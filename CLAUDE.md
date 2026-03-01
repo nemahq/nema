@@ -44,10 +44,12 @@ packages/
 
 ## Development Workflow
 
-### Branch Strategy
+### Branch Strategy (GitHub Flow + Tag Deploy)
 
-- `main` = production. Direct push prohibited.
+- `main` = latest integrated code. Direct push prohibited.
 - All work goes through feature branches → PR → review → merge.
+- **Deploy is decoupled from merge.** Merging to main does NOT trigger deployment.
+- Deploy happens only when a version tag is created (e.g., `v0.1.0`).
 
 **Branch naming**: `<type>/ctx<N>-<N>-<short-description>`
 
@@ -79,6 +81,12 @@ Examples: `feat/ctx2-1-structuring-prompt`, `fix/ctx5-trpc-error-handling`, `cho
 - One PR should be reviewable in a single sitting.
 - If a context requires large changes, split into sequential PRs with clear dependency.
 - Each PR must leave the codebase in a working state (all checks pass).
+
+### Deployment
+
+- Railway watches for version tags (`v*`), NOT main branch pushes.
+- To deploy: `git tag v0.1.0 && git push origin v0.1.0`
+- CI runs on both PR and main push. Deploy only triggers on tag.
 
 ## Key Files
 
