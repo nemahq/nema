@@ -17,6 +17,16 @@ Fastify 5 + tRPC 11 backend.
 - `GET /health` MUST always exist (Railway health check).
 - MUST use Zod schemas from `@nema-io/shared` for input validation.
 
+## Infrastructure Modules
+
+- `src/env.ts` — `requireEnv()` utility for env var validation.
+- `src/embedding/` — Embedding provider abstraction + Voyage implementation.
+  - `embedding-provider.ts` — `EmbeddingProvider` interface, `EmbeddingError`.
+  - `voyage-provider.ts` — `createVoyageProvider()` factory. SDK: `voyageai`.
+- `src/vector/` — Vector storage (Qdrant).
+  - `qdrant-client.ts` — `createVectorStore()` factory. Collection: `"documents"`, 1024-dim Cosine.
+  - Payload always includes `embedding_model` (`"<providerId>/<model>"`) for migration tracking.
+
 ## Dev
 
 - `pnpm dev` — tsx watch mode (auto-restart on change).
