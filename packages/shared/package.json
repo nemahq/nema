@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/",
+    "lint": "eslint --cache --cache-strategy content src/",
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
