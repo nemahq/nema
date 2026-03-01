@@ -80,4 +80,24 @@ describe("StructuredSaveSchema", () => {
     expect(result.summary).toBe(validDraft.summary);
     expect(result.body).toBe(validDraft.body);
   });
+
+  it("rejects create with non-null target_id", () => {
+    expect(() =>
+      StructuredSaveSchema.parse({
+        ...validDraft,
+        action: "create",
+        target_id: "doc_abc123",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects update with null target_id", () => {
+    expect(() =>
+      StructuredSaveSchema.parse({
+        ...validDraft,
+        action: "update",
+        target_id: null,
+      }),
+    ).toThrow();
+  });
 });
