@@ -27,16 +27,21 @@ describe("StructuredDraftSchema", () => {
     ).toThrow();
   });
 
-  it("rejects extra fields via strict parsing", () => {
+  it("strips extra fields from parsed output", () => {
     const result = StructuredDraftSchema.safeParse({
       ...validDraft,
       extra: "field",
     });
-    // Zod strips extra fields by default; parsed result should not include them
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data).not.toHaveProperty("extra");
     }
+  });
+
+  it("rejects empty string title", () => {
+    expect(() =>
+      StructuredDraftSchema.parse({ ...validDraft, title: "" }),
+    ).toThrow();
   });
 });
 
@@ -97,6 +102,16 @@ describe("StructuredSaveSchema", () => {
         ...validDraft,
         action: "update",
         target_id: null,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects update with empty string target_id", () => {
+    expect(() =>
+      StructuredSaveSchema.parse({
+        ...validDraft,
+        action: "update",
+        target_id: "",
       }),
     ).toThrow();
   });

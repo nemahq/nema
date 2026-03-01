@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { z } from "zod";
 import { OpenAiProvider } from "./openai-provider.js";
-import { LlmError } from "./errors.js";
+import { LlmError } from "./llm-error.js";
 
 // Mock OpenAI SDK
 vi.mock("openai", () => {
@@ -126,9 +126,74 @@ describe("OpenAiProvider", () => {
       expect(callArgs.model).toBe("gpt-4o-mini");
     });
 
-    it("throws LlmError with code 'unknown' when response has no parsed content", async () => {
+    it("throws when choices array is empty", async () => {
+      mockParse(provider, { choices: [] });
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM returned no choices",
+        }),
+      );
+    });
+
+    it("throws when response is truncated", async () => {
       mockParse(provider, {
-        choices: [{ message: { parsed: null } }],
+        choices: [
+          { finish_reason: "length", message: { parsed: { answer: "ok" } } },
+        ],
+      });
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM response was truncated (finish_reason: length)",
+        }),
+      );
+    });
+
+    it("throws when model refuses the request", async () => {
+      mockParse(provider, {
+        choices: [
+          {
+            finish_reason: "stop",
+            message: { parsed: null, refusal: "I cannot help with that" },
+          },
+        ],
+      });
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM refused the request: I cannot help with that",
+        }),
+      );
+    });
+
+    it("throws when response has no parsed content", async () => {
+      mockParse(provider, {
+        choices: [{ finish_reason: "stop", message: { parsed: null } }],
       });
 
       await expect(

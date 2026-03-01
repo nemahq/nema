@@ -6,7 +6,7 @@ import {
 } from "openai/error";
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { GenerateStructuredParams, LlmProvider } from "./llm-provider.js";
-import { LlmError } from "./errors.js";
+import { LlmError } from "./llm-error.js";
 
 export interface OpenAiProviderConfig {
   apiKey: string;
@@ -47,7 +47,23 @@ export class OpenAiProvider implements LlmProvider {
         response_format: zodResponseFormat(params.schema, params.schemaName),
       });
 
-      const parsed = completion.choices[0]?.message.parsed;
+      const choice = completion.choices[0];
+      if (!choice) {
+        throw new LlmError("unknown", "LLM returned no choices");
+      }
+      if (choice.finish_reason === "length") {
+        throw new LlmError(
+          "unknown",
+          "LLM response was truncated (finish_reason: length)",
+        );
+      }
+      if (choice.message?.refusal) {
+        throw new LlmError(
+          "unknown",
+          `LLM refused the request: ${choice.message.refusal}`,
+        );
+      }
+      const parsed = choice.message?.parsed;
       if (parsed == null) {
         throw new LlmError("unknown", "LLM returned no parseable response");
       }

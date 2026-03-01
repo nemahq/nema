@@ -28,7 +28,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 | Non-component files: kebab-case           | `use-auth.ts`                    |
 
 - `@nema-io/shared` exports raw TypeScript source. Import from `src/`, not compiled output.
-- Frontend imports `AppRouter` from `apps/server/src/router.ts` for end-to-end type safety.
+- `AppRouter` type lives in `apps/server/src/router.ts`. Frontend imports for end-to-end type safety.
 
 ## Self-Update
 

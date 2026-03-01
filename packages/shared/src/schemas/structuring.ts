@@ -5,11 +5,11 @@ import { z } from "zod";
  * Generated during conversation; no DB awareness.
  */
 export const StructuredDraftSchema = z.object({
-  title: z.string(),
-  category: z.string(),
-  tags: z.array(z.string()),
-  summary: z.string(),
-  body: z.string(),
+  title: z.string().min(1),
+  category: z.string().min(1),
+  tags: z.array(z.string().min(1)),
+  summary: z.string().min(1),
+  body: z.string().min(1),
 });
 
 export type StructuredDraft = z.infer<typeof StructuredDraftSchema>;
@@ -26,7 +26,7 @@ export const StructuredSaveSchema = z.discriminatedUnion("action", [
   }),
   StructuredDraftSchema.extend({
     action: z.literal("update"),
-    target_id: z.string(),
+    target_id: z.string().min(1),
   }),
 ]);
 
