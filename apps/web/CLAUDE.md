@@ -14,11 +14,11 @@ React 19 + Vite 6 frontend.
 
 ## Naming
 
-| Scope | Pattern | Example |
-|-------|---------|---------|
-| Component | PascalCase | `UserProfile.tsx` |
-| Non-component | kebab-case | `use-auth.ts` |
-| Env var | `VITE_` prefix | `VITE_API_URL` |
+| Scope         | Pattern        | Example           |
+| ------------- | -------------- | ----------------- |
+| Component     | PascalCase     | `UserProfile.tsx` |
+| Non-component | kebab-case     | `use-auth.ts`     |
+| Env var       | `VITE_` prefix | `VITE_API_URL`    |
 
 ## Dev
 
