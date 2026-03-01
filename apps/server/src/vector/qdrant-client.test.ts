@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { EmbeddingProvider } from "../embedding/index.js";
+import { VectorStoreError } from "./qdrant-client.js";
 
 const mockCollectionExists = vi.fn();
 const mockCreateCollection = vi.fn();
@@ -63,6 +64,26 @@ describe("createVectorStore", () => {
         field_schema: "keyword",
       });
     });
+
+    it("tolerates race condition when collection created concurrently", async () => {
+      mockCollectionExists
+        .mockResolvedValueOnce({ exists: false })
+        .mockResolvedValueOnce({ exists: true });
+      mockCreateCollection.mockRejectedValue(
+        new Error("collection already exists"),
+      );
+
+      const store = createVectorStore();
+      await expect(store.ensureCollection()).resolves.toBeUndefined();
+    });
+
+    it("throws VectorStoreError when creation truly fails", async () => {
+      mockCollectionExists.mockResolvedValue({ exists: false });
+      mockCreateCollection.mockRejectedValue(new Error("connection refused"));
+
+      const store = createVectorStore();
+      await expect(store.ensureCollection()).rejects.toThrow(VectorStoreError);
+    });
   });
 
   describe("upsert", () => {
@@ -109,7 +130,7 @@ describe("createVectorStore", () => {
       );
     });
 
-    it("includes metadata in payload", async () => {
+    it("includes metadata as nested field in payload", async () => {
       mockUpsert.mockResolvedValue({});
       const store = createVectorStore();
       const provider = fakeProvider([[0.1, 0.2]]);
@@ -125,11 +146,43 @@ describe("createVectorStore", () => {
         expect.objectContaining({
           points: expect.arrayContaining([
             expect.objectContaining({
-              payload: expect.objectContaining({ source: "manual" }),
+              payload: expect.objectContaining({
+                metadata: { source: "manual" },
+              }),
             }),
           ]),
         }),
       );
+    });
+
+    it("throws VectorStoreError on embedding count mismatch", async () => {
+      const store = createVectorStore();
+      const provider = fakeProvider([[0.1, 0.2]]);
+      // Provider returns 1 embedding but 2 chunks given
+      await expect(
+        store.upsert(provider, {
+          userId: "u1",
+          contextId: "c1",
+          chunks: ["text1", "text2"],
+        }),
+      ).rejects.toThrow(VectorStoreError);
+    });
+
+    it("wraps Qdrant SDK errors in VectorStoreError", async () => {
+      mockUpsert.mockRejectedValue(new Error("write timeout"));
+      const store = createVectorStore();
+      const provider = fakeProvider([[0.1, 0.2]]);
+
+      const err = await store
+        .upsert(provider, {
+          userId: "u1",
+          contextId: "c1",
+          chunks: ["text"],
+        })
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(VectorStoreError);
+      expect((err as VectorStoreError).operation).toBe("upsert");
     });
   });
 
@@ -220,6 +273,28 @@ describe("createVectorStore", () => {
         "documents",
         expect.objectContaining({ limit: 10 }),
       );
+    });
+
+    it("throws VectorStoreError when embedding returns no vector", async () => {
+      const store = createVectorStore();
+      const provider = fakeProvider([]);
+
+      await expect(
+        store.search(provider, { userId: "u1", query: "q" }),
+      ).rejects.toThrow(VectorStoreError);
+    });
+
+    it("wraps Qdrant SDK errors in VectorStoreError", async () => {
+      const store = createVectorStore();
+      const provider = fakeProvider([[0.1, 0.2]]);
+      mockSearch.mockRejectedValue(new Error("collection not found"));
+
+      const err = await store
+        .search(provider, { userId: "u1", query: "q" })
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(VectorStoreError);
+      expect((err as VectorStoreError).operation).toBe("search");
     });
   });
 });

@@ -59,7 +59,14 @@ export function createVoyageProvider(
           { timeoutInSeconds: timeoutSeconds },
         );
 
-        const embeddings = (response.data ?? []).map((item) => {
+        if (!response.data) {
+          throw new EmbeddingError(
+            "Voyage API returned no data in response",
+            "voyage",
+          );
+        }
+
+        const embeddings = response.data.map((item) => {
           if (!item.embedding) {
             throw new EmbeddingError(
               "Response item missing embedding vector",
@@ -80,9 +87,10 @@ export function createVoyageProvider(
           embeddings,
           model,
           dimension,
-          usage: response.usage?.totalTokens
-            ? { totalTokens: response.usage.totalTokens }
-            : undefined,
+          usage:
+            response.usage?.totalTokens != null
+              ? { totalTokens: response.usage.totalTokens }
+              : undefined,
         };
       } catch (error) {
         if (error instanceof EmbeddingError) throw error;

@@ -104,6 +104,26 @@ describe("createVoyageProvider", () => {
     ).rejects.toThrow(EmbeddingError);
   });
 
+  it("throws EmbeddingError when response.data is null", async () => {
+    mockEmbed.mockResolvedValue({ data: null });
+
+    const provider = createVoyageProvider({ apiKey: "test-key" });
+    await expect(provider.embed(["test"], "document")).rejects.toThrow(
+      EmbeddingError,
+    );
+  });
+
+  it("preserves totalTokens: 0 in usage", async () => {
+    mockEmbed.mockResolvedValue({
+      data: [{ embedding: [0.1], index: 0 }],
+      usage: { totalTokens: 0 },
+    });
+
+    const provider = createVoyageProvider({ apiKey: "test-key" });
+    const result = await provider.embed(["test"], "document");
+    expect(result.usage).toEqual({ totalTokens: 0 });
+  });
+
   it("passes inputType and outputDimension to SDK", async () => {
     mockEmbed.mockResolvedValue({
       data: [{ embedding: [1.0], index: 0 }],

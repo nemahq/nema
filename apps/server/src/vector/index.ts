@@ -5,4 +5,4 @@ export type {
   UpsertOptions,
   SearchOptions,
 } from "./qdrant-client.js";
-export { createVectorStore } from "./qdrant-client.js";
+export { createVectorStore, VectorStoreError } from "./qdrant-client.js";
