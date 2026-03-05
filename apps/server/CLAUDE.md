@@ -6,6 +6,16 @@ Fastify 5 + tRPC 11 backend.
 
 - Expose API keys (LLM, embedding, DB) to client. All external calls server-side only.
 
+## Directory Structure
+
+```
+src/
+├── index.ts       # Server bootstrap
+├── trpc.ts        # tRPC init
+├── router.ts      # Root router
+└── prompts/       # LLM system prompts and message builders
+```
+
 ## Rules
 
 - `GET /health` MUST always exist (Railway health check).
