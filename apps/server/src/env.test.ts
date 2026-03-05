@@ -20,4 +20,14 @@ describe("requireEnv", () => {
     vi.stubEnv("EMPTY_VAR", "");
     expect(() => requireEnv("EMPTY_VAR")).toThrow(EnvError);
   });
+
+  it("throws EnvError when env var is whitespace only", () => {
+    vi.stubEnv("WHITESPACE_VAR", "   ");
+    expect(() => requireEnv("WHITESPACE_VAR")).toThrow(EnvError);
+  });
+
+  it("trims whitespace from env var value", () => {
+    vi.stubEnv("PADDED_VAR", "  hello  ");
+    expect(requireEnv("PADDED_VAR")).toBe("hello");
+  });
 });

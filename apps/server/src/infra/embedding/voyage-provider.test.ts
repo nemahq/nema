@@ -61,6 +61,20 @@ describe("createVoyageProvider", () => {
     expect(mockEmbed).not.toHaveBeenCalled();
   });
 
+  it("accepts batch of exactly 128 items", async () => {
+    const embeddings = Array.from({ length: 128 }, () => [0.1]);
+    mockEmbed.mockResolvedValue({
+      data: embeddings.map((e, i) => ({ embedding: e, index: i })),
+      usage: { totalTokens: 100 },
+    });
+
+    const provider = createVoyageProvider({ apiKey: "test-key" });
+    const texts = Array.from({ length: 128 }, (_, i) => `text-${i}`);
+
+    const result = await provider.embed(texts, "document");
+    expect(result.embeddings).toHaveLength(128);
+  });
+
   it("throws EmbeddingError when batch exceeds 128", async () => {
     const provider = createVoyageProvider({ apiKey: "test-key" });
     const texts = Array.from({ length: 129 }, (_, i) => `text-${i}`);
@@ -122,6 +136,16 @@ describe("createVoyageProvider", () => {
     const provider = createVoyageProvider({ apiKey: "test-key" });
     const result = await provider.embed(["test"], "document");
     expect(result.usage).toEqual({ totalTokens: 0 });
+  });
+
+  it("returns undefined usage when API omits usage field", async () => {
+    mockEmbed.mockResolvedValue({
+      data: [{ embedding: [0.1], index: 0 }],
+    });
+
+    const provider = createVoyageProvider({ apiKey: "test-key" });
+    const result = await provider.embed(["test"], "document");
+    expect(result.usage).toBeUndefined();
   });
 
   it("passes inputType and outputDimension to SDK", async () => {

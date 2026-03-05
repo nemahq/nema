@@ -26,15 +26,16 @@ import { createQdrantStore } from "./qdrant-store.js";
 
 function fakeProvider(
   embeddings: number[][] = [[0.1, 0.2]],
+  dimension = 1024,
 ): EmbeddingProvider {
   return {
     providerId: "test",
     model: "test-model",
-    dimension: 2,
+    dimension,
     embed: vi.fn().mockResolvedValue({
       embeddings,
       model: "test-model",
-      dimension: 2,
+      dimension,
     }),
   };
 }
@@ -80,6 +81,44 @@ describe("createQdrantStore", () => {
     it("throws VectorStoreError when creation truly fails", async () => {
       mockCollectionExists.mockResolvedValue({ exists: false });
       mockCreateCollection.mockRejectedValue(new Error("connection refused"));
+
+      const store = createQdrantStore();
+      await expect(store.ensureCollection()).rejects.toThrow(VectorStoreError);
+    });
+
+    it("throws VectorStoreError when payload index creation fails", async () => {
+      mockCollectionExists.mockResolvedValue({ exists: false });
+      mockCreateCollection.mockResolvedValue({});
+      mockCreatePayloadIndex.mockRejectedValue(
+        new Error("index creation failed"),
+      );
+
+      const store = createQdrantStore();
+      await expect(store.ensureCollection()).rejects.toThrow(VectorStoreError);
+    });
+
+    it("still creates index after tolerating race condition", async () => {
+      mockCollectionExists
+        .mockResolvedValueOnce({ exists: false })
+        .mockResolvedValueOnce({ exists: true });
+      mockCreateCollection.mockRejectedValue(
+        new Error("collection already exists"),
+      );
+      mockCreatePayloadIndex.mockResolvedValue({});
+
+      const store = createQdrantStore();
+      await store.ensureCollection();
+      expect(mockCreatePayloadIndex).toHaveBeenCalledWith("documents", {
+        field_name: "user_id",
+        field_schema: "keyword",
+      });
+    });
+
+    it("throws VectorStoreError when re-check itself fails", async () => {
+      mockCollectionExists
+        .mockResolvedValueOnce({ exists: false })
+        .mockRejectedValueOnce(new Error("network down"));
+      mockCreateCollection.mockRejectedValue(new Error("timeout"));
 
       const store = createQdrantStore();
       await expect(store.ensureCollection()).rejects.toThrow(VectorStoreError);
@@ -134,6 +173,69 @@ describe("createQdrantStore", () => {
           ]),
         }),
       );
+    });
+
+    it("handles multi-chunk upsert with correct chunk_index values", async () => {
+      mockUpsert.mockResolvedValue({});
+      const store = createQdrantStore();
+      const provider = fakeProvider([
+        [0.1, 0.2],
+        [0.3, 0.4],
+        [0.5, 0.6],
+      ]);
+      const ids = await store.upsert(provider, {
+        docId: "d1",
+        userId: "u1",
+        chunks: ["chunk-0", "chunk-1", "chunk-2"],
+        tags: ["t1"],
+        summary: "s",
+      });
+
+      expect(ids).toHaveLength(3);
+      expect(provider.embed).toHaveBeenCalledWith(
+        ["chunk-0", "chunk-1", "chunk-2"],
+        "document",
+      );
+
+      const points = mockUpsert.mock.calls[0][1].points;
+      expect(points[0].payload.chunk_index).toBe(0);
+      expect(points[0].payload.text).toBe("chunk-0");
+      expect(points[1].payload.chunk_index).toBe(1);
+      expect(points[1].payload.text).toBe("chunk-1");
+      expect(points[2].payload.chunk_index).toBe(2);
+      expect(points[2].payload.text).toBe("chunk-2");
+    });
+
+    it("includes created_at in ISO format in payload", async () => {
+      mockUpsert.mockResolvedValue({});
+      const store = createQdrantStore();
+      const provider = fakeProvider([[0.1, 0.2]]);
+      await store.upsert(provider, {
+        docId: "d1",
+        userId: "u1",
+        chunks: ["text"],
+        tags: [],
+        summary: "s",
+      });
+
+      const points = mockUpsert.mock.calls[0][1].points;
+      expect(points[0].payload.created_at).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
+      );
+    });
+
+    it("throws VectorStoreError when provider dimension mismatches", async () => {
+      const store = createQdrantStore();
+      const provider = fakeProvider([[0.1, 0.2]], 512);
+      await expect(
+        store.upsert(provider, {
+          docId: "d1",
+          userId: "u1",
+          chunks: ["text"],
+          tags: [],
+          summary: "s",
+        }),
+      ).rejects.toThrow(VectorStoreError);
     });
 
     it("throws VectorStoreError on embedding count mismatch", async () => {
@@ -233,6 +335,14 @@ describe("createQdrantStore", () => {
         "documents",
         expect.objectContaining({ limit: 10 }),
       );
+    });
+
+    it("throws VectorStoreError when provider dimension mismatches", async () => {
+      const store = createQdrantStore();
+      const provider = fakeProvider([[0.1, 0.2]], 512);
+      await expect(
+        store.search(provider, { userId: "u1", query: "q" }),
+      ).rejects.toThrow(VectorStoreError);
     });
 
     it("throws VectorStoreError when embedding returns no vector", async () => {

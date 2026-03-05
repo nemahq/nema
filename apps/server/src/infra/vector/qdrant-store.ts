@@ -23,27 +23,45 @@ export function createQdrantStore(): VectorStore {
     async ensureCollection(): Promise<void> {
       try {
         const { exists } = await client.collectionExists(COLLECTION_NAME);
-        if (exists) return;
-
-        await client.createCollection(COLLECTION_NAME, {
-          vectors: { size: VECTOR_SIZE, distance: "Cosine" },
-        });
+        if (!exists) {
+          try {
+            await client.createCollection(COLLECTION_NAME, {
+              vectors: { size: VECTOR_SIZE, distance: "Cosine" },
+            });
+          } catch (createError) {
+            // Tolerate race condition: another instance may have created it
+            try {
+              const { exists: recheck } =
+                await client.collectionExists(COLLECTION_NAME);
+              if (!recheck) {
+                throw new VectorStoreError(
+                  `Failed to create collection: ${createError instanceof Error ? createError.message : String(createError)}`,
+                  "ensureCollection",
+                  createError,
+                );
+              }
+            } catch (recheckError) {
+              if (recheckError instanceof VectorStoreError) throw recheckError;
+              throw new VectorStoreError(
+                `Failed to ensure collection: ${createError instanceof Error ? createError.message : String(createError)}`,
+                "ensureCollection",
+                createError,
+              );
+            }
+          }
+        }
 
         await client.createPayloadIndex(COLLECTION_NAME, {
           field_name: "user_id",
           field_schema: "keyword",
         });
       } catch (error) {
-        // Tolerate race condition: another instance may have created it
-        const { exists: recheck } =
-          await client.collectionExists(COLLECTION_NAME);
-        if (!recheck) {
-          throw new VectorStoreError(
-            `Failed to ensure collection: ${error instanceof Error ? error.message : String(error)}`,
-            "ensureCollection",
-            error,
-          );
-        }
+        if (error instanceof VectorStoreError) throw error;
+        throw new VectorStoreError(
+          `Failed to ensure collection: ${error instanceof Error ? error.message : String(error)}`,
+          "ensureCollection",
+          error,
+        );
       }
     },
 
@@ -54,6 +72,13 @@ export function createQdrantStore(): VectorStore {
       const { docId, userId, chunks, tags, summary } = options;
 
       if (chunks.length === 0) return [];
+
+      if (provider.dimension !== VECTOR_SIZE) {
+        throw new VectorStoreError(
+          `Provider dimension ${provider.dimension} does not match collection vector size ${VECTOR_SIZE}`,
+          "upsert",
+        );
+      }
 
       try {
         const result = await provider.embed(chunks, "document");
@@ -110,6 +135,13 @@ export function createQdrantStore(): VectorStore {
       options: SearchOptions,
     ): Promise<VectorSearchResult[]> {
       const { userId, query, limit = 10, scoreThreshold } = options;
+
+      if (provider.dimension !== VECTOR_SIZE) {
+        throw new VectorStoreError(
+          `Provider dimension ${provider.dimension} does not match collection vector size ${VECTOR_SIZE}`,
+          "search",
+        );
+      }
 
       try {
         const result = await provider.embed([query], "query");
