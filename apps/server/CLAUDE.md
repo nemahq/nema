@@ -6,11 +6,15 @@ Fastify 5 + tRPC 11 backend.
 
 - Expose API keys (LLM, embedding, DB) to client. All external calls server-side only.
 
-## Entry Points
+## Directory Structure
 
-- `src/index.ts` — Server bootstrap. Fastify plugins, CORS, tRPC adapter mount at `/trpc`.
-- `src/trpc.ts` — tRPC init. `router` and `publicProcedure` exported here.
-- `src/router.ts` — Root router. Add new routers via `t.mergeRouters` or nested routes.
+```
+src/
+├── index.ts       # Server bootstrap
+├── trpc.ts        # tRPC init
+├── router.ts      # Root router
+└── prompts/       # LLM system prompts and message builders
+```
 
 ## Rules
 
