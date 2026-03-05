@@ -11,15 +11,18 @@ describe("DraftOutputSchema", () => {
     expect(result).toEqual(input);
   });
 
-  it("parses draft without session_title", () => {
-    const input = { body: "Updated draft content." };
+  it("parses draft with null session_title (edit cycle)", () => {
+    const input = { body: "Updated draft content.", session_title: null };
     const result = DraftOutputSchema.parse(input);
-    expect(result).toEqual(input);
-    expect(result.session_title).toBeUndefined();
+    expect(result.session_title).toBeNull();
   });
 
   it("rejects missing body", () => {
     expect(() => DraftOutputSchema.parse({ session_title: "title" })).toThrow();
+  });
+
+  it("rejects missing session_title", () => {
+    expect(() => DraftOutputSchema.parse({ body: "content" })).toThrow();
   });
 
   it("rejects empty body", () => {
@@ -35,6 +38,7 @@ describe("DraftOutputSchema", () => {
   it("strips extra fields from parsed output", () => {
     const result = DraftOutputSchema.safeParse({
       body: "content",
+      session_title: null,
       extra: "field",
     });
     expect(result.success).toBe(true);
@@ -152,6 +156,13 @@ describe("SaveOutputSchema", () => {
         merged_body: "",
       }),
     ).toThrow();
+  });
+
+  it("parses create without category (optional)", () => {
+    const { title, tags, summary } = validSaveMeta;
+    const input = { title, tags, summary, action: "create", target_id: null };
+    const result = SaveOutputSchema.parse(input);
+    expect(result.category).toBeUndefined();
   });
 
   it("rejects non-string tags", () => {

@@ -2,7 +2,10 @@ import OpenAI from "openai";
 import {
   APIConnectionTimeoutError,
   AuthenticationError,
+  BadRequestError,
+  PermissionDeniedError,
   RateLimitError,
+  UnprocessableEntityError,
 } from "openai/error";
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { GenerateStructuredParams, LlmProvider } from "./llm-provider.js";
@@ -57,6 +60,12 @@ export class OpenAiProvider implements LlmProvider {
           "LLM response was truncated (finish_reason: length)",
         );
       }
+      if (choice.finish_reason === "content_filter") {
+        throw new LlmError(
+          "content_filter",
+          "LLM response was blocked by content filter",
+        );
+      }
       if (choice.message?.refusal) {
         throw new LlmError(
           "unknown",
@@ -68,7 +77,14 @@ export class OpenAiProvider implements LlmProvider {
         throw new LlmError("unknown", "LLM returned no parseable response");
       }
 
-      return parsed as T;
+      const result = params.schema.safeParse(parsed);
+      if (!result.success) {
+        throw new LlmError(
+          "unknown",
+          `LLM response failed schema validation: ${result.error.message}`,
+        );
+      }
+      return result.data;
     } catch (error) {
       if (error instanceof LlmError) throw error;
       if (error instanceof APIConnectionTimeoutError) {
@@ -77,8 +93,17 @@ export class OpenAiProvider implements LlmProvider {
       if (error instanceof RateLimitError) {
         throw new LlmError("rate_limit", "LLM rate limit exceeded", error);
       }
-      if (error instanceof AuthenticationError) {
+      if (
+        error instanceof AuthenticationError ||
+        error instanceof PermissionDeniedError
+      ) {
         throw new LlmError("auth", "LLM authentication failed", error);
+      }
+      if (
+        error instanceof BadRequestError ||
+        error instanceof UnprocessableEntityError
+      ) {
+        throw new LlmError("bad_request", error.message, error);
       }
       throw new LlmError(
         "unknown",

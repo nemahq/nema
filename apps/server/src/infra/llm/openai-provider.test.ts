@@ -34,6 +34,7 @@ function mockParse(provider: OpenAiProvider, response: unknown) {
 
 function mockParseRejection(provider: OpenAiProvider, error: Error) {
   const parseFn = vi.fn().mockRejectedValue(error);
+  // Access the private client to attach mock rejection
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (provider as any).client = {
     chat: { completions: { parse: parseFn } },
@@ -120,6 +121,7 @@ describe("OpenAiProvider", () => {
         model: "gpt-4o-mini",
       });
 
+      // Access mock via private client to verify call args
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const callArgs = (provider as any).client.chat.completions.parse.mock
         .calls[0]?.[0];
@@ -162,6 +164,31 @@ describe("OpenAiProvider", () => {
         expect.objectContaining({
           code: "unknown",
           message: "LLM response was truncated (finish_reason: length)",
+        }),
+      );
+    });
+
+    it("throws when response is blocked by content filter", async () => {
+      mockParse(provider, {
+        choices: [
+          {
+            finish_reason: "content_filter",
+            message: { parsed: null },
+          },
+        ],
+      });
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "content_filter",
+          message: "LLM response was blocked by content filter",
         }),
       );
     });
@@ -211,8 +238,28 @@ describe("OpenAiProvider", () => {
       );
     });
 
+    it("throws when parsed response fails schema validation", async () => {
+      mockParse(provider, {
+        choices: [
+          { finish_reason: "stop", message: { parsed: { answer: 123 } } },
+        ],
+      });
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+        }),
+      );
+    });
+
     it("maps APIConnectionTimeoutError to LlmError timeout", async () => {
-      // Dynamically import to get the actual error class
       const { APIConnectionTimeoutError } = await import("openai/error");
       mockParseRejection(provider, new APIConnectionTimeoutError());
 
@@ -272,6 +319,54 @@ describe("OpenAiProvider", () => {
           messages: [{ role: "user", content: "q" }],
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "auth" }));
+    });
+
+    it("maps PermissionDeniedError to LlmError auth", async () => {
+      const { PermissionDeniedError } = await import("openai/error");
+      const error = PermissionDeniedError.generate(
+        403,
+        { error: { message: "forbidden" } },
+        "forbidden",
+        new Headers(),
+      );
+
+      mockParseRejection(
+        provider,
+        error as InstanceType<typeof PermissionDeniedError>,
+      );
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "auth" }));
+    });
+
+    it("maps BadRequestError to LlmError bad_request", async () => {
+      const { BadRequestError } = await import("openai/error");
+      const error = BadRequestError.generate(
+        400,
+        { error: { message: "invalid model" } },
+        "invalid model",
+        new Headers(),
+      );
+
+      mockParseRejection(
+        provider,
+        error as InstanceType<typeof BadRequestError>,
+      );
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "bad_request" }));
     });
 
     it("maps unknown errors to LlmError unknown", async () => {
