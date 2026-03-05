@@ -10,11 +10,16 @@ Fastify 5 + tRPC 11 backend.
 
 ```
 src/
-├── index.ts       # Server bootstrap
-├── trpc.ts        # tRPC init
-├── router.ts      # Root router
-└── prompts/       # LLM system prompts and message builders
+├── routers/     # tRPC endpoint definitions (thin: validation + service call)
+├── services/    # Orchestration logic (core business flows)
+├── infra/       # External service clients (Supabase, Qdrant, Neo4j, LLM, Embedding)
+└── prompts/     # LLM prompt templates (independently tunable)
 ```
+
+- `routers/` are thin: input validation + service call only. No business logic.
+- `services/` own orchestration: LLM call ordering, similar doc search, create/update judgment.
+- `infra/` isolates external dependencies. LLM provider swap = change inside `infra/`.
+- `prompts/` stay separate for independent tuning/review.
 
 ## Rules
 

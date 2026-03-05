@@ -6,12 +6,6 @@ React 19 + Vite 6 frontend.
 
 - Call external APIs directly. All API calls go through tRPC client.
 
-## Entry Points
-
-- `index.html` — Vite entry. Script tag loads `src/main.tsx`.
-- `src/main.tsx` — React root mount.
-- `src/App.tsx` — Root component.
-
 ## Naming
 
 | Scope         | Pattern        | Example           |
