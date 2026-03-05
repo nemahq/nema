@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { EmbeddingProvider } from "../embedding/index.js";
-import { VectorStoreError } from "./qdrant-client.js";
+import { VectorStoreError } from "./vector-store.js";
 
 const mockCollectionExists = vi.fn();
 const mockCreateCollection = vi.fn();
@@ -18,11 +18,11 @@ vi.mock("@qdrant/js-client-rest", () => ({
   })),
 }));
 
-vi.mock("../env.js", () => ({
+vi.mock("../../env.js", () => ({
   requireEnv: vi.fn((name: string) => `mock-${name}`),
 }));
 
-import { createVectorStore } from "./qdrant-client.js";
+import { createQdrantStore } from "./qdrant-store.js";
 
 function fakeProvider(
   embeddings: number[][] = [[0.1, 0.2]],
@@ -39,7 +39,7 @@ function fakeProvider(
   };
 }
 
-describe("createVectorStore", () => {
+describe("createQdrantStore", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -47,14 +47,14 @@ describe("createVectorStore", () => {
   describe("ensureCollection", () => {
     it("skips creation when collection exists", async () => {
       mockCollectionExists.mockResolvedValue({ exists: true });
-      const store = createVectorStore();
+      const store = createQdrantStore();
       await store.ensureCollection();
       expect(mockCreateCollection).not.toHaveBeenCalled();
     });
 
     it("creates collection and index when not exists", async () => {
       mockCollectionExists.mockResolvedValue({ exists: false });
-      const store = createVectorStore();
+      const store = createQdrantStore();
       await store.ensureCollection();
       expect(mockCreateCollection).toHaveBeenCalledWith("documents", {
         vectors: { size: 1024, distance: "Cosine" },
@@ -73,7 +73,7 @@ describe("createVectorStore", () => {
         new Error("collection already exists"),
       );
 
-      const store = createVectorStore();
+      const store = createQdrantStore();
       await expect(store.ensureCollection()).resolves.toBeUndefined();
     });
 
@@ -81,19 +81,21 @@ describe("createVectorStore", () => {
       mockCollectionExists.mockResolvedValue({ exists: false });
       mockCreateCollection.mockRejectedValue(new Error("connection refused"));
 
-      const store = createVectorStore();
+      const store = createQdrantStore();
       await expect(store.ensureCollection()).rejects.toThrow(VectorStoreError);
     });
   });
 
   describe("upsert", () => {
     it("returns empty array for empty chunks", async () => {
-      const store = createVectorStore();
+      const store = createQdrantStore();
       const provider = fakeProvider();
       const ids = await store.upsert(provider, {
+        docId: "d1",
         userId: "u1",
-        contextId: "c1",
         chunks: [],
+        tags: ["tag1"],
+        summary: "summary",
       });
       expect(ids).toHaveLength(0);
       expect(provider.embed).not.toHaveBeenCalled();
@@ -101,12 +103,14 @@ describe("createVectorStore", () => {
 
     it("embeds chunks and upserts with correct payload", async () => {
       mockUpsert.mockResolvedValue({});
-      const store = createVectorStore();
+      const store = createQdrantStore();
       const provider = fakeProvider([[0.1, 0.2]]);
       const ids = await store.upsert(provider, {
+        docId: "d1",
         userId: "u1",
-        contextId: "c1",
         chunks: ["hello world"],
+        tags: ["hiring", "frontend"],
+        summary: "Interview feedback",
       });
 
       expect(ids).toHaveLength(1);
@@ -118,10 +122,12 @@ describe("createVectorStore", () => {
           points: expect.arrayContaining([
             expect.objectContaining({
               payload: expect.objectContaining({
+                doc_id: "d1",
                 user_id: "u1",
-                context_id: "c1",
                 chunk_index: 0,
                 text: "hello world",
+                tags: ["hiring", "frontend"],
+                summary: "Interview feedback",
                 embedding_model: "test/test-model",
               }),
             }),
@@ -130,54 +136,32 @@ describe("createVectorStore", () => {
       );
     });
 
-    it("includes metadata as nested field in payload", async () => {
-      mockUpsert.mockResolvedValue({});
-      const store = createVectorStore();
-      const provider = fakeProvider([[0.1, 0.2]]);
-      await store.upsert(provider, {
-        userId: "u1",
-        contextId: "c1",
-        chunks: ["text"],
-        metadata: { source: "manual" },
-      });
-
-      expect(mockUpsert).toHaveBeenCalledWith(
-        "documents",
-        expect.objectContaining({
-          points: expect.arrayContaining([
-            expect.objectContaining({
-              payload: expect.objectContaining({
-                metadata: { source: "manual" },
-              }),
-            }),
-          ]),
-        }),
-      );
-    });
-
     it("throws VectorStoreError on embedding count mismatch", async () => {
-      const store = createVectorStore();
+      const store = createQdrantStore();
       const provider = fakeProvider([[0.1, 0.2]]);
-      // Provider returns 1 embedding but 2 chunks given
       await expect(
         store.upsert(provider, {
+          docId: "d1",
           userId: "u1",
-          contextId: "c1",
           chunks: ["text1", "text2"],
+          tags: [],
+          summary: "s",
         }),
       ).rejects.toThrow(VectorStoreError);
     });
 
     it("wraps Qdrant SDK errors in VectorStoreError", async () => {
       mockUpsert.mockRejectedValue(new Error("write timeout"));
-      const store = createVectorStore();
+      const store = createQdrantStore();
       const provider = fakeProvider([[0.1, 0.2]]);
 
       const err = await store
         .upsert(provider, {
+          docId: "d1",
           userId: "u1",
-          contextId: "c1",
           chunks: ["text"],
+          tags: [],
+          summary: "s",
         })
         .catch((e: unknown) => e);
 
@@ -191,7 +175,7 @@ describe("createVectorStore", () => {
       mockSearch.mockResolvedValue([
         { id: "abc", score: 0.95, payload: { text: "hello" } },
       ]);
-      const store = createVectorStore();
+      const store = createQdrantStore();
       const provider = fakeProvider([[0.5, 0.6]]);
 
       const results = await store.search(provider, {
@@ -216,33 +200,9 @@ describe("createVectorStore", () => {
       expect(results[0].score).toBe(0.95);
     });
 
-    it("adds context_id filter when provided", async () => {
-      mockSearch.mockResolvedValue([]);
-      const store = createVectorStore();
-      const provider = fakeProvider([[0.1, 0.2]]);
-
-      await store.search(provider, {
-        userId: "u1",
-        query: "q",
-        contextId: "c1",
-      });
-
-      expect(mockSearch).toHaveBeenCalledWith(
-        "documents",
-        expect.objectContaining({
-          filter: {
-            must: [
-              { key: "user_id", match: { value: "u1" } },
-              { key: "context_id", match: { value: "c1" } },
-            ],
-          },
-        }),
-      );
-    });
-
     it("passes score_threshold when provided", async () => {
       mockSearch.mockResolvedValue([]);
-      const store = createVectorStore();
+      const store = createQdrantStore();
       const provider = fakeProvider([[0.1, 0.2]]);
 
       await store.search(provider, {
@@ -261,7 +221,7 @@ describe("createVectorStore", () => {
 
     it("uses default limit of 10", async () => {
       mockSearch.mockResolvedValue([]);
-      const store = createVectorStore();
+      const store = createQdrantStore();
       const provider = fakeProvider([[0.1, 0.2]]);
 
       await store.search(provider, {
@@ -276,7 +236,7 @@ describe("createVectorStore", () => {
     });
 
     it("throws VectorStoreError when embedding returns no vector", async () => {
-      const store = createVectorStore();
+      const store = createQdrantStore();
       const provider = fakeProvider([]);
 
       await expect(
@@ -285,7 +245,7 @@ describe("createVectorStore", () => {
     });
 
     it("wraps Qdrant SDK errors in VectorStoreError", async () => {
-      const store = createVectorStore();
+      const store = createQdrantStore();
       const provider = fakeProvider([[0.1, 0.2]]);
       mockSearch.mockRejectedValue(new Error("collection not found"));
 

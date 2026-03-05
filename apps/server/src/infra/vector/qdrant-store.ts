@@ -1,65 +1,19 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
-import { requireEnv } from "../env.js";
+import { requireEnv } from "../../env.js";
 import type { EmbeddingProvider } from "../embedding/index.js";
+import type {
+  VectorStore,
+  UpsertOptions,
+  SearchOptions,
+  VectorSearchResult,
+  DocumentPayload,
+} from "./vector-store.js";
+import { VectorStoreError } from "./vector-store.js";
 
 const COLLECTION_NAME = "documents";
 const VECTOR_SIZE = 1024;
 
-export class VectorStoreError extends Error {
-  constructor(
-    message: string,
-    public readonly operation: string,
-    public readonly cause?: unknown,
-  ) {
-    super(message);
-    this.name = "VectorStoreError";
-  }
-}
-
-export interface DocumentPayload {
-  user_id: string;
-  context_id: string;
-  chunk_index: number;
-  text: string;
-  embedding_model: string;
-  created_at: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface VectorSearchResult {
-  id: string;
-  score: number;
-  payload: DocumentPayload;
-}
-
-export interface UpsertOptions {
-  userId: string;
-  contextId: string;
-  chunks: string[];
-  metadata?: Record<string, unknown>;
-}
-
-export interface SearchOptions {
-  userId: string;
-  query: string;
-  limit?: number;
-  contextId?: string;
-  scoreThreshold?: number;
-}
-
-export interface VectorStore {
-  ensureCollection(): Promise<void>;
-  upsert(
-    provider: EmbeddingProvider,
-    options: UpsertOptions,
-  ): Promise<string[]>;
-  search(
-    provider: EmbeddingProvider,
-    options: SearchOptions,
-  ): Promise<VectorSearchResult[]>;
-}
-
-export function createVectorStore(): VectorStore {
+export function createQdrantStore(): VectorStore {
   const client = new QdrantClient({
     url: requireEnv("QDRANT_URL"),
     apiKey: requireEnv("QDRANT_API_KEY"),
@@ -97,7 +51,7 @@ export function createVectorStore(): VectorStore {
       provider: EmbeddingProvider,
       options: UpsertOptions,
     ): Promise<string[]> {
-      const { userId, contextId, chunks, metadata } = options;
+      const { docId, userId, chunks, tags, summary } = options;
 
       if (chunks.length === 0) return [];
 
@@ -118,13 +72,14 @@ export function createVectorStore(): VectorStore {
           const id = crypto.randomUUID();
           ids.push(id);
           const payload: DocumentPayload = {
+            doc_id: docId,
             user_id: userId,
-            context_id: contextId,
             chunk_index: index,
             text: chunks[index],
+            tags,
+            summary,
             embedding_model: `${provider.providerId}/${provider.model}`,
             created_at: now,
-            metadata,
           };
           // Qdrant expects Record<string, unknown> for payload
           return {
@@ -154,7 +109,7 @@ export function createVectorStore(): VectorStore {
       provider: EmbeddingProvider,
       options: SearchOptions,
     ): Promise<VectorSearchResult[]> {
-      const { userId, query, limit = 10, contextId, scoreThreshold } = options;
+      const { userId, query, limit = 10, scoreThreshold } = options;
 
       try {
         const result = await provider.embed([query], "query");
@@ -170,9 +125,6 @@ export function createVectorStore(): VectorStore {
         const must: Record<string, unknown>[] = [
           { key: "user_id", match: { value: userId } },
         ];
-        if (contextId) {
-          must.push({ key: "context_id", match: { value: contextId } });
-        }
 
         const searchResult = await client.search(COLLECTION_NAME, {
           vector,

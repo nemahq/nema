@@ -20,12 +20,13 @@ Fastify 5 + tRPC 11 backend.
 ## Infrastructure Modules
 
 - `src/env.ts` — `requireEnv()` utility for env var validation.
-- `src/embedding/` — Embedding provider abstraction + Voyage implementation.
+- `src/infra/embedding/` — Embedding provider abstraction + Voyage implementation.
   - `embedding-provider.ts` — `EmbeddingProvider` interface, `EmbeddingError`.
   - `voyage-provider.ts` — `createVoyageProvider()` factory. SDK: `voyageai`.
-- `src/vector/` — Vector storage (Qdrant).
-  - `qdrant-client.ts` — `createVectorStore()` factory. Collection: `"documents"`, 1024-dim Cosine.
-  - Payload always includes `embedding_model` (`"<providerId>/<model>"`) for migration tracking.
+- `src/infra/vector/` — Vector storage abstraction + Qdrant implementation.
+  - `vector-store.ts` — `VectorStore` interface, `DocumentPayload`, `VectorStoreError`.
+  - `qdrant-store.ts` — `createQdrantStore()` factory. Collection: `"documents"`, 1024-dim Cosine.
+  - Payload includes `doc_id`, `tags`, `summary`, `embedding_model` (`"<providerId>/<model>"`).
 
 ## Dev
 

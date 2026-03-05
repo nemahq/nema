@@ -29,7 +29,7 @@ export class EmbeddingError extends Error {
     public readonly provider: string,
     public readonly cause?: unknown,
   ) {
-    super(message);
+    super(message, { cause });
     this.name = "EmbeddingError";
   }
 }
