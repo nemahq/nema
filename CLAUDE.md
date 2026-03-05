@@ -28,14 +28,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 | Non-component files: kebab-case           | `use-auth.ts`                    |
 
 - `@nema-io/shared` exports raw TypeScript source. Import from `src/`, not compiled output.
-- `AppRouter` type lives in `apps/server/src/router.ts`. Frontend imports for end-to-end type safety.
-
-## Key Files
-
-- `apps/server/src/index.ts` — Fastify entry. Plugins, CORS, tRPC adapter.
-- `apps/server/src/router.ts` — Root tRPC router. All API endpoints.
-- `apps/server/src/trpc.ts` — tRPC instance. Procedures and middleware.
-- `packages/shared/src/index.ts` — Barrel export for shared types/schemas.
+- Frontend imports `AppRouter` from `apps/server/src/router.ts` for end-to-end type safety.
 
 ## Self-Update
 
@@ -46,4 +39,5 @@ This file is a living document. Update it in the same PR when:
 - Non-obvious gotcha is discovered.
 
 Do NOT add: one-time workarounds, task-specific context, unverified patterns.
+Do NOT add: file paths or structure descriptions discoverable from code.
 Keep it under 60 lines. Move package-specific rules to that package's CLAUDE.md.
