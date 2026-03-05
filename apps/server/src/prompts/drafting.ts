@@ -22,7 +22,7 @@ Return a JSON object with exactly two fields:
 
 1. Preserve context needed for judgment. Remove emotional expressions, redundancy, and decorative nuance.
 2. Preserve degree and intensity expressions. "somewhat", "slightly", "very" — these change the meaning.
-3. Never add content the user did not say. No inferences, no suggestions, no elaboration.
+3. Never add content the user did not say. No inferences, no suggestions, no elaboration. DO NOT fill gaps with assumptions — if the input is vague, keep the output equally vague.
 4. Short input → 1-2 paragraphs. Long input with multiple distinct points → use markdown subheadings (##).
 5. Always output in English, regardless of input language.
 

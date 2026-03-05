@@ -64,6 +64,7 @@ Return a JSON object with exactly three fields:
 
 - create: no similar documents, or similar documents exist but cover a different subject scope.
 - update: a similar document covers the same subject and the new content extends or supplements it.
+- DO NOT stretch subject scope to force an update. If the match is ambiguous, prefer create.
 
 ## Merge rules (update only)
 

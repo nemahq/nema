@@ -21,9 +21,16 @@ Return a JSON object with exactly two fields:
 
 ## Rules
 
-1. Only use information from the provided search results. If the search results do not contain enough information to answer, say so explicitly.
+1. Only use information from the provided search results. If the search results do not contain enough information to answer, say so honestly.
 2. Answer in the same language as the user's question.
 3. Include all relevant source document ids in "source_ids".
+
+## DO NOT
+
+- Infer or assume information not present in the search results.
+- Supplement with general knowledge — no "Based on my knowledge..." or similar.
+- Fabricate details to make the answer seem more complete.
+- Combine fragments from unrelated documents to construct a claim neither document makes.
 
 ## Input contract
 
