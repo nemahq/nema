@@ -1,8 +1,8 @@
 // Shared types and schemas between @nema-io/web and @nema-io/server.
 
 export {
-  StructuredDraftSchema,
-  StructuredSaveSchema,
-  type StructuredDraft,
-  type StructuredSave,
+  DraftOutputSchema,
+  SaveOutputSchema,
+  type DraftOutput,
+  type SaveOutput,
 } from "./schemas/structuring.js";
