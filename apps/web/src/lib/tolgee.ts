@@ -1,25 +1,21 @@
-import { Tolgee, DevTools, FormatSimple } from "@tolgee/react";
+import { Tolgee, FormatSimple } from "@tolgee/react";
 
 const SUPPORTED_LANGUAGES = ["ko", "en"] as const;
 const DEFAULT_LANGUAGE = "ko";
 
 function detectLanguage(): string {
+  if (typeof navigator === "undefined" || !navigator.language) {
+    return DEFAULT_LANGUAGE;
+  }
   const browserLang = navigator.language.split("-")[0];
-  if (
-    SUPPORTED_LANGUAGES.includes(
-      browserLang as (typeof SUPPORTED_LANGUAGES)[number],
-    )
-  ) {
+  if ((SUPPORTED_LANGUAGES as readonly string[]).includes(browserLang)) {
     return browserLang;
   }
   return DEFAULT_LANGUAGE;
 }
 
 export const tolgee = Tolgee()
-  .use(DevTools())
   .use(FormatSimple())
   .init({
     language: detectLanguage(),
-    apiUrl: import.meta.env.VITE_TOLGEE_API_URL,
-    apiKey: import.meta.env.VITE_TOLGEE_API_KEY,
   });

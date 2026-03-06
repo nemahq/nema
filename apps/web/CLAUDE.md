@@ -41,7 +41,15 @@ src/
 - MUST use only `md:` (768px) breakpoint. Tablet gets desktop layout.
 - MUST NOT use `sm:`, `lg:`, `xl:`, `2xl:` in project code (shadcn internals exempt).
 
+## I18n
+
+- Tolgee (`@tolgee/react`). 번역 컴포넌트: `<T keyName="..." defaultValue="..." />`.
+- 키 네이밍: 첫 segment = feature (e.g. `common.home`, `auth.login`).
+- 프로덕션: staticData 번들. 인컨텍스트 편집 미사용.
+
 ## Dev
 
 - `pnpm dev` — Vite dev server at :5173 (HMR).
+- `pnpm test` — Vitest. Test files co-located as `*.test.tsx`.
+ dev server at :5173 (HMR).
 - `pnpm test` — Vitest. Test files co-located as `*.test.tsx`.
