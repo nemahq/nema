@@ -4,6 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nema</title>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("nema-theme");
+          if (t !== "dark" && t !== "light" && t !== "system") t = "light";
+          var d = document.documentElement;
+          if (t === "system") {
+            d.classList.add(
+              window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light",
+            );
+          } else {
+            d.classList.add(t);
+          }
+        } catch (_) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
