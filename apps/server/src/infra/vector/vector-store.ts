@@ -53,4 +53,5 @@ export interface VectorStore {
     provider: EmbeddingProvider,
     options: SearchOptions,
   ): Promise<VectorSearchResult[]>;
+  deleteByDocument(docId: string): Promise<void>;
 }
