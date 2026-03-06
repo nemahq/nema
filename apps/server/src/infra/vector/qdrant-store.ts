@@ -35,7 +35,7 @@ export function createQdrantStore(): VectorStore {
               field_schema: "keyword",
             });
           } catch (createError) {
-            // Tolerate race condition: another instance may have created it
+            // 다른 인스턴스가 동시에 컬렉션을 생성했을 수 있으므로 재확인
             try {
               const { exists: recheck } =
                 await client.collectionExists(COLLECTION_NAME);
@@ -111,7 +111,6 @@ export function createQdrantStore(): VectorStore {
             embedding_model: `${provider.providerId}/${provider.model}`,
             created_at: now,
           };
-          // Qdrant expects Record<string, unknown> for payload
           return {
             id,
             vector,
@@ -174,8 +173,6 @@ export function createQdrantStore(): VectorStore {
         return searchResult.map((point) => ({
           id: String(point.id),
           score: point.score,
-          // Qdrant returns Record<string, unknown>; we control the payload
-          // schema via upsert, so the cast is safe within this module.
           payload: point.payload as unknown as DocumentPayload,
         }));
       } catch (error) {
