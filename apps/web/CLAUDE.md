@@ -23,7 +23,7 @@ src/
 
 ## State Management
 
-- Server state: TanStack Query (`@trpc/tanstack-react-query`)
+- Server state: TanStack Query (tRPC 통합은 feature 구현 시 도입)
 - UI state: React built-ins (useState, useContext)
 
 ## Naming
