@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { appRouter } from "./router.js";
 import { createContext } from "./trpc.js";
+import { createQdrantStore } from "./infra/vector/index.js";
 
 function getPort(): number {
   const raw = process.env.PORT;
@@ -33,6 +34,10 @@ async function bootstrap() {
   });
 
   server.get("/health", async () => ({ status: "ok" }));
+
+  const vectorStore = createQdrantStore();
+  await vectorStore.ensureCollection();
+  server.log.info("Qdrant collection ready");
 
   const port = getPort();
   await server.listen({ port, host: "0.0.0.0" });

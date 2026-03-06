@@ -7,6 +7,7 @@ const mockCreateCollection = vi.fn();
 const mockCreatePayloadIndex = vi.fn();
 const mockUpsert = vi.fn();
 const mockSearch = vi.fn();
+const mockDelete = vi.fn();
 
 vi.mock("@qdrant/js-client-rest", () => ({
   QdrantClient: vi.fn().mockImplementation(() => ({
@@ -15,6 +16,7 @@ vi.mock("@qdrant/js-client-rest", () => ({
     createPayloadIndex: mockCreatePayloadIndex,
     upsert: mockUpsert,
     search: mockSearch,
+    delete: mockDelete,
   })),
 }));
 
@@ -347,6 +349,50 @@ describe("createQdrantStore", () => {
 
       expect(err).toBeInstanceOf(VectorStoreError);
       expect((err as VectorStoreError).operation).toBe("search");
+    });
+  });
+
+  describe("deleteByDocument", () => {
+    it("deletes points by doc_id filter", async () => {
+      mockDelete.mockResolvedValue({});
+      const store = createQdrantStore();
+      await store.deleteByDocument("d1");
+
+      expect(mockDelete).toHaveBeenCalledWith("documents", {
+        wait: true,
+        filter: {
+          must: [{ key: "doc_id", match: { value: "d1" } }],
+        },
+      });
+    });
+
+    it("wraps Qdrant SDK errors in VectorStoreError", async () => {
+      mockDelete.mockRejectedValue(new Error("connection refused"));
+      const store = createQdrantStore();
+
+      const err = await store.deleteByDocument("d1").catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(VectorStoreError);
+      expect((err as VectorStoreError).operation).toBe("deleteByDocument");
+    });
+  });
+
+  describe("ensureCollection doc_id index", () => {
+    it("creates both user_id and doc_id payload indexes", async () => {
+      mockCollectionExists.mockResolvedValue({ exists: false });
+      mockCreateCollection.mockResolvedValue({});
+      mockCreatePayloadIndex.mockResolvedValue({});
+      const store = createQdrantStore();
+      await store.ensureCollection();
+
+      expect(mockCreatePayloadIndex).toHaveBeenCalledWith("documents", {
+        field_name: "user_id",
+        field_schema: "keyword",
+      });
+      expect(mockCreatePayloadIndex).toHaveBeenCalledWith("documents", {
+        field_name: "doc_id",
+        field_schema: "keyword",
+      });
     });
   });
 });

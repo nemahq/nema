@@ -34,6 +34,10 @@ export function createQdrantStore(): VectorStore {
               field_name: "user_id",
               field_schema: "keyword",
             });
+            await client.createPayloadIndex(COLLECTION_NAME, {
+              field_name: "doc_id",
+              field_schema: "keyword",
+            });
           } catch (createError) {
             // 다른 인스턴스가 동시에 컬렉션을 생성했을 수 있으므로 재확인
             try {
@@ -48,6 +52,10 @@ export function createQdrantStore(): VectorStore {
               }
               await client.createPayloadIndex(COLLECTION_NAME, {
                 field_name: "user_id",
+                field_schema: "keyword",
+              });
+              await client.createPayloadIndex(COLLECTION_NAME, {
+                field_name: "doc_id",
                 field_schema: "keyword",
               });
             } catch (recheckError) {
@@ -180,6 +188,23 @@ export function createQdrantStore(): VectorStore {
         throw new VectorStoreError(
           `Search failed: ${error instanceof Error ? error.message : String(error)}`,
           "search",
+          error,
+        );
+      }
+    },
+
+    async deleteByDocument(docId: string): Promise<void> {
+      try {
+        await client.delete(COLLECTION_NAME, {
+          wait: true,
+          filter: {
+            must: [{ key: "doc_id", match: { value: docId } }],
+          },
+        });
+      } catch (error) {
+        throw new VectorStoreError(
+          `Delete failed: ${error instanceof Error ? error.message : String(error)}`,
+          "deleteByDocument",
           error,
         );
       }
