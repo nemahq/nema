@@ -55,7 +55,7 @@ describe("createQdrantStore", () => {
       expect(mockCreateCollection).not.toHaveBeenCalled();
     });
 
-    it("creates collection and index when not exists", async () => {
+    it("creates collection and indexes when not exists", async () => {
       mockCollectionExists.mockResolvedValue({ exists: false });
       const store = createQdrantStore();
       await store.ensureCollection();
@@ -64,6 +64,10 @@ describe("createQdrantStore", () => {
       });
       expect(mockCreatePayloadIndex).toHaveBeenCalledWith("documents", {
         field_name: "user_id",
+        field_schema: "keyword",
+      });
+      expect(mockCreatePayloadIndex).toHaveBeenCalledWith("documents", {
+        field_name: "doc_id",
         field_schema: "keyword",
       });
     });
@@ -99,7 +103,7 @@ describe("createQdrantStore", () => {
       await expect(store.ensureCollection()).rejects.toThrow(VectorStoreError);
     });
 
-    it("still creates index after tolerating race condition", async () => {
+    it("still creates indexes after tolerating race condition", async () => {
       mockCollectionExists
         .mockResolvedValueOnce({ exists: false })
         .mockResolvedValueOnce({ exists: true });
@@ -112,6 +116,10 @@ describe("createQdrantStore", () => {
       await store.ensureCollection();
       expect(mockCreatePayloadIndex).toHaveBeenCalledWith("documents", {
         field_name: "user_id",
+        field_schema: "keyword",
+      });
+      expect(mockCreatePayloadIndex).toHaveBeenCalledWith("documents", {
+        field_name: "doc_id",
         field_schema: "keyword",
       });
     });
@@ -374,25 +382,6 @@ describe("createQdrantStore", () => {
 
       expect(err).toBeInstanceOf(VectorStoreError);
       expect((err as VectorStoreError).operation).toBe("deleteByDocument");
-    });
-  });
-
-  describe("ensureCollection doc_id index", () => {
-    it("creates both user_id and doc_id payload indexes", async () => {
-      mockCollectionExists.mockResolvedValue({ exists: false });
-      mockCreateCollection.mockResolvedValue({});
-      mockCreatePayloadIndex.mockResolvedValue({});
-      const store = createQdrantStore();
-      await store.ensureCollection();
-
-      expect(mockCreatePayloadIndex).toHaveBeenCalledWith("documents", {
-        field_name: "user_id",
-        field_schema: "keyword",
-      });
-      expect(mockCreatePayloadIndex).toHaveBeenCalledWith("documents", {
-        field_name: "doc_id",
-        field_schema: "keyword",
-      });
     });
   });
 });

@@ -21,6 +21,17 @@ export function createQdrantStore(): VectorStore {
     apiKey: requireEnv("QDRANT_API_KEY"),
   });
 
+  async function ensurePayloadIndexes(): Promise<void> {
+    await client.createPayloadIndex(COLLECTION_NAME, {
+      field_name: "user_id",
+      field_schema: "keyword",
+    });
+    await client.createPayloadIndex(COLLECTION_NAME, {
+      field_name: "doc_id",
+      field_schema: "keyword",
+    });
+  }
+
   return {
     async ensureCollection(): Promise<void> {
       try {
@@ -30,43 +41,19 @@ export function createQdrantStore(): VectorStore {
             await client.createCollection(COLLECTION_NAME, {
               vectors: { size: VECTOR_DIMENSION, distance: "Cosine" },
             });
-            await client.createPayloadIndex(COLLECTION_NAME, {
-              field_name: "user_id",
-              field_schema: "keyword",
-            });
-            await client.createPayloadIndex(COLLECTION_NAME, {
-              field_name: "doc_id",
-              field_schema: "keyword",
-            });
           } catch (createError) {
             // 다른 인스턴스가 동시에 컬렉션을 생성했을 수 있으므로 재확인
-            try {
-              const { exists: recheck } =
-                await client.collectionExists(COLLECTION_NAME);
-              if (!recheck) {
-                throw new VectorStoreError(
-                  `Failed to create collection: ${createError instanceof Error ? createError.message : String(createError)}`,
-                  "ensureCollection",
-                  createError,
-                );
-              }
-              await client.createPayloadIndex(COLLECTION_NAME, {
-                field_name: "user_id",
-                field_schema: "keyword",
-              });
-              await client.createPayloadIndex(COLLECTION_NAME, {
-                field_name: "doc_id",
-                field_schema: "keyword",
-              });
-            } catch (recheckError) {
-              if (recheckError instanceof VectorStoreError) throw recheckError;
+            const { exists: recheck } =
+              await client.collectionExists(COLLECTION_NAME);
+            if (!recheck) {
               throw new VectorStoreError(
-                `Failed to ensure collection: ${createError instanceof Error ? createError.message : String(createError)}`,
+                `Failed to create collection: ${createError instanceof Error ? createError.message : String(createError)}`,
                 "ensureCollection",
                 createError,
               );
             }
           }
+          await ensurePayloadIndexes();
         }
       } catch (error) {
         if (error instanceof VectorStoreError) throw error;
