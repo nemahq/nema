@@ -25,8 +25,6 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 | ----------------------------------------- | -------------------------------- |
 | `.js` extension in relative imports (ESM) | `import { foo } from "./bar.js"` |
 | `VITE_` prefix for frontend env vars      | `VITE_API_URL`                   |
-| Component files: PascalCase               | `UserProfile.tsx`                |
-| Non-component files: kebab-case           | `use-auth.ts`                    |
 
 - `@nema-io/shared` exports raw TypeScript source. Import from `src/`, not compiled output.
 - `AppRouter` type lives in `apps/server/src/router.ts`. Frontend imports for end-to-end type safety.
