@@ -21,6 +21,12 @@ src/
 - `infra/` isolates external dependencies. LLM provider swap = change inside `infra/`.
 - `prompts/` stay separate for independent tuning/review.
 
+## Naming
+
+| Scope         | Pattern    | Example              |
+| ------------- | ---------- | -------------------- |
+| Non-component | kebab-case | `openai-provider.ts` |
+
 ## Rules
 
 - `GET /health` MUST always exist (Railway health check).
