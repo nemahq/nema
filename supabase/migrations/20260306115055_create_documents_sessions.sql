@@ -10,6 +10,7 @@ create table documents (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users(id) on delete cascade,
   title      text,
+  category   text,
   tags       text[] default '{}',
   summary    text,
   body       text not null,
@@ -22,8 +23,9 @@ create table documents (
 create table sessions (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users(id) on delete cascade,
-  messages   jsonb not null default '[]',
-  draft      jsonb,
+  title      text,
+  messages   jsonb not null default '[]' check (jsonb_typeof(messages) = 'array'),
+  draft      jsonb check (draft is null or jsonb_typeof(draft) = 'object'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -40,15 +42,14 @@ create table session_documents (
 -- Indexes
 -- =============================================================
 
-create index idx_documents_user_id           on documents (user_id);
-create index idx_documents_ingestion_status  on documents (ingestion_status);
+create index idx_documents_user_created      on documents (user_id, created_at desc);
+create index idx_documents_pending           on documents (id) where ingestion_status = 'pending';
 create index idx_documents_tags              on documents using gin (tags);
-create index idx_documents_created_at        on documents (created_at desc);
-create index idx_sessions_user_id            on sessions (user_id);
+create index idx_sessions_user_updated       on sessions (user_id, updated_at desc);
 create index idx_session_documents_document_id on session_documents (document_id);
 
 -- =============================================================
--- RLS: row-level security (owner CRUD only)
+-- RLS: row-level security
 -- =============================================================
 
 alter table documents enable row level security;
@@ -65,13 +66,15 @@ create policy "sessions_owner" on sessions
   for all using (user_id = auth.uid())
   with check  (user_id = auth.uid());
 
--- session_documents: owner can CRUD (via session ownership)
+-- session_documents: owner can CRUD (via session + document ownership)
 create policy "session_documents_owner" on session_documents
   for all using (
     session_id in (select id from sessions where user_id = auth.uid())
+    and document_id in (select id from documents where user_id = auth.uid())
   )
   with check (
     session_id in (select id from sessions where user_id = auth.uid())
+    and document_id in (select id from documents where user_id = auth.uid())
   );
 
 -- =============================================================
