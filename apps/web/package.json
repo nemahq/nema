@@ -14,8 +14,8 @@
   "dependencies": {
     "@nema-io/shared": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
-    "@trpc/client": "^11.0.0",
-    "@trpc/react-query": "^11.0.0",
+    "@trpc/client": "^11.12.0",
+    "@trpc/react-query": "^11.12.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
