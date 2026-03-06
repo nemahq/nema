@@ -18,7 +18,7 @@ export type DraftOutput = z.infer<typeof DraftOutputSchema>;
  * (similar docs, existing tag pool). Discriminated union enforces:
  * create → null target_id, update → string target_id + merged_body.
  */
-const Phase2MetaSchema = z.object({
+const SaveMetaSchema = z.object({
   title: z.string().min(1),
   category: z.string().min(1).optional(), // pre-included; prompt rules TBD
   tags: z.array(z.string().min(1)),
@@ -26,11 +26,11 @@ const Phase2MetaSchema = z.object({
 });
 
 export const SaveOutputSchema = z.discriminatedUnion("action", [
-  Phase2MetaSchema.extend({
+  SaveMetaSchema.extend({
     action: z.literal("create"),
     target_id: z.null(),
   }),
-  Phase2MetaSchema.extend({
+  SaveMetaSchema.extend({
     action: z.literal("update"),
     target_id: z.string().min(1),
     merged_body: z.string().min(1),
