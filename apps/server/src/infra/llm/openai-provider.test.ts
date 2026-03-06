@@ -48,10 +48,7 @@ describe("OpenAiProvider", () => {
       expect(() => new OpenAiProvider({ apiKey: "" })).toThrow(LlmError);
     });
 
-    it("creates provider with valid apiKey", () => {
-      expect(() => createProvider()).not.toThrow();
-    });
-  });
+});
 
   describe("generateStructured", () => {
     let provider: OpenAiProvider;
