@@ -105,6 +105,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.166.2
         version: 1.166.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@tolgee/react':
+        specifier: ^6.4.0
+        version: 6.4.0(react@19.2.4)
       '@trpc/client':
         specifier: ^11.12.0
         version: 11.12.0(@trpc/server@11.12.0(typescript@5.9.3))(typescript@5.9.3)
@@ -1835,6 +1838,17 @@ packages:
 
   '@tanstack/store@0.9.1':
     resolution: {integrity: sha512-+qcNkOy0N1qSGsP7omVCW0SDrXtaDcycPqBDE726yryiA5eTDFpjBReaYjghVJwNf1pcPMyzIwTGlYjCSQR0Fg==}
+
+  '@tolgee/core@6.4.0':
+    resolution: {integrity: sha512-LeoAYSaGoY0vqiIhjUiTThwmFufj83zeR35CizibR13ZQjHUbNaC07DwWOTmhR7f2ZSFPj8M/CkdxWXpN4kewg==}
+
+  '@tolgee/react@6.4.0':
+    resolution: {integrity: sha512-6p/M97RPS3eYoyyKE+JU5zPIkOu3mp+8BHEeIAetKP0If22Z6vSFKj9ulZuYPAtL3euMDE0Z+6W1YnVkuyHbzQ==}
+    peerDependencies:
+      react: ^16.14.0 || ^17.0.1 || ^18.1.0 || ^19
+
+  '@tolgee/web@6.4.0':
+    resolution: {integrity: sha512-pAUJf/mf7PMZsfQbOzjWHQpVrsbq1TWjg5IQ0S738TiN0V95Kt7dF3gBL7ebVecpLHv6lwDRQPxbPNJ45piwww==}
 
   '@trpc/client@11.12.0':
     resolution: {integrity: sha512-zTwFKQdE99pvNm7kXFdHo5xIQpGqpQJHtqVkT9o+i8h/0fbDOUBEEbFVICiMsNA+GiXskoaDRX2l+z6ir+Ug3w==}
@@ -6117,6 +6131,17 @@ snapshots:
       tiny-warning: 1.0.3
 
   '@tanstack/store@0.9.1': {}
+
+  '@tolgee/core@6.4.0': {}
+
+  '@tolgee/react@6.4.0(react@19.2.4)':
+    dependencies:
+      '@tolgee/web': 6.4.0
+      react: 19.2.4
+
+  '@tolgee/web@6.4.0':
+    dependencies:
+      '@tolgee/core': 6.4.0
 
   '@trpc/client@11.12.0(@trpc/server@11.12.0(typescript@5.9.3))(typescript@5.9.3)':
     dependencies:
