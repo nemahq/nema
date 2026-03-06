@@ -1,3 +1,5 @@
+export const VECTOR_DIMENSION = 1024;
+
 export type EmbeddingInputType = "document" | "query";
 
 export interface EmbeddingResult {
@@ -26,7 +28,7 @@ export interface EmbeddingProvider {
 export class EmbeddingError extends Error {
   constructor(
     message: string,
-    public readonly provider: string,
+    public readonly providerId: string,
     cause?: unknown,
   ) {
     super(message, { cause });

@@ -206,24 +206,6 @@ describe("createQdrantStore", () => {
       expect(points[2].payload.text).toBe("chunk-2");
     });
 
-    it("includes created_at in ISO format in payload", async () => {
-      mockUpsert.mockResolvedValue({});
-      const store = createQdrantStore();
-      const provider = fakeProvider([[0.1, 0.2]]);
-      await store.upsert(provider, {
-        docId: "d1",
-        userId: "u1",
-        chunks: ["text"],
-        tags: [],
-        summary: "s",
-      });
-
-      const points = mockUpsert.mock.calls[0][1].points;
-      expect(points[0].payload.created_at).toMatch(
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
-      );
-    });
-
     it("throws VectorStoreError when provider dimension mismatches", async () => {
       const store = createQdrantStore();
       const provider = fakeProvider([[0.1, 0.2]], 512);

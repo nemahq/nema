@@ -5,10 +5,10 @@ import type {
   EmbeddingResult,
   EmbeddingProviderConfig,
 } from "./embedding-provider.js";
-import { EmbeddingError } from "./embedding-provider.js";
+import { EmbeddingError, VECTOR_DIMENSION } from "./embedding-provider.js";
 
+const PROVIDER_ID = "voyage";
 const DEFAULT_MODEL = "voyage-4-large";
-const DEFAULT_DIMENSION = 1024;
 const MAX_BATCH_SIZE = 128;
 
 export interface VoyageProviderConfig extends EmbeddingProviderConfig {
@@ -22,14 +22,14 @@ export function createVoyageProvider(
   const {
     apiKey,
     model = DEFAULT_MODEL,
-    dimension = DEFAULT_DIMENSION,
+    dimension = VECTOR_DIMENSION,
     timeoutSeconds = 30,
   } = config;
 
   const client = new VoyageAIClient({ apiKey });
 
   return {
-    providerId: "voyage",
+    providerId: PROVIDER_ID,
     model,
     dimension,
 
@@ -44,7 +44,7 @@ export function createVoyageProvider(
       if (texts.length > MAX_BATCH_SIZE) {
         throw new EmbeddingError(
           `Batch size ${texts.length} exceeds limit of ${MAX_BATCH_SIZE}`,
-          "voyage",
+          PROVIDER_ID,
         );
       }
 
@@ -62,7 +62,7 @@ export function createVoyageProvider(
         if (!response.data) {
           throw new EmbeddingError(
             "Voyage API returned no data in response",
-            "voyage",
+            PROVIDER_ID,
           );
         }
 
@@ -70,7 +70,7 @@ export function createVoyageProvider(
           if (!item.embedding) {
             throw new EmbeddingError(
               "Response item missing embedding vector",
-              "voyage",
+              PROVIDER_ID,
             );
           }
           return item.embedding;
@@ -79,7 +79,7 @@ export function createVoyageProvider(
         if (embeddings.length !== texts.length) {
           throw new EmbeddingError(
             `Expected ${texts.length} embeddings, got ${embeddings.length}`,
-            "voyage",
+            PROVIDER_ID,
           );
         }
 
@@ -96,7 +96,7 @@ export function createVoyageProvider(
         if (error instanceof EmbeddingError) throw error;
         throw new EmbeddingError(
           `Voyage embed failed: ${error instanceof Error ? error.message : String(error)}`,
-          "voyage",
+          PROVIDER_ID,
           error,
         );
       }

@@ -1,6 +1,9 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { requireEnv } from "../../env.js";
-import type { EmbeddingProvider } from "../embedding/index.js";
+import {
+  VECTOR_DIMENSION,
+  type EmbeddingProvider,
+} from "../embedding/index.js";
 import type {
   VectorStore,
   UpsertOptions,
@@ -11,7 +14,6 @@ import type {
 import { VectorStoreError } from "./vector-store.js";
 
 const COLLECTION_NAME = "documents";
-const VECTOR_SIZE = 1024;
 
 export function createQdrantStore(): VectorStore {
   const client = new QdrantClient({
@@ -26,7 +28,11 @@ export function createQdrantStore(): VectorStore {
         if (!exists) {
           try {
             await client.createCollection(COLLECTION_NAME, {
-              vectors: { size: VECTOR_SIZE, distance: "Cosine" },
+              vectors: { size: VECTOR_DIMENSION, distance: "Cosine" },
+            });
+            await client.createPayloadIndex(COLLECTION_NAME, {
+              field_name: "user_id",
+              field_schema: "keyword",
             });
           } catch (createError) {
             // Tolerate race condition: another instance may have created it
@@ -40,6 +46,10 @@ export function createQdrantStore(): VectorStore {
                   createError,
                 );
               }
+              await client.createPayloadIndex(COLLECTION_NAME, {
+                field_name: "user_id",
+                field_schema: "keyword",
+              });
             } catch (recheckError) {
               if (recheckError instanceof VectorStoreError) throw recheckError;
               throw new VectorStoreError(
@@ -50,11 +60,6 @@ export function createQdrantStore(): VectorStore {
             }
           }
         }
-
-        await client.createPayloadIndex(COLLECTION_NAME, {
-          field_name: "user_id",
-          field_schema: "keyword",
-        });
       } catch (error) {
         if (error instanceof VectorStoreError) throw error;
         throw new VectorStoreError(
@@ -73,9 +78,9 @@ export function createQdrantStore(): VectorStore {
 
       if (chunks.length === 0) return [];
 
-      if (provider.dimension !== VECTOR_SIZE) {
+      if (provider.dimension !== VECTOR_DIMENSION) {
         throw new VectorStoreError(
-          `Provider dimension ${provider.dimension} does not match collection vector size ${VECTOR_SIZE}`,
+          `Provider dimension ${provider.dimension} does not match collection vector size ${VECTOR_DIMENSION}`,
           "upsert",
         );
       }
@@ -136,9 +141,9 @@ export function createQdrantStore(): VectorStore {
     ): Promise<VectorSearchResult[]> {
       const { userId, query, limit = 10, scoreThreshold } = options;
 
-      if (provider.dimension !== VECTOR_SIZE) {
+      if (provider.dimension !== VECTOR_DIMENSION) {
         throw new VectorStoreError(
-          `Provider dimension ${provider.dimension} does not match collection vector size ${VECTOR_SIZE}`,
+          `Provider dimension ${provider.dimension} does not match collection vector size ${VECTOR_DIMENSION}`,
           "search",
         );
       }
