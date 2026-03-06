@@ -35,6 +35,12 @@ src/
 | Non-component | camelCase      | `useAuth.ts`      |
 | Env var       | `VITE_` prefix | `VITE_API_URL`    |
 
+## Responsive
+
+- Desktop-first design. Base styles = mobile, `md:` = desktop (follows Tailwind mobile-first direction).
+- MUST use only `md:` (768px) breakpoint. Tablet gets desktop layout.
+- MUST NOT use `sm:`, `lg:`, `xl:`, `2xl:` in project code (shadcn internals exempt).
+
 ## Dev
 
 - `pnpm dev` — Vite dev server at :5173 (HMR).
