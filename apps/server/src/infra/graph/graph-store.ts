@@ -9,13 +9,16 @@ export class GraphStoreError extends Error {
   }
 }
 
-export type EntityType =
-  | "Person"
-  | "Organization"
-  | "Topic"
-  | "Event"
-  | "Project"
-  | "Location";
+export const ENTITY_TYPES = [
+  "Person",
+  "Organization",
+  "Topic",
+  "Event",
+  "Project",
+  "Location",
+] as const;
+
+export type EntityType = (typeof ENTITY_TYPES)[number];
 
 export interface GraphEntity {
   type: EntityType;
@@ -71,5 +74,6 @@ export interface GraphStore {
   ): Promise<GraphSearchResult[]>;
   listEntities(options: ListEntitiesOptions): Promise<GraphEntity[]>;
   mergeEntities(options: MergeEntitiesOptions): Promise<void>;
+  // userId 불필요 — Document 노드에 userId 없음. 접근 제어는 서비스 레이어 책임.
   deleteByDocument(docId: string): Promise<void>;
 }

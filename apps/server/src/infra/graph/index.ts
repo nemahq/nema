@@ -1,5 +1,5 @@
 export { createNeo4jStore } from "./neo4j-store.js";
-export { GraphStoreError } from "./graph-store.js";
+export { GraphStoreError, ENTITY_TYPES } from "./graph-store.js";
 export type {
   GraphStore,
   EntityType,

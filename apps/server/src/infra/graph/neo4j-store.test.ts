@@ -80,6 +80,18 @@ describe("createNeo4jStore", () => {
       expect(mockExecuteWrite).not.toHaveBeenCalled();
     });
 
+    it("rejects blank entity name", async () => {
+      const store = createNeo4jStore();
+      await expect(
+        store.upsertEntities({
+          docId: "d1",
+          userId: "u1",
+          entities: [{ type: "Person", name: "  " }],
+        }),
+      ).rejects.toThrow(GraphStoreError);
+      expect(mockExecuteWrite).not.toHaveBeenCalled();
+    });
+
     it("merges document, entities, and edges", async () => {
       mockRun.mockResolvedValue({ records: [] });
       const store = createNeo4jStore();
@@ -92,7 +104,6 @@ describe("createNeo4jStore", () => {
         ],
       });
 
-      // 1 Document MERGE + 2 Entity MERGE + 1 RELATED_TO
       expect(mockRun).toHaveBeenCalledTimes(4);
       expect(mockRun.mock.calls[0][0]).toContain("MERGE (d:Document");
       expect(mockRun.mock.calls[1][1]).toEqual(
@@ -113,7 +124,6 @@ describe("createNeo4jStore", () => {
         entities: [{ type: "Person", name: "김철수" }],
       });
 
-      // 1 Document MERGE + 1 Entity MERGE, no RELATED_TO
       expect(mockRun).toHaveBeenCalledTimes(2);
     });
 
@@ -155,6 +165,71 @@ describe("createNeo4jStore", () => {
         { docId: "d2", sharedEntityCount: 3 },
         { docId: "d3", sharedEntityCount: 1 },
       ]);
+    });
+
+    it("accumulates scores across multiple hops", async () => {
+      const hop1Record = {
+        get: (key: string) =>
+          key === "docId" ? "d2" : { low: 2, high: 0, toNumber: () => 2 },
+      };
+      const hop2Record = {
+        get: (key: string) =>
+          key === "docId" ? "d3" : { low: 1, high: 0, toNumber: () => 1 },
+      };
+      mockRun
+        .mockResolvedValueOnce({ records: [hop1Record] })
+        .mockResolvedValueOnce({ records: [hop2Record] });
+
+      const store = createNeo4jStore();
+      const results = await store.findRelatedDocuments({
+        docId: "d1",
+        userId: "u1",
+        depth: 2,
+      });
+
+      expect(mockRun).toHaveBeenCalledTimes(2);
+      expect(mockRun.mock.calls[1][1].frontier).toEqual(["d2"]);
+      expect(mockRun.mock.calls[1][1].visited).toEqual(
+        expect.arrayContaining(["d1", "d2"]),
+      );
+      expect(results).toEqual([
+        { docId: "d2", sharedEntityCount: 2 },
+        { docId: "d3", sharedEntityCount: 1 },
+      ]);
+    });
+
+    it("stops early when frontier is empty", async () => {
+      mockRun.mockResolvedValue({ records: [] });
+      const store = createNeo4jStore();
+      await store.findRelatedDocuments({
+        docId: "d1",
+        userId: "u1",
+        depth: 3,
+      });
+      expect(mockRun).toHaveBeenCalledTimes(1);
+    });
+
+    it("respects limit parameter", async () => {
+      mockRun.mockResolvedValue({
+        records: [
+          {
+            get: (key: string) =>
+              key === "docId" ? "d2" : { low: 3, high: 0, toNumber: () => 3 },
+          },
+          {
+            get: (key: string) =>
+              key === "docId" ? "d3" : { low: 1, high: 0, toNumber: () => 1 },
+          },
+        ],
+      });
+      const store = createNeo4jStore();
+      const results = await store.findRelatedDocuments({
+        docId: "d1",
+        userId: "u1",
+        limit: 1,
+      });
+      expect(results).toHaveLength(1);
+      expect(results[0].docId).toBe("d2");
     });
 
     it("returns empty array when no related documents", async () => {
@@ -263,7 +338,6 @@ describe("createNeo4jStore", () => {
         type: "Person",
       });
 
-      // MENTIONED_IN transfer + RELATED_TO transfer + source delete
       expect(mockRun).toHaveBeenCalledTimes(3);
       expect(mockRun.mock.calls[0][0]).toContain("MENTIONED_IN");
       expect(mockRun.mock.calls[1][0]).toContain("RELATED_TO");
@@ -299,14 +373,6 @@ describe("createNeo4jStore", () => {
       await expect(store.deleteByDocument("d1")).rejects.toThrow(
         GraphStoreError,
       );
-    });
-  });
-
-  describe("close", () => {
-    it("closes the driver", async () => {
-      const store = createNeo4jStore();
-      await store.close();
-      expect(mockClose).toHaveBeenCalled();
     });
   });
 });

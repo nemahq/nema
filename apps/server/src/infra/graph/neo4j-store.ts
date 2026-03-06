@@ -35,19 +35,32 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
            FOR (d:Document) ON (d.docId)`,
         );
       } catch (error) {
+        if (error instanceof GraphStoreError) throw error;
         throw new GraphStoreError(
           `Failed to ensure schema: ${error instanceof Error ? error.message : String(error)}`,
           "ensureSchema",
           error,
         );
       } finally {
-        await session.close();
+        try {
+          await session.close();
+        } catch {
+          /* 원래 에러 보존 */
+        }
       }
     },
 
     async upsertEntities(options: UpsertEntitiesOptions): Promise<void> {
       const { docId, userId, entities } = options;
       if (entities.length === 0) return;
+      for (const e of entities) {
+        if (!e.name.trim()) {
+          throw new GraphStoreError(
+            "Entity name must not be blank",
+            "upsertEntities",
+          );
+        }
+      }
 
       const session = driver.session();
       try {
@@ -64,7 +77,6 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
             );
           }
 
-          // RELATED_TO between co-occurring entities
           if (entities.length > 1) {
             await tx.run(
               `MATCH (d:Document {docId: $docId})<-[:MENTIONED_IN]-(e:Entity {userId: $userId})
@@ -85,7 +97,11 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           error,
         );
       } finally {
-        await session.close();
+        try {
+          await session.close();
+        } catch {
+          /* 원래 에러 보존 */
+        }
       }
     },
 
@@ -124,13 +140,18 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           .sort((a, b) => b.sharedEntityCount - a.sharedEntityCount)
           .slice(0, limit);
       } catch (error) {
+        if (error instanceof GraphStoreError) throw error;
         throw new GraphStoreError(
           `findRelatedDocuments failed: ${error instanceof Error ? error.message : String(error)}`,
           "findRelatedDocuments",
           error,
         );
       } finally {
-        await session.close();
+        try {
+          await session.close();
+        } catch {
+          /* 원래 에러 보존 */
+        }
       }
     },
 
@@ -155,13 +176,18 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           sharedEntityCount: (r.get("sharedEntityCount") as Integer).toNumber(),
         }));
       } catch (error) {
+        if (error instanceof GraphStoreError) throw error;
         throw new GraphStoreError(
           `findDocumentsByEntities failed: ${error instanceof Error ? error.message : String(error)}`,
           "findDocumentsByEntities",
           error,
         );
       } finally {
-        await session.close();
+        try {
+          await session.close();
+        } catch {
+          /* 원래 에러 보존 */
+        }
       }
     },
 
@@ -184,13 +210,18 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           name: r.get("name") as string,
         }));
       } catch (error) {
+        if (error instanceof GraphStoreError) throw error;
         throw new GraphStoreError(
           `listEntities failed: ${error instanceof Error ? error.message : String(error)}`,
           "listEntities",
           error,
         );
       } finally {
-        await session.close();
+        try {
+          await session.close();
+        } catch {
+          /* 원래 에러 보존 */
+        }
       }
     },
 
@@ -229,13 +260,18 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           );
         });
       } catch (error) {
+        if (error instanceof GraphStoreError) throw error;
         throw new GraphStoreError(
           `mergeEntities failed: ${error instanceof Error ? error.message : String(error)}`,
           "mergeEntities",
           error,
         );
       } finally {
-        await session.close();
+        try {
+          await session.close();
+        } catch {
+          /* 원래 에러 보존 */
+        }
       }
     },
 
@@ -255,13 +291,18 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           );
         });
       } catch (error) {
+        if (error instanceof GraphStoreError) throw error;
         throw new GraphStoreError(
           `deleteByDocument failed: ${error instanceof Error ? error.message : String(error)}`,
           "deleteByDocument",
           error,
         );
       } finally {
-        await session.close();
+        try {
+          await session.close();
+        } catch {
+          /* 원래 에러 보존 */
+        }
       }
     },
 
