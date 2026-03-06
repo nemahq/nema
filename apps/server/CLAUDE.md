@@ -13,7 +13,8 @@ src/
 ├── routers/     # tRPC endpoint definitions (thin: validation + service call)
 ├── services/    # Orchestration logic (core business flows)
 ├── infra/       # External service clients (Supabase, Qdrant, Neo4j, LLM, Embedding)
-└── prompts/     # LLM prompt templates (independently tunable)
+├── prompts/     # LLM prompt templates (independently tunable)
+└── eval/        # Prompt quality evaluation: seed data, runners, results
 ```
 
 - `routers/` are thin: input validation + service call only. No business logic.
