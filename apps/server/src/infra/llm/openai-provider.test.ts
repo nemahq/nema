@@ -3,7 +3,6 @@ import { z } from "zod";
 import { OpenAiProvider } from "./openai-provider.js";
 import { LlmError } from "./llm-error.js";
 
-// Mock OpenAI SDK
 vi.mock("openai", () => {
   const MockOpenAI = vi.fn();
   return { default: MockOpenAI };
@@ -24,7 +23,6 @@ function createProvider(overrides?: { model?: string; timeout?: number }) {
 
 function mockParse(provider: OpenAiProvider, response: unknown) {
   const parseFn = vi.fn().mockResolvedValue(response);
-  // Access the private client to attach mock
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (provider as any).client = {
     chat: { completions: { parse: parseFn } },
@@ -34,7 +32,6 @@ function mockParse(provider: OpenAiProvider, response: unknown) {
 
 function mockParseRejection(provider: OpenAiProvider, error: Error) {
   const parseFn = vi.fn().mockRejectedValue(error);
-  // Access the private client to attach mock rejection
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (provider as any).client = {
     chat: { completions: { parse: parseFn } },
@@ -47,8 +44,7 @@ describe("OpenAiProvider", () => {
     it("throws LlmError when apiKey is empty", () => {
       expect(() => new OpenAiProvider({ apiKey: "" })).toThrow(LlmError);
     });
-
-});
+  });
 
   describe("generateStructured", () => {
     let provider: OpenAiProvider;
@@ -118,7 +114,6 @@ describe("OpenAiProvider", () => {
         model: "gpt-4o-mini",
       });
 
-      // Access mock via private client to verify call args
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const callArgs = (provider as any).client.chat.completions.parse.mock
         .calls[0]?.[0];

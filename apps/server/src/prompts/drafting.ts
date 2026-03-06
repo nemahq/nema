@@ -1,13 +1,7 @@
-/**
- * Phase 1 — Drafting prompt
- *
- * Refines raw user input into structured, clear prose.
- * Produces body only. No titles, tags, summaries, or metadata.
- */
+// 드래프팅 프롬프트 — 사용자 입력을 구조화된 문서로 정제
+// body만 생성. 제목/태그/요약/메타데이터는 생성하지 않음
 
-// ---------------------------------------------------------------------------
-// System prompt (Fixed)
-// ---------------------------------------------------------------------------
+// --- 시스템 프롬프트 (고정) ---
 
 export const PHASE1_SYSTEM_PROMPT = `You are a structuring engine that refines raw user input into clear, well-organized prose. You only produce the refined body — never titles, tags, summaries, or metadata.
 
@@ -55,9 +49,7 @@ On edit cycles, always set "session_title" to null.
 </example>
 </examples>`;
 
-// ---------------------------------------------------------------------------
-// User message builders (Variable)
-// ---------------------------------------------------------------------------
+// --- 사용자 메시지 빌더 (가변) ---
 
 export function buildFirstCallMessage(userInput: string): string {
   return `<input>${userInput}</input>`;

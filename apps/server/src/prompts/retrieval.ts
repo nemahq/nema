@@ -1,14 +1,7 @@
-/**
- * Pull-out — Retrieval answer generation prompt
- *
- * Generates answers strictly from search results.
- * Never supplements with LLM general knowledge.
- * Answers in the same language as the user's question.
- */
+// 검색 응답 생성 프롬프트 — 검색 결과만으로 답변 생성
+// LLM 일반 지식 보충 금지. 사용자 질문과 동일 언어로 응답
 
-// ---------------------------------------------------------------------------
-// System prompt (Fixed)
-// ---------------------------------------------------------------------------
+// --- 시스템 프롬프트 (고정) ---
 
 export const RETRIEVAL_SYSTEM_PROMPT = `You are a knowledge retrieval assistant that answers questions strictly based on provided search results. Never use your general knowledge to supplement answers.
 
@@ -51,9 +44,7 @@ Interviewed a senior frontend candidate across two rounds. Technical skills were
 </example>
 </examples>`;
 
-// ---------------------------------------------------------------------------
-// User message builder (Variable)
-// ---------------------------------------------------------------------------
+// --- 사용자 메시지 빌더 (가변) ---
 
 export function buildRetrievalMessage(
   question: string,

@@ -1,17 +1,8 @@
-/**
- * Phase 2 — Saving prompts
- *
- * Three LLM calls in sequence:
- * 1. Multi-topic split — determine if body contains independent topics
- * 2. Judgment + merge — create/update decision, merge if update
- * 3. Meta generation — title, tags, summary from final body
- *
- * Step 4 (merge re-split) reuses the split prompt (1).
- */
+// 저장 프롬프트 — 3단계 순차 LLM 호출
+// 1. 토픽 분리 → 2. 생성/업데이트 판단 + 병합 → 3. 메타 생성
+// 4단계(병합 후 재분리)는 1번 프롬프트 재사용
 
-// ---------------------------------------------------------------------------
-// 1. Multi-topic split
-// ---------------------------------------------------------------------------
+// --- 1. 토픽 분리 ---
 
 export const SPLIT_SYSTEM_PROMPT = `You are a topic splitter that determines whether a text contains multiple independent topics that should be stored as separate documents.
 
@@ -46,9 +37,7 @@ export function buildSplitMessage(body: string): string {
   return `<input>${body}</input>`;
 }
 
-// ---------------------------------------------------------------------------
-// 2. Judgment + merge (create/update decision)
-// ---------------------------------------------------------------------------
+// --- 2. 생성/업데이트 판단 + 병합 ---
 
 export const JUDGMENT_SYSTEM_PROMPT = `You are a knowledge base curator that decides whether new content should create a new document or update an existing one. When updating, merge the new content with the existing document into a coherent whole.
 
@@ -116,9 +105,7 @@ export function buildJudgmentMessage(
   return `<new_body>${newBody}</new_body>\n\n<similar_documents>\n${docs}\n</similar_documents>`;
 }
 
-// ---------------------------------------------------------------------------
-// 3. Meta generation
-// ---------------------------------------------------------------------------
+// --- 3. 메타 생성 ---
 
 export const META_SYSTEM_PROMPT = `You are a metadata generator that produces a title, tags, and summary for a given document body.
 

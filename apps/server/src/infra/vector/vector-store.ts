@@ -11,7 +11,6 @@ export class VectorStoreError extends Error {
   }
 }
 
-/** Qdrant payload schema — uses snake_case to match storage layer. */
 export interface DocumentPayload {
   doc_id: string;
   user_id: string;

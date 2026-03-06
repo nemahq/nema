@@ -1,16 +1,7 @@
-/**
- * Intent Router prompts
- *
- * Classifies user input intent. Two variants:
- * - Draft inactive (A): put-in / pull-out
- * - Draft active (B): edit / pull-out / save / cancel
- *
- * Backend selects which prompt to use based on session draft state.
- */
+// 의도 분류 프롬프트
+// 세션 드래프트 상태에 따라 A(비활성) 또는 B(활성) 선택
 
-// ---------------------------------------------------------------------------
-// Prompt A — Draft inactive (2-way classification)
-// ---------------------------------------------------------------------------
+// --- Prompt A: 드래프트 비활성 (put-in / pull-out 2분류) ---
 
 export const INTENT_ROUTER_INACTIVE_SYSTEM_PROMPT = `You are an intent router that classifies user input as either storing knowledge (put-in) or retrieving knowledge (pull-out). When retrieval, also generate search queries and entity keywords.
 
@@ -46,9 +37,7 @@ Return a JSON object with exactly three fields:
 </example>
 </examples>`;
 
-// ---------------------------------------------------------------------------
-// Prompt B — Draft active (4-way classification)
-// ---------------------------------------------------------------------------
+// --- Prompt B: 드래프트 활성 (edit / pull-out / save / cancel 4분류) ---
 
 export const INTENT_ROUTER_ACTIVE_SYSTEM_PROMPT = `You are an intent router that classifies user input during an active draft session. Determine whether the user wants to edit the draft, retrieve knowledge, save, or cancel.
 
@@ -86,9 +75,7 @@ Return a JSON object with exactly three fields:
 </example>
 </examples>`;
 
-// ---------------------------------------------------------------------------
-// User message builder (shared)
-// ---------------------------------------------------------------------------
+// --- 사용자 메시지 빌더 (공용) ---
 
 export function buildIntentRouterMessage(userInput: string): string {
   return `<input>${userInput}</input>`;

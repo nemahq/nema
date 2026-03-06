@@ -93,7 +93,7 @@ describe("createVoyageProvider", () => {
       .catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(EmbeddingError);
-    expect((err as EmbeddingError).provider).toBe("voyage");
+    expect((err as EmbeddingError).providerId).toBe("voyage");
   });
 
   it("throws EmbeddingError when response item missing embedding", async () => {

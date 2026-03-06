@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-/** Conversation message. "system" is excluded — use systemPrompt param instead. */
+// "system"은 systemPrompt 파라미터로 별도 전달하므로 role에서 제외
 export interface LlmMessage {
   role: "user" | "assistant";
   content: string;
@@ -16,6 +16,5 @@ export interface GenerateStructuredParams<T> {
 }
 
 export interface LlmProvider {
-  /** @throws {LlmError} on any LLM call failure */
   generateStructured<T>(params: GenerateStructuredParams<T>): Promise<T>;
 }
