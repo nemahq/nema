@@ -37,7 +37,7 @@ src/
 
 ## Responsive
 
-- Desktop-first design, Tailwind mobile-first direction. Design for desktop, write base styles for mobile, add desktop styles with `md:`.
+- Desktop-first design. Base styles = mobile, `md:` = desktop (follows Tailwind mobile-first direction).
 - MUST use only `md:` (768px) breakpoint. Tablet gets desktop layout.
 - MUST NOT use `sm:`, `lg:`, `xl:`, `2xl:` in project code (shadcn internals exempt).
 
