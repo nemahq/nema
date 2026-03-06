@@ -29,9 +29,13 @@ function applyTheme(theme: Theme) {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "dark" || stored === "light" || stored === "system") {
-      return stored;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored === "dark" || stored === "light" || stored === "system") {
+        return stored;
+      }
+    } catch {
+      // localStorage 접근 불가 — light 기본값 사용
     }
     return "light";
   });
@@ -51,7 +55,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   const setTheme = (next: Theme) => {
-    localStorage.setItem(STORAGE_KEY, next);
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // 저장 실패해도 현재 세션에서는 테마 적용
+    }
     setThemeState(next);
   };
 
