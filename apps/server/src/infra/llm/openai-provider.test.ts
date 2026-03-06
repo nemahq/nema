@@ -47,8 +47,7 @@ describe("OpenAiProvider", () => {
     it("throws LlmError when apiKey is empty", () => {
       expect(() => new OpenAiProvider({ apiKey: "" })).toThrow(LlmError);
     });
-
-});
+  });
 
   describe("generateStructured", () => {
     let provider: OpenAiProvider;
