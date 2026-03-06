@@ -2,7 +2,7 @@
 -- Migration: documents, sessions, session_documents
 -- =============================================================
 
--- Enum for document ingestion status
+-- Enum for ingestion pipeline status
 create type ingestion_status as enum ('pending', 'completed', 'failed');
 
 -- ----- documents -----
