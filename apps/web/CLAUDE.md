@@ -31,6 +31,7 @@ src/
 | Scope         | Pattern        | Example           |
 | ------------- | -------------- | ----------------- |
 | Component     | PascalCase     | `UserProfile.tsx` |
+| `components/ui/` | lowercase (shadcn CLI 관리) | `button.tsx` |
 | Non-component | camelCase      | `useAuth.ts`      |
 | Env var       | `VITE_` prefix | `VITE_API_URL`    |
 
