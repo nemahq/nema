@@ -14,8 +14,6 @@ function detectLanguage(): string {
   return DEFAULT_LANGUAGE;
 }
 
-export const tolgee = Tolgee()
-  .use(FormatSimple())
-  .init({
-    language: detectLanguage(),
-  });
+export const tolgee = Tolgee().use(FormatSimple()).init({
+  language: detectLanguage(),
+});
