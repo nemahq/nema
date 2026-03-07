@@ -50,6 +50,4 @@ src/
 ## Dev
 
 - `pnpm dev` — Vite dev server at :5173 (HMR).
-- `pnpm test` — Vitest. Test files co-located as `*.test.tsx`.
- dev server at :5173 (HMR).
-- `pnpm test` — Vitest. Test files co-located as `*.test.tsx`.
+- `pnpm test` — Vitest. Test files co-located as `*.test.ts`.
