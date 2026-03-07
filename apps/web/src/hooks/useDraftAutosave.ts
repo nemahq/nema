@@ -45,6 +45,7 @@ export function useDraftAutosave<T>(
   const [value, setValue] = useState<T>(() => readStorage(key, initialValue));
   const latestRef = useRef(value);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearedRef = useRef(false);
 
   useEffect(() => {
     latestRef.current = value;
@@ -52,6 +53,8 @@ export function useDraftAutosave<T>(
 
   // debounce 저장
   useEffect(() => {
+    if (clearedRef.current) return;
+
     timeoutRef.current = setTimeout(() => {
       writeStorage(key, latestRef.current);
     }, delay);
@@ -65,7 +68,11 @@ export function useDraftAutosave<T>(
 
   // 언마운트·beforeunload 시 즉시 flush — 유실 방지
   useEffect(() => {
-    const flush = () => writeStorage(key, latestRef.current);
+    const flush = () => {
+      if (!clearedRef.current) {
+        writeStorage(key, latestRef.current);
+      }
+    };
     window.addEventListener("beforeunload", flush);
     return () => {
       window.removeEventListener("beforeunload", flush);
@@ -76,10 +83,19 @@ export function useDraftAutosave<T>(
     };
   }, [key]);
 
+  const setDraft = useCallback<React.Dispatch<React.SetStateAction<T>>>(
+    (action) => {
+      clearedRef.current = false;
+      setValue(action);
+    },
+    [],
+  );
+
   const clear = useCallback(() => {
+    clearedRef.current = true;
     removeStorage(key);
     setValue(initialValue);
   }, [key, initialValue]);
 
-  return [value, setValue, { clear }];
+  return [value, setDraft, { clear }];
 }

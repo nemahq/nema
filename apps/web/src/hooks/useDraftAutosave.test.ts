@@ -50,6 +50,12 @@ describe("useDraftAutosave", () => {
 
     expect(result.current[0]).toBe("");
     expect(localStorage.getItem("test")).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(localStorage.getItem("test")).toBeNull();
   });
 
   it("언마운트 시 대기 중인 값을 즉시 저장한다", () => {
