@@ -17,7 +17,21 @@ export default tseslint.config(
   {
     files: ["apps/web/**/*.{ts,tsx}"],
     plugins: { "react-hooks": reactHooks },
-    rules: reactHooks.configs.recommended.rules,
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@tolgee/react",
+              importNames: ["T", "useTranslate"],
+              message: "useTranslation() 훅의 t() 함수를 사용하세요.",
+            },
+          ],
+        },
+      ],
+    },
   },
   {
     ...jsxA11y.flatConfigs.recommended,

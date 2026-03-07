@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { TolgeeProvider } from "@tolgee/react";
-import { tolgee } from "../../lib/tolgee.js";
+import { tolgee } from "../../lib/i18n/tolgee.js";
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   return (

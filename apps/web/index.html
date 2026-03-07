@@ -7,17 +7,13 @@
     <script>
       (function () {
         try {
-          var t = localStorage.getItem("nema-theme");
-          if (t !== "dark" && t !== "light" && t !== "system") t = "light";
-          var d = document.documentElement;
-          if (t === "system") {
-            d.classList.add(
-              window.matchMedia("(prefers-color-scheme: dark)").matches
-                ? "dark"
-                : "light",
-            );
-          } else {
-            d.classList.add(t);
+          var t = localStorage.getItem("theme");
+          if (
+            t === "dark" ||
+            (t === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches)
+          ) {
+            document.documentElement.classList.add("dark");
           }
         } catch (_) {
           document.documentElement.classList.add("light");

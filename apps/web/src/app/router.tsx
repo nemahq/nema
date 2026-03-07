@@ -6,11 +6,11 @@ import {
   Outlet,
   useNavigate,
 } from "@tanstack/react-router";
-import { T } from "@tolgee/react";
 import { Button } from "../components/ui/button.js";
 import { supabase } from "../lib/supabase.js";
 import { App } from "./App.js";
 import { AuthPage } from "../features/auth/components/AuthPage.js";
+import { useTranslation } from "../lib/i18n/index.js";
 
 const rootRoute = createRootRoute({ component: App });
 
@@ -46,12 +46,11 @@ const authenticatedRoute = createRoute({
 
 function HomePage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="flex flex-col items-center gap-4 p-8">
-      <p>
-        <T keyName="common.home" defaultValue="홈" />
-      </p>
+      <p>{t("common.home")}</p>
       <Button
         variant="outline"
         onClick={async () => {
