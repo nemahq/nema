@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      // 캐시 전략 도입 시 'prompt'로 전환 검토
+      // TODO: 캐시 전략 도입 시 'prompt'로 전환 검토
       registerType: "autoUpdate",
       manifest: {
         name: "Nema",
@@ -19,18 +19,7 @@ export default defineConfig({
         display: "standalone",
         theme_color: "#0D9488",
         background_color: "#ffffff",
-        icons: [
-          {
-            src: "/icons/icon-192x192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "/icons/icon-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-        ],
+        // TODO: 앱 아이콘 추가 후 manifest.icons 설정
       },
     }),
   ],
