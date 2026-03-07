@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  type ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 type Theme = "dark" | "light" | "system";
 
@@ -17,17 +23,19 @@ function applyTheme(theme: Theme) {
   const root = document.documentElement;
   root.classList.remove("light", "dark");
 
-  const resolved =
-    theme === "system"
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light"
-      : theme;
+  if (theme !== "system") {
+    root.classList.add(theme);
+    return;
+  }
 
-  root.classList.add(resolved);
+  root.classList.add(
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light",
+  );
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -44,7 +52,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyTheme(theme);
   }, [theme]);
 
-  // system 모드일 때 OS 설정 변경 실시간 반영
   useEffect(() => {
     if (theme !== "system") return;
 
