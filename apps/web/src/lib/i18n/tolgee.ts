@@ -1,23 +1,16 @@
 import { Tolgee, FormatSimple } from "@tolgee/react";
+import type { Locale } from "./types.js";
 import { getStorage } from "../storage.js";
 import ko from "./ko.json";
 import en from "./en.json";
 
-const SUPPORTED_LANGUAGES = ["ko", "en"] as const;
-const DEFAULT_LANGUAGE = "ko";
-
-function detectLanguage(): string {
+function detectLanguage(): Locale {
   const stored = getStorage("locale");
   if (stored) return stored;
 
-  if (typeof navigator === "undefined" || !navigator.language) {
-    return DEFAULT_LANGUAGE;
-  }
-  const browserLang = navigator.language.split("-")[0];
-  if ((SUPPORTED_LANGUAGES as readonly string[]).includes(browserLang)) {
-    return browserLang;
-  }
-  return DEFAULT_LANGUAGE;
+  const browserLang = navigator?.language?.split("-")[0];
+  if (browserLang === "en") return "en";
+  return "ko";
 }
 
 export const tolgee = Tolgee().use(FormatSimple()).init({

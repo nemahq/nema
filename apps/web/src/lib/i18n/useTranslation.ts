@@ -1,10 +1,11 @@
 import { useTranslate } from "@tolgee/react";
+import type { CombinedOptions, DefaultParamType } from "@tolgee/web";
 import type { TranslationKey } from "./types.js";
 
 export function useTranslation() {
   const { t: tolgeeT } = useTranslate();
-
-  const t = (key: TranslationKey) => tolgeeT(key);
-
-  return { t };
+  return {
+    t: (key: TranslationKey, options?: CombinedOptions<DefaultParamType>) =>
+      tolgeeT(key, options),
+  };
 }

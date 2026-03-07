@@ -9,3 +9,5 @@ type Flatten<T, Prefix extends string = ""> = {
 }[keyof T & string];
 
 export type TranslationKey = Flatten<typeof ko>;
+
+export type Locale = "ko" | "en";

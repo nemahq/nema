@@ -1,25 +1,37 @@
+import type { Locale } from "./i18n/types.js";
+
 type StorageMap = {
   theme: "dark" | "light" | "system";
-  locale: "ko" | "en";
+  locale: Locale;
 };
 
-type StorageKey = keyof StorageMap;
+const isValid: {
+  [K in keyof StorageMap]: (v: string) => v is StorageMap[K];
+} = {
+  theme: (v): v is StorageMap["theme"] =>
+    v === "dark" || v === "light" || v === "system",
+  locale: (v): v is StorageMap["locale"] => v === "ko" || v === "en",
+};
 
-export function getStorage<K extends StorageKey>(key: K): StorageMap[K] | null {
+export function getStorage<K extends keyof StorageMap>(
+  key: K,
+): StorageMap[K] | null {
   try {
-    return localStorage.getItem(key) as StorageMap[K] | null;
+    const raw = localStorage.getItem(key);
+    if (raw !== null && isValid[key](raw)) return raw as StorageMap[K];
+    return null;
   } catch {
     return null;
   }
 }
 
-export function setStorage<K extends StorageKey>(
+export function setStorage<K extends keyof StorageMap>(
   key: K,
   value: StorageMap[K],
 ): void {
   try {
     localStorage.setItem(key, value);
   } catch {
-    // 저장 실패 무시
+    // localStorage 미지원 환경 (SSR, 시크릿 모드 등)
   }
 }

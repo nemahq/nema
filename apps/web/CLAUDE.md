@@ -46,7 +46,7 @@ src/
 - Tolgee (`@tolgee/react`) 기반. `useTranslation()` 훅의 `t()` 함수로 번역. `<T>` 컴포넌트 사용 금지.
 - locale JSON: `src/lib/i18n/ko.json`, `en.json`. 키 타입은 `ko.json`에서 자동 추론.
 - 키 네이밍: 첫 segment = feature (e.g. `common.home`, `auth.login`).
-- locale 전환: `changeLocale()`. 우선순위: localStorage → 브라우저 감지 → `ko`.
+- 초기 locale 결정: localStorage → 브라우저 감지 → `ko`. 런타임 전환: `changeLocale()`.
 - 프로덕션: staticData 번들. 인컨텍스트 편집 미사용.
 
 ## Storage

@@ -30,6 +30,7 @@
     "@nema-io/server": "workspace:^",
     "@nema-io/tsconfig": "workspace:*",
     "@tailwindcss/vite": "^4.2.1",
+    "@tolgee/web": "^6.4.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
