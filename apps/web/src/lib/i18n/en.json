@@ -1,0 +1,10 @@
+{
+  "app": {
+    "title": "Nema"
+  },
+  "common": {
+    "send": "Send",
+    "cancel": "Cancel",
+    "home": "Home"
+  }
+}

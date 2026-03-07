@@ -3,19 +3,18 @@ import {
   createRootRoute,
   createRoute,
 } from "@tanstack/react-router";
-import { T } from "@tolgee/react";
 import { App } from "./App.js";
+import { useTranslation } from "../lib/i18n/index.js";
 
 const rootRoute = createRootRoute({ component: App });
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: () => (
-    <p>
-      <T keyName="common.home" defaultValue="홈" />
-    </p>
-  ),
+  component: function IndexPage() {
+    const { t } = useTranslation();
+    return <p>{t("common.home")}</p>;
+  },
 });
 
 const routeTree = rootRoute.addChildren([indexRoute]);

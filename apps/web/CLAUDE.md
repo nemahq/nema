@@ -43,13 +43,18 @@ src/
 
 ## I18n
 
-- Tolgee (`@tolgee/react`). 번역 컴포넌트: `<T keyName="..." defaultValue="..." />`.
+- Tolgee (`@tolgee/react`) 기반. `useTranslation()` 훅의 `t()` 함수로 번역. `<T>` 컴포넌트 사용 금지.
+- locale JSON: `src/lib/i18n/ko.json`, `en.json`. 키 타입은 `ko.json`에서 자동 추론.
 - 키 네이밍: 첫 segment = feature (e.g. `common.home`, `auth.login`).
+- locale 전환: `changeLocale()`. 우선순위: localStorage → 브라우저 감지 → `ko`.
 - 프로덕션: staticData 번들. 인컨텍스트 편집 미사용.
+
+## Storage
+
+- localStorage 키는 `src/lib/storage.ts`에서 `StorageMap` 타입으로 중앙 관리.
+- `getStorage()` / `setStorage()` 유틸리티로만 접근. 직접 `localStorage` 호출 금지.
 
 ## Dev
 
 - `pnpm dev` — Vite dev server at :5173 (HMR).
-- `pnpm test` — Vitest. Test files co-located as `*.test.tsx`.
- dev server at :5173 (HMR).
 - `pnpm test` — Vitest. Test files co-located as `*.test.tsx`.

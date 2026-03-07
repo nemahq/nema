@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { getStorage, setStorage } from "../../lib/storage.js";
 
 type Theme = "dark" | "light" | "system";
 
@@ -6,8 +7,6 @@ type ThemeProviderState = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
 };
-
-const STORAGE_KEY = "nema-theme";
 
 const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
   undefined,
@@ -28,17 +27,9 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === "dark" || stored === "light" || stored === "system") {
-        return stored;
-      }
-    } catch {
-      // localStorage 접근 불가 — light 기본값 사용
-    }
-    return "light";
-  });
+  const [theme, setThemeState] = useState<Theme>(
+    () => getStorage("theme") ?? "light",
+  );
 
   useEffect(() => {
     applyTheme(theme);
@@ -55,11 +46,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   const setTheme = (next: Theme) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // 저장 실패해도 현재 세션에서는 테마 적용
-    }
+    setStorage("theme", next);
     setThemeState(next);
   };
 
