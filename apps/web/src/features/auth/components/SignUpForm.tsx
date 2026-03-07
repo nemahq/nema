@@ -1,8 +1,13 @@
 import { type FormEvent, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/lib/supabase";
+import { Button } from "../../../components/ui/button.js";
+import { Input } from "../../../components/ui/input.js";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../../components/ui/card.js";
+import { supabase } from "../../../lib/supabase.js";
 
 export function SignUpForm({ onToggle }: { onToggle: () => void }) {
   const [email, setEmail] = useState("");
@@ -16,10 +21,13 @@ export function SignUpForm({ onToggle }: { onToggle: () => void }) {
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
 
-    if (error) {
-      setError(error.message);
+    if (signUpError) {
+      setError(signUpError.message);
     } else {
       setSuccess(true);
     }

@@ -4,6 +4,7 @@ import {
   createRoute,
   redirect,
   Outlet,
+  useNavigate,
 } from "@tanstack/react-router";
 import { T } from "@tolgee/react";
 import { Button } from "../components/ui/button.js";
@@ -43,10 +44,10 @@ const authenticatedRoute = createRoute({
   },
 });
 
-const indexRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
-  path: "/",
-  component: () => (
+function HomePage() {
+  const navigate = useNavigate();
+
+  return (
     <div className="flex flex-col items-center gap-4 p-8">
       <p>
         <T keyName="common.home" defaultValue="홈" />
@@ -55,13 +56,19 @@ const indexRoute = createRoute({
         variant="outline"
         onClick={async () => {
           await supabase.auth.signOut();
-          window.location.href = "/signin";
+          navigate({ to: "/signin", search: { redirect: undefined } });
         }}
       >
         로그아웃
       </Button>
     </div>
-  ),
+  );
+}
+
+const indexRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/",
+  component: HomePage,
 });
 
 const routeTree = rootRoute.addChildren([

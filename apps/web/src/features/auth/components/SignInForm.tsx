@@ -1,9 +1,14 @@
 import { type FormEvent, useState } from "react";
 import { useSearch, useNavigate } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/lib/supabase";
+import { Button } from "../../../components/ui/button.js";
+import { Input } from "../../../components/ui/input.js";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../../components/ui/card.js";
+import { supabase } from "../../../lib/supabase.js";
 
 export function SignInForm({ onToggle }: { onToggle: () => void }) {
   const search = useSearch({ from: "/signin" });
@@ -18,13 +23,13 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) {
-      setError(error.message);
+    if (signInError) {
+      setError(signInError.message);
       setLoading(false);
       return;
     }
@@ -34,7 +39,12 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
   }
 
   async function handleGoogleSignIn() {
-    await supabase.auth.signInWithOAuth({ provider: "google" });
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+    });
+    if (oauthError) {
+      setError(oauthError.message);
+    }
   }
 
   return (
