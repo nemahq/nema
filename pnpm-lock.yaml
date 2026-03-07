@@ -53,6 +53,9 @@ importers:
       '@qdrant/js-client-rest':
         specifier: ^1.17.0
         version: 1.17.0(typescript@5.9.3)
+      '@supabase/supabase-js':
+        specifier: ^2.98.0
+        version: 2.98.0
       '@trpc/server':
         specifier: ^11.12.0
         version: 11.12.0(typescript@5.9.3)
