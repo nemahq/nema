@@ -16,7 +16,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 - Push directly to `main`.
 - Add `any` without explicit justification comment.
 - Import from compiled `dist/` — always import from `src/`.
-- Call external APIs from frontend — all calls go through tRPC.
+- Call external APIs from frontend — all calls go through tRPC. Exception: Supabase Auth client SDK (sign-in, sign-up, session management).
 - Expose server-side keys (LLM, DB) to client.
 
 ## Conventions

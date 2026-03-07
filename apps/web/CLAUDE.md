@@ -4,7 +4,7 @@ React 19 + Vite 6 frontend. TanStack Router + TanStack Query.
 
 ## Do NOT
 
-- Call external APIs directly. All API calls go through tRPC client.
+- Call external APIs directly. All API calls go through tRPC client. Exception: Supabase Auth client SDK (sign-in, sign-up, session management).
 - Cross-feature imports. Enforced by `eslint-plugin-boundaries`.
 
 ## Directory Structure
@@ -34,6 +34,11 @@ src/
 | `components/ui/` | lowercase (shadcn CLI 관리) | `button.tsx` |
 | Non-component | camelCase      | `useAuth.ts`      |
 | Env var       | `VITE_` prefix | `VITE_API_URL`    |
+
+## React
+
+- `useEffect` callbacks MUST be named functions (not anonymous arrows).
+- Async operations inside `useEffect` MUST use async/await (not `.then()` chains). Use Promise only when async/await cannot express the logic.
 
 ## Responsive
 
