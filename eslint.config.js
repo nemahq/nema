@@ -20,7 +20,7 @@ export default tseslint.config(
           paths: [
             {
               name: "@tolgee/react",
-              importNames: ["T"],
+              importNames: ["T", "useTranslate"],
               message: "useTranslation() 훅의 t() 함수를 사용하세요.",
             },
           ],

@@ -19,10 +19,6 @@ function applyTheme(theme: Theme): void {
   }
 }
 
-export function getTheme(): Theme {
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
-}
-
 export function setTheme(pref: ThemePreference): void {
   setStorage("theme", pref);
   applyTheme(resolveTheme(pref));

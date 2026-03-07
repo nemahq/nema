@@ -1,7 +1,9 @@
+import type { ThemePreference } from "./theme.js";
+import { LOCALES } from "./i18n/types.js";
 import type { Locale } from "./i18n/types.js";
 
 type StorageMap = {
-  theme: "dark" | "light" | "system";
+  theme: ThemePreference;
   locale: Locale;
 };
 
@@ -10,7 +12,8 @@ const isValid: {
 } = {
   theme: (v): v is StorageMap["theme"] =>
     v === "dark" || v === "light" || v === "system",
-  locale: (v): v is StorageMap["locale"] => v === "ko" || v === "en",
+  locale: (v): v is StorageMap["locale"] =>
+    (LOCALES as readonly string[]).includes(v),
 };
 
 export function getStorage<K extends keyof StorageMap>(
@@ -32,6 +35,6 @@ export function setStorage<K extends keyof StorageMap>(
   try {
     localStorage.setItem(key, value);
   } catch {
-    // localStorage 미지원 환경 (SSR, 시크릿 모드 등)
+    // 의도적 무시
   }
 }
