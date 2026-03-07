@@ -17,7 +17,11 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{js,ts,tsx,json,css}": "prettier --write"
+    "*.{js,ts,tsx}": [
+      "eslint --cache --cache-strategy content",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": "prettier --write"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
