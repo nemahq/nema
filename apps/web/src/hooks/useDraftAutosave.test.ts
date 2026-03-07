@@ -72,6 +72,52 @@ describe("useDraftAutosave", () => {
     expect(localStorage.getItem("test")).toBe(JSON.stringify("pending"));
   });
 
+  it("localStorage에 잘못된 JSON이 있으면 initialValue로 fallback한다", () => {
+    localStorage.setItem("test", "not valid json{");
+    const { result } = renderHook(() => useDraftAutosave("test", "fallback"));
+    expect(result.current[0]).toBe("fallback");
+  });
+
+  it("clear() 후 setDraft()하면 다시 자동저장된다", () => {
+    const { result } = renderHook(() => useDraftAutosave("test", ""));
+
+    act(() => {
+      result.current[1]("first");
+    });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(localStorage.getItem("test")).toBe(JSON.stringify("first"));
+
+    act(() => {
+      result.current[2].clear();
+    });
+    expect(localStorage.getItem("test")).toBeNull();
+
+    act(() => {
+      result.current[1]("second");
+    });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(localStorage.getItem("test")).toBe(JSON.stringify("second"));
+  });
+
+  it("clear() 후 언마운트해도 값이 다시 저장되지 않는다", () => {
+    const { result, unmount } = renderHook(() => useDraftAutosave("test", ""));
+
+    act(() => {
+      result.current[1]("typed");
+    });
+    act(() => {
+      result.current[2].clear();
+    });
+
+    unmount();
+
+    expect(localStorage.getItem("test")).toBeNull();
+  });
+
   it("객체 타입도 직렬화/역직렬화된다", () => {
     const initial = { title: "", body: "" };
     const { result } = renderHook(() => useDraftAutosave("test-obj", initial));

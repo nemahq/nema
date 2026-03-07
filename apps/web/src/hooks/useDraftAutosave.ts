@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseDraftAutosaveOptions {
-  /** debounce delay (ms). 기본값 500 */
+  /** ms 단위 */
   delay?: number;
 }
 
@@ -43,15 +43,18 @@ export function useDraftAutosave<T>(
   const delay = options?.delay ?? 500;
 
   const [value, setValue] = useState<T>(() => readStorage(key, initialValue));
+  const initialValueRef = useRef(initialValue);
   const latestRef = useRef(value);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
   const clearedRef = useRef(false);
+  const dirtyRef = useRef(false);
 
   useEffect(() => {
     latestRef.current = value;
   });
 
-  // debounce 저장
   useEffect(() => {
     if (clearedRef.current) return;
 
@@ -60,25 +63,21 @@ export function useDraftAutosave<T>(
     }, delay);
 
     return () => {
-      if (timeoutRef.current !== null) {
-        clearTimeout(timeoutRef.current);
-      }
+      clearTimeout(timeoutRef.current);
     };
   }, [key, value, delay]);
 
   // 언마운트·beforeunload 시 즉시 flush — 유실 방지
   useEffect(() => {
     const flush = () => {
-      if (!clearedRef.current) {
+      if (!clearedRef.current && dirtyRef.current) {
         writeStorage(key, latestRef.current);
       }
     };
     window.addEventListener("beforeunload", flush);
     return () => {
       window.removeEventListener("beforeunload", flush);
-      if (timeoutRef.current !== null) {
-        clearTimeout(timeoutRef.current);
-      }
+      clearTimeout(timeoutRef.current);
       flush();
     };
   }, [key]);
@@ -86,6 +85,7 @@ export function useDraftAutosave<T>(
   const setDraft = useCallback<React.Dispatch<React.SetStateAction<T>>>(
     (action) => {
       clearedRef.current = false;
+      dirtyRef.current = true;
       setValue(action);
     },
     [],
@@ -93,9 +93,10 @@ export function useDraftAutosave<T>(
 
   const clear = useCallback(() => {
     clearedRef.current = true;
+    dirtyRef.current = false;
     removeStorage(key);
-    setValue(initialValue);
-  }, [key, initialValue]);
+    setValue(initialValueRef.current);
+  }, [key]);
 
   return [value, setDraft, { clear }];
 }
