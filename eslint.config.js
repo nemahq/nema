@@ -53,18 +53,6 @@ export default tseslint.config(
           prefix: "@web",
         },
       ],
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "@tolgee/react",
-              importNames: ["T", "useTranslate"],
-              message: "useTranslation() 훅의 t() 함수를 사용하세요.",
-            },
-          ],
-        },
-      ],
     },
   },
   {
