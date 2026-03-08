@@ -1,16 +1,12 @@
-// Phase 1 (Drafting) 평가 스크립트
-// 시드 데이터를 LLM에 돌리고 결과를 JSON으로 저장
-//
-// 실행: pnpm tsx apps/server/src/eval/run-phase1.ts
+// 실행: pnpm tsx apps/server/src/eval/eval-drafting.ts
 
 import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { config } from "dotenv";
-
 import { DraftOutputSchema } from "@nema-io/shared/src/schemas/structuring";
 
+import { loadEnv } from "@server/env";
 import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
   buildEditCycleMessage,
@@ -21,7 +17,7 @@ import {
 import { PHASE1_EDIT_SEEDS, PHASE1_SEEDS } from "./seed-data";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: resolve(__dirname, "../../.env") });
+loadEnv(resolve(__dirname, "../.."));
 
 interface EvalResult {
   id: string;
