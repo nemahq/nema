@@ -10,3 +10,6 @@ dist/
 *.log
 .eslintcache
 .DS_Store
+.claude/settings.local.json
+.claude/worktrees/
+.worktrees/
