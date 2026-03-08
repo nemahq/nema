@@ -1,6 +1,6 @@
-import type { Locale } from "./i18n/types.js";
-import { LOCALES } from "./i18n/types.js";
-import type { ThemePreference } from "./theme.js";
+import type { Locale } from "./i18n/types";
+import { LOCALES } from "./i18n/types";
+import type { ThemePreference } from "./theme";
 
 type StorageMap = {
   theme: ThemePreference;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 
-import { SignInForm } from "./SignInForm.js";
-import { SignUpForm } from "./SignUpForm.js";
+import { SignInForm } from "./SignInForm";
+import { SignUpForm } from "./SignUpForm";
 
 export function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");

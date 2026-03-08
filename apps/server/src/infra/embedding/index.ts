@@ -3,7 +3,7 @@ export type {
   EmbeddingProvider,
   EmbeddingProviderConfig,
   EmbeddingResult,
-} from "./embedding-provider.js";
-export { EmbeddingError, VECTOR_DIMENSION } from "./embedding-provider.js";
-export type { VoyageProviderConfig } from "./voyage-provider.js";
-export { createVoyageProvider } from "./voyage-provider.js";
+} from "./embedding-provider";
+export { EmbeddingError, VECTOR_DIMENSION } from "./embedding-provider";
+export type { VoyageProviderConfig } from "./voyage-provider";
+export { createVoyageProvider } from "./voyage-provider";

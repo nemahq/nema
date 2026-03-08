@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DraftOutputSchema, SaveOutputSchema } from "./structuring.js";
+import { DraftOutputSchema, SaveOutputSchema } from "./structuring";
 
 describe("DraftOutputSchema", () => {
   it("parses valid draft with session_title", () => {

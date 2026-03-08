@@ -3,4 +3,4 @@ export {
   DraftOutputSchema,
   type SaveOutput,
   SaveOutputSchema,
-} from "./schemas/structuring.js";
+} from "./schemas/structuring";

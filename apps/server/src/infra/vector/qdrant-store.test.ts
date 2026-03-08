@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { EmbeddingProvider } from "@server/infra/embedding/index.js";
+import type { EmbeddingProvider } from "@server/infra/embedding/index";
 
-import { VectorStoreError } from "./vector-store.js";
+import { VectorStoreError } from "./vector-store";
 
 const mockCollectionExists = vi.fn();
 const mockCreateCollection = vi.fn();
@@ -22,11 +22,11 @@ vi.mock("@qdrant/js-client-rest", () => ({
   })),
 }));
 
-vi.mock("@server/env.js", () => ({
+vi.mock("@server/env", () => ({
   requireEnv: vi.fn((name: string) => `mock-${name}`),
 }));
 
-import { createQdrantStore } from "./qdrant-store.js";
+import { createQdrantStore } from "./qdrant-store";
 
 function fakeProvider(
   embeddings: number[][] = [[0.1, 0.2]],

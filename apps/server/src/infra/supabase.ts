@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { requireEnv } from "@server/env.js";
+import { requireEnv } from "@server/env";
 
 let _client: SupabaseClient | null = null;
 

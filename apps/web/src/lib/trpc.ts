@@ -1,10 +1,10 @@
 import { createTRPCClient, httpBatchLink, loggerLink } from "@trpc/client";
 
-import type { AppRouter } from "@nema-io/server/src/router.js";
+import type { AppRouter } from "@nema-io/server/src/router";
 
-import { ENV } from "@web/app/env.js";
+import { ENV } from "@web/app/env";
 
-import { supabase } from "./supabase.js";
+import { supabase } from "./supabase";
 
 export const trpc = createTRPCClient<AppRouter>({
   links: [
