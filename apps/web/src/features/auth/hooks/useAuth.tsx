@@ -28,12 +28,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(newSession);
       setLoading(false);
 
-      if (event === "SIGNED_IN" && window.location.hash) {
-        window.history.replaceState(
-          null,
-          "",
-          window.location.pathname + window.location.search,
-        );
+      if (event === "SIGNED_IN" && window.location.href.includes("#")) {
+        window.history.replaceState(null, "", window.location.pathname);
       }
     });
 
