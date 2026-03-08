@@ -1,8 +1,10 @@
-import { Tolgee, FormatSimple } from "@tolgee/react";
-import { LOCALES, type Locale } from "./types.js";
-import { getStorage } from "../storage.js";
-import ko from "./ko.json";
+import { FormatSimple, Tolgee } from "@tolgee/react";
+
+import { getStorage } from "@web/lib/storage.js";
+
 import en from "./en.json";
+import ko from "./ko.json";
+import { type Locale, LOCALES } from "./types.js";
 
 function detectLanguage(): Locale {
   const stored = getStorage("locale");

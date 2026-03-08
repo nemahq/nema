@@ -1,13 +1,13 @@
-export { createNeo4jStore } from "./neo4j-store.js";
-export { GraphStoreError, ENTITY_TYPES } from "./graph-store.js";
 export type {
-  GraphStore,
   EntityType,
+  FindDocumentsByEntitiesOptions,
+  FindRelatedDocumentsOptions,
   GraphEntity,
   GraphSearchResult,
-  UpsertEntitiesOptions,
-  FindRelatedDocumentsOptions,
-  FindDocumentsByEntitiesOptions,
+  GraphStore,
   ListEntitiesOptions,
   MergeEntitiesOptions,
+  UpsertEntitiesOptions,
 } from "./graph-store.js";
+export { ENTITY_TYPES, GraphStoreError } from "./graph-store.js";
+export { createNeo4jStore } from "./neo4j-store.js";

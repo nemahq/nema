@@ -1,8 +1,9 @@
 import { resolve } from "node:path";
-import tailwindcss from "@tailwindcss/vite";
+
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [
@@ -25,7 +26,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": resolve(__dirname, "src"),
+      "@web": resolve(__dirname, "src"),
     },
   },
   server: {

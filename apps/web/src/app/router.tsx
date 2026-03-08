@@ -1,16 +1,18 @@
 import {
-  createRouter,
   createRootRoute,
   createRoute,
-  redirect,
+  createRouter,
   Outlet,
+  redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { Button } from "../components/ui/button.js";
-import { supabase } from "../lib/supabase.js";
+
+import { Button } from "@web/components/ui/button.js";
+import { AuthPage } from "@web/features/auth/components/AuthPage.js";
+import { useTranslation } from "@web/lib/i18n/index.js";
+import { supabase } from "@web/lib/supabase.js";
+
 import { App } from "./App.js";
-import { AuthPage } from "../features/auth/components/AuthPage.js";
-import { useTranslation } from "../lib/i18n/index.js";
 
 const rootRoute = createRootRoute({ component: App });
 

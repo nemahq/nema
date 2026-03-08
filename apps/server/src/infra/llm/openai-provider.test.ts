@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { OpenAiProvider } from "./openai-provider.js";
+
 import { LlmError } from "./llm-error.js";
+import { OpenAiProvider } from "./openai-provider.js";
 
 vi.mock("openai", () => {
   const MockOpenAI = vi.fn();

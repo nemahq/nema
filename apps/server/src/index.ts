@@ -1,9 +1,10 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
+
+import { createQdrantStore } from "./infra/vector/index.js";
 import { appRouter } from "./router.js";
 import { createContext } from "./trpc.js";
-import { createQdrantStore } from "./infra/vector/index.js";
 
 function getPort(): number {
   const raw = process.env.PORT;

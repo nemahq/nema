@@ -1,9 +1,10 @@
 import { createContext, useContext, useState } from "react";
+
+import { getStorage } from "@web/lib/storage.js";
 import {
-  type ThemePreference,
   setTheme as setThemePref,
-} from "../../lib/theme.js";
-import { getStorage } from "../../lib/storage.js";
+  type ThemePreference,
+} from "@web/lib/theme.js";
 
 type ThemeProviderState = {
   theme: ThemePreference;

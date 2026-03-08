@@ -1,5 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { EmbeddingProvider } from "../embedding/index.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { EmbeddingProvider } from "@server/infra/embedding/index.js";
+
 import { VectorStoreError } from "./vector-store.js";
 
 const mockCollectionExists = vi.fn();
