@@ -15,7 +15,9 @@ function detectLanguage(): Locale {
 }
 
 // TODO: 번역 키 규모 증가 시 staticData → CDN fetch 전환
+const staticData: Record<Locale, typeof ko> = { ko, en };
+
 export const tolgee = Tolgee().use(FormatSimple()).init({
   language: detectLanguage(),
-  staticData: { ko, en },
+  staticData,
 });
