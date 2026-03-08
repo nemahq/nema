@@ -1,5 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { EmbeddingProvider } from "../embedding/index.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { EmbeddingProvider } from "@server/infra/embedding/index.js";
+
 import { VectorStoreError } from "./vector-store.js";
 
 const mockCollectionExists = vi.fn();
@@ -20,7 +22,7 @@ vi.mock("@qdrant/js-client-rest", () => ({
   })),
 }));
 
-vi.mock("../../env.js", () => ({
+vi.mock("@server/env.js", () => ({
   requireEnv: vi.fn((name: string) => `mock-${name}`),
 }));
 

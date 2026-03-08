@@ -1,9 +1,10 @@
 import { VoyageAIClient } from "voyageai";
+
 import type {
-  EmbeddingProvider,
   EmbeddingInputType,
-  EmbeddingResult,
+  EmbeddingProvider,
   EmbeddingProviderConfig,
+  EmbeddingResult,
 } from "./embedding-provider.js";
 import { EmbeddingError, VECTOR_DIMENSION } from "./embedding-provider.js";
 

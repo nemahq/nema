@@ -8,8 +8,9 @@ import {
   UnprocessableEntityError,
 } from "openai/error";
 import { zodResponseFormat } from "openai/helpers/zod";
-import type { GenerateStructuredParams, LlmProvider } from "./llm-provider.js";
+
 import { LlmError } from "./llm-error.js";
+import type { GenerateStructuredParams, LlmProvider } from "./llm-provider.js";
 
 export interface OpenAiProviderConfig {
   apiKey: string;

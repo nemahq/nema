@@ -1,6 +1,7 @@
+import type { User } from "@supabase/supabase-js";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
-import type { User } from "@supabase/supabase-js";
+
 import { getSupabaseAdmin } from "./infra/supabase.js";
 
 export async function createContext({ req, res }: CreateFastifyContextOptions) {

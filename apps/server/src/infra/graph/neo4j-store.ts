@@ -1,14 +1,16 @@
 import neo4j, { type Driver, type Integer } from "neo4j-driver";
-import { requireEnv } from "../../env.js";
+
+import { requireEnv } from "@server/env.js";
+
 import type {
-  GraphStore,
-  UpsertEntitiesOptions,
-  FindRelatedDocumentsOptions,
   FindDocumentsByEntitiesOptions,
+  FindRelatedDocumentsOptions,
+  GraphEntity,
+  GraphSearchResult,
+  GraphStore,
   ListEntitiesOptions,
   MergeEntitiesOptions,
-  GraphSearchResult,
-  GraphEntity,
+  UpsertEntitiesOptions,
 } from "./graph-store.js";
 import { GraphStoreError } from "./graph-store.js";
 

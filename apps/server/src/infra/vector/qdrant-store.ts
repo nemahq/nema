@@ -1,15 +1,17 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
-import { requireEnv } from "../../env.js";
+
+import { requireEnv } from "@server/env.js";
 import {
-  VECTOR_DIMENSION,
   type EmbeddingProvider,
-} from "../embedding/index.js";
+  VECTOR_DIMENSION,
+} from "@server/infra/embedding/index.js";
+
 import type {
-  VectorStore,
-  UpsertOptions,
-  SearchOptions,
-  VectorSearchResult,
   DocumentPayload,
+  SearchOptions,
+  UpsertOptions,
+  VectorSearchResult,
+  VectorStore,
 } from "./vector-store.js";
 import { VectorStoreError } from "./vector-store.js";
 

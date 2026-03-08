@@ -1,14 +1,15 @@
 import { type FormEvent, useState } from "react";
-import { useSearch, useNavigate } from "@tanstack/react-router";
-import { Button } from "../../../components/ui/button.js";
-import { Input } from "../../../components/ui/input.js";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+
+import { Button } from "@web/components/ui/button.js";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../../components/ui/card.js";
-import { supabase } from "../../../lib/supabase.js";
+} from "@web/components/ui/card.js";
+import { Input } from "@web/components/ui/input.js";
+import { supabase } from "@web/lib/supabase.js";
 
 export function SignInForm({ onToggle }: { onToggle: () => void }) {
   const search = useSearch({ from: "/signin" });

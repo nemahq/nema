@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+
 import { DraftOutputSchema, SaveOutputSchema } from "./structuring.js";
 
 describe("DraftOutputSchema", () => {

@@ -1,9 +1,11 @@
-import js from "@eslint/js";
 import prettier from "eslint-config-prettier";
 import boundaries from "eslint-plugin-boundaries";
 import jsxA11y from "eslint-plugin-jsx-a11y";
+import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths";
 import reactHooks from "eslint-plugin-react-hooks";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
 import tseslint from "typescript-eslint";
+import js from "@eslint/js";
 
 export default tseslint.config(
   { ignores: ["**/dist/**", "**/.turbo/**"] },
@@ -15,10 +17,42 @@ export default tseslint.config(
     },
   },
   {
+    plugins: {
+      "simple-import-sort": simpleImportSort,
+    },
+    rules: {
+      "simple-import-sort/imports": [
+        "error",
+        {
+          groups: [
+            ["^\\u0000"],
+            ["^node:"],
+            ["^[^@.]", "^@(?!nema-io|web|server)"],
+            ["^@nema-io/"],
+            ["^@(web|server)/"],
+            ["^\\."],
+          ],
+        },
+      ],
+      "simple-import-sort/exports": "error",
+    },
+  },
+  {
     files: ["apps/web/**/*.{ts,tsx}"],
-    plugins: { "react-hooks": reactHooks },
+    plugins: {
+      "react-hooks": reactHooks,
+      "no-relative-import-paths": noRelativeImportPaths,
+    },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      "no-relative-import-paths/no-relative-import-paths": [
+        "error",
+        {
+          allowSameFolder: true,
+          rootDir: "src",
+          prefix: "@web",
+        },
+      ],
       "no-restricted-imports": [
         "error",
         {
@@ -29,6 +63,22 @@ export default tseslint.config(
               message: "useTranslation() 훅의 t() 함수를 사용하세요.",
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["apps/server/**/*.{ts,tsx}"],
+    plugins: {
+      "no-relative-import-paths": noRelativeImportPaths,
+    },
+    rules: {
+      "no-relative-import-paths/no-relative-import-paths": [
+        "error",
+        {
+          allowSameFolder: true,
+          rootDir: "src",
+          prefix: "@server",
         },
       ],
     },

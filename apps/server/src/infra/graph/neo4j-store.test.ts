@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { GraphStoreError } from "./graph-store.js";
 
 const mockRun = vi.fn();
@@ -33,7 +34,7 @@ vi.mock("neo4j-driver", () => {
   };
 });
 
-vi.mock("../../env.js", () => ({
+vi.mock("@server/env.js", () => ({
   requireEnv: vi.fn((name: string) => `mock-${name}`),
 }));
 
