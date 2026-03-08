@@ -34,6 +34,12 @@ src/
 - MUST use Zod schemas from `@nema-io/shared` for input validation.
 - Use `protectedProcedure` for endpoints requiring authentication. Use `publicProcedure` otherwise.
 
+## I18n
+
+- Tolgee (`@tolgee/core`). Locale JSON in `infra/i18n/locales/`. `ko.json` is source of truth.
+- Key naming: first segment = domain (e.g. `error.llm_timeout`).
+- Locale resolved per-request from `Accept-Language` header. Default: `ko`.
+
 ## Dev
 
 - `pnpm dev` — tsx watch mode (auto-restart on change).

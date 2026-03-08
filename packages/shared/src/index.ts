@@ -1,3 +1,4 @@
+export { isLocale, type Locale, LOCALES } from "./i18n";
 export {
   type DraftOutput,
   DraftOutputSchema,
