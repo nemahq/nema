@@ -27,6 +27,9 @@
     "privacy": "Privacy Policy",
     "back": "Go back"
   },
+  "session": {
+    "empty": "Start a new conversation"
+  },
   "layout": {
     "collapse_sidebar": "Collapse sidebar",
     "expand_sidebar": "Expand sidebar"

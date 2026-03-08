@@ -27,6 +27,9 @@
     "privacy": "개인정보처리방침",
     "back": "돌아가기"
   },
+  "session": {
+    "empty": "새로운 대화를 시작해보세요"
+  },
   "layout": {
     "collapse_sidebar": "사이드바 접기",
     "expand_sidebar": "사이드바 펼치기"

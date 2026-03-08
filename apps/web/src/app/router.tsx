@@ -4,15 +4,13 @@ import {
   createRouter,
   Outlet,
   redirect,
-  useNavigate,
 } from "@tanstack/react-router";
 
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
-import { Button } from "@web/components/ui/button";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
+import { SessionPage } from "@web/features/session/components/SessionPage";
 import { supabase } from "@web/lib/supabase";
-import { useTranslation } from "@web/lib/tolgee";
 
 import { App } from "./App";
 
@@ -60,30 +58,10 @@ const authenticatedRoute = createRoute({
   },
 });
 
-function HomePage() {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-
-  return (
-    <div className="flex flex-col items-center gap-4 p-8">
-      <p>{t("common.home")}</p>
-      <Button
-        variant="outline"
-        onClick={async () => {
-          await supabase.auth.signOut();
-          navigate({ to: "/signin", search: { redirect: undefined } });
-        }}
-      >
-        로그아웃
-      </Button>
-    </div>
-  );
-}
-
 const indexRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/",
-  component: HomePage,
+  component: SessionPage,
 });
 
 const routeTree = rootRoute.addChildren([
