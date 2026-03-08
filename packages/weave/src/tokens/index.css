@@ -1,0 +1,180 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * ── Weave Design Tokens ────────────────────────────
+ * Nema Design System: "Calm and intellectual, but not cold."
+ *
+ * Primitive: Tailwind color scale (not re-declared)
+ * Semantic: role-based tokens referencing hex values
+ *
+ * Naming: --{group}-{role}-{state}
+ * Groups: brand, surface, fg, status, border
+ * Non-color: radius, duration, ease
+ */
+
+/* ── Semantic Tokens ─────────────────────── */
+
+:root {
+  /* Brand */
+  --brand: #14b8a6; /* teal-500 — solid fills */
+  --brand-hover: #0d9488; /* teal-600 — hover state */
+  --brand-accent: #0f766e; /* teal-700 — text/icon emphasis */
+  --brand-fg: #18181b; /* zinc-900 — text on brand bg */
+  --brand-tint: rgba(20, 184, 166, 0.08); /* subtle bg */
+  --brand-tint-hover: rgba(20, 184, 166, 0.12); /* subtle bg hover */
+
+  /* Surface */
+  --surface-base: #ffffff; /* page background */
+  --surface-raised: #fafafa; /* zinc-50 — elevated areas */
+  --surface-card: #ffffff; /* card background */
+  --shadow: rgba(0, 0, 0, 0.06);
+
+  /* Foreground */
+  --fg-primary: #18181b; /* zinc-900 */
+  --fg-secondary: #52525b; /* zinc-600 */
+  --fg-tertiary: #71717a; /* zinc-500 */
+
+  /* Status */
+  --status-success: #10b981; /* green-500 */
+  --status-success-tint: rgba(16, 185, 129, 0.08);
+  --status-warning: #f59e0b; /* amber-500 */
+  --status-warning-tint: rgba(245, 158, 11, 0.08);
+  --status-error: #ef4444; /* red-500 */
+  --status-error-tint: rgba(239, 68, 68, 0.08);
+  --status-info: #3b82f6; /* blue-500 */
+  --status-info-tint: rgba(59, 130, 246, 0.08);
+
+  /* Border */
+  --border: #e4e4e7; /* zinc-200 */
+
+  /* Transition */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+
+  /* shadcn compatibility */
+  --background: var(--surface-base);
+  --foreground: var(--fg-primary);
+  --card: var(--surface-card);
+  --card-foreground: var(--fg-primary);
+  --popover: var(--surface-card);
+  --popover-foreground: var(--fg-primary);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-fg);
+  --secondary: var(--surface-raised);
+  --secondary-foreground: var(--fg-primary);
+  --muted: var(--surface-raised);
+  --muted-foreground: var(--fg-tertiary);
+  --accent: var(--brand-tint);
+  --accent-foreground: var(--brand-accent);
+  --destructive: var(--status-error);
+  --input: var(--border);
+  --ring: var(--brand);
+}
+
+.dark {
+  /* Brand */
+  --brand-hover: #2dd4bf; /* teal-400 */
+  --brand-accent: #2dd4bf; /* teal-400 */
+  --brand-tint: rgba(20, 184, 166, 0.12);
+  --brand-tint-hover: rgba(20, 184, 166, 0.18);
+
+  /* Surface */
+  --surface-base: #18181b; /* zinc-900 */
+  --surface-raised: #27272a; /* zinc-800 */
+  --surface-card: #27272a; /* zinc-800 */
+  --shadow: rgba(0, 0, 0, 0.3);
+
+  /* Foreground */
+  --fg-primary: #f4f4f5; /* zinc-100 */
+  --fg-secondary: #a1a1aa; /* zinc-400 */
+
+  /* Status */
+  --status-success: #34d399; /* green-400 */
+  --status-success-tint: rgba(16, 185, 129, 0.12);
+  --status-warning: #fbbf24; /* amber-400 */
+  --status-warning-tint: rgba(245, 158, 11, 0.12);
+  --status-error: #f87171; /* red-400 */
+  --status-error-tint: rgba(239, 68, 68, 0.12);
+  --status-info: #60a5fa; /* blue-400 */
+  --status-info-tint: rgba(59, 130, 246, 0.12);
+
+  /* Border */
+  --border: #3f3f46; /* zinc-700 */
+}
+
+/* ── Tailwind Theme (semantic tokens only) ── */
+
+@theme inline {
+  /* Brand */
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-fg: var(--brand-fg);
+  --color-brand-tint: var(--brand-tint);
+  --color-brand-tint-hover: var(--brand-tint-hover);
+
+  /* Surface */
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-card: var(--surface-card);
+
+  /* Foreground */
+  --color-fg-primary: var(--fg-primary);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-tertiary: var(--fg-tertiary);
+
+  /* Status */
+  --color-status-success: var(--status-success);
+  --color-status-success-tint: var(--status-success-tint);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-tint: var(--status-warning-tint);
+  --color-status-error: var(--status-error);
+  --color-status-error-tint: var(--status-error-tint);
+  --color-status-info: var(--status-info);
+  --color-status-info-tint: var(--status-info-tint);
+
+  /* Border */
+  --color-border: var(--border);
+
+  /* shadcn compat */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Radius */
+  --radius-card: 12px;
+  --radius-button: 6px;
+  --radius-input: 6px;
+  --radius-tag: 4px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Satoshi", "Wanted Sans Variable", "Wanted Sans", sans-serif;
+  }
+}
