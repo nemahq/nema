@@ -154,14 +154,15 @@
 
   ── Interaction States ──────────────────────────
   hover:    shift to --brand-hover color or lighten/darken background 1 step
-  focus:    2px solid ring using --text-primary, 2px offset from element
+  focus:    2px solid ring using --brand, 2px offset from element
   active:   same as hover but with scale(0.98) transform
   disabled: opacity 0.5, cursor: not-allowed, no hover/focus effects
 
-  Focus ring uses --text-primary (NOT --brand) to ensure contrast
-  against both the element and the surrounding background.
+  Focus ring uses --brand to ensure contrast against zinc backgrounds
+  in both light and dark modes.
   Focus ring MUST always be visible for keyboard accessibility.
   DO NOT remove outline without providing a visible alternative.
+  Input focus also uses ring (not border-only) for consistent accessibility.
 
   Button variants:
   - Primary: --brand background, --brand-fg text, solid fill
@@ -171,7 +172,7 @@
   - Color: --brand-accent (teal-700 light / teal-400 dark)
   - Underline: always visible (text-decoration: underline, text-underline-offset: 2px)
   - Hover: color shifts to --brand-hover
-  - Focus: 2px solid ring using --text-primary (focus-visible only)
+  - Focus: 2px solid ring using --brand (focus-visible only)
   Links MUST be distinguishable from surrounding text by more than color alone.
   Underline provides this — DO NOT remove it without another visual indicator.
 
