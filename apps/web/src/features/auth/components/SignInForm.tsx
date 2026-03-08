@@ -89,7 +89,7 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
         </form>
 
         <div className="mt-4 flex flex-col gap-2">
-          <Button variant="outline" onClick={handleGoogleSignIn}>
+          <Button variant="secondary" onClick={handleGoogleSignIn}>
             {t("auth.continue_with_google")}
           </Button>
           <Button variant="link" onClick={onToggle}>
