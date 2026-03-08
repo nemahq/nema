@@ -1,14 +1,15 @@
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
-import { Button } from "@web/components/ui/button";
 import {
+  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@web/components/ui/card";
-import { Input } from "@web/components/ui/input";
+  Input,
+} from "@nema-io/weave";
+
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 

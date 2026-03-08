@@ -1,7 +1,7 @@
 import { ScrollArea as ScrollAreaPrimitive } from "radix-ui";
 import * as React from "react";
 
-import { cn } from "@web/lib/tailwind/utils";
+import { cn } from "../utils";
 
 function ScrollArea({
   className,
