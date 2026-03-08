@@ -5,7 +5,21 @@
   "common": {
     "send": "Send",
     "cancel": "Cancel",
-    "home": "Home"
+    "home": "Home",
+    "unknown_error": "An unknown error occurred."
+  },
+  "auth": {
+    "sign_in": "Sign in",
+    "sign_in_loading": "Signing in...",
+    "sign_up": "Sign up",
+    "sign_up_loading": "Signing up...",
+    "email_placeholder": "Email",
+    "password_placeholder": "Password",
+    "password_placeholder_signup": "Password (min 6 characters)",
+    "continue_with_google": "Continue with Google",
+    "no_account": "Don't have an account? Sign up",
+    "has_account": "Already have an account? Sign in",
+    "verification_email_sent": "Verification email sent. Please check your inbox."
   },
   "layout": {
     "collapse_sidebar": "Collapse sidebar",

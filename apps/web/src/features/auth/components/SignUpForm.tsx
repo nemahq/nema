@@ -9,8 +9,10 @@ import {
 } from "@web/components/ui/card";
 import { Input } from "@web/components/ui/input";
 import { supabase } from "@web/lib/supabase";
+import { useTranslation } from "@web/lib/tolgee";
 
 export function SignUpForm({ onToggle }: { onToggle: () => void }) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export function SignUpForm({ onToggle }: { onToggle: () => void }) {
       <Card className="w-full max-w-sm">
         <CardContent className="pt-6">
           <p className="text-sm text-muted-foreground">
-            확인 이메일을 발송했습니다. 메일함을 확인해주세요.
+            {t("auth.verification_email_sent")}
           </p>
         </CardContent>
       </Card>
@@ -50,20 +52,20 @@ export function SignUpForm({ onToggle }: { onToggle: () => void }) {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle>회원가입</CardTitle>
+        <CardTitle>{t("auth.sign_up")}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
             type="email"
-            placeholder="이메일"
+            placeholder={t("auth.email_placeholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
           <Input
             type="password"
-            placeholder="비밀번호 (6자 이상)"
+            placeholder={t("auth.password_placeholder_signup")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={6}
@@ -71,13 +73,13 @@ export function SignUpForm({ onToggle }: { onToggle: () => void }) {
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" disabled={loading}>
-            {loading ? "가입 중..." : "회원가입"}
+            {loading ? t("auth.sign_up_loading") : t("auth.sign_up")}
           </Button>
         </form>
 
         <div className="mt-4">
           <Button variant="link" onClick={onToggle}>
-            이미 계정이 있으신가요? 로그인
+            {t("auth.has_account")}
           </Button>
         </div>
       </CardContent>
