@@ -41,6 +41,7 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
     await navigate({ to });
   }
 
+  // TODO: Google OAuth 최초 가입 시 약관·개인정보처리방침 동의 플로우 필요
   async function handleGoogleSignIn() {
     setError(null);
     setLoading(true);

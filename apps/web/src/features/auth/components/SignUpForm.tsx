@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from "react";
+import { Link } from "@tanstack/react-router";
 
 import { Button } from "@web/components/ui/button";
 import {
@@ -24,20 +25,26 @@ export function SignUpForm({ onToggle }: { onToggle: () => void }) {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!agreedTerms || !agreedPrivacy) return;
     setError(null);
     setLoading(true);
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    if (signUpError) {
-      setError(signUpError.message);
-    } else {
-      setSuccess(true);
+      if (signUpError) {
+        setError(signUpError.message);
+      } else {
+        setSuccess(true);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.unknown_error"));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   if (success) {
@@ -79,19 +86,31 @@ export function SignUpForm({ onToggle }: { onToggle: () => void }) {
               <Checkbox
                 id="agree-terms"
                 checked={agreedTerms}
-                onCheckedChange={(v: boolean) => setAgreedTerms(v)}
+                onCheckedChange={(v) => setAgreedTerms(v === true)}
                 className="mt-0.5"
               />
-              <label htmlFor="agree-terms">{t("auth.agree_terms")}</label>
+              <label htmlFor="agree-terms">
+                {t("auth.agree_pre")}
+                <Link to="/terms" target="_blank" className="underline">
+                  {t("auth.terms")}
+                </Link>
+                {t("auth.agree_post")}
+              </label>
             </div>
             <div className="flex items-start gap-2 text-sm">
               <Checkbox
                 id="agree-privacy"
                 checked={agreedPrivacy}
-                onCheckedChange={(v: boolean) => setAgreedPrivacy(v)}
+                onCheckedChange={(v) => setAgreedPrivacy(v === true)}
                 className="mt-0.5"
               />
-              <label htmlFor="agree-privacy">{t("auth.agree_privacy")}</label>
+              <label htmlFor="agree-privacy">
+                {t("auth.agree_pre")}
+                <Link to="/privacy" target="_blank" className="underline">
+                  {t("auth.privacy")}
+                </Link>
+                {t("auth.agree_post")}
+              </label>
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
