@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { EmbeddingProvider } from "@server/infra/embedding/index";
+import type { EmbeddingProvider } from "@server/infra/embedding";
 
 import { VectorStoreError } from "./vector-store";
 

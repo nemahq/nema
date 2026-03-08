@@ -3,7 +3,7 @@ import { type ReactNode, useState } from "react";
 
 import { Button } from "@web/components/ui/button";
 import { cn } from "@web/lib/tailwind/utils";
-import { useTranslation } from "@web/lib/tolgee/index";
+import { useTranslation } from "@web/lib/tolgee";
 import { getStorage, setStorage } from "@web/utils/localStorage";
 
 export function Sidebar({ children }: { children?: ReactNode }) {

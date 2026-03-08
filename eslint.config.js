@@ -14,6 +14,17 @@ export default tseslint.config(
   {
     rules: {
       curly: "error",
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["*/index"],
+              message: "Import from the directory directly without /index.",
+            },
+          ],
+        },
+      ],
     },
   },
   {
@@ -61,6 +72,12 @@ export default tseslint.config(
               name: "@tolgee/react",
               importNames: ["T", "useTranslate"],
               message: "useTranslation() 훅의 t() 함수를 사용하세요.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["*/index"],
+              message: "Import from the directory directly without /index.",
             },
           ],
         },

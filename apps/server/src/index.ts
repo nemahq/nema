@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 
-import { createQdrantStore } from "./infra/vector/index";
+import { createQdrantStore } from "./infra/vector";
 import { appRouter } from "./router";
 import { createContext } from "./trpc";
 

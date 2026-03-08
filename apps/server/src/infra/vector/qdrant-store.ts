@@ -4,7 +4,7 @@ import { requireEnv } from "@server/env";
 import {
   type EmbeddingProvider,
   VECTOR_DIMENSION,
-} from "@server/infra/embedding/index";
+} from "@server/infra/embedding";
 
 import type {
   DocumentPayload,

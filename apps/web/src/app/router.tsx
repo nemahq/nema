@@ -10,7 +10,7 @@ import {
 import { Button } from "@web/components/ui/button";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
 import { supabase } from "@web/lib/supabase";
-import { useTranslation } from "@web/lib/tolgee/index";
+import { useTranslation } from "@web/lib/tolgee";
 
 import { App } from "./App";
 
