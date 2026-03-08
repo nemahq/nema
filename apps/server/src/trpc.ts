@@ -2,6 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
 
+import { mapDomainError } from "./error-mapper";
 import { resolveLanguage } from "./infra/i18n";
 import { getSupabaseAdmin } from "./infra/supabase";
 
@@ -32,14 +33,28 @@ type Context = Awaited<ReturnType<typeof createContext>>;
 const t = initTRPC.context<Context>().create();
 
 export const router = t.router;
-export const publicProcedure = t.procedure;
 
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
-  if (!ctx.user) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Authentication required.",
-    });
+const errorHandlingMiddleware = t.middleware(async ({ ctx, next }) => {
+  try {
+    return await next();
+  } catch (error) {
+    if (error instanceof TRPCError) {
+      throw error;
+    }
+    throw mapDomainError(error, ctx.lng);
   }
-  return next({ ctx: { ...ctx, user: ctx.user } });
 });
+
+export const publicProcedure = t.procedure.use(errorHandlingMiddleware);
+
+export const protectedProcedure = t.procedure
+  .use(errorHandlingMiddleware)
+  .use(({ ctx, next }) => {
+    if (!ctx.user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Authentication required.",
+      });
+    }
+    return next({ ctx: { ...ctx, user: ctx.user } });
+  });
