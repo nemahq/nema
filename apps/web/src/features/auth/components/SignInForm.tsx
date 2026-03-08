@@ -42,6 +42,7 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
   async function handleGoogleSignIn() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
+      options: { redirectTo: window.location.origin },
     });
     if (oauthError) {
       setError(oauthError.message);

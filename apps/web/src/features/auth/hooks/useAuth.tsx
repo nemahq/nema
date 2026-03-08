@@ -24,9 +24,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(function subscribeAuth() {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setLoading(false);
+
+      if (event === "SIGNED_IN" && window.location.href.includes("#")) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
     });
 
     return () => subscription.unsubscribe();
