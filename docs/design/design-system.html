@@ -48,7 +48,7 @@
     - 5.47:1 contrast on white — WCAG AA compliant
 
   ── Accessibility notes ───────────────────────────
-  --brand-text (teal-700) on white = 5.47:1 (PASS AA). Use for text accents.
+  --brand-accent (teal-700) on white = 5.47:1 (PASS AA). Use for text accents.
   --text-tertiary (zinc-500) on white = 4.83:1 (PASS AA).
   White text on teal-500 buttons = 2.49:1 (below AA).
     Accepted trade-off: brand aesthetics over strict compliance for
@@ -60,10 +60,10 @@
                         Light           Dark
   --brand               teal-500        teal-500        Filled backgrounds (buttons, bubbles)
   --brand-hover         teal-600        teal-400        Hover / interaction feedback
-  --brand-text          teal-700        teal-400        Text accent (WCAG AA compliant)
-  --brand-on            zinc-900        zinc-900        Text on brand-colored backgrounds (fixed)
-  --brand-subtle        teal-500/8%     teal-500/12%    Tag / badge backgrounds
-  --brand-subtle-strong teal-500/12%    teal-500/18%    Emphasized backgrounds (active state)
+  --brand-accent          teal-700        teal-400        Text accent (WCAG AA compliant)
+  --brand-fg            zinc-900        zinc-900        Text on brand-colored backgrounds (fixed)
+  --brand-tint        teal-500/8%     teal-500/12%    Tag / badge backgrounds
+  --brand-tint-hover teal-500/12%    teal-500/18%    Emphasized backgrounds (active state)
 
   ── Accent Color Usage ──────────────────────────
   Use brand teal sparingly. Most UI should be neutral (zinc grays).
@@ -164,11 +164,11 @@
   DO NOT remove outline without providing a visible alternative.
 
   Button variants:
-  - Primary: --brand background, --brand-on text, solid fill
-  - Secondary: transparent background, --brand-text border + text, outline style
+  - Primary: --brand background, --brand-fg text, solid fill
+  - Secondary: transparent background, --brand-accent border + text, outline style
 
   ── Link Style ──────────────────────────────────
-  - Color: --brand-text (teal-700 light / teal-400 dark)
+  - Color: --brand-accent (teal-700 light / teal-400 dark)
   - Underline: always visible (text-decoration: underline, text-underline-offset: 2px)
   - Hover: color shifts to --brand-hover
   - Focus: 2px solid ring using --text-primary (focus-visible only)
@@ -213,10 +213,10 @@
     /* Brand: teal-500 기준, 400/600/700은 UI 상태용 */
     --brand: #14B8A6;
     --brand-hover: #0D9488;
-    --brand-text: #0F766E;
-    --brand-on: #18181B;
-    --brand-subtle: rgba(20, 184, 166, 0.08);
-    --brand-subtle-strong: rgba(20, 184, 166, 0.12);
+    --brand-accent: #0F766E;
+    --brand-fg: #18181B;
+    --brand-tint: rgba(20, 184, 166, 0.08);
+    --brand-tint-hover: rgba(20, 184, 166, 0.12);
 
     --bg: #FFFFFF;
     --bg-surface: #FAFAFA;
@@ -249,10 +249,10 @@
   .dark {
     --brand: #14B8A6;
     --brand-hover: #2DD4BF;
-    --brand-text: #2DD4BF;
-    --brand-on: #18181B;
-    --brand-subtle: rgba(20, 184, 166, 0.12);
-    --brand-subtle-strong: rgba(20, 184, 166, 0.18);
+    --brand-accent: #2DD4BF;
+    --brand-fg: #18181B;
+    --brand-tint: rgba(20, 184, 166, 0.12);
+    --brand-tint-hover: rgba(20, 184, 166, 0.18);
 
     --bg: #18181B;
     --bg-surface: #27272A;
@@ -317,7 +317,7 @@
   }
 
   .controls button:hover { border-color: var(--brand-hover); color: var(--brand-hover); }
-  .controls button.active { background: var(--brand); color: var(--brand-on); border-color: var(--brand); }
+  .controls button.active { background: var(--brand); color: var(--brand-fg); border-color: var(--brand); }
 
   .controls .spacer { flex: 1; }
 
@@ -333,7 +333,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--brand-text);
+    color: var(--brand-accent);
     margin-bottom: 16px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
@@ -496,8 +496,8 @@
   }
 
   .mock-sidebar-item.active {
-    background: var(--brand-subtle);
-    color: var(--brand-text);
+    background: var(--brand-tint);
+    color: var(--brand-accent);
   }
 
   .mock-chat-layout {
@@ -519,7 +519,7 @@
 
   .mock-message-user {
     background: var(--brand);
-    color: var(--brand-on);
+    color: var(--brand-fg);
     padding: 12px 16px;
     border-radius: 12px 12px 4px 12px;
     font-size: 14px;
@@ -554,8 +554,8 @@
     font-weight: 500;
     padding: 2px 8px;
     border-radius: 4px;
-    background: var(--brand-subtle);
-    color: var(--brand-text);
+    background: var(--brand-tint);
+    color: var(--brand-accent);
     margin: 2px 4px 2px 0;
   }
 
@@ -641,7 +641,7 @@
   .spacing-bar {
     height: 24px;
     border-radius: 4px;
-    background: var(--brand-subtle-strong);
+    background: var(--brand-tint-hover);
     border: 1px solid var(--brand);
     opacity: 0.7;
   }
@@ -687,65 +687,65 @@
 
   .state-btn.primary {
     background: var(--brand);
-    color: var(--brand-on);
+    color: var(--brand-fg);
   }
 
   .state-btn.primary-hover {
     background: var(--brand-hover);
-    color: var(--brand-on);
+    color: var(--brand-fg);
   }
 
   .state-btn.primary-active {
     background: var(--brand-hover);
-    color: var(--brand-on);
+    color: var(--brand-fg);
     transform: scale(0.98);
   }
 
   .state-btn.primary-focus {
     background: var(--brand);
-    color: var(--brand-on);
+    color: var(--brand-fg);
     outline: none;
     box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--brand);
   }
 
   .state-btn.primary-disabled {
     background: var(--brand);
-    color: var(--brand-on);
+    color: var(--brand-fg);
     opacity: 0.5;
     cursor: not-allowed;
   }
 
   .state-btn.secondary {
     background: transparent;
-    color: var(--brand-text);
-    border: 1px solid var(--brand-text);
+    color: var(--brand-accent);
+    border: 1px solid var(--brand-accent);
   }
 
   .state-btn.secondary-hover {
-    background: var(--brand-subtle);
-    color: var(--brand-text);
+    background: var(--brand-tint);
+    color: var(--brand-accent);
     border: 1px solid var(--brand-hover);
   }
 
   .state-btn.secondary-active {
-    background: var(--brand-subtle);
-    color: var(--brand-text);
+    background: var(--brand-tint);
+    color: var(--brand-accent);
     border: 1px solid var(--brand-hover);
     transform: scale(0.98);
   }
 
   .state-btn.secondary-focus {
     background: transparent;
-    color: var(--brand-text);
-    border: 1px solid var(--brand-text);
+    color: var(--brand-accent);
+    border: 1px solid var(--brand-accent);
     outline: none;
     box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--brand);
   }
 
   .state-btn.secondary-disabled {
     background: transparent;
-    color: var(--brand-text);
-    border: 1px solid var(--brand-text);
+    color: var(--brand-accent);
+    border: 1px solid var(--brand-accent);
     opacity: 0.5;
     cursor: not-allowed;
   }
@@ -789,7 +789,7 @@
   }
 
   .link-demo a {
-    color: var(--brand-text);
+    color: var(--brand-accent);
     text-decoration: underline;
     text-underline-offset: 2px;
     transition: color var(--duration-fast) var(--ease-out);
@@ -887,7 +887,7 @@
   <button id="btn-light" onclick="setTheme('light')">Light</button>
   <button id="btn-dark" onclick="setTheme('dark')">Dark</button>
   <div class="spacer"></div>
-  <label style="color: var(--brand-text); font-weight: 600;">Nema Design System</label>
+  <label style="color: var(--brand-accent); font-weight: 600;">Nema Design System</label>
 </div>
 
 <div class="container">
@@ -1238,7 +1238,7 @@
         문의 사항이 있으시면 <a href="#">고객 지원</a>으로 연락해주세요.
       </div>
       <div style="margin-top: 16px; font-size: 12px; color: var(--text-tertiary);">
-        색상: --brand-text · 밑줄 기본 표시 (접근성) · hover 시 --brand-hover · focus-visible: text-primary ring
+        색상: --brand-accent · 밑줄 기본 표시 (접근성) · hover 시 --brand-hover · focus-visible: text-primary ring
       </div>
     </div>
   </div>

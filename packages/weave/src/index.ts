@@ -13,6 +13,7 @@ export {
   Dialog,
   DialogClose,
   DialogContent,
+  type DialogContentProps,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -42,7 +43,7 @@ export { Input } from "./components/input";
 export { ScrollArea, ScrollBar } from "./components/scroll-area";
 export { Separator } from "./components/separator";
 export { Skeleton } from "./components/skeleton";
-export { Toast } from "./components/toast";
+export { Toast, toast, type ToasterProps } from "./components/toast";
 export {
   Tooltip,
   TooltipContent,

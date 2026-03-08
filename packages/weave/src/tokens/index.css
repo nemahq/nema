@@ -50,14 +50,6 @@
   /* Border */
   --border: #e4e4e7; /* zinc-200 */
 
-  /* Transition */
-  --duration-fast: 150ms;
-  --duration-normal: 200ms;
-  --duration-slow: 300ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
-  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
-
   /* shadcn compatibility */
   --background: var(--surface-base);
   --foreground: var(--fg-primary);
@@ -162,11 +154,16 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Radius */
-  --radius-card: 12px;
-  --radius-button: 6px;
-  --radius-input: 6px;
-  --radius-tag: 4px;
+  /* Shadow */
+  --color-shadow: var(--shadow);
+
+  /* Transition */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
 }
 
 @layer base {

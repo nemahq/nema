@@ -5,7 +5,8 @@ import {
   OctagonXIcon,
   TriangleAlertIcon,
 } from "lucide-react";
-import { Toaster as Sonner, type ToasterProps } from "sonner";
+import * as React from "react";
+import { toast, Toaster as Sonner, type ToasterProps } from "sonner";
 
 function Toast({ theme = "system", ...props }: ToasterProps) {
   return (
@@ -24,7 +25,7 @@ function Toast({ theme = "system", ...props }: ToasterProps) {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
+          "--border-radius": "var(--radius-xl)",
         } as React.CSSProperties
       }
       {...props}
@@ -32,4 +33,4 @@ function Toast({ theme = "system", ...props }: ToasterProps) {
   );
 }
 
-export { Toast };
+export { Toast, toast, type ToasterProps };
