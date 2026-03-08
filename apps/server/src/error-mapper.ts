@@ -4,89 +4,87 @@ import type { Locale } from "@nema-io/shared";
 
 import { EmbeddingError } from "./infra/embedding/embedding-provider";
 import { GraphStoreError } from "./infra/graph/graph-store";
-import { t } from "./infra/i18n";
+import { t, type TranslationKey } from "./infra/i18n";
 import { LlmError } from "./infra/llm/llm-error";
 import { VectorStoreError } from "./infra/vector/vector-store";
+
+type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]["code"];
 
 export type DomainErrorCode =
   | "LLM_RATE_LIMIT"
   | "LLM_TIMEOUT"
+  | "LLM_AUTH"
+  | "LLM_BAD_REQUEST"
+  | "LLM_CONTENT_FILTER"
   | "LLM_ERROR"
   | "EMBEDDING_ERROR"
   | "VECTOR_STORE_ERROR"
   | "GRAPH_STORE_ERROR";
 
+const ERROR_MAP: Record<
+  DomainErrorCode,
+  { trpcCode: TRPCErrorCode; i18nKey: TranslationKey }
+> = {
+  LLM_RATE_LIMIT: {
+    trpcCode: "TOO_MANY_REQUESTS",
+    i18nKey: "error.llm_rate_limit",
+  },
+  LLM_TIMEOUT: { trpcCode: "TIMEOUT", i18nKey: "error.llm_timeout" },
+  LLM_AUTH: { trpcCode: "INTERNAL_SERVER_ERROR", i18nKey: "error.llm_auth" },
+  LLM_BAD_REQUEST: {
+    trpcCode: "BAD_REQUEST",
+    i18nKey: "error.llm_bad_request",
+  },
+  LLM_CONTENT_FILTER: {
+    trpcCode: "BAD_REQUEST",
+    i18nKey: "error.llm_content_filter",
+  },
+  LLM_ERROR: {
+    trpcCode: "INTERNAL_SERVER_ERROR",
+    i18nKey: "error.llm_default",
+  },
+  EMBEDDING_ERROR: {
+    trpcCode: "INTERNAL_SERVER_ERROR",
+    i18nKey: "error.embedding",
+  },
+  VECTOR_STORE_ERROR: {
+    trpcCode: "INTERNAL_SERVER_ERROR",
+    i18nKey: "error.vector_store",
+  },
+  GRAPH_STORE_ERROR: {
+    trpcCode: "INTERNAL_SERVER_ERROR",
+    i18nKey: "error.graph_store",
+  },
+};
+
+const LLM_CODE_MAP: Record<string, DomainErrorCode> = {
+  rate_limit: "LLM_RATE_LIMIT",
+  timeout: "LLM_TIMEOUT",
+  auth: "LLM_AUTH",
+  bad_request: "LLM_BAD_REQUEST",
+  content_filter: "LLM_CONTENT_FILTER",
+};
+
 export function getDomainCode(cause: unknown): DomainErrorCode | undefined {
   if (cause instanceof LlmError) {
-    switch (cause.code) {
-      case "rate_limit":
-        return "LLM_RATE_LIMIT";
-      case "timeout":
-        return "LLM_TIMEOUT";
-      default:
-        return "LLM_ERROR";
-    }
+    return LLM_CODE_MAP[cause.code] ?? "LLM_ERROR";
   }
-  if (cause instanceof EmbeddingError) {
-    return "EMBEDDING_ERROR";
-  }
-  if (cause instanceof VectorStoreError) {
-    return "VECTOR_STORE_ERROR";
-  }
-  if (cause instanceof GraphStoreError) {
-    return "GRAPH_STORE_ERROR";
-  }
+  if (cause instanceof EmbeddingError) return "EMBEDDING_ERROR";
+  if (cause instanceof VectorStoreError) return "VECTOR_STORE_ERROR";
+  if (cause instanceof GraphStoreError) return "GRAPH_STORE_ERROR";
   return undefined;
 }
 
 export function mapDomainError(error: unknown, lng: Locale): TRPCError {
-  if (error instanceof LlmError) {
-    switch (error.code) {
-      case "rate_limit":
-        return new TRPCError({
-          code: "TOO_MANY_REQUESTS",
-          message: t("error.llm_rate_limit", lng),
-          cause: error,
-        });
-      case "timeout":
-        return new TRPCError({
-          code: "TIMEOUT",
-          message: t("error.llm_timeout", lng),
-          cause: error,
-        });
-      default:
-        return new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: t("error.llm_default", lng),
-          cause: error,
-        });
-    }
-  }
-
-  if (error instanceof EmbeddingError) {
+  const domainCode = getDomainCode(error);
+  if (domainCode) {
+    const { trpcCode, i18nKey } = ERROR_MAP[domainCode];
     return new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: t("error.embedding", lng),
+      code: trpcCode,
+      message: t(i18nKey, lng),
       cause: error,
     });
   }
-
-  if (error instanceof VectorStoreError) {
-    return new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: t("error.vector_store", lng),
-      cause: error,
-    });
-  }
-
-  if (error instanceof GraphStoreError) {
-    return new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: t("error.graph_store", lng),
-      cause: error,
-    });
-  }
-
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
     message: t("error.unknown", lng),

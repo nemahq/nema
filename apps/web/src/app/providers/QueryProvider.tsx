@@ -5,6 +5,9 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
+import { TRPCClientError } from "@trpc/client";
+
+import { tolgee } from "@web/lib/tolgee/client";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,8 +16,13 @@ const queryClient = new QueryClient({
     },
   },
   mutationCache: new MutationCache({
-    onError(error) {
-      toast.error(error.message);
+    onError(error, _variables, _context, mutation) {
+      if (mutation.options.onError) return;
+      toast.error(
+        error instanceof TRPCClientError
+          ? error.message
+          : tolgee.t("common.unknown_error"),
+      );
     },
   }),
 });

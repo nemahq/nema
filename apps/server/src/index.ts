@@ -6,6 +6,7 @@ import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 
 import { getEnv, loadEnv } from "./env";
+import { initI18n } from "./infra/i18n";
 import { createQdrantStore } from "./infra/vector";
 import { appRouter } from "./router";
 import { createContext } from "./trpc";
@@ -13,6 +14,7 @@ import { createContext } from "./trpc";
 loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 
 async function bootstrap() {
+  await initI18n();
   const server = Fastify({ logger: true });
   const env = getEnv();
 
@@ -25,9 +27,6 @@ async function bootstrap() {
     trpcOptions: {
       router: appRouter,
       createContext,
-      onError({ error, path }: { error: Error; path: string | undefined }) {
-        server.log.error({ err: error, path }, `tRPC error on ${path}`);
-      },
     },
   });
 

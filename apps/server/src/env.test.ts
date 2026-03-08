@@ -60,4 +60,17 @@ describe("loadEnv", () => {
     expect(env.QDRANT_URL).toBeUndefined();
     expect(env.QDRANT_API_KEY).toBeUndefined();
   });
+
+  it("throws when only one QDRANT var is set", () => {
+    vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
+    vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
+    vi.stubEnv("NEO4J_USER", "neo4j");
+    vi.stubEnv("NEO4J_PASSWORD", "password");
+    vi.stubEnv("QDRANT_URL", "http://localhost:6333");
+
+    expect(() => loadEnv("/fake/root")).toThrow(
+      "QDRANT_URL and QDRANT_API_KEY must both be set or both be omitted",
+    );
+  });
 });

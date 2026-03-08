@@ -2,6 +2,9 @@
   "error": {
     "llm_rate_limit": "Too many requests. Please try again later.",
     "llm_timeout": "AI response timed out. Please try again.",
+    "llm_auth": "AI service authentication failed.",
+    "llm_bad_request": "Invalid AI service request.",
+    "llm_content_filter": "Your input was filtered. Please try different wording.",
     "llm_default": "An issue occurred with the AI service.",
     "embedding": "An issue occurred while processing text.",
     "vector_store": "An issue occurred while searching data.",

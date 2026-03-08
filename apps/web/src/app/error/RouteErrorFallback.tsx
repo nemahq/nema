@@ -1,11 +1,19 @@
+import { useEffect } from "react";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useRouter } from "@tanstack/react-router";
 
 import { useTranslation } from "@web/lib/tolgee";
 
-export function RouteErrorFallback({ reset }: ErrorComponentProps) {
+export function RouteErrorFallback({ error, reset }: ErrorComponentProps) {
   const { t } = useTranslation();
   const router = useRouter();
+
+  useEffect(
+    function logRouteError() {
+      console.error("[RouteErrorFallback]", error);
+    },
+    [error],
+  );
 
   function handleRetry() {
     reset();
