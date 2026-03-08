@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  MutationCache,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -7,6 +12,11 @@ const queryClient = new QueryClient({
       retry: 0,
     },
   },
+  mutationCache: new MutationCache({
+    onError(error) {
+      toast.error(error.message);
+    },
+  }),
 });
 
 export function QueryProvider({ children }: { children: ReactNode }) {
