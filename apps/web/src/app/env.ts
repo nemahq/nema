@@ -5,7 +5,7 @@ function requireEnv(key: string): string {
 }
 
 export const ENV = {
-  API_URL: import.meta.env.VITE_API_URL ?? "http://localhost:3001",
+  API_URL: requireEnv("VITE_API_URL"),
   SUPABASE_URL: requireEnv("VITE_SUPABASE_URL"),
   SUPABASE_ANON_KEY: requireEnv("VITE_SUPABASE_ANON_KEY"),
 } as const;
