@@ -6,9 +6,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 
 - `main` = latest integrated code. Feature branch → PR → CI passes → merge.
 - Deploy: ONLY version tags (`v*`) trigger Railway deployment.
-- Branch: `<type>/ctx<N>-<N>-<short-description>` (feat, fix, chore, refactor)
 - MUST verify CI locally before creating PR.
-- MUST reference context document in PR description.
 - PR title: Korean. Assignee: author. Labels: `enhancement`(feature), `bug`(fix), `refactoring`, `documentation`.
 
 ## DO NOT
