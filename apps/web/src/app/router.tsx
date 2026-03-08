@@ -6,6 +6,7 @@ import {
   redirect,
 } from "@tanstack/react-router";
 
+import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
@@ -14,7 +15,10 @@ import { supabase } from "@web/lib/supabase";
 
 import { App } from "./App";
 
-const rootRoute = createRootRoute({ component: App });
+const rootRoute = createRootRoute({
+  component: App,
+  errorComponent: RouteErrorFallback,
+});
 
 const signinRoute = createRoute({
   getParentRoute: () => rootRoute,
