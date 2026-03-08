@@ -18,7 +18,7 @@ AI-powered context management web app.
 
 - Node.js >= 22
 - pnpm 10.6+
-- [direnv](https://direnv.net/) — 환경변수 자동 로딩
+- [direnv](https://direnv.net/) — 서버 환경변수 자동 로딩 (서버 개발 시 필요)
 
 ### 1. 의존성 설치
 
@@ -26,62 +26,29 @@ AI-powered context management web app.
 pnpm install
 ```
 
-### 2. direnv 설정
+### 2. 환경변수
 
-셸 후킹 (최초 1회):
+공개 값(Supabase URL, anon key 등)은 각 앱의 `.env`에 커밋되어 있습니다.
+**웹 프론트엔드만 작업**한다면 추가 설정 없이 바로 시작할 수 있습니다.
 
-```bash
-# zsh
-echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
-source ~/.zshrc
-
-# bash
-echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-### 3. 환경변수 설정
-
-환경변수는 레포 밖 중앙 디렉토리에서 관리합니다. 워크트리를 여러 개 쓸 때도 한 번만 설정하면 됩니다.
+**서버 개발 시** 비밀키를 별도 설정해야 합니다:
 
 ```bash
+# direnv 셸 후킹 (최초 1회)
+echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc && source ~/.zshrc
+
+# 비밀키 파일 생성
 mkdir -p ~/.config/nema
-```
+cp apps/server/.env.example ~/.config/nema/server.env
+# ~/.config/nema/server.env 를 열어 실제 값으로 채우기
 
-`apps/server/.env.example`과 `apps/web/.env.example`을 참고하여 아래 파일을 생성합니다:
-
-```bash
-# ~/.config/nema/server.env
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-QDRANT_URL=https://xxx.cloud.qdrant.io:6333
-QDRANT_API_KEY=xxx
-NEO4J_URI=bolt+s://xxx.databases.neo4j.io
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=xxx
-OPENAI_API_KEY=sk-xxx
-VOYAGE_API_KEY=pa-xxx
-NODE_ENV=development
-PORT=3001
-CORS_ORIGIN=http://localhost:5173
-```
-
-```bash
-# ~/.config/nema/web.env
-VITE_API_URL=http://localhost:3001/trpc
-VITE_SUPABASE_URL=https://xxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJ...
-```
-
-각 앱 디렉토리에서 direnv를 허용합니다:
-
-```bash
+# direnv 허용
 cd apps/server && direnv allow
-cd apps/web && direnv allow
 ```
 
-### 4. 개발 서버 실행
+`apps/server/.env.example`에 필요한 비밀키 목록이 있습니다.
+
+### 3. 개발 서버 실행
 
 ```bash
 pnpm dev          # 서버 + 웹 동시 실행

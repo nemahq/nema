@@ -2,8 +2,8 @@ node_modules/
 dist/
 *.tsbuildinfo
 .turbo/
-.env
 .env.local
+.env.*.local
 *.log
 .eslintcache
 .DS_Store
