@@ -10,10 +10,12 @@ import {
 } from "@web/components/ui/card";
 import { Input } from "@web/components/ui/input";
 import { supabase } from "@web/lib/supabase";
+import { useTranslation } from "@web/lib/tolgee";
 
 export function SignInForm({ onToggle }: { onToggle: () => void }) {
   const search = useSearch({ from: "/signin" });
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,47 +42,56 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
   }
 
   async function handleGoogleSignIn() {
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-    });
-    if (oauthError) {
-      setError(oauthError.message);
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (oauthError) {
+        setError(oauthError.message);
+        setLoading(false);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.unknown_error"));
+      setLoading(false);
     }
   }
 
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle>로그인</CardTitle>
+        <CardTitle>{t("auth.sign_in")}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
             type="email"
-            placeholder="이메일"
+            placeholder={t("auth.email_placeholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
           <Input
             type="password"
-            placeholder="비밀번호"
+            placeholder={t("auth.password_placeholder")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" disabled={loading}>
-            {loading ? "로그인 중..." : "로그인"}
+            {loading ? t("auth.sign_in_loading") : t("auth.sign_in")}
           </Button>
         </form>
 
         <div className="mt-4 flex flex-col gap-2">
           <Button variant="outline" onClick={handleGoogleSignIn}>
-            Google로 계속하기
+            {t("auth.continue_with_google")}
           </Button>
           <Button variant="link" onClick={onToggle}>
-            계정이 없으신가요? 회원가입
+            {t("auth.no_account")}
           </Button>
         </div>
       </CardContent>
