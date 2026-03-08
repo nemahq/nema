@@ -14,7 +14,8 @@ src/
 ├── app/          # Entry point (providers/, router)
 ├── features/     # Business domain modules (capture, library, auth)
 ├── components/   # Feature-agnostic shared UI (ui/, layout/)
-├── lib/          # External service clients (tRPC, Supabase)
+├── lib/          # External service clients (folder per service: tolgee/, tailwind/)
+├── utils/        # Internal utilities (localStorage, theme, serialization)
 └── hooks/        # Feature-agnostic shared hooks
 ```
 
@@ -23,7 +24,7 @@ src/
 
 ## State Management
 
-- Server state: TanStack Query (tRPC 통합은 feature 구현 시 도입)
+- Server state: TanStack Query (tRPC integration deferred to feature implementation)
 - UI state: React built-ins (useState, useContext)
 
 ## Naming
@@ -31,7 +32,7 @@ src/
 | Scope         | Pattern        | Example           |
 | ------------- | -------------- | ----------------- |
 | Component     | PascalCase     | `UserProfile.tsx` |
-| `components/ui/` | lowercase (shadcn CLI 관리) | `button.tsx` |
+| `components/ui/` | lowercase (managed by shadcn CLI) | `button.tsx` |
 | Non-component | camelCase      | `useAuth.ts`      |
 | Env var       | `VITE_` prefix | `VITE_API_URL`    |
 
@@ -48,16 +49,16 @@ src/
 
 ## I18n
 
-- Tolgee (`@tolgee/react`) 기반. `useTranslation()` 훅의 `t()` 함수로 번역. `<T>` 컴포넌트 사용 금지.
-- locale JSON: `src/lib/i18n/ko.json`, `en.json`. 키 타입은 `ko.json`에서 자동 추론.
-- 키 네이밍: 첫 segment = feature (e.g. `common.home`, `auth.login`).
-- 초기 locale 결정: localStorage → 브라우저 감지 → `ko`. 런타임 전환: `changeLocale()`.
-- 프로덕션: staticData 번들. 인컨텍스트 편집 미사용.
+- Tolgee (`@tolgee/react`). Use `t()` from `useTranslation()` hook. Do NOT use `<T>` component.
+- Locale JSON in `lib/tolgee/`. Key types auto-inferred from `ko.json`.
+- Key naming: first segment = feature (e.g. `common.home`, `auth.login`).
+- Initial locale: localStorage → browser detection → `ko`. Runtime switch: `changeLocale()`.
+- Production: staticData bundle. No in-context editing.
 
 ## Storage
 
-- localStorage 키는 `src/lib/storage.ts`에서 `StorageMap` 타입으로 중앙 관리.
-- `getStorage()` / `setStorage()` 유틸리티로만 접근. 직접 `localStorage` 호출 금지.
+- All localStorage keys centrally managed via `StorageMap` type in `utils/`.
+- Access only through `getStorage()` / `setStorage()`. Direct `localStorage` calls prohibited.
 
 ## Dev
 

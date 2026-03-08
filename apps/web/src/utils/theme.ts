@@ -1,7 +1,13 @@
-import { getStorage, setStorage } from "./storage";
+import { getStorage, setStorage } from "./localStorage";
 
 export type Theme = "light" | "dark";
-export type ThemePreference = "light" | "dark" | "system";
+
+const THEME_PREFERENCES = ["light", "dark", "system"] as const;
+export type ThemePreference = (typeof THEME_PREFERENCES)[number];
+
+export function isThemePreference(v: string): v is ThemePreference {
+  return (THEME_PREFERENCES as readonly string[]).includes(v);
+}
 
 const MEDIA = "(prefers-color-scheme: dark)";
 

@@ -1,7 +1,10 @@
 import { createContext, useContext, useState } from "react";
 
-import { getStorage } from "@web/lib/storage";
-import { setTheme as setThemePref, type ThemePreference } from "@web/lib/theme";
+import { getStorage } from "@web/utils/localStorage";
+import {
+  setTheme as setThemePref,
+  type ThemePreference,
+} from "@web/utils/theme";
 
 type ThemeProviderState = {
   theme: ThemePreference;
@@ -14,7 +17,7 @@ const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(
-    () => getStorage("theme") ?? "light",
+    () => getStorage("theme") ?? "system",
   );
 
   const setTheme = (next: ThemePreference) => {

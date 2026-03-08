@@ -1,4 +1,4 @@
-import type { EmbeddingProvider } from "@server/infra/embedding/index";
+import type { EmbeddingProvider } from "@server/infra/embedding";
 
 export class VectorStoreError extends Error {
   constructor(

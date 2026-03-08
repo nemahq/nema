@@ -6,5 +6,9 @@
     "send": "Send",
     "cancel": "Cancel",
     "home": "Home"
+  },
+  "layout": {
+    "collapse_sidebar": "Collapse sidebar",
+    "expand_sidebar": "Expand sidebar"
   }
 }

@@ -1,19 +1,22 @@
-import type { Locale } from "./i18n/types";
-import { LOCALES } from "./i18n/types";
+import type { Locale } from "@web/lib/tolgee/types";
+import { isLocale } from "@web/lib/tolgee/types";
+
+import { type BooleanString, isBooleanString } from "./serialization";
 import type { ThemePreference } from "./theme";
+import { isThemePreference } from "./theme";
 
 type StorageMap = {
   theme: ThemePreference;
   locale: Locale;
+  sidebarCollapsed: BooleanString;
 };
 
 const isValid: {
   [K in keyof StorageMap]: (v: string) => v is StorageMap[K];
 } = {
-  theme: (v): v is StorageMap["theme"] =>
-    v === "dark" || v === "light" || v === "system",
-  locale: (v): v is StorageMap["locale"] =>
-    (LOCALES as readonly string[]).includes(v),
+  theme: isThemePreference,
+  locale: isLocale,
+  sidebarCollapsed: isBooleanString,
 };
 
 export function getStorage<K extends keyof StorageMap>(
