@@ -6,5 +6,9 @@
     "send": "보내기",
     "cancel": "취소",
     "home": "홈"
+  },
+  "layout": {
+    "collapse_sidebar": "사이드바 접기",
+    "expand_sidebar": "사이드바 펼치기"
   }
 }

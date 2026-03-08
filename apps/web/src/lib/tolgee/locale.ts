@@ -1,4 +1,4 @@
-import { setStorage } from "@web/lib/storage";
+import { setStorage } from "@web/utils/storage";
 
 import { tolgee } from "./tolgee";
 import type { Locale } from "./types";

@@ -3,6 +3,10 @@ import { getStorage, setStorage } from "./storage";
 export type Theme = "light" | "dark";
 export type ThemePreference = "light" | "dark" | "system";
 
+export function isThemePreference(v: string): v is ThemePreference {
+  return v === "light" || v === "dark" || v === "system";
+}
+
 const MEDIA = "(prefers-color-scheme: dark)";
 
 function resolveTheme(pref: ThemePreference | null): Theme {
