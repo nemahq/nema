@@ -18,7 +18,7 @@ export const trpc = createTRPCClient<AppRouter>({
         (opts.direction === "down" && opts.result instanceof Error),
     }),
     httpBatchLink({
-      url: apiUrl ?? "http://localhost:4000/trpc",
+      url: `${apiUrl ?? "http://localhost:3001"}/trpc`,
       async headers() {
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
