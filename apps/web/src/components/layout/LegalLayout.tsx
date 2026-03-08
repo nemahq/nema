@@ -10,7 +10,7 @@ export function LegalLayout({ children }: { children: ReactNode }) {
       <button
         type="button"
         onClick={() => window.history.back()}
-        className="mb-8 inline-block text-sm text-muted-foreground hover:text-foreground"
+        className="mb-8 inline-block text-sm text-fg-tertiary hover:text-fg-primary"
       >
         &larr; {t("auth.back")}
       </button>

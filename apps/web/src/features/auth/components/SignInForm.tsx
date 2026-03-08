@@ -82,7 +82,7 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-status-error">{error}</p>}
           <Button type="submit" disabled={loading}>
             {loading ? t("auth.sign_in_loading") : t("auth.sign_in")}
           </Button>
@@ -97,12 +97,12 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
           </Button>
         </div>
 
-        <div className="mt-4 flex justify-center gap-3 text-xs text-muted-foreground">
-          <Link to="/privacy" className="hover:text-foreground hover:underline">
+        <div className="mt-4 flex justify-center gap-3 text-xs text-fg-tertiary">
+          <Link to="/privacy" className="hover:text-fg-primary hover:underline">
             {t("auth.privacy")}
           </Link>
           <span>&middot;</span>
-          <Link to="/terms" className="hover:text-foreground hover:underline">
+          <Link to="/terms" className="hover:text-fg-primary hover:underline">
             {t("auth.terms")}
           </Link>
         </div>

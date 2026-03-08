@@ -50,24 +50,13 @@
   /* Border */
   --border: #e4e4e7; /* zinc-200 */
 
-  /* shadcn compatibility */
-  --background: var(--surface-base);
-  --foreground: var(--fg-primary);
-  --card: var(--surface-card);
-  --card-foreground: var(--fg-primary);
-  --popover: var(--surface-card);
-  --popover-foreground: var(--fg-primary);
-  --primary: var(--brand);
-  --primary-foreground: var(--brand-fg);
-  --secondary: var(--surface-raised);
-  --secondary-foreground: var(--fg-primary);
-  --muted: var(--surface-raised);
-  --muted-foreground: var(--fg-tertiary);
-  --accent: var(--brand-tint);
-  --accent-foreground: var(--brand-accent);
-  --destructive: var(--status-error);
-  --input: var(--border);
-  --ring: var(--brand);
+  /* Transition */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
 }
 
 .dark {
@@ -135,43 +124,22 @@
   /* Border */
   --color-border: var(--border);
 
-  /* shadcn compat */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-
   /* Shadow */
   --color-shadow: var(--shadow);
 
-  /* Transition */
-  --duration-fast: 150ms;
-  --duration-normal: 200ms;
-  --duration-slow: 300ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
-  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  /* Radius */
+  --radius-card: 12px;
+  --radius-button: 6px;
+  --radius-input: 6px;
+  --radius-tag: 4px;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-brand/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-surface-base text-fg-primary;
     font-family: "Satoshi", "Wanted Sans Variable", "Wanted Sans", sans-serif;
   }
 }

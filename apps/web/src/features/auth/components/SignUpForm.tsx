@@ -52,7 +52,7 @@ export function SignUpForm({ onToggle }: { onToggle: () => void }) {
     return (
       <Card className="w-full max-w-sm">
         <CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-fg-tertiary">
             {t("auth.verification_email_sent")}
           </p>
         </CardContent>
@@ -114,7 +114,7 @@ export function SignUpForm({ onToggle }: { onToggle: () => void }) {
               </label>
             </div>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-status-error">{error}</p>}
           <Button
             type="submit"
             disabled={loading || !agreedTerms || !agreedPrivacy}
