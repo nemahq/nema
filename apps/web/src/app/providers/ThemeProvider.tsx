@@ -17,7 +17,7 @@ const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(
-    () => getStorage("theme") ?? "light",
+    () => getStorage("theme") ?? "system",
   );
 
   const setTheme = (next: ThemePreference) => {

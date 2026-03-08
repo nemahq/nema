@@ -39,7 +39,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 
 - MUST NOT add comments that restate what code already expresses (type casts, function names, obvious flow).
 - Comments are reserved for: TODO, and intent/context that code alone cannot convey.
-- MUST write all comments in Korean.
+- PR title, description, and code comments in Korean. CLAUDE.md in English.
 
 ## Self-Update
 

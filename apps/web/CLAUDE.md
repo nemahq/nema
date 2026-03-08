@@ -50,14 +50,14 @@ src/
 ## I18n
 
 - Tolgee (`@tolgee/react`). Use `t()` from `useTranslation()` hook. Do NOT use `<T>` component.
-- Locale JSON: `src/lib/tolgee/ko.json`, `en.json`. Key types auto-inferred from `ko.json`.
+- Locale JSON in `lib/tolgee/`. Key types auto-inferred from `ko.json`.
 - Key naming: first segment = feature (e.g. `common.home`, `auth.login`).
 - Initial locale: localStorage → browser detection → `ko`. Runtime switch: `changeLocale()`.
 - Production: staticData bundle. No in-context editing.
 
 ## Storage
 
-- All localStorage keys centrally managed via `StorageMap` type in `src/utils/localStorage.ts`.
+- All localStorage keys centrally managed via `StorageMap` type in `utils/`.
 - Access only through `getStorage()` / `setStorage()`. Direct `localStorage` calls prohibited.
 
 ## Dev
