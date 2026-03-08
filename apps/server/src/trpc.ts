@@ -2,6 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
 
+import { resolveLanguage } from "./infra/i18n";
 import { getSupabaseAdmin } from "./infra/supabase";
 
 export async function createContext({ req, res }: CreateFastifyContextOptions) {
@@ -18,7 +19,12 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
     }
   }
 
-  return { req, res, log: req.log, user };
+  const acceptLanguage = req.headers["accept-language"];
+  const lng = resolveLanguage(
+    Array.isArray(acceptLanguage) ? acceptLanguage[0] : acceptLanguage,
+  );
+
+  return { req, res, log: req.log, user, lng };
 }
 
 type Context = Awaited<ReturnType<typeof createContext>>;
