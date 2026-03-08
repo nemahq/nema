@@ -16,7 +16,7 @@ const envSchema = z
     QDRANT_API_KEY: z.string().min(1).optional(),
 
     NEO4J_URI: z.string().min(1),
-    NEO4J_USER: z.string().min(1),
+    NEO4J_USERNAME: z.string().min(1),
     NEO4J_PASSWORD: z.string().min(1),
   })
   .refine(
