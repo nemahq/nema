@@ -1,12 +1,17 @@
 import type { ReactNode } from "react";
 
-import { Toaster } from "@web/components/ui/sonner";
-import { TooltipProvider } from "@web/components/ui/tooltip";
+import { Toast, TooltipProvider } from "@nema-io/weave";
+
 import { AuthProvider } from "@web/features/auth/hooks/useAuth";
 
 import { I18nProvider } from "./I18nProvider";
 import { QueryProvider } from "./QueryProvider";
-import { ThemeProvider } from "./ThemeProvider";
+import { ThemeProvider, useTheme } from "./ThemeProvider";
+
+function ThemedToast() {
+  const { theme } = useTheme();
+  return <Toast theme={theme} />;
+}
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
@@ -16,7 +21,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
           <AuthProvider>
             <TooltipProvider>
               {children}
-              <Toaster />
+              <ThemedToast />
             </TooltipProvider>
           </AuthProvider>
         </QueryProvider>

@@ -13,20 +13,16 @@
   },
   "dependencies": {
     "@nema-io/shared": "workspace:*",
+    "@nema-io/weave": "workspace:*",
     "@supabase/supabase-js": "^2.98.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-router": "^1.166.2",
     "@tolgee/react": "^6.4.0",
     "@trpc/client": "^11.12.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
-    "radix-ui": "^1.4.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "sonner": "^2.0.7",
-    "tailwind-merge": "^3.5.0"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@mdx-js/rollup": "^3.1.1",
