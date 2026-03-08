@@ -40,12 +40,22 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
   }
 
   async function handleGoogleSignIn() {
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
-    if (oauthError) {
-      setError(oauthError.message);
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (oauthError) {
+        setError(oauthError.message);
+        setLoading(false);
+      }
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다.",
+      );
+      setLoading(false);
     }
   }
 
