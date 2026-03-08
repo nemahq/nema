@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 
-import { useDraftAutosave } from "./useDraftAutosave.js";
+import { useDraftAutosave } from "./useDraftAutosave";
 
 describe("useDraftAutosave", () => {
   beforeEach(() => {

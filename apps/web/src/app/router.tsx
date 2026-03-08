@@ -7,12 +7,12 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 
-import { Button } from "@web/components/ui/button.js";
-import { AuthPage } from "@web/features/auth/components/AuthPage.js";
-import { useTranslation } from "@web/lib/i18n/index.js";
-import { supabase } from "@web/lib/supabase.js";
+import { Button } from "@web/components/ui/button";
+import { AuthPage } from "@web/features/auth/components/AuthPage";
+import { useTranslation } from "@web/lib/i18n/index";
+import { supabase } from "@web/lib/supabase";
 
-import { App } from "./App.js";
+import { App } from "./App";
 
 const rootRoute = createRootRoute({ component: App });
 

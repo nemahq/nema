@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { EmbeddingError } from "./embedding-provider.js";
+import { EmbeddingError } from "./embedding-provider";
 
 const mockEmbed = vi.fn();
 
@@ -8,7 +8,7 @@ vi.mock("voyageai", () => ({
   VoyageAIClient: vi.fn().mockImplementation(() => ({ embed: mockEmbed })),
 }));
 
-import { createVoyageProvider } from "./voyage-provider.js";
+import { createVoyageProvider } from "./voyage-provider";
 
 describe("createVoyageProvider", () => {
   beforeEach(() => {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { EnvError, requireEnv } from "./env.js";
+import { EnvError, requireEnv } from "./env";
 
 describe("requireEnv", () => {
   afterEach(() => {

@@ -1,6 +1,6 @@
 import neo4j, { type Driver, type Integer } from "neo4j-driver";
 
-import { requireEnv } from "@server/env.js";
+import { requireEnv } from "@server/env";
 
 import type {
   FindDocumentsByEntitiesOptions,
@@ -11,8 +11,8 @@ import type {
   ListEntitiesOptions,
   MergeEntitiesOptions,
   UpsertEntitiesOptions,
-} from "./graph-store.js";
-import { GraphStoreError } from "./graph-store.js";
+} from "./graph-store";
+import { GraphStoreError } from "./graph-store";
 
 export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
   const driver: Driver = neo4j.driver(

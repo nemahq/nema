@@ -4,10 +4,10 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 
-import { ErrorBoundary } from "./app/error/ErrorBoundary.js";
-import { AppProviders } from "./app/providers/index.js";
-import { router } from "./app/router.js";
-import { initTheme } from "./lib/theme.js";
+import { ErrorBoundary } from "./app/error/ErrorBoundary";
+import { AppProviders } from "./app/providers/index";
+import { router } from "./app/router";
+import { initTheme } from "./lib/theme";
 
 initTheme();
 

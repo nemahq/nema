@@ -9,8 +9,8 @@ import {
 } from "openai/error";
 import { zodResponseFormat } from "openai/helpers/zod";
 
-import { LlmError } from "./llm-error.js";
-import type { GenerateStructuredParams, LlmProvider } from "./llm-provider.js";
+import { LlmError } from "./llm-error";
+import type { GenerateStructuredParams, LlmProvider } from "./llm-provider";
 
 export interface OpenAiProviderConfig {
   apiKey: string;

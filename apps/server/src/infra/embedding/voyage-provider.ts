@@ -5,8 +5,8 @@ import type {
   EmbeddingProvider,
   EmbeddingProviderConfig,
   EmbeddingResult,
-} from "./embedding-provider.js";
-import { EmbeddingError, VECTOR_DIMENSION } from "./embedding-provider.js";
+} from "./embedding-provider";
+import { EmbeddingError, VECTOR_DIMENSION } from "./embedding-provider";
 
 const PROVIDER_ID = "voyage";
 const DEFAULT_MODEL = "voyage-4-large";

@@ -8,6 +8,6 @@ export type {
   ListEntitiesOptions,
   MergeEntitiesOptions,
   UpsertEntitiesOptions,
-} from "./graph-store.js";
-export { ENTITY_TYPES, GraphStoreError } from "./graph-store.js";
-export { createNeo4jStore } from "./neo4j-store.js";
+} from "./graph-store";
+export { ENTITY_TYPES, GraphStoreError } from "./graph-store";
+export { createNeo4jStore } from "./neo4j-store";

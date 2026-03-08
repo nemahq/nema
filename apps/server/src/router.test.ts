@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { appRouter } from "./router.js";
+import { appRouter } from "./router";
 
 const caller = appRouter.createCaller({
   req: {} as never,

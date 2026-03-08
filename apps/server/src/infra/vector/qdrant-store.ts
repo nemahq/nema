@@ -1,10 +1,10 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 
-import { requireEnv } from "@server/env.js";
+import { requireEnv } from "@server/env";
 import {
   type EmbeddingProvider,
   VECTOR_DIMENSION,
-} from "@server/infra/embedding/index.js";
+} from "@server/infra/embedding/index";
 
 import type {
   DocumentPayload,
@@ -12,8 +12,8 @@ import type {
   UpsertOptions,
   VectorSearchResult,
   VectorStore,
-} from "./vector-store.js";
-import { VectorStoreError } from "./vector-store.js";
+} from "./vector-store";
+import { VectorStoreError } from "./vector-store";
 
 const COLLECTION_NAME = "documents";
 

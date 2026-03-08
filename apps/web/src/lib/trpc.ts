@@ -1,8 +1,8 @@
 import { createTRPCClient, httpBatchLink, loggerLink } from "@trpc/client";
 
-import type { AppRouter } from "@nema-io/server/src/router.js";
+import type { AppRouter } from "@nema-io/server/src/router";
 
-import { supabase } from "./supabase.js";
+import { supabase } from "./supabase";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 

@@ -9,16 +9,16 @@ import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { DraftOutputSchema } from "@nema-io/shared/src/schemas/structuring.js";
+import { DraftOutputSchema } from "@nema-io/shared/src/schemas/structuring";
 
-import { OpenAiProvider } from "@server/infra/llm/openai-provider.js";
+import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
   buildEditCycleMessage,
   buildFirstCallMessage,
   PHASE1_SYSTEM_PROMPT,
-} from "@server/prompts/drafting.js";
+} from "@server/prompts/drafting";
 
-import { PHASE1_EDIT_SEEDS, PHASE1_SEEDS } from "./seed-data.js";
+import { PHASE1_EDIT_SEEDS, PHASE1_SEEDS } from "./seed-data";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

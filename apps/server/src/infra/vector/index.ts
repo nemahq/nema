@@ -1,9 +1,9 @@
-export { createQdrantStore } from "./qdrant-store.js";
+export { createQdrantStore } from "./qdrant-store";
 export type {
   DocumentPayload,
   SearchOptions,
   UpsertOptions,
   VectorSearchResult,
   VectorStore,
-} from "./vector-store.js";
-export { VectorStoreError } from "./vector-store.js";
+} from "./vector-store";
+export { VectorStoreError } from "./vector-store";
