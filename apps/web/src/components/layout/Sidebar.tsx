@@ -21,7 +21,7 @@ export function Sidebar({ children }: { children?: ReactNode }) {
   return (
     <aside
       className={cn(
-        "flex h-full flex-col overflow-hidden border-r transition-[width] duration-200",
+        "flex h-full flex-col overflow-hidden border-r",
         collapsed ? "w-12" : "w-64",
       )}
     >
@@ -34,12 +34,7 @@ export function Sidebar({ children }: { children?: ReactNode }) {
             collapsed ? "layout.expand_sidebar" : "layout.collapse_sidebar",
           )}
         >
-          <PanelLeft
-            className={cn(
-              "transition-transform duration-200",
-              collapsed && "rotate-180",
-            )}
-          />
+          <PanelLeft className={cn(collapsed && "rotate-180")} />
         </Button>
       </div>
 
