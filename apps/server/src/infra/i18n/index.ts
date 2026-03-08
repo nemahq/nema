@@ -1,9 +1,19 @@
 import { FormatSimple, TolgeeCore, type TolgeeInstance } from "@tolgee/core";
 
-import { type Locale, LOCALES } from "@nema-io/shared";
+import { isLocale, type Locale } from "@nema-io/shared";
 
 import en from "./locales/en.json";
 import ko from "./locales/ko.json";
+
+type Flatten<T, Prefix extends string = ""> = {
+  [K in keyof T & string]: T[K] extends Record<string, unknown>
+    ? Flatten<T[K], Prefix extends "" ? K : `${Prefix}.${K}`>
+    : Prefix extends ""
+      ? K
+      : `${Prefix}.${K}`;
+}[keyof T & string];
+
+export type TranslationKey = Flatten<typeof ko>;
 
 const DEFAULT_LANGUAGE: Locale = "ko";
 
@@ -22,14 +32,17 @@ export function resolveLanguage(acceptLanguageHeader?: string): Locale {
 
   for (const part of acceptLanguageHeader.split(",")) {
     const lang = part.split(";")[0].trim().split("-")[0];
-    if ((LOCALES as readonly string[]).includes(lang)) {
-      return lang as Locale;
+    if (isLocale(lang)) {
+      return lang;
     }
   }
 
   return DEFAULT_LANGUAGE;
 }
 
-export function t(key: string, lng: Locale): string {
+export function t(key: TranslationKey, lng: Locale): string {
+  if (!tolgee) {
+    throw new Error("i18n not initialized — call initI18n() first");
+  }
   return tolgee.t(key, undefined, { language: lng });
 }
