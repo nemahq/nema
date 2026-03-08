@@ -1,10 +1,16 @@
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 
+import { loadEnv } from "./env";
 import { createQdrantStore } from "./infra/vector";
 import { appRouter } from "./router";
 import { createContext } from "./trpc";
+
+loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 
 function getPort(): number {
   const raw = process.env.PORT;
