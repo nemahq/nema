@@ -37,7 +37,7 @@ vi.mock("neo4j-driver", () => {
 vi.mock("@server/env", () => ({
   getEnv: vi.fn(() => ({
     NEO4J_URI: "bolt://mock-neo4j",
-    NEO4J_USER: "mock-user",
+    NEO4J_USERNAME: "mock-user",
     NEO4J_PASSWORD: "mock-password",
   })),
 }));

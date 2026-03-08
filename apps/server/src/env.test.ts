@@ -15,7 +15,7 @@ describe("loadEnv", () => {
     vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
     vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
-    vi.stubEnv("NEO4J_USER", "neo4j");
+    vi.stubEnv("NEO4J_USERNAME", "neo4j");
     vi.stubEnv("NEO4J_PASSWORD", "password");
 
     loadEnv("/fake/root");
@@ -39,7 +39,7 @@ describe("loadEnv", () => {
     vi.stubEnv("SUPABASE_URL", "not-a-url");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
     vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
-    vi.stubEnv("NEO4J_USER", "neo4j");
+    vi.stubEnv("NEO4J_USERNAME", "neo4j");
     vi.stubEnv("NEO4J_PASSWORD", "password");
 
     expect(() => loadEnv("/fake/root")).toThrow(
@@ -51,7 +51,7 @@ describe("loadEnv", () => {
     vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
     vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
-    vi.stubEnv("NEO4J_USER", "neo4j");
+    vi.stubEnv("NEO4J_USERNAME", "neo4j");
     vi.stubEnv("NEO4J_PASSWORD", "password");
 
     loadEnv("/fake/root");
@@ -65,7 +65,7 @@ describe("loadEnv", () => {
     vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
     vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
-    vi.stubEnv("NEO4J_USER", "neo4j");
+    vi.stubEnv("NEO4J_USERNAME", "neo4j");
     vi.stubEnv("NEO4J_PASSWORD", "password");
     vi.stubEnv("QDRANT_URL", "http://localhost:6333");
 
