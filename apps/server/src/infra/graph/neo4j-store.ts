@@ -15,10 +15,10 @@ import type {
 import { GraphStoreError } from "./graph-store";
 
 export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
-  const { NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD } = getEnv();
+  const { NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD } = getEnv();
   const driver: Driver = neo4j.driver(
     NEO4J_URI,
-    neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD),
+    neo4j.auth.basic(NEO4J_USERNAME, NEO4J_PASSWORD),
   );
 
   return {
