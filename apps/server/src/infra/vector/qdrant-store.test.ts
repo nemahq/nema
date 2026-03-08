@@ -22,7 +22,7 @@ vi.mock("@qdrant/js-client-rest", () => ({
   })),
 }));
 
-vi.mock("../../env.js", () => ({
+vi.mock("@server/env.js", () => ({
   requireEnv: vi.fn((name: string) => `mock-${name}`),
 }));
 

@@ -3,14 +3,12 @@
 //
 // 실행: pnpm tsx apps/server/src/eval/run-phase1.ts
 
+import "dotenv/config";
+
 import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { config } from "dotenv";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: resolve(__dirname, "../../../../.env") });
 import { DraftOutputSchema } from "@nema-io/shared/src/schemas/structuring.js";
 
 import { OpenAiProvider } from "@server/infra/llm/openai-provider.js";
@@ -21,6 +19,8 @@ import {
 } from "@server/prompts/drafting.js";
 
 import { PHASE1_EDIT_SEEDS, PHASE1_SEEDS } from "./seed-data.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 interface EvalResult {
   id: string;

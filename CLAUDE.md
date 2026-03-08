@@ -44,12 +44,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 
 ## Self-Update
 
-Update this file in the same PR when:
-
-- New convention is established (used in 2+ places).
-- Architectural decision is made (new package, dependency, data flow).
-- Non-obvious gotcha is discovered.
-
 DO NOT add: one-time workarounds, task-specific context, unverified patterns.
 DO NOT add: file paths or structure descriptions discoverable from code.
+DO NOT add: rules already enforced by tooling (lint, formatter, CI).
 Keep under 60 lines. Move package-specific rules to that package's CLAUDE.md.
