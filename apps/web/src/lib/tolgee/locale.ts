@@ -1,6 +1,6 @@
 import { setStorage } from "@web/utils/storage";
 
-import { tolgee } from "./tolgee";
+import { tolgee } from "./client";
 import type { Locale } from "./types";
 
 export function changeLocale(locale: Locale) {
