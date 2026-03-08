@@ -4,7 +4,7 @@ import { type ReactNode, useState } from "react";
 import { Button } from "@web/components/ui/button";
 import { cn } from "@web/lib/tailwind/utils";
 import { useTranslation } from "@web/lib/tolgee/index";
-import { getStorage, setStorage } from "@web/utils/storage";
+import { getStorage, setStorage } from "@web/utils/localStorage";
 
 export function Sidebar({ children }: { children?: ReactNode }) {
   const { t } = useTranslation();

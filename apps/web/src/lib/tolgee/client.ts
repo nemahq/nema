@@ -1,6 +1,6 @@
 import { FormatSimple, Tolgee } from "@tolgee/react";
 
-import { getStorage } from "@web/utils/storage";
+import { getStorage } from "@web/utils/localStorage";
 
 import en from "./en.json";
 import ko from "./ko.json";

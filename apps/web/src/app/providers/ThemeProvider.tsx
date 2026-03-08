@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from "react";
 
-import { getStorage } from "@web/utils/storage";
+import { getStorage } from "@web/utils/localStorage";
 import {
   setTheme as setThemePref,
   type ThemePreference,

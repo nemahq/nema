@@ -1,14 +1,9 @@
 import type { Locale } from "@web/lib/tolgee/types";
 import { isLocale } from "@web/lib/tolgee/types";
 
+import { type BooleanString, isBooleanString } from "./serialization";
 import type { ThemePreference } from "./theme";
 import { isThemePreference } from "./theme";
-
-type BooleanString = "true" | "false";
-
-function isBooleanString(v: string): v is BooleanString {
-  return v === "true" || v === "false";
-}
 
 type StorageMap = {
   theme: ThemePreference;

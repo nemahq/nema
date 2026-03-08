@@ -1,4 +1,4 @@
-import { getStorage, setStorage } from "./storage";
+import { getStorage, setStorage } from "./localStorage";
 
 export type Theme = "light" | "dark";
 export type ThemePreference = "light" | "dark" | "system";
