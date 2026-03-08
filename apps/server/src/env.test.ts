@@ -1,34 +1,63 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { EnvError, requireEnv } from "./env";
+import { getEnv, loadEnv } from "./env";
 
-describe("requireEnv", () => {
+vi.mock("dotenv", () => ({
+  config: vi.fn(),
+}));
+
+describe("loadEnv", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it("returns value when env var is set", () => {
-    vi.stubEnv("TEST_VAR", "hello");
-    expect(requireEnv("TEST_VAR")).toBe("hello");
+  it("parses valid env vars", () => {
+    vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
+    vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
+    vi.stubEnv("NEO4J_USER", "neo4j");
+    vi.stubEnv("NEO4J_PASSWORD", "password");
+
+    loadEnv("/fake/root");
+    const env = getEnv();
+
+    expect(env.SUPABASE_URL).toBe("https://test.supabase.co");
+    expect(env.PORT).toBe(3001);
+    expect(env.CORS_ORIGIN).toBe("http://localhost:5173");
   });
 
-  it("throws EnvError when env var is missing", () => {
-    delete process.env.NONEXISTENT_VAR;
-    expect(() => requireEnv("NONEXISTENT_VAR")).toThrow(EnvError);
+  it("throws on missing required vars", () => {
+    vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
+    // NEO4J_URI 누락
+
+    expect(() => loadEnv("/fake/root")).toThrow(
+      "Invalid environment variables",
+    );
   });
 
-  it("throws EnvError when env var is empty string", () => {
-    vi.stubEnv("EMPTY_VAR", "");
-    expect(() => requireEnv("EMPTY_VAR")).toThrow(EnvError);
+  it("throws on invalid SUPABASE_URL format", () => {
+    vi.stubEnv("SUPABASE_URL", "not-a-url");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
+    vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
+    vi.stubEnv("NEO4J_USER", "neo4j");
+    vi.stubEnv("NEO4J_PASSWORD", "password");
+
+    expect(() => loadEnv("/fake/root")).toThrow(
+      "Invalid environment variables",
+    );
   });
 
-  it("throws EnvError when env var is whitespace only", () => {
-    vi.stubEnv("WHITESPACE_VAR", "   ");
-    expect(() => requireEnv("WHITESPACE_VAR")).toThrow(EnvError);
-  });
+  it("accepts optional QDRANT vars", () => {
+    vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
+    vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
+    vi.stubEnv("NEO4J_USER", "neo4j");
+    vi.stubEnv("NEO4J_PASSWORD", "password");
 
-  it("trims whitespace from env var value", () => {
-    vi.stubEnv("PADDED_VAR", "  hello  ");
-    expect(requireEnv("PADDED_VAR")).toBe("hello");
+    loadEnv("/fake/root");
+    const env = getEnv();
+
+    expect(env.QDRANT_URL).toBeUndefined();
+    expect(env.QDRANT_API_KEY).toBeUndefined();
   });
 });

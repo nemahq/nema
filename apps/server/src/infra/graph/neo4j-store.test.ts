@@ -35,7 +35,11 @@ vi.mock("neo4j-driver", () => {
 });
 
 vi.mock("@server/env", () => ({
-  requireEnv: vi.fn((name: string) => `mock-${name}`),
+  getEnv: vi.fn(() => ({
+    NEO4J_URI: "bolt://mock-neo4j",
+    NEO4J_USER: "mock-user",
+    NEO4J_PASSWORD: "mock-password",
+  })),
 }));
 
 import { createNeo4jStore } from "./neo4j-store";
