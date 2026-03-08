@@ -34,7 +34,7 @@ vi.mock("neo4j-driver", () => {
   };
 });
 
-vi.mock("@server/env.js", () => ({
+vi.mock("@server/env", () => ({
   requireEnv: vi.fn((name: string) => `mock-${name}`),
 }));
 
