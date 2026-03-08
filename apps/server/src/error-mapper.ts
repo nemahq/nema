@@ -8,6 +8,37 @@ import { t } from "./infra/i18n";
 import { LlmError } from "./infra/llm/llm-error";
 import { VectorStoreError } from "./infra/vector/vector-store";
 
+export type DomainErrorCode =
+  | "LLM_RATE_LIMIT"
+  | "LLM_TIMEOUT"
+  | "LLM_ERROR"
+  | "EMBEDDING_ERROR"
+  | "VECTOR_STORE_ERROR"
+  | "GRAPH_STORE_ERROR";
+
+export function getDomainCode(cause: unknown): DomainErrorCode | undefined {
+  if (cause instanceof LlmError) {
+    switch (cause.code) {
+      case "rate_limit":
+        return "LLM_RATE_LIMIT";
+      case "timeout":
+        return "LLM_TIMEOUT";
+      default:
+        return "LLM_ERROR";
+    }
+  }
+  if (cause instanceof EmbeddingError) {
+    return "EMBEDDING_ERROR";
+  }
+  if (cause instanceof VectorStoreError) {
+    return "VECTOR_STORE_ERROR";
+  }
+  if (cause instanceof GraphStoreError) {
+    return "GRAPH_STORE_ERROR";
+  }
+  return undefined;
+}
+
 export function mapDomainError(error: unknown, lng: Locale): TRPCError {
   if (error instanceof LlmError) {
     switch (error.code) {

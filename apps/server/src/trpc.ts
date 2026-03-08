@@ -2,7 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
 
-import { mapDomainError } from "./error-mapper";
+import { getDomainCode, mapDomainError } from "./error-mapper";
 import { resolveLanguage } from "./infra/i18n";
 import { getSupabaseAdmin } from "./infra/supabase";
 
@@ -30,7 +30,18 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
 
 type Context = Awaited<ReturnType<typeof createContext>>;
 
-const t = initTRPC.context<Context>().create();
+const t = initTRPC.context<Context>().create({
+  errorFormatter({ shape, error }) {
+    const domainCode = getDomainCode(error.cause);
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        domainCode,
+      },
+    };
+  },
+});
 
 export const router = t.router;
 
