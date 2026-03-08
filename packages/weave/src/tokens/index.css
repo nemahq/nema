@@ -1,3 +1,8 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
 /*
  * ── Weave Design Tokens ────────────────────────────
  * Nema Design System: "Calm and intellectual, but not cold."

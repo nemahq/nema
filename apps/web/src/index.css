@@ -1,6 +1,2 @@
-@import "tailwindcss";
-@import "tw-animate-css";
 @import "@nema-io/weave/tokens";
 @plugin "@tailwindcss/typography";
-
-@custom-variant dark (&:is(.dark *));
