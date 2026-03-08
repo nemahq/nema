@@ -20,7 +20,12 @@
     "continue_with_google": "Continue with Google",
     "no_account": "Don't have an account? Sign up",
     "has_account": "Already have an account? Sign in",
-    "verification_email_sent": "Verification email sent. Please check your inbox."
+    "verification_email_sent": "Verification email sent. Please check your inbox.",
+    "agree_pre": "I agree to the ",
+    "agree_post": " (required)",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "back": "Go back"
   },
   "layout": {
     "collapse_sidebar": "Collapse sidebar",

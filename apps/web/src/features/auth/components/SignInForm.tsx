@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { Button } from "@web/components/ui/button";
 import {
@@ -41,6 +41,7 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
     await navigate({ to });
   }
 
+  // TODO: Google OAuth 최초 가입 시 약관·개인정보처리방침 동의 플로우 필요
   async function handleGoogleSignIn() {
     setError(null);
     setLoading(true);
@@ -93,6 +94,16 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
           <Button variant="link" onClick={onToggle}>
             {t("auth.no_account")}
           </Button>
+        </div>
+
+        <div className="mt-4 flex justify-center gap-3 text-xs text-muted-foreground">
+          <Link to="/privacy" className="hover:text-foreground hover:underline">
+            {t("auth.privacy")}
+          </Link>
+          <span>&middot;</span>
+          <Link to="/terms" className="hover:text-foreground hover:underline">
+            {t("auth.terms")}
+          </Link>
         </div>
       </CardContent>
     </Card>
