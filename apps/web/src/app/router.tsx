@@ -7,6 +7,8 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 
+import { PrivacyPage } from "@web/app/pages/PrivacyPage";
+import { TermsPage } from "@web/app/pages/TermsPage";
 import { Button } from "@web/components/ui/button";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
 import { supabase } from "@web/lib/supabase";
@@ -29,6 +31,18 @@ const signinRoute = createRoute({
       throw redirect({ to: "/" });
     }
   },
+});
+
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/privacy",
+  component: PrivacyPage,
+});
+
+const termsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/terms",
+  component: TermsPage,
 });
 
 const authenticatedRoute = createRoute({
@@ -74,6 +88,8 @@ const indexRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   signinRoute,
+  privacyRoute,
+  termsRoute,
   authenticatedRoute.addChildren([indexRoute]),
 ]);
 

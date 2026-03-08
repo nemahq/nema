@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@web/components/ui/card";
+import { Checkbox } from "@web/components/ui/checkbox";
 import { Input } from "@web/components/ui/input";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
@@ -15,6 +16,8 @@ export function SignUpForm({ onToggle }: { onToggle: () => void }) {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -71,8 +74,31 @@ export function SignUpForm({ onToggle }: { onToggle: () => void }) {
             minLength={6}
             required
           />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start gap-2 text-sm">
+              <Checkbox
+                id="agree-terms"
+                checked={agreedTerms}
+                onCheckedChange={(v: boolean) => setAgreedTerms(v)}
+                className="mt-0.5"
+              />
+              <label htmlFor="agree-terms">{t("auth.agree_terms")}</label>
+            </div>
+            <div className="flex items-start gap-2 text-sm">
+              <Checkbox
+                id="agree-privacy"
+                checked={agreedPrivacy}
+                onCheckedChange={(v: boolean) => setAgreedPrivacy(v)}
+                className="mt-0.5"
+              />
+              <label htmlFor="agree-privacy">{t("auth.agree_privacy")}</label>
+            </div>
+          </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" disabled={loading}>
+          <Button
+            type="submit"
+            disabled={loading || !agreedTerms || !agreedPrivacy}
+          >
             {loading ? t("auth.sign_up_loading") : t("auth.sign_up")}
           </Button>
         </form>
