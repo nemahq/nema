@@ -1,6 +1,6 @@
 import neo4j, { type Driver, type Integer } from "neo4j-driver";
 
-import { requireEnv } from "@server/env";
+import { getEnv } from "@server/env";
 
 import type {
   FindDocumentsByEntitiesOptions,
@@ -15,9 +15,10 @@ import type {
 import { GraphStoreError } from "./graph-store";
 
 export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
+  const { NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD } = getEnv();
   const driver: Driver = neo4j.driver(
-    requireEnv("NEO4J_URI"),
-    neo4j.auth.basic(requireEnv("NEO4J_USER"), requireEnv("NEO4J_PASSWORD")),
+    NEO4J_URI,
+    neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD),
   );
 
   return {

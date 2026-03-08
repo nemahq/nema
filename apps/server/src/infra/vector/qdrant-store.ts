@@ -1,6 +1,6 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 
-import { requireEnv } from "@server/env";
+import { getEnv } from "@server/env";
 import {
   type EmbeddingProvider,
   VECTOR_DIMENSION,
@@ -18,9 +18,10 @@ import { VectorStoreError } from "./vector-store";
 const COLLECTION_NAME = "documents";
 
 export function createQdrantStore(): VectorStore {
+  const { QDRANT_URL, QDRANT_API_KEY } = getEnv();
   const client = new QdrantClient({
-    url: requireEnv("QDRANT_URL"),
-    apiKey: requireEnv("QDRANT_API_KEY"),
+    url: QDRANT_URL,
+    apiKey: QDRANT_API_KEY,
   });
 
   async function ensurePayloadIndexes(): Promise<void> {

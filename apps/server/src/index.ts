@@ -5,28 +5,21 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 
-import { loadEnv } from "./env";
+import { getEnv, loadEnv } from "./env";
+import { initI18n } from "./infra/i18n";
 import { createQdrantStore } from "./infra/vector";
 import { appRouter } from "./router";
 import { createContext } from "./trpc";
 
 loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 
-function getPort(): number {
-  const raw = process.env.PORT;
-  if (raw === undefined) return 3001;
-  const parsed = Number(raw);
-  if (Number.isNaN(parsed) || parsed <= 0 || parsed > 65535) {
-    throw new Error(`Invalid PORT: "${raw}"`);
-  }
-  return parsed;
-}
-
 async function bootstrap() {
+  await initI18n();
   const server = Fastify({ logger: true });
+  const env = getEnv();
 
   await server.register(cors, {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: env.CORS_ORIGIN,
   });
 
   await server.register(fastifyTRPCPlugin, {
@@ -34,15 +27,12 @@ async function bootstrap() {
     trpcOptions: {
       router: appRouter,
       createContext,
-      onError({ error, path }: { error: Error; path: string | undefined }) {
-        server.log.error({ err: error, path }, `tRPC error on ${path}`);
-      },
     },
   });
 
   server.get("/health", async () => ({ status: "ok" }));
 
-  if (process.env.QDRANT_URL && process.env.QDRANT_API_KEY) {
+  if (env.QDRANT_URL && env.QDRANT_API_KEY) {
     const vectorStore = createQdrantStore();
     await vectorStore.ensureCollection();
     server.log.info("Qdrant collection ready");
@@ -52,8 +42,7 @@ async function bootstrap() {
     );
   }
 
-  const port = getPort();
-  await server.listen({ port, host: "0.0.0.0" });
+  await server.listen({ port: env.PORT, host: "0.0.0.0" });
 
   for (const signal of ["SIGTERM", "SIGINT"] as const) {
     process.on(signal, async () => {

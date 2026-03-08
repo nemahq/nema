@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-import { ENV } from "@web/app/env";
+import { getEnv } from "@web/app/env";
 
-export const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY);
+const { SUPABASE_URL, SUPABASE_ANON_KEY } = getEnv();
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

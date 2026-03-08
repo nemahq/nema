@@ -23,7 +23,10 @@ vi.mock("@qdrant/js-client-rest", () => ({
 }));
 
 vi.mock("@server/env", () => ({
-  requireEnv: vi.fn((name: string) => `mock-${name}`),
+  getEnv: vi.fn(() => ({
+    QDRANT_URL: "http://mock-qdrant",
+    QDRANT_API_KEY: "mock-key",
+  })),
 }));
 
 import { createQdrantStore } from "./qdrant-store";
