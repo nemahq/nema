@@ -6,6 +6,7 @@
     "send": "Send",
     "cancel": "Cancel",
     "home": "Home",
+    "close": "Close",
     "unknown_error": "An unknown error occurred."
   },
   "auth": {
