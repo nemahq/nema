@@ -1,3 +1,4 @@
+export { Alert, type AlertVariant } from "./components/Alert";
 export { Badge, type BadgeVariant } from "./components/Badge";
 export { Button, buttonVariants } from "./components/Button";
 export {
