@@ -1,12 +1,13 @@
+import * as React from "react";
+import { toast, Toaster as Sonner, type ToasterProps } from "sonner";
+
 import {
   CircleCheckIcon,
   InfoIcon,
   Loader2Icon,
   OctagonXIcon,
   TriangleAlertIcon,
-} from "lucide-react";
-import * as React from "react";
-import { toast, Toaster as Sonner, type ToasterProps } from "sonner";
+} from "../icons";
 
 function Toast({ theme = "system", ...props }: ToasterProps) {
   return (
