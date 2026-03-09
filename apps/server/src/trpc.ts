@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import type { User } from "@supabase/supabase-js";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
@@ -52,6 +53,9 @@ const errorHandlingMiddleware = t.middleware(async ({ ctx, next }) => {
     if (error instanceof TRPCError) {
       throw error;
     }
+    Sentry.captureException(error, {
+      tags: { domainCode: getDomainCode(error) ?? "UNKNOWN" },
+    });
     throw mapDomainError(error, ctx.lng);
   }
 });

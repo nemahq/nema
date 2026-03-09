@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   MutationCache,
+  QueryCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import { TRPCClientError } from "@trpc/client";
 
 import { toast } from "@nema-io/weave";
 
+import { Sentry } from "@web/lib/sentry";
 import { tolgee } from "@web/lib/tolgee/client";
 
 const queryClient = new QueryClient({
@@ -16,8 +18,18 @@ const queryClient = new QueryClient({
       retry: 0,
     },
   },
+  queryCache: new QueryCache({
+    onError(error) {
+      if (!(error instanceof TRPCClientError)) {
+        Sentry.captureException(error);
+      }
+    },
+  }),
   mutationCache: new MutationCache({
     onError(error, _variables, _context, mutation) {
+      if (!(error instanceof TRPCClientError)) {
+        Sentry.captureException(error);
+      }
       if (mutation.options.onError) return;
       toast.error(
         error instanceof TRPCClientError

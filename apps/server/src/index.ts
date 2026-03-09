@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import * as Sentry from "@sentry/node";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 
 import { getEnv, loadEnv } from "./env";
@@ -30,6 +31,8 @@ async function bootstrap() {
     },
   });
 
+  Sentry.setupFastifyErrorHandler(server);
+
   server.get("/health", async () => ({ status: "ok" }));
 
   if (env.QDRANT_URL && env.QDRANT_API_KEY) {
@@ -48,12 +51,15 @@ async function bootstrap() {
     process.on(signal, async () => {
       server.log.info(`${signal} received, shutting down`);
       await server.close();
+      await Sentry.flush(2000);
       process.exit(0);
     });
   }
 }
 
-bootstrap().catch((err) => {
+bootstrap().catch(async (err) => {
   console.error("Fatal: bootstrap failed", err);
+  Sentry.captureException(err);
+  await Sentry.flush(2000);
   process.exit(1);
 });
