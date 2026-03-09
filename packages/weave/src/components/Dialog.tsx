@@ -1,9 +1,9 @@
 "use client";
 
-import { XIcon } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import * as React from "react";
 
+import { XIcon } from "../icons";
 import { cn } from "../utils";
 
 type DialogContentProps = React.ComponentProps<
