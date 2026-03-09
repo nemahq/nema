@@ -1,4 +1,4 @@
-export { Button, buttonVariants } from "./components/button";
+export { Button, buttonVariants } from "./components/Button";
 export {
   Card,
   CardAction,
@@ -7,8 +7,8 @@ export {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "./components/card";
-export { Checkbox } from "./components/checkbox";
+} from "./components/Card";
+export { Checkbox } from "./components/Checkbox";
 export {
   Dialog,
   DialogClose,
@@ -21,7 +21,7 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
-} from "./components/dialog";
+} from "./components/Dialog";
 export {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -38,16 +38,16 @@ export {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "./components/dropdown-menu";
-export { Input } from "./components/input";
-export { ScrollArea, ScrollBar } from "./components/scroll-area";
-export { Separator } from "./components/separator";
-export { Skeleton } from "./components/skeleton";
-export { Toast, toast, type ToasterProps } from "./components/toast";
+} from "./components/DropdownMenu";
+export { Input } from "./components/Input";
+export { ScrollArea, ScrollBar } from "./components/ScrollArea";
+export { Separator } from "./components/Separator";
+export { Skeleton } from "./components/Skeleton";
+export { Toast, toast, type ToasterProps } from "./components/Toast";
 export {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "./components/tooltip";
+} from "./components/Tooltip";
 export { cn } from "./utils";

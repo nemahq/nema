@@ -22,8 +22,8 @@ function Toast({ theme = "system", ...props }: ToasterProps) {
       }}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
+          "--normal-bg": "var(--surface-card)",
+          "--normal-text": "var(--fg-primary)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius-xl)",
         } as React.CSSProperties

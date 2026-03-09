@@ -1,6 +1,8 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useRouter } from "@tanstack/react-router";
 
+import { Button } from "@nema-io/weave";
+
 import { useTranslation } from "@web/lib/tolgee";
 
 export function RouteErrorFallback({ reset }: ErrorComponentProps) {
@@ -14,16 +16,10 @@ export function RouteErrorFallback({ reset }: ErrorComponentProps) {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-      <p className="text-muted-foreground text-sm">
-        {t("common.unknown_error")}
-      </p>
-      <button
-        type="button"
-        onClick={handleRetry}
-        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2 text-sm"
-      >
+      <p className="text-fg-tertiary text-sm">{t("common.unknown_error")}</p>
+      <Button variant="primary" size="sm" onClick={handleRetry}>
         {t("common.retry")}
-      </button>
+      </Button>
     </div>
   );
 }

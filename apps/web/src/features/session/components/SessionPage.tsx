@@ -9,7 +9,7 @@ export function SessionPage() {
       <Sidebar />
 
       <main className="flex flex-1 flex-col items-center justify-center">
-        <p className="text-muted-foreground">{t("session.empty")}</p>
+        <p className="text-fg-tertiary">{t("session.empty")}</p>
       </main>
     </div>
   );
