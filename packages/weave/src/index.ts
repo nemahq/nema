@@ -1,3 +1,4 @@
+export { Badge, type BadgeVariant } from "./components/Badge";
 export { Button, buttonVariants } from "./components/Button";
 export {
   Card,
