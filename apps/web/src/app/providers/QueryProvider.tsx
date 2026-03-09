@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
-import { toast } from "sonner";
 import {
   MutationCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
+
+import { toast } from "@nema-io/weave";
 
 import { tolgee } from "@web/lib/tolgee/client";
 
