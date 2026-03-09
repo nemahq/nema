@@ -1,7 +1,7 @@
-import { PanelLeft } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
 import { Button, cn } from "@nema-io/weave";
+import { PanelLeft } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 import { getStorage, setStorage } from "@web/utils/localStorage";
