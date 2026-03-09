@@ -1,0 +1,45 @@
+@reference "@nema-io/weave/styles";
+
+.prose-legal {
+  @apply text-fg-secondary leading-relaxed;
+
+  h1 {
+    @apply text-fg-primary text-3xl font-bold mt-0 mb-6;
+  }
+  h2 {
+    @apply text-fg-primary text-lg font-semibold mt-10 mb-3;
+  }
+  h3 {
+    @apply text-fg-primary text-base font-semibold mt-6 mb-2;
+  }
+  p {
+    @apply my-3;
+  }
+  strong {
+    @apply text-fg-primary font-semibold;
+  }
+  a {
+    @apply text-fg-primary underline underline-offset-2 hover:text-fg-secondary;
+  }
+  hr {
+    @apply border-border my-6;
+  }
+  ol {
+    @apply list-decimal pl-6 my-3 flex flex-col gap-1;
+  }
+  ul {
+    @apply list-disc pl-6 my-3 flex flex-col gap-1;
+  }
+  table {
+    @apply w-full my-4 text-sm;
+  }
+  th {
+    @apply text-left text-fg-primary font-semibold border-b border-border px-3 py-2;
+  }
+  td {
+    @apply border-b border-border px-3 py-2;
+  }
+  blockquote {
+    @apply border-l-2 border-border pl-4 text-fg-tertiary italic my-4;
+  }
+}

@@ -11,22 +11,12 @@
     "retry": "Retry"
   },
   "auth": {
-    "sign_in": "Sign in",
-    "sign_in_loading": "Signing in...",
-    "sign_up": "Sign up",
-    "sign_up_loading": "Signing up...",
     "email_placeholder": "Email",
-    "password_placeholder": "Password",
-    "password_placeholder_signup": "Password (min 6 characters)",
     "continue_with_google": "Continue with Google",
-    "no_account": "Don't have an account? Sign up",
-    "has_account": "Already have an account? Sign in",
-    "verification_email_sent": "Verification email sent. Please check your inbox.",
-    "agree_pre": "I agree to the ",
-    "agree_post": " (required)",
-    "terms": "Terms of Service",
-    "privacy": "Privacy Policy",
-    "back": "Go back"
+    "continue_with_email": "Continue with email",
+    "or": "OR",
+    "magic_link_sent": "We sent a login link to your email. Please check your inbox.",
+    "back_to_login": "Go back"
   },
   "session": {
     "empty": "Start a new conversation"

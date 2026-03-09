@@ -1,22 +1,21 @@
-import type { ReactNode } from "react";
+import "./legal.css";
 
-import { useTranslation } from "@web/lib/tolgee";
+import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+
+import NemaLogo from "@web/assets/nema-logo.svg";
 
 export function LegalLayout({ children }: { children: ReactNode }) {
-  const { t } = useTranslation();
-
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
-      <button
-        type="button"
-        onClick={() => window.history.back()}
-        className="mb-8 inline-block text-sm text-fg-tertiary hover:text-fg-primary"
-      >
-        &larr; {t("auth.back")}
-      </button>
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        {children}
-      </article>
+      <Link to="/" className="mb-8 inline-block">
+        <img
+          src={NemaLogo}
+          alt="Nema"
+          className="h-5 brightness-0 dark:invert"
+        />
+      </Link>
+      <article className="prose-legal max-w-none">{children}</article>
     </div>
   );
 }
