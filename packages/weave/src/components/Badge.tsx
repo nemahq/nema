@@ -23,7 +23,7 @@ function Badge({
   variant = "brand",
   className,
   ...props
-}: React.ComponentPropsWithRef<"span"> & {
+}: React.ComponentProps<"span"> & {
   variant?: BadgeVariant;
 }) {
   return (

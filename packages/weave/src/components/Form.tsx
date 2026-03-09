@@ -2,10 +2,14 @@ import * as React from "react";
 
 import { cn } from "../utils";
 
-function FormField({
-  className,
-  ...props
-}: React.ComponentPropsWithRef<"div">) {
+type FormMessageVariant = "error" | "success";
+
+const formMessageVariantClasses: Record<FormMessageVariant, string> = {
+  error: "text-status-error",
+  success: "text-status-success",
+};
+
+function FormField({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="form-field"
@@ -19,21 +23,17 @@ function FormMessage({
   variant = "error",
   className,
   ...props
-}: React.ComponentPropsWithRef<"p"> & {
-  variant?: "error" | "success";
+}: React.ComponentProps<"p"> & {
+  variant?: FormMessageVariant;
 }) {
   return (
     <p
       data-slot="form-message"
-      className={cn(
-        "text-sm",
-        variant === "error" && "text-status-error",
-        variant === "success" && "text-status-success",
-        className,
-      )}
+      role={variant === "error" ? "alert" : undefined}
+      className={cn("text-sm", formMessageVariantClasses[variant], className)}
       {...props}
     />
   );
 }
 
-export { FormField, FormMessage };
+export { FormField, FormMessage, type FormMessageVariant };

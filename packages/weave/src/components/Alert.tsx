@@ -30,7 +30,7 @@ function Alert({
   className,
   children,
   ...props
-}: React.ComponentPropsWithRef<"div"> & {
+}: React.ComponentProps<"div"> & {
   variant?: AlertVariant;
   icon?: boolean;
 }) {
