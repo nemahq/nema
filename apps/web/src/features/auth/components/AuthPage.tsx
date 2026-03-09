@@ -1,18 +1,142 @@
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
+import { useSearch } from "@tanstack/react-router";
 
-import { SignInForm } from "./SignInForm";
-import { SignUpForm } from "./SignUpForm";
+import { Button, Input, Separator } from "@nema-io/weave";
+import { Mail } from "@nema-io/weave/icons";
+
+import NemaLogo from "@web/assets/nema-logo.svg";
+import { supabase } from "@web/lib/supabase";
+import { useTranslation } from "@web/lib/tolgee";
+
+import { GoogleIcon } from "./GoogleIcon";
 
 export function AuthPage() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const search = useSearch({ from: "/signin" });
+  const { t } = useTranslation();
+
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+
+  async function handleGoogleSignIn() {
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (oauthError) {
+        setError(oauthError.message);
+        setLoading(false);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.unknown_error"));
+      setLoading(false);
+    }
+  }
+
+  async function handleEmailSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      const redirectTo = search.redirect?.startsWith("/")
+        ? `${window.location.origin}${search.redirect}`
+        : window.location.origin;
+
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectTo },
+      });
+
+      if (otpError) {
+        setError(otpError.message);
+      } else {
+        setMagicLinkSent(true);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.unknown_error"));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      {mode === "signin" ? (
-        <SignInForm onToggle={() => setMode("signup")} />
-      ) : (
-        <SignUpForm onToggle={() => setMode("signin")} />
-      )}
+    <div className="flex min-h-dvh items-center justify-center bg-surface p-4">
+      <div className="flex w-full max-w-sm flex-col items-center gap-8">
+        <img src={NemaLogo} alt="Nema" className="h-8" />
+
+        <div className="flex min-h-[260px] w-full flex-col items-center justify-center rounded-xl border border-border p-6">
+          {magicLinkSent ? (
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-2 text-center">
+                <p className="text-sm text-fg-secondary">
+                  {t("auth.magic_link_sent")}
+                </p>
+                <p className="text-xs text-fg-tertiary">{email}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMagicLinkSent(false)}
+              >
+                {t("auth.back_to_login")}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex w-full flex-col gap-3">
+              <Button
+                variant="neutral"
+                size="lg"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                className="w-full"
+              >
+                <GoogleIcon className="size-5" />
+                {t("auth.continue_with_google")}
+              </Button>
+
+              <div className="flex items-center gap-3">
+                <Separator className="flex-1" />
+                <span className="text-sm text-fg-tertiary">{t("auth.or")}</span>
+                <Separator className="flex-1" />
+              </div>
+
+              <form
+                onSubmit={handleEmailSubmit}
+                className="flex flex-col gap-3"
+              >
+                <Input
+                  type="email"
+                  placeholder={t("auth.email_placeholder")}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                <Button
+                  variant="neutral"
+                  size="lg"
+                  type="submit"
+                  disabled={loading}
+                  className="w-full"
+                >
+                  <Mail className="size-4" />
+                  {t("auth.continue_with_email")}
+                </Button>
+              </form>
+
+              <p
+                className={`text-center text-xs ${error ? "text-status-error" : "text-transparent"}`}
+              >
+                {error ?? "\u00A0"}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,79 @@
+import { useState } from "react";
+
+import { useTheme } from "@web/app/providers/ThemeProvider";
+import { changeLocale } from "@web/lib/tolgee";
+import type { Locale } from "@web/lib/tolgee/types";
+import { getStorage } from "@web/utils/localStorage";
+import type { ThemePreference } from "@web/utils/theme";
+
+const THEMES: ThemePreference[] = ["light", "dark", "system"];
+const LOCALES: Locale[] = ["ko", "en"];
+
+export function DevToolbar() {
+  const { theme, setTheme } = useTheme();
+  const [open, setOpen] = useState(false);
+  const [locale, setLocale] = useState<Locale>(
+    () => (getStorage("locale") as Locale) ?? "ko",
+  );
+
+  function handleLocaleChange(next: Locale) {
+    setLocale(next);
+    changeLocale(next);
+  }
+
+  return (
+    <div className="fixed bottom-3 left-3 z-50">
+      {open && (
+        <div className="mb-2 flex flex-col gap-3 rounded-lg border border-border bg-surface-raised p-3 text-xs shadow-lg">
+          <div className="flex flex-col gap-1.5">
+            <span className="font-semibold text-fg-tertiary">Theme</span>
+            <div className="flex items-center gap-1">
+              {THEMES.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTheme(t)}
+                  className={`cursor-pointer rounded px-2 py-0.5 transition-colors duration-fast ${
+                    theme === t
+                      ? "bg-brand text-brand-fg"
+                      : "text-fg-secondary hover:bg-surface-raised-hover"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="font-semibold text-fg-tertiary">Locale</span>
+            <div className="flex items-center gap-1">
+              {LOCALES.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => handleLocaleChange(l)}
+                  className={`cursor-pointer rounded px-2 py-0.5 transition-colors duration-fast ${
+                    locale === l
+                      ? "bg-brand text-brand-fg"
+                      : "text-fg-secondary hover:bg-surface-raised-hover"
+                  }`}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="cursor-pointer rounded-md bg-surface-raised px-2.5 py-1 text-xs font-semibold text-fg-secondary shadow-md border border-border transition-colors duration-fast hover:bg-surface-raised-hover"
+      >
+        Dev
+      </button>
+    </div>
+  );
+}
