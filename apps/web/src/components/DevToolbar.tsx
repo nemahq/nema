@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 
 import { useTheme } from "@web/app/providers/ThemeProvider";
+import { useAuth } from "@web/features/auth/hooks/useAuth";
+import { supabase } from "@web/lib/supabase";
 import { changeLocale } from "@web/lib/tolgee";
 import type { Locale } from "@web/lib/tolgee/types";
 import { getStorage } from "@web/utils/localStorage";
@@ -11,6 +14,8 @@ const LOCALES: Locale[] = ["ko", "en"];
 
 export function DevToolbar() {
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [locale, setLocale] = useState<Locale>(
     () => (getStorage("locale") as Locale) ?? "ko",
@@ -44,6 +49,27 @@ export function DevToolbar() {
               ))}
             </div>
           </div>
+
+          {user && (
+            <div className="flex flex-col gap-1.5">
+              <span className="font-semibold text-fg-tertiary">Auth</span>
+              <div className="flex items-center gap-2">
+                <span className="truncate text-fg-tertiary max-w-[120px]">
+                  {user.email}
+                </span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    await navigate({ to: "/signin" });
+                  }}
+                  className="cursor-pointer rounded bg-status-error/10 px-2 py-0.5 text-status-error transition-colors duration-fast hover:bg-status-error/20"
+                >
+                  Sign out
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <span className="font-semibold text-fg-tertiary">Locale</span>
