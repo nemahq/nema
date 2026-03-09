@@ -38,7 +38,7 @@ type TextProps<T extends React.ElementType = "p"> = {
   size?: TextSize;
   bold?: boolean;
   color?: TextColor;
-} & Omit<React.ComponentPropsWithoutRef<T>, "as" | "color">;
+} & Omit<React.ComponentPropsWithRef<T>, "as" | "color">;
 
 function Text<T extends React.ElementType = "p">({
   as,
