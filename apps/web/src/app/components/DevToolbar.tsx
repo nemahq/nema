@@ -65,7 +65,10 @@ export function DevToolbar() {
                   type="button"
                   onClick={async () => {
                     await supabase.auth.signOut();
-                    await navigate({ to: "/signin" });
+                    await navigate({
+                      to: "/signin",
+                      search: { redirect: undefined },
+                    });
                   }}
                   className="cursor-pointer rounded bg-status-error/10 px-2 py-0.5 text-status-error transition-colors duration-fast hover:bg-status-error/20"
                 >
