@@ -43,6 +43,12 @@ export { Input } from "./components/Input";
 export { ScrollArea, ScrollBar } from "./components/ScrollArea";
 export { Separator } from "./components/Separator";
 export { Skeleton } from "./components/Skeleton";
+export {
+  Text,
+  type TextColor,
+  type TextProps,
+  type TextSize,
+} from "./components/Text";
 export { Toast, toast, type ToasterProps } from "./components/Toast";
 export {
   Tooltip,
