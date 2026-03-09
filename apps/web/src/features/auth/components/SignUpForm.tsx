@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
   Checkbox,
+  FormMessage,
   Input,
 } from "@nema-io/weave";
 
@@ -114,7 +115,7 @@ export function SignUpForm({ onToggle }: { onToggle: () => void }) {
               </label>
             </div>
           </div>
-          {error && <p className="text-sm text-status-error">{error}</p>}
+          {error && <FormMessage>{error}</FormMessage>}
           <Button
             type="submit"
             disabled={loading || !agreedTerms || !agreedPrivacy}

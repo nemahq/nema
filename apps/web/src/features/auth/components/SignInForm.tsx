@@ -7,6 +7,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  FormMessage,
   Input,
 } from "@nema-io/weave";
 
@@ -82,7 +83,7 @@ export function SignInForm({ onToggle }: { onToggle: () => void }) {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          {error && <p className="text-sm text-status-error">{error}</p>}
+          {error && <FormMessage>{error}</FormMessage>}
           <Button type="submit" disabled={loading}>
             {loading ? t("auth.sign_in_loading") : t("auth.sign_in")}
           </Button>
