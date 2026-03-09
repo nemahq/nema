@@ -1,8 +1,11 @@
+import "./instrument";
+
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import * as Sentry from "@sentry/node";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 
 import { getEnv, loadEnv } from "./env";
@@ -16,6 +19,7 @@ loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 async function bootstrap() {
   await initI18n();
   const server = Fastify({ logger: true });
+  Sentry.setupFastifyErrorHandler(server);
   const env = getEnv();
 
   await server.register(cors, {
@@ -48,12 +52,14 @@ async function bootstrap() {
     process.on(signal, async () => {
       server.log.info(`${signal} received, shutting down`);
       await server.close();
+      await Sentry.flush(2000);
       process.exit(0);
     });
   }
 }
 
-bootstrap().catch((err) => {
-  console.error("Fatal: bootstrap failed", err);
+bootstrap().catch(async (err) => {
+  Sentry.captureException(err);
+  await Sentry.flush(2000);
   process.exit(1);
 });
