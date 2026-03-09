@@ -43,6 +43,18 @@ export {
 } from "./components/DropdownMenu";
 export { Input } from "./components/Input";
 export { ScrollArea, ScrollBar } from "./components/ScrollArea";
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "./components/Select";
 export { Separator } from "./components/Separator";
 export { Skeleton } from "./components/Skeleton";
 export {
