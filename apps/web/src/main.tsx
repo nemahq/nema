@@ -1,5 +1,6 @@
 import "./index.css";
 
+import type React from "react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
@@ -16,17 +17,15 @@ initTheme();
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element not found");
 
+function reportRenderError(error: unknown, errorInfo: React.ErrorInfo): void {
+  Sentry.captureException(error, {
+    extra: { componentStack: errorInfo.componentStack },
+  });
+}
+
 createRoot(root, {
-  onCaughtError(error, errorInfo) {
-    Sentry.captureException(error, {
-      extra: { componentStack: errorInfo.componentStack },
-    });
-  },
-  onUncaughtError(error, errorInfo) {
-    Sentry.captureException(error, {
-      extra: { componentStack: errorInfo.componentStack },
-    });
-  },
+  onCaughtError: reportRenderError,
+  onUncaughtError: reportRenderError,
 }).render(
   <StrictMode>
     <ErrorBoundary>

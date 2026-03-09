@@ -1,5 +1,3 @@
-import "./instrument";
-
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,7 +17,6 @@ loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 async function bootstrap() {
   await initI18n();
   const server = Fastify({ logger: true });
-  Sentry.setupFastifyErrorHandler(server);
   const env = getEnv();
 
   await server.register(cors, {
@@ -33,6 +30,8 @@ async function bootstrap() {
       createContext,
     },
   });
+
+  Sentry.setupFastifyErrorHandler(server);
 
   server.get("/health", async () => ({ status: "ok" }));
 
@@ -59,6 +58,7 @@ async function bootstrap() {
 }
 
 bootstrap().catch(async (err) => {
+  console.error("Fatal: bootstrap failed", err);
   Sentry.captureException(err);
   await Sentry.flush(2000);
   process.exit(1);

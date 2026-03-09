@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   MutationCache,
+  QueryCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
@@ -17,9 +18,18 @@ const queryClient = new QueryClient({
       retry: 0,
     },
   },
+  queryCache: new QueryCache({
+    onError(error) {
+      if (!(error instanceof TRPCClientError)) {
+        Sentry.captureException(error);
+      }
+    },
+  }),
   mutationCache: new MutationCache({
     onError(error, _variables, _context, mutation) {
-      Sentry.captureException(error);
+      if (!(error instanceof TRPCClientError)) {
+        Sentry.captureException(error);
+      }
       if (mutation.options.onError) return;
       toast.error(
         error instanceof TRPCClientError
