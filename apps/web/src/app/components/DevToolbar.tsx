@@ -12,6 +12,14 @@ import type { ThemePreference } from "@web/utils/theme";
 const THEMES: ThemePreference[] = ["light", "dark", "system"];
 const LOCALES: Locale[] = ["ko", "en"];
 
+function toggleClass(active: boolean) {
+  return `cursor-pointer rounded px-2 py-0.5 transition-colors duration-fast ${
+    active
+      ? "bg-brand text-brand-fg"
+      : "text-fg-secondary hover:bg-surface-raised-hover"
+  }`;
+}
+
 export function DevToolbar() {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
@@ -38,11 +46,7 @@ export function DevToolbar() {
                   key={t}
                   type="button"
                   onClick={() => setTheme(t)}
-                  className={`cursor-pointer rounded px-2 py-0.5 transition-colors duration-fast ${
-                    theme === t
-                      ? "bg-brand text-brand-fg"
-                      : "text-fg-secondary hover:bg-surface-raised-hover"
-                  }`}
+                  className={toggleClass(theme === t)}
                 >
                   {t}
                 </button>
@@ -79,11 +83,7 @@ export function DevToolbar() {
                   key={l}
                   type="button"
                   onClick={() => handleLocaleChange(l)}
-                  className={`cursor-pointer rounded px-2 py-0.5 transition-colors duration-fast ${
-                    locale === l
-                      ? "bg-brand text-brand-fg"
-                      : "text-fg-secondary hover:bg-surface-raised-hover"
-                  }`}
+                  className={toggleClass(locale === l)}
                 >
                   {l.toUpperCase()}
                 </button>

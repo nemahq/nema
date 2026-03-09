@@ -29,10 +29,10 @@ export function AuthPage() {
       });
       if (oauthError) {
         setError(oauthError.message);
-        setLoading(false);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.unknown_error"));
+    } finally {
       setLoading(false);
     }
   }
@@ -129,6 +129,7 @@ export function AuthPage() {
               </form>
 
               <p
+                role="alert"
                 className={`text-center text-xs ${error ? "text-status-error" : "text-transparent"}`}
               >
                 {error ?? "\u00A0"}

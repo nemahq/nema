@@ -16,10 +16,7 @@
     "continue_with_email": "Continue with email",
     "or": "OR",
     "magic_link_sent": "We sent a login link to your email. Please check your inbox.",
-    "back_to_login": "Go back",
-    "terms": "Terms of Service",
-    "privacy": "Privacy Policy",
-    "back": "Go back"
+    "back_to_login": "Go back"
   },
   "session": {
     "empty": "Start a new conversation"

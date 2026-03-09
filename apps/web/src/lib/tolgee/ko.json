@@ -16,10 +16,7 @@
     "continue_with_email": "이메일로 계속하기",
     "or": "OR",
     "magic_link_sent": "로그인 링크를 이메일로 보냈습니다. 메일함을 확인해주세요.",
-    "back_to_login": "돌아가기",
-    "terms": "이용약관",
-    "privacy": "개인정보처리방침",
-    "back": "돌아가기"
+    "back_to_login": "돌아가기"
   },
   "session": {
     "empty": "새로운 대화를 시작해보세요"
