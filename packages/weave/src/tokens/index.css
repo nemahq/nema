@@ -29,7 +29,11 @@
   /* Surface */
   --surface-base: #ffffff; /* page background */
   --surface-raised: #fafafa; /* zinc-50 — elevated areas */
+  --surface-raised-hover: #f4f4f5; /* zinc-100 — raised hover */
   --surface-card: #ffffff; /* card background */
+  --surface-context: var(
+    --surface-base
+  ); /* ring-offset 컨텍스트 — Card 등이 override */
   --shadow: rgba(0, 0, 0, 0.06);
 
   /* Foreground */
@@ -49,14 +53,6 @@
 
   /* Border */
   --border: #e4e4e7; /* zinc-200 */
-
-  /* Transition */
-  --duration-fast: 150ms;
-  --duration-normal: 200ms;
-  --duration-slow: 300ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
-  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
 }
 
 .dark {
@@ -69,12 +65,14 @@
   /* Surface */
   --surface-base: #18181b; /* zinc-900 */
   --surface-raised: #27272a; /* zinc-800 */
+  --surface-raised-hover: #3f3f46; /* zinc-700 — raised hover */
   --surface-card: #27272a; /* zinc-800 */
   --shadow: rgba(0, 0, 0, 0.3);
 
   /* Foreground */
   --fg-primary: #f4f4f5; /* zinc-100 */
   --fg-secondary: #a1a1aa; /* zinc-400 */
+  --fg-tertiary: #a1a1aa; /* zinc-400 */
 
   /* Status */
   --status-success: #34d399; /* green-400 */
@@ -104,7 +102,9 @@
   /* Surface */
   --color-surface-base: var(--surface-base);
   --color-surface-raised: var(--surface-raised);
+  --color-surface-raised-hover: var(--surface-raised-hover);
   --color-surface-card: var(--surface-card);
+  --color-surface-context: var(--surface-context);
 
   /* Foreground */
   --color-fg-primary: var(--fg-primary);
@@ -126,6 +126,14 @@
 
   /* Shadow */
   --color-shadow: var(--shadow);
+
+  /* Transition */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
 }
 
 @layer base {

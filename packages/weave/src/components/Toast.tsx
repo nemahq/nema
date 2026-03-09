@@ -25,7 +25,7 @@ function Toast({ theme = "system", ...props }: ToasterProps) {
           "--normal-bg": "var(--surface-card)",
           "--normal-text": "var(--fg-primary)",
           "--normal-border": "var(--border)",
-          "--border-radius": "12px",
+          "--border-radius": "var(--radius-xl)",
         } as React.CSSProperties
       }
       {...props}
