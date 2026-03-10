@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { Toast, TooltipProvider } from "@nema-io/weave";
 
-import { AuthProvider } from "@web/features/auth/hooks/useAuth";
+import { AuthProvider } from "@web/hooks/useAuth";
 
 import { I18nProvider } from "./I18nProvider";
 import { QueryProvider } from "./QueryProvider";

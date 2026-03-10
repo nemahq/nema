@@ -9,85 +9,208 @@
  * ── Weave Design Tokens ────────────────────────────
  * Nema Design System: "Calm and intellectual, but not cold."
  *
- * Primitive: Tailwind color scale (not re-declared)
- * Semantic: role-based tokens referencing hex values
+ * 3-layer architecture:
+ *   1. Palette: raw hex values (single source of truth)
+ *   2. Semantic: role-based tokens referencing palette
+ *   3. Tailwind theme: maps semantic tokens to utility classes
  *
  * Naming: --{group}-{role}-{state}
  * Groups: brand, surface, fg, status, border
  * Non-color: duration, ease
  */
 
-/* ── Semantic Tokens ─────────────────────── */
+/* ── Palette (hex defined once) ────────────── */
 
 :root {
   /* Brand */
-  --brand: #14b8a6; /* teal-500 — solid fills */
-  --brand-hover: #0d9488; /* teal-600 — hover state */
-  --brand-accent: #0f766e; /* teal-700 — text/icon emphasis */
-  --brand-fg: #1c1917; /* stone-900 — text on brand bg */
-  --brand-tint: rgba(20, 184, 166, 0.08); /* subtle bg */
-  --brand-tint-hover: rgba(20, 184, 166, 0.12); /* subtle bg hover */
+  --palette-brand: #14b8a6; /* teal-500 */
+  --palette-brand-fg: #1c1917; /* stone-900 */
 
-  /* Surface — stone scale (warm neutral) */
-  --surface-base: #fafaf9; /* stone-50 — page background */
-  --surface-raised: #f5f5f4; /* stone-100 — elevated areas */
-  --surface-raised-hover: #e7e5e4; /* stone-200 — raised hover */
-  --surface-card: #ffffff; /* card background */
-  --surface-context: var(
-    --surface-base
-  ); /* ring-offset 컨텍스트 — Card 등이 override */
-  --shadow: rgba(0, 0, 0, 0.06);
+  /* Brand — light */
+  --palette-light-brand-hover: #0d9488; /* teal-600 */
+  --palette-light-brand-accent: #0f766e; /* teal-700 */
+  --palette-light-brand-tint: rgba(20, 184, 166, 0.08);
+  --palette-light-brand-tint-hover: rgba(20, 184, 166, 0.12);
 
-  /* Foreground — stone scale */
-  --fg-primary: #1c1917; /* stone-900 */
-  --fg-secondary: #57534e; /* stone-600 */
-  --fg-tertiary: #78716c; /* stone-500 */
+  /* Brand — dark */
+  --palette-dark-brand-hover: #2dd4bf; /* teal-400 */
+  --palette-dark-brand-accent: #2dd4bf; /* teal-400 */
+  --palette-dark-brand-tint: rgba(20, 184, 166, 0.12);
+  --palette-dark-brand-tint-hover: rgba(20, 184, 166, 0.18);
 
-  /* Status */
-  --status-success: #10b981; /* green-500 */
-  --status-success-tint: rgba(16, 185, 129, 0.08);
-  --status-warning: #f59e0b; /* amber-500 */
-  --status-warning-tint: rgba(245, 158, 11, 0.08);
-  --status-error: #ef4444; /* red-500 */
-  --status-error-tint: rgba(239, 68, 68, 0.08);
-  --status-info: #3b82f6; /* blue-500 */
-  --status-info-tint: rgba(59, 130, 246, 0.08);
+  /* Surface — light */
+  --palette-light-surface-base: #fafaf9; /* stone-50 */
+  --palette-light-surface-raised: #f5f5f4; /* stone-100 */
+  --palette-light-surface-raised-hover: #e7e5e4; /* stone-200 */
+  --palette-light-surface-card: #ffffff;
+  --palette-light-surface-tooltip: #ffffff;
+  --palette-light-shadow: rgba(0, 0, 0, 0.06);
+
+  /* Surface — dark */
+  --palette-dark-surface-base: #1c1917; /* stone-900 */
+  --palette-dark-surface-raised: #292524; /* stone-800 */
+  --palette-dark-surface-raised-hover: #44403c; /* stone-700 */
+  --palette-dark-surface-card: #292524; /* stone-800 */
+  --palette-dark-surface-tooltip: #0c0a09; /* stone-950 */
+  --palette-dark-shadow: rgba(0, 0, 0, 0.3);
+
+  /* Foreground — light */
+  --palette-light-fg-primary: #1c1917; /* stone-900 */
+  --palette-light-fg-secondary: #57534e; /* stone-600 */
+  --palette-light-fg-tertiary: #78716c; /* stone-500 */
+
+  /* Foreground — dark */
+  --palette-dark-fg-primary: #f5f5f4; /* stone-100 */
+  --palette-dark-fg-secondary: #a8a29e; /* stone-400 */
+  --palette-dark-fg-tertiary: #a8a29e; /* stone-400 */
+
+  /* Status — light */
+  --palette-light-status-success: #10b981; /* green-500 */
+  --palette-light-status-success-tint: rgba(16, 185, 129, 0.08);
+  --palette-light-status-warning: #f59e0b; /* amber-500 */
+  --palette-light-status-warning-tint: rgba(245, 158, 11, 0.08);
+  --palette-light-status-error: #ef4444; /* red-500 */
+  --palette-light-status-error-tint: rgba(239, 68, 68, 0.08);
+  --palette-light-status-info: #3b82f6; /* blue-500 */
+  --palette-light-status-info-tint: rgba(59, 130, 246, 0.08);
+
+  /* Status — dark */
+  --palette-dark-status-success: #34d399; /* green-400 */
+  --palette-dark-status-success-tint: rgba(16, 185, 129, 0.12);
+  --palette-dark-status-warning: #fbbf24; /* amber-400 */
+  --palette-dark-status-warning-tint: rgba(245, 158, 11, 0.12);
+  --palette-dark-status-error: #f87171; /* red-400 */
+  --palette-dark-status-error-tint: rgba(239, 68, 68, 0.12);
+  --palette-dark-status-info: #60a5fa; /* blue-400 */
+  --palette-dark-status-info-tint: rgba(59, 130, 246, 0.12);
 
   /* Border */
-  --border: #d6d3d1; /* stone-300 */
+  --palette-light-border: #d6d3d1; /* stone-300 */
+  --palette-dark-border: #57534e; /* stone-600 */
+}
+
+/* ── Semantic Tokens ─────────────────────── */
+
+:root {
+  --brand: var(--palette-brand);
+  --brand-hover: var(--palette-light-brand-hover);
+  --brand-accent: var(--palette-light-brand-accent);
+  --brand-fg: var(--palette-brand-fg);
+  --brand-tint: var(--palette-light-brand-tint);
+  --brand-tint-hover: var(--palette-light-brand-tint-hover);
+
+  --surface-base: var(--palette-light-surface-base);
+  --surface-raised: var(--palette-light-surface-raised);
+  --surface-raised-hover: var(--palette-light-surface-raised-hover);
+  --surface-card: var(--palette-light-surface-card);
+  --surface-tooltip: var(--palette-light-surface-tooltip);
+  --surface-context: var(--surface-base);
+  --shadow: var(--palette-light-shadow);
+
+  --fg-primary: var(--palette-light-fg-primary);
+  --fg-secondary: var(--palette-light-fg-secondary);
+  --fg-tertiary: var(--palette-light-fg-tertiary);
+
+  --status-success: var(--palette-light-status-success);
+  --status-success-tint: var(--palette-light-status-success-tint);
+  --status-warning: var(--palette-light-status-warning);
+  --status-warning-tint: var(--palette-light-status-warning-tint);
+  --status-error: var(--palette-light-status-error);
+  --status-error-tint: var(--palette-light-status-error-tint);
+  --status-info: var(--palette-light-status-info);
+  --status-info-tint: var(--palette-light-status-info-tint);
+
+  --border: var(--palette-light-border);
 }
 
 .dark {
-  /* Brand */
-  --brand-hover: #2dd4bf; /* teal-400 */
-  --brand-accent: #2dd4bf; /* teal-400 */
-  --brand-tint: rgba(20, 184, 166, 0.12);
-  --brand-tint-hover: rgba(20, 184, 166, 0.18);
+  --brand-hover: var(--palette-dark-brand-hover);
+  --brand-accent: var(--palette-dark-brand-accent);
+  --brand-tint: var(--palette-dark-brand-tint);
+  --brand-tint-hover: var(--palette-dark-brand-tint-hover);
 
-  /* Surface — stone scale (warm neutral) */
-  --surface-base: #1c1917; /* stone-900 */
-  --surface-raised: #292524; /* stone-800 */
-  --surface-raised-hover: #44403c; /* stone-700 — raised hover */
-  --surface-card: #292524; /* stone-800 */
-  --shadow: rgba(0, 0, 0, 0.3);
+  --surface-base: var(--palette-dark-surface-base);
+  --surface-raised: var(--palette-dark-surface-raised);
+  --surface-raised-hover: var(--palette-dark-surface-raised-hover);
+  --surface-card: var(--palette-dark-surface-card);
+  --surface-tooltip: var(--palette-dark-surface-tooltip);
+  --shadow: var(--palette-dark-shadow);
 
-  /* Foreground — stone scale */
-  --fg-primary: #f5f5f4; /* stone-100 */
-  --fg-secondary: #a8a29e; /* stone-400 */
-  --fg-tertiary: #a8a29e; /* stone-400 */
+  --fg-primary: var(--palette-dark-fg-primary);
+  --fg-secondary: var(--palette-dark-fg-secondary);
+  --fg-tertiary: var(--palette-dark-fg-tertiary);
 
-  /* Status */
-  --status-success: #34d399; /* green-400 */
-  --status-success-tint: rgba(16, 185, 129, 0.12);
-  --status-warning: #fbbf24; /* amber-400 */
-  --status-warning-tint: rgba(245, 158, 11, 0.12);
-  --status-error: #f87171; /* red-400 */
-  --status-error-tint: rgba(239, 68, 68, 0.12);
-  --status-info: #60a5fa; /* blue-400 */
-  --status-info-tint: rgba(59, 130, 246, 0.12);
+  --status-success: var(--palette-dark-status-success);
+  --status-success-tint: var(--palette-dark-status-success-tint);
+  --status-warning: var(--palette-dark-status-warning);
+  --status-warning-tint: var(--palette-dark-status-warning-tint);
+  --status-error: var(--palette-dark-status-error);
+  --status-error-tint: var(--palette-dark-status-error-tint);
+  --status-info: var(--palette-dark-status-info);
+  --status-info-tint: var(--palette-dark-status-info-tint);
 
-  /* Border */
-  --border: #57534e; /* stone-600 */
+  --border: var(--palette-dark-border);
+}
+
+/* ── Theme Inversion ─────────────────────── */
+
+/* .dark와 값이 동일하나, 향후 "반전 테마 ≠ 다크 테마"가 될 수 있어 의도적으로 분리 유지 */
+.theme-inverted {
+  --brand-hover: var(--palette-dark-brand-hover);
+  --brand-accent: var(--palette-dark-brand-accent);
+  --brand-tint: var(--palette-dark-brand-tint);
+  --brand-tint-hover: var(--palette-dark-brand-tint-hover);
+
+  --surface-base: var(--palette-dark-surface-base);
+  --surface-raised: var(--palette-dark-surface-raised);
+  --surface-raised-hover: var(--palette-dark-surface-raised-hover);
+  --surface-card: var(--palette-dark-surface-card);
+  --surface-tooltip: var(--palette-dark-surface-tooltip);
+  --shadow: var(--palette-dark-shadow);
+
+  --fg-primary: var(--palette-dark-fg-primary);
+  --fg-secondary: var(--palette-dark-fg-secondary);
+  --fg-tertiary: var(--palette-dark-fg-tertiary);
+
+  --status-success: var(--palette-dark-status-success);
+  --status-success-tint: var(--palette-dark-status-success-tint);
+  --status-warning: var(--palette-dark-status-warning);
+  --status-warning-tint: var(--palette-dark-status-warning-tint);
+  --status-error: var(--palette-dark-status-error);
+  --status-error-tint: var(--palette-dark-status-error-tint);
+  --status-info: var(--palette-dark-status-info);
+  --status-info-tint: var(--palette-dark-status-info-tint);
+
+  --border: var(--palette-dark-border);
+}
+
+.dark .theme-inverted {
+  --brand-hover: var(--palette-light-brand-hover);
+  --brand-accent: var(--palette-light-brand-accent);
+  --brand-tint: var(--palette-light-brand-tint);
+  --brand-tint-hover: var(--palette-light-brand-tint-hover);
+
+  --surface-base: var(--palette-light-surface-base);
+  --surface-raised: var(--palette-light-surface-raised);
+  --surface-raised-hover: var(--palette-light-surface-raised-hover);
+  --surface-card: var(--palette-light-surface-card);
+  --surface-tooltip: var(--palette-light-surface-tooltip);
+  --shadow: var(--palette-light-shadow);
+
+  --fg-primary: var(--palette-light-fg-primary);
+  --fg-secondary: var(--palette-light-fg-secondary);
+  --fg-tertiary: var(--palette-light-fg-tertiary);
+
+  --status-success: var(--palette-light-status-success);
+  --status-success-tint: var(--palette-light-status-success-tint);
+  --status-warning: var(--palette-light-status-warning);
+  --status-warning-tint: var(--palette-light-status-warning-tint);
+  --status-error: var(--palette-light-status-error);
+  --status-error-tint: var(--palette-light-status-error-tint);
+  --status-info: var(--palette-light-status-info);
+  --status-info-tint: var(--palette-light-status-info-tint);
+
+  --border: var(--palette-light-border);
 }
 
 /* ── Tailwind Theme (semantic tokens only) ── */
@@ -106,6 +229,7 @@
   --color-surface-raised: var(--surface-raised);
   --color-surface-raised-hover: var(--surface-raised-hover);
   --color-surface-card: var(--surface-card);
+  --color-surface-tooltip: var(--surface-tooltip);
   --color-surface-context: var(--surface-context);
 
   /* Foreground */

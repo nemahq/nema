@@ -19,7 +19,16 @@
     "back_to_login": "Go back"
   },
   "session": {
-    "empty": "Start a new conversation"
+    "empty": "Start a new conversation",
+    "new_context": "New Context",
+    "your_contexts": "Your Contexts",
+    "untitled": "Untitled"
+  },
+  "settings": {
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "theme_system": "System",
+    "sign_out": "Sign out"
   },
   "layout": {
     "collapse_sidebar": "Collapse sidebar",
