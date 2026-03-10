@@ -1,4 +1,5 @@
 export { isLocale, type Locale, LOCALES } from "./i18n";
+export { type ChatInput, ChatInputSchema } from "./schemas/chat";
 export {
   type GetMessagesInput,
   GetMessagesInputSchema,

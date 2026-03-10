@@ -13,6 +13,9 @@ const envSchema = z
     SUPABASE_ANON_KEY: z.string().min(1),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
+    OPENAI_API_KEY: z.string().min(1).optional(),
+    VOYAGE_API_KEY: z.string().min(1).optional(),
+
     QDRANT_URL: z.string().url().optional(),
     QDRANT_API_KEY: z.string().min(1).optional(),
 
