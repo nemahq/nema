@@ -67,7 +67,7 @@ export function UserMenu({ collapsed }: { collapsed: boolean }) {
         ) : (
           <button
             type="button"
-            className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2.5 text-left transition-colors duration-fast outline-none hover:bg-surface-raised-hover data-[state=open]:bg-surface-raised-hover"
+            className="mx-1.5 my-1 flex w-[calc(100%-0.75rem)] cursor-pointer items-center gap-2.5 rounded-md px-3 py-2.5 text-left transition-colors duration-fast outline-none hover:bg-surface-raised-hover data-[state=open]:bg-surface-raised-hover"
           >
             <Avatar url={avatarUrl} initial={initial} />
             <span className="truncate text-sm font-semibold text-fg-primary animate-in fade-in slide-in-from-left-2 duration-normal">
