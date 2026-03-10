@@ -19,7 +19,15 @@
     "back_to_login": "돌아가기"
   },
   "session": {
-    "empty": "새로운 대화를 시작해보세요",
+    "empty_heading_0": "생각을 맡기면, 알아서 정리돼요",
+    "empty_subheading_0": "AI가 맥락을 구조화해서, 필요한 순간 바로 꺼내 쓸 수 있어요.",
+    "input_placeholder": "회의록, 아이디어, 메모 뭐든 좋아요",
+    "empty_heading_1": "머릿속에 쌓아두지 마세요",
+    "empty_subheading_1": "여기에 적으면 AI가 정리하고, 나중에 물어보면 바로 찾아줘요.",
+    "empty_heading_2": "한 번 넣으면, 다시 찾을 필요 없어요",
+    "empty_subheading_2": "필요할 때 물어보세요. AI가 맥락까지 기억하고 있어요.",
+    "empty_heading_3": "생각나는 대로 적으세요, 나머지는 Nema가 할게요",
+    "empty_subheading_3": "흩어진 정보를 AI가 정리하고, 필요할 때 즉시 꺼내줘요.",
     "new_context": "새 맥락",
     "your_contexts": "내 맥락",
     "untitled": "제목 없음"
