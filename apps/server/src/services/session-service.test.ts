@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { SupabaseError } from "../infra/supabase-error";
+import { SupabaseError } from "@server/infra/supabase-error";
+
 import { createSession, deleteSession, listSessions } from "./session-service";
 
 function makeRow(id: string, updatedAt: string) {

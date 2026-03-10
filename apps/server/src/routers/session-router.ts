@@ -7,8 +7,8 @@ import {
   createSession,
   deleteSession,
   listSessions,
-} from "../services/session-service";
-import { protectedProcedure, router } from "../trpc";
+} from "@server/services/session-service";
+import { protectedProcedure, router } from "@server/trpc";
 
 export const sessionRouter = router({
   list: protectedProcedure

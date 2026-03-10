@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { SessionListInput, SessionSummary } from "@nema-io/shared";
 
-import { SupabaseError } from "../infra/supabase-error";
+import { SupabaseError } from "@server/infra/supabase-error";
 
 function toSummary(row: {
   id: string;
