@@ -81,8 +81,8 @@ export function UserMenu({ collapsed }: { collapsed: boolean }) {
         side="top"
         align={collapsed ? "start" : "center"}
         alignOffset={collapsed ? 8 : 0}
-        sideOffset={collapsed ? 2 : 8}
-        className="w-60 !animate-none"
+        sideOffset={collapsed ? 2 : 4}
+        className="w-60 border-0 bg-surface-card dark:bg-surface-raised-hover !animate-none"
       >
         <DropdownMenuItem
           onClick={handleSignOut}
