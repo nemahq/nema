@@ -13,6 +13,7 @@ describe("loadEnv", () => {
 
   it("parses valid env vars", () => {
     vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
+    vi.stubEnv("SUPABASE_ANON_KEY", "test-anon-key");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
     vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
     vi.stubEnv("NEO4J_USERNAME", "neo4j");
@@ -37,6 +38,7 @@ describe("loadEnv", () => {
 
   it("throws on invalid SUPABASE_URL format", () => {
     vi.stubEnv("SUPABASE_URL", "not-a-url");
+    vi.stubEnv("SUPABASE_ANON_KEY", "test-anon-key");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
     vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
     vi.stubEnv("NEO4J_USERNAME", "neo4j");
@@ -49,6 +51,7 @@ describe("loadEnv", () => {
 
   it("accepts optional QDRANT vars", () => {
     vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
+    vi.stubEnv("SUPABASE_ANON_KEY", "test-anon-key");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
     vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
     vi.stubEnv("NEO4J_USERNAME", "neo4j");
@@ -63,6 +66,7 @@ describe("loadEnv", () => {
 
   it("throws when only one QDRANT var is set", () => {
     vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
+    vi.stubEnv("SUPABASE_ANON_KEY", "test-anon-key");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
     vi.stubEnv("NEO4J_URI", "bolt://localhost:7687");
     vi.stubEnv("NEO4J_USERNAME", "neo4j");

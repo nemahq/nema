@@ -10,6 +10,7 @@ const envSchema = z
     CORS_ORIGIN: z.string().default("http://localhost:5173"),
 
     SUPABASE_URL: z.string().url(),
+    SUPABASE_ANON_KEY: z.string().min(1),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
     QDRANT_URL: z.string().url().optional(),

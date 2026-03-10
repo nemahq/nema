@@ -9,6 +9,8 @@
     "embedding": "An issue occurred while processing text.",
     "vector_store": "An issue occurred while searching data.",
     "graph_store": "An issue occurred while saving data.",
+    "db_not_found": "The requested item was not found.",
+    "db_query_failed": "An issue occurred while querying data.",
     "unknown": "An unexpected issue occurred."
   }
 }
