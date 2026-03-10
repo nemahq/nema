@@ -2,15 +2,15 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  Outlet,
   redirect,
 } from "@tanstack/react-router";
 
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
+import { AppLayout } from "@web/app/layouts/AppLayout";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
+import { SessionPage } from "@web/app/pages/SessionPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
-import { SessionPage } from "@web/features/session/components/SessionPage";
 import { supabase } from "@web/lib/supabase";
 
 import { App } from "./App";
@@ -50,7 +50,7 @@ const termsRoute = createRoute({
 const authenticatedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "_authenticated",
-  component: Outlet,
+  component: AppLayout,
   async beforeLoad({ location }) {
     const { data } = await supabase.auth.getSession();
     if (!data.session) {

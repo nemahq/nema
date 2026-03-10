@@ -81,7 +81,7 @@ export function UserMenu({ collapsed }: { collapsed: boolean }) {
         side="top"
         align={collapsed ? "start" : "center"}
         alignOffset={collapsed ? 8 : 0}
-        sideOffset={2}
+        sideOffset={collapsed ? 2 : 8}
         className="w-60 !animate-none"
       >
         <DropdownMenuItem
