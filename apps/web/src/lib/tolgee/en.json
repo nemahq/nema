@@ -19,7 +19,15 @@
     "back_to_login": "Go back"
   },
   "session": {
-    "empty": "Start a new conversation",
+    "empty_heading_0": "Hand off your thoughts, we'll handle the rest",
+    "empty_subheading_0": "AI structures your context so you can pull it out the moment you need it.",
+    "input_placeholder": "Meeting notes, ideas, memos, anything works",
+    "empty_heading_1": "Stop keeping it all in your head",
+    "empty_subheading_1": "Write it here and AI organizes it. Ask later, get it back instantly.",
+    "empty_heading_2": "Put it in once, never search again",
+    "empty_subheading_2": "Just ask when you need it. AI remembers the full context.",
+    "empty_heading_3": "Write freely, Nema takes care of the rest",
+    "empty_subheading_3": "AI organizes scattered info and serves it back when you need it.",
     "new_context": "New Context",
     "your_contexts": "Your Contexts",
     "untitled": "Untitled"
