@@ -41,7 +41,7 @@ export function ChatInput({
   }
 
   return (
-    <div className="flex w-full items-end gap-2 rounded-xl border border-border bg-surface-raised p-3 focus-within:border-border-strong dark:bg-surface-raised-hover">
+    <div className="flex w-full flex-col gap-2 rounded-xl border border-border bg-surface-raised p-3 focus-within:border-border-strong dark:bg-surface-raised-hover">
       <textarea
         ref={textareaRef}
         value={value}
@@ -52,7 +52,7 @@ export function ChatInput({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         rows={3}
-        className="flex-1 resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-tertiary focus:outline-none"
+        className="w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-tertiary focus:outline-none [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
       />
       <Button
         variant="neutral"
@@ -60,7 +60,7 @@ export function ChatInput({
         disabled={!value.trim()}
         onClick={handleSubmit}
         aria-label={t("common.send")}
-        className="rounded-full transition-all duration-normal disabled:scale-90 enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80 dark:enabled:bg-fg-primary dark:enabled:text-surface-base"
+        className="self-end rounded-full transition-all duration-normal disabled:scale-90 enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80 dark:enabled:bg-fg-primary dark:enabled:text-surface-base"
       >
         <ArrowUp className="size-4" />
       </Button>
