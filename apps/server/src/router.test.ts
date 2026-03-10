@@ -8,6 +8,7 @@ const caller = appRouter.createCaller({
   log: console as never,
   user: null,
   lng: "ko",
+  supabase: null,
 });
 
 describe("appRouter", () => {

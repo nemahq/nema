@@ -5,7 +5,7 @@ import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify"
 
 import { getDomainCode, mapDomainError } from "./error-mapper";
 import { resolveLanguage } from "./infra/i18n";
-import { getSupabaseAdmin } from "./infra/supabase";
+import { createSupabaseUser, getSupabaseAdmin } from "./infra/supabase";
 
 export async function createContext({ req, res }: CreateFastifyContextOptions) {
   const prefix = "Bearer ";
@@ -14,10 +14,12 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
     : undefined;
 
   let user: User | null = null;
+  let supabase: ReturnType<typeof createSupabaseUser> | null = null;
   if (token) {
     const { data, error } = await getSupabaseAdmin().auth.getUser(token);
     if (!error) {
       user = data.user;
+      supabase = createSupabaseUser(token);
     }
   }
 
@@ -26,7 +28,7 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
     Array.isArray(acceptLanguage) ? acceptLanguage[0] : acceptLanguage,
   );
 
-  return { req, res, log: req.log, user, lng };
+  return { req, res, log: req.log, user, lng, supabase };
 }
 
 type Context = Awaited<ReturnType<typeof createContext>>;
@@ -65,11 +67,11 @@ export const publicProcedure = t.procedure.use(errorHandlingMiddleware);
 export const protectedProcedure = t.procedure
   .use(errorHandlingMiddleware)
   .use(({ ctx, next }) => {
-    if (!ctx.user) {
+    if (!ctx.user || !ctx.supabase) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
         message: "Authentication required.",
       });
     }
-    return next({ ctx: { ...ctx, user: ctx.user } });
+    return next({ ctx: { ...ctx, user: ctx.user, supabase: ctx.supabase } });
   });
