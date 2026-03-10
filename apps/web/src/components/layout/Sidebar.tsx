@@ -73,7 +73,7 @@ export function Sidebar({
         <div
           className={cn(
             "sticky bottom-0 bg-surface-raised dark:bg-surface-base",
-            !collapsed && "border-t border-border/50 ml-2",
+            !collapsed && "border-t border-border/50",
           )}
         >
           {footer(collapsed)}

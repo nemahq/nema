@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { useTheme } from "@web/app/providers/ThemeProvider";
-import { useAuth } from "@web/features/auth/hooks/useAuth";
+import { useAuth } from "@web/hooks/useAuth";
 import { supabase } from "@web/lib/supabase";
 import { changeLocale } from "@web/lib/tolgee";
 import type { Locale } from "@web/lib/tolgee/types";

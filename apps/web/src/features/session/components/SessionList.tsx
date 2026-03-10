@@ -13,7 +13,8 @@ const SessionItem = memo(function SessionItem({
 }: {
   session: SessionSummary;
 }) {
-  const title = session.title ?? "제목 없음";
+  const { t } = useTranslation();
+  const title = session.title ?? t("session.untitled");
 
   return (
     <button
@@ -50,7 +51,7 @@ export function SessionList({ collapsed }: { collapsed: boolean }) {
 
       const observer = new IntersectionObserver(
         function handleIntersection(entries) {
-          if (entries[0].isIntersecting) {
+          if (entries[0]?.isIntersecting) {
             loadMore();
           }
         },

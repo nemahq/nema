@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { TRPCError } from "@trpc/server";
 
 import type { SessionListInput, SessionSummary } from "@nema-io/shared";
 
@@ -23,10 +24,19 @@ function encodeCursor(updatedAt: string, id: string): string {
 }
 
 function decodeCursor(cursor: string): { updatedAt: string; id: string } {
-  const [updatedAt, id] = JSON.parse(
-    Buffer.from(cursor, "base64url").toString(),
-  ) as [string, string];
-  return { updatedAt, id };
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString());
+    if (
+      !Array.isArray(parsed) ||
+      typeof parsed[0] !== "string" ||
+      typeof parsed[1] !== "string"
+    ) {
+      throw new Error();
+    }
+    return { updatedAt: parsed[0], id: parsed[1] };
+  } catch {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid cursor" });
+  }
 }
 
 export async function listSessions(

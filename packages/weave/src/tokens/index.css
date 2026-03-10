@@ -43,6 +43,7 @@
   --palette-light-surface-raised: #f5f5f4; /* stone-100 */
   --palette-light-surface-raised-hover: #e7e5e4; /* stone-200 */
   --palette-light-surface-card: #ffffff;
+  --palette-light-surface-tooltip: #ffffff;
   --palette-light-shadow: rgba(0, 0, 0, 0.06);
 
   /* Surface — dark */
@@ -50,6 +51,7 @@
   --palette-dark-surface-raised: #292524; /* stone-800 */
   --palette-dark-surface-raised-hover: #44403c; /* stone-700 */
   --palette-dark-surface-card: #292524; /* stone-800 */
+  --palette-dark-surface-tooltip: #0c0a09; /* stone-950 */
   --palette-dark-shadow: rgba(0, 0, 0, 0.3);
 
   /* Foreground — light */
@@ -101,6 +103,7 @@
   --surface-raised: var(--palette-light-surface-raised);
   --surface-raised-hover: var(--palette-light-surface-raised-hover);
   --surface-card: var(--palette-light-surface-card);
+  --surface-tooltip: var(--palette-light-surface-tooltip);
   --surface-context: var(--surface-base);
   --shadow: var(--palette-light-shadow);
 
@@ -130,6 +133,7 @@
   --surface-raised: var(--palette-dark-surface-raised);
   --surface-raised-hover: var(--palette-dark-surface-raised-hover);
   --surface-card: var(--palette-dark-surface-card);
+  --surface-tooltip: var(--palette-dark-surface-tooltip);
   --shadow: var(--palette-dark-shadow);
 
   --fg-primary: var(--palette-dark-fg-primary);
@@ -150,6 +154,7 @@
 
 /* ── Theme Inversion ─────────────────────── */
 
+/* .dark와 값이 동일하나, 향후 "반전 테마 ≠ 다크 테마"가 될 수 있어 의도적으로 분리 유지 */
 .theme-inverted {
   --brand-hover: var(--palette-dark-brand-hover);
   --brand-accent: var(--palette-dark-brand-accent);
@@ -160,6 +165,7 @@
   --surface-raised: var(--palette-dark-surface-raised);
   --surface-raised-hover: var(--palette-dark-surface-raised-hover);
   --surface-card: var(--palette-dark-surface-card);
+  --surface-tooltip: var(--palette-dark-surface-tooltip);
   --shadow: var(--palette-dark-shadow);
 
   --fg-primary: var(--palette-dark-fg-primary);
@@ -188,6 +194,7 @@
   --surface-raised: var(--palette-light-surface-raised);
   --surface-raised-hover: var(--palette-light-surface-raised-hover);
   --surface-card: var(--palette-light-surface-card);
+  --surface-tooltip: var(--palette-light-surface-tooltip);
   --shadow: var(--palette-light-shadow);
 
   --fg-primary: var(--palette-light-fg-primary);
@@ -222,6 +229,7 @@
   --color-surface-raised: var(--surface-raised);
   --color-surface-raised-hover: var(--surface-raised-hover);
   --color-surface-card: var(--surface-card);
+  --color-surface-tooltip: var(--surface-tooltip);
   --color-surface-context: var(--surface-context);
 
   /* Foreground */

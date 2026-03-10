@@ -21,7 +21,8 @@
   "session": {
     "empty": "새로운 대화를 시작해보세요",
     "new_context": "새 맥락",
-    "your_contexts": "내 맥락"
+    "your_contexts": "내 맥락",
+    "untitled": "제목 없음"
   },
   "settings": {
     "theme_light": "라이트",
