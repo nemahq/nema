@@ -49,7 +49,7 @@
 
   ── Accessibility notes ───────────────────────────
   --brand-accent (teal-700) on white = 5.47:1 (PASS AA). Use for text accents.
-  --text-tertiary (stone-500) on white = 4.83:1 (PASS AA).
+  --text-tertiary (stone-500) on stone-50 = 4.59:1 (PASS AA).
   White text on teal-500 buttons = 2.49:1 (below AA).
     Accepted trade-off: brand aesthetics over strict compliance for
     short button labels. Button context provides sufficient readability.
@@ -158,7 +158,7 @@
   active:   same as hover but with scale(0.98) transform
   disabled: opacity 0.5, cursor: not-allowed, no hover/focus effects
 
-  Focus ring uses --brand to ensure contrast against zinc backgrounds
+  Focus ring uses --brand to ensure contrast against stone backgrounds
   in both light and dark modes.
   Focus ring MUST always be visible for keyboard accessibility.
   DO NOT remove outline without providing a visible alternative.
