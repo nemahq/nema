@@ -60,7 +60,7 @@ export function ChatInput({
         disabled={!value.trim()}
         onClick={handleSubmit}
         aria-label={t("common.send")}
-        className="self-end rounded-full transition-all duration-normal disabled:scale-90 enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80 dark:enabled:bg-fg-primary dark:enabled:text-surface-base"
+        className="self-end rounded-full transition-all duration-normal disabled:scale-90 disabled:bg-surface-raised-hover disabled:text-fg-tertiary disabled:border-transparent disabled:opacity-100 dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-tertiary enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80 dark:enabled:bg-fg-primary dark:enabled:text-surface-base"
       >
         <ArrowUp className="size-4" />
       </Button>
