@@ -9,6 +9,18 @@ export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
     : "query_failed";
 }
 
+export function throwIfSupabaseError(
+  error: { code: string; message: string } | null,
+): asserts error is null {
+  if (error) {
+    throw new SupabaseError(
+      toSupabaseErrorCode(error.code),
+      error.message,
+      error,
+    );
+  }
+}
+
 export class SupabaseError extends Error {
   override readonly cause?: unknown;
 
