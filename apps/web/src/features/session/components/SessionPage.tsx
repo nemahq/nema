@@ -47,7 +47,7 @@ function NewContextButton({ collapsed }: { collapsed: boolean }) {
     <div className="px-1.5 py-2">
       <Button
         variant="ghost"
-        className="w-full justify-start gap-2 pl-1.5 text-sm font-medium"
+        className="w-full justify-start gap-2 pl-1.5 text-sm font-normal"
         onClick={() => {
           // TODO: 세션 생성 API 연결
         }}
@@ -64,9 +64,7 @@ export function SessionPage() {
 
   return (
     <div className="flex h-dvh">
-      <Sidebar
-        footer={(collapsed) => <UserMenu collapsed={collapsed} />}
-      >
+      <Sidebar footer={(collapsed) => <UserMenu collapsed={collapsed} />}>
         {(collapsed) => <NewContextButton collapsed={collapsed} />}
       </Sidebar>
 
