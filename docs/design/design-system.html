@@ -49,7 +49,7 @@
 
   ── Accessibility notes ───────────────────────────
   --brand-accent (teal-700) on white = 5.47:1 (PASS AA). Use for text accents.
-  --text-tertiary (zinc-500) on white = 4.83:1 (PASS AA).
+  --text-tertiary (stone-500) on stone-50 = 4.59:1 (PASS AA).
   White text on teal-500 buttons = 2.49:1 (below AA).
     Accepted trade-off: brand aesthetics over strict compliance for
     short button labels. Button context provides sufficient readability.
@@ -61,12 +61,12 @@
   --brand               teal-500        teal-500        Filled backgrounds (buttons, bubbles)
   --brand-hover         teal-600        teal-400        Hover / interaction feedback
   --brand-accent          teal-700        teal-400        Text accent (WCAG AA compliant)
-  --brand-fg            zinc-900        zinc-900        Text on brand-colored backgrounds (fixed)
+  --brand-fg            stone-900       stone-900       Text on brand-colored backgrounds (fixed)
   --brand-tint        teal-500/8%     teal-500/12%    Tag / badge backgrounds
   --brand-tint-hover teal-500/12%    teal-500/18%    Emphasized backgrounds (active state)
 
   ── Accent Color Usage ──────────────────────────
-  Use brand teal sparingly. Most UI should be neutral (zinc grays).
+  Use brand teal sparingly. Most UI should be neutral (stone grays).
   Accent is reserved for:
   - ONE primary CTA per view (button)
   - Active/selected state (sidebar, tab)
@@ -74,47 +74,47 @@
   - Tags/badges (subtle background only)
   DO NOT flood the UI with teal. Restraint = sophistication.
 
-  ── Gray Scale: Zinc (both modes) ─────────────────
-  Both light and dark modes use the Tailwind Zinc scale for consistency.
-  Switching between modes keeps the same neutral color temperature.
+  ── Gray Scale: Stone (both modes) ────────────────
+  Both light and dark modes use the Tailwind Stone scale for warm neutrals.
+  Stone's yellow-brown undertone delivers "calm and intellectual, but not cold."
 
   Light mode:
-  - bg: #FFFFFF, surface: zinc-50 (#FAFAFA), card: #FFFFFF
-  - text: zinc-900 (#18181B), zinc-600 (#52525B), zinc-500 (#71717A)
-  - border: zinc-200 (#E4E4E7)
+  - bg: stone-50 (#FAFAF9), surface: stone-100 (#F5F5F4), card: #FFFFFF
+  - text: stone-900 (#1C1917), stone-600 (#57534E), stone-500 (#78716C)
+  - border: stone-300 (#D6D3D1)
 
   Dark mode:
-  - bg: zinc-900 (#18181B), surface: zinc-800 (#27272A), card: zinc-800
-  - text: zinc-100 (#F4F4F5), zinc-400 (#A1A1AA), zinc-500 (#71717A)
-  - border: zinc-700 (#3F3F46)
+  - bg: stone-900 (#1C1917), surface: stone-800 (#292524), card: stone-800
+  - text: stone-100 (#F5F5F4), stone-400 (#A8A29E), stone-500 (#78716C)
+  - border: stone-600 (#57534E)
 
   ── Dark Mode Principles ──────────────────────────
   - Filled elements (buttons, bubbles) stay teal-500 in both modes.
   - Text / icon accents shift to teal-400 in dark mode for readability.
 
-  ── Dark Mode Background — Why Zinc ─────────────
-  Chosen palette: Tailwind Zinc scale (neutral gray, no color tint).
+  ── Dark Mode Background — Why Stone ────────────
+  Chosen palette: Tailwind Stone scale (warm gray, subtle yellow-brown undertone).
 
   Decision rationale:
   1. Industry alignment — most modern SaaS dark modes use neutral grays
      in the #171717–#1E1E1E range: Spotify #121212, Notion #191919,
      Linear #1B1B1F, VS Code #1E1E1E, ChatGPT #212121.
-     Zinc-900 (#18181B) sits at the center of this cluster.
+     Stone-900 (#1C1917) sits within this cluster with added warmth.
   2. Brand color clarity — a blue-tinted background (e.g. Slate #0F172A)
-     competes with teal accents on color temperature. Neutral Zinc
-     lets teal-500 stand out cleanly without chromatic interference.
+     competes with teal accents on color temperature. Warm Stone
+     creates complementary contrast, letting teal stand out richly.
   3. Reading comfort — Nema is a text-heavy productivity tool.
      Ultra-dark backgrounds (#0F0F0F, #000000) cause excessive contrast
-     and eye fatigue in long sessions. Zinc-900 is dark enough to feel
+     and eye fatigue in long sessions. Stone-900 is dark enough to feel
      premium but comfortable for extended reading/writing.
-  4. Brand tone fit — pure Neutral (#171717) can feel flat and generic.
-     Zinc has just enough micro-character to convey
+  4. Brand tone fit — cool Zinc can feel clinical despite its character.
+     Stone's warm undertone directly embodies
      "calm and intellectual, but not cold."
 
   DO NOT use:
   - Slate/blue-tinted grays — conflicts with teal, looks dated.
   - Pure black (#000000) — too harsh for long reading sessions.
-  - Grays lighter than #27272A for backgrounds — loses dark mode feel.
+  - Grays lighter than #292524 for backgrounds — loses dark mode feel.
 
   ── Typography Hierarchy ──────────────────────────
   H1:      32px / Bold 700    / line-height 1.3
@@ -158,7 +158,7 @@
   active:   same as hover but with scale(0.98) transform
   disabled: opacity 0.5, cursor: not-allowed, no hover/focus effects
 
-  Focus ring uses --brand to ensure contrast against zinc backgrounds
+  Focus ring uses --brand to ensure contrast against stone backgrounds
   in both light and dark modes.
   Focus ring MUST always be visible for keyboard accessibility.
   DO NOT remove outline without providing a visible alternative.
@@ -219,17 +219,17 @@
     --brand: #14B8A6;
     --brand-hover: #0D9488;
     --brand-accent: #0F766E;
-    --brand-fg: #18181B;
+    --brand-fg: #1C1917;
     --brand-tint: rgba(20, 184, 166, 0.08);
     --brand-tint-hover: rgba(20, 184, 166, 0.12);
 
-    --bg: #FFFFFF;
-    --bg-surface: #FAFAFA;
+    --bg: #FAFAF9;
+    --bg-surface: #F5F5F4;
     --bg-card: #FFFFFF;
-    --text-primary: #18181B;
-    --text-secondary: #52525B;
-    --text-tertiary: #71717A;
-    --border: #E4E4E7;
+    --text-primary: #1C1917;
+    --text-secondary: #57534E;
+    --text-tertiary: #78716C;
+    --border: #D6D3D1;
     --shadow: rgba(0,0,0,0.06);
 
     /* Semantic */
@@ -255,17 +255,17 @@
     --brand: #14B8A6;
     --brand-hover: #2DD4BF;
     --brand-accent: #2DD4BF;
-    --brand-fg: #18181B;
+    --brand-fg: #1C1917;
     --brand-tint: rgba(20, 184, 166, 0.12);
     --brand-tint-hover: rgba(20, 184, 166, 0.18);
 
-    --bg: #18181B;
-    --bg-surface: #27272A;
-    --bg-card: #27272A;
-    --text-primary: #F4F4F5;
-    --text-secondary: #A1A1AA;
-    --text-tertiary: #71717A;
-    --border: #3F3F46;
+    --bg: #1C1917;
+    --bg-surface: #292524;
+    --bg-card: #292524;
+    --text-primary: #F5F5F4;
+    --text-secondary: #A8A29E;
+    --text-tertiary: #78716C;
+    --border: #57534E;
     --shadow: rgba(0,0,0,0.3);
 
     /* Semantic */
@@ -926,47 +926,47 @@
   <div class="section">
     <div class="section-title">01 / Color System — teal 스펙트럼</div>
 
-    <div class="color-compare-row-label">LIGHT MODE — white background</div>
+    <div class="color-compare-row-label">LIGHT MODE — stone-50 background</div>
     <div class="color-compare-row">
-      <div class="color-box" style="background: #FFFFFF;">
+      <div class="color-box" style="background: #FAFAF9;">
         <div class="c-logo" style="color: #2DD4BF;">Nema</div>
-        <div class="c-tagline" style="color: #52525B;">흩어진 생각을 지식으로</div>
-        <div class="c-label" style="color: #71717A;">teal-400</div>
-        <div class="c-hex" style="color: #71717A;">#2DD4BF</div>
+        <div class="c-tagline" style="color: #57534E;">흩어진 생각을 지식으로</div>
+        <div class="c-label" style="color: #78716C;">teal-400</div>
+        <div class="c-hex" style="color: #78716C;">#2DD4BF</div>
       </div>
-      <div class="color-box" style="background: #FFFFFF;">
+      <div class="color-box" style="background: #FAFAF9;">
         <div class="c-logo" style="color: #14B8A6;">Nema</div>
-        <div class="c-tagline" style="color: #52525B;">흩어진 생각을 지식으로</div>
-        <div class="c-label" style="color: #71717A;">teal-500</div>
-        <div class="c-hex" style="color: #71717A;">#14B8A6</div>
+        <div class="c-tagline" style="color: #57534E;">흩어진 생각을 지식으로</div>
+        <div class="c-label" style="color: #78716C;">teal-500</div>
+        <div class="c-hex" style="color: #78716C;">#14B8A6</div>
       </div>
-      <div class="color-box" style="background: #FFFFFF;">
+      <div class="color-box" style="background: #FAFAF9;">
         <div class="c-logo" style="color: #0D9488;">Nema</div>
-        <div class="c-tagline" style="color: #52525B;">흩어진 생각을 지식으로</div>
-        <div class="c-label" style="color: #71717A;">teal-600</div>
-        <div class="c-hex" style="color: #71717A;">#0D9488</div>
+        <div class="c-tagline" style="color: #57534E;">흩어진 생각을 지식으로</div>
+        <div class="c-label" style="color: #78716C;">teal-600</div>
+        <div class="c-hex" style="color: #78716C;">#0D9488</div>
       </div>
     </div>
 
-    <div class="color-compare-row-label">DARK MODE — zinc-900 background</div>
+    <div class="color-compare-row-label">DARK MODE — stone-900 background</div>
     <div class="color-compare-row">
-      <div class="color-box" style="background: #18181B;">
+      <div class="color-box" style="background: #1C1917;">
         <div class="c-logo" style="color: #2DD4BF;">Nema</div>
-        <div class="c-tagline" style="color: #A1A1AA;">흩어진 생각을 지식으로</div>
-        <div class="c-label" style="color: #71717A;">teal-400</div>
-        <div class="c-hex" style="color: #71717A;">#2DD4BF</div>
+        <div class="c-tagline" style="color: #A8A29E;">흩어진 생각을 지식으로</div>
+        <div class="c-label" style="color: #78716C;">teal-400</div>
+        <div class="c-hex" style="color: #78716C;">#2DD4BF</div>
       </div>
-      <div class="color-box" style="background: #18181B;">
+      <div class="color-box" style="background: #1C1917;">
         <div class="c-logo" style="color: #14B8A6;">Nema</div>
-        <div class="c-tagline" style="color: #A1A1AA;">흩어진 생각을 지식으로</div>
-        <div class="c-label" style="color: #71717A;">teal-500</div>
-        <div class="c-hex" style="color: #71717A;">#14B8A6</div>
+        <div class="c-tagline" style="color: #A8A29E;">흩어진 생각을 지식으로</div>
+        <div class="c-label" style="color: #78716C;">teal-500</div>
+        <div class="c-hex" style="color: #78716C;">#14B8A6</div>
       </div>
-      <div class="color-box" style="background: #18181B;">
+      <div class="color-box" style="background: #1C1917;">
         <div class="c-logo" style="color: #0D9488;">Nema</div>
-        <div class="c-tagline" style="color: #A1A1AA;">흩어진 생각을 지식으로</div>
-        <div class="c-label" style="color: #71717A;">teal-600</div>
-        <div class="c-hex" style="color: #71717A;">#0D9488</div>
+        <div class="c-tagline" style="color: #A8A29E;">흩어진 생각을 지식으로</div>
+        <div class="c-label" style="color: #78716C;">teal-600</div>
+        <div class="c-hex" style="color: #78716C;">#0D9488</div>
       </div>
     </div>
   </div>
