@@ -12,7 +12,7 @@ Return a JSON object with one field:
 
 ## Entity types
 
-Person, Organization, Topic, Event, Project, Location
+${ENTITY_TYPES.join(", ")}
 
 ## Rules
 

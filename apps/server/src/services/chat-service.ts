@@ -5,10 +5,7 @@ import type { ChatInput, Message } from "@nema-io/shared";
 import { DraftOutputSchema } from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
-import {
-  SupabaseError,
-  toSupabaseErrorCode,
-} from "@server/infra/supabase-error";
+import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import {
   buildEditCycleMessage,
   buildFirstCallMessage,
@@ -57,36 +54,39 @@ const RetrievalOutputSchema = z.object({
 });
 
 const SplitOutputSchema = z.object({
-  documents: z.array(z.object({ body: z.string() })),
+  documents: z.array(z.object({ body: z.string().min(1) })).min(1),
 });
 
 const JudgmentOutputSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("create"),
     target_id: z.null(),
-    final_body: z.string(),
+    final_body: z.string().min(1),
   }),
   z.object({
     action: z.literal("update"),
     target_id: z.string().min(1),
-    final_body: z.string(),
+    final_body: z.string().min(1),
   }),
 ]);
 
 const MetaOutputSchema = z.object({
-  title: z.string(),
-  tags: z.array(z.string()),
-  summary: z.string(),
+  title: z.string().min(1),
+  tags: z.array(z.string().min(1)),
+  summary: z.string().min(1),
 });
+
+const DraftSchema = z.object({ body: z.string().min(1) });
+type Draft = z.infer<typeof DraftSchema>;
 
 interface SearchIntent {
   queries: string[] | null;
   entities: string[] | null;
 }
 
-interface Draft {
-  body: string;
-}
+type PersistAction =
+  | { action: "create" }
+  | { action: "update"; targetId: string };
 
 // --- Draft state management ---
 
@@ -100,15 +100,9 @@ async function getDraft(
     .eq("id", sessionId)
     .single();
 
-  if (error) {
-    throw new SupabaseError(
-      toSupabaseErrorCode(error.code),
-      error.message,
-      error,
-    );
-  }
+  throwIfSupabaseError(error);
 
-  return data.draft as Draft | null;
+  return data.draft ? DraftSchema.parse(data.draft) : null;
 }
 
 async function setDraft(
@@ -122,13 +116,7 @@ async function setDraft(
     .update({ draft })
     .eq("id", sessionId);
 
-  if (error) {
-    throw new SupabaseError(
-      toSupabaseErrorCode(error.code),
-      error.message,
-      error,
-    );
-  }
+  throwIfSupabaseError(error);
 }
 
 async function clearDraft(
@@ -140,13 +128,7 @@ async function clearDraft(
     .update({ draft: null })
     .eq("id", sessionId);
 
-  if (error) {
-    throw new SupabaseError(
-      toSupabaseErrorCode(error.code),
-      error.message,
-      error,
-    );
-  }
+  throwIfSupabaseError(error);
 }
 
 async function updateSessionTitle(
@@ -159,13 +141,7 @@ async function updateSessionTitle(
     .update({ title })
     .eq("id", sessionId);
 
-  if (error) {
-    throw new SupabaseError(
-      toSupabaseErrorCode(error.code),
-      error.message,
-      error,
-    );
-  }
+  throwIfSupabaseError(error);
 }
 
 // --- Helpers ---
@@ -180,25 +156,19 @@ async function appendMessage(
     p_message: message,
   });
 
-  if (error) {
-    throw new SupabaseError(
-      toSupabaseErrorCode(error.code),
-      error.message,
-      error,
-    );
-  }
+  throwIfSupabaseError(error);
 }
 
-async function getExistingTags(supabase: SupabaseClient): Promise<string[]> {
-  const { data, error } = await supabase.from("documents").select("tags");
+async function getExistingTags(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("documents")
+    .select("tags")
+    .eq("user_id", userId);
 
-  if (error) {
-    throw new SupabaseError(
-      toSupabaseErrorCode(error.code),
-      error.message,
-      error,
-    );
-  }
+  throwIfSupabaseError(error);
 
   const allTags = new Set<string>();
   for (const doc of data ?? []) {
@@ -297,6 +267,10 @@ export async function processChat(
         await clearDraft(supabase, input.sessionId);
         responseContent = "작성 중인 내용이 취소되었습니다.";
         break;
+      default: {
+        const _exhaustive: never = intentResult.intent;
+        throw new Error(`Unhandled intent: ${_exhaustive}`);
+      }
     }
   }
 
@@ -432,7 +406,7 @@ async function handleSave(
     messages: [{ role: "user", content: buildSplitMessage(draftBody) }],
   });
 
-  const existingTags = await getExistingTags(supabase);
+  const existingTags = await getExistingTags(supabase, userId);
 
   const savedDocs: Array<{ id: string; title: string }> = [];
   for (const doc of splitResult.documents) {
@@ -478,13 +452,7 @@ async function saveDocument(
       .select("id, title, body")
       .in("id", docIds);
 
-    if (error) {
-      throw new SupabaseError(
-        toSupabaseErrorCode(error.code),
-        error.message,
-        error,
-      );
-    }
+    throwIfSupabaseError(error);
 
     similarDocs = (data ?? []).map((d) => ({
       id: d.id as string,
@@ -513,8 +481,6 @@ async function saveDocument(
     });
 
     if (reSplitResult.documents.length > 1) {
-      await deleteDocument(supabase, providers, judgment.target_id);
-
       const results: Array<{ id: string; title: string }> = [];
       for (const splitDoc of reSplitResult.documents) {
         const result = await persistDocument(
@@ -522,13 +488,13 @@ async function saveDocument(
           providers,
           userId,
           sessionId,
-          "create",
-          null,
+          { action: "create" },
           splitDoc.body,
           existingTags,
         );
         results.push(result);
       }
+      await deleteDocument(supabase, providers, judgment.target_id);
       return results;
     }
 
@@ -538,8 +504,7 @@ async function saveDocument(
         providers,
         userId,
         sessionId,
-        "update",
-        judgment.target_id,
+        { action: "update", targetId: judgment.target_id },
         judgment.final_body,
         existingTags,
       ),
@@ -552,8 +517,7 @@ async function saveDocument(
       providers,
       userId,
       sessionId,
-      "create",
-      null,
+      { action: "create" },
       judgment.final_body,
       existingTags,
     ),
@@ -565,8 +529,7 @@ async function persistDocument(
   providers: Providers,
   userId: string,
   sessionId: string,
-  action: "create" | "update",
-  targetId: string | null,
+  persistAction: PersistAction,
   body: string,
   existingTags: string[],
 ): Promise<{ id: string; title: string }> {
@@ -591,7 +554,7 @@ async function persistDocument(
 
   let docId: string;
 
-  if (action === "create") {
+  if (persistAction.action === "create") {
     const { data, error } = await supabase
       .from("documents")
       .insert({
@@ -605,17 +568,11 @@ async function persistDocument(
       .select("id")
       .single();
 
-    if (error) {
-      throw new SupabaseError(
-        toSupabaseErrorCode(error.code),
-        error.message,
-        error,
-      );
-    }
+    throwIfSupabaseError(error);
 
     docId = data.id as string;
   } else {
-    docId = targetId as string;
+    docId = persistAction.targetId;
 
     const { error } = await supabase
       .from("documents")
@@ -627,20 +584,14 @@ async function persistDocument(
       })
       .eq("id", docId);
 
-    if (error) {
-      throw new SupabaseError(
-        toSupabaseErrorCode(error.code),
-        error.message,
-        error,
-      );
-    }
+    throwIfSupabaseError(error);
 
-    await Promise.all([
-      vectorStore.deleteByDocument(docId),
-      graphStore.deleteByDocument(docId),
-    ]);
+    // TODO: outbox 패턴 전환 시 이벤트 기반 비동기 처리로 교체
+    await vectorStore.deleteByDocument(docId);
+    await graphStore.deleteByDocument(docId);
   }
 
+  // TODO: outbox 패턴 전환 시 이벤트 기반 비동기 처리로 교체
   await Promise.all([
     vectorStore.upsert(embedding, {
       docId,
@@ -654,41 +605,27 @@ async function persistDocument(
       userId,
       entities: entityResult.entities,
     }),
-    supabase
-      .from("session_documents")
-      .upsert({ session_id: sessionId, document_id: docId })
-      .then(({ error }) => {
-        if (error)
-          throw new SupabaseError(
-            toSupabaseErrorCode(error.code),
-            error.message,
-            error,
-          );
-      }),
   ]);
+
+  const { error: linkError } = await supabase
+    .from("session_documents")
+    .upsert({ session_id: sessionId, document_id: docId });
+
+  throwIfSupabaseError(linkError);
 
   return { id: docId, title: meta.title };
 }
 
+// TODO: outbox 패턴 전환 시 이벤트 기반 비동기 처리로 교체
 async function deleteDocument(
   supabase: SupabaseClient,
   providers: Providers,
   docId: string,
 ): Promise<void> {
-  await Promise.all([
-    supabase
-      .from("documents")
-      .delete()
-      .eq("id", docId)
-      .then(({ error }) => {
-        if (error)
-          throw new SupabaseError(
-            toSupabaseErrorCode(error.code),
-            error.message,
-            error,
-          );
-      }),
-    providers.vectorStore.deleteByDocument(docId),
-    providers.graphStore.deleteByDocument(docId),
-  ]);
+  await providers.vectorStore.deleteByDocument(docId);
+  await providers.graphStore.deleteByDocument(docId);
+
+  const { error } = await supabase.from("documents").delete().eq("id", docId);
+
+  throwIfSupabaseError(error);
 }
