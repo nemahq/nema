@@ -2,9 +2,8 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import type { SessionSummary } from "@nema-io/shared";
 
+import { fetchMockSessions } from "@web/features/session/mock";
 import { useTranslation } from "@web/lib/tolgee";
-
-import { fetchMockSessions } from "../mock";
 
 const INITIAL = fetchMockSessions();
 
