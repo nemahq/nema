@@ -2,7 +2,7 @@ import { type FormEvent, useState } from "react";
 import { useSearch } from "@tanstack/react-router";
 
 import { Button, Input, Separator } from "@nema-io/weave";
-import { Mail } from "@nema-io/weave/icons";
+import { LoaderCircle, Mail } from "@nema-io/weave/icons";
 
 import NemaLogo from "@web/assets/nema-logo.svg";
 import { supabase } from "@web/lib/supabase";
@@ -16,12 +16,13 @@ export function AuthPage() {
 
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   async function handleGoogleSignIn() {
     setError(null);
-    setLoading(true);
+    setGoogleLoading(true);
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -33,14 +34,14 @@ export function AuthPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.unknown_error"));
     } finally {
-      setLoading(false);
+      setGoogleLoading(false);
     }
   }
 
   async function handleEmailSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
+    setEmailLoading(true);
 
     try {
       const redirectTo = search.redirect?.startsWith("/")
@@ -60,14 +61,18 @@ export function AuthPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.unknown_error"));
     } finally {
-      setLoading(false);
+      setEmailLoading(false);
     }
   }
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface p-4">
       <div className="flex w-full max-w-sm flex-col items-center gap-8">
-        <img src={NemaLogo} alt="Nema" className="h-8" />
+        <img
+          src={NemaLogo}
+          alt="Nema"
+          className="h-8 dark:brightness-0 dark:invert"
+        />
 
         <div className="flex min-h-[260px] w-full flex-col items-center justify-center rounded-xl border border-border p-6">
           {magicLinkSent ? (
@@ -92,7 +97,7 @@ export function AuthPage() {
                 variant="neutral"
                 size="lg"
                 onClick={handleGoogleSignIn}
-                disabled={loading}
+                disabled={googleLoading || emailLoading}
                 className="w-full"
               >
                 <GoogleIcon className="size-5" />
@@ -120,11 +125,17 @@ export function AuthPage() {
                   variant="neutral"
                   size="lg"
                   type="submit"
-                  disabled={loading}
+                  disabled={emailLoading || googleLoading}
                   className="w-full"
                 >
-                  <Mail className="size-4" />
-                  {t("auth.continue_with_email")}
+                  {emailLoading ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Mail className="size-4" />
+                      {t("auth.continue_with_email")}
+                    </>
+                  )}
                 </Button>
               </form>
 
