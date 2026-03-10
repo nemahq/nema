@@ -8,7 +8,7 @@ export function SessionPage() {
     <div className="flex h-dvh">
       <Sidebar />
 
-      <main className="flex flex-1 flex-col items-center justify-center">
+      <main className="flex flex-1 flex-col items-center justify-center bg-surface-card">
         <p className="text-fg-tertiary">{t("session.empty")}</p>
       </main>
     </div>

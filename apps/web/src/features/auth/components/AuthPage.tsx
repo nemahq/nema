@@ -68,11 +68,7 @@ export function AuthPage() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface p-4">
       <div className="flex w-full max-w-sm flex-col items-center gap-8">
-        <img
-          src={NemaLogo}
-          alt="Nema"
-          className="h-8 dark:brightness-0 dark:invert"
-        />
+        <img src={NemaLogo} alt="Nema" className="h-8 nema-logo" />
 
         <div className="flex min-h-[260px] w-full flex-col items-center justify-center rounded-xl border border-border p-6">
           {magicLinkSent ? (

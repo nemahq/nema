@@ -1,2 +1,6 @@
 @import "@nema-io/weave/styles";
 @plugin "@tailwindcss/typography";
+
+@utility nema-logo {
+  @apply dark:brightness-0 dark:invert;
+}
