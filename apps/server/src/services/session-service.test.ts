@@ -13,6 +13,17 @@ function makeRow(id: string, updatedAt: string) {
   };
 }
 
+function encodeCursor(updatedAt: string, id: string): string {
+  return Buffer.from(JSON.stringify([updatedAt, id])).toString("base64url");
+}
+
+function decodeCursor(cursor: string): [string, string] {
+  return JSON.parse(Buffer.from(cursor, "base64url").toString()) as [
+    string,
+    string,
+  ];
+}
+
 function mockSupabase(resolved: {
   data?: unknown;
   error?: unknown;
@@ -22,7 +33,7 @@ function mockSupabase(resolved: {
   chain.select = vi.fn().mockReturnValue(chain);
   chain.order = vi.fn().mockReturnValue(chain);
   chain.limit = vi.fn().mockReturnValue(chain);
-  chain.lt = vi.fn().mockReturnValue(chain);
+  chain.or = vi.fn().mockReturnValue(chain);
   chain.insert = vi.fn().mockReturnValue(chain);
   chain.single = vi.fn().mockResolvedValue(resolved);
   chain.delete = vi.fn().mockReturnValue(chain);
@@ -52,7 +63,7 @@ describe("listSessions", () => {
     expect(result.nextCursor).toBeNull();
   });
 
-  it("결과가 limit+1이면 nextCursor가 마지막 항목의 updatedAt", async () => {
+  it("결과가 limit+1이면 nextCursor가 마지막 항목의 (updatedAt, id) 인코딩", async () => {
     const rows = [
       makeRow("a", "2026-03-03T00:00:00Z"),
       makeRow("b", "2026-03-02T00:00:00Z"),
@@ -63,15 +74,21 @@ describe("listSessions", () => {
     const result = await listSessions(client, { limit: 2 });
 
     expect(result.items).toHaveLength(2);
-    expect(result.nextCursor).toBe("2026-03-02T00:00:00Z");
+    expect(result.nextCursor).toBeTypeOf("string");
+    const [updatedAt, id] = decodeCursor(result.nextCursor as string);
+    expect(updatedAt).toBe("2026-03-02T00:00:00Z");
+    expect(id).toBe("b");
   });
 
-  it("cursor가 있으면 lt 필터 적용", async () => {
+  it("cursor가 있으면 or 필터로 복합 커서 적용", async () => {
     const { client, chain } = mockSupabase({ data: [] });
+    const cursor = encodeCursor("2026-03-01T00:00:00Z", "some-id");
 
-    await listSessions(client, { limit: 20, cursor: "2026-03-01T00:00:00Z" });
+    await listSessions(client, { limit: 20, cursor });
 
-    expect(chain.lt).toHaveBeenCalledWith("updated_at", "2026-03-01T00:00:00Z");
+    expect(chain.or).toHaveBeenCalledWith(
+      "updated_at.lt.2026-03-01T00:00:00Z,and(updated_at.eq.2026-03-01T00:00:00Z,id.lt.some-id)",
+    );
   });
 
   it("쿼리 실패 시 SupabaseError(query_failed) throw", async () => {
@@ -125,7 +142,6 @@ describe("deleteSession", () => {
   it("쿼리 실패 시 SupabaseError(query_failed) throw", async () => {
     const { client } = mockSupabase({
       error: { message: "fail" },
-      count: null,
     });
 
     await expect(deleteSession(client, "session-1")).rejects.toThrow(

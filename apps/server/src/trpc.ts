@@ -20,6 +20,8 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
     if (!error) {
       user = data.user;
       supabase = createSupabaseUser(token);
+    } else {
+      req.log.warn({ err: error }, "auth.getUser failed");
     }
   }
 

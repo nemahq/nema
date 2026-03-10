@@ -18,6 +18,17 @@ function toSummary(row: {
   };
 }
 
+function encodeCursor(updatedAt: string, id: string): string {
+  return Buffer.from(JSON.stringify([updatedAt, id])).toString("base64url");
+}
+
+function decodeCursor(cursor: string): { updatedAt: string; id: string } {
+  const [updatedAt, id] = JSON.parse(
+    Buffer.from(cursor, "base64url").toString(),
+  ) as [string, string];
+  return { updatedAt, id };
+}
+
 export async function listSessions(
   supabase: SupabaseClient,
   input: SessionListInput,
@@ -26,10 +37,14 @@ export async function listSessions(
     .from("sessions")
     .select("id, title, created_at, updated_at")
     .order("updated_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(input.limit + 1);
 
   if (input.cursor) {
-    query = query.lt("updated_at", input.cursor);
+    const { updatedAt, id } = decodeCursor(input.cursor);
+    query = query.or(
+      `updated_at.lt.${updatedAt},and(updated_at.eq.${updatedAt},id.lt.${id})`,
+    );
   }
 
   const { data, error } = await query;
@@ -39,7 +54,9 @@ export async function listSessions(
 
   const hasMore = data.length > input.limit;
   const items = (hasMore ? data.slice(0, input.limit) : data).map(toSummary);
-  const nextCursor = hasMore ? items[items.length - 1].updatedAt : null;
+  const lastItem = items[items.length - 1];
+  const nextCursor =
+    hasMore && lastItem ? encodeCursor(lastItem.updatedAt, lastItem.id) : null;
 
   return { items, nextCursor };
 }
@@ -73,7 +90,7 @@ export async function deleteSession(
   if (error) {
     throw new SupabaseError("query_failed", error.message, error);
   }
-  if (count === 0) {
+  if (!count) {
     throw new SupabaseError("not_found", `Session ${sessionId} not found`);
   }
 }

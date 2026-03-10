@@ -10,7 +10,7 @@ export const SessionSummarySchema = z.object({
 export type SessionSummary = z.infer<typeof SessionSummarySchema>;
 
 export const SessionListInputSchema = z.object({
-  cursor: z.string().datetime().optional(),
+  cursor: z.string().optional(),
   limit: z.number().int().min(1).max(100).default(20),
 });
 

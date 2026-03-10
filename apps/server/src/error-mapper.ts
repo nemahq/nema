@@ -6,7 +6,7 @@ import { EmbeddingError } from "./infra/embedding/embedding-provider";
 import { GraphStoreError } from "./infra/graph/graph-store";
 import { t, type TranslationKey } from "./infra/i18n";
 import { LlmError } from "./infra/llm/llm-error";
-import { SupabaseError } from "./infra/supabase-error";
+import { SupabaseError, type SupabaseErrorCode } from "./infra/supabase-error";
 import { VectorStoreError } from "./infra/vector/vector-store";
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]["code"];
@@ -68,6 +68,11 @@ const ERROR_MAP: Record<
   },
 };
 
+const SUPABASE_CODE_MAP: Record<SupabaseErrorCode, DomainErrorCode> = {
+  not_found: "DB_NOT_FOUND",
+  query_failed: "DB_QUERY_FAILED",
+};
+
 const LLM_CODE_MAP: Record<string, DomainErrorCode> = {
   rate_limit: "LLM_RATE_LIMIT",
   timeout: "LLM_TIMEOUT",
@@ -84,7 +89,7 @@ export function getDomainCode(cause: unknown): DomainErrorCode | undefined {
   if (cause instanceof VectorStoreError) return "VECTOR_STORE_ERROR";
   if (cause instanceof GraphStoreError) return "GRAPH_STORE_ERROR";
   if (cause instanceof SupabaseError) {
-    return cause.code === "not_found" ? "DB_NOT_FOUND" : "DB_QUERY_FAILED";
+    return SUPABASE_CODE_MAP[cause.code];
   }
   return undefined;
 }
