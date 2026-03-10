@@ -28,6 +28,9 @@ export function getProviders(): Providers {
   if (!env.VOYAGE_API_KEY) {
     throw new Error("VOYAGE_API_KEY is required for chat");
   }
+  if (!env.QDRANT_URL || !env.QDRANT_API_KEY) {
+    throw new Error("QDRANT_URL and QDRANT_API_KEY are required for chat");
+  }
 
   cached = {
     llm: new OpenAiProvider({ apiKey: env.OPENAI_API_KEY }),

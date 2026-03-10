@@ -1,8 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Message, SendMessageInput } from "@nema-io/shared";
+import { MessageSchema } from "@nema-io/shared";
 
-import { SupabaseError } from "@server/infra/supabase-error";
+import {
+  SupabaseError,
+  toSupabaseErrorCode,
+} from "@server/infra/supabase-error";
 
 export async function getMessages(
   supabase: SupabaseClient,
@@ -16,13 +20,13 @@ export async function getMessages(
 
   if (error) {
     throw new SupabaseError(
-      error.code === "PGRST116" ? "not_found" : "query_failed",
+      toSupabaseErrorCode(error.code),
       error.message,
       error,
     );
   }
 
-  return (data.messages ?? []) as Message[];
+  return MessageSchema.array().parse(data.messages ?? []);
 }
 
 export async function sendMessage(
@@ -44,7 +48,7 @@ export async function sendMessage(
 
   if (error) {
     throw new SupabaseError(
-      error.code === "P0002" ? "not_found" : "query_failed",
+      toSupabaseErrorCode(error.code),
       error.message,
       error,
     );

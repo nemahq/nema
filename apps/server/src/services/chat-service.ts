@@ -4,7 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChatInput, Message } from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
-import { SupabaseError } from "@server/infra/supabase-error";
+import {
+  SupabaseError,
+  toSupabaseErrorCode,
+} from "@server/infra/supabase-error";
 // TODO: 드래프팅 연동 시 주석 해제
 // import { DraftOutputSchema } from "@nema-io/shared";
 // import {
@@ -31,12 +34,41 @@ const RetrievalOutputSchema = z.object({
   source_ids: z.array(z.string()),
 });
 
+async function appendMessage(
+  supabase: SupabaseClient,
+  sessionId: string,
+  message: Message,
+): Promise<void> {
+  const { error } = await supabase.rpc("append_message", {
+    p_session_id: sessionId,
+    p_message: message,
+  });
+
+  if (error) {
+    throw new SupabaseError(
+      toSupabaseErrorCode(error.code),
+      error.message,
+      error,
+    );
+  }
+}
+
 export async function processChat(
   supabase: SupabaseClient,
   providers: Providers,
   userId: string,
   input: ChatInput,
 ): Promise<Message> {
+  const userMessage: Message = {
+    id: crypto.randomUUID(),
+    role: "user",
+    type: "text",
+    content: input.content,
+    createdAt: new Date().toISOString(),
+  };
+
+  await appendMessage(supabase, input.sessionId, userMessage);
+
   const intentResult = await providers.llm.generateStructured({
     schema: IntentOutputSchema,
     schemaName: "intent_router",
@@ -69,7 +101,7 @@ export async function processChat(
     responseContent = `입력하신 내용을 정리했습니다:\n\n${input.content}`;
   }
 
-  const message: Message = {
+  const assistantMessage: Message = {
     id: crypto.randomUUID(),
     role: "assistant",
     type: "text",
@@ -77,20 +109,9 @@ export async function processChat(
     createdAt: new Date().toISOString(),
   };
 
-  const { error } = await supabase.rpc("append_message", {
-    p_session_id: input.sessionId,
-    p_message: message,
-  });
+  await appendMessage(supabase, input.sessionId, assistantMessage);
 
-  if (error) {
-    throw new SupabaseError(
-      error.code === "P0002" ? "not_found" : "query_failed",
-      error.message,
-      error,
-    );
-  }
-
-  return message;
+  return assistantMessage;
 }
 
 async function handleRetrieval(
@@ -101,16 +122,14 @@ async function handleRetrieval(
 ): Promise<string> {
   const { llm, embedding, vectorStore, graphStore } = providers;
 
-  const vectorResults = [];
+  let vectorResults: Awaited<ReturnType<typeof vectorStore.search>> = [];
   if (intent.queries) {
-    for (const query of intent.queries) {
-      const results = await vectorStore.search(embedding, {
-        userId,
-        query,
-        limit: 5,
-      });
-      vectorResults.push(...results);
-    }
+    const results = await Promise.all(
+      intent.queries.map((query) =>
+        vectorStore.search(embedding, { userId, query, limit: 5 }),
+      ),
+    );
+    vectorResults = results.flat();
   }
 
   const graphDocIds = new Set<string>();
@@ -128,7 +147,7 @@ async function handleRetrieval(
   const seenDocIds = new Set<string>();
   const searchResults: Array<{ id: string; title: string; body: string }> = [];
 
-  const graphBoosted = vectorResults.sort((a, b) => {
+  const graphBoosted = [...vectorResults].sort((a, b) => {
     const aBoost = graphDocIds.has(a.payload.doc_id) ? 1 : 0;
     const bBoost = graphDocIds.has(b.payload.doc_id) ? 1 : 0;
     return bBoost - aBoost || b.score - a.score;
