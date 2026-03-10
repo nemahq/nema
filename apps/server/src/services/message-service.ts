@@ -29,20 +29,6 @@ export async function sendMessage(
   supabase: SupabaseClient,
   input: SendMessageInput,
 ): Promise<Message> {
-  const { data: session, error: fetchError } = await supabase
-    .from("sessions")
-    .select("messages")
-    .eq("id", input.sessionId)
-    .single();
-
-  if (fetchError) {
-    throw new SupabaseError(
-      fetchError.code === "PGRST116" ? "not_found" : "query_failed",
-      fetchError.message,
-      fetchError,
-    );
-  }
-
   const message: Message = {
     id: crypto.randomUUID(),
     role: "user",
@@ -51,15 +37,17 @@ export async function sendMessage(
     createdAt: new Date().toISOString(),
   };
 
-  const messages = [...((session.messages ?? []) as Message[]), message];
+  const { error } = await supabase.rpc("append_message", {
+    p_session_id: input.sessionId,
+    p_message: message,
+  });
 
-  const { error: updateError } = await supabase
-    .from("sessions")
-    .update({ messages })
-    .eq("id", input.sessionId);
-
-  if (updateError) {
-    throw new SupabaseError("query_failed", updateError.message, updateError);
+  if (error) {
+    throw new SupabaseError(
+      error.code === "P0002" ? "not_found" : "query_failed",
+      error.message,
+      error,
+    );
   }
 
   return message;
