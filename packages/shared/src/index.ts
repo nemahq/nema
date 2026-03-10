@@ -1,5 +1,17 @@
 export { isLocale, type Locale, LOCALES } from "./i18n";
 export {
+  type GetMessagesInput,
+  GetMessagesInputSchema,
+  type Message,
+  type MessageRole,
+  MessageRoleSchema,
+  MessageSchema,
+  type MessageType,
+  MessageTypeSchema,
+  type SendMessageInput,
+  SendMessageInputSchema,
+} from "./schemas/message";
+export {
   type SessionDeleteInput,
   SessionDeleteInputSchema,
   type SessionListInput,
