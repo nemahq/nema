@@ -54,7 +54,7 @@
   --status-info-tint: rgba(59, 130, 246, 0.08);
 
   /* Border */
-  --border: #e7e5e4; /* stone-200 */
+  --border: #d6d3d1; /* stone-300 */
 }
 
 .dark {
@@ -87,7 +87,7 @@
   --status-info-tint: rgba(59, 130, 246, 0.12);
 
   /* Border */
-  --border: #44403c; /* stone-700 */
+  --border: #57534e; /* stone-600 */
 }
 
 /* ── Tailwind Theme (semantic tokens only) ── */
