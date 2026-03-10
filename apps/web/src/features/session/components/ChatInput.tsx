@@ -41,7 +41,7 @@ export function ChatInput({
   }
 
   return (
-    <div className="flex w-full items-end gap-2 rounded-2xl border border-border bg-surface-raised p-3 dark:bg-surface-raised-hover">
+    <div className="flex w-full items-end gap-2 rounded-xl border border-border bg-surface-raised p-3 focus-within:border-border-strong dark:bg-surface-raised-hover">
       <textarea
         ref={textareaRef}
         value={value}
@@ -60,7 +60,7 @@ export function ChatInput({
         disabled={!value.trim()}
         onClick={handleSubmit}
         aria-label={t("common.send")}
-        className="rounded-full transition-all duration-normal disabled:scale-90 disabled:opacity-30 enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80 dark:enabled:bg-white dark:enabled:text-surface-base"
+        className="rounded-full transition-all duration-normal disabled:scale-90 enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80 dark:enabled:bg-fg-primary dark:enabled:text-surface-base"
       >
         <ArrowUp className="size-4" />
       </Button>

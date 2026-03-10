@@ -1,11 +1,14 @@
 import { useState } from "react";
 
 import { ChatInput } from "@web/features/session/components/ChatInput";
-import { EmptyState } from "@web/features/session/components/EmptyState";
+import { Greeting } from "@web/features/session/components/Greeting";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 import { useTranslation } from "@web/lib/tolgee";
+import en from "@web/lib/tolgee/en.json";
 
-const VARIANT_COUNT = 4;
+const VARIANT_COUNT = Object.keys(en.session).filter((k) =>
+  k.startsWith("empty_heading_"),
+).length;
 
 function pickRandom() {
   return Math.floor(Math.random() * VARIANT_COUNT);
@@ -21,11 +24,11 @@ export function SessionPage() {
 
       <main className="flex flex-1 flex-col items-center justify-center bg-surface-card">
         <div className="flex w-full max-w-2xl flex-col items-center gap-8 px-6">
-          <EmptyState variant={variant} />
+          <Greeting variant={variant} />
           <ChatInput
             placeholder={t("session.input_placeholder")}
             onSubmit={() => {
-              // TODO: 메시지 전송 API 연결
+              // TODO: tRPC message.chat mutation 호출 — 서버 API 구현 완료 (message-router.ts)
             }}
           />
         </div>

@@ -86,7 +86,7 @@ export function UserMenu({ collapsed }: { collapsed: boolean }) {
       >
         <DropdownMenuItem
           onClick={handleSignOut}
-          className="cursor-pointer data-[highlighted]:bg-surface-raised-hover dark:data-[highlighted]:bg-white/10"
+          className="cursor-pointer data-[highlighted]:bg-surface-raised-hover dark:data-[highlighted]:bg-fg-primary/10"
         >
           <LogOut />
           {t("settings.sign_out")}

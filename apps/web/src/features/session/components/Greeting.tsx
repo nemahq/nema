@@ -1,12 +1,12 @@
 import { useTranslation } from "@web/lib/tolgee";
 
-export function EmptyState({ variant }: { variant: number }) {
+export function Greeting({ variant }: { variant: number }) {
   const { t } = useTranslation();
 
   const headingKey =
-    `session.empty_heading_${variant}` as `session.empty_heading_${number}`;
+    `session.empty_heading_${variant}` as "session.empty_heading_0";
   const subheadingKey =
-    `session.empty_subheading_${variant}` as `session.empty_subheading_${number}`;
+    `session.empty_subheading_${variant}` as "session.empty_subheading_0";
 
   return (
     <div className="flex flex-col items-center gap-2 text-center">
