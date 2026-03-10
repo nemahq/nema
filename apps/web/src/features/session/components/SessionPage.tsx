@@ -15,7 +15,7 @@ function NewContextButton({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
 
   const icon = (
-    <div className="flex size-6 items-center justify-center rounded-full bg-brand/15 text-brand">
+    <div className="flex size-6 items-center justify-center rounded-full bg-brand/15 text-brand dark:bg-fg-primary/10 dark:text-fg-primary">
       <Plus strokeWidth={1.5} className="size-4" />
     </div>
   );
@@ -27,7 +27,7 @@ function NewContextButton({ collapsed }: { collapsed: boolean }) {
           <TooltipTrigger asChild>
             <button
               type="button"
-              className="flex h-9 w-8 items-center justify-center cursor-pointer rounded-md transition-colors duration-fast hover:bg-surface-raised-hover"
+              className="flex size-8 items-center justify-center cursor-pointer rounded-md transition-colors duration-fast hover:bg-surface-raised-hover"
               onClick={() => {
                 // TODO: 세션 생성 API 연결
               }}
