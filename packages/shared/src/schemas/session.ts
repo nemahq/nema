@@ -1,0 +1,23 @@
+import { z } from "zod";
+
+export const SessionSummarySchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type SessionSummary = z.infer<typeof SessionSummarySchema>;
+
+export const SessionListInputSchema = z.object({
+  cursor: z.string().datetime().optional(),
+  limit: z.number().int().min(1).max(100).default(20),
+});
+
+export type SessionListInput = z.infer<typeof SessionListInputSchema>;
+
+export const SessionDeleteInputSchema = z.object({
+  sessionId: z.string().uuid(),
+});
+
+export type SessionDeleteInput = z.infer<typeof SessionDeleteInputSchema>;
