@@ -21,6 +21,12 @@
   "session": {
     "empty": "Start a new conversation"
   },
+  "settings": {
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "theme_system": "System",
+    "sign_out": "Sign out"
+  },
   "layout": {
     "collapse_sidebar": "Collapse sidebar",
     "expand_sidebar": "Expand sidebar"

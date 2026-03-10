@@ -21,6 +21,12 @@
   "session": {
     "empty": "새로운 대화를 시작해보세요"
   },
+  "settings": {
+    "theme_light": "라이트",
+    "theme_dark": "다크",
+    "theme_system": "시스템",
+    "sign_out": "로그아웃"
+  },
   "layout": {
     "collapse_sidebar": "사이드바 접기",
     "expand_sidebar": "사이드바 펼치기"
