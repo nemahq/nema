@@ -4,6 +4,7 @@ import { Sidebar } from "@web/components/layout/Sidebar";
 import { SidebarActionButton } from "@web/components/layout/SidebarActionButton";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { SessionList } from "./SessionList";
 import { UserMenu } from "./UserMenu";
 
 function NewContextIcon() {
@@ -18,8 +19,8 @@ export function SessionSidebar() {
   const { t } = useTranslation();
 
   return (
-    <Sidebar footer={(collapsed) => <UserMenu collapsed={collapsed} />}>
-      {(collapsed) => (
+    <Sidebar
+      topSlot={(collapsed) => (
         <SidebarActionButton
           collapsed={collapsed}
           icon={<NewContextIcon />}
@@ -29,6 +30,9 @@ export function SessionSidebar() {
           }}
         />
       )}
+      footer={(collapsed) => <UserMenu collapsed={collapsed} />}
+    >
+      {(collapsed) => <SessionList collapsed={collapsed} />}
     </Sidebar>
   );
 }

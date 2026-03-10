@@ -20,7 +20,8 @@
   },
   "session": {
     "empty": "Start a new conversation",
-    "new_context": "New Context"
+    "new_context": "New Context",
+    "your_contexts": "Your Contexts"
   },
   "settings": {
     "theme_light": "Light",
