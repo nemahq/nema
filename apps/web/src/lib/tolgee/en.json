@@ -19,7 +19,8 @@
     "back_to_login": "Go back"
   },
   "session": {
-    "empty": "Start a new conversation"
+    "empty": "Start a new conversation",
+    "new_context": "New Context"
   },
   "settings": {
     "theme_light": "Light",

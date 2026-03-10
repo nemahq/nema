@@ -60,7 +60,7 @@ export function UserMenu({ collapsed }: { collapsed: boolean }) {
         {collapsed ? (
           <button
             type="button"
-            className="cursor-pointer rounded-full outline-none transition-opacity duration-fast hover:opacity-80 data-[state=open]:opacity-80"
+            className="flex w-full items-center justify-center py-2.5 cursor-pointer outline-none transition-opacity duration-fast hover:opacity-80 data-[state=open]:opacity-80"
           >
             <Avatar url={avatarUrl} initial={initial} />
           </button>
@@ -80,8 +80,9 @@ export function UserMenu({ collapsed }: { collapsed: boolean }) {
       <DropdownMenuContent
         side="top"
         align={collapsed ? "start" : "center"}
-        sideOffset={8}
-        className="w-48 !animate-none"
+        alignOffset={collapsed ? 8 : 0}
+        sideOffset={2}
+        className="w-60 !animate-none"
       >
         <DropdownMenuItem
           onClick={handleSignOut}

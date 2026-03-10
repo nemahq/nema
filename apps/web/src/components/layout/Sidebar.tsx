@@ -1,5 +1,7 @@
 import { type ReactNode, useState } from "react";
 
+import { Link } from "@tanstack/react-router";
+
 import { Button, cn } from "@nema-io/weave";
 import { PanelLeft } from "@nema-io/weave/icons";
 
@@ -11,7 +13,7 @@ export function Sidebar({
   children,
   footer,
 }: {
-  children?: ReactNode;
+  children?: ReactNode | ((collapsed: boolean) => ReactNode);
   footer?: (collapsed: boolean) => ReactNode;
 }) {
   const { t } = useTranslation();
@@ -34,12 +36,14 @@ export function Sidebar({
     >
       <div
         className={cn(
-          "flex h-12 items-center px-3",
-          collapsed ? "justify-center" : "justify-between",
+          "flex h-12 items-center",
+          collapsed ? "justify-center" : "justify-between px-3",
         )}
       >
         {!collapsed && (
-          <img src={NemaLogo} alt="Nema" className="h-4 nema-logo" />
+          <Link to="/">
+            <img src={NemaLogo} alt="Nema" className="h-4 nema-logo" />
+          </Link>
         )}
         <Button
           variant="ghost"
@@ -56,21 +60,16 @@ export function Sidebar({
         </Button>
       </div>
 
-      <div
-        className={cn(
-          "flex flex-1 flex-col overflow-hidden",
-          collapsed && "hidden",
-        )}
-      >
-        {children}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {typeof children === "function" ? children(collapsed) : children}
       </div>
 
       {footer && (
         <div
           className={cn(
             collapsed
-              ? "mt-auto flex justify-center pb-3"
-              : "border-t border-border",
+              ? "mt-auto"
+              : "border-t border-border/50",
           )}
         >
           {footer(collapsed)}
