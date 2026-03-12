@@ -1,5 +1,5 @@
-import { memo, useEffect, useRef } from "react";
-import { Link, useMatchRoute } from "@tanstack/react-router";
+import { memo, useEffect, useMemo, useRef } from "react";
+import { Link } from "@tanstack/react-router";
 
 import type { SessionSummary } from "@nema-io/shared";
 
@@ -8,10 +8,8 @@ import { trpc } from "@web/lib/trpc";
 
 const SessionItem = memo(function SessionItem({
   session,
-  isActive,
 }: {
   session: SessionSummary;
-  isActive: boolean;
 }) {
   const { t } = useTranslation();
   const title = session.title ?? t("session.untitled");
@@ -20,11 +18,13 @@ const SessionItem = memo(function SessionItem({
     <Link
       to="/context/$sessionId"
       params={{ sessionId: session.id }}
-      className={`w-full cursor-pointer truncate rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-fast ${
-        isActive
-          ? "bg-surface-raised-hover text-fg-primary font-medium"
-          : "text-fg-secondary hover:bg-surface-raised-hover"
-      }`}
+      className="w-full cursor-pointer truncate rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-fast"
+      activeProps={{
+        className: "bg-surface-raised-hover text-fg-primary font-medium",
+      }}
+      inactiveProps={{
+        className: "text-fg-secondary hover:bg-surface-raised-hover",
+      }}
     >
       {title}
     </Link>
@@ -34,7 +34,6 @@ const SessionItem = memo(function SessionItem({
 export function SessionList({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const matchRoute = useMatchRoute();
 
   const { data, hasNextPage, fetchNextPage, isFetchingNextPage } =
     trpc.session.list.useInfiniteQuery(
@@ -44,7 +43,10 @@ export function SessionList({ collapsed }: { collapsed: boolean }) {
       },
     );
 
-  const sessions = data?.pages.flatMap((page) => page.items) ?? [];
+  const sessions = useMemo(
+    () => data?.pages.flatMap((page) => page.items) ?? [],
+    [data],
+  );
 
   useEffect(
     function observeSentinel() {
@@ -78,16 +80,7 @@ export function SessionList({ collapsed }: { collapsed: boolean }) {
 
       <div className="flex flex-col gap-0.5">
         {sessions.map((session) => (
-          <SessionItem
-            key={session.id}
-            session={session}
-            isActive={
-              !!matchRoute({
-                to: "/context/$sessionId",
-                params: { sessionId: session.id },
-              })
-            }
-          />
+          <SessionItem key={session.id} session={session} />
         ))}
       </div>
 

@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
-import type { SessionSummary } from "@nema-io/shared";
-
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { Greeting } from "@web/features/session/components/Greeting";
 import { useTranslation } from "@web/lib/tolgee";
@@ -26,17 +24,13 @@ export function SessionPage() {
   const createSession = trpc.session.create.useMutation({
     onSuccess(newSession) {
       utils.session.list.setInfiniteData({ limit: 20 }, (old) => {
-        if (!old) return old;
-        const firstPage = old.pages[0];
-        if (!firstPage) return old;
+        if (!old?.pages[0]) return old;
+        const [firstPage, ...rest] = old.pages;
         return {
           ...old,
           pages: [
-            {
-              ...firstPage,
-              items: [newSession as SessionSummary, ...firstPage.items],
-            },
-            ...old.pages.slice(1),
+            { ...firstPage, items: [newSession, ...firstPage.items] },
+            ...rest,
           ],
         };
       });
@@ -53,6 +47,7 @@ export function SessionPage() {
         <Greeting variant={variant} />
         <ChatInput
           placeholder={t("session.input_placeholder")}
+          disabled={createSession.isPending}
           onSubmit={() => createSession.mutate()}
         />
       </div>
