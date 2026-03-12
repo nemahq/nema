@@ -22,6 +22,16 @@ export function SessionPage() {
 
   const createSession = useCreateSession();
 
+  function handleSubmit() {
+    createSession.mutate(undefined, {
+      onSuccess: (session) =>
+        navigate({
+          to: "/context/$sessionId",
+          params: { sessionId: session.id },
+        }),
+    });
+  }
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center bg-surface-card">
       <div className="flex w-full max-w-2xl flex-col items-center gap-8 px-6">
@@ -29,15 +39,7 @@ export function SessionPage() {
         <ChatInput
           placeholder={t("session.input_placeholder")}
           disabled={createSession.isPending}
-          onSubmit={() =>
-            createSession.mutate(undefined, {
-              onSuccess: (session) =>
-                navigate({
-                  to: "/context/$sessionId",
-                  params: { sessionId: session.id },
-                }),
-            })
-          }
+          onSubmit={handleSubmit}
         />
       </div>
     </main>
