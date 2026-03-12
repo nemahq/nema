@@ -36,6 +36,10 @@ src/
 | Non-component | camelCase      | `useAuth.ts`      |
 | Env var       | `VITE_` prefix | `VITE_API_URL`    |
 
+## Conventions
+
+- MUST follow rules in `docs/conventions.md`.
+
 ## React
 
 - `useEffect` callbacks MUST be named functions (not anonymous arrows).
