@@ -8,6 +8,9 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 - Deploy: ONLY version tags (`v*`) trigger Railway deployment.
 - MUST verify CI locally before creating PR.
 - PR title: Korean. Assignee: author. Labels: `enhancement`(feature), `bug`(fix), `refactoring`, `documentation`.
+- PR body MUST follow `.github/pull_request_template.md` (Why / What / How to verify / Notes).
+- Why = the problem this PR solves. What = key design decisions only (no file/function-level change lists — that's what the diff is for).
+- No review-feedback changelogs, no file lists, no unchecked checkbox lists.
 
 ## DO NOT
 
