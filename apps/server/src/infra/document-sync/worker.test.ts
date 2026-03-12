@@ -38,7 +38,12 @@ function mockGraphStore(): GraphStore {
 }
 
 function mockEmbedding(): EmbeddingProvider {
-  return { embed: vi.fn().mockResolvedValue([[0.1, 0.2]]) };
+  return {
+    providerId: "test",
+    model: "test-model",
+    dimension: 2,
+    embed: vi.fn().mockResolvedValue([[0.1, 0.2]]),
+  };
 }
 
 function makeMessage(
