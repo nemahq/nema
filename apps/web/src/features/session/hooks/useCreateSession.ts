@@ -1,5 +1,3 @@
-import type { useNavigate } from "@tanstack/react-router";
-
 import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
 import { trpc } from "@web/lib/trpc";
 
@@ -20,16 +18,12 @@ function prependSessionCache(
   });
 }
 
-export function useCreateSession(navigate: ReturnType<typeof useNavigate>) {
+export function useCreateSession() {
   const utils = trpc.useUtils();
 
   return trpc.session.create.useMutation({
     onSuccess(newSession) {
       prependSessionCache(utils, newSession);
-      navigate({
-        to: "/context/$sessionId",
-        params: { sessionId: newSession.id },
-      });
     },
   });
 }

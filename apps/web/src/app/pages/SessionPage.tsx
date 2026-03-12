@@ -20,7 +20,7 @@ export function SessionPage() {
   const navigate = useNavigate();
   const [variant] = useState(pickRandom);
 
-  const createSession = useCreateSession(navigate);
+  const createSession = useCreateSession();
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center bg-surface-card">
@@ -29,7 +29,15 @@ export function SessionPage() {
         <ChatInput
           placeholder={t("session.input_placeholder")}
           disabled={createSession.isPending}
-          onSubmit={() => createSession.mutate()}
+          onSubmit={() =>
+            createSession.mutate(undefined, {
+              onSuccess: (session) =>
+                navigate({
+                  to: "/context/$sessionId",
+                  params: { sessionId: session.id },
+                }),
+            })
+          }
         />
       </div>
     </main>
