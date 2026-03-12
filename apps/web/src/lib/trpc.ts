@@ -19,7 +19,8 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: `${getEnv().API_URL}/trpc`,
       async headers() {
-        const { data } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
         const token = data.session?.access_token;
         return token ? { Authorization: `Bearer ${token}` } : {};
       },
