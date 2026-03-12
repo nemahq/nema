@@ -1,16 +1,36 @@
 # Web Conventions
 
-## 컴포넌트
+## Components
 
-- 1파일 1컴포넌트.
-- 컴포넌트는 렌더링만 담당. 데이터 페칭, 캐시 조작 등 데이터 로직은 훅으로 분리.
-- 복잡한 핸들러는 인라인이 아닌 named function으로 추출.
+- One component per file.
+- Components only render. Data fetching, cache manipulation, and other data logic go in hooks.
+- Extract complex handlers as named functions instead of inline.
 
-## 훅
+## Hooks
 
-- 캐시 조작 함수는 해당 query를 소유한 훅에 위치.
-- mutation 훅은 부수효과(navigate 등)를 내장하지 않는다. 호출자가 `mutate(variables, { onSuccess })` 시점에 주입.
+- Cache manipulation functions belong in the hook that owns the query.
+- Mutation hooks MUST NOT embed side effects (navigate, etc.). Callers inject them at `mutate(variables, { onSuccess })` call site.
 
-## 함수 설계
+## Functions
 
-- 인자는 객체로 받는다. 사용처에서 각 인자의 의미를 바로 파악할 수 있도록.
+- Accept arguments as objects so each parameter's intent is clear at the call site.
+
+## Naming
+
+| Scope            | Pattern        | Example           |
+| ---------------- | -------------- | ----------------- |
+| Component        | PascalCase     | `UserProfile.tsx` |
+| `components/ui/` | lowercase (managed by shadcn CLI) | `button.tsx` |
+| Non-component    | camelCase      | `useAuth.ts`      |
+| Env var          | `VITE_` prefix | `VITE_API_URL`    |
+
+## React
+
+- `useEffect` callbacks MUST be named functions (not anonymous arrows).
+- Async operations inside `useEffect` MUST use async/await (not `.then()` chains). Use Promise only when async/await cannot express the logic.
+
+## Responsive
+
+- Desktop-first design. Base styles = mobile, `md:` = desktop (follows Tailwind mobile-first direction).
+- MUST use only `md:` (768px) breakpoint. Tablet gets desktop layout.
+- MUST NOT use `sm:`, `lg:`, `xl:`, `2xl:` in project code (shadcn internals exempt).
