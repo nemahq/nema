@@ -1,3 +1,5 @@
+import { useNavigate } from "@tanstack/react-router";
+
 import { Plus } from "@nema-io/weave/icons";
 
 import { Sidebar } from "@web/components/layout/Sidebar";
@@ -17,6 +19,7 @@ function NewContextIcon() {
 
 export function SessionSidebar() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   return (
     <Sidebar
@@ -25,9 +28,7 @@ export function SessionSidebar() {
           collapsed={collapsed}
           icon={<NewContextIcon />}
           label={t("session.new_context")}
-          onClick={() => {
-            // TODO: 세션 생성 API 연결
-          }}
+          onClick={() => navigate({ to: "/" })}
         />
       )}
       footer={(collapsed) => <UserMenu collapsed={collapsed} />}

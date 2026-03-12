@@ -45,5 +45,11 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    proxy: {
+      "/trpc": {
+        target: "https://api.getnema.app",
+        changeOrigin: true,
+      },
+    },
   },
 });

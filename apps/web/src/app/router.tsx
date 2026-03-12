@@ -7,6 +7,8 @@ import {
 
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
+import { SidebarLayout } from "@web/app/layouts/SidebarLayout";
+import { ChatPage } from "@web/app/pages/ChatPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { SessionPage } from "@web/app/pages/SessionPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
@@ -64,17 +66,31 @@ const authenticatedRoute = createRoute({
   },
 });
 
-const indexRoute = createRoute({
+const sidebarRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
+  id: "_sidebar",
+  component: SidebarLayout,
+});
+
+const indexRoute = createRoute({
+  getParentRoute: () => sidebarRoute,
   path: "/",
   component: SessionPage,
+});
+
+const sessionRoute = createRoute({
+  getParentRoute: () => sidebarRoute,
+  path: "/context/$sessionId",
+  component: ChatPage,
 });
 
 const routeTree = rootRoute.addChildren([
   signinRoute,
   privacyRoute,
   termsRoute,
-  authenticatedRoute.addChildren([indexRoute]),
+  authenticatedRoute.addChildren([
+    sidebarRoute.addChildren([indexRoute, sessionRoute]),
+  ]),
 ]);
 
 export const router = createRouter({ routeTree });

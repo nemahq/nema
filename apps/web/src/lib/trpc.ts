@@ -17,7 +17,7 @@ export const trpcClient = trpc.createClient({
         (opts.direction === "down" && opts.result instanceof Error),
     }),
     httpBatchLink({
-      url: `${getEnv().API_URL}/trpc`,
+      url: import.meta.env.DEV ? "/trpc" : `${getEnv().API_URL}/trpc`,
       async headers() {
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
