@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { EmbeddingProvider } from "@server/infra/embedding";
@@ -5,6 +6,7 @@ import type { GraphStore } from "@server/infra/graph";
 import type { VectorStore } from "@server/infra/vector";
 
 import type { DocumentSyncEvent, SyncMessage } from "./types";
+import { SyncMessageSchema } from "./types";
 
 const MAX_RETRIES = 5;
 const POLL_INTERVAL_MS = 2_000;
@@ -21,6 +23,7 @@ interface WorkerDeps {
 export function createSyncWorker(deps: WorkerDeps) {
   let timer: ReturnType<typeof setInterval> | null = null;
   let processing = false;
+  let currentPoll: Promise<void> | null = null;
 
   async function poll(): Promise<void> {
     if (processing) return;
@@ -36,9 +39,15 @@ export function createSyncWorker(deps: WorkerDeps) {
         console.error("[sync-worker] read error:", error);
         return;
       }
-      if (!data || (data as SyncMessage[]).length === 0) return;
+      if (!data || (data as unknown[]).length === 0) return;
 
-      for (const row of data as SyncMessage[]) {
+      const parsed = z.array(SyncMessageSchema).safeParse(data);
+      if (!parsed.success) {
+        console.error("[sync-worker] message validation failed:", parsed.error);
+        return;
+      }
+
+      for (const row of parsed.data as SyncMessage[]) {
         await handleMessage(row, deps);
       }
     } catch (err) {
@@ -51,14 +60,19 @@ export function createSyncWorker(deps: WorkerDeps) {
   return {
     start() {
       console.log("[sync-worker] started");
-      timer = setInterval(poll, POLL_INTERVAL_MS);
-      poll();
+      timer = setInterval(() => {
+        currentPoll = poll();
+      }, POLL_INTERVAL_MS);
+      currentPoll = poll();
     },
 
     async stop() {
       if (timer) {
         clearInterval(timer);
         timer = null;
+      }
+      if (currentPoll) {
+        await currentPoll;
       }
       console.log("[sync-worker] stopped");
     },
@@ -70,16 +84,10 @@ async function handleMessage(
   deps: WorkerDeps,
 ): Promise<void> {
   const event = row.message;
+  const docId = event.type !== "document.deleted" ? event.docId : undefined;
 
   try {
     await processEvent(event, deps);
-
-    const docId = event.type !== "document.deleted" ? event.docId : undefined;
-
-    await deps.supabase.rpc("ack_sync_event", {
-      p_msg_id: row.msg_id,
-      p_doc_id: docId ?? null,
-    });
   } catch (err) {
     console.error(
       `[sync-worker] failed to process ${event.type} (attempt ${row.read_ct}):`,
@@ -87,12 +95,17 @@ async function handleMessage(
     );
 
     if (row.read_ct >= MAX_RETRIES) {
-      const docId = event.type !== "document.deleted" ? event.docId : undefined;
-
-      await deps.supabase.rpc("nack_sync_event", {
-        p_msg_id: row.msg_id,
-        p_doc_id: docId ?? null,
-      });
+      try {
+        await deps.supabase.rpc("nack_sync_event", {
+          p_msg_id: row.msg_id,
+          p_doc_id: docId ?? null,
+        });
+      } catch (nackErr) {
+        console.error(
+          `[sync-worker] nack failed for msg_id=${row.msg_id}:`,
+          nackErr,
+        );
+      }
 
       console.error(
         `[sync-worker] permanently failed ${event.type} for doc ${
@@ -100,8 +113,24 @@ async function handleMessage(
         }`,
       );
     }
-    // Otherwise: message becomes visible again after visibility timeout
+    return;
   }
+
+  try {
+    await deps.supabase.rpc("ack_sync_event", {
+      p_msg_id: row.msg_id,
+      p_doc_id: docId ?? null,
+    });
+  } catch (ackErr) {
+    console.error(
+      `[sync-worker] ack failed for msg_id=${row.msg_id} (event already processed, may cause duplicate on retry):`,
+      ackErr,
+    );
+  }
+}
+
+function assertNever(x: never): never {
+  throw new Error(`Unexpected event type: ${JSON.stringify(x)}`);
 }
 
 async function processEvent(
@@ -130,7 +159,6 @@ async function processEvent(
     }
 
     case "document.updated": {
-      // Delete old indices, then create new ones
       await vectorStore.deleteByDocument(event.docId);
       await graphStore.deleteByDocument(event.docId);
 
@@ -156,5 +184,8 @@ async function processEvent(
       await graphStore.deleteByDocument(event.docId);
       break;
     }
+
+    default:
+      assertNever(event);
   }
 }

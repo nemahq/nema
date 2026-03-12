@@ -57,11 +57,17 @@ const SplitOutputSchema = z.object({
   documents: z.array(z.object({ body: z.string().min(1) })).min(1),
 });
 
-const JudgmentOutputSchema = z.object({
-  action: z.enum(["create", "update"]),
-  target_id: z.string().nullable(),
-  final_body: z.string().min(1),
-});
+const JudgmentOutputSchema = z
+  .object({
+    action: z.enum(["create", "update"]),
+    target_id: z.string().nullable(),
+    final_body: z.string().min(1),
+  })
+  .refine(
+    (d) =>
+      d.action !== "update" || (d.target_id !== null && d.target_id.length > 0),
+    { message: "target_id required for update" },
+  );
 
 const MetaOutputSchema = z.object({
   title: z.string().min(1),
@@ -464,6 +470,9 @@ async function saveDocument(
   });
 
   if (judgment.action === "update") {
+    // Guaranteed non-null by JudgmentOutputSchema .refine()
+    const targetId = judgment.target_id as string;
+
     const reSplitResult = await llm.generateStructured({
       schema: SplitOutputSchema,
       schemaName: "split",
@@ -487,7 +496,7 @@ async function saveDocument(
         );
         results.push(result);
       }
-      await deleteDocument(supabase, judgment.target_id);
+      await deleteDocument(supabase, targetId);
       return results;
     }
 
@@ -497,7 +506,7 @@ async function saveDocument(
         providers,
         userId,
         sessionId,
-        { action: "update", targetId: judgment.target_id },
+        { action: "update", targetId },
         judgment.final_body,
         existingTags,
       ),

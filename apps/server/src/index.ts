@@ -7,8 +7,8 @@ import * as Sentry from "@sentry/node";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 
 import { getEnv, loadEnv } from "./env";
+import { createSyncWorker } from "./infra/document-sync";
 import { initI18n } from "./infra/i18n";
-import { createSyncWorker } from "./infra/outbox";
 import { getSupabaseAdmin } from "./infra/supabase";
 import { createQdrantStore } from "./infra/vector";
 import { appRouter } from "./router";
@@ -68,7 +68,11 @@ async function bootstrap() {
   for (const signal of ["SIGTERM", "SIGINT"] as const) {
     process.on(signal, async () => {
       server.log.info(`${signal} received, shutting down`);
-      await stopWorker?.();
+      try {
+        await stopWorker?.();
+      } catch (err) {
+        server.log.error(`Worker stop failed: ${err}`);
+      }
       await server.close();
       await Sentry.flush(2000);
       process.exit(0);
