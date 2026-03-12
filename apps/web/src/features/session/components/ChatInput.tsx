@@ -8,9 +8,11 @@ import { useTranslation } from "@web/lib/tolgee";
 export function ChatInput({
   onSubmit,
   placeholder,
+  disabled,
 }: {
   onSubmit: (content: string) => void;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   const [value, setValue] = useState("");
@@ -25,7 +27,7 @@ export function ChatInput({
 
   function handleSubmit() {
     const trimmed = value.trim();
-    if (!trimmed) return;
+    if (!trimmed || disabled) return;
     onSubmit(trimmed);
     setValue("");
     if (textareaRef.current) {
@@ -57,7 +59,7 @@ export function ChatInput({
       <Button
         variant="neutral"
         size="icon-sm"
-        disabled={!value.trim()}
+        disabled={disabled || !value.trim()}
         onClick={handleSubmit}
         aria-label={t("common.send")}
         className="self-end rounded-full transition-all duration-normal disabled:scale-90 disabled:bg-surface-raised-hover disabled:text-fg-tertiary disabled:border-transparent disabled:opacity-100 dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-tertiary enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80 dark:enabled:bg-fg-primary dark:enabled:text-surface-base"

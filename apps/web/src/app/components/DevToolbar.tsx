@@ -35,7 +35,7 @@ export function DevToolbar() {
   }
 
   return (
-    <div className="fixed bottom-3 right-3 z-50 flex flex-col items-end">
+    <div className="fixed top-3 right-3 z-50 flex flex-col items-end">
       {open && (
         <div className="mb-2 flex flex-col gap-3 rounded-lg border border-border bg-surface-raised p-3 text-xs shadow-lg">
           <div className="flex flex-col gap-1.5">

@@ -1,69 +1,23 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
-import type { SessionSummary } from "@nema-io/shared";
-
-import { fetchMockSessions } from "@web/features/session/mock";
+import { useSessionList } from "@web/features/session/hooks/useSessionList";
+import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
 
-const INITIAL = fetchMockSessions();
-
-const SessionItem = memo(function SessionItem({
-  session,
-}: {
-  session: SessionSummary;
-}) {
-  const { t } = useTranslation();
-  const title = session.title ?? t("session.untitled");
-
-  return (
-    <button
-      type="button"
-      className="w-full cursor-pointer truncate rounded-md px-2 py-1.5 text-left text-sm text-fg-secondary transition-colors duration-fast hover:bg-surface-raised-hover"
-    >
-      {title}
-    </button>
-  );
-});
+import { SessionItem } from "./SessionItem";
 
 export function SessionList({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const [sessions, setSessions] = useState<SessionSummary[]>(INITIAL.items);
-  const [nextCursor, setNextCursor] = useState<string | null>(
-    INITIAL.nextCursor,
-  );
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const loadMore = useCallback(
-    function loadMore() {
-      if (!nextCursor) return;
-      const result = fetchMockSessions(nextCursor);
-      setSessions((prev) => [...prev, ...result.items]);
-      setNextCursor(result.nextCursor);
-    },
-    [nextCursor],
-  );
+  const { sessions, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useSessionList();
 
-  useEffect(
-    function observeSentinel() {
-      const sentinel = sentinelRef.current;
-      if (!sentinel || !nextCursor) return;
-
-      const observer = new IntersectionObserver(
-        function handleIntersection(entries) {
-          if (entries[0]?.isIntersecting) {
-            loadMore();
-          }
-        },
-        { rootMargin: "200px" },
-      );
-
-      observer.observe(sentinel);
-      return function cleanup() {
-        observer.disconnect();
-      };
-    },
-    [nextCursor, loadMore],
-  );
+  useIntersectionEffect({
+    ref: sentinelRef,
+    onIntersect: fetchNextPage,
+    enabled: hasNextPage && !isFetchingNextPage,
+  });
 
   if (collapsed) return null;
 
@@ -79,7 +33,7 @@ export function SessionList({ collapsed }: { collapsed: boolean }) {
         ))}
       </div>
 
-      {nextCursor && <div ref={sentinelRef} className="h-4" />}
+      {hasNextPage && <div ref={sentinelRef} className="h-4" />}
     </div>
   );
 }
