@@ -282,16 +282,29 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       const session = driver.session();
       try {
         await session.executeWrite(async (tx) => {
-          await tx.run(
+          // Collect candidate orphan entities before deleting document
+          const result = await tx.run(
             `MATCH (d:Document {docId: $docId})<-[:MENTIONED_IN]-(e:Entity)
-             WITH d, collect(e) AS candidates
-             DETACH DELETE d
-             WITH candidates
-             UNWIND candidates AS e
-             WHERE NOT (e)-[:MENTIONED_IN]->()
-             DETACH DELETE e`,
+             RETURN collect(id(e)) AS candidateIds`,
             { docId },
           );
+          const candidateIds =
+            (result.records[0]?.get("candidateIds") as unknown[]) ?? [];
+
+          // Delete the document and its relationships
+          await tx.run(`MATCH (d:Document {docId: $docId}) DETACH DELETE d`, {
+            docId,
+          });
+
+          // Delete orphan entities (no remaining MENTIONED_IN)
+          if (candidateIds.length > 0) {
+            await tx.run(
+              `MATCH (e:Entity)
+               WHERE id(e) IN $ids AND NOT (e)-[:MENTIONED_IN]->()
+               DETACH DELETE e`,
+              { ids: candidateIds },
+            );
+          }
         });
       } catch (error) {
         if (error instanceof GraphStoreError) throw error;

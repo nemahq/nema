@@ -57,18 +57,17 @@ const SplitOutputSchema = z.object({
   documents: z.array(z.object({ body: z.string().min(1) })).min(1),
 });
 
-const JudgmentOutputSchema = z.discriminatedUnion("action", [
-  z.object({
-    action: z.literal("create"),
-    target_id: z.null(),
+const JudgmentOutputSchema = z
+  .object({
+    action: z.enum(["create", "update"]),
+    target_id: z.string().nullable(),
     final_body: z.string().min(1),
-  }),
-  z.object({
-    action: z.literal("update"),
-    target_id: z.string().min(1),
-    final_body: z.string().min(1),
-  }),
-]);
+  })
+  .refine(
+    (d) =>
+      d.action !== "update" || (d.target_id !== null && d.target_id.length > 0),
+    { message: "target_id required for update" },
+  );
 
 const MetaOutputSchema = z.object({
   title: z.string().min(1),
@@ -471,6 +470,9 @@ async function saveDocument(
   });
 
   if (judgment.action === "update") {
+    // Guaranteed non-null by JudgmentOutputSchema .refine()
+    const targetId = judgment.target_id as string;
+
     const reSplitResult = await llm.generateStructured({
       schema: SplitOutputSchema,
       schemaName: "split",
@@ -494,7 +496,7 @@ async function saveDocument(
         );
         results.push(result);
       }
-      await deleteDocument(supabase, providers, judgment.target_id);
+      await deleteDocument(supabase, userId, targetId);
       return results;
     }
 
@@ -504,7 +506,7 @@ async function saveDocument(
         providers,
         userId,
         sessionId,
-        { action: "update", targetId: judgment.target_id },
+        { action: "update", targetId },
         judgment.final_body,
         existingTags,
       ),
@@ -533,7 +535,7 @@ async function persistDocument(
   body: string,
   existingTags: string[],
 ): Promise<{ id: string; title: string }> {
-  const { llm, embedding, vectorStore, graphStore } = providers;
+  const { llm } = providers;
 
   const [meta, entityResult] = await Promise.all([
     llm.generateStructured({
@@ -552,80 +554,55 @@ async function persistDocument(
     }),
   ]);
 
+  const entities = entityResult.entities.map((e) => ({
+    type: e.type,
+    name: e.name,
+  }));
+
   let docId: string;
 
   if (persistAction.action === "create") {
-    const { data, error } = await supabase
-      .from("documents")
-      .insert({
-        user_id: userId,
-        title: meta.title,
-        tags: meta.tags,
-        summary: meta.summary,
-        body,
-        ingestion_status: "completed",
-      })
-      .select("id")
-      .single();
+    const { data, error } = await supabase.rpc("create_document_with_event", {
+      p_user_id: userId,
+      p_title: meta.title,
+      p_tags: meta.tags,
+      p_summary: meta.summary,
+      p_body: body,
+      p_session_id: sessionId,
+      p_entities: entities,
+    });
 
     throwIfSupabaseError(error);
 
-    docId = data.id as string;
+    docId = data as string;
   } else {
     docId = persistAction.targetId;
 
-    const { error } = await supabase
-      .from("documents")
-      .update({
-        title: meta.title,
-        tags: meta.tags,
-        summary: meta.summary,
-        body,
-      })
-      .eq("id", docId);
+    const { error } = await supabase.rpc("update_document_with_event", {
+      p_doc_id: docId,
+      p_user_id: userId,
+      p_title: meta.title,
+      p_tags: meta.tags,
+      p_summary: meta.summary,
+      p_body: body,
+      p_entities: entities,
+    });
 
     throwIfSupabaseError(error);
-
-    // TODO: outbox 패턴 전환 시 이벤트 기반 비동기 처리로 교체
-    await vectorStore.deleteByDocument(docId);
-    await graphStore.deleteByDocument(docId);
   }
-
-  // TODO: outbox 패턴 전환 시 이벤트 기반 비동기 처리로 교체
-  await Promise.all([
-    vectorStore.upsert(embedding, {
-      docId,
-      userId,
-      chunks: [body],
-      tags: meta.tags,
-      summary: meta.summary,
-    }),
-    graphStore.upsertEntities({
-      docId,
-      userId,
-      entities: entityResult.entities,
-    }),
-  ]);
-
-  const { error: linkError } = await supabase
-    .from("session_documents")
-    .upsert({ session_id: sessionId, document_id: docId });
-
-  throwIfSupabaseError(linkError);
 
   return { id: docId, title: meta.title };
 }
 
-// TODO: outbox 패턴 전환 시 이벤트 기반 비동기 처리로 교체
 async function deleteDocument(
   supabase: SupabaseClient,
-  providers: Providers,
+  userId: string,
   docId: string,
 ): Promise<void> {
-  await providers.vectorStore.deleteByDocument(docId);
-  await providers.graphStore.deleteByDocument(docId);
-
-  const { error } = await supabase.from("documents").delete().eq("id", docId);
+  const { error } = await supabase.rpc("delete_document_with_event", {
+    p_doc_id: docId,
+    p_user_id: userId,
+  });
 
   throwIfSupabaseError(error);
 }
