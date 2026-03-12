@@ -1,10 +1,11 @@
-import { memo, useEffect, useMemo, useRef } from "react";
+import { memo, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 
 import type { SessionSummary } from "@nema-io/shared";
 
+import { useSessionList } from "@web/features/session/hooks/useSessionList";
+import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
-import { trpc } from "@web/lib/trpc";
 
 const SessionItem = memo(function SessionItem({
   session,
@@ -35,40 +36,12 @@ export function SessionList({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const { data, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    trpc.session.list.useInfiniteQuery(
-      { limit: 20 },
-      {
-        getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-      },
-    );
+  const { sessions, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useSessionList();
 
-  const sessions = useMemo(
-    () => data?.pages.flatMap((page) => page.items) ?? [],
-    [data],
-  );
-
-  useEffect(
-    function observeSentinel() {
-      const sentinel = sentinelRef.current;
-      if (!sentinel || !hasNextPage || isFetchingNextPage) return;
-
-      const observer = new IntersectionObserver(
-        function handleIntersection(entries) {
-          if (entries[0]?.isIntersecting) {
-            fetchNextPage();
-          }
-        },
-        { rootMargin: "200px" },
-      );
-
-      observer.observe(sentinel);
-      return function cleanup() {
-        observer.disconnect();
-      };
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  );
+  useIntersectionEffect(sentinelRef, fetchNextPage, {
+    enabled: hasNextPage && !isFetchingNextPage,
+  });
 
   if (collapsed) return null;
 
