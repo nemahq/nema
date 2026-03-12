@@ -5,12 +5,14 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { TRPCClientError } from "@trpc/client";
 
 import { toast } from "@nema-io/weave";
 
 import { Sentry } from "@web/lib/sentry";
 import { tolgee } from "@web/lib/tolgee/client";
+import { trpc, trpcClient } from "@web/lib/trpc";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +44,11 @@ const queryClient = new QueryClient({
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }
