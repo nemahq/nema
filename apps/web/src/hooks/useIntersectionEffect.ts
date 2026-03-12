@@ -1,12 +1,16 @@
 import { type RefObject, useEffect } from "react";
 
-export function useIntersectionEffect(
-  ref: RefObject<Element | null>,
-  callback: () => void,
-  options?: { enabled?: boolean; rootMargin?: string },
-) {
-  const { enabled = true, rootMargin = "200px" } = options ?? {};
-
+export function useIntersectionEffect({
+  ref,
+  onIntersect,
+  enabled = true,
+  rootMargin = "200px",
+}: {
+  ref: RefObject<Element | null>;
+  onIntersect: () => void;
+  enabled?: boolean;
+  rootMargin?: string;
+}) {
   useEffect(
     function observeIntersection() {
       const el = ref.current;
@@ -15,7 +19,7 @@ export function useIntersectionEffect(
       const observer = new IntersectionObserver(
         function handleIntersection(entries) {
           if (entries[0]?.isIntersecting) {
-            callback();
+            onIntersect();
           }
         },
         { rootMargin },
@@ -26,6 +30,6 @@ export function useIntersectionEffect(
         observer.disconnect();
       };
     },
-    [ref, callback, enabled, rootMargin],
+    [ref, onIntersect, enabled, rootMargin],
   );
 }

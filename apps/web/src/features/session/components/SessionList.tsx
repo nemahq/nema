@@ -13,7 +13,9 @@ export function SessionList({ collapsed }: { collapsed: boolean }) {
   const { sessions, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useSessionList();
 
-  useIntersectionEffect(sentinelRef, fetchNextPage, {
+  useIntersectionEffect({
+    ref: sentinelRef,
+    onIntersect: fetchNextPage,
     enabled: hasNextPage && !isFetchingNextPage,
   });
 
