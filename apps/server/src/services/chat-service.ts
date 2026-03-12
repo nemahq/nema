@@ -496,7 +496,7 @@ async function saveDocument(
         );
         results.push(result);
       }
-      await deleteDocument(supabase, targetId);
+      await deleteDocument(supabase, userId, targetId);
       return results;
     }
 
@@ -596,10 +596,12 @@ async function persistDocument(
 
 async function deleteDocument(
   supabase: SupabaseClient,
+  userId: string,
   docId: string,
 ): Promise<void> {
   const { error } = await supabase.rpc("delete_document_with_event", {
     p_doc_id: docId,
+    p_user_id: userId,
   });
 
   throwIfSupabaseError(error);

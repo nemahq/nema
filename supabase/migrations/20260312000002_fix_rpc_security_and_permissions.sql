@@ -93,20 +93,16 @@ $$ language plpgsql security definer set search_path = public, pgmq;
 -- Business: delete_document_with_event (fixed: auth check + single overload)
 create or replace function delete_document_with_event(
   p_doc_id   uuid,
-  p_user_id  uuid default null
+  p_user_id  uuid
 )
 returns void as $$
-declare
-  v_uid uuid;
 begin
-  v_uid := coalesce(p_user_id, auth.uid());
-
-  if p_user_id is not null and auth.uid() is not null and p_user_id != auth.uid() then
+  if p_user_id != auth.uid() then
     raise exception 'user_id mismatch';
   end if;
 
   if not exists (
-    select 1 from documents where id = p_doc_id and user_id = v_uid
+    select 1 from documents where id = p_doc_id and user_id = p_user_id
   ) then
     raise exception 'document not found or not owned by user';
   end if;
