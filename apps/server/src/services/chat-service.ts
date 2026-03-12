@@ -57,18 +57,11 @@ const SplitOutputSchema = z.object({
   documents: z.array(z.object({ body: z.string().min(1) })).min(1),
 });
 
-const JudgmentOutputSchema = z.discriminatedUnion("action", [
-  z.object({
-    action: z.literal("create"),
-    target_id: z.null(),
-    final_body: z.string().min(1),
-  }),
-  z.object({
-    action: z.literal("update"),
-    target_id: z.string().min(1),
-    final_body: z.string().min(1),
-  }),
-]);
+const JudgmentOutputSchema = z.object({
+  action: z.enum(["create", "update"]),
+  target_id: z.string().nullable(),
+  final_body: z.string().min(1),
+});
 
 const MetaOutputSchema = z.object({
   title: z.string().min(1),
