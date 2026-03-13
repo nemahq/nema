@@ -240,7 +240,6 @@ export async function* processChatStream(
     needsSessionTitle(supabase, input.sessionId),
   ]);
 
-  // 첫 메시지면 session_title 병렬 생성
   const titlePromise = shouldGenerateTitle
     ? generateSessionTitle(supabase, providers, input.sessionId, input.content)
     : null;
@@ -337,7 +336,6 @@ export async function* processChatStream(
     }
   }
 
-  // session_title 병렬 호출 결과 수신 + yield
   if (titlePromise) {
     const title = await titlePromise;
     if (title) {
@@ -345,7 +343,6 @@ export async function* processChatStream(
     }
   }
 
-  // 스트림 완료 후 어시스턴트 메시지 저장
   const assistantMessage: Message = {
     id: crypto.randomUUID(),
     role: "assistant",
@@ -358,8 +355,6 @@ export async function* processChatStream(
 
   yield { type: "done" };
 }
-
-// --- Streaming drafting ---
 
 async function* handleDraftingStream(
   providers: Providers,
@@ -385,8 +380,6 @@ async function* handleDraftingStream(
 
   return fullText;
 }
-
-// --- Streaming retrieval ---
 
 async function* handleRetrievalStream(
   supabase: SupabaseClient,
