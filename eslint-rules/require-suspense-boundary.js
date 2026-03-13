@@ -44,8 +44,10 @@ function importedHookUsesSuspense(source, currentFile) {
       const result = SUSPENSE_QUERY_RE.test(content);
       cache.set(basePath, result);
       return result;
-    } catch {
-      // extension not found, try next
+    } catch (err) {
+      if (err?.code !== "ENOENT") {
+        throw err;
+      }
     }
   }
 

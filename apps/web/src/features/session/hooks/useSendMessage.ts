@@ -32,6 +32,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
           setStreamingText("");
           fullTextRef.current = "";
           utils.message.list.invalidate({ sessionId });
+          utils.session.get.invalidate({ sessionId });
           break;
       }
     },
@@ -47,6 +48,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
       setStreamingText("");
       fullTextRef.current = "";
       utils.message.list.invalidate({ sessionId });
+      utils.session.get.invalidate({ sessionId });
     },
     [sessionId, utils],
   );

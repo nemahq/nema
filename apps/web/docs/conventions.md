@@ -48,6 +48,7 @@
 ### tRPC
 
 - MUST NOT use tRPC hooks directly in components. Always wrap in a custom hook.
+- One query or mutation per hook. Do not bundle multiple queries/mutations into a single hook.
 - Query hook: `use{Entity}{Qualifier}` (e.g., `useSessionList`, `useSessionDetail`)
 - Mutation hook: `use{Action}{Entity}` (e.g., `useCreateSession`, `useDeleteSession`)
 

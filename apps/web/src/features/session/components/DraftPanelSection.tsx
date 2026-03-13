@@ -1,13 +1,16 @@
 import { Suspense } from "react";
 
-import type { useDraftActions } from "@web/features/session/hooks/useDraftActions";
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import type { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
+import type { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
 import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
 
 import { DraftPanel } from "./DraftPanel";
 
 function DraftPanelSectionContent({
   sessionId,
-  draftActions,
+  saveDraft,
+  cancelDraft,
 }: DraftPanelSectionProps) {
   const draft = useSessionDraft({ sessionId });
 
@@ -18,22 +21,25 @@ function DraftPanelSectionContent({
   return (
     <DraftPanel
       draft={draft}
-      onSave={() => draftActions.save.mutate({ sessionId })}
-      onCancel={() => draftActions.cancel.mutate({ sessionId })}
-      isPending={draftActions.save.isPending}
+      onSave={() => saveDraft.mutate({ sessionId })}
+      onCancel={() => cancelDraft.mutate({ sessionId })}
+      isPending={saveDraft.isPending}
     />
   );
 }
 
 interface DraftPanelSectionProps {
   sessionId: string;
-  draftActions: ReturnType<typeof useDraftActions>;
+  saveDraft: ReturnType<typeof useSaveDraft>;
+  cancelDraft: ReturnType<typeof useCancelDraft>;
 }
 
 export function DraftPanelSection(props: DraftPanelSectionProps) {
   return (
-    <Suspense>
-      <DraftPanelSectionContent {...props} />
-    </Suspense>
+    <ErrorBoundary fallback={null}>
+      <Suspense>
+        <DraftPanelSectionContent {...props} />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

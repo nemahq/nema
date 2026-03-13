@@ -31,12 +31,9 @@ export function DraftPanel({
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabId>("draft");
-  const [openTabs] = useState<Set<TabId>>(() => new Set<TabId>(["draft"]));
   const [collapsed, setCollapsed] = useState(false);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
-
-  const visibleTabs = TABS.filter((tab) => openTabs.has(tab.id));
 
   function handleTabClick(tabId: TabId) {
     if (collapsed) {
@@ -93,14 +90,10 @@ export function DraftPanel({
     [width],
   );
 
-  if (visibleTabs.length === 0) {
-    return null;
-  }
-
   if (collapsed) {
     return (
       <div className="flex shrink-0 flex-col border-l border-border bg-surface-base">
-        {visibleTabs.map((tab) => (
+        {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -140,7 +133,7 @@ export function DraftPanel({
       />
 
       <div role="tablist" className="flex items-center border-b border-border">
-        {visibleTabs.map((tab) => (
+        {TABS.map((tab) => (
           <div
             key={tab.id}
             className={cn(
@@ -179,7 +172,7 @@ export function DraftPanel({
         ))}
       </div>
 
-      {activeTab === "draft" && openTabs.has("draft") && (
+      {activeTab === "draft" && (
         <div
           role="tabpanel"
           id="panel-draft"

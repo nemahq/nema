@@ -6,7 +6,8 @@ import type { Message } from "@nema-io/shared";
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { DraftPanelSection } from "@web/features/session/components/DraftPanelSection";
 import { MessageList } from "@web/features/session/components/MessageList";
-import { useDraftActions } from "@web/features/session/hooks/useDraftActions";
+import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
+import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
 import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -21,13 +22,17 @@ export function ChatPage() {
   const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
     sessionId,
   });
-  const draftActions = useDraftActions({ sessionId });
+  const saveDraft = useSaveDraft({ sessionId });
+  const cancelDraft = useCancelDraft({ sessionId });
 
   const streamingMessage = useMemo<Message | undefined>(() => {
     if (!isStreaming || !streamingText) {
       return undefined;
     }
 
+    // TODO: 서버에서 draft_start 이벤트를 보내 스트리밍 중에도 DraftCard로 렌더하고,
+    // 사이드 패널에서 직접 스트리밍 표시. 완료 시 채팅에 DraftCard 삽입.
+    // 취소된 드래프트는 접힌 상태 + "취소됨" 라벨로 이력 유지.
     return {
       id: STREAMING_MESSAGE_ID,
       role: "assistant",
@@ -37,10 +42,7 @@ export function ChatPage() {
     };
   }, [isStreaming, streamingText, streamStartedAt]);
 
-  const isPending =
-    isStreaming ||
-    draftActions.save.isPending ||
-    draftActions.cancel.isPending;
+  const isPending = isStreaming || saveDraft.isPending || cancelDraft.isPending;
 
   function handleSubmit(content: string) {
     send(content);
@@ -62,7 +64,11 @@ export function ChatPage() {
         </div>
       </main>
 
-      <DraftPanelSection sessionId={sessionId} draftActions={draftActions} />
+      <DraftPanelSection
+        sessionId={sessionId}
+        saveDraft={saveDraft}
+        cancelDraft={cancelDraft}
+      />
     </div>
   );
 }

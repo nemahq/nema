@@ -237,7 +237,6 @@ async function createAssistantResponse(
   sessionId: string,
   type: MessageType,
   content: string,
-  draft: Draft | null,
 ): Promise<ChatResponse> {
   const message: Message = {
     id: crypto.randomUUID(),
@@ -247,7 +246,7 @@ async function createAssistantResponse(
     createdAt: new Date().toISOString(),
   };
   await appendMessage(supabase, sessionId, message);
-  return { message, draft };
+  return { message, draft: null };
 }
 
 export async function* processChatStream(
@@ -419,13 +418,7 @@ export async function saveDraftAction(
     lng,
   );
 
-  return createAssistantResponse(
-    supabase,
-    sessionId,
-    "text",
-    responseContent,
-    null,
-  );
+  return createAssistantResponse(supabase, sessionId, "text", responseContent);
 }
 
 export async function cancelDraftAction(
@@ -440,7 +433,6 @@ export async function cancelDraftAction(
     sessionId,
     "text",
     t("chat.draft_cancelled", lng),
-    null,
   );
 }
 

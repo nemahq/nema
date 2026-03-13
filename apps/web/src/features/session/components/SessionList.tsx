@@ -1,5 +1,6 @@
 import { Suspense, useRef } from "react";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useSessionList } from "@web/features/session/hooks/useSessionList";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
@@ -39,8 +40,10 @@ function SessionListContent() {
 
 export function SessionList() {
   return (
-    <Suspense fallback={<SessionListSkeleton />}>
-      <SessionListContent />
-    </Suspense>
+    <ErrorBoundary fallback={null}>
+      <Suspense fallback={<SessionListSkeleton />}>
+        <SessionListContent />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
