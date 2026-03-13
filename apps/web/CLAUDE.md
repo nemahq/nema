@@ -44,6 +44,12 @@ src/
 - All localStorage keys centrally managed via `StorageMap` type in `utils/`.
 - Access only through `getStorage()` / `setStorage()`. Direct `localStorage` calls prohibited.
 
+## Feature Boundary
+
+- Split: different domain / different API resource / independent reuse unit. "Can you move this to another app as one chunk?"
+- Merge: same domain / shared state or data / same UI flow.
+- When ambiguous, merge first. Over-splitting is harder to undo.
+
 ## Dev
 
 - `pnpm dev` — Vite dev server at :5173 (HMR).
