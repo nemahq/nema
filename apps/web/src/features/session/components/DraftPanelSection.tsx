@@ -1,11 +1,15 @@
 import { Suspense } from "react";
 
+import { FileText } from "@nema-io/weave/icons";
+
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import type { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 import type { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
 import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
 
-import { DraftPanel } from "./DraftPanel";
+import { DraftTabContent } from "./DraftTabContent";
+import type { SidePanelTab } from "./SidePanel";
+import { SidePanel } from "./SidePanel";
 
 function DraftPanelSectionContent({
   sessionId,
@@ -18,14 +22,23 @@ function DraftPanelSectionContent({
     return null;
   }
 
-  return (
-    <DraftPanel
-      draft={draft}
-      onSave={() => saveDraft.mutate({ sessionId })}
-      onCancel={() => cancelDraft.mutate({ sessionId })}
-      isPending={saveDraft.isPending}
-    />
-  );
+  const tabs: SidePanelTab[] = [
+    {
+      id: "draft",
+      labelKey: "session.draft",
+      icon: FileText,
+      content: (
+        <DraftTabContent
+          draft={draft}
+          onSave={() => saveDraft.mutate({ sessionId })}
+          isPending={saveDraft.isPending}
+        />
+      ),
+      onClose: () => cancelDraft.mutate({ sessionId }),
+    },
+  ];
+
+  return <SidePanel tabs={tabs} />;
 }
 
 interface DraftPanelSectionProps {

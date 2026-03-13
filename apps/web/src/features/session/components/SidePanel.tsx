@@ -1,41 +1,32 @@
+import type { ComponentType, ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
 
-import type { SessionDraft } from "@nema-io/shared";
-import { Button, Card, CardContent, cn, Kbd } from "@nema-io/weave";
-import { FileText, X } from "@nema-io/weave/icons";
+import { cn } from "@nema-io/weave";
+import { X } from "@nema-io/weave/icons";
 
+import type { TranslationKey } from "@web/lib/tolgee";
 import { useTranslation } from "@web/lib/tolgee";
-
-import { MarkdownRenderer } from "./MarkdownRenderer";
 
 const DEFAULT_WIDTH = 480;
 const MIN_WIDTH = 280;
 const MAX_WIDTH_VW = 50;
 
-const TABS = [
-  { id: "draft", labelKey: "session.draft", icon: FileText },
-] as const;
+export interface SidePanelTab {
+  id: string;
+  labelKey: TranslationKey;
+  icon: ComponentType<{ className?: string }>;
+  content: ReactNode;
+  onClose?: () => void;
+}
 
-type TabId = (typeof TABS)[number]["id"];
-
-export function DraftPanel({
-  draft,
-  onSave,
-  onCancel,
-  isPending,
-}: {
-  draft: SessionDraft;
-  onSave: () => void;
-  onCancel: () => void;
-  isPending: boolean;
-}) {
+export function SidePanel({ tabs }: { tabs: SidePanelTab[] }) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<TabId>("draft");
+  const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
   const [collapsed, setCollapsed] = useState(false);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
 
-  function handleTabClick(tabId: TabId) {
+  function handleTabClick(tabId: string) {
     if (collapsed) {
       setCollapsed(false);
       setActiveTab(tabId);
@@ -46,12 +37,9 @@ export function DraftPanel({
     }
   }
 
-  function handleTabClose(e: React.MouseEvent, tabId: TabId) {
+  function handleTabClose(e: React.MouseEvent, tab: SidePanelTab) {
     e.stopPropagation();
-
-    if (tabId === "draft") {
-      onCancel();
-    }
+    tab.onClose?.();
   }
 
   const handleResizeStart = useCallback(
@@ -90,10 +78,16 @@ export function DraftPanel({
     [width],
   );
 
+  if (tabs.length === 0) {
+    return null;
+  }
+
+  const activeTabData = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+
   if (collapsed) {
     return (
       <div className="flex shrink-0 flex-col border-l border-border bg-surface-base">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -133,7 +127,7 @@ export function DraftPanel({
       />
 
       <div role="tablist" className="flex items-center border-b border-border">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <div
             key={tab.id}
             className={cn(
@@ -158,48 +152,29 @@ export function DraftPanel({
               <tab.icon className="size-3.5" />
               {t(tab.labelKey)}
             </button>
-            <button
-              type="button"
-              onClick={(e) => handleTabClose(e, tab.id)}
-              className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
-              aria-label={t("session.draft_tab_close", {
-                label: t(tab.labelKey),
-              })}
-            >
-              <X className="size-3" />
-            </button>
+            {tab.onClose && (
+              <button
+                type="button"
+                onClick={(e) => handleTabClose(e, tab)}
+                className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
+                aria-label={t("session.draft_tab_close", {
+                  label: t(tab.labelKey),
+                })}
+              >
+                <X className="size-3" />
+              </button>
+            )}
           </div>
         ))}
       </div>
 
-      {activeTab === "draft" && (
-        <div
-          role="tabpanel"
-          id="panel-draft"
-          className="flex-1 overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
-        >
-          <Card className="relative">
-            <div className="absolute right-3 top-3">
-              {/* TODO: ⌘+S 키보드 단축키 리스너 추가 */}
-              <Button
-                variant="primary"
-                size="xs"
-                onClick={onSave}
-                disabled={isPending}
-                className="gap-1 dark:bg-fg-primary dark:text-surface-base dark:border-transparent dark:hover:opacity-80"
-              >
-                {t("session.draft_save")}
-                <Kbd className="border-white/20 bg-white/10 text-inherit opacity-80">
-                  ⌘+S
-                </Kbd>
-              </Button>
-            </div>
-            <CardContent className="pt-4">
-              <MarkdownRenderer content={draft.body} />
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <div
+        role="tabpanel"
+        id={`panel-${activeTabData.id}`}
+        className="flex-1 overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
+      >
+        {activeTabData.content}
+      </div>
     </aside>
   );
 }
