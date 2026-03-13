@@ -13,7 +13,7 @@ import { Sentry } from "@web/lib/sentry";
 import { tolgee } from "@web/lib/tolgee/client";
 import { trpc, trpcClient } from "@web/lib/trpc";
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     mutations: {
       retry: 0,

@@ -4,6 +4,7 @@ import {
   createRouter,
   redirect,
 } from "@tanstack/react-router";
+import { getQueryKey } from "@trpc/react-query";
 
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
@@ -13,9 +14,12 @@ import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { SessionPage } from "@web/app/pages/SessionPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
+import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
 import { supabase } from "@web/lib/supabase";
+import { trpc, trpcClient } from "@web/lib/trpc";
 
 import { App } from "./App";
+import { queryClient } from "./providers/QueryProvider";
 
 const rootRoute = createRootRoute({
   component: App,
@@ -74,6 +78,18 @@ const sidebarRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   id: "_sidebar",
   component: SidebarLayout,
+  beforeLoad() {
+    void queryClient.prefetchInfiniteQuery({
+      queryKey: getQueryKey(
+        trpc.session.list,
+        { limit: SESSION_LIST_LIMIT },
+        "infinite",
+      ),
+      queryFn: () =>
+        trpcClient.session.list.query({ limit: SESSION_LIST_LIMIT }),
+      initialPageParam: undefined as string | undefined,
+    });
+  },
 });
 
 const indexRoute = createRoute({
