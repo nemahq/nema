@@ -30,14 +30,10 @@ function MessageListContent({ sessionId, streamingMessage }: MessageListProps) {
     messages,
   });
 
-  const lastDraftIndex = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].type === "draft") {
-        return i;
-      }
-    }
-    return -1;
-  }, [messages]);
+  const lastDraftIndex = useMemo(
+    () => messages.findLastIndex((msg) => msg.type === "draft"),
+    [messages],
+  );
 
   return (
     <div className="relative flex-1">
