@@ -6,7 +6,10 @@ export function useSendChat({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
 
   return trpc.message.chat.useMutation({
-    onMutate({ content }) {
+    async onMutate({ content }) {
+      await utils.message.list.cancel({ sessionId });
+      const previous = utils.message.list.getData({ sessionId });
+
       const optimistic: Message = {
         id: crypto.randomUUID(),
         role: "user",
@@ -18,6 +21,13 @@ export function useSendChat({ sessionId }: { sessionId: string }) {
       utils.message.list.setData({ sessionId }, (old) =>
         old ? [...old, optimistic] : [optimistic],
       );
+
+      return { previous };
+    },
+    onError(_err, _vars, context) {
+      if (context?.previous) {
+        utils.message.list.setData({ sessionId }, context.previous);
+      }
     },
     onSettled() {
       utils.message.list.invalidate({ sessionId });

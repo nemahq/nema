@@ -11,7 +11,7 @@ export function isThemePreference(v: string): v is ThemePreference {
 
 const MEDIA = "(prefers-color-scheme: dark)";
 
-function resolveTheme(pref: ThemePreference | null): Theme {
+export function resolveTheme(pref: ThemePreference | null): Theme {
   if (pref === "light" || pref === "dark") return pref;
   return window.matchMedia(MEDIA).matches ? "dark" : "light";
 }

@@ -25,13 +25,6 @@ export function useAutoScroll({
     setShowNewMessageButton(false);
   }, []);
 
-  const handleUserSentMessage = useCallback(
-    function handleUserSentMessage() {
-      requestAnimationFrame(() => scrollToBottom("smooth"));
-    },
-    [scrollToBottom],
-  );
-
   useEffect(
     function attachScrollListener() {
       const el = scrollRef.current;
@@ -80,6 +73,5 @@ export function useAutoScroll({
     scrollRef,
     showNewMessageButton,
     scrollToBottom,
-    handleUserSentMessage,
   };
 }

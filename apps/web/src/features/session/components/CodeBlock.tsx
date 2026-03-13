@@ -16,6 +16,7 @@ import oneLight from "react-syntax-highlighter/dist/esm/styles/prism/one-light";
 import { Button } from "@nema-io/weave";
 import { Check, Copy } from "@nema-io/weave/icons";
 
+import { useTheme } from "@web/app/providers/ThemeProvider";
 import { useTranslation } from "@web/lib/tolgee";
 
 SyntaxHighlighter.registerLanguage("typescript", typescript);
@@ -29,10 +30,6 @@ SyntaxHighlighter.registerLanguage("sql", sql);
 SyntaxHighlighter.registerLanguage("tsx", tsx);
 SyntaxHighlighter.registerLanguage("jsx", jsx);
 
-function isDark() {
-  return document.documentElement.classList.contains("dark");
-}
-
 export function CodeBlock({
   className,
   children,
@@ -41,6 +38,7 @@ export function CodeBlock({
   children?: React.ReactNode;
 }) {
   const { t } = useTranslation();
+  const { resolvedTheme } = useTheme();
   const [copied, setCopied] = useState(false);
   const match = className?.match(/language-(\w+)/);
   const lang = match?.[1] ?? "";
@@ -51,9 +49,13 @@ export function CodeBlock({
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard 사용 불가 환경에서는 무시
+    }
   }
 
   return (
@@ -65,7 +67,7 @@ export function CodeBlock({
           size="icon-xs"
           onClick={handleCopy}
           aria-label={copied ? t("session.copied") : t("session.copy_code")}
-          className="opacity-0 transition-opacity group-hover:opacity-100"
+          className="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
         >
           {copied ? (
             <Check className="size-3.5 text-status-success" />
@@ -76,7 +78,7 @@ export function CodeBlock({
       </div>
       <SyntaxHighlighter
         language={lang}
-        style={isDark() ? oneDark : oneLight}
+        style={resolvedTheme === "dark" ? oneDark : oneLight}
         customStyle={{
           margin: 0,
           padding: "1rem",
