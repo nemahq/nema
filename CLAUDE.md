@@ -5,7 +5,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 ## Workflow
 
 - `main` = latest integrated code. Feature branch → PR → CI passes → merge.
-- Deploy: ONLY version tags (`v*`) trigger Railway deployment.
+- Deploy: main merge triggers Railway auto-deploy (web + server).
 - MUST verify CI locally before creating PR.
 - PR title: Korean. Assignee: author. Labels: `enhancement`(feature), `bug`(fix), `refactoring`, `documentation`.
 - PR body MUST follow `.github/pull_request_template.md` (Why / What / How to verify / Notes).

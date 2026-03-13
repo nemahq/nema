@@ -1,67 +1,54 @@
 import { z } from "zod";
 
-import type { GraphEntity } from "@server/infra/graph";
-import { ENTITY_TYPES } from "@server/infra/graph";
+// --- PGMQ 메시지 스키마 (경량 트리거 + delete 이벤트) ---
 
-// --- Zod schemas for pgmq trust boundary validation ---
+const NotifyEventSchema = z.object({ type: z.literal("notify") });
 
-const GraphEntitySchema = z.object({
-  type: z.enum(ENTITY_TYPES),
-  name: z.string().min(1),
+const DeleteEventSchema = z.object({
+  type: z.literal("document.deleted"),
+  docId: z.string().uuid(),
 });
 
-const DocumentPayloadSchema = z.object({
-  docId: z.string(),
-  userId: z.string(),
-  body: z.string(),
-  tags: z.array(z.string()),
-  summary: z.string(),
-  entities: z.array(GraphEntitySchema),
-});
-
-const DocumentSyncEventSchema = z.discriminatedUnion("type", [
-  DocumentPayloadSchema.extend({ type: z.literal("document.created") }),
-  DocumentPayloadSchema.extend({ type: z.literal("document.updated") }),
-  z.object({ type: z.literal("document.deleted"), docId: z.string() }),
+const SyncEventSchema = z.discriminatedUnion("type", [
+  NotifyEventSchema,
+  DeleteEventSchema,
 ]);
 
-export const SyncMessageSchema = z.object({
+export const TriggerMessageSchema = z.object({
   msg_id: z.union([z.string(), z.number()]),
   read_ct: z.number(),
-  message: DocumentSyncEventSchema,
+  message: SyncEventSchema,
 });
 
 // --- TypeScript types ---
 
-interface DocumentEventPayload {
-  docId: string;
-  userId: string;
-  body: string;
-  tags: string[];
-  summary: string;
-  entities: GraphEntity[];
-}
+export type NotifyEvent = z.infer<typeof NotifyEventSchema>;
 
-export interface DocumentCreatedEvent extends DocumentEventPayload {
-  type: "document.created";
-}
-
-export interface DocumentUpdatedEvent extends DocumentEventPayload {
-  type: "document.updated";
-}
-
-export interface DocumentDeletedEvent {
+export interface DeleteEvent {
   type: "document.deleted";
   docId: string;
 }
 
-export type DocumentSyncEvent =
-  | DocumentCreatedEvent
-  | DocumentUpdatedEvent
-  | DocumentDeletedEvent;
+export type SyncEvent = NotifyEvent | DeleteEvent;
 
-export interface SyncMessage {
+export interface TriggerMessage {
   msg_id: number | string;
   read_ct: number;
-  message: DocumentSyncEvent;
+  message: SyncEvent;
+}
+
+export const PendingDocumentSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  body: z.string(),
+  tags: z.array(z.string()),
+  summary: z.string(),
+});
+
+export interface PendingDocument {
+  id: string;
+  user_id: string;
+  body: string;
+  tags: string[];
+  summary: string;
 }

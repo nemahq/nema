@@ -2,18 +2,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import type { GraphStore } from "@server/infra/graph";
+import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { VectorStore } from "@server/infra/vector";
 
-import type { DocumentSyncEvent, SyncMessage } from "./types";
+import type { PendingDocument, SyncEvent, TriggerMessage } from "./types";
 import { createSyncWorker } from "./worker";
 
 // --- Mock factories ---
 
 function mockSupabase() {
   const rpc = vi.fn();
-  return { rpc } as unknown as ReturnType<
+  const fromChain = {
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockResolvedValue({ error: null }),
+  };
+  const from = vi.fn().mockReturnValue(fromChain);
+  return { rpc, from, _fromChain: fromChain } as unknown as ReturnType<
     typeof import("@supabase/supabase-js").createClient
-  >;
+  > & { _fromChain: typeof fromChain };
 }
 
 function mockVectorStore(): VectorStore {
@@ -46,36 +52,32 @@ function mockEmbedding(): EmbeddingProvider {
   };
 }
 
+function mockLlm(): LlmProvider {
+  return {
+    generateStructured: vi.fn().mockResolvedValue({
+      entities: [{ type: "Person", name: "Alice" }],
+    }),
+  };
+}
+
 function makeMessage(
-  event: DocumentSyncEvent,
-  overrides?: Partial<SyncMessage>,
-): SyncMessage {
+  event: SyncEvent,
+  overrides?: Partial<TriggerMessage>,
+): TriggerMessage {
   return { msg_id: 1, read_ct: 1, message: event, ...overrides };
 }
 
-const CREATED_EVENT: DocumentSyncEvent = {
-  type: "document.created",
-  docId: "doc-1",
-  userId: "user-1",
+const DOC_ID_1 = "a0000000-0000-4000-a000-000000000001";
+const DOC_ID_2 = "a0000000-0000-4000-a000-000000000002";
+const DOC_ID_DEL = "a0000000-0000-4000-a000-0000000000dd";
+const USER_ID = "b0000000-0000-4000-a000-000000000001";
+
+const PENDING_DOC: PendingDocument = {
+  id: DOC_ID_1,
+  user_id: USER_ID,
   body: "test body",
   tags: ["tag1"],
   summary: "test summary",
-  entities: [{ type: "Person", name: "Alice" }],
-};
-
-const UPDATED_EVENT: DocumentSyncEvent = {
-  type: "document.updated",
-  docId: "doc-1",
-  userId: "user-1",
-  body: "updated body",
-  tags: ["tag2"],
-  summary: "updated summary",
-  entities: [{ type: "Topic", name: "Testing" }],
-};
-
-const DELETED_EVENT: DocumentSyncEvent = {
-  type: "document.deleted",
-  docId: "doc-1",
 };
 
 // --- Tests ---
@@ -89,24 +91,32 @@ describe("createSyncWorker", () => {
     vi.useRealTimers();
   });
 
-  // ========== Happy path ==========
+  // ========== Batch processing ==========
 
-  describe("document.created", () => {
-    it("upserts to vector + graph and acks", async () => {
+  describe("notify trigger → batch cycle", () => {
+    it("fetches pending docs, processes via LLM + vector + graph, marks completed", async () => {
       const supabase = mockSupabase();
       const vectorStore = mockVectorStore();
       const graphStore = mockGraphStore();
+      const llm = mockLlm();
       const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
 
       rpc
+        // read_sync_events → notify trigger
         .mockResolvedValueOnce({
-          data: [makeMessage(CREATED_EVENT)],
+          data: [makeMessage({ type: "notify" })],
           error: null,
         })
-        .mockResolvedValueOnce({ data: null, error: null }); // ack
+        // ack_sync_event
+        .mockResolvedValueOnce({ data: null, error: null })
+        // fetch_pending_documents → 1 doc
+        .mockResolvedValueOnce({ data: [PENDING_DOC], error: null })
+        // fetch_pending_documents → empty (cycle ends)
+        .mockResolvedValueOnce({ data: [], error: null });
 
       const worker = createSyncWorker({
         supabase,
+        llm,
         embedding: mockEmbedding(),
         vectorStore,
         graphStore,
@@ -115,80 +125,35 @@ describe("createSyncWorker", () => {
       await vi.advanceTimersByTimeAsync(0);
       await worker.stop();
 
+      // LLM으로 엔티티 추출
+      expect(llm.generateStructured).toHaveBeenCalledWith(
+        expect.objectContaining({ schemaName: "entity_extraction" }),
+      );
+
+      // vector + graph upsert
       expect(vectorStore.upsert).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ docId: "doc-1", chunks: ["test body"] }),
+        expect.objectContaining({ docId: DOC_ID_1, chunks: ["test body"] }),
       );
       expect(graphStore.upsertEntities).toHaveBeenCalledWith(
         expect.objectContaining({
-          docId: "doc-1",
+          docId: DOC_ID_1,
           entities: [{ type: "Person", name: "Alice" }],
         }),
       );
-      expect(rpc).toHaveBeenCalledWith("ack_sync_event", {
-        p_msg_id: 1,
-        p_doc_id: "doc-1",
+
+      // completed 마킹
+      expect(supabase._fromChain.update).toHaveBeenCalledWith({
+        ingestion_status: "completed",
       });
+      expect(supabase._fromChain.eq).toHaveBeenCalledWith("id", DOC_ID_1);
     });
   });
 
-  describe("document.updated", () => {
-    it("deletes old indices then re-creates, and acks", async () => {
-      const supabase = mockSupabase();
-      const vectorStore = mockVectorStore();
-      const graphStore = mockGraphStore();
-      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
-
-      rpc
-        .mockResolvedValueOnce({
-          data: [makeMessage(UPDATED_EVENT)],
-          error: null,
-        })
-        .mockResolvedValueOnce({ data: null, error: null }); // ack
-
-      const worker = createSyncWorker({
-        supabase,
-        embedding: mockEmbedding(),
-        vectorStore,
-        graphStore,
-      });
-      worker.start();
-      await vi.advanceTimersByTimeAsync(0);
-      await worker.stop();
-
-      // Delete old
-      expect(vectorStore.deleteByDocument).toHaveBeenCalledWith("doc-1");
-      expect(graphStore.deleteByDocument).toHaveBeenCalledWith("doc-1");
-
-      // Re-create
-      expect(vectorStore.upsert).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ docId: "doc-1", chunks: ["updated body"] }),
-      );
-      expect(graphStore.upsertEntities).toHaveBeenCalledWith(
-        expect.objectContaining({
-          docId: "doc-1",
-          entities: [{ type: "Topic", name: "Testing" }],
-        }),
-      );
-
-      // Delete happens before upsert
-      const deleteOrder = (
-        vectorStore.deleteByDocument as ReturnType<typeof vi.fn>
-      ).mock.invocationCallOrder[0];
-      const upsertOrder = (vectorStore.upsert as ReturnType<typeof vi.fn>).mock
-        .invocationCallOrder[0];
-      expect(deleteOrder).toBeLessThan(upsertOrder);
-
-      expect(rpc).toHaveBeenCalledWith("ack_sync_event", {
-        p_msg_id: 1,
-        p_doc_id: "doc-1",
-      });
-    });
-  });
+  // ========== Delete ==========
 
   describe("document.deleted", () => {
-    it("deletes from vector + graph and acks with null doc_id", async () => {
+    it("deletes from vector + graph and acks", async () => {
       const supabase = mockSupabase();
       const vectorStore = mockVectorStore();
       const graphStore = mockGraphStore();
@@ -196,13 +161,14 @@ describe("createSyncWorker", () => {
 
       rpc
         .mockResolvedValueOnce({
-          data: [makeMessage(DELETED_EVENT)],
+          data: [makeMessage({ type: "document.deleted", docId: DOC_ID_1 })],
           error: null,
         })
         .mockResolvedValueOnce({ data: null, error: null }); // ack
 
       const worker = createSyncWorker({
         supabase,
+        llm: mockLlm(),
         embedding: mockEmbedding(),
         vectorStore,
         graphStore,
@@ -211,17 +177,20 @@ describe("createSyncWorker", () => {
       await vi.advanceTimersByTimeAsync(0);
       await worker.stop();
 
-      expect(vectorStore.deleteByDocument).toHaveBeenCalledWith("doc-1");
-      expect(graphStore.deleteByDocument).toHaveBeenCalledWith("doc-1");
-      expect(rpc).toHaveBeenCalledWith("ack_sync_event", {
-        p_msg_id: 1,
-        p_doc_id: null,
-      });
+      expect(vectorStore.deleteByDocument).toHaveBeenCalledWith(DOC_ID_1);
+      expect(graphStore.deleteByDocument).toHaveBeenCalledWith(DOC_ID_1);
+      expect(rpc).toHaveBeenCalledWith("ack_sync_event", { p_msg_id: 1 });
+      expect(rpc).not.toHaveBeenCalledWith(
+        "fetch_pending_documents",
+        expect.anything(),
+      );
     });
   });
 
-  describe("batch processing", () => {
-    it("processes multiple messages in order", async () => {
+  // ========== Mixed batch ==========
+
+  describe("mixed notify + delete in one poll", () => {
+    it("handles delete first, then runs batch cycle", async () => {
       const supabase = mockSupabase();
       const vectorStore = mockVectorStore();
       const graphStore = mockGraphStore();
@@ -230,15 +199,24 @@ describe("createSyncWorker", () => {
       rpc
         .mockResolvedValueOnce({
           data: [
-            makeMessage(CREATED_EVENT, { msg_id: 1 }),
-            makeMessage(DELETED_EVENT, { msg_id: 2 }),
+            makeMessage(
+              { type: "document.deleted", docId: DOC_ID_DEL },
+              { msg_id: 1 },
+            ),
+            makeMessage({ type: "notify" }, { msg_id: 2 }),
           ],
           error: null,
         })
-        .mockResolvedValue({ data: null, error: null }); // acks
+        // ack msg 1
+        .mockResolvedValueOnce({ data: null, error: null })
+        // ack msg 2
+        .mockResolvedValueOnce({ data: null, error: null })
+        // fetch_pending → empty
+        .mockResolvedValueOnce({ data: [], error: null });
 
       const worker = createSyncWorker({
         supabase,
+        llm: mockLlm(),
         embedding: mockEmbedding(),
         vectorStore,
         graphStore,
@@ -247,30 +225,84 @@ describe("createSyncWorker", () => {
       await vi.advanceTimersByTimeAsync(0);
       await worker.stop();
 
-      expect(rpc).toHaveBeenCalledWith("ack_sync_event", {
-        p_msg_id: 1,
-        p_doc_id: "doc-1",
-      });
-      expect(rpc).toHaveBeenCalledWith("ack_sync_event", {
-        p_msg_id: 2,
-        p_doc_id: null,
+      expect(vectorStore.deleteByDocument).toHaveBeenCalledWith(DOC_ID_DEL);
+      expect(rpc).toHaveBeenCalledWith("fetch_pending_documents", {
+        p_max_retries: 5,
       });
     });
   });
 
-  // ========== Edge cases ==========
+  // ========== Empty queue ==========
 
   describe("empty queue", () => {
     it("does nothing when no messages", async () => {
       const supabase = mockSupabase();
       const vectorStore = mockVectorStore();
-      const graphStore = mockGraphStore();
       const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
 
       rpc.mockResolvedValue({ data: [], error: null });
 
       const worker = createSyncWorker({
         supabase,
+        llm: mockLlm(),
+        embedding: mockEmbedding(),
+        vectorStore: mockVectorStore(),
+        graphStore: mockGraphStore(),
+      });
+      worker.start();
+      await vi.advanceTimersByTimeAsync(0);
+      await worker.stop();
+
+      expect(vectorStore.upsert).not.toHaveBeenCalled();
+      expect(rpc).toHaveBeenCalledTimes(1); // only read_sync_events
+    });
+  });
+
+  // ========== Partial failure ==========
+
+  describe("partial failure in batch", () => {
+    it("marks successful doc completed, increments retry for failed doc", async () => {
+      const supabase = mockSupabase();
+      const vectorStore = mockVectorStore();
+      const graphStore = mockGraphStore();
+      const llm = mockLlm();
+      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      const doc2: PendingDocument = {
+        id: DOC_ID_2,
+        user_id: USER_ID,
+        body: "fail body",
+        tags: [],
+        summary: "fail",
+      };
+
+      // LLM succeeds for doc-1, fails for doc-2
+      (llm.generateStructured as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({
+          entities: [{ type: "Person", name: "Alice" }],
+        })
+        .mockRejectedValueOnce(new Error("LLM timeout"));
+
+      rpc
+        .mockResolvedValueOnce({
+          data: [makeMessage({ type: "notify" })],
+          error: null,
+        })
+        // ack
+        .mockResolvedValueOnce({ data: null, error: null })
+        // fetch_pending → 2 docs
+        .mockResolvedValueOnce({ data: [PENDING_DOC, doc2], error: null })
+        // increment_ingestion_retry for doc-2
+        .mockResolvedValueOnce({ data: null, error: null })
+        // fetch_pending → empty
+        .mockResolvedValueOnce({ data: [], error: null });
+
+      const worker = createSyncWorker({
+        supabase,
+        llm,
         embedding: mockEmbedding(),
         vectorStore,
         graphStore,
@@ -279,11 +311,23 @@ describe("createSyncWorker", () => {
       await vi.advanceTimersByTimeAsync(0);
       await worker.stop();
 
-      expect(vectorStore.upsert).not.toHaveBeenCalled();
-      expect(graphStore.upsertEntities).not.toHaveBeenCalled();
-      expect(rpc).toHaveBeenCalledTimes(1); // only read_sync_events
+      // doc-1 completed
+      expect(supabase._fromChain.update).toHaveBeenCalledWith({
+        ingestion_status: "completed",
+      });
+      expect(supabase._fromChain.eq).toHaveBeenCalledWith("id", DOC_ID_1);
+
+      // doc-2 retry incremented
+      expect(rpc).toHaveBeenCalledWith("increment_ingestion_retry", {
+        p_doc_id: DOC_ID_2,
+        p_max_retries: 5,
+      });
+
+      consoleSpy.mockRestore();
     });
   });
+
+  // ========== Read error ==========
 
   describe("read error from pgmq", () => {
     it("logs error and continues without crashing", async () => {
@@ -300,6 +344,7 @@ describe("createSyncWorker", () => {
 
       const worker = createSyncWorker({
         supabase,
+        llm: mockLlm(),
         embedding: mockEmbedding(),
         vectorStore: mockVectorStore(),
         graphStore: mockGraphStore(),
@@ -316,131 +361,13 @@ describe("createSyncWorker", () => {
     });
   });
 
-  describe("transient failure (below max retries)", () => {
-    it("does not nack — message will retry via visibility timeout", async () => {
-      const supabase = mockSupabase();
-      const vectorStore = mockVectorStore();
-      const graphStore = mockGraphStore();
-      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-
-      (vectorStore.upsert as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error("Qdrant timeout"),
-      );
-
-      rpc.mockResolvedValueOnce({
-        data: [makeMessage(CREATED_EVENT, { read_ct: 2 })],
-        error: null,
-      });
-
-      const worker = createSyncWorker({
-        supabase,
-        embedding: mockEmbedding(),
-        vectorStore,
-        graphStore,
-      });
-      worker.start();
-      await vi.advanceTimersByTimeAsync(0);
-      await worker.stop();
-
-      // Should NOT call nack (read_ct 2 < MAX_RETRIES 5)
-      expect(rpc).not.toHaveBeenCalledWith(
-        "nack_sync_event",
-        expect.anything(),
-      );
-      // Should NOT call ack either
-      expect(rpc).not.toHaveBeenCalledWith("ack_sync_event", expect.anything());
-
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe("permanent failure (max retries exceeded)", () => {
-    it("nacks with doc_id for create/update events", async () => {
-      const supabase = mockSupabase();
-      const vectorStore = mockVectorStore();
-      const graphStore = mockGraphStore();
-      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-
-      (vectorStore.upsert as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error("persistent failure"),
-      );
-
-      rpc
-        .mockResolvedValueOnce({
-          data: [makeMessage(CREATED_EVENT, { msg_id: 99, read_ct: 5 })],
-          error: null,
-        })
-        .mockResolvedValueOnce({ data: null, error: null }); // nack
-
-      const worker = createSyncWorker({
-        supabase,
-        embedding: mockEmbedding(),
-        vectorStore,
-        graphStore,
-      });
-      worker.start();
-      await vi.advanceTimersByTimeAsync(0);
-      await worker.stop();
-
-      expect(rpc).toHaveBeenCalledWith("nack_sync_event", {
-        p_msg_id: 99,
-        p_doc_id: "doc-1",
-      });
-
-      consoleSpy.mockRestore();
-    });
-
-    it("nacks with null doc_id for delete events", async () => {
-      const supabase = mockSupabase();
-      const vectorStore = mockVectorStore();
-      const graphStore = mockGraphStore();
-      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-
-      (
-        vectorStore.deleteByDocument as ReturnType<typeof vi.fn>
-      ).mockRejectedValue(new Error("graph down"));
-
-      rpc
-        .mockResolvedValueOnce({
-          data: [makeMessage(DELETED_EVENT, { msg_id: 77, read_ct: 6 })],
-          error: null,
-        })
-        .mockResolvedValueOnce({ data: null, error: null }); // nack
-
-      const worker = createSyncWorker({
-        supabase,
-        embedding: mockEmbedding(),
-        vectorStore,
-        graphStore,
-      });
-      worker.start();
-      await vi.advanceTimersByTimeAsync(0);
-      await worker.stop();
-
-      expect(rpc).toHaveBeenCalledWith("nack_sync_event", {
-        p_msg_id: 77,
-        p_doc_id: null,
-      });
-
-      consoleSpy.mockRestore();
-    });
-  });
+  // ========== Polling guard ==========
 
   describe("polling guard", () => {
     it("skips poll if previous poll is still processing", async () => {
       const supabase = mockSupabase();
       const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
 
-      // First read never resolves (simulates slow processing)
       let resolveFirst: (v: unknown) => void = () => {};
       const firstCall = new Promise((r) => {
         resolveFirst = r;
@@ -450,24 +377,24 @@ describe("createSyncWorker", () => {
 
       const worker = createSyncWorker({
         supabase,
+        llm: mockLlm(),
         embedding: mockEmbedding(),
         vectorStore: mockVectorStore(),
         graphStore: mockGraphStore(),
       });
       worker.start();
 
-      // Trigger another poll interval while first is still pending
       await vi.advanceTimersByTimeAsync(2000);
 
-      // Only one read_sync_events call (the second poll was skipped)
       expect(rpc).toHaveBeenCalledTimes(1);
 
-      // Cleanup
       resolveFirst({ data: [], error: null });
       await vi.advanceTimersByTimeAsync(0);
       await worker.stop();
     });
   });
+
+  // ========== Start and stop ==========
 
   describe("start and stop", () => {
     it("can be stopped cleanly", async () => {
@@ -477,6 +404,7 @@ describe("createSyncWorker", () => {
 
       const worker = createSyncWorker({
         supabase,
+        llm: mockLlm(),
         embedding: mockEmbedding(),
         vectorStore: mockVectorStore(),
         graphStore: mockGraphStore(),
@@ -486,10 +414,57 @@ describe("createSyncWorker", () => {
       await vi.advanceTimersByTimeAsync(0);
       await worker.stop();
 
-      // After stop, advancing timers should not trigger more polls
       const callCount = rpc.mock.calls.length;
       await vi.advanceTimersByTimeAsync(10000);
       expect(rpc.mock.calls.length).toBe(callCount);
+    });
+  });
+
+  // ========== Pending cycle ==========
+
+  describe("pending cycle loops until empty", () => {
+    it("processes multiple rounds until no pending docs remain", async () => {
+      const supabase = mockSupabase();
+      const vectorStore = mockVectorStore();
+      const graphStore = mockGraphStore();
+      const llm = mockLlm();
+      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
+
+      const doc2: PendingDocument = {
+        id: DOC_ID_2,
+        user_id: USER_ID,
+        body: "second doc",
+        tags: ["tag2"],
+        summary: "second",
+      };
+
+      rpc
+        .mockResolvedValueOnce({
+          data: [makeMessage({ type: "notify" })],
+          error: null,
+        })
+        // ack
+        .mockResolvedValueOnce({ data: null, error: null })
+        // fetch_pending round 1 → doc-1
+        .mockResolvedValueOnce({ data: [PENDING_DOC], error: null })
+        // fetch_pending round 2 → doc-2 (appeared during round 1)
+        .mockResolvedValueOnce({ data: [doc2], error: null })
+        // fetch_pending round 3 → empty
+        .mockResolvedValueOnce({ data: [], error: null });
+
+      const worker = createSyncWorker({
+        supabase,
+        llm,
+        embedding: mockEmbedding(),
+        vectorStore,
+        graphStore,
+      });
+      worker.start();
+      await vi.advanceTimersByTimeAsync(0);
+      await worker.stop();
+
+      expect(llm.generateStructured).toHaveBeenCalledTimes(2);
+      expect(vectorStore.upsert).toHaveBeenCalledTimes(2);
     });
   });
 });

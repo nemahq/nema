@@ -12,11 +12,6 @@ import {
   PHASE1_SYSTEM_PROMPT,
 } from "@server/prompts/drafting";
 import {
-  buildEntityExtractionMessage,
-  ENTITY_EXTRACTION_SYSTEM_PROMPT,
-  EntityExtractionSchema,
-} from "@server/prompts/entity-extraction";
-import {
   buildIntentRouterMessage,
   INTENT_ROUTER_ACTIVE_SYSTEM_PROMPT,
   INTENT_ROUTER_INACTIVE_SYSTEM_PROMPT,
@@ -560,27 +555,12 @@ async function persistDocument(
 ): Promise<{ id: string; title: string }> {
   const { llm } = providers;
 
-  const [meta, entityResult] = await Promise.all([
-    llm.generateStructured({
-      schema: MetaOutputSchema,
-      schemaName: "meta",
-      systemPrompt: META_SYSTEM_PROMPT,
-      messages: [
-        { role: "user", content: buildMetaMessage(body, existingTags) },
-      ],
-    }),
-    llm.generateStructured({
-      schema: EntityExtractionSchema,
-      schemaName: "entity_extraction",
-      systemPrompt: ENTITY_EXTRACTION_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildEntityExtractionMessage(body) }],
-    }),
-  ]);
-
-  const entities = entityResult.entities.map((e) => ({
-    type: e.type,
-    name: e.name,
-  }));
+  const meta = await llm.generateStructured({
+    schema: MetaOutputSchema,
+    schemaName: "meta",
+    systemPrompt: META_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: buildMetaMessage(body, existingTags) }],
+  });
 
   let docId: string;
 
@@ -592,7 +572,6 @@ async function persistDocument(
       p_summary: meta.summary,
       p_body: body,
       p_session_id: sessionId,
-      p_entities: entities,
     });
 
     throwIfSupabaseError(error);
@@ -608,7 +587,6 @@ async function persistDocument(
       p_tags: meta.tags,
       p_summary: meta.summary,
       p_body: body,
-      p_entities: entities,
     });
 
     throwIfSupabaseError(error);
