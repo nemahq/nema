@@ -2,7 +2,14 @@ import { z } from "zod";
 import * as Sentry from "@sentry/node";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
+import type {
+  ChatInput,
+  ChatStreamEvent,
+  Message,
+  MessageType,
+  SessionDraft,
+} from "@nema-io/shared";
+import { SessionDraftSchema } from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
@@ -71,8 +78,7 @@ const MetaOutputSchema = z.object({
   summary: z.string().min(1),
 });
 
-const DraftSchema = z.object({ body: z.string().min(1) });
-type Draft = z.infer<typeof DraftSchema>;
+type Draft = SessionDraft;
 
 interface SearchIntent {
   queries: string[] | null;
@@ -97,7 +103,7 @@ async function getDraft(
 
   throwIfSupabaseError(error);
 
-  return data.draft ? DraftSchema.parse(data.draft) : null;
+  return data.draft ? SessionDraftSchema.parse(data.draft) : null;
 }
 
 async function setDraft(
@@ -218,6 +224,11 @@ async function generateSessionTitle(
 
 // --- Main entry point ---
 
+interface ChatResponse {
+  message: Message;
+  draft: Draft | null;
+}
+
 export async function* processChatStream(
   supabase: SupabaseClient,
   providers: Providers,
@@ -245,6 +256,7 @@ export async function* processChatStream(
     : null;
 
   let responseContent: string;
+  let messageType: MessageType = "text";
 
   if (draft === null) {
     const intentResult = await providers.llm.generateStructured({
@@ -277,6 +289,7 @@ export async function* processChatStream(
         null,
         signal,
       );
+      messageType = "draft";
       await setDraft(supabase, input.sessionId, responseContent);
     }
   } else {
@@ -312,6 +325,7 @@ export async function* processChatStream(
           draft,
           signal,
         );
+        messageType = "draft";
         await setDraft(supabase, input.sessionId, responseContent);
         break;
       case "save":
@@ -346,7 +360,7 @@ export async function* processChatStream(
   const assistantMessage: Message = {
     id: crypto.randomUUID(),
     role: "assistant",
-    type: "text",
+    type: messageType,
     content: responseContent,
     createdAt: new Date().toISOString(),
   };
@@ -354,6 +368,57 @@ export async function* processChatStream(
   await appendMessage(supabase, input.sessionId, assistantMessage);
 
   yield { type: "done" };
+}
+
+export async function saveDraftAction(
+  supabase: SupabaseClient,
+  providers: Providers,
+  userId: string,
+  sessionId: string,
+): Promise<ChatResponse> {
+  const draft = await getDraft(supabase, sessionId);
+  if (!draft) {
+    throw new Error("No active draft to save");
+  }
+
+  const responseContent = await handleSave(
+    supabase,
+    providers,
+    userId,
+    sessionId,
+    draft.body,
+  );
+
+  const assistantMessage: Message = {
+    id: crypto.randomUUID(),
+    role: "assistant",
+    type: "text",
+    content: responseContent,
+    createdAt: new Date().toISOString(),
+  };
+
+  await appendMessage(supabase, sessionId, assistantMessage);
+
+  return { message: assistantMessage, draft: null };
+}
+
+export async function cancelDraftAction(
+  supabase: SupabaseClient,
+  sessionId: string,
+): Promise<ChatResponse> {
+  await clearDraft(supabase, sessionId);
+
+  const assistantMessage: Message = {
+    id: crypto.randomUUID(),
+    role: "assistant",
+    type: "text",
+    content: "작성 중인 내용이 취소되었습니다.",
+    createdAt: new Date().toISOString(),
+  };
+
+  await appendMessage(supabase, sessionId, assistantMessage);
+
+  return { message: assistantMessage, draft: null };
 }
 
 async function* handleDraftingStream(

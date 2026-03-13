@@ -1,5 +1,10 @@
 export { isLocale, type Locale, LOCALES } from "./i18n";
-export { type ChatInput, ChatInputSchema } from "./schemas/chat";
+export {
+  type ChatInput,
+  ChatInputSchema,
+  type DraftActionInput,
+  DraftActionInputSchema,
+} from "./schemas/chat";
 export {
   type ChatStreamEvent,
   ChatStreamEventSchema,
@@ -20,6 +25,10 @@ export {
 export {
   type SessionDeleteInput,
   SessionDeleteInputSchema,
+  type SessionDraft,
+  SessionDraftSchema,
+  type SessionGetInput,
+  SessionGetInputSchema,
   type SessionListInput,
   SessionListInputSchema,
   type SessionSummary,
