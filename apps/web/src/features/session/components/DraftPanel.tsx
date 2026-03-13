@@ -4,13 +4,17 @@ import type { SessionDraft } from "@nema-io/shared";
 import { Button, Card, CardContent, cn, Kbd } from "@nema-io/weave";
 import { FileText, X } from "@nema-io/weave/icons";
 
+import { useTranslation } from "@web/lib/tolgee";
+
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
 const DEFAULT_WIDTH = 480;
 const MIN_WIDTH = 280;
 const MAX_WIDTH_VW = 50;
 
-const TABS = [{ id: "draft", label: "드래프트", icon: FileText }] as const;
+const TABS = [
+  { id: "draft", labelKey: "session.draft", icon: FileText },
+] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
@@ -25,10 +29,9 @@ export function DraftPanel({
   onCancel: () => void;
   isPending: boolean;
 }) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabId>("draft");
-  const [openTabs, setOpenTabs] = useState<Set<TabId>>(
-    () => new Set<TabId>(["draft"]),
-  );
+  const [openTabs] = useState<Set<TabId>>(() => new Set<TabId>(["draft"]));
   const [collapsed, setCollapsed] = useState(false);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
@@ -51,15 +54,6 @@ export function DraftPanel({
 
     if (tabId === "draft") {
       onCancel();
-    }
-
-    const next = new Set(openTabs);
-    next.delete(tabId);
-    setOpenTabs(next);
-
-    if (activeTab === tabId && next.size > 0) {
-      const remaining = TABS.filter((t) => next.has(t.id));
-      setActiveTab(remaining[0].id);
     }
   }
 
@@ -118,11 +112,13 @@ export function DraftPanel({
                 ? "text-fg-secondary"
                 : "text-fg-tertiary hover:text-fg-secondary",
             )}
-            aria-label={`${tab.label} 패널 열기`}
+            aria-label={t("session.draft_panel_open", {
+              label: t(tab.labelKey),
+            })}
           >
             <tab.icon className="size-4" />
             <span className="text-[11px] font-medium [writing-mode:vertical-rl]">
-              {tab.label}
+              {t(tab.labelKey)}
             </span>
           </button>
         ))}
@@ -143,11 +139,13 @@ export function DraftPanel({
         className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize border-l border-border hover:border-brand active:border-brand"
       />
 
-      <div className="flex items-center border-b border-border">
+      <div role="tablist" className="flex items-center border-b border-border">
         {visibleTabs.map((tab) => (
           <div
             key={tab.id}
             role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`panel-${tab.id}`}
             tabIndex={0}
             onClick={() => handleTabClick(tab.id)}
             onKeyDown={(e) => {
@@ -165,12 +163,14 @@ export function DraftPanel({
             )}
           >
             <tab.icon className="size-3.5" />
-            {tab.label}
+            {t(tab.labelKey)}
             <button
               type="button"
               onClick={(e) => handleTabClose(e, tab.id)}
               className="ml-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
-              aria-label={`${tab.label} 탭 닫기`}
+              aria-label={t("session.draft_tab_close", {
+                label: t(tab.labelKey),
+              })}
             >
               <X className="size-3" />
             </button>
@@ -179,9 +179,14 @@ export function DraftPanel({
       </div>
 
       {activeTab === "draft" && openTabs.has("draft") && (
-        <div className="flex-1 overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]">
+        <div
+          role="tabpanel"
+          id="panel-draft"
+          className="flex-1 overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
+        >
           <Card className="relative">
             <div className="absolute right-3 top-3">
+              {/* TODO: ⌘+S 키보드 단축키 리스너 추가 */}
               <Button
                 variant="primary"
                 size="xs"
@@ -189,7 +194,7 @@ export function DraftPanel({
                 disabled={isPending}
                 className="gap-1 dark:bg-fg-primary dark:text-surface-base dark:border-transparent dark:hover:opacity-80"
               >
-                저장
+                {t("session.draft_save")}
                 <Kbd className="border-white/20 bg-white/10 text-inherit opacity-80">
                   ⌘+S
                 </Kbd>

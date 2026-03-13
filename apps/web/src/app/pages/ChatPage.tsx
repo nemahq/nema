@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 
 import type { Message } from "@nema-io/shared";
@@ -22,7 +22,6 @@ export function ChatPage() {
   const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
     sessionId,
   });
-  const draft = useSessionDraft({ sessionId });
   const draftActions = useDraftActions({ sessionId });
 
   const streamingMessage = useMemo<Message | undefined>(() => {
@@ -64,14 +63,32 @@ export function ChatPage() {
         </div>
       </main>
 
-      {draft && (
-        <DraftPanel
-          draft={draft}
-          onSave={() => draftActions.save.mutate({ sessionId })}
-          onCancel={() => draftActions.cancel.mutate({ sessionId })}
-          isPending={draftActions.save.isPending}
-        />
-      )}
+      <Suspense>
+        <DraftPanelSection sessionId={sessionId} draftActions={draftActions} />
+      </Suspense>
     </div>
+  );
+}
+
+function DraftPanelSection({
+  sessionId,
+  draftActions,
+}: {
+  sessionId: string;
+  draftActions: ReturnType<typeof useDraftActions>;
+}) {
+  const draft = useSessionDraft({ sessionId });
+
+  if (!draft) {
+    return null;
+  }
+
+  return (
+    <DraftPanel
+      draft={draft}
+      onSave={() => draftActions.save.mutate({ sessionId })}
+      onCancel={() => draftActions.cancel.mutate({ sessionId })}
+      isPending={draftActions.save.isPending}
+    />
   );
 }

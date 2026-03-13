@@ -1,6 +1,7 @@
 import { z } from "zod";
 import * as Sentry from "@sentry/node";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { TRPCError } from "@trpc/server";
 
 import type {
   ChatInput,
@@ -229,6 +230,24 @@ interface ChatResponse {
   draft: Draft | null;
 }
 
+async function createAssistantResponse(
+  supabase: SupabaseClient,
+  sessionId: string,
+  type: MessageType,
+  content: string,
+  draft: Draft | null,
+): Promise<ChatResponse> {
+  const message: Message = {
+    id: crypto.randomUUID(),
+    role: "assistant",
+    type,
+    content,
+    createdAt: new Date().toISOString(),
+  };
+  await appendMessage(supabase, sessionId, message);
+  return { message, draft };
+}
+
 export async function* processChatStream(
   supabase: SupabaseClient,
   providers: Providers,
@@ -378,7 +397,10 @@ export async function saveDraftAction(
 ): Promise<ChatResponse> {
   const draft = await getDraft(supabase, sessionId);
   if (!draft) {
-    throw new Error("No active draft to save");
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "No active draft to save",
+    });
   }
 
   const responseContent = await handleSave(
@@ -389,17 +411,13 @@ export async function saveDraftAction(
     draft.body,
   );
 
-  const assistantMessage: Message = {
-    id: crypto.randomUUID(),
-    role: "assistant",
-    type: "text",
-    content: responseContent,
-    createdAt: new Date().toISOString(),
-  };
-
-  await appendMessage(supabase, sessionId, assistantMessage);
-
-  return { message: assistantMessage, draft: null };
+  return createAssistantResponse(
+    supabase,
+    sessionId,
+    "text",
+    responseContent,
+    null,
+  );
 }
 
 export async function cancelDraftAction(
@@ -408,17 +426,13 @@ export async function cancelDraftAction(
 ): Promise<ChatResponse> {
   await clearDraft(supabase, sessionId);
 
-  const assistantMessage: Message = {
-    id: crypto.randomUUID(),
-    role: "assistant",
-    type: "text",
-    content: "작성 중인 내용이 취소되었습니다.",
-    createdAt: new Date().toISOString(),
-  };
-
-  await appendMessage(supabase, sessionId, assistantMessage);
-
-  return { message: assistantMessage, draft: null };
+  return createAssistantResponse(
+    supabase,
+    sessionId,
+    "text",
+    "작성 중인 내용이 취소되었습니다.",
+    null,
+  );
 }
 
 async function* handleDraftingStream(

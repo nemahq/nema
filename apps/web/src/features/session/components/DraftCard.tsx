@@ -4,6 +4,8 @@ import type { Message } from "@nema-io/shared";
 import { Button, Card, CardContent } from "@nema-io/weave";
 import { ChevronDown, ChevronRight } from "@nema-io/weave/icons";
 
+import { useTranslation } from "@web/lib/tolgee";
+
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { RelativeTime } from "./RelativeTime";
 
@@ -14,6 +16,7 @@ export function DraftCard({
   message: Message;
   isLatest: boolean;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(isLatest);
 
   if (!expanded) {
@@ -25,7 +28,7 @@ export function DraftCard({
           className="flex items-center gap-1.5 text-sm text-fg-tertiary hover:text-fg-secondary transition-colors"
         >
           <ChevronRight className="size-3.5" />
-          <span>이전 드래프트</span>
+          <span>{t("session.draft_previous")}</span>
           <RelativeTime dateTime={message.createdAt} />
         </button>
       </div>
@@ -37,7 +40,9 @@ export function DraftCard({
       <Card className="border-brand/20 bg-brand-tint">
         {!isLatest && (
           <div className="flex items-center justify-between px-4 pt-3">
-            <span className="text-xs text-fg-tertiary">이전 드래프트</span>
+            <span className="text-xs text-fg-tertiary">
+              {t("session.draft_previous")}
+            </span>
             <Button
               variant="ghost"
               size="icon-xs"

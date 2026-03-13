@@ -33,7 +33,12 @@
     "untitled": "제목 없음",
     "new_messages": "새 메시지",
     "copy_code": "코드 복사",
-    "copied": "복사됨"
+    "copied": "복사됨",
+    "draft": "드래프트",
+    "draft_previous": "이전 드래프트",
+    "draft_save": "저장",
+    "draft_panel_open": "{label} 패널 열기",
+    "draft_tab_close": "{label} 탭 닫기"
   },
   "settings": {
     "theme_light": "라이트",
