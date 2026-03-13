@@ -3,10 +3,21 @@
 ## Components
 
 - One component per file.
-- Components only render. Data fetching, cache manipulation, and other data logic go in hooks.
+- Components MUST NOT call tRPC hooks directly. Always wrap in a custom hook.
 - Extract complex handlers as named functions instead of inline.
 - Routing/branching components MUST only branch. Handlers belong inside each sub-component.
 - Constant values (style objects, config arrays, static maps) MUST be defined outside the component. Only values that depend on props, state, or hooks belong inside.
+
+### Responsibility tiers
+
+| Tier          | Description                                                                 |
+| ------------- | --------------------------------------------------------------------------- |
+| UI-only       | Receives all data via props. No hooks for data fetching or mutation.        |
+| Stateful unit | Owns a cohesive slice of state or data. May call custom hooks internally.   |
+| Page          | Composes child components. NOT a state hub — does not fetch on their behalf.|
+
+- State lives as close to the consuming UI as possible. Lift to a parent only when 2+ siblings share the same state.
+- If only one child uses a piece of data, that child should own the hook call — the page should not fetch and prop-drill it down.
 
 ## Hooks
 

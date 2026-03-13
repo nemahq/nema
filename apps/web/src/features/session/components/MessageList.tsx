@@ -1,6 +1,5 @@
 import { Suspense, useMemo } from "react";
 
-import type { Message } from "@nema-io/shared";
 import { Button } from "@nema-io/weave";
 import { ChevronDown } from "@nema-io/weave/icons";
 
