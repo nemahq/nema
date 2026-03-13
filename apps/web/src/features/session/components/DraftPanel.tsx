@@ -143,31 +143,32 @@ export function DraftPanel({
         {visibleTabs.map((tab) => (
           <div
             key={tab.id}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            aria-controls={`panel-${tab.id}`}
-            tabIndex={0}
-            onClick={() => handleTabClick(tab.id)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                handleTabClick(tab.id);
-              }
-            }}
             className={cn(
-              "group flex items-center gap-1.5 border-b-2 px-3 py-2",
-              "cursor-pointer text-sm font-medium",
-              "transition-colors hover:bg-surface-raised",
-              activeTab === tab.id
-                ? "border-brand text-fg-primary"
-                : "border-transparent text-fg-tertiary hover:text-fg-secondary",
+              "group flex items-center border-b-2",
+              activeTab === tab.id ? "border-brand" : "border-transparent",
             )}
           >
-            <tab.icon className="size-3.5" />
-            {t(tab.labelKey)}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-controls={`panel-${tab.id}`}
+              onClick={() => handleTabClick(tab.id)}
+              className={cn(
+                "flex items-center gap-1.5 py-2 pl-3 pr-1",
+                "text-sm font-medium transition-colors hover:bg-surface-raised",
+                activeTab === tab.id
+                  ? "text-fg-primary"
+                  : "text-fg-tertiary hover:text-fg-secondary",
+              )}
+            >
+              <tab.icon className="size-3.5" />
+              {t(tab.labelKey)}
+            </button>
             <button
               type="button"
               onClick={(e) => handleTabClose(e, tab.id)}
-              className="ml-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
+              className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
               aria-label={t("session.draft_tab_close", {
                 label: t(tab.labelKey),
               })}

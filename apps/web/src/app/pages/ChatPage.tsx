@@ -4,11 +4,10 @@ import { useParams } from "@tanstack/react-router";
 import type { Message } from "@nema-io/shared";
 
 import { ChatInput } from "@web/features/session/components/ChatInput";
-import { DraftPanel } from "@web/features/session/components/DraftPanel";
+import { DraftPanelSection } from "@web/features/session/components/DraftPanelSection";
 import { MessageList } from "@web/features/session/components/MessageList";
 import { useDraftActions } from "@web/features/session/hooks/useDraftActions";
 import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
-import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
 import { useTranslation } from "@web/lib/tolgee";
 
 const STREAMING_MESSAGE_ID = "streaming";
@@ -67,28 +66,5 @@ export function ChatPage() {
         <DraftPanelSection sessionId={sessionId} draftActions={draftActions} />
       </Suspense>
     </div>
-  );
-}
-
-function DraftPanelSection({
-  sessionId,
-  draftActions,
-}: {
-  sessionId: string;
-  draftActions: ReturnType<typeof useDraftActions>;
-}) {
-  const draft = useSessionDraft({ sessionId });
-
-  if (!draft) {
-    return null;
-  }
-
-  return (
-    <DraftPanel
-      draft={draft}
-      onSave={() => draftActions.save.mutate({ sessionId })}
-      onCancel={() => draftActions.cancel.mutate({ sessionId })}
-      isPending={draftActions.save.isPending}
-    />
   );
 }
