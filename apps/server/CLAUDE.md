@@ -39,7 +39,7 @@ src/
 - Tolgee (`@tolgee/core`). Locale JSON in `infra/i18n/locales/`. `ko.json` is source of truth.
 - Key naming: first segment = domain (e.g. `error.llm_timeout`).
 - Locale resolved per-request from `Accept-Language` header. Default: `ko`.
-- 빌드 시 staticData 사용. `pnpm tolgee:pull:server`로 Tolgee 플랫폼에서 최신 번역 동기화 가능.
+- Uses staticData at build time. Run `pnpm tolgee:pull:server` to sync latest translations from Tolgee platform.
 
 ## Dev
 

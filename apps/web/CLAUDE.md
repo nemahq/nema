@@ -37,8 +37,8 @@ src/
 - Locale JSON in `lib/tolgee/`. Key types auto-inferred from `ko.json`.
 - Key naming: first segment = feature (e.g. `common.home`, `auth.login`).
 - Initial locale: localStorage → browser detection → `ko`. Runtime switch: `changeLocale()`.
-- Production: CDN fetch (`VITE_TOLGEE_CDN_URL`) + local JSON fallback. CDN 미설정 시 staticData만 사용.
-- 번역 워크플로: 로컬 JSON 수정 → main merge 시 CI가 Tolgee에 push → Tolgee에서 번역 → `pnpm tolgee:pull:web`으로 동기화.
+- Production: CDN fetch (`VITE_TOLGEE_CDN_URL`) + local JSON fallback. Falls back to staticData only when CDN URL is not set.
+- Translation workflow: edit local JSON → CI pushes to Tolgee on main merge → translate on Tolgee → sync via `pnpm tolgee:pull:web`.
 
 ## Storage
 

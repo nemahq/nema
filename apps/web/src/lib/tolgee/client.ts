@@ -22,7 +22,9 @@ const { TOLGEE_CDN_URL } = getEnv();
 const tolgeeBuilder = Tolgee().use(FormatSimple());
 
 if (TOLGEE_CDN_URL) {
-  tolgeeBuilder.use(BackendFetch({ prefix: TOLGEE_CDN_URL }));
+  tolgeeBuilder.use(
+    BackendFetch({ prefix: TOLGEE_CDN_URL, fallbackOnFail: true }),
+  );
 }
 
 export const tolgee = tolgeeBuilder.init({
