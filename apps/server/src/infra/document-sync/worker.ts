@@ -12,7 +12,7 @@ import {
 } from "@server/prompts/entity-extraction";
 
 import type { DeleteEvent, PendingDocument } from "./types";
-import { TriggerMessageSchema } from "./types";
+import { PendingDocumentSchema, TriggerMessageSchema } from "./types";
 
 const MAX_RETRIES = 5;
 const POLL_INTERVAL_MS = 2_000;
@@ -57,13 +57,26 @@ export function createSyncWorker(deps: WorkerDeps) {
       let shouldRunBatch = false;
 
       for (const row of parsed.data) {
-        if (row.message.type === "notify") {
-          shouldRunBatch = true;
-        } else {
-          await handleDelete(row.message as DeleteEvent, deps);
-        }
+        try {
+          switch (row.message.type) {
+            case "notify":
+              shouldRunBatch = true;
+              break;
+            case "document.deleted":
+              await handleDelete(row.message, deps);
+              break;
+            default:
+              assertNever(row.message);
+          }
 
-        await deps.supabase.rpc("ack_sync_event", { p_msg_id: row.msg_id });
+          const { error: ackError } = await deps.supabase.rpc(
+            "ack_sync_event",
+            { p_msg_id: row.msg_id },
+          );
+          if (ackError) throw ackError;
+        } catch (err) {
+          console.error("[sync-worker] message processing failed:", err);
+        }
       }
 
       if (shouldRunBatch) {
@@ -107,11 +120,12 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
     for (const doc of docs) {
       try {
         await processDocument(doc, deps);
-        await markCompleted(deps.supabase, doc.id);
       } catch (err) {
         console.error(`[sync-worker] failed to process doc ${doc.id}:`, err);
         await incrementRetry(deps.supabase, doc.id);
+        continue;
       }
+      await markCompleted(deps.supabase, doc.id);
     }
   }
 }
@@ -124,11 +138,15 @@ async function fetchPendingDocuments(
   });
 
   if (error) {
-    console.error("[sync-worker] fetch pending error:", error);
-    return [];
+    throw new Error(`fetch_pending_documents failed: ${error.message}`);
   }
 
-  return (data ?? []) as PendingDocument[];
+  const parsed = z.array(PendingDocumentSchema).safeParse(data ?? []);
+  if (!parsed.success) {
+    throw new Error(`pending doc validation failed: ${parsed.error.message}`);
+  }
+
+  return parsed.data;
 }
 
 async function markCompleted(
@@ -141,7 +159,7 @@ async function markCompleted(
     .eq("id", docId);
 
   if (error) {
-    console.error("[sync-worker] mark completed error:", error);
+    throw new Error(`mark completed failed for doc ${docId}: ${error.message}`);
   }
 }
 
@@ -155,7 +173,9 @@ async function incrementRetry(
   });
 
   if (error) {
-    console.error("[sync-worker] increment retry error:", error);
+    throw new Error(
+      `increment_ingestion_retry failed for doc ${docId}: ${error.message}`,
+    );
   }
 }
 
@@ -205,4 +225,8 @@ async function handleDelete(
 ): Promise<void> {
   await deps.vectorStore.deleteByDocument(event.docId);
   await deps.graphStore.deleteByDocument(event.docId);
+}
+
+function assertNever(x: never): never {
+  throw new Error(`Unexpected event type: ${JSON.stringify(x)}`);
 }

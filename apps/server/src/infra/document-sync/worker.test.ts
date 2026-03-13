@@ -67,9 +67,14 @@ function makeMessage(
   return { msg_id: 1, read_ct: 1, message: event, ...overrides };
 }
 
+const DOC_ID_1 = "a0000000-0000-4000-a000-000000000001";
+const DOC_ID_2 = "a0000000-0000-4000-a000-000000000002";
+const DOC_ID_DEL = "a0000000-0000-4000-a000-0000000000dd";
+const USER_ID = "b0000000-0000-4000-a000-000000000001";
+
 const PENDING_DOC: PendingDocument = {
-  id: "doc-1",
-  user_id: "user-1",
+  id: DOC_ID_1,
+  user_id: USER_ID,
   body: "test body",
   tags: ["tag1"],
   summary: "test summary",
@@ -128,19 +133,20 @@ describe("createSyncWorker", () => {
       // vector + graph upsert
       expect(vectorStore.upsert).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ docId: "doc-1", chunks: ["test body"] }),
+        expect.objectContaining({ docId: DOC_ID_1, chunks: ["test body"] }),
       );
       expect(graphStore.upsertEntities).toHaveBeenCalledWith(
         expect.objectContaining({
-          docId: "doc-1",
+          docId: DOC_ID_1,
           entities: [{ type: "Person", name: "Alice" }],
         }),
       );
 
-      // completed 마킹 (from().update().eq())
-      expect(
-        (supabase as unknown as { from: ReturnType<typeof vi.fn> }).from,
-      ).toHaveBeenCalledWith("documents");
+      // completed 마킹
+      expect(supabase._fromChain.update).toHaveBeenCalledWith({
+        ingestion_status: "completed",
+      });
+      expect(supabase._fromChain.eq).toHaveBeenCalledWith("id", DOC_ID_1);
     });
   });
 
@@ -155,7 +161,7 @@ describe("createSyncWorker", () => {
 
       rpc
         .mockResolvedValueOnce({
-          data: [makeMessage({ type: "document.deleted", docId: "doc-1" })],
+          data: [makeMessage({ type: "document.deleted", docId: DOC_ID_1 })],
           error: null,
         })
         .mockResolvedValueOnce({ data: null, error: null }); // ack
@@ -171,9 +177,13 @@ describe("createSyncWorker", () => {
       await vi.advanceTimersByTimeAsync(0);
       await worker.stop();
 
-      expect(vectorStore.deleteByDocument).toHaveBeenCalledWith("doc-1");
-      expect(graphStore.deleteByDocument).toHaveBeenCalledWith("doc-1");
+      expect(vectorStore.deleteByDocument).toHaveBeenCalledWith(DOC_ID_1);
+      expect(graphStore.deleteByDocument).toHaveBeenCalledWith(DOC_ID_1);
       expect(rpc).toHaveBeenCalledWith("ack_sync_event", { p_msg_id: 1 });
+      expect(rpc).not.toHaveBeenCalledWith(
+        "fetch_pending_documents",
+        expect.anything(),
+      );
     });
   });
 
@@ -190,7 +200,7 @@ describe("createSyncWorker", () => {
         .mockResolvedValueOnce({
           data: [
             makeMessage(
-              { type: "document.deleted", docId: "doc-del" },
+              { type: "document.deleted", docId: DOC_ID_DEL },
               { msg_id: 1 },
             ),
             makeMessage({ type: "notify" }, { msg_id: 2 }),
@@ -215,7 +225,7 @@ describe("createSyncWorker", () => {
       await vi.advanceTimersByTimeAsync(0);
       await worker.stop();
 
-      expect(vectorStore.deleteByDocument).toHaveBeenCalledWith("doc-del");
+      expect(vectorStore.deleteByDocument).toHaveBeenCalledWith(DOC_ID_DEL);
       expect(rpc).toHaveBeenCalledWith("fetch_pending_documents", {
         p_max_retries: 5,
       });
@@ -262,8 +272,8 @@ describe("createSyncWorker", () => {
         .mockImplementation(() => {});
 
       const doc2: PendingDocument = {
-        id: "doc-2",
-        user_id: "user-1",
+        id: DOC_ID_2,
+        user_id: USER_ID,
         body: "fail body",
         tags: [],
         summary: "fail",
@@ -302,13 +312,14 @@ describe("createSyncWorker", () => {
       await worker.stop();
 
       // doc-1 completed
-      expect(
-        (supabase as unknown as { from: ReturnType<typeof vi.fn> }).from,
-      ).toHaveBeenCalledWith("documents");
+      expect(supabase._fromChain.update).toHaveBeenCalledWith({
+        ingestion_status: "completed",
+      });
+      expect(supabase._fromChain.eq).toHaveBeenCalledWith("id", DOC_ID_1);
 
       // doc-2 retry incremented
       expect(rpc).toHaveBeenCalledWith("increment_ingestion_retry", {
-        p_doc_id: "doc-2",
+        p_doc_id: DOC_ID_2,
         p_max_retries: 5,
       });
 
@@ -420,8 +431,8 @@ describe("createSyncWorker", () => {
       const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
 
       const doc2: PendingDocument = {
-        id: "doc-2",
-        user_id: "user-1",
+        id: DOC_ID_2,
+        user_id: USER_ID,
         body: "second doc",
         tags: ["tag2"],
         summary: "second",

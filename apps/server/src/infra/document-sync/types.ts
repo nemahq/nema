@@ -6,7 +6,7 @@ const NotifyEventSchema = z.object({ type: z.literal("notify") });
 
 const DeleteEventSchema = z.object({
   type: z.literal("document.deleted"),
-  docId: z.string(),
+  docId: z.string().uuid(),
 });
 
 const SyncEventSchema = z.discriminatedUnion("type", [
@@ -36,6 +36,14 @@ export interface TriggerMessage {
   read_ct: number;
   message: SyncEvent;
 }
+
+export const PendingDocumentSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  body: z.string(),
+  tags: z.array(z.string()),
+  summary: z.string(),
+});
 
 export interface PendingDocument {
   id: string;

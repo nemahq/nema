@@ -107,7 +107,8 @@ BEGIN
   WHERE d.ingestion_status = 'pending'
     AND d.ingestion_retry_count < p_max_retries
     AND (d.last_ingestion_attempt IS NULL
-         OR d.last_ingestion_attempt + d.ingestion_retry_count * interval '30 seconds' < now());
+         OR d.last_ingestion_attempt + d.ingestion_retry_count * interval '30 seconds' < now())
+  LIMIT 10;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -137,6 +138,9 @@ GRANT EXECUTE ON FUNCTION create_document_with_event(uuid, text, text[], text, t
 
 REVOKE ALL ON FUNCTION update_document_with_event(uuid, uuid, text, text[], text, text) FROM public, anon;
 GRANT EXECUTE ON FUNCTION update_document_with_event(uuid, uuid, text, text[], text, text) TO authenticated;
+
+REVOKE ALL ON FUNCTION ack_sync_event(bigint) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION ack_sync_event(bigint) TO service_role;
 
 REVOKE ALL ON FUNCTION fetch_pending_documents FROM public, anon, authenticated;
 GRANT EXECUTE ON FUNCTION fetch_pending_documents TO service_role;
