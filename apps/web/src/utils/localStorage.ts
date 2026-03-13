@@ -24,7 +24,9 @@ export function getStorage<K extends keyof StorageMap>(
 ): StorageMap[K] | null {
   try {
     const raw = localStorage.getItem(key);
-    if (raw !== null && isValid[key](raw)) return raw as StorageMap[K];
+    if (raw !== null && isValid[key](raw)) {
+      return raw as StorageMap[K];
+    }
     return null;
   } catch {
     return null;

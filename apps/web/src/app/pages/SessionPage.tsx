@@ -19,7 +19,6 @@ export function SessionPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [variant] = useState(pickRandom);
-
   const createSession = useCreateSession();
 
   function handleSubmit() {

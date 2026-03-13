@@ -30,7 +30,10 @@
     "empty_subheading_3": "흩어진 정보를 AI가 정리하고, 필요할 때 즉시 꺼내줘요.",
     "new_context": "새 맥락",
     "your_contexts": "내 맥락",
-    "untitled": "제목 없음"
+    "untitled": "제목 없음",
+    "new_messages": "새 메시지",
+    "copy_code": "코드 복사",
+    "copied": "복사됨"
   },
   "settings": {
     "theme_light": "라이트",

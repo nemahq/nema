@@ -30,7 +30,10 @@
     "empty_subheading_3": "AI organizes scattered info and serves it back when you need it.",
     "new_context": "New Context",
     "your_contexts": "Your Contexts",
-    "untitled": "Untitled"
+    "untitled": "Untitled",
+    "new_messages": "New messages",
+    "copy_code": "Copy code",
+    "copied": "Copied"
   },
   "settings": {
     "theme_light": "Light",

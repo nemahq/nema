@@ -6,6 +6,7 @@
 - Components only render. Data fetching, cache manipulation, and other data logic go in hooks.
 - Extract complex handlers as named functions instead of inline.
 - Routing/branching components MUST only branch. Handlers belong inside each sub-component.
+- Constant values (style objects, config arrays, static maps) MUST be defined outside the component. Only values that depend on props, state, or hooks belong inside.
 
 ## Hooks
 
@@ -24,7 +25,12 @@
 | Component        | PascalCase     | `UserProfile.tsx` |
 | `components/ui/` | lowercase (managed by shadcn CLI) | `button.tsx` |
 | Non-component    | camelCase      | `useAuth.ts`      |
+| Component CSS    | kebab-case of component name | `markdown-renderer.css` for `MarkdownRenderer` |
 | Env var          | `VITE_` prefix | `VITE_API_URL`    |
+
+- Hook name = caller perspective. Name by what the caller does, not by API endpoint or DB table.
+- Hook return variable: drop `use` prefix → camelCase. `useSendMessage()` → `sendMessage`. Array return → plural entity (`messages`).
+- Component name MUST NOT repeat the parent folder name. `session/components/MessageList` — O, `session/components/SessionMessageList` — X.
 
 ## Data Fetching
 
@@ -69,6 +75,15 @@
 - Split: different domain / different API resource / independent reuse unit. "Can you move this to another app as one chunk?"
 - Merge: same domain / shared state or data / same UI flow.
 - When ambiguous, merge first. Over-splitting is harder to undo.
+
+## TypeScript
+
+- `as const`: objects and arrays only. Freezes structure to readonly + literal types. Redundant on primitive `const` (already narrowed).
+  - O: `const ROLES = ["admin", "user"] as const` → `readonly ["admin", "user"]`
+  - X: `const MAX = 100 as const` → already `100` without `as const`
+- `satisfies`: validate shape against a type while preserving inferred literal types. Use when you need both type checking AND narrow inference.
+  - `{ key: "value" } satisfies Record<string, string>` → type-checked AND inferred as `{ key: "value" }`, not widened to `Record<string, string>`.
+- MUST NOT use `as` type assertions to silence the compiler. Allowed only for narrowing from `unknown` after a runtime guard.
 
 ## Design System
 

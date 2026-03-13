@@ -94,7 +94,9 @@ export function createVoyageProvider(
               : undefined,
         };
       } catch (error) {
-        if (error instanceof EmbeddingError) throw error;
+        if (error instanceof EmbeddingError) {
+          throw error;
+        }
         throw new EmbeddingError(
           `Voyage embed failed: ${error instanceof Error ? error.message : String(error)}`,
           PROVIDER_ID,

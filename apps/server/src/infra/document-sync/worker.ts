@@ -26,7 +26,9 @@ export function createSyncWorker(deps: WorkerDeps) {
   let currentPoll: Promise<void> | null = null;
 
   async function poll(): Promise<void> {
-    if (processing) return;
+    if (processing) {
+      return;
+    }
     processing = true;
 
     try {
@@ -39,7 +41,9 @@ export function createSyncWorker(deps: WorkerDeps) {
         console.error("[sync-worker] read error:", error);
         return;
       }
-      if (!data || (data as unknown[]).length === 0) return;
+      if (!data || (data as unknown[]).length === 0) {
+        return;
+      }
 
       const parsed = z.array(SyncMessageSchema).safeParse(data);
       if (!parsed.success) {

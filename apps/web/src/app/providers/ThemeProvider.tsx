@@ -1,13 +1,17 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 import { getStorage } from "@web/utils/localStorage";
 import {
+  MEDIA_DARK,
+  resolveTheme,
   setTheme as setThemePref,
+  type Theme,
   type ThemePreference,
 } from "@web/utils/theme";
 
 type ThemeProviderState = {
   theme: ThemePreference;
+  resolvedTheme: Theme;
   setTheme: (theme: ThemePreference) => void;
 };
 
@@ -19,14 +23,31 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(
     () => getStorage("theme") ?? "system",
   );
+  const [resolvedTheme, setResolvedTheme] = useState<Theme>(() =>
+    resolveTheme(getStorage("theme") ?? "system"),
+  );
+
+  useEffect(
+    function syncSystemTheme() {
+      if (theme !== "system") {
+        return;
+      }
+      const media = window.matchMedia(MEDIA_DARK);
+      const onChange = () => setResolvedTheme(resolveTheme("system"));
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    },
+    [theme],
+  );
 
   const setTheme = (next: ThemePreference) => {
     setThemePref(next);
     setThemeState(next);
+    setResolvedTheme(resolveTheme(next));
   };
 
   return (
-    <ThemeProviderContext.Provider value={{ theme, setTheme }}>
+    <ThemeProviderContext.Provider value={{ theme, resolvedTheme, setTheme }}>
       {children}
     </ThemeProviderContext.Provider>
   );

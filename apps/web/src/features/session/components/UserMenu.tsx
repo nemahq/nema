@@ -38,7 +38,9 @@ export function UserMenu({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
   const givenName = user.user_metadata?.given_name as string | undefined;

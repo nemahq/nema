@@ -87,7 +87,9 @@ export class OpenAiProvider implements LlmProvider {
       }
       return result.data;
     } catch (error) {
-      if (error instanceof LlmError) throw error;
+      if (error instanceof LlmError) {
+        throw error;
+      }
       if (error instanceof APIConnectionTimeoutError) {
         throw new LlmError("timeout", "LLM request timed out", error);
       }

@@ -32,7 +32,9 @@ const queryClient = new QueryClient({
       if (!(error instanceof TRPCClientError)) {
         Sentry.captureException(error);
       }
-      if (mutation.options.onError) return;
+      if (mutation.options.onError) {
+        return;
+      }
       toast.error(
         error instanceof TRPCClientError
           ? error.message

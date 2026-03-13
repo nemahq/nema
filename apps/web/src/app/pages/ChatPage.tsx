@@ -1,6 +1,9 @@
 import { useParams } from "@tanstack/react-router";
 
 import { ChatInput } from "@web/features/session/components/ChatInput";
+import { MessageList } from "@web/features/session/components/MessageList";
+import { useMessageList } from "@web/features/session/hooks/useMessageList";
+import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 export function ChatPage() {
@@ -9,17 +12,21 @@ export function ChatPage() {
     from: "/_authenticated/_sidebar/context/$sessionId",
   });
 
+  const messages = useMessageList({ sessionId });
+  const sendMessage = useSendMessage({ sessionId });
+
+  function handleSubmit(content: string) {
+    sendMessage.mutate({ sessionId, content });
+  }
+
   return (
     <main className="flex flex-1 flex-col bg-surface-card">
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-fg-tertiary">{sessionId}</p>
-      </div>
-      <div className="mx-auto w-full max-w-2xl px-6 pb-6">
+      <MessageList messages={messages} />
+      <div className="mx-auto w-full max-w-2xl px-6 pb-6 pt-2">
         <ChatInput
           placeholder={t("session.input_placeholder")}
-          onSubmit={() => {
-            // TODO: 메시지 전송 API 연결
-          }}
+          disabled={sendMessage.isPending}
+          onSubmit={handleSubmit}
         />
       </div>
     </main>

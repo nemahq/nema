@@ -31,7 +31,9 @@ const signinRoute = createRoute({
   component: AuthPage,
   async beforeLoad() {
     const { data, error } = await supabase.auth.getSession();
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(error.message);
+    }
     if (data.session) {
       throw redirect({ to: "/" });
     }
@@ -56,7 +58,9 @@ const authenticatedRoute = createRoute({
   component: AppLayout,
   async beforeLoad({ location }) {
     const { data, error } = await supabase.auth.getSession();
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(error.message);
+    }
     if (!data.session) {
       throw redirect({
         to: "/signin",
