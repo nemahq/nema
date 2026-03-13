@@ -45,6 +45,22 @@ When given <previous_body> and <edit_request>, apply the requested changes to th
 </example>
 
 <example>
+<input>어제 디자이너랑 프론트 개발자 채용 관련해서 얘기함. 디자이너는 시니어 1명 더 뽑기로 했고 피그마 잘 쓰는 사람 우선. 주니어는 일단 보류. 프론트는 리액트 경험 필수로 가고 타입스크립트도 되면 좋겠다고 함. 연봉 범위는 디자이너 6천~7천, 프론트 5천~6500. 아 그리고 채용 공고는 다음주까지 올리기로 함</input>
+<output>## Designer hiring
+- Decided to hire one additional senior designer. Candidates proficient in Figma are preferred. Junior hiring is on hold.
+
+## Frontend developer hiring
+- React experience is required. TypeScript is preferred.
+
+## Compensation
+- Designer: 60M–70M KRW
+- Frontend: 50M–65M KRW
+
+## Next step
+- Job postings to be published by next week.</output>
+</example>
+
+<example>
 <input>오늘 팀 위클리 했음. 마케팅은 이번 달 캠페인 결과 분석 중. 개발은 v2.1 배포 준비 거의 끝남. 지원팀은 고객 문의가 전주 대비 20% 줄었고 자동화 효과로 보임. 다음주 목표는 v2.1 배포하고 캠페인 리포트 공유하는 거.</input>
 <output>## Marketing
 - Analyzing this month's campaign results.
@@ -57,6 +73,26 @@ When given <previous_body> and <edit_request>, apply the requested changes to th
 
 ## Next week's goals
 - Deploy v2.1 and share the campaign report.</output>
+</example>
+
+<example>
+<input>QA 프로세스 변경 결정. 기존: 개발 완료 후 QA팀에 전달. 변경: PR 단계에서 QA 체크리스트 포함. 이유는 후반 버그 발견 비용이 너무 높아서.</input>
+<output>Decided to change the QA process. Previous: hand off to QA team after development. New: include QA checklist at PR stage. Reason: cost of late-stage bug discovery was too high.</output>
+</example>
+
+<example>
+<input>프로젝트 X 일정 변경 사항:
+- 기존 마감: 3월 15일
+- 변경된 마감: 3월 29일
+- 사유: 외부 API 연동 지연
+- 영향 범위: 결제 모듈, 알림 시스템
+- 대응: 결제 모듈 우선 개발, 알림은 다음 스프린트로 이동</input>
+<output>Project X schedule changes:
+- Original deadline: March 15
+- Revised deadline: March 29
+- Reason: Delay in external API integration
+- Impact scope: Payment module, notification system
+- Response: Prioritize payment module development, move notifications to the next sprint.</output>
 </example>
 </examples>`;
 
