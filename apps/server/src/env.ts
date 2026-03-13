@@ -22,6 +22,9 @@ const envSchema = z
     NEO4J_URI: z.string().min(1),
     NEO4J_USERNAME: z.string().min(1),
     NEO4J_PASSWORD: z.string().min(1),
+
+    POSTHOG_API_KEY: z.string().min(1).optional(),
+    POSTHOG_HOST: z.string().url().optional(),
   })
   .refine(
     (data) =>

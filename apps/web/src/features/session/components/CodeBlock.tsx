@@ -17,6 +17,7 @@ import { Button } from "@nema-io/weave";
 import { Check, Copy } from "@nema-io/weave/icons";
 
 import { useTheme } from "@web/app/providers/ThemeProvider";
+import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { useTranslation } from "@web/lib/tolgee";
 
 SyntaxHighlighter.registerLanguage("typescript", typescript);
@@ -49,6 +50,7 @@ export function CodeBlock({
 }) {
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
+  const trackEvent = useTrackEvent();
   const [copied, setCopied] = useState(false);
   const match = className?.match(/language-(\w+)/);
   const lang = match?.[1] ?? "";
@@ -61,6 +63,7 @@ export function CodeBlock({
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(code);
+      trackEvent("code.copy", null, { language: lang });
       setCopied(true);
       setTimeout(() => setCopied(false), COPIED_RESET_MS);
     } catch {

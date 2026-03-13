@@ -1,12 +1,17 @@
 import type { Message } from "@nema-io/shared";
 
+import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { trpc } from "@web/lib/trpc";
 
 export function useSendMessage({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
+  const trackEvent = useTrackEvent();
 
   return trpc.message.chat.useMutation({
     async onMutate({ content }) {
+      trackEvent("message.send", sessionId, {
+        content_length: content.length,
+      });
       await utils.message.list.cancel({ sessionId });
       const previous = utils.message.list.getData({ sessionId });
 

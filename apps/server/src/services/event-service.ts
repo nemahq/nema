@@ -1,6 +1,8 @@
 import * as Sentry from "@sentry/node";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { capture as capturePostHog } from "@server/infra/posthog";
+
 type ServerEventMap = {
   "intent.classified": { intent: string };
   "document.saved": { doc_count: number };
@@ -28,6 +30,10 @@ export function trackEvent(
   sessionId: string | null,
   payload: Record<string, unknown> = {},
 ): void {
+  const properties = { session_id: sessionId, ...payload };
+
+  capturePostHog({ distinctId: userId, event: type, properties });
+
   void (async () => {
     try {
       const { error } = await supabase
