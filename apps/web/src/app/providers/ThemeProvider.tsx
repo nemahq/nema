@@ -27,13 +27,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     resolveTheme(getStorage("theme") ?? "system"),
   );
 
-  useEffect(() => {
-    if (theme !== "system") return;
-    const media = window.matchMedia(MEDIA_DARK);
-    const onChange = () => setResolvedTheme(resolveTheme("system"));
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, [theme]);
+  useEffect(
+    function syncSystemTheme() {
+      if (theme !== "system") {
+        return;
+      }
+      const media = window.matchMedia(MEDIA_DARK);
+      const onChange = () => setResolvedTheme(resolveTheme("system"));
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    },
+    [theme],
+  );
 
   const setTheme = (next: ThemePreference) => {
     setThemePref(next);
