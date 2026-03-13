@@ -1,4 +1,5 @@
 import { z } from "zod";
+import * as Sentry from "@sentry/node";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
@@ -206,7 +207,11 @@ async function generateSessionTitle(
 
     await updateSessionTitle(supabase, sessionId, result.session_title);
     return result.session_title;
-  } catch {
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { operation: "generateSessionTitle" },
+      extra: { sessionId },
+    });
     return null;
   }
 }
@@ -269,7 +274,6 @@ export async function* processChatStream(
     } else {
       responseContent = yield* handleDraftingStream(
         providers,
-        input.sessionId,
         input.content,
         null,
         signal,
@@ -305,7 +309,6 @@ export async function* processChatStream(
       case "edit":
         responseContent = yield* handleDraftingStream(
           providers,
-          input.sessionId,
           input.content,
           draft,
           signal,
@@ -360,7 +363,6 @@ export async function* processChatStream(
 
 async function* handleDraftingStream(
   providers: Providers,
-  _sessionId: string,
   userInput: string,
   currentDraft: Draft | null,
   signal?: AbortSignal,

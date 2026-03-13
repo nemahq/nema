@@ -1,24 +1,20 @@
 import { useCallback, useRef, useState } from "react";
 import { skipToken } from "@tanstack/react-query";
 
-import type { ChatStreamEvent, Message } from "@nema-io/shared";
+import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
 
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { trpc } from "@web/lib/trpc";
-
-interface StreamState {
-  sessionId: string;
-  content: string;
-}
 
 export function useSendMessage({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
 
-  const [streamInput, setStreamInput] = useState<StreamState | null>(null);
+  const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const fullTextRef = useRef("");
+  const [streamStartedAt, setStreamStartedAt] = useState("");
 
   const handleData = useCallback(
     (event: ChatStreamEvent) => {
@@ -42,13 +38,18 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
     [sessionId, utils],
   );
 
-  const handleError = useCallback(() => {
-    setStreamInput(null);
-    setIsStreaming(false);
-    setStreamingText("");
-    fullTextRef.current = "";
-    utils.message.list.invalidate({ sessionId });
-  }, [sessionId, utils]);
+  // TODO: 인라인 에러 메시지 + 재시도 버튼 UI 추가
+  const handleError = useCallback(
+    (error: unknown) => {
+      console.error("[useSendMessage] streaming error:", error);
+      setStreamInput(null);
+      setIsStreaming(false);
+      setStreamingText("");
+      fullTextRef.current = "";
+      utils.message.list.invalidate({ sessionId });
+    },
+    [sessionId, utils],
+  );
 
   trpc.message.chat.useSubscription(streamInput ?? skipToken, {
     onData: handleData,
@@ -57,6 +58,10 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
 
   const send = useCallback(
     (content: string) => {
+      if (isStreaming) {
+        return;
+      }
+
       trackEvent("message.send", sessionId, {
         content_length: content.length,
       });
@@ -74,11 +79,12 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
       );
 
       fullTextRef.current = "";
+      setStreamStartedAt(new Date().toISOString());
       setStreamingText("");
       setIsStreaming(true);
       setStreamInput({ sessionId, content });
     },
-    [sessionId, trackEvent, utils],
+    [isStreaming, sessionId, trackEvent, utils],
   );
 
   const cancel = useCallback(() => {
@@ -86,7 +92,14 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
     setIsStreaming(false);
     setStreamingText("");
     fullTextRef.current = "";
-  }, []);
+    utils.message.list.invalidate({ sessionId });
+  }, [sessionId, utils]);
 
-  return { send, cancel, isStreaming, streamingText };
+  return {
+    send,
+    cancel,
+    isStreaming,
+    streamingText,
+    streamStartedAt,
+  };
 }

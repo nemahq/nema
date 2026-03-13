@@ -18,7 +18,9 @@ export function ChatPage() {
   });
 
   const serverMessages = useMessageList({ sessionId });
-  const { send, isStreaming, streamingText } = useSendMessage({ sessionId });
+  const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
+    sessionId,
+  });
 
   const messages = useMemo(() => {
     if (!isStreaming || !streamingText) {
@@ -30,11 +32,11 @@ export function ChatPage() {
       role: "assistant",
       type: "text",
       content: streamingText,
-      createdAt: new Date().toISOString(),
+      createdAt: streamStartedAt,
     };
 
     return [...serverMessages, streamingMessage];
-  }, [serverMessages, isStreaming, streamingText]);
+  }, [serverMessages, isStreaming, streamingText, streamStartedAt]);
 
   function handleSubmit(content: string) {
     send(content);

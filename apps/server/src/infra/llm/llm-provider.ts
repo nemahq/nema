@@ -6,22 +6,20 @@ export interface LlmMessage {
   content: string;
 }
 
-export interface GenerateStructuredParams<T> {
-  schema: z.ZodType<T>;
-  schemaName: string;
-  systemPrompt: string;
-  messages: [LlmMessage, ...LlmMessage[]];
-  model?: string;
-  temperature?: number;
-}
-
-export interface GenerateStreamParams {
+export interface LlmCallParams {
   systemPrompt: string;
   messages: [LlmMessage, ...LlmMessage[]];
   model?: string;
   temperature?: number;
   signal?: AbortSignal;
 }
+
+export interface GenerateStructuredParams<T> extends LlmCallParams {
+  schema: z.ZodType<T>;
+  schemaName: string;
+}
+
+export type GenerateStreamParams = LlmCallParams;
 
 export interface LlmProvider {
   generateStructured<T>(params: GenerateStructuredParams<T>): Promise<T>;

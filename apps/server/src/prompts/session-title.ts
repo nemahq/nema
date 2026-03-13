@@ -1,7 +1,9 @@
 import { z } from "zod";
 
+const SESSION_TITLE_MAX_LENGTH = 100;
+
 export const SessionTitleSchema = z.object({
-  session_title: z.string().min(1),
+  session_title: z.string().min(1).max(SESSION_TITLE_MAX_LENGTH),
 });
 
 export const SESSION_TITLE_SYSTEM_PROMPT = `You generate a short descriptive title (3-8 words) for a chat session based on the user's first message. The title should capture the main topic.
