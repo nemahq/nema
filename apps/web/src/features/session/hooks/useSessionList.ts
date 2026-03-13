@@ -23,8 +23,8 @@ export function prependSessionCache(
 }
 
 export function useSessionList() {
-  const { data, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    trpc.session.list.useInfiniteQuery(
+  const [data, { hasNextPage, fetchNextPage, isFetchingNextPage }] =
+    trpc.session.list.useSuspenseInfiniteQuery(
       { limit: SESSION_LIST_LIMIT },
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -32,7 +32,7 @@ export function useSessionList() {
     );
 
   const sessions = useMemo(
-    () => data?.pages.flatMap((page) => page.items) ?? [],
+    () => data.pages.flatMap((page) => page.items),
     [data],
   );
 

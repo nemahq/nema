@@ -6,7 +6,7 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { SessionItem } from "./SessionItem";
 
-export function SessionList({ collapsed }: { collapsed: boolean }) {
+export function SessionList() {
   const { t } = useTranslation();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -18,8 +18,6 @@ export function SessionList({ collapsed }: { collapsed: boolean }) {
     onIntersect: fetchNextPage,
     enabled: hasNextPage && !isFetchingNextPage,
   });
-
-  if (collapsed) return null;
 
   return (
     <div className="px-1.5">
