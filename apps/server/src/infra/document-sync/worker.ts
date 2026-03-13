@@ -3,18 +3,25 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import type { GraphStore } from "@server/infra/graph";
+import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { VectorStore } from "@server/infra/vector";
+import {
+  buildEntityExtractionMessage,
+  ENTITY_EXTRACTION_SYSTEM_PROMPT,
+  EntityExtractionSchema,
+} from "@server/prompts/entity-extraction";
 
-import type { DocumentSyncEvent, SyncMessage } from "./types";
-import { SyncMessageSchema } from "./types";
+import type { DeleteEvent, PendingDocument } from "./types";
+import { TriggerMessageSchema } from "./types";
 
 const MAX_RETRIES = 5;
 const POLL_INTERVAL_MS = 2_000;
-const BATCH_SIZE = 5;
+const PGMQ_BATCH_SIZE = 10;
 const VISIBILITY_TIMEOUT_SEC = 60;
 
 interface WorkerDeps {
   supabase: SupabaseClient;
+  llm: LlmProvider;
   embedding: EmbeddingProvider;
   vectorStore: VectorStore;
   graphStore: GraphStore;
@@ -31,7 +38,7 @@ export function createSyncWorker(deps: WorkerDeps) {
 
     try {
       const { data, error } = await deps.supabase.rpc("read_sync_events", {
-        p_batch_size: BATCH_SIZE,
+        p_batch_size: PGMQ_BATCH_SIZE,
         p_visibility_timeout: VISIBILITY_TIMEOUT_SEC,
       });
 
@@ -41,14 +48,26 @@ export function createSyncWorker(deps: WorkerDeps) {
       }
       if (!data || (data as unknown[]).length === 0) return;
 
-      const parsed = z.array(SyncMessageSchema).safeParse(data);
+      const parsed = z.array(TriggerMessageSchema).safeParse(data);
       if (!parsed.success) {
         console.error("[sync-worker] message validation failed:", parsed.error);
         return;
       }
 
-      for (const row of parsed.data as SyncMessage[]) {
-        await handleMessage(row, deps);
+      let shouldRunBatch = false;
+
+      for (const row of parsed.data) {
+        if (row.message.type === "notify") {
+          shouldRunBatch = true;
+        } else {
+          await handleDelete(row.message as DeleteEvent, deps);
+        }
+
+        await deps.supabase.rpc("ack_sync_event", { p_msg_id: row.msg_id });
+      }
+
+      if (shouldRunBatch) {
+        await runBatchCycle(deps);
       }
     } catch (err) {
       console.error("[sync-worker] poll error:", err);
@@ -79,113 +98,111 @@ export function createSyncWorker(deps: WorkerDeps) {
   };
 }
 
-async function handleMessage(
-  row: SyncMessage,
-  deps: WorkerDeps,
-): Promise<void> {
-  const event = row.message;
-  const docId = event.type !== "document.deleted" ? event.docId : undefined;
+async function runBatchCycle(deps: WorkerDeps): Promise<void> {
+  // pending 순환: 처리 후 남은 pending이 있으면 즉시 다음 배치
+  while (true) {
+    const docs = await fetchPendingDocuments(deps.supabase);
+    if (docs.length === 0) break;
 
-  try {
-    await processEvent(event, deps);
-  } catch (err) {
-    console.error(
-      `[sync-worker] failed to process ${event.type} (attempt ${row.read_ct}):`,
-      err,
-    );
-
-    if (row.read_ct >= MAX_RETRIES) {
+    for (const doc of docs) {
       try {
-        await deps.supabase.rpc("nack_sync_event", {
-          p_msg_id: row.msg_id,
-          p_doc_id: docId ?? null,
-        });
-      } catch (nackErr) {
-        console.error(
-          `[sync-worker] nack failed for msg_id=${row.msg_id}:`,
-          nackErr,
-        );
+        await processDocument(doc, deps);
+        await markCompleted(deps.supabase, doc.id);
+      } catch (err) {
+        console.error(`[sync-worker] failed to process doc ${doc.id}:`, err);
+        await incrementRetry(deps.supabase, doc.id);
       }
-
-      console.error(
-        `[sync-worker] permanently failed ${event.type} for doc ${
-          "docId" in event ? event.docId : "unknown"
-        }`,
-      );
     }
-    return;
-  }
-
-  try {
-    await deps.supabase.rpc("ack_sync_event", {
-      p_msg_id: row.msg_id,
-      p_doc_id: docId ?? null,
-    });
-  } catch (ackErr) {
-    console.error(
-      `[sync-worker] ack failed for msg_id=${row.msg_id} (event already processed, may cause duplicate on retry):`,
-      ackErr,
-    );
   }
 }
 
-function assertNever(x: never): never {
-  throw new Error(`Unexpected event type: ${JSON.stringify(x)}`);
+async function fetchPendingDocuments(
+  supabase: SupabaseClient,
+): Promise<PendingDocument[]> {
+  const { data, error } = await supabase.rpc("fetch_pending_documents", {
+    p_max_retries: MAX_RETRIES,
+  });
+
+  if (error) {
+    console.error("[sync-worker] fetch pending error:", error);
+    return [];
+  }
+
+  return (data ?? []) as PendingDocument[];
 }
 
-async function processEvent(
-  event: DocumentSyncEvent,
+async function markCompleted(
+  supabase: SupabaseClient,
+  docId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("documents")
+    .update({ ingestion_status: "completed" })
+    .eq("id", docId);
+
+  if (error) {
+    console.error("[sync-worker] mark completed error:", error);
+  }
+}
+
+async function incrementRetry(
+  supabase: SupabaseClient,
+  docId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("increment_ingestion_retry", {
+    p_doc_id: docId,
+    p_max_retries: MAX_RETRIES,
+  });
+
+  if (error) {
+    console.error("[sync-worker] increment retry error:", error);
+  }
+}
+
+async function processDocument(
+  doc: PendingDocument,
   deps: WorkerDeps,
 ): Promise<void> {
-  const { embedding, vectorStore, graphStore } = deps;
+  const { llm, embedding, vectorStore, graphStore } = deps;
 
-  switch (event.type) {
-    case "document.created": {
-      await Promise.all([
-        vectorStore.upsert(embedding, {
-          docId: event.docId,
-          userId: event.userId,
-          chunks: [event.body],
-          tags: event.tags,
-          summary: event.summary,
-        }),
-        graphStore.upsertEntities({
-          docId: event.docId,
-          userId: event.userId,
-          entities: event.entities,
-        }),
-      ]);
-      break;
-    }
+  const entityResult = await llm.generateStructured({
+    schema: EntityExtractionSchema,
+    schemaName: "entity_extraction",
+    systemPrompt: ENTITY_EXTRACTION_SYSTEM_PROMPT,
+    messages: [
+      { role: "user", content: buildEntityExtractionMessage(doc.body) },
+    ],
+  });
 
-    case "document.updated": {
-      await vectorStore.deleteByDocument(event.docId);
-      await graphStore.deleteByDocument(event.docId);
+  const entities = entityResult.entities.map((e) => ({
+    type: e.type,
+    name: e.name,
+  }));
 
-      await Promise.all([
-        vectorStore.upsert(embedding, {
-          docId: event.docId,
-          userId: event.userId,
-          chunks: [event.body],
-          tags: event.tags,
-          summary: event.summary,
-        }),
-        graphStore.upsertEntities({
-          docId: event.docId,
-          userId: event.userId,
-          entities: event.entities,
-        }),
-      ]);
-      break;
-    }
+  // delete → upsert: 신규 문서는 no-op, 수정 문서는 기존 인덱스 교체
+  await vectorStore.deleteByDocument(doc.id);
+  await graphStore.deleteByDocument(doc.id);
 
-    case "document.deleted": {
-      await vectorStore.deleteByDocument(event.docId);
-      await graphStore.deleteByDocument(event.docId);
-      break;
-    }
+  await Promise.all([
+    vectorStore.upsert(embedding, {
+      docId: doc.id,
+      userId: doc.user_id,
+      chunks: [doc.body],
+      tags: doc.tags,
+      summary: doc.summary,
+    }),
+    graphStore.upsertEntities({
+      docId: doc.id,
+      userId: doc.user_id,
+      entities,
+    }),
+  ]);
+}
 
-    default:
-      assertNever(event);
-  }
+async function handleDelete(
+  event: DeleteEvent,
+  deps: WorkerDeps,
+): Promise<void> {
+  await deps.vectorStore.deleteByDocument(event.docId);
+  await deps.graphStore.deleteByDocument(event.docId);
 }
