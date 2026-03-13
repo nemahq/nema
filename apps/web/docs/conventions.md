@@ -24,6 +24,7 @@
 | Component        | PascalCase     | `UserProfile.tsx` |
 | `components/ui/` | lowercase (managed by shadcn CLI) | `button.tsx` |
 | Non-component    | camelCase      | `useAuth.ts`      |
+| Component CSS    | kebab-case of component name | `markdown-renderer.css` for `MarkdownRenderer` |
 | Env var          | `VITE_` prefix | `VITE_API_URL`    |
 
 - Hook name = caller perspective. Name by what the caller does, not by API endpoint or DB table.

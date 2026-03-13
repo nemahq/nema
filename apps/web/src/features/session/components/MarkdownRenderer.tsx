@@ -1,4 +1,4 @@
-import "./markdown.css";
+import "./markdown-renderer.css";
 
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
