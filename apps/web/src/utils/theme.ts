@@ -12,7 +12,9 @@ export function isThemePreference(v: string): v is ThemePreference {
 export const MEDIA_DARK = "(prefers-color-scheme: dark)";
 
 export function resolveTheme(pref: ThemePreference | null): Theme {
-  if (pref === "light" || pref === "dark") return pref;
+  if (pref === "light" || pref === "dark") {
+    return pref;
+  }
   return window.matchMedia(MEDIA_DARK).matches ? "dark" : "light";
 }
 
@@ -35,7 +37,9 @@ export function initTheme(): void {
   applyTheme(resolveTheme(pref));
 
   window.matchMedia(MEDIA_DARK).addEventListener("change", () => {
-    if (getStorage("theme") !== "system") return;
+    if (getStorage("theme") !== "system") {
+      return;
+    }
     applyTheme(resolveTheme("system"));
   });
 }

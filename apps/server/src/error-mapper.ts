@@ -85,9 +85,15 @@ export function getDomainCode(cause: unknown): DomainErrorCode | undefined {
   if (cause instanceof LlmError) {
     return LLM_CODE_MAP[cause.code] ?? "LLM_ERROR";
   }
-  if (cause instanceof EmbeddingError) return "EMBEDDING_ERROR";
-  if (cause instanceof VectorStoreError) return "VECTOR_STORE_ERROR";
-  if (cause instanceof GraphStoreError) return "GRAPH_STORE_ERROR";
+  if (cause instanceof EmbeddingError) {
+    return "EMBEDDING_ERROR";
+  }
+  if (cause instanceof VectorStoreError) {
+    return "VECTOR_STORE_ERROR";
+  }
+  if (cause instanceof GraphStoreError) {
+    return "GRAPH_STORE_ERROR";
+  }
   if (cause instanceof SupabaseError) {
     return SUPABASE_CODE_MAP[cause.code];
   }

@@ -59,7 +59,9 @@ export function createQdrantStore(): VectorStore {
           await ensurePayloadIndexes();
         }
       } catch (error) {
-        if (error instanceof VectorStoreError) throw error;
+        if (error instanceof VectorStoreError) {
+          throw error;
+        }
         throw new VectorStoreError(
           `Failed to ensure collection: ${error instanceof Error ? error.message : String(error)}`,
           "ensureCollection",
@@ -74,7 +76,9 @@ export function createQdrantStore(): VectorStore {
     ): Promise<string[]> {
       const { docId, userId, chunks, tags, summary } = options;
 
-      if (chunks.length === 0) return [];
+      if (chunks.length === 0) {
+        return [];
+      }
 
       if (provider.dimension !== VECTOR_DIMENSION) {
         throw new VectorStoreError(
@@ -123,7 +127,9 @@ export function createQdrantStore(): VectorStore {
 
         return ids;
       } catch (error) {
-        if (error instanceof VectorStoreError) throw error;
+        if (error instanceof VectorStoreError) {
+          throw error;
+        }
         throw new VectorStoreError(
           `Upsert failed: ${error instanceof Error ? error.message : String(error)}`,
           "upsert",
@@ -174,7 +180,9 @@ export function createQdrantStore(): VectorStore {
           payload: point.payload as unknown as DocumentPayload,
         }));
       } catch (error) {
-        if (error instanceof VectorStoreError) throw error;
+        if (error instanceof VectorStoreError) {
+          throw error;
+        }
         throw new VectorStoreError(
           `Search failed: ${error instanceof Error ? error.message : String(error)}`,
           "search",

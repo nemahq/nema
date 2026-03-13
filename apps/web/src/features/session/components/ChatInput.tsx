@@ -20,14 +20,18 @@ export function ChatInput({
 
   function adjustHeight() {
     const el = textareaRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }
 
   function handleSubmit() {
     const trimmed = value.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || disabled) {
+      return;
+    }
     onSubmit(trimmed);
     setValue("");
     if (textareaRef.current) {

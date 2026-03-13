@@ -1,6 +1,8 @@
 function validate(key: string): string {
   const value = import.meta.env[key];
-  if (!value) throw new Error(`${key}가 설정되지 않았습니다.`);
+  if (!value) {
+    throw new Error(`${key}가 설정되지 않았습니다.`);
+  }
   return value;
 }
 

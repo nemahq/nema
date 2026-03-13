@@ -20,7 +20,9 @@ export const trpcClient = trpc.createClient({
       url: import.meta.env.DEV ? "/trpc" : `${getEnv().API_URL}/trpc`,
       async headers() {
         const { data, error } = await supabase.auth.getSession();
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
         const token = data.session?.access_token;
         return token ? { Authorization: `Bearer ${token}` } : {};
       },

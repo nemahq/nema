@@ -10,7 +10,9 @@ export function prependSessionCache(
   newSession: SessionSummary,
 ) {
   utils.session.list.setInfiniteData({ limit: SESSION_LIST_LIMIT }, (old) => {
-    if (!old?.pages[0]) return old;
+    if (!old?.pages[0]) {
+      return old;
+    }
     const [firstPage, ...rest] = old.pages;
     return {
       ...old,

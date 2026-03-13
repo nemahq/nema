@@ -14,7 +14,9 @@ export function useIntersectionEffect({
   useEffect(
     function observeIntersection() {
       const el = ref.current;
-      if (!el || !enabled) return;
+      if (!el || !enabled) {
+        return;
+      }
 
       const observer = new IntersectionObserver(
         function handleIntersection(entries) {

@@ -8,11 +8,14 @@ import { type Locale, LOCALES } from "./types";
 
 function detectLanguage(): Locale {
   const stored = getStorage("locale");
-  if (stored) return stored;
+  if (stored) {
+    return stored;
+  }
 
   const browserLang = navigator?.language?.split("-")[0];
-  if ((LOCALES as readonly string[]).includes(browserLang ?? ""))
+  if ((LOCALES as readonly string[]).includes(browserLang ?? "")) {
     return browserLang as Locale;
+  }
   return "ko";
 }
 

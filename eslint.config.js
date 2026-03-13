@@ -13,7 +13,6 @@ export default tseslint.config(
   ...tseslint.configs.strict,
   {
     rules: {
-      curly: "error",
       "no-restricted-imports": [
         "error",
         {
@@ -132,4 +131,5 @@ export default tseslint.config(
     },
   },
   prettier,
+  { rules: { curly: "error" } },
 );

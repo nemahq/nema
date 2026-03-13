@@ -18,7 +18,9 @@ export interface Providers {
 let cached: Providers | undefined;
 
 export function getProviders(): Providers {
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
 
   const env = getEnv();
 

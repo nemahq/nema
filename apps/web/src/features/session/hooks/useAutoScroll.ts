@@ -20,7 +20,9 @@ export function useAutoScroll({
     behavior: ScrollBehavior = "smooth",
   ) {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     el.scrollTo({ top: el.scrollHeight, behavior });
     setShowNewMessageButton(false);
   }, []);
@@ -28,7 +30,9 @@ export function useAutoScroll({
   useEffect(
     function attachScrollListener() {
       const el = scrollRef.current;
-      if (!el) return;
+      if (!el) {
+        return;
+      }
 
       function onScroll(this: HTMLDivElement) {
         const distance = this.scrollHeight - this.scrollTop - this.clientHeight;
@@ -51,7 +55,9 @@ export function useAutoScroll({
       const prev = prevMessageCountRef.current;
       prevMessageCountRef.current = messages.length;
 
-      if (messages.length <= prev) return;
+      if (messages.length <= prev) {
+        return;
+      }
 
       if (isNearBottomRef.current) {
         scrollToBottom("smooth");

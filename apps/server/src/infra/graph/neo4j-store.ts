@@ -38,7 +38,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
            FOR (d:Document) ON (d.docId)`,
         );
       } catch (error) {
-        if (error instanceof GraphStoreError) throw error;
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
         throw new GraphStoreError(
           `Failed to ensure schema: ${error instanceof Error ? error.message : String(error)}`,
           "ensureSchema",
@@ -55,7 +57,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
 
     async upsertEntities(options: UpsertEntitiesOptions): Promise<void> {
       const { docId, userId, entities } = options;
-      if (entities.length === 0) return;
+      if (entities.length === 0) {
+        return;
+      }
       for (const e of entities) {
         if (!e.name.trim()) {
           throw new GraphStoreError(
@@ -93,7 +97,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           }
         });
       } catch (error) {
-        if (error instanceof GraphStoreError) throw error;
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
         throw new GraphStoreError(
           `Upsert failed: ${error instanceof Error ? error.message : String(error)}`,
           "upsertEntities",
@@ -119,7 +125,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         let frontier = [docId];
 
         for (let hop = 0; hop < depth; hop++) {
-          if (frontier.length === 0) break;
+          if (frontier.length === 0) {
+            break;
+          }
           const result = await session.run(
             `MATCH (d:Document)<-[:MENTIONED_IN]-(e:Entity {userId: $userId})
                    -[:MENTIONED_IN]->(other:Document)
@@ -143,7 +151,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           .sort((a, b) => b.sharedEntityCount - a.sharedEntityCount)
           .slice(0, limit);
       } catch (error) {
-        if (error instanceof GraphStoreError) throw error;
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
         throw new GraphStoreError(
           `findRelatedDocuments failed: ${error instanceof Error ? error.message : String(error)}`,
           "findRelatedDocuments",
@@ -162,7 +172,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       options: FindDocumentsByEntitiesOptions,
     ): Promise<GraphSearchResult[]> {
       const { entityNames, userId, limit = 10 } = options;
-      if (entityNames.length === 0) return [];
+      if (entityNames.length === 0) {
+        return [];
+      }
 
       const session = driver.session();
       try {
@@ -179,7 +191,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           sharedEntityCount: (r.get("sharedEntityCount") as Integer).toNumber(),
         }));
       } catch (error) {
-        if (error instanceof GraphStoreError) throw error;
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
         throw new GraphStoreError(
           `findDocumentsByEntities failed: ${error instanceof Error ? error.message : String(error)}`,
           "findDocumentsByEntities",
@@ -213,7 +227,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           name: r.get("name") as string,
         }));
       } catch (error) {
-        if (error instanceof GraphStoreError) throw error;
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
         throw new GraphStoreError(
           `listEntities failed: ${error instanceof Error ? error.message : String(error)}`,
           "listEntities",
@@ -230,7 +246,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
 
     async mergeEntities(options: MergeEntitiesOptions): Promise<void> {
       const { userId, targetName, sourceNames, type } = options;
-      if (sourceNames.length === 0) return;
+      if (sourceNames.length === 0) {
+        return;
+      }
 
       const session = driver.session();
       try {
@@ -263,7 +281,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           );
         });
       } catch (error) {
-        if (error instanceof GraphStoreError) throw error;
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
         throw new GraphStoreError(
           `mergeEntities failed: ${error instanceof Error ? error.message : String(error)}`,
           "mergeEntities",
@@ -307,7 +327,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           }
         });
       } catch (error) {
-        if (error instanceof GraphStoreError) throw error;
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
         throw new GraphStoreError(
           `deleteByDocument failed: ${error instanceof Error ? error.message : String(error)}`,
           "deleteByDocument",

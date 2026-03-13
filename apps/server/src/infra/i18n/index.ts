@@ -28,7 +28,9 @@ export async function initI18n(): Promise<void> {
 }
 
 export function resolveLanguage(acceptLanguageHeader?: string): Locale {
-  if (!acceptLanguageHeader) return DEFAULT_LANGUAGE;
+  if (!acceptLanguageHeader) {
+    return DEFAULT_LANGUAGE;
+  }
 
   for (const part of acceptLanguageHeader.split(",")) {
     const lang = part.split(";")[0].trim().split("-")[0];

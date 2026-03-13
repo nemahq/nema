@@ -15,7 +15,9 @@ import { router } from "./app/router";
 initTheme();
 
 const root = document.getElementById("root");
-if (!root) throw new Error("Root element not found");
+if (!root) {
+  throw new Error("Root element not found");
+}
 
 function reportRenderError(error: unknown, errorInfo: React.ErrorInfo): void {
   Sentry.captureException(error, {
