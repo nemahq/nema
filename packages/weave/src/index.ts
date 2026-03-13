@@ -47,6 +47,7 @@ export {
   type FormMessageVariant,
 } from "./components/Form";
 export { Input } from "./components/Input";
+export { Kbd } from "./components/Kbd";
 export { Label } from "./components/Label";
 export { ScrollArea, ScrollBar } from "./components/ScrollArea";
 export {
