@@ -36,7 +36,7 @@
 
 ### Loading
 
-- Default: Suspense + `useSuspenseQuery`. Fallback is a Spinner or minimal loading indicator.
+- Default: Suspense + `useSuspenseQuery` / `useSuspenseInfiniteQuery`. Fallback is a Spinner or minimal loading indicator.
 - `isLoading` branching is allowed only when Skeleton UI is required for UX.
 
 ### Error
@@ -63,6 +63,12 @@
 - Interactive elements MUST use semantic tags (button, a). div + onClick is forbidden.
 - Icon-only buttons MUST have aria-label.
 - MUST NOT remove focus styles.
+
+## Feature Boundary
+
+- Split: different domain / different API resource / independent reuse unit. "Can you move this to another app as one chunk?"
+- Merge: same domain / shared state or data / same UI flow.
+- When ambiguous, merge first. Over-splitting is harder to undo.
 
 ## Design System
 
