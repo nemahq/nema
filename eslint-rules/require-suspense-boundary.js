@@ -16,7 +16,7 @@ export default {
   create(context) {
     const PATTERN = /^useSuspense(Infinite)?Query$/;
     let hasSuspenseImport = false;
-    /** @type {import("estree").Node[]} */
+    /** @type {import("estree").Identifier[]} */
     const suspenseCalls = [];
 
     return {
@@ -36,15 +36,14 @@ export default {
 
       CallExpression(node) {
         const callee = node.callee;
-        if (
+        if (callee.type === "Identifier" && PATTERN.test(callee.name)) {
+          suspenseCalls.push(callee);
+        } else if (
           callee.type === "MemberExpression" &&
           callee.property.type === "Identifier" &&
           PATTERN.test(callee.property.name)
         ) {
-          suspenseCalls.push({
-            node: callee.property,
-            name: callee.property.name,
-          });
+          suspenseCalls.push(callee.property);
         }
       },
 
@@ -52,8 +51,12 @@ export default {
         if (hasSuspenseImport || suspenseCalls.length === 0) {
           return;
         }
-        for (const { node, name } of suspenseCalls) {
-          context.report({ node, messageId: "missing", data: { name } });
+        for (const node of suspenseCalls) {
+          context.report({
+            node,
+            messageId: "missing",
+            data: { name: node.name },
+          });
         }
       },
     };
