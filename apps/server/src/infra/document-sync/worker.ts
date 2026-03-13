@@ -73,7 +73,9 @@ export function createSyncWorker(deps: WorkerDeps) {
             "ack_sync_event",
             { p_msg_id: row.msg_id },
           );
-          if (ackError) throw ackError;
+          if (ackError) {
+            throw ackError;
+          }
         } catch (err) {
           console.error("[sync-worker] message processing failed:", err);
         }
@@ -115,7 +117,9 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
   // pending 순환: 처리 후 남은 pending이 있으면 즉시 다음 배치
   while (true) {
     const docs = await fetchPendingDocuments(deps.supabase);
-    if (docs.length === 0) break;
+    if (docs.length === 0) {
+      break;
+    }
 
     for (const doc of docs) {
       try {
