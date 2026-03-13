@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Plus } from "@nema-io/weave/icons";
@@ -33,7 +34,11 @@ export function SessionSidebar() {
       )}
       footer={(collapsed) => <UserMenu collapsed={collapsed} />}
     >
-      {(collapsed) => <SessionList collapsed={collapsed} />}
+      {(collapsed) => (
+        <Suspense>
+          <SessionList collapsed={collapsed} />
+        </Suspense>
+      )}
     </Sidebar>
   );
 }

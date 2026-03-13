@@ -24,7 +24,7 @@ export function prependSessionCache(
 
 export function useSessionList() {
   const { data, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    trpc.session.list.useInfiniteQuery(
+    trpc.session.list.useSuspenseInfiniteQuery(
       { limit: SESSION_LIST_LIMIT },
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
