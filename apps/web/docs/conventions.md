@@ -47,6 +47,7 @@
 
 ### Error
 
+- All errors are globally reported to Sentry (unhandled rejections + MutationCache + ErrorBoundary). Do NOT add per-component `Sentry.captureException` unless additional context is needed.
 - Mutation errors: global toast (QueryProvider). Use `onError` only when individual handling is needed.
 - Query errors: handled by route `errorComponent`.
 - ErrorBoundary at route level by default. Component-level only when a failure must not propagate to the entire page.
