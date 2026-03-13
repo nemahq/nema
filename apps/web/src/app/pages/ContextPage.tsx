@@ -1,53 +1,18 @@
-import { Suspense, useMemo } from "react";
+import { useMemo } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
+import { getQueryKey } from "@trpc/react-query";
 
 import type { Message } from "@nema-io/shared";
-import { FileText } from "@nema-io/weave/icons";
 
-import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { ChatInput } from "@web/features/session/components/ChatInput";
-import { DraftTabContent } from "@web/features/session/components/DraftTabContent";
+import { ContextSidePanel } from "@web/features/session/components/ContextSidePanel";
 import { MessageList } from "@web/features/session/components/MessageList";
-import type { SidePanelTab } from "@web/features/session/components/SidePanel";
-import { SidePanel } from "@web/features/session/components/SidePanel";
-import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
-import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
 import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
-import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
 import { useTranslation } from "@web/lib/tolgee";
+import { trpc } from "@web/lib/trpc";
 
 const STREAMING_MESSAGE_ID = "streaming";
-
-function ContextSidePanel({
-  sessionId,
-  saveDraft,
-  cancelDraft,
-}: {
-  sessionId: string;
-  saveDraft: ReturnType<typeof useSaveDraft>;
-  cancelDraft: ReturnType<typeof useCancelDraft>;
-}) {
-  const draft = useSessionDraft({ sessionId });
-
-  const tabs: SidePanelTab[] = [];
-  if (draft) {
-    tabs.push({
-      id: "draft",
-      labelKey: "session.draft",
-      icon: FileText,
-      content: (
-        <DraftTabContent
-          draft={draft}
-          onSave={() => saveDraft.mutate({ sessionId })}
-          isPending={saveDraft.isPending}
-        />
-      ),
-      onClose: () => cancelDraft.mutate({ sessionId }),
-    });
-  }
-
-  return <SidePanel tabs={tabs} />;
-}
 
 export function ContextPage() {
   const { t } = useTranslation();
@@ -58,8 +23,15 @@ export function ContextPage() {
   const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
     sessionId,
   });
-  const saveDraft = useSaveDraft({ sessionId });
-  const cancelDraft = useCancelDraft({ sessionId });
+
+  const saveDraftMutating = useIsMutating({
+    mutationKey: getQueryKey(trpc.message.saveDraft),
+  });
+  const cancelDraftMutating = useIsMutating({
+    mutationKey: getQueryKey(trpc.message.cancelDraft),
+  });
+  const isPending =
+    isStreaming || saveDraftMutating > 0 || cancelDraftMutating > 0;
 
   const streamingMessage = useMemo<Message | undefined>(() => {
     if (!isStreaming || !streamingText) {
@@ -77,8 +49,6 @@ export function ContextPage() {
       createdAt: streamStartedAt,
     };
   }, [isStreaming, streamingText, streamStartedAt]);
-
-  const isPending = isStreaming || saveDraft.isPending || cancelDraft.isPending;
 
   function handleSubmit(content: string) {
     send(content);
@@ -100,15 +70,7 @@ export function ContextPage() {
         </div>
       </main>
 
-      <ErrorBoundary fallback={null}>
-        <Suspense>
-          <ContextSidePanel
-            sessionId={sessionId}
-            saveDraft={saveDraft}
-            cancelDraft={cancelDraft}
-          />
-        </Suspense>
-      </ErrorBoundary>
+      <ContextSidePanel sessionId={sessionId} />
     </div>
   );
 }

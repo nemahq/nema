@@ -1,22 +1,22 @@
-import type { SessionDraft } from "@nema-io/shared";
+import { Suspense } from "react";
+
 import { Button, Card, CardContent, Kbd } from "@nema-io/weave";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
+import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
-interface DraftTabContentProps {
-  draft: SessionDraft;
-  onSave: () => void;
-  isPending: boolean;
-}
-
-export function DraftTabContent({
-  draft,
-  onSave,
-  isPending,
-}: DraftTabContentProps) {
+function DraftTabContentInner({ sessionId }: { sessionId: string }) {
   const { t } = useTranslation();
+  const draft = useSessionDraft({ sessionId });
+  const saveDraft = useSaveDraft({ sessionId });
+
+  if (!draft) {
+    return null;
+  }
 
   return (
     <Card className="relative">
@@ -25,8 +25,8 @@ export function DraftTabContent({
         <Button
           variant="primary"
           size="xs"
-          onClick={onSave}
-          disabled={isPending}
+          onClick={() => saveDraft.mutate({ sessionId })}
+          disabled={saveDraft.isPending}
           className="gap-1 dark:bg-fg-primary dark:text-surface-base dark:border-transparent dark:hover:opacity-80"
         >
           {t("session.draft_save")}
@@ -39,5 +39,15 @@ export function DraftTabContent({
         <MarkdownRenderer content={draft.body} />
       </CardContent>
     </Card>
+  );
+}
+
+export function DraftTabContent({ sessionId }: { sessionId: string }) {
+  return (
+    <ErrorBoundary fallback={null}>
+      <Suspense>
+        <DraftTabContentInner sessionId={sessionId} />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
