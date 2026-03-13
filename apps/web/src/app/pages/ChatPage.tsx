@@ -1,4 +1,4 @@
-import { Suspense, useMemo } from "react";
+import { useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 
 import type { Message } from "@nema-io/shared";
@@ -62,9 +62,7 @@ export function ChatPage() {
         </div>
       </main>
 
-      <Suspense>
-        <DraftPanelSection sessionId={sessionId} draftActions={draftActions} />
-      </Suspense>
+      <DraftPanelSection sessionId={sessionId} draftActions={draftActions} />
     </div>
   );
 }
