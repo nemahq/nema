@@ -34,11 +34,13 @@ export function SessionSidebar() {
       )}
       footer={(collapsed) => <UserMenu collapsed={collapsed} />}
     >
-      {(collapsed) => (
-        <Suspense>
-          <SessionList collapsed={collapsed} />
-        </Suspense>
-      )}
+      {(collapsed) =>
+        !collapsed && (
+          <Suspense>
+            <SessionList />
+          </Suspense>
+        )
+      }
     </Sidebar>
   );
 }
