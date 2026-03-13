@@ -6,10 +6,15 @@ function validate(key: string): string {
   return value;
 }
 
+function optional(key: string): string | undefined {
+  return import.meta.env[key] || undefined;
+}
+
 const env = {
   API_URL: validate("VITE_API_URL"),
   SUPABASE_URL: validate("VITE_SUPABASE_URL"),
   SUPABASE_ANON_KEY: validate("VITE_SUPABASE_ANON_KEY"),
+  TOLGEE_CDN_URL: optional("VITE_TOLGEE_CDN_URL"),
 } as const;
 
 export function getEnv() {

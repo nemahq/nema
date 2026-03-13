@@ -16,7 +16,11 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "tolgee:push": "tolgee push",
+    "tolgee:pull": "pnpm tolgee:pull:web && pnpm tolgee:pull:server",
+    "tolgee:pull:web": "tolgee pull --path apps/web/src/lib/tolgee --namespaces web --file-structure-template {languageTag}.{extension}",
+    "tolgee:pull:server": "tolgee pull --path apps/server/src/infra/i18n/locales --namespaces server --file-structure-template {languageTag}.{extension}"
   },
   "lint-staged": {
     "*.{js,ts,tsx}": [
@@ -27,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
+    "@tolgee/cli": "^2.16.1",
     "eslint": "^9.22.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-boundaries": "^5.4.0",
