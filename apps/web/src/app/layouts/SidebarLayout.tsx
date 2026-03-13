@@ -1,14 +1,14 @@
 import { Suspense } from "react";
 import { Outlet } from "@tanstack/react-router";
 
-import { ContentAreaSkeleton } from "@web/components/layout/ContentAreaSkeleton";
+import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 
 export function SidebarLayout() {
   return (
     <>
       <SessionSidebar />
-      <Suspense fallback={<ContentAreaSkeleton />}>
+      <Suspense fallback={<ContentAreaFallback />}>
         <Outlet />
       </Suspense>
     </>
