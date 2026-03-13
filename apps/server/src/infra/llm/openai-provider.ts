@@ -10,7 +10,11 @@ import {
 import { zodResponseFormat } from "openai/helpers/zod";
 
 import { LlmError } from "./llm-error";
-import type { GenerateStructuredParams, LlmProvider } from "./llm-provider";
+import type {
+  GenerateStreamParams,
+  GenerateStructuredParams,
+  LlmProvider,
+} from "./llm-provider";
 
 export interface OpenAiProviderConfig {
   apiKey: string;
@@ -35,6 +39,38 @@ export class OpenAiProvider implements LlmProvider {
       timeout: config.timeout ?? DEFAULT_TIMEOUT_MS,
     });
     this.model = config.model ?? DEFAULT_MODEL;
+  }
+
+  async *generateStream(params: GenerateStreamParams): AsyncIterable<string> {
+    const model = params.model ?? this.model;
+
+    try {
+      const stream = await this.client.chat.completions.create({
+        model,
+        temperature: params.temperature,
+        stream: true,
+        messages: [
+          { role: "system" as const, content: params.systemPrompt },
+          ...params.messages,
+        ],
+      });
+
+      for await (const chunk of stream) {
+        if (params.signal?.aborted) {
+          stream.controller.abort();
+          return;
+        }
+        const delta = chunk.choices[0]?.delta?.content;
+        if (delta) {
+          yield delta;
+        }
+      }
+    } catch (error) {
+      if (params.signal?.aborted) {
+        return;
+      }
+      throw this.mapError(error);
+    }
   }
 
   async generateStructured<T>(params: GenerateStructuredParams<T>): Promise<T> {
@@ -87,32 +123,36 @@ export class OpenAiProvider implements LlmProvider {
       }
       return result.data;
     } catch (error) {
-      if (error instanceof LlmError) {
-        throw error;
-      }
-      if (error instanceof APIConnectionTimeoutError) {
-        throw new LlmError("timeout", "LLM request timed out", error);
-      }
-      if (error instanceof RateLimitError) {
-        throw new LlmError("rate_limit", "LLM rate limit exceeded", error);
-      }
-      if (
-        error instanceof AuthenticationError ||
-        error instanceof PermissionDeniedError
-      ) {
-        throw new LlmError("auth", "LLM authentication failed", error);
-      }
-      if (
-        error instanceof BadRequestError ||
-        error instanceof UnprocessableEntityError
-      ) {
-        throw new LlmError("bad_request", error.message, error);
-      }
-      throw new LlmError(
-        "unknown",
-        error instanceof Error ? error.message : "Unknown LLM error",
-        error,
-      );
+      throw this.mapError(error);
     }
+  }
+
+  private mapError(error: unknown): LlmError {
+    if (error instanceof LlmError) {
+      return error;
+    }
+    if (error instanceof APIConnectionTimeoutError) {
+      return new LlmError("timeout", "LLM request timed out", error);
+    }
+    if (error instanceof RateLimitError) {
+      return new LlmError("rate_limit", "LLM rate limit exceeded", error);
+    }
+    if (
+      error instanceof AuthenticationError ||
+      error instanceof PermissionDeniedError
+    ) {
+      return new LlmError("auth", "LLM authentication failed", error);
+    }
+    if (
+      error instanceof BadRequestError ||
+      error instanceof UnprocessableEntityError
+    ) {
+      return new LlmError("bad_request", error.message, error);
+    }
+    return new LlmError(
+      "unknown",
+      error instanceof Error ? error.message : "Unknown LLM error",
+      error,
+    );
   }
 }

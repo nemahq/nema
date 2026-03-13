@@ -1,15 +1,15 @@
 import { z } from "zod";
+import * as Sentry from "@sentry/node";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { ChatInput, Message } from "@nema-io/shared";
-import { DraftOutputSchema } from "@nema-io/shared";
+import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import {
   buildEditCycleMessage,
   buildFirstCallMessage,
-  PHASE1_SYSTEM_PROMPT,
+  DRAFTING_SYSTEM_PROMPT,
 } from "@server/prompts/drafting";
 import {
   buildIntentRouterMessage,
@@ -28,6 +28,11 @@ import {
   META_SYSTEM_PROMPT,
   SPLIT_SYSTEM_PROMPT,
 } from "@server/prompts/saving";
+import {
+  buildSessionTitleMessage,
+  SESSION_TITLE_SYSTEM_PROMPT,
+  SessionTitleSchema,
+} from "@server/prompts/session-title";
 import { trackEvent } from "@server/services/event-service";
 
 // --- Internal schemas ---
@@ -42,11 +47,6 @@ const ActiveIntentSchema = z.object({
   intent: z.enum(["edit", "pull-out", "save", "cancel"]),
   queries: z.array(z.string()).nullable(),
   entities: z.array(z.string()).nullable(),
-});
-
-const RetrievalOutputSchema = z.object({
-  answer: z.string(),
-  source_ids: z.array(z.string()),
 });
 
 const SplitOutputSchema = z.object({
@@ -174,14 +174,57 @@ async function getExistingTags(
   return [...allTags];
 }
 
+async function needsSessionTitle(
+  supabase: SupabaseClient,
+  sessionId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("title")
+    .eq("id", sessionId)
+    .single();
+
+  throwIfSupabaseError(error);
+
+  return data.title === null;
+}
+
+async function generateSessionTitle(
+  supabase: SupabaseClient,
+  providers: Providers,
+  sessionId: string,
+  userInput: string,
+): Promise<string | null> {
+  try {
+    const result = await providers.llm.generateStructured({
+      schema: SessionTitleSchema,
+      schemaName: "session_title",
+      systemPrompt: SESSION_TITLE_SYSTEM_PROMPT,
+      messages: [
+        { role: "user", content: buildSessionTitleMessage(userInput) },
+      ],
+    });
+
+    await updateSessionTitle(supabase, sessionId, result.session_title);
+    return result.session_title;
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { operation: "generateSessionTitle" },
+      extra: { sessionId },
+    });
+    return null;
+  }
+}
+
 // --- Main entry point ---
 
-export async function processChat(
+export async function* processChatStream(
   supabase: SupabaseClient,
   providers: Providers,
   userId: string,
   input: ChatInput,
-): Promise<Message> {
+  signal?: AbortSignal,
+): AsyncGenerator<ChatStreamEvent> {
   const userMessage: Message = {
     id: crypto.randomUUID(),
     role: "user",
@@ -192,7 +235,15 @@ export async function processChat(
 
   await appendMessage(supabase, input.sessionId, userMessage);
 
-  const draft = await getDraft(supabase, input.sessionId);
+  const [draft, shouldGenerateTitle] = await Promise.all([
+    getDraft(supabase, input.sessionId),
+    needsSessionTitle(supabase, input.sessionId),
+  ]);
+
+  const titlePromise = shouldGenerateTitle
+    ? generateSessionTitle(supabase, providers, input.sessionId, input.content)
+    : null;
+
   let responseContent: string;
 
   if (draft === null) {
@@ -210,22 +261,23 @@ export async function processChat(
     });
 
     if (intentResult.intent === "pull-out") {
-      responseContent = await handleRetrieval(
+      responseContent = yield* handleRetrievalStream(
         supabase,
         providers,
         userId,
         input.sessionId,
         input.content,
         intentResult,
+        signal,
       );
     } else {
-      responseContent = await handleDrafting(
-        supabase,
+      responseContent = yield* handleDraftingStream(
         providers,
-        input.sessionId,
         input.content,
         null,
+        signal,
       );
+      await setDraft(supabase, input.sessionId, responseContent);
     }
   } else {
     const intentResult = await providers.llm.generateStructured({
@@ -243,23 +295,24 @@ export async function processChat(
 
     switch (intentResult.intent) {
       case "pull-out":
-        responseContent = await handleRetrieval(
+        responseContent = yield* handleRetrievalStream(
           supabase,
           providers,
           userId,
           input.sessionId,
           input.content,
           intentResult,
+          signal,
         );
         break;
       case "edit":
-        responseContent = await handleDrafting(
-          supabase,
+        responseContent = yield* handleDraftingStream(
           providers,
-          input.sessionId,
           input.content,
           draft,
+          signal,
         );
+        await setDraft(supabase, input.sessionId, responseContent);
         break;
       case "save":
         responseContent = await handleSave(
@@ -269,15 +322,24 @@ export async function processChat(
           input.sessionId,
           draft.body,
         );
+        yield { type: "token", text: responseContent };
         break;
       case "cancel":
         await clearDraft(supabase, input.sessionId);
         responseContent = "작성 중인 내용이 취소되었습니다.";
+        yield { type: "token", text: responseContent };
         break;
       default: {
         const _exhaustive: never = intentResult.intent;
         throw new Error(`Unhandled intent: ${_exhaustive}`);
       }
+    }
+  }
+
+  if (titlePromise) {
+    const title = await titlePromise;
+    if (title) {
+      yield { type: "title", title };
     }
   }
 
@@ -291,49 +353,43 @@ export async function processChat(
 
   await appendMessage(supabase, input.sessionId, assistantMessage);
 
-  return assistantMessage;
+  yield { type: "done" };
 }
 
-// --- Drafting ---
-
-async function handleDrafting(
-  supabase: SupabaseClient,
+async function* handleDraftingStream(
   providers: Providers,
-  sessionId: string,
   userInput: string,
   currentDraft: Draft | null,
-): Promise<string> {
+  signal?: AbortSignal,
+): AsyncGenerator<ChatStreamEvent, string> {
   const isFirstCall = currentDraft === null;
   const message = isFirstCall
     ? buildFirstCallMessage(userInput)
     : buildEditCycleMessage(currentDraft.body, userInput);
 
-  const result = await providers.llm.generateStructured({
-    schema: DraftOutputSchema,
-    schemaName: "drafting",
-    systemPrompt: PHASE1_SYSTEM_PROMPT,
+  let fullText = "";
+
+  for await (const chunk of providers.llm.generateStream({
+    systemPrompt: DRAFTING_SYSTEM_PROMPT,
     messages: [{ role: "user", content: message }],
-  });
-
-  await setDraft(supabase, sessionId, result.body);
-
-  if (result.session_title) {
-    await updateSessionTitle(supabase, sessionId, result.session_title);
+    signal,
+  })) {
+    fullText += chunk;
+    yield { type: "token", text: chunk };
   }
 
-  return result.body;
+  return fullText;
 }
 
-// --- Retrieval ---
-
-async function handleRetrieval(
+async function* handleRetrievalStream(
   supabase: SupabaseClient,
   providers: Providers,
   userId: string,
   sessionId: string,
   question: string,
   intent: SearchIntent,
-): Promise<string> {
+  signal?: AbortSignal,
+): AsyncGenerator<ChatStreamEvent, string> {
   const { llm, embedding, vectorStore, graphStore } = providers;
 
   let vectorResults: Awaited<ReturnType<typeof vectorStore.search>> = [];
@@ -383,12 +439,14 @@ async function handleRetrieval(
   });
 
   if (searchResults.length === 0) {
-    return "관련된 정보를 찾지 못했습니다.";
+    const noResult = "관련된 정보를 찾지 못했습니다.";
+    yield { type: "token", text: noResult };
+    return noResult;
   }
 
-  const retrievalResult = await llm.generateStructured({
-    schema: RetrievalOutputSchema,
-    schemaName: "retrieval",
+  let fullText = "";
+
+  for await (const chunk of llm.generateStream({
     systemPrompt: RETRIEVAL_SYSTEM_PROMPT,
     messages: [
       {
@@ -396,9 +454,13 @@ async function handleRetrieval(
         content: buildRetrievalMessage(question, searchResults),
       },
     ],
-  });
+    signal,
+  })) {
+    fullText += chunk;
+    yield { type: "token", text: chunk };
+  }
 
-  return retrievalResult.answer;
+  return fullText;
 }
 
 // --- Save pipeline ---

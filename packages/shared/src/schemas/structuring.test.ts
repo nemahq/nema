@@ -1,53 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DraftOutputSchema, SaveOutputSchema } from "./structuring";
-
-describe("DraftOutputSchema", () => {
-  it("parses valid draft with session_title", () => {
-    const input = {
-      body: "Interviewed a senior frontend candidate.",
-      session_title: "프론트엔드 시니어 면접 피드백",
-    };
-    const result = DraftOutputSchema.parse(input);
-    expect(result).toEqual(input);
-  });
-
-  it("parses draft with null session_title (edit cycle)", () => {
-    const input = { body: "Updated draft content.", session_title: null };
-    const result = DraftOutputSchema.parse(input);
-    expect(result.session_title).toBeNull();
-  });
-
-  it("rejects missing body", () => {
-    expect(() => DraftOutputSchema.parse({ session_title: "title" })).toThrow();
-  });
-
-  it("rejects missing session_title", () => {
-    expect(() => DraftOutputSchema.parse({ body: "content" })).toThrow();
-  });
-
-  it("rejects empty body", () => {
-    expect(() => DraftOutputSchema.parse({ body: "" })).toThrow();
-  });
-
-  it("rejects empty session_title when present", () => {
-    expect(() =>
-      DraftOutputSchema.parse({ body: "content", session_title: "" }),
-    ).toThrow();
-  });
-
-  it("strips extra fields from parsed output", () => {
-    const result = DraftOutputSchema.safeParse({
-      body: "content",
-      session_title: null,
-      extra: "field",
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).not.toHaveProperty("extra");
-    }
-  });
-});
+import { SaveOutputSchema } from "./structuring";
 
 const validSaveMeta = {
   title: "Senior Frontend Interview Feedback",

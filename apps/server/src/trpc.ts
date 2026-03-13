@@ -7,11 +7,16 @@ import { getDomainCode, mapDomainError } from "./error-mapper";
 import { resolveLanguage } from "./infra/i18n";
 import { createSupabaseUser, getSupabaseAdmin } from "./infra/supabase";
 
-export async function createContext({ req, res }: CreateFastifyContextOptions) {
+export async function createContext({
+  req,
+  res,
+  info,
+}: CreateFastifyContextOptions) {
   const prefix = "Bearer ";
+  // SSE subscription은 connectionParams로 토큰을 전달받음
   const token = req.headers.authorization?.startsWith(prefix)
     ? req.headers.authorization.substring(prefix.length)
-    : undefined;
+    : (info.connectionParams?.["token"] ?? undefined);
 
   let user: User | null = null;
   let supabase: ReturnType<typeof createSupabaseUser> | null = null;

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import type { Message } from "@nema-io/shared";
 import { Button } from "@nema-io/weave";
 import { ChevronDown } from "@nema-io/weave/icons";
 
@@ -13,11 +14,15 @@ import { UserMessage } from "./UserMessage";
 
 interface MessageListProps {
   sessionId: string;
+  streamingMessage?: Message;
 }
 
-function MessageListContent({ sessionId }: MessageListProps) {
+function MessageListContent({ sessionId, streamingMessage }: MessageListProps) {
   const { t } = useTranslation();
-  const messages = useMessageList({ sessionId });
+  const serverMessages = useMessageList({ sessionId });
+  const messages = streamingMessage
+    ? [...serverMessages, streamingMessage]
+    : serverMessages;
   const { scrollRef, showNewMessageButton, scrollToBottom } = useAutoScroll({
     messages,
   });
@@ -56,10 +61,13 @@ function MessageListContent({ sessionId }: MessageListProps) {
   );
 }
 
-export function MessageList({ sessionId }: MessageListProps) {
+export function MessageList({ sessionId, streamingMessage }: MessageListProps) {
   return (
     <Suspense fallback={<MessageListSkeleton />}>
-      <MessageListContent sessionId={sessionId} />
+      <MessageListContent
+        sessionId={sessionId}
+        streamingMessage={streamingMessage}
+      />
     </Suspense>
   );
 }

@@ -1,9 +1,14 @@
+import { useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
+
+import type { Message } from "@nema-io/shared";
 
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { MessageList } from "@web/features/session/components/MessageList";
 import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
 import { useTranslation } from "@web/lib/tolgee";
+
+const STREAMING_MESSAGE_ID = "streaming";
 
 export function ChatPage() {
   const { t } = useTranslation();
@@ -11,19 +16,35 @@ export function ChatPage() {
     from: "/_authenticated/_sidebar/context/$sessionId",
   });
 
-  const sendMessage = useSendMessage({ sessionId });
+  const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
+    sessionId,
+  });
+
+  const streamingMessage = useMemo<Message | undefined>(() => {
+    if (!isStreaming || !streamingText) {
+      return undefined;
+    }
+
+    return {
+      id: STREAMING_MESSAGE_ID,
+      role: "assistant",
+      type: "text",
+      content: streamingText,
+      createdAt: streamStartedAt,
+    };
+  }, [isStreaming, streamingText, streamStartedAt]);
 
   function handleSubmit(content: string) {
-    sendMessage.mutate({ sessionId, content });
+    send(content);
   }
 
   return (
     <main className="flex flex-1 flex-col bg-surface-card">
-      <MessageList sessionId={sessionId} />
+      <MessageList sessionId={sessionId} streamingMessage={streamingMessage} />
       <div className="mx-auto w-full max-w-2xl px-6 pb-6 pt-2">
         <ChatInput
           placeholder={t("session.input_placeholder")}
-          disabled={sendMessage.isPending}
+          disabled={isStreaming}
           onSubmit={handleSubmit}
         />
       </div>

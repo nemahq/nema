@@ -57,6 +57,9 @@ function mockLlm(): LlmProvider {
     generateStructured: vi.fn().mockResolvedValue({
       entities: [{ type: "Person", name: "Alice" }],
     }),
+    async *generateStream() {
+      yield "";
+    },
   };
 }
 
