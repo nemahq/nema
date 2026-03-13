@@ -5,15 +5,17 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
+interface DraftTabContentProps {
+  draft: SessionDraft;
+  onSave: () => void;
+  isPending: boolean;
+}
+
 export function DraftTabContent({
   draft,
   onSave,
   isPending,
-}: {
-  draft: SessionDraft;
-  onSave: () => void;
-  isPending: boolean;
-}) {
+}: DraftTabContentProps) {
   const { t } = useTranslation();
 
   return (

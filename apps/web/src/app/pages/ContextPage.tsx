@@ -1,17 +1,53 @@
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 
 import type { Message } from "@nema-io/shared";
+import { FileText } from "@nema-io/weave/icons";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { ChatInput } from "@web/features/session/components/ChatInput";
-import { DraftPanelSection } from "@web/features/session/components/DraftPanelSection";
+import { DraftTabContent } from "@web/features/session/components/DraftTabContent";
 import { MessageList } from "@web/features/session/components/MessageList";
+import type { SidePanelTab } from "@web/features/session/components/SidePanel";
+import { SidePanel } from "@web/features/session/components/SidePanel";
 import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
 import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
+import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
 import { useTranslation } from "@web/lib/tolgee";
 
 const STREAMING_MESSAGE_ID = "streaming";
+
+function ContextSidePanel({
+  sessionId,
+  saveDraft,
+  cancelDraft,
+}: {
+  sessionId: string;
+  saveDraft: ReturnType<typeof useSaveDraft>;
+  cancelDraft: ReturnType<typeof useCancelDraft>;
+}) {
+  const draft = useSessionDraft({ sessionId });
+
+  const tabs: SidePanelTab[] = [];
+  if (draft) {
+    tabs.push({
+      id: "draft",
+      labelKey: "session.draft",
+      icon: FileText,
+      content: (
+        <DraftTabContent
+          draft={draft}
+          onSave={() => saveDraft.mutate({ sessionId })}
+          isPending={saveDraft.isPending}
+        />
+      ),
+      onClose: () => cancelDraft.mutate({ sessionId }),
+    });
+  }
+
+  return <SidePanel tabs={tabs} />;
+}
 
 export function ContextPage() {
   const { t } = useTranslation();
@@ -64,11 +100,15 @@ export function ContextPage() {
         </div>
       </main>
 
-      <DraftPanelSection
-        sessionId={sessionId}
-        saveDraft={saveDraft}
-        cancelDraft={cancelDraft}
-      />
+      <ErrorBoundary fallback={null}>
+        <Suspense>
+          <ContextSidePanel
+            sessionId={sessionId}
+            saveDraft={saveDraft}
+            cancelDraft={cancelDraft}
+          />
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }
