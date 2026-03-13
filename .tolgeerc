@@ -1,0 +1,29 @@
+{
+  "$schema": "https://docs.tolgee.io/cli-schema.json",
+  "projectId": 29063,
+  "push": {
+    "files": [
+      {
+        "path": "apps/web/src/lib/tolgee/ko.json",
+        "language": "ko",
+        "namespace": "web"
+      },
+      {
+        "path": "apps/web/src/lib/tolgee/en.json",
+        "language": "en",
+        "namespace": "web"
+      },
+      {
+        "path": "apps/server/src/infra/i18n/locales/ko.json",
+        "language": "ko",
+        "namespace": "server"
+      },
+      {
+        "path": "apps/server/src/infra/i18n/locales/en.json",
+        "language": "en",
+        "namespace": "server"
+      }
+    ],
+    "forceMode": "KEEP"
+  }
+}

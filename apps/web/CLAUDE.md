@@ -37,7 +37,8 @@ src/
 - Locale JSON in `lib/tolgee/`. Key types auto-inferred from `ko.json`.
 - Key naming: first segment = feature (e.g. `common.home`, `auth.login`).
 - Initial locale: localStorage → browser detection → `ko`. Runtime switch: `changeLocale()`.
-- Production: staticData bundle. No in-context editing.
+- Production: CDN fetch (`VITE_TOLGEE_CDN_URL`) + local JSON fallback. Falls back to staticData only when CDN URL is not set.
+- Translation workflow: edit local JSON → CI pushes to Tolgee on main merge → translate on Tolgee → sync via `pnpm tolgee:pull:web`.
 
 ## Storage
 
