@@ -15,7 +15,7 @@ function pickRandom() {
   return Math.floor(Math.random() * VARIANT_COUNT);
 }
 
-export function SessionPage() {
+export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [variant] = useState(pickRandom);

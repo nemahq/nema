@@ -9,9 +9,9 @@ import { getQueryKey } from "@trpc/react-query";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { SidebarLayout } from "@web/app/layouts/SidebarLayout";
-import { ChatPage } from "@web/app/pages/ChatPage";
+import { ContextPage } from "@web/app/pages/ContextPage";
+import { HomePage } from "@web/app/pages/HomePage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
-import { SessionPage } from "@web/app/pages/SessionPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
 import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
@@ -108,13 +108,13 @@ const sidebarRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => sidebarRoute,
   path: "/",
-  component: SessionPage,
+  component: HomePage,
 });
 
 const sessionRoute = createRoute({
   getParentRoute: () => sidebarRoute,
   path: "/context/$sessionId",
-  component: ChatPage,
+  component: ContextPage,
 });
 
 const routeTree = rootRoute.addChildren([

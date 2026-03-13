@@ -13,7 +13,7 @@ import { useTranslation } from "@web/lib/tolgee";
 
 const STREAMING_MESSAGE_ID = "streaming";
 
-export function ChatPage() {
+export function ContextPage() {
   const { t } = useTranslation();
   const { sessionId } = useParams({
     from: "/_authenticated/_sidebar/context/$sessionId",
