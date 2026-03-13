@@ -1,9 +1,6 @@
 import { trpc } from "@web/lib/trpc";
 
-import { useSessionId } from "./useSessionId";
-
-export function useMessageList() {
-  const sessionId = useSessionId();
+export function useMessageList({ sessionId }: { sessionId: string }) {
   const [messages] = trpc.message.list.useSuspenseQuery({ sessionId });
   return messages;
 }

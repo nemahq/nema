@@ -13,8 +13,8 @@ import { SidePanel } from "./SidePanel";
 
 function ContextSidePanelInner() {
   const sessionId = useSessionId();
-  const draft = useSessionDraft();
-  const cancelDraft = useCancelDraft();
+  const draft = useSessionDraft({ sessionId });
+  const cancelDraft = useCancelDraft({ sessionId });
 
   const tabs: SidePanelTab[] = [];
   if (draft) {

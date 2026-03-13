@@ -1,9 +1,6 @@
 import { trpc } from "@web/lib/trpc";
 
-import { useSessionId } from "./useSessionId";
-
-export function useCancelDraft() {
-  const sessionId = useSessionId();
+export function useCancelDraft({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
 
   return trpc.message.cancelDraft.useMutation({

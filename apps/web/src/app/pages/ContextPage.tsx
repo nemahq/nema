@@ -8,6 +8,7 @@ import { ChatInput } from "@web/features/session/components/ChatInput";
 import { ContextSidePanel } from "@web/features/session/components/ContextSidePanel";
 import { MessageList } from "@web/features/session/components/MessageList";
 import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
 
@@ -15,9 +16,11 @@ const STREAMING_MESSAGE_ID = "streaming";
 
 export function ContextPage() {
   const { t } = useTranslation();
+  const sessionId = useSessionId();
 
-  const { send, isStreaming, streamingText, streamStartedAt } =
-    useSendMessage();
+  const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
+    sessionId,
+  });
 
   const saveDraftMutating = useIsMutating({
     mutationKey: getQueryKey(trpc.message.saveDraft),

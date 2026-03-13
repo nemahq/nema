@@ -6,6 +6,7 @@ import { ChevronDown } from "@nema-io/weave/icons";
 
 import { useAutoScroll } from "@web/features/session/hooks/useAutoScroll";
 import { useMessageList } from "@web/features/session/hooks/useMessageList";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { AssistantMessage } from "./AssistantMessage";
@@ -19,7 +20,8 @@ interface MessageListProps {
 
 function MessageListContent({ streamingMessage }: MessageListProps) {
   const { t } = useTranslation();
-  const serverMessages = useMessageList();
+  const sessionId = useSessionId();
+  const serverMessages = useMessageList({ sessionId });
   const messages = useMemo(
     () =>
       streamingMessage ? [...serverMessages, streamingMessage] : serverMessages,

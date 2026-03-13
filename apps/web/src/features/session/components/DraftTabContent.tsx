@@ -13,8 +13,8 @@ import { MarkdownRenderer } from "./MarkdownRenderer";
 function DraftTabContentInner() {
   const { t } = useTranslation();
   const sessionId = useSessionId();
-  const draft = useSessionDraft();
-  const saveDraft = useSaveDraft();
+  const draft = useSessionDraft({ sessionId });
+  const saveDraft = useSaveDraft({ sessionId });
 
   if (!draft) {
     return null;
