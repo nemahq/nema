@@ -31,6 +31,7 @@ export const messageRouter = router({
         getProviders(),
         ctx.user.id,
         input,
+        ctx.lng,
         signal,
       );
     }),
@@ -43,12 +44,13 @@ export const messageRouter = router({
         getProviders(),
         ctx.user.id,
         input.sessionId,
+        ctx.lng,
       ),
     ),
 
   cancelDraft: protectedProcedure
     .input(DraftActionInputSchema)
     .mutation(({ ctx, input }) =>
-      cancelDraftAction(ctx.supabase, input.sessionId),
+      cancelDraftAction(ctx.supabase, input.sessionId, ctx.lng),
     ),
 });

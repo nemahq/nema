@@ -1,4 +1,9 @@
 {
+  "chat": {
+    "draft_cancelled": "The draft has been cancelled.",
+    "retrieval_empty": "No relevant information found.",
+    "save_complete": "Saved successfully."
+  },
   "error": {
     "llm_rate_limit": "Too many requests. Please try again later.",
     "llm_timeout": "AI response timed out. Please try again.",

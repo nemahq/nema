@@ -6,12 +6,14 @@ import { TRPCError } from "@trpc/server";
 import type {
   ChatInput,
   ChatStreamEvent,
+  Locale,
   Message,
   MessageType,
   SessionDraft,
 } from "@nema-io/shared";
 import { SessionDraftSchema } from "@nema-io/shared";
 
+import { t } from "@server/infra/i18n";
 import type { Providers } from "@server/infra/providers";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import {
@@ -253,6 +255,7 @@ export async function* processChatStream(
   providers: Providers,
   userId: string,
   input: ChatInput,
+  lng: Locale,
   signal?: AbortSignal,
 ): AsyncGenerator<ChatStreamEvent> {
   const userMessage: Message = {
@@ -299,6 +302,7 @@ export async function* processChatStream(
         input.sessionId,
         input.content,
         intentResult,
+        lng,
         signal,
       );
     } else {
@@ -334,6 +338,7 @@ export async function* processChatStream(
           input.sessionId,
           input.content,
           intentResult,
+          lng,
           signal,
         );
         break;
@@ -354,12 +359,13 @@ export async function* processChatStream(
           userId,
           input.sessionId,
           draft.body,
+          lng,
         );
         yield { type: "token", text: responseContent };
         break;
       case "cancel":
         await clearDraft(supabase, input.sessionId);
-        responseContent = "작성 중인 내용이 취소되었습니다.";
+        responseContent = t("chat.draft_cancelled", lng);
         yield { type: "token", text: responseContent };
         break;
       default: {
@@ -394,6 +400,7 @@ export async function saveDraftAction(
   providers: Providers,
   userId: string,
   sessionId: string,
+  lng: Locale,
 ): Promise<ChatResponse> {
   const draft = await getDraft(supabase, sessionId);
   if (!draft) {
@@ -409,6 +416,7 @@ export async function saveDraftAction(
     userId,
     sessionId,
     draft.body,
+    lng,
   );
 
   return createAssistantResponse(
@@ -423,6 +431,7 @@ export async function saveDraftAction(
 export async function cancelDraftAction(
   supabase: SupabaseClient,
   sessionId: string,
+  lng: Locale,
 ): Promise<ChatResponse> {
   await clearDraft(supabase, sessionId);
 
@@ -430,7 +439,7 @@ export async function cancelDraftAction(
     supabase,
     sessionId,
     "text",
-    "작성 중인 내용이 취소되었습니다.",
+    t("chat.draft_cancelled", lng),
     null,
   );
 }
@@ -467,6 +476,7 @@ async function* handleRetrievalStream(
   sessionId: string,
   question: string,
   intent: SearchIntent,
+  lng: Locale,
   signal?: AbortSignal,
 ): AsyncGenerator<ChatStreamEvent, string> {
   const { llm, embedding, vectorStore, graphStore } = providers;
@@ -518,7 +528,7 @@ async function* handleRetrievalStream(
   });
 
   if (searchResults.length === 0) {
-    const noResult = "관련된 정보를 찾지 못했습니다.";
+    const noResult = t("chat.retrieval_empty", lng);
     yield { type: "token", text: noResult };
     return noResult;
   }
@@ -550,6 +560,7 @@ async function handleSave(
   userId: string,
   sessionId: string,
   draftBody: string,
+  lng: Locale,
 ): Promise<string> {
   const { llm } = providers;
 
@@ -582,7 +593,7 @@ async function handleSave(
   });
 
   const docList = savedDocs.map((d) => `- ${d.title}`).join("\n");
-  return `저장이 완료되었습니다.\n\n${docList}`;
+  return `${t("chat.save_complete", lng)}\n\n${docList}`;
 }
 
 async function saveDocument(
