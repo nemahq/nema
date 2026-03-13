@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 
 import type { SessionDraft } from "@nema-io/shared";
-import { Button, Card, CardContent, cn, Kbd, Text } from "@nema-io/weave";
-import { FileText, Network, X } from "@nema-io/weave/icons";
+import { Button, Card, CardContent, cn, Kbd } from "@nema-io/weave";
+import { FileText, X } from "@nema-io/weave/icons";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
@@ -10,10 +10,7 @@ const DEFAULT_WIDTH = 480;
 const MIN_WIDTH = 280;
 const MAX_WIDTH_VW = 50;
 
-const TABS = [
-  { id: "draft", label: "드래프트", icon: FileText },
-  { id: "entities", label: "엔티티", icon: Network },
-] as const;
+const TABS = [{ id: "draft", label: "드래프트", icon: FileText }] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
@@ -30,7 +27,7 @@ export function DraftPanel({
 }) {
   const [activeTab, setActiveTab] = useState<TabId>("draft");
   const [openTabs, setOpenTabs] = useState<Set<TabId>>(
-    () => new Set<TabId>(["draft", "entities"]),
+    () => new Set<TabId>(["draft"]),
   );
   const [collapsed, setCollapsed] = useState(false);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
@@ -202,15 +199,6 @@ export function DraftPanel({
               <MarkdownRenderer content={draft.body} />
             </CardContent>
           </Card>
-        </div>
-      )}
-
-      {activeTab === "entities" && openTabs.has("entities") && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-5 text-center">
-          <Network className="size-10 text-fg-tertiary" />
-          <Text size="sm" color="secondary">
-            이 드래프트에서 추출된 엔티티가 여기에 표시됩니다.
-          </Text>
         </div>
       )}
     </aside>
