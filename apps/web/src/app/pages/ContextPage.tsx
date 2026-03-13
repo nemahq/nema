@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useIsMutating } from "@tanstack/react-query";
-import { useParams } from "@tanstack/react-router";
 import { getQueryKey } from "@trpc/react-query";
 
 import type { Message } from "@nema-io/shared";
@@ -16,13 +15,9 @@ const STREAMING_MESSAGE_ID = "streaming";
 
 export function ContextPage() {
   const { t } = useTranslation();
-  const { sessionId } = useParams({
-    from: "/_authenticated/_sidebar/context/$sessionId",
-  });
 
-  const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
-    sessionId,
-  });
+  const { send, isStreaming, streamingText, streamStartedAt } =
+    useSendMessage();
 
   const saveDraftMutating = useIsMutating({
     mutationKey: getQueryKey(trpc.message.saveDraft),
@@ -57,10 +52,7 @@ export function ContextPage() {
   return (
     <div className="flex flex-1 min-w-0">
       <main className="flex flex-1 flex-col bg-surface-card min-w-0">
-        <MessageList
-          sessionId={sessionId}
-          streamingMessage={streamingMessage}
-        />
+        <MessageList streamingMessage={streamingMessage} />
         <div className="mx-auto w-full max-w-2xl px-6 pb-6 pt-2">
           <ChatInput
             placeholder={t("session.input_placeholder")}
@@ -70,7 +62,7 @@ export function ContextPage() {
         </div>
       </main>
 
-      <ContextSidePanel sessionId={sessionId} />
+      <ContextSidePanel />
     </div>
   );
 }

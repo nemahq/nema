@@ -14,13 +14,12 @@ import { MessageListSkeleton } from "./MessageListSkeleton";
 import { UserMessage } from "./UserMessage";
 
 interface MessageListProps {
-  sessionId: string;
   streamingMessage?: Message;
 }
 
-function MessageListContent({ sessionId, streamingMessage }: MessageListProps) {
+function MessageListContent({ streamingMessage }: MessageListProps) {
   const { t } = useTranslation();
-  const serverMessages = useMessageList({ sessionId });
+  const serverMessages = useMessageList();
   const messages = useMemo(
     () =>
       streamingMessage ? [...serverMessages, streamingMessage] : serverMessages,
@@ -77,13 +76,10 @@ function MessageListContent({ sessionId, streamingMessage }: MessageListProps) {
   );
 }
 
-export function MessageList({ sessionId, streamingMessage }: MessageListProps) {
+export function MessageList({ streamingMessage }: MessageListProps) {
   return (
     <Suspense fallback={<MessageListSkeleton />}>
-      <MessageListContent
-        sessionId={sessionId}
-        streamingMessage={streamingMessage}
-      />
+      <MessageListContent streamingMessage={streamingMessage} />
     </Suspense>
   );
 }

@@ -1,6 +1,9 @@
 import { trpc } from "@web/lib/trpc";
 
-export function useSaveDraft({ sessionId }: { sessionId: string }) {
+import { useSessionId } from "./useSessionId";
+
+export function useSaveDraft() {
+  const sessionId = useSessionId();
   const utils = trpc.useUtils();
 
   return trpc.message.saveDraft.useMutation({

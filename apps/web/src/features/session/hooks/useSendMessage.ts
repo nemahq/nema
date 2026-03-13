@@ -6,7 +6,10 @@ import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { trpc } from "@web/lib/trpc";
 
-export function useSendMessage({ sessionId }: { sessionId: string }) {
+import { useSessionId } from "./useSessionId";
+
+export function useSendMessage() {
+  const sessionId = useSessionId();
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
 

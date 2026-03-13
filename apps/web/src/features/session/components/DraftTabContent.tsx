@@ -5,14 +5,16 @@ import { Button, Card, CardContent, Kbd } from "@nema-io/weave";
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
 import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
-function DraftTabContentInner({ sessionId }: { sessionId: string }) {
+function DraftTabContentInner() {
   const { t } = useTranslation();
-  const draft = useSessionDraft({ sessionId });
-  const saveDraft = useSaveDraft({ sessionId });
+  const sessionId = useSessionId();
+  const draft = useSessionDraft();
+  const saveDraft = useSaveDraft();
 
   if (!draft) {
     return null;
@@ -42,11 +44,11 @@ function DraftTabContentInner({ sessionId }: { sessionId: string }) {
   );
 }
 
-export function DraftTabContent({ sessionId }: { sessionId: string }) {
+export function DraftTabContent() {
   return (
     <ErrorBoundary fallback={null}>
       <Suspense>
-        <DraftTabContentInner sessionId={sessionId} />
+        <DraftTabContentInner />
       </Suspense>
     </ErrorBoundary>
   );

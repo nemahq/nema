@@ -1,6 +1,9 @@
 import { trpc } from "@web/lib/trpc";
 
-export function useSessionDraft({ sessionId }: { sessionId: string }) {
+import { useSessionId } from "./useSessionId";
+
+export function useSessionDraft() {
+  const sessionId = useSessionId();
   const [session] = trpc.session.get.useSuspenseQuery({ sessionId });
   return session.draft;
 }

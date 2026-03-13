@@ -5,14 +5,16 @@ import { FileText } from "@nema-io/weave/icons";
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
 
 import { DraftTabContent } from "./DraftTabContent";
 import type { SidePanelTab } from "./SidePanel";
 import { SidePanel } from "./SidePanel";
 
-function ContextSidePanelInner({ sessionId }: { sessionId: string }) {
-  const draft = useSessionDraft({ sessionId });
-  const cancelDraft = useCancelDraft({ sessionId });
+function ContextSidePanelInner() {
+  const sessionId = useSessionId();
+  const draft = useSessionDraft();
+  const cancelDraft = useCancelDraft();
 
   const tabs: SidePanelTab[] = [];
   if (draft) {
@@ -20,7 +22,7 @@ function ContextSidePanelInner({ sessionId }: { sessionId: string }) {
       id: "draft",
       labelKey: "session.draft",
       icon: FileText,
-      content: <DraftTabContent sessionId={sessionId} />,
+      content: <DraftTabContent />,
       onClose: () => cancelDraft.mutate({ sessionId }),
     });
   }
@@ -28,11 +30,11 @@ function ContextSidePanelInner({ sessionId }: { sessionId: string }) {
   return <SidePanel tabs={tabs} />;
 }
 
-export function ContextSidePanel({ sessionId }: { sessionId: string }) {
+export function ContextSidePanel() {
   return (
     <ErrorBoundary fallback={null}>
       <Suspense>
-        <ContextSidePanelInner sessionId={sessionId} />
+        <ContextSidePanelInner />
       </Suspense>
     </ErrorBoundary>
   );
