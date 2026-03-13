@@ -4,6 +4,7 @@ import {
   createRouter,
   redirect,
 } from "@tanstack/react-router";
+import { getQueryKey } from "@trpc/react-query";
 
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
@@ -13,7 +14,10 @@ import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { SessionPage } from "@web/app/pages/SessionPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
-import { supabase } from "@web/lib/supabase";
+import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
+import { queryClient } from "@web/lib/queryClient";
+import { getAccessToken, supabase } from "@web/lib/supabase";
+import { trpc, trpcClient } from "@web/lib/trpc";
 
 import { App } from "./App";
 
@@ -74,6 +78,31 @@ const sidebarRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   id: "_sidebar",
   component: SidebarLayout,
+  beforeLoad() {
+    if (!getAccessToken()) {
+      return;
+    }
+
+    const prefetchPromise = queryClient.prefetchInfiniteQuery({
+      queryKey: getQueryKey(
+        trpc.session.list,
+        { limit: SESSION_LIST_LIMIT },
+        "infinite",
+      ),
+      queryFn: () =>
+        trpcClient.session.list.query({ limit: SESSION_LIST_LIMIT }),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (
+        lastPage: Awaited<ReturnType<typeof trpcClient.session.list.query>>,
+      ) => lastPage.nextCursor ?? undefined,
+    });
+
+    if (import.meta.env.DEV) {
+      prefetchPromise.catch((error: unknown) => {
+        console.warn("[prefetch] Session list prefetch failed:", error);
+      });
+    }
+  },
 });
 
 const indexRoute = createRoute({

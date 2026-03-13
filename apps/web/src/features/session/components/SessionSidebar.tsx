@@ -8,6 +8,7 @@ import { SidebarActionButton } from "@web/components/layout/SidebarActionButton"
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SessionList } from "./SessionList";
+import { SessionListSkeleton } from "./SessionListSkeleton";
 import { UserMenu } from "./UserMenu";
 
 function NewContextIcon() {
@@ -36,7 +37,7 @@ export function SessionSidebar() {
     >
       {(collapsed) =>
         !collapsed && (
-          <Suspense>
+          <Suspense fallback={<SessionListSkeleton />}>
             <SessionList />
           </Suspense>
         )
