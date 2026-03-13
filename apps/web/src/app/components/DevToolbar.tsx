@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTheme } from "@web/app/providers/ThemeProvider";
 import { useAuth } from "@web/hooks/useAuth";
 import { supabase } from "@web/lib/supabase";
@@ -125,9 +126,11 @@ export function DevToolbar() {
       </div>
 
       {queryDevtools && (
-        <Suspense>
-          <ReactQueryDevtools initialIsOpen />
-        </Suspense>
+        <ErrorBoundary fallback={null}>
+          <Suspense>
+            <ReactQueryDevtools initialIsOpen />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </>
   );
