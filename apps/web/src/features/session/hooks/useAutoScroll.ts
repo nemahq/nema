@@ -37,10 +37,8 @@ export function useAutoScroll({
       const el = scrollRef.current;
       if (!el) return;
 
-      const target = el;
-      function onScroll() {
-        const distance =
-          target.scrollHeight - target.scrollTop - target.clientHeight;
+      function onScroll(this: HTMLDivElement) {
+        const distance = this.scrollHeight - this.scrollTop - this.clientHeight;
         isNearBottomRef.current = distance < threshold;
         if (isNearBottomRef.current) {
           setShowNewMessageButton(false);

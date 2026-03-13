@@ -5,37 +5,8 @@ import { ChevronDown } from "@nema-io/weave/icons";
 import { useAutoScroll } from "@web/features/session/hooks/useAutoScroll";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { MarkdownRenderer } from "./MarkdownRenderer";
-import { MessageBubble } from "./MessageBubble";
-import { RelativeTime } from "./RelativeTime";
-
-function UserMessage({ message }: { message: Message }) {
-  return (
-    <div className="flex justify-end">
-      <div className="max-w-[85%] md:max-w-[70%]">
-        <MessageBubble className="rounded-br-sm">
-          <p className="text-[15px] leading-[1.7] text-fg-primary whitespace-pre-wrap">
-            {message.content}
-          </p>
-        </MessageBubble>
-        <div className="mt-1 pr-1 text-right">
-          <RelativeTime dateTime={message.createdAt} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AssistantMessage({ message }: { message: Message }) {
-  return (
-    <div>
-      <MarkdownRenderer content={message.content} />
-      <div className="mt-1">
-        <RelativeTime dateTime={message.createdAt} />
-      </div>
-    </div>
-  );
-}
+import { AssistantMessage } from "./AssistantMessage";
+import { UserMessage } from "./UserMessage";
 
 export function MessageList({ messages }: { messages: Message[] }) {
   const { t } = useTranslation();

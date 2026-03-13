@@ -26,7 +26,6 @@ export function SessionPage() {
   const [messages] = useState<Message[]>(MOCK_MESSAGES);
 
   const hasMessages = messages.length > 0;
-
   const createSession = useCreateSession();
 
   function handleSubmit() {
@@ -39,27 +38,31 @@ export function SessionPage() {
     });
   }
 
-  return hasMessages ? (
-    <main className="flex flex-1 flex-col bg-surface-card">
-      <MessageList messages={messages} />
-      <div className="mx-auto w-full max-w-2xl px-6 pb-4 pt-2">
-        <ChatInput
-          placeholder={t("session.input_placeholder")}
-          disabled={createSession.isPending}
-          onSubmit={handleSubmit}
-        />
-      </div>
-    </main>
-  ) : (
-    <main className="flex flex-1 flex-col items-center justify-center bg-surface-card">
-      <div className="flex w-full max-w-2xl flex-col items-center gap-8 px-6">
-        <Greeting variant={variant} />
-        <ChatInput
-          placeholder={t("session.input_placeholder")}
-          disabled={createSession.isPending}
-          onSubmit={handleSubmit}
-        />
-      </div>
+  return (
+    <main
+      className={`flex flex-1 flex-col bg-surface-card ${hasMessages ? "" : "items-center justify-center"}`}
+    >
+      {hasMessages ? (
+        <>
+          <MessageList messages={messages} />
+          <div className="mx-auto w-full max-w-2xl px-6 pb-4 pt-2">
+            <ChatInput
+              placeholder={t("session.input_placeholder")}
+              disabled={createSession.isPending}
+              onSubmit={handleSubmit}
+            />
+          </div>
+        </>
+      ) : (
+        <div className="flex w-full max-w-2xl flex-col items-center gap-8 px-6">
+          <Greeting variant={variant} />
+          <ChatInput
+            placeholder={t("session.input_placeholder")}
+            disabled={createSession.isPending}
+            onSubmit={handleSubmit}
+          />
+        </div>
+      )}
     </main>
   );
 }
