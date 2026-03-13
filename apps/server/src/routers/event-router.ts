@@ -12,7 +12,7 @@ export const eventRouter = router({
         ctx.user.id,
         input.type,
         input.sessionId,
-        input.payload as Record<string, unknown>,
+        input.payload,
       );
     }),
 });

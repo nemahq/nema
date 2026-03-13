@@ -1,5 +1,26 @@
+import * as Sentry from "@sentry/node";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+type ServerEventMap = {
+  "intent.classified": { intent: string };
+  "document.saved": { doc_count: number };
+  "retrieval.completed": { result_count: number };
+};
+
+export function trackEvent<T extends keyof ServerEventMap>(
+  supabase: SupabaseClient,
+  userId: string,
+  type: T,
+  sessionId: string | null,
+  payload: ServerEventMap[T],
+): void;
+export function trackEvent(
+  supabase: SupabaseClient,
+  userId: string,
+  type: string,
+  sessionId: string | null,
+  payload: Record<string, unknown>,
+): void;
 export function trackEvent(
   supabase: SupabaseClient,
   userId: string,
@@ -7,12 +28,19 @@ export function trackEvent(
   sessionId: string | null,
   payload: Record<string, unknown> = {},
 ): void {
-  supabase
-    .from("events")
-    .insert({ user_id: userId, session_id: sessionId, type, payload })
-    .then(({ error }) => {
+  void (async () => {
+    try {
+      const { error } = await supabase
+        .from("events")
+        .insert({ user_id: userId, session_id: sessionId, type, payload });
       if (error) {
-        console.warn("[event-tracking] insert failed:", error.message);
+        Sentry.captureMessage(
+          `[event-tracking] insert failed: ${error.message}`,
+          { level: "warning", extra: { type, sessionId } },
+        );
       }
-    });
+    } catch (err) {
+      Sentry.captureException(err);
+    }
+  })();
 }
