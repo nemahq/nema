@@ -29,7 +29,6 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 - `@nema-io/shared` exports raw TypeScript source. Import from `src/`, not compiled output.
 - `AppRouter` type lives in `apps/server/src/router.ts`. Frontend imports for end-to-end type safety.
 - Supabase (PostgreSQL + Auth). Schema migrations: `supabase/migrations/`, managed via Supabase CLI.
-- UI work MUST follow the design system guidelines in `docs/design/design-system.html`.
 
 ## Tests
 
