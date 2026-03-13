@@ -6,6 +6,7 @@ import { ChevronDown } from "@nema-io/weave/icons";
 
 import { useAutoScroll } from "@web/features/session/hooks/useAutoScroll";
 import { useMessageList } from "@web/features/session/hooks/useMessageList";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { AssistantMessage } from "./AssistantMessage";
@@ -14,12 +15,12 @@ import { MessageListSkeleton } from "./MessageListSkeleton";
 import { UserMessage } from "./UserMessage";
 
 interface MessageListProps {
-  sessionId: string;
   streamingMessage?: Message;
 }
 
-function MessageListContent({ sessionId, streamingMessage }: MessageListProps) {
+function MessageListContent({ streamingMessage }: MessageListProps) {
   const { t } = useTranslation();
+  const sessionId = useSessionId();
   const serverMessages = useMessageList({ sessionId });
   const messages = useMemo(
     () =>
@@ -77,13 +78,10 @@ function MessageListContent({ sessionId, streamingMessage }: MessageListProps) {
   );
 }
 
-export function MessageList({ sessionId, streamingMessage }: MessageListProps) {
+export function MessageList({ streamingMessage }: MessageListProps) {
   return (
     <Suspense fallback={<MessageListSkeleton />}>
-      <MessageListContent
-        sessionId={sessionId}
-        streamingMessage={streamingMessage}
-      />
+      <MessageListContent streamingMessage={streamingMessage} />
     </Suspense>
   );
 }
