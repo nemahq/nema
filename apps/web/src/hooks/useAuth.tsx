@@ -7,6 +7,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 
+import { posthog } from "@web/lib/posthog";
 import { supabase } from "@web/lib/supabase";
 
 interface AuthContext {
@@ -27,6 +28,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setLoading(false);
+
+      if (newSession?.user) {
+        posthog.identify(newSession.user.id, {
+          email: newSession.user.email,
+        });
+      } else {
+        posthog.reset();
+      }
 
       if (event === "SIGNED_IN" && window.location.href.includes("#")) {
         window.history.replaceState(null, "", window.location.pathname);

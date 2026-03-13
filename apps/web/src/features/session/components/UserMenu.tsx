@@ -9,6 +9,7 @@ import {
 import { LogOut } from "@nema-io/weave/icons";
 
 import { useAuth } from "@web/hooks/useAuth";
+import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -37,6 +38,7 @@ export function UserMenu({ collapsed }: { collapsed: boolean }) {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const trackEvent = useTrackEvent();
 
   if (!user) {
     return null;
@@ -52,6 +54,7 @@ export function UserMenu({ collapsed }: { collapsed: boolean }) {
   const initial = (givenName ?? name).charAt(0).toUpperCase();
 
   async function handleSignOut() {
+    trackEvent("auth.signout");
     await supabase.auth.signOut();
     await navigate({ to: "/signin", search: { redirect: undefined } });
   }

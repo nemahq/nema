@@ -77,6 +77,8 @@ async function bootstrap() {
         server.log.error(`Worker stop failed: ${err}`);
       }
       await server.close();
+      const { getPostHog } = await import("./infra/posthog");
+      await getPostHog()?.shutdown();
       await Sentry.flush(2000);
       process.exit(0);
     });
