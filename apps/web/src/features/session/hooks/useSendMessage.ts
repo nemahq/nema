@@ -2,7 +2,7 @@ import type { Message } from "@nema-io/shared";
 
 import { trpc } from "@web/lib/trpc";
 
-export function useSendChat({ sessionId }: { sessionId: string }) {
+export function useSendMessage({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
 
   return trpc.message.chat.useMutation({

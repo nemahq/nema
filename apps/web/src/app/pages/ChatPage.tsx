@@ -3,7 +3,7 @@ import { useParams } from "@tanstack/react-router";
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { MessageList } from "@web/features/session/components/MessageList";
 import { useMessageList } from "@web/features/session/hooks/useMessageList";
-import { useSendChat } from "@web/features/session/hooks/useSendChat";
+import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 export function ChatPage() {
@@ -13,10 +13,10 @@ export function ChatPage() {
   });
 
   const messages = useMessageList({ sessionId });
-  const sendChat = useSendChat({ sessionId });
+  const sendMessage = useSendMessage({ sessionId });
 
   function handleSubmit(content: string) {
-    sendChat.mutate({ sessionId, content });
+    sendMessage.mutate({ sessionId, content });
   }
 
   return (
@@ -25,7 +25,7 @@ export function ChatPage() {
       <div className="mx-auto w-full max-w-2xl px-6 pb-6 pt-2">
         <ChatInput
           placeholder={t("session.input_placeholder")}
-          disabled={sendChat.isPending}
+          disabled={sendMessage.isPending}
           onSubmit={handleSubmit}
         />
       </div>
