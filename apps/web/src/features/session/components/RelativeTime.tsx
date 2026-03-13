@@ -8,6 +8,7 @@ import { useTranslation } from "@web/lib/tolgee";
 import { tolgee } from "@web/lib/tolgee/client";
 
 const LOCALE_MAP = { ko, en: enUS } as const;
+const TICK_INTERVAL_MS = 60_000;
 
 export function RelativeTime({
   dateTime,
@@ -21,7 +22,7 @@ export function RelativeTime({
   const [, tick] = useReducer((c: number) => c + 1, 0);
 
   useEffect(function startMinuteTimer() {
-    const id = setInterval(tick, 60_000);
+    const id = setInterval(tick, TICK_INTERVAL_MS);
     return function cleanup() {
       clearInterval(id);
     };

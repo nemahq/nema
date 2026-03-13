@@ -30,6 +30,8 @@ SyntaxHighlighter.registerLanguage("sql", sql);
 SyntaxHighlighter.registerLanguage("tsx", tsx);
 SyntaxHighlighter.registerLanguage("jsx", jsx);
 
+const COPIED_RESET_MS = 2000;
+
 const CODE_BLOCK_STYLE: React.CSSProperties = {
   margin: 0,
   padding: "1rem",
@@ -60,7 +62,7 @@ export function CodeBlock({
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), COPIED_RESET_MS);
     } catch {
       // clipboard 사용 불가 환경에서는 무시
     }
