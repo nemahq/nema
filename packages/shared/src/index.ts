@@ -1,5 +1,9 @@
 export { isLocale, type Locale, LOCALES } from "./i18n";
 export { type ChatInput, ChatInputSchema } from "./schemas/chat";
+export {
+  type ChatStreamEvent,
+  ChatStreamEventSchema,
+} from "./schemas/chat-stream";
 export { type TrackEventInput, TrackEventInputSchema } from "./schemas/event";
 export {
   type GetMessagesInput,

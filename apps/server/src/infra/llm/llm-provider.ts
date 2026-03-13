@@ -15,6 +15,15 @@ export interface GenerateStructuredParams<T> {
   temperature?: number;
 }
 
+export interface GenerateStreamParams {
+  systemPrompt: string;
+  messages: [LlmMessage, ...LlmMessage[]];
+  model?: string;
+  temperature?: number;
+  signal?: AbortSignal;
+}
+
 export interface LlmProvider {
   generateStructured<T>(params: GenerateStructuredParams<T>): Promise<T>;
+  generateStream(params: GenerateStreamParams): AsyncIterable<string>;
 }

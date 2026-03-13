@@ -5,7 +5,7 @@ import {
 } from "@nema-io/shared";
 
 import { getProviders } from "@server/infra/providers";
-import { processChat } from "@server/services/chat-service";
+import { processChatStream } from "@server/services/chat-service";
 import { getMessages, sendMessage } from "@server/services/message-service";
 import { protectedProcedure, router } from "@server/trpc";
 
@@ -20,7 +20,13 @@ export const messageRouter = router({
 
   chat: protectedProcedure
     .input(ChatInputSchema)
-    .mutation(({ ctx, input }) =>
-      processChat(ctx.supabase, getProviders(), ctx.user.id, input),
-    ),
+    .subscription(async function* ({ ctx, input, signal }) {
+      yield* processChatStream(
+        ctx.supabase,
+        getProviders(),
+        ctx.user.id,
+        input,
+        signal,
+      );
+    }),
 });
