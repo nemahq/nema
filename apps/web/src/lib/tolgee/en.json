@@ -33,7 +33,12 @@
     "untitled": "Untitled",
     "new_messages": "New messages",
     "copy_code": "Copy code",
-    "copied": "Copied"
+    "copied": "Copied",
+    "draft": "Draft",
+    "draft_previous": "Previous draft",
+    "draft_save": "Save",
+    "draft_panel_open": "Open {label} panel",
+    "draft_tab_close": "Close {label} tab"
   },
   "settings": {
     "theme_light": "Light",

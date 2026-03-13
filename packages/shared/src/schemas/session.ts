@@ -21,3 +21,13 @@ export const SessionDeleteInputSchema = z.object({
 });
 
 export type SessionDeleteInput = z.infer<typeof SessionDeleteInputSchema>;
+
+export const SessionDraftSchema = z.object({
+  body: z.string().min(1),
+});
+export type SessionDraft = z.infer<typeof SessionDraftSchema>;
+
+export const SessionGetInputSchema = z.object({
+  sessionId: z.string().uuid(),
+});
+export type SessionGetInput = z.infer<typeof SessionGetInputSchema>;

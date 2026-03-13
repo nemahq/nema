@@ -1,7 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TRPCError } from "@trpc/server";
 
-import type { SessionListInput, SessionSummary } from "@nema-io/shared";
+import type {
+  SessionDraft,
+  SessionListInput,
+  SessionSummary,
+} from "@nema-io/shared";
+import { SessionDraftSchema } from "@nema-io/shared";
 
 import { SupabaseError } from "@server/infra/supabase-error";
 
@@ -69,6 +74,26 @@ export async function listSessions(
     hasMore && lastItem ? encodeCursor(lastItem.updatedAt, lastItem.id) : null;
 
   return { items, nextCursor };
+}
+
+export async function getSession(
+  supabase: SupabaseClient,
+  sessionId: string,
+): Promise<SessionSummary & { draft: SessionDraft | null }> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("id, title, draft, created_at, updated_at")
+    .eq("id", sessionId)
+    .single();
+
+  if (error) {
+    throw new SupabaseError("query_failed", error.message, error);
+  }
+
+  return {
+    ...toSummary(data),
+    draft: data.draft ? SessionDraftSchema.parse(data.draft) : null,
+  };
 }
 
 export async function createSession(

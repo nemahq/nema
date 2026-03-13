@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 
 import type { Message } from "@nema-io/shared";
 import { Button } from "@nema-io/weave";
@@ -9,6 +9,7 @@ import { useMessageList } from "@web/features/session/hooks/useMessageList";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { AssistantMessage } from "./AssistantMessage";
+import { DraftCard } from "./DraftCard";
 import { MessageListSkeleton } from "./MessageListSkeleton";
 import { UserMessage } from "./UserMessage";
 
@@ -20,12 +21,19 @@ interface MessageListProps {
 function MessageListContent({ sessionId, streamingMessage }: MessageListProps) {
   const { t } = useTranslation();
   const serverMessages = useMessageList({ sessionId });
-  const messages = streamingMessage
-    ? [...serverMessages, streamingMessage]
-    : serverMessages;
+  const messages = useMemo(
+    () =>
+      streamingMessage ? [...serverMessages, streamingMessage] : serverMessages,
+    [serverMessages, streamingMessage],
+  );
   const { scrollRef, showNewMessageButton, scrollToBottom } = useAutoScroll({
     messages,
   });
+
+  const lastDraftIndex = useMemo(
+    () => messages.findLastIndex((msg) => msg.type === "draft"),
+    [messages],
+  );
 
   return (
     <div className="relative flex-1">
@@ -34,13 +42,21 @@ function MessageListContent({ sessionId, streamingMessage }: MessageListProps) {
         className="absolute inset-0 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
       >
         <div className="mx-auto max-w-2xl space-y-6 px-6 py-6">
-          {messages.map((msg) =>
-            msg.role === "user" ? (
-              <UserMessage key={msg.id} message={msg} />
-            ) : (
-              <AssistantMessage key={msg.id} message={msg} />
-            ),
-          )}
+          {messages.map((msg, i) => {
+            if (msg.role === "user") {
+              return <UserMessage key={msg.id} message={msg} />;
+            }
+            if (msg.type === "draft") {
+              return (
+                <DraftCard
+                  key={msg.id}
+                  message={msg}
+                  isLatest={i === lastDraftIndex}
+                />
+              );
+            }
+            return <AssistantMessage key={msg.id} message={msg} />;
+          })}
         </div>
       </div>
 

@@ -1,12 +1,14 @@
-import { useRef } from "react";
+import { Suspense, useRef } from "react";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useSessionList } from "@web/features/session/hooks/useSessionList";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SessionItem } from "./SessionItem";
+import { SessionListSkeleton } from "./SessionListSkeleton";
 
-export function SessionList() {
+function SessionListContent() {
   const { t } = useTranslation();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -33,5 +35,15 @@ export function SessionList() {
 
       {hasNextPage && <div ref={sentinelRef} className="h-4" />}
     </div>
+  );
+}
+
+export function SessionList() {
+  return (
+    <ErrorBoundary fallback={null}>
+      <Suspense fallback={<SessionListSkeleton />}>
+        <SessionListContent />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

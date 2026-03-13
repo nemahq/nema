@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Plus } from "@nema-io/weave/icons";
@@ -8,7 +7,6 @@ import { SidebarActionButton } from "@web/components/layout/SidebarActionButton"
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SessionList } from "./SessionList";
-import { SessionListSkeleton } from "./SessionListSkeleton";
 import { UserMenu } from "./UserMenu";
 
 function NewContextIcon() {
@@ -35,13 +33,7 @@ export function SessionSidebar() {
       )}
       footer={(collapsed) => <UserMenu collapsed={collapsed} />}
     >
-      {(collapsed) =>
-        !collapsed && (
-          <Suspense fallback={<SessionListSkeleton />}>
-            <SessionList />
-          </Suspense>
-        )
-      }
+      {(collapsed) => !collapsed && <SessionList />}
     </Sidebar>
   );
 }
