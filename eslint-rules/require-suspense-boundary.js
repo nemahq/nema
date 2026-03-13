@@ -4,11 +4,11 @@ export default {
     type: "problem",
     docs: {
       description:
-        "useSuspenseQuery / useSuspenseInfiniteQuery를 호출하는 파일은 반드시 Suspense를 import해야 합니다.",
+        "Files calling useSuspenseQuery / useSuspenseInfiniteQuery must import Suspense from React.",
     },
     messages: {
       missing:
-        "이 파일에서 {{ name }}을 사용하지만 Suspense를 import하지 않았습니다. Suspense 경계를 co-locate하세요.",
+        "This file uses {{ name }} but does not import Suspense. Co-locate a Suspense boundary in the same file.",
     },
     schema: [],
   },
