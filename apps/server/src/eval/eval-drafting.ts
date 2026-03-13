@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadEnv } from "@server/env";
+import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
   buildEditCycleMessage,
@@ -29,7 +30,7 @@ interface EvalResult {
 }
 
 async function collectStream(
-  provider: OpenAiProvider,
+  provider: LlmProvider,
   message: string,
 ): Promise<string> {
   let text = "";
