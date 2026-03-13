@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         posthog.identify(newSession.user.id, {
           email: newSession.user.email,
         });
-      } else {
+      } else if (event === "SIGNED_OUT") {
         posthog.reset();
       }
 

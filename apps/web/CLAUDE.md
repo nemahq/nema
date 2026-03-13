@@ -4,7 +4,7 @@ React 19 + Vite 6 frontend. TanStack Router + TanStack Query.
 
 ## Do NOT
 
-- Call external APIs directly. All API calls go through tRPC client. Exception: Supabase Auth client SDK (sign-in, sign-up, session management).
+- Call external APIs directly. All API calls go through tRPC client. Exception: Supabase Auth client SDK (sign-in, sign-up, session management), Tolgee CDN (translation fetch), PostHog JS SDK (analytics capture).
 - Cross-feature imports. Enforced by `eslint-plugin-boundaries`.
 
 ## Directory Structure

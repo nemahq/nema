@@ -9,6 +9,7 @@ import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { getEnv, loadEnv } from "./env";
 import { createSyncWorker } from "./infra/document-sync";
 import { initI18n } from "./infra/i18n";
+import { shutdown as shutdownPostHog } from "./infra/posthog";
 import { getSupabaseAdmin } from "./infra/supabase";
 import { createQdrantStore } from "./infra/vector";
 import { appRouter } from "./router";
@@ -77,8 +78,7 @@ async function bootstrap() {
         server.log.error(`Worker stop failed: ${err}`);
       }
       await server.close();
-      const { getPostHog } = await import("./infra/posthog");
-      await getPostHog()?.shutdown();
+      await shutdownPostHog();
       await Sentry.flush(2000);
       process.exit(0);
     });

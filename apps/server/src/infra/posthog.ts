@@ -5,11 +5,13 @@ import { getEnv } from "@server/env";
 const DEFAULT_HOST = "https://us.i.posthog.com";
 
 let client: PostHog | null = null;
+let initialized = false;
 
-export function getPostHog(): PostHog | null {
-  if (client) {
+function getClient(): PostHog | null {
+  if (initialized) {
     return client;
   }
+  initialized = true;
 
   const { POSTHOG_API_KEY, POSTHOG_HOST } = getEnv();
   if (!POSTHOG_API_KEY) {
@@ -23,4 +25,24 @@ export function getPostHog(): PostHog | null {
   });
 
   return client;
+}
+
+export function capture(args: {
+  distinctId: string;
+  event: string;
+  properties?: Record<string, unknown>;
+}): void {
+  try {
+    getClient()?.capture(args);
+  } catch {
+    // analytics must not affect app behavior
+  }
+}
+
+export async function shutdown(): Promise<void> {
+  try {
+    await getClient()?.shutdown();
+  } catch {
+    // analytics must not affect app behavior
+  }
 }
