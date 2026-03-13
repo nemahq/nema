@@ -30,6 +30,14 @@ SyntaxHighlighter.registerLanguage("sql", sql);
 SyntaxHighlighter.registerLanguage("tsx", tsx);
 SyntaxHighlighter.registerLanguage("jsx", jsx);
 
+const CODE_BLOCK_STYLE: React.CSSProperties = {
+  margin: 0,
+  padding: "1rem",
+  borderTopLeftRadius: 0,
+  borderTopRightRadius: 0,
+  background: "var(--color-surface-base)",
+};
+
 export function CodeBlock({
   className,
   children,
@@ -79,13 +87,7 @@ export function CodeBlock({
       <SyntaxHighlighter
         language={lang}
         style={resolvedTheme === "dark" ? oneDark : oneLight}
-        customStyle={{
-          margin: 0,
-          padding: "1rem",
-          borderTopLeftRadius: 0,
-          borderTopRightRadius: 0,
-          background: "var(--color-surface-base)",
-        }}
+        customStyle={CODE_BLOCK_STYLE}
       >
         {code}
       </SyntaxHighlighter>

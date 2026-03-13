@@ -6,6 +6,7 @@
 - Components only render. Data fetching, cache manipulation, and other data logic go in hooks.
 - Extract complex handlers as named functions instead of inline.
 - Routing/branching components MUST only branch. Handlers belong inside each sub-component.
+- Constant values (style objects, config arrays, static maps) MUST be defined outside the component. Only values that depend on props, state, or hooks belong inside.
 
 ## Hooks
 
