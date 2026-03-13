@@ -7,6 +7,8 @@ import simpleImportSort from "eslint-plugin-simple-import-sort";
 import tseslint from "typescript-eslint";
 import js from "@eslint/js";
 
+import requireSuspenseBoundary from "./eslint-rules/require-suspense-boundary.js";
+
 export default tseslint.config(
   { ignores: ["**/dist/**", "**/.turbo/**"] },
   js.configs.recommended,
@@ -52,9 +54,17 @@ export default tseslint.config(
     plugins: {
       "react-hooks": reactHooks,
       "no-relative-import-paths": noRelativeImportPaths,
+      nema: { rules: { "require-suspense-boundary": requireSuspenseBoundary } },
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      "nema/require-suspense-boundary": "error",
+    },
+  },
+  {
+    files: ["apps/web/**/hooks/**/*.{ts,tsx}"],
+    rules: {
+      "nema/require-suspense-boundary": "off",
       "no-relative-import-paths/no-relative-import-paths": [
         "error",
         {

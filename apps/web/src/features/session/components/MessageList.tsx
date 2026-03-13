@@ -1,15 +1,28 @@
+import { Suspense } from "react";
+
 import type { Message } from "@nema-io/shared";
 import { Button } from "@nema-io/weave";
 import { ChevronDown } from "@nema-io/weave/icons";
 
 import { useAutoScroll } from "@web/features/session/hooks/useAutoScroll";
+import { useMessageList } from "@web/features/session/hooks/useMessageList";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { AssistantMessage } from "./AssistantMessage";
+import { MessageListSkeleton } from "./MessageListSkeleton";
 import { UserMessage } from "./UserMessage";
 
-export function MessageList({ messages }: { messages: Message[] }) {
+interface MessageListProps {
+  sessionId: string;
+  streamingMessage?: Message;
+}
+
+function MessageListContent({ sessionId, streamingMessage }: MessageListProps) {
   const { t } = useTranslation();
+  const serverMessages = useMessageList({ sessionId });
+  const messages = streamingMessage
+    ? [...serverMessages, streamingMessage]
+    : serverMessages;
   const { scrollRef, showNewMessageButton, scrollToBottom } = useAutoScroll({
     messages,
   });
@@ -45,5 +58,16 @@ export function MessageList({ messages }: { messages: Message[] }) {
         </div>
       )}
     </div>
+  );
+}
+
+export function MessageList({ sessionId, streamingMessage }: MessageListProps) {
+  return (
+    <Suspense fallback={<MessageListSkeleton />}>
+      <MessageListContent
+        sessionId={sessionId}
+        streamingMessage={streamingMessage}
+      />
+    </Suspense>
   );
 }
