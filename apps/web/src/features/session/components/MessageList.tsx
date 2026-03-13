@@ -1,15 +1,23 @@
-import type { Message } from "@nema-io/shared";
+import { Suspense } from "react";
+
 import { Button } from "@nema-io/weave";
 import { ChevronDown } from "@nema-io/weave/icons";
 
 import { useAutoScroll } from "@web/features/session/hooks/useAutoScroll";
+import { useMessageList } from "@web/features/session/hooks/useMessageList";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { AssistantMessage } from "./AssistantMessage";
+import { MessageListSkeleton } from "./MessageListSkeleton";
 import { UserMessage } from "./UserMessage";
 
-export function MessageList({ messages }: { messages: Message[] }) {
+interface MessageListProps {
+  sessionId: string;
+}
+
+function MessageListContent({ sessionId }: MessageListProps) {
   const { t } = useTranslation();
+  const messages = useMessageList({ sessionId });
   const { scrollRef, showNewMessageButton, scrollToBottom } = useAutoScroll({
     messages,
   });
@@ -45,5 +53,13 @@ export function MessageList({ messages }: { messages: Message[] }) {
         </div>
       )}
     </div>
+  );
+}
+
+export function MessageList({ sessionId }: MessageListProps) {
+  return (
+    <Suspense fallback={<MessageListSkeleton />}>
+      <MessageListContent sessionId={sessionId} />
+    </Suspense>
   );
 }
