@@ -25,9 +25,4 @@ export {
   type SessionSummary,
   SessionSummarySchema,
 } from "./schemas/session";
-export {
-  type DraftOutput,
-  DraftOutputSchema,
-  type SaveOutput,
-  SaveOutputSchema,
-} from "./schemas/structuring";
+export { type SaveOutput, SaveOutputSchema } from "./schemas/structuring";

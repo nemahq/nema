@@ -4,14 +4,12 @@ import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { DraftOutputSchema } from "@nema-io/shared/src/schemas/structuring";
-
 import { loadEnv } from "@server/env";
 import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
   buildEditCycleMessage,
   buildFirstCallMessage,
-  PHASE1_SYSTEM_PROMPT,
+  DRAFTING_SYSTEM_PROMPT,
 } from "@server/prompts/drafting";
 
 import { PHASE1_EDIT_SEEDS, PHASE1_SEEDS } from "./seed-data";
@@ -24,13 +22,25 @@ interface EvalResult {
   category: string;
   description: string;
   input: string;
-  output: {
-    body: string;
-    session_title: string | null;
-  } | null;
+  output: string | null;
   error: string | null;
   checkpoints: string[];
   latencyMs: number;
+}
+
+async function collectStream(
+  provider: OpenAiProvider,
+  message: string,
+): Promise<string> {
+  let text = "";
+  for await (const chunk of provider.generateStream({
+    systemPrompt: DRAFTING_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: message }],
+    temperature: 0,
+  })) {
+    text += chunk;
+  }
+  return text;
 }
 
 async function main() {
@@ -49,15 +59,10 @@ async function main() {
     const start = Date.now();
 
     try {
-      const output = await provider.generateStructured({
-        schema: DraftOutputSchema,
-        schemaName: "DraftOutput",
-        systemPrompt: PHASE1_SYSTEM_PROMPT,
-        messages: [
-          { role: "user", content: buildFirstCallMessage(seed.input) },
-        ],
-        temperature: 0,
-      });
+      const output = await collectStream(
+        provider,
+        buildFirstCallMessage(seed.input),
+      );
 
       results.push({
         id: seed.id,
@@ -93,18 +98,10 @@ async function main() {
     const start = Date.now();
 
     try {
-      const output = await provider.generateStructured({
-        schema: DraftOutputSchema,
-        schemaName: "DraftOutput",
-        systemPrompt: PHASE1_SYSTEM_PROMPT,
-        messages: [
-          {
-            role: "user",
-            content: buildEditCycleMessage(seed.previousBody, seed.editRequest),
-          },
-        ],
-        temperature: 0,
-      });
+      const output = await collectStream(
+        provider,
+        buildEditCycleMessage(seed.previousBody, seed.editRequest),
+      );
 
       results.push({
         id: seed.id,

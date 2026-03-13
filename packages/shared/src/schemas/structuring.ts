@@ -1,18 +1,6 @@
 import { z } from "zod";
 
 /**
- * Phase 1 — Draft output from structuring LLM.
- * Refined body + nullable session title (first call only). No DB awareness.
- * LLM returns null for session_title on edit cycles.
- */
-export const DraftOutputSchema = z.object({
-  body: z.string().min(1),
-  session_title: z.string().min(1).nullable(),
-});
-
-export type DraftOutput = z.infer<typeof DraftOutputSchema>;
-
-/**
  * Phase 2 — Save output from structuring LLM.
  * Meta fields + create/update decision. Generated with DB context
  * (similar docs, existing tag pool). Discriminated union enforces:

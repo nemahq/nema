@@ -9,7 +9,7 @@ import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import {
   buildEditCycleMessage,
   buildFirstCallMessage,
-  STREAMING_DRAFTING_SYSTEM_PROMPT,
+  DRAFTING_SYSTEM_PROMPT,
 } from "@server/prompts/drafting";
 import {
   buildIntentRouterMessage,
@@ -18,7 +18,7 @@ import {
 } from "@server/prompts/intent-router";
 import {
   buildRetrievalMessage,
-  STREAMING_RETRIEVAL_SYSTEM_PROMPT,
+  RETRIEVAL_SYSTEM_PROMPT,
 } from "@server/prompts/retrieval";
 import {
   buildJudgmentMessage,
@@ -375,7 +375,7 @@ async function* handleDraftingStream(
   let fullText = "";
 
   for await (const chunk of providers.llm.generateStream({
-    systemPrompt: STREAMING_DRAFTING_SYSTEM_PROMPT,
+    systemPrompt: DRAFTING_SYSTEM_PROMPT,
     messages: [{ role: "user", content: message }],
     signal,
   })) {
@@ -454,7 +454,7 @@ async function* handleRetrievalStream(
   let fullText = "";
 
   for await (const chunk of llm.generateStream({
-    systemPrompt: STREAMING_RETRIEVAL_SYSTEM_PROMPT,
+    systemPrompt: RETRIEVAL_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",

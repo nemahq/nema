@@ -136,7 +136,6 @@ export const PHASE1_EDIT_SEEDS: EditCycleSeedInput[] = [
       "팔로업 미팅 날짜(3월 20일)가 추가되는가",
       "펀드명(알파벤처스)이 포함되는가",
       "기존 내용(fairly positive, pushed back somewhat)이 보존되는가",
-      "session_title이 null인가",
       "전체 body가 반환되는가 (변경 부분만이 아니라)",
     ],
   },
