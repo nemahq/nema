@@ -33,6 +33,7 @@ import {
   META_SYSTEM_PROMPT,
   SPLIT_SYSTEM_PROMPT,
 } from "@server/prompts/saving";
+import { trackEvent } from "@server/services/event-service";
 
 // --- Internal schemas ---
 
@@ -209,10 +210,16 @@ export async function processChat(
       ],
     });
 
+    trackEvent(supabase, userId, "intent.classified", input.sessionId, {
+      intent: intentResult.intent,
+    });
+
     if (intentResult.intent === "pull-out") {
       responseContent = await handleRetrieval(
+        supabase,
         providers,
         userId,
+        input.sessionId,
         input.content,
         intentResult,
       );
@@ -235,11 +242,17 @@ export async function processChat(
       ],
     });
 
+    trackEvent(supabase, userId, "intent.classified", input.sessionId, {
+      intent: intentResult.intent,
+    });
+
     switch (intentResult.intent) {
       case "pull-out":
         responseContent = await handleRetrieval(
+          supabase,
           providers,
           userId,
+          input.sessionId,
           input.content,
           intentResult,
         );
@@ -319,8 +332,10 @@ async function handleDrafting(
 // --- Retrieval ---
 
 async function handleRetrieval(
+  supabase: SupabaseClient,
   providers: Providers,
   userId: string,
+  sessionId: string,
   question: string,
   intent: SearchIntent,
 ): Promise<string> {
@@ -367,6 +382,10 @@ async function handleRetrieval(
       });
     }
   }
+
+  trackEvent(supabase, userId, "retrieval.completed", sessionId, {
+    result_count: searchResults.length,
+  });
 
   if (searchResults.length === 0) {
     return "관련된 정보를 찾지 못했습니다.";
@@ -421,6 +440,10 @@ async function handleSave(
   }
 
   await clearDraft(supabase, sessionId);
+
+  trackEvent(supabase, userId, "document.saved", sessionId, {
+    doc_count: savedDocs.length,
+  });
 
   const docList = savedDocs.map((d) => `- ${d.title}`).join("\n");
   return `저장이 완료되었습니다.\n\n${docList}`;
