@@ -9,11 +9,11 @@ export function isThemePreference(v: string): v is ThemePreference {
   return (THEME_PREFERENCES as readonly string[]).includes(v);
 }
 
-const MEDIA = "(prefers-color-scheme: dark)";
+export const MEDIA_DARK = "(prefers-color-scheme: dark)";
 
 export function resolveTheme(pref: ThemePreference | null): Theme {
   if (pref === "light" || pref === "dark") return pref;
-  return window.matchMedia(MEDIA).matches ? "dark" : "light";
+  return window.matchMedia(MEDIA_DARK).matches ? "dark" : "light";
 }
 
 function applyTheme(theme: Theme): void {
@@ -34,7 +34,7 @@ export function initTheme(): void {
   const pref = getStorage("theme");
   applyTheme(resolveTheme(pref));
 
-  window.matchMedia(MEDIA).addEventListener("change", () => {
+  window.matchMedia(MEDIA_DARK).addEventListener("change", () => {
     if (getStorage("theme") !== "system") return;
     applyTheme(resolveTheme("system"));
   });
