@@ -41,7 +41,6 @@ import {
 import {
   buildSessionTitleMessage,
   SESSION_TITLE_SYSTEM_PROMPT,
-  SessionTitleSchema,
 } from "@server/prompts/session-title";
 import { trackEvent } from "@server/services/event-service";
 
@@ -198,30 +197,34 @@ async function needsSessionTitle(
   return data.title === null;
 }
 
-async function generateSessionTitle(
+async function* streamSessionTitle(
   supabase: SupabaseClient,
   providers: Providers,
   sessionId: string,
   userInput: string,
-): Promise<string | null> {
+): AsyncGenerator<ChatStreamEvent> {
   try {
-    const result = await providers.llm.generateStructured({
-      schema: SessionTitleSchema,
-      schemaName: "session_title",
+    let fullTitle = "";
+
+    for await (const chunk of providers.llm.generateStream({
       systemPrompt: SESSION_TITLE_SYSTEM_PROMPT,
       messages: [
         { role: "user", content: buildSessionTitleMessage(userInput) },
       ],
-    });
+    })) {
+      fullTitle += chunk;
+    }
 
-    await updateSessionTitle(supabase, sessionId, result.session_title);
-    return result.session_title;
+    const title = fullTitle.trim();
+    if (title) {
+      await updateSessionTitle(supabase, sessionId, title);
+      yield { type: "title", title };
+    }
   } catch (error) {
     Sentry.captureException(error, {
-      tags: { operation: "generateSessionTitle" },
+      tags: { operation: "streamSessionTitle" },
       extra: { sessionId },
     });
-    return null;
   }
 }
 
@@ -272,9 +275,14 @@ export async function* processChatStream(
     needsSessionTitle(supabase, input.sessionId),
   ]);
 
-  const titlePromise = shouldGenerateTitle
-    ? generateSessionTitle(supabase, providers, input.sessionId, input.content)
-    : null;
+  if (shouldGenerateTitle) {
+    yield* streamSessionTitle(
+      supabase,
+      providers,
+      input.sessionId,
+      input.content,
+    );
+  }
 
   let responseContent: string;
   let messageType: MessageType = "text";
@@ -371,13 +379,6 @@ export async function* processChatStream(
         const _exhaustive: never = intentResult.intent;
         throw new Error(`Unhandled intent: ${_exhaustive}`);
       }
-    }
-  }
-
-  if (titlePromise) {
-    const title = await titlePromise;
-    if (title) {
-      yield { type: "title", title };
     }
   }
 

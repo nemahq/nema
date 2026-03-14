@@ -8,7 +8,6 @@ import type { Message } from "@nema-io/shared";
 import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeState";
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { MessageList } from "@web/features/session/components/MessageList";
-import { SessionSidePanel } from "@web/features/session/components/SessionSidePanel";
 import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTranslation } from "@web/lib/tolgee";
@@ -22,11 +21,10 @@ export function SessionPage() {
 
   const navigate = useNavigate();
   const initialMessage = useLocation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 우리가 HomePage에서 직접 넣은 state
     select: (loc) =>
-      (loc.state as any)[HOME_TO_SESSION_INITIAL_MESSAGE_KEY] as
-        | string
-        | undefined,
+      (loc.state as Record<string, unknown>)[
+        HOME_TO_SESSION_INITIAL_MESSAGE_KEY
+      ] as string | undefined,
   });
   const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
     sessionId,
@@ -88,7 +86,8 @@ export function SessionPage() {
         </div>
       </main>
 
-      <SessionSidePanel />
+      {/* TODO: CRP 확인 후 복원 */}
+      {/* <SessionSidePanel /> */}
     </div>
   );
 }

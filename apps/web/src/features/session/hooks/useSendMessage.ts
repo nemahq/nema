@@ -1,14 +1,18 @@
 import { useCallback, useRef, useState } from "react";
-import { skipToken } from "@tanstack/react-query";
+import { skipToken, useIsMutating } from "@tanstack/react-query";
+import { getQueryKey } from "@trpc/react-query";
 
 import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
 
+import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { trpc } from "@web/lib/trpc";
 
 export function useSendMessage({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
+  const isSessionCreating =
+    useIsMutating({ mutationKey: getQueryKey(trpc.session.create) }) > 0;
 
   const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -24,7 +28,24 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
           setStreamingText(fullTextRef.current);
           break;
         case "title":
-          utils.session.list.invalidate();
+          utils.session.list.setInfiniteData(
+            { limit: SESSION_LIST_LIMIT },
+            (old) => {
+              if (!old) {
+                return old;
+              }
+              const { title } = event;
+              return {
+                ...old,
+                pages: old.pages.map((page) => ({
+                  ...page,
+                  items: page.items.map((s) =>
+                    s.id === sessionId ? { ...s, title } : s,
+                  ),
+                })),
+              };
+            },
+          );
           break;
         case "done":
           setStreamInput(null);
@@ -53,10 +74,13 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
     [sessionId, utils],
   );
 
-  trpc.message.chat.useSubscription(streamInput ?? skipToken, {
-    onData: handleData,
-    onError: handleError,
-  });
+  trpc.message.chat.useSubscription(
+    streamInput && !isSessionCreating ? streamInput : skipToken,
+    {
+      onData: handleData,
+      onError: handleError,
+    },
+  );
 
   const send = useCallback(
     (content: string) => {

@@ -47,7 +47,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       "/trpc": {
-        target: "https://api.getnema.app",
+        target: process.env.VITE_DEV_API_TARGET ?? "https://api.getnema.app",
         changeOrigin: true,
       },
     },
