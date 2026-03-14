@@ -10,15 +10,15 @@ import { getQueryKey } from "@trpc/react-query";
 
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
-import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { ContextPage } from "@web/app/pages/ContextPage";
 import { HomePage } from "@web/app/pages/HomePage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
+import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
+import { ContextSidebar } from "@web/features/session/components/ContextSidebar";
 import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
 import { queryClient } from "@web/lib/queryClient";
-import { ContextSidebar } from "@web/features/session/components/ContextSidebar";
 import { getAccessToken, supabase } from "@web/lib/supabase";
 import { trpc, trpcClient } from "@web/lib/trpc";
 
