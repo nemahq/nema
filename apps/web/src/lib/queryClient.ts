@@ -33,6 +33,7 @@ export const queryClient = new QueryClient({
           : tolgee.t("common.unknown_error"),
         {
           duration: Infinity,
+          // onClick은 Sonner cancel 필수 필드. dismiss는 Sonner 내부 처리.
           cancel: { label: "✕", onClick: () => {} },
         },
       );
