@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
-import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/routeState";
+import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeState";
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { Greeting } from "@web/features/session/components/Greeting";
 import { useCreateSession } from "@web/features/session/hooks/useCreateSession";
@@ -28,7 +28,10 @@ export function HomePage() {
         navigate({
           to: "/session/$sessionId",
           params: { sessionId: session.id },
-          state: { [HOME_TO_SESSION_INITIAL_MESSAGE_KEY]: content },
+          state: (prev) => ({
+            ...prev,
+            [HOME_TO_SESSION_INITIAL_MESSAGE_KEY]: content,
+          }),
         }),
     });
   }

@@ -5,7 +5,7 @@ import { getQueryKey } from "@trpc/react-query";
 
 import type { Message } from "@nema-io/shared";
 
-import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/routeState";
+import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeState";
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { MessageList } from "@web/features/session/components/MessageList";
 import { SessionSidePanel } from "@web/features/session/components/SessionSidePanel";
@@ -22,7 +22,11 @@ export function SessionPage() {
 
   const navigate = useNavigate();
   const initialMessage = useLocation({
-    select: (loc) => loc.state[HOME_TO_SESSION_INITIAL_MESSAGE_KEY],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 우리가 HomePage에서 직접 넣은 state
+    select: (loc) =>
+      (loc.state as any)[HOME_TO_SESSION_INITIAL_MESSAGE_KEY] as
+        | string
+        | undefined,
   });
   const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
     sessionId,
