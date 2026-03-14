@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 
 import {
+  Avatar,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -12,26 +13,6 @@ import { useAuth } from "@web/hooks/useAuth";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
-
-interface AvatarProps {
-  url: string | undefined;
-  initial: string;
-}
-
-function Avatar({ url, initial }: AvatarProps) {
-  return url ? (
-    <img
-      src={url}
-      alt=""
-      className="size-7 shrink-0 rounded-full"
-      referrerPolicy="no-referrer"
-    />
-  ) : (
-    <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-medium text-brand-fg">
-      {initial}
-    </div>
-  );
-}
 
 interface UserMenuProps {
   collapsed: boolean;
@@ -70,14 +51,14 @@ export function UserMenu({ collapsed }: UserMenuProps) {
             type="button"
             className="flex w-full items-center justify-center py-2.5 cursor-pointer outline-none transition-opacity duration-fast hover:opacity-80 data-[state=open]:opacity-80"
           >
-            <Avatar url={avatarUrl} initial={initial} />
+            <Avatar src={avatarUrl} fallback={initial} />
           </button>
         ) : (
           <button
             type="button"
             className="flex w-full cursor-pointer items-center gap-2.5 rounded-md py-2.5 pl-2.5 pr-3 text-left transition-colors duration-fast outline-none hover:bg-surface-raised-hover data-[state=open]:bg-surface-raised-hover"
           >
-            <Avatar url={avatarUrl} initial={initial} />
+            <Avatar src={avatarUrl} fallback={initial} />
             <span className="truncate text-sm text-fg-primary animate-in fade-in slide-in-from-left-2 duration-normal">
               {name}
             </span>
