@@ -1,14 +1,16 @@
+import { Suspense } from "react";
 import {
   createRootRoute,
   createRoute,
   createRouter,
+  Outlet,
   redirect,
 } from "@tanstack/react-router";
 import { getQueryKey } from "@trpc/react-query";
 
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
-import { SidebarLayout } from "@web/app/layouts/SidebarLayout";
+import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { ContextPage } from "@web/app/pages/ContextPage";
 import { HomePage } from "@web/app/pages/HomePage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
@@ -16,6 +18,7 @@ import { TermsPage } from "@web/app/pages/TermsPage";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
 import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
 import { queryClient } from "@web/lib/queryClient";
+import { ContextSidebar } from "@web/features/session/components/ContextSidebar";
 import { getAccessToken, supabase } from "@web/lib/supabase";
 import { trpc, trpcClient } from "@web/lib/trpc";
 
@@ -74,10 +77,17 @@ const authenticatedRoute = createRoute({
   },
 });
 
-const sidebarRoute = createRoute({
+const contextSidebarRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
-  id: "_sidebar",
-  component: SidebarLayout,
+  id: "_contextSidebar",
+  component: () => (
+    <>
+      <ContextSidebar />
+      <Suspense fallback={<ContentAreaFallback />}>
+        <Outlet />
+      </Suspense>
+    </>
+  ),
   beforeLoad() {
     if (!getAccessToken()) {
       return;
@@ -106,13 +116,13 @@ const sidebarRoute = createRoute({
 });
 
 const indexRoute = createRoute({
-  getParentRoute: () => sidebarRoute,
+  getParentRoute: () => contextSidebarRoute,
   path: "/",
   component: HomePage,
 });
 
 const sessionRoute = createRoute({
-  getParentRoute: () => sidebarRoute,
+  getParentRoute: () => contextSidebarRoute,
   path: "/context/$sessionId",
   component: ContextPage,
 });
@@ -122,7 +132,7 @@ const routeTree = rootRoute.addChildren([
   privacyRoute,
   termsRoute,
   authenticatedRoute.addChildren([
-    sidebarRoute.addChildren([indexRoute, sessionRoute]),
+    contextSidebarRoute.addChildren([indexRoute, sessionRoute]),
   ]),
 ]);
 

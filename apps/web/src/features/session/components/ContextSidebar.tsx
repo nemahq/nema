@@ -17,7 +17,7 @@ function NewContextIcon() {
   );
 }
 
-export function SessionSidebar() {
+export function ContextSidebar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
