@@ -1,10 +1,11 @@
-import { type FormEvent, useState } from "react";
-import { useSearch } from "@tanstack/react-router";
+import { type FormEvent, useEffect, useState } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 
 import { Button, Input, Separator } from "@nema-io/weave";
 import { LoaderCircle, Mail } from "@nema-io/weave/icons";
 
 import NemaLogo from "@web/assets/nema-logo.svg";
+import { useAuth } from "@web/hooks/useAuth";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -12,7 +13,18 @@ import { GoogleIcon } from "./GoogleIcon";
 
 export function AuthPage() {
   const search = useSearch({ from: "/signin" });
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { t } = useTranslation();
+
+  useEffect(
+    function redirectOnSignIn() {
+      if (user) {
+        void navigate({ to: search.redirect ?? "/" });
+      }
+    },
+    [user, navigate, search.redirect],
+  );
 
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
