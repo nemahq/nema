@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { z } from "zod";
 import {
   createRootRoute,
   createRoute,
@@ -24,11 +25,13 @@ const rootRoute = createRootRoute({
   errorComponent: RouteErrorFallback,
 });
 
+// -- 공개 라우트 --
+
 const signinRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/signin",
-  validateSearch: (search: Record<string, unknown>) => ({
-    redirect: (search.redirect as string) || undefined,
+  validateSearch: z.object({
+    redirect: z.string().optional(),
   }),
   component: AuthPage,
   beforeLoad: requireGuest,
@@ -45,6 +48,8 @@ const termsRoute = createRoute({
   path: "/terms",
   component: TermsPage,
 });
+
+// -- 인증 라우트 --
 
 const authenticatedRoute = createRoute({
   getParentRoute: () => rootRoute,
