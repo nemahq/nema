@@ -5,7 +5,7 @@ import { getQueryKey } from "@trpc/react-query";
 
 import type { Message } from "@nema-io/shared";
 
-import { ROUTE_STATE } from "@web/app/router";
+import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/routeState";
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { MessageList } from "@web/features/session/components/MessageList";
 import { SessionSidePanel } from "@web/features/session/components/SessionSidePanel";
@@ -22,7 +22,7 @@ export function SessionPage() {
 
   const navigate = useNavigate();
   const initialMessage = useLocation({
-    select: (loc) => loc.state[ROUTE_STATE.INITIAL_MESSAGE],
+    select: (loc) => loc.state[HOME_TO_SESSION_INITIAL_MESSAGE_KEY],
   });
   const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
     sessionId,

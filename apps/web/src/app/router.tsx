@@ -19,6 +19,7 @@ import { requireAuth, requireGuest } from "@web/features/auth/guards";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 
 import { App } from "./App";
+import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "./routeState";
 
 const rootRoute = createRootRoute({
   component: App,
@@ -100,12 +101,8 @@ declare module "@tanstack/react-router" {
   }
 }
 
-export const ROUTE_STATE = {
-  INITIAL_MESSAGE: "initialMessage",
-} as const;
-
 declare module "@tanstack/history" {
   interface HistoryState {
-    [ROUTE_STATE.INITIAL_MESSAGE]?: string;
+    [HOME_TO_SESSION_INITIAL_MESSAGE_KEY]?: string;
   }
 }
