@@ -38,7 +38,12 @@
     "draft_previous": "Previous draft",
     "draft_save": "Save",
     "draft_panel_open": "Open {label} panel",
-    "draft_tab_close": "Close {label} tab"
+    "draft_tab_close": "Close {label} tab",
+    "rename": "Rename",
+    "delete": "Delete",
+    "delete_confirm_title": "Delete this context?",
+    "delete_confirm_description": "This action cannot be undone.",
+    "menu": "Session menu"
   },
   "settings": {
     "theme_light": "Light",

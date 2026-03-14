@@ -8,15 +8,13 @@ import NemaLogo from "@web/assets/nema-logo.svg";
 import { useTranslation } from "@web/lib/tolgee";
 import { getStorage, setStorage } from "@web/utils/localStorage";
 
-export function Sidebar({
-  topSlot,
-  children,
-  footer,
-}: {
+interface SidebarProps {
   topSlot?: (collapsed: boolean) => ReactNode;
   children?: ReactNode | ((collapsed: boolean) => ReactNode);
   footer?: (collapsed: boolean) => ReactNode;
-}) {
+}
+
+export function Sidebar({ topSlot, children, footer }: SidebarProps) {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(
     () => getStorage("sidebarCollapsed") === "true",

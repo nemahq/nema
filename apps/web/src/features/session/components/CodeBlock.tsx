@@ -41,13 +41,12 @@ const CODE_BLOCK_STYLE: React.CSSProperties = {
   background: "var(--color-surface-base)",
 };
 
-export function CodeBlock({
-  className,
-  children,
-}: {
+interface CodeBlockProps {
   className?: string;
   children?: React.ReactNode;
-}) {
+}
+
+export function CodeBlock({ className, children }: CodeBlockProps) {
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
   const trackEvent = useTrackEvent();

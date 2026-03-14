@@ -1,34 +1,58 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-
-import type { SessionSummary } from "@nema-io/shared";
 
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { RenameInput } from "./RenameInput";
+import { SessionItemMenu } from "./SessionItemMenu";
+
+interface SessionItemProps {
+  sessionId: string;
+  title: string | null;
+}
+
 export const SessionItem = memo(function SessionItem({
-  session,
-}: {
-  session: SessionSummary;
-}) {
+  sessionId,
+  title: rawTitle,
+}: SessionItemProps) {
   const { t } = useTranslation();
   const trackEvent = useTrackEvent();
-  const title = session.title ?? t("session.untitled");
+  const title = rawTitle ?? t("session.untitled");
+
+  const [isEditing, setIsEditing] = useState(false);
+
+  if (isEditing) {
+    return (
+      <RenameInput
+        sessionId={sessionId}
+        currentTitle={rawTitle}
+        onEditEnd={() => setIsEditing(false)}
+      />
+    );
+  }
 
   return (
-    <Link
-      to="/session/$sessionId"
-      params={{ sessionId: session.id }}
-      onClick={() => trackEvent("session.navigate", session.id)}
-      className="w-full cursor-pointer truncate rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-fast"
-      activeProps={{
-        className: "bg-surface-raised-hover text-fg-primary font-medium",
-      }}
-      inactiveProps={{
-        className: "text-fg-secondary hover:bg-surface-raised-hover",
-      }}
-    >
-      {title}
-    </Link>
+    <div className="group relative flex items-center">
+      <Link
+        to="/session/$sessionId"
+        params={{ sessionId }}
+        onClick={() => trackEvent("session.navigate", sessionId)}
+        className="w-full cursor-pointer truncate rounded-md px-2 py-1.5 pr-8 text-left text-sm transition-colors duration-fast"
+        activeProps={{
+          className: "bg-surface-raised-hover text-fg-primary font-medium",
+        }}
+        inactiveProps={{
+          className: "text-fg-secondary hover:bg-surface-raised-hover",
+        }}
+      >
+        {title}
+      </Link>
+
+      <SessionItemMenu
+        sessionId={sessionId}
+        onStartEditing={() => setIsEditing(true)}
+      />
+    </div>
   );
 });

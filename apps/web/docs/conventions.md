@@ -24,6 +24,11 @@
 - Cache manipulation functions belong in the hook that owns the query.
 - Mutation hooks MUST NOT embed side effects (navigate, etc.). Callers inject them at `mutate(variables, { onSuccess })` call site.
 
+## Analytics (PostHog)
+
+- Server action result → track in mutation hook's `onSuccess` (only after confirmed success).
+- Client-only interaction (navigation, copy, UI toggle) → track in the component handler.
+
 ## Functions
 
 - Accept arguments as objects so each parameter's intent is clear at the call site.
@@ -97,8 +102,12 @@
 - `satisfies`: validate shape against a type while preserving inferred literal types. Use when you need both type checking AND narrow inference.
   - `{ key: "value" } satisfies Record<string, string>` → type-checked AND inferred as `{ key: "value" }`, not widened to `Record<string, string>`.
 - MUST NOT use `as` type assertions to silence the compiler. Allowed only for narrowing from `unknown` after a runtime guard.
+- Component props MUST be declared as a named `interface {ComponentName}Props` above the component. Inline type annotations in the function signature are forbidden.
+  - Generic `Props` is forbidden — name collisions across files make refactoring error-prone.
+- Component data props MUST be primitive values (string, number, boolean). Do NOT pass objects — primitive props enable effective `memo` shallow comparison and minimize re-renders. Callbacks (`on*`), render functions, and `children` are exempt.
 
 ## Design System
 
 - Prefer weave components for UI implementation.
 - Refer to `docs/design/design-system.html` only when custom UI beyond weave is needed.
+- Minimize CSS `border` usage. Use `shadow` for surface elevation and separation instead.

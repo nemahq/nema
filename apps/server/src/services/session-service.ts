@@ -8,7 +8,10 @@ import type {
 } from "@nema-io/shared";
 import { SessionDraftSchema } from "@nema-io/shared";
 
-import { SupabaseError } from "@server/infra/supabase-error";
+import {
+  SupabaseError,
+  throwIfSupabaseError,
+} from "@server/infra/supabase-error";
 
 function toSummary(row: {
   id: string;
@@ -63,9 +66,7 @@ export async function listSessions(
   }
 
   const { data, error } = await query;
-  if (error) {
-    throw new SupabaseError("query_failed", error.message, error);
-  }
+  throwIfSupabaseError(error);
 
   const hasMore = data.length > input.limit;
   const items = (hasMore ? data.slice(0, input.limit) : data).map(toSummary);
@@ -86,9 +87,7 @@ export async function getSession(
     .eq("id", sessionId)
     .single();
 
-  if (error) {
-    throw new SupabaseError("query_failed", error.message, error);
-  }
+  throwIfSupabaseError(error);
 
   return {
     ...toSummary(data),
@@ -106,9 +105,24 @@ export async function createSession(
     .select("id, title, created_at, updated_at")
     .single();
 
-  if (error) {
-    throw new SupabaseError("query_failed", error.message, error);
-  }
+  throwIfSupabaseError(error);
+
+  return toSummary(data);
+}
+
+export async function updateSession(
+  supabase: SupabaseClient,
+  sessionId: string,
+  title: string,
+): Promise<SessionSummary> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .update({ title })
+    .eq("id", sessionId)
+    .select("id, title, created_at, updated_at")
+    .single();
+
+  throwIfSupabaseError(error);
 
   return toSummary(data);
 }
@@ -122,9 +136,7 @@ export async function deleteSession(
     .delete({ count: "exact" })
     .eq("id", sessionId);
 
-  if (error) {
-    throw new SupabaseError("query_failed", error.message, error);
-  }
+  throwIfSupabaseError(error);
   if (!count) {
     throw new SupabaseError("not_found", `Session ${sessionId} not found`);
   }

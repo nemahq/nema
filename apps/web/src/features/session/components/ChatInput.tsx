@@ -5,15 +5,13 @@ import { ArrowUp } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
-export function ChatInput({
-  onSubmit,
-  placeholder,
-  disabled,
-}: {
+interface ChatInputProps {
   onSubmit: (content: string) => void;
   placeholder?: string;
   disabled?: boolean;
-}) {
+}
+
+export function ChatInput({ onSubmit, placeholder, disabled }: ChatInputProps) {
   const { t } = useTranslation();
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);

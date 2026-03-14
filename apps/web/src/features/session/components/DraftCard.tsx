@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-import type { Message } from "@nema-io/shared";
 import { Button, Card, CardContent } from "@nema-io/weave";
 import { ChevronDown, ChevronRight } from "@nema-io/weave/icons";
 
@@ -9,13 +8,13 @@ import { useTranslation } from "@web/lib/tolgee";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { RelativeTime } from "./RelativeTime";
 
-export function DraftCard({
-  message,
-  isLatest,
-}: {
-  message: Message;
+interface DraftCardProps {
+  content: string;
+  createdAt: string;
   isLatest: boolean;
-}) {
+}
+
+export function DraftCard({ content, createdAt, isLatest }: DraftCardProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(isLatest);
 
@@ -29,7 +28,7 @@ export function DraftCard({
         >
           <ChevronRight className="size-3.5" />
           <span>{t("session.draft_previous")}</span>
-          <RelativeTime dateTime={message.createdAt} />
+          <RelativeTime dateTime={createdAt} />
         </button>
       </div>
     );
@@ -53,11 +52,11 @@ export function DraftCard({
           </div>
         )}
         <CardContent className={isLatest ? "pt-4" : "pt-2"}>
-          <MarkdownRenderer content={message.content} />
+          <MarkdownRenderer content={content} />
         </CardContent>
       </Card>
       <div className="mt-1">
-        <RelativeTime dateTime={message.createdAt} />
+        <RelativeTime dateTime={createdAt} />
       </div>
     </div>
   );

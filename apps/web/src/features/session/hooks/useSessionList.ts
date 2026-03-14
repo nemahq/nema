@@ -24,6 +24,42 @@ export function prependSessionCache(
   });
 }
 
+export function removeSessionCache(
+  utils: ReturnType<typeof trpc.useUtils>,
+  sessionId: string,
+) {
+  utils.session.list.setInfiniteData({ limit: SESSION_LIST_LIMIT }, (old) => {
+    if (!old) {
+      return old;
+    }
+    return {
+      ...old,
+      pages: old.pages.map((page) => ({
+        ...page,
+        items: page.items.filter((s) => s.id !== sessionId),
+      })),
+    };
+  });
+}
+
+export function updateSessionCache(
+  utils: ReturnType<typeof trpc.useUtils>,
+  updated: SessionSummary,
+) {
+  utils.session.list.setInfiniteData({ limit: SESSION_LIST_LIMIT }, (old) => {
+    if (!old) {
+      return old;
+    }
+    return {
+      ...old,
+      pages: old.pages.map((page) => ({
+        ...page,
+        items: page.items.map((s) => (s.id === updated.id ? updated : s)),
+      })),
+    };
+  });
+}
+
 export function useSessionList() {
   const [data, { hasNextPage, fetchNextPage, isFetchingNextPage }] =
     trpc.session.list.useSuspenseInfiniteQuery(

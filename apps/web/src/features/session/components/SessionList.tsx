@@ -31,7 +31,11 @@ function SessionListContent() {
 
       <div className="flex flex-col gap-0.5">
         {sessions.map((session) => (
-          <SessionItem key={session.id} session={session} />
+          <SessionItem
+            key={session.id}
+            sessionId={session.id}
+            title={session.title}
+          />
         ))}
       </div>
 
