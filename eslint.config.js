@@ -112,6 +112,10 @@ export default tseslint.config(
   {
     ...jsxA11y.flatConfigs.recommended,
     files: ["apps/web/**/*.{ts,tsx}"],
+    rules: {
+      ...jsxA11y.flatConfigs.recommended.rules,
+      "jsx-a11y/no-autofocus": "off",
+    },
   },
   {
     files: ["apps/web/src/**/*.{ts,tsx}"],

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const SESSION_TITLE_MAX_LENGTH = 100;
+import { SESSION_TITLE_MAX_LENGTH } from "@nema-io/shared";
 
 export const SessionTitleSchema = z.object({
   session_title: z.string().min(1).max(SESSION_TITLE_MAX_LENGTH),

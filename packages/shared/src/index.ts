@@ -23,6 +23,7 @@ export {
   SendMessageInputSchema,
 } from "./schemas/message";
 export {
+  SESSION_TITLE_MAX_LENGTH,
   type SessionDeleteInput,
   SessionDeleteInputSchema,
   type SessionDraft,

@@ -8,7 +8,10 @@ import type {
 } from "@nema-io/shared";
 import { SessionDraftSchema } from "@nema-io/shared";
 
-import { SupabaseError } from "@server/infra/supabase-error";
+import {
+  SupabaseError,
+  throwIfSupabaseError,
+} from "@server/infra/supabase-error";
 
 function toSummary(row: {
   id: string;
@@ -125,9 +128,7 @@ export async function updateSession(
     .select("id, title, created_at, updated_at")
     .single();
 
-  if (error) {
-    throw new SupabaseError("query_failed", error.message, error);
-  }
+  throwIfSupabaseError(error);
 
   return toSummary(data);
 }

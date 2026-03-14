@@ -32,8 +32,10 @@ export const SessionGetInputSchema = z.object({
 });
 export type SessionGetInput = z.infer<typeof SessionGetInputSchema>;
 
+export const SESSION_TITLE_MAX_LENGTH = 100;
+
 export const SessionUpdateInputSchema = z.object({
   sessionId: z.string().uuid(),
-  title: z.string().trim().min(1).max(100),
+  title: z.string().trim().min(1).max(SESSION_TITLE_MAX_LENGTH),
 });
 export type SessionUpdateInput = z.infer<typeof SessionUpdateInputSchema>;
