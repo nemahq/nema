@@ -113,6 +113,25 @@ export async function createSession(
   return toSummary(data);
 }
 
+export async function updateSession(
+  supabase: SupabaseClient,
+  sessionId: string,
+  title: string,
+): Promise<SessionSummary> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .update({ title })
+    .eq("id", sessionId)
+    .select("id, title, created_at, updated_at")
+    .single();
+
+  if (error) {
+    throw new SupabaseError("query_failed", error.message, error);
+  }
+
+  return toSummary(data);
+}
+
 export async function deleteSession(
   supabase: SupabaseClient,
   sessionId: string,

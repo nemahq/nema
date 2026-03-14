@@ -38,7 +38,11 @@
     "draft_previous": "이전 드래프트",
     "draft_save": "저장",
     "draft_panel_open": "{label} 패널 열기",
-    "draft_tab_close": "{label} 탭 닫기"
+    "draft_tab_close": "{label} 탭 닫기",
+    "rename": "이름 바꾸기",
+    "delete": "삭제",
+    "delete_confirm_title": "맥락을 삭제할까요?",
+    "delete_confirm_description": "삭제하면 되돌릴 수 없습니다."
   },
   "settings": {
     "theme_light": "라이트",

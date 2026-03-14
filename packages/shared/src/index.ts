@@ -33,5 +33,7 @@ export {
   SessionListInputSchema,
   type SessionSummary,
   SessionSummarySchema,
+  type SessionUpdateInput,
+  SessionUpdateInputSchema,
 } from "./schemas/session";
 export { type SaveOutput, SaveOutputSchema } from "./schemas/structuring";

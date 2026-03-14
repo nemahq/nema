@@ -31,3 +31,9 @@ export const SessionGetInputSchema = z.object({
   sessionId: z.string().uuid(),
 });
 export type SessionGetInput = z.infer<typeof SessionGetInputSchema>;
+
+export const SessionUpdateInputSchema = z.object({
+  sessionId: z.string().uuid(),
+  title: z.string().trim().min(1).max(100),
+});
+export type SessionUpdateInput = z.infer<typeof SessionUpdateInputSchema>;
