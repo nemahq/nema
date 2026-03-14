@@ -6,6 +6,7 @@ import { getQueryKey } from "@trpc/react-query";
 import type { Message } from "@nema-io/shared";
 
 import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeState";
+import { getRouteState } from "@web/app/utils/routeState";
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { MessageList } from "@web/features/session/components/MessageList";
 import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
@@ -22,13 +23,15 @@ export function SessionPage() {
   const navigate = useNavigate();
   const initialMessage = useLocation({
     select: (loc) =>
-      (loc.state as Record<string, unknown>)[
-        HOME_TO_SESSION_INITIAL_MESSAGE_KEY
-      ] as string | undefined,
+      getRouteState(loc.state, HOME_TO_SESSION_INITIAL_MESSAGE_KEY),
   });
-  const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
-    sessionId,
-  });
+  const {
+    send,
+    isStreaming,
+    isDraftStreaming,
+    streamingText,
+    streamStartedAt,
+  } = useSendMessage({ sessionId });
 
   const sentRef = useRef(false);
   useEffect(
@@ -53,13 +56,24 @@ export function SessionPage() {
     isStreaming || saveDraftMutating > 0 || cancelDraftMutating > 0;
 
   const streamingMessage = useMemo<Message | undefined>(() => {
-    if (!isStreaming || !streamingText) {
+    if (!isStreaming) {
       return undefined;
     }
 
-    // TODO: 서버에서 draft_start 이벤트를 보내 스트리밍 중에도 DraftCard로 렌더하고,
-    // 사이드 패널에서 직접 스트리밍 표시. 완료 시 채팅에 DraftCard 삽입.
-    // 취소된 드래프트는 접힌 상태 + "취소됨" 라벨로 이력 유지.
+    if (isDraftStreaming) {
+      return {
+        id: STREAMING_MESSAGE_ID,
+        role: "assistant",
+        type: "draft_status",
+        content: t("session.draft_creating"),
+        createdAt: streamStartedAt,
+      };
+    }
+
+    if (!streamingText) {
+      return undefined;
+    }
+
     return {
       id: STREAMING_MESSAGE_ID,
       role: "assistant",
@@ -67,7 +81,7 @@ export function SessionPage() {
       content: streamingText,
       createdAt: streamStartedAt,
     };
-  }, [isStreaming, streamingText, streamStartedAt]);
+  }, [isStreaming, isDraftStreaming, streamingText, streamStartedAt, t]);
 
   function handleSubmit(content: string) {
     send(content);

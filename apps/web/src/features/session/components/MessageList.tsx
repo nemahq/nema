@@ -11,6 +11,7 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { AssistantMessage } from "./AssistantMessage";
 import { DraftCard } from "./DraftCard";
+import { DraftStatusMessage } from "./DraftStatusMessage";
 import { MessageListSkeleton } from "./MessageListSkeleton";
 import { UserMessage } from "./UserMessage";
 
@@ -52,6 +53,9 @@ function MessageListContent({ streamingMessage }: MessageListProps) {
                   createdAt={msg.createdAt}
                 />
               );
+            }
+            if (msg.type === "draft_status") {
+              return <DraftStatusMessage key={msg.id} message={msg} />;
             }
             if (msg.type === "draft") {
               return (

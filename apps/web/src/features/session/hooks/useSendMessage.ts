@@ -16,6 +16,8 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
 
   const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isDraftStreaming, setIsDraftStreaming] = useState(false);
+  const isDraftStreamingRef = useRef(false);
   const [streamingText, setStreamingText] = useState("");
   const fullTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
@@ -23,9 +25,15 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
   const handleData = useCallback(
     (event: ChatStreamEvent) => {
       switch (event.type) {
+        case "draft_start":
+          isDraftStreamingRef.current = true;
+          setIsDraftStreaming(true);
+          break;
         case "token":
-          fullTextRef.current += event.text;
-          setStreamingText(fullTextRef.current);
+          if (!isDraftStreamingRef.current) {
+            fullTextRef.current += event.text;
+            setStreamingText(fullTextRef.current);
+          }
           break;
         case "title":
           utils.session.list.setInfiniteData(
@@ -50,6 +58,8 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
         case "done":
           setStreamInput(null);
           setIsStreaming(false);
+          setIsDraftStreaming(false);
+          isDraftStreamingRef.current = false;
           setStreamingText("");
           fullTextRef.current = "";
           utils.message.list.invalidate({ sessionId });
@@ -66,6 +76,8 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
       console.error("[useSendMessage] streaming error:", error);
       setStreamInput(null);
       setIsStreaming(false);
+      setIsDraftStreaming(false);
+      isDraftStreamingRef.current = false;
       setStreamingText("");
       fullTextRef.current = "";
       utils.message.list.invalidate({ sessionId });
@@ -125,6 +137,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
     send,
     cancel,
     isStreaming,
+    isDraftStreaming,
     streamingText,
     streamStartedAt,
   };

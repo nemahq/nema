@@ -1,6 +1,6 @@
 import { type KeyboardEvent, useRef, useState } from "react";
 
-import { Button } from "@nema-io/weave";
+import { Button, cn } from "@nema-io/weave";
 import { ArrowUp } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
@@ -45,7 +45,7 @@ export function ChatInput({ onSubmit, placeholder, disabled }: ChatInputProps) {
   }
 
   return (
-    <div className="flex w-full flex-col gap-2 rounded-xl border border-border bg-surface-raised p-3 focus-within:border-border-strong dark:bg-surface-raised-hover">
+    <div className="flex w-full flex-col gap-2 rounded-2xl border border-border bg-surface-raised p-3 shadow-sm transition-shadow duration-normal focus-within:border-border-strong focus-within:shadow-md dark:bg-surface-raised-hover">
       <textarea
         ref={textareaRef}
         value={value}
@@ -55,7 +55,7 @@ export function ChatInput({ onSubmit, placeholder, disabled }: ChatInputProps) {
         }}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        rows={3}
+        rows={1}
         className="w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-tertiary focus:outline-none [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
       />
       <Button
@@ -64,7 +64,14 @@ export function ChatInput({ onSubmit, placeholder, disabled }: ChatInputProps) {
         disabled={disabled || !value.trim()}
         onClick={handleSubmit}
         aria-label={t("common.send")}
-        className="self-end rounded-full transition-all duration-normal disabled:scale-90 disabled:bg-surface-raised-hover disabled:text-fg-tertiary disabled:border-transparent disabled:opacity-100 dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-tertiary enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80 dark:enabled:bg-fg-primary dark:enabled:text-surface-base"
+        className={cn(
+          "self-end rounded-full transition-all duration-normal",
+          "disabled:scale-90 disabled:bg-surface-raised-hover disabled:text-fg-tertiary disabled:border-transparent disabled:opacity-100",
+          "dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-tertiary",
+          "enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80",
+          "dark:enabled:bg-fg-primary dark:enabled:text-surface-base",
+          value.trim() ? "opacity-100 scale-100" : "opacity-0 scale-90",
+        )}
       >
         <ArrowUp className="size-4" />
       </Button>

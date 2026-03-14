@@ -1,6 +1,9 @@
 {
   "chat": {
-    "draft_cancelled": "The draft has been cancelled.",
+    "draft_created": "Draft created",
+    "draft_edited": "Draft edited",
+    "draft_cancelled": "Draft cancelled",
+    "draft_saved": "Saved",
     "retrieval_empty": "No relevant information found.",
     "save_complete": "Saved successfully."
   },

@@ -313,14 +313,16 @@ export async function* processChatStream(
         signal,
       );
     } else {
-      responseContent = yield* handleDraftingStream(
+      yield { type: "draft_start" };
+      const draftBody = yield* handleDraftingStream(
         providers,
         input.content,
         null,
         signal,
       );
-      messageType = "draft";
-      await setDraft(supabase, input.sessionId, responseContent);
+      await setDraft(supabase, input.sessionId, draftBody);
+      responseContent = t("chat.draft_created", lng);
+      messageType = "draft_status";
     }
   } else {
     const intentResult = await providers.llm.generateStructured({
@@ -349,16 +351,19 @@ export async function* processChatStream(
           signal,
         );
         break;
-      case "edit":
-        responseContent = yield* handleDraftingStream(
+      case "edit": {
+        yield { type: "draft_start" };
+        const editedBody = yield* handleDraftingStream(
           providers,
           input.content,
           draft,
           signal,
         );
-        messageType = "draft";
-        await setDraft(supabase, input.sessionId, responseContent);
+        await setDraft(supabase, input.sessionId, editedBody);
+        responseContent = t("chat.draft_edited", lng);
+        messageType = "draft_status";
         break;
+      }
       case "save":
         responseContent = await handleSave(
           supabase,
@@ -368,12 +373,12 @@ export async function* processChatStream(
           draft.body,
           lng,
         );
-        yield { type: "token", text: responseContent };
+        messageType = "draft_status";
         break;
       case "cancel":
         await clearDraft(supabase, input.sessionId);
         responseContent = t("chat.draft_cancelled", lng);
-        yield { type: "token", text: responseContent };
+        messageType = "draft_status";
         break;
       default: {
         const _exhaustive: never = intentResult.intent;
@@ -419,7 +424,12 @@ export async function saveDraftAction(
     lng,
   );
 
-  return createAssistantResponse(supabase, sessionId, "text", responseContent);
+  return createAssistantResponse(
+    supabase,
+    sessionId,
+    "draft_status",
+    responseContent,
+  );
 }
 
 export async function cancelDraftAction(
@@ -432,7 +442,7 @@ export async function cancelDraftAction(
   return createAssistantResponse(
     supabase,
     sessionId,
-    "text",
+    "draft_status",
     t("chat.draft_cancelled", lng),
   );
 }
