@@ -2,7 +2,6 @@ import { memo, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { useNavigate } from "@tanstack/react-router";
 
-import type { SessionSummary } from "@nema-io/shared";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,15 +17,17 @@ import { DeleteSessionDialog } from "./DeleteSessionDialog";
 import { RenameInput } from "./RenameInput";
 
 export const SessionItem = memo(function SessionItem({
-  session,
+  sessionId,
+  title: rawTitle,
 }: {
-  session: SessionSummary;
+  sessionId: string;
+  title: string | null;
 }) {
   const { t } = useTranslation();
   const trackEvent = useTrackEvent();
   const navigate = useNavigate();
   const params = useParams({ strict: false });
-  const title = session.title ?? t("session.untitled");
+  const title = rawTitle ?? t("session.untitled");
 
   const [isEditing, setIsEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -34,8 +35,8 @@ export const SessionItem = memo(function SessionItem({
   if (isEditing) {
     return (
       <RenameInput
-        sessionId={session.id}
-        currentTitle={session.title}
+        sessionId={sessionId}
+        currentTitle={rawTitle}
         onDone={() => setIsEditing(false)}
       />
     );
@@ -46,8 +47,8 @@ export const SessionItem = memo(function SessionItem({
       <div className="group relative flex items-center">
         <Link
           to="/session/$sessionId"
-          params={{ sessionId: session.id }}
-          onClick={() => trackEvent("session.navigate", session.id)}
+          params={{ sessionId }}
+          onClick={() => trackEvent("session.navigate", sessionId)}
           className="w-full cursor-pointer truncate rounded-md px-2 py-1.5 pr-8 text-left text-sm transition-colors duration-fast"
           activeProps={{
             className: "bg-surface-raised-hover text-fg-primary font-medium",
@@ -86,11 +87,11 @@ export const SessionItem = memo(function SessionItem({
       </div>
 
       <DeleteSessionDialog
-        sessionId={session.id}
+        sessionId={sessionId}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         onDeleted={() => {
-          if ("sessionId" in params && params.sessionId === session.id) {
+          if ("sessionId" in params && params.sessionId === sessionId) {
             navigate({ to: "/" });
           }
         }}

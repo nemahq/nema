@@ -45,18 +45,31 @@ function MessageListContent({ streamingMessage }: MessageListProps) {
         <div className="mx-auto max-w-2xl space-y-6 px-6 py-6">
           {messages.map((msg, i) => {
             if (msg.role === "user") {
-              return <UserMessage key={msg.id} message={msg} />;
+              return (
+                <UserMessage
+                  key={msg.id}
+                  content={msg.content}
+                  createdAt={msg.createdAt}
+                />
+              );
             }
             if (msg.type === "draft") {
               return (
                 <DraftCard
                   key={msg.id}
-                  message={msg}
+                  content={msg.content}
+                  createdAt={msg.createdAt}
                   isLatest={i === lastDraftIndex}
                 />
               );
             }
-            return <AssistantMessage key={msg.id} message={msg} />;
+            return (
+              <AssistantMessage
+                key={msg.id}
+                content={msg.content}
+                createdAt={msg.createdAt}
+              />
+            );
           })}
         </div>
       </div>

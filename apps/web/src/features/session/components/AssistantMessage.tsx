@@ -1,14 +1,18 @@
-import type { Message } from "@nema-io/shared";
-
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { RelativeTime } from "./RelativeTime";
 
-export function AssistantMessage({ message }: { message: Message }) {
+export function AssistantMessage({
+  content,
+  createdAt,
+}: {
+  content: string;
+  createdAt: string;
+}) {
   return (
     <div>
-      <MarkdownRenderer content={message.content} />
+      <MarkdownRenderer content={content} />
       <div className="mt-1">
-        <RelativeTime dateTime={message.createdAt} />
+        <RelativeTime dateTime={createdAt} />
       </div>
     </div>
   );
