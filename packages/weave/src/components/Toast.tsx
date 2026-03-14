@@ -26,6 +26,15 @@ function Toast({ theme = "system", ...props }: ToasterProps) {
           "--normal-bg": "var(--surface-card)",
           "--normal-text": "var(--fg-primary)",
           "--normal-border": "var(--border)",
+          "--success-bg": "var(--status-success-tint)",
+          "--success-text": "var(--status-success)",
+          "--success-border": "var(--status-success-tint)",
+          "--error-bg": "var(--status-error-tint)",
+          "--error-text": "var(--status-error)",
+          "--error-border": "var(--status-error-tint)",
+          "--warning-bg": "var(--status-warning-tint)",
+          "--warning-text": "var(--status-warning)",
+          "--warning-border": "var(--status-warning-tint)",
           "--border-radius": "var(--radius-xl)",
         } as React.CSSProperties
       }
