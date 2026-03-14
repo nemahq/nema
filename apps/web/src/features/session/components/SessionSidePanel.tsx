@@ -11,7 +11,7 @@ import { DraftTabContent } from "./DraftTabContent";
 import type { SidePanelTab } from "./SidePanel";
 import { SidePanel } from "./SidePanel";
 
-function ContextSidePanelInner() {
+function SessionSidePanelInner() {
   const sessionId = useSessionId();
   const draft = useSessionDraft({ sessionId });
   const cancelDraft = useCancelDraft({ sessionId });
@@ -30,11 +30,11 @@ function ContextSidePanelInner() {
   return <SidePanel tabs={tabs} />;
 }
 
-export function ContextSidePanel() {
+export function SessionSidePanel() {
   return (
     <ErrorBoundary fallback={null}>
       <Suspense>
-        <ContextSidePanelInner />
+        <SessionSidePanelInner />
       </Suspense>
     </ErrorBoundary>
   );

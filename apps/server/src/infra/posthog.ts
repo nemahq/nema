@@ -7,11 +7,17 @@ const DEFAULT_HOST = "https://us.i.posthog.com";
 let client: PostHog | null = null;
 let initialized = false;
 
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
 function getClient(): PostHog | null {
   if (initialized) {
     return client;
   }
   initialized = true;
+
+  if (!IS_PRODUCTION) {
+    return null;
+  }
 
   const { POSTHOG_API_KEY, POSTHOG_HOST } = getEnv();
   if (!POSTHOG_API_KEY) {

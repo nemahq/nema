@@ -20,6 +20,10 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 - Call external APIs from frontend — all calls go through tRPC. Exception: Supabase Auth client SDK (sign-in, sign-up, session management), Tolgee CDN (translation fetch), PostHog JS SDK (analytics capture).
 - Expose server-side keys (LLM, DB) to client.
 
+## Terminology
+
+Product terms vs code terms are mapped in `docs/glossary.md`. Code (variables, files, APIs, URLs) MUST use code terms.
+
 ## Conventions
 
 | Rule                                 | Example        |

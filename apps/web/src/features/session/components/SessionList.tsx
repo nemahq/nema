@@ -1,5 +1,7 @@
 import { Suspense, useRef } from "react";
 
+import { Skeleton } from "@nema-io/weave";
+
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useSessionList } from "@web/features/session/hooks/useSessionList";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
@@ -33,7 +35,23 @@ function SessionListContent() {
         ))}
       </div>
 
-      {hasNextPage && <div ref={sentinelRef} className="h-4" />}
+      {hasNextPage && (
+        <div ref={sentinelRef} className="flex flex-col gap-0.5">
+          {isFetchingNextPage && (
+            <>
+              <div className="px-2 py-1.5">
+                <Skeleton className="h-[18px] w-2/3 rounded-sm" />
+              </div>
+              <div className="px-2 py-1.5">
+                <Skeleton
+                  className="h-[18px] w-1/2 rounded-sm"
+                  style={{ opacity: 0.6 }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
