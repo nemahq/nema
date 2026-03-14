@@ -97,6 +97,7 @@
 - `satisfies`: validate shape against a type while preserving inferred literal types. Use when you need both type checking AND narrow inference.
   - `{ key: "value" } satisfies Record<string, string>` → type-checked AND inferred as `{ key: "value" }`, not widened to `Record<string, string>`.
 - MUST NOT use `as` type assertions to silence the compiler. Allowed only for narrowing from `unknown` after a runtime guard.
+- Component props type: `{ComponentName}Props`. Generic `Props` is forbidden — name collisions across files make refactoring error-prone.
 
 ## Design System
 

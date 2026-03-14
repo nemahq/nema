@@ -4,13 +4,17 @@ import { SESSION_TITLE_MAX_LENGTH } from "@nema-io/shared";
 
 import { useUpdateSession } from "@web/features/session/hooks/useUpdateSession";
 
-interface Props {
+interface RenameInputProps {
   sessionId: string;
   currentTitle: string | null;
   onDone: () => void;
 }
 
-export function RenameInput({ sessionId, currentTitle, onDone }: Props) {
+export function RenameInput({
+  sessionId,
+  currentTitle,
+  onDone,
+}: RenameInputProps) {
   const [editValue, setEditValue] = useState(currentTitle ?? "");
   const updateMutation = useUpdateSession();
 

@@ -11,7 +11,7 @@ import {
 import { useDeleteSession } from "@web/features/session/hooks/useDeleteSession";
 import { useTranslation } from "@web/lib/tolgee";
 
-interface Props {
+interface DeleteSessionDialogProps {
   sessionId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -23,7 +23,7 @@ export function DeleteSessionDialog({
   open,
   onOpenChange,
   onDeleted,
-}: Props) {
+}: DeleteSessionDialogProps) {
   const { t } = useTranslation();
   const deleteMutation = useDeleteSession();
 
