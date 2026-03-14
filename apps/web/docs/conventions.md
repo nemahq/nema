@@ -24,6 +24,11 @@
 - Cache manipulation functions belong in the hook that owns the query.
 - Mutation hooks MUST NOT embed side effects (navigate, etc.). Callers inject them at `mutate(variables, { onSuccess })` call site.
 
+## Analytics (PostHog)
+
+- Server action result → track in mutation hook's `onSuccess` (only after confirmed success).
+- Client-only interaction (navigation, copy, UI toggle) → track in the component handler.
+
 ## Functions
 
 - Accept arguments as objects so each parameter's intent is clear at the call site.
