@@ -5,8 +5,8 @@ import { getQueryKey } from "@trpc/react-query";
 import type { Message } from "@nema-io/shared";
 
 import { ChatInput } from "@web/features/session/components/ChatInput";
-import { ContextSidePanel } from "@web/features/session/components/ContextSidePanel";
 import { MessageList } from "@web/features/session/components/MessageList";
+import { SessionSidePanel } from "@web/features/session/components/SessionSidePanel";
 import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTranslation } from "@web/lib/tolgee";
@@ -14,7 +14,7 @@ import { trpc } from "@web/lib/trpc";
 
 const STREAMING_MESSAGE_ID = "streaming";
 
-export function ContextPage() {
+export function SessionPage() {
   const { t } = useTranslation();
   const sessionId = useSessionId();
 
@@ -65,7 +65,7 @@ export function ContextPage() {
         </div>
       </main>
 
-      <ContextSidePanel />
+      <SessionSidePanel />
     </div>
   );
 }

@@ -17,7 +17,7 @@ export const SessionItem = memo(function SessionItem({
 
   return (
     <Link
-      to="/context/$sessionId"
+      to="/session/$sessionId"
       params={{ sessionId: session.id }}
       onClick={() => trackEvent("session.navigate", session.id)}
       className="w-full cursor-pointer truncate rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-fast"

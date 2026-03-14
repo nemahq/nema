@@ -10,13 +10,13 @@ import { getQueryKey } from "@trpc/react-query";
 
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
-import { ContextPage } from "@web/app/pages/ContextPage";
 import { HomePage } from "@web/app/pages/HomePage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
+import { SessionPage } from "@web/app/pages/SessionPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
 import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
-import { ContextSidebar } from "@web/features/session/components/ContextSidebar";
+import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
 import { queryClient } from "@web/lib/queryClient";
 import { getAccessToken, supabase } from "@web/lib/supabase";
@@ -77,12 +77,12 @@ const authenticatedRoute = createRoute({
   },
 });
 
-const contextSidebarRoute = createRoute({
+const sessionSidebarRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
-  id: "_contextSidebar",
+  id: "_sessionSidebar",
   component: () => (
     <>
-      <ContextSidebar />
+      <SessionSidebar />
       <Suspense fallback={<ContentAreaFallback />}>
         <Outlet />
       </Suspense>
@@ -116,15 +116,15 @@ const contextSidebarRoute = createRoute({
 });
 
 const indexRoute = createRoute({
-  getParentRoute: () => contextSidebarRoute,
+  getParentRoute: () => sessionSidebarRoute,
   path: "/",
   component: HomePage,
 });
 
 const sessionRoute = createRoute({
-  getParentRoute: () => contextSidebarRoute,
-  path: "/context/$sessionId",
-  component: ContextPage,
+  getParentRoute: () => sessionSidebarRoute,
+  path: "/session/$sessionId",
+  component: SessionPage,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -132,7 +132,7 @@ const routeTree = rootRoute.addChildren([
   privacyRoute,
   termsRoute,
   authenticatedRoute.addChildren([
-    contextSidebarRoute.addChildren([indexRoute, sessionRoute]),
+    sessionSidebarRoute.addChildren([indexRoute, sessionRoute]),
   ]),
 ]);
 

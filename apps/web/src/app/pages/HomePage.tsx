@@ -25,7 +25,7 @@ export function HomePage() {
     createSession.mutate(undefined, {
       onSuccess: (session) =>
         navigate({
-          to: "/context/$sessionId",
+          to: "/session/$sessionId",
           params: { sessionId: session.id },
         }),
     });
