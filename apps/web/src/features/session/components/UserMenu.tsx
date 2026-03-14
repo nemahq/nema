@@ -13,13 +13,12 @@ import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 
-function Avatar({
-  url,
-  initial,
-}: {
+interface AvatarProps {
   url: string | undefined;
   initial: string;
-}) {
+}
+
+function Avatar({ url, initial }: AvatarProps) {
   return url ? (
     <img
       src={url}
@@ -34,7 +33,11 @@ function Avatar({
   );
 }
 
-export function UserMenu({ collapsed }: { collapsed: boolean }) {
+interface UserMenuProps {
+  collapsed: boolean;
+}
+
+export function UserMenu({ collapsed }: UserMenuProps) {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();

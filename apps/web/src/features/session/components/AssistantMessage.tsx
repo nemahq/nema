@@ -1,13 +1,15 @@
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { RelativeTime } from "./RelativeTime";
 
+interface AssistantMessageProps {
+  content: string;
+  createdAt: string;
+}
+
 export function AssistantMessage({
   content,
   createdAt,
-}: {
-  content: string;
-  createdAt: string;
-}) {
+}: AssistantMessageProps) {
   return (
     <div>
       <MarkdownRenderer content={content} />

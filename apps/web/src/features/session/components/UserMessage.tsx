@@ -1,13 +1,12 @@
 import { MessageBubble } from "./MessageBubble";
 import { RelativeTime } from "./RelativeTime";
 
-export function UserMessage({
-  content,
-  createdAt,
-}: {
+interface UserMessageProps {
   content: string;
   createdAt: string;
-}) {
+}
+
+export function UserMessage({ content, createdAt }: UserMessageProps) {
   return (
     <div className="flex justify-end">
       <div className="max-w-[85%] md:max-w-[70%]">

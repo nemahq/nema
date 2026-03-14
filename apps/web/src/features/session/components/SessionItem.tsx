@@ -16,13 +16,15 @@ import { useTranslation } from "@web/lib/tolgee";
 import { DeleteSessionDialog } from "./DeleteSessionDialog";
 import { RenameInput } from "./RenameInput";
 
+interface SessionItemProps {
+  sessionId: string;
+  title: string | null;
+}
+
 export const SessionItem = memo(function SessionItem({
   sessionId,
   title: rawTitle,
-}: {
-  sessionId: string;
-  title: string | null;
-}) {
+}: SessionItemProps) {
   const { t } = useTranslation();
   const trackEvent = useTrackEvent();
   const navigate = useNavigate();

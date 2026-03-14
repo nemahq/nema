@@ -10,13 +10,12 @@ import { tolgee } from "@web/lib/tolgee/client";
 const LOCALE_MAP = { ko, en: enUS } as const;
 const TICK_INTERVAL_MS = 60_000;
 
-export function RelativeTime({
-  dateTime,
-  className,
-}: {
+interface RelativeTimeProps {
   dateTime: string;
   className?: string;
-}) {
+}
+
+export function RelativeTime({ dateTime, className }: RelativeTimeProps) {
   // useTranslation 구독 → 언어 변경 시 리렌더링 보장
   useTranslation();
   const [, tick] = useReducer((c: number) => c + 1, 0);

@@ -7,17 +7,19 @@ import {
   TooltipTrigger,
 } from "@nema-io/weave";
 
+interface SidebarActionButtonProps {
+  collapsed: boolean;
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+}
+
 export function SidebarActionButton({
   collapsed,
   icon,
   label,
   onClick,
-}: {
-  collapsed: boolean;
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-}) {
+}: SidebarActionButtonProps) {
   if (collapsed) {
     return (
       <div className="flex justify-center py-2">

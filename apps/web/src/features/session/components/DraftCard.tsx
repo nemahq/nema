@@ -8,15 +8,13 @@ import { useTranslation } from "@web/lib/tolgee";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { RelativeTime } from "./RelativeTime";
 
-export function DraftCard({
-  content,
-  createdAt,
-  isLatest,
-}: {
+interface DraftCardProps {
   content: string;
   createdAt: string;
   isLatest: boolean;
-}) {
+}
+
+export function DraftCard({ content, createdAt, isLatest }: DraftCardProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(isLatest);
 
