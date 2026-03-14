@@ -21,20 +21,18 @@ function Toast({ theme = "system", ...props }: ToasterProps) {
         error: <OctagonXIcon className="size-4" />,
         loading: <Loader2Icon className="size-4 animate-spin" />,
       }}
+      toastOptions={{
+        classNames: {
+          toast: "bg-surface-card text-fg-primary border-transparent shadow-lg",
+          success:
+            "!bg-status-success-tint !text-status-success !border-transparent",
+          error: "!bg-status-error-tint !text-status-error !border-transparent",
+          warning:
+            "!bg-status-warning-tint !text-status-warning !border-transparent",
+        },
+      }}
       style={
         {
-          "--normal-bg": "var(--surface-card)",
-          "--normal-text": "var(--fg-primary)",
-          "--normal-border": "var(--border)",
-          "--success-bg": "var(--status-success-tint)",
-          "--success-text": "var(--status-success)",
-          "--success-border": "var(--status-success-tint)",
-          "--error-bg": "var(--status-error-tint)",
-          "--error-text": "var(--status-error)",
-          "--error-border": "var(--status-error-tint)",
-          "--warning-bg": "var(--status-warning-tint)",
-          "--warning-text": "var(--status-warning)",
-          "--warning-border": "var(--status-warning-tint)",
           "--border-radius": "var(--radius-xl)",
         } as React.CSSProperties
       }
