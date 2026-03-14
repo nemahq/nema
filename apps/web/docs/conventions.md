@@ -110,3 +110,4 @@
 
 - Prefer weave components for UI implementation.
 - Refer to `docs/design/design-system.html` only when custom UI beyond weave is needed.
+- Minimize CSS `border` usage. Use `shadow` for surface elevation and separation instead.
