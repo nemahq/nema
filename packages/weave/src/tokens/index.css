@@ -263,6 +263,15 @@
   --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-brand/50;
