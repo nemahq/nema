@@ -23,16 +23,17 @@ export function HomePage() {
   const createSession = useCreateSession();
 
   function handleSubmit(content: string) {
-    createSession.mutate(undefined, {
-      onSuccess: (session) =>
-        navigate({
-          to: "/session/$sessionId",
-          params: { sessionId: session.id },
-          state: (prev) => ({
-            ...prev,
-            [HOME_TO_SESSION_INITIAL_MESSAGE_KEY]: content,
-          }),
-        }),
+    const sessionId = crypto.randomUUID();
+
+    createSession.mutate({ sessionId });
+
+    navigate({
+      to: "/session/$sessionId",
+      params: { sessionId },
+      state: (prev) => ({
+        ...prev,
+        [HOME_TO_SESSION_INITIAL_MESSAGE_KEY]: content,
+      }),
     });
   }
 

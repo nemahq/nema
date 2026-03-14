@@ -79,7 +79,7 @@ export async function listSessions(
 
 export async function getSession(
   supabase: SupabaseClient,
-  sessionId: string,
+  { sessionId }: { sessionId: string },
 ): Promise<SessionSummary & { draft: SessionDraft | null }> {
   const { data, error } = await supabase
     .from("sessions")
@@ -97,11 +97,11 @@ export async function getSession(
 
 export async function createSession(
   supabase: SupabaseClient,
-  userId: string,
+  { userId, sessionId }: { userId: string; sessionId: string },
 ): Promise<SessionSummary> {
   const { data, error } = await supabase
     .from("sessions")
-    .insert({ user_id: userId })
+    .insert({ id: sessionId, user_id: userId })
     .select("id, title, created_at, updated_at")
     .single();
 
@@ -129,7 +129,7 @@ export async function updateSession(
 
 export async function deleteSession(
   supabase: SupabaseClient,
-  sessionId: string,
+  { sessionId }: { sessionId: string },
 ): Promise<void> {
   const { error, count } = await supabase
     .from("sessions")

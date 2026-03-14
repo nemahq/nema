@@ -24,6 +24,8 @@ export {
 } from "./schemas/message";
 export {
   SESSION_TITLE_MAX_LENGTH,
+  type SessionCreateInput,
+  SessionCreateInputSchema,
   type SessionDeleteInput,
   SessionDeleteInputSchema,
   type SessionDraft,
