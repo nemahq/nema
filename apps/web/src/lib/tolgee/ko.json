@@ -41,6 +41,7 @@
     "draft_tab_close": "{label} 탭 닫기",
     "rename": "이름 바꾸기",
     "delete": "삭제",
+    "menu": "세션 메뉴",
     "delete_confirm_title": "맥락을 삭제할까요?",
     "delete_confirm_description": "삭제하면 되돌릴 수 없습니다."
   },

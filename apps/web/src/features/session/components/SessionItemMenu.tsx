@@ -33,6 +33,7 @@ export function SessionItemMenu({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
+            aria-label={t("session.menu")}
             className="absolute right-1 flex size-6 items-center justify-center rounded-md opacity-0 transition-opacity duration-fast hover:bg-surface-raised-hover group-hover:opacity-100 data-[state=open]:opacity-100"
             onClick={(e) => e.preventDefault()}
           >

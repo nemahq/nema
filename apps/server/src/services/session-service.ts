@@ -66,9 +66,7 @@ export async function listSessions(
   }
 
   const { data, error } = await query;
-  if (error) {
-    throw new SupabaseError("query_failed", error.message, error);
-  }
+  throwIfSupabaseError(error);
 
   const hasMore = data.length > input.limit;
   const items = (hasMore ? data.slice(0, input.limit) : data).map(toSummary);
@@ -89,9 +87,7 @@ export async function getSession(
     .eq("id", sessionId)
     .single();
 
-  if (error) {
-    throw new SupabaseError("query_failed", error.message, error);
-  }
+  throwIfSupabaseError(error);
 
   return {
     ...toSummary(data),
@@ -109,9 +105,7 @@ export async function createSession(
     .select("id, title, created_at, updated_at")
     .single();
 
-  if (error) {
-    throw new SupabaseError("query_failed", error.message, error);
-  }
+  throwIfSupabaseError(error);
 
   return toSummary(data);
 }
@@ -142,9 +136,7 @@ export async function deleteSession(
     .delete({ count: "exact" })
     .eq("id", sessionId);
 
-  if (error) {
-    throw new SupabaseError("query_failed", error.message, error);
-  }
+  throwIfSupabaseError(error);
   if (!count) {
     throw new SupabaseError("not_found", `Session ${sessionId} not found`);
   }

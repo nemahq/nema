@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { SESSION_TITLE_MAX_LENGTH } from "@nema-io/shared";
 
@@ -17,8 +17,12 @@ export function RenameInput({
 }: RenameInputProps) {
   const [editValue, setEditValue] = useState(currentTitle ?? "");
   const updateMutation = useUpdateSession();
+  const cancelledRef = useRef(false);
 
   function commitEdit() {
+    if (cancelledRef.current || updateMutation.isPending) {
+      return;
+    }
     const trimmed = editValue.trim();
     if (!trimmed || trimmed === currentTitle) {
       onEditEnd();
@@ -26,7 +30,7 @@ export function RenameInput({
     }
     updateMutation.mutate(
       { sessionId, title: trimmed },
-      { onSettled: onEditEnd },
+      { onSuccess: onEditEnd },
     );
   }
 
@@ -42,6 +46,7 @@ export function RenameInput({
           e.currentTarget.blur();
         }
         if (e.key === "Escape") {
+          cancelledRef.current = true;
           onEditEnd();
         }
       }}

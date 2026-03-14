@@ -31,8 +31,10 @@ export function DeleteSessionDialog({
     deleteMutation.mutate(
       { sessionId },
       {
-        onSuccess: onDeleted,
-        onSettled: () => onOpenChange(false),
+        onSuccess: () => {
+          onDeleted();
+          onOpenChange(false);
+        },
       },
     );
   }
