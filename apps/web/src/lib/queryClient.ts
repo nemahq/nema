@@ -31,6 +31,10 @@ export const queryClient = new QueryClient({
         error instanceof TRPCClientError
           ? error.message
           : tolgee.t("common.unknown_error"),
+        {
+          duration: Infinity,
+          cancel: { label: "✕", onClick: () => {} },
+        },
       );
     },
   }),
