@@ -7,13 +7,13 @@ import { useUpdateSession } from "@web/features/session/hooks/useUpdateSession";
 interface RenameInputProps {
   sessionId: string;
   currentTitle: string | null;
-  onDone: () => void;
+  onEditEnd: () => void;
 }
 
 export function RenameInput({
   sessionId,
   currentTitle,
-  onDone,
+  onEditEnd,
 }: RenameInputProps) {
   const [editValue, setEditValue] = useState(currentTitle ?? "");
   const updateMutation = useUpdateSession();
@@ -21,10 +21,13 @@ export function RenameInput({
   function commitEdit() {
     const trimmed = editValue.trim();
     if (!trimmed || trimmed === currentTitle) {
-      onDone();
+      onEditEnd();
       return;
     }
-    updateMutation.mutate({ sessionId, title: trimmed }, { onSettled: onDone });
+    updateMutation.mutate(
+      { sessionId, title: trimmed },
+      { onSettled: onEditEnd },
+    );
   }
 
   return (
@@ -39,7 +42,7 @@ export function RenameInput({
           e.currentTarget.blur();
         }
         if (e.key === "Escape") {
-          onDone();
+          onEditEnd();
         }
       }}
       maxLength={SESSION_TITLE_MAX_LENGTH}

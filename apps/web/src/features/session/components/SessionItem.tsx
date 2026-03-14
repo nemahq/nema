@@ -37,7 +37,7 @@ export const SessionItem = memo(function SessionItem({
       <RenameInput
         sessionId={sessionId}
         currentTitle={rawTitle}
-        onDone={() => setIsEditing(false)}
+        onEditEnd={() => setIsEditing(false)}
       />
     );
   }
