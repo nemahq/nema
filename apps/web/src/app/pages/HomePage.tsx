@@ -21,12 +21,13 @@ export function HomePage() {
   const [variant] = useState(pickRandom);
   const createSession = useCreateSession();
 
-  function handleSubmit() {
+  function handleSubmit(content: string) {
     createSession.mutate(undefined, {
       onSuccess: (session) =>
         navigate({
           to: "/session/$sessionId",
           params: { sessionId: session.id },
+          state: { initialMessage: content },
         }),
     });
   }

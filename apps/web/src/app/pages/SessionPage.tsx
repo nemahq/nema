@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useIsMutating } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { getQueryKey } from "@trpc/react-query";
 
 import type { Message } from "@nema-io/shared";
@@ -18,9 +19,24 @@ export function SessionPage() {
   const { t } = useTranslation();
   const sessionId = useSessionId();
 
+  const navigate = useNavigate();
+  const { initialMessage } = useLocation({ select: (loc) => loc.state });
   const { send, isStreaming, streamingText, streamStartedAt } = useSendMessage({
     sessionId,
   });
+
+  const sentRef = useRef(false);
+  useEffect(
+    function sendInitialMessage() {
+      if (!initialMessage || sentRef.current) {
+        return;
+      }
+      sentRef.current = true;
+      send(initialMessage);
+      navigate({ replace: true, state: {} });
+    },
+    [initialMessage, navigate, send],
+  );
 
   const saveDraftMutating = useIsMutating({
     mutationKey: getQueryKey(trpc.message.saveDraft),

@@ -36,6 +36,7 @@
     "@nema-io/tsconfig": "workspace:*",
     "@sentry/vite-plugin": "^5.1.1",
     "@tailwindcss/vite": "^4.2.1",
+    "@tanstack/history": "^1.161.4",
     "@tanstack/react-query-devtools": "^5.91.3",
     "@testing-library/react": "^16.3.2",
     "@tolgee/web": "^6.4.0",
