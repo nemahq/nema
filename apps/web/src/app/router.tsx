@@ -4,9 +4,7 @@ import {
   createRoute,
   createRouter,
   Outlet,
-  redirect,
 } from "@tanstack/react-router";
-import { getQueryKey } from "@trpc/react-query";
 
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
@@ -16,11 +14,8 @@ import { SessionPage } from "@web/app/pages/SessionPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
 import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
+import { requireAuth, requireGuest } from "@web/features/auth/guards";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
-import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
-import { queryClient } from "@web/lib/queryClient";
-import { getAccessToken, supabase } from "@web/lib/supabase";
-import { trpc, trpcClient } from "@web/lib/trpc";
 
 import { App } from "./App";
 
@@ -36,15 +31,7 @@ const signinRoute = createRoute({
     redirect: (search.redirect as string) || undefined,
   }),
   component: AuthPage,
-  async beforeLoad() {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      throw new Error(error.message);
-    }
-    if (data.session) {
-      throw redirect({ to: "/" });
-    }
-  },
+  beforeLoad: requireGuest,
 });
 
 const privacyRoute = createRoute({
@@ -63,18 +50,7 @@ const authenticatedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "_authenticated",
   component: AppLayout,
-  async beforeLoad({ location }) {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      throw new Error(error.message);
-    }
-    if (!data.session) {
-      throw redirect({
-        to: "/signin",
-        search: { redirect: location.href },
-      });
-    }
-  },
+  beforeLoad: ({ location }) => requireAuth(location.href),
 });
 
 const sessionSidebarRoute = createRoute({
@@ -88,31 +64,6 @@ const sessionSidebarRoute = createRoute({
       </Suspense>
     </>
   ),
-  beforeLoad() {
-    if (!getAccessToken()) {
-      return;
-    }
-
-    const prefetchPromise = queryClient.prefetchInfiniteQuery({
-      queryKey: getQueryKey(
-        trpc.session.list,
-        { limit: SESSION_LIST_LIMIT },
-        "infinite",
-      ),
-      queryFn: () =>
-        trpcClient.session.list.query({ limit: SESSION_LIST_LIMIT }),
-      initialPageParam: undefined as string | undefined,
-      getNextPageParam: (
-        lastPage: Awaited<ReturnType<typeof trpcClient.session.list.query>>,
-      ) => lastPage.nextCursor ?? undefined,
-    });
-
-    if (import.meta.env.DEV) {
-      prefetchPromise.catch((error: unknown) => {
-        console.warn("[prefetch] Session list prefetch failed:", error);
-      });
-    }
-  },
 });
 
 const indexRoute = createRoute({
