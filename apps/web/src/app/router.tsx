@@ -100,8 +100,12 @@ declare module "@tanstack/react-router" {
   }
 }
 
+export const ROUTE_STATE = {
+  INITIAL_MESSAGE: "initialMessage",
+} as const;
+
 declare module "@tanstack/history" {
   interface HistoryState {
-    initialMessage?: string;
+    [ROUTE_STATE.INITIAL_MESSAGE]?: string;
   }
 }
