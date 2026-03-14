@@ -4,9 +4,10 @@ import { getEnv } from "@web/app/env";
 
 const DEFAULT_HOST = "https://us.i.posthog.com";
 
+const IS_PRODUCTION = import.meta.env.PROD;
 const { POSTHOG_KEY, POSTHOG_HOST } = getEnv();
 
-if (POSTHOG_KEY) {
+if (POSTHOG_KEY && IS_PRODUCTION) {
   posthogLib.init(POSTHOG_KEY, {
     api_host: POSTHOG_HOST ?? DEFAULT_HOST,
     capture_pageview: true,
