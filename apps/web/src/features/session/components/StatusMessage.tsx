@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 
-import type { Message } from "@nema-io/shared";
+import type { Message, StatusLogType } from "@nema-io/shared";
 
 import { useTranslation } from "@web/lib/tolgee";
 import type { TranslationKey } from "@web/lib/tolgee/types";
 
-const STATUS_LABEL_MAP: Record<string, TranslationKey> = {
+const STATUS_LABEL_MAP: Record<StatusLogType, TranslationKey> = {
   draft_created: "session.status_draft_created",
   draft_edited: "session.status_draft_edited",
   draft_cancelled: "session.status_draft_cancelled",
@@ -20,7 +20,9 @@ export function StatusMessage({
   icon?: ReactNode;
 }) {
   const { t } = useTranslation();
-  const labelKey = STATUS_LABEL_MAP[message.content];
+  const labelKey = STATUS_LABEL_MAP[message.content as StatusLogType] as
+    | TranslationKey
+    | undefined;
 
   return (
     <div className="flex items-center justify-center gap-1.5 py-1 text-xs text-fg-tertiary">

@@ -9,6 +9,7 @@ import type {
   Message,
   MessageType,
   SessionDraft,
+  StatusLogType,
 } from "@nema-io/shared";
 import { SessionDraftSchema } from "@nema-io/shared";
 
@@ -245,7 +246,7 @@ export async function* processChatStream(
         signal,
       );
       await setDraft(supabase, input.sessionId, draftBody);
-      responseContent = "draft_created";
+      responseContent = "draft_created" satisfies StatusLogType;
       messageType = "status";
     }
   } else {
@@ -284,7 +285,7 @@ export async function* processChatStream(
           signal,
         );
         await setDraft(supabase, input.sessionId, editedBody);
-        responseContent = "draft_edited";
+        responseContent = "draft_edited" satisfies StatusLogType;
         messageType = "status";
         break;
       }
@@ -296,12 +297,12 @@ export async function* processChatStream(
           input.sessionId,
           draft.body,
         );
-        responseContent = "draft_saved";
+        responseContent = "draft_saved" satisfies StatusLogType;
         messageType = "status";
         break;
       case "cancel":
         await clearDraft(supabase, input.sessionId);
-        responseContent = "draft_cancelled";
+        responseContent = "draft_cancelled" satisfies StatusLogType;
         messageType = "status";
         break;
       default: {
@@ -340,7 +341,12 @@ export async function saveDraftAction(
 
   await handleSave(supabase, providers, userId, sessionId, draft.body);
 
-  return createAssistantResponse(supabase, sessionId, "status", "draft_saved");
+  return createAssistantResponse(
+    supabase,
+    sessionId,
+    "status",
+    "draft_saved" satisfies StatusLogType,
+  );
 }
 
 export async function cancelDraftAction(
@@ -353,7 +359,7 @@ export async function cancelDraftAction(
     supabase,
     sessionId,
     "status",
-    "draft_cancelled",
+    "draft_cancelled" satisfies StatusLogType,
   );
 }
 
