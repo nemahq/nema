@@ -11,7 +11,7 @@ import { trackEvent } from "@server/services/event-service";
 
 const RETRIEVAL_SEARCH_LIMIT = 5;
 
-export interface SearchIntent {
+interface SearchIntent {
   queries: string[] | null;
   entities: string[] | null;
 }
