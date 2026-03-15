@@ -23,14 +23,10 @@ export function SessionPage() {
     select: (loc) =>
       getRouteState(loc.state, HOME_TO_SESSION_INITIAL_MESSAGE_KEY),
   });
-  const {
-    send,
-    isStreaming,
-    isDraftStreaming,
-    streamingText,
-    streamStartedAt,
-  } = useSendMessage({ sessionId });
-  const disabled = useChatInputDisabled({ isStreaming });
+  const { send, phase, streamingText, streamStartedAt } = useSendMessage({
+    sessionId,
+  });
+  const disabled = useChatInputDisabled({ phase });
 
   const sentRef = useRef(false);
   useEffect(
@@ -46,32 +42,29 @@ export function SessionPage() {
   );
 
   const streamingMessage = useMemo<Message | undefined>(() => {
-    if (!isStreaming) {
-      return undefined;
+    switch (phase) {
+      case "idle":
+        return undefined;
+      case "draft":
+        return {
+          id: STREAMING_MESSAGE_ID,
+          role: "assistant",
+          type: "status",
+          content: t("session.draft_creating"),
+          createdAt: streamStartedAt,
+        };
+      case "text":
+        return streamingText
+          ? {
+              id: STREAMING_MESSAGE_ID,
+              role: "assistant",
+              type: "text",
+              content: streamingText,
+              createdAt: streamStartedAt,
+            }
+          : undefined;
     }
-
-    if (isDraftStreaming) {
-      return {
-        id: STREAMING_MESSAGE_ID,
-        role: "assistant",
-        type: "status",
-        content: t("session.draft_creating"),
-        createdAt: streamStartedAt,
-      };
-    }
-
-    if (!streamingText) {
-      return undefined;
-    }
-
-    return {
-      id: STREAMING_MESSAGE_ID,
-      role: "assistant",
-      type: "text",
-      content: streamingText,
-      createdAt: streamStartedAt,
-    };
-  }, [isStreaming, isDraftStreaming, streamingText, streamStartedAt, t]);
+  }, [phase, streamingText, streamStartedAt, t]);
 
   return (
     <div className="flex flex-1 min-w-0">

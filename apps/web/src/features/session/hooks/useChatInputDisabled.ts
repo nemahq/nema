@@ -3,15 +3,13 @@ import { getQueryKey } from "@trpc/react-query";
 
 import { trpc } from "@web/lib/trpc";
 
-export function useChatInputDisabled({
-  isStreaming,
-}: {
-  isStreaming: boolean;
-}) {
+import type { StreamingPhase } from "./useSendMessage";
+
+export function useChatInputDisabled({ phase }: { phase: StreamingPhase }) {
   const saveDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.saveDraft) }) > 0;
   const cancelDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.cancelDraft) }) > 0;
 
-  return isStreaming || saveDraftMutating || cancelDraftMutating;
+  return phase !== "idle" || saveDraftMutating || cancelDraftMutating;
 }

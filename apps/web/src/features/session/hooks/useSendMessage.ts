@@ -9,6 +9,8 @@ import { trpc } from "@web/lib/trpc";
 
 import { addOptimisticMessage } from "./useMessageList";
 
+export type StreamingPhase = "idle" | "text" | "draft";
+
 export function useSendMessage({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
@@ -17,18 +19,16 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
     useIsMutating({ mutationKey: getQueryKey(trpc.session.create) }) > 0;
 
   const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [isDraftStreaming, setIsDraftStreaming] = useState(false);
-  const isDraftStreamingRef = useRef(false);
+  const [phase, setPhase] = useState<StreamingPhase>("idle");
+  const phaseRef = useRef<StreamingPhase>("idle");
   const [streamingText, setStreamingText] = useState("");
   const fullTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
 
   function resetStreamState() {
     setStreamInput(null);
-    setIsStreaming(false);
-    setIsDraftStreaming(false);
-    isDraftStreamingRef.current = false;
+    setPhase("idle");
+    phaseRef.current = "idle";
     setStreamingText("");
     fullTextRef.current = "";
   }
@@ -37,11 +37,11 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
     (event: ChatStreamEvent) => {
       switch (event.type) {
         case "draft_start":
-          isDraftStreamingRef.current = true;
-          setIsDraftStreaming(true);
+          phaseRef.current = "draft";
+          setPhase("draft");
           break;
         case "token":
-          if (!isDraftStreamingRef.current) {
+          if (phaseRef.current !== "draft") {
             fullTextRef.current += event.text;
             setStreamingText(fullTextRef.current);
           }
@@ -77,7 +77,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
 
   const send = useCallback(
     (content: string) => {
-      if (isStreaming) {
+      if (phase !== "idle") {
         return;
       }
 
@@ -98,10 +98,11 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
       fullTextRef.current = "";
       setStreamStartedAt(new Date().toISOString());
       setStreamingText("");
-      setIsStreaming(true);
+      phaseRef.current = "text";
+      setPhase("text");
       setStreamInput({ sessionId, content });
     },
-    [isStreaming, sessionId, trackEvent, utils],
+    [phase, sessionId, trackEvent, utils],
   );
 
   const cancel = useCallback(() => {
@@ -112,8 +113,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
   return {
     send,
     cancel,
-    isStreaming,
-    isDraftStreaming,
+    phase,
     streamingText,
     streamStartedAt,
   };
