@@ -1,7 +1,6 @@
 {
   "chat": {
-    "retrieval_empty": "No relevant information found.",
-    "save_complete": "Saved successfully."
+    "retrieval_empty": "No relevant information found."
   },
   "error": {
     "llm_rate_limit": "Too many requests. Please try again later.",

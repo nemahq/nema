@@ -44,7 +44,6 @@ export const messageRouter = router({
         getProviders(),
         ctx.user.id,
         input.sessionId,
-        ctx.lng,
       ),
     ),
 

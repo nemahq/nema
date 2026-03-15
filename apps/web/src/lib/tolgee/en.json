@@ -39,6 +39,7 @@
     "status_draft_created": "Draft created",
     "status_draft_edited": "Draft edited",
     "status_draft_cancelled": "Draft cancelled",
+    "status_draft_saved": "Saved",
     "draft_previous": "Previous draft",
     "draft_save": "Save",
     "draft_panel_open": "Open {label} panel",

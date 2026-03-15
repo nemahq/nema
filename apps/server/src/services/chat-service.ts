@@ -289,14 +289,14 @@ export async function* processChatStream(
         break;
       }
       case "save":
-        responseContent = await handleSave(
+        await handleSave(
           supabase,
           providers,
           userId,
           input.sessionId,
           draft.body,
-          lng,
         );
+        responseContent = "draft_saved";
         messageType = "status";
         break;
       case "cancel":
@@ -329,7 +329,6 @@ export async function saveDraftAction(
   providers: Providers,
   userId: string,
   sessionId: string,
-  lng: Locale,
 ): Promise<ChatResponse> {
   const draft = await getDraft(supabase, sessionId);
   if (!draft) {
@@ -339,21 +338,9 @@ export async function saveDraftAction(
     });
   }
 
-  const responseContent = await handleSave(
-    supabase,
-    providers,
-    userId,
-    sessionId,
-    draft.body,
-    lng,
-  );
+  await handleSave(supabase, providers, userId, sessionId, draft.body);
 
-  return createAssistantResponse(
-    supabase,
-    sessionId,
-    "status",
-    responseContent,
-  );
+  return createAssistantResponse(supabase, sessionId, "status", "draft_saved");
 }
 
 export async function cancelDraftAction(
@@ -486,8 +473,7 @@ async function handleSave(
   userId: string,
   sessionId: string,
   draftBody: string,
-  lng: Locale,
-): Promise<string> {
+): Promise<void> {
   const { llm } = providers;
 
   const splitResult = await llm.generateStructured({
@@ -517,9 +503,6 @@ async function handleSave(
   trackEvent(supabase, userId, "document.saved", sessionId, {
     doc_count: savedDocs.length,
   });
-
-  const docList = savedDocs.map((d) => `- ${d.title}`).join("\n");
-  return `${t("chat.save_complete", lng)}\n\n${docList}`;
 }
 
 async function saveDocument(
