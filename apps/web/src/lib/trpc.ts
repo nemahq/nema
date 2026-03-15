@@ -11,6 +11,7 @@ import type { AppRouter } from "@nema-io/server/src/router";
 import { getEnv } from "@web/app/env";
 
 import { getAccessToken } from "./supabase";
+import { tolgee } from "./tolgee/client";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -18,9 +19,17 @@ function getTrpcUrl() {
   return import.meta.env.DEV ? "/trpc" : `${getEnv().API_URL}/trpc`;
 }
 
-function getAuthHeaders() {
+function getHeaders() {
+  const headers: Record<string, string> = {};
   const token = getAccessToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const lang = tolgee.getLanguage();
+  if (lang) {
+    headers["Accept-Language"] = lang;
+  }
+  return headers;
 }
 
 export const trpcClient = trpc.createClient({
@@ -36,12 +45,13 @@ export const trpcClient = trpc.createClient({
         url: getTrpcUrl(),
         connectionParams: () => {
           const token = getAccessToken();
-          return token ? { token } : {};
+          const lang = tolgee.getLanguage();
+          return { ...(token && { token }), ...(lang && { lang }) };
         },
       }),
       false: httpBatchLink({
         url: getTrpcUrl(),
-        headers: getAuthHeaders,
+        headers: getHeaders,
       }),
     }),
   ],

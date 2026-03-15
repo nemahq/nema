@@ -30,9 +30,12 @@ export async function createContext({
     }
   }
 
-  const acceptLanguage = req.headers["accept-language"];
+  // SSE subscription은 connectionParams.lang, 일반 요청은 Accept-Language 헤더
+  const langParam =
+    (info.connectionParams?.["lang"] as string | undefined) ??
+    req.headers["accept-language"];
   const lng = resolveLanguage(
-    Array.isArray(acceptLanguage) ? acceptLanguage[0] : acceptLanguage,
+    Array.isArray(langParam) ? langParam[0] : langParam,
   );
 
   return { req, res, log: req.log, user, lng, supabase };

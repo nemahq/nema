@@ -5,7 +5,7 @@ import { tolgee } from "@web/lib/tolgee/client";
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   return (
-    <TolgeeProvider tolgee={tolgee} fallback="Loading...">
+    <TolgeeProvider tolgee={tolgee} fallback={null}>
       {children}
     </TolgeeProvider>
   );
