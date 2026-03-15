@@ -245,7 +245,7 @@ export async function* processChatStream(
         signal,
       );
       await setDraft(supabase, input.sessionId, draftBody);
-      responseContent = t("chat.draft_created", lng);
+      responseContent = "draft_created";
       messageType = "status";
     }
   } else {
@@ -284,7 +284,7 @@ export async function* processChatStream(
           signal,
         );
         await setDraft(supabase, input.sessionId, editedBody);
-        responseContent = t("chat.draft_edited", lng);
+        responseContent = "draft_edited";
         messageType = "status";
         break;
       }
@@ -301,7 +301,7 @@ export async function* processChatStream(
         break;
       case "cancel":
         await clearDraft(supabase, input.sessionId);
-        responseContent = t("chat.draft_cancelled", lng);
+        responseContent = "draft_cancelled";
         messageType = "status";
         break;
       default: {
@@ -359,7 +359,6 @@ export async function saveDraftAction(
 export async function cancelDraftAction(
   supabase: SupabaseClient,
   sessionId: string,
-  lng: Locale,
 ): Promise<ChatResponse> {
   await clearDraft(supabase, sessionId);
 
@@ -367,7 +366,7 @@ export async function cancelDraftAction(
     supabase,
     sessionId,
     "status",
-    t("chat.draft_cancelled", lng),
+    "draft_cancelled",
   );
 }
 

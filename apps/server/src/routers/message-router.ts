@@ -51,6 +51,6 @@ export const messageRouter = router({
   cancelDraft: protectedProcedure
     .input(DraftActionInputSchema)
     .mutation(({ ctx, input }) =>
-      cancelDraftAction(ctx.supabase, input.sessionId, ctx.lng),
+      cancelDraftAction(ctx.supabase, input.sessionId),
     ),
 });
