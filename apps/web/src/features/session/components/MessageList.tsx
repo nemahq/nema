@@ -1,7 +1,7 @@
 import { Suspense, useMemo } from "react";
 
 import { Button } from "@nema-io/weave";
-import { ChevronDown, PenLine } from "@nema-io/weave/icons";
+import { ChevronDown } from "@nema-io/weave/icons";
 
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useAutoScroll } from "@web/features/session/hooks/useAutoScroll";
@@ -46,13 +46,7 @@ function MessageListContent() {
               return <UserMessage key={msg.id} content={msg.content} />;
             }
             if (msg.type === "status") {
-              return (
-                <StatusMessage
-                  key={msg.id}
-                  message={msg}
-                  icon={<PenLine className="size-3" />}
-                />
-              );
+              return <StatusMessage key={msg.id} message={msg} />;
             }
             if (msg.type === "draft") {
               return (
