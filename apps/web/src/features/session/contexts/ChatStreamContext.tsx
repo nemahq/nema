@@ -13,13 +13,12 @@ import { getQueryKey } from "@trpc/react-query";
 
 import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
 
+import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
+import { addOptimisticMessage } from "@web/features/session/hooks/useMessageList";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
-
-import { useGenerateTitle } from "../hooks/useGenerateTitle";
-import { addOptimisticMessage } from "../hooks/useMessageList";
-import { useSessionId } from "../hooks/useSessionId";
 
 type StreamingPhase = "idle" | "text" | "draft";
 
