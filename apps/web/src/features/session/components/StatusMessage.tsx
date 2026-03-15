@@ -6,7 +6,7 @@ import { useTranslation } from "@web/lib/tolgee";
 import type { TranslationKey } from "@web/lib/tolgee/types";
 
 const STATUS_LABEL_MAP: Record<StatusLogType, TranslationKey> = {
-  draft_creating: "session.draft_creating",
+  draft_creating: "session.status_draft_creating",
   draft_created: "session.status_draft_created",
   draft_edited: "session.status_draft_edited",
   draft_cancelled: "session.status_draft_cancelled",
