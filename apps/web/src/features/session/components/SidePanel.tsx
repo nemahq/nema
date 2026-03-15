@@ -22,19 +22,11 @@ export interface SidePanelTab {
 export function SidePanel({ tabs }: { tabs: SidePanelTab[] }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
-  const [collapsed, setCollapsed] = useState(false);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
 
   function handleTabClick(tabId: string) {
-    if (collapsed) {
-      setCollapsed(false);
-      setActiveTab(tabId);
-    } else if (activeTab === tabId) {
-      setCollapsed(true);
-    } else {
-      setActiveTab(tabId);
-    }
+    setActiveTab(tabId);
   }
 
   function handleTabClose(e: React.MouseEvent, tab: SidePanelTab) {
@@ -78,40 +70,7 @@ export function SidePanel({ tabs }: { tabs: SidePanelTab[] }) {
     [width],
   );
 
-  if (tabs.length === 0) {
-    return null;
-  }
-
   const activeTabData = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
-
-  if (collapsed) {
-    return (
-      <div className="flex shrink-0 flex-col border-l border-border bg-surface-base">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => handleTabClick(tab.id)}
-            className={cn(
-              "flex flex-col items-center gap-2 px-2.5 py-3",
-              "cursor-pointer transition-colors hover:bg-surface-raised",
-              activeTab === tab.id
-                ? "text-fg-secondary"
-                : "text-fg-tertiary hover:text-fg-secondary",
-            )}
-            aria-label={t("session.draft_panel_open", {
-              label: t(tab.labelKey),
-            })}
-          >
-            <tab.icon className="size-4" />
-            <span className="text-[11px] font-medium [writing-mode:vertical-rl]">
-              {t(tab.labelKey)}
-            </span>
-          </button>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <aside
@@ -126,55 +85,66 @@ export function SidePanel({ tabs }: { tabs: SidePanelTab[] }) {
         className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize border-l border-border hover:border-brand active:border-brand"
       />
 
-      <div role="tablist" className="flex items-center border-b border-border">
-        {tabs.map((tab) => (
+      {tabs.length > 0 ? (
+        <>
           <div
-            key={tab.id}
-            className={cn(
-              "group flex items-center border-b-2",
-              activeTab === tab.id ? "border-brand" : "border-transparent",
-            )}
+            role="tablist"
+            className="flex items-center border-b border-border"
           >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              aria-controls={`panel-${tab.id}`}
-              onClick={() => handleTabClick(tab.id)}
-              className={cn(
-                "flex items-center gap-1.5 py-2 pl-3 pr-1",
-                "text-sm font-medium transition-colors hover:bg-surface-raised",
-                activeTab === tab.id
-                  ? "text-fg-primary"
-                  : "text-fg-tertiary hover:text-fg-secondary",
-              )}
-            >
-              <tab.icon className="size-3.5" />
-              {t(tab.labelKey)}
-            </button>
-            {tab.onClose && (
-              <button
-                type="button"
-                onClick={(e) => handleTabClose(e, tab)}
-                className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
-                aria-label={t("session.draft_tab_close", {
-                  label: t(tab.labelKey),
-                })}
+            {tabs.map((tab) => (
+              <div
+                key={tab.id}
+                className={cn(
+                  "group flex items-center border-b-2",
+                  activeTab === tab.id ? "border-brand" : "border-transparent",
+                )}
               >
-                <X className="size-3" />
-              </button>
-            )}
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  aria-controls={`panel-${tab.id}`}
+                  onClick={() => handleTabClick(tab.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 py-2 pl-3 pr-1",
+                    "text-sm font-medium transition-colors hover:bg-surface-raised",
+                    activeTab === tab.id
+                      ? "text-fg-primary"
+                      : "text-fg-tertiary hover:text-fg-secondary",
+                  )}
+                >
+                  <tab.icon className="size-3.5" />
+                  {t(tab.labelKey)}
+                </button>
+                {tab.onClose && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleTabClose(e, tab)}
+                    className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
+                    aria-label={t("session.draft_tab_close", {
+                      label: t(tab.labelKey),
+                    })}
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <div
-        role="tabpanel"
-        id={`panel-${activeTabData.id}`}
-        className="flex-1 overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
-      >
-        {activeTabData.content}
-      </div>
+          <div
+            role="tabpanel"
+            id={`panel-${activeTabData.id}`}
+            className="flex-1 overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
+          >
+            {activeTabData.content}
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-1 items-center justify-center text-fg-quaternary">
+          <span className="text-lg font-semibold">Logo</span>
+        </div>
+      )}
     </aside>
   );
 }

@@ -45,6 +45,7 @@ interface ChatStreamContextValue {
   cancel: () => void;
   streamingPhase: StreamingPhase;
   streamingMessage: DisplayMessage | undefined;
+  streamingDraftText: string;
 }
 
 const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
@@ -62,7 +63,9 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
   const [streamingPhase, setStreamingPhase] = useState<StreamingPhase>("idle");
   const streamingPhaseRef = useRef<StreamingPhase>("idle");
   const [streamingText, setStreamingText] = useState("");
+  const [streamingDraftText, setStreamingDraftText] = useState("");
   const fullTextRef = useRef("");
+  const fullDraftTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
 
   function resetStreamState() {
@@ -70,7 +73,9 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
     setStreamingPhase("idle");
     streamingPhaseRef.current = "idle";
     setStreamingText("");
+    setStreamingDraftText("");
     fullTextRef.current = "";
+    fullDraftTextRef.current = "";
   }
 
   const handleStreamEvent = useCallback(
@@ -81,16 +86,21 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
           setStreamingPhase("draft");
           break;
         case "token":
-          if (streamingPhaseRef.current !== "draft") {
+          if (streamingPhaseRef.current === "draft") {
+            fullDraftTextRef.current += event.text;
+            setStreamingDraftText(fullDraftTextRef.current);
+          } else {
             fullTextRef.current += event.text;
             setStreamingText(fullTextRef.current);
           }
           break;
         case "done":
-          utils.message.list.invalidate({ sessionId }).finally(() => {
+          Promise.all([
+            utils.message.list.invalidate({ sessionId }),
+            utils.session.get.invalidate({ sessionId }),
+          ]).finally(() => {
             resetStreamState();
           });
-          utils.session.get.invalidate({ sessionId });
           break;
         default: {
           const _exhaustive: never = event;
@@ -105,10 +115,12 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
   const handleStreamError = useCallback(
     (error: unknown) => {
       Sentry.captureException(error);
-      utils.message.list.invalidate({ sessionId }).finally(() => {
+      Promise.all([
+        utils.message.list.invalidate({ sessionId }),
+        utils.session.get.invalidate({ sessionId }),
+      ]).finally(() => {
         resetStreamState();
       });
-      utils.session.get.invalidate({ sessionId });
     },
     [sessionId, utils],
   );
@@ -193,8 +205,14 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
   }, [streamingPhase, streamingText, streamStartedAt]);
 
   const value = useMemo<ChatStreamContextValue>(
-    () => ({ send, cancel, streamingPhase, streamingMessage }),
-    [send, cancel, streamingPhase, streamingMessage],
+    () => ({
+      send,
+      cancel,
+      streamingPhase,
+      streamingMessage,
+      streamingDraftText,
+    }),
+    [send, cancel, streamingPhase, streamingMessage, streamingDraftText],
   );
 
   return <ChatStreamContext value={value}>{children}</ChatStreamContext>;
