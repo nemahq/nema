@@ -6,8 +6,9 @@ import { getQueryKey } from "@trpc/react-query";
 import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeState";
 import { getRouteState } from "@web/app/utils/routeState";
 import { ChatInput } from "@web/features/session/components/ChatInput";
+import { ChatPanel } from "@web/features/session/components/ChatPanel";
 import { MessageList } from "@web/features/session/components/MessageList";
-import { SessionSidePanel } from "@web/features/session/components/SessionSidePanel";
+import { SessionContentPanel } from "@web/features/session/components/SessionContentPanel";
 import {
   ChatStreamProvider,
   useChatStream,
@@ -47,18 +48,21 @@ function SessionContent() {
 
   return (
     <div className="flex flex-1 min-w-0">
-      <main className="flex flex-1 flex-col bg-surface-card min-w-0">
-        <MessageList />
-        <div className="mx-auto w-full max-w-2xl px-6 pb-6 pt-2">
-          <ChatInput
-            placeholder={t("session.input_placeholder")}
-            disabled={isChatInputDisabled}
-            onSubmit={send}
-          />
-        </div>
-      </main>
+      <SessionContentPanel />
 
-      <SessionSidePanel />
+      <ChatPanel>
+        <MessageList
+          footer={
+            <div className="mx-auto w-full max-w-2xl px-6 pb-6 pt-2">
+              <ChatInput
+                placeholder={t("session.input_placeholder")}
+                disabled={isChatInputDisabled}
+                onSubmit={send}
+              />
+            </div>
+          }
+        />
+      </ChatPanel>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { Button, Card, CardContent, Kbd } from "@nema-io/weave";
+import { Button, Kbd } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
@@ -24,9 +24,9 @@ function DraftTabContentInner() {
   const body = isStreaming ? smoothText : draft?.body;
 
   return (
-    <Card className="relative">
+    <div className="relative">
       {!isStreaming && body && (
-        <div className="absolute right-3 top-3">
+        <div className="absolute right-0 top-0">
           {/* TODO: ⌘+S 키보드 단축키 리스너 추가 */}
           <Button
             variant="primary"
@@ -42,10 +42,10 @@ function DraftTabContentInner() {
           </Button>
         </div>
       )}
-      <CardContent className="pt-4">
+      <div className="pt-10">
         {body ? <MarkdownRenderer content={body} /> : null}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

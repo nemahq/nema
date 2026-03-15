@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Suspense, useMemo } from "react";
 
 import { Button } from "@nema-io/weave";
@@ -10,12 +11,11 @@ import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { AssistantMessage } from "./AssistantMessage";
-import { DraftCard } from "./DraftCard";
 import { MessageListSkeleton } from "./MessageListSkeleton";
 import { StatusMessage } from "./StatusMessage";
 import { UserMessage } from "./UserMessage";
 
-function MessageListContent() {
+function MessageListContent({ footer }: { footer?: ReactNode }) {
   const { t } = useTranslation();
   const sessionId = useSessionId();
   const { streamingMessage } = useChatStream();
@@ -29,48 +29,42 @@ function MessageListContent() {
     messages,
   });
 
-  const lastDraftIndex = useMemo(
-    () => messages.findLastIndex((msg) => msg.type === "draft"),
-    [messages],
-  );
-
   return (
     <div className="relative flex-1">
       <div
         ref={scrollRef}
         className="absolute inset-0 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
       >
-        <div className="mx-auto max-w-2xl space-y-6 px-6 py-6">
-          {messages.map((msg, i) => {
-            if (msg.role === "user") {
-              return <UserMessage key={msg.id} content={msg.content} />;
-            }
-            if (msg.type === "status") {
-              return <StatusMessage key={msg.id} message={msg} />;
-            }
-            if (msg.type === "draft") {
+        <div className="flex min-h-full flex-col">
+          <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-6">
+            {messages.map((msg) => {
+              if (msg.type === "draft") {
+                return null;
+              }
+              if (msg.role === "user") {
+                return <UserMessage key={msg.id} content={msg.content} />;
+              }
+              if (msg.type === "status") {
+                return <StatusMessage key={msg.id} message={msg} />;
+              }
               return (
-                <DraftCard
+                <AssistantMessage
                   key={msg.id}
                   content={msg.content}
                   createdAt={msg.createdAt}
-                  isLatest={i === lastDraftIndex}
                 />
               );
-            }
-            return (
-              <AssistantMessage
-                key={msg.id}
-                content={msg.content}
-                createdAt={msg.createdAt}
-              />
-            );
-          })}
+            })}
+          </div>
+
+          {footer && (
+            <div className="sticky bottom-0 bg-surface-base">{footer}</div>
+          )}
         </div>
       </div>
 
       {showNewMessageButton && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+        <div className="absolute bottom-24 left-1/2 z-10 -translate-x-1/2">
           <Button
             variant="neutral"
             size="sm"
@@ -86,10 +80,10 @@ function MessageListContent() {
   );
 }
 
-export function MessageList() {
+export function MessageList({ footer }: { footer?: ReactNode }) {
   return (
     <Suspense fallback={<MessageListSkeleton />}>
-      <MessageListContent />
+      <MessageListContent footer={footer} />
     </Suspense>
   );
 }

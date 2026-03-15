@@ -8,11 +8,11 @@ import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 
+import type { ContentPanelTab } from "./ContentPanel";
+import { ContentPanel } from "./ContentPanel";
 import { DraftTabContent } from "./DraftTabContent";
-import type { SidePanelTab } from "./SidePanel";
-import { SidePanel } from "./SidePanel";
 
-function SessionSidePanelInner() {
+function SessionContentPanelInner() {
   const sessionId = useSessionId();
   const draft = useSessionDraft({ sessionId });
   const cancelDraft = useCancelDraft({ sessionId });
@@ -20,7 +20,7 @@ function SessionSidePanelInner() {
 
   const hasDraft = draft || streamingPhase === "draft";
 
-  const tabs: SidePanelTab[] = [];
+  const tabs: ContentPanelTab[] = [];
   if (hasDraft) {
     tabs.push({
       id: "draft",
@@ -31,15 +31,15 @@ function SessionSidePanelInner() {
     });
   }
 
-  return <SidePanel tabs={tabs} />;
+  return <ContentPanel tabs={tabs} />;
 }
 
-export function SessionSidePanel() {
+export function SessionContentPanel() {
   return (
     // TODO: ErrorBoundary에 componentDidCatch (Sentry 보고) + 의미 있는 fallback UI 추가
     <ErrorBoundary fallback={null}>
-      <Suspense fallback={<SidePanel tabs={[]} />}>
-        <SessionSidePanelInner />
+      <Suspense fallback={<ContentPanel tabs={[]} />}>
+        <SessionContentPanelInner />
       </Suspense>
     </ErrorBoundary>
   );

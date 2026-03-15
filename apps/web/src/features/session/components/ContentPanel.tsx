@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 
 import { cn } from "@nema-io/weave";
 import { X } from "@nema-io/weave/icons";
@@ -7,11 +7,7 @@ import { X } from "@nema-io/weave/icons";
 import type { TranslationKey } from "@web/lib/tolgee";
 import { useTranslation } from "@web/lib/tolgee";
 
-const DEFAULT_WIDTH = 480;
-const MIN_WIDTH = 280;
-const MAX_WIDTH_VW = 50;
-
-export interface SidePanelTab {
+export interface ContentPanelTab {
   id: string;
   labelKey: TranslationKey;
   icon: ComponentType<{ className?: string }>;
@@ -19,11 +15,9 @@ export interface SidePanelTab {
   onClose?: () => void;
 }
 
-export function SidePanel({ tabs }: { tabs: SidePanelTab[] }) {
+export function ContentPanel({ tabs }: { tabs: ContentPanelTab[] }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
-  const dragging = useRef(false);
 
   const resolvedTab =
     tabs.find((t) => t.id === activeTab)?.id ?? tabs[0]?.id ?? "";
@@ -32,62 +26,15 @@ export function SidePanel({ tabs }: { tabs: SidePanelTab[] }) {
     setActiveTab(tabId);
   }
 
-  function handleTabClose(e: React.MouseEvent, tab: SidePanelTab) {
+  function handleTabClose(e: React.MouseEvent, tab: ContentPanelTab) {
     e.stopPropagation();
     tab.onClose?.();
   }
 
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      dragging.current = true;
-      const startX = e.clientX;
-      const startWidth = width;
-      const maxWidth = window.innerWidth * (MAX_WIDTH_VW / 100);
-
-      function onMouseMove(ev: MouseEvent) {
-        if (!dragging.current) {
-          return;
-        }
-        const delta = startX - ev.clientX;
-        const next = Math.min(
-          maxWidth,
-          Math.max(MIN_WIDTH, startWidth + delta),
-        );
-        setWidth(next);
-      }
-
-      function onMouseUp() {
-        dragging.current = false;
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-      }
-
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-      document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
-    },
-    [width],
-  );
-
   const activeTabData = tabs.find((tab) => tab.id === resolvedTab) ?? tabs[0];
 
   return (
-    <aside
-      className="relative flex shrink-0 flex-col bg-surface-base"
-      style={{ width }}
-    >
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        onMouseDown={handleResizeStart}
-        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize border-l border-border hover:border-brand active:border-brand"
-      />
-
+    <main className="flex flex-1 flex-col bg-surface-card min-w-0">
       {tabs.length > 0 ? (
         <>
           <div
@@ -151,6 +98,6 @@ export function SidePanel({ tabs }: { tabs: SidePanelTab[] }) {
           <span className="text-lg font-semibold">Logo</span>
         </div>
       )}
-    </aside>
+    </main>
   );
 }
