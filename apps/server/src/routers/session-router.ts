@@ -14,7 +14,6 @@ import {
   generateSessionTitle,
   getSession,
   listSessions,
-  needsSessionTitle,
   updateSession,
 } from "@server/services/session-service";
 import { protectedProcedure, router } from "@server/trpc";
@@ -45,12 +44,9 @@ export const sessionRouter = router({
 
   generateTitle: protectedProcedure
     .input(SessionGenerateTitleInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      if (!(await needsSessionTitle(ctx.supabase, input.sessionId))) {
-        return null;
-      }
-      return generateSessionTitle(ctx.supabase, getProviders(), input);
-    }),
+    .mutation(({ ctx, input }) =>
+      generateSessionTitle(ctx.supabase, getProviders(), input),
+    ),
 
   delete: protectedProcedure
     .input(SessionDeleteInputSchema)
