@@ -180,9 +180,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
 export function useChatStream() {
   const ctx = useContext(ChatStreamContext);
   if (!ctx) {
-    throw new Error(
-      "useChatStream은 ChatStreamProvider 내부에서만 사용할 수 있습니다.",
-    );
+    throw new Error("useChatStream must be used within a ChatStreamProvider.");
   }
   return ctx;
 }
