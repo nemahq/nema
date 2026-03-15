@@ -147,23 +147,6 @@ export async function deleteSession(
   }
 }
 
-export async function needsSessionTitle(
-  supabase: SupabaseClient,
-  sessionId: string,
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("sessions")
-    .select("title")
-    .eq("id", sessionId)
-    .single();
-
-  if (error) {
-    throw new SupabaseError("query_failed", error.message, error);
-  }
-
-  return data.title === null;
-}
-
 export async function generateSessionTitle(
   supabase: SupabaseClient,
   providers: Providers,
