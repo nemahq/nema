@@ -1,34 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 
-/**
- * 서버에서 불규칙하게 도착하는 스트리밍 토큰을 버퍼에 쌓아두고,
- * requestAnimationFrame으로 일정한 속도(글자당 CHARS_PER_FRAME)로
- * 화면에 풀어주는 훅. 네트워크 스트리밍과 UI 렌더링을 분리하여
- * 끊김 없이 부드러운 텍스트 출력을 만든다.
- */
-
 const CHARS_PER_FRAME = 3;
 
+/**
+ * 네트워크 스트리밍의 불규칙한 도착 속도와 UI 렌더링을 분리하여
+ * 끊김 없이 부드러운 텍스트 출력을 만든다.
+ *
+ * @param buffer - 계속 늘어나는 원본 텍스트. 빈 문자열을 넘기면 내부 상태가 리셋된다.
+ */
 export function useBufferedStream(buffer: string) {
   const [displayed, setDisplayed] = useState("");
   const posRef = useRef(0);
   const rafRef = useRef(0);
-  const prevBufferRef = useRef(buffer);
 
   useEffect(
     function drainBuffer() {
-      const wasReset = prevBufferRef.current !== "" && buffer === "";
-      prevBufferRef.current = buffer;
-
-      if (wasReset) {
+      if (buffer === "") {
         posRef.current = 0;
+        return;
       }
 
       function tick() {
         if (posRef.current >= buffer.length) {
-          if (wasReset) {
-            setDisplayed("");
-          }
           return;
         }
         posRef.current = Math.min(
@@ -45,5 +38,5 @@ export function useBufferedStream(buffer: string) {
     [buffer],
   );
 
-  return displayed;
+  return buffer === "" ? "" : displayed;
 }

@@ -78,6 +78,22 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
     fullDraftTextRef.current = "";
   }
 
+  const invalidateAndReset = useCallback(
+    function invalidateAndReset() {
+      Promise.all([
+        utils.message.list.invalidate({ sessionId }),
+        utils.session.get.invalidate({ sessionId }),
+      ])
+        .catch((error) => {
+          Sentry.captureException(error);
+        })
+        .finally(() => {
+          resetStreamState();
+        });
+    },
+    [sessionId, utils],
+  );
+
   const handleStreamEvent = useCallback(
     (event: ChatStreamEvent) => {
       switch (event.type) {
@@ -95,12 +111,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
           }
           break;
         case "done":
-          Promise.all([
-            utils.message.list.invalidate({ sessionId }),
-            utils.session.get.invalidate({ sessionId }),
-          ]).finally(() => {
-            resetStreamState();
-          });
+          invalidateAndReset();
           break;
         default: {
           const _exhaustive: never = event;
@@ -108,21 +119,16 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [sessionId, utils],
+    [invalidateAndReset],
   );
 
   // TODO: 인라인 에러 메시지 + 재시도 버튼 UI 추가
   const handleStreamError = useCallback(
     (error: unknown) => {
       Sentry.captureException(error);
-      Promise.all([
-        utils.message.list.invalidate({ sessionId }),
-        utils.session.get.invalidate({ sessionId }),
-      ]).finally(() => {
-        resetStreamState();
-      });
+      invalidateAndReset();
     },
-    [sessionId, utils],
+    [invalidateAndReset],
   );
 
   trpc.message.chat.useSubscription(
@@ -165,13 +171,13 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
     [streamingPhase, sessionId, trackEvent, utils, generateTitle],
   );
 
-  const cancel = useCallback(() => {
-    setStreamInput(null);
-    utils.message.list.invalidate({ sessionId }).finally(() => {
-      resetStreamState();
-    });
-    utils.session.get.invalidate({ sessionId });
-  }, [sessionId, utils]);
+  const cancel = useCallback(
+    function cancel() {
+      setStreamInput(null);
+      invalidateAndReset();
+    },
+    [invalidateAndReset],
+  );
 
   const streamingMessage = useMemo<DisplayMessage | undefined>(() => {
     switch (streamingPhase) {

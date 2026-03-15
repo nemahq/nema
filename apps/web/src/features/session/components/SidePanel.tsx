@@ -25,6 +25,9 @@ export function SidePanel({ tabs }: { tabs: SidePanelTab[] }) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
 
+  const resolvedTab =
+    tabs.find((t) => t.id === activeTab)?.id ?? tabs[0]?.id ?? "";
+
   function handleTabClick(tabId: string) {
     setActiveTab(tabId);
   }
@@ -70,7 +73,7 @@ export function SidePanel({ tabs }: { tabs: SidePanelTab[] }) {
     [width],
   );
 
-  const activeTabData = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const activeTabData = tabs.find((tab) => tab.id === resolvedTab) ?? tabs[0];
 
   return (
     <aside
@@ -96,19 +99,21 @@ export function SidePanel({ tabs }: { tabs: SidePanelTab[] }) {
                 key={tab.id}
                 className={cn(
                   "group flex items-center border-b-2",
-                  activeTab === tab.id ? "border-brand" : "border-transparent",
+                  resolvedTab === tab.id
+                    ? "border-brand"
+                    : "border-transparent",
                 )}
               >
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={activeTab === tab.id}
+                  aria-selected={resolvedTab === tab.id}
                   aria-controls={`panel-${tab.id}`}
                   onClick={() => handleTabClick(tab.id)}
                   className={cn(
                     "flex items-center gap-1.5 py-2 pl-3 pr-1",
                     "text-sm font-medium transition-colors hover:bg-surface-raised",
-                    activeTab === tab.id
+                    resolvedTab === tab.id
                       ? "text-fg-primary"
                       : "text-fg-tertiary hover:text-fg-secondary",
                   )}
@@ -142,6 +147,7 @@ export function SidePanel({ tabs }: { tabs: SidePanelTab[] }) {
         </>
       ) : (
         <div className="flex flex-1 items-center justify-center text-fg-quaternary">
+          {/* TODO: 로고 에셋으로 교체 */}
           <span className="text-lg font-semibold">Logo</span>
         </div>
       )}

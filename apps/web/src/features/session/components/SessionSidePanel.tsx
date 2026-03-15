@@ -36,6 +36,7 @@ function SessionSidePanelInner() {
 
 export function SessionSidePanel() {
   return (
+    // TODO: ErrorBoundary에 componentDidCatch (Sentry 보고) + 의미 있는 fallback UI 추가
     <ErrorBoundary fallback={null}>
       <Suspense fallback={<SidePanel tabs={[]} />}>
         <SessionSidePanelInner />
