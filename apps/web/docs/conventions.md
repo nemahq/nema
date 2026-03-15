@@ -95,6 +95,7 @@
 | Folder | Contains | Does NOT contain |
 | --- | --- | --- |
 | `app/` | App bootstrap: everything needed to initialize and run the application | — |
+| `assets/` | Static files (images, icons, SVGs) | — |
 | `features/` | Domain-specific business modules. Owns internal components/, hooks/, etc. | Code directly imported by other features |
 | `components/` | Feature-agnostic UI components | Data fetching, business logic |
 | `hooks/` | Feature-agnostic custom hooks | Feature-specific hooks |

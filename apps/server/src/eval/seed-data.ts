@@ -16,6 +16,7 @@ interface EditCycleSeedInput {
   description: string;
   previousBody: string;
   editRequest: string;
+  /** pass/fail 판단 시 특히 확인할 포인트 */
   checkpoints: string[];
 }
 

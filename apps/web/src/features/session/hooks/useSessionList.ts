@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import type { SessionSummary } from "@nema-io/shared";
 
-import { SESSION_LIST_LIMIT } from "@web/features/session/constants/session";
+import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
 import { trpc } from "@web/lib/trpc";
 
 export function prependSessionCache(
