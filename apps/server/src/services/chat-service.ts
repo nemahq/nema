@@ -200,13 +200,13 @@ export async function* processChatStream(
   lng: Locale,
   signal?: AbortSignal,
 ): AsyncGenerator<ChatStreamEvent> {
-  const userMessage: Message = {
+  const userMessage = MessageSchema.parse({
     id: crypto.randomUUID(),
     role: "user",
     type: "text",
     content: input.content,
     createdAt: new Date().toISOString(),
-  };
+  });
 
   await appendMessage(supabase, input.sessionId, userMessage);
 

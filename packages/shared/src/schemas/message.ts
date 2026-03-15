@@ -44,7 +44,7 @@ export type Message = z.infer<typeof MessageSchema>;
 export const SendMessageInputSchema = z.object({
   sessionId: z.string().uuid(),
   content: z.string().trim().min(1).max(100_000),
-  type: MessageTypeSchema.default("text"),
+  type: z.enum(["text"]).default("text"),
 });
 export type SendMessageInput = z.infer<typeof SendMessageInputSchema>;
 

@@ -22,7 +22,6 @@ import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
 import { addOptimisticMessage } from "@web/features/session/hooks/useMessageList";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
-import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
 
 type StreamingPhase = "idle" | "text" | "draft";
@@ -39,7 +38,6 @@ interface ChatStreamContextValue {
 const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
 
 export function ChatStreamProvider({ children }: { children: ReactNode }) {
-  const { t } = useTranslation();
   const sessionId = useSessionId();
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
@@ -172,7 +170,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
             }
           : undefined;
     }
-  }, [streamingPhase, streamingText, streamStartedAt, t]);
+  }, [streamingPhase, streamingText, streamStartedAt]);
 
   const value = useMemo<ChatStreamContextValue>(
     () => ({ send, cancel, streamingPhase, streamingMessage }),
