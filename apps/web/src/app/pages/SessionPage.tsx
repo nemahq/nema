@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { useIsMutating } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { getQueryKey } from "@trpc/react-query";
 
 import type { Message } from "@nema-io/shared";
 
@@ -12,7 +10,6 @@ import { MessageList } from "@web/features/session/components/MessageList";
 import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTranslation } from "@web/lib/tolgee";
-import { trpc } from "@web/lib/trpc";
 
 const STREAMING_MESSAGE_ID = "streaming";
 
@@ -27,6 +24,7 @@ export function SessionPage() {
   });
   const {
     send,
+    isPending,
     isStreaming,
     isDraftStreaming,
     streamingText,
@@ -45,15 +43,6 @@ export function SessionPage() {
     },
     [initialMessage, navigate, send],
   );
-
-  const saveDraftMutating = useIsMutating({
-    mutationKey: getQueryKey(trpc.message.saveDraft),
-  });
-  const cancelDraftMutating = useIsMutating({
-    mutationKey: getQueryKey(trpc.message.cancelDraft),
-  });
-  const isPending =
-    isStreaming || saveDraftMutating > 0 || cancelDraftMutating > 0;
 
   const streamingMessage = useMemo<Message | undefined>(() => {
     if (!isStreaming) {
@@ -83,10 +72,6 @@ export function SessionPage() {
     };
   }, [isStreaming, isDraftStreaming, streamingText, streamStartedAt, t]);
 
-  function handleSubmit(content: string) {
-    send(content);
-  }
-
   return (
     <div className="flex flex-1 min-w-0">
       <main className="flex flex-1 flex-col bg-surface-card min-w-0">
@@ -95,7 +80,7 @@ export function SessionPage() {
           <ChatInput
             placeholder={t("session.input_placeholder")}
             disabled={isPending}
-            onSubmit={handleSubmit}
+            onSubmit={send}
           />
         </div>
       </main>

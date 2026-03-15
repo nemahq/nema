@@ -7,11 +7,18 @@ import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { trpc } from "@web/lib/trpc";
 
+import { addOptimisticMessage } from "./useMessageList";
+
 export function useSendMessage({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
+
   const isSessionCreating =
     useIsMutating({ mutationKey: getQueryKey(trpc.session.create) }) > 0;
+  const saveDraftMutating =
+    useIsMutating({ mutationKey: getQueryKey(trpc.message.saveDraft) }) > 0;
+  const cancelDraftMutating =
+    useIsMutating({ mutationKey: getQueryKey(trpc.message.cancelDraft) }) > 0;
 
   const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -20,6 +27,8 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
   const [streamingText, setStreamingText] = useState("");
   const fullTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
+
+  const isPending = isStreaming || saveDraftMutating || cancelDraftMutating;
 
   function resetStreamState() {
     setStreamInput(null);
@@ -90,9 +99,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
         createdAt: new Date().toISOString(),
       };
 
-      utils.message.list.setData({ sessionId }, (old) =>
-        old ? [...old, optimistic] : [optimistic],
-      );
+      addOptimisticMessage(utils, sessionId, optimistic);
 
       fullTextRef.current = "";
       setStreamStartedAt(new Date().toISOString());
@@ -111,6 +118,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
   return {
     send,
     cancel,
+    isPending,
     isStreaming,
     isDraftStreaming,
     streamingText,

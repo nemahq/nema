@@ -1,10 +1,17 @@
-import type { Message } from "@nema-io/shared";
-import { PenLine } from "@nema-io/weave/icons";
+import type { ReactNode } from "react";
 
-export function StatusMessage({ message }: { message: Message }) {
+import type { Message } from "@nema-io/shared";
+
+export function StatusMessage({
+  message,
+  icon,
+}: {
+  message: Message;
+  icon?: ReactNode;
+}) {
   return (
     <div className="flex items-center justify-center gap-1.5 py-1 text-xs text-fg-tertiary">
-      <PenLine className="size-3" />
+      {icon}
       <span>{message.content}</span>
     </div>
   );

@@ -8,7 +8,6 @@ import { useCreateSession } from "@web/features/session/hooks/useCreateSession";
 import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
 import { useTranslation } from "@web/lib/tolgee";
 import en from "@web/lib/tolgee/en.json";
-import { trpc } from "@web/lib/trpc";
 
 const VARIANT_COUNT = Object.keys(en.session).filter((k) =>
   k.startsWith("empty_heading_"),
@@ -22,14 +21,12 @@ export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [variant] = useState(pickRandom);
-  const utils = trpc.useUtils();
   const createSession = useCreateSession();
   const generateTitle = useGenerateTitle();
 
   function handleSubmit(content: string) {
     const sessionId = crypto.randomUUID();
 
-    utils.message.list.setData({ sessionId }, []);
     createSession.mutate(
       { sessionId },
       {
@@ -37,7 +34,6 @@ export function HomePage() {
           generateTitle.mutate({ sessionId, content });
         },
         onError: () => {
-          utils.message.list.setData({ sessionId }, undefined);
           navigate({ to: "/", replace: true });
         },
       },

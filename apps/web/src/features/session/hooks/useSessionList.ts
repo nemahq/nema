@@ -60,6 +60,27 @@ export function updateSessionCache(
   });
 }
 
+export function updateSessionTitleCache(
+  utils: ReturnType<typeof trpc.useUtils>,
+  sessionId: string,
+  title: string,
+) {
+  utils.session.list.setInfiniteData({ limit: SESSION_LIST_LIMIT }, (old) => {
+    if (!old) {
+      return old;
+    }
+    return {
+      ...old,
+      pages: old.pages.map((page) => ({
+        ...page,
+        items: page.items.map((s) =>
+          s.id === sessionId ? { ...s, title } : s,
+        ),
+      })),
+    };
+  });
+}
+
 export function useSessionList() {
   const [data, { hasNextPage, fetchNextPage, isFetchingNextPage }] =
     trpc.session.list.useSuspenseInfiniteQuery(

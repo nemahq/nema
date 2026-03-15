@@ -2,7 +2,7 @@ import { Suspense, useMemo } from "react";
 
 import type { Message } from "@nema-io/shared";
 import { Button } from "@nema-io/weave";
-import { ChevronDown } from "@nema-io/weave/icons";
+import { ChevronDown, PenLine } from "@nema-io/weave/icons";
 
 import { useAutoScroll } from "@web/features/session/hooks/useAutoScroll";
 import { useMessageList } from "@web/features/session/hooks/useMessageList";
@@ -55,7 +55,13 @@ function MessageListContent({ streamingMessage }: MessageListProps) {
               );
             }
             if (msg.type === "status") {
-              return <StatusMessage key={msg.id} message={msg} />;
+              return (
+                <StatusMessage
+                  key={msg.id}
+                  message={msg}
+                  icon={<PenLine className="size-3" />}
+                />
+              );
             }
             if (msg.type === "draft") {
               return (
