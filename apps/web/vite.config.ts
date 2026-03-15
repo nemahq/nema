@@ -45,9 +45,10 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // TODO: staging 환경 구축 후 dev:web target을 staging API로 변경
     proxy: {
       "/trpc": {
-        target: process.env.VITE_DEV_API_TARGET ?? "https://api.getnema.app",
+        target: process.env.VITE_DEV_API_TARGET ?? "http://localhost:3001",
         changeOrigin: true,
       },
     },
