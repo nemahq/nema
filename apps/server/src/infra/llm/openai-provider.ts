@@ -13,6 +13,7 @@ import { LlmError } from "./llm-error";
 import type {
   GenerateStreamParams,
   GenerateStructuredParams,
+  GenerateTextParams,
   LlmProvider,
 } from "./llm-provider";
 
@@ -122,6 +123,29 @@ export class OpenAiProvider implements LlmProvider {
         );
       }
       return result.data;
+    } catch (error) {
+      throw this.mapError(error);
+    }
+  }
+
+  async generateText(params: GenerateTextParams): Promise<string> {
+    const model = params.model ?? this.model;
+
+    try {
+      const completion = await this.client.chat.completions.create({
+        model,
+        temperature: params.temperature,
+        messages: [
+          { role: "system" as const, content: params.systemPrompt },
+          ...params.messages,
+        ],
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new LlmError("unknown", "LLM returned no content");
+      }
+      return content;
     } catch (error) {
       throw this.mapError(error);
     }

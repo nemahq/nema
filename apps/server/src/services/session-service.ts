@@ -152,16 +152,12 @@ export async function generateSessionTitle(
   providers: Providers,
   { sessionId, content }: { sessionId: string; content: string },
 ): Promise<string> {
-  let fullTitle = "";
-
-  for await (const chunk of providers.llm.generateStream({
+  const raw = await providers.llm.generateText({
     systemPrompt: SESSION_TITLE_SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildSessionTitleMessage(content) }],
-  })) {
-    fullTitle += chunk;
-  }
+  });
 
-  const title = fullTitle.trim();
+  const title = raw.trim();
   if (!title) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",

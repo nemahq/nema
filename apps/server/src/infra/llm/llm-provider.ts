@@ -21,7 +21,10 @@ export interface GenerateStructuredParams<T> extends LlmCallParams {
 
 export type GenerateStreamParams = LlmCallParams;
 
+export type GenerateTextParams = LlmCallParams;
+
 export interface LlmProvider {
   generateStructured<T>(params: GenerateStructuredParams<T>): Promise<T>;
   generateStream(params: GenerateStreamParams): AsyncIterable<string>;
+  generateText(params: GenerateTextParams): Promise<string>;
 }
