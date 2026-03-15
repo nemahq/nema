@@ -38,7 +38,7 @@ export function StatusMessage({ message }: StatusMessageProps) {
   return (
     <div className="flex items-center gap-1.5 py-1 text-xs text-fg-tertiary">
       <Circle
-        className={`size-2 fill-current ${inProgress ? "" : "text-brand"}`}
+        className={`size-2 fill-current ${inProgress ? "animate-pulse" : "text-brand"}`}
       />
       <span>{t(STATUS_LABEL_MAP[message.content])}</span>
     </div>
