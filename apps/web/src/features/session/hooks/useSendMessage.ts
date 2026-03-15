@@ -9,7 +9,7 @@ import { trpc } from "@web/lib/trpc";
 
 import { addOptimisticMessage } from "./useMessageList";
 
-export type StreamingPhase = "idle" | "text" | "draft";
+type StreamingPhase = "idle" | "text" | "draft";
 
 export function useSendMessage({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();

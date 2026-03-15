@@ -3,8 +3,6 @@ import { BackendFetch, FormatSimple, Tolgee } from "@tolgee/react";
 import { getEnv } from "@web/app/env";
 import { getStorage } from "@web/utils/localStorage";
 
-import en from "./en.json";
-import ko from "./ko.json";
 import { type Locale, LOCALES } from "./types";
 
 function detectLanguage(): Locale {
@@ -31,5 +29,8 @@ if (TOLGEE_CDN_URL) {
 
 export const tolgee = tolgeeBuilder.init({
   language: detectLanguage(),
-  staticData: { ko, en },
+  staticData: {
+    ko: () => import("./ko.json").then((m) => m.default),
+    en: () => import("./en.json").then((m) => m.default),
+  },
 });
