@@ -1,4 +1,4 @@
-import neo4j, { type Driver, type Integer } from "neo4j-driver";
+import neo4j, { type Driver, type Integer, isInt } from "neo4j-driver";
 
 import { getEnv } from "@server/env";
 
@@ -12,7 +12,46 @@ import type {
   MergeEntitiesOptions,
   UpsertEntitiesOptions,
 } from "./graph-store";
-import { GraphStoreError } from "./graph-store";
+import { ENTITY_TYPES, GraphStoreError } from "./graph-store";
+
+function getString(record: { get(key: string): unknown }, key: string): string {
+  const value = record.get(key);
+  if (typeof value !== "string") {
+    throw new GraphStoreError(
+      `Expected string for "${key}", got ${typeof value}`,
+      "recordParse",
+    );
+  }
+  return value;
+}
+
+function getInteger(
+  record: { get(key: string): unknown },
+  key: string,
+): number {
+  const value = record.get(key);
+  if (!isInt(value)) {
+    throw new GraphStoreError(
+      `Expected Integer for "${key}", got ${typeof value}`,
+      "recordParse",
+    );
+  }
+  return (value as Integer).toNumber();
+}
+
+function getEntityType(
+  record: { get(key: string): unknown },
+  key: string,
+): GraphEntity["type"] {
+  const value = getString(record, key);
+  if (!(ENTITY_TYPES as readonly string[]).includes(value)) {
+    throw new GraphStoreError(
+      `Expected EntityType for "${key}", got "${value}"`,
+      "recordParse",
+    );
+  }
+  return value as GraphEntity["type"];
+}
 
 export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
   const { NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD } = getEnv();
@@ -137,8 +176,8 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           );
           const nextFrontier: string[] = [];
           for (const r of result.records) {
-            const id = r.get("docId") as string;
-            const count = (r.get("sharedEntityCount") as Integer).toNumber();
+            const id = getString(r, "docId");
+            const count = getInteger(r, "sharedEntityCount");
             scores.set(id, (scores.get(id) ?? 0) + count);
             visited.add(id);
             nextFrontier.push(id);
@@ -187,8 +226,8 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           { userId, entityNames, limit: neo4j.int(limit) },
         );
         return result.records.map((r) => ({
-          docId: r.get("docId") as string,
-          sharedEntityCount: (r.get("sharedEntityCount") as Integer).toNumber(),
+          docId: getString(r, "docId"),
+          sharedEntityCount: getInteger(r, "sharedEntityCount"),
         }));
       } catch (error) {
         if (error instanceof GraphStoreError) {
@@ -223,8 +262,8 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           { userId, type, offset: neo4j.int(offset), limit: neo4j.int(limit) },
         );
         return result.records.map((r) => ({
-          type: r.get("type") as GraphEntity["type"],
-          name: r.get("name") as string,
+          type: getEntityType(r, "type"),
+          name: getString(r, "name"),
         }));
       } catch (error) {
         if (error instanceof GraphStoreError) {
@@ -308,8 +347,8 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
              RETURN collect(id(e)) AS candidateIds`,
             { docId },
           );
-          const candidateIds =
-            (result.records[0]?.get("candidateIds") as unknown[]) ?? [];
+          const raw = result.records[0]?.get("candidateIds");
+          const candidateIds = Array.isArray(raw) ? raw : [];
 
           // Delete the document and its relationships
           await tx.run(`MATCH (d:Document {docId: $docId}) DETACH DELETE d`, {

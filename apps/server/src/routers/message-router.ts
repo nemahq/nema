@@ -26,30 +26,33 @@ export const messageRouter = router({
   chat: protectedProcedure
     .input(ChatInputSchema)
     .subscription(async function* ({ ctx, input, signal }) {
-      yield* processChatStream(
-        ctx.supabase,
-        getProviders(),
-        ctx.user.id,
+      yield* processChatStream({
+        supabase: ctx.supabase,
+        providers: getProviders(),
+        userId: ctx.user.id,
         input,
-        ctx.lng,
+        lng: ctx.lng,
         signal,
-      );
+      });
     }),
 
   saveDraft: protectedProcedure
     .input(DraftActionInputSchema)
     .mutation(({ ctx, input }) =>
-      saveDraftAction(
-        ctx.supabase,
-        getProviders(),
-        ctx.user.id,
-        input.sessionId,
-      ),
+      saveDraftAction({
+        supabase: ctx.supabase,
+        providers: getProviders(),
+        userId: ctx.user.id,
+        sessionId: input.sessionId,
+      }),
     ),
 
   cancelDraft: protectedProcedure
     .input(DraftActionInputSchema)
     .mutation(({ ctx, input }) =>
-      cancelDraftAction(ctx.supabase, input.sessionId),
+      cancelDraftAction({
+        supabase: ctx.supabase,
+        sessionId: input.sessionId,
+      }),
     ),
 });

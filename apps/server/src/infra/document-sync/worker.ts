@@ -48,7 +48,7 @@ export function createSyncWorker(deps: WorkerDeps) {
         console.error("[sync-worker] read error:", error);
         return;
       }
-      if (!data || (data as unknown[]).length === 0) {
+      if (!data || !Array.isArray(data) || data.length === 0) {
         return;
       }
 

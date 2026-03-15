@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type OpenAI from "openai";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { LlmError } from "./llm-error";
@@ -18,26 +19,26 @@ vi.mock("openai/helpers/zod", () => ({
 
 const TestSchema = z.object({ answer: z.string() });
 
-function createProvider(overrides?: { model?: string; timeout?: number }) {
-  return new OpenAiProvider({ apiKey: "test-key", ...overrides });
+function createMockClient() {
+  const parseFn = vi.fn();
+  const client = {
+    chat: { completions: { parse: parseFn, create: vi.fn() } },
+  } as unknown as OpenAI;
+  return { client, parseFn };
 }
 
-function mockParse(provider: OpenAiProvider, response: unknown) {
-  const parseFn = vi.fn().mockResolvedValue(response);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (provider as any).client = {
-    chat: { completions: { parse: parseFn } },
-  };
-  return parseFn;
+function mockParse(response: unknown) {
+  const { client, parseFn } = createMockClient();
+  parseFn.mockResolvedValue(response);
+  const provider = new OpenAiProvider({ apiKey: "test-key", client });
+  return { provider, parseFn };
 }
 
-function mockParseRejection(provider: OpenAiProvider, error: Error) {
-  const parseFn = vi.fn().mockRejectedValue(error);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (provider as any).client = {
-    chat: { completions: { parse: parseFn } },
-  };
-  return parseFn;
+function mockParseRejection(error: Error) {
+  const { client, parseFn } = createMockClient();
+  parseFn.mockRejectedValue(error);
+  const provider = new OpenAiProvider({ apiKey: "test-key", client });
+  return { provider, parseFn };
 }
 
 describe("OpenAiProvider", () => {
@@ -48,14 +49,8 @@ describe("OpenAiProvider", () => {
   });
 
   describe("generateStructured", () => {
-    let provider: OpenAiProvider;
-
-    beforeEach(() => {
-      provider = createProvider();
-    });
-
     it("returns parsed response on success", async () => {
-      const parseFn = mockParse(provider, {
+      const { provider, parseFn } = mockParse({
         choices: [{ message: { parsed: { answer: "42" } } }],
       });
 
@@ -71,7 +66,7 @@ describe("OpenAiProvider", () => {
     });
 
     it("passes correct parameters to OpenAI SDK", async () => {
-      const parseFn = mockParse(provider, {
+      const { provider, parseFn } = mockParse({
         choices: [{ message: { parsed: { answer: "ok" } } }],
       });
 
@@ -103,7 +98,7 @@ describe("OpenAiProvider", () => {
     });
 
     it("uses custom model when provided in params", async () => {
-      mockParse(provider, {
+      const { provider, parseFn } = mockParse({
         choices: [{ message: { parsed: { answer: "ok" } } }],
       });
 
@@ -115,14 +110,12 @@ describe("OpenAiProvider", () => {
         model: "gpt-4o-mini",
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const callArgs = (provider as any).client.chat.completions.parse.mock
-        .calls[0]?.[0];
+      const callArgs = parseFn.mock.calls[0]?.[0];
       expect(callArgs.model).toBe("gpt-4o-mini");
     });
 
     it("throws when choices array is empty", async () => {
-      mockParse(provider, { choices: [] });
+      const { provider } = mockParse({ choices: [] });
 
       await expect(
         provider.generateStructured({
@@ -140,7 +133,7 @@ describe("OpenAiProvider", () => {
     });
 
     it("throws when response is truncated", async () => {
-      mockParse(provider, {
+      const { provider } = mockParse({
         choices: [
           { finish_reason: "length", message: { parsed: { answer: "ok" } } },
         ],
@@ -162,7 +155,7 @@ describe("OpenAiProvider", () => {
     });
 
     it("throws when response is blocked by content filter", async () => {
-      mockParse(provider, {
+      const { provider } = mockParse({
         choices: [
           {
             finish_reason: "content_filter",
@@ -187,7 +180,7 @@ describe("OpenAiProvider", () => {
     });
 
     it("throws when model refuses the request", async () => {
-      mockParse(provider, {
+      const { provider } = mockParse({
         choices: [
           {
             finish_reason: "stop",
@@ -212,7 +205,7 @@ describe("OpenAiProvider", () => {
     });
 
     it("throws when response has no parsed content", async () => {
-      mockParse(provider, {
+      const { provider } = mockParse({
         choices: [{ finish_reason: "stop", message: { parsed: null } }],
       });
 
@@ -232,7 +225,7 @@ describe("OpenAiProvider", () => {
     });
 
     it("throws when parsed response fails schema validation", async () => {
-      mockParse(provider, {
+      const { provider } = mockParse({
         choices: [
           { finish_reason: "stop", message: { parsed: { answer: 123 } } },
         ],
@@ -254,7 +247,7 @@ describe("OpenAiProvider", () => {
 
     it("maps APIConnectionTimeoutError to LlmError timeout", async () => {
       const { APIConnectionTimeoutError } = await import("openai/error");
-      mockParseRejection(provider, new APIConnectionTimeoutError());
+      const { provider } = mockParseRejection(new APIConnectionTimeoutError());
 
       await expect(
         provider.generateStructured({
@@ -275,8 +268,7 @@ describe("OpenAiProvider", () => {
         new Headers(),
       );
 
-      mockParseRejection(
-        provider,
+      const { provider } = mockParseRejection(
         error as InstanceType<typeof RateLimitError>,
       );
 
@@ -299,8 +291,7 @@ describe("OpenAiProvider", () => {
         new Headers(),
       );
 
-      mockParseRejection(
-        provider,
+      const { provider } = mockParseRejection(
         error as InstanceType<typeof AuthenticationError>,
       );
 
@@ -323,8 +314,7 @@ describe("OpenAiProvider", () => {
         new Headers(),
       );
 
-      mockParseRejection(
-        provider,
+      const { provider } = mockParseRejection(
         error as InstanceType<typeof PermissionDeniedError>,
       );
 
@@ -347,8 +337,7 @@ describe("OpenAiProvider", () => {
         new Headers(),
       );
 
-      mockParseRejection(
-        provider,
+      const { provider } = mockParseRejection(
         error as InstanceType<typeof BadRequestError>,
       );
 
@@ -363,7 +352,7 @@ describe("OpenAiProvider", () => {
     });
 
     it("maps unknown errors to LlmError unknown", async () => {
-      mockParseRejection(provider, new Error("something broke"));
+      const { provider } = mockParseRejection(new Error("something broke"));
 
       await expect(
         provider.generateStructured({

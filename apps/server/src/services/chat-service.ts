@@ -43,7 +43,7 @@ import {
 } from "@server/prompts/saving";
 import { trackEvent } from "@server/services/event-service";
 
-// --- Internal schemas ---
+const SIMILAR_DOC_SEARCH_LIMIT = 5;
 
 const InactiveIntentSchema = z.object({
   intent: z.enum(["put-in", "pull-out"]),
@@ -90,7 +90,11 @@ type PersistAction =
   | { action: "create" }
   | { action: "update"; targetId: string };
 
-// --- Draft state management ---
+interface ServiceContext {
+  supabase: SupabaseClient;
+  providers: Providers;
+  userId: string;
+}
 
 async function getDraft(
   supabase: SupabaseClient,
@@ -133,8 +137,6 @@ async function clearDraft(
   throwIfSupabaseError(error);
 }
 
-// --- Helpers ---
-
 async function appendMessage(
   supabase: SupabaseClient,
   sessionId: string,
@@ -161,45 +163,48 @@ async function getExistingTags(
 
   const allTags = new Set<string>();
   for (const doc of data ?? []) {
-    for (const tag of (doc.tags as string[]) ?? []) {
-      allTags.add(tag);
+    const tags = Array.isArray(doc.tags) ? doc.tags : [];
+    for (const tag of tags) {
+      if (typeof tag === "string") {
+        allTags.add(tag);
+      }
     }
   }
   return [...allTags];
 }
-
-// --- Main entry point ---
 
 interface ChatResponse {
   message: Message;
   draft: Draft | null;
 }
 
-async function createAssistantResponse(
-  supabase: SupabaseClient,
-  sessionId: string,
-  type: MessageType,
-  content: string,
-): Promise<ChatResponse> {
+async function createAssistantResponse(args: {
+  supabase: SupabaseClient;
+  sessionId: string;
+  type: MessageType;
+  content: string;
+}): Promise<ChatResponse> {
   const message = MessageSchema.parse({
     id: crypto.randomUUID(),
     role: "assistant",
-    type,
-    content,
+    type: args.type,
+    content: args.content,
     createdAt: new Date().toISOString(),
   });
-  await appendMessage(supabase, sessionId, message);
+  await appendMessage(args.supabase, args.sessionId, message);
   return { message, draft: null };
 }
 
-export async function* processChatStream(
-  supabase: SupabaseClient,
-  providers: Providers,
-  userId: string,
-  input: ChatInput,
-  lng: Locale,
-  signal?: AbortSignal,
-): AsyncGenerator<ChatStreamEvent> {
+export async function* processChatStream(args: {
+  supabase: SupabaseClient;
+  providers: Providers;
+  userId: string;
+  input: ChatInput;
+  lng: Locale;
+  signal?: AbortSignal;
+}): AsyncGenerator<ChatStreamEvent> {
+  const { supabase, providers, userId, input, lng, signal } = args;
+
   const userMessage = MessageSchema.parse({
     id: crypto.randomUUID(),
     role: "user",
@@ -230,24 +235,24 @@ export async function* processChatStream(
     });
 
     if (intentResult.intent === "pull-out") {
-      responseContent = yield* handleRetrievalStream(
+      responseContent = yield* handleRetrievalStream({
         supabase,
         providers,
         userId,
-        input.sessionId,
-        input.content,
-        intentResult,
+        sessionId: input.sessionId,
+        question: input.content,
+        intent: intentResult,
         lng,
         signal,
-      );
+      });
     } else {
       yield { type: "draft_start" };
-      const draftBody = yield* handleDraftingStream(
+      const draftBody = yield* handleDraftingStream({
         providers,
-        input.content,
-        null,
+        userInput: input.content,
+        currentDraft: null,
         signal,
-      );
+      });
       await setDraft(supabase, input.sessionId, draftBody);
       responseContent = STATUS_LOG_TYPES.DRAFT_CREATED;
       messageType = "status";
@@ -268,38 +273,38 @@ export async function* processChatStream(
 
     switch (intentResult.intent) {
       case "pull-out":
-        responseContent = yield* handleRetrievalStream(
+        responseContent = yield* handleRetrievalStream({
           supabase,
           providers,
           userId,
-          input.sessionId,
-          input.content,
-          intentResult,
+          sessionId: input.sessionId,
+          question: input.content,
+          intent: intentResult,
           lng,
           signal,
-        );
+        });
         break;
       case "edit": {
         yield { type: "draft_start" };
-        const editedBody = yield* handleDraftingStream(
+        const editedBody = yield* handleDraftingStream({
           providers,
-          input.content,
-          draft,
+          userInput: input.content,
+          currentDraft: draft,
           signal,
-        );
+        });
         await setDraft(supabase, input.sessionId, editedBody);
         responseContent = STATUS_LOG_TYPES.DRAFT_EDITED;
         messageType = "status";
         break;
       }
       case "save":
-        await handleSave(
+        await handleSave({
           supabase,
           providers,
           userId,
-          input.sessionId,
-          draft.body,
-        );
+          sessionId: input.sessionId,
+          draftBody: draft.body,
+        });
         responseContent = STATUS_LOG_TYPES.DRAFT_SAVED;
         messageType = "status";
         break;
@@ -328,12 +333,14 @@ export async function* processChatStream(
   yield { type: "done" };
 }
 
-export async function saveDraftAction(
-  supabase: SupabaseClient,
-  providers: Providers,
-  userId: string,
-  sessionId: string,
-): Promise<ChatResponse> {
+export async function saveDraftAction(args: {
+  supabase: SupabaseClient;
+  providers: Providers;
+  userId: string;
+  sessionId: string;
+}): Promise<ChatResponse> {
+  const { supabase, providers, userId, sessionId } = args;
+
   const draft = await getDraft(supabase, sessionId);
   if (!draft) {
     throw new TRPCError({
@@ -342,36 +349,46 @@ export async function saveDraftAction(
     });
   }
 
-  await handleSave(supabase, providers, userId, sessionId, draft.body);
+  await handleSave({
+    supabase,
+    providers,
+    userId,
+    sessionId,
+    draftBody: draft.body,
+  });
 
-  return createAssistantResponse(
+  return createAssistantResponse({
     supabase,
     sessionId,
-    "status",
-    STATUS_LOG_TYPES.DRAFT_SAVED,
-  );
+    type: "status",
+    content: STATUS_LOG_TYPES.DRAFT_SAVED,
+  });
 }
 
-export async function cancelDraftAction(
-  supabase: SupabaseClient,
-  sessionId: string,
-): Promise<ChatResponse> {
+export async function cancelDraftAction(args: {
+  supabase: SupabaseClient;
+  sessionId: string;
+}): Promise<ChatResponse> {
+  const { supabase, sessionId } = args;
+
   await clearDraft(supabase, sessionId);
 
-  return createAssistantResponse(
+  return createAssistantResponse({
     supabase,
     sessionId,
-    "status",
-    STATUS_LOG_TYPES.DRAFT_CANCELLED,
-  );
+    type: "status",
+    content: STATUS_LOG_TYPES.DRAFT_CANCELLED,
+  });
 }
 
-async function* handleDraftingStream(
-  providers: Providers,
-  userInput: string,
-  currentDraft: Draft | null,
-  signal?: AbortSignal,
-): AsyncGenerator<ChatStreamEvent, string> {
+async function* handleDraftingStream(args: {
+  providers: Providers;
+  userInput: string;
+  currentDraft: Draft | null;
+  signal?: AbortSignal;
+}): AsyncGenerator<ChatStreamEvent, string> {
+  const { providers, userInput, currentDraft, signal } = args;
+
   const isFirstCall = currentDraft === null;
   const message = isFirstCall
     ? buildFirstCallMessage(userInput)
@@ -391,23 +408,37 @@ async function* handleDraftingStream(
   return fullText;
 }
 
-async function* handleRetrievalStream(
-  supabase: SupabaseClient,
-  providers: Providers,
-  userId: string,
-  sessionId: string,
-  question: string,
-  intent: SearchIntent,
-  lng: Locale,
-  signal?: AbortSignal,
-): AsyncGenerator<ChatStreamEvent, string> {
+async function* handleRetrievalStream(args: {
+  supabase: SupabaseClient;
+  providers: Providers;
+  userId: string;
+  sessionId: string;
+  question: string;
+  intent: SearchIntent;
+  lng: Locale;
+  signal?: AbortSignal;
+}): AsyncGenerator<ChatStreamEvent, string> {
+  const {
+    supabase,
+    providers,
+    userId,
+    sessionId,
+    question,
+    intent,
+    lng,
+    signal,
+  } = args;
   const { llm, embedding, vectorStore, graphStore } = providers;
 
   let vectorResults: Awaited<ReturnType<typeof vectorStore.search>> = [];
   if (intent.queries) {
     const results = await Promise.all(
       intent.queries.map((query) =>
-        vectorStore.search(embedding, { userId, query, limit: 5 }),
+        vectorStore.search(embedding, {
+          userId,
+          query,
+          limit: SIMILAR_DOC_SEARCH_LIMIT,
+        }),
       ),
     );
     vectorResults = results.flat();
@@ -418,7 +449,7 @@ async function* handleRetrievalStream(
     const graphResults = await graphStore.findDocumentsByEntities({
       entityNames: intent.entities,
       userId,
-      limit: 5,
+      limit: SIMILAR_DOC_SEARCH_LIMIT,
     });
     for (const gr of graphResults) {
       graphDocIds.add(gr.docId);
@@ -474,15 +505,14 @@ async function* handleRetrievalStream(
   return fullText;
 }
 
-// --- Save pipeline ---
-
-async function handleSave(
-  supabase: SupabaseClient,
-  providers: Providers,
-  userId: string,
-  sessionId: string,
-  draftBody: string,
-): Promise<void> {
+async function handleSave(args: {
+  supabase: SupabaseClient;
+  providers: Providers;
+  userId: string;
+  sessionId: string;
+  draftBody: string;
+}): Promise<void> {
+  const { supabase, providers, userId, sessionId, draftBody } = args;
   const { llm } = providers;
 
   const splitResult = await llm.generateStructured({
@@ -496,14 +526,12 @@ async function handleSave(
 
   const savedDocs: Array<{ id: string; title: string }> = [];
   for (const doc of splitResult.documents) {
-    const results = await saveDocument(
-      supabase,
-      providers,
-      userId,
+    const results = await saveDocument({
+      ctx: { supabase, providers, userId },
       sessionId,
-      doc.body,
+      body: doc.body,
       existingTags,
-    );
+    });
     savedDocs.push(...results);
   }
 
@@ -514,20 +542,20 @@ async function handleSave(
   });
 }
 
-async function saveDocument(
-  supabase: SupabaseClient,
-  providers: Providers,
-  userId: string,
-  sessionId: string,
-  body: string,
-  existingTags: string[],
-): Promise<Array<{ id: string; title: string }>> {
+async function saveDocument(args: {
+  ctx: ServiceContext;
+  sessionId: string;
+  body: string;
+  existingTags: string[];
+}): Promise<Array<{ id: string; title: string }>> {
+  const { ctx, sessionId, body, existingTags } = args;
+  const { supabase, providers } = ctx;
   const { llm, embedding, vectorStore } = providers;
 
   const searchResults = await vectorStore.search(embedding, {
-    userId,
+    userId: ctx.userId,
     query: body,
-    limit: 5,
+    limit: SIMILAR_DOC_SEARCH_LIMIT,
   });
 
   const docIds = [...new Set(searchResults.map((r) => r.payload.doc_id))];
@@ -542,9 +570,9 @@ async function saveDocument(
     throwIfSupabaseError(error);
 
     similarDocs = (data ?? []).map((d) => ({
-      id: d.id as string,
-      title: (d.title as string) ?? "",
-      body: d.body as string,
+      id: String(d.id),
+      title: String(d.title ?? ""),
+      body: String(d.body),
     }));
   }
 
@@ -558,8 +586,10 @@ async function saveDocument(
   });
 
   if (judgment.action === "update") {
-    // Guaranteed non-null by JudgmentOutputSchema .refine()
-    const targetId = judgment.target_id as string;
+    if (!judgment.target_id) {
+      throw new Error("target_id is required for update action");
+    }
+    const targetId = judgment.target_id;
 
     const reSplitResult = await llm.generateStructured({
       schema: SplitOutputSchema,
@@ -573,57 +603,51 @@ async function saveDocument(
     if (reSplitResult.documents.length > 1) {
       const results: Array<{ id: string; title: string }> = [];
       for (const splitDoc of reSplitResult.documents) {
-        const result = await persistDocument(
-          supabase,
-          providers,
-          userId,
+        const result = await persistDocument({
+          ctx,
           sessionId,
-          { action: "create" },
-          splitDoc.body,
+          persistAction: { action: "create" },
+          body: splitDoc.body,
           existingTags,
-        );
+        });
         results.push(result);
       }
-      await deleteDocument(supabase, userId, targetId);
+      await deleteDocument(supabase, ctx.userId, targetId);
       return results;
     }
 
     return [
-      await persistDocument(
-        supabase,
-        providers,
-        userId,
+      await persistDocument({
+        ctx,
         sessionId,
-        { action: "update", targetId },
-        judgment.final_body,
+        persistAction: { action: "update", targetId },
+        body: judgment.final_body,
         existingTags,
-      ),
+      }),
     ];
   }
 
   return [
-    await persistDocument(
-      supabase,
-      providers,
-      userId,
+    await persistDocument({
+      ctx,
       sessionId,
-      { action: "create" },
-      judgment.final_body,
+      persistAction: { action: "create" },
+      body: judgment.final_body,
       existingTags,
-    ),
+    }),
   ];
 }
 
-async function persistDocument(
-  supabase: SupabaseClient,
-  providers: Providers,
-  userId: string,
-  sessionId: string,
-  persistAction: PersistAction,
-  body: string,
-  existingTags: string[],
-): Promise<{ id: string; title: string }> {
-  const { llm } = providers;
+async function persistDocument(args: {
+  ctx: ServiceContext;
+  sessionId: string;
+  persistAction: PersistAction;
+  body: string;
+  existingTags: string[];
+}): Promise<{ id: string; title: string }> {
+  const { ctx, sessionId, persistAction, body, existingTags } = args;
+  const { supabase } = ctx;
+  const { llm } = ctx.providers;
 
   const meta = await llm.generateStructured({
     schema: MetaOutputSchema,
@@ -636,7 +660,7 @@ async function persistDocument(
 
   if (persistAction.action === "create") {
     const { data, error } = await supabase.rpc("create_document_with_event", {
-      p_user_id: userId,
+      p_user_id: ctx.userId,
       p_title: meta.title,
       p_tags: meta.tags,
       p_summary: meta.summary,
@@ -646,13 +670,16 @@ async function persistDocument(
 
     throwIfSupabaseError(error);
 
-    docId = data as string;
+    if (typeof data !== "string") {
+      throw new Error("create_document_with_event did not return a string id");
+    }
+    docId = data;
   } else {
     docId = persistAction.targetId;
 
     const { error } = await supabase.rpc("update_document_with_event", {
       p_doc_id: docId,
-      p_user_id: userId,
+      p_user_id: ctx.userId,
       p_title: meta.title,
       p_tags: meta.tags,
       p_summary: meta.summary,

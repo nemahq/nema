@@ -3,6 +3,8 @@ import { PostHog } from "posthog-node";
 import { getEnv } from "@server/env";
 
 const DEFAULT_HOST = "https://us.i.posthog.com";
+const FLUSH_BATCH_SIZE = 20;
+const FLUSH_INTERVAL_MS = 10_000;
 
 let client: PostHog | null = null;
 let initialized = false;
@@ -26,8 +28,8 @@ function getClient(): PostHog | null {
 
   client = new PostHog(POSTHOG_API_KEY, {
     host: POSTHOG_HOST ?? DEFAULT_HOST,
-    flushAt: 20,
-    flushInterval: 10_000,
+    flushAt: FLUSH_BATCH_SIZE,
+    flushInterval: FLUSH_INTERVAL_MS,
   });
 
   return client;

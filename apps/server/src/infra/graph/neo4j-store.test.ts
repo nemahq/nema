@@ -7,8 +7,22 @@ const mockClose = vi.fn();
 const mockExecuteWrite = vi.fn();
 const mockSessionClose = vi.fn();
 
+const { MockInteger } = vi.hoisted(() => {
+  class MockInteger {
+    low: number;
+    high = 0;
+    constructor(low: number) {
+      this.low = low;
+    }
+    toNumber() {
+      return this.low;
+    }
+  }
+  return { MockInteger };
+});
+
 vi.mock("neo4j-driver", () => {
-  const intFn = (v: number) => ({ low: v, high: 0, toNumber: () => v });
+  const intFn = (v: number) => new MockInteger(v);
   return {
     default: {
       driver: vi.fn(() => ({
@@ -22,15 +36,8 @@ vi.mock("neo4j-driver", () => {
       auth: { basic: vi.fn() },
       int: intFn,
     },
-    Integer: class {
-      low: number;
-      constructor(low: number) {
-        this.low = low;
-      }
-      toNumber() {
-        return this.low;
-      }
-    },
+    Integer: MockInteger,
+    isInt: (v: unknown) => v instanceof MockInteger,
   };
 });
 
@@ -151,12 +158,10 @@ describe("createNeo4jStore", () => {
       mockRun.mockResolvedValue({
         records: [
           {
-            get: (key: string) =>
-              key === "docId" ? "d2" : { low: 3, high: 0, toNumber: () => 3 },
+            get: (key: string) => (key === "docId" ? "d2" : new MockInteger(3)),
           },
           {
-            get: (key: string) =>
-              key === "docId" ? "d3" : { low: 1, high: 0, toNumber: () => 1 },
+            get: (key: string) => (key === "docId" ? "d3" : new MockInteger(1)),
           },
         ],
       });
@@ -174,12 +179,10 @@ describe("createNeo4jStore", () => {
 
     it("accumulates scores across multiple hops", async () => {
       const hop1Record = {
-        get: (key: string) =>
-          key === "docId" ? "d2" : { low: 2, high: 0, toNumber: () => 2 },
+        get: (key: string) => (key === "docId" ? "d2" : new MockInteger(2)),
       };
       const hop2Record = {
-        get: (key: string) =>
-          key === "docId" ? "d3" : { low: 1, high: 0, toNumber: () => 1 },
+        get: (key: string) => (key === "docId" ? "d3" : new MockInteger(1)),
       };
       mockRun
         .mockResolvedValueOnce({ records: [hop1Record] })
@@ -218,12 +221,10 @@ describe("createNeo4jStore", () => {
       mockRun.mockResolvedValue({
         records: [
           {
-            get: (key: string) =>
-              key === "docId" ? "d2" : { low: 3, high: 0, toNumber: () => 3 },
+            get: (key: string) => (key === "docId" ? "d2" : new MockInteger(3)),
           },
           {
-            get: (key: string) =>
-              key === "docId" ? "d3" : { low: 1, high: 0, toNumber: () => 1 },
+            get: (key: string) => (key === "docId" ? "d3" : new MockInteger(1)),
           },
         ],
       });
@@ -271,8 +272,7 @@ describe("createNeo4jStore", () => {
       mockRun.mockResolvedValue({
         records: [
           {
-            get: (key: string) =>
-              key === "docId" ? "d1" : { low: 2, high: 0, toNumber: () => 2 },
+            get: (key: string) => (key === "docId" ? "d1" : new MockInteger(2)),
           },
         ],
       });

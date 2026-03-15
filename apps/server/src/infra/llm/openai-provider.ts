@@ -21,6 +21,7 @@ export interface OpenAiProviderConfig {
   apiKey: string;
   model?: string;
   timeout?: number;
+  client?: OpenAI;
 }
 
 const DEFAULT_MODEL = "gpt-4o";
@@ -31,14 +32,16 @@ export class OpenAiProvider implements LlmProvider {
   private readonly model: string;
 
   constructor(config: OpenAiProviderConfig) {
-    if (!config.apiKey) {
+    if (!config.client && !config.apiKey) {
       throw new LlmError("auth", "OPENAI_API_KEY is required");
     }
 
-    this.client = new OpenAI({
-      apiKey: config.apiKey,
-      timeout: config.timeout ?? DEFAULT_TIMEOUT_MS,
-    });
+    this.client =
+      config.client ??
+      new OpenAI({
+        apiKey: config.apiKey,
+        timeout: config.timeout ?? DEFAULT_TIMEOUT_MS,
+      });
     this.model = config.model ?? DEFAULT_MODEL;
   }
 

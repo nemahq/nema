@@ -15,6 +15,8 @@ import { createQdrantStore } from "./infra/vector";
 import { appRouter } from "./router";
 import { createContext } from "./trpc";
 
+const SENTRY_FLUSH_TIMEOUT_MS = 2000;
+
 loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 
 async function bootstrap() {
@@ -40,7 +42,12 @@ async function bootstrap() {
 
   let stopWorker: (() => Promise<void>) | undefined;
 
-  if (env.QDRANT_URL && env.QDRANT_API_KEY) {
+  if (
+    env.QDRANT_URL &&
+    env.QDRANT_API_KEY &&
+    env.OPENAI_API_KEY &&
+    env.VOYAGE_API_KEY
+  ) {
     const vectorStore = createQdrantStore();
     await vectorStore.ensureCollection();
     server.log.info("Qdrant collection ready");
@@ -52,9 +59,9 @@ async function bootstrap() {
 
     const worker = createSyncWorker({
       supabase: getSupabaseAdmin(),
-      llm: new OpenAiProvider({ apiKey: env.OPENAI_API_KEY as string }),
+      llm: new OpenAiProvider({ apiKey: env.OPENAI_API_KEY }),
       embedding: createVoyageProvider({
-        apiKey: env.VOYAGE_API_KEY as string,
+        apiKey: env.VOYAGE_API_KEY,
       }),
       vectorStore,
       graphStore: createNeo4jStore(),
@@ -63,7 +70,7 @@ async function bootstrap() {
     stopWorker = worker.stop;
   } else {
     server.log.warn(
-      "QDRANT_URL / QDRANT_API_KEY not set, skipping collection init",
+      "QDRANT_URL / QDRANT_API_KEY / OPENAI_API_KEY / VOYAGE_API_KEY not fully set, skipping worker init",
     );
   }
 
@@ -79,7 +86,7 @@ async function bootstrap() {
       }
       await server.close();
       await shutdownPostHog();
-      await Sentry.flush(2000);
+      await Sentry.flush(SENTRY_FLUSH_TIMEOUT_MS);
       process.exit(0);
     });
   }
@@ -88,6 +95,6 @@ async function bootstrap() {
 bootstrap().catch(async (err) => {
   console.error("Fatal: bootstrap failed", err);
   Sentry.captureException(err);
-  await Sentry.flush(2000);
+  await Sentry.flush(SENTRY_FLUSH_TIMEOUT_MS);
   process.exit(1);
 });
