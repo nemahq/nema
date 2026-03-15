@@ -11,7 +11,7 @@ import { VectorStoreError } from "./infra/vector/vector-store";
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]["code"];
 
-export type DomainErrorCode =
+type DomainErrorCode =
   | "LLM_RATE_LIMIT"
   | "LLM_TIMEOUT"
   | "LLM_AUTH"

@@ -36,7 +36,7 @@ const envSchema = z
     },
   );
 
-export type Env = z.infer<typeof envSchema>;
+type Env = z.infer<typeof envSchema>;
 
 let env: Env;
 

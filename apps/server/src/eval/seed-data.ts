@@ -1,7 +1,7 @@
 // Phase 1 (Drafting) 평가용 시드 데이터
 // 카테고리별 입력 + 평가 시 주의점 정의
 
-export interface SeedInput {
+interface SeedInput {
   id: string;
   category: string;
   description: string;
@@ -10,7 +10,7 @@ export interface SeedInput {
   checkpoints: string[];
 }
 
-export interface EditCycleSeedInput {
+interface EditCycleSeedInput {
   id: string;
   category: string;
   description: string;

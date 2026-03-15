@@ -34,6 +34,12 @@ jobs:
       - name: Format check
         run: pnpm format:check
 
+      - name: Knip (unused code)
+        run: pnpm knip
+
+      - name: Dependency cruiser (circular deps)
+        run: pnpm depcruise
+
       - name: Test
         run: pnpm test
 
