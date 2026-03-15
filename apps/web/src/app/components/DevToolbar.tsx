@@ -8,7 +8,7 @@ import { supabase } from "@web/lib/supabase";
 import { changeLocale } from "@web/lib/tolgee";
 import type { Locale } from "@web/lib/tolgee/types";
 import { getStorage } from "@web/utils/localStorage";
-import type { ThemePreference } from "@web/utils/theme";
+import type { ThemePreference } from "@web/utils/theme-preference";
 
 const ReactQueryDevtools = lazy(() =>
   import("@tanstack/react-query-devtools").then((m) => ({

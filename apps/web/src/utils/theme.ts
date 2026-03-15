@@ -1,8 +1,6 @@
 import { getStorage, setStorage } from "./localStorage";
 import type { ThemePreference } from "./theme-preference";
 
-export type { ThemePreference } from "./theme-preference";
-
 export type Theme = "light" | "dark";
 
 export const MEDIA_DARK = "(prefers-color-scheme: dark)";
