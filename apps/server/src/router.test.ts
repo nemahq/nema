@@ -9,6 +9,7 @@ const caller = appRouter.createCaller({
   user: null,
   lng: "ko",
   supabase: null,
+  providers: null,
 });
 
 describe("appRouter", () => {
