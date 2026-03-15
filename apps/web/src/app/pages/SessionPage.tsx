@@ -86,9 +86,6 @@ export function SessionPage() {
           />
         </div>
       </main>
-
-      {/* TODO: CRP 확인 후 복원 */}
-      {/* <SessionSidePanel /> */}
     </div>
   );
 }
