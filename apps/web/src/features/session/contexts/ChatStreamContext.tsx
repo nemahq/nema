@@ -38,13 +38,13 @@ export interface ClientStatusMessage {
   createdAt: string;
 }
 
-export type StreamingMessage = Message | ClientStatusMessage;
+export type DisplayMessage = Message | ClientStatusMessage;
 
 interface ChatStreamContextValue {
   send: (content: string) => void;
   cancel: () => void;
   streamingPhase: StreamingPhase;
-  streamingMessage: StreamingMessage | undefined;
+  streamingMessage: DisplayMessage | undefined;
 }
 
 const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
@@ -154,12 +154,14 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
   );
 
   const cancel = useCallback(() => {
+    setStreamInput(null);
     utils.message.list.invalidate({ sessionId }).finally(() => {
       resetStreamState();
     });
+    utils.session.get.invalidate({ sessionId });
   }, [sessionId, utils]);
 
-  const streamingMessage = useMemo<StreamingMessage | undefined>(() => {
+  const streamingMessage = useMemo<DisplayMessage | undefined>(() => {
     switch (streamingPhase) {
       case "idle":
         return undefined;
@@ -180,13 +182,13 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
               content: streamingText,
               createdAt: streamStartedAt,
             }
-          : {
+          : ({
               id: STREAMING_MESSAGE_ID,
               role: "assistant",
               type: "status",
-              content: "thinking" as const,
+              content: "thinking",
               createdAt: streamStartedAt,
-            };
+            } satisfies ClientStatusMessage);
     }
   }, [streamingPhase, streamingText, streamStartedAt]);
 

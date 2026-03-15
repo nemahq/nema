@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 
 import type { Message, StatusLogType } from "@nema-io/shared";
 
-import type { ClientStatusType } from "@web/features/session/contexts/ChatStreamContext";
+import type {
+  ClientStatusMessage,
+  ClientStatusType,
+} from "@web/features/session/contexts/ChatStreamContext";
 import { useTranslation } from "@web/lib/tolgee";
 import type { TranslationKey } from "@web/lib/tolgee/types";
 
@@ -21,7 +24,7 @@ const STATUS_LABEL_MAP: Record<
 interface StatusMessageProps {
   message:
     | Extract<Message, { type: "status" }>
-    | { type: "status"; content: ClientStatusType };
+    | Pick<ClientStatusMessage, "type" | "content">;
   icon?: ReactNode;
 }
 
