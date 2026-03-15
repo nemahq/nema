@@ -5,11 +5,15 @@ import { trpc } from "@web/lib/trpc";
 
 import type { StreamingPhase } from "./useSendMessage";
 
-export function useChatInputDisabled({ phase }: { phase: StreamingPhase }) {
+export function useChatInputDisabled({
+  streamingPhase,
+}: {
+  streamingPhase: StreamingPhase;
+}) {
   const saveDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.saveDraft) }) > 0;
   const cancelDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.cancelDraft) }) > 0;
 
-  return phase !== "idle" || saveDraftMutating || cancelDraftMutating;
+  return streamingPhase !== "idle" || saveDraftMutating || cancelDraftMutating;
 }

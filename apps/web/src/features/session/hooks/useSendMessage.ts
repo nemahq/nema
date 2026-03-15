@@ -19,16 +19,16 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
     useIsMutating({ mutationKey: getQueryKey(trpc.session.create) }) > 0;
 
   const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
-  const [phase, setPhase] = useState<StreamingPhase>("idle");
-  const phaseRef = useRef<StreamingPhase>("idle");
+  const [streamingPhase, setStreamingPhase] = useState<StreamingPhase>("idle");
+  const streamingPhaseRef = useRef<StreamingPhase>("idle");
   const [streamingText, setStreamingText] = useState("");
   const fullTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
 
   function resetStreamState() {
     setStreamInput(null);
-    setPhase("idle");
-    phaseRef.current = "idle";
+    setStreamingPhase("idle");
+    streamingPhaseRef.current = "idle";
     setStreamingText("");
     fullTextRef.current = "";
   }
@@ -37,11 +37,11 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
     (event: ChatStreamEvent) => {
       switch (event.type) {
         case "draft_start":
-          phaseRef.current = "draft";
-          setPhase("draft");
+          streamingPhaseRef.current = "draft";
+          setStreamingPhase("draft");
           break;
         case "token":
-          if (phaseRef.current !== "draft") {
+          if (streamingPhaseRef.current !== "draft") {
             fullTextRef.current += event.text;
             setStreamingText(fullTextRef.current);
           }
@@ -77,7 +77,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
 
   const send = useCallback(
     (content: string) => {
-      if (phase !== "idle") {
+      if (streamingPhase !== "idle") {
         return;
       }
 
@@ -98,11 +98,11 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
       fullTextRef.current = "";
       setStreamStartedAt(new Date().toISOString());
       setStreamingText("");
-      phaseRef.current = "text";
-      setPhase("text");
+      streamingPhaseRef.current = "text";
+      setStreamingPhase("text");
       setStreamInput({ sessionId, content });
     },
-    [phase, sessionId, trackEvent, utils],
+    [streamingPhase, sessionId, trackEvent, utils],
   );
 
   const cancel = useCallback(() => {
@@ -113,7 +113,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
   return {
     send,
     cancel,
-    phase,
+    streamingPhase,
     streamingText,
     streamStartedAt,
   };

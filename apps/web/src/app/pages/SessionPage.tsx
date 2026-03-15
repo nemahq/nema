@@ -23,10 +23,11 @@ export function SessionPage() {
     select: (loc) =>
       getRouteState(loc.state, HOME_TO_SESSION_INITIAL_MESSAGE_KEY),
   });
-  const { send, phase, streamingText, streamStartedAt } = useSendMessage({
-    sessionId,
-  });
-  const disabled = useChatInputDisabled({ phase });
+  const { send, streamingPhase, streamingText, streamStartedAt } =
+    useSendMessage({
+      sessionId,
+    });
+  const disabled = useChatInputDisabled({ streamingPhase });
 
   const sentRef = useRef(false);
   useEffect(
@@ -42,7 +43,7 @@ export function SessionPage() {
   );
 
   const streamingMessage = useMemo<Message | undefined>(() => {
-    switch (phase) {
+    switch (streamingPhase) {
       case "idle":
         return undefined;
       case "draft":
@@ -64,7 +65,7 @@ export function SessionPage() {
             }
           : undefined;
     }
-  }, [phase, streamingText, streamStartedAt, t]);
+  }, [streamingPhase, streamingText, streamStartedAt, t]);
 
   return (
     <div className="flex flex-1 min-w-0">
