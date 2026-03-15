@@ -9,7 +9,7 @@ import {
   cancelDraftAction,
   processChatStream,
   saveDraftAction,
-} from "@server/services/chat-service";
+} from "@server/services/chat";
 import { getMessages, sendMessage } from "@server/services/message-service";
 import { protectedProcedure, providerProcedure, router } from "@server/trpc";
 
