@@ -17,17 +17,19 @@ export function RenameInput({
 }: RenameInputProps) {
   const [editValue, setEditValue] = useState(currentTitle ?? "");
   const updateMutation = useUpdateSession();
-  const cancelledRef = useRef(false);
+  const doneRef = useRef(false);
 
   function commitEdit() {
-    if (cancelledRef.current) {
+    if (doneRef.current) {
       return;
     }
     const trimmed = editValue.trim();
     if (!trimmed || trimmed === currentTitle) {
+      doneRef.current = true;
       onEditEnd();
       return;
     }
+    doneRef.current = true;
     updateMutation.mutate({ sessionId, title: trimmed });
     onEditEnd();
   }
@@ -44,7 +46,7 @@ export function RenameInput({
           e.currentTarget.blur();
         }
         if (e.key === "Escape") {
-          cancelledRef.current = true;
+          doneRef.current = true;
           onEditEnd();
         }
       }}

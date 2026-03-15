@@ -15,7 +15,7 @@ type StreamingPhase = "idle" | "text" | "draft";
 export function useSendMessage({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
-  const generateTitle = useGenerateTitle();
+  const { mutate: generateTitle } = useGenerateTitle();
 
   const isSessionCreating =
     useIsMutating({ mutationKey: getQueryKey(trpc.session.create) }) > 0;
@@ -99,7 +99,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
 
       const cachedSession = utils.session.get.getData({ sessionId });
       if (!cachedSession?.title) {
-        generateTitle.mutate({ sessionId, content });
+        generateTitle({ sessionId, content });
       }
 
       fullTextRef.current = "";
