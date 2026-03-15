@@ -48,7 +48,7 @@
     "delete": "Delete",
     "delete_confirm_title": "Delete this context?",
     "delete_confirm_description": "This action cannot be undone.",
-    "menu": "Session menu"
+    "menu": "Context menu"
   },
   "settings": {
     "theme_light": "Light",
