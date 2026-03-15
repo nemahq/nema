@@ -1,10 +1,9 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 
-import { toast } from "@nema-io/weave";
-
 import { Sentry } from "@web/lib/sentry";
 import { tolgee } from "@web/lib/tolgee/client";
+import { toast } from "@web/utils/toast";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,11 +30,6 @@ export const queryClient = new QueryClient({
         error instanceof TRPCClientError
           ? error.message
           : tolgee.t("common.unknown_error"),
-        {
-          duration: Infinity,
-          // onClick은 Sonner cancel 필수 필드. dismiss는 Sonner 내부 처리.
-          cancel: { label: "✕", onClick: () => {} },
-        },
       );
     },
   }),

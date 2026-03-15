@@ -7,6 +7,7 @@ import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { trpc } from "@web/lib/trpc";
 
+import { useGenerateTitle } from "./useGenerateTitle";
 import { addOptimisticMessage } from "./useMessageList";
 
 type StreamingPhase = "idle" | "text" | "draft";
@@ -14,6 +15,7 @@ type StreamingPhase = "idle" | "text" | "draft";
 export function useSendMessage({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
+  const { mutate: generateTitle } = useGenerateTitle();
 
   const isSessionCreating =
     useIsMutating({ mutationKey: getQueryKey(trpc.session.create) }) > 0;
@@ -95,6 +97,11 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
 
       addOptimisticMessage(utils, sessionId, optimistic);
 
+      const cachedSession = utils.session.get.getData({ sessionId });
+      if (!cachedSession?.title) {
+        generateTitle({ sessionId, content });
+      }
+
       fullTextRef.current = "";
       setStreamStartedAt(new Date().toISOString());
       setStreamingText("");
@@ -102,7 +109,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
       setStreamingPhase("text");
       setStreamInput({ sessionId, content });
     },
-    [streamingPhase, sessionId, trackEvent, utils],
+    [streamingPhase, sessionId, trackEvent, utils, generateTitle],
   );
 
   const cancel = useCallback(() => {

@@ -17,23 +17,21 @@ export function RenameInput({
 }: RenameInputProps) {
   const [editValue, setEditValue] = useState(currentTitle ?? "");
   const updateMutation = useUpdateSession();
-  const cancelledRef = useRef(false);
+  const doneRef = useRef(false);
 
-  async function commitEdit() {
-    if (cancelledRef.current || updateMutation.isPending) {
+  function commitEdit() {
+    if (doneRef.current) {
       return;
     }
     const trimmed = editValue.trim();
     if (!trimmed || trimmed === currentTitle) {
+      doneRef.current = true;
       onEditEnd();
       return;
     }
-    try {
-      await updateMutation.mutateAsync({ sessionId, title: trimmed });
-      onEditEnd();
-    } catch {
-      // 글로벌 토스트가 에러를 표시
-    }
+    doneRef.current = true;
+    updateMutation.mutate({ sessionId, title: trimmed });
+    onEditEnd();
   }
 
   return (
@@ -48,7 +46,7 @@ export function RenameInput({
           e.currentTarget.blur();
         }
         if (e.key === "Escape") {
-          cancelledRef.current = true;
+          doneRef.current = true;
           onEditEnd();
         }
       }}
