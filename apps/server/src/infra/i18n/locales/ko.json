@@ -1,11 +1,6 @@
 {
   "chat": {
-    "draft_created": "초안 작성 완료",
-    "draft_edited": "초안 수정 완료",
-    "draft_cancelled": "초안 취소됨",
-    "draft_saved": "저장 완료",
-    "retrieval_empty": "관련된 정보를 찾지 못했습니다.",
-    "save_complete": "저장이 완료되었습니다."
+    "retrieval_empty": "관련된 정보를 찾지 못했습니다."
   },
   "error": {
     "llm_rate_limit": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",

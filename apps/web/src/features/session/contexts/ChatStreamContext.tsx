@@ -11,13 +11,17 @@ import * as Sentry from "@sentry/react";
 import { skipToken, useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
-import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
+import {
+  type ChatInput,
+  type ChatStreamEvent,
+  type Message,
+  STATUS_LOG_TYPES,
+} from "@nema-io/shared";
 
 import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
 import { addOptimisticMessage } from "@web/features/session/hooks/useMessageList";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
-import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
 
 type StreamingPhase = "idle" | "text" | "draft";
@@ -34,7 +38,6 @@ interface ChatStreamContextValue {
 const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
 
 export function ChatStreamProvider({ children }: { children: ReactNode }) {
-  const { t } = useTranslation();
   const sessionId = useSessionId();
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
@@ -153,7 +156,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
           id: STREAMING_MESSAGE_ID,
           role: "assistant",
           type: "status",
-          content: t("session.draft_creating"),
+          content: STATUS_LOG_TYPES.DRAFT_CREATING,
           createdAt: streamStartedAt,
         };
       case "text":
@@ -167,7 +170,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
             }
           : undefined;
     }
-  }, [streamingPhase, streamingText, streamStartedAt, t]);
+  }, [streamingPhase, streamingText, streamStartedAt]);
 
   const value = useMemo<ChatStreamContextValue>(
     () => ({ send, cancel, streamingPhase, streamingMessage }),

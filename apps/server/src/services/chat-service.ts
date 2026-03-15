@@ -10,7 +10,11 @@ import type {
   MessageType,
   SessionDraft,
 } from "@nema-io/shared";
-import { SessionDraftSchema } from "@nema-io/shared";
+import {
+  MessageSchema,
+  SessionDraftSchema,
+  STATUS_LOG_TYPES,
+} from "@nema-io/shared";
 
 import { t } from "@server/infra/i18n";
 import type { Providers } from "@server/infra/providers";
@@ -177,13 +181,13 @@ async function createAssistantResponse(
   type: MessageType,
   content: string,
 ): Promise<ChatResponse> {
-  const message: Message = {
+  const message = MessageSchema.parse({
     id: crypto.randomUUID(),
     role: "assistant",
     type,
     content,
     createdAt: new Date().toISOString(),
-  };
+  });
   await appendMessage(supabase, sessionId, message);
   return { message, draft: null };
 }
@@ -196,13 +200,13 @@ export async function* processChatStream(
   lng: Locale,
   signal?: AbortSignal,
 ): AsyncGenerator<ChatStreamEvent> {
-  const userMessage: Message = {
+  const userMessage = MessageSchema.parse({
     id: crypto.randomUUID(),
     role: "user",
     type: "text",
     content: input.content,
     createdAt: new Date().toISOString(),
-  };
+  });
 
   await appendMessage(supabase, input.sessionId, userMessage);
 
@@ -245,7 +249,7 @@ export async function* processChatStream(
         signal,
       );
       await setDraft(supabase, input.sessionId, draftBody);
-      responseContent = t("chat.draft_created", lng);
+      responseContent = STATUS_LOG_TYPES.DRAFT_CREATED;
       messageType = "status";
     }
   } else {
@@ -284,24 +288,24 @@ export async function* processChatStream(
           signal,
         );
         await setDraft(supabase, input.sessionId, editedBody);
-        responseContent = t("chat.draft_edited", lng);
+        responseContent = STATUS_LOG_TYPES.DRAFT_EDITED;
         messageType = "status";
         break;
       }
       case "save":
-        responseContent = await handleSave(
+        await handleSave(
           supabase,
           providers,
           userId,
           input.sessionId,
           draft.body,
-          lng,
         );
+        responseContent = STATUS_LOG_TYPES.DRAFT_SAVED;
         messageType = "status";
         break;
       case "cancel":
         await clearDraft(supabase, input.sessionId);
-        responseContent = t("chat.draft_cancelled", lng);
+        responseContent = STATUS_LOG_TYPES.DRAFT_CANCELLED;
         messageType = "status";
         break;
       default: {
@@ -311,13 +315,13 @@ export async function* processChatStream(
     }
   }
 
-  const assistantMessage: Message = {
+  const assistantMessage = MessageSchema.parse({
     id: crypto.randomUUID(),
     role: "assistant",
     type: messageType,
     content: responseContent,
     createdAt: new Date().toISOString(),
-  };
+  });
 
   await appendMessage(supabase, input.sessionId, assistantMessage);
 
@@ -329,7 +333,6 @@ export async function saveDraftAction(
   providers: Providers,
   userId: string,
   sessionId: string,
-  lng: Locale,
 ): Promise<ChatResponse> {
   const draft = await getDraft(supabase, sessionId);
   if (!draft) {
@@ -339,27 +342,19 @@ export async function saveDraftAction(
     });
   }
 
-  const responseContent = await handleSave(
-    supabase,
-    providers,
-    userId,
-    sessionId,
-    draft.body,
-    lng,
-  );
+  await handleSave(supabase, providers, userId, sessionId, draft.body);
 
   return createAssistantResponse(
     supabase,
     sessionId,
     "status",
-    responseContent,
+    STATUS_LOG_TYPES.DRAFT_SAVED,
   );
 }
 
 export async function cancelDraftAction(
   supabase: SupabaseClient,
   sessionId: string,
-  lng: Locale,
 ): Promise<ChatResponse> {
   await clearDraft(supabase, sessionId);
 
@@ -367,7 +362,7 @@ export async function cancelDraftAction(
     supabase,
     sessionId,
     "status",
-    t("chat.draft_cancelled", lng),
+    STATUS_LOG_TYPES.DRAFT_CANCELLED,
   );
 }
 
@@ -487,8 +482,7 @@ async function handleSave(
   userId: string,
   sessionId: string,
   draftBody: string,
-  lng: Locale,
-): Promise<string> {
+): Promise<void> {
   const { llm } = providers;
 
   const splitResult = await llm.generateStructured({
@@ -518,9 +512,6 @@ async function handleSave(
   trackEvent(supabase, userId, "document.saved", sessionId, {
     doc_count: savedDocs.length,
   });
-
-  const docList = savedDocs.map((d) => `- ${d.title}`).join("\n");
-  return `${t("chat.save_complete", lng)}\n\n${docList}`;
 }
 
 async function saveDocument(

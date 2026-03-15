@@ -1,11 +1,6 @@
 {
   "chat": {
-    "draft_created": "Draft created",
-    "draft_edited": "Draft edited",
-    "draft_cancelled": "Draft cancelled",
-    "draft_saved": "Saved",
-    "retrieval_empty": "No relevant information found.",
-    "save_complete": "Saved successfully."
+    "retrieval_empty": "No relevant information found."
   },
   "error": {
     "llm_rate_limit": "Too many requests. Please try again later.",
