@@ -32,7 +32,11 @@ src/
 
 - `GET /health` MUST always exist (Railway health check).
 - MUST use Zod schemas from `@nema-io/shared` for input validation.
-- Use `protectedProcedure` for endpoints requiring authentication. Use `publicProcedure` otherwise.
+- Use `publicProcedure` for unauthenticated endpoints, `protectedProcedure` for auth-only, `providerProcedure` for AI provider-dependent endpoints.
+
+## Conventions
+
+- MUST follow rules in `docs/conventions.md`.
 
 ## I18n
 
