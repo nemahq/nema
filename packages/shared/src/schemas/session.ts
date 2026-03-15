@@ -44,3 +44,11 @@ export const SessionCreateInputSchema = z.object({
   sessionId: z.string().uuid(),
 });
 export type SessionCreateInput = z.infer<typeof SessionCreateInputSchema>;
+
+export const SessionGenerateTitleInputSchema = z.object({
+  sessionId: z.string().uuid(),
+  content: z.string().min(1),
+});
+export type SessionGenerateTitleInput = z.infer<
+  typeof SessionGenerateTitleInputSchema
+>;

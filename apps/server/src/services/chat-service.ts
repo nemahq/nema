@@ -1,5 +1,4 @@
 import { z } from "zod";
-import * as Sentry from "@sentry/node";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TRPCError } from "@trpc/server";
 
@@ -38,10 +37,6 @@ import {
   META_SYSTEM_PROMPT,
   SPLIT_SYSTEM_PROMPT,
 } from "@server/prompts/saving";
-import {
-  buildSessionTitleMessage,
-  SESSION_TITLE_SYSTEM_PROMPT,
-} from "@server/prompts/session-title";
 import { trackEvent } from "@server/services/event-service";
 
 // --- Internal schemas ---
@@ -134,19 +129,6 @@ async function clearDraft(
   throwIfSupabaseError(error);
 }
 
-async function updateSessionTitle(
-  supabase: SupabaseClient,
-  sessionId: string,
-  title: string,
-): Promise<void> {
-  const { error } = await supabase
-    .from("sessions")
-    .update({ title })
-    .eq("id", sessionId);
-
-  throwIfSupabaseError(error);
-}
-
 // --- Helpers ---
 
 async function appendMessage(
@@ -180,52 +162,6 @@ async function getExistingTags(
     }
   }
   return [...allTags];
-}
-
-async function needsSessionTitle(
-  supabase: SupabaseClient,
-  sessionId: string,
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("sessions")
-    .select("title")
-    .eq("id", sessionId)
-    .single();
-
-  throwIfSupabaseError(error);
-
-  return data.title === null;
-}
-
-async function* streamSessionTitle(
-  supabase: SupabaseClient,
-  providers: Providers,
-  sessionId: string,
-  userInput: string,
-): AsyncGenerator<ChatStreamEvent> {
-  try {
-    let fullTitle = "";
-
-    for await (const chunk of providers.llm.generateStream({
-      systemPrompt: SESSION_TITLE_SYSTEM_PROMPT,
-      messages: [
-        { role: "user", content: buildSessionTitleMessage(userInput) },
-      ],
-    })) {
-      fullTitle += chunk;
-    }
-
-    const title = fullTitle.trim();
-    if (title) {
-      await updateSessionTitle(supabase, sessionId, title);
-      yield { type: "title", title };
-    }
-  } catch (error) {
-    Sentry.captureException(error, {
-      tags: { operation: "streamSessionTitle" },
-      extra: { sessionId },
-    });
-  }
 }
 
 // --- Main entry point ---
@@ -270,19 +206,7 @@ export async function* processChatStream(
 
   await appendMessage(supabase, input.sessionId, userMessage);
 
-  const [draft, shouldGenerateTitle] = await Promise.all([
-    getDraft(supabase, input.sessionId),
-    needsSessionTitle(supabase, input.sessionId),
-  ]);
-
-  if (shouldGenerateTitle) {
-    yield* streamSessionTitle(
-      supabase,
-      providers,
-      input.sessionId,
-      input.content,
-    );
-  }
+  const draft = await getDraft(supabase, input.sessionId);
 
   let responseContent: string;
   let messageType: MessageType = "text";

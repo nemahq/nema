@@ -5,6 +5,7 @@ import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeSta
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { Greeting } from "@web/features/session/components/Greeting";
 import { useCreateSession } from "@web/features/session/hooks/useCreateSession";
+import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
 import { useTranslation } from "@web/lib/tolgee";
 import en from "@web/lib/tolgee/en.json";
 import { trpc } from "@web/lib/trpc";
@@ -23,12 +24,24 @@ export function HomePage() {
   const [variant] = useState(pickRandom);
   const utils = trpc.useUtils();
   const createSession = useCreateSession();
+  const generateTitle = useGenerateTitle();
 
   function handleSubmit(content: string) {
     const sessionId = crypto.randomUUID();
 
     utils.message.list.setData({ sessionId }, []);
-    createSession.mutate({ sessionId });
+    createSession.mutate(
+      { sessionId },
+      {
+        onSuccess: () => {
+          generateTitle.mutate({ sessionId, content });
+        },
+        onError: () => {
+          utils.message.list.setData({ sessionId }, undefined);
+          navigate({ to: "/", replace: true });
+        },
+      },
+    );
 
     navigate({
       to: "/session/$sessionId",

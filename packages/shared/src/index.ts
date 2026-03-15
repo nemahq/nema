@@ -30,6 +30,8 @@ export {
   SessionDeleteInputSchema,
   type SessionDraft,
   SessionDraftSchema,
+  type SessionGenerateTitleInput,
+  SessionGenerateTitleInputSchema,
   type SessionGetInput,
   SessionGetInputSchema,
   type SessionListInput,

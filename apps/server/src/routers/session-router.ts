@@ -1,16 +1,20 @@
 import {
   SessionCreateInputSchema,
   SessionDeleteInputSchema,
+  SessionGenerateTitleInputSchema,
   SessionGetInputSchema,
   SessionListInputSchema,
   SessionUpdateInputSchema,
 } from "@nema-io/shared";
 
+import { getProviders } from "@server/infra/providers";
 import {
   createSession,
   deleteSession,
+  generateSessionTitle,
   getSession,
   listSessions,
+  needsSessionTitle,
   updateSession,
 } from "@server/services/session-service";
 import { protectedProcedure, router } from "@server/trpc";
@@ -38,6 +42,15 @@ export const sessionRouter = router({
     .mutation(({ ctx, input }) =>
       updateSession(ctx.supabase, input.sessionId, input.title),
     ),
+
+  generateTitle: protectedProcedure
+    .input(SessionGenerateTitleInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      if (!(await needsSessionTitle(ctx.supabase, input.sessionId))) {
+        return null;
+      }
+      return generateSessionTitle(ctx.supabase, getProviders(), input);
+    }),
 
   delete: protectedProcedure
     .input(SessionDeleteInputSchema)

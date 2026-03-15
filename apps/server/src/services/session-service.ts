@@ -8,10 +8,15 @@ import type {
 } from "@nema-io/shared";
 import { SessionDraftSchema } from "@nema-io/shared";
 
+import type { Providers } from "@server/infra/providers";
 import {
   SupabaseError,
   throwIfSupabaseError,
 } from "@server/infra/supabase-error";
+import {
+  buildSessionTitleMessage,
+  SESSION_TITLE_SYSTEM_PROMPT,
+} from "@server/prompts/session-title";
 
 function toSummary(row: {
   id: string;
@@ -140,4 +145,55 @@ export async function deleteSession(
   if (!count) {
     throw new SupabaseError("not_found", `Session ${sessionId} not found`);
   }
+}
+
+export async function needsSessionTitle(
+  supabase: SupabaseClient,
+  sessionId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("title")
+    .eq("id", sessionId)
+    .single();
+
+  if (error) {
+    throw new SupabaseError("query_failed", error.message, error);
+  }
+
+  return data.title === null;
+}
+
+export async function generateSessionTitle(
+  supabase: SupabaseClient,
+  providers: Providers,
+  { sessionId, content }: { sessionId: string; content: string },
+): Promise<string> {
+  let fullTitle = "";
+
+  for await (const chunk of providers.llm.generateStream({
+    systemPrompt: SESSION_TITLE_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: buildSessionTitleMessage(content) }],
+  })) {
+    fullTitle += chunk;
+  }
+
+  const title = fullTitle.trim();
+  if (!title) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "LLM returned empty title",
+    });
+  }
+
+  const { error } = await supabase
+    .from("sessions")
+    .update({ title })
+    .eq("id", sessionId);
+
+  if (error) {
+    throw new SupabaseError("query_failed", error.message, error);
+  }
+
+  return title;
 }
