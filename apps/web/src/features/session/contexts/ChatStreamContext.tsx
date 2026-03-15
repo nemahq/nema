@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import * as Sentry from "@sentry/react";
 import { skipToken, useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
@@ -76,6 +77,10 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
           utils.message.list.invalidate({ sessionId });
           utils.session.get.invalidate({ sessionId });
           break;
+        default: {
+          const _exhaustive: never = event;
+          void _exhaustive;
+        }
       }
     },
     [sessionId, utils],
@@ -84,7 +89,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
   // TODO: 인라인 에러 메시지 + 재시도 버튼 UI 추가
   const handleStreamError = useCallback(
     (error: unknown) => {
-      console.error("[ChatStream] streaming error:", error);
+      Sentry.captureException(error);
       resetStreamState();
       utils.message.list.invalidate({ sessionId });
       utils.session.get.invalidate({ sessionId });

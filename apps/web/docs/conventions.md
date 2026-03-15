@@ -45,7 +45,7 @@
 | Env var          | `VITE_` prefix | `VITE_API_URL`    |
 
 - Hook name = caller perspective. Name by what the caller does, not by API endpoint or DB table.
-- Hook return variable: drop `use` prefix → camelCase. `useSendMessage()` → `sendMessage`. Array return → plural entity (`messages`).
+- Hook return variable: drop `use` prefix → camelCase. `useSessionList()` → `sessionList`. Array return → plural entity (`messages`).
 - Component name MUST NOT repeat the parent folder name. `session/components/MessageList` — O, `session/components/SessionMessageList` — X.
 
 ## Data Fetching
