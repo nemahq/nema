@@ -96,8 +96,8 @@
 | --- | --- | --- |
 | `app/` | App bootstrap: everything needed to initialize and run the application | — |
 | `features/` | Domain-specific business modules. Owns internal components/, hooks/, etc. | Code directly imported by other features |
-| `components/` | Shared UI used by 2+ features | Data fetching, business logic |
-| `hooks/` | Shared hooks used by 2+ features | Feature-specific hooks |
+| `components/` | Feature-agnostic UI components | Data fetching, business logic |
+| `hooks/` | Feature-agnostic custom hooks | Feature-specific hooks |
 | `lib/` | External service client wrappers (one file or folder per service) | Business logic, pure utility functions |
 | `utils/` | Internal utility functions with no external service dependency | External service wrappers (→ lib/) |
 
