@@ -64,7 +64,7 @@ export function SessionPage() {
       return {
         id: STREAMING_MESSAGE_ID,
         role: "assistant",
-        type: "draft_status",
+        type: "status",
         content: t("session.draft_creating"),
         createdAt: streamStartedAt,
       };

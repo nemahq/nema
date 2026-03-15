@@ -246,7 +246,7 @@ export async function* processChatStream(
       );
       await setDraft(supabase, input.sessionId, draftBody);
       responseContent = t("chat.draft_created", lng);
-      messageType = "draft_status";
+      messageType = "status";
     }
   } else {
     const intentResult = await providers.llm.generateStructured({
@@ -285,7 +285,7 @@ export async function* processChatStream(
         );
         await setDraft(supabase, input.sessionId, editedBody);
         responseContent = t("chat.draft_edited", lng);
-        messageType = "draft_status";
+        messageType = "status";
         break;
       }
       case "save":
@@ -297,12 +297,12 @@ export async function* processChatStream(
           draft.body,
           lng,
         );
-        messageType = "draft_status";
+        messageType = "status";
         break;
       case "cancel":
         await clearDraft(supabase, input.sessionId);
         responseContent = t("chat.draft_cancelled", lng);
-        messageType = "draft_status";
+        messageType = "status";
         break;
       default: {
         const _exhaustive: never = intentResult.intent;
@@ -351,7 +351,7 @@ export async function saveDraftAction(
   return createAssistantResponse(
     supabase,
     sessionId,
-    "draft_status",
+    "status",
     responseContent,
   );
 }
@@ -366,7 +366,7 @@ export async function cancelDraftAction(
   return createAssistantResponse(
     supabase,
     sessionId,
-    "draft_status",
+    "status",
     t("chat.draft_cancelled", lng),
   );
 }
