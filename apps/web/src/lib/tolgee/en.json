@@ -35,6 +35,7 @@
     "copy_code": "Copy code",
     "copied": "Copied",
     "draft": "Draft",
+    "draft_creating": "Creating draft",
     "draft_previous": "Previous draft",
     "draft_save": "Save",
     "draft_panel_open": "Open {label} panel",

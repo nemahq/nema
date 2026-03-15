@@ -2,6 +2,7 @@ import { memo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
+import { useTypewriter } from "@web/hooks/useTypewriter";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { RenameInput } from "./RenameInput";
@@ -18,7 +19,8 @@ export const SessionItem = memo(function SessionItem({
 }: SessionItemProps) {
   const { t } = useTranslation();
   const trackEvent = useTrackEvent();
-  const title = rawTitle ?? t("session.untitled");
+  const animatedTitle = useTypewriter(rawTitle);
+  const title = animatedTitle || t("session.untitled");
 
   const [isEditing, setIsEditing] = useState(false);
 

@@ -1,36 +1,53 @@
 import { useCallback, useRef, useState } from "react";
-import { skipToken } from "@tanstack/react-query";
+import { skipToken, useIsMutating } from "@tanstack/react-query";
+import { getQueryKey } from "@trpc/react-query";
 
 import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
 
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { trpc } from "@web/lib/trpc";
 
+import { addOptimisticMessage } from "./useMessageList";
+
+export type StreamingPhase = "idle" | "text" | "draft";
+
 export function useSendMessage({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
 
+  const isSessionCreating =
+    useIsMutating({ mutationKey: getQueryKey(trpc.session.create) }) > 0;
+
   const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingPhase, setStreamingPhase] = useState<StreamingPhase>("idle");
+  const streamingPhaseRef = useRef<StreamingPhase>("idle");
   const [streamingText, setStreamingText] = useState("");
   const fullTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
 
-  const handleData = useCallback(
+  function resetStreamState() {
+    setStreamInput(null);
+    setStreamingPhase("idle");
+    streamingPhaseRef.current = "idle";
+    setStreamingText("");
+    fullTextRef.current = "";
+  }
+
+  const handleStreamEvent = useCallback(
     (event: ChatStreamEvent) => {
       switch (event.type) {
-        case "token":
-          fullTextRef.current += event.text;
-          setStreamingText(fullTextRef.current);
+        case "draft_start":
+          streamingPhaseRef.current = "draft";
+          setStreamingPhase("draft");
           break;
-        case "title":
-          utils.session.list.invalidate();
+        case "token":
+          if (streamingPhaseRef.current !== "draft") {
+            fullTextRef.current += event.text;
+            setStreamingText(fullTextRef.current);
+          }
           break;
         case "done":
-          setStreamInput(null);
-          setIsStreaming(false);
-          setStreamingText("");
-          fullTextRef.current = "";
+          resetStreamState();
           utils.message.list.invalidate({ sessionId });
           utils.session.get.invalidate({ sessionId });
           break;
@@ -40,27 +57,27 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
   );
 
   // TODO: 인라인 에러 메시지 + 재시도 버튼 UI 추가
-  const handleError = useCallback(
+  const handleStreamError = useCallback(
     (error: unknown) => {
       console.error("[useSendMessage] streaming error:", error);
-      setStreamInput(null);
-      setIsStreaming(false);
-      setStreamingText("");
-      fullTextRef.current = "";
+      resetStreamState();
       utils.message.list.invalidate({ sessionId });
       utils.session.get.invalidate({ sessionId });
     },
     [sessionId, utils],
   );
 
-  trpc.message.chat.useSubscription(streamInput ?? skipToken, {
-    onData: handleData,
-    onError: handleError,
-  });
+  trpc.message.chat.useSubscription(
+    streamInput && !isSessionCreating ? streamInput : skipToken,
+    {
+      onData: handleStreamEvent,
+      onError: handleStreamError,
+    },
+  );
 
   const send = useCallback(
     (content: string) => {
-      if (isStreaming) {
+      if (streamingPhase !== "idle") {
         return;
       }
 
@@ -76,31 +93,27 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
         createdAt: new Date().toISOString(),
       };
 
-      utils.message.list.setData({ sessionId }, (old) =>
-        old ? [...old, optimistic] : [optimistic],
-      );
+      addOptimisticMessage(utils, sessionId, optimistic);
 
       fullTextRef.current = "";
       setStreamStartedAt(new Date().toISOString());
       setStreamingText("");
-      setIsStreaming(true);
+      streamingPhaseRef.current = "text";
+      setStreamingPhase("text");
       setStreamInput({ sessionId, content });
     },
-    [isStreaming, sessionId, trackEvent, utils],
+    [streamingPhase, sessionId, trackEvent, utils],
   );
 
   const cancel = useCallback(() => {
-    setStreamInput(null);
-    setIsStreaming(false);
-    setStreamingText("");
-    fullTextRef.current = "";
+    resetStreamState();
     utils.message.list.invalidate({ sessionId });
   }, [sessionId, utils]);
 
   return {
     send,
     cancel,
-    isStreaming,
+    streamingPhase,
     streamingText,
     streamStartedAt,
   };

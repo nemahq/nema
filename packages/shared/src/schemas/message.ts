@@ -3,7 +3,7 @@ import { z } from "zod";
 export const MessageRoleSchema = z.enum(["user", "assistant"]);
 export type MessageRole = z.infer<typeof MessageRoleSchema>;
 
-export const MessageTypeSchema = z.enum(["text", "draft"]);
+export const MessageTypeSchema = z.enum(["text", "draft", "status"]);
 export type MessageType = z.infer<typeof MessageTypeSchema>;
 
 export const MessageSchema = z.object({

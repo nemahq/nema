@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
+import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeState";
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { Greeting } from "@web/features/session/components/Greeting";
 import { useCreateSession } from "@web/features/session/hooks/useCreateSession";
+import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
 import { useTranslation } from "@web/lib/tolgee";
 import en from "@web/lib/tolgee/en.json";
 
@@ -20,14 +22,30 @@ export function HomePage() {
   const navigate = useNavigate();
   const [variant] = useState(pickRandom);
   const createSession = useCreateSession();
+  const generateTitle = useGenerateTitle();
 
-  function handleSubmit() {
-    createSession.mutate(undefined, {
-      onSuccess: (session) =>
-        navigate({
-          to: "/session/$sessionId",
-          params: { sessionId: session.id },
-        }),
+  function handleSubmit(content: string) {
+    const sessionId = crypto.randomUUID();
+
+    createSession.mutate(
+      { sessionId },
+      {
+        onSuccess: () => {
+          generateTitle.mutate({ sessionId, content });
+        },
+        onError: () => {
+          navigate({ to: "/", replace: true });
+        },
+      },
+    );
+
+    navigate({
+      to: "/session/$sessionId",
+      params: { sessionId },
+      state: (prev) => ({
+        ...prev,
+        [HOME_TO_SESSION_INITIAL_MESSAGE_KEY]: content,
+      }),
     });
   }
 

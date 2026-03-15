@@ -60,6 +60,7 @@ function mockLlm(): LlmProvider {
     async *generateStream() {
       yield "";
     },
+    generateText: vi.fn().mockResolvedValue(""),
   };
 }
 

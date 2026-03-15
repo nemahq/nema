@@ -35,6 +35,7 @@
     "copy_code": "코드 복사",
     "copied": "복사됨",
     "draft": "드래프트",
+    "draft_creating": "초안 작성중",
     "draft_previous": "이전 드래프트",
     "draft_save": "저장",
     "draft_panel_open": "{label} 패널 열기",

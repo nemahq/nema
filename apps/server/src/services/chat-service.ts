@@ -1,5 +1,4 @@
 import { z } from "zod";
-import * as Sentry from "@sentry/node";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TRPCError } from "@trpc/server";
 
@@ -38,11 +37,6 @@ import {
   META_SYSTEM_PROMPT,
   SPLIT_SYSTEM_PROMPT,
 } from "@server/prompts/saving";
-import {
-  buildSessionTitleMessage,
-  SESSION_TITLE_SYSTEM_PROMPT,
-  SessionTitleSchema,
-} from "@server/prompts/session-title";
 import { trackEvent } from "@server/services/event-service";
 
 // --- Internal schemas ---
@@ -135,19 +129,6 @@ async function clearDraft(
   throwIfSupabaseError(error);
 }
 
-async function updateSessionTitle(
-  supabase: SupabaseClient,
-  sessionId: string,
-  title: string,
-): Promise<void> {
-  const { error } = await supabase
-    .from("sessions")
-    .update({ title })
-    .eq("id", sessionId);
-
-  throwIfSupabaseError(error);
-}
-
 // --- Helpers ---
 
 async function appendMessage(
@@ -181,48 +162,6 @@ async function getExistingTags(
     }
   }
   return [...allTags];
-}
-
-async function needsSessionTitle(
-  supabase: SupabaseClient,
-  sessionId: string,
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("sessions")
-    .select("title")
-    .eq("id", sessionId)
-    .single();
-
-  throwIfSupabaseError(error);
-
-  return data.title === null;
-}
-
-async function generateSessionTitle(
-  supabase: SupabaseClient,
-  providers: Providers,
-  sessionId: string,
-  userInput: string,
-): Promise<string | null> {
-  try {
-    const result = await providers.llm.generateStructured({
-      schema: SessionTitleSchema,
-      schemaName: "session_title",
-      systemPrompt: SESSION_TITLE_SYSTEM_PROMPT,
-      messages: [
-        { role: "user", content: buildSessionTitleMessage(userInput) },
-      ],
-    });
-
-    await updateSessionTitle(supabase, sessionId, result.session_title);
-    return result.session_title;
-  } catch (error) {
-    Sentry.captureException(error, {
-      tags: { operation: "generateSessionTitle" },
-      extra: { sessionId },
-    });
-    return null;
-  }
 }
 
 // --- Main entry point ---
@@ -267,14 +206,7 @@ export async function* processChatStream(
 
   await appendMessage(supabase, input.sessionId, userMessage);
 
-  const [draft, shouldGenerateTitle] = await Promise.all([
-    getDraft(supabase, input.sessionId),
-    needsSessionTitle(supabase, input.sessionId),
-  ]);
-
-  const titlePromise = shouldGenerateTitle
-    ? generateSessionTitle(supabase, providers, input.sessionId, input.content)
-    : null;
+  const draft = await getDraft(supabase, input.sessionId);
 
   let responseContent: string;
   let messageType: MessageType = "text";
@@ -305,14 +237,16 @@ export async function* processChatStream(
         signal,
       );
     } else {
-      responseContent = yield* handleDraftingStream(
+      yield { type: "draft_start" };
+      const draftBody = yield* handleDraftingStream(
         providers,
         input.content,
         null,
         signal,
       );
-      messageType = "draft";
-      await setDraft(supabase, input.sessionId, responseContent);
+      await setDraft(supabase, input.sessionId, draftBody);
+      responseContent = t("chat.draft_created", lng);
+      messageType = "status";
     }
   } else {
     const intentResult = await providers.llm.generateStructured({
@@ -341,16 +275,19 @@ export async function* processChatStream(
           signal,
         );
         break;
-      case "edit":
-        responseContent = yield* handleDraftingStream(
+      case "edit": {
+        yield { type: "draft_start" };
+        const editedBody = yield* handleDraftingStream(
           providers,
           input.content,
           draft,
           signal,
         );
-        messageType = "draft";
-        await setDraft(supabase, input.sessionId, responseContent);
+        await setDraft(supabase, input.sessionId, editedBody);
+        responseContent = t("chat.draft_edited", lng);
+        messageType = "status";
         break;
+      }
       case "save":
         responseContent = await handleSave(
           supabase,
@@ -360,24 +297,17 @@ export async function* processChatStream(
           draft.body,
           lng,
         );
-        yield { type: "token", text: responseContent };
+        messageType = "status";
         break;
       case "cancel":
         await clearDraft(supabase, input.sessionId);
         responseContent = t("chat.draft_cancelled", lng);
-        yield { type: "token", text: responseContent };
+        messageType = "status";
         break;
       default: {
         const _exhaustive: never = intentResult.intent;
         throw new Error(`Unhandled intent: ${_exhaustive}`);
       }
-    }
-  }
-
-  if (titlePromise) {
-    const title = await titlePromise;
-    if (title) {
-      yield { type: "title", title };
     }
   }
 
@@ -418,7 +348,12 @@ export async function saveDraftAction(
     lng,
   );
 
-  return createAssistantResponse(supabase, sessionId, "text", responseContent);
+  return createAssistantResponse(
+    supabase,
+    sessionId,
+    "status",
+    responseContent,
+  );
 }
 
 export async function cancelDraftAction(
@@ -431,7 +366,7 @@ export async function cancelDraftAction(
   return createAssistantResponse(
     supabase,
     sessionId,
-    "text",
+    "status",
     t("chat.draft_cancelled", lng),
   );
 }

@@ -2,7 +2,7 @@ import { Suspense, useMemo } from "react";
 
 import type { Message } from "@nema-io/shared";
 import { Button } from "@nema-io/weave";
-import { ChevronDown } from "@nema-io/weave/icons";
+import { ChevronDown, PenLine } from "@nema-io/weave/icons";
 
 import { useAutoScroll } from "@web/features/session/hooks/useAutoScroll";
 import { useMessageList } from "@web/features/session/hooks/useMessageList";
@@ -12,6 +12,7 @@ import { useTranslation } from "@web/lib/tolgee";
 import { AssistantMessage } from "./AssistantMessage";
 import { DraftCard } from "./DraftCard";
 import { MessageListSkeleton } from "./MessageListSkeleton";
+import { StatusMessage } from "./StatusMessage";
 import { UserMessage } from "./UserMessage";
 
 interface MessageListProps {
@@ -45,11 +46,14 @@ function MessageListContent({ streamingMessage }: MessageListProps) {
         <div className="mx-auto max-w-2xl space-y-6 px-6 py-6">
           {messages.map((msg, i) => {
             if (msg.role === "user") {
+              return <UserMessage key={msg.id} content={msg.content} />;
+            }
+            if (msg.type === "status") {
               return (
-                <UserMessage
+                <StatusMessage
                   key={msg.id}
-                  content={msg.content}
-                  createdAt={msg.createdAt}
+                  message={msg}
+                  icon={<PenLine className="size-3" />}
                 />
               );
             }

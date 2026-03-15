@@ -8,10 +8,15 @@ import type {
 } from "@nema-io/shared";
 import { SessionDraftSchema } from "@nema-io/shared";
 
+import type { Providers } from "@server/infra/providers";
 import {
   SupabaseError,
   throwIfSupabaseError,
 } from "@server/infra/supabase-error";
+import {
+  buildSessionTitleMessage,
+  SESSION_TITLE_SYSTEM_PROMPT,
+} from "@server/prompts/session-title";
 
 function toSummary(row: {
   id: string;
@@ -79,7 +84,7 @@ export async function listSessions(
 
 export async function getSession(
   supabase: SupabaseClient,
-  sessionId: string,
+  { sessionId }: { sessionId: string },
 ): Promise<SessionSummary & { draft: SessionDraft | null }> {
   const { data, error } = await supabase
     .from("sessions")
@@ -97,11 +102,11 @@ export async function getSession(
 
 export async function createSession(
   supabase: SupabaseClient,
-  userId: string,
+  { userId, sessionId }: { userId: string; sessionId: string },
 ): Promise<SessionSummary> {
   const { data, error } = await supabase
     .from("sessions")
-    .insert({ user_id: userId })
+    .insert({ id: sessionId, user_id: userId })
     .select("id, title, created_at, updated_at")
     .single();
 
@@ -129,7 +134,7 @@ export async function updateSession(
 
 export async function deleteSession(
   supabase: SupabaseClient,
-  sessionId: string,
+  { sessionId }: { sessionId: string },
 ): Promise<void> {
   const { error, count } = await supabase
     .from("sessions")
@@ -140,4 +145,34 @@ export async function deleteSession(
   if (!count) {
     throw new SupabaseError("not_found", `Session ${sessionId} not found`);
   }
+}
+
+export async function generateSessionTitle(
+  supabase: SupabaseClient,
+  providers: Providers,
+  { sessionId, content }: { sessionId: string; content: string },
+): Promise<string> {
+  const raw = await providers.llm.generateText({
+    systemPrompt: SESSION_TITLE_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: buildSessionTitleMessage(content) }],
+  });
+
+  const title = raw.trim();
+  if (!title) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "LLM returned empty title",
+    });
+  }
+
+  const { error } = await supabase
+    .from("sessions")
+    .update({ title })
+    .eq("id", sessionId);
+
+  if (error) {
+    throw new SupabaseError("query_failed", error.message, error);
+  }
+
+  return title;
 }

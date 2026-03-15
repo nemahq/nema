@@ -1,13 +1,17 @@
 import {
+  SessionCreateInputSchema,
   SessionDeleteInputSchema,
+  SessionGenerateTitleInputSchema,
   SessionGetInputSchema,
   SessionListInputSchema,
   SessionUpdateInputSchema,
 } from "@nema-io/shared";
 
+import { getProviders } from "@server/infra/providers";
 import {
   createSession,
   deleteSession,
+  generateSessionTitle,
   getSession,
   listSessions,
   updateSession,
@@ -17,15 +21,20 @@ import { protectedProcedure, router } from "@server/trpc";
 export const sessionRouter = router({
   get: protectedProcedure
     .input(SessionGetInputSchema)
-    .query(({ ctx, input }) => getSession(ctx.supabase, input.sessionId)),
+    .query(({ ctx, input }) => getSession(ctx.supabase, input)),
 
   list: protectedProcedure
     .input(SessionListInputSchema)
     .query(({ ctx, input }) => listSessions(ctx.supabase, input)),
 
-  create: protectedProcedure.mutation(({ ctx }) =>
-    createSession(ctx.supabase, ctx.user.id),
-  ),
+  create: protectedProcedure
+    .input(SessionCreateInputSchema)
+    .mutation(({ ctx, input }) =>
+      createSession(ctx.supabase, {
+        userId: ctx.user.id,
+        sessionId: input.sessionId,
+      }),
+    ),
 
   update: protectedProcedure
     .input(SessionUpdateInputSchema)
@@ -33,7 +42,13 @@ export const sessionRouter = router({
       updateSession(ctx.supabase, input.sessionId, input.title),
     ),
 
+  generateTitle: protectedProcedure
+    .input(SessionGenerateTitleInputSchema)
+    .mutation(({ ctx, input }) =>
+      generateSessionTitle(ctx.supabase, getProviders(), input),
+    ),
+
   delete: protectedProcedure
     .input(SessionDeleteInputSchema)
-    .mutation(({ ctx, input }) => deleteSession(ctx.supabase, input.sessionId)),
+    .mutation(({ ctx, input }) => deleteSession(ctx.supabase, input)),
 });

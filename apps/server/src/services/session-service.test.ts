@@ -106,7 +106,10 @@ describe("createSession", () => {
     const row = makeRow("new-id", "2026-03-10T00:00:00Z");
     const { client } = mockSupabase({ data: row });
 
-    const result = await createSession(client, "user-1");
+    const result = await createSession(client, {
+      userId: "user-1",
+      sessionId: "new-id",
+    });
 
     expect(result).toEqual({
       id: "new-id",
@@ -119,9 +122,9 @@ describe("createSession", () => {
   it("쿼리 실패 시 SupabaseError(query_failed) throw", async () => {
     const { client } = mockSupabase({ data: null, error: { message: "fail" } });
 
-    await expect(createSession(client, "user-1")).rejects.toThrow(
-      SupabaseError,
-    );
+    await expect(
+      createSession(client, { userId: "user-1", sessionId: "new-id" }),
+    ).rejects.toThrow(SupabaseError);
   });
 });
 
@@ -129,15 +132,17 @@ describe("deleteSession", () => {
   it("삭제 성공 시 정상 반환", async () => {
     const { client } = mockSupabase({ error: null, count: 1 });
 
-    await expect(deleteSession(client, "session-1")).resolves.toBeUndefined();
+    await expect(
+      deleteSession(client, { sessionId: "session-1" }),
+    ).resolves.toBeUndefined();
   });
 
   it("count가 0이면 SupabaseError(not_found) throw", async () => {
     const { client } = mockSupabase({ error: null, count: 0 });
 
-    await expect(deleteSession(client, "session-1")).rejects.toThrow(
-      expect.objectContaining({ code: "not_found" }),
-    );
+    await expect(
+      deleteSession(client, { sessionId: "session-1" }),
+    ).rejects.toThrow(expect.objectContaining({ code: "not_found" }));
   });
 
   it("쿼리 실패 시 SupabaseError(query_failed) throw", async () => {
@@ -145,8 +150,8 @@ describe("deleteSession", () => {
       error: { message: "fail" },
     });
 
-    await expect(deleteSession(client, "session-1")).rejects.toThrow(
-      expect.objectContaining({ code: "query_failed" }),
-    );
+    await expect(
+      deleteSession(client, { sessionId: "session-1" }),
+    ).rejects.toThrow(expect.objectContaining({ code: "query_failed" }));
   });
 });
