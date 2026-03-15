@@ -78,8 +78,8 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
     fullDraftTextRef.current = "";
   }
 
-  const invalidateAndReset = useCallback(
-    function invalidateAndReset() {
+  const settleStream = useCallback(
+    function settleStream() {
       Promise.all([
         utils.message.list.invalidate({ sessionId }),
         utils.session.get.invalidate({ sessionId }),
@@ -111,7 +111,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
           }
           break;
         case "done":
-          invalidateAndReset();
+          settleStream();
           break;
         default: {
           const _exhaustive: never = event;
@@ -119,16 +119,16 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [invalidateAndReset],
+    [settleStream],
   );
 
   // TODO: 인라인 에러 메시지 + 재시도 버튼 UI 추가
   const handleStreamError = useCallback(
     (error: unknown) => {
       Sentry.captureException(error);
-      invalidateAndReset();
+      settleStream();
     },
-    [invalidateAndReset],
+    [settleStream],
   );
 
   trpc.message.chat.useSubscription(
@@ -174,9 +174,9 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
   const cancel = useCallback(
     function cancel() {
       setStreamInput(null);
-      invalidateAndReset();
+      settleStream();
     },
-    [invalidateAndReset],
+    [settleStream],
   );
 
   const streamingMessage = useMemo<DisplayMessage | undefined>(() => {
