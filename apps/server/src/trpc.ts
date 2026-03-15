@@ -41,8 +41,15 @@ export async function createContext({
   let providers: Providers | null = null;
   try {
     providers = getProviders();
-  } catch {
-    // providers를 필요로 하지 않는 엔드포인트에서는 무시
+  } catch (err) {
+    const isConfigMissing =
+      err instanceof Error && /required for chat/.test(err.message);
+    if (!isConfigMissing) {
+      req.log.warn({ err }, "getProviders() failed unexpectedly");
+      Sentry.captureException(err, {
+        tags: { component: "trpc-context" },
+      });
+    }
   }
 
   return { req, res, log: req.log, user, lng, supabase, providers };

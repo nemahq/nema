@@ -1,4 +1,5 @@
 import neo4j, { type Driver, type Integer, isInt } from "neo4j-driver";
+import * as Sentry from "@sentry/node";
 
 import { getEnv } from "@server/env";
 
@@ -88,8 +89,11 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       } finally {
         try {
           await session.close();
-        } catch {
-          /* 원래 에러 보존 */
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
         }
       }
     },
@@ -147,8 +151,11 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       } finally {
         try {
           await session.close();
-        } catch {
-          /* 원래 에러 보존 */
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
         }
       }
     },
@@ -201,8 +208,11 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       } finally {
         try {
           await session.close();
-        } catch {
-          /* 원래 에러 보존 */
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
         }
       }
     },
@@ -241,8 +251,11 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       } finally {
         try {
           await session.close();
-        } catch {
-          /* 원래 에러 보존 */
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
         }
       }
     },
@@ -277,8 +290,11 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       } finally {
         try {
           await session.close();
-        } catch {
-          /* 원래 에러 보존 */
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
         }
       }
     },
@@ -331,8 +347,11 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       } finally {
         try {
           await session.close();
-        } catch {
-          /* 원래 에러 보존 */
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
         }
       }
     },
@@ -348,6 +367,12 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
             { docId },
           );
           const raw = result.records[0]?.get("candidateIds");
+          if (raw != null && !Array.isArray(raw)) {
+            Sentry.captureMessage(
+              `[neo4j] Expected array for "candidateIds", got ${typeof raw}`,
+              { level: "warning", extra: { docId } },
+            );
+          }
           const candidateIds = Array.isArray(raw) ? raw : [];
 
           // Delete the document and its relationships
@@ -377,8 +402,11 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       } finally {
         try {
           await session.close();
-        } catch {
-          /* 원래 에러 보존 */
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
         }
       }
     },

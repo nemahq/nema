@@ -277,9 +277,6 @@ describe("createSyncWorker", () => {
       const graphStore = mockGraphStore();
       const llm = mockLlm();
       const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
 
       const doc2: PendingDocument = {
         id: DOC_ID_2,
@@ -333,7 +330,13 @@ describe("createSyncWorker", () => {
         p_max_retries: 5,
       });
 
-      consoleSpy.mockRestore();
+      expect(Sentry.captureException).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "LLM timeout" }),
+        expect.objectContaining({
+          tags: expect.objectContaining({ component: "sync-worker" }),
+          extra: { docId: DOC_ID_2 },
+        }),
+      );
     });
   });
 

@@ -255,6 +255,32 @@ describe("createNeo4jStore", () => {
         store.findRelatedDocuments({ docId: "d1", userId: "u1" }),
       ).rejects.toThrow(GraphStoreError);
     });
+
+    it("throws GraphStoreError when record contains non-string docId", async () => {
+      mockRun.mockResolvedValue({
+        records: [
+          {
+            get: (key: string) => (key === "docId" ? 123 : new MockInteger(1)),
+          },
+        ],
+      });
+      const store = createNeo4jStore();
+      await expect(
+        store.findRelatedDocuments({ docId: "d1", userId: "u1" }),
+      ).rejects.toThrow(GraphStoreError);
+    });
+
+    it("throws GraphStoreError when record contains non-Integer sharedEntityCount", async () => {
+      mockRun.mockResolvedValue({
+        records: [
+          { get: (key: string) => (key === "docId" ? "d2" : "not-integer") },
+        ],
+      });
+      const store = createNeo4jStore();
+      await expect(
+        store.findRelatedDocuments({ docId: "d1", userId: "u1" }),
+      ).rejects.toThrow(GraphStoreError);
+    });
   });
 
   describe("findDocumentsByEntities", () => {
@@ -318,6 +344,18 @@ describe("createNeo4jStore", () => {
       const store = createNeo4jStore();
       await store.listEntities({ userId: "u1" });
       expect(mockRun.mock.calls[0][0]).not.toContain("e.type = $type");
+    });
+
+    it("throws GraphStoreError when record contains invalid entity type", async () => {
+      mockRun.mockResolvedValue({
+        records: [
+          { get: (key: string) => (key === "type" ? "InvalidType" : "name") },
+        ],
+      });
+      const store = createNeo4jStore();
+      await expect(store.listEntities({ userId: "u1" })).rejects.toThrow(
+        GraphStoreError,
+      );
     });
   });
 

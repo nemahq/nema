@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { TRPCError } from "@trpc/server";
 
 import type {
@@ -17,6 +16,7 @@ import {
 } from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
+import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import {
   buildIntentRouterMessage,
@@ -49,7 +49,7 @@ interface ChatResponse {
 }
 
 async function getDraft(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   sessionId: string,
 ): Promise<Draft | null> {
   const { data, error } = await supabase
@@ -64,7 +64,7 @@ async function getDraft(
 }
 
 async function setDraft(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   sessionId: string,
   body: string,
 ): Promise<void> {
@@ -78,7 +78,7 @@ async function setDraft(
 }
 
 async function clearDraft(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   sessionId: string,
 ): Promise<void> {
   const { error } = await supabase
@@ -90,7 +90,7 @@ async function clearDraft(
 }
 
 async function appendMessage(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   sessionId: string,
   message: Message,
 ): Promise<void> {
@@ -103,7 +103,7 @@ async function appendMessage(
 }
 
 async function createAssistantResponse(args: {
-  supabase: SupabaseClient;
+  supabase: TypedSupabaseClient;
   sessionId: string;
   type: MessageType;
   content: string;
@@ -120,7 +120,7 @@ async function createAssistantResponse(args: {
 }
 
 export async function* processChatStream(args: {
-  supabase: SupabaseClient;
+  supabase: TypedSupabaseClient;
   providers: Providers;
   userId: string;
   input: ChatInput;
@@ -259,7 +259,7 @@ export async function* processChatStream(args: {
 }
 
 export async function saveDraftAction(args: {
-  supabase: SupabaseClient;
+  supabase: TypedSupabaseClient;
   providers: Providers;
   userId: string;
   sessionId: string;
@@ -292,7 +292,7 @@ export async function saveDraftAction(args: {
 }
 
 export async function cancelDraftAction(args: {
-  supabase: SupabaseClient;
+  supabase: TypedSupabaseClient;
   sessionId: string;
 }): Promise<ChatResponse> {
   const { supabase, sessionId } = args;

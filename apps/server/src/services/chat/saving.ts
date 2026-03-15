@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Providers } from "@server/infra/providers";
+import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import {
   buildJudgmentMessage,
@@ -42,13 +42,13 @@ type PersistAction =
   | { action: "update"; targetId: string };
 
 interface ServiceContext {
-  supabase: SupabaseClient;
+  supabase: TypedSupabaseClient;
   providers: Providers;
   userId: string;
 }
 
 async function getExistingTags(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   userId: string,
 ): Promise<string[]> {
   const { data, error } = await supabase
@@ -71,7 +71,7 @@ async function getExistingTags(
 }
 
 export async function handleSave(args: {
-  supabase: SupabaseClient;
+  supabase: TypedSupabaseClient;
   providers: Providers;
   userId: string;
   sessionId: string;
@@ -256,7 +256,7 @@ async function persistDocument(args: {
 }
 
 async function deleteDocument(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   userId: string,
   docId: string,
 ): Promise<void> {

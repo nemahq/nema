@@ -1,9 +1,8 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 import type { ChatStreamEvent, Locale } from "@nema-io/shared";
 
 import { t } from "@server/infra/i18n";
 import type { Providers } from "@server/infra/providers";
+import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   buildRetrievalMessage,
   RETRIEVAL_SYSTEM_PROMPT,
@@ -18,7 +17,7 @@ export interface SearchIntent {
 }
 
 export async function* handleRetrievalStream(args: {
-  supabase: SupabaseClient;
+  supabase: TypedSupabaseClient;
   providers: Providers;
   userId: string;
   sessionId: string;

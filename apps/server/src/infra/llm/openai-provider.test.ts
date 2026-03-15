@@ -30,14 +30,14 @@ function createMockClient() {
 function mockParse(response: unknown) {
   const { client, parseFn } = createMockClient();
   parseFn.mockResolvedValue(response);
-  const provider = new OpenAiProvider({ apiKey: "test-key", client });
+  const provider = new OpenAiProvider({ client });
   return { provider, parseFn };
 }
 
 function mockParseRejection(error: Error) {
   const { client, parseFn } = createMockClient();
   parseFn.mockRejectedValue(error);
-  const provider = new OpenAiProvider({ apiKey: "test-key", client });
+  const provider = new OpenAiProvider({ client });
   return { provider, parseFn };
 }
 

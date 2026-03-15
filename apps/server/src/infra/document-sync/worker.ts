@@ -144,10 +144,24 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
           tags: { component: "sync-worker" },
           extra: { docId: doc.id },
         });
-        await incrementRetry(deps.supabase, doc.id);
+        try {
+          await incrementRetry(deps.supabase, doc.id);
+        } catch (retryErr) {
+          Sentry.captureException(retryErr, {
+            tags: { component: "sync-worker", phase: "incrementRetry" },
+            extra: { docId: doc.id },
+          });
+        }
         continue;
       }
-      await markCompleted(deps.supabase, doc.id);
+      try {
+        await markCompleted(deps.supabase, doc.id);
+      } catch (markErr) {
+        Sentry.captureException(markErr, {
+          tags: { component: "sync-worker", phase: "markCompleted" },
+          extra: { docId: doc.id },
+        });
+      }
     }
   }
 }
