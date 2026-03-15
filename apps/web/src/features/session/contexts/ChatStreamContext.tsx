@@ -11,7 +11,12 @@ import * as Sentry from "@sentry/react";
 import { skipToken, useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
-import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
+import {
+  type ChatInput,
+  type ChatStreamEvent,
+  type Message,
+  STATUS_LOG_TYPES,
+} from "@nema-io/shared";
 
 import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
 import { addOptimisticMessage } from "@web/features/session/hooks/useMessageList";
@@ -153,7 +158,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
           id: STREAMING_MESSAGE_ID,
           role: "assistant",
           type: "status",
-          content: t("session.draft_creating"),
+          content: STATUS_LOG_TYPES.DRAFT_CREATING,
           createdAt: streamStartedAt,
         };
       case "text":

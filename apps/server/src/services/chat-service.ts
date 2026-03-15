@@ -10,7 +10,11 @@ import type {
   MessageType,
   SessionDraft,
 } from "@nema-io/shared";
-import { SessionDraftSchema, STATUS_LOG_TYPES } from "@nema-io/shared";
+import {
+  MessageSchema,
+  SessionDraftSchema,
+  STATUS_LOG_TYPES,
+} from "@nema-io/shared";
 
 import { t } from "@server/infra/i18n";
 import type { Providers } from "@server/infra/providers";
@@ -177,13 +181,13 @@ async function createAssistantResponse(
   type: MessageType,
   content: string,
 ): Promise<ChatResponse> {
-  const message: Message = {
+  const message = MessageSchema.parse({
     id: crypto.randomUUID(),
     role: "assistant",
     type,
     content,
     createdAt: new Date().toISOString(),
-  };
+  });
   await appendMessage(supabase, sessionId, message);
   return { message, draft: null };
 }
@@ -311,13 +315,13 @@ export async function* processChatStream(
     }
   }
 
-  const assistantMessage: Message = {
+  const assistantMessage = MessageSchema.parse({
     id: crypto.randomUUID(),
     role: "assistant",
     type: messageType,
     content: responseContent,
     createdAt: new Date().toISOString(),
-  };
+  });
 
   await appendMessage(supabase, input.sessionId, assistantMessage);
 

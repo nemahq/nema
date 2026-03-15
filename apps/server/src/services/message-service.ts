@@ -33,13 +33,13 @@ export async function sendMessage(
   supabase: SupabaseClient,
   input: SendMessageInput,
 ): Promise<Message> {
-  const message: Message = {
+  const message = MessageSchema.parse({
     id: crypto.randomUUID(),
     role: "user",
     type: input.type,
     content: input.content,
     createdAt: new Date().toISOString(),
-  };
+  });
 
   const { error } = await supabase.rpc("append_message", {
     p_session_id: input.sessionId,
