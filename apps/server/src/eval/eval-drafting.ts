@@ -47,7 +47,7 @@ async function collectStream(
 async function main() {
   const apiKey = process.env["OPENAI_API_KEY"]?.trim();
   if (!apiKey) {
-    console.error("OPENAI_API_KEY 환경변수가 필요합니다.");
+    console.error("OPENAI_API_KEY environment variable is required");
     process.exit(1);
   }
 

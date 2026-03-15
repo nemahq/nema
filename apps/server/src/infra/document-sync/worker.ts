@@ -1,4 +1,5 @@
 import { z } from "zod";
+import * as Sentry from "@sentry/node";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { EmbeddingProvider } from "@server/infra/embedding";
@@ -45,16 +46,22 @@ export function createSyncWorker(deps: WorkerDeps) {
       });
 
       if (error) {
-        console.error("[sync-worker] read error:", error);
+        Sentry.captureMessage(`[sync-worker] read error: ${error.message}`, {
+          level: "error",
+          extra: { error },
+        });
         return;
       }
-      if (!data || (data as unknown[]).length === 0) {
+      if (!data || !Array.isArray(data) || data.length === 0) {
         return;
       }
 
       const parsed = z.array(TriggerMessageSchema).safeParse(data);
       if (!parsed.success) {
-        console.error("[sync-worker] message validation failed:", parsed.error);
+        Sentry.captureMessage("[sync-worker] message validation failed", {
+          level: "error",
+          extra: { validationError: parsed.error },
+        });
         return;
       }
 
@@ -81,7 +88,9 @@ export function createSyncWorker(deps: WorkerDeps) {
             throw ackError;
           }
         } catch (err) {
-          console.error("[sync-worker] message processing failed:", err);
+          Sentry.captureException(err, {
+            tags: { component: "sync-worker" },
+          });
         }
       }
 
@@ -89,7 +98,9 @@ export function createSyncWorker(deps: WorkerDeps) {
         await runBatchCycle(deps);
       }
     } catch (err) {
-      console.error("[sync-worker] poll error:", err);
+      Sentry.captureException(err, {
+        tags: { component: "sync-worker" },
+      });
     } finally {
       processing = false;
     }
@@ -129,11 +140,28 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
       try {
         await processDocument(doc, deps);
       } catch (err) {
-        console.error(`[sync-worker] failed to process doc ${doc.id}:`, err);
-        await incrementRetry(deps.supabase, doc.id);
+        Sentry.captureException(err, {
+          tags: { component: "sync-worker" },
+          extra: { docId: doc.id },
+        });
+        try {
+          await incrementRetry(deps.supabase, doc.id);
+        } catch (retryErr) {
+          Sentry.captureException(retryErr, {
+            tags: { component: "sync-worker", phase: "incrementRetry" },
+            extra: { docId: doc.id },
+          });
+        }
         continue;
       }
-      await markCompleted(deps.supabase, doc.id);
+      try {
+        await markCompleted(deps.supabase, doc.id);
+      } catch (markErr) {
+        Sentry.captureException(markErr, {
+          tags: { component: "sync-worker", phase: "markCompleted" },
+          extra: { docId: doc.id },
+        });
+      }
     }
   }
 }

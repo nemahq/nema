@@ -24,7 +24,8 @@
     "tolgee:push": "tolgee push",
     "tolgee:pull": "pnpm tolgee:pull:web && pnpm tolgee:pull:server",
     "tolgee:pull:web": "tolgee pull --path apps/web/src/lib/tolgee --namespaces web --file-structure-template {languageTag}.{extension}",
-    "tolgee:pull:server": "tolgee pull --path apps/server/src/infra/i18n/locales --namespaces server --file-structure-template {languageTag}.{extension}"
+    "tolgee:pull:server": "tolgee pull --path apps/server/src/infra/i18n/locales --namespaces server --file-structure-template {languageTag}.{extension}",
+    "supabase:gen-types": "supabase gen types typescript --linked > apps/server/src/infra/database.types.ts"
   },
   "lint-staged": {
     "*.{js,ts,tsx}": [

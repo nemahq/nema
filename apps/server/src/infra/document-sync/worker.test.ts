@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as Sentry from "@sentry/node";
 
 import type { EmbeddingProvider } from "@server/infra/embedding";
+
+vi.mock("@sentry/node", () => ({
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
+}));
 import type { GraphStore } from "@server/infra/graph";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { VectorStore } from "@server/infra/vector";
@@ -271,9 +277,6 @@ describe("createSyncWorker", () => {
       const graphStore = mockGraphStore();
       const llm = mockLlm();
       const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
 
       const doc2: PendingDocument = {
         id: DOC_ID_2,
@@ -327,19 +330,22 @@ describe("createSyncWorker", () => {
         p_max_retries: 5,
       });
 
-      consoleSpy.mockRestore();
+      expect(Sentry.captureException).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "LLM timeout" }),
+        expect.objectContaining({
+          tags: expect.objectContaining({ component: "sync-worker" }),
+          extra: { docId: DOC_ID_2 },
+        }),
+      );
     });
   });
 
   // ========== Read error ==========
 
   describe("read error from pgmq", () => {
-    it("logs error and continues without crashing", async () => {
+    it("reports error to Sentry and continues without crashing", async () => {
       const supabase = mockSupabase();
       const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
 
       rpc.mockResolvedValue({
         data: null,
@@ -357,11 +363,10 @@ describe("createSyncWorker", () => {
       await vi.advanceTimersByTimeAsync(0);
       await worker.stop();
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "[sync-worker] read error:",
-        expect.objectContaining({ message: "connection lost" }),
+      expect(Sentry.captureMessage).toHaveBeenCalledWith(
+        expect.stringContaining("connection lost"),
+        expect.objectContaining({ level: "error" }),
       );
-      consoleSpy.mockRestore();
     });
   });
 

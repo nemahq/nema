@@ -5,6 +5,8 @@ import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify"
 
 import { getDomainCode, mapDomainError } from "./error-mapper";
 import { resolveLanguage } from "./infra/i18n";
+import type { Providers } from "./infra/providers";
+import { getProviders } from "./infra/providers";
 import { createSupabaseUser, getSupabaseAdmin } from "./infra/supabase";
 
 export async function createContext({
@@ -36,7 +38,21 @@ export async function createContext({
     req.headers["accept-language"];
   const lng = resolveLanguage(langParam);
 
-  return { req, res, log: req.log, user, lng, supabase };
+  let providers: Providers | null = null;
+  try {
+    providers = getProviders();
+  } catch (err) {
+    const isConfigMissing =
+      err instanceof Error && /required for chat/.test(err.message);
+    if (!isConfigMissing) {
+      req.log.warn({ err }, "getProviders() failed unexpectedly");
+      Sentry.captureException(err, {
+        tags: { component: "trpc-context" },
+      });
+    }
+  }
+
+  return { req, res, log: req.log, user, lng, supabase, providers };
 }
 
 type Context = Awaited<ReturnType<typeof createContext>>;
@@ -83,3 +99,13 @@ export const protectedProcedure = t.procedure
     }
     return next({ ctx: { ...ctx, user: ctx.user, supabase: ctx.supabase } });
   });
+
+export const providerProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (!ctx.providers) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "AI providers not configured.",
+    });
+  }
+  return next({ ctx: { ...ctx, providers: ctx.providers } });
+});
