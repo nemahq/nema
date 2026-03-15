@@ -27,7 +27,9 @@ export function SessionPage() {
     useSendMessage({
       sessionId,
     });
-  const disabled = useChatInputDisabled({ streamingPhase });
+  const disabled = useChatInputDisabled({
+    isStreaming: streamingPhase !== "idle",
+  });
 
   const sentRef = useRef(false);
   useEffect(
