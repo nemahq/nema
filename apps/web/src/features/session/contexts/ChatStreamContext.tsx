@@ -1,18 +1,41 @@
-import { useCallback, useRef, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import * as Sentry from "@sentry/react";
 import { skipToken, useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
 import type { ChatInput, ChatStreamEvent, Message } from "@nema-io/shared";
 
+import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
+import { addOptimisticMessage } from "@web/features/session/hooks/useMessageList";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
+import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
-
-import { useGenerateTitle } from "./useGenerateTitle";
-import { addOptimisticMessage } from "./useMessageList";
 
 type StreamingPhase = "idle" | "text" | "draft";
 
-export function useSendMessage({ sessionId }: { sessionId: string }) {
+const STREAMING_MESSAGE_ID = "streaming";
+
+interface ChatStreamContextValue {
+  send: (content: string) => void;
+  cancel: () => void;
+  streamingPhase: StreamingPhase;
+  streamingMessage: Message | undefined;
+}
+
+const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
+
+export function ChatStreamProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+  const sessionId = useSessionId();
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
   const { mutate: generateTitle } = useGenerateTitle();
@@ -53,6 +76,10 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
           utils.message.list.invalidate({ sessionId });
           utils.session.get.invalidate({ sessionId });
           break;
+        default: {
+          const _exhaustive: never = event;
+          void _exhaustive;
+        }
       }
     },
     [sessionId, utils],
@@ -61,7 +88,7 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
   // TODO: 인라인 에러 메시지 + 재시도 버튼 UI 추가
   const handleStreamError = useCallback(
     (error: unknown) => {
-      console.error("[useSendMessage] streaming error:", error);
+      Sentry.captureException(error);
       resetStreamState();
       utils.message.list.invalidate({ sessionId });
       utils.session.get.invalidate({ sessionId });
@@ -117,11 +144,43 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
     utils.message.list.invalidate({ sessionId });
   }, [sessionId, utils]);
 
-  return {
-    send,
-    cancel,
-    streamingPhase,
-    streamingText,
-    streamStartedAt,
-  };
+  const streamingMessage = useMemo<Message | undefined>(() => {
+    switch (streamingPhase) {
+      case "idle":
+        return undefined;
+      case "draft":
+        return {
+          id: STREAMING_MESSAGE_ID,
+          role: "assistant",
+          type: "status",
+          content: t("session.draft_creating"),
+          createdAt: streamStartedAt,
+        };
+      case "text":
+        return streamingText
+          ? {
+              id: STREAMING_MESSAGE_ID,
+              role: "assistant",
+              type: "text",
+              content: streamingText,
+              createdAt: streamStartedAt,
+            }
+          : undefined;
+    }
+  }, [streamingPhase, streamingText, streamStartedAt, t]);
+
+  const value = useMemo<ChatStreamContextValue>(
+    () => ({ send, cancel, streamingPhase, streamingMessage }),
+    [send, cancel, streamingPhase, streamingMessage],
+  );
+
+  return <ChatStreamContext value={value}>{children}</ChatStreamContext>;
+}
+
+export function useChatStream() {
+  const ctx = useContext(ChatStreamContext);
+  if (!ctx) {
+    throw new Error("useChatStream must be used within a ChatStreamProvider.");
+  }
+  return ctx;
 }
