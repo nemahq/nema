@@ -28,11 +28,23 @@ type StreamingPhase = "idle" | "text" | "draft";
 
 const STREAMING_MESSAGE_ID = "streaming";
 
+export type ClientStatusType = "thinking";
+
+export interface ClientStatusMessage {
+  id: string;
+  role: "assistant";
+  type: "status";
+  content: ClientStatusType;
+  createdAt: string;
+}
+
+export type StreamingMessage = Message | ClientStatusMessage;
+
 interface ChatStreamContextValue {
   send: (content: string) => void;
   cancel: () => void;
   streamingPhase: StreamingPhase;
-  streamingMessage: Message | undefined;
+  streamingMessage: StreamingMessage | undefined;
 }
 
 const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
@@ -75,8 +87,9 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
           }
           break;
         case "done":
-          resetStreamState();
-          utils.message.list.invalidate({ sessionId });
+          utils.message.list.invalidate({ sessionId }).finally(() => {
+            resetStreamState();
+          });
           utils.session.get.invalidate({ sessionId });
           break;
         default: {
@@ -92,8 +105,9 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
   const handleStreamError = useCallback(
     (error: unknown) => {
       Sentry.captureException(error);
-      resetStreamState();
-      utils.message.list.invalidate({ sessionId });
+      utils.message.list.invalidate({ sessionId }).finally(() => {
+        resetStreamState();
+      });
       utils.session.get.invalidate({ sessionId });
     },
     [sessionId, utils],
@@ -143,11 +157,12 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
   );
 
   const cancel = useCallback(() => {
-    resetStreamState();
-    utils.message.list.invalidate({ sessionId });
+    utils.message.list.invalidate({ sessionId }).finally(() => {
+      resetStreamState();
+    });
   }, [sessionId, utils]);
 
-  const streamingMessage = useMemo<Message | undefined>(() => {
+  const streamingMessage = useMemo<StreamingMessage | undefined>(() => {
     switch (streamingPhase) {
       case "idle":
         return undefined;
@@ -168,7 +183,13 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
               content: streamingText,
               createdAt: streamStartedAt,
             }
-          : undefined;
+          : {
+              id: STREAMING_MESSAGE_ID,
+              role: "assistant",
+              type: "status",
+              content: "thinking" as const,
+              createdAt: streamStartedAt,
+            };
     }
   }, [streamingPhase, streamingText, streamStartedAt]);
 
