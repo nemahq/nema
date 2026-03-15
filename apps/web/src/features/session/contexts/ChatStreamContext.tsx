@@ -141,10 +141,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
 
       addOptimisticMessage(utils, sessionId, optimistic);
 
-      const cachedSession = utils.session.get.getData({ sessionId });
-      if (!cachedSession?.title) {
-        generateTitle({ sessionId, content });
-      }
+      generateTitle({ sessionId, content });
 
       fullTextRef.current = "";
       setStreamStartedAt(new Date().toISOString());
