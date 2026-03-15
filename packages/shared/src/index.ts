@@ -21,8 +21,8 @@ export {
   MessageTypeSchema,
   type SendMessageInput,
   SendMessageInputSchema,
+  STATUS_LOG_TYPES,
   type StatusLogType,
-  StatusLogTypeSchema,
 } from "./schemas/message";
 export {
   SESSION_TITLE_MAX_LENGTH,

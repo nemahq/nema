@@ -6,13 +6,15 @@ export type MessageRole = z.infer<typeof MessageRoleSchema>;
 export const MessageTypeSchema = z.enum(["text", "draft", "status"]);
 export type MessageType = z.infer<typeof MessageTypeSchema>;
 
-export const StatusLogTypeSchema = z.enum([
-  "draft_created",
-  "draft_edited",
-  "draft_cancelled",
-  "draft_saved",
-]);
-export type StatusLogType = z.infer<typeof StatusLogTypeSchema>;
+export const STATUS_LOG_TYPES = {
+  DRAFT_CREATED: "draft_created",
+  DRAFT_EDITED: "draft_edited",
+  DRAFT_CANCELLED: "draft_cancelled",
+  DRAFT_SAVED: "draft_saved",
+} as const;
+
+export type StatusLogType =
+  (typeof STATUS_LOG_TYPES)[keyof typeof STATUS_LOG_TYPES];
 
 export const MessageSchema = z.object({
   id: z.string().uuid(),
