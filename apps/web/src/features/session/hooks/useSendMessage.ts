@@ -15,10 +15,6 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
 
   const isSessionCreating =
     useIsMutating({ mutationKey: getQueryKey(trpc.session.create) }) > 0;
-  const saveDraftMutating =
-    useIsMutating({ mutationKey: getQueryKey(trpc.message.saveDraft) }) > 0;
-  const cancelDraftMutating =
-    useIsMutating({ mutationKey: getQueryKey(trpc.message.cancelDraft) }) > 0;
 
   const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -27,8 +23,6 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
   const [streamingText, setStreamingText] = useState("");
   const fullTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
-
-  const isPending = isStreaming || saveDraftMutating || cancelDraftMutating;
 
   function resetStreamState() {
     setStreamInput(null);
@@ -118,7 +112,6 @@ export function useSendMessage({ sessionId }: { sessionId: string }) {
   return {
     send,
     cancel,
-    isPending,
     isStreaming,
     isDraftStreaming,
     streamingText,

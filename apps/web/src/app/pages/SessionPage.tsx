@@ -7,6 +7,7 @@ import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeSta
 import { getRouteState } from "@web/app/utils/routeState";
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { MessageList } from "@web/features/session/components/MessageList";
+import { useChatInputDisabled } from "@web/features/session/hooks/useChatInputDisabled";
 import { useSendMessage } from "@web/features/session/hooks/useSendMessage";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTranslation } from "@web/lib/tolgee";
@@ -24,12 +25,12 @@ export function SessionPage() {
   });
   const {
     send,
-    isPending,
     isStreaming,
     isDraftStreaming,
     streamingText,
     streamStartedAt,
   } = useSendMessage({ sessionId });
+  const disabled = useChatInputDisabled({ isStreaming });
 
   const sentRef = useRef(false);
   useEffect(
@@ -79,7 +80,7 @@ export function SessionPage() {
         <div className="mx-auto w-full max-w-2xl px-6 pb-6 pt-2">
           <ChatInput
             placeholder={t("session.input_placeholder")}
-            disabled={isPending}
+            disabled={disabled}
             onSubmit={send}
           />
         </div>
