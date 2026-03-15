@@ -7,6 +7,7 @@ import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeSta
 import { getRouteState } from "@web/app/utils/routeState";
 import { ChatInput } from "@web/features/session/components/ChatInput";
 import { MessageList } from "@web/features/session/components/MessageList";
+import { SessionSidePanel } from "@web/features/session/components/SessionSidePanel";
 import {
   ChatStreamProvider,
   useChatStream,
@@ -57,8 +58,7 @@ function SessionContent() {
         </div>
       </main>
 
-      {/* TODO: CRP 확인 후 복원 */}
-      {/* <SessionSidePanel /> */}
+      <SessionSidePanel />
     </div>
   );
 }
