@@ -152,6 +152,16 @@ export async function generateSessionTitle(
   providers: Providers,
   { sessionId, content }: { sessionId: string; content: string },
 ): Promise<string> {
+  const { data: existing } = await supabase
+    .from("sessions")
+    .select("title")
+    .eq("id", sessionId)
+    .single();
+
+  if (existing?.title) {
+    return existing.title;
+  }
+
   const raw = await providers.llm.generateText({
     systemPrompt: SESSION_TITLE_SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildSessionTitleMessage(content) }],

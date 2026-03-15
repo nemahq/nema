@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { Message } from "@nema-io/shared";
+import type { DisplayMessage } from "@web/features/session/contexts/ChatStreamContext";
 
 const DEFAULT_THRESHOLD = 100;
 
@@ -8,7 +8,7 @@ export function useAutoScroll({
   messages,
   threshold = DEFAULT_THRESHOLD,
 }: {
-  messages: Message[];
+  messages: DisplayMessage[];
   threshold?: number;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
