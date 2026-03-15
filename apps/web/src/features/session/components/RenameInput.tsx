@@ -19,8 +19,8 @@ export function RenameInput({
   const updateMutation = useUpdateSession();
   const cancelledRef = useRef(false);
 
-  async function commitEdit() {
-    if (cancelledRef.current || updateMutation.isPending) {
+  function commitEdit() {
+    if (cancelledRef.current) {
       return;
     }
     const trimmed = editValue.trim();
@@ -28,12 +28,8 @@ export function RenameInput({
       onEditEnd();
       return;
     }
-    try {
-      await updateMutation.mutateAsync({ sessionId, title: trimmed });
-      onEditEnd();
-    } catch {
-      // 글로벌 토스트가 에러를 표시
-    }
+    updateMutation.mutate({ sessionId, title: trimmed });
+    onEditEnd();
   }
 
   return (
