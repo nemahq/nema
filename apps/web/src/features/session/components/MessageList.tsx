@@ -1,9 +1,9 @@
 import { Suspense, useMemo } from "react";
 
-import type { Message } from "@nema-io/shared";
 import { Button } from "@nema-io/weave";
 import { ChevronDown, PenLine } from "@nema-io/weave/icons";
 
+import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useAutoScroll } from "@web/features/session/hooks/useAutoScroll";
 import { useMessageList } from "@web/features/session/hooks/useMessageList";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
@@ -15,13 +15,10 @@ import { MessageListSkeleton } from "./MessageListSkeleton";
 import { StatusMessage } from "./StatusMessage";
 import { UserMessage } from "./UserMessage";
 
-interface MessageListProps {
-  streamingMessage?: Message;
-}
-
-function MessageListContent({ streamingMessage }: MessageListProps) {
+function MessageListContent() {
   const { t } = useTranslation();
   const sessionId = useSessionId();
+  const { streamingMessage } = useChatStream();
   const serverMessages = useMessageList({ sessionId });
   const messages = useMemo(
     () =>
@@ -95,10 +92,10 @@ function MessageListContent({ streamingMessage }: MessageListProps) {
   );
 }
 
-export function MessageList({ streamingMessage }: MessageListProps) {
+export function MessageList() {
   return (
     <Suspense fallback={<MessageListSkeleton />}>
-      <MessageListContent streamingMessage={streamingMessage} />
+      <MessageListContent />
     </Suspense>
   );
 }
