@@ -1,10 +1,9 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 
 import { FileText } from "@nema-io/weave/icons";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
-import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 
@@ -15,19 +14,19 @@ import { DraftTabContent } from "./DraftTabContent";
 function SessionContentPanelInner() {
   const sessionId = useSessionId();
   const draft = useSessionDraft({ sessionId });
-  const cancelDraft = useCancelDraft({ sessionId });
   const { streamingPhase } = useChatStream();
 
+  const [draftTabOpen, setDraftTabOpen] = useState(true);
   const hasDraft = draft || streamingPhase === "draft";
 
   const tabs: ContentPanelTab[] = [];
-  if (hasDraft) {
+  if (hasDraft && draftTabOpen) {
     tabs.push({
       id: "draft",
       labelKey: "session.draft",
       icon: FileText,
       content: <DraftTabContent />,
-      onClose: draft ? () => cancelDraft.mutate({ sessionId }) : undefined,
+      onClose: () => setDraftTabOpen(false),
     });
   }
 

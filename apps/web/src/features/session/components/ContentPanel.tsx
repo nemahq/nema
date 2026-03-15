@@ -39,49 +39,57 @@ export function ContentPanel({ tabs }: { tabs: ContentPanelTab[] }) {
         <>
           <div
             role="tablist"
-            className="flex items-center border-b border-border"
+            className="relative flex items-end border-b border-border"
           >
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                className={cn(
-                  "group flex items-center border-b-2",
-                  resolvedTab === tab.id
-                    ? "border-brand"
-                    : "border-transparent",
-                )}
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={resolvedTab === tab.id}
-                  aria-controls={`panel-${tab.id}`}
-                  onClick={() => handleTabClick(tab.id)}
+            {tabs.map((tab, i) => {
+              const isActive = resolvedTab === tab.id;
+              const isFirst = i === 0;
+
+              return (
+                <div
+                  key={tab.id}
                   className={cn(
-                    "flex items-center gap-1.5 py-2 pl-3 pr-1",
-                    "text-sm font-medium transition-colors hover:bg-surface-raised",
-                    resolvedTab === tab.id
-                      ? "text-fg-primary"
-                      : "text-fg-tertiary hover:text-fg-secondary",
+                    "group -mb-px flex items-center",
+                    isActive
+                      ? cn(
+                          "border-r border-t-2 border-t-amber-600 border-r-border bg-surface-card dark:border-t-amber-500",
+                          !isFirst && "border-l border-l-border",
+                        )
+                      : "border border-transparent",
                   )}
                 >
-                  <tab.icon className="size-3.5" />
-                  {t(tab.labelKey)}
-                </button>
-                {tab.onClose && (
                   <button
                     type="button"
-                    onClick={(e) => handleTabClose(e, tab)}
-                    className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
-                    aria-label={t("session.draft_tab_close", {
-                      label: t(tab.labelKey),
-                    })}
+                    role="tab"
+                    aria-selected={resolvedTab === tab.id}
+                    aria-controls={`panel-${tab.id}`}
+                    onClick={() => handleTabClick(tab.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 py-2 pl-3 pr-1",
+                      "text-sm font-medium transition-colors",
+                      resolvedTab === tab.id
+                        ? "text-fg-primary"
+                        : "text-fg-tertiary hover:text-fg-secondary",
+                    )}
                   >
-                    <X className="size-3" />
+                    <tab.icon className="size-3.5" />
+                    {t(tab.labelKey)}
                   </button>
-                )}
-              </div>
-            ))}
+                  {tab.onClose && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleTabClose(e, tab)}
+                      className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
+                      aria-label={t("session.draft_tab_close", {
+                        label: t(tab.labelKey),
+                      })}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <div

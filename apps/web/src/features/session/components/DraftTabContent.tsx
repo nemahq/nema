@@ -4,6 +4,7 @@ import { Button, Kbd } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
 import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
@@ -17,6 +18,7 @@ function DraftTabContentInner() {
   const sessionId = useSessionId();
   const draft = useSessionDraft({ sessionId });
   const saveDraft = useSaveDraft({ sessionId });
+  const cancelDraft = useCancelDraft({ sessionId });
   const { streamingPhase, streamingDraftText } = useChatStream();
 
   const isStreaming = streamingPhase === "draft";
@@ -26,19 +28,26 @@ function DraftTabContentInner() {
   return (
     <div className="relative">
       {!isStreaming && body && (
-        <div className="absolute right-0 top-0">
+        <div className="absolute right-0 top-0 flex gap-2">
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => cancelDraft.mutate({ sessionId })}
+            disabled={cancelDraft.isPending}
+          >
+            {t("common.cancel")}
+            <Kbd>Esc</Kbd>
+          </Button>
           {/* TODO: ⌘+S 키보드 단축키 리스너 추가 */}
           <Button
             variant="primary"
             size="xs"
             onClick={() => saveDraft.mutate({ sessionId })}
             disabled={saveDraft.isPending}
-            className="gap-1 dark:bg-fg-primary dark:text-surface-base dark:border-transparent dark:hover:opacity-80"
           >
             {t("session.draft_save")}
-            <Kbd className="border-white/20 bg-white/10 text-inherit opacity-80">
-              ⌘+S
-            </Kbd>
+            <Kbd>⌘</Kbd>
+            <Kbd>S</Kbd>
           </Button>
         </div>
       )}
