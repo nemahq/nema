@@ -46,13 +46,7 @@ function MessageListContent({ streamingMessage }: MessageListProps) {
         <div className="mx-auto max-w-2xl space-y-6 px-6 py-6">
           {messages.map((msg, i) => {
             if (msg.role === "user") {
-              return (
-                <UserMessage
-                  key={msg.id}
-                  content={msg.content}
-                  createdAt={msg.createdAt}
-                />
-              );
+              return <UserMessage key={msg.id} content={msg.content} />;
             }
             if (msg.type === "status") {
               return (
