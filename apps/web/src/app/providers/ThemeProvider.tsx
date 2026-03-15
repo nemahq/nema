@@ -6,8 +6,8 @@ import {
   resolveTheme,
   setTheme as setThemePref,
   type Theme,
-  type ThemePreference,
 } from "@web/utils/theme";
+import type { ThemePreference } from "@web/utils/theme-preference";
 
 type ThemeProviderState = {
   theme: ThemePreference;

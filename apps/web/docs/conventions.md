@@ -88,6 +88,36 @@
 - Icon-only buttons MUST have aria-label.
 - MUST NOT remove focus styles.
 
+## Folder Classification
+
+### `src/` root folders
+
+| Folder | Contains | Does NOT contain |
+| --- | --- | --- |
+| `app/` | App bootstrap: everything needed to initialize and run the application | — |
+| `assets/` | Static files (images, icons, SVGs) | — |
+| `features/` | Domain-specific business modules. Owns internal components/, hooks/, etc. | Code directly imported by other features |
+| `components/` | Feature-agnostic UI components | Data fetching, business logic |
+| `hooks/` | Feature-agnostic custom hooks | Feature-specific hooks |
+| `lib/` | External service client wrappers (one file or folder per service) | Business logic, pure utility functions |
+| `utils/` | Internal utility functions with no external service dependency | External service wrappers (→ lib/) |
+
+### Feature internals
+
+| Folder | When to use |
+| --- | --- |
+| `components/` | Feature-specific UI components |
+| `hooks/` | Feature-specific custom hooks |
+| `constants/` | Feature-specific constants |
+| `types/` | Types shared across multiple files within the feature |
+| `utils/` | Feature-specific pure functions |
+
+### Co-location
+
+- Keep types, constants, and type guards in the **same file** when tightly coupled.
+- If used in one feature only, keep it inside that feature. Promote to `src/` root when used by 2+ features.
+- Do NOT create separate `types/` or `constants/` folders. Reconsider only when 5+ files accumulate and navigation becomes difficult.
+
 ## Feature Boundary
 
 - Split: different domain / different API resource / independent reuse unit. "Can you move this to another app as one chunk?"
