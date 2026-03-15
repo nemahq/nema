@@ -35,6 +35,15 @@ Product terms vs code terms are mapped in `docs/glossary.md`. Code (variables, f
 - Supabase (PostgreSQL + Auth). Schema migrations: `supabase/migrations/`, managed via Supabase CLI.
 - Magic numbers MUST be extracted into named constants (e.g., `TICK_INTERVAL_MS = 60_000`). Numeric literals allowed only for 0, 1, and universally obvious values.
 
+## Dev Scripts
+
+| Script             | Usage                      |
+| ------------------ | -------------------------- |
+| `pnpm dev`         | local full-stack (default) |
+| `pnpm dev:web`     | frontend only (prod API)   |
+| `pnpm dev:server`  | server only                |
+| `pnpm dev:prod`    | local full-stack (prod API)|
+
 ## Tests
 
 - MUST test only real user scenarios and edge cases that need pre-validation.

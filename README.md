@@ -51,11 +51,11 @@ cd apps/server && direnv allow
 ### 3. 개발 서버 실행
 
 ```bash
-pnpm dev          # 서버 + 웹 동시 실행
+pnpm dev          # 웹 + 서버 (local API)
 ```
 
-- 서버: http://localhost:3001
 - 웹: http://localhost:5173
+- 서버: http://localhost:3001
 
 ## 프로젝트 구조
 
@@ -71,7 +71,10 @@ packages/
 
 | 명령어 | 설명 |
 | --- | --- |
-| `pnpm dev` | 개발 서버 실행 |
+| `pnpm dev` | 웹 + 서버 (local API) |
+| `pnpm dev:web` | 웹만 (prod API) |
+| `pnpm dev:server` | 서버만 |
+| `pnpm dev:prod` | 웹 + 서버 (prod API) |
 | `pnpm build` | 프로덕션 빌드 |
 | `pnpm typecheck` | 타입 체크 |
 | `pnpm lint` | ESLint 실행 |
