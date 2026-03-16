@@ -1,6 +1,10 @@
+import { useEffect, useRef } from "react";
 import { useIsMutating } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { getQueryKey } from "@trpc/react-query";
 
+import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeState";
+import { getRouteState } from "@web/app/utils/routeState";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
@@ -11,7 +15,25 @@ import { SidePanel } from "./SidePanel";
 
 export function ChatPanel() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const initialMessage = useLocation({
+    select: (loc) =>
+      getRouteState(loc.state, HOME_TO_SESSION_INITIAL_MESSAGE_KEY),
+  });
   const { send, streamingPhase } = useChatStream();
+
+  const sentRef = useRef(false);
+  useEffect(
+    function sendInitialMessage() {
+      if (!initialMessage || sentRef.current) {
+        return;
+      }
+      sentRef.current = true;
+      send(initialMessage);
+      navigate({ replace: true, state: {} });
+    },
+    [initialMessage, navigate, send],
+  );
 
   const saveDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.saveDraft) }) > 0;
