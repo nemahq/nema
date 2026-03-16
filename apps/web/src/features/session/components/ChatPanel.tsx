@@ -1,13 +1,18 @@
 import type { ReactNode } from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const DEFAULT_WIDTH = 480;
 const MIN_WIDTH = 280;
-const MAX_WIDTH_VW = 50;
+const MAX_WIDTH_RATIO = 0.5;
 
 export function ChatPanel({ children }: { children: ReactNode }) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => cleanupRef.current?.();
+  }, []);
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -15,7 +20,7 @@ export function ChatPanel({ children }: { children: ReactNode }) {
       dragging.current = true;
       const startX = e.clientX;
       const startWidth = width;
-      const maxWidth = window.innerWidth * (MAX_WIDTH_VW / 100);
+      const maxWidth = window.innerWidth * MAX_WIDTH_RATIO;
 
       function onMouseMove(ev: MouseEvent) {
         if (!dragging.current) {
@@ -29,18 +34,24 @@ export function ChatPanel({ children }: { children: ReactNode }) {
         setWidth(next);
       }
 
-      function onMouseUp() {
+      function cleanup() {
         dragging.current = false;
         document.removeEventListener("mousemove", onMouseMove);
         document.removeEventListener("mouseup", onMouseUp);
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
+        cleanupRef.current = null;
+      }
+
+      function onMouseUp() {
+        cleanup();
       }
 
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
       document.addEventListener("mousemove", onMouseMove);
       document.addEventListener("mouseup", onMouseUp);
+      cleanupRef.current = cleanup;
     },
     [width],
   );

@@ -17,7 +17,15 @@ function SessionContentPanelInner() {
   const { streamingPhase } = useChatStream();
 
   const [draftTabOpen, setDraftTabOpen] = useState(true);
-  const hasDraft = draft || streamingPhase === "draft";
+  const hasDraft = !!(draft || streamingPhase === "draft");
+
+  const [prevHasDraft, setPrevHasDraft] = useState(hasDraft);
+  if (hasDraft !== prevHasDraft) {
+    setPrevHasDraft(hasDraft);
+    if (hasDraft) {
+      setDraftTabOpen(true);
+    }
+  }
 
   const tabs: ContentPanelTab[] = [];
   if (hasDraft && draftTabOpen) {

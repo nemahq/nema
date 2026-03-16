@@ -19,8 +19,8 @@ export function ContentPanel({ tabs }: { tabs: ContentPanelTab[] }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
 
-  const resolvedTab =
-    tabs.find((t) => t.id === activeTab)?.id ?? tabs[0]?.id ?? "";
+  const activeTabData = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const resolvedTab = activeTabData?.id ?? "";
 
   function handleTabClick(tabId: string) {
     setActiveTab(tabId);
@@ -30,8 +30,6 @@ export function ContentPanel({ tabs }: { tabs: ContentPanelTab[] }) {
     e.stopPropagation();
     tab.onClose?.();
   }
-
-  const activeTabData = tabs.find((tab) => tab.id === resolvedTab) ?? tabs[0];
 
   return (
     <main className="flex flex-1 flex-col bg-surface-card min-w-0">
@@ -61,13 +59,13 @@ export function ContentPanel({ tabs }: { tabs: ContentPanelTab[] }) {
                   <button
                     type="button"
                     role="tab"
-                    aria-selected={resolvedTab === tab.id}
+                    aria-selected={isActive}
                     aria-controls={`panel-${tab.id}`}
                     onClick={() => handleTabClick(tab.id)}
                     className={cn(
                       "flex items-center gap-1.5 py-2 pl-3 pr-1",
                       "text-sm font-medium transition-colors",
-                      resolvedTab === tab.id
+                      isActive
                         ? "text-fg-primary"
                         : "text-fg-tertiary hover:text-fg-secondary",
                     )}
