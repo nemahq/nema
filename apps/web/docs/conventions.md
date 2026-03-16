@@ -19,6 +19,16 @@
 - State lives as close to the consuming UI as possible. Lift to a parent only when 2+ siblings share the same state.
 - If only one child uses a piece of data, that child should own the hook call — the page should not fetch and prop-drill it down.
 
+### Generic UI vs domain wrapper
+
+- Reusable UI components (layout shells, input controls, tabbed containers) MUST be props-driven with no domain logic or context dependencies.
+- Domain-specific behavior MUST be encapsulated in a wrapper component that composes the generic UI component internally.
+  - `SidePanel` (generic resize shell) ← `ChatPanel` (chat domain wrapper)
+  - `ChatInput` (generic input UI) ← `ChatComposer` (session chat domain wrapper)
+  - `TabbedPanel` (generic tab UI) ← `ContentPanel` (session content domain wrapper)
+- The wrapper owns hooks, context access, and derived state. The generic component receives only props.
+- Parent components MUST only compose and lay out children — they MUST NOT fetch data or compute state on a child's behalf.
+
 ## Hooks
 
 - Cache manipulation functions belong in the hook that owns the query.
