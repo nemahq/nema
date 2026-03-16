@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { cn } from "@nema-io/weave";
 
@@ -10,7 +11,7 @@ interface UserMessageProps {
 }
 
 export function UserMessage({ content }: UserMessageProps) {
-  const contentRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -39,13 +40,18 @@ export function UserMessage({ content }: UserMessageProps) {
     const scrollBefore = scrollContainer.scrollTop;
     const topBefore = el.getBoundingClientRect().top;
 
-    setIsExpanded((prev) => !prev);
+    flushSync(() => setIsExpanded((prev) => !prev));
 
-    requestAnimationFrame(function restoreScrollPosition() {
-      const topAfter = el.getBoundingClientRect().top;
-      const drift = topAfter - topBefore;
-      scrollContainer.scrollTop = scrollBefore + drift;
-    });
+    const topAfter = el.getBoundingClientRect().top;
+    const drift = topAfter - topBefore;
+    scrollContainer.scrollTop = scrollBefore + drift;
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleToggle();
+    }
   }
 
   const maxHeight = isExpanded
@@ -54,11 +60,13 @@ export function UserMessage({ content }: UserMessageProps) {
 
   return (
     <div className="relative">
-      <button
+      <div
         ref={contentRef}
-        type="button"
+        role={isOverflowing ? "button" : undefined}
+        tabIndex={isOverflowing ? 0 : undefined}
+        aria-expanded={isOverflowing ? isExpanded : undefined}
         onClick={isOverflowing ? handleToggle : undefined}
-        tabIndex={isOverflowing ? 0 : -1}
+        onKeyDown={isOverflowing ? handleKeyDown : undefined}
         className={cn(
           "w-full text-left rounded-xl border border-border bg-surface-raised px-4 py-3",
           isExpanded ? "overflow-y-auto" : "overflow-hidden",
@@ -70,7 +78,7 @@ export function UserMessage({ content }: UserMessageProps) {
         <span className="block text-[15px] leading-[1.7] text-fg-primary whitespace-pre-wrap">
           {content}
         </span>
-      </button>
+      </div>
       {isOverflowing && !isExpanded && (
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 rounded-b-xl bg-gradient-to-t from-surface-raised to-transparent" />
       )}

@@ -1,13 +1,14 @@
 import { Suspense, useMemo } from "react";
 
 import type { DisplayMessage } from "@web/features/session/contexts/ChatStreamContext";
+import { USER_TURN_DATA_ROLE } from "@web/features/session/hooks/useScrollAnchor";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 
 import { AssistantMessage } from "./AssistantMessage";
 import { StatusMessage } from "./StatusMessage";
 import { UserMessage } from "./UserMessage";
 
-function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
+export function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
   const turns: DisplayMessage[][] = [];
   let currentTurn: DisplayMessage[] = [];
 
@@ -39,7 +40,9 @@ function MessageListContent() {
         return (
           <div
             key={turn[0].id}
-            data-role={turn[0].role === "user" ? "user" : undefined}
+            data-role={
+              turn[0].role === "user" ? USER_TURN_DATA_ROLE : undefined
+            }
             className="mx-auto w-full max-w-2xl space-y-4 px-6 pt-6"
             style={
               isLastTurn ? { minHeight: "var(--panel-height)" } : undefined

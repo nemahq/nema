@@ -23,10 +23,15 @@ function ChatPanelContent() {
       if (!el) {
         return;
       }
-      const observer = new ResizeObserver(([entry]) => {
+      const observer = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) {
+          return;
+        }
         el.style.setProperty("--panel-height", `${entry.contentRect.height}px`);
         if (!initialScrollDoneRef.current) {
           initialScrollDoneRef.current = true;
+          // double-rAF: 첫 프레임에서 layout 반영, 두 번째 프레임에서 스크롤 실행
           requestAnimationFrame(() => {
             requestAnimationFrame(() => scrollToLastUserMessage("instant"));
           });
@@ -35,9 +40,10 @@ function ChatPanelContent() {
       observer.observe(el);
       return function cleanup() {
         observer.disconnect();
+        el.style.removeProperty("--panel-height");
       };
     },
-    [scrollRef, scrollToLastUserMessage],
+    [scrollToLastUserMessage],
   );
 
   return (

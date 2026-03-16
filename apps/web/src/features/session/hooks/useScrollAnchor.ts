@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef } from "react";
 
 import type { DisplayMessage } from "@web/features/session/contexts/ChatStreamContext";
 
+export const USER_TURN_DATA_ROLE = "user";
+
+const USER_TURN_SELECTOR = `[data-role="${USER_TURN_DATA_ROLE}"]`;
+const SCROLL_POSITION_TOLERANCE_PX = 1;
+
 export function useScrollAnchor({ messages }: { messages: DisplayMessage[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(messages.length);
@@ -9,24 +14,29 @@ export function useScrollAnchor({ messages }: { messages: DisplayMessage[] }) {
   const isUserScrollingRef = useRef(false);
 
   const scrollToLastUserMessage = useCallback(function scrollToLastUserMessage(
-    behavior: ScrollBehavior = "smooth",
+    behavior: ScrollBehavior = "instant",
   ) {
     const container = scrollRef.current;
     if (!container) {
       return;
     }
 
-    const userMessages = container.querySelectorAll('[data-role="user"]');
-    const lastUserEl = userMessages[userMessages.length - 1] as
+    const userTurns = container.querySelectorAll(USER_TURN_SELECTOR);
+    const lastUserEl = userTurns[userTurns.length - 1] as
       | HTMLElement
       | undefined;
-    if (lastUserEl) {
-      isProgrammaticScrollRef.current = true;
-      const top =
-        container.scrollTop +
+
+    const targetTop = lastUserEl
+      ? container.scrollTop +
         lastUserEl.getBoundingClientRect().top -
-        container.getBoundingClientRect().top;
-      container.scrollTo({ top, behavior });
+        container.getBoundingClientRect().top
+      : container.scrollHeight;
+
+    if (
+      Math.abs(container.scrollTop - targetTop) > SCROLL_POSITION_TOLERANCE_PX
+    ) {
+      isProgrammaticScrollRef.current = true;
+      container.scrollTo({ top: targetTop, behavior });
     }
     isUserScrollingRef.current = false;
   }, []);
