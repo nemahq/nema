@@ -18,10 +18,9 @@ import type {
 } from "./llm-provider";
 
 export type OpenAiProviderConfig =
-  | { apiKey: string; model?: string; timeout?: number }
-  | { client: OpenAI; model?: string };
+  | { apiKey: string; model: string; timeout?: number }
+  | { client: OpenAI; model: string };
 
-const DEFAULT_MODEL = "gpt-5";
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 export class OpenAiProvider implements LlmProvider {
@@ -40,7 +39,7 @@ export class OpenAiProvider implements LlmProvider {
         timeout: config.timeout ?? DEFAULT_TIMEOUT_MS,
       });
     }
-    this.model = config.model ?? DEFAULT_MODEL;
+    this.model = config.model;
   }
 
   async *generateStream(params: GenerateStreamParams): AsyncIterable<string> {

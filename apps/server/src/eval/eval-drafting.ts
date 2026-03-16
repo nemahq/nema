@@ -51,7 +51,7 @@ async function main() {
     process.exit(1);
   }
 
-  const provider = new OpenAiProvider({ apiKey });
+  const provider = new OpenAiProvider({ apiKey, model: "gpt-5" });
   const results: EvalResult[] = [];
 
   // 일반 시드

@@ -5,7 +5,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import type { GraphStore } from "@server/infra/graph";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
-import { getLlmModels } from "@server/infra/llm/models";
 import type { VectorStore } from "@server/infra/vector";
 import {
   buildEntityExtractionMessage,
@@ -229,7 +228,6 @@ async function processDocument(
     messages: [
       { role: "user", content: buildEntityExtractionMessage(doc.body) },
     ],
-    model: getLlmModels().mini,
   });
 
   const entities = entityResult.entities.map((e) => ({

@@ -8,7 +8,6 @@ import type {
 } from "@nema-io/shared";
 import { SessionDraftSchema } from "@nema-io/shared";
 
-import { getLlmModels } from "@server/infra/llm/models";
 import type { Providers } from "@server/infra/providers";
 import {
   SupabaseError,
@@ -163,10 +162,9 @@ export async function generateSessionTitle(
     return existing.title;
   }
 
-  const raw = await providers.llm.generateText({
+  const raw = await providers.llm.nano.generateText({
     systemPrompt: SESSION_TITLE_SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildSessionTitleMessage(content) }],
-    model: getLlmModels().nano,
   });
 
   const title = raw.trim();

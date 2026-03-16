@@ -15,7 +15,6 @@ import {
   STATUS_LOG_TYPES,
 } from "@nema-io/shared";
 
-import { getLlmModels } from "@server/infra/llm/models";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
@@ -146,14 +145,13 @@ export async function* processChatStream(args: {
   let messageType: MessageType = "text";
 
   if (draft === null) {
-    const intentResult = await providers.llm.generateStructured({
+    const intentResult = await providers.llm.mini.generateStructured({
       schema: InactiveIntentSchema,
       schemaName: "intent_router_inactive",
       systemPrompt: INTENT_ROUTER_INACTIVE_SYSTEM_PROMPT,
       messages: [
         { role: "user", content: buildIntentRouterMessage(input.content) },
       ],
-      model: getLlmModels().mini,
     });
 
     trackEvent(supabase, userId, "intent.classified", input.sessionId, {
@@ -184,14 +182,13 @@ export async function* processChatStream(args: {
       messageType = "status";
     }
   } else {
-    const intentResult = await providers.llm.generateStructured({
+    const intentResult = await providers.llm.mini.generateStructured({
       schema: ActiveIntentSchema,
       schemaName: "intent_router_active",
       systemPrompt: INTENT_ROUTER_ACTIVE_SYSTEM_PROMPT,
       messages: [
         { role: "user", content: buildIntentRouterMessage(input.content) },
       ],
-      model: getLlmModels().mini,
     });
 
     trackEvent(supabase, userId, "intent.classified", input.sessionId, {

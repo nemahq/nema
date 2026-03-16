@@ -30,21 +30,23 @@ function createMockClient() {
 function mockParse(response: unknown) {
   const { client, parseFn } = createMockClient();
   parseFn.mockResolvedValue(response);
-  const provider = new OpenAiProvider({ client });
+  const provider = new OpenAiProvider({ client, model: "gpt-5" });
   return { provider, parseFn };
 }
 
 function mockParseRejection(error: Error) {
   const { client, parseFn } = createMockClient();
   parseFn.mockRejectedValue(error);
-  const provider = new OpenAiProvider({ client });
+  const provider = new OpenAiProvider({ client, model: "gpt-5" });
   return { provider, parseFn };
 }
 
 describe("OpenAiProvider", () => {
   describe("constructor", () => {
     it("throws LlmError when apiKey is empty", () => {
-      expect(() => new OpenAiProvider({ apiKey: "" })).toThrow(LlmError);
+      expect(() => new OpenAiProvider({ apiKey: "", model: "gpt-5" })).toThrow(
+        LlmError,
+      );
     });
   });
 

@@ -1,6 +1,5 @@
 import type { ChatStreamEvent, SessionDraft } from "@nema-io/shared";
 
-import { getLlmModels } from "@server/infra/llm/models";
 import type { Providers } from "@server/infra/providers";
 import {
   buildEditCycleMessage,
@@ -25,10 +24,9 @@ export async function* handleDraftingStream(args: {
 
   let fullText = "";
 
-  for await (const chunk of providers.llm.generateStream({
+  for await (const chunk of providers.llm.standard.generateStream({
     systemPrompt: DRAFTING_SYSTEM_PROMPT,
     messages: [{ role: "user", content: message }],
-    model: getLlmModels().standard,
     signal,
   })) {
     fullText += chunk;

@@ -8,13 +8,6 @@ vi.mock("@sentry/node", () => ({
   captureMessage: vi.fn(),
 }));
 
-vi.mock("@server/infra/llm/models", () => ({
-  getLlmModels: () => ({
-    standard: "gpt-5",
-    mini: "gpt-5-mini",
-    nano: "gpt-5-nano",
-  }),
-}));
 import type { GraphStore } from "@server/infra/graph";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { VectorStore } from "@server/infra/vector";
