@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 import type { DisplayMessage } from "@web/features/session/contexts/ChatStreamContext";
 
@@ -41,7 +41,7 @@ export function useScrollAnchor({ messages }: { messages: DisplayMessage[] }) {
     isUserScrollingRef.current = false;
   }, []);
 
-  useEffect(function attachScrollListener() {
+  useLayoutEffect(function attachScrollListener() {
     const el = scrollRef.current;
     if (!el) {
       return;
@@ -61,7 +61,7 @@ export function useScrollAnchor({ messages }: { messages: DisplayMessage[] }) {
     };
   }, []);
 
-  useEffect(
+  useLayoutEffect(
     function anchorOnNewMessage() {
       const prev = prevMessageCountRef.current;
       prevMessageCountRef.current = messages.length;
@@ -77,12 +77,12 @@ export function useScrollAnchor({ messages }: { messages: DisplayMessage[] }) {
 
       if (lastMessage.role === "user") {
         isUserScrollingRef.current = false;
-        requestAnimationFrame(() => scrollToLastUserMessage("instant"));
+        scrollToLastUserMessage("instant");
         return;
       }
 
       if (!isUserScrollingRef.current) {
-        requestAnimationFrame(() => scrollToLastUserMessage("instant"));
+        scrollToLastUserMessage("instant");
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- track by count only

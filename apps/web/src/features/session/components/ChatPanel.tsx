@@ -42,7 +42,7 @@ function ChatPanelContent() {
         el.style.removeProperty("--panel-height");
       };
     },
-    [scrollToLastUserMessage],
+    [scrollRef, scrollToLastUserMessage],
   );
 
   return (

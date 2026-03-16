@@ -67,7 +67,7 @@ export function TabbedPanel({ tabs }: TabbedPanelProps) {
                     aria-controls={`panel-${tab.id}`}
                     onClick={() => handleTabClick(tab.id)}
                     className={cn(
-                      "flex items-center gap-1.5 py-2 pl-3",
+                      "flex items-center gap-1 py-2 pl-3",
                       tab.onClose ? "pr-1" : "pr-3",
                       "text-sm font-medium transition-colors",
                       isActive
