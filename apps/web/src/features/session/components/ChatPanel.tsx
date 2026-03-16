@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { getQueryKey } from "@trpc/react-query";
@@ -10,8 +10,7 @@ import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeSta
 import { getRouteState } from "@web/app/utils/routeState";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useAutoScroll } from "@web/features/session/hooks/useAutoScroll";
-import { useMessageList } from "@web/features/session/hooks/useMessageList";
-import { useSessionId } from "@web/features/session/hooks/useSessionId";
+import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
 
@@ -22,15 +21,9 @@ import { SidePanel } from "./SidePanel";
 
 function ChatPanelContent() {
   const { t } = useTranslation();
-  const sessionId = useSessionId();
-  const { send, streamingPhase, streamingMessage } = useChatStream();
+  const { send, streamingPhase } = useChatStream();
 
-  const serverMessages = useMessageList({ sessionId });
-  const messages = useMemo(
-    () =>
-      streamingMessage ? [...serverMessages, streamingMessage] : serverMessages,
-    [serverMessages, streamingMessage],
-  );
+  const messages = useSessionMessages();
   const { scrollRef, showNewMessageButton, scrollToBottom } = useAutoScroll({
     messages,
   });
