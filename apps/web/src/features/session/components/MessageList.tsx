@@ -1,6 +1,4 @@
-// Suspense boundary: ChatPanel.tsx
-/* eslint-disable nema/require-suspense-boundary */
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useMessageList } from "@web/features/session/hooks/useMessageList";
@@ -10,7 +8,7 @@ import { AssistantMessage } from "./AssistantMessage";
 import { StatusMessage } from "./StatusMessage";
 import { UserMessage } from "./UserMessage";
 
-export function MessageList() {
+function MessageListContent() {
   const sessionId = useSessionId();
   const { streamingMessage } = useChatStream();
   const serverMessages = useMessageList({ sessionId });
@@ -41,5 +39,13 @@ export function MessageList() {
         );
       })}
     </>
+  );
+}
+
+export function MessageList() {
+  return (
+    <Suspense>
+      <MessageListContent />
+    </Suspense>
   );
 }

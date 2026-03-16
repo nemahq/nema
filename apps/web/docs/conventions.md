@@ -2,7 +2,7 @@
 
 ## Components
 
-- One component per file.
+- One component per file. Exception: Suspense/ErrorBoundary wrapper + inner content component may share a file. Inner content component first, wrapper below.
 - Components MUST NOT call tRPC hooks directly. Always wrap in a custom hook.
 - Extract complex handlers as named functions instead of inline.
 - Routing/branching components MUST only branch. Handlers belong inside each sub-component.
