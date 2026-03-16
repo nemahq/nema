@@ -1,32 +1,73 @@
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 
+import type { DisplayMessage } from "@web/features/session/contexts/ChatStreamContext";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 
 import { AssistantMessage } from "./AssistantMessage";
 import { StatusMessage } from "./StatusMessage";
 import { UserMessage } from "./UserMessage";
 
+function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
+  const turns: DisplayMessage[][] = [];
+  let currentTurn: DisplayMessage[] = [];
+
+  for (const msg of messages) {
+    if (msg.type === "draft") {
+      continue;
+    }
+    if (msg.role === "user" && currentTurn.length > 0) {
+      turns.push(currentTurn);
+      currentTurn = [];
+    }
+    currentTurn.push(msg);
+  }
+  if (currentTurn.length > 0) {
+    turns.push(currentTurn);
+  }
+  return turns;
+}
+
 function MessageListContent() {
   const messages = useSessionMessages();
+  const turns = useMemo(() => groupIntoTurns(messages), [messages]);
 
   return (
     <>
-      {messages.map((msg) => {
-        if (msg.type === "draft") {
-          return null;
-        }
-        if (msg.role === "user") {
-          return <UserMessage key={msg.id} content={msg.content} />;
-        }
-        if (msg.type === "status") {
-          return <StatusMessage key={msg.id} message={msg} />;
-        }
+      {turns.map((turn, index) => {
+        const isLastTurn = index === turns.length - 1;
+
         return (
-          <AssistantMessage
-            key={msg.id}
-            content={msg.content}
-            createdAt={msg.createdAt}
-          />
+          <div
+            key={turn[0].id}
+            data-role={turn[0].role === "user" ? "user" : undefined}
+            className="mx-auto w-full max-w-2xl space-y-4 px-6 pt-6"
+            style={
+              isLastTurn ? { minHeight: "var(--panel-height)" } : undefined
+            }
+          >
+            {turn.map((msg) => {
+              if (msg.role === "user") {
+                return (
+                  <div
+                    key={msg.id}
+                    className="sticky top-0 z-[5] bg-surface-base py-1"
+                  >
+                    <UserMessage content={msg.content} />
+                  </div>
+                );
+              }
+              if (msg.type === "status") {
+                return <StatusMessage key={msg.id} message={msg} />;
+              }
+              return (
+                <AssistantMessage
+                  key={msg.id}
+                  content={msg.content}
+                  createdAt={msg.createdAt}
+                />
+              );
+            })}
+          </div>
         );
       })}
     </>
