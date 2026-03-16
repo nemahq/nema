@@ -33,6 +33,8 @@
 | mini | gpt-5-mini | `LLM_MODEL_MINI` |
 | nano | gpt-5-nano | `LLM_MODEL_NANO` |
 
+환경변수는 같은 프로바이더 내 모델 교체용 (예: `gpt-5` → `gpt-5.1`). 프로바이더 변경(예: OpenAI → Anthropic)은 `models.ts`에서 해당 tier의 구현체를 교체해야 한다.
+
 ## 확장 여지
 
 현재 3-tier로 충분하나, 제품이 단순 검색/생성을 넘어 사용자의 지식을 "사고"해야 하는 기능으로 확장될 경우 reasoning 모델 기반의 premium tier를 고려할 수 있다.
