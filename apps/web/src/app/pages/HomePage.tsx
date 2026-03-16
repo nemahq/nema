@@ -50,7 +50,7 @@ export function HomePage() {
         <Greeting variant={variant} />
         <ChatInput
           placeholder={t("session.input_placeholder")}
-          disabled={createSession.isPending}
+          submitDisabled={createSession.isPending}
           onSubmit={handleSubmit}
         />
       </div>

@@ -9,20 +9,20 @@ import { ChatInput } from "./ChatInput";
 
 export function ChatComposer() {
   const { t } = useTranslation();
-  const { send, streamingPhase } = useChatStream();
+  const { send, cancel, streamingPhase } = useChatStream();
 
   const saveDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.saveDraft) }) > 0;
   const cancelDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.cancelDraft) }) > 0;
-  const disabled =
-    streamingPhase !== "idle" || saveDraftMutating || cancelDraftMutating;
+  const isStreaming = streamingPhase !== "idle";
 
   return (
     <ChatInput
       placeholder={t("session.input_placeholder")}
-      disabled={disabled}
       onSubmit={send}
+      onStop={isStreaming ? cancel : undefined}
+      submitDisabled={saveDraftMutating || cancelDraftMutating}
     />
   );
 }
