@@ -22,9 +22,8 @@ export function useScrollAnchor({ messages }: { messages: DisplayMessage[] }) {
     }
 
     const userTurns = container.querySelectorAll(USER_TURN_SELECTOR);
-    const lastUserEl = userTurns[userTurns.length - 1] as
-      | HTMLElement
-      | undefined;
+    const lastUserEl =
+      userTurns.length > 0 ? userTurns[userTurns.length - 1] : undefined;
 
     const targetTop = lastUserEl
       ? container.scrollTop +
