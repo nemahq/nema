@@ -1,41 +1,68 @@
 # Convention Check
 
-Verify that changed code follows project conventions.
+Verify changed code against project conventions. Fix violations in place.
 
-## Procedure
+## Step 1 — Collect changes
 
-1. Run `git diff HEAD` (unstaged + staged) to get the list of changed files and their diffs.
-   - If no changes exist, report "No changes to check" and stop.
+1. Run `git diff HEAD` (unstaged + staged) to get changed files and diffs.
+   - No changes → report "No changes to check" and stop.
+2. Classify each changed file:
+   - **New file**: needs full validation (naming, folder placement, structure).
+   - **Existing file**: validate changed code only.
+3. Note the file types touched (`.ts`, `.tsx`, `.css`, etc.) to filter irrelevant rules later.
 
-2. Determine affected packages from changed file paths:
-   - `apps/web/` → web
-   - `apps/server/` → server
-   - Other (packages/, root config, etc.) → refer to that package's CLAUDE.md only
+## Step 2 — Determine scope
 
-3. Read convention files for each affected package:
-   - web: `apps/web/docs/conventions.md` + `apps/web/CLAUDE.md`
-   - server: `apps/server/docs/conventions.md` + `apps/server/CLAUDE.md`
-   - Root `CLAUDE.md` is already in context — do not re-read.
+Identify affected packages from file paths:
+- `apps/web/` → web
+- `apps/server/` → server
+- Other (`packages/`, root config) → that package's CLAUDE.md only
 
-4. Check each rule in the loaded conventions against the diff:
-   - Go rule by rule, in order. Do not scan everything at once.
-   - Skip rules that are irrelevant to the changed code.
-   - For each violation, record the file:line, violated rule, and suggested fix.
+## Step 3 — Load conventions
 
-5. Report results:
-   - No violations → output a single line: "Convention check passed."
-   - Violations found → output in this format:
+Read convention files for each affected package:
+- web: `apps/web/docs/conventions.md` + `apps/web/CLAUDE.md`
+- server: `apps/server/docs/conventions.md` + `apps/server/CLAUDE.md`
+- Root `CLAUDE.md` is already in context — do not re-read.
+
+## Step 4 — Build checklist
+
+From the loaded convention files, extract every **section heading** as a checklist category.
+Example for web conventions:
+- [ ] Components
+- [ ] Hooks
+- [ ] Functions
+- [ ] Naming
+- [ ] Data Fetching
+- [ ] React
+- [ ] TypeScript
+- [ ] ...
+
+Skip sections entirely irrelevant to the changed file types (e.g., skip "Responsive" if no `.tsx` changed).
+
+## Step 5 — Check and fix
+
+For each checklist item:
+1. Read all rules under that section.
+2. For each rule, check against the diff. If the diff alone is insufficient to judge (e.g., "one component per file", "constants outside component"), read the full file.
+3. If a violation is found → **fix it immediately**, then record what was fixed.
+4. Mark the checklist item as done before moving to the next section.
+
+## Step 6 — Report
+
+After all sections are checked:
+- No violations found → output: `Convention check passed.`
+- Violations fixed → output a summary table:
 
 ```
-### Convention Violations
+### Fixed
 
-| File:Line | Rule | Suggested Fix |
-|-----------|------|---------------|
-| ... | ... | ... |
+| File | What was fixed |
+|------|----------------|
+| ...  | ...            |
 ```
 
 ## Constraints
 
-- Report violations only. Do not mention rules that are followed correctly.
 - Only check rules explicitly stated in convention files. Do not flag based on personal preference or general best practices.
-- Do not auto-fix. Report only.
+- Complete every checklist item. Do not skip or batch sections.
