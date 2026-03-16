@@ -50,6 +50,7 @@ export function getProviders(): Providers {
     graphStore: createNeo4jStore(),
   };
 
+  // dev 전용 — 프로덕션에서 모델 프리셋 교체가 열리면 비용·보안 사고로 이어진다
   if (process.env.NODE_ENV !== "production") {
     realTiersLlm = createTieredLlm({ apiKey: env.OPENAI_API_KEY });
     applyLlmPreset("all-nano");
