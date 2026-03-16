@@ -1,7 +1,5 @@
 import { Suspense, useEffect, useRef } from "react";
-import { useIsMutating } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { getQueryKey } from "@trpc/react-query";
 
 import { Button } from "@nema-io/weave";
 import { ChevronDown } from "@nema-io/weave/icons";
@@ -12,28 +10,19 @@ import { useChatStream } from "@web/features/session/contexts/ChatStreamContext"
 import { useAutoScroll } from "@web/features/session/hooks/useAutoScroll";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 import { useTranslation } from "@web/lib/tolgee";
-import { trpc } from "@web/lib/trpc";
 
-import { ChatInput } from "./ChatInput";
+import { ChatComposer } from "./ChatComposer";
 import { MessageList } from "./MessageList";
 import { MessageListSkeleton } from "./MessageListSkeleton";
 import { SidePanel } from "./SidePanel";
 
 function ChatPanelContent() {
   const { t } = useTranslation();
-  const { send, streamingPhase } = useChatStream();
 
   const messages = useSessionMessages();
   const { scrollRef, showNewMessageButton, scrollToBottom } = useAutoScroll({
     messages,
   });
-
-  const saveDraftMutating =
-    useIsMutating({ mutationKey: getQueryKey(trpc.message.saveDraft) }) > 0;
-  const cancelDraftMutating =
-    useIsMutating({ mutationKey: getQueryKey(trpc.message.cancelDraft) }) > 0;
-  const isChatInputDisabled =
-    streamingPhase !== "idle" || saveDraftMutating || cancelDraftMutating;
 
   return (
     <div className="relative flex-1">
@@ -48,11 +37,7 @@ function ChatPanelContent() {
 
           <div className="sticky bottom-0 bg-surface-base">
             <div className="mx-auto w-full max-w-2xl px-6 pb-6 pt-2">
-              <ChatInput
-                placeholder={t("session.input_placeholder")}
-                disabled={isChatInputDisabled}
-                onSubmit={send}
-              />
+              <ChatComposer />
             </div>
           </div>
         </div>
