@@ -1,11 +1,13 @@
-# Convention Check
+# Convention Refactoring
 
 Verify changed code against project conventions. Fix violations in place.
 
 ## Step 1 — Collect changes
 
-1. Run `git diff HEAD` (unstaged + staged) to get changed files and diffs.
-   - No changes → report "No changes to check" and stop.
+1. Determine the base branch (`main`) and run `git diff main...HEAD` to get all changes on the current branch.
+   - Also include uncommitted changes: `git diff HEAD` (unstaged + staged).
+   - Combine both to get the full picture of current work.
+   - No changes in either → report "No changes to check" and stop.
 2. Classify each changed file:
    - **New file**: needs full validation (naming, folder placement, structure).
    - **Existing file**: validate changed code only.
@@ -20,22 +22,28 @@ Identify affected packages from file paths:
 
 ## Step 3 — Load conventions
 
-Read convention files for each affected package:
+Read **all** applicable convention sources for each affected package:
 - web: `apps/web/docs/conventions.md` + `apps/web/CLAUDE.md`
 - server: `apps/server/docs/conventions.md` + `apps/server/CLAUDE.md`
-- Root `CLAUDE.md` is already in context — do not re-read.
+- Root `CLAUDE.md` is already in context — do not re-read, but DO include its rules in the checklist.
 
 ## Step 4 — Build checklist
 
-From the loaded convention files, extract every **section heading** as a checklist category.
-Example for web conventions:
-- [ ] Components
-- [ ] Hooks
-- [ ] Functions
-- [ ] Naming
-- [ ] Data Fetching
-- [ ] React
-- [ ] TypeScript
+From **all loaded convention sources** (conventions.md + CLAUDE.md files including root), extract every **section heading** as a checklist category.
+
+Example for web changes:
+- [ ] Root CLAUDE.md — DO NOT
+- [ ] Root CLAUDE.md — Conventions
+- [ ] Root CLAUDE.md — Comments
+- [ ] Web CLAUDE.md — Do NOT
+- [ ] Web CLAUDE.md — I18n / Storage
+- [ ] Web conventions — Components
+- [ ] Web conventions — Hooks
+- [ ] Web conventions — Functions
+- [ ] Web conventions — Naming
+- [ ] Web conventions — Data Fetching
+- [ ] Web conventions — React
+- [ ] Web conventions — TypeScript
 - [ ] ...
 
 Skip sections entirely irrelevant to the changed file types (e.g., skip "Responsive" if no `.tsx` changed).
