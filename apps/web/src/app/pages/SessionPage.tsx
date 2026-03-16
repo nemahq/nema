@@ -35,7 +35,7 @@ function SessionContent() {
   return (
     <div className="flex flex-1 min-w-0">
       <SessionContentPanel />
-      <ChatPanel onSubmit={send} />
+      <ChatPanel />
     </div>
   );
 }

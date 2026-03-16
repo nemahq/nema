@@ -9,13 +9,9 @@ import { ChatInput } from "./ChatInput";
 import { MessageList } from "./MessageList";
 import { SidePanel } from "./SidePanel";
 
-export function ChatPanel({
-  onSubmit,
-}: {
-  onSubmit: (message: string) => void;
-}) {
+export function ChatPanel() {
   const { t } = useTranslation();
-  const { streamingPhase } = useChatStream();
+  const { send, streamingPhase } = useChatStream();
 
   const saveDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.saveDraft) }) > 0;
@@ -32,7 +28,7 @@ export function ChatPanel({
             <ChatInput
               placeholder={t("session.input_placeholder")}
               disabled={isChatInputDisabled}
-              onSubmit={onSubmit}
+              onSubmit={send}
             />
           </div>
         }
