@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { FileText } from "@nema-io/weave/icons";
 
 import { DraftTabContent } from "@web/features/session/components/DraftTabContent";
@@ -14,18 +12,9 @@ export function useDraftTab(): TabbedPanelTab | undefined {
   const draft = useSessionDraft({ sessionId });
   const { streamingPhase } = useChatStream();
 
-  const [draftTabOpen, setDraftTabOpen] = useState(true);
   const hasDraft = !!(draft || streamingPhase === "draft");
 
-  const [prevHasDraft, setPrevHasDraft] = useState(hasDraft);
-  if (hasDraft !== prevHasDraft) {
-    setPrevHasDraft(hasDraft);
-    if (hasDraft) {
-      setDraftTabOpen(true);
-    }
-  }
-
-  if (!hasDraft || !draftTabOpen) {
+  if (!hasDraft) {
     return undefined;
   }
 
@@ -34,6 +23,5 @@ export function useDraftTab(): TabbedPanelTab | undefined {
     labelKey: "session.draft",
     icon: FileText,
     content: <DraftTabContent />,
-    onClose: () => setDraftTabOpen(false),
   };
 }
