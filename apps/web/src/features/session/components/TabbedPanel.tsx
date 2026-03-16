@@ -41,7 +41,7 @@ export function TabbedPanel({ tabs }: TabbedPanelProps) {
         <>
           <div
             role="tablist"
-            className="relative flex items-end border-b border-border"
+            className="relative flex items-end border-b border-border/50"
           >
             {tabs.map((tab, i) => {
               const isActive = resolvedTab === tab.id;

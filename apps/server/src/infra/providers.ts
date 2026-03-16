@@ -4,7 +4,12 @@ import { createVoyageProvider } from "@server/infra/embedding";
 import type { GraphStore } from "@server/infra/graph";
 import { createNeo4jStore } from "@server/infra/graph";
 import type { TieredLlm } from "@server/infra/llm/models";
-import { createTieredLlm } from "@server/infra/llm/models";
+import {
+  createTieredLlm,
+  DEFAULT_MINI_MODEL,
+  DEFAULT_NANO_MODEL,
+  DEFAULT_STANDARD_MODEL,
+} from "@server/infra/llm/models";
 import type { VectorStore } from "@server/infra/vector";
 import { createQdrantStore } from "@server/infra/vector";
 
@@ -59,8 +64,25 @@ export function getProviders(): Providers {
   return cached;
 }
 
-export function getLlmPreset(): LlmPreset {
-  return currentPreset;
+export interface LlmPresetInfo {
+  preset: LlmPreset;
+  models: { standard: string; mini: string; nano: string };
+}
+
+export function getLlmPreset(): LlmPresetInfo {
+  const models =
+    currentPreset === "all-nano"
+      ? {
+          standard: DEFAULT_NANO_MODEL,
+          mini: DEFAULT_NANO_MODEL,
+          nano: DEFAULT_NANO_MODEL,
+        }
+      : {
+          standard: DEFAULT_STANDARD_MODEL,
+          mini: DEFAULT_MINI_MODEL,
+          nano: DEFAULT_NANO_MODEL,
+        };
+  return { preset: currentPreset, models };
 }
 
 export function setLlmPreset(preset: LlmPreset): void {

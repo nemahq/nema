@@ -1,13 +1,14 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTheme } from "@web/app/providers/ThemeProvider";
 import { useAuth } from "@web/hooks/useAuth";
+import { useModelPreset } from "@web/hooks/useModelPreset";
+import { useSetModelPreset } from "@web/hooks/useSetModelPreset";
 import { supabase } from "@web/lib/supabase";
 import { changeLocale } from "@web/lib/tolgee";
 import type { Locale } from "@web/lib/tolgee/types";
-import { trpc } from "@web/lib/trpc";
 import { getStorage } from "@web/utils/localStorage";
 import type { ThemePreference } from "@web/utils/theme-preference";
 
@@ -21,12 +22,58 @@ const THEMES: ThemePreference[] = ["light", "dark", "system"];
 const LOCALES: Locale[] = ["ko", "en"];
 const LLM_PRESETS = ["all-nano", "real-tiers"] as const;
 
+function formatModelMap(models: {
+  standard: string;
+  mini: string;
+  nano: string;
+}): string {
+  const unique = new Set(Object.values(models));
+  if (unique.size === 1) {
+    return `all: ${[...unique][0]}`;
+  }
+  return `S: ${models.standard} · M: ${models.mini} · N: ${models.nano}`;
+}
+
 function toggleClass(active: boolean) {
   return `cursor-pointer rounded px-2 py-0.5 transition-colors duration-fast ${
     active
       ? "bg-brand text-brand-fg"
       : "text-fg-secondary hover:bg-surface-raised-hover"
   }`;
+}
+
+function LlmPresetSection() {
+  const [presetData] = useModelPreset();
+  const presetMutation = useSetModelPreset();
+
+  useEffect(function resetPresetOnMount() {
+    if (presetData.preset !== "all-nano") {
+      presetMutation.mutate({ preset: "all-nano" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 1회만
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="font-semibold text-fg-tertiary">LLM</span>
+      <div className="flex items-center gap-1">
+        {LLM_PRESETS.map((p) => (
+          <button
+            key={p}
+            type="button"
+            disabled={presetMutation.isPending}
+            onClick={() => presetMutation.mutate({ preset: p })}
+            className={toggleClass(presetData.preset === p)}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+      <div className="text-[10px] text-fg-tertiary">
+        {formatModelMap(presetData.models)}
+      </div>
+    </div>
+  );
 }
 
 export function DevToolbar() {
@@ -39,16 +86,6 @@ export function DevToolbar() {
   );
   const [queryDevtools, setQueryDevtools] = useState(false);
 
-  const utils = trpc.useUtils();
-  const presetQuery = trpc.dev.getModelPreset.useQuery(undefined, {
-    retry: false,
-  });
-  const presetMutation = trpc.dev.setModelPreset.useMutation({
-    onSuccess: (preset) => {
-      utils.dev.getModelPreset.setData(undefined, preset);
-    },
-  });
-
   function handleLocaleChange(next: Locale) {
     setLocale(next);
     changeLocale(next);
@@ -58,7 +95,7 @@ export function DevToolbar() {
     <>
       <div className="fixed bottom-3 right-3 z-50 flex flex-col items-end">
         {open && (
-          <div className="mb-2 flex flex-col gap-3 rounded-lg border border-border bg-surface-raised p-3 text-xs shadow-lg">
+          <div className="mb-2 flex w-56 flex-col gap-3 rounded-lg border border-border bg-surface-raised p-3 text-xs shadow-lg">
             <div className="flex flex-col gap-1.5">
               <span className="font-semibold text-fg-tertiary">Theme</span>
               <div className="flex items-center gap-1">
@@ -115,24 +152,11 @@ export function DevToolbar() {
               </div>
             </div>
 
-            {presetQuery.data && (
-              <div className="flex flex-col gap-1.5">
-                <span className="font-semibold text-fg-tertiary">LLM</span>
-                <div className="flex items-center gap-1">
-                  {LLM_PRESETS.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      disabled={presetMutation.isPending}
-                      onClick={() => presetMutation.mutate({ preset: p })}
-                      className={toggleClass(presetQuery.data === p)}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <ErrorBoundary fallback={null}>
+              <Suspense>
+                <LlmPresetSection />
+              </Suspense>
+            </ErrorBoundary>
 
             <div className="flex flex-col gap-1.5">
               <span className="font-semibold text-fg-tertiary">Query</span>

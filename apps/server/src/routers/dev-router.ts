@@ -18,6 +18,6 @@ export const devRouter = router({
     .input(z.object({ preset: llmPresetSchema }))
     .mutation(({ input }) => {
       setLlmPreset(input.preset);
-      return input.preset;
+      return getLlmPreset();
     }),
 });

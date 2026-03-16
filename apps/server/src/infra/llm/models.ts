@@ -7,8 +7,8 @@ import {
 } from "@server/infra/llm/openai-provider";
 
 export const DEFAULT_STANDARD_MODEL = "gpt-5";
-const DEFAULT_MINI_MODEL = "gpt-5-mini";
-const DEFAULT_NANO_MODEL = "gpt-5-nano";
+export const DEFAULT_MINI_MODEL = "gpt-5-mini";
+export const DEFAULT_NANO_MODEL = "gpt-5-nano";
 
 export interface TieredLlm {
   readonly standard: LlmProvider;
