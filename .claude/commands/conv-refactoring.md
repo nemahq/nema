@@ -56,6 +56,12 @@ For each checklist item:
 3. If a violation is found → **fix it immediately**, then record what was fixed.
 4. Mark the checklist item as done before moving to the next section.
 
+## Step 5b — Architecture check
+
+If the loaded conventions include an Architecture section, verify layer boundaries and data ownership rules against the diff:
+- **web**: Check that components own their data via hooks rather than receiving it as props from parents. For each data prop, trace the parent usage — if the parent fetches via a hook and the child could call the same hook directly, the child should own the call.
+- **server**: Check that routers stay thin (validation + service call only), services call infra directly (routers do not fetch and pass data into services), and infra is not bypassed with raw SDK calls.
+
 ## Step 6 — Report
 
 After all sections are checked:

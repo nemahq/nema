@@ -2,7 +2,7 @@
 
 ## Components
 
-- One component per file.
+- One component per file. Exception: Suspense/ErrorBoundary wrapper + inner content component may share a file. Inner content component first, wrapper below.
 - Components MUST NOT call tRPC hooks directly. Always wrap in a custom hook.
 - Extract complex handlers as named functions instead of inline.
 - Routing/branching components MUST only branch. Handlers belong inside each sub-component.
@@ -19,10 +19,22 @@
 - State lives as close to the consuming UI as possible. Lift to a parent only when 2+ siblings share the same state.
 - If only one child uses a piece of data, that child should own the hook call — the page should not fetch and prop-drill it down.
 
+### Generic UI vs domain wrapper
+
+- Reusable UI components (layout shells, input controls, tabbed containers) MUST be props-driven with no domain logic or context dependencies.
+- Domain-specific behavior MUST be encapsulated in a wrapper component that composes the generic UI component internally.
+  - `SidePanel` (generic resize shell) ← `ChatPanel` (chat domain wrapper)
+  - `ChatInput` (generic input UI) ← `ChatComposer` (session chat domain wrapper)
+  - `TabbedPanel` (generic tab UI) ← `ContentPanel` (session content domain wrapper)
+- The wrapper owns hooks, context access, and derived state. The generic component receives only props.
+- Parent components MUST only compose and lay out children — they MUST NOT fetch data or compute state on a child's behalf.
+- Single responsibility check: if a component's hooks/state variables form 2+ independent groups (no shared variables, excluding shared utilities like `useTranslation`), extract each group into its own component.
+
 ## Hooks
 
 - Cache manipulation functions belong in the hook that owns the query.
 - Mutation hooks MUST NOT embed side effects (navigate, etc.). Callers inject them at `mutate(variables, { onSuccess })` call site.
+- Hooks MAY return objects containing `ReactNode` fields when the return type is a named interface. Hooks MUST NOT return raw JSX — if the primary purpose is rendering, use a component.
 
 ## Analytics (PostHog)
 
