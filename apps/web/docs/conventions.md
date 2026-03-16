@@ -34,6 +34,7 @@
 
 - Cache manipulation functions belong in the hook that owns the query.
 - Mutation hooks MUST NOT embed side effects (navigate, etc.). Callers inject them at `mutate(variables, { onSuccess })` call site.
+- Hooks MAY return objects containing `ReactNode` fields when the return type is a named interface. Hooks MUST NOT return raw JSX — if the primary purpose is rendering, use a component.
 
 ## Analytics (PostHog)
 
