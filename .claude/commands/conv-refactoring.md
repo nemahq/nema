@@ -56,6 +56,15 @@ For each checklist item:
 3. If a violation is found → **fix it immediately**, then record what was fixed.
 4. Mark the checklist item as done before moving to the next section.
 
+## Step 5b — Architecture check (web `.tsx` only)
+
+For each component in the diff that receives data props (exclude callbacks, `children`, render props):
+1. Read the parent file where the component is used.
+2. If the parent fetches data via a hook and passes it as a prop to this component:
+   - Check whether the child could call the same hook directly (same Provider scope).
+   - If yes → violation: the child should own the hook call, not receive the data as a prop.
+3. Fix by moving the hook call into the child and removing the prop.
+
 ## Step 6 — Report
 
 After all sections are checked:
