@@ -1,3 +1,4 @@
+import { devRouter } from "./routers/dev-router";
 import { eventRouter } from "./routers/event-router";
 import { messageRouter } from "./routers/message-router";
 import { sessionRouter } from "./routers/session-router";
@@ -10,6 +11,7 @@ export const appRouter = router({
   session: sessionRouter,
   message: messageRouter,
   event: eventRouter,
+  dev: devRouter,
 });
 
 export type AppRouter = typeof appRouter;

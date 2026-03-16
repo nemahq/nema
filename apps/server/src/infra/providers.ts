@@ -15,7 +15,11 @@ export interface Providers {
   graphStore: GraphStore;
 }
 
+export type LlmPreset = "all-nano" | "real-tiers";
+
 let cached: Providers | undefined;
+let realTiersLlm: TieredLlm | undefined;
+let currentPreset: LlmPreset = "all-nano";
 
 export function getProviders(): Providers {
   if (cached) {
@@ -46,5 +50,39 @@ export function getProviders(): Providers {
     graphStore: createNeo4jStore(),
   };
 
+  if (process.env.NODE_ENV !== "production") {
+    realTiersLlm = createTieredLlm({ apiKey: env.OPENAI_API_KEY });
+    applyLlmPreset("all-nano");
+  }
+
   return cached;
+}
+
+export function getLlmPreset(): LlmPreset {
+  return currentPreset;
+}
+
+export function setLlmPreset(preset: LlmPreset): void {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("LLM preset override is not available in production");
+  }
+  if (!cached || !realTiersLlm) {
+    throw new Error("Providers not initialized");
+  }
+  applyLlmPreset(preset);
+}
+
+function applyLlmPreset(preset: LlmPreset): void {
+  if (!cached || !realTiersLlm) {
+    return;
+  }
+  currentPreset = preset;
+  cached.llm =
+    preset === "all-nano"
+      ? {
+          standard: realTiersLlm.nano,
+          mini: realTiersLlm.nano,
+          nano: realTiersLlm.nano,
+        }
+      : realTiersLlm;
 }

@@ -7,6 +7,7 @@ import { useAuth } from "@web/hooks/useAuth";
 import { supabase } from "@web/lib/supabase";
 import { changeLocale } from "@web/lib/tolgee";
 import type { Locale } from "@web/lib/tolgee/types";
+import { trpc } from "@web/lib/trpc";
 import { getStorage } from "@web/utils/localStorage";
 import type { ThemePreference } from "@web/utils/theme-preference";
 
@@ -18,6 +19,7 @@ const ReactQueryDevtools = lazy(() =>
 
 const THEMES: ThemePreference[] = ["light", "dark", "system"];
 const LOCALES: Locale[] = ["ko", "en"];
+const LLM_PRESETS = ["all-nano", "real-tiers"] as const;
 
 function toggleClass(active: boolean) {
   return `cursor-pointer rounded px-2 py-0.5 transition-colors duration-fast ${
@@ -36,6 +38,16 @@ export function DevToolbar() {
     () => (getStorage("locale") as Locale) ?? "ko",
   );
   const [queryDevtools, setQueryDevtools] = useState(false);
+
+  const utils = trpc.useUtils();
+  const presetQuery = trpc.dev.getModelPreset.useQuery(undefined, {
+    retry: false,
+  });
+  const presetMutation = trpc.dev.setModelPreset.useMutation({
+    onSuccess: (preset) => {
+      utils.dev.getModelPreset.setData(undefined, preset);
+    },
+  });
 
   function handleLocaleChange(next: Locale) {
     setLocale(next);
@@ -102,6 +114,25 @@ export function DevToolbar() {
                 ))}
               </div>
             </div>
+
+            {presetQuery.data && (
+              <div className="flex flex-col gap-1.5">
+                <span className="font-semibold text-fg-tertiary">LLM</span>
+                <div className="flex items-center gap-1">
+                  {LLM_PRESETS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      disabled={presetMutation.isPending}
+                      onClick={() => presetMutation.mutate({ preset: p })}
+                      className={toggleClass(presetQuery.data === p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <span className="font-semibold text-fg-tertiary">Query</span>
