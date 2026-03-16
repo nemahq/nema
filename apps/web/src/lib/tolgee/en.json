@@ -4,6 +4,7 @@
   },
   "common": {
     "send": "Send",
+    "stop": "Stop",
     "cancel": "Cancel",
     "home": "Home",
     "close": "Close",
