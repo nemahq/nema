@@ -1,6 +1,7 @@
 import type { ChatStreamEvent, Locale } from "@nema-io/shared";
 
 import { t } from "@server/infra/i18n";
+import { getLlmModels } from "@server/infra/llm/models";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
@@ -104,6 +105,7 @@ export async function* handleRetrievalStream(args: {
         content: buildRetrievalMessage(question, searchResults),
       },
     ],
+    model: getLlmModels().standard,
     signal,
   })) {
     fullText += chunk;

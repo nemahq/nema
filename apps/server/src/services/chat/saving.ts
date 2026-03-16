@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { getLlmModels } from "@server/infra/llm/models";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
@@ -85,6 +86,7 @@ export async function handleSave(args: {
     schemaName: "split",
     systemPrompt: SPLIT_SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildSplitMessage(draftBody) }],
+    model: getLlmModels().mini,
   });
 
   const existingTags = await getExistingTags(supabase, userId);
@@ -146,6 +148,7 @@ async function saveDocument(args: {
     messages: [
       { role: "user", content: buildJudgmentMessage(body, similarDocs) },
     ],
+    model: getLlmModels().standard,
   });
 
   if (judgment.action === "update") {
@@ -161,6 +164,7 @@ async function saveDocument(args: {
       messages: [
         { role: "user", content: buildSplitMessage(judgment.final_body) },
       ],
+      model: getLlmModels().mini,
     });
 
     if (reSplitResult.documents.length > 1) {
@@ -217,6 +221,7 @@ async function persistDocument(args: {
     schemaName: "meta",
     systemPrompt: META_SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildMetaMessage(body, existingTags) }],
+    model: getLlmModels().mini,
   });
 
   let docId: string;

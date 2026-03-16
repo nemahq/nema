@@ -21,7 +21,7 @@ export type OpenAiProviderConfig =
   | { apiKey: string; model?: string; timeout?: number }
   | { client: OpenAI; model?: string };
 
-const DEFAULT_MODEL = "gpt-4o";
+const DEFAULT_MODEL = "gpt-5";
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 export class OpenAiProvider implements LlmProvider {

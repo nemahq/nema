@@ -83,7 +83,7 @@ describe("OpenAiProvider", () => {
       });
 
       const callArgs = parseFn.mock.calls[0]?.[0];
-      expect(callArgs.model).toBe("gpt-4o");
+      expect(callArgs.model).toBe("gpt-5");
       expect(callArgs.temperature).toBe(0.5);
       expect(callArgs.messages).toEqual([
         { role: "system", content: "System prompt." },

@@ -15,6 +15,7 @@ import {
   STATUS_LOG_TYPES,
 } from "@nema-io/shared";
 
+import { getLlmModels } from "@server/infra/llm/models";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
@@ -152,6 +153,7 @@ export async function* processChatStream(args: {
       messages: [
         { role: "user", content: buildIntentRouterMessage(input.content) },
       ],
+      model: getLlmModels().mini,
     });
 
     trackEvent(supabase, userId, "intent.classified", input.sessionId, {
@@ -189,6 +191,7 @@ export async function* processChatStream(args: {
       messages: [
         { role: "user", content: buildIntentRouterMessage(input.content) },
       ],
+      model: getLlmModels().mini,
     });
 
     trackEvent(supabase, userId, "intent.classified", input.sessionId, {

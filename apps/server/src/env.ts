@@ -23,6 +23,10 @@ const envSchema = z
     NEO4J_USERNAME: z.string().min(1),
     NEO4J_PASSWORD: z.string().min(1),
 
+    LLM_MODEL_STANDARD: z.string().min(1).optional(),
+    LLM_MODEL_MINI: z.string().min(1).optional(),
+    LLM_MODEL_NANO: z.string().min(1).optional(),
+
     POSTHOG_API_KEY: z.string().min(1).optional(),
     POSTHOG_HOST: z.string().url().optional(),
   })
