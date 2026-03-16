@@ -15,7 +15,11 @@ export interface ContentPanelTab {
   onClose?: () => void;
 }
 
-export function ContentPanel({ tabs }: { tabs: ContentPanelTab[] }) {
+interface ContentPanelProps {
+  tabs: ContentPanelTab[];
+}
+
+export function ContentPanel({ tabs }: ContentPanelProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
 

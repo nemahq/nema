@@ -5,7 +5,11 @@ const DEFAULT_WIDTH = 480;
 const MIN_WIDTH = 280;
 const MAX_WIDTH_RATIO = 0.5;
 
-export function SidePanel({ children }: { children: ReactNode }) {
+interface SidePanelProps {
+  children: ReactNode;
+}
+
+export function SidePanel({ children }: SidePanelProps) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);

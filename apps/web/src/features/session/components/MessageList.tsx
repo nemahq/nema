@@ -15,7 +15,11 @@ import { MessageListSkeleton } from "./MessageListSkeleton";
 import { StatusMessage } from "./StatusMessage";
 import { UserMessage } from "./UserMessage";
 
-function MessageListContent({ footer }: { footer?: ReactNode }) {
+interface MessageListProps {
+  footer?: ReactNode;
+}
+
+function MessageListContent({ footer }: MessageListProps) {
   const { t } = useTranslation();
   const sessionId = useSessionId();
   const { streamingMessage } = useChatStream();
@@ -80,7 +84,7 @@ function MessageListContent({ footer }: { footer?: ReactNode }) {
   );
 }
 
-export function MessageList({ footer }: { footer?: ReactNode }) {
+export function MessageList({ footer }: MessageListProps) {
   return (
     <Suspense fallback={<MessageListSkeleton />}>
       <MessageListContent footer={footer} />
