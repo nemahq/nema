@@ -14,7 +14,7 @@ export function SidePanel({ children }: SidePanelProps) {
   const dragging = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  useEffect(() => {
+  useEffect(function cleanupOnUnmount() {
     return () => cleanupRef.current?.();
   }, []);
 
