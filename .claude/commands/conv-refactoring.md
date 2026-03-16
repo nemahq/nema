@@ -56,14 +56,11 @@ For each checklist item:
 3. If a violation is found → **fix it immediately**, then record what was fixed.
 4. Mark the checklist item as done before moving to the next section.
 
-## Step 5b — Architecture check (web `.tsx` only)
+## Step 5b — Architecture check
 
-For each component in the diff that receives data props (exclude callbacks, `children`, render props):
-1. Read the parent file where the component is used.
-2. If the parent fetches data via a hook and passes it as a prop to this component:
-   - Check whether the child could call the same hook directly (same Provider scope).
-   - If yes → violation: the child should own the hook call, not receive the data as a prop.
-3. Fix by moving the hook call into the child and removing the prop.
+If the loaded conventions include an Architecture section, verify layer boundaries and data ownership rules against the diff:
+- **web**: Check that components own their data via hooks rather than receiving it as props from parents. For each data prop, trace the parent usage — if the parent fetches via a hook and the child could call the same hook directly, the child should own the call.
+- **server**: Check that routers stay thin (validation + service call only), services call infra directly (routers do not fetch and pass data into services), and infra is not bypassed with raw SDK calls.
 
 ## Step 6 — Report
 
