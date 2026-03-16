@@ -7,6 +7,7 @@ vi.mock("@sentry/node", () => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
 }));
+
 import type { GraphStore } from "@server/infra/graph";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { VectorStore } from "@server/infra/vector";

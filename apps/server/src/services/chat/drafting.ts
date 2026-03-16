@@ -24,7 +24,7 @@ export async function* handleDraftingStream(args: {
 
   let fullText = "";
 
-  for await (const chunk of providers.llm.generateStream({
+  for await (const chunk of providers.llm.standard.generateStream({
     systemPrompt: DRAFTING_SYSTEM_PROMPT,
     messages: [{ role: "user", content: message }],
     signal,

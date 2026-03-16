@@ -36,7 +36,7 @@ export async function* handleRetrievalStream(args: {
     lng,
     signal,
   } = args;
-  const { llm, embedding, vectorStore, graphStore } = providers;
+  const { embedding, vectorStore, graphStore } = providers;
 
   let vectorResults: Awaited<ReturnType<typeof vectorStore.search>> = [];
   if (intent.queries) {
@@ -96,7 +96,7 @@ export async function* handleRetrievalStream(args: {
 
   let fullText = "";
 
-  for await (const chunk of llm.generateStream({
+  for await (const chunk of providers.llm.standard.generateStream({
     systemPrompt: RETRIEVAL_SYSTEM_PROMPT,
     messages: [
       {

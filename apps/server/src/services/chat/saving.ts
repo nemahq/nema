@@ -78,9 +78,8 @@ export async function handleSave(args: {
   draftBody: string;
 }): Promise<void> {
   const { supabase, providers, userId, sessionId, draftBody } = args;
-  const { llm } = providers;
 
-  const splitResult = await llm.generateStructured({
+  const splitResult = await providers.llm.mini.generateStructured({
     schema: SplitOutputSchema,
     schemaName: "split",
     systemPrompt: SPLIT_SYSTEM_PROMPT,
@@ -113,7 +112,7 @@ async function saveDocument(args: {
 }): Promise<Array<{ id: string; title: string }>> {
   const { ctx, sessionId, body, existingTags } = args;
   const { supabase, providers } = ctx;
-  const { llm, embedding, vectorStore } = providers;
+  const { embedding, vectorStore } = providers;
 
   const searchResults = await vectorStore.search(embedding, {
     userId: ctx.userId,
@@ -139,7 +138,7 @@ async function saveDocument(args: {
     }));
   }
 
-  const judgment = await llm.generateStructured({
+  const judgment = await providers.llm.standard.generateStructured({
     schema: JudgmentOutputSchema,
     schemaName: "judgment",
     systemPrompt: JUDGMENT_SYSTEM_PROMPT,
@@ -154,7 +153,7 @@ async function saveDocument(args: {
     }
     const targetId = judgment.target_id;
 
-    const reSplitResult = await llm.generateStructured({
+    const reSplitResult = await providers.llm.mini.generateStructured({
       schema: SplitOutputSchema,
       schemaName: "split",
       systemPrompt: SPLIT_SYSTEM_PROMPT,
@@ -210,9 +209,8 @@ async function persistDocument(args: {
 }): Promise<{ id: string; title: string }> {
   const { ctx, sessionId, persistAction, body, existingTags } = args;
   const { supabase } = ctx;
-  const { llm } = ctx.providers;
 
-  const meta = await llm.generateStructured({
+  const meta = await ctx.providers.llm.mini.generateStructured({
     schema: MetaOutputSchema,
     schemaName: "meta",
     systemPrompt: META_SYSTEM_PROMPT,

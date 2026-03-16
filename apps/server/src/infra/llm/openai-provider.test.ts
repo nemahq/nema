@@ -30,21 +30,23 @@ function createMockClient() {
 function mockParse(response: unknown) {
   const { client, parseFn } = createMockClient();
   parseFn.mockResolvedValue(response);
-  const provider = new OpenAiProvider({ client });
+  const provider = new OpenAiProvider({ client, model: "gpt-5" });
   return { provider, parseFn };
 }
 
 function mockParseRejection(error: Error) {
   const { client, parseFn } = createMockClient();
   parseFn.mockRejectedValue(error);
-  const provider = new OpenAiProvider({ client });
+  const provider = new OpenAiProvider({ client, model: "gpt-5" });
   return { provider, parseFn };
 }
 
 describe("OpenAiProvider", () => {
   describe("constructor", () => {
     it("throws LlmError when apiKey is empty", () => {
-      expect(() => new OpenAiProvider({ apiKey: "" })).toThrow(LlmError);
+      expect(() => new OpenAiProvider({ apiKey: "", model: "gpt-5" })).toThrow(
+        LlmError,
+      );
     });
   });
 
@@ -83,7 +85,7 @@ describe("OpenAiProvider", () => {
       });
 
       const callArgs = parseFn.mock.calls[0]?.[0];
-      expect(callArgs.model).toBe("gpt-4o");
+      expect(callArgs.model).toBe("gpt-5");
       expect(callArgs.temperature).toBe(0.5);
       expect(callArgs.messages).toEqual([
         { role: "system", content: "System prompt." },
@@ -95,23 +97,6 @@ describe("OpenAiProvider", () => {
         type: "json_schema",
         json_schema: { name: "test_schema" },
       });
-    });
-
-    it("uses custom model when provided in params", async () => {
-      const { provider, parseFn } = mockParse({
-        choices: [{ message: { parsed: { answer: "ok" } } }],
-      });
-
-      await provider.generateStructured({
-        schema: TestSchema,
-        schemaName: "test",
-        systemPrompt: "sys",
-        messages: [{ role: "user", content: "q" }],
-        model: "gpt-4o-mini",
-      });
-
-      const callArgs = parseFn.mock.calls[0]?.[0];
-      expect(callArgs.model).toBe("gpt-4o-mini");
     });
 
     it("throws when choices array is empty", async () => {

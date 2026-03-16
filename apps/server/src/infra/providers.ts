@@ -3,13 +3,13 @@ import type { EmbeddingProvider } from "@server/infra/embedding";
 import { createVoyageProvider } from "@server/infra/embedding";
 import type { GraphStore } from "@server/infra/graph";
 import { createNeo4jStore } from "@server/infra/graph";
-import type { LlmProvider } from "@server/infra/llm/llm-provider";
-import { OpenAiProvider } from "@server/infra/llm/openai-provider";
+import type { TieredLlm } from "@server/infra/llm/models";
+import { createTieredLlm } from "@server/infra/llm/models";
 import type { VectorStore } from "@server/infra/vector";
 import { createQdrantStore } from "@server/infra/vector";
 
 export interface Providers {
-  llm: LlmProvider;
+  llm: TieredLlm;
   embedding: EmbeddingProvider;
   vectorStore: VectorStore;
   graphStore: GraphStore;
@@ -35,7 +35,12 @@ export function getProviders(): Providers {
   }
 
   cached = {
-    llm: new OpenAiProvider({ apiKey: env.OPENAI_API_KEY }),
+    llm: createTieredLlm({
+      apiKey: env.OPENAI_API_KEY,
+      modelStandard: env.LLM_MODEL_STANDARD,
+      modelMini: env.LLM_MODEL_MINI,
+      modelNano: env.LLM_MODEL_NANO,
+    }),
     embedding: createVoyageProvider({ apiKey: env.VOYAGE_API_KEY }),
     vectorStore: createQdrantStore(),
     graphStore: createNeo4jStore(),
