@@ -8,7 +8,7 @@ import { AssistantMessage } from "./AssistantMessage";
 import { StatusMessage } from "./StatusMessage";
 import { UserMessage } from "./UserMessage";
 
-export function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
+function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
   const turns: DisplayMessage[][] = [];
   let currentTurn: DisplayMessage[] = [];
 

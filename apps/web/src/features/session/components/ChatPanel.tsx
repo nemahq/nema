@@ -1,10 +1,11 @@
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
 import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeState";
 import { getRouteState } from "@web/app/utils/routeState";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useScrollAnchor } from "@web/features/session/hooks/useScrollAnchor";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 
 import { ChatComposer } from "./ChatComposer";
@@ -15,27 +16,25 @@ import { SidePanel } from "./SidePanel";
 function ChatPanelContent() {
   const messages = useSessionMessages();
   const { scrollRef, scrollToLastUserMessage } = useScrollAnchor({ messages });
-  const initialScrollDoneRef = useRef(false);
 
-  useEffect(
-    function syncPanelHeight() {
+  useLayoutEffect(
+    function syncPanelHeightAndInitialScroll() {
       const el = scrollRef.current;
       if (!el) {
         return;
       }
+
+      el.style.setProperty("--panel-height", `${el.clientHeight}px`);
+      // minHeight: var(--panel-height)가 적용되도록 레이아웃 강제 재계산
+      void el.offsetHeight;
+      scrollToLastUserMessage("instant");
+
       const observer = new ResizeObserver((entries) => {
         const entry = entries[0];
         if (!entry) {
           return;
         }
         el.style.setProperty("--panel-height", `${entry.contentRect.height}px`);
-        if (!initialScrollDoneRef.current) {
-          initialScrollDoneRef.current = true;
-          // double-rAF: 첫 프레임에서 layout 반영, 두 번째 프레임에서 스크롤 실행
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => scrollToLastUserMessage("instant"));
-          });
-        }
       });
       observer.observe(el);
       return function cleanup() {
@@ -66,6 +65,7 @@ function ChatPanelContent() {
 }
 
 export function ChatPanel() {
+  const sessionId = useSessionId();
   const navigate = useNavigate();
   const initialMessage = useLocation({
     select: (loc) =>
@@ -88,7 +88,7 @@ export function ChatPanel() {
 
   return (
     <SidePanel>
-      <Suspense fallback={<MessageListSkeleton />}>
+      <Suspense key={sessionId} fallback={<MessageListSkeleton />}>
         <ChatPanelContent />
       </Suspense>
     </SidePanel>
