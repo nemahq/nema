@@ -80,7 +80,7 @@ function ChatPanelContent() {
       >
         <div className="flex min-h-full flex-col">
           <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-6">
-            <MessageList messages={messages} />
+            <MessageList />
           </div>
 
           <div className="sticky bottom-0 bg-surface-base">

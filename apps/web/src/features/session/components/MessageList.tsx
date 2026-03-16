@@ -1,14 +1,23 @@
-import type { DisplayMessage } from "@web/features/session/contexts/ChatStreamContext";
+import { Suspense, useMemo } from "react";
+
+import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useMessageList } from "@web/features/session/hooks/useMessageList";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
 
 import { AssistantMessage } from "./AssistantMessage";
 import { StatusMessage } from "./StatusMessage";
 import { UserMessage } from "./UserMessage";
 
-interface MessageListProps {
-  messages: DisplayMessage[];
-}
+function MessageListContent() {
+  const sessionId = useSessionId();
+  const { streamingMessage } = useChatStream();
+  const serverMessages = useMessageList({ sessionId });
+  const messages = useMemo(
+    () =>
+      streamingMessage ? [...serverMessages, streamingMessage] : serverMessages,
+    [serverMessages, streamingMessage],
+  );
 
-export function MessageList({ messages }: MessageListProps) {
   return (
     <>
       {messages.map((msg) => {
@@ -30,5 +39,13 @@ export function MessageList({ messages }: MessageListProps) {
         );
       })}
     </>
+  );
+}
+
+export function MessageList() {
+  return (
+    <Suspense>
+      <MessageListContent />
+    </Suspense>
   );
 }
