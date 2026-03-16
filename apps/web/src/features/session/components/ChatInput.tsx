@@ -5,6 +5,11 @@ import { ArrowUp, Square } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
+const MAX_TEXTAREA_HEIGHT_PX = 200;
+
+const ACTION_BUTTON_BASE =
+  "self-end rounded-full transition-all duration-normal";
+
 interface ChatInputProps {
   onSubmit: (content: string) => void;
   onStop?: () => void;
@@ -28,18 +33,17 @@ export function ChatInput({
       return;
     }
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
   }
 
   const isStreaming = !!onStop;
   const hasContent = !!value.trim();
 
   function handleSubmit() {
-    const trimmed = value.trim();
-    if (!trimmed || submitDisabled || isStreaming) {
+    if (!hasContent || submitDisabled || isStreaming) {
       return;
     }
-    onSubmit(trimmed);
+    onSubmit(value.trim());
     setValue("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -74,7 +78,7 @@ export function ChatInput({
           onClick={onStop}
           aria-label={t("common.stop")}
           className={cn(
-            "self-end rounded-full transition-all duration-normal",
+            ACTION_BUTTON_BASE,
             "bg-fg-secondary text-surface-card border-transparent hover:opacity-80",
             "dark:bg-fg-primary dark:text-surface-base",
           )}
@@ -89,7 +93,7 @@ export function ChatInput({
           onClick={handleSubmit}
           aria-label={t("common.send")}
           className={cn(
-            "self-end rounded-full transition-all duration-normal",
+            ACTION_BUTTON_BASE,
             "disabled:scale-90 disabled:bg-surface-raised-hover disabled:text-fg-tertiary disabled:border-transparent disabled:opacity-100",
             "dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-tertiary",
             "enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80",

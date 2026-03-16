@@ -59,6 +59,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
   const isSessionCreating =
     useIsMutating({ mutationKey: getQueryKey(trpc.session.create) }) > 0;
 
+  const isSettlingRef = useRef(false);
   const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
   const [streamingPhase, setStreamingPhase] = useState<StreamingPhase>("idle");
   const streamingPhaseRef = useRef<StreamingPhase>("idle");
@@ -80,6 +81,11 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
 
   const settleStream = useCallback(
     function settleStream() {
+      if (isSettlingRef.current) {
+        return;
+      }
+      isSettlingRef.current = true;
+
       Promise.all([
         utils.message.list.invalidate({ sessionId }),
         utils.session.get.invalidate({ sessionId }),
@@ -89,6 +95,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
         })
         .finally(() => {
           resetStreamState();
+          isSettlingRef.current = false;
         });
     },
     [sessionId, utils],
