@@ -28,6 +28,7 @@
   - `TabbedPanel` (generic tab UI) ← `ContentPanel` (session content domain wrapper)
 - The wrapper owns hooks, context access, and derived state. The generic component receives only props.
 - Parent components MUST only compose and lay out children — they MUST NOT fetch data or compute state on a child's behalf.
+- Single responsibility check: if a component's hooks/state variables form 2+ independent groups (no shared variables, excluding shared utilities like `useTranslation`), extract each group into its own component.
 
 ## Hooks
 

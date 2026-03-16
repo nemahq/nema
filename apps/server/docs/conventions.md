@@ -17,6 +17,7 @@
 - Routers are thin: input validation + service call only. MUST NOT contain business logic, orchestration, or direct infra calls.
 - Services own orchestration. Each service method calls infra clients directly — routers MUST NOT fetch data and pass it into services.
 - Infra clients isolate external dependencies. Services MUST NOT construct HTTP requests, raw queries, or SDK calls directly — always go through infra.
+- Single responsibility check: if a function's variables/calls form 2+ independent groups (no shared variables), extract each group into its own function or module.
 
 ## Functions
 
