@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { loadEnv } from "@server/env";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
+import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
 import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
   buildEditCycleMessage,
@@ -51,7 +52,10 @@ async function main() {
     process.exit(1);
   }
 
-  const provider = new OpenAiProvider({ apiKey, model: "gpt-5" });
+  const provider = new OpenAiProvider({
+    apiKey,
+    model: DEFAULT_STANDARD_MODEL,
+  });
   const results: EvalResult[] = [];
 
   // 일반 시드
@@ -138,7 +142,7 @@ async function main() {
 
   const report = {
     runAt: new Date().toISOString(),
-    model: "gpt-4o",
+    model: DEFAULT_STANDARD_MODEL,
     temperature: 0,
     totalSeeds: results.length,
     errors: results.filter((r) => r.error).length,

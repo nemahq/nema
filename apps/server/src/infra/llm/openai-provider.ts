@@ -21,7 +21,7 @@ export type OpenAiProviderConfig =
   | { apiKey: string; model: string; timeout?: number }
   | { client: OpenAI; model: string };
 
-const DEFAULT_TIMEOUT_MS = 30_000;
+export const DEFAULT_TIMEOUT_MS = 30_000;
 
 export class OpenAiProvider implements LlmProvider {
   private readonly client: OpenAI;
@@ -43,11 +43,9 @@ export class OpenAiProvider implements LlmProvider {
   }
 
   async *generateStream(params: GenerateStreamParams): AsyncIterable<string> {
-    const model = params.model ?? this.model;
-
     try {
       const stream = await this.client.chat.completions.create({
-        model,
+        model: this.model,
         temperature: params.temperature,
         stream: true,
         messages: [
@@ -75,11 +73,9 @@ export class OpenAiProvider implements LlmProvider {
   }
 
   async generateStructured<T>(params: GenerateStructuredParams<T>): Promise<T> {
-    const model = params.model ?? this.model;
-
     try {
       const completion = await this.client.chat.completions.parse({
-        model,
+        model: this.model,
         temperature: params.temperature,
         messages: [
           { role: "system" as const, content: params.systemPrompt },
@@ -129,11 +125,9 @@ export class OpenAiProvider implements LlmProvider {
   }
 
   async generateText(params: GenerateTextParams): Promise<string> {
-    const model = params.model ?? this.model;
-
     try {
       const completion = await this.client.chat.completions.create({
-        model,
+        model: this.model,
         temperature: params.temperature,
         messages: [
           { role: "system" as const, content: params.systemPrompt },

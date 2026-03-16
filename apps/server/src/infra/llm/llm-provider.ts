@@ -9,7 +9,6 @@ export interface LlmMessage {
 export interface LlmCallParams {
   systemPrompt: string;
   messages: [LlmMessage, ...LlmMessage[]];
-  model?: string;
   temperature?: number;
   signal?: AbortSignal;
 }

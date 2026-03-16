@@ -35,7 +35,12 @@ export function getProviders(): Providers {
   }
 
   cached = {
-    llm: createTieredLlm(env.OPENAI_API_KEY),
+    llm: createTieredLlm({
+      apiKey: env.OPENAI_API_KEY,
+      modelStandard: env.LLM_MODEL_STANDARD,
+      modelMini: env.LLM_MODEL_MINI,
+      modelNano: env.LLM_MODEL_NANO,
+    }),
     embedding: createVoyageProvider({ apiKey: env.VOYAGE_API_KEY }),
     vectorStore: createQdrantStore(),
     graphStore: createNeo4jStore(),

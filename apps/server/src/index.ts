@@ -55,11 +55,11 @@ async function bootstrap() {
     const { createVoyageProvider } = await import("./infra/embedding");
     const { createNeo4jStore } = await import("./infra/graph");
 
-    const { createTieredLlm } = await import("./infra/llm/models");
+    const { getProviders } = await import("./infra/providers");
 
     const worker = createSyncWorker({
       supabase: getSupabaseAdmin(),
-      llm: createTieredLlm(env.OPENAI_API_KEY).mini,
+      llm: getProviders().llm.mini,
       embedding: createVoyageProvider({
         apiKey: env.VOYAGE_API_KEY,
       }),

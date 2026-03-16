@@ -99,23 +99,6 @@ describe("OpenAiProvider", () => {
       });
     });
 
-    it("uses custom model when provided in params", async () => {
-      const { provider, parseFn } = mockParse({
-        choices: [{ message: { parsed: { answer: "ok" } } }],
-      });
-
-      await provider.generateStructured({
-        schema: TestSchema,
-        schemaName: "test",
-        systemPrompt: "sys",
-        messages: [{ role: "user", content: "q" }],
-        model: "gpt-4o-mini",
-      });
-
-      const callArgs = parseFn.mock.calls[0]?.[0];
-      expect(callArgs.model).toBe("gpt-4o-mini");
-    });
-
     it("throws when choices array is empty", async () => {
       const { provider } = mockParse({ choices: [] });
 
