@@ -6,11 +6,23 @@ import {
   useRef,
 } from "react";
 
-import type { RegisteredAction } from "./types";
+import type { TranslationKey } from "@web/lib/tolgee";
+
+import type { ActionId } from "./actionMap";
+import type { ActionScope } from "./types";
+
+interface RegisteredAction {
+  id: ActionId;
+  category: string;
+  labelKey: TranslationKey;
+  shortcut: string;
+  scope: ActionScope;
+  execute: () => void;
+}
 
 interface ActionRegistryContextValue {
   register: (action: RegisteredAction) => void;
-  unregister: (id: string) => void;
+  unregister: (id: ActionId) => void;
   getAll: () => RegisteredAction[];
 }
 
@@ -19,13 +31,13 @@ const ActionRegistryContext = createContext<ActionRegistryContextValue | null>(
 );
 
 export function ActionRegistryProvider({ children }: { children: ReactNode }) {
-  const actionsRef = useRef(new Map<string, RegisteredAction>());
+  const actionsRef = useRef(new Map<ActionId, RegisteredAction>());
 
   const register = useCallback((action: RegisteredAction) => {
     actionsRef.current.set(action.id, action);
   }, []);
 
-  const unregister = useCallback((id: string) => {
+  const unregister = useCallback((id: ActionId) => {
     actionsRef.current.delete(id);
   }, []);
 

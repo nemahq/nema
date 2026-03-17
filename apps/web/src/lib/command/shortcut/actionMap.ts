@@ -1,7 +1,9 @@
+import type { TranslationKey } from "@web/lib/tolgee";
+
 import type { ActionDef, ActionScope } from "./types";
 
 function def(
-  labelKey: string,
+  labelKey: TranslationKey,
   shortcut: string,
   scope: ActionScope,
 ): ActionDef {

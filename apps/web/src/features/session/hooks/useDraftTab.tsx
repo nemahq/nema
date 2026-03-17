@@ -1,10 +1,10 @@
 import { FileText } from "@nema-io/weave/icons";
 
+import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { DraftTabContent } from "@web/features/session/components/DraftTabContent";
-import type { TabbedPanelTab } from "@web/features/session/components/TabbedPanel";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
-import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 
+import { useCancelDraft } from "./useCancelDraft";
 import { useSessionDraft } from "./useSessionDraft";
 import { useSessionId } from "./useSessionId";
 

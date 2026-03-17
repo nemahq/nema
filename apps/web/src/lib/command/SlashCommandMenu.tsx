@@ -2,7 +2,7 @@ import { cn } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 
-import type { SlashCommand } from "./ChatInput";
+import type { SlashCommand } from "./types";
 
 interface SlashCommandMenuProps {
   commands: SlashCommand[];
@@ -35,9 +35,7 @@ export function SlashCommandMenu({
           }}
         >
           <span className="font-medium text-fg-primary">/{cmd.name}</span>
-          <span className="text-fg-tertiary">
-            {t(cmd.descriptionKey as Parameters<typeof t>[0])}
-          </span>
+          <span className="text-fg-tertiary">{t(cmd.descriptionKey)}</span>
         </button>
       ))}
     </div>

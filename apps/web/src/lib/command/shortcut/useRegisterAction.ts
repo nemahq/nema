@@ -18,6 +18,8 @@ function resolveShortcut(shortcut: string): string {
   return `${withMeta}, ${withCtrl}`;
 }
 
+const MODIFIER_KEYS = ["mod", "ctrl", "meta", "shift", "alt"];
+
 export function useRegisterAction(
   id: ActionId,
   { execute, enabled = true }: UseRegisterActionOptions,
@@ -26,46 +28,30 @@ export function useRegisterAction(
   const def = getActionDef(id);
 
   const executeRef = useRef(execute);
-  useEffect(function syncExecuteRef() {
+  useEffect(() => {
     executeRef.current = execute;
   });
 
-  useEffect(
-    function syncRegistry() {
-      if (!enabled) {
-        unregister(id);
-        return;
-      }
+  useEffect(() => {
+    if (!enabled) {
+      unregister(id);
+      return;
+    }
 
-      register({
-        id,
-        category: def.category,
-        labelKey: def.labelKey,
-        shortcut: def.shortcut,
-        scope: def.scope,
-        execute: () => executeRef.current(),
-      });
-
-      return () => unregister(id);
-    },
-    [
+    register({
       id,
-      enabled,
-      def.category,
-      def.labelKey,
-      def.shortcut,
-      def.scope,
-      register,
-      unregister,
-    ],
-  );
+      category: def.category,
+      labelKey: def.labelKey,
+      shortcut: def.shortcut,
+      scope: def.scope,
+      execute: () => executeRef.current(),
+    });
 
-  const hasModifier =
-    def.shortcut.includes("mod") ||
-    def.shortcut.includes("ctrl") ||
-    def.shortcut.includes("meta") ||
-    def.shortcut.includes("shift") ||
-    def.shortcut.includes("alt");
+    return () => unregister(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- def.* fields are derived purely from id via static actionMap
+  }, [id, enabled, register, unregister]);
+
+  const hasModifier = MODIFIER_KEYS.some((key) => def.shortcut.includes(key));
 
   useHotkeys(
     resolveShortcut(def.shortcut),

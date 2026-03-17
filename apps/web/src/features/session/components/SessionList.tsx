@@ -5,8 +5,8 @@ import { Skeleton } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useSessionList } from "@web/features/session/hooks/useSessionList";
-import { useRegisterAction } from "@web/hooks/shortcut/useRegisterAction";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
+import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SessionItem } from "./SessionItem";

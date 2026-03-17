@@ -1,9 +1,9 @@
 import { Kbd } from "@nema-io/weave";
 
-import { getAllActionDefs } from "@web/hooks/shortcut/actionMap";
+import { getAllActionDefs } from "@web/lib/command/shortcut/actionMap";
 import { useTranslation } from "@web/lib/tolgee";
 
-const IS_MAC = navigator.platform.toUpperCase().includes("MAC");
+const IS_MAC = navigator.userAgent.includes("Mac");
 
 function formatKey(raw: string): string {
   return raw
@@ -15,7 +15,11 @@ function formatKey(raw: string): string {
     .replace(/\bescape\b/gi, "Esc");
 }
 
-function ShortcutKeys({ shortcut }: { shortcut: string }) {
+interface ShortcutKeysProps {
+  shortcut: string;
+}
+
+function ShortcutKeys({ shortcut }: ShortcutKeysProps) {
   const keys = formatKey(shortcut).split("+");
   return (
     <span className="flex gap-1">
@@ -26,24 +30,22 @@ function ShortcutKeys({ shortcut }: { shortcut: string }) {
   );
 }
 
+const GROUPED_ACTIONS = getAllActionDefs().reduce<
+  Record<string, ReturnType<typeof getAllActionDefs>>
+>((acc, action) => {
+  if (!acc[action.category]) {
+    acc[action.category] = [];
+  }
+  acc[action.category].push(action);
+  return acc;
+}, {});
+
 export function HelpTabContent() {
   const { t } = useTranslation();
-  const actions = getAllActionDefs();
-
-  const grouped = actions.reduce<Record<string, (typeof actions)[number][]>>(
-    (acc, action) => {
-      if (!acc[action.category]) {
-        acc[action.category] = [];
-      }
-      acc[action.category].push(action);
-      return acc;
-    },
-    {},
-  );
 
   return (
     <div className="max-w-sm space-y-6">
-      {Object.entries(grouped).map(([category, categoryActions]) => (
+      {Object.entries(GROUPED_ACTIONS).map(([category, categoryActions]) => (
         <div key={category}>
           <h3 className="mb-3 text-xs font-medium tracking-wider text-fg-tertiary">
             {t(`shortcut.category_${category}` as Parameters<typeof t>[0])}
@@ -55,7 +57,7 @@ export function HelpTabContent() {
                 className="flex items-center justify-between rounded px-2 py-1.5"
               >
                 <span className="text-sm text-fg-primary">
-                  {t(action.labelKey as Parameters<typeof t>[0])}
+                  {t(action.labelKey)}
                 </span>
                 <ShortcutKeys shortcut={action.shortcut} />
               </div>

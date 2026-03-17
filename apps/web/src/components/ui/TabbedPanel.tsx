@@ -1,11 +1,8 @@
 import type { ComponentType, ReactNode } from "react";
-import { useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
 
 import { cn } from "@nema-io/weave";
 import { X } from "@nema-io/weave/icons";
 
-import { useRegisterAction } from "@web/hooks/shortcut/useRegisterAction";
 import type { TranslationKey } from "@web/lib/tolgee";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -19,72 +16,19 @@ export interface TabbedPanelTab {
 
 interface TabbedPanelProps {
   tabs: TabbedPanelTab[];
+  activeTabId: string;
+  onActiveTabChange: (tabId: string) => void;
 }
 
-const MAX_TAB_SHORTCUT = 9;
-
-const TAB_HOTKEYS = Array.from(
-  { length: MAX_TAB_SHORTCUT },
-  (_, i) => `meta+${i + 1}, ctrl+${i + 1}`,
-).join(", ");
-
-export function TabbedPanel({ tabs }: TabbedPanelProps) {
+export function TabbedPanel({
+  tabs,
+  activeTabId,
+  onActiveTabChange,
+}: TabbedPanelProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
-  const [tabOrder, setTabOrder] = useState<string[]>(() =>
-    tabs.map((tab) => tab.id),
-  );
-  const [prevTabIds, setPrevTabIds] = useState(
-    () => new Set(tabs.map((tab) => tab.id)),
-  );
 
-  const currentIds = tabs.map((tab) => tab.id);
-  const tabsChanged =
-    currentIds.length !== prevTabIds.size ||
-    currentIds.some((id) => !prevTabIds.has(id));
-
-  if (tabsChanged) {
-    setPrevTabIds(new Set(currentIds));
-    const newIds = currentIds.filter((id) => !prevTabIds.has(id));
-    const kept = tabOrder.filter((id) => currentIds.includes(id));
-    setTabOrder([...kept, ...newIds]);
-    if (newIds.length > 0) {
-      setActiveTab(newIds[newIds.length - 1]);
-    }
-  }
-
-  const orderedTabs = tabOrder
-    .map((id) => tabs.find((tab) => tab.id === id))
-    .filter((tab): tab is TabbedPanelTab => tab !== undefined);
-
-  const activeTabData =
-    orderedTabs.find((tab) => tab.id === activeTab) ?? orderedTabs[0];
+  const activeTabData = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
   const resolvedTab = activeTabData?.id ?? "";
-
-  useHotkeys(
-    TAB_HOTKEYS,
-    (e) => {
-      e.preventDefault();
-      const num = parseInt(e.key, 10);
-      const tab = orderedTabs[num - 1];
-      if (tab) {
-        setActiveTab(tab.id);
-      }
-    },
-    {
-      enabled: orderedTabs.length > 1,
-      enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"],
-    },
-  );
-
-  useRegisterAction("tab.close", {
-    execute: () => activeTabData?.onClose?.(),
-    enabled: !!activeTabData?.onClose,
-  });
-
-  function handleTabClick(tabId: string) {
-    setActiveTab(tabId);
-  }
 
   function handleTabClose(e: React.MouseEvent, tab: TabbedPanelTab) {
     e.stopPropagation();
@@ -93,13 +37,13 @@ export function TabbedPanel({ tabs }: TabbedPanelProps) {
 
   return (
     <main className="flex flex-1 flex-col bg-surface-card min-w-0">
-      {orderedTabs.length > 0 ? (
+      {tabs.length > 0 ? (
         <>
           <div
             role="tablist"
             className="relative flex items-end border-b border-border/50"
           >
-            {orderedTabs.map((tab, i) => {
+            {tabs.map((tab, i) => {
               const isActive = resolvedTab === tab.id;
               const isFirst = i === 0;
 
@@ -121,7 +65,7 @@ export function TabbedPanel({ tabs }: TabbedPanelProps) {
                     role="tab"
                     aria-selected={isActive}
                     aria-controls={`panel-${tab.id}`}
-                    onClick={() => handleTabClick(tab.id)}
+                    onClick={() => onActiveTabChange(tab.id)}
                     className={cn(
                       "flex items-center gap-1 py-2 pl-3",
                       tab.onClose ? "pr-1" : "pr-3",
@@ -153,10 +97,10 @@ export function TabbedPanel({ tabs }: TabbedPanelProps) {
 
           <div
             role="tabpanel"
-            id={`panel-${activeTabData.id}`}
+            id={`panel-${resolvedTab}`}
             className="flex-1 overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
           >
-            {activeTabData.content}
+            {activeTabData?.content}
           </div>
         </>
       ) : (

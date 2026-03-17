@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeState";
-import { ChatInput } from "@web/features/session/components/ChatInput";
+import { ChatInput } from "@web/components/ui/ChatInput";
 import { Greeting } from "@web/features/session/components/Greeting";
 import { useCreateSession } from "@web/features/session/hooks/useCreateSession";
 import { useTranslation } from "@web/lib/tolgee";
@@ -20,6 +20,7 @@ export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [variant] = useState(pickRandom);
+  const [value, setValue] = useState("");
   const createSession = useCreateSession();
 
   function handleSubmit(content: string) {
@@ -42,6 +43,8 @@ export function HomePage() {
         [HOME_TO_SESSION_INITIAL_MESSAGE_KEY]: content,
       }),
     });
+
+    setValue("");
   }
 
   return (
@@ -49,6 +52,8 @@ export function HomePage() {
       <div className="flex w-full max-w-2xl flex-col items-center gap-8 px-6">
         <Greeting variant={variant} />
         <ChatInput
+          value={value}
+          onChange={setValue}
           placeholder={t("session.input_placeholder")}
           submitDisabled={createSession.isPending}
           onSubmit={handleSubmit}
