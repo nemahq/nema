@@ -91,6 +91,7 @@ end;
 $$ language plpgsql security definer set search_path = public, pgmq;
 
 -- Business: delete_document_with_event (fixed: auth check + single overload)
+drop function if exists delete_document_with_event(uuid, uuid);
 create or replace function delete_document_with_event(
   p_doc_id   uuid,
   p_user_id  uuid

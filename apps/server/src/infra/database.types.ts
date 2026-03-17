@@ -7,10 +7,30 @@ export type Json =
   | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.4";
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
   public: {
     Tables: {
@@ -94,6 +114,47 @@ export type Database = {
           },
         ];
       };
+      save_jobs: {
+        Row: {
+          created_at: string;
+          draft_body: string;
+          error_message: string | null;
+          id: string;
+          session_id: string;
+          status: Database["public"]["Enums"]["save_job_status"];
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          draft_body: string;
+          error_message?: string | null;
+          id?: string;
+          session_id: string;
+          status?: Database["public"]["Enums"]["save_job_status"];
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          draft_body?: string;
+          error_message?: string | null;
+          id?: string;
+          session_id?: string;
+          status?: Database["public"]["Enums"]["save_job_status"];
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "save_jobs_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       session_documents: {
         Row: {
           created_at: string;
@@ -120,47 +181,6 @@ export type Database = {
           },
           {
             foreignKeyName: "session_documents_session_id_fkey";
-            columns: ["session_id"];
-            isOneToOne: false;
-            referencedRelation: "sessions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      save_jobs: {
-        Row: {
-          id: string;
-          user_id: string;
-          session_id: string;
-          draft_body: string;
-          status: Database["public"]["Enums"]["save_job_status"];
-          error_message: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          session_id: string;
-          draft_body: string;
-          status?: Database["public"]["Enums"]["save_job_status"];
-          error_message?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          session_id?: string;
-          draft_body?: string;
-          status?: Database["public"]["Enums"]["save_job_status"];
-          error_message?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "save_jobs_session_id_fkey";
             columns: ["session_id"];
             isOneToOne: false;
             referencedRelation: "sessions";
@@ -223,6 +243,7 @@ export type Database = {
         Args: { p_doc_id: string; p_user_id: string };
         Returns: undefined;
       };
+      fail_stale_save_jobs: { Args: never; Returns: number };
       fetch_pending_documents: {
         Args: { p_max_retries?: number };
         Returns: {
@@ -244,10 +265,6 @@ export type Database = {
           msg_id: number;
           read_ct: number;
         }[];
-      };
-      fail_stale_save_jobs: {
-        Args: Record<PropertyKey, never>;
-        Returns: number;
       };
       update_document_with_event: {
         Args: {
@@ -392,6 +409,9 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       ingestion_status: ["pending", "completed", "failed"],
