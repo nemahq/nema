@@ -54,7 +54,10 @@
     "stream_stop": "Stop generation",
     "prev_session": "Previous session",
     "next_session": "Next session",
-    "tab_close": "Close tab"
+    "tab_close": "Close tab",
+    "save_queue_saving": "Saving...",
+    "save_queue_completed": "Saved",
+    "save_queue_failed": "Save failed"
   },
   "settings": {
     "theme_light": "Light",

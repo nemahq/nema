@@ -127,6 +127,47 @@ export type Database = {
           },
         ];
       };
+      save_jobs: {
+        Row: {
+          id: string;
+          user_id: string;
+          session_id: string;
+          draft_body: string;
+          status: Database["public"]["Enums"]["save_job_status"];
+          error_message: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          session_id: string;
+          draft_body: string;
+          status?: Database["public"]["Enums"]["save_job_status"];
+          error_message?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          session_id?: string;
+          draft_body?: string;
+          status?: Database["public"]["Enums"]["save_job_status"];
+          error_message?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "save_jobs_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       sessions: {
         Row: {
           created_at: string;
@@ -204,6 +245,10 @@ export type Database = {
           read_ct: number;
         }[];
       };
+      fail_stale_save_jobs: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
       update_document_with_event: {
         Args: {
           p_body: string;
@@ -218,6 +263,7 @@ export type Database = {
     };
     Enums: {
       ingestion_status: "pending" | "completed" | "failed";
+      save_job_status: "pending" | "processing" | "completed" | "failed";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -349,6 +395,7 @@ export const Constants = {
   public: {
     Enums: {
       ingestion_status: ["pending", "completed", "failed"],
+      save_job_status: ["pending", "processing", "completed", "failed"],
     },
   },
 } as const;

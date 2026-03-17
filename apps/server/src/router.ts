@@ -1,6 +1,7 @@
 import { devRouter } from "./routers/dev-router";
 import { eventRouter } from "./routers/event-router";
 import { messageRouter } from "./routers/message-router";
+import { saveJobRouter } from "./routers/save-job-router";
 import { sessionRouter } from "./routers/session-router";
 import { publicProcedure, router } from "./trpc";
 
@@ -11,6 +12,7 @@ export const appRouter = router({
   session: sessionRouter,
   message: messageRouter,
   event: eventRouter,
+  saveJob: saveJobRouter,
   dev: devRouter,
 });
 
