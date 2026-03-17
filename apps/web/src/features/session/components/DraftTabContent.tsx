@@ -8,6 +8,7 @@ import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
 import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
+import { useRegisterAction } from "@web/hooks/shortcut/useRegisterAction";
 import { useBufferedStream } from "@web/hooks/useBufferedStream";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -25,6 +26,18 @@ function DraftTabContentInner() {
   const smoothText = useBufferedStream(isStreaming ? streamingDraftText : "");
   const body = isStreaming ? smoothText : draft?.body;
 
+  const canAct = streamingPhase === "idle" && !!body;
+
+  useRegisterAction("draft.save", {
+    execute: () => saveDraft.mutate({ sessionId }),
+    enabled: canAct && !saveDraft.isPending,
+  });
+
+  useRegisterAction("draft.cancel", {
+    execute: () => cancelDraft.mutate({ sessionId }),
+    enabled: canAct && !cancelDraft.isPending,
+  });
+
   return (
     <div className="relative">
       {!isStreaming && body && (
@@ -38,7 +51,6 @@ function DraftTabContentInner() {
             {t("common.cancel")}
             <Kbd>Esc</Kbd>
           </Button>
-          {/* TODO: ⌘+S 키보드 단축키 리스너 추가 */}
           <Button
             variant="primary"
             size="xs"
