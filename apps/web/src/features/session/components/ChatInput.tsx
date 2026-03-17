@@ -10,12 +10,19 @@ const MAX_TEXTAREA_HEIGHT_PX = 200;
 const ACTION_BUTTON_BASE =
   "self-end rounded-full transition-all duration-normal";
 
+export interface SlashCommand {
+  name: string;
+  descriptionKey: string;
+  execute: () => void;
+}
+
 interface ChatInputProps {
   onSubmit: (content: string) => void;
   onStop?: () => void;
   placeholder?: string;
   submitDisabled?: boolean;
   autoFocus?: boolean;
+  slashCommands?: SlashCommand[];
 }
 
 export function ChatInput({
@@ -24,9 +31,11 @@ export function ChatInput({
   placeholder,
   submitDisabled,
   autoFocus,
+  slashCommands,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const [value, setValue] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   function adjustHeight() {
@@ -41,33 +50,94 @@ export function ChatInput({
   const isStreaming = !!onStop;
   const hasContent = !!value.trim();
 
-  function handleSubmit() {
-    if (!hasContent || submitDisabled || isStreaming) {
-      return;
-    }
-    onSubmit(value.trim());
+  const [menuDismissed, setMenuDismissed] = useState(false);
+  const slashQuery = value.startsWith("/")
+    ? value.slice(1).toLowerCase()
+    : null;
+  const filteredCommands =
+    slashQuery !== null && slashCommands && !menuDismissed
+      ? slashCommands.filter((cmd) => cmd.name.startsWith(slashQuery))
+      : [];
+  const showMenu = filteredCommands.length > 0;
+
+  function clearInput() {
     setValue("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
   }
 
+  function selectCommand(command: SlashCommand) {
+    command.execute();
+    clearInput();
+  }
+
+  function handleSubmit() {
+    if (!hasContent || submitDisabled || isStreaming) {
+      return;
+    }
+    onSubmit(value.trim());
+    clearInput();
+  }
+
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (showMenu) {
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          prev <= 0 ? filteredCommands.length - 1 : prev - 1,
+        );
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          prev >= filteredCommands.length - 1 ? 0 : prev + 1,
+        );
+        return;
+      }
+      if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+        e.preventDefault();
+        const command = filteredCommands[selectedIndex];
+        if (command) {
+          selectCommand(command);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        setMenuDismissed(true);
+        return;
+      }
+    }
+
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSubmit();
     }
   }
 
+  function handleChange(newValue: string) {
+    setValue(newValue);
+    setSelectedIndex(0);
+    setMenuDismissed(false);
+    adjustHeight();
+  }
+
   return (
-    <div className="flex w-full flex-col gap-2 rounded-2xl border border-border bg-surface-raised p-3 shadow-sm transition-shadow duration-normal focus-within:border-border-strong focus-within:shadow-md dark:bg-surface-raised-hover">
+    <div className="relative flex w-full flex-col gap-2 rounded-2xl border border-border bg-surface-raised p-3 shadow-sm transition-shadow duration-normal focus-within:border-border-strong focus-within:shadow-md dark:bg-surface-raised-hover">
+      {showMenu && (
+        <SlashCommandMenu
+          commands={filteredCommands}
+          selectedIndex={selectedIndex}
+          onSelect={selectCommand}
+        />
+      )}
       <textarea
         ref={textareaRef}
         value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          adjustHeight();
-        }}
+        onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         autoFocus={autoFocus}
@@ -107,6 +177,44 @@ export function ChatInput({
           <ArrowUp className="size-4" />
         </Button>
       )}
+    </div>
+  );
+}
+
+function SlashCommandMenu({
+  commands,
+  selectedIndex,
+  onSelect,
+}: {
+  commands: SlashCommand[];
+  selectedIndex: number;
+  onSelect: (command: SlashCommand) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="absolute bottom-full left-0 mb-1 w-full rounded-md border border-border bg-surface-card p-1 shadow-md">
+      {commands.map((cmd, i) => (
+        <button
+          key={cmd.name}
+          type="button"
+          className={cn(
+            "flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm transition-colors",
+            i === selectedIndex
+              ? "bg-surface-raised-hover"
+              : "hover:bg-surface-raised-hover",
+          )}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onSelect(cmd);
+          }}
+        >
+          <span className="font-medium text-fg-primary">/{cmd.name}</span>
+          <span className="text-fg-tertiary">
+            {t(cmd.descriptionKey as Parameters<typeof t>[0])}
+          </span>
+        </button>
+      ))}
     </div>
   );
 }

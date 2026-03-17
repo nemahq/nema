@@ -22,8 +22,34 @@ interface TabbedPanelProps {
 export function TabbedPanel({ tabs }: TabbedPanelProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
+  const [tabOrder, setTabOrder] = useState<string[]>(() =>
+    tabs.map((tab) => tab.id),
+  );
+  const [prevTabIds, setPrevTabIds] = useState(
+    () => new Set(tabs.map((tab) => tab.id)),
+  );
 
-  const activeTabData = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const currentIds = tabs.map((tab) => tab.id);
+  const tabsChanged =
+    currentIds.length !== prevTabIds.size ||
+    currentIds.some((id) => !prevTabIds.has(id));
+
+  if (tabsChanged) {
+    setPrevTabIds(new Set(currentIds));
+    const newIds = currentIds.filter((id) => !prevTabIds.has(id));
+    const kept = tabOrder.filter((id) => currentIds.includes(id));
+    setTabOrder([...kept, ...newIds]);
+    if (newIds.length > 0) {
+      setActiveTab(newIds[newIds.length - 1]);
+    }
+  }
+
+  const orderedTabs = tabOrder
+    .map((id) => tabs.find((tab) => tab.id === id))
+    .filter((tab): tab is TabbedPanelTab => tab !== undefined);
+
+  const activeTabData =
+    orderedTabs.find((tab) => tab.id === activeTab) ?? orderedTabs[0];
   const resolvedTab = activeTabData?.id ?? "";
 
   function handleTabClick(tabId: string) {
@@ -37,13 +63,13 @@ export function TabbedPanel({ tabs }: TabbedPanelProps) {
 
   return (
     <main className="flex flex-1 flex-col bg-surface-card min-w-0">
-      {tabs.length > 0 ? (
+      {orderedTabs.length > 0 ? (
         <>
           <div
             role="tablist"
             className="relative flex items-end border-b border-border/50"
           >
-            {tabs.map((tab, i) => {
+            {orderedTabs.map((tab, i) => {
               const isActive = resolvedTab === tab.id;
               const isFirst = i === 0;
 

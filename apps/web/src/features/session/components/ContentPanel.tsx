@@ -2,14 +2,16 @@ import { Suspense } from "react";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useDraftTab } from "@web/features/session/hooks/useDraftTab";
+import { useHelpTab } from "@web/features/session/hooks/useHelpTab";
 
 import type { TabbedPanelTab } from "./TabbedPanel";
 import { TabbedPanel } from "./TabbedPanel";
 
 function ContentPanelInner() {
   const draftTab = useDraftTab();
+  const helpTab = useHelpTab();
 
-  const tabs: TabbedPanelTab[] = [draftTab].filter(
+  const tabs: TabbedPanelTab[] = [draftTab, helpTab].filter(
     (tab): tab is TabbedPanelTab => tab !== undefined,
   );
 
