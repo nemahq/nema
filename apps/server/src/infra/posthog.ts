@@ -9,19 +9,18 @@ const FLUSH_INTERVAL_MS = 10_000;
 let client: PostHog | null = null;
 let initialized = false;
 
-const IS_PRODUCTION = process.env.NODE_ENV === "production";
-
 function getClient(): PostHog | null {
   if (initialized) {
     return client;
   }
   initialized = true;
 
-  if (!IS_PRODUCTION) {
+  const env = getEnv();
+  if (env.NODE_ENV !== "production") {
     return null;
   }
 
-  const { POSTHOG_API_KEY, POSTHOG_HOST } = getEnv();
+  const { POSTHOG_API_KEY, POSTHOG_HOST } = env;
   if (!POSTHOG_API_KEY) {
     return null;
   }

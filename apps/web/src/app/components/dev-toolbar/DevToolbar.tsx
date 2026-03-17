@@ -4,11 +4,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTheme } from "@web/app/providers/ThemeProvider";
 import { useAuth } from "@web/hooks/useAuth";
-import { useModelPreset } from "@web/hooks/useModelPreset";
-import { useSetModelPreset } from "@web/hooks/useSetModelPreset";
 import { supabase } from "@web/lib/supabase";
 import { changeLocale } from "@web/lib/tolgee";
 import type { Locale } from "@web/lib/tolgee/types";
+import { trpc } from "@web/lib/trpc";
 import { getStorage } from "@web/utils/localStorage";
 import type { ThemePreference } from "@web/utils/theme-preference";
 
@@ -27,9 +26,10 @@ function formatModelMap(models: {
   mini: string;
   nano: string;
 }): string {
-  const unique = new Set(Object.values(models));
-  if (unique.size === 1) {
-    return `all: ${[...unique][0]}`;
+  const allSame =
+    models.standard === models.mini && models.mini === models.nano;
+  if (allSame) {
+    return `all: ${models.standard}`;
   }
   return `S: ${models.standard} · M: ${models.mini} · N: ${models.nano}`;
 }
@@ -43,8 +43,13 @@ function toggleClass(active: boolean) {
 }
 
 function LlmPresetSection() {
-  const [presetData] = useModelPreset();
-  const presetMutation = useSetModelPreset();
+  const [presetData] = trpc.dev.getModelPreset.useSuspenseQuery();
+  const utils = trpc.useUtils();
+  const presetMutation = trpc.dev.setModelPreset.useMutation({
+    onSuccess: (data) => {
+      utils.dev.getModelPreset.setData(undefined, data);
+    },
+  });
 
   useEffect(function resetPresetOnMount() {
     if (presetData.preset !== "all-nano") {
@@ -152,7 +157,13 @@ export function DevToolbar() {
               </div>
             </div>
 
-            <ErrorBoundary fallback={null}>
+            <ErrorBoundary
+              fallback={
+                <span className="text-[10px] text-status-error">
+                  LLM preset unavailable
+                </span>
+              }
+            >
               <Suspense>
                 <LlmPresetSection />
               </Suspense>

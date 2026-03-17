@@ -23,8 +23,11 @@ export interface Providers {
 export type LlmPreset = "all-nano" | "real-tiers";
 
 let cached: Providers | undefined;
-let realTiersLlm: TieredLlm | undefined;
+let originalLlm: TieredLlm | undefined;
 let currentPreset: LlmPreset = "all-nano";
+let resolvedModelNames:
+  | { standard: string; mini: string; nano: string }
+  | undefined;
 
 export function getProviders(): Providers {
   if (cached) {
@@ -56,8 +59,13 @@ export function getProviders(): Providers {
   };
 
   // dev 전용 — 프로덕션에서 모델 프리셋 교체가 열리면 비용·보안 사고로 이어진다
-  if (process.env.NODE_ENV !== "production") {
-    realTiersLlm = createTieredLlm({ apiKey: env.OPENAI_API_KEY });
+  if (env.NODE_ENV !== "production") {
+    originalLlm = cached.llm;
+    resolvedModelNames = {
+      standard: env.LLM_MODEL_STANDARD ?? DEFAULT_STANDARD_MODEL,
+      mini: env.LLM_MODEL_MINI ?? DEFAULT_MINI_MODEL,
+      nano: env.LLM_MODEL_NANO ?? DEFAULT_NANO_MODEL,
+    };
     applyLlmPreset("all-nano");
   }
 
@@ -70,42 +78,42 @@ export interface LlmPresetInfo {
 }
 
 export function getLlmPreset(): LlmPresetInfo {
+  if (!resolvedModelNames) {
+    throw new Error("LLM preset info not available");
+  }
   const models =
     currentPreset === "all-nano"
       ? {
-          standard: DEFAULT_NANO_MODEL,
-          mini: DEFAULT_NANO_MODEL,
-          nano: DEFAULT_NANO_MODEL,
+          standard: resolvedModelNames.nano,
+          mini: resolvedModelNames.nano,
+          nano: resolvedModelNames.nano,
         }
-      : {
-          standard: DEFAULT_STANDARD_MODEL,
-          mini: DEFAULT_MINI_MODEL,
-          nano: DEFAULT_NANO_MODEL,
-        };
+      : resolvedModelNames;
   return { preset: currentPreset, models };
 }
 
 export function setLlmPreset(preset: LlmPreset): void {
-  if (process.env.NODE_ENV === "production") {
+  const env = getEnv();
+  if (env.NODE_ENV === "production") {
     throw new Error("LLM preset override is not available in production");
   }
-  if (!cached || !realTiersLlm) {
+  if (!cached || !originalLlm) {
     throw new Error("Providers not initialized");
   }
   applyLlmPreset(preset);
 }
 
 function applyLlmPreset(preset: LlmPreset): void {
-  if (!cached || !realTiersLlm) {
-    return;
+  if (!cached || !originalLlm) {
+    throw new Error("applyLlmPreset called before providers initialized");
   }
   currentPreset = preset;
   cached.llm =
     preset === "all-nano"
       ? {
-          standard: realTiersLlm.nano,
-          mini: realTiersLlm.nano,
-          nano: realTiersLlm.nano,
+          standard: originalLlm.nano,
+          mini: originalLlm.nano,
+          nano: originalLlm.nano,
         }
-      : realTiersLlm;
+      : originalLlm;
 }
