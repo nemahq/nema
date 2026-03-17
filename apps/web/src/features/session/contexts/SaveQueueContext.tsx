@@ -14,7 +14,7 @@ import { trpc } from "@web/lib/trpc";
 
 const SAVE_SUCCESS_DISMISS_MS = 3_000;
 
-export type SaveQueueItem = Omit<SaveJob, "id" | "updatedAt"> & {
+type SaveQueueItem = Omit<SaveJob, "id" | "updatedAt"> & {
   jobId: string;
 };
 
