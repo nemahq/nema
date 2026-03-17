@@ -21,6 +21,13 @@ interface TabbedPanelProps {
   tabs: TabbedPanelTab[];
 }
 
+const MAX_TAB_SHORTCUT = 9;
+
+const TAB_HOTKEYS = Array.from(
+  { length: MAX_TAB_SHORTCUT },
+  (_, i) => `meta+${i + 1}, ctrl+${i + 1}`,
+).join(", ");
+
 export function TabbedPanel({ tabs }: TabbedPanelProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
@@ -54,14 +61,8 @@ export function TabbedPanel({ tabs }: TabbedPanelProps) {
     orderedTabs.find((tab) => tab.id === activeTab) ?? orderedTabs[0];
   const resolvedTab = activeTabData?.id ?? "";
 
-  const MAX_TAB_SHORTCUT = 9;
-  const tabKeys = Array.from(
-    { length: MAX_TAB_SHORTCUT },
-    (_, i) => `meta+${i + 1}, ctrl+${i + 1}`,
-  ).join(", ");
-
   useHotkeys(
-    tabKeys,
+    TAB_HOTKEYS,
     (e) => {
       e.preventDefault();
       const num = parseInt(e.key, 10);

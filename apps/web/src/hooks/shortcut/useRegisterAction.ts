@@ -26,36 +26,39 @@ export function useRegisterAction(
   const def = getActionDef(id);
 
   const executeRef = useRef(execute);
-  useEffect(() => {
+  useEffect(function syncExecuteRef() {
     executeRef.current = execute;
   });
 
-  useEffect(() => {
-    if (!enabled) {
-      unregister(id);
-      return;
-    }
+  useEffect(
+    function syncRegistry() {
+      if (!enabled) {
+        unregister(id);
+        return;
+      }
 
-    register({
+      register({
+        id,
+        category: def.category,
+        labelKey: def.labelKey,
+        shortcut: def.shortcut,
+        scope: def.scope,
+        execute: () => executeRef.current(),
+      });
+
+      return () => unregister(id);
+    },
+    [
       id,
-      category: def.category,
-      labelKey: def.labelKey,
-      shortcut: def.shortcut,
-      scope: def.scope,
-      execute: () => executeRef.current(),
-    });
-
-    return () => unregister(id);
-  }, [
-    id,
-    enabled,
-    def.category,
-    def.labelKey,
-    def.shortcut,
-    def.scope,
-    register,
-    unregister,
-  ]);
+      enabled,
+      def.category,
+      def.labelKey,
+      def.shortcut,
+      def.scope,
+      register,
+      unregister,
+    ],
+  );
 
   const hasModifier =
     def.shortcut.includes("mod") ||
