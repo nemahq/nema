@@ -29,6 +29,7 @@ export function ChatComposer() {
       onSubmit={send}
       onStop={isStreaming ? cancel : undefined}
       submitDisabled={saveDraftMutating || cancelDraftMutating}
+      autoFocus
     />
   );
 }
