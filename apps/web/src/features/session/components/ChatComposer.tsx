@@ -23,7 +23,7 @@ export function ChatComposer() {
   const [inputValue, setInputValue] = useState("");
 
   const saveDraftMutating =
-    useIsMutating({ mutationKey: getQueryKey(trpc.message.saveDraft) }) > 0;
+    useIsMutating({ mutationKey: getQueryKey(trpc.saveJob.enqueue) }) > 0;
   const cancelDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.cancelDraft) }) > 0;
   const isStreaming = streamingPhase !== "idle";
