@@ -91,7 +91,7 @@ export async function enqueueSaveJob(args: {
   return toSaveJob(job);
 }
 
-export async function processSaveJob(args: {
+async function processSaveJob(args: {
   supabase: TypedSupabaseClient;
   providers: Providers;
   userId: string;

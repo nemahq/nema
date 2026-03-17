@@ -14,7 +14,7 @@ import { trpc } from "@web/lib/trpc";
 
 const SAVE_SUCCESS_DISMISS_MS = 3_000;
 
-export interface SaveQueueItem {
+interface SaveQueueItem {
   jobId: string;
   sessionId: string;
   status: SaveJobStatus;
