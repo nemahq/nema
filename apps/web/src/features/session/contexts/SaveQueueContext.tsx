@@ -8,18 +8,24 @@ import {
   useState,
 } from "react";
 
-import type { SaveJobStatus } from "@nema-io/shared";
+import type { SaveJob } from "@nema-io/shared";
 
 import { trpc } from "@web/lib/trpc";
 
 const SAVE_SUCCESS_DISMISS_MS = 3_000;
 
-interface SaveQueueItem {
+export type SaveQueueItem = Omit<SaveJob, "id" | "updatedAt"> & {
   jobId: string;
-  sessionId: string;
-  status: SaveJobStatus;
-  errorMessage: string | null;
-  createdAt: string;
+};
+
+function toSaveQueueItem(job: SaveJob): SaveQueueItem {
+  return {
+    jobId: job.id,
+    sessionId: job.sessionId,
+    status: job.status,
+    errorMessage: job.errorMessage,
+    createdAt: job.createdAt,
+  };
 }
 
 interface SaveQueueContextValue {
@@ -81,13 +87,7 @@ export function SaveQueueProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { job } = event;
-      const item: SaveQueueItem = {
-        jobId: job.id,
-        sessionId: job.sessionId,
-        status: job.status,
-        errorMessage: job.errorMessage,
-        createdAt: job.createdAt,
-      };
+      const item = toSaveQueueItem(job);
 
       setSseUpdates((prev) => {
         const next = new Map(prev);
@@ -99,6 +99,9 @@ export function SaveQueueProvider({ children }: { children: React.ReactNode }) {
         scheduleDismiss(job.id);
       }
     },
+    onError(error) {
+      console.error("Save job subscription error:", error);
+    },
   });
 
   // query 결과와 SSE 업데이트를 합산. SSE가 우선 (더 최신)
@@ -107,13 +110,7 @@ export function SaveQueueProvider({ children }: { children: React.ReactNode }) {
 
     if (initialJobs) {
       for (const j of initialJobs) {
-        merged.set(j.id, {
-          jobId: j.id,
-          sessionId: j.sessionId,
-          status: j.status,
-          errorMessage: j.errorMessage,
-          createdAt: j.createdAt,
-        });
+        merged.set(j.id, toSaveQueueItem(j));
       }
     }
 

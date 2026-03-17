@@ -1,11 +1,10 @@
 import * as Sentry from "@sentry/node";
+import { TRPCError } from "@trpc/server";
 
 import {
-  MessageSchema,
   type SaveJob,
   SaveJobSchema,
   SessionDraftSchema,
-  STATUS_LOG_TYPES,
 } from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
@@ -52,7 +51,10 @@ export async function enqueueSaveJob(args: {
 
   const draft = session.draft ? SessionDraftSchema.parse(session.draft) : null;
   if (!draft) {
-    throw new Error("No active draft to save");
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "No active draft to save",
+    });
   }
 
   const { data: job, error: insertError } = await supabase
@@ -68,25 +70,12 @@ export async function enqueueSaveJob(args: {
 
   throwIfSupabaseError(insertError);
 
-  // 드래프트 클리어 + 상태 메시지 추가를 병렬 처리
-  const statusMessage = MessageSchema.parse({
-    id: crypto.randomUUID(),
-    role: "assistant",
-    type: "status",
-    content: STATUS_LOG_TYPES.DRAFT_SAVED,
-    createdAt: new Date().toISOString(),
-  });
+  const { error: clearError } = await supabase
+    .from("sessions")
+    .update({ draft: null })
+    .eq("id", sessionId);
 
-  const [clearResult, appendResult] = await Promise.all([
-    supabase.from("sessions").update({ draft: null }).eq("id", sessionId),
-    supabase.rpc("append_message", {
-      p_session_id: sessionId,
-      p_message: statusMessage,
-    }),
-  ]);
-
-  throwIfSupabaseError(clearResult.error);
-  throwIfSupabaseError(appendResult.error);
+  throwIfSupabaseError(clearError);
 
   return toSaveJob(job);
 }
@@ -142,7 +131,10 @@ async function processSaveJob(args: {
       .eq("id", jobId);
 
     if (updateError) {
-      Sentry.captureException(updateError);
+      Sentry.captureException(updateError, {
+        tags: { component: "save-job" },
+        extra: { jobId, originalError: errorMessage },
+      });
     }
 
     throw error;
@@ -158,17 +150,27 @@ export async function processSaveJobBackground(args: {
   try {
     await processSaveJob(args);
   } catch (error) {
-    Sentry.captureException(error);
+    Sentry.captureException(error, {
+      tags: { component: "save-job" },
+      extra: { jobId: args.jobId, userId: args.userId },
+    });
   }
 
-  const { data } = await args.supabase
-    .from("save_jobs")
-    .select("id, session_id, status, error_message, created_at, updated_at")
-    .eq("id", args.jobId)
-    .single();
+  try {
+    const { data } = await args.supabase
+      .from("save_jobs")
+      .select("id, session_id, status, error_message, created_at, updated_at")
+      .eq("id", args.jobId)
+      .single();
 
-  if (data) {
-    emitSaveJobUpdate(args.userId, toSaveJob(data));
+    if (data) {
+      emitSaveJobUpdate(args.userId, toSaveJob(data));
+    }
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "save-job" },
+      extra: { jobId: args.jobId, userId: args.userId },
+    });
   }
 }
 
@@ -182,6 +184,7 @@ export async function retrySaveJob(args: {
     .from("save_jobs")
     .update({ status: "pending" as const, error_message: null })
     .eq("id", jobId)
+    .eq("status", "failed" as const)
     .select("id, session_id, status, error_message, created_at, updated_at")
     .single();
 
