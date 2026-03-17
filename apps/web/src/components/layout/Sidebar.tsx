@@ -29,7 +29,7 @@ export function Sidebar({ topSlot, children, footer }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "flex h-full flex-col overflow-y-auto bg-surface-raised [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent] dark:bg-surface-base",
+        "flex h-full flex-col overflow-y-auto border-r border-border/50 bg-surface-raised [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent] dark:bg-surface-base",
         collapsed ? "w-12" : "w-64",
       )}
     >

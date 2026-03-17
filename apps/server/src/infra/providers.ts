@@ -4,7 +4,12 @@ import { createVoyageProvider } from "@server/infra/embedding";
 import type { GraphStore } from "@server/infra/graph";
 import { createNeo4jStore } from "@server/infra/graph";
 import type { TieredLlm } from "@server/infra/llm/models";
-import { createTieredLlm } from "@server/infra/llm/models";
+import {
+  createTieredLlm,
+  DEFAULT_MINI_MODEL,
+  DEFAULT_NANO_MODEL,
+  DEFAULT_STANDARD_MODEL,
+} from "@server/infra/llm/models";
 import type { VectorStore } from "@server/infra/vector";
 import { createQdrantStore } from "@server/infra/vector";
 
@@ -15,7 +20,14 @@ export interface Providers {
   graphStore: GraphStore;
 }
 
+export type LlmPreset = "all-nano" | "real-tiers";
+
 let cached: Providers | undefined;
+let originalLlm: TieredLlm | undefined;
+let currentPreset: LlmPreset = "all-nano";
+let resolvedModelNames:
+  | { standard: string; mini: string; nano: string }
+  | undefined;
 
 export function getProviders(): Providers {
   if (cached) {
@@ -46,5 +58,62 @@ export function getProviders(): Providers {
     graphStore: createNeo4jStore(),
   };
 
+  // dev 전용 — 프로덕션에서 모델 프리셋 교체가 열리면 비용·보안 사고로 이어진다
+  if (env.NODE_ENV !== "production") {
+    originalLlm = cached.llm;
+    resolvedModelNames = {
+      standard: env.LLM_MODEL_STANDARD ?? DEFAULT_STANDARD_MODEL,
+      mini: env.LLM_MODEL_MINI ?? DEFAULT_MINI_MODEL,
+      nano: env.LLM_MODEL_NANO ?? DEFAULT_NANO_MODEL,
+    };
+    applyLlmPreset("all-nano");
+  }
+
   return cached;
+}
+
+export interface LlmPresetInfo {
+  preset: LlmPreset;
+  models: { standard: string; mini: string; nano: string };
+}
+
+export function getLlmPreset(): LlmPresetInfo {
+  if (!resolvedModelNames) {
+    throw new Error("LLM preset info not available");
+  }
+  const models =
+    currentPreset === "all-nano"
+      ? {
+          standard: resolvedModelNames.nano,
+          mini: resolvedModelNames.nano,
+          nano: resolvedModelNames.nano,
+        }
+      : resolvedModelNames;
+  return { preset: currentPreset, models };
+}
+
+export function setLlmPreset(preset: LlmPreset): void {
+  const env = getEnv();
+  if (env.NODE_ENV === "production") {
+    throw new Error("LLM preset override is not available in production");
+  }
+  if (!cached || !originalLlm) {
+    throw new Error("Providers not initialized");
+  }
+  applyLlmPreset(preset);
+}
+
+function applyLlmPreset(preset: LlmPreset): void {
+  if (!cached || !originalLlm) {
+    throw new Error("applyLlmPreset called before providers initialized");
+  }
+  currentPreset = preset;
+  cached.llm =
+    preset === "all-nano"
+      ? {
+          standard: originalLlm.nano,
+          mini: originalLlm.nano,
+          nano: originalLlm.nano,
+        }
+      : originalLlm;
 }

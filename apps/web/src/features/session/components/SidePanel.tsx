@@ -70,7 +70,7 @@ export function SidePanel({ children }: SidePanelProps) {
         role="separator"
         aria-orientation="vertical"
         onMouseDown={handleResizeStart}
-        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize border-l border-border hover:border-brand active:border-brand"
+        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize border-l border-border/50 hover:border-brand active:border-brand"
       />
 
       {children}

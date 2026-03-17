@@ -7,6 +7,9 @@ import { toast } from "@web/utils/toast";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
+    queries: {
+      retry: 0,
+    },
     mutations: {
       retry: 0,
     },
