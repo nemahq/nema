@@ -51,7 +51,10 @@
     "menu": "Context menu",
     "help": "Shortcut Guide",
     "help_description": "View shortcut list",
-    "stream_stop": "Stop generation"
+    "stream_stop": "Stop generation",
+    "prev_session": "Previous session",
+    "next_session": "Next session",
+    "tab_close": "Close tab"
   },
   "settings": {
     "theme_light": "Light",
@@ -63,7 +66,8 @@
     "category_draft": "Draft",
     "category_stream": "AI Generation",
     "category_navigation": "Navigation",
-    "category_sidebar": "Sidebar"
+    "category_sidebar": "Sidebar",
+    "category_tab": "Tab"
   },
   "layout": {
     "collapse_sidebar": "Collapse sidebar",

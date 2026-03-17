@@ -18,14 +18,15 @@ const actionMap = {
   },
   navigation: {
     newContext: def("session.new_context", "mod+shift+o", "global"),
+    prevSession: def("session.prev_session", "alt+up", "global"),
+    nextSession: def("session.next_session", "alt+down", "global"),
   },
   sidebar: {
     toggle: def("layout.toggle_sidebar", "mod+b", "global"),
   },
-  // TODO: 드래프트 탭 닫기 UX 구현 완료 후 활성화
-  // tab: {
-  //   close: def("session.tab_close", "mod+shift+w", "global"),
-  // },
+  tab: {
+    close: def("session.tab_close", "alt+w", "global"),
+  },
 } satisfies Record<string, Record<string, ActionDef>>;
 
 export type ActionId = {

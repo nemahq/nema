@@ -1,9 +1,11 @@
-import { Suspense, useRef } from "react";
+import { Suspense, useCallback, useRef } from "react";
+import { useMatch, useNavigate } from "@tanstack/react-router";
 
 import { Skeleton } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useSessionList } from "@web/features/session/hooks/useSessionList";
+import { useRegisterAction } from "@web/hooks/shortcut/useRegisterAction";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -12,10 +14,50 @@ import { SessionListSkeleton } from "./SessionListSkeleton";
 
 function SessionListContent() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const sessionMatch = useMatch({
+    from: "/_authenticated/_sessionSidebar/session/$sessionId",
+    shouldThrow: false,
+  });
+  const currentSessionId = sessionMatch?.params.sessionId;
 
   const { sessions, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useSessionList();
+
+  const navigateSession = useCallback(
+    (direction: -1 | 1) => {
+      if (sessions.length === 0) {
+        return;
+      }
+      const currentIndex = currentSessionId
+        ? sessions.findIndex((s) => s.id === currentSessionId)
+        : -1;
+      const nextIndex =
+        currentIndex === -1
+          ? 0
+          : (currentIndex + direction + sessions.length) % sessions.length;
+      const next = sessions[nextIndex];
+      if (next && next.id !== currentSessionId) {
+        navigate({
+          to: "/session/$sessionId",
+          params: { sessionId: next.id },
+        });
+      }
+    },
+    [sessions, currentSessionId, navigate],
+  );
+
+  useRegisterAction("navigation.prevSession", {
+    execute: () => navigateSession(-1),
+    enabled: sessions.length > 0,
+  });
+
+  useRegisterAction("navigation.nextSession", {
+    execute: () => navigateSession(1),
+    enabled: sessions.length > 0,
+  });
 
   useIntersectionEffect({
     ref: sentinelRef,

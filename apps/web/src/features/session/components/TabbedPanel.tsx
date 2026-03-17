@@ -1,9 +1,11 @@
 import type { ComponentType, ReactNode } from "react";
 import { useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 
 import { cn } from "@nema-io/weave";
 import { X } from "@nema-io/weave/icons";
 
+import { useRegisterAction } from "@web/hooks/shortcut/useRegisterAction";
 import type { TranslationKey } from "@web/lib/tolgee";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -51,6 +53,33 @@ export function TabbedPanel({ tabs }: TabbedPanelProps) {
   const activeTabData =
     orderedTabs.find((tab) => tab.id === activeTab) ?? orderedTabs[0];
   const resolvedTab = activeTabData?.id ?? "";
+
+  const MAX_TAB_SHORTCUT = 9;
+  const tabKeys = Array.from(
+    { length: MAX_TAB_SHORTCUT },
+    (_, i) => `meta+${i + 1}, ctrl+${i + 1}`,
+  ).join(", ");
+
+  useHotkeys(
+    tabKeys,
+    (e) => {
+      e.preventDefault();
+      const num = parseInt(e.key, 10);
+      const tab = orderedTabs[num - 1];
+      if (tab) {
+        setActiveTab(tab.id);
+      }
+    },
+    {
+      enabled: orderedTabs.length > 1,
+      enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"],
+    },
+  );
+
+  useRegisterAction("tab.close", {
+    execute: () => activeTabData?.onClose?.(),
+    enabled: !!activeTabData?.onClose,
+  });
 
   function handleTabClick(tabId: string) {
     setActiveTab(tabId);
