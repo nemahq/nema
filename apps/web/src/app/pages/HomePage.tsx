@@ -52,6 +52,7 @@ export function HomePage() {
           placeholder={t("session.input_placeholder")}
           submitDisabled={createSession.isPending}
           onSubmit={handleSubmit}
+          autoFocus
         />
       </div>
     </main>

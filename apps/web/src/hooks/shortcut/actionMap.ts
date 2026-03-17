@@ -16,6 +16,16 @@ const actionMap = {
   stream: {
     stop: def("session.stream_stop", "escape", "global"),
   },
+  navigation: {
+    newContext: def("session.new_context", "mod+shift+o", "global"),
+  },
+  sidebar: {
+    toggle: def("layout.toggle_sidebar", "mod+b", "global"),
+  },
+  // TODO: 드래프트 탭 닫기 UX 구현 완료 후 활성화
+  // tab: {
+  //   close: def("session.tab_close", "mod+shift+w", "global"),
+  // },
 } satisfies Record<string, Record<string, ActionDef>>;
 
 export type ActionId = {

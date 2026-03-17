@@ -4,6 +4,7 @@ import { Plus } from "@nema-io/weave/icons";
 
 import { Sidebar } from "@web/components/layout/Sidebar";
 import { SidebarActionButton } from "@web/components/layout/SidebarActionButton";
+import { useRegisterAction } from "@web/hooks/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SessionList } from "./SessionList";
@@ -20,6 +21,10 @@ function NewContextIcon() {
 export function SessionSidebar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  useRegisterAction("navigation.newContext", {
+    execute: () => navigate({ to: "/" }),
+  });
 
   return (
     <Sidebar

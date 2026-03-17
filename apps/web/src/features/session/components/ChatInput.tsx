@@ -15,6 +15,7 @@ interface ChatInputProps {
   onStop?: () => void;
   placeholder?: string;
   submitDisabled?: boolean;
+  autoFocus?: boolean;
 }
 
 export function ChatInput({
@@ -22,6 +23,7 @@ export function ChatInput({
   onStop,
   placeholder,
   submitDisabled,
+  autoFocus,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const [value, setValue] = useState("");
@@ -68,6 +70,7 @@ export function ChatInput({
         }}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        autoFocus={autoFocus}
         rows={1}
         className="w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-tertiary focus:outline-none [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
       />
