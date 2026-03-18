@@ -135,7 +135,7 @@ export function ChatComposer() {
           onSelect={selectCommand}
         />
       )}
-      <p className="px-2 text-xs text-fg-tertiary">
+      <p className="px-2 pb-1 text-xs text-fg-tertiary">
         <span className={MODE_CONFIG[mode].color}>
           {t(MODE_CONFIG[mode].labelKey)}
         </span>{" "}
