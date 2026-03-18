@@ -16,7 +16,11 @@ interface ContentTabContextValue {
 
 const ContentTabContext = createContext<ContentTabContextValue | null>(null);
 
-export function ContentTabProvider({ children }: { children: ReactNode }) {
+interface ContentTabProviderProps {
+  children: ReactNode;
+}
+
+export function ContentTabProvider({ children }: ContentTabProviderProps) {
   const [openTabs, setOpenTabs] = useState<Set<ContentTabName>>(
     () => new Set(),
   );

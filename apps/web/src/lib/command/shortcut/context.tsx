@@ -30,7 +30,13 @@ const ActionRegistryContext = createContext<ActionRegistryContextValue | null>(
   null,
 );
 
-export function ActionRegistryProvider({ children }: { children: ReactNode }) {
+interface ActionRegistryProviderProps {
+  children: ReactNode;
+}
+
+export function ActionRegistryProvider({
+  children,
+}: ActionRegistryProviderProps) {
   const actionsRef = useRef(new Map<ActionId, RegisteredAction>());
 
   const register = useCallback((action: RegisteredAction) => {
