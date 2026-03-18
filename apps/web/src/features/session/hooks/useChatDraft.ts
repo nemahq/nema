@@ -13,7 +13,7 @@ export function useChatDraft(sessionId: string): [string, (v: string) => void] {
 
   function setDraft(next: string) {
     setDraftState(next);
-    if (next) {
+    if (next !== "") {
       setRecordEntry("chatDrafts", sessionId, next);
     } else {
       deleteRecordEntry("chatDrafts", sessionId);
