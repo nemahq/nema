@@ -31,6 +31,7 @@ function toSaveQueueItem(job: SaveJob): SaveQueueItem {
 interface SaveQueueContextValue {
   items: SaveQueueItem[];
   dismiss: (jobId: string) => void;
+  retry: (jobId: string) => void;
 }
 
 const SaveQueueContext = createContext<SaveQueueContextValue | null>(null);
@@ -78,6 +79,23 @@ export function SaveQueueProvider({ children }: { children: React.ReactNode }) {
       dismissTimers.current.set(jobId, timer);
     },
     [dismiss],
+  );
+
+  const retrySave = trpc.saveJob.retry.useMutation({
+    onSuccess(job) {
+      setSseUpdates((prev) => {
+        const next = new Map(prev);
+        next.set(job.id, toSaveQueueItem(job));
+        return next;
+      });
+    },
+  });
+
+  const retry = useCallback(
+    (jobId: string) => {
+      retrySave.mutate({ jobId });
+    },
+    [retrySave],
   );
 
   trpc.saveJob.onUpdate.useSubscription(undefined, {
@@ -131,7 +149,7 @@ export function SaveQueueProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <SaveQueueContext.Provider value={{ items, dismiss }}>
+    <SaveQueueContext.Provider value={{ items, dismiss, retry }}>
       {children}
     </SaveQueueContext.Provider>
   );

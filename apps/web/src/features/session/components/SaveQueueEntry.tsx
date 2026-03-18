@@ -2,22 +2,22 @@ import type { SaveJobStatus } from "@nema-io/shared";
 import { Button, cn } from "@nema-io/weave";
 import { AlertCircle, Check, Loader2, X } from "@nema-io/weave/icons";
 
-import { useRetrySave } from "@web/features/session/hooks/useRetrySave";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface SaveQueueEntryProps {
   jobId: string;
   status: SaveJobStatus;
   onDismiss: (jobId: string) => void;
+  onRetry: (jobId: string) => void;
 }
 
 export function SaveQueueEntry({
   jobId,
   status,
   onDismiss,
+  onRetry,
 }: SaveQueueEntryProps) {
   const { t } = useTranslation();
-  const retrySave = useRetrySave();
   const isActive = status === "pending" || status === "processing";
   const isFailed = status === "failed";
   const isCompleted = status === "completed";
@@ -25,7 +25,7 @@ export function SaveQueueEntry({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-lg border bg-background px-4 py-3 shadow-md",
+        "flex items-center gap-3 rounded-lg border bg-popover px-4 py-3 shadow-md",
         isCompleted && "animate-fade-out",
       )}
     >
@@ -42,12 +42,7 @@ export function SaveQueueEntry({
       </span>
 
       {isFailed && (
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={() => retrySave.mutate({ jobId })}
-          disabled={retrySave.isPending}
-        >
+        <Button variant="ghost" size="xs" onClick={() => onRetry(jobId)}>
           {t("common.retry")}
         </Button>
       )}

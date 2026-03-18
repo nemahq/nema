@@ -13,8 +13,8 @@ export const SaveJobSchema = z.object({
   sessionId: z.string().uuid(),
   status: SaveJobStatusSchema,
   errorMessage: z.string().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 export type SaveJob = z.infer<typeof SaveJobSchema>;
 
