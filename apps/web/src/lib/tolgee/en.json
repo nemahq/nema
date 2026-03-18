@@ -61,7 +61,7 @@
     "mode_note": "Note",
     "mode_ask": "Ask",
     "input_placeholder_ask": "What are you looking for?",
-    "mode_toggle": "Toggle mode"
+    "mode_hint": "{mode} (⇧Tab to cycle)"
   },
   "settings": {
     "theme_light": "Light",

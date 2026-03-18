@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
-import type { ChatMode } from "@nema-io/shared";
+import { CHAT_MODES, type ChatMode } from "@nema-io/shared";
 import { ArrowUp, Search } from "@nema-io/weave/icons";
 
 import { ChatInput } from "@web/components/ui/ChatInput";
@@ -21,6 +21,33 @@ import { useSlashCommandMenu } from "@web/lib/command/slash/useSlashCommandMenu"
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
 
+const MODE_CONFIG: Record<
+  ChatMode,
+  {
+    icon: typeof ArrowUp;
+    placeholderKey:
+      | "session.input_placeholder"
+      | "session.input_placeholder_ask";
+    labelKey: "session.mode_note" | "session.mode_ask";
+  }
+> = {
+  note: {
+    icon: ArrowUp,
+    placeholderKey: "session.input_placeholder",
+    labelKey: "session.mode_note",
+  },
+  ask: {
+    icon: Search,
+    placeholderKey: "session.input_placeholder_ask",
+    labelKey: "session.mode_ask",
+  },
+};
+
+function nextMode(current: ChatMode): ChatMode {
+  const idx = CHAT_MODES.indexOf(current);
+  return CHAT_MODES[(idx + 1) % CHAT_MODES.length];
+}
+
 export function ChatComposer() {
   const { t } = useTranslation();
   const { send, cancel, streamingPhase } = useChatStream();
@@ -30,7 +57,7 @@ export function ChatComposer() {
   const [mode, setMode] = useState<ChatMode>("note");
 
   const toggleMode = useCallback(() => {
-    setMode((prev) => (prev === "note" ? "ask" : "note"));
+    setMode(nextMode);
   }, []);
 
   const saveDraftMutating =
@@ -108,18 +135,14 @@ export function ChatComposer() {
       <ChatInput
         value={inputValue}
         onChange={handleChange}
-        placeholder={
-          mode === "ask"
-            ? t("session.input_placeholder_ask")
-            : t("session.input_placeholder")
-        }
+        placeholder={t(MODE_CONFIG[mode].placeholderKey)}
         onSubmit={handleSubmit}
         onStop={isStreaming ? cancel : undefined}
         submitDisabled={saveDraftMutating || cancelDraftMutating}
         autoFocus
         onKeyDown={handleKeyDown}
-        submitIcon={mode === "ask" ? Search : ArrowUp}
-        hint={`${mode === "ask" ? t("session.mode_ask") : t("session.mode_note")} · ⇧Tab`}
+        submitIcon={MODE_CONFIG[mode].icon}
+        hint={t("session.mode_hint", { mode: t(MODE_CONFIG[mode].labelKey) })}
       />
     </div>
   );
