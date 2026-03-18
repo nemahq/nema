@@ -1,4 +1,9 @@
-import { type KeyboardEvent, useEffect, useRef } from "react";
+import {
+  type ComponentType,
+  type KeyboardEvent,
+  useEffect,
+  useRef,
+} from "react";
 
 import { Button, cn } from "@nema-io/weave";
 import { ArrowUp, Square } from "@nema-io/weave/icons";
@@ -19,6 +24,7 @@ interface ChatInputProps {
   placeholder?: string;
   submitDisabled?: boolean;
   autoFocus?: boolean;
+  submitIcon?: ComponentType<{ className?: string }>;
 }
 
 export function ChatInput({
@@ -30,6 +36,7 @@ export function ChatInput({
   placeholder,
   submitDisabled,
   autoFocus,
+  submitIcon: SubmitIcon = ArrowUp,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -110,7 +117,7 @@ export function ChatInput({
             hasContent ? "opacity-100 scale-100" : "opacity-0 scale-90",
           )}
         >
-          <ArrowUp className="size-4" />
+          <SubmitIcon className="size-4" />
         </Button>
       )}
     </div>

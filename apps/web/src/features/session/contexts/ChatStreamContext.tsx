@@ -13,6 +13,7 @@ import { getQueryKey } from "@trpc/react-query";
 
 import {
   type ChatInput,
+  type ChatMode,
   type ChatStreamEvent,
   type Message,
   STATUS_LOG_TYPES,
@@ -41,7 +42,7 @@ export interface ClientStatusMessage {
 export type DisplayMessage = Message | ClientStatusMessage;
 
 interface ChatStreamContextValue {
-  send: (content: string) => void;
+  send: (content: string, mode: ChatMode) => void;
   cancel: () => void;
   streamingPhase: StreamingPhase;
   streamingMessage: DisplayMessage | undefined;
@@ -151,13 +152,14 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   );
 
   const send = useCallback(
-    (content: string) => {
+    (content: string, mode: ChatMode) => {
       if (streamingPhase !== "idle") {
         return;
       }
 
       trackEvent("message.send", sessionId, {
         content_length: content.length,
+        mode,
       });
 
       const optimistic: Message = {
@@ -177,7 +179,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
       setStreamingText("");
       streamingPhaseRef.current = "text";
       setStreamingPhase("text");
-      setStreamInput({ sessionId, content });
+      setStreamInput({ sessionId, content, mode });
     },
     [streamingPhase, sessionId, trackEvent, utils, generateTitle],
   );

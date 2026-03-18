@@ -1,6 +1,9 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
+
+import { CHAT_MODES, type ChatMode } from "@nema-io/shared";
+import { ArrowUp, Search } from "@nema-io/weave/icons";
 
 import { ChatInput } from "@web/components/ui/ChatInput";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
@@ -18,12 +21,47 @@ import { useSlashCommandMenu } from "@web/lib/command/slash/useSlashCommandMenu"
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
 
+const MODE_CONFIG: Record<
+  ChatMode,
+  {
+    icon: typeof ArrowUp;
+    placeholderKey:
+      | "session.input_placeholder"
+      | "session.input_placeholder_ask";
+    labelKey: "session.mode_note" | "session.mode_ask";
+    color: string;
+  }
+> = {
+  note: {
+    icon: ArrowUp,
+    placeholderKey: "session.input_placeholder",
+    labelKey: "session.mode_note",
+    color: "text-mode-note",
+  },
+  ask: {
+    icon: Search,
+    placeholderKey: "session.input_placeholder_ask",
+    labelKey: "session.mode_ask",
+    color: "text-mode-ask",
+  },
+};
+
+function nextMode(current: ChatMode): ChatMode {
+  const idx = CHAT_MODES.indexOf(current);
+  return CHAT_MODES[(idx + 1) % CHAT_MODES.length];
+}
+
 export function ChatComposer() {
   const { t } = useTranslation();
   const { send, cancel, streamingPhase } = useChatStream();
   const { openTab } = useContentTab();
   const sessionId = useSessionId();
   const [inputValue, setInputValue] = useChatDraft(sessionId);
+  const [mode, setMode] = useState<ChatMode>("note");
+
+  const toggleMode = useCallback(() => {
+    setMode(nextMode);
+  }, []);
 
   const saveDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.saveJob.enqueue) }) > 0;
@@ -68,11 +106,17 @@ export function ChatComposer() {
   }
 
   function handleSubmit(content: string) {
-    send(content);
+    send(content, mode);
     setInputValue("");
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Tab" && e.shiftKey) {
+      e.preventDefault();
+      toggleMode();
+      return;
+    }
+
     const handled = handleMenuKeyDown(e.key, e.nativeEvent.isComposing);
     if (handled) {
       e.preventDefault();
@@ -91,15 +135,22 @@ export function ChatComposer() {
           onSelect={selectCommand}
         />
       )}
+      <p className="px-2 text-xs text-fg-tertiary">
+        <span className={MODE_CONFIG[mode].color}>
+          {t(MODE_CONFIG[mode].labelKey)}
+        </span>{" "}
+        {t("session.mode_hint_shortcut")}
+      </p>
       <ChatInput
         value={inputValue}
         onChange={handleChange}
-        placeholder={t("session.input_placeholder")}
+        placeholder={t(MODE_CONFIG[mode].placeholderKey)}
         onSubmit={handleSubmit}
         onStop={isStreaming ? cancel : undefined}
         submitDisabled={saveDraftMutating || cancelDraftMutating}
         autoFocus
         onKeyDown={handleKeyDown}
+        submitIcon={MODE_CONFIG[mode].icon}
       />
     </div>
   );

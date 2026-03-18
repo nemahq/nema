@@ -7,14 +7,14 @@ import {
   buildRetrievalMessage,
   RETRIEVAL_SYSTEM_PROMPT,
 } from "@server/prompts/retrieval";
+import {
+  buildSearchQueryMessage,
+  SEARCH_QUERY_EXTRACTOR_SYSTEM_PROMPT,
+  SearchQuerySchema,
+} from "@server/prompts/search-query-extractor";
 import { trackEvent } from "@server/services/event-service";
 
 const RETRIEVAL_SEARCH_LIMIT = 5;
-
-interface SearchIntent {
-  queries: string[] | null;
-  entities: string[] | null;
-}
 
 export async function* handleRetrievalStream(args: {
   supabase: TypedSupabaseClient;
@@ -22,26 +22,24 @@ export async function* handleRetrievalStream(args: {
   userId: string;
   sessionId: string;
   question: string;
-  intent: SearchIntent;
   lng: Locale;
   signal?: AbortSignal;
 }): AsyncGenerator<ChatStreamEvent, string> {
-  const {
-    supabase,
-    providers,
-    userId,
-    sessionId,
-    question,
-    intent,
-    lng,
-    signal,
-  } = args;
+  const { supabase, providers, userId, sessionId, question, lng, signal } =
+    args;
   const { embedding, vectorStore, graphStore } = providers;
 
+  const searchQuery = await providers.llm.mini.generateStructured({
+    schema: SearchQuerySchema,
+    schemaName: "search_query_extractor",
+    systemPrompt: SEARCH_QUERY_EXTRACTOR_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: buildSearchQueryMessage(question) }],
+  });
+
   let vectorResults: Awaited<ReturnType<typeof vectorStore.search>> = [];
-  if (intent.queries) {
+  if (searchQuery.queries.length > 0) {
     const searchBatches = await Promise.all(
-      intent.queries.map((query) =>
+      searchQuery.queries.map((query) =>
         vectorStore.search(embedding, {
           userId,
           query,
@@ -53,9 +51,9 @@ export async function* handleRetrievalStream(args: {
   }
 
   const graphDocIds = new Set<string>();
-  if (intent.entities && intent.entities.length > 0) {
+  if (searchQuery.entities.length > 0) {
     const graphResults = await graphStore.findDocumentsByEntities({
-      entityNames: intent.entities,
+      entityNames: searchQuery.entities,
       userId,
       limit: RETRIEVAL_SEARCH_LIMIT,
     });

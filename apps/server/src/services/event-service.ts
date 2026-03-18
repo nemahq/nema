@@ -5,7 +5,7 @@ import { capture as capturePostHog } from "@server/infra/posthog";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
 type ServerEventMap = {
-  "intent.classified": { intent: string };
+  "mode.selected": { mode: string };
   "document.saved": { doc_count: number };
   "retrieval.completed": { result_count: number };
 };

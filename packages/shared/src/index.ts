@@ -1,7 +1,10 @@
 export { isLocale, type Locale, LOCALES } from "./i18n";
 export {
+  CHAT_MODES,
   type ChatInput,
   ChatInputSchema,
+  type ChatMode,
+  ChatModeSchema,
   type DraftActionInput,
   DraftActionInputSchema,
 } from "./schemas/chat";

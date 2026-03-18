@@ -57,7 +57,11 @@
     "tab_close": "탭 닫기",
     "save_queue_saving": "저장 중...",
     "save_queue_completed": "저장 완료",
-    "save_queue_failed": "저장 실패"
+    "save_queue_failed": "저장 실패",
+    "mode_note": "메모",
+    "mode_ask": "질문",
+    "input_placeholder_ask": "무엇을 찾고 있나요?",
+    "mode_hint_shortcut": "(⇧Tab으로 전환)"
   },
   "settings": {
     "theme_light": "라이트",

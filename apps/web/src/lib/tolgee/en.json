@@ -57,7 +57,11 @@
     "tab_close": "Close tab",
     "save_queue_saving": "Saving...",
     "save_queue_completed": "Saved",
-    "save_queue_failed": "Save failed"
+    "save_queue_failed": "Save failed",
+    "mode_note": "Note",
+    "mode_ask": "Ask",
+    "input_placeholder_ask": "What are you looking for?",
+    "mode_hint_shortcut": "(⇧Tab to cycle)"
   },
   "settings": {
     "theme_light": "Light",

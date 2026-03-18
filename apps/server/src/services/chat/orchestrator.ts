@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import type {
   ChatInput,
   ChatStreamEvent,
@@ -17,31 +15,10 @@ import {
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
-import {
-  buildIntentRouterMessage,
-  INTENT_ROUTER_ACTIVE_SYSTEM_PROMPT,
-  INTENT_ROUTER_INACTIVE_SYSTEM_PROMPT,
-} from "@server/prompts/intent-router";
 import { trackEvent } from "@server/services/event-service";
-import {
-  enqueueSaveJob,
-  processSaveJobBackground,
-} from "@server/services/save-job-service";
 
 import { handleDraftingStream } from "./drafting";
 import { handleRetrievalStream } from "./retrieval";
-
-const InactiveIntentSchema = z.object({
-  intent: z.enum(["put-in", "pull-out"]),
-  queries: z.array(z.string()).nullable(),
-  entities: z.array(z.string()).nullable(),
-});
-
-const ActiveIntentSchema = z.object({
-  intent: z.enum(["edit", "pull-out", "save", "cancel"]),
-  queries: z.array(z.string()).nullable(),
-  entities: z.array(z.string()).nullable(),
-});
 
 type Draft = SessionDraft;
 
@@ -162,120 +139,44 @@ export async function* processChatStream(args: {
   let responseContent: string;
   let messageType: MessageType = "text";
 
-  if (draft === null) {
-    const intentResult = await providers.llm.mini.generateStructured({
-      schema: InactiveIntentSchema,
-      schemaName: "intent_router_inactive",
-      systemPrompt: INTENT_ROUTER_INACTIVE_SYSTEM_PROMPT,
-      messages: [
-        { role: "user", content: buildIntentRouterMessage(input.content) },
-      ],
-    });
+  trackEvent({
+    supabase,
+    userId,
+    type: "mode.selected",
+    sessionId: input.sessionId,
+    payload: { mode: input.mode },
+  });
 
-    trackEvent({
-      supabase,
-      userId,
-      type: "intent.classified",
-      sessionId: input.sessionId,
-      payload: { intent: intentResult.intent },
-    });
-
-    if (intentResult.intent === "pull-out") {
+  switch (input.mode) {
+    case "ask":
       responseContent = yield* handleRetrievalStream({
         supabase,
         providers,
         userId,
         sessionId: input.sessionId,
         question: input.content,
-        intent: intentResult,
         lng,
         signal,
       });
-    } else {
+      break;
+    case "note": {
       yield { type: "draft_start" };
       const draftBody = yield* handleDraftingStream({
         providers,
         userInput: input.content,
-        currentDraft: null,
+        currentDraft: draft,
         signal,
       });
       await setDraft({ supabase, sessionId: input.sessionId, body: draftBody });
-      responseContent = STATUS_LOG_TYPES.DRAFT_CREATED;
+      responseContent = draft
+        ? STATUS_LOG_TYPES.DRAFT_EDITED
+        : STATUS_LOG_TYPES.DRAFT_CREATED;
       messageType = "status";
+      break;
     }
-  } else {
-    const intentResult = await providers.llm.mini.generateStructured({
-      schema: ActiveIntentSchema,
-      schemaName: "intent_router_active",
-      systemPrompt: INTENT_ROUTER_ACTIVE_SYSTEM_PROMPT,
-      messages: [
-        { role: "user", content: buildIntentRouterMessage(input.content) },
-      ],
-    });
-
-    trackEvent({
-      supabase,
-      userId,
-      type: "intent.classified",
-      sessionId: input.sessionId,
-      payload: { intent: intentResult.intent },
-    });
-
-    switch (intentResult.intent) {
-      case "pull-out":
-        responseContent = yield* handleRetrievalStream({
-          supabase,
-          providers,
-          userId,
-          sessionId: input.sessionId,
-          question: input.content,
-          intent: intentResult,
-          lng,
-          signal,
-        });
-        break;
-      case "edit": {
-        yield { type: "draft_start" };
-        const editedBody = yield* handleDraftingStream({
-          providers,
-          userInput: input.content,
-          currentDraft: draft,
-          signal,
-        });
-        await setDraft({
-          supabase,
-          sessionId: input.sessionId,
-          body: editedBody,
-        });
-        responseContent = STATUS_LOG_TYPES.DRAFT_EDITED;
-        messageType = "status";
-        break;
-      }
-      case "save": {
-        const job = await enqueueSaveJob({
-          supabase,
-          userId,
-          sessionId: input.sessionId,
-        });
-        void processSaveJobBackground({
-          supabase,
-          providers,
-          userId,
-          jobId: job.id,
-        });
-        responseContent = STATUS_LOG_TYPES.DRAFT_SAVED;
-        messageType = "status";
-        break;
-      }
-      case "cancel":
-        await clearDraft(supabase, input.sessionId);
-        responseContent = STATUS_LOG_TYPES.DRAFT_CANCELLED;
-        messageType = "status";
-        break;
-      default: {
-        const _exhaustive: never = intentResult.intent;
-        throw new Error(`Unhandled intent: ${_exhaustive}`);
-      }
+    default: {
+      const _exhaustive: never = input.mode;
+      throw new Error(`Unhandled mode: ${_exhaustive}`);
     }
   }
 

@@ -14,6 +14,7 @@ import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { WritingCursor } from "./WritingCursor";
 
 function DraftTabContentInner() {
   const { t } = useTranslation();
@@ -66,7 +67,11 @@ function DraftTabContentInner() {
         </div>
       )}
       <div className="pt-10">
-        {body ? <MarkdownRenderer content={body} /> : null}
+        {body ? (
+          <MarkdownRenderer content={body} />
+        ) : isStreaming ? (
+          <WritingCursor />
+        ) : null}
       </div>
     </div>
   );
