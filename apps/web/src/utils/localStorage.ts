@@ -51,7 +51,7 @@ type JsonRecordKey = {
   [K in keyof StorageMap]: StorageMap[K] extends JsonRecord ? K : never;
 }[keyof StorageMap];
 
-export function getRecordStorage(key: JsonRecordKey): Record<string, string> {
+function readRecord(key: JsonRecordKey): Record<string, string> {
   const raw = getStorage(key);
   if (!raw) {
     return {};
@@ -59,9 +59,31 @@ export function getRecordStorage(key: JsonRecordKey): Record<string, string> {
   return JSON.parse(raw) as Record<string, string>;
 }
 
-export function setRecordStorage(
+function writeRecord(key: JsonRecordKey, record: Record<string, string>): void {
+  setStorage(key, JSON.stringify(record) as JsonRecord);
+}
+
+export function getRecordEntry(
   key: JsonRecordKey,
-  value: Record<string, string>,
+  entryKey: string,
+): string | null {
+  return readRecord(key)[entryKey] ?? null;
+}
+
+export function setRecordEntry(
+  key: JsonRecordKey,
+  entryKey: string,
+  entryValue: string,
 ): void {
-  setStorage(key, JSON.stringify(value) as JsonRecord);
+  const record = readRecord(key);
+  record[entryKey] = entryValue;
+  writeRecord(key, record);
+}
+
+export function deleteRecordEntry(key: JsonRecordKey, entryKey: string): void {
+  const record = readRecord(key);
+  const rest = Object.fromEntries(
+    Object.entries(record).filter(([k]) => k !== entryKey),
+  );
+  writeRecord(key, rest);
 }
