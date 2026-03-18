@@ -18,6 +18,71 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { SaveQueueItem } from "./SaveQueueItem";
 
+const HEADER_ICON: Record<PanelStatus, React.ReactNode> = {
+  completed: <Check className="size-4 text-status-success" />,
+  failed: <AlertCircle className="size-4 text-status-error" />,
+  active: <Loader2 className="size-4 animate-spin text-fg-tertiary" />,
+};
+
+interface SaveQueueHeaderProps {
+  panelStatus: PanelStatus;
+  completedCount: number;
+  failedCount: number;
+  totalCount: number;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+function SaveQueueHeader({
+  panelStatus,
+  completedCount,
+  failedCount,
+  totalCount,
+  expanded,
+  onToggle,
+}: SaveQueueHeaderProps) {
+  const { t } = useTranslation();
+
+  function getHeaderText(): string {
+    if (panelStatus === "completed") {
+      return t("session.save_queue_panel_completed");
+    }
+    if (panelStatus === "failed") {
+      if (completedCount > 0) {
+        return t("session.save_queue_panel_partial_fail", {
+          completed: completedCount,
+          failed: failedCount,
+        });
+      }
+      return t("session.save_queue_panel_all_failed", {
+        count: failedCount,
+      });
+    }
+    return t("session.save_queue_panel_active", {
+      completed: completedCount,
+      total: totalCount,
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      className="flex w-full items-center gap-2 px-3 py-2.5"
+      onClick={onToggle}
+    >
+      {HEADER_ICON[panelStatus]}
+      <span className="flex-1 text-left text-sm font-medium">
+        {getHeaderText()}
+      </span>
+      {expanded ? (
+        <ChevronDown className="size-4 text-fg-tertiary" />
+      ) : (
+        <ChevronUp className="size-4 text-fg-tertiary" />
+      )}
+    </button>
+  );
+}
+
 export function SaveQueuePanel() {
   const { t } = useTranslation();
   const { items, retry } = useSaveQueue();
@@ -63,54 +128,16 @@ export function SaveQueuePanel() {
     return null;
   }
 
-  function getHeaderText(): string {
-    if (panelStatus === "completed") {
-      return t("session.save_queue_panel_completed");
-    }
-    if (panelStatus === "failed") {
-      if (completedCount > 0) {
-        return t("session.save_queue_panel_partial_fail", {
-          completed: completedCount,
-          failed: failedCount,
-        });
-      }
-      return t("session.save_queue_panel_all_failed", {
-        count: failedCount,
-      });
-    }
-    return t("session.save_queue_panel_active", {
-      completed: completedCount,
-      total: items.length,
-    });
-  }
-
-  function getHeaderIcon() {
-    if (panelStatus === "completed") {
-      return <Check className="size-4 text-status-success" />;
-    }
-    if (panelStatus === "failed") {
-      return <AlertCircle className="size-4 text-status-error" />;
-    }
-    return <Loader2 className="size-4 animate-spin text-fg-tertiary" />;
-  }
-
   return (
     <div className="fixed bottom-4 left-4 z-50 w-80 overflow-hidden rounded-lg bg-surface-card shadow-lg">
-      <button
-        type="button"
-        className="flex w-full items-center gap-2 px-3 py-2.5"
-        onClick={() => setExpanded((prev) => !prev)}
-      >
-        {getHeaderIcon()}
-        <span className="flex-1 text-left text-sm font-medium">
-          {getHeaderText()}
-        </span>
-        {expanded ? (
-          <ChevronDown className="size-4 text-fg-tertiary" />
-        ) : (
-          <ChevronUp className="size-4 text-fg-tertiary" />
-        )}
-      </button>
+      <SaveQueueHeader
+        panelStatus={panelStatus}
+        completedCount={completedCount}
+        failedCount={failedCount}
+        totalCount={items.length}
+        expanded={expanded}
+        onToggle={() => setExpanded((prev) => !prev)}
+      />
 
       <div
         className={cn(
