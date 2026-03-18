@@ -1,9 +1,9 @@
 function validate(key: string): string {
-  const value = import.meta.env[key];
-  if (!value) {
+  const envVar = import.meta.env[key];
+  if (!envVar) {
     throw new Error(`${key}가 설정되지 않았습니다.`);
   }
-  return value;
+  return envVar;
 }
 
 function optional(key: string): string | undefined {

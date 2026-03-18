@@ -28,28 +28,30 @@ export function useRegisterAction(
   const def = getActionDef(id);
 
   const executeRef = useRef(execute);
-  useEffect(() => {
+  useEffect(function syncExecuteRef() {
     executeRef.current = execute;
   });
 
-  useEffect(() => {
-    if (!enabled) {
-      unregister(id);
-      return;
-    }
+  useEffect(
+    function syncRegistry() {
+      if (!enabled) {
+        unregister(id);
+        return;
+      }
 
-    register({
-      id,
-      category: def.category,
-      labelKey: def.labelKey,
-      shortcut: def.shortcut,
-      scope: def.scope,
-      execute: () => executeRef.current(),
-    });
+      register({
+        id,
+        category: def.category,
+        labelKey: def.labelKey,
+        shortcut: def.shortcut,
+        scope: def.scope,
+        execute: () => executeRef.current(),
+      });
 
-    return () => unregister(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- def.* fields are derived purely from id via static actionMap
-  }, [id, enabled, register, unregister]);
+      return () => unregister(id);
+    },
+    [id, enabled, register, unregister],
+  );
 
   const hasModifier = MODIFIER_KEYS.some((key) => def.shortcut.includes(key));
 

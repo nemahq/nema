@@ -5,9 +5,9 @@ import { HelpTabContent } from "@web/features/session/components/HelpTabContent"
 import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
 
 export function useHelpTab(): TabbedPanelTab | undefined {
-  const { helpTabOpen, closeHelpTab } = useContentTab();
+  const { openTabs, closeTab } = useContentTab();
 
-  if (!helpTabOpen) {
+  if (!openTabs.has("help")) {
     return undefined;
   }
 
@@ -16,6 +16,6 @@ export function useHelpTab(): TabbedPanelTab | undefined {
     labelKey: "session.help",
     icon: CircleHelp,
     content: <HelpTabContent />,
-    onClose: closeHelpTab,
+    onClose: () => closeTab("help"),
   };
 }

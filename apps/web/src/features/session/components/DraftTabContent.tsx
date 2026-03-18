@@ -3,15 +3,16 @@ import { Suspense } from "react";
 import { Button, Kbd } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
+import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
+import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useBufferedStream } from "@web/hooks/useBufferedStream";
+import { formatKeySegments } from "@web/lib/command/shortcut/formatKey";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { useChatStream } from "../contexts/ChatStreamContext";
-import { useCancelDraft } from "../hooks/useCancelDraft";
-import { useSaveDraft } from "../hooks/useSaveDraft";
-import { useSessionDraft } from "../hooks/useSessionDraft";
-import { useSessionId } from "../hooks/useSessionId";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
 function DraftTabContentInner() {
@@ -58,8 +59,9 @@ function DraftTabContentInner() {
             disabled={saveDraft.isPending}
           >
             {t("session.draft_save")}
-            <Kbd>⌘</Kbd>
-            <Kbd>S</Kbd>
+            {formatKeySegments("mod+s").map((key) => (
+              <Kbd key={key}>{key}</Kbd>
+            ))}
           </Button>
         </div>
       )}

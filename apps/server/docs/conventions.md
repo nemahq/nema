@@ -19,6 +19,10 @@
 - Infra clients isolate external dependencies. Services MUST NOT construct HTTP requests, raw queries, or SDK calls directly — always go through infra.
 - Single responsibility check: if a function's variables/calls form 2+ independent groups (no shared variables), extract each group into its own function or module.
 
+## Naming
+
+- Generic names like `value`, `data`, `item` MUST NOT be used for variables. Use domain-specific names that convey intent (e.g., `value` → `sessionTitle`, `data` → `sessionDetail`).
+
 ## Functions
 
 - Use object parameter pattern when a function has 3+ parameters.

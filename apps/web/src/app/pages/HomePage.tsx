@@ -6,21 +6,11 @@ import { ChatInput } from "@web/components/ui/ChatInput";
 import { Greeting } from "@web/features/session/components/Greeting";
 import { useCreateSession } from "@web/features/session/hooks/useCreateSession";
 import { useTranslation } from "@web/lib/tolgee";
-import en from "@web/lib/tolgee/en.json";
-
-const VARIANT_COUNT = Object.keys(en.session).filter((k) =>
-  k.startsWith("empty_heading_"),
-).length;
-
-function pickRandom() {
-  return Math.floor(Math.random() * VARIANT_COUNT);
-}
 
 export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [variant] = useState(pickRandom);
-  const [value, setValue] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const createSession = useCreateSession();
 
   function handleSubmit(content: string) {
@@ -44,16 +34,16 @@ export function HomePage() {
       }),
     });
 
-    setValue("");
+    setInputValue("");
   }
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center bg-surface-card">
       <div className="flex w-full max-w-2xl flex-col items-center gap-8 px-6">
-        <Greeting variant={variant} />
+        <Greeting />
         <ChatInput
-          value={value}
-          onChange={setValue}
+          value={inputValue}
+          onChange={setInputValue}
           placeholder={t("session.input_placeholder")}
           submitDisabled={createSession.isPending}
           onSubmit={handleSubmit}

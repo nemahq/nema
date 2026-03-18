@@ -17,9 +17,9 @@ function readStorage<T>(key: string, fallback: T): T {
   }
 }
 
-function writeStorage<T>(key: string, value: T): void {
+function writeStorage<T>(key: string, data: T): void {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(key, JSON.stringify(data));
   } catch {
     // storage full 또는 unavailable — silent fail
   }
@@ -38,59 +38,67 @@ export function useDraftAutosave<T>(
   initialValue: T,
   options?: UseDraftAutosaveOptions,
 ): [
-  value: T,
-  setValue: React.Dispatch<React.SetStateAction<T>>,
+  draft: T,
+  setDraft: React.Dispatch<React.SetStateAction<T>>,
   actions: { clear: () => void },
 ] {
   const delay = options?.delay ?? 500;
 
-  const [value, setValue] = useState<T>(() => readStorage(key, initialValue));
+  const [draft, setDraftState] = useState<T>(() =>
+    readStorage(key, initialValue),
+  );
   const initialValueRef = useRef(initialValue);
-  const latestRef = useRef(value);
+  const latestRef = useRef(draft);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
   const clearedRef = useRef(false);
   const dirtyRef = useRef(false);
 
-  useEffect(() => {
-    latestRef.current = value;
+  useEffect(function syncLatestRef() {
+    latestRef.current = draft;
   });
 
-  useEffect(() => {
-    if (clearedRef.current) {
-      return;
-    }
+  useEffect(
+    function scheduleAutosave() {
+      if (clearedRef.current) {
+        return;
+      }
 
-    timeoutRef.current = setTimeout(() => {
-      writeStorage(key, latestRef.current);
-    }, delay);
+      timeoutRef.current = setTimeout(() => {
+        writeStorage(key, latestRef.current);
+      }, delay);
 
-    return () => {
-      clearTimeout(timeoutRef.current);
-    };
-  }, [key, value, delay]);
+      return () => {
+        clearTimeout(timeoutRef.current);
+      };
+    },
+    [key, draft, delay],
+  );
 
   // 언마운트·beforeunload 시 즉시 flush — 유실 방지
-  useEffect(() => {
-    const flush = () => {
-      if (!clearedRef.current && dirtyRef.current) {
-        writeStorage(key, latestRef.current);
-      }
-    };
-    window.addEventListener("beforeunload", flush);
-    return () => {
-      window.removeEventListener("beforeunload", flush);
-      clearTimeout(timeoutRef.current);
-      flush();
-    };
-  }, [key]);
+  useEffect(
+    function flushOnUnmount() {
+      const flush = () => {
+        if (!clearedRef.current && dirtyRef.current) {
+          writeStorage(key, latestRef.current);
+        }
+      };
+      window.addEventListener("beforeunload", flush);
+      return () => {
+        window.removeEventListener("beforeunload", flush);
+        clearTimeout(timeoutRef.current);
+        flush();
+      };
+    },
+    [key],
+  );
 
   const setDraft = useCallback<React.Dispatch<React.SetStateAction<T>>>(
     (action) => {
       clearedRef.current = false;
       dirtyRef.current = true;
-      setValue(action);
+      setDraftState(action);
     },
     [],
   );
@@ -99,8 +107,8 @@ export function useDraftAutosave<T>(
     clearedRef.current = true;
     dirtyRef.current = false;
     removeStorage(key);
-    setValue(initialValueRef.current);
+    setDraftState(initialValueRef.current);
   }, [key]);
 
-  return [value, setDraft, { clear }];
+  return [draft, setDraft, { clear }];
 }

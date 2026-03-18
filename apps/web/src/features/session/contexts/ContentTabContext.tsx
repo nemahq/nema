@@ -6,21 +6,38 @@ import {
   useState,
 } from "react";
 
+type ContentTabName = "help";
+
 interface ContentTabContextValue {
-  helpTabOpen: boolean;
-  openHelpTab: () => void;
-  closeHelpTab: () => void;
+  openTabs: Set<ContentTabName>;
+  openTab: (name: ContentTabName) => void;
+  closeTab: (name: ContentTabName) => void;
 }
 
 const ContentTabContext = createContext<ContentTabContextValue | null>(null);
 
 export function ContentTabProvider({ children }: { children: ReactNode }) {
-  const [helpTabOpen, setHelpTabOpen] = useState(false);
-  const openHelpTab = useCallback(() => setHelpTabOpen(true), []);
-  const closeHelpTab = useCallback(() => setHelpTabOpen(false), []);
+  const [openTabs, setOpenTabs] = useState<Set<ContentTabName>>(
+    () => new Set(),
+  );
+
+  const openTab = useCallback(
+    (name: ContentTabName) => setOpenTabs((prev) => new Set(prev).add(name)),
+    [],
+  );
+
+  const closeTab = useCallback(
+    (name: ContentTabName) =>
+      setOpenTabs((prev) => {
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      }),
+    [],
+  );
 
   return (
-    <ContentTabContext value={{ helpTabOpen, openHelpTab, closeHelpTab }}>
+    <ContentTabContext value={{ openTabs, openTab, closeTab }}>
       {children}
     </ContentTabContext>
   );

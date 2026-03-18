@@ -3,21 +3,24 @@ import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
 import { ChatInput } from "@web/components/ui/ChatInput";
+import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
-import { SlashCommandMenu } from "@web/lib/command/SlashCommandMenu";
-import type { SlashCommand } from "@web/lib/command/types";
-import { useSlashCommandMenu } from "@web/lib/command/useSlashCommandMenu";
+import {
+  getAllCommandIds,
+  getCommandDef,
+} from "@web/lib/command/slash/commandMap";
+import { SlashCommandMenu } from "@web/lib/command/slash/SlashCommandMenu";
+import type { SlashCommand } from "@web/lib/command/slash/types";
+import { useSlashCommandMenu } from "@web/lib/command/slash/useSlashCommandMenu";
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
-
-import { useChatStream } from "../contexts/ChatStreamContext";
-import { useContentTab } from "../contexts/ContentTabContext";
 
 export function ChatComposer() {
   const { t } = useTranslation();
   const { send, cancel, streamingPhase } = useChatStream();
-  const { openHelpTab } = useContentTab();
-  const [value, setValue] = useState("");
+  const { openTab } = useContentTab();
+  const [inputValue, setInputValue] = useState("");
 
   const saveDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.saveDraft) }) > 0;
@@ -30,15 +33,21 @@ export function ChatComposer() {
     enabled: isStreaming,
   });
 
+  const executors: Record<string, () => void> = useMemo(
+    () => ({
+      help: () => openTab("help"),
+    }),
+    [openTab],
+  );
+
   const slashCommands = useMemo<SlashCommand[]>(
-    () => [
-      {
-        name: "help",
-        descriptionKey: "session.help_description",
-        execute: openHelpTab,
-      },
-    ],
-    [openHelpTab],
+    () =>
+      getAllCommandIds().map((id) => ({
+        name: id,
+        descriptionKey: getCommandDef(id).descriptionKey,
+        execute: executors[id],
+      })),
+    [executors],
   );
 
   const {
@@ -48,16 +57,16 @@ export function ChatComposer() {
     selectCommand,
     handleMenuKeyDown,
     handleValueChange,
-  } = useSlashCommandMenu(slashCommands, value, () => setValue(""));
+  } = useSlashCommandMenu(slashCommands, inputValue, () => setInputValue(""));
 
   function handleChange(newValue: string) {
-    setValue(newValue);
+    setInputValue(newValue);
     handleValueChange();
   }
 
   function handleSubmit(content: string) {
     send(content);
-    setValue("");
+    setInputValue("");
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -71,24 +80,24 @@ export function ChatComposer() {
   }
 
   return (
-    <ChatInput
-      value={value}
-      onChange={handleChange}
-      placeholder={t("session.input_placeholder")}
-      onSubmit={handleSubmit}
-      onStop={isStreaming ? cancel : undefined}
-      submitDisabled={saveDraftMutating || cancelDraftMutating}
-      autoFocus
-      onKeyDown={handleKeyDown}
-      menuSlot={
-        showMenu ? (
-          <SlashCommandMenu
-            commands={filteredCommands}
-            selectedIndex={selectedIndex}
-            onSelect={selectCommand}
-          />
-        ) : undefined
-      }
-    />
+    <div className="relative">
+      {showMenu && (
+        <SlashCommandMenu
+          commands={filteredCommands}
+          selectedIndex={selectedIndex}
+          onSelect={selectCommand}
+        />
+      )}
+      <ChatInput
+        value={inputValue}
+        onChange={handleChange}
+        placeholder={t("session.input_placeholder")}
+        onSubmit={handleSubmit}
+        onStop={isStreaming ? cancel : undefined}
+        submitDisabled={saveDraftMutating || cancelDraftMutating}
+        autoFocus
+        onKeyDown={handleKeyDown}
+      />
+    </div>
   );
 }

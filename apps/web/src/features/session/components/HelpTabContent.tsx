@@ -1,29 +1,17 @@
 import { Kbd } from "@nema-io/weave";
 
 import { getAllActionDefs } from "@web/lib/command/shortcut/actionMap";
+import { formatKeySegments } from "@web/lib/command/shortcut/formatKey";
 import { useTranslation } from "@web/lib/tolgee";
-
-const IS_MAC = navigator.userAgent.includes("Mac");
-
-function formatKey(raw: string): string {
-  return raw
-    .replace(/\bmod\b/gi, IS_MAC ? "⌘" : "Ctrl")
-    .replace(/\bshift\b/gi, IS_MAC ? "⇧" : "Shift")
-    .replace(/\balt\b/gi, IS_MAC ? "⌥" : "Alt")
-    .replace(/\bmeta\b/gi, "⌘")
-    .replace(/\bctrl\b/gi, "Ctrl")
-    .replace(/\bescape\b/gi, "Esc");
-}
 
 interface ShortcutKeysProps {
   shortcut: string;
 }
 
 function ShortcutKeys({ shortcut }: ShortcutKeysProps) {
-  const keys = formatKey(shortcut).split("+");
   return (
     <span className="flex gap-1">
-      {keys.map((key, i) => (
+      {formatKeySegments(shortcut).map((key, i) => (
         <Kbd key={i}>{key}</Kbd>
       ))}
     </span>

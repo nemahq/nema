@@ -33,36 +33,37 @@ export function useSlashCommandMenu(
     onClearValue();
   }
 
-  function handleMenuKeyDown(key: string, isComposing: boolean): boolean {
-    if (!showMenu) {
-      return false;
-    }
-
-    if (key === "ArrowUp") {
+  const keyHandlers: Record<string, () => void> = {
+    ArrowUp: () =>
       setSelectedIndex((prev) =>
         prev <= 0 ? filteredCommands.length - 1 : prev - 1,
-      );
-      return true;
-    }
-    if (key === "ArrowDown") {
+      ),
+    ArrowDown: () =>
       setSelectedIndex((prev) =>
         prev >= filteredCommands.length - 1 ? 0 : prev + 1,
-      );
-      return true;
-    }
-    if (key === "Enter" && !isComposing) {
+      ),
+    Enter: () => {
       const command = filteredCommands[selectedIndex];
       if (command) {
         selectCommand(command);
       }
-      return true;
-    }
-    if (key === "Escape") {
-      setMenuDismissed(true);
-      return true;
-    }
+    },
+    Escape: () => setMenuDismissed(true),
+  };
 
-    return false;
+  function handleMenuKeyDown(key: string, isComposing: boolean): boolean {
+    if (!showMenu) {
+      return false;
+    }
+    if (key === "Enter" && isComposing) {
+      return false;
+    }
+    const handler = keyHandlers[key];
+    if (!handler) {
+      return false;
+    }
+    handler();
+    return true;
   }
 
   function handleValueChange() {

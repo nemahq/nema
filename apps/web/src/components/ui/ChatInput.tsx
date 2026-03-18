@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
+import { type KeyboardEvent, useEffect, useRef } from "react";
 
 import { Button, cn } from "@nema-io/weave";
 import { ArrowUp, Square } from "@nema-io/weave/icons";
@@ -19,7 +19,6 @@ interface ChatInputProps {
   placeholder?: string;
   submitDisabled?: boolean;
   autoFocus?: boolean;
-  menuSlot?: ReactNode;
 }
 
 export function ChatInput({
@@ -31,19 +30,21 @@ export function ChatInput({
   placeholder,
   submitDisabled,
   autoFocus,
-  menuSlot,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) {
-      return;
-    }
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
-  }, [value]);
+  useEffect(
+    function adjustHeight() {
+      const el = textareaRef.current;
+      if (!el) {
+        return;
+      }
+      el.style.height = "auto";
+      el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
+    },
+    [value],
+  );
 
   const isStreaming = !!onStop;
   const hasContent = !!value.trim();
@@ -68,8 +69,7 @@ export function ChatInput({
   }
 
   return (
-    <div className="relative flex w-full flex-col gap-2 rounded-2xl border border-border bg-surface-raised p-3 shadow-sm transition-shadow duration-normal focus-within:border-border-strong focus-within:shadow-md dark:bg-surface-raised-hover">
-      {menuSlot}
+    <div className="flex w-full flex-col gap-2 rounded-2xl border border-border bg-surface-raised p-3 shadow-sm transition-shadow duration-normal focus-within:border-border-strong focus-within:shadow-md dark:bg-surface-raised-hover">
       <textarea
         ref={textareaRef}
         value={value}

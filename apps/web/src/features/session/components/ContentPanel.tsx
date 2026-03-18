@@ -4,10 +4,9 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { TabbedPanel } from "@web/components/ui/TabbedPanel";
+import { useDraftTab } from "@web/features/session/hooks/useDraftTab";
+import { useHelpTab } from "@web/features/session/hooks/useHelpTab";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
-
-import { useDraftTab } from "../hooks/useDraftTab";
-import { useHelpTab } from "../hooks/useHelpTab";
 
 const MAX_TAB_SHORTCUT = 9;
 
