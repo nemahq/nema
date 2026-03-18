@@ -221,6 +221,15 @@ export default tseslint.config(
     rules: { "nema/no-direct-trpc-hooks": "off" },
   },
   {
+    files: ["packages/weave/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/consistent-type-assertions": [
+        "error",
+        { assertionStyle: "as", objectLiteralTypeAssertions: "allow" },
+      ],
+    },
+  },
+  {
     files: ["apps/server/src/infra/supabase.ts"],
     rules: {
       "no-restricted-imports": [

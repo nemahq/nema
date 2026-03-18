@@ -1,4 +1,5 @@
-const FORBIDDEN_RE = /\b(?:sm|lg|xl|2xl):/;
+const FORBIDDEN_RE = /\b(?:sm|lg|xl|2xl):/g;
+const CSS_UTILS = new Set(["cn", "clsx", "cva", "tw", "twMerge"]);
 
 /** @type {import("eslint").Rule.RuleModule} */
 export default {
@@ -17,8 +18,7 @@ export default {
 
   create(context) {
     function checkString(node, value) {
-      const match = FORBIDDEN_RE.exec(value);
-      if (match) {
+      for (const match of value.matchAll(FORBIDDEN_RE)) {
         context.report({
           node,
           messageId: "forbidden",
@@ -41,16 +41,24 @@ export default {
 
       // template literals: className={`sm:hidden ${...}`}
       TemplateLiteral(node) {
+        const parent = node.parent;
+        if (
+          parent.type !== "JSXExpressionContainer" ||
+          parent.parent?.type !== "JSXAttribute" ||
+          parent.parent.name?.name !== "className"
+        ) {
+          return;
+        }
         for (const quasi of node.quasis) {
           checkString(quasi, quasi.value.raw);
         }
       },
 
-      // cn("sm:hidden", ...) / clsx / tw / cva 등 utility 호출의 문자열 인자
+      // cn("sm:hidden", ...) / clsx / tw / cva 등 CSS utility 호출의 문자열 인자
       CallExpression(node) {
         const name =
           node.callee.type === "Identifier" ? node.callee.name : null;
-        if (!name) {
+        if (!name || !CSS_UTILS.has(name)) {
           return;
         }
         for (const arg of node.arguments) {

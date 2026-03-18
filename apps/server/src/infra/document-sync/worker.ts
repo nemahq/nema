@@ -82,7 +82,7 @@ export function createSyncWorker(deps: WorkerDeps) {
 
           const { error: ackError } = await deps.supabase.rpc(
             "ack_sync_event",
-            { p_msg_id: Number(row.msg_id) },
+            { p_msg_id: row.msg_id },
           );
           if (ackError) {
             throw ackError;

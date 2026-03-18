@@ -11,11 +11,10 @@ type ServerEventMap = {
 };
 
 type JsonRecord = { [key: string]: Json | undefined };
-type EventPayload = JsonRecord | Record<string, unknown>;
 
 interface TrackEventParams<
   T extends string = string,
-  P extends EventPayload = EventPayload,
+  P extends JsonRecord = JsonRecord,
 > {
   supabase: TypedSupabaseClient;
   userId: string;
@@ -45,7 +44,7 @@ export function trackEvent({
         user_id: userId,
         session_id: sessionId,
         type,
-        payload: payload as JsonRecord,
+        payload,
       });
       if (error) {
         Sentry.captureMessage(
