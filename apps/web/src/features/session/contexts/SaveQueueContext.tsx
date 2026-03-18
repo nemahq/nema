@@ -12,7 +12,7 @@ import type { SaveJob } from "@nema-io/shared";
 
 import { trpc } from "@web/lib/trpc";
 
-const SAVE_SUCCESS_DISMISS_MS = 3_000;
+const PANEL_DISMISS_MS = 3_000;
 
 type SaveQueueItem = Omit<SaveJob, "id" | "updatedAt"> & {
   jobId: string;
@@ -23,6 +23,7 @@ function toSaveQueueItem(job: SaveJob): SaveQueueItem {
     jobId: job.id,
     sessionId: job.sessionId,
     status: job.status,
+    snippet: job.snippet,
     errorMessage: job.errorMessage,
     createdAt: job.createdAt,
   };
@@ -31,7 +32,6 @@ function toSaveQueueItem(job: SaveJob): SaveQueueItem {
 interface SaveQueueContextValue {
   items: SaveQueueItem[];
   addJob: (job: SaveJob) => void;
-  dismiss: (jobId: string) => void;
   retry: (jobId: string) => void;
 }
 
@@ -54,44 +54,30 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     new Map(),
   );
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const dismissTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
+  const panelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: initialJobs } = trpc.saveJob.list.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
 
-  const dismiss = useCallback((jobId: string) => {
-    setDismissedIds((prev) => new Set(prev).add(jobId));
-    const timer = dismissTimers.current.get(jobId);
-    if (timer) {
-      clearTimeout(timer);
-      dismissTimers.current.delete(jobId);
+  const clearPanelTimer = useCallback(() => {
+    if (panelTimer.current) {
+      clearTimeout(panelTimer.current);
+      panelTimer.current = null;
     }
   }, []);
 
-  const scheduleDismiss = useCallback(
-    (jobId: string) => {
-      if (dismissTimers.current.has(jobId)) {
-        return;
-      }
-      const timer = setTimeout(() => {
-        dismiss(jobId);
-        dismissTimers.current.delete(jobId);
-      }, SAVE_SUCCESS_DISMISS_MS);
-      dismissTimers.current.set(jobId, timer);
+  const addJob = useCallback(
+    (job: SaveJob) => {
+      clearPanelTimer();
+      setSseUpdates((prev) => {
+        const next = new Map(prev);
+        next.set(job.id, toSaveQueueItem(job));
+        return next;
+      });
     },
-    [dismiss],
+    [clearPanelTimer],
   );
-
-  const addJob = useCallback((job: SaveJob) => {
-    setSseUpdates((prev) => {
-      const next = new Map(prev);
-      next.set(job.id, toSaveQueueItem(job));
-      return next;
-    });
-  }, []);
 
   const retrySave = trpc.saveJob.retry.useMutation({
     onSuccess(job) {
@@ -113,17 +99,12 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
       }
 
       const { job } = event;
-      const queueItem = toSaveQueueItem(job);
 
       setSseUpdates((prev) => {
         const next = new Map(prev);
-        next.set(job.id, queueItem);
+        next.set(job.id, toSaveQueueItem(job));
         return next;
       });
-
-      if (job.status === "completed") {
-        scheduleDismiss(job.id);
-      }
     },
     onError() {},
   });
@@ -144,17 +125,51 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     return [...merged.values()].filter((i) => !dismissedIds.has(i.jobId));
   }, [initialJobs, sseUpdates, dismissedIds]);
 
-  useEffect(function cleanupDismissTimers() {
-    const timers = dismissTimers.current;
+  useEffect(
+    function panelAutoDismiss() {
+      if (items.length === 0) {
+        clearPanelTimer();
+        return;
+      }
+
+      const hasActive = items.some(
+        (i) => i.status === "pending" || i.status === "processing",
+      );
+      const hasFailed = items.some((i) => i.status === "failed");
+
+      if (hasActive || hasFailed) {
+        clearPanelTimer();
+        return;
+      }
+
+      // 전체 완료 — 패널 자동 dismiss 예약
+      if (!panelTimer.current) {
+        const ids = items.map((i) => i.jobId);
+        panelTimer.current = setTimeout(() => {
+          setDismissedIds((prev) => {
+            const next = new Set(prev);
+            for (const id of ids) {
+              next.add(id);
+            }
+            return next;
+          });
+          panelTimer.current = null;
+        }, PANEL_DISMISS_MS);
+      }
+    },
+    [items, clearPanelTimer],
+  );
+
+  useEffect(function cleanupPanelTimer() {
     return () => {
-      for (const timer of timers.values()) {
-        clearTimeout(timer);
+      if (panelTimer.current) {
+        clearTimeout(panelTimer.current);
       }
     };
   }, []);
 
   return (
-    <SaveQueueContext.Provider value={{ items, addJob, dismiss, retry }}>
+    <SaveQueueContext.Provider value={{ items, addJob, retry }}>
       {children}
     </SaveQueueContext.Provider>
   );

@@ -61,7 +61,12 @@
     "mode_note": "Note",
     "mode_ask": "Ask",
     "input_placeholder_ask": "What are you looking for?",
-    "mode_hint_shortcut": "(⇧Tab to cycle)"
+    "mode_hint_shortcut": "(⇧Tab to cycle)",
+    "save_queue_panel_active": "{completed}/{total} saving",
+    "save_queue_panel_completed": "Saved",
+    "save_queue_panel_partial_fail": "{completed} saved, {failed} failed",
+    "save_queue_panel_all_failed": "{count} failed",
+    "save_queue_panel_hint": "Saving continues even if you leave this page"
   },
   "settings": {
     "theme_light": "Light",

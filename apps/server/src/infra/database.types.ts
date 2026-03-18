@@ -121,6 +121,7 @@ export type Database = {
           error_message: string | null;
           id: string;
           session_id: string;
+          snippet: string | null;
           status: Database["public"]["Enums"]["save_job_status"];
           updated_at: string;
           user_id: string;
@@ -131,6 +132,7 @@ export type Database = {
           error_message?: string | null;
           id?: string;
           session_id: string;
+          snippet?: string | null;
           status?: Database["public"]["Enums"]["save_job_status"];
           updated_at?: string;
           user_id: string;
@@ -141,6 +143,7 @@ export type Database = {
           error_message?: string | null;
           id?: string;
           session_id?: string;
+          snippet?: string | null;
           status?: Database["public"]["Enums"]["save_job_status"];
           updated_at?: string;
           user_id?: string;
