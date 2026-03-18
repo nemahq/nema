@@ -5,10 +5,24 @@ import { type BooleanString, isBooleanString } from "./serialization";
 import type { ThemePreference } from "./theme-preference";
 import { isThemePreference } from "./theme-preference";
 
+type JsonRecord = string & { __brand?: "JsonRecord" };
+
+function isJsonRecord(v: string): v is JsonRecord {
+  try {
+    const parsed: unknown = JSON.parse(v);
+    return (
+      typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+    );
+  } catch {
+    return false;
+  }
+}
+
 type StorageMap = {
   theme: ThemePreference;
   locale: Locale;
   sidebarCollapsed: BooleanString;
+  chatDrafts: JsonRecord;
 };
 
 const isValid: {
@@ -17,6 +31,7 @@ const isValid: {
   theme: isThemePreference,
   locale: isLocale,
   sidebarCollapsed: isBooleanString,
+  chatDrafts: isJsonRecord,
 };
 
 export function getStorage<K extends keyof StorageMap>(

@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
 import { ChatInput } from "@web/components/ui/ChatInput";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
+import { useChatDraft } from "@web/features/session/hooks/useChatDraft";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import {
   getAllCommandIds,
@@ -20,7 +22,8 @@ export function ChatComposer() {
   const { t } = useTranslation();
   const { send, cancel, streamingPhase } = useChatStream();
   const { openTab } = useContentTab();
-  const [inputValue, setInputValue] = useState("");
+  const sessionId = useSessionId();
+  const [inputValue, setInputValue] = useChatDraft(sessionId);
 
   const saveDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.saveJob.enqueue) }) > 0;
