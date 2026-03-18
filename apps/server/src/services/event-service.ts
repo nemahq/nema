@@ -11,10 +11,11 @@ type ServerEventMap = {
 };
 
 type JsonRecord = { [key: string]: Json | undefined };
+type EventPayload = JsonRecord | Record<string, unknown>;
 
 interface TrackEventParams<
   T extends string = string,
-  P extends JsonRecord = JsonRecord,
+  P extends EventPayload = EventPayload,
 > {
   supabase: TypedSupabaseClient;
   userId: string;
@@ -40,9 +41,12 @@ export function trackEvent({
 
   void (async () => {
     try {
-      const { error } = await supabase
-        .from("events")
-        .insert({ user_id: userId, session_id: sessionId, type, payload });
+      const { error } = await supabase.from("events").insert({
+        user_id: userId,
+        session_id: sessionId,
+        type,
+        payload: payload as JsonRecord,
+      });
       if (error) {
         Sentry.captureMessage(
           `[event-tracking] insert failed: ${error.message}`,
