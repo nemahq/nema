@@ -142,8 +142,10 @@ export function ChatComposer() {
         autoFocus
         onKeyDown={handleKeyDown}
         submitIcon={MODE_CONFIG[mode].icon}
-        hint={t("session.mode_hint", { mode: t(MODE_CONFIG[mode].labelKey) })}
       />
+      <p className="px-2 text-xs text-fg-tertiary">
+        {t("session.mode_hint", { mode: t(MODE_CONFIG[mode].labelKey) })}
+      </p>
     </div>
   );
 }
