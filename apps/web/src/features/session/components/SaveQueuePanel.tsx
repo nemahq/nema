@@ -125,6 +125,12 @@ export function SaveQueuePanel() {
   }
 
   if (items.length === 0) {
+    if (expanded) {
+      setExpanded(false);
+    }
+    if (prevPanelStatus !== null) {
+      setPrevPanelStatus(null);
+    }
     return null;
   }
 
