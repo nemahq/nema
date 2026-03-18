@@ -15,7 +15,7 @@ const SyncEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export const TriggerMessageSchema = z.object({
-  msg_id: z.union([z.string(), z.number()]),
+  msg_id: z.number(),
   read_ct: z.number(),
   message: SyncEventSchema,
 });
@@ -32,7 +32,7 @@ export interface DeleteEvent {
 export type SyncEvent = NotifyEvent | DeleteEvent;
 
 export interface TriggerMessage {
-  msg_id: number | string;
+  msg_id: number;
   read_ct: number;
   message: SyncEvent;
 }

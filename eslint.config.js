@@ -7,13 +7,30 @@ import simpleImportSort from "eslint-plugin-simple-import-sort";
 import tseslint from "typescript-eslint";
 import js from "@eslint/js";
 
+import noDirectTrpcHooks from "./eslint-rules/no-direct-trpc-hooks.js";
+import noForbiddenBreakpoints from "./eslint-rules/no-forbidden-breakpoints.js";
+import noGenericVariableNames from "./eslint-rules/no-generic-variable-names.js";
+import requireNamedPropsInterface from "./eslint-rules/require-named-props-interface.js";
+import requireObjectParams from "./eslint-rules/require-object-params.js";
 import requireSuspenseBoundary from "./eslint-rules/require-suspense-boundary.js";
+
+const nemaPlugin = {
+  rules: {
+    "no-direct-trpc-hooks": noDirectTrpcHooks,
+    "no-forbidden-breakpoints": noForbiddenBreakpoints,
+    "no-generic-variable-names": noGenericVariableNames,
+    "require-named-props-interface": requireNamedPropsInterface,
+    "require-object-params": requireObjectParams,
+    "require-suspense-boundary": requireSuspenseBoundary,
+  },
+};
 
 export default tseslint.config(
   { ignores: ["**/dist/**", "**/.turbo/**"] },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {
+    plugins: { nema: nemaPlugin },
     rules: {
       "no-restricted-imports": [
         "error",
@@ -26,6 +43,14 @@ export default tseslint.config(
           ],
         },
       ],
+      "@typescript-eslint/consistent-type-assertions": [
+        "error",
+        {
+          assertionStyle: "as",
+          objectLiteralTypeAssertions: "never",
+        },
+      ],
+      "nema/no-generic-variable-names": "error",
     },
   },
   {
@@ -54,31 +79,20 @@ export default tseslint.config(
     plugins: {
       "react-hooks": reactHooks,
       "no-relative-import-paths": noRelativeImportPaths,
-      nema: { rules: { "require-suspense-boundary": requireSuspenseBoundary } },
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
       "nema/require-suspense-boundary": "error",
+      "nema/require-named-props-interface": "error",
+      "nema/no-forbidden-breakpoints": "error",
+      "nema/no-direct-trpc-hooks": "error",
+      "no-console": "error",
       "no-restricted-syntax": [
         "error",
         {
           selector:
             "CallExpression[callee.name='useEffect'] > ArrowFunctionExpression",
           message: "useEffect callback must be a named function.",
-        },
-      ],
-    },
-  },
-  {
-    files: ["apps/web/**/hooks/**/*.{ts,tsx}"],
-    rules: {
-      "nema/require-suspense-boundary": "off",
-      "no-relative-import-paths/no-relative-import-paths": [
-        "error",
-        {
-          allowSameFolder: true,
-          rootDir: "src",
-          prefix: "@web",
         },
       ],
       "no-restricted-imports": [
@@ -102,6 +116,20 @@ export default tseslint.config(
     },
   },
   {
+    files: ["apps/web/**/hooks/**/*.{ts,tsx}"],
+    rules: {
+      "nema/require-suspense-boundary": "off",
+      "no-relative-import-paths/no-relative-import-paths": [
+        "error",
+        {
+          allowSameFolder: true,
+          rootDir: "src",
+          prefix: "@web",
+        },
+      ],
+    },
+  },
+  {
     files: ["apps/server/**/*.{ts,tsx}"],
     plugins: {
       "no-relative-import-paths": noRelativeImportPaths,
@@ -113,6 +141,27 @@ export default tseslint.config(
           allowSameFolder: true,
           rootDir: "src",
           prefix: "@server",
+        },
+      ],
+      "nema/require-object-params": "error",
+      "no-console": ["error", { allow: ["warn"] }],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@supabase/supabase-js",
+              importNames: ["SupabaseClient"],
+              message:
+                "Use TypedSupabaseClient from @server/infra/supabase for type-safe DB access.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["*/index"],
+              message: "Import from the directory directly without /index.",
+            },
+          ],
         },
       ],
     },
@@ -147,6 +196,66 @@ export default tseslint.config(
             { from: "feature", allow: ["component", "lib", "hook"] },
             { from: "component", allow: ["lib", "hook"] },
             { from: "hook", allow: ["lib"] },
+          ],
+        },
+      ],
+    },
+  },
+  // --- Overrides ---
+  {
+    files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/consistent-type-assertions": [
+        "error",
+        { assertionStyle: "as", objectLiteralTypeAssertions: "allow" },
+      ],
+      "no-console": "off",
+    },
+  },
+  {
+    files: ["apps/server/src/eval/**/*.ts"],
+    rules: { "no-console": "off" },
+  },
+  {
+    files: ["apps/web/src/app/components/dev-toolbar/**/*.{ts,tsx}"],
+    rules: { "nema/no-direct-trpc-hooks": "off" },
+  },
+  {
+    files: ["packages/weave/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/consistent-type-assertions": [
+        "error",
+        { assertionStyle: "as", objectLiteralTypeAssertions: "allow" },
+      ],
+    },
+  },
+  {
+    files: ["apps/server/src/infra/supabase.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["*/index"],
+              message: "Import from the directory directly without /index.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["apps/web/src/lib/tolgee/useTranslation.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["*/index"],
+              message: "Import from the directory directly without /index.",
+            },
           ],
         },
       ],

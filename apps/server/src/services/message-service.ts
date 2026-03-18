@@ -1,15 +1,14 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 import type { Message, SendMessageInput } from "@nema-io/shared";
 import { MessageSchema } from "@nema-io/shared";
 
+import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   SupabaseError,
   toSupabaseErrorCode,
 } from "@server/infra/supabase-error";
 
 export async function getMessages(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   sessionId: string,
 ): Promise<Message[]> {
   const { data, error } = await supabase
@@ -30,7 +29,7 @@ export async function getMessages(
 }
 
 export async function sendMessage(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   input: SendMessageInput,
 ): Promise<Message> {
   const message = MessageSchema.parse({

@@ -8,7 +8,11 @@ import { CodeBlock } from "./CodeBlock";
 const REMARK_PLUGINS = [remarkGfm];
 const COMPONENTS = { code: CodeBlock };
 
-export function MarkdownRenderer({ content }: { content: string }) {
+interface MarkdownRendererProps {
+  content: string;
+}
+
+export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return (
     <div className="prose-chat">
       <Markdown remarkPlugins={REMARK_PLUGINS} components={COMPONENTS}>

@@ -93,6 +93,7 @@ async function bootstrap() {
 }
 
 bootstrap().catch(async (err) => {
+  // eslint-disable-next-line no-console -- fatal bootstrap before logger exists
   console.error("Fatal: bootstrap failed", err);
   Sentry.captureException(err);
   await Sentry.flush(SENTRY_FLUSH_TIMEOUT_MS);

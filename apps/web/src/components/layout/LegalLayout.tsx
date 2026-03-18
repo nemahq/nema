@@ -5,7 +5,11 @@ import { Link } from "@tanstack/react-router";
 
 import NemaLogo from "@web/assets/nema-logo.svg";
 
-export function LegalLayout({ children }: { children: ReactNode }) {
+interface LegalLayoutProps {
+  children: ReactNode;
+}
+
+export function LegalLayout({ children }: LegalLayoutProps) {
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
       <Link to="/" className="mb-8 inline-block">

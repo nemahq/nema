@@ -63,11 +63,15 @@ async function getDraft(
   return data.draft ? SessionDraftSchema.parse(data.draft) : null;
 }
 
-async function setDraft(
-  supabase: TypedSupabaseClient,
-  sessionId: string,
-  body: string,
-): Promise<void> {
+async function setDraft({
+  supabase,
+  sessionId,
+  body,
+}: {
+  supabase: TypedSupabaseClient;
+  sessionId: string;
+  body: string;
+}): Promise<void> {
   const draft: Draft = { body };
   const { error } = await supabase
     .from("sessions")
@@ -89,11 +93,15 @@ async function clearDraft(
   throwIfSupabaseError(error);
 }
 
-async function appendMessage(
-  supabase: TypedSupabaseClient,
-  sessionId: string,
-  message: Message,
-): Promise<void> {
+async function appendMessage({
+  supabase,
+  sessionId,
+  message,
+}: {
+  supabase: TypedSupabaseClient;
+  sessionId: string;
+  message: Message;
+}): Promise<void> {
   const { error } = await supabase.rpc("append_message", {
     p_session_id: sessionId,
     p_message: message,
@@ -115,7 +123,11 @@ async function createAssistantResponse(args: {
     content: args.content,
     createdAt: new Date().toISOString(),
   });
-  await appendMessage(args.supabase, args.sessionId, message);
+  await appendMessage({
+    supabase: args.supabase,
+    sessionId: args.sessionId,
+    message,
+  });
   return { message, draft: null };
 }
 
@@ -137,7 +149,11 @@ export async function* processChatStream(args: {
     createdAt: new Date().toISOString(),
   });
 
-  await appendMessage(supabase, input.sessionId, userMessage);
+  await appendMessage({
+    supabase,
+    sessionId: input.sessionId,
+    message: userMessage,
+  });
 
   const draft = await getDraft(supabase, input.sessionId);
 
@@ -154,8 +170,12 @@ export async function* processChatStream(args: {
       ],
     });
 
-    trackEvent(supabase, userId, "intent.classified", input.sessionId, {
-      intent: intentResult.intent,
+    trackEvent({
+      supabase,
+      userId,
+      type: "intent.classified",
+      sessionId: input.sessionId,
+      payload: { intent: intentResult.intent },
     });
 
     if (intentResult.intent === "pull-out") {
@@ -177,7 +197,7 @@ export async function* processChatStream(args: {
         currentDraft: null,
         signal,
       });
-      await setDraft(supabase, input.sessionId, draftBody);
+      await setDraft({ supabase, sessionId: input.sessionId, body: draftBody });
       responseContent = STATUS_LOG_TYPES.DRAFT_CREATED;
       messageType = "status";
     }
@@ -191,8 +211,12 @@ export async function* processChatStream(args: {
       ],
     });
 
-    trackEvent(supabase, userId, "intent.classified", input.sessionId, {
-      intent: intentResult.intent,
+    trackEvent({
+      supabase,
+      userId,
+      type: "intent.classified",
+      sessionId: input.sessionId,
+      payload: { intent: intentResult.intent },
     });
 
     switch (intentResult.intent) {
@@ -216,7 +240,11 @@ export async function* processChatStream(args: {
           currentDraft: draft,
           signal,
         });
-        await setDraft(supabase, input.sessionId, editedBody);
+        await setDraft({
+          supabase,
+          sessionId: input.sessionId,
+          body: editedBody,
+        });
         responseContent = STATUS_LOG_TYPES.DRAFT_EDITED;
         messageType = "status";
         break;
@@ -253,7 +281,11 @@ export async function* processChatStream(args: {
     createdAt: new Date().toISOString(),
   });
 
-  await appendMessage(supabase, input.sessionId, assistantMessage);
+  await appendMessage({
+    supabase,
+    sessionId: input.sessionId,
+    message: assistantMessage,
+  });
 
   yield { type: "done" };
 }

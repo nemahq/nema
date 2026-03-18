@@ -39,13 +39,21 @@ export const sessionRouter = router({
   update: protectedProcedure
     .input(SessionUpdateInputSchema)
     .mutation(({ ctx, input }) =>
-      updateSession(ctx.supabase, input.sessionId, input.title),
+      updateSession({
+        supabase: ctx.supabase,
+        sessionId: input.sessionId,
+        title: input.title,
+      }),
     ),
 
   generateTitle: protectedProcedure
     .input(SessionGenerateTitleInputSchema)
     .mutation(({ ctx, input }) =>
-      generateSessionTitle(ctx.supabase, getProviders(), input),
+      generateSessionTitle({
+        supabase: ctx.supabase,
+        providers: getProviders(),
+        ...input,
+      }),
     ),
 
   delete: protectedProcedure
