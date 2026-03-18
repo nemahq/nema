@@ -61,7 +61,7 @@
     "mode_note": "메모",
     "mode_ask": "질문",
     "input_placeholder_ask": "무엇을 찾고 있나요?",
-    "mode_hint": "{mode} (⇧Tab으로 전환)"
+    "mode_hint_shortcut": "(⇧Tab으로 전환)"
   },
   "settings": {
     "theme_light": "라이트",

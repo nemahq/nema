@@ -85,6 +85,14 @@
   --palette-dark-status-info: #60a5fa; /* blue-400 */
   --palette-dark-status-info-tint: rgba(59, 130, 246, 0.12);
 
+  /* Mode — light */
+  --palette-light-mode-note: #6366f1; /* indigo-500 */
+  --palette-light-mode-ask: #ea580c; /* orange-600 */
+
+  /* Mode — dark */
+  --palette-dark-mode-note: #818cf8; /* indigo-400 */
+  --palette-dark-mode-ask: #fb923c; /* orange-400 */
+
   /* Border */
   --palette-light-border: #d6d3d1; /* stone-300 */
   --palette-dark-border: #57534e; /* stone-600 */
@@ -121,6 +129,9 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
+  --mode-note: var(--palette-light-mode-note);
+  --mode-ask: var(--palette-light-mode-ask);
+
   --border: var(--palette-light-border);
 }
 
@@ -149,6 +160,9 @@
   --status-error-tint: var(--palette-dark-status-error-tint);
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
+
+  --mode-note: var(--palette-dark-mode-note);
+  --mode-ask: var(--palette-dark-mode-ask);
 
   --border: var(--palette-dark-border);
 }
@@ -182,6 +196,9 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
+  --mode-note: var(--palette-dark-mode-note);
+  --mode-ask: var(--palette-dark-mode-ask);
+
   --border: var(--palette-dark-border);
 }
 
@@ -210,6 +227,9 @@
   --status-error-tint: var(--palette-light-status-error-tint);
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
+
+  --mode-note: var(--palette-light-mode-note);
+  --mode-ask: var(--palette-light-mode-ask);
 
   --border: var(--palette-light-border);
 }
@@ -247,6 +267,10 @@
   --color-status-error-tint: var(--status-error-tint);
   --color-status-info: var(--status-info);
   --color-status-info-tint: var(--status-info-tint);
+
+  /* Mode */
+  --color-mode-note: var(--mode-note);
+  --color-mode-ask: var(--mode-ask);
 
   /* Border */
   --color-border: var(--border);
