@@ -123,13 +123,6 @@ export function SaveQueuePanel() {
       };
     }, [items]);
 
-  if (panelStatus !== prevPanelStatus) {
-    setPrevPanelStatus(panelStatus);
-    if (panelStatus === "failed") {
-      setExpanded(true);
-    }
-  }
-
   if (items.length === 0) {
     if (expanded) {
       setExpanded(false);
@@ -138,6 +131,13 @@ export function SaveQueuePanel() {
       setPrevPanelStatus(null);
     }
     return null;
+  }
+
+  if (panelStatus !== prevPanelStatus) {
+    setPrevPanelStatus(panelStatus);
+    if (panelStatus === "failed") {
+      setExpanded(true);
+    }
   }
 
   return (
