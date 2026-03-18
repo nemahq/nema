@@ -202,9 +202,7 @@ export async function processSaveJobBackground(args: {
   try {
     const { data } = await args.supabase
       .from("save_jobs")
-      .select(
-        "id, session_id, status, snippet, error_message, created_at, updated_at",
-      )
+      .select(SAVE_JOB_COLUMNS)
       .eq("id", args.jobId)
       .single();
 
