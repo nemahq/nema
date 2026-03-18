@@ -9,28 +9,14 @@ import {
   Loader2,
 } from "@nema-io/weave/icons";
 
-import { useSaveQueue } from "@web/features/session/contexts/SaveQueueContext";
+import {
+  derivePanelStatus,
+  type PanelStatus,
+  useSaveQueue,
+} from "@web/features/session/contexts/SaveQueueContext";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SaveQueueItem } from "./SaveQueueItem";
-
-type PanelStatus = "active" | "completed" | "failed";
-
-function derivePanelStatus(items: { status: string }[]): PanelStatus {
-  const hasActive = items.some(
-    (i) => i.status === "pending" || i.status === "processing",
-  );
-  if (hasActive) {
-    return "active";
-  }
-
-  const hasFailed = items.some((i) => i.status === "failed");
-  if (hasFailed) {
-    return "failed";
-  }
-
-  return "completed";
-}
 
 export function SaveQueuePanel() {
   const { t } = useTranslation();
@@ -40,7 +26,31 @@ export function SaveQueuePanel() {
     null,
   );
 
-  const panelStatus = derivePanelStatus(items);
+  const { panelStatus, completedCount, failedCount, visibleItems } =
+    useMemo(() => {
+      let completed = 0;
+      let failed = 0;
+      let hasActive = false;
+      const failedJobs: typeof items = [];
+
+      for (const job of items) {
+        if (job.status === "completed") {
+          completed++;
+        } else if (job.status === "failed") {
+          failed++;
+          failedJobs.push(job);
+        } else {
+          hasActive = true;
+        }
+      }
+
+      return {
+        panelStatus: derivePanelStatus(items),
+        completedCount: completed,
+        failedCount: failed,
+        visibleItems: hasActive || failed === 0 ? items : failedJobs,
+      };
+    }, [items]);
 
   if (panelStatus !== prevPanelStatus) {
     setPrevPanelStatus(panelStatus);
@@ -48,18 +58,6 @@ export function SaveQueuePanel() {
       setExpanded(true);
     }
   }
-
-  const completedCount = items.filter((i) => i.status === "completed").length;
-  const failedCount = items.filter((i) => i.status === "failed").length;
-  const totalCount = items.length;
-
-  const visibleItems = useMemo(
-    () =>
-      panelStatus === "failed"
-        ? items.filter((i) => i.status === "failed")
-        : items,
-    [items, panelStatus],
-  );
 
   if (items.length === 0) {
     return null;
@@ -82,7 +80,7 @@ export function SaveQueuePanel() {
     }
     return t("session.save_queue_panel_active", {
       completed: completedCount,
-      total: totalCount,
+      total: items.length,
     });
   }
 

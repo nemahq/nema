@@ -1,6 +1,6 @@
 import type { SaveJobStatus } from "@nema-io/shared";
 import { Button } from "@nema-io/weave";
-import { AlertCircle, Loader2, RotateCcw } from "@nema-io/weave/icons";
+import { AlertCircle, Check, Loader2, RotateCcw } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -19,11 +19,14 @@ export function SaveQueueItem({
 }: SaveQueueItemProps) {
   const { t } = useTranslation();
   const isFailed = status === "failed";
+  const isCompleted = status === "completed";
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5">
       {isFailed ? (
         <AlertCircle className="size-3.5 shrink-0 text-status-error" />
+      ) : isCompleted ? (
+        <Check className="size-3.5 shrink-0 text-status-success" />
       ) : (
         <Loader2 className="size-3.5 shrink-0 animate-spin text-fg-tertiary" />
       )}

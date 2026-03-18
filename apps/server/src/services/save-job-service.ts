@@ -18,9 +18,14 @@ import { handleSave } from "./chat/saving";
 
 const RECENT_JOBS_WINDOW_MINUTES = 3;
 const SNIPPET_MAX_LENGTH = 30;
+const SAVE_JOB_COLUMNS =
+  "id, session_id, status, snippet, error_message, created_at, updated_at" as const;
 
-function extractSnippet(body: string): string {
+function extractSnippet(body: string): string | null {
   const normalized = body.trim().replace(/\n/g, " ");
+  if (normalized.length === 0) {
+    return null;
+  }
   if (normalized.length <= SNIPPET_MAX_LENGTH) {
     return normalized;
   }
@@ -81,9 +86,7 @@ export async function enqueueSaveJob(args: {
       snippet,
       status: "pending" as const,
     })
-    .select(
-      "id, session_id, status, snippet, error_message, created_at, updated_at",
-    )
+    .select(SAVE_JOB_COLUMNS)
     .single();
 
   throwIfSupabaseError(insertError);
@@ -227,9 +230,7 @@ export async function retrySaveJob(args: {
     .update({ status: "pending" as const, error_message: null })
     .eq("id", jobId)
     .eq("status", "failed" as const)
-    .select(
-      "id, session_id, status, snippet, error_message, created_at, updated_at",
-    )
+    .select(SAVE_JOB_COLUMNS)
     .single();
 
   throwIfSupabaseError(error);
@@ -246,9 +247,7 @@ export async function listRecentSaveJobs(args: {
 
   const { data, error } = await args.supabase
     .from("save_jobs")
-    .select(
-      "id, session_id, status, snippet, error_message, created_at, updated_at",
-    )
+    .select(SAVE_JOB_COLUMNS)
     .or(`status.in.(pending,processing,failed),created_at.gte.${cutoff}`)
     .order("created_at", { ascending: false });
 
