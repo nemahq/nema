@@ -38,12 +38,15 @@ export function SaveQueueItem({
         {snippet ?? t("session.save_queue_saving")}
       </span>
 
-      {status === "failed" && (
-        <Button variant="ghost" size="xs" onClick={() => onRetry(jobId)}>
-          <RotateCcw className="size-3" />
-          {t("common.retry")}
-        </Button>
-      )}
+      <Button
+        variant="ghost"
+        size="xs"
+        className={status === "failed" ? "visible" : "invisible"}
+        onClick={() => onRetry(jobId)}
+      >
+        <RotateCcw className="size-3" />
+        {t("common.retry")}
+      </Button>
     </div>
   );
 }
