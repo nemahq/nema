@@ -3,6 +3,7 @@ import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
 import type { ChatMode } from "@nema-io/shared";
+import { ArrowUp, Search } from "@nema-io/weave/icons";
 
 import { ChatInput } from "@web/components/ui/ChatInput";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
@@ -117,10 +118,8 @@ export function ChatComposer() {
         submitDisabled={saveDraftMutating || cancelDraftMutating}
         autoFocus
         onKeyDown={handleKeyDown}
-        mode={mode}
-        modeLabel={
-          mode === "ask" ? t("session.mode_ask") : t("session.mode_note")
-        }
+        submitIcon={mode === "ask" ? Search : ArrowUp}
+        hint={`${mode === "ask" ? t("session.mode_ask") : t("session.mode_note")} · ⇧Tab`}
       />
     </div>
   );

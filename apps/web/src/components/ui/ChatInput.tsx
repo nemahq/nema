@@ -1,8 +1,12 @@
-import { type KeyboardEvent, useEffect, useRef } from "react";
+import {
+  type ComponentType,
+  type KeyboardEvent,
+  useEffect,
+  useRef,
+} from "react";
 
-import type { ChatMode } from "@nema-io/shared";
 import { Button, cn } from "@nema-io/weave";
-import { ArrowUp, Search, Square } from "@nema-io/weave/icons";
+import { ArrowUp, Square } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -20,8 +24,8 @@ interface ChatInputProps {
   placeholder?: string;
   submitDisabled?: boolean;
   autoFocus?: boolean;
-  mode?: ChatMode;
-  modeLabel?: string;
+  submitIcon?: ComponentType<{ className?: string }>;
+  hint?: string;
 }
 
 export function ChatInput({
@@ -33,8 +37,8 @@ export function ChatInput({
   placeholder,
   submitDisabled,
   autoFocus,
-  mode = "note",
-  modeLabel,
+  submitIcon: SubmitIcon = ArrowUp,
+  hint,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -72,8 +76,6 @@ export function ChatInput({
       handleSubmit();
     }
   }
-
-  const SubmitIcon = mode === "ask" ? Search : ArrowUp;
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -122,11 +124,9 @@ export function ChatInput({
           </Button>
         )}
       </div>
-      {modeLabel && (
+      {hint && (
         <div className="flex items-center gap-1.5 px-2 text-xs text-fg-tertiary">
-          <span>{modeLabel}</span>
-          <span>·</span>
-          <kbd className="font-sans">⇧Tab</kbd>
+          <span>{hint}</span>
         </div>
       )}
     </div>
