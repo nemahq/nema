@@ -15,7 +15,7 @@ src/
 ├── app/          # Entry point (providers/, router)
 ├── features/     # Business domain modules (capture, library, auth)
 ├── components/   # Feature-agnostic shared UI (ui/, layout/)
-├── lib/          # External service clients (folder per service: tolgee/, tailwind/)
+├── lib/          # Feature-independent infrastructure (external clients + internal modules, folder per concern)
 ├── utils/        # Internal utilities (localStorage, theme, serialization)
 └── hooks/        # Feature-agnostic shared hooks
 ```
