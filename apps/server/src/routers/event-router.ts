@@ -7,12 +7,12 @@ export const eventRouter = router({
   track: protectedProcedure
     .input(TrackEventInputSchema)
     .mutation(({ ctx, input }) => {
-      trackEvent(
-        ctx.supabase,
-        ctx.user.id,
-        input.type,
-        input.sessionId,
-        input.payload,
-      );
+      trackEvent({
+        supabase: ctx.supabase,
+        userId: ctx.user.id,
+        type: input.type,
+        sessionId: input.sessionId,
+        payload: input.payload,
+      });
     }),
 });

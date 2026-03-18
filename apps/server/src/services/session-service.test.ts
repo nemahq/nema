@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { SupabaseError } from "@server/infra/supabase-error";
 
 import { createSession, deleteSession, listSessions } from "./session-service";
@@ -45,7 +45,7 @@ function mockSupabase(resolved: {
   return {
     client: {
       from: vi.fn().mockReturnValue(chain),
-    } as unknown as SupabaseClient,
+    } as unknown as TypedSupabaseClient,
     chain,
   };
 }
@@ -58,10 +58,10 @@ describe("listSessions", () => {
     ];
     const { client } = mockSupabase({ data: rows });
 
-    const result = await listSessions(client, { limit: 5 });
+    const page = await listSessions(client, { limit: 5 });
 
-    expect(result.items).toHaveLength(2);
-    expect(result.nextCursor).toBeNull();
+    expect(page.items).toHaveLength(2);
+    expect(page.nextCursor).toBeNull();
   });
 
   it("결과가 limit+1이면 nextCursor가 마지막 항목의 (updatedAt, id) 인코딩", async () => {
@@ -72,11 +72,11 @@ describe("listSessions", () => {
     ];
     const { client } = mockSupabase({ data: rows });
 
-    const result = await listSessions(client, { limit: 2 });
+    const page = await listSessions(client, { limit: 2 });
 
-    expect(result.items).toHaveLength(2);
-    expect(result.nextCursor).toBeTypeOf("string");
-    const [updatedAt, id] = decodeCursor(result.nextCursor as string);
+    expect(page.items).toHaveLength(2);
+    expect(page.nextCursor).toBeTypeOf("string");
+    const [updatedAt, id] = decodeCursor(page.nextCursor as string);
     expect(updatedAt).toBe("2026-03-02T00:00:00Z");
     expect(id).toBe("b");
   });
@@ -106,12 +106,12 @@ describe("createSession", () => {
     const row = makeRow("new-id", "2026-03-10T00:00:00Z");
     const { client } = mockSupabase({ data: row });
 
-    const result = await createSession(client, {
+    const session = await createSession(client, {
       userId: "user-1",
       sessionId: "new-id",
     });
 
-    expect(result).toEqual({
+    expect(session).toEqual({
       id: "new-id",
       title: null,
       createdAt: "2026-01-01T00:00:00Z",

@@ -90,17 +90,21 @@ export async function handleSave(args: {
 
   const savedDocs: Array<{ id: string; title: string }> = [];
   for (const doc of splitResult.documents) {
-    const results = await saveDocument({
+    const saved = await saveDocument({
       ctx: { supabase, providers, userId },
       sessionId,
       body: doc.body,
       existingTags,
     });
-    savedDocs.push(...results);
+    savedDocs.push(...saved);
   }
 
-  trackEvent(supabase, userId, "document.saved", sessionId, {
-    doc_count: savedDocs.length,
+  trackEvent({
+    supabase,
+    userId,
+    type: "document.saved",
+    sessionId,
+    payload: { doc_count: savedDocs.length },
   });
 }
 
@@ -163,19 +167,19 @@ async function saveDocument(args: {
     });
 
     if (reSplitResult.documents.length > 1) {
-      const results: Array<{ id: string; title: string }> = [];
+      const savedDocs: Array<{ id: string; title: string }> = [];
       for (const splitDoc of reSplitResult.documents) {
-        const result = await persistDocument({
+        const savedDoc = await persistDocument({
           ctx,
           sessionId,
           persistAction: { action: "create" },
           body: splitDoc.body,
           existingTags,
         });
-        results.push(result);
+        savedDocs.push(savedDoc);
       }
-      await deleteDocument(supabase, ctx.userId, targetId);
-      return results;
+      await deleteDocument({ supabase, userId: ctx.userId, docId: targetId });
+      return savedDocs;
     }
 
     return [
@@ -253,11 +257,15 @@ async function persistDocument(args: {
   return { id: docId, title: meta.title };
 }
 
-async function deleteDocument(
-  supabase: TypedSupabaseClient,
-  userId: string,
-  docId: string,
-): Promise<void> {
+async function deleteDocument({
+  supabase,
+  userId,
+  docId,
+}: {
+  supabase: TypedSupabaseClient;
+  userId: string;
+  docId: string;
+}): Promise<void> {
   const { error } = await supabase.rpc("delete_document_with_event", {
     p_doc_id: docId,
     p_user_id: userId,

@@ -14,7 +14,11 @@ function ThemedToast() {
   return <Toast theme={theme} />;
 }
 
-export function AppProviders({ children }: { children: ReactNode }) {
+interface AppProvidersProps {
+  children: ReactNode;
+}
+
+export function AppProviders({ children }: AppProvidersProps) {
   return (
     <I18nProvider>
       <ThemeProvider>

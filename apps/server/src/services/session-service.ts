@@ -1,4 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { TRPCError } from "@trpc/server";
 
 import type {
@@ -9,6 +8,7 @@ import type {
 import { SessionDraftSchema } from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
+import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   SupabaseError,
   throwIfSupabaseError,
@@ -53,7 +53,7 @@ function decodeCursor(cursor: string): { updatedAt: string; id: string } {
 }
 
 export async function listSessions(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   input: SessionListInput,
 ) {
   let query = supabase
@@ -74,16 +74,18 @@ export async function listSessions(
   throwIfSupabaseError(error);
 
   const hasMore = data.length > input.limit;
-  const items = (hasMore ? data.slice(0, input.limit) : data).map(toSummary);
-  const lastItem = items[items.length - 1];
+  const sessions = (hasMore ? data.slice(0, input.limit) : data).map(toSummary);
+  const lastSession = sessions[sessions.length - 1];
   const nextCursor =
-    hasMore && lastItem ? encodeCursor(lastItem.updatedAt, lastItem.id) : null;
+    hasMore && lastSession
+      ? encodeCursor(lastSession.updatedAt, lastSession.id)
+      : null;
 
-  return { items, nextCursor };
+  return { items: sessions, nextCursor };
 }
 
 export async function getSession(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   { sessionId }: { sessionId: string },
 ): Promise<SessionSummary & { draft: SessionDraft | null }> {
   const { data, error } = await supabase
@@ -101,7 +103,7 @@ export async function getSession(
 }
 
 export async function createSession(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   { userId, sessionId }: { userId: string; sessionId: string },
 ): Promise<SessionSummary> {
   const { data, error } = await supabase
@@ -115,11 +117,15 @@ export async function createSession(
   return toSummary(data);
 }
 
-export async function updateSession(
-  supabase: SupabaseClient,
-  sessionId: string,
-  title: string,
-): Promise<SessionSummary> {
+export async function updateSession({
+  supabase,
+  sessionId,
+  title,
+}: {
+  supabase: TypedSupabaseClient;
+  sessionId: string;
+  title: string;
+}): Promise<SessionSummary> {
   const { data, error } = await supabase
     .from("sessions")
     .update({ title })
@@ -133,7 +139,7 @@ export async function updateSession(
 }
 
 export async function deleteSession(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   { sessionId }: { sessionId: string },
 ): Promise<void> {
   const { error, count } = await supabase
@@ -147,11 +153,17 @@ export async function deleteSession(
   }
 }
 
-export async function generateSessionTitle(
-  supabase: SupabaseClient,
-  providers: Providers,
-  { sessionId, content }: { sessionId: string; content: string },
-): Promise<string> {
+export async function generateSessionTitle({
+  supabase,
+  providers,
+  sessionId,
+  content,
+}: {
+  supabase: TypedSupabaseClient;
+  providers: Providers;
+  sessionId: string;
+  content: string;
+}): Promise<string> {
   const { data: existing } = await supabase
     .from("sessions")
     .select("title")

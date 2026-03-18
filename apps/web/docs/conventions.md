@@ -3,7 +3,6 @@
 ## Components
 
 - One component per file. Exception: Suspense/ErrorBoundary wrapper + inner content component may share a file. Inner content component first, wrapper below.
-- Components MUST NOT call tRPC hooks directly. Always wrap in a custom hook.
 - Extract complex handlers as named functions instead of inline.
 - Routing/branching components MUST only branch. Handlers belong inside each sub-component.
 - Constant values (style objects, config arrays, static maps) MUST be defined outside the component. Only values that depend on props, state, or hooks belong inside.
@@ -43,7 +42,6 @@
 
 ## Functions
 
-- Accept arguments as objects so each parameter's intent is clear at the call site.
 - Separate filtering/transformation logic (pure) from execution (side effects).
 
 ## Naming
@@ -65,7 +63,6 @@
 
 ### tRPC
 
-- MUST NOT use tRPC hooks directly in components. Always wrap in a custom hook.
 - One query or mutation per hook. Do not bundle multiple queries/mutations into a single hook.
 - Query hook: `use{Entity}{Qualifier}` (e.g., `useSessionList`, `useSessionDetail`)
 - Mutation hook: `use{Action}{Entity}` (e.g., `useCreateSession`, `useDeleteSession`)
@@ -93,8 +90,7 @@
 ## Responsive
 
 - Desktop-first design. Base styles = mobile, `md:` = desktop (follows Tailwind mobile-first direction).
-- MUST use only `md:` (768px) breakpoint. Tablet gets desktop layout.
-- MUST NOT use `sm:`, `lg:`, `xl:`, `2xl:` in project code (shadcn internals exempt).
+- Tablet gets desktop layout.
 
 ## Accessibility
 
@@ -146,8 +142,6 @@
 - `satisfies`: validate shape against a type while preserving inferred literal types. Use when you need both type checking AND narrow inference.
   - `{ key: "value" } satisfies Record<string, string>` → type-checked AND inferred as `{ key: "value" }`, not widened to `Record<string, string>`.
 - MUST NOT use `as` type assertions to silence the compiler. Allowed only for narrowing from `unknown` after a runtime guard.
-- Component props MUST be declared as a named `interface {ComponentName}Props` above the component. Inline type annotations in the function signature are forbidden.
-  - Generic `Props` is forbidden — name collisions across files make refactoring error-prone.
 - Component data props MUST be primitive values (string, number, boolean). Do NOT pass objects — primitive props enable effective `memo` shallow comparison and minimize re-renders. Callbacks (`on*`), render functions, and `children` are exempt.
 
 ## Design System

@@ -40,7 +40,7 @@ export async function* handleRetrievalStream(args: {
 
   let vectorResults: Awaited<ReturnType<typeof vectorStore.search>> = [];
   if (intent.queries) {
-    const results = await Promise.all(
+    const searchBatches = await Promise.all(
       intent.queries.map((query) =>
         vectorStore.search(embedding, {
           userId,
@@ -49,7 +49,7 @@ export async function* handleRetrievalStream(args: {
         }),
       ),
     );
-    vectorResults = results.flat();
+    vectorResults = searchBatches.flat();
   }
 
   const graphDocIds = new Set<string>();
@@ -84,8 +84,12 @@ export async function* handleRetrievalStream(args: {
     }
   }
 
-  trackEvent(supabase, userId, "retrieval.completed", sessionId, {
-    result_count: searchResults.length,
+  trackEvent({
+    supabase,
+    userId,
+    type: "retrieval.completed",
+    sessionId,
+    payload: { result_count: searchResults.length },
   });
 
   if (searchResults.length === 0) {

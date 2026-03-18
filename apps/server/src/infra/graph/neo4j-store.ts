@@ -16,42 +16,42 @@ import type {
 import { ENTITY_TYPES, GraphStoreError } from "./graph-store";
 
 function getString(record: { get(key: string): unknown }, key: string): string {
-  const value = record.get(key);
-  if (typeof value !== "string") {
+  const field = record.get(key);
+  if (typeof field !== "string") {
     throw new GraphStoreError(
-      `Expected string for "${key}", got ${typeof value}`,
+      `Expected string for "${key}", got ${typeof field}`,
       "recordParse",
     );
   }
-  return value;
+  return field;
 }
 
 function getInteger(
   record: { get(key: string): unknown },
   key: string,
 ): number {
-  const value = record.get(key);
-  if (!isInt(value)) {
+  const field = record.get(key);
+  if (!isInt(field)) {
     throw new GraphStoreError(
-      `Expected Integer for "${key}", got ${typeof value}`,
+      `Expected Integer for "${key}", got ${typeof field}`,
       "recordParse",
     );
   }
-  return (value as Integer).toNumber();
+  return (field as Integer).toNumber();
 }
 
 function getEntityType(
   record: { get(key: string): unknown },
   key: string,
 ): GraphEntity["type"] {
-  const value = getString(record, key);
-  if (!(ENTITY_TYPES as readonly string[]).includes(value)) {
+  const raw = getString(record, key);
+  if (!(ENTITY_TYPES as readonly string[]).includes(raw)) {
     throw new GraphStoreError(
-      `Expected EntityType for "${key}", got "${value}"`,
+      `Expected EntityType for "${key}", got "${raw}"`,
       "recordParse",
     );
   }
-  return value as GraphEntity["type"];
+  return raw as GraphEntity["type"];
 }
 
 export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {

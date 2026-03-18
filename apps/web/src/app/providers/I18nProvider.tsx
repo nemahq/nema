@@ -3,7 +3,11 @@ import { TolgeeProvider } from "@tolgee/react";
 
 import { tolgee } from "@web/lib/tolgee/client";
 
-export function I18nProvider({ children }: { children: ReactNode }) {
+interface I18nProviderProps {
+  children: ReactNode;
+}
+
+export function I18nProvider({ children }: I18nProviderProps) {
   return (
     <TolgeeProvider tolgee={tolgee} fallback={null}>
       {children}

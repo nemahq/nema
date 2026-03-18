@@ -1,10 +1,10 @@
 import { z } from "zod";
 import * as Sentry from "@sentry/node";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import type { GraphStore } from "@server/infra/graph";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
+import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type { VectorStore } from "@server/infra/vector";
 import {
   buildEntityExtractionMessage,
@@ -21,7 +21,7 @@ const PGMQ_BATCH_SIZE = 10;
 const VISIBILITY_TIMEOUT_SEC = 60;
 
 interface WorkerDeps {
-  supabase: SupabaseClient;
+  supabase: TypedSupabaseClient;
   llm: LlmProvider;
   embedding: EmbeddingProvider;
   vectorStore: VectorStore;
@@ -82,7 +82,7 @@ export function createSyncWorker(deps: WorkerDeps) {
 
           const { error: ackError } = await deps.supabase.rpc(
             "ack_sync_event",
-            { p_msg_id: row.msg_id },
+            { p_msg_id: Number(row.msg_id) },
           );
           if (ackError) {
             throw ackError;
@@ -108,6 +108,7 @@ export function createSyncWorker(deps: WorkerDeps) {
 
   return {
     start() {
+      // eslint-disable-next-line no-console -- lifecycle log, no logger in worker context
       console.log("[sync-worker] started");
       timer = setInterval(() => {
         currentPoll = poll();
@@ -123,6 +124,7 @@ export function createSyncWorker(deps: WorkerDeps) {
       if (currentPoll) {
         await currentPoll;
       }
+      // eslint-disable-next-line no-console -- lifecycle log, no logger in worker context
       console.log("[sync-worker] stopped");
     },
   };
@@ -167,7 +169,7 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
 }
 
 async function fetchPendingDocuments(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
 ): Promise<PendingDocument[]> {
   const { data, error } = await supabase.rpc("fetch_pending_documents", {
     p_max_retries: MAX_RETRIES,
@@ -186,7 +188,7 @@ async function fetchPendingDocuments(
 }
 
 async function markCompleted(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   docId: string,
 ): Promise<void> {
   const { error } = await supabase
@@ -200,7 +202,7 @@ async function markCompleted(
 }
 
 async function incrementRetry(
-  supabase: SupabaseClient,
+  supabase: TypedSupabaseClient,
   docId: string,
 ): Promise<void> {
   const { error } = await supabase.rpc("increment_ingestion_retry", {

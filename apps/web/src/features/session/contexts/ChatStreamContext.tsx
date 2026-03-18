@@ -50,7 +50,11 @@ interface ChatStreamContextValue {
 
 const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
 
-export function ChatStreamProvider({ children }: { children: ReactNode }) {
+interface ChatStreamProviderProps {
+  children: ReactNode;
+}
+
+export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   const sessionId = useSessionId();
   const utils = trpc.useUtils();
   const trackEvent = useTrackEvent();
