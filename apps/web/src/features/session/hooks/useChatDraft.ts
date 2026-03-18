@@ -15,10 +15,10 @@ function writeDrafts(drafts: Record<string, string>): void {
 }
 
 export function useChatDraft(sessionId: string): [string, (v: string) => void] {
-  const [value, setValue] = useState(() => readDrafts()[sessionId] ?? "");
+  const [draft, setDraftState] = useState(() => readDrafts()[sessionId] ?? "");
 
   function setDraft(next: string) {
-    setValue(next);
+    setDraftState(next);
     const drafts = readDrafts();
     if (next) {
       drafts[sessionId] = next;
@@ -32,5 +32,5 @@ export function useChatDraft(sessionId: string): [string, (v: string) => void] {
     writeDrafts(drafts);
   }
 
-  return [value, setDraft];
+  return [draft, setDraft];
 }
