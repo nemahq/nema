@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { Button, Kbd } from "@nema-io/weave";
+import { Button, Kbd, TextShimmer } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
@@ -66,7 +66,11 @@ function DraftTabContentInner() {
         </div>
       )}
       <div className="pt-10">
-        {body ? <MarkdownRenderer content={body} /> : null}
+        {body ? (
+          <MarkdownRenderer content={body} />
+        ) : isStreaming ? (
+          <TextShimmer />
+        ) : null}
       </div>
     </div>
   );
