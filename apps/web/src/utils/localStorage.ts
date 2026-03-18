@@ -1,7 +1,8 @@
 import type { Locale } from "@web/lib/tolgee/types";
 import { isLocale } from "@web/lib/tolgee/types";
 
-import { type BooleanString, isBooleanString } from "./serialization";
+import type { BooleanString, JsonRecord } from "./serialization";
+import { isBooleanString, isJsonRecord } from "./serialization";
 import type { ThemePreference } from "./theme-preference";
 import { isThemePreference } from "./theme-preference";
 
@@ -9,6 +10,7 @@ type StorageMap = {
   theme: ThemePreference;
   locale: Locale;
   sidebarCollapsed: BooleanString;
+  chatDrafts: JsonRecord;
 };
 
 const isValid: {
@@ -17,6 +19,7 @@ const isValid: {
   theme: isThemePreference,
   locale: isLocale,
   sidebarCollapsed: isBooleanString,
+  chatDrafts: isJsonRecord,
 };
 
 export function getStorage<K extends keyof StorageMap>(
@@ -42,4 +45,45 @@ export function setStorage<K extends keyof StorageMap>(
   } catch {
     // 의도적 무시
   }
+}
+
+type JsonRecordKey = {
+  [K in keyof StorageMap]: StorageMap[K] extends JsonRecord ? K : never;
+}[keyof StorageMap];
+
+function readRecord(key: JsonRecordKey): Record<string, string> {
+  const raw = getStorage(key);
+  if (!raw) {
+    return {};
+  }
+  return JSON.parse(raw) as Record<string, string>;
+}
+
+function writeRecord(key: JsonRecordKey, record: Record<string, string>): void {
+  setStorage(key, JSON.stringify(record) as JsonRecord);
+}
+
+export function getRecordEntry(
+  key: JsonRecordKey,
+  entryKey: string,
+): string | null {
+  return readRecord(key)[entryKey] ?? null;
+}
+
+export function setRecordEntry(
+  key: JsonRecordKey,
+  entryKey: string,
+  entryValue: string,
+): void {
+  const record = readRecord(key);
+  record[entryKey] = entryValue;
+  writeRecord(key, record);
+}
+
+export function deleteRecordEntry(key: JsonRecordKey, entryKey: string): void {
+  const record = readRecord(key);
+  const rest = Object.fromEntries(
+    Object.entries(record).filter(([k]) => k !== entryKey),
+  );
+  writeRecord(key, rest);
 }
