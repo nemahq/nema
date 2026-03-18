@@ -1,6 +1,8 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
+
+import type { ChatMode } from "@nema-io/shared";
 
 import { ChatInput } from "@web/components/ui/ChatInput";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
@@ -24,6 +26,11 @@ export function ChatComposer() {
   const { openTab } = useContentTab();
   const sessionId = useSessionId();
   const [inputValue, setInputValue] = useChatDraft(sessionId);
+  const [mode, setMode] = useState<ChatMode>("note");
+
+  const toggleMode = useCallback(() => {
+    setMode((prev) => (prev === "note" ? "ask" : "note"));
+  }, []);
 
   const saveDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.saveJob.enqueue) }) > 0;
@@ -68,11 +75,17 @@ export function ChatComposer() {
   }
 
   function handleSubmit(content: string) {
-    send(content);
+    send(content, mode);
     setInputValue("");
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Tab" && e.shiftKey) {
+      e.preventDefault();
+      toggleMode();
+      return;
+    }
+
     const handled = handleMenuKeyDown(e.key, e.nativeEvent.isComposing);
     if (handled) {
       e.preventDefault();
@@ -94,12 +107,20 @@ export function ChatComposer() {
       <ChatInput
         value={inputValue}
         onChange={handleChange}
-        placeholder={t("session.input_placeholder")}
+        placeholder={
+          mode === "ask"
+            ? t("session.input_placeholder_ask")
+            : t("session.input_placeholder")
+        }
         onSubmit={handleSubmit}
         onStop={isStreaming ? cancel : undefined}
         submitDisabled={saveDraftMutating || cancelDraftMutating}
         autoFocus
         onKeyDown={handleKeyDown}
+        mode={mode}
+        modeLabel={
+          mode === "ask" ? t("session.mode_ask") : t("session.mode_note")
+        }
       />
     </div>
   );
