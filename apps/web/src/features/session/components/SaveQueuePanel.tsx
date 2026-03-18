@@ -10,7 +10,6 @@ import {
 } from "@nema-io/weave/icons";
 
 import {
-  derivePanelStatus,
   type PanelStatus,
   useSaveQueue,
 } from "@web/features/session/contexts/SaveQueueContext";
@@ -47,13 +46,13 @@ function SaveQueueHeader({
     if (panelStatus === "completed") {
       return t("session.save_queue_panel_completed");
     }
+    if (panelStatus === "failed" && completedCount > 0) {
+      return t("session.save_queue_panel_partial_fail", {
+        completed: completedCount,
+        failed: failedCount,
+      });
+    }
     if (panelStatus === "failed") {
-      if (completedCount > 0) {
-        return t("session.save_queue_panel_partial_fail", {
-          completed: completedCount,
-          failed: failedCount,
-        });
-      }
       return t("session.save_queue_panel_all_failed", {
         count: failedCount,
       });
@@ -109,11 +108,18 @@ export function SaveQueuePanel() {
         }
       }
 
+      let panelStatus: PanelStatus = "completed";
+      if (hasActive) {
+        panelStatus = "active";
+      } else if (failed > 0) {
+        panelStatus = "failed";
+      }
+
       return {
-        panelStatus: derivePanelStatus(items),
+        panelStatus,
         completedCount: completed,
         failedCount: failed,
-        visibleItems: hasActive || failed === 0 ? items : failedJobs,
+        visibleItems: panelStatus === "failed" ? failedJobs : items,
       };
     }, [items]);
 

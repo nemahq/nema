@@ -16,7 +16,7 @@ const PANEL_DISMISS_MS = 3_000;
 
 export type PanelStatus = "active" | "completed" | "failed";
 
-export function derivePanelStatus(items: { status: string }[]): PanelStatus {
+function derivePanelStatus(items: { status: string }[]): PanelStatus {
   if (items.some((i) => i.status === "pending" || i.status === "processing")) {
     return "active";
   }
