@@ -61,7 +61,12 @@
     "mode_note": "메모",
     "mode_ask": "질문",
     "input_placeholder_ask": "무엇을 찾고 있나요?",
-    "mode_hint_shortcut": "(⇧Tab으로 전환)"
+    "mode_hint_shortcut": "(⇧Tab으로 전환)",
+    "save_queue_panel_active": "{completed}/{total} 저장 중",
+    "save_queue_panel_completed": "저장 완료",
+    "save_queue_panel_partial_fail": "{completed}개 완료, {failed}개 실패",
+    "save_queue_panel_all_failed": "{count}개 실패",
+    "save_queue_panel_hint": "이 페이지를 떠나도 저장은 계속됩니다"
   },
   "settings": {
     "theme_light": "라이트",

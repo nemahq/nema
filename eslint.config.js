@@ -262,5 +262,5 @@ export default tseslint.config(
     },
   },
   prettier,
-  { rules: { curly: "error" } },
+  { rules: { curly: "error", "no-nested-ternary": "error" } },
 );

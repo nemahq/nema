@@ -37,6 +37,7 @@ function makeJobRow(overrides?: Record<string, unknown>) {
     id: JOB_ID,
     session_id: SESSION_ID,
     status: "pending",
+    snippet: null,
     error_message: null,
     created_at: TIMESTAMP,
     updated_at: TIMESTAMP,

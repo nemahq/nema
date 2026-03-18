@@ -12,6 +12,7 @@ export const SaveJobSchema = z.object({
   id: z.string().uuid(),
   sessionId: z.string().uuid(),
   status: SaveJobStatusSchema,
+  snippet: z.string().nullable(),
   errorMessage: z.string().nullable(),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),

@@ -17,11 +17,26 @@ import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import { handleSave } from "./chat/saving";
 
 const RECENT_JOBS_WINDOW_MINUTES = 3;
+const SNIPPET_MAX_LENGTH = 30;
+const SAVE_JOB_COLUMNS =
+  "id, session_id, status, snippet, error_message, created_at, updated_at" as const;
+
+function extractSnippet(body: string): string | null {
+  const normalized = body.trim().replace(/\n/g, " ");
+  if (normalized.length === 0) {
+    return null;
+  }
+  if (normalized.length <= SNIPPET_MAX_LENGTH) {
+    return normalized;
+  }
+  return `${normalized.slice(0, SNIPPET_MAX_LENGTH)}…`;
+}
 
 function toSaveJob(row: {
   id: string;
   session_id: string;
   status: string;
+  snippet: string | null;
   error_message: string | null;
   created_at: string;
   updated_at: string;
@@ -30,6 +45,7 @@ function toSaveJob(row: {
     id: row.id,
     sessionId: row.session_id,
     status: row.status,
+    snippet: row.snippet,
     errorMessage: row.error_message,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -59,15 +75,18 @@ export async function enqueueSaveJob(args: {
     });
   }
 
+  const snippet = extractSnippet(draft.body);
+
   const { data: job, error: insertError } = await supabase
     .from("save_jobs")
     .insert({
       user_id: userId,
       session_id: sessionId,
       draft_body: draft.body,
+      snippet,
       status: "pending" as const,
     })
-    .select("id, session_id, status, error_message, created_at, updated_at")
+    .select(SAVE_JOB_COLUMNS)
     .single();
 
   throwIfSupabaseError(insertError);
@@ -183,7 +202,7 @@ export async function processSaveJobBackground(args: {
   try {
     const { data } = await args.supabase
       .from("save_jobs")
-      .select("id, session_id, status, error_message, created_at, updated_at")
+      .select(SAVE_JOB_COLUMNS)
       .eq("id", args.jobId)
       .single();
 
@@ -209,7 +228,7 @@ export async function retrySaveJob(args: {
     .update({ status: "pending" as const, error_message: null })
     .eq("id", jobId)
     .eq("status", "failed" as const)
-    .select("id, session_id, status, error_message, created_at, updated_at")
+    .select(SAVE_JOB_COLUMNS)
     .single();
 
   throwIfSupabaseError(error);
@@ -226,7 +245,7 @@ export async function listRecentSaveJobs(args: {
 
   const { data, error } = await args.supabase
     .from("save_jobs")
-    .select("id, session_id, status, error_message, created_at, updated_at")
+    .select(SAVE_JOB_COLUMNS)
     .or(`status.in.(pending,processing,failed),created_at.gte.${cutoff}`)
     .order("created_at", { ascending: false });
 

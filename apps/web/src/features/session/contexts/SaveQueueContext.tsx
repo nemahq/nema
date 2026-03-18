@@ -4,15 +4,27 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
+import * as Sentry from "@sentry/react";
 
 import type { SaveJob } from "@nema-io/shared";
 
 import { trpc } from "@web/lib/trpc";
 
-const SAVE_SUCCESS_DISMISS_MS = 3_000;
+const PANEL_DISMISS_MS = 3_000;
+
+export type PanelStatus = "active" | "completed" | "failed";
+
+function derivePanelStatus(items: { status: string }[]): PanelStatus {
+  if (items.some((i) => i.status === "pending" || i.status === "processing")) {
+    return "active";
+  }
+  if (items.some((i) => i.status === "failed")) {
+    return "failed";
+  }
+  return "completed";
+}
 
 type SaveQueueItem = Omit<SaveJob, "id" | "updatedAt"> & {
   jobId: string;
@@ -23,6 +35,7 @@ function toSaveQueueItem(job: SaveJob): SaveQueueItem {
     jobId: job.id,
     sessionId: job.sessionId,
     status: job.status,
+    snippet: job.snippet,
     errorMessage: job.errorMessage,
     createdAt: job.createdAt,
   };
@@ -31,7 +44,6 @@ function toSaveQueueItem(job: SaveJob): SaveQueueItem {
 interface SaveQueueContextValue {
   items: SaveQueueItem[];
   addJob: (job: SaveJob) => void;
-  dismiss: (jobId: string) => void;
   retry: (jobId: string) => void;
 }
 
@@ -54,36 +66,10 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     new Map(),
   );
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const dismissTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
 
   const { data: initialJobs } = trpc.saveJob.list.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
-
-  const dismiss = useCallback((jobId: string) => {
-    setDismissedIds((prev) => new Set(prev).add(jobId));
-    const timer = dismissTimers.current.get(jobId);
-    if (timer) {
-      clearTimeout(timer);
-      dismissTimers.current.delete(jobId);
-    }
-  }, []);
-
-  const scheduleDismiss = useCallback(
-    (jobId: string) => {
-      if (dismissTimers.current.has(jobId)) {
-        return;
-      }
-      const timer = setTimeout(() => {
-        dismiss(jobId);
-        dismissTimers.current.delete(jobId);
-      }, SAVE_SUCCESS_DISMISS_MS);
-      dismissTimers.current.set(jobId, timer);
-    },
-    [dismiss],
-  );
 
   const addJob = useCallback((job: SaveJob) => {
     setSseUpdates((prev) => {
@@ -113,19 +99,18 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
       }
 
       const { job } = event;
-      const queueItem = toSaveQueueItem(job);
 
       setSseUpdates((prev) => {
         const next = new Map(prev);
-        next.set(job.id, queueItem);
+        next.set(job.id, toSaveQueueItem(job));
         return next;
       });
-
-      if (job.status === "completed") {
-        scheduleDismiss(job.id);
-      }
     },
-    onError() {},
+    onError(error) {
+      Sentry.captureException(error, {
+        tags: { component: "save-queue-sse" },
+      });
+    },
   });
 
   const items = useMemo(() => {
@@ -144,17 +129,35 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     return [...merged.values()].filter((i) => !dismissedIds.has(i.jobId));
   }, [initialJobs, sseUpdates, dismissedIds]);
 
-  useEffect(function cleanupDismissTimers() {
-    const timers = dismissTimers.current;
-    return () => {
-      for (const timer of timers.values()) {
-        clearTimeout(timer);
+  useEffect(
+    function panelAutoDismiss() {
+      if (items.length === 0) {
+        return;
       }
-    };
-  }, []);
+
+      const status = derivePanelStatus(items);
+      if (status !== "completed") {
+        return;
+      }
+
+      const ids = items.map((i) => i.jobId);
+      const timer = setTimeout(() => {
+        setDismissedIds((prev) => {
+          const next = new Set(prev);
+          for (const id of ids) {
+            next.add(id);
+          }
+          return next;
+        });
+      }, PANEL_DISMISS_MS);
+
+      return () => clearTimeout(timer);
+    },
+    [items],
+  );
 
   return (
-    <SaveQueueContext.Provider value={{ items, addJob, dismiss, retry }}>
+    <SaveQueueContext.Provider value={{ items, addJob, retry }}>
       {children}
     </SaveQueueContext.Provider>
   );
