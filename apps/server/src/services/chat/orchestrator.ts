@@ -147,29 +147,37 @@ export async function* processChatStream(args: {
     payload: { mode: input.mode },
   });
 
-  if (input.mode === "ask") {
-    responseContent = yield* handleRetrievalStream({
-      supabase,
-      providers,
-      userId,
-      sessionId: input.sessionId,
-      question: input.content,
-      lng,
-      signal,
-    });
-  } else {
-    yield { type: "draft_start" };
-    const draftBody = yield* handleDraftingStream({
-      providers,
-      userInput: input.content,
-      currentDraft: draft,
-      signal,
-    });
-    await setDraft({ supabase, sessionId: input.sessionId, body: draftBody });
-    responseContent = draft
-      ? STATUS_LOG_TYPES.DRAFT_EDITED
-      : STATUS_LOG_TYPES.DRAFT_CREATED;
-    messageType = "status";
+  switch (input.mode) {
+    case "ask":
+      responseContent = yield* handleRetrievalStream({
+        supabase,
+        providers,
+        userId,
+        sessionId: input.sessionId,
+        question: input.content,
+        lng,
+        signal,
+      });
+      break;
+    case "note": {
+      yield { type: "draft_start" };
+      const draftBody = yield* handleDraftingStream({
+        providers,
+        userInput: input.content,
+        currentDraft: draft,
+        signal,
+      });
+      await setDraft({ supabase, sessionId: input.sessionId, body: draftBody });
+      responseContent = draft
+        ? STATUS_LOG_TYPES.DRAFT_EDITED
+        : STATUS_LOG_TYPES.DRAFT_CREATED;
+      messageType = "status";
+      break;
+    }
+    default: {
+      const _exhaustive: never = input.mode;
+      throw new Error(`Unhandled mode: ${_exhaustive}`);
+    }
   }
 
   const assistantMessage = MessageSchema.parse({
