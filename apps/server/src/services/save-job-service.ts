@@ -16,7 +16,6 @@ import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
 import { handleSave } from "./chat/saving";
 
-const RECENT_JOBS_WINDOW_MINUTES = 3;
 const SNIPPET_MAX_LENGTH = 30;
 const SAVE_JOB_COLUMNS =
   "id, session_id, status, snippet, error_message, created_at, updated_at" as const;
@@ -239,14 +238,10 @@ export async function retrySaveJob(args: {
 export async function listRecentSaveJobs(args: {
   supabase: TypedSupabaseClient;
 }): Promise<SaveJob[]> {
-  const cutoff = new Date(
-    Date.now() - RECENT_JOBS_WINDOW_MINUTES * 60 * 1000,
-  ).toISOString();
-
   const { data, error } = await args.supabase
     .from("save_jobs")
     .select(SAVE_JOB_COLUMNS)
-    .or(`status.in.(pending,processing,failed),created_at.gte.${cutoff}`)
+    .in("status", ["pending", "processing", "failed"])
     .order("created_at", { ascending: false });
 
   throwIfSupabaseError(error);

@@ -141,7 +141,7 @@ export function SaveQueuePanel() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 w-80 overflow-hidden rounded-lg bg-surface-card shadow-lg">
+    <div className="fixed bottom-4 left-1/2 z-50 w-80 -translate-x-1/2 overflow-hidden rounded-lg bg-white/80 shadow-2xl ring-1 ring-black/15 backdrop-blur-lg dark:bg-stone-800/80 dark:ring-white/15">
       <SaveQueueHeader
         panelStatus={panelStatus}
         completedCount={completedCount}
