@@ -71,7 +71,6 @@ export {
   type TextProps,
   type TextSize,
 } from "./components/Text";
-export { TextShimmer } from "./components/TextShimmer";
 export { Toast, toast, type ToasterProps } from "./components/Toast";
 export {
   Tooltip,

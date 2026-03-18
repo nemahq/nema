@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { Button, Kbd, TextShimmer } from "@nema-io/weave";
+import { Button, Kbd } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
@@ -14,6 +14,7 @@ import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { WritingCursor } from "./WritingCursor";
 
 function DraftTabContentInner() {
   const { t } = useTranslation();
@@ -69,7 +70,7 @@ function DraftTabContentInner() {
         {body ? (
           <MarkdownRenderer content={body} />
         ) : isStreaming ? (
-          <TextShimmer />
+          <WritingCursor />
         ) : null}
       </div>
     </div>
