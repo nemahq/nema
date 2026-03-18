@@ -3,7 +3,7 @@ import { useSaveQueue } from "@web/features/session/contexts/SaveQueueContext";
 import { SaveQueueEntry } from "./SaveQueueEntry";
 
 export function SaveQueueWidget() {
-  const { items, dismiss, retry } = useSaveQueue();
+  const { items, retry } = useSaveQueue();
 
   if (items.length === 0) {
     return null;
@@ -16,7 +16,6 @@ export function SaveQueueWidget() {
           key={item.jobId}
           jobId={item.jobId}
           status={item.status}
-          onDismiss={dismiss}
           onRetry={retry}
         />
       ))}

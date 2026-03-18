@@ -30,6 +30,7 @@ function toSaveQueueItem(job: SaveJob): SaveQueueItem {
 
 interface SaveQueueContextValue {
   items: SaveQueueItem[];
+  addJob: (job: SaveJob) => void;
   dismiss: (jobId: string) => void;
   retry: (jobId: string) => void;
 }
@@ -44,8 +45,11 @@ export function useSaveQueue(): SaveQueueContextValue {
   return ctx;
 }
 
-export function SaveQueueProvider({ children }: { children: React.ReactNode }) {
-  // SSE로 수신한 업데이트만 관리. 초기 데이터는 query에서 직접 사용
+interface SaveQueueProviderProps {
+  children: React.ReactNode;
+}
+
+export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
   const [sseUpdates, setSseUpdates] = useState<Map<string, SaveQueueItem>>(
     new Map(),
   );
@@ -81,13 +85,17 @@ export function SaveQueueProvider({ children }: { children: React.ReactNode }) {
     [dismiss],
   );
 
+  const addJob = useCallback((job: SaveJob) => {
+    setSseUpdates((prev) => {
+      const next = new Map(prev);
+      next.set(job.id, toSaveQueueItem(job));
+      return next;
+    });
+  }, []);
+
   const retrySave = trpc.saveJob.retry.useMutation({
     onSuccess(job) {
-      setSseUpdates((prev) => {
-        const next = new Map(prev);
-        next.set(job.id, toSaveQueueItem(job));
-        return next;
-      });
+      addJob(job);
     },
   });
 
@@ -105,11 +113,11 @@ export function SaveQueueProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { job } = event;
-      const item = toSaveQueueItem(job);
+      const queueItem = toSaveQueueItem(job);
 
       setSseUpdates((prev) => {
         const next = new Map(prev);
-        next.set(job.id, item);
+        next.set(job.id, queueItem);
         return next;
       });
 
@@ -117,12 +125,9 @@ export function SaveQueueProvider({ children }: { children: React.ReactNode }) {
         scheduleDismiss(job.id);
       }
     },
-    onError(error) {
-      console.error("Save job subscription error:", error);
-    },
+    onError() {},
   });
 
-  // query 결과와 SSE 업데이트를 합산. SSE가 우선 (더 최신)
   const items = useMemo(() => {
     const merged = new Map<string, SaveQueueItem>();
 
@@ -132,8 +137,8 @@ export function SaveQueueProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    for (const [id, item] of sseUpdates) {
-      merged.set(id, item);
+    for (const [id, queueItem] of sseUpdates) {
+      merged.set(id, queueItem);
     }
 
     return [...merged.values()].filter((i) => !dismissedIds.has(i.jobId));
@@ -149,7 +154,7 @@ export function SaveQueueProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <SaveQueueContext.Provider value={{ items, dismiss, retry }}>
+    <SaveQueueContext.Provider value={{ items, addJob, dismiss, retry }}>
       {children}
     </SaveQueueContext.Provider>
   );

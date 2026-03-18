@@ -1,20 +1,18 @@
 import type { SaveJobStatus } from "@nema-io/shared";
 import { Button, cn } from "@nema-io/weave";
-import { AlertCircle, Check, Loader2, X } from "@nema-io/weave/icons";
+import { AlertCircle, Check, Loader2 } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
 interface SaveQueueEntryProps {
   jobId: string;
   status: SaveJobStatus;
-  onDismiss: (jobId: string) => void;
   onRetry: (jobId: string) => void;
 }
 
 export function SaveQueueEntry({
   jobId,
   status,
-  onDismiss,
   onRetry,
 }: SaveQueueEntryProps) {
   const { t } = useTranslation();
@@ -23,17 +21,14 @@ export function SaveQueueEntry({
   const isCompleted = status === "completed";
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-3 rounded-lg border bg-popover px-4 py-3 shadow-md",
-        isCompleted && "animate-fade-out",
-      )}
-    >
+    <div className="flex w-full items-center gap-2 rounded-lg border bg-surface-card px-3 py-2.5 shadow-md">
       {isActive && (
-        <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+        <Loader2 className="size-4 shrink-0 animate-spin text-fg-tertiary" />
       )}
-      {isCompleted && <Check className="size-4 shrink-0 text-emerald-500" />}
-      {isFailed && <AlertCircle className="size-4 shrink-0 text-destructive" />}
+      {isCompleted && <Check className="size-4 shrink-0 text-status-success" />}
+      {isFailed && (
+        <AlertCircle className="size-4 shrink-0 text-status-error" />
+      )}
 
       <span className="flex-1 text-sm">
         {isActive && t("session.save_queue_saving")}
@@ -41,22 +36,14 @@ export function SaveQueueEntry({
         {isFailed && t("session.save_queue_failed")}
       </span>
 
-      {isFailed && (
-        <Button variant="ghost" size="xs" onClick={() => onRetry(jobId)}>
-          {t("common.retry")}
-        </Button>
-      )}
-
-      {isFailed && (
-        <button
-          type="button"
-          aria-label={t("common.close")}
-          className="text-muted-foreground hover:text-foreground"
-          onClick={() => onDismiss(jobId)}
-        >
-          <X className="size-3.5" />
-        </button>
-      )}
+      <Button
+        variant="ghost"
+        size="xs"
+        className={cn(!isFailed && "invisible")}
+        onClick={() => onRetry(jobId)}
+      >
+        {t("common.retry")}
+      </Button>
     </div>
   );
 }
