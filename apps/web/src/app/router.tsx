@@ -16,7 +16,9 @@ import { TermsPage } from "@web/app/pages/TermsPage";
 import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
 import { requireAuth, requireGuest } from "@web/features/auth/guards";
+import { SaveQueueWidget } from "@web/features/session/components/SaveQueueWidget";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
+import { SaveQueueProvider } from "@web/features/session/contexts/SaveQueueContext";
 
 import { App } from "./App";
 
@@ -62,12 +64,13 @@ const sessionSidebarRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   id: "_sessionSidebar",
   component: () => (
-    <>
+    <SaveQueueProvider>
       <SessionSidebar />
       <Suspense fallback={<ContentAreaFallback />}>
         <Outlet />
       </Suspense>
-    </>
+      <SaveQueueWidget />
+    </SaveQueueProvider>
   ),
 });
 

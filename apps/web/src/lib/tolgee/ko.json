@@ -54,7 +54,10 @@
     "stream_stop": "생성 중지",
     "prev_session": "이전 세션",
     "next_session": "다음 세션",
-    "tab_close": "탭 닫기"
+    "tab_close": "탭 닫기",
+    "save_queue_saving": "저장 중...",
+    "save_queue_completed": "저장 완료",
+    "save_queue_failed": "저장 실패"
   },
   "settings": {
     "theme_light": "라이트",

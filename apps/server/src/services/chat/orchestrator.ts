@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 
 import type {
   ChatInput,
@@ -24,10 +23,13 @@ import {
   INTENT_ROUTER_INACTIVE_SYSTEM_PROMPT,
 } from "@server/prompts/intent-router";
 import { trackEvent } from "@server/services/event-service";
+import {
+  enqueueSaveJob,
+  processSaveJobBackground,
+} from "@server/services/save-job-service";
 
 import { handleDraftingStream } from "./drafting";
 import { handleRetrievalStream } from "./retrieval";
-import { handleSave } from "./saving";
 
 const InactiveIntentSchema = z.object({
   intent: z.enum(["put-in", "pull-out"]),
@@ -249,18 +251,22 @@ export async function* processChatStream(args: {
         messageType = "status";
         break;
       }
-      case "save":
-        await handleSave({
+      case "save": {
+        const job = await enqueueSaveJob({
+          supabase,
+          userId,
+          sessionId: input.sessionId,
+        });
+        void processSaveJobBackground({
           supabase,
           providers,
           userId,
-          sessionId: input.sessionId,
-          draftBody: draft.body,
+          jobId: job.id,
         });
-        await clearDraft(supabase, input.sessionId);
         responseContent = STATUS_LOG_TYPES.DRAFT_SAVED;
         messageType = "status";
         break;
+      }
       case "cancel":
         await clearDraft(supabase, input.sessionId);
         responseContent = STATUS_LOG_TYPES.DRAFT_CANCELLED;
@@ -288,39 +294,6 @@ export async function* processChatStream(args: {
   });
 
   yield { type: "done" };
-}
-
-export async function saveDraftAction(args: {
-  supabase: TypedSupabaseClient;
-  providers: Providers;
-  userId: string;
-  sessionId: string;
-}): Promise<ChatResponse> {
-  const { supabase, providers, userId, sessionId } = args;
-
-  const draft = await getDraft(supabase, sessionId);
-  if (!draft) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "No active draft to save",
-    });
-  }
-
-  await handleSave({
-    supabase,
-    providers,
-    userId,
-    sessionId,
-    draftBody: draft.body,
-  });
-  await clearDraft(supabase, sessionId);
-
-  return createAssistantResponse({
-    supabase,
-    sessionId,
-    type: "status",
-    content: STATUS_LOG_TYPES.DRAFT_SAVED,
-  });
 }
 
 export async function cancelDraftAction(args: {

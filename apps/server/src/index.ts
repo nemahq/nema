@@ -13,6 +13,7 @@ import { shutdown as shutdownPostHog } from "./infra/posthog";
 import { getSupabaseAdmin } from "./infra/supabase";
 import { createQdrantStore } from "./infra/vector";
 import { appRouter } from "./router";
+import { failStaleSaveJobs } from "./services/save-job-service";
 import { createContext } from "./trpc";
 
 const SENTRY_FLUSH_TIMEOUT_MS = 2000;
@@ -39,6 +40,11 @@ async function bootstrap() {
   Sentry.setupFastifyErrorHandler(server);
 
   server.get("/health", async () => ({ status: "ok" }));
+
+  const staleCount = await failStaleSaveJobs(getSupabaseAdmin());
+  if (staleCount > 0) {
+    server.log.info(`Marked ${staleCount} stale save jobs as failed`);
+  }
 
   let stopWorker: (() => Promise<void>) | undefined;
 

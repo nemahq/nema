@@ -30,7 +30,9 @@ describe("appRouter", () => {
     });
 
     await expect(
-      authedCaller.message.saveDraft({ sessionId: "test" }),
+      authedCaller.saveJob.enqueue({
+        sessionId: "00000000-0000-0000-0000-000000000000",
+      }),
     ).rejects.toThrow(expect.objectContaining({ code: "PRECONDITION_FAILED" }));
   });
 });

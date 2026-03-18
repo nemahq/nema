@@ -19,6 +19,7 @@ AI-powered context management web app.
 - Node.js >= 22
 - pnpm 10.6+
 - [direnv](https://direnv.net/) — 서버 환경변수 자동 로딩 (서버 개발 시 필요)
+- Docker — DB 마이그레이션 및 타입 생성 시 필요 ([Docker Desktop](https://docs.docker.com/desktop/) 또는 [Colima](https://github.com/abiosoft/colima))
 
 ### 1. 의존성 설치
 
@@ -56,6 +57,23 @@ pnpm dev          # 웹 + 서버 (local API)
 
 - 웹: http://localhost:5173
 - 서버: http://localhost:3001
+
+## DB 마이그레이션
+
+마이그레이션 파일을 추가하거나 수정한 경우 타입을 재생성해야 합니다.
+
+```bash
+# Colima 사용 시 (Docker Desktop이 없는 경우)
+brew install docker colima
+colima start
+
+# 마이그레이션 적용 + 타입 생성
+supabase start -x vector,imgproxy,edge-runtime,logflare,studio
+supabase gen types --lang=typescript --local > apps/server/src/infra/database.types.ts
+supabase stop
+```
+
+생성된 `database.types.ts`를 마이그레이션과 함께 커밋합니다. CI에서 드리프트 감지가 동작하므로 타입이 최신이 아니면 머지가 차단됩니다.
 
 ## 프로젝트 구조
 
