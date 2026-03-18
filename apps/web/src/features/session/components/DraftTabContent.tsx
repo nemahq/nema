@@ -67,11 +67,8 @@ function DraftTabContentInner() {
         </div>
       )}
       <div className="pt-10">
-        {body ? (
-          <MarkdownRenderer content={body} />
-        ) : isStreaming ? (
-          <WritingCursor />
-        ) : null}
+        {body && <MarkdownRenderer content={body} />}
+        {!body && isStreaming && <WritingCursor />}
       </div>
     </div>
   );
