@@ -5,8 +5,6 @@ export const SearchQuerySchema = z.object({
   entities: z.array(z.string()),
 });
 
-export type SearchQuery = z.infer<typeof SearchQuerySchema>;
-
 export const SEARCH_QUERY_EXTRACTOR_SYSTEM_PROMPT = `You extract search queries and entity keywords from a user's question to support knowledge retrieval.
 
 <instructions>
