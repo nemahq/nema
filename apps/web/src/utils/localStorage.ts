@@ -58,3 +58,22 @@ export function setStorage<K extends keyof StorageMap>(
     // 의도적 무시
   }
 }
+
+type JsonRecordKey = {
+  [K in keyof StorageMap]: StorageMap[K] extends JsonRecord ? K : never;
+}[keyof StorageMap];
+
+export function getRecordStorage(key: JsonRecordKey): Record<string, string> {
+  const raw = getStorage(key);
+  if (!raw) {
+    return {};
+  }
+  return JSON.parse(raw) as Record<string, string>;
+}
+
+export function setRecordStorage(
+  key: JsonRecordKey,
+  value: Record<string, string>,
+): void {
+  setStorage(key, JSON.stringify(value) as JsonRecord);
+}

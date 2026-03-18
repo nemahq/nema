@@ -1,35 +1,25 @@
 import { useState } from "react";
 
-import { getStorage, setStorage } from "@web/utils/localStorage";
-
-function readDrafts(): Record<string, string> {
-  const raw = getStorage("chatDrafts");
-  if (!raw) {
-    return {};
-  }
-  return JSON.parse(raw) as Record<string, string>;
-}
-
-function writeDrafts(drafts: Record<string, string>): void {
-  setStorage("chatDrafts", JSON.stringify(drafts));
-}
+import { getRecordStorage, setRecordStorage } from "@web/utils/localStorage";
 
 export function useChatDraft(sessionId: string): [string, (v: string) => void] {
-  const [draft, setDraftState] = useState(() => readDrafts()[sessionId] ?? "");
+  const [draft, setDraftState] = useState(
+    () => getRecordStorage("chatDrafts")[sessionId] ?? "",
+  );
 
   function setDraft(next: string) {
     setDraftState(next);
-    const drafts = readDrafts();
+    const drafts = getRecordStorage("chatDrafts");
     if (next) {
       drafts[sessionId] = next;
     } else {
       const rest = Object.fromEntries(
         Object.entries(drafts).filter(([key]) => key !== sessionId),
       );
-      writeDrafts(rest);
+      setRecordStorage("chatDrafts", rest);
       return;
     }
-    writeDrafts(drafts);
+    setRecordStorage("chatDrafts", drafts);
   }
 
   return [draft, setDraft];
