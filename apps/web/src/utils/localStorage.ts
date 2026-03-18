@@ -1,22 +1,10 @@
 import type { Locale } from "@web/lib/tolgee/types";
 import { isLocale } from "@web/lib/tolgee/types";
 
-import { type BooleanString, isBooleanString } from "./serialization";
+import type { BooleanString, JsonRecord } from "./serialization";
+import { isBooleanString, isJsonRecord } from "./serialization";
 import type { ThemePreference } from "./theme-preference";
 import { isThemePreference } from "./theme-preference";
-
-type JsonRecord = string & { __brand?: "JsonRecord" };
-
-function isJsonRecord(v: string): v is JsonRecord {
-  try {
-    const parsed: unknown = JSON.parse(v);
-    return (
-      typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
-    );
-  } catch {
-    return false;
-  }
-}
 
 type StorageMap = {
   theme: ThemePreference;
