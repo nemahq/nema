@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef } from "react";
 
 import { Button, cn } from "@nema-io/weave";
 import { ArrowUp, Square } from "@nema-io/weave/icons";
@@ -11,30 +11,40 @@ const ACTION_BUTTON_BASE =
   "self-end rounded-full transition-all duration-normal";
 
 interface ChatInputProps {
+  value: string;
+  onChange: (value: string) => void;
   onSubmit: (content: string) => void;
   onStop?: () => void;
+  onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
   submitDisabled?: boolean;
+  autoFocus?: boolean;
 }
 
 export function ChatInput({
+  value,
+  onChange,
   onSubmit,
   onStop,
+  onKeyDown,
   placeholder,
   submitDisabled,
+  autoFocus,
 }: ChatInputProps) {
   const { t } = useTranslation();
-  const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  function adjustHeight() {
-    const el = textareaRef.current;
-    if (!el) {
-      return;
-    }
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
-  }
+  useEffect(
+    function adjustHeight() {
+      const el = textareaRef.current;
+      if (!el) {
+        return;
+      }
+      el.style.height = "auto";
+      el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
+    },
+    [value],
+  );
 
   const isStreaming = !!onStop;
   const hasContent = !!value.trim();
@@ -44,13 +54,14 @@ export function ChatInput({
       return;
     }
     onSubmit(value.trim());
-    setValue("");
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    onKeyDown?.(e);
+    if (e.defaultPrevented) {
+      return;
+    }
+
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSubmit();
@@ -62,12 +73,10 @@ export function ChatInput({
       <textarea
         ref={textareaRef}
         value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          adjustHeight();
-        }}
+        onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        autoFocus={autoFocus}
         rows={1}
         className="w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-tertiary focus:outline-none [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
       />

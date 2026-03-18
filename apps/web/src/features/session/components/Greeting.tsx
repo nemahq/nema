@@ -1,7 +1,16 @@
-import { useTranslation } from "@web/lib/tolgee";
+import { useRef } from "react";
 
-export function Greeting({ variant }: { variant: number }) {
+import { useTranslation } from "@web/lib/tolgee";
+import en from "@web/lib/tolgee/en.json";
+
+const VARIANT_COUNT = Object.keys(en.session).filter((k) =>
+  k.startsWith("empty_heading_"),
+).length;
+
+export function Greeting() {
   const { t } = useTranslation();
+  /* eslint-disable-next-line react-hooks/purity -- one-time impure initializer, useRef is safe here */
+  const variant = useRef(Math.floor(Math.random() * VARIANT_COUNT)).current;
 
   const headingKey =
     `session.empty_heading_${variant}` as "session.empty_heading_0";

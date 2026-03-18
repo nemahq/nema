@@ -48,7 +48,13 @@
     "delete": "삭제",
     "menu": "맥락 메뉴",
     "delete_confirm_title": "맥락을 삭제할까요?",
-    "delete_confirm_description": "삭제하면 되돌릴 수 없습니다."
+    "delete_confirm_description": "삭제하면 되돌릴 수 없습니다.",
+    "help": "단축키 가이드",
+    "help_description": "단축키 목록 보기",
+    "stream_stop": "생성 중지",
+    "prev_session": "이전 세션",
+    "next_session": "다음 세션",
+    "tab_close": "탭 닫기"
   },
   "settings": {
     "theme_light": "라이트",
@@ -56,8 +62,16 @@
     "theme_system": "시스템",
     "sign_out": "로그아웃"
   },
+  "shortcut": {
+    "category_draft": "초안",
+    "category_stream": "AI 생성",
+    "category_navigation": "네비게이션",
+    "category_sidebar": "사이드바",
+    "category_tab": "탭"
+  },
   "layout": {
     "collapse_sidebar": "사이드바 접기",
-    "expand_sidebar": "사이드바 펼치기"
+    "expand_sidebar": "사이드바 펼치기",
+    "toggle_sidebar": "사이드바 토글"
   }
 }

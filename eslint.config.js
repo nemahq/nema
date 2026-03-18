@@ -59,6 +59,14 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "nema/require-suspense-boundary": "error",
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "CallExpression[callee.name='useEffect'] > ArrowFunctionExpression",
+          message: "useEffect callback must be a named function.",
+        },
+      ],
     },
   },
   {

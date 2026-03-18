@@ -217,7 +217,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
     }
   }, [streamingPhase, streamingText, streamStartedAt]);
 
-  const value = useMemo<ChatStreamContextValue>(
+  const contextValue = useMemo<ChatStreamContextValue>(
     () => ({
       send,
       cancel,
@@ -228,7 +228,7 @@ export function ChatStreamProvider({ children }: { children: ReactNode }) {
     [send, cancel, streamingPhase, streamingMessage, streamingDraftText],
   );
 
-  return <ChatStreamContext value={value}>{children}</ChatStreamContext>;
+  return <ChatStreamContext value={contextValue}>{children}</ChatStreamContext>;
 }
 
 export function useChatStream() {

@@ -5,6 +5,7 @@ import { Button, cn } from "@nema-io/weave";
 import { PanelLeft } from "@nema-io/weave/icons";
 
 import NemaLogo from "@web/assets/nema-logo.svg";
+import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 import { getStorage, setStorage } from "@web/utils/localStorage";
 
@@ -25,6 +26,8 @@ export function Sidebar({ topSlot, children, footer }: SidebarProps) {
     setCollapsed(next);
     setStorage("sidebarCollapsed", next ? "true" : "false");
   }
+
+  useRegisterAction("sidebar.toggle", { execute: toggle });
 
   return (
     <aside

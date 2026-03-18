@@ -59,6 +59,7 @@
 - Hook name = caller perspective. Name by what the caller does, not by API endpoint or DB table.
 - Hook return variable: drop `use` prefix → camelCase. `useSessionList()` → `sessionList`. Array return → plural entity (`messages`).
 - Component name MUST NOT repeat the parent folder name. `session/components/MessageList` — O, `session/components/SessionMessageList` — X.
+- Generic names like `value`, `data`, `item` MUST NOT be used for variables. Use domain-specific names that convey intent (e.g., `inputValue` → `messageInput`, `data` → `sessionDetail`).
 
 ## Data Fetching
 
@@ -87,6 +88,7 @@
 - Async operations inside `useEffect` MUST use async/await (not `.then()` chains). Use Promise only when async/await cannot express the logic.
 - `useEffect` is only for external system connections (WebSocket, EventListener) and DOM manipulation.
 - MUST NOT use `useEffect` for: derived state computation, event response logic, effect chaining.
+- One-time impure initializers (e.g., `Math.random()`) MUST use `useState` with an initializer function: `const [x] = useState(() => impureFn())`. `useRef` initializer runs during render and violates purity rules.
 
 ## Responsive
 
