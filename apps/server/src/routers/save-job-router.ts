@@ -1,14 +1,9 @@
 import type { SaveJob } from "@nema-io/shared";
-import {
-  EnqueueSaveInputSchema,
-  MessageSchema,
-  RetrySaveInputSchema,
-  STATUS_LOG_TYPES,
-} from "@nema-io/shared";
+import { EnqueueSaveInputSchema, RetrySaveInputSchema } from "@nema-io/shared";
 
 import { onSaveJobUpdate } from "@server/infra/save-job-emitter";
-import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import {
+  appendSaveStatusMessage,
   enqueueSaveJob,
   listRecentSaveJobs,
   processSaveJobBackground,
@@ -26,20 +21,10 @@ export const saveJobRouter = router({
         sessionId: input.sessionId,
       });
 
-      const statusMessage = MessageSchema.parse({
-        id: crypto.randomUUID(),
-        role: "assistant",
-        type: "status",
-        content: STATUS_LOG_TYPES.DRAFT_SAVED,
-        createdAt: new Date().toISOString(),
+      await appendSaveStatusMessage({
+        supabase: ctx.supabase,
+        sessionId: input.sessionId,
       });
-
-      const { error } = await ctx.supabase.rpc("append_message", {
-        p_session_id: input.sessionId,
-        p_message: statusMessage,
-      });
-
-      throwIfSupabaseError(error);
 
       void processSaveJobBackground({
         supabase: ctx.supabase,

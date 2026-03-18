@@ -21,7 +21,7 @@ export function SaveQueueEntry({
   const isCompleted = status === "completed";
 
   return (
-    <div className="flex w-full items-center gap-2 rounded-lg border bg-surface-card px-3 py-2.5 shadow-md">
+    <div className="flex w-full items-center gap-2 rounded-lg bg-surface-card px-3 py-2.5 shadow-lg">
       {isActive && (
         <Loader2 className="size-4 shrink-0 animate-spin text-fg-tertiary" />
       )}
