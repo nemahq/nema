@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CHAT_MODES = ["note", "ask"] as const;
+export const CHAT_MODES = ["remember", "ask"] as const;
 export const ChatModeSchema = z.enum(CHAT_MODES);
 export type ChatMode = z.infer<typeof ChatModeSchema>;
 

@@ -86,11 +86,11 @@
   --palette-dark-status-info-tint: rgba(59, 130, 246, 0.12);
 
   /* Mode — light */
-  --palette-light-mode-note: #6366f1; /* indigo-500 */
+  --palette-light-mode-remember: #6366f1; /* indigo-500 */
   --palette-light-mode-ask: #ea580c; /* orange-600 */
 
   /* Mode — dark */
-  --palette-dark-mode-note: #818cf8; /* indigo-400 */
+  --palette-dark-mode-remember: #818cf8; /* indigo-400 */
   --palette-dark-mode-ask: #fb923c; /* orange-400 */
 
   /* Border */
@@ -129,7 +129,7 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
-  --mode-note: var(--palette-light-mode-note);
+  --mode-remember: var(--palette-light-mode-remember);
   --mode-ask: var(--palette-light-mode-ask);
 
   --border: var(--palette-light-border);
@@ -161,7 +161,7 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
-  --mode-note: var(--palette-dark-mode-note);
+  --mode-remember: var(--palette-dark-mode-remember);
   --mode-ask: var(--palette-dark-mode-ask);
 
   --border: var(--palette-dark-border);
@@ -196,7 +196,7 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
-  --mode-note: var(--palette-dark-mode-note);
+  --mode-remember: var(--palette-dark-mode-remember);
   --mode-ask: var(--palette-dark-mode-ask);
 
   --border: var(--palette-dark-border);
@@ -228,7 +228,7 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
-  --mode-note: var(--palette-light-mode-note);
+  --mode-remember: var(--palette-light-mode-remember);
   --mode-ask: var(--palette-light-mode-ask);
 
   --border: var(--palette-light-border);
@@ -269,7 +269,7 @@
   --color-status-info-tint: var(--status-info-tint);
 
   /* Mode */
-  --color-mode-note: var(--mode-note);
+  --color-mode-remember: var(--mode-remember);
   --color-mode-ask: var(--mode-ask);
 
   /* Border */

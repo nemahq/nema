@@ -28,15 +28,15 @@ const MODE_CONFIG: Record<
     placeholderKey:
       | "session.input_placeholder"
       | "session.input_placeholder_ask";
-    labelKey: "session.mode_note" | "session.mode_ask";
+    labelKey: "session.mode_remember" | "session.mode_ask";
     color: string;
   }
 > = {
-  note: {
+  remember: {
     icon: ArrowUp,
     placeholderKey: "session.input_placeholder",
-    labelKey: "session.mode_note",
-    color: "text-mode-note",
+    labelKey: "session.mode_remember",
+    color: "text-mode-remember",
   },
   ask: {
     icon: Search,
@@ -57,7 +57,7 @@ export function ChatComposer() {
   const { openTab } = useContentTab();
   const sessionId = useSessionId();
   const [inputValue, setInputValue] = useChatDraft(sessionId);
-  const [mode, setMode] = useState<ChatMode>("note");
+  const [mode, setMode] = useState<ChatMode>("remember");
 
   const toggleMode = useCallback(() => {
     setMode(nextMode);

@@ -80,7 +80,7 @@ export function ChatPanel() {
         return;
       }
       sentRef.current = true;
-      send(initialMessage, "note");
+      send(initialMessage, "remember");
       navigate({ replace: true, state: {} });
     },
     [initialMessage, navigate, send],
