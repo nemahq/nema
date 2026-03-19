@@ -159,7 +159,7 @@ export async function* processChatStream(args: {
         signal,
       });
       break;
-    case "note": {
+    case "remember": {
       yield { type: "draft_start" };
       const draftBody = yield* handleDraftingStream({
         providers,
