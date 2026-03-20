@@ -6,7 +6,6 @@ import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import {
-  buildDerivationMetaMessage,
   buildJudgmentMessage,
   buildMetaMessage,
   buildSplitMessage,
@@ -76,13 +75,17 @@ async function getExistingTags(
 }
 
 function normalizeTags(tags: string[]): string[] {
-  return tags.map((tag) =>
-    tag
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9가-힣ぁ-んァ-ヶ一-龥-]/g, ""),
-  );
+  return tags
+    .map((tag) =>
+      tag
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9가-힣ぁ-んァ-ヶ一-龥-]/g, "")
+        .replace(/^-+|-+$/g, "")
+        .replace(/-{2,}/g, "-"),
+    )
+    .filter((tag) => tag.length > 0);
 }
 
 export async function handleSave(args: {
@@ -268,7 +271,7 @@ async function generateDocumentFields(args: {
     messages: [
       {
         role: "user",
-        content: buildDerivationMetaMessage({
+        content: buildMetaMessage({
           body,
           existingTags,
           currentTags,
@@ -300,11 +303,12 @@ async function persistDocument(args: {
 
   let currentTags: string[] | undefined;
   if (persistAction.action === "update") {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("documents")
       .select("tags")
       .eq("id", persistAction.targetId)
       .single();
+    throwIfSupabaseError(error);
     currentTags = Array.isArray(data?.tags) ? data.tags : undefined;
   }
 

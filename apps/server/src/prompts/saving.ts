@@ -184,18 +184,6 @@ You receive:
 </example>
 </examples>`;
 
-export function buildDerivationMetaMessage(args: {
-  body: string;
-  existingTags: string[];
-  currentTags?: string[];
-}): string {
-  let msg = `<body>${args.body}</body>\n\n<existing_tags>${JSON.stringify(args.existingTags)}</existing_tags>`;
-  if (args.currentTags) {
-    msg += `\n\n<current_tags>${JSON.stringify(args.currentTags)}</current_tags>`;
-  }
-  return msg;
-}
-
 export function buildMetaMessage(args: {
   body: string;
   existingTags: string[];
