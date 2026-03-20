@@ -10,14 +10,6 @@ interface ProfileProviderProps {
   children: ReactNode;
 }
 
-export function ProfileProvider({ children }: ProfileProviderProps) {
-  return (
-    <Suspense fallback={null}>
-      <ProfileProviderInner>{children}</ProfileProviderInner>
-    </Suspense>
-  );
-}
-
 function ProfileProviderInner({ children }: ProfileProviderProps) {
   const [profile] = useProfileQuery();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -43,5 +35,13 @@ function ProfileProviderInner({ children }: ProfileProviderProps) {
         </>
       )}
     </ProfileContext>
+  );
+}
+
+export function ProfileProvider({ children }: ProfileProviderProps) {
+  return (
+    <Suspense fallback={null}>
+      <ProfileProviderInner>{children}</ProfileProviderInner>
+    </Suspense>
   );
 }
