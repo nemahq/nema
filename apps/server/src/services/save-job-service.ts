@@ -2,11 +2,9 @@ import * as Sentry from "@sentry/node";
 import { TRPCError } from "@trpc/server";
 
 import {
-  MessageSchema,
   type SaveJob,
   SaveJobSchema,
   SessionDraftSchema,
-  STATUS_LOG_TYPES,
 } from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
@@ -99,28 +97,6 @@ export async function enqueueSaveJob(args: {
   throwIfSupabaseError(clearError);
 
   return toSaveJob(job);
-}
-
-export async function appendSaveStatusMessage(args: {
-  supabase: TypedSupabaseClient;
-  sessionId: string;
-}): Promise<void> {
-  const { supabase, sessionId } = args;
-
-  const statusMessage = MessageSchema.parse({
-    id: crypto.randomUUID(),
-    role: "assistant",
-    type: "status",
-    content: STATUS_LOG_TYPES.DRAFT_SAVED,
-    createdAt: new Date().toISOString(),
-  });
-
-  const { error } = await supabase.rpc("append_message", {
-    p_session_id: sessionId,
-    p_message: statusMessage,
-  });
-
-  throwIfSupabaseError(error);
 }
 
 async function processSaveJob(args: {

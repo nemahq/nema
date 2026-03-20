@@ -11,7 +11,6 @@ const STATUS_LOG_TYPE_VALUES = [
   "draft_created",
   "draft_edited",
   "draft_cancelled",
-  "draft_saved",
 ] as const;
 
 export const StatusLogTypeSchema = z.enum(STATUS_LOG_TYPE_VALUES);
@@ -22,7 +21,6 @@ export const STATUS_LOG_TYPES = {
   DRAFT_CREATED: "draft_created",
   DRAFT_EDITED: "draft_edited",
   DRAFT_CANCELLED: "draft_cancelled",
-  DRAFT_SAVED: "draft_saved",
 } as const satisfies Record<string, StatusLogType>;
 
 const BaseMessageSchema = z.object({

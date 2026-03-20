@@ -1,3 +1,5 @@
+import { CHAT_MODES, type ChatMode } from "@nema-io/shared";
+
 import type { Locale } from "@web/lib/tolgee/types";
 import { isLocale } from "@web/lib/tolgee/types";
 
@@ -6,11 +8,16 @@ import { isBooleanString, isJsonRecord } from "./serialization";
 import type { ThemePreference } from "./theme-preference";
 import { isThemePreference } from "./theme-preference";
 
+function isChatMode(v: string): v is ChatMode {
+  return (CHAT_MODES as readonly string[]).includes(v);
+}
+
 type StorageMap = {
   theme: ThemePreference;
   locale: Locale;
   sidebarCollapsed: BooleanString;
   chatDrafts: JsonRecord;
+  chatMode: ChatMode;
 };
 
 const isValid: {
@@ -20,6 +27,7 @@ const isValid: {
   locale: isLocale,
   sidebarCollapsed: isBooleanString,
   chatDrafts: isJsonRecord,
+  chatMode: isChatMode,
 };
 
 export function getStorage<K extends keyof StorageMap>(

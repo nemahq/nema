@@ -69,7 +69,7 @@
     "status_draft_created": "초안 작성 완료",
     "status_draft_creating": "초안 작성 중...",
     "status_draft_edited": "초안 수정 완료",
-    "status_draft_saved": "저장 완료",
+    "status_searching": "검색 중...",
     "status_thinking": "생각하는 중...",
     "stream_stop": "생성 중지",
     "tab_close": "탭 닫기",

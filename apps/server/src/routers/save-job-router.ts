@@ -3,7 +3,6 @@ import { EnqueueSaveInputSchema, RetrySaveInputSchema } from "@nema-io/shared";
 
 import { onSaveJobUpdate } from "@server/infra/save-job-emitter";
 import {
-  appendSaveStatusMessage,
   enqueueSaveJob,
   listRecentSaveJobs,
   processSaveJobBackground,
@@ -18,11 +17,6 @@ export const saveJobRouter = router({
       const job = await enqueueSaveJob({
         supabase: ctx.supabase,
         userId: ctx.user.id,
-        sessionId: input.sessionId,
-      });
-
-      await appendSaveStatusMessage({
-        supabase: ctx.supabase,
         sessionId: input.sessionId,
       });
 
