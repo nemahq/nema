@@ -5,7 +5,6 @@ import { config } from "dotenv";
 import { z } from "zod";
 
 const appEnvValues = ["development", "staging", "production"] as const;
-export type AppEnv = (typeof appEnvValues)[number];
 
 const envSchema = z
   .object({
