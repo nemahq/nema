@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/node";
+
 import type { ChatStreamEvent, Locale } from "@nema-io/shared";
 
 import { t } from "@server/infra/i18n";
@@ -42,7 +44,7 @@ export async function* handleRetrievalStream(args: {
 
   yield { type: "phase", name: "searching" };
 
-  // --- 3개 검색 채널 병렬 실행 ---
+  // --- 3개 검색 채널 병렬 실행 (텍스트 매치는 보조 — 실패해도 메인 흐름 유지) ---
   const [vectorResults, graphResults, textMatchDocIds] = await Promise.all([
     // 1) Qdrant 벡터 검색 (영어 쿼리)
     searchQuery.queries.length > 0
@@ -67,8 +69,18 @@ export async function* handleRetrievalStream(args: {
         })
       : Promise.resolve([]),
 
-    // 3) Supabase 텍스트 매치 (영어 + 사용자 언어)
-    searchTextMatch({ supabase, userId, searchQuery }),
+    // 3) Supabase 텍스트 매치 (엔티티 키워드)
+    searchTextMatch({
+      supabase,
+      userId,
+      entities: searchQuery.entities,
+      localEntities: searchQuery.localEntities,
+    }).catch((err) => {
+      Sentry.captureException(err, {
+        tags: { component: "retrieval", channel: "text_match" },
+      });
+      return [] as string[];
+    }),
   ]);
 
   const graphDocIds = new Set(graphResults.map((gr) => gr.docId));
@@ -89,6 +101,7 @@ export async function* handleRetrievalStream(args: {
   const scores: number[] = [];
   let graphBoostedCount = 0;
   let textBoostedCount = 0;
+  let textOnlyCount = 0;
 
   for (const vr of boosted) {
     if (uniqueDocIds.length >= RETRIEVAL_MAX_RESULTS) {
@@ -118,7 +131,7 @@ export async function* handleRetrievalStream(args: {
     seenDocIds.add(docId);
     uniqueDocIds.push(docId);
     scores.push(0);
-    textBoostedCount++;
+    textOnlyCount++;
   }
 
   let searchResults: Array<{ id: string; title: string; body: string }> = [];
@@ -151,6 +164,7 @@ export async function* handleRetrievalStream(args: {
       scores,
       graph_boosted_count: graphBoostedCount,
       text_boosted_count: textBoostedCount,
+      text_only_count: textOnlyCount,
       query: question,
     },
   });
@@ -180,35 +194,37 @@ export async function* handleRetrievalStream(args: {
   return fullText;
 }
 
+function sanitizePostgrestValue(value: string): string {
+  return value.replace(/[,.()"{}\\]/g, "");
+}
+
 async function searchTextMatch(args: {
   supabase: TypedSupabaseClient;
   userId: string;
-  searchQuery: {
-    queries: string[];
-    entities: string[];
-    localQueries: string[];
-    localEntities: string[];
-  };
+  entities: string[];
+  localEntities: string[];
 }): Promise<string[]> {
-  const { supabase, userId, searchQuery } = args;
+  const { supabase, userId, entities, localEntities } = args;
   const conditions: string[] = [];
 
-  for (const q of searchQuery.queries) {
-    conditions.push(`title_en.ilike.%${q}%`);
-    conditions.push(`summary_en.ilike.%${q}%`);
+  for (const e of entities) {
+    const safe = sanitizePostgrestValue(e);
+    if (safe.length === 0) {
+      continue;
+    }
+    conditions.push(`tags_en.cs.{${safe}}`);
+    conditions.push(`title_en.ilike.%${safe}%`);
+    conditions.push(`summary_en.ilike.%${safe}%`);
   }
 
-  for (const q of searchQuery.localQueries) {
-    conditions.push(`title.ilike.%${q}%`);
-    conditions.push(`summary.ilike.%${q}%`);
-  }
-
-  for (const e of searchQuery.entities) {
-    conditions.push(`tags_en.cs.{${e}}`);
-  }
-
-  for (const e of searchQuery.localEntities) {
-    conditions.push(`tags.cs.{${e}}`);
+  for (const e of localEntities) {
+    const safe = sanitizePostgrestValue(e);
+    if (safe.length === 0) {
+      continue;
+    }
+    conditions.push(`tags.cs.{${safe}}`);
+    conditions.push(`title.ilike.%${safe}%`);
+    conditions.push(`summary.ilike.%${safe}%`);
   }
 
   if (conditions.length === 0) {
