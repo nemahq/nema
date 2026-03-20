@@ -15,9 +15,6 @@ const actionMap = {
     save: def("session.draft_save", "mod+s", "global"),
     cancel: def("common.cancel", "escape", "global"),
   },
-  retrieval: {
-    dismiss: def("common.close", "escape", "global"),
-  },
   stream: {
     stop: def("session.stream_stop", "escape", "global"),
   },
