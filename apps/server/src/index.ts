@@ -16,6 +16,13 @@ import { appRouter } from "./router";
 import { failStaleSaveJobs } from "./services/save-job-service";
 import { createContext } from "./trpc";
 
+declare const __COMMIT_SHA__: string;
+declare const __BUILD_TIMESTAMP__: string;
+
+const COMMIT_SHA =
+  typeof __COMMIT_SHA__ !== "undefined" ? __COMMIT_SHA__ : "dev";
+const BUILD_TIMESTAMP =
+  typeof __BUILD_TIMESTAMP__ !== "undefined" ? __BUILD_TIMESTAMP__ : "unknown";
 const SENTRY_FLUSH_TIMEOUT_MS = 2000;
 
 loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
@@ -39,7 +46,11 @@ async function bootstrap() {
 
   Sentry.setupFastifyErrorHandler(server);
 
-  server.get("/health", async () => ({ status: "ok" }));
+  server.get("/health", async () => ({
+    status: "ok",
+    version: COMMIT_SHA,
+    builtAt: BUILD_TIMESTAMP,
+  }));
 
   const staleCount = await failStaleSaveJobs(getSupabaseAdmin());
   if (staleCount > 0) {
