@@ -19,9 +19,6 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("streamdown") || id.includes("shiki")) {
-              return "streamdown";
-            }
             if (id.includes("date-fns")) {
               return "date-fns";
             }
@@ -45,6 +42,9 @@ export default defineConfig({
     VitePWA({
       // TODO: 캐시 전략 도입 시 'prompt'로 전환 검토
       registerType: "autoUpdate",
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      },
       manifest: {
         name: "Nema",
         short_name: "Nema",
