@@ -24,6 +24,6 @@ Push pending migrations to the staging Supabase environment.
 
 ## Constraints
 
-- This skill targets **staging only**. Production migrations are applied via CI/CD on main merge.
+- This skill targets **staging only**. Production migrations are applied via CI/CD on `v*` tag push.
 - Always dry-run first before applying.
 - Never hardcode or log database passwords.
