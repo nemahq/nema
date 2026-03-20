@@ -69,7 +69,7 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   const { data: initialJobs } = trpc.saveJob.list.useQuery(undefined, {
-    refetchOnWindowFocus: false,
+    staleTime: Infinity,
   });
 
   const addJob = useCallback((job: SaveJob) => {

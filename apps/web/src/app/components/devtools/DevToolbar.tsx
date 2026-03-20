@@ -43,7 +43,9 @@ function toggleClass(active: boolean) {
 }
 
 function LlmPresetSection() {
-  const [presetData] = trpc.dev.getModelPreset.useSuspenseQuery();
+  const [presetData] = trpc.dev.getModelPreset.useSuspenseQuery(undefined, {
+    staleTime: Infinity,
+  });
   const utils = trpc.useUtils();
   const presetMutation = trpc.dev.setModelPreset.useMutation({
     onSuccess: (data) => {

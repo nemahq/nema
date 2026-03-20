@@ -27,6 +27,9 @@ export function addOptimisticMessage(
 }
 
 export function useMessageList({ sessionId }: { sessionId: string }) {
-  const [messages] = trpc.message.list.useSuspenseQuery({ sessionId });
+  const [messages] = trpc.message.list.useSuspenseQuery(
+    { sessionId },
+    { staleTime: Infinity },
+  );
   return messages;
 }
