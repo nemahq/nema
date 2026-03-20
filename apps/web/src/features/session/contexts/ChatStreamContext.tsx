@@ -26,7 +26,7 @@ import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { trpc } from "@web/lib/trpc";
 
-type StreamingPhase = "idle" | "text" | "draft";
+type StreamingPhase = "idle" | "text" | "draft" | "retrieval";
 
 const STREAMING_MESSAGE_ID = "streaming";
 
@@ -48,6 +48,7 @@ interface ChatStreamContextValue {
   streamingPhase: StreamingPhase;
   streamingMessage: DisplayMessage | undefined;
   streamingDraftText: string;
+  streamingRetrievalText: string;
 }
 
 const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
@@ -71,9 +72,11 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   const streamingPhaseRef = useRef<StreamingPhase>("idle");
   const [streamingText, setStreamingText] = useState("");
   const [streamingDraftText, setStreamingDraftText] = useState("");
+  const [streamingRetrievalText, setStreamingRetrievalText] = useState("");
   const [activePhase, setActivePhase] = useState<PhaseName | null>(null);
   const fullTextRef = useRef("");
   const fullDraftTextRef = useRef("");
+  const fullRetrievalTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
 
   function resetStreamState() {
@@ -82,9 +85,11 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     streamingPhaseRef.current = "idle";
     setStreamingText("");
     setStreamingDraftText("");
+    setStreamingRetrievalText("");
     setActivePhase(null);
     fullTextRef.current = "";
     fullDraftTextRef.current = "";
+    fullRetrievalTextRef.current = "";
   }
 
   const settleStream = useCallback(
@@ -117,10 +122,17 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
           streamingPhaseRef.current = "draft";
           setStreamingPhase("draft");
           break;
+        case "retrieval_start":
+          streamingPhaseRef.current = "retrieval";
+          setStreamingPhase("retrieval");
+          break;
         case "token":
           if (streamingPhaseRef.current === "draft") {
             fullDraftTextRef.current += event.text;
             setStreamingDraftText(fullDraftTextRef.current);
+          } else if (streamingPhaseRef.current === "retrieval") {
+            fullRetrievalTextRef.current += event.text;
+            setStreamingRetrievalText(fullRetrievalTextRef.current);
           } else {
             fullTextRef.current += event.text;
             setStreamingText(fullTextRef.current);
@@ -213,6 +225,14 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
           content: STATUS_LOG_TYPES.DRAFT_CREATING,
           createdAt: streamStartedAt,
         };
+      case "retrieval":
+        return {
+          id: STREAMING_MESSAGE_ID,
+          role: "assistant",
+          type: "status",
+          content: STATUS_LOG_TYPES.RETRIEVAL_ANSWERED,
+          createdAt: streamStartedAt,
+        };
       case "text":
         return streamingText
           ? {
@@ -239,8 +259,16 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
       streamingPhase,
       streamingMessage,
       streamingDraftText,
+      streamingRetrievalText,
     }),
-    [send, cancel, streamingPhase, streamingMessage, streamingDraftText],
+    [
+      send,
+      cancel,
+      streamingPhase,
+      streamingMessage,
+      streamingDraftText,
+      streamingRetrievalText,
+    ],
   );
 
   return <ChatStreamContext value={contextValue}>{children}</ChatStreamContext>;

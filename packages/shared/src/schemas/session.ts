@@ -27,6 +27,11 @@ export const SessionDraftSchema = z.object({
 });
 export type SessionDraft = z.infer<typeof SessionDraftSchema>;
 
+export const SessionRetrievalSchema = z.object({
+  body: z.string().min(1),
+});
+export type SessionRetrieval = z.infer<typeof SessionRetrievalSchema>;
+
 export const SessionGetInputSchema = z.object({
   sessionId: z.string().uuid(),
 });

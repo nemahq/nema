@@ -1,1 +1,5 @@
-export { cancelDraftAction, processChatStream } from "./orchestrator";
+export {
+  cancelDraftAction,
+  dismissRetrievalAction,
+  processChatStream,
+} from "./orchestrator";

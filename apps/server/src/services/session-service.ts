@@ -3,9 +3,10 @@ import { TRPCError } from "@trpc/server";
 import type {
   SessionDraft,
   SessionListInput,
+  SessionRetrieval,
   SessionSummary,
 } from "@nema-io/shared";
-import { SessionDraftSchema } from "@nema-io/shared";
+import { SessionDraftSchema, SessionRetrievalSchema } from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
@@ -87,10 +88,15 @@ export async function listSessions(
 export async function getSession(
   supabase: TypedSupabaseClient,
   { sessionId }: { sessionId: string },
-): Promise<SessionSummary & { draft: SessionDraft | null }> {
+): Promise<
+  SessionSummary & {
+    draft: SessionDraft | null;
+    retrieval: SessionRetrieval | null;
+  }
+> {
   const { data, error } = await supabase
     .from("sessions")
-    .select("id, title, draft, created_at, updated_at")
+    .select("id, title, draft, retrieval, created_at, updated_at")
     .eq("id", sessionId)
     .single();
 
@@ -100,6 +106,9 @@ export async function getSession(
     ...toSummary(data),
     draft: data.draft
       ? (SessionDraftSchema.safeParse(data.draft).data ?? null)
+      : null,
+    retrieval: data.retrieval
+      ? (SessionRetrievalSchema.safeParse(data.retrieval).data ?? null)
       : null,
   };
 }
