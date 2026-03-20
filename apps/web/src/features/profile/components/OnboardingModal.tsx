@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-import { CONTENT_LANGUAGES, type ContentLanguage } from "@nema-io/shared";
+import {
+  CONTENT_LANGUAGES,
+  type ContentLanguage,
+  ContentLanguageSchema,
+} from "@nema-io/shared";
 import {
   Button,
   Dialog,
@@ -41,7 +45,12 @@ export function OnboardingModal() {
 
         <Select
           value={selected}
-          onValueChange={(v) => setSelected(v as ContentLanguage)}
+          onValueChange={(v) => {
+            const parsed = ContentLanguageSchema.safeParse(v);
+            if (parsed.success) {
+              setSelected(parsed.data);
+            }
+          }}
         >
           <SelectTrigger className="cursor-pointer">
             <SelectValue />

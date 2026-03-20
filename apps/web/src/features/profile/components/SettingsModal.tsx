@@ -1,6 +1,10 @@
 import { useId, useState } from "react";
 
-import { CONTENT_LANGUAGES, type ContentLanguage } from "@nema-io/shared";
+import {
+  CONTENT_LANGUAGES,
+  type ContentLanguage,
+  ContentLanguageSchema,
+} from "@nema-io/shared";
 import {
   Button,
   Dialog,
@@ -18,7 +22,7 @@ import {
 import { useUpdateProfile } from "@web/features/profile/hooks/useUpdateProfile";
 import { changeLocale, useTranslation } from "@web/lib/tolgee";
 import { tolgee } from "@web/lib/tolgee/client";
-import { type Locale, LOCALES } from "@web/lib/tolgee/types";
+import { isLocale, type Locale, LOCALES } from "@web/lib/tolgee/types";
 
 const LANGUAGE_LABELS: Record<string, string> = {
   ko: "한국어",
@@ -43,7 +47,10 @@ export function SettingsModal({
     currentContentLanguage,
   );
   const [appLang, setAppLang] = useState<Locale>(
-    (tolgee.getLanguage() as Locale) ?? "ko",
+    (() => {
+      const lang = tolgee.getLanguage();
+      return lang && isLocale(lang) ? lang : "ko";
+    })(),
   );
 
   const updateMutation = useUpdateProfile();
@@ -76,7 +83,11 @@ export function SettingsModal({
             </p>
             <Select
               value={appLang}
-              onValueChange={(v) => setAppLang(v as Locale)}
+              onValueChange={(v) => {
+                if (isLocale(v)) {
+                  setAppLang(v);
+                }
+              }}
             >
               <SelectTrigger id={appLangId} className="cursor-pointer">
                 <SelectValue />
@@ -107,7 +118,12 @@ export function SettingsModal({
             </p>
             <Select
               value={contentLang}
-              onValueChange={(v) => setContentLang(v as ContentLanguage)}
+              onValueChange={(v) => {
+                const parsed = ContentLanguageSchema.safeParse(v);
+                if (parsed.success) {
+                  setContentLang(parsed.data);
+                }
+              }}
             >
               <SelectTrigger id={contentLangId} className="cursor-pointer">
                 <SelectValue />
