@@ -10,6 +10,7 @@ type ServerEventMap = {
   "retrieval.completed": {
     result_count: number;
     scores: number[];
+    graph_boosted_count: number;
     query: string;
   };
 };

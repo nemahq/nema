@@ -14,7 +14,7 @@ import {
 } from "@server/prompts/search-query-extractor";
 import { trackEvent } from "@server/services/event-service";
 
-const RETRIEVAL_SEARCH_LIMIT = 15;
+const RETRIEVAL_PER_QUERY_LIMIT = 15;
 const RETRIEVAL_MAX_RESULTS = 15;
 const RETRIEVAL_SCORE_THRESHOLD = 0.6;
 
@@ -45,7 +45,7 @@ export async function* handleRetrievalStream(args: {
         vectorStore.search(embedding, {
           userId,
           query,
-          limit: RETRIEVAL_SEARCH_LIMIT,
+          limit: RETRIEVAL_PER_QUERY_LIMIT,
           scoreThreshold: RETRIEVAL_SCORE_THRESHOLD,
         }),
       ),
@@ -58,7 +58,7 @@ export async function* handleRetrievalStream(args: {
     const graphResults = await graphStore.findDocumentsByEntities({
       entityNames: searchQuery.entities,
       userId,
-      limit: RETRIEVAL_SEARCH_LIMIT,
+      limit: RETRIEVAL_PER_QUERY_LIMIT,
     });
     for (const gr of graphResults) {
       graphDocIds.add(gr.docId);
@@ -68,6 +68,7 @@ export async function* handleRetrievalStream(args: {
   const seenDocIds = new Set<string>();
   const searchResults: Array<{ id: string; title: string; body: string }> = [];
   const scores: number[] = [];
+  let graphBoostedCount = 0;
 
   const graphBoosted = [...vectorResults].sort((a, b) => {
     const aBoost = graphDocIds.has(a.payload.doc_id) ? 1 : 0;
@@ -82,6 +83,9 @@ export async function* handleRetrievalStream(args: {
     if (!seenDocIds.has(vr.payload.doc_id)) {
       seenDocIds.add(vr.payload.doc_id);
       scores.push(vr.score);
+      if (graphDocIds.has(vr.payload.doc_id)) {
+        graphBoostedCount++;
+      }
       searchResults.push({
         id: vr.payload.doc_id,
         title: vr.payload.summary,
@@ -95,7 +99,12 @@ export async function* handleRetrievalStream(args: {
     userId,
     type: "retrieval.completed",
     sessionId,
-    payload: { result_count: searchResults.length, scores, query: question },
+    payload: {
+      result_count: searchResults.length,
+      scores,
+      graph_boosted_count: graphBoostedCount,
+      query: question,
+    },
   });
 
   if (searchResults.length === 0) {
