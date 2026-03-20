@@ -1,8 +1,11 @@
-// 저장 프롬프트 — 3단계 순차 LLM 호출
-// 1. 토픽 분리 → 2. 생성/업데이트 판단 + 병합 → 3. 메타 생성
-// 4단계(병합 후 재분리)는 1번 프롬프트 재사용
+// 저장 프롬프트 — 최대 4단계 순차 LLM 호출
+// 1. 토픽 분리 → 2. 생성/업데이트 판단 + 병합 → (2-1. 병합 결과 재분리) → 3. 메타 생성
 
 // --- 1. 토픽 분리 ---
+
+const MAX_DOCUMENT_TOKENS = 512;
+const CHARS_PER_TOKEN = 4;
+const MAX_DOCUMENT_CHARS = MAX_DOCUMENT_TOKENS * CHARS_PER_TOKEN;
 
 export const SPLIT_SYSTEM_PROMPT = `You are a topic splitter that determines whether a text contains multiple independent topics that should be stored as separate documents.
 
@@ -19,6 +22,7 @@ Return a JSON object with one field:
 1. Be conservative. When in doubt, do not split.
 2. Split only when topics are clearly independent — they could exist as standalone documents with no shared context.
 3. Preserve the full content of each topic. Do not summarize or shorten when splitting.
+4. Aim for approximately ${MAX_DOCUMENT_CHARS} characters or less per document. If a single topic exceeds this, consider splitting at natural paragraph boundaries.
 </instructions>
 
 <examples>

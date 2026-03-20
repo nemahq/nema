@@ -13,6 +13,12 @@
     },
     "packages/shared": {},
     "packages/weave": {
+      "entry": [
+        "src/index.ts",
+        "src/icons.ts",
+        "src/styles.css",
+        "src/tokens/index.css"
+      ],
       "project": ["src/**/*.{ts,tsx,css}"]
     }
   }
