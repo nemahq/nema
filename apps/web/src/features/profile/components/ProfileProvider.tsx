@@ -2,6 +2,7 @@ import { type ReactNode, Suspense, useState } from "react";
 
 import { OnboardingModal } from "@web/features/onboarding";
 import { SettingsModal } from "@web/features/settings";
+import { useAuth } from "@web/hooks/useAuth";
 
 import { ProfileContext } from "../hooks/useProfile";
 import { useProfileQuery } from "../hooks/useProfileQuery";
@@ -39,6 +40,12 @@ function ProfileProviderInner({ children }: ProfileProviderProps) {
 }
 
 export function ProfileProvider({ children }: ProfileProviderProps) {
+  const { session, loading } = useAuth();
+
+  if (loading || !session) {
+    return <>{children}</>;
+  }
+
   return (
     <Suspense fallback={null}>
       <ProfileProviderInner>{children}</ProfileProviderInner>
