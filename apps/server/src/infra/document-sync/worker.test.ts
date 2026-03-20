@@ -87,8 +87,11 @@ const PENDING_DOC: PendingDocument = {
   id: DOC_ID_1,
   user_id: USER_ID,
   body: "test body",
+  body_en: null,
   tags: ["tag1"],
+  tags_en: null,
   summary: "test summary",
+  summary_en: null,
 };
 
 // --- Tests ---
@@ -283,8 +286,11 @@ describe("createSyncWorker", () => {
         id: DOC_ID_2,
         user_id: USER_ID,
         body: "fail body",
+        body_en: null,
         tags: [],
+        tags_en: null,
         summary: "fail",
+        summary_en: null,
       };
 
       // LLM succeeds for doc-1, fails for doc-2
@@ -444,8 +450,11 @@ describe("createSyncWorker", () => {
         id: DOC_ID_2,
         user_id: USER_ID,
         body: "second doc",
+        body_en: null,
         tags: ["tag2"],
+        tags_en: null,
         summary: "second",
+        summary_en: null,
       };
 
       rpc

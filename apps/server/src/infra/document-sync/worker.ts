@@ -223,12 +223,16 @@ async function processDocument(
 ): Promise<void> {
   const { llm, embedding, vectorStore, graphStore } = deps;
 
+  const engineBody = doc.body_en ?? doc.body;
+  const engineTags = doc.tags_en ?? doc.tags;
+  const engineSummary = doc.summary_en ?? doc.summary;
+
   const entityResult = await llm.generateStructured({
     schema: EntityExtractionSchema,
     schemaName: "entity_extraction",
     systemPrompt: ENTITY_EXTRACTION_SYSTEM_PROMPT,
     messages: [
-      { role: "user", content: buildEntityExtractionMessage(doc.body) },
+      { role: "user", content: buildEntityExtractionMessage(engineBody) },
     ],
   });
 
@@ -245,9 +249,9 @@ async function processDocument(
     vectorStore.upsert(embedding, {
       docId: doc.id,
       userId: doc.user_id,
-      chunks: [doc.body],
-      tags: doc.tags,
-      summary: doc.summary,
+      chunks: [engineBody],
+      tags: engineTags,
+      summary: engineSummary,
     }),
     graphStore.upsertEntities({
       docId: doc.id,

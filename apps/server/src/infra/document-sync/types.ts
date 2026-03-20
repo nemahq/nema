@@ -41,14 +41,20 @@ export const PendingDocumentSchema = z.object({
   id: z.string().uuid(),
   user_id: z.string().uuid(),
   body: z.string(),
+  body_en: z.string().nullable(),
   tags: z.array(z.string()),
+  tags_en: z.array(z.string()).nullable(),
   summary: z.string(),
+  summary_en: z.string().nullable(),
 });
 
 export interface PendingDocument {
   id: string;
   user_id: string;
   body: string;
+  body_en: string | null;
   tags: string[];
+  tags_en: string[] | null;
   summary: string;
+  summary_en: string | null;
 }
