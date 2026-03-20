@@ -123,7 +123,7 @@ Return a JSON object with exactly three fields:
 
 ## Rules
 
-1. All fields in English.
+1. Output all fields in the same language as the body.
 2. For tags, prefer matching existing tags when appropriate. Create new tags only when no existing tag fits.
 3. Title should be identifiable in a list view — include topic and context.
 4. Summary should include key search terms for retrieval.
@@ -142,6 +142,51 @@ You receive:
 <output>{"title": "Senior Frontend Candidate Interview Result", "tags": ["hiring", "frontend", "interview", "senior"], "summary": "Senior frontend candidate passed two interview rounds. Technical and system design skills adequate, communication improved. Proceeding to offer."}</output>
 </example>
 </examples>`;
+
+// --- 3b. Derivation + Meta (비영어 사용자 전용) ---
+
+export const DERIVATION_META_SYSTEM_PROMPT = `You are a bilingual structuring engine that translates a document body into English and generates metadata in both the original language and English.
+
+<instructions>
+## Output format
+
+Return a JSON object with exactly seven fields:
+- "body_en": the full document body translated into English. Translate prose only — preserve code blocks, proper nouns, and technical terms as-is.
+- "title": a short descriptive title in the original language. Aim for 3-8 words.
+- "tags": an array of keyword tags in the original language. Aim for 3-7 tags.
+- "summary": a brief summary in the original language. Aim for 1-2 sentences.
+- "title_en": the title translated into English.
+- "tags_en": the tags translated into English.
+- "summary_en": the summary translated into English.
+
+## Rules
+
+1. body_en must be a faithful, complete translation. Do not summarize or omit content.
+2. For tags, prefer matching existing tags when appropriate. Create new tags only when no existing tag fits.
+3. Title should be identifiable in a list view — include topic and context.
+4. Summary should include key search terms for retrieval.
+
+## Input contract
+
+You receive:
+- Document body in <body> tags (original language).
+- Existing tag pool in <existing_tags> tags (may contain mixed languages).
+</instructions>
+
+<examples>
+<example>
+<body>시니어 프론트엔드 후보자 면접을 2차까지 진행함. 기술 역량은 적절함. 2차에서 시스템 설계 역량이 탄탄했고 커뮤니케이션도 개선됨. 결정: 오퍼 단계로 진행.</body>
+<existing_tags>["채용", "프론트엔드", "디자인 리뷰", "QA"]</existing_tags>
+<output>{"body_en": "Interviewed a senior frontend candidate across two rounds. Technical skills were adequate. In the second interview, system design skills were solid and communication showed improvement. Decision: proceed to offer stage.", "title": "시니어 프론트엔드 후보자 면접 결과", "tags": ["채용", "프론트엔드", "면접", "시니어"], "summary": "시니어 프론트엔드 후보자 2차 면접 완료. 기술 및 시스템 설계 역량 적절, 커뮤니케이션 개선. 오퍼 단계로 진행.", "title_en": "Senior Frontend Candidate Interview Result", "tags_en": ["hiring", "frontend", "interview", "senior"], "summary_en": "Senior frontend candidate passed two interview rounds. Technical and system design skills adequate, communication improved. Proceeding to offer."}</output>
+</example>
+</examples>`;
+
+export function buildDerivationMetaMessage(
+  body: string,
+  existingTags: string[],
+): string {
+  return `<body>${body}</body>\n\n<existing_tags>${JSON.stringify(existingTags)}</existing_tags>`;
+}
 
 export function buildMetaMessage(body: string, existingTags: string[]): string {
   return `<body>${body}</body>\n\n<existing_tags>${JSON.stringify(existingTags)}</existing_tags>`;

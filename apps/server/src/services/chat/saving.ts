@@ -1,12 +1,16 @@
 import { z } from "zod";
 
+import type { ContentLanguage } from "@nema-io/shared";
+
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import {
+  buildDerivationMetaMessage,
   buildJudgmentMessage,
   buildMetaMessage,
   buildSplitMessage,
+  DERIVATION_META_SYSTEM_PROMPT,
   JUDGMENT_SYSTEM_PROMPT,
   META_SYSTEM_PROMPT,
   SPLIT_SYSTEM_PROMPT,
@@ -37,6 +41,16 @@ const MetaOutputSchema = z.object({
   summary: z.string().min(1),
 });
 
+const DerivationMetaOutputSchema = z.object({
+  body_en: z.string().min(1),
+  title: z.string().min(1),
+  tags: z.array(z.string().min(1)),
+  summary: z.string().min(1),
+  title_en: z.string().min(1),
+  tags_en: z.array(z.string().min(1)),
+  summary_en: z.string().min(1),
+});
+
 type PersistAction =
   | { action: "create" }
   | { action: "update"; targetId: string };
@@ -45,6 +59,7 @@ interface ServiceContext {
   supabase: TypedSupabaseClient;
   providers: Providers;
   userId: string;
+  contentLanguage: ContentLanguage;
 }
 
 async function getExistingTags(
@@ -76,8 +91,10 @@ export async function handleSave(args: {
   userId: string;
   sessionId: string;
   draftBody: string;
+  contentLanguage: ContentLanguage;
 }): Promise<void> {
-  const { supabase, providers, userId, sessionId, draftBody } = args;
+  const { supabase, providers, userId, sessionId, draftBody, contentLanguage } =
+    args;
 
   const splitResult = await providers.llm.mini.generateStructured({
     schema: SplitOutputSchema,
@@ -91,7 +108,7 @@ export async function handleSave(args: {
   const savedDocs: Array<{ id: string; title: string }> = [];
   for (const doc of splitResult.documents) {
     const saved = await saveDocument({
-      ctx: { supabase, providers, userId },
+      ctx: { supabase, providers, userId, contentLanguage },
       sessionId,
       body: doc.body,
       existingTags,
@@ -204,6 +221,62 @@ async function saveDocument(args: {
   ];
 }
 
+interface DocumentFields {
+  title: string;
+  tags: string[];
+  summary: string;
+  titleEn: string | undefined;
+  tagsEn: string[] | undefined;
+  summaryEn: string | undefined;
+  bodyEn: string | undefined;
+}
+
+async function generateDocumentFields(args: {
+  ctx: ServiceContext;
+  body: string;
+  existingTags: string[];
+}): Promise<DocumentFields> {
+  const { ctx, body, existingTags } = args;
+  if (ctx.contentLanguage === "en") {
+    const meta = await ctx.providers.llm.mini.generateStructured({
+      schema: MetaOutputSchema,
+      schemaName: "meta",
+      systemPrompt: META_SYSTEM_PROMPT,
+      messages: [
+        { role: "user", content: buildMetaMessage(body, existingTags) },
+      ],
+    });
+    return {
+      title: meta.title,
+      tags: meta.tags,
+      summary: meta.summary,
+      titleEn: undefined,
+      tagsEn: undefined,
+      summaryEn: undefined,
+      bodyEn: undefined,
+    };
+  }
+
+  const result = await ctx.providers.llm.standard.generateStructured({
+    schema: DerivationMetaOutputSchema,
+    schemaName: "derivation_meta",
+    systemPrompt: DERIVATION_META_SYSTEM_PROMPT,
+    messages: [
+      { role: "user", content: buildDerivationMetaMessage(body, existingTags) },
+    ],
+  });
+
+  return {
+    title: result.title,
+    tags: result.tags,
+    summary: result.summary,
+    titleEn: result.title_en,
+    tagsEn: result.tags_en,
+    summaryEn: result.summary_en,
+    bodyEn: result.body_en,
+  };
+}
+
 async function persistDocument(args: {
   ctx: ServiceContext;
   sessionId: string;
@@ -214,23 +287,22 @@ async function persistDocument(args: {
   const { ctx, sessionId, persistAction, body, existingTags } = args;
   const { supabase } = ctx;
 
-  const meta = await ctx.providers.llm.mini.generateStructured({
-    schema: MetaOutputSchema,
-    schemaName: "meta",
-    systemPrompt: META_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: buildMetaMessage(body, existingTags) }],
-  });
+  const fields = await generateDocumentFields({ ctx, body, existingTags });
 
   let docId: string;
 
   if (persistAction.action === "create") {
     const { data, error } = await supabase.rpc("create_document_with_event", {
       p_user_id: ctx.userId,
-      p_title: meta.title,
-      p_tags: meta.tags,
-      p_summary: meta.summary,
+      p_title: fields.title,
+      p_tags: fields.tags,
+      p_summary: fields.summary,
       p_body: body,
       p_session_id: sessionId,
+      p_title_en: fields.titleEn,
+      p_tags_en: fields.tagsEn,
+      p_summary_en: fields.summaryEn,
+      p_body_en: fields.bodyEn,
     });
 
     throwIfSupabaseError(error);
@@ -245,16 +317,20 @@ async function persistDocument(args: {
     const { error } = await supabase.rpc("update_document_with_event", {
       p_doc_id: docId,
       p_user_id: ctx.userId,
-      p_title: meta.title,
-      p_tags: meta.tags,
-      p_summary: meta.summary,
+      p_title: fields.title,
+      p_tags: fields.tags,
+      p_summary: fields.summary,
       p_body: body,
+      p_title_en: fields.titleEn,
+      p_tags_en: fields.tagsEn,
+      p_summary_en: fields.summaryEn,
+      p_body_en: fields.bodyEn,
     });
 
     throwIfSupabaseError(error);
   }
 
-  return { id: docId, title: meta.title };
+  return { id: docId, title: fields.title };
 }
 
 async function deleteDocument({

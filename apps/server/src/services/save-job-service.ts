@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/node";
 import { TRPCError } from "@trpc/server";
 
+import type { ContentLanguage } from "@nema-io/shared";
 import {
   MessageSchema,
   type SaveJob,
@@ -15,6 +16,7 @@ import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
 import { handleSave } from "./chat/saving";
+import { getProfile } from "./profile-service";
 
 const SNIPPET_MAX_LENGTH = 30;
 const SAVE_JOB_COLUMNS =
@@ -145,6 +147,9 @@ async function processSaveJob(args: {
 
   throwIfSupabaseError(fetchError);
 
+  const profile = await getProfile(supabase, { userId });
+  const contentLanguage: ContentLanguage = profile?.contentLanguage ?? "en";
+
   try {
     await handleSave({
       supabase,
@@ -152,6 +157,7 @@ async function processSaveJob(args: {
       userId,
       sessionId: job.session_id,
       draftBody: job.draft_body,
+      contentLanguage,
     });
 
     const { error } = await supabase
