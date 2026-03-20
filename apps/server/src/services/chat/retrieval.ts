@@ -47,9 +47,9 @@ export async function* handleRetrievalStream(args: {
   // --- 3개 검색 채널 병렬 실행 (텍스트 매치는 보조 — 실패해도 메인 흐름 유지) ---
   const [vectorResults, graphResults, textMatchDocIds] = await Promise.all([
     // 1) Qdrant 벡터 검색 (영어 쿼리)
-    searchQuery.queries.length > 0
+    searchQuery.queriesEn.length > 0
       ? Promise.all(
-          searchQuery.queries.map((query) =>
+          searchQuery.queriesEn.map((query) =>
             vectorStore.search(embedding, {
               userId,
               query,
@@ -61,9 +61,9 @@ export async function* handleRetrievalStream(args: {
       : Promise.resolve([] as Awaited<ReturnType<typeof vectorStore.search>>),
 
     // 2) Neo4j 그래프 검색 (영어 엔티티)
-    searchQuery.entities.length > 0
+    searchQuery.entitiesEn.length > 0
       ? graphStore.findDocumentsByEntities({
-          entityNames: searchQuery.entities,
+          entityNames: searchQuery.entitiesEn,
           userId,
           limit: RETRIEVAL_PER_QUERY_LIMIT,
         })
@@ -73,8 +73,8 @@ export async function* handleRetrievalStream(args: {
     searchTextMatch({
       supabase,
       userId,
+      entitiesEn: searchQuery.entitiesEn,
       entities: searchQuery.entities,
-      localEntities: searchQuery.localEntities,
     }).catch((err) => {
       Sentry.captureException(err, {
         tags: { component: "retrieval", channel: "text_match" },
@@ -201,13 +201,13 @@ function sanitizePostgrestValue(value: string): string {
 async function searchTextMatch(args: {
   supabase: TypedSupabaseClient;
   userId: string;
+  entitiesEn: string[];
   entities: string[];
-  localEntities: string[];
 }): Promise<string[]> {
-  const { supabase, userId, entities, localEntities } = args;
+  const { supabase, userId, entitiesEn, entities } = args;
   const conditions: string[] = [];
 
-  for (const e of entities) {
+  for (const e of entitiesEn) {
     const safe = sanitizePostgrestValue(e);
     if (safe.length === 0) {
       continue;
@@ -217,7 +217,7 @@ async function searchTextMatch(args: {
     conditions.push(`summary_en.ilike.%${safe}%`);
   }
 
-  for (const e of localEntities) {
+  for (const e of entities) {
     const safe = sanitizePostgrestValue(e);
     if (safe.length === 0) {
       continue;
