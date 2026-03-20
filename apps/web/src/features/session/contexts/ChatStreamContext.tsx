@@ -16,6 +16,7 @@ import {
   type ChatMode,
   type ChatStreamEvent,
   type Message,
+  type PhaseName,
   STATUS_LOG_TYPES,
 } from "@nema-io/shared";
 
@@ -29,7 +30,7 @@ type StreamingPhase = "idle" | "text" | "draft";
 
 const STREAMING_MESSAGE_ID = "streaming";
 
-export type ClientStatusType = "thinking";
+export type ClientStatusType = "thinking" | PhaseName;
 
 export interface ClientStatusMessage {
   id: string;
@@ -70,6 +71,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   const streamingPhaseRef = useRef<StreamingPhase>("idle");
   const [streamingText, setStreamingText] = useState("");
   const [streamingDraftText, setStreamingDraftText] = useState("");
+  const [activePhase, setActivePhase] = useState<PhaseName | null>(null);
   const fullTextRef = useRef("");
   const fullDraftTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
@@ -80,6 +82,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     streamingPhaseRef.current = "idle";
     setStreamingText("");
     setStreamingDraftText("");
+    setActivePhase(null);
     fullTextRef.current = "";
     fullDraftTextRef.current = "";
   }
@@ -122,13 +125,12 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
             setStreamingText(fullTextRef.current);
           }
           break;
+        case "phase":
+          setActivePhase(event.name);
+          break;
         case "done":
           settleStream();
           break;
-        default: {
-          const _exhaustive: never = event;
-          void _exhaustive;
-        }
       }
     },
     [settleStream],
@@ -217,11 +219,11 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
               id: STREAMING_MESSAGE_ID,
               role: "assistant",
               type: "status",
-              content: "thinking",
+              content: activePhase ?? "thinking",
               createdAt: streamStartedAt,
             } satisfies ClientStatusMessage);
     }
-  }, [streamingPhase, streamingText, streamStartedAt]);
+  }, [streamingPhase, streamingText, activePhase, streamStartedAt]);
 
   const contextValue = useMemo<ChatStreamContextValue>(
     () => ({

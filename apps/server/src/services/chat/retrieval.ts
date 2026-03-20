@@ -39,6 +39,8 @@ export async function* handleRetrievalStream(args: {
     messages: [{ role: "user", content: buildSearchQueryMessage(question) }],
   });
 
+  yield { type: "phase", name: "searching" };
+
   let vectorResults: Awaited<ReturnType<typeof vectorStore.search>> = [];
   if (searchQuery.queries.length > 0) {
     const searchBatches = await Promise.all(

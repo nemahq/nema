@@ -69,6 +69,7 @@
     "status_draft_created": "Draft created",
     "status_draft_creating": "Creating draft...",
     "status_draft_edited": "Draft edited",
+    "status_searching": "Searching...",
     "status_thinking": "Thinking...",
     "stream_stop": "Stop generation",
     "tab_close": "Close tab",
