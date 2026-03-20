@@ -1,7 +1,10 @@
 import { Suspense, useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
-import { HOME_TO_SESSION_INITIAL_MESSAGE_KEY } from "@web/app/constants/routeState";
+import {
+  HOME_TO_SESSION_INITIAL_MESSAGE_KEY,
+  HOME_TO_SESSION_INITIAL_MODE_KEY,
+} from "@web/app/constants/routeState";
 import { getRouteState } from "@web/app/utils/routeState";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useScrollAnchor } from "@web/features/session/hooks/useScrollAnchor";
@@ -67,9 +70,14 @@ function ChatPanelContent() {
 export function ChatPanel() {
   const sessionId = useSessionId();
   const navigate = useNavigate();
-  const initialMessage = useLocation({
-    select: (loc) =>
-      getRouteState(loc.state, HOME_TO_SESSION_INITIAL_MESSAGE_KEY),
+  const { initialMessage, initialMode } = useLocation({
+    select: (loc) => ({
+      initialMessage: getRouteState(
+        loc.state,
+        HOME_TO_SESSION_INITIAL_MESSAGE_KEY,
+      ),
+      initialMode: getRouteState(loc.state, HOME_TO_SESSION_INITIAL_MODE_KEY),
+    }),
   });
   const { send } = useChatStream();
 
@@ -80,10 +88,10 @@ export function ChatPanel() {
         return;
       }
       sentRef.current = true;
-      send(initialMessage, "remember");
+      send(initialMessage, initialMode === "ask" ? "ask" : "remember");
       navigate({ replace: true, state: {} });
     },
-    [initialMessage, navigate, send],
+    [initialMessage, initialMode, navigate, send],
   );
 
   return (
