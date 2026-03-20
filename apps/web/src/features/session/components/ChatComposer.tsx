@@ -20,6 +20,7 @@ import type { SlashCommand } from "@web/lib/command/slash/types";
 import { useSlashCommandMenu } from "@web/lib/command/slash/useSlashCommandMenu";
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
+import { getStorage, setStorage } from "@web/utils/localStorage";
 
 export function ChatComposer() {
   const { t } = useTranslation();
@@ -27,10 +28,16 @@ export function ChatComposer() {
   const { openTab } = useContentTab();
   const sessionId = useSessionId();
   const [inputValue, setInputValue] = useChatDraft(sessionId);
-  const [mode, setMode] = useState<ChatMode>("remember");
+  const [mode, setMode] = useState<ChatMode>(
+    () => getStorage("chatMode") ?? "remember",
+  );
 
   const toggleMode = useCallback(() => {
-    setMode(nextMode);
+    setMode((prev) => {
+      const next = nextMode(prev);
+      setStorage("chatMode", next);
+      return next;
+    });
   }, []);
 
   const saveDraftMutating =

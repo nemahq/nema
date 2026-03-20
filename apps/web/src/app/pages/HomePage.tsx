@@ -12,16 +12,23 @@ import { MODE_CONFIG, nextMode } from "@web/features/session/chatModeConfig";
 import { Greeting } from "@web/features/session/components/Greeting";
 import { useCreateSession } from "@web/features/session/hooks/useCreateSession";
 import { useTranslation } from "@web/lib/tolgee";
+import { getStorage, setStorage } from "@web/utils/localStorage";
 
 export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState("");
-  const [mode, setMode] = useState<ChatMode>("remember");
+  const [mode, setMode] = useState<ChatMode>(
+    () => getStorage("chatMode") ?? "remember",
+  );
   const createSession = useCreateSession();
 
   const toggleMode = useCallback(() => {
-    setMode(nextMode);
+    setMode((prev) => {
+      const next = nextMode(prev);
+      setStorage("chatMode", next);
+      return next;
+    });
   }, []);
 
   function handleSubmit(content: string) {
