@@ -4,11 +4,15 @@ import { resolve } from "node:path";
 import { config } from "dotenv";
 import { z } from "zod";
 
+const appEnvValues = ["development", "staging", "production"] as const;
+export type AppEnv = (typeof appEnvValues)[number];
+
 const envSchema = z
   .object({
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
+    APP_ENV: z.enum(appEnvValues).optional(),
     PORT: z.coerce.number().int().min(1).max(65535).default(3001),
     CORS_ORIGIN: z.string().default("http://localhost:5173"),
 
@@ -41,7 +45,13 @@ const envSchema = z
       message:
         "QDRANT_URL and QDRANT_API_KEY must both be set or both be omitted",
     },
-  );
+  )
+  .transform((data) => ({
+    ...data,
+    APP_ENV:
+      data.APP_ENV ??
+      (data.NODE_ENV === "test" ? "development" : data.NODE_ENV),
+  }));
 
 type Env = z.infer<typeof envSchema>;
 

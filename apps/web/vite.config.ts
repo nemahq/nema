@@ -49,7 +49,6 @@ export default defineConfig({
   server: {
     port: Number(process.env.VITE_PORT ?? 5173),
     strictPort: true,
-    // TODO: staging 환경 구축 후 dev:web target을 staging API로 변경
     proxy: {
       "/trpc": {
         target:

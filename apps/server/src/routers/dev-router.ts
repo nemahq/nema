@@ -15,7 +15,7 @@ const llmPresetSchema = z.enum([
 ]) satisfies z.ZodType<LlmPreset>;
 
 function assertDev(): void {
-  if (getEnv().NODE_ENV === "production") {
+  if (getEnv().APP_ENV === "production") {
     throw new TRPCError({ code: "NOT_FOUND" });
   }
 }
