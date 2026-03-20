@@ -41,7 +41,7 @@ src/
 - Key naming: first segment = feature (e.g. `common.home`, `auth.login`).
 - Initial locale: localStorage → browser detection → `ko`. Runtime switch: `changeLocale()`.
 - Production: CDN fetch (`VITE_TOLGEE_CDN_URL`) + local JSON fallback. Falls back to staticData only when CDN URL is not set.
-- Translation workflow: edit local JSON → CI pushes to Tolgee on main merge → translate on Tolgee → sync via `pnpm tolgee:pull:web`.
+- Translation workflow: edit local JSON (SSOT) → CI pushes to Tolgee on main merge. Tolgee is a read-only mirror + CDN.
 
 ## Storage
 

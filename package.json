@@ -30,8 +30,14 @@
       "prettier --write"
     ],
     "*.{json,css,md}": "prettier --write",
-    "apps/web/src/lib/tolgee/*.json": "eslint --fix",
-    "apps/server/src/infra/i18n/locales/*.json": "eslint --fix"
+    "apps/web/src/lib/tolgee/*.json": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "apps/server/src/infra/i18n/locales/*.json": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
