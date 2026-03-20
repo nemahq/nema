@@ -15,21 +15,19 @@ import type {
 } from "./vector-store";
 import { VectorStoreError } from "./vector-store";
 
-const COLLECTION_NAME = "documents";
-
 export function createQdrantStore(): VectorStore {
-  const { QDRANT_URL, QDRANT_API_KEY } = getEnv();
+  const { QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION } = getEnv();
   const client = new QdrantClient({
     url: QDRANT_URL,
     apiKey: QDRANT_API_KEY,
   });
 
   async function ensurePayloadIndexes(): Promise<void> {
-    await client.createPayloadIndex(COLLECTION_NAME, {
+    await client.createPayloadIndex(QDRANT_COLLECTION, {
       field_name: "user_id",
       field_schema: "keyword",
     });
-    await client.createPayloadIndex(COLLECTION_NAME, {
+    await client.createPayloadIndex(QDRANT_COLLECTION, {
       field_name: "doc_id",
       field_schema: "keyword",
     });
@@ -38,16 +36,16 @@ export function createQdrantStore(): VectorStore {
   return {
     async ensureCollection(): Promise<void> {
       try {
-        const { exists } = await client.collectionExists(COLLECTION_NAME);
+        const { exists } = await client.collectionExists(QDRANT_COLLECTION);
         if (!exists) {
           try {
-            await client.createCollection(COLLECTION_NAME, {
+            await client.createCollection(QDRANT_COLLECTION, {
               vectors: { size: VECTOR_DIMENSION, distance: "Cosine" },
             });
           } catch (createError) {
             // 다른 인스턴스가 동시에 컬렉션을 생성했을 수 있으므로 재확인
             const { exists: recheck } =
-              await client.collectionExists(COLLECTION_NAME);
+              await client.collectionExists(QDRANT_COLLECTION);
             if (!recheck) {
               throw new VectorStoreError(
                 `Failed to create collection: ${createError instanceof Error ? createError.message : String(createError)}`,
@@ -120,7 +118,7 @@ export function createQdrantStore(): VectorStore {
           };
         });
 
-        await client.upsert(COLLECTION_NAME, {
+        await client.upsert(QDRANT_COLLECTION, {
           wait: true,
           points,
         });
@@ -166,7 +164,7 @@ export function createQdrantStore(): VectorStore {
           { key: "user_id", match: { value: userId } },
         ];
 
-        const searchResult = await client.search(COLLECTION_NAME, {
+        const searchResult = await client.search(QDRANT_COLLECTION, {
           vector,
           limit,
           filter: { must },
@@ -193,7 +191,7 @@ export function createQdrantStore(): VectorStore {
 
     async deleteByDocument(docId: string): Promise<void> {
       try {
-        await client.delete(COLLECTION_NAME, {
+        await client.delete(QDRANT_COLLECTION, {
           wait: true,
           filter: {
             must: [{ key: "doc_id", match: { value: docId } }],

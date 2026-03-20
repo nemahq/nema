@@ -24,6 +24,7 @@ const envSchema = z
 
     QDRANT_URL: z.string().url().optional(),
     QDRANT_API_KEY: z.string().min(1).optional(),
+    QDRANT_COLLECTION: z.string().min(1).default("documents"),
 
     NEO4J_URI: z.string().min(1),
     NEO4J_USERNAME: z.string().min(1),
