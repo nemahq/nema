@@ -14,8 +14,10 @@ import { router } from "./app/router";
 
 initTheme();
 
-// eslint-disable-next-line no-console -- build metadata, not capturable by Sentry
-console.log(`[nema] ${__COMMIT_SHA__} (built ${__BUILD_TIMESTAMP__})`);
+if (typeof __COMMIT_SHA__ !== "undefined") {
+  // eslint-disable-next-line no-console -- build metadata, not capturable by Sentry
+  console.log(`[nema] ${__COMMIT_SHA__} (built ${__BUILD_TIMESTAMP__})`);
+}
 
 const root = document.getElementById("root");
 if (!root) {

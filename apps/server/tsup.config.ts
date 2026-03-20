@@ -10,6 +10,7 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   define: {
+    __COMMIT_SHA__: JSON.stringify(process.env.RAILWAY_GIT_COMMIT_SHA ?? "dev"),
     __BUILD_TIMESTAMP__: JSON.stringify(new Date().toISOString()),
   },
 });

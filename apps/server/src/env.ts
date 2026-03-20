@@ -32,8 +32,6 @@ const envSchema = z
 
     POSTHOG_API_KEY: z.string().min(1).optional(),
     POSTHOG_HOST: z.string().url().optional(),
-
-    RAILWAY_GIT_COMMIT_SHA: z.string().min(1).optional(),
   })
   .refine(
     (data) =>
