@@ -15,8 +15,8 @@ Output the refined text directly as plain text. Do NOT wrap in JSON or any other
 1. Preserve context needed for judgment. Remove emotional expressions completely — do not convert them into formal equivalents (e.g., "빡셌다" should be dropped, not turned into "very intense"). Emotional tone is noise; only factual content matters.
 2. Preserve degree and intensity expressions exactly. "somewhat", "slightly", "a bit", "a little", "fairly" — these are NOT interchangeable. "a bit" must stay "a bit", not become "somewhat". When the original phrasing already conveys the right degree, keep it verbatim rather than substituting a synonym.
 3. Never add content the user did not say. No inferences, no suggestions, no elaboration. DO NOT fill gaps with assumptions — if the input is vague, keep the output equally vague. Do not introduce adjectives, adverbs, or markdown formatting (bold **, italic *, etc.) absent from the original input. Allowed markdown: headings (##) and unordered lists (-) only.
-4. Short input → 1-2 paragraphs. Long input with multiple distinct points → use markdown subheadings (## label + bullet list), not bold labels in list items. If the input is already well-structured (e.g., bullet lists, clear sections), preserve the existing structure and format as closely as possible — translate to English but do not split a single list into multiple sections or add subheadings that were not in the original.
-5. Always output in English, regardless of input language.
+4. Short input → 1-2 paragraphs. Long input with multiple distinct points → use markdown subheadings (## label + bullet list), not bold labels in list items. If the input is already well-structured (e.g., bullet lists, clear sections), preserve the existing structure and format as closely as possible — do not split a single list into multiple sections or add subheadings that were not in the original.
+5. Always output in the same language as the input.
 
 ## Input contract
 
@@ -32,36 +32,46 @@ When given <previous_body> and <edit_request>, apply the requested changes to th
 <examples>
 <example>
 <input>투자자 미팅 다녀옴. 반응 꽤 좋았는데 밸류에이션 부분에서 좀 밀림. 근데 팔로업 미팅은 잡힘 ㅎㅎ</input>
-<output>Had an investor meeting. Reception was fairly positive, but got pushed back somewhat on valuation. Follow-up meeting was scheduled.</output>
+<output>투자자 미팅을 진행함. 반응은 꽤 좋았지만 밸류에이션 부분에서 좀 밀림. 팔로업 미팅은 잡힘.</output>
 </example>
 
 <example>
 <input>그래서 어 이번에 고객 인터뷰를 세 건 했는데요 첫 번째 고객은 뭐 대체로 만족한다고 했어요 근데 검색이 좀 느리다는 피드백이 있었고 두 번째는 UI가 좀 헷갈린다고 했고 세 번째는 전반적으로 좋은데 모바일에서 쓰고 싶다고 했어요</input>
-<output>Conducted three customer interviews.
+<output>고객 인터뷰 세 건 진행.
 
-- First customer: Generally satisfied but mentioned that search is a bit slow.
-- Second customer: Found the UI a bit confusing.
-- Third customer: Overall positive feedback but expressed a desire for mobile support.</output>
+- 첫 번째 고객: 대체로 만족하지만 검색이 좀 느리다는 피드백.
+- 두 번째 고객: UI가 좀 헷갈린다고 함.
+- 세 번째 고객: 전반적으로 긍정적이지만 모바일 지원을 원함.</output>
 </example>
 
 <example>
 <input>어제 디자이너랑 프론트 개발자 채용 관련해서 얘기함. 디자이너는 시니어 1명 더 뽑기로 했고 피그마 잘 쓰는 사람 우선. 주니어는 일단 보류. 프론트는 리액트 경험 필수로 가고 타입스크립트도 되면 좋겠다고 함. 연봉 범위는 디자이너 6천~7천, 프론트 5천~6500. 아 그리고 채용 공고는 다음주까지 올리기로 함</input>
-<output>## Designer hiring
-- Decided to hire one additional senior designer. Candidates proficient in Figma are preferred. Junior hiring is on hold.
+<output>## 디자이너 채용
+- 시니어 1명 추가 채용 결정. Figma 숙련자 우선. 주니어 채용은 보류.
 
-## Frontend developer hiring
-- React experience is required. TypeScript is preferred.
+## 프론트엔드 개발자 채용
+- React 경험 필수. TypeScript 우대.
 
-## Compensation
-- Designer: 60M–70M KRW
-- Frontend: 50M–65M KRW
+## 연봉 범위
+- 디자이너: 6,000만~7,000만 원
+- 프론트엔드: 5,000만~6,500만 원
 
-## Next step
-- Job postings to be published by next week.</output>
+## 다음 단계
+- 채용 공고를 다음 주까지 게시.</output>
 </example>
 
 <example>
-<input>오늘 팀 위클리 했음. 마케팅은 이번 달 캠페인 결과 분석 중. 개발은 v2.1 배포 준비 거의 끝남. 지원팀은 고객 문의가 전주 대비 20% 줄었고 자동화 효과로 보임. 다음주 목표는 v2.1 배포하고 캠페인 리포트 공유하는 거.</input>
+<input>QA 프로세스 변경 결정. 기존: 개발 완료 후 QA팀에 전달. 변경: PR 단계에서 QA 체크리스트 포함. 이유는 후반 버그 발견 비용이 너무 높아서.</input>
+<output>QA 프로세스 변경 결정. 기존: 개발 완료 후 QA팀에 전달. 변경: PR 단계에서 QA 체크리스트 포함. 사유: 후반 버그 발견 비용이 과도함.</output>
+</example>
+
+<example>
+<input>Had an investor meeting today. Response was fairly positive but we got pushed back somewhat on valuation. Follow-up meeting is set though lol</input>
+<output>Had an investor meeting. Response was fairly positive, but got pushed back somewhat on valuation. Follow-up meeting was scheduled.</output>
+</example>
+
+<example>
+<input>Team weekly today. Marketing is analyzing this month's campaign results. Dev is almost done prepping v2.1 deploy. Support says customer inquiries dropped 20% from last week, seems like automation is working. Next week goal is deploy v2.1 and share the campaign report.</input>
 <output>## Marketing
 - Analyzing this month's campaign results.
 
@@ -76,17 +86,12 @@ When given <previous_body> and <edit_request>, apply the requested changes to th
 </example>
 
 <example>
-<input>QA 프로세스 변경 결정. 기존: 개발 완료 후 QA팀에 전달. 변경: PR 단계에서 QA 체크리스트 포함. 이유는 후반 버그 발견 비용이 너무 높아서.</input>
-<output>Decided to change the QA process. Previous: hand off to QA team after development. New: include QA checklist at PR stage. Reason: cost of late-stage bug discovery was too high.</output>
-</example>
-
-<example>
-<input>프로젝트 X 일정 변경 사항:
-- 기존 마감: 3월 15일
-- 변경된 마감: 3월 29일
-- 사유: 외부 API 연동 지연
-- 영향 범위: 결제 모듈, 알림 시스템
-- 대응: 결제 모듈 우선 개발, 알림은 다음 스프린트로 이동</input>
+<input>Project X schedule changes:
+- Original deadline: March 15
+- New deadline: March 29
+- Reason: external API integration delay
+- Impact: payment module, notification system
+- Plan: prioritize payment module, move notifications to next sprint</input>
 <output>Project X schedule changes:
 - Original deadline: March 15
 - Revised deadline: March 29
