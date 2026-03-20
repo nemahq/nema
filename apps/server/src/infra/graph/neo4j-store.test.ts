@@ -116,15 +116,18 @@ describe("createNeo4jStore", () => {
         ],
       });
 
-      expect(mockRun).toHaveBeenCalledTimes(4);
+      expect(mockRun).toHaveBeenCalledTimes(3);
       expect(mockRun.mock.calls[0][0]).toContain("MERGE (d:Document");
+      expect(mockRun.mock.calls[1][0]).toContain("UNWIND");
       expect(mockRun.mock.calls[1][1]).toEqual(
-        expect.objectContaining({ type: "Person", name: "김철수" }),
+        expect.objectContaining({
+          entities: [
+            { type: "Person", name: "김철수" },
+            { type: "Topic", name: "프론트엔드" },
+          ],
+        }),
       );
-      expect(mockRun.mock.calls[2][1]).toEqual(
-        expect.objectContaining({ type: "Topic", name: "프론트엔드" }),
-      );
-      expect(mockRun.mock.calls[3][0]).toContain("RELATED_TO");
+      expect(mockRun.mock.calls[2][0]).toContain("RELATED_TO");
     });
 
     it("skips RELATED_TO for single entity", async () => {

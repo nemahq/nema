@@ -117,15 +117,18 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         await session.executeWrite(async (tx) => {
           await tx.run("MERGE (d:Document {docId: $docId})", { docId });
 
-          for (const entity of entities) {
-            await tx.run(
-              `MERGE (e:Entity {type: $type, name: $name, userId: $userId})
-               WITH e
-               MATCH (d:Document {docId: $docId})
-               MERGE (e)-[:MENTIONED_IN]->(d)`,
-              { type: entity.type, name: entity.name, userId, docId },
-            );
-          }
+          await tx.run(
+            `UNWIND $entities AS entity
+             MERGE (e:Entity {type: entity.type, name: entity.name, userId: $userId})
+             WITH e
+             MATCH (d:Document {docId: $docId})
+             MERGE (e)-[:MENTIONED_IN]->(d)`,
+            {
+              entities: entities.map((e) => ({ type: e.type, name: e.name })),
+              userId,
+              docId,
+            },
+          );
 
           if (entities.length > 1) {
             await tx.run(

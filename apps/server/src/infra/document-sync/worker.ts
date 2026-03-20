@@ -19,6 +19,7 @@ const MAX_RETRIES = 5;
 const POLL_INTERVAL_MS = 2_000;
 const PGMQ_BATCH_SIZE = 10;
 const VISIBILITY_TIMEOUT_SEC = 60;
+const PROCESS_CONCURRENCY = 3;
 
 interface WorkerDeps {
   supabase: TypedSupabaseClient;
@@ -138,32 +139,37 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
       break;
     }
 
-    for (const doc of docs) {
-      try {
-        await processDocument(doc, deps);
-      } catch (err) {
-        Sentry.captureException(err, {
-          tags: { component: "sync-worker" },
-          extra: { docId: doc.id },
-        });
-        try {
-          await incrementRetry(deps.supabase, doc.id);
-        } catch (retryErr) {
-          Sentry.captureException(retryErr, {
-            tags: { component: "sync-worker", phase: "incrementRetry" },
-            extra: { docId: doc.id },
-          });
-        }
-        continue;
-      }
-      try {
-        await markCompleted(deps.supabase, doc.id);
-      } catch (markErr) {
-        Sentry.captureException(markErr, {
-          tags: { component: "sync-worker", phase: "markCompleted" },
-          extra: { docId: doc.id },
-        });
-      }
+    for (let i = 0; i < docs.length; i += PROCESS_CONCURRENCY) {
+      const batch = docs.slice(i, i + PROCESS_CONCURRENCY);
+      await Promise.allSettled(
+        batch.map(async (doc) => {
+          try {
+            await processDocument(doc, deps);
+          } catch (err) {
+            Sentry.captureException(err, {
+              tags: { component: "sync-worker" },
+              extra: { docId: doc.id },
+            });
+            try {
+              await incrementRetry(deps.supabase, doc.id);
+            } catch (retryErr) {
+              Sentry.captureException(retryErr, {
+                tags: { component: "sync-worker", phase: "incrementRetry" },
+                extra: { docId: doc.id },
+              });
+            }
+            return;
+          }
+          try {
+            await markCompleted(deps.supabase, doc.id);
+          } catch (markErr) {
+            Sentry.captureException(markErr, {
+              tags: { component: "sync-worker", phase: "markCompleted" },
+              extra: { docId: doc.id },
+            });
+          }
+        }),
+      );
     }
   }
 }

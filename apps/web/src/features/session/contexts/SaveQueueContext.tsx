@@ -161,8 +161,13 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     [items],
   );
 
+  const saveQueueValue = useMemo(
+    () => ({ items, addJob, retry }),
+    [items, addJob, retry],
+  );
+
   return (
-    <SaveQueueContext.Provider value={{ items, addJob, retry }}>
+    <SaveQueueContext.Provider value={saveQueueValue}>
       {children}
     </SaveQueueContext.Provider>
   );

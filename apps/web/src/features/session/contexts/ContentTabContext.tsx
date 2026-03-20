@@ -3,6 +3,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useMemo,
   useState,
 } from "react";
 
@@ -40,10 +41,13 @@ export function ContentTabProvider({ children }: ContentTabProviderProps) {
     [],
   );
 
+  const contentTabValue = useMemo(
+    () => ({ openTabs, openTab, closeTab }),
+    [openTabs, openTab, closeTab],
+  );
+
   return (
-    <ContentTabContext value={{ openTabs, openTab, closeTab }}>
-      {children}
-    </ContentTabContext>
+    <ContentTabContext value={contentTabValue}>{children}</ContentTabContext>
   );
 }
 

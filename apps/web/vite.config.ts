@@ -15,6 +15,26 @@ export default defineConfig({
   },
   build: {
     sourcemap: "hidden",
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (
+              id.includes("react-syntax-highlighter") ||
+              id.includes("prismjs")
+            ) {
+              return "syntax-highlighter";
+            }
+            if (id.includes("date-fns")) {
+              return "date-fns";
+            }
+            if (id.includes("@tanstack")) {
+              return "tanstack";
+            }
+          }
+        },
+      },
+    },
   },
   plugins: [
     { enforce: "pre", ...mdx({ remarkPlugins: [remarkGfm] }) },
