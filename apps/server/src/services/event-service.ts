@@ -11,6 +11,8 @@ type ServerEventMap = {
     result_count: number;
     scores: number[];
     graph_boosted_count: number;
+    text_boosted_count: number;
+    text_only_count: number;
     query: string;
   };
 };
