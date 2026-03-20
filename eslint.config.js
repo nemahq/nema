@@ -1,5 +1,6 @@
 import prettier from "eslint-config-prettier";
 import boundaries from "eslint-plugin-boundaries";
+import jsonc from "eslint-plugin-jsonc";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -266,6 +267,22 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  ...jsonc.configs["flat/base"].map((config) => ({
+    ...config,
+    files: [
+      "apps/web/src/lib/tolgee/*.json",
+      "apps/server/src/infra/i18n/locales/*.json",
+    ],
+  })),
+  {
+    files: [
+      "apps/web/src/lib/tolgee/*.json",
+      "apps/server/src/infra/i18n/locales/*.json",
+    ],
+    rules: {
+      "jsonc/sort-keys": "error",
     },
   },
   prettier,
