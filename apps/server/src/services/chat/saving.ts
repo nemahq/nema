@@ -95,7 +95,7 @@ export async function handleSave(args: {
   sessionId: string;
   draftBody: string;
   contentLanguage: ContentLanguage;
-}): Promise<void> {
+}): Promise<string[]> {
   const { supabase, providers, userId, sessionId, draftBody, contentLanguage } =
     args;
 
@@ -126,6 +126,8 @@ export async function handleSave(args: {
     sessionId,
     payload: { doc_count: savedDocs.length },
   });
+
+  return savedDocs.map((d) => d.title);
 }
 
 async function saveDocument(args: {

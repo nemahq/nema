@@ -62,6 +62,7 @@ interface SaveQueueProviderProps {
 }
 
 export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
+  const utils = trpc.useUtils();
   const [sseUpdates, setSseUpdates] = useState<Map<string, SaveQueueItem>>(
     new Map(),
   );
@@ -105,6 +106,10 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
         next.set(job.id, toSaveQueueItem(job));
         return next;
       });
+
+      if (job.status === "completed") {
+        void utils.message.list.invalidate({ sessionId: job.sessionId });
+      }
     },
     onError(error) {
       Sentry.captureException(error, {

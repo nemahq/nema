@@ -112,8 +112,9 @@ describe("processSaveJobBackground", () => {
         }),
       );
 
-    const supabase = { from } as unknown as TypedSupabaseClient;
-    vi.mocked(handleSave).mockResolvedValue(undefined);
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const supabase = { from, rpc } as unknown as TypedSupabaseClient;
+    vi.mocked(handleSave).mockResolvedValue(["테스트 문서"]);
 
     await processSaveJobBackground({
       supabase,
@@ -125,6 +126,17 @@ describe("processSaveJobBackground", () => {
     expect(emitSaveJobUpdate).toHaveBeenCalledWith(
       USER_ID,
       expect.objectContaining({ id: JOB_ID, status: "completed" }),
+    );
+    expect(rpc).toHaveBeenCalledWith(
+      "append_message",
+      expect.objectContaining({
+        p_session_id: SESSION_ID,
+        p_message: expect.objectContaining({
+          type: "status",
+          content: "draft_saved",
+          meta: { titles: "테스트 문서" },
+        }),
+      }),
     );
   });
 
@@ -232,8 +244,9 @@ describe("processSaveJobBackground", () => {
         }),
       );
 
-    const supabase = { from } as unknown as TypedSupabaseClient;
-    vi.mocked(handleSave).mockResolvedValue(undefined);
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const supabase = { from, rpc } as unknown as TypedSupabaseClient;
+    vi.mocked(handleSave).mockResolvedValue(["테스트 문서"]);
 
     await processSaveJobBackground({
       supabase,
@@ -244,6 +257,87 @@ describe("processSaveJobBackground", () => {
 
     expect(handleSave).toHaveBeenCalledWith(
       expect.objectContaining({ contentLanguage: "ko" }),
+    );
+  });
+
+  it("여러 문서 저장 시 status 메시지에 쉼표 구분 제목 포함", async () => {
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: { draft_body: "test", session_id: SESSION_ID },
+          error: null,
+        }),
+      )
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: makeJobRow({ status: "completed" }),
+          error: null,
+        }),
+      );
+
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const supabase = { from, rpc } as unknown as TypedSupabaseClient;
+    vi.mocked(handleSave).mockResolvedValue(["문서 A", "문서 B", "문서 C"]);
+
+    await processSaveJobBackground({
+      supabase,
+      providers: {} as Providers,
+      userId: USER_ID,
+      jobId: JOB_ID,
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      "append_message",
+      expect.objectContaining({
+        p_message: expect.objectContaining({
+          meta: { titles: "문서 A, 문서 B, 문서 C" },
+        }),
+      }),
+    );
+  });
+
+  it("appendSaveStatusMessage 실패 시 completed status 유지 + Sentry 보고", async () => {
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: { draft_body: "test", session_id: SESSION_ID },
+          error: null,
+        }),
+      )
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: makeJobRow({ status: "completed" }),
+          error: null,
+        }),
+      );
+
+    const rpc = vi.fn().mockRejectedValue(new Error("RPC failed"));
+    const supabase = { from, rpc } as unknown as TypedSupabaseClient;
+    vi.mocked(handleSave).mockResolvedValue(["테스트 문서"]);
+
+    await processSaveJobBackground({
+      supabase,
+      providers: {} as Providers,
+      userId: USER_ID,
+      jobId: JOB_ID,
+    });
+
+    expect(emitSaveJobUpdate).toHaveBeenCalledWith(
+      USER_ID,
+      expect.objectContaining({ id: JOB_ID, status: "completed" }),
+    );
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        tags: { component: "save-job" },
+        extra: expect.objectContaining({ context: "status message append" }),
+      }),
     );
   });
 });
