@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import type { ChatMode } from "@nema-io/shared";
 
@@ -10,13 +10,13 @@ export function useChatMode() {
     () => getStorage("chatMode") ?? "remember",
   );
 
-  const toggleMode = useCallback(() => {
+  function toggleMode() {
     setMode((prev) => {
       const next = nextMode(prev);
       setStorage("chatMode", next);
       return next;
     });
-  }, []);
+  }
 
   return { mode, toggleMode } as const;
 }

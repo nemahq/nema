@@ -1,7 +1,6 @@
 import "streamdown/styles.css";
 import "./markdown-renderer.css";
 
-import { memo } from "react";
 import { Streamdown } from "streamdown";
 import { code } from "@streamdown/code";
 
@@ -11,9 +10,7 @@ interface MarkdownRendererProps {
   content: string;
 }
 
-export const MarkdownRenderer = memo(function MarkdownRenderer({
-  content,
-}: MarkdownRendererProps) {
+export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return (
     <div className="prose-chat">
       <Streamdown plugins={PLUGINS} controls={false}>
@@ -21,4 +18,4 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       </Streamdown>
     </div>
   );
-});
+}

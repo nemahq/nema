@@ -1,10 +1,4 @@
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useRef,
-} from "react";
+import { createContext, type ReactNode, useContext, useRef } from "react";
 
 import type { TranslationKey } from "@web/lib/tolgee";
 
@@ -39,15 +33,17 @@ export function ActionRegistryProvider({
 }: ActionRegistryProviderProps) {
   const actionsRef = useRef(new Map<ActionId, RegisteredAction>());
 
-  const register = useCallback((action: RegisteredAction) => {
+  function register(action: RegisteredAction) {
     actionsRef.current.set(action.id, action);
-  }, []);
+  }
 
-  const unregister = useCallback((id: ActionId) => {
+  function unregister(id: ActionId) {
     actionsRef.current.delete(id);
-  }, []);
+  }
 
-  const getAll = useCallback(() => Array.from(actionsRef.current.values()), []);
+  function getAll() {
+    return Array.from(actionsRef.current.values());
+  }
 
   return (
     <ActionRegistryContext value={{ register, unregister, getAll }}>

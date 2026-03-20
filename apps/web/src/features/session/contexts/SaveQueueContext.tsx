@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import * as Sentry from "@sentry/react";
 
 import type { SaveJob } from "@nema-io/shared";
@@ -72,13 +65,13 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     staleTime: Infinity,
   });
 
-  const addJob = useCallback((job: SaveJob) => {
+  function addJob(job: SaveJob) {
     setSseUpdates((prev) => {
       const next = new Map(prev);
       next.set(job.id, toSaveQueueItem(job));
       return next;
     });
-  }, []);
+  }
 
   const retrySave = trpc.saveJob.retry.useMutation({
     onSuccess(job) {
@@ -86,12 +79,9 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     },
   });
 
-  const retry = useCallback(
-    (jobId: string) => {
-      retrySave.mutate({ jobId });
-    },
-    [retrySave],
-  );
+  function retry(jobId: string) {
+    retrySave.mutate({ jobId });
+  }
 
   trpc.saveJob.onUpdate.useSubscription(undefined, {
     onData(event) {
@@ -118,7 +108,7 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     },
   });
 
-  const items = useMemo(() => {
+  const items = (() => {
     const merged = new Map<string, SaveQueueItem>();
 
     if (initialJobs) {
@@ -132,7 +122,7 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     }
 
     return [...merged.values()].filter((i) => !dismissedIds.has(i.jobId));
-  }, [initialJobs, sseUpdates, dismissedIds]);
+  })();
 
   useEffect(
     function panelAutoDismiss() {
@@ -161,13 +151,8 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     [items],
   );
 
-  const saveQueueValue = useMemo(
-    () => ({ items, addJob, retry }),
-    [items, addJob, retry],
-  );
-
   return (
-    <SaveQueueContext.Provider value={saveQueueValue}>
+    <SaveQueueContext.Provider value={{ items, addJob, retry }}>
       {children}
     </SaveQueueContext.Provider>
   );

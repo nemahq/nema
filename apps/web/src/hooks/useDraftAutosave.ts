@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface UseDraftAutosaveOptions {
   /** ms 단위 */
@@ -94,21 +94,18 @@ export function useDraftAutosave<T>(
     [key],
   );
 
-  const setDraft = useCallback<React.Dispatch<React.SetStateAction<T>>>(
-    (action) => {
-      clearedRef.current = false;
-      dirtyRef.current = true;
-      setDraftState(action);
-    },
-    [],
-  );
+  const setDraft: React.Dispatch<React.SetStateAction<T>> = (action) => {
+    clearedRef.current = false;
+    dirtyRef.current = true;
+    setDraftState(action);
+  };
 
-  const clear = useCallback(() => {
+  function clear() {
     clearedRef.current = true;
     dirtyRef.current = false;
     removeStorage(key);
     setDraftState(initialValueRef.current);
-  }, [key]);
+  }
 
   return [draft, setDraft, { clear }];
 }

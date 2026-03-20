@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { cn } from "@nema-io/weave";
 import {
@@ -90,38 +90,37 @@ export function SaveQueuePanel() {
     null,
   );
 
-  const { panelStatus, completedCount, failedCount, visibleItems } =
-    useMemo(() => {
-      let completed = 0;
-      let failed = 0;
-      let hasActive = false;
-      const failedJobs: typeof items = [];
+  const { panelStatus, completedCount, failedCount, visibleItems } = (() => {
+    let completed = 0;
+    let failed = 0;
+    let hasActive = false;
+    const failedJobs: typeof items = [];
 
-      for (const job of items) {
-        if (job.status === "completed") {
-          completed++;
-        } else if (job.status === "failed") {
-          failed++;
-          failedJobs.push(job);
-        } else {
-          hasActive = true;
-        }
+    for (const job of items) {
+      if (job.status === "completed") {
+        completed++;
+      } else if (job.status === "failed") {
+        failed++;
+        failedJobs.push(job);
+      } else {
+        hasActive = true;
       }
+    }
 
-      let panelStatus: PanelStatus = "completed";
-      if (hasActive) {
-        panelStatus = "active";
-      } else if (failed > 0) {
-        panelStatus = "failed";
-      }
+    let panelStatus: PanelStatus = "completed";
+    if (hasActive) {
+      panelStatus = "active";
+    } else if (failed > 0) {
+      panelStatus = "failed";
+    }
 
-      return {
-        panelStatus,
-        completedCount: completed,
-        failedCount: failed,
-        visibleItems: panelStatus === "failed" ? failedJobs : items,
-      };
-    }, [items]);
+    return {
+      panelStatus,
+      completedCount: completed,
+      failedCount: failed,
+      visibleItems: panelStatus === "failed" ? failedJobs : items,
+    };
+  })();
 
   if (items.length === 0) {
     if (expanded) {

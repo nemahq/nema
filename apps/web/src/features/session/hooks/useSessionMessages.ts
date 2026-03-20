@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 
 import { useMessageList } from "./useMessageList";
@@ -10,9 +8,7 @@ export function useSessionMessages() {
   const { streamingMessage } = useChatStream();
   const serverMessages = useMessageList({ sessionId });
 
-  return useMemo(
-    () =>
-      streamingMessage ? [...serverMessages, streamingMessage] : serverMessages,
-    [serverMessages, streamingMessage],
-  );
+  return streamingMessage
+    ? [...serverMessages, streamingMessage]
+    : serverMessages;
 }

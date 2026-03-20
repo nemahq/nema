@@ -1,5 +1,3 @@
-import { memo } from "react";
-
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { RelativeTime } from "./RelativeTime";
 
@@ -8,7 +6,7 @@ interface AssistantMessageProps {
   createdAt: string;
 }
 
-export const AssistantMessage = memo(function AssistantMessage({
+export function AssistantMessage({
   content,
   createdAt,
 }: AssistantMessageProps) {
@@ -20,4 +18,4 @@ export const AssistantMessage = memo(function AssistantMessage({
       </div>
     </div>
   );
-});
+}

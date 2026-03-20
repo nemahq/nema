@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
 import { cn } from "@nema-io/weave";
@@ -12,9 +12,9 @@ interface UserMessageProps {
 
 export function UserMessage({ content }: UserMessageProps) {
   const contentElRef = useRef<HTMLElement | null>(null);
-  const setContentRef = useCallback((el: HTMLElement | null) => {
+  function setContentRef(el: HTMLElement | null) {
     contentElRef.current = el;
-  }, []);
+  }
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 

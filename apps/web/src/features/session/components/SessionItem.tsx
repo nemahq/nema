@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
@@ -13,10 +13,7 @@ interface SessionItemProps {
   title: string | null;
 }
 
-export const SessionItem = memo(function SessionItem({
-  sessionId,
-  title: rawTitle,
-}: SessionItemProps) {
+export function SessionItem({ sessionId, title: rawTitle }: SessionItemProps) {
   const { t } = useTranslation();
   const trackEvent = useTrackEvent();
   const animatedTitle = useTypewriter(rawTitle);
@@ -57,4 +54,4 @@ export const SessionItem = memo(function SessionItem({
       />
     </div>
   );
-});
+}

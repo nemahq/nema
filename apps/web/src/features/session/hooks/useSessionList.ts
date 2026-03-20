@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-
 import type { SessionSummary } from "@nema-io/shared";
 
 import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
@@ -93,10 +91,7 @@ export function useSessionList() {
       },
     );
 
-  const sessions = useMemo(
-    () => data.pages.flatMap((page) => page.items),
-    [data],
-  );
+  const sessions = data.pages.flatMap((page) => page.items);
 
   return { sessions, hasNextPage, fetchNextPage, isFetchingNextPage };
 }

@@ -82,7 +82,7 @@ export default tseslint.config(
       "no-relative-import-paths": noRelativeImportPaths,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      ...reactHooks.configs["recommended-latest"].rules,
       "nema/require-suspense-boundary": "error",
       "nema/require-named-props-interface": "error",
       "nema/no-forbidden-breakpoints": "error",
