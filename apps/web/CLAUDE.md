@@ -34,6 +34,7 @@ src/
 
 ## I18n
 
+- MUST follow UX writing rules in `docs/ux-writing.md` when adding or modifying translation keys.
 - Tolgee (`@tolgee/react`). Use `t()` from `useTranslation()` hook. Do NOT use `<T>` component.
 - Locale JSON in `lib/tolgee/`. Key types auto-inferred from `ko.json`.
 - Key naming: first segment = feature (e.g. `common.home`, `auth.login`).
