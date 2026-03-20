@@ -3,9 +3,14 @@ import {
   DraftActionInputSchema,
   GetMessagesInputSchema,
   SendMessageInputSchema,
+  SessionGetInputSchema,
 } from "@nema-io/shared";
 
-import { cancelDraftAction, processChatStream } from "@server/services/chat";
+import {
+  cancelDraftAction,
+  dismissRetrievalAction,
+  processChatStream,
+} from "@server/services/chat";
 import { getMessages, sendMessage } from "@server/services/message-service";
 import { protectedProcedure, providerProcedure, router } from "@server/trpc";
 
@@ -37,6 +42,15 @@ export const messageRouter = router({
     .input(DraftActionInputSchema)
     .mutation(({ ctx, input }) =>
       cancelDraftAction({
+        supabase: ctx.supabase,
+        sessionId: input.sessionId,
+      }),
+    ),
+
+  dismissRetrieval: protectedProcedure
+    .input(SessionGetInputSchema)
+    .mutation(({ ctx, input }) =>
+      dismissRetrievalAction({
         supabase: ctx.supabase,
         sessionId: input.sessionId,
       }),

@@ -6,6 +6,7 @@ import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { TabbedPanel } from "@web/components/ui/TabbedPanel";
 import { useDraftTab } from "@web/features/session/hooks/useDraftTab";
 import { useHelpTab } from "@web/features/session/hooks/useHelpTab";
+import { useRetrievalTab } from "@web/features/session/hooks/useRetrievalTab";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 
 const MAX_TAB_SHORTCUT = 9;
@@ -17,9 +18,10 @@ const TAB_HOTKEYS = Array.from(
 
 function ContentPanelInner() {
   const draftTab = useDraftTab();
+  const retrievalTab = useRetrievalTab();
   const helpTab = useHelpTab();
 
-  const allTabs = [draftTab, helpTab];
+  const allTabs = [draftTab, retrievalTab, helpTab];
   const tabs: TabbedPanelTab[] = allTabs.filter(
     (tab): tab is TabbedPanelTab => tab !== undefined,
   );

@@ -24,6 +24,7 @@ const STATUS_LABEL_MAP: Record<
   draft_created: "session.status_draft_created",
   draft_edited: "session.status_draft_edited",
   draft_cancelled: "session.status_draft_cancelled",
+  retrieval_answered: "session.status_retrieval_answered",
 };
 
 interface StatusMessageProps {

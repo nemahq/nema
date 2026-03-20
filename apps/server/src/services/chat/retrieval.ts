@@ -22,6 +22,11 @@ const RETRIEVAL_MAX_RESULTS = 15;
 const RETRIEVAL_SCORE_THRESHOLD = 0.6;
 const TEXT_MATCH_LIMIT = 10;
 
+interface RetrievalResult {
+  text: string;
+  hasResults: boolean;
+}
+
 export async function* handleRetrievalStream(args: {
   supabase: TypedSupabaseClient;
   providers: Providers;
@@ -30,7 +35,7 @@ export async function* handleRetrievalStream(args: {
   question: string;
   lng: Locale;
   signal?: AbortSignal;
-}): AsyncGenerator<ChatStreamEvent, string> {
+}): AsyncGenerator<ChatStreamEvent, RetrievalResult> {
   const { supabase, providers, userId, sessionId, question, lng, signal } =
     args;
   const { embedding, vectorStore, graphStore } = providers;
@@ -172,8 +177,10 @@ export async function* handleRetrievalStream(args: {
   if (searchResults.length === 0) {
     const noResult = t("chat.retrieval_empty", lng);
     yield { type: "token", text: noResult };
-    return noResult;
+    return { text: noResult, hasResults: false };
   }
+
+  yield { type: "retrieval_start" };
 
   let fullText = "";
 
@@ -191,7 +198,7 @@ export async function* handleRetrievalStream(args: {
     yield { type: "token", text: chunk };
   }
 
-  return fullText;
+  return { text: fullText, hasResults: true };
 }
 
 function sanitizePostgrestValue(value: string): string {

@@ -5,6 +5,7 @@ import type {
   Message,
   MessageType,
   SessionDraft,
+  SessionRetrieval,
 } from "@nema-io/shared";
 import {
   MessageSchema,
@@ -21,6 +22,7 @@ import { handleDraftingStream } from "./drafting";
 import { handleRetrievalStream } from "./retrieval";
 
 type Draft = SessionDraft;
+type Retrieval = SessionRetrieval;
 
 interface ChatResponse {
   message: Message;
@@ -69,6 +71,36 @@ async function clearDraft(
   const { error } = await supabase
     .from("sessions")
     .update({ draft: null })
+    .eq("id", sessionId);
+
+  throwIfSupabaseError(error);
+}
+
+async function setRetrieval({
+  supabase,
+  sessionId,
+  body,
+}: {
+  supabase: TypedSupabaseClient;
+  sessionId: string;
+  body: string;
+}): Promise<void> {
+  const retrieval: Retrieval = { body };
+  const { error } = await supabase
+    .from("sessions")
+    .update({ retrieval })
+    .eq("id", sessionId);
+
+  throwIfSupabaseError(error);
+}
+
+async function clearRetrieval(
+  supabase: TypedSupabaseClient,
+  sessionId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("sessions")
+    .update({ retrieval: null })
     .eq("id", sessionId);
 
   throwIfSupabaseError(error);
@@ -150,8 +182,8 @@ export async function* processChatStream(args: {
   });
 
   switch (input.mode) {
-    case "ask":
-      responseContent = yield* handleRetrievalStream({
+    case "ask": {
+      const result = yield* handleRetrievalStream({
         supabase,
         providers,
         userId,
@@ -160,7 +192,19 @@ export async function* processChatStream(args: {
         lng,
         signal,
       });
+      if (result.hasResults) {
+        await setRetrieval({
+          supabase,
+          sessionId: input.sessionId,
+          body: result.text,
+        });
+        responseContent = STATUS_LOG_TYPES.RETRIEVAL_ANSWERED;
+        messageType = "status";
+      } else {
+        responseContent = result.text;
+      }
       break;
+    }
     case "remember": {
       yield { type: "draft_start" };
       const draftBody = yield* handleDraftingStream({
@@ -213,4 +257,11 @@ export async function cancelDraftAction(args: {
     type: "status",
     content: STATUS_LOG_TYPES.DRAFT_CANCELLED,
   });
+}
+
+export async function dismissRetrievalAction(args: {
+  supabase: TypedSupabaseClient;
+  sessionId: string;
+}): Promise<void> {
+  await clearRetrieval(args.supabase, args.sessionId);
 }

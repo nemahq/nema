@@ -63,6 +63,8 @@ export {
   SessionGetInputSchema,
   type SessionListInput,
   SessionListInputSchema,
+  type SessionRetrieval,
+  SessionRetrievalSchema,
   type SessionSummary,
   SessionSummarySchema,
   type SessionUpdateInput,
