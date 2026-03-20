@@ -24,6 +24,6 @@
         "namespace": "server"
       }
     ],
-    "forceMode": "KEEP"
+    "forceMode": "OVERRIDE"
   }
 }

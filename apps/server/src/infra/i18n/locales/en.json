@@ -3,17 +3,17 @@
     "retrieval_empty": "No relevant information found."
   },
   "error": {
-    "llm_rate_limit": "Too many requests. Please try again later.",
-    "llm_timeout": "AI response timed out. Please try again.",
+    "db_not_found": "The requested item was not found.",
+    "db_query_failed": "An issue occurred while querying data.",
+    "embedding": "An issue occurred while processing text.",
+    "graph_store": "An issue occurred while saving data.",
     "llm_auth": "AI service authentication failed.",
     "llm_bad_request": "Invalid AI service request.",
     "llm_content_filter": "Your input was filtered. Please try different wording.",
     "llm_default": "An issue occurred with the AI service.",
-    "embedding": "An issue occurred while processing text.",
-    "vector_store": "An issue occurred while searching data.",
-    "graph_store": "An issue occurred while saving data.",
-    "db_not_found": "The requested item was not found.",
-    "db_query_failed": "An issue occurred while querying data.",
-    "unknown": "An unexpected issue occurred."
+    "llm_rate_limit": "Too many requests. Please try again later.",
+    "llm_timeout": "AI response timed out. Please try again.",
+    "unknown": "An unexpected issue occurred.",
+    "vector_store": "An issue occurred while searching data."
   }
 }
