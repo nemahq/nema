@@ -19,12 +19,6 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (
-              id.includes("react-syntax-highlighter") ||
-              id.includes("prismjs")
-            ) {
-              return "syntax-highlighter";
-            }
             if (id.includes("streamdown") || id.includes("shiki")) {
               return "streamdown";
             }
