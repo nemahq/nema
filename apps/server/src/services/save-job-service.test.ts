@@ -4,6 +4,7 @@ import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
 vi.mock("./chat/saving", () => ({ handleSave: vi.fn() }));
+vi.mock("./profile-service", () => ({ getProfile: vi.fn() }));
 vi.mock("@server/infra/save-job-emitter", () => ({
   emitSaveJobUpdate: vi.fn(),
 }));
@@ -14,6 +15,7 @@ import * as Sentry from "@sentry/node";
 import { emitSaveJobUpdate } from "@server/infra/save-job-emitter";
 
 import { handleSave } from "./chat/saving";
+import { getProfile } from "./profile-service";
 import { enqueueSaveJob, processSaveJobBackground } from "./save-job-service";
 
 const JOB_ID = "a0000000-0000-4000-8000-000000000001";
@@ -45,8 +47,15 @@ function makeJobRow(overrides?: Record<string, unknown>) {
   };
 }
 
+const MOCK_PROFILE = {
+  contentLanguage: "en" as const,
+  createdAt: TIMESTAMP,
+  updatedAt: TIMESTAMP,
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(getProfile).mockResolvedValue(MOCK_PROFILE);
 });
 
 describe("enqueueSaveJob", () => {
@@ -159,6 +168,82 @@ describe("processSaveJobBackground", () => {
       expect.objectContaining({
         tags: { component: "save-job" },
       }),
+    );
+  });
+
+  it("프로필 없으면 throw → Sentry 보고", async () => {
+    vi.mocked(getProfile).mockResolvedValue(null);
+
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: { draft_body: "test", session_id: SESSION_ID },
+          error: null,
+        }),
+      )
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: makeJobRow({ status: "failed" }),
+          error: null,
+        }),
+      );
+
+    const supabase = { from } as unknown as TypedSupabaseClient;
+
+    await processSaveJobBackground({
+      supabase,
+      providers: {} as Providers,
+      userId: USER_ID,
+      jobId: JOB_ID,
+    });
+
+    expect(handleSave).not.toHaveBeenCalled();
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Save job requires a user profile" }),
+      expect.objectContaining({
+        tags: { component: "save-job" },
+      }),
+    );
+  });
+
+  it("프로필의 contentLanguage가 handleSave에 전달됨", async () => {
+    vi.mocked(getProfile).mockResolvedValue({
+      ...MOCK_PROFILE,
+      contentLanguage: "ko",
+    });
+
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: { draft_body: "test", session_id: SESSION_ID },
+          error: null,
+        }),
+      )
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: makeJobRow({ status: "completed" }),
+          error: null,
+        }),
+      );
+
+    const supabase = { from } as unknown as TypedSupabaseClient;
+    vi.mocked(handleSave).mockResolvedValue(undefined);
+
+    await processSaveJobBackground({
+      supabase,
+      providers: {} as Providers,
+      userId: USER_ID,
+      jobId: JOB_ID,
+    });
+
+    expect(handleSave).toHaveBeenCalledWith(
+      expect.objectContaining({ contentLanguage: "ko" }),
     );
   });
 });

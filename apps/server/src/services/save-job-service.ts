@@ -1,7 +1,6 @@
 import * as Sentry from "@sentry/node";
 import { TRPCError } from "@trpc/server";
 
-import type { ContentLanguage } from "@nema-io/shared";
 import {
   MessageSchema,
   type SaveJob,
@@ -148,7 +147,10 @@ async function processSaveJob(args: {
   throwIfSupabaseError(fetchError);
 
   const profile = await getProfile(supabase, { userId });
-  const contentLanguage: ContentLanguage = profile?.contentLanguage ?? "en";
+  if (!profile) {
+    throw new Error("Save job requires a user profile");
+  }
+  const contentLanguage = profile.contentLanguage;
 
   try {
     await handleSave({

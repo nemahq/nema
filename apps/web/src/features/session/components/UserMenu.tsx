@@ -10,8 +10,8 @@ import {
 } from "@nema-io/weave";
 import { LogOut, Settings } from "@nema-io/weave/icons";
 
+import { useProfile } from "@web/features/profile";
 import { useAuth } from "@web/hooks/useAuth";
-import { useProfile } from "@web/hooks/useProfile";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";

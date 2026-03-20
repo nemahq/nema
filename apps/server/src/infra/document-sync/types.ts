@@ -48,13 +48,4 @@ export const PendingDocumentSchema = z.object({
   summary_en: z.string().nullable(),
 });
 
-export interface PendingDocument {
-  id: string;
-  user_id: string;
-  body: string;
-  body_en: string | null;
-  tags: string[];
-  tags_en: string[] | null;
-  summary: string;
-  summary_en: string | null;
-}
+export type PendingDocument = z.infer<typeof PendingDocumentSchema>;

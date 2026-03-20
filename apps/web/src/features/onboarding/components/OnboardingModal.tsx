@@ -20,13 +20,8 @@ import {
   SelectValue,
 } from "@nema-io/weave";
 
-import { useUpdateProfile } from "@web/features/profile/hooks/useUpdateProfile";
+import { LANGUAGE_LABELS, useUpdateProfile } from "@web/features/profile";
 import { useTranslation } from "@web/lib/tolgee";
-
-const LANGUAGE_LABELS: Record<ContentLanguage, string> = {
-  ko: "한국어",
-  en: "English",
-};
 
 export function OnboardingModal() {
   const { t } = useTranslation();
@@ -65,6 +60,11 @@ export function OnboardingModal() {
         </Select>
 
         <DialogFooter>
+          {updateMutation.isError && (
+            <p className="text-sm text-status-error">
+              {t("common.unknown_error")}
+            </p>
+          )}
           <Button
             onClick={() => updateMutation.mutate({ contentLanguage: selected })}
             disabled={updateMutation.isPending}

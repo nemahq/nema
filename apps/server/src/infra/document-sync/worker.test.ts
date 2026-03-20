@@ -94,6 +94,17 @@ const PENDING_DOC: PendingDocument = {
   summary_en: null,
 };
 
+const PENDING_DOC_BILINGUAL: PendingDocument = {
+  id: DOC_ID_1,
+  user_id: USER_ID,
+  body: "한국어 본문",
+  body_en: "English body",
+  tags: ["태그1"],
+  tags_en: ["tag1"],
+  summary: "한국어 요약",
+  summary_en: "English summary",
+};
+
 // --- Tests ---
 
 describe("createSyncWorker", () => {
@@ -161,6 +172,51 @@ describe("createSyncWorker", () => {
         ingestion_status: "completed",
       });
       expect(supabase._fromChain.eq).toHaveBeenCalledWith("id", DOC_ID_1);
+    });
+  });
+
+  // ========== Bilingual document ==========
+
+  describe("bilingual document → English content used for engine", () => {
+    it("비영어 문서는 _en 필드로 벡터·엔티티 처리", async () => {
+      const supabase = mockSupabase();
+      const vectorStore = mockVectorStore();
+      const graphStore = mockGraphStore();
+      const llm = mockLlm();
+      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
+
+      rpc
+        .mockResolvedValueOnce({
+          data: [makeMessage({ type: "notify" })],
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: null, error: null })
+        .mockResolvedValueOnce({
+          data: [PENDING_DOC_BILINGUAL],
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: [], error: null });
+
+      const worker = createSyncWorker({
+        supabase,
+        llm,
+        embedding: mockEmbedding(),
+        vectorStore,
+        graphStore,
+      });
+      worker.start();
+      await vi.advanceTimersByTimeAsync(0);
+      await worker.stop();
+
+      expect(vectorStore.upsert).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          docId: DOC_ID_1,
+          chunks: ["English body"],
+          tags: ["tag1"],
+          summary: "English summary",
+        }),
+      );
     });
   });
 

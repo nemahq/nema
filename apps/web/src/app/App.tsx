@@ -1,6 +1,6 @@
 import { Outlet } from "@tanstack/react-router";
 
-import { DevToolbar } from "@web/app/components/dev-toolbar/DevToolbar";
+import { DevToolbar } from "@web/app/components/devtools/DevToolbar";
 
 export function App() {
   return (

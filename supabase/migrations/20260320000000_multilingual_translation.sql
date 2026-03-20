@@ -6,7 +6,8 @@
 -- ----- profiles (1:1 with auth.users) -----
 CREATE TABLE profiles (
   user_id           uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  content_language  text NOT NULL DEFAULT 'en',
+  content_language  text NOT NULL DEFAULT 'en'
+    CHECK (content_language IN ('en', 'ko')),
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now()
 );
