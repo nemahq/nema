@@ -75,6 +75,8 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Check for migration changes
         id: migrations
@@ -90,6 +92,7 @@ jobs:
       - name: Push migrations to staging
         if: steps.migrations.outputs.changed == 'true'
         run: |
+          set -euo pipefail
           supabase link --project-ref iydatypmzqconlcqljbj
           supabase db push --linked
         env:
@@ -105,6 +108,8 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli
@@ -126,6 +131,7 @@ jobs:
       - name: Push migrations to production
         if: steps.migrations.outputs.changed == 'true'
         run: |
+          set -euo pipefail
           supabase link --project-ref rvsecpihaiibosuchmdw
           supabase db push --linked
         env:

@@ -39,11 +39,11 @@ function ProfileProviderInner({ children }: ProfileProviderProps) {
   );
 }
 
-export function ProfileProvider({ children }: ProfileProviderProps) {
+export function ProfileProvider({ children }: ProfileProviderProps): ReactNode {
   const { session, loading } = useAuth();
 
   if (loading || !session) {
-    return <>{children}</>;
+    return children;
   }
 
   return (
