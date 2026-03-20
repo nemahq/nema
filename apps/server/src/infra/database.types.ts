@@ -287,6 +287,10 @@ export type Database = {
         Returns: undefined;
       };
       fail_stale_save_jobs: { Args: never; Returns: number };
+      get_unique_tags: {
+        Args: { p_user_id: string };
+        Returns: string[];
+      };
       fetch_pending_documents: {
         Args: { p_max_retries?: number };
         Returns: {

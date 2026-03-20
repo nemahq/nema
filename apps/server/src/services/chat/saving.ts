@@ -6,7 +6,6 @@ import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import {
-  buildDerivationMetaMessage,
   buildJudgmentMessage,
   buildMetaMessage,
   buildSplitMessage,
@@ -66,23 +65,27 @@ async function getExistingTags(
   supabase: TypedSupabaseClient,
   userId: string,
 ): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("documents")
-    .select("tags")
-    .eq("user_id", userId);
+  const { data, error } = await supabase.rpc("get_unique_tags", {
+    p_user_id: userId,
+  });
 
   throwIfSupabaseError(error);
 
-  const allTags = new Set<string>();
-  for (const doc of data ?? []) {
-    const tags = Array.isArray(doc.tags) ? doc.tags : [];
-    for (const tag of tags) {
-      if (typeof tag === "string") {
-        allTags.add(tag);
-      }
-    }
-  }
-  return [...allTags];
+  return Array.isArray(data) ? data : [];
+}
+
+function normalizeTags(tags: string[]): string[] {
+  return tags
+    .map((tag) =>
+      tag
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9가-힣ぁ-んァ-ヶ一-龥-]/g, "")
+        .replace(/^-+|-+$/g, "")
+        .replace(/-{2,}/g, "-"),
+    )
+    .filter((tag) => tag.length > 0);
 }
 
 export async function handleSave(args: {
@@ -235,20 +238,24 @@ async function generateDocumentFields(args: {
   ctx: ServiceContext;
   body: string;
   existingTags: string[];
+  currentTags?: string[];
 }): Promise<DocumentFields> {
-  const { ctx, body, existingTags } = args;
+  const { ctx, body, existingTags, currentTags } = args;
   if (ctx.contentLanguage === "en") {
     const meta = await ctx.providers.llm.mini.generateStructured({
       schema: MetaOutputSchema,
       schemaName: "meta",
       systemPrompt: META_SYSTEM_PROMPT,
       messages: [
-        { role: "user", content: buildMetaMessage(body, existingTags) },
+        {
+          role: "user",
+          content: buildMetaMessage({ body, existingTags, currentTags }),
+        },
       ],
     });
     return {
       title: meta.title,
-      tags: meta.tags,
+      tags: normalizeTags(meta.tags),
       summary: meta.summary,
       titleEn: undefined,
       tagsEn: undefined,
@@ -262,16 +269,23 @@ async function generateDocumentFields(args: {
     schemaName: "derivation_meta",
     systemPrompt: DERIVATION_META_SYSTEM_PROMPT,
     messages: [
-      { role: "user", content: buildDerivationMetaMessage(body, existingTags) },
+      {
+        role: "user",
+        content: buildMetaMessage({
+          body,
+          existingTags,
+          currentTags,
+        }),
+      },
     ],
   });
 
   return {
     title: result.title,
-    tags: result.tags,
+    tags: normalizeTags(result.tags),
     summary: result.summary,
     titleEn: result.title_en,
-    tagsEn: result.tags_en,
+    tagsEn: normalizeTags(result.tags_en),
     summaryEn: result.summary_en,
     bodyEn: result.body_en,
   };
@@ -287,7 +301,23 @@ async function persistDocument(args: {
   const { ctx, sessionId, persistAction, body, existingTags } = args;
   const { supabase } = ctx;
 
-  const fields = await generateDocumentFields({ ctx, body, existingTags });
+  let currentTags: string[] | undefined;
+  if (persistAction.action === "update") {
+    const { data, error } = await supabase
+      .from("documents")
+      .select("tags")
+      .eq("id", persistAction.targetId)
+      .single();
+    throwIfSupabaseError(error);
+    currentTags = Array.isArray(data?.tags) ? data.tags : undefined;
+  }
+
+  const fields = await generateDocumentFields({
+    ctx,
+    body,
+    existingTags,
+    currentTags,
+  });
 
   let docId: string;
 
