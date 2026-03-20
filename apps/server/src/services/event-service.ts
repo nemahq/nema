@@ -7,7 +7,11 @@ import type { TypedSupabaseClient } from "@server/infra/supabase";
 type ServerEventMap = {
   "mode.selected": { mode: string };
   "document.saved": { doc_count: number };
-  "retrieval.completed": { result_count: number };
+  "retrieval.completed": {
+    result_count: number;
+    scores: number[];
+    query: string;
+  };
 };
 
 type JsonRecord = { [key: string]: Json | undefined };

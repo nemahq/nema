@@ -14,7 +14,9 @@ import {
 } from "@server/prompts/search-query-extractor";
 import { trackEvent } from "@server/services/event-service";
 
-const RETRIEVAL_SEARCH_LIMIT = 5;
+const RETRIEVAL_SEARCH_LIMIT = 15;
+const RETRIEVAL_MAX_RESULTS = 15;
+const RETRIEVAL_SCORE_THRESHOLD = 0.6;
 
 export async function* handleRetrievalStream(args: {
   supabase: TypedSupabaseClient;
@@ -44,6 +46,7 @@ export async function* handleRetrievalStream(args: {
           userId,
           query,
           limit: RETRIEVAL_SEARCH_LIMIT,
+          scoreThreshold: RETRIEVAL_SCORE_THRESHOLD,
         }),
       ),
     );
@@ -64,6 +67,7 @@ export async function* handleRetrievalStream(args: {
 
   const seenDocIds = new Set<string>();
   const searchResults: Array<{ id: string; title: string; body: string }> = [];
+  const scores: number[] = [];
 
   const graphBoosted = [...vectorResults].sort((a, b) => {
     const aBoost = graphDocIds.has(a.payload.doc_id) ? 1 : 0;
@@ -72,8 +76,12 @@ export async function* handleRetrievalStream(args: {
   });
 
   for (const vr of graphBoosted) {
+    if (searchResults.length >= RETRIEVAL_MAX_RESULTS) {
+      break;
+    }
     if (!seenDocIds.has(vr.payload.doc_id)) {
       seenDocIds.add(vr.payload.doc_id);
+      scores.push(vr.score);
       searchResults.push({
         id: vr.payload.doc_id,
         title: vr.payload.summary,
@@ -87,7 +95,7 @@ export async function* handleRetrievalStream(args: {
     userId,
     type: "retrieval.completed",
     sessionId,
-    payload: { result_count: searchResults.length },
+    payload: { result_count: searchResults.length, scores, query: question },
   });
 
   if (searchResults.length === 0) {
