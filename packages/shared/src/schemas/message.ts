@@ -11,6 +11,7 @@ const STATUS_LOG_TYPE_VALUES = [
   "draft_created",
   "draft_edited",
   "draft_cancelled",
+  "draft_saved",
   "retrieval_answered",
 ] as const;
 
@@ -22,6 +23,7 @@ export const STATUS_LOG_TYPES = {
   DRAFT_CREATED: "draft_created",
   DRAFT_EDITED: "draft_edited",
   DRAFT_CANCELLED: "draft_cancelled",
+  DRAFT_SAVED: "draft_saved",
   RETRIEVAL_ANSWERED: "retrieval_answered",
 } as const satisfies Record<string, StatusLogType>;
 
@@ -37,6 +39,7 @@ export const MessageSchema = z.discriminatedUnion("type", [
   BaseMessageSchema.extend({
     type: z.literal("status"),
     content: StatusLogTypeSchema,
+    meta: z.record(z.string(), z.string()).optional(),
   }),
 ]);
 export type Message = z.infer<typeof MessageSchema>;

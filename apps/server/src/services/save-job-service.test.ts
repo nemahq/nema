@@ -113,7 +113,7 @@ describe("processSaveJobBackground", () => {
       );
 
     const supabase = { from } as unknown as TypedSupabaseClient;
-    vi.mocked(handleSave).mockResolvedValue(undefined);
+    vi.mocked(handleSave).mockResolvedValue(["테스트 문서"]);
 
     await processSaveJobBackground({
       supabase,
@@ -233,7 +233,7 @@ describe("processSaveJobBackground", () => {
       );
 
     const supabase = { from } as unknown as TypedSupabaseClient;
-    vi.mocked(handleSave).mockResolvedValue(undefined);
+    vi.mocked(handleSave).mockResolvedValue(["테스트 문서"]);
 
     await processSaveJobBackground({
       supabase,
