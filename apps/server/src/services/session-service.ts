@@ -98,7 +98,9 @@ export async function getSession(
 
   return {
     ...toSummary(data),
-    draft: data.draft ? SessionDraftSchema.parse(data.draft) : null,
+    draft: data.draft
+      ? (SessionDraftSchema.safeParse(data.draft).data ?? null)
+      : null,
   };
 }
 

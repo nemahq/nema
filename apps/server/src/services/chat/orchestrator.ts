@@ -39,7 +39,9 @@ async function getDraft(
 
   throwIfSupabaseError(error);
 
-  return data.draft ? SessionDraftSchema.parse(data.draft) : null;
+  return data.draft
+    ? (SessionDraftSchema.safeParse(data.draft).data ?? null)
+    : null;
 }
 
 async function setDraft({
@@ -121,7 +123,7 @@ export async function* processChatStream(args: {
   const { supabase, providers, userId, input, lng, signal } = args;
 
   const userMessage = MessageSchema.parse({
-    id: crypto.randomUUID(),
+    id: input.messageId,
     role: "user",
     type: "text",
     content: input.content,

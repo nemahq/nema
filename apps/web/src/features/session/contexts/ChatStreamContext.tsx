@@ -90,6 +90,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
         return;
       }
       isSettlingRef.current = true;
+      setStreamInput(null);
 
       Promise.all([
         utils.message.list.invalidate({ sessionId }),
@@ -153,9 +154,11 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
 
   const send = useCallback(
     (content: string, mode: ChatMode) => {
-      if (streamingPhase !== "idle") {
+      if (streamingPhaseRef.current !== "idle") {
         return;
       }
+
+      const messageId = crypto.randomUUID();
 
       trackEvent("message.send", sessionId, {
         content_length: content.length,
@@ -163,7 +166,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
       });
 
       const optimistic: Message = {
-        id: crypto.randomUUID(),
+        id: messageId,
         role: "user",
         type: "text",
         content,
@@ -179,9 +182,9 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
       setStreamingText("");
       streamingPhaseRef.current = "text";
       setStreamingPhase("text");
-      setStreamInput({ sessionId, content, mode });
+      setStreamInput({ sessionId, content, mode, messageId });
     },
-    [streamingPhase, sessionId, trackEvent, utils, generateTitle],
+    [sessionId, trackEvent, utils, generateTitle],
   );
 
   const cancel = useCallback(
