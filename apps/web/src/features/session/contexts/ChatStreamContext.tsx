@@ -131,6 +131,10 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
         case "done":
           settleStream();
           break;
+        default: {
+          const _exhaustive: never = event;
+          void _exhaustive;
+        }
       }
     },
     [settleStream],

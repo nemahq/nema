@@ -1,35 +1,23 @@
-import { type KeyboardEvent, useCallback, useState } from "react";
+import { type KeyboardEvent, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-
-import type { ChatMode } from "@nema-io/shared";
 
 import {
   HOME_TO_SESSION_INITIAL_MESSAGE_KEY,
   HOME_TO_SESSION_INITIAL_MODE_KEY,
 } from "@web/app/constants/routeState";
 import { ChatInput } from "@web/components/ui/ChatInput";
-import { MODE_CONFIG, nextMode } from "@web/features/session/chatModeConfig";
+import { MODE_CONFIG } from "@web/features/session/chatModeConfig";
 import { Greeting } from "@web/features/session/components/Greeting";
+import { useChatMode } from "@web/features/session/hooks/useChatMode";
 import { useCreateSession } from "@web/features/session/hooks/useCreateSession";
 import { useTranslation } from "@web/lib/tolgee";
-import { getStorage, setStorage } from "@web/utils/localStorage";
 
 export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState("");
-  const [mode, setMode] = useState<ChatMode>(
-    () => getStorage("chatMode") ?? "remember",
-  );
+  const { mode, toggleMode } = useChatMode();
   const createSession = useCreateSession();
-
-  const toggleMode = useCallback(() => {
-    setMode((prev) => {
-      const next = nextMode(prev);
-      setStorage("chatMode", next);
-      return next;
-    });
-  }, []);
 
   function handleSubmit(content: string) {
     const sessionId = crypto.randomUUID();

@@ -1,14 +1,13 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
-import type { ChatMode } from "@nema-io/shared";
-
 import { ChatInput } from "@web/components/ui/ChatInput";
-import { MODE_CONFIG, nextMode } from "@web/features/session/chatModeConfig";
+import { MODE_CONFIG } from "@web/features/session/chatModeConfig";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
 import { useChatDraft } from "@web/features/session/hooks/useChatDraft";
+import { useChatMode } from "@web/features/session/hooks/useChatMode";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import {
@@ -20,7 +19,6 @@ import type { SlashCommand } from "@web/lib/command/slash/types";
 import { useSlashCommandMenu } from "@web/lib/command/slash/useSlashCommandMenu";
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
-import { getStorage, setStorage } from "@web/utils/localStorage";
 
 export function ChatComposer() {
   const { t } = useTranslation();
@@ -28,17 +26,7 @@ export function ChatComposer() {
   const { openTab } = useContentTab();
   const sessionId = useSessionId();
   const [inputValue, setInputValue] = useChatDraft(sessionId);
-  const [mode, setMode] = useState<ChatMode>(
-    () => getStorage("chatMode") ?? "remember",
-  );
-
-  const toggleMode = useCallback(() => {
-    setMode((prev) => {
-      const next = nextMode(prev);
-      setStorage("chatMode", next);
-      return next;
-    });
-  }, []);
+  const { mode, toggleMode } = useChatMode();
 
   const saveDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.saveJob.enqueue) }) > 0;
