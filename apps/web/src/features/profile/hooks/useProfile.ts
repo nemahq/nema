@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 
 import type { Profile } from "@nema-io/shared";
 
-export interface ProfileContextValue {
+interface ProfileContextValue {
   profile: Profile;
   openSettings: () => void;
 }
