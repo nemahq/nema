@@ -14,6 +14,9 @@ import { router } from "./app/router";
 
 initTheme();
 
+// eslint-disable-next-line no-console -- build metadata, not capturable by Sentry
+console.log(`[nema] ${__COMMIT_SHA__} (built ${__BUILD_TIMESTAMP__})`);
+
 const root = document.getElementById("root");
 if (!root) {
   throw new Error("Root element not found");

@@ -9,4 +9,7 @@ export default defineConfig({
   noExternal: ["@nema-io/shared"],
   splitting: false,
   sourcemap: true,
+  define: {
+    __BUILD_TIMESTAMP__: JSON.stringify(new Date().toISOString()),
+  },
 });

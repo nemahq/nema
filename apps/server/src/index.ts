@@ -16,6 +16,8 @@ import { appRouter } from "./router";
 import { failStaleSaveJobs } from "./services/save-job-service";
 import { createContext } from "./trpc";
 
+declare const __BUILD_TIMESTAMP__: string;
+
 const SENTRY_FLUSH_TIMEOUT_MS = 2000;
 
 loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
@@ -39,7 +41,11 @@ async function bootstrap() {
 
   Sentry.setupFastifyErrorHandler(server);
 
-  server.get("/health", async () => ({ status: "ok" }));
+  server.get("/health", async () => ({
+    status: "ok",
+    version: env.RAILWAY_GIT_COMMIT_SHA ?? "dev",
+    builtAt: __BUILD_TIMESTAMP__,
+  }));
 
   const staleCount = await failStaleSaveJobs(getSupabaseAdmin());
   if (staleCount > 0) {

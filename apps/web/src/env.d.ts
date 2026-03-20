@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+declare const __COMMIT_SHA__: string;
+declare const __BUILD_TIMESTAMP__: string;
+
 declare module "*.mdx" {
   import type { ComponentType } from "react";
   const Component: ComponentType;
