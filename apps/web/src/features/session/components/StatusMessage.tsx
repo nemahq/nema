@@ -24,25 +24,34 @@ const STATUS_LABEL_MAP: Record<
   draft_created: "session.status_draft_created",
   draft_edited: "session.status_draft_edited",
   draft_cancelled: "session.status_draft_cancelled",
+  draft_saved: "session.status_draft_saved",
   retrieval_answered: "session.status_retrieval_answered",
 };
 
+type StatusSource =
+  | Extract<Message, { type: "status" }>
+  | Pick<ClientStatusMessage, "type" | "content">;
+
 interface StatusMessageProps {
-  message:
-    | Extract<Message, { type: "status" }>
-    | Pick<ClientStatusMessage, "type" | "content">;
+  message: StatusSource;
 }
 
 export function StatusMessage({ message }: StatusMessageProps) {
   const { t } = useTranslation();
   const inProgress = IN_PROGRESS_STATUSES.has(message.content);
 
+  const meta = "meta" in message ? message.meta : undefined;
+  const label =
+    message.content === "draft_saved" && meta?.titles
+      ? t(STATUS_LABEL_MAP[message.content], { titles: meta.titles })
+      : t(STATUS_LABEL_MAP[message.content]);
+
   return (
     <div className="flex items-center gap-1.5 py-1 text-xs text-fg-tertiary">
       <Circle
         className={`size-2 fill-current ${inProgress ? "animate-pulse" : "text-status-success"}`}
       />
-      <span>{t(STATUS_LABEL_MAP[message.content])}</span>
+      <span>{label}</span>
     </div>
   );
 }
