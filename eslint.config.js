@@ -199,6 +199,13 @@ export default tseslint.config(
           ],
         },
       ],
+      "boundaries/entry-point": [
+        "error",
+        {
+          default: "allow",
+          rules: [{ target: "feature", allow: "index.(ts|tsx)" }],
+        },
+      ],
     },
   },
   // --- Overrides ---
