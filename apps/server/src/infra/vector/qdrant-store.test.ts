@@ -26,6 +26,7 @@ vi.mock("@server/env", () => ({
   getEnv: vi.fn(() => ({
     QDRANT_URL: "http://mock-qdrant",
     QDRANT_API_KEY: "mock-key",
+    QDRANT_COLLECTION: "documents",
   })),
 }));
 
