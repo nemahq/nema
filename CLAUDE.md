@@ -4,8 +4,8 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 
 ## Workflow
 
-- `main` = latest integrated code. Feature branch → PR → CI passes → merge.
-- Deploy: main merge triggers Railway auto-deploy (web + server).
+- `staging` = default branch. Feature branch → PR → CI passes → staging merge → Railway staging auto-deploy.
+- `main` = production-ready code. `v*` tag push triggers production DB migration + Railway deploy.
 - MUST verify CI locally before creating PR.
 - PR title: Korean. Assignee: author. Labels: `enhancement`(feature), `bug`(fix), `refactoring`, `documentation`.
 - PR body MUST follow `.github/pull_request_template.md` (Why / What / How to verify / Notes).
@@ -14,7 +14,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 
 ## DO NOT
 
-- Push directly to `main`.
+- Push directly to `main` or `staging`.
 - Add `any` without explicit justification comment.
 - Import from compiled `dist/` — always import from `src/`.
 - Call external APIs from frontend — all calls go through tRPC. Exception: Supabase Auth client SDK (sign-in, sign-up, session management), Tolgee CDN (translation fetch), PostHog JS SDK (analytics capture).
