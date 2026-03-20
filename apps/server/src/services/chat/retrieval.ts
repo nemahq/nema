@@ -3,6 +3,7 @@ import type { ChatStreamEvent, Locale } from "@nema-io/shared";
 import { t } from "@server/infra/i18n";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
+import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import {
   buildRetrievalMessage,
   RETRIEVAL_SYSTEM_PROMPT,
@@ -65,33 +66,48 @@ export async function* handleRetrievalStream(args: {
     }
   }
 
-  const seenDocIds = new Set<string>();
-  const searchResults: Array<{ id: string; title: string; body: string }> = [];
-  const scores: number[] = [];
-  let graphBoostedCount = 0;
-
   const graphBoosted = [...vectorResults].sort((a, b) => {
     const aBoost = graphDocIds.has(a.payload.doc_id) ? 1 : 0;
     const bBoost = graphDocIds.has(b.payload.doc_id) ? 1 : 0;
     return bBoost - aBoost || b.score - a.score;
   });
 
+  const uniqueDocIds: string[] = [];
+  const seenDocIds = new Set<string>();
+  const scores: number[] = [];
+  let graphBoostedCount = 0;
   for (const vr of graphBoosted) {
-    if (searchResults.length >= RETRIEVAL_MAX_RESULTS) {
+    if (uniqueDocIds.length >= RETRIEVAL_MAX_RESULTS) {
       break;
     }
     if (!seenDocIds.has(vr.payload.doc_id)) {
       seenDocIds.add(vr.payload.doc_id);
+      uniqueDocIds.push(vr.payload.doc_id);
       scores.push(vr.score);
       if (graphDocIds.has(vr.payload.doc_id)) {
         graphBoostedCount++;
       }
-      searchResults.push({
-        id: vr.payload.doc_id,
-        title: vr.payload.summary,
-        body: vr.payload.text,
-      });
     }
+  }
+
+  let searchResults: Array<{ id: string; title: string; body: string }> = [];
+
+  if (uniqueDocIds.length > 0) {
+    const { data, error } = await supabase
+      .from("documents")
+      .select("id, title, body")
+      .in("id", uniqueDocIds);
+
+    throwIfSupabaseError(error);
+
+    const docMap = new Map(
+      (data ?? []).map((d) => [d.id, { title: d.title ?? "", body: d.body }]),
+    );
+
+    searchResults = uniqueDocIds.flatMap((id) => {
+      const doc = docMap.get(id);
+      return doc ? [{ id, title: doc.title, body: doc.body }] : [];
+    });
   }
 
   trackEvent({
