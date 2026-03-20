@@ -101,7 +101,7 @@ export async function enqueueSaveJob(args: {
   return toSaveJob(job);
 }
 
-export async function appendSaveStatusMessage(args: {
+async function appendSaveStatusMessage(args: {
   supabase: TypedSupabaseClient;
   sessionId: string;
 }): Promise<void> {
@@ -168,6 +168,11 @@ async function processSaveJob(args: {
       .eq("id", jobId);
 
     throwIfSupabaseError(error);
+
+    await appendSaveStatusMessage({
+      supabase,
+      sessionId: job.session_id,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
