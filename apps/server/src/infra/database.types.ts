@@ -91,27 +91,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      profiles: {
-        Row: {
-          content_language: string;
-          created_at: string;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          content_language?: string;
-          created_at?: string;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          content_language?: string;
-          created_at?: string;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
       events: {
         Row: {
           created_at: string;
@@ -146,6 +125,27 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      profiles: {
+        Row: {
+          content_language: string;
+          created_at: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          content_language?: string;
+          created_at?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          content_language?: string;
+          created_at?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
       };
       save_jobs: {
         Row: {
@@ -288,12 +288,12 @@ export type Database = {
         Args: { p_max_retries?: number };
         Returns: {
           body: string;
-          body_en: string | null;
+          body_en: string;
           id: string;
           summary: string;
-          summary_en: string | null;
+          summary_en: string;
           tags: string[];
-          tags_en: string[] | null;
+          tags_en: string[];
           user_id: string;
         }[];
       };
