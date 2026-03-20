@@ -1,5 +1,5 @@
 import {
-  httpBatchLink,
+  httpBatchStreamLink,
   httpSubscriptionLink,
   loggerLink,
   splitLink,
@@ -49,7 +49,7 @@ export const trpcClient = trpc.createClient({
           return { ...(token && { token }), ...(lang && { lang }) };
         },
       }),
-      false: httpBatchLink({
+      false: httpBatchStreamLink({
         url: getTrpcUrl(),
         headers: getHeaders,
       }),

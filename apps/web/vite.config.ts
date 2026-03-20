@@ -25,6 +25,9 @@ export default defineConfig({
             ) {
               return "syntax-highlighter";
             }
+            if (id.includes("streamdown") || id.includes("shiki")) {
+              return "streamdown";
+            }
             if (id.includes("date-fns")) {
               return "date-fns";
             }
@@ -38,7 +41,12 @@ export default defineConfig({
   },
   plugins: [
     { enforce: "pre", ...mdx({ remarkPlugins: [remarkGfm] }) },
-    react({ include: /\.(jsx|tsx|mdx)$/ }),
+    react({
+      include: /\.(jsx|tsx|mdx)$/,
+      babel: {
+        plugins: [["babel-plugin-react-compiler"]],
+      },
+    }),
     tailwindcss(),
     VitePWA({
       // TODO: 캐시 전략 도입 시 'prompt'로 전환 검토

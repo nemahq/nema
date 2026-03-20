@@ -41,6 +41,9 @@ export function createQdrantStore(): VectorStore {
           try {
             await client.createCollection(QDRANT_COLLECTION, {
               vectors: { size: VECTOR_DIMENSION, distance: "Cosine" },
+              quantization_config: {
+                scalar: { type: "int8", always_ram: true },
+              },
             });
           } catch (createError) {
             // 다른 인스턴스가 동시에 컬렉션을 생성했을 수 있으므로 재확인

@@ -67,6 +67,9 @@ describe("createQdrantStore", () => {
       await store.ensureCollection();
       expect(mockCreateCollection).toHaveBeenCalledWith("documents", {
         vectors: { size: 1024, distance: "Cosine" },
+        quantization_config: {
+          scalar: { type: "int8", always_ram: true },
+        },
       });
       expect(mockCreatePayloadIndex).toHaveBeenCalledWith("documents", {
         field_name: "user_id",
