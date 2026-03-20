@@ -58,8 +58,8 @@ export function getProviders(): Providers {
     graphStore: createNeo4jStore(),
   };
 
-  // dev 전용 — 프로덕션에서 모델 프리셋 교체가 열리면 비용·보안 사고로 이어진다
-  if (env.NODE_ENV !== "production") {
+  // prod 전용 잠금 — 프로덕션에서 모델 프리셋 교체가 열리면 비용·보안 사고로 이어진다
+  if (env.APP_ENV !== "production") {
     originalLlm = cached.llm;
     resolvedModelNames = {
       standard: env.LLM_MODEL_STANDARD ?? DEFAULT_STANDARD_MODEL,
@@ -94,7 +94,7 @@ export function getLlmPreset(): LlmPresetInfo {
 
 export function setLlmPreset(preset: LlmPreset): void {
   const env = getEnv();
-  if (env.NODE_ENV === "production") {
+  if (env.APP_ENV === "production") {
     throw new Error("LLM preset override is not available in production");
   }
   if (!cached || !originalLlm) {

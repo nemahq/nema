@@ -48,6 +48,7 @@ async function bootstrap() {
 
   server.get("/health", async () => ({
     status: "ok",
+    env: env.APP_ENV,
     version: COMMIT_SHA,
     builtAt: BUILD_TIMESTAMP,
   }));

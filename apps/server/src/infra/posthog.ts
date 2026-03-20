@@ -16,7 +16,7 @@ function getClient(): PostHog | null {
   initialized = true;
 
   const env = getEnv();
-  if (env.NODE_ENV !== "production") {
+  if (env.APP_ENV !== "production") {
     return null;
   }
 
