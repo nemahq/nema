@@ -2,10 +2,10 @@ import { useCallback, useMemo, useState } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
-import { CHAT_MODES, type ChatMode } from "@nema-io/shared";
-import { ArrowUp, Search } from "@nema-io/weave/icons";
+import type { ChatMode } from "@nema-io/shared";
 
 import { ChatInput } from "@web/components/ui/ChatInput";
+import { MODE_CONFIG, nextMode } from "@web/features/session/chatModeConfig";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
 import { useChatDraft } from "@web/features/session/hooks/useChatDraft";
@@ -20,36 +20,6 @@ import type { SlashCommand } from "@web/lib/command/slash/types";
 import { useSlashCommandMenu } from "@web/lib/command/slash/useSlashCommandMenu";
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
-
-const MODE_CONFIG: Record<
-  ChatMode,
-  {
-    icon: typeof ArrowUp;
-    placeholderKey:
-      | "session.input_placeholder"
-      | "session.input_placeholder_ask";
-    labelKey: "session.mode_remember" | "session.mode_ask";
-    color: string;
-  }
-> = {
-  remember: {
-    icon: ArrowUp,
-    placeholderKey: "session.input_placeholder",
-    labelKey: "session.mode_remember",
-    color: "text-mode-remember",
-  },
-  ask: {
-    icon: Search,
-    placeholderKey: "session.input_placeholder_ask",
-    labelKey: "session.mode_ask",
-    color: "text-mode-ask",
-  },
-};
-
-function nextMode(current: ChatMode): ChatMode {
-  const idx = CHAT_MODES.indexOf(current);
-  return CHAT_MODES[(idx + 1) % CHAT_MODES.length];
-}
 
 export function ChatComposer() {
   const { t } = useTranslation();
