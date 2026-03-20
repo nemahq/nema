@@ -70,14 +70,12 @@ function ChatPanelContent() {
 export function ChatPanel() {
   const sessionId = useSessionId();
   const navigate = useNavigate();
-  const { initialMessage, initialMode } = useLocation({
-    select: (loc) => ({
-      initialMessage: getRouteState(
-        loc.state,
-        HOME_TO_SESSION_INITIAL_MESSAGE_KEY,
-      ),
-      initialMode: getRouteState(loc.state, HOME_TO_SESSION_INITIAL_MODE_KEY),
-    }),
+  const initialMessage = useLocation({
+    select: (loc) =>
+      getRouteState(loc.state, HOME_TO_SESSION_INITIAL_MESSAGE_KEY),
+  });
+  const initialMode = useLocation({
+    select: (loc) => getRouteState(loc.state, HOME_TO_SESSION_INITIAL_MODE_KEY),
   });
   const { send } = useChatStream();
 
