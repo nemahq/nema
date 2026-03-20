@@ -288,4 +288,8 @@
     @apply bg-surface-base text-fg-primary;
     font-family: "Satoshi", "Wanted Sans Variable", "Wanted Sans", sans-serif;
   }
+  button,
+  [role="button"] {
+    @apply cursor-pointer;
+  }
 }
