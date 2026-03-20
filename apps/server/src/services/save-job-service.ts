@@ -15,6 +15,7 @@ import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
 import { handleSave } from "./chat/saving";
+import { getProfile } from "./profile-service";
 
 const SNIPPET_MAX_LENGTH = 30;
 const SAVE_JOB_COLUMNS =
@@ -145,6 +146,12 @@ async function processSaveJob(args: {
 
   throwIfSupabaseError(fetchError);
 
+  const profile = await getProfile(supabase, { userId });
+  if (!profile) {
+    throw new Error("Save job requires a user profile");
+  }
+  const contentLanguage = profile.contentLanguage;
+
   try {
     await handleSave({
       supabase,
@@ -152,6 +159,7 @@ async function processSaveJob(args: {
       userId,
       sessionId: job.session_id,
       draftBody: job.draft_body,
+      contentLanguage,
     });
 
     const { error } = await supabase

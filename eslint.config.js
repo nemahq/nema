@@ -193,10 +193,17 @@ export default tseslint.config(
           default: "disallow",
           rules: [
             { from: "app", allow: ["feature", "component", "lib", "hook"] },
-            { from: "feature", allow: ["component", "lib", "hook"] },
+            { from: "feature", allow: ["feature", "component", "lib", "hook"] },
             { from: "component", allow: ["lib", "hook"] },
             { from: "hook", allow: ["lib"] },
           ],
+        },
+      ],
+      "boundaries/entry-point": [
+        "error",
+        {
+          default: "allow",
+          rules: [{ target: "feature", allow: "index.(ts|tsx)" }],
         },
       ],
     },
@@ -217,7 +224,7 @@ export default tseslint.config(
     rules: { "no-console": "off" },
   },
   {
-    files: ["apps/web/src/app/components/dev-toolbar/**/*.{ts,tsx}"],
+    files: ["apps/web/src/app/components/devtools/**/*.{ts,tsx}"],
     rules: { "nema/no-direct-trpc-hooks": "off" },
   },
   {

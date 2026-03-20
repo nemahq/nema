@@ -5,10 +5,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@nema-io/weave";
-import { LogOut } from "@nema-io/weave/icons";
+import { LogOut, Settings } from "@nema-io/weave/icons";
 
+import { useProfile } from "@web/features/profile";
 import { useAuth } from "@web/hooks/useAuth";
 import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { supabase } from "@web/lib/supabase";
@@ -20,6 +22,7 @@ interface UserMenuProps {
 
 export function UserMenu({ collapsed }: UserMenuProps) {
   const { user } = useAuth();
+  const { openSettings } = useProfile();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const trackEvent = useTrackEvent();
@@ -73,6 +76,14 @@ export function UserMenu({ collapsed }: UserMenuProps) {
         sideOffset={collapsed ? 2 : 4}
         className="w-60 border-0 bg-surface-card dark:bg-surface-raised-hover !animate-none"
       >
+        <DropdownMenuItem
+          onClick={openSettings}
+          className="cursor-pointer data-[highlighted]:bg-surface-raised-hover dark:data-[highlighted]:bg-fg-primary/10"
+        >
+          <Settings />
+          {t("settings.settings")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={handleSignOut}
           className="cursor-pointer data-[highlighted]:bg-surface-raised-hover dark:data-[highlighted]:bg-fg-primary/10"

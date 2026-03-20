@@ -37,6 +37,7 @@ export type Database = {
       documents: {
         Row: {
           body: string;
+          body_en: string | null;
           category: string | null;
           created_at: string;
           id: string;
@@ -44,13 +45,17 @@ export type Database = {
           ingestion_status: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt: string | null;
           summary: string | null;
+          summary_en: string | null;
           tags: string[] | null;
+          tags_en: string[] | null;
           title: string | null;
+          title_en: string | null;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           body: string;
+          body_en?: string | null;
           category?: string | null;
           created_at?: string;
           id?: string;
@@ -58,13 +63,17 @@ export type Database = {
           ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt?: string | null;
           summary?: string | null;
+          summary_en?: string | null;
           tags?: string[] | null;
+          tags_en?: string[] | null;
           title?: string | null;
+          title_en?: string | null;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           body?: string;
+          body_en?: string | null;
           category?: string | null;
           created_at?: string;
           id?: string;
@@ -72,8 +81,11 @@ export type Database = {
           ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt?: string | null;
           summary?: string | null;
+          summary_en?: string | null;
           tags?: string[] | null;
+          tags_en?: string[] | null;
           title?: string | null;
+          title_en?: string | null;
           updated_at?: string;
           user_id?: string;
         };
@@ -113,6 +125,27 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      profiles: {
+        Row: {
+          content_language: string;
+          created_at: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          content_language?: string;
+          created_at?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          content_language?: string;
+          created_at?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
       };
       save_jobs: {
         Row: {
@@ -234,10 +267,14 @@ export type Database = {
       create_document_with_event: {
         Args: {
           p_body: string;
+          p_body_en?: string;
           p_session_id: string;
           p_summary: string;
+          p_summary_en?: string;
           p_tags: string[];
+          p_tags_en?: string[];
           p_title: string;
+          p_title_en?: string;
           p_user_id: string;
         };
         Returns: string;
@@ -251,9 +288,12 @@ export type Database = {
         Args: { p_max_retries?: number };
         Returns: {
           body: string;
+          body_en: string;
           id: string;
           summary: string;
+          summary_en: string;
           tags: string[];
+          tags_en: string[];
           user_id: string;
         }[];
       };
@@ -272,10 +312,14 @@ export type Database = {
       update_document_with_event: {
         Args: {
           p_body: string;
+          p_body_en?: string;
           p_doc_id: string;
           p_summary: string;
+          p_summary_en?: string;
           p_tags: string[];
+          p_tags_en?: string[];
           p_title: string;
+          p_title_en?: string;
           p_user_id: string;
         };
         Returns: undefined;

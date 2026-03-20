@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { Toast, TooltipProvider } from "@nema-io/weave";
 
+import { ProfileProvider } from "@web/features/profile";
 import { AuthProvider } from "@web/hooks/useAuth";
 import { ActionRegistryProvider } from "@web/lib/command/shortcut/context";
 
@@ -24,12 +25,14 @@ export function AppProviders({ children }: AppProvidersProps) {
       <ThemeProvider>
         <QueryProvider>
           <AuthProvider>
-            <ActionRegistryProvider>
-              <TooltipProvider>
-                {children}
-                <ThemedToast />
-              </TooltipProvider>
-            </ActionRegistryProvider>
+            <ProfileProvider>
+              <ActionRegistryProvider>
+                <TooltipProvider>
+                  {children}
+                  <ThemedToast />
+                </TooltipProvider>
+              </ActionRegistryProvider>
+            </ProfileProvider>
           </AuthProvider>
         </QueryProvider>
       </ThemeProvider>
