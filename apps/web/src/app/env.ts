@@ -10,14 +10,14 @@ function optional(key: string): string | undefined {
   return import.meta.env[key] || undefined;
 }
 
-type AppEnv = "development" | "staging" | "production";
+type AppEnv = "local" | "staging" | "production";
 
 function resolveAppEnv(): AppEnv {
   const raw = optional("VITE_APP_ENV");
-  if (raw === "development" || raw === "staging" || raw === "production") {
+  if (raw === "local" || raw === "staging" || raw === "production") {
     return raw;
   }
-  return import.meta.env.PROD ? "production" : "development";
+  return import.meta.env.PROD ? "production" : "local";
 }
 
 const env = {

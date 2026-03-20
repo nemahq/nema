@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { config } from "dotenv";
 import { z } from "zod";
 
-const appEnvValues = ["development", "staging", "production"] as const;
+const appEnvValues = ["local", "staging", "production"] as const;
 
 const envSchema = z
   .object({
@@ -48,8 +48,7 @@ const envSchema = z
   .transform((data) => ({
     ...data,
     APP_ENV:
-      data.APP_ENV ??
-      (data.NODE_ENV === "test" ? "development" : data.NODE_ENV),
+      data.APP_ENV ?? (data.NODE_ENV === "production" ? "production" : "local"),
   }));
 
 type Env = z.infer<typeof envSchema>;

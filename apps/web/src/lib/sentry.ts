@@ -6,7 +6,7 @@ const { APP_ENV } = getEnv();
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
-  enabled: APP_ENV !== "development",
+  enabled: APP_ENV === "production",
   environment: APP_ENV,
   release: typeof __COMMIT_SHA__ !== "undefined" ? __COMMIT_SHA__ : undefined,
   tracesSampleRate: 0,
