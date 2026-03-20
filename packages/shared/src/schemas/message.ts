@@ -39,7 +39,7 @@ export const MessageSchema = z.discriminatedUnion("type", [
   BaseMessageSchema.extend({
     type: z.literal("status"),
     content: StatusLogTypeSchema,
-    meta: z.record(z.string(), z.string()).optional(),
+    meta: z.object({ titles: z.string() }).optional(),
   }),
 ]);
 export type Message = z.infer<typeof MessageSchema>;

@@ -154,8 +154,9 @@ async function processSaveJob(args: {
   }
   const contentLanguage = profile.contentLanguage;
 
+  let titles: string[];
   try {
-    const titles = await handleSave({
+    titles = await handleSave({
       supabase,
       providers,
       userId,
@@ -170,12 +171,6 @@ async function processSaveJob(args: {
       .eq("id", jobId);
 
     throwIfSupabaseError(error);
-
-    await appendSaveStatusMessage({
-      supabase,
-      sessionId: job.session_id,
-      titles,
-    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
@@ -196,6 +191,19 @@ async function processSaveJob(args: {
     }
 
     throw error;
+  }
+
+  try {
+    await appendSaveStatusMessage({
+      supabase,
+      sessionId: job.session_id,
+      titles,
+    });
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "save-job" },
+      extra: { jobId, context: "status message append" },
+    });
   }
 }
 

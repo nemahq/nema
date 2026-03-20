@@ -108,7 +108,7 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
       });
 
       if (job.status === "completed") {
-        utils.message.list.invalidate({ sessionId: job.sessionId });
+        void utils.message.list.invalidate({ sessionId: job.sessionId });
       }
     },
     onError(error) {
