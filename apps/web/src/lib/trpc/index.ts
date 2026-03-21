@@ -10,8 +10,8 @@ import type { AppRouter } from "@nema-io/server/src/router";
 
 import { getEnv } from "@web/app/env";
 
-import { getAccessToken } from "./supabase";
-import { tolgee } from "./tolgee/client";
+import { getAccessToken } from "../supabase";
+import { tolgee } from "../tolgee/client";
 
 export const trpc = createTRPCReact<AppRouter>();
 
