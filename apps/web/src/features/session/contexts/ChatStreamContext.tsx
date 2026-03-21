@@ -21,7 +21,7 @@ import {
 import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
 import { addOptimisticMessage } from "@web/features/session/hooks/useMessageList";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
-import { useTrackEvent } from "@web/hooks/useTrackEvent";
+import { trackEvent } from "@web/hooks/useTrackEvent";
 import { trpc } from "@web/lib/trpc";
 
 type StreamingPhase = "idle" | "text" | "draft" | "retrieval";
@@ -58,7 +58,6 @@ interface ChatStreamProviderProps {
 export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   const sessionId = useSessionId();
   const utils = trpc.useUtils();
-  const trackEvent = useTrackEvent();
   const { mutate: generateTitle } = useGenerateTitle();
 
   const isSessionCreating =
@@ -203,16 +202,16 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
       case "draft":
         return {
           id: STREAMING_MESSAGE_ID,
-          role: "assistant" as const,
-          type: "status" as const,
+          role: "assistant",
+          type: "status",
           content: STATUS_LOG_TYPES.DRAFT_CREATING,
           createdAt: streamStartedAt,
         };
       case "retrieval":
         return {
           id: STREAMING_MESSAGE_ID,
-          role: "assistant" as const,
-          type: "status" as const,
+          role: "assistant",
+          type: "status",
           content: STATUS_LOG_TYPES.RETRIEVAL_ANSWERED,
           createdAt: streamStartedAt,
         };
@@ -220,8 +219,8 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
         return streamingText
           ? {
               id: STREAMING_MESSAGE_ID,
-              role: "assistant" as const,
-              type: "text" as const,
+              role: "assistant",
+              type: "text",
               content: streamingText,
               createdAt: streamStartedAt,
             }

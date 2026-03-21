@@ -1,4 +1,4 @@
-import { useTrackEvent } from "@web/hooks/useTrackEvent";
+import { trackEvent } from "@web/hooks/useTrackEvent";
 import { trpc } from "@web/lib/trpc";
 
 import { clearMessageCache, presetMessageCache } from "./useMessageList";
@@ -6,7 +6,6 @@ import { prependSessionCache } from "./useSessionList";
 
 export function useCreateSession() {
   const utils = trpc.useUtils();
-  const trackEvent = useTrackEvent();
 
   return trpc.session.create.useMutation({
     onMutate({ sessionId }) {

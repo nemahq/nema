@@ -37,6 +37,7 @@ export function createQdrantStore(): VectorStore {
     async ensureCollection(): Promise<void> {
       try {
         const { exists } = await client.collectionExists(QDRANT_COLLECTION);
+        // 기존 컬렉션은 quantization_config가 적용되지 않음 — recreateCollection API로 별도 마이그레이션 필요
         if (!exists) {
           try {
             await client.createCollection(QDRANT_COLLECTION, {

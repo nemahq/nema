@@ -34,6 +34,26 @@ function toSaveQueueItem(job: SaveJob): SaveQueueItem {
   };
 }
 
+function mergeItems(
+  initialJobs: SaveJob[] | undefined,
+  sseUpdates: Map<string, SaveQueueItem>,
+  dismissedIds: Set<string>,
+): SaveQueueItem[] {
+  const merged = new Map<string, SaveQueueItem>();
+
+  if (initialJobs) {
+    for (const j of initialJobs) {
+      merged.set(j.id, toSaveQueueItem(j));
+    }
+  }
+
+  for (const [id, queueItem] of sseUpdates) {
+    merged.set(id, queueItem);
+  }
+
+  return [...merged.values()].filter((i) => !dismissedIds.has(i.jobId));
+}
+
 interface SaveQueueContextValue {
   items: SaveQueueItem[];
   addJob: (job: SaveJob) => void;
@@ -108,21 +128,7 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     },
   });
 
-  const items = (() => {
-    const merged = new Map<string, SaveQueueItem>();
-
-    if (initialJobs) {
-      for (const j of initialJobs) {
-        merged.set(j.id, toSaveQueueItem(j));
-      }
-    }
-
-    for (const [id, queueItem] of sseUpdates) {
-      merged.set(id, queueItem);
-    }
-
-    return [...merged.values()].filter((i) => !dismissedIds.has(i.jobId));
-  })();
+  const items = mergeItems(initialJobs, sseUpdates, dismissedIds);
 
   useEffect(
     function panelAutoDismiss() {

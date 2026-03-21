@@ -12,17 +12,25 @@ const TICK_INTERVAL_MS = 60_000;
 
 let globalTick = 0;
 const listeners = new Set<() => void>();
-
-setInterval(() => {
-  globalTick++;
-  for (const fn of listeners) {
-    fn();
-  }
-}, TICK_INTERVAL_MS);
+let intervalId: ReturnType<typeof setInterval> | null = null;
 
 function subscribe(cb: () => void): () => void {
   listeners.add(cb);
-  return () => listeners.delete(cb);
+  if (!intervalId) {
+    intervalId = setInterval(() => {
+      globalTick++;
+      for (const fn of listeners) {
+        fn();
+      }
+    }, TICK_INTERVAL_MS);
+  }
+  return () => {
+    listeners.delete(cb);
+    if (listeners.size === 0 && intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  };
 }
 
 function getSnapshot(): number {

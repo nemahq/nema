@@ -109,12 +109,16 @@ export async function handleSave(args: {
   const existingTags = await getExistingTags(supabase, userId);
 
   const ctx: ServiceContext = { supabase, providers, userId, contentLanguage };
-  const results = await Promise.all(
-    splitResult.documents.map((doc) =>
-      saveDocument({ ctx, sessionId, body: doc.body, existingTags }),
-    ),
-  );
-  const savedDocs = results.flat();
+  const savedDocs: Array<{ id: string; title: string }> = [];
+  for (const doc of splitResult.documents) {
+    const saved = await saveDocument({
+      ctx,
+      sessionId,
+      body: doc.body,
+      existingTags,
+    });
+    savedDocs.push(...saved);
+  }
 
   trackEvent({
     supabase,
@@ -186,17 +190,17 @@ async function saveDocument(args: {
     });
 
     if (reSplitResult.documents.length > 1) {
-      const savedDocs = await Promise.all(
-        reSplitResult.documents.map((splitDoc) =>
-          persistDocument({
-            ctx,
-            sessionId,
-            persistAction: { action: "create" },
-            body: splitDoc.body,
-            existingTags,
-          }),
-        ),
-      );
+      const savedDocs: Array<{ id: string; title: string }> = [];
+      for (const splitDoc of reSplitResult.documents) {
+        const saved = await persistDocument({
+          ctx,
+          sessionId,
+          persistAction: { action: "create" },
+          body: splitDoc.body,
+          existingTags,
+        });
+        savedDocs.push(saved);
+      }
       await deleteDocument({ supabase, userId: ctx.userId, docId: targetId });
       return savedDocs;
     }

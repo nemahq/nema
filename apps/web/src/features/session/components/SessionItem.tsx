@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 
-import { useTrackEvent } from "@web/hooks/useTrackEvent";
+import { trackEvent } from "@web/hooks/useTrackEvent";
 import { useTypewriter } from "@web/hooks/useTypewriter";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -15,7 +15,6 @@ interface SessionItemProps {
 
 export function SessionItem({ sessionId, title: rawTitle }: SessionItemProps) {
   const { t } = useTranslation();
-  const trackEvent = useTrackEvent();
   const animatedTitle = useTypewriter(rawTitle);
   const title = animatedTitle || t("session.untitled");
 

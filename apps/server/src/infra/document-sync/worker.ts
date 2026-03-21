@@ -140,9 +140,9 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
     }
 
     for (let i = 0; i < docs.length; i += PROCESS_CONCURRENCY) {
-      const batch = docs.slice(i, i + PROCESS_CONCURRENCY);
+      const chunk = docs.slice(i, i + PROCESS_CONCURRENCY);
       await Promise.allSettled(
-        batch.map(async (doc) => {
+        chunk.map(async (doc) => {
           try {
             await processDocument(doc, deps);
           } catch (err) {

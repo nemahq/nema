@@ -1,3 +1,4 @@
+/* eslint-disable react-compiler/react-compiler -- deps 제한이 의도적 (count-only 트래킹) */
 import { useLayoutEffect, useRef } from "react";
 
 import type { DisplayMessage } from "@web/features/session/contexts/ChatStreamContext";

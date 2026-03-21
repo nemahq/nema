@@ -12,7 +12,7 @@ import { LogOut, Settings } from "@nema-io/weave/icons";
 
 import { useProfile } from "@web/features/profile";
 import { useAuth } from "@web/hooks/useAuth";
-import { useTrackEvent } from "@web/hooks/useTrackEvent";
+import { trackEvent } from "@web/hooks/useTrackEvent";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -25,8 +25,6 @@ export function UserMenu({ collapsed }: UserMenuProps) {
   const { openSettings } = useProfile();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const trackEvent = useTrackEvent();
-
   if (!user) {
     return null;
   }

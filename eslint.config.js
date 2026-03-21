@@ -3,6 +3,7 @@ import boundaries from "eslint-plugin-boundaries";
 import jsonc from "eslint-plugin-jsonc";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths";
+import reactCompiler from "eslint-plugin-react-compiler";
 import reactHooks from "eslint-plugin-react-hooks";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import tseslint from "typescript-eslint";
@@ -78,10 +79,12 @@ export default tseslint.config(
   {
     files: ["apps/web/**/*.{ts,tsx}"],
     plugins: {
+      "react-compiler": reactCompiler,
       "react-hooks": reactHooks,
       "no-relative-import-paths": noRelativeImportPaths,
     },
     rules: {
+      "react-compiler/react-compiler": "error",
       ...reactHooks.configs["recommended-latest"].rules,
       "nema/require-suspense-boundary": "error",
       "nema/require-named-props-interface": "error",

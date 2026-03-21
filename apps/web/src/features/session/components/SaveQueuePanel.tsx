@@ -17,6 +17,47 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { SaveQueueItem } from "./SaveQueueItem";
 
+interface PanelDetails {
+  panelStatus: PanelStatus;
+  completedCount: number;
+  failedCount: number;
+  visibleItems: ReturnType<typeof useSaveQueue>["items"];
+}
+
+function derivePanelDetails(
+  items: ReturnType<typeof useSaveQueue>["items"],
+): PanelDetails {
+  let completed = 0;
+  let failed = 0;
+  let hasActive = false;
+  const failedJobs: typeof items = [];
+
+  for (const job of items) {
+    if (job.status === "completed") {
+      completed++;
+    } else if (job.status === "failed") {
+      failed++;
+      failedJobs.push(job);
+    } else {
+      hasActive = true;
+    }
+  }
+
+  let panelStatus: PanelStatus = "completed";
+  if (hasActive) {
+    panelStatus = "active";
+  } else if (failed > 0) {
+    panelStatus = "failed";
+  }
+
+  return {
+    panelStatus,
+    completedCount: completed,
+    failedCount: failed,
+    visibleItems: panelStatus === "failed" ? failedJobs : items,
+  };
+}
+
 const HEADER_ICON: Record<PanelStatus, React.ReactNode> = {
   completed: <Check className="size-4 text-status-success" />,
   failed: <AlertCircle className="size-4 text-status-error" />,
@@ -90,37 +131,8 @@ export function SaveQueuePanel() {
     null,
   );
 
-  const { panelStatus, completedCount, failedCount, visibleItems } = (() => {
-    let completed = 0;
-    let failed = 0;
-    let hasActive = false;
-    const failedJobs: typeof items = [];
-
-    for (const job of items) {
-      if (job.status === "completed") {
-        completed++;
-      } else if (job.status === "failed") {
-        failed++;
-        failedJobs.push(job);
-      } else {
-        hasActive = true;
-      }
-    }
-
-    let panelStatus: PanelStatus = "completed";
-    if (hasActive) {
-      panelStatus = "active";
-    } else if (failed > 0) {
-      panelStatus = "failed";
-    }
-
-    return {
-      panelStatus,
-      completedCount: completed,
-      failedCount: failed,
-      visibleItems: panelStatus === "failed" ? failedJobs : items,
-    };
-  })();
+  const { panelStatus, completedCount, failedCount, visibleItems } =
+    derivePanelDetails(items);
 
   if (items.length === 0) {
     if (expanded) {

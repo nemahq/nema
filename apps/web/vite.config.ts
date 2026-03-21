@@ -8,6 +8,8 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 
+const MAX_CACHE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
 export default defineConfig({
   define: {
     __COMMIT_SHA__: JSON.stringify(process.env.RAILWAY_GIT_COMMIT_SHA ?? "dev"),
@@ -43,7 +45,7 @@ export default defineConfig({
       // TODO: 캐시 전략 도입 시 'prompt'로 전환 검토
       registerType: "autoUpdate",
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: MAX_CACHE_FILE_SIZE_BYTES,
       },
       manifest: {
         name: "Nema",
