@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Button, Kbd } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
@@ -14,6 +15,7 @@ import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { StreamErrorMessage } from "./StreamErrorMessage";
 import { WritingCursor } from "./WritingCursor";
 
 function DraftTabContentInner() {
@@ -22,7 +24,13 @@ function DraftTabContentInner() {
   const draft = useSessionDraft({ sessionId });
   const saveDraft = useSaveDraft({ sessionId });
   const cancelDraft = useCancelDraft({ sessionId });
-  const { streamingPhase, streamingDraftText } = useChatStream();
+  const {
+    streamingPhase,
+    streamingDraftText,
+    streamError,
+    retryStream,
+    dismissStreamError,
+  } = useChatStream();
 
   const isStreaming = streamingPhase === "draft";
   const smoothText = useBufferedStream(isStreaming ? streamingDraftText : "");
@@ -68,7 +76,14 @@ function DraftTabContentInner() {
       )}
       <div className="pt-10">
         {body && <MarkdownRenderer content={body} />}
-        {!body && isStreaming && <WritingCursor />}
+        {!body && isStreaming && !streamError && <WritingCursor />}
+        {streamError && streamingPhase === "draft" && (
+          <StreamErrorMessage
+            message={streamError}
+            onRetry={retryStream}
+            onDismiss={dismissStreamError}
+          />
+        )}
       </div>
     </div>
   );
@@ -76,8 +91,10 @@ function DraftTabContentInner() {
 
 export function DraftTabContent() {
   return (
-    // TODO: ErrorBoundary에 componentDidCatch (Sentry 보고) + 의미 있는 fallback UI 추가
-    <ErrorBoundary fallback={null}>
+    <ErrorBoundary
+      boundaryName="draft-tab"
+      fallbackRender={(props) => <SectionErrorFallback {...props} />}
+    >
       <Suspense>
         <DraftTabContentInner />
       </Suspense>

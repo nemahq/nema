@@ -7,6 +7,7 @@ import {
   Outlet,
 } from "@tanstack/react-router";
 
+import { NotFoundFallback } from "@web/app/error/NotFoundFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { HomePage } from "@web/app/pages/HomePage";
@@ -95,7 +96,10 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({
+  routeTree,
+  defaultNotFoundComponent: NotFoundFallback,
+});
 
 declare module "@tanstack/react-router" {
   interface Register {

@@ -2,6 +2,7 @@ import { Suspense, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { TabbedPanel } from "@web/components/ui/TabbedPanel";
 import { useDraftTab } from "@web/features/session/hooks/useDraftTab";
@@ -83,8 +84,10 @@ function ContentPanelInner() {
 
 export function ContentPanel() {
   return (
-    // TODO: ErrorBoundary에 componentDidCatch (Sentry 보고) + 의미 있는 fallback UI 추가
-    <ErrorBoundary fallback={null}>
+    <ErrorBoundary
+      boundaryName="content-panel"
+      fallbackRender={(props) => <SectionErrorFallback {...props} />}
+    >
       <Suspense
         fallback={
           <TabbedPanel tabs={[]} activeTabId="" onActiveTabChange={() => {}} />

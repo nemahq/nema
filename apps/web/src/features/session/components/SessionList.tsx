@@ -4,6 +4,7 @@ import { useMatch, useNavigate } from "@tanstack/react-router";
 import { Skeleton } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { useSessionList } from "@web/features/session/hooks/useSessionList";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
@@ -101,7 +102,10 @@ function SessionListContent() {
 
 export function SessionList() {
   return (
-    <ErrorBoundary fallback={null}>
+    <ErrorBoundary
+      boundaryName="session-list"
+      fallbackRender={(props) => <SectionErrorFallback {...props} />}
+    >
       <Suspense fallback={<SessionListSkeleton />}>
         <SessionListContent />
       </Suspense>

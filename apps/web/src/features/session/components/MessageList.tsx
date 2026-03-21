@@ -1,11 +1,13 @@
 import { Suspense } from "react";
 
 import type { DisplayMessage } from "@web/features/session/contexts/ChatStreamContext";
+import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { USER_TURN_DATA_ROLE } from "@web/features/session/hooks/useScrollAnchor";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 
 import { AssistantMessage } from "./AssistantMessage";
 import { StatusMessage } from "./StatusMessage";
+import { StreamErrorMessage } from "./StreamErrorMessage";
 import { UserMessage } from "./UserMessage";
 
 function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
@@ -31,6 +33,10 @@ function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
 function MessageListContent() {
   const messages = useSessionMessages();
   const turns = groupIntoTurns(messages);
+  const { streamError, streamingPhase, retryStream, dismissStreamError } =
+    useChatStream();
+
+  const showChatError = streamError && streamingPhase === "text";
 
   return (
     <>
@@ -70,6 +76,13 @@ function MessageListContent() {
                 />
               );
             })}
+            {isLastTurn && showChatError && (
+              <StreamErrorMessage
+                message={streamError}
+                onRetry={retryStream}
+                onDismiss={dismissStreamError}
+              />
+            )}
           </div>
         );
       })}

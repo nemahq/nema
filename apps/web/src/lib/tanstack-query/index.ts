@@ -7,6 +7,16 @@ import { toast } from "@web/utils/toast";
 
 const DEFAULT_STALE_TIME_MS = 30_000;
 
+function getErrorMessage(error: unknown): string {
+  if (!navigator.onLine) {
+    return tolgee.t("error.network");
+  }
+  if (error instanceof TRPCClientError) {
+    return error.message;
+  }
+  return tolgee.t("common.unknown_error");
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -32,11 +42,7 @@ export const queryClient = new QueryClient({
       if (mutation.options.onError) {
         return;
       }
-      toast.error(
-        error instanceof TRPCClientError
-          ? error.message
-          : tolgee.t("common.unknown_error"),
-      );
+      toast.error(getErrorMessage(error));
     },
   }),
 });
