@@ -2,6 +2,8 @@ import type { Message } from "@nema-io/shared";
 
 import { trpc } from "@web/lib/trpc";
 
+const MESSAGE_LIST_STALE_TIME_MS = 300_000;
+
 export function presetMessageCache(
   utils: ReturnType<typeof trpc.useUtils>,
   sessionId: string,
@@ -29,7 +31,7 @@ export function addOptimisticMessage(
 export function useMessageList({ sessionId }: { sessionId: string }) {
   const [messages] = trpc.message.list.useSuspenseQuery(
     { sessionId },
-    { staleTime: 300_000 },
+    { staleTime: MESSAGE_LIST_STALE_TIME_MS },
   );
   return messages;
 }

@@ -1,7 +1,7 @@
 import { TRPCClientError } from "@trpc/client";
 
 import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
-import { trackEvent } from "@web/hooks/useTrackEvent";
+import { trackEvent } from "@web/lib/posthog";
 import { tolgee } from "@web/lib/tolgee/client";
 import { trpc } from "@web/lib/trpc";
 import { toast } from "@web/utils/toast";

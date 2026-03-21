@@ -1,4 +1,4 @@
-import { trackEvent } from "@web/hooks/useTrackEvent";
+import { trackEvent } from "@web/lib/posthog";
 import { trpc } from "@web/lib/trpc";
 
 import { clearMessageCache, presetMessageCache } from "./useMessageList";
