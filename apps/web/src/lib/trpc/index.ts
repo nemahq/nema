@@ -1,5 +1,5 @@
 import {
-  httpBatchLink,
+  httpBatchStreamLink,
   httpSubscriptionLink,
   loggerLink,
   splitLink,
@@ -9,9 +9,8 @@ import { createTRPCReact } from "@trpc/react-query";
 import type { AppRouter } from "@nema-io/server/src/router";
 
 import { getEnv } from "@web/app/env";
-
-import { getAccessToken } from "./supabase";
-import { tolgee } from "./tolgee/client";
+import { getAccessToken } from "@web/lib/supabase";
+import { tolgee } from "@web/lib/tolgee/client";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -49,7 +48,7 @@ export const trpcClient = trpc.createClient({
           return { ...(token && { token }), ...(lang && { lang }) };
         },
       }),
-      false: httpBatchLink({
+      false: httpBatchStreamLink({
         url: getTrpcUrl(),
         headers: getHeaders,
       }),

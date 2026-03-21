@@ -1,5 +1,7 @@
 @import "@nema-io/weave/styles";
 @plugin "@tailwindcss/typography";
+@source "../../node_modules/streamdown/dist/*.js";
+@source "../../node_modules/@streamdown/code/dist/*.js";
 
 /* 앱 수준 모드 색상 — weave 팔레트를 앱 도메인 이름으로 매핑 */
 

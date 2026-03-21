@@ -1,3 +1,4 @@
+/* eslint-disable react-compiler/react-compiler -- dev-only 컴포넌트 */
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -43,7 +44,9 @@ function toggleClass(active: boolean) {
 }
 
 function LlmPresetSection() {
-  const [presetData] = trpc.dev.getModelPreset.useSuspenseQuery();
+  const [presetData] = trpc.dev.getModelPreset.useSuspenseQuery(undefined, {
+    staleTime: Infinity,
+  });
   const utils = trpc.useUtils();
   const presetMutation = trpc.dev.setModelPreset.useMutation({
     onSuccess: (data) => {

@@ -1,8 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { getEnv } from "@web/app/env";
-
-import { Sentry } from "./sentry";
+import { Sentry } from "@web/lib/sentry";
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = getEnv();
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

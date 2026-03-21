@@ -1,4 +1,5 @@
-import { useCallback, useLayoutEffect, useRef } from "react";
+/* eslint-disable react-compiler/react-compiler -- deps 제한이 의도적 (count-only 트래킹) */
+import { useLayoutEffect, useRef } from "react";
 
 import type { DisplayMessage } from "@web/features/session/contexts/ChatStreamContext";
 
@@ -13,9 +14,7 @@ export function useScrollAnchor({ messages }: { messages: DisplayMessage[] }) {
   const isProgrammaticScrollRef = useRef(false);
   const isUserScrollingRef = useRef(false);
 
-  const scrollToLastUserMessage = useCallback(function scrollToLastUserMessage(
-    behavior: ScrollBehavior = "instant",
-  ) {
+  function scrollToLastUserMessage(behavior: ScrollBehavior = "instant") {
     const container = scrollRef.current;
     if (!container) {
       return;
@@ -38,7 +37,7 @@ export function useScrollAnchor({ messages }: { messages: DisplayMessage[] }) {
       container.scrollTo({ top: targetTop, behavior });
     }
     isUserScrollingRef.current = false;
-  }, []);
+  }
 
   useLayoutEffect(function attachScrollListener() {
     const el = scrollRef.current;

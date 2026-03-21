@@ -108,10 +108,11 @@ export async function handleSave(args: {
 
   const existingTags = await getExistingTags(supabase, userId);
 
+  const ctx: ServiceContext = { supabase, providers, userId, contentLanguage };
   const savedDocs: Array<{ id: string; title: string }> = [];
   for (const doc of splitResult.documents) {
     const saved = await saveDocument({
-      ctx: { supabase, providers, userId, contentLanguage },
+      ctx,
       sessionId,
       body: doc.body,
       existingTags,
@@ -191,14 +192,14 @@ async function saveDocument(args: {
     if (reSplitResult.documents.length > 1) {
       const savedDocs: Array<{ id: string; title: string }> = [];
       for (const splitDoc of reSplitResult.documents) {
-        const savedDoc = await persistDocument({
+        const saved = await persistDocument({
           ctx,
           sessionId,
           persistAction: { action: "create" },
           body: splitDoc.body,
           existingTags,
         });
-        savedDocs.push(savedDoc);
+        savedDocs.push(saved);
       }
       await deleteDocument({ supabase, userId: ctx.userId, docId: targetId });
       return savedDocs;

@@ -1,9 +1,7 @@
 import {
   createContext,
   type ReactNode,
-  useCallback,
   useContext,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -23,7 +21,7 @@ import {
 import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
 import { addOptimisticMessage } from "@web/features/session/hooks/useMessageList";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
-import { useTrackEvent } from "@web/hooks/useTrackEvent";
+import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { trpc } from "@web/lib/trpc";
 
 type StreamingPhase = "idle" | "text" | "draft" | "retrieval";
@@ -60,7 +58,6 @@ interface ChatStreamProviderProps {
 export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   const sessionId = useSessionId();
   const utils = trpc.useUtils();
-  const trackEvent = useTrackEvent();
   const { mutate: generateTitle } = useGenerateTitle();
 
   const isSessionCreating =
@@ -92,75 +89,66 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     fullRetrievalTextRef.current = "";
   }
 
-  const settleStream = useCallback(
-    function settleStream() {
-      if (isSettlingRef.current) {
-        return;
-      }
-      isSettlingRef.current = true;
-      setStreamInput(null);
+  function settleStream() {
+    if (isSettlingRef.current) {
+      return;
+    }
+    isSettlingRef.current = true;
+    setStreamInput(null);
 
-      Promise.all([
-        utils.message.list.invalidate({ sessionId }),
-        utils.session.get.invalidate({ sessionId }),
-      ])
-        .catch((error) => {
-          Sentry.captureException(error);
-        })
-        .finally(() => {
-          resetStreamState();
-          isSettlingRef.current = false;
-        });
-    },
-    [sessionId, utils],
-  );
+    Promise.all([
+      utils.message.list.invalidate({ sessionId }),
+      utils.session.get.invalidate({ sessionId }),
+    ])
+      .catch((error) => {
+        Sentry.captureException(error);
+      })
+      .finally(() => {
+        resetStreamState();
+        isSettlingRef.current = false;
+      });
+  }
 
-  const handleStreamEvent = useCallback(
-    (event: ChatStreamEvent) => {
-      switch (event.type) {
-        case "draft_start":
-          streamingPhaseRef.current = "draft";
-          setStreamingPhase("draft");
-          break;
-        case "retrieval_start":
-          streamingPhaseRef.current = "retrieval";
-          setStreamingPhase("retrieval");
-          break;
-        case "token":
-          if (streamingPhaseRef.current === "draft") {
-            fullDraftTextRef.current += event.text;
-            setStreamingDraftText(fullDraftTextRef.current);
-          } else if (streamingPhaseRef.current === "retrieval") {
-            fullRetrievalTextRef.current += event.text;
-            setStreamingRetrievalText(fullRetrievalTextRef.current);
-          } else {
-            fullTextRef.current += event.text;
-            setStreamingText(fullTextRef.current);
-          }
-          break;
-        case "phase":
-          setActivePhase(event.name);
-          break;
-        case "done":
-          settleStream();
-          break;
-        default: {
-          const _exhaustive: never = event;
-          void _exhaustive;
+  function handleStreamEvent(event: ChatStreamEvent) {
+    switch (event.type) {
+      case "draft_start":
+        streamingPhaseRef.current = "draft";
+        setStreamingPhase("draft");
+        break;
+      case "retrieval_start":
+        streamingPhaseRef.current = "retrieval";
+        setStreamingPhase("retrieval");
+        break;
+      case "token":
+        if (streamingPhaseRef.current === "draft") {
+          fullDraftTextRef.current += event.text;
+          setStreamingDraftText(fullDraftTextRef.current);
+        } else if (streamingPhaseRef.current === "retrieval") {
+          fullRetrievalTextRef.current += event.text;
+          setStreamingRetrievalText(fullRetrievalTextRef.current);
+        } else {
+          fullTextRef.current += event.text;
+          setStreamingText(fullTextRef.current);
         }
+        break;
+      case "phase":
+        setActivePhase(event.name);
+        break;
+      case "done":
+        settleStream();
+        break;
+      default: {
+        const _exhaustive: never = event;
+        void _exhaustive;
       }
-    },
-    [settleStream],
-  );
+    }
+  }
 
   // TODO: 인라인 에러 메시지 + 재시도 버튼 UI 추가
-  const handleStreamError = useCallback(
-    (error: unknown) => {
-      Sentry.captureException(error);
-      settleStream();
-    },
-    [settleStream],
-  );
+  function handleStreamError(error: unknown) {
+    Sentry.captureException(error);
+    settleStream();
+  }
 
   trpc.message.chat.useSubscription(
     streamInput && !isSessionCreating ? streamInput : skipToken,
@@ -170,50 +158,44 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     },
   );
 
-  const send = useCallback(
-    (content: string, mode: ChatMode) => {
-      if (streamingPhaseRef.current !== "idle") {
-        return;
-      }
+  function send(content: string, mode: ChatMode) {
+    if (streamingPhaseRef.current !== "idle") {
+      return;
+    }
 
-      const messageId = crypto.randomUUID();
+    const messageId = crypto.randomUUID();
 
-      trackEvent("message.send", sessionId, {
-        content_length: content.length,
-        mode,
-      });
+    trackEvent("message.send", sessionId, {
+      content_length: content.length,
+      mode,
+    });
 
-      const optimistic: Message = {
-        id: messageId,
-        role: "user",
-        type: "text",
-        content,
-        createdAt: new Date().toISOString(),
-      };
+    const optimistic: Message = {
+      id: messageId,
+      role: "user",
+      type: "text",
+      content,
+      createdAt: new Date().toISOString(),
+    };
 
-      addOptimisticMessage(utils, sessionId, optimistic);
+    addOptimisticMessage(utils, sessionId, optimistic);
 
-      generateTitle({ sessionId, content });
+    generateTitle({ sessionId, content });
 
-      fullTextRef.current = "";
-      setStreamStartedAt(new Date().toISOString());
-      setStreamingText("");
-      streamingPhaseRef.current = "text";
-      setStreamingPhase("text");
-      setStreamInput({ sessionId, content, mode, messageId });
-    },
-    [sessionId, trackEvent, utils, generateTitle],
-  );
+    fullTextRef.current = "";
+    setStreamStartedAt(new Date().toISOString());
+    setStreamingText("");
+    streamingPhaseRef.current = "text";
+    setStreamingPhase("text");
+    setStreamInput({ sessionId, content, mode, messageId });
+  }
 
-  const cancel = useCallback(
-    function cancel() {
-      setStreamInput(null);
-      settleStream();
-    },
-    [settleStream],
-  );
+  function cancel() {
+    setStreamInput(null);
+    settleStream();
+  }
 
-  const streamingMessage = useMemo<DisplayMessage | undefined>(() => {
+  const streamingMessage: DisplayMessage | undefined = (() => {
     switch (streamingPhase) {
       case "idle":
         return undefined;
@@ -250,26 +232,16 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
               createdAt: streamStartedAt,
             } satisfies ClientStatusMessage);
     }
-  }, [streamingPhase, streamingText, activePhase, streamStartedAt]);
+  })();
 
-  const contextValue = useMemo<ChatStreamContextValue>(
-    () => ({
-      send,
-      cancel,
-      streamingPhase,
-      streamingMessage,
-      streamingDraftText,
-      streamingRetrievalText,
-    }),
-    [
-      send,
-      cancel,
-      streamingPhase,
-      streamingMessage,
-      streamingDraftText,
-      streamingRetrievalText,
-    ],
-  );
+  const contextValue: ChatStreamContextValue = {
+    send,
+    cancel,
+    streamingPhase,
+    streamingMessage,
+    streamingDraftText,
+    streamingRetrievalText,
+  };
 
   return <ChatStreamContext value={contextValue}>{children}</ChatStreamContext>;
 }

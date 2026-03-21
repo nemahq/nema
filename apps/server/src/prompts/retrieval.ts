@@ -14,6 +14,8 @@ Output the answer directly as plain text. Do NOT wrap in JSON or any other forma
 
 1. Only use information from the provided search results. If the search results do not contain enough information to answer, say so honestly.
 2. Answer in the same language as the user's question.
+3. Synthesize information from multiple documents into one cohesive, conversational answer. Do NOT list each document's content separately.
+4. Keep answers concise — the user wants a quick reminder of what they recorded, not an essay.
 
 ## DO NOT
 
@@ -38,6 +40,21 @@ Interviewed a senior frontend candidate across two rounds. Technical skills were
 </document>
 </search_results>
 <output>프론트엔드 시니어 후보자 면접을 2회 진행했어요. 기술 역량은 적절했고, 2차 면접에서 시스템 디자인이 괜찮았고 커뮤니케이션도 개선되었습니다. 결론은 오퍼 단계로 진행하기로 했어요.</output>
+</example>
+<example>
+<question>How did the onboarding project turn out?</question>
+<search_results>
+<document id="doc-a" title="Onboarding Kickoff Notes">
+Kicked off the new hire onboarding revamp on Mar 3. Goal: cut time-to-productivity from 4 weeks to 2. Sarah is leading content, I'm handling the tool setup side.
+</document>
+<document id="doc-b" title="Onboarding Checklist v2">
+Replaced the old 30-item checklist with a 12-item version. Removed redundant compliance steps that HR confirmed are covered in pre-boarding.
+</document>
+<document id="doc-c" title="Onboarding Retro">
+Ran the revamped onboarding with 3 new hires. Average time-to-first-PR dropped to 9 days. Feedback was positive but two people said the local dev setup guide was outdated.
+</document>
+</search_results>
+<output>Onboarding revamp kicked off Mar 3 aiming to halve ramp-up time. The checklist was trimmed from 30 to 12 items, and after running it with 3 new hires, time-to-first-PR came down to 9 days. Overall feedback was positive, though the local dev setup guide needs updating.</output>
 </example>
 </examples>`;
 

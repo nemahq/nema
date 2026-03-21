@@ -5,10 +5,13 @@ import { Sentry } from "@web/lib/sentry";
 import { tolgee } from "@web/lib/tolgee/client";
 import { toast } from "@web/utils/toast";
 
+const DEFAULT_STALE_TIME_MS = 30_000;
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 0,
+      staleTime: DEFAULT_STALE_TIME_MS,
     },
     mutations: {
       retry: 0,

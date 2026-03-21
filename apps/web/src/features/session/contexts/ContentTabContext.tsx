@@ -1,10 +1,4 @@
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useState,
-} from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
 
 type ContentTabName = "help";
 
@@ -25,20 +19,17 @@ export function ContentTabProvider({ children }: ContentTabProviderProps) {
     () => new Set(),
   );
 
-  const openTab = useCallback(
-    (name: ContentTabName) => setOpenTabs((prev) => new Set(prev).add(name)),
-    [],
-  );
+  function openTab(name: ContentTabName) {
+    setOpenTabs((prev) => new Set(prev).add(name));
+  }
 
-  const closeTab = useCallback(
-    (name: ContentTabName) =>
-      setOpenTabs((prev) => {
-        const next = new Set(prev);
-        next.delete(name);
-        return next;
-      }),
-    [],
-  );
+  function closeTab(name: ContentTabName) {
+    setOpenTabs((prev) => {
+      const next = new Set(prev);
+      next.delete(name);
+      return next;
+    });
+  }
 
   return (
     <ContentTabContext value={{ openTabs, openTab, closeTab }}>

@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import * as Sentry from "@sentry/react";
 
 import type { SaveJob } from "@nema-io/shared";
@@ -41,6 +34,26 @@ function toSaveQueueItem(job: SaveJob): SaveQueueItem {
   };
 }
 
+function mergeItems(
+  initialJobs: SaveJob[] | undefined,
+  sseUpdates: Map<string, SaveQueueItem>,
+  dismissedIds: Set<string>,
+): SaveQueueItem[] {
+  const merged = new Map<string, SaveQueueItem>();
+
+  if (initialJobs) {
+    for (const j of initialJobs) {
+      merged.set(j.id, toSaveQueueItem(j));
+    }
+  }
+
+  for (const [id, queueItem] of sseUpdates) {
+    merged.set(id, queueItem);
+  }
+
+  return [...merged.values()].filter((i) => !dismissedIds.has(i.jobId));
+}
+
 interface SaveQueueContextValue {
   items: SaveQueueItem[];
   addJob: (job: SaveJob) => void;
@@ -69,16 +82,16 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   const { data: initialJobs } = trpc.saveJob.list.useQuery(undefined, {
-    refetchOnWindowFocus: false,
+    staleTime: Infinity,
   });
 
-  const addJob = useCallback((job: SaveJob) => {
+  function addJob(job: SaveJob) {
     setSseUpdates((prev) => {
       const next = new Map(prev);
       next.set(job.id, toSaveQueueItem(job));
       return next;
     });
-  }, []);
+  }
 
   const retrySave = trpc.saveJob.retry.useMutation({
     onSuccess(job) {
@@ -86,12 +99,9 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     },
   });
 
-  const retry = useCallback(
-    (jobId: string) => {
-      retrySave.mutate({ jobId });
-    },
-    [retrySave],
-  );
+  function retry(jobId: string) {
+    retrySave.mutate({ jobId });
+  }
 
   trpc.saveJob.onUpdate.useSubscription(undefined, {
     onData(event) {
@@ -118,21 +128,7 @@ export function SaveQueueProvider({ children }: SaveQueueProviderProps) {
     },
   });
 
-  const items = useMemo(() => {
-    const merged = new Map<string, SaveQueueItem>();
-
-    if (initialJobs) {
-      for (const j of initialJobs) {
-        merged.set(j.id, toSaveQueueItem(j));
-      }
-    }
-
-    for (const [id, queueItem] of sseUpdates) {
-      merged.set(id, queueItem);
-    }
-
-    return [...merged.values()].filter((i) => !dismissedIds.has(i.jobId));
-  }, [initialJobs, sseUpdates, dismissedIds]);
+  const items = mergeItems(initialJobs, sseUpdates, dismissedIds);
 
   useEffect(
     function panelAutoDismiss() {

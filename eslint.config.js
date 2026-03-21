@@ -3,6 +3,7 @@ import boundaries from "eslint-plugin-boundaries";
 import jsonc from "eslint-plugin-jsonc";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths";
+import reactCompiler from "eslint-plugin-react-compiler";
 import reactHooks from "eslint-plugin-react-hooks";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import tseslint from "typescript-eslint";
@@ -78,11 +79,13 @@ export default tseslint.config(
   {
     files: ["apps/web/**/*.{ts,tsx}"],
     plugins: {
+      "react-compiler": reactCompiler,
       "react-hooks": reactHooks,
       "no-relative-import-paths": noRelativeImportPaths,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      "react-compiler/react-compiler": "error",
+      ...reactHooks.configs["recommended-latest"].rules,
       "nema/require-suspense-boundary": "error",
       "nema/require-named-props-interface": "error",
       "nema/no-forbidden-breakpoints": "error",
@@ -117,9 +120,8 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/web/**/hooks/**/*.{ts,tsx}"],
+    files: ["apps/web/src/**/*.{ts,tsx}"],
     rules: {
-      "nema/require-suspense-boundary": "off",
       "no-relative-import-paths/no-relative-import-paths": [
         "error",
         {
@@ -128,6 +130,12 @@ export default tseslint.config(
           prefix: "@web",
         },
       ],
+    },
+  },
+  {
+    files: ["apps/web/**/hooks/**/*.{ts,tsx}"],
+    rules: {
+      "nema/require-suspense-boundary": "off",
     },
   },
   {

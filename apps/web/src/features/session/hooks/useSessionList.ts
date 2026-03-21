@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-
 import type { SessionSummary } from "@nema-io/shared";
 
 import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
@@ -81,19 +79,19 @@ export function updateSessionTitleCache(
   });
 }
 
+const SESSION_LIST_STALE_TIME_MS = 300_000;
+
 export function useSessionList() {
   const [data, { hasNextPage, fetchNextPage, isFetchingNextPage }] =
     trpc.session.list.useSuspenseInfiniteQuery(
       { limit: SESSION_LIST_LIMIT },
       {
+        staleTime: SESSION_LIST_STALE_TIME_MS,
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
       },
     );
 
-  const sessions = useMemo(
-    () => data.pages.flatMap((page) => page.items),
-    [data],
-  );
+  const sessions = data.pages.flatMap((page) => page.items);
 
   return { sessions, hasNextPage, fetchNextPage, isFetchingNextPage };
 }

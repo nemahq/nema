@@ -55,15 +55,17 @@ function getEntityType(
 }
 
 export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
-  const { NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD } = getEnv();
+  const { NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, NEO4J_DATABASE } =
+    getEnv();
   const driver: Driver = neo4j.driver(
     NEO4J_URI,
     neo4j.auth.basic(NEO4J_USERNAME, NEO4J_PASSWORD),
   );
+  const sessionConfig = { database: NEO4J_DATABASE };
 
   return {
     async ensureSchema(): Promise<void> {
-      const session = driver.session();
+      const session = driver.session(sessionConfig);
       try {
         await session.run(
           `CREATE CONSTRAINT entity_unique IF NOT EXISTS
@@ -112,20 +114,23 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         }
       }
 
-      const session = driver.session();
+      const session = driver.session(sessionConfig);
       try {
         await session.executeWrite(async (tx) => {
           await tx.run("MERGE (d:Document {docId: $docId})", { docId });
 
-          for (const entity of entities) {
-            await tx.run(
-              `MERGE (e:Entity {type: $type, name: $name, userId: $userId})
-               WITH e
-               MATCH (d:Document {docId: $docId})
-               MERGE (e)-[:MENTIONED_IN]->(d)`,
-              { type: entity.type, name: entity.name, userId, docId },
-            );
-          }
+          await tx.run(
+            `UNWIND $entities AS entity
+             MERGE (e:Entity {type: entity.type, name: entity.name, userId: $userId})
+             WITH e
+             MATCH (d:Document {docId: $docId})
+             MERGE (e)-[:MENTIONED_IN]->(d)`,
+            {
+              entities: entities.map((e) => ({ type: e.type, name: e.name })),
+              userId,
+              docId,
+            },
+          );
 
           if (entities.length > 1) {
             await tx.run(
@@ -164,7 +169,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       options: FindRelatedDocumentsOptions,
     ): Promise<GraphSearchResult[]> {
       const { docId, userId, depth = 1, limit = 10 } = options;
-      const session = driver.session();
+      const session = driver.session(sessionConfig);
       try {
         const visited = new Set<string>([docId]);
         const scores = new Map<string, number>();
@@ -225,7 +230,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         return [];
       }
 
-      const session = driver.session();
+      const session = driver.session(sessionConfig);
       try {
         const result = await session.run(
           `MATCH (e:Entity {userId: $userId})-[:MENTIONED_IN]->(d:Document)
@@ -262,7 +267,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
 
     async listEntities(options: ListEntitiesOptions): Promise<GraphEntity[]> {
       const { userId, type, limit = 50, offset = 0 } = options;
-      const session = driver.session();
+      const session = driver.session(sessionConfig);
       try {
         const typeFilter = type ? "AND e.type = $type" : "";
         const result = await session.run(
@@ -305,7 +310,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         return;
       }
 
-      const session = driver.session();
+      const session = driver.session(sessionConfig);
       try {
         await session.executeWrite(async (tx) => {
           await tx.run(
@@ -357,7 +362,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
     },
 
     async deleteByDocument(docId: string): Promise<void> {
-      const session = driver.session();
+      const session = driver.session(sessionConfig);
       try {
         await session.executeWrite(async (tx) => {
           // Collect candidate orphan entities before deleting document

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 
-import { queryClient } from "@web/lib/queryClient";
+import { queryClient } from "@web/lib/tanstack-query";
 import { trpc, trpcClient } from "@web/lib/trpc";
 
 interface QueryProviderProps {

@@ -13,3 +13,6 @@ dist/
 .claude/settings.local.json
 .claude/worktrees/
 .worktrees/
+
+# Turborepo
+.turbo

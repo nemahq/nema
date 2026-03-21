@@ -8,6 +8,8 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 
+const MAX_CACHE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
 export default defineConfig({
   define: {
     __COMMIT_SHA__: JSON.stringify(process.env.RAILWAY_GIT_COMMIT_SHA ?? "dev"),
@@ -15,14 +17,36 @@ export default defineConfig({
   },
   build: {
     sourcemap: "hidden",
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("date-fns")) {
+              return "date-fns";
+            }
+            if (id.includes("@tanstack")) {
+              return "tanstack";
+            }
+          }
+        },
+      },
+    },
   },
   plugins: [
     { enforce: "pre", ...mdx({ remarkPlugins: [remarkGfm] }) },
-    react({ include: /\.(jsx|tsx|mdx)$/ }),
+    react({
+      include: /\.(jsx|tsx|mdx)$/,
+      babel: {
+        plugins: [["babel-plugin-react-compiler"]],
+      },
+    }),
     tailwindcss(),
     VitePWA({
       // TODO: 캐시 전략 도입 시 'prompt'로 전환 검토
       registerType: "autoUpdate",
+      workbox: {
+        maximumFileSizeToCacheInBytes: MAX_CACHE_FILE_SIZE_BYTES,
+      },
       manifest: {
         name: "Nema",
         short_name: "Nema",

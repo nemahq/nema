@@ -1,7 +1,7 @@
 import { TRPCClientError } from "@trpc/client";
 
 import { SESSION_LIST_LIMIT } from "@web/features/session/constants";
-import { useTrackEvent } from "@web/hooks/useTrackEvent";
+import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { tolgee } from "@web/lib/tolgee/client";
 import { trpc } from "@web/lib/trpc";
 import { toast } from "@web/utils/toast";
@@ -10,7 +10,6 @@ import { updateSessionCache, updateSessionTitleCache } from "./useSessionList";
 
 export function useUpdateSession() {
   const utils = trpc.useUtils();
-  const trackEvent = useTrackEvent();
 
   return trpc.session.update.useMutation({
     onMutate({ sessionId, title }) {

@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useRef } from "react";
+import { Suspense, useRef } from "react";
 import { useMatch, useNavigate } from "@tanstack/react-router";
 
 import { Skeleton } from "@nema-io/weave";
@@ -26,28 +26,25 @@ function SessionListContent() {
   const { sessions, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useSessionList();
 
-  const navigateSession = useCallback(
-    (direction: -1 | 1) => {
-      if (sessions.length === 0) {
-        return;
-      }
-      const currentIndex = currentSessionId
-        ? sessions.findIndex((s) => s.id === currentSessionId)
-        : -1;
-      const nextIndex =
-        currentIndex === -1
-          ? 0
-          : (currentIndex + direction + sessions.length) % sessions.length;
-      const next = sessions[nextIndex];
-      if (next && next.id !== currentSessionId) {
-        navigate({
-          to: "/session/$sessionId",
-          params: { sessionId: next.id },
-        });
-      }
-    },
-    [sessions, currentSessionId, navigate],
-  );
+  function navigateSession(direction: -1 | 1) {
+    if (sessions.length === 0) {
+      return;
+    }
+    const currentIndex = currentSessionId
+      ? sessions.findIndex((s) => s.id === currentSessionId)
+      : -1;
+    const nextIndex =
+      currentIndex === -1
+        ? 0
+        : (currentIndex + direction + sessions.length) % sessions.length;
+    const next = sessions[nextIndex];
+    if (next && next.id !== currentSessionId) {
+      navigate({
+        to: "/session/$sessionId",
+        params: { sessionId: next.id },
+      });
+    }
+  }
 
   useRegisterAction("navigation.prevSession", {
     execute: () => navigateSession(-1),

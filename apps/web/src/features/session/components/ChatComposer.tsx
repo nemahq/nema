@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
@@ -39,22 +38,15 @@ export function ChatComposer() {
     enabled: isStreaming,
   });
 
-  const executors: Record<string, () => void> = useMemo(
-    () => ({
-      help: () => openTab("help"),
-    }),
-    [openTab],
-  );
+  const executors: Record<string, () => void> = {
+    help: () => openTab("help"),
+  };
 
-  const slashCommands = useMemo<SlashCommand[]>(
-    () =>
-      getAllCommandIds().map((id) => ({
-        name: id,
-        descriptionKey: getCommandDef(id).descriptionKey,
-        execute: executors[id],
-      })),
-    [executors],
-  );
+  const slashCommands: SlashCommand[] = getAllCommandIds().map((id) => ({
+    name: id,
+    descriptionKey: getCommandDef(id).descriptionKey,
+    execute: executors[id],
+  }));
 
   const {
     showMenu,

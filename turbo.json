@@ -10,13 +10,16 @@
       "cache": false
     },
     "lint": {
-      "dependsOn": []
+      "dependsOn": [],
+      "outputs": []
     },
     "typecheck": {
-      "dependsOn": []
+      "dependsOn": [],
+      "outputs": []
     },
     "test": {
-      "dependsOn": []
+      "dependsOn": [],
+      "outputs": []
     }
   }
 }

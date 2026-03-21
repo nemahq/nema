@@ -1,12 +1,10 @@
+import "streamdown/styles.css";
 import "./markdown-renderer.css";
 
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Streamdown } from "streamdown";
+import { code } from "@streamdown/code";
 
-import { CodeBlock } from "./CodeBlock";
-
-const REMARK_PLUGINS = [remarkGfm];
-const COMPONENTS = { code: CodeBlock };
+const PLUGINS = { code };
 
 interface MarkdownRendererProps {
   content: string;
@@ -15,9 +13,9 @@ interface MarkdownRendererProps {
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return (
     <div className="prose-chat">
-      <Markdown remarkPlugins={REMARK_PLUGINS} components={COMPONENTS}>
+      <Streamdown plugins={PLUGINS} controls={false}>
         {content}
-      </Markdown>
+      </Streamdown>
     </div>
   );
 }
