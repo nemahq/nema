@@ -37,12 +37,12 @@ Product terms vs code terms are mapped in `docs/glossary.md`. Code (variables, f
 
 ## Dev Scripts
 
-| Script             | Usage                      |
-| ------------------ | -------------------------- |
-| `pnpm dev`         | local full-stack (default) |
-| `pnpm dev:web`     | frontend only (staging API)|
-| `pnpm dev:server`  | server only                |
-| `pnpm dev:prod`    | local full-stack (prod API)|
+| Script             | Usage                       |
+| ------------------ | --------------------------- |
+| `pnpm dev`         | local full-stack (default)  |
+| `pnpm dev:web`     | frontend only (staging API) |
+| `pnpm dev:web:prod`| frontend only (prod API)    |
+| `pnpm dev:server`  | server only                 |
 
 ## Tests
 
