@@ -15,14 +15,6 @@ if (POSTHOG_KEY && APP_ENV === "production") {
   });
 }
 
-export function trackEvent(
-  type: string,
-  sessionId: string | null = null,
-  payload: Record<string, unknown> = {},
-) {
-  posthog.capture(type, { session_id: sessionId, ...payload });
-}
-
 export const posthog = {
   capture: (...args: Parameters<typeof posthogLib.capture>) => {
     try {

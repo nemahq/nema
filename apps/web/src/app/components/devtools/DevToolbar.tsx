@@ -1,4 +1,4 @@
-/* eslint-disable react-compiler/react-compiler -- deps 제한이 의도적인 dev-only 컴포넌트 */
+/* eslint-disable react-compiler/react-compiler -- dev-only 컴포넌트 */
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 

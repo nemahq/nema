@@ -12,7 +12,7 @@ import { LogOut, Settings } from "@nema-io/weave/icons";
 
 import { useProfile } from "@web/features/profile";
 import { useAuth } from "@web/hooks/useAuth";
-import { trackEvent } from "@web/lib/posthog";
+import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 

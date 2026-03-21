@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import { Sentry } from "@web/lib/sentry";
+
 interface UseDraftAutosaveOptions {
   /** ms 단위 */
   delay?: number;
@@ -20,16 +22,22 @@ function readStorage<T>(key: string, fallback: T): T {
 function writeStorage<T>(key: string, data: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(data));
-  } catch {
-    // storage full 또는 unavailable — silent fail
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "draft-autosave" },
+      extra: { key },
+    });
   }
 }
 
 function removeStorage(key: string): void {
   try {
     localStorage.removeItem(key);
-  } catch {
-    // unavailable — silent fail
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "draft-autosave" },
+      extra: { key },
+    });
   }
 }
 

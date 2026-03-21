@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { useTypewriter } from "@web/hooks/useTypewriter";
-import { trackEvent } from "@web/lib/posthog";
+import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { RenameInput } from "./RenameInput";

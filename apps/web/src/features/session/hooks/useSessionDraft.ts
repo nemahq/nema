@@ -1,6 +1,5 @@
+import { SESSION_STALE_TIME_MS } from "@web/features/session/constants";
 import { trpc } from "@web/lib/trpc";
-
-const SESSION_STALE_TIME_MS = 300_000;
 
 export function useSessionDraft({ sessionId }: { sessionId: string }) {
   const [session] = trpc.session.get.useSuspenseQuery(

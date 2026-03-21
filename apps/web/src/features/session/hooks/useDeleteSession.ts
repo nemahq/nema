@@ -1,4 +1,4 @@
-import { trackEvent } from "@web/lib/posthog";
+import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { trpc } from "@web/lib/trpc";
 
 import { removeSessionCache } from "./useSessionList";
