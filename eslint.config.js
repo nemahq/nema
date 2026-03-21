@@ -120,9 +120,8 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/web/**/hooks/**/*.{ts,tsx}"],
+    files: ["apps/web/src/**/*.{ts,tsx}"],
     rules: {
-      "nema/require-suspense-boundary": "off",
       "no-relative-import-paths/no-relative-import-paths": [
         "error",
         {
@@ -131,6 +130,12 @@ export default tseslint.config(
           prefix: "@web",
         },
       ],
+    },
+  },
+  {
+    files: ["apps/web/**/hooks/**/*.{ts,tsx}"],
+    rules: {
+      "nema/require-suspense-boundary": "off",
     },
   },
   {

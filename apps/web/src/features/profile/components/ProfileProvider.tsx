@@ -1,11 +1,10 @@
 import { type ReactNode, Suspense, useState } from "react";
 
 import { OnboardingModal } from "@web/features/onboarding";
+import { ProfileContext } from "@web/features/profile/hooks/useProfile";
+import { useProfileQuery } from "@web/features/profile/hooks/useProfileQuery";
 import { SettingsModal } from "@web/features/settings";
 import { useAuth } from "@web/hooks/useAuth";
-
-import { ProfileContext } from "../hooks/useProfile";
-import { useProfileQuery } from "../hooks/useProfileQuery";
 
 interface ProfileProviderProps {
   children: ReactNode;
