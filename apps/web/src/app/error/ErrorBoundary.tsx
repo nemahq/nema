@@ -1,7 +1,6 @@
 import type { ErrorInfo, ReactNode } from "react";
 import { Component } from "react";
-
-import { Sentry } from "@web/lib/sentry";
+import * as Sentry from "@sentry/react";
 
 export interface ErrorFallbackProps {
   reset: () => void;

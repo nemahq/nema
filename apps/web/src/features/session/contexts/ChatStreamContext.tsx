@@ -7,7 +7,6 @@ import {
 } from "react";
 import * as Sentry from "@sentry/react";
 import { skipToken, useIsMutating } from "@tanstack/react-query";
-import { TRPCClientError } from "@trpc/client";
 import { getQueryKey } from "@trpc/react-query";
 
 import {
@@ -23,7 +22,7 @@ import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
 import { addOptimisticMessage } from "@web/features/session/hooks/useMessageList";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
-import { tolgee } from "@web/lib/tolgee/client";
+import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { trpc } from "@web/lib/trpc";
 
 type StreamingPhase = "idle" | "text" | "draft" | "retrieval";
@@ -58,16 +57,6 @@ const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
 
 interface ChatStreamProviderProps {
   children: ReactNode;
-}
-
-function getStreamErrorMessage(error: unknown): string {
-  if (!navigator.onLine) {
-    return tolgee.t("error.network");
-  }
-  if (error instanceof TRPCClientError) {
-    return error.message;
-  }
-  return tolgee.t("common.unknown_error");
 }
 
 export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
@@ -164,7 +153,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
 
   function handleStreamError(error: unknown) {
     Sentry.captureException(error);
-    setStreamError(getStreamErrorMessage(error));
+    setStreamError(getErrorMessage(error));
     setStreamInput(null);
   }
 
@@ -173,6 +162,18 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     if (!lastInput) {
       return;
     }
+
+    const messageId = crypto.randomUUID();
+    const newInput: ChatInput = { ...lastInput, messageId };
+
+    addOptimisticMessage(utils, sessionId, {
+      id: messageId,
+      role: "user",
+      type: "text",
+      content: lastInput.content,
+      createdAt: new Date().toISOString(),
+    });
+
     setStreamError(null);
     fullTextRef.current = "";
     fullDraftTextRef.current = "";
@@ -180,7 +181,8 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     setStreamingText("");
     setStreamingDraftText("");
     setStreamingRetrievalText("");
-    setStreamInput(lastInput);
+    lastStreamInputRef.current = newInput;
+    setStreamInput(newInput);
   }
 
   function dismissStreamError() {
@@ -237,6 +239,9 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   }
 
   const streamingMessage: DisplayMessage | undefined = (() => {
+    if (streamError) {
+      return undefined;
+    }
     switch (streamingPhase) {
       case "idle":
         return undefined;

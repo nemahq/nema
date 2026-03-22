@@ -1,21 +1,11 @@
+import * as Sentry from "@sentry/react";
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 
-import { Sentry } from "@web/lib/sentry";
-import { tolgee } from "@web/lib/tolgee/client";
+import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { toast } from "@web/utils/toast";
 
 const DEFAULT_STALE_TIME_MS = 30_000;
-
-function getErrorMessage(error: unknown): string {
-  if (!navigator.onLine) {
-    return tolgee.t("error.network");
-  }
-  if (error instanceof TRPCClientError) {
-    return error.message;
-  }
-  return tolgee.t("common.unknown_error");
-}
 
 export const queryClient = new QueryClient({
   defaultOptions: {

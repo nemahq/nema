@@ -1,4 +1,5 @@
-import { Sentry } from "@web/lib/sentry";
+import * as Sentry from "@sentry/react";
+
 import { trpc } from "@web/lib/trpc";
 
 import { updateSessionTitleCache } from "./useSessionList";
