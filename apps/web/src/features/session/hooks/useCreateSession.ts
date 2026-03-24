@@ -2,6 +2,7 @@ import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { trpc } from "@web/lib/trpc";
 
 import { clearMessageCache, presetMessageCache } from "./useMessageList";
+import { presetSessionCache } from "./useSessionDraft";
 import { prependSessionCache } from "./useSessionList";
 
 export function useCreateSession() {
@@ -10,6 +11,7 @@ export function useCreateSession() {
   return trpc.session.create.useMutation({
     onMutate({ sessionId }) {
       presetMessageCache(utils, sessionId);
+      presetSessionCache(utils, sessionId);
     },
     onSuccess(newSession) {
       trackEvent("session.create", newSession.id);
