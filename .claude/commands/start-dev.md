@@ -11,15 +11,27 @@ Start a development server in the background.
 
 ## Steps
 
-1. Parse the argument from `$ARGUMENTS`. If empty, default to `dev`.
-2. Map the argument to the script:
+1. Parse the argument from `$ARGUMENTS`.
+2. Infer the canonical argument using fuzzy matching. Accept synonyms and partial matches:
 
-| Argument | Script |
-|----------|--------|
-| _(none)_ | `pnpm dev` |
-| `web` | `pnpm dev:web` |
-| `server` | `pnpm dev:server` |
-| `prod` | `pnpm dev:web:prod` |
+| Canonical | Accepted inputs (case-insensitive) |
+|-----------|-------------------------------------|
+| _(none)_  | empty, `local`, `full`, `all`, `fullstack`, `full-stack` |
+| `web`     | `web`, `staging`, `stg`, `front`, `frontend` |
+| `server`  | `server`, `api`, `back`, `backend` |
+| `prod`    | `prod`, `production`, `web:prod` |
 
-3. Run the mapped script using the Bash tool with `run_in_background: true`.
-4. Report which dev server was started.
+If the input doesn't match any synonym, report the unrecognized argument and list the valid options. Do NOT proceed.
+
+3. Map the canonical argument to the script:
+
+| Canonical | Script |
+|-----------|--------|
+| _(none)_  | `pnpm dev` |
+| `web`     | `pnpm dev:web` |
+| `server`  | `pnpm dev:server` |
+| `prod`    | `pnpm dev:web:prod` |
+
+4. Run the mapped script using the Bash tool with `run_in_background: true`.
+5. Wait 3 seconds, then read the background task output to extract the port/URL (e.g., `localhost:5173`).
+6. Report which dev server was started and the local URL with port.
