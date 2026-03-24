@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
-import { useDeferredProfileQuery } from "@web/features/profile/hooks/useDeferredProfileQuery";
-
+import { useOnboardingCheck } from "../hooks/useOnboardingCheck";
 import { OnboardingModal } from "./OnboardingModal";
 
 interface OnboardingGateProps {
@@ -9,13 +8,13 @@ interface OnboardingGateProps {
 }
 
 export function OnboardingGate({ children }: OnboardingGateProps) {
-  const { data: profile, isLoading } = useDeferredProfileQuery();
+  const { needsOnboarding, isLoading } = useOnboardingCheck();
 
   if (isLoading) {
-    return children;
+    return null;
   }
 
-  if (!profile) {
+  if (needsOnboarding) {
     return <OnboardingModal />;
   }
 

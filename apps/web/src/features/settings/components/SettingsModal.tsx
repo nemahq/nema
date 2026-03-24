@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { Dialog, DialogContent } from "@nema-io/weave";
 
-import { useProfileQuery } from "@web/features/profile/hooks/useProfileQuery";
+import { useProfileSuspenseQuery } from "@web/features/profile/hooks/useProfile";
 
 import { SettingsForm } from "./SettingsForm";
 
@@ -14,7 +14,7 @@ interface SettingsModalProps {
 function SettingsModalContent({
   onOpenChange,
 }: Pick<SettingsModalProps, "onOpenChange">) {
-  const [profile] = useProfileQuery();
+  const [profile] = useProfileSuspenseQuery();
 
   if (!profile) {
     return null;
