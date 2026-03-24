@@ -21,8 +21,8 @@ import {
 import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
 import { addOptimisticMessage } from "@web/features/session/hooks/useMessageList";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
-import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
+import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { trpc } from "@web/lib/trpc";
 
 type StreamingPhase = "idle" | "text" | "draft" | "retrieval";
