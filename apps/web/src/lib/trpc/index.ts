@@ -9,7 +9,7 @@ import { createTRPCReact } from "@trpc/react-query";
 import type { AppRouter } from "@nema-io/server/src/router";
 
 import { getEnv } from "@web/app/env";
-import { getAccessToken } from "@web/lib/supabase";
+import { getAccessToken, sessionReady } from "@web/lib/supabase";
 import { tolgee } from "@web/lib/tolgee/client";
 
 export const trpc = createTRPCReact<AppRouter>();
@@ -18,7 +18,8 @@ function getTrpcUrl() {
   return import.meta.env.DEV ? "/trpc" : `${getEnv().API_URL}/trpc`;
 }
 
-function getHeaders() {
+async function getHeaders() {
+  await sessionReady;
   const headers: Record<string, string> = {};
   const token = getAccessToken();
   if (token) {
@@ -42,7 +43,8 @@ export const trpcClient = trpc.createClient({
       condition: (op) => op.type === "subscription",
       true: httpSubscriptionLink({
         url: getTrpcUrl(),
-        connectionParams: () => {
+        connectionParams: async () => {
+          await sessionReady;
           const token = getAccessToken();
           const lang = tolgee.getLanguage();
           return { ...(token && { token }), ...(lang && { lang }) };
