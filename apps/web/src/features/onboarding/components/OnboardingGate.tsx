@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-import { useOnboardingCheck } from "../hooks/useOnboardingCheck";
+import { useProfileQuery } from "@web/features/profile/hooks/useProfileQuery";
+
 import { OnboardingModal } from "./OnboardingModal";
 
 interface OnboardingGateProps {
@@ -8,13 +9,13 @@ interface OnboardingGateProps {
 }
 
 export function OnboardingGate({ children }: OnboardingGateProps) {
-  const { needsOnboarding, isLoading } = useOnboardingCheck();
+  const { data: profile, isLoading } = useProfileQuery();
 
   if (isLoading) {
     return null;
   }
 
-  if (needsOnboarding) {
+  if (!profile) {
     return <OnboardingModal />;
   }
 
