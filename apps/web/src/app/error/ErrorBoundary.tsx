@@ -2,6 +2,13 @@ import type { ErrorInfo, ReactNode } from "react";
 import { Component } from "react";
 import * as Sentry from "@sentry/react";
 
+type BoundaryName =
+  | "root"
+  | "content-panel"
+  | "draft-tab"
+  | "retrieval-tab"
+  | "session-list";
+
 export interface ErrorFallbackProps {
   reset: () => void;
   hasRetried: boolean;
@@ -11,7 +18,7 @@ interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   fallbackRender?: (props: ErrorFallbackProps) => ReactNode;
-  boundaryName?: string;
+  boundaryName?: BoundaryName;
 }
 
 interface State {
