@@ -2,8 +2,7 @@ import * as Sentry from "@sentry/react";
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 
-import { getErrorMessage } from "@web/lib/getErrorMessage";
-import { toast } from "@web/utils/toast";
+import { toastError } from "@web/utils/toast";
 
 const DEFAULT_STALE_TIME_MS = 30_000;
 
@@ -32,7 +31,7 @@ export const queryClient = new QueryClient({
       if (mutation.options.onError) {
         return;
       }
-      toast.error(getErrorMessage(error));
+      toastError(error);
     },
   }),
 });
