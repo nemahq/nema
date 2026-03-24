@@ -73,9 +73,7 @@ function MessageListContent() {
                 />
               );
             })}
-            {isLastTurn && streamingPhase === "text" && (
-              <StreamErrorMessage />
-            )}
+            {isLastTurn && streamingPhase === "text" && <StreamErrorMessage />}
           </div>
         );
       })}
