@@ -7,3 +7,9 @@ export function useProfileQuery() {
     staleTime: PROFILE_STALE_TIME_MS,
   });
 }
+
+export function useProfileSuspenseQuery() {
+  return trpc.profile.get.useSuspenseQuery(undefined, {
+    staleTime: PROFILE_STALE_TIME_MS,
+  });
+}

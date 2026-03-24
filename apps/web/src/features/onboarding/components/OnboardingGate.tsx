@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { useProfileQuery } from "@web/features/profile/hooks/useProfileQuery";
+import { useProfileQuery } from "@web/features/profile/hooks/useProfile";
 
 import { OnboardingModal } from "./OnboardingModal";
 

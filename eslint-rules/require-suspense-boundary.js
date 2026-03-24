@@ -4,8 +4,10 @@ import { dirname, resolve } from "node:path";
 const SUSPENSE_QUERY_RE = /useSuspense(?:Infinite)?Query/;
 const EXTENSIONS = [".ts", ".tsx", "/index.ts", "/index.tsx"];
 
-/** @type {Map<string, boolean>} base import path → contains suspense query */
-const cache = new Map();
+/** @type {Map<string, string | null>} base import path → file content */
+const fileCache = new Map();
+/** @type {Map<string, boolean>} "basePath::hookName" → uses suspense */
+const hookCache = new Map();
 
 /**
  * Resolve @web/ alias or relative import to a base file path (without extension).
@@ -25,34 +27,79 @@ function resolveBasePath(source, currentFile) {
   return null;
 }
 
-/**
- * Check if the file at the resolved import path contains useSuspenseQuery.
- * Results are cached per ESLint run.
- */
-function importedHookUsesSuspense(source, currentFile) {
-  const basePath = resolveBasePath(source, currentFile);
-  if (!basePath) {
-    return false;
+function readSourceFile(basePath) {
+  if (fileCache.has(basePath)) {
+    return fileCache.get(basePath);
   }
-  if (cache.has(basePath)) {
-    return cache.get(basePath);
-  }
-
   for (const ext of EXTENSIONS) {
     try {
       const content = readFileSync(basePath + ext, "utf-8");
-      const result = SUSPENSE_QUERY_RE.test(content);
-      cache.set(basePath, result);
-      return result;
+      fileCache.set(basePath, content);
+      return content;
     } catch (err) {
       if (err?.code !== "ENOENT") {
         throw err;
       }
     }
   }
+  fileCache.set(basePath, null);
+  return null;
+}
 
-  cache.set(basePath, false);
+/**
+ * Extract the body of `export function <hookName>` and check if it contains
+ * useSuspenseQuery. Uses a simple brace-counting approach.
+ */
+function hookBodyUsesSuspense(content, hookName) {
+  const pattern = new RegExp(
+    `export\\s+function\\s+${hookName}\\s*(?:<[^>]*>)?\\s*\\(`,
+  );
+  const match = pattern.exec(content);
+  if (!match) {
+    return false;
+  }
+
+  let depth = 0;
+  let started = false;
+  const start = match.index + match[0].length;
+  for (let i = start; i < content.length; i++) {
+    if (content[i] === "{") {
+      depth++;
+      started = true;
+    } else if (content[i] === "}") {
+      depth--;
+      if (started && depth === 0) {
+        const body = content.slice(start, i);
+        return SUSPENSE_QUERY_RE.test(body);
+      }
+    }
+  }
   return false;
+}
+
+/**
+ * Check if a specific imported hook uses suspense queries.
+ */
+function importedHookUsesSuspense(source, currentFile, hookName) {
+  const basePath = resolveBasePath(source, currentFile);
+  if (!basePath) {
+    return false;
+  }
+
+  const cacheKey = `${basePath}::${hookName}`;
+  if (hookCache.has(cacheKey)) {
+    return hookCache.get(cacheKey);
+  }
+
+  const content = readSourceFile(basePath);
+  if (!content) {
+    hookCache.set(cacheKey, false);
+    return false;
+  }
+
+  const result = hookBodyUsesSuspense(content, hookName);
+  hookCache.set(cacheKey, result);
+  return result;
 }
 
 /** @type {import("eslint").Rule.RuleModule} */
@@ -107,7 +154,7 @@ export default {
           if (!name || !/^use[A-Z]/.test(name)) {
             continue;
           }
-          if (importedHookUsesSuspense(node.source.value, currentFile)) {
+          if (importedHookUsesSuspense(node.source.value, currentFile, name)) {
             indirectHooks.push({ node: spec, name });
           }
         }

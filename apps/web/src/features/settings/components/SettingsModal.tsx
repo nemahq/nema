@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { Dialog, DialogContent } from "@nema-io/weave";
 
-import { useProfileSuspenseQuery } from "@web/features/profile/hooks/useProfileSuspenseQuery";
+import { useProfileSuspenseQuery } from "@web/features/profile/hooks/useProfile";
 
 import { SettingsForm } from "./SettingsForm";
 
