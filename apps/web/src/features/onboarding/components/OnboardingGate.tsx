@@ -11,13 +11,12 @@ interface OnboardingGateProps {
 export function OnboardingGate({ children }: OnboardingGateProps) {
   const { data: profile, isLoading } = useProfileQuery();
 
-  if (isLoading) {
-    return null;
-  }
+  const needsOnboarding = !isLoading && !profile;
 
-  if (!profile) {
-    return <OnboardingModal />;
-  }
-
-  return children;
+  return (
+    <>
+      {children}
+      {needsOnboarding && <OnboardingModal />}
+    </>
+  );
 }
