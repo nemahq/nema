@@ -25,21 +25,22 @@ export function HomePage() {
     createSession.mutate(
       { sessionId },
       {
+        onSuccess: () => {
+          navigate({
+            to: "/session/$sessionId",
+            params: { sessionId },
+            state: (prev) => ({
+              ...prev,
+              [HOME_TO_SESSION_INITIAL_MESSAGE_KEY]: content,
+              [HOME_TO_SESSION_INITIAL_MODE_KEY]: mode,
+            }),
+          });
+        },
         onError: () => {
           navigate({ to: "/", replace: true });
         },
       },
     );
-
-    navigate({
-      to: "/session/$sessionId",
-      params: { sessionId },
-      state: (prev) => ({
-        ...prev,
-        [HOME_TO_SESSION_INITIAL_MESSAGE_KEY]: content,
-        [HOME_TO_SESSION_INITIAL_MODE_KEY]: mode,
-      }),
-    });
 
     setInputValue("");
   }
