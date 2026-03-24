@@ -2,8 +2,6 @@ import { Suspense } from "react";
 
 import { Button, Kbd } from "@nema-io/weave";
 
-import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
-import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
@@ -91,13 +89,8 @@ function DraftTabContentInner() {
 
 export function DraftTabContent() {
   return (
-    <ErrorBoundary
-      boundaryName="draft-tab"
-      fallbackRender={(props) => <SectionErrorFallback {...props} />}
-    >
-      <Suspense>
-        <DraftTabContentInner />
-      </Suspense>
-    </ErrorBoundary>
+    <Suspense>
+      <DraftTabContentInner />
+    </Suspense>
   );
 }

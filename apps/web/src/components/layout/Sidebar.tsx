@@ -4,6 +4,8 @@ import { Link } from "@tanstack/react-router";
 import { Button, cn } from "@nema-io/weave";
 import { PanelLeft } from "@nema-io/weave/icons";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import NemaLogo from "@web/assets/nema-logo.svg";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
@@ -66,9 +68,14 @@ export function Sidebar({ topSlot, children, footer }: SidebarProps) {
         {topSlot?.(collapsed)}
       </div>
 
-      <div className="flex-1">
-        {typeof children === "function" ? children(collapsed) : children}
-      </div>
+      <ErrorBoundary
+        boundaryName="sidebar"
+        fallbackRender={(props) => <SectionErrorFallback {...props} />}
+      >
+        <div className="flex-1">
+          {typeof children === "function" ? children(collapsed) : children}
+        </div>
+      </ErrorBoundary>
 
       {footer && (
         <div

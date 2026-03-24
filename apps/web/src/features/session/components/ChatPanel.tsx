@@ -5,6 +5,8 @@ import {
   HOME_TO_SESSION_INITIAL_MESSAGE_KEY,
   HOME_TO_SESSION_INITIAL_MODE_KEY,
 } from "@web/app/constants/routeState";
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { getRouteState } from "@web/app/utils/routeState";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useScrollAnchor } from "@web/features/session/hooks/useScrollAnchor";
@@ -96,9 +98,14 @@ export function ChatPanel() {
 
   return (
     <SidePanel>
-      <Suspense key={sessionId} fallback={<MessageListSkeleton />}>
-        <ChatPanelContent />
-      </Suspense>
+      <ErrorBoundary
+        boundaryName="chat-panel"
+        fallbackRender={(props) => <SectionErrorFallback {...props} />}
+      >
+        <Suspense key={sessionId} fallback={<MessageListSkeleton />}>
+          <ChatPanelContent />
+        </Suspense>
+      </ErrorBoundary>
     </SidePanel>
   );
 }

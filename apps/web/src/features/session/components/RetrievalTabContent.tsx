@@ -1,7 +1,5 @@
 import { Suspense } from "react";
 
-import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
-import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useSessionRetrieval } from "@web/features/session/hooks/useSessionRetrieval";
@@ -45,13 +43,8 @@ function RetrievalTabContentInner() {
 
 export function RetrievalTabContent() {
   return (
-    <ErrorBoundary
-      boundaryName="retrieval-tab"
-      fallbackRender={(props) => <SectionErrorFallback {...props} />}
-    >
-      <Suspense>
-        <RetrievalTabContentInner />
-      </Suspense>
-    </ErrorBoundary>
+    <Suspense>
+      <RetrievalTabContentInner />
+    </Suspense>
   );
 }
