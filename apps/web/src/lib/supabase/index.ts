@@ -6,11 +6,9 @@ import { getEnv } from "@web/app/env";
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = getEnv();
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let cachedAccessToken: string | null = null;
-
-supabase.auth.getSession().then(({ data }) => {
-  cachedAccessToken = data.session?.access_token ?? null;
-});
+const { data: initialSession } = await supabase.auth.getSession();
+let cachedAccessToken: string | null =
+  initialSession.session?.access_token ?? null;
 
 supabase.auth.onAuthStateChange((event, session) => {
   const hadToken = cachedAccessToken !== null;
