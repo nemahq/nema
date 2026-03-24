@@ -4,15 +4,21 @@ import { RefreshCw, RotateCcw } from "@nema-io/weave/icons";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface PageErrorFallbackProps {
+  error?: Error;
   onRetry?: () => void;
 }
 
-export function PageErrorFallback({ onRetry }: PageErrorFallbackProps) {
+export function PageErrorFallback({ error, onRetry }: PageErrorFallbackProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
+    <div className="flex h-full flex-1 flex-col items-center justify-center gap-3 p-8">
       <p className="text-sm text-fg-tertiary">{t("error.page_error")}</p>
+      {error?.message && (
+        <p className="max-w-md text-center text-xs text-fg-tertiary/60">
+          {error.message}
+        </p>
+      )}
       {onRetry ? (
         <Button variant="ghost" size="sm" onClick={onRetry}>
           <RotateCcw className="size-3.5" />

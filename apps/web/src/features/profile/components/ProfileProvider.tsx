@@ -42,7 +42,7 @@ export function ProfileProvider({ children }: ProfileProviderProps): ReactNode {
   const { session, loading } = useAuth();
 
   if (loading || !session) {
-    return children;
+    return null;
   }
 
   return (
