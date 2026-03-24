@@ -1,10 +1,6 @@
 import { useId, useState } from "react";
 
-import {
-  CONTENT_LANGUAGES,
-  type ContentLanguage,
-  ContentLanguageSchema,
-} from "@nema-io/shared";
+import type { ContentLanguage } from "@nema-io/shared";
 import {
   Button,
   DialogFooter,
@@ -22,21 +18,16 @@ import { changeLocale, useTranslation } from "@web/lib/tolgee";
 import { tolgee } from "@web/lib/tolgee/client";
 import { isLocale, type Locale, LOCALES } from "@web/lib/tolgee/types";
 
+import { ContentLanguageSection } from "./ContentLanguageSection";
+
 interface SettingsFormProps {
-  currentContentLanguage: ContentLanguage;
   onOpenChange: (open: boolean) => void;
 }
 
-export function SettingsForm({
-  currentContentLanguage,
-  onOpenChange,
-}: SettingsFormProps) {
+export function SettingsForm({ onOpenChange }: SettingsFormProps) {
   const { t } = useTranslation();
   const appLangId = useId();
-  const contentLangId = useId();
-  const [contentLang, setContentLang] = useState<ContentLanguage>(
-    currentContentLanguage,
-  );
+  const [contentLang, setContentLang] = useState<ContentLanguage | null>(null);
   const [appLang, setAppLang] = useState<Locale>(() => {
     const lang = tolgee.getLanguage();
     return lang && isLocale(lang) ? lang : "ko";
@@ -45,6 +36,9 @@ export function SettingsForm({
   const updateMutation = useUpdateProfile();
 
   function handleSave() {
+    if (!contentLang) {
+      return;
+    }
     updateMutation.mutate(
       { contentLanguage: contentLang },
       {
@@ -94,37 +88,7 @@ export function SettingsForm({
           </Select>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor={contentLangId}
-            className="text-sm font-medium text-fg-primary"
-          >
-            {t("settings.content_language")}
-          </label>
-          <p className="text-xs text-fg-tertiary">
-            {t("settings.content_language_description")}
-          </p>
-          <Select
-            value={contentLang}
-            onValueChange={(v) => {
-              const parsed = ContentLanguageSchema.safeParse(v);
-              if (parsed.success) {
-                setContentLang(parsed.data);
-              }
-            }}
-          >
-            <SelectTrigger id={contentLangId} className="cursor-pointer">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CONTENT_LANGUAGES.map((lang) => (
-                <SelectItem key={lang} value={lang} className="cursor-pointer">
-                  {LANGUAGE_LABELS[lang]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <ContentLanguageSection onChange={setContentLang} />
       </div>
 
       <DialogFooter>
