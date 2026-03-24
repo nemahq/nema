@@ -6,8 +6,7 @@ import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTheme } from "@web/app/providers/ThemeProvider";
 import { useAuth } from "@web/hooks/useAuth";
 import { supabase } from "@web/lib/supabase";
-import { changeLocale } from "@web/lib/tolgee";
-import { tolgee } from "@web/lib/tolgee/client";
+import { changeLocale, useCurrentLocale } from "@web/lib/tolgee";
 import type { Locale } from "@web/lib/tolgee/types";
 import { trpc } from "@web/lib/trpc";
 import type { ThemePreference } from "@web/utils/theme-preference";
@@ -90,7 +89,7 @@ export function DevToolbar() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [queryDevtools, setQueryDevtools] = useState(false);
-  const currentLocale = tolgee.getLanguage();
+  const [currentLocale] = useCurrentLocale();
 
   return (
     <>

@@ -18,8 +18,7 @@ import {
   useProfileSuspenseQuery,
   useUpdateProfile,
 } from "@web/features/profile";
-import { changeLocale, useTranslation } from "@web/lib/tolgee";
-import { tolgee } from "@web/lib/tolgee/client";
+import { useCurrentLocale, useTranslation } from "@web/lib/tolgee";
 import { isLocale, type Locale, LOCALES } from "@web/lib/tolgee/types";
 
 import { ContentLanguageSection } from "./ContentLanguageSection";
@@ -35,10 +34,8 @@ export function SettingsForm({ onOpenChange }: SettingsFormProps) {
   const [contentLang, setContentLang] = useState<ContentLanguage>(
     profile?.contentLanguage ?? "ko",
   );
-  const [appLang, setAppLang] = useState<Locale>(() => {
-    const lang = tolgee.getLanguage();
-    return lang && isLocale(lang) ? lang : "ko";
-  });
+  const [currentLocale, setLocale] = useCurrentLocale();
+  const [appLang, setAppLang] = useState<Locale>(currentLocale);
 
   const updateMutation = useUpdateProfile();
 
@@ -47,7 +44,7 @@ export function SettingsForm({ onOpenChange }: SettingsFormProps) {
       { contentLanguage: contentLang },
       {
         onSuccess: () => {
-          changeLocale(appLang);
+          setLocale(appLang);
           onOpenChange(false);
         },
       },
