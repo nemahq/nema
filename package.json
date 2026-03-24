@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:web": "VITE_DEV_API_TARGET=https://api-staging.getnema.app pnpm --filter web dev",
-    "dev:web:prod": "VITE_DEV_API_TARGET=https://api.getnema.app pnpm --filter web dev",
+    "dev:web:prod": "VITE_DEV_API_TARGET=https://api.getnema.app pnpm --filter web dev:prod",
     "dev:server": "pnpm --filter server dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
