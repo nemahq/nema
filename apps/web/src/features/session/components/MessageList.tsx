@@ -33,10 +33,7 @@ function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
 function MessageListContent() {
   const messages = useSessionMessages();
   const turns = groupIntoTurns(messages);
-  const { streamError, streamingPhase, retryStream, dismissStreamError } =
-    useChatStream();
-
-  const showChatError = streamError && streamingPhase === "text";
+  const { streamingPhase } = useChatStream();
 
   return (
     <>
@@ -76,12 +73,8 @@ function MessageListContent() {
                 />
               );
             })}
-            {isLastTurn && showChatError && (
-              <StreamErrorMessage
-                message={streamError}
-                onRetry={retryStream}
-                onDismiss={dismissStreamError}
-              />
+            {isLastTurn && streamingPhase === "text" && (
+              <StreamErrorMessage />
             )}
           </div>
         );

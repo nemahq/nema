@@ -12,13 +12,8 @@ import { WritingCursor } from "./WritingCursor";
 function RetrievalTabContentInner() {
   const sessionId = useSessionId();
   const retrieval = useSessionRetrieval({ sessionId });
-  const {
-    streamingPhase,
-    streamingRetrievalText,
-    streamError,
-    retryStream,
-    dismissStreamError,
-  } = useChatStream();
+  const { streamingPhase, streamingRetrievalText, streamError } =
+    useChatStream();
 
   const isStreaming = streamingPhase === "retrieval";
   const smoothText = useBufferedStream(
@@ -30,13 +25,7 @@ function RetrievalTabContentInner() {
     <div>
       {body && <MarkdownRenderer content={body} />}
       {!body && isStreaming && !streamError && <WritingCursor />}
-      {streamError && streamingPhase === "retrieval" && (
-        <StreamErrorMessage
-          message={streamError}
-          onRetry={retryStream}
-          onDismiss={dismissStreamError}
-        />
-      )}
+      {streamingPhase === "retrieval" && <StreamErrorMessage />}
     </div>
   );
 }

@@ -22,13 +22,7 @@ function DraftTabContentInner() {
   const draft = useSessionDraft({ sessionId });
   const saveDraft = useSaveDraft({ sessionId });
   const cancelDraft = useCancelDraft({ sessionId });
-  const {
-    streamingPhase,
-    streamingDraftText,
-    streamError,
-    retryStream,
-    dismissStreamError,
-  } = useChatStream();
+  const { streamingPhase, streamingDraftText, streamError } = useChatStream();
 
   const isStreaming = streamingPhase === "draft";
   const smoothText = useBufferedStream(isStreaming ? streamingDraftText : "");
@@ -75,13 +69,7 @@ function DraftTabContentInner() {
       <div className="pt-10">
         {body && <MarkdownRenderer content={body} />}
         {!body && isStreaming && !streamError && <WritingCursor />}
-        {streamError && streamingPhase === "draft" && (
-          <StreamErrorMessage
-            message={streamError}
-            onRetry={retryStream}
-            onDismiss={dismissStreamError}
-          />
-        )}
+        {streamingPhase === "draft" && <StreamErrorMessage />}
       </div>
     </div>
   );
