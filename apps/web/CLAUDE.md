@@ -6,7 +6,7 @@ React 19 + Vite 6 frontend. TanStack Router + TanStack Query.
 
 - Call external APIs directly. All API calls go through tRPC client. Exception: Supabase Auth client SDK (sign-in, sign-up, session management), Tolgee CDN (translation fetch), PostHog JS SDK (analytics capture).
 - Cross-feature imports except through public API (`index.ts`). Enforced by `eslint-plugin-boundaries`.
-- Add providers outside `AppProviders` (e.g., in layouts or pages). All app-wide providers go in `app/providers/`.
+- Add route/auth-dependent providers to `AppProviders`. Only route- and auth-agnostic infrastructure providers belong there. Place scoped providers in the relevant layout.
 - Use `console.*` for logging. Errors go to Sentry, analytics go to PostHog. Console allowed only when Sentry cannot capture the context.
 
 ## Directory Structure
