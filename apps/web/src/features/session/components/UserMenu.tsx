@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import {
@@ -10,7 +11,7 @@ import {
 } from "@nema-io/weave";
 import { LogOut, Settings } from "@nema-io/weave/icons";
 
-import { useProfile } from "@web/features/profile";
+import { SettingsModal } from "@web/features/settings";
 import { useAuth } from "@web/hooks/useAuth";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { supabase } from "@web/lib/supabase";
@@ -22,9 +23,10 @@ interface UserMenuProps {
 
 export function UserMenu({ collapsed }: UserMenuProps) {
   const { user } = useAuth();
-  const { openSettings } = useProfile();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   if (!user) {
     return null;
   }
@@ -75,7 +77,7 @@ export function UserMenu({ collapsed }: UserMenuProps) {
         className="w-60 border-0 bg-surface-card dark:bg-surface-raised-hover !animate-none"
       >
         <DropdownMenuItem
-          onClick={openSettings}
+          onClick={() => setSettingsOpen(true)}
           className="cursor-pointer data-[highlighted]:bg-surface-raised-hover dark:data-[highlighted]:bg-fg-primary/10"
         >
           <Settings />
@@ -90,6 +92,7 @@ export function UserMenu({ collapsed }: UserMenuProps) {
           {t("settings.sign_out")}
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
     </DropdownMenu>
   );
 }

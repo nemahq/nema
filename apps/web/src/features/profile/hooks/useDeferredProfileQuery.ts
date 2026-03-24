@@ -1,0 +1,9 @@
+import { trpc } from "@web/lib/trpc";
+
+const PROFILE_STALE_TIME_MS = 600_000;
+
+export function useDeferredProfileQuery() {
+  return trpc.profile.get.useQuery(undefined, {
+    staleTime: PROFILE_STALE_TIME_MS,
+  });
+}

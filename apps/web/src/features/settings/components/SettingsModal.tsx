@@ -1,27 +1,41 @@
-import type { ContentLanguage } from "@nema-io/shared";
+import { Suspense } from "react";
+
 import { Dialog, DialogContent } from "@nema-io/weave";
+
+import { useProfileQuery } from "@web/features/profile/hooks/useProfileQuery";
 
 import { SettingsForm } from "./SettingsForm";
 
 interface SettingsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentContentLanguage: ContentLanguage;
 }
 
-export function SettingsModal({
-  open,
+function SettingsModalContent({
   onOpenChange,
-  currentContentLanguage,
-}: SettingsModalProps) {
+}: Pick<SettingsModalProps, "onOpenChange">) {
+  const [profile] = useProfileQuery();
+
+  if (!profile) {
+    return null;
+  }
+
+  return (
+    <SettingsForm
+      currentContentLanguage={profile.contentLanguage}
+      onOpenChange={onOpenChange}
+    />
+  );
+}
+
+export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         {open && (
-          <SettingsForm
-            currentContentLanguage={currentContentLanguage}
-            onOpenChange={onOpenChange}
-          />
+          <Suspense>
+            <SettingsModalContent onOpenChange={onOpenChange} />
+          </Suspense>
         )}
       </DialogContent>
     </Dialog>
