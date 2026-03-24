@@ -11,5 +11,5 @@ export function RouteErrorFallback({ reset }: ErrorComponentProps) {
     router.invalidate();
   }
 
-  return <PageErrorFallback variant="error" onRetry={handleRetry} />;
+  return <PageErrorFallback onRetry={handleRetry} />;
 }

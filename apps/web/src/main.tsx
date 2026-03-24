@@ -40,10 +40,7 @@ createRoot(root, {
     <ErrorBoundary
       boundaryName="root"
       fallbackRender={({ reset, hasRetried }) => (
-        <PageErrorFallback
-          variant="error"
-          onRetry={hasRetried ? undefined : reset}
-        />
+        <PageErrorFallback onRetry={hasRetried ? undefined : reset} />
       )}
     >
       <AppProviders>
