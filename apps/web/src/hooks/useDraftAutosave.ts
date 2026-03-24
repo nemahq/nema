@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-import { Sentry } from "@web/lib/sentry";
+import * as Sentry from "@sentry/react";
 
 interface UseDraftAutosaveOptions {
   /** ms 단위 */

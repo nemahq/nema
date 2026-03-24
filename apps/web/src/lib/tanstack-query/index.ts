@@ -1,9 +1,8 @@
+import * as Sentry from "@sentry/react";
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 
-import { Sentry } from "@web/lib/sentry";
-import { tolgee } from "@web/lib/tolgee/client";
-import { toast } from "@web/utils/toast";
+import { toastError } from "@web/utils/toast";
 
 const DEFAULT_STALE_TIME_MS = 30_000;
 
@@ -32,11 +31,7 @@ export const queryClient = new QueryClient({
       if (mutation.options.onError) {
         return;
       }
-      toast.error(
-        error instanceof TRPCClientError
-          ? error.message
-          : tolgee.t("common.unknown_error"),
-      );
+      toastError(error);
     },
   }),
 });

@@ -3,7 +3,6 @@ import { useMatch, useNavigate } from "@tanstack/react-router";
 
 import { Skeleton } from "@nema-io/weave";
 
-import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useSessionList } from "@web/features/session/hooks/useSessionList";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
@@ -101,10 +100,8 @@ function SessionListContent() {
 
 export function SessionList() {
   return (
-    <ErrorBoundary fallback={null}>
-      <Suspense fallback={<SessionListSkeleton />}>
-        <SessionListContent />
-      </Suspense>
-    </ErrorBoundary>
+    <Suspense fallback={<SessionListSkeleton />}>
+      <SessionListContent />
+    </Suspense>
   );
 }

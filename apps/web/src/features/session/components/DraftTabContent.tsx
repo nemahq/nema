@@ -2,7 +2,6 @@ import { Suspense } from "react";
 
 import { Button, Kbd } from "@nema-io/weave";
 
-import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
@@ -14,6 +13,7 @@ import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { StreamErrorMessage } from "./StreamErrorMessage";
 import { WritingCursor } from "./WritingCursor";
 
 function DraftTabContentInner() {
@@ -22,7 +22,7 @@ function DraftTabContentInner() {
   const draft = useSessionDraft({ sessionId });
   const saveDraft = useSaveDraft({ sessionId });
   const cancelDraft = useCancelDraft({ sessionId });
-  const { streamingPhase, streamingDraftText } = useChatStream();
+  const { streamingPhase, streamingDraftText, streamError } = useChatStream();
 
   const isStreaming = streamingPhase === "draft";
   const smoothText = useBufferedStream(isStreaming ? streamingDraftText : "");
@@ -68,7 +68,8 @@ function DraftTabContentInner() {
       )}
       <div className="pt-10">
         {body && <MarkdownRenderer content={body} />}
-        {!body && isStreaming && <WritingCursor />}
+        {!body && isStreaming && !streamError && <WritingCursor />}
+        {streamingPhase === "draft" && <StreamErrorMessage />}
       </div>
     </div>
   );
@@ -76,11 +77,8 @@ function DraftTabContentInner() {
 
 export function DraftTabContent() {
   return (
-    // TODO: ErrorBoundary에 componentDidCatch (Sentry 보고) + 의미 있는 fallback UI 추가
-    <ErrorBoundary fallback={null}>
-      <Suspense>
-        <DraftTabContentInner />
-      </Suspense>
-    </ErrorBoundary>
+    <Suspense>
+      <DraftTabContentInner />
+    </Suspense>
   );
 }

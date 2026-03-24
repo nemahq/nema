@@ -1,5 +1,7 @@
 import { toast as weaveToast } from "@nema-io/weave";
 
+import { getErrorMessage } from "@web/lib/getErrorMessage";
+
 export const toast = {
   ...weaveToast,
   error(message: string) {
@@ -9,3 +11,7 @@ export const toast = {
     });
   },
 };
+
+export function toastError(error: unknown): void {
+  toast.error(getErrorMessage(error));
+}

@@ -21,6 +21,7 @@ import {
 import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
 import { addOptimisticMessage } from "@web/features/session/hooks/useMessageList";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
+import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { trpc } from "@web/lib/trpc";
 
@@ -47,6 +48,9 @@ interface ChatStreamContextValue {
   streamingMessage: DisplayMessage | undefined;
   streamingDraftText: string;
   streamingRetrievalText: string;
+  streamError: string | null;
+  retryStream: () => void;
+  dismissStreamError: () => void;
 }
 
 const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
@@ -65,6 +69,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
 
   const isSettlingRef = useRef(false);
   const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
+  const lastStreamInputRef = useRef<ChatInput | null>(null);
   const [streamingPhase, setStreamingPhase] = useState<StreamingPhase>("idle");
   const streamingPhaseRef = useRef<StreamingPhase>("idle");
   const [streamingText, setStreamingText] = useState("");
@@ -75,6 +80,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   const fullDraftTextRef = useRef("");
   const fullRetrievalTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
+  const [streamError, setStreamError] = useState<string | null>(null);
 
   function resetStreamState() {
     setStreamInput(null);
@@ -87,6 +93,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     fullTextRef.current = "";
     fullDraftTextRef.current = "";
     fullRetrievalTextRef.current = "";
+    setStreamError(null);
   }
 
   function settleStream() {
@@ -144,9 +151,42 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     }
   }
 
-  // TODO: 인라인 에러 메시지 + 재시도 버튼 UI 추가
   function handleStreamError(error: unknown) {
     Sentry.captureException(error);
+    setStreamError(getErrorMessage(error));
+    setStreamInput(null);
+  }
+
+  function retryStream() {
+    const lastInput = lastStreamInputRef.current;
+    if (!lastInput) {
+      return;
+    }
+
+    const messageId = crypto.randomUUID();
+    const newInput: ChatInput = { ...lastInput, messageId };
+
+    addOptimisticMessage(utils, sessionId, {
+      id: messageId,
+      role: "user",
+      type: "text",
+      content: lastInput.content,
+      createdAt: new Date().toISOString(),
+    });
+
+    setStreamError(null);
+    fullTextRef.current = "";
+    fullDraftTextRef.current = "";
+    fullRetrievalTextRef.current = "";
+    setStreamingText("");
+    setStreamingDraftText("");
+    setStreamingRetrievalText("");
+    lastStreamInputRef.current = newInput;
+    setStreamInput(newInput);
+  }
+
+  function dismissStreamError() {
+    setStreamError(null);
     settleStream();
   }
 
@@ -187,7 +227,10 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     setStreamingText("");
     streamingPhaseRef.current = "text";
     setStreamingPhase("text");
-    setStreamInput({ sessionId, content, mode, messageId });
+
+    const input: ChatInput = { sessionId, content, mode, messageId };
+    lastStreamInputRef.current = input;
+    setStreamInput(input);
   }
 
   function cancel() {
@@ -196,6 +239,9 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   }
 
   const streamingMessage: DisplayMessage | undefined = (() => {
+    if (streamError) {
+      return undefined;
+    }
     switch (streamingPhase) {
       case "idle":
         return undefined;
@@ -241,6 +287,9 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     streamingMessage,
     streamingDraftText,
     streamingRetrievalText,
+    streamError,
+    retryStream,
+    dismissStreamError,
   };
 
   return <ChatStreamContext value={contextValue}>{children}</ChatStreamContext>;

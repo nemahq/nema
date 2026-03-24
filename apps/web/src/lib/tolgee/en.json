@@ -19,6 +19,14 @@
     "stop": "Stop",
     "unknown_error": "An unknown error occurred."
   },
+  "error": {
+    "go_home": "Go to home",
+    "network": "Can't connect to the internet. Please check your connection.",
+    "not_found": "Page not found.",
+    "page_error": "Something went wrong.",
+    "refresh": "Refresh",
+    "section_load_failed": "Couldn't load this section."
+  },
   "layout": {
     "collapse_sidebar": "Collapse sidebar",
     "expand_sidebar": "Expand sidebar",

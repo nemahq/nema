@@ -11,5 +11,3 @@ Sentry.init({
   release: typeof __COMMIT_SHA__ !== "undefined" ? __COMMIT_SHA__ : undefined,
   tracesSampleRate: 0,
 });
-
-export { Sentry };
