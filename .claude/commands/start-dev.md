@@ -1,3 +1,7 @@
+---
+argument-hint: [local|web|server|prod]
+---
+
 # Start Dev Server
 
 Start a development server in the background.
