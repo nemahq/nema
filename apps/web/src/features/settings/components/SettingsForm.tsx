@@ -13,7 +13,11 @@ import {
   SelectValue,
 } from "@nema-io/weave";
 
-import { LANGUAGE_LABELS, useUpdateProfile } from "@web/features/profile";
+import {
+  LANGUAGE_LABELS,
+  useProfileSuspenseQuery,
+  useUpdateProfile,
+} from "@web/features/profile";
 import { changeLocale, useTranslation } from "@web/lib/tolgee";
 import { tolgee } from "@web/lib/tolgee/client";
 import { isLocale, type Locale, LOCALES } from "@web/lib/tolgee/types";
@@ -26,8 +30,11 @@ interface SettingsFormProps {
 
 export function SettingsForm({ onOpenChange }: SettingsFormProps) {
   const { t } = useTranslation();
+  const [profile] = useProfileSuspenseQuery();
   const appLangId = useId();
-  const [contentLang, setContentLang] = useState<ContentLanguage | null>(null);
+  const [contentLang, setContentLang] = useState<ContentLanguage>(
+    profile?.contentLanguage ?? "ko",
+  );
   const [appLang, setAppLang] = useState<Locale>(() => {
     const lang = tolgee.getLanguage();
     return lang && isLocale(lang) ? lang : "ko";
@@ -36,9 +43,6 @@ export function SettingsForm({ onOpenChange }: SettingsFormProps) {
   const updateMutation = useUpdateProfile();
 
   function handleSave() {
-    if (!contentLang) {
-      return;
-    }
     updateMutation.mutate(
       { contentLanguage: contentLang },
       {
@@ -88,7 +92,7 @@ export function SettingsForm({ onOpenChange }: SettingsFormProps) {
           </Select>
         </div>
 
-        <ContentLanguageSection onChange={setContentLang} />
+        <ContentLanguageSection value={contentLang} onChange={setContentLang} />
       </div>
 
       <DialogFooter>

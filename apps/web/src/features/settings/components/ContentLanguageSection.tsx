@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useId, useState } from "react";
+import { useId } from "react";
 
 import {
   CONTENT_LANGUAGES,
@@ -14,32 +14,23 @@ import {
 } from "@nema-io/weave";
 
 import { LANGUAGE_LABELS } from "@web/features/profile";
-import { useProfileSuspenseQuery } from "@web/features/profile";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface ContentLanguageSectionProps {
+  value: ContentLanguage;
   onChange: (value: ContentLanguage) => void;
 }
 
-function ContentLanguageSectionInner({
+export function ContentLanguageSection({
+  value,
   onChange,
 }: ContentLanguageSectionProps) {
   const { t } = useTranslation();
   const contentLangId = useId();
-  const [profile] = useProfileSuspenseQuery();
-
-  const [contentLang, setContentLang] = useState<ContentLanguage>(
-    () => profile?.contentLanguage ?? "ko",
-  );
-
-  useEffect(function notifyInitialValue() {
-    onChange(contentLang);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- 마운트 시 1회 초기값 전달
 
   function handleChange(v: string) {
     const parsed = ContentLanguageSchema.safeParse(v);
     if (parsed.success) {
-      setContentLang(parsed.data);
       onChange(parsed.data);
     }
   }
@@ -55,7 +46,7 @@ function ContentLanguageSectionInner({
       <p className="text-xs text-fg-tertiary">
         {t("settings.content_language_description")}
       </p>
-      <Select value={contentLang} onValueChange={handleChange}>
+      <Select value={value} onValueChange={handleChange}>
         <SelectTrigger id={contentLangId} className="cursor-pointer">
           <SelectValue />
         </SelectTrigger>
@@ -68,13 +59,5 @@ function ContentLanguageSectionInner({
         </SelectContent>
       </Select>
     </div>
-  );
-}
-
-export function ContentLanguageSection(props: ContentLanguageSectionProps) {
-  return (
-    <Suspense>
-      <ContentLanguageSectionInner {...props} />
-    </Suspense>
   );
 }
