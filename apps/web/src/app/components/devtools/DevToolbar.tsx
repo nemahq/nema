@@ -1,13 +1,13 @@
 /* eslint-disable react-compiler/react-compiler -- dev-only 컴포넌트 */
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useTolgee } from "@tolgee/react";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTheme } from "@web/app/providers/ThemeProvider";
 import { useAuth } from "@web/hooks/useAuth";
 import { supabase } from "@web/lib/supabase";
-import { changeLocale, useCurrentLocale } from "@web/lib/tolgee";
-import type { Locale } from "@web/lib/tolgee/types";
+import { changeLocale, isLocale, type Locale } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
 import type { ThemePreference } from "@web/utils/theme-preference";
 
@@ -89,7 +89,9 @@ export function DevToolbar() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [queryDevtools, setQueryDevtools] = useState(false);
-  const [currentLocale] = useCurrentLocale();
+  const tolgeeInstance = useTolgee(["language"]);
+  const lang = tolgeeInstance.getLanguage();
+  const currentLocale: Locale = lang && isLocale(lang) ? lang : "ko";
 
   return (
     <>
