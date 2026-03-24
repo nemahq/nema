@@ -23,7 +23,7 @@ const tolgeeBuilder = Tolgee().use(FormatSimple());
 
 if (TOLGEE_CDN_URL) {
   tolgeeBuilder.use(
-    BackendFetch({ prefix: TOLGEE_CDN_URL, fallbackOnFail: true }),
+    BackendFetch({ prefix: `${TOLGEE_CDN_URL}/web`, fallbackOnFail: true }),
   );
 }
 
