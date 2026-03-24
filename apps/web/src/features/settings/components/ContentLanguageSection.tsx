@@ -14,7 +14,7 @@ import {
 } from "@nema-io/weave";
 
 import { LANGUAGE_LABELS } from "@web/features/profile";
-import { useProfileSuspenseQuery } from "@web/features/profile/hooks/useProfile";
+import { useProfileSuspenseQuery } from "@web/features/profile";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface ContentLanguageSectionProps {
