@@ -12,7 +12,7 @@ export function PageErrorFallback({ error, onRetry }: PageErrorFallbackProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="flex h-full flex-1 flex-col items-center justify-center gap-3 p-8">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 p-8">
       <p className="text-sm text-fg-tertiary">{t("error.page_error")}</p>
       {error?.message && (
         <p className="max-w-md text-center text-xs text-fg-tertiary/60">
