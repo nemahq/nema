@@ -72,6 +72,8 @@ Cache manipulation functions (`presetCache`, `addOptimistic`, `clearCache`) stay
 
 UI side-effects MUST NOT live inside the mutation hook.
 
+**Error toast**: The global `MutationCache.onError` shows a toast for all mutation errors by default. To suppress the global toast (e.g., when showing a custom error UI), set `meta: { skipGlobalToast: true }` on the mutation.
+
 ### Optimistic updates
 
 Three required steps in every optimistic mutation:
