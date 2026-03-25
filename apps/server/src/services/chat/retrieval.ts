@@ -193,6 +193,7 @@ export async function* handleRetrievalStream(args: {
   }
 
   yield { type: "retrieval_start" };
+  yield { type: "phase", name: "answering" };
 
   let fullText = "";
 

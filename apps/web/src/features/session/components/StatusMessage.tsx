@@ -11,6 +11,7 @@ import type { TranslationKey } from "@web/lib/tolgee/types";
 const IN_PROGRESS_STATUSES = new Set<StatusLogType | ClientStatusType>([
   "thinking",
   "searching",
+  "answering",
   "draft_creating",
 ]);
 
@@ -20,6 +21,7 @@ const STATUS_LABEL_MAP: Record<
 > = {
   thinking: "session.status_thinking",
   searching: "session.status_searching",
+  answering: "session.status_answering",
   draft_creating: "session.status_draft_creating",
   draft_created: "session.status_draft_created",
   draft_edited: "session.status_draft_edited",

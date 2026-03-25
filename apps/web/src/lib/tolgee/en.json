@@ -74,6 +74,7 @@
     "save_queue_panel_hint": "Saving continues even if you leave this page.",
     "save_queue_panel_partial_fail": "{completed} saved, {failed} failed",
     "save_queue_saving": "Saving...",
+    "status_answering": "Generating answer...",
     "status_draft_cancelled": "Draft cancelled",
     "status_draft_created": "Draft created",
     "status_draft_creating": "Creating draft...",
