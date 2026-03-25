@@ -78,10 +78,15 @@ const indexRoute = createRoute({
   component: HomePage,
 });
 
+function SessionPageShell() {
+  const { sessionId } = sessionRoute.useParams();
+  return <SessionPage key={sessionId} />;
+}
+
 const sessionRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/session/$sessionId",
-  component: SessionPage,
+  component: SessionPageShell,
 });
 
 const routeTree = rootRoute.addChildren([

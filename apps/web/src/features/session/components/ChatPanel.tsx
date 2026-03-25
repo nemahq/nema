@@ -10,7 +10,6 @@ import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { getRouteState } from "@web/app/utils/routeState";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useScrollAnchor } from "@web/features/session/hooks/useScrollAnchor";
-import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 
 import { ChatComposer } from "./ChatComposer";
@@ -70,7 +69,6 @@ function ChatPanelContent() {
 }
 
 export function ChatPanel() {
-  const sessionId = useSessionId();
   const navigate = useNavigate();
   const { initialMessage, initialMode } = useLocation({
     select: (loc) => ({
@@ -102,7 +100,7 @@ export function ChatPanel() {
         boundaryName="chat-panel"
         fallbackRender={(props) => <SectionErrorFallback {...props} />}
       >
-        <Suspense key={sessionId} fallback={<MessageListSkeleton />}>
+        <Suspense fallback={<MessageListSkeleton />}>
           <ChatPanelContent />
         </Suspense>
       </ErrorBoundary>
