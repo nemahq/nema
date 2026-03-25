@@ -1,3 +1,5 @@
+import { TRPCError } from "@trpc/server";
+
 import type {
   ChatInput,
   ChatStreamEvent,
@@ -17,6 +19,7 @@ import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import { trackEvent } from "@server/services/event-service";
+import { getProfile } from "@server/services/profile-service";
 
 import { handleDraftingStream } from "./drafting";
 import { handleRetrievalStream } from "./retrieval";
@@ -206,11 +209,20 @@ export async function* processChatStream(args: {
       break;
     }
     case "remember": {
+      const profile = await getProfile(supabase, { userId });
+      if (!profile) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Drafting requires a user profile",
+        });
+      }
+
       yield { type: "draft_start" };
       const draftBody = yield* handleDraftingStream({
         providers,
         userInput: input.content,
         currentDraft: draft,
+        contentLanguage: profile.contentLanguage,
         signal,
       });
       await setDraft({ supabase, sessionId: input.sessionId, body: draftBody });

@@ -33,6 +33,7 @@ src/
 - `GET /health` MUST always exist (Railway health check).
 - MUST use Zod schemas from `@nema-io/shared` for input validation.
 - Use `publicProcedure` for unauthenticated endpoints, `protectedProcedure` for auth-only, `providerProcedure` for AI provider-dependent endpoints.
+- MUST throw `TRPCError` or domain errors (handled by `errorHandlingMiddleware`) in services — plain `Error` bypasses the domain mapper, producing generic user messages and `UNKNOWN` Sentry tags.
 
 ## Conventions
 

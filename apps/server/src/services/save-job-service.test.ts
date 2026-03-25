@@ -111,8 +111,9 @@ describe("processSaveJobBackground", () => {
           error: null,
         }),
       );
+    const rpc = vi.fn().mockResolvedValue({ error: null });
 
-    const supabase = { from } as unknown as TypedSupabaseClient;
+    const supabase = { from, rpc } as unknown as TypedSupabaseClient;
     vi.mocked(handleSave).mockResolvedValue(["테스트 문서"]);
 
     await processSaveJobBackground({
@@ -231,8 +232,9 @@ describe("processSaveJobBackground", () => {
           error: null,
         }),
       );
+    const rpc = vi.fn().mockResolvedValue({ error: null });
 
-    const supabase = { from } as unknown as TypedSupabaseClient;
+    const supabase = { from, rpc } as unknown as TypedSupabaseClient;
     vi.mocked(handleSave).mockResolvedValue(["테스트 문서"]);
 
     await processSaveJobBackground({
