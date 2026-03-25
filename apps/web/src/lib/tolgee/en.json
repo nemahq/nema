@@ -78,7 +78,7 @@
     "status_draft_created": "Draft created",
     "status_draft_creating": "Creating draft...",
     "status_draft_edited": "Draft edited",
-    "status_draft_saved": "''{titles}'' saved",
+    "status_draft_saved": "{titles} saved",
     "status_retrieval_answered": "Search completed",
     "status_searching": "Searching...",
     "status_thinking": "Thinking...",

@@ -78,7 +78,7 @@
     "status_draft_created": "초안 작성 완료",
     "status_draft_creating": "초안 작성 중...",
     "status_draft_edited": "초안 수정 완료",
-    "status_draft_saved": "''{titles}'' 저장 완료",
+    "status_draft_saved": "{titles} 저장 완료",
     "status_retrieval_answered": "검색 완료",
     "status_searching": "검색 중...",
     "status_thinking": "생각하는 중...",
