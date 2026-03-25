@@ -28,15 +28,26 @@ export function addOptimisticMessage(
   );
 }
 
-export function useMessageListSuspenseQuery(
+type MessageListOutput = NonNullable<
+  ReturnType<ReturnType<typeof trpc.useUtils>["message"]["list"]["getData"]>
+>;
+
+type MessageListBaseOptions = Omit<
+  NonNullable<Parameters<typeof trpc.message.list.useSuspenseQuery>[1]>,
+  "queryKey" | "select"
+>;
+
+export function useMessageListSuspenseQuery<TData = MessageListOutput>(
   input: { sessionId: string },
-  options?: Omit<
-    Parameters<typeof trpc.message.list.useSuspenseQuery>[1],
-    "queryKey"
-  >,
+  options?: MessageListBaseOptions & {
+    select?: (data: MessageListOutput) => TData;
+  },
 ) {
   return trpc.message.list.useSuspenseQuery(input, {
     staleTime: MESSAGE_LIST_STALE_TIME_MS,
     ...options,
-  });
+  }) as unknown as [
+    TData,
+    ReturnType<typeof trpc.message.list.useSuspenseQuery>[1],
+  ];
 }

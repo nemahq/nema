@@ -19,8 +19,10 @@ import { WritingCursor } from "./WritingCursor";
 function DraftTabContentInner() {
   const { t } = useTranslation();
   const sessionId = useSessionId();
-  const [session] = useSessionSuspenseQuery({ sessionId });
-  const draft = session.draft;
+  const [draft] = useSessionSuspenseQuery(
+    { sessionId },
+    { select: (session) => session.draft },
+  );
   const saveDraft = useSaveDraft({ sessionId });
   const cancelDraft = useCancelDraft({ sessionId });
   const { streamingPhase, streamingDraftText, streamError } = useChatStream();

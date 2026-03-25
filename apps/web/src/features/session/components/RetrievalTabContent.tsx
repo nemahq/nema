@@ -11,8 +11,10 @@ import { WritingCursor } from "./WritingCursor";
 
 function RetrievalTabContentInner() {
   const sessionId = useSessionId();
-  const [session] = useSessionSuspenseQuery({ sessionId });
-  const retrieval = session.retrieval;
+  const [retrieval] = useSessionSuspenseQuery(
+    { sessionId },
+    { select: (session) => session.retrieval },
+  );
   const { streamingPhase, streamingRetrievalText, streamError } =
     useChatStream();
 

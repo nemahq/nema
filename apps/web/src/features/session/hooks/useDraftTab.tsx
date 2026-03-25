@@ -10,11 +10,14 @@ import { useSessionSuspenseQuery } from "./useSessionQuery";
 
 export function useDraftTab(): TabbedPanelTab | undefined {
   const sessionId = useSessionId();
-  const [session] = useSessionSuspenseQuery({ sessionId });
+  const [draft] = useSessionSuspenseQuery(
+    { sessionId },
+    { select: (session) => session.draft },
+  );
   const { streamingPhase } = useChatStream();
   const cancelDraft = useCancelDraft({ sessionId });
 
-  const hasDraft = !!(session.draft || streamingPhase === "draft");
+  const hasDraft = !!(draft || streamingPhase === "draft");
 
   if (!hasDraft) {
     return undefined;

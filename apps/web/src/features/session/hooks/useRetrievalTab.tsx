@@ -10,11 +10,14 @@ import { useSessionSuspenseQuery } from "./useSessionQuery";
 
 export function useRetrievalTab(): TabbedPanelTab | undefined {
   const sessionId = useSessionId();
-  const [session] = useSessionSuspenseQuery({ sessionId });
+  const [retrieval] = useSessionSuspenseQuery(
+    { sessionId },
+    { select: (session) => session.retrieval },
+  );
   const { streamingPhase } = useChatStream();
   const dismissRetrieval = useDismissRetrieval({ sessionId });
 
-  const hasRetrieval = !!(session.retrieval || streamingPhase === "retrieval");
+  const hasRetrieval = !!(retrieval || streamingPhase === "retrieval");
 
   if (!hasRetrieval) {
     return undefined;
