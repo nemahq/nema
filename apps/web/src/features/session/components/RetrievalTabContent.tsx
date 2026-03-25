@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
-import { useSessionRetrieval } from "@web/features/session/hooks/useSessionRetrieval";
+import { useSessionSuspenseQuery } from "@web/features/session/hooks/useSessionQuery";
 import { useBufferedStream } from "@web/hooks/useBufferedStream";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
@@ -11,7 +11,8 @@ import { WritingCursor } from "./WritingCursor";
 
 function RetrievalTabContentInner() {
   const sessionId = useSessionId();
-  const retrieval = useSessionRetrieval({ sessionId });
+  const [session] = useSessionSuspenseQuery({ sessionId });
+  const retrieval = session.retrieval;
   const { streamingPhase, streamingRetrievalText, streamError } =
     useChatStream();
 

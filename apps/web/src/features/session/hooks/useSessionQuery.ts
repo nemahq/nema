@@ -18,10 +18,15 @@ export function presetSessionCache(
   );
 }
 
-export function useSessionDraft({ sessionId }: { sessionId: string }) {
-  const [session] = trpc.session.get.useSuspenseQuery(
-    { sessionId },
-    { staleTime: SESSION_STALE_TIME_MS },
-  );
-  return session.draft;
+export function useSessionSuspenseQuery(
+  input: { sessionId: string },
+  options?: Omit<
+    Parameters<typeof trpc.session.get.useSuspenseQuery>[1],
+    "queryKey"
+  >,
+) {
+  return trpc.session.get.useSuspenseQuery(input, {
+    staleTime: SESSION_STALE_TIME_MS,
+    ...options,
+  });
 }

@@ -4,7 +4,8 @@ export function useDismissRetrieval({ sessionId }: { sessionId: string }) {
   const utils = trpc.useUtils();
 
   return trpc.message.dismissRetrieval.useMutation({
-    onMutate() {
+    async onMutate() {
+      await utils.session.get.cancel({ sessionId });
       const prev = utils.session.get.getData({ sessionId });
       utils.session.get.setData({ sessionId }, (old) =>
         old ? { ...old, retrieval: null } : undefined,
@@ -15,6 +16,9 @@ export function useDismissRetrieval({ sessionId }: { sessionId: string }) {
       if (context?.prev) {
         utils.session.get.setData({ sessionId }, context.prev);
       }
+    },
+    onSettled() {
+      utils.session.get.invalidate({ sessionId });
     },
   });
 }

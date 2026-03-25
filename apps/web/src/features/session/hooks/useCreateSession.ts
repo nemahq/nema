@@ -1,9 +1,9 @@
 import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { trpc } from "@web/lib/trpc";
 
-import { clearMessageCache, presetMessageCache } from "./useMessageList";
-import { presetSessionCache } from "./useSessionDraft";
+import { clearMessageCache, presetMessageCache } from "./useMessageListQuery";
 import { prependSessionCache } from "./useSessionList";
+import { presetSessionCache } from "./useSessionQuery";
 
 export function useCreateSession() {
   const utils = trpc.useUtils();

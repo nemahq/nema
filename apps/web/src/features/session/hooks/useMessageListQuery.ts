@@ -28,10 +28,15 @@ export function addOptimisticMessage(
   );
 }
 
-export function useMessageList({ sessionId }: { sessionId: string }) {
-  const [messages] = trpc.message.list.useSuspenseQuery(
-    { sessionId },
-    { staleTime: MESSAGE_LIST_STALE_TIME_MS },
-  );
-  return messages;
+export function useMessageListSuspenseQuery(
+  input: { sessionId: string },
+  options?: Omit<
+    Parameters<typeof trpc.message.list.useSuspenseQuery>[1],
+    "queryKey"
+  >,
+) {
+  return trpc.message.list.useSuspenseQuery(input, {
+    staleTime: MESSAGE_LIST_STALE_TIME_MS,
+    ...options,
+  });
 }
