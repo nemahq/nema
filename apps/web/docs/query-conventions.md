@@ -40,28 +40,10 @@ return session.draft;
 
 ### Options override
 
-Accept an optional second argument typed from tRPC's own inference, with `queryKey` and `select` separated. Make the hook generic so `select` narrows the return type.
+Accept an optional second argument typed from tRPC's own inference, with `queryKey` omitted. Spread after defaults so consumers can override.
 
 ```ts
-type Output = NonNullable<
-  ReturnType<ReturnType<typeof trpc.useUtils>["xxx"]["yyy"]["getData"]>
->;
-
-type BaseOptions = Omit<
-  NonNullable<Parameters<typeof trpc.xxx.yyy.useSuspenseQuery>[1]>,
-  "queryKey" | "select"
->;
-
-export function useXxxSuspenseQuery<TData = Output>(
-  input: { ... },
-  options?: BaseOptions & { select?: (data: Output) => TData },
-) {
-  return trpc.xxx.yyy.useSuspenseQuery(input, {
-    staleTime: XXX_STALE_TIME_MS,
-    ...options,
-  } as NonNullable<Parameters<typeof trpc.xxx.yyy.useSuspenseQuery>[1]>)
-    as unknown as [TData, ReturnType<typeof trpc.xxx.yyy.useSuspenseQuery>[1]];
-}
+options?: Omit<Parameters<typeof trpc.xxx.useQuery>[1], "queryKey">
 ```
 
 ### Variants
@@ -74,17 +56,6 @@ Create only the variant that has a consumer. Do not pre-create both `useQuery` a
 ### File naming
 
 `use{Entity}Query.ts` — even if only a Suspense variant exists.
-
-### Derived data with `select`
-
-When a consumer needs only a subset of the query data, pass `select` to avoid re-renders from unrelated fields.
-
-```ts
-const [draft] = useSessionSuspenseQuery(
-  { sessionId },
-  { select: (session) => session.draft },
-);
-```
 
 ### Cache utilities
 
