@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 const SUSPENSE_QUERY_RE = /useSuspense(?:Infinite)?Query/;
 const EXTENSIONS = [".ts", ".tsx", "/index.ts", "/index.tsx"];
 
-/** @type {Map<string, string | null>} base import path → file content */
+/** @type {Map<string, { content: string; filePath: string } | null>} base import path → file info */
 const fileCache = new Map();
 /** @type {Map<string, boolean>} "basePath::hookName" → uses suspense */
 const hookCache = new Map();
@@ -32,10 +32,12 @@ function readSourceFile(basePath) {
     return fileCache.get(basePath);
   }
   for (const ext of EXTENSIONS) {
+    const filePath = basePath + ext;
     try {
-      const content = readFileSync(basePath + ext, "utf-8");
-      fileCache.set(basePath, content);
-      return content;
+      const content = readFileSync(filePath, "utf-8");
+      const result = { content, filePath };
+      fileCache.set(basePath, result);
+      return result;
     } catch (err) {
       if (err?.code !== "ENOENT") {
         throw err;
@@ -78,7 +80,22 @@ function hookBodyUsesSuspense(content, hookName) {
 }
 
 /**
+ * Find re-export source for a hook: `export { hookName } from "./path"`.
+ * Returns the relative source string or null.
+ */
+function findReExportSource(content, hookName) {
+  const pattern = new RegExp(
+    `export\\s*\\{[^}]*\\b${hookName}\\b[^}]*\\}\\s*from\\s*["']([^"']+)["']`,
+  );
+  const match = pattern.exec(content);
+  return match ? match[1] : null;
+}
+
+const MAX_REEXPORT_DEPTH = 3;
+
+/**
  * Check if a specific imported hook uses suspense queries.
+ * Follows barrel re-exports up to MAX_REEXPORT_DEPTH levels.
  */
 function importedHookUsesSuspense(source, currentFile, hookName) {
   const basePath = resolveBasePath(source, currentFile);
@@ -91,15 +108,54 @@ function importedHookUsesSuspense(source, currentFile, hookName) {
     return hookCache.get(cacheKey);
   }
 
-  const content = readSourceFile(basePath);
-  if (!content) {
+  const file = readSourceFile(basePath);
+  if (!file) {
     hookCache.set(cacheKey, false);
     return false;
   }
 
-  const result = hookBodyUsesSuspense(content, hookName);
-  hookCache.set(cacheKey, result);
-  return result;
+  if (hookBodyUsesSuspense(file.content, hookName)) {
+    hookCache.set(cacheKey, true);
+    return true;
+  }
+
+  const reExportSource = findReExportSource(file.content, hookName);
+  if (reExportSource) {
+    const resolvedPath = resolveBasePath(reExportSource, file.filePath);
+    if (resolvedPath) {
+      const result = followReExport(resolvedPath, hookName, 1);
+      hookCache.set(cacheKey, result);
+      return result;
+    }
+  }
+
+  hookCache.set(cacheKey, false);
+  return false;
+}
+
+function followReExport(basePath, hookName, depth) {
+  if (depth > MAX_REEXPORT_DEPTH) {
+    return false;
+  }
+
+  const file = readSourceFile(basePath);
+  if (!file) {
+    return false;
+  }
+
+  if (hookBodyUsesSuspense(file.content, hookName)) {
+    return true;
+  }
+
+  const reExportSource = findReExportSource(file.content, hookName);
+  if (reExportSource) {
+    const resolvedPath = resolveBasePath(reExportSource, file.filePath);
+    if (resolvedPath) {
+      return followReExport(resolvedPath, hookName, depth + 1);
+    }
+  }
+
+  return false;
 }
 
 /** @type {import("eslint").Rule.RuleModule} */

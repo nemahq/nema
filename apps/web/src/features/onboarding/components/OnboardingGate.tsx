@@ -9,9 +9,9 @@ interface OnboardingGateProps {
 }
 
 export function OnboardingGate({ children }: OnboardingGateProps) {
-  const { data: profile, isLoading } = useProfileQuery();
+  const { data: profile, isLoading, isError } = useProfileQuery();
 
-  const needsOnboarding = !isLoading && !profile;
+  const needsOnboarding = !isLoading && !isError && !profile;
 
   return (
     <>

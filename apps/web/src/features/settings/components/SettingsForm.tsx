@@ -15,6 +15,7 @@ import {
 
 import {
   LANGUAGE_LABELS,
+  // eslint-disable-next-line nema/require-suspense-boundary -- Suspense boundary in SettingsModal
   useProfileSuspenseQuery,
   useUpdateProfile,
 } from "@web/features/profile";

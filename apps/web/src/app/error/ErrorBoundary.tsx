@@ -39,7 +39,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   }
 
   private readonly reset = () => {
-    this.setState({ hasError: false, hasRetried: true });
+    this.setState({ error: null, hasError: false, hasRetried: true });
   };
 
   override render() {
