@@ -60,7 +60,8 @@ let env: Env;
 export function loadEnv(appRoot: string): void {
   const appEnv = process.env.APP_ENV ?? "staging";
   config({ path: resolve(appRoot, `.env.${appEnv}`) });
-  config({ path: resolve(homedir(), ".config/nema/server.env") });
+  config({ path: resolve(appRoot, ".env") });
+  config({ path: resolve(homedir(), ".config/nema/.env.secret") });
 
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
