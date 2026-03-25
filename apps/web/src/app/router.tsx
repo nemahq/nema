@@ -81,22 +81,28 @@ const indexRoute = createRoute({
   component: HomePage,
 });
 
-function SessionKeepAlive() {
-  const { sessionId } = sessionRoute.useParams();
-  const [aliveIds, setAliveIds] = useState<string[]>([sessionId]);
-  const [prevSessionId, setPrevSessionId] = useState(sessionId);
+function useRecentIds(currentId: string) {
+  const [ids, setIds] = useState<string[]>([currentId]);
+  const [prevId, setPrevId] = useState(currentId);
 
-  if (prevSessionId !== sessionId) {
-    setPrevSessionId(sessionId);
-    setAliveIds((prev) => {
-      const without = prev.filter((id) => id !== sessionId);
-      return [...without, sessionId].slice(-MAX_ALIVE_SESSIONS);
+  if (prevId !== currentId) {
+    setPrevId(currentId);
+    setIds((prev) => {
+      const without = prev.filter((id) => id !== currentId);
+      return [...without, currentId].slice(-MAX_ALIVE_SESSIONS);
     });
   }
 
+  return ids;
+}
+
+function SessionPageShell() {
+  const { sessionId } = sessionRoute.useParams();
+  const recentIds = useRecentIds(sessionId);
+
   return (
     <>
-      {aliveIds.map((id) => (
+      {recentIds.map((id) => (
         <VisibilityProvider key={id} visible={id === sessionId}>
           <SessionIdProvider sessionId={id}>
             <div hidden={id !== sessionId} className="contents">
@@ -114,7 +120,7 @@ function SessionKeepAlive() {
 const sessionRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/session/$sessionId",
-  component: SessionKeepAlive,
+  component: SessionPageShell,
 });
 
 const routeTree = rootRoute.addChildren([
