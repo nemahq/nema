@@ -82,8 +82,8 @@
   "settings": {
     "app_language": "App language",
     "app_language_description": "Language used for menus, buttons, and interface",
-    "content_language": "Content language",
-    "content_language_description": "Used when you Remember and Ask",
+    "content_language": "Note language",
+    "content_language_description": "The language your notes are written in",
     "onboarding_description": "We'll organize what you write based on this language.",
     "onboarding_title": "What language do you write in?",
     "save": "Save",

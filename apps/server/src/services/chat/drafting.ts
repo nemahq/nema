@@ -1,4 +1,8 @@
-import type { ChatStreamEvent, SessionDraft } from "@nema-io/shared";
+import type {
+  ChatStreamEvent,
+  ContentLanguage,
+  SessionDraft,
+} from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
 import {
@@ -13,14 +17,19 @@ export async function* handleDraftingStream(args: {
   providers: Providers;
   userInput: string;
   currentDraft: Draft | null;
+  contentLanguage: ContentLanguage;
   signal?: AbortSignal;
 }): AsyncGenerator<ChatStreamEvent, string> {
-  const { providers, userInput, currentDraft, signal } = args;
+  const { providers, userInput, currentDraft, contentLanguage, signal } = args;
 
   const isFirstCall = currentDraft === null;
   const message = isFirstCall
-    ? buildFirstCallMessage(userInput)
-    : buildEditCycleMessage(currentDraft.body, userInput);
+    ? buildFirstCallMessage(userInput, contentLanguage)
+    : buildEditCycleMessage({
+        previousBody: currentDraft.body,
+        editRequest: userInput,
+        contentLanguage,
+      });
 
   let fullText = "";
 
