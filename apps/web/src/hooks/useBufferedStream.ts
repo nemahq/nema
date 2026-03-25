@@ -8,7 +8,7 @@ const CHARS_PER_FRAME = 3;
  *
  * @param buffer - 계속 늘어나는 원본 텍스트. 빈 문자열을 넘기면 내부 상태가 리셋된다.
  */
-export function useBufferedStream(buffer: string) {
+export function useBufferedStream(buffer: string, enabled = true) {
   const [displayed, setDisplayed] = useState("");
   const posRef = useRef(0);
   const rafRef = useRef(0);
@@ -17,6 +17,10 @@ export function useBufferedStream(buffer: string) {
     function drainBuffer() {
       if (buffer === "") {
         posRef.current = 0;
+        return;
+      }
+
+      if (!enabled) {
         return;
       }
 
@@ -35,7 +39,7 @@ export function useBufferedStream(buffer: string) {
       rafRef.current = requestAnimationFrame(tick);
       return () => cancelAnimationFrame(rafRef.current);
     },
-    [buffer],
+    [buffer, enabled],
   );
 
   return buffer === "" ? "" : displayed;

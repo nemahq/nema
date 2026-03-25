@@ -20,6 +20,7 @@ import { requireAuth, requireGuest } from "@web/features/auth/guards";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 import { MAX_ALIVE_SESSIONS } from "@web/features/session/constants";
 import { SessionIdProvider } from "@web/features/session/contexts/SessionIdContext";
+import { VisibilityProvider } from "@web/lib/visibility";
 
 import { App } from "./App";
 
@@ -89,21 +90,22 @@ function SessionKeepAlive() {
     setPrevSessionId(sessionId);
     setAliveIds((prev) => {
       const without = prev.filter((id) => id !== sessionId);
-      const next = [...without, sessionId];
-      return next.slice(-MAX_ALIVE_SESSIONS);
+      return [...without, sessionId].slice(-MAX_ALIVE_SESSIONS);
     });
   }
 
   return (
     <>
       {aliveIds.map((id) => (
-        <SessionIdProvider key={id} sessionId={id}>
-          <div hidden={id !== sessionId} className="contents">
-            <Suspense fallback={<ContentAreaFallback />}>
-              <SessionPage />
-            </Suspense>
-          </div>
-        </SessionIdProvider>
+        <VisibilityProvider key={id} visible={id === sessionId}>
+          <SessionIdProvider sessionId={id}>
+            <div hidden={id !== sessionId} className="contents">
+              <Suspense fallback={<ContentAreaFallback />}>
+                <SessionPage />
+              </Suspense>
+            </div>
+          </SessionIdProvider>
+        </VisibilityProvider>
       ))}
     </>
   );

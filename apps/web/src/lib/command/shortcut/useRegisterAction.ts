@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
+import { useVisible } from "@web/lib/visibility";
+
 import { type ActionId, getActionDef } from "./actionMap";
 import { useActionRegistry } from "./context";
 
@@ -26,6 +28,8 @@ export function useRegisterAction(
 ) {
   const { register, unregister } = useActionRegistry();
   const def = getActionDef(id);
+  const visible = useVisible();
+  const effectiveEnabled = visible && enabled;
 
   const executeRef = useRef(execute);
   useEffect(function syncExecuteRef() {
@@ -34,7 +38,7 @@ export function useRegisterAction(
 
   useEffect(
     function syncRegistry() {
-      if (!enabled) {
+      if (!effectiveEnabled) {
         unregister(id);
         return;
       }
@@ -50,7 +54,7 @@ export function useRegisterAction(
 
       return () => unregister(id);
     },
-    [id, enabled, register, unregister, def],
+    [id, effectiveEnabled, register, unregister, def],
   );
 
   const hasModifier = MODIFIER_KEYS.some((key) => def.shortcut.includes(key));
@@ -62,7 +66,7 @@ export function useRegisterAction(
       executeRef.current();
     },
     {
-      enabled,
+      enabled: effectiveEnabled,
       enableOnFormTags:
         hasModifier || def.shortcut === "escape"
           ? ["INPUT", "TEXTAREA", "SELECT"]

@@ -11,6 +11,7 @@ import { useBufferedStream } from "@web/hooks/useBufferedStream";
 import { formatKeySegments } from "@web/lib/command/shortcut/formatKey";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
+import { useVisible } from "@web/lib/visibility";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { StreamErrorMessage } from "./StreamErrorMessage";
@@ -25,8 +26,12 @@ function DraftTabContentInner() {
   const cancelDraft = useCancelDraft({ sessionId });
   const { streamingPhase, streamingDraftText, streamError } = useChatStream();
 
+  const visible = useVisible();
   const isStreaming = streamingPhase === "draft";
-  const smoothText = useBufferedStream(isStreaming ? streamingDraftText : "");
+  const smoothText = useBufferedStream(
+    isStreaming ? streamingDraftText : "",
+    visible,
+  );
   const body = isStreaming ? smoothText : draft?.body;
 
   const canAct = streamingPhase === "idle" && !!body;

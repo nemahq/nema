@@ -11,6 +11,7 @@ import { getRouteState } from "@web/app/utils/routeState";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useScrollAnchor } from "@web/features/session/hooks/useScrollAnchor";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
+import { useVisible } from "@web/lib/visibility";
 
 import { ChatComposer } from "./ChatComposer";
 import { MessageList } from "./MessageList";
@@ -18,11 +19,15 @@ import { MessageListSkeleton } from "./MessageListSkeleton";
 import { SidePanel } from "./SidePanel";
 
 function ChatPanelContent() {
+  const visible = useVisible();
   const messages = useSessionMessages();
   const { scrollRef, scrollToLastUserMessage } = useScrollAnchor({ messages });
 
   useLayoutEffect(
     function syncPanelHeightAndInitialScroll() {
+      if (!visible) {
+        return;
+      }
       const el = scrollRef.current;
       if (!el) {
         return;
@@ -46,7 +51,7 @@ function ChatPanelContent() {
         el.style.removeProperty("--panel-height");
       };
     },
-    [scrollRef, scrollToLastUserMessage],
+    [visible, scrollRef, scrollToLastUserMessage],
   );
 
   return (

@@ -4,6 +4,7 @@ import { useChatStream } from "@web/features/session/contexts/ChatStreamContext"
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useSessionSuspenseQuery } from "@web/features/session/hooks/useSessionQuery";
 import { useBufferedStream } from "@web/hooks/useBufferedStream";
+import { useVisible } from "@web/lib/visibility";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { StreamErrorMessage } from "./StreamErrorMessage";
@@ -16,9 +17,11 @@ function RetrievalTabContentInner() {
   const { streamingPhase, streamingRetrievalText, streamError } =
     useChatStream();
 
+  const visible = useVisible();
   const isStreaming = streamingPhase === "retrieval";
   const smoothText = useBufferedStream(
     isStreaming ? streamingRetrievalText : "",
+    visible,
   );
   const body = isStreaming ? smoothText : retrieval?.body;
 

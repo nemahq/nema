@@ -9,6 +9,7 @@ import { useDraftTab } from "@web/features/session/hooks/useDraftTab";
 import { useHelpTab } from "@web/features/session/hooks/useHelpTab";
 import { useRetrievalTab } from "@web/features/session/hooks/useRetrievalTab";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
+import { useVisible } from "@web/lib/visibility";
 
 const MAX_TAB_SHORTCUT = 9;
 
@@ -18,6 +19,7 @@ const TAB_HOTKEYS = Array.from(
 ).join(", ");
 
 function ContentPanelInner() {
+  const visible = useVisible();
   const draftTab = useDraftTab();
   const retrievalTab = useRetrievalTab();
   const helpTab = useHelpTab();
@@ -63,7 +65,7 @@ function ContentPanelInner() {
       }
     },
     {
-      enabled: orderedTabs.length > 1,
+      enabled: visible && orderedTabs.length > 1,
       enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"],
     },
   );
