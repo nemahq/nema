@@ -6,15 +6,15 @@ import { useChatStream } from "@web/features/session/contexts/ChatStreamContext"
 
 import { useDismissRetrieval } from "./useDismissRetrieval";
 import { useSessionId } from "./useSessionId";
-import { useSessionRetrieval } from "./useSessionRetrieval";
+import { useSessionSuspenseQuery } from "./useSessionQuery";
 
 export function useRetrievalTab(): TabbedPanelTab | undefined {
   const sessionId = useSessionId();
-  const retrieval = useSessionRetrieval({ sessionId });
+  const [session] = useSessionSuspenseQuery({ sessionId });
   const { streamingPhase } = useChatStream();
   const dismissRetrieval = useDismissRetrieval({ sessionId });
 
-  const hasRetrieval = !!(retrieval || streamingPhase === "retrieval");
+  const hasRetrieval = !!(session.retrieval || streamingPhase === "retrieval");
 
   if (!hasRetrieval) {
     return undefined;

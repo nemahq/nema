@@ -61,6 +61,8 @@
 
 ## Data Fetching
 
+- MUST follow rules in `docs/query-conventions.md`.
+
 ### tRPC
 
 - One query or mutation per hook. Do not bundle multiple queries/mutations into a single hook.

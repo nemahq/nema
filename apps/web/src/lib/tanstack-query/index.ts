@@ -57,7 +57,7 @@ export const queryClient = new QueryClient({
       if (!(error instanceof TRPCClientError)) {
         Sentry.captureException(error);
       }
-      if (mutation.options.onError) {
+      if (mutation.meta?.skipGlobalToast) {
         return;
       }
       toastError(error);

@@ -19,7 +19,7 @@ import {
 } from "@nema-io/shared";
 
 import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
-import { addOptimisticMessage } from "@web/features/session/hooks/useMessageList";
+import { addOptimisticMessage } from "@web/features/session/hooks/useMessageListQuery";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
