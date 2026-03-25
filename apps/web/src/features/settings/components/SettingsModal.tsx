@@ -1,5 +1,3 @@
-import { Suspense } from "react";
-
 import { Dialog, DialogContent } from "@nema-io/weave";
 
 import { SettingsForm } from "./SettingsForm";
@@ -13,11 +11,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        {open && (
-          <Suspense>
-            <SettingsForm onOpenChange={onOpenChange} />
-          </Suspense>
-        )}
+        {open && <SettingsForm onOpenChange={onOpenChange} />}
       </DialogContent>
     </Dialog>
   );

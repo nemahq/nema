@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { Suspense, useId, useState } from "react";
 
 import type { ContentLanguage } from "@nema-io/shared";
 import {
@@ -15,7 +15,6 @@ import {
 
 import {
   LANGUAGE_LABELS,
-  // eslint-disable-next-line nema/require-suspense-boundary -- Suspense boundary in SettingsModal
   useProfileSuspenseQuery,
   useUpdateProfile,
 } from "@web/features/profile";
@@ -34,7 +33,7 @@ interface SettingsFormProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function SettingsForm({ onOpenChange }: SettingsFormProps) {
+function SettingsFormInner({ onOpenChange }: SettingsFormProps) {
   const { t } = useTranslation();
   const [profile] = useProfileSuspenseQuery();
   const appLangId = useId();
@@ -110,5 +109,13 @@ export function SettingsForm({ onOpenChange }: SettingsFormProps) {
         </Button>
       </DialogFooter>
     </>
+  );
+}
+
+export function SettingsForm({ onOpenChange }: SettingsFormProps) {
+  return (
+    <Suspense>
+      <SettingsFormInner onOpenChange={onOpenChange} />
+    </Suspense>
   );
 }
