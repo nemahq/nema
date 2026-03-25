@@ -12,7 +12,12 @@ import {
   processChatStream,
 } from "@server/services/chat";
 import { getMessages, sendMessage } from "@server/services/message-service";
-import { protectedProcedure, providerProcedure, router } from "@server/trpc";
+import {
+  protectedProcedure,
+  providerProcedure,
+  router,
+  wrapSubscriptionErrors,
+} from "@server/trpc";
 
 export const messageRouter = router({
   list: protectedProcedure
@@ -28,14 +33,17 @@ export const messageRouter = router({
     input,
     signal,
   }) {
-    yield* processChatStream({
-      supabase: ctx.supabase,
-      providers: ctx.providers,
-      userId: ctx.user.id,
-      input,
-      lng: ctx.lng,
-      signal,
-    });
+    yield* wrapSubscriptionErrors(
+      processChatStream({
+        supabase: ctx.supabase,
+        providers: ctx.providers,
+        userId: ctx.user.id,
+        input,
+        lng: ctx.lng,
+        signal,
+      }),
+      ctx.lng,
+    );
   }),
 
   cancelDraft: protectedProcedure

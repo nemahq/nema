@@ -58,7 +58,8 @@ type Env = z.infer<typeof envSchema>;
 let env: Env;
 
 export function loadEnv(appRoot: string): void {
-  config({ path: resolve(appRoot, ".env") });
+  const appEnv = process.env.APP_ENV ?? "staging";
+  config({ path: resolve(appRoot, `.env.${appEnv}`) });
   config({ path: resolve(homedir(), ".config/nema/server.env") });
 
   const result = envSchema.safeParse(process.env);

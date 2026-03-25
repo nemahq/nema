@@ -165,6 +165,9 @@ importers:
       '@trpc/react-query':
         specifier: ^11.12.0
         version: 11.12.0(@tanstack/react-query@5.90.21(react@19.2.4))(@trpc/client@11.12.0(@trpc/server@11.12.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.12.0(typescript@5.9.3))(react@19.2.4)(typescript@5.9.3)
+      '@trpc/server':
+        specifier: 11.12.0
+        version: 11.12.0(typescript@5.9.3)
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
