@@ -50,12 +50,12 @@ options?: Omit<Parameters<typeof trpc.xxx.useQuery>[1], "queryKey">
 
 Create only the variant that has a consumer. Do not pre-create both `useQuery` and `useSuspenseQuery`.
 
-- Suspense only → `use{Endpoint}SuspenseQuery`
-- Both needed → `use{Endpoint}Query` + `use{Endpoint}SuspenseQuery` in the same file
+- Suspense only → `use{Entity}SuspenseQuery`
+- Both needed → `use{Entity}Query` + `use{Entity}SuspenseQuery` in the same file
 
 ### File naming
 
-`use{Endpoint}Query.ts` — even if only a Suspense variant exists.
+`use{Entity}Query.ts` — even if only a Suspense variant exists.
 
 ### Cache utilities
 
@@ -68,11 +68,11 @@ Cache manipulation functions (`presetCache`, `addOptimistic`, `clearCache`) stay
 | Location | Responsibility |
 | --- | --- |
 | `useMutation({ onSuccess })` | Cache invalidation, cache update, analytics — **server state logic** |
-| `mutate(data, { onSuccess })` | Toast, navigate, close dialog — **UI side-effects** |
+| `mutate(data, { onSuccess })` | Navigate, close dialog — **UI side-effects** |
 
 UI side-effects MUST NOT live inside the mutation hook.
 
-**Error toast**: The global `MutationCache.onError` shows a toast for all mutation errors by default. To suppress the global toast (e.g., when showing a custom error UI), set `meta: { skipGlobalToast: true }` on the mutation.
+**Error toast**: The global `MutationCache.onError` shows a toast for all mutation errors by default. Individual toast handling is unnecessary. To suppress the global toast (e.g., when showing a custom error UI), set `meta: { skipGlobalToast: true }` on the mutation.
 
 ### Optimistic updates
 
