@@ -1,18 +1,15 @@
-import { createContext, useContext } from "react";
+import { trpc } from "@web/lib/trpc";
 
-import type { Profile } from "@nema-io/shared";
+const PROFILE_STALE_TIME_MS = 600_000;
 
-interface ProfileContextValue {
-  profile: Profile;
-  openSettings: () => void;
+export function useProfileQuery() {
+  return trpc.profile.get.useQuery(undefined, {
+    staleTime: PROFILE_STALE_TIME_MS,
+  });
 }
 
-export const ProfileContext = createContext<ProfileContextValue | null>(null);
-
-export function useProfile() {
-  const ctx = useContext(ProfileContext);
-  if (!ctx) {
-    throw new Error("useProfile must be used within ProfileProvider");
-  }
-  return ctx;
+export function useProfileSuspenseQuery() {
+  return trpc.profile.get.useSuspenseQuery(undefined, {
+    staleTime: PROFILE_STALE_TIME_MS,
+  });
 }

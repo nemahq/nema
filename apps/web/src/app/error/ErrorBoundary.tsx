@@ -3,6 +3,7 @@ import { Component } from "react";
 import * as Sentry from "@sentry/react";
 
 export interface ErrorFallbackProps {
+  error: Error;
   reset: () => void;
   hasRetried: boolean;
 }
@@ -15,6 +16,7 @@ interface ErrorBoundaryProps {
 }
 
 interface State {
+  error: Error | null;
   hasError: boolean;
   hasRetried: boolean;
 }
@@ -22,11 +24,11 @@ interface State {
 export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, hasRetried: false };
+    this.state = { error: null, hasError: false, hasRetried: false };
   }
 
-  static getDerivedStateFromError(): Partial<State> {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): Partial<State> {
+    return { error, hasError: true };
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -37,13 +39,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   }
 
   private readonly reset = () => {
-    this.setState({ hasError: false, hasRetried: true });
+    this.setState({ error: null, hasError: false, hasRetried: true });
   };
 
   override render() {
-    if (this.state.hasError) {
+    if (this.state.hasError && this.state.error) {
       if (this.props.fallbackRender) {
         return this.props.fallbackRender({
+          error: this.state.error,
           reset: this.reset,
           hasRetried: this.state.hasRetried,
         });

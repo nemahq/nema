@@ -9,7 +9,7 @@ export function NotFoundErrorFallback() {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 p-8">
       <p className="text-sm text-fg-tertiary">{t("error.not_found")}</p>
       <Button variant="ghost" size="sm" asChild>
         <Link to="/">

@@ -39,8 +39,11 @@ createRoot(root, {
   <StrictMode>
     <ErrorBoundary
       boundaryName="root"
-      fallbackRender={({ reset, hasRetried }) => (
-        <PageErrorFallback onRetry={hasRetried ? undefined : reset} />
+      fallbackRender={({ error, reset, hasRetried }) => (
+        <PageErrorFallback
+          error={error}
+          onRetry={hasRetried ? undefined : reset}
+        />
       )}
     >
       <AppProviders>

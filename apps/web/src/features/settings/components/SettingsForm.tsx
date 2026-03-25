@@ -1,10 +1,6 @@
-import { useId, useState } from "react";
+import { Suspense, useId, useState } from "react";
 
-import {
-  CONTENT_LANGUAGES,
-  type ContentLanguage,
-  ContentLanguageSchema,
-} from "@nema-io/shared";
+import type { ContentLanguage } from "@nema-io/shared";
 import {
   Button,
   DialogFooter,
@@ -17,25 +13,32 @@ import {
   SelectValue,
 } from "@nema-io/weave";
 
-import { LANGUAGE_LABELS, useUpdateProfile } from "@web/features/profile";
-import { changeLocale, useTranslation } from "@web/lib/tolgee";
-import { tolgee } from "@web/lib/tolgee/client";
-import { isLocale, type Locale, LOCALES } from "@web/lib/tolgee/types";
+import {
+  LANGUAGE_LABELS,
+  useProfileSuspenseQuery,
+  useUpdateProfile,
+} from "@web/features/profile";
+import {
+  changeLocale,
+  isLocale,
+  type Locale,
+  LOCALES,
+  tolgee,
+  useTranslation,
+} from "@web/lib/tolgee";
+
+import { ContentLanguageSection } from "./ContentLanguageSection";
 
 interface SettingsFormProps {
-  currentContentLanguage: ContentLanguage;
   onOpenChange: (open: boolean) => void;
 }
 
-export function SettingsForm({
-  currentContentLanguage,
-  onOpenChange,
-}: SettingsFormProps) {
+function SettingsFormInner({ onOpenChange }: SettingsFormProps) {
   const { t } = useTranslation();
+  const [profile] = useProfileSuspenseQuery();
   const appLangId = useId();
-  const contentLangId = useId();
   const [contentLang, setContentLang] = useState<ContentLanguage>(
-    currentContentLanguage,
+    profile?.contentLanguage ?? "ko",
   );
   const [appLang, setAppLang] = useState<Locale>(() => {
     const lang = tolgee.getLanguage();
@@ -94,37 +97,7 @@ export function SettingsForm({
           </Select>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor={contentLangId}
-            className="text-sm font-medium text-fg-primary"
-          >
-            {t("settings.content_language")}
-          </label>
-          <p className="text-xs text-fg-tertiary">
-            {t("settings.content_language_description")}
-          </p>
-          <Select
-            value={contentLang}
-            onValueChange={(v) => {
-              const parsed = ContentLanguageSchema.safeParse(v);
-              if (parsed.success) {
-                setContentLang(parsed.data);
-              }
-            }}
-          >
-            <SelectTrigger id={contentLangId} className="cursor-pointer">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CONTENT_LANGUAGES.map((lang) => (
-                <SelectItem key={lang} value={lang} className="cursor-pointer">
-                  {LANGUAGE_LABELS[lang]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <ContentLanguageSection value={contentLang} onChange={setContentLang} />
       </div>
 
       <DialogFooter>
@@ -136,5 +109,13 @@ export function SettingsForm({
         </Button>
       </DialogFooter>
     </>
+  );
+}
+
+export function SettingsForm({ onOpenChange }: SettingsFormProps) {
+  return (
+    <Suspense>
+      <SettingsFormInner onOpenChange={onOpenChange} />
+    </Suspense>
   );
 }

@@ -8,7 +8,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let cachedAccessToken: string | null = null;
 
-supabase.auth.getSession().then(({ data }) => {
+export const sessionReady = supabase.auth.getSession().then(({ data }) => {
   cachedAccessToken = data.session?.access_token ?? null;
 });
 

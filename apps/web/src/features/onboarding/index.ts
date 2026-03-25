@@ -1,1 +1,1 @@
-export { OnboardingModal } from "./components/OnboardingModal";
+export { OnboardingGate } from "./components/OnboardingGate";
