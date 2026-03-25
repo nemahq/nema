@@ -1,6 +1,8 @@
 // 드래프팅 프롬프트 — 사용자 입력을 구조화된 문서로 정제
 // body만 생성. 제목/태그/요약/메타데이터는 생성하지 않음
 
+import type { ContentLanguage } from "@nema-io/shared";
+
 // --- 시스템 프롬프트 (고정) ---
 
 export const DRAFTING_SYSTEM_PROMPT = `You are a structuring engine that refines raw user input into clear, well-organized prose. You only produce the refined body — never titles, tags, summaries, or metadata.
@@ -99,25 +101,32 @@ When given <previous_body> and <edit_request>, apply the requested changes to th
 - Impact scope: Payment module, notification system
 - Response: Prioritize payment module development, move notifications to the next sprint.</output>
 </example>
+
+<example>
+<output_language>ko</output_language>
+
+<input>Had a quick sync with the design team about the new onboarding flow. They approved the final mockups. Target launch is end of March. Need to coordinate with backend on API readiness.</input>
+<output>디자인팀과 새 온보딩 플로우 관련 미팅 진행. 최종 목업 승인됨. 출시 목표는 3월 말. 백엔드 API 준비 상황과 조율 필요.</output>
+</example>
 </examples>`;
 
 // --- 사용자 메시지 빌더 (가변) ---
 
-function languageTag(contentLanguage: string): string {
+function languageTag(contentLanguage: ContentLanguage): string {
   return `<output_language>${contentLanguage}</output_language>\n\n`;
 }
 
-export function buildFirstCallMessage(
-  userInput: string,
-  contentLanguage: string,
-): string {
-  return `${languageTag(contentLanguage)}<input>${userInput}</input>`;
+export function buildFirstCallMessage(args: {
+  userInput: string;
+  contentLanguage: ContentLanguage;
+}): string {
+  return `${languageTag(args.contentLanguage)}<input>${args.userInput}</input>`;
 }
 
 export function buildEditCycleMessage(args: {
   previousBody: string;
   editRequest: string;
-  contentLanguage: string;
+  contentLanguage: ContentLanguage;
 }): string {
   return `${languageTag(args.contentLanguage)}<previous_body>${args.previousBody}</previous_body>\n\n<edit_request>${args.editRequest}</edit_request>`;
 }

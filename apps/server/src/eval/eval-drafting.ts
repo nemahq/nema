@@ -66,7 +66,7 @@ async function main() {
     try {
       const output = await collectStream(
         provider,
-        buildFirstCallMessage(seed.input, "ko"),
+        buildFirstCallMessage({ userInput: seed.input, contentLanguage: "ko" }),
       );
 
       results.push({

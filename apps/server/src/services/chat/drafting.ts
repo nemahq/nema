@@ -24,7 +24,7 @@ export async function* handleDraftingStream(args: {
 
   const isFirstCall = currentDraft === null;
   const message = isFirstCall
-    ? buildFirstCallMessage(userInput, contentLanguage)
+    ? buildFirstCallMessage({ userInput, contentLanguage })
     : buildEditCycleMessage({
         previousBody: currentDraft.body,
         editRequest: userInput,

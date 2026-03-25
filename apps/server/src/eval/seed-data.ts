@@ -53,7 +53,7 @@ export const PHASE1_SEEDS: SeedInput[] = [
     checkpoints: [
       "타협안(simplified landing page → full version 1주 후)이 정확히 보존되는가",
       "'pushed back a bit' — 정도 표현이 유지되는가",
-      "영어 입력이 영어로 출력되는가",
+      "contentLanguage=ko이므로 영어 입력이 한국어로 번역+구조화되는가",
     ],
   },
   {

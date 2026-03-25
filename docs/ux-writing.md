@@ -29,7 +29,7 @@ Nema는 B2C "되찾기 도구" — 사용자가 매일 편하게 생각을 맡�
 | AI 중간 결과 | 초안 | Draft |
 
 - 한국어: 기능명을 문장에 쓸 때 자연스럽게 녹임 — "기억하기에서 저장할 때 사용하는 언어"
-- 영어: 기능명은 대문자로 고유명사 취급 — "The language used when you Remember"
+- 영어: 기능명은 대문자로 고유명사 취급 — "The language you use when you Remember"
 
 ---
 

@@ -1,3 +1,5 @@
+import { TRPCError } from "@trpc/server";
+
 import type {
   ChatInput,
   ChatStreamEvent,
@@ -209,7 +211,10 @@ export async function* processChatStream(args: {
     case "remember": {
       const profile = await getProfile(supabase, { userId });
       if (!profile) {
-        throw new Error("Drafting requires a user profile");
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Drafting requires a user profile",
+        });
       }
 
       yield { type: "draft_start" };
