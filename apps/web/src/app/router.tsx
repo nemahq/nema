@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { z } from "zod";
 import {
   createRootRoute,
@@ -18,6 +18,8 @@ import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback"
 import { AuthPage } from "@web/features/auth/components/AuthPage";
 import { requireAuth, requireGuest } from "@web/features/auth/guards";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
+import { MAX_ALIVE_SESSIONS } from "@web/features/session/constants";
+import { SessionIdProvider } from "@web/features/session/contexts/SessionIdContext";
 
 import { App } from "./App";
 
@@ -78,15 +80,39 @@ const indexRoute = createRoute({
   component: HomePage,
 });
 
-function SessionPageShell() {
+function SessionKeepAlive() {
   const { sessionId } = sessionRoute.useParams();
-  return <SessionPage key={sessionId} />;
+  const [aliveIds, setAliveIds] = useState<string[]>([sessionId]);
+  const [prevSessionId, setPrevSessionId] = useState(sessionId);
+
+  if (prevSessionId !== sessionId) {
+    setPrevSessionId(sessionId);
+    setAliveIds((prev) => {
+      const without = prev.filter((id) => id !== sessionId);
+      const next = [...without, sessionId];
+      return next.slice(-MAX_ALIVE_SESSIONS);
+    });
+  }
+
+  return (
+    <>
+      {aliveIds.map((id) => (
+        <SessionIdProvider key={id} sessionId={id}>
+          <div hidden={id !== sessionId} className="contents">
+            <Suspense fallback={<ContentAreaFallback />}>
+              <SessionPage />
+            </Suspense>
+          </div>
+        </SessionIdProvider>
+      ))}
+    </>
+  );
 }
 
 const sessionRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/session/$sessionId",
-  component: SessionPageShell,
+  component: SessionKeepAlive,
 });
 
 const routeTree = rootRoute.addChildren([
