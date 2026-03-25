@@ -81,6 +81,8 @@ const indexRoute = createRoute({
   component: HomePage,
 });
 
+// 세션 전환 시 컴포넌트 언마운트를 방지하여 진행 중인 스트리밍을 유지한다.
+// 최근 방문한 세션 ID를 최대 MAX_ALIVE_SESSIONS개까지 보관하고, 초과 시 가장 오래된 것을 제거한다.
 function useRecentIds(currentId: string) {
   const [ids, setIds] = useState<string[]>([currentId]);
   const [prevId, setPrevId] = useState(currentId);
