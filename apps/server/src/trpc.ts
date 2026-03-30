@@ -108,7 +108,7 @@ export const protectedProcedure = t.procedure
  * INTERNAL_SERVER_ERROR는 httpSubscriptionLink의 retryableRpcCodes에 포함되어
  * SSE 자동 재연결 무한 루프를 유발하므로 UNPROCESSABLE_CONTENT로 변환한다.
  */
-export async function* wrapSubscriptionErrors<T>(
+export async function* mapSubscriptionErrors<T>(
   gen: AsyncGenerator<T>,
   lng: Locale,
 ): AsyncGenerator<T> {

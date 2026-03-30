@@ -13,10 +13,10 @@ import {
 } from "@server/services/chat";
 import { getMessages, sendMessage } from "@server/services/message-service";
 import {
+  mapSubscriptionErrors,
   protectedProcedure,
   providerProcedure,
   router,
-  wrapSubscriptionErrors,
 } from "@server/trpc";
 
 export const messageRouter = router({
@@ -33,7 +33,7 @@ export const messageRouter = router({
     input,
     signal,
   }) {
-    yield* wrapSubscriptionErrors(
+    yield* mapSubscriptionErrors(
       processChatStream({
         supabase: ctx.supabase,
         providers: ctx.providers,
