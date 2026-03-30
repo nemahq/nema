@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
 
-interface TabbedPanelShellProps {
+interface TabbedPanelLayoutProps {
   header: ReactNode;
   children: ReactNode;
 }
 
-export function TabbedPanelShell({ header, children }: TabbedPanelShellProps) {
+export function TabbedPanelLayout({
+  header,
+  children,
+}: TabbedPanelLayoutProps) {
   return (
     <main className="flex flex-1 flex-col bg-surface-card min-w-0">
       {header}

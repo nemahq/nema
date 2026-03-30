@@ -1,13 +1,13 @@
 import { Skeleton } from "@nema-io/weave";
 
-import { TabbedPanelShell } from "@web/components/ui/TabbedPanelShell";
+import { TabbedPanelLayout } from "@web/components/ui/TabbedPanelLayout";
 
 const TAB_HEADER_HEIGHT_PX = 38;
-const LINE_WIDTHS = ["w-4/5", "w-3/5", "w-[90%]", "w-2/5", "w-3/4"];
+const BODY_LINES = ["w-[90%]", "w-3/5", "w-4/5", "w-2/5"];
 
 export function ContentPanelSkeleton() {
   return (
-    <TabbedPanelShell
+    <TabbedPanelLayout
       header={
         <div
           className="relative flex items-end border-b border-border/50"
@@ -20,18 +20,19 @@ export function ContentPanelSkeleton() {
         </div>
       }
     >
-      <div className="space-y-2.5">
-        {LINE_WIDTHS.map((width, i) => (
+      <Skeleton className="h-5 w-2/5 rounded-sm" />
+      <div className="mt-3 space-y-2">
+        {BODY_LINES.map((width, i) => (
           <Skeleton
             key={i}
             className={`h-3.5 rounded-sm ${width}`}
             style={{
-              animationDelay: `${i * 100}ms`,
-              opacity: 1 - i * 0.12,
+              animationDelay: `${(i + 1) * 100}ms`,
+              opacity: 1 - i * 0.15,
             }}
           />
         ))}
       </div>
-    </TabbedPanelShell>
+    </TabbedPanelLayout>
   );
 }

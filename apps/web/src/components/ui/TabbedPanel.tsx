@@ -6,7 +6,7 @@ import { X } from "@nema-io/weave/icons";
 import type { TranslationKey } from "@web/lib/tolgee";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { TabbedPanelShell } from "./TabbedPanelShell";
+import { TabbedPanelLayout } from "./TabbedPanelLayout";
 
 export interface TabbedPanelTab {
   id: string;
@@ -38,7 +38,7 @@ export function TabbedPanel({
   }
 
   return (
-    <TabbedPanelShell
+    <TabbedPanelLayout
       header={
         tabs.length > 0 ? (
           <div
@@ -109,6 +109,6 @@ export function TabbedPanel({
           <span className="text-lg font-semibold">Logo</span>
         </div>
       )}
-    </TabbedPanelShell>
+    </TabbedPanelLayout>
   );
 }
