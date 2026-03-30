@@ -6,6 +6,7 @@ import { t } from "@server/infra/i18n";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import { VectorStoreError } from "@server/infra/vector/vector-store";
 import {
   buildRetrievalMessage,
   RETRIEVAL_SYSTEM_PROMPT,
@@ -50,6 +51,9 @@ export async function* handleRetrievalStream(args: {
   yield { type: "phase", name: "searching" };
 
   // --- 3개 검색 채널 병렬 실행 (개별 채널 실패해도 메인 흐름 유지) ---
+  const channelFailures: string[] = [];
+  const sentryExtra = { userId, sessionId };
+
   const [vectorResults, graphResults, textMatchDocIds] = await Promise.all([
     // 1) Qdrant 벡터 검색 (영어 쿼리)
     (searchQuery.queriesEn.length > 0
@@ -65,8 +69,10 @@ export async function* handleRetrievalStream(args: {
         ).then((batches) => batches.flat())
       : Promise.resolve([] as Awaited<ReturnType<typeof vectorStore.search>>)
     ).catch((err) => {
+      channelFailures.push("vector");
       Sentry.captureException(err, {
         tags: { component: "retrieval", channel: "vector" },
+        extra: sentryExtra,
       });
       return [] as Awaited<ReturnType<typeof vectorStore.search>>;
     }),
@@ -80,8 +86,10 @@ export async function* handleRetrievalStream(args: {
         })
       : Promise.resolve([])
     ).catch((err) => {
+      channelFailures.push("graph");
       Sentry.captureException(err, {
         tags: { component: "retrieval", channel: "graph" },
+        extra: sentryExtra,
       });
       return [] as Array<{ docId: string }>;
     }),
@@ -93,12 +101,19 @@ export async function* handleRetrievalStream(args: {
       entitiesEn: searchQuery.entitiesEn,
       entities: searchQuery.entities,
     }).catch((err) => {
+      channelFailures.push("text_match");
       Sentry.captureException(err, {
         tags: { component: "retrieval", channel: "text_match" },
+        extra: sentryExtra,
       });
       return [] as string[];
     }),
   ]);
+
+  const TOTAL_CHANNEL_COUNT = 3;
+  if (channelFailures.length === TOTAL_CHANNEL_COUNT) {
+    throw new VectorStoreError("All retrieval channels failed", "search");
+  }
 
   const graphDocIds = new Set(graphResults.map((gr) => gr.docId));
   const textMatchSet = new Set(textMatchDocIds);

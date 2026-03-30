@@ -4,16 +4,10 @@
   },
   "error": {
     "db_not_found": "The requested item was not found.",
-    "db_query_failed": "Something went wrong. Please try again.",
-    "embedding": "Something went wrong. Please try again.",
-    "graph_store": "Something went wrong. Please try again.",
-    "llm_auth": "Something went wrong. Please try again.",
+    "default": "Something went wrong. Please try again.",
     "llm_bad_request": "We couldn't process your request. Please try again.",
     "llm_content_filter": "We couldn't process your input. Please try different wording.",
-    "llm_default": "Something went wrong. Please try again.",
     "llm_rate_limit": "Too many requests. Please try again shortly.",
-    "llm_timeout": "Response timed out. Please try again.",
-    "unknown": "Something unexpected happened.",
-    "vector_store": "Something went wrong. Please try again."
+    "llm_timeout": "Response timed out. Please try again."
   }
 }

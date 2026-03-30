@@ -121,10 +121,13 @@ export async function* wrapSubscriptionErrors<T>(
     Sentry.captureException(error, {
       tags: { domainCode: getDomainCode(error) ?? "UNKNOWN" },
     });
-    const { message } = mapDomainError(error, lng);
+    const mapped = mapDomainError(error, lng);
     throw new TRPCError({
-      code: "UNPROCESSABLE_CONTENT",
-      message,
+      code:
+        mapped.code === "INTERNAL_SERVER_ERROR"
+          ? "UNPROCESSABLE_CONTENT"
+          : mapped.code,
+      message: mapped.message,
       cause: error,
     });
   }
