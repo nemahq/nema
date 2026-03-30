@@ -7,6 +7,7 @@ import {
   SessionUpdateInputSchema,
 } from "@nema-io/shared";
 
+import { hasActiveGeneration } from "@server/infra/chat-stream-manager";
 import { getProviders } from "@server/infra/providers";
 import {
   createSession,
@@ -21,7 +22,10 @@ import { protectedProcedure, router } from "@server/trpc";
 export const sessionRouter = router({
   get: protectedProcedure
     .input(SessionGetInputSchema)
-    .query(({ ctx, input }) => getSession(ctx.supabase, input)),
+    .query(async ({ ctx, input }) => {
+      const session = await getSession(ctx.supabase, input);
+      return { ...session, isGenerating: hasActiveGeneration(input.sessionId) };
+    }),
 
   list: protectedProcedure
     .input(SessionListInputSchema)

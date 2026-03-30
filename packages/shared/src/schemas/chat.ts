@@ -4,13 +4,26 @@ export const CHAT_MODES = ["remember", "ask"] as const;
 export const ChatModeSchema = z.enum(CHAT_MODES);
 export type ChatMode = z.infer<typeof ChatModeSchema>;
 
-export const ChatInputSchema = z.object({
+const ChatStartInputSchema = z.object({
+  type: z.literal("start").optional().default("start"),
   sessionId: z.string().uuid(),
   messageId: z.string().uuid(),
   content: z.string().trim().min(1).max(100_000),
   mode: ChatModeSchema,
 });
+
+const ChatResumeInputSchema = z.object({
+  type: z.literal("resume"),
+  sessionId: z.string().uuid(),
+});
+
+export const ChatInputSchema = z.union([
+  ChatResumeInputSchema,
+  ChatStartInputSchema,
+]);
 export type ChatInput = z.infer<typeof ChatInputSchema>;
+export type ChatStartInput = z.infer<typeof ChatStartInputSchema>;
+export type ChatResumeInput = z.infer<typeof ChatResumeInputSchema>;
 
 export const DraftActionInputSchema = z.object({
   sessionId: z.string().uuid(),

@@ -1,5 +1,5 @@
 import type {
-  ChatInput,
+  ChatStartInput,
   ChatStreamEvent,
   Locale,
   Message,
@@ -13,6 +13,7 @@ import {
   STATUS_LOG_TYPES,
 } from "@nema-io/shared";
 
+import { cancelGeneration } from "@server/infra/chat-stream-manager";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
@@ -148,7 +149,7 @@ export async function* processChatStream(args: {
   supabase: TypedSupabaseClient;
   providers: Providers;
   userId: string;
-  input: ChatInput;
+  input: ChatStartInput;
   lng: Locale;
   signal?: AbortSignal;
 }): AsyncGenerator<ChatStreamEvent> {
@@ -249,6 +250,7 @@ export async function cancelDraftAction(args: {
 }): Promise<ChatResponse> {
   const { supabase, sessionId } = args;
 
+  cancelGeneration(sessionId);
   await clearDraft(supabase, sessionId);
 
   return createAssistantResponse({
@@ -257,6 +259,10 @@ export async function cancelDraftAction(args: {
     type: "status",
     content: STATUS_LOG_TYPES.DRAFT_CANCELLED,
   });
+}
+
+export function cancelGenerationAction(sessionId: string): void {
+  cancelGeneration(sessionId);
 }
 
 export async function dismissRetrievalAction(args: {

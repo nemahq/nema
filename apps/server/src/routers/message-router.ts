@@ -7,7 +7,13 @@ import {
 } from "@nema-io/shared";
 
 import {
+  hasActiveGeneration,
+  runGeneration,
+  subscribe,
+} from "@server/infra/chat-stream-manager";
+import {
   cancelDraftAction,
+  cancelGenerationAction,
   dismissRetrievalAction,
   processChatStream,
 } from "@server/services/chat";
@@ -31,20 +37,31 @@ export const messageRouter = router({
   chat: providerProcedure.input(ChatInputSchema).subscription(async function* ({
     ctx,
     input,
-    signal,
   }) {
-    yield* mapSubscriptionErrors(
+    const { sessionId } = input;
+
+    if (input.type === "resume" || hasActiveGeneration(sessionId)) {
+      yield* mapSubscriptionErrors(subscribe(sessionId), ctx.lng);
+      return;
+    }
+
+    void runGeneration(
+      sessionId,
       processChatStream({
         supabase: ctx.supabase,
         providers: ctx.providers,
         userId: ctx.user.id,
         input,
         lng: ctx.lng,
-        signal,
       }),
-      ctx.lng,
     );
+
+    yield* mapSubscriptionErrors(subscribe(sessionId), ctx.lng);
   }),
+
+  cancelGeneration: protectedProcedure
+    .input(SessionGetInputSchema)
+    .mutation(({ input }) => cancelGenerationAction(input.sessionId)),
 
   cancelDraft: protectedProcedure
     .input(DraftActionInputSchema)
