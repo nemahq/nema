@@ -218,7 +218,11 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   );
 
   // 세션 마운트 시 진행 중인 생성이 있으면 자동 재연결
-  const { data: session } = trpc.session.get.useQuery({ sessionId });
+  // 세션 복귀 시 isGenerating 상태를 항상 서버에서 받아와야 auto-resume 판단 가능
+  const { data: session } = trpc.session.get.useQuery(
+    { sessionId },
+    { staleTime: 0 },
+  );
 
   if (session?.isGenerating && streamingPhase === "idle" && !streamInput) {
     setStreamingPhase("text");
