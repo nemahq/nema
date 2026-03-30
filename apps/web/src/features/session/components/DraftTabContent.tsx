@@ -42,36 +42,39 @@ function DraftTabContentInner() {
   });
 
   return (
-    <div className="relative">
-      {!isStreaming && body && (
-        <div className="absolute right-0 top-0 flex gap-2">
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() => cancelDraft.mutate({ sessionId })}
-            disabled={cancelDraft.isPending}
-          >
-            {t("common.cancel")}
-            <Kbd>Esc</Kbd>
-          </Button>
-          <Button
-            variant="primary"
-            size="xs"
-            onClick={() => saveDraft.mutate({ sessionId })}
-            disabled={saveDraft.isPending}
-          >
-            {t("session.draft_save")}
-            {formatKeySegments("mod+s").map((key) => (
-              <Kbd key={key}>{key}</Kbd>
-            ))}
-          </Button>
-        </div>
-      )}
-      <div className="pt-10">
+    <div className="flex items-start gap-4">
+      <div className="min-w-0 flex-1">
         {body && <MarkdownRenderer content={body} />}
         {!body && isStreaming && !streamError && <WritingCursor />}
         {streamingPhase === "draft" && <StreamErrorMessage />}
       </div>
+
+      {!isStreaming && body && (
+        <div className="sticky top-0 shrink-0">
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => cancelDraft.mutate({ sessionId })}
+              disabled={cancelDraft.isPending}
+            >
+              {t("common.cancel")}
+              <Kbd>Esc</Kbd>
+            </Button>
+            <Button
+              variant="primary"
+              size="xs"
+              onClick={() => saveDraft.mutate({ sessionId })}
+              disabled={saveDraft.isPending}
+            >
+              {t("session.draft_save")}
+              {formatKeySegments("mod+s").map((key) => (
+                <Kbd key={key}>{key}</Kbd>
+              ))}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
