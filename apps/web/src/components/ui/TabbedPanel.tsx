@@ -40,12 +40,8 @@ export function TabbedPanel({
   return (
     <TabbedPanelLayout
       header={
-        tabs.length > 0 ? (
-          <div
-            role="tablist"
-            className="relative flex items-end border-b border-border/50"
-          >
-            {tabs.map((tab, i) => {
+        tabs.length > 0
+          ? tabs.map((tab, i) => {
               const isActive = resolvedTab === tab.id;
               const isFirst = i === 0;
 
@@ -94,9 +90,8 @@ export function TabbedPanel({
                   )}
                 </div>
               );
-            })}
-          </div>
-        ) : null
+            })
+          : null
       }
     >
       {tabs.length > 0 ? (

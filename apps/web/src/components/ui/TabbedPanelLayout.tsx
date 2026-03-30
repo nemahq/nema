@@ -11,7 +11,12 @@ export function TabbedPanelLayout({
 }: TabbedPanelLayoutProps) {
   return (
     <main className="flex flex-1 flex-col bg-surface-card min-w-0">
-      {header}
+      <div
+        role="tablist"
+        className="relative flex items-end border-b border-border/50"
+      >
+        {header}
+      </div>
       <div className="flex flex-1 flex-col overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]">
         {children}
       </div>
