@@ -2,7 +2,7 @@ import { Skeleton } from "@nema-io/weave";
 
 import { TabbedPanelLayout } from "@web/components/ui/TabbedPanelLayout";
 
-const TAB_HEADER_HEIGHT_PX = 38;
+const TAB_HEADER_STYLE = { height: 38 };
 const LINE_WIDTHS = ["w-4/5", "w-3/5", "w-[90%]", "w-2/5", "w-3/4"];
 
 export function ContentPanelSkeleton() {
@@ -11,7 +11,7 @@ export function ContentPanelSkeleton() {
       header={
         <div
           className="-mb-px flex items-center gap-1 border-r border-r-border bg-surface-card px-3"
-          style={{ height: TAB_HEADER_HEIGHT_PX }}
+          style={TAB_HEADER_STYLE}
         >
           <Skeleton className="size-3.5 rounded-sm" />
           <Skeleton className="h-3.5 w-8 rounded-sm" />
