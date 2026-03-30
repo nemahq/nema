@@ -48,6 +48,8 @@ export const messageRouter = router({
 
     const abortController = new AbortController();
 
+    // 생성을 현재 SSE 연결과 독립적으로 실행한다.
+    // 클라이언트가 끊겨도 서버에서 끝까지 완료되며, subscribe로 이벤트를 받는다.
     void runGeneration({
       userId,
       sessionId,

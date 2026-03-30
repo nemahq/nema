@@ -224,6 +224,8 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     { staleTime: 0 },
   );
 
+  // render-phase setState: useEffect 대신 동기 실행하여 불필요한 idle 렌더 사이클을 방지한다.
+  // React 공식 "Adjusting state based on props" 패턴.
   if (session?.isGenerating && streamingPhase === "idle" && !streamInput) {
     setStreamingPhase("text");
     setStreamStartedAt(new Date().toISOString());
