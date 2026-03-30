@@ -5,6 +5,8 @@ export {
   ChatInputSchema,
   type ChatMode,
   ChatModeSchema,
+  type ChatResumeInput,
+  type ChatStartInput,
   type DraftActionInput,
   DraftActionInputSchema,
 } from "./schemas/chat";

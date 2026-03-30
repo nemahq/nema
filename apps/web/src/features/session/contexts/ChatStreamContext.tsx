@@ -1,7 +1,9 @@
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -12,6 +14,7 @@ import { getQueryKey } from "@trpc/react-query";
 import {
   type ChatInput,
   type ChatMode,
+  type ChatStartInput,
   type ChatStreamEvent,
   type Message,
   type PhaseName,
@@ -29,6 +32,7 @@ import { trpc } from "@web/lib/trpc";
 type StreamingPhase = "idle" | "text" | "draft" | "retrieval";
 
 const STREAMING_MESSAGE_ID = "streaming";
+const RESUME_TIMEOUT_MS = 30_000;
 
 export type ClientStatusType = "thinking" | PhaseName | StatusLogType;
 
@@ -70,9 +74,17 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
 
   const isSettlingRef = useRef(false);
   const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
-  const lastStreamInputRef = useRef<ChatInput | null>(null);
+  const lastStreamInputRef = useRef<ChatStartInput | null>(null);
   const [streamingPhase, setStreamingPhase] = useState<StreamingPhase>("idle");
   const streamingPhaseRef = useRef<StreamingPhase>("idle");
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const cancelGenerationMutation = trpc.message.cancelGeneration.useMutation({
+    onError(error) {
+      Sentry.captureException(error, {
+        tags: { component: "chat-stream-cancel" },
+      });
+    },
+  });
   const [streamingText, setStreamingText] = useState("");
   const [streamingDraftText, setStreamingDraftText] = useState("");
   const [streamingRetrievalText, setStreamingRetrievalText] = useState("");
@@ -97,25 +109,28 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     setStreamError(null);
   }
 
-  function settleStream() {
-    if (isSettlingRef.current) {
-      return;
-    }
-    isSettlingRef.current = true;
-    setStreamInput(null);
+  const settleStream = useCallback(
+    function settleStream() {
+      if (isSettlingRef.current) {
+        return;
+      }
+      isSettlingRef.current = true;
+      setStreamInput(null);
 
-    Promise.all([
-      utils.message.list.invalidate({ sessionId }),
-      utils.session.get.invalidate({ sessionId }),
-    ])
-      .catch((error) => {
-        Sentry.captureException(error);
-      })
-      .finally(() => {
-        resetStreamState();
-        isSettlingRef.current = false;
-      });
-  }
+      Promise.all([
+        utils.message.list.invalidate({ sessionId }),
+        utils.session.get.invalidate({ sessionId }),
+      ])
+        .catch((error) => {
+          Sentry.captureException(error);
+        })
+        .finally(() => {
+          resetStreamState();
+          isSettlingRef.current = false;
+        });
+    },
+    [sessionId, utils],
+  );
 
   function handleStreamEvent(event: ChatStreamEvent) {
     switch (event.type) {
@@ -165,7 +180,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     }
 
     const messageId = crypto.randomUUID();
-    const newInput: ChatInput = { ...lastInput, messageId };
+    const newInput: ChatStartInput = { ...lastInput, messageId };
 
     addOptimisticMessage(utils, sessionId, {
       id: messageId,
@@ -194,50 +209,99 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   trpc.message.chat.useSubscription(
     streamInput && !isSessionCreating ? streamInput : skipToken,
     {
-      onData: handleStreamEvent,
+      onData(event) {
+        clearTimeout(resumeTimerRef.current);
+        handleStreamEvent(event);
+      },
       onError: handleStreamError,
     },
   );
 
-  function send(content: string, mode: ChatMode) {
-    if (streamingPhaseRef.current !== "idle") {
-      return;
-    }
+  // 세션 마운트 시 진행 중인 생성이 있으면 자동 재연결
+  // 세션 복귀 시 isGenerating 상태를 항상 서버에서 받아와야 auto-resume 판단 가능
+  const { data: session } = trpc.session.get.useQuery(
+    { sessionId },
+    { staleTime: 0 },
+  );
 
-    const messageId = crypto.randomUUID();
-
-    trackEvent("message.send", sessionId, {
-      content_length: content.length,
-      mode,
-    });
-
-    const optimistic: Message = {
-      id: messageId,
-      role: "user",
-      type: "text",
-      content,
-      createdAt: new Date().toISOString(),
-    };
-
-    addOptimisticMessage(utils, sessionId, optimistic);
-
-    generateTitle({ sessionId, content });
-
-    fullTextRef.current = "";
-    setStreamStartedAt(new Date().toISOString());
-    setStreamingText("");
-    streamingPhaseRef.current = "text";
+  // render-phase setState: useEffect 대신 동기 실행하여 불필요한 idle 렌더 사이클을 방지한다.
+  // React 공식 "Adjusting state based on props" 패턴.
+  if (session?.isGenerating && streamingPhase === "idle" && !streamInput) {
     setStreamingPhase("text");
-
-    const input: ChatInput = { sessionId, content, mode, messageId };
-    lastStreamInputRef.current = input;
-    setStreamInput(input);
+    setStreamStartedAt(new Date().toISOString());
+    setStreamInput({ type: "resume", sessionId });
   }
 
-  function cancel() {
-    setStreamInput(null);
-    settleStream();
-  }
+  const isResuming = streamInput?.type === "resume";
+
+  useEffect(
+    function watchResumeTimeout() {
+      if (!isResuming) {
+        return;
+      }
+      resumeTimerRef.current = setTimeout(() => {
+        Sentry.captureMessage("Stream resume timed out", {
+          extra: { sessionId },
+        });
+        settleStream();
+      }, RESUME_TIMEOUT_MS);
+      return () => clearTimeout(resumeTimerRef.current);
+    },
+    [isResuming, sessionId, settleStream],
+  );
+
+  const send = useCallback(
+    (content: string, mode: ChatMode) => {
+      if (streamingPhaseRef.current !== "idle") {
+        return;
+      }
+
+      const messageId = crypto.randomUUID();
+
+      trackEvent("message.send", sessionId, {
+        content_length: content.length,
+        mode,
+      });
+
+      const optimistic: Message = {
+        id: messageId,
+        role: "user",
+        type: "text",
+        content,
+        createdAt: new Date().toISOString(),
+      };
+
+      addOptimisticMessage(utils, sessionId, optimistic);
+
+      generateTitle({ sessionId, content });
+
+      fullTextRef.current = "";
+      setStreamStartedAt(new Date().toISOString());
+      setStreamingText("");
+      streamingPhaseRef.current = "text";
+      setStreamingPhase("text");
+
+      const input: ChatStartInput = {
+        type: "start",
+        sessionId,
+        content,
+        mode,
+        messageId,
+      };
+      lastStreamInputRef.current = input;
+      setStreamInput(input);
+    },
+    [sessionId, utils, generateTitle],
+  );
+
+  const cancel = useCallback(
+    function cancel() {
+      cancelGenerationMutation.mutate({ sessionId });
+      setStreamInput(null);
+      settleStream();
+    },
+    [sessionId, cancelGenerationMutation, settleStream],
+  );
 
   const streamingMessage: DisplayMessage | undefined = (() => {
     if (streamError) {

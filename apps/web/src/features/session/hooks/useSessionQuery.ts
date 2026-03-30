@@ -14,6 +14,7 @@ export function presetSessionCache(
       updatedAt: new Date().toISOString(),
       draft: null,
       retrieval: null,
+      isGenerating: false,
     },
   );
 }
