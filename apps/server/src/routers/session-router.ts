@@ -24,7 +24,10 @@ export const sessionRouter = router({
     .input(SessionGetInputSchema)
     .query(async ({ ctx, input }) => {
       const session = await getSession(ctx.supabase, input);
-      return { ...session, isGenerating: hasActiveGeneration(input.sessionId) };
+      return {
+        ...session,
+        isGenerating: hasActiveGeneration(ctx.user.id, input.sessionId),
+      };
     }),
 
   list: protectedProcedure

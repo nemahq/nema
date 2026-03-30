@@ -246,11 +246,12 @@ export async function* processChatStream(args: {
 
 export async function cancelDraftAction(args: {
   supabase: TypedSupabaseClient;
+  userId: string;
   sessionId: string;
 }): Promise<ChatResponse> {
-  const { supabase, sessionId } = args;
+  const { supabase, userId, sessionId } = args;
 
-  cancelGeneration(sessionId);
+  cancelGeneration(userId, sessionId);
   await clearDraft(supabase, sessionId);
 
   return createAssistantResponse({
@@ -261,8 +262,11 @@ export async function cancelDraftAction(args: {
   });
 }
 
-export function cancelGenerationAction(sessionId: string): void {
-  cancelGeneration(sessionId);
+export function cancelGenerationAction(
+  userId: string,
+  sessionId: string,
+): void {
+  cancelGeneration(userId, sessionId);
 }
 
 export async function dismissRetrievalAction(args: {

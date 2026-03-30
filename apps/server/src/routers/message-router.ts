@@ -39,35 +39,44 @@ export const messageRouter = router({
     input,
   }) {
     const { sessionId } = input;
+    const userId = ctx.user.id;
 
-    if (input.type === "resume" || hasActiveGeneration(sessionId)) {
-      yield* mapSubscriptionErrors(subscribe(sessionId), ctx.lng);
+    if (input.type === "resume" || hasActiveGeneration(userId, sessionId)) {
+      yield* mapSubscriptionErrors(subscribe(userId, sessionId), ctx.lng);
       return;
     }
 
-    void runGeneration(
+    const abortController = new AbortController();
+
+    void runGeneration({
+      userId,
       sessionId,
-      processChatStream({
+      stream: processChatStream({
         supabase: ctx.supabase,
         providers: ctx.providers,
-        userId: ctx.user.id,
+        userId,
         input,
         lng: ctx.lng,
+        signal: abortController.signal,
       }),
-    );
+      abortController,
+    });
 
-    yield* mapSubscriptionErrors(subscribe(sessionId), ctx.lng);
+    yield* mapSubscriptionErrors(subscribe(userId, sessionId), ctx.lng);
   }),
 
   cancelGeneration: protectedProcedure
     .input(SessionGetInputSchema)
-    .mutation(({ input }) => cancelGenerationAction(input.sessionId)),
+    .mutation(({ ctx, input }) =>
+      cancelGenerationAction(ctx.user.id, input.sessionId),
+    ),
 
   cancelDraft: protectedProcedure
     .input(DraftActionInputSchema)
     .mutation(({ ctx, input }) =>
       cancelDraftAction({
         supabase: ctx.supabase,
+        userId: ctx.user.id,
         sessionId: input.sessionId,
       }),
     ),

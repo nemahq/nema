@@ -1,5 +1,7 @@
 import { EventEmitter } from "node:events";
 
+import * as Sentry from "@sentry/node";
+
 import type { ChatStreamEvent } from "@nema-io/shared";
 
 const BUFFER_TTL_MS = 300_000; // 5분
@@ -10,22 +12,31 @@ interface GenerationState {
   status: "running" | "done" | "error";
   error?: unknown;
   cleanupTimer?: ReturnType<typeof setTimeout>;
+  abortController?: AbortController;
 }
 
 const generations = new Map<string, GenerationState>();
 
-function scheduleCleanup(sessionId: string): void {
-  const state = generations.get(sessionId);
+function makeKey(userId: string, sessionId: string): string {
+  return `${userId}:${sessionId}`;
+}
+
+function scheduleCleanup(key: string): void {
+  const state = generations.get(key);
   if (!state) {
     return;
   }
   state.cleanupTimer = setTimeout(() => {
-    generations.delete(sessionId);
+    generations.delete(key);
   }, BUFFER_TTL_MS);
 }
 
-export function hasActiveGeneration(sessionId: string): boolean {
-  return generations.has(sessionId);
+export function hasActiveGeneration(
+  userId: string,
+  sessionId: string,
+): boolean {
+  const state = generations.get(makeKey(userId, sessionId));
+  return state?.status === "running";
 }
 
 interface GenerationHandle {
@@ -34,10 +45,13 @@ interface GenerationHandle {
   fail: (error: unknown) => void;
 }
 
-export function startGeneration(sessionId: string): GenerationHandle {
-  const existing = generations.get(sessionId);
+function startGeneration(
+  key: string,
+  abortController?: AbortController,
+): GenerationHandle {
+  const existing = generations.get(key);
   if (existing?.status === "running") {
-    throw new Error(`Generation already running for session ${sessionId}.`);
+    throw new Error(`Generation already running for ${key}.`);
   }
 
   if (existing?.cleanupTimer) {
@@ -51,33 +65,46 @@ export function startGeneration(sessionId: string): GenerationHandle {
     events: [],
     emitter,
     status: "running",
+    abortController,
   };
-  generations.set(sessionId, state);
+  generations.set(key, state);
 
   return {
     emit(event: ChatStreamEvent) {
+      if (state.status !== "running") {
+        return;
+      }
       state.events.push(event);
       emitter.emit("event", event);
     },
     complete() {
+      if (state.status !== "running") {
+        return;
+      }
       state.status = "done";
       emitter.emit("end");
-      scheduleCleanup(sessionId);
+      scheduleCleanup(key);
     },
     fail(error: unknown) {
+      if (state.status !== "running") {
+        return;
+      }
       state.status = "error";
       state.error = error;
-      emitter.emit("error", error);
-      scheduleCleanup(sessionId);
+      emitter.emit("stream_error", error);
+      scheduleCleanup(key);
     },
   };
 }
 
 export async function* subscribe(
+  userId: string,
   sessionId: string,
 ): AsyncGenerator<ChatStreamEvent> {
-  const state = generations.get(sessionId);
+  const key = makeKey(userId, sessionId);
+  const state = generations.get(key);
   if (!state) {
+    yield { type: "done" };
     return;
   }
 
@@ -118,7 +145,7 @@ export async function* subscribe(
 
   state.emitter.on("event", onEvent);
   state.emitter.on("end", onEnd);
-  state.emitter.on("error", onError);
+  state.emitter.on("stream_error", onError);
 
   try {
     while (!done || queue.length > 0) {
@@ -141,31 +168,50 @@ export async function* subscribe(
   } finally {
     state.emitter.off("event", onEvent);
     state.emitter.off("end", onEnd);
-    state.emitter.off("error", onError);
+    state.emitter.off("stream_error", onError);
   }
 }
 
-export function cancelGeneration(sessionId: string): void {
-  const state = generations.get(sessionId);
+export function cancelGeneration(userId: string, sessionId: string): void {
+  const key = makeKey(userId, sessionId);
+  const state = generations.get(key);
   if (!state || state.status !== "running") {
     return;
   }
+  state.abortController?.abort();
   state.status = "done";
   state.emitter.emit("end");
-  scheduleCleanup(sessionId);
+  scheduleCleanup(key);
 }
 
-export async function runGeneration(
-  sessionId: string,
-  stream: AsyncIterable<ChatStreamEvent>,
-): Promise<void> {
-  const handle = startGeneration(sessionId);
+export async function runGeneration(args: {
+  userId: string;
+  sessionId: string;
+  stream: AsyncIterable<ChatStreamEvent>;
+  abortController?: AbortController;
+}): Promise<void> {
+  const { userId, sessionId, stream, abortController } = args;
+  const key = makeKey(userId, sessionId);
+  let handle: GenerationHandle;
+  try {
+    handle = startGeneration(key, abortController);
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "chat-stream-manager" },
+      extra: { sessionId },
+    });
+    return;
+  }
   try {
     for await (const event of stream) {
       handle.emit(event);
     }
     handle.complete();
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "chat-stream-manager" },
+      extra: { sessionId },
+    });
     handle.fail(error);
   }
 }
