@@ -6,7 +6,6 @@ import { t } from "@server/infra/i18n";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
-import { VectorStoreError } from "@server/infra/vector/vector-store";
 import {
   buildRetrievalMessage,
   RETRIEVAL_SYSTEM_PROMPT,
@@ -112,7 +111,7 @@ export async function* handleRetrievalStream(args: {
 
   const TOTAL_CHANNEL_COUNT = 3;
   if (channelFailures.length === TOTAL_CHANNEL_COUNT) {
-    throw new VectorStoreError("All retrieval channels failed", "search");
+    throw new Error("All retrieval channels failed");
   }
 
   const graphDocIds = new Set(graphResults.map((gr) => gr.docId));
