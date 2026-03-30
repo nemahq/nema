@@ -13,10 +13,9 @@ export function ContentPanelSkeleton() {
           className="relative flex items-end border-b border-border/50"
           style={{ height: TAB_HEADER_HEIGHT_PX }}
         >
-          <div className="-mb-px flex h-[calc(100%+1px)] items-center gap-1 border-r border-r-border bg-surface-card pl-3 pr-2">
+          <div className="-mb-px flex h-[calc(100%+1px)] items-center gap-1 border-r border-r-border bg-surface-card px-3">
             <Skeleton className="size-3.5 rounded-sm" />
             <Skeleton className="h-3.5 w-8 rounded-sm" />
-            <Skeleton className="size-3 rounded-sm" />
           </div>
         </div>
       }
