@@ -50,7 +50,6 @@ export async function* handleRetrievalStream(args: {
   yield { type: "phase", name: "searching" };
 
   // --- 3개 검색 채널 병렬 실행 (개별 채널 실패해도 메인 흐름 유지) ---
-  const channelFailures: string[] = [];
   const sentryExtra = { userId, sessionId };
 
   const [vectorResults, graphResults, textMatchDocIds] = await Promise.all([
@@ -68,7 +67,6 @@ export async function* handleRetrievalStream(args: {
         ).then((batches) => batches.flat())
       : Promise.resolve([] as Awaited<ReturnType<typeof vectorStore.search>>)
     ).catch((err) => {
-      channelFailures.push("vector");
       Sentry.captureException(err, {
         tags: { component: "retrieval", channel: "vector" },
         extra: sentryExtra,
@@ -85,7 +83,6 @@ export async function* handleRetrievalStream(args: {
         })
       : Promise.resolve([])
     ).catch((err) => {
-      channelFailures.push("graph");
       Sentry.captureException(err, {
         tags: { component: "retrieval", channel: "graph" },
         extra: sentryExtra,
@@ -100,7 +97,6 @@ export async function* handleRetrievalStream(args: {
       entitiesEn: searchQuery.entitiesEn,
       entities: searchQuery.entities,
     }).catch((err) => {
-      channelFailures.push("text_match");
       Sentry.captureException(err, {
         tags: { component: "retrieval", channel: "text_match" },
         extra: sentryExtra,
@@ -108,13 +104,6 @@ export async function* handleRetrievalStream(args: {
       return [] as string[];
     }),
   ]);
-
-  const CHANNEL_NAMES = ["vector", "graph", "text_match"] as const;
-  if (channelFailures.length === CHANNEL_NAMES.length) {
-    const noResult = t("chat.retrieval_empty", lng);
-    yield { type: "token", text: noResult };
-    return { text: noResult, hasResults: false };
-  }
 
   const graphDocIds = new Set(graphResults.map((gr) => gr.docId));
   const textMatchSet = new Set(textMatchDocIds);
