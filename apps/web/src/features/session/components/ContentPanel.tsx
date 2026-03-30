@@ -10,6 +10,8 @@ import { useHelpTab } from "@web/features/session/hooks/useHelpTab";
 import { useRetrievalTab } from "@web/features/session/hooks/useRetrievalTab";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 
+import { ContentPanelSkeleton } from "./ContentPanelSkeleton";
+
 const MAX_TAB_SHORTCUT = 9;
 
 const TAB_HOTKEYS = Array.from(
@@ -88,11 +90,7 @@ export function ContentPanel() {
       boundaryName="content-panel"
       fallbackRender={(props) => <SectionErrorFallback {...props} />}
     >
-      <Suspense
-        fallback={
-          <TabbedPanel tabs={[]} activeTabId="" onActiveTabChange={() => {}} />
-        }
-      >
+      <Suspense fallback={<ContentPanelSkeleton />}>
         <ContentPanelInner />
       </Suspense>
     </ErrorBoundary>
