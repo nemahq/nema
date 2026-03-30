@@ -93,7 +93,7 @@ export function ChatComposer() {
         />
       )}
       <p className="px-2 pb-1 text-xs text-fg-tertiary">
-        <span className={MODE_CONFIG[mode].color}>
+        <span className={`font-semibold ${MODE_CONFIG[mode].color}`}>
           {t(MODE_CONFIG[mode].labelKey)}
         </span>{" "}
         {t("session.mode_hint_shortcut")}

@@ -42,7 +42,7 @@ function DraftTabContentInner() {
   });
 
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex items-start gap-2">
       <div className="min-w-0 flex-1">
         {body && <MarkdownRenderer content={body} />}
         {!body && isStreaming && !streamError && <WritingCursor />}
