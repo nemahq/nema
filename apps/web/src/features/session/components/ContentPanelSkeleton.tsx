@@ -17,7 +17,7 @@ export function ContentPanelSkeleton() {
       </div>
 
       <div className="flex-1 p-5">
-        <div className="space-y-2.5 pt-10">
+        <div className="space-y-2.5">
           {LINE_WIDTHS.map((width, i) => (
             <Skeleton
               key={i}
