@@ -109,9 +109,11 @@ export async function* handleRetrievalStream(args: {
     }),
   ]);
 
-  const TOTAL_CHANNEL_COUNT = 3;
-  if (channelFailures.length === TOTAL_CHANNEL_COUNT) {
-    throw new Error("All retrieval channels failed");
+  const CHANNEL_NAMES = ["vector", "graph", "text_match"] as const;
+  if (channelFailures.length === CHANNEL_NAMES.length) {
+    const noResult = t("chat.retrieval_empty", lng);
+    yield { type: "token", text: noResult };
+    return { text: noResult, hasResults: false };
   }
 
   const graphDocIds = new Set(graphResults.map((gr) => gr.docId));
