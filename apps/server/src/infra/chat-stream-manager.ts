@@ -4,7 +4,9 @@ import * as Sentry from "@sentry/node";
 
 import type { ChatStreamEvent } from "@nema-io/shared";
 
-const BUFFER_TTL_MS = 300_000; // 5분
+// 생성 완료 후 클라이언트 재연결을 위해 이벤트 버퍼를 유지하는 시간.
+// 이 시간 안에 복귀하면 스트리밍 이벤트를 재생받고, 초과하면 DB 데이터로 정적 렌더된다.
+const BUFFER_TTL_MS = 300_000;
 
 interface GenerationState {
   events: ChatStreamEvent[];
