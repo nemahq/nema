@@ -174,7 +174,7 @@ export function SaveQueuePanel() {
               {t("session.save_queue_panel_hint")}
             </p>
           )}
-          <div className="max-h-48 overflow-y-auto pb-1">
+          <div className="max-h-24 overflow-y-auto pb-1 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]">
             {visibleItems.map((item) => (
               <SaveQueueItem
                 key={item.jobId}
