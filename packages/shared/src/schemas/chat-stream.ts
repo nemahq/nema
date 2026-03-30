@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const PHASE_VALUES = ["searching"] as const;
+const PHASE_VALUES = ["searching", "answering"] as const;
 
 export const PhaseNameSchema = z.enum(PHASE_VALUES);
 export type PhaseName = z.infer<typeof PhaseNameSchema>;

@@ -8,7 +8,16 @@ export function useSessionMessages() {
   const { streamingMessage } = useChatStream();
   const [serverMessages] = useMessageListSuspenseQuery({ sessionId });
 
-  return streamingMessage
-    ? [...serverMessages, streamingMessage]
-    : serverMessages;
+  if (!streamingMessage) {
+    return serverMessages;
+  }
+
+  const lastServerMsg = serverMessages.at(-1);
+  const isDuplicate =
+    lastServerMsg &&
+    lastServerMsg.type === streamingMessage.type &&
+    "content" in lastServerMsg &&
+    lastServerMsg.content === streamingMessage.content;
+
+  return isDuplicate ? serverMessages : [...serverMessages, streamingMessage];
 }

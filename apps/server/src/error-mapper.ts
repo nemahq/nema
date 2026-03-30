@@ -33,7 +33,7 @@ const ERROR_MAP: Record<
     i18nKey: "error.llm_rate_limit",
   },
   LLM_TIMEOUT: { trpcCode: "TIMEOUT", i18nKey: "error.llm_timeout" },
-  LLM_AUTH: { trpcCode: "INTERNAL_SERVER_ERROR", i18nKey: "error.llm_auth" },
+  LLM_AUTH: { trpcCode: "INTERNAL_SERVER_ERROR", i18nKey: "error.default" },
   LLM_BAD_REQUEST: {
     trpcCode: "BAD_REQUEST",
     i18nKey: "error.llm_bad_request",
@@ -44,19 +44,19 @@ const ERROR_MAP: Record<
   },
   LLM_ERROR: {
     trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.llm_default",
+    i18nKey: "error.default",
   },
   EMBEDDING_ERROR: {
     trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.embedding",
+    i18nKey: "error.default",
   },
   VECTOR_STORE_ERROR: {
     trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.vector_store",
+    i18nKey: "error.default",
   },
   GRAPH_STORE_ERROR: {
     trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.graph_store",
+    i18nKey: "error.default",
   },
   DB_NOT_FOUND: {
     trpcCode: "NOT_FOUND",
@@ -64,7 +64,7 @@ const ERROR_MAP: Record<
   },
   DB_QUERY_FAILED: {
     trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.db_query_failed",
+    i18nKey: "error.default",
   },
 };
 
@@ -112,7 +112,7 @@ export function mapDomainError(error: unknown, lng: Locale): TRPCError {
   }
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
-    message: t("error.unknown", lng),
+    message: t("error.default", lng),
     cause: error,
   });
 }

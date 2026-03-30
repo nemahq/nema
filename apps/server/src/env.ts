@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { config } from "dotenv";
 import { z } from "zod";
 
-const appEnvValues = ["local", "staging", "production"] as const;
+const appEnvValues = ["staging", "production"] as const;
 
 const envSchema = z
   .object({
@@ -50,7 +50,8 @@ const envSchema = z
   .transform((data) => ({
     ...data,
     APP_ENV:
-      data.APP_ENV ?? (data.NODE_ENV === "production" ? "production" : "local"),
+      data.APP_ENV ??
+      (data.NODE_ENV === "production" ? "production" : "staging"),
   }));
 
 type Env = z.infer<typeof envSchema>;
@@ -58,8 +59,10 @@ type Env = z.infer<typeof envSchema>;
 let env: Env;
 
 export function loadEnv(appRoot: string): void {
+  const appEnv = process.env.APP_ENV ?? "staging";
+  config({ path: resolve(appRoot, `.env.${appEnv}`) });
   config({ path: resolve(appRoot, ".env") });
-  config({ path: resolve(homedir(), ".config/nema/server.env") });
+  config({ path: resolve(homedir(), ".config/nema/.env.secret") });
 
   const result = envSchema.safeParse(process.env);
   if (!result.success) {

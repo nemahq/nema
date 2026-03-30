@@ -16,6 +16,7 @@ import {
   type Message,
   type PhaseName,
   STATUS_LOG_TYPES,
+  type StatusLogType,
 } from "@nema-io/shared";
 
 import { useGenerateTitle } from "@web/features/session/hooks/useGenerateTitle";
@@ -29,7 +30,7 @@ type StreamingPhase = "idle" | "text" | "draft" | "retrieval";
 
 const STREAMING_MESSAGE_ID = "streaming";
 
-export type ClientStatusType = "thinking" | PhaseName;
+export type ClientStatusType = "thinking" | PhaseName | StatusLogType;
 
 export interface ClientStatusMessage {
   id: string;
@@ -258,9 +259,9 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
           id: STREAMING_MESSAGE_ID,
           role: "assistant",
           type: "status",
-          content: STATUS_LOG_TYPES.RETRIEVAL_ANSWERED,
+          content: activePhase ?? STATUS_LOG_TYPES.RETRIEVAL_ANSWERED,
           createdAt: streamStartedAt,
-        };
+        } satisfies ClientStatusMessage;
       case "text":
         return streamingText
           ? {

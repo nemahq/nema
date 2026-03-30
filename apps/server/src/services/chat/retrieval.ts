@@ -49,10 +49,12 @@ export async function* handleRetrievalStream(args: {
 
   yield { type: "phase", name: "searching" };
 
-  // --- 3개 검색 채널 병렬 실행 (텍스트 매치는 보조 — 실패해도 메인 흐름 유지) ---
+  // --- 3개 검색 채널 병렬 실행 (개별 채널 실패해도 메인 흐름 유지) ---
+  const sentryExtra = { userId, sessionId };
+
   const [vectorResults, graphResults, textMatchDocIds] = await Promise.all([
     // 1) Qdrant 벡터 검색 (영어 쿼리)
-    searchQuery.queriesEn.length > 0
+    (searchQuery.queriesEn.length > 0
       ? Promise.all(
           searchQuery.queriesEn.map((query) =>
             vectorStore.search(embedding, {
@@ -63,16 +65,30 @@ export async function* handleRetrievalStream(args: {
             }),
           ),
         ).then((batches) => batches.flat())
-      : Promise.resolve([] as Awaited<ReturnType<typeof vectorStore.search>>),
+      : Promise.resolve([] as Awaited<ReturnType<typeof vectorStore.search>>)
+    ).catch((err) => {
+      Sentry.captureException(err, {
+        tags: { component: "retrieval", channel: "vector" },
+        extra: sentryExtra,
+      });
+      return [] as Awaited<ReturnType<typeof vectorStore.search>>;
+    }),
 
     // 2) Neo4j 그래프 검색 (영어 엔티티)
-    searchQuery.entitiesEn.length > 0
+    (searchQuery.entitiesEn.length > 0
       ? graphStore.findDocumentsByEntities({
           entityNames: searchQuery.entitiesEn,
           userId,
           limit: RETRIEVAL_PER_QUERY_LIMIT,
         })
-      : Promise.resolve([]),
+      : Promise.resolve([])
+    ).catch((err) => {
+      Sentry.captureException(err, {
+        tags: { component: "retrieval", channel: "graph" },
+        extra: sentryExtra,
+      });
+      return [] as Array<{ docId: string }>;
+    }),
 
     // 3) Supabase 텍스트 매치 (엔티티 키워드)
     searchTextMatch({
@@ -83,6 +99,7 @@ export async function* handleRetrievalStream(args: {
     }).catch((err) => {
       Sentry.captureException(err, {
         tags: { component: "retrieval", channel: "text_match" },
+        extra: sentryExtra,
       });
       return [] as string[];
     }),
@@ -181,6 +198,7 @@ export async function* handleRetrievalStream(args: {
   }
 
   yield { type: "retrieval_start" };
+  yield { type: "phase", name: "answering" };
 
   let fullText = "";
 
