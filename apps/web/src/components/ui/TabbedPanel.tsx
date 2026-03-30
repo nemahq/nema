@@ -6,6 +6,8 @@ import { X } from "@nema-io/weave/icons";
 import type { TranslationKey } from "@web/lib/tolgee";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { TabbedPanelShell } from "./TabbedPanelShell";
+
 export interface TabbedPanelTab {
   id: string;
   labelKey: TranslationKey;
@@ -36,9 +38,9 @@ export function TabbedPanel({
   }
 
   return (
-    <main className="flex flex-1 flex-col bg-surface-card min-w-0">
-      {tabs.length > 0 ? (
-        <>
+    <TabbedPanelShell
+      header={
+        tabs.length > 0 ? (
           <div
             role="tablist"
             className="relative flex items-end border-b border-border/50"
@@ -94,21 +96,19 @@ export function TabbedPanel({
               );
             })}
           </div>
-
-          <div
-            role="tabpanel"
-            id={`panel-${resolvedTab}`}
-            className="flex-1 overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
-          >
-            {activeTabData?.content}
-          </div>
-        </>
+        ) : null
+      }
+    >
+      {tabs.length > 0 ? (
+        <div role="tabpanel" id={`panel-${resolvedTab}`}>
+          {activeTabData?.content}
+        </div>
       ) : (
         <div className="flex flex-1 items-center justify-center text-fg-quaternary">
           {/* TODO: 로고 에셋으로 교체 */}
           <span className="text-lg font-semibold">Logo</span>
         </div>
       )}
-    </main>
+    </TabbedPanelShell>
   );
 }
