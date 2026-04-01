@@ -34,7 +34,7 @@ const STATUS_LABEL_MAP: Record<
 
 type StatusSource =
   | Extract<Message, { type: "status" }>
-  | Pick<ClientStatusMessage, "type" | "content" | "meta">;
+  | Pick<ClientStatusMessage, "type" | "content">;
 
 interface StatusMessageProps {
   message: StatusSource;
@@ -42,20 +42,18 @@ interface StatusMessageProps {
 
 export function StatusMessage({ message }: StatusMessageProps) {
   const { t } = useTranslation();
-  const meta = "meta" in message ? message.meta : undefined;
 
   if (message.content === "searching") {
-    const entities = meta && "entities" in meta ? (meta.entities ?? []) : [];
-    return <SearchingStatus entities={entities} />;
+    return <SearchingStatus />;
   }
 
   const status = IN_PROGRESS_STATUSES.has(message.content)
     ? "in-progress"
     : "completed";
-  const titles = meta && "titles" in meta ? meta.titles : undefined;
+  const meta = "meta" in message ? message.meta : undefined;
   const label =
-    message.content === "draft_saved" && titles
-      ? t(STATUS_LABEL_MAP[message.content], { titles })
+    message.content === "draft_saved" && meta?.titles
+      ? t(STATUS_LABEL_MAP[message.content], { titles: meta.titles })
       : t(STATUS_LABEL_MAP[message.content]);
 
   return <StatusIndicator label={label} status={status} />;

@@ -1,12 +1,9 @@
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { StatusIndicator } from "./StatusIndicator";
 
 const MAX_VISIBLE_ENTITIES = 2;
-
-interface SearchingStatusProps {
-  entities: string[];
-}
 
 function formatEntities(
   entities: string[],
@@ -19,13 +16,14 @@ function formatEntities(
     : visible;
 }
 
-export function SearchingStatus({ entities }: SearchingStatusProps) {
+export function SearchingStatus() {
   const { t } = useTranslation();
+  const { searchEntities } = useChatLifecycle();
 
   const label =
-    entities.length > 0
+    searchEntities.length > 0
       ? t("session.status_searching_with_entities", {
-          entities: formatEntities(entities, t),
+          entities: formatEntities(searchEntities, t),
         })
       : t("session.status_searching");
 
