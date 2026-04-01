@@ -8,7 +8,7 @@ import {
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { getRouteState } from "@web/app/utils/routeState";
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useScrollAnchor } from "@web/features/session/hooks/useScrollAnchor";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 
@@ -79,7 +79,7 @@ export function ChatPanel() {
       initialMode: getRouteState(loc.state, HOME_TO_SESSION_INITIAL_MODE_KEY),
     }),
   });
-  const { send } = useChatStream();
+  const { send } = useChatLifecycle();
 
   const sentRef = useRef(false);
   useEffect(

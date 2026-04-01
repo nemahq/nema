@@ -46,7 +46,7 @@ export interface ClientStatusMessage {
 
 export type DisplayMessage = Message | ClientStatusMessage;
 
-interface ChatStreamContextValue {
+interface ChatLifecycleContextValue {
   send: (content: string, mode: ChatMode) => void;
   cancel: () => void;
   streamingPhase: StreamingPhase;
@@ -58,7 +58,9 @@ interface ChatStreamContextValue {
   dismissStreamError: () => void;
 }
 
-const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
+const ChatLifecycleContext = createContext<ChatLifecycleContextValue | null>(
+  null,
+);
 
 function buildStreamingMessage({
   streamError,
@@ -122,11 +124,13 @@ function buildStreamingMessage({
   }
 }
 
-interface ChatStreamProviderProps {
+interface ChatLifecycleProviderProps {
   children: ReactNode;
 }
 
-export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
+export function ChatLifecycleProvider({
+  children,
+}: ChatLifecycleProviderProps) {
   const sessionId = useSessionId();
   const utils = trpc.useUtils();
   const { mutate: generateTitle } = useGenerateTitle();
@@ -381,7 +385,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     activePhase,
   });
 
-  const contextValue: ChatStreamContextValue = {
+  const contextValue: ChatLifecycleContextValue = {
     send,
     cancel,
     streamingPhase,
@@ -393,13 +397,17 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     dismissStreamError,
   };
 
-  return <ChatStreamContext value={contextValue}>{children}</ChatStreamContext>;
+  return (
+    <ChatLifecycleContext value={contextValue}>{children}</ChatLifecycleContext>
+  );
 }
 
-export function useChatStream() {
-  const ctx = useContext(ChatStreamContext);
+export function useChatLifecycle() {
+  const ctx = useContext(ChatLifecycleContext);
   if (!ctx) {
-    throw new Error("useChatStream must be used within a ChatStreamProvider.");
+    throw new Error(
+      "useChatLifecycle must be used within a ChatLifecycleProvider.",
+    );
   }
   return ctx;
 }

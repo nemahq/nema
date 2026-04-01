@@ -1,12 +1,12 @@
 import { Button } from "@nema-io/weave";
 import { RotateCcw, X } from "@nema-io/weave/icons";
 
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useTranslation } from "@web/lib/tolgee";
 
 export function StreamErrorMessage() {
   const { t } = useTranslation();
-  const { streamError, retryStream, dismissStreamError } = useChatStream();
+  const { streamError, retryStream, dismissStreamError } = useChatLifecycle();
 
   if (!streamError) {
     return null;

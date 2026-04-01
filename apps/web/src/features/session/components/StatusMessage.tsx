@@ -4,7 +4,7 @@ import { Circle } from "@nema-io/weave/icons";
 import type {
   ClientStatusMessage,
   ClientStatusType,
-} from "@web/features/session/contexts/ChatStreamContext";
+} from "@web/features/session/contexts/ChatLifecycleContext";
 import { useTranslation } from "@web/lib/tolgee";
 import type { TranslationKey } from "@web/lib/tolgee/types";
 

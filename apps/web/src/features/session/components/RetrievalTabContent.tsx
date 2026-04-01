@@ -4,7 +4,7 @@ import { Suspense } from "react";
 
 import { Search } from "@nema-io/weave/icons";
 
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useSessionSuspenseQuery } from "@web/features/session/hooks/useSessionQuery";
 import { useBufferedStream } from "@web/hooks/useBufferedStream";
@@ -32,7 +32,7 @@ function RetrievalTabContentInner() {
   const [session] = useSessionSuspenseQuery({ sessionId });
   const retrieval = session.retrieval;
   const { streamingPhase, streamingRetrievalText, streamError } =
-    useChatStream();
+    useChatLifecycle();
 
   const isSearching = streamingPhase === "searching";
   const isStreaming = streamingPhase === "retrieval";

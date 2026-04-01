@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
-import type { DisplayMessage } from "@web/features/session/contexts/ChatStreamContext";
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import type { DisplayMessage } from "@web/features/session/contexts/ChatLifecycleContext";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { USER_TURN_DATA_ROLE } from "@web/features/session/hooks/useScrollAnchor";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 
@@ -33,7 +33,7 @@ function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
 function MessageListContent() {
   const messages = useSessionMessages();
   const turns = groupIntoTurns(messages);
-  const { streamingPhase } = useChatStream();
+  const { streamingPhase } = useChatLifecycle();
 
   return (
     <>
