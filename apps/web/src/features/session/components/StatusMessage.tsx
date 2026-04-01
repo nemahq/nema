@@ -5,7 +5,6 @@ import type {
   ClientStatusMessage,
   ClientStatusType,
 } from "@web/features/session/contexts/ChatLifecycleContext";
-import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useTranslation } from "@web/lib/tolgee";
 import type { TranslationKey } from "@web/lib/tolgee/types";
 
@@ -46,7 +45,7 @@ function formatEntities(
 
 type StatusSource =
   | Extract<Message, { type: "status" }>
-  | Pick<ClientStatusMessage, "type" | "content">;
+  | Pick<ClientStatusMessage, "type" | "content" | "meta">;
 
 interface StatusMessageProps {
   message: StatusSource;
@@ -54,21 +53,21 @@ interface StatusMessageProps {
 
 export function StatusMessage({ message }: StatusMessageProps) {
   const { t } = useTranslation();
-  const { searchEntities } = useChatLifecycle();
   const inProgress = IN_PROGRESS_STATUSES.has(message.content);
+  const meta = "meta" in message ? message.meta : undefined;
+  const entities = meta && "entities" in meta ? meta.entities : undefined;
+  const titles = meta && "titles" in meta ? meta.titles : undefined;
 
   let label: string;
 
-  if (message.content === "searching" && searchEntities.length > 0) {
+  if (message.content === "searching" && entities?.length) {
     label = t("session.status_searching_with_entities", {
-      entities: formatEntities(searchEntities, t),
+      entities: formatEntities(entities, t),
     });
+  } else if (message.content === "draft_saved" && titles) {
+    label = t(STATUS_LABEL_MAP[message.content], { titles });
   } else {
-    const meta = "meta" in message ? message.meta : undefined;
-    label =
-      message.content === "draft_saved" && meta?.titles
-        ? t(STATUS_LABEL_MAP[message.content], { titles: meta.titles })
-        : t(STATUS_LABEL_MAP[message.content]);
+    label = t(STATUS_LABEL_MAP[message.content]);
   }
 
   return (

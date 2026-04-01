@@ -43,6 +43,7 @@ export interface ClientStatusMessage {
   type: "status";
   content: ClientStatusType;
   createdAt: string;
+  meta?: { entities?: string[] };
 }
 
 export type DisplayMessage = Message | ClientStatusMessage;
@@ -54,7 +55,6 @@ interface ChatLifecycleContextValue {
   streamingMessage: DisplayMessage | undefined;
   streamingDraftText: string;
   streamingRetrievalText: string;
-  searchEntities: string[];
   searchResultDocs: SearchResultDoc[];
   clearSearchResults: () => void;
   streamError: string | null;
@@ -72,12 +72,14 @@ function buildStreamingMessage({
   streamStartedAt,
   streamingText,
   activePhase,
+  searchEntities,
 }: {
   streamError: string | null;
   streamingPhase: StreamingPhase;
   streamStartedAt: string;
   streamingText: string;
   activePhase: PhaseName | null;
+  searchEntities: string[];
 }): DisplayMessage | undefined {
   if (streamError) {
     return undefined;
@@ -100,6 +102,9 @@ function buildStreamingMessage({
         type: "status",
         content: "searching" satisfies PhaseName,
         createdAt: streamStartedAt,
+        ...(searchEntities.length > 0 && {
+          meta: { entities: searchEntities },
+        }),
       } satisfies ClientStatusMessage;
     case "retrieval":
       return {
@@ -402,6 +407,7 @@ export function ChatLifecycleProvider({
     streamStartedAt,
     streamingText,
     activePhase,
+    searchEntities,
   });
 
   const contextValue: ChatLifecycleContextValue = {
@@ -411,7 +417,6 @@ export function ChatLifecycleProvider({
     streamingMessage,
     streamingDraftText,
     streamingRetrievalText,
-    searchEntities,
     searchResultDocs,
     clearSearchResults: useCallback(function clearSearchResults() {
       setSearchResultDocs([]);

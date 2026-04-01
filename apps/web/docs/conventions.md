@@ -43,6 +43,7 @@
 ## Functions
 
 - Separate filtering/transformation logic (pure) from execution (side effects).
+- Extract formatting/transformation logic into named functions when it obscures the surrounding control flow.
 
 ## Naming
 
