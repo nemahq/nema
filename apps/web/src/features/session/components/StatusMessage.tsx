@@ -1,5 +1,4 @@
 import type { Message, StatusLogType } from "@nema-io/shared";
-import { Circle } from "@nema-io/weave/icons";
 
 import type {
   ClientStatusMessage,
@@ -7,6 +6,9 @@ import type {
 } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useTranslation } from "@web/lib/tolgee";
 import type { TranslationKey } from "@web/lib/tolgee/types";
+
+import { SearchingStatus } from "./SearchingStatus";
+import { StatusIndicator } from "./StatusIndicator";
 
 const IN_PROGRESS_STATUSES = new Set<StatusLogType | ClientStatusType>([
   "thinking",
@@ -40,20 +42,19 @@ interface StatusMessageProps {
 
 export function StatusMessage({ message }: StatusMessageProps) {
   const { t } = useTranslation();
-  const inProgress = IN_PROGRESS_STATUSES.has(message.content);
 
+  if (message.content === "searching") {
+    return <SearchingStatus />;
+  }
+
+  const status = IN_PROGRESS_STATUSES.has(message.content)
+    ? "in-progress"
+    : "completed";
   const meta = "meta" in message ? message.meta : undefined;
   const label =
     message.content === "draft_saved" && meta?.titles
       ? t(STATUS_LABEL_MAP[message.content], { titles: meta.titles })
       : t(STATUS_LABEL_MAP[message.content]);
 
-  return (
-    <div className="flex items-center gap-1.5 py-1 text-xs text-fg-tertiary">
-      <Circle
-        className={`size-2 fill-current ${inProgress ? "animate-pulse" : "text-status-success"}`}
-      />
-      <span>{label}</span>
-    </div>
-  );
+  return <StatusIndicator label={label} status={status} />;
 }

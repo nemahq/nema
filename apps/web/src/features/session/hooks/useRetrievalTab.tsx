@@ -9,13 +9,18 @@ import { useSessionSuspenseQuery } from "./useSessionQuery";
 export function useRetrievalTab(): TabbedPanelTab | undefined {
   const sessionId = useSessionId();
   const [session] = useSessionSuspenseQuery({ sessionId });
-  const { streamingPhase } = useChatLifecycle();
+  const { streamingPhase, searchResultDocs, clearSearchResults } =
+    useChatLifecycle();
   const dismissRetrieval = useDismissRetrieval({ sessionId });
 
   const isStreamingRetrieval =
     streamingPhase === "searching" || streamingPhase === "retrieval";
 
-  if (!session.retrieval && !isStreamingRetrieval) {
+  if (
+    !session.retrieval &&
+    !isStreamingRetrieval &&
+    searchResultDocs.length === 0
+  ) {
     return undefined;
   }
 
@@ -23,6 +28,9 @@ export function useRetrievalTab(): TabbedPanelTab | undefined {
     id: "retrieval",
     labelKey: "session.retrieval",
     content: <RetrievalTabContent />,
-    onClose: () => dismissRetrieval.mutate({ sessionId }),
+    onClose: () => {
+      dismissRetrieval.mutate({ sessionId });
+      clearSearchResults();
+    },
   };
 }

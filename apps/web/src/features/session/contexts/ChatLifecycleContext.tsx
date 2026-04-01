@@ -18,6 +18,7 @@ import {
   type ChatStreamEvent,
   type Message,
   type PhaseName,
+  type SearchResultDoc,
   STATUS_LOG_TYPES,
   type StatusLogType,
 } from "@nema-io/shared";
@@ -53,6 +54,9 @@ interface ChatLifecycleContextValue {
   streamingMessage: DisplayMessage | undefined;
   streamingDraftText: string;
   streamingRetrievalText: string;
+  searchEntities: string[];
+  searchResultDocs: SearchResultDoc[];
+  clearSearchResults: () => void;
   streamError: string | null;
   retryStream: () => void;
   dismissStreamError: () => void;
@@ -160,6 +164,10 @@ export function ChatLifecycleProvider({
   const fullRetrievalTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
   const [streamError, setStreamError] = useState<string | null>(null);
+  const [searchEntities, setSearchEntities] = useState<string[]>([]);
+  const [searchResultDocs, setSearchResultDocs] = useState<SearchResultDoc[]>(
+    [],
+  );
 
   function transitionPhase(phase: StreamingPhase) {
     streamingPhaseRef.current = phase;
@@ -181,6 +189,8 @@ export function ChatLifecycleProvider({
     resetTextBuffers();
     setActivePhase(null);
     setStreamError(null);
+    setSearchEntities([]);
+    setSearchResultDocs([]);
   }
 
   const settleStream = useCallback(
@@ -237,6 +247,12 @@ export function ChatLifecycleProvider({
           transitionPhase("searching");
         }
         break;
+      case "search_query":
+        setSearchEntities(event.entities);
+        break;
+      case "search_results":
+        setSearchResultDocs(event.documents);
+        break;
       case "done":
         settleStream();
         break;
@@ -272,6 +288,8 @@ export function ChatLifecycleProvider({
 
     setStreamError(null);
     resetTextBuffers();
+    setSearchEntities([]);
+    setSearchResultDocs([]);
     lastStreamInputRef.current = newInput;
     setStreamInput(newInput);
   }
@@ -353,6 +371,7 @@ export function ChatLifecycleProvider({
       fullTextRef.current = "";
       setStreamStartedAt(new Date().toISOString());
       setStreamingText("");
+      setSearchResultDocs([]);
       transitionPhase("text");
 
       const input: ChatStartInput = {
@@ -392,6 +411,11 @@ export function ChatLifecycleProvider({
     streamingMessage,
     streamingDraftText,
     streamingRetrievalText,
+    searchEntities,
+    searchResultDocs,
+    clearSearchResults: useCallback(function clearSearchResults() {
+      setSearchResultDocs([]);
+    }, []),
     streamError,
     retryStream,
     dismissStreamError,

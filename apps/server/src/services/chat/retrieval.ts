@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/node";
 
-import type { ChatStreamEvent, Locale } from "@nema-io/shared";
+import type { ChatStreamEvent, Locale, SearchResultDoc } from "@nema-io/shared";
 
 import { t } from "@server/infra/i18n";
 import type { Providers } from "@server/infra/providers";
@@ -25,6 +25,7 @@ const TEXT_MATCH_LIMIT = 10;
 interface RetrievalResult {
   text: string;
   hasResults: boolean;
+  documents: SearchResultDoc[];
 }
 
 export async function* handleRetrievalStream(args: {
@@ -48,6 +49,11 @@ export async function* handleRetrievalStream(args: {
   });
 
   yield { type: "phase", name: "searching" };
+  yield {
+    type: "search_query",
+    queries: searchQuery.queries,
+    entities: searchQuery.entities,
+  };
 
   // --- 3개 검색 채널 병렬 실행 (개별 채널 실패해도 메인 흐름 유지) ---
   const sentryExtra = { userId, sessionId };
@@ -191,10 +197,17 @@ export async function* handleRetrievalStream(args: {
     },
   });
 
+  const documents: SearchResultDoc[] = searchResults.map((d) => ({
+    id: d.id,
+    title: d.title,
+  }));
+
+  yield { type: "search_results", documents };
+
   if (searchResults.length === 0) {
     const noResult = t("chat.retrieval_empty", lng);
     yield { type: "token", text: noResult };
-    return { text: noResult, hasResults: false };
+    return { text: noResult, hasResults: false, documents: [] };
   }
 
   yield { type: "retrieval_start" };
@@ -216,7 +229,7 @@ export async function* handleRetrievalStream(args: {
     yield { type: "token", text: chunk };
   }
 
-  return { text: fullText, hasResults: true };
+  return { text: fullText, hasResults: true, documents };
 }
 
 function sanitizePostgrestValue(value: string): string {

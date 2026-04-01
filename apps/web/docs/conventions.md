@@ -43,6 +43,7 @@
 ## Functions
 
 - Separate filtering/transformation logic (pure) from execution (side effects).
+- Extract formatting/transformation logic into named functions when it obscures the surrounding control flow.
 
 ## Naming
 
@@ -88,6 +89,7 @@
 - `useEffect` is only for external system connections (WebSocket, EventListener) and DOM manipulation.
 - MUST NOT use `useEffect` for: derived state computation, event response logic, effect chaining.
 - One-time impure initializers (e.g., `Math.random()`) MUST use `useState` with an initializer function: `const [x] = useState(() => impureFn())`. `useRef` initializer runs during render and violates purity rules.
+- Prefer derived values over render-phase setState (`if (prop !== prev) setState(...)`). Consider derived computation, `key` prop reset, or state restructuring first. Render-phase setState is a last resort when none of those alternatives apply.
 
 ## Responsive
 
