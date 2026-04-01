@@ -1,6 +1,7 @@
-import type { ComponentType, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { cn } from "@nema-io/weave";
+import type { WeaveIcon } from "@nema-io/weave/icons";
 import { X } from "@nema-io/weave/icons";
 
 import type { TranslationKey } from "@web/lib/tolgee";
@@ -11,7 +12,7 @@ import { TabbedPanelLayout } from "./TabbedPanelLayout";
 export interface TabbedPanelTab {
   id: string;
   labelKey: TranslationKey;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: WeaveIcon;
   content: ReactNode;
   onClose?: () => void;
 }
