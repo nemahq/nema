@@ -9,13 +9,13 @@ import { useSessionSuspenseQuery } from "./useSessionQuery";
 export function useRetrievalTab(): TabbedPanelTab | undefined {
   const sessionId = useSessionId();
   const [session] = useSessionSuspenseQuery({ sessionId });
-  const { streamingPhase } = useChatLifecycle();
+  const { streamingPhase, searchResultDocs } = useChatLifecycle();
   const dismissRetrieval = useDismissRetrieval({ sessionId });
 
   const isStreamingRetrieval =
     streamingPhase === "searching" || streamingPhase === "retrieval";
 
-  if (!session.retrieval && !isStreamingRetrieval) {
+  if (!session.retrieval && !isStreamingRetrieval && searchResultDocs.length === 0) {
     return undefined;
   }
 

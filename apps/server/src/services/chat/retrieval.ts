@@ -48,6 +48,11 @@ export async function* handleRetrievalStream(args: {
   });
 
   yield { type: "phase", name: "searching" };
+  yield {
+    type: "search_query",
+    queries: searchQuery.queries,
+    entities: searchQuery.entities,
+  };
 
   // --- 3개 검색 채널 병렬 실행 (개별 채널 실패해도 메인 흐름 유지) ---
   const sentryExtra = { userId, sessionId };
@@ -190,6 +195,11 @@ export async function* handleRetrievalStream(args: {
       query: question,
     },
   });
+
+  yield {
+    type: "search_results",
+    documents: searchResults.map((d) => ({ id: d.id, title: d.title })),
+  };
 
   if (searchResults.length === 0) {
     const noResult = t("chat.retrieval_empty", lng);

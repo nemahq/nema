@@ -10,6 +10,7 @@ import { useSessionSuspenseQuery } from "@web/features/session/hooks/useSessionQ
 import { useBufferedStream } from "@web/hooks/useBufferedStream";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { SearchResultsList } from "./SearchResultsList";
 import { StreamErrorMessage } from "./StreamErrorMessage";
 import { WritingCursor } from "./WritingCursor";
 
@@ -40,9 +41,11 @@ function RetrievalTabContentInner() {
     isStreaming ? streamingRetrievalText : "",
   );
   const body = isStreaming ? smoothText : retrieval?.body;
+  const isCompleted = !isStreaming && !!retrieval?.body;
 
   return (
     <div>
+      <SearchResultsList collapsible={isCompleted} />
       {isSearching && !streamError && <SearchingIndicator />}
       {body && <MarkdownRenderer content={body} />}
       {!body && isStreaming && !streamError && <WritingCursor />}

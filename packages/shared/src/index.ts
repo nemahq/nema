@@ -14,6 +14,7 @@ export {
   type ChatStreamEvent,
   ChatStreamEventSchema,
   type PhaseName,
+  type SearchResultDoc,
 } from "./schemas/chat-stream";
 export { type TrackEventInput, TrackEventInputSchema } from "./schemas/event";
 export {
