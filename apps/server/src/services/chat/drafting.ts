@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/node";
+
 import type { ChatStreamEvent, SessionDraft } from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
@@ -44,7 +46,10 @@ export async function classifyDraftIntent(args: {
         },
       ],
     });
-  } catch {
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "draft-intent-classifier" },
+    });
     return { intent: "append" };
   }
 }

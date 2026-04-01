@@ -452,6 +452,7 @@ export function ChatLifecycleProvider({
         sessionId,
         actionMessageId: pendingConfirmation.actionMessageId,
         intent,
+        draftContext: pendingConfirmation.draftContext,
       });
       setPendingConfirmation(null);
     },

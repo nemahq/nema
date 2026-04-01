@@ -408,20 +408,7 @@ export async function* confirmDraftIntentStream(args: {
 }): AsyncGenerator<ChatStreamEvent> {
   const { supabase, providers, input, signal } = args;
 
-  // 1. action 메시지를 resolved로 업데이트
-  await updateMessagePayload({
-    supabase,
-    sessionId: input.sessionId,
-    messageId: input.actionMessageId,
-    payload: {
-      actionType: "draft_intent_confirmation",
-      draftContext: "",
-      status: "resolved",
-      selectedOption: input.intent,
-    },
-  });
-
-  // 2. 마지막 user 메시지와 현재 드래프트 조회
+  // 1. 마지막 user 메시지와 현재 드래프트 조회
   const [messages, draft] = await Promise.all([
     getMessages(supabase, input.sessionId),
     getDraft(supabase, input.sessionId),
@@ -447,6 +434,19 @@ export async function* confirmDraftIntentStream(args: {
   });
 
   await setDraft({ supabase, sessionId: input.sessionId, body: draftBody });
+
+  // 3. 드래프팅 성공 후 action 메시지를 resolved로 업데이트
+  await updateMessagePayload({
+    supabase,
+    sessionId: input.sessionId,
+    messageId: input.actionMessageId,
+    payload: {
+      actionType: "draft_intent_confirmation",
+      draftContext: input.draftContext,
+      status: "resolved",
+      selectedOption: input.intent,
+    },
+  });
 
   // 4. status 메시지 생성
   const statusMessage = MessageSchema.parse({

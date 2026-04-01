@@ -18,7 +18,7 @@ export const ChatStreamEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("retrieval_start") }),
   z.object({
     type: z.literal("draft_intent_confirmation"),
-    actionMessageId: z.string(),
+    actionMessageId: z.string().uuid(),
     draftContext: z.string(),
   }),
   z.object({ type: z.literal("phase"), name: PhaseNameSchema }),
