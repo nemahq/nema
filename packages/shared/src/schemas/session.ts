@@ -29,6 +29,9 @@ export type SessionDraft = z.infer<typeof SessionDraftSchema>;
 
 export const SessionRetrievalSchema = z.object({
   body: z.string().min(1),
+  documents: z
+    .array(z.object({ id: z.string(), title: z.string() }))
+    .optional(),
 });
 export type SessionRetrieval = z.infer<typeof SessionRetrievalSchema>;
 

@@ -25,6 +25,7 @@ const TEXT_MATCH_LIMIT = 10;
 interface RetrievalResult {
   text: string;
   hasResults: boolean;
+  documents: Array<{ id: string; title: string }>;
 }
 
 export async function* handleRetrievalStream(args: {
@@ -204,7 +205,7 @@ export async function* handleRetrievalStream(args: {
   if (searchResults.length === 0) {
     const noResult = t("chat.retrieval_empty", lng);
     yield { type: "token", text: noResult };
-    return { text: noResult, hasResults: false };
+    return { text: noResult, hasResults: false, documents: [] };
   }
 
   yield { type: "retrieval_start" };
@@ -226,7 +227,8 @@ export async function* handleRetrievalStream(args: {
     yield { type: "token", text: chunk };
   }
 
-  return { text: fullText, hasResults: true };
+  const documents = searchResults.map((d) => ({ id: d.id, title: d.title }));
+  return { text: fullText, hasResults: true, documents };
 }
 
 function sanitizePostgrestValue(value: string): string {

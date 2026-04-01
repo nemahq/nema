@@ -1,55 +1,41 @@
-import { useState } from "react";
-
-import { ChevronDown, ChevronUp, FileText } from "@nema-io/weave/icons";
+import { FileText } from "@nema-io/weave/icons";
 
 import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
+import { useSessionId } from "@web/features/session/hooks/useSessionId";
+import { useSessionSuspenseQuery } from "@web/features/session/hooks/useSessionQuery";
 import { useTranslation } from "@web/lib/tolgee";
 
-interface SearchResultsListProps {
-  collapsible: boolean;
-}
-
-export function SearchResultsList({ collapsible }: SearchResultsListProps) {
+export function SearchResultsList() {
   const { t } = useTranslation();
   const { searchResultDocs } = useChatLifecycle();
-  const [userExpanded, setUserExpanded] = useState(false);
-  const expanded = collapsible ? userExpanded : true;
+  const sessionId = useSessionId();
+  const [session] = useSessionSuspenseQuery({ sessionId });
 
-  if (searchResultDocs.length === 0) {
+  const documents =
+    searchResultDocs.length > 0
+      ? searchResultDocs
+      : (session.retrieval?.documents ?? []);
+
+  if (documents.length === 0) {
     return null;
   }
 
   return (
     <div className="mb-3 animate-in fade-in rounded-lg bg-bg-secondary p-3 shadow-sm duration-normal">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between text-xs font-medium text-fg-secondary"
-        onClick={() => setUserExpanded((prev) => !prev)}
-        disabled={!collapsible}
-      >
-        <span>
-          {t("session.status_search_results_title")} ({searchResultDocs.length})
-        </span>
-        {collapsible &&
-          (expanded ? (
-            <ChevronUp className="size-3.5 text-fg-tertiary" />
-          ) : (
-            <ChevronDown className="size-3.5 text-fg-tertiary" />
-          ))}
-      </button>
-      {expanded && (
-        <ul className="mt-2 space-y-1">
-          {searchResultDocs.map((doc) => (
-            <li
-              key={doc.id}
-              className="flex items-center gap-1.5 text-xs text-fg-tertiary"
-            >
-              <FileText className="size-3 shrink-0" />
-              <span className="truncate">{doc.title}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      <span className="text-xs font-medium text-fg-secondary">
+        {t("session.status_search_results_title")} ({documents.length})
+      </span>
+      <ul className="mt-2 space-y-1">
+        {documents.map((doc) => (
+          <li
+            key={doc.id}
+            className="flex items-center gap-1.5 text-xs text-fg-tertiary"
+          >
+            <FileText className="size-3 shrink-0" />
+            <span className="truncate">{doc.title}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

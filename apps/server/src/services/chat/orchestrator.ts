@@ -81,12 +81,14 @@ async function setRetrieval({
   supabase,
   sessionId,
   body,
+  documents,
 }: {
   supabase: TypedSupabaseClient;
   sessionId: string;
   body: string;
+  documents: Array<{ id: string; title: string }>;
 }): Promise<void> {
-  const retrieval: Retrieval = { body };
+  const retrieval: Retrieval = { body, documents };
   const { error } = await supabase
     .from("sessions")
     .update({ retrieval })
@@ -198,6 +200,7 @@ export async function* processChatStream(args: {
           supabase,
           sessionId: input.sessionId,
           body: result.text,
+          documents: result.documents,
         });
         responseContent = STATUS_LOG_TYPES.RETRIEVAL_ANSWERED;
         messageType = "status";
