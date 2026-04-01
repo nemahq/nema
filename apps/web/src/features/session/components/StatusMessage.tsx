@@ -43,27 +43,19 @@ interface StatusMessageProps {
 
 export function StatusMessage({ message }: StatusMessageProps) {
   const { t } = useTranslation();
-  const { searchEntities, searchResultDocs } = useChatLifecycle();
+  const { searchEntities } = useChatLifecycle();
   const inProgress = IN_PROGRESS_STATUSES.has(message.content);
 
   let label: string;
 
-  if (message.content === "searching") {
-    if (searchResultDocs.length > 0) {
-      label = t("session.status_search_results_found", {
-        count: searchResultDocs.length,
-      });
-    } else if (searchEntities.length > 0) {
-      const visible = searchEntities.slice(0, MAX_VISIBLE_ENTITIES).join(", ");
-      const overflow = searchEntities.length - MAX_VISIBLE_ENTITIES;
-      const entities =
-        overflow > 0
-          ? `${visible} ${t("common.overflow_count", { count: overflow })}`
-          : visible;
-      label = t("session.status_searching_with_entities", { entities });
-    } else {
-      label = t(STATUS_LABEL_MAP[message.content]);
-    }
+  if (message.content === "searching" && searchEntities.length > 0) {
+    const visible = searchEntities.slice(0, MAX_VISIBLE_ENTITIES).join(", ");
+    const overflow = searchEntities.length - MAX_VISIBLE_ENTITIES;
+    const entities =
+      overflow > 0
+        ? `${visible} ${t("common.overflow_count", { count: overflow })}`
+        : visible;
+    label = t("session.status_searching_with_entities", { entities });
   } else {
     const meta = "meta" in message ? message.meta : undefined;
     label =

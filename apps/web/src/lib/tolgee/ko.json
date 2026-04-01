@@ -82,7 +82,6 @@
     "status_draft_edited": "초안 수정 완료",
     "status_draft_saved": "\"{titles}\" 저장 완료",
     "status_retrieval_answered": "검색 완료",
-    "status_search_results_found": "{count}건의 문서를 찾았어요",
     "status_search_results_title": "검색된 문서",
     "status_searching": "검색 중...",
     "status_searching_with_entities": "{entities} 키워드로 검색 중...",

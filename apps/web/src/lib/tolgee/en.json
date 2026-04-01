@@ -82,7 +82,6 @@
     "status_draft_edited": "Draft edited",
     "status_draft_saved": "\"{titles}\" saved",
     "status_retrieval_answered": "Search completed",
-    "status_search_results_found": "Found {count} documents",
     "status_search_results_title": "Search results",
     "status_searching": "Searching...",
     "status_searching_with_entities": "Searching by {entities}...",
