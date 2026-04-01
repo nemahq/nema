@@ -33,6 +33,17 @@ const STATUS_LABEL_MAP: Record<
   retrieval_answered: "session.status_retrieval_answered",
 };
 
+function formatEntities(
+  entities: string[],
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  const visible = entities.slice(0, MAX_VISIBLE_ENTITIES).join(", ");
+  const overflow = entities.length - MAX_VISIBLE_ENTITIES;
+  return overflow > 0
+    ? `${visible} ${t("common.overflow_count", { count: overflow })}`
+    : visible;
+}
+
 type StatusSource =
   | Extract<Message, { type: "status" }>
   | Pick<ClientStatusMessage, "type" | "content">;
@@ -49,13 +60,9 @@ export function StatusMessage({ message }: StatusMessageProps) {
   let label: string;
 
   if (message.content === "searching" && searchEntities.length > 0) {
-    const visible = searchEntities.slice(0, MAX_VISIBLE_ENTITIES).join(", ");
-    const overflow = searchEntities.length - MAX_VISIBLE_ENTITIES;
-    const entities =
-      overflow > 0
-        ? `${visible} ${t("common.overflow_count", { count: overflow })}`
-        : visible;
-    label = t("session.status_searching_with_entities", { entities });
+    label = t("session.status_searching_with_entities", {
+      entities: formatEntities(searchEntities, t),
+    });
   } else {
     const meta = "meta" in message ? message.meta : undefined;
     label =
