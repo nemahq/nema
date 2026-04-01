@@ -5,6 +5,7 @@ import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleCo
 import { USER_TURN_DATA_ROLE } from "@web/features/session/hooks/useScrollAnchor";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 
+import { ActionMessage } from "./ActionMessage";
 import { AssistantMessage } from "./AssistantMessage";
 import { StatusMessage } from "./StatusMessage";
 import { StreamErrorMessage } from "./StreamErrorMessage";
@@ -61,6 +62,9 @@ function MessageListContent() {
                     <UserMessage content={msg.content} />
                   </div>
                 );
+              }
+              if (msg.type === "action") {
+                return <ActionMessage key={msg.id} message={msg} />;
               }
               if (msg.type === "status") {
                 return <StatusMessage key={msg.id} message={msg} />;

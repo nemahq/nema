@@ -1,8 +1,11 @@
 import * as Sentry from "@sentry/node";
+import { TRPCError } from "@trpc/server";
 
 import type {
+  ActionPayload,
   ChatStartInput,
   ChatStreamEvent,
+  ConfirmDraftIntentInput,
   Locale,
   Message,
   MessageType,
@@ -17,12 +20,17 @@ import {
 } from "@nema-io/shared";
 
 import { cancelGeneration } from "@server/infra/chat-stream-manager";
+import type { Json } from "@server/infra/database.types";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import { trackEvent } from "@server/services/event-service";
 
-import { handleDraftingStream } from "./drafting";
+import {
+  classifyDraftIntent,
+  extractDraftContext,
+  handleDraftingStream,
+} from "./drafting";
 import { handleRetrievalStream } from "./retrieval";
 
 type Draft = SessionDraft;
@@ -219,6 +227,66 @@ export async function* processChatStream(args: {
       break;
     }
     case "remember": {
+      // 편집 사이클일 때 의도 분류
+      if (draft) {
+        const { intent } = await classifyDraftIntent({
+          providers,
+          userInput: input.content,
+          previousBody: draft.body,
+        });
+
+        if (intent === "ambiguous") {
+          const draftContext = extractDraftContext(draft.body);
+          const actionMessage = MessageSchema.parse({
+            id: crypto.randomUUID(),
+            role: "assistant",
+            type: "action",
+            content: "",
+            payload: {
+              actionType: "draft_intent_confirmation",
+              draftContext,
+              status: "pending",
+              selectedOption: null,
+            },
+            createdAt: new Date().toISOString(),
+          });
+
+          await appendMessage({
+            supabase,
+            sessionId: input.sessionId,
+            message: actionMessage,
+          });
+
+          yield {
+            type: "draft_intent_confirmation",
+            actionMessageId: actionMessage.id,
+            draftContext,
+          };
+          yield { type: "done" };
+          return;
+        }
+
+        // replace → 새 초안으로 취급
+        if (intent === "replace") {
+          yield { type: "draft_start" };
+          const draftBody = yield* handleDraftingStream({
+            providers,
+            userInput: input.content,
+            currentDraft: null,
+            signal,
+          });
+          await setDraft({
+            supabase,
+            sessionId: input.sessionId,
+            body: draftBody,
+          });
+          responseContent = STATUS_LOG_TYPES.DRAFT_CREATED;
+          messageType = "status";
+          break;
+        }
+      }
+
+      // 첫 생성 또는 append → 기존 흐름
       yield { type: "draft_start" };
       const draftBody = yield* handleDraftingStream({
         providers,
@@ -286,4 +354,117 @@ export async function dismissRetrievalAction(args: {
   sessionId: string;
 }): Promise<void> {
   await clearRetrieval(args.supabase, args.sessionId);
+}
+
+async function updateMessagePayload(args: {
+  supabase: TypedSupabaseClient;
+  sessionId: string;
+  messageId: string;
+  payload: ActionPayload;
+}): Promise<void> {
+  const { error } = await args.supabase.rpc("update_message_payload", {
+    p_session_id: args.sessionId,
+    p_message_id: args.messageId,
+    p_payload: JSON.parse(JSON.stringify(args.payload)) as Json,
+  });
+
+  throwIfSupabaseError(error);
+}
+
+async function getMessages(
+  supabase: TypedSupabaseClient,
+  sessionId: string,
+): Promise<Message[]> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("messages")
+    .eq("id", sessionId)
+    .single();
+
+  throwIfSupabaseError(error);
+
+  const raw = (data.messages ?? []) as unknown[];
+  return raw
+    .map((m) => MessageSchema.safeParse(m))
+    .filter((r) => r.success)
+    .map((r) => r.data);
+}
+
+function findLastUserMessage(messages: Message[]): Message | undefined {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user") {
+      return messages[i];
+    }
+  }
+  return undefined;
+}
+
+export async function* confirmDraftIntentStream(args: {
+  supabase: TypedSupabaseClient;
+  providers: Providers;
+  userId: string;
+  input: ConfirmDraftIntentInput;
+  signal?: AbortSignal;
+}): AsyncGenerator<ChatStreamEvent> {
+  const { supabase, providers, input, signal } = args;
+
+  // 1. action 메시지를 resolved로 업데이트
+  await updateMessagePayload({
+    supabase,
+    sessionId: input.sessionId,
+    messageId: input.actionMessageId,
+    payload: {
+      actionType: "draft_intent_confirmation",
+      draftContext: "",
+      status: "resolved",
+      selectedOption: input.intent,
+    },
+  });
+
+  // 2. 마지막 user 메시지와 현재 드래프트 조회
+  const [messages, draft] = await Promise.all([
+    getMessages(supabase, input.sessionId),
+    getDraft(supabase, input.sessionId),
+  ]);
+
+  const userMessage = findLastUserMessage(messages);
+  if (!userMessage) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "No user message found for draft intent confirmation",
+    });
+  }
+
+  // 3. intent에 따라 드래프팅 실행
+  const currentDraft = input.intent === "replace" ? null : draft;
+
+  yield { type: "draft_start" };
+  const draftBody = yield* handleDraftingStream({
+    providers,
+    userInput: userMessage.content,
+    currentDraft,
+    signal,
+  });
+
+  await setDraft({ supabase, sessionId: input.sessionId, body: draftBody });
+
+  // 4. status 메시지 생성
+  const statusMessage = MessageSchema.parse({
+    id: crypto.randomUUID(),
+    role: "assistant",
+    type: "status",
+    content:
+      input.intent === "replace"
+        ? STATUS_LOG_TYPES.DRAFT_CREATED
+        : STATUS_LOG_TYPES.DRAFT_EDITED,
+    createdAt: new Date().toISOString(),
+  });
+
+  await appendMessage({
+    supabase,
+    sessionId: input.sessionId,
+    message: statusMessage,
+  });
+
+  yield { type: "done" };
 }

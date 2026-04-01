@@ -3,7 +3,7 @@ import { z } from "zod";
 export const MessageRoleSchema = z.enum(["user", "assistant"]);
 export type MessageRole = z.infer<typeof MessageRoleSchema>;
 
-export const MessageTypeSchema = z.enum(["text", "draft", "status"]);
+export const MessageTypeSchema = z.enum(["text", "draft", "status", "action"]);
 export type MessageType = z.infer<typeof MessageTypeSchema>;
 
 const STATUS_LOG_TYPE_VALUES = [
@@ -12,6 +12,7 @@ const STATUS_LOG_TYPE_VALUES = [
   "draft_edited",
   "draft_cancelled",
   "draft_saved",
+  "draft_intent_confirmed",
   "retrieval_answered",
 ] as const;
 
@@ -24,8 +25,24 @@ export const STATUS_LOG_TYPES = {
   DRAFT_EDITED: "draft_edited",
   DRAFT_CANCELLED: "draft_cancelled",
   DRAFT_SAVED: "draft_saved",
+  DRAFT_INTENT_CONFIRMED: "draft_intent_confirmed",
   RETRIEVAL_ANSWERED: "retrieval_answered",
 } as const satisfies Record<string, StatusLogType>;
+
+export const DraftIntentOptionSchema = z.enum(["append", "replace"]);
+export type DraftIntentOption = z.infer<typeof DraftIntentOptionSchema>;
+
+const DraftIntentConfirmationPayloadSchema = z.object({
+  actionType: z.literal("draft_intent_confirmation"),
+  draftContext: z.string(),
+  status: z.enum(["pending", "resolved"]),
+  selectedOption: DraftIntentOptionSchema.nullable(),
+});
+
+const ActionPayloadSchema = z.discriminatedUnion("actionType", [
+  DraftIntentConfirmationPayloadSchema,
+]);
+export type ActionPayload = z.infer<typeof ActionPayloadSchema>;
 
 const BaseMessageSchema = z.object({
   id: z.string().uuid(),
@@ -40,6 +57,11 @@ export const MessageSchema = z.discriminatedUnion("type", [
     type: z.literal("status"),
     content: StatusLogTypeSchema,
     meta: z.object({ titles: z.string() }).optional(),
+  }),
+  BaseMessageSchema.extend({
+    type: z.literal("action"),
+    content: z.string(),
+    payload: ActionPayloadSchema,
   }),
 ]);
 export type Message = z.infer<typeof MessageSchema>;

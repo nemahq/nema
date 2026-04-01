@@ -267,6 +267,10 @@ export type Database = {
         Args: { p_message: Json; p_session_id: string };
         Returns: undefined;
       };
+      update_message_payload: {
+        Args: { p_message_id: string; p_payload: Json; p_session_id: string };
+        Returns: undefined;
+      };
       create_document_with_event: {
         Args: {
           p_body: string;

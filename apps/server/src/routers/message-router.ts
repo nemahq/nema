@@ -1,5 +1,6 @@
 import {
   ChatInputSchema,
+  ConfirmDraftIntentInputSchema,
   DraftActionInputSchema,
   GetMessagesInputSchema,
   SendMessageInputSchema,
@@ -14,6 +15,7 @@ import {
 import {
   cancelDraftAction,
   cancelGenerationAction,
+  confirmDraftIntentStream,
   dismissRetrievalAction,
   processChatStream,
 } from "@server/services/chat";
@@ -82,6 +84,18 @@ export const messageRouter = router({
         sessionId: input.sessionId,
       }),
     ),
+
+  confirmDraftIntent: providerProcedure
+    .input(ConfirmDraftIntentInputSchema)
+    .subscription(async function* ({ ctx, input, signal }) {
+      yield* confirmDraftIntentStream({
+        supabase: ctx.supabase,
+        providers: ctx.providers,
+        userId: ctx.user.id,
+        input,
+        signal,
+      });
+    }),
 
   dismissRetrieval: protectedProcedure
     .input(SessionGetInputSchema)

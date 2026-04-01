@@ -29,6 +29,7 @@ const STATUS_LABEL_MAP: Record<
   draft_edited: "session.status_draft_edited",
   draft_cancelled: "session.status_draft_cancelled",
   draft_saved: "session.status_draft_saved",
+  draft_intent_confirmed: "session.status_draft_intent_confirmed",
   retrieval_answered: "session.status_retrieval_answered",
 };
 

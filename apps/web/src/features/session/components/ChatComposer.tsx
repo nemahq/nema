@@ -21,7 +21,8 @@ import { trpc } from "@web/lib/trpc";
 
 export function ChatComposer() {
   const { t } = useTranslation();
-  const { send, cancel, streamingPhase } = useChatLifecycle();
+  const { send, cancel, streamingPhase, pendingConfirmation } =
+    useChatLifecycle();
   const { openTab } = useContentTab();
   const sessionId = useSessionId();
   const [inputValue, setInputValue] = useChatDraft(sessionId);
@@ -104,7 +105,10 @@ export function ChatComposer() {
         placeholder={t(MODE_CONFIG[mode].placeholderKey)}
         onSubmit={handleSubmit}
         onStop={isStreaming ? cancel : undefined}
-        submitDisabled={saveDraftMutating || cancelDraftMutating}
+        submitDisabled={
+          saveDraftMutating || cancelDraftMutating || !!pendingConfirmation
+        }
+        disabled={!!pendingConfirmation}
         autoFocus
         onKeyDown={handleKeyDown}
         submitIcon={MODE_CONFIG[mode].icon}

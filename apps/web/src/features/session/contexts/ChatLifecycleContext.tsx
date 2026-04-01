@@ -16,6 +16,8 @@ import {
   type ChatMode,
   type ChatStartInput,
   type ChatStreamEvent,
+  type ConfirmDraftIntentInput,
+  type DraftIntentOption,
   type Message,
   type PhaseName,
   type SearchResultDoc,
@@ -47,9 +49,15 @@ export interface ClientStatusMessage {
 
 export type DisplayMessage = Message | ClientStatusMessage;
 
+interface PendingConfirmation {
+  actionMessageId: string;
+  draftContext: string;
+}
+
 interface ChatLifecycleContextValue {
   send: (content: string, mode: ChatMode) => void;
   cancel: () => void;
+  confirmDraftIntent: (intent: DraftIntentOption) => void;
   streamingPhase: StreamingPhase;
   streamingMessage: DisplayMessage | undefined;
   streamingDraftText: string;
@@ -60,6 +68,7 @@ interface ChatLifecycleContextValue {
   streamError: string | null;
   retryStream: () => void;
   dismissStreamError: () => void;
+  pendingConfirmation: PendingConfirmation | null;
 }
 
 const ChatLifecycleContext = createContext<ChatLifecycleContextValue | null>(
@@ -144,6 +153,10 @@ export function ChatLifecycleProvider({
 
   const isSettlingRef = useRef(false);
   const [streamInput, setStreamInput] = useState<ChatInput | null>(null);
+  const [confirmInput, setConfirmInput] =
+    useState<ConfirmDraftIntentInput | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] =
+    useState<PendingConfirmation | null>(null);
   const lastStreamInputRef = useRef<ChatStartInput | null>(null);
   const [streamingPhase, setStreamingPhase] = useState<StreamingPhase>("idle");
   const streamingPhaseRef = useRef<StreamingPhase>("idle");
@@ -183,15 +196,16 @@ export function ChatLifecycleProvider({
     setStreamingRetrievalText("");
   }
 
-  function resetStreamState() {
+  const resetStreamState = useCallback(function resetStreamState() {
     setStreamInput(null);
+    setConfirmInput(null);
     transitionPhase("idle");
     resetTextBuffers();
     setActivePhase(null);
     setStreamError(null);
     setSearchEntities([]);
     setSearchResultDocs([]);
-  }
+  }, []);
 
   const settleStream = useCallback(
     function settleStream() {
@@ -213,7 +227,7 @@ export function ChatLifecycleProvider({
           isSettlingRef.current = false;
         });
     },
-    [sessionId, utils],
+    [sessionId, utils, resetStreamState],
   );
 
   function handleStreamEvent(event: ChatStreamEvent) {
@@ -223,6 +237,12 @@ export function ChatLifecycleProvider({
         break;
       case "retrieval_start":
         transitionPhase("retrieval");
+        break;
+      case "draft_intent_confirmation":
+        setPendingConfirmation({
+          actionMessageId: event.actionMessageId,
+          draftContext: event.draftContext,
+        });
         break;
       case "token":
         if (streamingPhaseRef.current === "draft") {
@@ -299,6 +319,31 @@ export function ChatLifecycleProvider({
     settleStream();
   }
 
+  // 페이지 새로고침 시 pending action 메시지 복원
+  const messagesQuery = trpc.message.list.useQuery(
+    { sessionId },
+    { enabled: pendingConfirmation === null && streamingPhase === "idle" },
+  );
+
+  if (
+    messagesQuery.data &&
+    pendingConfirmation === null &&
+    streamingPhase === "idle"
+  ) {
+    const pendingAction = [...messagesQuery.data]
+      .reverse()
+      .find(
+        (m): m is Extract<Message, { type: "action" }> =>
+          m.type === "action" && m.payload.status === "pending",
+      );
+    if (pendingAction) {
+      setPendingConfirmation({
+        actionMessageId: pendingAction.id,
+        draftContext: pendingAction.payload.draftContext,
+      });
+    }
+  }
+
   trpc.message.chat.useSubscription(
     streamInput && !isSessionCreating ? streamInput : skipToken,
     {
@@ -309,6 +354,11 @@ export function ChatLifecycleProvider({
       onError: handleStreamError,
     },
   );
+
+  trpc.message.confirmDraftIntent.useSubscription(confirmInput ?? skipToken, {
+    onData: handleStreamEvent,
+    onError: handleStreamError,
+  });
 
   // 세션 마운트 시 진행 중인 생성이 있으면 자동 재연결
   // 세션 복귀 시 isGenerating 상태를 항상 서버에서 받아와야 auto-resume 판단 가능
@@ -387,6 +437,27 @@ export function ChatLifecycleProvider({
     [sessionId, utils, generateTitle],
   );
 
+  const confirmDraftIntent = useCallback(
+    function confirmDraftIntent(intent: DraftIntentOption) {
+      if (!pendingConfirmation) {
+        return;
+      }
+
+      fullDraftTextRef.current = "";
+      setStreamingDraftText("");
+      setStreamStartedAt(new Date().toISOString());
+      transitionPhase("text");
+
+      setConfirmInput({
+        sessionId,
+        actionMessageId: pendingConfirmation.actionMessageId,
+        intent,
+      });
+      setPendingConfirmation(null);
+    },
+    [sessionId, pendingConfirmation],
+  );
+
   const cancel = useCallback(
     function cancel() {
       cancelGenerationMutation.mutate({ sessionId });
@@ -407,6 +478,7 @@ export function ChatLifecycleProvider({
   const contextValue: ChatLifecycleContextValue = {
     send,
     cancel,
+    confirmDraftIntent,
     streamingPhase,
     streamingMessage,
     streamingDraftText,
@@ -419,6 +491,7 @@ export function ChatLifecycleProvider({
     streamError,
     retryStream,
     dismissStreamError,
+    pendingConfirmation,
   };
 
   return (

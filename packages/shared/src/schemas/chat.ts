@@ -29,3 +29,12 @@ export const DraftActionInputSchema = z.object({
   sessionId: z.string().uuid(),
 });
 export type DraftActionInput = z.infer<typeof DraftActionInputSchema>;
+
+export const ConfirmDraftIntentInputSchema = z.object({
+  sessionId: z.string().uuid(),
+  actionMessageId: z.string().uuid(),
+  intent: z.enum(["append", "replace"]),
+});
+export type ConfirmDraftIntentInput = z.infer<
+  typeof ConfirmDraftIntentInputSchema
+>;
