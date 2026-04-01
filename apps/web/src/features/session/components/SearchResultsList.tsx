@@ -12,15 +12,8 @@ interface SearchResultsListProps {
 export function SearchResultsList({ collapsible }: SearchResultsListProps) {
   const { t } = useTranslation();
   const { searchResultDocs } = useChatLifecycle();
-  const [expanded, setExpanded] = useState(!collapsible);
-  const [wasCollapsible, setWasCollapsible] = useState(collapsible);
-
-  if (collapsible !== wasCollapsible) {
-    setWasCollapsible(collapsible);
-    if (collapsible) {
-      setExpanded(false);
-    }
-  }
+  const [userExpanded, setUserExpanded] = useState(false);
+  const expanded = collapsible ? userExpanded : true;
 
   if (searchResultDocs.length === 0) {
     return null;
@@ -31,7 +24,7 @@ export function SearchResultsList({ collapsible }: SearchResultsListProps) {
       <button
         type="button"
         className="flex w-full items-center justify-between text-xs font-medium text-fg-secondary"
-        onClick={() => setExpanded((prev) => !prev)}
+        onClick={() => setUserExpanded((prev) => !prev)}
         disabled={!collapsible}
       >
         <span>
