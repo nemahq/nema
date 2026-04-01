@@ -43,10 +43,12 @@ function RetrievalTabContentInner() {
 
   return (
     <div>
-      {isSearching && <SearchingIndicator />}
+      {isSearching && !streamError && <SearchingIndicator />}
       {body && <MarkdownRenderer content={body} />}
       {!body && isStreaming && !streamError && <WritingCursor />}
-      {streamingPhase === "retrieval" && <StreamErrorMessage />}
+      {(streamingPhase === "retrieval" || streamingPhase === "searching") && (
+        <StreamErrorMessage />
+      )}
     </div>
   );
 }

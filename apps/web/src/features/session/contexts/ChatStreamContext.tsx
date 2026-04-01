@@ -149,6 +149,8 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
         } else if (streamingPhaseRef.current === "retrieval") {
           fullRetrievalTextRef.current += event.text;
           setStreamingRetrievalText(fullRetrievalTextRef.current);
+        } else if (streamingPhaseRef.current === "searching") {
+          break;
         } else {
           fullTextRef.current += event.text;
           setStreamingText(fullTextRef.current);
