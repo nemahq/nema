@@ -12,13 +12,10 @@ export function useRetrievalTab(): TabbedPanelTab | undefined {
   const { streamingPhase } = useChatStream();
   const dismissRetrieval = useDismissRetrieval({ sessionId });
 
-  const hasRetrieval = !!(
-    session.retrieval ||
-    streamingPhase === "searching" ||
-    streamingPhase === "retrieval"
-  );
+  const isStreamingRetrieval =
+    streamingPhase === "searching" || streamingPhase === "retrieval";
 
-  if (!hasRetrieval) {
+  if (!session.retrieval && !isStreamingRetrieval) {
     return undefined;
   }
 

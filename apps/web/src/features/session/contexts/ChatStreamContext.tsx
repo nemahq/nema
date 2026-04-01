@@ -60,6 +60,68 @@ interface ChatStreamContextValue {
 
 const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
 
+function buildStreamingMessage({
+  streamError,
+  streamingPhase,
+  streamStartedAt,
+  streamingText,
+  activePhase,
+}: {
+  streamError: string | null;
+  streamingPhase: StreamingPhase;
+  streamStartedAt: string;
+  streamingText: string;
+  activePhase: PhaseName | null;
+}): DisplayMessage | undefined {
+  if (streamError) {
+    return undefined;
+  }
+  switch (streamingPhase) {
+    case "idle":
+      return undefined;
+    case "draft":
+      return {
+        id: STREAMING_MESSAGE_ID,
+        role: "assistant",
+        type: "status",
+        content: STATUS_LOG_TYPES.DRAFT_CREATING,
+        createdAt: streamStartedAt,
+      };
+    case "searching":
+      return {
+        id: STREAMING_MESSAGE_ID,
+        role: "assistant",
+        type: "status",
+        content: "searching" satisfies PhaseName,
+        createdAt: streamStartedAt,
+      } satisfies ClientStatusMessage;
+    case "retrieval":
+      return {
+        id: STREAMING_MESSAGE_ID,
+        role: "assistant",
+        type: "status",
+        content: activePhase ?? STATUS_LOG_TYPES.RETRIEVAL_ANSWERED,
+        createdAt: streamStartedAt,
+      } satisfies ClientStatusMessage;
+    case "text":
+      return streamingText
+        ? {
+            id: STREAMING_MESSAGE_ID,
+            role: "assistant",
+            type: "text",
+            content: streamingText,
+            createdAt: streamStartedAt,
+          }
+        : ({
+            id: STREAMING_MESSAGE_ID,
+            role: "assistant",
+            type: "status",
+            content: activePhase ?? "thinking",
+            createdAt: streamStartedAt,
+          } satisfies ClientStatusMessage);
+  }
+}
+
 interface ChatStreamProviderProps {
   children: ReactNode;
 }
@@ -312,55 +374,13 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     [sessionId, cancelGenerationMutation, settleStream],
   );
 
-  const streamingMessage: DisplayMessage | undefined = (() => {
-    if (streamError) {
-      return undefined;
-    }
-    switch (streamingPhase) {
-      case "idle":
-        return undefined;
-      case "draft":
-        return {
-          id: STREAMING_MESSAGE_ID,
-          role: "assistant",
-          type: "status",
-          content: STATUS_LOG_TYPES.DRAFT_CREATING,
-          createdAt: streamStartedAt,
-        };
-      case "searching":
-        return {
-          id: STREAMING_MESSAGE_ID,
-          role: "assistant",
-          type: "status",
-          content: "searching" satisfies PhaseName,
-          createdAt: streamStartedAt,
-        } satisfies ClientStatusMessage;
-      case "retrieval":
-        return {
-          id: STREAMING_MESSAGE_ID,
-          role: "assistant",
-          type: "status",
-          content: activePhase ?? STATUS_LOG_TYPES.RETRIEVAL_ANSWERED,
-          createdAt: streamStartedAt,
-        } satisfies ClientStatusMessage;
-      case "text":
-        return streamingText
-          ? {
-              id: STREAMING_MESSAGE_ID,
-              role: "assistant",
-              type: "text",
-              content: streamingText,
-              createdAt: streamStartedAt,
-            }
-          : ({
-              id: STREAMING_MESSAGE_ID,
-              role: "assistant",
-              type: "status",
-              content: activePhase ?? "thinking",
-              createdAt: streamStartedAt,
-            } satisfies ClientStatusMessage);
-    }
-  })();
+  const streamingMessage = buildStreamingMessage({
+    streamError,
+    streamingPhase,
+    streamStartedAt,
+    streamingText,
+    activePhase,
+  });
 
   const contextValue: ChatStreamContextValue = {
     send,
