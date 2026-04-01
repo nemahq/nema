@@ -29,5 +29,5 @@ export function SearchingStatus({ entities }: SearchingStatusProps) {
         })
       : t("session.status_searching");
 
-  return <StatusIndicator label={label} inProgress />;
+  return <StatusIndicator label={label} status="in-progress" />;
 }

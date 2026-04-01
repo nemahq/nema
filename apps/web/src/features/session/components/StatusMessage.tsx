@@ -49,12 +49,14 @@ export function StatusMessage({ message }: StatusMessageProps) {
     return <SearchingStatus entities={entities} />;
   }
 
-  const inProgress = IN_PROGRESS_STATUSES.has(message.content);
+  const status = IN_PROGRESS_STATUSES.has(message.content)
+    ? "in-progress"
+    : "completed";
   const titles = meta && "titles" in meta ? meta.titles : undefined;
   const label =
     message.content === "draft_saved" && titles
       ? t(STATUS_LABEL_MAP[message.content], { titles })
       : t(STATUS_LABEL_MAP[message.content]);
 
-  return <StatusIndicator label={label} inProgress={inProgress} />;
+  return <StatusIndicator label={label} status={status} />;
 }
