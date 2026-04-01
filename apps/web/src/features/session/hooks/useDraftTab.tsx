@@ -1,5 +1,3 @@
-import { FileText } from "@nema-io/weave/icons";
-
 import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { DraftTabContent } from "@web/features/session/components/DraftTabContent";
 import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
@@ -23,7 +21,6 @@ export function useDraftTab(): TabbedPanelTab | undefined {
   return {
     id: "draft",
     labelKey: "session.draft",
-    icon: FileText,
     content: <DraftTabContent />,
     onClose: () => cancelDraft.mutate({ sessionId }),
   };

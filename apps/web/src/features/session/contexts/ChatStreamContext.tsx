@@ -29,7 +29,7 @@ import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { trpc } from "@web/lib/trpc";
 
-type StreamingPhase = "idle" | "text" | "draft" | "retrieval";
+type StreamingPhase = "idle" | "text" | "searching" | "draft" | "retrieval";
 
 const STREAMING_MESSAGE_ID = "streaming";
 const RESUME_TIMEOUT_MS = 30_000;
@@ -156,6 +156,13 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
         break;
       case "phase":
         setActivePhase(event.name);
+        if (
+          event.name === "searching" &&
+          streamingPhaseRef.current === "text"
+        ) {
+          streamingPhaseRef.current = "searching";
+          setStreamingPhase("searching");
+        }
         break;
       case "done":
         settleStream();
@@ -318,6 +325,14 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
           content: STATUS_LOG_TYPES.DRAFT_CREATING,
           createdAt: streamStartedAt,
         };
+      case "searching":
+        return {
+          id: STREAMING_MESSAGE_ID,
+          role: "assistant",
+          type: "status",
+          content: "searching" satisfies PhaseName,
+          createdAt: streamStartedAt,
+        } satisfies ClientStatusMessage;
       case "retrieval":
         return {
           id: STREAMING_MESSAGE_ID,

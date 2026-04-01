@@ -11,7 +11,7 @@ import { TabbedPanelLayout } from "./TabbedPanelLayout";
 export interface TabbedPanelTab {
   id: string;
   labelKey: TranslationKey;
-  icon: ComponentType<{ className?: string }>;
+  icon?: ComponentType<{ className?: string }>;
   content: ReactNode;
   onClose?: () => void;
 }
@@ -73,7 +73,7 @@ export function TabbedPanel({
                         : "text-fg-tertiary hover:text-fg-secondary",
                     )}
                   >
-                    <tab.icon className="size-3.5" />
+                    {tab.icon && <tab.icon className="size-3.5" />}
                     {t(tab.labelKey)}
                   </button>
                   {tab.onClose && (
