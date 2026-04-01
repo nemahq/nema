@@ -157,17 +157,25 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   const [streamStartedAt, setStreamStartedAt] = useState("");
   const [streamError, setStreamError] = useState<string | null>(null);
 
-  function resetStreamState() {
-    setStreamInput(null);
-    setStreamingPhase("idle");
-    streamingPhaseRef.current = "idle";
-    setStreamingText("");
-    setStreamingDraftText("");
-    setStreamingRetrievalText("");
-    setActivePhase(null);
+  function transitionPhase(phase: StreamingPhase) {
+    streamingPhaseRef.current = phase;
+    setStreamingPhase(phase);
+  }
+
+  function resetTextBuffers() {
     fullTextRef.current = "";
     fullDraftTextRef.current = "";
     fullRetrievalTextRef.current = "";
+    setStreamingText("");
+    setStreamingDraftText("");
+    setStreamingRetrievalText("");
+  }
+
+  function resetStreamState() {
+    setStreamInput(null);
+    transitionPhase("idle");
+    resetTextBuffers();
+    setActivePhase(null);
     setStreamError(null);
   }
 
@@ -197,12 +205,10 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   function handleStreamEvent(event: ChatStreamEvent) {
     switch (event.type) {
       case "draft_start":
-        streamingPhaseRef.current = "draft";
-        setStreamingPhase("draft");
+        transitionPhase("draft");
         break;
       case "retrieval_start":
-        streamingPhaseRef.current = "retrieval";
-        setStreamingPhase("retrieval");
+        transitionPhase("retrieval");
         break;
       case "token":
         if (streamingPhaseRef.current === "draft") {
@@ -224,8 +230,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
           event.name === "searching" &&
           streamingPhaseRef.current === "text"
         ) {
-          streamingPhaseRef.current = "searching";
-          setStreamingPhase("searching");
+          transitionPhase("searching");
         }
         break;
       case "done":
@@ -262,12 +267,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     });
 
     setStreamError(null);
-    fullTextRef.current = "";
-    fullDraftTextRef.current = "";
-    fullRetrievalTextRef.current = "";
-    setStreamingText("");
-    setStreamingDraftText("");
-    setStreamingRetrievalText("");
+    resetTextBuffers();
     lastStreamInputRef.current = newInput;
     setStreamInput(newInput);
   }
@@ -349,8 +349,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
       fullTextRef.current = "";
       setStreamStartedAt(new Date().toISOString());
       setStreamingText("");
-      streamingPhaseRef.current = "text";
-      setStreamingPhase("text");
+      transitionPhase("text");
 
       const input: ChatStartInput = {
         type: "start",
