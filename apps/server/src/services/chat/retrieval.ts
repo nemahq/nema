@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/node";
 
-import type { ChatStreamEvent, Locale } from "@nema-io/shared";
+import type { ChatStreamEvent, Locale, SearchResultDoc } from "@nema-io/shared";
 
 import { t } from "@server/infra/i18n";
 import type { Providers } from "@server/infra/providers";
@@ -25,7 +25,7 @@ const TEXT_MATCH_LIMIT = 10;
 interface RetrievalResult {
   text: string;
   hasResults: boolean;
-  documents: Array<{ id: string; title: string }>;
+  documents: SearchResultDoc[];
 }
 
 export async function* handleRetrievalStream(args: {
@@ -197,10 +197,12 @@ export async function* handleRetrievalStream(args: {
     },
   });
 
-  yield {
-    type: "search_results",
-    documents: searchResults.map((d) => ({ id: d.id, title: d.title })),
-  };
+  const documents: SearchResultDoc[] = searchResults.map((d) => ({
+    id: d.id,
+    title: d.title,
+  }));
+
+  yield { type: "search_results", documents };
 
   if (searchResults.length === 0) {
     const noResult = t("chat.retrieval_empty", lng);
@@ -227,7 +229,6 @@ export async function* handleRetrievalStream(args: {
     yield { type: "token", text: chunk };
   }
 
-  const documents = searchResults.map((d) => ({ id: d.id, title: d.title }));
   return { text: fullText, hasResults: true, documents };
 }
 

@@ -5,7 +5,7 @@ const PHASE_VALUES = ["searching", "answering"] as const;
 export const PhaseNameSchema = z.enum(PHASE_VALUES);
 export type PhaseName = z.infer<typeof PhaseNameSchema>;
 
-const SearchResultDocSchema = z.object({
+export const SearchResultDocSchema = z.object({
   id: z.string(),
   title: z.string(),
 });

@@ -1,9 +1,12 @@
+import * as Sentry from "@sentry/node";
+
 import type {
   ChatStartInput,
   ChatStreamEvent,
   Locale,
   Message,
   MessageType,
+  SearchResultDoc,
   SessionDraft,
   SessionRetrieval,
 } from "@nema-io/shared";
@@ -86,7 +89,7 @@ async function setRetrieval({
   supabase: TypedSupabaseClient;
   sessionId: string;
   body: string;
-  documents: Array<{ id: string; title: string }>;
+  documents: SearchResultDoc[];
 }): Promise<void> {
   const retrieval: Retrieval = { body, documents };
   const { error } = await supabase
@@ -205,7 +208,12 @@ export async function* processChatStream(args: {
         responseContent = STATUS_LOG_TYPES.RETRIEVAL_ANSWERED;
         messageType = "status";
       } else {
-        await clearRetrieval(supabase, input.sessionId);
+        await clearRetrieval(supabase, input.sessionId).catch((error) => {
+          Sentry.captureException(error, {
+            tags: { component: "orchestrator", operation: "clear_retrieval" },
+            extra: { sessionId: input.sessionId },
+          });
+        });
         responseContent = result.text;
       }
       break;

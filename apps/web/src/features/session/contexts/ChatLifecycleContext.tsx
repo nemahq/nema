@@ -54,7 +54,6 @@ interface ChatLifecycleContextValue {
   streamingMessage: DisplayMessage | undefined;
   streamingDraftText: string;
   streamingRetrievalText: string;
-  searchQueries: string[];
   searchEntities: string[];
   searchResultDocs: SearchResultDoc[];
   clearSearchResults: () => void;
@@ -165,7 +164,6 @@ export function ChatLifecycleProvider({
   const fullRetrievalTextRef = useRef("");
   const [streamStartedAt, setStreamStartedAt] = useState("");
   const [streamError, setStreamError] = useState<string | null>(null);
-  const [searchQueries, setSearchQueries] = useState<string[]>([]);
   const [searchEntities, setSearchEntities] = useState<string[]>([]);
   const [searchResultDocs, setSearchResultDocs] = useState<SearchResultDoc[]>(
     [],
@@ -191,8 +189,8 @@ export function ChatLifecycleProvider({
     resetTextBuffers();
     setActivePhase(null);
     setStreamError(null);
-    setSearchQueries([]);
     setSearchEntities([]);
+    setSearchResultDocs([]);
   }
 
   const settleStream = useCallback(
@@ -250,7 +248,6 @@ export function ChatLifecycleProvider({
         }
         break;
       case "search_query":
-        setSearchQueries(event.queries);
         setSearchEntities(event.entities);
         break;
       case "search_results":
@@ -291,7 +288,6 @@ export function ChatLifecycleProvider({
 
     setStreamError(null);
     resetTextBuffers();
-    setSearchQueries([]);
     setSearchEntities([]);
     setSearchResultDocs([]);
     lastStreamInputRef.current = newInput;
@@ -415,7 +411,6 @@ export function ChatLifecycleProvider({
     streamingMessage,
     streamingDraftText,
     streamingRetrievalText,
-    searchQueries,
     searchEntities,
     searchResultDocs,
     clearSearchResults: useCallback(function clearSearchResults() {
