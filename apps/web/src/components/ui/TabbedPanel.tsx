@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { cn } from "@nema-io/weave";
 import { X } from "@nema-io/weave/icons";
@@ -11,7 +11,6 @@ import { TabbedPanelLayout } from "./TabbedPanelLayout";
 export interface TabbedPanelTab {
   id: string;
   labelKey: TranslationKey;
-  icon: ComponentType<{ className?: string }>;
   content: ReactNode;
   onClose?: () => void;
 }
@@ -73,7 +72,6 @@ export function TabbedPanel({
                         : "text-fg-tertiary hover:text-fg-secondary",
                     )}
                   >
-                    <tab.icon className="size-3.5" />
                     {t(tab.labelKey)}
                   </button>
                   {tab.onClose && (

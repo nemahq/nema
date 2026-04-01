@@ -1,8 +1,6 @@
-import { FileText } from "@nema-io/weave/icons";
-
 import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { DraftTabContent } from "@web/features/session/components/DraftTabContent";
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 
 import { useCancelDraft } from "./useCancelDraft";
 import { useSessionId } from "./useSessionId";
@@ -11,7 +9,7 @@ import { useSessionSuspenseQuery } from "./useSessionQuery";
 export function useDraftTab(): TabbedPanelTab | undefined {
   const sessionId = useSessionId();
   const [session] = useSessionSuspenseQuery({ sessionId });
-  const { streamingPhase } = useChatStream();
+  const { streamingPhase } = useChatLifecycle();
   const cancelDraft = useCancelDraft({ sessionId });
 
   const hasDraft = !!(session.draft || streamingPhase === "draft");
@@ -23,7 +21,6 @@ export function useDraftTab(): TabbedPanelTab | undefined {
   return {
     id: "draft",
     labelKey: "session.draft",
-    icon: FileText,
     content: <DraftTabContent />,
     onClose: () => cancelDraft.mutate({ sessionId }),
   };

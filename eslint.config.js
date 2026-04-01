@@ -108,6 +108,12 @@ export default tseslint.config(
               importNames: ["T", "useTranslate"],
               message: "useTranslation() 훅의 t() 함수를 사용하세요.",
             },
+            {
+              name: "@nema-io/weave/icons",
+              importNames: ["LucideIcon"],
+              message:
+                "Do not import LucideIcon directly. Define a project-level alias if an icon type is needed.",
+            },
           ],
           patterns: [
             {

@@ -3,7 +3,7 @@ import { getQueryKey } from "@trpc/react-query";
 
 import { ChatInput } from "@web/components/ui/ChatInput";
 import { MODE_CONFIG } from "@web/features/session/chatModeConfig";
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
 import { useChatDraft } from "@web/features/session/hooks/useChatDraft";
 import { useChatMode } from "@web/features/session/hooks/useChatMode";
@@ -21,7 +21,7 @@ import { trpc } from "@web/lib/trpc";
 
 export function ChatComposer() {
   const { t } = useTranslation();
-  const { send, cancel, streamingPhase } = useChatStream();
+  const { send, cancel, streamingPhase } = useChatLifecycle();
   const { openTab } = useContentTab();
   const sessionId = useSessionId();
   const [inputValue, setInputValue] = useChatDraft(sessionId);

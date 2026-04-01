@@ -29,7 +29,7 @@ import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { trpc } from "@web/lib/trpc";
 
-type StreamingPhase = "idle" | "text" | "draft" | "retrieval";
+type StreamingPhase = "idle" | "text" | "searching" | "draft" | "retrieval";
 
 const STREAMING_MESSAGE_ID = "streaming";
 const RESUME_TIMEOUT_MS = 30_000;
@@ -46,7 +46,7 @@ export interface ClientStatusMessage {
 
 export type DisplayMessage = Message | ClientStatusMessage;
 
-interface ChatStreamContextValue {
+interface ChatLifecycleContextValue {
   send: (content: string, mode: ChatMode) => void;
   cancel: () => void;
   streamingPhase: StreamingPhase;
@@ -58,13 +58,79 @@ interface ChatStreamContextValue {
   dismissStreamError: () => void;
 }
 
-const ChatStreamContext = createContext<ChatStreamContextValue | null>(null);
+const ChatLifecycleContext = createContext<ChatLifecycleContextValue | null>(
+  null,
+);
 
-interface ChatStreamProviderProps {
+function buildStreamingMessage({
+  streamError,
+  streamingPhase,
+  streamStartedAt,
+  streamingText,
+  activePhase,
+}: {
+  streamError: string | null;
+  streamingPhase: StreamingPhase;
+  streamStartedAt: string;
+  streamingText: string;
+  activePhase: PhaseName | null;
+}): DisplayMessage | undefined {
+  if (streamError) {
+    return undefined;
+  }
+  switch (streamingPhase) {
+    case "idle":
+      return undefined;
+    case "draft":
+      return {
+        id: STREAMING_MESSAGE_ID,
+        role: "assistant",
+        type: "status",
+        content: STATUS_LOG_TYPES.DRAFT_CREATING,
+        createdAt: streamStartedAt,
+      };
+    case "searching":
+      return {
+        id: STREAMING_MESSAGE_ID,
+        role: "assistant",
+        type: "status",
+        content: "searching" satisfies PhaseName,
+        createdAt: streamStartedAt,
+      } satisfies ClientStatusMessage;
+    case "retrieval":
+      return {
+        id: STREAMING_MESSAGE_ID,
+        role: "assistant",
+        type: "status",
+        content: activePhase ?? STATUS_LOG_TYPES.RETRIEVAL_ANSWERED,
+        createdAt: streamStartedAt,
+      } satisfies ClientStatusMessage;
+    case "text":
+      return streamingText
+        ? {
+            id: STREAMING_MESSAGE_ID,
+            role: "assistant",
+            type: "text",
+            content: streamingText,
+            createdAt: streamStartedAt,
+          }
+        : ({
+            id: STREAMING_MESSAGE_ID,
+            role: "assistant",
+            type: "status",
+            content: activePhase ?? "thinking",
+            createdAt: streamStartedAt,
+          } satisfies ClientStatusMessage);
+  }
+}
+
+interface ChatLifecycleProviderProps {
   children: ReactNode;
 }
 
-export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
+export function ChatLifecycleProvider({
+  children,
+}: ChatLifecycleProviderProps) {
   const sessionId = useSessionId();
   const utils = trpc.useUtils();
   const { mutate: generateTitle } = useGenerateTitle();
@@ -95,17 +161,25 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   const [streamStartedAt, setStreamStartedAt] = useState("");
   const [streamError, setStreamError] = useState<string | null>(null);
 
-  function resetStreamState() {
-    setStreamInput(null);
-    setStreamingPhase("idle");
-    streamingPhaseRef.current = "idle";
-    setStreamingText("");
-    setStreamingDraftText("");
-    setStreamingRetrievalText("");
-    setActivePhase(null);
+  function transitionPhase(phase: StreamingPhase) {
+    streamingPhaseRef.current = phase;
+    setStreamingPhase(phase);
+  }
+
+  function resetTextBuffers() {
     fullTextRef.current = "";
     fullDraftTextRef.current = "";
     fullRetrievalTextRef.current = "";
+    setStreamingText("");
+    setStreamingDraftText("");
+    setStreamingRetrievalText("");
+  }
+
+  function resetStreamState() {
+    setStreamInput(null);
+    transitionPhase("idle");
+    resetTextBuffers();
+    setActivePhase(null);
     setStreamError(null);
   }
 
@@ -135,12 +209,10 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
   function handleStreamEvent(event: ChatStreamEvent) {
     switch (event.type) {
       case "draft_start":
-        streamingPhaseRef.current = "draft";
-        setStreamingPhase("draft");
+        transitionPhase("draft");
         break;
       case "retrieval_start":
-        streamingPhaseRef.current = "retrieval";
-        setStreamingPhase("retrieval");
+        transitionPhase("retrieval");
         break;
       case "token":
         if (streamingPhaseRef.current === "draft") {
@@ -149,6 +221,8 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
         } else if (streamingPhaseRef.current === "retrieval") {
           fullRetrievalTextRef.current += event.text;
           setStreamingRetrievalText(fullRetrievalTextRef.current);
+        } else if (streamingPhaseRef.current === "searching") {
+          break;
         } else {
           fullTextRef.current += event.text;
           setStreamingText(fullTextRef.current);
@@ -156,6 +230,12 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
         break;
       case "phase":
         setActivePhase(event.name);
+        if (
+          event.name === "searching" &&
+          streamingPhaseRef.current === "text"
+        ) {
+          transitionPhase("searching");
+        }
         break;
       case "done":
         settleStream();
@@ -191,12 +271,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     });
 
     setStreamError(null);
-    fullTextRef.current = "";
-    fullDraftTextRef.current = "";
-    fullRetrievalTextRef.current = "";
-    setStreamingText("");
-    setStreamingDraftText("");
-    setStreamingRetrievalText("");
+    resetTextBuffers();
     lastStreamInputRef.current = newInput;
     setStreamInput(newInput);
   }
@@ -278,8 +353,7 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
       fullTextRef.current = "";
       setStreamStartedAt(new Date().toISOString());
       setStreamingText("");
-      streamingPhaseRef.current = "text";
-      setStreamingPhase("text");
+      transitionPhase("text");
 
       const input: ChatStartInput = {
         type: "start",
@@ -303,49 +377,15 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     [sessionId, cancelGenerationMutation, settleStream],
   );
 
-  const streamingMessage: DisplayMessage | undefined = (() => {
-    if (streamError) {
-      return undefined;
-    }
-    switch (streamingPhase) {
-      case "idle":
-        return undefined;
-      case "draft":
-        return {
-          id: STREAMING_MESSAGE_ID,
-          role: "assistant",
-          type: "status",
-          content: STATUS_LOG_TYPES.DRAFT_CREATING,
-          createdAt: streamStartedAt,
-        };
-      case "retrieval":
-        return {
-          id: STREAMING_MESSAGE_ID,
-          role: "assistant",
-          type: "status",
-          content: activePhase ?? STATUS_LOG_TYPES.RETRIEVAL_ANSWERED,
-          createdAt: streamStartedAt,
-        } satisfies ClientStatusMessage;
-      case "text":
-        return streamingText
-          ? {
-              id: STREAMING_MESSAGE_ID,
-              role: "assistant",
-              type: "text",
-              content: streamingText,
-              createdAt: streamStartedAt,
-            }
-          : ({
-              id: STREAMING_MESSAGE_ID,
-              role: "assistant",
-              type: "status",
-              content: activePhase ?? "thinking",
-              createdAt: streamStartedAt,
-            } satisfies ClientStatusMessage);
-    }
-  })();
+  const streamingMessage = buildStreamingMessage({
+    streamError,
+    streamingPhase,
+    streamStartedAt,
+    streamingText,
+    activePhase,
+  });
 
-  const contextValue: ChatStreamContextValue = {
+  const contextValue: ChatLifecycleContextValue = {
     send,
     cancel,
     streamingPhase,
@@ -357,13 +397,17 @@ export function ChatStreamProvider({ children }: ChatStreamProviderProps) {
     dismissStreamError,
   };
 
-  return <ChatStreamContext value={contextValue}>{children}</ChatStreamContext>;
+  return (
+    <ChatLifecycleContext value={contextValue}>{children}</ChatLifecycleContext>
+  );
 }
 
-export function useChatStream() {
-  const ctx = useContext(ChatStreamContext);
+export function useChatLifecycle() {
+  const ctx = useContext(ChatLifecycleContext);
   if (!ctx) {
-    throw new Error("useChatStream must be used within a ChatStreamProvider.");
+    throw new Error(
+      "useChatLifecycle must be used within a ChatLifecycleProvider.",
+    );
   }
   return ctx;
 }

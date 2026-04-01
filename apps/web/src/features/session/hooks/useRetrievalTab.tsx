@@ -1,8 +1,6 @@
-import { Search } from "@nema-io/weave/icons";
-
 import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { RetrievalTabContent } from "@web/features/session/components/RetrievalTabContent";
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 
 import { useDismissRetrieval } from "./useDismissRetrieval";
 import { useSessionId } from "./useSessionId";
@@ -11,19 +9,19 @@ import { useSessionSuspenseQuery } from "./useSessionQuery";
 export function useRetrievalTab(): TabbedPanelTab | undefined {
   const sessionId = useSessionId();
   const [session] = useSessionSuspenseQuery({ sessionId });
-  const { streamingPhase } = useChatStream();
+  const { streamingPhase } = useChatLifecycle();
   const dismissRetrieval = useDismissRetrieval({ sessionId });
 
-  const hasRetrieval = !!(session.retrieval || streamingPhase === "retrieval");
+  const isStreamingRetrieval =
+    streamingPhase === "searching" || streamingPhase === "retrieval";
 
-  if (!hasRetrieval) {
+  if (!session.retrieval && !isStreamingRetrieval) {
     return undefined;
   }
 
   return {
     id: "retrieval",
     labelKey: "session.retrieval",
-    icon: Search,
     content: <RetrievalTabContent />,
     onClose: () => dismissRetrieval.mutate({ sessionId }),
   };

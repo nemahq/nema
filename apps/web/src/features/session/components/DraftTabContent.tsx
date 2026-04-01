@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { Button, Kbd } from "@nema-io/weave";
 
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
 import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
@@ -23,7 +23,8 @@ function DraftTabContentInner() {
   const draft = session.draft;
   const saveDraft = useSaveDraft({ sessionId });
   const cancelDraft = useCancelDraft({ sessionId });
-  const { streamingPhase, streamingDraftText, streamError } = useChatStream();
+  const { streamingPhase, streamingDraftText, streamError } =
+    useChatLifecycle();
 
   const isStreaming = streamingPhase === "draft";
   const smoothText = useBufferedStream(isStreaming ? streamingDraftText : "");
