@@ -42,10 +42,11 @@ function RetrievalTabContentInner() {
   );
   const body = isStreaming ? smoothText : retrieval?.body;
   const isCompleted = !isStreaming && !!retrieval?.body;
+  const shouldCollapse = isStreaming || isCompleted;
 
   return (
     <div>
-      <SearchResultsList collapsible={isCompleted} />
+      <SearchResultsList collapsible={shouldCollapse} />
       {isSearching && !streamError && <SearchingIndicator />}
       {body && <MarkdownRenderer content={body} />}
       {!body && isStreaming && !streamError && <WritingCursor />}

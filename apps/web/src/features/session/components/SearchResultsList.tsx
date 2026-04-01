@@ -13,13 +13,21 @@ export function SearchResultsList({ collapsible }: SearchResultsListProps) {
   const { t } = useTranslation();
   const { searchResultDocs } = useChatLifecycle();
   const [expanded, setExpanded] = useState(!collapsible);
+  const [wasCollapsible, setWasCollapsible] = useState(collapsible);
+
+  if (collapsible !== wasCollapsible) {
+    setWasCollapsible(collapsible);
+    if (collapsible) {
+      setExpanded(false);
+    }
+  }
 
   if (searchResultDocs.length === 0) {
     return null;
   }
 
   return (
-    <div className="mb-3 rounded-lg bg-bg-secondary p-3 shadow-sm">
+    <div className="mb-3 animate-in fade-in rounded-lg bg-bg-secondary p-3 shadow-sm duration-normal">
       <button
         type="button"
         className="flex w-full items-center justify-between text-xs font-medium text-fg-secondary"

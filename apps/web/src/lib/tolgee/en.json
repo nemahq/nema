@@ -85,7 +85,7 @@
     "status_search_results_found": "Found {count} documents",
     "status_search_results_title": "Search results",
     "status_searching": "Searching...",
-    "status_searching_with_entities": "Searching for {entities}...",
+    "status_searching_with_entities": "Searching by {entities}...",
     "status_thinking": "Thinking...",
     "stream_stop": "Stop generation",
     "tab_close": "Close tab",

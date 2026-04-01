@@ -202,6 +202,7 @@ export async function* processChatStream(args: {
         responseContent = STATUS_LOG_TYPES.RETRIEVAL_ANSWERED;
         messageType = "status";
       } else {
+        await clearRetrieval(supabase, input.sessionId);
         responseContent = result.text;
       }
       break;

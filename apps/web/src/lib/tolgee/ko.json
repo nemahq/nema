@@ -85,7 +85,7 @@
     "status_search_results_found": "{count}건의 문서를 찾았어요",
     "status_search_results_title": "검색된 문서",
     "status_searching": "검색 중...",
-    "status_searching_with_entities": "{entities} 검색 중...",
+    "status_searching_with_entities": "{entities} 키워드로 검색 중...",
     "status_thinking": "생각하는 중...",
     "stream_stop": "생성 중지",
     "tab_close": "탭 닫기",

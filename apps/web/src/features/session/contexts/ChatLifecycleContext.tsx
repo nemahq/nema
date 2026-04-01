@@ -57,6 +57,7 @@ interface ChatLifecycleContextValue {
   searchQueries: string[];
   searchEntities: string[];
   searchResultDocs: SearchResultDoc[];
+  clearSearchResults: () => void;
   streamError: string | null;
   retryStream: () => void;
   dismissStreamError: () => void;
@@ -417,6 +418,9 @@ export function ChatLifecycleProvider({
     searchQueries,
     searchEntities,
     searchResultDocs,
+    clearSearchResults: useCallback(function clearSearchResults() {
+      setSearchResultDocs([]);
+    }, []),
     streamError,
     retryStream,
     dismissStreamError,
