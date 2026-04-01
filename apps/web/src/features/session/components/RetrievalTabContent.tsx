@@ -13,11 +13,15 @@ import { MarkdownRenderer } from "./MarkdownRenderer";
 import { StreamErrorMessage } from "./StreamErrorMessage";
 import { WritingCursor } from "./WritingCursor";
 
+const SEARCHING_PULSE_STYLE = {
+  animation: "searching-pulse 1.4s ease-in-out infinite",
+};
+
 function SearchingIndicator() {
   return (
     <Search
       className="size-5 text-fg-secondary"
-      style={{ animation: "searching-pulse 1.4s ease-in-out infinite" }}
+      style={SEARCHING_PULSE_STYLE}
       aria-hidden
     />
   );
