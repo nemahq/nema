@@ -1,9 +1,9 @@
 import { useNavigate } from "@tanstack/react-router";
 
-import { Plus } from "@nema-io/weave/icons";
+import { Brain, Plus } from "@nema-io/weave/icons";
 
 import { Sidebar } from "@web/components/layout/Sidebar";
-import { SidebarActionButton } from "@web/components/layout/SidebarActionButton";
+import { SidebarNavLink } from "@web/components/layout/SidebarNavLink";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -29,12 +29,25 @@ export function SessionSidebar() {
   return (
     <Sidebar
       topSlot={(collapsed) => (
-        <SidebarActionButton
-          collapsed={collapsed}
-          icon={<NewContextIcon />}
-          label={t("session.new_context")}
-          onClick={() => navigate({ to: "/" })}
-        />
+        <>
+          <SidebarNavLink
+            collapsed={collapsed}
+            icon={<NewContextIcon />}
+            label={t("session.new_context")}
+            to="/"
+            showActive={false}
+          />
+          <SidebarNavLink
+            collapsed={collapsed}
+            icon={
+              <div className="flex size-6 items-center justify-center">
+                <Brain strokeWidth={1.5} className="size-4" />
+              </div>
+            }
+            label={t("memory.sidebar_label")}
+            to="/memory"
+          />
+        </>
       )}
       footer={(collapsed) => <UserMenu collapsed={collapsed} />}
     >

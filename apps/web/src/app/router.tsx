@@ -17,6 +17,7 @@ import { TermsPage } from "@web/app/pages/TermsPage";
 import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { AuthPage } from "@web/features/auth/components/AuthPage";
 import { requireAuth, requireGuest } from "@web/features/auth/guards";
+import { MemoryPage } from "@web/features/memory";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 
 import { App } from "./App";
@@ -89,12 +90,18 @@ const sessionRoute = createRoute({
   component: SessionPageShell,
 });
 
+const memoryRoute = createRoute({
+  getParentRoute: () => sessionSidebarRoute,
+  path: "/memory",
+  component: MemoryPage,
+});
+
 const routeTree = rootRoute.addChildren([
   signinRoute,
   privacyRoute,
   termsRoute,
   authenticatedRoute.addChildren([
-    sessionSidebarRoute.addChildren([indexRoute, sessionRoute]),
+    sessionSidebarRoute.addChildren([indexRoute, sessionRoute, memoryRoute]),
   ]),
 ]);
 

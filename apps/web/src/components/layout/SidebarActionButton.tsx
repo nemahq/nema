@@ -22,7 +22,7 @@ export function SidebarActionButton({
 }: SidebarActionButtonProps) {
   if (collapsed) {
     return (
-      <div className="flex justify-center py-2">
+      <div className="flex justify-center">
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -42,7 +42,7 @@ export function SidebarActionButton({
   }
 
   return (
-    <div className="px-1.5 py-2">
+    <div className="px-1.5">
       <Button
         variant="ghost"
         className="w-full justify-start gap-2 pl-1.5 text-sm font-normal"

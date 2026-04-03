@@ -33,6 +33,11 @@
     "expand_sidebar": "사이드바 펼치기",
     "toggle_sidebar": "사이드바 토글"
   },
+  "memory": {
+    "empty_heading": "아직 쌓인 기억이 없어요.",
+    "empty_subheading": "대화를 시작하면 여기에 채워질 거예요.",
+    "sidebar_label": "기억"
+  },
   "session": {
     "copied": "복사됨",
     "copy_code": "코드 복사",
