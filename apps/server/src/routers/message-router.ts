@@ -16,7 +16,6 @@ import {
   cancelDraftAction,
   cancelGenerationAction,
   confirmDraftIntentStream,
-  dismissRetrievalAction,
   processChatStream,
 } from "@server/services/chat";
 import { getMessages, sendMessage } from "@server/services/message-service";
@@ -99,13 +98,4 @@ export const messageRouter = router({
         ctx.lng,
       );
     }),
-
-  dismissRetrieval: protectedProcedure
-    .input(SessionGetInputSchema)
-    .mutation(({ ctx, input }) =>
-      dismissRetrievalAction({
-        supabase: ctx.supabase,
-        sessionId: input.sessionId,
-      }),
-    ),
 });

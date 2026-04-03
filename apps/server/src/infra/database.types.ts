@@ -228,7 +228,7 @@ export type Database = {
         Row: {
           body: string;
           created_at: string;
-          documents: Json | null;
+          documents: Json;
           id: string;
           query: string;
           session_id: string;
@@ -237,7 +237,7 @@ export type Database = {
         Insert: {
           body: string;
           created_at?: string;
-          documents?: Json | null;
+          documents?: Json;
           id?: string;
           query: string;
           session_id: string;
@@ -246,7 +246,7 @@ export type Database = {
         Update: {
           body?: string;
           created_at?: string;
-          documents?: Json | null;
+          documents?: Json;
           id?: string;
           query?: string;
           session_id?: string;

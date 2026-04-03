@@ -3,7 +3,7 @@ create table session_retrievals (
   session_id  uuid not null references sessions(id) on delete cascade,
   query       text not null,
   body        text not null,
-  documents   jsonb default '[]',
+  documents   jsonb not null default '[]',
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );

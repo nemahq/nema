@@ -108,18 +108,6 @@ async function insertRetrieval({
   return data.id;
 }
 
-async function deleteRetrievals(
-  supabase: TypedSupabaseClient,
-  sessionId: string,
-): Promise<void> {
-  const { error } = await supabase
-    .from("session_retrievals")
-    .delete()
-    .eq("session_id", sessionId);
-
-  throwIfSupabaseError(error);
-}
-
 async function appendMessage({
   supabase,
   sessionId,
@@ -322,13 +310,6 @@ export function cancelGenerationAction(
   sessionId: string,
 ): void {
   cancelGeneration(userId, sessionId);
-}
-
-export async function dismissRetrievalAction(args: {
-  supabase: TypedSupabaseClient;
-  sessionId: string;
-}): Promise<void> {
-  await deleteRetrievals(args.supabase, args.sessionId);
 }
 
 async function updateMessagePayload(args: {
