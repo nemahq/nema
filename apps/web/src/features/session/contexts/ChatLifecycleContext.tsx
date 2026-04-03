@@ -274,6 +274,8 @@ export function ChatLifecycleProvider({
       case "search_results":
         setSearchResultDocs(event.documents);
         break;
+      case "retrieval_saved":
+        break;
       case "done":
         settleStream();
         break;
