@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 
-import { Button } from "@nema-io/weave";
-import { FileText, Search } from "@nema-io/weave/icons";
+import { cn } from "@nema-io/weave";
+import { FileText, PanelRight, Search } from "@nema-io/weave/icons";
 
 import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
+import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useSessionSuspenseQuery } from "@web/features/session/hooks/useSessionQuery";
 import { useTranslation } from "@web/lib/tolgee";
@@ -16,7 +17,6 @@ interface RetrievalMessageProps {
   retrievalId: string | null;
   content: string;
   query: string;
-  onOpenTab?: (retrievalId: string) => void;
 }
 
 function formatSearchingLabel(
@@ -35,30 +35,16 @@ function formatSearchingLabel(
   return t("session.status_searching_with_entities", { entities: formatted });
 }
 
-interface QueryHeaderProps {
-  query: string;
-}
-
-function QueryHeader({ query }: QueryHeaderProps) {
-  return (
-    <div className="flex items-start gap-2">
-      <Search className="mt-0.5 size-4 shrink-0 text-fg-tertiary" aria-hidden />
-      <span className="line-clamp-2 text-sm text-fg-secondary">
-        &ldquo;{query}&rdquo;
-      </span>
-    </div>
-  );
-}
-
 function RetrievalMessageInner({
   retrievalId,
   content,
   query,
-  onOpenTab,
 }: RetrievalMessageProps) {
   const { t } = useTranslation();
   const { streamingPhase, searchEntities, searchResultDocs } =
     useChatLifecycle();
+  const { openRetrievalTabs, openRetrievalTab, closeRetrievalTab, tabOrder } =
+    useContentTab();
   const sessionId = useSessionId();
   const [session] = useSessionSuspenseQuery({ sessionId });
 
@@ -71,9 +57,59 @@ function RetrievalMessageInner({
     ? searchResultDocs.length
     : (retrieval?.documents.length ?? searchResultDocs.length);
 
+  const isTabOpen = retrievalId !== null && openRetrievalTabs.has(retrievalId);
+  const canToggleTab =
+    !isStreaming && !isRetrievalLoading && docCount > 0 && retrievalId !== null;
+  const tabIndex = isTabOpen
+    ? tabOrder.indexOf(`retrieval-${retrievalId}`) + 1
+    : 0;
+
+  function handleToggleTab() {
+    if (!retrievalId) {
+      return;
+    }
+    if (isTabOpen) {
+      closeRetrievalTab(retrievalId);
+    } else {
+      openRetrievalTab(retrievalId);
+    }
+  }
+
   return (
-    <div className="space-y-1.5 rounded-xl bg-bg-secondary p-3 shadow-sm">
-      <QueryHeader query={query} />
+    <div className="space-y-1.5 rounded-r-xl border-l-2 border-l-brand bg-surface-card p-3 shadow-sm dark:bg-surface-raised">
+      <div className="flex items-start gap-2">
+        <Search
+          className="mt-0.5 size-4 shrink-0 text-fg-tertiary"
+          aria-hidden
+        />
+        <span className="line-clamp-2 flex-1 text-sm text-fg-secondary">
+          &ldquo;{query}&rdquo;
+        </span>
+        {canToggleTab && (
+          <button
+            type="button"
+            onClick={handleToggleTab}
+            className={cn(
+              "relative shrink-0 rounded p-0.5 transition-colors",
+              isTabOpen
+                ? "text-amber-600 dark:text-amber-500"
+                : "text-fg-quaternary hover:text-fg-secondary",
+            )}
+            aria-label={t(
+              isTabOpen
+                ? "session.retrieval_close_tab"
+                : "session.retrieval_open_tab",
+            )}
+          >
+            <PanelRight className="size-4" />
+            {tabIndex > 0 && (
+              <span className="absolute -right-1 -top-1 flex size-3.5 items-center justify-center rounded-full bg-amber-600 text-[9px] font-bold leading-none text-white dark:bg-amber-500">
+                {tabIndex}
+              </span>
+            )}
+          </button>
+        )}
+      </div>
 
       {isStreaming && streamingPhase === "searching" && (
         <StatusIndicator
@@ -109,22 +145,6 @@ function RetrievalMessageInner({
       {!isStreaming && content && (
         <p className="line-clamp-2 text-xs text-fg-tertiary">{content}</p>
       )}
-
-      {!isStreaming &&
-        !isRetrievalLoading &&
-        docCount > 0 &&
-        onOpenTab &&
-        retrievalId && (
-          <div className="flex justify-end">
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => onOpenTab(retrievalId)}
-            >
-              {t("session.retrieval_open_tab")}
-            </Button>
-          </div>
-        )}
     </div>
   );
 }
@@ -133,8 +153,16 @@ export function RetrievalMessage(props: RetrievalMessageProps) {
   return (
     <Suspense
       fallback={
-        <div className="space-y-1.5 rounded-xl bg-bg-secondary p-3 shadow-sm">
-          <QueryHeader query={props.query} />
+        <div className="space-y-1.5 rounded-r-xl border-l-2 border-l-brand bg-surface-card p-3 shadow-sm dark:bg-surface-raised">
+          <div className="flex items-start gap-2">
+            <Search
+              className="mt-0.5 size-4 shrink-0 text-fg-tertiary"
+              aria-hidden
+            />
+            <span className="line-clamp-2 flex-1 text-sm text-fg-secondary">
+              &ldquo;{props.query}&rdquo;
+            </span>
+          </div>
         </div>
       }
     >

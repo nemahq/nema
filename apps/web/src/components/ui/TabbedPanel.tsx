@@ -10,7 +10,8 @@ import { TabbedPanelLayout } from "./TabbedPanelLayout";
 
 export interface TabbedPanelTab {
   id: string;
-  labelKey: TranslationKey;
+  labelKey?: TranslationKey;
+  label?: string;
   content: ReactNode;
   onClose?: () => void;
 }
@@ -72,7 +73,7 @@ export function TabbedPanel({
                         : "text-fg-tertiary hover:text-fg-secondary",
                     )}
                   >
-                    {t(tab.labelKey)}
+                    {tab.label ?? (tab.labelKey ? t(tab.labelKey) : "")}
                   </button>
                   {tab.onClose && (
                     <button
@@ -80,7 +81,8 @@ export function TabbedPanel({
                       onClick={(e) => handleTabClose(e, tab)}
                       className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
                       aria-label={t("session.draft_tab_close", {
-                        label: t(tab.labelKey),
+                        label:
+                          tab.label ?? (tab.labelKey ? t(tab.labelKey) : ""),
                       })}
                     >
                       <X className="size-3" />

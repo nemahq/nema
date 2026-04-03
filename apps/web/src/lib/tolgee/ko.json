@@ -70,6 +70,7 @@
     "prev_session": "이전 맥락",
     "rename": "이름 바꾸기",
     "retrieval": "검색 결과",
+    "retrieval_close_tab": "탭 닫기",
     "retrieval_doc_count": "{count}건의 문서를 찾았어요.",
     "retrieval_generating": "답변 생성 중...",
     "retrieval_open_tab": "탭에서 보기",

@@ -1,27 +1,21 @@
+import type { SearchResultDoc } from "@nema-io/shared";
 import { FileText } from "@nema-io/weave/icons";
 
-import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
-import { useSessionId } from "@web/features/session/hooks/useSessionId";
-import { useSessionSuspenseQuery } from "@web/features/session/hooks/useSessionQuery";
 import { useTranslation } from "@web/lib/tolgee";
 
-export function SearchResultsList() {
-  const { t } = useTranslation();
-  const { searchResultDocs } = useChatLifecycle();
-  const sessionId = useSessionId();
-  const [session] = useSessionSuspenseQuery({ sessionId });
+interface SearchResultsListProps {
+  documents: SearchResultDoc[];
+}
 
-  const documents =
-    searchResultDocs.length > 0
-      ? searchResultDocs
-      : (session.retrievals[0]?.documents ?? []);
+export function SearchResultsList({ documents }: SearchResultsListProps) {
+  const { t } = useTranslation();
 
   if (documents.length === 0) {
     return null;
   }
 
   return (
-    <div className="mb-3 animate-in fade-in rounded-lg bg-bg-secondary p-3 shadow-sm duration-normal">
+    <div className="mb-3 animate-in fade-in rounded-lg border border-border/40 bg-surface-card p-3 shadow-sm duration-normal">
       <span className="text-xs font-medium text-fg-secondary">
         {t("session.status_search_results_title")} ({documents.length})
       </span>

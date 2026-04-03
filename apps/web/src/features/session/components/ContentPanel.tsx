@@ -1,13 +1,14 @@
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { TabbedPanel } from "@web/components/ui/TabbedPanel";
+import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
 import { useDraftTab } from "@web/features/session/hooks/useDraftTab";
 import { useHelpTab } from "@web/features/session/hooks/useHelpTab";
-import { useRetrievalTab } from "@web/features/session/hooks/useRetrievalTab";
+import { useRetrievalTabs } from "@web/features/session/hooks/useRetrievalTabs";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 
 import { ContentPanelSkeleton } from "./ContentPanelSkeleton";
@@ -20,11 +21,12 @@ const TAB_HOTKEYS = Array.from(
 ).join(", ");
 
 function ContentPanelInner() {
+  const { setTabOrder: syncTabOrder } = useContentTab();
   const draftTab = useDraftTab();
-  const retrievalTab = useRetrievalTab();
+  const retrievalTabs = useRetrievalTabs();
   const helpTab = useHelpTab();
 
-  const allTabs = [draftTab, retrievalTab, helpTab];
+  const allTabs = [draftTab, ...retrievalTabs, helpTab];
   const tabs: TabbedPanelTab[] = allTabs.filter(
     (tab): tab is TabbedPanelTab => tab !== undefined,
   );
@@ -44,12 +46,24 @@ function ContentPanelInner() {
     setTabOrder(nextOrder);
     if (newIds.length > 0) {
       setActiveTab(newIds[newIds.length - 1]);
+    } else if (!currentIds.has(activeTab)) {
+      const prevIndex = tabOrder.indexOf(activeTab);
+      const neighbor =
+        kept[Math.min(prevIndex, kept.length - 1)] ?? kept[0] ?? "";
+      setActiveTab(neighbor);
     }
   }
 
   const orderedTabs = tabOrder
     .map((id) => tabs.find((tab) => tab.id === id))
     .filter((tab): tab is TabbedPanelTab => tab !== undefined);
+
+  useEffect(
+    function syncTabOrderToContext() {
+      syncTabOrder(tabOrder);
+    },
+    [tabOrder, syncTabOrder],
+  );
 
   const activeTabData =
     orderedTabs.find((tab) => tab.id === activeTab) ?? orderedTabs[0];

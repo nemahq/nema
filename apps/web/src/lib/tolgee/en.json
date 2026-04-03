@@ -70,6 +70,7 @@
     "prev_session": "Previous context",
     "rename": "Rename",
     "retrieval": "Search results",
+    "retrieval_close_tab": "Close tab",
     "retrieval_doc_count": "Found {count} documents.",
     "retrieval_generating": "Generating answer...",
     "retrieval_open_tab": "Open in tab",

@@ -18,6 +18,7 @@ type StorageMap = {
   sidebarCollapsed: BooleanString;
   chatDrafts: JsonRecord;
   chatMode: ChatMode;
+  openRetrievalTabs: JsonRecord;
 };
 
 const isValid: {
@@ -28,6 +29,7 @@ const isValid: {
   sidebarCollapsed: isBooleanString,
   chatDrafts: isJsonRecord,
   chatMode: isChatMode,
+  openRetrievalTabs: isJsonRecord,
 };
 
 export function getStorage<K extends keyof StorageMap>(

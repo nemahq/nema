@@ -81,6 +81,7 @@ interface ChatLifecycleContextValue {
   retryStream: () => void;
   dismissStreamError: () => void;
   pendingConfirmation: PendingConfirmation | null;
+  lastSavedRetrievalId: string | null;
 }
 
 const ChatLifecycleContext = createContext<ChatLifecycleContextValue | null>(
@@ -187,6 +188,9 @@ export function ChatLifecycleProvider({
   const [searchResultDocs, setSearchResultDocs] = useState<SearchResultDoc[]>(
     [],
   );
+  const [lastSavedRetrievalId, setLastSavedRetrievalId] = useState<
+    string | null
+  >(null);
 
   function transitionPhase(phase: StreamingPhase) {
     streamingPhaseRef.current = phase;
@@ -281,6 +285,7 @@ export function ChatLifecycleProvider({
         setSearchResultDocs(event.documents);
         break;
       case "retrieval_saved":
+        setLastSavedRetrievalId(event.retrievalId);
         break;
       case "done":
         settleStream();
@@ -502,6 +507,7 @@ export function ChatLifecycleProvider({
     retryStream,
     dismissStreamError,
     pendingConfirmation,
+    lastSavedRetrievalId,
   };
 
   return (
