@@ -1,44 +1,18 @@
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 
-import {
-  HOME_TO_SESSION_INITIAL_MESSAGE_KEY,
-  HOME_TO_SESSION_INITIAL_MODE_KEY,
-} from "@web/app/constants/routeState";
 import { ChatInput } from "@web/components/ui/ChatInput";
-import { MODE_CONFIG, useCreateSession } from "@web/features/session";
+import { MODE_CONFIG, useStartSession } from "@web/features/session";
 import { useTranslation } from "@web/lib/tolgee";
 
 const REMEMBER_MODE = MODE_CONFIG["remember"];
 
 export function MemoryEmptyState() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [inputValue, setInputValue] = useState("");
-  const createSession = useCreateSession();
+  const { startSession, isPending } = useStartSession();
 
   function handleSubmit(content: string) {
-    const sessionId = crypto.randomUUID();
-
-    createSession.mutate(
-      { sessionId },
-      {
-        onError: () => {
-          navigate({ to: "/", replace: true });
-        },
-      },
-    );
-
-    navigate({
-      to: "/session/$sessionId",
-      params: { sessionId },
-      state: (prev) => ({
-        ...prev,
-        [HOME_TO_SESSION_INITIAL_MESSAGE_KEY]: content,
-        [HOME_TO_SESSION_INITIAL_MODE_KEY]: "remember",
-      }),
-    });
-
+    startSession(content, "remember");
     setInputValue("");
   }
 
@@ -58,7 +32,7 @@ export function MemoryEmptyState() {
             value={inputValue}
             onChange={setInputValue}
             placeholder={t(REMEMBER_MODE.placeholderKey)}
-            submitDisabled={createSession.isPending}
+            submitDisabled={isPending}
             onSubmit={handleSubmit}
             submitIcon={REMEMBER_MODE.icon}
             autoFocus
