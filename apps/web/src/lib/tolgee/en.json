@@ -42,7 +42,7 @@
     "draft": "Draft",
     "draft_creating": "Creating draft",
     "draft_intent_append": "Add to existing draft",
-    "draft_intent_question": "Add to existing '{draftContext}' draft, or start a new one?",
+    "draft_intent_question": "Add to existing \"{draftContext}\" draft, or start a new one?",
     "draft_intent_replace": "Start new",
     "draft_panel_open": "Open {label} panel",
     "draft_previous": "Previous draft",

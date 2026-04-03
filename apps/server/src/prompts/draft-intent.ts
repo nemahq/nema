@@ -6,14 +6,13 @@ export const DRAFT_INTENT_SYSTEM_PROMPT = `You classify the user's intent when t
 
 Given the existing draft body and the user's new message, determine the intent:
 
-- **append**: The user clearly wants to ADD new content to the existing draft. Signals: "~도 추가해줘", "~도 넣어줘", "아 그리고", adding a new section or data point to what already exists.
-- **replace**: The user clearly wants to MODIFY, REWRITE, or CORRECT the existing draft. Signals: "수정해줘", "바꿔줘", "더 간결하게", "톤을 바꿔", fixing errors, restructuring existing content.
-- **ambiguous**: The user introduces a topic that has NO clear connection to the existing draft, and it is unclear whether they want to add it to the draft or start a completely new one.
+- **append**: The new message stays within the SAME topic or context as the existing draft, OR uses an explicit add signal (words meaning "also/too" combined with an add request).
+- **replace**: The user wants to MODIFY, REWRITE, or CORRECT the existing draft (requests to rewrite, shorten, change tone, fix errors, or restructure).
+- **ambiguous**: The new message introduces a DIFFERENT topic from the existing draft, without an explicit add or modify signal.
 
 Important:
-- Default to "append" when in doubt between append and ambiguous.
-- Only classify as "ambiguous" when the new topic is clearly unrelated AND there is no explicit add/modify signal.
-- Short messages like "이것도" or "추가" are append signals, not ambiguous.`;
+- To decide between append and ambiguous, check whether the new message's topic overlaps with the existing draft. If the topics are different and there is no explicit signal, classify as "ambiguous".
+- Short messages with an explicit add signal (meaning "also this", "add this too") are always "append", regardless of topic.`;
 
 export const DraftIntentSchema = z.object({
   intent: z.enum(["append", "replace", "ambiguous"]),

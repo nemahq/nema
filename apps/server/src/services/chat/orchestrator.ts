@@ -265,28 +265,9 @@ export async function* processChatStream(args: {
           yield { type: "done" };
           return;
         }
-
-        // replace → 새 초안으로 취급
-        if (intent === "replace") {
-          yield { type: "draft_start" };
-          const draftBody = yield* handleDraftingStream({
-            providers,
-            userInput: input.content,
-            currentDraft: null,
-            signal,
-          });
-          await setDraft({
-            supabase,
-            sessionId: input.sessionId,
-            body: draftBody,
-          });
-          responseContent = STATUS_LOG_TYPES.DRAFT_CREATED;
-          messageType = "status";
-          break;
-        }
       }
 
-      // 첫 생성 또는 append → 기존 흐름
+      // 첫 생성, append, replace → 기존 흐름 (edit cycle)
       yield { type: "draft_start" };
       const draftBody = yield* handleDraftingStream({
         providers,

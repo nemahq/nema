@@ -214,6 +214,7 @@ export function ChatLifecycleProvider({
       }
       isSettlingRef.current = true;
       setStreamInput(null);
+      setConfirmInput(null);
 
       Promise.all([
         utils.message.list.invalidate({ sessionId }),

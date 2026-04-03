@@ -42,7 +42,7 @@
     "draft": "초안",
     "draft_creating": "초안 작성 중",
     "draft_intent_append": "기존 초안에 추가",
-    "draft_intent_question": "기존 '{draftContext}' 초안에 추가할까요, 새로운 초안으로 작성할까요?",
+    "draft_intent_question": "기존 \"{draftContext}\" 초안에 추가할까요, 새로운 초안으로 작성할까요?",
     "draft_intent_replace": "새로 작성",
     "draft_panel_open": "{label} 패널 열기",
     "draft_previous": "이전 초안",
