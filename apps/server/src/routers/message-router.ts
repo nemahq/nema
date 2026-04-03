@@ -88,13 +88,16 @@ export const messageRouter = router({
   confirmDraftIntent: providerProcedure
     .input(ConfirmDraftIntentInputSchema)
     .subscription(async function* ({ ctx, input, signal }) {
-      yield* confirmDraftIntentStream({
-        supabase: ctx.supabase,
-        providers: ctx.providers,
-        userId: ctx.user.id,
-        input,
-        signal,
-      });
+      yield* mapSubscriptionErrors(
+        confirmDraftIntentStream({
+          supabase: ctx.supabase,
+          providers: ctx.providers,
+          userId: ctx.user.id,
+          input,
+          signal,
+        }),
+        ctx.lng,
+      );
     }),
 
   dismissRetrieval: protectedProcedure

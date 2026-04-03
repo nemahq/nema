@@ -227,7 +227,6 @@ export async function* processChatStream(args: {
       break;
     }
     case "remember": {
-      // 편집 사이클일 때 의도 분류
       if (draft) {
         const { intent } = await classifyDraftIntent({
           providers,
@@ -389,7 +388,6 @@ export async function* confirmDraftIntentStream(args: {
 }): AsyncGenerator<ChatStreamEvent> {
   const { supabase, providers, input, signal } = args;
 
-  // 1. 마지막 user 메시지와 현재 드래프트 조회
   const [messages, draft] = await Promise.all([
     getMessages(supabase, input.sessionId),
     getDraft(supabase, input.sessionId),
@@ -403,7 +401,6 @@ export async function* confirmDraftIntentStream(args: {
     });
   }
 
-  // 3. intent에 따라 드래프팅 실행
   const currentDraft = input.intent === "replace" ? null : draft;
 
   yield { type: "draft_start" };
@@ -416,7 +413,6 @@ export async function* confirmDraftIntentStream(args: {
 
   await setDraft({ supabase, sessionId: input.sessionId, body: draftBody });
 
-  // 3. 드래프팅 성공 후 action 메시지를 resolved로 업데이트
   await updateMessagePayload({
     supabase,
     sessionId: input.sessionId,
@@ -429,7 +425,6 @@ export async function* confirmDraftIntentStream(args: {
     },
   });
 
-  // 4. status 메시지 생성
   const statusMessage = MessageSchema.parse({
     id: crypto.randomUUID(),
     role: "assistant",
