@@ -33,6 +33,8 @@ jobs:
       - name: Setup Supabase CLI
         if: steps.migrations.outputs.changed == 'true'
         uses: supabase/setup-cli@v1
+        with:
+          version: 2.84.2
 
       - name: Verify database types are up to date
         if: steps.migrations.outputs.changed == 'true'
@@ -88,6 +90,8 @@ jobs:
       - name: Setup Supabase CLI
         if: steps.migrations.outputs.changed == 'true'
         uses: supabase/setup-cli@v1
+        with:
+          version: 2.84.2
 
       - name: Push migrations to staging
         if: steps.migrations.outputs.changed == 'true'
@@ -127,6 +131,8 @@ jobs:
       - name: Setup Supabase CLI
         if: steps.migrations.outputs.changed == 'true'
         uses: supabase/setup-cli@v1
+        with:
+          version: 2.84.2
 
       - name: Push migrations to production
         if: steps.migrations.outputs.changed == 'true'
