@@ -19,6 +19,13 @@ function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
     if (msg.type === "draft") {
       continue;
     }
+    if (
+      msg.type === "action" &&
+      "payload" in msg &&
+      msg.payload.status === "resolved"
+    ) {
+      continue;
+    }
     if (msg.role === "user" && currentTurn.length > 0) {
       turns.push(currentTurn);
       currentTurn = [];
