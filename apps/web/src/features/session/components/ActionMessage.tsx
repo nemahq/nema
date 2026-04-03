@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import type { Message } from "@nema-io/shared";
-import { Button, cn, Kbd } from "@nema-io/weave";
+import { Button, Kbd } from "@nema-io/weave";
 
 import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useTranslation } from "@web/lib/tolgee";
@@ -17,12 +17,10 @@ export function ActionMessage({ message }: ActionMessageProps) {
   const { confirmDraftIntent, pendingConfirmation } = useChatLifecycle();
   const { payload } = message;
 
-  const isConfirmation = payload.actionType === "draft_intent_confirmation";
   const isPending =
-    isConfirmation &&
+    payload.actionType === "draft_intent_confirmation" &&
     payload.status === "pending" &&
     pendingConfirmation?.actionMessageId === message.id;
-  const isResolved = isConfirmation && payload.status === "resolved";
 
   useEffect(
     function handleDraftIntentShortcuts() {
@@ -51,7 +49,7 @@ export function ActionMessage({ message }: ActionMessageProps) {
     [isPending, confirmDraftIntent],
   );
 
-  if (!isConfirmation) {
+  if (!isPending) {
     return null;
   }
 
@@ -64,36 +62,20 @@ export function ActionMessage({ message }: ActionMessageProps) {
       </p>
       <div className="flex gap-2">
         <Button
-          variant={
-            isResolved && payload.selectedOption === "append"
-              ? "primary"
-              : "neutral"
-          }
+          variant="neutral"
           size="sm"
-          disabled={isResolved}
           onClick={() => confirmDraftIntent("append")}
-          className={cn(
-            isResolved && payload.selectedOption !== "append" && "opacity-40",
-          )}
         >
           {t("session.draft_intent_append")}
-          {isPending && <Kbd>1</Kbd>}
+          <Kbd>1</Kbd>
         </Button>
         <Button
-          variant={
-            isResolved && payload.selectedOption === "replace"
-              ? "primary"
-              : "neutral"
-          }
+          variant="neutral"
           size="sm"
-          disabled={isResolved}
           onClick={() => confirmDraftIntent("replace")}
-          className={cn(
-            isResolved && payload.selectedOption !== "replace" && "opacity-40",
-          )}
         >
           {t("session.draft_intent_replace")}
-          {isPending && <Kbd>2</Kbd>}
+          <Kbd>2</Kbd>
         </Button>
       </div>
     </div>
