@@ -7,6 +7,7 @@ import { useSessionMessages } from "@web/features/session/hooks/useSessionMessag
 
 import { ActionMessage } from "./ActionMessage";
 import { AssistantMessage } from "./AssistantMessage";
+import { RetrievalMessage } from "./RetrievalMessage";
 import { StatusMessage } from "./StatusMessage";
 import { StreamErrorMessage } from "./StreamErrorMessage";
 import { UserMessage } from "./UserMessage";
@@ -72,6 +73,18 @@ function MessageListContent() {
               }
               if (msg.type === "action") {
                 return <ActionMessage key={msg.id} message={msg} />;
+              }
+              if (msg.type === "retrieval") {
+                const turnQuery =
+                  turn.find((m) => m.role === "user")?.content ?? "";
+                return (
+                  <RetrievalMessage
+                    key={msg.id}
+                    retrievalId={msg.retrievalId}
+                    content={msg.content}
+                    query={turnQuery}
+                  />
+                );
               }
               if (msg.type === "status") {
                 return <StatusMessage key={msg.id} message={msg} />;
