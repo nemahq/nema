@@ -248,14 +248,17 @@ export async function* processChatStream(args: {
     }
   }
 
-  const assistantMessage = MessageSchema.parse({
+  const base = {
     id: crypto.randomUUID(),
-    role: "assistant",
-    type: messageType,
-    content: responseContent,
-    ...(retrievalId && { retrievalId }),
+    role: "assistant" as const,
     createdAt: new Date().toISOString(),
-  });
+  };
+
+  const assistantMessage = MessageSchema.parse(
+    messageType === "retrieval"
+      ? { ...base, type: "retrieval", content: responseContent, retrievalId }
+      : { ...base, type: messageType, content: responseContent },
+  );
 
   await appendMessage({
     supabase,
