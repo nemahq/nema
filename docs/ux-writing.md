@@ -91,7 +91,7 @@ Nema는 B2C "되찾기 도구" — 사용자가 매일 편하게 생각을 맡�
 | ✅ "Shortcut guide" | ❌ "Shortcut Guide" |
 | ✅ "Your contexts" | ❌ "Your Contexts" |
 
-예외: 제품 기능명(Remember, Ask), 고유명사(Nema, Google).
+예외: 제품 기능명(Remember, Ask, Memory), 고유명사(Nema, Google).
 
 ### Voice
 

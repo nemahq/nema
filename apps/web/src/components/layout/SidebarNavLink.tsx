@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { Link, type LinkProps } from "@tanstack/react-router";
 
-import { cn, Tooltip, TooltipContent, TooltipTrigger } from "@nema-io/weave";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@nema-io/weave";
 
 interface SidebarNavLinkProps {
   collapsed: boolean;
@@ -48,9 +48,7 @@ export function SidebarNavLink({
     <div className="px-1.5 py-0.5">
       <Link
         to={to}
-        className={cn(
-          "flex h-9 w-full items-center gap-2 rounded-md px-1.5 text-sm font-normal transition-colors duration-fast hover:bg-surface-raised-hover",
-        )}
+        className="flex h-9 w-full items-center gap-2 rounded-md px-1.5 text-sm font-normal transition-colors duration-fast hover:bg-surface-raised-hover"
         activeProps={activeProps}
       >
         {icon}

@@ -6,8 +6,7 @@ import {
   HOME_TO_SESSION_INITIAL_MODE_KEY,
 } from "@web/app/constants/routeState";
 import { ChatInput } from "@web/components/ui/ChatInput";
-import { MODE_CONFIG } from "@web/features/session/chatModeConfig";
-import { useCreateSession } from "@web/features/session/hooks/useCreateSession";
+import { MODE_CONFIG, useCreateSession } from "@web/features/session";
 import { useTranslation } from "@web/lib/tolgee";
 
 const REMEMBER_MODE = MODE_CONFIG["remember"];

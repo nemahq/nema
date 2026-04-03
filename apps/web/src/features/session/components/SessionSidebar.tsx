@@ -18,6 +18,14 @@ function NewContextIcon() {
   );
 }
 
+function MemoryIcon() {
+  return (
+    <div className="flex size-6 items-center justify-center">
+      <Brain strokeWidth={1.5} className="size-4" />
+    </div>
+  );
+}
+
 export function SessionSidebar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -39,11 +47,7 @@ export function SessionSidebar() {
           />
           <SidebarNavLink
             collapsed={collapsed}
-            icon={
-              <div className="flex size-6 items-center justify-center">
-                <Brain strokeWidth={1.5} className="size-4" />
-              </div>
-            }
+            icon={<MemoryIcon />}
             label={t("memory.sidebar_label")}
             to="/memory"
           />
