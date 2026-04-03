@@ -4,12 +4,17 @@ import * as Sentry from "@sentry/node";
 import { getEnv } from "@server/env";
 
 import type {
+  EntityTypeCount,
   FindDocumentsByEntitiesOptions,
+  FindDocumentsByEntityOptions,
   FindRelatedDocumentsOptions,
+  GetRelatedEntitiesOptions,
   GraphEntity,
+  GraphEntityWithCount,
   GraphSearchResult,
   GraphStore,
   ListEntitiesOptions,
+  ListEntitiesWithStatsOptions,
   MergeEntitiesOptions,
   UpsertEntitiesOptions,
 } from "./graph-store";
@@ -290,6 +295,157 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         throw new GraphStoreError(
           `listEntities failed: ${error instanceof Error ? error.message : String(error)}`,
           "listEntities",
+          error,
+        );
+      } finally {
+        try {
+          await session.close();
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
+        }
+      }
+    },
+
+    async listEntitiesWithStats(
+      options: ListEntitiesWithStatsOptions,
+    ): Promise<GraphEntityWithCount[]> {
+      const { userId, type } = options;
+      const session = driver.session(sessionConfig);
+      try {
+        const typeFilter = type ? "AND e.type = $type" : "";
+        const result = await session.run(
+          `MATCH (e:Entity {userId: $userId})
+           WHERE true ${typeFilter}
+           OPTIONAL MATCH (e)-[:MENTIONED_IN]->(d:Document)
+           RETURN e.type AS type, e.name AS name, count(d) AS documentCount
+           ORDER BY documentCount DESC, e.name`,
+          { userId, type },
+        );
+        return result.records.map((r) => ({
+          type: getEntityType(r, "type"),
+          name: getString(r, "name"),
+          documentCount: getInteger(r, "documentCount"),
+        }));
+      } catch (error) {
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
+        throw new GraphStoreError(
+          `listEntitiesWithStats failed: ${error instanceof Error ? error.message : String(error)}`,
+          "listEntitiesWithStats",
+          error,
+        );
+      } finally {
+        try {
+          await session.close();
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
+        }
+      }
+    },
+
+    async findDocumentsByEntity(
+      options: FindDocumentsByEntityOptions,
+    ): Promise<string[]> {
+      const { userId, name, type, limit = 50 } = options;
+      const session = driver.session(sessionConfig);
+      try {
+        const result = await session.run(
+          `MATCH (e:Entity {userId: $userId, name: $name, type: $type})
+                 -[:MENTIONED_IN]->(d:Document)
+           RETURN d.docId AS docId
+           LIMIT $limit`,
+          { userId, name, type, limit: neo4j.int(limit) },
+        );
+        return result.records.map((r) => getString(r, "docId"));
+      } catch (error) {
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
+        throw new GraphStoreError(
+          `findDocumentsByEntity failed: ${error instanceof Error ? error.message : String(error)}`,
+          "findDocumentsByEntity",
+          error,
+        );
+      } finally {
+        try {
+          await session.close();
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
+        }
+      }
+    },
+
+    async getRelatedEntities(
+      options: GetRelatedEntitiesOptions,
+    ): Promise<GraphEntityWithCount[]> {
+      const { userId, name, type, limit = 50 } = options;
+      const session = driver.session(sessionConfig);
+      try {
+        const result = await session.run(
+          `MATCH (e:Entity {userId: $userId, name: $name, type: $type})
+                 -[:RELATED_TO]-(other:Entity {userId: $userId})
+           OPTIONAL MATCH (other)-[:MENTIONED_IN]->(d:Document)
+           RETURN other.type AS type, other.name AS name, count(d) AS documentCount
+           ORDER BY documentCount DESC, other.name
+           LIMIT $limit`,
+          { userId, name, type, limit: neo4j.int(limit) },
+        );
+        return result.records.map((r) => ({
+          type: getEntityType(r, "type"),
+          name: getString(r, "name"),
+          documentCount: getInteger(r, "documentCount"),
+        }));
+      } catch (error) {
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
+        throw new GraphStoreError(
+          `getRelatedEntities failed: ${error instanceof Error ? error.message : String(error)}`,
+          "getRelatedEntities",
+          error,
+        );
+      } finally {
+        try {
+          await session.close();
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
+        }
+      }
+    },
+
+    async getEntityCountsByType(userId: string): Promise<EntityTypeCount[]> {
+      const session = driver.session(sessionConfig);
+      try {
+        const result = await session.run(
+          `MATCH (e:Entity {userId: $userId})
+           RETURN e.type AS type, count(e) AS count
+           ORDER BY count DESC`,
+          { userId },
+        );
+        return result.records.map((r) => ({
+          type: getEntityType(r, "type"),
+          count: getInteger(r, "count"),
+        }));
+      } catch (error) {
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
+        throw new GraphStoreError(
+          `getEntityCountsByType failed: ${error instanceof Error ? error.message : String(error)}`,
+          "getEntityCountsByType",
           error,
         );
       } finally {
