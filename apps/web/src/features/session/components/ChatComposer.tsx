@@ -39,6 +39,15 @@ export function ChatComposer() {
     enabled: isStreaming,
   });
 
+  useRegisterAction("navigation.focusComposer", {
+    execute: () => {
+      const el = document.querySelector<HTMLTextAreaElement>(
+        "[data-chat-composer]",
+      );
+      el?.focus();
+    },
+  });
+
   const executors: Record<string, () => void> = {
     help: () => openTab("help"),
   };
