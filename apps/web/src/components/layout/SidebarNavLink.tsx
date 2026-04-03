@@ -3,7 +3,7 @@ import { Link, type LinkProps } from "@tanstack/react-router";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@nema-io/weave";
 
-import { useSidebarCollapsed } from "./Sidebar";
+import { useSidebar } from "./Sidebar";
 
 interface SidebarNavLinkProps {
   icon: ReactNode;
@@ -18,7 +18,7 @@ export function SidebarNavLink({
   to,
   showActive = true,
 }: SidebarNavLinkProps) {
-  const collapsed = useSidebarCollapsed();
+  const { collapsed } = useSidebar();
   const activeProps = showActive
     ? { className: "bg-surface-raised-hover font-medium" }
     : undefined;

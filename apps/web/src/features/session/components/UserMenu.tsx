@@ -11,7 +11,7 @@ import {
 } from "@nema-io/weave";
 import { LogOut } from "@nema-io/weave/icons";
 
-import { useSidebarCollapsed } from "@web/components/layout/Sidebar";
+import { useSidebar } from "@web/components/layout/Sidebar";
 import { SettingsModal } from "@web/features/settings";
 import { useAuth } from "@web/hooks/useAuth";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
@@ -21,7 +21,7 @@ import { useTranslation } from "@web/lib/tolgee";
 import { SettingsMenuItem } from "./SettingsMenuItem";
 
 export function UserMenu() {
-  const collapsed = useSidebarCollapsed();
+  const { collapsed } = useSidebar();
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();

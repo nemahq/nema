@@ -11,8 +11,12 @@ import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 import { getStorage, setStorage } from "@web/utils/localStorage";
 
-const SidebarContext = createContext(false);
-export function useSidebarCollapsed() {
+interface SidebarState {
+  collapsed: boolean;
+}
+
+const SidebarContext = createContext<SidebarState>({ collapsed: false });
+export function useSidebar() {
   return useContext(SidebarContext);
 }
 
@@ -37,7 +41,7 @@ export function Sidebar({ topSlot, children, footer }: SidebarProps) {
   useRegisterAction("sidebar.toggle", { execute: toggle });
 
   return (
-    <SidebarContext value={collapsed}>
+    <SidebarContext value={{ collapsed }}>
       <aside
         className={cn(
           "flex h-full flex-col overflow-y-auto border-r border-border/50 bg-surface-raised [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent] dark:bg-surface-base",

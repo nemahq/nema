@@ -6,7 +6,7 @@ import { useTranslation } from "@web/lib/tolgee";
 
 const REMEMBER_MODE = MODE_CONFIG["remember"];
 
-export function MemoryEmptyState() {
+export function EmptyState() {
   const { t } = useTranslation();
   const [inputValue, setInputValue] = useState("");
   const { startSession, isPending } = useStartSession();
