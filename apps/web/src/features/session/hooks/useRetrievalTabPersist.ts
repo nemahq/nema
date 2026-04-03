@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getRecordEntry, setRecordEntry } from "@web/utils/localStorage";
 
@@ -26,19 +26,24 @@ export function useRetrievalTabPersist(sessionId: string) {
   const [openRetrievalTabs, setOpenRetrievalTabs] = useState<Set<string>>(() =>
     loadRetrievalTabs(sessionId),
   );
+  const prevSessionIdRef = useRef(sessionId);
+
+  useEffect(
+    function syncRetrievalTabsToStorage() {
+      if (prevSessionIdRef.current !== sessionId) {
+        prevSessionIdRef.current = sessionId;
+        return;
+      }
+      persistRetrievalTabs(sessionId, openRetrievalTabs);
+    },
+    [sessionId, openRetrievalTabs],
+  );
 
   useEffect(
     function resetRetrievalTabsOnSessionChange() {
       setOpenRetrievalTabs(loadRetrievalTabs(sessionId));
     },
     [sessionId],
-  );
-
-  useEffect(
-    function syncRetrievalTabsToStorage() {
-      persistRetrievalTabs(sessionId, openRetrievalTabs);
-    },
-    [sessionId, openRetrievalTabs],
   );
 
   const openRetrievalTab = useCallback((retrievalId: string) => {
