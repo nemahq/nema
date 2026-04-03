@@ -58,6 +58,8 @@ export {
   SaveJobStatusSchema,
 } from "./schemas/save-job";
 export {
+  type DeleteRetrievalInput,
+  DeleteRetrievalInputSchema,
   SESSION_TITLE_MAX_LENGTH,
   type SessionCreateInput,
   SessionCreateInputSchema,

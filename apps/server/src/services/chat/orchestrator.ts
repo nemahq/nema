@@ -8,7 +8,6 @@ import type {
   Locale,
   Message,
   MessageType,
-  SearchResultDoc,
   SessionDraft,
 } from "@nema-io/shared";
 import {
@@ -23,6 +22,7 @@ import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import { trackEvent } from "@server/services/event-service";
+import { createRetrieval } from "@server/services/retrieval-service";
 
 import {
   classifyDraftIntent,
@@ -83,29 +83,6 @@ async function clearDraft(
     .eq("id", sessionId);
 
   throwIfSupabaseError(error);
-}
-
-async function insertRetrieval({
-  supabase,
-  sessionId,
-  query,
-  body,
-  documents,
-}: {
-  supabase: TypedSupabaseClient;
-  sessionId: string;
-  query: string;
-  body: string;
-  documents: SearchResultDoc[];
-}): Promise<string> {
-  const { data, error } = await supabase
-    .from("session_retrievals")
-    .insert({ session_id: sessionId, query, body, documents })
-    .select("id")
-    .single();
-
-  throwIfSupabaseError(error);
-  return data.id;
 }
 
 async function appendMessage({
@@ -174,6 +151,7 @@ export async function* processChatStream(args: {
 
   let responseContent: string;
   let messageType: MessageType = "text";
+  let retrievalId: string | undefined;
 
   trackEvent({
     supabase,
@@ -195,15 +173,15 @@ export async function* processChatStream(args: {
         signal,
       });
       if (result.hasResults) {
-        await insertRetrieval({
+        retrievalId = await createRetrieval({
           supabase,
           sessionId: input.sessionId,
           query: input.content,
           body: result.text,
           documents: result.documents,
         });
-        responseContent = STATUS_LOG_TYPES.RETRIEVAL_ANSWERED;
-        messageType = "status";
+        responseContent = result.text;
+        messageType = "retrieval";
       } else {
         responseContent = result.text;
       }
@@ -275,6 +253,7 @@ export async function* processChatStream(args: {
     role: "assistant",
     type: messageType,
     content: responseContent,
+    ...(retrievalId && { retrievalId }),
     createdAt: new Date().toISOString(),
   });
 
@@ -283,6 +262,10 @@ export async function* processChatStream(args: {
     sessionId: input.sessionId,
     message: assistantMessage,
   });
+
+  if (retrievalId) {
+    yield { type: "retrieval_saved", retrievalId };
+  }
 
   yield { type: "done" };
 }

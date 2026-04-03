@@ -1,6 +1,7 @@
 import {
   ChatInputSchema,
   ConfirmDraftIntentInputSchema,
+  DeleteRetrievalInputSchema,
   DraftActionInputSchema,
   GetMessagesInputSchema,
   SendMessageInputSchema,
@@ -19,6 +20,7 @@ import {
   processChatStream,
 } from "@server/services/chat";
 import { getMessages, sendMessage } from "@server/services/message-service";
+import { deleteRetrieval } from "@server/services/retrieval-service";
 import {
   mapSubscriptionErrors,
   protectedProcedure,
@@ -98,4 +100,13 @@ export const messageRouter = router({
         ctx.lng,
       );
     }),
+
+  deleteRetrieval: protectedProcedure
+    .input(DeleteRetrievalInputSchema)
+    .mutation(({ ctx, input }) =>
+      deleteRetrieval({
+        supabase: ctx.supabase,
+        retrievalId: input.retrievalId,
+      }),
+    ),
 });
