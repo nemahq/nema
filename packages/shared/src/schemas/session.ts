@@ -40,6 +40,11 @@ export const SessionRetrievalSchema = z.object({
 });
 export type SessionRetrieval = z.infer<typeof SessionRetrievalSchema>;
 
+export const DeleteRetrievalInputSchema = z.object({
+  retrievalId: z.string().uuid(),
+});
+export type DeleteRetrievalInput = z.infer<typeof DeleteRetrievalInputSchema>;
+
 export const SessionGetInputSchema = z.object({
   sessionId: z.string().uuid(),
 });

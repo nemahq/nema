@@ -31,6 +31,10 @@ export const ChatStreamEventSchema = z.discriminatedUnion("type", [
     type: z.literal("search_results"),
     documents: z.array(SearchResultDocSchema),
   }),
+  z.object({
+    type: z.literal("retrieval_saved"),
+    retrievalId: z.string().uuid(),
+  }),
   z.object({ type: z.literal("done") }),
 ]);
 
