@@ -35,7 +35,7 @@
   },
   "memory": {
     "empty_heading": "아직 쌓인 기억이 없어요.",
-    "empty_subheading": "대화를 시작하면 여기에 채워질 거예요.",
+    "empty_subheading": "새 맥락을 만들면 여기에 채워질 거예요.",
     "sidebar_label": "기억"
   },
   "session": {
