@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import { TRPCError } from "@trpc/server";
 
 import type {
@@ -11,7 +10,6 @@ import type {
   MessageType,
   SearchResultDoc,
   SessionDraft,
-  SessionRetrieval,
 } from "@nema-io/shared";
 import {
   MessageSchema,
@@ -34,7 +32,6 @@ import {
 import { handleRetrievalStream } from "./retrieval";
 
 type Draft = SessionDraft;
-type Retrieval = SessionRetrieval;
 
 interface ChatResponse {
   message: Message;
@@ -88,34 +85,37 @@ async function clearDraft(
   throwIfSupabaseError(error);
 }
 
-async function setRetrieval({
+async function insertRetrieval({
   supabase,
   sessionId,
+  query,
   body,
   documents,
 }: {
   supabase: TypedSupabaseClient;
   sessionId: string;
+  query: string;
   body: string;
   documents: SearchResultDoc[];
-}): Promise<void> {
-  const retrieval: Retrieval = { body, documents };
-  const { error } = await supabase
-    .from("sessions")
-    .update({ retrieval })
-    .eq("id", sessionId);
+}): Promise<string> {
+  const { data, error } = await supabase
+    .from("session_retrievals")
+    .insert({ session_id: sessionId, query, body, documents })
+    .select("id")
+    .single();
 
   throwIfSupabaseError(error);
+  return data.id;
 }
 
-async function clearRetrieval(
+async function deleteRetrievals(
   supabase: TypedSupabaseClient,
   sessionId: string,
 ): Promise<void> {
   const { error } = await supabase
-    .from("sessions")
-    .update({ retrieval: null })
-    .eq("id", sessionId);
+    .from("session_retrievals")
+    .delete()
+    .eq("session_id", sessionId);
 
   throwIfSupabaseError(error);
 }
@@ -207,21 +207,16 @@ export async function* processChatStream(args: {
         signal,
       });
       if (result.hasResults) {
-        await setRetrieval({
+        await insertRetrieval({
           supabase,
           sessionId: input.sessionId,
+          query: input.content,
           body: result.text,
           documents: result.documents,
         });
         responseContent = STATUS_LOG_TYPES.RETRIEVAL_ANSWERED;
         messageType = "status";
       } else {
-        await clearRetrieval(supabase, input.sessionId).catch((error) => {
-          Sentry.captureException(error, {
-            tags: { component: "orchestrator", operation: "clear_retrieval" },
-            extra: { sessionId: input.sessionId },
-          });
-        });
         responseContent = result.text;
       }
       break;
@@ -333,7 +328,7 @@ export async function dismissRetrievalAction(args: {
   supabase: TypedSupabaseClient;
   sessionId: string;
 }): Promise<void> {
-  await clearRetrieval(args.supabase, args.sessionId);
+  await deleteRetrievals(args.supabase, args.sessionId);
 }
 
 async function updateMessagePayload(args: {

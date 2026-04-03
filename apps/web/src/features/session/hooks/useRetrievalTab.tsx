@@ -16,8 +16,10 @@ export function useRetrievalTab(): TabbedPanelTab | undefined {
   const isStreamingRetrieval =
     streamingPhase === "searching" || streamingPhase === "retrieval";
 
+  const latestRetrieval = session.retrievals[0] ?? null;
+
   if (
-    !session.retrieval &&
+    !latestRetrieval &&
     !isStreamingRetrieval &&
     searchResultDocs.length === 0
   ) {

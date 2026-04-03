@@ -14,7 +14,7 @@ export function SearchResultsList() {
   const documents =
     searchResultDocs.length > 0
       ? searchResultDocs
-      : (session.retrieval?.documents ?? []);
+      : (session.retrievals[0]?.documents ?? []);
 
   if (documents.length === 0) {
     return null;
