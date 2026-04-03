@@ -11,7 +11,7 @@ export const DocumentSummarySchema = z.object({
 export type DocumentSummary = z.infer<typeof DocumentSummarySchema>;
 
 export const DocumentDetailSchema = DocumentSummarySchema.extend({
-  body: z.string(),
+  body: z.string().min(1),
 });
 export type DocumentDetail = z.infer<typeof DocumentDetailSchema>;
 
