@@ -215,6 +215,7 @@ export function ChatLifecycleProvider({
     setStreamError(null);
     setSearchEntities([]);
     setSearchResultDocs([]);
+    setLastSavedRetrievalId(null);
   }, []);
 
   const settleStream = useCallback(

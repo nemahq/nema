@@ -58,11 +58,14 @@ export function ContentTabProvider({ children }: ContentTabProviderProps) {
   const [openRetrievalTabs, setOpenRetrievalTabs] = useState<Set<string>>(() =>
     loadRetrievalTabs(sessionId),
   );
-  const [tabOrder, setTabOrderState] = useState<string[]>([]);
+  const [tabOrder, setTabOrder] = useState<string[]>([]);
 
-  const setTabOrder = useCallback((order: string[]) => {
-    setTabOrderState(order);
-  }, []);
+  useEffect(
+    function resetRetrievalTabsOnSessionChange() {
+      setOpenRetrievalTabs(loadRetrievalTabs(sessionId));
+    },
+    [sessionId],
+  );
 
   useEffect(
     function syncRetrievalTabsToStorage() {

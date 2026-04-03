@@ -37,7 +37,9 @@ function ContentPanelInner() {
   );
 
   const currentIds = new Set(tabs.map((tab) => tab.id));
-  const newIds = tabs.map((t) => t.id).filter((id) => !tabOrder.includes(id));
+  const newIds = tabs
+    .map((tab) => tab.id)
+    .filter((id) => !tabOrder.includes(id));
   const kept = tabOrder.filter((id) => currentIds.has(id));
   const needsUpdate = newIds.length > 0 || kept.length !== tabOrder.length;
 

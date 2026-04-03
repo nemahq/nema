@@ -58,8 +58,7 @@ function RetrievalMessageInner({
     : (retrieval?.documents.length ?? searchResultDocs.length);
 
   const isTabOpen = retrievalId !== null && openRetrievalTabs.has(retrievalId);
-  const canToggleTab =
-    !isStreaming && !isRetrievalLoading && docCount > 0 && retrievalId !== null;
+  const canToggleTab = !isStreaming && !isRetrievalLoading && docCount > 0;
   const tabIndex = isTabOpen
     ? tabOrder.indexOf(`retrieval-${retrievalId}`) + 1
     : 0;

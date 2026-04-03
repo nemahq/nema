@@ -2,10 +2,14 @@ import { useEffect, useRef } from "react";
 
 import { ChatPanel } from "@web/features/session/components/ChatPanel";
 import { ContentPanel } from "@web/features/session/components/ContentPanel";
-import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
-import { ChatLifecycleProvider } from "@web/features/session/contexts/ChatLifecycleContext";
-import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
-import { ContentTabProvider } from "@web/features/session/contexts/ContentTabContext";
+import {
+  ChatLifecycleProvider,
+  useChatLifecycle,
+} from "@web/features/session/contexts/ChatLifecycleContext";
+import {
+  ContentTabProvider,
+  useContentTab,
+} from "@web/features/session/contexts/ContentTabContext";
 
 function AutoOpenRetrievalTab() {
   const { lastSavedRetrievalId } = useChatLifecycle();

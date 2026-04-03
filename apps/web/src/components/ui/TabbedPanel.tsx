@@ -8,18 +8,26 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { TabbedPanelLayout } from "./TabbedPanelLayout";
 
-export interface TabbedPanelTab {
+type TabBase = {
   id: string;
-  labelKey?: TranslationKey;
-  label?: string;
   content: ReactNode;
   onClose?: () => void;
-}
+};
+
+export type TabbedPanelTab = TabBase &
+  ({ labelKey: TranslationKey } | { label: string });
 
 interface TabbedPanelProps {
   tabs: TabbedPanelTab[];
   activeTabId: string;
   onActiveTabChange: (tabId: string) => void;
+}
+
+function resolveLabel(
+  tab: TabbedPanelTab,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  return "label" in tab ? tab.label : t(tab.labelKey);
 }
 
 export function TabbedPanel({
@@ -73,7 +81,7 @@ export function TabbedPanel({
                         : "text-fg-tertiary hover:text-fg-secondary",
                     )}
                   >
-                    {tab.label ?? (tab.labelKey ? t(tab.labelKey) : "")}
+                    {resolveLabel(tab, t)}
                   </button>
                   {tab.onClose && (
                     <button
@@ -81,8 +89,7 @@ export function TabbedPanel({
                       onClick={(e) => handleTabClose(e, tab)}
                       className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
                       aria-label={t("session.draft_tab_close", {
-                        label:
-                          tab.label ?? (tab.labelKey ? t(tab.labelKey) : ""),
+                        label: resolveLabel(tab, t),
                       })}
                     >
                       <X className="size-3" />
