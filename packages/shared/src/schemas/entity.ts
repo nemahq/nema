@@ -14,7 +14,7 @@ export type EntityType = (typeof ENTITY_TYPES)[number];
 const EntityTypeSchema = z.enum(ENTITY_TYPES);
 
 export const EntitySummarySchema = z.object({
-  name: z.string(),
+  name: z.string().min(1),
   type: EntityTypeSchema,
   documentCount: z.number().int().nonnegative(),
 });

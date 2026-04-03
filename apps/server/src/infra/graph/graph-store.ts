@@ -56,9 +56,7 @@ export interface MergeEntitiesOptions {
   type: EntityType;
 }
 
-export interface GraphEntityWithCount {
-  type: EntityType;
-  name: string;
+export interface GraphEntityWithCount extends GraphEntity {
   documentCount: number;
 }
 

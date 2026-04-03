@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/node";
+
 import type {
   DocumentSummary,
   EntityGetDocumentsInput,
@@ -52,6 +54,21 @@ export async function getDocumentsByEntity(opts: {
 
   throwIfSupabaseError(error);
 
+  if (data.length < docIds.length) {
+    Sentry.captureMessage(
+      "[entity-service] Neo4j returned docIds not found in Supabase — possible sync drift",
+      {
+        level: "warning",
+        extra: {
+          entityName: opts.input.name,
+          entityType: opts.input.type,
+          neo4jCount: docIds.length,
+          supabaseCount: data.length,
+        },
+      },
+    );
+  }
+
   return data.map((row) => ({
     id: row.id,
     title: row.title,
@@ -91,6 +108,13 @@ export async function getSummaryStats(opts: {
   ]);
 
   throwIfSupabaseError(error);
+
+  if (count === null) {
+    Sentry.captureMessage(
+      "[entity-service] documents count query returned null — expected number",
+      { level: "warning", extra: { userId: opts.userId } },
+    );
+  }
 
   return {
     totalDocuments: count ?? 0,
