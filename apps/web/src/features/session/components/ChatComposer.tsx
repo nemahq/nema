@@ -1,7 +1,10 @@
 import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
-import { ChatInput } from "@web/components/ui/ChatInput";
+import {
+  CHAT_COMPOSER_SELECTOR,
+  ChatInput,
+} from "@web/components/ui/ChatInput";
 import { MODE_CONFIG } from "@web/features/session/chatModeConfig";
 import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
@@ -37,6 +40,15 @@ export function ChatComposer() {
   useRegisterAction("stream.stop", {
     execute: cancel,
     enabled: isStreaming,
+  });
+
+  useRegisterAction("navigation.focusComposer", {
+    execute: () => {
+      const el = document.querySelector<HTMLTextAreaElement>(
+        CHAT_COMPOSER_SELECTOR,
+      );
+      el?.focus();
+    },
   });
 
   const executors: Record<string, () => void> = {

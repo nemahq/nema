@@ -19,6 +19,7 @@ const actionMap = {
     stop: def("session.stream_stop", "escape", "global"),
   },
   navigation: {
+    focusComposer: def("session.focus_composer", "mod+l", "global"),
     newContext: def("session.new_context", "mod+shift+o", "global"),
     prevSession: def("session.prev_session", "alt+up", "global"),
     nextSession: def("session.next_session", "alt+down", "global"),

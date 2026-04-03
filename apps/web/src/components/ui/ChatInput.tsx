@@ -12,6 +12,9 @@ import { useTranslation } from "@web/lib/tolgee";
 
 const MAX_TEXTAREA_HEIGHT_PX = 200;
 
+const CHAT_COMPOSER_DATA_ATTR = "data-chat-composer";
+export const CHAT_COMPOSER_SELECTOR = `[${CHAT_COMPOSER_DATA_ATTR}]`;
+
 const ACTION_BUTTON_BASE =
   "self-end rounded-full transition-all duration-normal";
 
@@ -81,6 +84,7 @@ export function ChatInput({
     <div className="flex w-full flex-col gap-2 rounded-2xl border border-border bg-surface-raised p-3 shadow-sm transition-shadow duration-normal focus-within:border-border-strong focus-within:shadow-md dark:bg-surface-raised-hover">
       <textarea
         ref={textareaRef}
+        {...{ [CHAT_COMPOSER_DATA_ATTR]: true }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
