@@ -17,7 +17,6 @@ export function useRetrievalTab(): TabbedPanelTab | undefined {
   const isStreamingRetrieval =
     streamingPhase === "searching" || streamingPhase === "retrieval";
 
-  // 새 스트리밍이 시작되면 dismiss 상태 초기화
   if (isStreamingRetrieval && dismissed) {
     setDismissed(false);
   }

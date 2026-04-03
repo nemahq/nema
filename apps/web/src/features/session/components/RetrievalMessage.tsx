@@ -69,7 +69,7 @@ function RetrievalMessageInner({
   const isRetrievalLoading = !isStreaming && retrieval === null;
   const docCount = isStreaming
     ? searchResultDocs.length
-    : (retrieval?.documents.length ?? 0);
+    : (retrieval?.documents.length ?? searchResultDocs.length);
 
   return (
     <div className="space-y-1.5 rounded-xl bg-bg-secondary p-3 shadow-sm">
@@ -99,34 +99,32 @@ function RetrievalMessageInner({
         </>
       )}
 
-      {!isStreaming && !isRetrievalLoading && docCount === 0 && (
-        <p className="text-xs text-fg-tertiary">
-          {t("session.retrieval_no_results")}
-        </p>
+      {!isStreaming && docCount > 0 && (
+        <div className="flex items-center gap-1.5 text-xs text-fg-tertiary">
+          <FileText className="size-3 shrink-0" aria-hidden />
+          <span>{t("session.retrieval_doc_count", { count: docCount })}</span>
+        </div>
       )}
 
-      {!isStreaming && !isRetrievalLoading && docCount > 0 && (
-        <>
-          <div className="flex items-center gap-1.5 text-xs text-fg-tertiary">
-            <FileText className="size-3 shrink-0" aria-hidden />
-            <span className="truncate">
-              {t("session.retrieval_doc_count", { count: docCount })} &middot;{" "}
-              {content}
-            </span>
-          </div>
-          {onOpenTab && retrievalId && (
-            <div className="flex justify-end">
-              <Button
-                variant="ghost"
-                size="xs"
-                onClick={() => onOpenTab(retrievalId)}
-              >
-                {t("session.retrieval_open_tab")}
-              </Button>
-            </div>
-          )}
-        </>
+      {!isStreaming && content && (
+        <p className="line-clamp-2 text-xs text-fg-tertiary">{content}</p>
       )}
+
+      {!isStreaming &&
+        !isRetrievalLoading &&
+        docCount > 0 &&
+        onOpenTab &&
+        retrievalId && (
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => onOpenTab(retrievalId)}
+            >
+              {t("session.retrieval_open_tab")}
+            </Button>
+          </div>
+        )}
     </div>
   );
 }

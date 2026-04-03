@@ -72,7 +72,6 @@
     "retrieval": "검색 결과",
     "retrieval_doc_count": "{count}건의 문서를 찾았어요.",
     "retrieval_generating": "답변 생성 중...",
-    "retrieval_no_results": "검색 결과가 없어요.",
     "retrieval_open_tab": "탭에서 보기",
     "save_queue_completed": "저장 완료",
     "save_queue_failed": "저장 실패",
