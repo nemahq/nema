@@ -47,7 +47,19 @@ export interface ClientStatusMessage {
   createdAt: string;
 }
 
-export type DisplayMessage = Message | ClientStatusMessage;
+export interface ClientRetrievalMessage {
+  id: string;
+  role: "assistant";
+  type: "retrieval";
+  content: string;
+  retrievalId: null;
+  createdAt: string;
+}
+
+export type DisplayMessage =
+  | Message
+  | ClientStatusMessage
+  | ClientRetrievalMessage;
 
 interface PendingConfirmation {
   actionMessageId: string;
@@ -103,21 +115,15 @@ function buildStreamingMessage({
         createdAt: streamStartedAt,
       };
     case "searching":
-      return {
-        id: STREAMING_MESSAGE_ID,
-        role: "assistant",
-        type: "status",
-        content: "searching" satisfies PhaseName,
-        createdAt: streamStartedAt,
-      } satisfies ClientStatusMessage;
     case "retrieval":
       return {
         id: STREAMING_MESSAGE_ID,
         role: "assistant",
-        type: "status",
-        content: activePhase ?? STATUS_LOG_TYPES.RETRIEVAL_ANSWERED,
+        type: "retrieval",
+        content: "",
+        retrievalId: null,
         createdAt: streamStartedAt,
-      } satisfies ClientStatusMessage;
+      } satisfies ClientRetrievalMessage;
     case "text":
       return streamingText
         ? {

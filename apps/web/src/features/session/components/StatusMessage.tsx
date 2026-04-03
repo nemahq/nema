@@ -7,12 +7,10 @@ import type {
 import { useTranslation } from "@web/lib/tolgee";
 import type { TranslationKey } from "@web/lib/tolgee/types";
 
-import { SearchingStatus } from "./SearchingStatus";
 import { StatusIndicator } from "./StatusIndicator";
 
 const IN_PROGRESS_STATUSES = new Set<StatusLogType | ClientStatusType>([
   "thinking",
-  "searching",
   "answering",
   "draft_creating",
 ]);
@@ -43,10 +41,6 @@ interface StatusMessageProps {
 
 export function StatusMessage({ message }: StatusMessageProps) {
   const { t } = useTranslation();
-
-  if (message.content === "searching") {
-    return <SearchingStatus />;
-  }
 
   const status = IN_PROGRESS_STATUSES.has(message.content)
     ? "in-progress"
