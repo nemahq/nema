@@ -4,7 +4,7 @@ import { cn } from "@nema-io/weave";
 import { FileText, PanelRight, Search } from "@nema-io/weave/icons";
 
 import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
-import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
+import { useRetrievalTabToggle } from "@web/features/session/hooks/useRetrievalTabToggle";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useSessionSuspenseQuery } from "@web/features/session/hooks/useSessionQuery";
 import { useTranslation } from "@web/lib/tolgee";
@@ -43,8 +43,7 @@ function RetrievalMessageInner({
   const { t } = useTranslation();
   const { streamingPhase, searchEntities, searchResultDocs } =
     useChatLifecycle();
-  const { openRetrievalTabs, openRetrievalTab, closeRetrievalTab, tabOrder } =
-    useContentTab();
+  const { isTabOpen, tabIndex, toggleTab } = useRetrievalTabToggle(retrievalId);
   const sessionId = useSessionId();
   const [session] = useSessionSuspenseQuery({ sessionId });
 
@@ -56,23 +55,7 @@ function RetrievalMessageInner({
   const docCount = isStreaming
     ? searchResultDocs.length
     : (retrieval?.documents.length ?? searchResultDocs.length);
-
-  const isTabOpen = retrievalId !== null && openRetrievalTabs.has(retrievalId);
   const canToggleTab = !isStreaming && !isRetrievalLoading && docCount > 0;
-  const tabIndex = isTabOpen
-    ? tabOrder.indexOf(`retrieval-${retrievalId}`) + 1
-    : 0;
-
-  function handleToggleTab() {
-    if (!retrievalId) {
-      return;
-    }
-    if (isTabOpen) {
-      closeRetrievalTab(retrievalId);
-    } else {
-      openRetrievalTab(retrievalId);
-    }
-  }
 
   return (
     <div className="space-y-1.5 rounded-r-xl border-l-2 border-l-brand bg-surface-card p-3 shadow-sm dark:bg-surface-raised">
@@ -87,7 +70,7 @@ function RetrievalMessageInner({
         {canToggleTab && (
           <button
             type="button"
-            onClick={handleToggleTab}
+            onClick={toggleTab}
             className={cn(
               "relative shrink-0 rounded p-0.5 transition-colors",
               isTabOpen

@@ -1,14 +1,7 @@
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
 
+import { useRetrievalTabPersist } from "@web/features/session/hooks/useRetrievalTabPersist";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
-import { getRecordEntry, setRecordEntry } from "@web/utils/localStorage";
 
 type ContentTabName = "help";
 
@@ -29,50 +22,15 @@ interface ContentTabProviderProps {
   children: ReactNode;
 }
 
-function loadRetrievalTabs(sessionId: string): Set<string> {
-  const raw = getRecordEntry("openRetrievalTabs", sessionId);
-  if (!raw) {
-    return new Set();
-  }
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.every((v) => typeof v === "string")) {
-      return new Set(parsed as string[]);
-    }
-    return new Set();
-  } catch {
-    return new Set();
-  }
-}
-
-function persistRetrievalTabs(sessionId: string, tabs: Set<string>) {
-  setRecordEntry("openRetrievalTabs", sessionId, JSON.stringify([...tabs]));
-}
-
 export function ContentTabProvider({ children }: ContentTabProviderProps) {
   const sessionId = useSessionId();
+  const { openRetrievalTabs, openRetrievalTab, closeRetrievalTab } =
+    useRetrievalTabPersist(sessionId);
 
   const [openTabs, setOpenTabs] = useState<Set<ContentTabName>>(
     () => new Set(),
   );
-  const [openRetrievalTabs, setOpenRetrievalTabs] = useState<Set<string>>(() =>
-    loadRetrievalTabs(sessionId),
-  );
   const [tabOrder, setTabOrder] = useState<string[]>([]);
-
-  useEffect(
-    function resetRetrievalTabsOnSessionChange() {
-      setOpenRetrievalTabs(loadRetrievalTabs(sessionId));
-    },
-    [sessionId],
-  );
-
-  useEffect(
-    function syncRetrievalTabsToStorage() {
-      persistRetrievalTabs(sessionId, openRetrievalTabs);
-    },
-    [sessionId, openRetrievalTabs],
-  );
 
   function openTab(name: ContentTabName) {
     setOpenTabs((prev) => new Set(prev).add(name));
@@ -85,18 +43,6 @@ export function ContentTabProvider({ children }: ContentTabProviderProps) {
       return next;
     });
   }
-
-  const openRetrievalTab = useCallback((retrievalId: string) => {
-    setOpenRetrievalTabs((prev) => new Set(prev).add(retrievalId));
-  }, []);
-
-  const closeRetrievalTab = useCallback((retrievalId: string) => {
-    setOpenRetrievalTabs((prev) => {
-      const next = new Set(prev);
-      next.delete(retrievalId);
-      return next;
-    });
-  }, []);
 
   return (
     <ContentTabContext
