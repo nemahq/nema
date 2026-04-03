@@ -36,26 +36,24 @@ export function SessionSidebar() {
 
   return (
     <Sidebar
-      topSlot={(collapsed) => (
+      topSlot={
         <>
           <SidebarNavLink
-            collapsed={collapsed}
             icon={<NewContextIcon />}
             label={t("session.new_context")}
             to="/"
             showActive={false}
           />
           <SidebarNavLink
-            collapsed={collapsed}
             icon={<MemoryIcon />}
             label={t("memory.sidebar_label")}
             to="/memory"
           />
         </>
-      )}
-      footer={(collapsed) => <UserMenu collapsed={collapsed} />}
+      }
+      footer={<UserMenu />}
     >
-      {(collapsed) => !collapsed && <SessionList />}
+      <SessionList />
     </Sidebar>
   );
 }
