@@ -33,6 +33,11 @@
     "expand_sidebar": "Expand sidebar",
     "toggle_sidebar": "Toggle sidebar"
   },
+  "memory": {
+    "empty_heading": "No memories yet.",
+    "empty_subheading": "Create a new context and it'll fill up here.",
+    "sidebar_label": "Memory"
+  },
   "session": {
     "copied": "Copied",
     "copy_code": "Copy code",

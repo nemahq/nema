@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { Button, cn } from "@nema-io/weave";
@@ -11,10 +11,19 @@ import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 import { getStorage, setStorage } from "@web/utils/localStorage";
 
+interface SidebarState {
+  collapsed: boolean;
+}
+
+const SidebarContext = createContext<SidebarState>({ collapsed: false });
+export function useSidebar() {
+  return useContext(SidebarContext);
+}
+
 interface SidebarProps {
-  topSlot?: (collapsed: boolean) => ReactNode;
-  children?: ReactNode | ((collapsed: boolean) => ReactNode);
-  footer?: (collapsed: boolean) => ReactNode;
+  topSlot?: ReactNode;
+  children?: ReactNode;
+  footer?: ReactNode;
 }
 
 export function Sidebar({ topSlot, children, footer }: SidebarProps) {
@@ -32,61 +41,61 @@ export function Sidebar({ topSlot, children, footer }: SidebarProps) {
   useRegisterAction("sidebar.toggle", { execute: toggle });
 
   return (
-    <aside
-      className={cn(
-        "flex h-full flex-col overflow-y-auto border-r border-border/50 bg-surface-raised [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent] dark:bg-surface-base",
-        collapsed ? "w-12" : "w-64",
-      )}
-    >
-      <div className="sticky top-0 z-10 bg-surface-raised dark:bg-surface-base">
-        <div
-          className={cn(
-            "flex h-12 items-center",
-            collapsed ? "justify-center" : "justify-between px-3",
-          )}
-        >
-          {!collapsed && (
-            <Link to="/">
-              <img src={NemaLogo} alt="Nema" className="h-4 nema-logo" />
-            </Link>
-          )}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={toggle}
-            aria-label={t(
-              collapsed ? "layout.expand_sidebar" : "layout.collapse_sidebar",
+    <SidebarContext value={{ collapsed }}>
+      <aside
+        className={cn(
+          "flex h-full flex-col overflow-y-auto border-r border-border/50 bg-surface-raised [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent] dark:bg-surface-base",
+          collapsed ? "w-12" : "w-64",
+        )}
+      >
+        <div className="sticky top-0 z-10 bg-surface-raised dark:bg-surface-base">
+          <div
+            className={cn(
+              "flex h-12 items-center",
+              collapsed ? "justify-center" : "justify-between px-3",
             )}
           >
-            <PanelLeft
-              strokeWidth={1.5}
-              className={cn(collapsed && "rotate-180")}
-            />
-          </Button>
+            {!collapsed && (
+              <Link to="/">
+                <img src={NemaLogo} alt="Nema" className="h-4 nema-logo" />
+              </Link>
+            )}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={toggle}
+              aria-label={t(
+                collapsed ? "layout.expand_sidebar" : "layout.collapse_sidebar",
+              )}
+            >
+              <PanelLeft
+                strokeWidth={1.5}
+                className={cn(collapsed && "rotate-180")}
+              />
+            </Button>
+          </div>
+
+          {topSlot}
         </div>
 
-        {topSlot?.(collapsed)}
-      </div>
-
-      <ErrorBoundary
-        boundaryName="sidebar"
-        fallbackRender={(props) => <SectionErrorFallback {...props} />}
-      >
-        <div className="flex-1">
-          {typeof children === "function" ? children(collapsed) : children}
-        </div>
-      </ErrorBoundary>
-
-      {footer && (
-        <div
-          className={cn(
-            "sticky bottom-0 bg-surface-raised dark:bg-surface-base",
-            !collapsed && "border-t border-border/50",
-          )}
+        <ErrorBoundary
+          boundaryName="sidebar"
+          fallbackRender={(props) => <SectionErrorFallback {...props} />}
         >
-          {footer(collapsed)}
-        </div>
-      )}
-    </aside>
+          <div className="flex-1">{children}</div>
+        </ErrorBoundary>
+
+        {footer && (
+          <div
+            className={cn(
+              "sticky bottom-0 bg-surface-raised dark:bg-surface-base",
+              !collapsed && "border-t border-border/50",
+            )}
+          >
+            {footer}
+          </div>
+        )}
+      </aside>
+    </SidebarContext>
   );
 }

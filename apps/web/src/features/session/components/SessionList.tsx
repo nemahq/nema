@@ -3,6 +3,7 @@ import { useMatch, useNavigate } from "@tanstack/react-router";
 
 import { Skeleton } from "@nema-io/weave";
 
+import { useSidebar } from "@web/components/layout/Sidebar";
 import { useSessionList } from "@web/features/session/hooks/useSessionList";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
@@ -99,6 +100,12 @@ function SessionListContent() {
 }
 
 export function SessionList() {
+  const { collapsed } = useSidebar();
+
+  if (collapsed) {
+    return null;
+  }
+
   return (
     <Suspense fallback={<SessionListSkeleton />}>
       <SessionListContent />

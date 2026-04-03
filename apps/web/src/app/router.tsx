@@ -11,6 +11,7 @@ import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { HomePage } from "@web/app/pages/HomePage";
+import { MemoryPage } from "@web/app/pages/MemoryPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { SessionPage } from "@web/app/pages/SessionPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
@@ -89,12 +90,18 @@ const sessionRoute = createRoute({
   component: SessionPageShell,
 });
 
+const memoryRoute = createRoute({
+  getParentRoute: () => sessionSidebarRoute,
+  path: "/memory",
+  component: MemoryPage,
+});
+
 const routeTree = rootRoute.addChildren([
   signinRoute,
   privacyRoute,
   termsRoute,
   authenticatedRoute.addChildren([
-    sessionSidebarRoute.addChildren([indexRoute, sessionRoute]),
+    sessionSidebarRoute.addChildren([indexRoute, sessionRoute, memoryRoute]),
   ]),
 ]);
 
