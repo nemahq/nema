@@ -1,4 +1,5 @@
 import { devRouter } from "./routers/dev-router";
+import { documentRouter } from "./routers/document-router";
 import { eventRouter } from "./routers/event-router";
 import { messageRouter } from "./routers/message-router";
 import { profileRouter } from "./routers/profile-router";
@@ -10,6 +11,7 @@ export const appRouter = router({
   health: publicProcedure.query(() => {
     return { status: "ok" };
   }),
+  document: documentRouter,
   profile: profileRouter,
   session: sessionRouter,
   message: messageRouter,

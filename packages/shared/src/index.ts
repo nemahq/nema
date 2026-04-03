@@ -18,6 +18,18 @@ export {
   type PhaseName,
   type SearchResultDoc,
 } from "./schemas/chat-stream";
+export {
+  type DocumentDeleteInput,
+  DocumentDeleteInputSchema,
+  type DocumentDetail,
+  DocumentDetailSchema,
+  type DocumentGetInput,
+  DocumentGetInputSchema,
+  type DocumentListInput,
+  DocumentListInputSchema,
+  type DocumentSummary,
+  DocumentSummarySchema,
+} from "./schemas/document";
 export { type TrackEventInput, TrackEventInputSchema } from "./schemas/event";
 export {
   type ActionPayload,
