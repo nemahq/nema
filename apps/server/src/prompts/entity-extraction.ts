@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ENTITY_TYPES } from "@server/infra/graph/graph-store";
+import { ENTITY_TYPES } from "@nema-io/shared";
 
 export const ENTITY_EXTRACTION_SYSTEM_PROMPT = `You are an entity extractor that identifies key entities from document text.
 

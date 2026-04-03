@@ -1,3 +1,7 @@
+import { ENTITY_TYPES, type EntityType } from "@nema-io/shared";
+
+export { ENTITY_TYPES, type EntityType };
+
 export class GraphStoreError extends Error {
   constructor(
     message: string,
@@ -8,17 +12,6 @@ export class GraphStoreError extends Error {
     this.name = "GraphStoreError";
   }
 }
-
-export const ENTITY_TYPES = [
-  "Person",
-  "Organization",
-  "Topic",
-  "Event",
-  "Project",
-  "Location",
-] as const;
-
-export type EntityType = (typeof ENTITY_TYPES)[number];
 
 export interface GraphEntity {
   type: EntityType;
@@ -63,6 +56,34 @@ export interface MergeEntitiesOptions {
   type: EntityType;
 }
 
+export interface GraphEntityWithCount extends GraphEntity {
+  documentCount: number;
+}
+
+export interface ListEntitiesWithStatsOptions {
+  userId: string;
+  type?: EntityType;
+}
+
+export interface FindDocumentsByEntityOptions {
+  userId: string;
+  name: string;
+  type: EntityType;
+  limit?: number;
+}
+
+export interface GetRelatedEntitiesOptions {
+  userId: string;
+  name: string;
+  type: EntityType;
+  limit?: number;
+}
+
+export interface EntityTypeCount {
+  type: EntityType;
+  count: number;
+}
+
 export interface GraphStore {
   ensureSchema(): Promise<void>;
   upsertEntities(options: UpsertEntitiesOptions): Promise<void>;
@@ -73,6 +94,16 @@ export interface GraphStore {
     options: FindDocumentsByEntitiesOptions,
   ): Promise<GraphSearchResult[]>;
   listEntities(options: ListEntitiesOptions): Promise<GraphEntity[]>;
+  listEntitiesWithStats(
+    options: ListEntitiesWithStatsOptions,
+  ): Promise<GraphEntityWithCount[]>;
+  findDocumentsByEntity(
+    options: FindDocumentsByEntityOptions,
+  ): Promise<string[]>;
+  getRelatedEntities(
+    options: GetRelatedEntitiesOptions,
+  ): Promise<GraphEntityWithCount[]>;
+  getEntityCountsByType(userId: string): Promise<EntityTypeCount[]>;
   mergeEntities(options: MergeEntitiesOptions): Promise<void>;
   // userId 불필요 — Document 노드에 userId 없음. 접근 제어는 서비스 레이어 책임.
   deleteByDocument(docId: string): Promise<void>;

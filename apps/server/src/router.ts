@@ -1,5 +1,6 @@
 import { devRouter } from "./routers/dev-router";
 import { documentRouter } from "./routers/document-router";
+import { entityRouter } from "./routers/entity-router";
 import { eventRouter } from "./routers/event-router";
 import { messageRouter } from "./routers/message-router";
 import { profileRouter } from "./routers/profile-router";
@@ -12,6 +13,7 @@ export const appRouter = router({
     return { status: "ok" };
   }),
   document: documentRouter,
+  entity: entityRouter,
   profile: profileRouter,
   session: sessionRouter,
   message: messageRouter,

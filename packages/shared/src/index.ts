@@ -30,6 +30,22 @@ export {
   type DocumentSummary,
   DocumentSummarySchema,
 } from "./schemas/document";
+export {
+  ENTITY_TYPES,
+  type EntityGetDocumentsInput,
+  EntityGetDocumentsInputSchema,
+  type EntityGetRelatedInput,
+  EntityGetRelatedInputSchema,
+  type EntityListInput,
+  EntityListInputSchema,
+  type EntityStats,
+  EntityStatsSchema,
+  type EntitySummary,
+  EntitySummarySchema,
+  type EntityType,
+  type EntityTypeStat,
+  EntityTypeStatSchema,
+} from "./schemas/entity";
 export { type TrackEventInput, TrackEventInputSchema } from "./schemas/event";
 export {
   type ActionPayload,
