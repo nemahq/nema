@@ -35,8 +35,8 @@ export const SessionRetrievalSchema = z.object({
   query: z.string().min(1),
   body: z.string().min(1),
   documents: z.array(SearchResultDocSchema).default([]),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 export type SessionRetrieval = z.infer<typeof SessionRetrievalSchema>;
 

@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { Button } from "@nema-io/weave";
 import { FileText, Search } from "@nema-io/weave/icons";
 
@@ -33,7 +35,22 @@ function formatSearchingLabel(
   return t("session.status_searching_with_entities", { entities: formatted });
 }
 
-export function RetrievalMessage({
+interface QueryHeaderProps {
+  query: string;
+}
+
+function QueryHeader({ query }: QueryHeaderProps) {
+  return (
+    <div className="flex items-start gap-2">
+      <Search className="mt-0.5 size-4 shrink-0 text-fg-tertiary" aria-hidden />
+      <span className="line-clamp-2 text-sm text-fg-secondary">
+        &ldquo;{query}&rdquo;
+      </span>
+    </div>
+  );
+}
+
+function RetrievalMessageInner({
   retrievalId,
   content,
   query,
@@ -49,21 +66,14 @@ export function RetrievalMessage({
   const retrieval = isStreaming
     ? null
     : (session.retrievals.find((r) => r.id === retrievalId) ?? null);
+  const isRetrievalLoading = !isStreaming && retrieval === null;
   const docCount = isStreaming
     ? searchResultDocs.length
     : (retrieval?.documents.length ?? 0);
 
   return (
     <div className="space-y-1.5 rounded-xl bg-bg-secondary p-3 shadow-sm">
-      <div className="flex items-start gap-2">
-        <Search
-          className="mt-0.5 size-4 shrink-0 text-fg-tertiary"
-          aria-hidden
-        />
-        <span className="line-clamp-2 text-sm text-fg-secondary">
-          &ldquo;{query}&rdquo;
-        </span>
-      </div>
+      <QueryHeader query={query} />
 
       {isStreaming && streamingPhase === "searching" && (
         <StatusIndicator
@@ -89,13 +99,13 @@ export function RetrievalMessage({
         </>
       )}
 
-      {!isStreaming && docCount === 0 && (
+      {!isStreaming && !isRetrievalLoading && docCount === 0 && (
         <p className="text-xs text-fg-tertiary">
           {t("session.retrieval_no_results")}
         </p>
       )}
 
-      {!isStreaming && docCount > 0 && (
+      {!isStreaming && !isRetrievalLoading && docCount > 0 && (
         <>
           <div className="flex items-center gap-1.5 text-xs text-fg-tertiary">
             <FileText className="size-3 shrink-0" aria-hidden />
@@ -118,5 +128,19 @@ export function RetrievalMessage({
         </>
       )}
     </div>
+  );
+}
+
+export function RetrievalMessage(props: RetrievalMessageProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-1.5 rounded-xl bg-bg-secondary p-3 shadow-sm">
+          <QueryHeader query={props.query} />
+        </div>
+      }
+    >
+      <RetrievalMessageInner {...props} />
+    </Suspense>
   );
 }

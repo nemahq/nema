@@ -16,8 +16,9 @@ export function useSessionMessages() {
   const isDuplicate =
     lastServerMsg &&
     lastServerMsg.type === streamingMessage.type &&
-    "content" in lastServerMsg &&
-    lastServerMsg.content === streamingMessage.content;
+    (lastServerMsg.type === "retrieval" ||
+      ("content" in lastServerMsg &&
+        lastServerMsg.content === streamingMessage.content));
 
   return isDuplicate ? serverMessages : [...serverMessages, streamingMessage];
 }
