@@ -13,7 +13,7 @@ export function presetSessionCache(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       draft: null,
-      retrieval: null,
+      retrievals: [],
       isGenerating: false,
     },
   );

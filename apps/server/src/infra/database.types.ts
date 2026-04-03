@@ -224,13 +224,50 @@ export type Database = {
           },
         ];
       };
+      session_retrievals: {
+        Row: {
+          body: string;
+          created_at: string;
+          documents: Json;
+          id: string;
+          query: string;
+          session_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          body: string;
+          created_at?: string;
+          documents?: Json;
+          id?: string;
+          query: string;
+          session_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          body?: string;
+          created_at?: string;
+          documents?: Json;
+          id?: string;
+          query?: string;
+          session_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_retrievals_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       sessions: {
         Row: {
           created_at: string;
           draft: Json | null;
           id: string;
           messages: Json;
-          retrieval: Json | null;
           title: string | null;
           updated_at: string;
           user_id: string;
@@ -240,7 +277,6 @@ export type Database = {
           draft?: Json | null;
           id?: string;
           messages?: Json;
-          retrieval?: Json | null;
           title?: string | null;
           updated_at?: string;
           user_id: string;
@@ -250,7 +286,6 @@ export type Database = {
           draft?: Json | null;
           id?: string;
           messages?: Json;
-          retrieval?: Json | null;
           title?: string | null;
           updated_at?: string;
           user_id?: string;
@@ -265,10 +300,6 @@ export type Database = {
       ack_sync_event: { Args: { p_msg_id: number }; Returns: undefined };
       append_message: {
         Args: { p_message: Json; p_session_id: string };
-        Returns: undefined;
-      };
-      update_message_payload: {
-        Args: { p_message_id: string; p_payload: Json; p_session_id: string };
         Returns: undefined;
       };
       create_document_with_event: {
@@ -291,10 +322,6 @@ export type Database = {
         Returns: undefined;
       };
       fail_stale_save_jobs: { Args: never; Returns: number };
-      get_unique_tags: {
-        Args: { p_user_id: string };
-        Returns: string[];
-      };
       fetch_pending_documents: {
         Args: { p_max_retries?: number };
         Returns: {
@@ -308,6 +335,7 @@ export type Database = {
           user_id: string;
         }[];
       };
+      get_unique_tags: { Args: { p_user_id: string }; Returns: string[] };
       increment_ingestion_retry: {
         Args: { p_doc_id: string; p_max_retries?: number };
         Returns: undefined;
@@ -320,6 +348,8 @@ export type Database = {
           read_ct: number;
         }[];
       };
+      show_limit: { Args: never; Returns: number };
+      show_trgm: { Args: { "": string }; Returns: string[] };
       update_document_with_event: {
         Args: {
           p_body: string;
@@ -333,6 +363,10 @@ export type Database = {
           p_title_en?: string;
           p_user_id: string;
         };
+        Returns: undefined;
+      };
+      update_message_payload: {
+        Args: { p_message_id: string; p_payload: Json; p_session_id: string };
         Returns: undefined;
       };
     };

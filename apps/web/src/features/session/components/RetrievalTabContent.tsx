@@ -31,7 +31,7 @@ function SearchingIndicator() {
 function RetrievalTabContentInner() {
   const sessionId = useSessionId();
   const [session] = useSessionSuspenseQuery({ sessionId });
-  const retrieval = session.retrieval;
+  const retrieval = session.retrievals[0] ?? null;
   const { streamingPhase, streamingRetrievalText, streamError } =
     useChatLifecycle();
 

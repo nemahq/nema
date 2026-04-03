@@ -91,25 +91,46 @@ export async function getSession(
 ): Promise<
   SessionSummary & {
     draft: SessionDraft | null;
-    retrieval: SessionRetrieval | null;
+    retrievals: SessionRetrieval[];
   }
 > {
   const { data, error } = await supabase
     .from("sessions")
-    .select("id, title, draft, retrieval, created_at, updated_at")
+    .select("id, title, draft, created_at, updated_at")
     .eq("id", sessionId)
     .single();
 
   throwIfSupabaseError(error);
+
+  const { data: retrievalRows, error: retrievalError } = await supabase
+    .from("session_retrievals")
+    .select("id, session_id, query, body, documents, created_at, updated_at")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: false });
+
+  throwIfSupabaseError(retrievalError);
+
+  const retrievals = retrievalRows
+    .map((row) =>
+      SessionRetrievalSchema.safeParse({
+        id: row.id,
+        sessionId: row.session_id,
+        query: row.query,
+        body: row.body,
+        documents: row.documents,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }),
+    )
+    .filter((r) => r.success)
+    .map((r) => r.data);
 
   return {
     ...toSummary(data),
     draft: data.draft
       ? (SessionDraftSchema.safeParse(data.draft).data ?? null)
       : null,
-    retrieval: data.retrieval
-      ? (SessionRetrievalSchema.safeParse(data.retrieval).data ?? null)
-      : null,
+    retrievals,
   };
 }
 
