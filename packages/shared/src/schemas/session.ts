@@ -30,8 +30,13 @@ export const SessionDraftSchema = z.object({
 export type SessionDraft = z.infer<typeof SessionDraftSchema>;
 
 export const SessionRetrievalSchema = z.object({
+  id: z.string().uuid(),
+  sessionId: z.string().uuid(),
+  query: z.string().min(1),
   body: z.string().min(1),
-  documents: z.array(SearchResultDocSchema).optional(),
+  documents: z.array(SearchResultDocSchema).default([]),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
 });
 export type SessionRetrieval = z.infer<typeof SessionRetrievalSchema>;
 

@@ -3,7 +3,13 @@ import { z } from "zod";
 export const MessageRoleSchema = z.enum(["user", "assistant"]);
 export type MessageRole = z.infer<typeof MessageRoleSchema>;
 
-export const MessageTypeSchema = z.enum(["text", "draft", "status", "action"]);
+export const MessageTypeSchema = z.enum([
+  "text",
+  "draft",
+  "status",
+  "action",
+  "retrieval",
+]);
 export type MessageType = z.infer<typeof MessageTypeSchema>;
 
 const STATUS_LOG_TYPE_VALUES = [
@@ -62,6 +68,11 @@ export const MessageSchema = z.discriminatedUnion("type", [
     type: z.literal("action"),
     content: z.string(),
     payload: ActionPayloadSchema,
+  }),
+  BaseMessageSchema.extend({
+    type: z.literal("retrieval"),
+    content: z.string(),
+    retrievalId: z.string().uuid(),
   }),
 ]);
 export type Message = z.infer<typeof MessageSchema>;
