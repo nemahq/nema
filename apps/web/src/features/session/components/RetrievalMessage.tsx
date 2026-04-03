@@ -22,7 +22,7 @@ function formatSearchingLabel(
   t: ReturnType<typeof useTranslation>["t"],
 ): string {
   if (entities.length === 0) {
-    return t("session.retrieval_searching");
+    return t("session.status_searching");
   }
   const visible = entities.slice(0, MAX_VISIBLE_ENTITIES).join(", ");
   const overflow = entities.length - MAX_VISIBLE_ENTITIES;
