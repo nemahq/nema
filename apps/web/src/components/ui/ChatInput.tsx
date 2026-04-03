@@ -23,6 +23,7 @@ interface ChatInputProps {
   onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
   submitDisabled?: boolean;
+  disabled?: boolean;
   autoFocus?: boolean;
   submitIcon?: ComponentType<{ className?: string }>;
 }
@@ -35,6 +36,7 @@ export function ChatInput({
   onKeyDown,
   placeholder,
   submitDisabled,
+  disabled,
   autoFocus,
   submitIcon: SubmitIcon = ArrowUp,
 }: ChatInputProps) {
@@ -83,9 +85,13 @@ export function ChatInput({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        disabled={disabled}
         autoFocus={autoFocus}
         rows={1}
-        className="w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-tertiary focus:outline-none [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
+        className={cn(
+          "w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-tertiary focus:outline-none [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]",
+          disabled && "cursor-not-allowed opacity-50",
+        )}
       />
       {isStreaming ? (
         <Button

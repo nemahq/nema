@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { DraftIntentOptionSchema } from "./message";
+
 export const CHAT_MODES = ["remember", "ask"] as const;
 export const ChatModeSchema = z.enum(CHAT_MODES);
 export type ChatMode = z.infer<typeof ChatModeSchema>;
@@ -29,3 +31,13 @@ export const DraftActionInputSchema = z.object({
   sessionId: z.string().uuid(),
 });
 export type DraftActionInput = z.infer<typeof DraftActionInputSchema>;
+
+export const ConfirmDraftIntentInputSchema = z.object({
+  sessionId: z.string().uuid(),
+  actionMessageId: z.string().uuid(),
+  intent: DraftIntentOptionSchema,
+  draftContext: z.string(),
+});
+export type ConfirmDraftIntentInput = z.infer<
+  typeof ConfirmDraftIntentInputSchema
+>;

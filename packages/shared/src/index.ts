@@ -7,6 +7,8 @@ export {
   ChatModeSchema,
   type ChatResumeInput,
   type ChatStartInput,
+  type ConfirmDraftIntentInput,
+  ConfirmDraftIntentInputSchema,
   type DraftActionInput,
   DraftActionInputSchema,
 } from "./schemas/chat";
@@ -18,6 +20,9 @@ export {
 } from "./schemas/chat-stream";
 export { type TrackEventInput, TrackEventInputSchema } from "./schemas/event";
 export {
+  type ActionPayload,
+  type DraftIntentOption,
+  DraftIntentOptionSchema,
   type GetMessagesInput,
   GetMessagesInputSchema,
   type Message,

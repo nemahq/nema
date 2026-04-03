@@ -23,14 +23,18 @@ function DraftTabContentInner() {
   const draft = session.draft;
   const saveDraft = useSaveDraft({ sessionId });
   const cancelDraft = useCancelDraft({ sessionId });
-  const { streamingPhase, streamingDraftText, streamError } =
-    useChatLifecycle();
+  const {
+    streamingPhase,
+    streamingDraftText,
+    streamError,
+    pendingConfirmation,
+  } = useChatLifecycle();
 
   const isStreaming = streamingPhase === "draft";
   const smoothText = useBufferedStream(isStreaming ? streamingDraftText : "");
   const body = isStreaming ? smoothText : draft?.body;
 
-  const canAct = streamingPhase === "idle" && !!body;
+  const canAct = streamingPhase === "idle" && !!body && !pendingConfirmation;
 
   useRegisterAction("draft.save", {
     execute: () => saveDraft.mutate({ sessionId }),
@@ -57,7 +61,7 @@ function DraftTabContentInner() {
               variant="ghost"
               size="xs"
               onClick={() => cancelDraft.mutate({ sessionId })}
-              disabled={cancelDraft.isPending}
+              disabled={!canAct || cancelDraft.isPending}
             >
               {t("common.cancel")}
               <Kbd>Esc</Kbd>
@@ -66,7 +70,7 @@ function DraftTabContentInner() {
               variant="primary"
               size="xs"
               onClick={() => saveDraft.mutate({ sessionId })}
-              disabled={saveDraft.isPending}
+              disabled={!canAct || saveDraft.isPending}
             >
               {t("session.draft_save")}
               {formatKeySegments("mod+s").map((key) => (

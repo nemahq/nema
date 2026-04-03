@@ -1,6 +1,14 @@
+import * as Sentry from "@sentry/node";
+
 import type { ChatStreamEvent, SessionDraft } from "@nema-io/shared";
 
 import type { Providers } from "@server/infra/providers";
+import {
+  buildDraftIntentMessage,
+  DRAFT_INTENT_SYSTEM_PROMPT,
+  type DraftIntent,
+  DraftIntentSchema,
+} from "@server/prompts/draft-intent";
 import {
   buildEditCycleMessage,
   buildFirstCallMessage,
@@ -8,6 +16,43 @@ import {
 } from "@server/prompts/drafting";
 
 type Draft = SessionDraft;
+
+const DRAFT_DISPLAY_CONTEXT_MAX_LENGTH = 50;
+
+export function extractDraftContext(draftBody: string): string {
+  const firstLine = draftBody.split("\n")[0].replace(/^#+\s*/, "");
+  return firstLine.length > DRAFT_DISPLAY_CONTEXT_MAX_LENGTH
+    ? firstLine.slice(0, DRAFT_DISPLAY_CONTEXT_MAX_LENGTH) + "..."
+    : firstLine;
+}
+
+export async function classifyDraftIntent(args: {
+  providers: Providers;
+  userInput: string;
+  previousBody: string;
+}): Promise<DraftIntent> {
+  try {
+    return await args.providers.llm.mini.generateStructured({
+      schema: DraftIntentSchema,
+      schemaName: "draft_intent_classifier",
+      systemPrompt: DRAFT_INTENT_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: buildDraftIntentMessage({
+            previousBody: args.previousBody,
+            userInput: args.userInput,
+          }),
+        },
+      ],
+    });
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "draft-intent-classifier" },
+    });
+    return { intent: "append" };
+  }
+}
 
 export async function* handleDraftingStream(args: {
   providers: Providers;
