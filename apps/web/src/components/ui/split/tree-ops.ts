@@ -1,19 +1,17 @@
 import type { ReactNode } from "react";
 
-import type { ResizeDirection, SplitNode } from "./types";
+import type {
+  ResizeDirection,
+  SplitBranch,
+  SplitLeaf,
+  SplitNode,
+} from "./types";
 
-export interface SplitSkeletonLeaf {
-  type: "leaf";
-  id: string;
-}
+export type SplitSkeletonLeaf = Omit<SplitLeaf, "content">;
 
-export interface SplitSkeletonBranch {
-  type: "branch";
-  id: string;
-  direction: ResizeDirection;
+export type SplitSkeletonBranch = Omit<SplitBranch, "children"> & {
   children: [SplitSkeletonNode, SplitSkeletonNode, ...SplitSkeletonNode[]];
-  ratios?: number[];
-}
+};
 
 export type SplitSkeletonNode = SplitSkeletonLeaf | SplitSkeletonBranch;
 
@@ -102,7 +100,10 @@ export function toSkeleton(node: SplitNode): SplitSkeletonNode {
   }
 
   return {
-    ...node,
+    type: "branch",
+    id: node.id,
+    direction: node.direction,
+    ratios: node.ratios,
     children: node.children.map(toSkeleton) as [
       SplitSkeletonNode,
       SplitSkeletonNode,

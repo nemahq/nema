@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import type { SplitSkeletonNode } from "./tree-ops";
-import { findLeafIds, insertLeaf, removeLeaf } from "./tree-ops";
+import {
+  findLeafIds,
+  hydrate,
+  insertLeaf,
+  removeLeaf,
+  toSkeleton,
+} from "./tree-ops";
+import type { SplitNode } from "./types";
 
 const LEAF_A: SplitSkeletonNode = { type: "leaf", id: "a" };
 const LEAF_B: SplitSkeletonNode = { type: "leaf", id: "b" };
@@ -102,6 +109,26 @@ describe("removeLeaf", () => {
     });
   });
 
+  it("기존 ratios가 있는 branch에서 자식을 제거하면 ratios가 초기화된다", () => {
+    const tree: SplitSkeletonNode = {
+      type: "branch",
+      id: "root",
+      direction: "horizontal",
+      ratios: [0.2, 0.5, 0.3],
+      children: [LEAF_A, LEAF_B, LEAF_C],
+    };
+
+    const result = removeLeaf(tree, "b");
+
+    expect(result).toEqual({
+      type: "branch",
+      id: "root",
+      direction: "horizontal",
+      children: [LEAF_A, LEAF_C],
+      ratios: undefined,
+    });
+  });
+
   it("중첩 트리에서 제거 후 재귀적으로 prune한다", () => {
     const tree: SplitSkeletonNode = {
       type: "branch",
@@ -154,5 +181,59 @@ describe("findLeafIds", () => {
     };
 
     expect(findLeafIds(tree)).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("toSkeleton / hydrate round-trip", () => {
+  it("SplitNode → skeleton → hydrate로 구조가 보존된다", () => {
+    const contentA = "content-a";
+    const contentB = "content-b";
+
+    const tree: SplitNode = {
+      type: "branch",
+      id: "root",
+      direction: "horizontal",
+      ratios: [0.4, 0.6],
+      children: [
+        { type: "leaf", id: "a", content: contentA },
+        { type: "leaf", id: "b", content: contentB },
+      ],
+    };
+
+    const skeleton = toSkeleton(tree);
+
+    expect(skeleton).toEqual({
+      type: "branch",
+      id: "root",
+      direction: "horizontal",
+      ratios: [0.4, 0.6],
+      children: [
+        { type: "leaf", id: "a" },
+        { type: "leaf", id: "b" },
+      ],
+    });
+    expect("content" in skeleton).toBe(false);
+
+    const contentMap = new Map<string, unknown>([
+      ["a", contentA],
+      ["b", contentB],
+    ]);
+    const hydrated = hydrate(
+      skeleton,
+      contentMap as Map<string, React.ReactNode>,
+    );
+
+    expect(hydrated).toEqual(tree);
+  });
+
+  it("hydrate 시 contentMap에 없는 leaf는 content가 null이 된다", () => {
+    const skeleton: SplitSkeletonNode = { type: "leaf", id: "missing" };
+    const hydrated = hydrate(skeleton, new Map());
+
+    expect(hydrated).toEqual({
+      type: "leaf",
+      id: "missing",
+      content: null,
+    });
   });
 });

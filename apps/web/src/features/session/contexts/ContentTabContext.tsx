@@ -6,13 +6,11 @@ import {
   useState,
 } from "react";
 
-import type { SplitSkeletonNode } from "@web/components/ui/split/tree-ops";
-import {
-  findLeafIds,
-  insertLeaf,
-  removeLeaf,
-} from "@web/components/ui/split/tree-ops";
-import type { ResizeDirection } from "@web/components/ui/split/types";
+import type {
+  ResizeDirection,
+  SplitSkeletonNode,
+} from "@web/components/ui/split";
+import { findLeafIds, insertLeaf, removeLeaf } from "@web/components/ui/split";
 import { useRetrievalTabPersist } from "@web/features/session/hooks/useRetrievalTabPersist";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import type { PaneState } from "@web/features/session/hooks/useSplitLayoutPersist";
@@ -53,6 +51,17 @@ const ContentTabContext = createContext<ContentTabContextValue | null>(null);
 
 interface ContentTabProviderProps {
   children: ReactNode;
+}
+
+function nextActiveAfterRemoval(
+  tabIds: string[],
+  currentActiveId: string,
+  removedId: string,
+): string {
+  if (currentActiveId !== removedId) {
+    return currentActiveId;
+  }
+  return tabIds[0] ?? "";
 }
 
 function defaultPaneMap(): Map<string, PaneState> {
@@ -118,7 +127,7 @@ export function ContentTabProvider({ children }: ContentTabProviderProps) {
     ) {
       const newPaneId = crypto.randomUUID();
       const branchId = crypto.randomUUID();
-      const nextTree = insertLeaf(
+      let nextTree = insertLeaf(
         splitTree,
         paneId,
         newPaneId,
@@ -131,14 +140,22 @@ export function ContentTabProvider({ children }: ContentTabProviderProps) {
       const sourcePane = nextPaneMap.get(paneId);
       if (sourcePane) {
         const nextTabIds = sourcePane.tabIds.filter((id) => id !== tabId);
-        const nextActiveTabId =
-          sourcePane.activeTabId === tabId
-            ? (nextTabIds[0] ?? "")
-            : sourcePane.activeTabId;
-        nextPaneMap.set(paneId, {
-          tabIds: nextTabIds,
-          activeTabId: nextActiveTabId,
-        });
+        if (nextTabIds.length === 0) {
+          nextPaneMap.delete(paneId);
+          const pruned = removeLeaf(nextTree, paneId);
+          if (pruned) {
+            nextTree = pruned;
+          }
+        } else {
+          nextPaneMap.set(paneId, {
+            tabIds: nextTabIds,
+            activeTabId: nextActiveAfterRemoval(
+              nextTabIds,
+              sourcePane.activeTabId,
+              tabId,
+            ),
+          });
+        }
       }
 
       nextPaneMap.set(newPaneId, { tabIds: [tabId], activeTabId: tabId });
@@ -190,27 +207,25 @@ export function ContentTabProvider({ children }: ContentTabProviderProps) {
       }
 
       const sourcePane = nextPaneMap.get(sourcePaneId);
-      if (!sourcePane) {
+      const targetPane = nextPaneMap.get(targetPaneId);
+      if (!sourcePane || !targetPane) {
         return;
       }
 
       const nextSourceTabIds = sourcePane.tabIds.filter((id) => id !== tabId);
-      const nextSourceActive =
-        sourcePane.activeTabId === tabId
-          ? (nextSourceTabIds[0] ?? "")
-          : sourcePane.activeTabId;
       nextPaneMap.set(sourcePaneId, {
         tabIds: nextSourceTabIds,
-        activeTabId: nextSourceActive,
+        activeTabId: nextActiveAfterRemoval(
+          nextSourceTabIds,
+          sourcePane.activeTabId,
+          tabId,
+        ),
       });
 
-      const targetPane = nextPaneMap.get(targetPaneId);
-      if (targetPane) {
-        nextPaneMap.set(targetPaneId, {
-          tabIds: [...targetPane.tabIds, tabId],
-          activeTabId: tabId,
-        });
-      }
+      nextPaneMap.set(targetPaneId, {
+        tabIds: [...targetPane.tabIds, tabId],
+        activeTabId: tabId,
+      });
 
       let nextTree = splitTree;
       let nextFocused = focusedPaneId;
@@ -240,25 +255,29 @@ export function ContentTabProvider({ children }: ContentTabProviderProps) {
     [splitTree, paneMap, focusedPaneId, persistSplit],
   );
 
-  const setFocusedPane = useCallback(function setFocusedPane(paneId: string) {
-    setFocusedPaneIdState(paneId);
-  }, []);
+  const setFocusedPane = useCallback(
+    function setFocusedPane(paneId: string) {
+      setFocusedPaneIdState(paneId);
+      setSplitLayout({ tree: splitTree, paneMap, focusedPaneId: paneId });
+    },
+    [splitTree, paneMap, setSplitLayout],
+  );
 
-  const setPaneActiveTab = useCallback(function setPaneActiveTab(
-    paneId: string,
-    tabId: string,
-  ) {
-    setPaneMapState((prev) => {
-      const pane = prev.get(paneId);
+  const setPaneActiveTab = useCallback(
+    function setPaneActiveTab(paneId: string, tabId: string) {
+      const pane = paneMap.get(paneId);
       if (!pane || pane.activeTabId === tabId) {
-        return prev;
+        return;
       }
-      const next = new Map(prev);
-      next.set(paneId, { ...pane, activeTabId: tabId });
-      return next;
-    });
-  }, []);
+      const nextPaneMap = new Map(paneMap);
+      nextPaneMap.set(paneId, { ...pane, activeTabId: tabId });
+      setPaneMapState(nextPaneMap);
+      setSplitLayout({ tree: splitTree, paneMap: nextPaneMap, focusedPaneId });
+    },
+    [paneMap, splitTree, focusedPaneId, setSplitLayout],
+  );
 
+  // ContentPanel 재조정(reconciliation) 전용. 일반 소비자는 splitPaneWithTab/closePane/moveTabToPane 사용
   const setSplitTree = useCallback(function setSplitTree(
     tree: SplitSkeletonNode,
   ) {

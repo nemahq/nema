@@ -5,12 +5,12 @@ import { cn } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
-import { SplitContainer } from "@web/components/ui/split";
 import {
   findLeafIds,
   hydrate,
   removeLeaf,
-} from "@web/components/ui/split/tree-ops";
+  SplitContainer,
+} from "@web/components/ui/split";
 import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { TabbedPanel } from "@web/components/ui/TabbedPanel";
 import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
@@ -48,10 +48,7 @@ function ContentPanelInner() {
   const tabs: TabbedPanelTab[] = allTabs.filter(
     (tab): tab is TabbedPanelTab => tab !== undefined,
   );
-  const tabMap = useMemo(
-    () => new Map(tabs.map((tab) => [tab.id, tab])),
-    [tabs],
-  );
+  const tabMap = new Map(tabs.map((tab) => [tab.id, tab]));
 
   // --- 탭-패인 재조정 ---
   const currentTabIds = new Set(tabs.map((t) => t.id));
@@ -165,14 +162,11 @@ function ContentPanelInner() {
 
   // --- 포커스된 패인의 탭 ---
   const focusedPane = paneMap.get(focusedPaneId);
-  const focusedTabs = useMemo(() => {
-    if (!focusedPane) {
-      return [];
-    }
-    return focusedPane.tabIds
-      .map((id) => tabMap.get(id))
-      .filter((t): t is TabbedPanelTab => t !== undefined);
-  }, [focusedPane, tabMap]);
+  const focusedTabs = focusedPane
+    ? focusedPane.tabIds
+        .map((id) => tabMap.get(id))
+        .filter((t): t is TabbedPanelTab => t !== undefined)
+    : [];
 
   const focusedActiveTab = focusedPane
     ? (tabMap.get(focusedPane.activeTabId) ?? focusedTabs[0])

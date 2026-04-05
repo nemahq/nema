@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import * as Sentry from "@sentry/react";
 
-import type { SplitSkeletonNode } from "@web/components/ui/split/tree-ops";
+import type { SplitSkeletonNode } from "@web/components/ui/split";
 import { getRecordEntry, setRecordEntry } from "@web/utils/localStorage";
 
 export interface PaneState {
@@ -27,7 +28,14 @@ function loadSplitLayout(sessionId: string): SplitLayoutState | null {
   }
   try {
     const parsed = JSON.parse(raw) as SerializedSplitLayout;
-    if (!parsed.tree || !parsed.paneMap || !parsed.focusedPaneId) {
+    if (
+      !parsed.tree ||
+      typeof parsed.tree !== "object" ||
+      !("type" in parsed.tree) ||
+      !parsed.paneMap ||
+      typeof parsed.paneMap !== "object" ||
+      typeof parsed.focusedPaneId !== "string"
+    ) {
       return null;
     }
     return {
@@ -35,7 +43,11 @@ function loadSplitLayout(sessionId: string): SplitLayoutState | null {
       paneMap: new Map(Object.entries(parsed.paneMap)),
       focusedPaneId: parsed.focusedPaneId,
     };
-  } catch {
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "split-layout-persist" },
+      extra: { sessionId },
+    });
     return null;
   }
 }
@@ -75,7 +87,9 @@ export function useSplitLayoutPersist(sessionId: string) {
     [sessionId],
   );
 
-  const updateSplitLayout = useCallback((state: SplitLayoutState) => {
+  const updateSplitLayout = useCallback(function updateSplitLayout(
+    state: SplitLayoutState,
+  ) {
     setSplitLayout(state);
   }, []);
 
