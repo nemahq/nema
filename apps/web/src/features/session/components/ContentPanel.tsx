@@ -5,12 +5,7 @@ import { cn } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
-import {
-  findLeafIds,
-  hydrate,
-  removeLeaf,
-  SplitContainer,
-} from "@web/components/ui/split";
+import { findLeafIds, hydrate, SplitContainer } from "@web/components/ui/split";
 import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { TabbedPanel } from "@web/components/ui/TabbedPanel";
 import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
@@ -18,6 +13,7 @@ import { useSplitPane } from "@web/features/session/contexts/SplitPaneContext";
 import { useDraftTab } from "@web/features/session/hooks/useDraftTab";
 import { useHelpTab } from "@web/features/session/hooks/useHelpTab";
 import { useRetrievalTabs } from "@web/features/session/hooks/useRetrievalTabs";
+import { reconcileTabsWithPanes } from "@web/features/session/hooks/useTabPaneReconciliation";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 
 import { ContentPanelSkeleton } from "./ContentPanelSkeleton";
@@ -53,90 +49,18 @@ function ContentPanelInner() {
 
   // --- 탭-패인 재조정 ---
   const currentTabIds = new Set(tabs.map((t) => t.id));
+  const reconciled = reconcileTabsWithPanes({
+    currentTabIds,
+    paneMap,
+    splitTree,
+    focusedPaneId,
+  });
 
-  const assignedTabIds = new Set<string>();
-  for (const pane of paneMap.values()) {
-    for (const id of pane.tabIds) {
-      assignedTabIds.add(id);
-    }
-  }
-
-  const unassignedTabIds = tabs
-    .map((t) => t.id)
-    .filter((id) => !assignedTabIds.has(id));
-
-  let hasRemovedTabs = false;
-  for (const pane of paneMap.values()) {
-    for (const id of pane.tabIds) {
-      if (!currentTabIds.has(id)) {
-        hasRemovedTabs = true;
-        break;
-      }
-    }
-    if (hasRemovedTabs) {
-      break;
-    }
-  }
-
-  const needsReconcile = unassignedTabIds.length > 0 || hasRemovedTabs;
-
-  if (needsReconcile) {
-    const nextPaneMap = new Map(paneMap);
-    let nextTree = splitTree;
-    let nextFocused = focusedPaneId;
-    const panesToRemove: string[] = [];
-
-    // 사라진 탭 제거
-    for (const [paneId, pane] of nextPaneMap) {
-      const filteredTabIds = pane.tabIds.filter((id) => currentTabIds.has(id));
-      if (filteredTabIds.length !== pane.tabIds.length) {
-        if (filteredTabIds.length === 0) {
-          panesToRemove.push(paneId);
-        } else {
-          const nextActive = currentTabIds.has(pane.activeTabId)
-            ? pane.activeTabId
-            : (filteredTabIds[0] ?? "");
-          nextPaneMap.set(paneId, {
-            tabIds: filteredTabIds,
-            activeTabId: nextActive,
-          });
-        }
-      }
-    }
-
-    // 빈 패인 트리에서 제거
-    for (const paneId of panesToRemove) {
-      nextPaneMap.delete(paneId);
-      const pruned = removeLeaf(nextTree, paneId);
-      if (pruned) {
-        nextTree = pruned;
-      }
-    }
-
-    // 새 탭을 포커스된 패인에 추가
-    if (unassignedTabIds.length > 0) {
-      const targetPaneId = nextPaneMap.has(nextFocused)
-        ? nextFocused
-        : (findLeafIds(nextTree)[0] ?? nextFocused);
-      const targetPane = nextPaneMap.get(targetPaneId);
-      if (targetPane) {
-        nextPaneMap.set(targetPaneId, {
-          tabIds: [...targetPane.tabIds, ...unassignedTabIds],
-          activeTabId: unassignedTabIds[unassignedTabIds.length - 1],
-        });
-      }
-    }
-
-    // 포커스 유효성 확인
-    const leafIds = findLeafIds(nextTree);
-    if (!leafIds.includes(nextFocused)) {
-      nextFocused = leafIds[0] ?? focusedPaneId;
-    }
-
-    setPaneMap(nextPaneMap);
-    setSplitTree(nextTree);
-    if (nextFocused !== focusedPaneId) {
-      setFocusedPane(nextFocused);
+  if (reconciled.changed) {
+    setPaneMap(reconciled.paneMap);
+    setSplitTree(reconciled.splitTree);
+    if (reconciled.focusedPaneId !== focusedPaneId) {
+      setFocusedPane(reconciled.focusedPaneId);
     }
   }
 
