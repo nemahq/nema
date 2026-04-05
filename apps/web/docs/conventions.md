@@ -81,6 +81,7 @@
 - Mutation errors: global toast (QueryProvider). Use `onError` only when individual handling is needed.
 - Query errors: handled by route `errorComponent`.
 - ErrorBoundary at route level by default. Component-level only when a failure must not propagate to the entire page.
+- Section background color MUST be on a container outside ErrorBoundary/Suspense. If only the inner content defines it, fallback states lose the background.
 
 ## React
 
