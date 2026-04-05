@@ -2,10 +2,10 @@ import { useEffect, useRef } from "react";
 
 import { cn } from "@nema-io/weave";
 
+import type { ResizeDirection } from "./types";
+
 const KEYBOARD_STEP = 0.03;
 const KEYBOARD_STEP_LARGE = 0.1;
-
-export type ResizeDirection = "horizontal" | "vertical";
 
 interface ResizeHandleProps {
   direction: ResizeDirection;

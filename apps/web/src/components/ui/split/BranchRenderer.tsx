@@ -3,89 +3,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@nema-io/weave";
 
-import type { ResizeDirection } from "./ResizeHandle";
-import { ResizeHandle } from "./ResizeHandle";
-
-interface SplitLeaf {
-  type: "leaf";
-  id: string;
-  content: ReactNode;
-}
-
-interface SplitBranch {
-  type: "branch";
-  id: string;
-  direction: ResizeDirection;
-  children: [SplitNode, SplitNode, ...SplitNode[]];
-  ratios?: number[];
-}
-
-type SplitNode = SplitLeaf | SplitBranch;
-
-export type { SplitBranch, SplitLeaf, SplitNode };
-
-const DEFAULT_MIN_SIZE = 120;
-
-function defaultRatios(count: number): number[] {
-  return Array.from({ length: count }, () => 1 / count);
-}
-
-interface SplitContainerProps {
-  root: SplitNode;
-  minSize?: number;
-  onRatiosChange?: (nodeId: string, ratios: number[]) => void;
-}
-
-export function SplitContainer({
-  root,
-  minSize = DEFAULT_MIN_SIZE,
-  onRatiosChange,
-}: SplitContainerProps) {
-  return (
-    <div className="flex flex-1 min-h-0 min-w-0">
-      <SplitNodeRenderer
-        node={root}
-        minSize={minSize}
-        onRatiosChange={onRatiosChange}
-      />
-    </div>
-  );
-}
-
-interface SplitNodeRendererProps {
-  node: SplitNode;
-  minSize: number;
-  onRatiosChange?: (nodeId: string, ratios: number[]) => void;
-}
-
-function SplitNodeRenderer({
-  node,
-  minSize,
-  onRatiosChange,
-}: SplitNodeRendererProps) {
-  if (node.type === "leaf") {
-    return <div className="flex flex-1 min-h-0 min-w-0">{node.content}</div>;
-  }
-
-  return (
-    <BranchRenderer
-      node={node}
-      minSize={minSize}
-      onRatiosChange={onRatiosChange}
-    />
-  );
-}
+import { PaneWithHandle } from "./PaneWithHandle";
+import type { SplitBranch, SplitNode } from "./types";
+import { defaultRatios } from "./types";
 
 interface BranchRendererProps {
   node: SplitBranch;
   minSize: number;
   onRatiosChange?: (nodeId: string, ratios: number[]) => void;
+  renderNode: (node: SplitNode) => ReactNode;
 }
 
-function BranchRenderer({
+export function BranchRenderer({
   node,
   minSize,
   onRatiosChange,
+  renderNode,
 }: BranchRendererProps) {
   const { id, direction, children } = node;
   const isHorizontal = direction === "horizontal";
@@ -176,66 +109,9 @@ function BranchRenderer({
           containerSize={containerSize}
           onResize={handleResize}
         >
-          <SplitNodeRenderer
-            node={child}
-            minSize={minSize}
-            onRatiosChange={onRatiosChange}
-          />
+          {renderNode(child)}
         </PaneWithHandle>
       ))}
     </div>
-  );
-}
-
-interface PaneWithHandleProps {
-  index: number;
-  isLast: boolean;
-  ratio: number;
-  direction: ResizeDirection;
-  containerSize: number;
-  onResize: (handleIndex: number, pixelDelta: number) => void;
-  children: ReactNode;
-}
-
-function PaneWithHandle({
-  index,
-  isLast,
-  ratio,
-  direction,
-  containerSize,
-  onResize,
-  children,
-}: PaneWithHandleProps) {
-  const isHorizontal = direction === "horizontal";
-  const style = isHorizontal
-    ? { width: `${ratio * 100}%` }
-    : { height: `${ratio * 100}%` };
-
-  const handleResizeForIndex = useCallback(
-    function handleResizeForIndex(pixelDelta: number) {
-      onResize(index, pixelDelta);
-    },
-    [onResize, index],
-  );
-
-  return (
-    <>
-      <div
-        className={cn(
-          "flex min-h-0 min-w-0",
-          isHorizontal ? "flex-row" : "flex-col",
-        )}
-        style={style}
-      >
-        {children}
-      </div>
-      {!isLast && (
-        <ResizeHandle
-          direction={direction}
-          containerSize={containerSize}
-          onResize={handleResizeForIndex}
-        />
-      )}
-    </>
   );
 }
