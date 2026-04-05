@@ -15,7 +15,7 @@ interface SplitBranch {
   type: "branch";
   id: string;
   direction: "horizontal" | "vertical";
-  children: SplitNode[];
+  children: [SplitNode, SplitNode, ...SplitNode[]];
   ratios?: number[];
 }
 
@@ -27,12 +27,6 @@ const DEFAULT_MIN_SIZE = 120;
 
 function defaultRatios(count: number): number[] {
   return Array.from({ length: count }, () => 1 / count);
-}
-
-function clampRatios(ratios: number[], minRatio: number): number[] {
-  const clamped = ratios.map((r) => Math.max(r, minRatio));
-  const total = clamped.reduce((sum, r) => sum + r, 0);
-  return clamped.map((r) => r / total);
 }
 
 interface SplitContainerProps {
@@ -104,7 +98,13 @@ function BranchRenderer({
       : defaultRatios(children.length);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const containerSizeRef = useRef(0);
   const [containerSize, setContainerSize] = useState(0);
+
+  const ratiosRef = useRef(ratios);
+  useEffect(function syncRatiosRef() {
+    ratiosRef.current = ratios;
+  });
 
   useEffect(
     function observeContainerSize() {
@@ -121,6 +121,7 @@ function BranchRenderer({
         const size = isHorizontal
           ? entry.contentRect.width
           : entry.contentRect.height;
+        containerSizeRef.current = size;
         setContainerSize(size);
       });
 
@@ -132,24 +133,28 @@ function BranchRenderer({
 
   const handleResize = useCallback(
     function handleResize(handleIndex: number, pixelDelta: number) {
-      setInternalRatios((prev) => {
-        if (containerSize === 0) {
-          return prev;
-        }
+      const currentSize = containerSizeRef.current;
+      if (currentSize === 0) {
+        return;
+      }
 
-        const ratioDelta = pixelDelta / containerSize;
-        const next = [...prev];
-        next[handleIndex] += ratioDelta;
-        next[handleIndex + 1] -= ratioDelta;
+      const prev = ratiosRef.current;
+      const minRatio = minSize / currentSize;
+      const ratioDelta = pixelDelta / currentSize;
 
-        const minRatio = minSize / containerSize;
-        const clamped = clampRatios(next, minRatio);
+      const maxDelta = prev[handleIndex + 1] - minRatio;
+      const minDelta = -(prev[handleIndex] - minRatio);
+      const clampedDelta = Math.max(minDelta, Math.min(maxDelta, ratioDelta));
 
-        onRatiosChange?.(id, clamped);
-        return clamped;
-      });
+      const next = [...prev];
+      next[handleIndex] += clampedDelta;
+      next[handleIndex + 1] -= clampedDelta;
+
+      ratiosRef.current = next;
+      setInternalRatios(next);
+      onRatiosChange?.(id, next);
     },
-    [containerSize, minSize, id, onRatiosChange],
+    [minSize, id, onRatiosChange],
   );
 
   return (
@@ -165,7 +170,7 @@ function BranchRenderer({
           key={child.id}
           index={i}
           isLast={i === children.length - 1}
-          ratio={ratios[i]}
+          ratio={ratios[i] ?? 1 / children.length}
           direction={direction}
           containerSize={containerSize}
           onResize={handleResize}

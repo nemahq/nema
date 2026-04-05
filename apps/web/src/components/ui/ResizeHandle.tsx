@@ -5,13 +5,9 @@ import { cn } from "@nema-io/weave";
 const KEYBOARD_STEP = 0.03;
 const KEYBOARD_STEP_LARGE = 0.1;
 
-type ResizeDirection = "horizontal" | "vertical";
-
 interface ResizeHandleProps {
-  direction: ResizeDirection;
-  /** 분할 방향의 컨테이너 크기 (px). 키보드 스텝 계산에 사용 */
+  direction: "horizontal" | "vertical";
   containerSize: number;
-  /** 증분 픽셀 변화량. 포인터 드래그와 키보드 모두 이 콜백으로 통합 */
   onResize: (pixelDelta: number) => void;
 }
 
@@ -21,6 +17,11 @@ export function ResizeHandle({
   onResize,
 }: ResizeHandleProps) {
   const cleanupRef = useRef<(() => void) | null>(null);
+  const onResizeRef = useRef(onResize);
+
+  useEffect(function syncOnResizeRef() {
+    onResizeRef.current = onResize;
+  });
 
   useEffect(function cleanupOnUnmount() {
     return () => cleanupRef.current?.();
@@ -39,7 +40,7 @@ export function ResizeHandle({
       const delta = currentPos - lastPos;
       lastPos = currentPos;
       if (delta !== 0) {
-        onResize(delta);
+        onResizeRef.current(delta);
       }
     }
 
@@ -82,6 +83,7 @@ export function ResizeHandle({
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- focusable separator = ARIA window splitter (interactive)
     <div
       role="separator"
+      // aria-orientation은 구분선 자체의 방향: 수평 분할(좌우) 시 구분선은 수직
       aria-orientation={isHorizontal ? "vertical" : "horizontal"}
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable separator = ARIA window splitter (interactive)
       tabIndex={0}
