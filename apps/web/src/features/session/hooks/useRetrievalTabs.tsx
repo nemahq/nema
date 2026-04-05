@@ -17,7 +17,7 @@ export function useRetrievalTabs(): TabbedPanelTab[] {
   const { retrievals } = session;
 
   useEffect(
-    function cleanupOrphanedTabs() {
+    function cleanupOrphanedTabsOnSessionEntry() {
       const retrievalIds = new Set(retrievals.map((r) => r.id));
       for (const id of openRetrievalTabs) {
         if (!retrievalIds.has(id)) {
@@ -25,7 +25,7 @@ export function useRetrievalTabs(): TabbedPanelTab[] {
         }
       }
     },
-    [retrievals, openRetrievalTabs, closeRetrievalTab],
+    [sessionId],
   );
 
   return useMemo(() => {
