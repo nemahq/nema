@@ -2,11 +2,13 @@ import type { ReactNode } from "react";
 
 interface TabbedPanelLayoutProps {
   header: ReactNode;
+  headerProps?: React.HTMLAttributes<HTMLDivElement>;
   children: ReactNode;
 }
 
 export function TabbedPanelLayout({
   header,
+  headerProps,
   children,
 }: TabbedPanelLayoutProps) {
   return (
@@ -14,6 +16,7 @@ export function TabbedPanelLayout({
       <div
         role="tablist"
         className="relative flex items-end border-b border-border/50"
+        {...headerProps}
       >
         {header}
       </div>

@@ -22,6 +22,9 @@ interface TabbedPanelProps {
   tabs: TabbedPanelTab[];
   activeTabId: string;
   onActiveTabChange: (tabId: string) => void;
+  onTabDragStart?: (tabId: string, e: React.DragEvent) => void;
+  onTabDragOver?: (e: React.DragEvent) => void;
+  onTabDrop?: (e: React.DragEvent) => void;
 }
 
 function resolveLabel(
@@ -35,6 +38,9 @@ export function TabbedPanel({
   tabs,
   activeTabId,
   onActiveTabChange,
+  onTabDragStart,
+  onTabDragOver,
+  onTabDrop,
 }: TabbedPanelProps) {
   const { t } = useTranslation();
 
@@ -66,6 +72,8 @@ export function TabbedPanel({
                         )
                       : "border border-transparent",
                   )}
+                  draggable={!!onTabDragStart}
+                  onDragStart={(e) => onTabDragStart?.(tab.id, e)}
                 >
                   <button
                     type="button"
@@ -101,6 +109,10 @@ export function TabbedPanel({
             })
           : null
       }
+      headerProps={{
+        onDragOver: onTabDragOver,
+        onDrop: onTabDrop,
+      }}
     >
       {tabs.length > 0 ? (
         <div role="tabpanel" id={`panel-${resolvedTab}`}>
