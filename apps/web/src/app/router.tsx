@@ -14,10 +14,10 @@ import { HomePage } from "@web/app/pages/HomePage";
 import { MemoryPage } from "@web/app/pages/MemoryPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { SessionPage } from "@web/app/pages/SessionPage";
+import { SignInPage } from "@web/app/pages/SignInPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
 import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
-import { AuthPage } from "@web/features/auth/components/AuthPage";
-import { requireAuth, requireGuest } from "@web/features/auth/guards";
+import { requireAuth, requireGuest } from "@web/features/auth";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 
 import { App } from "./App";
@@ -35,7 +35,7 @@ const signinRoute = createRoute({
   validateSearch: z.object({
     redirect: z.string().optional(),
   }),
-  component: AuthPage,
+  component: SignInPage,
   beforeLoad: requireGuest,
 });
 
