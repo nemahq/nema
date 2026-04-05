@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@nema-io/weave";
 
+import type { ResizeDirection } from "./ResizeHandle";
 import { ResizeHandle } from "./ResizeHandle";
 
 interface SplitLeaf {
@@ -14,7 +15,7 @@ interface SplitLeaf {
 interface SplitBranch {
   type: "branch";
   id: string;
-  direction: "horizontal" | "vertical";
+  direction: ResizeDirection;
   children: [SplitNode, SplitNode, ...SplitNode[]];
   ratios?: number[];
 }
@@ -190,7 +191,7 @@ interface PaneWithHandleProps {
   index: number;
   isLast: boolean;
   ratio: number;
-  direction: "horizontal" | "vertical";
+  direction: ResizeDirection;
   containerSize: number;
   onResize: (handleIndex: number, pixelDelta: number) => void;
   children: ReactNode;

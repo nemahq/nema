@@ -5,9 +5,13 @@ import { cn } from "@nema-io/weave";
 const KEYBOARD_STEP = 0.03;
 const KEYBOARD_STEP_LARGE = 0.1;
 
+export type ResizeDirection = "horizontal" | "vertical";
+
 interface ResizeHandleProps {
-  direction: "horizontal" | "vertical";
+  direction: ResizeDirection;
+  /** 분할 방향의 컨테이너 크기 (px). 키보드 스텝 계산에 사용 */
   containerSize: number;
+  /** 증분 픽셀 변화량. 포인터 드래그와 키보드 모두 이 콜백으로 통합 */
   onResize: (pixelDelta: number) => void;
 }
 
