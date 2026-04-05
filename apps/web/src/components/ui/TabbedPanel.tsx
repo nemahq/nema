@@ -109,10 +109,8 @@ export function TabbedPanel({
             })
           : null
       }
-      headerProps={{
-        onDragOver: onTabDragOver,
-        onDrop: onTabDrop,
-      }}
+      onHeaderDragOver={onTabDragOver}
+      onHeaderDrop={onTabDrop}
     >
       {tabs.length > 0 ? (
         <div role="tabpanel" id={`panel-${resolvedTab}`}>

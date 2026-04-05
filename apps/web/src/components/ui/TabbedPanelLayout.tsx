@@ -2,21 +2,25 @@ import type { ReactNode } from "react";
 
 interface TabbedPanelLayoutProps {
   header: ReactNode;
-  headerProps?: React.HTMLAttributes<HTMLDivElement>;
+  onHeaderDragOver?: (e: React.DragEvent) => void;
+  onHeaderDrop?: (e: React.DragEvent) => void;
   children: ReactNode;
 }
 
 export function TabbedPanelLayout({
   header,
-  headerProps,
+  onHeaderDragOver,
+  onHeaderDrop,
   children,
 }: TabbedPanelLayoutProps) {
   return (
     <main className="flex flex-1 flex-col min-w-0">
       <div
         role="tablist"
+        tabIndex={-1}
         className="relative flex items-end border-b border-border/50"
-        {...headerProps}
+        onDragOver={onHeaderDragOver}
+        onDrop={onHeaderDrop}
       >
         {header}
       </div>
