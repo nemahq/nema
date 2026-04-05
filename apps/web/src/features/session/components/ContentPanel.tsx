@@ -14,6 +14,7 @@ import {
 import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { TabbedPanel } from "@web/components/ui/TabbedPanel";
 import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
+import { useSplitPane } from "@web/features/session/contexts/SplitPaneContext";
 import { useDraftTab } from "@web/features/session/hooks/useDraftTab";
 import { useHelpTab } from "@web/features/session/hooks/useHelpTab";
 import { useRetrievalTabs } from "@web/features/session/hooks/useRetrievalTabs";
@@ -29,8 +30,8 @@ const TAB_HOTKEYS = Array.from(
 ).join(", ");
 
 function ContentPanelInner() {
+  const { setTabOrder: syncTabOrder } = useContentTab();
   const {
-    setTabOrder: syncTabOrder,
     splitTree,
     paneMap,
     focusedPaneId,
@@ -38,7 +39,7 @@ function ContentPanelInner() {
     setPaneActiveTab,
     setPaneMap,
     setSplitTree,
-  } = useContentTab();
+  } = useSplitPane();
 
   const draftTab = useDraftTab();
   const retrievalTabs = useRetrievalTabs();
