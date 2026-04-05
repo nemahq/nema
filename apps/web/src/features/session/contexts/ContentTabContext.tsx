@@ -1,9 +1,26 @@
-import { createContext, type ReactNode, useContext, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useState,
+} from "react";
 
+import type { SplitSkeletonNode } from "@web/components/ui/split/tree-ops";
+import {
+  findLeafIds,
+  insertLeaf,
+  removeLeaf,
+} from "@web/components/ui/split/tree-ops";
+import type { ResizeDirection } from "@web/components/ui/split/types";
 import { useRetrievalTabPersist } from "@web/features/session/hooks/useRetrievalTabPersist";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
+import type { PaneState } from "@web/features/session/hooks/useSplitLayoutPersist";
+import { useSplitLayoutPersist } from "@web/features/session/hooks/useSplitLayoutPersist";
 
 type ContentTabName = "help";
+
+export const DEFAULT_PANE_ID = "default-pane";
 
 interface ContentTabContextValue {
   openTabs: Set<ContentTabName>;
@@ -14,6 +31,22 @@ interface ContentTabContextValue {
   closeRetrievalTab: (retrievalId: string) => void;
   tabOrder: string[];
   setTabOrder: (order: string[]) => void;
+
+  splitTree: SplitSkeletonNode;
+  paneMap: Map<string, PaneState>;
+  focusedPaneId: string;
+
+  splitPaneWithTab: (
+    paneId: string,
+    tabId: string,
+    direction: ResizeDirection,
+  ) => void;
+  closePane: (paneId: string) => void;
+  moveTabToPane: (tabId: string, targetPaneId: string) => void;
+  setFocusedPane: (paneId: string) => void;
+  setPaneActiveTab: (paneId: string, tabId: string) => void;
+  setSplitTree: (tree: SplitSkeletonNode) => void;
+  setPaneMap: (paneMap: Map<string, PaneState>) => void;
 }
 
 const ContentTabContext = createContext<ContentTabContextValue | null>(null);
@@ -22,15 +55,48 @@ interface ContentTabProviderProps {
   children: ReactNode;
 }
 
+function defaultPaneMap(): Map<string, PaneState> {
+  return new Map([[DEFAULT_PANE_ID, { tabIds: [], activeTabId: "" }]]);
+}
+
 export function ContentTabProvider({ children }: ContentTabProviderProps) {
   const sessionId = useSessionId();
   const { openRetrievalTabs, openRetrievalTab, closeRetrievalTab } =
     useRetrievalTabPersist(sessionId);
+  const { splitLayout, setSplitLayout } = useSplitLayoutPersist(sessionId);
 
   const [openTabs, setOpenTabs] = useState<Set<ContentTabName>>(
     () => new Set(),
   );
   const [tabOrder, setTabOrder] = useState<string[]>([]);
+
+  const [splitTree, setSplitTreeState] = useState<SplitSkeletonNode>(
+    () => splitLayout?.tree ?? { type: "leaf", id: DEFAULT_PANE_ID },
+  );
+  const [paneMap, setPaneMapState] = useState<Map<string, PaneState>>(
+    () => splitLayout?.paneMap ?? defaultPaneMap(),
+  );
+  const [focusedPaneId, setFocusedPaneIdState] = useState<string>(
+    () => splitLayout?.focusedPaneId ?? DEFAULT_PANE_ID,
+  );
+
+  const persistSplit = useCallback(
+    function persistSplit(
+      nextTree: SplitSkeletonNode,
+      nextPaneMap: Map<string, PaneState>,
+      nextFocused: string,
+    ) {
+      setSplitTreeState(nextTree);
+      setPaneMapState(nextPaneMap);
+      setFocusedPaneIdState(nextFocused);
+      setSplitLayout({
+        tree: nextTree,
+        paneMap: nextPaneMap,
+        focusedPaneId: nextFocused,
+      });
+    },
+    [setSplitLayout],
+  );
 
   function openTab(name: ContentTabName) {
     setOpenTabs((prev) => new Set(prev).add(name));
@@ -44,6 +110,167 @@ export function ContentTabProvider({ children }: ContentTabProviderProps) {
     });
   }
 
+  const splitPaneWithTab = useCallback(
+    function splitPaneWithTab(
+      paneId: string,
+      tabId: string,
+      direction: ResizeDirection,
+    ) {
+      const newPaneId = crypto.randomUUID();
+      const branchId = crypto.randomUUID();
+      const nextTree = insertLeaf(
+        splitTree,
+        paneId,
+        newPaneId,
+        branchId,
+        direction,
+      );
+
+      const nextPaneMap = new Map(paneMap);
+
+      const sourcePane = nextPaneMap.get(paneId);
+      if (sourcePane) {
+        const nextTabIds = sourcePane.tabIds.filter((id) => id !== tabId);
+        const nextActiveTabId =
+          sourcePane.activeTabId === tabId
+            ? (nextTabIds[0] ?? "")
+            : sourcePane.activeTabId;
+        nextPaneMap.set(paneId, {
+          tabIds: nextTabIds,
+          activeTabId: nextActiveTabId,
+        });
+      }
+
+      nextPaneMap.set(newPaneId, { tabIds: [tabId], activeTabId: tabId });
+
+      persistSplit(nextTree, nextPaneMap, newPaneId);
+    },
+    [splitTree, paneMap, persistSplit],
+  );
+
+  const closePane = useCallback(
+    function closePane(paneId: string) {
+      const nextTree = removeLeaf(splitTree, paneId);
+      const nextPaneMap = new Map(paneMap);
+      nextPaneMap.delete(paneId);
+
+      if (!nextTree) {
+        persistSplit(
+          { type: "leaf", id: DEFAULT_PANE_ID },
+          defaultPaneMap(),
+          DEFAULT_PANE_ID,
+        );
+        return;
+      }
+
+      const leafIds = findLeafIds(nextTree);
+      const nextFocused = leafIds.includes(focusedPaneId)
+        ? focusedPaneId
+        : (leafIds[0] ?? DEFAULT_PANE_ID);
+
+      persistSplit(nextTree, nextPaneMap, nextFocused);
+    },
+    [splitTree, paneMap, focusedPaneId, persistSplit],
+  );
+
+  const moveTabToPane = useCallback(
+    function moveTabToPane(tabId: string, targetPaneId: string) {
+      const nextPaneMap = new Map(paneMap);
+
+      let sourcePaneId: string | null = null;
+      for (const [id, pane] of nextPaneMap) {
+        if (pane.tabIds.includes(tabId)) {
+          sourcePaneId = id;
+          break;
+        }
+      }
+
+      if (!sourcePaneId || sourcePaneId === targetPaneId) {
+        return;
+      }
+
+      const sourcePane = nextPaneMap.get(sourcePaneId);
+      if (!sourcePane) {
+        return;
+      }
+
+      const nextSourceTabIds = sourcePane.tabIds.filter((id) => id !== tabId);
+      const nextSourceActive =
+        sourcePane.activeTabId === tabId
+          ? (nextSourceTabIds[0] ?? "")
+          : sourcePane.activeTabId;
+      nextPaneMap.set(sourcePaneId, {
+        tabIds: nextSourceTabIds,
+        activeTabId: nextSourceActive,
+      });
+
+      const targetPane = nextPaneMap.get(targetPaneId);
+      if (targetPane) {
+        nextPaneMap.set(targetPaneId, {
+          tabIds: [...targetPane.tabIds, tabId],
+          activeTabId: tabId,
+        });
+      }
+
+      let nextTree = splitTree;
+      let nextFocused = focusedPaneId;
+
+      if (nextSourceTabIds.length === 0) {
+        const pruned = removeLeaf(splitTree, sourcePaneId);
+        nextPaneMap.delete(sourcePaneId);
+
+        if (!pruned) {
+          persistSplit(
+            { type: "leaf", id: DEFAULT_PANE_ID },
+            defaultPaneMap(),
+            DEFAULT_PANE_ID,
+          );
+          return;
+        }
+
+        nextTree = pruned;
+        const leafIds = findLeafIds(pruned);
+        nextFocused = leafIds.includes(focusedPaneId)
+          ? focusedPaneId
+          : (leafIds[0] ?? DEFAULT_PANE_ID);
+      }
+
+      persistSplit(nextTree, nextPaneMap, nextFocused);
+    },
+    [splitTree, paneMap, focusedPaneId, persistSplit],
+  );
+
+  const setFocusedPane = useCallback(function setFocusedPane(paneId: string) {
+    setFocusedPaneIdState(paneId);
+  }, []);
+
+  const setPaneActiveTab = useCallback(function setPaneActiveTab(
+    paneId: string,
+    tabId: string,
+  ) {
+    setPaneMapState((prev) => {
+      const pane = prev.get(paneId);
+      if (!pane || pane.activeTabId === tabId) {
+        return prev;
+      }
+      const next = new Map(prev);
+      next.set(paneId, { ...pane, activeTabId: tabId });
+      return next;
+    });
+  }, []);
+
+  const setSplitTree = useCallback(function setSplitTree(
+    tree: SplitSkeletonNode,
+  ) {
+    setSplitTreeState(tree);
+  }, []);
+
+  const setPaneMap = useCallback(function setPaneMap(
+    nextPaneMap: Map<string, PaneState>,
+  ) {
+    setPaneMapState(nextPaneMap);
+  }, []);
+
   return (
     <ContentTabContext
       value={{
@@ -55,6 +282,16 @@ export function ContentTabProvider({ children }: ContentTabProviderProps) {
         closeRetrievalTab,
         tabOrder,
         setTabOrder,
+        splitTree,
+        paneMap,
+        focusedPaneId,
+        splitPaneWithTab,
+        closePane,
+        moveTabToPane,
+        setFocusedPane,
+        setPaneActiveTab,
+        setSplitTree,
+        setPaneMap,
       }}
     >
       {children}
