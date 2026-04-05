@@ -10,7 +10,7 @@ export function TabbedPanelLayout({
   children,
 }: TabbedPanelLayoutProps) {
   return (
-    <main className="flex flex-1 flex-col bg-surface-card min-w-0">
+    <main className="flex flex-1 flex-col min-w-0">
       <div
         role="tablist"
         className="relative flex items-end border-b border-border/50"

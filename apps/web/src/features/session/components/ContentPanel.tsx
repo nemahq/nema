@@ -102,13 +102,15 @@ function ContentPanelInner() {
 
 export function ContentPanel() {
   return (
-    <ErrorBoundary
-      boundaryName="content-panel"
-      fallbackRender={(props) => <SectionErrorFallback {...props} />}
-    >
-      <Suspense fallback={<ContentPanelSkeleton />}>
-        <ContentPanelInner />
-      </Suspense>
-    </ErrorBoundary>
+    <div className="flex flex-1 flex-col bg-surface-card min-w-0">
+      <ErrorBoundary
+        boundaryName="content-panel"
+        fallbackRender={(props) => <SectionErrorFallback {...props} />}
+      >
+        <Suspense fallback={<ContentPanelSkeleton />}>
+          <ContentPanelInner />
+        </Suspense>
+      </ErrorBoundary>
+    </div>
   );
 }
