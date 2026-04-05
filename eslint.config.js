@@ -120,6 +120,11 @@ export default tseslint.config(
               group: ["*/index"],
               message: "Import from the directory directly without /index.",
             },
+            {
+              group: ["@web/features/**/*Page"],
+              message:
+                "Page components (*Page) must live in app/pages/, not in features/.",
+            },
           ],
         },
       ],

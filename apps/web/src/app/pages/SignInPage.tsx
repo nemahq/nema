@@ -5,13 +5,12 @@ import { Button, Input, Separator } from "@nema-io/weave";
 import { LoaderCircle, Mail } from "@nema-io/weave/icons";
 
 import NemaLogo from "@web/assets/nema-logo.svg";
+import { GoogleIcon } from "@web/features/auth";
 import { useAuth } from "@web/hooks/useAuth";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { GoogleIcon } from "./GoogleIcon";
-
-export function AuthPage() {
+export function SignInPage() {
   const search = useSearch({ from: "/signin" });
   const navigate = useNavigate();
   const { user } = useAuth();
