@@ -29,6 +29,32 @@ const TAB_HOTKEYS = Array.from(
 
 const TAB_DND_TYPE = "application/x-nema-tab";
 
+interface TabDragData {
+  tabId: string;
+  sourcePaneId: string;
+}
+
+function parseDragData(e: React.DragEvent): TabDragData | null {
+  const raw = e.dataTransfer.getData(TAB_DND_TYPE);
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof (parsed as Record<string, unknown>).tabId !== "string" ||
+      typeof (parsed as Record<string, unknown>).sourcePaneId !== "string"
+    ) {
+      return null;
+    }
+    return parsed as TabDragData;
+  } catch {
+    return null;
+  }
+}
+
 function ContentPanelInner() {
   const { setTabOrder: syncTabOrder } = useContentTab();
   const {
@@ -109,11 +135,19 @@ function ContentPanelInner() {
       if (!isDragging) {
         return;
       }
-      function onDragEnd() {
+      function clearDragging() {
         setIsDragging(false);
       }
-      document.addEventListener("dragend", onDragEnd);
-      return () => document.removeEventListener("dragend", onDragEnd);
+      document.addEventListener("dragend", clearDragging);
+      document.addEventListener("drop", clearDragging);
+      document.addEventListener("pointerdown", clearDragging);
+      document.addEventListener("visibilitychange", clearDragging);
+      return () => {
+        document.removeEventListener("dragend", clearDragging);
+        document.removeEventListener("drop", clearDragging);
+        document.removeEventListener("pointerdown", clearDragging);
+        document.removeEventListener("visibilitychange", clearDragging);
+      };
     },
     [isDragging],
   );
@@ -124,14 +158,11 @@ function ContentPanelInner() {
       position: DropPosition,
       e: React.DragEvent,
     ) {
-      const raw = e.dataTransfer.getData(TAB_DND_TYPE);
-      if (!raw) {
+      const parsed = parseDragData(e);
+      if (!parsed) {
         return;
       }
-      const { tabId, sourcePaneId } = JSON.parse(raw) as {
-        tabId: string;
-        sourcePaneId: string;
-      };
+      const { tabId, sourcePaneId } = parsed;
 
       if (position === "center") {
         if (sourcePaneId !== targetPaneId) {
@@ -142,7 +173,9 @@ function ContentPanelInner() {
           position === "left" || position === "right"
             ? "horizontal"
             : "vertical";
-        splitPaneWithTab(targetPaneId, tabId, direction);
+        const insertPosition =
+          position === "left" || position === "top" ? "before" : "after";
+        splitPaneWithTab(targetPaneId, tabId, direction, insertPosition);
       }
       setIsDragging(false);
     },
@@ -228,7 +261,6 @@ function ContentPanelInner() {
 
     return (
       <PaneTabbedPanel
-        paneId={paneId}
         tabs={paneTabs}
         activeTabId={paneActiveTabId}
         isFocused={paneId === focusedPaneId}
@@ -260,7 +292,6 @@ function ContentPanelInner() {
 }
 
 interface PaneTabbedPanelProps {
-  paneId: string;
   tabs: TabbedPanelTab[];
   activeTabId: string;
   isFocused: boolean;
@@ -311,7 +342,11 @@ function PaneTabbedPanel({
         onTabDrop={handleTabDrop}
       />
       {isDragging && (
-        <DropZoneOverlay disableEdges={disableEdges} onDrop={onDrop} />
+        <DropZoneOverlay
+          dragType={TAB_DND_TYPE}
+          disableEdges={disableEdges}
+          onDrop={onDrop}
+        />
       )}
     </div>
   );

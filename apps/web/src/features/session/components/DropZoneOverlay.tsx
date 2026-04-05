@@ -7,6 +7,7 @@ export type DropPosition = "top" | "bottom" | "left" | "right" | "center";
 const EDGE_THRESHOLD = 0.25;
 
 interface DropZoneOverlayProps {
+  dragType: string;
   onDrop: (position: DropPosition, e: React.DragEvent) => void;
   disableEdges?: boolean;
 }
@@ -16,7 +17,7 @@ function detectPosition(
   rect: DOMRect,
   disableEdges: boolean,
 ): DropPosition {
-  if (disableEdges) {
+  if (disableEdges || rect.width === 0 || rect.height === 0) {
     return "center";
   }
 
@@ -47,6 +48,7 @@ const POSITION_STYLE: Record<DropPosition, string> = {
 };
 
 export function DropZoneOverlay({
+  dragType,
   onDrop,
   disableEdges = false,
 }: DropZoneOverlayProps) {
@@ -57,6 +59,9 @@ export function DropZoneOverlay({
 
   const handleDragOver = useCallback(
     function handleDragOver(e: React.DragEvent) {
+      if (!e.dataTransfer.types.includes(dragType)) {
+        return;
+      }
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
       const rect = containerRef.current?.getBoundingClientRect();
@@ -65,7 +70,7 @@ export function DropZoneOverlay({
       }
       setActivePosition(detectPosition(e, rect, disableEdges));
     },
-    [disableEdges],
+    [dragType, disableEdges],
   );
 
   function handleDragLeave(e: React.DragEvent) {

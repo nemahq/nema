@@ -26,6 +26,24 @@ describe("insertLeaf", () => {
     });
   });
 
+  it("position=before일 때 새 leaf가 앞에 온다", () => {
+    const result = insertLeaf(
+      LEAF_A,
+      "a",
+      "b",
+      "branch-1",
+      "horizontal",
+      "before",
+    );
+
+    expect(result).toEqual({
+      type: "branch",
+      id: "branch-1",
+      direction: "horizontal",
+      children: [{ type: "leaf", id: "b" }, LEAF_A],
+    });
+  });
+
   it("대상이 없으면 트리를 그대로 반환한다", () => {
     const result = insertLeaf(LEAF_A, "nonexistent", "b", "br", "vertical");
 
