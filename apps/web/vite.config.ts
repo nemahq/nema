@@ -50,12 +50,20 @@ export default defineConfig({
       manifest: {
         name: "Nema",
         short_name: "Nema",
-        description: "AI-powered context management",
+        description: "Forget freely. Nema remembers",
         start_url: "/",
         display: "standalone",
         theme_color: "#0D9488",
-        background_color: "#ffffff",
-        // TODO: 앱 아이콘 추가 후 manifest.icons 설정
+        background_color: "#1c1917",
+        icons: [
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          {
+            src: "/icon-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any",
+          },
+        ],
       },
     }),
     sentryVitePlugin({

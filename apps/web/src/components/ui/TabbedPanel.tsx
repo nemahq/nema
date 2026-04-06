@@ -6,6 +6,7 @@ import { X } from "@nema-io/weave/icons";
 import type { TranslationKey } from "@web/lib/tolgee";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { NemaMarkIcon } from "./NemaMarkIcon";
 import { TabbedPanelLayout } from "./TabbedPanelLayout";
 
 type TabBase = {
@@ -106,9 +107,13 @@ export function TabbedPanel({
           {activeTabData?.content}
         </div>
       ) : (
-        <div className="flex flex-1 items-center justify-center text-fg-quaternary">
-          {/* TODO: 로고 에셋으로 교체 */}
-          <span className="text-lg font-semibold">Logo</span>
+        <div className="flex flex-1 items-center justify-center">
+          <NemaMarkIcon
+            width={140}
+            height={171}
+            fill="currentColor"
+            className="opacity-[0.06] dark:opacity-[0.08]"
+          />
         </div>
       )}
     </TabbedPanelLayout>
