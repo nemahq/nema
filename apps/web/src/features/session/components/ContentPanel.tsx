@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { cn } from "@nema-io/weave";
@@ -17,6 +17,8 @@ import { reconcileTabsWithPanes } from "@web/features/session/hooks/useTabPaneRe
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 
 import { ContentPanelSkeleton } from "./ContentPanelSkeleton";
+import type { DropPosition } from "./DropZoneOverlay";
+import { DropZoneOverlay } from "./DropZoneOverlay";
 
 const MAX_TAB_SHORTCUT = 9;
 
@@ -24,6 +26,34 @@ const TAB_HOTKEYS = Array.from(
   { length: MAX_TAB_SHORTCUT },
   (_, i) => `meta+${i + 1}, ctrl+${i + 1}`,
 ).join(", ");
+
+const TAB_DND_TYPE = "application/x-nema-tab";
+
+interface TabDragData {
+  tabId: string;
+  sourcePaneId: string;
+}
+
+function parseDragData(e: React.DragEvent): TabDragData | null {
+  const raw = e.dataTransfer.getData(TAB_DND_TYPE);
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof (parsed as Record<string, unknown>).tabId !== "string" ||
+      typeof (parsed as Record<string, unknown>).sourcePaneId !== "string"
+    ) {
+      return null;
+    }
+    return parsed as TabDragData;
+  } catch {
+    return null;
+  }
+}
 
 function ContentPanelInner() {
   const { setTabOrder: syncTabOrder } = useContentTab();
@@ -35,6 +65,8 @@ function ContentPanelInner() {
     setPaneActiveTab,
     setPaneMap,
     setSplitTree,
+    splitPaneWithTab,
+    moveTabToPane,
   } = useSplitPane();
 
   const draftTab = useDraftTab();
@@ -47,7 +79,6 @@ function ContentPanelInner() {
   );
   const tabMap = new Map(tabs.map((tab) => [tab.id, tab]));
 
-  // --- 탭-패인 재조정 ---
   const currentTabIds = new Set(tabs.map((t) => t.id));
   const reconciled = reconcileTabsWithPanes({
     currentTabIds,
@@ -64,7 +95,6 @@ function ContentPanelInner() {
     }
   }
 
-  // --- 전역 tabOrder 동기화 ---
   const leafIds = useMemo(
     function computeLeafIds() {
       return findLeafIds(splitTree);
@@ -85,7 +115,73 @@ function ContentPanelInner() {
     [globalTabOrder, syncTabOrder],
   );
 
-  // --- 포커스된 패인의 탭 ---
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleTabDragStart = useCallback(function handleTabDragStart(
+    paneId: string,
+    tabId: string,
+    e: React.DragEvent,
+  ) {
+    e.dataTransfer.setData(
+      TAB_DND_TYPE,
+      JSON.stringify({ tabId, sourcePaneId: paneId }),
+    );
+    e.dataTransfer.effectAllowed = "move";
+    setIsDragging(true);
+  }, []);
+
+  useEffect(
+    function listenDragEnd() {
+      if (!isDragging) {
+        return;
+      }
+      function clearDragging() {
+        setIsDragging(false);
+      }
+      document.addEventListener("dragend", clearDragging);
+      document.addEventListener("drop", clearDragging);
+      document.addEventListener("pointerdown", clearDragging);
+      document.addEventListener("visibilitychange", clearDragging);
+      return () => {
+        document.removeEventListener("dragend", clearDragging);
+        document.removeEventListener("drop", clearDragging);
+        document.removeEventListener("pointerdown", clearDragging);
+        document.removeEventListener("visibilitychange", clearDragging);
+      };
+    },
+    [isDragging],
+  );
+
+  const handlePaneDrop = useCallback(
+    function handlePaneDrop(
+      targetPaneId: string,
+      position: DropPosition,
+      e: React.DragEvent,
+    ) {
+      const parsed = parseDragData(e);
+      if (!parsed) {
+        return;
+      }
+      const { tabId, sourcePaneId } = parsed;
+
+      if (position === "center") {
+        if (sourcePaneId !== targetPaneId) {
+          moveTabToPane(tabId, targetPaneId);
+        }
+      } else {
+        const direction =
+          position === "left" || position === "right"
+            ? "horizontal"
+            : "vertical";
+        const insertPosition =
+          position === "left" || position === "top" ? "before" : "after";
+        splitPaneWithTab(targetPaneId, tabId, direction, insertPosition);
+      }
+      setIsDragging(false);
+    },
+    [moveTabToPane, splitPaneWithTab],
+  );
+
   const focusedPane = paneMap.get(focusedPaneId);
   const focusedTabs = focusedPane
     ? focusedPane.tabIds
@@ -97,7 +193,6 @@ function ContentPanelInner() {
     ? (tabMap.get(focusedPane.activeTabId) ?? focusedTabs[0])
     : undefined;
 
-  // --- 핫키: Cmd+1-9 → 포커스된 패인의 N번째 탭 ---
   useHotkeys(
     TAB_HOTKEYS,
     (e) => {
@@ -114,62 +209,81 @@ function ContentPanelInner() {
     },
   );
 
-  // --- 탭 닫기 → 포커스된 패인의 활성 탭 ---
   useRegisterAction("tab.close", {
     execute: () => focusedActiveTab?.onClose?.(),
     enabled: !!focusedActiveTab?.onClose,
   });
 
-  // --- 렌더링 ---
-  const isSinglePane = leafIds.length <= 1;
+  useRegisterAction("split.right", {
+    execute: () => {
+      if (focusedActiveTab) {
+        splitPaneWithTab(focusedPaneId, focusedActiveTab.id, "horizontal");
+      }
+    },
+    enabled: focusedTabs.length >= 2 && !!focusedActiveTab,
+  });
 
-  if (isSinglePane) {
-    const singlePaneTabs = leafIds[0]
-      ? (paneMap.get(leafIds[0])?.tabIds ?? [])
-          .map((id) => tabMap.get(id))
-          .filter((t): t is TabbedPanelTab => t !== undefined)
-      : tabs;
+  useRegisterAction("split.down", {
+    execute: () => {
+      if (focusedActiveTab) {
+        splitPaneWithTab(focusedPaneId, focusedActiveTab.id, "vertical");
+      }
+    },
+    enabled: focusedTabs.length >= 2 && !!focusedActiveTab,
+  });
 
-    const singlePaneState = leafIds[0] ? paneMap.get(leafIds[0]) : undefined;
-    const singleActiveTabId = singlePaneState
-      ? singlePaneState.activeTabId || singlePaneTabs[0]?.id || ""
-      : (tabs[0]?.id ?? "");
+  useRegisterAction("split.focusNextPane", {
+    execute: () => {
+      const currentIndex = leafIds.indexOf(focusedPaneId);
+      const nextIndex = (currentIndex + 1) % leafIds.length;
+      setFocusedPane(leafIds[nextIndex]);
+    },
+    enabled: leafIds.length > 1,
+  });
 
-    return (
-      <TabbedPanel
-        tabs={singlePaneTabs}
-        activeTabId={singleActiveTabId}
-        onActiveTabChange={(tabId) => {
-          if (leafIds[0]) {
-            setPaneActiveTab(leafIds[0], tabId);
-          }
-        }}
-      />
-    );
-  }
+  useRegisterAction("split.focusPrevPane", {
+    execute: () => {
+      const currentIndex = leafIds.indexOf(focusedPaneId);
+      const prevIndex = (currentIndex - 1 + leafIds.length) % leafIds.length;
+      setFocusedPane(leafIds[prevIndex]);
+    },
+    enabled: leafIds.length > 1,
+  });
 
-  const contentMap = new Map<string, React.ReactNode>();
-  for (const paneId of leafIds) {
+  function buildPaneContent(paneId: string) {
     const paneState = paneMap.get(paneId);
     const paneTabs = paneState
       ? paneState.tabIds
           .map((id) => tabMap.get(id))
           .filter((t): t is TabbedPanelTab => t !== undefined)
       : [];
-
     const paneActiveTabId = paneState?.activeTabId ?? paneTabs[0]?.id ?? "";
 
-    contentMap.set(
-      paneId,
+    return (
       <PaneTabbedPanel
-        paneId={paneId}
         tabs={paneTabs}
         activeTabId={paneActiveTabId}
         isFocused={paneId === focusedPaneId}
+        isDragging={isDragging}
+        disableEdges={paneTabs.length <= 1}
         onFocus={() => setFocusedPane(paneId)}
         onActiveTabChange={(tabId) => setPaneActiveTab(paneId, tabId)}
-      />,
+        onTabDragStart={(tabId, e) => handleTabDragStart(paneId, tabId, e)}
+        onDrop={(position, e) => handlePaneDrop(paneId, position, e)}
+      />
     );
+  }
+
+  const isSinglePane = leafIds.length <= 1;
+
+  if (isSinglePane) {
+    const singlePaneId = leafIds[0] ?? focusedPaneId;
+    return buildPaneContent(singlePaneId);
+  }
+
+  const contentMap = new Map<string, React.ReactNode>();
+  for (const paneId of leafIds) {
+    contentMap.set(paneId, buildPaneContent(paneId));
   }
 
   const hydratedTree = hydrate(splitTree, contentMap);
@@ -178,25 +292,43 @@ function ContentPanelInner() {
 }
 
 interface PaneTabbedPanelProps {
-  paneId: string;
   tabs: TabbedPanelTab[];
   activeTabId: string;
   isFocused: boolean;
+  isDragging: boolean;
+  disableEdges: boolean;
   onFocus: () => void;
   onActiveTabChange: (tabId: string) => void;
+  onTabDragStart: (tabId: string, e: React.DragEvent) => void;
+  onDrop: (position: DropPosition, e: React.DragEvent) => void;
 }
 
 function PaneTabbedPanel({
   tabs,
   activeTabId,
   isFocused,
+  isDragging,
+  disableEdges,
   onFocus,
   onActiveTabChange,
+  onTabDragStart,
+  onDrop,
 }: PaneTabbedPanelProps) {
+  function handleTabDragOver(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes(TAB_DND_TYPE)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    }
+  }
+
+  function handleTabDrop(e: React.DragEvent) {
+    onDrop("center", e);
+  }
+
   return (
     <div
       className={cn(
-        "flex flex-1 flex-col min-w-0 min-h-0",
+        "relative flex flex-1 flex-col min-w-0 min-h-0",
         isFocused && "ring-1 ring-inset ring-brand/30",
       )}
       onPointerDown={onFocus}
@@ -205,7 +337,17 @@ function PaneTabbedPanel({
         tabs={tabs}
         activeTabId={activeTabId}
         onActiveTabChange={onActiveTabChange}
+        onTabDragStart={onTabDragStart}
+        onTabDragOver={handleTabDragOver}
+        onTabDrop={handleTabDrop}
       />
+      {isDragging && (
+        <DropZoneOverlay
+          dragType={TAB_DND_TYPE}
+          disableEdges={disableEdges}
+          onDrop={onDrop}
+        />
+      )}
     </div>
   );
 }

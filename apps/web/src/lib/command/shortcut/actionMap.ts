@@ -27,6 +27,12 @@ const actionMap = {
   sidebar: {
     toggle: def("layout.toggle_sidebar", "mod+b", "global"),
   },
+  split: {
+    right: def("session.split_right", "mod+Backslash", "global"),
+    down: def("session.split_down", "mod+shift+Backslash", "global"),
+    focusNextPane: def("session.focus_next_pane", "alt+right", "global"),
+    focusPrevPane: def("session.focus_prev_pane", "alt+left", "global"),
+  },
   tab: {
     close: def("session.tab_close", "alt+w", "global"),
   },

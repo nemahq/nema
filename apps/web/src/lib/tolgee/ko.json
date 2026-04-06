@@ -63,6 +63,8 @@
     "empty_subheading_2": "나중에 찾으면 맥락까지 돌아와요.",
     "empty_subheading_3": "기억이 쌓일수록 더 잘 찾아줘요.",
     "focus_composer": "입력창 포커스",
+    "focus_next_pane": "다음 분할 영역",
+    "focus_prev_pane": "이전 분할 영역",
     "help": "단축키 가이드",
     "help_description": "단축키 목록 보기",
     "input_placeholder": "회의록, 아이디어, 메모 뭐든 좋아요",
@@ -89,6 +91,8 @@
     "save_queue_panel_hint": "이 페이지를 떠나도 저장은 계속돼요.",
     "save_queue_panel_partial_fail": "{completed}개 완료, {failed}개 실패",
     "save_queue_saving": "저장 중...",
+    "split_down": "하단으로 분할",
+    "split_right": "우측으로 분할",
     "status_answering": "답변 생성 중...",
     "status_draft_cancelled": "초안 취소됨",
     "status_draft_created": "초안 작성 완료",
@@ -125,6 +129,7 @@
     "category_draft": "초안",
     "category_navigation": "네비게이션",
     "category_sidebar": "사이드바",
+    "category_split": "분할",
     "category_stream": "AI 생성",
     "category_tab": "탭"
   }

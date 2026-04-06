@@ -15,28 +15,27 @@ export type SplitSkeletonBranch = Omit<SplitBranch, "children"> & {
 
 export type SplitSkeletonNode = SplitSkeletonLeaf | SplitSkeletonBranch;
 
-/** targetLeafId를 branch로 교체하여 [기존leaf, 새leaf]로 분할 */
+/** targetLeafId를 branch로 교체하여 분할. position으로 새 leaf의 삽입 위치를 제어 */
 export function insertLeaf(
   tree: SplitSkeletonNode,
   targetLeafId: string,
   newLeafId: string,
   branchId: string,
   direction: ResizeDirection,
+  position: "before" | "after" = "after",
 ): SplitSkeletonNode {
   if (tree.type === "leaf") {
     if (tree.id === targetLeafId) {
-      return {
-        type: "branch",
-        id: branchId,
-        direction,
-        children: [tree, { type: "leaf", id: newLeafId }],
-      };
+      const newLeaf: SplitSkeletonLeaf = { type: "leaf", id: newLeafId };
+      const children: [SplitSkeletonNode, SplitSkeletonNode] =
+        position === "before" ? [newLeaf, tree] : [tree, newLeaf];
+      return { type: "branch", id: branchId, direction, children };
     }
     return tree;
   }
 
   const nextChildren = tree.children.map((child) =>
-    insertLeaf(child, targetLeafId, newLeafId, branchId, direction),
+    insertLeaf(child, targetLeafId, newLeafId, branchId, direction, position),
   ) as [SplitSkeletonNode, SplitSkeletonNode, ...SplitSkeletonNode[]];
 
   if (nextChildren.every((child, i) => child === tree.children[i])) {

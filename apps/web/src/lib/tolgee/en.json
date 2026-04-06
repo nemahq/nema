@@ -63,6 +63,8 @@
     "empty_subheading_2": "The full context comes back when you ask.",
     "empty_subheading_3": "The more you save, the smarter it gets.",
     "focus_composer": "Focus composer",
+    "focus_next_pane": "Next Split",
+    "focus_prev_pane": "Previous Split",
     "help": "Shortcut guide",
     "help_description": "View shortcut list",
     "input_placeholder": "Meeting notes, ideas, memos, anything works",
@@ -89,6 +91,8 @@
     "save_queue_panel_hint": "Saving continues even if you leave this page.",
     "save_queue_panel_partial_fail": "{completed} saved, {failed} failed",
     "save_queue_saving": "Saving...",
+    "split_down": "Split Down",
+    "split_right": "Split Right",
     "status_answering": "Generating answer...",
     "status_draft_cancelled": "Draft cancelled",
     "status_draft_created": "Draft created",
@@ -125,6 +129,7 @@
     "category_draft": "Draft",
     "category_navigation": "Navigation",
     "category_sidebar": "Sidebar",
+    "category_split": "Split",
     "category_stream": "AI Generation",
     "category_tab": "Tab"
   }

@@ -41,6 +41,7 @@ interface SplitPaneContextValue {
     paneId: string,
     tabId: string,
     direction: ResizeDirection,
+    position?: "before" | "after",
   ) => void;
   closePane: (paneId: string) => void;
   moveTabToPane: (tabId: string, targetPaneId: string) => void;
@@ -94,6 +95,7 @@ export function SplitPaneProvider({ children }: SplitPaneProviderProps) {
       paneId: string,
       tabId: string,
       direction: ResizeDirection,
+      position: "before" | "after" = "after",
     ) {
       const newPaneId = crypto.randomUUID();
       const branchId = crypto.randomUUID();
@@ -103,6 +105,7 @@ export function SplitPaneProvider({ children }: SplitPaneProviderProps) {
         newPaneId,
         branchId,
         direction,
+        position,
       );
 
       const nextPaneMap = new Map(paneMap);
