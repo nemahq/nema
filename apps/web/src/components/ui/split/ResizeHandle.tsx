@@ -48,12 +48,17 @@ export function ResizeHandle({
       }
     }
 
+    const cursorClass = isHorizontal
+      ? "cursor-col-resize"
+      : "cursor-row-resize";
+
     function cleanup() {
       document.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("pointerup", onPointerUp);
       document.removeEventListener("pointercancel", onPointerUp);
-      document.body.style.cursor = "";
+      document.documentElement.style.cursor = "";
       document.body.style.userSelect = "";
+      document.documentElement.classList.remove(cursorClass);
       cleanupRef.current = null;
     }
 
@@ -61,8 +66,9 @@ export function ResizeHandle({
       cleanup();
     }
 
-    document.body.style.cursor = cursorStyle;
+    document.documentElement.style.cursor = cursorStyle;
     document.body.style.userSelect = "none";
+    document.documentElement.classList.add(cursorClass);
     document.addEventListener("pointermove", onPointerMove);
     document.addEventListener("pointerup", onPointerUp);
     document.addEventListener("pointercancel", onPointerUp);
@@ -94,13 +100,12 @@ export function ResizeHandle({
       onPointerDown={handlePointerDown}
       onKeyDown={handleKeyDown}
       className={cn(
-        "relative z-10 shrink-0 touch-none select-none",
-        "before:absolute before:border-border/50 before:transition-colors before:duration-fast",
-        "hover:before:border-brand active:before:border-brand",
-        "focus-visible:before:border-brand focus-visible:outline-none",
+        "relative z-10 shrink-0 touch-none select-none bg-border/50",
+        "hover:bg-brand active:bg-brand",
+        "focus-visible:bg-brand focus-visible:outline-none",
         isHorizontal
-          ? "w-0 cursor-col-resize before:inset-y-0 before:-left-px before:border-l -mx-1 px-1"
-          : "h-0 cursor-row-resize before:inset-x-0 before:-top-px before:border-t -my-1 py-1",
+          ? "w-px cursor-col-resize -mx-px px-px"
+          : "h-px cursor-row-resize -my-px py-px",
       )}
     />
   );
