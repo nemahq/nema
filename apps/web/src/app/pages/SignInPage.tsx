@@ -77,7 +77,7 @@ export function SignInPage() {
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface p-4">
-      <div className="flex w-full max-w-sm flex-col items-center gap-8">
+      <div className="flex w-full max-w-sm flex-col items-center gap-5">
         <div className="flex flex-col items-center gap-3">
           <svg
             width="48"
