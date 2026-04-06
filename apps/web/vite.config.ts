@@ -51,7 +51,7 @@ export default defineConfig({
       manifest: {
         name: "Nema",
         short_name: "Nema",
-        description: "It's okay to forget — Nema will remember for you",
+        description: "Forget freely. Nema remembers",
         start_url: "/",
         display: "standalone",
         theme_color: "#0D9488",
