@@ -155,18 +155,18 @@ function ContentPanelInner() {
       }
       const { tabId, sourcePaneId } = parsed;
 
+      const sourcePane = paneMap.get(sourcePaneId);
+      if (!sourcePane || !sourcePane.tabIds.includes(tabId)) {
+        return;
+      }
+
       if (position === "center") {
         if (sourcePaneId !== targetPaneId) {
           moveTabToPane(tabId, targetPaneId);
         }
       } else {
         // 같은 패인 + 유일한 탭이면 분할 불가 (source가 비어서 즉시 해제됨)
-        const sourcePane = paneMap.get(sourcePaneId);
-        if (
-          sourcePaneId === targetPaneId &&
-          sourcePane &&
-          sourcePane.tabIds.length <= 1
-        ) {
+        if (sourcePaneId === targetPaneId && sourcePane.tabIds.length <= 1) {
           return;
         }
         const direction =

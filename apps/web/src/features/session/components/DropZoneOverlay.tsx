@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@nema-io/weave";
 
@@ -47,6 +47,15 @@ export function useDropZone(dragType: string, disableEdges: boolean) {
   );
   const containerRef = useRef<HTMLDivElement>(null);
   const dragEnterCountRef = useRef(0);
+
+  useEffect(function resetOnDragEnd() {
+    function handleDragEnd() {
+      dragEnterCountRef.current = 0;
+      setActivePosition(null);
+    }
+    document.addEventListener("dragend", handleDragEnd);
+    return () => document.removeEventListener("dragend", handleDragEnd);
+  }, []);
 
   function handleDragEnter(e: React.DragEvent) {
     if (!e.dataTransfer.types.includes(dragType)) {

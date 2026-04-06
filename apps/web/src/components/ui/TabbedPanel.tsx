@@ -111,6 +111,11 @@ function DraggableTab({
     onTabDrop?.(e, tab.id);
   }
 
+  function handleDragEnd() {
+    dragEnterCount.current = 0;
+    setDropSide(null);
+  }
+
   return (
     <div
       ref={ref}
@@ -135,6 +140,7 @@ function DraggableTab({
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onDragEnd={handleDragEnd}
     >
       <button
         type="button"

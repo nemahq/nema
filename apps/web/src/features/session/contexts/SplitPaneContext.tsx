@@ -115,24 +115,26 @@ export function SplitPaneProvider({ children }: SplitPaneProviderProps) {
       const nextPaneMap = new Map(paneMap);
 
       const sourcePane = nextPaneMap.get(actualSourcePaneId);
-      if (sourcePane) {
-        const nextTabIds = sourcePane.tabIds.filter((id) => id !== tabId);
-        if (nextTabIds.length === 0) {
-          nextPaneMap.delete(actualSourcePaneId);
-          const pruned = removeLeaf(nextTree, actualSourcePaneId);
-          if (pruned) {
-            nextTree = pruned;
-          }
-        } else {
-          nextPaneMap.set(actualSourcePaneId, {
-            tabIds: nextTabIds,
-            activeTabId: nextActiveAfterRemoval(
-              nextTabIds,
-              sourcePane.activeTabId,
-              tabId,
-            ),
-          });
+      if (!sourcePane) {
+        return;
+      }
+
+      const nextTabIds = sourcePane.tabIds.filter((id) => id !== tabId);
+      if (nextTabIds.length === 0) {
+        nextPaneMap.delete(actualSourcePaneId);
+        const pruned = removeLeaf(nextTree, actualSourcePaneId);
+        if (pruned) {
+          nextTree = pruned;
         }
+      } else {
+        nextPaneMap.set(actualSourcePaneId, {
+          tabIds: nextTabIds,
+          activeTabId: nextActiveAfterRemoval(
+            nextTabIds,
+            sourcePane.activeTabId,
+            tabId,
+          ),
+        });
       }
 
       nextPaneMap.set(newPaneId, { tabIds: [tabId], activeTabId: tabId });
@@ -258,6 +260,13 @@ export function SplitPaneProvider({ children }: SplitPaneProviderProps) {
     function reorderTabsInPane(paneId: string, tabIds: string[]) {
       const pane = paneMap.get(paneId);
       if (!pane) {
+        return;
+      }
+      const currentSet = new Set(pane.tabIds);
+      if (
+        tabIds.length !== pane.tabIds.length ||
+        !tabIds.every((id) => currentSet.has(id))
+      ) {
         return;
       }
       const nextPaneMap = new Map(paneMap);

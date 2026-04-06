@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 interface TabbedPanelLayoutProps {
   header: ReactNode;
   onHeaderDragOver?: (e: React.DragEvent) => void;
-  onHeaderDrop?: (e: React.DragEvent) => void;
   overlay?: ReactNode;
   children: ReactNode;
 }
@@ -11,7 +10,6 @@ interface TabbedPanelLayoutProps {
 export function TabbedPanelLayout({
   header,
   onHeaderDragOver,
-  onHeaderDrop,
   overlay,
   children,
 }: TabbedPanelLayoutProps) {
@@ -26,7 +24,6 @@ export function TabbedPanelLayout({
           onHeaderDragOver?.(e);
         }}
         onDragEnter={(e) => e.stopPropagation()}
-        onDrop={onHeaderDrop}
       >
         {header}
       </div>
