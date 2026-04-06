@@ -42,6 +42,7 @@ interface SplitPaneContextValue {
     tabId: string,
     direction: ResizeDirection,
     position?: "before" | "after",
+    sourcePaneId?: string,
   ) => void;
   closePane: (paneId: string) => void;
   moveTabToPane: (tabId: string, targetPaneId: string) => void;
@@ -49,6 +50,7 @@ interface SplitPaneContextValue {
   setPaneActiveTab: (paneId: string, tabId: string) => void;
   // ContentPanel 재조정(reconciliation) 전용. 일반 소비자는 splitPaneWithTab/closePane/moveTabToPane 사용
   setSplitTree: (tree: SplitSkeletonNode) => void;
+  reorderTabsInPane: (paneId: string, tabIds: string[]) => void;
   setPaneMap: (paneMap: Map<string, PaneState>) => void;
 }
 
@@ -96,7 +98,9 @@ export function SplitPaneProvider({ children }: SplitPaneProviderProps) {
       tabId: string,
       direction: ResizeDirection,
       position: "before" | "after" = "after",
+      sourcePaneId?: string,
     ) {
+      const actualSourcePaneId = sourcePaneId ?? paneId;
       const newPaneId = crypto.randomUUID();
       const branchId = crypto.randomUUID();
       let nextTree = insertLeaf(
@@ -110,17 +114,17 @@ export function SplitPaneProvider({ children }: SplitPaneProviderProps) {
 
       const nextPaneMap = new Map(paneMap);
 
-      const sourcePane = nextPaneMap.get(paneId);
+      const sourcePane = nextPaneMap.get(actualSourcePaneId);
       if (sourcePane) {
         const nextTabIds = sourcePane.tabIds.filter((id) => id !== tabId);
         if (nextTabIds.length === 0) {
-          nextPaneMap.delete(paneId);
-          const pruned = removeLeaf(nextTree, paneId);
+          nextPaneMap.delete(actualSourcePaneId);
+          const pruned = removeLeaf(nextTree, actualSourcePaneId);
           if (pruned) {
             nextTree = pruned;
           }
         } else {
-          nextPaneMap.set(paneId, {
+          nextPaneMap.set(actualSourcePaneId, {
             tabIds: nextTabIds,
             activeTabId: nextActiveAfterRemoval(
               nextTabIds,
@@ -250,6 +254,20 @@ export function SplitPaneProvider({ children }: SplitPaneProviderProps) {
     [paneMap, splitTree, focusedPaneId, setSplitLayout],
   );
 
+  const reorderTabsInPane = useCallback(
+    function reorderTabsInPane(paneId: string, tabIds: string[]) {
+      const pane = paneMap.get(paneId);
+      if (!pane) {
+        return;
+      }
+      const nextPaneMap = new Map(paneMap);
+      nextPaneMap.set(paneId, { ...pane, tabIds });
+      setPaneMapState(nextPaneMap);
+      setSplitLayout({ tree: splitTree, paneMap: nextPaneMap, focusedPaneId });
+    },
+    [paneMap, splitTree, focusedPaneId, setSplitLayout],
+  );
+
   const setSplitTree = useCallback(function setSplitTree(
     tree: SplitSkeletonNode,
   ) {
@@ -273,6 +291,7 @@ export function SplitPaneProvider({ children }: SplitPaneProviderProps) {
         moveTabToPane,
         setFocusedPane,
         setPaneActiveTab,
+        reorderTabsInPane,
         setSplitTree,
         setPaneMap,
       }}

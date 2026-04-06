@@ -1,7 +1,5 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-
-import { cn } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
@@ -18,7 +16,7 @@ import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 
 import { ContentPanelSkeleton } from "./ContentPanelSkeleton";
 import type { DropPosition } from "./DropZoneOverlay";
-import { DropZoneOverlay } from "./DropZoneOverlay";
+import { DropZoneHighlight, useDropZone } from "./DropZoneOverlay";
 
 const MAX_TAB_SHORTCUT = 9;
 
@@ -63,6 +61,7 @@ function ContentPanelInner() {
     focusedPaneId,
     setFocusedPane,
     setPaneActiveTab,
+    reorderTabsInPane,
     setPaneMap,
     setSplitTree,
     splitPaneWithTab,
@@ -79,21 +78,38 @@ function ContentPanelInner() {
   );
   const tabMap = new Map(tabs.map((tab) => [tab.id, tab]));
 
-  const currentTabIds = new Set(tabs.map((t) => t.id));
-  const reconciled = reconcileTabsWithPanes({
-    currentTabIds,
-    paneMap,
-    splitTree,
-    focusedPaneId,
-  });
+  const currentTabIdsKey = tabs.map((t) => t.id).join(",");
 
-  if (reconciled.changed) {
-    setPaneMap(reconciled.paneMap);
-    setSplitTree(reconciled.splitTree);
-    if (reconciled.focusedPaneId !== focusedPaneId) {
-      setFocusedPane(reconciled.focusedPaneId);
-    }
-  }
+  useEffect(
+    function reconcileTabPaneState() {
+      const currentTabIds = new Set(
+        currentTabIdsKey.split(",").filter(Boolean),
+      );
+      const reconciled = reconcileTabsWithPanes({
+        currentTabIds,
+        paneMap,
+        splitTree,
+        focusedPaneId,
+      });
+
+      if (reconciled.changed) {
+        setPaneMap(reconciled.paneMap);
+        setSplitTree(reconciled.splitTree);
+        if (reconciled.focusedPaneId !== focusedPaneId) {
+          setFocusedPane(reconciled.focusedPaneId);
+        }
+      }
+    },
+    [
+      currentTabIdsKey,
+      paneMap,
+      splitTree,
+      focusedPaneId,
+      setPaneMap,
+      setSplitTree,
+      setFocusedPane,
+    ],
+  );
 
   const leafIds = useMemo(
     function computeLeafIds() {
@@ -115,8 +131,6 @@ function ContentPanelInner() {
     [globalTabOrder, syncTabOrder],
   );
 
-  const [isDragging, setIsDragging] = useState(false);
-
   const handleTabDragStart = useCallback(function handleTabDragStart(
     paneId: string,
     tabId: string,
@@ -127,30 +141,7 @@ function ContentPanelInner() {
       JSON.stringify({ tabId, sourcePaneId: paneId }),
     );
     e.dataTransfer.effectAllowed = "move";
-    setIsDragging(true);
   }, []);
-
-  useEffect(
-    function listenDragEnd() {
-      if (!isDragging) {
-        return;
-      }
-      function clearDragging() {
-        setIsDragging(false);
-      }
-      document.addEventListener("dragend", clearDragging);
-      document.addEventListener("drop", clearDragging);
-      document.addEventListener("pointerdown", clearDragging);
-      document.addEventListener("visibilitychange", clearDragging);
-      return () => {
-        document.removeEventListener("dragend", clearDragging);
-        document.removeEventListener("drop", clearDragging);
-        document.removeEventListener("pointerdown", clearDragging);
-        document.removeEventListener("visibilitychange", clearDragging);
-      };
-    },
-    [isDragging],
-  );
 
   const handlePaneDrop = useCallback(
     function handlePaneDrop(
@@ -169,17 +160,31 @@ function ContentPanelInner() {
           moveTabToPane(tabId, targetPaneId);
         }
       } else {
+        // 같은 패인 + 유일한 탭이면 분할 불가 (source가 비어서 즉시 해제됨)
+        const sourcePane = paneMap.get(sourcePaneId);
+        if (
+          sourcePaneId === targetPaneId &&
+          sourcePane &&
+          sourcePane.tabIds.length <= 1
+        ) {
+          return;
+        }
         const direction =
           position === "left" || position === "right"
             ? "horizontal"
             : "vertical";
         const insertPosition =
           position === "left" || position === "top" ? "before" : "after";
-        splitPaneWithTab(targetPaneId, tabId, direction, insertPosition);
+        splitPaneWithTab(
+          targetPaneId,
+          tabId,
+          direction,
+          insertPosition,
+          sourcePaneId,
+        );
       }
-      setIsDragging(false);
     },
-    [moveTabToPane, splitPaneWithTab],
+    [moveTabToPane, splitPaneWithTab, paneMap],
   );
 
   const focusedPane = paneMap.get(focusedPaneId);
@@ -261,15 +266,16 @@ function ContentPanelInner() {
 
     return (
       <PaneTabbedPanel
+        paneId={paneId}
         tabs={paneTabs}
         activeTabId={paneActiveTabId}
-        isFocused={paneId === focusedPaneId}
-        isDragging={isDragging}
-        disableEdges={paneTabs.length <= 1}
+        isFocused={isSinglePane ? undefined : paneId === focusedPaneId}
+        disableEdges={false}
         onFocus={() => setFocusedPane(paneId)}
         onActiveTabChange={(tabId) => setPaneActiveTab(paneId, tabId)}
         onTabDragStart={(tabId, e) => handleTabDragStart(paneId, tabId, e)}
         onDrop={(position, e) => handlePaneDrop(paneId, position, e)}
+        onReorderTabs={(tabIds) => reorderTabsInPane(paneId, tabIds)}
       />
     );
   }
@@ -292,28 +298,39 @@ function ContentPanelInner() {
 }
 
 interface PaneTabbedPanelProps {
+  paneId: string;
   tabs: TabbedPanelTab[];
   activeTabId: string;
-  isFocused: boolean;
-  isDragging: boolean;
+  isFocused?: boolean;
   disableEdges: boolean;
   onFocus: () => void;
   onActiveTabChange: (tabId: string) => void;
   onTabDragStart: (tabId: string, e: React.DragEvent) => void;
   onDrop: (position: DropPosition, e: React.DragEvent) => void;
+  onReorderTabs: (tabIds: string[]) => void;
 }
 
 function PaneTabbedPanel({
+  paneId,
   tabs,
   activeTabId,
   isFocused,
-  isDragging,
   disableEdges,
   onFocus,
   onActiveTabChange,
   onTabDragStart,
   onDrop,
+  onReorderTabs,
 }: PaneTabbedPanelProps) {
+  const { containerRef, activePosition, resetDrag, containerProps } =
+    useDropZone(TAB_DND_TYPE, disableEdges);
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    resetDrag();
+    onDrop(activePosition ?? "center", e);
+  }
+
   function handleTabDragOver(e: React.DragEvent) {
     if (e.dataTransfer.types.includes(TAB_DND_TYPE)) {
       e.preventDefault();
@@ -321,33 +338,47 @@ function PaneTabbedPanel({
     }
   }
 
-  function handleTabDrop(e: React.DragEvent) {
-    onDrop("center", e);
+  function handleTabDrop(e: React.DragEvent, dropTargetTabId: string) {
+    e.preventDefault();
+    resetDrag();
+    const parsed = parseDragData(e);
+    if (!parsed) {
+      return;
+    }
+    if (parsed.sourcePaneId === paneId) {
+      const currentOrder = tabs.map((t) => t.id);
+      const fromIndex = currentOrder.indexOf(parsed.tabId);
+      const toIndex = currentOrder.indexOf(dropTargetTabId);
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) {
+        return;
+      }
+      const next = [...currentOrder];
+      next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, parsed.tabId);
+      onReorderTabs(next);
+    } else {
+      onDrop("center", e);
+    }
   }
 
   return (
     <div
-      className={cn(
-        "relative flex flex-1 flex-col min-w-0 min-h-0",
-        isFocused && "ring-1 ring-inset ring-brand/30",
-      )}
+      ref={containerRef}
+      className="relative flex flex-1 flex-col min-w-0 min-h-0"
       onPointerDown={onFocus}
+      onDrop={handleDrop}
+      {...containerProps}
     >
       <TabbedPanel
         tabs={tabs}
         activeTabId={activeTabId}
         onActiveTabChange={onActiveTabChange}
+        focused={isFocused}
         onTabDragStart={onTabDragStart}
         onTabDragOver={handleTabDragOver}
         onTabDrop={handleTabDrop}
+        overlay={<DropZoneHighlight activePosition={activePosition} />}
       />
-      {isDragging && (
-        <DropZoneOverlay
-          dragType={TAB_DND_TYPE}
-          disableEdges={disableEdges}
-          onDrop={onDrop}
-        />
-      )}
     </div>
   );
 }

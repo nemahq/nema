@@ -1,16 +1,10 @@
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { cn } from "@nema-io/weave";
 
 export type DropPosition = "top" | "bottom" | "left" | "right" | "center";
 
-const EDGE_THRESHOLD = 0.25;
-
-interface DropZoneOverlayProps {
-  dragType: string;
-  onDrop: (position: DropPosition, e: React.DragEvent) => void;
-  disableEdges?: boolean;
-}
+const EDGE_THRESHOLD = 0.3;
 
 function detectPosition(
   e: React.DragEvent,
@@ -40,75 +34,88 @@ function detectPosition(
 }
 
 const POSITION_STYLE: Record<DropPosition, string> = {
-  top: "inset-x-0 top-0 h-1/4",
-  bottom: "inset-x-0 bottom-0 h-1/4",
-  left: "inset-y-0 left-0 w-1/4",
-  right: "inset-y-0 right-0 w-1/4",
+  top: "inset-x-0 top-0 h-1/2",
+  bottom: "inset-x-0 bottom-0 h-1/2",
+  left: "inset-y-0 left-0 w-1/2",
+  right: "inset-y-0 right-0 w-1/2",
   center: "inset-0",
 };
 
-export function DropZoneOverlay({
-  dragType,
-  onDrop,
-  disableEdges = false,
-}: DropZoneOverlayProps) {
+export function useDropZone(dragType: string, disableEdges: boolean) {
   const [activePosition, setActivePosition] = useState<DropPosition | null>(
     null,
   );
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragEnterCountRef = useRef(0);
 
-  const handleDragOver = useCallback(
-    function handleDragOver(e: React.DragEvent) {
-      if (!e.dataTransfer.types.includes(dragType)) {
-        return;
-      }
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
+  function handleDragEnter(e: React.DragEvent) {
+    if (!e.dataTransfer.types.includes(dragType)) {
+      return;
+    }
+    dragEnterCountRef.current += 1;
+    if (dragEnterCountRef.current === 1) {
       const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) {
-        return;
+      if (rect) {
+        setActivePosition(detectPosition(e, rect, disableEdges));
       }
-      setActivePosition(detectPosition(e, rect, disableEdges));
-    },
-    [dragType, disableEdges],
-  );
-
-  function handleDragLeave(e: React.DragEvent) {
-    if (
-      containerRef.current &&
-      !containerRef.current.contains(e.relatedTarget as Node)
-    ) {
-      setActivePosition(null);
     }
   }
 
-  function handleDrop(e: React.DragEvent) {
+  function handleDragOver(e: React.DragEvent) {
+    if (!e.dataTransfer.types.includes(dragType)) {
+      return;
+    }
     e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) {
       return;
     }
-    const position = detectPosition(e, rect, disableEdges);
+    setActivePosition(detectPosition(e, rect, disableEdges));
+  }
+
+  function handleDragLeave() {
+    dragEnterCountRef.current -= 1;
+    if (dragEnterCountRef.current <= 0) {
+      dragEnterCountRef.current = 0;
+      setActivePosition(null);
+    }
+  }
+
+  function resetDrag() {
+    dragEnterCountRef.current = 0;
     setActivePosition(null);
-    onDrop(position, e);
+  }
+
+  return {
+    containerRef,
+    activePosition,
+    resetDrag,
+    containerProps: {
+      onDragEnter: handleDragEnter,
+      onDragOver: handleDragOver,
+      onDragLeave: handleDragLeave,
+    },
+  };
+}
+
+interface DropZoneHighlightProps {
+  activePosition: DropPosition | null;
+}
+
+export function DropZoneHighlight({ activePosition }: DropZoneHighlightProps) {
+  if (!activePosition) {
+    return null;
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0 z-20"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      {activePosition && (
-        <div
-          className={cn(
-            "absolute rounded bg-brand/15 transition-all duration-fast",
-            POSITION_STYLE[activePosition],
-          )}
-        />
-      )}
+    <div className="pointer-events-none absolute inset-0 z-20">
+      <div
+        className={cn(
+          "absolute bg-fg-primary/10 transition-all duration-fast",
+          POSITION_STYLE[activePosition],
+        )}
+      />
     </div>
   );
 }
