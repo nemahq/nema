@@ -19,6 +19,7 @@ type StorageMap = {
   chatDrafts: JsonRecord;
   chatMode: ChatMode;
   openRetrievalTabs: JsonRecord;
+  splitLayout: JsonRecord;
 };
 
 const isValid: {
@@ -30,6 +31,7 @@ const isValid: {
   chatDrafts: isJsonRecord,
   chatMode: isChatMode,
   openRetrievalTabs: isJsonRecord,
+  splitLayout: isJsonRecord,
 };
 
 export function getStorage<K extends keyof StorageMap>(

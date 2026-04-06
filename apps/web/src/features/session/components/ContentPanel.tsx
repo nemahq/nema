@@ -1,14 +1,19 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+
+import { cn } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
+import { findLeafIds, hydrate, SplitContainer } from "@web/components/ui/split";
 import type { TabbedPanelTab } from "@web/components/ui/TabbedPanel";
 import { TabbedPanel } from "@web/components/ui/TabbedPanel";
 import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
+import { useSplitPane } from "@web/features/session/contexts/SplitPaneContext";
 import { useDraftTab } from "@web/features/session/hooks/useDraftTab";
 import { useHelpTab } from "@web/features/session/hooks/useHelpTab";
 import { useRetrievalTabs } from "@web/features/session/hooks/useRetrievalTabs";
+import { reconcileTabsWithPanes } from "@web/features/session/hooks/useTabPaneReconciliation";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 
 import { ContentPanelSkeleton } from "./ContentPanelSkeleton";
@@ -22,6 +27,16 @@ const TAB_HOTKEYS = Array.from(
 
 function ContentPanelInner() {
   const { setTabOrder: syncTabOrder } = useContentTab();
+  const {
+    splitTree,
+    paneMap,
+    focusedPaneId,
+    setFocusedPane,
+    setPaneActiveTab,
+    setPaneMap,
+    setSplitTree,
+  } = useSplitPane();
+
   const draftTab = useDraftTab();
   const retrievalTabs = useRetrievalTabs();
   const helpTab = useHelpTab();
@@ -30,73 +45,168 @@ function ContentPanelInner() {
   const tabs: TabbedPanelTab[] = allTabs.filter(
     (tab): tab is TabbedPanelTab => tab !== undefined,
   );
+  const tabMap = new Map(tabs.map((tab) => [tab.id, tab]));
 
-  const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? "");
-  const [tabOrder, setTabOrder] = useState<string[]>(() =>
-    tabs.map((tab) => tab.id),
-  );
+  // --- 탭-패인 재조정 ---
+  const currentTabIds = new Set(tabs.map((t) => t.id));
+  const reconciled = reconcileTabsWithPanes({
+    currentTabIds,
+    paneMap,
+    splitTree,
+    focusedPaneId,
+  });
 
-  const currentIds = new Set(tabs.map((tab) => tab.id));
-  const newIds = tabs
-    .map((tab) => tab.id)
-    .filter((id) => !tabOrder.includes(id));
-  const kept = tabOrder.filter((id) => currentIds.has(id));
-  const needsUpdate = newIds.length > 0 || kept.length !== tabOrder.length;
-
-  if (needsUpdate) {
-    const nextOrder = [...kept, ...newIds];
-    setTabOrder(nextOrder);
-    if (newIds.length > 0) {
-      setActiveTab(newIds[newIds.length - 1]);
-    } else if (!currentIds.has(activeTab)) {
-      const prevIndex = tabOrder.indexOf(activeTab);
-      const neighbor =
-        kept[Math.min(prevIndex, kept.length - 1)] ?? kept[0] ?? "";
-      setActiveTab(neighbor);
+  if (reconciled.changed) {
+    setPaneMap(reconciled.paneMap);
+    setSplitTree(reconciled.splitTree);
+    if (reconciled.focusedPaneId !== focusedPaneId) {
+      setFocusedPane(reconciled.focusedPaneId);
     }
   }
 
-  const orderedTabs = tabOrder
-    .map((id) => tabs.find((tab) => tab.id === id))
-    .filter((tab): tab is TabbedPanelTab => tab !== undefined);
+  // --- 전역 tabOrder 동기화 ---
+  const leafIds = useMemo(
+    function computeLeafIds() {
+      return findLeafIds(splitTree);
+    },
+    [splitTree],
+  );
+  const globalTabOrder = useMemo(
+    function computeGlobalTabOrder() {
+      return leafIds.flatMap((paneId) => paneMap.get(paneId)?.tabIds ?? []);
+    },
+    [leafIds, paneMap],
+  );
 
   useEffect(
     function syncTabOrderToContext() {
-      syncTabOrder(tabOrder);
+      syncTabOrder(globalTabOrder);
     },
-    [tabOrder, syncTabOrder],
+    [globalTabOrder, syncTabOrder],
   );
 
-  const activeTabData =
-    orderedTabs.find((tab) => tab.id === activeTab) ?? orderedTabs[0];
+  // --- 포커스된 패인의 탭 ---
+  const focusedPane = paneMap.get(focusedPaneId);
+  const focusedTabs = focusedPane
+    ? focusedPane.tabIds
+        .map((id) => tabMap.get(id))
+        .filter((t): t is TabbedPanelTab => t !== undefined)
+    : [];
 
+  const focusedActiveTab = focusedPane
+    ? (tabMap.get(focusedPane.activeTabId) ?? focusedTabs[0])
+    : undefined;
+
+  // --- 핫키: Cmd+1-9 → 포커스된 패인의 N번째 탭 ---
   useHotkeys(
     TAB_HOTKEYS,
     (e) => {
       e.preventDefault();
       const num = parseInt(e.key, 10);
-      const tab = orderedTabs[num - 1];
+      const tab = focusedTabs[num - 1];
       if (tab) {
-        setActiveTab(tab.id);
+        setPaneActiveTab(focusedPaneId, tab.id);
       }
     },
     {
-      enabled: orderedTabs.length > 1,
+      enabled: focusedTabs.length > 1,
       enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"],
     },
   );
 
+  // --- 탭 닫기 → 포커스된 패인의 활성 탭 ---
   useRegisterAction("tab.close", {
-    execute: () => activeTabData?.onClose?.(),
-    enabled: !!activeTabData?.onClose,
+    execute: () => focusedActiveTab?.onClose?.(),
+    enabled: !!focusedActiveTab?.onClose,
   });
 
+  // --- 렌더링 ---
+  const isSinglePane = leafIds.length <= 1;
+
+  if (isSinglePane) {
+    const singlePaneTabs = leafIds[0]
+      ? (paneMap.get(leafIds[0])?.tabIds ?? [])
+          .map((id) => tabMap.get(id))
+          .filter((t): t is TabbedPanelTab => t !== undefined)
+      : tabs;
+
+    const singlePaneState = leafIds[0] ? paneMap.get(leafIds[0]) : undefined;
+    const singleActiveTabId = singlePaneState
+      ? singlePaneState.activeTabId || singlePaneTabs[0]?.id || ""
+      : (tabs[0]?.id ?? "");
+
+    return (
+      <TabbedPanel
+        tabs={singlePaneTabs}
+        activeTabId={singleActiveTabId}
+        onActiveTabChange={(tabId) => {
+          if (leafIds[0]) {
+            setPaneActiveTab(leafIds[0], tabId);
+          }
+        }}
+      />
+    );
+  }
+
+  const contentMap = new Map<string, React.ReactNode>();
+  for (const paneId of leafIds) {
+    const paneState = paneMap.get(paneId);
+    const paneTabs = paneState
+      ? paneState.tabIds
+          .map((id) => tabMap.get(id))
+          .filter((t): t is TabbedPanelTab => t !== undefined)
+      : [];
+
+    const paneActiveTabId = paneState?.activeTabId ?? paneTabs[0]?.id ?? "";
+
+    contentMap.set(
+      paneId,
+      <PaneTabbedPanel
+        paneId={paneId}
+        tabs={paneTabs}
+        activeTabId={paneActiveTabId}
+        isFocused={paneId === focusedPaneId}
+        onFocus={() => setFocusedPane(paneId)}
+        onActiveTabChange={(tabId) => setPaneActiveTab(paneId, tabId)}
+      />,
+    );
+  }
+
+  const hydratedTree = hydrate(splitTree, contentMap);
+
+  return <SplitContainer root={hydratedTree} />;
+}
+
+interface PaneTabbedPanelProps {
+  paneId: string;
+  tabs: TabbedPanelTab[];
+  activeTabId: string;
+  isFocused: boolean;
+  onFocus: () => void;
+  onActiveTabChange: (tabId: string) => void;
+}
+
+function PaneTabbedPanel({
+  tabs,
+  activeTabId,
+  isFocused,
+  onFocus,
+  onActiveTabChange,
+}: PaneTabbedPanelProps) {
   return (
-    <TabbedPanel
-      tabs={orderedTabs}
-      activeTabId={activeTabData?.id ?? ""}
-      onActiveTabChange={setActiveTab}
-    />
+    <div
+      className={cn(
+        "flex flex-1 flex-col min-w-0 min-h-0",
+        isFocused && "ring-1 ring-inset ring-brand/30",
+      )}
+      onPointerDown={onFocus}
+    >
+      <TabbedPanel
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onActiveTabChange={onActiveTabChange}
+      />
+    </div>
   );
 }
 

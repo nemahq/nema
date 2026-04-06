@@ -1,7 +1,4 @@
 export { SplitContainer } from "./SplitContainer";
-export type {
-  ResizeDirection,
-  SplitBranch,
-  SplitLeaf,
-  SplitNode,
-} from "./types";
+export type { SplitSkeletonNode } from "./tree-ops";
+export { findLeafIds, hydrate, insertLeaf, removeLeaf } from "./tree-ops";
+export type { ResizeDirection } from "./types";
