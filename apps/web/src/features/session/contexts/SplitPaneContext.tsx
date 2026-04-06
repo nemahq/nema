@@ -15,7 +15,7 @@ import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import type { PaneState } from "@web/features/session/hooks/useSplitLayoutPersist";
 import { useSplitLayoutPersist } from "@web/features/session/hooks/useSplitLayoutPersist";
 
-export const DEFAULT_PANE_ID = "default-pane";
+const DEFAULT_PANE_ID = "default-pane";
 
 function nextActiveAfterRemoval(
   tabIds: string[],

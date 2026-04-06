@@ -9,7 +9,7 @@ export interface PaneState {
   activeTabId: string;
 }
 
-export interface SplitLayoutState {
+interface SplitLayoutState {
   tree: SplitSkeletonNode;
   paneMap: Map<string, PaneState>;
   focusedPaneId: string;
