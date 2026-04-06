@@ -377,8 +377,8 @@ function PaneTabbedPanel({
         onTabDragStart={onTabDragStart}
         onTabDragOver={handleTabDragOver}
         onTabDrop={handleTabDrop}
-        overlay={<DropZoneHighlight activePosition={activePosition} />}
       />
+      <DropZoneHighlight activePosition={activePosition} />
     </div>
   );
 }

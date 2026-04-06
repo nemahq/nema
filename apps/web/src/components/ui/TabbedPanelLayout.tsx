@@ -3,14 +3,12 @@ import type { ReactNode } from "react";
 interface TabbedPanelLayoutProps {
   header: ReactNode;
   onHeaderDragOver?: (e: React.DragEvent) => void;
-  overlay?: ReactNode;
   children: ReactNode;
 }
 
 export function TabbedPanelLayout({
   header,
   onHeaderDragOver,
-  overlay,
   children,
 }: TabbedPanelLayoutProps) {
   return (
@@ -29,7 +27,6 @@ export function TabbedPanelLayout({
       </div>
       <div className="relative flex flex-1 flex-col overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]">
         {children}
-        {overlay}
       </div>
     </main>
   );

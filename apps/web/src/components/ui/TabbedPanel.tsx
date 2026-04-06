@@ -26,7 +26,6 @@ interface TabbedPanelProps {
   onTabDragStart?: (tabId: string, e: React.DragEvent) => void;
   onTabDragOver?: (e: React.DragEvent) => void;
   onTabDrop?: (e: React.DragEvent, dropTargetTabId: string) => void;
-  overlay?: ReactNode;
 }
 
 function resolveLabel(
@@ -179,7 +178,6 @@ export function TabbedPanel({
   onTabDragStart,
   onTabDragOver,
   onTabDrop,
-  overlay,
 }: TabbedPanelProps) {
   const { t } = useTranslation();
 
@@ -216,7 +214,6 @@ export function TabbedPanel({
           : null
       }
       onHeaderDragOver={onTabDragOver}
-      overlay={overlay}
     >
       {tabs.length > 0 ? (
         <div role="tabpanel" id={`panel-${resolvedTab}`}>
