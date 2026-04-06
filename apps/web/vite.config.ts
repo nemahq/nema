@@ -44,7 +44,6 @@ export default defineConfig({
     VitePWA({
       // TODO: 캐시 전략 도입 시 'prompt'로 전환 검토
       registerType: "autoUpdate",
-      devOptions: { enabled: true },
       workbox: {
         maximumFileSizeToCacheInBytes: MAX_CACHE_FILE_SIZE_BYTES,
       },

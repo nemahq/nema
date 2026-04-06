@@ -25,12 +25,21 @@
       }
     </script>
     <title>Nema</title>
+    <!-- og:title, og:description은 크롤러 전용이라 JS로 갱신 불필요 -->
     <script>
-      if (navigator.language.startsWith("ko")) {
-        document.title = "네마";
-        document.querySelector('meta[name="description"]').content =
-          "잊어도 돼요, 네마가 기억할게요";
-      }
+      (function () {
+        try {
+          if (navigator.language.startsWith("ko")) {
+            document.addEventListener("DOMContentLoaded", function () {
+              document.title = "네마";
+              var meta = document.querySelector('meta[name="description"]');
+              if (meta) meta.content = "잊어도 돼요, 네마가 기억할게요";
+            });
+          }
+        } catch (_) {
+          /* locale override is non-critical; keep English defaults */
+        }
+      })();
     </script>
     <!-- surface-base: weave/src/tokens/index.css 의 palette-{light,dark}-surface-base 와 동기화 -->
     <style>
