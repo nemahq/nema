@@ -44,18 +44,27 @@ export default defineConfig({
     VitePWA({
       // TODO: 캐시 전략 도입 시 'prompt'로 전환 검토
       registerType: "autoUpdate",
+      devOptions: { enabled: true },
       workbox: {
         maximumFileSizeToCacheInBytes: MAX_CACHE_FILE_SIZE_BYTES,
       },
       manifest: {
         name: "Nema",
         short_name: "Nema",
-        description: "AI-powered context management",
+        description: "It's okay to forget — Nema will remember for you",
         start_url: "/",
         display: "standalone",
         theme_color: "#0D9488",
-        background_color: "#ffffff",
-        // TODO: 앱 아이콘 추가 후 manifest.icons 설정
+        background_color: "#1c1917",
+        icons: [
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          {
+            src: "/icon-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any",
+          },
+        ],
       },
     }),
     sentryVitePlugin({
