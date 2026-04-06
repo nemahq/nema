@@ -188,9 +188,7 @@ function PaneWithHandle({
   children,
 }: PaneWithHandleProps) {
   const isHorizontal = direction === "horizontal";
-  const style = isHorizontal
-    ? { width: `${ratio * 100}%` }
-    : { height: `${ratio * 100}%` };
+  const style = { flex: `${ratio} 1 0%` };
 
   const handleResizeForIndex = useCallback(
     function handleResizeForIndex(pixelDelta: number) {
@@ -203,7 +201,7 @@ function PaneWithHandle({
     <>
       <div
         className={cn(
-          "flex min-h-0 min-w-0",
+          "flex min-h-0 min-w-0 overflow-clip",
           isHorizontal ? "flex-row" : "flex-col",
         )}
         style={style}

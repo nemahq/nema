@@ -38,8 +38,9 @@ export function SidePanel({ children }: SidePanelProps) {
       dragging.current = false;
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
-      document.body.style.cursor = "";
+      document.documentElement.style.cursor = "";
       document.body.style.userSelect = "";
+      document.documentElement.classList.remove("cursor-col-resize");
       cleanupRef.current = null;
     }
 
@@ -47,8 +48,9 @@ export function SidePanel({ children }: SidePanelProps) {
       cleanup();
     }
 
-    document.body.style.cursor = "col-resize";
+    document.documentElement.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
+    document.documentElement.classList.add("cursor-col-resize");
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
     cleanupRef.current = cleanup;

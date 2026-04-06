@@ -18,3 +18,13 @@
 @utility nema-logo {
   @apply dark:brightness-0 dark:invert;
 }
+
+html.cursor-col-resize,
+html.cursor-col-resize * {
+  cursor: col-resize !important;
+}
+
+html.cursor-row-resize,
+html.cursor-row-resize * {
+  cursor: row-resize !important;
+}

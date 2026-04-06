@@ -21,8 +21,8 @@ const actionMap = {
   navigation: {
     focusComposer: def("session.focus_composer", "mod+l", "global"),
     newContext: def("session.new_context", "mod+shift+o", "global"),
-    prevSession: def("session.prev_session", "alt+up", "global"),
-    nextSession: def("session.next_session", "alt+down", "global"),
+    prevSession: def("session.prev_session", "mod+shift+up", "global"),
+    nextSession: def("session.next_session", "mod+shift+down", "global"),
   },
   sidebar: {
     toggle: def("layout.toggle_sidebar", "mod+b", "global"),
@@ -30,8 +30,12 @@ const actionMap = {
   split: {
     right: def("session.split_right", "mod+Backslash", "global"),
     down: def("session.split_down", "mod+shift+Backslash", "global"),
-    focusNextPane: def("session.focus_next_pane", "alt+right", "global"),
-    focusPrevPane: def("session.focus_prev_pane", "alt+left", "global"),
+    focusNextPane: def(
+      "session.focus_next_pane",
+      "alt+right, alt+down",
+      "global",
+    ),
+    focusPrevPane: def("session.focus_prev_pane", "alt+left, alt+up", "global"),
   },
   tab: {
     close: def("session.tab_close", "alt+w", "global"),
