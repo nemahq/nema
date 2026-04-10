@@ -30,20 +30,26 @@
   Light mode:    bg stone-50 (#FAFAF9)  / mark teal-700 (#0F766E)
   Mono dark:     bg stone-900 / mark stone-100 (#F5F5F4)
   Mono light:    bg stone-50  / mark stone-900 (#1C1917)
-  Teal bg:       bg teal-700→900 / mark white
 
-  ── Icon Usage Guide ────────────────────────────
-  ★ Dark + Teal    → App store, home screen, PWA manifest (default)
-    Dark + White   → Monochrome contexts, splash, single-color print
-    Light + Dark   → Light-mode adaptive icon (Android)
-    Light + Teal   → Light-mode brand emphasis, web header
-    Teal bg        → Social media profile, marketing, business card
+  ── Icon Usage Guide (priority order) ──────────
+  Core — daily use (highest exposure):
+  01 ★ Dark + Teal  → App store, home screen, PWA, GitHub org, social profile
+  02   Light + Teal → Light-mode app sidebar, document header, web nav
 
-  Experimental (outside design system):
-    Teal gradient bg   → Landing page hero, OG image, social cover
-    Gradient mark      → Pitch deck, Product Hunt banner, promo material
-    White→Teal mark    → Brand storytelling, concept explanation contexts
-    Teal→Dark bg       → In-app splash screen, onboarding flow
+  Monochrome — fallback for restricted environments:
+  03   Dark + White → Single-color print, grayscale contexts
+  04   Light + Dark → Android adaptive icon (light variant)
+
+  Experimental — special/one-off contexts (outside design system):
+  05   Teal gradient bg → Landing hero, OG image, full brand statements
+  06   Gradient mark    → Pitch deck, Product Hunt banner, promo material
+  07   White→Teal mark  → Brand storytelling, concept explanation
+  08   Teal→Dark bg     → In-app splash, onboarding flow
+
+  Note: A solid dark-teal background (teal-700→900) was considered but
+  removed — too heavy, loses the brand anchor (teal-500), and sits
+  awkwardly between "dark" and "teal". Use Teal gradient bg (teal-500→700)
+  when a teal background is needed.
 
   ── Typography ──────────────────────────────────
   Wordmark font: Satoshi Bold 700
@@ -66,25 +72,97 @@
       }
       body {
         font-family: "Satoshi", "Space Grotesk", sans-serif;
-        background: #1c1917;
-        color: #f5f5f4;
-        padding: 48px 32px 80px;
+        background: var(--page-bg);
+        color: var(--text-primary);
+        padding: 0 0 80px;
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+
+      /* Chrome browser-style backgrounds */
+      :root {
+        --page-bg: #ffffff;
+        --page-surface: #f8f9fa;
+        --text-primary: #202124;
+        --text-secondary: #5f6368;
+        --text-tertiary: #80868b;
+        --border: #dadce0;
+        --brand-accent: #0f766e;
+      }
+
+      body.dark {
+        --page-bg: #202124;
+        --page-surface: #292a2d;
+        --text-primary: #e8eaed;
+        --text-secondary: #9aa0a6;
+        --text-tertiary: #80868b;
+        --border: #3c4043;
+        --brand-accent: #2dd4bf;
+      }
+
+      /* Sticky theme controls */
+      .controls {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--page-surface);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 32px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 48px;
+      }
+      .controls label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+      .controls button {
+        font-family: inherit;
+        padding: 6px 14px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--page-bg);
+        color: var(--text-primary);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .controls button:hover {
+        border-color: var(--brand-accent);
+        color: var(--brand-accent);
+      }
+      .controls button.active {
+        background: var(--brand-accent);
+        color: #ffffff;
+        border-color: var(--brand-accent);
+      }
+      .controls .spacer {
+        flex: 1;
+      }
+      .controls .title {
+        color: var(--brand-accent);
+        font-weight: 600;
       }
 
       .section {
         max-width: 1200px;
         margin: 0 auto 56px;
+        padding: 0 32px;
       }
       .st {
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 4px;
-        color: #78716c;
+        color: var(--text-tertiary);
         margin-bottom: 8px;
       }
       .sd {
         font-size: 14px;
-        color: #a8a29e;
+        color: var(--text-secondary);
         margin-bottom: 32px;
         line-height: 1.6;
       }
@@ -92,7 +170,7 @@
         max-width: 1200px;
         margin: 48px auto;
         border: none;
-        border-top: 1px solid #292524;
+        border-top: 1px solid var(--border);
       }
 
       .icon {
@@ -134,13 +212,13 @@
       }
       .row {
         display: flex;
-        gap: 32px;
+        gap: 40px;
         flex-wrap: wrap;
-        align-items: center;
+        align-items: flex-start;
       }
       .row-tight {
         display: flex;
-        gap: 12px;
+        gap: 16px;
         flex-wrap: wrap;
         align-items: end;
       }
@@ -150,102 +228,65 @@
         align-items: center;
         gap: 8px;
       }
+
+      /* Variant card — used in Core / Monochrome / Experimental sections */
+      .variant {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 200px;
+      }
+      .variant .icon {
+        margin-bottom: 16px;
+      }
+      .variant .rank {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: var(--brand-accent);
+        margin-bottom: 4px;
+      }
+      .variant .name {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+      }
+      .variant .when {
+        font-size: 12px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
       .label {
         font-size: 10px;
-        color: #78716c;
+        color: var(--text-tertiary);
         letter-spacing: 1px;
       }
     </style>
   </head>
   <body>
+    <!-- Theme controls -->
+    <div class="controls">
+      <label>Theme:</label>
+      <button id="btn-auto" onclick="setTheme('auto')">Auto</button>
+      <button id="btn-light" onclick="setTheme('light')">Light</button>
+      <button id="btn-dark" onclick="setTheme('dark')">Dark</button>
+      <div class="spacer"></div>
+      <label class="title">Nema Logo Design</label>
+    </div>
+
     <!-- ============================================
-       1. APP ICON
+       1. CORE ICONS — Daily use
   ============================================= -->
     <div class="section">
-      <p class="st">App Icon — Primary</p>
-      <p class="sd">디자인 시스템 컬러 기반 5종. ★ = 추천 기본.</p>
+      <p class="st">Core — 매일 쓰는 기본</p>
+      <p class="sd">
+        사용자가 가장 자주 접하는 2종. 여기에 브랜드 정체성이 집중된다.
+      </p>
 
       <div class="row">
-        <!-- Dark -->
-        <div class="col">
-          <div
-            class="icon rounded-ios"
-            style="
-              width: 160px;
-              height: 160px;
-              background: linear-gradient(150deg, #1c1917, #141210);
-            "
-          >
-            <svg width="108" height="108" viewBox="96 74 178 211">
-              <path
-                fill="#F5F5F4"
-                transform="scale(0.359375)"
-                d="M568.753 234.706C586.198 233.287 607.4 236.769 623.81 242.245C662.228 255.13 693.907 282.828 711.803 319.183C730.607 357.939 733.54 402.504 719.979 443.39C707.252 481.858 679.667 513.636 643.371 531.644C604.636 550.756 559.554 552.296 518.912 538.466L518.948 764.748C496.855 765.492 469.93 765.079 447.62 764.814L447.633 661.087L447.733 548.375C448.002 542.117 447.942 535.849 447.555 529.597C444.157 538.654 440.906 549.426 437.843 558.755L420.716 610.852L370.279 764.83C346.492 765.555 319.093 764.921 295.07 764.928L382.644 498.632L416.797 394.906C424.149 372.668 430.572 350.744 439.721 329.12C462.84 274.475 508.965 238.939 568.753 234.706Z"
-              />
-              <path
-                fill="#141210"
-                transform="scale(0.359375)"
-                d="M570.056 306.702C573.068 306.307 578.511 306.44 581.5 306.72C603.689 308.799 624.12 319.68 638.229 336.931C666.042 371.186 663.385 427.91 628.386 456.561C608.385 472.934 581.628 476.182 556.617 473.571C539.649 471.385 529.317 467.272 513.899 460.315C499.315 453.734 486.592 451.18 471.423 457.149C475.018 443.964 480.391 430.208 484.547 417.084C498.586 372.756 514.773 312.253 570.056 306.702Z"
-              />
-            </svg>
-          </div>
-          <span class="label">Dark — 모노크롬, 스플래시, 단색인쇄</span>
-        </div>
-
-        <!-- Light -->
-        <div class="col">
-          <div
-            class="icon rounded-ios"
-            style="
-              width: 160px;
-              height: 160px;
-              background: linear-gradient(150deg, #fafaf9, #f0efed);
-            "
-          >
-            <svg width="108" height="108" viewBox="96 74 178 211">
-              <path
-                fill="#1C1917"
-                transform="scale(0.359375)"
-                d="M568.753 234.706C586.198 233.287 607.4 236.769 623.81 242.245C662.228 255.13 693.907 282.828 711.803 319.183C730.607 357.939 733.54 402.504 719.979 443.39C707.252 481.858 679.667 513.636 643.371 531.644C604.636 550.756 559.554 552.296 518.912 538.466L518.948 764.748C496.855 765.492 469.93 765.079 447.62 764.814L447.633 661.087L447.733 548.375C448.002 542.117 447.942 535.849 447.555 529.597C444.157 538.654 440.906 549.426 437.843 558.755L420.716 610.852L370.279 764.83C346.492 765.555 319.093 764.921 295.07 764.928L382.644 498.632L416.797 394.906C424.149 372.668 430.572 350.744 439.721 329.12C462.84 274.475 508.965 238.939 568.753 234.706Z"
-              />
-              <path
-                fill="#F0EFED"
-                transform="scale(0.359375)"
-                d="M570.056 306.702C573.068 306.307 578.511 306.44 581.5 306.72C603.689 308.799 624.12 319.68 638.229 336.931C666.042 371.186 663.385 427.91 628.386 456.561C608.385 472.934 581.628 476.182 556.617 473.571C539.649 471.385 529.317 467.272 513.899 460.315C499.315 453.734 486.592 451.18 471.423 457.149C475.018 443.964 480.391 430.208 484.547 417.084C498.586 372.756 514.773 312.253 570.056 306.702Z"
-              />
-            </svg>
-          </div>
-          <span class="label">Light — 라이트모드 적응형 아이콘</span>
-        </div>
-
-        <!-- Teal bg -->
-        <div class="col">
-          <div
-            class="icon rounded-ios"
-            style="
-              width: 160px;
-              height: 160px;
-              background: linear-gradient(150deg, #0f766e, #064e3b);
-            "
-          >
-            <svg width="108" height="108" viewBox="96 74 178 211">
-              <path
-                fill="#FFFFFF"
-                transform="scale(0.359375)"
-                d="M568.753 234.706C586.198 233.287 607.4 236.769 623.81 242.245C662.228 255.13 693.907 282.828 711.803 319.183C730.607 357.939 733.54 402.504 719.979 443.39C707.252 481.858 679.667 513.636 643.371 531.644C604.636 550.756 559.554 552.296 518.912 538.466L518.948 764.748C496.855 765.492 469.93 765.079 447.62 764.814L447.633 661.087L447.733 548.375C448.002 542.117 447.942 535.849 447.555 529.597C444.157 538.654 440.906 549.426 437.843 558.755L420.716 610.852L370.279 764.83C346.492 765.555 319.093 764.921 295.07 764.928L382.644 498.632L416.797 394.906C424.149 372.668 430.572 350.744 439.721 329.12C462.84 274.475 508.965 238.939 568.753 234.706Z"
-              />
-              <path
-                fill="#0B6259"
-                transform="scale(0.359375)"
-                d="M570.056 306.702C573.068 306.307 578.511 306.44 581.5 306.72C603.689 308.799 624.12 319.68 638.229 336.931C666.042 371.186 663.385 427.91 628.386 456.561C608.385 472.934 581.628 476.182 556.617 473.571C539.649 471.385 529.317 467.272 513.899 460.315C499.315 453.734 486.592 451.18 471.423 457.149C475.018 443.964 480.391 430.208 484.547 417.084C498.586 372.756 514.773 312.253 570.056 306.702Z"
-              />
-            </svg>
-          </div>
-          <span class="label">Teal bg — SNS, 마케팅, 명함</span>
-        </div>
-
-        <!-- Dark + Teal mark -->
-        <div class="col">
+        <!-- 01: Dark + Teal (primary) -->
+        <div class="variant">
           <div
             class="icon rounded-ios"
             style="
@@ -267,11 +308,16 @@
               />
             </svg>
           </div>
-          <span class="label">★ Dark + Teal — 앱스토어, 홈화면, PWA</span>
+          <div class="rank">01 · PRIMARY ★</div>
+          <div class="name">Dark + Teal</div>
+          <div class="when">
+            앱스토어, iOS/Android 홈화면, PWA manifest, GitHub 조직 프로필,
+            소셜 미디어 프로필. Nema의 얼굴.
+          </div>
         </div>
 
-        <!-- Light + Teal mark -->
-        <div class="col">
+        <!-- 02: Light + Teal -->
+        <div class="variant">
           <div
             class="icon rounded-ios"
             style="
@@ -293,7 +339,12 @@
               />
             </svg>
           </div>
-          <span class="label">Light + Teal — 라이트모드 브랜드 강조</span>
+          <div class="rank">02</div>
+          <div class="name">Light + Teal</div>
+          <div class="when">
+            라이트모드 앱 내부. 사이드바 로고, 문서 헤더, 웹사이트 네비게이션.
+            화이트 배경 위에서 브랜드 컬러 유지.
+          </div>
         </div>
       </div>
     </div>
@@ -301,17 +352,94 @@
     <hr class="divider" />
 
     <!-- ============================================
-       1b. EXPERIMENTAL — Gradient & Two-tone
+       2. MONOCHROME — Fallback variants
   ============================================= -->
     <div class="section">
-      <p class="st">Experimental</p>
+      <p class="st">Monochrome — 단색이 필요할 때</p>
       <p class="sd">
-        그라디언트 배경, 그라디언트 마크, 두 톤 마크. 디자인 시스템 밖 탐색.
+        브랜드 컬러를 쓸 수 없는 환경을 위한 대체 버전. 자주 쓰이지 않는다.
       </p>
 
       <div class="row">
-        <!-- Teal gradient bg + white mark -->
-        <div class="col">
+        <!-- 03: Dark + White -->
+        <div class="variant">
+          <div
+            class="icon rounded-ios"
+            style="
+              width: 160px;
+              height: 160px;
+              background: linear-gradient(150deg, #1c1917, #141210);
+            "
+          >
+            <svg width="108" height="108" viewBox="96 74 178 211">
+              <path
+                fill="#F5F5F4"
+                transform="scale(0.359375)"
+                d="M568.753 234.706C586.198 233.287 607.4 236.769 623.81 242.245C662.228 255.13 693.907 282.828 711.803 319.183C730.607 357.939 733.54 402.504 719.979 443.39C707.252 481.858 679.667 513.636 643.371 531.644C604.636 550.756 559.554 552.296 518.912 538.466L518.948 764.748C496.855 765.492 469.93 765.079 447.62 764.814L447.633 661.087L447.733 548.375C448.002 542.117 447.942 535.849 447.555 529.597C444.157 538.654 440.906 549.426 437.843 558.755L420.716 610.852L370.279 764.83C346.492 765.555 319.093 764.921 295.07 764.928L382.644 498.632L416.797 394.906C424.149 372.668 430.572 350.744 439.721 329.12C462.84 274.475 508.965 238.939 568.753 234.706Z"
+              />
+              <path
+                fill="#141210"
+                transform="scale(0.359375)"
+                d="M570.056 306.702C573.068 306.307 578.511 306.44 581.5 306.72C603.689 308.799 624.12 319.68 638.229 336.931C666.042 371.186 663.385 427.91 628.386 456.561C608.385 472.934 581.628 476.182 556.617 473.571C539.649 471.385 529.317 467.272 513.899 460.315C499.315 453.734 486.592 451.18 471.423 457.149C475.018 443.964 480.391 430.208 484.547 417.084C498.586 372.756 514.773 312.253 570.056 306.702Z"
+              />
+            </svg>
+          </div>
+          <div class="rank">03</div>
+          <div class="name">Dark + White</div>
+          <div class="when">
+            단색 인쇄, 흑백 문서, teal을 렌더링할 수 없는 환경.
+            브랜드 컬러를 희생하더라도 정체성 유지가 필요할 때.
+          </div>
+        </div>
+
+        <!-- 04: Light + Dark -->
+        <div class="variant">
+          <div
+            class="icon rounded-ios"
+            style="
+              width: 160px;
+              height: 160px;
+              background: linear-gradient(150deg, #fafaf9, #f0efed);
+            "
+          >
+            <svg width="108" height="108" viewBox="96 74 178 211">
+              <path
+                fill="#1C1917"
+                transform="scale(0.359375)"
+                d="M568.753 234.706C586.198 233.287 607.4 236.769 623.81 242.245C662.228 255.13 693.907 282.828 711.803 319.183C730.607 357.939 733.54 402.504 719.979 443.39C707.252 481.858 679.667 513.636 643.371 531.644C604.636 550.756 559.554 552.296 518.912 538.466L518.948 764.748C496.855 765.492 469.93 765.079 447.62 764.814L447.633 661.087L447.733 548.375C448.002 542.117 447.942 535.849 447.555 529.597C444.157 538.654 440.906 549.426 437.843 558.755L420.716 610.852L370.279 764.83C346.492 765.555 319.093 764.921 295.07 764.928L382.644 498.632L416.797 394.906C424.149 372.668 430.572 350.744 439.721 329.12C462.84 274.475 508.965 238.939 568.753 234.706Z"
+              />
+              <path
+                fill="#F0EFED"
+                transform="scale(0.359375)"
+                d="M570.056 306.702C573.068 306.307 578.511 306.44 581.5 306.72C603.689 308.799 624.12 319.68 638.229 336.931C666.042 371.186 663.385 427.91 628.386 456.561C608.385 472.934 581.628 476.182 556.617 473.571C539.649 471.385 529.317 467.272 513.899 460.315C499.315 453.734 486.592 451.18 471.423 457.149C475.018 443.964 480.391 430.208 484.547 417.084C498.586 372.756 514.773 312.253 570.056 306.702Z"
+              />
+            </svg>
+          </div>
+          <div class="rank">04</div>
+          <div class="name">Light + Dark</div>
+          <div class="when">
+            Android 적응형 아이콘(라이트 테마 변종), 시스템이 강제로 흑백
+            아이콘을 요구하는 맥락.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- ============================================
+       3. EXPERIMENTAL — Special contexts
+  ============================================= -->
+    <div class="section">
+      <p class="st">Experimental — 특수 맥락에서만</p>
+      <p class="sd">
+        디자인 시스템 밖의 확장. 일회성 자료나 브랜드 스테이트먼트가 필요할 때.
+        일상적으로 쓰지 않는다.
+      </p>
+
+      <div class="row">
+        <!-- 05: Teal gradient bg + white mark (true cutout hole) -->
+        <div class="variant">
           <div
             class="icon rounded-ios"
             style="
@@ -321,25 +449,40 @@
             "
           >
             <svg width="108" height="108" viewBox="96 74 178 211">
-              <path
-                fill="#fff"
-                transform="scale(0.359375)"
-                d="M568.753 234.706C586.198 233.287 607.4 236.769 623.81 242.245C662.228 255.13 693.907 282.828 711.803 319.183C730.607 357.939 733.54 402.504 719.979 443.39C707.252 481.858 679.667 513.636 643.371 531.644C604.636 550.756 559.554 552.296 518.912 538.466L518.948 764.748C496.855 765.492 469.93 765.079 447.62 764.814L447.633 661.087L447.733 548.375C448.002 542.117 447.942 535.849 447.555 529.597C444.157 538.654 440.906 549.426 437.843 558.755L420.716 610.852L370.279 764.83C346.492 765.555 319.093 764.921 295.07 764.928L382.644 498.632L416.797 394.906C424.149 372.668 430.572 350.744 439.721 329.12C462.84 274.475 508.965 238.939 568.753 234.706Z"
-              />
-              <path
-                fill="#0c6b60"
-                transform="scale(0.359375)"
-                d="M570.056 306.702C573.068 306.307 578.511 306.44 581.5 306.72C603.689 308.799 624.12 319.68 638.229 336.931C666.042 371.186 663.385 427.91 628.386 456.561C608.385 472.934 581.628 476.182 556.617 473.571C539.649 471.385 529.317 467.272 513.899 460.315C499.315 453.734 486.592 451.18 471.423 457.149C475.018 443.964 480.391 430.208 484.547 417.084C498.586 372.756 514.773 312.253 570.056 306.702Z"
+              <defs>
+                <mask id="mask-tealgrad">
+                  <path
+                    fill="white"
+                    transform="scale(0.359375)"
+                    d="M568.753 234.706C586.198 233.287 607.4 236.769 623.81 242.245C662.228 255.13 693.907 282.828 711.803 319.183C730.607 357.939 733.54 402.504 719.979 443.39C707.252 481.858 679.667 513.636 643.371 531.644C604.636 550.756 559.554 552.296 518.912 538.466L518.948 764.748C496.855 765.492 469.93 765.079 447.62 764.814L447.633 661.087L447.733 548.375C448.002 542.117 447.942 535.849 447.555 529.597C444.157 538.654 440.906 549.426 437.843 558.755L420.716 610.852L370.279 764.83C346.492 765.555 319.093 764.921 295.07 764.928L382.644 498.632L416.797 394.906C424.149 372.668 430.572 350.744 439.721 329.12C462.84 274.475 508.965 238.939 568.753 234.706Z"
+                  />
+                  <path
+                    fill="black"
+                    transform="scale(0.359375)"
+                    d="M570.056 306.702C573.068 306.307 578.511 306.44 581.5 306.72C603.689 308.799 624.12 319.68 638.229 336.931C666.042 371.186 663.385 427.91 628.386 456.561C608.385 472.934 581.628 476.182 556.617 473.571C539.649 471.385 529.317 467.272 513.899 460.315C499.315 453.734 486.592 451.18 471.423 457.149C475.018 443.964 480.391 430.208 484.547 417.084C498.586 372.756 514.773 312.253 570.056 306.702Z"
+                  />
+                </mask>
+              </defs>
+              <rect
+                x="96"
+                y="74"
+                width="178"
+                height="211"
+                fill="#ffffff"
+                mask="url(#mask-tealgrad)"
               />
             </svg>
           </div>
-          <span class="label"
-            >Teal gradient bg — 랜딩페이지 히어로, OG 이미지</span
-          >
+          <div class="rank">05</div>
+          <div class="name">Teal gradient bg</div>
+          <div class="when">
+            랜딩 페이지 히어로, OG 이미지, 소셜 커버. 브랜드를 "풀 임팩트"로
+            보여주는 유일한 teal 배경 버전.
+          </div>
         </div>
 
-        <!-- Dark + gradient teal mark -->
-        <div class="col">
+        <!-- 06: Dark + gradient teal mark -->
+        <div class="variant">
           <div
             class="icon rounded-ios"
             style="
@@ -367,13 +510,16 @@
               />
             </svg>
           </div>
-          <span class="label"
-            >Gradient mark — 발표자료, 프로덕트 헌트 배너</span
-          >
+          <div class="rank">06</div>
+          <div class="name">Gradient mark</div>
+          <div class="when">
+            발표 자료, Product Hunt 배너, 일회성 프로모션. 시각적 풍부함이
+            필요한 맥락. 작은 사이즈에는 부적합.
+          </div>
         </div>
 
-        <!-- Dark + teal-to-white gradient mark -->
-        <div class="col">
+        <!-- 07: Dark + teal-to-white gradient mark -->
+        <div class="variant">
           <div
             class="icon rounded-ios"
             style="
@@ -401,13 +547,16 @@
               />
             </svg>
           </div>
-          <span class="label"
-            >White→Teal — 컨셉 설명 시, 브랜드 스토리텔링</span
-          >
+          <div class="rank">07</div>
+          <div class="name">White→Teal mark</div>
+          <div class="when">
+            브랜드 스토리텔링, 컨셉 설명 자료. "실이 바늘귀를 통과한다"는
+            메타포를 시각적으로 표현할 때.
+          </div>
         </div>
 
-        <!-- Teal-to-dark gradient bg + white mark -->
-        <div class="col">
+        <!-- 08: Teal-to-dark gradient bg + white mark -->
+        <div class="variant">
           <div
             class="icon rounded-ios"
             style="
@@ -429,7 +578,12 @@
               />
             </svg>
           </div>
-          <span class="label">Teal→Dark bg — 앱 내 스플래시, 온보딩 화면</span>
+          <div class="rank">08</div>
+          <div class="name">Teal→Dark bg</div>
+          <div class="when">
+            앱 내 스플래시 화면, 온보딩 플로우 배경. 다크 환경으로 자연스럽게
+            전환되는 프리미엄 느낌.
+          </div>
         </div>
       </div>
     </div>
@@ -717,5 +871,34 @@
         </div>
       </div>
     </div>
+
+    <script>
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+
+      function applyTheme(isDark) {
+        document.body.classList.toggle("dark", isDark);
+      }
+
+      function autoListener(e) {
+        applyTheme(e.matches);
+      }
+
+      function setTheme(mode) {
+        document
+          .querySelectorAll(".controls button")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById("btn-" + mode).classList.add("active");
+
+        if (mode === "auto") {
+          applyTheme(mq.matches);
+          mq.addEventListener("change", autoListener);
+        } else {
+          mq.removeEventListener("change", autoListener);
+          applyTheme(mode === "dark");
+        }
+      }
+
+      setTheme("auto");
+    </script>
   </body>
 </html>
