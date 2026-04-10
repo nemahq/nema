@@ -66,25 +66,97 @@
       }
       body {
         font-family: "Satoshi", "Space Grotesk", sans-serif;
-        background: #1c1917;
-        color: #f5f5f4;
-        padding: 48px 32px 80px;
+        background: var(--page-bg);
+        color: var(--text-primary);
+        padding: 0 0 80px;
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+
+      /* Chrome browser-style backgrounds */
+      :root {
+        --page-bg: #ffffff;
+        --page-surface: #f8f9fa;
+        --text-primary: #202124;
+        --text-secondary: #5f6368;
+        --text-tertiary: #80868b;
+        --border: #dadce0;
+        --brand-accent: #0f766e;
+      }
+
+      body.dark {
+        --page-bg: #202124;
+        --page-surface: #292a2d;
+        --text-primary: #e8eaed;
+        --text-secondary: #9aa0a6;
+        --text-tertiary: #80868b;
+        --border: #3c4043;
+        --brand-accent: #2dd4bf;
+      }
+
+      /* Sticky theme controls */
+      .controls {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--page-surface);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 32px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 48px;
+      }
+      .controls label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+      .controls button {
+        font-family: inherit;
+        padding: 6px 14px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--page-bg);
+        color: var(--text-primary);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .controls button:hover {
+        border-color: var(--brand-accent);
+        color: var(--brand-accent);
+      }
+      .controls button.active {
+        background: var(--brand-accent);
+        color: #ffffff;
+        border-color: var(--brand-accent);
+      }
+      .controls .spacer {
+        flex: 1;
+      }
+      .controls .title {
+        color: var(--brand-accent);
+        font-weight: 600;
       }
 
       .section {
         max-width: 1200px;
         margin: 0 auto 56px;
+        padding: 0 32px;
       }
       .st {
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 4px;
-        color: #78716c;
+        color: var(--text-tertiary);
         margin-bottom: 8px;
       }
       .sd {
         font-size: 14px;
-        color: #a8a29e;
+        color: var(--text-secondary);
         margin-bottom: 32px;
         line-height: 1.6;
       }
@@ -92,7 +164,7 @@
         max-width: 1200px;
         margin: 48px auto;
         border: none;
-        border-top: 1px solid #292524;
+        border-top: 1px solid var(--border);
       }
 
       .icon {
@@ -152,12 +224,22 @@
       }
       .label {
         font-size: 10px;
-        color: #78716c;
+        color: var(--text-tertiary);
         letter-spacing: 1px;
       }
     </style>
   </head>
   <body>
+    <!-- Theme controls -->
+    <div class="controls">
+      <label>Theme:</label>
+      <button id="btn-auto" onclick="setTheme('auto')">Auto</button>
+      <button id="btn-light" onclick="setTheme('light')">Light</button>
+      <button id="btn-dark" onclick="setTheme('dark')">Dark</button>
+      <div class="spacer"></div>
+      <label class="title">Nema Logo Design</label>
+    </div>
+
     <!-- ============================================
        1. APP ICON
   ============================================= -->
@@ -717,5 +799,34 @@
         </div>
       </div>
     </div>
+
+    <script>
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+
+      function applyTheme(isDark) {
+        document.body.classList.toggle("dark", isDark);
+      }
+
+      function autoListener(e) {
+        applyTheme(e.matches);
+      }
+
+      function setTheme(mode) {
+        document
+          .querySelectorAll(".controls button")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById("btn-" + mode).classList.add("active");
+
+        if (mode === "auto") {
+          applyTheme(mq.matches);
+          mq.addEventListener("change", autoListener);
+        } else {
+          mq.removeEventListener("change", autoListener);
+          applyTheme(mode === "dark");
+        }
+      }
+
+      setTheme("auto");
+    </script>
   </body>
 </html>
