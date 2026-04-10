@@ -66,10 +66,12 @@ describe("createNeo4jStore", () => {
       mockRun.mockResolvedValue({ records: [] });
       const store = createNeo4jStore();
       await store.ensureSchema();
-      expect(mockRun).toHaveBeenCalledTimes(3);
-      expect(mockRun.mock.calls[0][0]).toContain("CREATE CONSTRAINT");
-      expect(mockRun.mock.calls[1][0]).toContain("entity_user_id");
-      expect(mockRun.mock.calls[2][0]).toContain("document_doc_id");
+      expect(mockRun).toHaveBeenCalledTimes(5);
+      expect(mockRun.mock.calls[0][0]).toContain("DROP CONSTRAINT");
+      expect(mockRun.mock.calls[1][0]).toContain("entity_unique_en");
+      expect(mockRun.mock.calls[2][0]).toContain("entity_user_id");
+      expect(mockRun.mock.calls[3][0]).toContain("document_doc_id");
+      expect(mockRun.mock.calls[4][0]).toContain("nameEn IS NULL");
       expect(mockSessionClose).toHaveBeenCalled();
     });
 
@@ -88,17 +90,19 @@ describe("createNeo4jStore", () => {
         docId: "d1",
         userId: "u1",
         entities: [],
+        createdAt: "2026-04-01T00:00:00.000Z",
       });
       expect(mockExecuteWrite).not.toHaveBeenCalled();
     });
 
-    it("rejects blank entity name", async () => {
+    it("rejects blank entity nameEn", async () => {
       const store = createNeo4jStore();
       await expect(
         store.upsertEntities({
           docId: "d1",
           userId: "u1",
-          entities: [{ type: "Person", name: "  " }],
+          entities: [{ type: "Person", name: "김철수", nameEn: "  " }],
+          createdAt: "2026-04-01T00:00:00.000Z",
         }),
       ).rejects.toThrow(GraphStoreError);
       expect(mockExecuteWrite).not.toHaveBeenCalled();
@@ -111,19 +115,21 @@ describe("createNeo4jStore", () => {
         docId: "d1",
         userId: "u1",
         entities: [
-          { type: "Person", name: "김철수" },
-          { type: "Topic", name: "프론트엔드" },
+          { type: "Person", name: "김철수", nameEn: "Kim Chulsu" },
+          { type: "Topic", name: "프론트엔드", nameEn: "frontend" },
         ],
+        createdAt: "2026-04-01T00:00:00.000Z",
       });
 
       expect(mockRun).toHaveBeenCalledTimes(3);
       expect(mockRun.mock.calls[0][0]).toContain("MERGE (d:Document");
+      expect(mockRun.mock.calls[0][0]).toContain("createdAt");
       expect(mockRun.mock.calls[1][0]).toContain("UNWIND");
       expect(mockRun.mock.calls[1][1]).toEqual(
         expect.objectContaining({
           entities: [
-            { type: "Person", name: "김철수" },
-            { type: "Topic", name: "프론트엔드" },
+            { type: "Person", name: "김철수", nameEn: "Kim Chulsu" },
+            { type: "Topic", name: "프론트엔드", nameEn: "frontend" },
           ],
         }),
       );
@@ -136,7 +142,8 @@ describe("createNeo4jStore", () => {
       await store.upsertEntities({
         docId: "d1",
         userId: "u1",
-        entities: [{ type: "Person", name: "김철수" }],
+        entities: [{ type: "Person", name: "김철수", nameEn: "Kim Chulsu" }],
+        createdAt: "2026-04-01T00:00:00.000Z",
       });
 
       expect(mockRun).toHaveBeenCalledTimes(2);
@@ -149,7 +156,8 @@ describe("createNeo4jStore", () => {
         store.upsertEntities({
           docId: "d1",
           userId: "u1",
-          entities: [{ type: "Person", name: "김철수" }],
+          entities: [{ type: "Person", name: "김철수", nameEn: "Kim Chulsu" }],
+          createdAt: "2026-04-01T00:00:00.000Z",
         }),
       ).rejects.toThrow(GraphStoreError);
       expect(mockSessionClose).toHaveBeenCalled();
@@ -326,13 +334,23 @@ describe("createNeo4jStore", () => {
       mockRun.mockResolvedValue({
         records: [
           {
-            get: (key: string) => (key === "type" ? "Person" : "김철수"),
+            get: (key: string) => {
+              if (key === "type") {
+                return "Person";
+              }
+              if (key === "nameEn") {
+                return "Kim Chulsu";
+              }
+              return "김철수";
+            },
           },
         ],
       });
       const store = createNeo4jStore();
       const results = await store.listEntities({ userId: "u1" });
-      expect(results).toEqual([{ type: "Person", name: "김철수" }]);
+      expect(results).toEqual([
+        { type: "Person", name: "김철수", nameEn: "Kim Chulsu" },
+      ]);
     });
 
     it("includes type filter when provided", async () => {

@@ -36,7 +36,17 @@
   "memory": {
     "empty_heading": "아직 쌓인 기억이 없어요.",
     "empty_subheading": "새 맥락을 만들면 여기에 채워질 거예요.",
-    "sidebar_label": "기억"
+    "entity_type_event": "이벤트",
+    "entity_type_location": "장소",
+    "entity_type_organization": "조직",
+    "entity_type_person": "인물",
+    "entity_type_project": "프로젝트",
+    "entity_type_topic": "주제",
+    "page_title": "{name}의 기억",
+    "sidebar_label": "기억",
+    "stats_summary": "{noteCount}개의 기록 · {entityCount}개의 키워드",
+    "view_map": "맵",
+    "view_overview": "개요"
   },
   "session": {
     "copied": "복사됨",

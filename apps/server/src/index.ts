@@ -75,6 +75,10 @@ async function bootstrap() {
 
     const { getProviders } = await import("./infra/providers");
 
+    const graphStore = createNeo4jStore();
+    await graphStore.ensureSchema();
+    server.log.info("Neo4j schema ready");
+
     const worker = createSyncWorker({
       supabase: getSupabaseAdmin(),
       llm: getProviders().llm.mini,
@@ -82,7 +86,7 @@ async function bootstrap() {
         apiKey: env.VOYAGE_API_KEY,
       }),
       vectorStore,
-      graphStore: createNeo4jStore(),
+      graphStore,
     });
     worker.start();
     stopWorker = worker.stop;

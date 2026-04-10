@@ -7,6 +7,7 @@ import {
   Outlet,
 } from "@tanstack/react-router";
 
+import { ContentAreaErrorFallback } from "@web/app/error/ContentAreaErrorFallback";
 import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
@@ -77,6 +78,7 @@ const indexRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/",
   component: HomePage,
+  errorComponent: ContentAreaErrorFallback,
 });
 
 function SessionPageShell() {
@@ -88,12 +90,14 @@ const sessionRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/session/$sessionId",
   component: SessionPageShell,
+  errorComponent: ContentAreaErrorFallback,
 });
 
 const memoryRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/memory",
   component: MemoryPage,
+  errorComponent: ContentAreaErrorFallback,
 });
 
 const routeTree = rootRoute.addChildren([

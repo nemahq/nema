@@ -16,6 +16,7 @@ export class GraphStoreError extends Error {
 export interface GraphEntity {
   type: EntityType;
   name: string;
+  nameEn: string;
 }
 
 export interface GraphSearchResult {
@@ -27,6 +28,7 @@ export interface UpsertEntitiesOptions {
   docId: string;
   userId: string;
   entities: GraphEntity[];
+  createdAt: string;
 }
 
 export interface FindRelatedDocumentsOptions {
@@ -58,6 +60,7 @@ export interface MergeEntitiesOptions {
 
 export interface GraphEntityWithCount extends GraphEntity {
   documentCount: number;
+  lastReferencedAt?: string;
 }
 
 export interface ListEntitiesWithStatsOptions {

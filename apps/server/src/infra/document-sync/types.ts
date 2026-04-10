@@ -46,6 +46,7 @@ export const PendingDocumentSchema = z.object({
   tags_en: z.array(z.string()).nullable(),
   summary: z.string(),
   summary_en: z.string().nullable(),
+  created_at: z.string(),
 });
 
 export type PendingDocument = z.infer<typeof PendingDocumentSchema>;

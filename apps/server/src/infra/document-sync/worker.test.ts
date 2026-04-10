@@ -62,7 +62,7 @@ function mockEmbedding(): EmbeddingProvider {
 function mockLlm(): LlmProvider {
   return {
     generateStructured: vi.fn().mockResolvedValue({
-      entities: [{ type: "Person", name: "Alice" }],
+      entities: [{ type: "Person", name: "Alice", nameEn: "Alice" }],
     }),
     async *generateStream() {
       yield "";
@@ -92,6 +92,7 @@ const PENDING_DOC: PendingDocument = {
   tags_en: null,
   summary: "test summary",
   summary_en: null,
+  created_at: "2026-04-01T00:00:00.000Z",
 };
 
 const PENDING_DOC_BILINGUAL: PendingDocument = {
@@ -103,6 +104,7 @@ const PENDING_DOC_BILINGUAL: PendingDocument = {
   tags_en: ["tag1"],
   summary: "한국어 요약",
   summary_en: "English summary",
+  created_at: "2026-04-01T00:00:00.000Z",
 };
 
 // --- Tests ---
@@ -163,7 +165,8 @@ describe("createSyncWorker", () => {
       expect(graphStore.upsertEntities).toHaveBeenCalledWith(
         expect.objectContaining({
           docId: DOC_ID_1,
-          entities: [{ type: "Person", name: "Alice" }],
+          entities: [{ type: "Person", name: "Alice", nameEn: "Alice" }],
+          createdAt: "2026-04-01T00:00:00.000Z",
         }),
       );
 
@@ -347,12 +350,13 @@ describe("createSyncWorker", () => {
         tags_en: null,
         summary: "fail",
         summary_en: null,
+        created_at: "2026-04-02T00:00:00.000Z",
       };
 
       // LLM succeeds for doc-1, fails for doc-2
       (llm.generateStructured as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({
-          entities: [{ type: "Person", name: "Alice" }],
+          entities: [{ type: "Person", name: "Alice", nameEn: "Alice" }],
         })
         .mockRejectedValueOnce(new Error("LLM timeout"));
 
@@ -511,6 +515,7 @@ describe("createSyncWorker", () => {
         tags_en: null,
         summary: "second",
         summary_en: null,
+        created_at: "2026-04-02T00:00:00.000Z",
       };
 
       rpc
