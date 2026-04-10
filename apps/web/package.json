@@ -15,7 +15,6 @@
   "dependencies": {
     "@nema-io/shared": "workspace:*",
     "@nema-io/weave": "workspace:*",
-    "@react-sigma/core": "^5.0.6",
     "@sentry/react": "^10.42.0",
     "@streamdown/code": "^1.1.1",
     "@supabase/supabase-js": "^2.98.0",
@@ -27,13 +26,10 @@
     "@trpc/react-query": "^11.12.0",
     "@trpc/server": "^11.12.0",
     "date-fns": "^4.1.0",
-    "graphology": "^0.26.0",
-    "graphology-layout-forceatlas2": "^0.10.1",
     "posthog-js": "^1.360.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hotkeys-hook": "^5.2.4",
-    "sigma": "^3.0.2",
     "streamdown": "^2.5.0",
     "zod": "^4.3.6"
   },
