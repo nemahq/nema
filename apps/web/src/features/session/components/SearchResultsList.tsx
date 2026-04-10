@@ -15,7 +15,7 @@ export function SearchResultsList({ documents }: SearchResultsListProps) {
   }
 
   return (
-    <div className="mb-3 animate-in fade-in rounded-lg border border-border/40 bg-surface-card p-3 shadow-sm duration-normal">
+    <div className="mb-3 rounded-lg border border-border/40 bg-surface-card p-3 shadow-sm">
       <span className="text-xs font-medium text-fg-secondary">
         {t("session.status_search_results_title")} ({documents.length})
       </span>
