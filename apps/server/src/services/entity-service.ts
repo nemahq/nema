@@ -108,6 +108,7 @@ export async function getGraph(opts: {
 
   return {
     nodes: graphData.entities.map((e) => ({
+      id: toKey(e.type, e.name),
       name: e.name,
       type: e.type,
       documentCount: e.documentCount,

@@ -578,22 +578,20 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       const { userId } = options;
       const session = driver.session(sessionConfig);
       try {
-        const [entityResult, edgeResult] = await Promise.all([
-          session.run(
-            `MATCH (e:Entity {userId: $userId})
-             OPTIONAL MATCH (e)-[:MENTIONED_IN]->(d:Document)
-             RETURN e.type AS type, e.name AS name, count(d) AS documentCount
-             ORDER BY documentCount DESC, e.name`,
-            { userId },
-          ),
-          session.run(
-            `MATCH (a:Entity {userId: $userId})-[:RELATED_TO]-(b:Entity {userId: $userId})
-             WHERE id(a) < id(b)
-             RETURN a.type AS sourceType, a.name AS sourceName,
-                    b.type AS targetType, b.name AS targetName`,
-            { userId },
-          ),
-        ]);
+        const entityResult = await session.run(
+          `MATCH (e:Entity {userId: $userId})
+           OPTIONAL MATCH (e)-[:MENTIONED_IN]->(d:Document)
+           RETURN e.type AS type, e.name AS name, count(d) AS documentCount
+           ORDER BY documentCount DESC, e.name`,
+          { userId },
+        );
+        const edgeResult = await session.run(
+          `MATCH (a:Entity {userId: $userId})-[:RELATED_TO]-(b:Entity {userId: $userId})
+           WHERE id(a) < id(b)
+           RETURN a.type AS sourceType, a.name AS sourceName,
+                  b.type AS targetType, b.name AS targetName`,
+          { userId },
+        );
 
         return {
           entities: entityResult.records.map((r) => ({

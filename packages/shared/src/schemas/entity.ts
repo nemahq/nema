@@ -52,6 +52,7 @@ export const EntityGetRelatedInputSchema = z.object({
 export type EntityGetRelatedInput = z.infer<typeof EntityGetRelatedInputSchema>;
 
 export const EntityGraphNodeSchema = z.object({
+  id: z.string().min(1),
   name: z.string().min(1),
   type: EntityTypeSchema,
   documentCount: z.number().int().nonnegative(),
