@@ -5,15 +5,24 @@
       <stop offset="100%" stop-color="#0f766e"/>
     </linearGradient>
   </defs>
+
+  <!-- Background -->
   <rect width="1200" height="630" fill="url(#bg)"/>
 
-  <!-- Mark (white) -->
-  <g transform="translate(500, 140)">
-    <svg width="200" height="245" viewBox="96 74 178 211">
+  <!-- Mark (left-anchored, vertically centered) -->
+  <g transform="translate(140, 150)">
+    <svg width="270" height="330" viewBox="96 74 178 211">
       <path fill-rule="evenodd" fill="#FFFFFF" transform="scale(0.359375)" d="M568.753 234.706C586.198 233.287 607.4 236.769 623.81 242.245C662.228 255.13 693.907 282.828 711.803 319.183C730.607 357.939 733.54 402.504 719.979 443.39C707.252 481.858 679.667 513.636 643.371 531.644C604.636 550.756 559.554 552.296 518.912 538.466L518.948 764.748C496.855 765.492 469.93 765.079 447.62 764.814L447.633 661.087L447.733 548.375C448.002 542.117 447.942 535.849 447.555 529.597C444.157 538.654 440.906 549.426 437.843 558.755L420.716 610.852L370.279 764.83C346.492 765.555 319.093 764.921 295.07 764.928L382.644 498.632L416.797 394.906C424.149 372.668 430.572 350.744 439.721 329.12C462.84 274.475 508.965 238.939 568.753 234.706Z M570.056 306.702C573.068 306.307 578.511 306.44 581.5 306.72C603.689 308.799 624.12 319.68 638.229 336.931C666.042 371.186 663.385 427.91 628.386 456.561C608.385 472.934 581.628 476.182 556.617 473.571C539.649 471.385 529.317 467.272 513.899 460.315C499.315 453.734 486.592 451.18 471.423 457.149C475.018 443.964 480.391 430.208 484.547 417.084C498.586 372.756 514.773 312.253 570.056 306.702Z"/>
     </svg>
   </g>
 
-  <!-- Wordmark -->
-  <text x="600" y="460" text-anchor="middle" font-family="Satoshi, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="700" font-size="72" fill="#FFFFFF" letter-spacing="2">Nema</text>
+  <!-- Wordmark (right side, top of text block) -->
+  <text x="470" y="335"
+        font-family="Satoshi, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-weight="700" font-size="140" fill="#FFFFFF" letter-spacing="-3">Nema</text>
+
+  <!-- Tagline (right side, below wordmark) -->
+  <text x="475" y="400"
+        font-family="Satoshi, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-weight="500" font-size="38" fill="#FFFFFF" fill-opacity="0.85" letter-spacing="0">Forget freely. Nema remembers.</text>
 </svg>

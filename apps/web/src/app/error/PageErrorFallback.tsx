@@ -1,6 +1,7 @@
 import { Button } from "@nema-io/weave";
 import { RefreshCw, RotateCcw } from "@nema-io/weave/icons";
 
+import { NemaMarkIcon } from "@web/components/ui/NemaMarkIcon";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface PageErrorFallbackProps {
@@ -13,6 +14,11 @@ export function PageErrorFallback({ error, onRetry }: PageErrorFallbackProps) {
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-3 p-8">
+      <NemaMarkIcon
+        width={32}
+        height={39}
+        className="mb-4 fill-teal-500 dark:fill-fg-primary"
+      />
       <p className="text-sm text-fg-tertiary">{t("error.page_error")}</p>
       {error?.message && (
         <p className="max-w-md text-center text-xs text-fg-tertiary/60">

@@ -4,7 +4,6 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button, Input, Separator } from "@nema-io/weave";
 import { LoaderCircle, Mail } from "@nema-io/weave/icons";
 
-import { NemaMarkIcon } from "@web/components/ui/NemaMarkIcon";
 import { GoogleIcon } from "@web/features/auth";
 import { useAuth } from "@web/hooks/useAuth";
 import { supabase } from "@web/lib/supabase";
@@ -79,16 +78,9 @@ export function SignInPage() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface p-4">
       <div className="flex w-full max-w-sm flex-col items-center gap-5">
-        <div className="flex flex-col items-center gap-3">
-          <NemaMarkIcon
-            width={48}
-            height={59}
-            className="fill-teal-700 dark:fill-teal-400"
-          />
-          <p className="text-lg font-semibold text-fg-primary">
-            {t("auth.tagline")}
-          </p>
-        </div>
+        <span className="text-[40px] font-bold leading-none tracking-tight text-teal-500 dark:text-fg-primary">
+          Nema
+        </span>
 
         <div className="flex min-h-[260px] w-full flex-col items-center justify-center rounded-xl border border-border p-6">
           {magicLinkSent ? (
