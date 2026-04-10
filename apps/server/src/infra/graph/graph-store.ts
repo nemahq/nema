@@ -84,6 +84,22 @@ export interface EntityTypeCount {
   count: number;
 }
 
+export interface GraphEdge {
+  sourceType: EntityType;
+  sourceName: string;
+  targetType: EntityType;
+  targetName: string;
+}
+
+export interface GraphData {
+  entities: GraphEntityWithCount[];
+  edges: GraphEdge[];
+}
+
+export interface GetGraphOptions {
+  userId: string;
+}
+
 export interface GraphStore {
   ensureSchema(): Promise<void>;
   upsertEntities(options: UpsertEntitiesOptions): Promise<void>;
@@ -107,4 +123,5 @@ export interface GraphStore {
   mergeEntities(options: MergeEntitiesOptions): Promise<void>;
   // userId 불필요 — Document 노드에 userId 없음. 접근 제어는 서비스 레이어 책임.
   deleteByDocument(docId: string): Promise<void>;
+  getGraph(options: GetGraphOptions): Promise<GraphData>;
 }

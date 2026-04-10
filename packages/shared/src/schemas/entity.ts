@@ -50,3 +50,22 @@ export const EntityGetRelatedInputSchema = z.object({
   type: EntityTypeSchema,
 });
 export type EntityGetRelatedInput = z.infer<typeof EntityGetRelatedInputSchema>;
+
+export const EntityGraphNodeSchema = z.object({
+  name: z.string().min(1),
+  type: EntityTypeSchema,
+  documentCount: z.number().int().nonnegative(),
+});
+export type EntityGraphNode = z.infer<typeof EntityGraphNodeSchema>;
+
+export const EntityGraphEdgeSchema = z.object({
+  source: z.string().min(1),
+  target: z.string().min(1),
+});
+export type EntityGraphEdge = z.infer<typeof EntityGraphEdgeSchema>;
+
+export const EntityGraphSchema = z.object({
+  nodes: z.array(EntityGraphNodeSchema),
+  edges: z.array(EntityGraphEdgeSchema),
+});
+export type EntityGraph = z.infer<typeof EntityGraphSchema>;

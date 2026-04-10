@@ -6,6 +6,7 @@ import {
 
 import {
   getDocumentsByEntity,
+  getGraph,
   getRelatedEntities,
   getSummaryStats,
   listEntitiesWithStats,
@@ -41,6 +42,13 @@ export const entityRouter = router({
         input,
       }),
     ),
+
+  graph: providerProcedure.query(({ ctx }) =>
+    getGraph({
+      graphStore: ctx.providers.graphStore,
+      userId: ctx.user.id,
+    }),
+  ),
 
   stats: providerProcedure.query(({ ctx }) =>
     getSummaryStats({

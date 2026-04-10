@@ -4,6 +4,7 @@ import type {
   DocumentSummary,
   EntityGetDocumentsInput,
   EntityGetRelatedInput,
+  EntityGraph,
   EntityListInput,
   EntityStats,
   EntitySummary,
@@ -95,6 +96,27 @@ export async function getRelatedEntities(opts: {
     type: e.type,
     documentCount: e.documentCount,
   }));
+}
+
+export async function getGraph(opts: {
+  graphStore: GraphStore;
+  userId: string;
+}): Promise<EntityGraph> {
+  const graphData = await opts.graphStore.getGraph({ userId: opts.userId });
+
+  const toKey = (type: string, name: string) => `${type}:${name}`;
+
+  return {
+    nodes: graphData.entities.map((e) => ({
+      name: e.name,
+      type: e.type,
+      documentCount: e.documentCount,
+    })),
+    edges: graphData.edges.map((e) => ({
+      source: toKey(e.sourceType, e.sourceName),
+      target: toKey(e.targetType, e.targetName),
+    })),
+  };
 }
 
 export async function getSummaryStats(opts: {

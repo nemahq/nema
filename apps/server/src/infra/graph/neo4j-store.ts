@@ -8,7 +8,9 @@ import type {
   FindDocumentsByEntitiesOptions,
   FindDocumentsByEntityOptions,
   FindRelatedDocumentsOptions,
+  GetGraphOptions,
   GetRelatedEntitiesOptions,
+  GraphData,
   GraphEntity,
   GraphEntityWithCount,
   GraphSearchResult,
@@ -558,6 +560,61 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         throw new GraphStoreError(
           `deleteByDocument failed: ${error instanceof Error ? error.message : String(error)}`,
           "deleteByDocument",
+          error,
+        );
+      } finally {
+        try {
+          await session.close();
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
+        }
+      }
+    },
+
+    async getGraph(options: GetGraphOptions): Promise<GraphData> {
+      const { userId } = options;
+      const session = driver.session(sessionConfig);
+      try {
+        const [entityResult, edgeResult] = await Promise.all([
+          session.run(
+            `MATCH (e:Entity {userId: $userId})
+             OPTIONAL MATCH (e)-[:MENTIONED_IN]->(d:Document)
+             RETURN e.type AS type, e.name AS name, count(d) AS documentCount
+             ORDER BY documentCount DESC, e.name`,
+            { userId },
+          ),
+          session.run(
+            `MATCH (a:Entity {userId: $userId})-[:RELATED_TO]-(b:Entity {userId: $userId})
+             WHERE id(a) < id(b)
+             RETURN a.type AS sourceType, a.name AS sourceName,
+                    b.type AS targetType, b.name AS targetName`,
+            { userId },
+          ),
+        ]);
+
+        return {
+          entities: entityResult.records.map((r) => ({
+            type: getEntityType(r, "type"),
+            name: getString(r, "name"),
+            documentCount: getInteger(r, "documentCount"),
+          })),
+          edges: edgeResult.records.map((r) => ({
+            sourceType: getEntityType(r, "sourceType"),
+            sourceName: getString(r, "sourceName"),
+            targetType: getEntityType(r, "targetType"),
+            targetName: getString(r, "targetName"),
+          })),
+        };
+      } catch (error) {
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
+        throw new GraphStoreError(
+          `getGraph failed: ${error instanceof Error ? error.message : String(error)}`,
+          "getGraph",
           error,
         );
       } finally {
