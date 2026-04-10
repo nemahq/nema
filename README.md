@@ -1,6 +1,8 @@
-# Nema
+<p align="center">
+  <img src="apps/web/src/assets/nema-logo.svg" alt="Nema" height="28" />
+</p>
 
-AI-powered context management web app.
+<p align="center">AI-powered context management web app.</p>
 
 ## Tech Stack
 

@@ -8,8 +8,7 @@
     "continue_with_google": "Continue with Google",
     "email_placeholder": "Email",
     "magic_link_sent": "Check your email for the login link.",
-    "or": "OR",
-    "tagline": "Forget freely. Nema remembers"
+    "or": "OR"
   },
   "common": {
     "cancel": "Cancel",
@@ -58,10 +57,12 @@
     "empty_heading_1": "Capture it while it's fresh",
     "empty_heading_2": "Put it all here",
     "empty_heading_3": "Just start writing",
+    "empty_heading_4": "Forget freely",
     "empty_subheading_0": "Write it down — it'll be ready when you need it.",
     "empty_subheading_1": "The organizing is on us.",
     "empty_subheading_2": "The full context comes back when you ask.",
     "empty_subheading_3": "The more you save, the smarter it gets.",
+    "empty_subheading_4": "Nema remembers.",
     "focus_composer": "Focus composer",
     "focus_next_pane": "Next split",
     "focus_prev_pane": "Previous split",
