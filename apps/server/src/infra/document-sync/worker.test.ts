@@ -180,8 +180,8 @@ describe("createSyncWorker", () => {
 
   // ========== Bilingual document ==========
 
-  describe("bilingual document → English content used for engine", () => {
-    it("비영어 문서는 _en 필드로 벡터·엔티티 처리", async () => {
+  describe("bilingual document → engine field separation", () => {
+    it("벡터는 _en 필드로, 엔티티 추출은 원문 body로 처리", async () => {
       const supabase = mockSupabase();
       const vectorStore = mockVectorStore();
       const graphStore = mockGraphStore();
@@ -211,6 +211,7 @@ describe("createSyncWorker", () => {
       await vi.advanceTimersByTimeAsync(0);
       await worker.stop();
 
+      // 벡터 임베딩은 영문 번역본으로
       expect(vectorStore.upsert).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
@@ -218,6 +219,18 @@ describe("createSyncWorker", () => {
           chunks: ["English body"],
           tags: ["tag1"],
           summary: "English summary",
+        }),
+      );
+      // 엔티티 추출은 원문 언어 보존을 위해 원문 body로
+      expect(llm.generateStructured).toHaveBeenCalledWith(
+        expect.objectContaining({
+          schemaName: "entity_extraction",
+          messages: [
+            expect.objectContaining({
+              role: "user",
+              content: expect.stringContaining("한국어 본문"),
+            }),
+          ],
         }),
       );
     });

@@ -105,10 +105,23 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
            FOR (d:Document) ON (d.docId)`,
         );
         // Backfill: 기존 엔티티의 name(영문) → nameEn 복사
-        await session.run(
+        // 재부팅마다 실행되지만 nameEn IS NULL 필터로 이미 처리된 노드는 제외되어 멱등.
+        // 기대값은 0 — 0이 아니면 데이터 드리프트 시그널로 Sentry에 기록.
+        const backfillResult = await session.run(
           `MATCH (e:Entity) WHERE e.nameEn IS NULL
-           SET e.nameEn = e.name`,
+           SET e.nameEn = e.name
+           RETURN count(e) AS updated`,
         );
+        const backfillRecord = backfillResult.records[0];
+        if (backfillRecord) {
+          const backfilled = getInteger(backfillRecord, "updated");
+          if (backfilled > 0) {
+            Sentry.captureMessage(
+              "[neo4j] backfilled Entity.nameEn from name",
+              { level: "info", extra: { backfilled } },
+            );
+          }
+        }
       } catch (error) {
         if (error instanceof GraphStoreError) {
           throw error;
@@ -132,9 +145,6 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
 
     async upsertEntities(options: UpsertEntitiesOptions): Promise<void> {
       const { docId, userId, entities, createdAt } = options;
-      if (entities.length === 0) {
-        return;
-      }
       for (const e of entities) {
         if (!e.nameEn.trim()) {
           throw new GraphStoreError(
@@ -147,15 +157,23 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       const session = driver.session(sessionConfig);
       try {
         await session.executeWrite(async (tx) => {
+          // Document 노드는 엔티티가 0개여도 반드시 upsert해야 lastReferencedAt 집계에서 누락되지 않음.
+          // createdAt은 ON CREATE SET으로 최초 1회만 고정 — 재처리 시 덮어쓰지 않음.
           await tx.run(
-            "MERGE (d:Document {docId: $docId}) SET d.createdAt = $createdAt",
+            "MERGE (d:Document {docId: $docId}) ON CREATE SET d.createdAt = $createdAt",
             { docId, createdAt },
           );
 
+          if (entities.length === 0) {
+            return;
+          }
+
+          // name(원문 언어)은 ON CREATE SET으로 최초 추출 값을 고정.
+          // 재추출에서 다른 원문 언어로 들어와도 라벨이 drift하지 않도록 함.
           await tx.run(
             `UNWIND $entities AS entity
              MERGE (e:Entity {type: entity.type, nameEn: entity.nameEn, userId: $userId})
-             SET e.name = entity.name
+             ON CREATE SET e.name = entity.name
              WITH e
              MATCH (d:Document {docId: $docId})
              MERGE (e)-[:MENTIONED_IN]->(d)`,
@@ -354,9 +372,10 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           `MATCH (e:Entity {userId: $userId})
            WHERE true ${typeFilter}
            OPTIONAL MATCH (e)-[:MENTIONED_IN]->(d:Document)
+           WITH e, count(d) AS documentCount, max(d.createdAt) AS lastReferencedAt
            RETURN e.type AS type, e.name AS name, e.nameEn AS nameEn,
-                  count(d) AS documentCount, max(d.createdAt) AS lastReferencedAt
-           ORDER BY lastReferencedAt DESC, documentCount DESC, e.name`,
+                  documentCount, lastReferencedAt
+           ORDER BY lastReferencedAt IS NULL, lastReferencedAt DESC, documentCount DESC, e.name`,
           { userId, type },
         );
         return result.records.map((r) => ({
@@ -617,9 +636,10 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         const entityResult = await session.run(
           `MATCH (e:Entity {userId: $userId})
            OPTIONAL MATCH (e)-[:MENTIONED_IN]->(d:Document)
+           WITH e, count(d) AS documentCount, max(d.createdAt) AS lastReferencedAt
            RETURN e.type AS type, e.name AS name, e.nameEn AS nameEn,
-                  count(d) AS documentCount, max(d.createdAt) AS lastReferencedAt
-           ORDER BY documentCount DESC, e.name`,
+                  documentCount, lastReferencedAt
+           ORDER BY lastReferencedAt IS NULL, lastReferencedAt DESC, documentCount DESC, e.name`,
           { userId },
         );
         const edgeResult = await session.run(

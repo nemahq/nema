@@ -58,6 +58,12 @@ async function bootstrap() {
     server.log.info(`Marked ${staleCount} stale save jobs as failed`);
   }
 
+  // Neo4j 스키마는 Qdrant 상태와 무관하게 항상 준비되어야 함 (entity.list 등 read 경로가 의존).
+  const { createNeo4jStore } = await import("./infra/graph");
+  const graphStore = createNeo4jStore();
+  await graphStore.ensureSchema();
+  server.log.info("Neo4j schema ready");
+
   let stopWorker: (() => Promise<void>) | undefined;
 
   if (
@@ -71,13 +77,8 @@ async function bootstrap() {
     server.log.info("Qdrant collection ready");
 
     const { createVoyageProvider } = await import("./infra/embedding");
-    const { createNeo4jStore } = await import("./infra/graph");
 
     const { getProviders } = await import("./infra/providers");
-
-    const graphStore = createNeo4jStore();
-    await graphStore.ensureSchema();
-    server.log.info("Neo4j schema ready");
 
     const worker = createSyncWorker({
       supabase: getSupabaseAdmin(),

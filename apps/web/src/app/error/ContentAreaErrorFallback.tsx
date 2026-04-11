@@ -19,9 +19,9 @@ export function ContentAreaErrorFallback({
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-surface-card p-8">
       <p className="text-sm text-fg-tertiary">{t("error.page_error")}</p>
-      {error?.message && (
+      {import.meta.env.DEV && error?.message && (
         <p className="max-w-md text-center text-xs text-fg-tertiary/60">
           {error.message}
         </p>

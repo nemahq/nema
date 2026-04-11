@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import type { User } from "@supabase/supabase-js";
 
 import { ViewSegment } from "@web/features/memory/components/ViewSegment";
@@ -21,7 +20,7 @@ function getDisplayName(user: User | null): string {
   return user.email ?? "";
 }
 
-function HeaderContent() {
+export function Header() {
   const { t } = useTranslation();
   const { user } = useAuth();
 
@@ -34,13 +33,5 @@ function HeaderContent() {
         <ViewSegment />
       </div>
     </div>
-  );
-}
-
-export function Header() {
-  return (
-    <Suspense>
-      <HeaderContent />
-    </Suspense>
   );
 }

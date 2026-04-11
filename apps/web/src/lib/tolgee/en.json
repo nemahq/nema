@@ -44,7 +44,6 @@
     "entity_type_topic": "Topic",
     "page_title": "{name}'s Memory",
     "sidebar_label": "Memory",
-    "stats_summary": "{noteCount} notes · {entityCount} entities",
     "view_map": "Map",
     "view_overview": "Overview"
   },

@@ -17,16 +17,9 @@ const ENTITY_TYPE_LABEL_KEY: Record<EntityType, TranslationKey> = {
 interface TypeSectionProps {
   type: EntityType;
   entities: EntitySummary[];
-  selectedEntity?: string;
-  onEntityClick?: (entity: EntitySummary) => void;
 }
 
-export function TypeSection({
-  type,
-  entities,
-  selectedEntity,
-  onEntityClick,
-}: TypeSectionProps) {
+export function TypeSection({ type, entities }: TypeSectionProps) {
   const { t } = useTranslation();
   const color = ENTITY_TYPE_COLOR[type];
 
@@ -47,8 +40,6 @@ export function TypeSection({
             key={`${entity.type}-${entity.nameEn ?? entity.name}`}
             name={entity.name}
             documentCount={entity.documentCount}
-            selected={selectedEntity === entity.name}
-            onClick={() => onEntityClick?.(entity)}
           />
         ))}
       </div>

@@ -26,11 +26,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 REVOKE ALL ON FUNCTION fetch_pending_documents FROM public, anon, authenticated;
 GRANT EXECUTE ON FUNCTION fetch_pending_documents TO service_role;
 
--- 전체 문서 재인제스천 트리거
+-- 이미 완료된 문서만 재인제스천. failed 상태는 원인이 미해결이므로 제외.
 UPDATE documents SET
   ingestion_status = 'pending',
   ingestion_retry_count = 0,
-  last_ingestion_attempt = NULL;
+  last_ingestion_attempt = NULL
+WHERE ingestion_status = 'completed';
 
 -- pgmq notify로 worker 깨우기
 SELECT pgmq.send('document_sync', jsonb_build_object('type', 'notify'));

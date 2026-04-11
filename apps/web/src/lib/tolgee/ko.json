@@ -44,7 +44,6 @@
     "entity_type_topic": "주제",
     "page_title": "{name}의 기억",
     "sidebar_label": "기억",
-    "stats_summary": "{noteCount}개의 기록 · {entityCount}개의 키워드",
     "view_map": "맵",
     "view_overview": "개요"
   },
