@@ -41,7 +41,7 @@ export const EntityListInputSchema = z.object({
 export type EntityListInput = z.infer<typeof EntityListInputSchema>;
 
 export const EntityGetDocumentsInputSchema = z.object({
-  name: z.string().min(1),
+  nameEn: z.string().min(1),
   type: EntityTypeSchema,
 });
 export type EntityGetDocumentsInput = z.infer<
@@ -49,7 +49,7 @@ export type EntityGetDocumentsInput = z.infer<
 >;
 
 export const EntityGetRelatedInputSchema = z.object({
-  name: z.string().min(1),
+  nameEn: z.string().min(1),
   type: EntityTypeSchema,
 });
 export type EntityGetRelatedInput = z.infer<typeof EntityGetRelatedInputSchema>;

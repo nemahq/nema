@@ -364,14 +364,14 @@ describe("createNeo4jStore", () => {
     it("returns empty for empty entity names", async () => {
       const store = createNeo4jStore();
       const results = await store.findDocumentsByEntities({
-        entityNames: [],
+        entityNamesEn: [],
         userId: "u1",
       });
       expect(results).toEqual([]);
       expect(mockRun).not.toHaveBeenCalled();
     });
 
-    it("searches by entity names", async () => {
+    it("searches by English entity names", async () => {
       mockRun.mockResolvedValue({
         records: [
           {
@@ -381,14 +381,15 @@ describe("createNeo4jStore", () => {
       });
       const store = createNeo4jStore();
       const results = await store.findDocumentsByEntities({
-        entityNames: ["김철수", "프론트엔드"],
+        entityNamesEn: ["Kim Chulsu", "frontend"],
         userId: "u1",
       });
 
       expect(results).toEqual([{ docId: "d1", sharedEntityCount: 2 }]);
+      expect(mockRun.mock.calls[0][0]).toContain("e.nameEn IN $entityNamesEn");
       expect(mockRun.mock.calls[0][1]).toEqual(
         expect.objectContaining({
-          entityNames: ["김철수", "프론트엔드"],
+          entityNamesEn: ["Kim Chulsu", "frontend"],
           userId: "u1",
         }),
       );
@@ -532,8 +533,8 @@ describe("createNeo4jStore", () => {
       const store = createNeo4jStore();
       await store.mergeEntities({
         userId: "u1",
-        targetName: "김철수",
-        sourceNames: [],
+        targetNameEn: "Kim Chulsu",
+        sourceNamesEn: [],
         type: "Person",
       });
       expect(mockExecuteWrite).not.toHaveBeenCalled();
@@ -544,13 +545,14 @@ describe("createNeo4jStore", () => {
       const store = createNeo4jStore();
       await store.mergeEntities({
         userId: "u1",
-        targetName: "김철수",
-        sourceNames: ["철수"],
+        targetNameEn: "Kim Chulsu",
+        sourceNamesEn: ["Chulsu"],
         type: "Person",
       });
 
       expect(mockRun).toHaveBeenCalledTimes(3);
       expect(mockRun.mock.calls[0][0]).toContain("MENTIONED_IN");
+      expect(mockRun.mock.calls[0][0]).toContain("nameEn: $targetNameEn");
       expect(mockRun.mock.calls[1][0]).toContain("RELATED_TO");
       expect(mockRun.mock.calls[2][0]).toContain("DETACH DELETE");
     });
@@ -561,8 +563,8 @@ describe("createNeo4jStore", () => {
       await expect(
         store.mergeEntities({
           userId: "u1",
-          targetName: "김철수",
-          sourceNames: ["철수"],
+          targetNameEn: "Kim Chulsu",
+          sourceNamesEn: ["Chulsu"],
           type: "Person",
         }),
       ).rejects.toThrow(GraphStoreError);

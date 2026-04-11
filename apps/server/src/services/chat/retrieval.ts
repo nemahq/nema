@@ -83,7 +83,7 @@ export async function* handleRetrievalStream(args: {
     // 2) Neo4j 그래프 검색 (영어 엔티티)
     (searchQuery.entitiesEn.length > 0
       ? graphStore.findDocumentsByEntities({
-          entityNames: searchQuery.entitiesEn,
+          entityNamesEn: searchQuery.entitiesEn,
           userId,
           limit: RETRIEVAL_PER_QUERY_LIMIT,
         })

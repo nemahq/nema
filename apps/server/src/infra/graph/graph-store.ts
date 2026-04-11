@@ -39,7 +39,7 @@ export interface FindRelatedDocumentsOptions {
 }
 
 export interface FindDocumentsByEntitiesOptions {
-  entityNames: string[];
+  entityNamesEn: string[];
   userId: string;
   limit?: number;
 }
@@ -53,8 +53,8 @@ export interface ListEntitiesOptions {
 
 export interface MergeEntitiesOptions {
   userId: string;
-  targetName: string;
-  sourceNames: string[];
+  targetNameEn: string;
+  sourceNamesEn: string[];
   type: EntityType;
 }
 
@@ -70,14 +70,14 @@ export interface ListEntitiesWithStatsOptions {
 
 export interface FindDocumentsByEntityOptions {
   userId: string;
-  name: string;
+  nameEn: string;
   type: EntityType;
   limit?: number;
 }
 
 export interface GetRelatedEntitiesOptions {
   userId: string;
-  name: string;
+  nameEn: string;
   type: EntityType;
   limit?: number;
 }
