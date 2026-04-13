@@ -37,7 +37,6 @@ export interface TriggerMessage {
   message: SyncEvent;
 }
 
-// Supabase fetch_pending_documents RPC row shadow — snake_case intentional.
 export const PendingDocumentSchema = z.object({
   id: z.string().uuid(),
   user_id: z.string().uuid(),

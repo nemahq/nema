@@ -9,7 +9,6 @@ export const ENTITY_TYPE_COLOR: Record<EntityType, string> = {
   Location: "#4ADE80",
 };
 
-// Record 기반으로 선언해 신규 EntityType 추가 시 컴파일 에러로 누락 방지.
 const ENTITY_TYPE_RANK: Record<EntityType, number> = {
   Topic: 0,
   Person: 1,

@@ -122,7 +122,6 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           `CREATE INDEX document_doc_id IF NOT EXISTS
            FOR (d:Document) ON (d.docId)`,
         );
-        // Backfill: 기존 엔티티의 name(영문) → nameEn 복사
         // 재부팅마다 실행되지만 nameEn IS NULL 필터로 이미 처리된 노드는 제외되어 멱등.
         // 기대값은 0 — 0이 아니면 데이터 드리프트 시그널로 Sentry에 기록.
         const backfillResult = await session.run(
@@ -176,7 +175,6 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       try {
         await session.executeWrite(async (tx) => {
           // Document 노드는 엔티티가 0개여도 반드시 upsert해야 lastReferencedAt 집계에서 누락되지 않음.
-          // createdAt은 ON CREATE SET으로 최초 1회만 고정 — 재처리 시 덮어쓰지 않음.
           await tx.run(
             "MERGE (d:Document {docId: $docId}) ON CREATE SET d.createdAt = $createdAt",
             { docId, createdAt },
@@ -186,8 +184,6 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
             return;
           }
 
-          // name(원문 언어)은 ON CREATE SET으로 최초 추출 값을 고정.
-          // 재추출에서 다른 원문 언어로 들어와도 라벨이 drift하지 않도록 함.
           await tx.run(
             `UNWIND $entities AS entity
              MERGE (e:Entity {type: entity.type, nameEn: entity.nameEn, userId: $userId})
