@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTheme } from "@web/app/providers/ThemeProvider";
-import { useAuth } from "@web/hooks/useAuth";
+import { useAuth } from "@web/lib/auth";
 import { supabase } from "@web/lib/supabase";
 import { changeLocale, type Locale, useCurrentLocale } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";

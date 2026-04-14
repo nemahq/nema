@@ -5,7 +5,7 @@ import { Button, Input, Separator } from "@nema-io/weave";
 import { LoaderCircle, Mail } from "@nema-io/weave/icons";
 
 import { GoogleIcon } from "@web/features/auth";
-import { useAuth } from "@web/hooks/useAuth";
+import { useAuth } from "@web/lib/auth";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 

@@ -13,7 +13,7 @@ import { LogOut } from "@nema-io/weave/icons";
 
 import { useSidebar } from "@web/components/layout/Sidebar";
 import { SettingsModal } from "@web/features/settings";
-import { useAuth } from "@web/hooks/useAuth";
+import { useAuth } from "@web/lib/auth";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";

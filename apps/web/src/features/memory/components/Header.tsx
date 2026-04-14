@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { HeaderSkeleton } from "@web/features/memory/components/HeaderSkeleton";
 import { ViewSegment } from "@web/features/memory/components/ViewSegment";
-import { useAuth } from "@web/hooks/useAuth";
+import { useAuth } from "@web/lib/auth";
 import { useTranslation } from "@web/lib/tolgee";
 
 function HeaderContent() {
