@@ -295,8 +295,8 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
     async findDocumentsByEntities(
       options: FindDocumentsByEntitiesOptions,
     ): Promise<GraphSearchResult[]> {
-      const { entityNamesEn, userId, limit = 10 } = options;
-      if (entityNamesEn.length === 0) {
+      const { entityNames, userId, limit = 10 } = options;
+      if (entityNames.length === 0) {
         return [];
       }
 
@@ -304,11 +304,11 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       try {
         const result = await session.run(
           `MATCH (e:Entity {userId: $userId})-[:MENTIONED_IN]->(d:Document)
-           WHERE e.nameEn IN $entityNamesEn
+           WHERE e.nameEn IN $entityNames
            RETURN d.docId AS docId, count(e) AS sharedEntityCount
            ORDER BY sharedEntityCount DESC
            LIMIT $limit`,
-          { userId, entityNamesEn, limit: neo4j.int(limit) },
+          { userId, entityNames, limit: neo4j.int(limit) },
         );
         return result.records.map((r) => ({
           docId: getString(r, "docId"),
@@ -423,15 +423,15 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
     async findDocumentsByEntity(
       options: FindDocumentsByEntityOptions,
     ): Promise<string[]> {
-      const { userId, nameEn, type, limit = 50 } = options;
+      const { userId, name, type, limit = 50 } = options;
       const session = driver.session(sessionConfig);
       try {
         const result = await session.run(
-          `MATCH (e:Entity {userId: $userId, nameEn: $nameEn, type: $type})
+          `MATCH (e:Entity {userId: $userId, nameEn: $name, type: $type})
                  -[:MENTIONED_IN]->(d:Document)
            RETURN d.docId AS docId
            LIMIT $limit`,
-          { userId, nameEn, type, limit: neo4j.int(limit) },
+          { userId, name, type, limit: neo4j.int(limit) },
         );
         return result.records.map((r) => getString(r, "docId"));
       } catch (error) {
@@ -458,17 +458,17 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
     async getRelatedEntities(
       options: GetRelatedEntitiesOptions,
     ): Promise<GraphEntityWithCount[]> {
-      const { userId, nameEn, type, limit = 50 } = options;
+      const { userId, name, type, limit = 50 } = options;
       const session = driver.session(sessionConfig);
       try {
         const result = await session.run(
-          `MATCH (e:Entity {userId: $userId, nameEn: $nameEn, type: $type})
+          `MATCH (e:Entity {userId: $userId, nameEn: $name, type: $type})
                  -[:RELATED_TO]-(other:Entity {userId: $userId})
            OPTIONAL MATCH (other)-[:MENTIONED_IN]->(d:Document)
            RETURN other.type AS type, other.name AS name, other.nameEn AS nameEn, count(d) AS documentCount
            ORDER BY documentCount DESC, other.name
            LIMIT $limit`,
-          { userId, nameEn, type, limit: neo4j.int(limit) },
+          { userId, name, type, limit: neo4j.int(limit) },
         );
         return result.records.map((r) => ({
           type: getEntityType(r, "type"),
@@ -532,8 +532,8 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
     },
 
     async mergeEntities(options: MergeEntitiesOptions): Promise<void> {
-      const { userId, targetNameEn, sourceNamesEn, type } = options;
-      if (sourceNamesEn.length === 0) {
+      const { userId, targetName, sourceNames, type } = options;
+      if (sourceNames.length === 0) {
         return;
       }
 
@@ -541,30 +541,30 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       try {
         await session.executeWrite(async (tx) => {
           await tx.run(
-            `MERGE (target:Entity {type: $type, nameEn: $targetNameEn, userId: $userId})
+            `MERGE (target:Entity {type: $type, nameEn: $targetName, userId: $userId})
              WITH target
              MATCH (source:Entity {type: $type, userId: $userId})
-             WHERE source.nameEn IN $sourceNamesEn AND source <> target
+             WHERE source.nameEn IN $sourceNames AND source <> target
              MATCH (source)-[r:MENTIONED_IN]->(d:Document)
              MERGE (target)-[:MENTIONED_IN]->(d)
              DELETE r`,
-            { type, targetNameEn, sourceNamesEn, userId },
+            { type, targetName, sourceNames, userId },
           );
           await tx.run(
             `MATCH (source:Entity {type: $type, userId: $userId})
-             WHERE source.nameEn IN $sourceNamesEn
+             WHERE source.nameEn IN $sourceNames
              MATCH (source)-[r:RELATED_TO]-(other:Entity)
-             WHERE other.nameEn <> $targetNameEn
-             MERGE (target:Entity {type: $type, nameEn: $targetNameEn, userId: $userId})
+             WHERE other.nameEn <> $targetName
+             MERGE (target:Entity {type: $type, nameEn: $targetName, userId: $userId})
              MERGE (target)-[:RELATED_TO]-(other)
              DELETE r`,
-            { type, targetNameEn, sourceNamesEn, userId },
+            { type, targetName, sourceNames, userId },
           );
           await tx.run(
             `MATCH (source:Entity {type: $type, userId: $userId})
-             WHERE source.nameEn IN $sourceNamesEn
+             WHERE source.nameEn IN $sourceNames
              DETACH DELETE source`,
-            { type, sourceNamesEn, userId },
+            { type, sourceNames, userId },
           );
         });
       } catch (error) {

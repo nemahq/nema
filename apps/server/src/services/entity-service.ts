@@ -41,7 +41,7 @@ export async function getDocumentsByEntity(opts: {
 }): Promise<DocumentSummary[]> {
   const docIds = await opts.graphStore.findDocumentsByEntity({
     userId: opts.userId,
-    nameEn: opts.input.nameEn,
+    name: opts.input.name,
     type: opts.input.type,
   });
 
@@ -63,7 +63,7 @@ export async function getDocumentsByEntity(opts: {
       {
         level: "warning",
         extra: {
-          entityNameEn: opts.input.nameEn,
+          entityName: opts.input.name,
           entityType: opts.input.type,
           neo4jCount: docIds.length,
           supabaseCount: data.length,
@@ -89,7 +89,7 @@ export async function getRelatedEntities(opts: {
 }): Promise<EntitySummary[]> {
   const related = await opts.graphStore.getRelatedEntities({
     userId: opts.userId,
-    nameEn: opts.input.nameEn,
+    name: opts.input.name,
     type: opts.input.type,
   });
 
