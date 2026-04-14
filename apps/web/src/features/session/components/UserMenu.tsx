@@ -13,7 +13,7 @@ import { LogOut } from "@nema-io/weave/icons";
 
 import { useSidebar } from "@web/components/layout/Sidebar";
 import { SettingsModal } from "@web/features/settings";
-import { useAuth } from "@web/lib/auth";
+import { useUser } from "@web/lib/auth";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
@@ -22,14 +22,10 @@ import { SettingsMenuItem } from "./SettingsMenuItem";
 
 export function UserMenu() {
   const { collapsed } = useSidebar();
-  const { user } = useAuth();
+  const user = useUser();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
-
-  if (!user) {
-    return null;
-  }
 
   const initial = user.displayName.charAt(0).toUpperCase();
 

@@ -42,11 +42,13 @@ function toAppUser(user: User): AppUser {
     }
   }
 
+  const rawAvatar = user.user_metadata?.avatar_url;
+
   return {
     id: user.id,
-    displayName,
+    displayName: displayName || user.id.slice(0, 8),
     email: user.email ?? "",
-    avatarUrl: user.user_metadata?.avatar_url as string | undefined,
+    avatarUrl: typeof rawAvatar === "string" ? rawAvatar : undefined,
   };
 }
 
@@ -95,4 +97,12 @@ export function useAuth() {
     throw new Error("useAuth는 AuthProvider 내부에서만 사용할 수 있습니다.");
   }
   return ctx;
+}
+
+export function useUser(): AppUser {
+  const { user } = useAuth();
+  if (!user) {
+    throw new Error("useUser is only available in authenticated routes");
+  }
+  return user;
 }
