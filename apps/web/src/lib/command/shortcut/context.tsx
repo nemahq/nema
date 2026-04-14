@@ -1,7 +1,9 @@
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -43,23 +45,25 @@ export function ActionRegistryProvider({
   const actionsRef = useRef(new Map<ActionId, RegisteredAction>());
   const [registryVersion, setRegistryVersion] = useState(0);
 
-  function register(action: RegisteredAction) {
+  const register = useCallback(function register(action: RegisteredAction) {
     actionsRef.current.set(action.id, action);
     setRegistryVersion((v) => v + 1);
-  }
+  }, []);
 
-  function unregister(id: ActionId) {
+  const unregister = useCallback(function unregister(id: ActionId) {
     if (actionsRef.current.has(id)) {
       actionsRef.current.delete(id);
       setRegistryVersion((v) => v + 1);
     }
-  }
+  }, []);
 
-  function getAll() {
+  const getAll = useCallback(function getAll() {
     return Array.from(actionsRef.current.values());
-  }
+  }, []);
 
-  function isShortcutSuppressed(id: ActionId): boolean {
+  const isShortcutSuppressed = useCallback(function isShortcutSuppressed(
+    id: ActionId,
+  ): boolean {
     const action = actionsRef.current.get(id);
     if (!action) {
       return false;
@@ -74,18 +78,21 @@ export function ActionRegistryProvider({
       }
     }
     return false;
-  }
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({
+      register,
+      unregister,
+      getAll,
+      isShortcutSuppressed,
+      registryVersion,
+    }),
+    [register, unregister, getAll, isShortcutSuppressed, registryVersion],
+  );
 
   return (
-    <ActionRegistryContext
-      value={{
-        register,
-        unregister,
-        getAll,
-        isShortcutSuppressed,
-        registryVersion,
-      }}
-    >
+    <ActionRegistryContext value={contextValue}>
       {children}
     </ActionRegistryContext>
   );
