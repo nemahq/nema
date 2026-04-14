@@ -11,6 +11,7 @@ import { useSplitPane } from "@web/features/session/contexts/SplitPaneContext";
 import { useDraftTab } from "@web/features/session/hooks/useDraftTab";
 import { useHelpTab } from "@web/features/session/hooks/useHelpTab";
 import { useRetrievalTabs } from "@web/features/session/hooks/useRetrievalTabs";
+import { useStreamingRetrievalTab } from "@web/features/session/hooks/useStreamingRetrievalTab";
 import { reconcileTabsWithPanes } from "@web/features/session/hooks/useTabPaneReconciliation";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 
@@ -69,10 +70,11 @@ function ContentPanelInner() {
   } = useSplitPane();
 
   const draftTab = useDraftTab();
+  const streamingRetrievalTab = useStreamingRetrievalTab();
   const retrievalTabs = useRetrievalTabs();
   const helpTab = useHelpTab();
 
-  const allTabs = [draftTab, ...retrievalTabs, helpTab];
+  const allTabs = [draftTab, streamingRetrievalTab, ...retrievalTabs, helpTab];
   const tabs: TabbedPanelTab[] = allTabs.filter(
     (tab): tab is TabbedPanelTab => tab !== undefined,
   );
