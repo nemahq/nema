@@ -6,17 +6,20 @@ function def(
   labelKey: TranslationKey,
   shortcut: string,
   scope: ActionScope,
+  priority = 0,
 ): ActionDef {
-  return { labelKey, shortcut, scope };
+  return { labelKey, shortcut, scope, priority };
 }
 
+// priority: 같은 단축키에 여러 액션이 등록되면 높은 값이 우선 실행된다 (z-index 방식).
+// 기본값 0 = 최저 우선순위. 새 액션은 별도 지정 없이 양보한다.
 const actionMap = {
   draft: {
     save: def("session.draft_save", "mod+s", "global"),
     cancel: def("common.cancel", "escape", "global"),
   },
   stream: {
-    stop: def("session.stream_stop", "escape", "global"),
+    stop: def("session.stream_stop", "escape", "global", 1),
   },
   navigation: {
     focusComposer: def("session.focus_composer", "mod+l", "global"),

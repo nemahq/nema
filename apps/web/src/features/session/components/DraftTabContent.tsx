@@ -30,38 +30,43 @@ function DraftTabContentInner() {
     pendingConfirmation,
   } = useChatLifecycle();
 
-  const isStreaming = streamingPhase === "draft";
-  const smoothText = useBufferedStream(isStreaming ? streamingDraftText : "");
-  const body = isStreaming ? smoothText : draft?.body;
+  const isDraftStreaming = streamingPhase === "draft";
+  const smoothText = useBufferedStream(
+    isDraftStreaming ? streamingDraftText : "",
+  );
+  const body = isDraftStreaming ? smoothText : draft?.body;
 
-  const canAct = streamingPhase === "idle" && !!body && !pendingConfirmation;
+  const canAct = !isDraftStreaming && !!body && !pendingConfirmation;
 
   useRegisterAction("draft.save", {
     execute: () => saveDraft.mutate({ sessionId }),
     enabled: canAct && !saveDraft.isPending,
   });
 
-  useRegisterAction("draft.cancel", {
-    execute: () => cancelDraft.mutate({ sessionId }),
-    enabled: canAct && !cancelDraft.isPending,
-  });
+  const { isShortcutOverridden: isCancelOverridden } = useRegisterAction(
+    "draft.cancel",
+    {
+      execute: () => cancelDraft.mutate({ sessionId }),
+      enabled: canAct && !cancelDraft.isPending,
+    },
+  );
 
   return (
     <div className="flex items-start gap-2">
       <div className="min-w-0 flex-1">
         {body && <MarkdownRenderer content={body} />}
-        {!body && isStreaming && !streamError && <WritingCursor />}
-        {streamingPhase === "draft" && <StreamErrorMessage />}
+        {!body && isDraftStreaming && !streamError && <WritingCursor />}
+        {isDraftStreaming && <StreamErrorMessage />}
       </div>
 
-      {!isStreaming && body && (
+      {!isDraftStreaming && body && (
         <div className="sticky top-0 shrink-0">
           <div className="flex gap-2">
             <Button
               variant="ghost"
               size="xs"
               onClick={() => cancelDraft.mutate({ sessionId })}
-              disabled={!canAct || cancelDraft.isPending}
+              disabled={!canAct || cancelDraft.isPending || isCancelOverridden}
             >
               {t("common.cancel")}
               <Kbd>Esc</Kbd>

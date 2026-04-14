@@ -60,19 +60,30 @@ export function reconcileTabsWithPanes(
 
   for (const [paneId, pane] of nextPaneMap) {
     const filteredTabIds = pane.tabIds.filter((id) => currentTabIds.has(id));
-    if (filteredTabIds.length !== pane.tabIds.length) {
-      if (filteredTabIds.length === 0) {
-        panesToRemove.push(paneId);
-      } else {
-        const nextActive = currentTabIds.has(pane.activeTabId)
-          ? pane.activeTabId
-          : (filteredTabIds[0] ?? "");
-        nextPaneMap.set(paneId, {
-          tabIds: filteredTabIds,
-          activeTabId: nextActive,
-        });
-      }
+    if (filteredTabIds.length === pane.tabIds.length) {
+      continue;
     }
+    if (filteredTabIds.length === 0) {
+      panesToRemove.push(paneId);
+      continue;
+    }
+
+    const activeStillExists = currentTabIds.has(pane.activeTabId);
+    let nextActive: string;
+    if (activeStillExists) {
+      nextActive = pane.activeTabId;
+    } else {
+      const prevIndex = pane.tabIds.indexOf(pane.activeTabId);
+      const nearbyTab = filteredTabIds.find(
+        (id) => pane.tabIds.indexOf(id) >= prevIndex,
+      );
+      nextActive = nearbyTab ?? filteredTabIds[filteredTabIds.length - 1] ?? "";
+    }
+
+    nextPaneMap.set(paneId, {
+      tabIds: filteredTabIds,
+      activeTabId: nextActive,
+    });
   }
 
   for (const paneId of panesToRemove) {

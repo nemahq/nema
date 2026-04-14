@@ -1,4 +1,12 @@
-import { createContext, type ReactNode, useContext, useRef } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import type { TranslationKey } from "@web/lib/tolgee";
 
@@ -11,6 +19,7 @@ interface RegisteredAction {
   labelKey: TranslationKey;
   shortcut: string;
   scope: ActionScope;
+  priority: number;
   execute: () => void;
 }
 
@@ -18,6 +27,8 @@ interface ActionRegistryContextValue {
   register: (action: RegisteredAction) => void;
   unregister: (id: ActionId) => void;
   getAll: () => RegisteredAction[];
+  isShortcutOverridden: (id: ActionId) => boolean;
+  registryVersion: number;
 }
 
 const ActionRegistryContext = createContext<ActionRegistryContextValue | null>(
@@ -32,21 +43,59 @@ export function ActionRegistryProvider({
   children,
 }: ActionRegistryProviderProps) {
   const actionsRef = useRef(new Map<ActionId, RegisteredAction>());
+  const [registryVersion, setRegistryVersion] = useState(0);
 
-  function register(action: RegisteredAction) {
+  const register = useCallback(function register(action: RegisteredAction) {
+    const isNew = !actionsRef.current.has(action.id);
     actionsRef.current.set(action.id, action);
-  }
+    if (isNew) {
+      setRegistryVersion((v) => v + 1);
+    }
+  }, []);
 
-  function unregister(id: ActionId) {
-    actionsRef.current.delete(id);
-  }
+  const unregister = useCallback(function unregister(id: ActionId) {
+    if (actionsRef.current.has(id)) {
+      actionsRef.current.delete(id);
+      setRegistryVersion((v) => v + 1);
+    }
+  }, []);
 
-  function getAll() {
+  const getAll = useCallback(function getAll() {
     return Array.from(actionsRef.current.values());
-  }
+  }, []);
+
+  const isShortcutOverridden = useCallback(function isShortcutOverridden(
+    id: ActionId,
+  ): boolean {
+    const action = actionsRef.current.get(id);
+    if (!action) {
+      return false;
+    }
+    for (const other of actionsRef.current.values()) {
+      if (
+        other.id !== id &&
+        other.shortcut === action.shortcut &&
+        other.priority > action.priority
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({
+      register,
+      unregister,
+      getAll,
+      isShortcutOverridden,
+      registryVersion,
+    }),
+    [register, unregister, getAll, isShortcutOverridden, registryVersion],
+  );
 
   return (
-    <ActionRegistryContext value={{ register, unregister, getAll }}>
+    <ActionRegistryContext value={contextValue}>
       {children}
     </ActionRegistryContext>
   );

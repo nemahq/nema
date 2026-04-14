@@ -6,4 +6,5 @@ export interface ActionDef {
   labelKey: TranslationKey;
   shortcut: string;
   scope: ActionScope;
+  priority: number;
 }
