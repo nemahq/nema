@@ -21,7 +21,7 @@ function resolveShortcut(shortcut: string): string {
 const MODIFIER_KEYS = ["mod", "ctrl", "meta", "shift", "alt"];
 
 interface UseRegisterActionResult {
-  isShortcutSuppressed: boolean;
+  isShortcutOverridden: boolean;
 }
 
 export function useRegisterAction(
@@ -29,7 +29,7 @@ export function useRegisterAction(
   { execute, enabled = true }: UseRegisterActionOptions,
 ): UseRegisterActionResult {
   const registry = useActionRegistry();
-  const { register, unregister, isShortcutSuppressed } = registry;
+  const { register, unregister, isShortcutOverridden } = registry;
   const def = useMemo(() => getActionDef(id), [id]);
 
   const executeRef = useRef(execute);
@@ -60,12 +60,12 @@ export function useRegisterAction(
   );
 
   const hasModifier = MODIFIER_KEYS.some((key) => def.shortcut.includes(key));
-  const suppressed = enabled && isShortcutSuppressed(id);
+  const overridden = enabled && isShortcutOverridden(id);
 
   useHotkeys(
     resolveShortcut(def.shortcut),
     (e) => {
-      if (isShortcutSuppressed(id)) {
+      if (isShortcutOverridden(id)) {
         return;
       }
       e.preventDefault();
@@ -80,5 +80,5 @@ export function useRegisterAction(
     },
   );
 
-  return { isShortcutSuppressed: suppressed };
+  return { isShortcutOverridden: overridden };
 }

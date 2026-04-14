@@ -43,7 +43,7 @@ function DraftTabContentInner() {
     enabled: canAct && !saveDraft.isPending,
   });
 
-  const { isShortcutSuppressed: isCancelSuppressed } = useRegisterAction(
+  const { isShortcutOverridden: isCancelOverridden } = useRegisterAction(
     "draft.cancel",
     {
       execute: () => cancelDraft.mutate({ sessionId }),
@@ -66,7 +66,7 @@ function DraftTabContentInner() {
               variant="ghost"
               size="xs"
               onClick={() => cancelDraft.mutate({ sessionId })}
-              disabled={!canAct || cancelDraft.isPending || isCancelSuppressed}
+              disabled={!canAct || cancelDraft.isPending || isCancelOverridden}
             >
               {t("common.cancel")}
               <Kbd>Esc</Kbd>

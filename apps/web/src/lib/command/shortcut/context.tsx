@@ -27,7 +27,7 @@ interface ActionRegistryContextValue {
   register: (action: RegisteredAction) => void;
   unregister: (id: ActionId) => void;
   getAll: () => RegisteredAction[];
-  isShortcutSuppressed: (id: ActionId) => boolean;
+  isShortcutOverridden: (id: ActionId) => boolean;
   registryVersion: number;
 }
 
@@ -64,7 +64,7 @@ export function ActionRegistryProvider({
     return Array.from(actionsRef.current.values());
   }, []);
 
-  const isShortcutSuppressed = useCallback(function isShortcutSuppressed(
+  const isShortcutOverridden = useCallback(function isShortcutOverridden(
     id: ActionId,
   ): boolean {
     const action = actionsRef.current.get(id);
@@ -88,10 +88,10 @@ export function ActionRegistryProvider({
       register,
       unregister,
       getAll,
-      isShortcutSuppressed,
+      isShortcutOverridden,
       registryVersion,
     }),
-    [register, unregister, getAll, isShortcutSuppressed, registryVersion],
+    [register, unregister, getAll, isShortcutOverridden, registryVersion],
   );
 
   return (
