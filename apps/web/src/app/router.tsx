@@ -7,8 +7,8 @@ import {
   Outlet,
 } from "@tanstack/react-router";
 
-import { ContentAreaErrorFallback } from "@web/app/error/ContentAreaErrorFallback";
 import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
+import { RootErrorFallback } from "@web/app/error/RootErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { HomePage } from "@web/app/pages/HomePage";
@@ -25,7 +25,7 @@ import { App } from "./App";
 
 const rootRoute = createRootRoute({
   component: App,
-  errorComponent: RouteErrorFallback,
+  errorComponent: RootErrorFallback,
 });
 
 // -- 공개 라우트 --
@@ -78,7 +78,7 @@ const indexRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/",
   component: HomePage,
-  errorComponent: ContentAreaErrorFallback,
+  errorComponent: RouteErrorFallback,
 });
 
 function SessionPageShell() {
@@ -90,14 +90,14 @@ const sessionRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/session/$sessionId",
   component: SessionPageShell,
-  errorComponent: ContentAreaErrorFallback,
+  errorComponent: RouteErrorFallback,
 });
 
 const memoryRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/memory",
   component: MemoryPage,
-  errorComponent: ContentAreaErrorFallback,
+  errorComponent: RouteErrorFallback,
 });
 
 const routeTree = rootRoute.addChildren([
