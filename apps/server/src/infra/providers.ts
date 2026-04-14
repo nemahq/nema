@@ -10,13 +10,17 @@ import {
   DEFAULT_NANO_MODEL,
   DEFAULT_STANDARD_MODEL,
 } from "@server/infra/llm/models";
-import type { VectorStore } from "@server/infra/vector";
-import { createQdrantStore } from "@server/infra/vector";
+import type { EntityVectorStore, VectorStore } from "@server/infra/vector";
+import {
+  createQdrantEntityStore,
+  createQdrantStore,
+} from "@server/infra/vector";
 
 export interface Providers {
   llm: TieredLlm;
   embedding: EmbeddingProvider;
   vectorStore: VectorStore;
+  entityVectorStore: EntityVectorStore;
   graphStore: GraphStore;
 }
 
@@ -55,6 +59,7 @@ export function getProviders(): Providers {
     }),
     embedding: createVoyageProvider({ apiKey: env.VOYAGE_API_KEY }),
     vectorStore: createQdrantStore(),
+    entityVectorStore: createQdrantEntityStore(),
     graphStore: createNeo4jStore(),
   };
 

@@ -10,7 +10,7 @@ vi.mock("@sentry/node", () => ({
 
 import type { GraphStore } from "@server/infra/graph";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
-import type { VectorStore } from "@server/infra/vector";
+import type { EntityVectorStore, VectorStore } from "@server/infra/vector";
 
 import type { PendingDocument, SyncEvent, TriggerMessage } from "./types";
 import { createSyncWorker } from "./worker";
@@ -68,6 +68,14 @@ function mockLlm(): LlmProvider {
       yield "";
     },
     generateText: vi.fn().mockResolvedValue(""),
+  };
+}
+
+function mockEntityVectorStore(): EntityVectorStore {
+  return {
+    ensureCollection: vi.fn().mockResolvedValue(undefined),
+    upsert: vi.fn().mockResolvedValue(undefined),
+    search: vi.fn().mockResolvedValue([]),
   };
 }
 
@@ -147,6 +155,7 @@ describe("createSyncWorker", () => {
         embedding: mockEmbedding(),
         vectorStore,
         graphStore,
+        entityVectorStore: mockEntityVectorStore(),
       });
       worker.start();
       await vi.advanceTimersByTimeAsync(0);
@@ -165,7 +174,13 @@ describe("createSyncWorker", () => {
       expect(graphStore.upsertEntities).toHaveBeenCalledWith(
         expect.objectContaining({
           docId: DOC_ID_1,
-          entities: [{ type: "Person", name: "Alice", nameEn: "Alice" }],
+          entities: [
+            expect.objectContaining({
+              type: "Person",
+              name: "Alice",
+              nameEn: "Alice",
+            }),
+          ],
           createdAt: "2026-04-01T00:00:00.000Z",
         }),
       );
@@ -206,6 +221,7 @@ describe("createSyncWorker", () => {
         embedding: mockEmbedding(),
         vectorStore,
         graphStore,
+        entityVectorStore: mockEntityVectorStore(),
       });
       worker.start();
       await vi.advanceTimersByTimeAsync(0);
@@ -258,6 +274,7 @@ describe("createSyncWorker", () => {
         embedding: mockEmbedding(),
         vectorStore,
         graphStore,
+        entityVectorStore: mockEntityVectorStore(),
       });
       worker.start();
       await vi.advanceTimersByTimeAsync(0);
@@ -306,6 +323,7 @@ describe("createSyncWorker", () => {
         embedding: mockEmbedding(),
         vectorStore,
         graphStore,
+        entityVectorStore: mockEntityVectorStore(),
       });
       worker.start();
       await vi.advanceTimersByTimeAsync(0);
@@ -334,6 +352,7 @@ describe("createSyncWorker", () => {
         embedding: mockEmbedding(),
         vectorStore: mockVectorStore(),
         graphStore: mockGraphStore(),
+        entityVectorStore: mockEntityVectorStore(),
       });
       worker.start();
       await vi.advanceTimersByTimeAsync(0);
@@ -393,6 +412,7 @@ describe("createSyncWorker", () => {
         embedding: mockEmbedding(),
         vectorStore,
         graphStore,
+        entityVectorStore: mockEntityVectorStore(),
       });
       worker.start();
       await vi.advanceTimersByTimeAsync(0);
@@ -438,6 +458,7 @@ describe("createSyncWorker", () => {
         embedding: mockEmbedding(),
         vectorStore: mockVectorStore(),
         graphStore: mockGraphStore(),
+        entityVectorStore: mockEntityVectorStore(),
       });
       worker.start();
       await vi.advanceTimersByTimeAsync(0);
@@ -470,6 +491,7 @@ describe("createSyncWorker", () => {
         embedding: mockEmbedding(),
         vectorStore: mockVectorStore(),
         graphStore: mockGraphStore(),
+        entityVectorStore: mockEntityVectorStore(),
       });
       worker.start();
 
@@ -497,6 +519,7 @@ describe("createSyncWorker", () => {
         embedding: mockEmbedding(),
         vectorStore: mockVectorStore(),
         graphStore: mockGraphStore(),
+        entityVectorStore: mockEntityVectorStore(),
       });
 
       worker.start();
@@ -551,6 +574,7 @@ describe("createSyncWorker", () => {
         embedding: mockEmbedding(),
         vectorStore,
         graphStore,
+        entityVectorStore: mockEntityVectorStore(),
       });
       worker.start();
       await vi.advanceTimersByTimeAsync(0);

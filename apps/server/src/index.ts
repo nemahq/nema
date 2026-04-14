@@ -11,7 +11,7 @@ import { createSyncWorker } from "./infra/document-sync";
 import { initI18n } from "./infra/i18n";
 import { shutdown as shutdownPostHog } from "./infra/posthog";
 import { getSupabaseAdmin } from "./infra/supabase";
-import { createQdrantStore } from "./infra/vector";
+import { createQdrantEntityStore, createQdrantStore } from "./infra/vector";
 import { appRouter } from "./router";
 import { failStaleSaveJobs } from "./services/save-job-service";
 import { createContext } from "./trpc";
@@ -74,7 +74,11 @@ async function bootstrap() {
   ) {
     const vectorStore = createQdrantStore();
     await vectorStore.ensureCollection();
-    server.log.info("Qdrant collection ready");
+    server.log.info("Qdrant document collection ready");
+
+    const entityVectorStore = createQdrantEntityStore();
+    await entityVectorStore.ensureCollection();
+    server.log.info("Qdrant entity collection ready");
 
     const { createVoyageProvider } = await import("./infra/embedding");
 
@@ -88,6 +92,7 @@ async function bootstrap() {
       }),
       vectorStore,
       graphStore,
+      entityVectorStore,
     });
     worker.start();
     stopWorker = worker.stop;
