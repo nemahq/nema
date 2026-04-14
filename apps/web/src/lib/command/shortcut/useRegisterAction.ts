@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { type ActionId, getActionDef } from "./actionMap";
@@ -30,7 +30,7 @@ export function useRegisterAction(
 ): UseRegisterActionResult {
   const registry = useActionRegistry();
   const { register, unregister, isShortcutSuppressed } = registry;
-  const def = getActionDef(id);
+  const def = useMemo(() => getActionDef(id), [id]);
 
   const executeRef = useRef(execute);
   useEffect(function syncExecuteRef() {
