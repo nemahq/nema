@@ -83,6 +83,15 @@ export function reconcileTabsWithPanes(
     }
   }
 
+  // 모든 패인이 삭제되면 트리에 남은 마지막 leaf로 빈 패인을 복원한다.
+  // removeLeaf는 마지막 leaf 제거 시 null을 반환하므로 트리에는 leaf가 남아 있지만
+  // paneMap에서는 삭제된 불일치 상태가 된다. 이를 보정하지 않으면 이후 새 탭 배정이
+  // 모두 실패하여 어떤 탭도 열리지 않는다.
+  if (nextPaneMap.size === 0) {
+    const fallbackId = findLeafIds(nextTree)[0] ?? focusedPaneId;
+    nextPaneMap.set(fallbackId, { tabIds: [], activeTabId: "" });
+  }
+
   if (unassignedTabIds.length > 0) {
     const targetPaneId = nextPaneMap.has(nextFocused)
       ? nextFocused
