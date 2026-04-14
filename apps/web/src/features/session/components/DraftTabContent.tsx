@@ -30,11 +30,16 @@ function DraftTabContentInner() {
     pendingConfirmation,
   } = useChatLifecycle();
 
-  const isStreaming = streamingPhase === "draft";
-  const smoothText = useBufferedStream(isStreaming ? streamingDraftText : "");
-  const body = isStreaming ? smoothText : draft?.body;
+  const isDraftStreaming = streamingPhase === "draft";
+  const smoothText = useBufferedStream(
+    isDraftStreaming ? streamingDraftText : "",
+  );
+  const body = isDraftStreaming ? smoothText : draft?.body;
 
-  const canAct = streamingPhase === "idle" && !!body && !pendingConfirmation;
+  const canAct = !isDraftStreaming && !!body && !pendingConfirmation;
+  // Esc가 stream.stop과 draft.cancel에 동시 바인딩되어 있어
+  // 스트리밍 중 draft.cancel이 활성화되면 Esc 한 번에 두 액션이 모두 발동한다.
+  const canCancel = canAct && streamingPhase === "idle";
 
   useRegisterAction("draft.save", {
     execute: () => saveDraft.mutate({ sessionId }),
@@ -43,25 +48,25 @@ function DraftTabContentInner() {
 
   useRegisterAction("draft.cancel", {
     execute: () => cancelDraft.mutate({ sessionId }),
-    enabled: canAct && !cancelDraft.isPending,
+    enabled: canCancel && !cancelDraft.isPending,
   });
 
   return (
     <div className="flex items-start gap-2">
       <div className="min-w-0 flex-1">
         {body && <MarkdownRenderer content={body} />}
-        {!body && isStreaming && !streamError && <WritingCursor />}
+        {!body && isDraftStreaming && !streamError && <WritingCursor />}
         {streamingPhase === "draft" && <StreamErrorMessage />}
       </div>
 
-      {!isStreaming && body && (
+      {!isDraftStreaming && body && (
         <div className="sticky top-0 shrink-0">
           <div className="flex gap-2">
             <Button
               variant="ghost"
               size="xs"
               onClick={() => cancelDraft.mutate({ sessionId })}
-              disabled={!canAct || cancelDraft.isPending}
+              disabled={!canCancel || cancelDraft.isPending}
             >
               {t("common.cancel")}
               <Kbd>Esc</Kbd>
