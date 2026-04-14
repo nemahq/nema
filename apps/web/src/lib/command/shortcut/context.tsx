@@ -46,8 +46,11 @@ export function ActionRegistryProvider({
   const [registryVersion, setRegistryVersion] = useState(0);
 
   const register = useCallback(function register(action: RegisteredAction) {
+    const isNew = !actionsRef.current.has(action.id);
     actionsRef.current.set(action.id, action);
-    setRegistryVersion((v) => v + 1);
+    if (isNew) {
+      setRegistryVersion((v) => v + 1);
+    }
   }, []);
 
   const unregister = useCallback(function unregister(id: ActionId) {
