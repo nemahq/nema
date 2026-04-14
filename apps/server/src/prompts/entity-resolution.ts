@@ -37,8 +37,6 @@ export const EntityResolutionSchema = z.object({
   ),
 });
 
-export type EntityResolution = z.infer<typeof EntityResolutionSchema>;
-
 export function buildEntityResolutionMessage(
   entries: Array<{
     extractedName: string;

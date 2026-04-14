@@ -25,14 +25,14 @@ const EMBEDDING_SCORE_THRESHOLD = 0.6;
 
 // --- 타입 ---
 
-export interface ResolvedEntity {
+interface ResolvedEntity {
   type: EntityType;
   name: string;
   nameEn?: string;
   isNew: boolean;
 }
 
-export interface ResolveEntitiesOptions {
+interface ResolveEntitiesOptions {
   extractedEntities: GraphEntity[];
   userId: string;
   graphStore: GraphStore;
