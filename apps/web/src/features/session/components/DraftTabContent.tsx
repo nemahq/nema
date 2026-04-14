@@ -37,19 +37,19 @@ function DraftTabContentInner() {
   const body = isDraftStreaming ? smoothText : draft?.body;
 
   const canAct = !isDraftStreaming && !!body && !pendingConfirmation;
-  // Esc가 stream.stop과 draft.cancel에 동시 바인딩되어 있어
-  // 스트리밍 중 draft.cancel이 활성화되면 Esc 한 번에 두 액션이 모두 발동한다.
-  const canCancel = canAct && streamingPhase === "idle";
 
   useRegisterAction("draft.save", {
     execute: () => saveDraft.mutate({ sessionId }),
     enabled: canAct && !saveDraft.isPending,
   });
 
-  useRegisterAction("draft.cancel", {
-    execute: () => cancelDraft.mutate({ sessionId }),
-    enabled: canCancel && !cancelDraft.isPending,
-  });
+  const { isShortcutSuppressed: isCancelSuppressed } = useRegisterAction(
+    "draft.cancel",
+    {
+      execute: () => cancelDraft.mutate({ sessionId }),
+      enabled: canAct && !cancelDraft.isPending,
+    },
+  );
 
   return (
     <div className="flex items-start gap-2">
@@ -66,7 +66,7 @@ function DraftTabContentInner() {
               variant="ghost"
               size="xs"
               onClick={() => cancelDraft.mutate({ sessionId })}
-              disabled={!canCancel || cancelDraft.isPending}
+              disabled={!canAct || cancelDraft.isPending || isCancelSuppressed}
             >
               {t("common.cancel")}
               <Kbd>Esc</Kbd>

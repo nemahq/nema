@@ -6,8 +6,9 @@ function def(
   labelKey: TranslationKey,
   shortcut: string,
   scope: ActionScope,
+  priority = 0,
 ): ActionDef {
-  return { labelKey, shortcut, scope };
+  return { labelKey, shortcut, scope, priority };
 }
 
 const actionMap = {
@@ -16,7 +17,7 @@ const actionMap = {
     cancel: def("common.cancel", "escape", "global"),
   },
   stream: {
-    stop: def("session.stream_stop", "escape", "global"),
+    stop: def("session.stream_stop", "escape", "global", 1),
   },
   navigation: {
     focusComposer: def("session.focus_composer", "mod+l", "global"),

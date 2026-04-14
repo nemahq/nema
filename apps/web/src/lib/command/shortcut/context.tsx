@@ -11,6 +11,7 @@ interface RegisteredAction {
   labelKey: TranslationKey;
   shortcut: string;
   scope: ActionScope;
+  priority: number;
   execute: () => void;
 }
 
@@ -18,6 +19,7 @@ interface ActionRegistryContextValue {
   register: (action: RegisteredAction) => void;
   unregister: (id: ActionId) => void;
   getAll: () => RegisteredAction[];
+  isShortcutSuppressed: (id: ActionId) => boolean;
 }
 
 const ActionRegistryContext = createContext<ActionRegistryContextValue | null>(
@@ -45,8 +47,27 @@ export function ActionRegistryProvider({
     return Array.from(actionsRef.current.values());
   }
 
+  function isShortcutSuppressed(id: ActionId): boolean {
+    const action = actionsRef.current.get(id);
+    if (!action) {
+      return false;
+    }
+    for (const other of actionsRef.current.values()) {
+      if (
+        other.id !== id &&
+        other.shortcut === action.shortcut &&
+        other.priority > action.priority
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   return (
-    <ActionRegistryContext value={{ register, unregister, getAll }}>
+    <ActionRegistryContext
+      value={{ register, unregister, getAll, isShortcutSuppressed }}
+    >
       {children}
     </ActionRegistryContext>
   );
