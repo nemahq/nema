@@ -28,8 +28,7 @@ export function useRegisterAction(
   id: ActionId,
   { execute, enabled = true }: UseRegisterActionOptions,
 ): UseRegisterActionResult {
-  const registry = useActionRegistry();
-  const { register, unregister, isShortcutOverridden } = registry;
+  const { register, unregister, isShortcutOverridden } = useActionRegistry();
   const def = useMemo(() => getActionDef(id), [id]);
 
   const executeRef = useRef(execute);

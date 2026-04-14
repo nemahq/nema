@@ -56,7 +56,7 @@ function DraftTabContentInner() {
       <div className="min-w-0 flex-1">
         {body && <MarkdownRenderer content={body} />}
         {!body && isDraftStreaming && !streamError && <WritingCursor />}
-        {streamingPhase === "draft" && <StreamErrorMessage />}
+        {isDraftStreaming && <StreamErrorMessage />}
       </div>
 
       {!isDraftStreaming && body && (
