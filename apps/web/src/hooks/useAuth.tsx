@@ -37,7 +37,7 @@ function toAppUser(user: User): AppUser {
   for (const resolve of NAME_PRIORITY) {
     const resolved = resolve(user);
     if (typeof resolved === "string" && resolved) {
-      displayName = value;
+      displayName = resolved;
       break;
     }
   }
