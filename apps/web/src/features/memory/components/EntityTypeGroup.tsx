@@ -14,12 +14,12 @@ const ENTITY_TYPE_LABEL_KEY: Record<EntityType, TranslationKey> = {
   Location: "memory.entity_type_location",
 };
 
-interface TypeSectionProps {
+interface EntityTypeGroupProps {
   type: EntityType;
   entities: EntitySummary[];
 }
 
-export function TypeSection({ type, entities }: TypeSectionProps) {
+export function EntityTypeGroup({ type, entities }: EntityTypeGroupProps) {
   const { t } = useTranslation();
   const color = ENTITY_TYPE_COLOR[type];
 
