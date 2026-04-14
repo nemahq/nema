@@ -17,9 +17,12 @@ import {
 
 // --- 상수 ---
 
-const FUZZY_JACCARD_THRESHOLD = 0.9;
+const FUZZY_DICE_THRESHOLD = 0.9;
+const FUZZY_OVERLAP_THRESHOLD = 0.95;
+const FUZZY_OVERLAP_MAX_LEN_DIFF = 2;
 const FUZZY_MIN_ENTROPY = 1.5;
-const SHINGLE_SIZE = 3;
+const SHINGLE_SIZE_DEFAULT = 3;
+const SHINGLE_SIZE_CJK = 2;
 const EMBEDDING_CANDIDATE_LIMIT = 15;
 const EMBEDDING_SCORE_THRESHOLD = 0.6;
 const EXISTING_ENTITIES_LIMIT = 1000;
@@ -58,6 +61,16 @@ function shannonEntropy(s: string): number {
   return entropy;
 }
 
+const CJK_RANGE = /[\u3000-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF]/;
+
+function containsCjk(s: string): boolean {
+  return CJK_RANGE.test(s);
+}
+
+function shingleSize(s: string): number {
+  return containsCjk(s) ? SHINGLE_SIZE_CJK : SHINGLE_SIZE_DEFAULT;
+}
+
 function shingles(s: string, size: number): Set<string> {
   const result = new Set<string>();
   const normalized = normalize(s);
@@ -67,18 +80,30 @@ function shingles(s: string, size: number): Set<string> {
   return result;
 }
 
-function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+function intersectionCount(a: Set<string>, b: Set<string>): number {
+  let count = 0;
+  for (const shingle of a) {
+    if (b.has(shingle)) {
+      count++;
+    }
+  }
+  return count;
+}
+
+function diceSimilarity(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 && b.size === 0) {
     return 1;
   }
-  let intersection = 0;
-  for (const shingle of a) {
-    if (b.has(shingle)) {
-      intersection++;
-    }
+  const total = a.size + b.size;
+  return total === 0 ? 0 : (2 * intersectionCount(a, b)) / total;
+}
+
+function overlapCoefficient(a: Set<string>, b: Set<string>): number {
+  const minSize = Math.min(a.size, b.size);
+  if (minSize === 0) {
+    return 0;
   }
-  const union = a.size + b.size - intersection;
-  return union === 0 ? 0 : intersection / union;
+  return intersectionCount(a, b) / minSize;
 }
 
 // --- 메인 ---
@@ -136,7 +161,7 @@ export async function resolveEntities(
     }
   }
 
-  // --- Stage 2: 퍼지 매칭 ---
+  // --- Stage 2: 퍼지 매칭 (Dice + Overlap 보조, CJK bigram) ---
   const afterStage1 = extractedEntities.filter((e) => !resolved.has(e));
 
   for (const entity of afterStage1) {
@@ -144,16 +169,27 @@ export async function resolveEntities(
       continue;
     }
 
-    const entityShingles = shingles(entity.name, SHINGLE_SIZE);
+    const size = shingleSize(entity.name);
+    const entityShingles = shingles(entity.name, size);
     if (entityShingles.size === 0) {
       continue;
     }
 
     const existing = existingByType.get(entity.type) ?? [];
     for (const candidate of existing) {
-      const candidateShingles = shingles(candidate.name, SHINGLE_SIZE);
-      const similarity = jaccardSimilarity(entityShingles, candidateShingles);
-      if (similarity >= FUZZY_JACCARD_THRESHOLD) {
+      const candidateShingles = shingles(candidate.name, size);
+      const dice = diceSimilarity(entityShingles, candidateShingles);
+      if (dice >= FUZZY_DICE_THRESHOLD) {
+        resolved.set(entity, candidate.name);
+        break;
+      }
+      // Dice 미달이지만 한쪽이 다른 쪽을 거의 포함하고 길이 차이가 작으면 매칭
+      const lenDiff = Math.abs(entity.name.length - candidate.name.length);
+      if (
+        lenDiff <= FUZZY_OVERLAP_MAX_LEN_DIFF &&
+        overlapCoefficient(entityShingles, candidateShingles) >=
+          FUZZY_OVERLAP_THRESHOLD
+      ) {
         resolved.set(entity, candidate.name);
         break;
       }

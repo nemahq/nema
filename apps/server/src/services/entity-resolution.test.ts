@@ -48,13 +48,11 @@ function mockEmbedding(): EmbeddingProvider {
     providerId: "test",
     model: "test-model",
     dimension: 1024,
-    embed: vi
-      .fn()
-      .mockResolvedValue({
-        embeddings: [[0.1]],
-        model: "test",
-        dimension: 1024,
-      }),
+    embed: vi.fn().mockResolvedValue({
+      embeddings: [[0.1]],
+      model: "test",
+      dimension: 1024,
+    }),
   };
 }
 
@@ -135,7 +133,7 @@ describe("resolveEntities", () => {
   });
 
   describe("Stage 2: 퍼지 매칭", () => {
-    it("matches high-entropy name with Jaccard >= 0.9", async () => {
+    it("matches English name via Dice similarity", async () => {
       const existing: GraphEntity[] = [
         { type: "Organization", name: "Sequoia Capital Partners Fund" },
       ];
@@ -155,6 +153,45 @@ describe("resolveEntities", () => {
       });
       expect(result[0].isNew).toBe(false);
       expect(result[0].name).toBe("Sequoia Capital Partners Fund");
+    });
+
+    it("matches CJK name via bigram Dice (2-gram instead of 3-gram)", async () => {
+      const existing: GraphEntity[] = [
+        { type: "Organization", name: "세쿼이아 캐피탈" },
+      ];
+      const result = await resolveEntities({
+        extractedEntities: [
+          {
+            type: "Organization",
+            name: "세쿼이아 캐피탈스",
+            nameEn: "Sequoia Capitals",
+          },
+        ],
+        userId: USER_ID,
+        graphStore: mockGraphStore(existing),
+        entityVectorStore: mockEntityVectorStore(),
+        embedding: mockEmbedding(),
+        llm: mockLlm(),
+      });
+      expect(result[0].isNew).toBe(false);
+      expect(result[0].name).toBe("세쿼이아 캐피탈");
+    });
+
+    it("matches via overlap coefficient when Dice is below threshold but containment is high", async () => {
+      const existing: GraphEntity[] = [{ type: "Event", name: "투자자 미팅" }];
+      const result = await resolveEntities({
+        extractedEntities: [
+          { type: "Event", name: "투자자 미팅들", nameEn: "investor meetings" },
+        ],
+        userId: USER_ID,
+        graphStore: mockGraphStore(existing),
+        entityVectorStore: mockEntityVectorStore(),
+        embedding: mockEmbedding(),
+        llm: mockLlm(),
+      });
+      // 길이 차이 1 + 높은 overlap → 매칭
+      expect(result[0].isNew).toBe(false);
+      expect(result[0].name).toBe("투자자 미팅");
     });
 
     it("skips fuzzy for low-entropy names", async () => {
