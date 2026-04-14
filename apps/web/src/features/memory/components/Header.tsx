@@ -1,9 +1,12 @@
+import { Suspense } from "react";
+
+import { HeaderSkeleton } from "@web/features/memory/components/HeaderSkeleton";
 import { ViewSegment } from "@web/features/memory/components/ViewSegment";
 import { useAuth } from "@web/hooks/useAuth";
 import { useTranslation } from "@web/lib/tolgee";
 import { getDisplayName } from "@web/utils/user";
 
-export function Header() {
+function HeaderContent() {
   const { t } = useTranslation();
   const { user } = useAuth();
 
@@ -16,5 +19,13 @@ export function Header() {
         <ViewSegment />
       </div>
     </div>
+  );
+}
+
+export function Header() {
+  return (
+    <Suspense fallback={<HeaderSkeleton />}>
+      <HeaderContent />
+    </Suspense>
   );
 }
