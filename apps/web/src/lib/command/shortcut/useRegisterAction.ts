@@ -28,7 +28,8 @@ export function useRegisterAction(
   id: ActionId,
   { execute, enabled = true }: UseRegisterActionOptions,
 ): UseRegisterActionResult {
-  const { register, unregister, isShortcutSuppressed } = useActionRegistry();
+  const registry = useActionRegistry();
+  const { register, unregister, isShortcutSuppressed } = registry;
   const def = getActionDef(id);
 
   const executeRef = useRef(execute);

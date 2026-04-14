@@ -1,4 +1,10 @@
-import { createContext, type ReactNode, useContext, useRef } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useRef,
+  useState,
+} from "react";
 
 import type { TranslationKey } from "@web/lib/tolgee";
 
@@ -20,6 +26,7 @@ interface ActionRegistryContextValue {
   unregister: (id: ActionId) => void;
   getAll: () => RegisteredAction[];
   isShortcutSuppressed: (id: ActionId) => boolean;
+  registryVersion: number;
 }
 
 const ActionRegistryContext = createContext<ActionRegistryContextValue | null>(
@@ -34,13 +41,18 @@ export function ActionRegistryProvider({
   children,
 }: ActionRegistryProviderProps) {
   const actionsRef = useRef(new Map<ActionId, RegisteredAction>());
+  const [registryVersion, setRegistryVersion] = useState(0);
 
   function register(action: RegisteredAction) {
     actionsRef.current.set(action.id, action);
+    setRegistryVersion((v) => v + 1);
   }
 
   function unregister(id: ActionId) {
-    actionsRef.current.delete(id);
+    if (actionsRef.current.has(id)) {
+      actionsRef.current.delete(id);
+      setRegistryVersion((v) => v + 1);
+    }
   }
 
   function getAll() {
@@ -66,7 +78,13 @@ export function ActionRegistryProvider({
 
   return (
     <ActionRegistryContext
-      value={{ register, unregister, getAll, isShortcutSuppressed }}
+      value={{
+        register,
+        unregister,
+        getAll,
+        isShortcutSuppressed,
+        registryVersion,
+      }}
     >
       {children}
     </ActionRegistryContext>
