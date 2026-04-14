@@ -148,6 +148,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
             return;
           }
 
+          // nameEn은 보조 속성 — 기존 값이 있으면 보존하고, 없을 때만 채운다
           await tx.run(
             `UNWIND $entities AS entity
              MERGE (e:Entity {type: entity.type, name: entity.name, userId: $userId})

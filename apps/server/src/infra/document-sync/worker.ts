@@ -252,14 +252,23 @@ async function processDocument(
   }));
 
   // entity resolution: 기존 엔티티와 동일 개념이면 canonical name으로 치환
-  const resolved = await resolveEntities({
-    extractedEntities,
-    userId: doc.user_id,
-    graphStore,
-    entityVectorStore,
-    embedding,
-    llm,
-  });
+  let resolved;
+  try {
+    resolved = await resolveEntities({
+      extractedEntities,
+      userId: doc.user_id,
+      graphStore,
+      entityVectorStore,
+      embedding,
+      llm,
+    });
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { component: "entity-resolution", stage: "top-level" },
+      extra: { docId: doc.id, userId: doc.user_id },
+    });
+    resolved = extractedEntities.map((e) => ({ ...e, isNew: true }));
+  }
 
   // delete → upsert: 신규 문서는 no-op, 수정 문서는 기존 인덱스 교체
   await vectorStore.deleteByDocument(doc.id);

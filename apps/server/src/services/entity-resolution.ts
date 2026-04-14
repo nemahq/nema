@@ -26,10 +26,7 @@ const EXISTING_ENTITIES_LIMIT = 1000;
 
 // --- 타입 ---
 
-interface ResolvedEntity {
-  type: EntityType;
-  name: string;
-  nameEn?: string;
+interface ResolvedEntity extends GraphEntity {
   isNew: boolean;
 }
 
@@ -109,15 +106,22 @@ export async function resolveEntities(
     byType.set(entity.type, group);
   }
 
-  // 타입별로 기존 엔티티를 한번에 조회
   const existingByType = new Map<EntityType, GraphEntity[]>();
   for (const type of byType.keys()) {
-    const existing = await graphStore.listEntities({
-      userId,
-      type,
-      limit: EXISTING_ENTITIES_LIMIT,
-    });
-    existingByType.set(type, existing);
+    try {
+      const existing = await graphStore.listEntities({
+        userId,
+        type,
+        limit: EXISTING_ENTITIES_LIMIT,
+      });
+      existingByType.set(type, existing);
+    } catch (err) {
+      Sentry.captureException(err, {
+        tags: { component: "entity-resolution", stage: "listEntities" },
+        extra: { userId, type },
+      });
+      existingByType.set(type, []);
+    }
   }
 
   const resolved = new Map<GraphEntity, string | null>();
@@ -179,7 +183,7 @@ export async function resolveEntities(
     } catch (err) {
       Sentry.captureException(err, {
         tags: { component: "entity-resolution", stage: "embedding" },
-        extra: { entityName: entity.name, entityType: entity.type },
+        extra: { userId, entityName: entity.name, entityType: entity.type },
       });
       resolved.set(entity, null);
     }
@@ -207,16 +211,40 @@ export async function resolveEntities(
 
       for (const resolution of result.resolutions) {
         const entity = needsLlm.find(
-          ([e]) => e.name === resolution.extractedName,
+          ([e]) =>
+            e.name === resolution.extractedName &&
+            e.type === resolution.extractedType,
         )?.[0];
         if (entity) {
           resolved.set(entity, resolution.matchedName);
+        } else {
+          Sentry.captureMessage(
+            `[entity-resolution] LLM returned unrecognized entity: "${resolution.extractedName}" (${resolution.extractedType})`,
+            {
+              level: "warning",
+              extra: {
+                userId,
+                expectedNames: needsLlm.map(([e]) => e.name),
+              },
+            },
+          );
+        }
+      }
+
+      // LLM이 일부 엔티티 판정을 누락한 경우 새 엔티티로 처리
+      for (const [entity] of needsLlm) {
+        if (!resolved.has(entity)) {
+          resolved.set(entity, null);
         }
       }
     } catch (err) {
       Sentry.captureException(err, {
         tags: { component: "entity-resolution", stage: "llm" },
-        extra: { entityCount: needsLlm.length },
+        extra: {
+          userId,
+          entityCount: needsLlm.length,
+          entities: needsLlm.slice(0, 5).map(([e]) => e.name),
+        },
       });
       for (const [entity] of needsLlm) {
         resolved.set(entity, null);

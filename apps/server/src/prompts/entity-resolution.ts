@@ -10,8 +10,9 @@ Given a list of newly extracted entities and their candidate matches from the kn
 ## Output format
 
 Return a JSON object with one field:
-- "resolutions": array of objects, each with "extractedName" and "matchedName" fields.
+- "resolutions": array of objects, each with "extractedName", "extractedType", and "matchedName" fields.
   - "extractedName": the name of the newly extracted entity (exactly as provided).
+  - "extractedType": the type of the newly extracted entity (exactly as provided).
   - "matchedName": the name of the matching existing entity, or null if no match.
 
 ## Rules
@@ -32,6 +33,7 @@ export const EntityResolutionSchema = z.object({
   resolutions: z.array(
     z.object({
       extractedName: z.string().min(1),
+      extractedType: z.string().min(1),
       matchedName: z.string().nullable(),
     }),
   ),

@@ -149,13 +149,14 @@ describe("createSyncWorker", () => {
         // fetch_pending_documents → empty (cycle ends)
         .mockResolvedValueOnce({ data: [], error: null });
 
+      const entityVectorStore = mockEntityVectorStore();
       const worker = createSyncWorker({
         supabase,
         llm,
         embedding: mockEmbedding(),
         vectorStore,
         graphStore,
-        entityVectorStore: mockEntityVectorStore(),
+        entityVectorStore,
       });
       worker.start();
       await vi.advanceTimersByTimeAsync(0);
@@ -166,7 +167,7 @@ describe("createSyncWorker", () => {
         expect.objectContaining({ schemaName: "entity_extraction" }),
       );
 
-      // vector + graph upsert
+      // vector + graph + entity vector upsert
       expect(vectorStore.upsert).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ docId: DOC_ID_1, chunks: ["test body"] }),
@@ -182,6 +183,15 @@ describe("createSyncWorker", () => {
             }),
           ],
           createdAt: "2026-04-01T00:00:00.000Z",
+        }),
+      );
+      expect(entityVectorStore.upsert).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          userId: USER_ID,
+          entities: [
+            expect.objectContaining({ name: "Alice", type: "Person" }),
+          ],
         }),
       );
 

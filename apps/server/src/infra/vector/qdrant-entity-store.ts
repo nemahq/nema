@@ -1,3 +1,4 @@
+import { v5 as uuidv5 } from "uuid";
 import { QdrantClient } from "@qdrant/js-client-rest";
 
 import type { EntityType } from "@nema-io/shared";
@@ -23,6 +24,19 @@ interface EntityPayload {
   name: string;
   type: EntityType;
   embedding_model: string;
+}
+
+const ENTITY_UUID_NAMESPACE = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+
+function entityPointId(opts: {
+  userId: string;
+  type: EntityType;
+  name: string;
+}): string {
+  return uuidv5(
+    `${opts.userId}:${opts.type}:${opts.name}`,
+    ENTITY_UUID_NAMESPACE,
+  );
 }
 
 export function createQdrantEntityStore(): EntityVectorStore {
@@ -121,7 +135,7 @@ export function createQdrantEntityStore(): EntityVectorStore {
             embedding_model: `${provider.providerId}/${provider.model}`,
           };
           return {
-            id: crypto.randomUUID(),
+            id: entityPointId({ userId, type: entity.type, name: entity.name }),
             vector,
             payload: payload as unknown as Record<string, unknown>,
           };
