@@ -1,18 +1,11 @@
 import type { EntitySummary, EntityType } from "@nema-io/shared";
 
 import { EntityChip } from "@web/features/memory/components/EntityChip";
-import { ENTITY_TYPE_COLOR } from "@web/features/memory/constants";
-import type { TranslationKey } from "@web/lib/tolgee";
+import {
+  ENTITY_TYPE_COLOR,
+  ENTITY_TYPE_LABEL_KEY,
+} from "@web/features/memory/constants";
 import { useTranslation } from "@web/lib/tolgee";
-
-const ENTITY_TYPE_LABEL_KEY: Record<EntityType, TranslationKey> = {
-  Topic: "memory.entity_type_topic",
-  Person: "memory.entity_type_person",
-  Organization: "memory.entity_type_organization",
-  Project: "memory.entity_type_project",
-  Event: "memory.entity_type_event",
-  Location: "memory.entity_type_location",
-};
 
 interface EntityTypeGroupProps {
   type: EntityType;
