@@ -11,7 +11,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { posthog } from "@web/lib/posthog";
 import { supabase } from "@web/lib/supabase";
 
-export interface AppUser {
+interface AppUser {
   id: string;
   displayName: string;
   email: string;
