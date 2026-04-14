@@ -15,7 +15,6 @@ const EntityTypeSchema = z.enum(ENTITY_TYPES);
 
 export const EntitySummarySchema = z.object({
   name: z.string().min(1),
-  // TODO: backfill 완료 및 과도기 종료 후 required로 승격
   nameEn: z.string().min(1).optional(),
   type: EntityTypeSchema,
   documentCount: z.number().int().nonnegative(),
