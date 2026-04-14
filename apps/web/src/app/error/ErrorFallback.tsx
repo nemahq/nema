@@ -16,7 +16,7 @@ export function ErrorFallback({
   detail,
   onRetry,
   onRefresh,
-  showBranding,
+  showBranding = true,
   className,
 }: ErrorFallbackProps) {
   const { t } = useTranslation();

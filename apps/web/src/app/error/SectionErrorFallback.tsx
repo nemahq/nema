@@ -9,6 +9,7 @@ export function SectionErrorFallback({
     <ErrorFallback
       onRetry={hasRetried ? undefined : reset}
       onRefresh={hasRetried ? () => window.location.reload() : undefined}
+      showBranding={false}
       className="flex-1"
     />
   );

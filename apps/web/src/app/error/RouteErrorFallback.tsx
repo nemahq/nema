@@ -13,9 +13,9 @@ export function RouteErrorFallback({ error, reset }: ErrorComponentProps) {
 
   return (
     <ErrorFallback
-      detail={import.meta.env.DEV ? error?.message : undefined}
+      detail={error?.message}
       onRetry={handleRetry}
-      className="flex-1 bg-surface-card"
+      className="flex-1"
     />
   );
 }

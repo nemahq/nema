@@ -8,7 +8,6 @@ import {
 } from "@tanstack/react-router";
 
 import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
-import { RootErrorFallback } from "@web/app/error/RootErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { HomePage } from "@web/app/pages/HomePage";
@@ -25,7 +24,7 @@ import { App } from "./App";
 
 const rootRoute = createRootRoute({
   component: App,
-  errorComponent: RootErrorFallback,
+  errorComponent: RouteErrorFallback,
 });
 
 // -- 공개 라우트 --

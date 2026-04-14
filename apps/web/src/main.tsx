@@ -44,7 +44,6 @@ createRoot(root, {
           detail={error?.message}
           onRetry={hasRetried ? undefined : reset}
           onRefresh={hasRetried ? () => window.location.reload() : undefined}
-          showBranding
           className="min-h-dvh"
         />
       )}
