@@ -11,6 +11,8 @@ function def(
   return { labelKey, shortcut, scope, priority };
 }
 
+// priority: 같은 단축키에 여러 액션이 등록되면 높은 값이 우선 실행된다 (z-index 방식).
+// 기본값 0 = 최저 우선순위. 새 액션은 별도 지정 없이 양보한다.
 const actionMap = {
   draft: {
     save: def("session.draft_save", "mod+s", "global"),
