@@ -2,8 +2,7 @@ import { Suspense } from "react";
 
 import { EmptyState } from "@web/features/memory/components/EmptyState";
 import { Header } from "@web/features/memory/components/Header";
-import { OverviewSkeleton } from "@web/features/memory/components/OverviewSkeleton";
-import { OverviewView } from "@web/features/memory/components/OverviewView";
+import { Overview } from "@web/features/memory/components/Overview";
 import { useEntityListSuspenseQuery } from "@web/features/memory/hooks/useEntityListQuery";
 
 function MemoryContent() {
@@ -16,7 +15,7 @@ function MemoryContent() {
   return (
     <>
       <Header />
-      <OverviewView />
+      <Overview />
     </>
   );
 }
@@ -24,7 +23,7 @@ function MemoryContent() {
 export function MemoryPage() {
   return (
     <main className="flex flex-1 flex-col bg-surface-card">
-      <Suspense fallback={<OverviewSkeleton />}>
+      <Suspense>
         <MemoryContent />
       </Suspense>
     </main>

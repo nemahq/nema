@@ -2,6 +2,7 @@ import { Suspense, useMemo } from "react";
 
 import type { EntitySummary, EntityType } from "@nema-io/shared";
 
+import { OverviewSkeleton } from "@web/features/memory/components/OverviewSkeleton";
 import { TypeSection } from "@web/features/memory/components/TypeSection";
 import { ENTITY_TYPE_ORDER } from "@web/features/memory/constants";
 import { useEntityListSuspenseQuery } from "@web/features/memory/hooks/useEntityListQuery";
@@ -35,9 +36,9 @@ function OverviewContent() {
   );
 }
 
-export function OverviewView() {
+export function Overview() {
   return (
-    <Suspense>
+    <Suspense fallback={<OverviewSkeleton />}>
       <OverviewContent />
     </Suspense>
   );
