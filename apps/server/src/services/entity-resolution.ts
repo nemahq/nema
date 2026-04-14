@@ -22,6 +22,7 @@ const FUZZY_MIN_ENTROPY = 1.5;
 const SHINGLE_SIZE = 3;
 const EMBEDDING_CANDIDATE_LIMIT = 15;
 const EMBEDDING_SCORE_THRESHOLD = 0.6;
+const EXISTING_ENTITIES_LIMIT = 1000;
 
 // --- 타입 ---
 
@@ -101,7 +102,6 @@ export async function resolveEntities(
     return [];
   }
 
-  // 타입별 그룹핑
   const byType = new Map<EntityType, GraphEntity[]>();
   for (const entity of extractedEntities) {
     const group = byType.get(entity.type) ?? [];
@@ -115,7 +115,7 @@ export async function resolveEntities(
     const existing = await graphStore.listEntities({
       userId,
       type,
-      limit: 1000,
+      limit: EXISTING_ENTITIES_LIMIT,
     });
     existingByType.set(type, existing);
   }
