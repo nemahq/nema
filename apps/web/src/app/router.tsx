@@ -77,6 +77,7 @@ const indexRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/",
   component: HomePage,
+  errorComponent: RouteErrorFallback,
 });
 
 function SessionPageShell() {
@@ -88,12 +89,14 @@ const sessionRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/session/$sessionId",
   component: SessionPageShell,
+  errorComponent: RouteErrorFallback,
 });
 
 const memoryRoute = createRoute({
   getParentRoute: () => sessionSidebarRoute,
   path: "/memory",
   component: MemoryPage,
+  errorComponent: RouteErrorFallback,
 });
 
 const routeTree = rootRoute.addChildren([

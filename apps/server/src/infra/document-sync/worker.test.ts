@@ -62,7 +62,7 @@ function mockEmbedding(): EmbeddingProvider {
 function mockLlm(): LlmProvider {
   return {
     generateStructured: vi.fn().mockResolvedValue({
-      entities: [{ type: "Person", name: "Alice" }],
+      entities: [{ type: "Person", name: "Alice", nameEn: "Alice" }],
     }),
     async *generateStream() {
       yield "";
@@ -92,6 +92,7 @@ const PENDING_DOC: PendingDocument = {
   tags_en: null,
   summary: "test summary",
   summary_en: null,
+  created_at: "2026-04-01T00:00:00.000Z",
 };
 
 const PENDING_DOC_BILINGUAL: PendingDocument = {
@@ -103,6 +104,7 @@ const PENDING_DOC_BILINGUAL: PendingDocument = {
   tags_en: ["tag1"],
   summary: "한국어 요약",
   summary_en: "English summary",
+  created_at: "2026-04-01T00:00:00.000Z",
 };
 
 // --- Tests ---
@@ -163,7 +165,8 @@ describe("createSyncWorker", () => {
       expect(graphStore.upsertEntities).toHaveBeenCalledWith(
         expect.objectContaining({
           docId: DOC_ID_1,
-          entities: [{ type: "Person", name: "Alice" }],
+          entities: [{ type: "Person", name: "Alice", nameEn: "Alice" }],
+          createdAt: "2026-04-01T00:00:00.000Z",
         }),
       );
 
@@ -177,8 +180,8 @@ describe("createSyncWorker", () => {
 
   // ========== Bilingual document ==========
 
-  describe("bilingual document → English content used for engine", () => {
-    it("비영어 문서는 _en 필드로 벡터·엔티티 처리", async () => {
+  describe("bilingual document → engine field separation", () => {
+    it("벡터는 _en 필드로, 엔티티 추출은 원문 body로 처리", async () => {
       const supabase = mockSupabase();
       const vectorStore = mockVectorStore();
       const graphStore = mockGraphStore();
@@ -208,6 +211,7 @@ describe("createSyncWorker", () => {
       await vi.advanceTimersByTimeAsync(0);
       await worker.stop();
 
+      // 벡터 임베딩은 영문 번역본으로
       expect(vectorStore.upsert).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
@@ -215,6 +219,18 @@ describe("createSyncWorker", () => {
           chunks: ["English body"],
           tags: ["tag1"],
           summary: "English summary",
+        }),
+      );
+      // 엔티티 추출은 원문 언어 보존을 위해 원문 body로
+      expect(llm.generateStructured).toHaveBeenCalledWith(
+        expect.objectContaining({
+          schemaName: "entity_extraction",
+          messages: [
+            expect.objectContaining({
+              role: "user",
+              content: expect.stringContaining("한국어 본문"),
+            }),
+          ],
         }),
       );
     });
@@ -347,12 +363,13 @@ describe("createSyncWorker", () => {
         tags_en: null,
         summary: "fail",
         summary_en: null,
+        created_at: "2026-04-02T00:00:00.000Z",
       };
 
       // LLM succeeds for doc-1, fails for doc-2
       (llm.generateStructured as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({
-          entities: [{ type: "Person", name: "Alice" }],
+          entities: [{ type: "Person", name: "Alice", nameEn: "Alice" }],
         })
         .mockRejectedValueOnce(new Error("LLM timeout"));
 
@@ -511,6 +528,7 @@ describe("createSyncWorker", () => {
         tags_en: null,
         summary: "second",
         summary_en: null,
+        created_at: "2026-04-02T00:00:00.000Z",
       };
 
       rpc

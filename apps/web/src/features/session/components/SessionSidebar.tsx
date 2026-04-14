@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 
-import { Brain, Plus } from "@nema-io/weave/icons";
+import { Plus, Waypoints } from "@nema-io/weave/icons";
 
 import { Sidebar } from "@web/components/layout/Sidebar";
 import { SidebarNavLink } from "@web/components/layout/SidebarNavLink";
@@ -21,7 +21,7 @@ function NewContextIcon() {
 function MemoryIcon() {
   return (
     <div className="flex size-6 items-center justify-center">
-      <Brain strokeWidth={1.5} className="size-4" />
+      <Waypoints strokeWidth={1.5} className="size-4" />
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { initTheme } from "@web/utils/theme";
 
 import { ErrorBoundary } from "./app/error/ErrorBoundary";
-import { PageErrorFallback } from "./app/error/PageErrorFallback";
+import { ErrorFallback } from "./app/error/ErrorFallback";
 import { AppProviders } from "./app/providers";
 import { router } from "./app/router";
 
@@ -40,9 +40,11 @@ createRoot(root, {
     <ErrorBoundary
       boundaryName="root"
       fallbackRender={({ error, reset, hasRetried }) => (
-        <PageErrorFallback
-          error={error}
+        <ErrorFallback
+          detail={error?.message}
           onRetry={hasRetried ? undefined : reset}
+          onRefresh={hasRetried ? () => window.location.reload() : undefined}
+          className="min-h-dvh"
         />
       )}
     >

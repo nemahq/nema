@@ -233,18 +233,20 @@ async function processDocument(
   const engineTags = doc.tags_en ?? doc.tags;
   const engineSummary = doc.summary_en ?? doc.summary;
 
+  // 엔티티는 원문 언어로 name을 추출해야 하므로 translated body가 아닌 원문 body를 전달한다
   const entityResult = await llm.generateStructured({
     schema: EntityExtractionSchema,
     schemaName: "entity_extraction",
     systemPrompt: ENTITY_EXTRACTION_SYSTEM_PROMPT,
     messages: [
-      { role: "user", content: buildEntityExtractionMessage(engineBody) },
+      { role: "user", content: buildEntityExtractionMessage(doc.body) },
     ],
   });
 
   const entities = entityResult.entities.map((e) => ({
     type: e.type,
     name: e.name,
+    nameEn: e.nameEn,
   }));
 
   // delete → upsert: 신규 문서는 no-op, 수정 문서는 기존 인덱스 교체
@@ -263,6 +265,7 @@ async function processDocument(
       docId: doc.id,
       userId: doc.user_id,
       entities,
+      createdAt: doc.created_at,
     }),
   ]);
 }

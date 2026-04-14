@@ -17,6 +17,7 @@ import { useAuth } from "@web/hooks/useAuth";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
+import { getDisplayName } from "@web/utils/user";
 
 import { SettingsMenuItem } from "./SettingsMenuItem";
 
@@ -32,13 +33,8 @@ export function UserMenu() {
   }
 
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
-  const givenName = user.user_metadata?.given_name as string | undefined;
-  const familyName = user.user_metadata?.family_name as string | undefined;
-  const name =
-    givenName && familyName
-      ? `${givenName} ${familyName}`
-      : (user.user_metadata?.full_name as string) || user.email || "";
-  const initial = (givenName ?? name).charAt(0).toUpperCase();
+  const name = getDisplayName(user);
+  const initial = name.charAt(0).toUpperCase();
 
   async function handleSignOut() {
     trackEvent("auth.signout");

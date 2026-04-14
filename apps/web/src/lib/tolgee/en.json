@@ -36,7 +36,16 @@
   "memory": {
     "empty_heading": "No memories yet.",
     "empty_subheading": "Create a new context and it'll fill up here.",
-    "sidebar_label": "Memory"
+    "entity_type_event": "Event",
+    "entity_type_location": "Location",
+    "entity_type_organization": "Organization",
+    "entity_type_person": "Person",
+    "entity_type_project": "Project",
+    "entity_type_topic": "Topic",
+    "page_title": "{name}'s Memory",
+    "sidebar_label": "Memory",
+    "view_map": "Map",
+    "view_overview": "Overview"
   },
   "session": {
     "copied": "Copied",

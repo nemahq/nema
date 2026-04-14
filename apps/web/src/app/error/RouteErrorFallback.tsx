@@ -1,7 +1,7 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useRouter } from "@tanstack/react-router";
 
-import { PageErrorFallback } from "./PageErrorFallback";
+import { ErrorFallback } from "@web/app/error/ErrorFallback";
 
 export function RouteErrorFallback({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
@@ -11,5 +11,11 @@ export function RouteErrorFallback({ error, reset }: ErrorComponentProps) {
     router.invalidate();
   }
 
-  return <PageErrorFallback error={error} onRetry={handleRetry} />;
+  return (
+    <ErrorFallback
+      detail={error?.message}
+      onRetry={handleRetry}
+      className="flex-1"
+    />
+  );
 }

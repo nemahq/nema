@@ -47,6 +47,41 @@ function getInteger(
   return (field as Integer).toNumber();
 }
 
+function getOptionalString(
+  record: { get(key: string): unknown },
+  key: string,
+): string | undefined {
+  const field = record.get(key);
+  if (field === null || field === undefined) {
+    return undefined;
+  }
+  if (typeof field !== "string") {
+    throw new GraphStoreError(
+      `Expected string or null for "${key}", got ${typeof field}`,
+      "recordParse",
+    );
+  }
+  return field;
+}
+
+// 재부팅 시 ensureSchema에서 backfill이 수행되므로 nameEn은 정상 상태에서 항상 존재해야 한다.
+// fallback이 발동하면 비정상 시그널이므로 Sentry에 warning을 남긴다.
+function getNameEnOrWarn(
+  record: { get(key: string): unknown },
+  context: { userId: string },
+): string {
+  const nameEn = getOptionalString(record, "nameEn");
+  if (nameEn !== undefined) {
+    return nameEn;
+  }
+  const name = getString(record, "name");
+  Sentry.captureMessage("[neo4j] entity missing nameEn after backfill", {
+    level: "warning",
+    extra: { userId: context.userId, name },
+  });
+  return name;
+}
+
 function getEntityType(
   record: { get(key: string): unknown },
   key: string,
@@ -74,9 +109,10 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
     async ensureSchema(): Promise<void> {
       const session = driver.session(sessionConfig);
       try {
+        await session.run(`DROP CONSTRAINT entity_unique IF EXISTS`);
         await session.run(
-          `CREATE CONSTRAINT entity_unique IF NOT EXISTS
-           FOR (e:Entity) REQUIRE (e.type, e.name, e.userId) IS UNIQUE`,
+          `CREATE CONSTRAINT entity_unique_en IF NOT EXISTS
+           FOR (e:Entity) REQUIRE (e.type, e.nameEn, e.userId) IS UNIQUE`,
         );
         await session.run(
           `CREATE INDEX entity_user_id IF NOT EXISTS
@@ -86,6 +122,23 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           `CREATE INDEX document_doc_id IF NOT EXISTS
            FOR (d:Document) ON (d.docId)`,
         );
+        // 재부팅마다 실행되지만 nameEn IS NULL 필터로 이미 처리된 노드는 제외되어 멱등.
+        // 기대값은 0 — 0이 아니면 데이터 드리프트 시그널로 Sentry에 기록.
+        const backfillResult = await session.run(
+          `MATCH (e:Entity) WHERE e.nameEn IS NULL
+           SET e.nameEn = e.name
+           RETURN count(e) AS updated`,
+        );
+        const backfillRecord = backfillResult.records[0];
+        if (backfillRecord) {
+          const backfilled = getInteger(backfillRecord, "updated");
+          if (backfilled > 0) {
+            Sentry.captureMessage(
+              "[neo4j] backfilled Entity.nameEn from name",
+              { level: "info", extra: { backfilled } },
+            );
+          }
+        }
       } catch (error) {
         if (error instanceof GraphStoreError) {
           throw error;
@@ -108,14 +161,11 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
     },
 
     async upsertEntities(options: UpsertEntitiesOptions): Promise<void> {
-      const { docId, userId, entities } = options;
-      if (entities.length === 0) {
-        return;
-      }
+      const { docId, userId, entities, createdAt } = options;
       for (const e of entities) {
-        if (!e.name.trim()) {
+        if (!e.nameEn.trim()) {
           throw new GraphStoreError(
-            "Entity name must not be blank",
+            "Entity nameEn must not be blank",
             "upsertEntities",
           );
         }
@@ -124,16 +174,29 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       const session = driver.session(sessionConfig);
       try {
         await session.executeWrite(async (tx) => {
-          await tx.run("MERGE (d:Document {docId: $docId})", { docId });
+          // Document 노드는 엔티티가 0개여도 반드시 upsert해야 lastReferencedAt 집계에서 누락되지 않음.
+          await tx.run(
+            "MERGE (d:Document {docId: $docId}) ON CREATE SET d.createdAt = $createdAt",
+            { docId, createdAt },
+          );
+
+          if (entities.length === 0) {
+            return;
+          }
 
           await tx.run(
             `UNWIND $entities AS entity
-             MERGE (e:Entity {type: entity.type, name: entity.name, userId: $userId})
+             MERGE (e:Entity {type: entity.type, nameEn: entity.nameEn, userId: $userId})
+             ON CREATE SET e.name = entity.name
              WITH e
              MATCH (d:Document {docId: $docId})
              MERGE (e)-[:MENTIONED_IN]->(d)`,
             {
-              entities: entities.map((e) => ({ type: e.type, name: e.name })),
+              entities: entities.map((e) => ({
+                type: e.type,
+                name: e.name,
+                nameEn: e.nameEn,
+              })),
               userId,
               docId,
             },
@@ -241,7 +304,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       try {
         const result = await session.run(
           `MATCH (e:Entity {userId: $userId})-[:MENTIONED_IN]->(d:Document)
-           WHERE e.name IN $entityNames
+           WHERE e.nameEn IN $entityNames
            RETURN d.docId AS docId, count(e) AS sharedEntityCount
            ORDER BY sharedEntityCount DESC
            LIMIT $limit`,
@@ -280,7 +343,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         const result = await session.run(
           `MATCH (e:Entity {userId: $userId})
            WHERE true ${typeFilter}
-           RETURN e.type AS type, e.name AS name
+           RETURN e.type AS type, e.name AS name, e.nameEn AS nameEn
            ORDER BY e.name
            SKIP $offset
            LIMIT $limit`,
@@ -289,6 +352,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         return result.records.map((r) => ({
           type: getEntityType(r, "type"),
           name: getString(r, "name"),
+          nameEn: getNameEnOrWarn(r, { userId }),
         }));
       } catch (error) {
         if (error instanceof GraphStoreError) {
@@ -322,14 +386,18 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           `MATCH (e:Entity {userId: $userId})
            WHERE true ${typeFilter}
            OPTIONAL MATCH (e)-[:MENTIONED_IN]->(d:Document)
-           RETURN e.type AS type, e.name AS name, count(d) AS documentCount
-           ORDER BY documentCount DESC, e.name`,
+           WITH e, count(d) AS documentCount, max(d.createdAt) AS lastReferencedAt
+           RETURN e.type AS type, e.name AS name, e.nameEn AS nameEn,
+                  documentCount, lastReferencedAt
+           ORDER BY lastReferencedAt IS NULL, lastReferencedAt DESC, documentCount DESC, e.name`,
           { userId, type },
         );
         return result.records.map((r) => ({
           type: getEntityType(r, "type"),
           name: getString(r, "name"),
+          nameEn: getNameEnOrWarn(r, { userId }),
           documentCount: getInteger(r, "documentCount"),
+          lastReferencedAt: getOptionalString(r, "lastReferencedAt"),
         }));
       } catch (error) {
         if (error instanceof GraphStoreError) {
@@ -359,7 +427,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       const session = driver.session(sessionConfig);
       try {
         const result = await session.run(
-          `MATCH (e:Entity {userId: $userId, name: $name, type: $type})
+          `MATCH (e:Entity {userId: $userId, nameEn: $name, type: $type})
                  -[:MENTIONED_IN]->(d:Document)
            RETURN d.docId AS docId
            LIMIT $limit`,
@@ -394,10 +462,10 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       const session = driver.session(sessionConfig);
       try {
         const result = await session.run(
-          `MATCH (e:Entity {userId: $userId, name: $name, type: $type})
+          `MATCH (e:Entity {userId: $userId, nameEn: $name, type: $type})
                  -[:RELATED_TO]-(other:Entity {userId: $userId})
            OPTIONAL MATCH (other)-[:MENTIONED_IN]->(d:Document)
-           RETURN other.type AS type, other.name AS name, count(d) AS documentCount
+           RETURN other.type AS type, other.name AS name, other.nameEn AS nameEn, count(d) AS documentCount
            ORDER BY documentCount DESC, other.name
            LIMIT $limit`,
           { userId, name, type, limit: neo4j.int(limit) },
@@ -405,6 +473,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         return result.records.map((r) => ({
           type: getEntityType(r, "type"),
           name: getString(r, "name"),
+          nameEn: getNameEnOrWarn(r, { userId }),
           documentCount: getInteger(r, "documentCount"),
         }));
       } catch (error) {
@@ -472,10 +541,10 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       try {
         await session.executeWrite(async (tx) => {
           await tx.run(
-            `MERGE (target:Entity {type: $type, name: $targetName, userId: $userId})
+            `MERGE (target:Entity {type: $type, nameEn: $targetName, userId: $userId})
              WITH target
              MATCH (source:Entity {type: $type, userId: $userId})
-             WHERE source.name IN $sourceNames AND source <> target
+             WHERE source.nameEn IN $sourceNames AND source <> target
              MATCH (source)-[r:MENTIONED_IN]->(d:Document)
              MERGE (target)-[:MENTIONED_IN]->(d)
              DELETE r`,
@@ -483,17 +552,17 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           );
           await tx.run(
             `MATCH (source:Entity {type: $type, userId: $userId})
-             WHERE source.name IN $sourceNames
+             WHERE source.nameEn IN $sourceNames
              MATCH (source)-[r:RELATED_TO]-(other:Entity)
-             WHERE other.name <> $targetName
-             MERGE (target:Entity {type: $type, name: $targetName, userId: $userId})
+             WHERE other.nameEn <> $targetName
+             MERGE (target:Entity {type: $type, nameEn: $targetName, userId: $userId})
              MERGE (target)-[:RELATED_TO]-(other)
              DELETE r`,
             { type, targetName, sourceNames, userId },
           );
           await tx.run(
             `MATCH (source:Entity {type: $type, userId: $userId})
-             WHERE source.name IN $sourceNames
+             WHERE source.nameEn IN $sourceNames
              DETACH DELETE source`,
             { type, sourceNames, userId },
           );
@@ -581,8 +650,10 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         const entityResult = await session.run(
           `MATCH (e:Entity {userId: $userId})
            OPTIONAL MATCH (e)-[:MENTIONED_IN]->(d:Document)
-           RETURN e.type AS type, e.name AS name, count(d) AS documentCount
-           ORDER BY documentCount DESC, e.name`,
+           WITH e, count(d) AS documentCount, max(d.createdAt) AS lastReferencedAt
+           RETURN e.type AS type, e.name AS name, e.nameEn AS nameEn,
+                  documentCount, lastReferencedAt
+           ORDER BY lastReferencedAt IS NULL, lastReferencedAt DESC, documentCount DESC, e.name`,
           { userId },
         );
         const edgeResult = await session.run(
@@ -597,7 +668,9 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           entities: entityResult.records.map((r) => ({
             type: getEntityType(r, "type"),
             name: getString(r, "name"),
+            nameEn: getNameEnOrWarn(r, { userId }),
             documentCount: getInteger(r, "documentCount"),
+            lastReferencedAt: getOptionalString(r, "lastReferencedAt"),
           })),
           edges: edgeResult.records.map((r) => ({
             sourceType: getEntityType(r, "sourceType"),
