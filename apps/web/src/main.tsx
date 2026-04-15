@@ -7,6 +7,8 @@ import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import { RouterProvider } from "@tanstack/react-router";
 
+import type { ErrorFallbackLabels } from "@web/app/error/ErrorFallback";
+import { getStorage } from "@web/utils/localStorage";
 import { initTheme } from "@web/utils/theme";
 
 import { ErrorBoundary } from "./app/error/ErrorBoundary";
@@ -15,6 +17,32 @@ import { AppProviders } from "./app/providers";
 import { router } from "./app/router";
 
 initTheme();
+
+const ROOT_FALLBACK_LABELS: Record<string, ErrorFallbackLabels> = {
+  ko: {
+    pageError: "잠깐, 다시 불러올게요.",
+    retry: "다시 시도",
+    refresh: "새로고침",
+    copyError: "에러 정보 복사",
+  },
+  en: {
+    pageError: "Hold on, let's try that again.",
+    retry: "Retry",
+    refresh: "Refresh",
+    copyError: "Copy error info",
+  },
+};
+
+function detectRootLocale(): string {
+  const stored = getStorage("locale");
+  if (stored) {
+    return stored;
+  }
+  const browserLang = navigator?.language?.split("-")[0];
+  return browserLang === "ko" ? "ko" : "en";
+}
+
+const rootLabels = ROOT_FALLBACK_LABELS[detectRootLocale()];
 
 if (typeof __COMMIT_SHA__ !== "undefined") {
   // eslint-disable-next-line no-console -- build metadata, not capturable by Sentry
@@ -46,12 +74,7 @@ createRoot(root, {
           onRefresh={hasRetried ? () => window.location.reload() : undefined}
           size="page"
           className="min-h-dvh"
-          labels={{
-            pageError: "잠깐, 다시 불러올게요.",
-            retry: "다시 시도",
-            refresh: "새로고침",
-            copyError: "에러 정보 복사",
-          }}
+          labels={rootLabels}
         />
       )}
     >

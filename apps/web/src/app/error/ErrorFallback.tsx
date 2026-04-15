@@ -8,7 +8,7 @@ import { useTranslation } from "@web/lib/tolgee";
 
 const COPIED_FEEDBACK_MS = 2_000;
 
-interface ErrorFallbackLabels {
+export interface ErrorFallbackLabels {
   pageError: string;
   retry: string;
   refresh: string;
