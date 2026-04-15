@@ -13,6 +13,7 @@ Return a JSON object with one field:
 ## Entity types
 
 Each type has a specific scope. Do not extract entities outside these definitions.
+Keep in sync with ENTITY_TYPES from @nema-io/shared.
 
 - Person: Real names or titles referring to a specific individual (e.g., "Dr. Lee", "김철수")
 - Organization: Companies, teams, institutions, communities (e.g., "Google", "Marketing Team")
