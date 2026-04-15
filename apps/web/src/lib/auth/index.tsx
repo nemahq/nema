@@ -86,6 +86,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const rawUser = session?.user ?? null;
   const user = useMemo(() => (rawUser ? toAppUser(rawUser) : null), [rawUser]);
 
+  if (loading) {
+    return null;
+  }
+
   return (
     <AuthContext value={{ user, session, loading }}>{children}</AuthContext>
   );
