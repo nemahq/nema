@@ -7,7 +7,10 @@
       "project": ["src/**/*.{ts,tsx}"]
     },
     "apps/server": {
-      "entry": ["src/eval/eval-drafting.ts"],
+      "entry": [
+        "src/eval/eval-drafting.ts",
+        "src/eval/eval-entity-resolution.ts"
+      ],
       "project": ["src/**/*.ts"],
       "ignore": ["src/infra/**"]
     },

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as Sentry from "@sentry/node";
 
 import { GraphStoreError } from "./graph-store";
 
@@ -68,62 +67,23 @@ describe("createNeo4jStore", () => {
   });
 
   describe("ensureSchema", () => {
-    it("creates constraint on (type, nameEn, userId) and indexes, runs backfill", async () => {
-      const zeroBackfill = {
-        records: [
-          {
-            get: (key: string) =>
-              key === "updated" ? new MockInteger(0) : null,
-          },
-        ],
-      };
+    it("creates constraint on (type, name, userId) and indexes", async () => {
       mockRun
         .mockResolvedValueOnce({ records: [] })
         .mockResolvedValueOnce({ records: [] })
         .mockResolvedValueOnce({ records: [] })
-        .mockResolvedValueOnce({ records: [] })
-        .mockResolvedValueOnce(zeroBackfill);
+        .mockResolvedValueOnce({ records: [] });
       const store = createNeo4jStore();
       await store.ensureSchema();
-      expect(mockRun).toHaveBeenCalledTimes(5);
+      expect(mockRun).toHaveBeenCalledTimes(4);
       expect(mockRun.mock.calls[0][0]).toContain(
-        "DROP CONSTRAINT entity_unique",
+        "DROP CONSTRAINT entity_unique_en",
       );
-      expect(mockRun.mock.calls[1][0]).toContain("entity_unique_en");
-      expect(mockRun.mock.calls[1][0]).toContain(
-        "(e.type, e.nameEn, e.userId)",
-      );
+      expect(mockRun.mock.calls[1][0]).toContain("entity_unique");
+      expect(mockRun.mock.calls[1][0]).toContain("(e.type, e.name, e.userId)");
       expect(mockRun.mock.calls[2][0]).toContain("entity_user_id");
       expect(mockRun.mock.calls[3][0]).toContain("document_doc_id");
-      expect(mockRun.mock.calls[4][0]).toContain("e.nameEn IS NULL");
-      expect(mockRun.mock.calls[4][0]).toContain("SET e.nameEn = e.name");
       expect(mockSessionClose).toHaveBeenCalled();
-    });
-
-    it("reports to Sentry when backfill touched rows", async () => {
-      const backfillWithUpdates = {
-        records: [
-          {
-            get: (key: string) =>
-              key === "updated" ? new MockInteger(12) : null,
-          },
-        ],
-      };
-      mockRun
-        .mockResolvedValueOnce({ records: [] })
-        .mockResolvedValueOnce({ records: [] })
-        .mockResolvedValueOnce({ records: [] })
-        .mockResolvedValueOnce({ records: [] })
-        .mockResolvedValueOnce(backfillWithUpdates);
-      const store = createNeo4jStore();
-      await store.ensureSchema();
-      expect(Sentry.captureMessage).toHaveBeenCalledWith(
-        expect.stringContaining("backfilled Entity.nameEn"),
-        expect.objectContaining({
-          level: "info",
-          extra: { backfilled: 12 },
-        }),
-      );
     });
 
     it("throws GraphStoreError on failure", async () => {
@@ -156,20 +116,20 @@ describe("createNeo4jStore", () => {
       });
     });
 
-    it("rejects blank entity nameEn", async () => {
+    it("rejects blank entity name", async () => {
       const store = createNeo4jStore();
       await expect(
         store.upsertEntities({
           docId: "d1",
           userId: "u1",
-          entities: [{ type: "Person", name: "김철수", nameEn: "  " }],
+          entities: [{ type: "Person", name: "  ", nameEn: "Kim Chulsu" }],
           createdAt: "2026-04-01T00:00:00.000Z",
         }),
       ).rejects.toThrow(GraphStoreError);
       expect(mockExecuteWrite).not.toHaveBeenCalled();
     });
 
-    it("merges document, entities, and edges with nameEn as merge key", async () => {
+    it("merges document, entities, and edges with name as merge key", async () => {
       mockRun.mockResolvedValue({ records: [] });
       const store = createNeo4jStore();
       await store.upsertEntities({
@@ -186,10 +146,10 @@ describe("createNeo4jStore", () => {
       expect(mockRun.mock.calls[0][0]).toContain("ON CREATE SET d.createdAt");
       expect(mockRun.mock.calls[1][0]).toContain("UNWIND");
       expect(mockRun.mock.calls[1][0]).toContain(
-        "MERGE (e:Entity {type: entity.type, nameEn: entity.nameEn",
+        "MERGE (e:Entity {type: entity.type, name: entity.name",
       );
       expect(mockRun.mock.calls[1][0]).toContain(
-        "ON CREATE SET e.name = entity.name",
+        "ON CREATE SET e.nameEn = entity.nameEn",
       );
       expect(mockRun.mock.calls[1][1]).toEqual(
         expect.objectContaining({
@@ -364,14 +324,15 @@ describe("createNeo4jStore", () => {
     it("returns empty for empty entity names", async () => {
       const store = createNeo4jStore();
       const results = await store.findDocumentsByEntities({
-        entityNames: [],
+        entities: [],
+        entitiesEn: [],
         userId: "u1",
       });
       expect(results).toEqual([]);
       expect(mockRun).not.toHaveBeenCalled();
     });
 
-    it("searches by English entity names", async () => {
+    it("searches by both original and English entity names", async () => {
       mockRun.mockResolvedValue({
         records: [
           {
@@ -381,15 +342,18 @@ describe("createNeo4jStore", () => {
       });
       const store = createNeo4jStore();
       const results = await store.findDocumentsByEntities({
-        entityNames: ["Kim Chulsu", "frontend"],
+        entities: ["김철수", "프론트엔드"],
+        entitiesEn: ["Kim Chulsu", "frontend"],
         userId: "u1",
       });
 
       expect(results).toEqual([{ docId: "d1", sharedEntityCount: 2 }]);
-      expect(mockRun.mock.calls[0][0]).toContain("e.nameEn IN $entityNames");
+      expect(mockRun.mock.calls[0][0]).toContain("e.name IN $entities");
+      expect(mockRun.mock.calls[0][0]).toContain("e.nameEn IN $entitiesEn");
       expect(mockRun.mock.calls[0][1]).toEqual(
         expect.objectContaining({
-          entityNames: ["Kim Chulsu", "frontend"],
+          entities: ["김철수", "프론트엔드"],
+          entitiesEn: ["Kim Chulsu", "frontend"],
           userId: "u1",
         }),
       );
@@ -459,7 +423,7 @@ describe("createNeo4jStore", () => {
       );
     });
 
-    it("returns nameEn and lastReferencedAt, falling back to name when nameEn is null", async () => {
+    it("returns undefined nameEn when not set", async () => {
       mockRun.mockResolvedValue({
         records: [
           {
@@ -490,7 +454,7 @@ describe("createNeo4jStore", () => {
         {
           type: "Topic",
           name: "AI Marketing",
-          nameEn: "AI Marketing",
+          nameEn: undefined,
           documentCount: 5,
           lastReferencedAt: "2026-04-10T00:00:00.000Z",
         },
@@ -552,7 +516,7 @@ describe("createNeo4jStore", () => {
 
       expect(mockRun).toHaveBeenCalledTimes(3);
       expect(mockRun.mock.calls[0][0]).toContain("MENTIONED_IN");
-      expect(mockRun.mock.calls[0][0]).toContain("nameEn: $targetName");
+      expect(mockRun.mock.calls[0][0]).toContain("name: $targetName");
       expect(mockRun.mock.calls[1][0]).toContain("RELATED_TO");
       expect(mockRun.mock.calls[2][0]).toContain("DETACH DELETE");
     });

@@ -10,13 +10,18 @@ import {
   DEFAULT_NANO_MODEL,
   DEFAULT_STANDARD_MODEL,
 } from "@server/infra/llm/models";
-import type { VectorStore } from "@server/infra/vector";
-import { createQdrantStore } from "@server/infra/vector";
+import type { EntityVectorStore, VectorStore } from "@server/infra/vector";
+import {
+  createQdrantClient,
+  createQdrantEntityStore,
+  createQdrantStore,
+} from "@server/infra/vector";
 
 export interface Providers {
   llm: TieredLlm;
   embedding: EmbeddingProvider;
   vectorStore: VectorStore;
+  entityVectorStore: EntityVectorStore;
   graphStore: GraphStore;
 }
 
@@ -46,6 +51,8 @@ export function getProviders(): Providers {
     throw new Error("QDRANT_URL and QDRANT_API_KEY are required for chat");
   }
 
+  const qdrantClient = createQdrantClient();
+
   cached = {
     llm: createTieredLlm({
       apiKey: env.OPENAI_API_KEY,
@@ -54,7 +61,8 @@ export function getProviders(): Providers {
       modelNano: env.LLM_MODEL_NANO,
     }),
     embedding: createVoyageProvider({ apiKey: env.VOYAGE_API_KEY }),
-    vectorStore: createQdrantStore(),
+    vectorStore: createQdrantStore(qdrantClient),
+    entityVectorStore: createQdrantEntityStore(qdrantClient),
     graphStore: createNeo4jStore(),
   };
 

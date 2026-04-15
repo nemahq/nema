@@ -5,12 +5,13 @@ import type { EmbeddingProvider } from "@server/infra/embedding";
 import type { GraphStore } from "@server/infra/graph";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
-import type { VectorStore } from "@server/infra/vector";
+import type { EntityVectorStore, VectorStore } from "@server/infra/vector";
 import {
   buildEntityExtractionMessage,
   ENTITY_EXTRACTION_SYSTEM_PROMPT,
   EntityExtractionSchema,
 } from "@server/prompts/entity-extraction";
+import { resolveEntities } from "@server/services/entity-resolution";
 
 import type { DeleteEvent, PendingDocument } from "./types";
 import { PendingDocumentSchema, TriggerMessageSchema } from "./types";
@@ -27,6 +28,7 @@ interface WorkerDeps {
   embedding: EmbeddingProvider;
   vectorStore: VectorStore;
   graphStore: GraphStore;
+  entityVectorStore: EntityVectorStore;
 }
 
 export function createSyncWorker(deps: WorkerDeps) {
@@ -227,7 +229,7 @@ async function processDocument(
   doc: PendingDocument,
   deps: WorkerDeps,
 ): Promise<void> {
-  const { llm, embedding, vectorStore, graphStore } = deps;
+  const { llm, embedding, vectorStore, graphStore, entityVectorStore } = deps;
 
   const engineBody = doc.body_en ?? doc.body;
   const engineTags = doc.tags_en ?? doc.tags;
@@ -243,15 +245,36 @@ async function processDocument(
     ],
   });
 
-  const entities = entityResult.entities.map((e) => ({
+  const extractedEntities = entityResult.entities.map((e) => ({
     type: e.type,
     name: e.name,
     nameEn: e.nameEn,
   }));
 
+  // entity resolution: 기존 엔티티와 동일 개념이면 canonical name으로 치환
+  let resolved;
+  try {
+    resolved = await resolveEntities({
+      extractedEntities,
+      userId: doc.user_id,
+      graphStore,
+      entityVectorStore,
+      embedding,
+      llm,
+    });
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { component: "entity-resolution", stage: "top-level" },
+      extra: { docId: doc.id, userId: doc.user_id },
+    });
+    resolved = extractedEntities.map((e) => ({ ...e, isNew: true }));
+  }
+
   // delete → upsert: 신규 문서는 no-op, 수정 문서는 기존 인덱스 교체
   await vectorStore.deleteByDocument(doc.id);
   await graphStore.deleteByDocument(doc.id);
+
+  const newEntities = resolved.filter((e) => e.isNew);
 
   await Promise.all([
     vectorStore.upsert(embedding, {
@@ -264,9 +287,15 @@ async function processDocument(
     graphStore.upsertEntities({
       docId: doc.id,
       userId: doc.user_id,
-      entities,
+      entities: resolved,
       createdAt: doc.created_at,
     }),
+    newEntities.length > 0
+      ? entityVectorStore.upsert(embedding, {
+          userId: doc.user_id,
+          entities: newEntities.map((e) => ({ name: e.name, type: e.type })),
+        })
+      : Promise.resolve(),
   ]);
 }
 
