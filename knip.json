@@ -9,6 +9,7 @@
     "apps/server": {
       "entry": [
         "src/eval/eval-drafting.ts",
+        "src/eval/eval-entity-extraction.ts",
         "src/eval/eval-entity-resolution.ts"
       ],
       "project": ["src/**/*.ts"],
