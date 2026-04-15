@@ -1,9 +1,7 @@
 import { v5 as uuidv5 } from "uuid";
-import { QdrantClient } from "@qdrant/js-client-rest";
 
 import type { EntityType } from "@nema-io/shared";
 
-import { getEnv } from "@server/env";
 import {
   type EmbeddingProvider,
   VECTOR_DIMENSION,
@@ -15,6 +13,7 @@ import type {
   EntityUpsertOptions,
   EntityVectorStore,
 } from "./entity-vector-store";
+import type { QdrantClient } from "./qdrant-client";
 import { VectorStoreError } from "./vector-store";
 
 const ENTITY_COLLECTION = "entities";
@@ -39,13 +38,9 @@ function entityPointId(opts: {
   );
 }
 
-export function createQdrantEntityStore(): EntityVectorStore {
-  const { QDRANT_URL, QDRANT_API_KEY } = getEnv();
-  const client = new QdrantClient({
-    url: QDRANT_URL,
-    apiKey: QDRANT_API_KEY,
-  });
-
+export function createQdrantEntityStore(
+  client: QdrantClient,
+): EntityVectorStore {
   async function ensurePayloadIndexes(): Promise<void> {
     await client.createPayloadIndex(ENTITY_COLLECTION, {
       field_name: "user_id",

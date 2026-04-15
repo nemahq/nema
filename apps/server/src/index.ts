@@ -11,7 +11,11 @@ import { createSyncWorker } from "./infra/document-sync";
 import { initI18n } from "./infra/i18n";
 import { shutdown as shutdownPostHog } from "./infra/posthog";
 import { getSupabaseAdmin } from "./infra/supabase";
-import { createQdrantEntityStore, createQdrantStore } from "./infra/vector";
+import {
+  createQdrantClient,
+  createQdrantEntityStore,
+  createQdrantStore,
+} from "./infra/vector";
 import { appRouter } from "./router";
 import { failStaleSaveJobs } from "./services/save-job-service";
 import { createContext } from "./trpc";
@@ -72,11 +76,13 @@ async function bootstrap() {
     env.OPENAI_API_KEY &&
     env.VOYAGE_API_KEY
   ) {
-    const vectorStore = createQdrantStore();
+    const qdrantClient = createQdrantClient();
+
+    const vectorStore = createQdrantStore(qdrantClient);
     await vectorStore.ensureCollection();
     server.log.info("Qdrant document collection ready");
 
-    const entityVectorStore = createQdrantEntityStore();
+    const entityVectorStore = createQdrantEntityStore(qdrantClient);
     await entityVectorStore.ensureCollection();
     server.log.info("Qdrant entity collection ready");
 

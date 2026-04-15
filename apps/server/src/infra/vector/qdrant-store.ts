@@ -1,11 +1,10 @@
-import { QdrantClient } from "@qdrant/js-client-rest";
-
 import { getEnv } from "@server/env";
 import {
   type EmbeddingProvider,
   VECTOR_DIMENSION,
 } from "@server/infra/embedding";
 
+import type { QdrantClient } from "./qdrant-client";
 import type {
   DocumentPayload,
   SearchOptions,
@@ -15,12 +14,8 @@ import type {
 } from "./vector-store";
 import { VectorStoreError } from "./vector-store";
 
-export function createQdrantStore(): VectorStore {
-  const { QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION } = getEnv();
-  const client = new QdrantClient({
-    url: QDRANT_URL,
-    apiKey: QDRANT_API_KEY,
-  });
+export function createQdrantStore(client: QdrantClient): VectorStore {
+  const { QDRANT_COLLECTION } = getEnv();
 
   async function ensurePayloadIndexes(): Promise<void> {
     await client.createPayloadIndex(QDRANT_COLLECTION, {
