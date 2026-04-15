@@ -67,7 +67,8 @@ export const ENTITY_RESOLUTION_SEEDS: EntityResolutionSeed[] = [
   {
     id: "same-name-different-concept",
     category: "동명이인/동명이의",
-    description: "Apple(회사)과 Apple(과일)은 다른 개념 — type이 같아도 문맥상 다름",
+    description:
+      "Apple(회사)과 Apple(과일)은 다른 개념 — type이 같아도 문맥상 다름",
     extracted: { name: "Apple Vision Pro", type: "Topic" },
     candidates: [{ name: "Apple", score: 0.78 }],
     expectedMatch: null,
