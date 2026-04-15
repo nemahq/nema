@@ -8,7 +8,7 @@ import * as Sentry from "@sentry/react";
 import { RouterProvider } from "@tanstack/react-router";
 
 import type { ErrorFallbackLabels } from "@web/app/error/ErrorFallback";
-import { getStorage } from "@web/utils/localStorage";
+import { detectLanguage } from "@web/lib/tolgee";
 import { initTheme } from "@web/utils/theme";
 
 import { ErrorBoundary } from "./app/error/ErrorBoundary";
@@ -33,16 +33,7 @@ const ROOT_FALLBACK_LABELS: Record<string, ErrorFallbackLabels> = {
   },
 };
 
-function detectRootLocale(): string {
-  const stored = getStorage("locale");
-  if (stored) {
-    return stored;
-  }
-  const browserLang = navigator?.language?.split("-")[0];
-  return browserLang === "ko" ? "ko" : "en";
-}
-
-const rootLabels = ROOT_FALLBACK_LABELS[detectRootLocale()];
+const rootLabels = ROOT_FALLBACK_LABELS[detectLanguage()];
 
 if (typeof __COMMIT_SHA__ !== "undefined") {
   // eslint-disable-next-line no-console -- build metadata, not capturable by Sentry
