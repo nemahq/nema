@@ -49,7 +49,7 @@ export function SidebarNavLink({
     <div className="px-1.5 py-0.5">
       <Link
         to={to}
-        className="flex h-9 w-full items-center gap-2 rounded-md px-1.5 text-sm font-normal transition-colors duration-fast hover:bg-surface-raised-hover"
+        className="flex h-9 w-full items-center gap-1.5 rounded-md px-1.5 text-sm font-normal transition-colors duration-fast hover:bg-surface-raised-hover"
         activeProps={activeProps}
       >
         {icon}
