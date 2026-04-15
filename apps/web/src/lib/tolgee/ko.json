@@ -21,6 +21,7 @@
     "unknown_error": "알 수 없는 오류가 발생했어요."
   },
   "error": {
+    "copy_error": "에러 정보 복사",
     "go_home": "홈으로 돌아가기",
     "network": "네트워크 연결을 확인해주세요.",
     "not_found": "이 페이지는 여기에 없어요.",

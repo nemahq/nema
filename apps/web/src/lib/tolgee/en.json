@@ -21,6 +21,7 @@
     "unknown_error": "An unknown error occurred."
   },
   "error": {
+    "copy_error": "Copy error info",
     "go_home": "Go to home",
     "network": "Check your network connection.",
     "not_found": "This page isn't here.",

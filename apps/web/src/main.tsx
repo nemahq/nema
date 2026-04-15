@@ -44,7 +44,14 @@ createRoot(root, {
           detail={error?.message}
           onRetry={hasRetried ? undefined : reset}
           onRefresh={hasRetried ? () => window.location.reload() : undefined}
+          size="page"
           className="min-h-dvh"
+          labels={{
+            pageError: "잠깐, 다시 불러올게요.",
+            retry: "다시 시도",
+            refresh: "새로고침",
+            copyError: "에러 정보 복사",
+          }}
         />
       )}
     >
