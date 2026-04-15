@@ -92,6 +92,24 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       const session = driver.session(sessionConfig);
       try {
         await session.run(`DROP CONSTRAINT entity_unique_en IF EXISTS`);
+        await session.run(`
+          MATCH (e:Entity)
+          WITH e.type AS type, e.name AS name, e.userId AS userId, collect(e) AS dupes
+          WHERE size(dupes) > 1
+          WITH dupes[0] AS keep, dupes[1..] AS rest
+          UNWIND rest AS dup
+          WITH keep, dup
+          CALL (keep, dup) {
+            MATCH (dup)-[r]->(target)
+            MERGE (keep)-[:RELATES_TO]->(target)
+            DELETE r
+            UNION
+            MATCH (source)-[r]->(dup)
+            MERGE (source)-[:RELATES_TO]->(keep)
+            DELETE r
+          }
+          DETACH DELETE dup
+        `);
         await session.run(
           `CREATE CONSTRAINT entity_unique IF NOT EXISTS
            FOR (e:Entity) REQUIRE (e.type, e.name, e.userId) IS UNIQUE`,
