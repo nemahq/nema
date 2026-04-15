@@ -8,7 +8,7 @@ import * as Sentry from "@sentry/react";
 import { RouterProvider } from "@tanstack/react-router";
 
 import type { ErrorFallbackLabels } from "@web/app/error/ErrorFallback";
-import { detectLanguage } from "@web/lib/tolgee";
+import { detectLanguage } from "@web/utils/locale";
 import { initTheme } from "@web/utils/theme";
 
 import { ErrorBoundary } from "./app/error/ErrorBoundary";

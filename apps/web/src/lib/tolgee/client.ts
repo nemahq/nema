@@ -1,8 +1,7 @@
 import { BackendFetch, FormatSimple, Tolgee } from "@tolgee/react";
 
 import { getEnv } from "@web/app/env";
-
-import { detectLanguage } from "./detectLanguage";
+import { detectLanguage } from "@web/utils/locale";
 
 const { TOLGEE_CDN_URL } = getEnv();
 const tolgeeBuilder = Tolgee().use(FormatSimple());

@@ -1,6 +1,6 @@
-import { getStorage } from "@web/utils/localStorage";
+import { type Locale, LOCALES } from "@nema-io/shared";
 
-import { type Locale, LOCALES } from "./types";
+import { getStorage } from "@web/utils/localStorage";
 
 export function detectLanguage(): Locale {
   const stored = getStorage("locale");
