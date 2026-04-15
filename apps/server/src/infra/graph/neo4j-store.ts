@@ -92,7 +92,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       const session = driver.session(sessionConfig);
       try {
         await session.run(`DROP CONSTRAINT entity_unique_en IF EXISTS`);
-        const dedupResult = await session.run(`
+        await session.run(`
           MATCH (e:Entity)
           WITH e.type AS type, e.name AS name, e.userId AS userId, collect(e) AS dupes
           WHERE size(dupes) > 1
@@ -108,18 +108,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
             MERGE (keep)-[:RELATED_TO]-(other)
           }
           DETACH DELETE dup
-          RETURN count(dup) AS merged
         `);
-        const merged = dedupResult.records[0]?.get("merged")?.toInt?.() ?? 0;
-        if (merged > 0) {
-          Sentry.captureMessage(
-            "[neo4j] deduplicated entities during schema migration",
-            {
-              level: "info",
-              extra: { mergedCount: merged },
-            },
-          );
-        }
         await session.run(
           `CREATE CONSTRAINT entity_unique IF NOT EXISTS
            FOR (e:Entity) REQUIRE (e.type, e.name, e.userId) IS UNIQUE`,

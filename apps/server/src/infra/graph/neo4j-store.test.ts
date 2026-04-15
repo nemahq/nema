@@ -68,10 +68,9 @@ describe("createNeo4jStore", () => {
 
   describe("ensureSchema", () => {
     it("creates constraint on (type, name, userId) and indexes", async () => {
-      const mockDedupRecord = { get: () => ({ toInt: () => 0 }) };
       mockRun
         .mockResolvedValueOnce({ records: [] })
-        .mockResolvedValueOnce({ records: [mockDedupRecord] })
+        .mockResolvedValueOnce({ records: [] })
         .mockResolvedValueOnce({ records: [] })
         .mockResolvedValueOnce({ records: [] })
         .mockResolvedValueOnce({ records: [] });
