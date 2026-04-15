@@ -68,21 +68,24 @@ describe("createNeo4jStore", () => {
 
   describe("ensureSchema", () => {
     it("creates constraint on (type, name, userId) and indexes", async () => {
+      const mockDedupRecord = { get: () => ({ toInt: () => 0 }) };
       mockRun
         .mockResolvedValueOnce({ records: [] })
+        .mockResolvedValueOnce({ records: [mockDedupRecord] })
         .mockResolvedValueOnce({ records: [] })
         .mockResolvedValueOnce({ records: [] })
         .mockResolvedValueOnce({ records: [] });
       const store = createNeo4jStore();
       await store.ensureSchema();
-      expect(mockRun).toHaveBeenCalledTimes(4);
+      expect(mockRun).toHaveBeenCalledTimes(5);
       expect(mockRun.mock.calls[0][0]).toContain(
         "DROP CONSTRAINT entity_unique_en",
       );
-      expect(mockRun.mock.calls[1][0]).toContain("entity_unique");
-      expect(mockRun.mock.calls[1][0]).toContain("(e.type, e.name, e.userId)");
-      expect(mockRun.mock.calls[2][0]).toContain("entity_user_id");
-      expect(mockRun.mock.calls[3][0]).toContain("document_doc_id");
+      expect(mockRun.mock.calls[1][0]).toContain("DETACH DELETE dup");
+      expect(mockRun.mock.calls[2][0]).toContain("entity_unique");
+      expect(mockRun.mock.calls[2][0]).toContain("(e.type, e.name, e.userId)");
+      expect(mockRun.mock.calls[3][0]).toContain("entity_user_id");
+      expect(mockRun.mock.calls[4][0]).toContain("document_doc_id");
       expect(mockSessionClose).toHaveBeenCalled();
     });
 
