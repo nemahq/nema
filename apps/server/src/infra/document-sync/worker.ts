@@ -336,11 +336,18 @@ async function runEntityOrphanPrune(deps: WorkerDeps): Promise<void> {
   const userIds = [...new Set((rows ?? []).map((r) => r.user_id))];
 
   for (const userId of userIds) {
-    const liveEntities = await deps.graphStore.listEntities({
-      userId,
-      limit: ENTITY_PRUNE_LIST_LIMIT,
-    });
-    await deps.entityVectorStore.pruneOrphans({ userId, liveEntities });
+    try {
+      const liveEntities = await deps.graphStore.listEntities({
+        userId,
+        limit: ENTITY_PRUNE_LIST_LIMIT,
+      });
+      await deps.entityVectorStore.pruneOrphans({ userId, liveEntities });
+    } catch (err) {
+      Sentry.captureException(err, {
+        tags: { component: "sync-worker", phase: "entityOrphanPrune" },
+        extra: { userId },
+      });
+    }
   }
 }
 

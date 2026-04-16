@@ -612,7 +612,6 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
             name: getString(r, "name"),
           }));
 
-          // Delete orphan entities
           await tx.run(
             `MATCH (e:Entity)
              WHERE id(e) IN $ids AND NOT (e)-[:MENTIONED_IN]->()

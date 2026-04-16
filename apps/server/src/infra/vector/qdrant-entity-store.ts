@@ -19,6 +19,7 @@ import type { QdrantClient } from "./qdrant-client";
 import { VectorStoreError } from "./vector-store";
 
 const ENTITY_COLLECTION = "entities";
+const ENTITY_PRUNE_SCROLL_PAGE_SIZE = 100;
 
 interface EntityPayload {
   user_id: string;
@@ -248,7 +249,7 @@ export function createQdrantEntityStore(
               filter: { must: [{ key: "user_id", match: { value: userId } }] },
               with_payload: false,
               with_vector: false,
-              limit: 100,
+              limit: ENTITY_PRUNE_SCROLL_PAGE_SIZE,
               offset: offset ?? undefined,
             },
           );
