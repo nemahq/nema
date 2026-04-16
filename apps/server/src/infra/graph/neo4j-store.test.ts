@@ -542,6 +542,7 @@ describe("createNeo4jStore", () => {
       mockRun
         .mockResolvedValueOnce({ records: [{ get: () => ["id-1", "id-2"] }] })
         .mockResolvedValueOnce({ records: [] })
+        .mockResolvedValueOnce({ records: [] })
         .mockResolvedValueOnce({ records: [] });
       const store = createNeo4jStore();
       await store.deleteByDocument("d1");
@@ -554,9 +555,14 @@ describe("createNeo4jStore", () => {
       expect(mockRun.mock.calls[1][0]).toContain("DETACH DELETE d");
       expect(mockRun.mock.calls[1][1]).toEqual({ docId: "d1" });
 
-      // Step 3: delete orphan entities
-      expect(mockRun.mock.calls[2][0]).toContain("DETACH DELETE e");
+      // Step 3: collect orphan entity info before deleting
+      expect(mockRun.mock.calls[2][0]).not.toContain("DETACH DELETE");
+      expect(mockRun.mock.calls[2][0]).toContain("e.userId");
       expect(mockRun.mock.calls[2][1]).toEqual({ ids: ["id-1", "id-2"] });
+
+      // Step 4: delete orphan entities
+      expect(mockRun.mock.calls[3][0]).toContain("DETACH DELETE e");
+      expect(mockRun.mock.calls[3][1]).toEqual({ ids: ["id-1", "id-2"] });
     });
 
     it("skips orphan cleanup when no candidates", async () => {

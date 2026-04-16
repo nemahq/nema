@@ -596,23 +596,30 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
             docId,
           });
 
-          // Delete orphan entities (no remaining MENTIONED_IN), return deleted list
+          // Collect orphan entity info before deleting
           if (candidateIds.length === 0) {
             return [];
           }
           const orphanResult = await tx.run(
             `MATCH (e:Entity)
              WHERE id(e) IN $ids AND NOT (e)-[:MENTIONED_IN]->()
-             WITH e.userId AS userId, e.type AS type, e.name AS name
-             DETACH DELETE e
-             RETURN userId, type, name`,
+             RETURN e.userId AS userId, e.type AS type, e.name AS name`,
             { ids: candidateIds },
           );
-          return orphanResult.records.map((r) => ({
+          const orphaned = orphanResult.records.map((r) => ({
             userId: getString(r, "userId"),
             type: getEntityType(r, "type"),
             name: getString(r, "name"),
           }));
+
+          // Delete orphan entities
+          await tx.run(
+            `MATCH (e:Entity)
+             WHERE id(e) IN $ids AND NOT (e)-[:MENTIONED_IN]->()
+             DETACH DELETE e`,
+            { ids: candidateIds },
+          );
+          return orphaned;
         });
       } catch (error) {
         if (error instanceof GraphStoreError) {
