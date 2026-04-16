@@ -1,6 +1,6 @@
 # Nema 구조화 엔진 — Put-in 흐름 설계 (v2, Memory 모델)
 
-> Pull-out 흐름은 [put-in-and-pull-out-flow-design-v1.md](put-in-and-pull-out-flow-design-v1.md) 참조. 검색 레이어 변경(Memory 1차 / 폴백 2차)은 NEM-89에서 설계.
+> Pull-out 흐름은 [put-in-and-pull-out-flow-design-v1.md](put-in-and-pull-out-flow-design-v1.md) 참조. 검색 레이어 변경(Memory 1차 / 폴백 2차)은 별도 설계 예정.
 
 ## 목적
 
@@ -241,7 +241,7 @@ MVP에서 Phase 2는 **사용자 관점에서 Non-blocking**이다. 저장 트�
           "created_at": "..."
         }
         create 시에도 최초 revision 기록 (prev_body = null)
-        상세 스키마 설계: NEM-85에 위임
+        상세 스키마 설계는 별도 결정
 
 5. Backend → Frontend: 저장 완료 응답
 
@@ -295,7 +295,7 @@ update_type:
 
 하나의 저장이 여러 Memory를 대상으로 update를 트리거할 수 있다. (예: "이직했고 팀도 바뀌었다" → 직업 Memory + 팀 관계 Memory 동시 update)
 
-동일 Memory에 동시 업데이트가 발생하는 경우 순서 보장이 필요하다. 처리 방식은 NEM-88에 위임.
+동일 Memory에 동시 업데이트가 발생하는 경우 순서 보장이 필요하다. 처리 방식은 별도 설계 예정.
 
 구현 시 함수명은 `fanOut` 대신 동작을 서술하는 이름(예: `propagateToRelatedMemories`)을 권장한다.
 
@@ -439,7 +439,7 @@ Phase 3에서 추출된 엔티티/관계를 기반으로 영향받는 Memory를 
 
 ### 동일 Memory 동시 업데이트
 
-Phase 4 fan-out 과정에서 동일 Memory에 동시 업데이트가 발생하는 경우 순서 보장이 필요하다. 처리 방식은 NEM-88에 위임.
+Phase 4 fan-out 과정에서 동일 Memory에 동시 업데이트가 발생하는 경우 순서 보장이 필요하다. 처리 방식은 별도 설계 예정.
 
 ### 향후 고려사항
 
