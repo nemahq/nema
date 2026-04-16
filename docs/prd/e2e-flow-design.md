@@ -10,7 +10,7 @@
 |---|---|
 | **Memory (기억)** | 주제/엔티티별 합성 문서. 새 정보가 들어올 때마다 증분 업데이트됨 |
 | **Revision (히스토리)** | Memory의 각 업데이트 기록 (`memory_revisions` 테이블) |
-| **update** | 기존 내용 대체 ("React 쓴다" → "Svelte로 전환") |
+| **replace** | 기존 내용 대체 ("React 쓴다" → "Svelte로 전환") |
 | **extend** | 기존 내용에 추가 ("Stripe PM" + "결제 인프라 팀 리드") |
 | **세션** | raw 대화 원본. 별도 원본 문서 없이 여기서 보존 |
 | **fan-out** | 하나의 저장이 여러 Memory를 동시 업데이트하는 것 |
@@ -19,7 +19,7 @@
 
 1. [구성 요소 정의](#1-구성-요소-정의) — 흐름에 참여하는 주체와 책임 경계
 2. [Phase 1: 드래프팅](#2-phase-1-드래프팅) — Intent Router → put-in 판정 → LLM 본문 정제 → body만 표시 → 수정/pull-out/저장/취소
-3. [Phase 2: 저장](#3-phase-2-저장) — 저장 트리거 → 멀티 토픽 분리 → 관련 Memory 검색 → 증분 업데이트/신규 생성 → diff 기록 → DB 기록
+3. [Phase 2: 저장](#3-phase-2-저장) — 저장 트리거 → 멀티 토픽 분리 → 관련 Memory 검색 → 증분 업데이트/신규 생성 → Revision 기록 → DB 기록
 4. [Phase 3: 비동기 인제스천](#4-phase-3-비동기-인제스천) — 임베딩 생성 (Qdrant) + 그래프 노드/엣지 생성 (Neo4j). 완료 후 Phase 4 트리거
 5. [Phase 4: Memory 재생성](#5-phase-4-memory-재생성) — 엔티티 기반 fan-out → 영향받는 Memory 검색 → 재생성 큐
 6. [상태 및 세션 관리](#6-상태-및-세션-관리) — 대화 상태 유지, 드래프트 임시 저장, Phase 전환 시점, 대화 이력 저장
@@ -39,7 +39,7 @@
 | **Frontend** | React (Vite) | UI 렌더링, 사용자 입력 수집, 드래프트 카드 표시 (인라인 저장/취소 버튼), pull-out 답변 버블 표시 | LLM 직접 호출, DB 직접 접근 |
 | **Backend** | Fastify + tRPC | 흐름 오케스트레이션, 외부 서비스 호출 순서 제어, 입력 검증, 관련 Memory 검색 | 구조화 판단 (LLM 영역), 데이터 영속 (DB 영역) |
 | **LLM** | Claude (교체 가능) | Intent 판단 + 검색 쿼리 생성 (Intent Router + Query Planner), 본문 정제 (Phase 1), title/tags/summary 생성 + create/update 판단 + 증분 업데이트 (Phase 2), 검색 결과 기반 답변 생성 (Pull-out), Memory 재생성 (Phase 4) | 데이터 저장, 검색, 상태 유지 |
-| **Supabase** | PostgreSQL | Memory 저장 (source of truth), diff/revision 이력 저장, 세션 저장 | 의미 검색, 관계 탐색 |
+| **Supabase** | PostgreSQL | Memory 저장 (source of truth), Revision 이력 저장, 세션 저장 | 의미 검색, 관계 탐색 |
 | **Qdrant** | Vector DB | 임베딩 벡터 저장, 의미 유사도 검색 | 원본 저장, 관계 탐색 |
 | **Neo4j** | Graph DB | 엔티티 간 관계 저장, 관계 탐색 (multi-hop), 영향받는 Memory 탐색 | 원본 저장, 의미 검색 |
 
@@ -69,7 +69,7 @@
 ### 데이터 저장 원칙
 
 - **단일 책임**: 각 저장소는 고유 역할만 수행. 관계 정보는 Neo4j에만, 벡터는 Qdrant에만
-- **Supabase가 source of truth**: Memory 원본 + 메타데이터 + diff 이력. 나머지 저장소는 파생 데이터
+- **Supabase가 source of truth**: Memory 원본 + 메타데이터 + Revision 이력. 나머지 저장소는 파생 데이터
 - **파생 데이터 재생성 가능**: Qdrant, Neo4j 데이터는 Supabase 원본으로부터 재생성 가능해야 함
 - **세션은 raw 원본**: 대화 원본은 세션에 보존. 별도 원본 문서 불필요
 
@@ -169,7 +169,7 @@ title, tags, summary는 Phase 2에서 기존 Memory 컨텍스트(기존 태그 �
 
 ## 3. Phase 2: 저장
 
-사용자가 저장을 트리거한 시점부터 Supabase에 Memory가 기록되기까지의 흐름. Phase 1에서 생성된 body를 바탕으로 메타 필드 생성, 멀티 토픽 분리, 관련 Memory 검색, create/update 판단, 증분 업데이트, diff 기록을 수행한다.
+사용자가 저장을 트리거한 시점부터 Supabase에 Memory가 기록되기까지의 흐름. Phase 1에서 생성된 body를 바탕으로 메타 필드 생성, 멀티 토픽 분리, 관련 Memory 검색, create/update 판단, 증분 업데이트, Revision 기록을 수행한다.
 
 MVP에서 Phase 2는 **사용자 관점에서 Non-blocking**이다. 저장 트리거 즉시 새 입력(Phase 1)을 시작할 수 있으며, Phase 2는 백그라운드에서 처리된다.
 
@@ -230,7 +230,7 @@ MVP에서 Phase 2는 **사용자 관점에서 Non-blocking**이다. 저장 트�
         create → memories 테이블에 새 행 삽입 (title, tags, summary, body)
         update → 기존 행 갱신 (updated_body로 교체, ingestion_status = pending)
 
-   4-5. Backend → Supabase: diff 기록
+   4-5. Backend → Supabase: Revision 기록
         update 시 memory_revisions 테이블에 revision 삽입
         {
           "memory_id": "...",
@@ -304,7 +304,7 @@ update_type:
 사용자 입력이 독립적인 2개 이상의 주제를 포함할 때 Backend가 LLM에 분리를 요청한다. 분리된 각 body는 4-1부터 독립적으로 처리된다.
 
 - 분리 판단은 **보수적으로**: 애매하면 단일 문서 유지
-- 분리된 중 일부 저장이 실패해도 성공한 것은 유지 (부분 실패 허용)
+- 분리된 것 중 일부 저장이 실패해도 성공한 것은 유지 (부분 실패 허용)
 
 ### 동시 저장 처리
 
@@ -367,9 +367,8 @@ Phase 2 저장 완료 → ingestion_status = pending
   4. 성공한 Memory: ingestion_status = completed
      실패한 Memory: pending 유지
   5. 배치 완료 → pending 재확인
-     → pending 있음: 즉시 다음 배치
-     → pending 없음: 대기 (다음 Phase 2 저장이 트리거)
-  6. 배치 완료 → Phase 4 트리거
+     → pending 있음: 즉시 다음 배치 (Phase 4 트리거 없음)
+     → pending 없음: Phase 4 트리거 → 대기 (다음 Phase 2 저장이 트리거)
 ```
 
 ### 흐름
@@ -400,9 +399,9 @@ Phase 2 저장 완료 → ingestion_status = pending
    성공: ingestion_status = completed
    실패: pending 유지
 
-8. pending 재확인 → 있으면 1로 복귀
-
-9. 배치 완료 → Phase 4 트리거
+8. pending 재확인
+   → 있으면 1로 복귀 (Phase 4 트리거 없음)
+   → 없으면 Phase 4 트리거 후 대기
 ```
 
 ---
@@ -432,7 +431,7 @@ Phase 3에서 추출된 엔티티/관계를 기반으로 영향받는 Memory를 
    입력: 기존 Memory body + 관련 엔티티 컨텍스트 (Neo4j에서 조회)
    출력: 재합성된 body
 
-5. Backend → Supabase: 재생성된 Memory 저장 + diff 기록 (4-4, 4-5와 동일)
+5. Backend → Supabase: 재생성된 Memory 저장 + Revision 기록 (4-4, 4-5와 동일)
    ingestion_status = pending → Phase 3 재트리거
 
 6. Phase 3 재트리거 → 재생성된 Memory 인제스천
@@ -511,14 +510,14 @@ Phase 4 fan-out 과정에서 동일 Memory에 동시 업데이트가 발생하�
 
 ### Intent Router + Query Planner
 
-#### 드래프트 비활성 시 (2분기)
+#### 드래프트 비활성 시
 
 | 판정 | 후속 흐름 |
 |---|---|
 | put-in | Phase 1 (드래프팅) |
 | pull-out | Pull-out 검색 → 답변 생성 |
 
-#### 드래프트 활성 시 (3분기)
+#### 드래프트 활성 시
 
 | 판정 | 후속 흐름 |
 |---|---|
