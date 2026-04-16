@@ -7,6 +7,7 @@ import type {
   EntityTypeCount,
   FindDocumentsByEntitiesOptions,
   FindDocumentsByEntityOptions,
+  FindEntitiesByNormalizedNamesOptions,
   FindRelatedDocumentsOptions,
   GetGraphOptions,
   GetRelatedEntitiesOptions,
@@ -18,6 +19,7 @@ import type {
   ListEntitiesOptions,
   ListEntitiesWithStatsOptions,
   MergeEntitiesOptions,
+  NormalizedNameMatch,
   OrphanedEntity,
   UpsertEntitiesOptions,
 } from "./graph-store";
@@ -345,6 +347,50 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
         throw new GraphStoreError(
           `listEntities failed: ${error instanceof Error ? error.message : String(error)}`,
           "listEntities",
+          error,
+        );
+      } finally {
+        try {
+          await session.close();
+        } catch (closeErr) {
+          Sentry.captureMessage("[neo4j] session.close() failed", {
+            level: "warning",
+            extra: { closeError: closeErr },
+          });
+        }
+      }
+    },
+
+    async findEntitiesByNormalizedNames(
+      options: FindEntitiesByNormalizedNamesOptions,
+    ): Promise<NormalizedNameMatch[]> {
+      const { userId, queries } = options;
+      if (queries.length === 0) {
+        return [];
+      }
+      const session = driver.session(sessionConfig);
+      try {
+        const result = await session.run(
+          `UNWIND $queries AS q
+           MATCH (e:Entity {userId: $userId})
+           WHERE e.type = q.type AND toLower(trim(e.name)) = q.normalizedName
+           WITH q.type AS type, q.normalizedName AS normalizedName, head(collect(e)) AS e
+           RETURN type, normalizedName, e.name AS name, e.nameEn AS nameEn`,
+          { userId, queries },
+        );
+        return result.records.map((r) => ({
+          type: getEntityType(r, "type"),
+          normalizedName: getString(r, "normalizedName"),
+          name: getString(r, "name"),
+          nameEn: getOptionalString(r, "nameEn"),
+        }));
+      } catch (error) {
+        if (error instanceof GraphStoreError) {
+          throw error;
+        }
+        throw new GraphStoreError(
+          `findEntitiesByNormalizedNames failed: ${error instanceof Error ? error.message : String(error)}`,
+          "findEntitiesByNormalizedNames",
           error,
         );
       } finally {

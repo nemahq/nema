@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { EmbeddingProvider } from "@server/infra/embedding";
-import type { GraphEntity, GraphStore } from "@server/infra/graph";
+import type { GraphStore } from "@server/infra/graph";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { EntityVectorStore } from "@server/infra/vector";
 
@@ -16,13 +16,13 @@ import { resolveEntities } from "./entity-resolution";
 
 // --- Mock factories ---
 
-function mockGraphStore(existingEntities: GraphEntity[] = []): GraphStore {
+function mockGraphStore(): GraphStore {
   return {
     ensureSchema: vi.fn(),
     upsertEntities: vi.fn(),
     findRelatedDocuments: vi.fn(),
     findDocumentsByEntities: vi.fn(),
-    listEntities: vi.fn().mockResolvedValue(existingEntities),
+    listEntities: vi.fn(),
     listEntitiesWithStats: vi.fn(),
     findDocumentsByEntity: vi.fn(),
     getRelatedEntities: vi.fn(),
@@ -30,6 +30,7 @@ function mockGraphStore(existingEntities: GraphEntity[] = []): GraphStore {
     mergeEntities: vi.fn(),
     deleteByDocument: vi.fn(),
     getGraph: vi.fn(),
+    findEntitiesByNormalizedNames: vi.fn().mockResolvedValue([]),
   } as unknown as GraphStore;
 }
 
@@ -93,13 +94,18 @@ describe("resolveEntities", () => {
 
   describe("Stage 1: 정규화 일치", () => {
     it("matches entity by normalized name (case + whitespace)", async () => {
-      const existing: GraphEntity[] = [{ type: "Person", name: "Alice Kim" }];
+      const graphStore = mockGraphStore();
+      (
+        graphStore.findEntitiesByNormalizedNames as ReturnType<typeof vi.fn>
+      ).mockResolvedValue([
+        { type: "Person", normalizedName: "alice kim", name: "Alice Kim" },
+      ]);
       const result = await resolveEntities({
         extractedEntities: [
           { type: "Person", name: "alice  kim", nameEn: "Alice Kim" },
         ],
         userId: USER_ID,
-        graphStore: mockGraphStore(existing),
+        graphStore,
         entityVectorStore: mockEntityVectorStore(),
         embedding: mockEmbedding(),
         llm: mockLlm(),
@@ -110,16 +116,11 @@ describe("resolveEntities", () => {
     });
 
     it("does not match different types with same name", async () => {
-      const existing: GraphEntity[] = [
-        { type: "Organization", name: "Python" },
-      ];
-      const graphStore = mockGraphStore(existing);
-      // listEntities는 type 필터로 호출되므로, Topic 타입에 대해 빈 결과 반환
-      (graphStore.listEntities as ReturnType<typeof vi.fn>).mockImplementation(
-        async (opts: { type?: string }) =>
-          opts.type === "Organization" ? existing : [],
-      );
-
+      const graphStore = mockGraphStore();
+      // Topic 타입 쿼리에 대해 빈 결과 반환 — Organization 엔티티는 매칭 안 됨
+      (
+        graphStore.findEntitiesByNormalizedNames as ReturnType<typeof vi.fn>
+      ).mockResolvedValue([]);
       const result = await resolveEntities({
         extractedEntities: [
           { type: "Topic", name: "Python", nameEn: "Python" },
@@ -134,86 +135,8 @@ describe("resolveEntities", () => {
     });
   });
 
-  describe("Stage 2: 퍼지 매칭", () => {
-    it("matches English name via Dice similarity", async () => {
-      const existing: GraphEntity[] = [
-        { type: "Organization", name: "Sequoia Capital Partners Fund" },
-      ];
-      const result = await resolveEntities({
-        extractedEntities: [
-          {
-            type: "Organization",
-            name: "Sequoia Capital Partners Funds",
-            nameEn: "Sequoia Capital Partners Funds",
-          },
-        ],
-        userId: USER_ID,
-        graphStore: mockGraphStore(existing),
-        entityVectorStore: mockEntityVectorStore(),
-        embedding: mockEmbedding(),
-        llm: mockLlm(),
-      });
-      expect(result[0].isNew).toBe(false);
-      expect(result[0].name).toBe("Sequoia Capital Partners Fund");
-    });
-
-    it("matches CJK name via bigram Dice (2-gram instead of 3-gram)", async () => {
-      const existing: GraphEntity[] = [
-        { type: "Organization", name: "세쿼이아 캐피탈" },
-      ];
-      const result = await resolveEntities({
-        extractedEntities: [
-          {
-            type: "Organization",
-            name: "세쿼이아 캐피탈스",
-            nameEn: "Sequoia Capitals",
-          },
-        ],
-        userId: USER_ID,
-        graphStore: mockGraphStore(existing),
-        entityVectorStore: mockEntityVectorStore(),
-        embedding: mockEmbedding(),
-        llm: mockLlm(),
-      });
-      expect(result[0].isNew).toBe(false);
-      expect(result[0].name).toBe("세쿼이아 캐피탈");
-    });
-
-    it("matches via overlap coefficient when Dice is below threshold but containment is high", async () => {
-      const existing: GraphEntity[] = [{ type: "Event", name: "투자자 미팅" }];
-      const result = await resolveEntities({
-        extractedEntities: [
-          { type: "Event", name: "투자자 미팅들", nameEn: "investor meetings" },
-        ],
-        userId: USER_ID,
-        graphStore: mockGraphStore(existing),
-        entityVectorStore: mockEntityVectorStore(),
-        embedding: mockEmbedding(),
-        llm: mockLlm(),
-      });
-      // 길이 차이 1 + 높은 overlap → 매칭
-      expect(result[0].isNew).toBe(false);
-      expect(result[0].name).toBe("투자자 미팅");
-    });
-
-    it("skips fuzzy for low-entropy names", async () => {
-      const existing: GraphEntity[] = [{ type: "Topic", name: "AI" }];
-      // "AI" has very low entropy → fuzzy skipped → goes to Stage 3
-      const result = await resolveEntities({
-        extractedEntities: [{ type: "Topic", name: "AIs", nameEn: "AIs" }],
-        userId: USER_ID,
-        graphStore: mockGraphStore(existing),
-        entityVectorStore: mockEntityVectorStore(),
-        embedding: mockEmbedding(),
-        llm: mockLlm(),
-      });
-      // Stage 3 returns no candidates → new entity
-      expect(result[0].isNew).toBe(true);
-    });
-  });
-
-  describe("Stage 3: 임베딩 유사도", () => {
-    it("passes candidates to Stage 4 LLM when embedding search finds matches", async () => {
+  describe("Stage 2: 임베딩 유사도", () => {
+    it("passes candidates to Stage 3 LLM when embedding search finds matches", async () => {
       const llm = mockLlm([
         {
           extractedName: "베트남 쌀국수",
@@ -271,7 +194,7 @@ describe("resolveEntities", () => {
     });
   });
 
-  describe("Stage 4: LLM 판정", () => {
+  describe("Stage 3: LLM 판정", () => {
     it("treats all as new when LLM fails", async () => {
       const llm = mockLlm();
       (llm.generateStructured as ReturnType<typeof vi.fn>).mockRejectedValue(
@@ -337,12 +260,12 @@ describe("resolveEntities", () => {
     });
   });
 
-  describe("listEntities 실패 격리", () => {
-    it("falls back to empty list when Neo4j fails", async () => {
+  describe("Neo4j 실패 격리", () => {
+    it("falls back gracefully when Neo4j fails", async () => {
       const graphStore = mockGraphStore();
-      (graphStore.listEntities as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error("Neo4j connection timeout"),
-      );
+      (
+        graphStore.findEntitiesByNormalizedNames as ReturnType<typeof vi.fn>
+      ).mockRejectedValue(new Error("Neo4j connection timeout"));
       const result = await resolveEntities({
         extractedEntities: [{ type: "Person", name: "Alice", nameEn: "Alice" }],
         userId: USER_ID,
@@ -351,7 +274,7 @@ describe("resolveEntities", () => {
         embedding: mockEmbedding(),
         llm: mockLlm(),
       });
-      // Stage 1-2 스킵 → Stage 3(빈 결과) → 새 엔티티
+      // Stage 1 스킵 → Stage 2(빈 결과) → 새 엔티티
       expect(result[0].isNew).toBe(true);
       expect(Sentry.captureException).toHaveBeenCalled();
     });
