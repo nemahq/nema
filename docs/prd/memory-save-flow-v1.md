@@ -9,6 +9,7 @@
 
 - 문서 단위가 `Document` → `Memory` (주제/엔티티별 합성 문서, 증분 업데이트)
 - 저장마다 Revision 기록 → 시간축 추적 + revert 가능
+- 저장 이벤트 단위로 Revision을 묶는 History → PR 목록처럼 변경 맥락 조회 가능
 - 하나의 저장이 여러 Memory를 동시 업데이트(fan-out)
 - Phase 4 신설: 엔티티 기반으로 영향받는 Memory 탐색 → 재생성 큐
 
@@ -17,7 +18,8 @@
 | 용어 | 설명 |
 |---|---|
 | **Memory** | 주제/엔티티별 합성 문서. 새 정보가 들어올 때마다 증분 업데이트됨 |
-| **Revision** | Memory의 각 업데이트 기록 (`memory_revisions` 테이블) |
+| **History** | 한 번의 저장이 만든 Memory 변경들의 묶음 (`histories` 테이블) |
+| **Revision** | Memory별 개별 변경 레코드 (`memory_revisions` 테이블). 하나의 History에 여러 Revision이 속함 |
 | **extend** | 기존 내용에 추가 ("Stripe PM" + "결제 인프라 팀 리드") |
 | **replace** | 기존 내용 대체 ("React 쓴다" → "Svelte로 전환") |
 | **fan-out** | 하나의 저장이 여러 Memory를 동시 업데이트하는 것 |
@@ -34,19 +36,30 @@
 1. 저장 트리거 → Frontend: 저장 큐 UI에 항목 추가 (로딩 상태)
    Frontend → Backend: 확정된 body 전달
 
-2. Backend → LLM: 멀티 토픽 분리 판단
+2. Backend → Supabase: History 생성
+   histories 테이블에 새 행 삽입
+   {
+     "id": "...",
+     "source_session_id": "...",
+     "source_draft_body": "저장 시점의 초안 본문",
+     "user_id": "...",
+     "created_at": "..."
+   }
+   이하 모든 Revision은 이 history_id를 공유한다
+
+3. Backend → LLM: 멀티 토픽 분리 판단
    입력: body
    출력: 단일 문서 유지 또는 분리된 body 목록
 
-3. [이하 body별로 반복]
+4. [이하 body별로 반복]
 
-   3-1. Backend: 관련 Memory 검색 결과 확보
+   4-1. Backend: 관련 Memory 검색 결과 확보
         - Phase 1 검색 완료 + 분리 안 됨: 결과 재사용
         - 그 외: Phase 2에서 직접 검색
 
-   3-2. Backend → Supabase: 기존 태그 풀 조회
+   4-2. Backend → Supabase: 기존 태그 풀 조회
 
-   3-3. Backend → LLM: 메타 필드 생성 + create/update 판단
+   4-3. Backend → LLM: 메타 필드 생성 + create/update 판단
         입력: body + 관련 Memory 목록 + 기존 태그 풀
         판단: 관련 Memory와 주제 범위가 일치하는가?
           → 주제 범위 밖 또는 관련 Memory 없음: create
@@ -76,27 +89,27 @@
           ...
         ]
 
-   3-4. Backend → Supabase: DB 기록
+   4-4. Backend → Supabase: DB 기록
         create → memories 테이블에 새 행 삽입 (ingestion_status = pending)
         update → 기존 행 갱신 (updated_body로 교체, ingestion_status = pending)
 
-   3-5. Backend → Supabase: Revision 기록
+   4-5. Backend → Supabase: Revision 기록
         memory_revisions 테이블에 revision 삽입
         {
           "memory_id": "...",
+          "history_id": "...",  // 2번에서 생성한 History
           "prev_body": "갱신 전 본문",  // create 시 null
           "next_body": "갱신 후 본문",
           "update_type": "create" | "extend" | "replace",
-          "source_session_id": "...",
           "created_at": "..."
         }
         상세 스키마 설계는 별도 결정
 
-4. Backend → Frontend: 저장 완료 응답
+5. Backend → Frontend: 저장 완료 응답
    성공 → 완료 표시
    실패 → 에러 표시 + 드래프트 복구 + 재시도 버튼
 
-5. → Phase 3 트리거
+6. → Phase 3 트리거
 ```
 
 ### Memory 스키마
@@ -115,6 +128,18 @@
 | `user_id` | uuid | 시스템 | 소유자 |
 
 > 소프트 앵커는 LLM 프롬프트에 수치를 명시하되 시스템 검증으로 강제하지 않는다.
+
+### History 스키마
+
+| 필드 | 타입 | 생성 주체 | 설명 |
+|---|---|---|---|
+| `id` | uuid | 시스템 | History 고유 식별자 |
+| `source_session_id` | uuid | 시스템 | 저장을 트리거한 세션 |
+| `source_draft_body` | string | 시스템 | 저장 시점의 초안 본문 |
+| `user_id` | uuid | 시스템 | 소유자 |
+| `created_at` | timestamp | 시스템 | 저장 이벤트 발생 시각 |
+
+Phase 2 직접 변경과 Phase 4 재생성 Revision 모두 동일한 `history_id`를 공유한다. Phase 4가 Phase 3를 재트리거하여 연쇄 발생하는 Revision들도 원래 저장을 유발한 History를 가리킨다.
 
 ### create/update 판단 — 주제 범위 게이트
 
@@ -207,7 +232,8 @@ Phase 3에서 추출된 엔티티/관계를 기반으로 영향받는 Memory를 
    입력: 기존 Memory body + 관련 엔티티 컨텍스트 (Neo4j에서 조회)
    출력: 재합성된 body + title + tags + summary
 
-5. Backend → Supabase: 재생성된 Memory 저장 + Revision 기록 (3-4, 3-5와 동일)
+5. Backend → Supabase: 재생성된 Memory 저장 + Revision 기록 (4-4, 4-5와 동일)
+   Revision의 history_id는 이 재생성을 유발한 원래 저장의 History와 동일
    ingestion_status = pending → Phase 3 재트리거
 ```
 
