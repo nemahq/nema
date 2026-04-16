@@ -34,63 +34,6 @@ export type Database = {
   };
   public: {
     Tables: {
-      documents: {
-        Row: {
-          body: string;
-          body_en: string | null;
-          category: string | null;
-          created_at: string;
-          id: string;
-          ingestion_retry_count: number;
-          ingestion_status: Database["public"]["Enums"]["ingestion_status"];
-          last_ingestion_attempt: string | null;
-          summary: string | null;
-          summary_en: string | null;
-          tags: string[] | null;
-          tags_en: string[] | null;
-          title: string | null;
-          title_en: string | null;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          body: string;
-          body_en?: string | null;
-          category?: string | null;
-          created_at?: string;
-          id?: string;
-          ingestion_retry_count?: number;
-          ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
-          last_ingestion_attempt?: string | null;
-          summary?: string | null;
-          summary_en?: string | null;
-          tags?: string[] | null;
-          tags_en?: string[] | null;
-          title?: string | null;
-          title_en?: string | null;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          body?: string;
-          body_en?: string | null;
-          category?: string | null;
-          created_at?: string;
-          id?: string;
-          ingestion_retry_count?: number;
-          ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
-          last_ingestion_attempt?: string | null;
-          summary?: string | null;
-          summary_en?: string | null;
-          tags?: string[] | null;
-          tags_en?: string[] | null;
-          title?: string | null;
-          title_en?: string | null;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
       events: {
         Row: {
           created_at: string;
@@ -126,6 +69,131 @@ export type Database = {
           },
         ];
       };
+      histories: {
+        Row: {
+          created_at: string;
+          id: string;
+          source_draft_body: string;
+          source_session_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          source_draft_body: string;
+          source_session_id?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          source_draft_body?: string;
+          source_session_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "histories_source_session_id_fkey";
+            columns: ["source_session_id"];
+            isOneToOne: false;
+            referencedRelation: "sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      memories: {
+        Row: {
+          body: string;
+          category: string | null;
+          created_at: string;
+          id: string;
+          ingestion_retry_count: number;
+          ingestion_status: Database["public"]["Enums"]["ingestion_status"];
+          last_ingestion_attempt: string | null;
+          summary: string | null;
+          tags: string[] | null;
+          title: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          body: string;
+          category?: string | null;
+          created_at?: string;
+          id?: string;
+          ingestion_retry_count?: number;
+          ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
+          last_ingestion_attempt?: string | null;
+          summary?: string | null;
+          tags?: string[] | null;
+          title?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          body?: string;
+          category?: string | null;
+          created_at?: string;
+          id?: string;
+          ingestion_retry_count?: number;
+          ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
+          last_ingestion_attempt?: string | null;
+          summary?: string | null;
+          tags?: string[] | null;
+          title?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      memory_revisions: {
+        Row: {
+          created_at: string;
+          history_id: string;
+          id: string;
+          memory_id: string;
+          next_body: string;
+          prev_body: string | null;
+          source: Database["public"]["Enums"]["revision_source"];
+          update_type: Database["public"]["Enums"]["update_type"];
+        };
+        Insert: {
+          created_at?: string;
+          history_id: string;
+          id?: string;
+          memory_id: string;
+          next_body: string;
+          prev_body?: string | null;
+          source: Database["public"]["Enums"]["revision_source"];
+          update_type: Database["public"]["Enums"]["update_type"];
+        };
+        Update: {
+          created_at?: string;
+          history_id?: string;
+          id?: string;
+          memory_id?: string;
+          next_body?: string;
+          prev_body?: string | null;
+          source?: Database["public"]["Enums"]["revision_source"];
+          update_type?: Database["public"]["Enums"]["update_type"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "memory_revisions_history_id_fkey";
+            columns: ["history_id"];
+            isOneToOne: false;
+            referencedRelation: "histories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "memory_revisions_memory_id_fkey";
+            columns: ["memory_id"];
+            isOneToOne: false;
+            referencedRelation: "memories";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           content_language: string;
@@ -152,6 +220,7 @@ export type Database = {
           created_at: string;
           draft_body: string;
           error_message: string | null;
+          history_id: string | null;
           id: string;
           session_id: string;
           snippet: string | null;
@@ -163,6 +232,7 @@ export type Database = {
           created_at?: string;
           draft_body: string;
           error_message?: string | null;
+          history_id?: string | null;
           id?: string;
           session_id: string;
           snippet?: string | null;
@@ -174,6 +244,7 @@ export type Database = {
           created_at?: string;
           draft_body?: string;
           error_message?: string | null;
+          history_id?: string | null;
           id?: string;
           session_id?: string;
           snippet?: string | null;
@@ -183,40 +254,14 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: "save_jobs_history_id_fkey";
+            columns: ["history_id"];
+            isOneToOne: false;
+            referencedRelation: "histories";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "save_jobs_session_id_fkey";
-            columns: ["session_id"];
-            isOneToOne: false;
-            referencedRelation: "sessions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      session_documents: {
-        Row: {
-          created_at: string;
-          document_id: string;
-          session_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          document_id: string;
-          session_id: string;
-        };
-        Update: {
-          created_at?: string;
-          document_id?: string;
-          session_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "session_documents_document_id_fkey";
-            columns: ["document_id"];
-            isOneToOne: false;
-            referencedRelation: "documents";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "session_documents_session_id_fkey";
             columns: ["session_id"];
             isOneToOne: false;
             referencedRelation: "sessions";
@@ -302,47 +347,44 @@ export type Database = {
         Args: { p_message: Json; p_session_id: string };
         Returns: undefined;
       };
-      create_document_with_event: {
+      complete_memory_ingestion: {
+        Args: { p_memory_id: string };
+        Returns: undefined;
+      };
+      create_memory_with_revision: {
         Args: {
           p_body: string;
-          p_body_en?: string;
-          p_session_id: string;
+          p_category: string;
+          p_history_id: string;
           p_summary: string;
-          p_summary_en?: string;
           p_tags: string[];
-          p_tags_en?: string[];
           p_title: string;
-          p_title_en?: string;
           p_user_id: string;
         };
         Returns: string;
       };
-      delete_document_with_event: {
-        Args: { p_doc_id: string; p_user_id: string };
-        Returns: undefined;
-      };
       fail_stale_save_jobs: { Args: never; Returns: number };
-      fetch_pending_documents: {
+      fetch_pending_memories: {
         Args: { p_max_retries?: number };
         Returns: {
           body: string;
-          body_en: string;
+          created_at: string;
           id: string;
           summary: string;
-          summary_en: string;
           tags: string[];
-          tags_en: string[];
           user_id: string;
         }[];
       };
       get_unique_tags: { Args: { p_user_id: string }; Returns: string[] };
-      increment_ingestion_retry: {
-        Args: { p_doc_id: string; p_max_retries?: number };
+      increment_memory_ingestion_retry: {
+        Args: { p_max_retries?: number; p_memory_id: string };
         Returns: undefined;
       };
-      list_document_user_ids: {
+      list_memory_user_ids: {
         Args: never;
-        Returns: { user_id: string }[];
+        Returns: {
+          user_id: string;
+        }[];
       };
       read_sync_events: {
         Args: { p_batch_size?: number; p_visibility_timeout?: number };
@@ -354,17 +396,16 @@ export type Database = {
       };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
-      update_document_with_event: {
+      update_memory_with_revision: {
         Args: {
           p_body: string;
-          p_body_en?: string;
-          p_doc_id: string;
+          p_category: string;
+          p_history_id: string;
+          p_memory_id: string;
           p_summary: string;
-          p_summary_en?: string;
           p_tags: string[];
-          p_tags_en?: string[];
           p_title: string;
-          p_title_en?: string;
+          p_update_type: Database["public"]["Enums"]["update_type"];
           p_user_id: string;
         };
         Returns: undefined;
@@ -376,7 +417,9 @@ export type Database = {
     };
     Enums: {
       ingestion_status: "pending" | "completed" | "failed";
+      revision_source: "direct" | "regeneration";
       save_job_status: "pending" | "processing" | "completed" | "failed";
+      update_type: "create" | "extend" | "replace";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -511,7 +554,9 @@ export const Constants = {
   public: {
     Enums: {
       ingestion_status: ["pending", "completed", "failed"],
+      revision_source: ["direct", "regeneration"],
       save_job_status: ["pending", "processing", "completed", "failed"],
+      update_type: ["create", "extend", "replace"],
     },
   },
 } as const;
