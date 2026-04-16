@@ -243,5 +243,5 @@ fan-out 과정에서 동일 Memory에 동시 업데이트가 발생하는 경우
 
 ### 향후 고려사항
 
-- **재생성 깊이 제한**: Phase 4 → Phase 3 → Phase 4 순환 가능. 최대 깊이(hop) 제한 필요
+- **재생성 깊이 제한**: Phase 4 → Phase 3 → Phase 4 순환 가능. 최대 깊이(hop) 제한 필요. 참조 기본값 2-3 hop, 실제 cascade 로그 보고 튜닝
 - **재생성 우선순위**: 최근 접근된 Memory, 자주 참조된 Memory를 우선 재생성
