@@ -58,6 +58,7 @@
           "tags": [...],
           "summary": "...",
           "action": "create",
+          "update_type": "create",
           "body": "..."
         }
 
