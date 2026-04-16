@@ -1,4 +1,6 @@
-# Nema 구조화 엔진 — End-to-End 흐름 설계
+# Nema 구조화 엔진 — Put-in 흐름 설계 (v2, Memory 모델)
+
+> Pull-out 흐름은 [put-in-and-pull-out-flow-design-v1.md](put-in-and-pull-out-flow-design-v1.md) 참조. 검색 레이어 변경(Memory 1차 / 폴백 2차)은 NEM-89에서 설계.
 
 ## 목적
 
@@ -23,8 +25,6 @@
 4. [Phase 3: 비동기 인제스천](#4-phase-3-비동기-인제스천) — 임베딩 생성 (Qdrant) + 그래프 노드/엣지 생성 (Neo4j). 완료 후 Phase 4 트리거
 5. [Phase 4: Memory 재생성](#5-phase-4-memory-재생성) — 엔티티 기반 fan-out → 영향받는 Memory 검색 → 재생성 큐
 6. [상태 및 세션 관리](#6-상태-및-세션-관리) — 대화 상태 유지, 드래프트 임시 저장, Phase 전환 시점, 대화 이력 저장
-7. [Pull-out 흐름](#7-pull-out-흐름) — Memory 전용 검색(1차) + 기존 검색(폴백) → 답변 생성
-
 ---
 
 ## 1. 구성 요소 정의
@@ -497,114 +497,3 @@ Phase 4 fan-out 과정에서 동일 Memory에 동시 업데이트가 발생하�
 - 취소 시: `draft` → null
 
 ---
-
-## 7. Pull-out 흐름
-
-저장된 Memory를 검색하고 답변을 생성하는 흐름. Put-in(Phase 1→2→3→4)과 동일한 채팅 인터페이스에서 동작한다.
-
-### 설계 원칙
-
-- **단일 인터페이스**: Put-in과 Pull-out을 별도 UI로 나누지 않는다. 시스템이 의도를 판단한다
-- **내 지식만 답변**: LLM의 일반 지식으로 답변하지 않는다. 검색 결과가 없으면 "관련 기억이 없습니다"로 응답한다
-- **답변은 채팅 버블**: 드래프트 카드는 put-in에만 사용한다
-
-### Intent Router + Query Planner
-
-#### 드래프트 비활성 시
-
-| 판정 | 후속 흐름 |
-|---|---|
-| put-in | Phase 1 (드래프팅) |
-| pull-out | Pull-out 검색 → 답변 생성 |
-
-#### 드래프트 활성 시
-
-| 판정 | 후속 흐름 |
-|---|---|
-| 수정 요청 | Phase 1 재호출 → 드래프트 카드 업데이트 |
-| pull-out | Pull-out 검색 → 채팅 버블 (드래프트 카드 유지) |
-| 저장 / 취소 | Phase 2 전환 또는 드래프트 폐기 |
-
-#### 출력 스키마
-
-```json
-// put-in
-{ "intent": "put-in", "queries": null, "entities": null }
-
-// pull-out
-{
-  "intent": "pull-out",
-  "queries": ["프론트엔드 시니어 면접", "커뮤니케이션 평가"],
-  "entities": ["프론트엔드", "시니어 채용"]
-}
-
-// 드래프트 활성 시
-{ "intent": "edit", "queries": null, "entities": null }
-{ "intent": "save", "queries": null, "entities": null }
-{ "intent": "cancel", "queries": null, "entities": null }
-```
-
-### 흐름
-
-```
-1. User → Frontend: 질문 입력
-
-2. Frontend → Backend: 사용자 입력 전달
-
-3. Backend → LLM: Intent Router + Query Planner
-   출력: { intent: "pull-out", queries: [...], entities: [...] }
-
-4. Backend → 병렬 검색:
-   [1차: Memory 전용 검색]
-   a) Qdrant: queries 각각에 대해 시맨틱 검색 → 유사 Memory top-K
-   b) Neo4j: entities로 엔티티 임베딩 매칭 → 관련 엔티티 → 연결된 Memory
-
-   [폴백: 인제스천 미완료 Memory]
-   c) Supabase: pending Memory 중 tags/summary/title 텍스트 매칭
-      (ingestion_status = pending인 Memory가 존재할 때만 실행)
-
-5. Backend: 결과 합산 + 중복 제거 + 스코어 기반 정렬
-   - Qdrant 유사도 스코어 기준으로 상위 Memory 선정
-   - Neo4j 결과는 Qdrant에 없는 Memory만 보강으로 추가
-   - Supabase 폴백은 최하위 우선순위 (시맨틱 매칭이 아니므로 정확도 낮음)
-
-6. Backend → LLM: 답변 생성
-   입력: 원래 질문 + 대화 이력 + 검색 결과 (Memory body + 메타)
-   출력: 답변 텍스트 + 참조 Memory ID 목록
-
-7. Backend → Frontend: 답변 전달
-
-8. Frontend → User: 채팅 버블 표시
-   - 답변 본문
-   - 출처 Memory 링크 목록 (클릭 시 Memory 전문 보기)
-```
-
-### 검색 전략
-
-Memory 전용 검색(1차)과 인제스천 미완료 폴백(2차)으로 구조적으로 분리한다.
-
-| 레이어 | 저장소 | 검색 방식 | 역할 |
-|---|---|---|---|
-| **1차: Memory 검색** | Qdrant | 쿼리별 임베딩 → 시맨틱 유사도 | 의미 기반 Memory 검색. 주력 |
-| **1차: Memory 검색** | Neo4j | 엔티티 임베딩 매칭 → 그래프 탐색 | Qdrant가 놓치는 관계 기반 Memory 보강 |
-| **폴백** | Supabase | tags/summary/title 텍스트 매칭 | pending Memory 폴백. 방금 저장한 Memory가 검색에서 빠지는 것을 방지 |
-
-Pull-out 검색 전략의 세부 구현은 NEM-89에 위임.
-
-### 검색 결과 없음
-
-```
-Backend: 검색 결과 0건 확인
-→ Frontend: "관련 기억이 없습니다" 메시지 표시
-```
-
-### 출처 표시
-
-답변 버블 하단에 참조 Memory 목록을 표시한다. 클릭 시 Memory 전문 보기.
-
-### 향후 고려사항
-
-- **후속 질문 제안**: 답변 생성 시 LLM이 관련 후속 질문 2-3개 함께 생성
-- **답변 품질 피드백**: 답변 버블에 유용/비유용 버튼
-- **검색 결과 시각화**: 답변 근거가 된 Memory 간 관계를 그래프로 시각화
-- **"누구에게 물어보세요" 제안**: 멀티유저 소유권 모델 도입 후 질문 주제 관련 Memory 소유자/기여자 추천
