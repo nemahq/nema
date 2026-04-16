@@ -20,6 +20,9 @@ const MAX_RETRIES = 5;
 const POLL_INTERVAL_MS = 2_000;
 const ENTITY_PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1_000;
 const ENTITY_PRUNE_LIST_LIMIT = 10_000;
+// handleDelete 즉시 정리가 정상이면 prune에서 잡히는 orphan은 이름 치환 등 소수 케이스뿐.
+// 이 임계치를 넘으면 즉시 정리 경로에 누수가 있다는 신호로 보고 warning.
+const ENTITY_PRUNE_LEAK_ALERT_THRESHOLD = 100;
 const PGMQ_BATCH_SIZE = 10;
 const VISIBILITY_TIMEOUT_SEC = 60;
 const PROCESS_CONCURRENCY = 3;
@@ -366,10 +369,10 @@ async function runEntityOrphanPrune(deps: WorkerDeps): Promise<void> {
         userId,
         liveEntities,
       });
-      if (pruned > 0) {
+      if (pruned >= ENTITY_PRUNE_LEAK_ALERT_THRESHOLD) {
         Sentry.captureMessage(
-          `[entityOrphanPrune] pruned ${pruned} orphan entities`,
-          { level: "info", extra: { userId, pruned } },
+          `[entityOrphanPrune] pruned ${pruned} orphan entities — possible leak in handleDelete`,
+          { level: "warning", extra: { userId, pruned } },
         );
       }
     } catch (err) {
