@@ -287,7 +287,16 @@ async function processDocument(
 
   // delete → upsert: 신규 문서는 no-op, 수정 문서는 기존 인덱스 교체
   await vectorStore.deleteByDocument(doc.id);
-  await graphStore.deleteByDocument(doc.id);
+  const orphanedOnUpdate = await graphStore.deleteByDocument(doc.id);
+
+  // 재처리 시 다시 upsert될 엔티티는 제외하고 orphan만 Qdrant에서 정리
+  const resolvedKey = new Set(resolved.map((e) => `${e.type}:${e.name}`));
+  const trulyOrphaned = orphanedOnUpdate.filter(
+    (o) => !resolvedKey.has(`${o.type}:${o.name}`),
+  );
+  if (trulyOrphaned.length > 0) {
+    await entityVectorStore.deleteByEntities(trulyOrphaned);
+  }
 
   const newEntities = resolved.filter((e) => e.isNew);
 
@@ -326,14 +335,14 @@ async function handleDelete(
 }
 
 async function runEntityOrphanPrune(deps: WorkerDeps): Promise<void> {
-  const { data: rows, error } = await deps.supabase
-    .from("documents")
-    .select("user_id");
+  const { data: rows, error } = await deps.supabase.rpc(
+    "list_document_user_ids",
+  );
   if (error) {
     throw new Error(`entity prune: failed to fetch user ids: ${error.message}`);
   }
 
-  const userIds = [...new Set((rows ?? []).map((r) => r.user_id))];
+  const userIds = (rows ?? []).map((r) => r.user_id);
 
   for (const userId of userIds) {
     try {
@@ -341,7 +350,28 @@ async function runEntityOrphanPrune(deps: WorkerDeps): Promise<void> {
         userId,
         limit: ENTITY_PRUNE_LIST_LIMIT,
       });
-      await deps.entityVectorStore.pruneOrphans({ userId, liveEntities });
+      // listEntities가 limit만큼 꽉 차면 잘렸을 가능성이 있음.
+      // 이 상태로 prune하면 limit 초과 엔티티가 orphan으로 오판되어 삭제되므로 스킵.
+      if (liveEntities.length >= ENTITY_PRUNE_LIST_LIMIT) {
+        Sentry.captureMessage(
+          "[entityOrphanPrune] listEntities hit limit; skipping prune to avoid false-positive deletion",
+          {
+            level: "warning",
+            extra: { userId, limit: ENTITY_PRUNE_LIST_LIMIT },
+          },
+        );
+        continue;
+      }
+      const pruned = await deps.entityVectorStore.pruneOrphans({
+        userId,
+        liveEntities,
+      });
+      if (pruned > 0) {
+        Sentry.captureMessage(
+          `[entityOrphanPrune] pruned ${pruned} orphan entities`,
+          { level: "info", extra: { userId, pruned } },
+        );
+      }
     } catch (err) {
       Sentry.captureException(err, {
         tags: { component: "sync-worker", phase: "entityOrphanPrune" },

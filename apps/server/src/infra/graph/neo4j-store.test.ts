@@ -60,8 +60,8 @@ describe("createNeo4jStore", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockExecuteWrite.mockImplementation(
-      async (fn: (tx: { run: typeof mockRun }) => Promise<void>) => {
-        await fn({ run: mockRun });
+      async <T>(fn: (tx: { run: typeof mockRun }) => Promise<T>) => {
+        return await fn({ run: mockRun });
       },
     );
   });
@@ -570,9 +570,38 @@ describe("createNeo4jStore", () => {
         .mockResolvedValueOnce({ records: [{ get: () => [] }] })
         .mockResolvedValueOnce({ records: [] });
       const store = createNeo4jStore();
-      await store.deleteByDocument("d1");
+      const orphaned = await store.deleteByDocument("d1");
 
       expect(mockRun).toHaveBeenCalledTimes(2);
+      expect(orphaned).toEqual([]);
+    });
+
+    it("returns deleted orphan entities (userId, type, name)", async () => {
+      const orphanRecord = {
+        get: (key: string) => {
+          if (key === "userId") {
+            return "user-1";
+          }
+          if (key === "type") {
+            return "Person";
+          }
+          if (key === "name") {
+            return "Alice";
+          }
+          throw new Error(`unexpected key: ${key}`);
+        },
+      };
+      mockRun
+        .mockResolvedValueOnce({ records: [{ get: () => ["id-1"] }] })
+        .mockResolvedValueOnce({ records: [] })
+        .mockResolvedValueOnce({ records: [orphanRecord] })
+        .mockResolvedValueOnce({ records: [] });
+      const store = createNeo4jStore();
+      const orphaned = await store.deleteByDocument("d1");
+
+      expect(orphaned).toEqual([
+        { userId: "user-1", type: "Person", name: "Alice" },
+      ]);
     });
 
     it("wraps errors in GraphStoreError", async () => {

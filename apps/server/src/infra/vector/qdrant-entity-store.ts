@@ -6,9 +6,9 @@ import {
   type EmbeddingProvider,
   VECTOR_DIMENSION,
 } from "@server/infra/embedding";
+import type { OrphanedEntity } from "@server/infra/graph/graph-store";
 
 import type {
-  EntityDeleteOptions,
   EntityPruneOptions,
   EntitySearchOptions,
   EntitySearchResult,
@@ -212,7 +212,9 @@ export function createQdrantEntityStore(
       }
     },
 
-    async deleteByEntities(entities: EntityDeleteOptions[]): Promise<void> {
+    async deleteByEntities(
+      entities: ReadonlyArray<OrphanedEntity>,
+    ): Promise<void> {
       if (entities.length === 0) {
         return;
       }
@@ -232,6 +234,11 @@ export function createQdrantEntityStore(
 
     async pruneOrphans(options: EntityPruneOptions): Promise<number> {
       const { userId, liveEntities } = options;
+      // liveEntities 빈 배열 = Neo4j 엔티티 0개. 이 경우 해당 user의 모든 Qdrant 포인트를
+      // orphan으로 삭제하게 되어 데이터 손실 위험이 크므로, 호출자가 의도를 명시할 때까지 스킵.
+      if (liveEntities.length === 0) {
+        return 0;
+      }
       const liveIds = new Set(
         liveEntities.map((e) =>
           entityPointId({ userId, type: e.type, name: e.name }),
