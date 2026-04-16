@@ -40,6 +40,8 @@ function mockEntityVectorStore(
     ensureCollection: vi.fn(),
     upsert: vi.fn(),
     search: vi.fn().mockResolvedValue(searchResults),
+    deleteByEntities: vi.fn().mockResolvedValue(undefined),
+    pruneOrphans: vi.fn().mockResolvedValue(0),
   };
 }
 

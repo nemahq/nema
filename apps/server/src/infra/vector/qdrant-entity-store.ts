@@ -8,6 +8,8 @@ import {
 } from "@server/infra/embedding";
 
 import type {
+  EntityDeleteOptions,
+  EntityPruneOptions,
   EntitySearchOptions,
   EntitySearchResult,
   EntityUpsertOptions,
@@ -204,6 +206,76 @@ export function createQdrantEntityStore(
         throw new VectorStoreError(
           `Entity search failed: ${error instanceof Error ? error.message : String(error)}`,
           "search",
+          error,
+        );
+      }
+    },
+
+    async deleteByEntities(entities: EntityDeleteOptions[]): Promise<void> {
+      if (entities.length === 0) {
+        return;
+      }
+      try {
+        const ids = entities.map((e) =>
+          entityPointId({ userId: e.userId, type: e.type, name: e.name }),
+        );
+        await client.delete(ENTITY_COLLECTION, { wait: true, points: ids });
+      } catch (error) {
+        throw new VectorStoreError(
+          `Entity delete failed: ${error instanceof Error ? error.message : String(error)}`,
+          "deleteByEntities",
+          error,
+        );
+      }
+    },
+
+    async pruneOrphans(options: EntityPruneOptions): Promise<number> {
+      const { userId, liveEntities } = options;
+      const liveIds = new Set(
+        liveEntities.map((e) =>
+          entityPointId({ userId, type: e.type, name: e.name }),
+        ),
+      );
+
+      const orphanIds: string[] = [];
+      let offset: string | number | null = null;
+
+      try {
+        do {
+          const { points, next_page_offset } = await client.scroll(
+            ENTITY_COLLECTION,
+            {
+              filter: { must: [{ key: "user_id", match: { value: userId } }] },
+              with_payload: false,
+              with_vector: false,
+              limit: 100,
+              offset: offset ?? undefined,
+            },
+          );
+          for (const point of points) {
+            if (!liveIds.has(String(point.id))) {
+              orphanIds.push(String(point.id));
+            }
+          }
+          const nextOffset = next_page_offset;
+          offset =
+            typeof nextOffset === "string" || typeof nextOffset === "number"
+              ? nextOffset
+              : null;
+        } while (offset !== null);
+
+        if (orphanIds.length > 0) {
+          await client.delete(ENTITY_COLLECTION, {
+            wait: true,
+            points: orphanIds,
+          });
+        }
+
+        return orphanIds.length;
+      } catch (error) {
+        throw new VectorStoreError(
+          `Entity prune failed: ${error instanceof Error ? error.message : String(error)}`,
+          "pruneOrphans",
           error,
         );
       }

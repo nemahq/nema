@@ -21,6 +21,17 @@ export interface EntitySearchResult {
   score: number;
 }
 
+export interface EntityDeleteOptions {
+  userId: string;
+  type: EntityType;
+  name: string;
+}
+
+export interface EntityPruneOptions {
+  userId: string;
+  liveEntities: Array<{ type: EntityType; name: string }>;
+}
+
 export interface EntityVectorStore {
   ensureCollection(): Promise<void>;
   upsert(
@@ -31,4 +42,6 @@ export interface EntityVectorStore {
     provider: EmbeddingProvider,
     options: EntitySearchOptions,
   ): Promise<EntitySearchResult[]>;
+  deleteByEntities(entities: EntityDeleteOptions[]): Promise<void>;
+  pruneOrphans(options: EntityPruneOptions): Promise<number>;
 }

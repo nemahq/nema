@@ -18,6 +18,7 @@ import type {
   ListEntitiesOptions,
   ListEntitiesWithStatsOptions,
   MergeEntitiesOptions,
+  OrphanedEntity,
   UpsertEntitiesOptions,
 } from "./graph-store";
 import { ENTITY_TYPES, GraphStoreError } from "./graph-store";
@@ -571,10 +572,10 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       }
     },
 
-    async deleteByDocument(docId: string): Promise<void> {
+    async deleteByDocument(docId: string): Promise<OrphanedEntity[]> {
       const session = driver.session(sessionConfig);
       try {
-        await session.executeWrite(async (tx) => {
+        return await session.executeWrite(async (tx) => {
           // Collect candidate orphan entities before deleting document
           const result = await tx.run(
             `MATCH (d:Document {docId: $docId})<-[:MENTIONED_IN]-(e:Entity)
@@ -595,15 +596,23 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
             docId,
           });
 
-          // Delete orphan entities (no remaining MENTIONED_IN)
-          if (candidateIds.length > 0) {
-            await tx.run(
-              `MATCH (e:Entity)
-               WHERE id(e) IN $ids AND NOT (e)-[:MENTIONED_IN]->()
-               DETACH DELETE e`,
-              { ids: candidateIds },
-            );
+          // Delete orphan entities (no remaining MENTIONED_IN), return deleted list
+          if (candidateIds.length === 0) {
+            return [];
           }
+          const orphanResult = await tx.run(
+            `MATCH (e:Entity)
+             WHERE id(e) IN $ids AND NOT (e)-[:MENTIONED_IN]->()
+             WITH e.userId AS userId, e.type AS type, e.name AS name
+             DETACH DELETE e
+             RETURN userId, type, name`,
+            { ids: candidateIds },
+          );
+          return orphanResult.records.map((r) => ({
+            userId: getString(r, "userId"),
+            type: getEntityType(r, "type"),
+            name: getString(r, "name"),
+          }));
         });
       } catch (error) {
         if (error instanceof GraphStoreError) {

@@ -46,7 +46,7 @@ function mockGraphStore(): GraphStore {
     findDocumentsByEntities: vi.fn().mockResolvedValue([]),
     listEntities: vi.fn().mockResolvedValue([]),
     mergeEntities: vi.fn().mockResolvedValue(undefined),
-    deleteByDocument: vi.fn().mockResolvedValue(undefined),
+    deleteByDocument: vi.fn().mockResolvedValue([]),
   } as unknown as GraphStore;
 }
 
@@ -76,6 +76,8 @@ function mockEntityVectorStore(): EntityVectorStore {
     ensureCollection: vi.fn().mockResolvedValue(undefined),
     upsert: vi.fn().mockResolvedValue(undefined),
     search: vi.fn().mockResolvedValue([]),
+    deleteByEntities: vi.fn().mockResolvedValue(undefined),
+    pruneOrphans: vi.fn().mockResolvedValue(0),
   };
 }
 

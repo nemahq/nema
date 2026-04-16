@@ -18,6 +18,8 @@ import { PendingDocumentSchema, TriggerMessageSchema } from "./types";
 
 const MAX_RETRIES = 5;
 const POLL_INTERVAL_MS = 2_000;
+const ENTITY_PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1_000;
+const ENTITY_PRUNE_LIST_LIMIT = 10_000;
 const PGMQ_BATCH_SIZE = 10;
 const VISIBILITY_TIMEOUT_SEC = 60;
 const PROCESS_CONCURRENCY = 3;
@@ -33,6 +35,7 @@ interface WorkerDeps {
 
 export function createSyncWorker(deps: WorkerDeps) {
   let timer: ReturnType<typeof setInterval> | null = null;
+  let pruneTimer: ReturnType<typeof setInterval> | null = null;
   let processing = false;
   let currentPoll: Promise<void> | null = null;
 
@@ -117,12 +120,24 @@ export function createSyncWorker(deps: WorkerDeps) {
         currentPoll = poll();
       }, POLL_INTERVAL_MS);
       currentPoll = poll();
+
+      pruneTimer = setInterval(() => {
+        runEntityOrphanPrune(deps).catch((err) => {
+          Sentry.captureException(err, {
+            tags: { component: "sync-worker", phase: "entityOrphanPrune" },
+          });
+        });
+      }, ENTITY_PRUNE_INTERVAL_MS);
     },
 
     async stop() {
       if (timer) {
         clearInterval(timer);
         timer = null;
+      }
+      if (pruneTimer) {
+        clearInterval(pruneTimer);
+        pruneTimer = null;
       }
       if (currentPoll) {
         await currentPoll;
@@ -304,7 +319,29 @@ async function handleDelete(
   deps: WorkerDeps,
 ): Promise<void> {
   await deps.vectorStore.deleteByDocument(event.docId);
-  await deps.graphStore.deleteByDocument(event.docId);
+  const orphaned = await deps.graphStore.deleteByDocument(event.docId);
+  if (orphaned.length > 0) {
+    await deps.entityVectorStore.deleteByEntities(orphaned);
+  }
+}
+
+async function runEntityOrphanPrune(deps: WorkerDeps): Promise<void> {
+  const { data: rows, error } = await deps.supabase
+    .from("documents")
+    .select("user_id");
+  if (error) {
+    throw new Error(`entity prune: failed to fetch user ids: ${error.message}`);
+  }
+
+  const userIds = [...new Set((rows ?? []).map((r) => r.user_id))];
+
+  for (const userId of userIds) {
+    const liveEntities = await deps.graphStore.listEntities({
+      userId,
+      limit: ENTITY_PRUNE_LIST_LIMIT,
+    });
+    await deps.entityVectorStore.pruneOrphans({ userId, liveEntities });
+  }
 }
 
 function assertNever(x: never): never {
