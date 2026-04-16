@@ -152,7 +152,7 @@ async function saveDocument(args: {
 
   if (docIds.length > 0) {
     const { data, error } = await supabase
-      .from("documents")
+      .from("memories")
       .select("id, title, body")
       .in("id", docIds);
 
@@ -301,13 +301,13 @@ async function persistDocument(args: {
   body: string;
   existingTags: string[];
 }): Promise<{ id: string; title: string }> {
-  const { ctx, sessionId, persistAction, body, existingTags } = args;
+  const { ctx, persistAction, body, existingTags } = args;
   const { supabase } = ctx;
 
   let currentTags: string[] | undefined;
   if (persistAction.action === "update") {
     const { data, error } = await supabase
-      .from("documents")
+      .from("memories")
       .select("tags")
       .eq("id", persistAction.targetId)
       .single();
@@ -324,44 +324,8 @@ async function persistDocument(args: {
 
   let docId: string;
 
-  if (persistAction.action === "create") {
-    const { data, error } = await supabase.rpc("create_document_with_event", {
-      p_user_id: ctx.userId,
-      p_title: fields.title,
-      p_tags: fields.tags,
-      p_summary: fields.summary,
-      p_body: body,
-      p_session_id: sessionId,
-      p_title_en: fields.titleEn,
-      p_tags_en: fields.tagsEn,
-      p_summary_en: fields.summaryEn,
-      p_body_en: fields.bodyEn,
-    });
-
-    throwIfSupabaseError(error);
-
-    if (typeof data !== "string") {
-      throw new Error("create_document_with_event did not return a string id");
-    }
-    docId = data;
-  } else {
-    docId = persistAction.targetId;
-
-    const { error } = await supabase.rpc("update_document_with_event", {
-      p_doc_id: docId,
-      p_user_id: ctx.userId,
-      p_title: fields.title,
-      p_tags: fields.tags,
-      p_summary: fields.summary,
-      p_body: body,
-      p_title_en: fields.titleEn,
-      p_tags_en: fields.tagsEn,
-      p_summary_en: fields.summaryEn,
-      p_body_en: fields.bodyEn,
-    });
-
-    throwIfSupabaseError(error);
-  }
+  // TODO(NEM-86): Memory 모델 저장 파이프라인으로 교체
+  throw new Error("saving pipeline not yet implemented for Memory model");
 
   return { id: docId, title: fields.title };
 }
@@ -375,10 +339,12 @@ async function deleteDocument({
   userId: string;
   docId: string;
 }): Promise<void> {
-  const { error } = await supabase.rpc("delete_document_with_event", {
-    p_doc_id: docId,
-    p_user_id: userId,
-  });
+  // TODO(NEM-86): PGMQ 연동 삭제 이벤트 재구현 (Qdrant/Neo4j orphan 정리)
+  const { error } = await supabase
+    .from("memories")
+    .delete()
+    .eq("id", docId)
+    .eq("user_id", userId);
 
   throwIfSupabaseError(error);
 }

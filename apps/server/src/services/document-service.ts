@@ -52,7 +52,7 @@ export async function listDocuments(
   input: DocumentListInput,
 ) {
   let query = supabase
-    .from("documents")
+    .from("memories")
     .select("id, title, tags, summary, created_at, updated_at")
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
@@ -84,7 +84,7 @@ export async function getDocument(
   { documentId }: { documentId: string },
 ): Promise<DocumentDetail> {
   const { data, error } = await supabase
-    .from("documents")
+    .from("memories")
     .select("id, title, tags, summary, body, created_at, updated_at")
     .eq("id", documentId)
     .single();
@@ -101,10 +101,12 @@ export async function deleteDocument(
   supabase: TypedSupabaseClient,
   { documentId, userId }: { documentId: string; userId: string },
 ): Promise<void> {
-  const { error } = await supabase.rpc("delete_document_with_event", {
-    p_doc_id: documentId,
-    p_user_id: userId,
-  });
+  // TODO(NEM-86): PGMQ 연동 삭제 이벤트 재구현 (Qdrant/Neo4j orphan 정리)
+  const { error } = await supabase
+    .from("memories")
+    .delete()
+    .eq("id", documentId)
+    .eq("user_id", userId);
 
   throwIfSupabaseError(error);
 }

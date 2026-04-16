@@ -167,7 +167,7 @@ export async function* handleRetrievalStream(args: {
 
   if (uniqueDocIds.length > 0) {
     const { data, error } = await supabase
-      .from("documents")
+      .from("memories")
       .select("id, title, body")
       .in("id", uniqueDocIds);
 
@@ -271,7 +271,7 @@ async function searchTextMatch(args: {
   }
 
   const { data, error } = await supabase
-    .from("documents")
+    .from("memories")
     .select("id")
     .eq("user_id", userId)
     .or(conditions.join(","))
