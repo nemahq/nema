@@ -1,6 +1,7 @@
 import type { EntityType } from "@nema-io/shared";
 
 import type { EmbeddingProvider } from "@server/infra/embedding";
+import type { OrphanedEntity } from "@server/infra/graph/graph-store";
 
 export interface EntityUpsertOptions {
   userId: string;
@@ -21,6 +22,11 @@ export interface EntitySearchResult {
   score: number;
 }
 
+export interface EntityPruneOptions {
+  userId: string;
+  liveEntities: ReadonlyArray<{ type: EntityType; name: string }>;
+}
+
 export interface EntityVectorStore {
   ensureCollection(): Promise<void>;
   upsert(
@@ -31,4 +37,6 @@ export interface EntityVectorStore {
     provider: EmbeddingProvider,
     options: EntitySearchOptions,
   ): Promise<EntitySearchResult[]>;
+  deleteByEntities(entities: ReadonlyArray<OrphanedEntity>): Promise<void>;
+  pruneOrphans(options: EntityPruneOptions): Promise<number>;
 }

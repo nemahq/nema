@@ -18,6 +18,7 @@ import type {
   ListEntitiesOptions,
   ListEntitiesWithStatsOptions,
   MergeEntitiesOptions,
+  OrphanedEntity,
   UpsertEntitiesOptions,
 } from "./graph-store";
 import { ENTITY_TYPES, GraphStoreError } from "./graph-store";
@@ -571,10 +572,10 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
       }
     },
 
-    async deleteByDocument(docId: string): Promise<void> {
+    async deleteByDocument(docId: string): Promise<OrphanedEntity[]> {
       const session = driver.session(sessionConfig);
       try {
-        await session.executeWrite(async (tx) => {
+        return await session.executeWrite(async (tx) => {
           // Collect candidate orphan entities before deleting document
           const result = await tx.run(
             `MATCH (d:Document {docId: $docId})<-[:MENTIONED_IN]-(e:Entity)
@@ -595,15 +596,30 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
             docId,
           });
 
-          // Delete orphan entities (no remaining MENTIONED_IN)
-          if (candidateIds.length > 0) {
-            await tx.run(
-              `MATCH (e:Entity)
-               WHERE id(e) IN $ids AND NOT (e)-[:MENTIONED_IN]->()
-               DETACH DELETE e`,
-              { ids: candidateIds },
-            );
+          // DETACH DELETE 이후에는 노드 속성을 RETURN할 수 없어, 삭제 대상 정보를
+          // 먼저 수집한 뒤 별도 쿼리에서 삭제한다. 반환값은 호출자가 Qdrant 정리에 사용.
+          if (candidateIds.length === 0) {
+            return [];
           }
+          const orphanResult = await tx.run(
+            `MATCH (e:Entity)
+             WHERE id(e) IN $ids AND NOT (e)-[:MENTIONED_IN]->()
+             RETURN e.userId AS userId, e.type AS type, e.name AS name`,
+            { ids: candidateIds },
+          );
+          const orphaned = orphanResult.records.map((r) => ({
+            userId: getString(r, "userId"),
+            type: getEntityType(r, "type"),
+            name: getString(r, "name"),
+          }));
+
+          await tx.run(
+            `MATCH (e:Entity)
+             WHERE id(e) IN $ids AND NOT (e)-[:MENTIONED_IN]->()
+             DETACH DELETE e`,
+            { ids: candidateIds },
+          );
+          return orphaned;
         });
       } catch (error) {
         if (error instanceof GraphStoreError) {

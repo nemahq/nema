@@ -104,6 +104,12 @@ export interface GetGraphOptions {
   userId: string;
 }
 
+export interface OrphanedEntity {
+  userId: string;
+  type: EntityType;
+  name: string;
+}
+
 export interface GraphStore {
   ensureSchema(): Promise<void>;
   upsertEntities(options: UpsertEntitiesOptions): Promise<void>;
@@ -126,6 +132,6 @@ export interface GraphStore {
   getEntityCountsByType(userId: string): Promise<EntityTypeCount[]>;
   mergeEntities(options: MergeEntitiesOptions): Promise<void>;
   // userId 불필요 — Document 노드에 userId 없음. 접근 제어는 서비스 레이어 책임.
-  deleteByDocument(docId: string): Promise<void>;
+  deleteByDocument(docId: string): Promise<OrphanedEntity[]>;
   getGraph(options: GetGraphOptions): Promise<GraphData>;
 }

@@ -6,8 +6,10 @@ import {
   type EmbeddingProvider,
   VECTOR_DIMENSION,
 } from "@server/infra/embedding";
+import type { OrphanedEntity } from "@server/infra/graph/graph-store";
 
 import type {
+  EntityPruneOptions,
   EntitySearchOptions,
   EntitySearchResult,
   EntityUpsertOptions,
@@ -17,6 +19,7 @@ import type { QdrantClient } from "./qdrant-client";
 import { VectorStoreError } from "./vector-store";
 
 const ENTITY_COLLECTION = "entities";
+const ENTITY_PRUNE_SCROLL_PAGE_SIZE = 100;
 
 interface EntityPayload {
   user_id: string;
@@ -204,6 +207,83 @@ export function createQdrantEntityStore(
         throw new VectorStoreError(
           `Entity search failed: ${error instanceof Error ? error.message : String(error)}`,
           "search",
+          error,
+        );
+      }
+    },
+
+    async deleteByEntities(
+      entities: ReadonlyArray<OrphanedEntity>,
+    ): Promise<void> {
+      if (entities.length === 0) {
+        return;
+      }
+      try {
+        const ids = entities.map((e) =>
+          entityPointId({ userId: e.userId, type: e.type, name: e.name }),
+        );
+        await client.delete(ENTITY_COLLECTION, { wait: true, points: ids });
+      } catch (error) {
+        throw new VectorStoreError(
+          `Entity delete failed: ${error instanceof Error ? error.message : String(error)}`,
+          "deleteByEntities",
+          error,
+        );
+      }
+    },
+
+    async pruneOrphans(options: EntityPruneOptions): Promise<number> {
+      const { userId, liveEntities } = options;
+      // liveEntities 빈 배열 = Neo4j 엔티티 0개. 이 경우 해당 user의 모든 Qdrant 포인트를
+      // orphan으로 삭제하게 되어 데이터 손실 위험이 크므로, 호출자가 의도를 명시할 때까지 스킵.
+      if (liveEntities.length === 0) {
+        return 0;
+      }
+      const liveIds = new Set(
+        liveEntities.map((e) =>
+          entityPointId({ userId, type: e.type, name: e.name }),
+        ),
+      );
+
+      const orphanIds: string[] = [];
+      let offset: string | number | null = null;
+
+      try {
+        do {
+          const { points, next_page_offset } = await client.scroll(
+            ENTITY_COLLECTION,
+            {
+              filter: { must: [{ key: "user_id", match: { value: userId } }] },
+              with_payload: false,
+              with_vector: false,
+              limit: ENTITY_PRUNE_SCROLL_PAGE_SIZE,
+              offset: offset ?? undefined,
+            },
+          );
+          for (const point of points) {
+            if (!liveIds.has(String(point.id))) {
+              orphanIds.push(String(point.id));
+            }
+          }
+          const nextOffset = next_page_offset;
+          offset =
+            typeof nextOffset === "string" || typeof nextOffset === "number"
+              ? nextOffset
+              : null;
+        } while (offset !== null);
+
+        if (orphanIds.length > 0) {
+          await client.delete(ENTITY_COLLECTION, {
+            wait: true,
+            points: orphanIds,
+          });
+        }
+
+        return orphanIds.length;
+      } catch (error) {
+        throw new VectorStoreError(
+          `Entity prune failed: ${error instanceof Error ? error.message : String(error)}`,
+          "pruneOrphans",
           error,
         );
       }

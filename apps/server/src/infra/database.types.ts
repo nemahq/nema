@@ -340,6 +340,10 @@ export type Database = {
         Args: { p_doc_id: string; p_max_retries?: number };
         Returns: undefined;
       };
+      list_document_user_ids: {
+        Args: never;
+        Returns: { user_id: string }[];
+      };
       read_sync_events: {
         Args: { p_batch_size?: number; p_visibility_timeout?: number };
         Returns: {

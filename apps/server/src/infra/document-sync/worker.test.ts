@@ -46,7 +46,7 @@ function mockGraphStore(): GraphStore {
     findDocumentsByEntities: vi.fn().mockResolvedValue([]),
     listEntities: vi.fn().mockResolvedValue([]),
     mergeEntities: vi.fn().mockResolvedValue(undefined),
-    deleteByDocument: vi.fn().mockResolvedValue(undefined),
+    deleteByDocument: vi.fn().mockResolvedValue([]),
   } as unknown as GraphStore;
 }
 
@@ -76,6 +76,8 @@ function mockEntityVectorStore(): EntityVectorStore {
     ensureCollection: vi.fn().mockResolvedValue(undefined),
     upsert: vi.fn().mockResolvedValue(undefined),
     search: vi.fn().mockResolvedValue([]),
+    deleteByEntities: vi.fn().mockResolvedValue(undefined),
+    pruneOrphans: vi.fn().mockResolvedValue(0),
   };
 }
 
@@ -297,6 +299,190 @@ describe("createSyncWorker", () => {
         "fetch_pending_documents",
         expect.anything(),
       );
+    });
+
+    it("삭제된 orphan 엔티티를 Qdrant에서도 정리한다", async () => {
+      const supabase = mockSupabase();
+      const graphStore = mockGraphStore();
+      const entityVectorStore = mockEntityVectorStore();
+      const orphaned = [
+        { userId: USER_ID, type: "Person" as const, name: "Alice" },
+        { userId: USER_ID, type: "Topic" as const, name: "검색" },
+      ];
+      (
+        graphStore.deleteByDocument as ReturnType<typeof vi.fn>
+      ).mockResolvedValue(orphaned);
+
+      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
+      rpc
+        .mockResolvedValueOnce({
+          data: [makeMessage({ type: "document.deleted", docId: DOC_ID_1 })],
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: null, error: null });
+
+      const worker = createSyncWorker({
+        supabase,
+        llm: mockLlm(),
+        embedding: mockEmbedding(),
+        vectorStore: mockVectorStore(),
+        graphStore,
+        entityVectorStore,
+      });
+      worker.start();
+      await vi.advanceTimersByTimeAsync(0);
+      await worker.stop();
+
+      expect(entityVectorStore.deleteByEntities).toHaveBeenCalledWith(orphaned);
+    });
+
+    it("orphan이 없으면 Qdrant 삭제를 호출하지 않는다", async () => {
+      const supabase = mockSupabase();
+      const entityVectorStore = mockEntityVectorStore();
+      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
+      rpc
+        .mockResolvedValueOnce({
+          data: [makeMessage({ type: "document.deleted", docId: DOC_ID_1 })],
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: null, error: null });
+
+      const worker = createSyncWorker({
+        supabase,
+        llm: mockLlm(),
+        embedding: mockEmbedding(),
+        vectorStore: mockVectorStore(),
+        graphStore: mockGraphStore(),
+        entityVectorStore,
+      });
+      worker.start();
+      await vi.advanceTimersByTimeAsync(0);
+      await worker.stop();
+
+      expect(entityVectorStore.deleteByEntities).not.toHaveBeenCalled();
+    });
+  });
+
+  // ========== Entity orphan prune (daily batch) ==========
+
+  describe("runEntityOrphanPrune (24h interval)", () => {
+    const ENTITY_PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1_000;
+    const ENTITY_PRUNE_LIST_LIMIT = 10_000;
+
+    function setupPruneRpc(
+      rpc: ReturnType<typeof vi.fn>,
+      userIds: Array<{ user_id: string }>,
+    ): void {
+      rpc.mockImplementation((name: string) => {
+        if (name === "list_document_user_ids") {
+          return Promise.resolve({ data: userIds, error: null });
+        }
+        return Promise.resolve({ data: [], error: null });
+      });
+    }
+
+    it("각 userId별로 pruneOrphans를 호출한다", async () => {
+      const supabase = mockSupabase();
+      const graphStore = mockGraphStore();
+      const entityVectorStore = mockEntityVectorStore();
+      setupPruneRpc(supabase.rpc as ReturnType<typeof vi.fn>, [
+        { user_id: "u1" },
+        { user_id: "u2" },
+      ]);
+      (graphStore.listEntities as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { type: "Person", name: "Alice" },
+      ]);
+
+      const worker = createSyncWorker({
+        supabase,
+        llm: mockLlm(),
+        embedding: mockEmbedding(),
+        vectorStore: mockVectorStore(),
+        graphStore,
+        entityVectorStore,
+      });
+      worker.start();
+      await vi.advanceTimersByTimeAsync(ENTITY_PRUNE_INTERVAL_MS);
+      await worker.stop();
+
+      expect(entityVectorStore.pruneOrphans).toHaveBeenCalledTimes(2);
+      expect(entityVectorStore.pruneOrphans).toHaveBeenCalledWith({
+        userId: "u1",
+        liveEntities: [{ type: "Person", name: "Alice" }],
+      });
+      expect(entityVectorStore.pruneOrphans).toHaveBeenCalledWith({
+        userId: "u2",
+        liveEntities: [{ type: "Person", name: "Alice" }],
+      });
+    });
+
+    it("listEntities가 limit에 도달하면 false-positive 방지를 위해 스킵한다", async () => {
+      const supabase = mockSupabase();
+      const graphStore = mockGraphStore();
+      const entityVectorStore = mockEntityVectorStore();
+      setupPruneRpc(supabase.rpc as ReturnType<typeof vi.fn>, [
+        { user_id: "u1" },
+      ]);
+
+      const fullBatch = Array.from(
+        { length: ENTITY_PRUNE_LIST_LIMIT },
+        (_, i) => ({ type: "Person" as const, name: `entity-${i}` }),
+      );
+      (graphStore.listEntities as ReturnType<typeof vi.fn>).mockResolvedValue(
+        fullBatch,
+      );
+
+      const worker = createSyncWorker({
+        supabase,
+        llm: mockLlm(),
+        embedding: mockEmbedding(),
+        vectorStore: mockVectorStore(),
+        graphStore,
+        entityVectorStore,
+      });
+      worker.start();
+      await vi.advanceTimersByTimeAsync(ENTITY_PRUNE_INTERVAL_MS);
+      await worker.stop();
+
+      expect(entityVectorStore.pruneOrphans).not.toHaveBeenCalled();
+      expect(Sentry.captureMessage).toHaveBeenCalledWith(
+        expect.stringContaining("skipping prune"),
+        expect.objectContaining({ level: "warning" }),
+      );
+    });
+
+    it("단일 userId 에러가 다른 userId 처리를 막지 않는다", async () => {
+      const supabase = mockSupabase();
+      const graphStore = mockGraphStore();
+      const entityVectorStore = mockEntityVectorStore();
+      setupPruneRpc(supabase.rpc as ReturnType<typeof vi.fn>, [
+        { user_id: "u1" },
+        { user_id: "u2" },
+      ]);
+      (graphStore.listEntities as ReturnType<typeof vi.fn>)
+        .mockRejectedValueOnce(new Error("neo4j transient"))
+        .mockResolvedValueOnce([{ type: "Person", name: "Alice" }]);
+
+      const worker = createSyncWorker({
+        supabase,
+        llm: mockLlm(),
+        embedding: mockEmbedding(),
+        vectorStore: mockVectorStore(),
+        graphStore,
+        entityVectorStore,
+      });
+      worker.start();
+      await vi.advanceTimersByTimeAsync(ENTITY_PRUNE_INTERVAL_MS);
+      await worker.stop();
+
+      expect(Sentry.captureException).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({ extra: { userId: "u1" } }),
+      );
+      expect(entityVectorStore.pruneOrphans).toHaveBeenCalledWith({
+        userId: "u2",
+        liveEntities: [{ type: "Person", name: "Alice" }],
+      });
     });
   });
 
