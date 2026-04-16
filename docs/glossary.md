@@ -8,6 +8,6 @@
 | 메시지 | Message | Message | 세션 내 개별 대화 단위 |
 | 챗 | Chat | Chat | 사용자 메시지에 대한 AI 응답 생성 프로세스 (한 턴) |
 | 초안 | Draft | Draft | AI가 구조화한 저장 전 중간 결과물 |
-| 기록 | Note | Document | AI가 정리하여 영구 저장된 지식 단위 |
-| 키워드 | Entity | Entity | 기록에서 추출된 핵심 요소 (인물, 조직, 주제 등) |
-| 기억 | Memory | Memory | 축적된 지식의 전체를 탐색하는 공간 |
+| 키워드 | Entity | Entity | 기억에서 추출된 핵심 요소 (인물, 조직, 주제 등) |
+| 기억 | Memory | Memory | 주제/엔티티별 합성 문서. 새 정보가 들어올 때마다 증분 업데이트되는 지식 단위 |
+| 히스토리 | History | Revision | 기억의 각 업데이트 기록 |
