@@ -110,6 +110,15 @@ export interface OrphanedEntity {
   name: string;
 }
 
+export interface FindEntitiesByNormalizedNamesOptions {
+  userId: string;
+  queries: Array<{ type: EntityType; normalizedName: string }>;
+}
+
+export interface NormalizedNameMatch extends GraphEntity {
+  normalizedName: string;
+}
+
 export interface GraphStore {
   ensureSchema(): Promise<void>;
   upsertEntities(options: UpsertEntitiesOptions): Promise<void>;
@@ -120,6 +129,9 @@ export interface GraphStore {
     options: FindDocumentsByEntitiesOptions,
   ): Promise<GraphSearchResult[]>;
   listEntities(options: ListEntitiesOptions): Promise<GraphEntity[]>;
+  findEntitiesByNormalizedNames(
+    options: FindEntitiesByNormalizedNamesOptions,
+  ): Promise<NormalizedNameMatch[]>;
   listEntitiesWithStats(
     options: ListEntitiesWithStatsOptions,
   ): Promise<GraphEntityWithCount[]>;

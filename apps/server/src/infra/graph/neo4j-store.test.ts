@@ -537,6 +537,151 @@ describe("createNeo4jStore", () => {
     });
   });
 
+  describe("findEntitiesByNormalizedNames", () => {
+    it("returns empty array without querying when queries is empty", async () => {
+      const store = createNeo4jStore();
+      const results = await store.findEntitiesByNormalizedNames({
+        userId: "u1",
+        queries: [],
+      });
+      expect(results).toEqual([]);
+      expect(mockRun).not.toHaveBeenCalled();
+    });
+
+    it("issues UNWIND query with userId and queries params", async () => {
+      mockRun.mockResolvedValue({ records: [] });
+      const store = createNeo4jStore();
+      await store.findEntitiesByNormalizedNames({
+        userId: "u1",
+        queries: [{ type: "Person", normalizedName: "alice kim" }],
+      });
+      expect(mockRun.mock.calls[0][0]).toContain("UNWIND $queries AS q");
+      expect(mockRun.mock.calls[0][0]).toContain("toLower(trim(e.name))");
+      expect(mockRun.mock.calls[0][0]).toContain("q.normalizedName");
+      expect(mockRun.mock.calls[0][1]).toEqual({
+        userId: "u1",
+        queries: [{ type: "Person", normalizedName: "alice kim" }],
+      });
+    });
+
+    it("returns matched entities with normalizedName", async () => {
+      mockRun.mockResolvedValue({
+        records: [
+          {
+            get: (key: string) => {
+              if (key === "type") {
+                return "Person";
+              }
+              if (key === "normalizedName") {
+                return "alice kim";
+              }
+              if (key === "name") {
+                return "Alice Kim";
+              }
+              if (key === "nameEn") {
+                return "Alice Kim";
+              }
+              return null;
+            },
+          },
+        ],
+      });
+      const store = createNeo4jStore();
+      const results = await store.findEntitiesByNormalizedNames({
+        userId: "u1",
+        queries: [{ type: "Person", normalizedName: "alice kim" }],
+      });
+      expect(results).toEqual([
+        {
+          type: "Person",
+          normalizedName: "alice kim",
+          name: "Alice Kim",
+          nameEn: "Alice Kim",
+        },
+      ]);
+    });
+
+    it("returns undefined nameEn when null", async () => {
+      mockRun.mockResolvedValue({
+        records: [
+          {
+            get: (key: string) => {
+              if (key === "type") {
+                return "Topic";
+              }
+              if (key === "normalizedName") {
+                return "ai";
+              }
+              if (key === "name") {
+                return "AI";
+              }
+              if (key === "nameEn") {
+                return null;
+              }
+              return null;
+            },
+          },
+        ],
+      });
+      const store = createNeo4jStore();
+      const results = await store.findEntitiesByNormalizedNames({
+        userId: "u1",
+        queries: [{ type: "Topic", normalizedName: "ai" }],
+      });
+      expect(results[0]?.nameEn).toBeUndefined();
+    });
+
+    it("wraps errors in GraphStoreError", async () => {
+      mockRun.mockRejectedValue(new Error("query failed"));
+      const store = createNeo4jStore();
+      await expect(
+        store.findEntitiesByNormalizedNames({
+          userId: "u1",
+          queries: [{ type: "Person", normalizedName: "alice" }],
+        }),
+      ).rejects.toThrow(GraphStoreError);
+      expect(mockSessionClose).toHaveBeenCalled();
+    });
+
+    it("returns multiple matched entities for multiple queries", async () => {
+      const mockRecords = [
+        {
+          type: "Person",
+          normalizedName: "alice kim",
+          name: "Alice Kim",
+          nameEn: "Alice Kim",
+        },
+        { type: "Topic", normalizedName: "ai", name: "AI", nameEn: null },
+      ];
+      mockRun.mockResolvedValue({
+        records: mockRecords.map((r) => ({
+          get: (key: string) => r[key as keyof typeof r] ?? null,
+        })),
+      });
+      const store = createNeo4jStore();
+      const results = await store.findEntitiesByNormalizedNames({
+        userId: "u1",
+        queries: [
+          { type: "Person", normalizedName: "alice kim" },
+          { type: "Topic", normalizedName: "ai" },
+        ],
+      });
+      expect(results).toHaveLength(2);
+      expect(results[0]).toEqual({
+        type: "Person",
+        normalizedName: "alice kim",
+        name: "Alice Kim",
+        nameEn: "Alice Kim",
+      });
+      expect(results[1]).toMatchObject({
+        type: "Topic",
+        normalizedName: "ai",
+        name: "AI",
+      });
+      expect(results[1]?.nameEn).toBeUndefined();
+    });
+  });
+
   describe("deleteByDocument", () => {
     it("collects candidates, deletes document, then cleans orphans", async () => {
       mockRun
