@@ -642,6 +642,44 @@ describe("createNeo4jStore", () => {
       ).rejects.toThrow(GraphStoreError);
       expect(mockSessionClose).toHaveBeenCalled();
     });
+
+    it("returns multiple matched entities for multiple queries", async () => {
+      const mockRecords = [
+        {
+          type: "Person",
+          normalizedName: "alice kim",
+          name: "Alice Kim",
+          nameEn: "Alice Kim",
+        },
+        { type: "Topic", normalizedName: "ai", name: "AI", nameEn: null },
+      ];
+      mockRun.mockResolvedValue({
+        records: mockRecords.map((r) => ({
+          get: (key: string) => r[key as keyof typeof r] ?? null,
+        })),
+      });
+      const store = createNeo4jStore();
+      const results = await store.findEntitiesByNormalizedNames({
+        userId: "u1",
+        queries: [
+          { type: "Person", normalizedName: "alice kim" },
+          { type: "Topic", normalizedName: "ai" },
+        ],
+      });
+      expect(results).toHaveLength(2);
+      expect(results[0]).toEqual({
+        type: "Person",
+        normalizedName: "alice kim",
+        name: "Alice Kim",
+        nameEn: "Alice Kim",
+      });
+      expect(results[1]).toMatchObject({
+        type: "Topic",
+        normalizedName: "ai",
+        name: "AI",
+      });
+      expect(results[1]?.nameEn).toBeUndefined();
+    });
   });
 
   describe("deleteByDocument", () => {

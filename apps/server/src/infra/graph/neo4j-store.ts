@@ -389,7 +389,7 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
           throw error;
         }
         throw new GraphStoreError(
-          `findEntitiesByNormalizedNames failed: ${error instanceof Error ? error.message : String(error)}`,
+          `findEntitiesByNormalizedNames failed (${queries.length} queries): ${error instanceof Error ? error.message : String(error)}`,
           "findEntitiesByNormalizedNames",
           error,
         );

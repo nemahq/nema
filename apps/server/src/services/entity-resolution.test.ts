@@ -102,7 +102,7 @@ describe("resolveEntities", () => {
       ]);
       const result = await resolveEntities({
         extractedEntities: [
-          { type: "Person", name: "alice  kim", nameEn: "Alice Kim" },
+          { type: "Person", name: "  Alice Kim  ", nameEn: "Alice Kim" },
         ],
         userId: USER_ID,
         graphStore,

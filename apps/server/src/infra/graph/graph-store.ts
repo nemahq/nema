@@ -115,11 +115,8 @@ export interface FindEntitiesByNormalizedNamesOptions {
   queries: Array<{ type: EntityType; normalizedName: string }>;
 }
 
-export interface NormalizedNameMatch {
-  type: EntityType;
+export interface NormalizedNameMatch extends GraphEntity {
   normalizedName: string;
-  name: string;
-  nameEn?: string;
 }
 
 export interface GraphStore {

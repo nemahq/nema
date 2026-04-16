@@ -36,7 +36,7 @@ interface ResolveEntitiesOptions {
 // --- 유틸 ---
 
 function normalize(name: string): string {
-  return name.toLowerCase().trim().replace(/\s+/g, " ");
+  return name.toLowerCase().trim();
 }
 
 // --- 메인 ---
@@ -83,7 +83,7 @@ export async function resolveEntities(
   } catch (err) {
     Sentry.captureException(err, {
       tags: { component: "entity-resolution", stage: "normalizedNameLookup" },
-      extra: { userId },
+      extra: { userId, queryCount: extractedEntities.length },
     });
   }
 
