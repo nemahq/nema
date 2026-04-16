@@ -596,7 +596,8 @@ export function createNeo4jStore(): GraphStore & { close(): Promise<void> } {
             docId,
           });
 
-          // Collect orphan entity info before deleting
+          // DETACH DELETE 이후에는 노드 속성을 RETURN할 수 없어, 삭제 대상 정보를
+          // 먼저 수집한 뒤 별도 쿼리에서 삭제한다. 반환값은 호출자가 Qdrant 정리에 사용.
           if (candidateIds.length === 0) {
             return [];
           }
