@@ -85,7 +85,7 @@
           "memory_id": "...",
           "prev_body": "갱신 전 본문",  // create 시 null
           "next_body": "갱신 후 본문",
-          "revision_type": "create" | "extend" | "replace",
+          "update_type": "create" | "extend" | "replace",
           "source_session_id": "...",
           "created_at": "..."
         }
@@ -120,14 +120,10 @@
 - **create**: 관련 Memory가 없거나 주제 범위 밖
 - **update**: 동일 주제이고 새 body가 해당 Memory의 보완/확장
 
-update_type (LLM 출력):
+update_type:
+- **create**: 최초 생성 (prev_body = null)
 - **extend**: 기존 내용 유지하며 새 정보 추가
 - **replace**: 기존 내용을 새 내용으로 대체
-
-revision_type (memory_revisions 테이블):
-- **create**: 최초 생성 (prev_body = null)
-- **extend**: 기존 내용에 추가
-- **replace**: 기존 내용 대체
 
 ### Fan-out
 
