@@ -59,7 +59,14 @@ Ask the user:
 1. **Checklist**: Check `CLAUDE.md updated` automatically based on the diff:
    - If any CLAUDE.md file was changed → mark as `[x]`.
    - Otherwise → leave as `[ ]`.
-2. **Title**: Korean, purpose-oriented, under 70 characters. No English prefixes like `feat:`, `fix:`, `chore:`.
+2. **Title**: Korean, purpose-oriented, under 70 characters. Format: `{한글 요약}` or `{한글 요약} — {부제}`
+   - Use `—` separator only when a sub-clause meaningfully adds context.
+   - Examples:
+     - `엔티티 벡터 라이프사이클 관리 — orphan Qdrant 포인트 정리`
+     - `에러 폴백 UX 고도화 — 기술 메시지 숨기고 복사로 접근`
+     - `staging 빌드 모드를 환경변수 기반으로 분기`
+     - `DB 스키마: memories + histories + memory_revisions 도입, documents 제거`
+   - Do NOT use English prefixes like `feat:`, `fix:`, `chore:`.
 3. **Label**: Recommend one of `enhancement`, `bug`, `refactoring`, `documentation` based on the nature of the changes.
 4. Assemble the body following `.github/pull_request_template.md` format:
 
