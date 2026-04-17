@@ -19,7 +19,7 @@ import {
 } from "@server/prompts/saving";
 
 const VECTOR_SEARCH_LIMIT = 20;
-// 실측 기반: body_en으로 인덱싱된 Memory를 한국어 토픽으로 cross-lingual 검색 시 관련 항목이 0.4~0.6 구간에 분포. 0.3은 false-positive를 허용하는 대신 miss를 줄이는 쪽 (JUDGMENT가 무관 후보를 걸러냄)
+// 0.3은 false-positive를 허용하는 대신 miss를 줄이는 쪽 (JUDGMENT가 무관 후보를 걸러냄). 데이터 쌓이면 재튜닝.
 const VECTOR_SCORE_THRESHOLD = 0.3;
 
 type PipelineStep = "split" | "judgment" | "meta";
