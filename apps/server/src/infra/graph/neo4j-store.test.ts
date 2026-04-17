@@ -124,7 +124,7 @@ describe("createNeo4jStore", () => {
         store.upsertEntities({
           docId: "d1",
           userId: "u1",
-          entities: [{ type: "Person", name: "  ", nameEn: "Kim Chulsu" }],
+          entities: [{ type: "Person", name: "  " }],
           createdAt: "2026-04-01T00:00:00.000Z",
         }),
       ).rejects.toThrow(GraphStoreError);
@@ -138,8 +138,8 @@ describe("createNeo4jStore", () => {
         docId: "d1",
         userId: "u1",
         entities: [
-          { type: "Person", name: "김철수", nameEn: "Kim Chulsu" },
-          { type: "Topic", name: "프론트엔드", nameEn: "frontend" },
+          { type: "Person", name: "김철수" },
+          { type: "Topic", name: "프론트엔드" },
         ],
         createdAt: "2026-04-01T00:00:00.000Z",
       });
@@ -150,14 +150,11 @@ describe("createNeo4jStore", () => {
       expect(mockRun.mock.calls[1][0]).toContain(
         "MERGE (e:Entity {type: entity.type, name: entity.name",
       );
-      expect(mockRun.mock.calls[1][0]).toContain(
-        "ON CREATE SET e.nameEn = entity.nameEn",
-      );
       expect(mockRun.mock.calls[1][1]).toEqual(
         expect.objectContaining({
           entities: [
-            { type: "Person", name: "김철수", nameEn: "Kim Chulsu" },
-            { type: "Topic", name: "프론트엔드", nameEn: "frontend" },
+            { type: "Person", name: "김철수" },
+            { type: "Topic", name: "프론트엔드" },
           ],
         }),
       );
@@ -170,7 +167,7 @@ describe("createNeo4jStore", () => {
       await store.upsertEntities({
         docId: "d1",
         userId: "u1",
-        entities: [{ type: "Person", name: "김철수", nameEn: "Kim Chulsu" }],
+        entities: [{ type: "Person", name: "김철수" }],
         createdAt: "2026-04-01T00:00:00.000Z",
       });
 
@@ -184,7 +181,7 @@ describe("createNeo4jStore", () => {
         store.upsertEntities({
           docId: "d1",
           userId: "u1",
-          entities: [{ type: "Person", name: "김철수", nameEn: "Kim Chulsu" }],
+          entities: [{ type: "Person", name: "김철수" }],
           createdAt: "2026-04-01T00:00:00.000Z",
         }),
       ).rejects.toThrow(GraphStoreError);
@@ -327,14 +324,13 @@ describe("createNeo4jStore", () => {
       const store = createNeo4jStore();
       const results = await store.findDocumentsByEntities({
         entities: [],
-        entitiesEn: [],
         userId: "u1",
       });
       expect(results).toEqual([]);
       expect(mockRun).not.toHaveBeenCalled();
     });
 
-    it("searches by both original and English entity names", async () => {
+    it("searches by entity names", async () => {
       mockRun.mockResolvedValue({
         records: [
           {
@@ -345,17 +341,14 @@ describe("createNeo4jStore", () => {
       const store = createNeo4jStore();
       const results = await store.findDocumentsByEntities({
         entities: ["김철수", "프론트엔드"],
-        entitiesEn: ["Kim Chulsu", "frontend"],
         userId: "u1",
       });
 
       expect(results).toEqual([{ docId: "d1", sharedEntityCount: 2 }]);
       expect(mockRun.mock.calls[0][0]).toContain("e.name IN $entities");
-      expect(mockRun.mock.calls[0][0]).toContain("e.nameEn IN $entitiesEn");
       expect(mockRun.mock.calls[0][1]).toEqual(
         expect.objectContaining({
           entities: ["김철수", "프론트엔드"],
-          entitiesEn: ["Kim Chulsu", "frontend"],
           userId: "u1",
         }),
       );
@@ -371,9 +364,6 @@ describe("createNeo4jStore", () => {
               if (key === "type") {
                 return "Person";
               }
-              if (key === "nameEn") {
-                return "Kim Chulsu";
-              }
               return "김철수";
             },
           },
@@ -381,9 +371,7 @@ describe("createNeo4jStore", () => {
       });
       const store = createNeo4jStore();
       const results = await store.listEntities({ userId: "u1" });
-      expect(results).toEqual([
-        { type: "Person", name: "김철수", nameEn: "Kim Chulsu" },
-      ]);
+      expect(results).toEqual([{ type: "Person", name: "김철수" }]);
     });
 
     it("includes type filter when provided", async () => {
@@ -425,44 +413,6 @@ describe("createNeo4jStore", () => {
       );
     });
 
-    it("returns undefined nameEn when not set", async () => {
-      mockRun.mockResolvedValue({
-        records: [
-          {
-            get: (key: string) => {
-              if (key === "type") {
-                return "Topic";
-              }
-              if (key === "name") {
-                return "AI Marketing";
-              }
-              if (key === "nameEn") {
-                return null;
-              }
-              if (key === "documentCount") {
-                return new MockInteger(5);
-              }
-              if (key === "lastReferencedAt") {
-                return "2026-04-10T00:00:00.000Z";
-              }
-              return null;
-            },
-          },
-        ],
-      });
-      const store = createNeo4jStore();
-      const results = await store.listEntitiesWithStats({ userId: "u1" });
-      expect(results).toEqual([
-        {
-          type: "Topic",
-          name: "AI Marketing",
-          nameEn: undefined,
-          documentCount: 5,
-          lastReferencedAt: "2026-04-10T00:00:00.000Z",
-        },
-      ]);
-    });
-
     it("handles entities with no connected documents (lastReferencedAt undefined)", async () => {
       mockRun.mockResolvedValue({
         records: [
@@ -472,9 +422,6 @@ describe("createNeo4jStore", () => {
                 return "Person";
               }
               if (key === "name") {
-                return "Kyle";
-              }
-              if (key === "nameEn") {
                 return "Kyle";
               }
               if (key === "documentCount") {
@@ -578,9 +525,6 @@ describe("createNeo4jStore", () => {
               if (key === "name") {
                 return "Alice Kim";
               }
-              if (key === "nameEn") {
-                return "Alice Kim";
-              }
               return null;
             },
           },
@@ -596,39 +540,8 @@ describe("createNeo4jStore", () => {
           type: "Person",
           normalizedName: "alice kim",
           name: "Alice Kim",
-          nameEn: "Alice Kim",
         },
       ]);
-    });
-
-    it("returns undefined nameEn when null", async () => {
-      mockRun.mockResolvedValue({
-        records: [
-          {
-            get: (key: string) => {
-              if (key === "type") {
-                return "Topic";
-              }
-              if (key === "normalizedName") {
-                return "ai";
-              }
-              if (key === "name") {
-                return "AI";
-              }
-              if (key === "nameEn") {
-                return null;
-              }
-              return null;
-            },
-          },
-        ],
-      });
-      const store = createNeo4jStore();
-      const results = await store.findEntitiesByNormalizedNames({
-        userId: "u1",
-        queries: [{ type: "Topic", normalizedName: "ai" }],
-      });
-      expect(results[0]?.nameEn).toBeUndefined();
     });
 
     it("wraps errors in GraphStoreError", async () => {
@@ -649,9 +562,8 @@ describe("createNeo4jStore", () => {
           type: "Person",
           normalizedName: "alice kim",
           name: "Alice Kim",
-          nameEn: "Alice Kim",
         },
-        { type: "Topic", normalizedName: "ai", name: "AI", nameEn: null },
+        { type: "Topic", normalizedName: "ai", name: "AI" },
       ];
       mockRun.mockResolvedValue({
         records: mockRecords.map((r) => ({
@@ -671,14 +583,12 @@ describe("createNeo4jStore", () => {
         type: "Person",
         normalizedName: "alice kim",
         name: "Alice Kim",
-        nameEn: "Alice Kim",
       });
-      expect(results[1]).toMatchObject({
+      expect(results[1]).toEqual({
         type: "Topic",
         normalizedName: "ai",
         name: "AI",
       });
-      expect(results[1]?.nameEn).toBeUndefined();
     });
   });
 
