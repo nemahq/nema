@@ -352,4 +352,131 @@ describe("processSaveJobBackground", () => {
       }),
     );
   });
+
+  it("draft_body가 null이면 (double-process 방지) handleSave 호출 없이 Error 전파 + Sentry 보고", async () => {
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: { draft_body: null, session_id: SESSION_ID },
+          error: null,
+        }),
+      )
+      .mockReturnValueOnce(
+        createChain({
+          data: makeJobRow({ status: "processing" }),
+          error: null,
+        }),
+      );
+
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const supabase = { from, rpc } as unknown as TypedSupabaseClient;
+
+    await processSaveJobBackground({
+      supabase,
+      providers: {} as Providers,
+      userId: USER_ID,
+      jobId: JOB_ID,
+    });
+
+    expect(handleSave).not.toHaveBeenCalled();
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("draft_body is null"),
+      }),
+      expect.objectContaining({ tags: { component: "save-job" } }),
+    );
+  });
+
+  it("completed 상태 업데이트 payload에 history_id, draft_body: null 포함", async () => {
+    const completedUpdateChain = createChain({ error: null });
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: { draft_body: "test", session_id: SESSION_ID },
+          error: null,
+        }),
+      )
+      .mockReturnValueOnce(completedUpdateChain)
+      .mockReturnValueOnce(
+        createChain({
+          data: makeJobRow({ status: "completed" }),
+          error: null,
+        }),
+      );
+
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const supabase = { from, rpc } as unknown as TypedSupabaseClient;
+    vi.mocked(handleSave).mockResolvedValue({
+      titles: ["테스트 문서"],
+      historyId: "hist-id-xyz",
+    });
+
+    await processSaveJobBackground({
+      supabase,
+      providers: {} as Providers,
+      userId: USER_ID,
+      jobId: JOB_ID,
+    });
+
+    expect(completedUpdateChain.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "completed",
+        history_id: "hist-id-xyz",
+        draft_body: null,
+      }),
+    );
+  });
+
+  it("link_draft_to_history RPC가 error 반환해도 completed 유지 + Sentry 보고", async () => {
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: { draft_body: "test", session_id: SESSION_ID },
+          error: null,
+        }),
+      )
+      .mockReturnValueOnce(createChain({ error: null }))
+      .mockReturnValueOnce(
+        createChain({
+          data: makeJobRow({ status: "completed" }),
+          error: null,
+        }),
+      );
+
+    const rpc = vi.fn().mockImplementation((name: string) => {
+      if (name === "link_draft_to_history") {
+        return Promise.resolve({ error: { message: "link failed" } });
+      }
+      return Promise.resolve({ error: null });
+    });
+    const supabase = { from, rpc } as unknown as TypedSupabaseClient;
+    vi.mocked(handleSave).mockResolvedValue({
+      titles: ["테스트 문서"],
+      historyId: "hist-id-1",
+    });
+
+    await processSaveJobBackground({
+      supabase,
+      providers: {} as Providers,
+      userId: USER_ID,
+      jobId: JOB_ID,
+    });
+
+    expect(emitSaveJobUpdate).toHaveBeenCalledWith(
+      USER_ID,
+      expect.objectContaining({ id: JOB_ID, status: "completed" }),
+    );
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "link failed" }),
+      expect.objectContaining({
+        extra: expect.objectContaining({ context: "link draft to history" }),
+      }),
+    );
+  });
 });
