@@ -122,7 +122,8 @@ export async function handleSave(args: {
   throwIfSupabaseError(historyError);
   const historyId = history.id;
 
-  // META LLM 호출은 아이템별 병렬. persist는 순차 유지 (NEM-95: 같은 target 중복 race 방지)
+  // META LLM은 아이템별 병렬, persist는 원자적 단일 RPC로 all-or-nothing 보장.
+  // 같은 memory_id를 여러 아이템이 target으로 지목하면 RPC 내부 순차 loop에서 late-write-wins로 결정적 처리.
   const metas = await Promise.all(
     allItems.map((judgmentItem, itemIndex) =>
       withStepContext({
@@ -144,45 +145,25 @@ export async function handleSave(args: {
     ),
   );
 
-  const titles: string[] = [];
+  const pipelineItems = allItems.map((judgmentItem, i) => ({
+    update_type: judgmentItem.update_type,
+    target_id: judgmentItem.target_id,
+    title: metas[i].title,
+    category: metas[i].category,
+    tags: metas[i].tags,
+    summary: metas[i].summary,
+    body: judgmentItem.final_body,
+  }));
 
-  for (let i = 0; i < allItems.length; i++) {
-    const judgmentItem = allItems[i];
-    const meta = metas[i];
+  const { data: titles, error: applyError } = await supabase.rpc(
+    "apply_save_pipeline",
+    {
+      p_user_id: userId,
+      p_history_id: historyId,
+      p_items: pipelineItems,
+    },
+  );
+  throwIfSupabaseError(applyError);
 
-    if (judgmentItem.update_type === "create") {
-      const { error } = await supabase.rpc("create_memory_with_revision", {
-        p_user_id: userId,
-        p_history_id: historyId,
-        p_title: meta.title,
-        p_category: meta.category,
-        p_tags: meta.tags,
-        p_summary: meta.summary,
-        p_body: judgmentItem.final_body,
-      });
-      throwIfSupabaseError(error);
-    } else {
-      if (!judgmentItem.target_id) {
-        throw new Error(
-          `update_type "${judgmentItem.update_type}" requires non-null target_id`,
-        );
-      }
-      const { error } = await supabase.rpc("update_memory_with_revision", {
-        p_memory_id: judgmentItem.target_id,
-        p_user_id: userId,
-        p_history_id: historyId,
-        p_title: meta.title,
-        p_category: meta.category,
-        p_tags: meta.tags,
-        p_summary: meta.summary,
-        p_body: judgmentItem.final_body,
-        p_update_type: judgmentItem.update_type,
-      });
-      throwIfSupabaseError(error);
-    }
-
-    titles.push(meta.title);
-  }
-
-  return { titles, historyId };
+  return { titles: titles ?? [], historyId };
 }
