@@ -97,11 +97,8 @@ const PENDING_DOC: PendingDocument = {
   id: DOC_ID_1,
   user_id: USER_ID,
   body: "test body",
-  body_en: null,
   tags: ["tag1"],
-  tags_en: null,
   summary: "test summary",
-  summary_en: null,
   created_at: "2026-04-01T00:00:00.000Z",
 };
 
@@ -502,11 +499,8 @@ describe("createSyncWorker", () => {
         id: DOC_ID_2,
         user_id: USER_ID,
         body: "fail body",
-        body_en: null,
         tags: [],
-        tags_en: null,
         summary: "fail",
-        summary_en: null,
         created_at: "2026-04-02T00:00:00.000Z",
       };
 
@@ -672,11 +666,8 @@ describe("createSyncWorker", () => {
         id: DOC_ID_2,
         user_id: USER_ID,
         body: "second doc",
-        body_en: null,
         tags: ["tag2"],
-        tags_en: null,
         summary: "second",
-        summary_en: null,
         created_at: "2026-04-02T00:00:00.000Z",
       };
 
