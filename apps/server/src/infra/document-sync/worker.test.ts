@@ -299,7 +299,7 @@ describe("createSyncWorker", () => {
       expect(graphStore.deleteByDocument).toHaveBeenCalledWith(DOC_ID_1);
       expect(rpc).toHaveBeenCalledWith("ack_sync_event", { p_msg_id: 1 });
       expect(rpc).not.toHaveBeenCalledWith(
-        "fetch_pending_documents",
+        "fetch_pending_memories",
         expect.anything(),
       );
     });

@@ -31,7 +31,7 @@ CREATE TABLE histories (
   created_at        timestamptz NOT NULL DEFAULT now()
 );
 
--- ----- memory_revisions -----
+-- ----- memory_revisions (append-only) -----
 CREATE TABLE memory_revisions (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   memory_id   uuid NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
@@ -40,7 +40,11 @@ CREATE TABLE memory_revisions (
   next_body   text NOT NULL,
   update_type update_type NOT NULL,
   source      revision_source NOT NULL,
-  created_at  timestamptz NOT NULL DEFAULT now()
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT chk_create_has_null_prev CHECK (
+    (update_type = 'create' AND prev_body IS NULL)
+    OR (update_type IN ('extend', 'replace') AND prev_body IS NOT NULL)
+  )
 );
 
 -- ----- save_jobs: history_id 추가 -----
@@ -75,11 +79,9 @@ CREATE POLICY "histories_owner" ON histories
   FOR ALL USING (user_id = auth.uid())
   WITH CHECK  (user_id = auth.uid());
 
-CREATE POLICY "memory_revisions_owner" ON memory_revisions
-  FOR ALL USING (
-    memory_id IN (SELECT id FROM memories WHERE user_id = auth.uid())
-  )
-  WITH CHECK (
+-- append-only: SELECT만 허용. INSERT는 RPC(SECURITY DEFINER) 경로로, DELETE는 memories CASCADE로 처리
+CREATE POLICY "memory_revisions_select" ON memory_revisions
+  FOR SELECT USING (
     memory_id IN (SELECT id FROM memories WHERE user_id = auth.uid())
   );
 
@@ -118,6 +120,12 @@ BEGIN
     RAISE EXCEPTION 'user_id mismatch';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1 FROM histories WHERE id = p_history_id AND user_id = p_user_id
+  ) THEN
+    RAISE EXCEPTION 'history not found or not owned by user';
+  END IF;
+
   INSERT INTO memories (user_id, title, category, tags, summary, body, ingestion_status)
   VALUES (p_user_id, p_title, p_category, p_tags, p_summary, p_body, 'pending')
   RETURNING id INTO v_memory_id;
@@ -148,6 +156,12 @@ DECLARE
 BEGIN
   IF p_user_id != auth.uid() THEN
     RAISE EXCEPTION 'user_id mismatch';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM histories WHERE id = p_history_id AND user_id = p_user_id
+  ) THEN
+    RAISE EXCEPTION 'history not found or not owned by user';
   END IF;
 
   SELECT body INTO v_prev_body

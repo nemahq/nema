@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import { TRPCError } from "@trpc/server";
 
 import type {
@@ -109,4 +110,10 @@ export async function deleteDocument(
     .eq("user_id", userId);
 
   throwIfSupabaseError(error);
+
+  // NEM-86 배포 전까지 Qdrant/Neo4j orphan이 남음 — 추후 백필 대상 추적용
+  Sentry.captureMessage(
+    "[deleteDocument] NEM-86 pending: Qdrant/Neo4j orphan retained",
+    { level: "info", extra: { memoryId: documentId, userId } },
+  );
 }
