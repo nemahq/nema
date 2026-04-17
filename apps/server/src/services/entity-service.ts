@@ -50,7 +50,7 @@ export async function getDocumentsByEntity(opts: {
   }
 
   const { data, error } = await opts.supabase
-    .from("documents")
+    .from("memories")
     .select("id, title, tags, summary, created_at, updated_at")
     .in("id", docIds)
     .order("created_at", { ascending: false });
@@ -130,14 +130,14 @@ export async function getSummaryStats(opts: {
 }): Promise<EntityStats> {
   const [entityCounts, { count, error }] = await Promise.all([
     opts.graphStore.getEntityCountsByType(opts.userId),
-    opts.supabase.from("documents").select("*", { count: "exact", head: true }),
+    opts.supabase.from("memories").select("*", { count: "exact", head: true }),
   ]);
 
   throwIfSupabaseError(error);
 
   if (count === null) {
     Sentry.captureMessage(
-      "[entity-service] documents count query returned null — expected number",
+      "[entity-service] memories count query returned null — expected number",
       { level: "warning", extra: { userId: opts.userId } },
     );
   }

@@ -197,12 +197,12 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
 async function fetchPendingDocuments(
   supabase: TypedSupabaseClient,
 ): Promise<PendingDocument[]> {
-  const { data, error } = await supabase.rpc("fetch_pending_documents", {
+  const { data, error } = await supabase.rpc("fetch_pending_memories", {
     p_max_retries: MAX_RETRIES,
   });
 
   if (error) {
-    throw new Error(`fetch_pending_documents failed: ${error.message}`);
+    throw new Error(`fetch_pending_memories failed: ${error.message}`);
   }
 
   const parsed = z.array(PendingDocumentSchema).safeParse(data ?? []);
@@ -217,10 +217,9 @@ async function markCompleted(
   supabase: TypedSupabaseClient,
   docId: string,
 ): Promise<void> {
-  const { error } = await supabase
-    .from("documents")
-    .update({ ingestion_status: "completed" })
-    .eq("id", docId);
+  const { error } = await supabase.rpc("complete_memory_ingestion", {
+    p_memory_id: docId,
+  });
 
   if (error) {
     throw new Error(`mark completed failed for doc ${docId}: ${error.message}`);
@@ -231,14 +230,14 @@ async function incrementRetry(
   supabase: TypedSupabaseClient,
   docId: string,
 ): Promise<void> {
-  const { error } = await supabase.rpc("increment_ingestion_retry", {
-    p_doc_id: docId,
+  const { error } = await supabase.rpc("increment_memory_ingestion_retry", {
+    p_memory_id: docId,
     p_max_retries: MAX_RETRIES,
   });
 
   if (error) {
     throw new Error(
-      `increment_ingestion_retry failed for doc ${docId}: ${error.message}`,
+      `increment_memory_ingestion_retry failed for doc ${docId}: ${error.message}`,
     );
   }
 }
@@ -338,9 +337,7 @@ async function handleDelete(
 }
 
 async function runEntityOrphanPrune(deps: WorkerDeps): Promise<void> {
-  const { data: rows, error } = await deps.supabase.rpc(
-    "list_document_user_ids",
-  );
+  const { data: rows, error } = await deps.supabase.rpc("list_memory_user_ids");
   if (error) {
     throw new Error(`entity prune: failed to fetch user ids: ${error.message}`);
   }
