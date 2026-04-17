@@ -2,7 +2,8 @@
   <img src="apps/web/src/assets/nema-logo.svg" alt="Nema" height="28" />
 </p>
 
-<p align="center">AI-powered context management web app.</p>
+<p align="center">맥락을 구조화하고, 쓸수록 판단이 선명해지는 지식 시스템</p>
+<p align="center">A knowledge system that structures your context and sharpens your judgment over time.</p>
 
 ## Tech Stack
 
