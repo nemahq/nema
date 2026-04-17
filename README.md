@@ -82,7 +82,7 @@ colima start
 
 # 마이그레이션 적용 + 타입 생성
 supabase start -x vector,imgproxy,edge-runtime,logflare,studio
-supabase gen types --lang=typescript --local > apps/server/src/infra/database.types.ts
+supabase gen types typescript --linked > apps/server/src/infra/database.types.ts
 supabase stop
 ```
 
@@ -105,9 +105,9 @@ packages/
 | 명령어 | 설명 |
 | --- | --- |
 | `pnpm dev` | 웹 + 서버 (local API) |
-| `pnpm dev:web` | 웹만 (prod API) |
+| `pnpm dev:web` | 웹만 (staging API) |
+| `pnpm dev:web:prod` | 웹만 (prod API) |
 | `pnpm dev:server` | 서버만 |
-| `pnpm dev:prod` | 웹 + 서버 (prod API) |
 | `pnpm build` | 프로덕션 빌드 |
 | `pnpm typecheck` | 타입 체크 |
 | `pnpm lint` | ESLint 실행 |
