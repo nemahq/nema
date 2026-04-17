@@ -30,23 +30,18 @@ Execute `/pr-writing` **Steps 1-6 only** (collect changes, determine Why, draft 
 
 ## Step 4 — Create PR
 
-1. Ask the user if the PR should be created as draft:
-
-   > Draft로 생성할까요? (y/N)
-
-2. Push the branch: `git push -u origin HEAD`.
-3. Create the PR with full metadata:
+1. Push the branch: `git push -u origin HEAD`.
+2. Create the PR with full metadata:
 
    ```
    gh pr create \
      --title "<title from /pr-writing>" \
      --label "<label from /pr-writing>" \
      --assignee "@me" \
-     --body "<body from /pr-writing>" \
-     [--draft]
+     --body "<body from /pr-writing>"
    ```
 
-4. Report the PR URL.
+3. Report the PR URL.
 
 ## Constraints
 
