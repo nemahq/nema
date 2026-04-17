@@ -114,7 +114,10 @@ describe("processSaveJobBackground", () => {
 
     const rpc = vi.fn().mockResolvedValue({ error: null });
     const supabase = { from, rpc } as unknown as TypedSupabaseClient;
-    vi.mocked(handleSave).mockResolvedValue(["테스트 문서"]);
+    vi.mocked(handleSave).mockResolvedValue({
+      titles: ["테스트 문서"],
+      historyId: "hist-id-1",
+    });
 
     await processSaveJobBackground({
       supabase,
@@ -246,7 +249,10 @@ describe("processSaveJobBackground", () => {
 
     const rpc = vi.fn().mockResolvedValue({ error: null });
     const supabase = { from, rpc } as unknown as TypedSupabaseClient;
-    vi.mocked(handleSave).mockResolvedValue(["테스트 문서"]);
+    vi.mocked(handleSave).mockResolvedValue({
+      titles: ["테스트 문서"],
+      historyId: "hist-id-1",
+    });
 
     await processSaveJobBackground({
       supabase,
@@ -280,7 +286,10 @@ describe("processSaveJobBackground", () => {
 
     const rpc = vi.fn().mockResolvedValue({ error: null });
     const supabase = { from, rpc } as unknown as TypedSupabaseClient;
-    vi.mocked(handleSave).mockResolvedValue(["문서 A", "문서 B", "문서 C"]);
+    vi.mocked(handleSave).mockResolvedValue({
+      titles: ["문서 A", "문서 B", "문서 C"],
+      historyId: "hist-id-1",
+    });
 
     await processSaveJobBackground({
       supabase,
@@ -319,7 +328,10 @@ describe("processSaveJobBackground", () => {
 
     const rpc = vi.fn().mockRejectedValue(new Error("RPC failed"));
     const supabase = { from, rpc } as unknown as TypedSupabaseClient;
-    vi.mocked(handleSave).mockResolvedValue(["테스트 문서"]);
+    vi.mocked(handleSave).mockResolvedValue({
+      titles: ["테스트 문서"],
+      historyId: "hist-id-1",
+    });
 
     await processSaveJobBackground({
       supabase,

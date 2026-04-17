@@ -155,19 +155,26 @@ async function processSaveJob(args: {
   const contentLanguage = profile.contentLanguage;
 
   let titles: string[];
+  let historyId: string;
   try {
-    titles = await handleSave({
+    const result = await handleSave({
       supabase,
       providers,
       userId,
       sessionId: job.session_id,
-      draftBody: job.draft_body,
+      draftBody: job.draft_body as string,
       contentLanguage,
     });
+    titles = result.titles;
+    historyId = result.historyId;
 
     const { error } = await supabase
       .from("save_jobs")
-      .update({ status: "completed" as const })
+      .update({
+        status: "completed" as const,
+        history_id: historyId,
+        draft_body: null,
+      })
       .eq("id", jobId);
 
     throwIfSupabaseError(error);
@@ -191,6 +198,18 @@ async function processSaveJob(args: {
     }
 
     throw error;
+  }
+
+  try {
+    await supabase.rpc("link_draft_to_history", {
+      p_session_id: job.session_id,
+      p_history_id: historyId,
+    });
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "save-job" },
+      extra: { jobId, context: "link draft to history" },
+    });
   }
 
   try {
