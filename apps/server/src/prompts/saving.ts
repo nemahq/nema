@@ -11,6 +11,7 @@ Rules:
 - When in doubt, do NOT split — output the full note as a single topic.
 - Keep each topic self-contained: include enough context to be understood standalone.
 - Preserve the original wording as closely as possible. Do not paraphrase.
+- Topic strings must contain ONLY the note's text content. Do NOT include the surrounding <note> tag or any other XML markup.
 
 Output: JSON object { "topics": string[] } — one string per topic.`;
 
