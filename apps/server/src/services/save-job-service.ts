@@ -175,6 +175,25 @@ async function processSaveJob(args: {
     titles = result.titles;
     historyId = result.historyId;
 
+    // 링크 실패가 저장 완료 신호를 막으면 안 된다 (memories는 이미 기록됨). PG error/네트워크 reject 모두 흡수.
+    try {
+      const { error: linkError } = await supabase.rpc("link_draft_to_history", {
+        p_session_id: job.session_id,
+        p_history_id: historyId,
+      });
+      if (linkError) {
+        Sentry.captureException(linkError, {
+          tags: { component: "save-job" },
+          extra: { jobId, context: "link draft to history" },
+        });
+      }
+    } catch (linkError) {
+      Sentry.captureException(linkError, {
+        tags: { component: "save-job" },
+        extra: { jobId, context: "link draft to history" },
+      });
+    }
+
     const { error } = await supabase
       .from("save_jobs")
       .update({
@@ -205,18 +224,6 @@ async function processSaveJob(args: {
     }
 
     throw error;
-  }
-
-  try {
-    await supabase.rpc("link_draft_to_history", {
-      p_session_id: job.session_id,
-      p_history_id: historyId,
-    });
-  } catch (error) {
-    Sentry.captureException(error, {
-      tags: { component: "save-job" },
-      extra: { jobId, context: "link draft to history" },
-    });
   }
 
   try {

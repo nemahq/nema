@@ -366,9 +366,9 @@ export type Database = {
       create_memory_with_revision: {
         Args: {
           p_body: string;
-          p_category: string;
+          p_category: string | null;
           p_history_id: string;
-          p_summary: string;
+          p_summary: string | null;
           p_tags: string[];
           p_title: string;
           p_user_id: string;
@@ -414,10 +414,10 @@ export type Database = {
       update_memory_with_revision: {
         Args: {
           p_body: string;
-          p_category: string;
+          p_category: string | null;
           p_history_id: string;
           p_memory_id: string;
-          p_summary: string;
+          p_summary: string | null;
           p_tags: string[];
           p_title: string;
           p_update_type: Database["public"]["Enums"]["update_type"];

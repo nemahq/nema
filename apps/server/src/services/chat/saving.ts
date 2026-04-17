@@ -31,7 +31,6 @@ export async function handleSave(args: {
   const { supabase, providers, userId, sessionId, draftBody } = args;
   const { embedding, vectorStore, llm } = providers;
 
-  // Step 1: 토픽 분리
   const splitOutput = await llm.mini.generateStructured({
     schema: SplitOutputSchema,
     schemaName: "saving_split",
@@ -39,7 +38,6 @@ export async function handleSave(args: {
     messages: [{ role: "user", content: buildSplitMessage(draftBody) }],
   });
 
-  // Step 2-3: 토픽별 벡터 검색 + JUDGMENT
   const allItems: JudgmentItem[] = [];
 
   for (const topic of splitOutput.topics) {
@@ -79,7 +77,6 @@ export async function handleSave(args: {
     allItems.push(...judgmentOutput.items);
   }
 
-  // Step 4: History 생성
   const { data: history, error: historyError } = await supabase
     .from("histories")
     .insert({
@@ -92,7 +89,6 @@ export async function handleSave(args: {
   throwIfSupabaseError(historyError);
   const historyId = history.id;
 
-  // Step 5: META 생성 + DB 기록
   const titles: string[] = [];
 
   for (const judgmentItem of allItems) {
@@ -110,7 +106,7 @@ export async function handleSave(args: {
         p_user_id: userId,
         p_history_id: historyId,
         p_title: meta.title,
-        p_category: (meta.category ?? null) as string,
+        p_category: meta.category,
         p_tags: meta.tags,
         p_summary: meta.summary,
         p_body: judgmentItem.final_body,
@@ -127,7 +123,7 @@ export async function handleSave(args: {
         p_user_id: userId,
         p_history_id: historyId,
         p_title: meta.title,
-        p_category: (meta.category ?? null) as string,
+        p_category: meta.category,
         p_tags: meta.tags,
         p_summary: meta.summary,
         p_body: judgmentItem.final_body,
