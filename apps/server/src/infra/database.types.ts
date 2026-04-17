@@ -230,7 +230,7 @@ export type Database = {
       save_jobs: {
         Row: {
           created_at: string;
-          draft_body: string;
+          draft_body: string | null;
           error_message: string | null;
           history_id: string | null;
           id: string;
@@ -254,7 +254,7 @@ export type Database = {
         };
         Update: {
           created_at?: string;
-          draft_body?: string;
+          draft_body?: string | null;
           error_message?: string | null;
           history_id?: string | null;
           id?: string;
@@ -366,9 +366,9 @@ export type Database = {
       create_memory_with_revision: {
         Args: {
           p_body: string;
-          p_category: string;
+          p_category: string | null;
           p_history_id: string;
-          p_summary: string;
+          p_summary: string | null;
           p_tags: string[];
           p_title: string;
           p_user_id: string;
@@ -414,10 +414,10 @@ export type Database = {
       update_memory_with_revision: {
         Args: {
           p_body: string;
-          p_category: string;
+          p_category: string | null;
           p_history_id: string;
           p_memory_id: string;
-          p_summary: string;
+          p_summary: string | null;
           p_tags: string[];
           p_title: string;
           p_update_type: Database["public"]["Enums"]["update_type"];
@@ -429,10 +429,14 @@ export type Database = {
         Args: { p_message_id: string; p_payload: Json; p_session_id: string };
         Returns: undefined;
       };
+      link_draft_to_history: {
+        Args: { p_session_id: string; p_history_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       ingestion_status: "pending" | "completed" | "failed";
-      revision_source: "direct" | "regeneration";
+      revision_source: "direct" | "propagated";
       save_job_status: "pending" | "processing" | "completed" | "failed";
       update_type: "create" | "extend" | "replace";
     };

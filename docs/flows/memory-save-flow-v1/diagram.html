@@ -1,426 +1,994 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Memory 저장 흐름</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #f5f5f5;
-    color: #111;
-    padding: 48px 36px;
-    max-width: 900px;
-    margin: 0 auto;
-  }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memory 저장 흐름</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f5f5f5;
+        color: #111;
+        padding: 48px 36px;
+        max-width: 900px;
+        margin: 0 auto;
+      }
 
-  .page-title { font-size: 11px; font-weight: 600; color: #999; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
-  .draft-quote {
-    font-size: 19px;
-    color: #111;
-    font-weight: 400;
-    line-height: 1.55;
-    padding: 18px 22px;
-    background: #fff;
-    border-left: 3px solid #2a7bff;
-    border-radius: 0 8px 8px 0;
-    margin-bottom: 5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  }
-  .draft-sub { font-size: 12px; color: #aaa; margin-bottom: 44px; padding-left: 2px; }
+      .page-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: #999;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .draft-quote {
+        font-size: 19px;
+        color: #111;
+        font-weight: 400;
+        line-height: 1.55;
+        padding: 18px 22px;
+        background: #fff;
+        border-left: 3px solid #2a7bff;
+        border-radius: 0 8px 8px 0;
+        margin-bottom: 5px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      }
+      .draft-sub {
+        font-size: 12px;
+        color: #aaa;
+        margin-bottom: 44px;
+        padding-left: 2px;
+      }
 
-  /* ── 스텝 ── */
-  .step { margin-bottom: 36px; }
-  .step-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
-  .step-num {
-    font-size: 11px; font-weight: 700; color: #888;
-    background: #fff; border: 1.5px solid #ddd; border-radius: 50%;
-    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; margin-top: 1px;
-  }
-  .step-meta { flex: 1; }
-  .step-title-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
-  .step-title { font-size: 15px; font-weight: 700; color: #111; }
-  .step-bg { font-size: 11px; color: #bbb; font-weight: 400; }
-  .step-desc { font-size: 13px; color: #666; line-height: 1.6; }
-  .step-files { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 5px; }
-  .step-file {
-    font-size: 11px; color: #888; background: #f0f0f0;
-    border: 1px solid #e0e0e0; border-radius: 4px; padding: 2px 9px;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-  }
-  .step-unimplemented {
-    font-size: 11px; color: #bbb; background: #fafafa;
-    border: 1px dashed #ddd; border-radius: 4px; padding: 2px 9px;
-  }
+      /* ── 스텝 ── */
+      .step {
+        margin-bottom: 36px;
+      }
+      .step-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+      .step-num {
+        font-size: 11px;
+        font-weight: 700;
+        color: #888;
+        background: #fff;
+        border: 1.5px solid #ddd;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .step-meta {
+        flex: 1;
+      }
+      .step-title-row {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 4px;
+      }
+      .step-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #111;
+      }
+      .step-bg {
+        font-size: 11px;
+        color: #bbb;
+        font-weight: 400;
+      }
+      .step-desc {
+        font-size: 13px;
+        color: #666;
+        line-height: 1.6;
+      }
+      .step-files {
+        margin-top: 7px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .step-file {
+        font-size: 11px;
+        color: #888;
+        background: #f0f0f0;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 2px 9px;
+        font-family: "SF Mono", "Fira Code", monospace;
+      }
+      .step-unimplemented {
+        font-size: 11px;
+        color: #bbb;
+        background: #fafafa;
+        border: 1px dashed #ddd;
+        border-radius: 4px;
+        padding: 2px 9px;
+      }
 
-  /* ── 저장 큐 ── */
-  .queue-flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .queue-node {
-    background: #fff; border: 1px solid #e0e0e0; border-radius: 7px;
-    padding: 10px 15px; font-size: 13px; color: #222;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  }
-  .queue-node .sub { font-size: 11px; color: #aaa; margin-top: 3px; font-family: 'SF Mono', monospace; }
-  .queue-arrow { color: #ccc; font-size: 16px; }
-  .queue-note { font-size: 12px; color: #aaa; margin-top: 10px; line-height: 1.6; }
+      /* ── 저장 큐 ── */
+      .queue-flow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .queue-node {
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 7px;
+        padding: 10px 15px;
+        font-size: 13px;
+        color: #222;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      }
+      .queue-node .sub {
+        font-size: 11px;
+        color: #aaa;
+        margin-top: 3px;
+        font-family: "SF Mono", monospace;
+      }
+      .queue-arrow {
+        color: #ccc;
+        font-size: 16px;
+      }
+      .queue-note {
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 10px;
+        line-height: 1.6;
+      }
 
-  /* ── 토픽 분리 ── */
-  .split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .topic-card {
-    background: #fff; border: 1px solid #e8e8e8; border-radius: 7px;
-    padding: 14px 17px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  }
-  .topic-tag { font-size: 10px; font-weight: 600; color: #bbb; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 7px; }
-  .topic-text { font-size: 14px; color: #222; line-height: 1.5; }
+      /* ── 토픽 분리 ── */
+      .split-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .topic-card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 7px;
+        padding: 14px 17px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      }
+      .topic-tag {
+        font-size: 10px;
+        font-weight: 600;
+        color: #bbb;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 7px;
+      }
+      .topic-text {
+        font-size: 14px;
+        color: #222;
+        line-height: 1.5;
+      }
 
-  /* ── Judgment ── */
-  .judgment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .judgment-col { display: flex; flex-direction: column; gap: 8px; }
-  .judgment-section-label { font-size: 11px; color: #bbb; margin-bottom: 2px; padding-left: 2px; font-weight: 500; }
-  .memory-update {
-    background: #fff; border: 1px solid #e8e8e8; border-radius: 7px;
-    overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  }
-  .memory-update-header { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-bottom: 1px solid #f0f0f0; background: #fafafa; }
-  .memory-name { font-size: 13px; color: #222; font-weight: 600; flex: 1; }
-  .memory-update-body { padding: 11px 14px; }
-  .diff-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.5; margin-bottom: 5px; }
-  .diff-row:last-child { margin-bottom: 0; }
-  .diff-label { font-size: 10px; font-weight: 700; color: #ccc; width: 24px; flex-shrink: 0; padding-top: 2px; text-transform: uppercase; }
-  .diff-text-old { color: #bbb; text-decoration: line-through; }
-  .diff-text-new { color: #222; }
-  .fanout-note { font-size: 11px; color: #bbb; padding: 6px 0 0 2px; line-height: 1.5; }
+      /* ── Judgment ── */
+      .judgment-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .judgment-col {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .judgment-section-label {
+        font-size: 11px;
+        color: #bbb;
+        margin-bottom: 2px;
+        padding-left: 2px;
+        font-weight: 500;
+      }
+      .memory-update {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 7px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      }
+      .memory-update-header {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 10px 14px;
+        border-bottom: 1px solid #f0f0f0;
+        background: #fafafa;
+      }
+      .memory-name {
+        font-size: 13px;
+        color: #222;
+        font-weight: 600;
+        flex: 1;
+      }
+      .memory-update-body {
+        padding: 11px 14px;
+      }
+      .diff-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        font-size: 12.5px;
+        line-height: 1.5;
+        margin-bottom: 5px;
+      }
+      .diff-row:last-child {
+        margin-bottom: 0;
+      }
+      .diff-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: #ccc;
+        width: 24px;
+        flex-shrink: 0;
+        padding-top: 2px;
+        text-transform: uppercase;
+      }
+      .diff-text-old {
+        color: #bbb;
+        text-decoration: line-through;
+      }
+      .diff-text-new {
+        color: #222;
+      }
+      .fanout-note {
+        font-size: 11px;
+        color: #bbb;
+        padding: 6px 0 0 2px;
+        line-height: 1.5;
+      }
 
-  /* ── 메타 ── */
-  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .meta-card {
-    background: #fff; border: 1px solid #e8e8e8; border-radius: 7px;
-    padding: 13px 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  }
-  .meta-card-label { font-size: 10px; font-weight: 600; color: #bbb; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 9px; }
-  .meta-field { display: flex; gap: 10px; font-size: 12.5px; margin-bottom: 6px; line-height: 1.4; }
-  .meta-field:last-child { margin-bottom: 0; }
-  .meta-key { color: #bbb; width: 52px; flex-shrink: 0; font-weight: 500; }
-  .meta-val { color: #333; }
-  .meta-tags { display: flex; gap: 4px; flex-wrap: wrap; }
-  .meta-tag-chip {
-    background: #f0f0f0; border: 1px solid #e4e4e4;
-    border-radius: 4px; padding: 1px 8px; font-size: 11px; color: #555;
-  }
+      /* ── 메타 ── */
+      .meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .meta-card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 7px;
+        padding: 13px 15px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      }
+      .meta-card-label {
+        font-size: 10px;
+        font-weight: 600;
+        color: #bbb;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 9px;
+      }
+      .meta-field {
+        display: flex;
+        gap: 10px;
+        font-size: 12.5px;
+        margin-bottom: 6px;
+        line-height: 1.4;
+      }
+      .meta-field:last-child {
+        margin-bottom: 0;
+      }
+      .meta-key {
+        color: #bbb;
+        width: 52px;
+        flex-shrink: 0;
+        font-weight: 500;
+      }
+      .meta-val {
+        color: #333;
+      }
+      .meta-tags {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .meta-tag-chip {
+        background: #f0f0f0;
+        border: 1px solid #e4e4e4;
+        border-radius: 4px;
+        padding: 1px 8px;
+        font-size: 11px;
+        color: #555;
+      }
 
-  /* ── 뱃지 ── */
-  .badge {
-    font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
-    padding: 2px 9px; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
-  }
-  .badge.replace { background: #fff0f0; color: #c0392b; border: 1px solid #f5c6c6; }
-  .badge.extend  { background: #eef4ff; color: #1a5ce6; border: 1px solid #c5d9fb; }
-  .badge.create  { background: #eefaf3; color: #1a7a45; border: 1px solid #b8e8cc; }
+      /* ── 뱃지 ── */
+      .badge {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 2px 9px;
+        border-radius: 4px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .badge.replace {
+        background: #fff0f0;
+        color: #c0392b;
+        border: 1px solid #f5c6c6;
+      }
+      .badge.extend {
+        background: #eef4ff;
+        color: #1a5ce6;
+        border: 1px solid #c5d9fb;
+      }
+      .badge.create {
+        background: #eefaf3;
+        color: #1a7a45;
+        border: 1px solid #b8e8cc;
+      }
 
-  /* ── History ── */
-  .history-wrapper {
-    background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
-    overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  }
-  .history-header-bar {
-    display: flex; align-items: center; gap: 10px; padding: 11px 16px;
-    background: #fafafa; border-bottom: 1px solid #ebebeb; flex-wrap: wrap;
-  }
-  .history-header-label { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.08em; }
-  .history-header-id { font-size: 11px; font-family: monospace; color: #bbb; }
-  .history-header-draft { font-size: 11px; color: #bbb; }
-  .revision-rows { padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
-  .revision-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 13px; background: #fafafa; border: 1px solid #efefef; border-radius: 6px;
-  }
-  .revision-memory-name { font-size: 13px; color: #222; font-weight: 500; flex: 1; }
-  .revision-source { font-size: 10px; font-weight: 600; color: #ccc; text-transform: uppercase; letter-spacing: 0.07em; }
-  .history-footer {
-    padding: 10px 16px; border-top: 1px solid #ebebeb;
-    font-size: 11px; color: #bbb; display: flex; gap: 18px; flex-wrap: wrap;
-  }
-  .dot-small { width: 6px; height: 6px; border-radius: 50%; background: #2a7bff; display: inline-block; margin-right: 5px; vertical-align: middle; }
+      /* ── History ── */
+      .history-wrapper {
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      }
+      .history-header-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 16px;
+        background: #fafafa;
+        border-bottom: 1px solid #ebebeb;
+        flex-wrap: wrap;
+      }
+      .history-header-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #999;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .history-header-id {
+        font-size: 11px;
+        font-family: monospace;
+        color: #bbb;
+      }
+      .history-header-draft {
+        font-size: 11px;
+        color: #bbb;
+      }
+      .revision-rows {
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .revision-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 13px;
+        background: #fafafa;
+        border: 1px solid #efefef;
+        border-radius: 6px;
+      }
+      .revision-memory-name {
+        font-size: 13px;
+        color: #222;
+        font-weight: 500;
+        flex: 1;
+      }
+      .revision-source {
+        font-size: 10px;
+        font-weight: 600;
+        color: #ccc;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+      }
+      .history-footer {
+        padding: 10px 16px;
+        border-top: 1px solid #ebebeb;
+        font-size: 11px;
+        color: #bbb;
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+      .dot-small {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #2a7bff;
+        display: inline-block;
+        margin-right: 5px;
+        vertical-align: middle;
+      }
 
-  /* ── Phase ── */
-  .phase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .phase-card {
-    background: #fff; border: 1px solid #e8e8e8; border-radius: 7px;
-    padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  }
-  .phase-card-title { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 11px; }
-  .phase-item { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: #555; margin-bottom: 8px; line-height: 1.5; }
-  .phase-item:last-child { margin-bottom: 0; }
-  .phase-arrow { color: #ccc; flex-shrink: 0; }
+      /* ── Phase ── */
+      .phase-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .phase-card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 7px;
+        padding: 14px 16px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      }
+      .phase-card-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: #999;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 11px;
+      }
+      .phase-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 12.5px;
+        color: #555;
+        margin-bottom: 8px;
+        line-height: 1.5;
+      }
+      .phase-item:last-child {
+        margin-bottom: 0;
+      }
+      .phase-arrow {
+        color: #ccc;
+        flex-shrink: 0;
+      }
 
-  .entity-flow { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-bottom: 11px; font-size: 12px; color: #aaa; }
-  .entity-chip {
-    background: #f4f4f4; border: 1px solid #e4e4e4;
-    border-radius: 5px; padding: 3px 10px; font-size: 12px; color: #444; font-weight: 500;
-  }
-  .regen-item {
-    display: flex; align-items: flex-start; gap: 9px;
-    padding: 9px 12px; background: #fafafa; border: 1px solid #efefef;
-    border-radius: 6px; font-size: 12.5px; color: #555; margin-bottom: 6px;
-  }
-  .regen-item:last-child { margin-bottom: 0; }
-  .regen-badge {
-    font-size: 10px; font-weight: 600; color: #aaa; background: #f0f0f0;
-    border: 1px solid #e4e4e4; border-radius: 4px; padding: 2px 7px;
-    text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; flex-shrink: 0;
-  }
+      .entity-flow {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-bottom: 11px;
+        font-size: 12px;
+        color: #aaa;
+      }
+      .entity-chip {
+        background: #f4f4f4;
+        border: 1px solid #e4e4e4;
+        border-radius: 5px;
+        padding: 3px 10px;
+        font-size: 12px;
+        color: #444;
+        font-weight: 500;
+      }
+      .regen-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        padding: 9px 12px;
+        background: #fafafa;
+        border: 1px solid #efefef;
+        border-radius: 6px;
+        font-size: 12.5px;
+        color: #555;
+        margin-bottom: 6px;
+      }
+      .regen-item:last-child {
+        margin-bottom: 0;
+      }
+      .regen-badge {
+        font-size: 10px;
+        font-weight: 600;
+        color: #aaa;
+        background: #f0f0f0;
+        border: 1px solid #e4e4e4;
+        border-radius: 4px;
+        padding: 2px 7px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
 
-  code {
-    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px;
-    background: #f0f0f0; padding: 1px 6px; border-radius: 3px; color: #555;
-  }
-  .divider { border: none; border-top: 1px solid #e8e8e8; margin: 8px 0 36px; }
-  .phase-note { font-size: 11.5px; color: #aaa; margin-top: 11px; line-height: 1.7; }
-</style>
-</head>
-<body>
-
-<p class="page-title">Memory 저장 흐름</p>
-<div class="draft-quote">"토스로 이직했다. 팀장이 김철수에서 이영희로 바뀌었다."</div>
-<p class="draft-sub">사용자가 저장 버튼을 누를 때 이 Draft가 아래 단계를 거쳐 Memory로 기록된다</p>
-
-
-<!-- STEP 0 -->
-<div class="step">
-  <div class="step-header">
-    <div class="step-num">0</div>
-    <div class="step-meta">
-      <div class="step-title-row">
-        <span class="step-title">저장 큐 등록</span>
-        <span class="step-bg">프론트엔드 non-blocking</span>
-      </div>
-      <div class="step-desc">저장 버튼을 누르면 즉시 큐에 등록되고 사용자는 바로 다음 작업을 시작할 수 있다. 실제 처리는 백그라운드에서 순차적으로 진행된다. Draft 본문은 <code>save_jobs.draft_body</code>에 보존되고, 세션의 편집 상태(<code>session.draft</code>)만 초기화된다.</div>
-      <div class="step-files">
-        <span class="step-file">save-job-service.ts</span>
-      </div>
+      code {
+        font-family: "SF Mono", "Fira Code", monospace;
+        font-size: 11px;
+        background: #f0f0f0;
+        padding: 1px 6px;
+        border-radius: 3px;
+        color: #555;
+      }
+      .divider {
+        border: none;
+        border-top: 1px solid #e8e8e8;
+        margin: 8px 0 36px;
+      }
+      .phase-note {
+        font-size: 11.5px;
+        color: #aaa;
+        margin-top: 11px;
+        line-height: 1.7;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="page-title">Memory 저장 흐름</p>
+    <div class="draft-quote">
+      "토스로 이직했다. 팀장이 김철수에서 이영희로 바뀌었다."
     </div>
-  </div>
-  <div class="queue-flow">
-    <div class="queue-node">저장 버튼 클릭<div class="sub">Draft 본문 확정</div></div>
-    <span class="queue-arrow">→</span>
-    <div class="queue-node">save_jobs 생성<div class="sub">status: pending</div></div>
-    <span class="queue-arrow">→</span>
-    <div class="queue-node">Draft 초기화<div class="sub">session.draft = null</div></div>
-    <span class="queue-arrow">→</span>
-    <div class="queue-node">백그라운드 처리 시작<div class="sub">status: processing</div></div>
-  </div>
-  <p class="queue-note">저장이 여러 개 쌓여도 큐에서 순차 처리 → 앞선 저장 결과를 반영한 상태에서 다음 저장의 유사 검색이 수행되므로 충돌 없음. <code>save_jobs.draft_body</code>에 Draft 본문이 임시 보관되며, Step 4에서 <code>histories.source_draft_body</code>로 이관 후 null로 초기화된다.</p>
-</div>
-
-<hr class="divider">
-
-<!-- STEP 1 -->
-<div class="step">
-  <div class="step-header">
-    <div class="step-num">1</div>
-    <div class="step-meta">
-      <div class="step-title-row"><span class="step-title">토픽 분리</span></div>
-      <div class="step-desc">독립적인 주제가 섞여 있으면 나눈다. 애매하면 나누지 않는다. 이하 단계는 분리된 토픽별로 반복된다.</div>
-      <div class="step-files">
-        <span class="step-file">services/chat/saving.ts</span>
-        <span class="step-file">prompts/saving.ts · SPLIT_SYSTEM_PROMPT</span>
-      </div>
-    </div>
-  </div>
-  <div class="split-grid">
-    <div class="topic-card"><div class="topic-tag">토픽 A</div><div class="topic-text">토스로 이직했다.</div></div>
-    <div class="topic-card"><div class="topic-tag">토픽 B</div><div class="topic-text">팀장이 김철수에서 이영희로 바뀌었다.</div></div>
-  </div>
-</div>
-
-
-<!-- STEP 2 -->
-<div class="step">
-  <div class="step-header">
-    <div class="step-num">2</div>
-    <div class="step-meta">
-      <div class="step-title-row"><span class="step-title">관련 Memory 탐색 및 분류</span></div>
-      <div class="step-desc">벡터 검색으로 유사 Memory를 찾고, 각각에 대해 create / extend / replace를 판단한다. 토픽 하나가 여러 Memory에 걸치면 fan-out.</div>
-      <div class="step-files">
-        <span class="step-file">services/chat/saving.ts</span>
-        <span class="step-file">prompts/saving.ts · JUDGMENT_SYSTEM_PROMPT</span>
-        <span class="step-unimplemented">fan-out 미구현</span>
-      </div>
-    </div>
-  </div>
-  <div class="judgment-grid">
-    <div class="judgment-col">
-      <div class="judgment-section-label">토픽 A — 유사 Memory 1개 발견</div>
-      <div class="memory-update">
-        <div class="memory-update-header"><span class="badge replace">replace</span><span class="memory-name">커리어 이력</span></div>
-        <div class="memory-update-body">
-          <div class="diff-row"><span class="diff-label">전</span><span class="diff-text-old">스타트업 재직 중. 프로덕트 매니저.</span></div>
-          <div class="diff-row"><span class="diff-label">후</span><span class="diff-text-new">토스로 이직. 이전 직장(스타트업) PM 경험 보유.</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="judgment-col">
-      <div class="judgment-section-label">토픽 B — 유사 Memory 3개 발견 → fan-out</div>
-      <div class="memory-update">
-        <div class="memory-update-header"><span class="badge replace">replace</span><span class="memory-name">팀 구성</span></div>
-        <div class="memory-update-body">
-          <div class="diff-row"><span class="diff-label">전</span><span class="diff-text-old">팀장: 김철수</span></div>
-          <div class="diff-row"><span class="diff-label">후</span><span class="diff-text-new">팀장: 이영희 (이전: 김철수)</span></div>
-        </div>
-      </div>
-      <div class="memory-update">
-        <div class="memory-update-header"><span class="badge replace">replace</span><span class="memory-name">김철수 프로필</span></div>
-        <div class="memory-update-body">
-          <div class="diff-row"><span class="diff-label">전</span><span class="diff-text-old">팀장 역할 수행 중.</span></div>
-          <div class="diff-row"><span class="diff-label">후</span><span class="diff-text-new">전 팀장. 현재 팀장 역할 종료.</span></div>
-        </div>
-      </div>
-      <div class="memory-update">
-        <div class="memory-update-header"><span class="badge extend">extend</span><span class="memory-name">이영희 프로필</span></div>
-        <div class="memory-update-body">
-          <div class="diff-row"><span class="diff-label">전</span><span class="diff-text-old" style="text-decoration:none;color:#ccc">팀원. 시니어 엔지니어.</span></div>
-          <div class="diff-row"><span class="diff-label">후</span><span class="diff-text-new">팀원 → 팀장으로 선임. 시니어 엔지니어 출신.</span></div>
-        </div>
-      </div>
-      <p class="fanout-note">Memory마다 replace / extend 독립 판단.</p>
-    </div>
-  </div>
-</div>
-
-
-<!-- STEP 3 -->
-<div class="step">
-  <div class="step-header">
-    <div class="step-num">3</div>
-    <div class="step-meta">
-      <div class="step-title-row"><span class="step-title">메타 생성</span></div>
-      <div class="step-desc">변경된 Memory별로 title / tags / summary를 생성한다. 한국어 콘텐츠는 영문 파생 필드(title_en 등)도 함께 생성.</div>
-      <div class="step-files">
-        <span class="step-file">services/chat/saving.ts</span>
-        <span class="step-file">prompts/saving.ts · META_SYSTEM_PROMPT</span>
-      </div>
-    </div>
-  </div>
-  <div class="meta-grid">
-    <div class="meta-card">
-      <div class="meta-card-label">커리어 이력</div>
-      <div class="meta-field"><span class="meta-key">title</span><span class="meta-val">토스 이직 및 커리어 이력</span></div>
-      <div class="meta-field"><span class="meta-key">tags</span><div class="meta-tags"><span class="meta-tag-chip">커리어</span><span class="meta-tag-chip">이직</span><span class="meta-tag-chip">토스</span><span class="meta-tag-chip">pm</span></div></div>
-      <div class="meta-field"><span class="meta-key">summary</span><span class="meta-val">스타트업 PM에서 토스로 이직. 이전 직장 경험 보유.</span></div>
-    </div>
-    <div class="meta-card">
-      <div class="meta-card-label">팀 구성</div>
-      <div class="meta-field"><span class="meta-key">title</span><span class="meta-val">팀 구성 및 팀장 변경 이력</span></div>
-      <div class="meta-field"><span class="meta-key">tags</span><div class="meta-tags"><span class="meta-tag-chip">팀</span><span class="meta-tag-chip">팀장</span><span class="meta-tag-chip">조직</span></div></div>
-      <div class="meta-field"><span class="meta-key">summary</span><span class="meta-val">팀장이 김철수에서 이영희로 변경.</span></div>
-    </div>
-  </div>
-</div>
-
-
-<!-- STEP 4 -->
-<div class="step">
-  <div class="step-header">
-    <div class="step-num">4</div>
-    <div class="step-meta">
-      <div class="step-title-row"><span class="step-title">변경 사항 저장</span></div>
-      <div class="step-desc">이번 저장에서 발생한 모든 변경을 History 하나로 묶어 기록한다. <code>save_jobs.draft_body</code>는 <code>histories.source_draft_body</code>로 이관 후 null로 초기화된다.</div>
-      <div class="step-files">
-        <span class="step-file">services/chat/saving.ts · persistDocument</span>
-        <span class="step-unimplemented">History / Revision 기록 미구현 (NEM-85)</span>
-      </div>
-    </div>
-  </div>
-  <div class="history-wrapper">
-    <div class="history-header-bar">
-      <span class="history-header-label">History</span>
-      <span class="history-header-id">hist_abc123</span>
-      <span class="history-header-draft">· source_draft_body: "토스로 이직했다. 팀장이 김철수에서..."</span>
-    </div>
-    <div class="revision-rows">
-      <div class="revision-row"><span class="badge replace">replace</span><span class="revision-memory-name">커리어 이력</span><span class="revision-source">direct</span></div>
-      <div class="revision-row"><span class="badge replace">replace</span><span class="revision-memory-name">팀 구성</span><span class="revision-source">direct</span></div>
-      <div class="revision-row"><span class="badge replace">replace</span><span class="revision-memory-name">김철수 프로필</span><span class="revision-source">direct</span></div>
-      <div class="revision-row"><span class="badge extend">extend</span><span class="revision-memory-name">이영희 프로필</span><span class="revision-source">direct</span></div>
-      <div class="revision-row" style="border-style:dashed; background:transparent; color:#bbb; justify-content:center; padding:10px">
-        <span style="font-size:11px">↓ Step 6(Phase 4) 완료 후 propagated Revision이 이 아래에 append됨</span>
-      </div>
-    </div>
-    <div class="history-footer">
-      <span><span class="dot-small"></span>직접 Revision 4개, 동일한 hist_abc123 참조</span>
-      <span>· 세션의 Draft 메시지에 <code>history_id</code> 업데이트</span>
-      <span>· <code>ingestion_status = pending</code> 설정 → 인제스천 트리거</span>
-    </div>
-  </div>
-</div>
-
-<hr class="divider">
-
-<!-- STEP 5 -->
-<div class="step">
-  <div class="step-header">
-    <div class="step-num">5</div>
-    <div class="step-meta">
-      <div class="step-title-row">
-        <span class="step-title">검색 인덱스 갱신</span>
-        <span class="step-bg">백그라운드 · Phase 3</span>
-      </div>
-      <div class="step-desc">저장된 Memory를 임베딩·그래프로 변환해 검색 가능한 상태로 만든다.</div>
-      <div class="step-files"><span class="step-unimplemented">미구현</span></div>
-    </div>
-  </div>
-  <div class="phase-grid">
-    <div class="phase-card">
-      <div class="phase-card-title">임베딩 (Qdrant)</div>
-      <div class="phase-item"><span class="phase-arrow">→</span>4개 Memory 임베딩 생성 후 벡터 DB 저장</div>
-      <div class="phase-item"><span class="phase-arrow">→</span>이후 저장 시 유사 Memory 검색에 활용</div>
-    </div>
-    <div class="phase-card">
-      <div class="phase-card-title">엔티티 그래프 (Neo4j)</div>
-      <div class="phase-item"><span class="phase-arrow">→</span>엔티티 추출: 토스, 김철수, 이영희, 팀</div>
-      <div class="phase-item"><span class="phase-arrow">→</span>관계 기록: 이영희 → 팀장, 김철수 → 전 팀장</div>
-      <div class="phase-item"><span class="phase-arrow">→</span>다음 단계(간접 전파)에서 이 그래프 조회</div>
-    </div>
-  </div>
-</div>
-
-
-<!-- STEP 6 -->
-<div class="step">
-  <div class="step-header">
-    <div class="step-num">6</div>
-    <div class="step-meta">
-      <div class="step-title-row">
-        <span class="step-title">간접 영향 전파</span>
-        <span class="step-bg">백그라운드 · Phase 4</span>
-      </div>
-      <div class="step-desc">이번에 바뀐 엔티티를 참조하는 다른 Memory들을 찾아 자동으로 재합성한다. 직접 수정하지 않았지만 맥락이 outdated된 Memory를 최신 상태로 유지.</div>
-      <div class="step-files"><span class="step-unimplemented">미구현</span></div>
-    </div>
-  </div>
-  <div class="phase-card">
-    <div class="entity-flow">
-      <span>변경된 엔티티</span>
-      <span class="entity-chip">토스</span>
-      <span class="entity-chip">이영희</span>
-      <span class="entity-chip">김철수</span>
-      <span style="color:#ccc">→ 이 엔티티를 참조하는 Memory 탐색</span>
-    </div>
-    <div class="regen-item"><span class="regen-badge">재합성 예정</span><span>프로젝트 X 회고 — "토스" 관련 맥락 outdated. 재합성 큐 추가.</span></div>
-    <div class="regen-item"><span class="regen-badge">재합성 예정</span><span>투자 메모 — 토스 언급 있음. 현재 상태 반영해 재합성.</span></div>
-    <p style="font-size:11.5px; color:#888; margin-top:12px; margin-bottom:6px;">→ 재합성 완료 후 Step 4의 History(<code>hist_abc123</code>)에 아래 Revision이 append됨:</p>
-    <div class="revision-rows" style="padding:0">
-      <div class="revision-row"><span class="badge replace">replace</span><span class="revision-memory-name">프로젝트 X 회고</span><span class="revision-source">propagated</span></div>
-      <div class="revision-row"><span class="badge extend">extend</span><span class="revision-memory-name">투자 메모</span><span class="revision-source">propagated</span></div>
-    </div>
-    <p class="phase-note">
-      <code>source: propagated</code>으로 직접 수정과 구분.
-      NEM-26(시간축 추적)·NEM-81(Lint)은 <code>source = direct</code>만 필터링.
+    <p class="draft-sub">
+      사용자가 저장 버튼을 누를 때 이 Draft가 아래 단계를 거쳐 Memory로 기록된다
     </p>
-  </div>
-</div>
 
-</body>
+    <!-- STEP 0 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">0</div>
+        <div class="step-meta">
+          <div class="step-title-row">
+            <span class="step-title">저장 큐 등록</span>
+            <span class="step-bg">프론트엔드 non-blocking</span>
+          </div>
+          <div class="step-desc">
+            저장 버튼을 누르면 즉시 큐에 등록되고 사용자는 바로 다음 작업을
+            시작할 수 있다. 실제 처리는 백그라운드에서 순차적으로 진행된다.
+            Draft 본문은 <code>save_jobs.draft_body</code>에 보존되고, 세션의
+            편집 상태(<code>session.draft</code>)만 초기화된다.
+          </div>
+          <div class="step-files">
+            <span class="step-file">save-job-service.ts</span>
+          </div>
+        </div>
+      </div>
+      <div class="queue-flow">
+        <div class="queue-node">
+          저장 버튼 클릭
+          <div class="sub">Draft 본문 확정</div>
+        </div>
+        <span class="queue-arrow">→</span>
+        <div class="queue-node">
+          save_jobs 생성
+          <div class="sub">status: pending</div>
+        </div>
+        <span class="queue-arrow">→</span>
+        <div class="queue-node">
+          Draft 초기화
+          <div class="sub">session.draft = null</div>
+        </div>
+        <span class="queue-arrow">→</span>
+        <div class="queue-node">
+          백그라운드 처리 시작
+          <div class="sub">status: processing</div>
+        </div>
+      </div>
+      <p class="queue-note">
+        저장이 여러 개 쌓여도 큐에서 순차 처리 → 앞선 저장 결과를 반영한
+        상태에서 다음 저장의 유사 검색이 수행되므로 충돌 없음.
+        <code>save_jobs.draft_body</code>에 Draft 본문이 임시 보관되며, Step
+        4에서 <code>histories.source_draft_body</code>로 이관 후 null로
+        초기화된다.
+      </p>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- STEP 1 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div class="step-meta">
+          <div class="step-title-row">
+            <span class="step-title">토픽 분리</span>
+          </div>
+          <div class="step-desc">
+            독립적인 주제가 섞여 있으면 나눈다. 애매하면 나누지 않는다. 이하
+            단계는 분리된 토픽별로 반복된다.
+          </div>
+          <div class="step-files">
+            <span class="step-file">services/chat/saving.ts</span>
+            <span class="step-file"
+              >prompts/saving.ts · SPLIT_SYSTEM_PROMPT</span
+            >
+          </div>
+        </div>
+      </div>
+      <div class="split-grid">
+        <div class="topic-card">
+          <div class="topic-tag">토픽 A</div>
+          <div class="topic-text">토스로 이직했다.</div>
+        </div>
+        <div class="topic-card">
+          <div class="topic-tag">토픽 B</div>
+          <div class="topic-text">팀장이 김철수에서 이영희로 바뀌었다.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div class="step-meta">
+          <div class="step-title-row">
+            <span class="step-title">관련 Memory 탐색 및 분류</span>
+          </div>
+          <div class="step-desc">
+            벡터 검색으로 유사 Memory를 찾고, 각각에 대해 create / extend /
+            replace를 판단한다. 토픽 하나가 여러 Memory에 걸치면 fan-out.
+          </div>
+          <div class="step-files">
+            <span class="step-file">services/chat/saving.ts</span>
+            <span class="step-file"
+              >prompts/saving.ts · JUDGMENT_SYSTEM_PROMPT</span
+            >
+            <span class="step-unimplemented">fan-out 미구현</span>
+          </div>
+        </div>
+      </div>
+      <div class="judgment-grid">
+        <div class="judgment-col">
+          <div class="judgment-section-label">
+            토픽 A — 유사 Memory 1개 발견
+          </div>
+          <div class="memory-update">
+            <div class="memory-update-header">
+              <span class="badge replace">replace</span
+              ><span class="memory-name">커리어 이력</span>
+            </div>
+            <div class="memory-update-body">
+              <div class="diff-row">
+                <span class="diff-label">전</span
+                ><span class="diff-text-old"
+                  >스타트업 재직 중. 프로덕트 매니저.</span
+                >
+              </div>
+              <div class="diff-row">
+                <span class="diff-label">후</span
+                ><span class="diff-text-new"
+                  >토스로 이직. 이전 직장(스타트업) PM 경험 보유.</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="judgment-col">
+          <div class="judgment-section-label">
+            토픽 B — 유사 Memory 3개 발견 → fan-out
+          </div>
+          <div class="memory-update">
+            <div class="memory-update-header">
+              <span class="badge replace">replace</span
+              ><span class="memory-name">팀 구성</span>
+            </div>
+            <div class="memory-update-body">
+              <div class="diff-row">
+                <span class="diff-label">전</span
+                ><span class="diff-text-old">팀장: 김철수</span>
+              </div>
+              <div class="diff-row">
+                <span class="diff-label">후</span
+                ><span class="diff-text-new">팀장: 이영희 (이전: 김철수)</span>
+              </div>
+            </div>
+          </div>
+          <div class="memory-update">
+            <div class="memory-update-header">
+              <span class="badge replace">replace</span
+              ><span class="memory-name">김철수 프로필</span>
+            </div>
+            <div class="memory-update-body">
+              <div class="diff-row">
+                <span class="diff-label">전</span
+                ><span class="diff-text-old">팀장 역할 수행 중.</span>
+              </div>
+              <div class="diff-row">
+                <span class="diff-label">후</span
+                ><span class="diff-text-new"
+                  >전 팀장. 현재 팀장 역할 종료.</span
+                >
+              </div>
+            </div>
+          </div>
+          <div class="memory-update">
+            <div class="memory-update-header">
+              <span class="badge extend">extend</span
+              ><span class="memory-name">이영희 프로필</span>
+            </div>
+            <div class="memory-update-body">
+              <div class="diff-row">
+                <span class="diff-label">전</span
+                ><span
+                  class="diff-text-old"
+                  style="text-decoration: none; color: #ccc"
+                  >팀원. 시니어 엔지니어.</span
+                >
+              </div>
+              <div class="diff-row">
+                <span class="diff-label">후</span
+                ><span class="diff-text-new"
+                  >팀원 → 팀장으로 선임. 시니어 엔지니어 출신.</span
+                >
+              </div>
+            </div>
+          </div>
+          <p class="fanout-note">Memory마다 replace / extend 독립 판단.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <div class="step-meta">
+          <div class="step-title-row">
+            <span class="step-title">메타 생성</span>
+          </div>
+          <div class="step-desc">
+            변경된 Memory별로 title / tags / summary를 생성한다. 한국어 콘텐츠는
+            영문 파생 필드(title_en 등)도 함께 생성.
+          </div>
+          <div class="step-files">
+            <span class="step-file">services/chat/saving.ts</span>
+            <span class="step-file"
+              >prompts/saving.ts · META_SYSTEM_PROMPT</span
+            >
+          </div>
+        </div>
+      </div>
+      <div class="meta-grid">
+        <div class="meta-card">
+          <div class="meta-card-label">커리어 이력</div>
+          <div class="meta-field">
+            <span class="meta-key">title</span
+            ><span class="meta-val">토스 이직 및 커리어 이력</span>
+          </div>
+          <div class="meta-field">
+            <span class="meta-key">tags</span>
+            <div class="meta-tags">
+              <span class="meta-tag-chip">커리어</span
+              ><span class="meta-tag-chip">이직</span
+              ><span class="meta-tag-chip">토스</span
+              ><span class="meta-tag-chip">pm</span>
+            </div>
+          </div>
+          <div class="meta-field">
+            <span class="meta-key">summary</span
+            ><span class="meta-val"
+              >스타트업 PM에서 토스로 이직. 이전 직장 경험 보유.</span
+            >
+          </div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-card-label">팀 구성</div>
+          <div class="meta-field">
+            <span class="meta-key">title</span
+            ><span class="meta-val">팀 구성 및 팀장 변경 이력</span>
+          </div>
+          <div class="meta-field">
+            <span class="meta-key">tags</span>
+            <div class="meta-tags">
+              <span class="meta-tag-chip">팀</span
+              ><span class="meta-tag-chip">팀장</span
+              ><span class="meta-tag-chip">조직</span>
+            </div>
+          </div>
+          <div class="meta-field">
+            <span class="meta-key">summary</span
+            ><span class="meta-val">팀장이 김철수에서 이영희로 변경.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <div class="step-meta">
+          <div class="step-title-row">
+            <span class="step-title">변경 사항 저장</span>
+          </div>
+          <div class="step-desc">
+            이번 저장에서 발생한 모든 변경을 History 하나로 묶어 기록한다.
+            <code>save_jobs.draft_body</code>는
+            <code>histories.source_draft_body</code>로 이관 후 null로
+            초기화된다.
+          </div>
+          <div class="step-files">
+            <span class="step-file"
+              >services/chat/saving.ts · persistDocument</span
+            >
+            <span class="step-unimplemented"
+              >History / Revision 기록 미구현 (NEM-85)</span
+            >
+          </div>
+        </div>
+      </div>
+      <div class="history-wrapper">
+        <div class="history-header-bar">
+          <span class="history-header-label">History</span>
+          <span class="history-header-id">hist_abc123</span>
+          <span class="history-header-draft"
+            >· source_draft_body: "토스로 이직했다. 팀장이 김철수에서..."</span
+          >
+        </div>
+        <div class="revision-rows">
+          <div class="revision-row">
+            <span class="badge replace">replace</span
+            ><span class="revision-memory-name">커리어 이력</span
+            ><span class="revision-source">direct</span>
+          </div>
+          <div class="revision-row">
+            <span class="badge replace">replace</span
+            ><span class="revision-memory-name">팀 구성</span
+            ><span class="revision-source">direct</span>
+          </div>
+          <div class="revision-row">
+            <span class="badge replace">replace</span
+            ><span class="revision-memory-name">김철수 프로필</span
+            ><span class="revision-source">direct</span>
+          </div>
+          <div class="revision-row">
+            <span class="badge extend">extend</span
+            ><span class="revision-memory-name">이영희 프로필</span
+            ><span class="revision-source">direct</span>
+          </div>
+          <div
+            class="revision-row"
+            style="
+              border-style: dashed;
+              background: transparent;
+              color: #bbb;
+              justify-content: center;
+              padding: 10px;
+            "
+          >
+            <span style="font-size: 11px"
+              >↓ Step 6(Phase 4) 완료 후 propagated Revision이 이 아래에
+              append됨</span
+            >
+          </div>
+        </div>
+        <div class="history-footer">
+          <span
+            ><span class="dot-small"></span>직접 Revision 4개, 동일한
+            hist_abc123 참조</span
+          >
+          <span>· 세션의 Draft 메시지에 <code>history_id</code> 업데이트</span>
+          <span
+            >· <code>ingestion_status = pending</code> 설정 → 인제스천
+            트리거</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- STEP 5 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">5</div>
+        <div class="step-meta">
+          <div class="step-title-row">
+            <span class="step-title">검색 인덱스 갱신</span>
+            <span class="step-bg">백그라운드 · Phase 3</span>
+          </div>
+          <div class="step-desc">
+            저장된 Memory를 임베딩·그래프로 변환해 검색 가능한 상태로 만든다.
+          </div>
+          <div class="step-files">
+            <span class="step-unimplemented">미구현</span>
+          </div>
+        </div>
+      </div>
+      <div class="phase-grid">
+        <div class="phase-card">
+          <div class="phase-card-title">임베딩 (Qdrant)</div>
+          <div class="phase-item">
+            <span class="phase-arrow">→</span>4개 Memory 임베딩 생성 후 벡터 DB
+            저장
+          </div>
+          <div class="phase-item">
+            <span class="phase-arrow">→</span>이후 저장 시 유사 Memory 검색에
+            활용
+          </div>
+        </div>
+        <div class="phase-card">
+          <div class="phase-card-title">엔티티 그래프 (Neo4j)</div>
+          <div class="phase-item">
+            <span class="phase-arrow">→</span>엔티티 추출: 토스, 김철수, 이영희,
+            팀
+          </div>
+          <div class="phase-item">
+            <span class="phase-arrow">→</span>관계 기록: 이영희 → 팀장, 김철수 →
+            전 팀장
+          </div>
+          <div class="phase-item">
+            <span class="phase-arrow">→</span>다음 단계(간접 전파)에서 이 그래프
+            조회
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">6</div>
+        <div class="step-meta">
+          <div class="step-title-row">
+            <span class="step-title">간접 영향 전파</span>
+            <span class="step-bg">백그라운드 · Phase 4</span>
+          </div>
+          <div class="step-desc">
+            이번에 바뀐 엔티티를 참조하는 다른 Memory들을 찾아 자동으로
+            재합성한다. 직접 수정하지 않았지만 맥락이 outdated된 Memory를 최신
+            상태로 유지.
+          </div>
+          <div class="step-files">
+            <span class="step-unimplemented">미구현</span>
+          </div>
+        </div>
+      </div>
+      <div class="phase-card">
+        <div class="entity-flow">
+          <span>변경된 엔티티</span>
+          <span class="entity-chip">토스</span>
+          <span class="entity-chip">이영희</span>
+          <span class="entity-chip">김철수</span>
+          <span style="color: #ccc">→ 이 엔티티를 참조하는 Memory 탐색</span>
+        </div>
+        <div class="regen-item">
+          <span class="regen-badge">재합성 예정</span
+          ><span
+            >프로젝트 X 회고 — "토스" 관련 맥락 outdated. 재합성 큐 추가.</span
+          >
+        </div>
+        <div class="regen-item">
+          <span class="regen-badge">재합성 예정</span
+          ><span>투자 메모 — 토스 언급 있음. 현재 상태 반영해 재합성.</span>
+        </div>
+        <p
+          style="
+            font-size: 11.5px;
+            color: #888;
+            margin-top: 12px;
+            margin-bottom: 6px;
+          "
+        >
+          → 재합성 완료 후 Step 4의 History(<code>hist_abc123</code>)에 아래
+          Revision이 append됨:
+        </p>
+        <div class="revision-rows" style="padding: 0">
+          <div class="revision-row">
+            <span class="badge replace">replace</span
+            ><span class="revision-memory-name">프로젝트 X 회고</span
+            ><span class="revision-source">propagated</span>
+          </div>
+          <div class="revision-row">
+            <span class="badge extend">extend</span
+            ><span class="revision-memory-name">투자 메모</span
+            ><span class="revision-source">propagated</span>
+          </div>
+        </div>
+        <p class="phase-note">
+          <code>source: propagated</code>으로 직접 수정과 구분. NEM-26(시간축
+          추적)·NEM-81(Lint)은 <code>source = direct</code>만 필터링.
+        </p>
+      </div>
+    </div>
+  </body>
 </html>

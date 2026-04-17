@@ -58,7 +58,11 @@ const BaseMessageSchema = z.object({
 
 export const MessageSchema = z.discriminatedUnion("type", [
   BaseMessageSchema.extend({ type: z.literal("text"), content: z.string() }),
-  BaseMessageSchema.extend({ type: z.literal("draft"), content: z.string() }),
+  BaseMessageSchema.extend({
+    type: z.literal("draft"),
+    content: z.string(),
+    historyId: z.string().uuid().optional(),
+  }),
   BaseMessageSchema.extend({
     type: z.literal("status"),
     content: StatusLogTypeSchema,

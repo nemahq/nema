@@ -148,6 +148,13 @@ async function processSaveJob(args: {
 
   throwIfSupabaseError(fetchError);
 
+  // 처리 완료 후 null로 비우는 컬럼이라 reader 경로에서는 값이 있어야 정상
+  if (job.draft_body === null) {
+    throw new Error(
+      `save_jobs(${jobId}).draft_body is null — job may have already been processed`,
+    );
+  }
+
   const profile = await getProfile(supabase, { userId });
   if (!profile) {
     throw new Error("Save job requires a user profile");
@@ -155,8 +162,9 @@ async function processSaveJob(args: {
   const contentLanguage = profile.contentLanguage;
 
   let titles: string[];
+  let historyId: string;
   try {
-    titles = await handleSave({
+    const result = await handleSave({
       supabase,
       providers,
       userId,
@@ -164,10 +172,35 @@ async function processSaveJob(args: {
       draftBody: job.draft_body,
       contentLanguage,
     });
+    titles = result.titles;
+    historyId = result.historyId;
+
+    // 링크 실패가 저장 완료 신호를 막으면 안 된다 (memories는 이미 기록됨). PG error/네트워크 reject 모두 흡수.
+    try {
+      const { error: linkError } = await supabase.rpc("link_draft_to_history", {
+        p_session_id: job.session_id,
+        p_history_id: historyId,
+      });
+      if (linkError) {
+        Sentry.captureException(linkError, {
+          tags: { component: "save-job" },
+          extra: { jobId, context: "link draft to history" },
+        });
+      }
+    } catch (linkError) {
+      Sentry.captureException(linkError, {
+        tags: { component: "save-job" },
+        extra: { jobId, context: "link draft to history" },
+      });
+    }
 
     const { error } = await supabase
       .from("save_jobs")
-      .update({ status: "completed" as const })
+      .update({
+        status: "completed" as const,
+        history_id: historyId,
+        draft_body: null,
+      })
       .eq("id", jobId);
 
     throwIfSupabaseError(error);
