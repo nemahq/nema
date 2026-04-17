@@ -15,7 +15,6 @@ const EntityTypeSchema = z.enum(ENTITY_TYPES);
 
 export const EntitySummarySchema = z.object({
   name: z.string().min(1),
-  nameEn: z.string().min(1).optional(),
   type: EntityTypeSchema,
   documentCount: z.number().int().nonnegative(),
   lastReferencedAt: z.string().datetime({ offset: true }).optional(),

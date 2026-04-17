@@ -59,10 +59,10 @@ export async function* handleRetrievalStream(args: {
   const sentryExtra = { userId, sessionId };
 
   const [vectorResults, graphResults, textMatchDocIds] = await Promise.all([
-    // 1) Qdrant 벡터 검색 (영어 쿼리)
-    (searchQuery.queriesEn.length > 0
+    // 1) Qdrant 벡터 검색
+    (searchQuery.queries.length > 0
       ? Promise.all(
-          searchQuery.queriesEn.map((query) =>
+          searchQuery.queries.map((query) =>
             vectorStore.search(embedding, {
               userId,
               query,
@@ -80,11 +80,10 @@ export async function* handleRetrievalStream(args: {
       return [] as Awaited<ReturnType<typeof vectorStore.search>>;
     }),
 
-    // 2) Neo4j 그래프 검색 (원문 + 영문 엔티티)
-    (searchQuery.entities.length > 0 || searchQuery.entitiesEn.length > 0
+    // 2) Neo4j 그래프 검색
+    (searchQuery.entities.length > 0
       ? graphStore.findDocumentsByEntities({
           entities: searchQuery.entities,
-          entitiesEn: searchQuery.entitiesEn,
           userId,
           limit: RETRIEVAL_PER_QUERY_LIMIT,
         })
@@ -101,7 +100,6 @@ export async function* handleRetrievalStream(args: {
     searchTextMatch({
       supabase,
       userId,
-      entitiesEn: searchQuery.entitiesEn,
       entities: searchQuery.entities,
     }).catch((err) => {
       Sentry.captureException(err, {
@@ -240,21 +238,10 @@ function sanitizePostgrestValue(value: string): string {
 async function searchTextMatch(args: {
   supabase: TypedSupabaseClient;
   userId: string;
-  entitiesEn: string[];
   entities: string[];
 }): Promise<string[]> {
-  const { supabase, userId, entitiesEn, entities } = args;
+  const { supabase, userId, entities } = args;
   const conditions: string[] = [];
-
-  for (const e of entitiesEn) {
-    const safe = sanitizePostgrestValue(e);
-    if (safe.length === 0) {
-      continue;
-    }
-    conditions.push(`tags_en.cs.{${safe}}`);
-    conditions.push(`title_en.ilike.%${safe}%`);
-    conditions.push(`summary_en.ilike.%${safe}%`);
-  }
 
   for (const e of entities) {
     const safe = sanitizePostgrestValue(e);
