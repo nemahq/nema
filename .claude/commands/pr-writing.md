@@ -18,6 +18,8 @@ Analyze the current branch and compose a high-quality PR — title, body, label.
 
 ## Step 2 — Determine Why
 
+The assumed reader has seen the diff but has zero background on this change. Why must be self-contained enough that someone exploring history 6 months later can understand the problem without any prior context.
+
 1. Check the current conversation context for the motivation behind the changes (issue links, user statements, prior discussion).
 2. If sufficient context exists → draft the "Why" section directly (1-2 sentences max).
 3. If context is unclear or absent → ask the user:
@@ -27,6 +29,8 @@ Analyze the current branch and compose a high-quality PR — title, body, label.
    Wait for the answer, then draft the section.
 
 ## Step 3 — Draft What
+
+The assumed reader has seen the diff but doesn't know why this approach was chosen over alternatives. What should explain the key design decisions and, where relevant, why alternatives were ruled out.
 
 1. From the diff and commit history, identify the key design decisions.
 2. Draft the "What" section (2-5 lines max). Do NOT repeat what the diff already shows — design decisions only, no file/function change lists.
