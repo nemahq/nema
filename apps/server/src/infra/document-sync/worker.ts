@@ -248,9 +248,9 @@ async function processDocument(
 ): Promise<void> {
   const { llm, embedding, vectorStore, graphStore, entityVectorStore } = deps;
 
-  const engineBody = doc.body;
-  const engineTags = doc.tags;
-  const engineSummary = doc.summary;
+  const engineBody = doc.body_en ?? doc.body;
+  const engineTags = doc.tags_en ?? doc.tags;
+  const engineSummary = doc.summary_en ?? doc.summary;
 
   // 엔티티는 원문 언어로 name을 추출해야 하므로 translated body가 아닌 원문 body를 전달한다
   const entityResult = await llm.generateStructured({

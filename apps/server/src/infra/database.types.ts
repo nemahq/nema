@@ -104,6 +104,7 @@ export type Database = {
       memories: {
         Row: {
           body: string;
+          body_en: string | null;
           category: string | null;
           created_at: string;
           id: string;
@@ -111,13 +112,17 @@ export type Database = {
           ingestion_status: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt: string | null;
           summary: string | null;
+          summary_en: string | null;
           tags: string[] | null;
+          tags_en: string[] | null;
           title: string | null;
+          title_en: string | null;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           body: string;
+          body_en?: string | null;
           category?: string | null;
           created_at?: string;
           id?: string;
@@ -125,13 +130,17 @@ export type Database = {
           ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt?: string | null;
           summary?: string | null;
+          summary_en?: string | null;
           tags?: string[] | null;
+          tags_en?: string[] | null;
           title?: string | null;
+          title_en?: string | null;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           body?: string;
+          body_en?: string | null;
           category?: string | null;
           created_at?: string;
           id?: string;
@@ -139,8 +148,11 @@ export type Database = {
           ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt?: string | null;
           summary?: string | null;
+          summary_en?: string | null;
           tags?: string[] | null;
+          tags_en?: string[] | null;
           title?: string | null;
+          title_en?: string | null;
           updated_at?: string;
           user_id?: string;
         };
@@ -368,10 +380,13 @@ export type Database = {
         Args: { p_max_retries?: number };
         Returns: {
           body: string;
+          body_en: string;
           created_at: string;
           id: string;
           summary: string;
+          summary_en: string;
           tags: string[];
+          tags_en: string[];
           user_id: string;
         }[];
       };

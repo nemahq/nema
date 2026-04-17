@@ -97,8 +97,11 @@ const PENDING_DOC: PendingDocument = {
   id: DOC_ID_1,
   user_id: USER_ID,
   body: "test body",
+  body_en: null,
   tags: ["tag1"],
+  tags_en: null,
   summary: "test summary",
+  summary_en: null,
   created_at: "2026-04-01T00:00:00.000Z",
 };
 
@@ -106,8 +109,11 @@ const PENDING_DOC_BILINGUAL: PendingDocument = {
   id: DOC_ID_1,
   user_id: USER_ID,
   body: "한국어 본문",
+  body_en: "English body",
   tags: ["태그1"],
+  tags_en: ["tag1"],
   summary: "한국어 요약",
+  summary_en: "English summary",
   created_at: "2026-04-01T00:00:00.000Z",
 };
 
@@ -567,8 +573,11 @@ describe("createSyncWorker", () => {
         id: DOC_ID_2,
         user_id: USER_ID,
         body: "fail body",
+        body_en: null,
         tags: [],
+        tags_en: null,
         summary: "fail",
+        summary_en: null,
         created_at: "2026-04-02T00:00:00.000Z",
       };
 
@@ -733,8 +742,11 @@ describe("createSyncWorker", () => {
         id: DOC_ID_2,
         user_id: USER_ID,
         body: "second doc",
+        body_en: null,
         tags: ["tag2"],
+        tags_en: null,
         summary: "second",
+        summary_en: null,
         created_at: "2026-04-02T00:00:00.000Z",
       };
 
