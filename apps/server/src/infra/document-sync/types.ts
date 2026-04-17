@@ -41,11 +41,8 @@ export const PendingDocumentSchema = z.object({
   id: z.string().uuid(),
   user_id: z.string().uuid(),
   body: z.string().min(1),
-  body_en: z.string().nullable(),
   tags: z.array(z.string()),
-  tags_en: z.array(z.string()).nullable(),
   summary: z.string(),
-  summary_en: z.string().nullable(),
   created_at: z.string().datetime({ offset: true }),
 });
 
