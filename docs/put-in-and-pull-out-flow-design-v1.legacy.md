@@ -1,5 +1,13 @@
 # Nema 구조화 엔진 — End-to-End 흐름 설계
 
+> **⚠️ Legacy — 이관 예정 문서**
+>
+> 이 문서는 Put-in/Pull-out 전체 흐름(드래프팅, Intent Router, 저장, 검색)을 다루는 초기 설계 기록이다. 이후 설계 단위가 flow별로 분리되어 `docs/flows/<flow-name>-vN/` 구조로 이관 중이다.
+>
+> - Phase 2(저장) 관련 내용은 [flows/memory-save-flow-v1](../flows/memory-save-flow-v1/prd.md)으로 대체됨. 여기 기록된 Phase 2 설계(병합 모델, merge 후 재분리 등)는 outdated.
+> - Phase 1(드래프팅)과 Pull-out 흐름은 아직 이관되지 않았으며, 이 문서가 유일한 설계 근거.
+> - 추후 `docs/flows/drafting-flow-vN/`, `docs/flows/pull-out-flow-vN/`로 분할 이관 예정. 그 시점에 이 파일은 삭제된다.
+
 ## 목적
 
 사용자 입력이 구조화된 지식으로 저장(Put-in)되고, 저장된 지식을 검색하여 답변(Pull-out)하기까지의 전체 흐름을 단계별로 명세한다. 각 단계에서 누가(Frontend, Backend, LLM, DB) 무엇을 하고, 어떤 데이터가 오가는지를 확정해서 하위 레이어(LLM 추상화, 임베딩 파이프라인, API 통합) 설계의 기반을 만든다.

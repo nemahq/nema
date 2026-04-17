@@ -1,7 +1,7 @@
 # Memory 저장 파이프라인 설계 (v1)
 
-> Put-in 전체 흐름(드래프팅, Intent Router, 세션 관리)은 [put-in-and-pull-out-flow-design-v1.md](put-in-and-pull-out-flow-design-v1.md) 참조.
-> 이 문서는 저장 트리거 이후 — Phase 2(저장) → Phase 3(인제스천) → Phase 4(재생성) — 에서 새롭게 설계된 흐름만 다룬다.
+> Put-in 전체 흐름(드래프팅, Intent Router, 세션 관리)은 [put-in-and-pull-out-flow-design-v1.legacy.md](../../put-in-and-pull-out-flow-design-v1.legacy.md) 참조.
+> 이 문서는 저장 트리거 이후 — Phase 2(저장) → Phase 3(인제스천) → Phase 4(간접 영향 전파) — 에서 새롭게 설계된 흐름만 다룬다.
 
 ## 배경
 
@@ -11,7 +11,7 @@
 - 저장마다 Revision 기록 → 시간축 추적 + revert 가능
 - 저장 이벤트 단위로 Revision을 묶는 History → PR 목록처럼 변경 맥락 조회 가능
 - 하나의 저장이 여러 Memory를 동시 업데이트(fan-out)
-- Phase 4 신설: 엔티티 기반으로 영향받는 Memory 탐색 → 재생성 큐
+- Phase 4 신설: 엔티티 기반으로 간접 영향받는 Memory 탐색 → 재합성
 
 ## 용어
 
@@ -59,32 +59,21 @@
 
    4-2. Backend → Supabase: 기존 태그 풀 조회
 
-   4-3. Backend → LLM: 메타 필드 생성 + create/update 판단
+   4-3. Backend → LLM: 메타 필드 생성 + update_type 판단
         입력: body + 관련 Memory 목록 + 기존 태그 풀
         판단: 관련 Memory와 주제 범위가 일치하는가?
           → 주제 범위 밖 또는 관련 Memory 없음: create
-          → 주제 범위 안: update (extend 또는 replace)
+          → 주제 범위 안: extend 또는 replace
 
-        create 출력:
-        {
-          "title": "...",
-          "tags": [...],
-          "summary": "...",
-          "action": "create",
-          "update_type": "create",
-          "body": "..."
-        }
-
-        update 출력 (fan-out: 복수의 target_id 가능):
+        출력 (fan-out: 배열, create/extend/replace 혼재 가능):
         [
           {
             "title": "...",
             "tags": [...],
             "summary": "...",
-            "action": "update",
-            "update_type": "extend" | "replace",
-            "target_id": "existing_memory_id",
-            "updated_body": "..."
+            "update_type": "create" | "extend" | "replace",
+            "target_id": "existing_memory_id" | null,  // create 시 null
+            "final_body": "..."
           },
           ...
         ]
@@ -101,6 +90,7 @@
           "prev_body": "갱신 전 본문",  // create 시 null
           "next_body": "갱신 후 본문",
           "update_type": "create" | "extend" | "replace",
+          "source": "direct" | "propagated",  // direct: Phase 2 직접 수정, propagated: Phase 4 간접 전파
           "created_at": "..."
         }
         상세 스키마 설계는 별도 결정
@@ -139,21 +129,30 @@
 | `user_id` | uuid | 시스템 | 소유자 |
 | `created_at` | timestamp | 시스템 | 저장 이벤트 발생 시각 |
 
-Phase 2 직접 변경과 Phase 4 재생성 Revision 모두 동일한 `history_id`를 공유한다. Phase 4가 Phase 3를 재트리거하여 연쇄 발생하는 Revision들도 원래 저장을 유발한 History를 가리킨다.
+Phase 2 직접 변경(`source: direct`)과 Phase 4 간접 전파(`source: propagated`) Revision 모두 동일한 `history_id`를 공유한다. Phase 4가 Phase 3를 재트리거하여 연쇄 발생하는 Revision들도 원래 저장을 유발한 History를 가리킨다. NEM-26(시간축 추적)·NEM-81(Lint)은 `source = direct`만 필터링해 "의도된 변경"을 추적한다.
 
-### create/update 판단 — 주제 범위 게이트
+### update_type 판단 (3-way 분류)
 
-- **create**: 관련 Memory가 없거나 주제 범위 밖
-- **update**: 동일 주제이고 새 body가 해당 Memory의 보완/확장
+단일 필드 `update_type`으로 세 가지 중 하나를 분류한다:
 
-update_type:
-- **create**: 최초 생성 (prev_body = null)
-- **extend**: 기존 내용 유지하며 새 정보 추가
-- **replace**: 기존 내용을 새 내용으로 대체
+- **create**: 관련 Memory가 없거나 주제 범위 밖 (prev_body = null)
+- **extend**: 기존 내용이 여전히 사실이면서 새 정보가 추가되는 경우
+- **replace**: 기존 내용이 더 이상 현재 사실이 아닌 경우
+
+분류 규칙:
+- 애매하면 **replace 기본값** — 잘못된 extend는 stale fact를 조용히 유지하지만, 잘못된 replace는 이력에서 복구 가능 (비대칭성)
+- Memory title/summary가 "현재 상태" 관점이면 변경 → replace, "이력/타임라인" 관점이면 추가 → extend
+- 부분 업데이트(일부 사실만 변경)도 replace로 분류. final_body에서 유효한 사실은 유지
+- replace의 final_body: 신규 내용 주도, 이전 사실은 "이전엔 X, 지금은 Y" 형태로만 보존
 
 ### Fan-out
 
-하나의 저장이 여러 Memory를 대상으로 update를 트리거할 수 있다. (예: "이직했고 팀도 바뀌었다" → 직업 Memory + 팀 관계 Memory 동시 update)
+하나의 저장이 여러 Memory를 대상으로 동시 업데이트를 트리거할 수 있다. (예: "팀장이 김철수에서 이영희로 바뀌었다" → 팀 구성 Memory + 김철수 프로필 + 이영희 프로필 동시 업데이트)
+
+- **fan-out 상한 없음**: LLM이 Draft 내용 기반으로 관련 Memory를 자유롭게 선택. 자연스러운 제약은 벡터 검색 파라미터.
+- **벡터 검색**: `limit = 20`(안전망), `scoreThreshold`로 실질적 필터링 (임계값은 실제 데이터 보고 튜닝)
+- **create + update 혼재 허용**: 동일 Draft에서 create와 update가 섞일 수 있음
+- **순차 처리**: fan-out 대상을 순차 처리 (동일 Memory 동시 업데이트 방어)
 
 동일 Memory에 동시 업데이트가 발생하는 경우 순서 보장이 필요하다. 처리 방식은 별도 설계 예정.
 
@@ -168,9 +167,15 @@ update_type:
 
 Phase 2는 **큐로 순차 처리**한다. 앞선 저장 결과를 반영한 상태에서 다음 저장의 유사 검색 + create/update 판단이 수행되므로 충돌 없음.
 
-### 향후 고려사항
+### 변경 사항 인지 (approve/reject 없음)
 
-- **Revision 리뷰 플로우**: DB 기록 전에 사용자 확인 단계 삽입. update 시 "기존 body vs updated_body" 비교, create 시 title/tags/summary 확인
+저장 파이프라인에는 사용자의 approve/reject 게이트 단계를 두지 않는다. 이유:
+
+- 코드와 달리 Memory는 diff 이력 뷰(NEM-90)에서 언제든 revert 가능 → 사전 gate보다 사후 confirm이 비용 효율적
+- 신뢰도 쌓인 후 approve 단계는 bypass 대상이 되기 쉬움
+- 팀 스페이스의 더블 체크 니즈는 저장 파이프라인의 approve가 아니라 "팀원 변경사항 피드/알림" 구조가 자연스러움
+
+대신 저장 완료 직후 변경 사항 요약을 사용자에게 인지시키고, 필요시 diff 이력 뷰에서 revert하는 방향.
 
 ---
 
@@ -207,7 +212,7 @@ Phase 2가 Memory를 저장/수정할 때 **항상 `pending`으로 덮어쓴다.
 
 ---
 
-## Phase 4: Memory 재생성
+## Phase 4: 간접 영향 전파
 
 Phase 3에서 추출된 엔티티/관계를 기반으로 영향받는 Memory를 탐색하고 재합성한다.
 
@@ -224,16 +229,16 @@ Phase 3에서 추출된 엔티티/관계를 기반으로 영향받는 Memory를 
    입력: Phase 3에서 처리된 Memory ID 목록
    출력: 영향받는 Memory ID 목록
 
-3. Backend: 재생성 큐에 추가
+3. Backend: 재합성 큐에 추가
    - 이미 큐에 있는 Memory는 중복 추가하지 않음
    - 방금 Phase 3에서 처리된 Memory 자신은 제외
 
-4. Backend → LLM: 큐의 Memory 순차 재생성
+4. Backend → LLM: 큐의 Memory 순차 재합성
    입력: 기존 Memory body + 관련 엔티티 컨텍스트 (Neo4j에서 조회)
    출력: 재합성된 body + title + tags + summary
 
-5. Backend → Supabase: 재생성된 Memory 저장 + Revision 기록 (4-4, 4-5와 동일)
-   Revision의 history_id는 이 재생성을 유발한 원래 저장의 History와 동일
+5. Backend → Supabase: 재합성된 Memory 저장 + Revision 기록 (4-4, 4-5와 동일, `source: propagated`)
+   Revision의 history_id는 이 전파를 유발한 원래 저장의 History와 동일
    ingestion_status = pending → Phase 3 재트리거
 ```
 
@@ -243,5 +248,5 @@ fan-out 과정에서 동일 Memory에 동시 업데이트가 발생하는 경우
 
 ### 향후 고려사항
 
-- **재생성 깊이 제한**: Phase 4 → Phase 3 → Phase 4 순환 가능. 최대 깊이(hop) 제한 필요. 참조 기본값 2-3 hop, 실제 cascade 로그 보고 튜닝
-- **재생성 우선순위**: 최근 접근된 Memory, 자주 참조된 Memory를 우선 재생성
+- **전파 깊이 제한**: Phase 4 → Phase 3 → Phase 4 순환 가능. 최대 깊이(hop) 제한 필요. 참조 기본값 2-3 hop, 실제 cascade 로그 보고 튜닝
+- **재합성 우선순위**: 최근 접근된 Memory, 자주 참조된 Memory를 우선 재합성
