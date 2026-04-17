@@ -104,15 +104,7 @@ If the user opted to keep a large PR, prepend:
 
 ---
 
-## Step 7 — Determine reviewer (standalone only)
-
-Ask the user:
-
-> 리뷰어를 추가할까요? (GitHub 사용자명, 없으면 Enter)
-
-If the user names reviewers → include in `--reviewer` flags. If skipped → omit.
-
-## Step 8 — Create PR (standalone only)
+## Step 7 — Create PR (standalone only)
 
 1. Push the branch: `git push -u origin HEAD`.
 2. Create the PR with full metadata:
@@ -122,8 +114,7 @@ If the user names reviewers → include in `--reviewer` flags. If skipped → om
      --title "<title>" \
      --label "<label>" \
      --assignee "@me" \
-     --body "<body>" \
-     [--reviewer "<reviewer1>,<reviewer2>"]
+     --body "<body>"
    ```
 
 3. Report the PR URL.
