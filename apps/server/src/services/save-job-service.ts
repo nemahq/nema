@@ -148,6 +148,13 @@ async function processSaveJob(args: {
 
   throwIfSupabaseError(fetchError);
 
+  // 처리 완료 후 null로 비우는 컬럼이라 reader 경로에서는 값이 있어야 정상
+  if (job.draft_body === null) {
+    throw new Error(
+      `save_jobs(${jobId}).draft_body is null — job may have already been processed`,
+    );
+  }
+
   const profile = await getProfile(supabase, { userId });
   if (!profile) {
     throw new Error("Save job requires a user profile");
@@ -162,7 +169,7 @@ async function processSaveJob(args: {
       providers,
       userId,
       sessionId: job.session_id,
-      draftBody: job.draft_body as string,
+      draftBody: job.draft_body,
       contentLanguage,
     });
     titles = result.titles;
