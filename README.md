@@ -7,7 +7,6 @@
   <sub><em>A knowledge system that structures your context and sharpens your judgment over time.</em></sub>
 </p>
 
----
 
 ## Stack
 
@@ -21,7 +20,6 @@
 | Graph DB | Neo4j |
 | LLM / Embedding | OpenAI, Voyage AI |
 
----
 
 ## 프로젝트 구조
 
@@ -34,7 +32,6 @@ packages/
 └── weave/        # UI 컴포넌트, 디자인 토큰
 ```
 
----
 
 ## 시작하기
 
@@ -82,7 +79,6 @@ pnpm dev          # 웹 + 서버 (local API)
 - 웹: http://localhost:5173
 - 서버: http://localhost:3001
 
----
 
 ## DB 마이그레이션
 
@@ -101,7 +97,6 @@ supabase stop
 
 생성된 `database.types.ts`를 마이그레이션과 함께 커밋합니다. CI에서 드리프트 감지가 동작하므로 타입이 최신이 아니면 머지가 차단됩니다.
 
----
 
 ## 스크립트
 
