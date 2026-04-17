@@ -92,19 +92,12 @@ function makeProviders(overrides?: {
 function makeSupabase(opts: {
   historiesInsertError?: unknown;
   memoriesFetchError?: unknown;
-  applyError?: unknown;
-  applyTitles?: string[];
+  rpcError?: unknown;
   memoriesFetchData?: Array<{ id: string; body: string }>;
 }): { supabase: TypedSupabaseClient; rpc: ReturnType<typeof vi.fn> } {
-  const rpc = vi.fn().mockImplementation((name: string) => {
-    if (name === "apply_save_pipeline") {
-      return Promise.resolve({
-        data: opts.applyError ? null : (opts.applyTitles ?? []),
-        error: opts.applyError ?? null,
-      });
-    }
-    return Promise.resolve({ data: null, error: null });
-  });
+  const rpc = vi
+    .fn()
+    .mockResolvedValue({ data: MEMORY_ID, error: opts.rpcError ?? null });
 
   const from = vi.fn((table: string) => {
     if (table === "memories") {
@@ -130,9 +123,9 @@ beforeEach(() => {
 });
 
 describe("handleSave", () => {
-  it("단일 토픽 + 유사 Memory 없음 → 단일 apply_save_pipeline RPC 호출", async () => {
+  it("단일 토픽 + 유사 Memory 없음 → create 1건, titles 반환", async () => {
     const providers = makeProviders();
-    const { supabase, rpc } = makeSupabase({ applyTitles: ["기본 제목"] });
+    const { supabase, rpc } = makeSupabase({});
 
     const result = await handleSave({
       supabase,
@@ -145,21 +138,18 @@ describe("handleSave", () => {
 
     expect(result.historyId).toBe(HISTORY_ID);
     expect(result.titles).toEqual(["기본 제목"]);
-    expect(rpc).toHaveBeenCalledWith("apply_save_pipeline", {
-      p_user_id: USER_ID,
-      p_history_id: HISTORY_ID,
-      p_items: [
-        expect.objectContaining({
-          update_type: "create",
-          target_id: null,
-          title: "기본 제목",
-          body: "새 내용",
-        }),
-      ],
-    });
+    expect(rpc).toHaveBeenCalledWith(
+      "create_memory_with_revision",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_history_id: HISTORY_ID,
+        p_title: "기본 제목",
+        p_body: "새 내용",
+      }),
+    );
   });
 
-  it("Fan-out: 2토픽/2아이템이 apply_save_pipeline 단일 호출로 묶임 (원자성)", async () => {
+  it("Fan-out: 2토픽 각각이 judgment item을 반환 → persist가 각 아이템마다 호출", async () => {
     const providers = makeProviders({
       splitTopics: ["topic-A", "topic-B"],
       judgmentItemsByTopic: [
@@ -183,9 +173,7 @@ describe("handleSave", () => {
         { title: "B 제목", category: null, tags: [], summary: "B" },
       ],
     });
-    const { supabase, rpc } = makeSupabase({
-      applyTitles: ["A 제목", "B 제목"],
-    });
+    const { supabase, rpc } = makeSupabase({});
 
     const result = await handleSave({
       supabase,
@@ -197,27 +185,34 @@ describe("handleSave", () => {
     });
 
     expect(result.titles).toEqual(["A 제목", "B 제목"]);
-    expect(rpc).toHaveBeenCalledTimes(1);
-    expect(rpc).toHaveBeenCalledWith(
-      "apply_save_pipeline",
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenNthCalledWith(
+      1,
+      "create_memory_with_revision",
+      expect.objectContaining({ p_body: "A 내용" }),
+    );
+    expect(rpc).toHaveBeenNthCalledWith(
+      2,
+      "update_memory_with_revision",
       expect.objectContaining({
-        p_items: [
-          expect.objectContaining({ update_type: "create", body: "A 내용" }),
-          expect.objectContaining({
-            update_type: "replace",
-            target_id: MEMORY_ID,
-            body: "B 내용",
-          }),
-        ],
+        p_memory_id: MEMORY_ID,
+        p_update_type: "replace",
+        p_body: "B 내용",
       }),
     );
   });
 
-  it("apply_save_pipeline이 RPC 에러 반환 시 SupabaseError 전파 (DB 트랜잭션 롤백 기대)", async () => {
-    const providers = makeProviders();
-    const { supabase } = makeSupabase({
-      applyError: { message: "target_id required", code: "P0001" },
+  it("update_type=replace에 target_id가 null이면 throw (LLM 오동작 가드)", async () => {
+    const providers = makeProviders({
+      judgmentItems: [
+        {
+          update_type: "replace",
+          target_id: null,
+          final_body: "잘못된 출력",
+        },
+      ],
     });
+    const { supabase } = makeSupabase({});
 
     await expect(
       handleSave({
@@ -228,7 +223,7 @@ describe("handleSave", () => {
         draftBody: "draft",
         contentLanguage: "ko",
       }),
-    ).rejects.toThrow(/target_id required/);
+    ).rejects.toThrow(/requires non-null target_id/);
   });
 
   it("histories insert 실패 시 SupabaseError 전파 (job failed로 귀결)", async () => {

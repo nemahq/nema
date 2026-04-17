@@ -433,10 +433,6 @@ export type Database = {
         Args: { p_session_id: string; p_history_id: string };
         Returns: undefined;
       };
-      apply_save_pipeline: {
-        Args: { p_user_id: string; p_history_id: string; p_items: Json };
-        Returns: string[];
-      };
     };
     Enums: {
       ingestion_status: "pending" | "completed" | "failed";

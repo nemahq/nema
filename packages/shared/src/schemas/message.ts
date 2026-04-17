@@ -56,23 +56,13 @@ const BaseMessageSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
-// Draft 메시지는 linked/unlinked 상태를 별도 variant로 분리 — linked일 때만 historyId가 존재함을 타입 단에서 보장
-const DraftMessageSchema = z.discriminatedUnion("status", [
-  BaseMessageSchema.extend({
-    type: z.literal("draft"),
-    content: z.string(),
-    status: z.literal("unlinked"),
-  }),
-  BaseMessageSchema.extend({
-    type: z.literal("draft"),
-    content: z.string(),
-    status: z.literal("linked"),
-    historyId: z.string().uuid(),
-  }),
-]);
-
-const NonDraftMessageSchema = z.discriminatedUnion("type", [
+export const MessageSchema = z.discriminatedUnion("type", [
   BaseMessageSchema.extend({ type: z.literal("text"), content: z.string() }),
+  BaseMessageSchema.extend({
+    type: z.literal("draft"),
+    content: z.string(),
+    historyId: z.string().uuid().optional(),
+  }),
   BaseMessageSchema.extend({
     type: z.literal("status"),
     content: StatusLogTypeSchema,
@@ -88,11 +78,6 @@ const NonDraftMessageSchema = z.discriminatedUnion("type", [
     content: z.string(),
     retrievalId: z.string().uuid(),
   }),
-]);
-
-export const MessageSchema = z.union([
-  DraftMessageSchema,
-  NonDraftMessageSchema,
 ]);
 export type Message = z.infer<typeof MessageSchema>;
 
