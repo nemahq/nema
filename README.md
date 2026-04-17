@@ -4,7 +4,7 @@
 
 <p align="center">
   <b>맥락을 구조화하고, 쓸수록 판단이 선명해지는 지식 시스템</b><br>
-  <sub>A knowledge system that structures your context and sharpens your judgment over time.</sub>
+  <sub><em>A knowledge system that structures your context and sharpens your judgment over time.</em></sub>
 </p>
 
 ---
