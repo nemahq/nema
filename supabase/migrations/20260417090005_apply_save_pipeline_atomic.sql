@@ -1,7 +1,5 @@
--- NEM-86 후속: fan-out 저장 원자화.
--- 기존 apps/server는 아이템별로 create_memory_with_revision / update_memory_with_revision RPC를
--- 순차 호출했고, 중간 실패 시 이미 반영된 Memory·Revision이 orphan으로 남았다.
--- 단일 RPC로 모든 아이템을 한 트랜잭션 내에서 처리해 all-or-nothing 으로 만든다.
+-- 저장 파이프라인의 fan-out persist 원자화: items 배열 전체를 하나의 트랜잭션에서 처리.
+-- 한 아이템 실패 시 RAISE EXCEPTION으로 전체 롤백 → 부분 커밋된 Memory/Revision 없이 일관된 상태 유지.
 
 CREATE OR REPLACE FUNCTION apply_save_pipeline(
   p_user_id    uuid,

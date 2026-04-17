@@ -122,8 +122,8 @@ export async function handleSave(args: {
   throwIfSupabaseError(historyError);
   const historyId = history.id;
 
-  // META LLM은 아이템별 병렬, persist는 원자적 단일 RPC (중간 실패 시 orphan 방지).
-  // NEM-95의 같은 target 중복 race는 RPC 내부 순차 loop로 결정적 last-write-wins 유지.
+  // META LLM은 아이템별 병렬, persist는 원자적 단일 RPC로 all-or-nothing 보장.
+  // 같은 memory_id를 여러 아이템이 target으로 지목하면 RPC 내부 순차 loop에서 late-write-wins로 결정적 처리.
   const metas = await Promise.all(
     allItems.map((judgmentItem, itemIndex) =>
       withStepContext({
