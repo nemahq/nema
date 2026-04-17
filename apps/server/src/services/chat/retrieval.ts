@@ -97,11 +97,10 @@ export async function* handleRetrievalStream(args: {
     }),
 
     // 3) Supabase 텍스트 매치 (엔티티 키워드)
-    searchTextMatch({
-      supabase,
-      userId,
-      entities: searchQuery.entities,
-    }).catch((err) => {
+    (searchQuery.entities.length > 0
+      ? searchTextMatch({ supabase, userId, entities: searchQuery.entities })
+      : Promise.resolve([])
+    ).catch((err) => {
       Sentry.captureException(err, {
         tags: { component: "retrieval", channel: "text_match" },
         extra: sentryExtra,
