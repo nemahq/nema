@@ -104,6 +104,7 @@ export type Database = {
       memories: {
         Row: {
           body: string;
+          body_en: string | null;
           category: string | null;
           created_at: string;
           id: string;
@@ -111,13 +112,17 @@ export type Database = {
           ingestion_status: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt: string | null;
           summary: string | null;
+          summary_en: string | null;
           tags: string[] | null;
+          tags_en: string[] | null;
           title: string | null;
+          title_en: string | null;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           body: string;
+          body_en?: string | null;
           category?: string | null;
           created_at?: string;
           id?: string;
@@ -125,13 +130,17 @@ export type Database = {
           ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt?: string | null;
           summary?: string | null;
+          summary_en?: string | null;
           tags?: string[] | null;
+          tags_en?: string[] | null;
           title?: string | null;
+          title_en?: string | null;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           body?: string;
+          body_en?: string | null;
           category?: string | null;
           created_at?: string;
           id?: string;
@@ -139,8 +148,11 @@ export type Database = {
           ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt?: string | null;
           summary?: string | null;
+          summary_en?: string | null;
           tags?: string[] | null;
+          tags_en?: string[] | null;
           title?: string | null;
+          title_en?: string | null;
           updated_at?: string;
           user_id?: string;
         };
@@ -230,7 +242,7 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
-          draft_body?: string | null;
+          draft_body: string;
           error_message?: string | null;
           history_id?: string | null;
           id?: string;
@@ -356,7 +368,7 @@ export type Database = {
           p_body: string;
           p_category: string | null;
           p_history_id: string;
-          p_summary: string;
+          p_summary: string | null;
           p_tags: string[];
           p_title: string;
           p_user_id: string;
@@ -368,20 +380,19 @@ export type Database = {
         Args: { p_max_retries?: number };
         Returns: {
           body: string;
+          body_en: string;
           created_at: string;
           id: string;
           summary: string;
+          summary_en: string;
           tags: string[];
+          tags_en: string[];
           user_id: string;
         }[];
       };
       get_unique_tags: { Args: { p_user_id: string }; Returns: string[] };
       increment_memory_ingestion_retry: {
         Args: { p_max_retries?: number; p_memory_id: string };
-        Returns: undefined;
-      };
-      link_draft_to_history: {
-        Args: { p_history_id: string; p_session_id: string };
         Returns: undefined;
       };
       list_memory_user_ids: {
@@ -406,7 +417,7 @@ export type Database = {
           p_category: string | null;
           p_history_id: string;
           p_memory_id: string;
-          p_summary: string;
+          p_summary: string | null;
           p_tags: string[];
           p_title: string;
           p_update_type: Database["public"]["Enums"]["update_type"];
@@ -416,6 +427,10 @@ export type Database = {
       };
       update_message_payload: {
         Args: { p_message_id: string; p_payload: Json; p_session_id: string };
+        Returns: undefined;
+      };
+      link_draft_to_history: {
+        Args: { p_session_id: string; p_history_id: string };
         Returns: undefined;
       };
     };
@@ -558,7 +573,7 @@ export const Constants = {
   public: {
     Enums: {
       ingestion_status: ["pending", "completed", "failed"],
-      revision_source: ["direct", "propagated"],
+      revision_source: ["direct", "regeneration"],
       save_job_status: ["pending", "processing", "completed", "failed"],
       update_type: ["create", "extend", "replace"],
     },

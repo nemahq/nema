@@ -186,12 +186,14 @@ export async function resolveEntities(
       return {
         type: entity.type,
         name: matchedName,
+        nameEn: entity.nameEn,
         isNew: false,
       };
     }
     return {
       type: entity.type,
       name: entity.name,
+      nameEn: entity.nameEn,
       isNew: true,
     };
   });

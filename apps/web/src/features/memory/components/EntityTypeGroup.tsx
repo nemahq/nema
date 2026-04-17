@@ -30,7 +30,7 @@ export function EntityTypeGroup({ type, entities }: EntityTypeGroupProps) {
       <div className="flex flex-wrap gap-2">
         {entities.map((entity) => (
           <EntityChip
-            key={`${entity.type}-${entity.name}`}
+            key={`${entity.type}-${entity.nameEn ?? entity.name}`}
             name={entity.name}
             documentCount={entity.documentCount}
           />

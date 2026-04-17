@@ -101,7 +101,9 @@ describe("resolveEntities", () => {
         { type: "Person", normalizedName: "alice kim", name: "Alice Kim" },
       ]);
       const result = await resolveEntities({
-        extractedEntities: [{ type: "Person", name: "  Alice Kim  " }],
+        extractedEntities: [
+          { type: "Person", name: "  Alice Kim  ", nameEn: "Alice Kim" },
+        ],
         userId: USER_ID,
         graphStore,
         entityVectorStore: mockEntityVectorStore(),
@@ -120,7 +122,9 @@ describe("resolveEntities", () => {
         graphStore.findEntitiesByNormalizedNames as ReturnType<typeof vi.fn>
       ).mockResolvedValue([]);
       const result = await resolveEntities({
-        extractedEntities: [{ type: "Topic", name: "Python" }],
+        extractedEntities: [
+          { type: "Topic", name: "Python", nameEn: "Python" },
+        ],
         userId: USER_ID,
         graphStore,
         entityVectorStore: mockEntityVectorStore(),
@@ -141,7 +145,9 @@ describe("resolveEntities", () => {
         },
       ]);
       const result = await resolveEntities({
-        extractedEntities: [{ type: "Topic", name: "베트남 쌀국수" }],
+        extractedEntities: [
+          { type: "Topic", name: "베트남 쌀국수", nameEn: "Pho" },
+        ],
         userId: USER_ID,
         graphStore: mockGraphStore(),
         entityVectorStore: mockEntityVectorStore([
@@ -176,7 +182,7 @@ describe("resolveEntities", () => {
         new Error("Qdrant timeout"),
       );
       const result = await resolveEntities({
-        extractedEntities: [{ type: "Person", name: "테스트" }],
+        extractedEntities: [{ type: "Person", name: "테스트", nameEn: "Test" }],
         userId: USER_ID,
         graphStore: mockGraphStore(),
         entityVectorStore,
@@ -195,7 +201,7 @@ describe("resolveEntities", () => {
         new Error("LLM rate limit"),
       );
       const result = await resolveEntities({
-        extractedEntities: [{ type: "Topic", name: "쌀국수" }],
+        extractedEntities: [{ type: "Topic", name: "쌀국수", nameEn: "Pho" }],
         userId: USER_ID,
         graphStore: mockGraphStore(),
         entityVectorStore: mockEntityVectorStore([
@@ -210,7 +216,7 @@ describe("resolveEntities", () => {
 
     it("handles LLM returning null matchedName", async () => {
       const result = await resolveEntities({
-        extractedEntities: [{ type: "Topic", name: "리액트" }],
+        extractedEntities: [{ type: "Topic", name: "리액트", nameEn: "React" }],
         userId: USER_ID,
         graphStore: mockGraphStore(),
         entityVectorStore: mockEntityVectorStore([
@@ -230,7 +236,7 @@ describe("resolveEntities", () => {
 
     it("warns when LLM returns unrecognized extractedName", async () => {
       const result = await resolveEntities({
-        extractedEntities: [{ type: "Topic", name: "쌀국수" }],
+        extractedEntities: [{ type: "Topic", name: "쌀국수", nameEn: "Pho" }],
         userId: USER_ID,
         graphStore: mockGraphStore(),
         entityVectorStore: mockEntityVectorStore([
@@ -261,7 +267,7 @@ describe("resolveEntities", () => {
         graphStore.findEntitiesByNormalizedNames as ReturnType<typeof vi.fn>
       ).mockRejectedValue(new Error("Neo4j connection timeout"));
       const result = await resolveEntities({
-        extractedEntities: [{ type: "Person", name: "Alice" }],
+        extractedEntities: [{ type: "Person", name: "Alice", nameEn: "Alice" }],
         userId: USER_ID,
         graphStore,
         entityVectorStore: mockEntityVectorStore(),
