@@ -21,6 +21,7 @@ loadEnv(resolve(__dirname, "../.."));
 interface EntityResult {
   type: string;
   name: string;
+  nameEn: string;
 }
 
 interface EvalResult {

@@ -26,6 +26,7 @@ export async function listEntitiesWithStats(opts: {
 
   return entities.map((e) => ({
     name: e.name,
+    nameEn: e.nameEn,
     type: e.type,
     documentCount: e.documentCount,
     lastReferencedAt: e.lastReferencedAt,
@@ -94,6 +95,7 @@ export async function getRelatedEntities(opts: {
 
   return related.map((e) => ({
     name: e.name,
+    nameEn: e.nameEn,
     type: e.type,
     documentCount: e.documentCount,
   }));
