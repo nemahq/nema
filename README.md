@@ -23,6 +23,19 @@
 
 ---
 
+## 프로젝트 구조
+
+```
+apps/
+├── server/       # Fastify + tRPC 백엔드
+└── web/          # React + Vite 프론트엔드
+packages/
+├── shared/       # 공유 스키마, 타입
+└── weave/        # UI 컴포넌트, 디자인 토큰
+```
+
+---
+
 ## 시작하기
 
 ### 사전 요구사항
@@ -89,16 +102,6 @@ supabase stop
 생성된 `database.types.ts`를 마이그레이션과 함께 커밋합니다. CI에서 드리프트 감지가 동작하므로 타입이 최신이 아니면 머지가 차단됩니다.
 
 ---
-
-## 프로젝트 구조
-
-```
-apps/
-├── server/       # Fastify + tRPC 백엔드
-└── web/          # React + Vite 프론트엔드
-packages/
-└── shared/       # 공유 스키마, 타입
-```
 
 ## 스크립트
 
