@@ -10,7 +10,8 @@
       "entry": [
         "src/eval/eval-drafting.ts",
         "src/eval/eval-entity-extraction.ts",
-        "src/eval/eval-entity-resolution.ts"
+        "src/eval/eval-entity-resolution.ts",
+        "src/eval/eval-save-pipeline.ts"
       ],
       "project": ["src/**/*.ts"],
       "ignore": ["src/infra/**"]

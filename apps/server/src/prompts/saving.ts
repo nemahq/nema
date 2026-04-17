@@ -18,7 +18,6 @@ Output: JSON object { "topics": string[] } — one string per topic.`;
 export const SplitOutputSchema = z.object({
   topics: z.array(z.string().min(1)).nonempty(),
 });
-export type SplitOutput = z.infer<typeof SplitOutputSchema>;
 
 export function buildSplitMessage(draftBody: string): string {
   return `<note>${draftBody}</note>`;
@@ -79,7 +78,6 @@ export type JudgmentItem = z.infer<typeof JudgmentItemSchema>;
 export const JudgmentOutputSchema = z.object({
   items: z.array(JudgmentItemSchema).nonempty(),
 });
-export type JudgmentOutput = z.infer<typeof JudgmentOutputSchema>;
 
 const MEMORY_BODY_PREVIEW_MAX = 1500;
 
@@ -130,7 +128,6 @@ export const MetaOutputSchema = z.object({
   tags: z.array(z.string()),
   summary: z.string(),
 });
-export type MetaOutput = z.infer<typeof MetaOutputSchema>;
 
 export function buildMetaMessage(body: string): string {
   return `<memory>${body}</memory>`;
