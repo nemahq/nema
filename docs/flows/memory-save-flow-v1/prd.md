@@ -1,6 +1,6 @@
 # Memory 저장 파이프라인 설계 (v1)
 
-> Put-in 전체 흐름(드래프팅, Intent Router, 세션 관리)은 [put-in-and-pull-out-flow-design-v1.md](put-in-and-pull-out-flow-design-v1.md) 참조.
+> Put-in 전체 흐름(드래프팅, Intent Router, 세션 관리)은 [put-in-and-pull-out-flow-design-v1.md](../../prd/put-in-and-pull-out-flow-design-v1.md) 참조.
 > 이 문서는 저장 트리거 이후 — Phase 2(저장) → Phase 3(인제스천) → Phase 4(간접 영향 전파) — 에서 새롭게 설계된 흐름만 다룬다.
 
 ## 배경
