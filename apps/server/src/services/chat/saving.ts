@@ -3,6 +3,7 @@ import type { ContentLanguage } from "@nema-io/shared";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import type { JudgmentItem } from "@server/prompts/saving";
 import {
   buildJudgmentMessage,
   buildMetaMessage,
@@ -11,7 +12,6 @@ import {
   JudgmentOutputSchema,
   META_SYSTEM_PROMPT,
   MetaOutputSchema,
-  normalizeJudgmentOutput,
   SPLIT_SYSTEM_PROMPT,
   SplitOutputSchema,
 } from "@server/prompts/saving";
@@ -31,7 +31,7 @@ export async function handleSave(args: {
   const { embedding, vectorStore, llm } = providers;
 
   // Step 1: 토픽 분리
-  const topics = await llm.mini.generateStructured({
+  const splitOutput = await llm.mini.generateStructured({
     schema: SplitOutputSchema,
     schemaName: "saving_split",
     systemPrompt: SPLIT_SYSTEM_PROMPT,
@@ -39,9 +39,9 @@ export async function handleSave(args: {
   });
 
   // Step 2-3: 토픽별 벡터 검색 + JUDGMENT
-  const allItems: ReturnType<typeof normalizeJudgmentOutput> = [];
+  const allItems: JudgmentItem[] = [];
 
-  for (const topic of topics) {
+  for (const topic of splitOutput.topics) {
     const searchResults = await vectorStore.search(embedding, {
       userId,
       query: topic,
@@ -75,7 +75,7 @@ export async function handleSave(args: {
       ],
     });
 
-    allItems.push(...normalizeJudgmentOutput(judgmentOutput));
+    allItems.push(...judgmentOutput.items);
   }
 
   // Step 4: History 생성

@@ -12,9 +12,11 @@ Rules:
 - Keep each topic self-contained: include enough context to be understood standalone.
 - Preserve the original wording as closely as possible. Do not paraphrase.
 
-Output: JSON array of strings, one string per topic.`;
+Output: JSON object { "topics": string[] } — one string per topic.`;
 
-export const SplitOutputSchema = z.array(z.string().min(1)).nonempty();
+export const SplitOutputSchema = z.object({
+  topics: z.array(z.string().min(1)).nonempty(),
+});
 export type SplitOutput = z.infer<typeof SplitOutputSchema>;
 
 export function buildSplitMessage(draftBody: string): string {
@@ -29,10 +31,10 @@ export const JUDGMENT_SYSTEM_PROMPT = `You manage a user's personal knowledge ba
 
 ## Output format
 
-JSON array. Each element represents one memory operation:
-{ "update_type": "create" | "extend" | "replace", "target_id": "<uuid>" | null, "final_body": "<complete memory text>" }
+JSON object with an "items" array. Each item represents one memory operation:
+{ "items": [{ "update_type": "create" | "extend" | "replace", "target_id": "<uuid>" | null, "final_body": "<complete memory text>" }, ...] }
 
-If only one operation is needed, you may return a single object instead of an array.
+Output at least one item — if no existing memory is relevant, output a single create item.
 
 ## Decision rules
 
@@ -73,17 +75,10 @@ const JudgmentItemSchema = z.object({
 
 export type JudgmentItem = z.infer<typeof JudgmentItemSchema>;
 
-export const JudgmentOutputSchema = z.union([
-  JudgmentItemSchema,
-  z.array(JudgmentItemSchema).nonempty(),
-]);
+export const JudgmentOutputSchema = z.object({
+  items: z.array(JudgmentItemSchema).nonempty(),
+});
 export type JudgmentOutput = z.infer<typeof JudgmentOutputSchema>;
-
-export function normalizeJudgmentOutput(
-  output: JudgmentOutput,
-): JudgmentItem[] {
-  return Array.isArray(output) ? output : [output];
-}
 
 const MEMORY_BODY_PREVIEW_MAX = 1500;
 
