@@ -146,9 +146,11 @@ describe("createSyncWorker", () => {
         })
         // ack_sync_event
         .mockResolvedValueOnce({ data: null, error: null })
-        // fetch_pending_documents → 1 doc
+        // fetch_pending_memories → 1 doc
         .mockResolvedValueOnce({ data: [PENDING_DOC], error: null })
-        // fetch_pending_documents → empty (cycle ends)
+        // complete_memory_ingestion
+        .mockResolvedValueOnce({ data: null, error: null })
+        // fetch_pending_memories → empty (cycle ends)
         .mockResolvedValueOnce({ data: [], error: null });
 
       const entityVectorStore = mockEntityVectorStore();
@@ -198,10 +200,9 @@ describe("createSyncWorker", () => {
       );
 
       // completed 마킹
-      expect(supabase._fromChain.update).toHaveBeenCalledWith({
-        ingestion_status: "completed",
+      expect(rpc).toHaveBeenCalledWith("complete_memory_ingestion", {
+        p_memory_id: DOC_ID_1,
       });
-      expect(supabase._fromChain.eq).toHaveBeenCalledWith("id", DOC_ID_1);
     });
   });
 
@@ -225,6 +226,8 @@ describe("createSyncWorker", () => {
           data: [PENDING_DOC_BILINGUAL],
           error: null,
         })
+        // complete_memory_ingestion
+        .mockResolvedValueOnce({ data: null, error: null })
         .mockResolvedValueOnce({ data: [], error: null });
 
       const worker = createSyncWorker({
@@ -374,7 +377,7 @@ describe("createSyncWorker", () => {
       userIds: Array<{ user_id: string }>,
     ): void {
       rpc.mockImplementation((name: string) => {
-        if (name === "list_document_user_ids") {
+        if (name === "list_memory_user_ids") {
           return Promise.resolve({ data: userIds, error: null });
         }
         return Promise.resolve({ data: [], error: null });
@@ -526,7 +529,7 @@ describe("createSyncWorker", () => {
       await worker.stop();
 
       expect(vectorStore.deleteByDocument).toHaveBeenCalledWith(DOC_ID_DEL);
-      expect(rpc).toHaveBeenCalledWith("fetch_pending_documents", {
+      expect(rpc).toHaveBeenCalledWith("fetch_pending_memories", {
         p_max_retries: 5,
       });
     });
@@ -597,7 +600,9 @@ describe("createSyncWorker", () => {
         .mockResolvedValueOnce({ data: null, error: null })
         // fetch_pending → 2 docs
         .mockResolvedValueOnce({ data: [PENDING_DOC, doc2], error: null })
-        // increment_ingestion_retry for doc-2
+        // complete_memory_ingestion for doc-1
+        .mockResolvedValueOnce({ data: null, error: null })
+        // increment_memory_ingestion_retry for doc-2
         .mockResolvedValueOnce({ data: null, error: null })
         // fetch_pending → empty
         .mockResolvedValueOnce({ data: [], error: null });
@@ -615,14 +620,13 @@ describe("createSyncWorker", () => {
       await worker.stop();
 
       // doc-1 completed
-      expect(supabase._fromChain.update).toHaveBeenCalledWith({
-        ingestion_status: "completed",
+      expect(rpc).toHaveBeenCalledWith("complete_memory_ingestion", {
+        p_memory_id: DOC_ID_1,
       });
-      expect(supabase._fromChain.eq).toHaveBeenCalledWith("id", DOC_ID_1);
 
       // doc-2 retry incremented
-      expect(rpc).toHaveBeenCalledWith("increment_ingestion_retry", {
-        p_doc_id: DOC_ID_2,
+      expect(rpc).toHaveBeenCalledWith("increment_memory_ingestion_retry", {
+        p_memory_id: DOC_ID_2,
         p_max_retries: 5,
       });
 
@@ -759,8 +763,12 @@ describe("createSyncWorker", () => {
         .mockResolvedValueOnce({ data: null, error: null })
         // fetch_pending round 1 → doc-1
         .mockResolvedValueOnce({ data: [PENDING_DOC], error: null })
+        // complete_memory_ingestion for doc-1
+        .mockResolvedValueOnce({ data: null, error: null })
         // fetch_pending round 2 → doc-2 (appeared during round 1)
         .mockResolvedValueOnce({ data: [doc2], error: null })
+        // complete_memory_ingestion for doc-2
+        .mockResolvedValueOnce({ data: null, error: null })
         // fetch_pending round 3 → empty
         .mockResolvedValueOnce({ data: [], error: null });
 
