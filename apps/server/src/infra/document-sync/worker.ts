@@ -248,11 +248,6 @@ async function processDocument(
 ): Promise<void> {
   const { llm, embedding, vectorStore, graphStore, entityVectorStore } = deps;
 
-  const engineBody = doc.body_en ?? doc.body;
-  const engineTags = doc.tags_en ?? doc.tags;
-  const engineSummary = doc.summary_en ?? doc.summary;
-
-  // 엔티티는 원문 언어로 name을 추출해야 하므로 translated body가 아닌 원문 body를 전달한다
   const entityResult = await llm.generateStructured({
     schema: EntityExtractionSchema,
     schemaName: "entity_extraction",
@@ -265,7 +260,6 @@ async function processDocument(
   const extractedEntities = entityResult.entities.map((e) => ({
     type: e.type,
     name: e.name,
-    nameEn: e.nameEn,
   }));
 
   // entity resolution: 기존 엔티티와 동일 개념이면 canonical name으로 치환
@@ -306,9 +300,9 @@ async function processDocument(
     vectorStore.upsert(embedding, {
       docId: doc.id,
       userId: doc.user_id,
-      chunks: [engineBody],
-      tags: engineTags,
-      summary: engineSummary,
+      chunks: [doc.body],
+      tags: doc.tags,
+      summary: doc.summary,
     }),
     graphStore.upsertEntities({
       docId: doc.id,

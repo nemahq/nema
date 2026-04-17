@@ -62,7 +62,7 @@ function mockEmbedding(): EmbeddingProvider {
 function mockLlm(): LlmProvider {
   return {
     generateStructured: vi.fn().mockResolvedValue({
-      entities: [{ type: "Person", name: "Alice", nameEn: "Alice" }],
+      entities: [{ type: "Person", name: "Alice" }],
     }),
     async *generateStream() {
       yield "";
@@ -102,18 +102,6 @@ const PENDING_DOC: PendingDocument = {
   tags_en: null,
   summary: "test summary",
   summary_en: null,
-  created_at: "2026-04-01T00:00:00.000Z",
-};
-
-const PENDING_DOC_BILINGUAL: PendingDocument = {
-  id: DOC_ID_1,
-  user_id: USER_ID,
-  body: "한국어 본문",
-  body_en: "English body",
-  tags: ["태그1"],
-  tags_en: ["tag1"],
-  summary: "한국어 요약",
-  summary_en: "English summary",
   created_at: "2026-04-01T00:00:00.000Z",
 };
 
@@ -183,7 +171,6 @@ describe("createSyncWorker", () => {
             expect.objectContaining({
               type: "Person",
               name: "Alice",
-              nameEn: "Alice",
             }),
           ],
           createdAt: "2026-04-01T00:00:00.000Z",
@@ -203,67 +190,6 @@ describe("createSyncWorker", () => {
       expect(rpc).toHaveBeenCalledWith("complete_memory_ingestion", {
         p_memory_id: DOC_ID_1,
       });
-    });
-  });
-
-  // ========== Bilingual document ==========
-
-  describe("bilingual document → engine field separation", () => {
-    it("벡터는 _en 필드로, 엔티티 추출은 원문 body로 처리", async () => {
-      const supabase = mockSupabase();
-      const vectorStore = mockVectorStore();
-      const graphStore = mockGraphStore();
-      const llm = mockLlm();
-      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
-
-      rpc
-        .mockResolvedValueOnce({
-          data: [makeMessage({ type: "notify" })],
-          error: null,
-        })
-        .mockResolvedValueOnce({ data: null, error: null })
-        .mockResolvedValueOnce({
-          data: [PENDING_DOC_BILINGUAL],
-          error: null,
-        })
-        // complete_memory_ingestion
-        .mockResolvedValueOnce({ data: null, error: null })
-        .mockResolvedValueOnce({ data: [], error: null });
-
-      const worker = createSyncWorker({
-        supabase,
-        llm,
-        embedding: mockEmbedding(),
-        vectorStore,
-        graphStore,
-        entityVectorStore: mockEntityVectorStore(),
-      });
-      worker.start();
-      await vi.advanceTimersByTimeAsync(0);
-      await worker.stop();
-
-      // 벡터 임베딩은 영문 번역본으로
-      expect(vectorStore.upsert).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          docId: DOC_ID_1,
-          chunks: ["English body"],
-          tags: ["tag1"],
-          summary: "English summary",
-        }),
-      );
-      // 엔티티 추출은 원문 언어 보존을 위해 원문 body로
-      expect(llm.generateStructured).toHaveBeenCalledWith(
-        expect.objectContaining({
-          schemaName: "entity_extraction",
-          messages: [
-            expect.objectContaining({
-              role: "user",
-              content: expect.stringContaining("한국어 본문"),
-            }),
-          ],
-        }),
-      );
     });
   });
 
@@ -587,7 +513,7 @@ describe("createSyncWorker", () => {
       // LLM succeeds for doc-1, fails for doc-2
       (llm.generateStructured as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({
-          entities: [{ type: "Person", name: "Alice", nameEn: "Alice" }],
+          entities: [{ type: "Person", name: "Alice" }],
         })
         .mockRejectedValueOnce(new Error("LLM timeout"));
 
