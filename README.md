@@ -1,19 +1,27 @@
 <p align="center">
-  <img src="apps/web/src/assets/nema-logo.svg" alt="Nema" height="28" />
+  <img src="apps/web/src/assets/nema-logo.svg" alt="Nema" height="32" />
 </p>
 
-<p align="center">맥락을 구조화하고, 쓸수록 판단이 선명해지는 지식 시스템</p>
-<p align="center">A knowledge system that structures your context and sharpens your judgment over time.</p>
+<p align="center">
+  <b>맥락을 구조화하고, 쓸수록 판단이 선명해지는 지식 시스템</b><br>
+  <sub>A knowledge system that structures your context and sharpens your judgment over time.</sub>
+</p>
 
-## Tech Stack
+---
 
-- **Monorepo**: Turborepo + pnpm
-- **Frontend**: React 19, Vite 6, TanStack Router/Query, Tailwind CSS 4
-- **Backend**: Fastify 5, tRPC 11
-- **Database**: Supabase (PostgreSQL + Auth)
-- **Vector DB**: Qdrant
-- **Graph DB**: Neo4j
-- **LLM/Embedding**: OpenAI, Voyage AI
+## Stack
+
+| | |
+|---|---|
+| Monorepo | Turborepo + pnpm |
+| Frontend | React 19, Vite 6, TanStack Router/Query, Tailwind CSS 4 |
+| Backend | Fastify 5, tRPC 11 |
+| Database | Supabase (PostgreSQL + Auth) |
+| Vector DB | Qdrant |
+| Graph DB | Neo4j |
+| LLM / Embedding | OpenAI, Voyage AI |
+
+---
 
 ## 시작하기
 
@@ -61,6 +69,8 @@ pnpm dev          # 웹 + 서버 (local API)
 - 웹: http://localhost:5173
 - 서버: http://localhost:3001
 
+---
+
 ## DB 마이그레이션
 
 마이그레이션 파일을 추가하거나 수정한 경우 타입을 재생성해야 합니다.
@@ -77,6 +87,8 @@ supabase stop
 ```
 
 생성된 `database.types.ts`를 마이그레이션과 함께 커밋합니다. CI에서 드리프트 감지가 동작하므로 타입이 최신이 아니면 머지가 차단됩니다.
+
+---
 
 ## 프로젝트 구조
 
