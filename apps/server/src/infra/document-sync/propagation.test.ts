@@ -137,14 +137,13 @@ describe("runPropagation", () => {
       expect(llm.generateStructured).toHaveBeenCalledTimes(2);
 
       // C 재합성: trigger body에 A와 B 둘 다 포함
-      const cCall = (
-        llm.generateStructured as ReturnType<typeof vi.fn>
-      ).mock.calls.find(([params]) =>
+      const llmCalls = (llm.generateStructured as ReturnType<typeof vi.fn>).mock
+        .calls;
+      const cCallIdx = llmCalls.findIndex(([params]) =>
         (params.messages[0].content as string).includes("C body"),
       );
-      expect(cCall).toBeDefined();
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const cContent: string = cCall![0].messages[0].content;
+      expect(cCallIdx).not.toBe(-1);
+      const cContent: string = llmCalls[cCallIdx][0].messages[0].content;
       expect(cContent).toContain("body A");
       expect(cContent).toContain("body B");
 
