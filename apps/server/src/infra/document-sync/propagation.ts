@@ -38,8 +38,8 @@ export async function runPropagation(
   deps: PropagationDeps,
 ): Promise<void> {
   // Map 값의 historyId: 연쇄 revision이 "원래 저장 History"를 가리키게 하는 핵심.
-  // NEM-26(시간축)·NEM-81(Lint)이 source='direct'로 필터하면서 propagated
-  // revision도 같은 history_id를 공유해야 "저장 A가 유발한 전파 묶음" 조회가 성립.
+  // direct revision과 propagated revision이 같은 history_id를 공유해야
+  // "저장 A가 유발한 전파 묶음" 조회(시간축 추적·Lint 등)가 성립한다.
   const triggersByRelated = new Map<
     TriggerKey,
     {
