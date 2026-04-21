@@ -53,16 +53,29 @@ function mockSupabase(memories: object[], revisions: object[]) {
 
   const from = vi.fn().mockImplementation((table: string) => {
     if (table === "memories") {
+      // select(...).eq("user_id", ...).in("id", ...)
       return {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ data: memories, error: null }),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockImplementation((_col: string, ids: string[]) => {
+          const filtered = (memories as Array<{ id: string }>).filter((m) =>
+            ids.includes(m.id),
+          );
+          return Promise.resolve({ data: filtered, error: null });
+        }),
       };
     }
-    // memory_revisions
+    // memory_revisions: select(...).in("memory_id", ...).order(...)
     return {
       select: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      order: vi.fn().mockResolvedValue({ data: revisions, error: null }),
+      in: vi.fn().mockImplementation((_col: string, ids: string[]) => {
+        const filtered = (revisions as Array<{ memory_id: string }>).filter(
+          (r) => ids.includes(r.memory_id),
+        );
+        return {
+          order: vi.fn().mockResolvedValue({ data: filtered, error: null }),
+        };
+      }),
     };
   });
 

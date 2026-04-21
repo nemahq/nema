@@ -19,6 +19,7 @@ import type { DeleteEvent, PendingDocument } from "./types";
 import { PendingDocumentSchema, TriggerMessageSchema } from "./types";
 
 const MAX_RETRIES = 5;
+// PRD 참조값 2-3 hop 중 보수적 하한. 데이터 쌓인 뒤 조정 예정.
 const MAX_PROPAGATION_DEPTH = 2;
 const POLL_INTERVAL_MS = 2_000;
 const ENTITY_PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1_000;

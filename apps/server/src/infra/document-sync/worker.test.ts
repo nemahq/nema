@@ -696,6 +696,39 @@ describe("createSyncWorker", () => {
       });
     });
 
+    it("depth=1 수신 시 Phase 4 실행 + send_memory_sync_notify(depth=2) 호출", async () => {
+      const supabase = mockSupabase();
+      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
+
+      rpc
+        .mockResolvedValueOnce({
+          data: [makeMessage({ type: "notify", propagation_depth: 1 })],
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: null, error: null }) // ack
+        .mockResolvedValueOnce({ data: [PENDING_DOC], error: null }) // fetch_pending
+        .mockResolvedValueOnce({ data: null, error: null }) // complete
+        .mockResolvedValueOnce({ data: [], error: null }) // fetch_pending empty
+        .mockResolvedValueOnce({ data: null, error: null }); // send_memory_sync_notify
+
+      const worker = createSyncWorker({
+        supabase,
+        llm: mockLlm(),
+        embedding: mockEmbedding(),
+        vectorStore: mockVectorStore(),
+        graphStore: mockGraphStore(),
+        entityVectorStore: mockEntityVectorStore(),
+      });
+      worker.start();
+      await vi.advanceTimersByTimeAsync(0);
+      await worker.stop();
+
+      expect(runPropagation).toHaveBeenCalled();
+      expect(rpc).toHaveBeenCalledWith("send_memory_sync_notify", {
+        p_propagation_depth: 2,
+      });
+    });
+
     it("depth=2 notify 수신 시 Phase 4 skip — send_memory_sync_notify 미호출", async () => {
       const supabase = mockSupabase();
       const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
