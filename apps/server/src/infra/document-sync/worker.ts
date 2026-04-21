@@ -215,6 +215,11 @@ async function runBatchCycle(deps: WorkerDeps, depth: number): Promise<void> {
 
   await runPropagation(processedItems, deps);
 
+  // runPropagation이 연관 memory들을 pending으로 되돌려놓은 상태 →
+  // 다음 poll의 runBatchCycle이 이들을 Phase 3 재인덱싱으로 집어가고, 끝나면
+  // 다시 여기로 돌아와 depth+1로 Phase 4를 재실행 (MAX_PROPAGATION_DEPTH까지).
+  // notify 전송 실패는 swallow — Phase 3 primary 저장은 이미 성공했고 다음 hop
+  // 전파만 유실되므로 degrade OK. throw로 바꾸면 성공한 재합성까지 영향.
   const { error } = await deps.supabase.rpc("send_memory_sync_notify", {
     p_propagation_depth: depth + 1,
   });
