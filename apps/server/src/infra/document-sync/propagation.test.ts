@@ -143,7 +143,8 @@ describe("runPropagation", () => {
         (params.messages[0].content as string).includes("C body"),
       );
       expect(cCall).toBeDefined();
-      const cContent: string = cCall[0].messages[0].content;
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const cContent: string = cCall![0].messages[0].content;
       expect(cContent).toContain("body A");
       expect(cContent).toContain("body B");
 
