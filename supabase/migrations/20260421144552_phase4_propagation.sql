@@ -1,11 +1,3 @@
--- Phase 4 propagation 구현
--- 1. revision_source에 'propagated' 추가 (이미 types에 반영됨)
--- 2. _write_memory_revision 헬퍼 추출 (auth 없는 순수 데이터 쓰기)
--- 3. update_memory_with_revision → 헬퍼 호출로 전환
--- 4. apply_propagated_revision 신설 (service_role 전용)
--- 5. send_memory_sync_notify 신설 (Phase 4 전파 트리거)
--- 6. fetch_pending_memories에 history_id 추가
-
 ALTER TYPE revision_source ADD VALUE IF NOT EXISTS 'propagated';
 
 -- =============================================================

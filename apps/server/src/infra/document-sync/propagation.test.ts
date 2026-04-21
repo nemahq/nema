@@ -53,7 +53,6 @@ function mockSupabase(memories: object[], revisions: object[]) {
 
   const from = vi.fn().mockImplementation((table: string) => {
     if (table === "memories") {
-      // select(...).eq("user_id", ...).in("id", ...)
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -65,7 +64,6 @@ function mockSupabase(memories: object[], revisions: object[]) {
         }),
       };
     }
-    // memory_revisions: select(...).in("memory_id", ...).order(...)
     return {
       select: vi.fn().mockReturnThis(),
       in: vi.fn().mockImplementation((_col: string, ids: string[]) => {
@@ -146,7 +144,6 @@ describe("runPropagation", () => {
 
       await runPropagation(items, { supabase, llm, graphStore });
 
-      // LLM 호출은 C, D 각각 한 번씩 — 총 2회
       expect(llm.generateStructured).toHaveBeenCalledTimes(2);
 
       // C 재합성: trigger body에 A와 B 둘 다 포함
@@ -160,7 +157,6 @@ describe("runPropagation", () => {
       expect(cContent).toContain("body A");
       expect(cContent).toContain("body B");
 
-      // apply_propagated_revision: C, D 각각 한 번씩
       expect(rpc).toHaveBeenCalledWith(
         "apply_propagated_revision",
         expect.objectContaining({ p_memory_id: DOC_C }),
