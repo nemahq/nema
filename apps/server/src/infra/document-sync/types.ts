@@ -2,7 +2,10 @@ import { z } from "zod";
 
 // --- PGMQ 메시지 스키마 (경량 트리거 + delete 이벤트) ---
 
-const NotifyEventSchema = z.object({ type: z.literal("notify") });
+const NotifyEventSchema = z.object({
+  type: z.literal("notify"),
+  propagation_depth: z.number().int().nonnegative().optional(),
+});
 
 const DeleteEventSchema = z.object({
   type: z.literal("document.deleted"),
@@ -44,6 +47,7 @@ export const PendingDocumentSchema = z.object({
   tags: z.array(z.string()),
   summary: z.string().min(1),
   created_at: z.string().datetime({ offset: true }),
+  history_id: z.string().uuid().nullable(),
 });
 
 export type PendingDocument = z.infer<typeof PendingDocumentSchema>;

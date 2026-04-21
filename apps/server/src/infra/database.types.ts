@@ -363,12 +363,27 @@ export type Database = {
         };
         Returns: string;
       };
+      apply_propagated_revision: {
+        Args: {
+          p_body: string;
+          p_category: string | null;
+          p_history_id: string;
+          p_memory_id: string;
+          p_summary: string;
+          p_tags: string[];
+          p_title: string;
+          p_update_type: Database["public"]["Enums"]["update_type"];
+          p_user_id: string;
+        };
+        Returns: undefined;
+      };
       fail_stale_save_jobs: { Args: never; Returns: number };
       fetch_pending_memories: {
         Args: { p_max_retries?: number };
         Returns: {
           body: string;
           created_at: string;
+          history_id: string | null;
           id: string;
           summary: string;
           tags: string[];
@@ -397,6 +412,10 @@ export type Database = {
           msg_id: number;
           read_ct: number;
         }[];
+      };
+      send_memory_sync_notify: {
+        Args: { p_propagation_depth?: number };
+        Returns: undefined;
       };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };

@@ -13,10 +13,14 @@ import {
 } from "@server/prompts/entity-extraction";
 import { resolveEntities } from "@server/services/entity-resolution";
 
+import type { ProcessedItem } from "./propagation";
+import { runPropagation } from "./propagation";
 import type { DeleteEvent, PendingDocument } from "./types";
 import { PendingDocumentSchema, TriggerMessageSchema } from "./types";
 
 const MAX_RETRIES = 5;
+// PRD 참조값 2-3 hop 중 보수적 하한. 데이터 쌓인 뒤 조정 예정.
+const MAX_PROPAGATION_DEPTH = 2;
 const POLL_INTERVAL_MS = 2_000;
 const ENTITY_PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1_000;
 const ENTITY_PRUNE_LIST_LIMIT = 10_000;
@@ -74,14 +78,18 @@ export function createSyncWorker(deps: WorkerDeps) {
         return;
       }
 
-      let shouldRunBatch = false;
+      let minDepth = Infinity;
 
       for (const row of parsed.data) {
         try {
           switch (row.message.type) {
-            case "notify":
-              shouldRunBatch = true;
+            case "notify": {
+              const d = row.message.propagation_depth ?? 0;
+              if (d < minDepth) {
+                minDepth = d;
+              }
               break;
+            }
             case "document.deleted":
               await handleDelete(row.message, deps);
               break;
@@ -103,8 +111,8 @@ export function createSyncWorker(deps: WorkerDeps) {
         }
       }
 
-      if (shouldRunBatch) {
-        await runBatchCycle(deps);
+      if (minDepth !== Infinity) {
+        await runBatchCycle(deps, minDepth);
       }
     } catch (err) {
       Sentry.captureException(err, {
@@ -151,7 +159,9 @@ export function createSyncWorker(deps: WorkerDeps) {
   };
 }
 
-async function runBatchCycle(deps: WorkerDeps): Promise<void> {
+async function runBatchCycle(deps: WorkerDeps, depth: number): Promise<void> {
+  const processedItems: ProcessedItem[] = [];
+
   // pending 순환: 처리 후 남은 pending이 있으면 즉시 다음 배치
   while (true) {
     const docs = await fetchPendingDocuments(deps.supabase);
@@ -182,6 +192,12 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
           }
           try {
             await markCompleted(deps.supabase, doc.id);
+            processedItems.push({
+              docId: doc.id,
+              userId: doc.user_id,
+              historyId: doc.history_id,
+              body: doc.body,
+            });
           } catch (markErr) {
             Sentry.captureException(markErr, {
               tags: { component: "sync-worker", phase: "markCompleted" },
@@ -191,6 +207,27 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
         }),
       );
     }
+  }
+
+  if (processedItems.length === 0 || depth >= MAX_PROPAGATION_DEPTH) {
+    return;
+  }
+
+  await runPropagation(processedItems, deps);
+
+  // runPropagation이 연관 memory들을 pending으로 되돌려놓은 상태 →
+  // 다음 poll의 runBatchCycle이 이들을 Phase 3 재인덱싱으로 집어가고, 끝나면
+  // 다시 여기로 돌아와 depth+1로 Phase 4를 재실행 (MAX_PROPAGATION_DEPTH까지).
+  // notify 전송 실패는 swallow — Phase 3 primary 저장은 이미 성공했고 다음 hop
+  // 전파만 유실되므로 degrade OK. throw로 바꾸면 성공한 재합성까지 영향.
+  const { error } = await deps.supabase.rpc("send_memory_sync_notify", {
+    p_propagation_depth: depth + 1,
+  });
+  if (error) {
+    Sentry.captureMessage(
+      `[sync-worker] send_memory_sync_notify failed: ${error.message}`,
+      { level: "error", extra: { error } },
+    );
   }
 }
 
