@@ -37,13 +37,31 @@ export async function runPropagation(
   processedItems: ProcessedItem[],
   deps: PropagationDeps,
 ): Promise<void> {
+  // Map 값의 historyId: 연쇄 revision이 "원래 저장 History"를 가리키게 하는 핵심.
+  // direct revision과 propagated revision이 같은 history_id를 공유해야
+  // "저장 A가 유발한 전파 묶음" 조회(시간축 추적·Lint 등)가 성립한다.
   const triggersByRelated = new Map<
     TriggerKey,
-    { userId: string; docId: string; triggerBodies: string[] }
+    {
+      userId: string;
+      docId: string;
+      historyId: string;
+      triggerBodies: string[];
+    }
   >();
 
   await Promise.allSettled(
     processedItems.map(async (item) => {
+      if (item.historyId === null) {
+        // 정상 경로에서는 발생하지 않음 (create_memory_with_revision이 memory와
+        // revision을 동시 삽입). 방어선이지만 기록은 남긴다.
+        Sentry.captureMessage(
+          `[propagation] skipping trigger without historyId: ${item.docId}`,
+          { level: "warning", extra: { docId: item.docId } },
+        );
+        return;
+      }
+
       try {
         const related = await deps.graphStore.findRelatedDocuments({
           docId: item.docId,
@@ -61,6 +79,7 @@ export async function runPropagation(
             triggersByRelated.set(key, {
               userId: item.userId,
               docId: r.docId,
+              historyId: item.historyId,
               triggerBodies: [item.body],
             });
           }
@@ -95,26 +114,14 @@ export async function runPropagation(
     summary: string | null;
     body: string;
   }> = [];
-  const revisions: Array<{
-    memory_id: string;
-    history_id: string;
-    created_at: string;
-  }> = [];
 
   for (const [userId, docIdSet] of idsByUser) {
     const ids = [...docIdSet];
-    const [memResult, revResult] = await Promise.all([
-      deps.supabase
-        .from("memories")
-        .select("id, user_id, title, category, tags, summary, body")
-        .eq("user_id", userId)
-        .in("id", ids),
-      deps.supabase
-        .from("memory_revisions")
-        .select("memory_id, history_id, created_at")
-        .in("memory_id", ids)
-        .order("created_at", { ascending: false }),
-    ]);
+    const memResult = await deps.supabase
+      .from("memories")
+      .select("id, user_id, title, category, tags, summary, body")
+      .eq("user_id", userId)
+      .in("id", ids);
 
     if (memResult.error) {
       Sentry.captureMessage(
@@ -123,31 +130,14 @@ export async function runPropagation(
       );
       continue;
     }
-    if (revResult.error) {
-      Sentry.captureMessage(
-        `[propagation] memory_revisions fetch failed: ${revResult.error.message}`,
-        { level: "error", extra: { error: revResult.error, userId } },
-      );
-      continue;
-    }
 
     memories.push(...(memResult.data ?? []));
-    revisions.push(...(revResult.data ?? []));
-  }
-
-  const historyIdByMemory = new Map<string, string>();
-  for (const r of revisions) {
-    if (!historyIdByMemory.has(r.memory_id)) {
-      historyIdByMemory.set(r.memory_id, r.history_id);
-    }
   }
 
   await Promise.allSettled(
     memories.map(async (mem) => {
       const trigger = triggersByRelated.get(triggerKey(mem.user_id, mem.id));
-      const historyId = historyIdByMemory.get(mem.id);
-
-      if (!trigger || !historyId) {
+      if (!trigger) {
         return;
       }
 
@@ -178,7 +168,7 @@ export async function runPropagation(
       const { error } = await deps.supabase.rpc("apply_propagated_revision", {
         p_memory_id: mem.id,
         p_user_id: mem.user_id,
-        p_history_id: historyId,
+        p_history_id: trigger.historyId,
         p_title: mem.title ?? "",
         p_category: mem.category ?? null,
         p_tags: result.tags,
