@@ -30,6 +30,9 @@ JSON object:
 - summary: one sentence capturing the core current fact.
 - tags: 2–5 specific keywords.`;
 
+// title 재합성 제외 — 연관 memory 변경은 주로 내용·관계 업데이트지 주제 자체가
+// 바뀌는 경우가 드물어 제목은 기존 값을 유지한다. 본문이 크게 바뀌어도 제목이
+// 빈번히 불일치하면 추후 별도 재명명 경로 도입을 검토.
 export const ResynthesisOutputSchema = z.object({
   update_type: z.enum(["extend", "replace"]),
   body: z.string().min(1),
