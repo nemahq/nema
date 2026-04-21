@@ -13,10 +13,13 @@ import {
 } from "@server/prompts/entity-extraction";
 import { resolveEntities } from "@server/services/entity-resolution";
 
+import type { ProcessedItem } from "./propagation";
+import { runPropagation } from "./propagation";
 import type { DeleteEvent, PendingDocument } from "./types";
 import { PendingDocumentSchema, TriggerMessageSchema } from "./types";
 
 const MAX_RETRIES = 5;
+const MAX_PROPAGATION_DEPTH = 2;
 const POLL_INTERVAL_MS = 2_000;
 const ENTITY_PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1_000;
 const ENTITY_PRUNE_LIST_LIMIT = 10_000;
@@ -74,14 +77,18 @@ export function createSyncWorker(deps: WorkerDeps) {
         return;
       }
 
-      let shouldRunBatch = false;
+      let minDepth = Infinity;
 
       for (const row of parsed.data) {
         try {
           switch (row.message.type) {
-            case "notify":
-              shouldRunBatch = true;
+            case "notify": {
+              const d = row.message.propagation_depth ?? 0;
+              if (d < minDepth) {
+                minDepth = d;
+              }
               break;
+            }
             case "document.deleted":
               await handleDelete(row.message, deps);
               break;
@@ -103,8 +110,8 @@ export function createSyncWorker(deps: WorkerDeps) {
         }
       }
 
-      if (shouldRunBatch) {
-        await runBatchCycle(deps);
+      if (minDepth !== Infinity) {
+        await runBatchCycle(deps, minDepth);
       }
     } catch (err) {
       Sentry.captureException(err, {
@@ -151,7 +158,9 @@ export function createSyncWorker(deps: WorkerDeps) {
   };
 }
 
-async function runBatchCycle(deps: WorkerDeps): Promise<void> {
+async function runBatchCycle(deps: WorkerDeps, depth: number): Promise<void> {
+  const processedItems: ProcessedItem[] = [];
+
   // pending 순환: 처리 후 남은 pending이 있으면 즉시 다음 배치
   while (true) {
     const docs = await fetchPendingDocuments(deps.supabase);
@@ -182,6 +191,12 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
           }
           try {
             await markCompleted(deps.supabase, doc.id);
+            processedItems.push({
+              docId: doc.id,
+              userId: doc.user_id,
+              historyId: doc.history_id,
+              body: doc.body,
+            });
           } catch (markErr) {
             Sentry.captureException(markErr, {
               tags: { component: "sync-worker", phase: "markCompleted" },
@@ -191,6 +206,22 @@ async function runBatchCycle(deps: WorkerDeps): Promise<void> {
         }),
       );
     }
+  }
+
+  if (processedItems.length === 0 || depth >= MAX_PROPAGATION_DEPTH) {
+    return;
+  }
+
+  await runPropagation(processedItems, deps);
+
+  const { error } = await deps.supabase.rpc("send_memory_sync_notify", {
+    p_propagation_depth: depth + 1,
+  });
+  if (error) {
+    Sentry.captureMessage(
+      `[sync-worker] send_memory_sync_notify failed: ${error.message}`,
+      { level: "error", extra: { error } },
+    );
   }
 }
 

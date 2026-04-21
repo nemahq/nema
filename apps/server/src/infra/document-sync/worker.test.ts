@@ -15,6 +15,12 @@ import type { EntityVectorStore, VectorStore } from "@server/infra/vector";
 import type { PendingDocument, SyncEvent, TriggerMessage } from "./types";
 import { createSyncWorker } from "./worker";
 
+vi.mock("./propagation", () => ({
+  runPropagation: vi.fn().mockResolvedValue(undefined),
+}));
+
+import { runPropagation } from "./propagation";
+
 // --- Mock factories ---
 
 function mockSupabase() {
@@ -100,6 +106,7 @@ const PENDING_DOC: PendingDocument = {
   tags: ["tag1"],
   summary: "test summary",
   created_at: "2026-04-01T00:00:00.000Z",
+  history_id: null,
 };
 
 // --- Tests ---
@@ -107,6 +114,7 @@ const PENDING_DOC: PendingDocument = {
 describe("createSyncWorker", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -502,6 +510,7 @@ describe("createSyncWorker", () => {
         tags: [],
         summary: "fail",
         created_at: "2026-04-02T00:00:00.000Z",
+        history_id: null,
       };
 
       // LLM succeeds for doc-1, fails for doc-2
@@ -652,6 +661,75 @@ describe("createSyncWorker", () => {
     });
   });
 
+  // ========== Phase 4 depth ==========
+
+  describe("Phase 4 propagation depth", () => {
+    it("depth=0 완료 후 send_memory_sync_notify(depth=1) 호출", async () => {
+      const supabase = mockSupabase();
+      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
+
+      rpc
+        .mockResolvedValueOnce({
+          data: [makeMessage({ type: "notify" })],
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: null, error: null }) // ack
+        .mockResolvedValueOnce({ data: [PENDING_DOC], error: null }) // fetch_pending
+        .mockResolvedValueOnce({ data: null, error: null }) // complete
+        .mockResolvedValueOnce({ data: [], error: null }) // fetch_pending empty
+        .mockResolvedValueOnce({ data: null, error: null }); // send_memory_sync_notify
+
+      const worker = createSyncWorker({
+        supabase,
+        llm: mockLlm(),
+        embedding: mockEmbedding(),
+        vectorStore: mockVectorStore(),
+        graphStore: mockGraphStore(),
+        entityVectorStore: mockEntityVectorStore(),
+      });
+      worker.start();
+      await vi.advanceTimersByTimeAsync(0);
+      await worker.stop();
+
+      expect(rpc).toHaveBeenCalledWith("send_memory_sync_notify", {
+        p_propagation_depth: 1,
+      });
+    });
+
+    it("depth=2 notify 수신 시 Phase 4 skip — send_memory_sync_notify 미호출", async () => {
+      const supabase = mockSupabase();
+      const rpc = supabase.rpc as ReturnType<typeof vi.fn>;
+
+      rpc
+        .mockResolvedValueOnce({
+          data: [makeMessage({ type: "notify", propagation_depth: 2 })],
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: null, error: null }) // ack
+        .mockResolvedValueOnce({ data: [PENDING_DOC], error: null }) // fetch_pending
+        .mockResolvedValueOnce({ data: null, error: null }) // complete
+        .mockResolvedValueOnce({ data: [], error: null }); // fetch_pending empty
+
+      const worker = createSyncWorker({
+        supabase,
+        llm: mockLlm(),
+        embedding: mockEmbedding(),
+        vectorStore: mockVectorStore(),
+        graphStore: mockGraphStore(),
+        entityVectorStore: mockEntityVectorStore(),
+      });
+      worker.start();
+      await vi.advanceTimersByTimeAsync(0);
+      await worker.stop();
+
+      const rpcCalls = (rpc as ReturnType<typeof vi.fn>).mock.calls.map(
+        (c) => c[0],
+      );
+      expect(rpcCalls).not.toContain("send_memory_sync_notify");
+      expect(runPropagation).not.toHaveBeenCalled();
+    });
+  });
+
   // ========== Pending cycle ==========
 
   describe("pending cycle loops until empty", () => {
@@ -669,6 +747,7 @@ describe("createSyncWorker", () => {
         tags: ["tag2"],
         summary: "second",
         created_at: "2026-04-02T00:00:00.000Z",
+        history_id: null,
       };
 
       rpc
