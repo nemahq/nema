@@ -37,8 +37,6 @@ export const ResynthesisOutputSchema = z.object({
   summary: z.string().min(1),
 });
 
-export type ResynthesisOutput = z.infer<typeof ResynthesisOutputSchema>;
-
 const BODY_PREVIEW_MAX = 1_500;
 
 function truncateBody(body: string): string {
