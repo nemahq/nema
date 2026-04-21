@@ -68,6 +68,7 @@ jobs:
       - name: Test
         run: pnpm test
 
+  # Railway staging auto-deploy must be OFF — this job manages deployment sequencing.
   deploy-staging:
     needs: check
     runs-on: ubuntu-latest
