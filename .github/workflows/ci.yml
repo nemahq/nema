@@ -68,17 +68,21 @@ jobs:
       - name: Test
         run: pnpm test
 
-  migrate-staging:
+  # Railway staging auto-deploy must be OFF — this job manages deployment sequencing.
+  deploy-staging:
     needs: check
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     concurrency:
-      group: migrate-staging
+      group: deploy-staging
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
 
       - name: Check for migration changes
         id: migrations
@@ -102,6 +106,16 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD_STAGING }}
+
+      - name: Deploy server to staging
+        run: railway up --service server --environment staging --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy web to staging
+        run: railway up --service web --environment staging --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
   deploy-production:
     needs: check
