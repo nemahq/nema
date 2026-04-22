@@ -1,8 +1,21 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as Sentry from "@sentry/node";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
+import { SupabaseError } from "@server/infra/supabase-error";
 
 import { listHistories } from "./history-service";
+
+vi.mock("@sentry/node", () => ({
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
+}));
+
+beforeEach(() => {
+  vi.mocked(Sentry.captureMessage).mockClear();
+});
+
+const UUID_PREV = "11111111-1111-4111-a111-111111111111";
 
 type IngestionStatus = "pending" | "completed" | "failed";
 type RevisionSource = "direct" | "propagated";
@@ -32,6 +45,10 @@ type TableRows = {
   memories?: MemoryRow[];
 };
 
+type TableErrors = Partial<
+  Record<keyof TableRows, { code: string; message: string }>
+>;
+
 function encodeCursor(createdAt: string, id: string): string {
   return Buffer.from(JSON.stringify([createdAt, id])).toString("base64url");
 }
@@ -43,12 +60,15 @@ function decodeCursor(cursor: string): [string, string] {
   ];
 }
 
-function mockSupabase(rows: TableRows) {
+function mockSupabase(rows: TableRows, errors: TableErrors = {}) {
   const orCalls: Record<string, string[]> = {};
 
   function makeChain(table: string) {
     const tableRows = rows[table as keyof TableRows] ?? [];
-    const result = { data: tableRows, error: null };
+    const tableError = errors[table as keyof TableRows] ?? null;
+    const result = tableError
+      ? { data: null, error: tableError }
+      : { data: tableRows, error: null };
     const chain: Record<string, ReturnType<typeof vi.fn>> = {};
     chain.select = vi.fn().mockReturnValue(chain);
     chain.order = vi.fn().mockReturnValue(chain);
@@ -201,19 +221,40 @@ describe("listHistories", () => {
 
     await listHistories(client, {
       limit: 20,
-      cursor: encodeCursor("2026-03-01T00:00:00Z", "h-prev"),
+      cursor: encodeCursor("2026-03-01T00:00:00Z", UUID_PREV),
     });
 
     expect(orCalls.histories).toEqual([
-      "created_at.lt.2026-03-01T00:00:00Z,and(created_at.eq.2026-03-01T00:00:00Z,id.lt.h-prev)",
+      `created_at.lt.2026-03-01T00:00:00Z,and(created_at.eq.2026-03-01T00:00:00Z,id.lt.${UUID_PREV})`,
     ]);
   });
 
-  it("잘못된 cursor는 BAD_REQUEST로 throw", async () => {
+  it("JSON 파싱 실패 cursor는 BAD_REQUEST", async () => {
     const { client } = mockSupabase({});
 
     await expect(
       listHistories(client, { limit: 20, cursor: "not-valid" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("id가 uuid 포맷이 아닌 cursor는 BAD_REQUEST (PostgREST 문자열 주입 차단)", async () => {
+    const { client } = mockSupabase({});
+    const maliciousCursor = encodeCursor(
+      "2026-03-01T00:00:00Z",
+      "bad,and(user_id.neq.x)",
+    );
+
+    await expect(
+      listHistories(client, { limit: 20, cursor: maliciousCursor }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("createdAt이 datetime이 아닌 cursor는 BAD_REQUEST", async () => {
+    const { client } = mockSupabase({});
+    const badCursor = encodeCursor("not-a-datetime", UUID_PREV);
+
+    await expect(
+      listHistories(client, { limit: 20, cursor: badCursor }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
@@ -505,5 +546,203 @@ describe("listHistories", () => {
     const page = await listHistories(client, { limit: 20 });
 
     expect(page.items).toMatchObject([{ primaryMemory: { name: null } }]);
+  });
+
+  it("histories 쿼리 에러 시 SupabaseError 전파", async () => {
+    const { client } = mockSupabase(
+      {},
+      { histories: { code: "XX500", message: "histories fail" } },
+    );
+
+    await expect(listHistories(client, { limit: 20 })).rejects.toThrow(
+      SupabaseError,
+    );
+  });
+
+  it("memory_revisions 쿼리 에러 시 SupabaseError 전파", async () => {
+    const { client } = mockSupabase(
+      {
+        histories: [
+          {
+            id: "h1",
+            created_at: "2026-03-02T00:00:00Z",
+            source_session_id: null,
+          },
+        ],
+      },
+      { memory_revisions: { code: "XX500", message: "revisions fail" } },
+    );
+
+    await expect(listHistories(client, { limit: 20 })).rejects.toThrow(
+      SupabaseError,
+    );
+  });
+
+  it("memories 쿼리 에러 시 SupabaseError 전파", async () => {
+    const { client } = mockSupabase(
+      {
+        histories: [
+          {
+            id: "h1",
+            created_at: "2026-03-02T00:00:00Z",
+            source_session_id: null,
+          },
+        ],
+        memory_revisions: [
+          revision({
+            historyId: "h1",
+            memoryId: "m1",
+            source: "direct",
+            createdAt: "2026-03-02T00:00:00Z",
+          }),
+        ],
+      },
+      { memories: { code: "XX500", message: "memories fail" } },
+    );
+
+    await expect(listHistories(client, { limit: 20 })).rejects.toThrow(
+      SupabaseError,
+    );
+  });
+
+  it("복수 history의 revision이 올바르게 history_id별로 분리됨", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: "h1",
+          created_at: "2026-03-02T00:00:00Z",
+          source_session_id: null,
+        },
+        {
+          id: "h2",
+          created_at: "2026-03-01T00:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        // h1: direct m1 (completed) + propagated m2 (pending)
+        revision({
+          historyId: "h1",
+          memoryId: "m1",
+          source: "direct",
+          createdAt: "2026-03-02T00:00:00Z",
+        }),
+        revision({
+          historyId: "h1",
+          memoryId: "m2",
+          source: "propagated",
+          createdAt: "2026-03-02T00:00:01Z",
+        }),
+        // h2: direct m3 (failed)
+        revision({
+          historyId: "h2",
+          memoryId: "m3",
+          source: "direct",
+          createdAt: "2026-03-01T00:00:00Z",
+        }),
+      ],
+      memories: [
+        memory({ id: "m1", status: "completed", title: "h1 primary" }),
+        memory({ id: "m2", status: "pending" }),
+        memory({ id: "m3", status: "failed", title: "h2 primary" }),
+      ],
+    });
+
+    const page = await listHistories(client, { limit: 20 });
+
+    expect(page.items).toMatchObject([
+      {
+        id: "h1",
+        primaryMemory: { id: "m1", name: "h1 primary" },
+        memoryCount: 2,
+        status: "processing",
+      },
+      {
+        id: "h2",
+        primaryMemory: { id: "m3", name: "h2 primary" },
+        memoryCount: 1,
+        status: "failed",
+      },
+    ]);
+  });
+
+  it("primaryMemory가 memoryMap에서 누락되면 Sentry.captureMessage로 경고 + 해당 행 제외", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: "h1",
+          created_at: "2026-03-02T00:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        revision({
+          historyId: "h1",
+          memoryId: "m-missing",
+          source: "direct",
+          createdAt: "2026-03-02T00:00:00Z",
+        }),
+      ],
+      // m-missing에 대한 memories row 없음 (FK/RLS 무결성 이상 시나리오)
+      memories: [],
+    });
+
+    const page = await listHistories(client, { limit: 20 });
+
+    expect(page.items).toHaveLength(0);
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      expect.stringContaining("primary memory missing"),
+      expect.objectContaining({
+        level: "warning",
+        extra: expect.objectContaining({
+          historyId: "h1",
+          memoryId: "m-missing",
+        }),
+      }),
+    );
+  });
+
+  it("propagated memory가 memoryMap에서 누락되면 status를 processing으로 보수 판정 + Sentry 경고", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: "h1",
+          created_at: "2026-03-02T00:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        revision({
+          historyId: "h1",
+          memoryId: "m-primary",
+          source: "direct",
+          createdAt: "2026-03-02T00:00:00Z",
+        }),
+        revision({
+          historyId: "h1",
+          memoryId: "m-missing-propagated",
+          source: "propagated",
+          createdAt: "2026-03-02T00:00:01Z",
+        }),
+      ],
+      memories: [memory({ id: "m-primary", status: "completed" })],
+      // m-missing-propagated는 memories에 없음 → status 알 수 없음
+    });
+
+    const page = await listHistories(client, { limit: 20 });
+
+    expect(page.items).toMatchObject([
+      { memoryCount: 2, status: "processing" },
+    ]);
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      expect.stringContaining("revision memories missing"),
+      expect.objectContaining({
+        level: "warning",
+        extra: expect.objectContaining({
+          historyId: "h1",
+          missingMemoryIds: ["m-missing-propagated"],
+        }),
+      }),
+    );
   });
 });
