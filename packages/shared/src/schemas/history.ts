@@ -5,9 +5,13 @@ export const HISTORY_LIST_MAX_LIMIT = 100;
 
 /**
  * History 단위로 집계된 정리 상태.
- * - processing: 하나라도 Revision이 pending 또는 processing
- * - completed: 모든 Revision이 completed
- * - failed: 모든 Revision이 failed (자동 재시도 한계 도달)
+ * Revision 상태(pending/completed/failed, 향후 processing 추가 가능)를
+ * History 레벨 단일 신호로 환원한다.
+ *
+ * 집계 규칙:
+ * - processing: 하나라도 진행 중(pending/processing) — 실패 확정 보류
+ * - failed: 진행 중 없음 + 하나라도 failed (mixed completed/failed 포함)
+ * - completed: 전부 completed
  *
  * pending을 별도 상태로 두지 않은 건 의도적 — History 레벨에선
  * "뭐가 돌고 있다"를 단일 신호(processing)로 합친다.

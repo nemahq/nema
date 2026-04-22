@@ -10,6 +10,7 @@ import {
   RetryHistoryIngestionInputSchema,
 } from "@nema-io/shared";
 
+import { listHistories } from "@server/services/history-service";
 import { protectedProcedure, router } from "@server/trpc";
 
 // 호출 시점마다 새 인스턴스 — 스택 트레이스를 resolver 위치에 고정.
@@ -23,9 +24,10 @@ function notImplemented(procedure: string): TRPCError {
 export const historyRouter = router({
   list: protectedProcedure
     .input(HistoryListInputSchema)
-    .query((): Promise<HistoryListOutput> => {
-      throw notImplemented("list");
-    }),
+    .query(
+      ({ ctx, input }): Promise<HistoryListOutput> =>
+        listHistories(ctx.supabase, input),
+    ),
 
   detail: protectedProcedure
     .input(HistoryDetailInputSchema)
