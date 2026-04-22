@@ -26,6 +26,8 @@ function MemoryIcon() {
   );
 }
 
+const MEMORY_LINK_ACTIVE_OPTIONS = { exact: false } as const;
+
 export function SessionSidebar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -48,6 +50,7 @@ export function SessionSidebar() {
             icon={<MemoryIcon />}
             label={t("memory.sidebar_label")}
             to="/memory"
+            activeOptions={MEMORY_LINK_ACTIVE_OPTIONS}
           />
         </>
       }

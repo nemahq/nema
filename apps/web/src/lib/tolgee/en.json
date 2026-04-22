@@ -45,7 +45,7 @@
     "entity_type_topic": "Topic",
     "page_title": "{name}'s Memory",
     "sidebar_label": "Memory",
-    "view_map": "Map",
+    "view_history": "History",
     "view_overview": "Overview"
   },
   "session": {

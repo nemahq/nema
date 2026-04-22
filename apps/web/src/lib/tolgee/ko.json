@@ -45,7 +45,7 @@
     "entity_type_topic": "주제",
     "page_title": "{name}의 기억",
     "sidebar_label": "기억",
-    "view_map": "맵",
+    "view_history": "히스토리",
     "view_overview": "개요"
   },
   "session": {

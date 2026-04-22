@@ -10,6 +10,7 @@ interface SidebarNavLinkProps {
   label: string;
   to: LinkProps["to"];
   showActive?: boolean;
+  activeOptions?: LinkProps["activeOptions"];
 }
 
 export function SidebarNavLink({
@@ -17,6 +18,7 @@ export function SidebarNavLink({
   label,
   to,
   showActive = true,
+  activeOptions,
 }: SidebarNavLinkProps) {
   const { collapsed } = useSidebar();
   const activeProps = showActive
@@ -33,6 +35,7 @@ export function SidebarNavLink({
               aria-label={label}
               className="flex size-9 items-center justify-center rounded-md transition-colors duration-fast hover:bg-surface-raised-hover"
               activeProps={activeProps}
+              activeOptions={activeOptions}
             >
               {icon}
             </Link>
