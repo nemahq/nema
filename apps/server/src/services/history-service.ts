@@ -91,9 +91,7 @@ export async function listHistories(
     .order("created_at", { ascending: true });
   throwIfSupabaseError(revisionError);
 
-  const memoryIds = Array.from(
-    new Set(revisionRows.map((r: RevisionRow) => r.memory_id)),
-  );
+  const memoryIds = Array.from(new Set(revisionRows.map((r) => r.memory_id)));
 
   const memoryMap = new Map<
     string,
@@ -115,7 +113,7 @@ export async function listHistories(
   }
 
   const revisionsByHistory = new Map<string, RevisionRow[]>();
-  for (const rev of revisionRows as RevisionRow[]) {
+  for (const rev of revisionRows) {
     const list = revisionsByHistory.get(rev.history_id) ?? [];
     list.push(rev);
     revisionsByHistory.set(rev.history_id, list);
