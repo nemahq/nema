@@ -48,6 +48,7 @@ export function SessionSidebar() {
             icon={<MemoryIcon />}
             label={t("memory.sidebar_label")}
             to="/memory"
+            activeOptions={{ exact: false }}
           />
         </>
       }

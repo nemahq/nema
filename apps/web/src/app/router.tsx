@@ -5,12 +5,15 @@ import {
   createRoute,
   createRouter,
   Outlet,
+  redirect,
 } from "@tanstack/react-router";
 
 import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { HomePage } from "@web/app/pages/HomePage";
+import { MemoryHistoryTab } from "@web/app/pages/MemoryHistoryTab";
+import { MemoryOverviewTab } from "@web/app/pages/MemoryOverviewTab";
 import { MemoryPage } from "@web/app/pages/MemoryPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { SessionPage } from "@web/app/pages/SessionPage";
@@ -19,6 +22,7 @@ import { TermsPage } from "@web/app/pages/TermsPage";
 import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { requireAuth, requireGuest } from "@web/features/auth";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
+import { getStorage } from "@web/utils/localStorage";
 
 import { App } from "./App";
 
@@ -99,12 +103,43 @@ const memoryRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
+const memoryIndexRoute = createRoute({
+  getParentRoute: () => memoryRoute,
+  path: "/",
+  beforeLoad: () => {
+    const lastTab = getStorage("memoryLastTab");
+    throw redirect({
+      to: lastTab === "history" ? "/memory/history" : "/memory/overview",
+    });
+  },
+});
+
+const memoryOverviewRoute = createRoute({
+  getParentRoute: () => memoryRoute,
+  path: "/overview",
+  component: MemoryOverviewTab,
+});
+
+const memoryHistoryRoute = createRoute({
+  getParentRoute: () => memoryRoute,
+  path: "/history",
+  component: MemoryHistoryTab,
+});
+
 const routeTree = rootRoute.addChildren([
   signinRoute,
   privacyRoute,
   termsRoute,
   authenticatedRoute.addChildren([
-    sessionSidebarRoute.addChildren([indexRoute, sessionRoute, memoryRoute]),
+    sessionSidebarRoute.addChildren([
+      indexRoute,
+      sessionRoute,
+      memoryRoute.addChildren([
+        memoryIndexRoute,
+        memoryOverviewRoute,
+        memoryHistoryRoute,
+      ]),
+    ]),
   ]),
 ]);
 
