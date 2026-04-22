@@ -62,7 +62,8 @@ export const HistoryListItemSchema = z.object({
   createdAt: z.string().datetime({ offset: true }),
   primaryMemory: z.object({
     id: z.string().uuid(),
-    name: z.string(),
+    // 제목이 아직 안 정해진 상태(ingestion pending 등)를 null로 전달 — fallback 표시는 프론트 책임
+    name: z.string().nullable(),
   }),
   memoryCount: z.number().int().nonnegative(),
   sessionId: z.string().uuid().nullable(),

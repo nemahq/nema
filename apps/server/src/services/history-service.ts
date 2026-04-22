@@ -11,8 +11,6 @@ import type { Database } from "@server/infra/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
-const MEMORY_TITLE_FALLBACK = "제목 없음";
-
 type IngestionStatus = Database["public"]["Enums"]["ingestion_status"];
 type RevisionSource = Database["public"]["Enums"]["revision_source"];
 
@@ -147,7 +145,7 @@ export async function listHistories(
       createdAt: row.created_at,
       primaryMemory: {
         id: firstDirect.memory_id,
-        name: primaryMemory.title ?? MEMORY_TITLE_FALLBACK,
+        name: primaryMemory.title,
       },
       memoryCount: statuses.length,
       sessionId: row.source_session_id,

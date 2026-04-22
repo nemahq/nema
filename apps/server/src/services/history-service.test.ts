@@ -482,7 +482,7 @@ describe("listHistories", () => {
     expect(page.items).toMatchObject([{ sessionId: null }]);
   });
 
-  it("primaryMemory title이 null이면 fallback 라벨 사용", async () => {
+  it("primaryMemory title이 null이면 name을 그대로 null로 전달 (fallback은 프론트 책임)", async () => {
     const { client } = mockSupabase({
       histories: [
         {
@@ -504,8 +504,6 @@ describe("listHistories", () => {
 
     const page = await listHistories(client, { limit: 20 });
 
-    expect(page.items).toMatchObject([
-      { primaryMemory: { name: "제목 없음" } },
-    ]);
+    expect(page.items).toMatchObject([{ primaryMemory: { name: null } }]);
   });
 });
