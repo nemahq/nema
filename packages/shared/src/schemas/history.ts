@@ -1,7 +1,17 @@
 import { z } from "zod";
 
-export const HISTORY_LIST_MAX_LIMIT = 50;
+export const HISTORY_LIST_DEFAULT_LIMIT = 20;
+export const HISTORY_LIST_MAX_LIMIT = 100;
 
+/**
+ * History 단위로 집계된 정리 상태.
+ * - processing: 하나라도 Revision이 pending 또는 processing
+ * - completed: 모든 Revision이 completed
+ * - failed: 모든 Revision이 failed (자동 재시도 한계 도달)
+ *
+ * pending을 별도 상태로 두지 않은 건 의도적 — History 레벨에선
+ * "뭐가 돌고 있다"를 단일 신호(processing)로 합친다.
+ */
 export const HistoryStatusSchema = z.enum([
   "processing",
   "completed",
@@ -25,11 +35,23 @@ export type UpdateType = z.infer<typeof UpdateTypeSchema>;
 export const RevisionSourceSchema = z.enum(["direct", "propagated"]);
 export type RevisionSource = z.infer<typeof RevisionSourceSchema>;
 
-const HistorySessionRefSchema = z
-  .object({
+/**
+ * Memory 삭제 상태를 타입으로 강제.
+ * - active: id·name 모두 존재
+ * - deleted: id 없음, name은 스냅샷으로 유지
+ */
+export const RevisionMemorySchema = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("active"),
     id: z.string().uuid(),
-  })
-  .nullable();
+    name: z.string(),
+  }),
+  z.object({
+    status: z.literal("deleted"),
+    name: z.string(),
+  }),
+]);
+export type RevisionMemory = z.infer<typeof RevisionMemorySchema>;
 
 export const HistoryListItemSchema = z.object({
   id: z.string().uuid(),
@@ -39,14 +61,19 @@ export const HistoryListItemSchema = z.object({
     name: z.string(),
   }),
   memoryCount: z.number().int().nonnegative(),
-  session: HistorySessionRefSchema,
+  sessionId: z.string().uuid().nullable(),
   status: HistoryStatusSchema,
 });
 export type HistoryListItem = z.infer<typeof HistoryListItemSchema>;
 
 export const HistoryListInputSchema = z.object({
   cursor: z.string().optional(),
-  limit: z.number().int().min(1).max(HISTORY_LIST_MAX_LIMIT).optional(),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(HISTORY_LIST_MAX_LIMIT)
+    .default(HISTORY_LIST_DEFAULT_LIMIT),
 });
 export type HistoryListInput = z.infer<typeof HistoryListInputSchema>;
 
@@ -56,29 +83,45 @@ export const HistoryListOutputSchema = z.object({
 });
 export type HistoryListOutput = z.infer<typeof HistoryListOutputSchema>;
 
-export const HistoryRevisionSchema = z.object({
+/**
+ * updateType과 prevBody의 교차 불변식을 타입으로 강제.
+ * DB CHECK 제약(chk_create_has_null_prev)과 일치:
+ * - create → prevBody null
+ * - extend/replace → prevBody 필수
+ */
+const RevisionBaseSchema = z.object({
   id: z.string().uuid(),
-  memory: z.object({
-    id: z.string().uuid().nullable(),
-    name: z.string(),
-  }),
-  prevBody: z.string().nullable(),
+  memory: RevisionMemorySchema,
   nextBody: z.string(),
-  updateType: UpdateTypeSchema,
   source: RevisionSourceSchema,
   ingestionStatus: RevisionIngestionStatusSchema,
 });
+
+export const HistoryRevisionSchema = z.discriminatedUnion("updateType", [
+  RevisionBaseSchema.extend({
+    updateType: z.literal("create"),
+    prevBody: z.null(),
+  }),
+  RevisionBaseSchema.extend({
+    updateType: z.literal("extend"),
+    prevBody: z.string(),
+  }),
+  RevisionBaseSchema.extend({
+    updateType: z.literal("replace"),
+    prevBody: z.string(),
+  }),
+]);
 export type HistoryRevision = z.infer<typeof HistoryRevisionSchema>;
 
 export const HistoryDetailInputSchema = z.object({
-  id: z.string().uuid(),
+  historyId: z.string().uuid(),
 });
 export type HistoryDetailInput = z.infer<typeof HistoryDetailInputSchema>;
 
 export const HistoryDetailOutputSchema = z.object({
   id: z.string().uuid(),
   createdAt: z.string().datetime({ offset: true }),
-  session: HistorySessionRefSchema,
+  sessionId: z.string().uuid().nullable(),
   status: HistoryStatusSchema,
   revisions: z.array(HistoryRevisionSchema),
 });

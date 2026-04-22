@@ -54,6 +54,7 @@ export {
 } from "./schemas/entity";
 export { type TrackEventInput, TrackEventInputSchema } from "./schemas/event";
 export {
+  HISTORY_LIST_DEFAULT_LIMIT,
   HISTORY_LIST_MAX_LIMIT,
   type HistoryDetailInput,
   HistoryDetailInputSchema,
@@ -77,6 +78,8 @@ export {
   RetryHistoryIngestionInputSchema,
   type RevisionIngestionStatus,
   RevisionIngestionStatusSchema,
+  type RevisionMemory,
+  RevisionMemorySchema,
   type RevisionSource,
   RevisionSourceSchema,
   type UpdateType,
