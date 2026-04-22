@@ -8,7 +8,8 @@ export function MemoryHistoryTab() {
   return (
     <Suspense>
       <MemoryTabShell>
-        <div className="flex-1" />
+        {/* TODO(NEM-102): 히스토리 리스트 렌더 */}
+        {null}
       </MemoryTabShell>
     </Suspense>
   );

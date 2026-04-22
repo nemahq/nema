@@ -107,10 +107,8 @@ const memoryIndexRoute = createRoute({
   getParentRoute: () => memoryRoute,
   path: "/",
   beforeLoad: () => {
-    const lastTab = getStorage("memoryLastTab");
-    throw redirect({
-      to: lastTab === "history" ? "/memory/history" : "/memory/overview",
-    });
+    const lastTab = getStorage("memoryLastTab") ?? "overview";
+    throw redirect({ to: `/memory/${lastTab}` as const });
   },
 });
 

@@ -13,7 +13,8 @@ const TABS: readonly Tab[] = [
   { to: "/memory/history", labelKey: "memory.view_history" },
 ];
 
-const BASE_CLASS = "px-3 py-1 text-xs transition-colors duration-fast";
+const BASE_CLASS =
+  "border-l border-border/50 px-3 py-1 text-xs transition-colors duration-fast first:border-l-0";
 const ACTIVE_CLASS = "font-semibold text-fg-primary";
 const INACTIVE_CLASS =
   "bg-surface-raised font-medium text-fg-tertiary hover:bg-surface-raised-hover hover:text-fg-secondary";
@@ -23,13 +24,11 @@ export function ViewSegment() {
 
   return (
     <div className="flex overflow-hidden rounded-md border border-border/50">
-      {TABS.map((tab, index) => (
+      {TABS.map((tab) => (
         <Link
           key={tab.to}
           to={tab.to}
-          className={
-            index === 0 ? BASE_CLASS : `border-l border-border/50 ${BASE_CLASS}`
-          }
+          className={BASE_CLASS}
           activeProps={{ className: ACTIVE_CLASS }}
           inactiveProps={{ className: INACTIVE_CLASS }}
         >
