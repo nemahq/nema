@@ -39,19 +39,14 @@ Each agent must cap its report at roughly 300 words — full fix code is the orc
 3. Any violations → apply fixes directly (Edit/Write tool), grouped by file to minimize churn. After fixes, run `pnpm typecheck` if any `.ts` / `.tsx` file was modified.
 4. Commit the fixes as a single commit: `리뷰 반영 — 컨벤션/용어/UX 자동 수정` (adjust scope names to match which gates actually flagged issues).
 
-## Step 4 — Compose PR (inline, user-interactive)
+## Step 4 — Compose PR (inline, no questions)
 
-Execute this step inline in the main flow — do NOT delegate to a subagent. The steps ask the user questions; only the orchestrator can interact with them.
+Execute this step inline. Do NOT ask the user anything — infer every section from the conversation context, diff, and commit history. If a section genuinely has nothing to say, omit it (Notes) or fall back to the default (see below). The user can correct the draft after it's posted.
 
-1. **Why** (1–2 sentences). First check the current conversation for motivation (issue links, prior discussion). If sufficient context exists → draft directly. Otherwise ask:
-   > 이 변경이 필요한 이유가 뭔가요? (관련 이슈/티켓이 있다면 함께 알려주세요)
+1. **Why** (1–2 sentences). Infer from conversation context (issue links, prior discussion, stated motivation) and commit messages. Must be self-contained for a 6-month-later reader.
 2. **What** (2–5 lines). Design decisions only — no file/function change lists. Infer from diff + commit history.
-3. **How to verify**. Ask:
-   > 리뷰어가 확인할 수 있는 구체적인 시나리오가 있나요?
-   No answer → infer concrete runnable scenarios from the affected flows. Do NOT write generic items like "타입체크 통과 확인".
-4. **Notes**. Ask:
-   > 트레이드오프, 리스크, 후속 작업 등 남길 노트가 있나요?
-   No content → omit the section entirely.
+3. **How to verify**. Infer concrete runnable scenarios from the affected flows. Do NOT write generic items like "타입체크 통과 확인". If the change is a pure doc/config edit with no runtime behavior, write a single concrete manual-review scenario (e.g., "다음 실행 시 X 동작이 Y 방식으로 바뀌는지").
+4. **Notes**. Include only if the diff or conversation surfaces a real tradeoff, risk, or follow-up. Otherwise omit the section entirely.
 5. **Title** (Korean, under 70 chars). Format: `{한글 요약}` or `{한글 요약} — {부제}`. No `feat:`/`fix:`/`chore:` prefixes.
 6. **Label**. One of `enhancement`, `bug`, `refactoring`, `documentation`.
 7. **Checklist**. Auto-check `CLAUDE.md updated` if any `CLAUDE.md` file is in the diff.
