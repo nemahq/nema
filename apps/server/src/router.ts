@@ -2,6 +2,7 @@ import { devRouter } from "./routers/dev-router";
 import { documentRouter } from "./routers/document-router";
 import { entityRouter } from "./routers/entity-router";
 import { eventRouter } from "./routers/event-router";
+import { historyRouter } from "./routers/history-router";
 import { messageRouter } from "./routers/message-router";
 import { profileRouter } from "./routers/profile-router";
 import { saveJobRouter } from "./routers/save-job-router";
@@ -19,6 +20,7 @@ export const appRouter = router({
   message: messageRouter,
   event: eventRouter,
   saveJob: saveJobRouter,
+  history: historyRouter,
   dev: devRouter,
 });
 
