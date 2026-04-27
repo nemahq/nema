@@ -253,7 +253,6 @@ function buildRevisionMemory(
         ingestionStatus: memoryEntry.ingestionStatus,
       };
     }
-    // memory_id가 있는데 memoryMap에 없음 — 무결성 이상
     Sentry.captureMessage(
       "[history-service] revision memory_id present but missing from memoryMap",
       {
@@ -341,7 +340,6 @@ export async function getHistoryDetail(
     }
   }
 
-  // direct 먼저, propagated 나중. 각 그룹 안에서 created_at ASC
   const sorted = [...revisionRows].sort((a, b) => {
     if (a.source !== b.source) {
       return a.source === "direct" ? -1 : 1;
@@ -354,7 +352,8 @@ export async function getHistoryDetail(
     return buildHistoryRevision({ row, memory, ingestionStatus });
   });
 
-  // 삭제된 기억(memory_id IS NULL)은 집계에서 제외
+  // Memory가 없으면 ingestion 상태를 평가할 수 없으므로 집계에서 제외 —
+  // 모두 deleted면 빈 배열로 떨어져 자연스럽게 completed가 됨.
   const activeStatuses: IngestionStatus[] = sorted.flatMap((r) => {
     if (r.memory_id === null) {
       return [];

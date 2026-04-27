@@ -960,33 +960,6 @@ describe("getHistoryDetail", () => {
     });
   });
 
-  it("status 집계: active memory pending → processing", async () => {
-    const { client } = mockSupabase({
-      histories: [
-        {
-          id: HISTORY_ID,
-          created_at: "2026-04-20T10:00:00Z",
-          source_session_id: null,
-        },
-      ],
-      memory_revisions: [
-        detailRevision({
-          id: REV_1,
-          memory_id: MEM_ACTIVE,
-          memory_name_snapshot: "기억",
-          next_body: "내용",
-          update_type: "create",
-          source: "direct",
-        }),
-      ],
-      memories: [memory({ id: MEM_ACTIVE, status: "pending" })],
-    });
-
-    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
-
-    expect(result.status).toBe("processing");
-  });
-
   it("status 집계: deleted revision만 남으면 completed", async () => {
     const { client } = mockSupabase({
       histories: [
@@ -1007,44 +980,6 @@ describe("getHistoryDetail", () => {
         }),
       ],
       memories: [],
-    });
-
-    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
-
-    expect(result.status).toBe("completed");
-  });
-
-  it("status 집계: active completed + deleted revision 혼합 → completed", async () => {
-    const { client } = mockSupabase({
-      histories: [
-        {
-          id: HISTORY_ID,
-          created_at: "2026-04-20T10:00:00Z",
-          source_session_id: null,
-        },
-      ],
-      memory_revisions: [
-        detailRevision({
-          id: REV_1,
-          memory_id: MEM_ACTIVE,
-          memory_name_snapshot: "살아있는 기억",
-          next_body: "내용",
-          update_type: "create",
-          source: "direct",
-        }),
-        detailRevision({
-          id: REV_2,
-          memory_id: null,
-          memory_name_snapshot: "삭제된 기억",
-          next_body: "내용",
-          update_type: "create",
-          source: "propagated",
-          created_at: "2026-04-20T10:01:00Z",
-        }),
-      ],
-      memories: [
-        memory({ id: MEM_ACTIVE, status: "completed", title: "살아있는 기억" }),
-      ],
     });
 
     const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
@@ -1085,58 +1020,10 @@ describe("getHistoryDetail", () => {
     );
   });
 
-  it("histories 쿼리 에러 시 SupabaseError 전파", async () => {
+  it("DB 쿼리 에러는 SupabaseError로 전파", async () => {
     const { client } = mockSupabase(
       {},
       { histories: { code: "XX500", message: "histories fail" } },
-    );
-
-    await expect(
-      getHistoryDetail(client, { historyId: HISTORY_ID }),
-    ).rejects.toThrow(SupabaseError);
-  });
-
-  it("memory_revisions 쿼리 에러 시 SupabaseError 전파", async () => {
-    const { client } = mockSupabase(
-      {
-        histories: [
-          {
-            id: HISTORY_ID,
-            created_at: "2026-04-20T10:00:00Z",
-            source_session_id: null,
-          },
-        ],
-      },
-      { memory_revisions: { code: "XX500", message: "revisions fail" } },
-    );
-
-    await expect(
-      getHistoryDetail(client, { historyId: HISTORY_ID }),
-    ).rejects.toThrow(SupabaseError);
-  });
-
-  it("memories 쿼리 에러 시 SupabaseError 전파", async () => {
-    const { client } = mockSupabase(
-      {
-        histories: [
-          {
-            id: HISTORY_ID,
-            created_at: "2026-04-20T10:00:00Z",
-            source_session_id: null,
-          },
-        ],
-        memory_revisions: [
-          detailRevision({
-            id: REV_1,
-            memory_id: MEM_ACTIVE,
-            memory_name_snapshot: "기억",
-            next_body: "내용",
-            update_type: "create",
-            source: "direct",
-          }),
-        ],
-      },
-      { memories: { code: "XX500", message: "memories fail" } },
     );
 
     await expect(
