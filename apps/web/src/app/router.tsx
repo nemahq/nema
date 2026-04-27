@@ -124,6 +124,12 @@ const memoryHistoryRoute = createRoute({
   component: MemoryHistoryTab,
 });
 
+const memoryHistoryDetailRoute = createRoute({
+  getParentRoute: () => memoryRoute,
+  path: "/history/$historyId",
+  component: () => null,
+});
+
 const routeTree = rootRoute.addChildren([
   signinRoute,
   privacyRoute,
@@ -136,6 +142,7 @@ const routeTree = rootRoute.addChildren([
         memoryIndexRoute,
         memoryOverviewRoute,
         memoryHistoryRoute,
+        memoryHistoryDetailRoute,
       ]),
     ]),
   ]),

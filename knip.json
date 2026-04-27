@@ -4,7 +4,8 @@
   "ignoreDependencies": ["estree", "vitest"],
   "workspaces": {
     "apps/web": {
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignore": ["src/**/mocks/**"]
     },
     "apps/server": {
       "entry": [

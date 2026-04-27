@@ -14,7 +14,7 @@ function OverviewContent() {
   );
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-6 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]">
+    <div className="px-8 py-6">
       {ENTITY_TYPE_ORDER.map((type) => {
         const list = grouped.get(type);
         if (!list?.length) {
