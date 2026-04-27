@@ -1,11 +1,13 @@
 import { useNavigate } from "@tanstack/react-router";
 
-import { AlertTriangle, Check, ChevronRight } from "@nema-io/weave/icons";
+import { ChevronRight } from "@nema-io/weave/icons";
 
+import {
+  type HistoryStatus,
+  HistoryStatusIcon,
+} from "@web/features/memory/components/HistoryStatusIcon";
 import { formatHistoryTime } from "@web/features/memory/utils/historyTime";
 import { useTranslation } from "@web/lib/tolgee";
-
-type HistoryStatus = "processing" | "completed" | "failed";
 
 interface HistoryListItemProps {
   id: string;
@@ -46,7 +48,7 @@ export function HistoryListItem({
           <time dateTime={createdAt} className="text-xs text-fg-secondary">
             {formatHistoryTime(date)}
           </time>
-          <StatusIcon status={status} />
+          <HistoryStatusIcon status={status} />
         </div>
         <div className="flex min-w-0 items-baseline gap-1.5">
           <span className="truncate text-base font-semibold text-fg-primary">
@@ -62,44 +64,5 @@ export function HistoryListItem({
 
       <ChevronRight className="size-4 shrink-0 text-fg-secondary opacity-0 group-hover:opacity-100" />
     </button>
-  );
-}
-
-interface StatusIconProps {
-  status: HistoryStatus;
-}
-
-function StatusIcon({ status }: StatusIconProps) {
-  const { t } = useTranslation();
-
-  if (status === "processing") {
-    return (
-      <span
-        aria-label={t("memory.history_status_processing")}
-        className="flex size-3 shrink-0 items-center justify-center"
-      >
-        <span className="block size-1.5 animate-pulse rounded-full bg-fg-secondary" />
-      </span>
-    );
-  }
-
-  if (status === "failed") {
-    return (
-      <span
-        aria-label={t("memory.history_status_failed")}
-        className="shrink-0 text-status-error"
-      >
-        <AlertTriangle className="size-3" strokeWidth={2.5} />
-      </span>
-    );
-  }
-
-  return (
-    <span
-      aria-label={t("memory.history_status_completed")}
-      className="shrink-0 text-brand"
-    >
-      <Check className="size-3" strokeWidth={2.5} />
-    </span>
   );
 }

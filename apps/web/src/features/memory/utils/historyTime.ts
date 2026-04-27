@@ -6,6 +6,8 @@ import {
   isYesterday,
 } from "date-fns";
 
+import { getWeekStartsOn } from "@web/utils/locale";
+
 const timeFormatter = new Intl.DateTimeFormat(undefined, {
   hour: "numeric",
   minute: "2-digit",
@@ -15,20 +17,6 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
   month: "numeric",
   day: "numeric",
 });
-
-type WeekInfoLocale = Intl.Locale & {
-  getWeekInfo?: () => { firstDay: number };
-};
-
-function getWeekStartsOn(): 0 | 1 {
-  try {
-    const locale = new Intl.Locale(navigator.language) as WeekInfoLocale;
-    const info = locale.getWeekInfo?.();
-    return info?.firstDay === 7 ? 0 : 1;
-  } catch {
-    return 1;
-  }
-}
 
 const WEEK_STARTS_ON = getWeekStartsOn();
 

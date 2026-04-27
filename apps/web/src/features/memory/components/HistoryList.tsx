@@ -1,56 +1,36 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import { Skeleton } from "@nema-io/weave";
 
 import { HistoryListItem } from "@web/features/memory/components/HistoryListItem";
+import { HistoryListSkeleton } from "@web/features/memory/components/HistoryListSkeleton";
 import { useHistoryListInfiniteQuery } from "@web/features/memory/hooks/useHistoryList";
-import { MOCK_HISTORY_ITEMS } from "@web/features/memory/mocks/historyList";
 import {
   getTimeGroup,
   type TimeGroup,
   timeGroupId,
 } from "@web/features/memory/utils/historyTime";
+import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
 
 export function HistoryList() {
   const { t } = useTranslation();
-  const { isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
     useHistoryListInfiniteQuery();
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(
-    function observeSentinel() {
-      const sentinel = sentinelRef.current;
-      if (!sentinel) {
-        return;
-      }
-
-      const observer = new IntersectionObserver(
-        (entries) => {
-          if (
-            entries[0]?.isIntersecting &&
-            hasNextPage &&
-            !isFetchingNextPage
-          ) {
-            void fetchNextPage();
-          }
-        },
-        { threshold: 0.1 },
-      );
-
-      observer.observe(sentinel);
-      return () => observer.disconnect();
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  );
+  useIntersectionEffect({
+    ref: sentinelRef,
+    onIntersect: fetchNextPage,
+    enabled: hasNextPage && !isFetchingNextPage,
+  });
 
   if (isLoading) {
     return <HistoryListSkeleton />;
   }
 
-  // TODO(테스트): 임시 mock — 확인 후 제거
-  const items = MOCK_HISTORY_ITEMS;
+  const items = data?.pages.flatMap((page) => page.items) ?? [];
 
   const groups = groupByTimeGroup(items);
 
@@ -86,40 +66,6 @@ export function HistoryList() {
           <Skeleton className="h-12 w-full rounded-lg" />
         </div>
       )}
-    </div>
-  );
-}
-
-const SKELETON_TITLE_WIDTHS = ["w-3/4", "w-2/3", "w-1/2"] as const;
-const SKELETON_GROUP_ROW_COUNTS = [3, 3] as const;
-
-function HistoryListSkeleton() {
-  return (
-    <div className="max-w-3xl space-y-6 px-8 py-6">
-      {SKELETON_GROUP_ROW_COUNTS.map((rowCount, groupIdx) => (
-        <div key={groupIdx}>
-          <div className="flex items-center gap-3 py-2">
-            <Skeleton className="h-3 w-10" />
-            <div className="h-px flex-1 bg-border" />
-          </div>
-          <div className="space-y-0.5">
-            {Array.from({ length: rowCount }, (_, rowIdx) => (
-              <div key={rowIdx} className="flex items-center gap-3 px-4 py-2.5">
-                <div className="flex flex-1 flex-col gap-0.5">
-                  <Skeleton className="h-3 w-12" />
-                  <Skeleton
-                    className={`h-5 ${
-                      SKELETON_TITLE_WIDTHS[
-                        rowIdx % SKELETON_TITLE_WIDTHS.length
-                      ]
-                    }`}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
