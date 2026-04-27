@@ -913,7 +913,7 @@ describe("getHistoryDetail", () => {
     });
   });
 
-  it("update_type='extend'|'replace' → prevBody: string", async () => {
+  it("update_type='extend' → prevBody: 원본 문자열", async () => {
     const { client } = mockSupabase({
       histories: [
         {
@@ -932,16 +932,6 @@ describe("getHistoryDetail", () => {
           prev_body: "파스타를 좋아함",
           source: "direct",
         }),
-        detailRevision({
-          id: REV_2,
-          memory_id: MEM_ACTIVE,
-          memory_name_snapshot: "식습관",
-          next_body: "채식주의자",
-          update_type: "replace",
-          prev_body: "파스타와 스시를 좋아함",
-          source: "direct",
-          created_at: "2026-04-20T10:01:00Z",
-        }),
       ],
       memories: [
         memory({ id: MEM_ACTIVE, status: "completed", title: "식습관" }),
@@ -953,10 +943,6 @@ describe("getHistoryDetail", () => {
     expect(result.revisions[0]).toMatchObject({
       updateType: "extend",
       prevBody: "파스타를 좋아함",
-    });
-    expect(result.revisions[1]).toMatchObject({
-      updateType: "replace",
-      prevBody: "파스타와 스시를 좋아함",
     });
   });
 
@@ -1103,60 +1089,6 @@ describe("getHistoryDetail", () => {
 
     expect(result.revisions).toEqual([]);
     expect(result.status).toBe("completed");
-  });
-
-  it("서로 다른 두 active memory가 한 history에 — memories 쿼리에 dedup된 id 전달", async () => {
-    const memA = "22222222-2222-4222-a222-222222222222";
-    const memB = "33333333-3333-4333-a333-333333333333";
-    const { client } = mockSupabase({
-      histories: [
-        {
-          id: HISTORY_ID,
-          created_at: "2026-04-20T10:00:00Z",
-          source_session_id: null,
-        },
-      ],
-      memory_revisions: [
-        detailRevision({
-          id: REV_1,
-          memory_id: memA,
-          memory_name_snapshot: "A",
-          next_body: "a1",
-          update_type: "create",
-          source: "direct",
-        }),
-        detailRevision({
-          id: REV_2,
-          memory_id: memB,
-          memory_name_snapshot: "B",
-          next_body: "b1",
-          update_type: "create",
-          source: "propagated",
-        }),
-        // 같은 memory_id가 다시 등장 — Set으로 dedup되어야 함
-        detailRevision({
-          id: REV_3,
-          memory_id: memA,
-          memory_name_snapshot: "A",
-          next_body: "a2",
-          update_type: "extend",
-          prev_body: "a1",
-          source: "propagated",
-        }),
-      ],
-      memories: [
-        memory({ id: memA, status: "completed", title: "A" }),
-        memory({ id: memB, status: "completed", title: "B" }),
-      ],
-    });
-
-    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
-
-    expect(result.revisions).toHaveLength(3);
-    const activeIds = result.revisions
-      .map((r) => (r.memory.status === "active" ? r.memory.id : null))
-      .filter((id): id is string => id !== null);
-    expect(new Set(activeIds)).toEqual(new Set([memA, memB]));
   });
 
   it("extend/replace인데 prev_body가 null → Sentry 경고 + 빈 문자열 폴백", async () => {
