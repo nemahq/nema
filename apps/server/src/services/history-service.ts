@@ -3,10 +3,14 @@ import * as Sentry from "@sentry/node";
 import { TRPCError } from "@trpc/server";
 
 import type {
+  HistoryDetailInput,
+  HistoryDetailOutput,
   HistoryListInput,
   HistoryListItem,
   HistoryListOutput,
+  HistoryRevision,
   HistoryStatus,
+  RevisionMemory,
 } from "@nema-io/shared";
 
 import type { Database } from "@server/infra/database.types";
@@ -15,6 +19,7 @@ import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
 type IngestionStatus = Database["public"]["Enums"]["ingestion_status"];
 type RevisionSource = Database["public"]["Enums"]["revision_source"];
+type UpdateType = Database["public"]["Enums"]["update_type"];
 
 function encodeCursor(createdAt: string, id: string): string {
   return Buffer.from(JSON.stringify([createdAt, id])).toString("base64url");
@@ -63,9 +68,9 @@ function aggregateStatus(statuses: IngestionStatus[]): HistoryStatus {
   return "completed";
 }
 
-type RevisionRow = {
+type ListRevisionRow = {
   history_id: string;
-  memory_id: string;
+  memory_id: string | null;
   source: RevisionSource;
   created_at: string;
 };
@@ -107,7 +112,9 @@ export async function listHistories(
     .order("created_at", { ascending: true });
   throwIfSupabaseError(revisionError);
 
-  const memoryIds = Array.from(new Set(revisionRows.map((r) => r.memory_id)));
+  const memoryIds = Array.from(
+    new Set(revisionRows.map((r) => r.memory_id).filter((id) => id !== null)),
+  );
 
   const memoryMap = new Map<
     string,
@@ -128,7 +135,7 @@ export async function listHistories(
     }
   }
 
-  const revisionsByHistory = new Map<string, RevisionRow[]>();
+  const revisionsByHistory = new Map<string, ListRevisionRow[]>();
   for (const rev of revisionRows) {
     const list = revisionsByHistory.get(rev.history_id) ?? [];
     list.push(rev);
@@ -139,8 +146,10 @@ export async function listHistories(
   for (const row of pageRows) {
     const revs = revisionsByHistory.get(row.id) ?? [];
     // created_at asc 정렬 내에서 첫 direct revision — primaryMemory 판정 기준
-    const firstDirect = revs.find((r) => r.source === "direct");
-    if (!firstDirect) {
+    const firstDirect = revs.find(
+      (r) => r.source === "direct" && r.memory_id !== null,
+    );
+    if (!firstDirect || firstDirect.memory_id === null) {
       continue;
     }
 
@@ -161,7 +170,9 @@ export async function listHistories(
       continue;
     }
 
-    const distinctMemoryIds = Array.from(new Set(revs.map((r) => r.memory_id)));
+    const distinctMemoryIds = Array.from(
+      new Set(revs.map((r) => r.memory_id).filter((id) => id !== null)),
+    );
     const missingMemoryIds: string[] = [];
     const statuses: IngestionStatus[] = [];
     for (const id of distinctMemoryIds) {
@@ -210,4 +221,153 @@ export async function listHistories(
       : null;
 
   return { items, nextCursor };
+}
+
+type DetailRevisionRow = {
+  id: string;
+  memory_id: string | null;
+  memory_name_snapshot: string;
+  prev_body: string | null;
+  next_body: string;
+  update_type: UpdateType;
+  source: RevisionSource;
+  created_at: string;
+};
+
+function buildRevisionMemory(
+  row: DetailRevisionRow,
+  memoryMap: Map<
+    string,
+    { title: string | null; ingestionStatus: IngestionStatus }
+  >,
+): { memory: RevisionMemory; ingestionStatus: IngestionStatus } {
+  if (row.memory_id !== null) {
+    const memoryEntry = memoryMap.get(row.memory_id);
+    if (memoryEntry) {
+      return {
+        memory: {
+          status: "active",
+          id: row.memory_id,
+          name: memoryEntry.title ?? row.memory_name_snapshot,
+        },
+        ingestionStatus: memoryEntry.ingestionStatus,
+      };
+    }
+    // memory_id가 있는데 memoryMap에 없음 — 무결성 이상
+    Sentry.captureMessage(
+      "[history-service] revision memory_id present but missing from memoryMap",
+      {
+        level: "warning",
+        extra: { revisionId: row.id, memoryId: row.memory_id },
+      },
+    );
+  }
+  return {
+    memory: { status: "deleted", name: row.memory_name_snapshot },
+    ingestionStatus: "completed",
+  };
+}
+
+function buildHistoryRevision({
+  row,
+  memory,
+  ingestionStatus,
+}: {
+  row: DetailRevisionRow;
+  memory: RevisionMemory;
+  ingestionStatus: IngestionStatus;
+}): HistoryRevision {
+  const base = {
+    id: row.id,
+    memory,
+    nextBody: row.next_body,
+    source: row.source,
+    ingestionStatus,
+  };
+  if (row.update_type === "create") {
+    return { ...base, updateType: "create", prevBody: null };
+  }
+  return {
+    ...base,
+    updateType: row.update_type,
+    prevBody: row.prev_body ?? "",
+  };
+}
+
+export async function getHistoryDetail(
+  supabase: TypedSupabaseClient,
+  input: HistoryDetailInput,
+): Promise<HistoryDetailOutput> {
+  const { data: historyRows, error: historyError } = await supabase
+    .from("histories")
+    .select("id, created_at, source_session_id")
+    .eq("id", input.historyId);
+  throwIfSupabaseError(historyError);
+
+  if (historyRows.length === 0) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "History not found" });
+  }
+
+  const history = historyRows[0];
+
+  const { data: revisionRows, error: revisionError } = await supabase
+    .from("memory_revisions")
+    .select(
+      "id, memory_id, memory_name_snapshot, prev_body, next_body, update_type, source, created_at",
+    )
+    .eq("history_id", input.historyId);
+  throwIfSupabaseError(revisionError);
+
+  const nonNullMemoryIds = Array.from(
+    new Set(revisionRows.map((r) => r.memory_id).filter((id) => id !== null)),
+  );
+
+  const memoryMap = new Map<
+    string,
+    { title: string | null; ingestionStatus: IngestionStatus }
+  >();
+  if (nonNullMemoryIds.length > 0) {
+    const { data: memoryRows, error: memoryError } = await supabase
+      .from("memories")
+      .select("id, title, ingestion_status")
+      .in("id", nonNullMemoryIds);
+    throwIfSupabaseError(memoryError);
+
+    for (const row of memoryRows) {
+      memoryMap.set(row.id, {
+        title: row.title,
+        ingestionStatus: row.ingestion_status,
+      });
+    }
+  }
+
+  // direct 먼저, propagated 나중. 각 그룹 안에서 created_at ASC
+  const sorted = [...revisionRows].sort((a, b) => {
+    if (a.source !== b.source) {
+      return a.source === "direct" ? -1 : 1;
+    }
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+
+  const revisions: HistoryRevision[] = sorted.map((row) => {
+    const { memory, ingestionStatus } = buildRevisionMemory(row, memoryMap);
+    return buildHistoryRevision({ row, memory, ingestionStatus });
+  });
+
+  // 삭제된 기억(memory_id IS NULL)은 집계에서 제외
+  const activeStatuses: IngestionStatus[] = sorted.flatMap((r) => {
+    if (r.memory_id === null) {
+      return [];
+    }
+    const entry = memoryMap.get(r.memory_id);
+    return entry ? [entry.ingestionStatus] : [];
+  });
+
+  return {
+    id: history.id,
+    createdAt: history.created_at,
+    sessionId: history.source_session_id,
+    status: aggregateStatus(activeStatuses),
+    revisions,
+  };
 }

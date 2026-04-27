@@ -152,6 +152,7 @@ export type Database = {
           history_id: string;
           id: string;
           memory_id: string;
+          memory_name_snapshot: string;
           next_body: string;
           prev_body: string | null;
           source: Database["public"]["Enums"]["revision_source"];
@@ -162,6 +163,7 @@ export type Database = {
           history_id: string;
           id?: string;
           memory_id: string;
+          memory_name_snapshot: string;
           next_body: string;
           prev_body?: string | null;
           source: Database["public"]["Enums"]["revision_source"];
@@ -172,6 +174,7 @@ export type Database = {
           history_id?: string;
           id?: string;
           memory_id?: string;
+          memory_name_snapshot?: string;
           next_body?: string;
           prev_body?: string | null;
           source?: Database["public"]["Enums"]["revision_source"];
@@ -342,10 +345,44 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      _write_memory_revision: {
+        Args: {
+          p_body: string;
+          p_category: string | null;
+          p_history_id: string;
+          p_memory_id: string;
+          p_memory_name_snapshot: string;
+          p_source: Database["public"]["Enums"]["revision_source"];
+          p_summary: string;
+          p_tags: string[];
+          p_title: string;
+          p_update_type: Database["public"]["Enums"]["update_type"];
+          p_user_id: string;
+        };
+        Returns: undefined;
+      };
       ack_sync_event: { Args: { p_msg_id: number }; Returns: undefined };
       append_message: {
         Args: { p_message: Json; p_session_id: string };
         Returns: undefined;
+      };
+      apply_propagated_revision: {
+        Args: {
+          p_body: string;
+          p_category: string | null;
+          p_history_id: string;
+          p_memory_id: string;
+          p_summary: string;
+          p_tags: string[];
+          p_title: string;
+          p_update_type: Database["public"]["Enums"]["update_type"];
+          p_user_id: string;
+        };
+        Returns: undefined;
+      };
+      apply_save_pipeline: {
+        Args: { p_history_id: string; p_items: Json; p_user_id: string };
+        Returns: string[];
       };
       complete_memory_ingestion: {
         Args: { p_memory_id: string };
@@ -363,27 +400,13 @@ export type Database = {
         };
         Returns: string;
       };
-      apply_propagated_revision: {
-        Args: {
-          p_body: string;
-          p_category: string | null;
-          p_history_id: string;
-          p_memory_id: string;
-          p_summary: string;
-          p_tags: string[];
-          p_title: string;
-          p_update_type: Database["public"]["Enums"]["update_type"];
-          p_user_id: string;
-        };
-        Returns: undefined;
-      };
       fail_stale_save_jobs: { Args: never; Returns: number };
       fetch_pending_memories: {
         Args: { p_max_retries?: number };
         Returns: {
           body: string;
           created_at: string;
-          history_id: string | null;
+          history_id: string;
           id: string;
           summary: string;
           tags: string[];
@@ -436,10 +459,6 @@ export type Database = {
       update_message_payload: {
         Args: { p_message_id: string; p_payload: Json; p_session_id: string };
         Returns: undefined;
-      };
-      apply_save_pipeline: {
-        Args: { p_user_id: string; p_history_id: string; p_items: Json };
-        Returns: string[];
       };
     };
     Enums: {

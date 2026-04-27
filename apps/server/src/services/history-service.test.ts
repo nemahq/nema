@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/node";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { SupabaseError } from "@server/infra/supabase-error";
 
-import { listHistories } from "./history-service";
+import { getHistoryDetail, listHistories } from "./history-service";
 
 vi.mock("@sentry/node", () => ({
   captureException: vi.fn(),
@@ -28,7 +28,19 @@ type HistoryRow = {
 
 type RevisionRow = {
   history_id: string;
-  memory_id: string;
+  memory_id: string | null;
+  source: RevisionSource;
+  created_at: string;
+};
+
+type DetailRevisionRow = {
+  id: string;
+  history_id: string;
+  memory_id: string | null;
+  memory_name_snapshot: string;
+  prev_body: string | null;
+  next_body: string;
+  update_type: "create" | "extend" | "replace";
   source: RevisionSource;
   created_at: string;
 };
@@ -41,7 +53,7 @@ type MemoryRow = {
 
 type TableRows = {
   histories?: HistoryRow[];
-  memory_revisions?: RevisionRow[];
+  memory_revisions?: RevisionRow[] | DetailRevisionRow[];
   memories?: MemoryRow[];
 };
 
@@ -74,6 +86,7 @@ function mockSupabase(rows: TableRows, errors: TableErrors = {}) {
     chain.order = vi.fn().mockReturnValue(chain);
     chain.limit = vi.fn().mockReturnValue(chain);
     chain.in = vi.fn().mockReturnValue(chain);
+    chain.eq = vi.fn().mockReturnValue(chain);
     chain.or = vi.fn((arg: string) => {
       orCalls[table] ??= [];
       orCalls[table].push(arg);
@@ -744,5 +757,440 @@ describe("listHistories", () => {
         }),
       }),
     );
+  });
+});
+
+// ──────────────────────────────────────────────
+// getHistoryDetail
+// ──────────────────────────────────────────────
+
+const HISTORY_ID = "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa";
+const SESSION_ID = "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb";
+const MEM_ACTIVE = "cccccccc-cccc-4ccc-cccc-cccccccccccc";
+const MEM_DELETED = "dddddddd-dddd-4ddd-dddd-dddddddddddd";
+const REV_1 = "eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee";
+const REV_2 = "ffffffff-ffff-4fff-ffff-ffffffffffff";
+const REV_3 = "11111111-1111-4111-b111-111111111111";
+
+function detailRevision(
+  overrides: Partial<DetailRevisionRow> &
+    Pick<
+      DetailRevisionRow,
+      | "id"
+      | "memory_id"
+      | "memory_name_snapshot"
+      | "next_body"
+      | "update_type"
+      | "source"
+    >,
+): DetailRevisionRow {
+  return {
+    history_id: HISTORY_ID,
+    prev_body: null,
+    created_at: "2026-04-20T10:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("getHistoryDetail", () => {
+  it("정상: 복수 Revision 반환 — direct 먼저, propagated 나중 정렬", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: SESSION_ID,
+        },
+      ],
+      memory_revisions: [
+        detailRevision({
+          id: REV_2,
+          memory_id: MEM_ACTIVE,
+          memory_name_snapshot: "취미",
+          next_body: "전파된 수정",
+          update_type: "extend",
+          prev_body: "원본",
+          source: "propagated",
+          created_at: "2026-04-20T10:01:00Z",
+        }),
+        detailRevision({
+          id: REV_1,
+          memory_id: MEM_ACTIVE,
+          memory_name_snapshot: "취미",
+          next_body: "최초 내용",
+          update_type: "create",
+          source: "direct",
+          created_at: "2026-04-20T10:00:00Z",
+        }),
+      ],
+      memories: [
+        memory({ id: MEM_ACTIVE, status: "completed", title: "취미" }),
+      ],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    expect(result.id).toBe(HISTORY_ID);
+    expect(result.sessionId).toBe(SESSION_ID);
+    expect(result.revisions).toHaveLength(2);
+    // direct 먼저
+    expect(result.revisions[0]).toMatchObject({ id: REV_1, source: "direct" });
+    // propagated 나중
+    expect(result.revisions[1]).toMatchObject({
+      id: REV_2,
+      source: "propagated",
+    });
+  });
+
+  it("없는 historyId → NOT_FOUND", async () => {
+    const { client } = mockSupabase({ histories: [] });
+
+    await expect(
+      getHistoryDetail(client, { historyId: HISTORY_ID }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("Memory가 삭제된 Revision → status: deleted, name: snapshot 값", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        detailRevision({
+          id: REV_1,
+          memory_id: null,
+          memory_name_snapshot: "삭제된 기억 이름",
+          next_body: "내용",
+          update_type: "create",
+          source: "direct",
+        }),
+      ],
+      memories: [],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    expect(result.revisions[0]).toMatchObject({
+      memory: { status: "deleted", name: "삭제된 기억 이름" },
+      ingestionStatus: "completed",
+    });
+  });
+
+  it("update_type='create' → prevBody: null", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        detailRevision({
+          id: REV_1,
+          memory_id: MEM_ACTIVE,
+          memory_name_snapshot: "식습관",
+          next_body: "파스타를 좋아함",
+          update_type: "create",
+          prev_body: null,
+          source: "direct",
+        }),
+      ],
+      memories: [
+        memory({ id: MEM_ACTIVE, status: "completed", title: "식습관" }),
+      ],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    expect(result.revisions[0]).toMatchObject({
+      updateType: "create",
+      prevBody: null,
+    });
+  });
+
+  it("update_type='extend'|'replace' → prevBody: string", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        detailRevision({
+          id: REV_1,
+          memory_id: MEM_ACTIVE,
+          memory_name_snapshot: "식습관",
+          next_body: "파스타와 스시를 좋아함",
+          update_type: "extend",
+          prev_body: "파스타를 좋아함",
+          source: "direct",
+        }),
+        detailRevision({
+          id: REV_2,
+          memory_id: MEM_ACTIVE,
+          memory_name_snapshot: "식습관",
+          next_body: "채식주의자",
+          update_type: "replace",
+          prev_body: "파스타와 스시를 좋아함",
+          source: "direct",
+          created_at: "2026-04-20T10:01:00Z",
+        }),
+      ],
+      memories: [
+        memory({ id: MEM_ACTIVE, status: "completed", title: "식습관" }),
+      ],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    expect(result.revisions[0]).toMatchObject({
+      updateType: "extend",
+      prevBody: "파스타를 좋아함",
+    });
+    expect(result.revisions[1]).toMatchObject({
+      updateType: "replace",
+      prevBody: "파스타와 스시를 좋아함",
+    });
+  });
+
+  it("status 집계: active memory pending → processing", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        detailRevision({
+          id: REV_1,
+          memory_id: MEM_ACTIVE,
+          memory_name_snapshot: "기억",
+          next_body: "내용",
+          update_type: "create",
+          source: "direct",
+        }),
+      ],
+      memories: [memory({ id: MEM_ACTIVE, status: "pending" })],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    expect(result.status).toBe("processing");
+  });
+
+  it("status 집계: deleted revision만 남으면 completed", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        detailRevision({
+          id: REV_1,
+          memory_id: null,
+          memory_name_snapshot: "삭제된 기억",
+          next_body: "내용",
+          update_type: "create",
+          source: "direct",
+        }),
+      ],
+      memories: [],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    expect(result.status).toBe("completed");
+  });
+
+  it("status 집계: active completed + deleted revision 혼합 → completed", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        detailRevision({
+          id: REV_1,
+          memory_id: MEM_ACTIVE,
+          memory_name_snapshot: "살아있는 기억",
+          next_body: "내용",
+          update_type: "create",
+          source: "direct",
+        }),
+        detailRevision({
+          id: REV_2,
+          memory_id: null,
+          memory_name_snapshot: "삭제된 기억",
+          next_body: "내용",
+          update_type: "create",
+          source: "propagated",
+          created_at: "2026-04-20T10:01:00Z",
+        }),
+      ],
+      memories: [
+        memory({ id: MEM_ACTIVE, status: "completed", title: "살아있는 기억" }),
+      ],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    expect(result.status).toBe("completed");
+  });
+
+  it("memory_id 있는데 memoryMap 누락 → Sentry 경고 + deleted 처리", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        detailRevision({
+          id: REV_1,
+          memory_id: MEM_DELETED,
+          memory_name_snapshot: "고아 기억",
+          next_body: "내용",
+          update_type: "create",
+          source: "direct",
+        }),
+      ],
+      memories: [],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    expect(result.revisions[0]).toMatchObject({
+      memory: { status: "deleted", name: "고아 기억" },
+    });
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      expect.stringContaining("memory_id present but missing from memoryMap"),
+      expect.objectContaining({ level: "warning" }),
+    );
+  });
+
+  it("histories 쿼리 에러 시 SupabaseError 전파", async () => {
+    const { client } = mockSupabase(
+      {},
+      { histories: { code: "XX500", message: "histories fail" } },
+    );
+
+    await expect(
+      getHistoryDetail(client, { historyId: HISTORY_ID }),
+    ).rejects.toThrow(SupabaseError);
+  });
+
+  it("memory_revisions 쿼리 에러 시 SupabaseError 전파", async () => {
+    const { client } = mockSupabase(
+      {
+        histories: [
+          {
+            id: HISTORY_ID,
+            created_at: "2026-04-20T10:00:00Z",
+            source_session_id: null,
+          },
+        ],
+      },
+      { memory_revisions: { code: "XX500", message: "revisions fail" } },
+    );
+
+    await expect(
+      getHistoryDetail(client, { historyId: HISTORY_ID }),
+    ).rejects.toThrow(SupabaseError);
+  });
+
+  it("memories 쿼리 에러 시 SupabaseError 전파", async () => {
+    const { client } = mockSupabase(
+      {
+        histories: [
+          {
+            id: HISTORY_ID,
+            created_at: "2026-04-20T10:00:00Z",
+            source_session_id: null,
+          },
+        ],
+        memory_revisions: [
+          detailRevision({
+            id: REV_1,
+            memory_id: MEM_ACTIVE,
+            memory_name_snapshot: "기억",
+            next_body: "내용",
+            update_type: "create",
+            source: "direct",
+          }),
+        ],
+      },
+      { memories: { code: "XX500", message: "memories fail" } },
+    );
+
+    await expect(
+      getHistoryDetail(client, { historyId: HISTORY_ID }),
+    ).rejects.toThrow(SupabaseError);
+  });
+
+  it("direct 그룹 내 created_at ASC, propagated 그룹 내 created_at ASC 정렬", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        detailRevision({
+          id: REV_3,
+          memory_id: MEM_ACTIVE,
+          memory_name_snapshot: "기억",
+          next_body: "propagated 늦은",
+          update_type: "extend",
+          prev_body: "propagated 이른",
+          source: "propagated",
+          created_at: "2026-04-20T10:02:00Z",
+        }),
+        detailRevision({
+          id: REV_2,
+          memory_id: MEM_ACTIVE,
+          memory_name_snapshot: "기억",
+          next_body: "propagated 이른",
+          update_type: "create",
+          source: "propagated",
+          created_at: "2026-04-20T10:01:00Z",
+        }),
+        detailRevision({
+          id: REV_1,
+          memory_id: MEM_ACTIVE,
+          memory_name_snapshot: "기억",
+          next_body: "direct",
+          update_type: "create",
+          source: "direct",
+          created_at: "2026-04-20T10:00:00Z",
+        }),
+      ],
+      memories: [
+        memory({ id: MEM_ACTIVE, status: "completed", title: "기억" }),
+      ],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    const ids = result.revisions.map((r) => r.id);
+    expect(ids).toEqual([REV_1, REV_2, REV_3]);
   });
 });
