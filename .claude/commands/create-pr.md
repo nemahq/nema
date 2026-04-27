@@ -44,9 +44,50 @@ Each agent must cap its report at roughly 300 words — full fix code is the orc
 Execute this step inline. Do NOT ask the user anything — infer every section from the conversation context, diff, and commit history. If a section genuinely has nothing to say, omit it (Notes) or fall back to the default (see below). The user can correct the draft after it's posted.
 
 1. **Why** (1–2 sentences). Infer from conversation context (issue links, prior discussion, stated motivation) and commit messages. Must be self-contained for a 6-month-later reader.
-2. **What** (2–5 lines). Design decisions only — no file/function change lists. Infer from diff + commit history.
-3. **How to verify**. Infer concrete runnable scenarios from the affected flows. Do NOT write generic items like "타입체크 통과 확인". If the change is a pure doc/config edit with no runtime behavior, write a single concrete manual-review scenario (e.g., "다음 실행 시 X 동작이 Y 방식으로 바뀌는지").
-4. **Notes**. Include only if the diff or conversation surfaces a real tradeoff, risk, or follow-up. Otherwise omit the section entirely.
+2. **What**. Design decisions only — no file/function change lists. Infer from diff + commit history.
+   - **3 or fewer decisions**: flat bullets are fine.
+   - **4 or more**: group by area. Use a bold area header with 1–3 bullets under each.
+
+   ```markdown
+   BAD (6 flat bullets — no signal of what matters):
+   - Change memory_id FK to SET NULL and add snapshot column
+   - Express RevisionMemory as active/deleted union
+   - Pin ingestionStatus to 'completed' for deleted revisions
+   - Exclude deleted revisions from status aggregation
+   - Single NOT_FOUND response
+   - Add memory_id IS NULL condition to RLS
+
+   GOOD (grouped into 4 areas):
+   **Schema**
+   memory_id FK switched to SET NULL with a name snapshot column.
+
+   **Types**
+   RevisionMemory enforced as active/deleted discriminated union.
+
+   **Status semantics**
+   - Deleted revisions pin ingestionStatus to 'completed' (no retry possible).
+   - Aggregation excludes deleted revisions (no memory → no ingestion signal).
+
+   **Error response**
+   NOT_FOUND only — distinguishing existence from ownership leaks info.
+   ```
+
+   Forbidden: change-narrative bullets like "added X", "changed Y", "removed Z" — those are visible in the diff. Capture the *reasoning* behind decisions only.
+
+3. **How to verify**. Numbered step-by-step scenarios. Each step must read as "do X → see Y" in one line. Do NOT write generic items like "타입체크 통과 확인". If the change is a pure doc/config edit with no runtime behavior, write a single concrete manual-review scenario.
+
+   ```markdown
+   BAD:
+   - Call the endpoint locally and check the response
+   - Verify list resolver still works (regression)
+
+   GOOD:
+   1. Create 2 memories under the same history → call detail → both return as active revisions.
+   2. Delete one → call detail again → one active, one deleted (name preserved).
+   3. Call with another user's historyId → NOT_FOUND.
+   ```
+
+4. **Notes**. Include only if the diff or conversation surfaces a real tradeoff, risk, or follow-up. Forbidden: time-dependent phrasing ("just pushed to staging", "merged moments ago") — the PR body is a permanent record and goes stale.
 5. **Title** (Korean, under 70 chars). Format: `{한글 요약}` or `{한글 요약} — {부제}`. No `feat:`/`fix:`/`chore:` prefixes.
 6. **Label**. One of `enhancement`, `bug`, `refactoring`, `documentation`.
 7. **Checklist**. Auto-check `CLAUDE.md updated` if any `CLAUDE.md` file is in the diff.
@@ -60,6 +101,18 @@ Execute this step inline. Do NOT ask the user anything — infer every section f
    ## Checklist
    - [x/ ] CLAUDE.md updated (if new convention or architecture change)
    ```
+
+## Step 4.5 — Readability self-review
+
+Re-read the drafted body from a reviewer's point of view and check the items below. Fix violations in place before moving to Step 5.
+
+- [ ] If `What` has 4+ same-depth bullets, are they grouped under area headers?
+- [ ] Any change-narrative bullets ("added/changed/removed") still present? (Drop them — visible in the diff.)
+- [ ] Is `How to verify` numbered step-by-step scenarios? Any vague items ending in "...확인" / "verify ..."?
+- [ ] Any time-dependent phrasing ("just", "already", "currently on staging", "soon")?
+- [ ] In a single sentence, more than 5 mixed English technical terms inside Korean prose hurting readability?
+
+This self-review compensates for a known side effect of the "infer everything in one shot" mode: the body never gets a critical re-read before submission.
 
 ## Step 5 — Push and create
 

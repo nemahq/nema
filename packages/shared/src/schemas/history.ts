@@ -41,14 +41,15 @@ export type RevisionSource = z.infer<typeof RevisionSourceSchema>;
 
 /**
  * Memory 삭제 상태를 타입으로 강제.
- * - active: id·name 모두 존재
- * - deleted: id 없음, name은 스냅샷으로 유지
+ * - active: id·name·ingestionStatus 모두 존재 — 처리 상태가 의미 있는 유일한 분기
+ * - deleted: id 없음, name은 스냅샷으로 유지. 처리 상태는 의미 없으므로 필드 자체 제거
  */
 export const RevisionMemorySchema = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("active"),
     id: z.string().uuid(),
     name: z.string(),
+    ingestionStatus: RevisionIngestionStatusSchema,
   }),
   z.object({
     status: z.literal("deleted"),
@@ -99,7 +100,6 @@ const RevisionBaseSchema = z.object({
   memory: RevisionMemorySchema,
   nextBody: z.string(),
   source: RevisionSourceSchema,
-  ingestionStatus: RevisionIngestionStatusSchema,
 });
 
 export const HistoryRevisionSchema = z.discriminatedUnion("updateType", [
