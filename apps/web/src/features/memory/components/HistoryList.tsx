@@ -3,10 +3,12 @@ import { useEffect, useRef } from "react";
 import { Skeleton } from "@nema-io/weave";
 
 import { HistoryListItem } from "@web/features/memory/components/HistoryListItem";
-import { getTimeGroup } from "@web/features/memory/historyTime";
 import { useHistoryListInfiniteQuery } from "@web/features/memory/hooks/useHistoryList";
+import { getTimeGroup } from "@web/features/memory/utils/historyTime";
+import { useTranslation } from "@web/lib/tolgee";
 
 export function HistoryList() {
+  const { t } = useTranslation();
   const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
     useHistoryListInfiniteQuery();
 
@@ -47,7 +49,7 @@ export function HistoryList() {
   if (items.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-fg-secondary">
-        아직 정리된 기억이 없어요.
+        {t("memory.history_empty")}
       </div>
     );
   }
@@ -61,8 +63,16 @@ export function HistoryList() {
           <p className="px-4 py-2 text-xs font-medium text-fg-secondary sticky top-0 bg-surface-card">
             {group.label}
           </p>
-          {group.items.map((item) => (
-            <HistoryListItem key={item.id} item={item} />
+          {group.items.map((historyItem) => (
+            <HistoryListItem
+              key={historyItem.id}
+              id={historyItem.id}
+              createdAt={historyItem.createdAt}
+              primaryMemoryName={historyItem.primaryMemory.name}
+              memoryCount={historyItem.memoryCount}
+              sessionId={historyItem.sessionId}
+              status={historyItem.status}
+            />
           ))}
         </div>
       ))}

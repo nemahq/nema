@@ -18,80 +18,91 @@ import {
 import {
   formatHistoryTime,
   formatHistoryTimeTooltip,
-} from "@web/features/memory/historyTime";
-import type { HistoryListItem } from "@web/features/memory/hooks/useHistoryList";
+} from "@web/features/memory/utils/historyTime";
+import { useTranslation } from "@web/lib/tolgee";
 
-const UNNAMED_MEMORY_LABEL = "이름 없는 기억";
+type HistoryStatus = "processing" | "completed" | "failed";
 
 interface HistoryListItemProps {
-  item: HistoryListItem;
+  id: string;
+  createdAt: string;
+  primaryMemoryName: string | null;
+  memoryCount: number;
+  sessionId: string | null;
+  status: HistoryStatus;
 }
 
-export function HistoryListItem({ item }: HistoryListItemProps) {
+export function HistoryListItem({
+  id,
+  createdAt,
+  primaryMemoryName,
+  memoryCount,
+  sessionId,
+  status,
+}: HistoryListItemProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const createdAt = new Date(item.createdAt);
-  const memoryName = item.primaryMemory.name ?? UNNAMED_MEMORY_LABEL;
-  const extraCount = item.memoryCount - 1;
+  const date = new Date(createdAt);
+  const memoryName = primaryMemoryName ?? t("memory.history_unnamed");
+  const extraCount = memoryCount - 1;
 
   function handleRowClick() {
     void navigate({
       to: "/memory/history/$historyId",
-      params: { historyId: item.id },
+      params: { historyId: id },
     });
   }
 
   function handleSessionClick(e: MouseEvent) {
     e.stopPropagation();
-    if (!item.sessionId) {
+    if (!sessionId) {
       return;
     }
     void navigate({
       to: "/session/$sessionId",
-      params: { sessionId: item.sessionId },
+      params: { sessionId },
     });
   }
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onClick={handleRowClick}
-      onKeyDown={(e) => e.key === "Enter" && handleRowClick()}
-      className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-raised cursor-pointer"
+      className="flex w-full items-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-raised cursor-pointer"
     >
       <Tooltip>
         <TooltipTrigger asChild>
           <time
-            dateTime={item.createdAt}
+            dateTime={createdAt}
             className="text-xs text-fg-secondary w-16 shrink-0"
           >
-            {formatHistoryTime(createdAt)}
+            {formatHistoryTime(date)}
           </time>
         </TooltipTrigger>
-        <TooltipContent>{formatHistoryTimeTooltip(createdAt)}</TooltipContent>
+        <TooltipContent>{formatHistoryTimeTooltip(date)}</TooltipContent>
       </Tooltip>
 
       <div className="flex flex-1 min-w-0 items-center gap-1.5">
         <span className="text-sm text-fg-primary truncate">{memoryName}</span>
         {extraCount > 0 && (
           <span className="text-xs text-fg-secondary shrink-0">
-            외 {extraCount}개
+            {t("common.overflow_count", { count: extraCount })}
           </span>
         )}
       </div>
 
-      {item.status === "processing" && (
+      {status === "processing" && (
         <Badge variant="info" className="inline-flex items-center gap-1">
           <Loader2 className="size-3 animate-spin" />
-          정리 중
+          {t("memory.history_status_processing")}
         </Badge>
       )}
 
-      {item.status === "failed" && (
+      {status === "failed" && (
         <div className="flex items-center gap-1">
           <Badge variant="error" className="inline-flex items-center gap-1">
             <AlertTriangle className="size-3" />
-            정리 실패
+            {t("memory.history_status_failed")}
           </Badge>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -104,7 +115,7 @@ export function HistoryListItem({ item }: HistoryListItemProps) {
                 <RotateCcw />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>다시 시도</TooltipContent>
+            <TooltipContent>{t("common.retry")}</TooltipContent>
           </Tooltip>
         </div>
       )}
@@ -115,15 +126,17 @@ export function HistoryListItem({ item }: HistoryListItemProps) {
             variant="ghost"
             size="icon-xs"
             onClick={handleSessionClick}
-            disabled={!item.sessionId}
+            disabled={!sessionId}
           >
             <ArrowUpRight />
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          {item.sessionId ? "대화로 이동" : "삭제된 대화"}
+          {sessionId
+            ? t("memory.history_go_to_session")
+            : t("memory.history_session_deleted")}
         </TooltipContent>
       </Tooltip>
-    </div>
+    </button>
   );
 }
