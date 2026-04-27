@@ -1,10 +1,10 @@
-import { useRef } from "react";
+import { Suspense, useRef } from "react";
 
 import { Skeleton } from "@nema-io/weave";
 
 import { HistoryListItem } from "@web/features/memory/components/HistoryListItem";
 import { HistoryListSkeleton } from "@web/features/memory/components/HistoryListSkeleton";
-import { useHistoryListInfiniteQuery } from "@web/features/memory/hooks/useHistoryList";
+import { useHistoryList } from "@web/features/memory/hooks/useHistoryList";
 import {
   getTimeGroup,
   type TimeGroup,
@@ -13,10 +13,10 @@ import {
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
 
-export function HistoryList() {
+function HistoryListContent() {
   const { t } = useTranslation();
-  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
-    useHistoryListInfiniteQuery();
+  const { histories, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useHistoryList();
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -26,13 +26,7 @@ export function HistoryList() {
     enabled: hasNextPage && !isFetchingNextPage,
   });
 
-  if (isLoading) {
-    return <HistoryListSkeleton />;
-  }
-
-  const items = data?.pages.flatMap((page) => page.items) ?? [];
-
-  const groups = groupByTimeGroup(items);
+  const groups = groupByTimeGroup(histories);
 
   return (
     <div className="max-w-3xl space-y-6 px-8 py-6">
@@ -70,12 +64,18 @@ export function HistoryList() {
   );
 }
 
+export function HistoryList() {
+  return (
+    <Suspense fallback={<HistoryListSkeleton />}>
+      <HistoryListContent />
+    </Suspense>
+  );
+}
+
 type HistoryGroup = {
   id: string;
   label: TimeGroup;
-  items: NonNullable<
-    ReturnType<typeof useHistoryListInfiniteQuery>["data"]
-  >["pages"][number]["items"];
+  items: ReturnType<typeof useHistoryList>["histories"];
 };
 
 function groupByTimeGroup(items: HistoryGroup["items"]): HistoryGroup[] {
