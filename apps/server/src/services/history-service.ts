@@ -10,6 +10,7 @@ import type {
   HistoryListOutput,
   HistoryRevision,
   HistoryStatus,
+  RevisionIngestionStatus,
   RevisionMemory,
 } from "@nema-io/shared";
 
@@ -57,9 +58,12 @@ function decodeCursor(cursor: string): { createdAt: string; id: string } {
   return { createdAt, id };
 }
 
-// DB enum은 pending/completed/failed 3종. processing은 History 레벨 합성 값.
-function aggregateStatus(statuses: IngestionStatus[]): HistoryStatus {
-  if (statuses.some((s) => s === "pending")) {
+// DB enum은 pending/completed/failed 3종. processing은 합성 값 —
+// 무결성 이상 시 detail에서도 보수적으로 "processing"이 들어올 수 있다.
+function aggregateStatus(
+  statuses: (IngestionStatus | RevisionIngestionStatus)[],
+): HistoryStatus {
+  if (statuses.some((s) => s === "pending" || s === "processing")) {
     return "processing";
   }
   if (statuses.some((s) => s === "failed")) {
@@ -69,6 +73,7 @@ function aggregateStatus(statuses: IngestionStatus[]): HistoryStatus {
 }
 
 type ListRevisionRow = {
+  id: string;
   history_id: string;
   memory_id: string | null;
   source: RevisionSource;
@@ -107,7 +112,7 @@ export async function listHistories(
 
   const { data: revisionRows, error: revisionError } = await supabase
     .from("memory_revisions")
-    .select("history_id, memory_id, source, created_at")
+    .select("id, history_id, memory_id, source, created_at")
     .in("history_id", historyIds)
     .order("created_at", { ascending: true });
   throwIfSupabaseError(revisionError);
@@ -163,7 +168,7 @@ export async function listHistories(
           extra: {
             historyId: row.id,
             memoryId: firstDirect.memory_id,
-            revisionId: firstDirect,
+            revisionId: firstDirect.id,
           },
         },
       );
@@ -240,51 +245,63 @@ function buildRevisionMemory(
     string,
     { title: string | null; ingestionStatus: IngestionStatus }
   >,
-): { memory: RevisionMemory; ingestionStatus: IngestionStatus } {
-  if (row.memory_id !== null) {
-    const memoryEntry = memoryMap.get(row.memory_id);
-    if (memoryEntry) {
-      return {
-        memory: {
-          status: "active",
-          id: row.memory_id,
-          name: memoryEntry.title ?? row.memory_name_snapshot,
-        },
-        ingestionStatus: memoryEntry.ingestionStatus,
-      };
-    }
-    Sentry.captureMessage(
-      "[history-service] revision memory_id present but missing from memoryMap",
-      {
-        level: "warning",
-        extra: { revisionId: row.id, memoryId: row.memory_id },
-      },
-    );
+): RevisionMemory {
+  if (row.memory_id === null) {
+    return { status: "deleted", name: row.memory_name_snapshot };
   }
+  const memoryEntry = memoryMap.get(row.memory_id);
+  if (memoryEntry) {
+    return {
+      status: "active",
+      id: row.memory_id,
+      name: memoryEntry.title ?? row.memory_name_snapshot,
+      ingestionStatus: memoryEntry.ingestionStatus,
+    };
+  }
+  // memory_id가 살아 있는데 memoryMap에 없음 — FK/RLS 무결성 이상.
+  // listHistories와 동일하게 보수적으로 processing으로 다운그레이드 —
+  // "거짓 deleted" 노출보단 "아직 진행 중"이 사용자 오해가 적음.
+  Sentry.captureMessage(
+    "[history-service] revision memory_id present but missing from memoryMap",
+    {
+      level: "warning",
+      extra: { revisionId: row.id, memoryId: row.memory_id },
+    },
+  );
   return {
-    memory: { status: "deleted", name: row.memory_name_snapshot },
-    ingestionStatus: "completed",
+    status: "active",
+    id: row.memory_id,
+    name: row.memory_name_snapshot,
+    ingestionStatus: "processing",
   };
 }
 
 function buildHistoryRevision({
   row,
   memory,
-  ingestionStatus,
 }: {
   row: DetailRevisionRow;
   memory: RevisionMemory;
-  ingestionStatus: IngestionStatus;
 }): HistoryRevision {
   const base = {
     id: row.id,
     memory,
     nextBody: row.next_body,
     source: row.source,
-    ingestionStatus,
   };
   if (row.update_type === "create") {
     return { ...base, updateType: "create", prevBody: null };
+  }
+  // DB CHECK 제약(chk_create_has_null_prev)이 extend/replace의 prev_body NOT NULL을 보장.
+  // 그럼에도 null이면 invariant 위반이므로 침묵 폴백 대신 가시화.
+  if (row.prev_body === null) {
+    Sentry.captureMessage(
+      "[history-service] prev_body unexpectedly null on extend/replace revision",
+      {
+        level: "warning",
+        extra: { revisionId: row.id, updateType: row.update_type },
+      },
+    );
   }
   return {
     ...base,
@@ -348,19 +365,15 @@ export async function getHistoryDetail(
   });
 
   const revisions: HistoryRevision[] = sorted.map((row) => {
-    const { memory, ingestionStatus } = buildRevisionMemory(row, memoryMap);
-    return buildHistoryRevision({ row, memory, ingestionStatus });
+    const memory = buildRevisionMemory(row, memoryMap);
+    return buildHistoryRevision({ row, memory });
   });
 
   // Memory가 없으면 ingestion 상태를 평가할 수 없으므로 집계에서 제외 —
   // 모두 deleted면 빈 배열로 떨어져 자연스럽게 completed가 됨.
-  const activeStatuses: IngestionStatus[] = sorted.flatMap((r) => {
-    if (r.memory_id === null) {
-      return [];
-    }
-    const entry = memoryMap.get(r.memory_id);
-    return entry ? [entry.ingestionStatus] : [];
-  });
+  const activeStatuses: RevisionIngestionStatus[] = revisions.flatMap((r) =>
+    r.memory.status === "active" ? [r.memory.ingestionStatus] : [],
+  );
 
   return {
     id: history.id,

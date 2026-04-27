@@ -833,9 +833,7 @@ describe("getHistoryDetail", () => {
     expect(result.id).toBe(HISTORY_ID);
     expect(result.sessionId).toBe(SESSION_ID);
     expect(result.revisions).toHaveLength(2);
-    // direct 먼저
     expect(result.revisions[0]).toMatchObject({ id: REV_1, source: "direct" });
-    // propagated 나중
     expect(result.revisions[1]).toMatchObject({
       id: REV_2,
       source: "propagated",
@@ -850,7 +848,7 @@ describe("getHistoryDetail", () => {
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  it("Memory가 삭제된 Revision → status: deleted, name: snapshot 값", async () => {
+  it("Memory가 삭제된 Revision → memory.status: deleted, name: snapshot 값", async () => {
     const { client } = mockSupabase({
       histories: [
         {
@@ -874,10 +872,12 @@ describe("getHistoryDetail", () => {
 
     const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
 
-    expect(result.revisions[0]).toMatchObject({
-      memory: { status: "deleted", name: "삭제된 기억 이름" },
-      ingestionStatus: "completed",
+    expect(result.revisions[0].memory).toEqual({
+      status: "deleted",
+      name: "삭제된 기억 이름",
     });
+    // deleted variant에는 ingestionStatus가 아예 존재하지 않아야 함
+    expect(result.revisions[0].memory).not.toHaveProperty("ingestionStatus");
   });
 
   it("update_type='create' → prevBody: null", async () => {
@@ -987,7 +987,7 @@ describe("getHistoryDetail", () => {
     expect(result.status).toBe("completed");
   });
 
-  it("memory_id 있는데 memoryMap 누락 → Sentry 경고 + deleted 처리", async () => {
+  it("memory_id 있는데 memoryMap 누락 → Sentry 경고 + active+processing 보수 폴백", async () => {
     const { client } = mockSupabase({
       histories: [
         {
@@ -1011,9 +1011,14 @@ describe("getHistoryDetail", () => {
 
     const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
 
-    expect(result.revisions[0]).toMatchObject({
-      memory: { status: "deleted", name: "고아 기억" },
+    // 거짓 deleted 노출보다 "아직 진행 중"이 안전 — listHistories의 보수적 다운그레이드와 일치
+    expect(result.revisions[0].memory).toEqual({
+      status: "active",
+      id: MEM_DELETED,
+      name: "고아 기억",
+      ingestionStatus: "processing",
     });
+    expect(result.status).toBe("processing");
     expect(Sentry.captureMessage).toHaveBeenCalledWith(
       expect.stringContaining("memory_id present but missing from memoryMap"),
       expect.objectContaining({ level: "warning" }),
@@ -1079,5 +1084,115 @@ describe("getHistoryDetail", () => {
 
     const ids = result.revisions.map((r) => r.id);
     expect(ids).toEqual([REV_1, REV_2, REV_3]);
+  });
+
+  it("revision 0개 → 빈 배열 + status: completed", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [],
+      memories: [],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    expect(result.revisions).toEqual([]);
+    expect(result.status).toBe("completed");
+  });
+
+  it("서로 다른 두 active memory가 한 history에 — memories 쿼리에 dedup된 id 전달", async () => {
+    const memA = "22222222-2222-4222-a222-222222222222";
+    const memB = "33333333-3333-4333-a333-333333333333";
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        detailRevision({
+          id: REV_1,
+          memory_id: memA,
+          memory_name_snapshot: "A",
+          next_body: "a1",
+          update_type: "create",
+          source: "direct",
+        }),
+        detailRevision({
+          id: REV_2,
+          memory_id: memB,
+          memory_name_snapshot: "B",
+          next_body: "b1",
+          update_type: "create",
+          source: "propagated",
+        }),
+        // 같은 memory_id가 다시 등장 — Set으로 dedup되어야 함
+        detailRevision({
+          id: REV_3,
+          memory_id: memA,
+          memory_name_snapshot: "A",
+          next_body: "a2",
+          update_type: "extend",
+          prev_body: "a1",
+          source: "propagated",
+        }),
+      ],
+      memories: [
+        memory({ id: memA, status: "completed", title: "A" }),
+        memory({ id: memB, status: "completed", title: "B" }),
+      ],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    expect(result.revisions).toHaveLength(3);
+    const activeIds = result.revisions
+      .map((r) => (r.memory.status === "active" ? r.memory.id : null))
+      .filter((id): id is string => id !== null);
+    expect(new Set(activeIds)).toEqual(new Set([memA, memB]));
+  });
+
+  it("extend/replace인데 prev_body가 null → Sentry 경고 + 빈 문자열 폴백", async () => {
+    const { client } = mockSupabase({
+      histories: [
+        {
+          id: HISTORY_ID,
+          created_at: "2026-04-20T10:00:00Z",
+          source_session_id: null,
+        },
+      ],
+      memory_revisions: [
+        detailRevision({
+          id: REV_1,
+          memory_id: MEM_ACTIVE,
+          memory_name_snapshot: "기억",
+          next_body: "다음",
+          update_type: "extend",
+          prev_body: null,
+          source: "direct",
+        }),
+      ],
+      memories: [
+        memory({ id: MEM_ACTIVE, status: "completed", title: "기억" }),
+      ],
+    });
+
+    const result = await getHistoryDetail(client, { historyId: HISTORY_ID });
+
+    expect(result.revisions[0]).toMatchObject({
+      updateType: "extend",
+      prevBody: "",
+    });
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      expect.stringContaining("prev_body unexpectedly null"),
+      expect.objectContaining({ level: "warning" }),
+    );
   });
 });
