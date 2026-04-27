@@ -1,24 +1,8 @@
-import type { MouseEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
-import {
-  Badge,
-  Button,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@nema-io/weave";
-import {
-  AlertTriangle,
-  ArrowUpRight,
-  Loader2,
-  RotateCcw,
-} from "@nema-io/weave/icons";
+import { AlertTriangle, Check, ChevronRight } from "@nema-io/weave/icons";
 
-import {
-  formatHistoryTime,
-  formatHistoryTimeTooltip,
-} from "@web/features/memory/utils/historyTime";
+import { formatHistoryTime } from "@web/features/memory/utils/historyTime";
 import { useTranslation } from "@web/lib/tolgee";
 
 type HistoryStatus = "processing" | "completed" | "failed";
@@ -28,7 +12,6 @@ interface HistoryListItemProps {
   createdAt: string;
   primaryMemoryName: string | null;
   memoryCount: number;
-  sessionId: string | null;
   status: HistoryStatus;
 }
 
@@ -37,7 +20,6 @@ export function HistoryListItem({
   createdAt,
   primaryMemoryName,
   memoryCount,
-  sessionId,
   status,
 }: HistoryListItemProps) {
   const { t } = useTranslation();
@@ -53,90 +35,71 @@ export function HistoryListItem({
     });
   }
 
-  function handleSessionClick(e: MouseEvent) {
-    e.stopPropagation();
-    if (!sessionId) {
-      return;
-    }
-    void navigate({
-      to: "/session/$sessionId",
-      params: { sessionId },
-    });
-  }
-
   return (
     <button
       type="button"
       onClick={handleRowClick}
-      className="flex w-full items-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-raised cursor-pointer"
+      className="group flex w-full cursor-pointer items-center gap-3 rounded-lg px-4 py-2.5 text-left hover:bg-stone-100 active:bg-stone-200 dark:hover:bg-stone-700 dark:active:bg-stone-600"
     >
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <time
-            dateTime={createdAt}
-            className="text-xs text-fg-secondary w-16 shrink-0"
-          >
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="flex items-center gap-1.5">
+          <time dateTime={createdAt} className="text-xs text-fg-secondary">
             {formatHistoryTime(date)}
           </time>
-        </TooltipTrigger>
-        <TooltipContent>{formatHistoryTimeTooltip(date)}</TooltipContent>
-      </Tooltip>
-
-      <div className="flex flex-1 min-w-0 items-center gap-1.5">
-        <span className="text-sm text-fg-primary truncate">{memoryName}</span>
-        {extraCount > 0 && (
-          <span className="text-xs text-fg-secondary shrink-0">
-            {t("common.overflow_count", { count: extraCount })}
+          <StatusIcon status={status} />
+        </div>
+        <div className="flex min-w-0 items-baseline gap-1.5">
+          <span className="truncate text-base font-semibold text-fg-primary">
+            {memoryName}
           </span>
-        )}
+          {extraCount > 0 && (
+            <span className="shrink-0 text-xs text-fg-secondary">
+              {t("common.overflow_count", { count: extraCount })}
+            </span>
+          )}
+        </div>
       </div>
 
-      {status === "processing" && (
-        <Badge variant="info" className="inline-flex items-center gap-1">
-          <Loader2 className="size-3 animate-spin" />
-          {t("memory.history_status_processing")}
-        </Badge>
-      )}
-
-      {status === "failed" && (
-        <div className="flex items-center gap-1">
-          <Badge variant="error" className="inline-flex items-center gap-1">
-            <AlertTriangle className="size-3" />
-            {t("memory.history_status_failed")}
-          </Badge>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={(e) => e.stopPropagation()}
-                // TODO(NEM-100): 재시도 API 연결
-              >
-                <RotateCcw />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("common.retry")}</TooltipContent>
-          </Tooltip>
-        </div>
-      )}
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={handleSessionClick}
-            disabled={!sessionId}
-          >
-            <ArrowUpRight />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          {sessionId
-            ? t("memory.history_go_to_session")
-            : t("memory.history_session_deleted")}
-        </TooltipContent>
-      </Tooltip>
+      <ChevronRight className="size-4 shrink-0 text-fg-secondary opacity-0 group-hover:opacity-100" />
     </button>
+  );
+}
+
+interface StatusIconProps {
+  status: HistoryStatus;
+}
+
+function StatusIcon({ status }: StatusIconProps) {
+  const { t } = useTranslation();
+
+  if (status === "processing") {
+    return (
+      <span
+        aria-label={t("memory.history_status_processing")}
+        className="flex size-3 shrink-0 items-center justify-center"
+      >
+        <span className="block size-1.5 animate-pulse rounded-full bg-fg-secondary" />
+      </span>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <span
+        aria-label={t("memory.history_status_failed")}
+        className="shrink-0 text-status-error"
+      >
+        <AlertTriangle className="size-3" strokeWidth={2.5} />
+      </span>
+    );
+  }
+
+  return (
+    <span
+      aria-label={t("memory.history_status_completed")}
+      className="shrink-0 text-brand"
+    >
+      <Check className="size-3" strokeWidth={2.5} />
+    </span>
   );
 }

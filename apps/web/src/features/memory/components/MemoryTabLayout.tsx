@@ -4,11 +4,11 @@ import { EmptyState } from "@web/features/memory/components/EmptyState";
 import { Header } from "@web/features/memory/components/Header";
 import { useEntityListSuspenseQuery } from "@web/features/memory/hooks/useEntityListQuery";
 
-interface MemoryTabShellProps {
+interface MemoryTabLayoutProps {
   children: ReactNode;
 }
 
-export function MemoryTabShell({ children }: MemoryTabShellProps) {
+export function MemoryTabLayout({ children }: MemoryTabLayoutProps) {
   const [entities] = useEntityListSuspenseQuery();
 
   if (entities.length === 0) {
@@ -18,7 +18,9 @@ export function MemoryTabShell({ children }: MemoryTabShellProps) {
   return (
     <>
       <Header />
-      {children}
+      <div className="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]">
+        {children}
+      </div>
     </>
   );
 }

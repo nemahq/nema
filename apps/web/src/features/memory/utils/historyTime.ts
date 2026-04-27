@@ -1,50 +1,67 @@
 import {
-  differenceInCalendarDays,
-  format,
-  formatDistanceToNow,
   isThisMonth,
   isThisWeek,
   isThisYear,
   isToday,
   isYesterday,
 } from "date-fns";
-import { ko } from "date-fns/locale";
 
-const ONE_MONTH_DAYS = 30;
+const timeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  month: "numeric",
+  day: "numeric",
+});
+
+type WeekInfoLocale = Intl.Locale & {
+  getWeekInfo?: () => { firstDay: number };
+};
+
+function getWeekStartsOn(): 0 | 1 {
+  try {
+    const locale = new Intl.Locale(navigator.language) as WeekInfoLocale;
+    const info = locale.getWeekInfo?.();
+    return info?.firstDay === 7 ? 0 : 1;
+  } catch {
+    return 1;
+  }
+}
+
+const WEEK_STARTS_ON = getWeekStartsOn();
+
+export type TimeGroup =
+  | { kind: "today" | "yesterday" | "this_week" | "this_month" | "this_year" }
+  | { kind: "year"; year: number };
 
 export function formatHistoryTime(date: Date): string {
-  const diffDays = differenceInCalendarDays(new Date(), date);
-
-  if (diffDays < ONE_MONTH_DAYS) {
-    return formatDistanceToNow(date, { addSuffix: true, locale: ko });
+  if (isToday(date) || isYesterday(date)) {
+    return timeFormatter.format(date);
   }
-
-  if (isThisYear(date)) {
-    return format(date, "M. d.");
-  }
-
-  return format(date, "yyyy. M. d.");
+  return dateFormatter.format(date);
 }
 
-export function formatHistoryTimeTooltip(date: Date): string {
-  return format(date, "yyyy년 M월 d일 HH:mm", { locale: ko });
-}
-
-export function getTimeGroup(date: Date): string {
+export function getTimeGroup(date: Date): TimeGroup {
   if (isToday(date)) {
-    return "오늘";
+    return { kind: "today" };
   }
   if (isYesterday(date)) {
-    return "어제";
+    return { kind: "yesterday" };
   }
-  if (isThisWeek(date, { weekStartsOn: 1 })) {
-    return "이번 주";
+  if (isThisWeek(date, { weekStartsOn: WEEK_STARTS_ON })) {
+    return { kind: "this_week" };
   }
   if (isThisMonth(date)) {
-    return "이번 달";
+    return { kind: "this_month" };
   }
   if (isThisYear(date)) {
-    return "올해";
+    return { kind: "this_year" };
   }
-  return `${date.getFullYear()}년`;
+  return { kind: "year", year: date.getFullYear() };
+}
+
+export function timeGroupId(group: TimeGroup): string {
+  return group.kind === "year" ? `year:${group.year}` : group.kind;
 }

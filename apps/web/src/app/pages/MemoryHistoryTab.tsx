@@ -1,16 +1,16 @@
 import { Suspense } from "react";
 
 import { HistoryList } from "@web/features/memory/components/HistoryList";
-import { MemoryTabShell } from "@web/features/memory/components/MemoryTabShell";
+import { MemoryTabLayout } from "@web/features/memory/components/MemoryTabLayout";
 import { useRememberMemoryTab } from "@web/features/memory/hooks/useRememberMemoryTab";
 
 export function MemoryHistoryTab() {
   useRememberMemoryTab("history");
   return (
     <Suspense>
-      <MemoryTabShell>
+      <MemoryTabLayout>
         <HistoryList />
-      </MemoryTabShell>
+      </MemoryTabLayout>
     </Suspense>
   );
 }
