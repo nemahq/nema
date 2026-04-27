@@ -151,7 +151,7 @@ export type Database = {
           created_at: string;
           history_id: string;
           id: string;
-          memory_id: string;
+          memory_id: string | null;
           memory_name_snapshot: string;
           next_body: string;
           prev_body: string | null;
@@ -162,7 +162,7 @@ export type Database = {
           created_at?: string;
           history_id: string;
           id?: string;
-          memory_id: string;
+          memory_id?: string | null;
           memory_name_snapshot: string;
           next_body: string;
           prev_body?: string | null;
@@ -173,7 +173,7 @@ export type Database = {
           created_at?: string;
           history_id?: string;
           id?: string;
-          memory_id?: string;
+          memory_id?: string | null;
           memory_name_snapshot?: string;
           next_body?: string;
           prev_body?: string | null;
