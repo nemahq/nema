@@ -22,7 +22,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 
 ## Terminology
 
-Product terms vs code terms are mapped in `docs/glossary.md`. Code (variables, files, APIs, URLs) MUST use code terms.
+Product terms vs code terms are mapped in `docs/guides/glossary.md`. Code (variables, files, APIs, URLs) MUST use code terms.
 
 ## Conventions
 
