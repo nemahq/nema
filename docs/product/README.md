@@ -13,6 +13,7 @@
 - [07-modeling](07-modeling.md) — 모델링 (concept를 데이터 구조로) ✅ — 진술·원본·관계·변경셋
 - [08-implementation-vs-model](08-implementation-vs-model.md) — 대조 (기존 구현체 ↔ 새 모델) ✅
 - [09-mvp-scope](09-mvp-scope.md) — MVP 스코프 (첫 출시에 넣을 것/뺄 것) ✅
+- [10-concept-collaboration](10-concept-collaboration.md) — 협업 기반 개념 (소유 Space · 접근 Share/Group · 조직 층) ✅
 
 참고:
 - [faq](faq.md) — 예상 반론과 답 (계속 누적)
@@ -42,7 +43,7 @@
 - ◻ 소비 — 제시 형태(표현) 미정
 
 **확장**
-- ◻ 공유/협업 — 소유의 *자리*(중립 이름의 소속 층, 오늘은 소속=사용자 1인)는 지금 둠. 권한 규칙·층 구조(콘텐츠 그릇 vs 사람 묶음)는 협업 단계에서
+- ✅ 공유/협업 — **소유(Space)와 접근(Share·Group)을 다른 축으로 분리.** 그 위에 조직(Organization) 층(신원·과금·정책, 콘텐츠 경계 아님). 권한 운영은 사람(정책·확정)·시스템(미세 적용·제안) 분업 + 기본 닫힘. 세부 규칙은 다중 사용자 단계 → [10](10-concept-collaboration.md)
 - ◻ 테마 — 여러 진술을 관통하는 묶음 (관계의 일종일 수 있어 보류)
 
 ## 핵심 개념의 층위
