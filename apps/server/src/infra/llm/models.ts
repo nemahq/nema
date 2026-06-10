@@ -16,7 +16,7 @@ export interface TieredLlm {
   readonly nano: LlmProvider;
 }
 
-// 동작별 모델 매핑은 docs/llm-model-map.md 참고
+// 동작별 모델 매핑은 docs/guides/llm-model-map.md 참고
 export function createTieredLlm(args: {
   apiKey: string;
   modelStandard?: string;

@@ -13,8 +13,8 @@ Review and fix translation keys against the UX writing guide.
 ## Step 2 — Load rules
 
 Read the following files:
-- `docs/ux-writing.md` (full guide)
-- `docs/glossary.md` (terminology)
+- `docs/guides/ux-writing.md` (full guide)
+- `docs/guides/glossary.md` (terminology)
 - Changed translation JSON files in full (for context)
 
 ## Step 3 — Run checklist
@@ -64,5 +64,5 @@ Fix violations immediately upon discovery.
 
 ## Constraints
 
-- Only apply rules from `docs/ux-writing.md` and `docs/glossary.md`. Do not flag based on personal preference or general best practices.
+- Only apply rules from `docs/guides/ux-writing.md` and `docs/guides/glossary.md`. Do not flag based on personal preference or general best practices.
 - Complete every checklist item. Do not skip or batch.
