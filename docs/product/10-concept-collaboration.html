@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nema — 모델 전체, 한 단위씩</title>
+<style>
+  :root{
+    --bg:#eef1f5; --card:#fff; --ink:#1b1f27; --muted:#6b7280; --line:#d7dce3;
+    --space:#3b82f6; --space-bg:#eff6ff; --share:#e8590c; --rel:#0ca678;
+    --group:#7048e8; --change:#868e96;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",sans-serif;line-height:1.55;}
+  .wrap{max-width:1000px;margin:0 auto;padding:30px 22px 70px;}
+  h1{font-size:21px;margin:0 0 16px;letter-spacing:-.3px;}
+  h1 small{font-weight:500;color:var(--muted);font-size:14px;}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px 22px;min-height:120px;display:flex;flex-direction:column;justify-content:center;}
+  .panel .kicker{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+  .panel .kicker.real{color:var(--share);}
+  .panel .kicker.ops{color:var(--group);}
+  .panel h2{margin:0 0 8px;font-size:20px;letter-spacing:-.3px;}
+  .panel p{margin:0;font-size:14.5px;color:#374151;}
+  .panel b{color:#111827;}
+  .nav{display:flex;align-items:center;gap:12px;margin:15px 0 8px;}
+  .nav button{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink);
+    font-size:14px;font-weight:600;padding:9px 16px;border-radius:10px;cursor:pointer;}
+  .nav button:hover:not(:disabled){background:#f3f5f8;}
+  .nav button:disabled{opacity:.4;cursor:default;}
+  .dots{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;}
+  .dots i{width:9px;height:9px;border-radius:50%;background:#cdd5e0;cursor:pointer;transition:.2s;}
+  .dots i.on{background:#374151;transform:scale(1.25);}
+  .dots i.real.on{background:#e8590c;}
+  .dots i.ops.on{background:#7048e8;}
+  .count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .scene{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px;margin-top:4px;}
+  .banner{font-size:12.5px;font-weight:700;color:#9a3412;background:#fff7ed;border:1px solid #f3b079;
+    border-radius:8px;padding:6px 12px;margin:0 4px 6px;display:inline-block;}
+  svg{width:100%;height:auto;display:block;}
+  [data-step]{transition:opacity .35s ease;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>nema 모델 — 한 단위씩 쌓기 <small>· 개념(1–12) → 실사례(13–15)</small></h1>
+
+  <div class="panel">
+    <div class="kicker" id="kicker"></div>
+    <h2 id="title"></h2>
+    <p id="desc"></p>
+  </div>
+
+  <div class="nav">
+    <button id="prev">‹ 이전</button>
+    <button id="next">다음 ›</button>
+    <span class="count" id="count"></span>
+    <span class="dots" id="dots"></span>
+  </div>
+
+  <!-- ============ SCENE 1 : 개념 (step 1–12) ============ -->
+  <div class="scene" id="sceneConcept">
+    <svg viewBox="0 0 1000 660" role="img" aria-label="모델 단계별">
+      <defs>
+        <marker id="aShare" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#e8590c"/></marker>
+        <marker id="aRel" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#0ca678"/></marker>
+        <marker id="aRef" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#9ca3af"/></marker>
+      </defs>
+
+      <g data-step="7">
+        <rect x="44" y="126" width="314" height="266" rx="14" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+        <text x="62" y="150" font-size="13.5" font-weight="700" fill="#1d4ed8">Space — 철수의 개인 · Member 1</text>
+      </g>
+      <g data-step="8">
+        <rect x="560" y="126" width="420" height="266" rx="14" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+        <text x="578" y="150" font-size="13.5" font-weight="700" fill="#1d4ed8">Space — 디자인팀 · Member 2 (공동 소유)</text>
+      </g>
+      <g data-step="6">
+        <rect x="576" y="166" width="392" height="170" rx="10" fill="none" stroke="#868e96" stroke-width="1.6" stroke-dasharray="7 5"/>
+        <text x="958" y="184" font-size="12" font-weight="700" fill="#868e96" text-anchor="end">Changeset · ingestion</text>
+      </g>
+
+      <g data-step="1">
+        <rect x="66" y="158" width="268" height="122" rx="9" fill="#fff" stroke="#cdd5e0" stroke-width="1.5"/>
+        <text x="82" y="184" font-size="13.5" font-weight="700" fill="#111827">s1 — Statement</text>
+        <text x="82" y="208" font-size="13.5" fill="#374151">요즘 번아웃이 와서</text>
+        <text x="82" y="228" font-size="13.5" fill="#374151">속도가 안 난다</text>
+      </g>
+      <g data-step="3">
+        <rect x="82" y="246" width="56" height="22" rx="11" fill="#eef2ff" stroke="#9aa7e8"/>
+        <text x="110" y="261" font-size="11.5" font-weight="700" fill="#3b4fc4" text-anchor="middle">claim</text>
+        <rect x="144" y="246" width="60" height="22" rx="11" fill="#fff4e6" stroke="#f3b079"/>
+        <text x="174" y="261" font-size="11.5" font-weight="700" fill="#b5560a" text-anchor="middle">guess</text>
+        <rect x="210" y="246" width="62" height="22" rx="11" fill="#ebfbee" stroke="#8ce0a0"/>
+        <text x="241" y="261" font-size="11.5" font-weight="700" fill="#2b8a3e" text-anchor="middle">active</text>
+      </g>
+      <g data-step="2">
+        <line x1="200" y1="280" x2="200" y2="304" stroke="#9ca3af" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#aRef)"/>
+        <text x="208" y="297" font-size="10.5" fill="#9ca3af">sourceRef</text>
+        <rect x="66" y="306" width="268" height="68" rx="9" fill="#f8f9fa" stroke="#cdd5e0" stroke-width="1.5"/>
+        <text x="82" y="330" font-size="13" font-weight="700" fill="#495057">Source — 원본 (무손실 박제)</text>
+        <text x="82" y="352" font-size="12.5" fill="#6b7280">철수가 적은 러프한 말 뭉치</text>
+      </g>
+
+      <g data-step="4">
+        <rect x="590" y="186" width="150" height="56" rx="9" fill="#fff" stroke="#cdd5e0" stroke-width="1.5"/>
+        <text x="604" y="210" font-size="13" font-weight="700" fill="#111827">s3</text>
+        <text x="604" y="229" font-size="13" fill="#374151">출시가 급함</text>
+        <rect x="796" y="186" width="150" height="56" rx="9" fill="#fff" stroke="#cdd5e0" stroke-width="1.5"/>
+        <text x="810" y="210" font-size="13" font-weight="700" fill="#111827">s2</text>
+        <text x="810" y="229" font-size="13" fill="#374151">결제 = 토스</text>
+        <rect x="590" y="262" width="232" height="56" rx="9" fill="#fff" stroke="#cdd5e0" stroke-width="1.5"/>
+        <text x="604" y="286" font-size="13" font-weight="700" fill="#111827">s4</text>
+        <text x="604" y="305" font-size="13" fill="#374151">버튼 키움 (접근성)</text>
+      </g>
+      <g data-step="5">
+        <line x1="740" y1="214" x2="796" y2="214" stroke="#0ca678" stroke-width="2.4" marker-end="url(#aRel)"/>
+        <text x="768" y="206" font-size="11.5" fill="#0ca678" text-anchor="middle" font-weight="700">supports</text>
+      </g>
+
+      <g data-step="9">
+        <circle cx="660" cy="560" r="32" fill="#fff7ed" stroke="#e8590c" stroke-width="2.5"/>
+        <text x="660" y="565" font-size="13" font-weight="700" fill="#9a3412" text-anchor="middle">박부장</text>
+        <text x="660" y="612" font-size="12.5" fill="#6b7280" text-anchor="middle">User — 외부 (어느 Space의 Member 아님)</text>
+      </g>
+      <g data-step="10">
+        <line x1="205" y1="282" x2="628" y2="546" stroke="#e8590c" stroke-width="3" marker-end="url(#aShare)"/>
+        <rect x="296" y="404" width="180" height="28" rx="14" fill="#fff7ed" stroke="#e8590c" stroke-width="1.5"/>
+        <text x="386" y="423" font-size="12.5" font-weight="700" fill="#9a3412" text-anchor="middle">Share · 보기 (1방향)</text>
+      </g>
+      <g data-step="11">
+        <circle cx="915" cy="300" r="20" fill="#ede9fe" stroke="#7048e8" stroke-width="2"/>
+        <text x="915" y="304" font-size="12" font-weight="700" fill="#5b2bd6" text-anchor="middle">영희</text>
+        <line x1="905" y1="317" x2="688" y2="540" stroke="#7048e8" stroke-width="2" stroke-dasharray="6 5"/>
+        <rect x="772" y="424" width="150" height="26" rx="13" fill="#ede9fe" stroke="#7048e8" stroke-width="1.5"/>
+        <text x="847" y="442" font-size="12.5" font-weight="700" fill="#5b2bd6" text-anchor="middle">Group · 매니저</text>
+        <line x1="810" y1="318" x2="849" y2="424" stroke="#e8590c" stroke-width="2.6" marker-end="url(#aShare)"/>
+        <text x="846" y="378" font-size="11" font-weight="700" fill="#9a3412">share</text>
+      </g>
+      <g data-step="12">
+        <rect x="842" y="288" width="64" height="20" rx="10" fill="#ede9fe" stroke="#7048e8"/>
+        <text x="874" y="302" font-size="11" font-weight="700" fill="#5b2bd6" text-anchor="middle">Member</text>
+        <text x="660" y="630" font-size="11.5" fill="#9ca3af" text-anchor="middle">운영 role 없음 · Share 받은 진술만 봄</text>
+        <rect x="44" y="470" width="336" height="90" rx="10" fill="#f8f9fa" stroke="#cdd5e0"/>
+        <text x="62" y="496" font-size="12.5" font-weight="800" fill="#495057">운영 role (소유 축)</text>
+        <text x="62" y="518" font-size="12" fill="#495057">Owner — 멤버 관리 · 삭제 · 공유 정책</text>
+        <text x="62" y="536" font-size="12" fill="#495057">Member — 기여 · 접근</text>
+        <text x="62" y="554" font-size="11.5" fill="#9ca3af">접근(Share)과 직교 · 세부는 멀티 단계</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ============ SCENE 2 : 실사례 (step 13–15) ============ -->
+  <div class="scene" id="sceneReal" style="display:none">
+    <span class="banner">실사례 — 가상 제품회사 ‘페이브(Pave)’의 결제 출시</span>
+    <svg viewBox="0 0 1000 660" role="img" aria-label="실제 회사 조직 적용">
+      <defs>
+        <marker id="rShare" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#e8590c"/></marker>
+      </defs>
+
+      <!-- STEP 13: Spaces -->
+      <g data-step="13">
+        <!-- 철수 개인 -->
+        <rect x="40" y="80" width="250" height="150" rx="13" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+        <text x="56" y="104" font-size="13" font-weight="700" fill="#1d4ed8">Space · 철수 개인</text>
+        <text x="56" y="122" font-size="11.5" fill="#6b7280">사적</text>
+        <rect x="56" y="138" width="218" height="74" rx="8" fill="#fff" stroke="#cdd5e0" stroke-width="1.4"/>
+        <text x="70" y="162" font-size="12.5" font-weight="700" fill="#111827">“요즘 번아웃이라</text>
+        <text x="70" y="180" font-size="12.5" font-weight="700" fill="#111827"> 속도가 안 난다”</text>
+        <text x="70" y="200" font-size="11" fill="#9ca3af">claim · guess</text>
+
+        <!-- 결제 프로젝트 -->
+        <rect x="330" y="62" width="350" height="208" rx="13" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+        <text x="346" y="86" font-size="13" font-weight="700" fill="#1d4ed8">Space · 결제 프로젝트</text>
+        <text x="346" y="104" font-size="11.5" fill="#6b7280">Owner 영희 · Member 철수·민수·지수</text>
+        <rect x="346" y="118" width="318" height="56" rx="8" fill="#fff" stroke="#cdd5e0" stroke-width="1.4"/>
+        <text x="360" y="141" font-size="12.5" font-weight="700" fill="#111827">“결제 = 토스페이먼츠”</text>
+        <text x="360" y="160" font-size="11" fill="#9ca3af">claim · certain</text>
+        <rect x="346" y="186" width="318" height="64" rx="8" fill="#fff" stroke="#cdd5e0" stroke-width="1.4"/>
+        <text x="360" y="209" font-size="12.5" font-weight="700" fill="#111827">“출시 지연 리스크가 있다”</text>
+        <text x="360" y="230" font-size="11" fill="#9ca3af">claim · guess</text>
+
+        <!-- 경영 -->
+        <rect x="720" y="80" width="240" height="150" rx="13" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+        <text x="736" y="104" font-size="13" font-weight="700" fill="#1d4ed8">Space · 경영</text>
+        <text x="736" y="122" font-size="11.5" fill="#6b7280">Owner 박부장</text>
+        <rect x="736" y="138" width="208" height="74" rx="8" fill="#fff" stroke="#cdd5e0" stroke-width="1.4"/>
+        <text x="750" y="162" font-size="12.5" font-weight="700" fill="#111827">“철수 평가를</text>
+        <text x="750" y="180" font-size="12.5" font-weight="700" fill="#111827"> 어떻게 할지 고민”</text>
+        <text x="750" y="200" font-size="11" fill="#9ca3af">question</text>
+      </g>
+
+      <!-- STEP 14: people + role + Group -->
+      <g data-step="14">
+        <!-- Group 리더 타원 (지수·영희·박부장 가로지름) -->
+        <ellipse cx="610" cy="478" rx="252" ry="50" fill="#f3effe" stroke="#7048e8" stroke-width="1.8" stroke-dasharray="7 5"/>
+        <text x="610" y="548" font-size="12.5" font-weight="700" fill="#5b2bd6" text-anchor="middle">Group · 리더 (조직도와 별개로 묶음)</text>
+
+        <!-- people -->
+        <g font-size="12.5" font-weight="700" text-anchor="middle">
+          <circle cx="110" cy="478" r="26" fill="#fff" stroke="#3b82f6" stroke-width="2"/><text x="110" y="482" fill="#1d4ed8">철수</text>
+          <text x="110" y="516" font-size="10.5" font-weight="600" fill="#6b7280">Member</text>
+
+          <circle cx="250" cy="478" r="26" fill="#fff" stroke="#3b82f6" stroke-width="2"/><text x="250" y="482" fill="#1d4ed8">민수</text>
+          <text x="250" y="516" font-size="10.5" font-weight="600" fill="#6b7280">Member</text>
+
+          <circle cx="400" cy="478" r="26" fill="#fff" stroke="#3b82f6" stroke-width="2"/><text x="400" y="482" fill="#1d4ed8">지수</text>
+          <text x="400" y="516" font-size="10.5" font-weight="600" fill="#6b7280">Member</text>
+
+          <circle cx="560" cy="478" r="26" fill="#fff" stroke="#3b82f6" stroke-width="2"/><text x="560" y="482" fill="#1d4ed8">영희</text>
+          <text x="560" y="516" font-size="10.5" font-weight="700" fill="#9a3412">Owner</text>
+
+          <circle cx="820" cy="478" r="26" fill="#fff7ed" stroke="#e8590c" stroke-width="2.4"/><text x="820" y="482" fill="#9a3412">박부장</text>
+          <text x="820" y="516" font-size="10.5" font-weight="700" fill="#9a3412">Owner</text>
+        </g>
+      </g>
+
+      <!-- STEP 15: share flows -->
+      <g data-step="15">
+        <!-- ① 번아웃 → 박부장만 -->
+        <line x1="200" y1="212" x2="800" y2="458" stroke="#e8590c" stroke-width="2.6" marker-end="url(#rShare)"/>
+        <rect x="430" y="300" width="150" height="26" rx="13" fill="#fff7ed" stroke="#e8590c"/>
+        <text x="505" y="318" font-size="11.5" font-weight="700" fill="#9a3412" text-anchor="middle">① 박부장에게만 · 민감</text>
+        <!-- ② 출시 리스크 → 리더 Group -->
+        <line x1="505" y1="250" x2="560" y2="430" stroke="#e8590c" stroke-width="2.6" marker-end="url(#rShare)"/>
+        <rect x="560" y="320" width="168" height="26" rx="13" fill="#fff7ed" stroke="#e8590c"/>
+        <text x="644" y="338" font-size="11.5" font-weight="700" fill="#9a3412" text-anchor="middle">② 리더 Group · 보고</text>
+        <!-- ③ 평가 고민 → 닫힘 -->
+        <text x="840" y="246" font-size="12.5" font-weight="700" fill="#adb5bd" text-anchor="middle">③ 🔒 아무에게도 안 엶 · 사적</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ============ SCENE 3 : 운영 모델 (step 16) ============ -->
+  <div class="scene" id="sceneOps" style="display:none">
+    <span class="banner" style="color:#5b2bd6;background:#f3effe;border-color:#b39ddb">운영 모델 — 권한은 누가 굴리나</span>
+    <svg viewBox="0 0 1000 540" role="img" aria-label="권한 운영 모델">
+      <defs>
+        <marker id="oArr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#868e96"/></marker>
+      </defs>
+      <g data-step="16">
+        <!-- 새 진술 in -->
+        <rect x="410" y="34" width="180" height="34" rx="17" fill="#fff" stroke="#cdd5e0" stroke-width="1.5"/>
+        <text x="500" y="56" font-size="12.5" font-weight="700" fill="#111827" text-anchor="middle">새 진술이 들어온다</text>
+        <line x1="500" y1="68" x2="500" y2="108" stroke="#868e96" stroke-width="2" marker-end="url(#oArr)"/>
+
+        <!-- 사람 박스 -->
+        <rect x="48" y="120" width="420" height="250" rx="14" fill="#f8f9fa" stroke="#495057" stroke-width="1.8"/>
+        <text x="68" y="148" font-size="14" font-weight="800" fill="#212529">🧍 사람 — ‘규칙과 예외’만</text>
+        <text x="68" y="180" font-size="13" fill="#374151">• 정책·규칙 정하기 <tspan fill="#868e96">(주제 → 대상, 룰베이스)</tspan></text>
+        <text x="68" y="210" font-size="13" fill="#374151">• 갈림길에서 답 <tspan fill="#868e96">(“열까요?” 예 / 아니오)</tspan></text>
+        <text x="68" y="240" font-size="13" fill="#374151">• 예외 직접 열기·닫기 / 되돌리기</text>
+        <text x="68" y="284" font-size="12" fill="#5b2bd6">만지는 면 = 룰 <tspan fill="#868e96">(결정적 · 예측 가능)</tspan></text>
+        <text x="68" y="320" font-size="11.5" fill="#9ca3af">평소엔 손 안 댐 · 신뢰 쌓일수록 호출 ↓</text>
+
+        <!-- 시스템 박스 -->
+        <rect x="532" y="120" width="420" height="250" rx="14" fill="#f8f9fa" stroke="#868e96" stroke-width="1.8"/>
+        <text x="552" y="148" font-size="14" font-weight="800" fill="#495057">⚙️ 시스템 — 매 진술에 적용</text>
+        <text x="552" y="180" font-size="13" fill="#374151">• 새 진술을 의미로 분류 <tspan fill="#868e96">(어느 부류?)</tspan></text>
+        <text x="552" y="210" font-size="13" fill="#374151">• 규칙대로 권한 마킹 + share 생성</text>
+        <text x="552" y="240" font-size="13" fill="#374151">• 애매·민감하면 사람에게 <tspan fill="#9a3412" font-weight="700">제안</tspan></text>
+        <text x="552" y="284" font-size="12" fill="#5b2bd6">뒷단 = LLM 의미 매칭 <tspan fill="#868e96">(제안일 뿐)</tspan></text>
+        <text x="552" y="320" font-size="11.5" fill="#9ca3af">규칙에 깔끔히 맞으면 조용히 자동 처리</text>
+
+        <!-- flows between -->
+        <line x1="532" y1="200" x2="468" y2="200" stroke="#868e96" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#oArr)"/>
+        <text x="500" y="193" font-size="10.5" fill="#868e96" text-anchor="middle">애매→갈림길</text>
+        <line x1="468" y1="250" x2="532" y2="250" stroke="#868e96" stroke-width="1.8" marker-end="url(#oArr)"/>
+        <text x="500" y="266" font-size="10.5" fill="#868e96" text-anchor="middle">정책 공급</text>
+
+        <!-- 안전판 -->
+        <rect x="48" y="400" width="904" height="56" rx="12" fill="#fff7ed" stroke="#f3b079" stroke-width="1.6"/>
+        <text x="500" y="424" font-size="13" font-weight="800" fill="#9a3412" text-anchor="middle">🔒 디폴트 닫힘 — 규칙 0개면 전부 ‘나만’</text>
+        <text x="500" y="444" font-size="12" fill="#b5560a" text-anchor="middle">안 건드리면 사적으로 남고, 실수는 ‘안 열림’으로 난다 (회복 가능) · 권한 확정은 룰·사람이지 LLM 아님</text>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<script>
+const STEPS = [
+  {kicker:"재료 · 단위", title:"① Statement — 맥락 한 조각",
+   desc:"가장 작은 단위. ‘왜’ 한 조각이야. 예: <b>“요즘 번아웃이라 속도가 안 난다”</b> = s1. 모든 건 이 조각에서 시작해."},
+  {kicker:"재료 · 뿌리", title:"② Source — 진술이 나온 원본",
+   desc:"진술은 사람이 던진 러프한 말 뭉치(Source)에서 <b>추출</b>돼. 원본은 의미로 안 다루고 <b>무손실로 박제</b>되고, 진술이 <b>sourceRef</b>로 그걸 가리켜 — 출처 추적의 실체. 진술은 원본의 ‘투영’."},
+  {kicker:"속성", title:"③ Statement 속성 — 진술이 품는 것",
+   desc:"진술 하나에 붙는 것들: <b>type</b>(claim·question·todo), <b>confidence</b>(certain·guess, claim에만), <b>status</b>(active·archived — ‘빼기’는 archived). 참·거짓은 시스템이 판단 안 해."},
+  {kicker:"재료가 쌓인다", title:"④ 진술이 더 들어온다",
+   desc:"진술은 계속 쌓여. <b>s2 ‘결제=토스’, s3 ‘출시 급함’, s4 ‘버튼 키움’</b>. 아직은 흩어진 조각들일 뿐이야."},
+  {kicker:"재료 · 연결", title:"⑤ Relation — 진술을 잇는 선",
+   desc:"<b>s3가 s2를 supports</b>(뒷받침). 종류는 4개 — supports · <b>conflicts</b>(충돌 드러냄) · <b>replaces</b>(밀어내 지난 것) · <b>resolves</b>(질문·할일 닫음). 관계가 자라야 ‘왜’의 그림이 돼."},
+  {kicker:"변경", title:"⑥ Changeset — 한 번의 변경 묶음",
+   desc:"진술·관계의 생성·제거를 <b>한 묶음</b>으로 묶는 봉투(ingestion·conflict·merge·manual·revert). 리뷰·되돌리기·이력이 여기 붙어 — <b>GitHub의 커밋/PR과 같은 자리</b>야."},
+  {kicker:"축 1 · 소유", title:"⑦ Space — 담는 칸 (누구 것인가)",
+   desc:"여기까지 만든 진술·원본·관계가 <b>‘누구 것인가’</b>. 그 소유 칸이 Space. s1·원본은 ‘철수의 개인 Space’에 담겼어."},
+  {kicker:"축 1 · 소유", title:"⑧ Space는 여러 개 — 개인도 팀도 같은 단위",
+   desc:"‘디자인팀 Space’는 철수·영희가 <b>함께 가진 공동 소유</b>(Member 2). 개인(1명)·팀(N명)은 <b>멤버 수만 다른 같은 것</b>. s2~s4·변경셋이 여기 담겨."},
+  {kicker:"사람", title:"⑨ 외부 User — 아직 못 본다",
+   desc:"박부장. 어느 Space의 Member도 아닌 <b>외부 사람</b>. 지금은 위의 어떤 진술도 볼 수 없어."},
+  {kicker:"축 2 · 접근", title:"⑩ Share — 여는 칸 (핵심)",
+   desc:"철수가 s1을 박부장에게 연다 = <b>Share 엣지 하나</b>. s1의 <b>소유(Space)는 안 변하고 접근만 열려</b>. 그리고 <b>한 방향</b> — 박부장→철수는 안 열림(비대칭)."},
+  {kicker:"축 2 · 접근", title:"⑪ Group — 묶고, 경계를 가로지른다",
+   desc:"이번엔 s4를 박부장 ‘개인’이 아니라 <b>‘매니저’ Group</b>에 열어 — 명단에 든 <b>영희·박부장이 한 번에</b> 봐. Group은 소유와 무관히 사람을 묶고(영희=팀 Member + 박부장=외부), <b>Space 경계를 가로질러</b>."},
+  {kicker:"축 1 · 운영 role", title:"⑫ Owner / Member — 운영 권한 (다른 축)",
+   desc:"지금까지의 Share는 ‘누가 진술을 보나’(접근). 이것과 <b>다른 축</b>이 ‘누가 Space를 운영하나’ — 멤버 넣고 빼기·삭제·공유 정책. 이건 멤버에 붙는 <b>role</b>(Owner·Member)이야. <b>role(운영) ≠ Share(접근), 둘은 직교</b>. 세부는 멀티 단계로 미룸."},
+
+  {kicker:"실사례 · 소유", real:true, title:"⑬ 실제 회사 — Space는 여러 개",
+   desc:"제품회사 ‘페이브’라면: 각자 <b>개인 Space</b>(사적), <b>결제 프로젝트 Space</b>(팀 공동), <b>경영 Space</b>가 따로 있어. 진술이 각 Space에 담겨 — 소유가 흩어져 있지."},
+  {kicker:"실사례 · 운영·묶음", real:true, title:"⑭ role 과 Group",
+   desc:"각 Space엔 <b>Owner/Member</b>(영희=결제 Owner, 박부장=경영 Owner, 나머지는 Member). 그리고 직책으로 묶은 <b>Group ‘리더’</b>(지수·영희·박부장)가 여러 Space를 <b>가로질러</b> — 조직도와 별개로 사람을 묶어."},
+  {kicker:"실사례 · 접근 흐름", real:true, title:"⑮ 맥락이 실제로 흐르는 법",
+   desc:"같은 회사 안에서 진술마다·방향마다 다르게 흘러: <b>①</b> 철수 ‘번아웃’ → <b>박부장에게만</b>(민감 1:1) <b>②</b> ‘출시 지연 리스크’ → <b>리더 Group</b>(보고) <b>③</b> 박부장의 ‘평가 고민’ → <b>아무에게도 안 엶</b>(사적). 이 <b>진술별·방향성</b> 통제가 네마가 거인과 갈리는 자리야."},
+
+  {kicker:"운영 · 사람↔시스템", ops:true, title:"⑯ 권한은 누가 굴리나",
+   desc:"구조 위에서 권한이 <b>어떻게</b> 굴러가나. <b>사람</b>은 규칙(룰베이스)·갈림길 답·예외/되돌리기 — ‘규칙과 예외’만. <b>시스템</b>은 매 진술을 의미로 분류해 규칙대로 마킹·share하고, 애매하면 제안. <b>디폴트 닫힘</b>이라 안 건드리면 사적이고, 실수는 ‘안 열림’으로 나. 사람이 만지는 면은 <b>룰(결정적)</b>, LLM은 뒷단 의미 매칭(제안)이야."},
+];
+
+const groups = [...document.querySelectorAll('[data-step]')];
+let cur = 1;
+const $ = id => document.getElementById(id);
+const dotsEl = $('dots');
+STEPS.forEach((s,i)=>{const d=document.createElement('i');if(s.real)d.classList.add('real');if(s.ops)d.classList.add('ops');d.onclick=()=>{cur=i+1;render();};dotsEl.appendChild(d);});
+
+function render(){
+  const s = STEPS[cur-1];
+  $('kicker').textContent=s.kicker; $('kicker').className='kicker'+(s.real?' real':'')+(s.ops?' ops':'');
+  $('title').textContent=s.title; $('desc').innerHTML=s.desc;
+  $('count').textContent=cur+" / "+STEPS.length;
+  // scene toggle
+  $('sceneConcept').style.display = cur<=12 ? 'block':'none';
+  $('sceneReal').style.display = (cur>=13 && cur<=15) ? 'block':'none';
+  $('sceneOps').style.display = cur===16 ? 'block':'none';
+  groups.forEach(g=>{const n=+g.dataset.step;
+    if(n>cur){g.style.opacity=0;g.style.pointerEvents='none';}
+    else{g.style.opacity=(n===cur?1:0.26);g.style.pointerEvents='';}});
+  [...dotsEl.children].forEach((d,i)=>d.classList.toggle('on',i+1===cur));
+  $('prev').disabled=cur===1; $('next').disabled=cur===STEPS.length;
+}
+$('prev').onclick=()=>{if(cur>1){cur--;render();}};
+$('next').onclick=()=>{if(cur<STEPS.length){cur++;render();}};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')$('next').click();if(e.key==='ArrowLeft')$('prev').click();});
+render();
+</script>
+</body>
+</html>
