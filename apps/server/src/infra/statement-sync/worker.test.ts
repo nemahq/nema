@@ -11,7 +11,7 @@ import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type { VectorStore } from "@server/infra/vector";
 
 import type { PendingSource, PendingStatement } from "./types";
-import { createStatementSyncWorker } from "./worker";
+import { createStatementSyncWorker, POLL_INTERVAL_MS } from "./worker";
 
 const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
 const SPACE_ID = "b0000000-0000-4000-a000-000000000001";
@@ -101,7 +101,7 @@ async function runOnePoll(deps: {
 }) {
   const worker = createStatementSyncWorker(deps);
   worker.start(); // start가 즉시 sweep 1회 실행
-  await vi.advanceTimersByTimeAsync(2_000); // 첫 poll까지
+  await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS); // 첫 poll까지
   await worker.stop();
 }
 

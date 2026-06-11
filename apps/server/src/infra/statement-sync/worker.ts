@@ -20,7 +20,7 @@ import {
 } from "./types";
 
 const MAX_RETRIES = 5;
-const POLL_INTERVAL_MS = 2_000;
+export const POLL_INTERVAL_MS = 2_000;
 // 실패한 행의 lease((retry+1)×30초)가 풀린 뒤 재시도를 깨울 notify가 따로 없으므로,
 // 주기 사이클이 자동 재시도의 동력이다 (ingestion-design 5장의 재시도 계약).
 const SWEEP_INTERVAL_MS = 60_000;

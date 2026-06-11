@@ -99,6 +99,7 @@ async function bootstrap() {
         await stopWorker?.();
       } catch (err) {
         server.log.error(`Worker stop failed: ${err}`);
+        Sentry.captureException(err, { level: "warning" });
       }
       await server.close();
       await shutdownPostHog();
