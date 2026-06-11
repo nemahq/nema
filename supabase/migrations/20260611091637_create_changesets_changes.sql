@@ -33,9 +33,10 @@ CREATE TABLE changesets (
 );
 
 -- ----- 개별 연산 -----
--- target_id는 FK 없는 polymorphic — 대상이 3종이라 단일 FK 불가 +
--- 이력 로그라 Space 삭제로 대상이 사라져도 "무엇을 했는지"가 남아야 한다.
--- 생성 시 대상 존재 보장은 RPC가 한다.
+-- target_id는 FK 없는 polymorphic — 대상이 3종이라 단일 FK 불가.
+-- 자기 Space 삭제 땐 changes도 changeset 경유 CASCADE로 함께 지워지지만,
+-- 다른 Space의 삭제 연쇄로 대상만 사라지는 경우(cross-space 관계 끝점 등)에도
+-- "무엇을 했는지"는 남아야 한다. 생성 시 대상 존재 보장은 RPC가 한다.
 CREATE TABLE changes (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   changeset_id  uuid NOT NULL REFERENCES changesets(id) ON DELETE CASCADE,

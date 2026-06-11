@@ -3,10 +3,13 @@
 -- 2단계 비동기 파이프의 DB 계약. worker 실제 구현(LLM 추출, Voyage 임베딩,
 -- Qdrant 클라이언트)은 후속 — 여기서는 큐·RPC·상태 컬럼 계약까지만.
 --
---   글 던짐 → source 박제 (extraction_status=pending)
---     → [worker] 추출(LLM): apply_ingestion_changeset로 원자 생성, extraction completed
---       → statements (ingestion_status=pending)
---       → [worker] 임베딩(Voyage): Qdrant upsert, ingestion completed
+--   글 던짐 → [추출(LLM)] → statements (ingestion_status=pending)
+--     → [worker] 임베딩(Voyage): Qdrant upsert, ingestion completed
+--
+-- apply_ingestion_changeset은 source 박제와 진술 저장을 한 트랜잭션에 묶는 계약이라
+-- 추출이 끝난 결과를 들고 호출된다. 미리 박제된 pending source에 진술을 붙여 완료
+-- 처리하는 비동기 적용 RPC는 저장 파이프 흐름(후속)에서 확정 —
+-- fetch_pending_sources/complete/increment는 그 비동기 경로를 위한 폴링 계약이다.
 --
 -- 전부 service_role 전용 (v1의 fetch_pending_memories 류 계승).
 -- =============================================================
@@ -17,6 +20,8 @@ SELECT pgmq.create('statement_sync');
 -- 추출 RPC — sources.extraction_status 폴링
 -- =============================================================
 
+-- 인출 = 클레임: 시도 시각을 찍어 (retry+1)×30초 lease 동안 재인출을 막고,
+-- 동시 worker는 SKIP LOCKED로 서로 다른 행을 가져간다 — 중복 추출 방지.
 CREATE OR REPLACE FUNCTION fetch_pending_sources(p_max_retries int DEFAULT 5)
 RETURNS TABLE (
   id         uuid,
@@ -28,20 +33,34 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT s.id, s.space_id, s.author_id, s.session_id, s.body, s.created_at
-  FROM sources s
-  WHERE s.extraction_status = 'pending'
-    AND s.extraction_retry_count < p_max_retries
-    AND (s.last_extraction_attempt IS NULL
-         OR s.last_extraction_attempt + s.extraction_retry_count * interval '30 seconds' < now())
-  LIMIT 10;
+  UPDATE sources s
+  SET last_extraction_attempt = now()
+  FROM (
+    SELECT s2.id
+    FROM sources s2
+    WHERE s2.extraction_status = 'pending'
+      AND s2.extraction_retry_count < p_max_retries
+      AND (s2.last_extraction_attempt IS NULL
+           OR s2.last_extraction_attempt + (s2.extraction_retry_count + 1) * interval '30 seconds' < now())
+    LIMIT 10
+    FOR UPDATE SKIP LOCKED
+  ) picked
+  WHERE s.id = picked.id
+  RETURNING s.id, s.space_id, s.author_id, s.session_id, s.body, s.created_at;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE OR REPLACE FUNCTION complete_source_extraction(p_source_id uuid)
 RETURNS void AS $$
 BEGIN
-  UPDATE sources SET extraction_status = 'completed' WHERE id = p_source_id;
+  UPDATE sources
+  SET extraction_status = 'completed',
+      error_message     = NULL
+  WHERE id = p_source_id AND extraction_status = 'pending';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'source % is not pending extraction', p_source_id;
+  END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -52,15 +71,20 @@ CREATE OR REPLACE FUNCTION increment_source_extraction_retry(
 )
 RETURNS void AS $$
 BEGIN
+  -- pending 가드: 늦게 도착한 재시도가 completed 행을 pending으로 되살리지 못하게
   UPDATE sources
   SET extraction_retry_count  = extraction_retry_count + 1,
       last_extraction_attempt = now(),
-      error_message           = p_error_message,
+      error_message           = COALESCE(p_error_message, error_message),
       extraction_status = CASE
         WHEN extraction_retry_count + 1 >= p_max_retries THEN 'failed'::ingestion_status
         ELSE 'pending'::ingestion_status
       END
-  WHERE id = p_source_id;
+  WHERE id = p_source_id AND extraction_status = 'pending';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'source % is not pending extraction', p_source_id;
+  END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -90,6 +114,15 @@ BEGIN
   -- 사람 type(ingestion)의 author 필수는 RPC가 보장 (DB는 SET NULL과 양립 위해 CHECK로 안 박음)
   IF p_author_id IS NULL THEN
     RAISE EXCEPTION 'ingestion changeset requires author_id';
+  END IF;
+
+  -- SECURITY DEFINER라 RLS를 안 타므로 소유 검증도 RPC 몫 — 엉뚱한 Space에 쓰면
+  -- 그 행이 제출자에게 안 보여 "저장 증발"로 나타난다
+  IF NOT EXISTS (
+    SELECT 1 FROM space_members
+    WHERE space_id = p_space_id AND user_id = p_author_id
+  ) THEN
+    RAISE EXCEPTION 'author % is not a member of space %', p_author_id, p_space_id;
   END IF;
 
   IF jsonb_typeof(p_statements) != 'array' OR jsonb_array_length(p_statements) = 0 THEN
@@ -140,7 +173,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 -- 임베딩 RPC — statements.ingestion_status 폴링
 -- =============================================================
 
--- status 포함 — 선언적 동기화: worker가 active면 Qdrant upsert, archived면 delete
+-- status 포함 — 선언적 동기화: worker가 active면 Qdrant upsert, archived면 delete.
+-- 인출 = 클레임 (fetch_pending_sources와 동일한 lease + SKIP LOCKED 패턴).
 CREATE OR REPLACE FUNCTION fetch_pending_statements(p_max_retries int DEFAULT 5)
 RETURNS TABLE (
   id         uuid,
@@ -153,20 +187,34 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT st.id, st.space_id, st.content, st.type, st.confidence, st.status, st.created_at
-  FROM statements st
-  WHERE st.ingestion_status = 'pending'
-    AND st.ingestion_retry_count < p_max_retries
-    AND (st.last_ingestion_attempt IS NULL
-         OR st.last_ingestion_attempt + st.ingestion_retry_count * interval '30 seconds' < now())
-  LIMIT 10;
+  UPDATE statements st
+  SET last_ingestion_attempt = now()
+  FROM (
+    SELECT st2.id
+    FROM statements st2
+    WHERE st2.ingestion_status = 'pending'
+      AND st2.ingestion_retry_count < p_max_retries
+      AND (st2.last_ingestion_attempt IS NULL
+           OR st2.last_ingestion_attempt + (st2.ingestion_retry_count + 1) * interval '30 seconds' < now())
+    LIMIT 10
+    FOR UPDATE SKIP LOCKED
+  ) picked
+  WHERE st.id = picked.id
+  RETURNING st.id, st.space_id, st.content, st.type, st.confidence, st.status, st.created_at;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE OR REPLACE FUNCTION complete_statement_ingestion(p_statement_id uuid)
 RETURNS void AS $$
 BEGIN
-  UPDATE statements SET ingestion_status = 'completed' WHERE id = p_statement_id;
+  UPDATE statements
+  SET ingestion_status = 'completed',
+      error_message    = NULL
+  WHERE id = p_statement_id AND ingestion_status = 'pending';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'statement % is not pending ingestion', p_statement_id;
+  END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -177,15 +225,20 @@ CREATE OR REPLACE FUNCTION increment_statement_ingestion_retry(
 )
 RETURNS void AS $$
 BEGIN
+  -- pending 가드: 늦게 도착한 재시도가 completed 행을 pending으로 되살리지 못하게
   UPDATE statements
   SET ingestion_retry_count  = ingestion_retry_count + 1,
       last_ingestion_attempt = now(),
-      error_message          = p_error_message,
+      error_message          = COALESCE(p_error_message, error_message),
       ingestion_status = CASE
         WHEN ingestion_retry_count + 1 >= p_max_retries THEN 'failed'::ingestion_status
         ELSE 'pending'::ingestion_status
       END
-  WHERE id = p_statement_id;
+  WHERE id = p_statement_id AND ingestion_status = 'pending';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'statement % is not pending ingestion', p_statement_id;
+  END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 

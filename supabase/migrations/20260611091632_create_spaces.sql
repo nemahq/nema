@@ -29,7 +29,7 @@ CREATE TABLE space_members (
 -- Indexes
 -- =============================================================
 
--- 매 RLS의 is_space_member 탐색
+-- 사용자→Space 역조회용 (is_space_member의 등치 조회는 PK(space_id, user_id)가 커버)
 CREATE INDEX idx_space_members_user ON space_members (user_id);
 
 -- =============================================================

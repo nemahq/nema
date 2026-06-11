@@ -1,7 +1,7 @@
 -- =============================================================
 -- save-engine-v2 5/6: 관계 층 — statement_relations (자리만, 엔진 미연결)
 -- same-space를 강제하지 않는다 — statement_sources와 정반대.
--- 관계는 Space를 가로지를 수 있다(다른 사람 진술에 내가 반박/근거를 닮).
+-- 관계는 Space를 가로지를 수 있다(다른 사람 진술에 내가 반박/근거를 단다).
 -- space_id는 만든 쪽의 것이고 끝점은 다른 Space일 수 있다.
 -- author_id 없음 — 엔진 산물. 소유는 space_id로만.
 -- 엔진 단계로 미룬 것: 끝점 archived → 관계 연쇄 archived 트리거,
@@ -13,7 +13,7 @@ CREATE TYPE relation_status AS ENUM ('active', 'archived');
 
 CREATE TABLE statement_relations (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  space_id    uuid NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,  -- 관계를 만든 쪽 소유
+  space_id    uuid NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
   type        relation_type NOT NULL,  -- conflicts는 논리상 대칭이나 저장은 방향으로 두고 동작에서 대칭 처리
   from_id     uuid NOT NULL REFERENCES statements(id) ON DELETE CASCADE,
   to_id       uuid NOT NULL REFERENCES statements(id) ON DELETE CASCADE,

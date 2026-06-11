@@ -1,7 +1,7 @@
 -- =============================================================
 -- save-engine-v2 1/6: 합성 문서 시절(v1) 테이블·enum·큐·RPC 드랍
 -- 진술 기반 새 스키마(2~6층)를 세우기 전 정리. 출시 전이라 데이터 폐기 가능.
--- 보존: ingestion_status enum, update_updated_at(), sessions/messages/profiles/events
+-- 보존: ingestion_status enum, update_updated_at(), sessions(messages 컬럼 포함)/profiles/events
 -- =============================================================
 
 -- ----- RPC 드랍 (테이블·enum보다 먼저 — 시그니처가 update_type 등에 의존) -----

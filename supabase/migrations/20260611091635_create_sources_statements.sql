@@ -104,7 +104,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER trg_statement_sources_same_space
-  BEFORE INSERT ON statement_sources
+  BEFORE INSERT OR UPDATE ON statement_sources
   FOR EACH ROW EXECUTE FUNCTION enforce_statement_source_same_space();
 
 -- =============================================================
