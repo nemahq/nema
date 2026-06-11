@@ -72,3 +72,7 @@ export {
   type SourceCreateInput,
   SourceCreateInputSchema,
 } from "./schemas/source";
+export {
+  type StatementSearchInput,
+  StatementSearchInputSchema,
+} from "./schemas/statement-search";
