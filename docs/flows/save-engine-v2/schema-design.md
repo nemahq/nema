@@ -122,6 +122,7 @@ CREATE TABLE statements (
   ingestion_status        ingestion_status NOT NULL DEFAULT 'pending',
   ingestion_retry_count   int NOT NULL DEFAULT 0,
   last_ingestion_attempt  timestamptz,
+  error_message           text,                           -- 임베딩 실패 이유 (sources의 추출 실패와 대칭)
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now(),
   -- 확신도 무결성: claim이면 반드시 있고, 그 외엔 반드시 없음
@@ -154,17 +155,18 @@ CREATE TABLE changesets (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   space_id    uuid NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
   type        changeset_type NOT NULL,    -- ingestion|conflict|merge|manual|revert
-  status      changeset_status NOT NULL,  -- pending | applied
-  source_id   uuid REFERENCES sources(id),         -- ingestion이면 어느 원본
-  reverts_id  uuid REFERENCES changesets(id),      -- revert면 되돌리는 대상
-  author_id   uuid REFERENCES auth.users(id),      -- 사람 주도면 주체, 엔진이면 NULL
+  status      changeset_status NOT NULL,  -- pending | applied (DEFAULT 없음 — 생성 RPC가 명시적으로 정함)
+  source_id   uuid REFERENCES sources(id)    ON DELETE CASCADE,   -- ingestion이면 어느 원본 (같은 Space라 동반 삭제)
+  reverts_id  uuid REFERENCES changesets(id) ON DELETE CASCADE,   -- revert면 되돌리는 대상
+  author_id   uuid REFERENCES auth.users(id) ON DELETE SET NULL,  -- 변경을 일으킨 주체(사람). 엔진이면 NULL. 계정 삭제 시 NULL로 보존
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now(),
-  -- type별 무결성 (작동 type은 확정적이라 박고, conflict/merge는 source_id 미확정이나 의미상 NULL)
+  -- type별 무결성. author_id는 "엔진 type은 반드시 NULL"만 DB로 강제하고,
+  -- 사람 type의 author 필수는 생성 RPC가 보장한다 (계정 삭제 시 SET NULL과 양립시키기 위함 — 4.5).
   CONSTRAINT chk_changeset_shape CHECK (
-    (type='ingestion' AND source_id IS NOT NULL AND reverts_id IS NULL AND author_id IS NOT NULL) OR
-    (type='revert'    AND reverts_id IS NOT NULL AND source_id IS NULL AND author_id IS NOT NULL) OR
-    (type='manual'    AND source_id IS NULL AND reverts_id IS NULL AND author_id IS NOT NULL) OR
+    (type='ingestion' AND source_id IS NOT NULL AND reverts_id IS NULL) OR
+    (type='revert'    AND reverts_id IS NOT NULL AND source_id IS NULL) OR
+    (type='manual'    AND source_id IS NULL AND reverts_id IS NULL) OR
     (type IN ('conflict','merge') AND source_id IS NULL AND reverts_id IS NULL AND author_id IS NULL)
   )
 );
@@ -189,8 +191,9 @@ CREATE TABLE changes (
 ```
 
 - **첫 출시에 실제로 생성되는 type은 `ingestion`(저장)·`manual`(직접 빼기)·`revert`(되돌리기) 3개.** `conflict`·`merge`는 관계 엔진이 만들어 미연결(스키마는 받아둠).
+- **`changesets.author_id`는 "변경을 일으킨 주체"** — `ingestion`이면 원본을 제출한 *사람*이다(엔진이 진술을 추출해도 변경을 일으킨 주체는 제출자). 결정 #4의 "엔진 산물엔 author 없음"은 진술·관계 같은 *산출물*에 대한 것이라 축이 다르다. DB는 엔진 type(`conflict`/`merge`)의 `author IS NULL`만 강제하고, 사람 type의 author 필수는 생성 RPC가 보장한다.
 - **append-only 되돌리기**: `applied`를 되돌릴 때 status를 바꾸지 않고 `revert` 변경셋을 *추가*한다(07).
-- **`changes.target_id`는 FK 없는 polymorphic** — `changes`는 이력 로그라 대상이 hard-delete돼도 "무엇을 했는지"가 보존돼야 한다. 생성 시 대상 존재 보장은 RPC가 한다.
+- **`changes.target_id`는 FK 없는 polymorphic** — 대상이 3종(statement/source/relation)이라 단일 FK가 불가능한 게 1차 이유다. 더해서 이력 로그라, Space 삭제(4.5)로 대상이 사라져도 "무엇을 했는지"가 남아야 한다. 생성 시 대상 존재 보장은 RPC가 한다. (개별 기록은 hard-delete가 없어 평소엔 대상이 늘 존재한다.)
 - `data` 형식(modify의 before/after 보존 등)은 구현 단계로 열어둠.
 
 ### 4.4 관계 층 (자리만, 엔진 미연결)
@@ -213,6 +216,26 @@ CREATE TABLE statement_relations (
 - `author_id` 없음 — 엔진 산물. 소유는 `space_id`로만.
 - `conflicts`는 논리상 대칭이나 저장은 방향(from/to)으로 두고 동작에서 대칭 처리.
 - **엔진 단계로 미룬 것**: "끝점 archived → 관계 연쇄 archived" 트리거, `(from_id, to_id, type)` 중복 방지 unique. 첫 출시엔 관계 row가 (엔진 미연결이라) 안 생기므로 자리만.
+
+### 4.5 삭제·보존 정책 (전 테이블 공통)
+
+개별 기록(source·statement·relation)에는 **hard-delete가 없다** — "빼기"는 전부 soft(`status='archived'`)다. 07이 열어둔 "완전 삭제(기밀 등)"는 후순위. 실제로 hard-delete가 일어나는 경로는 둘뿐이고, 이 둘이 모든 FK의 `ON DELETE`를 정한다:
+
+| 경로 | 동작 |
+|---|---|
+| **Space 삭제** | 그 Space의 모든 기록이 `space_id` 경유 `CASCADE` 삭제 |
+| **계정 삭제(`auth.users`)** | `author_id`가 `SET NULL` — 작성자만 비우고 기록은 Space에 보존(10: 사람이 떠나도 기록은 남는다) |
+
+| FK | ON DELETE | 이유 |
+|---|---|---|
+| 모든 `space_id` | `CASCADE` | Space가 소유의 뿌리 |
+| `author_id` (sources·changesets) | `SET NULL` | 계정 삭제 시 익명으로 기록 보존 |
+| `session_id` (sources) | `SET NULL` | 대화가 지워져도 원본 보존 |
+| `changesets.source_id`·`reverts_id` | `CASCADE` | 끝점은 같은 Space라 Space 삭제 시 동반 |
+| `statement_sources`·`statement_relations`의 끝점 | `CASCADE` | hard-delete는 Space 삭제 때만 일어나므로 동반 |
+| `changes.target_id` | (FK 없음) | polymorphic이라 단일 FK 불가 + 이력 보존(4.3) |
+
+`author_id NOT NULL`을 CHECK로 박지 않은 이유가 여기 있다 — 계정 삭제 시 `SET NULL`과 충돌하기 때문. 사람 type의 author 필수는 쓰기가 전부 RPC 경유라 RPC가 보장한다.
 
 ---
 
