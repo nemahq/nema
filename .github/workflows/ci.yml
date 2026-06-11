@@ -12,6 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 마이그레이션 변경 감지가 base 브랜치와 diff하므로 전체 이력 필요
+          # (기본 fetch-depth: 1에서는 base ref가 없어 감지가 조용히 skip되던 버그)
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
 
@@ -26,7 +30,9 @@ jobs:
         if: github.event_name == 'pull_request'
         id: migrations
         run: |
-          if git diff --name-only origin/${{ github.base_ref }}...HEAD -- 'supabase/migrations/' | grep -q .; then
+          set -euo pipefail
+          CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- 'supabase/migrations/')
+          if [ -n "$CHANGED" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
@@ -39,10 +45,13 @@ jobs:
       - name: Verify database types are up to date
         if: steps.migrations.outputs.changed == 'true'
         run: |
+          set -euo pipefail
           supabase start
-          supabase gen types --lang=typescript --local > /tmp/database.types.ts
+          supabase gen types --lang=typescript --local > apps/server/src/infra/database.types.ts
           supabase stop
-          if ! diff -q /tmp/database.types.ts apps/server/src/infra/database.types.ts > /dev/null 2>&1; then
+          # 커밋본은 pre-commit prettier가 재포맷하므로 raw 생성물도 같은 포맷으로 맞춰 비교
+          pnpm exec prettier --write apps/server/src/infra/database.types.ts
+          if ! git diff --exit-code apps/server/src/infra/database.types.ts; then
             echo "::error::database.types.ts is out of date. Run 'supabase gen types --lang=typescript --local > apps/server/src/infra/database.types.ts' locally and commit."
             exit 1
           fi
