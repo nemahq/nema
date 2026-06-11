@@ -9,7 +9,8 @@
     "apps/server": {
       "entry": [
         "src/eval/eval-drafting.ts",
-        "src/eval/verify-statement-search.ts"
+        "src/eval/verify-statement-search.ts",
+        "src/eval/statement-engine/seed-data.ts"
       ],
       "project": ["src/**/*.ts"],
       "ignore": ["src/infra/**"]
