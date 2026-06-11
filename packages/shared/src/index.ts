@@ -68,3 +68,7 @@ export {
   type SessionUpdateInput,
   SessionUpdateInputSchema,
 } from "./schemas/session";
+export {
+  type SourceCreateInput,
+  SourceCreateInputSchema,
+} from "./schemas/source";
