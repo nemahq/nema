@@ -183,7 +183,7 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
           filter: {
             must: [{ key: "space_id", match: { any: spaceIds } }],
           },
-          // point id = statement_id 계약 — payload 없이 id만 받는다
+          // point id = statement_id 계약
           with_payload: false,
           score_threshold: scoreThreshold,
         });

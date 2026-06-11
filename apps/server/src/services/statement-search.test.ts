@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { assembleSourceGroups } from "./statement-search";
+import type { Providers } from "@server/infra/providers";
+import type { TypedSupabaseClient } from "@server/infra/supabase";
+import type { VectorStore } from "@server/infra/vector";
+
+import { assembleSourceGroups, searchStatements } from "./statement-search";
 
 function claim(args: {
   id: string;
@@ -152,5 +156,166 @@ describe("assembleSourceGroups", () => {
       sourceId: "src",
       sourceCreatedAt: "2026-01-02T03:04:05Z",
     });
+  });
+});
+
+// --- searchStatements: 체인 기록 + 캔 응답 stub으로 오케스트레이션 검증 ---
+
+interface QueryStub {
+  calls: unknown[][];
+  select: (...args: unknown[]) => QueryStub;
+  in: (...args: unknown[]) => QueryStub;
+  eq: (...args: unknown[]) => QueryStub;
+  then: (resolve: (value: { data: unknown; error: null }) => void) => void;
+}
+
+function queryStub(rows: unknown[]): QueryStub {
+  const calls: unknown[][] = [];
+  const chain = (name: string) => {
+    return (...args: unknown[]) => {
+      calls.push([name, ...args]);
+      return stub;
+    };
+  };
+  const stub: QueryStub = {
+    calls,
+    select: chain("select"),
+    in: chain("in"),
+    eq: chain("eq"),
+    then: (resolve) => {
+      resolve({ data: rows, error: null });
+    },
+  };
+  return stub;
+}
+
+function supabaseStub(responses: Record<string, QueryStub[]>) {
+  return {
+    from: (table: string) => {
+      const next = responses[table]?.shift();
+      if (!next) {
+        throw new Error(`Unexpected query on table: ${table}`);
+      }
+      return next;
+    },
+  } as unknown as TypedSupabaseClient;
+}
+
+function providersStub(searchMock: ReturnType<typeof vi.fn>): Providers {
+  const vectorStore: VectorStore = {
+    ensureCollection: vi.fn(),
+    dropLegacyCollections: vi.fn(),
+    upsertStatements: vi.fn(),
+    deleteStatements: vi.fn(),
+    search: searchMock,
+  };
+  return {
+    llm: null as never, // 꺼내기 경로엔 LLM이 없다
+    embedding: {
+      providerId: "test",
+      model: "test-model",
+      dimension: 1024,
+      embed: vi.fn(),
+    },
+    vectorStore,
+  };
+}
+
+function statementRow(args: {
+  id: string;
+  sourceId: string;
+  locator: unknown;
+}) {
+  return {
+    id: args.id,
+    content: `내용 ${args.id}`,
+    type: "claim",
+    confidence: "certain",
+    created_at: "2026-06-11T00:00:00Z",
+    statement_sources: [
+      {
+        source_id: args.sourceId,
+        locator: args.locator,
+        sources: { created_at: "2026-06-10T00:00:00Z" },
+      },
+    ],
+  };
+}
+
+describe("searchStatements", () => {
+  it("멤버인 Space가 없으면 임베딩·Qdrant 호출 없이 빈 결과", async () => {
+    const search = vi.fn();
+    const result = await searchStatements({
+      supabase: supabaseStub({ space_members: [queryStub([])] }),
+      providers: providersStub(search),
+      query: "질문",
+    });
+
+    expect(result).toEqual({ groups: [] });
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it("원장 재조회는 active만 — archived 벡터가 남아 있어도 거른다", async () => {
+    const search = vi.fn().mockResolvedValue([
+      { statementId: "s1", score: 0.9 },
+      { statementId: "s-archived", score: 0.95 },
+    ]);
+    // 원장은 active 필터가 걸린 결과만 돌려준다 — archived 행은 응답에 없음
+    const statementsQuery = queryStub([
+      statementRow({ id: "s1", sourceId: "src", locator: { index: 0 } }),
+    ]);
+
+    const result = await searchStatements({
+      supabase: supabaseStub({
+        space_members: [queryStub([{ space_id: "space-1" }])],
+        statements: [statementsQuery],
+        statement_sources: [queryStub([{ source_id: "src" }])],
+      }),
+      providers: providersStub(search),
+      query: "질문",
+    });
+
+    // 필터가 빠지는 회귀를 막는 핵심 단언 — archived 거름은 이 체인이 전부다
+    expect(statementsQuery.calls).toContainEqual(["eq", "status", "active"]);
+    expect(result.groups).toHaveLength(1);
+    expect(result.groups[0]?.statements.map((s) => s.id)).toEqual(["s1"]);
+  });
+
+  it("locator index 0은 falsy 강제 없이 원문 첫 자리로 산다", async () => {
+    const search = vi.fn().mockResolvedValue([
+      { statementId: "first", score: 0.6 },
+      { statementId: "second", score: 0.99 },
+    ]);
+
+    const result = await searchStatements({
+      supabase: supabaseStub({
+        space_members: [queryStub([{ space_id: "space-1" }])],
+        statements: [
+          queryStub([
+            statementRow({
+              id: "second",
+              sourceId: "src",
+              locator: { index: 1 },
+            }),
+            statementRow({
+              id: "first",
+              sourceId: "src",
+              locator: { index: 0 },
+            }),
+          ]),
+        ],
+        statement_sources: [
+          queryStub([{ source_id: "src" }, { source_id: "src" }]),
+        ],
+      }),
+      providers: providersStub(search),
+      query: "질문",
+    });
+
+    // index 0이 ||류 강제로 null 취급되면 first가 맨 뒤로 밀린다
+    expect(result.groups[0]?.statements.map((s) => s.id)).toEqual([
+      "first",
+      "second",
+    ]);
   });
 });

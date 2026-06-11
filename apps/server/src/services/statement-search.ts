@@ -1,4 +1,4 @@
-import type { Json } from "@server/infra/database.types";
+import type { Database, Json } from "@server/infra/database.types";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
@@ -7,8 +7,9 @@ import { throwIfSupabaseError } from "@server/infra/supabase-error";
 const STATEMENT_SEARCH_LIMIT = 15;
 const STATEMENT_SEARCH_SCORE_THRESHOLD = 0.6;
 
-type SearchedStatementType = "claim" | "question" | "todo";
-type SearchedStatementConfidence = "certain" | "guess";
+type SearchedStatementType = Database["public"]["Enums"]["statement_type"];
+type SearchedStatementConfidence =
+  Database["public"]["Enums"]["statement_confidence"];
 
 interface SearchedStatement {
   id: string;
@@ -195,7 +196,7 @@ export function assembleSourceGroups(args: {
           createdAt: statement.createdAt,
           score,
         },
-        // locator 없는 진술(과거 데이터·수동 생성)은 원문 순서를 모르므로 뒤로
+        // locator는 nullable 자리(schema 4.2) — 안 채우는 쓰기 경로가 생기면 원문 순서를 모르므로 뒤로
         orderIndex: ref.orderIndex ?? Number.MAX_SAFE_INTEGER,
       });
     }
@@ -211,7 +212,9 @@ export function assembleSourceGroups(args: {
       maxScore: Math.max(...members.map((m) => m.statement.score)),
       group: {
         key: group.key,
-        totalStatementCount: activeCountBySourceId.get(group.key.sourceId) ?? 0,
+        // 묶음이 있는 원본에 0은 구조상 불가능 — 집계가 비면 닿은 수가 하한
+        totalStatementCount:
+          activeCountBySourceId.get(group.key.sourceId) ?? members.length,
         statements: members.map((m) => m.statement),
       },
     };
