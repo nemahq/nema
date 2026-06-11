@@ -95,9 +95,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         type: "claim",
         confidence: "certain",
         axes: ["decision-reason-split"],
-        needsHumanReview: true,
-        reviewNote:
-          "04가 절단 기준 미정의 대표 예로 든 경계 — 독립 진술로 볼지, 앞 결정(s1)에 붙은 근거로 볼지. 04의 예시 표는 독립으로 제안했다",
+        needsHumanReview: false,
       },
       {
         id: "meeting-memo-1-s3",
@@ -173,15 +171,20 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         needsHumanReview: false,
       },
       {
-        id: "transcript-1-s5",
-        content:
-          "세 번째 인터뷰 고객은 전반적으로 만족하지만 모바일에서 쓰고 싶어 한다",
+        id: "transcript-1-s5a",
+        content: "세 번째 인터뷰 고객은 제품에 전반적으로 만족한다",
         type: "claim",
         confidence: "certain",
-        axes: ["merge-elaboration"],
-        needsHumanReview: true,
-        reviewNote:
-          "만족(평가)과 모바일 요청을 한 진술로 합칠지 둘로 끊을지 — 한 고객의 발언이라 합쳤지만 '왜'가 둘이라고 볼 수도 있다",
+        axes: ["compound-split", "pronoun-resolution"],
+        needsHumanReview: false,
+      },
+      {
+        id: "transcript-1-s5b",
+        content: "세 번째 인터뷰 고객은 모바일에서 쓰고 싶어 한다",
+        type: "claim",
+        confidence: "certain",
+        axes: ["compound-split"],
+        needsHumanReview: false,
       },
       {
         id: "transcript-1-s6",
@@ -189,19 +192,14 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         type: "claim",
         confidence: "certain",
         axes: ["merge-elaboration"],
-        needsHumanReview: true,
-        reviewNote:
-          "개별 피드백(s2·s5)의 요약 진술 — 원문에 '정리하면'으로 명시돼 있어 담았지만, 요약을 독립 진술로 받을지는 절단 기준의 결정 사항",
+        needsHumanReview: false,
       },
       {
         id: "transcript-1-s7",
-        content: "태그 커스텀 요청을 수용할지는 더 고민이 필요하다",
-        type: "claim",
-        confidence: "guess",
-        axes: ["question-label", "confidence-mix"],
-        needsHumanReview: true,
-        reviewNote:
-          "'좀 더 고민해봐야 할 것 같아요' — claim(guess)으로 제안했지만 question('수용할 것인가?')이나 todo('고민하기')로 볼 여지. type 경계의 대표 케이스",
+        content: "태그 커스텀 요청을 수용할 것인가?",
+        type: "question",
+        axes: ["question-label"],
+        needsHumanReview: false,
       },
     ],
   },
@@ -247,14 +245,20 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         needsHumanReview: false,
       },
       {
-        id: "weekly-1-s5",
-        content:
-          "디자인팀은 모바일 앱 와이어프레임 1차를 완료하고 피드백을 반영 중이다",
+        id: "weekly-1-s5a",
+        content: "디자인팀은 모바일 앱 와이어프레임 1차를 완료했다",
         type: "claim",
         confidence: "certain",
-        axes: ["merge-elaboration"],
-        needsHumanReview: true,
-        reviewNote: "완료와 피드백 반영을 한 진술로 합칠지 둘로 끊을지",
+        axes: ["compound-split"],
+        needsHumanReview: false,
+      },
+      {
+        id: "weekly-1-s5b",
+        content: "디자인팀은 모바일 앱 와이어프레임 피드백을 반영 중이다",
+        type: "claim",
+        confidence: "certain",
+        axes: ["compound-split"],
+        needsHumanReview: false,
       },
       {
         id: "weekly-1-s6",
@@ -262,9 +266,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         type: "claim",
         confidence: "certain",
         axes: ["compound-split"],
-        needsHumanReview: true,
-        reviewNote:
-          "s7(결과 시점)과 한 진술로 합칠지 — 진행 상태와 예정 시점을 다른 '왜'로 봤다",
+        needsHumanReview: false,
       },
       {
         id: "weekly-1-s7",
@@ -272,8 +274,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         type: "claim",
         confidence: "certain",
         axes: ["compound-split"],
-        needsHumanReview: true,
-        reviewNote: "s6과 합칠지의 반대편",
+        needsHumanReview: false,
       },
       {
         id: "weekly-1-s8",
@@ -340,9 +341,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         content: "온보딩 이메일 시퀀스 초안은 내가 쓰기로 했다",
         type: "todo",
         axes: ["todo-boundary"],
-        needsHumanReview: true,
-        reviewNote:
-          "'쓰기로 했음'은 결정(claim)이자 할 일(todo) — todo로 제안했지만 claim/todo 경계 기준이 필요한 대표 케이스",
+        needsHumanReview: false,
       },
       {
         id: "braindump-1-s7",
@@ -350,9 +349,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         type: "claim",
         confidence: "certain",
         axes: ["compound-split"],
-        needsHumanReview: true,
-        reviewNote:
-          "s8(정리·공유 todo)과 한 진술로 묶을지 — 사실과 할 일이라 끊었다",
+        needsHumanReview: false,
       },
       {
         id: "braindump-1-s8",
@@ -453,7 +450,7 @@ export const SEED_QUERIES: SeedQuery[] = [
   {
     id: "q8",
     query: "폰에서 쓰고 싶다는 의견이 있었나?",
-    expectedStatementIds: ["transcript-1-s5", "transcript-1-s6"],
+    expectedStatementIds: ["transcript-1-s5b", "transcript-1-s6"],
     failureAxis: "paraphrase",
     description: "모바일 → 폰",
   },
