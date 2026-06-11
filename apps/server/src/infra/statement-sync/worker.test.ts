@@ -84,6 +84,7 @@ function mockVectorStore(): VectorStore {
     dropLegacyCollections: vi.fn().mockResolvedValue([]),
     upsertStatements: vi.fn().mockResolvedValue(undefined),
     deleteStatements: vi.fn().mockResolvedValue(undefined),
+    search: vi.fn().mockResolvedValue([]),
   };
 }
 

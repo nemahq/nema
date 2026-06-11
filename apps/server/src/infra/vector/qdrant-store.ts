@@ -6,13 +6,15 @@ import {
 
 import type { QdrantClient } from "./qdrant-client";
 import type {
+  SearchOptions,
   StatementPayload,
+  StatementSearchHit,
   StatementUpsertItem,
   VectorStore,
 } from "./vector-store";
 import { VectorStoreError } from "./vector-store";
 
-// v1 문서·entity 컬렉션 — 합성 문서 모델 폐기로 데이터째 폐기 (v1-salvage 5장).
+// v1 문서·entity 컬렉션 — 합성 문서 모델 폐기로 데이터째 폐기.
 // 문서 컬렉션 이름은 환경마다 달랐다: prod는 기본값 documents, staging은 documents-staging.
 const LEGACY_COLLECTIONS = ["documents", "documents-staging", "entities"];
 
@@ -142,6 +144,61 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
         throw new VectorStoreError(
           `Upsert failed: ${error instanceof Error ? error.message : String(error)}`,
           "upsertStatements",
+          error,
+        );
+      }
+    },
+
+    async search(
+      provider: EmbeddingProvider,
+      options: SearchOptions,
+    ): Promise<StatementSearchHit[]> {
+      const { spaceIds, query, limit, scoreThreshold } = options;
+
+      if (provider.dimension !== VECTOR_DIMENSION) {
+        throw new VectorStoreError(
+          `Provider dimension ${provider.dimension} does not match collection vector size ${VECTOR_DIMENSION}`,
+          "search",
+        );
+      }
+
+      if (spaceIds.length === 0) {
+        return [];
+      }
+
+      try {
+        const result = await provider.embed([query], "query");
+        const vector = result.embeddings[0];
+
+        if (!vector) {
+          throw new VectorStoreError(
+            "Embedding provider returned no vector for search query",
+            "search",
+          );
+        }
+
+        const searchResult = await client.search(QDRANT_COLLECTION, {
+          vector,
+          limit,
+          filter: {
+            must: [{ key: "space_id", match: { any: spaceIds } }],
+          },
+          // point id = statement_id 계약
+          with_payload: false,
+          score_threshold: scoreThreshold,
+        });
+
+        return searchResult.map((point) => ({
+          statementId: String(point.id),
+          score: point.score,
+        }));
+      } catch (error) {
+        if (error instanceof VectorStoreError) {
+          throw error;
+        }
+        throw new VectorStoreError(
+          `Search failed: ${error instanceof Error ? error.message : String(error)}`,
+          "search",
           error,
         );
       }
