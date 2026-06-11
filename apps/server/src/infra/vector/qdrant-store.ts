@@ -14,7 +14,7 @@ import type {
 } from "./vector-store";
 import { VectorStoreError } from "./vector-store";
 
-// v1 문서·entity 컬렉션 — 합성 문서 모델 폐기로 데이터째 폐기 (v1-salvage 5장).
+// v1 문서·entity 컬렉션 — 합성 문서 모델 폐기로 데이터째 폐기.
 // 문서 컬렉션 이름은 환경마다 달랐다: prod는 기본값 documents, staging은 documents-staging.
 const LEGACY_COLLECTIONS = ["documents", "documents-staging", "entities"];
 
