@@ -95,13 +95,19 @@ apply_ingestion_changeset(p_source_id uuid, p_statements jsonb) → changeset_id
 - **진술이 0개면**(노이즈뿐인 글) changeset을 만들지 않고 `complete_source_extraction`만 호출 — 빈 changeset을 남기지 않는다. schema의 RPC 골격에 두 RPC가 다 있는 이유.
 - schema-design 5.3의 RPC 설명("source+statements+… 원자 생성")에서 **source 생성은 빠진다** — 박제가 동기 단계로 먼저다(이 문서가 그 미결을 확정, schema 쪽 문구도 함께 수정).
 
+### 기존 마이그레이션과의 관계 (빌드 범위)
+
+저장소 구현(`20260611091643_statement_sync_queue_rpcs.sql`)의 `apply_ingestion_changeset`은 **동기형 임시 계약**이다 — source 박제와 진술 저장을 한 호출에 묶고(`p_body`를 직접 받아 `extraction_status='completed'`로 박제), 헤더 주석이 "미리 박제된 pending source에 진술을 붙이는 비동기 적용 RPC는 저장 파이프 흐름(후속)에서 확정"이라고 이 문서로 결정을 넘겼다. 이 문서가 그 결정을 2단계(동기 박제 → 비동기 적용)로 확정했으므로, **넣기 빌드 범위에 기존 RPC를 이 계약대로 재작성하는 마이그레이션이 포함된다**:
+
+- `apply_ingestion_changeset`을 `(p_source_id, p_statements)` 시그니처로 재작성 — 시그니처가 바뀌므로 `DROP FUNCTION` 선행(supabase 규칙). pending source 전제·완료 표시 동일 트랜잭션·`locator {"index": n}` 기록을 포함하고, 마이그레이션 헤더 주석의 "박제+저장 한 트랜잭션" 서술도 함께 갱신한다.
+- `create_source`(2장)·`retry_source_extraction`·`retry_statement_ingestion`(5장)은 **신규 추가분**이다. `fetch_pending_*`·`complete_*`·`increment_*` 6종과 큐 소비 RPC(`read_sync_events`·`ack_sync_event`)는 기존 그대로 쓴다.
+
 ## 5. 실패 처리 — 지우지 않는다
 
 ### 재시도 (v1 패턴 계승)
 
 - 추출 실패 → `increment_source_extraction_retry`: `retry_count` +1, `last_extraction_attempt`·`error_message` 기록. 상한 도달 시 `extraction_status='failed'`.
-- `fetch_pending_sources`는 `pending`이면서 `retry_count < 상한`인 것만 반환.
-- 재시도는 같은 배치 사이클 안에서 즉시(워커의 pending 순환이 다시 집어감). 시간 backoff는 두지 않고 필요해지면 운영 데이터 보고 추가. 상한값(v1은 5)은 구현 단계 상수.
+- `fetch_pending_sources`는 `pending`이면서 `retry_count < 상한`인 것만 반환. 인출은 시도 시각을 찍는 클레임이라, 실패한 행은 `(retry_count+1)×30초` lease가 지나야 재인출된다 — **선형 backoff가 기존 마이그레이션에 이미 구현돼 있다.** 상한값(기본 5)도 RPC 기본값으로 박혀 있다.
 - 임베딩 실패도 완전 대칭: `increment_statement_ingestion_retry`.
 
 ### 실패한 source의 거취 (schema가 넘긴 미결의 확정)
@@ -120,14 +126,14 @@ retry_statement_ingestion(p_statement_id uuid) -- 대칭
 
 ## 6. 워커 — 한 큐, 한 워커, 추출 먼저 임베딩 다음
 
-- **깨우기**: `create_source`·`apply_ingestion_changeset`·archive 계열 RPC가 모두 `statement_sync` 큐에 notify를 쏜다. 메시지는 "깨워라" 하나 — v1의 `document.deleted` 같은 즉시 정리 이벤트가 필요 없다. archive가 `ingestion_status='pending'`으로 되돌리는 선언적 동기화(schema 5.3)가 삭제를 흡수한다.
+- **깨우기**: `create_source`·`apply_ingestion_changeset`·archive 계열 RPC(빼기·되돌리기 설계에서 생길 미래 계약)가 모두 `statement_sync` 큐에 notify를 쏜다. 메시지는 "깨워라" 하나 — v1의 `document.deleted` 같은 즉시 정리 이벤트가 필요 없다. archive가 `ingestion_status='pending'`으로 되돌리는 선언적 동기화(schema 5.3)가 삭제를 흡수한다.
 - **사이클**: 깨어나면
   1. `fetch_pending_sources` 순환 — 추출하고 `apply_ingestion_changeset`(0개면 `complete_source_extraction`만)
   2. `fetch_pending_statements` 순환 — 진술 `status`가 `active`면 Qdrant upsert, `archived`면 delete, 끝나면 `complete_statement_ingestion`
   3. 둘 다 빌 때까지 반복. ①이 pending 진술을 만들어내므로 이 순서면 한 번 깨어난 김에 임베딩까지 끝난다.
 - **Qdrant**: 1진술 = 1 point, payload는 schema 5.3 그대로 — `{statement_id, space_id, content, type, confidence, created_at, embedding_model}`. 진술은 짧아서 임베딩 호출은 여러 진술을 한 번에 묶는 배치가 자연스럽다(배치 크기는 구현 단계 상수).
 - **동시성·재사용**: v1 워커(infra/document-sync) 골격 그대로 — pgmq 배치 read + visibility timeout + ack, 아이템 단위 청크 병렬, Sentry 단계별 태깅. `infra/statement-sync`가 그 자리를 대체한다.
-- **단일 워커 가정과 전환 경로**: "pending 목록을 가져와 처리"는 워커가 하나라는 가정 위에 있다. 워커를 늘리는 날(처리량·단계 격리·배포 분리가 요구할 때)엔 `fetch_pending_*`에 잠금(`FOR UPDATE SKIP LOCKED` 류)을 넣어 이중 처리를 막는다 — RPC 내부 수정만으로 전환된다.
+- **워커는 하나로 시작하지만, 인출은 이미 멀티 워커 안전**: `fetch_pending_*`가 `FOR UPDATE SKIP LOCKED` + lease 클레임으로 구현돼 있어 워커를 늘려도 같은 행을 이중 처리하지 않는다. 분리(처리량·단계 격리·배포 분리)가 필요해지면 RPC 수정 없이 워커 프로세스만 늘리면 된다.
 
 ## 7. 기존 코드의 거취 (빌드 세션 참고)
 
