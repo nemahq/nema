@@ -1,4 +1,6 @@
 import { getEnv } from "@server/env";
+import type { EmbeddingProvider } from "@server/infra/embedding";
+import { createVoyageProvider } from "@server/infra/embedding";
 import type { TieredLlm } from "@server/infra/llm/models";
 import {
   createTieredLlm,
@@ -6,11 +8,15 @@ import {
   DEFAULT_NANO_MODEL,
   DEFAULT_STANDARD_MODEL,
 } from "@server/infra/llm/models";
+import type { VectorStore } from "@server/infra/vector";
+import { createQdrantClient, createQdrantStore } from "@server/infra/vector";
 
-// v1 저장·검색 파이프 철거로 embedding/vector/graph provider가 비었다.
-// v2 동기화 worker(진술 추출·임베딩)가 들어올 때 다시 채운다.
+// 요청 경로(진술 검색)용 provider. 워커는 index.ts에서 직접 조립한다.
+// graph(Neo4j)는 관계 엔진과 함께 후속.
 export interface Providers {
   llm: TieredLlm;
+  embedding: EmbeddingProvider;
+  vectorStore: VectorStore;
 }
 
 export type LlmPreset = "all-nano" | "real-tiers";
@@ -32,6 +38,12 @@ export function getProviders(): Providers {
   if (!env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is required for chat");
   }
+  if (!env.VOYAGE_API_KEY) {
+    throw new Error("VOYAGE_API_KEY is required for chat");
+  }
+  if (!env.QDRANT_URL || !env.QDRANT_API_KEY) {
+    throw new Error("QDRANT_URL and QDRANT_API_KEY are required for chat");
+  }
 
   cached = {
     llm: createTieredLlm({
@@ -40,6 +52,8 @@ export function getProviders(): Providers {
       modelMini: env.LLM_MODEL_MINI,
       modelNano: env.LLM_MODEL_NANO,
     }),
+    embedding: createVoyageProvider({ apiKey: env.VOYAGE_API_KEY }),
+    vectorStore: createQdrantStore(createQdrantClient()),
   };
 
   // prod 전용 잠금 — 프로덕션에서 모델 프리셋 교체가 열리면 비용·보안 사고로 이어진다

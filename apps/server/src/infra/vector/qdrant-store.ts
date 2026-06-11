@@ -6,7 +6,9 @@ import {
 
 import type { QdrantClient } from "./qdrant-client";
 import type {
+  SearchOptions,
   StatementPayload,
+  StatementSearchHit,
   StatementUpsertItem,
   VectorStore,
 } from "./vector-store";
@@ -142,6 +144,61 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
         throw new VectorStoreError(
           `Upsert failed: ${error instanceof Error ? error.message : String(error)}`,
           "upsertStatements",
+          error,
+        );
+      }
+    },
+
+    async search(
+      provider: EmbeddingProvider,
+      options: SearchOptions,
+    ): Promise<StatementSearchHit[]> {
+      const { spaceIds, query, limit, scoreThreshold } = options;
+
+      if (provider.dimension !== VECTOR_DIMENSION) {
+        throw new VectorStoreError(
+          `Provider dimension ${provider.dimension} does not match collection vector size ${VECTOR_DIMENSION}`,
+          "search",
+        );
+      }
+
+      if (spaceIds.length === 0) {
+        return [];
+      }
+
+      try {
+        const result = await provider.embed([query], "query");
+        const vector = result.embeddings[0];
+
+        if (!vector) {
+          throw new VectorStoreError(
+            "Embedding provider returned no vector for search query",
+            "search",
+          );
+        }
+
+        const searchResult = await client.search(QDRANT_COLLECTION, {
+          vector,
+          limit,
+          filter: {
+            must: [{ key: "space_id", match: { any: spaceIds } }],
+          },
+          // point id = statement_id 계약 — payload 없이 id만 받는다
+          with_payload: false,
+          score_threshold: scoreThreshold,
+        });
+
+        return searchResult.map((point) => ({
+          statementId: String(point.id),
+          score: point.score,
+        }));
+      } catch (error) {
+        if (error instanceof VectorStoreError) {
+          throw error;
+        }
+        throw new VectorStoreError(
+          `Search failed: ${error instanceof Error ? error.message : String(error)}`,
+          "search",
           error,
         );
       }

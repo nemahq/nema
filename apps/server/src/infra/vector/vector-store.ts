@@ -35,6 +35,18 @@ export interface StatementUpsertItem {
   createdAt: string;
 }
 
+export interface StatementSearchHit {
+  statementId: string;
+  score: number;
+}
+
+export interface SearchOptions {
+  spaceIds: string[];
+  query: string;
+  limit: number;
+  scoreThreshold: number;
+}
+
 export interface VectorStore {
   ensureCollection(): Promise<void>;
   /** 부팅 시 1회 — v1 컬렉션(documents·entities) 정리. 지운 이름을 반환한다. */
@@ -44,4 +56,9 @@ export interface VectorStore {
     statements: StatementUpsertItem[],
   ): Promise<void>;
   deleteStatements(statementIds: string[]): Promise<void>;
+  /** 본문은 Postgres 원장에서 다시 읽는다 — 색인은 statement_id+score만 돌려준다. */
+  search(
+    provider: EmbeddingProvider,
+    options: SearchOptions,
+  ): Promise<StatementSearchHit[]>;
 }
