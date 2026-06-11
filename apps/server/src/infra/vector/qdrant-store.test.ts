@@ -33,13 +33,11 @@ function mockEmbedding(embeddings: number[][]): EmbeddingProvider {
     providerId: "test",
     model: "test-model",
     dimension: VECTOR_DIMENSION,
-    embed: vi
-      .fn()
-      .mockResolvedValue({
-        embeddings,
-        model: "test-model",
-        dimension: VECTOR_DIMENSION,
-      }),
+    embed: vi.fn().mockResolvedValue({
+      embeddings,
+      model: "test-model",
+      dimension: VECTOR_DIMENSION,
+    }),
   };
 }
 
