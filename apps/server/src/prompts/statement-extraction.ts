@@ -43,7 +43,8 @@ Text with no "why" — greetings, filler, small talk — yields nothing. If the 
 - Content must contain only the statement text — no surrounding XML markup.`;
 
 const ExtractedStatementSchema = z.object({
-  content: z.string().min(1),
+  // trim — 공백뿐인 진술이 DB·임베딩까지 흘러가지 않게 (source body 검증과 정합)
+  content: z.string().trim().min(1),
   type: z.enum(["claim", "question", "todo"]),
   confidence: z.enum(["certain", "guess"]).nullable(),
 });

@@ -66,24 +66,31 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
         return;
       }
 
+      // 메시지 내용은 안 본다 — 전부 "깨워라"로 취급하고 ack.
+      // malformed 메시지도 ack한다 — 안 하면 영구 재전달되며 매 사이클 알림을 도배한다.
       const parsed = z.array(TriggerMessageSchema).safeParse(data);
       if (!parsed.success) {
         Sentry.captureMessage("[statement-sync] message validation failed", {
           level: "error",
           extra: { validationError: parsed.error },
         });
-        return;
       }
 
-      // 메시지 내용은 안 본다 — 전부 "깨워라"로 취급하고 ack
-      for (const row of parsed.data) {
+      const msgIds = parsed.success
+        ? parsed.data.map((row) => row.msg_id)
+        : data.flatMap((row: unknown) => {
+            const id = (row as { msg_id?: unknown })?.msg_id;
+            return typeof id === "number" ? [id] : [];
+          });
+
+      for (const msgId of msgIds) {
         const { error: ackError } = await deps.supabase.rpc("ack_sync_event", {
-          p_msg_id: row.msg_id,
+          p_msg_id: msgId,
         });
         if (ackError) {
           Sentry.captureMessage(
             `[statement-sync] ack failed: ${ackError.message}`,
-            { level: "error", extra: { msgId: row.msg_id } },
+            { level: "error", extra: { msgId } },
           );
         }
       }
@@ -118,11 +125,18 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
     start() {
       // eslint-disable-next-line no-console -- lifecycle log, no logger in worker context
       console.log("[statement-sync] started");
+      // processing 중엔 current를 덮어쓰지 않는다 — poll/sweep은 진입 즉시(동기로)
+      // processing을 잡으므로, 이 가드면 current는 항상 실제 일을 시작한 promise를
+      // 가리키고 stop()의 await current가 in-flight 사이클을 끝까지 기다린다.
       pollTimer = setInterval(() => {
-        current = poll();
+        if (!processing) {
+          current = poll();
+        }
       }, POLL_INTERVAL_MS);
       sweepTimer = setInterval(() => {
-        current = sweep();
+        if (!processing) {
+          current = sweep();
+        }
       }, SWEEP_INTERVAL_MS);
       // 재기동 직후 1회 — 죽기 전에 ack까지 끝낸 notify의 잔여 pending을 줍는다
       current = sweep();

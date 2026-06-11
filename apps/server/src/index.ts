@@ -64,12 +64,18 @@ async function bootstrap() {
     await vectorStore.ensureCollection();
     server.log.info("Qdrant statement collection ready");
 
-    // v1 컬렉션(documents·entities)은 합성 문서 모델과 함께 데이터째 폐기
-    const dropped = await vectorStore.dropLegacyCollections();
-    if (dropped.length > 0) {
-      server.log.info(
-        `Dropped legacy Qdrant collections: ${dropped.join(", ")}`,
-      );
+    // v1 컬렉션(documents·entities)은 합성 문서 모델과 함께 데이터째 폐기.
+    // 일회성 청소라 실패가 서버를 죽일 이유는 없다 — 경고만 남기고 계속 서빙.
+    try {
+      const dropped = await vectorStore.dropLegacyCollections();
+      if (dropped.length > 0) {
+        server.log.info(
+          `Dropped legacy Qdrant collections: ${dropped.join(", ")}`,
+        );
+      }
+    } catch (err) {
+      server.log.error(`Legacy Qdrant collection cleanup failed: ${err}`);
+      Sentry.captureException(err, { level: "warning" });
     }
 
     const { createVoyageProvider } = await import("./infra/embedding");
@@ -85,9 +91,12 @@ async function bootstrap() {
     worker.start();
     stopWorker = worker.stop;
   } else {
-    server.log.warn(
-      "QDRANT_URL / QDRANT_API_KEY / OPENAI_API_KEY / VOYAGE_API_KEY not fully set, skipping statement-sync worker init",
-    );
+    // 워커가 없으면 source가 박제만 되고 추출·임베딩이 영영 안 돈다 —
+    // 배포 오설정이 "멀쩡해 보이는" 상태로 묻히지 않게 Sentry에도 남긴다.
+    const message =
+      "QDRANT_URL / QDRANT_API_KEY / OPENAI_API_KEY / VOYAGE_API_KEY not fully set, skipping statement-sync worker init";
+    server.log.warn(message);
+    Sentry.captureMessage(`[bootstrap] ${message}`, { level: "warning" });
   }
 
   await server.listen({ port: env.PORT, host: "0.0.0.0" });
