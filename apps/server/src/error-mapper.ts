@@ -2,9 +2,11 @@ import { TRPCError } from "@trpc/server";
 
 import type { Locale } from "@nema-io/shared";
 
+import { EmbeddingError } from "./infra/embedding/embedding-provider";
 import { t, type TranslationKey } from "./infra/i18n";
 import { LlmError } from "./infra/llm/llm-error";
 import { SupabaseError, type SupabaseErrorCode } from "./infra/supabase-error";
+import { VectorStoreError } from "./infra/vector/vector-store";
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]["code"];
 
@@ -15,6 +17,8 @@ type DomainErrorCode =
   | "LLM_BAD_REQUEST"
   | "LLM_CONTENT_FILTER"
   | "LLM_ERROR"
+  | "EMBEDDING_ERROR"
+  | "VECTOR_STORE_ERROR"
   | "DB_NOT_FOUND"
   | "DB_QUERY_FAILED";
 
@@ -37,6 +41,14 @@ const ERROR_MAP: Record<
     i18nKey: "error.llm_content_filter",
   },
   LLM_ERROR: {
+    trpcCode: "INTERNAL_SERVER_ERROR",
+    i18nKey: "error.default",
+  },
+  EMBEDDING_ERROR: {
+    trpcCode: "INTERNAL_SERVER_ERROR",
+    i18nKey: "error.default",
+  },
+  VECTOR_STORE_ERROR: {
     trpcCode: "INTERNAL_SERVER_ERROR",
     i18nKey: "error.default",
   },
@@ -66,6 +78,12 @@ const LLM_CODE_MAP: Record<string, DomainErrorCode> = {
 export function getDomainCode(cause: unknown): DomainErrorCode | undefined {
   if (cause instanceof LlmError) {
     return LLM_CODE_MAP[cause.code] ?? "LLM_ERROR";
+  }
+  if (cause instanceof EmbeddingError) {
+    return "EMBEDDING_ERROR";
+  }
+  if (cause instanceof VectorStoreError) {
+    return "VECTOR_STORE_ERROR";
   }
   if (cause instanceof SupabaseError) {
     return SUPABASE_CODE_MAP[cause.code];
