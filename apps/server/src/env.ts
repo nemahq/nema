@@ -20,16 +20,6 @@ const envSchema = z
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
     OPENAI_API_KEY: z.string().min(1).optional(),
-    VOYAGE_API_KEY: z.string().min(1).optional(),
-
-    QDRANT_URL: z.string().url().optional(),
-    QDRANT_API_KEY: z.string().min(1).optional(),
-    QDRANT_COLLECTION: z.string().min(1).default("documents"),
-
-    NEO4J_URI: z.string().min(1),
-    NEO4J_USERNAME: z.string().min(1),
-    NEO4J_PASSWORD: z.string().min(1),
-    NEO4J_DATABASE: z.string().min(1).default("neo4j"),
 
     LLM_MODEL_STANDARD: z.string().min(1).optional(),
     LLM_MODEL_MINI: z.string().min(1).optional(),
@@ -38,15 +28,6 @@ const envSchema = z
     POSTHOG_API_KEY: z.string().min(1).optional(),
     POSTHOG_HOST: z.string().url().optional(),
   })
-  .refine(
-    (data) =>
-      (data.QDRANT_URL && data.QDRANT_API_KEY) ||
-      (!data.QDRANT_URL && !data.QDRANT_API_KEY),
-    {
-      message:
-        "QDRANT_URL and QDRANT_API_KEY must both be set or both be omitted",
-    },
-  )
   .transform((data) => ({
     ...data,
     APP_ENV:

@@ -26,7 +26,6 @@ const STATUS_LABEL_MAP: Record<
   draft_created: "session.status_draft_created",
   draft_edited: "session.status_draft_edited",
   draft_cancelled: "session.status_draft_cancelled",
-  draft_saved: "session.status_draft_saved",
   draft_intent_confirmed: "session.status_draft_intent_confirmed",
   retrieval_answered: "session.status_retrieval_answered",
 };
@@ -45,11 +44,7 @@ export function StatusMessage({ message }: StatusMessageProps) {
   const status = IN_PROGRESS_STATUSES.has(message.content)
     ? "in-progress"
     : "completed";
-  const meta = "meta" in message ? message.meta : undefined;
-  const label =
-    message.content === "draft_saved" && meta?.titles
-      ? t(STATUS_LABEL_MAP[message.content], { titles: meta.titles })
-      : t(STATUS_LABEL_MAP[message.content]);
+  const label = t(STATUS_LABEL_MAP[message.content]);
 
   return <StatusIndicator label={label} status={status} />;
 }
