@@ -32,7 +32,7 @@
 4. **`author_id`는 사람 산물에만** (원본·사람 주도 변경셋). 엔진 산물(진술·관계)엔 없음.
 5. **관계·변경셋은 스키마에 자리만, 엔진은 미연결** (이 작업 스코프 기준).
 6. **진술 종류 claim/question/todo 다 받음.** 확신도는 claim에만.
-7. **원본·진술은 불변.** "수정"은 폐기(archive) + 재생성으로 표현한다.
+7. **원본은 불변** — "수정"은 폐기(archive)+재생성으로 표현. **진술의 `modify`는 모델 연산으로 존재하나(07이 "진술을 modify하면 관계 재평가"로 명시), 첫 출시엔 직접 수정 기능을 안 만들어 실제로 생성되지 않는다(09 미정).**
 
 ---
 
@@ -114,7 +114,7 @@ CREATE TABLE sources (
 CREATE TABLE statements (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   space_id    uuid NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
-  content     text NOT NULL,                              -- 그 '왜' 자체 (불변)
+  content     text NOT NULL,                              -- 그 '왜' 자체
   type        statement_type NOT NULL,                    -- claim | question | todo
   confidence  statement_confidence,                       -- certain | guess, claim에서만
   status      statement_status NOT NULL DEFAULT 'active', -- active | archived
@@ -142,7 +142,7 @@ CREATE TABLE statement_sources (
 ```
 
 - `statements`엔 `author_id` 없음 — 엔진 산물. 출처는 `statement_sources → sources.author_id`로 파생.
-- `content`는 사실상 불변. `updated_at`은 `status`/동기화 같은 메타 변경 추적용.
+- `content` 수정(`modify`)은 모델 연산으로 존재하나(07: "진술을 `modify`하면 관계 재평가"), **첫 출시엔 직접 수정 기능을 안 만들어 미사용**(09 미정). `updated_at`은 `status`/동기화 같은 메타 변경 추적용. (원본과 달리 진술 modify를 막는 제약은 두지 않는다 — 07이 진술 modify를 허용하므로.)
 - **`statement_sources`는 양끝이 같은 Space여야 함**(추출 관계는 Space를 가로지르지 않음). `BEFORE INSERT` 트리거로 `statement.space_id = source.space_id` 강제 (의미상 확정적이라 지금 박는다).
 - `sources`는 임베딩하지 않음(원본은 의미로 다루지 않음). 임베딩 대상은 진술뿐.
 
