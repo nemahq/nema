@@ -3,6 +3,7 @@ import { eventRouter } from "./routers/event-router";
 import { messageRouter } from "./routers/message-router";
 import { profileRouter } from "./routers/profile-router";
 import { sessionRouter } from "./routers/session-router";
+import { sourceRouter } from "./routers/source-router";
 import { publicProcedure, router } from "./trpc";
 
 export const appRouter = router({
@@ -13,6 +14,7 @@ export const appRouter = router({
   session: sessionRouter,
   message: messageRouter,
   event: eventRouter,
+  source: sourceRouter,
   dev: devRouter,
 });
 

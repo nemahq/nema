@@ -528,14 +528,8 @@ export type Database = {
         Returns: undefined;
       };
       apply_ingestion_changeset: {
-        Args: {
-          p_author_id: string;
-          p_body: string;
-          p_session_id: string;
-          p_space_id: string;
-          p_statements: Json;
-        };
-        Returns: Json;
+        Args: { p_source_id: string; p_statements: Json };
+        Returns: string;
       };
       complete_source_extraction: {
         Args: { p_source_id: string };
@@ -544,6 +538,10 @@ export type Database = {
       complete_statement_ingestion: {
         Args: { p_statement_id: string };
         Returns: undefined;
+      };
+      create_source: {
+        Args: { p_body: string; p_session_id?: string; p_space_id: string };
+        Returns: string;
       };
       fetch_pending_sources: {
         Args: { p_max_retries?: number };
@@ -592,6 +590,14 @@ export type Database = {
           msg_id: number;
           read_ct: number;
         }[];
+      };
+      retry_source_extraction: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
+      retry_statement_ingestion: {
+        Args: { p_statement_id: string };
+        Returns: undefined;
       };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };

@@ -6,10 +6,11 @@
 --   글 던짐 → [추출(LLM)] → statements (ingestion_status=pending)
 --     → [worker] 임베딩(Voyage): Qdrant upsert, ingestion completed
 --
--- apply_ingestion_changeset은 source 박제와 진술 저장을 한 트랜잭션에 묶는 계약이라
--- 추출이 끝난 결과를 들고 호출된다. 미리 박제된 pending source에 진술을 붙여 완료
--- 처리하는 비동기 적용 RPC는 저장 파이프 흐름(후속)에서 확정 —
--- fetch_pending_sources/complete/increment는 그 비동기 경로를 위한 폴링 계약이다.
+-- 이 파일의 apply_ingestion_changeset은 source 박제와 진술 저장을 한 호출에 묶은
+-- 동기형 임시 계약이었다. ingestion-design이 2단계(동기 박제 → 비동기 적용)로
+-- 확정하면서 20260611120858_ingestion_pipe_rpcs.sql이 (p_source_id, p_statements)
+-- 시그니처로 재작성했다 — fetch_pending_sources/complete/increment는 그 비동기
+-- 경로를 위한 폴링 계약이다.
 --
 -- 전부 service_role 전용 (v1의 fetch_pending_memories 류 계승).
 -- =============================================================
