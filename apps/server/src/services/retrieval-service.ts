@@ -1,31 +1,7 @@
-import type { SearchResultDoc } from "@nema-io/shared";
-
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
-export async function createRetrieval({
-  supabase,
-  sessionId,
-  query,
-  body,
-  documents,
-}: {
-  supabase: TypedSupabaseClient;
-  sessionId: string;
-  query: string;
-  body: string;
-  documents: SearchResultDoc[];
-}): Promise<string> {
-  const { data, error } = await supabase
-    .from("session_retrievals")
-    .insert({ session_id: sessionId, query, body, documents })
-    .select("id")
-    .single();
-
-  throwIfSupabaseError(error);
-  return data.id;
-}
-
+// createRetrieval은 v1 검색 파이프와 함께 철거 — 메시지 삭제 시 정리 경로만 남긴다
 export async function deleteRetrieval({
   supabase,
   retrievalId,

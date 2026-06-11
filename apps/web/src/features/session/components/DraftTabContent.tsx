@@ -4,11 +4,9 @@ import { Button, Kbd } from "@nema-io/weave";
 
 import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
-import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
 import { useSessionSuspenseQuery } from "@web/features/session/hooks/useSessionQuery";
 import { useBufferedStream } from "@web/hooks/useBufferedStream";
-import { formatKeySegments } from "@web/lib/command/shortcut/formatKey";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -21,7 +19,6 @@ function DraftTabContentInner() {
   const sessionId = useSessionId();
   const [session] = useSessionSuspenseQuery({ sessionId });
   const draft = session.draft;
-  const saveDraft = useSaveDraft({ sessionId });
   const cancelDraft = useCancelDraft({ sessionId });
   const {
     streamingPhase,
@@ -38,10 +35,7 @@ function DraftTabContentInner() {
 
   const canAct = !isDraftStreaming && !!body && !pendingConfirmation;
 
-  useRegisterAction("draft.save", {
-    execute: () => saveDraft.mutate({ sessionId }),
-    enabled: canAct && !saveDraft.isPending,
-  });
+  // 저장 버튼·단축키는 v1 저장 파이프와 함께 철거 — 넣기 엔진(v2)이 새 저장 흐름을 단다
 
   const { isShortcutOverridden: isCancelOverridden } = useRegisterAction(
     "draft.cancel",
@@ -70,17 +64,6 @@ function DraftTabContentInner() {
             >
               {t("common.cancel")}
               <Kbd>Esc</Kbd>
-            </Button>
-            <Button
-              variant="primary"
-              size="xs"
-              onClick={() => saveDraft.mutate({ sessionId })}
-              disabled={!canAct || saveDraft.isPending}
-            >
-              {t("session.draft_save")}
-              {formatKeySegments("mod+s").map((key) => (
-                <Kbd key={key}>{key}</Kbd>
-              ))}
             </Button>
           </div>
         </div>

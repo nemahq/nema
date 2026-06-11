@@ -12,13 +12,6 @@ function isChatMode(v: string): v is ChatMode {
   return (CHAT_MODES as readonly string[]).includes(v);
 }
 
-export const MEMORY_TABS = ["overview", "history"] as const;
-export type MemoryTab = (typeof MEMORY_TABS)[number];
-
-function isMemoryTab(v: string): v is MemoryTab {
-  return (MEMORY_TABS as readonly string[]).includes(v);
-}
-
 type StorageMap = {
   theme: ThemePreference;
   locale: Locale;
@@ -27,7 +20,6 @@ type StorageMap = {
   chatMode: ChatMode;
   openRetrievalTabs: JsonRecord;
   splitLayout: JsonRecord;
-  memoryLastTab: MemoryTab;
 };
 
 const isValid: {
@@ -40,7 +32,6 @@ const isValid: {
   chatMode: isChatMode,
   openRetrievalTabs: isJsonRecord,
   splitLayout: isJsonRecord,
-  memoryLastTab: isMemoryTab,
 };
 
 export function getStorage<K extends keyof StorageMap>(
