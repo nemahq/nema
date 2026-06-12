@@ -10,7 +10,8 @@
       "entry": [
         "src/eval/eval-drafting.ts",
         "src/eval/verify-statement-search.ts",
-        "src/eval/statement-engine/seed-data.ts"
+        "src/eval/statement-engine/run-extraction.ts",
+        "src/eval/statement-engine/run-retrieval.ts"
       ],
       "project": ["src/**/*.ts"],
       "ignore": ["src/infra/**"]
