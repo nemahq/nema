@@ -1,1 +1,1 @@
-export { DevHarnessPage } from "./components/DevHarnessPage";
+export { HarnessPage } from "./components/HarnessPage";

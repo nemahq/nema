@@ -19,7 +19,7 @@ import { SignInPage } from "@web/app/pages/SignInPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
 import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { requireAuth, requireGuest } from "@web/features/auth";
-import { DevHarnessPage } from "@web/features/dev-harness";
+import { HarnessPage } from "@web/features/dev-harness";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 
 import { App } from "./App";
@@ -98,7 +98,7 @@ const sessionRoute = createRoute({
 const devHarnessRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/dev",
-  component: DevHarnessPage,
+  component: HarnessPage,
   errorComponent: RouteErrorFallback,
   beforeLoad: () => {
     if (getEnv().APP_ENV === "production") {
