@@ -5,11 +5,11 @@
 //
 // "초장문은 1콜이 못 받는다"는 아직 가설이다(기존 측정은 전부 ~200토큰 이하).
 // 장문 시드 4급간을 분할 없는 현행 1콜(제품과 동일: gpt-5 + reasoning low)에
-// 넣어 길이별 지연·진술 수를 실측한다. 타임아웃은 제품(60초)보다 길게 풀어
-// "잘렸다"가 아니라 "실제 몇 초 걸렸다"를 곡선에 남긴다.
+// 넣어 길이별 지연·진술 수를 실측한다. 타임아웃은 제품선(EXTRACTION_TIMEOUT_MS)보다
+// 길게 풀어 "잘렸다"가 아니라 "실제 몇 초 걸렸다"를 곡선에 남긴다.
 //
 // 곡선이 말해주는 것:
-// - 제품 타임아웃(60초)을 넘기 시작하는 길이 → 분할 임계선의 역산 재료
+// - 제품 타임아웃을 넘기 시작하는 길이 → 분할 임계선의 역산 재료
 // - 반복 간 진술 수 분산 → 긴 맥락에서 절단 일관성이 흔들리는 1차 신호
 // - 안 무너지면 → 분할 자체가 불필요(가설 기각), 더 긴 급간으로 재측정
 
@@ -25,6 +25,7 @@ process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
 process.env["QDRANT_API_KEY"] ??= "eval-unused";
 
 import { loadEnv } from "@server/env";
+import { LlmError } from "@server/infra/llm/llm-error";
 import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
 import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
@@ -48,7 +49,7 @@ loadEnv(resolve(__dirname, "../../.."));
 const RUNS_PER_SEED = 3;
 /** 동시 호출 상한 — 곡선은 지연 측정이라 과한 동시성은 측정 자체를 오염시킨다 */
 const CONCURRENCY = 3;
-/** 제품(60초)보다 길게 풀어 실제 소요를 본다 — 곡선의 목적은 통과/실패가 아니라 모양 */
+/** 제품선보다 길게 풀어 실제 소요를 본다 — 곡선의 목적은 통과/실패가 아니라 모양 */
 const CURVE_TIMEOUT_MS = 180_000;
 /** 콘솔 요약의 칼럼 폭 (시드 id / 토큰 수) */
 const SEED_ID_COL_WIDTH = 24;
@@ -89,6 +90,9 @@ async function measureRun(params: {
       ],
       reasoningEffort: EXTRACTION_REASONING_EFFORT,
       timeoutMs: CURVE_TIMEOUT_MS,
+      // SDK 묵시 재시도(기본 2회)가 끼면 합산 시간이 단일 콜 지연으로 기록돼
+      // 곡선이 오염된다 — 워커와 동일하게 끈다
+      maxRetries: 0,
     });
     const latencyMs = Date.now() - startedAt;
     return {
@@ -101,12 +105,19 @@ async function measureRun(params: {
     };
   } catch (err) {
     const latencyMs = Date.now() - startedAt;
+    // 분류 코드(timeout/rate_limit/…)를 함께 남긴다 — 사후 집계가 message 문자열에 안 기대게
+    let error: string;
+    if (err instanceof LlmError) {
+      error = `[${err.code}] ${err.message}`;
+    } else {
+      error = err instanceof Error ? err.message : String(err);
+    }
     return {
       runIndex,
       latencyMs,
       statementCount: null,
       exceedsProductTimeout: latencyMs > PRODUCT_TIMEOUT_MS,
-      error: err instanceof Error ? err.message : String(err),
+      error,
       statements: null,
     };
   }
@@ -114,8 +125,9 @@ async function measureRun(params: {
 
 function summarize(point: CurvePoint): string {
   const ok = point.runs.filter((r) => r.error === null);
+  // 실패 런의 지연은 타임아웃 절단값일 수 있어 실측처럼 읽히지 않게 표시한다
   const latencies = point.runs.map(
-    (r) => (r.latencyMs / 1000).toFixed(1) + "s",
+    (r) => (r.latencyMs / 1000).toFixed(1) + "s" + (r.error ? "(오류)" : ""),
   );
   const counts = ok.map((r) => r.statementCount).join("/");
   const over = point.runs.filter((r) => r.exceedsProductTimeout).length;
