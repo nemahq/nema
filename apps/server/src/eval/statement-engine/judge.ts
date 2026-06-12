@@ -86,7 +86,7 @@ function normalizeForExactMatch(text: string): string {
 
 // 모델이 JSON 뒤에 사족을 붙이거나 재고 후 새 JSON을 내기도 한다 —
 // 균형 잡힌 최상위 {...} 후보를 모아 마지막 파싱 가능한 객체(최종 답)를 쓴다
-function parseJsonObject(text: string): Record<string, unknown> {
+export function parseJsonObject(text: string): Record<string, unknown> {
   const candidates: string[] = [];
   let depth = 0;
   let start = -1;
@@ -156,7 +156,7 @@ export interface Judge {
 export function createJudge(apiKey: string, concurrency: number): Judge {
   const limit = createLimiter(concurrency);
   // 같은 문장 쌍의 재판정 제거 — 반복 실행(일관성 측정)은 동일 문장이 많이 겹친다.
-  // 판정은 대칭이므로 키도 순서 무관. Promise를 캐시해 동시 중복 호출도 합쳐진다.
+  // 판정을 대칭으로 설계했으므로 키도 순서 무관. Promise를 캐시해 동시 중복 호출도 합쳐진다.
   const sameMeaningCache = new Map<string, Promise<JudgeVerdict>>();
   const usage: JudgeUsage = {
     apiCalls: 0,
@@ -257,11 +257,16 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
         `Statement A: ${a}\nStatement B: ${b}`,
       ).then((text) => {
         const parsed = parseJsonObject(text);
-        return {
-          pass: parsed["same"] === true,
-          reason: String(parsed["reason"] ?? ""),
-        };
+        const same = parsed["same"];
+        if (typeof same !== "boolean") {
+          throw new Error(
+            `Judge returned no boolean "same": ${JSON.stringify(parsed).slice(0, ERROR_SNIPPET_LENGTH)}`,
+          );
+        }
+        return { pass: same, reason: String(parsed["reason"] ?? "") };
       });
+      // 거부된 Promise가 캐시에 남으면 일시 장애가 같은 쌍 전체로 증폭된다 — 실패 시 비움
+      verdictPromise.catch(() => sameMeaningCache.delete(cacheKey));
       sameMeaningCache.set(cacheKey, verdictPromise);
       return verdictPromise;
     },
@@ -272,10 +277,13 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
         `<note>${params.source}</note>\n\nStatement: ${params.statement}`,
       );
       const parsed = parseJsonObject(text);
-      return {
-        pass: parsed["pass"] === true,
-        reason: String(parsed["reason"] ?? ""),
-      };
+      const pass = parsed["pass"];
+      if (typeof pass !== "boolean") {
+        throw new Error(
+          `Judge returned no boolean "pass": ${JSON.stringify(parsed).slice(0, ERROR_SNIPPET_LENGTH)}`,
+        );
+      }
+      return { pass, reason: String(parsed["reason"] ?? "") };
     },
 
     usage(): JudgeUsage {

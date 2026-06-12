@@ -8,8 +8,8 @@
 // 주의: SEED_QUERIES의 expectedStatementIds는 골든 진술 id를 참조한다 —
 // 골든 검토로 진술을 합치거나 빼면 그 id를 기대하는 질의도 함께 갱신할 것.
 
-export type StatementType = "claim" | "question" | "todo";
-export type StatementConfidence = "certain" | "guess";
+type StatementType = "claim" | "question" | "todo";
+type StatementConfidence = "certain" | "guess";
 
 /** 이 진술이 시험하는 절단·분류의 축 (실패의 축별 집계용) */
 export type EvalAxis =
