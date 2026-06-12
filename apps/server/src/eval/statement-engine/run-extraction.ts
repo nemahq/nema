@@ -52,6 +52,7 @@ const JUDGE_CONCURRENCY = 8;
 // 글×반복 전부(30콜)를 동시에 쏘면 gpt-5가 제공자 타임아웃을 넘긴다 — 상한 필수
 const EXTRACTION_CONCURRENCY = 4;
 const EXTRACTION_MAX_ATTEMPTS = 3;
+const EXTRACTION_RETRY_DELAY_MS = 3_000;
 
 type StatementType = ExtractedStatement["type"];
 type Confidence = "certain" | "guess" | null;
@@ -92,6 +93,7 @@ async function extract(
           // 제품(worker)과 동일 설정 — 평가가 제품과 같은 경로를 본다
           reasoningEffort: EXTRACTION_REASONING_EFFORT,
           timeoutMs: WORKER_EXTRACTION_TIMEOUT_MS,
+          maxRetries: 0,
         }),
       );
       return normalize(output.statements);
@@ -99,6 +101,10 @@ async function extract(
       lastError = error;
       console.warn(
         `  추출 재시도 ${attempt + 1}/${EXTRACTION_MAX_ATTEMPTS}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      // rate limit에서 즉시 재시도는 악화 — 선형 백오프
+      await new Promise((resolve) =>
+        setTimeout(resolve, EXTRACTION_RETRY_DELAY_MS * (attempt + 1)),
       );
     }
   }

@@ -55,7 +55,7 @@ export class OpenAiProvider implements LlmProvider {
             ...params.messages,
           ],
         },
-        { timeout: params.timeoutMs },
+        { timeout: params.timeoutMs, maxRetries: params.maxRetries },
       );
 
       for await (const chunk of stream) {
@@ -89,7 +89,7 @@ export class OpenAiProvider implements LlmProvider {
           ],
           response_format: zodResponseFormat(params.schema, params.schemaName),
         },
-        { timeout: params.timeoutMs },
+        { timeout: params.timeoutMs, maxRetries: params.maxRetries },
       );
 
       const choice = completion.choices[0];
@@ -144,7 +144,7 @@ export class OpenAiProvider implements LlmProvider {
             ...params.messages,
           ],
         },
-        { timeout: params.timeoutMs },
+        { timeout: params.timeoutMs, maxRetries: params.maxRetries },
       );
 
       const content = completion.choices[0]?.message?.content;
