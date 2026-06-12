@@ -215,7 +215,7 @@ CREATE TABLE statement_relations (
 - **`same-space`를 강제하지 않는다** — `statement_sources`와 정반대. 관계는 Space를 가로지를 수 있다(다른 사람 진술에 내가 반박/근거를 닮, 10). `space_id`는 만든 쪽의 것이고 끝점은 다른 Space일 수 있다.
 - `author_id` 없음 — 엔진 산물. 소유는 `space_id`로만.
 - `conflicts`는 논리상 대칭이나 저장은 방향(from/to)으로 두고 동작에서 대칭 처리.
-- **엔진 단계로 미룬 것**: "끝점 archived → 관계 연쇄 archived" 트리거, `(from_id, to_id, type)` 중복 방지 unique. 첫 출시엔 관계 row가 (엔진 미연결이라) 안 생기므로 자리만.
+- **엔진 단계로 미룬 것**: "끝점 archived → 관계 연쇄 archived" 트리거, `(from_id, to_id, type)` 중복 방지 unique. 첫 출시엔 관계 row가 (엔진 미연결이라) 안 생기므로 자리만 — [relation-design](relation-design.md)이 둘 다 엔진 빌드 범위로 받았다(7장). 관계 엔진의 변경셋 type(`relation` 신설, `chk_changeset_shape` 수정 동반)도 같은 문서 6장이 확정.
 
 ### 4.5 삭제·보존 정책 (전 테이블 공통)
 

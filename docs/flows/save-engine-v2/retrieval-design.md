@@ -106,8 +106,8 @@ search({ query: string })  →
 
 ## 8. 후속 / 미결
 
-- **묶음 1순위 기준** — 관계 엔진 설계에서 확정. 그때 원본 묶음은 출처 축으로 강등.
-- **충돌·지난 것 표시** — 관계(`conflicts`·`replaces`) 필요. 관계 엔진과 함께.
+- **묶음 1순위 기준** — 관계 엔진 설계([relation-design](relation-design.md))가 받았으나 dogfooding 후로 보류 — 실제 진술·관계 위에서 확정. 그때 원본 묶음은 출처 축으로 강등.
+- **충돌·지난 것 표시** — [relation-design](relation-design.md) 8장이 확정: 검색 결과에서 빼지 않고 진술마다 표식(`supersededBy`·`conflictsWith`·`resolvedBy` 모양)을 단다.
 - **다중 쿼리 추출** — 하니스에서 miss 패턴이 입증되면 임베딩 앞에 추가.
 - **limit·threshold 값** — 하니스에서 진술 데이터로 보정.
 - **형제 펼치기·원문 보기 조회** — 화면 작업에서 (`sourceId` 기반 단순 조회).
