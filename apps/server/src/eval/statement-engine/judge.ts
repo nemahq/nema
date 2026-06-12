@@ -12,6 +12,7 @@ const JUDGE_MODEL = "claude-sonnet-4-6";
 const MAX_OUTPUT_TOKENS = 300;
 const MAX_RETRIES = 4;
 const RETRY_BASE_DELAY_MS = 2_000;
+const ERROR_SNIPPET_LENGTH = 200;
 
 const SAME_MEANING_SYSTEM_PROMPT = `You compare two statements extracted from a personal note and decide whether they express the same single piece of information.
 
@@ -71,6 +72,14 @@ interface AnthropicResponse {
   usage?: { input_tokens: number; output_tokens: number };
 }
 
+function isAnthropicResponse(value: unknown): value is AnthropicResponse {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { content?: unknown }).content)
+  );
+}
+
 function normalizeForExactMatch(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
@@ -102,7 +111,9 @@ function parseJsonObject(text: string): Record<string, unknown> {
       // 다음 후보 시도
     }
   }
-  throw new Error(`Judge returned no parseable JSON: ${text.slice(0, 200)}`);
+  throw new Error(
+    `Judge returned no parseable JSON: ${text.slice(0, ERROR_SNIPPET_LENGTH)}`,
+  );
 }
 
 function sleep(ms: number): Promise<void> {
@@ -181,13 +192,17 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
         response.status === 529 ||
         response.status >= 500;
       const error = new Error(
-        `Anthropic API ${response.status}: ${errorBody.slice(0, 200)}`,
+        `Anthropic API ${response.status}: ${errorBody.slice(0, ERROR_SNIPPET_LENGTH)}`,
       );
       (error as Error & { retriable?: boolean }).retriable = retriable;
       throw error;
     }
 
-    const judgeResponse = (await response.json()) as AnthropicResponse;
+    const responseBody: unknown = await response.json();
+    if (!isAnthropicResponse(responseBody)) {
+      throw new Error("Anthropic API returned an unexpected response shape");
+    }
+    const judgeResponse = responseBody;
     usage.apiCalls += 1;
     usage.inputTokens += judgeResponse.usage?.input_tokens ?? 0;
     usage.outputTokens += judgeResponse.usage?.output_tokens ?? 0;
