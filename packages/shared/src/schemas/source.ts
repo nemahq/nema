@@ -6,3 +6,9 @@ export const SourceCreateInputSchema = z.object({
 });
 
 export type SourceCreateInput = z.infer<typeof SourceCreateInputSchema>;
+
+export const SourceGetInputSchema = z.object({
+  sourceId: z.string().uuid(),
+});
+
+export type SourceGetInput = z.infer<typeof SourceGetInputSchema>;
