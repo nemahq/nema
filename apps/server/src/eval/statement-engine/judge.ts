@@ -12,12 +12,17 @@ const JUDGE_MODEL = "claude-sonnet-4-6";
 const MAX_OUTPUT_TOKENS = 300;
 const MAX_RETRIES = 4;
 const RETRY_BASE_DELAY_MS = 2_000;
+const ERROR_SNIPPET_LENGTH = 200;
 
 const SAME_MEANING_SYSTEM_PROMPT = `You compare two statements extracted from a personal note and decide whether they express the same single piece of information.
 
-Answer "same": true only if both convey the same decision, fact, question, or task about the same subject. Differences in phrasing, word choice, or politeness do not matter. Differences in subject, scope, polarity (affirmed vs negated), or which information is conveyed DO matter — those make them different.
+Answer "same": true if both convey the same decision, fact, question, or task about the same subject. Judge the core information, not the wording:
 
-A statement that covers strictly more information than the other (e.g., bundles an extra fact) is NOT the same.
+- Phrasing, word choice, politeness, reporting form ("the customer is satisfied" vs "the customer said they are satisfied") do not matter.
+- Qualifiers that are obvious from shared context ("the first customer" vs "the first interview customer", with vs without "with the product") do not matter.
+- An open issue phrased as a question vs as "need to consider X" is the same information.
+
+Differences that DO matter: a different subject, a different polarity (affirmed vs negated), or genuinely different information. A statement bundling an extra independent fact (one that could stand as its own statement) is NOT the same — but extra attribution or connective phrasing is fine.
 
 Output JSON only: {"same": boolean, "reason": "<one short sentence>"}`;
 
@@ -25,12 +30,16 @@ Output JSON only: {"same": boolean, "reason": "<one short sentence>"}`;
 const DIMENSION_SYSTEM_PROMPTS = {
   atomicity: `You judge one statement extracted from a note. Question: does it contain exactly ONE unit of meaning — one decision, one fact, one question, or one task?
 
-Fail if it bundles two pieces of information that could be searched for separately or could become outdated separately (e.g., a decision plus its reason, a status plus a scheduled date).
+Fail if it bundles two pieces of information that could be searched for separately or could become outdated separately (e.g., a decision plus an unrelated status, two parallel facts joined by "and", a status plus a scheduled date).
+
+Exception: a reason-link statement ("the reason for choosing X is Y") is ONE unit — the link itself is the information. Do not fail it for mentioning both the decision and the reason. Likewise a task with its deadline is ONE unit.
 
 Output JSON only: {"pass": boolean, "reason": "<one short sentence>"}`,
   selfContained: `You judge one statement extracted from a note. Question: can it be fully understood on its own, without reading the note?
 
 Fail if it contains unresolved pronouns or references ("it", "that plan", "him", "그 건") whose referent the note makes clear, or if essential context is missing so the statement is ambiguous standing alone.
+
+These are personal notes: first person ("I", "we", "나", "내가", "우리") refers to the note's author and their team — that is self-contained, do not fail it.
 
 Output JSON only: {"pass": boolean, "reason": "<one short sentence>"}`,
   faithfulness: `You judge one statement extracted from a note, with the original note provided. Question: is the statement faithful to the note?
@@ -63,13 +72,21 @@ interface AnthropicResponse {
   usage?: { input_tokens: number; output_tokens: number };
 }
 
+function isAnthropicResponse(value: unknown): value is AnthropicResponse {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { content?: unknown }).content)
+  );
+}
+
 function normalizeForExactMatch(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
 // 모델이 JSON 뒤에 사족을 붙이거나 재고 후 새 JSON을 내기도 한다 —
 // 균형 잡힌 최상위 {...} 후보를 모아 마지막 파싱 가능한 객체(최종 답)를 쓴다
-function parseJsonObject(text: string): Record<string, unknown> {
+export function parseJsonObject(text: string): Record<string, unknown> {
   const candidates: string[] = [];
   let depth = 0;
   let start = -1;
@@ -94,7 +111,9 @@ function parseJsonObject(text: string): Record<string, unknown> {
       // 다음 후보 시도
     }
   }
-  throw new Error(`Judge returned no parseable JSON: ${text.slice(0, 200)}`);
+  throw new Error(
+    `Judge returned no parseable JSON: ${text.slice(0, ERROR_SNIPPET_LENGTH)}`,
+  );
 }
 
 function sleep(ms: number): Promise<void> {
@@ -102,7 +121,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 /** 동시 호출 상한 — 외부 의존성 없이 작은 세마포어로 */
-function createLimiter(concurrency: number) {
+export function createLimiter(concurrency: number) {
   let active = 0;
   const queue: Array<() => void> = [];
 
@@ -136,6 +155,9 @@ export interface Judge {
 
 export function createJudge(apiKey: string, concurrency: number): Judge {
   const limit = createLimiter(concurrency);
+  // 같은 문장 쌍의 재판정 제거 — 반복 실행(일관성 측정)은 동일 문장이 많이 겹친다.
+  // 판정을 대칭으로 설계했으므로 키도 순서 무관. Promise를 캐시해 동시 중복 호출도 합쳐진다.
+  const sameMeaningCache = new Map<string, Promise<JudgeVerdict>>();
   const usage: JudgeUsage = {
     apiCalls: 0,
     shortCircuits: 0,
@@ -170,13 +192,17 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
         response.status === 529 ||
         response.status >= 500;
       const error = new Error(
-        `Anthropic API ${response.status}: ${errorBody.slice(0, 200)}`,
+        `Anthropic API ${response.status}: ${errorBody.slice(0, ERROR_SNIPPET_LENGTH)}`,
       );
       (error as Error & { retriable?: boolean }).retriable = retriable;
       throw error;
     }
 
-    const judgeResponse = (await response.json()) as AnthropicResponse;
+    const responseBody: unknown = await response.json();
+    if (!isAnthropicResponse(responseBody)) {
+      throw new Error("Anthropic API returned an unexpected response shape");
+    }
+    const judgeResponse = responseBody;
     usage.apiCalls += 1;
     usage.inputTokens += judgeResponse.usage?.input_tokens ?? 0;
     usage.outputTokens += judgeResponse.usage?.output_tokens ?? 0;
@@ -214,19 +240,35 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
 
   return {
     async sameMeaning(a: string, b: string): Promise<JudgeVerdict> {
-      if (normalizeForExactMatch(a) === normalizeForExactMatch(b)) {
+      const normalizedA = normalizeForExactMatch(a);
+      const normalizedB = normalizeForExactMatch(b);
+      if (normalizedA === normalizedB) {
         usage.shortCircuits += 1;
         return { pass: true, reason: "exact match" };
       }
-      const text = await callWithRetry(
+      const cacheKey = JSON.stringify([normalizedA, normalizedB].sort());
+      const cached = sameMeaningCache.get(cacheKey);
+      if (cached) {
+        usage.shortCircuits += 1;
+        return cached;
+      }
+      const verdictPromise = callWithRetry(
         SAME_MEANING_SYSTEM_PROMPT,
         `Statement A: ${a}\nStatement B: ${b}`,
-      );
-      const parsed = parseJsonObject(text);
-      return {
-        pass: parsed["same"] === true,
-        reason: String(parsed["reason"] ?? ""),
-      };
+      ).then((text) => {
+        const parsed = parseJsonObject(text);
+        const same = parsed["same"];
+        if (typeof same !== "boolean") {
+          throw new Error(
+            `Judge returned no boolean "same": ${JSON.stringify(parsed).slice(0, ERROR_SNIPPET_LENGTH)}`,
+          );
+        }
+        return { pass: same, reason: String(parsed["reason"] ?? "") };
+      });
+      // 거부된 Promise가 캐시에 남으면 일시 장애가 같은 쌍 전체로 증폭된다 — 실패 시 비움
+      verdictPromise.catch(() => sameMeaningCache.delete(cacheKey));
+      sameMeaningCache.set(cacheKey, verdictPromise);
+      return verdictPromise;
     },
 
     async quality(params: QualityJudgeParams): Promise<JudgeVerdict> {
@@ -235,10 +277,13 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
         `<note>${params.source}</note>\n\nStatement: ${params.statement}`,
       );
       const parsed = parseJsonObject(text);
-      return {
-        pass: parsed["pass"] === true,
-        reason: String(parsed["reason"] ?? ""),
-      };
+      const pass = parsed["pass"];
+      if (typeof pass !== "boolean") {
+        throw new Error(
+          `Judge returned no boolean "pass": ${JSON.stringify(parsed).slice(0, ERROR_SNIPPET_LENGTH)}`,
+        );
+      }
+      return { pass, reason: String(parsed["reason"] ?? "") };
     },
 
     usage(): JudgeUsage {

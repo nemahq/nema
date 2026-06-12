@@ -7,12 +7,12 @@
 // 코퍼스 = 골든 진술 직접 임베딩(결정 #1) — 추출 엔진과 무관하게 검색만 격리 측정.
 // 평가 전용 컬렉션을 매 실행 비우고 다시 채운다(제품 컬렉션 불간섭).
 
-import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// 운영 env(.env.staging)가 먼저 로드되면 그 값이 이기므로, 로컬 평가 기본값을 선점한다
+// dotenv는 이미 설정된 process.env를 덮지 않는다 — loadEnv 전에 선점해
+// 운영 env(.env.staging) 값보다 로컬 평가 기본값이 이기게 한다
 process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
 process.env["QDRANT_API_KEY"] ??= "local-dev";
 process.env["QDRANT_COLLECTION"] ??= "statements_eval";
@@ -23,6 +23,7 @@ import { loadEnv } from "@server/env";
 import { createVoyageProvider } from "@server/infra/embedding";
 import { createQdrantClient, createQdrantStore } from "@server/infra/vector";
 
+import { pointIdOf, round } from "./metrics";
 import { SEED_DOCUMENTS, SEED_QUERIES, type SeedQuery } from "./seed-data";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -36,16 +37,8 @@ const SEARCH_LIMIT = 10;
 const NO_THRESHOLD = -1;
 /** 평가 전용 Space — 격리 필터 경로(spaceIds)를 실전과 동일하게 태운다 */
 const EVAL_SPACE_ID = "00000000-0000-4000-8000-0000000000e7";
-
-// 골든 id("meeting-memo-1-s1")는 Qdrant point id(UUID)가 못 되므로 결정적 매핑
-function pointIdOf(goldenId: string): string {
-  const h = createHash("sha1").update(goldenId).digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
-}
-
-function round(value: number): number {
-  return Math.round(value * 1000) / 1000;
-}
+/** 무정답 질의에서 기록하는 상위 점수 개수 (threshold 보정의 반대쪽 재료) */
+const NO_ANSWER_TOP_SCORES = 3;
 
 interface QueryReport {
   queryId: string;
@@ -70,8 +63,12 @@ async function main() {
   const client = createQdrantClient();
   const store = createQdrantStore(client);
 
-  // 매 실행 깨끗한 코퍼스 — 골든이 자라도 잔존 벡터가 없게
-  await client.deleteCollection(collection).catch(() => undefined);
+  // 매 실행 깨끗한 코퍼스 — 골든이 자라도 잔존 벡터가 없게.
+  // 존재 확인 후 삭제 — 에러를 삼키면 삭제 실패 시 오염된 코퍼스로 조용히 측정된다.
+  const { exists } = await client.collectionExists(collection);
+  if (exists) {
+    await client.deleteCollection(collection);
+  }
   await store.ensureCollection();
 
   const golden = SEED_DOCUMENTS.flatMap((doc) => doc.goldenStatements);
@@ -187,7 +184,9 @@ async function main() {
         .filter((r) => r.recallAtK === null)
         .map((r) => ({
           queryId: r.queryId,
-          topScores: r.results.slice(0, 3).map((x) => x.score),
+          topScores: r.results
+            .slice(0, NO_ANSWER_TOP_SCORES)
+            .map((x) => x.score),
         })),
     },
   };
@@ -215,4 +214,7 @@ async function main() {
   console.log(`\n결과 저장: ${outPath}`);
 }
 
-main();
+main().catch((error) => {
+  console.error("eval run failed:", error);
+  process.exit(1);
+});

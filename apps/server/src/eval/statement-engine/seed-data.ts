@@ -8,8 +8,8 @@
 // 주의: SEED_QUERIES의 expectedStatementIds는 골든 진술 id를 참조한다 —
 // 골든 검토로 진술을 합치거나 빼면 그 id를 기대하는 질의도 함께 갱신할 것.
 
-export type StatementType = "claim" | "question" | "todo";
-export type StatementConfidence = "certain" | "guess";
+type StatementType = "claim" | "question" | "todo";
+type StatementConfidence = "certain" | "guess";
 
 /** 이 진술이 시험하는 절단·분류의 축 (실패의 축별 집계용) */
 export type EvalAxis =
@@ -162,12 +162,19 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         needsHumanReview: false,
       },
       {
-        id: "transcript-1-s4",
-        content:
-          "태그 커스텀 요청은 자동 태깅이 핵심인 우리 제품 방향과 다르다",
+        id: "transcript-1-s4a",
+        content: "태그 커스텀 요청은 우리 제품 방향과 다르다",
         type: "claim",
         confidence: "certain",
         axes: ["decision-reason-split", "pronoun-resolution"],
+        needsHumanReview: false,
+      },
+      {
+        id: "transcript-1-s4b",
+        content: "우리 제품의 핵심은 자동 태깅이다",
+        type: "claim",
+        confidence: "certain",
+        axes: ["decision-reason-split"],
         needsHumanReview: false,
       },
       {
@@ -187,11 +194,19 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         needsHumanReview: false,
       },
       {
-        id: "transcript-1-s6",
-        content: "검색 속도 개선과 모바일 지원이 고객들의 공통 요청이다",
+        id: "transcript-1-s6a",
+        content: "검색 속도 개선은 고객들의 공통 요청이다",
         type: "claim",
         confidence: "certain",
-        axes: ["merge-elaboration"],
+        axes: ["compound-split"],
+        needsHumanReview: false,
+      },
+      {
+        id: "transcript-1-s6b",
+        content: "모바일 지원은 고객들의 공통 요청이다",
+        type: "claim",
+        confidence: "certain",
+        axes: ["compound-split"],
         needsHumanReview: false,
       },
       {
@@ -222,6 +237,14 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
       {
         id: "weekly-1-s2",
         content: "대시보드 리디자인은 다음주 QA에 들어간다",
+        type: "claim",
+        confidence: "certain",
+        axes: ["compound-split"],
+        needsHumanReview: false,
+      },
+      {
+        id: "weekly-1-s3a",
+        content: "백엔드는 API 리팩토링을 진행 중이다",
         type: "claim",
         confidence: "certain",
         axes: ["compound-split"],
@@ -329,8 +352,16 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         needsHumanReview: false,
       },
       {
-        id: "braindump-1-s5",
-        content: "기능이 더 많으므로 가격이 월 1만 원을 넘어도 될 것 같다",
+        id: "braindump-1-s5a",
+        content: "우리 제품은 경쟁사보다 기능이 더 많다",
+        type: "claim",
+        confidence: "certain",
+        axes: ["decision-reason-split"],
+        needsHumanReview: false,
+      },
+      {
+        id: "braindump-1-s5b",
+        content: "가격이 월 1만 원을 넘어도 될 것 같다",
         type: "claim",
         confidence: "guess",
         axes: ["confidence-mix", "decision-reason-split"],
@@ -444,20 +475,20 @@ export const SEED_QUERIES: SeedQuery[] = [
   {
     id: "q7",
     query: "고객들이 공통으로 바라는 개선점이 뭐였지?",
-    expectedStatementIds: ["transcript-1-s6"],
+    expectedStatementIds: ["transcript-1-s6a", "transcript-1-s6b"],
     failureAxis: "paraphrase",
   },
   {
     id: "q8",
     query: "폰에서 쓰고 싶다는 의견이 있었나?",
-    expectedStatementIds: ["transcript-1-s5b", "transcript-1-s6"],
+    expectedStatementIds: ["transcript-1-s5b", "transcript-1-s6b"],
     failureAxis: "paraphrase",
     description: "모바일 → 폰",
   },
   {
     id: "q9",
     query: "커스텀 태그는 안 하기로 한 거야?",
-    expectedStatementIds: ["transcript-1-s4", "transcript-1-s7"],
+    expectedStatementIds: ["transcript-1-s4a", "transcript-1-s7"],
     failureAxis: "negation",
     description:
       "코퍼스엔 '방향과 다르다'·'고민 필요'만 있음 — 부정 단정 질의가 닿는지",
@@ -501,7 +532,7 @@ export const SEED_QUERIES: SeedQuery[] = [
     expectedStatementIds: [
       "braindump-1-s2",
       "braindump-1-s3",
-      "braindump-1-s5",
+      "braindump-1-s5b",
     ],
     failureAxis: "paraphrase",
     description: "가격 정책 → 구독료",

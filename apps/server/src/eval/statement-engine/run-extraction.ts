@@ -12,13 +12,16 @@ import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// 이 러너는 Supabase·Qdrant를 쓰지 않는다 — env 스키마(필수 키·쌍 제약) 통과용 자리값
+// 이 러너는 Supabase·Qdrant를 쓰지 않는다 — env 스키마(필수 키·쌍 제약) 통과용 자리값.
+// URL·KEY는 "둘 다 있거나 둘 다 없거나"라 쌍으로 박는다 (커밋된 .env에 숨어 기대지 않게).
 process.env["SUPABASE_SERVICE_ROLE_KEY"] ??= "eval-unused";
+process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
 process.env["QDRANT_API_KEY"] ??= "eval-unused";
 
 import { loadEnv } from "@server/env";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
-import { createTieredLlm } from "@server/infra/llm/models";
+import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
+import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
   buildStatementExtractionMessage,
   type ExtractedStatement,
@@ -26,20 +29,26 @@ import {
   StatementExtractionSchema,
 } from "@server/prompts/statement-extraction";
 
-import { createJudge, type Judge, QUALITY_DIMENSIONS } from "./judge";
 import {
-  type EvalAxis,
-  type GoldenStatement,
-  SEED_DOCUMENTS,
-  type SeedDocument,
-} from "./seed-data";
+  createJudge,
+  createLimiter,
+  type Judge,
+  QUALITY_DIMENSIONS,
+} from "./judge";
+import { type PrecisionRecallF1, round, scoreF1 } from "./metrics";
+import { type EvalAxis, SEED_DOCUMENTS, type SeedDocument } from "./seed-data";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadEnv(resolve(__dirname, "../../.."));
 
 /** 일관성 측정의 반복 수 (eval-design 3.3) — 1회차는 골든 대조·품질 채점을 겸한다 */
-const RUNS_PER_DOC = 5;
+// --quick: 1회만 추출해 일관성(5회 쌍대)을 생략 — 프롬프트 반복 보정용 빠른 루프
+const RUNS_PER_DOC = process.argv.includes("--quick") ? 1 : 5;
 const JUDGE_CONCURRENCY = 8;
+// 글×반복 전부(30콜)를 동시에 쏘면 gpt-5가 제공자 타임아웃을 넘긴다 — 상한 필수
+const EXTRACTION_CONCURRENCY = 4;
+const EXTRACTION_MAX_ATTEMPTS = 3;
+const EXTRACTION_TIMEOUT_MS = 120_000;
 
 type StatementType = ExtractedStatement["type"];
 type Confidence = "certain" | "guess" | null;
@@ -60,19 +69,34 @@ function normalize(raw: ExtractedStatement[]): NormalizedStatement[] {
   }));
 }
 
+const limitExtraction = createLimiter(EXTRACTION_CONCURRENCY);
+
 async function extract(
   llm: LlmProvider,
   body: string,
 ): Promise<NormalizedStatement[]> {
-  const output = await llm.generateStructured({
-    schema: StatementExtractionSchema,
-    schemaName: "statement_extraction",
-    systemPrompt: STATEMENT_EXTRACTION_SYSTEM_PROMPT,
-    messages: [
-      { role: "user", content: buildStatementExtractionMessage(body) },
-    ],
-  });
-  return normalize(output.statements);
+  let lastError: unknown;
+  for (let attempt = 0; attempt < EXTRACTION_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const output = await limitExtraction(() =>
+        llm.generateStructured({
+          schema: StatementExtractionSchema,
+          schemaName: "statement_extraction",
+          systemPrompt: STATEMENT_EXTRACTION_SYSTEM_PROMPT,
+          messages: [
+            { role: "user", content: buildStatementExtractionMessage(body) },
+          ],
+        }),
+      );
+      return normalize(output.statements);
+    } catch (error) {
+      lastError = error;
+      console.warn(
+        `  추출 재시도 ${attempt + 1}/${EXTRACTION_MAX_ATTEMPTS}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  throw lastError;
 }
 
 interface MatchParams<L, R> {
@@ -89,28 +113,40 @@ interface MatchResult<L, R> {
   unmatchedRight: R[];
 }
 
-// greedy 1:1 — 추출 원문 순서대로, 아직 짝 없는 상대와 심판 매칭 (eval-design 3.1)
+// greedy 1:1 — 추출 원문 순서대로, 아직 짝 없는 상대와 매칭 (eval-design 3.1).
+// 판정 행렬을 병렬로 선계산하고 배정만 순차로 — greedy 결과는 순차 판정과 동일,
+// 벽시계 시간이 동시성만큼 줄어든다 (조기 종료가 없어 판정 호출 수는 늘지만
+// 판정 캐시·동일 문자열 지름길이 흡수한다).
+// 배정이 좌측 순서 기준이라 쌍대 일관성(runA↔runB)에서 방향에 따라 미세히 다를 수
+// 있는 근사다 — 현 규모(쌍당 진술 ~10개)에서 영향은 무시 수준.
 async function matchStatements<L, R>(
   params: MatchParams<L, R>,
 ): Promise<MatchResult<L, R>> {
   const { judge, left, right, leftContent, rightContent } = params;
-  const pairs: Array<{ left: L; right: R }> = [];
-  const taken = new Set<R>();
 
-  for (const leftItem of left) {
-    for (const rightItem of right) {
-      if (taken.has(rightItem)) {
+  const verdictMatrix = await Promise.all(
+    left.map((leftItem) =>
+      Promise.all(
+        right.map((rightItem) =>
+          judge
+            .sameMeaning(leftContent(leftItem), rightContent(rightItem))
+            .then((verdict) => verdict.pass),
+        ),
+      ),
+    ),
+  );
+
+  const pairs: Array<{ left: L; right: R }> = [];
+  const takenRight = new Set<number>();
+  for (const [leftIndex, leftItem] of left.entries()) {
+    const verdictRow = verdictMatrix[leftIndex] ?? [];
+    for (const [rightIndex, rightItem] of right.entries()) {
+      if (takenRight.has(rightIndex) || !verdictRow[rightIndex]) {
         continue;
       }
-      const verdict = await judge.sameMeaning(
-        leftContent(leftItem),
-        rightContent(rightItem),
-      );
-      if (verdict.pass) {
-        pairs.push({ left: leftItem, right: rightItem });
-        taken.add(rightItem);
-        break;
-      }
+      pairs.push({ left: leftItem, right: rightItem });
+      takenRight.add(rightIndex);
+      break;
     }
   }
 
@@ -118,37 +154,8 @@ async function matchStatements<L, R>(
   return {
     pairs,
     unmatchedLeft: left.filter((item) => !matchedLeft.has(item)),
-    unmatchedRight: right.filter((item) => !taken.has(item)),
+    unmatchedRight: right.filter((_, index) => !takenRight.has(index)),
   };
-}
-
-interface PrecisionRecallF1 {
-  precision: number;
-  recall: number;
-  f1: number;
-}
-
-// 양쪽 0개(잡담 글에서 0개 추출)는 만점 — "추출 0개가 정답"인 케이스
-function scoreF1(counts: {
-  matched: number;
-  extracted: number;
-  golden: number;
-}): PrecisionRecallF1 {
-  if (counts.extracted === 0 && counts.golden === 0) {
-    return { precision: 1, recall: 1, f1: 1 };
-  }
-  const precision =
-    counts.extracted === 0 ? 1 : counts.matched / counts.extracted;
-  const recall = counts.golden === 0 ? 1 : counts.matched / counts.golden;
-  const f1 =
-    precision + recall === 0
-      ? 0
-      : (2 * precision * recall) / (precision + recall);
-  return { precision, recall, f1 };
-}
-
-function round(value: number): number {
-  return Math.round(value * 1000) / 1000;
 }
 
 interface DocReport {
@@ -175,7 +182,7 @@ interface DocReport {
     statement: string;
     dimensions: Record<string, { pass: boolean; reason: string }>;
   }>;
-  consistency: { pairwiseF1: number[]; mean: number };
+  consistency: { pairwiseF1: number[]; mean: number | null };
 }
 
 async function evaluateDocument(params: {
@@ -209,15 +216,20 @@ async function evaluateDocument(params: {
     expected: pair.right.type,
     actual: pair.left.type,
   }));
-  const confidencePairs = match.pairs
-    .filter((pair) => pair.right.type === "claim" && pair.left.type === "claim")
-    .map((pair) => ({
-      goldenId: pair.right.id,
-      expected:
-        (pair.right as GoldenStatement & { confidence?: Confidence })
-          .confidence ?? null,
-      actual: pair.left.confidence,
-    }));
+  const confidencePairs = match.pairs.flatMap((pair) => {
+    const golden = pair.right;
+    const extracted = pair.left;
+    if (golden.type !== "claim" || extracted.type !== "claim") {
+      return [];
+    }
+    return [
+      {
+        goldenId: golden.id,
+        expected: golden.confidence,
+        actual: extracted.confidence,
+      },
+    ];
+  });
 
   // 차원별 품질 (1회차 추출 전체)
   const quality = await Promise.all(
@@ -239,13 +251,14 @@ async function evaluateDocument(params: {
     }),
   );
 
-  // 일관성 — 5회 쌍 10개의 쌍대 F1 (eval-design 3.3)
-  const pairwiseF1: number[] = [];
-  for (const [indexA, runA] of runs.entries()) {
-    for (const runB of runs.slice(indexA + 1)) {
+  // 일관성 — 5회 쌍 10개의 쌍대 F1 (eval-design 3.3). 쌍은 서로 독립이라 동시 처리
+  const runPairs = runs.flatMap((runA, indexA) =>
+    runs.slice(indexA + 1).map((runB) => ({ runA, runB })),
+  );
+  const pairwiseF1 = await Promise.all(
+    runPairs.map(async ({ runA, runB }) => {
       if (runA.length === 0 && runB.length === 0) {
-        pairwiseF1.push(1);
-        continue;
+        return 1;
       }
       const pairMatch = await matchStatements({
         judge,
@@ -254,17 +267,17 @@ async function evaluateDocument(params: {
         leftContent: (statement) => statement.content,
         rightContent: (statement) => statement.content,
       });
-      pairwiseF1.push(
-        scoreF1({
-          matched: pairMatch.pairs.length,
-          extracted: runA.length,
-          golden: runB.length,
-        }).f1,
-      );
-    }
-  }
+      return scoreF1({
+        matched: pairMatch.pairs.length,
+        extracted: runA.length,
+        golden: runB.length,
+      }).f1;
+    }),
+  );
   const consistencyMean =
-    pairwiseF1.reduce((sum, value) => sum + value, 0) / pairwiseF1.length;
+    pairwiseF1.length === 0
+      ? null
+      : pairwiseF1.reduce((sum, value) => sum + value, 0) / pairwiseF1.length;
 
   return {
     docId: doc.id,
@@ -288,7 +301,7 @@ async function evaluateDocument(params: {
     quality,
     consistency: {
       pairwiseF1: pairwiseF1.map(round),
-      mean: round(consistencyMean),
+      mean: consistencyMean === null ? null : round(consistencyMean),
     },
   };
 }
@@ -317,15 +330,50 @@ async function main() {
     process.exit(1);
   }
 
-  const llm = createTieredLlm({ apiKey: openaiKey }).standard;
+  // 제품 기본 타임아웃(30초)은 gpt-5가 긴 글에서 자주 넘긴다 — 측정 목적은 품질이라
+  // 러너만 여유를 준다. 제품 타임아웃의 적정값은 별도 이슈 (measurement-log #3 발견).
+  const llm = new OpenAiProvider({
+    apiKey: openaiKey,
+    model: DEFAULT_STANDARD_MODEL,
+    timeout: EXTRACTION_TIMEOUT_MS,
+  });
   const judge = createJudge(anthropicKey, JUDGE_CONCURRENCY);
 
+  // 글은 서로 독립이라 동시 처리 — 동시성 상한은 judge의 limiter가 잡는다.
+  // 글 단위로 오류를 격리 — 한 글의 실패가 나머지 글의 (비용 지불된) 결과를 유실시키지 않게.
+  const started = Date.now();
+  console.log(
+    `글 ${SEED_DOCUMENTS.length}개 × ${RUNS_PER_DOC}회 추출 + 채점 중...`,
+  );
   const reports: DocReport[] = [];
-  for (const doc of SEED_DOCUMENTS) {
-    console.log(`[${doc.id}] 추출 ${RUNS_PER_DOC}회 + 채점 중...`);
-    const started = Date.now();
-    reports.push(await evaluateDocument({ llm, judge, doc }));
-    console.log(`  ✓ ${Math.round((Date.now() - started) / 1000)}s`);
+  const failedDocs: Array<{ docId: string; error: string }> = [];
+  await Promise.all(
+    SEED_DOCUMENTS.map(async (doc) => {
+      try {
+        const report = await evaluateDocument({ llm, judge, doc });
+        reports.push(report);
+        console.log(
+          `  ✓ [${doc.id}] ${Math.round((Date.now() - started) / 1000)}s`,
+        );
+      } catch (error) {
+        failedDocs.push({
+          docId: doc.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        console.log(
+          `  ✗ [${doc.id}] ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }),
+  );
+
+  // 전 글 실패면 집계가 0/0 만점으로 둔갑한다 — 가짜 성공 차단
+  if (reports.length === 0) {
+    console.error("all documents failed — no metrics to report:");
+    for (const failed of failedDocs) {
+      console.error(`  - ${failed.docId}: ${failed.error}`);
+    }
+    process.exit(1);
   }
 
   // 집계
@@ -340,7 +388,11 @@ async function main() {
       report.golden.overExtracted.length,
     0,
   );
-  const totalGolden = SEED_DOCUMENTS.reduce(
+  // 실패한 글의 골든은 분모에서 제외 — 평가 안 된 항목이 recall을 깎으면 안 됨
+  const evaluatedDocs = SEED_DOCUMENTS.filter((doc) =>
+    reports.some((report) => report.docId === doc.id),
+  );
+  const totalGolden = evaluatedDocs.reduce(
     (sum, doc) => sum + doc.goldenStatements.length,
     0,
   );
@@ -405,12 +457,23 @@ async function main() {
     }
   }
 
-  const consistencyMean = round(
-    reports.reduce((sum, report) => sum + report.consistency.mean, 0) /
-      reports.length,
+  const docConsistencies = reports.flatMap((report) =>
+    report.consistency.mean === null ? [] : [report.consistency.mean],
   );
+  const consistencyMean =
+    docConsistencies.length === 0
+      ? null
+      : round(
+          docConsistencies.reduce((sum, value) => sum + value, 0) /
+            docConsistencies.length,
+        );
 
   const summary = {
+    docs: {
+      total: SEED_DOCUMENTS.length,
+      evaluated: reports.length,
+      failed: failedDocs.length,
+    },
     golden: {
       precision: round(micro.precision),
       recall: round(micro.recall),
@@ -441,6 +504,7 @@ async function main() {
         runAt: new Date().toISOString(),
         runsPerDoc: RUNS_PER_DOC,
         judgeUsage: judge.usage(),
+        failedDocs,
         summary,
         documents: reports,
       },
@@ -454,4 +518,7 @@ async function main() {
   console.log(`\n결과 저장: ${outPath}`);
 }
 
-main();
+main().catch((error) => {
+  console.error("eval run failed:", error);
+  process.exit(1);
+});
