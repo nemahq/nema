@@ -17,7 +17,6 @@
 | Backend | Fastify 5, tRPC 11 |
 | Database | Supabase (PostgreSQL + Auth) |
 | Vector DB | Qdrant |
-| Graph DB | Neo4j |
 | LLM / Embedding | OpenAI, Voyage AI |
 
 
