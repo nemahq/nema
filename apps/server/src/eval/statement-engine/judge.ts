@@ -4,6 +4,8 @@
 // 제품 인프라(infra/llm)에 provider를 추가하지 않고 eval 전용으로 직접 호출한다.
 // 모든 판정은 이진 pass/fail — 다단 척도는 모델별 반응이 불안정(결정 #4).
 
+import { createLimiter } from "@server/infra/llm/limiter";
+
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
 // Sonnet급으로 충분: reference 동봉 + 이진 판정이라 심판 난이도가 낮다.
@@ -120,24 +122,8 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** 동시 호출 상한 — 외부 의존성 없이 작은 세마포어로 */
-export function createLimiter(concurrency: number) {
-  let active = 0;
-  const queue: Array<() => void> = [];
-
-  return async function limit<T>(task: () => Promise<T>): Promise<T> {
-    if (active >= concurrency) {
-      await new Promise<void>((resolve) => queue.push(resolve));
-    }
-    active += 1;
-    try {
-      return await task();
-    } finally {
-      active -= 1;
-      queue.shift()?.();
-    }
-  };
-}
+// 워커(청크 병렬)와 공유 — infra 구현이 원본, 러너들은 여기서 가져간다
+export { createLimiter };
 
 export interface QualityJudgeParams {
   dimension: QualityDimension;
