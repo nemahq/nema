@@ -12,7 +12,7 @@ Fastify 5 + tRPC 11 backend.
 src/
 ├── routers/     # tRPC endpoint definitions (thin: validation + service call)
 ├── services/    # Orchestration logic (core business flows)
-├── infra/       # External service clients (Supabase, Qdrant, Neo4j, LLM, Embedding)
+├── infra/       # External service clients (Supabase, Qdrant, LLM, Embedding)
 ├── prompts/     # LLM prompt templates (independently tunable)
 └── eval/        # Prompt quality evaluation: seed data, runners, results
 ```
