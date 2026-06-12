@@ -52,6 +52,15 @@ async function bootstrap() {
     builtAt: BUILD_TIMESTAMP,
   }));
 
+  // 스탬프가 빌드에 안 실리면 조용히 dev로 회귀한다 — 빌드 시점엔 감지할 환경
+  // 신호가 없으므로(NEM-135) 배포 런타임(RAILWAY_ENVIRONMENT 존재)에서 잡는다.
+  if (process.env.RAILWAY_ENVIRONMENT && COMMIT_SHA === "dev") {
+    const message =
+      'Deployed build has no commit SHA stamp — /health reports version "dev". CI must write .commit-sha before railway up.';
+    server.log.error(message);
+    Sentry.captureMessage(`[bootstrap] ${message}`, { level: "error" });
+  }
+
   let stopWorker: (() => Promise<void>) | undefined;
 
   if (
