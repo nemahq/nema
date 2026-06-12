@@ -30,12 +30,18 @@ const EXTRACTION_CONCURRENCY = 3;
 // 추출 호출 한정 — 절단은 규칙 적용에 가까워 깊은 추론이 불필요한데, gpt-5의
 // 추론 시간 변동이 기본 30초 타임아웃을 자주 넘겨 짧은 글도 조용히 실패했다
 // (measurement-log #3 + E2E 실증). effort를 낮춰 변동의 뿌리를 줄이고,
-// 타임아웃은 꼬리(p95+)를 덮게 완화. SDK 자동 재시도는 꺼서(maxRetries 0)
-// 60초가 진짜 벽시계 상한이 되게 한다 — 재시도 주인은 DB lease 사이클 한 층.
-// lease(90초, extraction_lease_covers_llm_timeout 마이그레이션)가 이 상한을 덮는다.
-// eval 러너가 같은 값을 미러링한다.
+// SDK 자동 재시도는 꺼서(maxRetries 0) 타임아웃이 진짜 벽시계 상한이 되게
+// 한다 — 재시도 주인은 DB lease 사이클 한 층.
+//
+// 타임아웃 120초의 근거(measurement-log #5): 제공자의 정상 응답이 시간대에
+// 따라 같은 입력 기준 1.5~2.3배 출렁여, 60초는 느린 시간대의 *정상* 호출
+// (1,278토큰 입력이 74~89초)을 죽은 호출로 오판해 끊는다. 타임아웃의 일은
+// 행 걸린 호출 회수 하나 — 비동기 파이프라 높게 잡는 오차는 복구 몇 분
+// 지연으로 싸고, 낮게 잡는 오차는 정상 작업 폐기로 비싸다.
+// lease(150초, extraction_lease_covers_slow_provider 마이그레이션)가 이 상한을
+// 덮는다. eval 러너가 같은 값을 미러링한다.
 export const EXTRACTION_REASONING_EFFORT = "low" as const;
-export const EXTRACTION_TIMEOUT_MS = 60_000;
+export const EXTRACTION_TIMEOUT_MS = 120_000;
 
 type Phase = "extraction" | "embedding";
 

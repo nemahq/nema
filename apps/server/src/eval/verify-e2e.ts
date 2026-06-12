@@ -62,8 +62,9 @@ const SOURCE_BODY =
 const SEARCH_QUERY = "결제는 어떤 업체로 정했지?";
 
 const WAIT_POLL_INTERVAL_MS = 2_000;
-// 워커 폴링(2초)+LLM 추출 지연을 덮는 여유. 임베딩은 LLM이 없어 더 짧다.
-const EXTRACTION_WAIT_TIMEOUT_MS = 90_000;
+// 워커 폴링(2초)+LLM 추출 지연을 덮는 여유 — 추출 호출 상한(120초)보다 넉넉히.
+// 임베딩은 LLM이 없어 더 짧다.
+const EXTRACTION_WAIT_TIMEOUT_MS = 150_000;
 const EMBEDDING_WAIT_TIMEOUT_MS = 60_000;
 
 // 진단 도구가 인프라 오류를 삼키면 "추출 타임아웃"으로 둔갑한다 — 전 조회에 적용
