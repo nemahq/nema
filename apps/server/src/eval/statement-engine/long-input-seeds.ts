@@ -12,7 +12,7 @@
 // - 골든 진술 없음 — 곡선의 1차 신호(지연·진술 수·타임아웃·반복 분산)는
 //   골든 없이 측정된다. F1 검증은 분할 구현 뒤 별도 시드로.
 
-export interface LongInputSeed {
+interface LongInputSeed {
   id: string;
   description: string;
   /** o200k_base 기준 목표 토큰 급간 (실측은 러너가 찍는다) */
