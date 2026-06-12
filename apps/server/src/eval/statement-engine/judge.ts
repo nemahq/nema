@@ -12,6 +12,9 @@ const ANTHROPIC_VERSION = "2023-06-01";
 // 표본 검사(결정 #5)에서 어긋남이 보이면 그때 조정.
 const JUDGE_MODEL = "claude-sonnet-4-6";
 const MAX_OUTPUT_TOKENS = 300;
+// 요소 열거는 이진 판정과 달리 목록을 토해낸다 — 300이면 10여 개에서 잘려
+// JSON이 깨진다 (실측). 열거 한 건이 정보 단위 ~20개 안쪽이라 1,500이면 넉넉.
+const ELEMENT_LIST_MAX_TOKENS = 1_500;
 const MAX_RETRIES = 4;
 const RETRY_BASE_DELAY_MS = 2_000;
 const ERROR_SNIPPET_LENGTH = 200;
@@ -104,6 +107,20 @@ function normalizeForExactMatch(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+// 모델이 불리언을 문자열("true")로 내는 경우가 실측에서 나왔다 — 그 둘만 받는다
+function parseLooseBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  return null;
+}
+
 // 모델이 JSON 뒤에 사족을 붙이거나 재고 후 새 JSON을 내기도 한다 —
 // 균형 잡힌 최상위 {...} 후보를 모아 마지막 파싱 가능한 객체(최종 답)를 쓴다
 export function parseJsonObject(text: string): Record<string, unknown> {
@@ -173,10 +190,12 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
     outputTokens: 0,
   };
 
-  async function callOnce(
-    systemPrompt: string,
-    userContent: string,
-  ): Promise<string> {
+  async function callOnce(params: {
+    systemPrompt: string;
+    userContent: string;
+    maxTokens: number;
+  }): Promise<string> {
+    const { systemPrompt, userContent, maxTokens } = params;
     const response = await fetch(ANTHROPIC_API_URL, {
       method: "POST",
       headers: {
@@ -186,7 +205,7 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
       },
       body: JSON.stringify({
         model: JUDGE_MODEL,
-        max_tokens: MAX_OUTPUT_TOKENS,
+        max_tokens: maxTokens,
         temperature: 0,
         system: systemPrompt,
         messages: [{ role: "user", content: userContent }],
@@ -224,14 +243,18 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
     return text;
   }
 
-  async function callWithRetry(
-    systemPrompt: string,
-    userContent: string,
-  ): Promise<string> {
+  async function callWithRetry(params: {
+    systemPrompt: string;
+    userContent: string;
+    maxTokens?: number;
+  }): Promise<string> {
+    const { systemPrompt, userContent, maxTokens = MAX_OUTPUT_TOKENS } = params;
     let lastError: unknown;
     for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
       try {
-        return await limit(() => callOnce(systemPrompt, userContent));
+        return await limit(() =>
+          callOnce({ systemPrompt, userContent, maxTokens }),
+        );
       } catch (error) {
         lastError = error;
         const retriable =
@@ -260,13 +283,13 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
         usage.shortCircuits += 1;
         return cached;
       }
-      const verdictPromise = callWithRetry(
-        SAME_MEANING_SYSTEM_PROMPT,
-        `Statement A: ${a}\nStatement B: ${b}`,
-      ).then((text) => {
+      const verdictPromise = callWithRetry({
+        systemPrompt: SAME_MEANING_SYSTEM_PROMPT,
+        userContent: `Statement A: ${a}\nStatement B: ${b}`,
+      }).then((text) => {
         const parsed = parseJsonObject(text);
-        const same = parsed["same"];
-        if (typeof same !== "boolean") {
+        const same = parseLooseBoolean(parsed["same"]);
+        if (same === null) {
           throw new Error(
             `Judge returned no boolean "same": ${JSON.stringify(parsed).slice(0, ERROR_SNIPPET_LENGTH)}`,
           );
@@ -280,13 +303,13 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
     },
 
     async quality(params: QualityJudgeParams): Promise<JudgeVerdict> {
-      const text = await callWithRetry(
-        DIMENSION_SYSTEM_PROMPTS[params.dimension],
-        `<note>${params.source}</note>\n\nStatement: ${params.statement}`,
-      );
+      const text = await callWithRetry({
+        systemPrompt: DIMENSION_SYSTEM_PROMPTS[params.dimension],
+        userContent: `<note>${params.source}</note>\n\nStatement: ${params.statement}`,
+      });
       const parsed = parseJsonObject(text);
-      const pass = parsed["pass"];
-      if (typeof pass !== "boolean") {
+      const pass = parseLooseBoolean(parsed["pass"]);
+      if (pass === null) {
         throw new Error(
           `Judge returned no boolean "pass": ${JSON.stringify(parsed).slice(0, ERROR_SNIPPET_LENGTH)}`,
         );
@@ -295,10 +318,11 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
     },
 
     async listElements(passage: string): Promise<string[]> {
-      const text = await callWithRetry(
-        ELEMENT_LIST_SYSTEM_PROMPT,
-        `<passage>${passage}</passage>`,
-      );
+      const text = await callWithRetry({
+        systemPrompt: ELEMENT_LIST_SYSTEM_PROMPT,
+        userContent: `<passage>${passage}</passage>`,
+        maxTokens: ELEMENT_LIST_MAX_TOKENS,
+      });
       const parsed = parseJsonObject(text);
       const elements = parsed["elements"];
       if (!Array.isArray(elements)) {
@@ -314,13 +338,13 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
       statements: string[],
     ): Promise<JudgeVerdict> {
       const list = statements.map((s) => `- ${s}`).join("\n");
-      const text = await callWithRetry(
-        ELEMENT_COVERED_SYSTEM_PROMPT,
-        `Information unit: ${element}\n\nExtracted statements:\n${list}`,
-      );
+      const text = await callWithRetry({
+        systemPrompt: ELEMENT_COVERED_SYSTEM_PROMPT,
+        userContent: `Information unit: ${element}\n\nExtracted statements:\n${list}`,
+      });
       const parsed = parseJsonObject(text);
-      const covered = parsed["covered"];
-      if (typeof covered !== "boolean") {
+      const covered = parseLooseBoolean(parsed["covered"]);
+      if (covered === null) {
         throw new Error(
           `Judge returned no boolean "covered": ${JSON.stringify(parsed).slice(0, ERROR_SNIPPET_LENGTH)}`,
         );

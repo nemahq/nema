@@ -316,11 +316,15 @@ async function pairwiseF1(params: {
       .map(({ j }) => j);
   });
 
+  // 심판 변칙 응답은 불일치로 간주 — 매칭 누락은 F1을 보수적으로(낮게) 만들 뿐
   const verdicts = await Promise.all(
     left.map((statement, i) =>
       Promise.all(
         (candidates[i] ?? []).map((j) =>
-          judge.sameMeaning(statement, right[j] ?? "").then((v) => v.pass),
+          judge
+            .sameMeaning(statement, right[j] ?? "")
+            .then((v) => v.pass)
+            .catch(() => false),
         ),
       ),
     ),
@@ -363,26 +367,51 @@ async function consistencyOfRuns(
   );
 }
 
+/**
+ * 품질 채점 표본 크기 — 판정마다 원문 전체(2.7~5.3k토큰)를 동봉해 전수 채점은
+ * 비용·시간의 지배 항목이 된다. pass율 추정엔 균등 간격 표본 40개로 충분.
+ */
+const QUALITY_SAMPLE_PER_LIST = 40;
+
+/** 균등 간격 표본 — 결정적(무작위 없음), 원문 위치 분포를 보존 */
+function sampleEvenly<T>(items: T[], size: number): T[] {
+  if (items.length <= size) {
+    return items;
+  }
+  const step = items.length / size;
+  return Array.from(
+    { length: size },
+    (_, i) => items[Math.floor(i * step)] as T,
+  );
+}
+
 async function qualityPassRates(params: {
   judge: Judge;
   source: string;
   statements: ExtractedStatement[];
-}): Promise<Record<string, number>> {
+}): Promise<{ rates: Record<string, number>; judgeFailures: number }> {
   const { judge, source, statements } = params;
+  const sampled = sampleEvenly(statements, QUALITY_SAMPLE_PER_LIST);
   const dims = ["atomicity", "selfContained", "faithfulness"] as const;
   const rates: Record<string, number> = {};
+  let judgeFailures = 0;
   for (const dimension of dims) {
+    // 심판의 변칙 응답(산문·잘림)이 측정 전체를 죽이지 않게 판정 단위로 격리 —
+    // 실패는 모수에서 빼고 세어 보고한다
     const verdicts = await Promise.all(
-      statements.map((s) =>
-        judge.quality({ dimension, source, statement: s.content }),
+      sampled.map((s) =>
+        judge
+          .quality({ dimension, source, statement: s.content })
+          .then((v) => v.pass as boolean | null)
+          .catch(() => null),
       ),
     );
+    const judged = verdicts.filter((v): v is boolean => v !== null);
+    judgeFailures += verdicts.length - judged.length;
     rates[dimension] =
-      verdicts.length === 0
-        ? 1
-        : verdicts.filter((v) => v.pass).length / verdicts.length;
+      judged.length === 0 ? 1 : judged.filter(Boolean).length / judged.length;
   }
-  return rates;
+  return { rates, judgeFailures };
 }
 
 interface CoverageResult {
@@ -496,8 +525,13 @@ async function runSplitAbMode(llm: OpenAiProvider): Promise<unknown> {
     console.log(
       `${seed.id} — 1콜 ${singleRuns.map((r) => (r.latencyMs / 1000).toFixed(0) + "s").join("/")}` +
         ` vs 분할(${chunks.length}청크) ${splitRuns.map((r) => (r.wallMs / 1000).toFixed(0) + "s").join("/")}` +
-        ` · 진술 ${singleRuns.map((r) => r.statementCount).join("/")} vs ${splitRuns.map((r) => r.statements?.length).join("/")}`,
+        ` · 진술 ${singleRuns.map((r) => r.statementCount ?? "-").join("/")} vs ${splitRuns.map((r) => r.statements?.length ?? "-").join("/")}`,
     );
+    for (const run of [...singleRuns, ...splitRuns]) {
+      if (run.error) {
+        console.log(`  ⚠ run${run.runIndex} 오류: ${run.error}`);
+      }
+    }
 
     const [singleConsistency, splitConsistency] = await Promise.all([
       consistencyOfRuns(
@@ -522,6 +556,7 @@ async function runSplitAbMode(llm: OpenAiProvider): Promise<unknown> {
     ]);
 
     let coverage = null;
+    let coverageError: string | null = null;
     if (firstSplit?.statementsPerChunk) {
       // run1의 청크별 진술 복원 — 연결본을 청크 경계 수로 다시 가른다
       const perChunk: ExtractedStatement[][] = [];
@@ -532,22 +567,33 @@ async function runSplitAbMode(llm: OpenAiProvider): Promise<unknown> {
         );
         cursor += count;
       }
-      coverage = await boundaryCoverage({
-        judge,
-        chunks,
-        statementsPerChunk: perChunk,
-      });
+      try {
+        coverage = await boundaryCoverage({
+          judge,
+          chunks,
+          statementsPerChunk: perChunk,
+        });
+      } catch (err) {
+        // 포괄성은 부가 측정 — 심판 실패가 A/B 본 측정까지 유실시키지 않게 격리
+        coverageError = describeError(err);
+        console.log(`  ⚠ 경계 포괄성 측정 실패: ${coverageError}`);
+      }
     }
 
     const mean = (xs: number[]) =>
       xs.length === 0 ? null : xs.reduce((a, b) => a + b, 0) / xs.length;
+    const judgeFailures =
+      singleQuality.judgeFailures + splitQuality.judgeFailures;
     console.log(
       `  일관성 1콜 ${mean(singleConsistency)?.toFixed(3)} vs 분할 ${mean(splitConsistency)?.toFixed(3)}` +
-        ` · 품질(원자/자기완결/충실) 1콜 ${Object.values(singleQuality)
+        ` · 품질(원자/자기완결/충실, 표본 ${QUALITY_SAMPLE_PER_LIST}) 1콜 ${Object.values(
+          singleQuality.rates,
+        )
           .map((v) => (v * 100).toFixed(0))
-          .join("/")}% vs 분할 ${Object.values(splitQuality)
+          .join("/")}% vs 분할 ${Object.values(splitQuality.rates)
           .map((v) => (v * 100).toFixed(0))
           .join("/")}%` +
+        (judgeFailures > 0 ? ` (판정 실패 ${judgeFailures} 제외)` : "") +
         (coverage
           ? ` · 경계 포괄 ${coverage.boundaries.map((b) => `${b.covered}/${b.elementCount}`).join(" ")} (대조 ${coverage.control?.covered}/${coverage.control?.elementCount})`
           : ""),
@@ -562,6 +608,7 @@ async function runSplitAbMode(llm: OpenAiProvider): Promise<unknown> {
       consistency: { single: singleConsistency, split: splitConsistency },
       quality: { single: singleQuality, split: splitQuality },
       coverage,
+      coverageError,
     });
   }
 
