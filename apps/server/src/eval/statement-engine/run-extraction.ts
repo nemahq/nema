@@ -23,6 +23,10 @@ import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
 import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
+  EXTRACTION_REASONING_EFFORT,
+  EXTRACTION_TIMEOUT_MS as WORKER_EXTRACTION_TIMEOUT_MS,
+} from "@server/infra/statement-sync/worker";
+import {
   buildStatementExtractionMessage,
   type ExtractedStatement,
   STATEMENT_EXTRACTION_SYSTEM_PROMPT,
@@ -48,7 +52,7 @@ const JUDGE_CONCURRENCY = 8;
 // 글×반복 전부(30콜)를 동시에 쏘면 gpt-5가 제공자 타임아웃을 넘긴다 — 상한 필수
 const EXTRACTION_CONCURRENCY = 4;
 const EXTRACTION_MAX_ATTEMPTS = 3;
-const EXTRACTION_TIMEOUT_MS = 120_000;
+const EXTRACTION_RETRY_DELAY_MS = 3_000;
 
 type StatementType = ExtractedStatement["type"];
 type Confidence = "certain" | "guess" | null;
@@ -86,6 +90,10 @@ async function extract(
           messages: [
             { role: "user", content: buildStatementExtractionMessage(body) },
           ],
+          // 제품(worker)과 동일 설정 — 평가가 제품과 같은 경로를 본다
+          reasoningEffort: EXTRACTION_REASONING_EFFORT,
+          timeoutMs: WORKER_EXTRACTION_TIMEOUT_MS,
+          maxRetries: 0,
         }),
       );
       return normalize(output.statements);
@@ -93,6 +101,10 @@ async function extract(
       lastError = error;
       console.warn(
         `  추출 재시도 ${attempt + 1}/${EXTRACTION_MAX_ATTEMPTS}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      // rate limit에서 즉시 재시도는 악화 — 선형 백오프
+      await new Promise((resolve) =>
+        setTimeout(resolve, EXTRACTION_RETRY_DELAY_MS * (attempt + 1)),
       );
     }
   }
@@ -330,12 +342,10 @@ async function main() {
     process.exit(1);
   }
 
-  // 제품 기본 타임아웃(30초)은 gpt-5가 긴 글에서 자주 넘긴다 — 측정 목적은 품질이라
-  // 러너만 여유를 준다. 제품 타임아웃의 적정값은 별도 이슈 (measurement-log #3 발견).
+  // 타임아웃·reasoning은 호출 단위로 worker와 동일하게 전달된다 (extract 참고)
   const llm = new OpenAiProvider({
     apiKey: openaiKey,
     model: DEFAULT_STANDARD_MODEL,
-    timeout: EXTRACTION_TIMEOUT_MS,
   });
   const judge = createJudge(anthropicKey, JUDGE_CONCURRENCY);
 
