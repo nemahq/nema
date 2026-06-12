@@ -362,18 +362,31 @@ async function main() {
   });
   const judge = createJudge(anthropicKey, JUDGE_CONCURRENCY);
 
-  // 글은 서로 독립이라 동시 처리 — 동시성 상한은 judge의 limiter가 잡는다
+  // 글은 서로 독립이라 동시 처리 — 동시성 상한은 judge의 limiter가 잡는다.
+  // 글 단위로 오류를 격리 — 한 글의 실패가 나머지 글의 (비용 지불된) 결과를 유실시키지 않게.
   const started = Date.now();
   console.log(
     `글 ${SEED_DOCUMENTS.length}개 × ${RUNS_PER_DOC}회 추출 + 채점 중...`,
   );
-  const reports = await Promise.all(
+  const reports: DocReport[] = [];
+  const failedDocs: Array<{ docId: string; error: string }> = [];
+  await Promise.all(
     SEED_DOCUMENTS.map(async (doc) => {
-      const report = await evaluateDocument({ llm, judge, doc });
-      console.log(
-        `  ✓ [${doc.id}] ${Math.round((Date.now() - started) / 1000)}s`,
-      );
-      return report;
+      try {
+        const report = await evaluateDocument({ llm, judge, doc });
+        reports.push(report);
+        console.log(
+          `  ✓ [${doc.id}] ${Math.round((Date.now() - started) / 1000)}s`,
+        );
+      } catch (error) {
+        failedDocs.push({
+          docId: doc.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        console.log(
+          `  ✗ [${doc.id}] ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }),
   );
 
@@ -389,7 +402,11 @@ async function main() {
       report.golden.overExtracted.length,
     0,
   );
-  const totalGolden = SEED_DOCUMENTS.reduce(
+  // 실패한 글의 골든은 분모에서 제외 — 평가 안 된 항목이 recall을 깎으면 안 됨
+  const evaluatedDocs = SEED_DOCUMENTS.filter((doc) =>
+    reports.some((report) => report.docId === doc.id),
+  );
+  const totalGolden = evaluatedDocs.reduce(
     (sum, doc) => sum + doc.goldenStatements.length,
     0,
   );
@@ -496,6 +513,7 @@ async function main() {
         runAt: new Date().toISOString(),
         runsPerDoc: RUNS_PER_DOC,
         judgeUsage: judge.usage(),
+        failedDocs,
         summary,
         documents: reports,
       },

@@ -36,6 +36,8 @@ const SEARCH_LIMIT = 10;
 const NO_THRESHOLD = -1;
 /** 평가 전용 Space — 격리 필터 경로(spaceIds)를 실전과 동일하게 태운다 */
 const EVAL_SPACE_ID = "00000000-0000-4000-8000-0000000000e7";
+/** 무정답 질의에서 기록하는 상위 점수 개수 (threshold 보정의 반대쪽 재료) */
+const NO_ANSWER_TOP_SCORES = 3;
 
 // 골든 id("meeting-memo-1-s1")는 Qdrant point id(UUID)가 못 되므로 결정적 매핑
 function pointIdOf(goldenId: string): string {
@@ -187,7 +189,9 @@ async function main() {
         .filter((r) => r.recallAtK === null)
         .map((r) => ({
           queryId: r.queryId,
-          topScores: r.results.slice(0, 3).map((x) => x.score),
+          topScores: r.results
+            .slice(0, NO_ANSWER_TOP_SCORES)
+            .map((x) => x.score),
         })),
     },
   };
