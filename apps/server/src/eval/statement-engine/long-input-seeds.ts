@@ -20,6 +20,16 @@ interface LongInputSeed {
   input: string;
 }
 
+/**
+ * 상한 검증용 합성 입력 — 하루치 노트 여러 편을 한 번에 붙여넣은 결 (~10k 토큰).
+ * 새로 빚지 않고 4급간을 잇는 이유: 상한 검증이 보는 건 절단 품질(급간별 측정의
+ * 몫)이 아니라 다청크 배관 — 청크 수·순서·원자 적용·벽시계 — 이고, 주제가 다른
+ * 글의 연결은 "여러 메모를 통째로 붙여넣기"라는 실제 상한 사례의 모양이기도 하다.
+ */
+export function buildUpperBoundInput(): string {
+  return LONG_INPUT_SEEDS.map((seed) => seed.input).join("\n\n---\n\n");
+}
+
 export const LONG_INPUT_SEEDS: LongInputSeed[] = [
   {
     id: "long-700-weekly",

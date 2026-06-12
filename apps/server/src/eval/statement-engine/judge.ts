@@ -51,6 +51,24 @@ Fail if it states anything the note does not say, or expresses MORE certainty th
 Output JSON only: {"pass": boolean, "reason": "<one short sentence>"}`,
 } as const;
 
+// 요소 포괄성(long-input-chunking 6장) — Claimify의 element-level coverage 방식.
+// 전수 골든 없이 "빠뜨렸는가"를 잰다: 구간의 정보 단위를 열거하고, 추출 결과가
+// 각 단위를 덮는지 판정. 경계 창 누락 검출 전담 — 일관성·품질 심판은 추출된
+// 진술만 보므로 매 실행 똑같이 빠지는 진술을 못 잡는다.
+const ELEMENT_LIST_SYSTEM_PROMPT = `You enumerate the atomic information units in a passage from a personal note.
+
+An information unit is one decision, one reason, one fact/finding, one open question, or one task — anything the note's author might later search for as part of their reasoning. Skip greetings, filler, and scene-setting with no informational content.
+
+Keep each unit short (one clause) and self-contained (name the subject; no bare pronouns). Do not merge two units into one; do not invent anything not in the passage.
+
+Output JSON only: {"elements": ["...", "..."]}`;
+
+const ELEMENT_COVERED_SYSTEM_PROMPT = `You check whether one information unit from a note survived statement extraction.
+
+Given the unit and the list of extracted statements, answer covered: true if any statement (or an obvious combination of statements) conveys the unit's information — explicitly or implicitly. Wording differences do not matter; the information surviving does.
+
+Output JSON only: {"covered": boolean, "reason": "<one short sentence>"}`;
+
 type QualityDimension = keyof typeof DIMENSION_SYSTEM_PROMPTS;
 
 export const QUALITY_DIMENSIONS = Object.keys(
@@ -136,6 +154,10 @@ export interface Judge {
   sameMeaning(a: string, b: string): Promise<JudgeVerdict>;
   /** 원문 동봉 품질 판정 — 원자성·자기완결·충실성 */
   quality(params: QualityJudgeParams): Promise<JudgeVerdict>;
+  /** 구간의 원자적 정보 단위 열거 — 요소 포괄성 측정의 1단계 */
+  listElements(passage: string): Promise<string[]>;
+  /** 정보 단위가 추출 진술들에 살아남았는가 — 요소 포괄성 측정의 2단계 */
+  elementCovered(element: string, statements: string[]): Promise<JudgeVerdict>;
   usage(): JudgeUsage;
 }
 
@@ -270,6 +292,40 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
         );
       }
       return { pass, reason: String(parsed["reason"] ?? "") };
+    },
+
+    async listElements(passage: string): Promise<string[]> {
+      const text = await callWithRetry(
+        ELEMENT_LIST_SYSTEM_PROMPT,
+        `<passage>${passage}</passage>`,
+      );
+      const parsed = parseJsonObject(text);
+      const elements = parsed["elements"];
+      if (!Array.isArray(elements)) {
+        throw new Error(
+          `Judge returned no array "elements": ${JSON.stringify(parsed).slice(0, ERROR_SNIPPET_LENGTH)}`,
+        );
+      }
+      return elements.filter((e): e is string => typeof e === "string");
+    },
+
+    async elementCovered(
+      element: string,
+      statements: string[],
+    ): Promise<JudgeVerdict> {
+      const list = statements.map((s) => `- ${s}`).join("\n");
+      const text = await callWithRetry(
+        ELEMENT_COVERED_SYSTEM_PROMPT,
+        `Information unit: ${element}\n\nExtracted statements:\n${list}`,
+      );
+      const parsed = parseJsonObject(text);
+      const covered = parsed["covered"];
+      if (typeof covered !== "boolean") {
+        throw new Error(
+          `Judge returned no boolean "covered": ${JSON.stringify(parsed).slice(0, ERROR_SNIPPET_LENGTH)}`,
+        );
+      }
+      return { pass: covered, reason: String(parsed["reason"] ?? "") };
     },
 
     usage(): JudgeUsage {
