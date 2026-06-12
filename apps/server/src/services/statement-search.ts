@@ -3,9 +3,11 @@ import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
-// v1 꺼내기 값 그대로 자리만 — 진술 데이터로 하니스에서 보정 (retrieval-design 3장)
+// 평가 하니스 첫 실측으로 보정 (retrieval-design 3장).
+// 골든 질의의 정답 점수대 0.216~0.52, 무정답 질의 최고점 0.239 —
+// v1 자리값 0.6은 정답을 전부 잘라 결과가 항상 0건이었다. 분포 하단에 맞춰 0.2로.
 const STATEMENT_SEARCH_LIMIT = 15;
-const STATEMENT_SEARCH_SCORE_THRESHOLD = 0.6;
+const STATEMENT_SEARCH_SCORE_THRESHOLD = 0.2;
 
 type SearchedStatementType = Database["public"]["Enums"]["statement_type"];
 type SearchedStatementConfidence =
