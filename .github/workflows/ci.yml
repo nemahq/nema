@@ -120,6 +120,11 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD_STAGING }}
 
+      # railway up은 git 메타데이터 없이 파일만 올린다 — 빌드가 읽을 커밋 SHA를 파일로 스탬프.
+      # .commit-sha를 gitignore에 넣지 말 것 — railway up이 gitignore된 파일을 업로드에서 제외해 전 배포가 dev로 회귀한다.
+      - name: Stamp commit SHA
+        run: echo "$GITHUB_SHA" > .commit-sha
+
       - name: Deploy server to staging
         run: railway up --service server --environment staging --detach
         env:
@@ -174,6 +179,11 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      # railway up은 git 메타데이터 없이 파일만 올린다 — 빌드가 읽을 커밋 SHA를 파일로 스탬프.
+      # .commit-sha를 gitignore에 넣지 말 것 — railway up이 gitignore된 파일을 업로드에서 제외해 전 배포가 dev로 회귀한다.
+      - name: Stamp commit SHA
+        run: echo "$GITHUB_SHA" > .commit-sha
 
       - name: Deploy server to production
         run: railway up --service server --environment production --detach
