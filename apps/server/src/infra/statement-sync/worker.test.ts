@@ -81,7 +81,6 @@ function mockEmbedding(): EmbeddingProvider {
 function mockVectorStore(): VectorStore {
   return {
     ensureCollection: vi.fn(),
-    dropLegacyCollections: vi.fn().mockResolvedValue([]),
     upsertStatements: vi.fn().mockResolvedValue(undefined),
     deleteStatements: vi.fn().mockResolvedValue(undefined),
     search: vi.fn().mockResolvedValue([]),

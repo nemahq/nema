@@ -204,7 +204,6 @@ function supabaseStub(responses: Record<string, QueryStub[]>) {
 function providersStub(searchMock: ReturnType<typeof vi.fn>): Providers {
   const vectorStore: VectorStore = {
     ensureCollection: vi.fn(),
-    dropLegacyCollections: vi.fn(),
     upsertStatements: vi.fn(),
     deleteStatements: vi.fn(),
     search: searchMock,
