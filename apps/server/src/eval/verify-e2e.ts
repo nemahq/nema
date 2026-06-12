@@ -70,6 +70,8 @@ const WAIT_POLL_INTERVAL_MS = 2_000;
 const EXTRACTION_WAIT_TIMEOUT_MS = 150_000;
 // 장문(다청크)은 청크 웨이브(⌈청크÷동시성3⌉) × 호출 상한 — 7청크면 3웨이브
 const LONG_EXTRACTION_WAIT_TIMEOUT_MS = 480_000;
+// ①~⑤ 전부 도달해야 통과 — 단계를 더하면 같이 올릴 것
+const EXPECTED_CHECK_COUNT = 5;
 // 상한 합성 입력(~10k 토큰)의 진술 수 하한 — 짧은 시드 4편의 합이라 보수적으로
 const LONG_MIN_STATEMENTS = 50;
 const EMBEDDING_WAIT_TIMEOUT_MS = 60_000;
@@ -141,7 +143,7 @@ async function main() {
       );
 
     console.log("\n=== 결과 ===");
-    let allPass = Object.keys(results).length === 5;
+    let allPass = Object.keys(results).length === EXPECTED_CHECK_COUNT;
     for (const [label, pass] of Object.entries(results)) {
       console.log(`${pass ? "✅" : "❌"} ${label}`);
       allPass = allPass && pass;

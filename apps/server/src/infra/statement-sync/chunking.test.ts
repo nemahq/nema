@@ -9,11 +9,19 @@ import {
 
 // 합성 장문 — 문단(빈 줄)·문장 경계가 모두 있는 회의록 결.
 // 문장마다 고유 번호를 박아 무손실·순서 검증이 문자열 비교로 가능하게 한다.
+const SENTENCES_PER_PARAGRAPH = 5;
+// 문맥 창은 문장 경계 정렬로 예산을 한 문장만큼 넘을 수 있다 — 허용 배율
+const CONTEXT_BUDGET_TOLERANCE_FACTOR = 2;
+
 function buildParagraphText(sentenceCount: number): string {
   const paragraphs: string[] = [];
-  for (let p = 0; p * 5 < sentenceCount; p++) {
+  for (let p = 0; p * SENTENCES_PER_PARAGRAPH < sentenceCount; p++) {
     const sentences: string[] = [];
-    for (let s = p * 5; s < Math.min((p + 1) * 5, sentenceCount); s++) {
+    for (
+      let s = p * SENTENCES_PER_PARAGRAPH;
+      s < Math.min((p + 1) * SENTENCES_PER_PARAGRAPH, sentenceCount);
+      s++
+    ) {
       sentences.push(
         `${s}번째 논의에서 배포 파이프라인의 캐시 무효화 정책을 검토했고 결론은 문서에 적었다.`,
       );
@@ -106,7 +114,7 @@ describe("chunkForExtraction", () => {
         );
         // 예산 + 문장 정렬 여유 안쪽
         expect(countTokens(chunk.contextBefore ?? "")).toBeLessThanOrEqual(
-          CHUNK_CONTEXT_WINDOW_TOKENS * 2,
+          CHUNK_CONTEXT_WINDOW_TOKENS * CONTEXT_BUDGET_TOLERANCE_FACTOR,
         );
       }
       if (i === chunks.length - 1) {
@@ -117,7 +125,7 @@ describe("chunkForExtraction", () => {
           next?.body.trimStart().startsWith(chunk.contextAfter ?? ""),
         ).toBe(true);
         expect(countTokens(chunk.contextAfter ?? "")).toBeLessThanOrEqual(
-          CHUNK_CONTEXT_WINDOW_TOKENS * 2,
+          CHUNK_CONTEXT_WINDOW_TOKENS * CONTEXT_BUDGET_TOLERANCE_FACTOR,
         );
       }
     }
