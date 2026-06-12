@@ -9,10 +9,14 @@ export function useSourceSuspenseQuery(
   >,
 ) {
   return trpc.source.get.useSuspenseQuery(input, {
-    refetchInterval: (query) =>
-      query.state.data?.extractionStatus === "pending"
-        ? SOURCE_POLL_INTERVAL_MS
-        : false,
+    // 추출이 끝나는 순간 진술이 임베딩 pending으로 생기므로, 임베딩까지 끝나야 폴링을 멈춘다
+    refetchInterval: (query) => {
+      const source = query.state.data;
+      const processing =
+        source?.extractionStatus === "pending" ||
+        source?.statements.some((s) => s.ingestionStatus === "pending");
+      return processing ? SOURCE_POLL_INTERVAL_MS : false;
+    },
     ...options,
   });
 }

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { SourceCard } from "@web/features/dev-harness/components/SourceCard";
 import { useSourceListSuspenseQuery } from "@web/features/dev-harness/hooks/useSourceListQuery";
+import { getErrorMessage } from "@web/lib/getErrorMessage";
 
 interface SourceHistoryListProps {
   expandedSourceId: string | null;
@@ -12,7 +13,7 @@ function SourceHistoryListContent({
   expandedSourceId,
   onToggleSource,
 }: SourceHistoryListProps) {
-  const [sourceList] = useSourceListSuspenseQuery();
+  const [sourceList, sourceListQuery] = useSourceListSuspenseQuery();
 
   return (
     <>
@@ -20,6 +21,11 @@ function SourceHistoryListContent({
         던진 글 ({sourceList.sources.length})
       </h3>
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+        {sourceListQuery.isError && (
+          <p className="text-xs text-status-error">
+            목록 갱신 실패 — {getErrorMessage(sourceListQuery.error)}
+          </p>
+        )}
         {sourceList.sources.length === 0 && (
           <p className="text-xs text-fg-tertiary">
             아직 없음 — 위에서 첫 글을 던져보기

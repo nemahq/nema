@@ -45,7 +45,7 @@ interface SourceSummary {
   statementCount: number;
 }
 
-// 내가 던진 글 목록 — 격리는 RLS(내 Space 멤버십)가 담당한다
+// 내 Space의 원본 목록(작성자 무관) — 격리는 RLS(Space 멤버십)가 담당한다
 export async function listSources(args: {
   supabase: TypedSupabaseClient;
 }): Promise<{ sources: SourceSummary[] }> {
@@ -126,6 +126,7 @@ export async function getSource(args: {
       "id, body, extraction_status, error_message, created_at, statement_sources(locator, statements(id, content, type, confidence, status, ingestion_status, created_at))",
     )
     .eq("id", sourceId)
+    .eq("status", "active")
     .single();
   throwIfSupabaseError(error);
 
