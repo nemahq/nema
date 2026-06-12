@@ -11,6 +11,10 @@ export interface LlmCallParams {
   messages: [LlmMessage, ...LlmMessage[]];
   temperature?: number;
   signal?: AbortSignal;
+  /** 추론 모델의 사고 깊이 — 규칙 적용에 가까운 호출(추출 등)은 낮춰 지연·변동을 줄인다 */
+  reasoningEffort?: "minimal" | "low" | "medium" | "high";
+  /** 이 호출만의 타임아웃 — 미지정 시 provider(클라이언트) 기본값 */
+  timeoutMs?: number;
 }
 
 export interface GenerateStructuredParams<T> extends LlmCallParams {

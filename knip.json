@@ -11,7 +11,8 @@
         "src/eval/eval-drafting.ts",
         "src/eval/verify-statement-search.ts",
         "src/eval/statement-engine/run-extraction.ts",
-        "src/eval/statement-engine/run-retrieval.ts"
+        "src/eval/statement-engine/run-retrieval.ts",
+        "src/eval/verify-e2e.ts"
       ],
       "project": ["src/**/*.ts"],
       "ignore": ["src/infra/**"]

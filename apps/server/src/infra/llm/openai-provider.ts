@@ -44,15 +44,19 @@ export class OpenAiProvider implements LlmProvider {
 
   async *generateStream(params: GenerateStreamParams): AsyncIterable<string> {
     try {
-      const stream = await this.client.chat.completions.create({
-        model: this.model,
-        temperature: params.temperature,
-        stream: true,
-        messages: [
-          { role: "system" as const, content: params.systemPrompt },
-          ...params.messages,
-        ],
-      });
+      const stream = await this.client.chat.completions.create(
+        {
+          model: this.model,
+          temperature: params.temperature,
+          reasoning_effort: params.reasoningEffort,
+          stream: true,
+          messages: [
+            { role: "system" as const, content: params.systemPrompt },
+            ...params.messages,
+          ],
+        },
+        { timeout: params.timeoutMs },
+      );
 
       for await (const chunk of stream) {
         if (params.signal?.aborted) {
@@ -74,15 +78,19 @@ export class OpenAiProvider implements LlmProvider {
 
   async generateStructured<T>(params: GenerateStructuredParams<T>): Promise<T> {
     try {
-      const completion = await this.client.chat.completions.parse({
-        model: this.model,
-        temperature: params.temperature,
-        messages: [
-          { role: "system" as const, content: params.systemPrompt },
-          ...params.messages,
-        ],
-        response_format: zodResponseFormat(params.schema, params.schemaName),
-      });
+      const completion = await this.client.chat.completions.parse(
+        {
+          model: this.model,
+          temperature: params.temperature,
+          reasoning_effort: params.reasoningEffort,
+          messages: [
+            { role: "system" as const, content: params.systemPrompt },
+            ...params.messages,
+          ],
+          response_format: zodResponseFormat(params.schema, params.schemaName),
+        },
+        { timeout: params.timeoutMs },
+      );
 
       const choice = completion.choices[0];
       if (!choice) {
@@ -126,14 +134,18 @@ export class OpenAiProvider implements LlmProvider {
 
   async generateText(params: GenerateTextParams): Promise<string> {
     try {
-      const completion = await this.client.chat.completions.create({
-        model: this.model,
-        temperature: params.temperature,
-        messages: [
-          { role: "system" as const, content: params.systemPrompt },
-          ...params.messages,
-        ],
-      });
+      const completion = await this.client.chat.completions.create(
+        {
+          model: this.model,
+          temperature: params.temperature,
+          reasoning_effort: params.reasoningEffort,
+          messages: [
+            { role: "system" as const, content: params.systemPrompt },
+            ...params.messages,
+          ],
+        },
+        { timeout: params.timeoutMs },
+      );
 
       const content = completion.choices[0]?.message?.content;
       if (!content) {
