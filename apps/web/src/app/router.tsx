@@ -4,9 +4,11 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  notFound,
   Outlet,
 } from "@tanstack/react-router";
 
+import { getEnv } from "@web/app/env";
 import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
@@ -17,6 +19,7 @@ import { SignInPage } from "@web/app/pages/SignInPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
 import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { requireAuth, requireGuest } from "@web/features/auth";
+import { DevHarnessPage } from "@web/features/dev-harness";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 
 import { App } from "./App";
@@ -91,12 +94,26 @@ const sessionRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
+// 내부 테스트 조종석 (NEM-125) — 프로덕션에서는 존재하지 않는 경로로 보인다
+const devHarnessRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/dev",
+  component: DevHarnessPage,
+  errorComponent: RouteErrorFallback,
+  beforeLoad: () => {
+    if (getEnv().APP_ENV === "production") {
+      throw notFound();
+    }
+  },
+});
+
 const routeTree = rootRoute.addChildren([
   signinRoute,
   privacyRoute,
   termsRoute,
   authenticatedRoute.addChildren([
     sessionSidebarRoute.addChildren([indexRoute, sessionRoute]),
+    devHarnessRoute,
   ]),
 ]);
 

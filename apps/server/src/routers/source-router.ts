@@ -1,6 +1,10 @@
-import { SourceCreateInputSchema } from "@nema-io/shared";
+import { SourceCreateInputSchema, SourceGetInputSchema } from "@nema-io/shared";
 
-import { createSource } from "@server/services/source-service";
+import {
+  createSource,
+  getSource,
+  listSources,
+} from "@server/services/source-service";
 import { protectedProcedure, router } from "@server/trpc";
 
 export const sourceRouter = router({
@@ -13,4 +17,15 @@ export const sourceRouter = router({
         sessionId: input.sessionId,
       }),
     ),
+
+  list: protectedProcedure.query(({ ctx }) =>
+    listSources({ supabase: ctx.supabase }),
+  ),
+
+  get: protectedProcedure.input(SourceGetInputSchema).query(({ ctx, input }) =>
+    getSource({
+      supabase: ctx.supabase,
+      sourceId: input.sourceId,
+    }),
+  ),
 });
