@@ -12,8 +12,10 @@ import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// 이 러너는 Supabase·Qdrant를 쓰지 않는다 — env 스키마(필수 키·쌍 제약) 통과용 자리값
+// 이 러너는 Supabase·Qdrant를 쓰지 않는다 — env 스키마(필수 키·쌍 제약) 통과용 자리값.
+// URL·KEY는 "둘 다 있거나 둘 다 없거나"라 쌍으로 박는다 (커밋된 .env에 숨어 기대지 않게).
 process.env["SUPABASE_SERVICE_ROLE_KEY"] ??= "eval-unused";
+process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
 process.env["QDRANT_API_KEY"] ??= "eval-unused";
 
 import { loadEnv } from "@server/env";
@@ -33,12 +35,8 @@ import {
   type Judge,
   QUALITY_DIMENSIONS,
 } from "./judge";
-import {
-  type EvalAxis,
-  type GoldenStatement,
-  SEED_DOCUMENTS,
-  type SeedDocument,
-} from "./seed-data";
+import { type PrecisionRecallF1, round, scoreF1 } from "./metrics";
+import { type EvalAxis, SEED_DOCUMENTS, type SeedDocument } from "./seed-data";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadEnv(resolve(__dirname, "../../.."));
@@ -117,7 +115,10 @@ interface MatchResult<L, R> {
 
 // greedy 1:1 — 추출 원문 순서대로, 아직 짝 없는 상대와 매칭 (eval-design 3.1).
 // 판정 행렬을 병렬로 선계산하고 배정만 순차로 — greedy 결과는 순차 판정과 동일,
-// 벽시계 시간만 동시성만큼 줄어든다.
+// 벽시계 시간이 동시성만큼 줄어든다 (조기 종료가 없어 판정 호출 수는 늘지만
+// 판정 캐시·동일 문자열 지름길이 흡수한다).
+// 배정이 좌측 순서 기준이라 쌍대 일관성(runA↔runB)에서 방향에 따라 미세히 다를 수
+// 있는 근사다 — 현 규모(쌍당 진술 ~10개)에서 영향은 무시 수준.
 async function matchStatements<L, R>(
   params: MatchParams<L, R>,
 ): Promise<MatchResult<L, R>> {
@@ -155,35 +156,6 @@ async function matchStatements<L, R>(
     unmatchedLeft: left.filter((item) => !matchedLeft.has(item)),
     unmatchedRight: right.filter((_, index) => !takenRight.has(index)),
   };
-}
-
-interface PrecisionRecallF1 {
-  precision: number;
-  recall: number;
-  f1: number;
-}
-
-// 양쪽 0개(잡담 글에서 0개 추출)는 만점 — "추출 0개가 정답"인 케이스
-function scoreF1(counts: {
-  matched: number;
-  extracted: number;
-  golden: number;
-}): PrecisionRecallF1 {
-  if (counts.extracted === 0 && counts.golden === 0) {
-    return { precision: 1, recall: 1, f1: 1 };
-  }
-  const precision =
-    counts.extracted === 0 ? 1 : counts.matched / counts.extracted;
-  const recall = counts.golden === 0 ? 1 : counts.matched / counts.golden;
-  const f1 =
-    precision + recall === 0
-      ? 0
-      : (2 * precision * recall) / (precision + recall);
-  return { precision, recall, f1 };
-}
-
-function round(value: number): number {
-  return Math.round(value * 1000) / 1000;
 }
 
 interface DocReport {
@@ -244,15 +216,20 @@ async function evaluateDocument(params: {
     expected: pair.right.type,
     actual: pair.left.type,
   }));
-  const confidencePairs = match.pairs
-    .filter((pair) => pair.right.type === "claim" && pair.left.type === "claim")
-    .map((pair) => ({
-      goldenId: pair.right.id,
-      expected:
-        (pair.right as GoldenStatement & { confidence?: Confidence })
-          .confidence ?? null,
-      actual: pair.left.confidence,
-    }));
+  const confidencePairs = match.pairs.flatMap((pair) => {
+    const golden = pair.right;
+    const extracted = pair.left;
+    if (golden.type !== "claim" || extracted.type !== "claim") {
+      return [];
+    }
+    return [
+      {
+        goldenId: golden.id,
+        expected: golden.confidence,
+        actual: extracted.confidence,
+      },
+    ];
+  });
 
   // 차원별 품질 (1회차 추출 전체)
   const quality = await Promise.all(
@@ -390,6 +367,15 @@ async function main() {
     }),
   );
 
+  // 전 글 실패면 집계가 0/0 만점으로 둔갑한다 — 가짜 성공 차단
+  if (reports.length === 0) {
+    console.error("all documents failed — no metrics to report:");
+    for (const failed of failedDocs) {
+      console.error(`  - ${failed.docId}: ${failed.error}`);
+    }
+    process.exit(1);
+  }
+
   // 집계
   const totalMatched = reports.reduce(
     (sum, report) => sum + report.golden.matchedPairs.length,
@@ -483,6 +469,11 @@ async function main() {
         );
 
   const summary = {
+    docs: {
+      total: SEED_DOCUMENTS.length,
+      evaluated: reports.length,
+      failed: failedDocs.length,
+    },
     golden: {
       precision: round(micro.precision),
       recall: round(micro.recall),
@@ -527,4 +518,7 @@ async function main() {
   console.log(`\n결과 저장: ${outPath}`);
 }
 
-main();
+main().catch((error) => {
+  console.error("eval run failed:", error);
+  process.exit(1);
+});
