@@ -47,6 +47,11 @@ const SOURCE_BODY =
   "김 대리는 출시가 급하다고 계속 그러고, 직접 연동은 한 달은 걸린다니까. 근데 수수료가 좀 걸리긴 해.";
 const SEARCH_QUERY = "결제는 어떤 업체로 정했지?";
 
+const WAIT_POLL_INTERVAL_MS = 2_000;
+// 워커 폴링(2초)+LLM 추출 지연을 덮는 여유. 임베딩은 LLM이 없어 더 짧다.
+const EXTRACTION_WAIT_TIMEOUT_MS = 90_000;
+const EMBEDDING_WAIT_TIMEOUT_MS = 60_000;
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -61,7 +66,7 @@ async function waitUntil(args: {
     if (await args.check()) {
       return true;
     }
-    await sleep(2_000);
+    await sleep(WAIT_POLL_INTERVAL_MS);
   }
   console.log(`  ⏱  타임아웃: ${args.label} (${args.timeoutMs}ms)`);
   return false;
@@ -133,7 +138,7 @@ async function main() {
   worker.start();
   const extracted = await waitUntil({
     label: "추출 완료",
-    timeoutMs: 90_000,
+    timeoutMs: EXTRACTION_WAIT_TIMEOUT_MS,
     check: async () => {
       const { data } = await admin
         .from("sources")
@@ -180,7 +185,7 @@ async function main() {
   worker.start();
   const embedded = await waitUntil({
     label: "임베딩 완료",
-    timeoutMs: 60_000,
+    timeoutMs: EMBEDDING_WAIT_TIMEOUT_MS,
     check: async () => {
       const { data } = await admin
         .from("statements")
@@ -231,7 +236,9 @@ async function main() {
   await admin.auth.admin.deleteUser(userId);
   await createQdrantClient()
     .deleteCollection(EVAL_COLLECTION)
-    .catch(() => undefined);
+    .catch((cleanupError) =>
+      console.warn("qdrant eval collection cleanup failed:", cleanupError),
+    );
 
   console.log("\n=== 결과 ===");
   let allPass = true;
