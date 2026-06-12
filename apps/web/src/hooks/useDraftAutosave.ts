@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as Sentry from "@sentry/react";
 
 interface UseDraftAutosaveOptions {
   /** ms 단위 */
@@ -20,16 +21,22 @@ function readStorage<T>(key: string, fallback: T): T {
 function writeStorage<T>(key: string, data: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(data));
-  } catch {
-    // storage full 또는 unavailable — silent fail
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "draft-autosave" },
+      extra: { key },
+    });
   }
 }
 
 function removeStorage(key: string): void {
   try {
     localStorage.removeItem(key);
-  } catch {
-    // unavailable — silent fail
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "draft-autosave" },
+      extra: { key },
+    });
   }
 }
 
@@ -94,21 +101,18 @@ export function useDraftAutosave<T>(
     [key],
   );
 
-  const setDraft = useCallback<React.Dispatch<React.SetStateAction<T>>>(
-    (action) => {
-      clearedRef.current = false;
-      dirtyRef.current = true;
-      setDraftState(action);
-    },
-    [],
-  );
+  const setDraft: React.Dispatch<React.SetStateAction<T>> = (action) => {
+    clearedRef.current = false;
+    dirtyRef.current = true;
+    setDraftState(action);
+  };
 
-  const clear = useCallback(() => {
+  function clear() {
     clearedRef.current = true;
     dirtyRef.current = false;
     removeStorage(key);
     setDraftState(initialValueRef.current);
-  }, [key]);
+  }
 
   return [draft, setDraft, { clear }];
 }

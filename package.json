@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:web": "VITE_DEV_API_TARGET=https://api-staging.getnema.app pnpm --filter web dev",
+    "dev:web:prod": "VITE_DEV_API_TARGET=https://api.getnema.app pnpm --filter web dev:prod",
     "dev:server": "pnpm --filter server dev",
-    "dev:prod": "VITE_DEV_API_TARGET=https://api.getnema.app turbo run dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
@@ -49,6 +49,7 @@
     "eslint-plugin-jsonc": "^3.1.2",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-no-relative-import-paths": "^1.6.1",
+    "eslint-plugin-react-compiler": "19.1.0-rc.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "husky": "^9.1.7",

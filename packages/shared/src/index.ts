@@ -5,6 +5,10 @@ export {
   ChatInputSchema,
   type ChatMode,
   ChatModeSchema,
+  type ChatResumeInput,
+  type ChatStartInput,
+  type ConfirmDraftIntentInput,
+  ConfirmDraftIntentInputSchema,
   type DraftActionInput,
   DraftActionInputSchema,
 } from "./schemas/chat";
@@ -12,9 +16,13 @@ export {
   type ChatStreamEvent,
   ChatStreamEventSchema,
   type PhaseName,
+  type SearchResultDoc,
 } from "./schemas/chat-stream";
 export { type TrackEventInput, TrackEventInputSchema } from "./schemas/event";
 export {
+  type ActionPayload,
+  type DraftIntentOption,
+  DraftIntentOptionSchema,
   type GetMessagesInput,
   GetMessagesInputSchema,
   type Message,
@@ -38,18 +46,8 @@ export {
   ProfileUpdateInputSchema,
 } from "./schemas/profile";
 export {
-  type EnqueueSaveInput,
-  EnqueueSaveInputSchema,
-  type RetrySaveInput,
-  RetrySaveInputSchema,
-  type SaveJob,
-  type SaveJobEvent,
-  SaveJobEventSchema,
-  SaveJobSchema,
-  type SaveJobStatus,
-  SaveJobStatusSchema,
-} from "./schemas/save-job";
-export {
+  type DeleteRetrievalInput,
+  DeleteRetrievalInputSchema,
   SESSION_TITLE_MAX_LENGTH,
   type SessionCreateInput,
   SessionCreateInputSchema,
@@ -70,4 +68,11 @@ export {
   type SessionUpdateInput,
   SessionUpdateInputSchema,
 } from "./schemas/session";
-export { type SaveOutput, SaveOutputSchema } from "./schemas/structuring";
+export {
+  type SourceCreateInput,
+  SourceCreateInputSchema,
+} from "./schemas/source";
+export {
+  type StatementSearchInput,
+  StatementSearchInputSchema,
+} from "./schemas/statement-search";

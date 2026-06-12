@@ -1,10 +1,12 @@
-import { useMemo } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
-import { ChatInput } from "@web/components/ui/ChatInput";
+import {
+  CHAT_COMPOSER_SELECTOR,
+  ChatInput,
+} from "@web/components/ui/ChatInput";
 import { MODE_CONFIG } from "@web/features/session/chatModeConfig";
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useContentTab } from "@web/features/session/contexts/ContentTabContext";
 import { useChatDraft } from "@web/features/session/hooks/useChatDraft";
 import { useChatMode } from "@web/features/session/hooks/useChatMode";
@@ -22,14 +24,13 @@ import { trpc } from "@web/lib/trpc";
 
 export function ChatComposer() {
   const { t } = useTranslation();
-  const { send, cancel, streamingPhase } = useChatStream();
+  const { send, cancel, streamingPhase, pendingConfirmation } =
+    useChatLifecycle();
   const { openTab } = useContentTab();
   const sessionId = useSessionId();
   const [inputValue, setInputValue] = useChatDraft(sessionId);
   const { mode, toggleMode } = useChatMode();
 
-  const saveDraftMutating =
-    useIsMutating({ mutationKey: getQueryKey(trpc.saveJob.enqueue) }) > 0;
   const cancelDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.cancelDraft) }) > 0;
   const isStreaming = streamingPhase !== "idle";
@@ -39,22 +40,24 @@ export function ChatComposer() {
     enabled: isStreaming,
   });
 
-  const executors: Record<string, () => void> = useMemo(
-    () => ({
-      help: () => openTab("help"),
-    }),
-    [openTab],
-  );
+  useRegisterAction("navigation.focusComposer", {
+    execute: () => {
+      const el = document.querySelector<HTMLTextAreaElement>(
+        CHAT_COMPOSER_SELECTOR,
+      );
+      el?.focus();
+    },
+  });
 
-  const slashCommands = useMemo<SlashCommand[]>(
-    () =>
-      getAllCommandIds().map((id) => ({
-        name: id,
-        descriptionKey: getCommandDef(id).descriptionKey,
-        execute: executors[id],
-      })),
-    [executors],
-  );
+  const executors: Record<string, () => void> = {
+    help: () => openTab("help"),
+  };
+
+  const slashCommands: SlashCommand[] = getAllCommandIds().map((id) => ({
+    name: id,
+    descriptionKey: getCommandDef(id).descriptionKey,
+    execute: executors[id],
+  }));
 
   const {
     showMenu,
@@ -101,7 +104,7 @@ export function ChatComposer() {
         />
       )}
       <p className="px-2 pb-1 text-xs text-fg-tertiary">
-        <span className={MODE_CONFIG[mode].color}>
+        <span className={`font-semibold ${MODE_CONFIG[mode].color}`}>
           {t(MODE_CONFIG[mode].labelKey)}
         </span>{" "}
         {t("session.mode_hint_shortcut")}
@@ -112,7 +115,8 @@ export function ChatComposer() {
         placeholder={t(MODE_CONFIG[mode].placeholderKey)}
         onSubmit={handleSubmit}
         onStop={isStreaming ? cancel : undefined}
-        submitDisabled={saveDraftMutating || cancelDraftMutating}
+        submitDisabled={cancelDraftMutating || !!pendingConfirmation}
+        disabled={!!pendingConfirmation}
         autoFocus
         onKeyDown={handleKeyDown}
         submitIcon={MODE_CONFIG[mode].icon}

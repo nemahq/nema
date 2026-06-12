@@ -36,6 +36,17 @@ If the input doesn't match any synonym, report the unrecognized argument and lis
 | `server`  | `pnpm dev:server` |
 | `prod`    | `pnpm dev:web:prod` |
 
-4. Run the mapped script using the Bash tool with `run_in_background: true`.
-5. Wait 3 seconds, then read the background task output to extract the port/URL (e.g., `localhost:5173`).
-6. Report which dev server was started and the local URL with port.
+4. Before starting, kill any existing process on the target port(s). Do NOT ask the user — just kill it silently.
+
+| Canonical | Port(s) to free |
+|-----------|-----------------|
+| _(none)_  | 5173, 3000      |
+| `web`     | 5173            |
+| `server`  | 3000            |
+| `prod`    | 5173            |
+
+Run `lsof -ti:<port> | xargs kill -9 2>/dev/null` for each port. Ignore errors (no process = nothing to kill).
+
+5. Run the mapped script using the Bash tool with `run_in_background: true`.
+6. Wait 3 seconds, then read the background task output to extract the port/URL (e.g., `localhost:5173`).
+7. Report which dev server was started and the local URL with port.

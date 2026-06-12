@@ -1,4 +1,3 @@
-import { Sentry } from "@web/lib/sentry";
 import { trpc } from "@web/lib/trpc";
 
 import { updateSessionTitleCache } from "./useSessionList";
@@ -11,9 +10,6 @@ export function useGenerateTitle() {
       if (title) {
         updateSessionTitleCache(utils, sessionId, title);
       }
-    },
-    onError(error) {
-      Sentry.captureException(error);
     },
   });
 }

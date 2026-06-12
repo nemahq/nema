@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { SearchResultDocSchema } from "./chat-stream";
+
 export const SessionSummarySchema = z.object({
   id: z.string().uuid(),
   title: z.string().nullable(),
@@ -28,9 +30,20 @@ export const SessionDraftSchema = z.object({
 export type SessionDraft = z.infer<typeof SessionDraftSchema>;
 
 export const SessionRetrievalSchema = z.object({
+  id: z.string().uuid(),
+  sessionId: z.string().uuid(),
+  query: z.string().min(1),
   body: z.string().min(1),
+  documents: z.array(SearchResultDocSchema).default([]),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 export type SessionRetrieval = z.infer<typeof SessionRetrievalSchema>;
+
+export const DeleteRetrievalInputSchema = z.object({
+  retrievalId: z.string().uuid(),
+});
+export type DeleteRetrievalInput = z.infer<typeof DeleteRetrievalInputSchema>;
 
 export const SessionGetInputSchema = z.object({
   sessionId: z.string().uuid(),

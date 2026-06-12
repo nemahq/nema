@@ -1,0 +1,2 @@
+-- list_document_user_ids()는 memories 모델 전환으로 대체됨.
+-- 대체 함수: list_memory_user_ids() — 20260416220615_create_memories_histories_revisions.sql

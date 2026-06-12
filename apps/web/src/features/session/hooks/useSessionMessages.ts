@@ -1,18 +1,24 @@
-import { useMemo } from "react";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
-
-import { useMessageList } from "./useMessageList";
+import { useMessageListSuspenseQuery } from "./useMessageListQuery";
 import { useSessionId } from "./useSessionId";
 
 export function useSessionMessages() {
   const sessionId = useSessionId();
-  const { streamingMessage } = useChatStream();
-  const serverMessages = useMessageList({ sessionId });
+  const { streamingMessage } = useChatLifecycle();
+  const [serverMessages] = useMessageListSuspenseQuery({ sessionId });
 
-  return useMemo(
-    () =>
-      streamingMessage ? [...serverMessages, streamingMessage] : serverMessages,
-    [serverMessages, streamingMessage],
-  );
+  if (!streamingMessage) {
+    return serverMessages;
+  }
+
+  const lastServerMsg = serverMessages.at(-1);
+  const isDuplicate =
+    lastServerMsg &&
+    lastServerMsg.type === streamingMessage.type &&
+    (lastServerMsg.type === "retrieval" ||
+      ("content" in lastServerMsg &&
+        lastServerMsg.content === streamingMessage.content));
+
+  return isDuplicate ? serverMessages : [...serverMessages, streamingMessage];
 }

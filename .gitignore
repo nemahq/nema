@@ -6,10 +6,14 @@ dist/
 .env.local
 .env.*.local
 !apps/server/.env
-!apps/web/.env
+!apps/server/.env.staging
+!apps/server/.env.production
 *.log
 .eslintcache
 .DS_Store
 .claude/settings.local.json
 .claude/worktrees/
 .worktrees/
+
+# Turborepo
+.turbo

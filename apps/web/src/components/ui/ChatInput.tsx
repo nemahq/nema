@@ -12,6 +12,9 @@ import { useTranslation } from "@web/lib/tolgee";
 
 const MAX_TEXTAREA_HEIGHT_PX = 200;
 
+const CHAT_COMPOSER_DATA_ATTR = "data-chat-composer";
+export const CHAT_COMPOSER_SELECTOR = `[${CHAT_COMPOSER_DATA_ATTR}]`;
+
 const ACTION_BUTTON_BASE =
   "self-end rounded-full transition-all duration-normal";
 
@@ -23,6 +26,7 @@ interface ChatInputProps {
   onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
   submitDisabled?: boolean;
+  disabled?: boolean;
   autoFocus?: boolean;
   submitIcon?: ComponentType<{ className?: string }>;
 }
@@ -35,6 +39,7 @@ export function ChatInput({
   onKeyDown,
   placeholder,
   submitDisabled,
+  disabled,
   autoFocus,
   submitIcon: SubmitIcon = ArrowUp,
 }: ChatInputProps) {
@@ -79,13 +84,18 @@ export function ChatInput({
     <div className="flex w-full flex-col gap-2 rounded-2xl border border-border bg-surface-raised p-3 shadow-sm transition-shadow duration-normal focus-within:border-border-strong focus-within:shadow-md dark:bg-surface-raised-hover">
       <textarea
         ref={textareaRef}
+        {...{ [CHAT_COMPOSER_DATA_ATTR]: true }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        disabled={disabled}
         autoFocus={autoFocus}
         rows={1}
-        className="w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-tertiary focus:outline-none [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
+        className={cn(
+          "w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-tertiary focus:outline-none [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]",
+          disabled && "cursor-not-allowed opacity-50",
+        )}
       />
       {isStreaming ? (
         <Button

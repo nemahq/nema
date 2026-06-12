@@ -1,11 +1,15 @@
-import { Suspense, useMemo } from "react";
+import { Suspense } from "react";
 
-import type { DisplayMessage } from "@web/features/session/contexts/ChatStreamContext";
+import type { DisplayMessage } from "@web/features/session/contexts/ChatLifecycleContext";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { USER_TURN_DATA_ROLE } from "@web/features/session/hooks/useScrollAnchor";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 
+import { ActionMessage } from "./ActionMessage";
 import { AssistantMessage } from "./AssistantMessage";
+import { RetrievalMessage } from "./RetrievalMessage";
 import { StatusMessage } from "./StatusMessage";
+import { StreamErrorMessage } from "./StreamErrorMessage";
 import { UserMessage } from "./UserMessage";
 
 function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
@@ -14,6 +18,13 @@ function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
 
   for (const msg of messages) {
     if (msg.type === "draft") {
+      continue;
+    }
+    if (
+      msg.type === "action" &&
+      "payload" in msg &&
+      msg.payload.status === "resolved"
+    ) {
       continue;
     }
     if (msg.role === "user" && currentTurn.length > 0) {
@@ -30,7 +41,8 @@ function groupIntoTurns(messages: DisplayMessage[]): DisplayMessage[][] {
 
 function MessageListContent() {
   const messages = useSessionMessages();
-  const turns = useMemo(() => groupIntoTurns(messages), [messages]);
+  const turns = groupIntoTurns(messages);
+  const { streamingPhase } = useChatLifecycle();
 
   return (
     <>
@@ -59,6 +71,21 @@ function MessageListContent() {
                   </div>
                 );
               }
+              if (msg.type === "action") {
+                return <ActionMessage key={msg.id} message={msg} />;
+              }
+              if (msg.type === "retrieval") {
+                const turnQuery =
+                  turn.find((m) => m.role === "user")?.content ?? "";
+                return (
+                  <RetrievalMessage
+                    key={msg.id}
+                    retrievalId={msg.retrievalId}
+                    content={msg.content}
+                    query={turnQuery}
+                  />
+                );
+              }
               if (msg.type === "status") {
                 return <StatusMessage key={msg.id} message={msg} />;
               }
@@ -70,6 +97,7 @@ function MessageListContent() {
                 />
               );
             })}
+            {isLastTurn && streamingPhase === "text" && <StreamErrorMessage />}
           </div>
         );
       })}

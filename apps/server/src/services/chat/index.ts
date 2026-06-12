@@ -1,5 +1,6 @@
 export {
   cancelDraftAction,
-  dismissRetrievalAction,
+  cancelGenerationAction,
+  confirmDraftIntentStream,
   processChatStream,
 } from "./orchestrator";

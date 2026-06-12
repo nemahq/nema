@@ -11,6 +11,16 @@ export interface LlmCallParams {
   messages: [LlmMessage, ...LlmMessage[]];
   temperature?: number;
   signal?: AbortSignal;
+  /** 추론 모델의 사고 깊이 — 규칙 적용에 가까운 호출(추출 등)은 낮춰 지연·변동을 줄인다 */
+  reasoningEffort?: "minimal" | "low" | "medium" | "high";
+  /**
+   * 시도 단위 타임아웃 — 미지정 시 provider(클라이언트) 기본값.
+   * 주의: SDK가 타임아웃을 자동 재시도하므로(기본 2회) 호출 전체의 상한이 아니다.
+   * 벽시계 상한이 필요하면 maxRetries: 0을 함께 전달할 것.
+   */
+  timeoutMs?: number;
+  /** SDK 자동 재시도 횟수 — 호출자가 자체 재시도를 가지면 0으로 꺼서 주인을 한 층으로 */
+  maxRetries?: number;
 }
 
 export interface GenerateStructuredParams<T> extends LlmCallParams {

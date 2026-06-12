@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Plus } from "@nema-io/weave/icons";
 
 import { Sidebar } from "@web/components/layout/Sidebar";
-import { SidebarActionButton } from "@web/components/layout/SidebarActionButton";
+import { SidebarNavLink } from "@web/components/layout/SidebarNavLink";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -28,17 +28,19 @@ export function SessionSidebar() {
 
   return (
     <Sidebar
-      topSlot={(collapsed) => (
-        <SidebarActionButton
-          collapsed={collapsed}
-          icon={<NewContextIcon />}
-          label={t("session.new_context")}
-          onClick={() => navigate({ to: "/" })}
-        />
-      )}
-      footer={(collapsed) => <UserMenu collapsed={collapsed} />}
+      topSlot={
+        <>
+          <SidebarNavLink
+            icon={<NewContextIcon />}
+            label={t("session.new_context")}
+            to="/"
+            showActive={false}
+          />
+        </>
+      }
+      footer={<UserMenu />}
     >
-      {(collapsed) => !collapsed && <SessionList />}
+      <SessionList />
     </Sidebar>
   );
 }

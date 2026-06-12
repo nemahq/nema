@@ -66,7 +66,7 @@ async function main() {
     try {
       const output = await collectStream(
         provider,
-        buildFirstCallMessage({ userInput: seed.input, contentLanguage: "ko" }),
+        buildFirstCallMessage(seed.input),
       );
 
       results.push({
@@ -105,11 +105,7 @@ async function main() {
     try {
       const output = await collectStream(
         provider,
-        buildEditCycleMessage({
-          previousBody: seed.previousBody,
-          editRequest: seed.editRequest,
-          contentLanguage: "ko",
-        }),
+        buildEditCycleMessage(seed.previousBody, seed.editRequest),
       );
 
       results.push({

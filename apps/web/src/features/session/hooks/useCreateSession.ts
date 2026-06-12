@@ -1,16 +1,17 @@
-import { useTrackEvent } from "@web/hooks/useTrackEvent";
+import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { trpc } from "@web/lib/trpc";
 
-import { clearMessageCache, presetMessageCache } from "./useMessageList";
+import { clearMessageCache, presetMessageCache } from "./useMessageListQuery";
 import { prependSessionCache } from "./useSessionList";
+import { presetSessionCache } from "./useSessionQuery";
 
 export function useCreateSession() {
   const utils = trpc.useUtils();
-  const trackEvent = useTrackEvent();
 
   return trpc.session.create.useMutation({
     onMutate({ sessionId }) {
       presetMessageCache(utils, sessionId);
+      presetSessionCache(utils, sessionId);
     },
     onSuccess(newSession) {
       trackEvent("session.create", newSession.id);

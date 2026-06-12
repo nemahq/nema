@@ -1,9 +1,9 @@
-import { Suspense, useCallback, useRef } from "react";
+import { Suspense, useRef } from "react";
 import { useMatch, useNavigate } from "@tanstack/react-router";
 
 import { Skeleton } from "@nema-io/weave";
 
-import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { useSidebar } from "@web/components/layout/Sidebar";
 import { useSessionList } from "@web/features/session/hooks/useSessionList";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
@@ -26,28 +26,25 @@ function SessionListContent() {
   const { sessions, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useSessionList();
 
-  const navigateSession = useCallback(
-    (direction: -1 | 1) => {
-      if (sessions.length === 0) {
-        return;
-      }
-      const currentIndex = currentSessionId
-        ? sessions.findIndex((s) => s.id === currentSessionId)
-        : -1;
-      const nextIndex =
-        currentIndex === -1
-          ? 0
-          : (currentIndex + direction + sessions.length) % sessions.length;
-      const next = sessions[nextIndex];
-      if (next && next.id !== currentSessionId) {
-        navigate({
-          to: "/session/$sessionId",
-          params: { sessionId: next.id },
-        });
-      }
-    },
-    [sessions, currentSessionId, navigate],
-  );
+  function navigateSession(direction: -1 | 1) {
+    if (sessions.length === 0) {
+      return;
+    }
+    const currentIndex = currentSessionId
+      ? sessions.findIndex((s) => s.id === currentSessionId)
+      : -1;
+    const nextIndex =
+      currentIndex === -1
+        ? 0
+        : (currentIndex + direction + sessions.length) % sessions.length;
+    const next = sessions[nextIndex];
+    if (next && next.id !== currentSessionId) {
+      navigate({
+        to: "/session/$sessionId",
+        params: { sessionId: next.id },
+      });
+    }
+  }
 
   useRegisterAction("navigation.prevSession", {
     execute: () => navigateSession(-1),
@@ -103,11 +100,15 @@ function SessionListContent() {
 }
 
 export function SessionList() {
+  const { collapsed } = useSidebar();
+
+  if (collapsed) {
+    return null;
+  }
+
   return (
-    <ErrorBoundary fallback={null}>
-      <Suspense fallback={<SessionListSkeleton />}>
-        <SessionListContent />
-      </Suspense>
-    </ErrorBoundary>
+    <Suspense fallback={<SessionListSkeleton />}>
+      <SessionListContent />
+    </Suspense>
   );
 }

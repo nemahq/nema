@@ -3,7 +3,13 @@ import { z } from "zod";
 export const MessageRoleSchema = z.enum(["user", "assistant"]);
 export type MessageRole = z.infer<typeof MessageRoleSchema>;
 
-export const MessageTypeSchema = z.enum(["text", "draft", "status"]);
+export const MessageTypeSchema = z.enum([
+  "text",
+  "draft",
+  "status",
+  "action",
+  "retrieval",
+]);
 export type MessageType = z.infer<typeof MessageTypeSchema>;
 
 const STATUS_LOG_TYPE_VALUES = [
@@ -11,7 +17,7 @@ const STATUS_LOG_TYPE_VALUES = [
   "draft_created",
   "draft_edited",
   "draft_cancelled",
-  "draft_saved",
+  "draft_intent_confirmed",
   "retrieval_answered",
 ] as const;
 
@@ -23,9 +29,24 @@ export const STATUS_LOG_TYPES = {
   DRAFT_CREATED: "draft_created",
   DRAFT_EDITED: "draft_edited",
   DRAFT_CANCELLED: "draft_cancelled",
-  DRAFT_SAVED: "draft_saved",
+  DRAFT_INTENT_CONFIRMED: "draft_intent_confirmed",
   RETRIEVAL_ANSWERED: "retrieval_answered",
 } as const satisfies Record<string, StatusLogType>;
+
+export const DraftIntentOptionSchema = z.enum(["append", "replace"]);
+export type DraftIntentOption = z.infer<typeof DraftIntentOptionSchema>;
+
+const DraftIntentConfirmationPayloadSchema = z.object({
+  actionType: z.literal("draft_intent_confirmation"),
+  draftContext: z.string(),
+  status: z.enum(["pending", "resolved"]),
+  selectedOption: DraftIntentOptionSchema.nullable(),
+});
+
+const ActionPayloadSchema = z.discriminatedUnion("actionType", [
+  DraftIntentConfirmationPayloadSchema,
+]);
+export type ActionPayload = z.infer<typeof ActionPayloadSchema>;
 
 const BaseMessageSchema = z.object({
   id: z.string().uuid(),
@@ -33,14 +54,43 @@ const BaseMessageSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
-export const MessageSchema = z.discriminatedUnion("type", [
+// Draft 메시지는 linked/unlinked 상태를 별도 variant로 분리 — linked일 때만 historyId가 존재함을 타입 단에서 보장
+const DraftMessageSchema = z.discriminatedUnion("status", [
+  BaseMessageSchema.extend({
+    type: z.literal("draft"),
+    content: z.string(),
+    status: z.literal("unlinked"),
+  }),
+  BaseMessageSchema.extend({
+    type: z.literal("draft"),
+    content: z.string(),
+    status: z.literal("linked"),
+    historyId: z.string().uuid(),
+  }),
+]);
+
+const NonDraftMessageSchema = z.discriminatedUnion("type", [
   BaseMessageSchema.extend({ type: z.literal("text"), content: z.string() }),
-  BaseMessageSchema.extend({ type: z.literal("draft"), content: z.string() }),
   BaseMessageSchema.extend({
     type: z.literal("status"),
     content: StatusLogTypeSchema,
-    meta: z.record(z.string(), z.string()).optional(),
+    meta: z.object({ titles: z.string() }).optional(),
   }),
+  BaseMessageSchema.extend({
+    type: z.literal("action"),
+    content: z.string(),
+    payload: ActionPayloadSchema,
+  }),
+  BaseMessageSchema.extend({
+    type: z.literal("retrieval"),
+    content: z.string(),
+    retrievalId: z.string().uuid(),
+  }),
+]);
+
+export const MessageSchema = z.union([
+  DraftMessageSchema,
+  NonDraftMessageSchema,
 ]);
 export type Message = z.infer<typeof MessageSchema>;
 

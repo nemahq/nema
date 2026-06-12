@@ -1,14 +1,13 @@
+/* eslint-disable react-compiler/react-compiler -- dev-only 컴포넌트 */
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTheme } from "@web/app/providers/ThemeProvider";
-import { useAuth } from "@web/hooks/useAuth";
+import { useAuth } from "@web/lib/auth";
 import { supabase } from "@web/lib/supabase";
-import { changeLocale } from "@web/lib/tolgee";
-import type { Locale } from "@web/lib/tolgee/types";
+import { changeLocale, type Locale, useCurrentLocale } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
-import { getStorage } from "@web/utils/localStorage";
 import type { ThemePreference } from "@web/utils/theme-preference";
 
 const ReactQueryDevtools = lazy(() =>
@@ -43,7 +42,9 @@ function toggleClass(active: boolean) {
 }
 
 function LlmPresetSection() {
-  const [presetData] = trpc.dev.getModelPreset.useSuspenseQuery();
+  const [presetData] = trpc.dev.getModelPreset.useSuspenseQuery(undefined, {
+    staleTime: Infinity,
+  });
   const utils = trpc.useUtils();
   const presetMutation = trpc.dev.setModelPreset.useMutation({
     onSuccess: (data) => {
@@ -86,15 +87,8 @@ export function DevToolbar() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [locale, setLocale] = useState<Locale>(
-    () => (getStorage("locale") as Locale) ?? "ko",
-  );
   const [queryDevtools, setQueryDevtools] = useState(false);
-
-  function handleLocaleChange(next: Locale) {
-    setLocale(next);
-    changeLocale(next);
-  }
+  const currentLocale = useCurrentLocale();
 
   return (
     <>
@@ -148,8 +142,8 @@ export function DevToolbar() {
                   <button
                     key={l}
                     type="button"
-                    onClick={() => handleLocaleChange(l)}
-                    className={toggleClass(locale === l)}
+                    onClick={() => changeLocale(l)}
+                    className={toggleClass(currentLocale === l)}
                   >
                     {l.toUpperCase()}
                   </button>

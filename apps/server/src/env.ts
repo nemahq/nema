@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { config } from "dotenv";
 import { z } from "zod";
 
-const appEnvValues = ["local", "staging", "production"] as const;
+const appEnvValues = ["staging", "production"] as const;
 
 const envSchema = z
   .object({
@@ -24,10 +24,7 @@ const envSchema = z
 
     QDRANT_URL: z.string().url().optional(),
     QDRANT_API_KEY: z.string().min(1).optional(),
-
-    NEO4J_URI: z.string().min(1),
-    NEO4J_USERNAME: z.string().min(1),
-    NEO4J_PASSWORD: z.string().min(1),
+    QDRANT_COLLECTION: z.string().min(1).default("statements"),
 
     LLM_MODEL_STANDARD: z.string().min(1).optional(),
     LLM_MODEL_MINI: z.string().min(1).optional(),
@@ -48,7 +45,8 @@ const envSchema = z
   .transform((data) => ({
     ...data,
     APP_ENV:
-      data.APP_ENV ?? (data.NODE_ENV === "production" ? "production" : "local"),
+      data.APP_ENV ??
+      (data.NODE_ENV === "production" ? "production" : "staging"),
   }));
 
 type Env = z.infer<typeof envSchema>;
@@ -56,8 +54,10 @@ type Env = z.infer<typeof envSchema>;
 let env: Env;
 
 export function loadEnv(appRoot: string): void {
+  const appEnv = process.env.APP_ENV ?? "staging";
+  config({ path: resolve(appRoot, `.env.${appEnv}`) });
   config({ path: resolve(appRoot, ".env") });
-  config({ path: resolve(homedir(), ".config/nema/server.env") });
+  config({ path: resolve(homedir(), ".config/nema/.env.secret") });
 
   const result = envSchema.safeParse(process.env);
   if (!result.success) {

@@ -2,85 +2,80 @@ import { Suspense } from "react";
 
 import { Button, Kbd } from "@nema-io/weave";
 
-import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
+import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useCancelDraft } from "@web/features/session/hooks/useCancelDraft";
-import { useSaveDraft } from "@web/features/session/hooks/useSaveDraft";
-import { useSessionDraft } from "@web/features/session/hooks/useSessionDraft";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
+import { useSessionSuspenseQuery } from "@web/features/session/hooks/useSessionQuery";
 import { useBufferedStream } from "@web/hooks/useBufferedStream";
-import { formatKeySegments } from "@web/lib/command/shortcut/formatKey";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { StreamErrorMessage } from "./StreamErrorMessage";
 import { WritingCursor } from "./WritingCursor";
 
 function DraftTabContentInner() {
   const { t } = useTranslation();
   const sessionId = useSessionId();
-  const draft = useSessionDraft({ sessionId });
-  const saveDraft = useSaveDraft({ sessionId });
+  const [session] = useSessionSuspenseQuery({ sessionId });
+  const draft = session.draft;
   const cancelDraft = useCancelDraft({ sessionId });
-  const { streamingPhase, streamingDraftText } = useChatStream();
+  const {
+    streamingPhase,
+    streamingDraftText,
+    streamError,
+    pendingConfirmation,
+  } = useChatLifecycle();
 
-  const isStreaming = streamingPhase === "draft";
-  const smoothText = useBufferedStream(isStreaming ? streamingDraftText : "");
-  const body = isStreaming ? smoothText : draft?.body;
+  const isDraftStreaming = streamingPhase === "draft";
+  const smoothText = useBufferedStream(
+    isDraftStreaming ? streamingDraftText : "",
+  );
+  const body = isDraftStreaming ? smoothText : draft?.body;
 
-  const canAct = streamingPhase === "idle" && !!body;
+  const canAct = !isDraftStreaming && !!body && !pendingConfirmation;
 
-  useRegisterAction("draft.save", {
-    execute: () => saveDraft.mutate({ sessionId }),
-    enabled: canAct && !saveDraft.isPending,
-  });
+  // 저장 버튼·단축키는 v1 저장 파이프와 함께 철거 — 넣기 엔진(v2)이 새 저장 흐름을 단다
 
-  useRegisterAction("draft.cancel", {
-    execute: () => cancelDraft.mutate({ sessionId }),
-    enabled: canAct && !cancelDraft.isPending,
-  });
+  const { isShortcutOverridden: isCancelOverridden } = useRegisterAction(
+    "draft.cancel",
+    {
+      execute: () => cancelDraft.mutate({ sessionId }),
+      enabled: canAct && !cancelDraft.isPending,
+    },
+  );
 
   return (
-    <div className="relative">
-      {!isStreaming && body && (
-        <div className="absolute right-0 top-0 flex gap-2">
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() => cancelDraft.mutate({ sessionId })}
-            disabled={cancelDraft.isPending}
-          >
-            {t("common.cancel")}
-            <Kbd>Esc</Kbd>
-          </Button>
-          <Button
-            variant="primary"
-            size="xs"
-            onClick={() => saveDraft.mutate({ sessionId })}
-            disabled={saveDraft.isPending}
-          >
-            {t("session.draft_save")}
-            {formatKeySegments("mod+s").map((key) => (
-              <Kbd key={key}>{key}</Kbd>
-            ))}
-          </Button>
+    <div className="flex items-start gap-2">
+      <div className="min-w-0 flex-1">
+        {body && <MarkdownRenderer content={body} />}
+        {!body && isDraftStreaming && !streamError && <WritingCursor />}
+        {isDraftStreaming && <StreamErrorMessage />}
+      </div>
+
+      {!isDraftStreaming && body && (
+        <div className="sticky top-0 shrink-0">
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => cancelDraft.mutate({ sessionId })}
+              disabled={!canAct || cancelDraft.isPending || isCancelOverridden}
+            >
+              {t("common.cancel")}
+              <Kbd>Esc</Kbd>
+            </Button>
+          </div>
         </div>
       )}
-      <div className="pt-10">
-        {body && <MarkdownRenderer content={body} />}
-        {!body && isStreaming && <WritingCursor />}
-      </div>
     </div>
   );
 }
 
 export function DraftTabContent() {
   return (
-    // TODO: ErrorBoundary에 componentDidCatch (Sentry 보고) + 의미 있는 fallback UI 추가
-    <ErrorBoundary fallback={null}>
-      <Suspense>
-        <DraftTabContentInner />
-      </Suspense>
-    </ErrorBoundary>
+    <Suspense>
+      <DraftTabContentInner />
+    </Suspense>
   );
 }

@@ -21,7 +21,6 @@
     "@trpc/server": "^11.12.0",
     "dotenv": "^17.3.1",
     "fastify": "^5.2.1",
-    "neo4j-driver": "^6.0.1",
     "openai": "^6.25.0",
     "posthog-node": "^5.28.1",
     "voyageai": "^0.1.0",

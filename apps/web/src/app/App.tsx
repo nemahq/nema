@@ -1,9 +1,9 @@
 import { Outlet } from "@tanstack/react-router";
 
 import { DevToolbar } from "@web/app/components/devtools/DevToolbar";
+import { getEnv } from "@web/app/env";
 
-// import.meta.env 직접 접근 — production 빌드에서 tree-shaking 보장
-const SHOW_DEV_TOOLBAR = import.meta.env.VITE_APP_ENV !== "production";
+const SHOW_DEV_TOOLBAR = getEnv().APP_ENV === "local";
 
 export function App() {
   return (

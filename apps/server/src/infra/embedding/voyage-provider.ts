@@ -11,6 +11,7 @@ import { EmbeddingError, VECTOR_DIMENSION } from "./embedding-provider";
 const PROVIDER_ID = "voyage";
 const DEFAULT_MODEL = "voyage-4-large";
 const MAX_BATCH_SIZE = 128;
+const DEFAULT_TIMEOUT_SECONDS = 30;
 
 export interface VoyageProviderConfig extends EmbeddingProviderConfig {
   apiKey: string;
@@ -24,7 +25,7 @@ export function createVoyageProvider(
     apiKey,
     model = DEFAULT_MODEL,
     dimension = VECTOR_DIMENSION,
-    timeoutSeconds = 30,
+    timeoutSeconds = DEFAULT_TIMEOUT_SECONDS,
   } = config;
 
   const client = new VoyageAIClient({ apiKey });

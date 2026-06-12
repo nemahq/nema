@@ -3,7 +3,6 @@ import { TRPCError } from "@trpc/server";
 import type { Locale } from "@nema-io/shared";
 
 import { EmbeddingError } from "./infra/embedding/embedding-provider";
-import { GraphStoreError } from "./infra/graph/graph-store";
 import { t, type TranslationKey } from "./infra/i18n";
 import { LlmError } from "./infra/llm/llm-error";
 import { SupabaseError, type SupabaseErrorCode } from "./infra/supabase-error";
@@ -20,7 +19,6 @@ type DomainErrorCode =
   | "LLM_ERROR"
   | "EMBEDDING_ERROR"
   | "VECTOR_STORE_ERROR"
-  | "GRAPH_STORE_ERROR"
   | "DB_NOT_FOUND"
   | "DB_QUERY_FAILED";
 
@@ -33,7 +31,7 @@ const ERROR_MAP: Record<
     i18nKey: "error.llm_rate_limit",
   },
   LLM_TIMEOUT: { trpcCode: "TIMEOUT", i18nKey: "error.llm_timeout" },
-  LLM_AUTH: { trpcCode: "INTERNAL_SERVER_ERROR", i18nKey: "error.llm_auth" },
+  LLM_AUTH: { trpcCode: "INTERNAL_SERVER_ERROR", i18nKey: "error.default" },
   LLM_BAD_REQUEST: {
     trpcCode: "BAD_REQUEST",
     i18nKey: "error.llm_bad_request",
@@ -44,19 +42,15 @@ const ERROR_MAP: Record<
   },
   LLM_ERROR: {
     trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.llm_default",
+    i18nKey: "error.default",
   },
   EMBEDDING_ERROR: {
     trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.embedding",
+    i18nKey: "error.default",
   },
   VECTOR_STORE_ERROR: {
     trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.vector_store",
-  },
-  GRAPH_STORE_ERROR: {
-    trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.graph_store",
+    i18nKey: "error.default",
   },
   DB_NOT_FOUND: {
     trpcCode: "NOT_FOUND",
@@ -64,7 +58,7 @@ const ERROR_MAP: Record<
   },
   DB_QUERY_FAILED: {
     trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.db_query_failed",
+    i18nKey: "error.default",
   },
 };
 
@@ -91,9 +85,6 @@ export function getDomainCode(cause: unknown): DomainErrorCode | undefined {
   if (cause instanceof VectorStoreError) {
     return "VECTOR_STORE_ERROR";
   }
-  if (cause instanceof GraphStoreError) {
-    return "GRAPH_STORE_ERROR";
-  }
   if (cause instanceof SupabaseError) {
     return SUPABASE_CODE_MAP[cause.code];
   }
@@ -112,7 +103,7 @@ export function mapDomainError(error: unknown, lng: Locale): TRPCError {
   }
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
-    message: t("error.unknown", lng),
+    message: t("error.default", lng),
     cause: error,
   });
 }

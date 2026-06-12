@@ -3,6 +3,8 @@ import type { User } from "@supabase/supabase-js";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
 
+import type { Locale } from "@nema-io/shared";
+
 import { getDomainCode, mapDomainError } from "./error-mapper";
 import { resolveLanguage } from "./infra/i18n";
 import type { Providers } from "./infra/providers";
@@ -99,6 +101,37 @@ export const protectedProcedure = t.procedure
     }
     return next({ ctx: { ...ctx, user: ctx.user, supabase: ctx.supabase } });
   });
+
+/**
+ * Subscription(async generator) 내부 에러를 잡아 i18n 매핑 + 비재시도 코드로 변환.
+ * tRPC의 errorHandlingMiddleware는 generator iteration 중 에러를 못 잡고,
+ * INTERNAL_SERVER_ERROR는 httpSubscriptionLink의 retryableRpcCodes에 포함되어
+ * SSE 자동 재연결 무한 루프를 유발하므로 UNPROCESSABLE_CONTENT로 변환한다.
+ */
+export async function* mapSubscriptionErrors<T>(
+  gen: AsyncGenerator<T>,
+  lng: Locale,
+): AsyncGenerator<T> {
+  try {
+    return yield* gen;
+  } catch (error) {
+    if (error instanceof TRPCError) {
+      throw error;
+    }
+    Sentry.captureException(error, {
+      tags: { domainCode: getDomainCode(error) ?? "UNKNOWN" },
+    });
+    const mapped = mapDomainError(error, lng);
+    throw new TRPCError({
+      code:
+        mapped.code === "INTERNAL_SERVER_ERROR"
+          ? "UNPROCESSABLE_CONTENT"
+          : mapped.code,
+      message: mapped.message,
+      cause: error,
+    });
+  }
+}
 
 export const providerProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (!ctx.providers) {

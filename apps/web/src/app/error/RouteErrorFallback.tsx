@@ -1,25 +1,27 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useRouter } from "@tanstack/react-router";
 
-import { Button } from "@nema-io/weave";
+import { ErrorFallback } from "@web/app/error/ErrorFallback";
 
-import { useTranslation } from "@web/lib/tolgee";
+let lastRetriedError: string | null = null;
 
-export function RouteErrorFallback({ reset }: ErrorComponentProps) {
-  const { t } = useTranslation();
+export function RouteErrorFallback({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
+  const hasRetried = lastRetriedError === error.message;
 
   function handleRetry() {
+    lastRetriedError = error.message;
     reset();
     router.invalidate();
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-      <p className="text-fg-tertiary text-sm">{t("common.unknown_error")}</p>
-      <Button variant="primary" size="sm" onClick={handleRetry}>
-        {t("common.retry")}
-      </Button>
-    </div>
+    <ErrorFallback
+      detail={error?.message}
+      onRetry={hasRetried ? undefined : handleRetry}
+      onRefresh={hasRetried ? () => window.location.reload() : undefined}
+      size="page"
+      className="flex-1"
+    />
   );
 }

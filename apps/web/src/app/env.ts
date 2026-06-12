@@ -13,11 +13,14 @@ function optional(key: string): string | undefined {
 type AppEnv = "local" | "staging" | "production";
 
 function resolveAppEnv(): AppEnv {
-  const raw = optional("VITE_APP_ENV");
-  if (raw === "local" || raw === "staging" || raw === "production") {
-    return raw;
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") {
+    return "local";
   }
-  return import.meta.env.PROD ? "production" : "local";
+  if (host.startsWith("staging.")) {
+    return "staging";
+  }
+  return "production";
 }
 
 const env = {

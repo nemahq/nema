@@ -1,9 +1,10 @@
+export { createQdrantClient } from "./qdrant-client";
 export { createQdrantStore } from "./qdrant-store";
 export type {
-  DocumentPayload,
   SearchOptions,
-  UpsertOptions,
-  VectorSearchResult,
+  StatementPayload,
+  StatementSearchHit,
+  StatementUpsertItem,
   VectorStore,
 } from "./vector-store";
 export { VectorStoreError } from "./vector-store";

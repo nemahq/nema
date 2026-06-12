@@ -20,11 +20,15 @@ function resolveShortcut(shortcut: string): string {
 
 const MODIFIER_KEYS = ["mod", "ctrl", "meta", "shift", "alt"];
 
+interface UseRegisterActionResult {
+  isShortcutOverridden: boolean;
+}
+
 export function useRegisterAction(
   id: ActionId,
   { execute, enabled = true }: UseRegisterActionOptions,
-) {
-  const { register, unregister } = useActionRegistry();
+): UseRegisterActionResult {
+  const { register, unregister, isShortcutOverridden } = useActionRegistry();
   const def = useMemo(() => getActionDef(id), [id]);
 
   const executeRef = useRef(execute);
@@ -45,6 +49,7 @@ export function useRegisterAction(
         labelKey: def.labelKey,
         shortcut: def.shortcut,
         scope: def.scope,
+        priority: def.priority,
         execute: () => executeRef.current(),
       });
 
@@ -54,10 +59,14 @@ export function useRegisterAction(
   );
 
   const hasModifier = MODIFIER_KEYS.some((key) => def.shortcut.includes(key));
+  const overridden = enabled && isShortcutOverridden(id);
 
   useHotkeys(
     resolveShortcut(def.shortcut),
     (e) => {
+      if (isShortcutOverridden(id)) {
+        return;
+      }
       e.preventDefault();
       executeRef.current();
     },
@@ -69,4 +78,6 @@ export function useRegisterAction(
           : false,
     },
   );
+
+  return { isShortcutOverridden: overridden };
 }

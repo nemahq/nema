@@ -1,39 +1,36 @@
 import { Suspense } from "react";
 
-import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
-import { useChatStream } from "@web/features/session/contexts/ChatStreamContext";
 import { useSessionId } from "@web/features/session/hooks/useSessionId";
-import { useSessionRetrieval } from "@web/features/session/hooks/useSessionRetrieval";
-import { useBufferedStream } from "@web/hooks/useBufferedStream";
+import { useSessionSuspenseQuery } from "@web/features/session/hooks/useSessionQuery";
 
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { WritingCursor } from "./WritingCursor";
+import { SearchResultsList } from "./SearchResultsList";
 
-function RetrievalTabContentInner() {
+interface RetrievalTabContentProps {
+  retrievalId: string;
+}
+
+function RetrievalTabContentInner({ retrievalId }: RetrievalTabContentProps) {
   const sessionId = useSessionId();
-  const retrieval = useSessionRetrieval({ sessionId });
-  const { streamingPhase, streamingRetrievalText } = useChatStream();
+  const [session] = useSessionSuspenseQuery({ sessionId });
+  const retrieval = session.retrievals.find((r) => r.id === retrievalId);
 
-  const isStreaming = streamingPhase === "retrieval";
-  const smoothText = useBufferedStream(
-    isStreaming ? streamingRetrievalText : "",
-  );
-  const body = isStreaming ? smoothText : retrieval?.body;
+  if (!retrieval) {
+    return null;
+  }
 
   return (
     <div>
-      {body && <MarkdownRenderer content={body} />}
-      {!body && isStreaming && <WritingCursor />}
+      <SearchResultsList documents={retrieval.documents} />
+      {retrieval.body && <MarkdownRenderer content={retrieval.body} />}
     </div>
   );
 }
 
-export function RetrievalTabContent() {
+export function RetrievalTabContent({ retrievalId }: RetrievalTabContentProps) {
   return (
-    <ErrorBoundary fallback={null}>
-      <Suspense>
-        <RetrievalTabContentInner />
-      </Suspense>
-    </ErrorBoundary>
+    <Suspense>
+      <RetrievalTabContentInner retrievalId={retrievalId} />
+    </Suspense>
   );
 }

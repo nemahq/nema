@@ -1,4 +1,6 @@
-export { ProfileProvider } from "./components/ProfileProvider";
 export { LANGUAGE_LABELS } from "./constants";
-export { useProfile } from "./hooks/useProfile";
+export {
+  useProfileQuery,
+  useProfileSuspenseQuery,
+} from "./hooks/useProfileQuery";
 export { useUpdateProfile } from "./hooks/useUpdateProfile";

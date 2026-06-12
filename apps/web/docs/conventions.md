@@ -43,6 +43,7 @@
 ## Functions
 
 - Separate filtering/transformation logic (pure) from execution (side effects).
+- Extract formatting/transformation logic into named functions when it obscures the surrounding control flow.
 
 ## Naming
 
@@ -61,6 +62,8 @@
 
 ## Data Fetching
 
+- MUST follow rules in `docs/query-conventions.md`.
+
 ### tRPC
 
 - One query or mutation per hook. Do not bundle multiple queries/mutations into a single hook.
@@ -78,6 +81,7 @@
 - Mutation errors: global toast (QueryProvider). Use `onError` only when individual handling is needed.
 - Query errors: handled by route `errorComponent`.
 - ErrorBoundary at route level by default. Component-level only when a failure must not propagate to the entire page.
+- Section background color MUST be on a container outside ErrorBoundary/Suspense. If only the inner content defines it, fallback states lose the background.
 
 ## React
 
@@ -86,6 +90,7 @@
 - `useEffect` is only for external system connections (WebSocket, EventListener) and DOM manipulation.
 - MUST NOT use `useEffect` for: derived state computation, event response logic, effect chaining.
 - One-time impure initializers (e.g., `Math.random()`) MUST use `useState` with an initializer function: `const [x] = useState(() => impureFn())`. `useRef` initializer runs during render and violates purity rules.
+- Prefer derived values over render-phase setState (`if (prop !== prev) setState(...)`). Consider derived computation, `key` prop reset, or state restructuring first. Render-phase setState is a last resort when none of those alternatives apply.
 
 ## Responsive
 

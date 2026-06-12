@@ -1,5 +1,7 @@
 @import "@nema-io/weave/styles";
 @plugin "@tailwindcss/typography";
+@source "../../node_modules/streamdown/dist/*.js";
+@source "../../node_modules/@streamdown/code/dist/*.js";
 
 /* 앱 수준 모드 색상 — weave 팔레트를 앱 도메인 이름으로 매핑 */
 
@@ -15,4 +17,14 @@
 
 @utility nema-logo {
   @apply dark:brightness-0 dark:invert;
+}
+
+html.cursor-col-resize,
+html.cursor-col-resize * {
+  cursor: col-resize !important;
+}
+
+html.cursor-row-resize,
+html.cursor-row-resize * {
+  cursor: row-resize !important;
 }

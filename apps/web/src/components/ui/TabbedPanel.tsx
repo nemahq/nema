@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import { cn } from "@nema-io/weave";
 import { X } from "@nema-io/weave/icons";
@@ -6,24 +6,178 @@ import { X } from "@nema-io/weave/icons";
 import type { TranslationKey } from "@web/lib/tolgee";
 import { useTranslation } from "@web/lib/tolgee";
 
-export interface TabbedPanelTab {
+import { NemaMarkIcon } from "./NemaMarkIcon";
+import { TabbedPanelLayout } from "./TabbedPanelLayout";
+
+type TabBase = {
   id: string;
-  labelKey: TranslationKey;
-  icon: ComponentType<{ className?: string }>;
   content: ReactNode;
   onClose?: () => void;
-}
+};
+
+export type TabbedPanelTab = TabBase &
+  ({ labelKey: TranslationKey } | { label: string });
 
 interface TabbedPanelProps {
   tabs: TabbedPanelTab[];
   activeTabId: string;
   onActiveTabChange: (tabId: string) => void;
+  focused?: boolean;
+  onTabDragStart?: (tabId: string, e: React.DragEvent) => void;
+  onTabDragOver?: (e: React.DragEvent) => void;
+  onTabDrop?: (e: React.DragEvent, dropTargetTabId: string) => void;
+}
+
+function resolveLabel(
+  tab: TabbedPanelTab,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  return "label" in tab ? tab.label : t(tab.labelKey);
+}
+
+function tabTextStyle(isActive: boolean, focused?: boolean): string {
+  if (isActive) {
+    return focused === false ? "text-fg-tertiary" : "text-fg-primary";
+  }
+  return focused === false
+    ? "text-fg-tertiary/60 hover:text-fg-tertiary"
+    : "text-fg-tertiary hover:text-fg-secondary";
+}
+
+type DropSide = "left" | "right" | null;
+
+interface DraggableTabProps {
+  tab: TabbedPanelTab;
+  isActive: boolean;
+  isFirst: boolean;
+  focused?: boolean;
+  draggable: boolean;
+  label: string;
+  onActiveTabChange: (tabId: string) => void;
+  onTabDragStart?: (tabId: string, e: React.DragEvent) => void;
+  onTabDrop?: (e: React.DragEvent, dropTargetTabId: string) => void;
+  onTabClose: (e: React.MouseEvent, tab: TabbedPanelTab) => void;
+  closeLabel: string;
+}
+
+function DraggableTab({
+  tab,
+  isActive,
+  isFirst,
+  focused,
+  draggable,
+  label,
+  onActiveTabChange,
+  onTabDragStart,
+  onTabDrop,
+  onTabClose,
+  closeLabel,
+}: DraggableTabProps) {
+  const [dropSide, setDropSide] = useState<DropSide>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const dragEnterCount = useRef(0);
+
+  function handleDragOver(e: React.DragEvent) {
+    if (!onTabDrop) {
+      return;
+    }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) {
+      return;
+    }
+    const relX = (e.clientX - rect.left) / rect.width;
+    setDropSide(relX < 0.5 ? "left" : "right");
+  }
+
+  function handleDragEnter() {
+    dragEnterCount.current += 1;
+  }
+
+  function handleDragLeave() {
+    dragEnterCount.current -= 1;
+    if (dragEnterCount.current <= 0) {
+      dragEnterCount.current = 0;
+      setDropSide(null);
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.stopPropagation();
+    dragEnterCount.current = 0;
+    setDropSide(null);
+    onTabDrop?.(e, tab.id);
+  }
+
+  function handleDragEnd() {
+    dragEnterCount.current = 0;
+    setDropSide(null);
+  }
+
+  return (
+    <div
+      ref={ref}
+      key={tab.id}
+      className={cn(
+        "group -mb-px flex items-center",
+        isActive
+          ? cn(
+              "border-r border-t-2 border-r-border bg-surface-card",
+              focused === false
+                ? "border-t-border"
+                : "border-t-amber-600 dark:border-t-amber-500",
+              !isFirst && "border-l border-l-border",
+            )
+          : "border border-transparent border-r-border/30",
+        dropSide === "left" && "border-l-2 border-l-brand",
+        dropSide === "right" && "border-r-2 border-r-brand",
+      )}
+      draggable={draggable}
+      onDragStart={(e) => onTabDragStart?.(tab.id, e)}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onDragEnd={handleDragEnd}
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={isActive}
+        aria-controls={`panel-${tab.id}`}
+        onClick={() => onActiveTabChange(tab.id)}
+        className={cn(
+          "flex items-center gap-1 py-2 pl-3",
+          tab.onClose ? "pr-1" : "pr-3",
+          "text-sm font-medium",
+          tabTextStyle(isActive, focused),
+        )}
+      >
+        {label}
+      </button>
+      {tab.onClose && (
+        <button
+          type="button"
+          onClick={(e) => onTabClose(e, tab)}
+          className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
+          aria-label={closeLabel}
+        >
+          <X className="size-3" />
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function TabbedPanel({
   tabs,
   activeTabId,
   onActiveTabChange,
+  focused,
+  onTabDragStart,
+  onTabDragOver,
+  onTabDrop,
 }: TabbedPanelProps) {
   const { t } = useTranslation();
 
@@ -36,79 +190,45 @@ export function TabbedPanel({
   }
 
   return (
-    <main className="flex flex-1 flex-col bg-surface-card min-w-0">
+    <TabbedPanelLayout
+      header={
+        tabs.length > 0
+          ? tabs.map((tab, i) => (
+              <DraggableTab
+                key={tab.id}
+                tab={tab}
+                isActive={resolvedTab === tab.id}
+                isFirst={i === 0}
+                focused={focused}
+                draggable={!!onTabDragStart}
+                label={resolveLabel(tab, t)}
+                onActiveTabChange={onActiveTabChange}
+                onTabDragStart={onTabDragStart}
+                onTabDrop={onTabDrop}
+                onTabClose={handleTabClose}
+                closeLabel={t("session.draft_tab_close", {
+                  label: resolveLabel(tab, t),
+                })}
+              />
+            ))
+          : null
+      }
+      onHeaderDragOver={onTabDragOver}
+    >
       {tabs.length > 0 ? (
-        <>
-          <div
-            role="tablist"
-            className="relative flex items-end border-b border-border/50"
-          >
-            {tabs.map((tab, i) => {
-              const isActive = resolvedTab === tab.id;
-              const isFirst = i === 0;
-
-              return (
-                <div
-                  key={tab.id}
-                  className={cn(
-                    "group -mb-px flex items-center",
-                    isActive
-                      ? cn(
-                          "border-r border-t-2 border-t-amber-600 border-r-border bg-surface-card dark:border-t-amber-500",
-                          !isFirst && "border-l border-l-border",
-                        )
-                      : "border border-transparent",
-                  )}
-                >
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={isActive}
-                    aria-controls={`panel-${tab.id}`}
-                    onClick={() => onActiveTabChange(tab.id)}
-                    className={cn(
-                      "flex items-center gap-1 py-2 pl-3",
-                      tab.onClose ? "pr-1" : "pr-3",
-                      "text-sm font-medium transition-colors",
-                      isActive
-                        ? "text-fg-primary"
-                        : "text-fg-tertiary hover:text-fg-secondary",
-                    )}
-                  >
-                    <tab.icon className="size-3.5" />
-                    {t(tab.labelKey)}
-                  </button>
-                  {tab.onClose && (
-                    <button
-                      type="button"
-                      onClick={(e) => handleTabClose(e, tab)}
-                      className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
-                      aria-label={t("session.draft_tab_close", {
-                        label: t(tab.labelKey),
-                      })}
-                    >
-                      <X className="size-3" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <div
-            role="tabpanel"
-            id={`panel-${resolvedTab}`}
-            className="flex-1 overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
-          >
-            {activeTabData?.content}
-          </div>
-        </>
+        <div role="tabpanel" id={`panel-${resolvedTab}`}>
+          {activeTabData?.content}
+        </div>
       ) : (
-        <div className="flex flex-1 items-center justify-center text-fg-quaternary">
-          {/* TODO: 로고 에셋으로 교체 */}
-          <span className="text-lg font-semibold">Logo</span>
+        <div className="flex flex-1 items-center justify-center">
+          <NemaMarkIcon
+            width={140}
+            height={171}
+            fill="currentColor"
+            className="opacity-[0.06] dark:opacity-[0.08]"
+          />
         </div>
       )}
-    </main>
+    </TabbedPanelLayout>
   );
 }

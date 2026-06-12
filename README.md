@@ -1,16 +1,37 @@
-# Nema
+<p align="center">
+  <img src="apps/web/src/assets/nema-logo.svg" alt="Nema" height="32" />
+</p>
 
-AI-powered context management web app.
+<p align="center">
+  <b>맥락을 구조화하고, 쓸수록 판단이 선명해지는 지식 시스템</b><br>
+  <sub><em>A knowledge system that structures your context and sharpens your judgment over time.</em></sub>
+</p>
 
-## Tech Stack
 
-- **Monorepo**: Turborepo + pnpm
-- **Frontend**: React 19, Vite 6, TanStack Router/Query, Tailwind CSS 4
-- **Backend**: Fastify 5, tRPC 11
-- **Database**: Supabase (PostgreSQL + Auth)
-- **Vector DB**: Qdrant
-- **Graph DB**: Neo4j
-- **LLM/Embedding**: OpenAI, Voyage AI
+## Stack
+
+| | |
+|---|---|
+| Monorepo | Turborepo + pnpm |
+| Frontend | React 19, Vite 6, TanStack Router/Query, Tailwind CSS 4 |
+| Backend | Fastify 5, tRPC 11 |
+| Database | Supabase (PostgreSQL + Auth) |
+| Vector DB | Qdrant |
+| Graph DB | Neo4j |
+| LLM / Embedding | OpenAI, Voyage AI |
+
+
+## 프로젝트 구조
+
+```
+apps/
+├── server/       # Fastify + tRPC 백엔드
+└── web/          # React + Vite 프론트엔드
+packages/
+├── shared/       # 공유 스키마, 타입
+└── weave/        # UI 컴포넌트, 디자인 토큰
+```
+
 
 ## 시작하기
 
@@ -58,6 +79,7 @@ pnpm dev          # 웹 + 서버 (local API)
 - 웹: http://localhost:5173
 - 서버: http://localhost:3001
 
+
 ## DB 마이그레이션
 
 마이그레이션 파일을 추가하거나 수정한 경우 타입을 재생성해야 합니다.
@@ -69,30 +91,21 @@ colima start
 
 # 마이그레이션 적용 + 타입 생성
 supabase start -x vector,imgproxy,edge-runtime,logflare,studio
-supabase gen types --lang=typescript --local > apps/server/src/infra/database.types.ts
+supabase gen types typescript --linked > apps/server/src/infra/database.types.ts
 supabase stop
 ```
 
 생성된 `database.types.ts`를 마이그레이션과 함께 커밋합니다. CI에서 드리프트 감지가 동작하므로 타입이 최신이 아니면 머지가 차단됩니다.
 
-## 프로젝트 구조
-
-```
-apps/
-├── server/       # Fastify + tRPC 백엔드
-└── web/          # React + Vite 프론트엔드
-packages/
-└── shared/       # 공유 스키마, 타입
-```
 
 ## 스크립트
 
 | 명령어 | 설명 |
 | --- | --- |
 | `pnpm dev` | 웹 + 서버 (local API) |
-| `pnpm dev:web` | 웹만 (prod API) |
+| `pnpm dev:web` | 웹만 (staging API) |
+| `pnpm dev:web:prod` | 웹만 (prod API) |
 | `pnpm dev:server` | 서버만 |
-| `pnpm dev:prod` | 웹 + 서버 (prod API) |
 | `pnpm build` | 프로덕션 빌드 |
 | `pnpm typecheck` | 타입 체크 |
 | `pnpm lint` | ESLint 실행 |

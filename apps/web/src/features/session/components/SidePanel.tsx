@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const DEFAULT_WIDTH = 480;
 const MIN_WIDTH = 280;
@@ -18,47 +18,43 @@ export function SidePanel({ children }: SidePanelProps) {
     return () => cleanupRef.current?.();
   }, []);
 
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      dragging.current = true;
-      const startX = e.clientX;
-      const startWidth = width;
-      const maxWidth = window.innerWidth * MAX_WIDTH_RATIO;
+  function handleResizeStart(e: React.MouseEvent) {
+    e.preventDefault();
+    dragging.current = true;
+    const startX = e.clientX;
+    const startWidth = width;
+    const maxWidth = window.innerWidth * MAX_WIDTH_RATIO;
 
-      function onMouseMove(ev: MouseEvent) {
-        if (!dragging.current) {
-          return;
-        }
-        const delta = startX - ev.clientX;
-        const next = Math.min(
-          maxWidth,
-          Math.max(MIN_WIDTH, startWidth + delta),
-        );
-        setWidth(next);
+    function onMouseMove(ev: MouseEvent) {
+      if (!dragging.current) {
+        return;
       }
+      const delta = startX - ev.clientX;
+      const next = Math.min(maxWidth, Math.max(MIN_WIDTH, startWidth + delta));
+      setWidth(next);
+    }
 
-      function cleanup() {
-        dragging.current = false;
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-        cleanupRef.current = null;
-      }
+    function cleanup() {
+      dragging.current = false;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.documentElement.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.documentElement.classList.remove("cursor-col-resize");
+      cleanupRef.current = null;
+    }
 
-      function onMouseUp() {
-        cleanup();
-      }
+    function onMouseUp() {
+      cleanup();
+    }
 
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-      document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
-      cleanupRef.current = cleanup;
-    },
-    [width],
-  );
+    document.documentElement.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.documentElement.classList.add("cursor-col-resize");
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    cleanupRef.current = cleanup;
+  }
 
   return (
     <aside

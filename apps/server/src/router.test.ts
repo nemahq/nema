@@ -30,8 +30,11 @@ describe("appRouter", () => {
     });
 
     await expect(
-      authedCaller.saveJob.enqueue({
+      authedCaller.message.confirmDraftIntent({
         sessionId: "00000000-0000-0000-0000-000000000000",
+        actionMessageId: "00000000-0000-0000-0000-000000000001",
+        intent: "replace",
+        draftContext: "context",
       }),
     ).rejects.toThrow(expect.objectContaining({ code: "PRECONDITION_FAILED" }));
   });

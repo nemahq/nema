@@ -1,8 +1,8 @@
-import { memo, useState } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 
-import { useTrackEvent } from "@web/hooks/useTrackEvent";
 import { useTypewriter } from "@web/hooks/useTypewriter";
+import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { RenameInput } from "./RenameInput";
@@ -13,12 +13,8 @@ interface SessionItemProps {
   title: string | null;
 }
 
-export const SessionItem = memo(function SessionItem({
-  sessionId,
-  title: rawTitle,
-}: SessionItemProps) {
+export function SessionItem({ sessionId, title: rawTitle }: SessionItemProps) {
   const { t } = useTranslation();
-  const trackEvent = useTrackEvent();
   const animatedTitle = useTypewriter(rawTitle);
   const title = animatedTitle || t("session.untitled");
 
@@ -57,4 +53,4 @@ export const SessionItem = memo(function SessionItem({
       />
     </div>
   );
-});
+}

@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | grep -q 'git push' && echo '{\"systemMessage\":\"⚠️  push 전 체크: /create-pr 스킬로 품질 게이트 + PR 생성을 한 번에 실행할 수 있습니다.\"}' || true"
+          }
+        ]
+      }
+    ]
+  }
+}
