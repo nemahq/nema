@@ -14,10 +14,6 @@ import type {
 } from "./vector-store";
 import { VectorStoreError } from "./vector-store";
 
-// v1 문서·entity 컬렉션 — 합성 문서 모델 폐기로 데이터째 폐기.
-// 문서 컬렉션 이름은 환경마다 달랐다: prod는 기본값 documents, staging은 documents-staging.
-const LEGACY_COLLECTIONS = ["documents", "documents-staging", "entities"];
-
 export function createQdrantStore(client: QdrantClient): VectorStore {
   const { QDRANT_COLLECTION } = getEnv();
 
@@ -66,29 +62,6 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
           error,
         );
       }
-    },
-
-    async dropLegacyCollections(): Promise<string[]> {
-      const dropped: string[] = [];
-      for (const name of LEGACY_COLLECTIONS) {
-        if (name === QDRANT_COLLECTION) {
-          continue;
-        }
-        try {
-          const { exists } = await client.collectionExists(name);
-          if (exists) {
-            await client.deleteCollection(name);
-            dropped.push(name);
-          }
-        } catch (error) {
-          throw new VectorStoreError(
-            `Failed to drop legacy collection ${name}: ${error instanceof Error ? error.message : String(error)}`,
-            "dropLegacyCollections",
-            error,
-          );
-        }
-      }
-      return dropped;
     },
 
     async upsertStatements(

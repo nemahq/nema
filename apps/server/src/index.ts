@@ -73,20 +73,6 @@ async function bootstrap() {
     await vectorStore.ensureCollection();
     server.log.info("Qdrant statement collection ready");
 
-    // v1 컬렉션(documents·entities)은 합성 문서 모델과 함께 데이터째 폐기.
-    // 일회성 청소라 실패가 서버를 죽일 이유는 없다 — 경고만 남기고 계속 서빙.
-    try {
-      const dropped = await vectorStore.dropLegacyCollections();
-      if (dropped.length > 0) {
-        server.log.info(
-          `Dropped legacy Qdrant collections: ${dropped.join(", ")}`,
-        );
-      }
-    } catch (err) {
-      server.log.error(`Legacy Qdrant collection cleanup failed: ${err}`);
-      Sentry.captureException(err, { level: "warning" });
-    }
-
     const { createVoyageProvider } = await import("./infra/embedding");
     const { getProviders } = await import("./infra/providers");
 

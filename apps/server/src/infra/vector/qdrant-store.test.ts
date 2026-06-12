@@ -55,18 +55,6 @@ describe("createQdrantStore", () => {
     vi.clearAllMocks();
   });
 
-  it("dropLegacyCollections — 현재 설정된 컬렉션과 이름이 겹치면 지우지 않는다", async () => {
-    const client = mockClient();
-    const store = createQdrantStore(client);
-
-    const dropped = await store.dropLegacyCollections();
-
-    // 현재 컬렉션(documents)은 레거시 목록에 있어도 보호, 나머지만 삭제
-    expect(dropped).toEqual(["documents-staging", "entities"]);
-    const deletedNames = client.deleteCollection.mock.calls.map(([n]) => n);
-    expect(deletedNames).not.toContain("documents");
-  });
-
   it("upsertStatements — 임베딩 개수가 어긋나면 upsert 없이 거부한다", async () => {
     const client = mockClient();
     const store = createQdrantStore(client);
