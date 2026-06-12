@@ -40,12 +40,12 @@
 - 같은 글 안에서도 관계가 생긴다 — 결정과 근거가 한 글에 같이 오는 게 가장 흔한 모양("출시가 급했다. 그래서 토스를 택했다").
 - LLM이 글의 진술 묶음을 통째로 보면 "이 글이 무슨 얘기인지" 맥락 안에서 판단한다. 낱개 검사는 그 맥락을 버린다.
 
-**같은 글 안 관계도 ③단계가 전담한다 — 추출 콜은 안 건드린다.** 추출이 글 안 관계를 달고 ③이 글 밖 관계를 달면 같은 판단이 프롬프트 두 곳으로 갈라져, 기준 수정·평가가 두 벌이 된다. 절단 품질이 첫 출시 품질을 좌우하는 가장 큰 변수(ingestion-design)라 추출 콜에 책임을 더 얹지 않는 이유도 있다. "쪼개는 순간이 관계를 가장 잘 안다"는 장점은 ③이 같은 글의 배치를 통째로 받으므로 거의 보존된다.
+**같은 글 안 관계도 ③단계가 전담한다 — 추출 콜은 안 건드린다.** 추출이 글 안 관계를 달고 ③이 글 밖 관계를 달면 같은 판단이 프롬프트 두 곳으로 갈라져, 기준 수정·평가가 두 벌이 된다. 절단 품질이 첫 출시 품질을 좌우하는 가장 큰 미정 항목(09)이라 추출 콜에 책임을 더 얹지 않는 이유도 있다. "쪼개는 순간이 관계를 가장 잘 안다"는 장점은 ③이 같은 글의 배치를 통째로 받으므로 거의 보존된다.
 
 **엔진의 행동반경은 space 한 칸이다.** 후보 검색을 새 진술의 space로 한정하면 자연히 보장되므로 별도 검증 로직이 없다.
 
 - space 안에서는 **작성자 무관**하게 잇는다 — 한 space는 함께 쌓는 맥락 한 칸(10)이라, 내 새 정보가 동료의 지난 결정과 부딪히면 드러나는 게 제품의 약속이다.
-- space 사이는 엔진이 넘지 않는다. 엔진이 경계를 넘는 순간 "어디에 적으면 누구에게 보이나"의 약속이 깨진다. cross-space 관계의 1차 주인은 사람의 의식적 행위(다른 space의 공개 진술에 직접 반박을 닮 — 스키마가 same-space 제약을 안 둔 이유)이고, 엔진의 cross-space 확장은 협업 권한 설계의 몫.
+- space 사이는 엔진이 넘지 않는다. 엔진이 경계를 넘는 순간 "어디에 적으면 누구에게 보이나"의 약속이 깨진다. cross-space 관계의 1차 주인은 사람의 의식적 행위(다른 space의 진술에 직접 반박을 닮 — 스키마가 same-space 제약을 안 둔 이유)이고, 엔진의 cross-space 확장은 협업 권한 설계의 몫.
 - 따라서 `statement_relations`에 same-space 제약은 **추가하지 않는다**(사람의 자리 보존). 좁히는 건 엔진의 검색 범위뿐.
 
 ## 3. 방아쇠와 상태 — 원본에 세 번째 상태 컬럼
@@ -108,7 +108,7 @@ sources.linking_status       — 잇기 됐나     (③, 원본별 — 신규)
 
 ## 6. 변경셋 — `relation` type 신설, 운명이 같은 것끼리 묶기
 
-**changeset type에 flat 값 `relation`을 추가한다.** 엔진의 관계 변경은 `ingestion`에 못 탄다 — ① ingestion 변경셋은 추출 직후 `applied`로 닫히는데 관계는 임베딩 뒤에 나오고(시점), ② ingestion은 "사람 주도 = 즉시 applied"인데 관계는 pending이 있고(게이트), ③ ingestion의 author는 제출자인데 관계는 엔진 산물이라 author가 없어야 한다(주체). 셋 다 "관계 감지는 저장이 방아쇠일 뿐 다른 종류의 변경"이라는 신호다. 07이 stale 재평가에 `recheck`를 별도 flat 값으로 둔 것과 같은 결.
+**changeset type에 flat 값 `relation`을 추가한다.** 엔진의 관계 변경은 `ingestion`에 못 탄다 — ① ingestion 변경셋은 추출 직후 `applied`로 닫히는데 관계는 임베딩 뒤에 나오고(시점), ② ingestion은 "사람 주도 = 즉시 applied"인데 관계는 pending이 있고(게이트), ③ ingestion의 author는 제출자인데 관계는 엔진 산물이라 author가 없어야 한다(주체). 셋 다 "관계 감지는 저장이 방아쇠일 뿐 다른 종류의 변경"이라는 신호다. 07이 stale 재평가에 `recheck`를 별도 flat 값으로 두기로 한 것과 같은 결.
 
 | type | 역할 | 주체 / status |
 | --- | --- | --- |
@@ -162,7 +162,7 @@ schema-design이 "관계 엔진과 함께 후속"으로 넘긴 결정을 여기�
 | --- | --- |
 | 마이그레이션 | `sources.linking_status`(+재시도 컬럼), `changeset_type`에 `relation` + `chk_changeset_shape` 수정, 연쇄 archive 트리거, `(from_id, to_id, type)` unique |
 | RPC | `fetch_pending_linking_sources` / `apply_relation_changesets`(적용+완료 한 트랜잭션) / `increment_source_linking_retry` / `retry_source_linking` — 추출 RPC 4종과 대칭 |
-| 워커 | `infra/statement-sync`에 ③단계 — 후보 검색(Qdrant) + LLM 판단 + 게이트 |
+| 워커 | `infra/statement-sync`에 ③단계 — 후보 검색(Qdrant) + LLM 판단 + 게이트. ingestion-design 6장의 사이클(①→② 반복)에 세 번째 순환으로 끼어 ①②③ 셋 다 빌 때까지 반복 |
 | 프롬프트 | 관계 판단(4종 + 이진 확신, 교대/경합 기준 — 5장이 뼈대) |
 | 꺼내기 | 표식 조회 + 응답 필드 3종 |
 | 문서 | `docs/guides/glossary.md`에 "잇기(관계 검사) = linking" 추가 |
