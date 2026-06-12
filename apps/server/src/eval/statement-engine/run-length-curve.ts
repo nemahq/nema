@@ -50,6 +50,9 @@ const RUNS_PER_SEED = 3;
 const CONCURRENCY = 3;
 /** 제품(60초)보다 길게 풀어 실제 소요를 본다 — 곡선의 목적은 통과/실패가 아니라 모양 */
 const CURVE_TIMEOUT_MS = 180_000;
+/** 콘솔 요약의 칼럼 폭 (시드 id / 토큰 수) */
+const SEED_ID_COL_WIDTH = 24;
+const TOKEN_COL_WIDTH = 5;
 
 interface CurveRun {
   runIndex: number;
@@ -118,8 +121,8 @@ function summarize(point: CurvePoint): string {
   const over = point.runs.filter((r) => r.exceedsProductTimeout).length;
   const errors = point.runs.length - ok.length;
   return [
-    point.seedId.padEnd(24),
-    String(point.inputTokens).padStart(5) + " tok",
+    point.seedId.padEnd(SEED_ID_COL_WIDTH),
+    String(point.inputTokens).padStart(TOKEN_COL_WIDTH) + " tok",
     "지연 " + latencies.join(" "),
     "진술 " + (counts || "-"),
     over > 0 ? `60초 초과 ${over}/${point.runs.length}` : "60초 이내",
