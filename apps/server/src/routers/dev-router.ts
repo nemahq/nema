@@ -7,7 +7,7 @@ import {
   type LlmPreset,
   setLlmPreset,
 } from "@server/infra/providers";
-import { publicProcedure, router } from "@server/trpc";
+import { protectedProcedure, router } from "@server/trpc";
 
 const llmPresetSchema = z.enum([
   "all-nano",
@@ -21,11 +21,11 @@ function assertDev(): void {
 }
 
 export const devRouter = router({
-  getModelPreset: publicProcedure.query(() => {
+  getModelPreset: protectedProcedure.query(() => {
     assertDev();
     return getLlmPreset();
   }),
-  setModelPreset: publicProcedure
+  setModelPreset: protectedProcedure
     .input(z.object({ preset: llmPresetSchema }))
     .mutation(({ input }) => {
       assertDev();
