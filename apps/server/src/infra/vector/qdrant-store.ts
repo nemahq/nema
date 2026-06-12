@@ -6,24 +6,26 @@ import {
 
 import type { QdrantClient } from "./qdrant-client";
 import type {
-  DocumentPayload,
   SearchOptions,
-  UpsertOptions,
-  VectorSearchResult,
+  StatementPayload,
+  StatementSearchHit,
+  StatementUpsertItem,
   VectorStore,
 } from "./vector-store";
 import { VectorStoreError } from "./vector-store";
+
+// v1 문서·entity 컬렉션 — 합성 문서 모델 폐기로 데이터째 폐기.
+// 문서 컬렉션 이름은 환경마다 달랐다: prod는 기본값 documents, staging은 documents-staging.
+const LEGACY_COLLECTIONS = ["documents", "documents-staging", "entities"];
 
 export function createQdrantStore(client: QdrantClient): VectorStore {
   const { QDRANT_COLLECTION } = getEnv();
 
   async function ensurePayloadIndexes(): Promise<void> {
+    // 검색 격리 필터는 space_id 하나 (schema-design 5.3).
+    // statement_id는 point id라 별도 인덱스 불요.
     await client.createPayloadIndex(QDRANT_COLLECTION, {
-      field_name: "user_id",
-      field_schema: "keyword",
-    });
-    await client.createPayloadIndex(QDRANT_COLLECTION, {
-      field_name: "doc_id",
+      field_name: "space_id",
       field_schema: "keyword",
     });
   }
@@ -32,7 +34,6 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
     async ensureCollection(): Promise<void> {
       try {
         const { exists } = await client.collectionExists(QDRANT_COLLECTION);
-        // 기존 컬렉션은 quantization_config가 적용되지 않음 — recreateCollection API로 별도 마이그레이션 필요
         if (!exists) {
           try {
             await client.createCollection(QDRANT_COLLECTION, {
@@ -67,69 +68,82 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
       }
     },
 
-    async upsert(
-      provider: EmbeddingProvider,
-      options: UpsertOptions,
-    ): Promise<string[]> {
-      const { docId, userId, chunks, tags, summary } = options;
+    async dropLegacyCollections(): Promise<string[]> {
+      const dropped: string[] = [];
+      for (const name of LEGACY_COLLECTIONS) {
+        if (name === QDRANT_COLLECTION) {
+          continue;
+        }
+        try {
+          const { exists } = await client.collectionExists(name);
+          if (exists) {
+            await client.deleteCollection(name);
+            dropped.push(name);
+          }
+        } catch (error) {
+          throw new VectorStoreError(
+            `Failed to drop legacy collection ${name}: ${error instanceof Error ? error.message : String(error)}`,
+            "dropLegacyCollections",
+            error,
+          );
+        }
+      }
+      return dropped;
+    },
 
-      if (chunks.length === 0) {
-        return [];
+    async upsertStatements(
+      provider: EmbeddingProvider,
+      statements: StatementUpsertItem[],
+    ): Promise<void> {
+      if (statements.length === 0) {
+        return;
       }
 
       if (provider.dimension !== VECTOR_DIMENSION) {
         throw new VectorStoreError(
           `Provider dimension ${provider.dimension} does not match collection vector size ${VECTOR_DIMENSION}`,
-          "upsert",
+          "upsertStatements",
         );
       }
 
       try {
-        const result = await provider.embed(chunks, "document");
+        const result = await provider.embed(
+          statements.map((s) => s.content),
+          "document",
+        );
 
-        if (result.embeddings.length !== chunks.length) {
+        if (result.embeddings.length !== statements.length) {
           throw new VectorStoreError(
-            `Embedding count mismatch: expected ${chunks.length}, got ${result.embeddings.length}`,
-            "upsert",
+            `Embedding count mismatch: expected ${statements.length}, got ${result.embeddings.length}`,
+            "upsertStatements",
           );
         }
 
-        const now = new Date().toISOString();
-        const ids: string[] = [];
-
-        const points = result.embeddings.map((vector, index) => {
-          const id = crypto.randomUUID();
-          ids.push(id);
-          const payload: DocumentPayload = {
-            doc_id: docId,
-            user_id: userId,
-            chunk_index: index,
-            text: chunks[index],
-            tags,
-            summary,
+        const points = statements.map((statement, index) => {
+          const payload: StatementPayload = {
+            statement_id: statement.statementId,
+            space_id: statement.spaceId,
+            content: statement.content,
+            type: statement.type,
+            confidence: statement.confidence,
+            created_at: statement.createdAt,
             embedding_model: `${provider.providerId}/${provider.model}`,
-            created_at: now,
           };
           return {
-            id,
-            vector,
+            id: statement.statementId,
+            vector: result.embeddings[index],
             payload: payload as unknown as Record<string, unknown>,
           };
         });
 
-        await client.upsert(QDRANT_COLLECTION, {
-          wait: true,
-          points,
-        });
-
-        return ids;
+        await client.upsert(QDRANT_COLLECTION, { wait: true, points });
       } catch (error) {
         if (error instanceof VectorStoreError) {
           throw error;
         }
         throw new VectorStoreError(
           `Upsert failed: ${error instanceof Error ? error.message : String(error)}`,
-          "upsert",
+          "upsertStatements",
           error,
         );
       }
@@ -138,14 +152,18 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
     async search(
       provider: EmbeddingProvider,
       options: SearchOptions,
-    ): Promise<VectorSearchResult[]> {
-      const { userId, query, limit = 10, scoreThreshold } = options;
+    ): Promise<StatementSearchHit[]> {
+      const { spaceIds, query, limit, scoreThreshold } = options;
 
       if (provider.dimension !== VECTOR_DIMENSION) {
         throw new VectorStoreError(
           `Provider dimension ${provider.dimension} does not match collection vector size ${VECTOR_DIMENSION}`,
           "search",
         );
+      }
+
+      if (spaceIds.length === 0) {
+        return [];
       }
 
       try {
@@ -159,22 +177,20 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
           );
         }
 
-        const must: Record<string, unknown>[] = [
-          { key: "user_id", match: { value: userId } },
-        ];
-
         const searchResult = await client.search(QDRANT_COLLECTION, {
           vector,
           limit,
-          filter: { must },
-          with_payload: true,
+          filter: {
+            must: [{ key: "space_id", match: { any: spaceIds } }],
+          },
+          // point id = statement_id 계약
+          with_payload: false,
           score_threshold: scoreThreshold,
         });
 
         return searchResult.map((point) => ({
-          id: String(point.id),
+          statementId: String(point.id),
           score: point.score,
-          payload: point.payload as unknown as DocumentPayload,
         }));
       } catch (error) {
         if (error instanceof VectorStoreError) {
@@ -188,18 +204,19 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
       }
     },
 
-    async deleteByDocument(docId: string): Promise<void> {
+    async deleteStatements(statementIds: string[]): Promise<void> {
+      if (statementIds.length === 0) {
+        return;
+      }
       try {
         await client.delete(QDRANT_COLLECTION, {
           wait: true,
-          filter: {
-            must: [{ key: "doc_id", match: { value: docId } }],
-          },
+          points: statementIds,
         });
       } catch (error) {
         throw new VectorStoreError(
           `Delete failed: ${error instanceof Error ? error.message : String(error)}`,
-          "deleteByDocument",
+          "deleteStatements",
           error,
         );
       }

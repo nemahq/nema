@@ -34,6 +34,102 @@ export type Database = {
   };
   public: {
     Tables: {
+      changes: {
+        Row: {
+          action: Database["public"]["Enums"]["change_action"];
+          changeset_id: string;
+          created_at: string;
+          data: Json | null;
+          id: string;
+          target_id: string;
+          target_type: Database["public"]["Enums"]["change_target_type"];
+        };
+        Insert: {
+          action: Database["public"]["Enums"]["change_action"];
+          changeset_id: string;
+          created_at?: string;
+          data?: Json | null;
+          id?: string;
+          target_id: string;
+          target_type: Database["public"]["Enums"]["change_target_type"];
+        };
+        Update: {
+          action?: Database["public"]["Enums"]["change_action"];
+          changeset_id?: string;
+          created_at?: string;
+          data?: Json | null;
+          id?: string;
+          target_id?: string;
+          target_type?: Database["public"]["Enums"]["change_target_type"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "changes_changeset_id_fkey";
+            columns: ["changeset_id"];
+            isOneToOne: false;
+            referencedRelation: "changesets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      changesets: {
+        Row: {
+          author_id: string | null;
+          created_at: string;
+          id: string;
+          reverts_id: string | null;
+          source_id: string | null;
+          space_id: string;
+          status: Database["public"]["Enums"]["changeset_status"];
+          type: Database["public"]["Enums"]["changeset_type"];
+          updated_at: string;
+        };
+        Insert: {
+          author_id?: string | null;
+          created_at?: string;
+          id?: string;
+          reverts_id?: string | null;
+          source_id?: string | null;
+          space_id: string;
+          status: Database["public"]["Enums"]["changeset_status"];
+          type: Database["public"]["Enums"]["changeset_type"];
+          updated_at?: string;
+        };
+        Update: {
+          author_id?: string | null;
+          created_at?: string;
+          id?: string;
+          reverts_id?: string | null;
+          source_id?: string | null;
+          space_id?: string;
+          status?: Database["public"]["Enums"]["changeset_status"];
+          type?: Database["public"]["Enums"]["changeset_type"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "changesets_reverts_id_fkey";
+            columns: ["reverts_id"];
+            isOneToOne: false;
+            referencedRelation: "changesets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "changesets_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "changesets_space_id_fkey";
+            columns: ["space_id"];
+            isOneToOne: false;
+            referencedRelation: "spaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       events: {
         Row: {
           created_at: string;
@@ -69,134 +165,6 @@ export type Database = {
           },
         ];
       };
-      histories: {
-        Row: {
-          created_at: string;
-          id: string;
-          source_draft_body: string;
-          source_session_id: string | null;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          source_draft_body: string;
-          source_session_id?: string | null;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          source_draft_body?: string;
-          source_session_id?: string | null;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "histories_source_session_id_fkey";
-            columns: ["source_session_id"];
-            isOneToOne: false;
-            referencedRelation: "sessions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      memories: {
-        Row: {
-          body: string;
-          category: string | null;
-          created_at: string;
-          id: string;
-          ingestion_retry_count: number;
-          ingestion_status: Database["public"]["Enums"]["ingestion_status"];
-          last_ingestion_attempt: string | null;
-          summary: string | null;
-          tags: string[] | null;
-          title: string | null;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          body: string;
-          category?: string | null;
-          created_at?: string;
-          id?: string;
-          ingestion_retry_count?: number;
-          ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
-          last_ingestion_attempt?: string | null;
-          summary?: string | null;
-          tags?: string[] | null;
-          title?: string | null;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          body?: string;
-          category?: string | null;
-          created_at?: string;
-          id?: string;
-          ingestion_retry_count?: number;
-          ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
-          last_ingestion_attempt?: string | null;
-          summary?: string | null;
-          tags?: string[] | null;
-          title?: string | null;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
-      memory_revisions: {
-        Row: {
-          created_at: string;
-          history_id: string;
-          id: string;
-          memory_id: string | null;
-          memory_name_snapshot: string;
-          next_body: string;
-          prev_body: string | null;
-          source: Database["public"]["Enums"]["revision_source"];
-          update_type: Database["public"]["Enums"]["update_type"];
-        };
-        Insert: {
-          created_at?: string;
-          history_id: string;
-          id?: string;
-          memory_id?: string | null;
-          memory_name_snapshot: string;
-          next_body: string;
-          prev_body?: string | null;
-          source: Database["public"]["Enums"]["revision_source"];
-          update_type: Database["public"]["Enums"]["update_type"];
-        };
-        Update: {
-          created_at?: string;
-          history_id?: string;
-          id?: string;
-          memory_id?: string | null;
-          memory_name_snapshot?: string;
-          next_body?: string;
-          prev_body?: string | null;
-          source?: Database["public"]["Enums"]["revision_source"];
-          update_type?: Database["public"]["Enums"]["update_type"];
-        };
-        Relationships: [
-          {
-            foreignKeyName: "memory_revisions_history_id_fkey";
-            columns: ["history_id"];
-            isOneToOne: false;
-            referencedRelation: "histories";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "memory_revisions_memory_id_fkey";
-            columns: ["memory_id"];
-            isOneToOne: false;
-            referencedRelation: "memories";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       profiles: {
         Row: {
           content_language: string;
@@ -217,60 +185,6 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [];
-      };
-      save_jobs: {
-        Row: {
-          created_at: string;
-          draft_body: string | null;
-          error_message: string | null;
-          history_id: string | null;
-          id: string;
-          session_id: string;
-          snippet: string | null;
-          status: Database["public"]["Enums"]["save_job_status"];
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          draft_body?: string | null;
-          error_message?: string | null;
-          history_id?: string | null;
-          id?: string;
-          session_id: string;
-          snippet?: string | null;
-          status?: Database["public"]["Enums"]["save_job_status"];
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          draft_body?: string | null;
-          error_message?: string | null;
-          history_id?: string | null;
-          id?: string;
-          session_id?: string;
-          snippet?: string | null;
-          status?: Database["public"]["Enums"]["save_job_status"];
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "save_jobs_history_id_fkey";
-            columns: ["history_id"];
-            isOneToOne: false;
-            referencedRelation: "histories";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "save_jobs_session_id_fkey";
-            columns: ["session_id"];
-            isOneToOne: false;
-            referencedRelation: "sessions";
-            referencedColumns: ["id"];
-          },
-        ];
       };
       session_retrievals: {
         Row: {
@@ -340,94 +254,335 @@ export type Database = {
         };
         Relationships: [];
       };
+      sources: {
+        Row: {
+          author_id: string | null;
+          body: string;
+          created_at: string;
+          error_message: string | null;
+          extraction_retry_count: number;
+          extraction_status: Database["public"]["Enums"]["ingestion_status"];
+          id: string;
+          last_extraction_attempt: string | null;
+          session_id: string | null;
+          space_id: string;
+          status: Database["public"]["Enums"]["source_status"];
+          updated_at: string;
+        };
+        Insert: {
+          author_id?: string | null;
+          body: string;
+          created_at?: string;
+          error_message?: string | null;
+          extraction_retry_count?: number;
+          extraction_status?: Database["public"]["Enums"]["ingestion_status"];
+          id?: string;
+          last_extraction_attempt?: string | null;
+          session_id?: string | null;
+          space_id: string;
+          status?: Database["public"]["Enums"]["source_status"];
+          updated_at?: string;
+        };
+        Update: {
+          author_id?: string | null;
+          body?: string;
+          created_at?: string;
+          error_message?: string | null;
+          extraction_retry_count?: number;
+          extraction_status?: Database["public"]["Enums"]["ingestion_status"];
+          id?: string;
+          last_extraction_attempt?: string | null;
+          session_id?: string | null;
+          space_id?: string;
+          status?: Database["public"]["Enums"]["source_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sources_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "sources_space_id_fkey";
+            columns: ["space_id"];
+            isOneToOne: false;
+            referencedRelation: "spaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      space_members: {
+        Row: {
+          created_at: string;
+          role: Database["public"]["Enums"]["space_role"];
+          space_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          role: Database["public"]["Enums"]["space_role"];
+          space_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          role?: Database["public"]["Enums"]["space_role"];
+          space_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "space_members_space_id_fkey";
+            columns: ["space_id"];
+            isOneToOne: false;
+            referencedRelation: "spaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      spaces: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      statement_relations: {
+        Row: {
+          created_at: string;
+          from_id: string;
+          id: string;
+          space_id: string;
+          status: Database["public"]["Enums"]["relation_status"];
+          to_id: string;
+          type: Database["public"]["Enums"]["relation_type"];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          from_id: string;
+          id?: string;
+          space_id: string;
+          status?: Database["public"]["Enums"]["relation_status"];
+          to_id: string;
+          type: Database["public"]["Enums"]["relation_type"];
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          from_id?: string;
+          id?: string;
+          space_id?: string;
+          status?: Database["public"]["Enums"]["relation_status"];
+          to_id?: string;
+          type?: Database["public"]["Enums"]["relation_type"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "statement_relations_from_id_fkey";
+            columns: ["from_id"];
+            isOneToOne: false;
+            referencedRelation: "statements";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "statement_relations_space_id_fkey";
+            columns: ["space_id"];
+            isOneToOne: false;
+            referencedRelation: "spaces";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "statement_relations_to_id_fkey";
+            columns: ["to_id"];
+            isOneToOne: false;
+            referencedRelation: "statements";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      statement_sources: {
+        Row: {
+          created_at: string;
+          locator: Json | null;
+          source_id: string;
+          statement_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          locator?: Json | null;
+          source_id: string;
+          statement_id: string;
+        };
+        Update: {
+          created_at?: string;
+          locator?: Json | null;
+          source_id?: string;
+          statement_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "statement_sources_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "statement_sources_statement_id_fkey";
+            columns: ["statement_id"];
+            isOneToOne: false;
+            referencedRelation: "statements";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      statements: {
+        Row: {
+          confidence:
+            | Database["public"]["Enums"]["statement_confidence"]
+            | null;
+          content: string;
+          created_at: string;
+          error_message: string | null;
+          id: string;
+          ingestion_retry_count: number;
+          ingestion_status: Database["public"]["Enums"]["ingestion_status"];
+          last_ingestion_attempt: string | null;
+          space_id: string;
+          status: Database["public"]["Enums"]["statement_status"];
+          type: Database["public"]["Enums"]["statement_type"];
+          updated_at: string;
+        };
+        Insert: {
+          confidence?:
+            | Database["public"]["Enums"]["statement_confidence"]
+            | null;
+          content: string;
+          created_at?: string;
+          error_message?: string | null;
+          id?: string;
+          ingestion_retry_count?: number;
+          ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
+          last_ingestion_attempt?: string | null;
+          space_id: string;
+          status?: Database["public"]["Enums"]["statement_status"];
+          type: Database["public"]["Enums"]["statement_type"];
+          updated_at?: string;
+        };
+        Update: {
+          confidence?:
+            | Database["public"]["Enums"]["statement_confidence"]
+            | null;
+          content?: string;
+          created_at?: string;
+          error_message?: string | null;
+          id?: string;
+          ingestion_retry_count?: number;
+          ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
+          last_ingestion_attempt?: string | null;
+          space_id?: string;
+          status?: Database["public"]["Enums"]["statement_status"];
+          type?: Database["public"]["Enums"]["statement_type"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "statements_space_id_fkey";
+            columns: ["space_id"];
+            isOneToOne: false;
+            referencedRelation: "spaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      _write_memory_revision: {
-        Args: {
-          p_body: string;
-          p_category: string | null;
-          p_history_id: string;
-          p_memory_id: string;
-          p_memory_name_snapshot: string;
-          p_source: Database["public"]["Enums"]["revision_source"];
-          p_summary: string;
-          p_tags: string[];
-          p_title: string;
-          p_update_type: Database["public"]["Enums"]["update_type"];
-          p_user_id: string;
-        };
-        Returns: undefined;
-      };
       ack_sync_event: { Args: { p_msg_id: number }; Returns: undefined };
       append_message: {
         Args: { p_message: Json; p_session_id: string };
         Returns: undefined;
       };
-      apply_propagated_revision: {
-        Args: {
-          p_body: string;
-          p_category: string | null;
-          p_history_id: string;
-          p_memory_id: string;
-          p_summary: string;
-          p_tags: string[];
-          p_title: string;
-          p_update_type: Database["public"]["Enums"]["update_type"];
-          p_user_id: string;
-        };
-        Returns: undefined;
-      };
-      apply_save_pipeline: {
-        Args: { p_history_id: string; p_items: Json; p_user_id: string };
-        Returns: string[];
-      };
-      complete_memory_ingestion: {
-        Args: { p_memory_id: string };
-        Returns: undefined;
-      };
-      create_memory_with_revision: {
-        Args: {
-          p_body: string;
-          p_category: string | null;
-          p_history_id: string;
-          p_summary: string;
-          p_tags: string[];
-          p_title: string;
-          p_user_id: string;
-        };
+      apply_ingestion_changeset: {
+        Args: { p_source_id: string; p_statements: Json };
         Returns: string;
       };
-      fail_stale_save_jobs: { Args: never; Returns: number };
-      fetch_pending_memories: {
+      complete_source_extraction: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
+      complete_statement_ingestion: {
+        Args: { p_statement_id: string };
+        Returns: undefined;
+      };
+      create_source: {
+        Args: { p_body: string; p_session_id?: string; p_space_id: string };
+        Returns: string;
+      };
+      fetch_pending_sources: {
         Args: { p_max_retries?: number };
         Returns: {
+          author_id: string;
           body: string;
           created_at: string;
-          history_id: string;
           id: string;
-          summary: string;
-          tags: string[];
-          user_id: string;
+          session_id: string;
+          space_id: string;
         }[];
       };
-      get_unique_tags: { Args: { p_user_id: string }; Returns: string[] };
-      increment_memory_ingestion_retry: {
-        Args: { p_max_retries?: number; p_memory_id: string };
-        Returns: undefined;
-      };
-      link_draft_to_history: {
-        Args: { p_history_id: string; p_session_id: string };
-        Returns: undefined;
-      };
-      list_memory_user_ids: {
-        Args: never;
+      fetch_pending_statements: {
+        Args: { p_max_retries?: number };
         Returns: {
-          user_id: string;
+          confidence: Database["public"]["Enums"]["statement_confidence"];
+          content: string;
+          created_at: string;
+          id: string;
+          space_id: string;
+          status: Database["public"]["Enums"]["statement_status"];
+          type: Database["public"]["Enums"]["statement_type"];
         }[];
       };
+      increment_source_extraction_retry: {
+        Args: {
+          p_error_message?: string;
+          p_max_retries?: number;
+          p_source_id: string;
+        };
+        Returns: undefined;
+      };
+      increment_statement_ingestion_retry: {
+        Args: {
+          p_error_message?: string;
+          p_max_retries?: number;
+          p_statement_id: string;
+        };
+        Returns: undefined;
+      };
+      is_space_member: { Args: { p_space_id: string }; Returns: boolean };
       read_sync_events: {
         Args: { p_batch_size?: number; p_visibility_timeout?: number };
         Returns: {
@@ -436,36 +591,34 @@ export type Database = {
           read_ct: number;
         }[];
       };
-      send_memory_sync_notify: {
-        Args: { p_propagation_depth?: number };
+      retry_source_extraction: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
+      retry_statement_ingestion: {
+        Args: { p_statement_id: string };
         Returns: undefined;
       };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
-      update_memory_with_revision: {
-        Args: {
-          p_body: string;
-          p_category: string | null;
-          p_history_id: string;
-          p_memory_id: string;
-          p_summary: string;
-          p_tags: string[];
-          p_title: string;
-          p_update_type: Database["public"]["Enums"]["update_type"];
-          p_user_id: string;
-        };
-        Returns: undefined;
-      };
       update_message_payload: {
         Args: { p_message_id: string; p_payload: Json; p_session_id: string };
         Returns: undefined;
       };
     };
     Enums: {
+      change_action: "create" | "archive" | "modify";
+      change_target_type: "statement" | "relation" | "source";
+      changeset_status: "pending" | "applied";
+      changeset_type: "ingestion" | "conflict" | "merge" | "manual" | "revert";
       ingestion_status: "pending" | "completed" | "failed";
-      revision_source: "direct" | "propagated";
-      save_job_status: "pending" | "processing" | "completed" | "failed";
-      update_type: "create" | "extend" | "replace";
+      relation_status: "active" | "archived";
+      relation_type: "supports" | "conflicts" | "replaces" | "resolves";
+      source_status: "active" | "archived";
+      space_role: "owner" | "member";
+      statement_confidence: "certain" | "guess";
+      statement_status: "active" | "archived";
+      statement_type: "claim" | "question" | "todo";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -599,10 +752,18 @@ export const Constants = {
   },
   public: {
     Enums: {
+      change_action: ["create", "archive", "modify"],
+      change_target_type: ["statement", "relation", "source"],
+      changeset_status: ["pending", "applied"],
+      changeset_type: ["ingestion", "conflict", "merge", "manual", "revert"],
       ingestion_status: ["pending", "completed", "failed"],
-      revision_source: ["direct", "propagated"],
-      save_job_status: ["pending", "processing", "completed", "failed"],
-      update_type: ["create", "extend", "replace"],
+      relation_status: ["active", "archived"],
+      relation_type: ["supports", "conflicts", "replaces", "resolves"],
+      source_status: ["active", "archived"],
+      space_role: ["owner", "member"],
+      statement_confidence: ["certain", "guess"],
+      statement_status: ["active", "archived"],
+      statement_type: ["claim", "question", "todo"],
     },
   },
 } as const;

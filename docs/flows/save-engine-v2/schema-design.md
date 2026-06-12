@@ -302,7 +302,7 @@ CREATE TRIGGER on_auth_user_created
 - 큐: `statement_sync`(v1의 `memory_sync` 대체). 저장/추출/임베딩 RPC가 `pgmq.send` notify.
 - RPC 골격 (service_role, v1의 `fetch_pending_memories` 류 계승):
   - 추출: `fetch_pending_sources` / `complete_source_extraction` / `increment_source_extraction_retry`
-  - 저장: `apply_ingestion_changeset` — source+statements+statement_sources+changeset+changes를 한 트랜잭션에 원자 생성
+  - 저장: `apply_ingestion_changeset` — statements+statement_sources+changeset+changes 생성과 source 추출 완료 표시를 한 트랜잭션에 원자 처리 (source 자체는 박제 단계에서 먼저 생성 — [ingestion-design](ingestion-design.md) 2·4장)
   - 임베딩: `fetch_pending_statements` / `complete_statement_ingestion` / `increment_statement_ingestion_retry`
 - **Qdrant payload** (1진술 = 1 point, 청크 없음):
   ```
@@ -311,7 +311,7 @@ CREATE TRIGGER on_auth_user_created
   검색 필터는 `space_id`(내가 멤버인 Space들) 경유로 격리. (`user_id` → `space_id` 전환.)
 - **archived 진술의 벡터 = 선언적 동기화**: worker가 진술을 가져왔을 때 `status='active'`면 Qdrant upsert, `status='archived'`면 delete. **archive를 수행하는 RPC(manual·revert)가** `status`를 바꾸면서 `ingestion_status`를 `pending`으로 함께 되돌려, worker가 벡터를 제거한다. → 검색 공간이 깨끗해 search는 `space_id` 필터만으로 끝남(archived는 벡터가 없음).
 - **Neo4j는 이번 스코프 밖** — 진술 관계 그래프 동기화는 관계 엔진과 함께 후속. 기존 Entity(핵심어) 그물은 `memories` 드랍과 함께 정지(핵심어는 09에서 보조·있으면 좋음으로 강등).
-- **이 문서의 경계** — `source` 박제와 `ingestion` changeset의 생성 시점, 추출 실패 시 박제된 source의 정리 경로, `revert`가 무르는 단위는 **저장 파이프 흐름(후속)**에서 확정한다. 여기서는 스키마와 RPC 계약(시그니처·책임)까지만 정한다. (책상이 아니라 실제 추출 데이터를 보며 정할 일 — 09의 "절단 기준"과 같은 결.)
+- **이 문서의 경계** — `source` 박제와 `ingestion` changeset의 생성 시점, 추출 실패 시 박제된 source의 정리 경로는 [ingestion-design](ingestion-design.md)이 확정했다(박제는 동기, changeset은 추출 성공 직후 원자 생성, 실패 source는 보존+수동 재개). `revert`가 무르는 단위는 빼기·되돌리기 설계(후속)에서. 여기서는 스키마와 RPC 계약(시그니처·책임)까지만 정한다.
 
 ### 5.4 enum 타입 / 인덱스
 
@@ -385,6 +385,6 @@ statement_relations  (from_id), (to_id), (space_id)
   | 변경셋(Changeset) | `changesets` / `changes` |
   | 스페이스(Space) | `spaces` / `space_members` |
 
-- **저장 파이프 흐름(후속 설계)**: `ingestion` changeset의 source 묶음·생성 시점, 추출 실패한 source의 정리 경로, `revert`가 무르는 단위. 이 문서는 스키마·RPC 계약까지만 정했고, 실제 흐름은 추출 데이터를 보며 별도 흐름 문서에서 확정.
+- **저장 파이프 흐름**: [ingestion-design](ingestion-design.md)에서 확정됨 (`revert`가 무르는 단위만 빼기·되돌리기 설계로 남음).
 - **협업 전환 시 추가할 무결성·메커니즘** (지금은 자리만): 가입 훅 → 앱 레이어 이전, 관계 끝점 연쇄 archive 트리거, 관계 중복 방지 unique, Organization 층(`spaces.org_id`), 접근 축(공유·그룹)의 `is_space_member` 확장.
 - **구현 단계로 열어둔 것**: `spaces.name` 채우는 정책, `locator` 형식, `changes.data` 형식(modify before/after), 진술 절단 기준, 노이즈 필터.

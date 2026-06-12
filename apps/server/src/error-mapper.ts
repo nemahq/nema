@@ -3,7 +3,6 @@ import { TRPCError } from "@trpc/server";
 import type { Locale } from "@nema-io/shared";
 
 import { EmbeddingError } from "./infra/embedding/embedding-provider";
-import { GraphStoreError } from "./infra/graph/graph-store";
 import { t, type TranslationKey } from "./infra/i18n";
 import { LlmError } from "./infra/llm/llm-error";
 import { SupabaseError, type SupabaseErrorCode } from "./infra/supabase-error";
@@ -20,7 +19,6 @@ type DomainErrorCode =
   | "LLM_ERROR"
   | "EMBEDDING_ERROR"
   | "VECTOR_STORE_ERROR"
-  | "GRAPH_STORE_ERROR"
   | "DB_NOT_FOUND"
   | "DB_QUERY_FAILED";
 
@@ -51,10 +49,6 @@ const ERROR_MAP: Record<
     i18nKey: "error.default",
   },
   VECTOR_STORE_ERROR: {
-    trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.default",
-  },
-  GRAPH_STORE_ERROR: {
     trpcCode: "INTERNAL_SERVER_ERROR",
     i18nKey: "error.default",
   },
@@ -90,9 +84,6 @@ export function getDomainCode(cause: unknown): DomainErrorCode | undefined {
   }
   if (cause instanceof VectorStoreError) {
     return "VECTOR_STORE_ERROR";
-  }
-  if (cause instanceof GraphStoreError) {
-    return "GRAPH_STORE_ERROR";
   }
   if (cause instanceof SupabaseError) {
     return SUPABASE_CODE_MAP[cause.code];

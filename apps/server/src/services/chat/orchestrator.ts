@@ -18,18 +18,17 @@ import {
 
 import { cancelGeneration } from "@server/infra/chat-stream-manager";
 import type { Json } from "@server/infra/database.types";
+import { t } from "@server/infra/i18n";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import { trackEvent } from "@server/services/event-service";
-import { createRetrieval } from "@server/services/retrieval-service";
 
 import {
   classifyDraftIntent,
   extractDraftContext,
   handleDraftingStream,
 } from "./drafting";
-import { handleRetrievalStream } from "./retrieval";
 
 type Draft = SessionDraft;
 
@@ -151,7 +150,6 @@ export async function* processChatStream(args: {
 
   let responseContent: string;
   let messageType: MessageType = "text";
-  let retrievalId: string | undefined;
 
   trackEvent({
     supabase,
@@ -163,28 +161,8 @@ export async function* processChatStream(args: {
 
   switch (input.mode) {
     case "ask": {
-      const result = yield* handleRetrievalStream({
-        supabase,
-        providers,
-        userId,
-        sessionId: input.sessionId,
-        question: input.content,
-        lng,
-        signal,
-      });
-      if (result.hasResults) {
-        retrievalId = await createRetrieval({
-          supabase,
-          sessionId: input.sessionId,
-          query: input.content,
-          body: result.text,
-          documents: result.documents,
-        });
-        responseContent = result.text;
-        messageType = "retrieval";
-      } else {
-        responseContent = result.text;
-      }
+      // v1 검색 파이프(합성 문서 기반) 철거 — 꺼내기 엔진(v2)이 붙을 때까지 빈 결과로 응답
+      responseContent = t("chat.retrieval_empty", lng);
       break;
     }
     case "remember": {
@@ -248,27 +226,19 @@ export async function* processChatStream(args: {
     }
   }
 
-  const base = {
+  const assistantMessage = MessageSchema.parse({
     id: crypto.randomUUID(),
     role: "assistant" as const,
     createdAt: new Date().toISOString(),
-  };
-
-  const assistantMessage = MessageSchema.parse(
-    messageType === "retrieval"
-      ? { ...base, type: "retrieval", content: responseContent, retrievalId }
-      : { ...base, type: messageType, content: responseContent },
-  );
+    type: messageType,
+    content: responseContent,
+  });
 
   await appendMessage({
     supabase,
     sessionId: input.sessionId,
     message: assistantMessage,
   });
-
-  if (retrievalId) {
-    yield { type: "retrieval_saved", retrievalId };
-  }
 
   yield { type: "done" };
 }

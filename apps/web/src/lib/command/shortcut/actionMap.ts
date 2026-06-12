@@ -15,7 +15,6 @@ function def(
 // 기본값 0 = 최저 우선순위. 새 액션은 별도 지정 없이 양보한다.
 const actionMap = {
   draft: {
-    save: def("session.draft_save", "mod+s", "global"),
     cancel: def("common.cancel", "escape", "global"),
   },
   stream: {

@@ -17,7 +17,6 @@ const STATUS_LOG_TYPE_VALUES = [
   "draft_created",
   "draft_edited",
   "draft_cancelled",
-  "draft_saved",
   "draft_intent_confirmed",
   "retrieval_answered",
 ] as const;
@@ -30,7 +29,6 @@ export const STATUS_LOG_TYPES = {
   DRAFT_CREATED: "draft_created",
   DRAFT_EDITED: "draft_edited",
   DRAFT_CANCELLED: "draft_cancelled",
-  DRAFT_SAVED: "draft_saved",
   DRAFT_INTENT_CONFIRMED: "draft_intent_confirmed",
   RETRIEVAL_ANSWERED: "retrieval_answered",
 } as const satisfies Record<string, StatusLogType>;

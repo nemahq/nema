@@ -1,8 +1,6 @@
 import { getEnv } from "@server/env";
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import { createVoyageProvider } from "@server/infra/embedding";
-import type { GraphStore } from "@server/infra/graph";
-import { createNeo4jStore } from "@server/infra/graph";
 import type { TieredLlm } from "@server/infra/llm/models";
 import {
   createTieredLlm,
@@ -10,19 +8,15 @@ import {
   DEFAULT_NANO_MODEL,
   DEFAULT_STANDARD_MODEL,
 } from "@server/infra/llm/models";
-import type { EntityVectorStore, VectorStore } from "@server/infra/vector";
-import {
-  createQdrantClient,
-  createQdrantEntityStore,
-  createQdrantStore,
-} from "@server/infra/vector";
+import type { VectorStore } from "@server/infra/vector";
+import { createQdrantClient, createQdrantStore } from "@server/infra/vector";
 
+// 요청 경로(진술 검색)용 provider. 워커는 index.ts에서 직접 조립한다.
+// graph(Neo4j)는 관계 엔진과 함께 후속.
 export interface Providers {
   llm: TieredLlm;
   embedding: EmbeddingProvider;
   vectorStore: VectorStore;
-  entityVectorStore: EntityVectorStore;
-  graphStore: GraphStore;
 }
 
 export type LlmPreset = "all-nano" | "real-tiers";
@@ -51,8 +45,6 @@ export function getProviders(): Providers {
     throw new Error("QDRANT_URL and QDRANT_API_KEY are required for chat");
   }
 
-  const qdrantClient = createQdrantClient();
-
   cached = {
     llm: createTieredLlm({
       apiKey: env.OPENAI_API_KEY,
@@ -61,9 +53,7 @@ export function getProviders(): Providers {
       modelNano: env.LLM_MODEL_NANO,
     }),
     embedding: createVoyageProvider({ apiKey: env.VOYAGE_API_KEY }),
-    vectorStore: createQdrantStore(qdrantClient),
-    entityVectorStore: createQdrantEntityStore(qdrantClient),
-    graphStore: createNeo4jStore(),
+    vectorStore: createQdrantStore(createQdrantClient()),
   };
 
   // prod 전용 잠금 — 프로덕션에서 모델 프리셋 교체가 열리면 비용·보안 사고로 이어진다

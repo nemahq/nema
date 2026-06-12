@@ -7,17 +7,12 @@ import * as Sentry from "@sentry/node";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 
 import { getEnv, loadEnv } from "./env";
-import { createSyncWorker } from "./infra/document-sync";
 import { initI18n } from "./infra/i18n";
 import { shutdown as shutdownPostHog } from "./infra/posthog";
+import { createStatementSyncWorker } from "./infra/statement-sync";
 import { getSupabaseAdmin } from "./infra/supabase";
-import {
-  createQdrantClient,
-  createQdrantEntityStore,
-  createQdrantStore,
-} from "./infra/vector";
+import { createQdrantClient, createQdrantStore } from "./infra/vector";
 import { appRouter } from "./router";
-import { failStaleSaveJobs } from "./services/save-job-service";
 import { createContext } from "./trpc";
 
 declare const __COMMIT_SHA__: string;
@@ -57,17 +52,6 @@ async function bootstrap() {
     builtAt: BUILD_TIMESTAMP,
   }));
 
-  const staleCount = await failStaleSaveJobs(getSupabaseAdmin());
-  if (staleCount > 0) {
-    server.log.info(`Marked ${staleCount} stale save jobs as failed`);
-  }
-
-  // Neo4j 스키마는 Qdrant 상태와 무관하게 항상 준비되어야 함 (entity.list 등 read 경로가 의존).
-  const { createNeo4jStore } = await import("./infra/graph");
-  const graphStore = createNeo4jStore();
-  await graphStore.ensureSchema();
-  server.log.info("Neo4j schema ready");
-
   let stopWorker: (() => Promise<void>) | undefined;
 
   if (
@@ -76,36 +60,43 @@ async function bootstrap() {
     env.OPENAI_API_KEY &&
     env.VOYAGE_API_KEY
   ) {
-    const qdrantClient = createQdrantClient();
-
-    const vectorStore = createQdrantStore(qdrantClient);
+    const vectorStore = createQdrantStore(createQdrantClient());
     await vectorStore.ensureCollection();
-    server.log.info("Qdrant document collection ready");
+    server.log.info("Qdrant statement collection ready");
 
-    const entityVectorStore = createQdrantEntityStore(qdrantClient);
-    await entityVectorStore.ensureCollection();
-    server.log.info("Qdrant entity collection ready");
+    // v1 컬렉션(documents·entities)은 합성 문서 모델과 함께 데이터째 폐기.
+    // 일회성 청소라 실패가 서버를 죽일 이유는 없다 — 경고만 남기고 계속 서빙.
+    try {
+      const dropped = await vectorStore.dropLegacyCollections();
+      if (dropped.length > 0) {
+        server.log.info(
+          `Dropped legacy Qdrant collections: ${dropped.join(", ")}`,
+        );
+      }
+    } catch (err) {
+      server.log.error(`Legacy Qdrant collection cleanup failed: ${err}`);
+      Sentry.captureException(err, { level: "warning" });
+    }
 
     const { createVoyageProvider } = await import("./infra/embedding");
-
     const { getProviders } = await import("./infra/providers");
 
-    const worker = createSyncWorker({
+    const worker = createStatementSyncWorker({
       supabase: getSupabaseAdmin(),
-      llm: getProviders().llm.mini,
-      embedding: createVoyageProvider({
-        apiKey: env.VOYAGE_API_KEY,
-      }),
+      // 절단 품질이 첫 출시 품질을 좌우 — 티어 조정은 하니스에서 데이터 보고 (ingestion-design 3장)
+      llm: getProviders().llm.standard,
+      embedding: createVoyageProvider({ apiKey: env.VOYAGE_API_KEY }),
       vectorStore,
-      graphStore,
-      entityVectorStore,
     });
     worker.start();
     stopWorker = worker.stop;
   } else {
-    server.log.warn(
-      "QDRANT_URL / QDRANT_API_KEY / OPENAI_API_KEY / VOYAGE_API_KEY not fully set, skipping worker init",
-    );
+    // 워커가 없으면 source가 박제만 되고 추출·임베딩이 영영 안 돈다 —
+    // 배포 오설정이 "멀쩡해 보이는" 상태로 묻히지 않게 Sentry에도 남긴다.
+    const message =
+      "QDRANT_URL / QDRANT_API_KEY / OPENAI_API_KEY / VOYAGE_API_KEY not fully set, skipping statement-sync worker init";
+    server.log.warn(message);
+    Sentry.captureMessage(`[bootstrap] ${message}`, { level: "warning" });
   }
 
   await server.listen({ port: env.PORT, host: "0.0.0.0" });
@@ -117,6 +108,7 @@ async function bootstrap() {
         await stopWorker?.();
       } catch (err) {
         server.log.error(`Worker stop failed: ${err}`);
+        Sentry.captureException(err, { level: "warning" });
       }
       await server.close();
       await shutdownPostHog();

@@ -31,8 +31,6 @@ export function ChatComposer() {
   const [inputValue, setInputValue] = useChatDraft(sessionId);
   const { mode, toggleMode } = useChatMode();
 
-  const saveDraftMutating =
-    useIsMutating({ mutationKey: getQueryKey(trpc.saveJob.enqueue) }) > 0;
   const cancelDraftMutating =
     useIsMutating({ mutationKey: getQueryKey(trpc.message.cancelDraft) }) > 0;
   const isStreaming = streamingPhase !== "idle";
@@ -117,9 +115,7 @@ export function ChatComposer() {
         placeholder={t(MODE_CONFIG[mode].placeholderKey)}
         onSubmit={handleSubmit}
         onStop={isStreaming ? cancel : undefined}
-        submitDisabled={
-          saveDraftMutating || cancelDraftMutating || !!pendingConfirmation
-        }
+        submitDisabled={cancelDraftMutating || !!pendingConfirmation}
         disabled={!!pendingConfirmation}
         autoFocus
         onKeyDown={handleKeyDown}
