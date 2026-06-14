@@ -325,7 +325,8 @@ async function main() {
     })),
   );
 
-  const supportsFpTotal = (byType["supports"]?.falsePositive ?? 0) as number;
+  // typeTally(Record<string, TypeTally>)에서 직접 — byType은 precision 필드가 섞여 느슨한 타입.
+  const supportsFpTotal = typeTally["supports"]?.falsePositive ?? 0;
   const appliedSupportsFp = appliedFps.filter(
     (r) => r.type === "supports",
   ).length;
