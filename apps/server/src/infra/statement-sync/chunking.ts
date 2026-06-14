@@ -227,6 +227,10 @@ function enforceThreshold(bodies: string[]): string[] {
   );
 }
 
+// THRESHOLD까지 탐욕적으로 채우므로 마지막 조각이 작아질 수 있다(예: 1316…217).
+// 균등 분배(꼬투리 방지)는 깨끗한 packEvenly 경로의 보장이고, 여기선 임계선 안전을
+// 균등 모양보다 우선한다 — 안전망이 발동하는 비균등 입력 한정이고, 조각이 작아도
+// 추출은 결정적·무손실이라 일관성·품질에 해가 없다(작은 입력도 정상 추출).
 function splitOversized(body: string): string[] {
   const candidates = collectCandidates(body);
   const pieces: string[] = [];

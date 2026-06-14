@@ -319,8 +319,9 @@ async function runPipeline(args: {
   // long-input-chunking 6장의 상한 실주행: 다청크 → apply 1회 원자 적용,
   // locator index가 원문 순서로 연속인지(청크 연결 계약)를 실배관에서 본다.
   const longBody = buildUpperBoundInput();
+  const expectedChunkCount = chunkForExtraction(longBody).length;
   console.log(
-    `⑤ 장문 분할: ${longBody.length}자 (${chunkForExtraction(longBody).length}청크 예상) 박제`,
+    `⑤ 장문 분할: ${longBody.length}자 (${expectedChunkCount}청크 예상) 박제`,
   );
   const { sourceId: longSourceId } = await createSource({
     supabase: userClient,
@@ -366,14 +367,17 @@ async function runPipeline(args: {
   const indicesContiguous =
     indices.length > 0 && indices.every((value, i) => value === i);
 
+  // 다청크가 한 changeset으로 모인다는 게 이 단계의 핵심 — 입력이 실제로 분할됐는지
+  // (단일 청크 fallback이 아닌지) 명시 단정한다.
   results["⑤ 장문 분할 — 다청크 원자 적용·index 연속"] =
     longExtracted &&
+    expectedChunkCount >= 2 &&
     (longChangesets?.length ?? 0) === 1 &&
     longChangesets?.[0]?.status === "applied" &&
     indices.length >= LONG_MIN_STATEMENTS &&
     indicesContiguous;
   console.log(
-    `⑤ 장문 분할: 추출=${longExtracted}, changeset ${longChangesets?.length}개(${longChangesets?.[0]?.status}), ` +
+    `⑤ 장문 분할: 추출=${longExtracted}, ${expectedChunkCount}청크→changeset ${longChangesets?.length}개(${longChangesets?.[0]?.status}), ` +
       `진술 ${indices.length}개, index 연속=${indicesContiguous}`,
   );
 }

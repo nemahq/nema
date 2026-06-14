@@ -12,6 +12,9 @@ import {
 const SENTENCES_PER_PARAGRAPH = 5;
 // 문맥 창은 문장 경계 정렬로 예산을 한 문장만큼 넘을 수 있다 — 허용 배율
 const CONTEXT_BUDGET_TOLERANCE_FACTOR = 2;
+// 균등 패킹 경로에서 가장 작은 청크가 가장 큰 청크의 이 비율 이상이어야 한다
+// (꼬투리 청크 방지 — 설계 3장). 실측 변동은 ~1%라 0.5는 넉넉한 회귀 가드.
+const MIN_CHUNK_BALANCE_RATIO = 0.5;
 
 function buildParagraphText(sentenceCount: number): string {
   const paragraphs: string[] = [];
@@ -51,11 +54,15 @@ describe("chunkForExtraction", () => {
     const chunks = chunkForExtraction(body);
     expect(chunks.length).toBeGreaterThan(1);
     expect(chunks.map((c) => c.body).join("")).toBe(body);
-    for (const chunk of chunks) {
-      expect(countTokens(chunk.body)).toBeLessThanOrEqual(
-        EXTRACTION_CHUNK_THRESHOLD_TOKENS,
-      );
+    const sizes = chunks.map((c) => countTokens(c.body));
+    for (const size of sizes) {
+      expect(size).toBeLessThanOrEqual(EXTRACTION_CHUNK_THRESHOLD_TOKENS);
     }
+    // 균등 입력은 안전망(splitOversized) 미발동 → packEvenly의 균등 분배가 성립.
+    // 마지막 청크만 극단적으로 작아지는 꼬투리 회귀를 잡는다 (설계 3장).
+    expect(Math.min(...sizes)).toBeGreaterThanOrEqual(
+      Math.max(...sizes) * MIN_CHUNK_BALANCE_RATIO,
+    );
   });
 
   it("문단(빈 줄) 경계가 있으면 거기서 자른다 — 문장 중간 절단 없음", () => {
