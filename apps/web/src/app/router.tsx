@@ -6,6 +6,7 @@ import {
   createRouter,
   notFound,
   Outlet,
+  rootRouteId,
 } from "@tanstack/react-router";
 
 import { getEnv } from "@web/app/env";
@@ -23,6 +24,14 @@ import { HarnessPage } from "@web/features/dev-harness";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 
 import { App } from "./App";
+
+/**
+ * 앱 셸 밖, 루트 경계에서 렌더되는 전체 화면 404.
+ * 중첩 레이아웃 안쪽에 갇히지 않게 하려면 raw `notFound()` 대신 이걸 사용한다.
+ */
+function notFoundAtRoot() {
+  return notFound({ routeId: rootRouteId });
+}
 
 const rootRoute = createRootRoute({
   component: App,
@@ -102,7 +111,7 @@ const devHarnessRoute = createRoute({
   errorComponent: RouteErrorFallback,
   beforeLoad: () => {
     if (getEnv().APP_ENV === "production") {
-      throw notFound();
+      throw notFoundAtRoot();
     }
   },
 });
