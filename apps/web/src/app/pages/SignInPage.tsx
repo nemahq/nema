@@ -18,7 +18,8 @@ export function SignInPage() {
   useEffect(
     function redirectOnSignIn() {
       if (user) {
-        void navigate({ to: search.redirect ?? "/" });
+        const target = search.redirect?.startsWith("/") ? search.redirect : "/";
+        void navigate({ to: target });
       }
     },
     [user, navigate, search.redirect],

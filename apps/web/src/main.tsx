@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import { RouterProvider } from "@tanstack/react-router";
 
+import { getEnv } from "@web/app/env";
 import type { ErrorFallbackLabels } from "@web/app/error/ErrorFallback";
 import { detectLanguage } from "@web/utils/locale";
 import { initTheme } from "@web/utils/theme";
@@ -38,6 +39,16 @@ const rootLabels = ROOT_FALLBACK_LABELS[detectLanguage()];
 if (typeof __COMMIT_SHA__ !== "undefined") {
   // eslint-disable-next-line no-console -- build metadata, not capturable by Sentry
   console.log(`[nema] ${__COMMIT_SHA__} (built ${__BUILD_TIMESTAMP__})`);
+
+  // 스탬프가 빌드에 안 실리면 조용히 dev로 회귀하고, 그 dev가 Sentry 릴리스
+  // 태그까지 오염시킨다. 빌드 시점엔 감지할 신호가 없어(서버 apps/server/src/index.ts와
+  // 동일) 배포 런타임(APP_ENV이 local이 아님)에서 잡는다.
+  if (getEnv().APP_ENV !== "local" && __COMMIT_SHA__ === "dev") {
+    Sentry.captureMessage(
+      '[bootstrap] Deployed web build has no commit SHA stamp — console and Sentry release report "dev". CI must write .commit-sha before railway up.',
+      { level: "error" },
+    );
+  }
 }
 
 const root = document.getElementById("root");
