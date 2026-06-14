@@ -1,12 +1,29 @@
 import { z } from "zod";
 import * as Sentry from "@sentry/node";
 
+import type { RelationType } from "@nema-io/shared";
+
+import type { Json } from "@server/infra/database.types";
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import { createLimiter } from "@server/infra/llm/limiter";
 import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
-import type { StatementUpsertItem, VectorStore } from "@server/infra/vector";
+import type {
+  NeighborSearchOptions,
+  StatementSearchHit,
+  StatementUpsertItem,
+  VectorStore,
+} from "@server/infra/vector";
+import type {
+  LabeledStatement,
+  RelationProposal,
+} from "@server/prompts/relation-judgment";
+import {
+  buildRelationJudgmentMessage,
+  RELATION_JUDGMENT_SYSTEM_PROMPT,
+  RelationJudgmentSchema,
+} from "@server/prompts/relation-judgment";
 import type { ExtractedStatement } from "@server/prompts/statement-extraction";
 import {
   buildStatementExtractionMessage,
@@ -16,8 +33,17 @@ import {
 
 import type { ExtractionChunk } from "./chunking";
 import { chunkForExtraction } from "./chunking";
-import type { PendingSource, PendingStatement } from "./types";
+import type {
+  LinkingBatchStatement,
+  LinkingCandidateStatement,
+  PendingLinkingSource,
+  PendingSource,
+  PendingStatement,
+} from "./types";
 import {
+  LinkingBatchStatementSchema,
+  LinkingCandidateStatementSchema,
+  PendingLinkingSourceSchema,
   PendingSourceSchema,
   PendingStatementSchema,
   TriggerMessageSchema,
@@ -47,7 +73,24 @@ const EXTRACTION_CONCURRENCY = 3;
 export const EXTRACTION_REASONING_EFFORT = "low" as const;
 export const EXTRACTION_TIMEOUT_MS = 120_000;
 
-type Phase = "extraction" | "embedding";
+// --- ③ 잇기(linking) ---
+const LINKING_CONCURRENCY = 3;
+// 판정도 standard 티어 LLM 1콜이라 추출과 같은 상한·effort를 미러한다.
+// lease(150초, relation_linking_rpcs)가 이 타임아웃을 덮는다.
+export const LINKING_REASONING_EFFORT = "low" as const;
+export const LINKING_TIMEOUT_MS = 120_000;
+// 후보 좁히기 ⓐ(벡터 근접)의 보수적 기본값. 전수 비교는 대량 유입에서 즉사하므로
+// 좁게 깐다 — 놓친 관계의 벡터 거리 분포는 dogfooding 보정이 데이터로 푼다
+// (relation-design §11). 같은 글 형제(ⓑ)는 새 진술 배치에 이미 들어 있어 점수 무관.
+const CANDIDATE_TOP_K = 10;
+// 보류: cosine 유사도 하한. 0.5는 "뜻이 가까워 관계가 걸릴 만한" 보수적 경계 —
+// 데이터로 보정(§11).
+const CANDIDATE_SCORE_THRESHOLD = 0.5;
+// 앵커별 이웃 검색의 일시 실패(Qdrant 블립) 흡수 — 추출 청크 콜과 같은 정책.
+const NEIGHBOR_SEARCH_MAX_ATTEMPTS = 3;
+const NEIGHBOR_SEARCH_RETRY_DELAY_MS = 2_000;
+
+type Phase = "extraction" | "embedding" | "linking";
 
 interface WorkerDeps {
   supabase: TypedSupabaseClient;
@@ -179,13 +222,15 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
   };
 }
 
-// 사이클: ① 추출 → ② 임베딩, 둘 다 빌 때까지.
-// ①이 pending 진술을 만들어내므로 이 순서면 한 번 깨어난 김에 임베딩까지 끝난다.
+// 사이클: ① 추출 → ② 임베딩 → ③ 잇기, 셋 다 빌 때까지.
+// ①이 pending 진술을, ②가 잇기 대상(임베딩 끝난 원본)을 만들어내므로 이 순서면
+// 한 번 깨어난 김에 추출·임베딩·잇기까지 끝난다 (relation-design §3).
 async function runCycle(deps: WorkerDeps): Promise<void> {
   while (true) {
     const extracted = await runExtractionPass(deps);
     const embedded = await runEmbeddingPass(deps);
-    if (extracted === 0 && embedded === 0) {
+    const linked = await runLinkingPass(deps);
+    if (extracted === 0 && embedded === 0 && linked === 0) {
       break;
     }
   }
@@ -502,6 +547,363 @@ async function fetchPendingStatements(
   return parsed.data;
 }
 
+// --- ③ 잇기 (후보 좁히기 → LLM 판정 → 게이트 → relation 변경셋) ---
+
+async function runLinkingPass(deps: WorkerDeps): Promise<number> {
+  let processed = 0;
+
+  while (true) {
+    const sources = await fetchPendingLinkingSources(deps.supabase);
+    if (sources.length === 0) {
+      break;
+    }
+    processed += sources.length;
+
+    for (let i = 0; i < sources.length; i += LINKING_CONCURRENCY) {
+      const chunk = sources.slice(i, i + LINKING_CONCURRENCY);
+      await Promise.allSettled(
+        chunk.map(async (source) => {
+          try {
+            await processLinking(source, deps);
+          } catch (err) {
+            Sentry.captureException(err, {
+              tags: { component: "statement-sync", phase: "linking" },
+              extra: { sourceId: source.id },
+            });
+            await incrementRetry(deps.supabase, {
+              phase: "linking",
+              id: source.id,
+              errorMessage: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }),
+      );
+    }
+  }
+
+  return processed;
+}
+
+async function processLinking(
+  source: PendingLinkingSource,
+  deps: WorkerDeps,
+): Promise<void> {
+  const batch = await fetchSourceStatements(deps.supabase, source.id);
+
+  // 검사할 진술이 없으면(노이즈뿐인 글) LLM 없이 완료 (relation-design §3)
+  if (batch.length === 0) {
+    await applyRelationChangesets({
+      supabase: deps.supabase,
+      sourceId: source.id,
+      applied: [],
+      pending: [],
+    });
+    return;
+  }
+
+  // ⓐ 뜻의 이웃 — 벡터 있는(임베딩 completed) 새 진술마다 최근접. ⓑ 같은 글
+  // 형제는 새 진술 배치에 이미 다 들어 있어 LLM이 직접 잇는다(별도 후보 불요).
+  const batchIds = new Set(batch.map((s) => s.id));
+  const neighborIdLists: string[][] = [];
+  for (const statement of batch) {
+    if (statement.ingestion_status !== "completed") {
+      continue; // 벡터 없는 진술은 자기 이웃 검색의 앵커가 될 수 없다
+    }
+    const hits = await searchNeighborsWithRetry(deps.vectorStore, {
+      statementId: statement.id,
+      spaceId: source.space_id,
+      limit: CANDIDATE_TOP_K,
+      scoreThreshold: CANDIDATE_SCORE_THRESHOLD,
+    });
+    neighborIdLists.push(hits.map((h) => h.statementId));
+  }
+  const candidateIds = selectCandidateIds(neighborIdLists, batchIds);
+
+  const candidates =
+    candidateIds.length > 0
+      ? await fetchCandidateStatements(deps.supabase, candidateIds)
+      : [];
+
+  // 비교 대상이 둘 미만(새 1개 + 후보 0개)이면 관계가 생길 수 없다 — LLM 생략
+  if (!canFormRelations(batch.length, candidates.length)) {
+    await applyRelationChangesets({
+      supabase: deps.supabase,
+      sourceId: source.id,
+      applied: [],
+      pending: [],
+    });
+    return;
+  }
+
+  // 라벨 부여 + id 매핑 — LLM엔 라벨(N0/E1…)만 보여 uuid 환각을 막는다
+  const labelToId = new Map<string, string>();
+  const newLabeled: LabeledStatement[] = batch.map((statement, index) => {
+    const label = `N${index}`;
+    labelToId.set(label, statement.id);
+    return {
+      label,
+      content: statement.content,
+      type: statement.type,
+      confidence: statement.confidence,
+    };
+  });
+  const existingLabeled: LabeledStatement[] = candidates.map(
+    (statement, index) => {
+      const label = `E${index}`;
+      labelToId.set(label, statement.id);
+      return {
+        label,
+        content: statement.content,
+        type: statement.type,
+        confidence: statement.confidence,
+      };
+    },
+  );
+
+  const message = buildRelationJudgmentMessage(newLabeled, existingLabeled);
+  const output = await limitLlmCall(() =>
+    callJudgmentWithRetry(deps.llm, message),
+  );
+
+  const { applied, pending } = gateProposals({
+    proposals: output.relations,
+    labelToId,
+    batchIds,
+  });
+  await applyRelationChangesets({
+    supabase: deps.supabase,
+    sourceId: source.id,
+    applied,
+    pending,
+  });
+}
+
+// 앵커별 이웃 검색의 일시 실패(Qdrant 블립)를 흡수한다 — 임베딩 패스가 Qdrant를
+// 멱등 재시도하는 것과 같은 회복력을 잇기에도 준다. 끝내 실패하면 전파해 source
+// 단위 lease 재시도가 받는다(완전 장애는 failed→수동 재개로 복구). 재시도가 없으면
+// 한 앵커의 블립이 source의 retry 예산을 태우고 잇기 전체를 버린다.
+async function searchNeighborsWithRetry(
+  vectorStore: VectorStore,
+  options: NeighborSearchOptions,
+): Promise<StatementSearchHit[]> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= NEIGHBOR_SEARCH_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await vectorStore.searchNeighbors(options);
+    } catch (err) {
+      lastError = err;
+      if (attempt === NEIGHBOR_SEARCH_MAX_ATTEMPTS) {
+        throw err;
+      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, attempt * NEIGHBOR_SEARCH_RETRY_DELAY_MS),
+      );
+    }
+  }
+  throw lastError;
+}
+
+// 후보 = 앵커별 이웃을 합치고 중복·형제(같은 배치)를 걷어낸 기존 진술 id들.
+// 형제는 새 진술 목록(batch)이 이미 담으므로 후보에서 뺀다 (relation-design §4).
+export function selectCandidateIds(
+  neighborIdLists: string[][],
+  batchIds: Set<string>,
+): string[] {
+  const ids = new Set<string>();
+  for (const list of neighborIdLists) {
+    for (const id of list) {
+      if (!batchIds.has(id)) {
+        ids.add(id);
+      }
+    }
+  }
+  return [...ids];
+}
+
+// 비교 대상이 둘 미만(새 1개 + 후보 0개)이면 관계가 생길 수 없다 — LLM 콜을 생략한다.
+export function canFormRelations(
+  batchLength: number,
+  candidateLength: number,
+): boolean {
+  return candidateLength > 0 || batchLength >= 2;
+}
+
+interface RelationChange {
+  from_id: string;
+  to_id: string;
+  type: RelationType;
+}
+
+// 게이트 (relation-design §5): 확신·비충돌만 조용히 applied. 충돌은 확신해도
+// pending, 애매는 종류 무관 pending. 라벨을 id로 되돌리며 부적격 제안을 거른다.
+export function gateProposals(params: {
+  proposals: RelationProposal[];
+  labelToId: Map<string, string>;
+  batchIds: Set<string>;
+}): { applied: RelationChange[]; pending: RelationChange[] } {
+  const { proposals, labelToId, batchIds } = params;
+  const applied: RelationChange[] = [];
+  const pending: RelationChange[] = [];
+  const seen = new Set<string>();
+
+  for (const proposal of proposals) {
+    const fromId = labelToId.get(proposal.from);
+    const toId = labelToId.get(proposal.to);
+    if (!fromId || !toId || fromId === toId) {
+      continue; // 모르는 라벨이거나 자기 관계
+    }
+    // 적어도 한 끝점은 새 진술이어야 한다 — 기존↔기존은 이미 검사됨 (§5 scope)
+    if (!batchIds.has(fromId) && !batchIds.has(toId)) {
+      continue;
+    }
+
+    // 중복 제거. conflicts는 대칭이라 양끝을 정렬해 역방향 중복까지 collapse.
+    const key =
+      proposal.type === "conflicts"
+        ? `conflicts:${[fromId, toId].sort().join(":")}`
+        : `${proposal.type}:${fromId}:${toId}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+
+    const change: RelationChange = {
+      from_id: fromId,
+      to_id: toId,
+      type: proposal.type,
+    };
+    if (proposal.confident && proposal.type !== "conflicts") {
+      applied.push(change);
+    } else {
+      pending.push(change);
+    }
+  }
+
+  return { applied, pending };
+}
+
+function callJudgment(llm: LlmProvider, message: string) {
+  return llm.generateStructured({
+    schema: RelationJudgmentSchema,
+    schemaName: "relation_judgment",
+    systemPrompt: RELATION_JUDGMENT_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: message }],
+    reasoningEffort: LINKING_REASONING_EFFORT,
+    timeoutMs: LINKING_TIMEOUT_MS,
+    maxRetries: 0,
+  });
+}
+
+// 추출 청크 콜과 같은 재시도 정책 — 일시 오류(timeout/rate_limit/unknown)만,
+// 시도 횟수 비례 지연. 결정적 실패는 source 단위 lease 사이클이 받는다.
+async function callJudgmentWithRetry(llm: LlmProvider, message: string) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= CHUNK_CALL_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await callJudgment(llm, message);
+    } catch (err) {
+      lastError = err;
+      const retryable =
+        err instanceof LlmError && RETRYABLE_LLM_CODES.has(err.code);
+      if (!retryable || attempt === CHUNK_CALL_MAX_ATTEMPTS) {
+        throw err;
+      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, attempt * CHUNK_CALL_RETRY_DELAY_MS),
+      );
+    }
+  }
+  throw lastError;
+}
+
+async function applyRelationChangesets(params: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+  applied: RelationChange[];
+  pending: RelationChange[];
+}): Promise<void> {
+  const { supabase, sourceId, applied, pending } = params;
+  const { error } = await supabase.rpc("apply_relation_changesets", {
+    p_source_id: sourceId,
+    // RPC가 jsonb 배열로 받는다 — 구조체 배열을 Json으로 넘긴다. 여기서 TS의 필드명
+    // 검증이 끊기고, 계약 상대는 apply_relation_changesets의 v_item->>'from_id'/'to_id'/'type'
+    // 읽기다 — 키를 바꾸면 그 RPC도 함께 고쳐야 한다.
+    p_applied: applied as unknown as Json,
+    p_pending: pending as unknown as Json,
+  });
+  if (error) {
+    throw new Error(
+      `apply_relation_changesets failed for ${sourceId}: ${error.message}`,
+    );
+  }
+}
+
+async function fetchPendingLinkingSources(
+  supabase: TypedSupabaseClient,
+): Promise<PendingLinkingSource[]> {
+  const { data, error } = await supabase.rpc("fetch_pending_linking_sources", {
+    p_max_retries: MAX_RETRIES,
+  });
+  if (error) {
+    throw new Error(`fetch_pending_linking_sources failed: ${error.message}`);
+  }
+
+  const parsed = z.array(PendingLinkingSourceSchema).safeParse(data ?? []);
+  if (!parsed.success) {
+    throw new Error(
+      `pending linking source validation failed: ${parsed.error.message}`,
+    );
+  }
+  return parsed.data;
+}
+
+// 원본의 active 진술(새 배치) — 같은 글 형제는 여기서 다 모인다.
+async function fetchSourceStatements(
+  supabase: TypedSupabaseClient,
+  sourceId: string,
+): Promise<LinkingBatchStatement[]> {
+  const { data, error } = await supabase
+    .from("statements")
+    .select(
+      "id, content, type, confidence, ingestion_status, statement_sources!inner(source_id)",
+    )
+    .eq("statement_sources.source_id", sourceId)
+    .eq("status", "active");
+  if (error) {
+    throw new Error(
+      `fetch source statements failed for ${sourceId}: ${error.message}`,
+    );
+  }
+
+  const parsed = z.array(LinkingBatchStatementSchema).safeParse(data ?? []);
+  if (!parsed.success) {
+    throw new Error(`linking batch validation failed: ${parsed.error.message}`);
+  }
+  return parsed.data;
+}
+
+async function fetchCandidateStatements(
+  supabase: TypedSupabaseClient,
+  ids: string[],
+): Promise<LinkingCandidateStatement[]> {
+  const { data, error } = await supabase
+    .from("statements")
+    .select("id, content, type, confidence")
+    .in("id", ids)
+    .eq("status", "active");
+  if (error) {
+    throw new Error(`fetch candidate statements failed: ${error.message}`);
+  }
+
+  const parsed = z.array(LinkingCandidateStatementSchema).safeParse(data ?? []);
+  if (!parsed.success) {
+    throw new Error(
+      `linking candidate validation failed: ${parsed.error.message}`,
+    );
+  }
+  return parsed.data;
+}
+
 // --- 공통 재시도 ---
 
 async function incrementRetry(
@@ -510,23 +912,46 @@ async function incrementRetry(
 ): Promise<void> {
   const { phase, id, errorMessage } = params;
 
-  const { error } =
-    phase === "extraction"
-      ? await supabase.rpc("increment_source_extraction_retry", {
-          p_source_id: id,
-          p_max_retries: MAX_RETRIES,
-          p_error_message: errorMessage,
-        })
-      : await supabase.rpc("increment_statement_ingestion_retry", {
-          p_statement_id: id,
-          p_max_retries: MAX_RETRIES,
-          p_error_message: errorMessage,
-        });
+  const { error } = await runIncrementRpc({
+    supabase,
+    phase,
+    id,
+    errorMessage,
+  });
 
   if (error) {
     Sentry.captureException(
       new Error(`increment retry failed for ${id}: ${error.message}`),
       { tags: { component: "statement-sync", phase } },
     );
+  }
+}
+
+function runIncrementRpc(params: {
+  supabase: TypedSupabaseClient;
+  phase: Phase;
+  id: string;
+  errorMessage: string;
+}) {
+  const { supabase, phase, id, errorMessage } = params;
+  switch (phase) {
+    case "extraction":
+      return supabase.rpc("increment_source_extraction_retry", {
+        p_source_id: id,
+        p_max_retries: MAX_RETRIES,
+        p_error_message: errorMessage,
+      });
+    case "linking":
+      return supabase.rpc("increment_source_linking_retry", {
+        p_source_id: id,
+        p_max_retries: MAX_RETRIES,
+        p_error_message: errorMessage,
+      });
+    case "embedding":
+      return supabase.rpc("increment_statement_ingestion_retry", {
+        p_statement_id: id,
+        p_max_retries: MAX_RETRIES,
+        p_error_message: errorMessage,
+      });
   }
 }

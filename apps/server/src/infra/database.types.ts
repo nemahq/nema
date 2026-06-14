@@ -264,6 +264,9 @@ export type Database = {
           extraction_status: Database["public"]["Enums"]["ingestion_status"];
           id: string;
           last_extraction_attempt: string | null;
+          last_linking_attempt: string | null;
+          linking_retry_count: number;
+          linking_status: Database["public"]["Enums"]["ingestion_status"];
           session_id: string | null;
           space_id: string;
           status: Database["public"]["Enums"]["source_status"];
@@ -278,6 +281,9 @@ export type Database = {
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           last_extraction_attempt?: string | null;
+          last_linking_attempt?: string | null;
+          linking_retry_count?: number;
+          linking_status?: Database["public"]["Enums"]["ingestion_status"];
           session_id?: string | null;
           space_id: string;
           status?: Database["public"]["Enums"]["source_status"];
@@ -292,6 +298,9 @@ export type Database = {
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           last_extraction_attempt?: string | null;
+          last_linking_attempt?: string | null;
+          linking_retry_count?: number;
+          linking_status?: Database["public"]["Enums"]["ingestion_status"];
           session_id?: string | null;
           space_id?: string;
           status?: Database["public"]["Enums"]["source_status"];
@@ -531,6 +540,10 @@ export type Database = {
         Args: { p_source_id: string; p_statements: Json };
         Returns: string;
       };
+      apply_relation_changesets: {
+        Args: { p_applied?: Json; p_pending?: Json; p_source_id: string };
+        Returns: undefined;
+      };
       complete_source_extraction: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -542,6 +555,14 @@ export type Database = {
       create_source: {
         Args: { p_body: string; p_session_id?: string; p_space_id: string };
         Returns: string;
+      };
+      fetch_pending_linking_sources: {
+        Args: { p_max_retries?: number };
+        Returns: {
+          created_at: string;
+          id: string;
+          space_id: string;
+        }[];
       };
       fetch_pending_sources: {
         Args: { p_max_retries?: number };
@@ -574,6 +595,14 @@ export type Database = {
         };
         Returns: undefined;
       };
+      increment_source_linking_retry: {
+        Args: {
+          p_error_message?: string;
+          p_max_retries?: number;
+          p_source_id: string;
+        };
+        Returns: undefined;
+      };
       increment_statement_ingestion_retry: {
         Args: {
           p_error_message?: string;
@@ -595,6 +624,10 @@ export type Database = {
         Args: { p_source_id: string };
         Returns: undefined;
       };
+      retry_source_linking: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
       retry_statement_ingestion: {
         Args: { p_statement_id: string };
         Returns: undefined;
@@ -610,7 +643,13 @@ export type Database = {
       change_action: "create" | "archive" | "modify";
       change_target_type: "statement" | "relation" | "source";
       changeset_status: "pending" | "applied";
-      changeset_type: "ingestion" | "conflict" | "merge" | "manual" | "revert";
+      changeset_type:
+        | "ingestion"
+        | "conflict"
+        | "merge"
+        | "manual"
+        | "revert"
+        | "relation";
       ingestion_status: "pending" | "completed" | "failed";
       relation_status: "active" | "archived";
       relation_type: "supports" | "conflicts" | "replaces" | "resolves";
@@ -755,7 +794,14 @@ export const Constants = {
       change_action: ["create", "archive", "modify"],
       change_target_type: ["statement", "relation", "source"],
       changeset_status: ["pending", "applied"],
-      changeset_type: ["ingestion", "conflict", "merge", "manual", "revert"],
+      changeset_type: [
+        "ingestion",
+        "conflict",
+        "merge",
+        "manual",
+        "revert",
+        "relation",
+      ],
       ingestion_status: ["pending", "completed", "failed"],
       relation_status: ["active", "archived"],
       relation_type: ["supports", "conflicts", "replaces", "resolves"],

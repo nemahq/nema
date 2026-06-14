@@ -4,7 +4,11 @@ import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type { VectorStore } from "@server/infra/vector";
 
-import { assembleSourceGroups, searchStatements } from "./statement-search";
+import {
+  assembleSourceGroups,
+  buildRelationMarkers,
+  searchStatements,
+} from "./statement-search";
 
 function claim(args: {
   id: string;
@@ -166,6 +170,7 @@ interface QueryStub {
   select: (...args: unknown[]) => QueryStub;
   in: (...args: unknown[]) => QueryStub;
   eq: (...args: unknown[]) => QueryStub;
+  or: (...args: unknown[]) => QueryStub;
   then: (resolve: (value: { data: unknown; error: null }) => void) => void;
 }
 
@@ -182,6 +187,7 @@ function queryStub(rows: unknown[]): QueryStub {
     select: chain("select"),
     in: chain("in"),
     eq: chain("eq"),
+    or: chain("or"),
     then: (resolve) => {
       resolve({ data: rows, error: null });
     },
@@ -207,6 +213,7 @@ function providersStub(searchMock: ReturnType<typeof vi.fn>): Providers {
     upsertStatements: vi.fn(),
     deleteStatements: vi.fn(),
     search: searchMock,
+    searchNeighbors: vi.fn(),
   };
   return {
     llm: null as never, // 꺼내기 경로엔 LLM이 없다
@@ -268,6 +275,7 @@ describe("searchStatements", () => {
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
         statements: [statementsQuery],
+        statement_relations: [queryStub([])],
         statement_sources: [queryStub([{ source_id: "src" }])],
       }),
       providers: providersStub(search),
@@ -303,6 +311,7 @@ describe("searchStatements", () => {
             }),
           ]),
         ],
+        statement_relations: [queryStub([])],
         statement_sources: [
           queryStub([{ source_id: "src" }, { source_id: "src" }]),
         ],
@@ -316,5 +325,58 @@ describe("searchStatements", () => {
       "first",
       "second",
     ]);
+  });
+});
+
+// 표식 방향 — 잘못되면 "지난 것"이 엉뚱한 진술에 붙는다 (relation-design §8).
+describe("buildRelationMarkers", () => {
+  const ME = "me";
+  const OTHER = "other";
+  const ids = new Set([ME]);
+
+  it("replaces가 나를 가리키면(to_id=나) supersededBy에 후임자(from_id)", () => {
+    const markers = buildRelationMarkers(
+      [{ from_id: OTHER, to_id: ME, type: "replaces" }],
+      ids,
+    );
+    expect(markers.get(ME)).toEqual({ supersededBy: [OTHER] });
+  });
+
+  it("내가 후임자(from_id)면 표식이 붙지 않는다 — 가리켜진 쪽만 '지난 것'", () => {
+    const markers = buildRelationMarkers(
+      [{ from_id: ME, to_id: OTHER, type: "replaces" }],
+      ids,
+    );
+    expect(markers.get(ME)).toBeUndefined();
+  });
+
+  it("resolves가 나를 가리키면(to_id=나) resolvedBy에 닫은 진술(from_id)", () => {
+    const markers = buildRelationMarkers(
+      [{ from_id: OTHER, to_id: ME, type: "resolves" }],
+      ids,
+    );
+    expect(markers.get(ME)).toEqual({ resolvedBy: [OTHER] });
+  });
+
+  it("conflicts는 방향 무관 — 어느 끝이든 상대를 conflictsWith에", () => {
+    const fromMe = buildRelationMarkers(
+      [{ from_id: ME, to_id: OTHER, type: "conflicts" }],
+      ids,
+    );
+    expect(fromMe.get(ME)).toEqual({ conflictsWith: [OTHER] });
+
+    const toMe = buildRelationMarkers(
+      [{ from_id: OTHER, to_id: ME, type: "conflicts" }],
+      ids,
+    );
+    expect(toMe.get(ME)).toEqual({ conflictsWith: [OTHER] });
+  });
+
+  it("supports는 1차에서 표식 없음", () => {
+    const markers = buildRelationMarkers(
+      [{ from_id: OTHER, to_id: ME, type: "supports" }],
+      ids,
+    );
+    expect(markers.size).toBe(0);
   });
 });

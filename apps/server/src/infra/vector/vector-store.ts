@@ -47,6 +47,13 @@ export interface SearchOptions {
   scoreThreshold: number;
 }
 
+export interface NeighborSearchOptions {
+  statementId: string;
+  spaceId: string;
+  limit: number;
+  scoreThreshold: number;
+}
+
 export interface VectorStore {
   ensureCollection(): Promise<void>;
   upsertStatements(
@@ -58,5 +65,13 @@ export interface VectorStore {
   search(
     provider: EmbeddingProvider,
     options: SearchOptions,
+  ): Promise<StatementSearchHit[]>;
+  /**
+   * 관계 후보 좁히기 ⓐ — 한 진술의 저장된 벡터로 자기 space의 뜻 이웃을 찾는다
+   * (relation-design §4). 재임베딩하지 않고(query/document 타입 불일치 회피) point id
+   * 최근접을 쓰며, 앵커 자신은 제외한다. 벡터가 없는(임베딩 failed) 진술엔 쓰지 않는다.
+   */
+  searchNeighbors(
+    options: NeighborSearchOptions,
   ): Promise<StatementSearchHit[]>;
 }
