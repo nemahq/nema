@@ -89,6 +89,11 @@ const CANDIDATE_SCORE_THRESHOLD = 0.5;
 // 앵커별 이웃 검색의 일시 실패(Qdrant 블립) 흡수 — 추출 청크 콜과 같은 정책.
 const NEIGHBOR_SEARCH_MAX_ATTEMPTS = 3;
 const NEIGHBOR_SEARCH_RETRY_DELAY_MS = 2_000;
+// 한 잇기 콜에 넣을 새 진술 상한 — 장문 source(초장문 분할로 진술 수백)가 새 진술 전부 +
+// 후보 전부를 한 프롬프트에 욱여넣어 컨텍스트 초과·판정 품질 붕괴되는 걸 막는다(추출의
+// 토큰 청킹에 대응하는 잇기판, 단위는 진술 수). 구속 조건은 컨텍스트가 아니라 판정 품질
+// 이라 보수적으로 작게: "한입에 판정할 만한" 수십 개. 진짜 무릎은 dogfooding이 측정(§11).
+const MAX_STATEMENTS_PER_LINKING_CALL = 30;
 
 type Phase = "extraction" | "embedding" | "linking";
 
@@ -590,34 +595,58 @@ async function processLinking(
 ): Promise<void> {
   const batch = await fetchSourceStatements(deps.supabase, source.id);
 
-  // 검사할 진술이 없으면(노이즈뿐인 글) LLM 없이 완료 (relation-design §3)
-  if (batch.length === 0) {
-    await applyRelationChangesets({
-      supabase: deps.supabase,
-      sourceId: source.id,
-      applied: [],
-      pending: [],
+  // 장문 source는 진술이 수백이 될 수 있다 — 새 진술 전부를 한 콜에 넣으면 컨텍스트
+  // 초과·판정 품질 붕괴라, 원문 순서대로 sub-batch로 끊어 콜을 나눈다. 인접 진술(결정+
+  // 바로 뒤 근거)이 같은 sub-batch에 남아 형제 관계를 그 안에서 잡고, 떨어진 형제는 ⓐ가
+  // 복원한다. ≤상한이면 sub-batch 1개라 짧은 글은 기존 동작 그대로.
+  const subBatches = chunkStatements(batch, MAX_STATEMENTS_PER_LINKING_CALL);
+  const applied: RelationChange[] = [];
+  const pending: RelationChange[] = [];
+  for (const subBatch of subBatches) {
+    const result = await linkSubBatch({
+      subBatch,
+      spaceId: source.space_id,
+      deps,
     });
-    return;
+    applied.push(...result.applied);
+    pending.push(...result.pending);
   }
 
-  // ⓐ 뜻의 이웃 — 벡터 있는(임베딩 completed) 새 진술마다 최근접. ⓑ 같은 글
-  // 형제는 새 진술 배치에 이미 다 들어 있어 LLM이 직접 잇는다(별도 후보 불요).
-  const batchIds = new Set(batch.map((s) => s.id));
+  // K개 sub-batch 결과를 모아 source당 1번 적용 — 되돌리기 단위는 글이라 applied 변경셋도
+  // 글당 1개여야 한다(§6). sub-batch 간 같은 쌍이 양쪽에서 제안될 수 있어(서로의 후보로
+  // 끌려옴) 합친 뒤 dedup한다. 배치 0개(노이즈뿐)면 빈 적용으로 완료만.
+  await applyRelationChangesets({
+    supabase: deps.supabase,
+    sourceId: source.id,
+    applied: dedupeChanges(applied),
+    pending: dedupeChanges(pending),
+  });
+}
+
+// 한 sub-batch 잇기 — 후보 좁히기 → LLM 판정 → 게이트. 후보 제외는 이 sub-batch의 id만
+// (다른 sub-batch의 형제는 후보로 끌려와야 분할로 끊긴 형제 관계가 ⓐ로 복원된다).
+async function linkSubBatch(params: {
+  subBatch: LinkingBatchStatement[];
+  spaceId: string;
+  deps: WorkerDeps;
+}): Promise<{ applied: RelationChange[]; pending: RelationChange[] }> {
+  const { subBatch, spaceId, deps } = params;
+  // ⓐ 뜻의 이웃 — 벡터 있는(임베딩 completed) 새 진술마다 최근접.
+  const subBatchIds = new Set(subBatch.map((s) => s.id));
   const neighborIdLists: string[][] = [];
-  for (const statement of batch) {
+  for (const statement of subBatch) {
     if (statement.ingestion_status !== "completed") {
       continue; // 벡터 없는 진술은 자기 이웃 검색의 앵커가 될 수 없다
     }
     const hits = await searchNeighborsWithRetry(deps.vectorStore, {
       statementId: statement.id,
-      spaceId: source.space_id,
+      spaceId,
       limit: CANDIDATE_TOP_K,
       scoreThreshold: CANDIDATE_SCORE_THRESHOLD,
     });
     neighborIdLists.push(hits.map((h) => h.statementId));
   }
-  const candidateIds = selectCandidateIds(neighborIdLists, batchIds);
+  const candidateIds = selectCandidateIds(neighborIdLists, subBatchIds);
 
   const candidates =
     candidateIds.length > 0
@@ -625,19 +654,13 @@ async function processLinking(
       : [];
 
   // 비교 대상이 둘 미만(새 1개 + 후보 0개)이면 관계가 생길 수 없다 — LLM 생략
-  if (!canFormRelations(batch.length, candidates.length)) {
-    await applyRelationChangesets({
-      supabase: deps.supabase,
-      sourceId: source.id,
-      applied: [],
-      pending: [],
-    });
-    return;
+  if (!canFormRelations(subBatch.length, candidates.length)) {
+    return { applied: [], pending: [] };
   }
 
   // 라벨 부여 + id 매핑 — LLM엔 라벨(N0/E1…)만 보여 uuid 환각을 막는다
   const labelToId = new Map<string, string>();
-  const newLabeled: LabeledStatement[] = batch.map((statement, index) => {
+  const newLabeled: LabeledStatement[] = subBatch.map((statement, index) => {
     const label = `N${index}`;
     labelToId.set(label, statement.id);
     return {
@@ -665,17 +688,40 @@ async function processLinking(
     callJudgmentWithRetry(deps.llm, message),
   );
 
-  const { applied, pending } = gateProposals({
+  return gateProposals({
     proposals: output.relations,
     labelToId,
-    batchIds,
+    batchIds: subBatchIds,
   });
-  await applyRelationChangesets({
-    supabase: deps.supabase,
-    sourceId: source.id,
-    applied,
-    pending,
-  });
+}
+
+// 새 진술을 원문 순서 보존하며 size개씩 끊는다 (장문 source의 잇기 콜 분할).
+export function chunkStatements<T>(statements: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < statements.length; i += size) {
+    chunks.push(statements.slice(i, i + size));
+  }
+  return chunks;
+}
+
+// sub-batch 결과를 합친 뒤 중복 제거 — 같은 관계가 여러 sub-batch에서 제안될 수 있다
+// (서로의 후보로 끌려옴). conflicts는 대칭이라 양끝 정렬 키로 역방향까지 collapse
+// (gateProposals와 같은 규칙).
+export function dedupeChanges(changes: RelationChange[]): RelationChange[] {
+  const seen = new Set<string>();
+  const result: RelationChange[] = [];
+  for (const change of changes) {
+    const key =
+      change.type === "conflicts"
+        ? `conflicts:${[change.from_id, change.to_id].sort().join(":")}`
+        : `${change.type}:${change.from_id}:${change.to_id}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(change);
+  }
+  return result;
 }
 
 // 앵커별 이웃 검색의 일시 실패(Qdrant 블립)를 흡수한다 — 임베딩 패스가 Qdrant를
@@ -865,7 +911,7 @@ async function fetchSourceStatements(
   const { data, error } = await supabase
     .from("statements")
     .select(
-      "id, content, type, confidence, ingestion_status, statement_sources!inner(source_id)",
+      "id, content, type, confidence, ingestion_status, statement_sources!inner(source_id, locator)",
     )
     .eq("statement_sources.source_id", sourceId)
     .eq("status", "active");
@@ -875,11 +921,32 @@ async function fetchSourceStatements(
     );
   }
 
-  const parsed = z.array(LinkingBatchStatementSchema).safeParse(data ?? []);
+  // 원문 등장 순서(locator.index)로 정렬 — sub-batch가 원문 연속 구간이 되게 한다.
+  // 한 트랜잭션 생성이라 created_at이 모두 같아 순서는 locator에만 기댄다(꺼내기와 동일).
+  const ordered = [...(data ?? [])].sort(
+    (a, b) => sourceOrderIndex(a) - sourceOrderIndex(b),
+  );
+
+  const parsed = z.array(LinkingBatchStatementSchema).safeParse(ordered);
   if (!parsed.success) {
     throw new Error(`linking batch validation failed: ${parsed.error.message}`);
   }
   return parsed.data;
+}
+
+// statement_sources의 locator {"index": n}에서 원문 순서를 뽑는다. !inner 필터로
+// 이 source의 행만 임베드돼 첫 원소를 본다. 없으면(방어) 맨 뒤로.
+function sourceOrderIndex(row: {
+  statement_sources: Array<{ locator: unknown }>;
+}): number {
+  const locator = row.statement_sources[0]?.locator;
+  if (locator && typeof locator === "object" && !Array.isArray(locator)) {
+    const index = (locator as Record<string, unknown>)["index"];
+    if (typeof index === "number") {
+      return index;
+    }
+  }
+  return Number.MAX_SAFE_INTEGER;
 }
 
 async function fetchCandidateStatements(
