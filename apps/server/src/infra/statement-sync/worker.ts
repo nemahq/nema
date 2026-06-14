@@ -9,7 +9,12 @@ import { createLimiter } from "@server/infra/llm/limiter";
 import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
-import type { StatementUpsertItem, VectorStore } from "@server/infra/vector";
+import type {
+  NeighborSearchOptions,
+  StatementSearchHit,
+  StatementUpsertItem,
+  VectorStore,
+} from "@server/infra/vector";
 import type {
   LabeledStatement,
   RelationProposal,
@@ -81,6 +86,9 @@ const CANDIDATE_TOP_K = 10;
 // 보류: cosine 유사도 하한. 0.5는 "뜻이 가까워 관계가 걸릴 만한" 보수적 경계 —
 // 데이터로 보정(§11).
 const CANDIDATE_SCORE_THRESHOLD = 0.5;
+// 앵커별 이웃 검색의 일시 실패(Qdrant 블립) 흡수 — 추출 청크 콜과 같은 정책.
+const NEIGHBOR_SEARCH_MAX_ATTEMPTS = 3;
+const NEIGHBOR_SEARCH_RETRY_DELAY_MS = 2_000;
 
 type Phase = "extraction" | "embedding" | "linking";
 
@@ -596,32 +604,28 @@ async function processLinking(
   // ⓐ 뜻의 이웃 — 벡터 있는(임베딩 completed) 새 진술마다 최근접. ⓑ 같은 글
   // 형제는 새 진술 배치에 이미 다 들어 있어 LLM이 직접 잇는다(별도 후보 불요).
   const batchIds = new Set(batch.map((s) => s.id));
-  const candidateIds = new Set<string>();
+  const neighborIdLists: string[][] = [];
   for (const statement of batch) {
     if (statement.ingestion_status !== "completed") {
       continue; // 벡터 없는 진술은 자기 이웃 검색의 앵커가 될 수 없다
     }
-    const hits = await deps.vectorStore.searchNeighbors({
+    const hits = await searchNeighborsWithRetry(deps.vectorStore, {
       statementId: statement.id,
       spaceId: source.space_id,
       limit: CANDIDATE_TOP_K,
       scoreThreshold: CANDIDATE_SCORE_THRESHOLD,
     });
-    for (const hit of hits) {
-      // 같은 배치(형제)는 새 진술 목록이 이미 담으므로 후보에서 뺀다
-      if (!batchIds.has(hit.statementId)) {
-        candidateIds.add(hit.statementId);
-      }
-    }
+    neighborIdLists.push(hits.map((h) => h.statementId));
   }
+  const candidateIds = selectCandidateIds(neighborIdLists, batchIds);
 
   const candidates =
-    candidateIds.size > 0
-      ? await fetchCandidateStatements(deps.supabase, [...candidateIds])
+    candidateIds.length > 0
+      ? await fetchCandidateStatements(deps.supabase, candidateIds)
       : [];
 
   // 비교 대상이 둘 미만(새 1개 + 후보 0개)이면 관계가 생길 수 없다 — LLM 생략
-  if (candidates.length === 0 && batch.length < 2) {
+  if (!canFormRelations(batch.length, candidates.length)) {
     await applyRelationChangesets({
       supabase: deps.supabase,
       sourceId: source.id,
@@ -672,6 +676,56 @@ async function processLinking(
     applied,
     pending,
   });
+}
+
+// 앵커별 이웃 검색의 일시 실패(Qdrant 블립)를 흡수한다 — 임베딩 패스가 Qdrant를
+// 멱등 재시도하는 것과 같은 회복력을 잇기에도 준다. 끝내 실패하면 전파해 source
+// 단위 lease 재시도가 받는다(완전 장애는 failed→수동 재개로 복구). 재시도가 없으면
+// 한 앵커의 블립이 source의 retry 예산을 태우고 잇기 전체를 버린다.
+async function searchNeighborsWithRetry(
+  vectorStore: VectorStore,
+  options: NeighborSearchOptions,
+): Promise<StatementSearchHit[]> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= NEIGHBOR_SEARCH_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await vectorStore.searchNeighbors(options);
+    } catch (err) {
+      lastError = err;
+      if (attempt === NEIGHBOR_SEARCH_MAX_ATTEMPTS) {
+        throw err;
+      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, attempt * NEIGHBOR_SEARCH_RETRY_DELAY_MS),
+      );
+    }
+  }
+  throw lastError;
+}
+
+// 후보 = 앵커별 이웃을 합치고 중복·형제(같은 배치)를 걷어낸 기존 진술 id들.
+// 형제는 새 진술 목록(batch)이 이미 담으므로 후보에서 뺀다 (relation-design §4).
+export function selectCandidateIds(
+  neighborIdLists: string[][],
+  batchIds: Set<string>,
+): string[] {
+  const ids = new Set<string>();
+  for (const list of neighborIdLists) {
+    for (const id of list) {
+      if (!batchIds.has(id)) {
+        ids.add(id);
+      }
+    }
+  }
+  return [...ids];
+}
+
+// 비교 대상이 둘 미만(새 1개 + 후보 0개)이면 관계가 생길 수 없다 — LLM 콜을 생략한다.
+export function canFormRelations(
+  batchLength: number,
+  candidateLength: number,
+): boolean {
+  return candidateLength > 0 || batchLength >= 2;
 }
 
 interface RelationChange {
@@ -771,7 +825,9 @@ async function applyRelationChangesets(params: {
   const { supabase, sourceId, applied, pending } = params;
   const { error } = await supabase.rpc("apply_relation_changesets", {
     p_source_id: sourceId,
-    // RPC가 jsonb 배열로 받는다 — 구조체 배열을 Json으로 넘긴다
+    // RPC가 jsonb 배열로 받는다 — 구조체 배열을 Json으로 넘긴다. 여기서 TS의 필드명
+    // 검증이 끊기고, 계약 상대는 apply_relation_changesets의 v_item->>'from_id'/'to_id'/'type'
+    // 읽기다 — 키를 바꾸면 그 RPC도 함께 고쳐야 한다.
     p_applied: applied as unknown as Json,
     p_pending: pending as unknown as Json,
   });

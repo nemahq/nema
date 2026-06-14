@@ -82,7 +82,8 @@ CREATE TRIGGER trg_statements_cascade_archive_relations
 --    재시도가 같은 관계를 이중 적용하는 것을 막는다 (relation-design §7).
 --    상태 무관 전체 유니크 — 가려진 관계의 재생성도 막고, 연쇄 복귀는 기존 행을
 --    UPDATE하므로 충돌하지 않는다. conflicts의 역방향(B→A) 중복은 이 인덱스가
---    아니라 후보 단계에서 막는다(방향 저장·동작 대칭, schema-design §4.4).
+--    아니라 게이트(gateProposals)가 막는다 — 양끝을 정렬한 키로 dedup. 후보 단계엔
+--    충돌 방향 개념이 없다(방향 저장·동작 대칭, schema-design §4.4).
 -- =============================================================
 
 CREATE UNIQUE INDEX uq_statement_relations_triple

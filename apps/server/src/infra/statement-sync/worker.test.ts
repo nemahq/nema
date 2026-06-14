@@ -14,9 +14,11 @@ import type { RelationProposal } from "@server/prompts/relation-judgment";
 
 import type { PendingSource, PendingStatement } from "./types";
 import {
+  canFormRelations,
   createStatementSyncWorker,
   gateProposals,
   POLL_INTERVAL_MS,
+  selectCandidateIds,
 } from "./worker";
 
 const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
@@ -515,5 +517,42 @@ describe("gateProposals", () => {
       { from: "E0", to: "N0", type: "conflicts", confident: false },
     ]);
     expect(pending).toHaveLength(1);
+  });
+});
+
+// 후보 좁히기 — 형제 제외/skip 경계가 틀리면 LLM 판정 대상을 조용히 망친다.
+describe("selectCandidateIds", () => {
+  it("앵커별 이웃을 합치고 중복을 건다", () => {
+    const ids = selectCandidateIds(
+      [
+        ["e1", "e2"],
+        ["e2", "e3"],
+      ],
+      new Set(),
+    );
+    expect([...ids].sort()).toEqual(["e1", "e2", "e3"]);
+  });
+
+  it("같은 배치(형제) id는 후보에서 뺀다 — 새 진술 목록이 이미 담으므로", () => {
+    const ids = selectCandidateIds([["sibling", "e1"]], new Set(["sibling"]));
+    expect(ids).toEqual(["e1"]);
+  });
+
+  it("이웃이 없으면 빈 배열", () => {
+    expect(selectCandidateIds([[], []], new Set(["x"]))).toEqual([]);
+  });
+});
+
+describe("canFormRelations", () => {
+  it("후보가 있으면 진술 1개라도 LLM을 부른다", () => {
+    expect(canFormRelations(1, 3)).toBe(true);
+  });
+
+  it("후보 0 + 새 진술 2개 이상이면 형제끼리 관계가 가능하다", () => {
+    expect(canFormRelations(2, 0)).toBe(true);
+  });
+
+  it("후보 0 + 새 진술 1개면 비교 대상이 없어 생략한다", () => {
+    expect(canFormRelations(1, 0)).toBe(false);
   });
 });

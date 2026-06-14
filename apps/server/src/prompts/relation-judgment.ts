@@ -86,6 +86,8 @@ export const RelationJudgmentSchema = z.object({
 });
 
 // 메시지에 들어갈 라벨 진술. 라벨 부여·id 매핑은 워커 몫(프롬프트는 포맷만).
+// type·confidence는 프롬프트 라인에 박는 표시값일 뿐이라 좁은 enum 대신 string으로
+// 둔다(판정 결과는 하류에서 RelationProposalSchema로 다시 검증된다).
 export interface LabeledStatement {
   label: string;
   content: string;

@@ -138,7 +138,11 @@ BEGIN
   -- target_id는 승인 시 생길 관계의 id를 미리 예약한다(changes.target_id NOT NULL).
   FOR v_item IN SELECT value FROM jsonb_array_elements(p_pending)
   LOOP
-    -- 재시도가 같은 쌍을 다시 제안하면 기존 pending 변경셋이 막는다 (§6 빌드 세부).
+    -- 재시도가 같은 쌍을 다시 제안하면 기존 pending 변경셋을 건너뛴다 (§6 빌드 세부).
+    -- best-effort다 — 관계 행이 없어 unique로 못 막고, 같은 space의 형제 source가
+    -- 병렬(LINKING_CONCURRENCY)일 때 check-then-insert 경쟁으로 중복 pending이 샐 수
+    -- 있다. 해는 가볍다(검토함의 중복 항목 하나, 표시단 dedup 가능) — 승인 시점엔
+    -- statement_relations의 (from,to,type) unique가 이중 적용을 막는다.
     CONTINUE WHEN EXISTS (
       SELECT 1
       FROM changesets c
