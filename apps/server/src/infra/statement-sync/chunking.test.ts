@@ -80,6 +80,36 @@ describe("chunkForExtraction", () => {
     }
   });
 
+  it("비균등 경계 입력에서도 모든 청크(꼬리 포함)가 임계선 이하 — 추정 오차·잔차 안전망", () => {
+    // 균등 문단(buildParagraphText)은 추정 오차·잔차 누적을 못 드러낸다. 문단 길이를
+    // 바꿔가며 경계 간격을 비균등으로 만들면 비종단·꼬리 청크가 임계선을 넘던 회귀.
+    const sentence =
+      "배포 파이프라인의 캐시 무효화 정책을 재검토했고 결론은 위키에 정리하기로 했다 ";
+    const buildSkewed = (paraLen: number, paraCount: number): string => {
+      const para = sentence
+        .repeat(Math.ceil(paraLen / sentence.length))
+        .slice(0, paraLen);
+      return Array.from({ length: paraCount }, (_, i) => `${i}번 ${para}`).join(
+        "\n\n",
+      );
+    };
+
+    // [650,60]은 안전망 없을 때 9청크가 초과하던 최강 회귀 케이스, [800,30]은 다른 모양
+    for (const [paraLen, paraCount] of [
+      [650, 60],
+      [800, 30],
+    ] as const) {
+      const body = buildSkewed(paraLen, paraCount);
+      const chunks = chunkForExtraction(body);
+      expect(chunks.map((c) => c.body).join("")).toBe(body);
+      for (const chunk of chunks) {
+        expect(countTokens(chunk.body)).toBeLessThanOrEqual(
+          EXTRACTION_CHUNK_THRESHOLD_TOKENS,
+        );
+      }
+    }
+  });
+
   it("경계가 전무한 한 덩어리도 하드 컷으로 무손실 분할된다", () => {
     // 공백·구두점 없는 연속 텍스트 (최악 입력)
     const body = "가나다라마바사아자차카타파하".repeat(500);

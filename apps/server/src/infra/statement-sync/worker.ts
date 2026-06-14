@@ -270,7 +270,11 @@ const LLM_CALL_CONCURRENCY = 3;
 const CHUNK_CALL_MAX_ATTEMPTS = 3;
 // rate_limit 직후 즉시 재시도는 또 걸린다 — 시도 횟수 비례 지연
 const CHUNK_CALL_RETRY_DELAY_MS = 2_000;
-// 결정적 실패(스키마·인증·콘텐츠 필터)는 재시도해도 같다 — 일시 오류만 재시도
+// 결정적 실패(스키마·인증·콘텐츠 필터)는 재시도해도 같다 — 일시 오류만 재시도.
+// unknown은 provider가 분류 못 한 오류로, 일시 장애와 결정적 실패를 함께 묶는다 —
+// 후자면 3회를 헛쓰지만 숨지 않고 결국 Sentry+DB로 전파되므로 보수적으로 포함한다.
+// 청크 콜이 결정적 실패로 죽으면 source 전체가 lease 사이클로 MAX_RETRIES회 통째
+// 재추출되며 매번 같은 자리서 실패한다(원자성 대가의 비용 증폭, 동작은 의도대로).
 const RETRYABLE_LLM_CODES: ReadonlySet<string> = new Set([
   "timeout",
   "rate_limit",

@@ -14,6 +14,8 @@ export const EXTRACTION_CHUNK_THRESHOLD_TOKENS = 1_500;
 export const CHUNK_CONTEXT_WINDOW_TOKENS = 200;
 /** 균등 분배 목표 지점에서 경계를 탐색하는 반경 — 못 찾으면 한 단계 강등 */
 const BOUNDARY_SEARCH_WINDOW_TOKENS = 200;
+/** 비단절 하드 컷이 THRESHOLD를 넘을 때 조각을 줄이는 비율 (enforceThreshold fallback) */
+const HARD_CUT_SHRINK_FACTOR = 0.9;
 
 // gpt-5 계열 인코딩 고정 — 모델이 바뀌면 임계선 곡선 자체를 재측정해야 하므로
 // (설계 7장) 인코딩만 바꾸는 일은 없다
@@ -155,10 +157,21 @@ function splitIntoBodies(body: string, totalTokens: number): string[] {
 
   // 경계가 아예 없는 입력(비단절 덩어리)은 토큰 균등 하드 컷 한 번으로 끝낸다
   // — 루프의 청크별 재인코딩을 피한다 (비단절은 인코딩이 가장 비싼 입력이다)
-  if (candidates.length === 0) {
-    return evenTokenSplit(body, chunkCount);
-  }
+  const raw =
+    candidates.length === 0
+      ? evenTokenSplit(body, chunkCount)
+      : packEvenly({ body, totalTokens, chunkCount, candidates });
 
+  return enforceThreshold(raw);
+}
+
+function packEvenly(params: {
+  body: string;
+  totalTokens: number;
+  chunkCount: number;
+  candidates: BoundaryCandidate[];
+}): string[] {
+  const { body, totalTokens, chunkCount, candidates } = params;
   const bodies: string[] = [];
   let cursorChar = 0;
   let cursorTokens = 0;
@@ -182,10 +195,9 @@ function splitIntoBodies(body: string, totalTokens: number): string[] {
       cursorChar = cut.charIndex;
       cursorTokens = cut.tokenIndex;
     } else {
-      // 최후 수단: 탐색 창에 경계가 전무 — 문자 위치 하드 컷.
+      // 탐색 창에 경계가 전무 — 문자 위치 하드 컷.
       // 토큰 decode 기반 컷은 토큰 경계가 멀티바이트 문자를 가를 수 있어
-      // 무손실이 깨진다 — 문자 비례 추정으로 자른다(토큰 수 오차 ±몇 %는
-      // 임계선 마진 안).
+      // 무손실이 깨진다 — 문자 비례 추정으로 자른다(토큰 수 오차는 enforceThreshold가 받는다).
       const rest = body.slice(cursorChar);
       const restTokens = countTokens(rest);
       const take = Math.round(ideal - cursorTokens);
@@ -200,6 +212,67 @@ function splitIntoBodies(body: string, totalTokens: number): string[] {
   }
   bodies.push(body.slice(cursorChar));
   return bodies;
+}
+
+// 균등 패킹의 경계 위치는 collectCandidates의 조각 인코딩 누적값으로 잡는데, 이 합은
+// 전체 재인코딩(countTokens)과 BPE 병합 차이로 어긋난다 — THRESHOLD 이하로 판단된
+// 청크가 실측으로는 넘을 수 있고, 잔차가 꼬리 청크로 쌓이기도 한다(둘 다 비균등
+// 경계 입력에서 재현됨). 분할이 막으려던 과대 콜이 청크 단위로 재발하지 않게,
+// 실측으로 초과 청크만 THRESHOLD 이하 조각으로 다시 가른다(무손실·결정적).
+function enforceThreshold(bodies: string[]): string[] {
+  return bodies.flatMap((b) =>
+    countTokens(b) > EXTRACTION_CHUNK_THRESHOLD_TOKENS
+      ? splitOversized(b)
+      : [b],
+  );
+}
+
+function splitOversized(body: string): string[] {
+  const candidates = collectCandidates(body);
+  const pieces: string[] = [];
+  let cursorChar = 0;
+
+  while (true) {
+    const rest = body.slice(cursorChar);
+    if (countTokens(rest) <= EXTRACTION_CHUNK_THRESHOLD_TOKENS) {
+      pieces.push(rest);
+      break;
+    }
+    // cursor부터 실측 토큰이 THRESHOLD를 넘지 않는 가장 먼 경계 (후보는 charIndex 순)
+    let cutChar = -1;
+    for (const candidate of candidates) {
+      if (candidate.charIndex <= cursorChar) {
+        continue;
+      }
+      const piece = body.slice(cursorChar, candidate.charIndex);
+      if (countTokens(piece) <= EXTRACTION_CHUNK_THRESHOLD_TOKENS) {
+        cutChar = candidate.charIndex;
+      } else {
+        break;
+      }
+    }
+    if (cutChar < 0) {
+      // 첫 경계조차 THRESHOLD 초과(또는 경계 전무) — 문자 비례 하드 컷, 넘치면 줄여 보장
+      const restTokens = countTokens(rest);
+      let pieceChars = Math.max(
+        1,
+        Math.floor(
+          (rest.length * EXTRACTION_CHUNK_THRESHOLD_TOKENS) / restTokens,
+        ),
+      );
+      while (
+        pieceChars > 1 &&
+        countTokens(rest.slice(0, pieceChars)) >
+          EXTRACTION_CHUNK_THRESHOLD_TOKENS
+      ) {
+        pieceChars = Math.floor(pieceChars * HARD_CUT_SHRINK_FACTOR);
+      }
+      cutChar = cursorChar + pieceChars;
+    }
+    pieces.push(body.slice(cursorChar, cutChar));
+    cursorChar = cutChar;
+  }
+  return pieces;
 }
 
 /** 경계 없는 입력 전용 — 문자 균등 분할 (균일한 비단절 덩어리라 토큰 균등과 동치) */
