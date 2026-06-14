@@ -62,6 +62,13 @@ Statements:
 
 "오늘 날씨 좋네" produces nothing.
 
+## Surrounding context (present only for long notes)
+
+A long note may be processed in consecutive segments. When the message includes <context_before> or <context_after>, they are the raw text neighboring the <note> segment, attached read-only:
+
+- Use them to resolve pronouns and omitted subjects ("that approach" → the approach named in context), and to see decisions that continue or reverse across the segment boundary.
+- Extract statements ONLY from <note>. Text that appears only in context must never become a statement — the neighboring segment's own extraction covers it.
+
 ## Output
 
 - JSON object: { "statements": [{ "content": string, "type": "claim" | "question" | "todo", "confidence": "certain" | "guess" | null }] }
@@ -83,6 +90,19 @@ export const StatementExtractionSchema = z.object({
   statements: z.array(ExtractedStatementSchema),
 });
 
-export function buildStatementExtractionMessage(body: string): string {
-  return `<note>${body}</note>`;
+// 분할 경로(초장문)에서만 문맥이 붙는다 — 짧은 글은 인자 없이 기존 메시지 그대로.
+// 문맥은 읽기 전용(추출 금지) — 규칙은 시스템 프롬프트의 Surrounding context 절.
+export function buildStatementExtractionMessage(
+  body: string,
+  context?: { before: string | null; after: string | null },
+): string {
+  const parts: string[] = [];
+  if (context?.before) {
+    parts.push(`<context_before>${context.before}</context_before>`);
+  }
+  parts.push(`<note>${body}</note>`);
+  if (context?.after) {
+    parts.push(`<context_after>${context.after}</context_after>`);
+  }
+  return parts.join("\n");
 }

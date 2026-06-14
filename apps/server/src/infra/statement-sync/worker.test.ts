@@ -6,6 +6,7 @@ vi.mock("@sentry/node", () => ({
 }));
 
 import type { EmbeddingProvider } from "@server/infra/embedding";
+import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type { VectorStore } from "@server/infra/vector";
@@ -317,5 +318,124 @@ describe("createStatementSyncWorker", () => {
       vectorStore.upsertStatements as ReturnType<typeof vi.fn>
     ).mock.invocationCallOrder[0];
     expect(applyOrder).toBeLessThan(upsertOrder);
+  });
+
+  // --- 분할 경로 (long-input-chunking 설계 5장) ---
+
+  // 임계선(1,500토큰) 초과 합성 장문 — 문단마다 고유 번호로 순서 검증 가능
+  function longBody(): string {
+    const paragraphs: string[] = [];
+    for (let p = 0; p < 60; p++) {
+      paragraphs.push(
+        `${p}번째 안건으로 배포 파이프라인의 캐시 무효화 정책을 검토했고 결론은 위키에 정리하기로 했다. ` +
+          `근거는 지난 분기 장애 회고에서 나온 캐시 불일치 사례 세 건이다.`,
+      );
+    }
+    return paragraphs.join("\n\n");
+  }
+
+  it("장문 분할 — 청크 병렬 추출 결과가 원문 순서로 연결돼 apply 1회에 담긴다", async () => {
+    const { client, rpc } = mockSupabase({
+      read_sync_events: [[NOTIFY_ROW]],
+      fetch_pending_sources: [[{ ...PENDING_SOURCE, body: longBody() }]],
+    });
+
+    // 청크마다 그 청크 본문의 첫 안건 번호를 진술로 돌려준다 — 연결 순서가
+    // 호출 완료 순서가 아니라 청크(원문) 순서임을 내용으로 검증
+    const generateStructured = vi.fn(
+      async (params: { messages: Array<{ content: string }> }) => {
+        const content = params.messages[0]?.content ?? "";
+        const note = /<note>([\s\S]*?)<\/note>/.exec(content)?.[1] ?? "";
+        const marker = /(\d+)번째 안건/.exec(note)?.[1] ?? "?";
+        return {
+          statements: [
+            {
+              content: `${marker}번째 청크 진술`,
+              type: "claim",
+              confidence: "certain",
+            },
+          ],
+        };
+      },
+    );
+    const llm = {
+      generateStructured,
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    } as unknown as LlmProvider;
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    // 여러 콜로 갈렸고
+    expect(generateStructured.mock.calls.length).toBeGreaterThan(1);
+    // 청크 콜에는 읽기 전용 문맥이 동봉된다 (첫 청크 제외)
+    const messages = generateStructured.mock.calls.map(
+      (call) => call[0]?.messages[0]?.content ?? "",
+    );
+    expect(messages.some((m) => m.includes("<context_before>"))).toBe(true);
+    expect(messages.some((m) => m.includes("<context_after>"))).toBe(true);
+
+    // apply는 1회, 진술은 원문(청크) 순서 + 전역 index
+    const applies = rpcCalls(rpc, "apply_ingestion_changeset");
+    expect(applies).toHaveLength(1);
+    const statements = (
+      applies[0]?.[1] as {
+        p_statements: Array<{ content: string; index: number }>;
+      }
+    ).p_statements;
+    expect(statements.length).toBe(generateStructured.mock.calls.length);
+    const markers = statements.map((s) =>
+      Number(/(\d+)번째/.exec(s.content)?.[1]),
+    );
+    expect(markers).toEqual([...markers].sort((a, b) => a - b));
+    expect(statements.map((s) => s.index)).toEqual(statements.map((_, i) => i));
+  });
+
+  it("장문 분할 — 청크 하나가 실패하면 부분 저장 없이 source 전체가 재시도 경로를 탄다", async () => {
+    const { client, rpc } = mockSupabase({
+      read_sync_events: [[NOTIFY_ROW]],
+      fetch_pending_sources: [[{ ...PENDING_SOURCE, body: longBody() }]],
+    });
+
+    let callCount = 0;
+    const generateStructured = vi.fn(async () => {
+      callCount += 1;
+      if (callCount === 2) {
+        // 결정적 실패 — 콜 레벨 재시도 없이 즉시 전파되는 코드
+        throw new LlmError("bad_request", "schema mismatch");
+      }
+      return {
+        statements: [{ content: "진술", type: "claim", confidence: "certain" }],
+      };
+    });
+    const llm = {
+      generateStructured,
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    } as unknown as LlmProvider;
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    expect(rpcCalls(rpc, "apply_ingestion_changeset")).toHaveLength(0);
+    const retries = rpcCalls(rpc, "increment_source_extraction_retry");
+    expect(retries).toHaveLength(1);
+    expect(retries[0]?.[1]).toMatchObject({
+      p_source_id: SOURCE_ID,
+      p_error_message: expect.stringContaining("schema mismatch"),
+    });
   });
 });

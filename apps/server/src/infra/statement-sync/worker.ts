@@ -2,6 +2,8 @@ import { z } from "zod";
 import * as Sentry from "@sentry/node";
 
 import type { EmbeddingProvider } from "@server/infra/embedding";
+import { createLimiter } from "@server/infra/llm/limiter";
+import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type { StatementUpsertItem, VectorStore } from "@server/infra/vector";
@@ -12,6 +14,8 @@ import {
   StatementExtractionSchema,
 } from "@server/prompts/statement-extraction";
 
+import type { ExtractionChunk } from "./chunking";
+import { chunkForExtraction } from "./chunking";
 import type { PendingSource, PendingStatement } from "./types";
 import {
   PendingSourceSchema,
@@ -228,19 +232,8 @@ async function processSource(
   source: PendingSource,
   deps: WorkerDeps,
 ): Promise<void> {
-  const output = await deps.llm.generateStructured({
-    schema: StatementExtractionSchema,
-    schemaName: "statement_extraction",
-    systemPrompt: STATEMENT_EXTRACTION_SYSTEM_PROMPT,
-    messages: [
-      { role: "user", content: buildStatementExtractionMessage(source.body) },
-    ],
-    reasoningEffort: EXTRACTION_REASONING_EFFORT,
-    timeoutMs: EXTRACTION_TIMEOUT_MS,
-    maxRetries: 0,
-  });
-
-  const statements = normalizeStatements(output.statements);
+  const extracted = await extractSourceStatements(deps.llm, source.body);
+  const statements = normalizeStatements(extracted);
 
   // 진술 0개(노이즈뿐인 글)면 빈 changeset을 남기지 않는다
   if (statements.length === 0) {
@@ -264,6 +257,98 @@ async function processSource(
       `apply_ingestion_changeset failed for ${source.id}: ${error.message}`,
     );
   }
+}
+
+// --- 추출 — 임계선 이하 1콜, 초과 시 청크 병렬 (long-input-chunking 설계) ---
+
+// 동시 LLM 콜 상한은 이 한 군데서 관리한다 — source 병렬(EXTRACTION_CONCURRENCY)과
+// 청크 병렬이 곱으로 불어나지 않게, 모든 추출 콜이 같은 제한기를 지난다.
+// 동시 4 초과 시 제공자 타임아웃이 관찰된 전례(measurement-log #3)로 3.
+const LLM_CALL_CONCURRENCY = 3;
+// 청크 콜 한정 재시도 — 단일 콜 실패는 DB lease 재시도가 받지만, 분할 경로는
+// 청크 하나의 일시 실패가 성공한 나머지 전부를 버리게 하므로 콜 레벨 방어가 먼저다.
+const CHUNK_CALL_MAX_ATTEMPTS = 3;
+// rate_limit 직후 즉시 재시도는 또 걸린다 — 시도 횟수 비례 지연
+const CHUNK_CALL_RETRY_DELAY_MS = 2_000;
+// 결정적 실패(스키마·인증·콘텐츠 필터)는 재시도해도 같다 — 일시 오류만 재시도.
+// unknown은 provider가 분류 못 한 오류로, 일시 장애와 결정적 실패를 함께 묶는다 —
+// 후자면 3회를 헛쓰지만 숨지 않고 결국 Sentry+DB로 전파되므로 보수적으로 포함한다.
+// 청크 콜이 결정적 실패로 죽으면 source 전체가 lease 사이클로 MAX_RETRIES회 통째
+// 재추출되며 매번 같은 자리서 실패한다(원자성 대가의 비용 증폭, 동작은 의도대로).
+const RETRYABLE_LLM_CODES: ReadonlySet<string> = new Set([
+  "timeout",
+  "rate_limit",
+  "unknown",
+]);
+
+const limitLlmCall = createLimiter(LLM_CALL_CONCURRENCY);
+
+async function extractSourceStatements(
+  llm: LlmProvider,
+  body: string,
+): Promise<ExtractedStatement[]> {
+  const chunks = chunkForExtraction(body);
+
+  // 임계선 이하(1청크, 문맥 없음) — 기존 1콜 경로 그대로
+  const single = chunks.length === 1 ? chunks[0] : undefined;
+  if (single) {
+    const output = await limitLlmCall(() => callExtraction(llm, single));
+    return output.statements;
+  }
+
+  // 청크 병렬 — 입력(본문+문맥)이 분할 시점에 전부 확정돼 있어 앞 콜 결과를
+  // 기다릴 필요가 없다. 하나라도 실패하면 source 전체 실패(부분 저장 없음) —
+  // Promise.all의 첫 reject가 그대로 전파돼 호출자의 재시도 경로를 탄다.
+  const outputs = await Promise.all(
+    chunks.map((chunk) =>
+      limitLlmCall(() => callExtractionWithRetry(llm, chunk)),
+    ),
+  );
+  // 청크 순서대로 연결 = 원문 등장 순서 — index는 normalizeStatements가 재부여
+  return outputs.flatMap((output) => output.statements);
+}
+
+function callExtraction(llm: LlmProvider, chunk: ExtractionChunk) {
+  return llm.generateStructured({
+    schema: StatementExtractionSchema,
+    schemaName: "statement_extraction",
+    systemPrompt: STATEMENT_EXTRACTION_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content: buildStatementExtractionMessage(chunk.body, {
+          before: chunk.contextBefore,
+          after: chunk.contextAfter,
+        }),
+      },
+    ],
+    reasoningEffort: EXTRACTION_REASONING_EFFORT,
+    timeoutMs: EXTRACTION_TIMEOUT_MS,
+    maxRetries: 0,
+  });
+}
+
+async function callExtractionWithRetry(
+  llm: LlmProvider,
+  chunk: ExtractionChunk,
+) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= CHUNK_CALL_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await callExtraction(llm, chunk);
+    } catch (err) {
+      lastError = err;
+      const retryable =
+        err instanceof LlmError && RETRYABLE_LLM_CODES.has(err.code);
+      if (!retryable || attempt === CHUNK_CALL_MAX_ATTEMPTS) {
+        throw err;
+      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, attempt * CHUNK_CALL_RETRY_DELAY_MS),
+      );
+    }
+  }
+  throw lastError;
 }
 
 // 출력 순서 = 원문 순서 계약이므로 index는 배열 위치에서 파생.

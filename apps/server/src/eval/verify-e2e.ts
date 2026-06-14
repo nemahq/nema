@@ -24,9 +24,12 @@ import type { Database } from "@server/infra/database.types";
 import { createVoyageProvider } from "@server/infra/embedding";
 import { createTieredLlm } from "@server/infra/llm/models";
 import { createStatementSyncWorker } from "@server/infra/statement-sync";
+import { chunkForExtraction } from "@server/infra/statement-sync/chunking";
 import { createQdrantClient, createQdrantStore } from "@server/infra/vector";
 import { createSource } from "@server/services/source-service";
 import { searchStatements } from "@server/services/statement-search";
+
+import { buildUpperBoundInput } from "./statement-engine/long-input-seeds";
 
 loadEnv(new URL("../..", import.meta.url).pathname);
 
@@ -65,6 +68,12 @@ const WAIT_POLL_INTERVAL_MS = 2_000;
 // 워커 폴링(2초)+LLM 추출 지연을 덮는 여유 — 추출 호출 상한(120초)보다 넉넉히.
 // 임베딩은 LLM이 없어 더 짧다.
 const EXTRACTION_WAIT_TIMEOUT_MS = 150_000;
+// 장문(다청크)은 청크 웨이브(⌈청크÷동시성3⌉) × 호출 상한 — 7청크면 3웨이브
+const LONG_EXTRACTION_WAIT_TIMEOUT_MS = 480_000;
+// ①~⑤ 전부 도달해야 통과 — 단계를 더하면 같이 올릴 것
+const EXPECTED_CHECK_COUNT = 5;
+// 상한 합성 입력(~10k 토큰)의 진술 수 하한 — 짧은 시드 4편의 합이라 보수적으로
+const LONG_MIN_STATEMENTS = 50;
 const EMBEDDING_WAIT_TIMEOUT_MS = 60_000;
 
 // 진단 도구가 인프라 오류를 삼키면 "추출 타임아웃"으로 둔갑한다 — 전 조회에 적용
@@ -134,7 +143,7 @@ async function main() {
       );
 
     console.log("\n=== 결과 ===");
-    let allPass = Object.keys(results).length === 4;
+    let allPass = Object.keys(results).length === EXPECTED_CHECK_COUNT;
     for (const [label, pass] of Object.entries(results)) {
       console.log(`${pass ? "✅" : "❌"} ${label}`);
       allPass = allPass && pass;
@@ -305,6 +314,72 @@ async function runPipeline(args: {
       console.log(`        · (${s.score.toFixed(3)}) ${s.content}`);
     }
   }
+
+  // ── ⑤ 장문 분할 — 임계선 초과 입력이 여러 청크로 갈려도 한 changeset ──
+  // long-input-chunking 6장의 상한 실주행: 다청크 → apply 1회 원자 적용,
+  // locator index가 원문 순서로 연속인지(청크 연결 계약)를 실배관에서 본다.
+  const longBody = buildUpperBoundInput();
+  const expectedChunkCount = chunkForExtraction(longBody).length;
+  console.log(
+    `⑤ 장문 분할: ${longBody.length}자 (${expectedChunkCount}청크 예상) 박제`,
+  );
+  const { sourceId: longSourceId } = await createSource({
+    supabase: userClient,
+    body: longBody,
+  });
+
+  worker.start();
+  const longExtracted = await waitUntil({
+    label: "장문 추출 완료",
+    timeoutMs: LONG_EXTRACTION_WAIT_TIMEOUT_MS,
+    check: async () => {
+      const { data, error: pollError } = await admin
+        .from("sources")
+        .select("extraction_status")
+        .eq("id", longSourceId)
+        .single();
+      expectNoError("장문 추출 상태 조회", pollError);
+      return data?.extraction_status === "completed";
+    },
+  });
+  await worker.stop();
+
+  const { data: longRefs, error: longRefsError } = await admin
+    .from("statement_sources")
+    .select("locator")
+    .eq("source_id", longSourceId);
+  expectNoError("장문 statement_sources 조회", longRefsError);
+  const { data: longChangesets, error: longChangesetError } = await admin
+    .from("changesets")
+    .select("id, status")
+    .eq("source_id", longSourceId);
+  expectNoError("장문 changeset 조회", longChangesetError);
+
+  const indices = (longRefs ?? [])
+    .map((r) => {
+      const locator = r.locator;
+      if (locator && typeof locator === "object" && "index" in locator) {
+        return Number((locator as { index: unknown }).index);
+      }
+      return Number.NaN;
+    })
+    .sort((a, b) => a - b);
+  const indicesContiguous =
+    indices.length > 0 && indices.every((value, i) => value === i);
+
+  // 다청크가 한 changeset으로 모인다는 게 이 단계의 핵심 — 입력이 실제로 분할됐는지
+  // (단일 청크 fallback이 아닌지) 명시 단정한다.
+  results["⑤ 장문 분할 — 다청크 원자 적용·index 연속"] =
+    longExtracted &&
+    expectedChunkCount >= 2 &&
+    (longChangesets?.length ?? 0) === 1 &&
+    longChangesets?.[0]?.status === "applied" &&
+    indices.length >= LONG_MIN_STATEMENTS &&
+    indicesContiguous;
+  console.log(
+    `⑤ 장문 분할: 추출=${longExtracted}, ${expectedChunkCount}청크→changeset ${longChangesets?.length}개(${longChangesets?.[0]?.status}), ` +
+      `진술 ${indices.length}개, index 연속=${indicesContiguous}`,
+  );
 }
 
 async function getSpaceId(
