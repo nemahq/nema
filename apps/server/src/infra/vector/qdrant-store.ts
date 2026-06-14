@@ -6,6 +6,7 @@ import {
 
 import type { QdrantClient } from "./qdrant-client";
 import type {
+  NeighborSearchOptions,
   SearchOptions,
   StatementPayload,
   StatementSearchHit,
@@ -172,6 +173,37 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
         throw new VectorStoreError(
           `Search failed: ${error instanceof Error ? error.message : String(error)}`,
           "search",
+          error,
+        );
+      }
+    },
+
+    async searchNeighbors(
+      options: NeighborSearchOptions,
+    ): Promise<StatementSearchHit[]> {
+      const { statementId, spaceId, limit, scoreThreshold } = options;
+
+      try {
+        // query = point id → 저장된 벡터로 최근접 검색. 앵커 자신은 has_id로 제외.
+        const result = await client.query(QDRANT_COLLECTION, {
+          query: statementId,
+          limit,
+          filter: {
+            must: [{ key: "space_id", match: { any: [spaceId] } }],
+            must_not: [{ has_id: [statementId] }],
+          },
+          with_payload: false,
+          score_threshold: scoreThreshold,
+        });
+
+        return result.points.map((point) => ({
+          statementId: String(point.id),
+          score: point.score,
+        }));
+      } catch (error) {
+        throw new VectorStoreError(
+          `Neighbor search failed: ${error instanceof Error ? error.message : String(error)}`,
+          "searchNeighbors",
           error,
         );
       }

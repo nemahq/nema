@@ -75,6 +75,14 @@ export {
   SourceGetInputSchema,
 } from "./schemas/source";
 export {
+  RELATION_STATUSES,
+  RELATION_TYPES,
+  type RelationStatus,
+  RelationStatusSchema,
+  type RelationType,
+  RelationTypeSchema,
+} from "./schemas/statement-relation";
+export {
   type StatementSearchInput,
   StatementSearchInputSchema,
 } from "./schemas/statement-search";

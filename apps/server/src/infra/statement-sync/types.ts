@@ -36,3 +36,37 @@ export const PendingStatementSchema = z.object({
 });
 
 export type PendingStatement = z.infer<typeof PendingStatementSchema>;
+
+// --- 잇기(linking) ③단계 ---
+
+export const PendingLinkingSourceSchema = z.object({
+  id: z.string().uuid(),
+  space_id: z.string().uuid(),
+  created_at: z.string().datetime({ offset: true }),
+});
+
+export type PendingLinkingSource = z.infer<typeof PendingLinkingSourceSchema>;
+
+// 잇기 대상 원본의 새 진술(배치). ingestion_status로 ⓐ 앵커 가능 여부를 가린다
+// (벡터 없는 failed 진술은 자기 이웃 검색의 앵커가 될 수 없다).
+export const LinkingBatchStatementSchema = z.object({
+  id: z.string().uuid(),
+  content: z.string().min(1),
+  type: z.enum(["claim", "question", "todo"]),
+  confidence: z.enum(["certain", "guess"]).nullable(),
+  ingestion_status: z.enum(["pending", "completed", "failed"]),
+});
+
+export type LinkingBatchStatement = z.infer<typeof LinkingBatchStatementSchema>;
+
+// 후보(기존 진술) — 본문만 필요. 벡터 이웃이라 늘 active.
+export const LinkingCandidateStatementSchema = z.object({
+  id: z.string().uuid(),
+  content: z.string().min(1),
+  type: z.enum(["claim", "question", "todo"]),
+  confidence: z.enum(["certain", "guess"]).nullable(),
+});
+
+export type LinkingCandidateStatement = z.infer<
+  typeof LinkingCandidateStatementSchema
+>;

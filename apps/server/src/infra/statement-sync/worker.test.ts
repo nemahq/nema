@@ -10,9 +10,14 @@ import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type { VectorStore } from "@server/infra/vector";
+import type { RelationProposal } from "@server/prompts/relation-judgment";
 
 import type { PendingSource, PendingStatement } from "./types";
-import { createStatementSyncWorker, POLL_INTERVAL_MS } from "./worker";
+import {
+  createStatementSyncWorker,
+  gateProposals,
+  POLL_INTERVAL_MS,
+} from "./worker";
 
 const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
 const SPACE_ID = "b0000000-0000-4000-a000-000000000001";
@@ -85,6 +90,7 @@ function mockVectorStore(): VectorStore {
     upsertStatements: vi.fn().mockResolvedValue(undefined),
     deleteStatements: vi.fn().mockResolvedValue(undefined),
     search: vi.fn().mockResolvedValue([]),
+    searchNeighbors: vi.fn().mockResolvedValue([]),
   };
 }
 
@@ -437,5 +443,77 @@ describe("createStatementSyncWorker", () => {
       p_source_id: SOURCE_ID,
       p_error_message: expect.stringContaining("schema mismatch"),
     });
+  });
+});
+
+// 게이트 — 엔진 판정의 척추 (relation-design §5). 잘못되면 충돌이 조용히 적용되거나
+// 멀쩡한 관계가 사람 책상으로 새므로, 분기·dedup·scope를 직접 박는다.
+describe("gateProposals", () => {
+  const NEW_0 = "d0000000-0000-4000-a000-000000000001";
+  const NEW_1 = "d0000000-0000-4000-a000-000000000002";
+  const OLD_0 = "e0000000-0000-4000-a000-000000000001";
+  const OLD_1 = "e0000000-0000-4000-a000-000000000002";
+
+  const labelToId = new Map<string, string>([
+    ["N0", NEW_0],
+    ["N1", NEW_1],
+    ["E0", OLD_0],
+    ["E1", OLD_1],
+  ]);
+  const batchIds = new Set<string>([NEW_0, NEW_1]);
+
+  const gate = (proposals: RelationProposal[]) =>
+    gateProposals({ proposals, labelToId, batchIds });
+
+  it("확신·비충돌은 applied — supports·replaces·resolves", () => {
+    const { applied, pending } = gate([
+      { from: "N0", to: "E0", type: "replaces", confident: true },
+      { from: "E1", to: "N1", type: "supports", confident: true },
+      { from: "N0", to: "E1", type: "resolves", confident: true },
+    ]);
+    expect(applied).toHaveLength(3);
+    expect(pending).toHaveLength(0);
+    expect(applied).toContainEqual({
+      from_id: NEW_0,
+      to_id: OLD_0,
+      type: "replaces",
+    });
+  });
+
+  it("충돌은 확신해도 pending", () => {
+    const { applied, pending } = gate([
+      { from: "N0", to: "E0", type: "conflicts", confident: true },
+    ]);
+    expect(applied).toHaveLength(0);
+    expect(pending).toEqual([
+      { from_id: NEW_0, to_id: OLD_0, type: "conflicts" },
+    ]);
+  });
+
+  it("애매는 종류 무관 pending", () => {
+    const { applied, pending } = gate([
+      { from: "N0", to: "E0", type: "replaces", confident: false },
+      { from: "E1", to: "N1", type: "supports", confident: false },
+    ]);
+    expect(applied).toHaveLength(0);
+    expect(pending).toHaveLength(2);
+  });
+
+  it("모르는 라벨·자기 관계·기존↔기존은 버린다", () => {
+    const { applied, pending } = gate([
+      { from: "N0", to: "E9", type: "supports", confident: true }, // 모르는 라벨
+      { from: "N0", to: "N0", type: "supports", confident: true }, // 자기 관계
+      { from: "E0", to: "E1", type: "conflicts", confident: true }, // 기존↔기존
+    ]);
+    expect(applied).toHaveLength(0);
+    expect(pending).toHaveLength(0);
+  });
+
+  it("conflicts는 역방향 중복을 collapse한다", () => {
+    const { pending } = gate([
+      { from: "N0", to: "E0", type: "conflicts", confident: true },
+      { from: "E0", to: "N0", type: "conflicts", confident: false },
+    ]);
+    expect(pending).toHaveLength(1);
   });
 });
