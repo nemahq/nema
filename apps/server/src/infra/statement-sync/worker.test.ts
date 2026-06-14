@@ -19,7 +19,9 @@ import {
   createStatementSyncWorker,
   dedupeChanges,
   gateProposals,
+  orderBySourceAppearance,
   POLL_INTERVAL_MS,
+  reconcileChanges,
   selectCandidateIds,
 } from "./worker";
 
@@ -683,5 +685,67 @@ describe("잇기 분할 통합 — 장문 source", () => {
     expect(llm.generateStructured).toHaveBeenCalledTimes(2);
     // 되돌리기 단위는 글 — K개 sub-batch여도 적용은 source당 1번
     expect(rpcCalls(rpc, "apply_relation_changesets")).toHaveLength(1);
+  });
+});
+
+// 교차 dedup — sub-batch로 갈려 같은 쌍이 applied·pending 양쪽에 살아남는 걸 막는다
+// (gateProposals의 XOR 불변식이 콜 단위라 깨지는 지점, applied 우선).
+describe("reconcileChanges", () => {
+  const A = "a0000000-0000-4000-a000-000000000001";
+  const B = "a0000000-0000-4000-a000-000000000002";
+  const C = "a0000000-0000-4000-a000-000000000003";
+
+  it("같은 쌍이 applied·pending 양쪽이면 pending에서 빼고 applied만 남긴다", () => {
+    const out = reconcileChanges(
+      [{ from_id: A, to_id: B, type: "supports" }],
+      [{ from_id: A, to_id: B, type: "supports" }],
+    );
+    expect(out.applied).toHaveLength(1);
+    expect(out.pending).toHaveLength(0);
+  });
+
+  it("applied에 없는 pending은 보존한다", () => {
+    const out = reconcileChanges(
+      [{ from_id: A, to_id: B, type: "supports" }],
+      [{ from_id: A, to_id: C, type: "conflicts" }],
+    );
+    expect(out.applied).toHaveLength(1);
+    expect(out.pending).toHaveLength(1);
+  });
+
+  it("각 리스트 내부 중복도 함께 collapse한다", () => {
+    const out = reconcileChanges(
+      [
+        { from_id: A, to_id: B, type: "supports" },
+        { from_id: A, to_id: B, type: "supports" },
+      ],
+      [],
+    );
+    expect(out.applied).toHaveLength(1);
+  });
+});
+
+// 원문 순서 정렬 — 핵심 변경인데 통합 테스트 입력이 이미 순서라 no-op이던 공백을 메운다.
+describe("orderBySourceAppearance", () => {
+  const row = (id: string, index: number | null) => ({
+    id,
+    statement_sources: [{ locator: index === null ? {} : { index } }],
+  });
+
+  it("셔플 입력을 locator.index 오름차순으로 정렬한다", () => {
+    const ordered = orderBySourceAppearance([
+      row("c", 2),
+      row("a", 0),
+      row("b", 1),
+    ]);
+    expect(ordered.map((r) => r.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("locator index가 없는 행은 맨 뒤로 — 상류 불변식 위반 방어", () => {
+    const ordered = orderBySourceAppearance([
+      row("missing", null),
+      row("first", 0),
+    ]);
+    expect(ordered.map((r) => r.id)).toEqual(["first", "missing"]);
   });
 });

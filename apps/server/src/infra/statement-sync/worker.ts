@@ -599,6 +599,9 @@ async function processLinking(
   // 초과·판정 품질 붕괴라, 원문 순서대로 sub-batch로 끊어 콜을 나눈다. 인접 진술(결정+
   // 바로 뒤 근거)이 같은 sub-batch에 남아 형제 관계를 그 안에서 잡고, 떨어진 형제는 ⓐ가
   // 복원한다. ≤상한이면 sub-batch 1개라 짧은 글은 기존 동작 그대로.
+  // sub-batch 중 하나라도 실패하면(전파) source 전체가 lease 재시도로 다시 돈다 —
+  // 성공한 sub-batch의 LLM 콜까지 재실행된다. 적용이 끝에 1회뿐이라 부분 적용이 없는
+  // 대가다(추출 경로의 청크 원자성 비용과 같은 결). 정합성 > 재실행 비용.
   const subBatches = chunkStatements(batch, MAX_STATEMENTS_PER_LINKING_CALL);
   const applied: RelationChange[] = [];
   const pending: RelationChange[] = [];
@@ -613,13 +616,16 @@ async function processLinking(
   }
 
   // K개 sub-batch 결과를 모아 source당 1번 적용 — 되돌리기 단위는 글이라 applied 변경셋도
-  // 글당 1개여야 한다(§6). sub-batch 간 같은 쌍이 양쪽에서 제안될 수 있어(서로의 후보로
-  // 끌려옴) 합친 뒤 dedup한다. 배치 0개(노이즈뿐)면 빈 적용으로 완료만.
+  // 글당 1개여야 한다(§6). 배치 0개(노이즈뿐)면 빈 적용으로 완료만.
+  const { applied: finalApplied, pending: finalPending } = reconcileChanges(
+    applied,
+    pending,
+  );
   await applyRelationChangesets({
     supabase: deps.supabase,
     sourceId: source.id,
-    applied: dedupeChanges(applied),
-    pending: dedupeChanges(pending),
+    applied: finalApplied,
+    pending: finalPending,
   });
 }
 
@@ -711,10 +717,7 @@ export function dedupeChanges(changes: RelationChange[]): RelationChange[] {
   const seen = new Set<string>();
   const result: RelationChange[] = [];
   for (const change of changes) {
-    const key =
-      change.type === "conflicts"
-        ? `conflicts:${[change.from_id, change.to_id].sort().join(":")}`
-        : `${change.type}:${change.from_id}:${change.to_id}`;
+    const key = changeKey(change);
     if (seen.has(key)) {
       continue;
     }
@@ -722,6 +725,23 @@ export function dedupeChanges(changes: RelationChange[]): RelationChange[] {
     result.push(change);
   }
   return result;
+}
+
+// 누적된 sub-batch 결과를 적용 직전 정리. 각 리스트를 dedup하고, applied에 든 쌍을
+// pending에서 뺀다(applied 우선). gateProposals의 "한 쌍 = applied XOR pending" 불변식은
+// 콜 단위라, sub-batch로 갈리면 같은 쌍이 한 콜에선 applied·다른 콜에선 pending으로
+// 판정될 수 있다(컨텍스트가 달라 — 서로의 후보로 끌려옴). confident 판정을 우선해, 이미
+// 적용될 관계를 사람이 또 검토하는 무의미한 항목을 막는다.
+export function reconcileChanges(
+  applied: RelationChange[],
+  pending: RelationChange[],
+): { applied: RelationChange[]; pending: RelationChange[] } {
+  const dedupedApplied = dedupeChanges(applied);
+  const appliedKeys = new Set(dedupedApplied.map(changeKey));
+  const dedupedPending = dedupeChanges(pending).filter(
+    (change) => !appliedKeys.has(changeKey(change)),
+  );
+  return { applied: dedupedApplied, pending: dedupedPending };
 }
 
 // 앵커별 이웃 검색의 일시 실패(Qdrant 블립)를 흡수한다 — 임베딩 패스가 Qdrant를
@@ -780,6 +800,14 @@ interface RelationChange {
   type: RelationType;
 }
 
+// 관계의 정체성 키 — 중복 판정의 단일 규칙. conflicts는 대칭이라 양끝을 정렬해
+// 역방향(B→A)까지 같은 키로 collapse. gateProposals·dedupeChanges·교차 dedup이 공유한다.
+function changeKey(change: RelationChange): string {
+  return change.type === "conflicts"
+    ? `conflicts:${[change.from_id, change.to_id].sort().join(":")}`
+    : `${change.type}:${change.from_id}:${change.to_id}`;
+}
+
 // 게이트 (relation-design §5): 확신·비충돌만 조용히 applied. 충돌은 확신해도
 // pending, 애매는 종류 무관 pending. 라벨을 id로 되돌리며 부적격 제안을 거른다.
 export function gateProposals(params: {
@@ -803,21 +831,19 @@ export function gateProposals(params: {
       continue;
     }
 
-    // 중복 제거. conflicts는 대칭이라 양끝을 정렬해 역방향 중복까지 collapse.
-    const key =
-      proposal.type === "conflicts"
-        ? `conflicts:${[fromId, toId].sort().join(":")}`
-        : `${proposal.type}:${fromId}:${toId}`;
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-
     const change: RelationChange = {
       from_id: fromId,
       to_id: toId,
       type: proposal.type,
     };
+
+    // 중복 제거 — 한 콜 안에서 같은 쌍은 첫 판정만 채택(applied XOR pending).
+    const key = changeKey(change);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+
     if (proposal.confident && proposal.type !== "conflicts") {
       applied.push(change);
     } else {
@@ -921,11 +947,7 @@ async function fetchSourceStatements(
     );
   }
 
-  // 원문 등장 순서(locator.index)로 정렬 — sub-batch가 원문 연속 구간이 되게 한다.
-  // 한 트랜잭션 생성이라 created_at이 모두 같아 순서는 locator에만 기댄다(꺼내기와 동일).
-  const ordered = [...(data ?? [])].sort(
-    (a, b) => sourceOrderIndex(a) - sourceOrderIndex(b),
-  );
+  const ordered = orderBySourceAppearance(data ?? []);
 
   const parsed = z.array(LinkingBatchStatementSchema).safeParse(ordered);
   if (!parsed.success) {
@@ -934,8 +956,19 @@ async function fetchSourceStatements(
   return parsed.data;
 }
 
+// 원문 등장 순서(locator.index)로 정렬 — sub-batch가 원문 연속 구간이 되게 한다.
+// 한 트랜잭션 생성이라 created_at이 모두 같아 순서는 locator에만 기댄다(꺼내기와 동일).
+export function orderBySourceAppearance<
+  T extends { statement_sources: Array<{ locator: unknown }> },
+>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => sourceOrderIndex(a) - sourceOrderIndex(b));
+}
+
 // statement_sources의 locator {"index": n}에서 원문 순서를 뽑는다. !inner 필터로
-// 이 source의 행만 임베드돼 첫 원소를 본다. 없으면(방어) 맨 뒤로.
+// 이 source의 행만 임베드돼 첫 원소를 본다.
+// ingestion 경로(apply_ingestion_changeset)는 진술마다 locator를 반드시 채우므로
+// 정상 데이터는 여기 안 걸린다 — MAX_SAFE_INTEGER로 떨어지면(맨 뒤) 상류 불변식
+// 위반 신호다. zod 밖이라 무신호로 정렬만 흐트러지니 의미를 코멘트로 남긴다.
 function sourceOrderIndex(row: {
   statement_sources: Array<{ locator: unknown }>;
 }): number {
