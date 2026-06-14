@@ -20,6 +20,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 - Import from compiled `dist/` — always import from `src/`.
 - Call external APIs from frontend — all calls go through tRPC. Exception: Supabase Auth client SDK (sign-in, sign-up, session management), Tolgee CDN (translation fetch), PostHog JS SDK (analytics capture).
 - Expose server-side keys (LLM, DB) to client.
+- Duplicate an env var across repo `.env` and Railway. One home per var: public config → repo `.env.{mode}`, secrets → Railway only. Duplicates let Railway silently override the repo at build/load time and drift.
 
 ## Terminology
 

@@ -18,7 +18,8 @@ export function SignInPage() {
   useEffect(
     function redirectOnSignIn() {
       if (user) {
-        void navigate({ to: search.redirect ?? "/" });
+        const target = search.redirect?.startsWith("/") ? search.redirect : "/";
+        void navigate({ to: target });
       }
     },
     [user, navigate, search.redirect],
@@ -30,13 +31,20 @@ export function SignInPage() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
+  // startsWith("/") 가드로 외부 URL 주입(open redirect)을 차단한다.
+  function resolveRedirectUrl() {
+    return search.redirect?.startsWith("/")
+      ? `${window.location.origin}${search.redirect}`
+      : window.location.origin;
+  }
+
   async function handleGoogleSignIn() {
     setError(null);
     setGoogleLoading(true);
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.origin },
+        options: { redirectTo: resolveRedirectUrl() },
       });
       if (oauthError) {
         setError(oauthError.message);
@@ -54,13 +62,9 @@ export function SignInPage() {
     setEmailLoading(true);
 
     try {
-      const redirectTo = search.redirect?.startsWith("/")
-        ? `${window.location.origin}${search.redirect}`
-        : window.location.origin;
-
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectTo },
+        options: { emailRedirectTo: resolveRedirectUrl() },
       });
 
       if (otpError) {
