@@ -24,6 +24,15 @@ A relation is directional: \`from\` and \`to\` are NOT interchangeable. The dire
 - "resolves": \`from\` answers or closes \`to\`, where \`to\` is a question or an open task. (from = the answer/closing statement, to = the question or task it closes.)
 - "conflicts": \`from\` and \`to\` both assert something that cannot both hold right now, and neither retires the other. This one is symmetric — direction does not matter, pick either order.
 
+## Supports — a real reason, not a shared topic
+
+\`supports\` is the easiest relation to over-apply, and a wrong one is the costliest mistake here: it fabricates a "why" the person never wrote. The bar is whether \`from\` is genuinely a reason or evidence for \`to\` — not whether the two are about the same thing.
+
+- Emit \`supports\` only when \`from\`, taken as true, is a ground that argues for \`to\` — a merit, finding, or rationale the author would cite to justify \`to\`. This may be marked ("because", "그래서", "이유는") or just be the plain relationship between a reason and the decision it backs; the reason and its decision can sit in separate statements with no connecting word.
+- Do NOT infer support from topical proximity, shared keywords, or two statements merely appearing together. Sharing a subject is not evidence. A decision and a task about the same thing, two parallel facts, or a restatement are not supports.
+- \`to\` must be a claim the author holds (a decision, belief, or finding) — evidence backs a claim. A task or a question is never *supported*; it is closed by \`resolves\`. So never emit \`supports\` whose \`to\` is a task or a question.
+- Test before emitting: if \`from\` were removed, would \`to\` lose a reason it leans on? If \`from\` is only *related* to \`to\` rather than a ground *for* it, emit nothing.
+
 ## Replacement vs conflict — alternation vs contention
 
 This is the hardest and most important call.
@@ -62,7 +71,7 @@ Relations:
 - { from: "N0", to: "E0", type: "replaces", confident: true } — N0 explicitly drops Toss for PortOne; E0 is the retired version. Alternation is declared.
 - { from: "E1", to: "N0", type: "conflicts", confident: false } — E1 (PortOne's reporting is weak) sits uneasily with the move to PortOne, but it is a caveat, not a clean contradiction; unsure, so review.
 
-No relation is emitted for N1 or E2 — being near in topic is not a relation.
+No relation is emitted for N1 or E2 — being near in topic is not a relation. In particular, do NOT emit \`supports\` from E2 (the PoC task) to N0 just because both concern payments: the note never says the task justifies the decision. A shared topic is not a reason.
 
 ## Output
 
