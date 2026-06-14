@@ -30,7 +30,10 @@ import {
   LINKING_REASONING_EFFORT,
   LINKING_TIMEOUT_MS,
 } from "@server/infra/statement-sync/worker";
-import type { LabeledStatement } from "@server/prompts/relation-judgment";
+import type {
+  LabeledStatement,
+  RelationProposal,
+} from "@server/prompts/relation-judgment";
 import {
   buildRelationJudgmentMessage,
   RELATION_JUDGMENT_SYSTEM_PROMPT,
@@ -81,7 +84,7 @@ const limitJudgment = createLimiter(JUDGMENT_CONCURRENCY);
 async function judge(
   llm: LlmProvider,
   message: string,
-): Promise<{ from: string; to: string; type: string; confident: boolean }[]> {
+): Promise<RelationProposal[]> {
   let lastError: unknown;
   for (let attempt = 0; attempt < JUDGMENT_MAX_ATTEMPTS; attempt += 1) {
     try {
@@ -163,8 +166,9 @@ async function runScenarioOnce(params: {
   const proposals = await judge(llm, message);
 
   // 워커와 같은 게이트를 그대로 통과시킨다 — applied/pending 분기가 제품과 동일.
+  // proposals는 judge()가 RelationJudgmentSchema로 이미 검증한 RelationProposal[].
   const { applied, pending } = gateProposals({
-    proposals: RelationJudgmentSchema.parse({ relations: proposals }).relations,
+    proposals,
     labelToId,
     batchIds,
   });
@@ -262,8 +266,12 @@ async function main() {
     (sum, r) => sum + r.scored.length,
     0,
   );
+  // 골든 분모 = tp + missed + directionError — 방향만 틀린 골든은 missed에서 빠지므로(별도
+  // 버킷) 여기 더해야 분모가 정밀도 쪽(scored.length = tp+de+fp)과 대칭이 된다. 빠뜨리면
+  // 방향 오판이 생기는 순간 overall.recall이 조용히 부풀려진다.
   const totalGolden = allResults.reduce(
-    (sum, r) => sum + r.counts.truePositive + r.counts.missed,
+    (sum, r) =>
+      sum + r.counts.truePositive + r.counts.missed + r.counts.directionError,
     0,
   );
   const overall = precisionRecall({
