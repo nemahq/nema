@@ -13,12 +13,9 @@ const MAX_CACHE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{7,40}$/i;
 
-// 커밋 SHA 우선순위: RAILWAY_GIT_COMMIT_SHA(repo 연동 배포로 되돌아갈 경우 대비)
-// → CI가 railway up 직전 저장소 루트에 스탬프한 .commit-sha 파일.
-// 스탬프 존재 자체가 "배포 빌드" 신호다. CI→Railway 빌드로 건너오는 건 업로드된
-// 파일뿐이라 가장 확실하고, 어떤 환경변수에도 의존하지 않는다. (RAILWAY_* 변수는
-// railway up 빌드 단계에 주입되지 않아 신호로 쓸 수 없다.) 로컬 빌드는 스탬프가
-// 없으니 항상 dev.
+// 커밋 SHA: RAILWAY_GIT_COMMIT_SHA(repo 연동 배포 대비) → CI가 railway up 직전
+// 스탬프한 .commit-sha. 스탬프 존재 = 배포 빌드 신호 (CI→Railway 빌드엔 업로드된
+// 파일만 건너오고, RAILWAY_* 변수는 빌드 단계에 주입되지 않는다). 로컬은 항상 dev.
 function resolveCommitSha(): string {
   const fromEnv = process.env.RAILWAY_GIT_COMMIT_SHA;
   if (fromEnv && COMMIT_SHA_PATTERN.test(fromEnv)) {
