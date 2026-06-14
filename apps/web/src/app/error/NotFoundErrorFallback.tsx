@@ -10,7 +10,7 @@ export function NotFoundErrorFallback() {
   const { t } = useTranslation();
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 p-8">
+    <div className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-3 p-8">
       <NemaMarkIcon
         width={32}
         height={39}

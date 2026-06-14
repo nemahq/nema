@@ -4,11 +4,11 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  notFound,
   Outlet,
 } from "@tanstack/react-router";
 
 import { getEnv } from "@web/app/env";
+import { notFoundAtRoot } from "@web/app/error/notFound";
 import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
@@ -102,7 +102,7 @@ const devHarnessRoute = createRoute({
   errorComponent: RouteErrorFallback,
   beforeLoad: () => {
     if (getEnv().APP_ENV === "production") {
-      throw notFound();
+      throw notFoundAtRoot();
     }
   },
 });
