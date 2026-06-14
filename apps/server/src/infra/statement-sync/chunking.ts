@@ -23,7 +23,11 @@ const encoder = getEncoding("o200k_base");
 // (실측: 비단절 5,600자 = 14초, 일반 텍스트 6,400자 = 11ms). 인코딩 입력을
 // 조각으로 묶어 상한을 건다 — 조각 경계는 공백을 우선해 일반 텍스트의 토큰 수
 // 오차를 없애고, 비단절 구간만 강제 절단된다(±몇 토큰, 패킹 정밀도엔 무관).
-const ENCODE_SLICE_CHARS = 400;
+//
+// 총 인코딩 시간은 입력 길이에 선형이고 조각 크기에 비례한다(작업량 ∝ N×조각).
+// 120은 비단절 7,000자를 1.3초→0.36초로 줄이면서(CI 사양 5초 안), 토큰 수
+// 오차는 +0.6%로 패킹 마진 안. 정상 텍스트는 공백에서 끊겨 오차·속도 영향 없음.
+const ENCODE_SLICE_CHARS = 120;
 const SLICE_WHITESPACE_LOOKBACK_CHARS = 100;
 
 function encodeBounded(text: string): number[] {
