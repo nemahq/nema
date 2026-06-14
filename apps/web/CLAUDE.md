@@ -8,6 +8,7 @@ React 19 + Vite 6 frontend. TanStack Router + TanStack Query.
 - Cross-feature imports except through public API (`index.ts`). Enforced by `eslint-plugin-boundaries`.
 - Add route/auth-dependent providers to `AppProviders`. Only route- and auth-agnostic infrastructure providers belong there. Place scoped providers in the relevant layout.
 - Use `console.*` for logging. Errors go to Sentry, analytics go to PostHog. Console allowed only when Sentry cannot capture the context.
+- Put public `VITE_*` config in Railway — every `VITE_*` lives in repo `.env.{staging,production}`. Railway holds only build secrets (`SENTRY_*`), the build-mode selector (`VITE_APP_ENV`), and platform-injected vars.
 
 ## Directory Structure
 
