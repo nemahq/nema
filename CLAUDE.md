@@ -6,6 +6,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 
 - `staging` = default branch. Feature branch → PR → CI passes → staging merge → Railway staging auto-deploy.
 - `main` = production-ready code. `v*` tag push triggers production DB migration + Railway deploy.
+- Tag format: CalVer `vYYYY.MM.DD` (same-day redeploys: `.N` suffix). Every prod deploy MUST be tagged — migration diff is computed against the previous tag.
 - MUST verify CI locally before creating PR.
 - PR title: Korean. Assignee: author. Labels: `enhancement`(feature), `bug`(fix), `refactoring`, `documentation`.
 - PR body MUST follow `.github/pull_request_template.md` (Why / What / How to verify / Notes).

@@ -49,8 +49,6 @@ export interface SearchOptions {
 
 export interface VectorStore {
   ensureCollection(): Promise<void>;
-  /** 부팅 시 1회 — v1 컬렉션(documents·entities) 정리. 지운 이름을 반환한다. */
-  dropLegacyCollections(): Promise<string[]>;
   upsertStatements(
     provider: EmbeddingProvider,
     statements: StatementUpsertItem[],

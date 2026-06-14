@@ -12,7 +12,7 @@
 
 <!-- Concrete scenarios a reviewer can run or check.
      BAD:  "[ ] 타입체크 통과 확인"
-     GOOD: "pnpm dev → 문서 저장 → Qdrant/Neo4j 동기화 로그 확인" -->
+     GOOD: "pnpm dev → 글 저장 → Qdrant 동기화 로그 확인" -->
 
 ## Notes
 

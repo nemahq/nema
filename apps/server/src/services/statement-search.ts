@@ -231,7 +231,7 @@ export function assembleSourceGroups(args: {
   return groups.map((g) => g.group);
 }
 
-function parseLocatorIndex(locator: Json | null): number | null {
+export function parseLocatorIndex(locator: Json | null): number | null {
   if (
     locator !== null &&
     typeof locator === "object" &&

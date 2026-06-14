@@ -54,6 +54,8 @@ create_source(p_space_id uuid, p_body text, p_session_id uuid?) → source_id
 
 ## 3. 추출 — LLM 1콜로 쪼개기·종류·확신도
 
+> **장문 확장**: 임계선(1,500토큰)을 넘는 초장문 입력은 청크로 갈라 병렬 추출한다 — [`long-input-chunking.md`](long-input-chunking.md). 임계선 이하는 이 장 그대로 1콜이고, 분할은 워커 안에서만 보이며 changeset 계약(4장)은 동일하다.
+
 source body를 넣으면 `[{content, type, confidence?}]`가 한 번에 나오는 구조화 출력 **1콜**. v1(saving.ts)의 split→judgment→meta 다단은 쓰지 않는다 — judgment는 "기존 문서와 합칠지" 판단이라 검색 결과 주입이 필요해 분리가 필수였고, meta는 합성 문서의 제목·태그용이었다. 둘 다 v2에 없다.
 
 - 쪼개기와 종류 판단은 한 머리에서: 어디서 끊을지는 그 조각이 claim/question/todo인지와 얽혀 있다. 확신도(claim만 certain/guess)의 단서("~인 것 같다" vs "~로 확정")도 쪼개는 순간 가장 선명하다.

@@ -71,6 +71,8 @@ export {
 export {
   type SourceCreateInput,
   SourceCreateInputSchema,
+  type SourceGetInput,
+  SourceGetInputSchema,
 } from "./schemas/source";
 export {
   type StatementSearchInput,
