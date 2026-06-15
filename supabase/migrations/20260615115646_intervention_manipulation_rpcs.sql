@@ -19,6 +19,8 @@
 --   것이 하나라도 있다. 재귀 — redo가 revert를 또 가리키고, 분기(redo 후 X를
 --   다시 revert) 가능. 사슬은 얕다(되돌리기 깊이). 멱등 가드와 이력의 "되돌림
 --   여부"(§7.2)가 둘 다 이 술어에 기댄다.
+--   TS 쌍: changeset-service.ts buildRevertedPredicate(목록 조회용 같은 재귀) —
+--   둘은 같은 정의라 한쪽을 고치면 다른 쪽도 함께 고쳐야 한다.
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION is_changeset_reverted(p_changeset_id uuid)

@@ -40,6 +40,20 @@ describe("buildRevertedPredicate", () => {
     expect(isReverted("R3")).toBe(false);
   });
 
+  it("자식이 둘인데 둘 다 되돌려졌으면 부모는 in-effect (OR-fold, some 극성)", () => {
+    // C ← R1(R1←R2), C ← R3(R3←R4)  → R1·R3 모두 무효 → C의 유효 revert 없음 → false.
+    // some/every 혼동이나 단축평가 극성이 뒤집히면 여기서만 깨진다.
+    const isReverted = buildRevertedPredicate([
+      { id: "R1", revertsId: "C" },
+      { id: "R2", revertsId: "R1" },
+      { id: "R3", revertsId: "C" },
+      { id: "R4", revertsId: "R3" },
+    ]);
+    expect(isReverted("C")).toBe(false);
+    expect(isReverted("R1")).toBe(true);
+    expect(isReverted("R3")).toBe(true);
+  });
+
   it("두 단계 redo는 다시 reverted로 토글", () => {
     // C ← R1 ← R2 ← R3  → R1 다시 유효 → C reverted
     const isReverted = buildRevertedPredicate([
