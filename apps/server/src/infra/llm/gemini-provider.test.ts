@@ -90,12 +90,50 @@ describe("GeminiProvider", () => {
       expect(callArgs.config.systemInstruction).toBe("System prompt.");
       expect(callArgs.config.temperature).toBe(0.5);
       expect(callArgs.config.maxOutputTokens).toBe(16_384);
+      // timeoutMs/maxRetries를 안 넘기면 httpOptions 자체를 생략한다(undefined 누수 금지).
+      expect(callArgs.config.httpOptions).toBeUndefined();
       // assistant → "model" 역할 매핑
       expect(callArgs.contents).toEqual([
         { role: "user", parts: [{ text: "Hello" }] },
         { role: "model", parts: [{ text: "Hi" }] },
         { role: "user", parts: [{ text: "Question" }] },
       ]);
+    });
+
+    it("includes only defined httpOptions keys when timeout/retries are set", async () => {
+      const { provider, generateContent } = mockGenerate({
+        text: "ok",
+        candidates: [{ finishReason: "STOP" }],
+      });
+
+      await provider.generateText({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+        timeoutMs: 5_000,
+        maxRetries: 2,
+      });
+
+      const httpOptions = generateContent.mock.calls[0]?.[0].config.httpOptions;
+      expect(httpOptions.timeout).toBe(5_000);
+      // attempts = maxRetries + 1 (원요청 포함)
+      expect(httpOptions.retryOptions).toEqual({ attempts: 3 });
+    });
+
+    it("omits retryOptions when only timeoutMs is set", async () => {
+      const { provider, generateContent } = mockGenerate({
+        text: "ok",
+        candidates: [{ finishReason: "STOP" }],
+      });
+
+      await provider.generateText({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+        timeoutMs: 5_000,
+      });
+
+      const httpOptions = generateContent.mock.calls[0]?.[0].config.httpOptions;
+      expect(httpOptions.timeout).toBe(5_000);
+      expect("retryOptions" in httpOptions).toBe(false);
     });
 
     it("throws when response is truncated by MAX_TOKENS", async () => {

@@ -19,29 +19,29 @@ const TestSchema = z.object({ answer: z.string() });
 
 function createMockClient() {
   const createFn = vi.fn();
-  // 네이티브 구조화 출력은 beta.messages.create를 탄다.
-  const betaCreateFn = vi.fn();
+  // 네이티브 구조화 출력은 beta.messages.parse를 탄다(zod 정규화 + parsed_output).
+  const betaParseFn = vi.fn();
   const client = {
     messages: { create: createFn },
-    beta: { messages: { create: betaCreateFn } },
+    beta: { messages: { parse: betaParseFn } },
   } as unknown as Anthropic;
-  return { client, createFn, betaCreateFn };
+  return { client, createFn, betaParseFn };
 }
 
 function mockCreate(response: unknown) {
-  const { client, createFn, betaCreateFn } = createMockClient();
+  const { client, createFn, betaParseFn } = createMockClient();
   createFn.mockResolvedValue(response);
-  betaCreateFn.mockResolvedValue(response);
+  betaParseFn.mockResolvedValue(response);
   const provider = new AnthropicProvider({ client, model: "claude-opus-4-8" });
-  return { provider, createFn, betaCreateFn };
+  return { provider, createFn, betaParseFn };
 }
 
 function mockCreateRejection(error: Error) {
-  const { client, createFn, betaCreateFn } = createMockClient();
+  const { client, createFn, betaParseFn } = createMockClient();
   createFn.mockRejectedValue(error);
-  betaCreateFn.mockRejectedValue(error);
+  betaParseFn.mockRejectedValue(error);
   const provider = new AnthropicProvider({ client, model: "claude-opus-4-8" });
-  return { provider, createFn, betaCreateFn };
+  return { provider, createFn, betaParseFn };
 }
 
 describe("AnthropicProvider", () => {
@@ -318,17 +318,18 @@ describe("AnthropicProvider", () => {
   });
 
   describe("generateStructured (native path)", () => {
-    // 네이티브 경로는 beta.messages.create로 output_config.format을 보내고,
-    // 응답은 첫 text 블록에 스키마를 만족하는 JSON 문자열로 온다.
+    // 네이티브 경로는 beta.messages.parse로 betaZodOutputFormat을 보내고,
+    // SDK 헬퍼가 본문을 zod로 파싱해 parsed_output에 채워 돌려준다.
     function nativeResponse(payload: unknown, stopReason = "end_turn") {
       return {
         stop_reason: stopReason,
         content: [{ type: "text", text: JSON.stringify(payload) }],
+        parsed_output: payload,
       };
     }
 
-    it("parses JSON from the native output and returns it", async () => {
-      const { provider, betaCreateFn, createFn } = mockCreate(
+    it("returns parsed_output from the native parse helper", async () => {
+      const { provider, betaParseFn, createFn } = mockCreate(
         nativeResponse({ answer: "42" }),
       );
 
@@ -341,12 +342,12 @@ describe("AnthropicProvider", () => {
 
       expect(result).toEqual({ answer: "42" });
       // 네이티브 경로만 호출되고 tool_use 경로(messages.create)는 안 탄다.
-      expect(betaCreateFn).toHaveBeenCalledOnce();
+      expect(betaParseFn).toHaveBeenCalledOnce();
       expect(createFn).not.toHaveBeenCalled();
     });
 
-    it("sends the structured-outputs beta header and output_config.format", async () => {
-      const { provider, betaCreateFn } = mockCreate(
+    it("sends the structured-outputs beta header and a normalized output format", async () => {
+      const { provider, betaParseFn } = mockCreate(
         nativeResponse({ answer: "ok" }),
       );
 
@@ -357,13 +358,58 @@ describe("AnthropicProvider", () => {
         messages: [{ role: "user", content: "q" }],
       });
 
-      const callArgs = betaCreateFn.mock.calls[0]?.[0];
+      const callArgs = betaParseFn.mock.calls[0]?.[0];
       expect(callArgs.betas).toEqual(["structured-outputs-2025-11-13"]);
+      // betaZodOutputFormat이 json_schema 포맷 + parse 콜백을 만들어 싣는다.
       expect(callArgs.output_config.format.type).toBe("json_schema");
       expect(callArgs.output_config.format.schema.type).toBe("object");
+      expect(typeof callArgs.output_config.format.parse).toBe("function");
       // 강제 tool_use 파라미터가 더는 새지 않아야 한다.
       expect(callArgs.tools).toBeUndefined();
       expect(callArgs.tool_choice).toBeUndefined();
+    });
+
+    it("passes empty request options (no undefined timeout) when timeoutMs is omitted", async () => {
+      // 운영 호출부는 timeoutMs를 안 넘긴다. SDK에 {timeout: undefined}가 새지 않고
+      // 빈 객체가 가야 한다(생성자 기본 timeout이 그대로 살아남도록).
+      const { provider, betaParseFn } = mockCreate(
+        nativeResponse({ answer: "x" }),
+      );
+
+      await provider.generateStructured({
+        schema: TestSchema,
+        schemaName: "test",
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+      });
+
+      const options = betaParseFn.mock.calls[0]?.[1];
+      expect(options).toEqual({});
+      expect("timeout" in options).toBe(false);
+      expect("maxRetries" in options).toBe(false);
+    });
+
+    it("normalizes unsupported zod constraints instead of 400-ing (folds into description)", async () => {
+      // 구조화출력 미지원 제약(min length)이 붙은 스키마라도 헬퍼가 스키마 키워드에서
+      // 떼어내 description으로 접으므로 compile-time 400이 안 나야 한다.
+      const ConstrainedSchema = z.object({ answer: z.string().min(3) });
+      const { provider, betaParseFn } = mockCreate({
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: JSON.stringify({ answer: "okay" }) }],
+        parsed_output: { answer: "okay" },
+      });
+
+      const result = await provider.generateStructured({
+        schema: ConstrainedSchema,
+        schemaName: "test",
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+      });
+
+      expect(result).toEqual({ answer: "okay" });
+      const schema = betaParseFn.mock.calls[0]?.[0].output_config.format.schema;
+      // 제약이 스키마 본문이 아니라 description으로 접혀 들어갔다.
+      expect(schema.properties.answer.minLength).toBeUndefined();
     });
 
     it("throws when truncated by max_tokens", async () => {
@@ -385,7 +431,11 @@ describe("AnthropicProvider", () => {
     });
 
     it("throws when model refuses the request", async () => {
-      const { provider } = mockCreate({ stop_reason: "refusal", content: [] });
+      const { provider } = mockCreate({
+        stop_reason: "refusal",
+        content: [],
+        parsed_output: null,
+      });
 
       await expect(
         provider.generateStructured({
@@ -402,29 +452,12 @@ describe("AnthropicProvider", () => {
       );
     });
 
-    it("throws when the native output is not valid JSON", async () => {
+    it("throws when there is no parsed content", async () => {
       const { provider } = mockCreate({
         stop_reason: "end_turn",
-        content: [{ type: "text", text: "not json" }],
+        content: [],
+        parsed_output: null,
       });
-
-      await expect(
-        provider.generateStructured({
-          schema: TestSchema,
-          schemaName: "test",
-          systemPrompt: "sys",
-          messages: [{ role: "user", content: "q" }],
-        }),
-      ).rejects.toThrow(
-        expect.objectContaining({
-          code: "unknown",
-          message: "LLM returned non-JSON output",
-        }),
-      );
-    });
-
-    it("throws when there is no content", async () => {
-      const { provider } = mockCreate({ stop_reason: "end_turn", content: [] });
 
       await expect(
         provider.generateStructured({
@@ -441,7 +474,7 @@ describe("AnthropicProvider", () => {
       );
     });
 
-    it("throws when the native output fails schema validation", async () => {
+    it("throws when the parsed output fails our schema validation", async () => {
       const { provider } = mockCreate(nativeResponse({ answer: 123 }));
 
       await expect(
@@ -472,8 +505,8 @@ describe("AnthropicProvider", () => {
     }
 
     it("falls back to tool_use when native returns an unsupported 400", async () => {
-      const { client, createFn, betaCreateFn } = createMockClient();
-      betaCreateFn.mockRejectedValue(await makeNativeUnsupportedError());
+      const { client, createFn, betaParseFn } = createMockClient();
+      betaParseFn.mockRejectedValue(await makeNativeUnsupportedError());
       createFn.mockResolvedValue({
         stop_reason: "tool_use",
         content: [
@@ -498,7 +531,7 @@ describe("AnthropicProvider", () => {
       });
 
       expect(result).toEqual({ answer: "42" });
-      expect(betaCreateFn).toHaveBeenCalledOnce();
+      expect(betaParseFn).toHaveBeenCalledOnce();
       const callArgs = createFn.mock.calls[0]?.[0];
       expect(callArgs.tool_choice).toEqual({ type: "tool", name: "test" });
       expect(callArgs.tools[0].name).toBe("test");
@@ -507,8 +540,8 @@ describe("AnthropicProvider", () => {
 
     it("does NOT fall back on an unrelated 400 (e.g. billing)", async () => {
       const { BadRequestError } = await import("@anthropic-ai/sdk");
-      const { client, createFn, betaCreateFn } = createMockClient();
-      betaCreateFn.mockRejectedValue(
+      const { client, createFn, betaParseFn } = createMockClient();
+      betaParseFn.mockRejectedValue(
         new BadRequestError(
           400,
           { error: { message: "Your credit balance is too low" } },
@@ -534,8 +567,8 @@ describe("AnthropicProvider", () => {
     });
 
     it("throws when the fallback tool_use returns no tool_use block", async () => {
-      const { client, createFn, betaCreateFn } = createMockClient();
-      betaCreateFn.mockRejectedValue(await makeNativeUnsupportedError());
+      const { client, createFn, betaParseFn } = createMockClient();
+      betaParseFn.mockRejectedValue(await makeNativeUnsupportedError());
       createFn.mockResolvedValue({
         stop_reason: "end_turn",
         content: [{ type: "text", text: "no tool" }],

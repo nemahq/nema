@@ -14,7 +14,7 @@ export interface LlmCallParams {
   /**
    * 모델의 사고/연산 깊이 힌트. 규칙 적용에 가까운 호출은 낮춰 지연·변동을 줄인다.
    * 현재 OpenAI 어댑터만 reasoning_effort로 honor하고, Claude·Gemini는 받되 무시한다
-   * (extended thinking / thinking budget 매핑은 후속 NEM 별건으로 미룸).
+   * (extended thinking / thinking budget 매핑은 후속 별건으로 미룸).
    */
   computeLevel?: "minimal" | "low" | "medium" | "high";
   /**

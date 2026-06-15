@@ -8,7 +8,10 @@ import {
   UnprocessableEntityError,
 } from "openai/error";
 import { zodTextFormat } from "openai/helpers/zod";
-import type { ResponseInputItem } from "openai/resources/responses/responses";
+import type {
+  Response,
+  ResponseInputItem,
+} from "openai/resources/responses/responses";
 
 import { LlmError } from "./llm-error";
 import type {
@@ -24,8 +27,9 @@ export type OpenAiProviderConfig =
 
 export const DEFAULT_TIMEOUT_MS = 30_000;
 
-// 추론 모델은 출력 예산이 너무 작으면 사고 토큰만 쓰고 status "incomplete"로 끝난다
-export const DEFAULT_MAX_OUTPUT_TOKENS = 4096;
+// 추론 모델은 출력 예산이 너무 작으면 사고 토큰만 쓰고 status "incomplete"로 끝난다.
+// Claude/Gemini 어댑터와 같은 상한으로 맞춰 긴 초안이 잘리지 않게 넉넉히 잡는다.
+export const DEFAULT_MAX_OUTPUT_TOKENS = 16_384;
 
 export class OpenAiProvider implements LlmProvider {
   private readonly client: OpenAI;
@@ -86,11 +90,17 @@ export class OpenAiProvider implements LlmProvider {
           temperature: params.temperature,
           reasoning: this.reasoning(params.computeLevel),
           max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
+          // Responses API는 store 기본값이 true라 응답을 OpenAI에 ~30일 보관한다.
+          // previous_response_id를 안 쓰므로 보관 이득이 없어 명시적으로 끈다.
+          store: false,
           stream: true,
         },
         this.requestOptions(params),
       );
 
+      // 종료 이벤트(response.completed/incomplete)가 싣고 오는 최종 응답을 잡아둔다.
+      // 루프 후 비스트리밍 경로와 같은 truncation/refusal 검사를 돌리기 위함.
+      let finalResponse: Response | undefined;
       for await (const event of stream) {
         if (params.signal?.aborted) {
           stream.controller.abort();
@@ -98,6 +108,25 @@ export class OpenAiProvider implements LlmProvider {
         }
         if (event.type === "response.output_text.delta") {
           yield event.delta;
+        }
+        if (
+          event.type === "response.completed" ||
+          event.type === "response.incomplete"
+        ) {
+          finalResponse = event.response;
+        }
+      }
+
+      // 취소 경로는 위 가드에서 이미 빠졌다. 정상 종료한 스트림만 최종 상태를 검사해
+      // 잘림(incomplete)·콘텐츠 필터·거절을 비스트리밍 경로와 같은 LlmError로 끊는다.
+      if (finalResponse != null) {
+        this.assertComplete(
+          finalResponse.status,
+          finalResponse.incomplete_details?.reason,
+        );
+        const refusal = this.findRefusal(finalResponse.output);
+        if (refusal != null) {
+          throw new LlmError("unknown", `LLM refused the request: ${refusal}`);
         }
       }
     } catch (error) {
@@ -118,6 +147,8 @@ export class OpenAiProvider implements LlmProvider {
           temperature: params.temperature,
           reasoning: this.reasoning(params.computeLevel),
           max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
+          // Responses API는 store 기본값이 true(응답 ~30일 보관). 우리는 안 쓰므로 끈다.
+          store: false,
           text: { format: zodTextFormat(params.schema, params.schemaName) },
         },
         this.requestOptions(params),
@@ -158,6 +189,8 @@ export class OpenAiProvider implements LlmProvider {
           temperature: params.temperature,
           reasoning: this.reasoning(params.computeLevel),
           max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
+          // Responses API는 store 기본값이 true(응답 ~30일 보관). 우리는 안 쓰므로 끈다.
+          store: false,
         },
         this.requestOptions(params),
       );
