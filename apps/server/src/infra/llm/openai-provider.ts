@@ -48,7 +48,7 @@ export class OpenAiProvider implements LlmProvider {
         {
           model: this.model,
           temperature: params.temperature,
-          reasoning_effort: params.reasoningEffort,
+          reasoning_effort: params.computeLevel,
           stream: true,
           messages: [
             { role: "system" as const, content: params.systemPrompt },
@@ -82,7 +82,7 @@ export class OpenAiProvider implements LlmProvider {
         {
           model: this.model,
           temperature: params.temperature,
-          reasoning_effort: params.reasoningEffort,
+          reasoning_effort: params.computeLevel,
           messages: [
             { role: "system" as const, content: params.systemPrompt },
             ...params.messages,
@@ -138,7 +138,7 @@ export class OpenAiProvider implements LlmProvider {
         {
           model: this.model,
           temperature: params.temperature,
-          reasoning_effort: params.reasoningEffort,
+          reasoning_effort: params.computeLevel,
           messages: [
             { role: "system" as const, content: params.systemPrompt },
             ...params.messages,
