@@ -1,7 +1,11 @@
 import { Suspense } from "react";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { ConfirmButton } from "@web/features/dev-harness/components/ConfirmButton";
 import { StatementRow } from "@web/features/dev-harness/components/StatementRow";
+import { useArchiveSource } from "@web/features/dev-harness/hooks/useArchiveSource";
+import { useArchiveStatement } from "@web/features/dev-harness/hooks/useArchiveStatement";
+import { useInterventionInvalidation } from "@web/features/dev-harness/hooks/useInterventionInvalidation";
 import { useSourceSuspenseQuery } from "@web/features/dev-harness/hooks/useSourceQuery";
 import type { SourceStatement } from "@web/features/dev-harness/types";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
@@ -25,6 +29,10 @@ interface SourceDetailBodyProps {
 
 function SourceDetailBodyContent({ sourceId }: SourceDetailBodyProps) {
   const [source, sourceQuery] = useSourceSuspenseQuery({ sourceId });
+  const archiveStatement = useArchiveStatement();
+  const archiveSource = useArchiveSource();
+  const invalidate = useInterventionInvalidation();
+  const archiving = archiveStatement.isPending || archiveSource.isPending;
 
   return (
     <div className="flex flex-col gap-2 border-t border-border/40 px-3 py-2">
@@ -67,10 +75,32 @@ function SourceDetailBodyContent({ sourceId }: SourceDetailBodyProps) {
               confidence={statement.confidence}
               content={statement.content}
               meta={ingestionMetaLabel(statement.ingestionStatus)}
+              action={
+                <ConfirmButton
+                  label="빼기"
+                  disabled={archiving}
+                  onConfirm={() =>
+                    archiveStatement.mutate(
+                      { statementId: statement.id },
+                      { onSuccess: invalidate },
+                    )
+                  }
+                />
+              }
             />
           ))}
         </ul>
       )}
+
+      <div className="flex justify-end pt-1">
+        <ConfirmButton
+          label="이 글 빼기"
+          disabled={archiving}
+          onConfirm={() =>
+            archiveSource.mutate({ sourceId }, { onSuccess: invalidate })
+          }
+        />
+      </div>
     </div>
   );
 }
