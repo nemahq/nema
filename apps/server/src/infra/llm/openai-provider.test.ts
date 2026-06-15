@@ -11,9 +11,9 @@ vi.mock("openai", () => {
 });
 
 vi.mock("openai/helpers/zod", () => ({
-  zodResponseFormat: vi.fn((_schema: unknown, name: string) => ({
+  zodTextFormat: vi.fn((_schema: unknown, name: string) => ({
     type: "json_schema",
-    json_schema: { name },
+    name,
   })),
 }));
 
@@ -21,10 +21,11 @@ const TestSchema = z.object({ answer: z.string() });
 
 function createMockClient() {
   const parseFn = vi.fn();
+  const createFn = vi.fn();
   const client = {
-    chat: { completions: { parse: parseFn, create: vi.fn() } },
+    responses: { parse: parseFn, create: createFn },
   } as unknown as OpenAI;
-  return { client, parseFn };
+  return { client, parseFn, createFn };
 }
 
 function mockParse(response: unknown) {
@@ -41,6 +42,27 @@ function mockParseRejection(error: Error) {
   return { provider, parseFn };
 }
 
+function mockCreate(response: unknown) {
+  const { client, createFn } = createMockClient();
+  createFn.mockResolvedValue(response);
+  const provider = new OpenAiProvider({ client, model: "gpt-5" });
+  return { provider, createFn };
+}
+
+// 비동기 이벤트 스트림 + abort 신호를 노출하는 Responses 스트림 더블
+function makeStream(events: unknown[]) {
+  const abort = vi.fn();
+  const stream = {
+    controller: { abort },
+    async *[Symbol.asyncIterator]() {
+      for (const event of events) {
+        yield event;
+      }
+    },
+  };
+  return { stream, abort };
+}
+
 describe("OpenAiProvider", () => {
   describe("constructor", () => {
     it("throws LlmError when apiKey is empty", () => {
@@ -50,10 +72,184 @@ describe("OpenAiProvider", () => {
     });
   });
 
+  describe("generateText", () => {
+    it("returns output_text on success", async () => {
+      const { provider } = mockCreate({
+        status: "completed",
+        output_text: "hello world",
+      });
+
+      const result = await provider.generateText({
+        systemPrompt: "You are a helper.",
+        messages: [{ role: "user", content: "Hi" }],
+      });
+
+      expect(result).toBe("hello world");
+    });
+
+    it("maps systemPrompt to instructions and messages to input", async () => {
+      const { provider, createFn } = mockCreate({
+        status: "completed",
+        output_text: "ok",
+      });
+
+      await provider.generateText({
+        systemPrompt: "System prompt.",
+        messages: [
+          { role: "user", content: "Hello" },
+          { role: "assistant", content: "Hi" },
+          { role: "user", content: "Question" },
+        ],
+        temperature: 0.5,
+        computeLevel: "low",
+      });
+
+      const callArgs = createFn.mock.calls[0]?.[0];
+      expect(callArgs.model).toBe("gpt-5");
+      expect(callArgs.temperature).toBe(0.5);
+      expect(callArgs.instructions).toBe("System prompt.");
+      expect(callArgs.reasoning).toEqual({ effort: "low" });
+      expect(callArgs.input).toEqual([
+        { role: "user", content: "Hello" },
+        { role: "assistant", content: "Hi" },
+        { role: "user", content: "Question" },
+      ]);
+    });
+
+    it("omits reasoning when computeLevel is not set", async () => {
+      const { provider, createFn } = mockCreate({
+        status: "completed",
+        output_text: "ok",
+      });
+
+      await provider.generateText({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+      });
+
+      expect(createFn.mock.calls[0]?.[0].reasoning).toBeUndefined();
+    });
+
+    it("throws truncation error when status is incomplete (max_output_tokens)", async () => {
+      const { provider } = mockCreate({
+        status: "incomplete",
+        incomplete_details: { reason: "max_output_tokens" },
+        output_text: "",
+      });
+
+      await expect(
+        provider.generateText({
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM response was truncated (incomplete: max_output_tokens)",
+        }),
+      );
+    });
+
+    it("throws content_filter error when status is incomplete (content_filter)", async () => {
+      const { provider } = mockCreate({
+        status: "incomplete",
+        incomplete_details: { reason: "content_filter" },
+        output_text: "",
+      });
+
+      await expect(
+        provider.generateText({
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "content_filter",
+          message: "LLM response was blocked by content filter",
+        }),
+      );
+    });
+
+    it("throws when output_text is empty", async () => {
+      const { provider } = mockCreate({
+        status: "completed",
+        output_text: "",
+      });
+
+      await expect(
+        provider.generateText({
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM returned no content",
+        }),
+      );
+    });
+  });
+
+  describe("generateStream", () => {
+    it("yields text from output_text.delta events", async () => {
+      const { stream } = makeStream([
+        { type: "response.output_text.delta", delta: "Hel" },
+        { type: "response.created" },
+        { type: "response.output_text.delta", delta: "lo" },
+        { type: "response.completed" },
+      ]);
+      const createFn = vi.fn().mockResolvedValue(stream);
+      const client = {
+        responses: { create: createFn },
+      } as unknown as OpenAI;
+      const provider = new OpenAiProvider({ client, model: "gpt-5" });
+
+      const chunks: string[] = [];
+      for await (const chunk of provider.generateStream({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+      })) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toEqual(["Hel", "lo"]);
+      expect(createFn.mock.calls[0]?.[0].stream).toBe(true);
+    });
+
+    it("aborts the stream and stops yielding when signal is aborted", async () => {
+      const { stream, abort } = makeStream([
+        { type: "response.output_text.delta", delta: "a" },
+        { type: "response.output_text.delta", delta: "b" },
+      ]);
+      const createFn = vi.fn().mockResolvedValue(stream);
+      const client = {
+        responses: { create: createFn },
+      } as unknown as OpenAI;
+      const provider = new OpenAiProvider({ client, model: "gpt-5" });
+
+      const controller = new AbortController();
+      controller.abort();
+
+      const chunks: string[] = [];
+      for await (const chunk of provider.generateStream({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+        signal: controller.signal,
+      })) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toEqual([]);
+      expect(abort).toHaveBeenCalledOnce();
+    });
+  });
+
   describe("generateStructured", () => {
     it("returns parsed response on success", async () => {
       const { provider, parseFn } = mockParse({
-        choices: [{ message: { parsed: { answer: "42" } } }],
+        status: "completed",
+        output: [],
+        output_parsed: { answer: "42" },
       });
 
       const result = await provider.generateStructured({
@@ -69,7 +265,9 @@ describe("OpenAiProvider", () => {
 
     it("passes correct parameters to OpenAI SDK", async () => {
       const { provider, parseFn } = mockParse({
-        choices: [{ message: { parsed: { answer: "ok" } } }],
+        status: "completed",
+        output: [],
+        output_parsed: { answer: "ok" },
       });
 
       await provider.generateStructured({
@@ -87,41 +285,23 @@ describe("OpenAiProvider", () => {
       const callArgs = parseFn.mock.calls[0]?.[0];
       expect(callArgs.model).toBe("gpt-5");
       expect(callArgs.temperature).toBe(0.5);
-      expect(callArgs.messages).toEqual([
-        { role: "system", content: "System prompt." },
+      expect(callArgs.instructions).toBe("System prompt.");
+      expect(callArgs.input).toEqual([
         { role: "user", content: "Hello" },
         { role: "assistant", content: "Hi" },
         { role: "user", content: "Question" },
       ]);
-      expect(callArgs.response_format).toEqual({
-        type: "json_schema",
-        json_schema: { name: "test_schema" },
+      expect(callArgs.text).toEqual({
+        format: { type: "json_schema", name: "test_schema" },
       });
     });
 
-    it("throws when choices array is empty", async () => {
-      const { provider } = mockParse({ choices: [] });
-
-      await expect(
-        provider.generateStructured({
-          schema: TestSchema,
-          schemaName: "test",
-          systemPrompt: "sys",
-          messages: [{ role: "user", content: "q" }],
-        }),
-      ).rejects.toThrow(
-        expect.objectContaining({
-          code: "unknown",
-          message: "LLM returned no choices",
-        }),
-      );
-    });
-
-    it("throws when response is truncated", async () => {
+    it("throws when response is truncated (incomplete: max_output_tokens)", async () => {
       const { provider } = mockParse({
-        choices: [
-          { finish_reason: "length", message: { parsed: { answer: "ok" } } },
-        ],
+        status: "incomplete",
+        incomplete_details: { reason: "max_output_tokens" },
+        output: [],
+        output_parsed: { answer: "ok" },
       });
 
       await expect(
@@ -134,19 +314,17 @@ describe("OpenAiProvider", () => {
       ).rejects.toThrow(
         expect.objectContaining({
           code: "unknown",
-          message: "LLM response was truncated (finish_reason: length)",
+          message: "LLM response was truncated (incomplete: max_output_tokens)",
         }),
       );
     });
 
     it("throws when response is blocked by content filter", async () => {
       const { provider } = mockParse({
-        choices: [
-          {
-            finish_reason: "content_filter",
-            message: { parsed: null },
-          },
-        ],
+        status: "incomplete",
+        incomplete_details: { reason: "content_filter" },
+        output: [],
+        output_parsed: null,
       });
 
       await expect(
@@ -166,12 +344,14 @@ describe("OpenAiProvider", () => {
 
     it("throws when model refuses the request", async () => {
       const { provider } = mockParse({
-        choices: [
+        status: "completed",
+        output: [
           {
-            finish_reason: "stop",
-            message: { parsed: null, refusal: "I cannot help with that" },
+            type: "message",
+            content: [{ type: "refusal", refusal: "I cannot help with that" }],
           },
         ],
+        output_parsed: null,
       });
 
       await expect(
@@ -191,7 +371,9 @@ describe("OpenAiProvider", () => {
 
     it("throws when response has no parsed content", async () => {
       const { provider } = mockParse({
-        choices: [{ finish_reason: "stop", message: { parsed: null } }],
+        status: "completed",
+        output: [],
+        output_parsed: null,
       });
 
       await expect(
@@ -211,9 +393,9 @@ describe("OpenAiProvider", () => {
 
     it("throws when parsed response fails schema validation", async () => {
       const { provider } = mockParse({
-        choices: [
-          { finish_reason: "stop", message: { parsed: { answer: 123 } } },
-        ],
+        status: "completed",
+        output: [],
+        output_parsed: { answer: 123 },
       });
 
       await expect(
