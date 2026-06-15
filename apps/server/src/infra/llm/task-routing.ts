@@ -45,13 +45,8 @@ export function clearTaskOverride(task: LlmTask): void {
 }
 
 export function getAllTaskOverrides(): Record<LlmTask, string | null> {
-  const tasks: LlmTask[] = [
-    "drafting",
-    "draftIntent",
-    "sessionTitle",
-    "extraction",
-    "relationJudgment",
-  ];
+  // task 목록을 TASK_DEFAULT_TIER에서 파생 — 6번째 task가 생겨도 누락되지 않는다.
+  const tasks = Object.keys(TASK_DEFAULT_TIER) as LlmTask[];
   return Object.fromEntries(
     tasks.map((task) => [task, taskOverrides.get(task) ?? null]),
   ) as Record<LlmTask, string | null>;
