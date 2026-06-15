@@ -19,24 +19,29 @@ const TestSchema = z.object({ answer: z.string() });
 
 function createMockClient() {
   const createFn = vi.fn();
+  // 네이티브 구조화 출력은 beta.messages.create를 탄다.
+  const betaCreateFn = vi.fn();
   const client = {
     messages: { create: createFn },
+    beta: { messages: { create: betaCreateFn } },
   } as unknown as Anthropic;
-  return { client, createFn };
+  return { client, createFn, betaCreateFn };
 }
 
 function mockCreate(response: unknown) {
-  const { client, createFn } = createMockClient();
+  const { client, createFn, betaCreateFn } = createMockClient();
   createFn.mockResolvedValue(response);
+  betaCreateFn.mockResolvedValue(response);
   const provider = new AnthropicProvider({ client, model: "claude-opus-4-8" });
-  return { provider, createFn };
+  return { provider, createFn, betaCreateFn };
 }
 
 function mockCreateRejection(error: Error) {
-  const { client, createFn } = createMockClient();
+  const { client, createFn, betaCreateFn } = createMockClient();
   createFn.mockRejectedValue(error);
+  betaCreateFn.mockRejectedValue(error);
   const provider = new AnthropicProvider({ client, model: "claude-opus-4-8" });
-  return { provider, createFn };
+  return { provider, createFn, betaCreateFn };
 }
 
 describe("AnthropicProvider", () => {
@@ -312,19 +317,20 @@ describe("AnthropicProvider", () => {
     });
   });
 
-  describe("generateStructured", () => {
-    it("returns parsed tool_use input on success", async () => {
-      const { provider, createFn } = mockCreate({
-        stop_reason: "tool_use",
-        content: [
-          {
-            type: "tool_use",
-            id: "toolu_1",
-            name: "test",
-            input: { answer: "42" },
-          },
-        ],
-      });
+  describe("generateStructured (native path)", () => {
+    // 네이티브 경로는 beta.messages.create로 output_config.format을 보내고,
+    // 응답은 첫 text 블록에 스키마를 만족하는 JSON 문자열로 온다.
+    function nativeResponse(payload: unknown, stopReason = "end_turn") {
+      return {
+        stop_reason: stopReason,
+        content: [{ type: "text", text: JSON.stringify(payload) }],
+      };
+    }
+
+    it("parses JSON from the native output and returns it", async () => {
+      const { provider, betaCreateFn, createFn } = mockCreate(
+        nativeResponse({ answer: "42" }),
+      );
 
       const result = await provider.generateStructured({
         schema: TestSchema,
@@ -334,39 +340,34 @@ describe("AnthropicProvider", () => {
       });
 
       expect(result).toEqual({ answer: "42" });
-
-      const callArgs = createFn.mock.calls[0]?.[0];
-      expect(callArgs.tool_choice).toEqual({ type: "tool", name: "test" });
-      expect(callArgs.tools[0].name).toBe("test");
-      expect(callArgs.tools[0].input_schema.type).toBe("object");
+      // 네이티브 경로만 호출되고 tool_use 경로(messages.create)는 안 탄다.
+      expect(betaCreateFn).toHaveBeenCalledOnce();
+      expect(createFn).not.toHaveBeenCalled();
     });
 
-    it("throws when no tool_use block is present", async () => {
-      const { provider } = mockCreate({
-        stop_reason: "end_turn",
-        content: [{ type: "text", text: "no tool" }],
+    it("sends the structured-outputs beta header and output_config.format", async () => {
+      const { provider, betaCreateFn } = mockCreate(
+        nativeResponse({ answer: "ok" }),
+      );
+
+      await provider.generateStructured({
+        schema: TestSchema,
+        schemaName: "test",
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
       });
 
-      await expect(
-        provider.generateStructured({
-          schema: TestSchema,
-          schemaName: "test",
-          systemPrompt: "sys",
-          messages: [{ role: "user", content: "q" }],
-        }),
-      ).rejects.toThrow(
-        expect.objectContaining({
-          code: "unknown",
-          message: "LLM returned no tool_use block",
-        }),
-      );
+      const callArgs = betaCreateFn.mock.calls[0]?.[0];
+      expect(callArgs.betas).toEqual(["structured-outputs-2025-11-13"]);
+      expect(callArgs.output_config.format.type).toBe("json_schema");
+      expect(callArgs.output_config.format.schema.type).toBe("object");
+      // 강제 tool_use 파라미터가 더는 새지 않아야 한다.
+      expect(callArgs.tools).toBeUndefined();
+      expect(callArgs.tool_choice).toBeUndefined();
     });
 
     it("throws when truncated by max_tokens", async () => {
-      const { provider } = mockCreate({
-        stop_reason: "max_tokens",
-        content: [],
-      });
+      const { provider } = mockCreate(nativeResponse({}, "max_tokens"));
 
       await expect(
         provider.generateStructured({
@@ -384,10 +385,7 @@ describe("AnthropicProvider", () => {
     });
 
     it("throws when model refuses the request", async () => {
-      const { provider } = mockCreate({
-        stop_reason: "refusal",
-        content: [],
-      });
+      const { provider } = mockCreate({ stop_reason: "refusal", content: [] });
 
       await expect(
         provider.generateStructured({
@@ -404,17 +402,10 @@ describe("AnthropicProvider", () => {
       );
     });
 
-    it("throws when tool_use input fails schema validation", async () => {
+    it("throws when the native output is not valid JSON", async () => {
       const { provider } = mockCreate({
-        stop_reason: "tool_use",
-        content: [
-          {
-            type: "tool_use",
-            id: "toolu_1",
-            name: "test",
-            input: { answer: 123 },
-          },
-        ],
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: "not json" }],
       });
 
       await expect(
@@ -424,7 +415,149 @@ describe("AnthropicProvider", () => {
           systemPrompt: "sys",
           messages: [{ role: "user", content: "q" }],
         }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM returned non-JSON output",
+        }),
+      );
+    });
+
+    it("throws when there is no content", async () => {
+      const { provider } = mockCreate({ stop_reason: "end_turn", content: [] });
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM returned no content",
+        }),
+      );
+    });
+
+    it("throws when the native output fails schema validation", async () => {
+      const { provider } = mockCreate(nativeResponse({ answer: 123 }));
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
       ).rejects.toThrow(expect.objectContaining({ code: "unknown" }));
+    });
+  });
+
+  describe("generateStructured (tool_use fallback)", () => {
+    // 네이티브 미지원 신호(400)면 런타임에 tool_use 경로로 폴백한다.
+    async function makeNativeUnsupportedError() {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      return new BadRequestError(
+        400,
+        {
+          error: {
+            message: "This model does not support structured outputs",
+          },
+        },
+        "This model does not support structured outputs",
+        new Headers(),
+      );
+    }
+
+    it("falls back to tool_use when native returns an unsupported 400", async () => {
+      const { client, createFn, betaCreateFn } = createMockClient();
+      betaCreateFn.mockRejectedValue(await makeNativeUnsupportedError());
+      createFn.mockResolvedValue({
+        stop_reason: "tool_use",
+        content: [
+          {
+            type: "tool_use",
+            id: "toolu_1",
+            name: "test",
+            input: { answer: "42" },
+          },
+        ],
+      });
+      const provider = new AnthropicProvider({
+        client,
+        model: "claude-opus-4-8",
+      });
+
+      const result = await provider.generateStructured({
+        schema: TestSchema,
+        schemaName: "test",
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+      });
+
+      expect(result).toEqual({ answer: "42" });
+      expect(betaCreateFn).toHaveBeenCalledOnce();
+      const callArgs = createFn.mock.calls[0]?.[0];
+      expect(callArgs.tool_choice).toEqual({ type: "tool", name: "test" });
+      expect(callArgs.tools[0].name).toBe("test");
+      expect(callArgs.tools[0].input_schema.type).toBe("object");
+    });
+
+    it("does NOT fall back on an unrelated 400 (e.g. billing)", async () => {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      const { client, createFn, betaCreateFn } = createMockClient();
+      betaCreateFn.mockRejectedValue(
+        new BadRequestError(
+          400,
+          { error: { message: "Your credit balance is too low" } },
+          "Your credit balance is too low",
+          new Headers(),
+        ),
+      );
+      const provider = new AnthropicProvider({
+        client,
+        model: "claude-opus-4-8",
+      });
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "bad_request" }));
+      // 폴백을 타지 않는다 — tool_use(messages.create)는 호출되지 않는다.
+      expect(createFn).not.toHaveBeenCalled();
+    });
+
+    it("throws when the fallback tool_use returns no tool_use block", async () => {
+      const { client, createFn, betaCreateFn } = createMockClient();
+      betaCreateFn.mockRejectedValue(await makeNativeUnsupportedError());
+      createFn.mockResolvedValue({
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: "no tool" }],
+      });
+      const provider = new AnthropicProvider({
+        client,
+        model: "claude-opus-4-8",
+      });
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM returned no tool_use block",
+        }),
+      );
     });
   });
 
