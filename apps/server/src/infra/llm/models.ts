@@ -16,7 +16,7 @@ export interface TieredLlm {
   readonly nano: LlmProvider;
 }
 
-// task 라우팅(NEM-146)이 override 모델용 provider를 만들 때 같은 OpenAI 클라이언트를
+// task 라우팅이 override 모델용 provider를 만들 때 같은 OpenAI 클라이언트를
 // 재사용하도록 공유 client를 함께 돌려준다 — task별 모델마다 클라이언트를 새로 열지 않는다.
 export interface TieredLlmBundle {
   readonly tiers: TieredLlm;

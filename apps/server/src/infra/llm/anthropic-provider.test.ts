@@ -273,7 +273,6 @@ describe("AnthropicProvider", () => {
           message: "LLM response was truncated (stop_reason: max_tokens)",
         }),
       );
-      // 잘리기 전 델타는 흘려보냈는지도 확인한다.
       expect(chunks).toEqual(["partial"]);
     });
 

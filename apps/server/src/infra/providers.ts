@@ -27,7 +27,7 @@ import {
 import type { VectorStore } from "@server/infra/vector";
 import { createQdrantClient, createQdrantStore } from "@server/infra/vector";
 
-// tier 시스템(standard/mini/nano) 위에 task 라우팅을 얹은 LLM 인터페이스(NEM-146).
+// tier 시스템(standard/mini/nano) 위에 task 라우팅을 얹은 LLM 인터페이스.
 // tier는 preset 내부 교체용으로 그대로 유지하고, 호출부는 forTask로 task별 모델을 받는다.
 export type LlmRouter = TieredLlm & {
   forTask(task: LlmTask): LlmProvider;
@@ -53,10 +53,10 @@ let resolvedModelNames:
 // 공유 OpenAI 클라이언트로 만든다(getProviders 초기화 시 주입).
 let overrideProviders: Map<string, LlmProvider> | undefined;
 let sharedOpenAiClient: OpenAI | undefined;
-// anthropic 어댑터(NEM-147)용 공유 클라이언트 — anthropic 모델이 처음 요청될 때 만든다.
+// anthropic 어댑터용 공유 클라이언트 — anthropic 모델이 처음 요청될 때 만든다.
 // 키가 없으면 그 시점에 LlmError("auth")로 끊는다(서버 부팅은 키 없이도 가능).
 let sharedAnthropicClient: Anthropic | undefined;
-// gemini 어댑터(NEM-148)용 공유 클라이언트 — AI Studio(apiKey) 모드가 기본.
+// gemini 어댑터용 공유 클라이언트 — AI Studio(apiKey) 모드가 기본.
 // Vertex 모드 배선은 후속 옵션으로 남긴다(키 없이도 서버 부팅 가능).
 let sharedGeminiClient: GoogleGenAI | undefined;
 
@@ -245,7 +245,7 @@ function applyLlmPreset(preset: LlmPreset): void {
       : originalLlm;
 }
 
-// task별 런타임 모델 스위칭(NEM-146) — preset과 같은 prod 잠금을 공유한다.
+// task별 런타임 모델 스위칭 — preset과 같은 prod 잠금을 공유한다.
 // 모델 id는 setTaskOverride가 MODEL_CATALOG로 검증한다.
 export function setTaskModel(task: LlmTask, modelId: string): void {
   const env = getEnv();
