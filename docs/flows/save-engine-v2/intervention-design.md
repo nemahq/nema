@@ -69,7 +69,9 @@ pending 관계 해소     — 엔진이 미뤄둔 관계 제안을 적용/거절
 
 Q1: 원본 archive는 진술을 **건드리지 않는다**(07). 사용자가 원본 수준에서 원하는 헤드라인 동작은 "글 통째로 무르기"(= ingestion 되돌리기, §4.1)이고, "원문만 가리고 진술은 남기기"는 v1에 강한 시나리오가 없다(기밀 원문은 soft-archive로 보호 안 되는 hard-delete 케이스라 07이 별도로 미룸).
 
-`archive_source(p_source_id)`는 계약에 **자리로 둔다** — `manual` 변경셋 + `{archive, source, id}`, 원본 `status='archived'`. 벡터 없음(원본은 임베딩 안 함), 연쇄 없음. NEM-133이 필요로 하면 얹는 얇은 형제 RPC. v1 화면 헤드라인 아님.
+`archive_source(p_source_id)` — `manual` 변경셋 + `{archive, source, id}`, 원본 `status='archived'`. 벡터 없음(원본은 임베딩 안 함), 연쇄 없음.
+
+**빌드 결정 (G):** RPC는 **이번에 만든다**(자리만 두지 않는다) — `archive_statement`와 3줄 차이고, ingestion 되돌리기(§4.1)가 어차피 원본 archive 경로를 쓰므로 같은 로직을 공유한다. 단 **v1 화면 헤드라인은 아니다**(NEM-133이 노출할지는 화면 몫). 즉 "백엔드 계약은 완비, UI 노출은 선택".
 
 ## 4. 되돌리기 (revert)
 
@@ -87,7 +89,8 @@ Q1: 원본 archive는 진술을 **건드리지 않는다**(07). 사용자가 원
 타겟 = `ingestion` 변경셋. "이 글 잘못 넣었다, 다 무르자."
 
 - 그 변경셋이 만든 진술(`changes` 중 `create/statement`) 가운데 **현재 active인 것만** archive + `ingestion_status='pending'`(벡터 축출).
-- 변경셋의 `source_id`가 가리키는 **원본도 함께** archive — "글 통째로"의 *글*은 원본이므로, 되돌리면 원본도 활성 목록에서 빠진다. (원본은 changes엔 없지만 변경셋의 명백한 주어라 `source_id`로 닿는다. Q1의 "원본 빼기 → 진술 유지"와 축이 다르다 — 저쪽은 원본만 빼는 독립 동작, 이쪽은 글 넣기라는 *사건*을 통째로 무르는 것.)
+- 변경셋의 `source_id`가 가리키는 **원본도 함께** archive — "글 통째로"의 *글*은 원본이므로, 되돌리면 원본도 활성 목록에서 빠진다(빈 원본 잔여 방지). Q1의 "원본 빼기 → 진술 유지"와 축이 다르다 — 저쪽은 원본만 빼는 독립 동작, 이쪽은 글 넣기라는 *사건*을 통째로 무르는 것.
+  - **순수성 예외 (C, 명시):** revert는 원칙적으로 "타겟 변경셋의 `changes`를 뒤집는다". 그런데 원본은 ingestion 변경셋의 `changes`에 없고(넣기는 진술 create만 기록, 원본은 동기 박제) `source_id`로만 닿는다. 그래서 **ingestion 되돌리기만은** changes 밖의 `source_id`에서 원본을 *유도*해 archive한다 — 유일한 예외다. 단 그 archive는 revert 변경셋의 changes에 `{archive, source, source_id}`로 *기록*되므로, redo는 다시 자기 기술적이다(예외는 "무엇을 archive할지 아는 경로"에만 있고, 기록·redo는 일반 규칙 그대로).
 - `revert` 변경셋의 changes = `{archive, source, source_id}` + `{archive, statement, id}×(active N)`.
 - **관계는 열거 안 함** — 진술이 archived되며 트리거가 걸린 관계(그 글의 자동 잇기 100% + 다른 글이 이 진술을 가리킨 cross-source 관계까지)를 자동 archive(Q2). 잇기 후보는 새 진술의 벡터로 space 전체를 검색하므로 끝점이 여러 원본에 걸치지만, 모든 잇기 관계는 끝점 하나가 이 글의 진술이라 진술 archive만으로 빠짐없이 정리된다.
 - notify(벡터 축출).
@@ -120,7 +123,22 @@ Q1: 원본 archive는 진술을 **건드리지 않는다**(07). 사용자가 원
 
 예: 글 넣기 → S1·S2·S3 / 사용자가 S2만 빼기(manual) / 그 글 되돌리기. 되돌리기는 그 시점 active인 S1·S3만 archive·기록하고(S2는 건너뜀), redo는 S1·S3만 복귀 — **손수 뺀 S2는 가린 채로 보존**된다. manual·revert·redo가 여러 겹 쌓여도 각 결정이 독립적으로 살아남는다(append-only 정확성 조건).
 
-**double-revert 가드:** 한 변경셋엔 *유효한* revert가 최대 하나. `revert_changeset(C)`는 C를 가리키는 유효 revert가 이미 있으면 `RAISE`(이중 archive 방지 — 더블클릭 멱등). "유효함"은 revert 사슬의 패리티로 파생(C를 가리키는 revert가 다시 되돌려졌으면 C는 다시 in-effect). 정확한 판정 SQL은 빌드 세부(재귀 조회), 계약은 "되돌리기는 멱등하다"를 보장한다.
+**double-revert 가드 — in-effect 술어 (B).** 멱등성과 이력의 "되돌림 여부"(§7.2)가 둘 다 이 술어에 기대므로 "빌드 세부"로 미루지 않고 여기서 정의한다.
+
+> 변경셋 X가 **in-effect**(효력 있음) ⟺ X를 가리키는(`reverts_id = X`) revert 중 *그 자신이 in-effect인 것*이 하나도 없다.
+
+재귀 정의다 — redo가 revert를 또 가리키고(분기 가능: redo 후 C를 다시 revert하면 C에 revert 자식이 둘), 자식의 효력이 손자에 의해 뒤집힌다. 구현은 재귀 CTE(또는 `reverts_id` 사슬을 따라 올라가며 효력 토글):
+
+```
+-- C가 현재 되돌려졌나 = C를 가리키는 in-effect revert가 존재하나
+WITH RECURSIVE eff(id, in_effect) AS (...)  -- 잎(자식 없는 revert)=in-effect, 위로 토글
+SELECT EXISTS(SELECT 1 FROM changesets r
+              WHERE r.reverts_id = C AND <r is in-effect>);
+```
+
+`revert_changeset(X)`는 **X가 현재 in-effect가 아니면 `RAISE`**(이미 되돌려진 걸 또 되돌리기 금지 = 더블클릭 멱등). redo는 X(원래 타겟)가 아니라 그 revert 변경셋을 새 타겟으로 부르므로 같은 가드를 통과한다. 정확한 CTE는 빌드에서 쓰되, *술어의 정의*는 위로 고정 — 읽기 계약의 "되돌림 여부"도 같은 술어를 쓴다.
+
+**빈 되돌리기:** 타겟의 대상이 그 시점 하나도 전이되지 않으면(예: 진술이 이미 전부 손수 archived) revert 변경셋을 만들지 않고 `RAISE`('nothing to revert') — 빈 변경셋을 남기지 않는다(넣기 RPC의 "빈 changeset 금지"와 같은 결).
 
 ## 5. pending 관계 해소
 
@@ -128,13 +146,14 @@ Q1: 원본 archive는 진술을 **건드리지 않는다**(07). 사용자가 원
 
 ### 5.1 적용 — pending→applied, 행 생성
 
-`apply_pending_relation(p_changeset_id)`:
+`apply_pending_relation(p_changeset_id) → uuid` (적용된 관계 id):
 
 - 변경셋이 `type='relation'` AND `status='pending'`일 때만(아니면 `RAISE`).
-- 그 변경셋의 단일 change에서 `data`(예약 `target_id`·type·from·to)를 읽어 `statement_relations` 행 생성 — **예약된 `target_id`를 id로** 써서 changes.target_id가 그대로 유효하게. `ON CONFLICT (from_id,to_id,type) DO NOTHING`(다른 경로로 이미 있으면).
+- **끝점 무결성 먼저.** 제안 대기 중 끝점 진술이 archived됐으면(stale 제안) active 관계를 가린 진술에 걸 수 없다 — **양끝 active가 아니면 `RAISE`**('endpoint no longer active'). 조용히 거절로 바꾸지 않는다(적용을 눌렀는데 거절되는 부작용 금지). 검토함 화면은 stale 제안에 적용 버튼을 안 띄워 이 `RAISE`를 사전 차단한다.
+- 그 변경셋의 단일 change에서 `data`(예약 `target_id`·type·from·to)를 읽어 `statement_relations` 행 생성 — **예약된 `target_id`를 id로** 써서 changes.target_id가 그대로 유효하게.
+- **댕글링 방지 (A).** 같은 `(from,to,type)`가 다른 글의 잇기로 이미 active면(relation-design이 인정한 best-effort 중복) 예약 id로 행이 안 생긴다. 이때 `change.target_id`가 존재하지 않는 관계를 가리키지 않도록, **이미 있는 관계의 실제 id로 `change.target_id`를 갱신**하고(그 행이 이 적용의 산물로 간주됨) 변경셋을 applied로 닫는다. 즉 `INSERT ... ON CONFLICT (from_id,to_id,type) DO NOTHING RETURNING id`로 새 행 id를 얻고, NULL이면 기존 행 id를 조회해 change에 반영한다. 반환값은 어느 경우든 **실재하는 관계 id**.
 - 변경셋 `status='applied'`. 이제 일반 applied 관계와 동일 — 꺼내기에 비치고(충돌이면 ⚡), `relation` 변경셋(건당 1개)을 타겟으로 §4.2 되돌리기 가능.
-- 끝점 무결성: 제안 대기 중 끝점이 archived됐으면(stale 제안) active 관계를 가린 진술에 걸 수 없다 — 양끝 active일 때만 적용, 아니면 stale로 보고 거절 처리(빌드 세부). 트리거가 끝점 불변식을 지키는 것과 같은 결.
-- author: `relation` 변경셋은 shape상 `author_id IS NULL`(엔진 제안이라). 적용은 status 전이일 뿐 author를 찍지 않는다 — 누가 적용했나는 v1(1인 space)에서 유일 멤버라 자명하고, 필요해지면 협업 단계에서 더한다.
+- author: `relation` 변경셋은 shape상 `author_id IS NULL`(엔진 제안이라). 적용은 status 전이일 뿐 author를 찍지 않는다 — 누가 적용/거절했나는 v1(1인 space)에서 유일 멤버라 자명하고, 원장이 엔진·사람 해소를 구분 못 하는 한계는 §10(resolver author)로 남긴다.
 
 ### 5.2 거절 — pending→rejected, 영구
 
@@ -162,6 +181,7 @@ Q1: 원본 archive는 진술을 **건드리지 않는다**(07). 사용자가 원
 
 - 이미 active인 관계의 재제안은 후보 좁히기(relation-design §4 "이미 같은 종류 관계 걸린 쌍은 건너뜀")가 LLM 전에 막으므로 여기선 pending·rejected만 본다.
 - 같은 쌍이라도 **type이 다르면** 다른 주장이라 막지 않는다(가드는 `(from,to,type)` 단위) — "supports 거절"이 "conflicts 제안"을 막지 않는다.
+- **성능 (F).** 현재 pending 가드는 `changes.data->>'from_id'` 등 JSONB를 스캔한다(relation-design이 인정한 best-effort). rejected를 더하면 스캔 대상이 늘고 rejected는 안 지워져 누적된다. 거절이 쌓여 잇기 워커가 느려지면 `(space_id, from_id, to_id, type)` 함수 인덱스 또는 제안 트리플 정규화 컬럼을 들인다 — 해제 조건은 dogfooding 실측이라 빌드 1차엔 미루되, 누적 누수를 §10에 명시.
 
 ## 7. 계약 (NEM-133이 올라탄다)
 
@@ -195,12 +215,14 @@ Q1: 원본 archive는 진술을 **건드리지 않는다**(07). 사용자가 원
 
 ## 8. 마이그레이션
 
-supabase 규칙: 변경당 1파일, `supabase migration new`. enum `ADD VALUE`는 같은 트랜잭션에서 못 쓰므로(Postgres) 사용 RPC와 분리.
+supabase 규칙: 변경당 1파일, `supabase migration new`.
 
-1. **enum 추가** — `changeset_status`에 `rejected`, `change_action`에 `restore`(별도 파일, RPC 분리).
-2. **`chk_data_by_action` 수정** — `restore`도 `archive`처럼 data 없음: `(action IN ('create','modify') AND data IS NOT NULL) OR (action IN ('archive','restore') AND data IS NULL)`.
-3. **조작 RPC** — §7.1 다섯 + 권한.
-4. **재제안 가드 수정** — `apply_relation_changesets`의 pending 가드에 `rejected` 포함(§6). `CREATE OR REPLACE`.
+> **순서 불변식 (D).** `ALTER TYPE ... ADD VALUE`로 더한 enum 값은 **같은 트랜잭션에서 참조할 수 없다**(Postgres "unsafe use of new value"). 그러므로 `rejected`·`restore` 추가는 그 값을 쓰는 **모든 것(CHECK 수정·RPC)과 별도 마이그레이션 파일**이어야 한다. 관계 엔진이 `relation` 값에서 이미 겪은 패턴(`chk_changeset_shape`를 별 파일로 뺀 것)을 그대로 따른다 — 안 지키면 `db reset`이 깨진다.
+
+1. **파일 1 — enum 값만** — `changeset_status`에 `rejected`, `change_action`에 `restore`. (값 추가만, 아무 참조 없음.)
+2. **파일 2 — `chk_data_by_action` 수정** — `restore`도 `archive`처럼 data 없음: `(action IN ('create','modify') AND data IS NOT NULL) OR (action IN ('archive','restore') AND data IS NULL)`. (`restore` 값을 참조하므로 파일 1 이후.)
+3. **파일 3 — 조작 RPC** — §7.1 다섯 + 권한.
+4. **파일 4 — 재제안 가드 수정** — `apply_relation_changesets`의 pending 가드에 `rejected` 포함(§6). `CREATE OR REPLACE`.
 
 작성 후 `supabase db reset && supabase gen types ... > apps/server/src/infra/database.types.ts`, 생성 타입 동반 커밋.
 
@@ -209,9 +231,9 @@ supabase 규칙: 변경당 1파일, `supabase migration new`. enum `ADD VALUE`�
 실 사용자 시나리오·사전검증 필요한 엣지만(런타임·커버리지용 금지):
 
 - **연쇄 archive**: 진술 빼기 → 걸린 관계 자동 archive(트리거). 글 되돌리기 → 그 글의 진술·관계 + cross-source 관계까지 빠짐.
-- **revert 멱등·겹침**: double-revert 가드, S2만 빼고 글 되돌리기 → redo 시 S2 보존(§4.4), redo 대칭(archive↔restore).
+- **revert 멱등·겹침**: double-revert 가드(in-effect 술어), S2만 빼고 글 되돌리기 → redo 시 S2 보존(§4.4), redo 대칭(archive↔restore), 빈 되돌리기 `RAISE`.
 - **벡터 동기화**: archive/restore가 `ingestion_status='pending'` + notify를 찍어 워커가 벡터 삭제/재적재.
-- **pending 해소 후 상태**: 적용 → 행 생성·꺼내기 비침, 거절 → rejected·재제안 안 됨, stale 제안(끝점 archived) 처리.
+- **pending 해소 후 상태**: 적용 → 행 생성·꺼내기 비침, 거절 → rejected·재제안 안 됨, stale 제안(끝점 archived) 적용 시 `RAISE`, 같은 쌍이 이미 active일 때 적용 → 댕글링 없이 기존 id 반영(§5.1 A).
 
 ## 10. 보류 / 후속 — 해제 조건과 함께
 
@@ -220,4 +242,5 @@ supabase 규칙: 변경당 1파일, `supabase migration new`. enum `ADD VALUE`�
 - **진술 직접 작성·수정** — 진술 불변·author 규칙과 부딪혀 별도 설계. 실제 UX 필요 입증 시.
 - **원본 수정 설탕** — revert-ingestion + create-source 조립. 원본 수정 마찰이 dogfooding에서 입증되면.
 - **진술 modify 시 stale 관계 재평가(`recheck`)** — 07 기존 보류. 진술 modify가 실제로 생기는 날.
-- **resolver author 기록** — pending 적용/거절의 주체. 협업(멀티 멤버) 단계에서.
+- **resolver author 기록** — pending 적용/거절의 주체(원장이 엔진·사람 해소를 구분 못 하는 한계, §5.1). 협업(멀티 멤버) 단계에서.
+- **재제안 가드 인덱스/정규화** — rejected 누적으로 JSONB 스캔이 느려지면(§6 F). 해제 조건은 dogfooding 실측.
