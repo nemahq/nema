@@ -90,7 +90,10 @@ function resolveOverrideProvider(modelId: string): LlmProvider {
 
   const spec = getModelSpec(modelId);
   if (!spec) {
-    throw new Error(`Unknown model id "${modelId}" — not in MODEL_CATALOG`);
+    throw new LlmError(
+      "bad_request",
+      `Unknown model id "${modelId}" — not in MODEL_CATALOG`,
+    );
   }
 
   let provider: LlmProvider;
@@ -104,11 +107,16 @@ function resolveOverrideProvider(modelId: string): LlmProvider {
       client: getAnthropicClient(),
       model: spec.id,
     });
-  } else {
+  } else if (spec.provider === "google") {
     provider = new GeminiProvider({
       client: getGeminiClient(),
       model: spec.id,
     });
+  } else {
+    throw new LlmError(
+      "bad_request",
+      `No adapter wired for provider "${spec.provider}" (model "${modelId}")`,
+    );
   }
 
   overrideProviders.set(modelId, provider);
@@ -244,8 +252,27 @@ export function setTaskModel(task: LlmTask, modelId: string): void {
   if (env.APP_ENV === "production") {
     throw new Error("LLM task override is not available in production");
   }
+  // resolveOverrideProvider가 의존하는 overrideProviders/공유 클라이언트는
+  // getProviders가 cached보다 먼저 채우므로, cached 존재가 곧 초기화 완료를 보장한다.
   if (!cached) {
     throw new Error("Providers not initialized");
+  }
+  // set-time 검증: override를 커밋하기 전에 실제로 provider를 해석해 본다.
+  // 카탈로그엔 있지만 어댑터 미배선/API 키 부재로 resolve 단계에서만 터지는 모델을
+  // 여기서 걸러야 한다 — 안 그러면 워커가 배치마다 resolve→throw→pending 유지로
+  // 무한 재처리(조용한 재시도 루프)에 빠진다. 성공적으로 set된 override는
+  // resolve 가능함이 보장된다(해석된 provider는 캐시되어 그대로 재사용).
+  try {
+    resolveOverrideProvider(modelId);
+  } catch (err) {
+    if (err instanceof LlmError) {
+      throw new LlmError(
+        "bad_request",
+        `Cannot set override for "${task}": model "${modelId}" is not usable — ${err.message}`,
+        err,
+      );
+    }
+    throw err;
   }
   setTaskOverride(task, modelId);
 }
