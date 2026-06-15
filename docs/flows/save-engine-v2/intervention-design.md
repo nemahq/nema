@@ -58,7 +58,7 @@ pending 관계 해소     — 엔진이 미뤄둔 관계 제안을 적용/거절
 
 `archive_statement(p_statement_id)`:
 
-1. 진술이 **현재 active일 때만** 진행(이미 archived면 `RAISE` — 새 변경셋을 만들지 않는다, §4.3의 "실제 전이만 기록").
+1. 진술이 **현재 active일 때만** 진행(이미 archived면 `RAISE` — 새 변경셋을 만들지 않는다, §4.4의 "실제 전이만 기록").
 2. `manual` 변경셋 1개(`author_id = auth.uid()`) + `changes`: `{action:'archive', target_type:'statement', target_id}`.
 3. 진술 `status='archived'` + **`ingestion_status='pending'`** — schema §5.3의 선언적 동기화. 워커가 archived 진술을 집어 Qdrant에서 벡터를 지운다.
 4. `pgmq.send('statement_sync', notify)` — 벡터 축출을 워커가 깨어 처리.
@@ -151,7 +151,8 @@ SELECT EXISTS(SELECT 1 FROM changesets r
 - 변경셋이 `type='relation'` AND `status='pending'`일 때만(아니면 `RAISE`).
 - **끝점 무결성 먼저.** 제안 대기 중 끝점 진술이 archived됐으면(stale 제안) active 관계를 가린 진술에 걸 수 없다 — **양끝 active가 아니면 `RAISE`**('endpoint no longer active'). 조용히 거절로 바꾸지 않는다(적용을 눌렀는데 거절되는 부작용 금지). 검토함 화면은 stale 제안에 적용 버튼을 안 띄워 이 `RAISE`를 사전 차단한다.
 - 그 변경셋의 단일 change에서 `data`(예약 `target_id`·type·from·to)를 읽어 `statement_relations` 행 생성 — **예약된 `target_id`를 id로** 써서 changes.target_id가 그대로 유효하게.
-- **댕글링 방지 (A).** 같은 `(from,to,type)`가 다른 글의 잇기로 이미 active면(relation-design이 인정한 best-effort 중복) 예약 id로 행이 안 생긴다. 이때 `change.target_id`가 존재하지 않는 관계를 가리키지 않도록, **이미 있는 관계의 실제 id로 `change.target_id`를 갱신**하고(그 행이 이 적용의 산물로 간주됨) 변경셋을 applied로 닫는다. 즉 `INSERT ... ON CONFLICT (from_id,to_id,type) DO NOTHING RETURNING id`로 새 행 id를 얻고, NULL이면 기존 행 id를 조회해 change에 반영한다. 반환값은 어느 경우든 **실재하는 관계 id**.
+- **적용의 사후 조건 = "active (from,to,type) 관계가 존재한다" (A).** `uq_statement_relations_triple`은 **상태 무관 전체 유니크**다(`20260614072230` 주석: "가려진 관계의 재생성도 막고"). 그래서 `ON CONFLICT (from,to,type)`는 *active뿐 아니라 archived 행과도* 충돌한다. archived 행과 충돌하는 경로가 실재한다: ① (A,B,supports) 적용→active, ② 그 `relation` 변경셋을 §4.2로 되돌림→관계만 archived(끝점은 active라 복귀 분기 안 걸림), ③ archived 쌍은 재제안 가드(§6, pending·rejected만 봄)·후보 좁히기("이미 active인 관계"만 건너뜀)를 둘 다 통과해 재제안됨, ④ 사용자가 적용. 단순 `DO NOTHING`이면 archived 행이 그대로라 **"적용을 눌렀는데 active 관계는 안 생기고 이력만 applied"인 조용한 no-op**이 된다.
+  - 그래서 적용은 "행 생성"이 아니라 **active를 보장**한다: `INSERT (id=예약값) ... ON CONFLICT (from,to,type) DO UPDATE SET status='active' RETURNING id, (xmax=0) AS inserted`. 결과 분기로 changes를 자기 기술적으로 남긴다 — **새로 생기면** `{create, relation, id}`(id=예약값), **archived였다 복귀하면** `{restore, relation, 기존 id}`(신설 restore 액션과 결이 맞음), **이미 active였으면**(드문 중복 제안) 전이 없음이라 change를 안 남기고 `change.target_id`만 기존 id로 맞춘다(§4.4 "실제 전이만 기록"). 반환값은 어느 경우든 **active인 관계 id**.
 - 변경셋 `status='applied'`. 이제 일반 applied 관계와 동일 — 꺼내기에 비치고(충돌이면 ⚡), `relation` 변경셋(건당 1개)을 타겟으로 §4.2 되돌리기 가능.
 - author: `relation` 변경셋은 shape상 `author_id IS NULL`(엔진 제안이라). 적용은 status 전이일 뿐 author를 찍지 않는다 — 누가 적용/거절했나는 v1(1인 space)에서 유일 멤버라 자명하고, 원장이 엔진·사람 해소를 구분 못 하는 한계는 §10(resolver author)로 남긴다.
 
@@ -233,7 +234,7 @@ supabase 규칙: 변경당 1파일, `supabase migration new`.
 - **연쇄 archive**: 진술 빼기 → 걸린 관계 자동 archive(트리거). 글 되돌리기 → 그 글의 진술·관계 + cross-source 관계까지 빠짐.
 - **revert 멱등·겹침**: double-revert 가드(in-effect 술어), S2만 빼고 글 되돌리기 → redo 시 S2 보존(§4.4), redo 대칭(archive↔restore), 빈 되돌리기 `RAISE`.
 - **벡터 동기화**: archive/restore가 `ingestion_status='pending'` + notify를 찍어 워커가 벡터 삭제/재적재.
-- **pending 해소 후 상태**: 적용 → 행 생성·꺼내기 비침, 거절 → rejected·재제안 안 됨, stale 제안(끝점 archived) 적용 시 `RAISE`, 같은 쌍이 이미 active일 때 적용 → 댕글링 없이 기존 id 반영(§5.1 A).
+- **pending 해소 후 상태**: 적용 → 행 생성·꺼내기 비침, 거절 → rejected·재제안 안 됨, stale 제안(끝점 archived) 적용 시 `RAISE`. **적용의 active 보장(§5.1 A)**: 관계 되돌린 뒤(archived) 같은 쌍 재제안→적용 시 archived 행이 restore되어 active가 되고(조용한 no-op 아님), 이미 active면 댕글링 없이 기존 id 반영.
 
 ## 10. 보류 / 후속 — 해제 조건과 함께
 
