@@ -41,6 +41,15 @@ This is the hardest and most important call.
 - **conflicts = contention.** Two statements each claim to be valid *now*, and they are incompatible — but neither declares it supersedes the other. They just disagree. The system does not judge which is true; it surfaces the clash for the person.
 - **When torn between replaces and conflicts, choose conflicts.** Replacement silently hides the older statement as "past"; if no clear alternation was declared, hiding a still-valid statement is the worse error. Conflict always goes to a human anyway.
 
+## Conflicts — a contradiction, not a caveat
+
+The job here is to separate a genuine contradiction from a mere caveat — NOT to grow suspicious of conflicts in general. An incompatible pair must still surface; only the false ones get cut. The one test is whether the two statements can both be true at the same time.
+
+- A genuine conflict is two assertions that both purport to hold *now* and cannot both be true: "auth goes with our own implementation" vs "auth uses Supabase Auth". Surface it as \`conflicts\`. Do NOT downgrade such a pair to \`replaces\` or drop it just because the contradiction is uncomfortable — when neither side declares it supersedes the other, it is a conflict (this is the "when torn, choose conflicts" rule above).
+- A drawback is not a contradiction. "PortOne's fee is 0.3%p higher" and "we're switching to PortOne" are both true together — the higher fee is a *cost* of the move, not a denial of it. Before emitting, ask: could a reasonable person hold both at once? If yes, it is a caveat, concern, cost, or trade-off — not a conflict. Emit nothing.
+- This is about meaning, not wording. A conflict need not contain "not", "cancel", or any negation word: "QA finishes the day before release" and "QA runs the morning of release" cannot both hold, so they conflict even though neither negates the other. Judge whether the contents are mutually exclusive, not whether a contradiction is spelled out.
+- Endpoints. A conflict is between two assertions of a present state. A question asserts nothing, so it is never a conflict endpoint — a question re-raised on an already-settled topic is closed by \`resolves\` or is simply unrelated. A task states an intent to act, not a present fact: a task that merely plans to change an existing decision does not conflict with it (at most it foreshadows a future replacement) — treat a task as a conflict endpoint only when its content already asserts a present state incompatible with the other.
+
 ## Confidence — binary
 
 For each relation output \`confident\`: true or false.
@@ -69,9 +78,8 @@ EXISTING statements:
 
 Relations:
 - { from: "N0", to: "E0", type: "replaces", confident: true } — N0 explicitly drops Toss for PortOne; E0 is the retired version. Alternation is declared.
-- { from: "E1", to: "N0", type: "conflicts", confident: false } — E1 (PortOne's reporting is weak) sits uneasily with the move to PortOne, but it is a caveat, not a clean contradiction; unsure, so review.
 
-No relation is emitted for N1 or E2 — being near in topic is not a relation. In particular, do NOT emit \`supports\` from E2 (the PoC task) to N0 just because both concern payments: the note never says the task justifies the decision. A shared topic is not a reason.
+No relation is emitted for E1, N1, or E2 — being near in topic is not a relation. E1 (PortOne's reporting is weak) is a *caveat* about the move to PortOne, not a contradiction of it: both hold at once, so it is not a conflict. And do NOT emit \`supports\` from E2 (the PoC task) to N0 just because both concern payments: the note never says the task justifies the decision. A shared topic is neither a reason nor a clash.
 
 ## Output
 
