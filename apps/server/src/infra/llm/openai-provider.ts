@@ -7,7 +7,8 @@ import {
   RateLimitError,
   UnprocessableEntityError,
 } from "openai/error";
-import { zodResponseFormat } from "openai/helpers/zod";
+import { zodTextFormat } from "openai/helpers/zod";
+import type { ResponseInputItem } from "openai/resources/responses/responses";
 
 import { LlmError } from "./llm-error";
 import type {
@@ -22,6 +23,9 @@ export type OpenAiProviderConfig =
   | { client: OpenAI; model: string };
 
 export const DEFAULT_TIMEOUT_MS = 30_000;
+
+// 추론 모델은 출력 예산이 너무 작으면 사고 토큰만 쓰고 status "incomplete"로 끝난다
+export const DEFAULT_MAX_OUTPUT_TOKENS = 4096;
 
 export class OpenAiProvider implements LlmProvider {
   private readonly client: OpenAI;
@@ -42,30 +46,58 @@ export class OpenAiProvider implements LlmProvider {
     this.model = config.model;
   }
 
+  // messages(user/assistant)를 Responses API input 배열로 매핑. system은 instructions로 분리 전달
+  private toInput(
+    messages: GenerateTextParams["messages"],
+  ): ResponseInputItem[] {
+    return messages.map((message) => ({
+      role: message.role,
+      content: message.content,
+    }));
+  }
+
+  private reasoning(
+    computeLevel: GenerateTextParams["computeLevel"],
+  ): { effort: NonNullable<GenerateTextParams["computeLevel"]> } | undefined {
+    return computeLevel ? { effort: computeLevel } : undefined;
+  }
+
+  // SDK가 명시적 undefined timeout/maxRetries를 거부하므로 정의된 옵션만 담아 전달
+  private requestOptions(
+    params: Pick<GenerateTextParams, "timeoutMs" | "maxRetries">,
+  ): { timeout?: number; maxRetries?: number } {
+    const options: { timeout?: number; maxRetries?: number } = {};
+    if (params.timeoutMs !== undefined) {
+      options.timeout = params.timeoutMs;
+    }
+    if (params.maxRetries !== undefined) {
+      options.maxRetries = params.maxRetries;
+    }
+    return options;
+  }
+
   async *generateStream(params: GenerateStreamParams): AsyncIterable<string> {
     try {
-      const stream = await this.client.chat.completions.create(
+      const stream = await this.client.responses.create(
         {
           model: this.model,
+          instructions: params.systemPrompt,
+          input: this.toInput(params.messages),
           temperature: params.temperature,
-          reasoning_effort: params.computeLevel,
+          reasoning: this.reasoning(params.computeLevel),
+          max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
           stream: true,
-          messages: [
-            { role: "system" as const, content: params.systemPrompt },
-            ...params.messages,
-          ],
         },
-        { timeout: params.timeoutMs, maxRetries: params.maxRetries },
+        this.requestOptions(params),
       );
 
-      for await (const chunk of stream) {
+      for await (const event of stream) {
         if (params.signal?.aborted) {
           stream.controller.abort();
           return;
         }
-        const delta = chunk.choices[0]?.delta?.content;
-        if (delta) {
-          yield delta;
+        if (event.type === "response.output_text.delta") {
+          yield event.delta;
         }
       }
     } catch (error) {
@@ -78,43 +110,27 @@ export class OpenAiProvider implements LlmProvider {
 
   async generateStructured<T>(params: GenerateStructuredParams<T>): Promise<T> {
     try {
-      const completion = await this.client.chat.completions.parse(
+      const response = await this.client.responses.parse(
         {
           model: this.model,
+          instructions: params.systemPrompt,
+          input: this.toInput(params.messages),
           temperature: params.temperature,
-          reasoning_effort: params.computeLevel,
-          messages: [
-            { role: "system" as const, content: params.systemPrompt },
-            ...params.messages,
-          ],
-          response_format: zodResponseFormat(params.schema, params.schemaName),
+          reasoning: this.reasoning(params.computeLevel),
+          max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
+          text: { format: zodTextFormat(params.schema, params.schemaName) },
         },
-        { timeout: params.timeoutMs, maxRetries: params.maxRetries },
+        this.requestOptions(params),
       );
 
-      const choice = completion.choices[0];
-      if (!choice) {
-        throw new LlmError("unknown", "LLM returned no choices");
+      this.assertComplete(response.status, response.incomplete_details?.reason);
+
+      const refusal = this.findRefusal(response.output);
+      if (refusal != null) {
+        throw new LlmError("unknown", `LLM refused the request: ${refusal}`);
       }
-      if (choice.finish_reason === "length") {
-        throw new LlmError(
-          "unknown",
-          "LLM response was truncated (finish_reason: length)",
-        );
-      }
-      if (choice.finish_reason === "content_filter") {
-        throw new LlmError(
-          "content_filter",
-          "LLM response was blocked by content filter",
-        );
-      }
-      if (choice.message?.refusal) {
-        throw new LlmError(
-          "unknown",
-          `LLM refused the request: ${choice.message.refusal}`,
-        );
-      }
-      const parsed = choice.message?.parsed;
+
+      const parsed = response.output_parsed;
       if (parsed == null) {
         throw new LlmError("unknown", "LLM returned no parseable response");
       }
@@ -134,20 +150,21 @@ export class OpenAiProvider implements LlmProvider {
 
   async generateText(params: GenerateTextParams): Promise<string> {
     try {
-      const completion = await this.client.chat.completions.create(
+      const response = await this.client.responses.create(
         {
           model: this.model,
+          instructions: params.systemPrompt,
+          input: this.toInput(params.messages),
           temperature: params.temperature,
-          reasoning_effort: params.computeLevel,
-          messages: [
-            { role: "system" as const, content: params.systemPrompt },
-            ...params.messages,
-          ],
+          reasoning: this.reasoning(params.computeLevel),
+          max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
         },
-        { timeout: params.timeoutMs, maxRetries: params.maxRetries },
+        this.requestOptions(params),
       );
 
-      const content = completion.choices[0]?.message?.content;
+      this.assertComplete(response.status, response.incomplete_details?.reason);
+
+      const content = response.output_text;
       if (!content) {
         throw new LlmError("unknown", "LLM returned no content");
       }
@@ -155,6 +172,56 @@ export class OpenAiProvider implements LlmProvider {
     } catch (error) {
       throw this.mapError(error);
     }
+  }
+
+  // status가 incomplete면 사유에 따라 truncation/content_filter LlmError로 변환
+  private assertComplete(
+    status: string | undefined,
+    reason: string | undefined,
+  ): void {
+    if (status !== "incomplete") {
+      return;
+    }
+    if (reason === "max_output_tokens") {
+      throw new LlmError(
+        "unknown",
+        "LLM response was truncated (incomplete: max_output_tokens)",
+      );
+    }
+    if (reason === "content_filter") {
+      throw new LlmError(
+        "content_filter",
+        "LLM response was blocked by content filter",
+      );
+    }
+    throw new LlmError(
+      "unknown",
+      `LLM response was incomplete (reason: ${reason ?? "unknown"})`,
+    );
+  }
+
+  // refusal은 top-level이 아니라 message 블록의 content[] 파트에 중첩돼 있어 훑어야 한다.
+  private findRefusal(
+    output: Array<{ type: string; content?: unknown }>,
+  ): string | null {
+    for (const outputItem of output) {
+      if (outputItem.type !== "message" || !Array.isArray(outputItem.content)) {
+        continue;
+      }
+      for (const part of outputItem.content) {
+        if (
+          typeof part === "object" &&
+          part != null &&
+          "type" in part &&
+          part.type === "refusal" &&
+          "refusal" in part &&
+          typeof part.refusal === "string"
+        ) {
+          return part.refusal;
+        }
+      }
+    }
+    return null;
   }
 
   private mapError(error: unknown): LlmError {
