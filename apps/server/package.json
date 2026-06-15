@@ -14,6 +14,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
     "@fastify/cors": "^11.0.0",
+    "@google/genai": "^2.8.0",
     "@nema-io/shared": "workspace:*",
     "@qdrant/js-client-rest": "^1.17.0",
     "@sentry/node": "^10.42.0",

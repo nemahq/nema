@@ -20,6 +20,9 @@ const GPT5_CONTEXT_WINDOW = 400_000;
 // Claude 계열 컨텍스트 윈도우(토큰).
 const CLAUDE_CONTEXT_WINDOW = 200_000;
 
+// Gemini 2.x 계열 컨텍스트 윈도우(토큰). 2.5 Pro는 1M+이나 보수적으로 1M로 잡는다.
+const GEMINI_CONTEXT_WINDOW = 1_000_000;
+
 // 알려진 모델 집합. env로 모델 id가 덮였다면(LLM_MODEL_*) 그 id는 여기 없을 수 있고,
 // getModelSpec은 undefined를 돌려준다 — 라우팅 기본 경로(TASK_DEFAULT_TIER→tier)는
 // 카탈로그를 거치지 않으므로 env override가 있어도 기본 동작은 깨지지 않는다.
@@ -54,6 +57,21 @@ export const MODEL_CATALOG: Record<string, ModelSpec> = {
     id: "claude-haiku-4-5-20251001",
     provider: "anthropic",
     contextWindow: CLAUDE_CONTEXT_WINDOW,
+  },
+  "gemini-2.5-pro": {
+    id: "gemini-2.5-pro",
+    provider: "google",
+    contextWindow: GEMINI_CONTEXT_WINDOW,
+  },
+  "gemini-2.5-flash": {
+    id: "gemini-2.5-flash",
+    provider: "google",
+    contextWindow: GEMINI_CONTEXT_WINDOW,
+  },
+  "gemini-2.0-flash": {
+    id: "gemini-2.0-flash",
+    provider: "google",
+    contextWindow: GEMINI_CONTEXT_WINDOW,
   },
 };
 

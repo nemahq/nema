@@ -1,10 +1,12 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 
 import { getEnv } from "@server/env";
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import { createVoyageProvider } from "@server/infra/embedding";
 import { AnthropicProvider } from "@server/infra/llm/anthropic-provider";
+import { GeminiProvider } from "@server/infra/llm/gemini-provider";
 import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import { getModelSpec } from "@server/infra/llm/model-catalog";
@@ -54,6 +56,9 @@ let sharedOpenAiClient: OpenAI | undefined;
 // anthropic 어댑터(NEM-147)용 공유 클라이언트 — anthropic 모델이 처음 요청될 때 만든다.
 // 키가 없으면 그 시점에 LlmError("auth")로 끊는다(서버 부팅은 키 없이도 가능).
 let sharedAnthropicClient: Anthropic | undefined;
+// gemini 어댑터(NEM-148)용 공유 클라이언트 — AI Studio(apiKey) 모드가 기본.
+// Vertex 모드 배선은 후속 옵션으로 남긴다(키 없이도 서버 부팅 가능).
+let sharedGeminiClient: GoogleGenAI | undefined;
 
 // tier 묶음을 forTask가 달린 LlmRouter로 감싼다. forTask 해석:
 //  - task override가 있으면 → 카탈로그 모델용 provider(모델별 캐시, 공유 클라이언트 재사용)
@@ -100,9 +105,10 @@ function resolveOverrideProvider(modelId: string): LlmProvider {
       model: spec.id,
     });
   } else {
-    throw new Error(
-      `Provider "${spec.provider}" for model "${modelId}" is not yet wired (adapter pending — NEM-148)`,
-    );
+    provider = new GeminiProvider({
+      client: getGeminiClient(),
+      model: spec.id,
+    });
   }
 
   overrideProviders.set(modelId, provider);
@@ -122,6 +128,21 @@ function getAnthropicClient(): Anthropic {
   }
   sharedAnthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
   return sharedAnthropicClient;
+}
+
+function getGeminiClient(): GoogleGenAI {
+  if (sharedGeminiClient) {
+    return sharedGeminiClient;
+  }
+  const env = getEnv();
+  if (!env.GEMINI_API_KEY) {
+    throw new LlmError(
+      "auth",
+      "GEMINI_API_KEY is required to use a Google model",
+    );
+  }
+  sharedGeminiClient = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+  return sharedGeminiClient;
 }
 
 export function getProviders(): Providers {
