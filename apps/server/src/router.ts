@@ -1,3 +1,4 @@
+import { changesetRouter } from "./routers/changeset-router";
 import { devRouter } from "./routers/dev-router";
 import { eventRouter } from "./routers/event-router";
 import { messageRouter } from "./routers/message-router";
@@ -17,6 +18,7 @@ export const appRouter = router({
   event: eventRouter,
   source: sourceRouter,
   statement: statementRouter,
+  changeset: changesetRouter,
   dev: devRouter,
 });
 
