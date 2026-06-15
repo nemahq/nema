@@ -6,6 +6,7 @@ import Anthropic, {
   PermissionDeniedError,
   RateLimitError,
 } from "@anthropic-ai/sdk";
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { AnthropicBeta } from "@anthropic-ai/sdk/resources/beta/beta";
 import type {
   ContentBlock,
@@ -50,7 +51,8 @@ function isToolUseBlock(block: ContentBlock): block is ToolUseBlock {
 }
 
 // 400 메시지가 "이 모델/베타는 구조화 출력을 못 받는다"는 신호인지 본다.
-// 맞으면 tool_use로 폴백, 아니면(스키마 오류 등) 그대로 올린다.
+// 맞으면 tool_use로 폴백한다. 미지원 모델/베타 전용 안전망이다 —
+// 스키마 제약(minLength 등)發 400은 betaZodOutputFormat 정규화가 애초에 막는다.
 // 결제·인증 같은 다른 400을 폴백으로 삼키지 않도록 표현을 좁게 잡는다.
 function isNativeUnsupportedError(error: BadRequestError): boolean {
   const message = error.message.toLowerCase();
@@ -87,6 +89,21 @@ export class AnthropicProvider implements LlmProvider {
     this.model = config.model;
   }
 
+  // SDK가 명시적 undefined timeout/maxRetries를 거부할 수 있어 정의된 옵션만 담아 전달.
+  // 운영 호출부(초안/세션)는 timeoutMs를 안 넘기므로 빈 옵션이 정상 경로다.
+  private requestOptions(
+    params: Pick<GenerateTextParams, "timeoutMs" | "maxRetries">,
+  ): { timeout?: number; maxRetries?: number } {
+    const options: { timeout?: number; maxRetries?: number } = {};
+    if (params.timeoutMs !== undefined) {
+      options.timeout = params.timeoutMs;
+    }
+    if (params.maxRetries !== undefined) {
+      options.maxRetries = params.maxRetries;
+    }
+    return options;
+  }
+
   async *generateStream(params: GenerateStreamParams): AsyncIterable<string> {
     try {
       const stream = await this.client.messages.create(
@@ -98,9 +115,9 @@ export class AnthropicProvider implements LlmProvider {
           stream: true,
           messages: this.toMessages(params.messages),
           // computeLevel: Claude엔 reasoning_effort 대응이 없어 일단 무시한다.
-          // extended thinking 매핑은 후속(NEM 별건)으로 미룬다.
+          // extended thinking 매핑은 후속 별건으로 미룬다.
         },
-        { timeout: params.timeoutMs, maxRetries: params.maxRetries },
+        this.requestOptions(params),
       );
 
       for await (const event of stream) {
@@ -155,12 +172,15 @@ export class AnthropicProvider implements LlmProvider {
     }
   }
 
-  // 네이티브 경로 — output_config.format(json_schema)으로 디코딩을 제약한다.
-  // 응답은 첫 text 블록에 스키마를 만족하는 JSON 문자열로 온다.
+  // 네이티브 경로 — beta.messages.parse + betaZodOutputFormat.
+  // 헬퍼가 zod를 JSON 스키마로 변환하며 구조화출력이 미지원하는 제약
+  // (minLength/maximum 등)을 스키마에서 떼어내 description으로 접어, 그런 제약이 붙은
+  // 스키마도 컴파일 단계 400 없이 통과한다. raw toJSONSchema를 직접 보내면 그 400이
+  // 폴백 신호로 안 잡혀 bad_request로 새던 문제를 헬퍼가 정규화로 막는다.
   private async generateStructuredNative<T>(
     params: GenerateStructuredParams<T>,
   ): Promise<T> {
-    const message = await this.client.beta.messages.create(
+    const message = await this.client.beta.messages.parse(
       {
         model: this.model,
         max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
@@ -168,14 +188,9 @@ export class AnthropicProvider implements LlmProvider {
         system: params.systemPrompt,
         messages: this.toMessages(params.messages),
         betas: [STRUCTURED_OUTPUTS_BETA],
-        output_config: {
-          format: {
-            type: "json_schema",
-            schema: this.toJsonSchema(params.schema),
-          },
-        },
+        output_config: { format: betaZodOutputFormat(params.schema) },
       },
-      { timeout: params.timeoutMs, maxRetries: params.maxRetries },
+      this.requestOptions(params),
     );
 
     if (message.stop_reason === "max_tokens") {
@@ -188,22 +203,12 @@ export class AnthropicProvider implements LlmProvider {
       throw new LlmError("unknown", "LLM refused the request");
     }
 
-    const text = message.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("");
-    if (!text) {
+    // 헬퍼가 parsed_output을 이미 zod로 파싱하지만, SDK 출력을 그대로 믿지 않고
+    // 우리 스키마로 한 번 더 좁힌다(as 금지 규약 + 방어). null이면 본문이 비었다는 뜻.
+    if (message.parsed_output == null) {
       throw new LlmError("unknown", "LLM returned no content");
     }
-
-    let json: unknown;
-    try {
-      json = JSON.parse(text);
-    } catch (cause) {
-      throw new LlmError("unknown", "LLM returned non-JSON output", cause);
-    }
-
-    return this.parseWithSchema(params.schema, json);
+    return this.parseWithSchema(params.schema, message.parsed_output);
   }
 
   // 폴백 경로 — 강제 tool_use. 네이티브 미지원 모델에서만 쓰인다.
@@ -226,7 +231,7 @@ export class AnthropicProvider implements LlmProvider {
           ],
           tool_choice: { type: "tool", name: params.schemaName },
         },
-        { timeout: params.timeoutMs, maxRetries: params.maxRetries },
+        this.requestOptions(params),
       );
 
       if (message.stop_reason === "max_tokens") {
@@ -260,7 +265,7 @@ export class AnthropicProvider implements LlmProvider {
           system: params.systemPrompt,
           messages: this.toMessages(params.messages),
         },
-        { timeout: params.timeoutMs, maxRetries: params.maxRetries },
+        this.requestOptions(params),
       );
 
       if (message.stop_reason === "max_tokens") {
@@ -288,13 +293,6 @@ export class AnthropicProvider implements LlmProvider {
       role: message.role,
       content: message.content,
     }));
-  }
-
-  // 네이티브 output_config.format에 싣는 JSON 스키마. 최상위 type은 object로 고정.
-  private toJsonSchema<T>(
-    schema: GenerateStructuredParams<T>["schema"],
-  ): Record<string, unknown> {
-    return { ...z.toJSONSchema(schema), type: "object" };
   }
 
   private toInputSchema<T>(

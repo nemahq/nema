@@ -162,20 +162,29 @@ export class GeminiProvider implements LlmProvider {
       temperature: params.temperature,
       maxOutputTokens: GEMINI_DEFAULT_MAX_OUTPUT_TOKENS,
       abortSignal: params.signal,
-      httpOptions:
-        params.timeoutMs != null || params.maxRetries != null
-          ? {
-              timeout: params.timeoutMs,
-              // attempts는 원요청 포함 총 시도 횟수라 maxRetries+1로 환산한다.
-              retryOptions:
-                params.maxRetries != null
-                  ? { attempts: params.maxRetries + 1 }
-                  : undefined,
-            }
-          : undefined,
+      httpOptions: this.httpOptions(params),
       // computeLevel: Gemini는 reasoning_effort 대응이 없어 일단 무시한다.
-      // thinking budget 매핑은 후속(NEM 별건)으로 미룬다.
+      // thinking budget 매핑은 후속 별건으로 미룬다.
     };
+  }
+
+  // SDK에 명시적 undefined가 새지 않도록 정의된 키만 담는다. 둘 다 미지정이면
+  // httpOptions 자체를 생략해 클라이언트 기본값(생성자 timeout)이 그대로 살게 한다.
+  private httpOptions(
+    params: Pick<GenerateTextParams, "timeoutMs" | "maxRetries">,
+  ): GenerateContentConfig["httpOptions"] {
+    if (params.timeoutMs == null && params.maxRetries == null) {
+      return undefined;
+    }
+    const httpOptions: NonNullable<GenerateContentConfig["httpOptions"]> = {};
+    if (params.timeoutMs != null) {
+      httpOptions.timeout = params.timeoutMs;
+    }
+    if (params.maxRetries != null) {
+      // attempts는 원요청 포함 총 시도 횟수라 maxRetries+1로 환산한다.
+      httpOptions.retryOptions = { attempts: params.maxRetries + 1 };
+    }
+    return httpOptions;
   }
 
   private toContents(messages: LlmMessage[]): Content[] {

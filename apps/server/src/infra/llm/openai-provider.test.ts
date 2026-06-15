@@ -214,6 +214,90 @@ describe("OpenAiProvider", () => {
 
       expect(chunks).toEqual(["Hel", "lo"]);
       expect(createFn.mock.calls[0]?.[0].stream).toBe(true);
+      // store 기본값(true) 보관을 끄고 보냈는지 핀으로 박는다.
+      expect(createFn.mock.calls[0]?.[0].store).toBe(false);
+    });
+
+    it("throws when the stream ends incomplete (max_output_tokens)", async () => {
+      // 종료 이벤트가 status incomplete를 싣고 오면 비스트리밍 경로와 같은
+      // truncation LlmError로 끊어야 한다(조용히 끝나면 안 됨).
+      const { stream } = makeStream([
+        { type: "response.output_text.delta", delta: "partial" },
+        {
+          type: "response.incomplete",
+          response: {
+            status: "incomplete",
+            incomplete_details: { reason: "max_output_tokens" },
+            output: [],
+          },
+        },
+      ]);
+      const createFn = vi.fn().mockResolvedValue(stream);
+      const client = {
+        responses: { create: createFn },
+      } as unknown as OpenAI;
+      const provider = new OpenAiProvider({ client, model: "gpt-5" });
+
+      const chunks: string[] = [];
+      await expect(
+        (async () => {
+          for await (const chunk of provider.generateStream({
+            systemPrompt: "sys",
+            messages: [{ role: "user", content: "q" }],
+          })) {
+            chunks.push(chunk);
+          }
+        })(),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM response was truncated (incomplete: max_output_tokens)",
+        }),
+      );
+      // 종료 검사 전까지 흘러온 델타는 정상적으로 yield된다.
+      expect(chunks).toEqual(["partial"]);
+    });
+
+    it("throws when the stream ends in a refusal (response.completed)", async () => {
+      const { stream } = makeStream([
+        {
+          type: "response.completed",
+          response: {
+            status: "completed",
+            output: [
+              {
+                type: "message",
+                content: [
+                  { type: "refusal", refusal: "I cannot help with that" },
+                ],
+              },
+            ],
+          },
+        },
+      ]);
+      const createFn = vi.fn().mockResolvedValue(stream);
+      const client = {
+        responses: { create: createFn },
+      } as unknown as OpenAI;
+      const provider = new OpenAiProvider({ client, model: "gpt-5" });
+
+      const chunks: string[] = [];
+      await expect(
+        (async () => {
+          for await (const chunk of provider.generateStream({
+            systemPrompt: "sys",
+            messages: [{ role: "user", content: "q" }],
+          })) {
+            chunks.push(chunk);
+          }
+        })(),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM refused the request: I cannot help with that",
+        }),
+      );
+      expect(chunks).toEqual([]);
     });
 
     it("aborts the stream and stops yielding when signal is aborted", async () => {
