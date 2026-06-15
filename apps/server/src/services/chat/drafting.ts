@@ -32,7 +32,7 @@ export async function classifyDraftIntent(args: {
   previousBody: string;
 }): Promise<DraftIntent> {
   try {
-    return await args.providers.llm.mini.generateStructured({
+    return await args.providers.llm.forTask("draftIntent").generateStructured({
       schema: DraftIntentSchema,
       schemaName: "draft_intent_classifier",
       systemPrompt: DRAFT_INTENT_SYSTEM_PROMPT,
@@ -69,7 +69,7 @@ export async function* handleDraftingStream(args: {
 
   let fullText = "";
 
-  for await (const chunk of providers.llm.standard.generateStream({
+  for await (const chunk of providers.llm.forTask("drafting").generateStream({
     systemPrompt: DRAFTING_SYSTEM_PROMPT,
     messages: [{ role: "user", content: message }],
     signal,
