@@ -11,8 +11,8 @@ export interface LlmCallParams {
   messages: [LlmMessage, ...LlmMessage[]];
   temperature?: number;
   signal?: AbortSignal;
-  /** 추론 모델의 사고 깊이 — 규칙 적용에 가까운 호출(추출 등)은 낮춰 지연·변동을 줄인다 */
-  reasoningEffort?: "minimal" | "low" | "medium" | "high";
+  /** 모델의 사고/연산 깊이 힌트 — 프로바이더가 자기 방식으로 매핑하거나 무시한다. 규칙 적용에 가까운 호출은 낮춰 지연·변동을 줄인다 */
+  computeLevel?: "minimal" | "low" | "medium" | "high";
   /**
    * 시도 단위 타임아웃 — 미지정 시 provider(클라이언트) 기본값.
    * 주의: SDK가 타임아웃을 자동 재시도하므로(기본 2회) 호출 전체의 상한이 아니다.
