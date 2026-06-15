@@ -479,4 +479,101 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
     ],
     note: "e2는 '정산 리포트' 키워드만 s2와 겹치는 무관 사실 — supports로 잇는 게 함정. s3은 무관 할 일",
   },
+  {
+    id: "caveat-not-conflict",
+    description:
+      "결정의 단점(둘 다 참)을 충돌로 과발화하나 — caveat ≠ contradiction (도그푸딩 핵심 실패 모드)",
+    traps: ["false-conflict", "mere-neighbor"],
+    statements: [
+      {
+        id: "s1",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "결제 수단에 카카오페이를 추가하기로 했다",
+      },
+      {
+        id: "s2",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "카카오페이는 정산 수수료가 결제 수단 중 가장 높다",
+      },
+      {
+        id: "e1",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "결제 수단은 카드와 계좌이체를 지원한다",
+      },
+    ],
+    golden: [],
+    note: "s2는 카카오페이 추가의 단점일 뿐 둘 다 동시에 참 — 충돌 아님(근거도 아님). e1은 '결제 수단' 토픽 형제, 추가가 기존 지원을 부정하지 않음 — 무관계. 무엇이든 내면 FP",
+  },
+  {
+    id: "question-reentry-decided",
+    description:
+      "이미 결정된 주제에 질문이 재유입 — 질문은 주장을 안 하니 충돌 아님(기존 결정이 닫으면 resolves)",
+    traps: ["false-conflict", "mere-neighbor"],
+    statements: [
+      {
+        id: "e1",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "결제는 토스로 한다",
+      },
+      {
+        id: "s1",
+        role: "new",
+        type: "question",
+        content: "결제 PG는 토스로 할지 포트원으로 할지 정해야 하나?",
+      },
+      {
+        id: "s2",
+        role: "new",
+        type: "todo",
+        content: "결제 환불 정책 문서를 작성한다",
+      },
+    ],
+    golden: [
+      {
+        from: "e1",
+        to: "s1",
+        type: "resolves",
+        note: "이미 내린 결정(토스)이 재유입된 PG 질문을 닫는다 — 답=결정, 대상=질문",
+      },
+    ],
+    note: "s1은 질문 — 결정을 부정·경합하지 않으니 충돌로 뜨면 안 됨. s2는 '결제' 토픽 형제 할 일 — 무관계",
+  },
+  {
+    id: "change-todo-not-conflict",
+    description:
+      "기존 결정을 바꾸려는 할 일을 충돌로 띄우나 — 할 일은 의도(미래)지 현재 주장이 아님 (측정 #2 발견)",
+    traps: ["false-conflict", "mere-neighbor"],
+    statements: [
+      {
+        id: "e1",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "파일 업로드 용량 제한은 10MB로 한다",
+      },
+      {
+        id: "s1",
+        role: "new",
+        type: "todo",
+        content: "업로드 용량 제한을 50MB로 올리는 작업을 한다",
+      },
+      {
+        id: "s2",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "업로드 진행률 표시를 추가했다",
+      },
+    ],
+    golden: [],
+    note: "s1은 '바꿀 계획'인 할 일 — 지금은 10MB 결정과 둘 다 참(아직 안 바꿈). 현재 충돌 아님(기껏해야 미래 replaces 씨앗). 충돌로 띄우면 FP. s2는 '업로드' 토픽 형제 — 무관계. 측정 #2에서 8/8 충돌 오발해 양성→음성 함정으로 보정",
+  },
 ];

@@ -335,6 +335,7 @@ async function main() {
 
   // typeTally(Record<string, TypeTally>)에서 직접 — byType은 precision 필드가 섞여 느슨한 타입.
   const supportsFpTotal = typeTally["supports"]?.falsePositive ?? 0;
+  const conflictsFpTotal = typeTally["conflicts"]?.falsePositive ?? 0;
   const appliedSupportsFp = appliedFps.filter(
     (r) => r.type === "supports",
   ).length;
@@ -346,9 +347,11 @@ async function main() {
     failedRuns: failedRuns.length,
     overall: withType(overall),
     byType,
-    // 헤드라인: 지어낸 supports와, 그중 조용히 그래프에 박힌(applied) 것
+    // 헤드라인: 지어낸 supports(applied가 가장 해롭다)와 헛 충돌(conflicts FP — 이번 슬라이스 표적).
+    // 충돌은 게이트가 늘 pending이라 applied FP는 supports/replaces/resolves뿐.
     headline: {
       supportsFalsePositives: supportsFpTotal,
+      conflictsFalsePositives: conflictsFpTotal,
       appliedFalsePositives: appliedFps.length,
       appliedSupportsFalsePositives: appliedSupportsFp,
     },
