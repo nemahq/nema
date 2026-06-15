@@ -348,7 +348,7 @@ async function main() {
     overall: withType(overall),
     byType,
     // 헤드라인: 지어낸 supports(applied가 가장 해롭다)와 헛 충돌(conflicts FP — 이번 슬라이스 표적).
-    // 충돌은 게이트가 늘 pending이라 applied FP는 supports/replaces/resolves뿐.
+    // 충돌은 게이트가 늘 pending이라(relation-design §5) applied FP는 supports/replaces/resolves뿐.
     headline: {
       supportsFalsePositives: supportsFpTotal,
       conflictsFalsePositives: conflictsFpTotal,
