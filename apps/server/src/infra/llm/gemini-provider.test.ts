@@ -37,7 +37,8 @@ function mockGenerateRejection(error: unknown) {
   return { provider, generateContent };
 }
 
-// @google/genai 에러는 ApiError(.status)만 export되므로, 매핑은 status 구조로 검증한다.
+// 매핑은 instanceof가 아니라 구조적 .status로 동작하므로(어댑터 주석 참고), 테스트도
+// ApiError 인스턴스 대신 .status를 단 일반 Error로 그 경로를 검증한다.
 function apiError(status: number, message: string): Error {
   const error = new Error(message);
   Object.assign(error, { status });
@@ -128,6 +129,90 @@ describe("GeminiProvider", () => {
           messages: [{ role: "user", content: "q" }],
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "content_filter" }));
+    });
+
+    it("throws content_filter on RECITATION finishReason", async () => {
+      const { provider } = mockGenerate({
+        text: "",
+        candidates: [{ finishReason: "RECITATION" }],
+      });
+
+      await expect(
+        provider.generateText({
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "content_filter",
+          message: "LLM response was blocked (finishReason: RECITATION)",
+        }),
+      );
+    });
+
+    it("throws content_filter on PROHIBITED_CONTENT finishReason", async () => {
+      const { provider } = mockGenerate({
+        text: "",
+        candidates: [{ finishReason: "PROHIBITED_CONTENT" }],
+      });
+
+      await expect(
+        provider.generateText({
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "content_filter" }));
+    });
+
+    it("throws content_filter on prompt-level block (promptFeedback)", async () => {
+      // 프롬프트가 막히면 후보가 아예 없고 promptFeedback.blockReason만 온다.
+      const { provider } = mockGenerate({
+        text: undefined,
+        promptFeedback: { blockReason: "SAFETY" },
+        candidates: [],
+      });
+
+      await expect(
+        provider.generateText({
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "content_filter",
+          message: "LLM blocked the prompt (blockReason: SAFETY)",
+        }),
+      );
+    });
+
+    it("throws content_filter when candidates are empty", async () => {
+      const { provider } = mockGenerate({ text: undefined, candidates: [] });
+
+      await expect(
+        provider.generateText({
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "content_filter" }));
+    });
+
+    it("accepts computeLevel but ignores it (no throw, no SDK param)", async () => {
+      // Gemini도 computeLevel을 의도적으로 무시한다 — 받되 config로 새지 않고 동작 불변.
+      const { provider, generateContent } = mockGenerate({
+        text: "ok",
+        candidates: [{ finishReason: "STOP" }],
+      });
+
+      const result = await provider.generateText({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+        computeLevel: "high",
+      });
+
+      expect(result).toBe("ok");
+      const callArgs = generateContent.mock.calls[0]?.[0];
+      expect(callArgs.config.computeLevel).toBeUndefined();
+      expect(callArgs.config.thinkingConfig).toBeUndefined();
     });
 
     it("throws when there is no text content", async () => {
@@ -312,10 +397,13 @@ describe("GeminiProvider", () => {
   });
 
   describe("error mapping", () => {
-    it("maps client-side timeout to LlmError timeout", async () => {
-      const { provider } = mockGenerateRejection(
-        new Error("Request timed out."),
-      );
+    it("maps a reaching AbortError (SDK timeout) to LlmError timeout", async () => {
+      // SDK는 httpOptions.timeout을 abortController.abort()로 구현해 맨 AbortError로
+      // 거절한다("This operation was aborted"). 사용자 취소 가드를 통과해 여기까지 온
+      // AbortError는 타임아웃으로 본다 — 실제 SDK가 내는 형태를 그대로 흉내낸다.
+      const abortError = new Error("This operation was aborted");
+      abortError.name = "AbortError";
+      const { provider } = mockGenerateRejection(abortError);
 
       await expect(
         provider.generateText({

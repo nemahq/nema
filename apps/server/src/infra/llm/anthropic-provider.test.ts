@@ -131,6 +131,26 @@ describe("AnthropicProvider", () => {
         }),
       );
     });
+
+    it("accepts computeLevel but ignores it (no throw, no SDK param)", async () => {
+      // Claude는 computeLevel을 의도적으로 무시한다. 받되 SDK 호출에 새 파라미터가
+      // 새지 않고, 동작도 평소와 같음을 핀으로 박는다(후속 매핑 전까지 no-op 보장).
+      const { provider, createFn } = mockCreate({
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: "ok" }],
+      });
+
+      const result = await provider.generateText({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+        computeLevel: "high",
+      });
+
+      expect(result).toBe("ok");
+      const callArgs = createFn.mock.calls[0]?.[0];
+      expect(callArgs.computeLevel).toBeUndefined();
+      expect(callArgs.reasoning_effort).toBeUndefined();
+    });
   });
 
   describe("generateStream", () => {
@@ -214,6 +234,82 @@ describe("AnthropicProvider", () => {
       }
 
       expect(chunks).toEqual([]);
+    });
+
+    it("throws when stream is truncated by max_tokens (message_delta)", async () => {
+      // 실제 SDK의 message_delta가 delta.stop_reason을 싣는 형태를 그대로 흉내낸다.
+      const events = [
+        {
+          type: "content_block_delta",
+          delta: { type: "text_delta", text: "partial" },
+        },
+        {
+          type: "message_delta",
+          delta: { stop_reason: "max_tokens", stop_sequence: null },
+          usage: { output_tokens: 16_384 },
+        },
+      ];
+      const stream = {
+        controller: { abort: vi.fn() },
+        async *[Symbol.asyncIterator]() {
+          yield* events;
+        },
+      };
+      const { provider } = mockCreate(stream);
+
+      const chunks: string[] = [];
+      await expect(
+        (async () => {
+          for await (const chunk of provider.generateStream({
+            systemPrompt: "sys",
+            messages: [{ role: "user", content: "q" }],
+          })) {
+            chunks.push(chunk);
+          }
+        })(),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM response was truncated (stop_reason: max_tokens)",
+        }),
+      );
+      // 잘리기 전 델타는 흘려보냈는지도 확인한다.
+      expect(chunks).toEqual(["partial"]);
+    });
+
+    it("throws when stream ends in a refusal (message_delta)", async () => {
+      const events = [
+        {
+          type: "message_delta",
+          delta: { stop_reason: "refusal", stop_sequence: null },
+          usage: { output_tokens: 1 },
+        },
+      ];
+      const stream = {
+        controller: { abort: vi.fn() },
+        async *[Symbol.asyncIterator]() {
+          yield* events;
+        },
+      };
+      const { provider } = mockCreate(stream);
+
+      const collected: string[] = [];
+      await expect(
+        (async () => {
+          for await (const chunk of provider.generateStream({
+            systemPrompt: "sys",
+            messages: [{ role: "user", content: "q" }],
+          })) {
+            collected.push(chunk);
+          }
+        })(),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          code: "unknown",
+          message: "LLM refused the request",
+        }),
+      );
+      expect(collected).toEqual([]);
     });
   });
 

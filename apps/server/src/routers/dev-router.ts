@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { getEnv } from "@server/env";
-import { MODEL_CATALOG } from "@server/infra/llm/model-catalog";
+import { listModelSpecs } from "@server/infra/llm/model-catalog";
 import type { LlmTask } from "@server/infra/llm/task-routing";
 import {
   clearTaskOverride,
@@ -51,7 +51,7 @@ export const devRouter = router({
     assertDev();
     return {
       overrides: getAllTaskOverrides(),
-      catalog: Object.values(MODEL_CATALOG),
+      catalog: listModelSpecs(),
     };
   }),
   setTaskModel: protectedProcedure
