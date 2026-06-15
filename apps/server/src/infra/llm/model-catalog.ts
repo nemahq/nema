@@ -17,6 +17,9 @@ export interface ModelSpec {
 // gpt-5 계열 컨텍스트 윈도우 — 입력+출력 합산 상한(토큰).
 const GPT5_CONTEXT_WINDOW = 400_000;
 
+// Claude 계열 컨텍스트 윈도우(토큰).
+const CLAUDE_CONTEXT_WINDOW = 200_000;
+
 // 알려진 모델 집합. env로 모델 id가 덮였다면(LLM_MODEL_*) 그 id는 여기 없을 수 있고,
 // getModelSpec은 undefined를 돌려준다 — 라우팅 기본 경로(TASK_DEFAULT_TIER→tier)는
 // 카탈로그를 거치지 않으므로 env override가 있어도 기본 동작은 깨지지 않는다.
@@ -36,6 +39,21 @@ export const MODEL_CATALOG: Record<string, ModelSpec> = {
     id: DEFAULT_NANO_MODEL,
     provider: "openai",
     contextWindow: GPT5_CONTEXT_WINDOW,
+  },
+  "claude-opus-4-8": {
+    id: "claude-opus-4-8",
+    provider: "anthropic",
+    contextWindow: CLAUDE_CONTEXT_WINDOW,
+  },
+  "claude-sonnet-4-6": {
+    id: "claude-sonnet-4-6",
+    provider: "anthropic",
+    contextWindow: CLAUDE_CONTEXT_WINDOW,
+  },
+  "claude-haiku-4-5-20251001": {
+    id: "claude-haiku-4-5-20251001",
+    provider: "anthropic",
+    contextWindow: CLAUDE_CONTEXT_WINDOW,
   },
 };
 
