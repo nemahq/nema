@@ -39,7 +39,7 @@ export function buildRevertedPredicate(
 
 // ===== 조작 (§3·§4·§5) — 전부 RPC 한 줄. 소유 검증·원자성은 RPC가 진다. =====
 
-// 진술 빼기(§3.1). 걸린 관계는 연쇄 트리거가, 벡터 축출은 워커가 처리.
+// 걸린 관계는 연쇄 트리거가, 벡터 축출은 워커가 처리(§3.1).
 export async function archiveStatement(args: {
   supabase: TypedSupabaseClient;
   statementId: string;
@@ -50,7 +50,7 @@ export async function archiveStatement(args: {
   throwIfSupabaseError(error);
 }
 
-// 원본 빼기(§3.2). 진술 연쇄 없음.
+// 진술 연쇄 없음 — 원본만 가린다(§3.2).
 export async function archiveSource(args: {
   supabase: TypedSupabaseClient;
   sourceId: string;
@@ -61,7 +61,7 @@ export async function archiveSource(args: {
   throwIfSupabaseError(error);
 }
 
-// 되돌리기/redo(§4). 반환은 새 revert 변경셋 id.
+// 되돌리기·redo 공용 — 타겟 타입별 역연산은 RPC가 한다(§4).
 export async function revertChangeset(args: {
   supabase: TypedSupabaseClient;
   changesetId: string;
@@ -73,7 +73,7 @@ export async function revertChangeset(args: {
   return { revertChangesetId: data };
 }
 
-// pending 적용(§5.1). 반환은 active가 된 관계 id.
+// 반환은 active가 보장된 관계 id — 없으면 생성, archived면 복귀(§5.1).
 export async function applyPendingRelation(args: {
   supabase: TypedSupabaseClient;
   changesetId: string;
@@ -85,7 +85,6 @@ export async function applyPendingRelation(args: {
   return { relationId: data };
 }
 
-// pending 거절(§5.2).
 export async function rejectPendingRelation(args: {
   supabase: TypedSupabaseClient;
   changesetId: string;
@@ -135,8 +134,8 @@ function parseRelationProposal(
   return { type: typeResult.data, fromId, toId };
 }
 
-// 검토함 — pending 관계 제안 목록. 제안은 changes.data에만 살고(관계 행 없음),
-// 끝점 진술 content는 별도 조회로 붙인다(data의 from/to는 jsonb라 FK 조인 불가).
+// 제안은 changes.data에만 살고(관계 행 없음), 끝점 진술 content는 별도 조회로
+// 붙인다 — data의 from/to가 jsonb라 FK 조인이 안 된다.
 export async function listPendingRelations(args: {
   supabase: TypedSupabaseClient;
 }): Promise<{ proposals: PendingRelationProposal[] }> {
@@ -217,7 +216,7 @@ interface ChangesetHistoryEntry {
   createdAt: string;
 }
 
-// 이력 — 변경셋 목록. 되돌리기 UI가 여기서 타겟을 고른다.
+// 되돌리기 UI가 타겟을 고르는 목록(§7.2).
 export async function listChangesets(args: {
   supabase: TypedSupabaseClient;
   limit: number;
