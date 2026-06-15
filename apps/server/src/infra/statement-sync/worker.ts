@@ -8,6 +8,7 @@ import type { EmbeddingProvider } from "@server/infra/embedding";
 import { createLimiter } from "@server/infra/llm/limiter";
 import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
+import type { LlmTask } from "@server/infra/llm/task-routing";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type {
   NeighborSearchOptions,
@@ -99,7 +100,9 @@ type Phase = "extraction" | "embedding" | "linking";
 
 interface WorkerDeps {
   supabase: TypedSupabaseClient;
-  llm: LlmProvider;
+  // 추출·관계 판정이 서로 다른 모델을 쓸 수 있게 단일 llm 대신 task 라우터를 받는다.
+  // 워커는 자기 두 콜(extraction/relationJudgment)을 task로 해석해 모델을 고른다.
+  forTask: (task: LlmTask) => LlmProvider;
   embedding: EmbeddingProvider;
   vectorStore: VectorStore;
 }
@@ -282,7 +285,10 @@ async function processSource(
   source: PendingSource,
   deps: WorkerDeps,
 ): Promise<void> {
-  const extracted = await extractSourceStatements(deps.llm, source.body);
+  const extracted = await extractSourceStatements(
+    deps.forTask("extraction"),
+    source.body,
+  );
   const statements = normalizeStatements(extracted);
 
   // 진술 0개(노이즈뿐인 글)면 빈 changeset을 남기지 않는다
@@ -691,7 +697,7 @@ async function linkSubBatch(params: {
 
   const message = buildRelationJudgmentMessage(newLabeled, existingLabeled);
   const output = await limitLlmCall(() =>
-    callJudgmentWithRetry(deps.llm, message),
+    callJudgmentWithRetry(deps.forTask("relationJudgment"), message),
   );
 
   return gateProposals({

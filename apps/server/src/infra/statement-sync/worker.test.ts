@@ -128,7 +128,9 @@ async function runOnePoll(deps: {
   embedding: EmbeddingProvider;
   vectorStore: VectorStore;
 }) {
-  const worker = createStatementSyncWorker(deps);
+  // 워커는 task 라우터(forTask)를 받는다 — 테스트는 두 task 모두 같은 mock으로 해석.
+  const { llm, ...rest } = deps;
+  const worker = createStatementSyncWorker({ ...rest, forTask: () => llm });
   worker.start(); // start가 즉시 sweep 1회 실행
   await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS); // 첫 poll까지
   await worker.stop();
