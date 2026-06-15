@@ -79,7 +79,7 @@ async function bootstrap() {
     const llmRouter = getProviders().llm;
     const worker = createStatementSyncWorker({
       supabase: getSupabaseAdmin(),
-      // 추출·관계 판정 모델은 task 라우터가 고른다(NEM-146) — 기본은 둘 다 standard tier.
+      // 추출·관계 판정 모델은 task 라우터가 고른다 — 기본은 둘 다 standard tier.
       // 티어 조정은 하니스에서 데이터 보고 (ingestion-design 3장).
       forTask: (task) => llmRouter.forTask(task),
       embedding: createVoyageProvider({ apiKey: env.VOYAGE_API_KEY }),

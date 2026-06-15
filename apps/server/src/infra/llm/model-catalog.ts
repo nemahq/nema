@@ -1,5 +1,5 @@
-// 모델 레지스트리 — task 라우팅(NEM-146)이 override 모델 id를 검증·해석하는 단일 출처.
-// 단가·세부 능력은 Phase 2(NEM-149)로 미룬다. provider 어댑터는 NEM-147/148.
+// 모델 레지스트리 — task 라우팅이 override 모델 id를 검증·해석하는 단일 출처.
+// 단가·세부 능력은 후속 측정 단계로 미룬다.
 import {
   DEFAULT_MINI_MODEL,
   DEFAULT_NANO_MODEL,
@@ -69,7 +69,6 @@ export const MODEL_CATALOG: Record<string, ModelEntry> = {
   },
 };
 
-// id는 카탈로그 키에서 채운다 — 항목에 id를 따로 두지 않으므로 키/id가 어긋날 수 없다.
 export function getModelSpec(id: string): ModelSpec | undefined {
   const entry = MODEL_CATALOG[id];
   if (!entry) {

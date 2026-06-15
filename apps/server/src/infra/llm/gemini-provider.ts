@@ -17,8 +17,7 @@ import type {
 
 export type GeminiProviderConfig =
   | { apiKey: string; model: string; timeout?: number }
-  // TODO(NEM-140): Vertex 배선은 아직 env가 안 먹여 미검증 표면이다. 구조는 싸게 남겨두되
-  // 실제 자격증명·라우팅 연결은 NEM-140에서 한다.
+  // TODO: Vertex 경로는 아직 env 배선이 없어 미검증 — 구조만 남겨두고 실제 자격증명·라우팅 연결은 후속.
   | {
       vertexai: true;
       project: string;
@@ -59,7 +58,7 @@ export class GeminiProvider implements LlmProvider {
     if ("client" in config) {
       this.client = config.client;
     } else if ("vertexai" in config) {
-      // TODO(NEM-140): Vertex 경로는 미검증. 현재는 형태만 유지하고 실제 사용은 후속에서 연다.
+      // TODO: Vertex 경로는 미검증. 현재는 형태만 유지하고 실제 사용은 후속에서 연다.
       this.client = new GoogleGenAI({
         vertexai: true,
         project: config.project,
