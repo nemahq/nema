@@ -21,6 +21,7 @@ const envSchema = z
 
     OPENAI_API_KEY: z.string().min(1).optional(),
     ANTHROPIC_API_KEY: z.string().min(1).optional(),
+    GEMINI_API_KEY: z.string().min(1).optional(),
     VOYAGE_API_KEY: z.string().min(1).optional(),
 
     QDRANT_URL: z.string().url().optional(),
