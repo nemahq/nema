@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-// 사람 개입 조작의 입력 — 전부 대상 id 하나. 격리·소유 검증은 RPC(멤버십)가 한다.
-// intervention-design §7.3.
-
 export const ArchiveStatementInputSchema = z.object({
   statementId: z.string().uuid(),
 });

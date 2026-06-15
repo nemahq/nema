@@ -37,8 +37,6 @@ export function buildRevertedPredicate(
   return isReverted;
 }
 
-// ===== 조작 (§3·§4·§5) — 전부 RPC 한 줄. 소유 검증·원자성은 RPC가 진다. =====
-
 // 걸린 관계는 연쇄 트리거가, 벡터 축출은 워커가 처리(§3.1).
 export async function archiveStatement(args: {
   supabase: TypedSupabaseClient;
@@ -94,8 +92,6 @@ export async function rejectPendingRelation(args: {
   });
   throwIfSupabaseError(error);
 }
-
-// ===== 읽기 (§7.2) — 검토함·이력. 격리는 RLS(Space 멤버십). =====
 
 interface PendingRelationEndpoint {
   id: string;
@@ -216,7 +212,6 @@ interface ChangesetHistoryEntry {
   createdAt: string;
 }
 
-// 되돌리기 UI가 타겟을 고르는 목록(§7.2).
 export async function listChangesets(args: {
   supabase: TypedSupabaseClient;
   limit: number;
