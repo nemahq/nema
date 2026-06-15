@@ -85,6 +85,20 @@ export class AnthropicProvider implements LlmProvider {
         ) {
           yield event.delta.text;
         }
+        // message_delta가 stop_reason을 싣고 온다. 잘림(max_tokens)·거절(refusal)을
+        // 비스트리밍 경로와 같은 LlmError로 끊어야 호출부가 일관되게 처리한다.
+        if (event.type === "message_delta") {
+          const stopReason = event.delta.stop_reason;
+          if (stopReason === "max_tokens") {
+            throw new LlmError(
+              "unknown",
+              "LLM response was truncated (stop_reason: max_tokens)",
+            );
+          }
+          if (stopReason === "refusal") {
+            throw new LlmError("unknown", "LLM refused the request");
+          }
+        }
       }
     } catch (error) {
       if (params.signal?.aborted) {

@@ -17,6 +17,8 @@ import type {
 
 export type GeminiProviderConfig =
   | { apiKey: string; model: string; timeout?: number }
+  // TODO(NEM-140): Vertex 배선은 아직 env가 안 먹여 미검증 표면이다. 구조는 싸게 남겨두되
+  // 실제 자격증명·라우팅 연결은 NEM-140에서 한다.
   | {
       vertexai: true;
       project: string;
@@ -40,6 +42,14 @@ const HTTP_TOO_MANY_REQUESTS = 429;
 // finishReason은 문자열 enum이라 런타임 import 없이 값으로 비교한다.
 const FINISH_REASON_MAX_TOKENS = "MAX_TOKENS";
 const FINISH_REASON_SAFETY = "SAFETY";
+// SAFETY 외의 차단 계열 — 콘텐츠 정책상 결정적으로 막힌 응답이라 재시도해도 동일하다.
+// content_filter(비재시도)로 매핑하지 않으면 unknown "no content"로 빠져 워커가 3회 헛돈다.
+const FINISH_REASON_BLOCKED = new Set([
+  "RECITATION",
+  "BLOCKLIST",
+  "PROHIBITED_CONTENT",
+  "SPII",
+]);
 
 export class GeminiProvider implements LlmProvider {
   private readonly client: GoogleGenAI;
@@ -49,6 +59,7 @@ export class GeminiProvider implements LlmProvider {
     if ("client" in config) {
       this.client = config.client;
     } else if ("vertexai" in config) {
+      // TODO(NEM-140): Vertex 경로는 미검증. 현재는 형태만 유지하고 실제 사용은 후속에서 연다.
       this.client = new GoogleGenAI({
         vertexai: true,
         project: config.project,
@@ -177,6 +188,15 @@ export class GeminiProvider implements LlmProvider {
   }
 
   private assertNotBlocked(response: GenerateContentResponse): void {
+    // 프롬프트 단계 차단(promptFeedback.blockReason)은 후보가 아예 안 생긴다.
+    const blockReason = response.promptFeedback?.blockReason;
+    if (blockReason) {
+      throw new LlmError(
+        "content_filter",
+        `LLM blocked the prompt (blockReason: ${blockReason})`,
+      );
+    }
+
     const finishReason = response.candidates?.[0]?.finishReason;
     if (finishReason === FINISH_REASON_MAX_TOKENS) {
       throw new LlmError(
@@ -190,13 +210,28 @@ export class GeminiProvider implements LlmProvider {
         "LLM response was blocked by safety filter",
       );
     }
+    if (finishReason && FINISH_REASON_BLOCKED.has(finishReason)) {
+      throw new LlmError(
+        "content_filter",
+        `LLM response was blocked (finishReason: ${finishReason})`,
+      );
+    }
+    // 후보가 비어 있고 차단 사유도 안 잡혔으면 호출부의 "no content" 경로가 받는다.
+    if (!response.candidates || response.candidates.length === 0) {
+      throw new LlmError(
+        "content_filter",
+        "LLM returned no candidates (likely blocked)",
+      );
+    }
   }
 
   private mapError(error: unknown): LlmError {
     if (error instanceof LlmError) {
       return error;
     }
-    // 클라이언트 측 타임아웃은 전용 에러 클래스가 export되지 않아 이름으로 식별한다.
+    // SDK는 httpOptions.timeout을 abortController.abort()로 구현하므로, 사용자 취소가
+    // 아닌데도 여기까지 온 AbortError는 곧 타임아웃이다(취소 경로는 호출부에서
+    // signal.aborted 가드로 이미 걸러진 뒤다). "Request timed out" 문구도 함께 본다.
     if (isTimeoutError(error)) {
       return new LlmError("timeout", "LLM request timed out", error);
     }
@@ -235,13 +270,16 @@ function isTimeoutError(error: unknown): boolean {
     return false;
   }
   return (
+    error.name === "AbortError" ||
+    error.message.toLowerCase().includes("aborted") ||
     error.name.includes("Timeout") ||
     error.message.includes("Request timed out")
   );
 }
 
 // @google/genai의 ApiError는 .status를 노출한다(legacy/nextgen 양쪽 동일).
-// 전용 클래스가 export되지 않으므로 구조적으로 status를 읽는다.
+// ApiError 클래스 자체는 export되지만, instanceof는 dual-package(node/web 엔트리)·
+// 버전 스큐에서 다른 인스턴스를 잡으면 깨지므로, 구조적으로 .status만 읽는다.
 function httpStatusOf(error: unknown): number | undefined {
   if (typeof error === "object" && error !== null) {
     const status: unknown = Reflect.get(error, "status");
