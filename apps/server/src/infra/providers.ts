@@ -1,8 +1,11 @@
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
 import { getEnv } from "@server/env";
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import { createVoyageProvider } from "@server/infra/embedding";
+import { AnthropicProvider } from "@server/infra/llm/anthropic-provider";
+import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import { getModelSpec } from "@server/infra/llm/model-catalog";
 import type { TieredLlm } from "@server/infra/llm/models";
@@ -48,6 +51,9 @@ let resolvedModelNames:
 // 공유 OpenAI 클라이언트로 만든다(getProviders 초기화 시 주입).
 let overrideProviders: Map<string, LlmProvider> | undefined;
 let sharedOpenAiClient: OpenAI | undefined;
+// anthropic 어댑터(NEM-147)용 공유 클라이언트 — anthropic 모델이 처음 요청될 때 만든다.
+// 키가 없으면 그 시점에 LlmError("auth")로 끊는다(서버 부팅은 키 없이도 가능).
+let sharedAnthropicClient: Anthropic | undefined;
 
 // tier 묶음을 forTask가 달린 LlmRouter로 감싼다. forTask 해석:
 //  - task override가 있으면 → 카탈로그 모델용 provider(모델별 캐시, 공유 클라이언트 재사용)
@@ -81,19 +87,41 @@ function resolveOverrideProvider(modelId: string): LlmProvider {
   if (!spec) {
     throw new Error(`Unknown model id "${modelId}" — not in MODEL_CATALOG`);
   }
-  // openai만 어댑터가 준비돼 있다. anthropic/google은 NEM-147/148에서 합류한다.
-  if (spec.provider !== "openai") {
+
+  let provider: LlmProvider;
+  if (spec.provider === "openai") {
+    provider = new OpenAiProvider({
+      client: sharedOpenAiClient,
+      model: spec.id,
+    });
+  } else if (spec.provider === "anthropic") {
+    provider = new AnthropicProvider({
+      client: getAnthropicClient(),
+      model: spec.id,
+    });
+  } else {
     throw new Error(
-      `Provider "${spec.provider}" for model "${modelId}" is not yet wired (adapter pending — NEM-147/148)`,
+      `Provider "${spec.provider}" for model "${modelId}" is not yet wired (adapter pending — NEM-148)`,
     );
   }
 
-  const provider = new OpenAiProvider({
-    client: sharedOpenAiClient,
-    model: spec.id,
-  });
   overrideProviders.set(modelId, provider);
   return provider;
+}
+
+function getAnthropicClient(): Anthropic {
+  if (sharedAnthropicClient) {
+    return sharedAnthropicClient;
+  }
+  const env = getEnv();
+  if (!env.ANTHROPIC_API_KEY) {
+    throw new LlmError(
+      "auth",
+      "ANTHROPIC_API_KEY is required to use an Anthropic model",
+    );
+  }
+  sharedAnthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  return sharedAnthropicClient;
 }
 
 export function getProviders(): Providers {
