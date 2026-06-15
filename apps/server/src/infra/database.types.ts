@@ -540,8 +540,17 @@ export type Database = {
         Args: { p_source_id: string; p_statements: Json };
         Returns: string;
       };
+      apply_pending_relation: {
+        Args: { p_changeset_id: string };
+        Returns: string;
+      };
       apply_relation_changesets: {
         Args: { p_applied?: Json; p_pending?: Json; p_source_id: string };
+        Returns: undefined;
+      };
+      archive_source: { Args: { p_source_id: string }; Returns: undefined };
+      archive_statement: {
+        Args: { p_statement_id: string };
         Returns: undefined;
       };
       complete_source_extraction: {
@@ -611,6 +620,10 @@ export type Database = {
         };
         Returns: undefined;
       };
+      is_changeset_reverted: {
+        Args: { p_changeset_id: string };
+        Returns: boolean;
+      };
       is_space_member: { Args: { p_space_id: string }; Returns: boolean };
       read_sync_events: {
         Args: { p_batch_size?: number; p_visibility_timeout?: number };
@@ -619,6 +632,10 @@ export type Database = {
           msg_id: number;
           read_ct: number;
         }[];
+      };
+      reject_pending_relation: {
+        Args: { p_changeset_id: string };
+        Returns: undefined;
       };
       retry_source_extraction: {
         Args: { p_source_id: string };
@@ -632,6 +649,7 @@ export type Database = {
         Args: { p_statement_id: string };
         Returns: undefined;
       };
+      revert_changeset: { Args: { p_changeset_id: string }; Returns: string };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
       update_message_payload: {
@@ -640,9 +658,9 @@ export type Database = {
       };
     };
     Enums: {
-      change_action: "create" | "archive" | "modify";
+      change_action: "create" | "archive" | "modify" | "restore";
       change_target_type: "statement" | "relation" | "source";
-      changeset_status: "pending" | "applied";
+      changeset_status: "pending" | "applied" | "rejected";
       changeset_type:
         | "ingestion"
         | "conflict"
@@ -791,9 +809,9 @@ export const Constants = {
   },
   public: {
     Enums: {
-      change_action: ["create", "archive", "modify"],
+      change_action: ["create", "archive", "modify", "restore"],
       change_target_type: ["statement", "relation", "source"],
-      changeset_status: ["pending", "applied"],
+      changeset_status: ["pending", "applied", "rejected"],
       changeset_type: [
         "ingestion",
         "conflict",
