@@ -16,7 +16,6 @@ import type {
 } from "./llm-provider";
 
 // effort → Gemini 3.x thinking_level(enum). Gemini가 받는 값만 매핑하고 나머지는 무시한다.
-// gemini-3.1-pro-preview에 Vertex(global)로 thinking_level + 구조화출력 라이브 검증 완료.
 function toThinkingLevel(
   effort: GenerateTextParams["effort"],
 ): ThinkingLevel | undefined {

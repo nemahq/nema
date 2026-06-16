@@ -155,7 +155,6 @@ describe("AnthropicProvider", () => {
       });
 
       expect(result).toBe("ok");
-      // 비-beta 경로로 새지 않고, beta에 adaptive thinking + effort가 실린다.
       expect(createFn).not.toHaveBeenCalled();
       const callArgs = betaCreateFn.mock.calls[0]?.[0];
       expect(callArgs.thinking).toEqual({ type: "adaptive" });
@@ -409,7 +408,7 @@ describe("AnthropicProvider", () => {
       // 강제 tool_use 파라미터가 더는 새지 않아야 한다.
       expect(callArgs.tools).toBeUndefined();
       expect(callArgs.tool_choice).toBeUndefined();
-      // effort를 안 넘기면 thinking/effort 미설정(동작 불변).
+      // effort 미지정 → thinking/effort도 미설정(동작 불변)인지 함께 핀.
       expect(callArgs.thinking).toBeUndefined();
       expect(callArgs.output_config.effort).toBeUndefined();
     });

@@ -183,8 +183,7 @@ export class AnthropicProvider implements LlmProvider {
     }
   }
 
-  // effort 경로 — adaptive thinking + output_config.effort는 beta messages에만 있다.
-  // adaptive thinking과 custom temperature는 충돌하므로 temperature는 싣지 않는다.
+  // effort 경로 — adaptive thinking·effort는 beta messages 전용이라 분리. temperature는 충돌로 생략.
   private async *streamWithEffort(
     params: GenerateStreamParams,
     effort: AnthropicEffort,
@@ -383,8 +382,7 @@ export class AnthropicProvider implements LlmProvider {
     }
   }
 
-  // effort 경로 — adaptive thinking + output_config.effort는 beta messages에만 있다.
-  // adaptive thinking과 custom temperature는 충돌하므로 temperature는 싣지 않는다.
+  // effort 경로 — streamWithEffort와 동형(beta 전용 adaptive thinking, temperature 생략).
   private async generateTextWithEffort(
     params: GenerateTextParams,
     effort: AnthropicEffort,

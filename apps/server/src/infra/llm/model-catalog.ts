@@ -74,7 +74,7 @@ export const MODEL_CATALOG: Record<string, ModelEntry> = {
     provider: "anthropic",
     contextWindow: CLAUDE_CONTEXT_WINDOW,
   },
-  // Vertex(global)에서 라이브 검증한 3.x. 2.5/2.0은 만료돼 제거.
+  // 현행 Gemini 3.x — 만료된 2.5/2.0 대체.
   "gemini-3.1-pro-preview": {
     provider: "google",
     contextWindow: GEMINI_CONTEXT_WINDOW,
