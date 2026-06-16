@@ -137,9 +137,9 @@ describe("AnthropicProvider", () => {
       );
     });
 
-    it("accepts computeLevel but ignores it (no throw, no SDK param)", async () => {
-      // Claude는 computeLevel을 의도적으로 무시한다. 받되 SDK 호출에 새 파라미터가
-      // 새지 않고, 동작도 평소와 같음을 핀으로 박는다(후속 매핑 전까지 no-op 보장).
+    it("does not apply effort on the text path (only the structured path wires it)", async () => {
+      // effort(adaptive thinking)는 구조화출력(beta) 경로에서만 적용한다. generateText는
+      // effort를 받아도 SDK 호출에 thinking/output_config가 새지 않음을 핀으로 박는다.
       const { provider, createFn } = mockCreate({
         stop_reason: "end_turn",
         content: [{ type: "text", text: "ok" }],
@@ -148,13 +148,13 @@ describe("AnthropicProvider", () => {
       const result = await provider.generateText({
         systemPrompt: "sys",
         messages: [{ role: "user", content: "q" }],
-        computeLevel: "high",
+        effort: "high",
       });
 
       expect(result).toBe("ok");
       const callArgs = createFn.mock.calls[0]?.[0];
-      expect(callArgs.computeLevel).toBeUndefined();
-      expect(callArgs.reasoning_effort).toBeUndefined();
+      expect(callArgs.thinking).toBeUndefined();
+      expect(callArgs.output_config).toBeUndefined();
     });
   });
 
@@ -367,6 +367,30 @@ describe("AnthropicProvider", () => {
       // 강제 tool_use 파라미터가 더는 새지 않아야 한다.
       expect(callArgs.tools).toBeUndefined();
       expect(callArgs.tool_choice).toBeUndefined();
+      // effort를 안 넘기면 thinking/effort 미설정(동작 불변).
+      expect(callArgs.thinking).toBeUndefined();
+      expect(callArgs.output_config.effort).toBeUndefined();
+    });
+
+    it("enables adaptive thinking and sends effort on the structured path", async () => {
+      const { provider, betaParseFn } = mockCreate(
+        nativeResponse({ answer: "ok" }),
+      );
+
+      await provider.generateStructured({
+        schema: TestSchema,
+        schemaName: "test",
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+        temperature: 0.2,
+        effort: "high",
+      });
+
+      const callArgs = betaParseFn.mock.calls[0]?.[0];
+      expect(callArgs.thinking).toEqual({ type: "adaptive" });
+      expect(callArgs.output_config.effort).toBe("high");
+      // adaptive thinking은 custom temperature와 충돌하므로 effort일 땐 temperature를 뺀다.
+      expect(callArgs.temperature).toBeUndefined();
     });
 
     it("passes empty request options (no undefined timeout) when timeoutMs is omitted", async () => {

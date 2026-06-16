@@ -1,5 +1,6 @@
 // 모델 레지스트리 — task 라우팅이 override 모델 id를 검증·해석하는 단일 출처.
 // 단가·세부 능력은 후속 측정 단계로 미룬다.
+import type { LlmEffort } from "@server/infra/llm/llm-provider";
 import {
   DEFAULT_MINI_MODEL,
   DEFAULT_NANO_MODEL,
@@ -7,6 +8,21 @@ import {
 } from "@server/infra/llm/models";
 
 export type LlmProviderId = "openai" | "anthropic" | "google";
+
+// 프로바이더별로 실제 받는 effort 값. override를 set할 때 모델 프로바이더에 맞는
+// 값인지 여기서 검증해, 안 먹는 값(예: OpenAI에 xhigh)을 set 시점에 거른다.
+const PROVIDER_EFFORTS: Record<LlmProviderId, ReadonlySet<LlmEffort>> = {
+  openai: new Set<LlmEffort>(["minimal", "low", "medium", "high"]),
+  anthropic: new Set<LlmEffort>(["low", "medium", "high", "xhigh", "max"]),
+  google: new Set<LlmEffort>(["minimal", "low", "medium", "high"]),
+};
+
+export function isEffortValidFor(
+  provider: LlmProviderId,
+  effort: LlmEffort,
+): boolean {
+  return PROVIDER_EFFORTS[provider].has(effort);
+}
 
 export interface ModelSpec {
   id: string;

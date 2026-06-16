@@ -19,6 +19,7 @@ import type {
   GenerateStructuredParams,
   GenerateTextParams,
   LlmProvider,
+  OpenAiEffort,
 } from "./llm-provider";
 
 export type OpenAiProviderConfig =
@@ -60,10 +61,20 @@ export class OpenAiProvider implements LlmProvider {
     }));
   }
 
+  // OpenAI가 받는 effort만 reasoning.effort로 넘긴다. 바인딩이 프로바이더에 맞는 값만
+  // 주입하므로, 그 외 값(예: Claude의 xhigh)은 안전망으로 무시한다.
   private reasoning(
-    computeLevel: GenerateTextParams["computeLevel"],
-  ): { effort: NonNullable<GenerateTextParams["computeLevel"]> } | undefined {
-    return computeLevel ? { effort: computeLevel } : undefined;
+    effort: GenerateTextParams["effort"],
+  ): { effort: OpenAiEffort } | undefined {
+    switch (effort) {
+      case "minimal":
+      case "low":
+      case "medium":
+      case "high":
+        return { effort };
+      default:
+        return undefined;
+    }
   }
 
   // SDK가 명시적 undefined timeout/maxRetries를 거부하므로 정의된 옵션만 담아 전달
@@ -88,7 +99,7 @@ export class OpenAiProvider implements LlmProvider {
           instructions: params.systemPrompt,
           input: this.toInput(params.messages),
           temperature: params.temperature,
-          reasoning: this.reasoning(params.computeLevel),
+          reasoning: this.reasoning(params.effort),
           max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
           // Responses API는 store 기본값이 true라 응답을 OpenAI에 ~30일 보관한다.
           // previous_response_id를 안 쓰므로 보관 이득이 없어 명시적으로 끈다.
@@ -145,7 +156,7 @@ export class OpenAiProvider implements LlmProvider {
           instructions: params.systemPrompt,
           input: this.toInput(params.messages),
           temperature: params.temperature,
-          reasoning: this.reasoning(params.computeLevel),
+          reasoning: this.reasoning(params.effort),
           max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
           // Responses API는 store 기본값이 true(응답 ~30일 보관). 우리는 안 쓰므로 끈다.
           store: false,
@@ -187,7 +198,7 @@ export class OpenAiProvider implements LlmProvider {
           instructions: params.systemPrompt,
           input: this.toInput(params.messages),
           temperature: params.temperature,
-          reasoning: this.reasoning(params.computeLevel),
+          reasoning: this.reasoning(params.effort),
           max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
           // Responses API는 store 기본값이 true(응답 ~30일 보관). 우리는 안 쓰므로 끈다.
           store: false,

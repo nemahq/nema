@@ -4,7 +4,7 @@ import type {
   GenerateContentConfig,
   GenerateContentResponse,
 } from "@google/genai";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 import { LlmError } from "./llm-error";
 import type {
@@ -14,6 +14,25 @@ import type {
   LlmMessage,
   LlmProvider,
 } from "./llm-provider";
+
+// effort → Gemini 3.x thinking_level(enum). Gemini가 받는 값만 매핑하고 나머지는 무시한다.
+// 주의: 라이브 미검증(작동 키·Vertex 미설정) — 모델 id 3.x 갱신과 함께 후속 검증 필요.
+function toThinkingLevel(
+  effort: GenerateTextParams["effort"],
+): ThinkingLevel | undefined {
+  switch (effort) {
+    case "minimal":
+      return ThinkingLevel.MINIMAL;
+    case "low":
+      return ThinkingLevel.LOW;
+    case "medium":
+      return ThinkingLevel.MEDIUM;
+    case "high":
+      return ThinkingLevel.HIGH;
+    default:
+      return undefined;
+  }
+}
 
 export type GeminiProviderConfig =
   | { apiKey: string; model: string; timeout?: number }
@@ -157,14 +176,15 @@ export class GeminiProvider implements LlmProvider {
   }
 
   private toConfig(params: GenerateTextParams): GenerateContentConfig {
+    const thinkingLevel = toThinkingLevel(params.effort);
     return {
       systemInstruction: params.systemPrompt,
       temperature: params.temperature,
       maxOutputTokens: GEMINI_DEFAULT_MAX_OUTPUT_TOKENS,
       abortSignal: params.signal,
       httpOptions: this.httpOptions(params),
-      // computeLevel: Gemini는 reasoning_effort 대응이 없어 일단 무시한다.
-      // thinking budget 매핑은 후속 별건으로 미룬다.
+      // effort가 있으면 thinking_level로 사고량을 조절한다(3.x). 없으면 미설정(동작 불변).
+      ...(thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}),
     };
   }
 

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { getEnv } from "@server/env";
+import type { LlmEffort } from "@server/infra/llm/llm-provider";
 import { listModelSpecs } from "@server/infra/llm/model-catalog";
 import {
   clearTaskOverride,
@@ -20,6 +21,16 @@ const llmPresetSchema = z.enum([
   "all-nano",
   "real-tiers",
 ]) satisfies z.ZodType<LlmPreset>;
+
+// 전 프로바이더 네이티브 effort의 합집합 — setTaskModel이 모델 프로바이더에 맞는지 검증한다.
+const llmEffortSchema = z.enum([
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+]) satisfies z.ZodType<LlmEffort>;
 
 function assertDev(): void {
   if (getEnv().APP_ENV === "production") {
@@ -47,10 +58,20 @@ export const devRouter = router({
     };
   }),
   setTaskModel: protectedProcedure
-    .input(z.object({ task: LLM_TASK_SCHEMA, modelId: z.string().min(1) }))
+    .input(
+      z.object({
+        task: LLM_TASK_SCHEMA,
+        modelId: z.string().min(1),
+        effort: llmEffortSchema.optional(),
+      }),
+    )
     .mutation(({ input }) => {
       assertDev();
-      setTaskModel(input.task, input.modelId);
+      setTaskModel({
+        task: input.task,
+        modelId: input.modelId,
+        effort: input.effort,
+      });
       return getAllTaskOverrides();
     }),
   clearTaskModel: protectedProcedure

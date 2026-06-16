@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { GoogleGenAI } from "@google/genai";
+import { ThinkingLevel } from "@google/genai";
 
 import { GeminiProvider } from "./gemini-provider";
 import { LlmError } from "./llm-error";
@@ -234,8 +235,8 @@ describe("GeminiProvider", () => {
       ).rejects.toThrow(expect.objectContaining({ code: "content_filter" }));
     });
 
-    it("accepts computeLevel but ignores it (no throw, no SDK param)", async () => {
-      // Gemini도 computeLevel을 의도적으로 무시한다 — 받되 config로 새지 않고 동작 불변.
+    it("maps effort to a thinking_level on the request config", async () => {
+      // Gemini는 effort를 thinking_level(3.x)로 적용한다.
       const { provider, generateContent } = mockGenerate({
         text: "ok",
         candidates: [{ finishReason: "STOP" }],
@@ -244,12 +245,28 @@ describe("GeminiProvider", () => {
       const result = await provider.generateText({
         systemPrompt: "sys",
         messages: [{ role: "user", content: "q" }],
-        computeLevel: "high",
+        effort: "high",
       });
 
       expect(result).toBe("ok");
       const callArgs = generateContent.mock.calls[0]?.[0];
-      expect(callArgs.config.computeLevel).toBeUndefined();
+      expect(callArgs.config.thinkingConfig).toEqual({
+        thinkingLevel: ThinkingLevel.HIGH,
+      });
+    });
+
+    it("omits thinkingConfig when effort is not set (behavior unchanged)", async () => {
+      const { provider, generateContent } = mockGenerate({
+        text: "ok",
+        candidates: [{ finishReason: "STOP" }],
+      });
+
+      await provider.generateText({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+      });
+
+      const callArgs = generateContent.mock.calls[0]?.[0];
       expect(callArgs.config.thinkingConfig).toBeUndefined();
     });
 

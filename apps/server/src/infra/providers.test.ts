@@ -52,7 +52,7 @@ describe("providers — override resolution wiring", () => {
     const { getProviders, setTaskModel, AnthropicProvider } = await loadFresh();
 
     const providers = getProviders();
-    setTaskModel("generateDraft", "claude-opus-4-8");
+    setTaskModel({ task: "generateDraft", modelId: "claude-opus-4-8" });
 
     expect(providers.llm.forTask("generateDraft")).toBeInstanceOf(
       AnthropicProvider,
@@ -64,7 +64,7 @@ describe("providers — override resolution wiring", () => {
     const { getProviders, setTaskModel, GeminiProvider } = await loadFresh();
 
     const providers = getProviders();
-    setTaskModel("generateDraft", "gemini-2.5-pro");
+    setTaskModel({ task: "generateDraft", modelId: "gemini-2.5-pro" });
 
     expect(providers.llm.forTask("generateDraft")).toBeInstanceOf(
       GeminiProvider,
@@ -78,7 +78,8 @@ describe("providers — override resolution wiring", () => {
 
     expect(
       causeCodeOf(
-        () => setTaskModel("generateDraft", "claude-opus-4-8"),
+        () =>
+          setTaskModel({ task: "generateDraft", modelId: "claude-opus-4-8" }),
         LlmError,
       ),
     ).toBe("auth");
@@ -90,7 +91,8 @@ describe("providers — override resolution wiring", () => {
 
     expect(
       causeCodeOf(
-        () => setTaskModel("generateDraft", "gemini-2.5-pro"),
+        () =>
+          setTaskModel({ task: "generateDraft", modelId: "gemini-2.5-pro" }),
         LlmError,
       ),
     ).toBe("auth");

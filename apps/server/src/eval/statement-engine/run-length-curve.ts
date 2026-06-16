@@ -34,7 +34,7 @@ import {
   type ExtractionChunk,
 } from "@server/infra/statement-sync/chunking";
 import {
-  EXTRACTION_COMPUTE_LEVEL,
+  EXTRACTION_EFFORT,
   EXTRACTION_TIMEOUT_MS as PRODUCT_TIMEOUT_MS,
 } from "@server/infra/statement-sync/worker";
 import {
@@ -91,7 +91,7 @@ async function callExtraction(
         }),
       },
     ],
-    computeLevel: EXTRACTION_COMPUTE_LEVEL,
+    effort: EXTRACTION_EFFORT,
     timeoutMs: CURVE_TIMEOUT_MS,
     // SDK 묵시 재시도(기본 2회)가 끼면 합산 시간이 단일 콜 지연으로 기록돼
     // 측정이 오염된다 — 워커와 동일하게 끈다
@@ -654,7 +654,7 @@ async function main() {
 
   console.log(
     `${mode === "curve" ? "길이 곡선" : "분할 A/B"} 측정 — ` +
-      `모델 ${DEFAULT_STANDARD_MODEL} (effort ${EXTRACTION_COMPUTE_LEVEL}), ` +
+      `모델 ${DEFAULT_STANDARD_MODEL} (effort ${EXTRACTION_EFFORT}), ` +
       `측정 타임아웃 ${CURVE_TIMEOUT_MS / 1000}초 (제품선 ${PRODUCT_TIMEOUT_MS / 1000}초)`,
   );
 
@@ -673,7 +673,7 @@ async function main() {
         measuredAt: new Date().toISOString(),
         mode,
         model: DEFAULT_STANDARD_MODEL,
-        computeLevel: EXTRACTION_COMPUTE_LEVEL,
+        effort: EXTRACTION_EFFORT,
         curveTimeoutMs: CURVE_TIMEOUT_MS,
         productTimeoutMs: PRODUCT_TIMEOUT_MS,
         runsPerSeed: RUNS_PER_SEED,

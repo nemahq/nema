@@ -18,11 +18,29 @@ import type {
 
 import { LlmError } from "./llm-error";
 import type {
+  AnthropicEffort,
   GenerateStreamParams,
   GenerateStructuredParams,
   GenerateTextParams,
   LlmProvider,
 } from "./llm-provider";
+
+// Claude가 받는 effort만 추려낸다. 바인딩이 프로바이더에 맞는 값만 주입하지만,
+// 그 외 값은 안전망으로 걸러 thinking 설정에서 뺀다.
+function toAnthropicEffort(
+  effort: GenerateStreamParams["effort"],
+): AnthropicEffort | undefined {
+  switch (effort) {
+    case "low":
+    case "medium":
+    case "high":
+    case "xhigh":
+    case "max":
+      return effort;
+    default:
+      return undefined;
+  }
+}
 
 export type AnthropicProviderConfig =
   | { apiKey: string; model: string; timeout?: number }
@@ -114,8 +132,8 @@ export class AnthropicProvider implements LlmProvider {
           system: params.systemPrompt,
           stream: true,
           messages: this.toMessages(params.messages),
-          // computeLevel: Claude엔 reasoning_effort 대응이 없어 일단 무시한다.
-          // extended thinking 매핑은 후속 별건으로 미룬다.
+          // effort(adaptive thinking)는 구조화출력(beta) 경로에서만 적용한다.
+          // stream/text를 쓰는 task엔 effort 바인딩이 없어 여기선 다루지 않는다.
         },
         this.requestOptions(params),
       );
@@ -180,15 +198,21 @@ export class AnthropicProvider implements LlmProvider {
   private async generateStructuredNative<T>(
     params: GenerateStructuredParams<T>,
   ): Promise<T> {
+    // effort가 있으면 adaptive thinking을 켜고 effort로 사고량을 조절한다(format과 같은
+    // output_config에 담는다). 없으면 thinking 미설정 = 사고 없음(동작 불변).
+    // adaptive thinking은 custom temperature와 충돌하므로 effort일 땐 temperature를 뺀다.
+    const effort = toAnthropicEffort(params.effort);
+    const format = betaZodOutputFormat(params.schema);
     const message = await this.client.beta.messages.parse(
       {
         model: this.model,
         max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
-        temperature: params.temperature,
+        temperature: effort ? undefined : params.temperature,
         system: params.systemPrompt,
         messages: this.toMessages(params.messages),
         betas: [STRUCTURED_OUTPUTS_BETA],
-        output_config: { format: betaZodOutputFormat(params.schema) },
+        ...(effort ? { thinking: { type: "adaptive" as const } } : {}),
+        output_config: effort ? { format, effort } : { format },
       },
       this.requestOptions(params),
     );

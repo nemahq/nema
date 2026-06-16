@@ -8,7 +8,13 @@ import { createVoyageProvider } from "@server/infra/embedding";
 import { AnthropicProvider } from "@server/infra/llm/anthropic-provider";
 import { GeminiProvider } from "@server/infra/llm/gemini-provider";
 import { LlmError } from "@server/infra/llm/llm-error";
-import type { LlmProvider } from "@server/infra/llm/llm-provider";
+import type {
+  GenerateStreamParams,
+  GenerateStructuredParams,
+  GenerateTextParams,
+  LlmEffort,
+  LlmProvider,
+} from "@server/infra/llm/llm-provider";
 import { getModelSpec } from "@server/infra/llm/model-catalog";
 import type { TieredLlm } from "@server/infra/llm/models";
 import {
@@ -22,7 +28,7 @@ import type { LlmTask } from "@server/infra/llm/task-routing";
 import {
   getTaskOverride,
   setTaskOverride,
-  TASK_DEFAULT_TIER,
+  TASK_DEFAULTS,
 } from "@server/infra/llm/task-routing";
 import type { VectorStore } from "@server/infra/vector";
 import { createQdrantClient, createQdrantStore } from "@server/infra/vector";
@@ -69,11 +75,37 @@ let sharedGeminiClient: GoogleGenAI | undefined;
 function toRouter(tiers: TieredLlm): LlmRouter {
   return {
     forTask(task: LlmTask): LlmProvider {
-      const overrideModelId = getTaskOverride(task);
-      if (overrideModelId) {
-        return resolveOverrideProvider(overrideModelId);
+      const override = getTaskOverride(task);
+      if (override) {
+        return bindEffort(
+          resolveOverrideProvider(override.modelId),
+          override.effort,
+        );
       }
-      return tiers[TASK_DEFAULT_TIER[task]];
+      const def = TASK_DEFAULTS[task];
+      return bindEffort(tiers[def.tier], def.effort);
+    },
+  };
+}
+
+// task 바인딩의 네이티브 effort를 호출 파라미터에 주입한다. 호출부가 직접 effort를
+// 넘기면(주로 eval) 그 값을 존중하고, 없을 때만 바인딩 기본값을 채운다.
+function bindEffort(
+  provider: LlmProvider,
+  effort: LlmEffort | undefined,
+): LlmProvider {
+  if (effort === undefined) {
+    return provider;
+  }
+  return {
+    generateStructured<T>(params: GenerateStructuredParams<T>): Promise<T> {
+      return provider.generateStructured({ effort, ...params });
+    },
+    generateStream(params: GenerateStreamParams): AsyncIterable<string> {
+      return provider.generateStream({ effort, ...params });
+    },
+    generateText(params: GenerateTextParams): Promise<string> {
+      return provider.generateText({ effort, ...params });
     },
   };
 }
@@ -247,7 +279,12 @@ function applyLlmPreset(preset: LlmPreset): void {
 
 // task별 런타임 모델 스위칭 — preset과 같은 prod 잠금을 공유한다.
 // 모델 id는 setTaskOverride가 MODEL_CATALOG로 검증한다.
-export function setTaskModel(task: LlmTask, modelId: string): void {
+export function setTaskModel(params: {
+  task: LlmTask;
+  modelId: string;
+  effort?: LlmEffort;
+}): void {
+  const { task, modelId, effort } = params;
   const env = getEnv();
   if (env.APP_ENV === "production") {
     throw new Error("LLM task override is not available in production");
@@ -274,5 +311,5 @@ export function setTaskModel(task: LlmTask, modelId: string): void {
     }
     throw err;
   }
-  setTaskOverride(task, modelId);
+  setTaskOverride({ task, modelId, effort });
 }
