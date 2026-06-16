@@ -8,12 +8,13 @@ import { getModelSpec } from "@server/infra/llm/model-catalog";
 
 // task 목록 단일 출처 — dev-router의 런타임 입력 검증도 이 enum을 공유한다.
 // 나눠 적으면 새 task를 한쪽만 추가했을 때 런타임 검증이 조용히 어긋난다.
+// 값 규칙: <동사><목적어> — LLM이 수행하는 동작 + 도메인 객체. 값만 봐도 무엇을 하는지 읽히게 한다.
 export const LLM_TASK_SCHEMA = z.enum([
-  "drafting",
-  "draftIntent",
-  "sessionTitle",
-  "extraction",
-  "relationJudgment",
+  "generateDraft",
+  "classifyDraftIntent",
+  "generateSessionTitle",
+  "extractStatements",
+  "judgeRelations",
 ]);
 
 export type LlmTask = z.infer<typeof LLM_TASK_SCHEMA>;
@@ -23,11 +24,11 @@ export type LlmTask = z.infer<typeof LLM_TASK_SCHEMA>;
 //  추출=standard, 관계 판정=standard). 이 표가 곧 "override 없을 때의 동작 불변" 계약이다.
 export const TASK_DEFAULT_TIER: Record<LlmTask, "standard" | "mini" | "nano"> =
   {
-    drafting: "standard",
-    draftIntent: "mini",
-    sessionTitle: "nano",
-    extraction: "standard",
-    relationJudgment: "standard",
+    generateDraft: "standard",
+    classifyDraftIntent: "mini",
+    generateSessionTitle: "nano",
+    extractStatements: "standard",
+    judgeRelations: "standard",
   };
 
 // task → override 모델 id. 비어 있으면 기본 tier로 해석한다.

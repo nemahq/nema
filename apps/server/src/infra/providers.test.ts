@@ -52,9 +52,11 @@ describe("providers — override resolution wiring", () => {
     const { getProviders, setTaskModel, AnthropicProvider } = await loadFresh();
 
     const providers = getProviders();
-    setTaskModel("drafting", "claude-opus-4-8");
+    setTaskModel("generateDraft", "claude-opus-4-8");
 
-    expect(providers.llm.forTask("drafting")).toBeInstanceOf(AnthropicProvider);
+    expect(providers.llm.forTask("generateDraft")).toBeInstanceOf(
+      AnthropicProvider,
+    );
   });
 
   it("resolves a google catalog model to a GeminiProvider", async () => {
@@ -62,9 +64,11 @@ describe("providers — override resolution wiring", () => {
     const { getProviders, setTaskModel, GeminiProvider } = await loadFresh();
 
     const providers = getProviders();
-    setTaskModel("drafting", "gemini-2.5-pro");
+    setTaskModel("generateDraft", "gemini-2.5-pro");
 
-    expect(providers.llm.forTask("drafting")).toBeInstanceOf(GeminiProvider);
+    expect(providers.llm.forTask("generateDraft")).toBeInstanceOf(
+      GeminiProvider,
+    );
   });
 
   it("throws auth when ANTHROPIC_API_KEY is missing for an anthropic model", async () => {
@@ -73,7 +77,10 @@ describe("providers — override resolution wiring", () => {
     getProviders();
 
     expect(
-      causeCodeOf(() => setTaskModel("drafting", "claude-opus-4-8"), LlmError),
+      causeCodeOf(
+        () => setTaskModel("generateDraft", "claude-opus-4-8"),
+        LlmError,
+      ),
     ).toBe("auth");
   });
 
@@ -82,7 +89,10 @@ describe("providers — override resolution wiring", () => {
     getProviders();
 
     expect(
-      causeCodeOf(() => setTaskModel("drafting", "gemini-2.5-pro"), LlmError),
+      causeCodeOf(
+        () => setTaskModel("generateDraft", "gemini-2.5-pro"),
+        LlmError,
+      ),
     ).toBe("auth");
   });
 });

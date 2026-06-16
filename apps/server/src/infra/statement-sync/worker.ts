@@ -286,7 +286,7 @@ async function processSource(
   deps: WorkerDeps,
 ): Promise<void> {
   const extracted = await extractSourceStatements(
-    deps.forTask("extraction"),
+    deps.forTask("extractStatements"),
     source.body,
   );
   const statements = normalizeStatements(extracted);
@@ -697,7 +697,7 @@ async function linkSubBatch(params: {
 
   const message = buildRelationJudgmentMessage(newLabeled, existingLabeled);
   const output = await limitLlmCall(() =>
-    callJudgmentWithRetry(deps.forTask("relationJudgment"), message),
+    callJudgmentWithRetry(deps.forTask("judgeRelations"), message),
   );
 
   return gateProposals({
