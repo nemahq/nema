@@ -19,29 +19,33 @@ const TestSchema = z.object({ answer: z.string() });
 
 function createMockClient() {
   const createFn = vi.fn();
-  // 네이티브 구조화 출력은 beta.messages.parse를 탄다(zod 정규화 + parsed_output).
+  // 네이티브 구조화 출력은 beta.messages.parse를, effort(adaptive thinking) 경로는
+  // beta.messages.create를 탄다.
   const betaParseFn = vi.fn();
+  const betaCreateFn = vi.fn();
   const client = {
     messages: { create: createFn },
-    beta: { messages: { parse: betaParseFn } },
+    beta: { messages: { parse: betaParseFn, create: betaCreateFn } },
   } as unknown as Anthropic;
-  return { client, createFn, betaParseFn };
+  return { client, createFn, betaParseFn, betaCreateFn };
 }
 
 function mockCreate(response: unknown) {
-  const { client, createFn, betaParseFn } = createMockClient();
+  const { client, createFn, betaParseFn, betaCreateFn } = createMockClient();
   createFn.mockResolvedValue(response);
   betaParseFn.mockResolvedValue(response);
+  betaCreateFn.mockResolvedValue(response);
   const provider = new AnthropicProvider({ client, model: "claude-opus-4-8" });
-  return { provider, createFn, betaParseFn };
+  return { provider, createFn, betaParseFn, betaCreateFn };
 }
 
 function mockCreateRejection(error: Error) {
-  const { client, createFn, betaParseFn } = createMockClient();
+  const { client, createFn, betaParseFn, betaCreateFn } = createMockClient();
   createFn.mockRejectedValue(error);
   betaParseFn.mockRejectedValue(error);
+  betaCreateFn.mockRejectedValue(error);
   const provider = new AnthropicProvider({ client, model: "claude-opus-4-8" });
-  return { provider, createFn, betaParseFn };
+  return { provider, createFn, betaParseFn, betaCreateFn };
 }
 
 describe("AnthropicProvider", () => {
@@ -137,10 +141,8 @@ describe("AnthropicProvider", () => {
       );
     });
 
-    it("does not apply effort on the text path (only the structured path wires it)", async () => {
-      // effort(adaptive thinking)는 구조화출력(beta) 경로에서만 적용한다. generateText는
-      // effort를 받아도 SDK 호출에 thinking/output_config가 새지 않음을 핀으로 박는다.
-      const { provider, createFn } = mockCreate({
+    it("routes to the beta path with adaptive thinking + effort when effort is set", async () => {
+      const { provider, createFn, betaCreateFn } = mockCreate({
         stop_reason: "end_turn",
         content: [{ type: "text", text: "ok" }],
       });
@@ -148,13 +150,18 @@ describe("AnthropicProvider", () => {
       const result = await provider.generateText({
         systemPrompt: "sys",
         messages: [{ role: "user", content: "q" }],
+        temperature: 0.5,
         effort: "high",
       });
 
       expect(result).toBe("ok");
-      const callArgs = createFn.mock.calls[0]?.[0];
-      expect(callArgs.thinking).toBeUndefined();
-      expect(callArgs.output_config).toBeUndefined();
+      // 비-beta 경로로 새지 않고, beta에 adaptive thinking + effort가 실린다.
+      expect(createFn).not.toHaveBeenCalled();
+      const callArgs = betaCreateFn.mock.calls[0]?.[0];
+      expect(callArgs.thinking).toEqual({ type: "adaptive" });
+      expect(callArgs.output_config).toEqual({ effort: "high" });
+      // adaptive thinking과 custom temperature 충돌 회피 — temperature는 빠진다.
+      expect(callArgs.temperature).toBeUndefined();
     });
   });
 
@@ -189,6 +196,41 @@ describe("AnthropicProvider", () => {
       }
 
       expect(chunks).toEqual(["Hel", "lo"]);
+    });
+
+    it("routes streaming through the beta path with adaptive thinking + effort", async () => {
+      const events = [
+        {
+          type: "content_block_delta",
+          delta: { type: "text_delta", text: "hi" },
+        },
+        { type: "message_stop" },
+      ];
+      const stream = {
+        controller: { abort: vi.fn() },
+        async *[Symbol.asyncIterator]() {
+          yield* events;
+        },
+      };
+      const { provider, createFn, betaCreateFn } = mockCreate(stream);
+
+      const chunks: string[] = [];
+      for await (const chunk of provider.generateStream({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+        temperature: 0.5,
+        effort: "max",
+      })) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toEqual(["hi"]);
+      expect(createFn).not.toHaveBeenCalled();
+      const callArgs = betaCreateFn.mock.calls[0]?.[0];
+      expect(callArgs.thinking).toEqual({ type: "adaptive" });
+      expect(callArgs.output_config).toEqual({ effort: "max" });
+      expect(callArgs.stream).toBe(true);
+      expect(callArgs.temperature).toBeUndefined();
     });
 
     it("aborts the stream and stops when signal is aborted", async () => {

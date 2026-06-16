@@ -43,7 +43,7 @@ const CLAUDE_CONTEXT_WINDOW = 200_000;
 const GEMINI_CONTEXT_WINDOW = 1_000_000;
 
 // 알려진 모델 집합. env로 모델 id가 덮였다면(LLM_MODEL_*) 그 id는 여기 없을 수 있고,
-// getModelSpec은 undefined를 돌려준다 — 라우팅 기본 경로(TASK_DEFAULT_TIER→tier)는
+// getModelSpec은 undefined를 돌려준다 — 라우팅 기본 경로(TASK_DEFAULTS→tier)는
 // 카탈로그를 거치지 않으므로 env override가 있어도 기본 동작은 깨지지 않는다.
 // 카탈로그는 "런타임에 명시적으로 갈아끼울 수 있는" 모델의 화이트리스트다.
 export const MODEL_CATALOG: Record<string, ModelEntry> = {

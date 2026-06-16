@@ -33,13 +33,13 @@ interface TaskDefault {
 
 // 각 task의 기본 tier·effort — 5개 호출부가 현재 쓰는 설정을 그대로 미러한다.
 // 이 표가 곧 "override 없을 때의 동작 불변" 계약이다.
-export const TASK_DEFAULTS: Record<LlmTask, TaskDefault> = {
+export const TASK_DEFAULTS = {
   generateDraft: { tier: "standard" },
   classifyDraftIntent: { tier: "mini" },
   generateSessionTitle: { tier: "nano" },
   extractStatements: { tier: "standard", effort: "low" },
   judgeRelations: { tier: "standard", effort: "low" },
-};
+} as const satisfies Record<LlmTask, TaskDefault>;
 
 // task → override. effort는 그 모델 프로바이더의 네이티브 값(set 시점에 검증).
 export interface TaskOverride {

@@ -70,7 +70,7 @@ let sharedGeminiClient: GoogleGenAI | undefined;
 
 // tier 묶음을 forTask가 달린 LlmRouter로 감싼다. forTask 해석:
 //  - task override가 있으면 → 카탈로그 모델용 provider(모델별 캐시, 공유 클라이언트 재사용)
-//  - 없으면 → 현재 tier(TASK_DEFAULT_TIER). preset이 cached.llm의 tier를 갈아끼우므로
+//  - 없으면 → 현재 tier(TASK_DEFAULTS). preset이 cached.llm의 tier를 갈아끼우므로
 //    기본 경로는 활성 preset을 자동으로 따른다(= 동작 불변).
 function toRouter(tiers: TieredLlm): LlmRouter {
   return {
@@ -83,7 +83,9 @@ function toRouter(tiers: TieredLlm): LlmRouter {
         );
       }
       const def = TASK_DEFAULTS[task];
-      return bindEffort(tiers[def.tier], def.effort);
+      // TASK_DEFAULTS는 as const라 effort 없는 task는 키 자체가 없다 — in으로 좁힌다.
+      const effort = "effort" in def ? def.effort : undefined;
+      return bindEffort(tiers[def.tier], effort);
     },
   };
 }

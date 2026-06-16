@@ -1,11 +1,22 @@
-import type { z } from "zod";
+import { z } from "zod";
 
-// 각 프로바이더의 네이티브 effort 어휘 — 중립 스케일로 정규화하지 않고 각 사 값을 그대로 쓴다.
+// effort 어휘 단일 출처 — 전 프로바이더 네이티브 값의 합집합. dev-router 런타임 검증도
+// 이 스키마를 공유한다(값을 한쪽에만 늘려 검증이 조용히 어긋나는 걸 막는다).
+export const LLM_EFFORT_SCHEMA = z.enum([
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+]);
+export type LlmEffort = z.infer<typeof LLM_EFFORT_SCHEMA>;
+
+// 각 프로바이더가 실제 받는 부분집합 — 어댑터 가드·set-time 검증이 이걸로 좁힌다.
 // (OpenAI reasoning.effort / Claude adaptive thinking effort / Gemini thinking_level)
 export type OpenAiEffort = "minimal" | "low" | "medium" | "high";
 export type AnthropicEffort = "low" | "medium" | "high" | "xhigh" | "max";
 export type GeminiEffort = "minimal" | "low" | "medium" | "high";
-export type LlmEffort = OpenAiEffort | AnthropicEffort | GeminiEffort;
 
 // "system"은 systemPrompt 파라미터로 별도 전달하므로 role에서 제외
 export interface LlmMessage {

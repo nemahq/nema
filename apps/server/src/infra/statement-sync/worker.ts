@@ -103,7 +103,7 @@ type Phase = "extraction" | "embedding" | "linking";
 interface WorkerDeps {
   supabase: TypedSupabaseClient;
   // 추출·관계 판정이 서로 다른 모델을 쓸 수 있게 단일 llm 대신 task 라우터를 받는다.
-  // 워커는 자기 두 콜(extraction/relationJudgment)을 task로 해석해 모델을 고른다.
+  // 워커는 자기 두 콜(extractStatements/judgeRelations)을 task로 해석해 모델을 고른다.
   forTask: (task: LlmTask) => LlmProvider;
   embedding: EmbeddingProvider;
   vectorStore: VectorStore;
