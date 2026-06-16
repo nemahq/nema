@@ -11,6 +11,9 @@ export type LlmProviderId = "openai" | "anthropic" | "google";
 
 // 프로바이더별로 실제 받는 effort 값. override를 set할 때 모델 프로바이더에 맞는
 // 값인지 여기서 검증해, 안 먹는 값(예: OpenAI에 xhigh)을 set 시점에 거른다.
+// TODO: 검증이 프로바이더 단위라 모델별 차이는 못 잡는다 — Anthropic xhigh는 Opus 전용,
+// max는 Haiku 미지원. 잘못된 조합은 set-time 통과 후 call-time LlmError로 드러난다(dev 전용,
+// prod 잠금). 모델별 유효 effort 표가 필요해지면 그때 좁힌다.
 const PROVIDER_EFFORTS: Record<LlmProviderId, ReadonlySet<LlmEffort>> = {
   openai: new Set<LlmEffort>(["minimal", "low", "medium", "high"]),
   anthropic: new Set<LlmEffort>(["low", "medium", "high", "xhigh", "max"]),

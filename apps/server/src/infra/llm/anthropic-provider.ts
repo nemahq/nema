@@ -366,6 +366,9 @@ export class AnthropicProvider implements LlmProvider {
           "LLM response was truncated (stop_reason: max_tokens)",
         );
       }
+      if (message.stop_reason === "refusal") {
+        throw new LlmError("unknown", "LLM refused the request");
+      }
 
       const text = message.content
         .filter(isTextBlock)
@@ -404,6 +407,9 @@ export class AnthropicProvider implements LlmProvider {
           "unknown",
           "LLM response was truncated (stop_reason: max_tokens)",
         );
+      }
+      if (message.stop_reason === "refusal") {
+        throw new LlmError("unknown", "LLM refused the request");
       }
 
       // beta 응답 블록 — thinking 블록은 건너뛰고 text만 모은다(구조적으로 좁힌다).

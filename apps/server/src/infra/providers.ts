@@ -6,7 +6,10 @@ import { getEnv } from "@server/env";
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import { createVoyageProvider } from "@server/infra/embedding";
 import { AnthropicProvider } from "@server/infra/llm/anthropic-provider";
-import { GeminiProvider } from "@server/infra/llm/gemini-provider";
+import {
+  DEFAULT_TIMEOUT_MS as GEMINI_DEFAULT_TIMEOUT_MS,
+  GeminiProvider,
+} from "@server/infra/llm/gemini-provider";
 import { LlmError } from "@server/infra/llm/llm-error";
 import type {
   GenerateStreamParams,
@@ -183,6 +186,8 @@ function getGeminiClient(): GoogleGenAI {
       vertexai: true,
       project: env.GEMINI_VERTEX_PROJECT,
       location: env.GEMINI_VERTEX_LOCATION ?? "global",
+      // per-call timeoutMs 안 넘기는 경로(dev override drafting/sessionTitle)의 무한 행 방지.
+      httpOptions: { timeout: GEMINI_DEFAULT_TIMEOUT_MS },
     });
     return sharedGeminiClient;
   }
@@ -192,7 +197,10 @@ function getGeminiClient(): GoogleGenAI {
       "GEMINI_API_KEY or GEMINI_VERTEX_PROJECT is required to use a Google model",
     );
   }
-  sharedGeminiClient = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+  sharedGeminiClient = new GoogleGenAI({
+    apiKey: env.GEMINI_API_KEY,
+    httpOptions: { timeout: GEMINI_DEFAULT_TIMEOUT_MS },
+  });
   return sharedGeminiClient;
 }
 
