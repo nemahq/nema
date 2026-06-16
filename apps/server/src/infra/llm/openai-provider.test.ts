@@ -101,7 +101,7 @@ describe("OpenAiProvider", () => {
           { role: "user", content: "Question" },
         ],
         temperature: 0.5,
-        computeLevel: "low",
+        effort: "low",
       });
 
       const callArgs = createFn.mock.calls[0]?.[0];
@@ -116,7 +116,7 @@ describe("OpenAiProvider", () => {
       ]);
     });
 
-    it("omits reasoning when computeLevel is not set", async () => {
+    it("omits reasoning when effort is not set", async () => {
       const { provider, createFn } = mockCreate({
         status: "completed",
         output_text: "ok",

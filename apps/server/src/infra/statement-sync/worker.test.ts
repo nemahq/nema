@@ -470,6 +470,85 @@ describe("createStatementSyncWorker", () => {
   });
 });
 
+// task 이름 계약 — 워커가 forTask에 넘기는 문자열이 라우팅 표(TASK_DEFAULTS)와 어긋나면
+// effort 바인딩이 안 붙어 추출/판정이 full-reasoning 비용으로 조용히 돈다. 명시 인자를
+// 뗀 지금 이 호출 문자열이 유일한 안전망이라 못박는다.
+describe("createStatementSyncWorker — forTask task names", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('추출 경로는 forTask를 정확히 "extractStatements"로 부른다', async () => {
+    const { client } = mockSupabase({
+      read_sync_events: [[NOTIFY_ROW]],
+      fetch_pending_sources: [[PENDING_SOURCE]],
+    });
+    const llm = mockLlm([
+      { content: "한 문장.", type: "claim", confidence: "certain" },
+    ]);
+    const forTask = vi.fn(() => llm);
+
+    const worker = createStatementSyncWorker({
+      supabase: client,
+      forTask,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+    worker.start();
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+    await worker.stop();
+
+    expect(forTask).toHaveBeenCalledWith("extractStatements");
+    // 옛 이름("extraction")으로 드리프트하면 여기서 잡힌다.
+    expect(forTask).not.toHaveBeenCalledWith("extraction");
+  });
+
+  it('관계 판정 경로는 forTask를 정확히 "judgeRelations"로 부른다', async () => {
+    const statements = Array.from({ length: 3 }, (_, i) => ({
+      id: `c0000000-0000-4000-a000-${String(i).padStart(12, "0")}`,
+      content: `진술 ${i}`,
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [{ source_id: SOURCE_ID, locator: { index: i } }],
+    }));
+    const { client } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_linking_sources: [
+          [
+            {
+              id: SOURCE_ID,
+              space_id: SPACE_ID,
+              created_at: "2026-06-11T00:00:00.000Z",
+            },
+          ],
+        ],
+      },
+      { statements },
+    );
+    const llm = mockRelationLlm();
+    const forTask = vi.fn(() => llm);
+
+    const worker = createStatementSyncWorker({
+      supabase: client,
+      forTask,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+    worker.start();
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+    await worker.stop();
+
+    expect(forTask).toHaveBeenCalledWith("judgeRelations");
+  });
+});
+
 // 게이트 — 엔진 판정의 척추 (relation-design §5). 잘못되면 충돌이 조용히 적용되거나
 // 멀쩡한 관계가 사람 책상으로 새므로, 분기·dedup·scope를 직접 박는다.
 describe("gateProposals", () => {

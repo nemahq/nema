@@ -18,11 +18,29 @@ import type {
 
 import { LlmError } from "./llm-error";
 import type {
+  AnthropicEffort,
   GenerateStreamParams,
   GenerateStructuredParams,
   GenerateTextParams,
   LlmProvider,
 } from "./llm-provider";
+
+// Claude가 받는 effort만 추려낸다. 바인딩이 프로바이더에 맞는 값만 주입하지만,
+// 그 외 값은 안전망으로 걸러 thinking 설정에서 뺀다.
+function toAnthropicEffort(
+  effort: GenerateStreamParams["effort"],
+): AnthropicEffort | undefined {
+  switch (effort) {
+    case "low":
+    case "medium":
+    case "high":
+    case "xhigh":
+    case "max":
+      return effort;
+    default:
+      return undefined;
+  }
+}
 
 export type AnthropicProviderConfig =
   | { apiKey: string; model: string; timeout?: number }
@@ -105,6 +123,19 @@ export class AnthropicProvider implements LlmProvider {
   }
 
   async *generateStream(params: GenerateStreamParams): AsyncIterable<string> {
+    // effort가 있을 때만 adaptive thinking을 켜는 beta 경로로 보낸다. effort 없는
+    // streamPlain은 한 바이트도 안 바뀌어 프로덕션 스트리밍 동작이 불변이다.
+    const effort = toAnthropicEffort(params.effort);
+    if (effort) {
+      yield* this.streamWithEffort(params, effort);
+      return;
+    }
+    yield* this.streamPlain(params);
+  }
+
+  private async *streamPlain(
+    params: GenerateStreamParams,
+  ): AsyncIterable<string> {
     try {
       const stream = await this.client.messages.create(
         {
@@ -114,8 +145,6 @@ export class AnthropicProvider implements LlmProvider {
           system: params.systemPrompt,
           stream: true,
           messages: this.toMessages(params.messages),
-          // computeLevel: Claude엔 reasoning_effort 대응이 없어 일단 무시한다.
-          // extended thinking 매핑은 후속 별건으로 미룬다.
         },
         this.requestOptions(params),
       );
@@ -133,6 +162,57 @@ export class AnthropicProvider implements LlmProvider {
         }
         // message_delta가 stop_reason을 싣고 온다. 잘림(max_tokens)·거절(refusal)을
         // 비스트리밍 경로와 같은 LlmError로 끊어야 호출부가 일관되게 처리한다.
+        if (event.type === "message_delta") {
+          const stopReason = event.delta.stop_reason;
+          if (stopReason === "max_tokens") {
+            throw new LlmError(
+              "unknown",
+              "LLM response was truncated (stop_reason: max_tokens)",
+            );
+          }
+          if (stopReason === "refusal") {
+            throw new LlmError("unknown", "LLM refused the request");
+          }
+        }
+      }
+    } catch (error) {
+      if (params.signal?.aborted) {
+        return;
+      }
+      throw this.mapError(error);
+    }
+  }
+
+  // effort 경로 — adaptive thinking·effort는 beta messages 전용이라 분리. temperature는 충돌로 생략.
+  private async *streamWithEffort(
+    params: GenerateStreamParams,
+    effort: AnthropicEffort,
+  ): AsyncIterable<string> {
+    try {
+      const stream = await this.client.beta.messages.create(
+        {
+          model: this.model,
+          max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
+          system: params.systemPrompt,
+          stream: true,
+          messages: this.toMessages(params.messages),
+          thinking: { type: "adaptive" },
+          output_config: { effort },
+        },
+        this.requestOptions(params),
+      );
+
+      for await (const event of stream) {
+        if (params.signal?.aborted) {
+          stream.controller.abort();
+          return;
+        }
+        if (
+          event.type === "content_block_delta" &&
+          event.delta.type === "text_delta"
+        ) {
+          yield event.delta.text;
+        }
         if (event.type === "message_delta") {
           const stopReason = event.delta.stop_reason;
           if (stopReason === "max_tokens") {
@@ -180,15 +260,21 @@ export class AnthropicProvider implements LlmProvider {
   private async generateStructuredNative<T>(
     params: GenerateStructuredParams<T>,
   ): Promise<T> {
+    // effort가 있으면 adaptive thinking을 켜고 effort로 사고량을 조절한다(format과 같은
+    // output_config에 담는다). 없으면 thinking 미설정 = 사고 없음(동작 불변).
+    // adaptive thinking은 custom temperature와 충돌하므로 effort일 땐 temperature를 뺀다.
+    const effort = toAnthropicEffort(params.effort);
+    const format = betaZodOutputFormat(params.schema);
     const message = await this.client.beta.messages.parse(
       {
         model: this.model,
         max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
-        temperature: params.temperature,
+        temperature: effort ? undefined : params.temperature,
         system: params.systemPrompt,
         messages: this.toMessages(params.messages),
         betas: [STRUCTURED_OUTPUTS_BETA],
-        output_config: { format: betaZodOutputFormat(params.schema) },
+        ...(effort ? { thinking: { type: "adaptive" as const } } : {}),
+        output_config: effort ? { format, effort } : { format },
       },
       this.requestOptions(params),
     );
@@ -256,6 +342,11 @@ export class AnthropicProvider implements LlmProvider {
   }
 
   async generateText(params: GenerateTextParams): Promise<string> {
+    // effort가 있으면 adaptive thinking을 켜는 beta 경로로. 없으면 현행 그대로(동작 불변).
+    const effort = toAnthropicEffort(params.effort);
+    if (effort) {
+      return this.generateTextWithEffort(params, effort);
+    }
     try {
       const message = await this.client.messages.create(
         {
@@ -274,10 +365,54 @@ export class AnthropicProvider implements LlmProvider {
           "LLM response was truncated (stop_reason: max_tokens)",
         );
       }
+      if (message.stop_reason === "refusal") {
+        throw new LlmError("unknown", "LLM refused the request");
+      }
 
       const text = message.content
         .filter(isTextBlock)
         .map((block) => block.text)
+        .join("");
+      if (!text) {
+        throw new LlmError("unknown", "LLM returned no content");
+      }
+      return text;
+    } catch (error) {
+      throw this.mapError(error);
+    }
+  }
+
+  // effort 경로 — streamWithEffort와 동형(beta 전용 adaptive thinking, temperature 생략).
+  private async generateTextWithEffort(
+    params: GenerateTextParams,
+    effort: AnthropicEffort,
+  ): Promise<string> {
+    try {
+      const message = await this.client.beta.messages.create(
+        {
+          model: this.model,
+          max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
+          system: params.systemPrompt,
+          messages: this.toMessages(params.messages),
+          thinking: { type: "adaptive" },
+          output_config: { effort },
+        },
+        this.requestOptions(params),
+      );
+
+      if (message.stop_reason === "max_tokens") {
+        throw new LlmError(
+          "unknown",
+          "LLM response was truncated (stop_reason: max_tokens)",
+        );
+      }
+      if (message.stop_reason === "refusal") {
+        throw new LlmError("unknown", "LLM refused the request");
+      }
+
+      // beta 응답 블록 — thinking 블록은 건너뛰고 text만 모은다(구조적으로 좁힌다).
+      const text = message.content
+        .map((block) => (block.type === "text" ? block.text : ""))
         .join("");
       if (!text) {
         throw new LlmError("unknown", "LLM returned no content");

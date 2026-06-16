@@ -1,8 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 // 클라이언트 생성자만 막아 실제 네트워크/키 검증을 차단한다 — 어댑터 클래스(Anthropic/
 // GeminiProvider)는 진짜를 써야 forTask 결과를 instanceof로 검증할 수 있다.
-vi.mock("openai", () => ({ default: vi.fn() }));
+// OpenAI 클라이언트는 responses 스파이를 노출해 forTask가 바인딩 effort를 어댑터로
+// 흘리는지(bindEffort 주입)까지 관찰한다.
+const { openaiResponsesParse, openaiResponsesCreate } = vi.hoisted(() => ({
+  openaiResponsesParse: vi.fn(),
+  openaiResponsesCreate: vi.fn(),
+}));
+vi.mock("openai", () => ({
+  default: vi.fn(() => ({
+    responses: { parse: openaiResponsesParse, create: openaiResponsesCreate },
+  })),
+}));
 vi.mock("@anthropic-ai/sdk", () => ({ default: vi.fn() }));
 vi.mock("@google/genai", () => ({ GoogleGenAI: vi.fn() }));
 vi.mock("@qdrant/js-client-rest", () => ({ QdrantClient: vi.fn() }));
@@ -52,9 +63,11 @@ describe("providers — override resolution wiring", () => {
     const { getProviders, setTaskModel, AnthropicProvider } = await loadFresh();
 
     const providers = getProviders();
-    setTaskModel("drafting", "claude-opus-4-8");
+    setTaskModel({ task: "generateDraft", modelId: "claude-opus-4-8" });
 
-    expect(providers.llm.forTask("drafting")).toBeInstanceOf(AnthropicProvider);
+    expect(providers.llm.forTask("generateDraft")).toBeInstanceOf(
+      AnthropicProvider,
+    );
   });
 
   it("resolves a google catalog model to a GeminiProvider", async () => {
@@ -62,9 +75,11 @@ describe("providers — override resolution wiring", () => {
     const { getProviders, setTaskModel, GeminiProvider } = await loadFresh();
 
     const providers = getProviders();
-    setTaskModel("drafting", "gemini-2.5-pro");
+    setTaskModel({ task: "generateDraft", modelId: "gemini-3.1-pro-preview" });
 
-    expect(providers.llm.forTask("drafting")).toBeInstanceOf(GeminiProvider);
+    expect(providers.llm.forTask("generateDraft")).toBeInstanceOf(
+      GeminiProvider,
+    );
   });
 
   it("throws auth when ANTHROPIC_API_KEY is missing for an anthropic model", async () => {
@@ -73,7 +88,11 @@ describe("providers — override resolution wiring", () => {
     getProviders();
 
     expect(
-      causeCodeOf(() => setTaskModel("drafting", "claude-opus-4-8"), LlmError),
+      causeCodeOf(
+        () =>
+          setTaskModel({ task: "generateDraft", modelId: "claude-opus-4-8" }),
+        LlmError,
+      ),
     ).toBe("auth");
   });
 
@@ -82,8 +101,73 @@ describe("providers — override resolution wiring", () => {
     getProviders();
 
     expect(
-      causeCodeOf(() => setTaskModel("drafting", "gemini-2.5-pro"), LlmError),
+      causeCodeOf(
+        () =>
+          setTaskModel({
+            task: "generateDraft",
+            modelId: "gemini-3.1-pro-preview",
+          }),
+        LlmError,
+      ),
     ).toBe("auth");
+  });
+});
+
+describe("forTask effort injection (bindEffort)", () => {
+  beforeEach(() => {
+    openaiResponsesParse.mockReset();
+    openaiResponsesCreate.mockReset();
+    // 기본 OpenAI tier 경로(구조화/텍스트)를 성공으로 모킹.
+    openaiResponsesParse.mockResolvedValue({
+      status: "completed",
+      output: [],
+      output_parsed: { ok: true },
+    });
+    openaiResponsesCreate.mockResolvedValue({
+      status: "completed",
+      output_text: "ok",
+    });
+  });
+
+  it("injects the task's bound effort (extractStatements → low)", async () => {
+    const { getProviders } = await loadFresh();
+    await getProviders()
+      .llm.forTask("extractStatements")
+      .generateStructured({
+        schema: z.object({ ok: z.boolean() }),
+        schemaName: "t",
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+      });
+    const callArgs = openaiResponsesParse.mock.calls[0]?.[0];
+    expect(callArgs.reasoning).toEqual({ effort: "low" });
+  });
+
+  it("injects no effort for a task without a bound effort (generateDraft)", async () => {
+    const { getProviders } = await loadFresh();
+    await getProviders()
+      .llm.forTask("generateDraft")
+      .generateText({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+      });
+    const callArgs = openaiResponsesCreate.mock.calls[0]?.[0];
+    expect(callArgs.reasoning).toBeUndefined();
+  });
+
+  it("lets a caller-supplied effort win over the binding", async () => {
+    const { getProviders } = await loadFresh();
+    await getProviders()
+      .llm.forTask("extractStatements")
+      .generateStructured({
+        schema: z.object({ ok: z.boolean() }),
+        schemaName: "t",
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+        effort: "high",
+      });
+    const callArgs = openaiResponsesParse.mock.calls[0]?.[0];
+    expect(callArgs.reasoning).toEqual({ effort: "high" });
   });
 });
 

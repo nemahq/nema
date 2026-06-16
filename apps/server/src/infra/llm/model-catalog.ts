@@ -1,5 +1,6 @@
 // 모델 레지스트리 — task 라우팅이 override 모델 id를 검증·해석하는 단일 출처.
 // 단가·세부 능력은 후속 측정 단계로 미룬다.
+import type { LlmEffort } from "@server/infra/llm/llm-provider";
 import {
   DEFAULT_MINI_MODEL,
   DEFAULT_NANO_MODEL,
@@ -7,6 +8,21 @@ import {
 } from "@server/infra/llm/models";
 
 export type LlmProviderId = "openai" | "anthropic" | "google";
+
+// 프로바이더별로 실제 받는 effort 값. override를 set할 때 모델 프로바이더에 맞는
+// 값인지 여기서 검증해, 안 먹는 값(예: OpenAI에 xhigh)을 set 시점에 거른다.
+const PROVIDER_EFFORTS: Record<LlmProviderId, ReadonlySet<LlmEffort>> = {
+  openai: new Set<LlmEffort>(["minimal", "low", "medium", "high"]),
+  anthropic: new Set<LlmEffort>(["low", "medium", "high", "xhigh", "max"]),
+  google: new Set<LlmEffort>(["minimal", "low", "medium", "high"]),
+};
+
+export function isEffortValidFor(
+  provider: LlmProviderId,
+  effort: LlmEffort,
+): boolean {
+  return PROVIDER_EFFORTS[provider].has(effort);
+}
 
 export interface ModelSpec {
   id: string;
@@ -27,7 +43,7 @@ const CLAUDE_CONTEXT_WINDOW = 200_000;
 const GEMINI_CONTEXT_WINDOW = 1_000_000;
 
 // 알려진 모델 집합. env로 모델 id가 덮였다면(LLM_MODEL_*) 그 id는 여기 없을 수 있고,
-// getModelSpec은 undefined를 돌려준다 — 라우팅 기본 경로(TASK_DEFAULT_TIER→tier)는
+// getModelSpec은 undefined를 돌려준다 — 라우팅 기본 경로(TASK_DEFAULTS→tier)는
 // 카탈로그를 거치지 않으므로 env override가 있어도 기본 동작은 깨지지 않는다.
 // 카탈로그는 "런타임에 명시적으로 갈아끼울 수 있는" 모델의 화이트리스트다.
 export const MODEL_CATALOG: Record<string, ModelEntry> = {
@@ -55,15 +71,16 @@ export const MODEL_CATALOG: Record<string, ModelEntry> = {
     provider: "anthropic",
     contextWindow: CLAUDE_CONTEXT_WINDOW,
   },
-  "gemini-2.5-pro": {
+  // 현행 Gemini 3.x — 만료된 2.5/2.0 대체.
+  "gemini-3.1-pro-preview": {
     provider: "google",
     contextWindow: GEMINI_CONTEXT_WINDOW,
   },
-  "gemini-2.5-flash": {
+  "gemini-3.5-flash": {
     provider: "google",
     contextWindow: GEMINI_CONTEXT_WINDOW,
   },
-  "gemini-2.0-flash": {
+  "gemini-3.1-flash-lite": {
     provider: "google",
     contextWindow: GEMINI_CONTEXT_WINDOW,
   },

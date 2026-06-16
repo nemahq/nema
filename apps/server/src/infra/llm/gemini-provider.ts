@@ -4,7 +4,7 @@ import type {
   GenerateContentConfig,
   GenerateContentResponse,
 } from "@google/genai";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 import { LlmError } from "./llm-error";
 import type {
@@ -15,16 +15,28 @@ import type {
   LlmProvider,
 } from "./llm-provider";
 
+// effort → Gemini 3.x thinking_level(enum). Gemini가 받는 값만 매핑하고 나머지는 무시한다.
+function toThinkingLevel(
+  effort: GenerateTextParams["effort"],
+): ThinkingLevel | undefined {
+  switch (effort) {
+    case "minimal":
+      return ThinkingLevel.MINIMAL;
+    case "low":
+      return ThinkingLevel.LOW;
+    case "medium":
+      return ThinkingLevel.MEDIUM;
+    case "high":
+      return ThinkingLevel.HIGH;
+    default:
+      return undefined;
+  }
+}
+
+// Vertex vs AI Studio 선택은 providers.ts(getGeminiClient)가 정해 client로 주입한다.
+// 어댑터는 클라이언트 종류를 모른 채 동일하게 호출만 한다.
 export type GeminiProviderConfig =
   | { apiKey: string; model: string; timeout?: number }
-  // TODO: Vertex 경로는 아직 env 배선이 없어 미검증 — 구조만 남겨두고 실제 자격증명·라우팅 연결은 후속.
-  | {
-      vertexai: true;
-      project: string;
-      location: string;
-      model: string;
-      timeout?: number;
-    }
   | { client: GoogleGenAI; model: string };
 
 export const DEFAULT_TIMEOUT_MS = 30_000;
@@ -57,14 +69,6 @@ export class GeminiProvider implements LlmProvider {
   constructor(config: GeminiProviderConfig) {
     if ("client" in config) {
       this.client = config.client;
-    } else if ("vertexai" in config) {
-      // TODO: Vertex 경로는 미검증. 현재는 형태만 유지하고 실제 사용은 후속에서 연다.
-      this.client = new GoogleGenAI({
-        vertexai: true,
-        project: config.project,
-        location: config.location,
-        httpOptions: { timeout: config.timeout ?? DEFAULT_TIMEOUT_MS },
-      });
     } else {
       if (!config.apiKey) {
         throw new LlmError("auth", "GEMINI_API_KEY is required");
@@ -157,14 +161,15 @@ export class GeminiProvider implements LlmProvider {
   }
 
   private toConfig(params: GenerateTextParams): GenerateContentConfig {
+    const thinkingLevel = toThinkingLevel(params.effort);
     return {
       systemInstruction: params.systemPrompt,
       temperature: params.temperature,
       maxOutputTokens: GEMINI_DEFAULT_MAX_OUTPUT_TOKENS,
       abortSignal: params.signal,
       httpOptions: this.httpOptions(params),
-      // computeLevel: Gemini는 reasoning_effort 대응이 없어 일단 무시한다.
-      // thinking budget 매핑은 후속 별건으로 미룬다.
+      // effort가 있으면 thinking_level로 사고량을 조절한다(3.x). 없으면 미설정(동작 불변).
+      ...(thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}),
     };
   }
 

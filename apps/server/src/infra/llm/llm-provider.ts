@@ -1,4 +1,22 @@
-import type { z } from "zod";
+import { z } from "zod";
+
+// effort 어휘 단일 출처 — 전 프로바이더 네이티브 값의 합집합. dev-router 런타임 검증도
+// 이 스키마를 공유한다(값을 한쪽에만 늘려 검증이 조용히 어긋나는 걸 막는다).
+export const LLM_EFFORT_SCHEMA = z.enum([
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+]);
+export type LlmEffort = z.infer<typeof LLM_EFFORT_SCHEMA>;
+
+// 각 프로바이더가 실제 받는 부분집합 — 어댑터 가드·set-time 검증이 이걸로 좁힌다.
+// (OpenAI reasoning.effort / Claude adaptive thinking effort / Gemini thinking_level)
+export type OpenAiEffort = "minimal" | "low" | "medium" | "high";
+export type AnthropicEffort = "low" | "medium" | "high" | "xhigh" | "max";
+export type GeminiEffort = "minimal" | "low" | "medium" | "high";
 
 // "system"은 systemPrompt 파라미터로 별도 전달하므로 role에서 제외
 export interface LlmMessage {
@@ -12,11 +30,11 @@ export interface LlmCallParams {
   temperature?: number;
   signal?: AbortSignal;
   /**
-   * 모델의 사고/연산 깊이 힌트. 규칙 적용에 가까운 호출은 낮춰 지연·변동을 줄인다.
-   * 현재 OpenAI 어댑터만 reasoning_effort로 honor하고, Claude·Gemini는 받되 무시한다
-   * (extended thinking / thinking budget 매핑은 후속 별건으로 미룸).
+   * 모델의 사고/연산 깊이. task→모델 바인딩(task-routing)에서 그 모델 프로바이더의
+   * 네이티브 값으로 정해져 라우터가 주입한다 — 제품 호출부는 forTask만 보면 된다.
+   * 각 어댑터는 자기 프로바이더가 받는 값만 적용하고 그 외 값은 무시한다.
    */
-  computeLevel?: "minimal" | "low" | "medium" | "high";
+  effort?: LlmEffort;
   /**
    * 시도 단위 타임아웃 — 미지정 시 provider(클라이언트) 기본값.
    * 주의: SDK가 타임아웃을 자동 재시도하므로(기본 2회) 호출 전체의 상한이 아니다.

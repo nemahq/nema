@@ -71,14 +71,16 @@ const EXTRACTION_CONCURRENCY = 3;
 // 지연으로 싸고, 낮게 잡는 오차는 정상 작업 폐기로 비싸다.
 // lease(150초, extraction_lease_covers_slow_provider 마이그레이션)가 이 상한을
 // 덮는다. eval 러너가 같은 값을 미러링한다.
-export const EXTRACTION_COMPUTE_LEVEL = "low" as const;
+// 라이브 경로의 effort는 task 라우팅(extractStatements) 바인딩이 정한다. 이 상수는
+// eval 러너가 같은 값을 직접 재현하기 위한 미러다.
+export const EXTRACTION_EFFORT = "low" as const;
 export const EXTRACTION_TIMEOUT_MS = 120_000;
 
 // --- ③ 잇기(linking) ---
 const LINKING_CONCURRENCY = 3;
 // 판정도 standard 티어 LLM 1콜이라 추출과 같은 상한·effort를 미러한다.
 // lease(150초, relation_linking_rpcs)가 이 타임아웃을 덮는다.
-export const LINKING_COMPUTE_LEVEL = "low" as const;
+export const LINKING_EFFORT = "low" as const;
 export const LINKING_TIMEOUT_MS = 120_000;
 // 후보 좁히기 ⓐ(벡터 근접)의 보수적 기본값. 전수 비교는 대량 유입에서 즉사하므로
 // 좁게 깐다 — 놓친 관계의 벡터 거리 분포는 dogfooding 보정이 데이터로 푼다
@@ -101,7 +103,7 @@ type Phase = "extraction" | "embedding" | "linking";
 interface WorkerDeps {
   supabase: TypedSupabaseClient;
   // 추출·관계 판정이 서로 다른 모델을 쓸 수 있게 단일 llm 대신 task 라우터를 받는다.
-  // 워커는 자기 두 콜(extraction/relationJudgment)을 task로 해석해 모델을 고른다.
+  // 워커는 자기 두 콜(extractStatements/judgeRelations)을 task로 해석해 모델을 고른다.
   forTask: (task: LlmTask) => LlmProvider;
   embedding: EmbeddingProvider;
   vectorStore: VectorStore;
@@ -286,7 +288,7 @@ async function processSource(
   deps: WorkerDeps,
 ): Promise<void> {
   const extracted = await extractSourceStatements(
-    deps.forTask("extraction"),
+    deps.forTask("extractStatements"),
     source.body,
   );
   const statements = normalizeStatements(extracted);
@@ -378,7 +380,6 @@ function callExtraction(llm: LlmProvider, chunk: ExtractionChunk) {
         }),
       },
     ],
-    computeLevel: EXTRACTION_COMPUTE_LEVEL,
     timeoutMs: EXTRACTION_TIMEOUT_MS,
     maxRetries: 0,
   });
@@ -697,7 +698,7 @@ async function linkSubBatch(params: {
 
   const message = buildRelationJudgmentMessage(newLabeled, existingLabeled);
   const output = await limitLlmCall(() =>
-    callJudgmentWithRetry(deps.forTask("relationJudgment"), message),
+    callJudgmentWithRetry(deps.forTask("judgeRelations"), message),
   );
 
   return gateProposals({
@@ -866,7 +867,6 @@ function callJudgment(llm: LlmProvider, message: string) {
     schemaName: "relation_judgment",
     systemPrompt: RELATION_JUDGMENT_SYSTEM_PROMPT,
     messages: [{ role: "user", content: message }],
-    computeLevel: LINKING_COMPUTE_LEVEL,
     timeoutMs: LINKING_TIMEOUT_MS,
     maxRetries: 0,
   });

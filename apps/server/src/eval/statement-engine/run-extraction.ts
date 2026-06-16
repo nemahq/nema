@@ -23,7 +23,7 @@ import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
 import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
-  EXTRACTION_COMPUTE_LEVEL,
+  EXTRACTION_EFFORT,
   EXTRACTION_TIMEOUT_MS as WORKER_EXTRACTION_TIMEOUT_MS,
 } from "@server/infra/statement-sync/worker";
 import {
@@ -91,7 +91,7 @@ async function extract(
             { role: "user", content: buildStatementExtractionMessage(body) },
           ],
           // 제품(worker)과 동일 설정 — 평가가 제품과 같은 경로를 본다
-          computeLevel: EXTRACTION_COMPUTE_LEVEL,
+          effort: EXTRACTION_EFFORT,
           timeoutMs: WORKER_EXTRACTION_TIMEOUT_MS,
           maxRetries: 0,
         }),

@@ -2,11 +2,12 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { getEnv } from "@server/env";
+import { LLM_EFFORT_SCHEMA } from "@server/infra/llm/llm-provider";
 import { listModelSpecs } from "@server/infra/llm/model-catalog";
-import type { LlmTask } from "@server/infra/llm/task-routing";
 import {
   clearTaskOverride,
   getAllTaskOverrides,
+  LLM_TASK_SCHEMA,
 } from "@server/infra/llm/task-routing";
 import {
   getLlmPreset,
@@ -20,14 +21,6 @@ const llmPresetSchema = z.enum([
   "all-nano",
   "real-tiers",
 ]) satisfies z.ZodType<LlmPreset>;
-
-const llmTaskSchema = z.enum([
-  "drafting",
-  "draftIntent",
-  "sessionTitle",
-  "extraction",
-  "relationJudgment",
-]) satisfies z.ZodType<LlmTask>;
 
 function assertDev(): void {
   if (getEnv().APP_ENV === "production") {
@@ -55,14 +48,24 @@ export const devRouter = router({
     };
   }),
   setTaskModel: protectedProcedure
-    .input(z.object({ task: llmTaskSchema, modelId: z.string().min(1) }))
+    .input(
+      z.object({
+        task: LLM_TASK_SCHEMA,
+        modelId: z.string().min(1),
+        effort: LLM_EFFORT_SCHEMA.optional(),
+      }),
+    )
     .mutation(({ input }) => {
       assertDev();
-      setTaskModel(input.task, input.modelId);
+      setTaskModel({
+        task: input.task,
+        modelId: input.modelId,
+        effort: input.effort,
+      });
       return getAllTaskOverrides();
     }),
   clearTaskModel: protectedProcedure
-    .input(z.object({ task: llmTaskSchema }))
+    .input(z.object({ task: LLM_TASK_SCHEMA }))
     .mutation(({ input }) => {
       assertDev();
       clearTaskOverride(input.task);

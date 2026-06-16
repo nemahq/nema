@@ -27,7 +27,7 @@ import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
 import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
   gateProposals,
-  LINKING_COMPUTE_LEVEL,
+  LINKING_EFFORT,
   LINKING_TIMEOUT_MS,
 } from "@server/infra/statement-sync/worker";
 import type {
@@ -95,7 +95,7 @@ async function judge(
           systemPrompt: RELATION_JUDGMENT_SYSTEM_PROMPT,
           messages: [{ role: "user", content: message }],
           // 제품(worker ③단계)과 동일 설정 — 평가가 같은 경로를 본다
-          computeLevel: LINKING_COMPUTE_LEVEL,
+          effort: LINKING_EFFORT,
           timeoutMs: LINKING_TIMEOUT_MS,
           maxRetries: 0,
         }),
