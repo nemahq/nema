@@ -75,7 +75,7 @@ describe("providers — override resolution wiring", () => {
     const { getProviders, setTaskModel, GeminiProvider } = await loadFresh();
 
     const providers = getProviders();
-    setTaskModel({ task: "generateDraft", modelId: "gemini-2.5-pro" });
+    setTaskModel({ task: "generateDraft", modelId: "gemini-3.1-pro-preview" });
 
     expect(providers.llm.forTask("generateDraft")).toBeInstanceOf(
       GeminiProvider,
@@ -103,7 +103,10 @@ describe("providers — override resolution wiring", () => {
     expect(
       causeCodeOf(
         () =>
-          setTaskModel({ task: "generateDraft", modelId: "gemini-2.5-pro" }),
+          setTaskModel({
+            task: "generateDraft",
+            modelId: "gemini-3.1-pro-preview",
+          }),
         LlmError,
       ),
     ).toBe("auth");

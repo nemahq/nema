@@ -176,10 +176,20 @@ function getGeminiClient(): GoogleGenAI {
     return sharedGeminiClient;
   }
   const env = getEnv();
+  // GEMINI_VERTEX_PROJECT가 있으면 Vertex(ADC 인증, GCP 크레딧) 경로, 없으면 AI Studio(apiKey).
+  // Vertex는 키 파일 대신 ADC를 자동으로 쓴다(로컬 gcloud / 배포 환경 워크로드 자격증명).
+  if (env.GEMINI_VERTEX_PROJECT) {
+    sharedGeminiClient = new GoogleGenAI({
+      vertexai: true,
+      project: env.GEMINI_VERTEX_PROJECT,
+      location: env.GEMINI_VERTEX_LOCATION ?? "global",
+    });
+    return sharedGeminiClient;
+  }
   if (!env.GEMINI_API_KEY) {
     throw new LlmError(
       "auth",
-      "GEMINI_API_KEY is required to use a Google model",
+      "GEMINI_API_KEY or GEMINI_VERTEX_PROJECT is required to use a Google model",
     );
   }
   sharedGeminiClient = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });

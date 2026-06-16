@@ -16,7 +16,7 @@ import type {
 } from "./llm-provider";
 
 // effort → Gemini 3.x thinking_level(enum). Gemini가 받는 값만 매핑하고 나머지는 무시한다.
-// 주의: 라이브 미검증(작동 키·Vertex 미설정) — 모델 id 3.x 갱신과 함께 후속 검증 필요.
+// gemini-3.1-pro-preview에 Vertex(global)로 thinking_level + 구조화출력 라이브 검증 완료.
 function toThinkingLevel(
   effort: GenerateTextParams["effort"],
 ): ThinkingLevel | undefined {
@@ -34,16 +34,10 @@ function toThinkingLevel(
   }
 }
 
+// Vertex vs AI Studio 선택은 providers.ts(getGeminiClient)가 정해 client로 주입한다.
+// 어댑터는 클라이언트 종류를 모른 채 동일하게 호출만 한다.
 export type GeminiProviderConfig =
   | { apiKey: string; model: string; timeout?: number }
-  // TODO: Vertex 경로는 아직 env 배선이 없어 미검증 — 구조만 남겨두고 실제 자격증명·라우팅 연결은 후속.
-  | {
-      vertexai: true;
-      project: string;
-      location: string;
-      model: string;
-      timeout?: number;
-    }
   | { client: GoogleGenAI; model: string };
 
 export const DEFAULT_TIMEOUT_MS = 30_000;
@@ -76,14 +70,6 @@ export class GeminiProvider implements LlmProvider {
   constructor(config: GeminiProviderConfig) {
     if ("client" in config) {
       this.client = config.client;
-    } else if ("vertexai" in config) {
-      // TODO: Vertex 경로는 미검증. 현재는 형태만 유지하고 실제 사용은 후속에서 연다.
-      this.client = new GoogleGenAI({
-        vertexai: true,
-        project: config.project,
-        location: config.location,
-        httpOptions: { timeout: config.timeout ?? DEFAULT_TIMEOUT_MS },
-      });
     } else {
       if (!config.apiKey) {
         throw new LlmError("auth", "GEMINI_API_KEY is required");

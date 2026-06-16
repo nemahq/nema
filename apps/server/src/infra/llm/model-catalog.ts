@@ -71,15 +71,16 @@ export const MODEL_CATALOG: Record<string, ModelEntry> = {
     provider: "anthropic",
     contextWindow: CLAUDE_CONTEXT_WINDOW,
   },
-  "gemini-2.5-pro": {
+  // Vertex(global)에서 라이브 검증한 3.x. 2.5/2.0은 만료돼 제거.
+  "gemini-3.1-pro-preview": {
     provider: "google",
     contextWindow: GEMINI_CONTEXT_WINDOW,
   },
-  "gemini-2.5-flash": {
+  "gemini-3.5-flash": {
     provider: "google",
     contextWindow: GEMINI_CONTEXT_WINDOW,
   },
-  "gemini-2.0-flash": {
+  "gemini-3.1-flash-lite": {
     provider: "google",
     contextWindow: GEMINI_CONTEXT_WINDOW,
   },
