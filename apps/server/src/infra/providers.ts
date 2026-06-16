@@ -28,8 +28,9 @@ import type { VectorStore } from "@server/infra/vector";
 import { createQdrantClient, createQdrantStore } from "@server/infra/vector";
 
 // tier 시스템(standard/mini/nano) 위에 task 라우팅을 얹은 LLM 인터페이스.
-// tier는 preset 내부 교체용으로 그대로 유지하고, 호출부는 forTask로 task별 모델을 받는다.
-export type LlmRouter = TieredLlm & {
+// tier는 라우터 내부 구현 디테일이라 밖으로 내보내지 않는다 — 호출부가 .standard로
+// task 라우팅(+런타임 스위칭)을 우회하는 길을 막아, 모든 호출이 forTask를 거치게 한다.
+export type LlmRouter = {
   forTask(task: LlmTask): LlmProvider;
 };
 
@@ -44,7 +45,9 @@ export interface Providers {
 export type LlmPreset = "all-nano" | "real-tiers";
 
 let cached: Providers | undefined;
-let originalLlm: LlmRouter | undefined;
+// preset 교체가 all-nano로 되돌릴 원본 tier 묶음. tier를 router 밖에서 읽지 않도록
+// router가 아니라 TieredLlm으로 보관한다(비프로덕션에서만 채워진다).
+let originalTiers: TieredLlm | undefined;
 let currentPreset: LlmPreset = "all-nano";
 let resolvedModelNames:
   | { standard: string; mini: string; nano: string }
@@ -66,15 +69,12 @@ let sharedGeminiClient: GoogleGenAI | undefined;
 //    기본 경로는 활성 preset을 자동으로 따른다(= 동작 불변).
 function toRouter(tiers: TieredLlm): LlmRouter {
   return {
-    standard: tiers.standard,
-    mini: tiers.mini,
-    nano: tiers.nano,
     forTask(task: LlmTask): LlmProvider {
       const overrideModelId = getTaskOverride(task);
       if (overrideModelId) {
         return resolveOverrideProvider(overrideModelId);
       }
-      return this[TASK_DEFAULT_TIER[task]];
+      return tiers[TASK_DEFAULT_TIER[task]];
     },
   };
 }
@@ -187,7 +187,7 @@ export function getProviders(): Providers {
 
   // prod 전용 잠금 — 프로덕션에서 모델 프리셋 교체가 열리면 비용·보안 사고로 이어진다
   if (env.APP_ENV !== "production") {
-    originalLlm = cached.llm;
+    originalTiers = bundle.tiers;
     resolvedModelNames = {
       standard: env.LLM_MODEL_STANDARD ?? DEFAULT_STANDARD_MODEL,
       mini: env.LLM_MODEL_MINI ?? DEFAULT_MINI_MODEL,
@@ -224,25 +224,26 @@ export function setLlmPreset(preset: LlmPreset): void {
   if (env.APP_ENV === "production") {
     throw new Error("LLM preset override is not available in production");
   }
-  if (!cached || !originalLlm) {
+  if (!cached || !originalTiers) {
     throw new Error("Providers not initialized");
   }
   applyLlmPreset(preset);
 }
 
 function applyLlmPreset(preset: LlmPreset): void {
-  if (!cached || !originalLlm) {
+  if (!cached || !originalTiers) {
     throw new Error("applyLlmPreset called before providers initialized");
   }
   currentPreset = preset;
-  cached.llm =
+  const tiers: TieredLlm =
     preset === "all-nano"
-      ? toRouter({
-          standard: originalLlm.nano,
-          mini: originalLlm.nano,
-          nano: originalLlm.nano,
-        })
-      : originalLlm;
+      ? {
+          standard: originalTiers.nano,
+          mini: originalTiers.nano,
+          nano: originalTiers.nano,
+        }
+      : originalTiers;
+  cached.llm = toRouter(tiers);
 }
 
 // task별 런타임 모델 스위칭 — preset과 같은 prod 잠금을 공유한다.

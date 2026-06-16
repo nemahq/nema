@@ -298,7 +298,7 @@ async function runPipeline(args: {
     supabase: userClient,
     // 검색은 vectorStore·embedding만 쓴다 — llm은 타입 충족용(forTask는 standard로 미러).
     providers: {
-      llm: { ...llm, forTask: () => llm.standard },
+      llm: { forTask: () => llm.standard },
       embedding,
       vectorStore,
     },
