@@ -45,8 +45,7 @@ export interface Providers {
 export type LlmPreset = "all-nano" | "real-tiers";
 
 let cached: Providers | undefined;
-// preset 교체가 all-nano로 되돌릴 원본 tier 묶음. tier를 router 밖에서 읽지 않도록
-// router가 아니라 TieredLlm으로 보관한다(비프로덕션에서만 채워진다).
+// preset 교체가 되돌릴 원본 tier. router가 tier를 노출하지 않으므로 TieredLlm으로 보관한다.
 let originalTiers: TieredLlm | undefined;
 let currentPreset: LlmPreset = "all-nano";
 let resolvedModelNames:

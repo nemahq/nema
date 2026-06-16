@@ -6,8 +6,8 @@ import { z } from "zod";
 import { LlmError } from "@server/infra/llm/llm-error";
 import { getModelSpec } from "@server/infra/llm/model-catalog";
 
-// task 목록의 단일 출처 — 타입(LlmTask)도, 런타임 입력 검증(dev-router)도 모두 여기서 파생한다.
-// 둘로 나눠 적으면 한쪽만 늘렸을 때 런타임 검증이 조용히 어긋나므로 enum 하나로 묶는다.
+// task 목록 단일 출처 — dev-router의 런타임 입력 검증도 이 enum을 공유한다.
+// 나눠 적으면 새 task를 한쪽만 추가했을 때 런타임 검증이 조용히 어긋난다.
 export const LLM_TASK_SCHEMA = z.enum([
   "drafting",
   "draftIntent",
