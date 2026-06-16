@@ -69,8 +69,13 @@ function ReviewPanelContent() {
     setResults(nextResults);
     setMarkings(remaining);
     setSummary({ ok, fail });
-    await invalidate();
-    setSubmitting(false);
+
+    // 무효화가 실패해도 패널이 영구 잠기지 않도록 리셋을 분리한다.
+    try {
+      await invalidate();
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const markedCount = markings.size;
