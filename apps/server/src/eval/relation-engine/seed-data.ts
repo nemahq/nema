@@ -576,4 +576,85 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
     golden: [],
     note: "s1은 '바꿀 계획'인 할 일 — 지금은 10MB 결정과 둘 다 참(아직 안 바꿈). 현재 충돌 아님(기껏해야 미래 replaces 씨앗). 충돌로 띄우면 FP. s2는 '업로드' 토픽 형제 — 무관계. 측정 #2 v1에서 모델이 8/8 충돌을 안 냄 — claim↔todo 양성 골든이 과한 주장이라 음성 함정으로 보정",
   },
+  {
+    id: "conflicts-fact-clash-dogfood",
+    description:
+      "도그푸딩 충돌 미검출 재현: 같은 사실(시장에 강자가 있나)에 어긋난 두 주장을 conflicts로 잡나 — 부정어 없는 사실 모순",
+    traps: ["false-conflict"],
+    statements: [
+      {
+        id: "e1",
+        role: "existing",
+        type: "claim",
+        confidence: "guess",
+        content: "1인가구 시장은 넓은데 아직 뚜렷한 강자가 보이지 않는다",
+      },
+      {
+        id: "s1",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "1인가구 쪽은 두잇이 이미 자금과 팀을 갖추고 선점해 있다",
+      },
+      {
+        id: "s2",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "그래서 1인가구 생활관리는 후보에서 접는다",
+      },
+    ],
+    golden: [
+      {
+        from: "s1",
+        to: "e1",
+        type: "conflicts",
+        note: "강자 없다(e1) vs 두잇이 선점(s1) — 같은 사실에 양립 불가, 교대 선언 없음. 부정어 없이도 모순",
+      },
+      {
+        from: "s1",
+        to: "s2",
+        type: "supports",
+        note: "'그래서'로 인과 명시 — 두잇 선점(s1)이 접는 결정(s2)을 받친다",
+      },
+    ],
+    note: "핵심은 conflicts 재현(recall): 후보로 함께 주어지면 판정은 s1↔e1 충돌을 잡는다(미검출은 retrieval 단계 문제). s1→s2는 '그래서' 인과가 박힌 진짜 supports라 골든에 포함",
+  },
+  {
+    id: "invented-supports-todo-unrelated-dogfood",
+    description:
+      "도그푸딩 supports 과잉 재현: 할 일을 supports의 to로 잇거나(to는 claim이어야), 토픽만 겹치는 무관 사실을 근거로 지어내나",
+    traps: ["invented-supports", "mere-neighbor"],
+    statements: [
+      {
+        id: "s1",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "N잡은 공백이 분명해 검증 난이도가 낮다",
+      },
+      {
+        id: "e1",
+        role: "existing",
+        type: "todo",
+        content: "N잡과 건강 중 무엇을 먼저 검증할지 정해야 한다",
+      },
+      {
+        id: "s2",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "N잡은 정산 데이터를 매달 보내는 행동이 습관으로 자리잡는다",
+      },
+      {
+        id: "e2",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "플랫폼마다 정산 주기와 세금 기준이 달라 수입 파악이 번거롭다",
+      },
+    ],
+    golden: [],
+    note: "s1→e1을 supports로 잇는 게 1순위 FP — e1은 todo라 supports의 to가 될 수 없다(닫으려면 resolves인데 s1은 답이 아님). s2→e2는 '정산' 토픽만 겹치는 무관 쌍(습관 vs 번거로움) — 근거 아님. 둘 다 침묵해야",
+  },
 ];

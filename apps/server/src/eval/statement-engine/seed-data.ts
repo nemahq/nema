@@ -425,6 +425,51 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
     goldenStatements: [],
     note: "기대 추출 수 = 0. '새 의자 편하다' 같은 감상을 claim으로 받을지가 노이즈 경계의 실측 지점 — 골든 0개 자체가 사람 검토 대상",
   },
+  {
+    id: "weak-hedge-1",
+    description:
+      "도그푸딩 확신 차등 실패 재현: 약한 추측 표지('~해 보인다', '여지가 있다', '~고 본다')를 guess로 가르나 — 하니스에서 전부 certain으로 굳던 유형",
+    axes: ["confidence-mix"],
+    input:
+      "후보를 보면, N잡은 매달 반복되는 일이라 습관이 붙기 쉬워 보인다. 건강 쪽은 웨어러블로 데이터가 자동으로 쌓이는 흐름이 있어 가능성이 있어 보인다. 예체능은 단독으로는 시장이 작지만 프리랜서나 1인가구로 넓혀갈 여지가 있다. 결론적으로 N잡이 가장 앞선다고 본다.",
+    goldenStatements: [
+      {
+        id: "weak-hedge-1-s1",
+        content: "N잡은 매달 반복되는 일이라 습관이 붙기 쉽다",
+        type: "claim",
+        confidence: "guess",
+        axes: ["confidence-mix"],
+        needsHumanReview: false,
+      },
+      {
+        id: "weak-hedge-1-s2",
+        content: "건강은 웨어러블로 데이터가 자동으로 쌓여 가능성이 있다",
+        type: "claim",
+        confidence: "guess",
+        axes: ["confidence-mix"],
+        needsHumanReview: false,
+      },
+      {
+        id: "weak-hedge-1-s3",
+        content: "예체능은 프리랜서나 1인가구로 넓혀갈 여지가 있다",
+        type: "claim",
+        confidence: "guess",
+        axes: ["confidence-mix"],
+        needsHumanReview: false,
+      },
+      {
+        id: "weak-hedge-1-s4",
+        content: "N잡이 가장 앞선 후보다",
+        type: "claim",
+        confidence: "guess",
+        axes: ["confidence-mix"],
+        needsHumanReview: false,
+        reviewNote:
+          "'가장 앞선다고 본다'는 단정형에 가깝지만 검증 전 판단이라 guess로 둔다 — 경계 사례",
+      },
+    ],
+    note: "네 진술 모두 약한 추측 표지를 단 guess. 추출이 certain으로 굳히면 confidence 정확도가 떨어진다 — 하니스에서 본 실패의 격리 재현",
+  },
 ];
 
 // ---------------------------------------------------------------------------
