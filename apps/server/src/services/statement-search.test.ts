@@ -326,6 +326,45 @@ describe("searchStatements", () => {
       "second",
     ]);
   });
+
+  it("줄기 범위(topicIds)를 주면 주제 → 원본 → 진술로 좁혀 검색에 한정한다", async () => {
+    const search = vi.fn().mockResolvedValue([]);
+
+    await searchStatements({
+      supabase: supabaseStub({
+        space_members: [queryStub([{ space_id: "space-1" }])],
+        source_topics: [queryStub([{ source_id: "src-1" }])],
+        statement_sources: [
+          queryStub([{ statement_id: "s1" }, { statement_id: "s2" }]),
+        ],
+      }),
+      providers: providersStub(search),
+      query: "질문",
+      topicIds: ["topic-1"],
+    });
+
+    expect(search).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ statementIds: ["s1", "s2"] }),
+    );
+  });
+
+  it("줄기에 속한 진술이 없으면 검색 없이 빈 결과", async () => {
+    const search = vi.fn();
+
+    const result = await searchStatements({
+      supabase: supabaseStub({
+        space_members: [queryStub([{ space_id: "space-1" }])],
+        source_topics: [queryStub([])],
+      }),
+      providers: providersStub(search),
+      query: "질문",
+      topicIds: ["topic-1"],
+    });
+
+    expect(result).toEqual({ groups: [] });
+    expect(search).not.toHaveBeenCalled();
+  });
 });
 
 // 표식 방향 — 잘못되면 "지난 것"이 엉뚱한 진술에 붙는다 (relation-design §8).

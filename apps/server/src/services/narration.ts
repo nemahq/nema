@@ -39,7 +39,10 @@ export async function* handleNarrationStream(args: {
 }
 
 // 근거 묶음을 LLM 입력으로 직렬화한다. 진술마다 id를 노출해 산문이 [s:<id>] 마커로 가리키게 한다.
-function buildNarrationUserMessage(query: string, evidence: Evidence): string {
+export function buildNarrationUserMessage(
+  query: string,
+  evidence: Evidence,
+): string {
   const seen = new Set<string>();
   const found: string[] = [];
   for (const group of evidence.groups) {
