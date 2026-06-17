@@ -62,7 +62,7 @@ nema는 사람이 맥락("왜")을 쌓아 두고 다시 꺼내 쓰는 기억 도
 **인증 (Supabase OAuth)**
 - 인증은 OAuth로 한다. 직접 만드는 개인 토큰(PAT) 방식은 쓰지 않는다(근거는 §3).
 - OAuth는 사용자가 브라우저로 로그인하면 시스템이 토큰을 발급·관리해 주는 표준 방식이다. Supabase가 2025년 11월에 공개한 OAuth 서버 기능이 MCP 규약을 그대로 만족한다. 토큰 발급은 Supabase가 맡고, 우리 MCP 서버는 받은 토큰이 유효한지 검증만 한다(이 검증은 기존 백엔드가 이미 한다).
-- 아무 AI나 자동 등록되지 않도록, 우리 클라이언트를 미리 등록해 둔다(자동 등록 기능은 끈다). 또한 staging과 production은 클라이언트를 따로 둔다.
+- staging에서는 Dynamic Client Registration(DCR)을 켜서 호스트(Claude Code 등)가 자기를 자동 등록하게 둔다. DCR은 원격 MCP의 표준 등록 경로이고, 단일 사용자 staging에서는 노출 위험이 낮다. production은 그 단계에서 따로 정한다(§6).
 - `openid` 항목(로그인한 사람의 신원 정보를 담은 별도 토큰)은 요청하지 않는다. 우리에게 필요한 것은 접근용 토큰뿐이고, 그 토큰은 기존 검증 경로(서버가 Supabase에 토큰 유효성을 물어보는 `auth.getUser` 호출)가 서명 방식과 무관하게 그대로 받아 주므로, production의 기존 인증을 건드리지 않는다.
 
 **구현 도구**
@@ -126,7 +126,7 @@ Claude Code (MCP를 호출하는 AI)
 
 **인프라 (한 번 세우면 이후 도구는 기존 배포 흐름을 그대로 탐)**
 - Railway 서비스 둘: staging(병합 시 자동 배포) + production(태그 배포).
-- Supabase 설정: staging·production 각각 OAuth 서버를 켜고, 클라이언트를 미리 등록하고, 로그인 후 돌아올 주소(redirect URI)를 등록한다.
+- Supabase 설정: staging·production 각각 OAuth 서버를 켜고, staging은 DCR을 허용해 호스트가 자기를 등록하게 둔다. redirect URI는 호스트가 등록 시 함께 제출한다.
 
 **고치지 않는 것**
 - Track 0 계약 전부(테이블, 함수, tRPC). 기존 엔진 전부. `apps/server`의 인증 로직(그대로 재사용).
@@ -137,7 +137,7 @@ Claude Code (MCP를 호출하는 AI)
 
 **공개 주소가 처음부터 인터넷에 열린다**
 - 읽기 전용이지만, 앞단을 OAuth가 막고(로그인한 사용자만 통과) RLS가 그 사용자 데이터로만 좁힌다. 따라서 읽기 전용 공개는 받아들일 수 있다.
-- 아무 AI나 자동 등록되지 않도록, 우리 클라이언트만 미리 등록해 둔다.
+- 실제 방어선은 등록 제한이 아니라 동의 화면(사용자가 직접 승인)과 redirect URI 검증이다. staging은 DCR을 켜되 단일 사용자라 노출이 낮고, production으로 갈 때 redirect 패턴 제한·rate limit, 또는 CIMD 같은 가드를 더한다.
 
 **production의 Supabase OAuth가 아직 공개 베타다**
 - Supabase가 production 사용을 공식적으로 허용했다.
@@ -154,7 +154,7 @@ Claude Code (MCP를 호출하는 AI)
 
 1. `apps/mcp` 기본 골격(공식 라이브러리 + Streamable HTTP) 만들고 연결 확인.
 2. tRPC 클라이언트 생성 함수(`AppRouter` 타입, 토큰 실어 보내기).
-3. staging Supabase OAuth 서버 켜기 + 검증 메타데이터 공개 + 클라이언트 미리 등록.
+3. staging Supabase OAuth 서버 켜기(DCR 허용) + 검증 메타데이터 공개.
 4. `list_topics` 도구를 `topic.list`에 연결.
 5. 로컬에서 Claude Code 연결: 로그인 -> `list_topics` 호출 -> staging의 내 주제가 나오는지 확인.
 6. staging 병합(자동 배포) -> 태그 배포로 production 띄우기 + production OAuth 설정.

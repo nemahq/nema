@@ -34,6 +34,11 @@
     "expand_sidebar": "Expand sidebar",
     "toggle_sidebar": "Toggle sidebar"
   },
+  "oauth": {
+    "approve": "Allow",
+    "consent_request": "Allow {client} to access your nema account?",
+    "deny": "Deny"
+  },
   "session": {
     "copied": "Copied",
     "copy_code": "Copy code",

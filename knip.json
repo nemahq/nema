@@ -21,6 +21,7 @@
       "project": ["src/**/*.ts"],
       "ignore": ["src/infra/**"]
     },
+    "apps/mcp": {},
     "packages/shared": {},
     "packages/weave": {
       "entry": [

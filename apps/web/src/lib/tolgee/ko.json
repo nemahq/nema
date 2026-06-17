@@ -34,6 +34,11 @@
     "expand_sidebar": "사이드바 펼치기",
     "toggle_sidebar": "사이드바 토글"
   },
+  "oauth": {
+    "approve": "허용",
+    "consent_request": "{client}에 nema 계정 접근을 허용하시겠어요?",
+    "deny": "거부"
+  },
   "session": {
     "copied": "복사됨",
     "copy_code": "코드 복사",
