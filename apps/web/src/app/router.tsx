@@ -22,6 +22,7 @@ import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback"
 import { requireAuth, requireGuest } from "@web/features/auth";
 import { HarnessPage } from "@web/features/dev-harness";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
+import { setStorage } from "@web/utils/localStorage";
 
 import { App } from "./App";
 
@@ -59,10 +60,17 @@ const oauthConsentRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/oauth/consent",
   validateSearch: z.object({
-    authorization_id: z.string(),
+    authorization_id: z.string().optional(),
   }),
   component: OAuthConsentPage,
-  beforeLoad: ({ location }) => requireAuth(location.href),
+  beforeLoad: ({ search, location }) => {
+    // 구글 등 OAuth 공급자 왕복에서 URL 쿼리가 깎여 authorization_id가 사라질 수
+    // 있어, 진입 시점에 저장해 두고 페이지가 복구하게 한다.
+    if (search.authorization_id) {
+      setStorage("oauthAuthorizationId", search.authorization_id);
+    }
+    return requireAuth(location.href);
+  },
 });
 
 // -- 인증 라우트 --

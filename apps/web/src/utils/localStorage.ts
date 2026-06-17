@@ -20,6 +20,8 @@ type StorageMap = {
   chatMode: ChatMode;
   openRetrievalTabs: JsonRecord;
   splitLayout: JsonRecord;
+  // OAuth 공급자 왕복에서 URL 쿼리가 깎여도 복구하도록 authorization_id를 잠시 보관.
+  oauthAuthorizationId: string;
 };
 
 const isValid: {
@@ -32,6 +34,7 @@ const isValid: {
   chatMode: isChatMode,
   openRetrievalTabs: isJsonRecord,
   splitLayout: isJsonRecord,
+  oauthAuthorizationId: (v): v is string => v.length > 0,
 };
 
 export function getStorage<K extends keyof StorageMap>(
@@ -54,6 +57,14 @@ export function setStorage<K extends keyof StorageMap>(
 ): void {
   try {
     localStorage.setItem(key, value);
+  } catch {
+    // 의도적 무시
+  }
+}
+
+export function removeStorage<K extends keyof StorageMap>(key: K): void {
+  try {
+    localStorage.removeItem(key);
   } catch {
     // 의도적 무시
   }
