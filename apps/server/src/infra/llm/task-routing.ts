@@ -20,6 +20,7 @@ export const LLM_TASK_SCHEMA = z.enum([
   "extractStatements",
   "judgeRelations",
   "assistDraft",
+  "narrate",
 ]);
 
 export type LlmTask = z.infer<typeof LLM_TASK_SCHEMA>;
@@ -42,6 +43,8 @@ export const TASK_DEFAULTS = {
   judgeRelations: { tier: "standard", effort: "low" },
   // 한 방 어시스턴트: 말뭉치를 깎아 본문 + 제목 + 주제 제안(구조화 출력). 정제 작업이라 standard.
   assistDraft: { tier: "standard" },
+  // 해설: 근거 묶음을 산문으로 풀어 읽는다. 품질이 신뢰의 핵심이라 standard.
+  narrate: { tier: "standard" },
 } as const satisfies Record<LlmTask, TaskDefault>;
 
 // task → override. effort는 그 모델 프로바이더의 네이티브 값(set 시점에 검증).

@@ -27,7 +27,7 @@ interface RelationMarkers {
   resolvedBy?: string[];
 }
 
-interface SearchedStatement extends RelationMarkers {
+export interface SearchedStatement extends RelationMarkers {
   id: string;
   content: string;
   type: SearchedStatementType;
@@ -45,13 +45,13 @@ interface SourceGroupKey {
 
 type StatementGroupKey = SourceGroupKey;
 
-interface StatementGroup {
+export interface StatementGroup {
   key: StatementGroupKey;
   totalStatementCount: number;
   statements: SearchedStatement[];
 }
 
-interface StatementSearchResult {
+export interface StatementSearchResult {
   groups: StatementGroup[];
 }
 
@@ -59,8 +59,9 @@ export async function searchStatements(args: {
   supabase: TypedSupabaseClient;
   providers: Providers;
   query: string;
+  topicIds?: string[];
 }): Promise<StatementSearchResult> {
-  const { supabase, providers, query } = args;
+  const { supabase, providers, query, topicIds } = args;
 
   // 격리는 내가 멤버인 Space 목록 — 오늘은 개인 Space 1개지만 처음부터 목록으로
   const { data: memberships, error: membershipError } = await supabase
@@ -73,12 +74,23 @@ export async function searchStatements(args: {
     return { groups: [] };
   }
 
+  // 줄기 범위 — 주제가 주어지면 그 주제의 진술로 검색을 한정한다 (narration-design 3장).
+  // 빈 집합이면 그 줄기에 진술이 없다는 뜻이라 검색 없이 끝낸다.
+  let scopedStatementIds: string[] | undefined;
+  if (topicIds !== undefined) {
+    scopedStatementIds = await collectScopedStatementIds(supabase, topicIds);
+    if (scopedStatementIds.length === 0) {
+      return { groups: [] };
+    }
+  }
+
   // 전처리 LLM 없이 그대로 임베딩(쿼리 모드) → Qdrant. statement_id+score만 받는다
   const hits = await providers.vectorStore.search(providers.embedding, {
     spaceIds,
     query,
     limit: STATEMENT_SEARCH_LIMIT,
     scoreThreshold: STATEMENT_SEARCH_SCORE_THRESHOLD,
+    statementIds: scopedStatementIds,
   });
 
   if (hits.length === 0) {
@@ -354,4 +366,35 @@ export function parseLocatorIndex(locator: Json | null): number | null {
     return locator["index"];
   }
   return null;
+}
+
+// archived 진술은 벡터 색인에 없어 검색에서 자동 탈락하므로 여기서 status를 따로 거르지 않는다.
+async function collectScopedStatementIds(
+  supabase: TypedSupabaseClient,
+  topicIds: string[],
+): Promise<string[]> {
+  if (topicIds.length === 0) {
+    return [];
+  }
+
+  const { data: topicSources, error: sourceError } = await supabase
+    .from("source_topics")
+    .select("source_id")
+    .in("topic_id", topicIds);
+  throwIfSupabaseError(sourceError);
+
+  const sourceIds = [
+    ...new Set((topicSources ?? []).map((row) => row.source_id)),
+  ];
+  if (sourceIds.length === 0) {
+    return [];
+  }
+
+  const { data: scoped, error: scopedError } = await supabase
+    .from("statement_sources")
+    .select("statement_id")
+    .in("source_id", sourceIds);
+  throwIfSupabaseError(scopedError);
+
+  return [...new Set((scoped ?? []).map((row) => row.statement_id))];
 }

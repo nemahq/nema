@@ -45,6 +45,9 @@ export interface SearchOptions {
   query: string;
   limit: number;
   scoreThreshold: number;
+  // 줄기 범위 좁히기 — 주어지면 이 진술 id 집합 안에서만 검색한다 (narration-design 3장).
+  // 빈 배열은 "후보 없음" → 0건. undefined는 한정 없음 → 공간 전체.
+  statementIds?: string[];
 }
 
 export interface NeighborSearchOptions {

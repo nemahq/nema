@@ -127,7 +127,7 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
       provider: EmbeddingProvider,
       options: SearchOptions,
     ): Promise<StatementSearchHit[]> {
-      const { spaceIds, query, limit, scoreThreshold } = options;
+      const { spaceIds, query, limit, scoreThreshold, statementIds } = options;
 
       if (provider.dimension !== VECTOR_DIMENSION) {
         throw new VectorStoreError(
@@ -137,6 +137,11 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
       }
 
       if (spaceIds.length === 0) {
+        return [];
+      }
+
+      // 빈 후보 집합은 전체검색으로 새면 안 된다 — 한정이 비면 결과도 비어야 한다
+      if (statementIds !== undefined && statementIds.length === 0) {
         return [];
       }
 
@@ -155,7 +160,10 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
           vector,
           limit,
           filter: {
-            must: [{ key: "space_id", match: { any: spaceIds } }],
+            must: [
+              { key: "space_id", match: { any: spaceIds } },
+              ...(statementIds ? [{ has_id: statementIds }] : []),
+            ],
           },
           // point id = statement_id 계약
           with_payload: false,
