@@ -48,17 +48,18 @@ curl localhost:3002/.well-known/oauth-protected-resource
 
 ## 마무리에 필요한 사람 단계
 
-코드와 무인 검증(통신, PRS 메타데이터, 인증 게이트, transport)은 끝나 있다. 아래는 계정/배포 권한이 필요해 사람이 해야 한다.
+코드와 무인 검증(통신, PRS 메타데이터, 인증 게이트, transport)은 끝나 있다. OAuth 동의 화면도 `apps/web`의 `/oauth/consent`에 최소 형태로 구현돼 있다. 아래는 계정/배포 권한이 필요해 사람이 해야 한다.
 
-1. Supabase OAuth 서버 활성화(staging 먼저, 이후 production)
-   - Authentication > OAuth Server에서 서버를 켠다.
-   - 공개 클라이언트(PKCE)를 pre-register한다. 자동 등록(DCR)은 켜지 않는다.
-   - 사용할 MCP 호스트의 redirect URI를 등록한다.
+1. Supabase OAuth 서버 활성화 + 클라이언트 등록(staging 먼저, 이후 production)
+   - Authentication > OAuth Server에서 서버를 켠다. Allow Dynamic OAuth Apps는 끈다(우리 클라이언트만 pre-register).
+   - Authentication > OAuth Apps > Add a new client: Client type는 **Public**(PKCE), Redirect URI는 `http://localhost:8080/callback`(로컬 검증용. 배포 호스트가 쓰는 콜백도 추가).
+   - 발급된 Client ID를 메모한다.
    - `openid` scope는 사용하지 않는다(접근 토큰만 필요, 기존 서명 방식 유지).
-2. 배포(Railway)
+2. 배포(Railway) - 로컬 검증만 할 거면 건너뛴다
    - apps/mcp 서비스를 생성한다(staging 자동배포 + 태그로 production).
    - `MCP_PUBLIC_URL`을 배포 URL(`https://.../mcp`)로 설정한다. 필요 시 `SUPABASE_OAUTH_ISSUER`도.
 3. 연결 + 최종 증명
-   - MCP 호스트(예: Claude Code)에 원격 서버 URL을 등록한다(로컬은 `http://localhost:3002/mcp`).
-   - 브라우저 OAuth 로그인으로 토큰을 발급받는다.
+   - 로컬 서버를 띄운다: `pnpm --filter @nema-io/mcp dev`.
+   - Claude Code에 등록: `claude mcp add --transport http --client-id <CLIENT_ID> --callback-port 8080 nema http://localhost:3002/mcp`.
+   - `/mcp`로 OAuth를 시작하면 브라우저가 nema 로그인 후 `/oauth/consent` 동의 화면으로, 허용하면 토큰이 발급된다.
    - `list_topics`를 호출해 본인 주제가 나오는지 확인한다(유효 토큰 -> 주제 경로).

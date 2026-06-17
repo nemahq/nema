@@ -13,6 +13,7 @@ import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { HomePage } from "@web/app/pages/HomePage";
+import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { SessionPage } from "@web/app/pages/SessionPage";
 import { SignInPage } from "@web/app/pages/SignInPage";
@@ -51,6 +52,17 @@ const termsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/terms",
   component: TermsPage,
+});
+
+// 인증은 필요하지만 앱 레이아웃(사이드바) 없이 단독으로 뜨는 OAuth 동의 화면.
+const oauthConsentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/oauth/consent",
+  validateSearch: z.object({
+    authorization_id: z.string(),
+  }),
+  component: OAuthConsentPage,
+  beforeLoad: ({ location }) => requireAuth(location.href),
 });
 
 // -- 인증 라우트 --
@@ -111,6 +123,7 @@ const routeTree = rootRoute.addChildren([
   signinRoute,
   privacyRoute,
   termsRoute,
+  oauthConsentRoute,
   authenticatedRoute.addChildren([
     sessionSidebarRoute.addChildren([indexRoute, sessionRoute]),
     devHarnessRoute,
