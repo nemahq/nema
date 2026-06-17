@@ -199,6 +199,88 @@ export async function listPendingRelations(args: {
   };
 }
 
+interface ActiveRelationEndpoint {
+  id: string;
+  content: string;
+}
+
+interface ActiveRelation {
+  id: string;
+  type: RelationType;
+  from: ActiveRelationEndpoint;
+  to: ActiveRelationEndpoint;
+  createdAt: string;
+}
+
+// 적용된 관계(검토함을 안 거치고 자동 적용된 것 포함)를 양끝 content와 함께 — 하니스 보정용.
+// statement_relations에서 직접 읽는다(changesets와 별개). 끝점 archive 시 관계도 연쇄
+// archive되므로 active 관계의 양끝은 active이고 content가 늘 있다(없으면 데이터 이상 → 스킵).
+export async function listActiveRelations(args: {
+  supabase: TypedSupabaseClient;
+  sourceId?: string;
+  limit: number;
+}): Promise<{ relations: ActiveRelation[] }> {
+  const { supabase, sourceId, limit } = args;
+
+  let sourceStatementIds: string[] | null = null;
+  if (sourceId) {
+    const { data: refs, error } = await supabase
+      .from("statement_sources")
+      .select("statement_id")
+      .eq("source_id", sourceId);
+    throwIfSupabaseError(error);
+    sourceStatementIds = (refs ?? []).map((r) => r.statement_id);
+    if (sourceStatementIds.length === 0) {
+      return { relations: [] };
+    }
+  }
+
+  let query = supabase
+    .from("statement_relations")
+    .select("id, type, from_id, to_id, created_at")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (sourceStatementIds) {
+    const idList = sourceStatementIds.join(",");
+    query = query.or(`from_id.in.(${idList}),to_id.in.(${idList})`);
+  }
+  const { data: rows, error } = await query;
+  throwIfSupabaseError(error);
+
+  if (!rows || rows.length === 0) {
+    return { relations: [] };
+  }
+
+  const endpointIds = [...new Set(rows.flatMap((r) => [r.from_id, r.to_id]))];
+  const { data: statements, error: stmtError } = await supabase
+    .from("statements")
+    .select("id, content")
+    .in("id", endpointIds);
+  throwIfSupabaseError(stmtError);
+
+  const contentById = new Map((statements ?? []).map((s) => [s.id, s.content]));
+
+  return {
+    relations: rows.flatMap((row) => {
+      const fromContent = contentById.get(row.from_id);
+      const toContent = contentById.get(row.to_id);
+      if (fromContent === undefined || toContent === undefined) {
+        return [];
+      }
+      return [
+        {
+          id: row.id,
+          type: row.type,
+          from: { id: row.from_id, content: fromContent },
+          to: { id: row.to_id, content: toContent },
+          createdAt: row.created_at,
+        },
+      ];
+    }),
+  };
+}
+
 interface ChangesetHistoryEntry {
   id: string;
   type: ChangesetType;

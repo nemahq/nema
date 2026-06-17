@@ -12,6 +12,7 @@ export function useInterventionInvalidation() {
       utils.statement.search.invalidate(),
       utils.changeset.listChangesets.invalidate(),
       utils.changeset.listPendingRelations.invalidate(),
+      utils.changeset.listActiveRelations.invalidate(),
     ]);
   };
 }

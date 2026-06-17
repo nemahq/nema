@@ -1,17 +1,8 @@
-import { Badge, type BadgeVariant, Button } from "@nema-io/weave";
+import { Badge, Button } from "@nema-io/weave";
 
+import { RELATION_META } from "@web/features/dev-harness/relationMeta";
 import type { PendingRelation } from "@web/features/dev-harness/types";
 import { formatDateTime } from "@web/features/dev-harness/utils";
-
-const RELATION_META: Record<
-  PendingRelation["relationType"],
-  { label: string; variant: BadgeVariant }
-> = {
-  supports: { label: "뒷받침", variant: "info" },
-  conflicts: { label: "충돌", variant: "error" },
-  replaces: { label: "대체", variant: "warning" },
-  resolves: { label: "해소", variant: "success" },
-};
 
 type Marking = "apply" | "reject";
 

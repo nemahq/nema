@@ -21,3 +21,6 @@ export type PendingRelation =
   RouterOutputs["changeset"]["listPendingRelations"]["proposals"][number];
 export type ChangesetHistoryEntry =
   RouterOutputs["changeset"]["listChangesets"]["changesets"][number];
+export type ActiveRelation =
+  RouterOutputs["changeset"]["listActiveRelations"]["relations"][number];
+export type RelationType = ActiveRelation["type"];
