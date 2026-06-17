@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>nema 첫 제품 MVP 와이어프레임</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --ink: #1c2430;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  /* 화면 전체가 앱이다. 한 번에 한 화면만 보인다. */
+  .screen { display: none; min-height: 100vh; }
+  .screen.on { display: block; }
+
+  /* 0. 전면 철거 직후: 빈 화면 */
+  #screen-empty { }
+</style>
+</head>
+<body>
+
+  <!-- 0. 전면 철거 직후: 인증·공간 셸만 남고 본문은 비어 있다. 화면은 합의되는 대로 채운다. -->
+  <section class="screen on" id="screen-empty"></section>
+
+</body>
+</html>
