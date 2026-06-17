@@ -1,3 +1,5 @@
+import { TRPCError } from "@trpc/server";
+
 import type {
   Draft,
   DraftConfirmInput,
@@ -51,6 +53,16 @@ export async function createDraft(args: {
   input: DraftCreateInput;
 }): Promise<{ draftId: string }> {
   const { supabase, input } = args;
+
+  // DB 컬럼이 `body text NOT NULL DEFAULT ''`라 빈 본문도 저장된다 — 두 입구가 지나는
+  // 이 chokepoint에서 막아, tRPC edge를 안 거치는 호출부(assist)에서도 불변식을 강제한다.
+  if (input.body.trim() === "") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Draft body must not be empty",
+    });
+  }
+
   const spaceId = await resolvePersonalSpaceId(supabase);
 
   const { data, error } = await supabase.rpc("create_draft", {
