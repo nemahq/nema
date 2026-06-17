@@ -34,6 +34,25 @@ export {
   type PhaseName,
   type SearchResultDoc,
 } from "./schemas/chat-stream";
+export {
+  type Draft,
+  DRAFT_TITLE_MAX_LENGTH,
+  type DraftAssistInput,
+  DraftAssistInputSchema,
+  type DraftConfirmInput,
+  DraftConfirmInputSchema,
+  type DraftCreateInput,
+  DraftCreateInputSchema,
+  type DraftDeleteInput,
+  DraftDeleteInputSchema,
+  type DraftEditInput,
+  DraftEditInputSchema,
+  type DraftGetInput,
+  DraftGetInputSchema,
+  type DraftOrigin,
+  DraftOriginSchema,
+  DraftSchema,
+} from "./schemas/draft";
 export { type TrackEventInput, TrackEventInputSchema } from "./schemas/event";
 export {
   type ActionPayload,
@@ -103,3 +122,9 @@ export {
   type StatementSearchInput,
   StatementSearchInputSchema,
 } from "./schemas/statement-search";
+export {
+  DRAFT_TOPICS_MAX,
+  type Topic,
+  TOPIC_NAME_MAX_LENGTH,
+  TopicSchema,
+} from "./schemas/topic";
