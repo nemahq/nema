@@ -24,32 +24,48 @@ export function OAuthConsentPage() {
       }
       loadedRef.current = true;
       void (async () => {
-        const { data, error: detailsError } =
-          await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
-        if (detailsError) {
-          setError(detailsError.message);
-          return;
-        }
-        if ("authorization_id" in data) {
-          setClientName(data.client.name);
-        } else {
-          // 이미 동의한 요청은 곧장 클라이언트로 돌려보낸다.
-          window.location.href = data.redirect_url;
+        try {
+          const { data, error: detailsError } =
+            await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
+          if (detailsError) {
+            setError(detailsError.message);
+            return;
+          }
+          if ("authorization_id" in data) {
+            setClientName(data.client.name);
+          } else {
+            // 이미 동의한 요청은 곧장 클라이언트로 돌려보낸다.
+            window.location.href = data.redirect_url;
+          }
+        } catch (e) {
+          setError(e instanceof Error ? e.message : t("common.unknown_error"));
         }
       })();
     },
-    [authorizationId],
+    [authorizationId, t],
   );
 
   async function decide(approve: boolean) {
     setDeciding(true);
     setError(null);
-    const { error: decisionError } = approve
-      ? await supabase.auth.oauth.approveAuthorization(authorizationId)
-      : await supabase.auth.oauth.denyAuthorization(authorizationId);
-    // 성공 시 브라우저가 클라이언트로 자동 리다이렉트되므로 아래로 내려오지 않는다.
-    if (decisionError) {
-      setError(decisionError.message);
+    try {
+      // skipBrowserRedirect로 redirect_url을 직접 받아 명시적으로 이동한다.
+      // 자동 리다이렉트에 기대면 그게 안 일어날 때 버튼이 영구 비활성으로 멈춘다.
+      const { data, error: decisionError } = approve
+        ? await supabase.auth.oauth.approveAuthorization(authorizationId, {
+            skipBrowserRedirect: true,
+          })
+        : await supabase.auth.oauth.denyAuthorization(authorizationId, {
+            skipBrowserRedirect: true,
+          });
+      if (decisionError) {
+        setError(decisionError.message);
+        setDeciding(false);
+        return;
+      }
+      window.location.href = data.redirect_url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.unknown_error"));
       setDeciding(false);
     }
   }
