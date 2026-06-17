@@ -201,7 +201,8 @@ export async function listPendingRelations(args: {
 
 interface ActiveRelationEndpoint {
   id: string;
-  content: string;
+  // 못 찾으면 null — 행을 버리지 않고 표면화한다(아래 listActiveRelations 주석)
+  content: string | null;
 }
 
 interface ActiveRelation {
@@ -214,7 +215,9 @@ interface ActiveRelation {
 
 // 적용된 관계(검토함을 안 거치고 자동 적용된 것 포함)를 양끝 content와 함께 — 하니스 보정용.
 // statement_relations에서 직접 읽는다(changesets와 별개). 끝점 archive 시 관계도 연쇄
-// archive되므로 active 관계의 양끝은 active이고 content가 늘 있다(없으면 데이터 이상 → 스킵).
+// archive되므로 active 관계의 양끝은 active이고 content가 늘 있어야 한다. 그래도 못 찾으면
+// (데이터 이상) 행을 버리지 않고 content=null로 둬 화면에 드러낸다 — 보정 하니스가
+// "엔진이 적게 만든 것"과 "뷰가 누락시킨 것"을 헷갈리지 않게(과소집계 은폐 방지).
 export async function listActiveRelations(args: {
   supabase: TypedSupabaseClient;
   sourceId?: string;
@@ -262,22 +265,13 @@ export async function listActiveRelations(args: {
   const contentById = new Map((statements ?? []).map((s) => [s.id, s.content]));
 
   return {
-    relations: rows.flatMap((row) => {
-      const fromContent = contentById.get(row.from_id);
-      const toContent = contentById.get(row.to_id);
-      if (fromContent === undefined || toContent === undefined) {
-        return [];
-      }
-      return [
-        {
-          id: row.id,
-          type: row.type,
-          from: { id: row.from_id, content: fromContent },
-          to: { id: row.to_id, content: toContent },
-          createdAt: row.created_at,
-        },
-      ];
-    }),
+    relations: rows.map((row) => ({
+      id: row.id,
+      type: row.type,
+      from: { id: row.from_id, content: contentById.get(row.from_id) ?? null },
+      to: { id: row.to_id, content: contentById.get(row.to_id) ?? null },
+      createdAt: row.created_at,
+    })),
   };
 }
 

@@ -1,13 +1,15 @@
 import { Badge } from "@nema-io/weave";
 
-import { RELATION_META } from "@web/features/dev-harness/relationMeta";
+import {
+  MISSING_STATEMENT_CONTENT,
+  RELATION_META,
+} from "@web/features/dev-harness/relationMeta";
 import type { RelationType } from "@web/features/dev-harness/types";
 
 interface StatementRelationLineProps {
   relationType: RelationType;
-  // 상대 진술이 놓인 방향: → 이 진술이 from, ← 이 진술이 to, ↔ 무방향(충돌)
   arrow: string;
-  counterpartContent: string;
+  counterpartContent: string | null;
 }
 
 export function StatementRelationLine({
@@ -24,7 +26,7 @@ export function StatementRelationLine({
       </Badge>
       <span className="shrink-0 text-xs text-fg-tertiary">{arrow}</span>
       <span className="min-w-0 flex-1 text-xs text-fg-tertiary">
-        {counterpartContent}
+        {counterpartContent ?? MISSING_STATEMENT_CONTENT}
       </span>
     </div>
   );

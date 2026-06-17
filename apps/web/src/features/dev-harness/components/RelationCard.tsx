@@ -1,13 +1,16 @@
 import { Badge } from "@nema-io/weave";
 
-import { RELATION_META } from "@web/features/dev-harness/relationMeta";
+import {
+  MISSING_STATEMENT_CONTENT,
+  RELATION_META,
+} from "@web/features/dev-harness/relationMeta";
 import type { RelationType } from "@web/features/dev-harness/types";
 import { formatDateTime } from "@web/features/dev-harness/utils";
 
 interface RelationCardProps {
   relationType: RelationType;
-  fromContent: string;
-  toContent: string;
+  fromContent: string | null;
+  toContent: string | null;
   createdAt: string;
 }
 
@@ -29,9 +32,9 @@ export function RelationCard({
         </span>
       </div>
       <div className="flex flex-col gap-0.5 text-sm text-fg-primary">
-        <p className="min-w-0">{fromContent}</p>
+        <p className="min-w-0">{fromContent ?? MISSING_STATEMENT_CONTENT}</p>
         <span className="text-xs text-fg-tertiary">↓ {meta.label}</span>
-        <p className="min-w-0">{toContent}</p>
+        <p className="min-w-0">{toContent ?? MISSING_STATEMENT_CONTENT}</p>
       </div>
     </div>
   );
