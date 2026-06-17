@@ -19,7 +19,6 @@ import {
 import { protectedProcedure, providerProcedure, router } from "@server/trpc";
 
 export const draftRouter = router({
-  // 앱 한 방 어시스턴트 — LLM 의존이라 providerProcedure
   assist: providerProcedure
     .input(DraftAssistInputSchema)
     .mutation(({ ctx, input }) =>

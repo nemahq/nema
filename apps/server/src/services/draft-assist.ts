@@ -33,7 +33,6 @@ function sanitizeTopics(raw: string[]): string[] {
   return result;
 }
 
-// 한 방 어시스턴트: 기존 주제 읽기 → LLM이 본문·제목·주제 제안 → in_app 초안 생성.
 // 외부 입구(MCP)가 Claude Code로 하는 일을 앱 입구에서 대칭으로 수행한다.
 export async function assistDraft(args: {
   supabase: TypedSupabaseClient;

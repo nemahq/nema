@@ -122,7 +122,6 @@ BEGIN
     ON CONFLICT DO NOTHING;
   END LOOP;
 
-  -- 초안은 역할 끝: 제거 (확정 뒤 사라짐)
   DELETE FROM drafts WHERE id = p_draft_id;
 
   RETURN v_source_id;
