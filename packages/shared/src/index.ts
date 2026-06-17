@@ -75,6 +75,7 @@ export {
   STATUS_LOG_TYPES,
   type StatusLogType,
 } from "./schemas/message";
+export { type NarrationInput, NarrationInputSchema } from "./schemas/narration";
 export {
   CONTENT_LANGUAGES,
   type ContentLanguage,

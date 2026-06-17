@@ -21,10 +21,12 @@ function mockClient() {
     deleteCollection: vi.fn().mockResolvedValue(true),
     upsert: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(undefined),
+    search: vi.fn().mockResolvedValue([]),
   } as unknown as QdrantClient & {
     collectionExists: ReturnType<typeof vi.fn>;
     deleteCollection: ReturnType<typeof vi.fn>;
     upsert: ReturnType<typeof vi.fn>;
+    search: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -69,5 +71,23 @@ describe("createQdrantStore", () => {
     ).rejects.toThrow(VectorStoreError);
 
     expect(client.upsert).not.toHaveBeenCalled();
+  });
+
+  it("search — 빈 statementIds는 전체검색으로 새지 않고 즉시 빈 결과", async () => {
+    const client = mockClient();
+    const store = createQdrantStore(client);
+    const embedding = mockEmbedding([[0.1, 0.2]]);
+
+    const hits = await store.search(embedding, {
+      spaceIds: ["b0000000-0000-4000-a000-000000000001"],
+      query: "질문",
+      limit: 15,
+      scoreThreshold: 0.2,
+      statementIds: [],
+    });
+
+    expect(hits).toEqual([]);
+    expect(embedding.embed).not.toHaveBeenCalled();
+    expect(client.search).not.toHaveBeenCalled();
   });
 });

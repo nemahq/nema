@@ -10,6 +10,7 @@
     "apps/server": {
       "entry": [
         "src/eval/eval-drafting.ts",
+        "src/eval/eval-narration.ts",
         "src/eval/verify-statement-search.ts",
         "src/eval/statement-engine/run-extraction.ts",
         "src/eval/statement-engine/run-retrieval.ts",
