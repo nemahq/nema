@@ -135,6 +135,11 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
+      - name: Deploy mcp to staging
+        run: railway up --service mcp --environment staging --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+
   deploy-production:
     needs: check
     runs-on: ubuntu-latest
