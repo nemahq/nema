@@ -3,11 +3,13 @@ import { useState } from "react";
 import { cn } from "@nema-io/weave";
 
 import { HistoryPanel } from "@web/features/dev-harness/components/HistoryPanel";
+import { RelationsPanel } from "@web/features/dev-harness/components/RelationsPanel";
 import { ReviewPanel } from "@web/features/dev-harness/components/ReviewPanel";
 import { WorkTab } from "@web/features/dev-harness/components/WorkTab";
 
 const TABS = [
   { id: "work", label: "작업" },
+  { id: "relations", label: "관계" },
   { id: "review", label: "검토함" },
   { id: "history", label: "이력" },
 ] as const;
@@ -41,6 +43,7 @@ export function HarnessPage() {
 
       <div className="flex min-h-0 flex-1">
         {tab === "work" && <WorkTab />}
+        {tab === "relations" && <RelationsPanel />}
         {tab === "review" && <ReviewPanel />}
         {tab === "history" && <HistoryPanel />}
       </div>

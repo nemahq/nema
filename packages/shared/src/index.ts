@@ -1,5 +1,7 @@
 export { isLocale, type Locale, LOCALES } from "./i18n";
 export {
+  ACTIVE_RELATION_LIST_LIMIT_DEFAULT,
+  ACTIVE_RELATION_LIST_LIMIT_MAX,
   type ApplyPendingRelationInput,
   ApplyPendingRelationInputSchema,
   type ArchiveSourceInput,
@@ -8,6 +10,8 @@ export {
   ArchiveStatementInputSchema,
   CHANGESET_LIST_LIMIT_DEFAULT,
   CHANGESET_LIST_LIMIT_MAX,
+  type ListActiveRelationsInput,
+  ListActiveRelationsInputSchema,
   type ListChangesetsInput,
   ListChangesetsInputSchema,
   type RejectPendingRelationInput,

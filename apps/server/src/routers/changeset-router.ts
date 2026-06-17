@@ -2,6 +2,7 @@ import {
   ApplyPendingRelationInputSchema,
   ArchiveSourceInputSchema,
   ArchiveStatementInputSchema,
+  ListActiveRelationsInputSchema,
   ListChangesetsInputSchema,
   RejectPendingRelationInputSchema,
   RevertChangesetInputSchema,
@@ -11,6 +12,7 @@ import {
   applyPendingRelation,
   archiveSource,
   archiveStatement,
+  listActiveRelations,
   listChangesets,
   listPendingRelations,
   rejectPendingRelation,
@@ -69,5 +71,15 @@ export const changesetRouter = router({
     .input(ListChangesetsInputSchema)
     .query(({ ctx, input }) =>
       listChangesets({ supabase: ctx.supabase, limit: input.limit }),
+    ),
+
+  listActiveRelations: protectedProcedure
+    .input(ListActiveRelationsInputSchema)
+    .query(({ ctx, input }) =>
+      listActiveRelations({
+        supabase: ctx.supabase,
+        sourceId: input.sourceId,
+        limit: input.limit,
+      }),
     ),
 });
