@@ -20,6 +20,11 @@ const envSchema = z
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
     OPENAI_API_KEY: z.string().min(1).optional(),
+    ANTHROPIC_API_KEY: z.string().min(1).optional(),
+    GEMINI_API_KEY: z.string().min(1).optional(),
+    // 설정 시 Gemini를 Vertex(ADC 인증·GCP 크레딧) 경로로 — 없으면 GEMINI_API_KEY(AI Studio).
+    GEMINI_VERTEX_PROJECT: z.string().min(1).optional(),
+    GEMINI_VERTEX_LOCATION: z.string().min(1).optional(),
     VOYAGE_API_KEY: z.string().min(1).optional(),
 
     QDRANT_URL: z.string().url().optional(),

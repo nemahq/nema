@@ -1,9 +1,18 @@
 import { Suspense } from "react";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { ConfirmButton } from "@web/features/dev-harness/components/ConfirmButton";
+import { StatementRelationLine } from "@web/features/dev-harness/components/StatementRelationLine";
 import { StatementRow } from "@web/features/dev-harness/components/StatementRow";
+import { useActiveRelationsSuspenseQuery } from "@web/features/dev-harness/hooks/useActiveRelationsQuery";
+import { useArchiveSource } from "@web/features/dev-harness/hooks/useArchiveSource";
+import { useArchiveStatement } from "@web/features/dev-harness/hooks/useArchiveStatement";
+import { useInterventionInvalidation } from "@web/features/dev-harness/hooks/useInterventionInvalidation";
 import { useSourceSuspenseQuery } from "@web/features/dev-harness/hooks/useSourceQuery";
-import type { SourceStatement } from "@web/features/dev-harness/types";
+import type {
+  ActiveRelation,
+  SourceStatement,
+} from "@web/features/dev-harness/types";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
 // 검색은 임베딩 완료된 진술만 닿는다 — 완료 전 상태를 진술 옆에 표시 (ingestion-design 5장)
@@ -19,12 +28,41 @@ function ingestionMetaLabel(
   return undefined;
 }
 
+function buildRelationsByStatement(
+  relations: ActiveRelation[],
+): Map<string, ActiveRelation[]> {
+  const byStatement = new Map<string, ActiveRelation[]>();
+  for (const relation of relations) {
+    for (const endpointId of [relation.from.id, relation.to.id]) {
+      const list = byStatement.get(endpointId) ?? [];
+      list.push(relation);
+      byStatement.set(endpointId, list);
+    }
+  }
+  return byStatement;
+}
+
+// 상대 진술이 놓인 방향: → 이 진술이 from, ← 이 진술이 to, ↔ 무방향(충돌)
+function directionArrow(type: ActiveRelation["type"], isFrom: boolean): string {
+  if (type === "conflicts") {
+    return "↔";
+  }
+  return isFrom ? "→" : "←";
+}
+
 interface SourceDetailBodyProps {
   sourceId: string;
 }
 
 function SourceDetailBodyContent({ sourceId }: SourceDetailBodyProps) {
   const [source, sourceQuery] = useSourceSuspenseQuery({ sourceId });
+  const [{ relations }] = useActiveRelationsSuspenseQuery({ sourceId });
+  const archiveStatement = useArchiveStatement();
+  const archiveSource = useArchiveSource();
+  const invalidate = useInterventionInvalidation();
+  const archiving = archiveStatement.isPending || archiveSource.isPending;
+
+  const relationsByStatement = buildRelationsByStatement(relations);
 
   return (
     <div className="flex flex-col gap-2 border-t border-border/40 px-3 py-2">
@@ -60,17 +98,63 @@ function SourceDetailBodyContent({ sourceId }: SourceDetailBodyProps) {
 
       {source.statements.length > 0 && (
         <ul className="flex flex-col gap-1">
-          {source.statements.map((statement) => (
-            <StatementRow
-              key={statement.id}
-              type={statement.type}
-              confidence={statement.confidence}
-              content={statement.content}
-              meta={ingestionMetaLabel(statement.ingestionStatus)}
-            />
-          ))}
+          {source.statements.map((statement) => {
+            const statementRelations =
+              relationsByStatement.get(statement.id) ?? [];
+            return (
+              <StatementRow
+                key={statement.id}
+                type={statement.type}
+                confidence={statement.confidence}
+                content={statement.content}
+                meta={ingestionMetaLabel(statement.ingestionStatus)}
+                markers={
+                  statementRelations.length > 0 && (
+                    <div className="flex flex-col gap-1 border-t border-border/30 pt-1">
+                      {statementRelations.map((relation) => {
+                        const isFrom = relation.from.id === statement.id;
+                        const counterpart = isFrom
+                          ? relation.to
+                          : relation.from;
+                        return (
+                          <StatementRelationLine
+                            key={relation.id}
+                            relationType={relation.type}
+                            arrow={directionArrow(relation.type, isFrom)}
+                            counterpartContent={counterpart.content}
+                          />
+                        );
+                      })}
+                    </div>
+                  )
+                }
+                action={
+                  <ConfirmButton
+                    label="빼기"
+                    disabled={archiving}
+                    onConfirm={() =>
+                      archiveStatement.mutate(
+                        { statementId: statement.id },
+                        { onSuccess: invalidate },
+                      )
+                    }
+                  />
+                }
+              />
+            );
+          })}
         </ul>
       )}
+
+      <div className="flex justify-end pt-1">
+        <ConfirmButton
+          label="이 글 빼기"
+          disabled={archiving}
+          onConfirm={() =>
+            archiveSource.mutate({ sourceId }, { onSuccess: invalidate })
+          }
+        />
+      </div>
     </div>
   );
 }

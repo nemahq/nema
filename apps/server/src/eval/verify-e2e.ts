@@ -178,7 +178,9 @@ async function runPipeline(args: {
 
   // providers — 로컬 Qdrant·실제 Voyage/OpenAI. 워커가 진짜 추출·임베딩한다.
   // 추출 타임아웃·reasoning은 worker 내부의 호출 단위 설정(제품 경로)을 그대로 쓴다.
-  const llm = createTieredLlm({ apiKey: requireEnv("OPENAI_API_KEY") });
+  const { tiers: llm } = createTieredLlm({
+    apiKey: requireEnv("OPENAI_API_KEY"),
+  });
   const embedding = createVoyageProvider({
     apiKey: requireEnv("VOYAGE_API_KEY"),
   });
@@ -206,7 +208,8 @@ async function runPipeline(args: {
   // 추출→임베딩 전체 사이클을 돈다.
   const worker = createStatementSyncWorker({
     supabase: admin,
-    llm: llm.standard,
+    // E2E는 제품 경로(standard tier)를 그대로 미러한다 — 추출·관계 판정 둘 다 standard.
+    forTask: () => llm.standard,
     embedding,
     vectorStore,
   });
@@ -293,7 +296,12 @@ async function runPipeline(args: {
   // ── ④ 뜻 검색 → 원장 조회 → 원본 묶음 반환 ────────────────────────
   const searchResult = await searchStatements({
     supabase: userClient,
-    providers: { llm, embedding, vectorStore },
+    // 검색은 vectorStore·embedding만 쓴다 — llm은 타입 충족용(forTask는 standard로 미러).
+    providers: {
+      llm: { forTask: () => llm.standard },
+      embedding,
+      vectorStore,
+    },
     query: SEARCH_QUERY,
   });
   const hitContents = searchResult.groups.flatMap((g) =>

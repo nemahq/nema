@@ -32,20 +32,22 @@ export async function classifyDraftIntent(args: {
   previousBody: string;
 }): Promise<DraftIntent> {
   try {
-    return await args.providers.llm.mini.generateStructured({
-      schema: DraftIntentSchema,
-      schemaName: "draft_intent_classifier",
-      systemPrompt: DRAFT_INTENT_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: buildDraftIntentMessage({
-            previousBody: args.previousBody,
-            userInput: args.userInput,
-          }),
-        },
-      ],
-    });
+    return await args.providers.llm
+      .forTask("classifyDraftIntent")
+      .generateStructured({
+        schema: DraftIntentSchema,
+        schemaName: "draft_intent_classifier",
+        systemPrompt: DRAFT_INTENT_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: buildDraftIntentMessage({
+              previousBody: args.previousBody,
+              userInput: args.userInput,
+            }),
+          },
+        ],
+      });
   } catch (error) {
     Sentry.captureException(error, {
       tags: { component: "draft-intent-classifier" },
@@ -69,11 +71,13 @@ export async function* handleDraftingStream(args: {
 
   let fullText = "";
 
-  for await (const chunk of providers.llm.standard.generateStream({
-    systemPrompt: DRAFTING_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: message }],
-    signal,
-  })) {
+  for await (const chunk of providers.llm
+    .forTask("generateDraft")
+    .generateStream({
+      systemPrompt: DRAFTING_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: message }],
+      signal,
+    })) {
     fullText += chunk;
     yield { type: "token", text: chunk };
   }

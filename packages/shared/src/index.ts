@@ -1,5 +1,25 @@
 export { isLocale, type Locale, LOCALES } from "./i18n";
 export {
+  ACTIVE_RELATION_LIST_LIMIT_DEFAULT,
+  ACTIVE_RELATION_LIST_LIMIT_MAX,
+  type ApplyPendingRelationInput,
+  ApplyPendingRelationInputSchema,
+  type ArchiveSourceInput,
+  ArchiveSourceInputSchema,
+  type ArchiveStatementInput,
+  ArchiveStatementInputSchema,
+  CHANGESET_LIST_LIMIT_DEFAULT,
+  CHANGESET_LIST_LIMIT_MAX,
+  type ListActiveRelationsInput,
+  ListActiveRelationsInputSchema,
+  type ListChangesetsInput,
+  ListChangesetsInputSchema,
+  type RejectPendingRelationInput,
+  RejectPendingRelationInputSchema,
+  type RevertChangesetInput,
+  RevertChangesetInputSchema,
+} from "./schemas/changeset";
+export {
   CHAT_MODES,
   type ChatInput,
   ChatInputSchema,
@@ -18,6 +38,25 @@ export {
   type PhaseName,
   type SearchResultDoc,
 } from "./schemas/chat-stream";
+export {
+  type Draft,
+  DRAFT_TITLE_MAX_LENGTH,
+  type DraftAssistInput,
+  DraftAssistInputSchema,
+  type DraftConfirmInput,
+  DraftConfirmInputSchema,
+  type DraftCreateInput,
+  DraftCreateInputSchema,
+  type DraftDeleteInput,
+  DraftDeleteInputSchema,
+  type DraftEditInput,
+  DraftEditInputSchema,
+  type DraftGetInput,
+  DraftGetInputSchema,
+  type DraftOrigin,
+  DraftOriginSchema,
+  DraftSchema,
+} from "./schemas/draft";
 export { type TrackEventInput, TrackEventInputSchema } from "./schemas/event";
 export {
   type ActionPayload,
@@ -36,6 +75,7 @@ export {
   STATUS_LOG_TYPES,
   type StatusLogType,
 } from "./schemas/message";
+export { type NarrationInput, NarrationInputSchema } from "./schemas/narration";
 export {
   CONTENT_LANGUAGES,
   type ContentLanguage,
@@ -69,12 +109,27 @@ export {
   SessionUpdateInputSchema,
 } from "./schemas/session";
 export {
+  SOURCE_BODY_MAX_LENGTH,
   type SourceCreateInput,
   SourceCreateInputSchema,
   type SourceGetInput,
   SourceGetInputSchema,
 } from "./schemas/source";
 export {
+  RELATION_STATUSES,
+  RELATION_TYPES,
+  type RelationStatus,
+  RelationStatusSchema,
+  type RelationType,
+  RelationTypeSchema,
+} from "./schemas/statement-relation";
+export {
   type StatementSearchInput,
   StatementSearchInputSchema,
 } from "./schemas/statement-search";
+export {
+  DRAFT_TOPICS_MAX,
+  type Topic,
+  TOPIC_NAME_MAX_LENGTH,
+  TopicSchema,
+} from "./schemas/topic";

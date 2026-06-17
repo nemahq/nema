@@ -3,13 +3,27 @@ import { useState } from "react";
 import { Button } from "@nema-io/weave";
 
 import { GroupCard } from "@web/features/dev-harness/components/GroupCard";
+import { RelationMarkers } from "@web/features/dev-harness/components/RelationMarkers";
 import { StatementRow } from "@web/features/dev-harness/components/StatementRow";
 import { useStatementSearchQuery } from "@web/features/dev-harness/hooks/useStatementSearchQuery";
 import type { StatementGroup } from "@web/features/dev-harness/types";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
+// 매칭 못 한 상대 진술은 ID 앞자리만 노출 — 식별엔 충분하고 전체 ID는 잡음
+const COUNTERPART_ID_PREFIX_LENGTH = 8;
+
 function maxScoreOf(statements: StatementGroup["statements"]): number {
   return Math.max(...statements.map((s) => s.score));
+}
+
+function buildContentById(groups: StatementGroup[]): Map<string, string> {
+  const contentById = new Map<string, string>();
+  for (const group of groups) {
+    for (const statement of group.statements) {
+      contentById.set(statement.id, statement.content);
+    }
+  }
+  return contentById;
 }
 
 export function SearchPanel() {
@@ -19,6 +33,15 @@ export function SearchPanel() {
   const statementSearchQuery = useStatementSearchQuery({
     query: submittedQuery,
   });
+
+  const groups = statementSearchQuery.data?.groups;
+  const contentById = buildContentById(groups ?? []);
+
+  function resolveCounterpartLabel(id: string): string {
+    return (
+      contentById.get(id) ?? `#${id.slice(0, COUNTERPART_ID_PREFIX_LENGTH)}`
+    );
+  }
 
   function handleSubmit() {
     const trimmedQuery = queryInput.trim();
@@ -62,12 +85,12 @@ export function SearchPanel() {
             {getErrorMessage(statementSearchQuery.error)}
           </p>
         )}
-        {statementSearchQuery.data?.groups.length === 0 && (
+        {groups?.length === 0 && (
           <p className="text-xs text-fg-tertiary">
             닿은 진술 없음 — 다른 말로 물어보거나 글을 더 던져보기
           </p>
         )}
-        {statementSearchQuery.data?.groups.map((group) => (
+        {groups?.map((group) => (
           <GroupCard
             key={group.key.sourceId}
             sourceCreatedAt={group.key.sourceCreatedAt}
@@ -82,6 +105,14 @@ export function SearchPanel() {
                 confidence={statement.confidence}
                 content={statement.content}
                 meta={statement.score.toFixed(3)}
+                markers={
+                  <RelationMarkers
+                    supersededBy={statement.supersededBy}
+                    conflictsWith={statement.conflictsWith}
+                    resolvedBy={statement.resolvedBy}
+                    resolveLabel={resolveCounterpartLabel}
+                  />
+                }
               />
             ))}
           </GroupCard>

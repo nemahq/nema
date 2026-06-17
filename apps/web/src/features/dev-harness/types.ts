@@ -9,3 +9,18 @@ export type SourceDetail = RouterOutputs["source"]["get"];
 export type SourceStatement = SourceDetail["statements"][number];
 export type StatementGroup =
   RouterOutputs["statement"]["search"]["groups"][number];
+export type SearchedStatement = StatementGroup["statements"][number];
+
+// 표식은 상대 진술 ID만 실려온다(content 없음) — 본문은 같은 검색 결과 안에서만 매칭 가능
+export type RelationMarkers = Pick<
+  SearchedStatement,
+  "supersededBy" | "conflictsWith" | "resolvedBy"
+>;
+
+export type PendingRelation =
+  RouterOutputs["changeset"]["listPendingRelations"]["proposals"][number];
+export type ChangesetHistoryEntry =
+  RouterOutputs["changeset"]["listChangesets"]["changesets"][number];
+export type ActiveRelation =
+  RouterOutputs["changeset"]["listActiveRelations"]["relations"][number];
+export type RelationType = ActiveRelation["type"];

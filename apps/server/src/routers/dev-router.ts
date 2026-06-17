@@ -2,10 +2,18 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { getEnv } from "@server/env";
+import { LLM_EFFORT_SCHEMA } from "@server/infra/llm/llm-provider";
+import { listModelSpecs } from "@server/infra/llm/model-catalog";
+import {
+  clearTaskOverride,
+  getAllTaskOverrides,
+  LLM_TASK_SCHEMA,
+} from "@server/infra/llm/task-routing";
 import {
   getLlmPreset,
   type LlmPreset,
   setLlmPreset,
+  setTaskModel,
 } from "@server/infra/providers";
 import { protectedProcedure, router } from "@server/trpc";
 
@@ -31,5 +39,36 @@ export const devRouter = router({
       assertDev();
       setLlmPreset(input.preset);
       return getLlmPreset();
+    }),
+  getTaskModels: protectedProcedure.query(() => {
+    assertDev();
+    return {
+      overrides: getAllTaskOverrides(),
+      catalog: listModelSpecs(),
+    };
+  }),
+  setTaskModel: protectedProcedure
+    .input(
+      z.object({
+        task: LLM_TASK_SCHEMA,
+        modelId: z.string().min(1),
+        effort: LLM_EFFORT_SCHEMA.optional(),
+      }),
+    )
+    .mutation(({ input }) => {
+      assertDev();
+      setTaskModel({
+        task: input.task,
+        modelId: input.modelId,
+        effort: input.effort,
+      });
+      return getAllTaskOverrides();
+    }),
+  clearTaskModel: protectedProcedure
+    .input(z.object({ task: LLM_TASK_SCHEMA }))
+    .mutation(({ input }) => {
+      assertDev();
+      clearTaskOverride(input.task);
+      return getAllTaskOverrides();
     }),
 });

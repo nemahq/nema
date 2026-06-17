@@ -130,6 +130,50 @@ export type Database = {
           },
         ];
       };
+      drafts: {
+        Row: {
+          author_id: string | null;
+          body: string;
+          created_at: string;
+          id: string;
+          origin: Database["public"]["Enums"]["draft_origin"];
+          proposed_topics: string[];
+          space_id: string;
+          title: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          author_id?: string | null;
+          body?: string;
+          created_at?: string;
+          id?: string;
+          origin: Database["public"]["Enums"]["draft_origin"];
+          proposed_topics?: string[];
+          space_id: string;
+          title?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          author_id?: string | null;
+          body?: string;
+          created_at?: string;
+          id?: string;
+          origin?: Database["public"]["Enums"]["draft_origin"];
+          proposed_topics?: string[];
+          space_id?: string;
+          title?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "drafts_space_id_fkey";
+            columns: ["space_id"];
+            isOneToOne: false;
+            referencedRelation: "spaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       events: {
         Row: {
           created_at: string;
@@ -254,6 +298,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      source_topics: {
+        Row: {
+          created_at: string;
+          source_id: string;
+          topic_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          source_id: string;
+          topic_id: string;
+        };
+        Update: {
+          created_at?: string;
+          source_id?: string;
+          topic_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "source_topics_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "source_topics_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       sources: {
         Row: {
           author_id: string | null;
@@ -264,9 +341,13 @@ export type Database = {
           extraction_status: Database["public"]["Enums"]["ingestion_status"];
           id: string;
           last_extraction_attempt: string | null;
+          last_linking_attempt: string | null;
+          linking_retry_count: number;
+          linking_status: Database["public"]["Enums"]["ingestion_status"];
           session_id: string | null;
           space_id: string;
           status: Database["public"]["Enums"]["source_status"];
+          title: string | null;
           updated_at: string;
         };
         Insert: {
@@ -278,9 +359,13 @@ export type Database = {
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           last_extraction_attempt?: string | null;
+          last_linking_attempt?: string | null;
+          linking_retry_count?: number;
+          linking_status?: Database["public"]["Enums"]["ingestion_status"];
           session_id?: string | null;
           space_id: string;
           status?: Database["public"]["Enums"]["source_status"];
+          title?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -292,9 +377,13 @@ export type Database = {
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           last_extraction_attempt?: string | null;
+          last_linking_attempt?: string | null;
+          linking_retry_count?: number;
+          linking_status?: Database["public"]["Enums"]["ingestion_status"];
           session_id?: string | null;
           space_id?: string;
           status?: Database["public"]["Enums"]["source_status"];
+          title?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -517,6 +606,38 @@ export type Database = {
           },
         ];
       };
+      topics: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          space_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          space_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          space_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "topics_space_id_fkey";
+            columns: ["space_id"];
+            isOneToOne: false;
+            referencedRelation: "spaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -531,6 +652,19 @@ export type Database = {
         Args: { p_source_id: string; p_statements: Json };
         Returns: string;
       };
+      apply_pending_relation: {
+        Args: { p_changeset_id: string };
+        Returns: string;
+      };
+      apply_relation_changesets: {
+        Args: { p_applied?: Json; p_pending?: Json; p_source_id: string };
+        Returns: undefined;
+      };
+      archive_source: { Args: { p_source_id: string }; Returns: undefined };
+      archive_statement: {
+        Args: { p_statement_id: string };
+        Returns: undefined;
+      };
       complete_source_extraction: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -539,9 +673,32 @@ export type Database = {
         Args: { p_statement_id: string };
         Returns: undefined;
       };
+      confirm_draft: {
+        Args: { p_draft_id: string; p_title: string; p_topics: string[] };
+        Returns: string;
+      };
+      create_draft: {
+        Args: {
+          p_body: string;
+          p_origin: Database["public"]["Enums"]["draft_origin"];
+          p_proposed_topics?: string[];
+          p_space_id: string;
+          p_title?: string;
+        };
+        Returns: string;
+      };
       create_source: {
         Args: { p_body: string; p_session_id?: string; p_space_id: string };
         Returns: string;
+      };
+      delete_draft: { Args: { p_draft_id: string }; Returns: undefined };
+      fetch_pending_linking_sources: {
+        Args: { p_max_retries?: number };
+        Returns: {
+          created_at: string;
+          id: string;
+          space_id: string;
+        }[];
       };
       fetch_pending_sources: {
         Args: { p_max_retries?: number };
@@ -574,6 +731,14 @@ export type Database = {
         };
         Returns: undefined;
       };
+      increment_source_linking_retry: {
+        Args: {
+          p_error_message?: string;
+          p_max_retries?: number;
+          p_source_id: string;
+        };
+        Returns: undefined;
+      };
       increment_statement_ingestion_retry: {
         Args: {
           p_error_message?: string;
@@ -581,6 +746,10 @@ export type Database = {
           p_statement_id: string;
         };
         Returns: undefined;
+      };
+      is_changeset_reverted: {
+        Args: { p_changeset_id: string };
+        Returns: boolean;
       };
       is_space_member: { Args: { p_space_id: string }; Returns: boolean };
       read_sync_events: {
@@ -591,7 +760,15 @@ export type Database = {
           read_ct: number;
         }[];
       };
+      reject_pending_relation: {
+        Args: { p_changeset_id: string };
+        Returns: undefined;
+      };
       retry_source_extraction: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
+      retry_source_linking: {
         Args: { p_source_id: string };
         Returns: undefined;
       };
@@ -599,18 +776,35 @@ export type Database = {
         Args: { p_statement_id: string };
         Returns: undefined;
       };
+      revert_changeset: { Args: { p_changeset_id: string }; Returns: string };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
+      update_draft: {
+        Args: {
+          p_body?: string;
+          p_draft_id: string;
+          p_proposed_topics?: string[];
+          p_title?: string;
+        };
+        Returns: undefined;
+      };
       update_message_payload: {
         Args: { p_message_id: string; p_payload: Json; p_session_id: string };
         Returns: undefined;
       };
     };
     Enums: {
-      change_action: "create" | "archive" | "modify";
+      change_action: "create" | "archive" | "modify" | "restore";
       change_target_type: "statement" | "relation" | "source";
-      changeset_status: "pending" | "applied";
-      changeset_type: "ingestion" | "conflict" | "merge" | "manual" | "revert";
+      changeset_status: "pending" | "applied" | "rejected";
+      changeset_type:
+        | "ingestion"
+        | "conflict"
+        | "merge"
+        | "manual"
+        | "revert"
+        | "relation";
+      draft_origin: "in_app" | "external";
       ingestion_status: "pending" | "completed" | "failed";
       relation_status: "active" | "archived";
       relation_type: "supports" | "conflicts" | "replaces" | "resolves";
@@ -752,10 +946,18 @@ export const Constants = {
   },
   public: {
     Enums: {
-      change_action: ["create", "archive", "modify"],
+      change_action: ["create", "archive", "modify", "restore"],
       change_target_type: ["statement", "relation", "source"],
-      changeset_status: ["pending", "applied"],
-      changeset_type: ["ingestion", "conflict", "merge", "manual", "revert"],
+      changeset_status: ["pending", "applied", "rejected"],
+      changeset_type: [
+        "ingestion",
+        "conflict",
+        "merge",
+        "manual",
+        "revert",
+        "relation",
+      ],
+      draft_origin: ["in_app", "external"],
       ingestion_status: ["pending", "completed", "failed"],
       relation_status: ["active", "archived"],
       relation_type: ["supports", "conflicts", "replaces", "resolves"],

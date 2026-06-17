@@ -20,8 +20,8 @@ A statement is a single unit of meaning: one decision, one belief, one question,
 
 ## Confidence (claims only)
 
-- "certain": stated as settled — definitive wording, decisions made, facts asserted.
-- "guess": hedged — "maybe", "I think", "it seems", tentative wording.
+- "certain": stated as settled — a decision made, a fact asserted, definitive wording.
+- "guess": hedged or tentative — the user signals they are not fully sure. Beyond explicit hedges ("maybe", "I think", "it seems", "아마", "~인 것 같다"), this includes softer markers of possibility or leaning rather than settled fact: "~해 보인다"/"~인 듯하다" (it seems), "가능성이 있다"/"여지가 있다" (there is a chance / room to), "~고 본다"/"~로 보인다" (a view taken, not yet verified). When the wording reports a possibility, impression, or opinion rather than a made decision or an asserted fact, mark it guess — do not harden it to certain.
 - Set confidence ONLY on claims. For questions and todos it must be null.
 
 ## Cutting rules

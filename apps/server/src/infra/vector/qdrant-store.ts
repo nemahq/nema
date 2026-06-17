@@ -6,6 +6,7 @@ import {
 
 import type { QdrantClient } from "./qdrant-client";
 import type {
+  NeighborSearchOptions,
   SearchOptions,
   StatementPayload,
   StatementSearchHit,
@@ -126,7 +127,7 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
       provider: EmbeddingProvider,
       options: SearchOptions,
     ): Promise<StatementSearchHit[]> {
-      const { spaceIds, query, limit, scoreThreshold } = options;
+      const { spaceIds, query, limit, scoreThreshold, statementIds } = options;
 
       if (provider.dimension !== VECTOR_DIMENSION) {
         throw new VectorStoreError(
@@ -136,6 +137,11 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
       }
 
       if (spaceIds.length === 0) {
+        return [];
+      }
+
+      // 빈 후보 집합은 전체검색으로 새면 안 된다 — 한정이 비면 결과도 비어야 한다
+      if (statementIds !== undefined && statementIds.length === 0) {
         return [];
       }
 
@@ -154,7 +160,10 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
           vector,
           limit,
           filter: {
-            must: [{ key: "space_id", match: { any: spaceIds } }],
+            must: [
+              { key: "space_id", match: { any: spaceIds } },
+              ...(statementIds ? [{ has_id: statementIds }] : []),
+            ],
           },
           // point id = statement_id 계약
           with_payload: false,
@@ -172,6 +181,37 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
         throw new VectorStoreError(
           `Search failed: ${error instanceof Error ? error.message : String(error)}`,
           "search",
+          error,
+        );
+      }
+    },
+
+    async searchNeighbors(
+      options: NeighborSearchOptions,
+    ): Promise<StatementSearchHit[]> {
+      const { statementId, spaceId, limit, scoreThreshold } = options;
+
+      try {
+        // query = point id → 저장된 벡터로 최근접 검색. 앵커 자신은 has_id로 제외.
+        const result = await client.query(QDRANT_COLLECTION, {
+          query: statementId,
+          limit,
+          filter: {
+            must: [{ key: "space_id", match: { any: [spaceId] } }],
+            must_not: [{ has_id: [statementId] }],
+          },
+          with_payload: false,
+          score_threshold: scoreThreshold,
+        });
+
+        return result.points.map((point) => ({
+          statementId: String(point.id),
+          score: point.score,
+        }));
+      } catch (error) {
+        throw new VectorStoreError(
+          `Neighbor search failed: ${error instanceof Error ? error.message : String(error)}`,
+          "searchNeighbors",
           error,
         );
       }
