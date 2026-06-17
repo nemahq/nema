@@ -17,8 +17,16 @@ export function SignInPage() {
 
   useEffect(
     function redirectOnSignIn() {
-      if (user) {
-        const target = search.redirect?.startsWith("/") ? search.redirect : "/";
+      if (!user) {
+        return;
+      }
+      const target = search.redirect?.startsWith("/") ? search.redirect : "/";
+      // target에 쿼리스트링이 있으면 SPA navigate가 이를 떨궈 도착 라우트의
+      // validateSearch가 깨진다(예: OAuth 동의의 authorization_id). 전체
+      // 내비게이션으로 쿼리를 보존한다.
+      if (target.includes("?")) {
+        window.location.href = `${window.location.origin}${target}`;
+      } else {
         void navigate({ to: target });
       }
     },
