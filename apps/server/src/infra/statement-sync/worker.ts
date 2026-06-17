@@ -82,12 +82,13 @@ const LINKING_CONCURRENCY = 3;
 // lease(150초, relation_linking_rpcs)가 이 타임아웃을 덮는다.
 export const LINKING_EFFORT = "low" as const;
 export const LINKING_TIMEOUT_MS = 120_000;
-// 후보 좁히기 ⓐ(벡터 근접)의 보수적 기본값. 전수 비교는 대량 유입에서 즉사하므로
-// 좁게 깐다 — 놓친 관계의 벡터 거리 분포는 dogfooding 보정이 데이터로 푼다
-// (relation-design §11). 같은 글 형제(ⓑ)는 새 진술 배치에 이미 들어 있어 점수 무관.
-const CANDIDATE_TOP_K = 10;
-// 보류: cosine 유사도 하한. 0.5는 "뜻이 가까워 관계가 걸릴 만한" 보수적 경계 —
-// 데이터로 보정(§11).
+// 후보 좁히기 ⓐ(벡터 근접) — NEM-165 실데이터 보정(run-candidate-retrieval).
+// 진짜 관계 쌍은 순위 ≤3에 몰리고 우연한 주제 이웃(거짓충돌·near-dup)은 ≥8에 떨어져,
+// 그 사이 빈 구간 끝인 7로 둔다: 함정을 후보에서 빼면서도 코퍼스가 커져 파트너 순위가
+// 밀릴 여유를 남긴다. 같은 글 형제(ⓑ)는 새 진술 배치에 이미 들어 있어 점수 무관.
+const CANDIDATE_TOP_K = 7;
+// cosine 유사도 하한. 충돌 쌍이 0.554에 걸려(NEM-165) 이게 진짜 관계가 사는 바닥선 —
+// 더 올리면 충돌을 놓치고, 더 내려도 후보만 늘 뿐 recall은 그대로다.
 const CANDIDATE_SCORE_THRESHOLD = 0.5;
 // 앵커별 이웃 검색의 일시 실패(Qdrant 블립) 흡수 — 추출 청크 콜과 같은 정책.
 const NEIGHBOR_SEARCH_MAX_ATTEMPTS = 3;
