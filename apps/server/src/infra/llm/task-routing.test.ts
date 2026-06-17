@@ -61,6 +61,7 @@ describe("TASK_DEFAULTS", () => {
       generateSessionTitle: { tier: "nano" },
       extractStatements: { tier: "standard", effort: "low" },
       judgeRelations: { tier: "standard", effort: "low" },
+      assistDraft: { tier: "standard" },
     });
   });
 });
