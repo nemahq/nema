@@ -37,7 +37,7 @@
 
 **제목·주제**
 - 둘 다 작성한 쪽이 제안한다(외부=MCP, 앱=nema 어시스턴트). 사람이 게이트에서 확정·교정한다.
-- 주제는 원본(source)에 1..N개 붙는다(멀티 라벨). 진술의 주제는 진술 → 원본 → 주제 조회로 따라온다.
+- 주제는 원본(source)에 0..N개 붙는다(멀티 라벨, 무태그 허용). 진술의 주제는 진술 → 원본 → 주제 조회로 따라온다.
 - 주제는 공간(Space)에 쌓이는 재사용 목록(레지스트리)이다. 평평한 단일 라벨이고 계층·군집·진술별 표식은 없다.
 - 주제 레지스트리 = 지도의 줄기 목록. 같은 주제를 가진 원본들의 집합이 곧 한 줄기다(별도 줄기 엔티티 없음).
 
@@ -87,7 +87,7 @@ CREATE TABLE topics (
   UNIQUE (space_id, name)
 );
 
--- 원본 1..N 주제 (멀티 라벨). 진술의 주제는 statement_sources -> source_topics로 파생.
+-- 원본 0..N 주제 (멀티 라벨, 무태그 허용). 진술의 주제는 statement_sources -> source_topics로 파생.
 CREATE TABLE source_topics (
   source_id  uuid NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
   topic_id   uuid NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
@@ -241,15 +241,20 @@ BEGIN
     RAISE EXCEPTION 'draft body must be non-empty to confirm';
   END IF;
 
-  -- 엔진 트리거 재사용: source 박제 + 워커 notify (create_source가 둘 다 함)
+  -- 엔진 트리거 재사용: source 박제 + 워커 notify (create_source가 둘 다 함).
+  -- 원본 작성자(sources.author_id) = 확정자(auth.uid()) = 사람 주권. drafts.author_id는
+  -- 출처 보존용이며 이 슬라이스에선 안 읽는다(멀티 유저 때 외부 작성자 추적에 쓸 자리).
   v_source_id := create_source(v_space_id, v_body, NULL);
 
   UPDATE sources SET title = p_title WHERE id = v_source_id;
 
-  -- 주제 레지스트리 find-or-create + 연결 (멀티 라벨)
+  -- 주제 레지스트리 find-or-create + 연결 (멀티 라벨). p_topics가 비면 루프 미실행 =
+  -- 무태그 원본(미분류): 의도된 상태다(확정 시 주제 강제 안 함).
   FOREACH v_topic IN ARRAY coalesce(p_topics, '{}')
   LOOP
     CONTINUE WHEN btrim(v_topic) = '';
+    -- DO UPDATE는 충돌 시 RETURNING을 켜는 관용구(기존 주제 재사용도 id 반환).
+    -- 부수효과: 재사용 때마다 topics.updated_at 갱신 = "마지막 태깅" 시각(의도됨).
     INSERT INTO topics (space_id, name)
     VALUES (v_space_id, btrim(v_topic))
     ON CONFLICT (space_id, name) DO UPDATE SET name = EXCLUDED.name
@@ -267,9 +272,18 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 
 -- 권한: 사용자 경로(RPC 안에서 멤버십 검증). MCP 서버도 사용자 토큰으로 authenticated.
-REVOKE ALL ON FUNCTION create_draft, update_draft, delete_draft, confirm_draft
+-- 시그니처를 명시한다(기존 마이그레이션 하우스 스타일 + 오버로드 모호성 차단).
+REVOKE ALL ON FUNCTION
+  create_draft(uuid, draft_origin, text, text, text[]),
+  update_draft(uuid, text, text, text[]),
+  delete_draft(uuid),
+  confirm_draft(uuid, text, text[])
   FROM public, anon;
-GRANT EXECUTE ON FUNCTION create_draft, update_draft, delete_draft, confirm_draft
+GRANT EXECUTE ON FUNCTION
+  create_draft(uuid, draft_origin, text, text, text[]),
+  update_draft(uuid, text, text, text[]),
+  delete_draft(uuid),
+  confirm_draft(uuid, text, text[])
   TO authenticated, service_role;
 ```
 
@@ -324,17 +338,17 @@ export const DraftAssistInputSchema = z.object({
   body: z.string().trim().min(1).max(SOURCE_BODY_MAX_LENGTH),
 });
 
-// 생성/올리기 (앱 어시스턴트 결과 + MCP 공용).
-// draftId 있으면 기존 초안 채우기(MCP의 a), 없으면 새로 만들기(MCP의 b).
-export const DraftUpsertInputSchema = z.object({
-  draftId: z.string().uuid().optional(),
+// 생성 (앱 어시스턴트 결과 + MCP 새 초안). draftId 없음 = 항상 신규.
+// 기존 초안 갱신(MCP 기존 지목 / 사람 수정)은 draft.edit(부분)로 간다. 한 입력에
+// create와 update를 겹치면 update 분기가 body를 강제해 부분 갱신이 막힌다.
+export const DraftCreateInputSchema = z.object({
   origin: DraftOriginSchema,
   title: z.string().trim().max(DRAFT_TITLE_MAX_LENGTH).optional(),
   body: z.string().trim().min(1).max(SOURCE_BODY_MAX_LENGTH),
   proposedTopics: TopicNameArray.default([]),
 });
 
-// 공동 편집 (사람 수정) - 부분 갱신
+// 공동 편집 (사람 수정 + MCP 기존 초안 지목) - 부분 갱신(빠진 필드는 유지).
 export const DraftEditInputSchema = z.object({
   draftId: z.string().uuid(),
   title: z.string().trim().max(DRAFT_TITLE_MAX_LENGTH).optional(),
@@ -342,11 +356,11 @@ export const DraftEditInputSchema = z.object({
   proposedTopics: TopicNameArray.optional(),
 });
 
-// 확정 게이트
+// 확정 게이트. topics는 0개 허용 = 무태그(미분류). 강제하지 않는다.
 export const DraftConfirmInputSchema = z.object({
   draftId: z.string().uuid(),
   title: z.string().trim().min(1).max(DRAFT_TITLE_MAX_LENGTH),
-  topics: TopicNameArray,
+  topics: TopicNameArray, // .min 없음 → 0..N
 });
 
 export const DraftDeleteInputSchema = z.object({
@@ -358,8 +372,8 @@ export const DraftDeleteInputSchema = z.object({
 
 ```
 draft.assist(DraftAssistInput)  -> { draftId }     // providerProcedure (LLM). 한 방 제안 후 in_app 초안 생성
-draft.upsert(DraftUpsertInput)  -> { draftId }     // protectedProcedure. create_draft 또는 update_draft
-draft.edit(DraftEditInput)      -> void            // protectedProcedure. 사람 공동 편집
+draft.create(DraftCreateInput)  -> { draftId }     // protectedProcedure. create_draft (신규만)
+draft.edit(DraftEditInput)      -> void            // protectedProcedure. update_draft (부분; 사람 수정 + MCP 기존 지목)
 draft.confirm(DraftConfirmInput)-> { sourceId }    // protectedProcedure. confirm_draft (게이트)
 draft.delete(DraftDeleteInput)  -> void            // protectedProcedure. 폐기
 draft.list()                    -> { drafts: Draft[] }   // 대기 초안 목록(인박스)
@@ -373,7 +387,7 @@ topic.list()                    -> { topics: Topic[] }   // 레지스트리 읽�
 MCP 서버는 사용자 토큰으로 인증해 위 tRPC와 같은 계약에 매핑되는 도구 둘을 노출한다.
 
 - 읽기 도구 `list_topics` -> `topic.list` (기존 주제 재사용을 위해 먼저 읽는다)
-- 쓰기 도구 `upload_draft` -> `draft.upsert` (origin='external'; draftId 없으면 새로, 있으면 지목 채우기)
+- 쓰기 도구 `upload_draft` -> 새 초안은 `draft.create`(origin='external'), 기존 지목 채우기는 `draft.edit`(부분 갱신)
 
 불변식: MCP는 `draft.confirm`을 절대 호출하지 않는다. 확정은 앱에서 사람만 한다(사람 주권 게이트). MCP 서버 자체(패키지 위치, 통신 방식, 인증 메커니즘, 도구 내부)는 다음 세션에서 이 계약에 맞춰 설계한다.
 
@@ -411,6 +425,8 @@ MCP 서버는 사용자 토큰으로 인증해 위 tRPC와 같은 계약에 매�
 
 진술은 자기 주제를 들지 않는다. `statement -> statement_sources -> sources -> source_topics -> topics`로 따라온다. 지도의 줄기 = `topics` 한 행, 그 줄기의 내용 = 그 주제를 가진 원본들과 그 원본의 진술들.
 
+주제 없는 원본(무태그)은 어느 줄기에도 안 잡힌다. 지도는 이들을 "미분류" 묶음으로 따로 보여, 나중에 태깅(교정)할 인박스 역할을 한다. 무태그를 허용하는 값은 확신 없을 때 틀린 주제를 강요하지 않는 데 있다(원칙: 틀릴 만한 건 단정하지 않음 + 사람 주권).
+
 ---
 
 ## 7. 만들 / 고칠 파일
@@ -424,13 +440,14 @@ MCP 서버는 사용자 토큰으로 인증해 위 tRPC와 같은 계약에 매�
 | `supabase/migrations/<ts>_draft_rpcs.sql` | 신규: create/update/delete/confirm_draft RPC |
 | `apps/server/src/infra/database.types.ts` | 재생성(생성 타입 커밋) |
 | `packages/shared/src/schemas/topic.ts` | 신규: Topic, 상수 |
-| `packages/shared/src/schemas/draft.ts` | 신규: Draft, origin, upsert/edit/confirm/assist/delete 입력 |
+| `packages/shared/src/schemas/draft.ts` | 신규: Draft, origin, create/edit/confirm/assist/delete 입력 |
 | `packages/shared/src/index.ts` | 위 두 스키마 export |
+| `docs/guides/glossary.md` | 갱신: draft(1급)·topic/주제·줄기(stem) 코드 용어 매핑, 기존 초안→Draft 항목 v2로 |
 | `apps/server/src/services/draft-service.ts` | 신규: create/update/delete/confirm/list/get (Space 해소는 source-service 패턴 재사용) |
 | `apps/server/src/services/topic-service.ts` | 신규: listTopics(레지스트리 읽기) |
 | `apps/server/src/services/draft-assist.ts` | 신규: 한 방 어시스턴트(topic.list 읽기 + LLM + create_draft) |
 | `apps/server/src/prompts/draft-assist.ts` | 신규: 시스템 프롬프트 + 구조화 출력 스키마({title, body, topics}) |
-| `apps/server/src/routers/draft-router.ts` | 신규: assist/upsert/edit/confirm/delete/list/get |
+| `apps/server/src/routers/draft-router.ts` | 신규: assist/create/edit/confirm/delete/list/get |
 | `apps/server/src/routers/topic-router.ts` | 신규: list |
 | `apps/server/src/router.ts` | draft·topic 라우터 등록 |
 
@@ -464,7 +481,7 @@ MCP 서버는 사용자 토큰으로 인증해 위 tRPC와 같은 계약에 매�
   어시스턴트·인박스·게이트  (5.3 경계에만 의존)
 ```
 
-병렬 경계: Track A와 B는 둘 다 5장 공유 계약(`DraftUpsertInput`/`DraftConfirmInput`/`topic.list`/`draft.*`)에만 의존한다. 둘 다 `drafts` 테이블 + `confirm_draft`(앱) / `draft.upsert`(MCP)에서 수렴한다. Track 0이 이 계약을 박은 뒤에는 A·B가 서로를 안 봐도 된다.
+병렬 경계: Track A와 B는 둘 다 5장 공유 계약(`DraftCreateInput`/`DraftEditInput`/`DraftConfirmInput`/`topic.list`/`draft.*`)에만 의존한다. 둘 다 `drafts` 테이블 + `confirm_draft`(앱) / `draft.create`·`draft.edit`(MCP)에서 수렴한다. Track 0이 이 계약을 박은 뒤에는 A·B가 서로를 안 봐도 된다.
 
 ---
 
