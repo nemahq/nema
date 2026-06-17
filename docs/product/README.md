@@ -14,6 +14,7 @@
 - [08-implementation-vs-model](08-implementation-vs-model.md) — 대조 (기존 구현체 ↔ 새 모델) ✅
 - [09-mvp-scope](09-mvp-scope.md) — MVP 스코프 (첫 출시에 넣을 것/뺄 것) ✅
 - [10-concept-collaboration](10-concept-collaboration.md) — 협업 기반 개념 (소유 Space · 접근 Share/Group · 조직 층) ✅
+- [11-first-product-direction](11-first-product-direction.md) — 첫 제품 방향 (누구에게·무엇부터) ✅
 
 참고:
 - [faq](faq.md) — 예상 반론과 답 (계속 누적)
@@ -24,6 +25,7 @@
 2. **모델링** — concept 전체(진술·관계·속성·동작)를 구체적 형태로 ✅ (핵심 4종)
 3. **기존 구현물과 대조** — 기존 nema 코드(memories/revisions/Neo4j 등)와 모델을 맞대봄 ✅ → [08](08-implementation-vs-model.md)
 4. **MVP 스코프 확정** — 대조 결과가 곧 스코프 지도 (이미 구현됨 / 추가 / 재검토) ✅ → [09](09-mvp-scope.md)
+5. **첫 제품 방향** — 첫 사용자·표면 우선순위·완성 기준 ✅ → [11](11-first-product-direction.md)
 
 ## 컨셉 지도
 
