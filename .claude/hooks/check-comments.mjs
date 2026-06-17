@@ -31,13 +31,13 @@ function collectAddedText(toolName, toolInput) {
   return "";
 }
 
+// `//` 라인 주석만 센다. JSDoc·라이선스 등 블록 주석(/* * */)은 대개 의도
+// 문서라 제외하며, 이로써 함수 문서화마다 nudge가 터지는 오탐도 사라진다.
 function findExplanatoryComments(text) {
   const offenders = [];
   for (const raw of text.split("\n")) {
     const line = raw.trim();
-    const isComment =
-      line.startsWith("//") || line.startsWith("/*") || line.startsWith("*");
-    if (!isComment) continue;
+    if (!line.startsWith("//")) continue;
     if (ALLOWED_COMMENT.test(line)) continue;
     offenders.push(line);
   }
@@ -66,7 +66,7 @@ const sample = offenders
 const additionalContext =
   `Project comment policy (root CLAUDE.md → Comments): comments must not restate what the code ` +
   `already expresses; they are reserved for TODO and intent/context that code alone cannot convey. ` +
-  `This edit to ${filePath} added ${offenders.length} explanatory comment line(s):\n${sample}\n` +
+  `This edit to ${filePath} includes ${offenders.length} explanatory comment line(s):\n${sample}\n` +
   `Any of these that merely describe what the adjacent code does should be removed; ` +
   `keep only the ones conveying non-obvious intent.`;
 
