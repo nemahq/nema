@@ -200,6 +200,11 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
+      - name: Deploy mcp to production
+        run: railway up --service mcp --environment production --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
   tolgee-push:
     needs: check
     runs-on: ubuntu-latest
