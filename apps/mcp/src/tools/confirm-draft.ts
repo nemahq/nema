@@ -1,4 +1,4 @@
-import { createNemaClient } from "@mcp/trpc-client";
+import { authedClient } from "@mcp/trpc-client";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { DraftConfirmInputSchema } from "@nema-io/shared";
@@ -19,11 +19,7 @@ export function registerConfirmDraft(server: McpServer): void {
       },
     },
     async (input, extra) => {
-      const token = extra.authInfo?.token;
-      if (!token) {
-        throw new Error("Authenticated access token is required");
-      }
-      const result = await createNemaClient(token).draft.confirm.mutate(input);
+      const result = await authedClient(extra).draft.confirm.mutate(input);
       return {
         content: [{ type: "text", text: JSON.stringify(result) }],
         structuredContent: result,

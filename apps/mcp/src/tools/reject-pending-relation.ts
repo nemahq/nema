@@ -1,4 +1,4 @@
-import { createNemaClient } from "@mcp/trpc-client";
+import { authedClient } from "@mcp/trpc-client";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { RejectPendingRelationInputSchema } from "@nema-io/shared";
@@ -19,13 +19,7 @@ export function registerRejectPendingRelation(server: McpServer): void {
       },
     },
     async (input, extra) => {
-      const token = extra.authInfo?.token;
-      if (!token) {
-        throw new Error("Authenticated access token is required");
-      }
-      await createNemaClient(token).changeset.rejectPendingRelation.mutate(
-        input,
-      );
+      await authedClient(extra).changeset.rejectPendingRelation.mutate(input);
       return { content: [{ type: "text", text: "Pending relation rejected" }] };
     },
   );

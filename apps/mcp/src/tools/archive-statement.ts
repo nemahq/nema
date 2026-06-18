@@ -1,4 +1,4 @@
-import { createNemaClient } from "@mcp/trpc-client";
+import { authedClient } from "@mcp/trpc-client";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { ArchiveStatementInputSchema } from "@nema-io/shared";
@@ -19,11 +19,7 @@ export function registerArchiveStatement(server: McpServer): void {
       },
     },
     async (input, extra) => {
-      const token = extra.authInfo?.token;
-      if (!token) {
-        throw new Error("Authenticated access token is required");
-      }
-      await createNemaClient(token).changeset.archiveStatement.mutate(input);
+      await authedClient(extra).changeset.archiveStatement.mutate(input);
       return { content: [{ type: "text", text: "Statement archived" }] };
     },
   );

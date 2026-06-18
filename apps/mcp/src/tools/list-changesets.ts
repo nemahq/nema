@@ -1,4 +1,4 @@
-import { createNemaClient } from "@mcp/trpc-client";
+import { authedClient } from "@mcp/trpc-client";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { ListChangesetsInputSchema } from "@nema-io/shared";
@@ -19,12 +19,8 @@ export function registerListChangesets(server: McpServer): void {
       },
     },
     async (input, extra) => {
-      const token = extra.authInfo?.token;
-      if (!token) {
-        throw new Error("Authenticated access token is required");
-      }
       const result =
-        await createNemaClient(token).changeset.listChangesets.query(input);
+        await authedClient(extra).changeset.listChangesets.query(input);
       return {
         content: [{ type: "text", text: JSON.stringify(result) }],
         structuredContent: result,

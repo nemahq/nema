@@ -1,4 +1,4 @@
-import { createNemaClient } from "@mcp/trpc-client";
+import { authedClient } from "@mcp/trpc-client";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { DraftEditInputSchema } from "@nema-io/shared";
@@ -19,11 +19,7 @@ export function registerEditDraft(server: McpServer): void {
       },
     },
     async (input, extra) => {
-      const token = extra.authInfo?.token;
-      if (!token) {
-        throw new Error("Authenticated access token is required");
-      }
-      await createNemaClient(token).draft.edit.mutate(input);
+      await authedClient(extra).draft.edit.mutate(input);
       return { content: [{ type: "text", text: "Draft updated" }] };
     },
   );

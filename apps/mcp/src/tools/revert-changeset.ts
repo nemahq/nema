@@ -1,4 +1,4 @@
-import { createNemaClient } from "@mcp/trpc-client";
+import { authedClient } from "@mcp/trpc-client";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { RevertChangesetInputSchema } from "@nema-io/shared";
@@ -19,12 +19,7 @@ export function registerRevertChangeset(server: McpServer): void {
       },
     },
     async (input, extra) => {
-      const token = extra.authInfo?.token;
-      if (!token) {
-        throw new Error("Authenticated access token is required");
-      }
-      const result =
-        await createNemaClient(token).changeset.revert.mutate(input);
+      const result = await authedClient(extra).changeset.revert.mutate(input);
       return {
         content: [{ type: "text", text: JSON.stringify(result) }],
         structuredContent: result,

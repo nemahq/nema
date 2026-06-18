@@ -1,4 +1,4 @@
-import { createNemaClient } from "@mcp/trpc-client";
+import { authedClient } from "@mcp/trpc-client";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { SourceGetInputSchema } from "@nema-io/shared";
@@ -19,11 +19,7 @@ export function registerGetSource(server: McpServer): void {
       },
     },
     async (input, extra) => {
-      const token = extra.authInfo?.token;
-      if (!token) {
-        throw new Error("Authenticated access token is required");
-      }
-      const source = await createNemaClient(token).source.get.query(input);
+      const source = await authedClient(extra).source.get.query(input);
       return {
         content: [{ type: "text", text: JSON.stringify(source) }],
         structuredContent: source,

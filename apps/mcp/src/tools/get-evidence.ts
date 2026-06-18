@@ -1,4 +1,4 @@
-import { createNemaClient } from "@mcp/trpc-client";
+import { authedClient } from "@mcp/trpc-client";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { NarrationInputSchema } from "@nema-io/shared";
@@ -19,12 +19,8 @@ export function registerGetEvidence(server: McpServer): void {
       },
     },
     async (input, extra) => {
-      const token = extra.authInfo?.token;
-      if (!token) {
-        throw new Error("Authenticated access token is required");
-      }
       const evidence =
-        await createNemaClient(token).narration.evidence.query(input);
+        await authedClient(extra).narration.evidence.query(input);
       return {
         content: [{ type: "text", text: JSON.stringify(evidence) }],
         structuredContent: evidence,

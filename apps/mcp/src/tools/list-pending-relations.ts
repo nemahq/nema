@@ -1,4 +1,4 @@
-import { createNemaClient } from "@mcp/trpc-client";
+import { authedClient } from "@mcp/trpc-client";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 export function registerListPendingRelations(server: McpServer): void {
@@ -17,12 +17,8 @@ export function registerListPendingRelations(server: McpServer): void {
       },
     },
     async (_args, extra) => {
-      const token = extra.authInfo?.token;
-      if (!token) {
-        throw new Error("Authenticated access token is required");
-      }
       const result =
-        await createNemaClient(token).changeset.listPendingRelations.query();
+        await authedClient(extra).changeset.listPendingRelations.query();
       return {
         content: [{ type: "text", text: JSON.stringify(result) }],
         structuredContent: result,

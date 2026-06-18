@@ -1,4 +1,4 @@
-import { createNemaClient } from "@mcp/trpc-client";
+import { authedClient } from "@mcp/trpc-client";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { ApplyPendingRelationInputSchema } from "@nema-io/shared";
@@ -19,14 +19,8 @@ export function registerApplyPendingRelation(server: McpServer): void {
       },
     },
     async (input, extra) => {
-      const token = extra.authInfo?.token;
-      if (!token) {
-        throw new Error("Authenticated access token is required");
-      }
       const result =
-        await createNemaClient(token).changeset.applyPendingRelation.mutate(
-          input,
-        );
+        await authedClient(extra).changeset.applyPendingRelation.mutate(input);
       return {
         content: [{ type: "text", text: JSON.stringify(result) }],
         structuredContent: result,
