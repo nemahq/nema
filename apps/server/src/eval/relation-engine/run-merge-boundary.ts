@@ -8,6 +8,8 @@
 // 전에 "모델이 엄격한 같음을 가를 수 있나"만 격리해 재는 probe다. 가르면 본 구현으로,
 // 못 가르면 경계 정의를 다시 본다.
 
+// 이 러너는 Supabase·Qdrant를 안 쓴다 — env 스키마(필수 키·쌍 제약) 통과용 자리값.
+// URL·KEY는 "둘 다 있거나 둘 다 없거나"라 쌍으로 박는다 (커밋된 .env에 숨어 기대지 않게).
 process.env["SUPABASE_SERVICE_ROLE_KEY"] ??= "eval-unused";
 process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
 process.env["QDRANT_API_KEY"] ??= "eval-unused";
@@ -28,7 +30,10 @@ import {
   LINKING_TIMEOUT_MS,
 } from "@server/infra/statement-sync/worker";
 
-import { MERGE_BOUNDARY_PAIRS } from "./merge-boundary-seed";
+import {
+  type BoundaryStatement,
+  MERGE_BOUNDARY_PAIRS,
+} from "./merge-boundary-seed";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadEnv(resolve(__dirname, "../../.."));
@@ -90,15 +95,8 @@ const ProbeSchema = z.object({
 
 type Category = z.infer<typeof ProbeSchema>["category"];
 
-function buildMessage(
-  a: { content: string; type: string; confidence: string | null },
-  b: { content: string; type: string; confidence: string | null },
-): string {
-  const fmt = (s: {
-    content: string;
-    type: string;
-    confidence: string | null;
-  }) =>
+function buildMessage(a: BoundaryStatement, b: BoundaryStatement): string {
+  const fmt = (s: BoundaryStatement) =>
     s.confidence
       ? `(${s.type}, ${s.confidence}) ${s.content}`
       : `(${s.type}) ${s.content}`;
@@ -110,12 +108,15 @@ interface PredictionRecord {
   mergeable: boolean;
   trueRelation: string;
   predictions: Category[];
-  /** 같음이라 부른 비율 */
-  sameRate: number;
+  /** 같음이라 부른 비율 (성공한 분류 기준). 전 회차 실패면 null */
+  sameRate: number | null;
 }
 
 // 합쳐야면 같음 100%가 ✓·일부면 △, 합치면X면 같음 0%가 ✓·하나라도 같음이면 ✗(false-merge)
-function markFor(mergeable: boolean, sameRate: number): string {
+function markFor(mergeable: boolean, sameRate: number | null): string {
+  if (sameRate === null) {
+    return "?";
+  }
   if (mergeable) {
     return sameRate === 1 ? "✓" : "△";
   }
@@ -145,6 +146,9 @@ async function classify(
       return out.category;
     } catch (error) {
       lastError = error;
+      console.warn(
+        `  분류 재시도 ${attempt + 1}/${PROBE_MAX_ATTEMPTS}: ${error instanceof Error ? error.message : String(error)}`,
+      );
       await new Promise((r) =>
         setTimeout(r, PROBE_RETRY_DELAY_MS * (attempt + 1)),
       );
@@ -166,18 +170,29 @@ async function main() {
   });
 
   const records: PredictionRecord[] = [];
+  let failedRuns = 0;
   for (const pair of MERGE_BOUNDARY_PAIRS) {
     const message = buildMessage(pair.a, pair.b);
-    const predictions = await Promise.all(
+    // 쌍×회차를 각자 격리 — 한 분류 실패가 이미 끝난 쌍들의 (비용 지불된) 결과를
+    // 유실시키지 않게. 형제 run-judgment와 같은 결: 전부 실패일 때만 의미 없는 런.
+    const settled = await Promise.allSettled(
       Array.from({ length: runs }, () => classify(llm, message)),
     );
+    const predictions = settled
+      .filter(
+        (s): s is PromiseFulfilledResult<Category> => s.status === "fulfilled",
+      )
+      .map((s) => s.value);
+    failedRuns += settled.length - predictions.length;
     const sameCount = predictions.filter((p) => p === "same").length;
     records.push({
       pairId: pair.id,
       mergeable: pair.mergeable,
       trueRelation: pair.trueRelation,
       predictions,
-      sameRate: round(sameCount / runs),
+      sameRate: predictions.length
+        ? round(sameCount / predictions.length)
+        : null,
     });
   }
 
@@ -189,10 +204,13 @@ async function main() {
   const truePositive = predictedSame.filter((x) => x.mergeable).length;
   const falseMerge = predictedSame.filter((x) => !x.mergeable).length;
   const mergeableTotal = allPreds.filter((x) => x.mergeable).length;
+  // 분모 0이면 null — 모델이 same을 한 번도 안 내면 "데이터 없음"이지 정밀도 1.0이 아니다
   const samePrecision = predictedSame.length
     ? round(truePositive / predictedSame.length)
-    : 1;
-  const sameRecall = mergeableTotal ? round(truePositive / mergeableTotal) : 1;
+    : null;
+  const sameRecall = mergeableTotal
+    ? round(truePositive / mergeableTotal)
+    : null;
 
   const falseMergePairs = records
     .filter((r) => !r.mergeable && r.predictions.includes("same"))
@@ -202,14 +220,16 @@ async function main() {
       sameRate: r.sameRate,
     }));
   const missedPairs = records
-    .filter((r) => r.mergeable && r.sameRate < 1)
+    .filter((r) => r.mergeable && r.sameRate !== null && r.sameRate < 1)
     .map((r) => ({ pairId: r.pairId, sameRate: r.sameRate }));
 
   const summary = {
     runs,
     pairs: MERGE_BOUNDARY_PAIRS.length,
+    failedRuns,
     samePrecision,
     sameRecall,
+    // 예측 단위(같다고 한 횟수) — 쌍 단위인 falseMergePairs.length와 다를 수 있다
     falseMergeCount: falseMerge,
     falseMergePairs,
     missedPairs,
@@ -234,12 +254,18 @@ async function main() {
     const flag = r.mergeable ? "합쳐야" : "합치면X";
     const mark = markFor(r.mergeable, r.sameRate);
     console.log(
-      `  ${mark} [${flag}] ${r.pairId} — same ${r.sameRate} (참관계 ${r.trueRelation})`,
+      `  ${mark} [${flag}] ${r.pairId} — same ${r.sameRate ?? "—"} (참관계 ${r.trueRelation})`,
     );
   }
   console.log("\n=== 요약 ===");
   console.log(JSON.stringify(summary, null, 2));
   console.log(`\n결과 저장: ${outPath}`);
+
+  // 전 회차 실패면 결과 JSON은 남기되 성공으로 위장하지 않는다
+  if (allPreds.length === 0) {
+    console.error("모든 분류가 실패했다 — 측정값 없음");
+    process.exit(1);
+  }
 }
 
 main().catch((error) => {

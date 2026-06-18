@@ -6,7 +6,7 @@
 // mergeable=true = 진짜 같은 말(합쳐야). false = 같지 않음(합치면 과합치 = 위험한 오류).
 // 핵심 지표는 "같음" 판정의 정밀도(precision) — 다른 걸 같다고 하면 알갱이가 뭉개진다.
 
-interface BoundaryStatement {
+export interface BoundaryStatement {
   content: string;
   type: "claim" | "question" | "todo";
   confidence: "certain" | "guess" | null;
