@@ -43,7 +43,7 @@
 EVAL_LLM_MODEL=gemini-3.5-flash GEMINI_VERTEX_PROJECT=<gcp-project> pnpm tsx apps/server/src/eval/statement-engine/run-extraction.ts
 ```
 
-Vertex 인증은 ADC(`gcloud auth application-default login`)를 쓴다. `GEMINI_VERTEX_PROJECT`가 있으면 Vertex, 없고 `GEMINI_API_KEY`만 있으면 AI Studio 경로다.
+Vertex 인증은 ADC(`gcloud auth application-default login`)를 쓴다. `GEMINI_VERTEX_PROJECT`가 있으면 Vertex, 없고 `GEMINI_API_KEY`만 있으면 AI Studio 경로다. ADC는 클라이언트 생성이 아니라 첫 호출에서 검증되므로, 미인증·만료면 측정 도중 auth 에러로 표면화된다 — 실행 전 `gcloud auth application-default login` 상태를 확인한다.
 
 ### 분리선 — 모델 무관 vs 모델 종속
 

@@ -23,6 +23,7 @@ import { loadEnv } from "@server/env";
 import { createEvalLlm } from "@server/eval/eval-llm";
 import type { Database } from "@server/infra/database.types";
 import { createVoyageProvider } from "@server/infra/embedding";
+import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import { createStatementSyncWorker } from "@server/infra/statement-sync";
 import { chunkForExtraction } from "@server/infra/statement-sync/chunking";
 import { createQdrantClient, createQdrantStore } from "@server/infra/vector";
@@ -107,6 +108,9 @@ async function main() {
   const results: Record<string, boolean> = {};
   const admin = createClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+  // 모델·키를 유저 생성 전에 먼저 해석해 빠르게 실패한다 — 키 부재로 유저만 만들고 끝나지 않게.
+  const llm = createEvalLlm();
+
   // 테스트 유저 — 가입 트리거가 개인 Space를 자동 생성
   const email = `e2e-${Date.now()}@test.local`;
   const password = "e2e-verify-password";
@@ -124,7 +128,7 @@ async function main() {
 
   // 어느 단계에서 터져도 요약은 찍히고 유저·컬렉션은 정리된다
   try {
-    await runPipeline({ admin, userId, email, password, results });
+    await runPipeline({ admin, llm, userId, email, password, results });
   } finally {
     await admin.auth.admin
       .deleteUser(userId)
@@ -159,12 +163,13 @@ async function main() {
 
 async function runPipeline(args: {
   admin: ReturnType<typeof createClient<Database>>;
+  llm: LlmProvider;
   userId: string;
   email: string;
   password: string;
   results: Record<string, boolean>;
 }) {
-  const { admin, userId, email, password, results } = args;
+  const { admin, llm, userId, email, password, results } = args;
 
   // 유저 토큰 클라이언트 (RLS 경로를 실전과 동일하게 탄다)
   const userClient = createClient<Database>(SUPABASE_URL, ANON_KEY);
@@ -176,9 +181,8 @@ async function runPipeline(args: {
     throw signInError;
   }
 
-  // providers — 로컬 Qdrant·실제 Voyage/OpenAI. 워커가 진짜 추출·임베딩한다.
+  // providers — 로컬 Qdrant·실제 Voyage. llm은 main()에서 미리 해석해 받는다.
   // 추출 타임아웃·reasoning은 worker 내부의 호출 단위 설정(제품 경로)을 그대로 쓴다.
-  const llm = createEvalLlm();
   const embedding = createVoyageProvider({
     apiKey: requireEnv("VOYAGE_API_KEY"),
   });

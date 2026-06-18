@@ -64,8 +64,8 @@ let sharedOpenAiClient: OpenAI | undefined;
 // anthropic 어댑터용 공유 클라이언트 — anthropic 모델이 처음 요청될 때 만든다.
 // 키가 없으면 그 시점에 LlmError("auth")로 끊는다(서버 부팅은 키 없이도 가능).
 let sharedAnthropicClient: Anthropic | undefined;
-// gemini 어댑터용 공유 클라이언트 — AI Studio(apiKey) 모드가 기본.
-// Vertex 모드 배선은 후속 옵션으로 남긴다(키 없이도 서버 부팅 가능).
+// gemini 어댑터용 공유 클라이언트 — GEMINI_VERTEX_PROJECT 있으면 Vertex(ADC), 없으면 AI Studio(apiKey).
+// createGeminiClient가 선택한다(첫 요청 시 생성, 키 없이도 서버 부팅 가능).
 let sharedGeminiClient: GoogleGenAI | undefined;
 
 // tier 묶음을 forTask가 달린 LlmRouter로 감싼다. forTask 해석:
