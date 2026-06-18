@@ -102,6 +102,9 @@ interface SourceStatement {
   ingestionStatus: Database["public"]["Enums"]["ingestion_status"];
   createdAt: string;
   orderIndex: number | null;
+  // 이 진술로 합쳐진(같은 말) 중복들의 출처 id — 자기 출처 외 추가분 (NEM-162).
+  // 화면이 "이 진술은 글 N개에서도 나옴(쌓일수록 더 믿게 됨)"을 그릴 재료.
+  mergedFromSourceIds: string[];
 }
 
 interface SourceDetail {
@@ -130,7 +133,7 @@ export async function getSource(args: {
     .single();
   throwIfSupabaseError(error);
 
-  const statements = row.statement_sources
+  const baseStatements = row.statement_sources
     .flatMap((ref) =>
       ref.statements && ref.statements.status === "active"
         ? [
@@ -153,6 +156,15 @@ export async function getSource(args: {
         a.createdAt.localeCompare(b.createdAt),
     );
 
+  const mergedSourceIdsByKeeper = await fetchMergedSourceIds(
+    supabase,
+    baseStatements.map((s) => s.id),
+  );
+  const statements: SourceStatement[] = baseStatements.map((s) => ({
+    ...s,
+    mergedFromSourceIds: mergedSourceIdsByKeeper.get(s.id) ?? [],
+  }));
+
   return {
     id: row.id,
     body: row.body,
@@ -161,4 +173,36 @@ export async function getSource(args: {
     createdAt: row.created_at,
     statements,
   };
+}
+
+// 합쳐진(같은 말) 출처 모으기 (NEM-162) — keeper별로, duplicate_of=keeper이고 archived인
+// 중복들의 출처 id(중복 제거). archived만 보므로 되돌리기로 되살아난 중복은 자동 제외된다.
+async function fetchMergedSourceIds(
+  supabase: TypedSupabaseClient,
+  keeperIds: string[],
+): Promise<Map<string, string[]>> {
+  const byKeeper = new Map<string, Set<string>>();
+  if (keeperIds.length === 0) {
+    return new Map();
+  }
+
+  const { data, error } = await supabase
+    .from("statements")
+    .select("duplicate_of, statement_sources(source_id)")
+    .in("duplicate_of", keeperIds)
+    .eq("status", "archived");
+  throwIfSupabaseError(error);
+
+  for (const dup of data ?? []) {
+    if (!dup.duplicate_of) {
+      continue;
+    }
+    const set = byKeeper.get(dup.duplicate_of) ?? new Set<string>();
+    for (const ref of dup.statement_sources) {
+      set.add(ref.source_id);
+    }
+    byKeeper.set(dup.duplicate_of, set);
+  }
+
+  return new Map([...byKeeper].map(([keeper, ids]) => [keeper, [...ids]]));
 }

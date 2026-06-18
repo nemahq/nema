@@ -554,6 +554,7 @@ export type Database = {
             | null;
           content: string;
           created_at: string;
+          duplicate_of: string | null;
           error_message: string | null;
           id: string;
           ingestion_retry_count: number;
@@ -586,6 +587,7 @@ export type Database = {
             | null;
           content?: string;
           created_at?: string;
+          duplicate_of?: string | null;
           error_message?: string | null;
           id?: string;
           ingestion_retry_count?: number;
@@ -597,6 +599,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "statements_duplicate_of_fkey";
+            columns: ["duplicate_of"];
+            isOneToOne: false;
+            referencedRelation: "statements";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "statements_space_id_fkey";
             columns: ["space_id"];
@@ -659,7 +668,7 @@ export type Database = {
       apply_relation_changesets: {
         Args: {
           p_applied?: Json;
-          p_duplicate_ids?: string[];
+          p_duplicates?: Json;
           p_pending?: Json;
           p_source_id: string;
         };
