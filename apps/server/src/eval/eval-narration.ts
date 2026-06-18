@@ -6,9 +6,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadEnv } from "@server/env";
+import { createEvalLlm } from "@server/eval/eval-llm";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
-import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
-import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import { NARRATION_SYSTEM_PROMPT } from "@server/prompts/narration";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -57,16 +56,7 @@ async function collect(
 }
 
 async function main() {
-  const apiKey = process.env["OPENAI_API_KEY"]?.trim();
-  if (!apiKey) {
-    console.error("OPENAI_API_KEY environment variable is required");
-    process.exit(1);
-  }
-
-  const provider = new OpenAiProvider({
-    apiKey,
-    model: DEFAULT_STANDARD_MODEL,
-  });
+  const provider = createEvalLlm();
 
   for (const testCase of CASES) {
     console.log(`\n=== ${testCase.name} ===`);

@@ -3,13 +3,13 @@
 // ① 곡선 모드 (기본): 분할 없는 1콜의 길이별 지연·진술 수 곡선.
 //    초장문 분할의 관문 측정(measurement-log #5)이 이 모드였다.
 //    실행: pnpm tsx src/eval/statement-engine/run-length-curve.ts
-//    필요 키: OPENAI_API_KEY
+//    필요 키: 측정 모델 키(기본 OPENAI_API_KEY; EVAL_LLM_MODEL로 교체 시 해당 프로바이더 키)
 //
 // ② 분할 A/B 모드 (--split): 임계선 초과 급간을 1콜 vs 분할 경로로 비교
 //    (long-input-chunking 6장의 검증 1·2층). 지연·일관성(쌍대 F1)·품질 3차원·
 //    경계 창 요소 포괄성 + 상한 합성 입력의 다청크 구조 검증.
 //    실행: pnpm tsx src/eval/statement-engine/run-length-curve.ts --split
-//    필요 키: OPENAI_API_KEY(추출), ANTHROPIC_API_KEY(심판)
+//    필요 키: 측정 모델 키(기본 OPENAI_API_KEY; EVAL_LLM_MODEL로 교체 가능), ANTHROPIC_API_KEY(심판)
 //
 // 타임아웃은 제품선(EXTRACTION_TIMEOUT_MS)보다 길게 풀어 "잘렸다"가 아니라
 // "실제 몇 초 걸렸다"를 남긴다. SDK 묵시 재시도는 양 모드 모두 차단(곡선 오염 방지).
@@ -24,9 +24,9 @@ process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
 process.env["QDRANT_API_KEY"] ??= "eval-unused";
 
 import { loadEnv } from "@server/env";
+import { createEvalLlm, resolveEvalModelId } from "@server/eval/eval-llm";
 import { LlmError } from "@server/infra/llm/llm-error";
-import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
-import { OpenAiProvider } from "@server/infra/llm/openai-provider";
+import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import {
   chunkForExtraction,
   countTokens,
@@ -75,7 +75,7 @@ type Mode = "curve" | "split-ab";
 // --- 공통: 추출 콜 ---
 
 async function callExtraction(
-  llm: OpenAiProvider,
+  llm: LlmProvider,
   chunk: ExtractionChunk,
 ): Promise<ExtractedStatement[]> {
   const output = await llm.generateStructured({
@@ -129,7 +129,7 @@ interface CurvePoint {
 }
 
 async function measureSingleRun(params: {
-  llm: OpenAiProvider;
+  llm: LlmProvider;
   body: string;
   runIndex: number;
 }): Promise<CurveRun> {
@@ -184,7 +184,7 @@ function summarizeCurvePoint(point: CurvePoint): string {
     .join("  ");
 }
 
-async function runCurveMode(llm: OpenAiProvider): Promise<unknown> {
+async function runCurveMode(llm: LlmProvider): Promise<unknown> {
   const limit = createLimiter(CONCURRENCY);
   const points: CurvePoint[] = await Promise.all(
     LONG_INPUT_SEEDS.map(async (seed) => {
@@ -221,7 +221,7 @@ interface SplitRun {
 }
 
 async function measureSplitRun(params: {
-  llm: OpenAiProvider;
+  llm: LlmProvider;
   chunks: ExtractionChunk[];
   runIndex: number;
 }): Promise<SplitRun> {
@@ -491,7 +491,7 @@ async function boundaryCoverage(params: {
   return { boundaries, control };
 }
 
-async function runSplitAbMode(llm: OpenAiProvider): Promise<unknown> {
+async function runSplitAbMode(llm: LlmProvider): Promise<unknown> {
   const anthropicKey = process.env["ANTHROPIC_API_KEY"];
   if (!anthropicKey) {
     console.error("ANTHROPIC_API_KEY is required for --split (judge)");
@@ -640,21 +640,13 @@ async function runSplitAbMode(llm: OpenAiProvider): Promise<unknown> {
 // --- 진입점 ---
 
 async function main() {
-  const openaiKey = process.env["OPENAI_API_KEY"];
-  if (!openaiKey) {
-    console.error("OPENAI_API_KEY is required");
-    process.exit(1);
-  }
   const mode: Mode = process.argv.includes("--split") ? "split-ab" : "curve";
 
-  const llm = new OpenAiProvider({
-    apiKey: openaiKey,
-    model: DEFAULT_STANDARD_MODEL,
-  });
+  const llm = createEvalLlm();
 
   console.log(
     `${mode === "curve" ? "길이 곡선" : "분할 A/B"} 측정 — ` +
-      `모델 ${DEFAULT_STANDARD_MODEL} (effort ${EXTRACTION_EFFORT}), ` +
+      `모델 ${resolveEvalModelId()} (effort ${EXTRACTION_EFFORT}), ` +
       `측정 타임아웃 ${CURVE_TIMEOUT_MS / 1000}초 (제품선 ${PRODUCT_TIMEOUT_MS / 1000}초)`,
   );
 
@@ -672,7 +664,7 @@ async function main() {
       {
         measuredAt: new Date().toISOString(),
         mode,
-        model: DEFAULT_STANDARD_MODEL,
+        model: resolveEvalModelId(),
         effort: EXTRACTION_EFFORT,
         curveTimeoutMs: CURVE_TIMEOUT_MS,
         productTimeoutMs: PRODUCT_TIMEOUT_MS,

@@ -2,7 +2,7 @@
 //
 // 실행: apps/server에서  pnpm tsx src/eval/relation-engine/run-merge-boundary.ts
 //   --runs N : 쌍당 N회 (기본 5 — LLM 변동 흡수)
-// 필요 키: OPENAI_API_KEY. 채점은 코드 정확 비교(심판 LLM 없음).
+// 필요 키: 측정 모델 키(기본 OPENAI_API_KEY; EVAL_LLM_MODEL로 교체 가능). 채점은 코드 정확 비교(심판 LLM 없음).
 //
 // 본 판정 프롬프트·스키마(shared enum·DB)는 건드리지 않는다 — 합치기를 본격 구현하기
 // 전에 "모델이 엄격한 같음을 가를 수 있나"만 격리해 재는 probe다. 가르면 본 구현으로,
@@ -21,10 +21,10 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
 import { loadEnv } from "@server/env";
+import { createEvalLlm } from "@server/eval/eval-llm";
 import { round } from "@server/eval/statement-engine/metrics";
 import { createLimiter } from "@server/infra/llm/limiter";
-import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
-import { OpenAiProvider } from "@server/infra/llm/openai-provider";
+import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import {
   LINKING_EFFORT,
   LINKING_TIMEOUT_MS,
@@ -125,10 +125,7 @@ function markFor(mergeable: boolean, sameRate: number | null): string {
 
 const limit = createLimiter(PROBE_CONCURRENCY);
 
-async function classify(
-  llm: OpenAiProvider,
-  message: string,
-): Promise<Category> {
+async function classify(llm: LlmProvider, message: string): Promise<Category> {
   let lastError: unknown;
   for (let attempt = 0; attempt < PROBE_MAX_ATTEMPTS; attempt += 1) {
     try {
@@ -158,16 +155,8 @@ async function classify(
 }
 
 async function main() {
-  const openaiKey = process.env["OPENAI_API_KEY"]?.trim();
-  if (!openaiKey) {
-    console.error("OPENAI_API_KEY is required");
-    process.exit(1);
-  }
   const runs = parseRuns();
-  const llm = new OpenAiProvider({
-    apiKey: openaiKey,
-    model: DEFAULT_STANDARD_MODEL,
-  });
+  const llm = createEvalLlm();
 
   const records: PredictionRecord[] = [];
   let failedRuns = 0;

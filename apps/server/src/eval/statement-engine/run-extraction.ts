@@ -1,7 +1,7 @@
 // 쪼개기·분류·일관성 러너 (eval-design 3·4장)
 //
 // 실행: apps/server에서  pnpm tsx src/eval/statement-engine/run-extraction.ts
-// 필요 키: OPENAI_API_KEY(추출), ANTHROPIC_API_KEY(심판) — loadEnv가 읽는다.
+// 필요 키: 측정 모델 키(기본 OPENAI_API_KEY; EVAL_LLM_MODEL로 교체 가능), ANTHROPIC_API_KEY(심판).
 //
 // 흐름: 글 6개 × 5회 추출(worker와 동일한 LLM 1콜)
 //   1회차 → 골든 대조 F1 + 분류 대조 + 차원별 품질
@@ -19,9 +19,8 @@ process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
 process.env["QDRANT_API_KEY"] ??= "eval-unused";
 
 import { loadEnv } from "@server/env";
+import { createEvalLlm } from "@server/eval/eval-llm";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
-import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
-import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
   EXTRACTION_EFFORT,
   EXTRACTION_TIMEOUT_MS as WORKER_EXTRACTION_TIMEOUT_MS,
@@ -335,18 +334,14 @@ function buildConfusionMatrix(
 }
 
 async function main() {
-  const openaiKey = process.env["OPENAI_API_KEY"]?.trim();
   const anthropicKey = process.env["ANTHROPIC_API_KEY"]?.trim();
-  if (!openaiKey || !anthropicKey) {
-    console.error("OPENAI_API_KEY and ANTHROPIC_API_KEY are required");
+  if (!anthropicKey) {
+    console.error("ANTHROPIC_API_KEY is required (judge is Claude-locked)");
     process.exit(1);
   }
 
   // 타임아웃·reasoning은 호출 단위로 worker와 동일하게 전달된다 (extract 참고)
-  const llm = new OpenAiProvider({
-    apiKey: openaiKey,
-    model: DEFAULT_STANDARD_MODEL,
-  });
+  const llm = createEvalLlm();
   const judge = createJudge(anthropicKey, JUDGE_CONCURRENCY);
 
   // 글은 서로 독립이라 동시 처리 — 동시성 상한은 judge의 limiter가 잡는다.

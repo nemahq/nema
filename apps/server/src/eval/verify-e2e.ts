@@ -5,7 +5,7 @@
 //
 // 실행 (로컬 supabase + 로컬 qdrant 기동 후, apps/server에서):
 //   pnpm tsx src/eval/verify-e2e.ts
-// 필요 키: OPENAI_API_KEY(추출)·VOYAGE_API_KEY(임베딩) — loadEnv가 읽는다.
+// 필요 키: 측정 모델 키(기본 OPENAI_API_KEY; EVAL_LLM_MODEL로 교체 가능)·VOYAGE_API_KEY(임베딩).
 //
 // 로컬 인프라를 강제 선점 (staging .env 값보다 먼저 — dotenv는 기존 값을 안 덮는다).
 process.env["SUPABASE_URL"] ??= "http://127.0.0.1:54321";
@@ -20,9 +20,9 @@ process.env["QDRANT_COLLECTION"] ??= "statements_e2e";
 import { createClient } from "@supabase/supabase-js";
 
 import { loadEnv } from "@server/env";
+import { createEvalLlm } from "@server/eval/eval-llm";
 import type { Database } from "@server/infra/database.types";
 import { createVoyageProvider } from "@server/infra/embedding";
-import { createTieredLlm } from "@server/infra/llm/models";
 import { createStatementSyncWorker } from "@server/infra/statement-sync";
 import { chunkForExtraction } from "@server/infra/statement-sync/chunking";
 import { createQdrantClient, createQdrantStore } from "@server/infra/vector";
@@ -178,9 +178,7 @@ async function runPipeline(args: {
 
   // providers — 로컬 Qdrant·실제 Voyage/OpenAI. 워커가 진짜 추출·임베딩한다.
   // 추출 타임아웃·reasoning은 worker 내부의 호출 단위 설정(제품 경로)을 그대로 쓴다.
-  const { tiers: llm } = createTieredLlm({
-    apiKey: requireEnv("OPENAI_API_KEY"),
-  });
+  const llm = createEvalLlm();
   const embedding = createVoyageProvider({
     apiKey: requireEnv("VOYAGE_API_KEY"),
   });
@@ -208,8 +206,8 @@ async function runPipeline(args: {
   // 추출→임베딩 전체 사이클을 돈다.
   const worker = createStatementSyncWorker({
     supabase: admin,
-    // E2E는 제품 경로(standard tier)를 그대로 미러한다 — 추출·관계 판정 둘 다 standard.
-    forTask: () => llm.standard,
+    // E2E는 제품 경로를 미러한다 — 추출·관계 판정 둘 다 같은 모델(EVAL_LLM_MODEL, 미설정 시 gpt-5).
+    forTask: () => llm,
     embedding,
     vectorStore,
   });
@@ -296,9 +294,9 @@ async function runPipeline(args: {
   // ── ④ 뜻 검색 → 원장 조회 → 원본 묶음 반환 ────────────────────────
   const searchResult = await searchStatements({
     supabase: userClient,
-    // 검색은 vectorStore·embedding만 쓴다 — llm은 타입 충족용(forTask는 standard로 미러).
+    // 검색은 vectorStore·embedding만 쓴다 — llm은 타입 충족용.
     providers: {
-      llm: { forTask: () => llm.standard },
+      llm: { forTask: () => llm },
       embedding,
       vectorStore,
     },
