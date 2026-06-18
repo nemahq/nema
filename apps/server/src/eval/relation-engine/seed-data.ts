@@ -62,6 +62,8 @@ export interface RelationScenario {
   statements: ScenarioStatement[];
   /** 이 진술들 사이 성립하는 관계의 전수 (없으면 빈 배열 = "엔진은 침묵해야") */
   golden: GoldenRelation[];
+  /** 같음(중복) 골든 — 합쳐야 하는 쌍의 전수. 생략/빈 = 합칠 게 없음 (NEM-162) */
+  expectedDuplicates?: Array<{ duplicate: string; of: string }>;
   note?: string;
 }
 
@@ -683,7 +685,8 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
       },
     ],
     golden: [],
-    note: "같은 결정의 재진술(표현만 다름). conflicts로 잡으면 NEM-162 핵심 오판 — 둘 다 '유효'를 주장한다고 양립 불가로 보는 것. replaces도 오답(번복·교대 없음). 약한 supports는 무난",
+    expectedDuplicates: [{ duplicate: "s1", of: "e1" }],
+    note: "같은 결정의 재진술(표현만 다름) → 합쳐야(duplicate). conflicts로 잡으면 NEM-162 핵심 오판, replaces도 오답(번복·교대 없음). 관계가 아니라 중복으로 잡는 게 정답",
   },
   {
     id: "near-dup-harness-c3d1",
@@ -707,7 +710,8 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
       },
     ],
     golden: [],
-    note: "확신만 오른 같은 입장(가장 앞선다 → 확정). 교대 선언이 없어 replaces 오답, 사실이 안 어긋나 conflicts 오답. harness-scenarios.md D 항목의 near-dup 함정과 같은 자리",
+    expectedDuplicates: [],
+    note: "확신만 오른 같은 입장(가장 앞선다 guess → 확정 certain)은 progression이라 합치면 안 됨 — 생각이 굳은 이력이 정보다. duplicate·conflicts·replaces 전부 오답(침묵해야). 과합치 함정 — duplicate FP를 잡는 자리",
   },
   {
     id: "near-dup-paraphrase",
@@ -730,6 +734,7 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
       },
     ],
     golden: [],
-    note: "같은 사실의 표현 차이뿐. conflicts·replaces 어느 쪽도 오답 — 어긋나지도 갈음하지도 않는다",
+    expectedDuplicates: [{ duplicate: "s1", of: "e1" }],
+    note: "같은 사실의 표현 차이뿐 → 합쳐야(duplicate). 어긋나지도 갈음하지도 않으니 conflicts·replaces는 오답",
   },
 ];

@@ -5,6 +5,7 @@ import {
   type GatedRelation,
   relationKey,
   type RelationTriple,
+  scoreDuplicates,
   scorePredictions,
   tallyByType,
 } from "./metrics";
@@ -98,6 +99,48 @@ describe("tallyByType", () => {
       missed: 0,
       directionError: 0,
     });
+  });
+});
+
+describe("scoreDuplicates", () => {
+  it("같음은 대칭 — 끝점 순서가 뒤집혀도 골든과 맞는다", () => {
+    const result = scoreDuplicates({
+      predicted: [{ a: "s1", b: "e1" }],
+      expected: [{ a: "e1", b: "s1" }],
+    });
+    expect(result.matched).toBe(1);
+    expect(result.falsePositives).toHaveLength(0);
+    expect(result.missed).toHaveLength(0);
+  });
+
+  it("골든에 없는 예측은 과합치(falsePositive) — 가장 위험", () => {
+    const result = scoreDuplicates({
+      predicted: [{ a: "s1", b: "e2" }],
+      expected: [],
+    });
+    expect(result.matched).toBe(0);
+    expect(result.falsePositives).toHaveLength(1);
+  });
+
+  it("골든인데 못 잡으면 missed", () => {
+    const result = scoreDuplicates({
+      predicted: [],
+      expected: [{ a: "s1", b: "e1" }],
+    });
+    expect(result.missed).toHaveLength(1);
+    expect(result.matched).toBe(0);
+  });
+
+  it("같은 쌍을 두 번 예측하면 골든은 한 번만 회수, 나머지는 FP (claim-once)", () => {
+    const result = scoreDuplicates({
+      predicted: [
+        { a: "s1", b: "e1" },
+        { a: "e1", b: "s1" },
+      ],
+      expected: [{ a: "s1", b: "e1" }],
+    });
+    expect(result.matched).toBe(1);
+    expect(result.falsePositives).toHaveLength(1);
   });
 });
 

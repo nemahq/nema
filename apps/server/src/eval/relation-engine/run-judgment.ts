@@ -31,6 +31,7 @@ import {
   LINKING_TIMEOUT_MS,
 } from "@server/infra/statement-sync/worker";
 import type {
+  DuplicateProposal,
   LabeledStatement,
   RelationProposal,
 } from "@server/prompts/relation-judgment";
@@ -42,9 +43,12 @@ import {
 
 import {
   appliedFalsePositives,
+  type DuplicatePair,
+  type DuplicateScore,
   type GatedRelation,
   precisionRecall,
   round,
+  scoreDuplicates,
   scorePredictions,
   type ScoreResult,
   tallyByType,
@@ -84,7 +88,7 @@ const limitJudgment = createLimiter(JUDGMENT_CONCURRENCY);
 async function judge(
   llm: LlmProvider,
   message: string,
-): Promise<RelationProposal[]> {
+): Promise<{ relations: RelationProposal[]; duplicates: DuplicateProposal[] }> {
   let lastError: unknown;
   for (let attempt = 0; attempt < JUDGMENT_MAX_ATTEMPTS; attempt += 1) {
     try {
@@ -100,7 +104,7 @@ async function judge(
           maxRetries: 0,
         }),
       );
-      return output.relations;
+      return { relations: output.relations, duplicates: output.duplicates };
     } catch (error) {
       lastError = error;
       console.warn(
@@ -157,18 +161,17 @@ function buildLabels(scenario: RelationScenario): {
 async function runScenarioOnce(params: {
   llm: LlmProvider;
   scenario: RelationScenario;
-}): Promise<ScoreResult> {
+}): Promise<{ relation: ScoreResult; duplicate: DuplicateScore }> {
   const { llm, scenario } = params;
   const { newLabeled, existingLabeled, labelToId, batchIds } =
     buildLabels(scenario);
 
   const message = buildRelationJudgmentMessage(newLabeled, existingLabeled);
-  const proposals = await judge(llm, message);
+  const { relations, duplicates } = await judge(llm, message);
 
   // 워커와 같은 게이트를 그대로 통과시킨다 — applied/pending 분기가 제품과 동일.
-  // proposals는 judge()가 RelationJudgmentSchema로 이미 검증한 RelationProposal[].
   const { applied, pending } = gateProposals({
-    proposals,
+    proposals: relations,
     labelToId,
     batchIds,
   });
@@ -186,8 +189,23 @@ async function runScenarioOnce(params: {
       gate: "pending" as const,
     })),
   ];
+  const relation = scorePredictions({ predictions, golden: scenario.golden });
 
-  return scorePredictions({ predictions, golden: scenario.golden });
+  // 중복: 라벨→id. 모르는 라벨(환각)은 버린다 — 관계와 같은 정책. 끝점은 시나리오 진술 id.
+  const predictedDuplicates: DuplicatePair[] = duplicates.flatMap((d) => {
+    const a = labelToId.get(d.duplicate);
+    const b = labelToId.get(d.of);
+    return a && b ? [{ a, b }] : [];
+  });
+  const expectedDuplicates: DuplicatePair[] = (
+    scenario.expectedDuplicates ?? []
+  ).map((d) => ({ a: d.duplicate, b: d.of }));
+  const duplicate = scoreDuplicates({
+    predicted: predictedDuplicates,
+    expected: expectedDuplicates,
+  });
+
+  return { relation, duplicate };
 }
 
 function withType(precision: ReturnType<typeof precisionRecall>) {
@@ -228,6 +246,7 @@ async function main() {
     scenarioId: string;
     run: number;
     result: ScoreResult;
+    duplicate: DuplicateScore;
   }
   const runs: ScenarioRun[] = [];
   const failedRuns: Array<{ scenarioId: string; run: number; error: string }> =
@@ -237,8 +256,16 @@ async function main() {
     RELATION_SCENARIOS.flatMap((scenario) =>
       Array.from({ length: RUNS_PER_SCENARIO }, (_, run) => async () => {
         try {
-          const result = await runScenarioOnce({ llm, scenario });
-          runs.push({ scenarioId: scenario.id, run, result });
+          const { relation, duplicate } = await runScenarioOnce({
+            llm,
+            scenario,
+          });
+          runs.push({
+            scenarioId: scenario.id,
+            run,
+            result: relation,
+            duplicate,
+          });
         } catch (error) {
           failedRuns.push({
             scenarioId: scenario.id,
@@ -333,6 +360,34 @@ async function main() {
     })),
   );
 
+  // 중복(같음) 집계 — micro. 과합치(falseMerges)가 가장 위험(서로 다른 사실을 뭉갬).
+  const dupMatched = runs.reduce((s, r) => s + r.duplicate.matched, 0);
+  const dupPredicted = runs.reduce((s, r) => s + r.duplicate.predicted, 0);
+  const dupExpected = runs.reduce((s, r) => s + r.duplicate.expected, 0);
+  const duplicatePR = precisionRecall({
+    truePositive: dupMatched,
+    predicted: dupPredicted,
+    golden: dupExpected,
+  });
+  const toPair = (scenarioId: string, p: DuplicatePair) => ({
+    a: lookup(scenarioId, p.a),
+    b: lookup(scenarioId, p.b),
+  });
+  const duplicateFalseMerges = runs.flatMap(({ scenarioId, run, duplicate }) =>
+    duplicate.falsePositives.map((p) => ({
+      scenarioId,
+      run,
+      ...toPair(scenarioId, p),
+    })),
+  );
+  const duplicateMissed = runs.flatMap(({ scenarioId, run, duplicate }) =>
+    duplicate.missed.map((p) => ({
+      scenarioId,
+      run,
+      ...toPair(scenarioId, p),
+    })),
+  );
+
   // typeTally(Record<string, TypeTally>)에서 직접 — byType은 precision 필드가 섞여 느슨한 타입.
   const supportsFpTotal = typeTally["supports"]?.falsePositive ?? 0;
   const conflictsFpTotal = typeTally["conflicts"]?.falsePositive ?? 0;
@@ -347,6 +402,12 @@ async function main() {
     failedRuns: failedRuns.length,
     overall: withType(overall),
     byType,
+    // 같음(중복) 검출 — NEM-162. falseMerges = 과합치(서로 다른 사실을 뭉갠 것, 가장 위험).
+    duplicates: {
+      ...withType(duplicatePR),
+      falseMerges: duplicateFalseMerges.length,
+      missed: duplicateMissed.length,
+    },
     // 충돌은 늘 pending이라(relation-design §5) applied 충돌 FP는 존재할 수 없다 — 그래서
     // applied 변종은 supports에만 둔다(헤드라인의 supports↔conflicts 비대칭 이유).
     headline: {
@@ -373,7 +434,13 @@ async function main() {
         runsPerScenario: RUNS_PER_SCENARIO,
         failedRuns,
         summary,
-        failures: { falsePositives, directionErrors, missedGolden },
+        failures: {
+          falsePositives,
+          directionErrors,
+          missedGolden,
+          duplicateFalseMerges,
+          duplicateMissed,
+        },
       },
       null,
       2,
