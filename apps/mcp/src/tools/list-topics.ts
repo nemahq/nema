@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createNemaClient } from "@mcp/trpc-client";
+import { authedClient } from "@mcp/trpc-client";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { TopicSchema } from "@nema-io/shared";
@@ -23,11 +23,7 @@ export function registerListTopics(server: McpServer): void {
       },
     },
     async (_args, extra) => {
-      const token = extra.authInfo?.token;
-      if (!token) {
-        throw new Error("Authenticated access token is required");
-      }
-      const { topics } = await createNemaClient(token).topic.list.query();
+      const { topics } = await authedClient(extra).topic.list.query();
       const payload = { topics };
       return {
         content: [{ type: "text", text: JSON.stringify(payload) }],
