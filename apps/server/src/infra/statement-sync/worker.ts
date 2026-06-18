@@ -811,18 +811,40 @@ export function selectCandidateIds(
 // 가릴 중복 진술 id (NEM-162) — 가릴 쪽(duplicate 라벨)이 이번 배치의 새 진술일 때만.
 // 기존 진술은 새 글 투입으로 가리지 않는다(오래된 기록이 조용히 사라지는 놀람 방지 —
 // 프롬프트도 "duplicate=새 진술 우선"로 유도). 모르는 라벨은 버리고, 중복은 한 번만.
+//
+// 남길 쪽(of)이 살아남는 것까지 보장한다: of가 실재하고, of 자신이 가려질 대상이
+// 아닐 때만 가린다. 대칭쌍([{dup:A,of:B},{dup:B,of:A}])이나 of 환각이면 둘 다 가려져
+// 흡수할 원본이 사라지므로(무소음 데이터 손실) 그런 쌍은 통째로 버린다.
 export function selectDuplicateIds(params: {
   duplicates: DuplicateProposal[];
   labelToId: Map<string, string>;
   batchIds: Set<string>;
 }): string[] {
   const { duplicates, labelToId, batchIds } = params;
-  const ids = new Set<string>();
+  // 1차: 가릴 후보(새 진술)를 모은다 — of 생존 검사의 기준 집합.
+  const archiveCandidates = new Set<string>();
   for (const duplicate of duplicates) {
     const archiveId = labelToId.get(duplicate.duplicate);
     if (archiveId && batchIds.has(archiveId)) {
-      ids.add(archiveId);
+      archiveCandidates.add(archiveId);
     }
+  }
+  // 2차: 남길 쪽이 실재하고 가려지지 않을 때만 확정.
+  const ids = new Set<string>();
+  for (const duplicate of duplicates) {
+    const archiveId = labelToId.get(duplicate.duplicate);
+    const keeperId = labelToId.get(duplicate.of);
+    if (!archiveId || !batchIds.has(archiveId)) {
+      continue;
+    }
+    if (
+      !keeperId ||
+      keeperId === archiveId ||
+      archiveCandidates.has(keeperId)
+    ) {
+      continue; // 남길 쪽이 없거나·자기 자신이거나·함께 가려질 거면 가리지 않는다
+    }
+    ids.add(archiveId);
   }
   return [...ids];
 }
