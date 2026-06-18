@@ -657,7 +657,12 @@ export type Database = {
         Returns: string;
       };
       apply_relation_changesets: {
-        Args: { p_applied?: Json; p_pending?: Json; p_source_id: string };
+        Args: {
+          p_applied?: Json;
+          p_duplicate_ids?: string[];
+          p_pending?: Json;
+          p_source_id: string;
+        };
         Returns: undefined;
       };
       archive_source: { Args: { p_source_id: string }; Returns: undefined };

@@ -23,6 +23,7 @@ import {
   POLL_INTERVAL_MS,
   reconcileChanges,
   selectCandidateIds,
+  selectDuplicateIds,
 } from "./worker";
 
 const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
@@ -644,6 +645,78 @@ describe("selectCandidateIds", () => {
   });
 });
 
+describe("selectDuplicateIds", () => {
+  const labelToId = new Map([
+    ["N0", "new-1"],
+    ["E0", "existing-1"],
+  ]);
+  const batchIds = new Set(["new-1"]);
+
+  it("가릴 쪽(duplicate)이 새 진술이면 그 id를 가린다", () => {
+    const ids = selectDuplicateIds({
+      duplicates: [{ duplicate: "N0", of: "E0" }],
+      labelToId,
+      batchIds,
+    });
+    expect(ids).toEqual(["new-1"]);
+  });
+
+  it("가릴 쪽이 기존 진술이면 가리지 않는다 — 새 글 투입으로 옛 기록을 안 지운다", () => {
+    const ids = selectDuplicateIds({
+      duplicates: [{ duplicate: "E0", of: "N0" }],
+      labelToId,
+      batchIds,
+    });
+    expect(ids).toEqual([]);
+  });
+
+  it("모르는 라벨은 버린다", () => {
+    const ids = selectDuplicateIds({
+      duplicates: [{ duplicate: "N9", of: "E0" }],
+      labelToId,
+      batchIds,
+    });
+    expect(ids).toEqual([]);
+  });
+
+  it("같은 진술이 여러 번 중복으로 와도 한 번만", () => {
+    const ids = selectDuplicateIds({
+      duplicates: [
+        { duplicate: "N0", of: "E0" },
+        { duplicate: "N0", of: "E0" },
+      ],
+      labelToId,
+      batchIds,
+    });
+    expect(ids).toEqual(["new-1"]);
+  });
+
+  it("대칭쌍은 둘 다 안 가린다 — 흡수할 원본이 사라지는 무소음 손실 방지", () => {
+    const twoNew = new Map([
+      ["N0", "new-1"],
+      ["N1", "new-2"],
+    ]);
+    const ids = selectDuplicateIds({
+      duplicates: [
+        { duplicate: "N0", of: "N1" },
+        { duplicate: "N1", of: "N0" },
+      ],
+      labelToId: twoNew,
+      batchIds: new Set(["new-1", "new-2"]),
+    });
+    expect(ids).toEqual([]);
+  });
+
+  it("남길 쪽(of)이 환각 라벨이면 가리지 않는다", () => {
+    const ids = selectDuplicateIds({
+      duplicates: [{ duplicate: "N0", of: "N9" }],
+      labelToId,
+      batchIds,
+    });
+    expect(ids).toEqual([]);
+  });
+});
+
 describe("canFormRelations", () => {
   it("후보가 있으면 진술 1개라도 LLM을 부른다", () => {
     expect(canFormRelations(1, 3)).toBe(true);
@@ -711,7 +784,9 @@ describe("dedupeChanges", () => {
 
 function mockRelationLlm(): LlmProvider {
   return {
-    generateStructured: vi.fn().mockResolvedValue({ relations: [] }),
+    generateStructured: vi
+      .fn()
+      .mockResolvedValue({ relations: [], duplicates: [] }),
     async *generateStream() {
       yield "";
     },
@@ -766,6 +841,66 @@ describe("잇기 분할 통합 — 장문 source", () => {
     expect(llm.generateStructured).toHaveBeenCalledTimes(2);
     // 되돌리기 단위는 글 — K개 sub-batch여도 적용은 source당 1번
     expect(rpcCalls(rpc, "apply_relation_changesets")).toHaveLength(1);
+  });
+
+  it("판정의 duplicates가 apply의 p_duplicate_ids로 흘러간다 — 가릴 새 진술 id", async () => {
+    const keeper = {
+      id: "c0000000-0000-4000-a000-000000000000",
+      content: "N잡으로 확정",
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [{ source_id: SOURCE_ID, locator: { index: 0 } }],
+    };
+    const dup = {
+      id: "c0000000-0000-4000-a000-000000000001",
+      content: "N잡으로 정함",
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [{ source_id: SOURCE_ID, locator: { index: 1 } }],
+    };
+    const statements = [keeper, dup];
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_linking_sources: [
+          [
+            {
+              id: SOURCE_ID,
+              space_id: SPACE_ID,
+              created_at: "2026-06-11T00:00:00.000Z",
+            },
+          ],
+        ],
+      },
+      { statements },
+    );
+    // 두 번째 진술(N1)이 첫 진술(N0)의 재진술 — 가려야
+    const llm: LlmProvider = {
+      generateStructured: vi.fn().mockResolvedValue({
+        relations: [],
+        duplicates: [{ duplicate: "N1", of: "N0" }],
+      }),
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    };
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const calls = rpcCalls(rpc, "apply_relation_changesets");
+    expect(calls).toHaveLength(1);
+    const args = calls[0]?.[1] as { p_duplicate_ids: string[] };
+    expect(args.p_duplicate_ids).toEqual([dup.id]);
   });
 });
 
