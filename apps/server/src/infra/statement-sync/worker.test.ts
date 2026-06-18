@@ -23,6 +23,7 @@ import {
   POLL_INTERVAL_MS,
   reconcileChanges,
   selectCandidateIds,
+  selectDuplicateIds,
 } from "./worker";
 
 const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
@@ -644,6 +645,53 @@ describe("selectCandidateIds", () => {
   });
 });
 
+describe("selectDuplicateIds", () => {
+  const labelToId = new Map([
+    ["N0", "new-1"],
+    ["E0", "existing-1"],
+  ]);
+  const batchIds = new Set(["new-1"]);
+
+  it("가릴 쪽(duplicate)이 새 진술이면 그 id를 가린다", () => {
+    const ids = selectDuplicateIds({
+      duplicates: [{ duplicate: "N0", of: "E0" }],
+      labelToId,
+      batchIds,
+    });
+    expect(ids).toEqual(["new-1"]);
+  });
+
+  it("가릴 쪽이 기존 진술이면 가리지 않는다 — 새 글 투입으로 옛 기록을 안 지운다", () => {
+    const ids = selectDuplicateIds({
+      duplicates: [{ duplicate: "E0", of: "N0" }],
+      labelToId,
+      batchIds,
+    });
+    expect(ids).toEqual([]);
+  });
+
+  it("모르는 라벨은 버린다", () => {
+    const ids = selectDuplicateIds({
+      duplicates: [{ duplicate: "N9", of: "E0" }],
+      labelToId,
+      batchIds,
+    });
+    expect(ids).toEqual([]);
+  });
+
+  it("같은 진술이 여러 번 중복으로 와도 한 번만", () => {
+    const ids = selectDuplicateIds({
+      duplicates: [
+        { duplicate: "N0", of: "E0" },
+        { duplicate: "N0", of: "E0" },
+      ],
+      labelToId,
+      batchIds,
+    });
+    expect(ids).toEqual(["new-1"]);
+  });
+});
+
 describe("canFormRelations", () => {
   it("후보가 있으면 진술 1개라도 LLM을 부른다", () => {
     expect(canFormRelations(1, 3)).toBe(true);
@@ -711,7 +759,9 @@ describe("dedupeChanges", () => {
 
 function mockRelationLlm(): LlmProvider {
   return {
-    generateStructured: vi.fn().mockResolvedValue({ relations: [] }),
+    generateStructured: vi
+      .fn()
+      .mockResolvedValue({ relations: [], duplicates: [] }),
     async *generateStream() {
       yield "";
     },
