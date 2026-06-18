@@ -51,7 +51,8 @@ export type RelationTrap =
   | "invented-supports" // 토픽이 가까운 사실을 근거랍시고 지어내 supports로 잇나
   | "false-conflict" // 안 부딪히는 두 진술을 충돌이라 하나
   | "contention-not-alternation" // 교대 선언 없는 경합을 replaces로 오판하나
-  | "mere-neighbor"; // 뜻만 가까운 무관계 쌍에 관계를 다나
+  | "mere-neighbor" // 뜻만 가까운 무관계 쌍에 관계를 다나
+  | "near-duplicate"; // 거의 같은 두 진술을 충돌·대체로 오판하나 (NEM-162)
 
 export interface RelationScenario {
   id: string;
@@ -656,5 +657,79 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
     ],
     golden: [],
     note: "s1→e1을 supports로 잇는 게 1순위 FP — e1은 todo라 supports의 to가 될 수 없다(닫으려면 resolves인데 s1은 답이 아님). s2→e2는 '정산' 토픽만 겹치는 무관 쌍(습관 vs 번거로움) — 근거 아님. 둘 다 침묵해야",
+  },
+  // --- near-duplicate 함정 (NEM-162) — 거의 같은 두 진술. 엔진엔 "같음" 관계가 없어
+  // 이상은 침묵. 진짜 오답은 conflicts·replaces(둘 다 유효 주장 → '동시 참 불가'로
+  // 충돌 오발, 또는 같은 방향 강화를 번복=replaces로 오판). 약한 supports는 무난. ---
+  {
+    id: "near-dup-reingest",
+    description:
+      "이미 넣은 결정을 거의 같은 말로 다시 넣음 — 합칠 동작이 없으니 침묵해야",
+    traps: ["near-duplicate"],
+    statements: [
+      {
+        id: "e1",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "결제 연동은 토스페이먼츠로 가기로 했다",
+      },
+      {
+        id: "s1",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "결제는 토스페이먼츠로 하기로 정했다",
+      },
+    ],
+    golden: [],
+    note: "같은 결정의 재진술(표현만 다름). conflicts로 잡으면 NEM-162 핵심 오판 — 둘 다 '유효'를 주장한다고 양립 불가로 보는 것. replaces도 오답(번복·교대 없음). 약한 supports는 무난",
+  },
+  {
+    id: "near-dup-harness-c3d1",
+    description:
+      "하니스 near-dup 함정(C3↔D1) — 같은 방향 강화(guess→certain), 번복 아님",
+    traps: ["near-duplicate"],
+    statements: [
+      {
+        id: "e1",
+        role: "existing",
+        type: "claim",
+        confidence: "guess",
+        content: "남은 후보 중에서는 N잡 수익 관리가 가장 앞선다고 본다",
+      },
+      {
+        id: "s1",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "검증 대상을 N잡 수익 관리로 확정했다",
+      },
+    ],
+    golden: [],
+    note: "확신만 오른 같은 입장(가장 앞선다 → 확정). 교대 선언이 없어 replaces 오답, 사실이 안 어긋나 conflicts 오답. harness-scenarios.md D 항목의 near-dup 함정과 같은 자리",
+  },
+  {
+    id: "near-dup-paraphrase",
+    description: "같은 수치·사실을 표현만 바꿔 재진술 — 침묵해야",
+    traps: ["near-duplicate"],
+    statements: [
+      {
+        id: "e1",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "가입 전환율이 12퍼센트 정도로 나온다",
+      },
+      {
+        id: "s1",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "회원가입 전환율은 약 12퍼센트다",
+      },
+    ],
+    golden: [],
+    note: "같은 사실의 표현 차이뿐. conflicts·replaces 어느 쪽도 오답 — 어긋나지도 갈음하지도 않는다",
   },
 ];
