@@ -61,6 +61,7 @@ Report a duplicate ONLY for a true restatement: the same proposition, possibly i
 - A firmer or more confident version of the same direction is NOT a duplicate. A guess that later becomes certain is a progression, and that change is information — keep both (emit nothing, or at most \`replaces\` if an explicit switch). Do not merge it.
 - A version that adds a reason, detail, or qualifier is NOT a duplicate — it carries new information (consider \`supports\`, never duplicate).
 - Sharing a topic or keywords is NOT a duplicate.
+- A shared sentence shape is not the same claim. Two statements can reuse one frame or list-counting template — "불리한 이유는 세 가지다" and "병행하지 않는 이유는 세 가지다" — yet count entirely different things; matching shape is not matching content. Likewise, naming a subject ("둘째는 건강 자기관리다") and deciding about it ("건강 자기관리는 2순위로 둔다") are different claims about the same subject, not a restatement. Merge on a matching proposition, never on a shared wording pattern or subject.
 - When unsure whether two statements are truly the same claim or merely close, do NOT report a duplicate. A false merge destroys a distinct fact; abstain.
 - A duplicate may hold between a new statement and an existing one, or between two new statements in the batch.
 - A pair reported as a duplicate must NOT also appear in \`relations\`.
