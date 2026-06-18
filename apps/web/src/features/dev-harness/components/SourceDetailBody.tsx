@@ -109,8 +109,16 @@ function SourceDetailBodyContent({ sourceId }: SourceDetailBodyProps) {
                 content={statement.content}
                 meta={ingestionMetaLabel(statement.ingestionStatus)}
                 markers={
-                  statementRelations.length > 0 && (
+                  (statement.mergedFromSourceIds.length > 0 ||
+                    statementRelations.length > 0) && (
                     <div className="flex flex-col gap-1 border-t border-border/30 pt-1">
+                      {statement.mergedFromSourceIds.length > 0 && (
+                        <span className="text-xs text-fg-tertiary">
+                          같은 말 합쳐짐 · 다른 글{" "}
+                          {statement.mergedFromSourceIds.length}개에도 있음 (총{" "}
+                          {statement.mergedFromSourceIds.length + 1}번)
+                        </span>
+                      )}
                       {statementRelations.map((relation) => {
                         const isFrom = relation.from.id === statement.id;
                         const counterpart = isFrom

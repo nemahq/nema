@@ -23,7 +23,7 @@ import {
   POLL_INTERVAL_MS,
   reconcileChanges,
   selectCandidateIds,
-  selectDuplicateIds,
+  selectDuplicatePairs,
 } from "./worker";
 
 const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
@@ -645,50 +645,80 @@ describe("selectCandidateIds", () => {
   });
 });
 
-describe("selectDuplicateIds", () => {
+describe("selectDuplicatePairs", () => {
   const labelToId = new Map([
     ["N0", "new-1"],
     ["E0", "existing-1"],
   ]);
   const batchIds = new Set(["new-1"]);
 
-  it("가릴 쪽(duplicate)이 새 진술이면 그 id를 가린다", () => {
-    const ids = selectDuplicateIds({
+  it("가릴 쪽이 새 진술이면 {가릴, 남길} 쌍을 낸다", () => {
+    const pairs = selectDuplicatePairs({
       duplicates: [{ duplicate: "N0", of: "E0" }],
       labelToId,
       batchIds,
     });
-    expect(ids).toEqual(["new-1"]);
+    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "existing-1" }]);
   });
 
-  it("가릴 쪽이 기존 진술이면 가리지 않는다 — 새 글 투입으로 옛 기록을 안 지운다", () => {
-    const ids = selectDuplicateIds({
+  it("가릴 쪽이 기존 진술이면 안 가린다 — 새 글 투입으로 옛 기록을 안 지운다", () => {
+    const pairs = selectDuplicatePairs({
       duplicates: [{ duplicate: "E0", of: "N0" }],
       labelToId,
       batchIds,
     });
-    expect(ids).toEqual([]);
+    expect(pairs).toEqual([]);
   });
 
-  it("모르는 라벨은 버린다", () => {
-    const ids = selectDuplicateIds({
+  it("모르는 가릴-라벨은 버린다", () => {
+    const pairs = selectDuplicatePairs({
       duplicates: [{ duplicate: "N9", of: "E0" }],
       labelToId,
       batchIds,
     });
-    expect(ids).toEqual([]);
+    expect(pairs).toEqual([]);
   });
 
-  it("같은 진술이 여러 번 중복으로 와도 한 번만", () => {
-    const ids = selectDuplicateIds({
+  it("한 진술에 keeper가 여러 번이면 첫 keeper만 채택", () => {
+    const twoExisting = new Map([
+      ["N0", "new-1"],
+      ["E0", "existing-1"],
+      ["E1", "existing-2"],
+    ]);
+    const pairs = selectDuplicatePairs({
       duplicates: [
         { duplicate: "N0", of: "E0" },
+        { duplicate: "N0", of: "E1" },
+      ],
+      labelToId: twoExisting,
+      batchIds,
+    });
+    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "existing-1" }]);
+  });
+
+  it("무효 keeper가 먼저 와도 뒤의 유효 keeper로 가린다 — 첫 무효가 막지 않음", () => {
+    const pairs = selectDuplicatePairs({
+      duplicates: [
+        { duplicate: "N0", of: "N9" },
         { duplicate: "N0", of: "E0" },
       ],
       labelToId,
       batchIds,
     });
-    expect(ids).toEqual(["new-1"]);
+    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "existing-1" }]);
+  });
+
+  it("같은 글 안 비대칭(둘 다 새 진술)은 가린다 — 과거부 안 됨", () => {
+    const twoNew = new Map([
+      ["N0", "new-1"],
+      ["N1", "new-2"],
+    ]);
+    const pairs = selectDuplicatePairs({
+      duplicates: [{ duplicate: "N0", of: "N1" }],
+      labelToId: twoNew,
+      batchIds: new Set(["new-1", "new-2"]),
+    });
+    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "new-2" }]);
   });
 
   it("대칭쌍은 둘 다 안 가린다 — 흡수할 원본이 사라지는 무소음 손실 방지", () => {
@@ -696,7 +726,7 @@ describe("selectDuplicateIds", () => {
       ["N0", "new-1"],
       ["N1", "new-2"],
     ]);
-    const ids = selectDuplicateIds({
+    const pairs = selectDuplicatePairs({
       duplicates: [
         { duplicate: "N0", of: "N1" },
         { duplicate: "N1", of: "N0" },
@@ -704,16 +734,16 @@ describe("selectDuplicateIds", () => {
       labelToId: twoNew,
       batchIds: new Set(["new-1", "new-2"]),
     });
-    expect(ids).toEqual([]);
+    expect(pairs).toEqual([]);
   });
 
-  it("남길 쪽(of)이 환각 라벨이면 가리지 않는다", () => {
-    const ids = selectDuplicateIds({
+  it("남길 쪽(keeper)이 환각 라벨이면 안 가린다", () => {
+    const pairs = selectDuplicatePairs({
       duplicates: [{ duplicate: "N0", of: "N9" }],
       labelToId,
       batchIds,
     });
-    expect(ids).toEqual([]);
+    expect(pairs).toEqual([]);
   });
 });
 
@@ -843,7 +873,7 @@ describe("잇기 분할 통합 — 장문 source", () => {
     expect(rpcCalls(rpc, "apply_relation_changesets")).toHaveLength(1);
   });
 
-  it("판정의 duplicates가 apply의 p_duplicate_ids로 흘러간다 — 가릴 새 진술 id", async () => {
+  it("판정의 duplicates가 apply의 p_duplicates 쌍으로 흘러간다 — {가릴, 남길}", async () => {
     const keeper = {
       id: "c0000000-0000-4000-a000-000000000000",
       content: "N잡으로 확정",
@@ -899,8 +929,12 @@ describe("잇기 분할 통합 — 장문 source", () => {
 
     const calls = rpcCalls(rpc, "apply_relation_changesets");
     expect(calls).toHaveLength(1);
-    const args = calls[0]?.[1] as { p_duplicate_ids: string[] };
-    expect(args.p_duplicate_ids).toEqual([dup.id]);
+    const args = calls[0]?.[1] as {
+      p_duplicates: { duplicate: string; keeper: string }[];
+    };
+    expect(args.p_duplicates).toEqual([
+      { duplicate: dup.id, keeper: keeper.id },
+    ]);
   });
 });
 
