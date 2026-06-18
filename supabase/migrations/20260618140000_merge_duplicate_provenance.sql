@@ -14,10 +14,16 @@
 -- =============================================================
 
 ALTER TABLE statements
-  ADD COLUMN duplicate_of uuid REFERENCES statements(id) ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS duplicate_of uuid REFERENCES statements(id) ON DELETE SET NULL;
 
 COMMENT ON COLUMN statements.duplicate_of IS
   '이 진술이 같은 말로 합쳐져 들어간 남길 진술(NEM-162). archived일 때만 의미 — 합쳐진 출처 집계에 쓰인다.';
+
+-- 합쳐진 출처 집계(getSource — 상태 폴링 hot path)가 duplicate_of=keeper·archived를
+-- 훑으므로 부분 인덱스로 받친다. 집계는 archived만 보니 그 조건으로 좁힌다.
+CREATE INDEX IF NOT EXISTS idx_statements_duplicate_of_archived
+  ON statements (duplicate_of)
+  WHERE status = 'archived' AND duplicate_of IS NOT NULL;
 
 DROP FUNCTION IF EXISTS apply_relation_changesets(uuid, jsonb, jsonb, uuid[]);
 

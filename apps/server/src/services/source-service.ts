@@ -156,10 +156,11 @@ export async function getSource(args: {
         a.createdAt.localeCompare(b.createdAt),
     );
 
-  const mergedSourceIdsByKeeper = await fetchMergedSourceIds(
+  const mergedSourceIdsByKeeper = await fetchMergedSourceIds({
     supabase,
-    baseStatements.map((s) => s.id),
-  );
+    keeperIds: baseStatements.map((s) => s.id),
+    ownSourceId: sourceId,
+  });
   const statements: SourceStatement[] = baseStatements.map((s) => ({
     ...s,
     mergedFromSourceIds: mergedSourceIdsByKeeper.get(s.id) ?? [],
@@ -177,10 +178,15 @@ export async function getSource(args: {
 
 // 합쳐진(같은 말) 출처 모으기 (NEM-162) — keeper별로, duplicate_of=keeper이고 archived인
 // 중복들의 출처 id(중복 제거). archived만 보므로 되돌리기로 되살아난 중복은 자동 제외된다.
-async function fetchMergedSourceIds(
-  supabase: TypedSupabaseClient,
-  keeperIds: string[],
-): Promise<Map<string, string[]>> {
+// ownSourceId(지금 보는 글)는 뺀다 — 같은 글 안 비대칭 합치기가 "다른 글에도 있음"으로
+// 잘못 세어지지 않게(cross-source 보강만 센다). 한 단계만 따른다: keeper는 늘 살아남는
+// 쪽이라(가리는 건 새 진술뿐) duplicate_of 사슬이 안 생겨 1단계로 충분하다.
+async function fetchMergedSourceIds(params: {
+  supabase: TypedSupabaseClient;
+  keeperIds: string[];
+  ownSourceId: string;
+}): Promise<Map<string, string[]>> {
+  const { supabase, keeperIds, ownSourceId } = params;
   const byKeeper = new Map<string, Set<string>>();
   if (keeperIds.length === 0) {
     return new Map();
@@ -199,10 +205,16 @@ async function fetchMergedSourceIds(
     }
     const set = byKeeper.get(dup.duplicate_of) ?? new Set<string>();
     for (const ref of dup.statement_sources) {
-      set.add(ref.source_id);
+      if (ref.source_id !== ownSourceId) {
+        set.add(ref.source_id);
+      }
     }
     byKeeper.set(dup.duplicate_of, set);
   }
 
-  return new Map([...byKeeper].map(([keeper, ids]) => [keeper, [...ids]]));
+  return new Map(
+    [...byKeeper]
+      .map(([keeper, ids]): [string, string[]] => [keeper, [...ids]])
+      .filter(([, ids]) => ids.length > 0),
+  );
 }

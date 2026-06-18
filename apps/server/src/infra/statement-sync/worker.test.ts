@@ -679,16 +679,46 @@ describe("selectDuplicatePairs", () => {
     expect(pairs).toEqual([]);
   });
 
-  it("같은 진술이 여러 번 중복으로 와도 한 쌍만", () => {
+  it("한 진술에 keeper가 여러 번이면 첫 keeper만 채택", () => {
+    const twoExisting = new Map([
+      ["N0", "new-1"],
+      ["E0", "existing-1"],
+      ["E1", "existing-2"],
+    ]);
     const pairs = selectDuplicatePairs({
       duplicates: [
         { duplicate: "N0", of: "E0" },
+        { duplicate: "N0", of: "E1" },
+      ],
+      labelToId: twoExisting,
+      batchIds,
+    });
+    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "existing-1" }]);
+  });
+
+  it("무효 keeper가 먼저 와도 뒤의 유효 keeper로 가린다 — 첫 무효가 막지 않음", () => {
+    const pairs = selectDuplicatePairs({
+      duplicates: [
+        { duplicate: "N0", of: "N9" },
         { duplicate: "N0", of: "E0" },
       ],
       labelToId,
       batchIds,
     });
     expect(pairs).toEqual([{ duplicate: "new-1", keeper: "existing-1" }]);
+  });
+
+  it("같은 글 안 비대칭(둘 다 새 진술)은 가린다 — 과거부 안 됨", () => {
+    const twoNew = new Map([
+      ["N0", "new-1"],
+      ["N1", "new-2"],
+    ]);
+    const pairs = selectDuplicatePairs({
+      duplicates: [{ duplicate: "N0", of: "N1" }],
+      labelToId: twoNew,
+      batchIds: new Set(["new-1", "new-2"]),
+    });
+    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "new-2" }]);
   });
 
   it("대칭쌍은 둘 다 안 가린다 — 흡수할 원본이 사라지는 무소음 손실 방지", () => {
