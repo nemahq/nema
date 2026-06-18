@@ -5,13 +5,17 @@ import { Button } from "@nema-io/weave";
 
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
+import { getStorage, removeStorage } from "@web/utils/localStorage";
 
 // Supabase OAuth 서버가 동의 UI를 앱에 위임한다(Authorization Path).
 export function OAuthConsentPage() {
-  const { authorization_id: authorizationId } = useSearch({
-    from: "/oauth/consent",
-  });
+  const search = useSearch({ from: "/oauth/consent" });
   const { t } = useTranslation();
+  // 구글 등 OAuth 공급자 왕복에서 authorization_id가 URL에서 사라질 수 있어,
+  // 라우트 진입 때 저장해 둔 값으로 복구한다(없으면 URL 값을 그대로 쓴다).
+  const [authorizationId] = useState(
+    () => search.authorization_id ?? getStorage("oauthAuthorizationId"),
+  );
   const [clientName, setClientName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deciding, setDeciding] = useState(false);
@@ -23,6 +27,10 @@ export function OAuthConsentPage() {
         return;
       }
       loadedRef.current = true;
+      removeStorage("oauthAuthorizationId");
+      if (!authorizationId) {
+        return;
+      }
       void (async () => {
         try {
           const { data, error: detailsError } =
@@ -46,6 +54,9 @@ export function OAuthConsentPage() {
   );
 
   async function decide(approve: boolean) {
+    if (!authorizationId) {
+      return;
+    }
     setDeciding(true);
     setError(null);
     try {
@@ -70,10 +81,12 @@ export function OAuthConsentPage() {
     }
   }
 
-  if (error) {
+  // authorization_id가 URL에도 저장소에도 없으면 잘못 들어온 요청이다.
+  const message = error ?? (authorizationId ? null : t("common.unknown_error"));
+  if (message) {
     return (
       <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
-        <p className="text-sm text-status-error">{error}</p>
+        <p className="text-sm text-status-error">{message}</p>
       </main>
     );
   }
