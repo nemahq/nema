@@ -310,7 +310,7 @@ CREATE TRIGGER on_auth_user_created
   ```
   검색 필터는 `space_id`(내가 멤버인 Space들) 경유로 격리. (`user_id` → `space_id` 전환.)
 - **archived 진술의 벡터 = 선언적 동기화**: worker가 진술을 가져왔을 때 `status='active'`면 Qdrant upsert, `status='archived'`면 delete. **archive를 수행하는 RPC(manual·revert)가** `status`를 바꾸면서 `ingestion_status`를 `pending`으로 함께 되돌려, worker가 벡터를 제거한다. → 검색 공간이 깨끗해 search는 `space_id` 필터만으로 끝남(archived는 벡터가 없음).
-- **Neo4j는 이번 스코프 밖** — 진술 관계 그래프 동기화는 관계 엔진과 함께 후속. 기존 Entity(핵심어) 그물은 `memories` 드랍과 함께 정지(핵심어는 09에서 보조·있으면 좋음으로 강등).
+- **Neo4j는 이번 스코프 밖** — 진술 관계 그래프 동기화는 관계 엔진과 함께 후속. 기존 Entity(개체) 그물은 `memories` 드랍과 함께 정지(개체는 09에서 보조·있으면 좋음으로 강등).
 - **이 문서의 경계** — `source` 박제와 `ingestion` changeset의 생성 시점, 추출 실패 시 박제된 source의 정리 경로는 [ingestion-design](ingestion-design.md)이 확정했다(박제는 동기, changeset은 추출 성공 직후 원자 생성, 실패 source는 보존+수동 재개). `revert`가 무르는 단위는 빼기·되돌리기 설계(후속)에서. 여기서는 스키마와 RPC 계약(시그니처·책임)까지만 정한다.
 
 ### 5.4 enum 타입 / 인덱스
