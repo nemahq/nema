@@ -737,4 +737,196 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
     expectedDuplicates: [{ duplicate: "s1", of: "e1" }],
     note: "같은 사실의 표현 차이뿐 → 합쳐야(duplicate). 어긋나지도 갈음하지도 않으니 conflicts·replaces는 오답",
   },
+  // --- 재투입 배치 함정 (NEM-162 후속) — 격리 쌍 probe의 사각을 메운다. 위 near-dup 3종은
+  // 모두 새 1 + 기존 1짜리 격리 쌍이라 same precision 1.0이었으나, 실 워커는 같은 글을 통째로
+  // 다시 받으면 새 진술 여럿 + 후보 수십을 한 콜에 판정한다(linkSubBatch). 그 밀집 맥락에서만
+  // 드러나는 위험은 "틀만 같은 두 진술을 같음으로 뭉개는 과합치"다: "불리한 이유는 세 가지다"와
+  // "병행하지 않는 이유는 세 가지다"는 "…이유는 세 가지다" 틀만 같고 세는 대상이 달라 서로 다른
+  // 사실인데, 밀집 배치에서 모델이 가끔 같음으로 합쳤다(무소음 데이터 손실 — 같음엔 확신 게이트가
+  // 없어 무조건 archive). 진술은 staging 도그푸딩 실스냅샷(글 D 첫투입 = existing, 재투입 = new).
+  //
+  // golden=[] 이지만 두 가지를 알고 본다: ① 재투입엔 의도적 교대가 없으니 replaces는 전부 FP.
+  // ② 재투입 진술들은 글 D 내부의 진짜 supports("건강 안 사라짐"→"건강 2순위" 등)를 다시
+  // 찾으므로 supports FP가 뜨는데, 이는 지어냄이 아니라 골든을 비워둔 탓이라 이 시나리오에선
+  // 무시한다(merge 시 archive로 자가정리). 이 시나리오가 지키는 메트릭은 falseMerges(위험한
+  // 과합치)=0 과 replaces FP=0. keeper가 유동적인 추출-뭉침 진술은 falseMerges를 흐리므로 뺐다. ---
+  {
+    id: "reingest-batch-article-d",
+    description:
+      "같은 글(D)을 통째로 재투입 — 밀집 배치에서 틀만 같은 두 진술을 같음으로 뭉개나(과합치) + 재진술을 replaces로 미나",
+    traps: ["near-duplicate"],
+    statements: [
+      // 재투입 (source #4) — 새 배치
+      {
+        id: "n1",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "검증 대상을 N잡 수익 관리로 확정했다.",
+      },
+      {
+        id: "n3",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "건강 자기관리는 2순위로 둔다.",
+      },
+      {
+        id: "n5",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "병행하지 않는 이유는 세 가지다.",
+      },
+      {
+        id: "n6",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content:
+          "검증 방식이 N잡은 공백을 메우는 쪽이고 건강은 기존 앱 사용자의 불만을 포착하는 쪽이라 완전히 달라서, 동시에 하면 둘 다 얕아진다.",
+      },
+      {
+        id: "n7",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "건강은 당장 사라질 시장이 아니라 나중에 봐도 된다.",
+      },
+      {
+        id: "n8",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content:
+          "그리고 공백이라는 문제가 품질 부족이라는 문제보다 더 절실해서 N잡을 먼저 둘 이유가 분명하다.",
+      },
+      {
+        id: "n9",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content:
+          "N잡이 B2C인데도 해볼 만하다고 보는 건, 정산 데이터를 매달 보내는 행동이 자연히 반복되면서 습관으로 자리잡기 때문이다.",
+      },
+      {
+        id: "n10",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content:
+          "광고로 사람을 사오지 않아도 한번 자리잡은 사용자가 매달 돌아온다.",
+      },
+      // 첫투입 (source #3) — 기존 후보. n* 각각의 거의-같은 짝이 여기 있다.
+      {
+        id: "e1",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "검증 대상을 N잡 수익 관리로 확정했다.",
+      },
+      {
+        id: "e2",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "최대 3개월을 잡는다.",
+      },
+      {
+        id: "e3",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "다섯 명이 매월 정산 데이터를 보낸다.",
+      },
+      {
+        id: "e4",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content:
+          "내가 정리한 수입 리포트와 세금 예측을 두 달 넘게 반복해서 받는 상태가 되면 성공으로 본다.",
+      },
+      {
+        id: "e5",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "건강 자기관리는 2순위로 둔다.",
+      },
+      {
+        id: "e6",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "병행하지 않는다.",
+      },
+      {
+        id: "e7",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "N잡이 실패하면 그때 건강으로 넘어간다.",
+      },
+      {
+        id: "e8",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content:
+          "N잡은 공백을 메우는 쪽이고 건강은 기존 앱 사용자의 불만을 포착하는 쪽이라 완전히 달라서, 동시에 하면 둘 다 얕아진다.",
+      },
+      {
+        id: "e9",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "건강은 당장 사라질 시장이 아니라 나중에 봐도 된다.",
+      },
+      {
+        id: "e10",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content:
+          "공백이라는 문제가 품질 부족이라는 문제보다 더 절실해서 N잡을 먼저 둘 이유가 분명하다.",
+      },
+      {
+        id: "e11",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content:
+          "N잡이 B2C인데도 해볼 만하다고 보는 건, 정산 데이터를 매달 보내는 행동이 자연히 반복되면서 습관으로 자리잡기 때문이다.",
+      },
+      {
+        id: "e12",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content:
+          "광고로 사람을 사오지 않아도 한번 자리잡은 사용자가 매달 돌아온다.",
+      },
+      // 타 글(A) 진술 — 재투입 n5("병행하지 않는 이유는 세 가지다")가 틀만 같은 이
+      // 문장을 replaces로 잡는 도그푸딩 오발(틀 메아리)을 재현하려 후보에 둔다.
+      {
+        id: "e13",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "불리한 이유는 세 가지다.",
+      },
+    ],
+    golden: [],
+    expectedDuplicates: [
+      { duplicate: "n1", of: "e1" }, // 글자 동일
+      { duplicate: "n3", of: "e5" }, // 글자 동일
+      { duplicate: "n7", of: "e9" }, // 글자 동일
+      { duplicate: "n9", of: "e11" }, // 글자 동일
+      { duplicate: "n10", of: "e12" }, // 글자 동일
+      { duplicate: "n6", of: "e8" }, // 앞에 "검증 방식이"만 붙은 같은 주장
+      { duplicate: "n8", of: "e10" }, // 앞에 "그리고"만 붙은 같은 주장
+    ],
+    note: "핵심 함정은 n5('병행하지 않는 이유는 세 가지다')↔e13('불리한 이유는 세 가지다') — 틀만 같고 세는 대상이 달라 같음도 대체도 아님(침묵해야). 가드 전 밀집 배치에서 가끔 같음으로 뭉갰다(과합치, 무손실 아님). 깨끗한 재진술 7쌍은 합쳐야(expectedDuplicates). e2~e7은 현실적 후보 밀도를 주는 첫투입 진술(짝 진술은 keeper 모호로 제외)",
+  },
 ];
