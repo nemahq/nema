@@ -5,9 +5,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadEnv } from "@server/env";
+import { createEvalLlm, resolveEvalModelId } from "@server/eval/eval-llm";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
-import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
-import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
   buildEditCycleMessage,
   buildFirstCallMessage,
@@ -46,16 +45,7 @@ async function collectStream(
 }
 
 async function main() {
-  const apiKey = process.env["OPENAI_API_KEY"]?.trim();
-  if (!apiKey) {
-    console.error("OPENAI_API_KEY environment variable is required");
-    process.exit(1);
-  }
-
-  const provider = new OpenAiProvider({
-    apiKey,
-    model: DEFAULT_STANDARD_MODEL,
-  });
+  const provider = createEvalLlm();
   const results: EvalResult[] = [];
 
   // 일반 시드
@@ -142,7 +132,7 @@ async function main() {
 
   const report = {
     runAt: new Date().toISOString(),
-    model: DEFAULT_STANDARD_MODEL,
+    model: resolveEvalModelId(),
     temperature: 0,
     totalSeeds: results.length,
     errors: results.filter((r) => r.error).length,

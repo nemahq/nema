@@ -3,7 +3,7 @@
 // 실행: apps/server에서  pnpm tsx src/eval/relation-engine/run-judgment.ts
 //   --quick  : 시나리오당 1회만 (반복 안정화 생략 — 프롬프트 보정 빠른 루프)
 //   --runs N : 시나리오당 N회 (전후 비교를 촘촘히 — 드문 FP를 안정적으로 잡기)
-// 필요 키: OPENAI_API_KEY (판정 LLM). 채점은 코드 정확 비교라 심판 LLM 없음.
+// 필요 키: 측정 모델 키(기본 OPENAI_API_KEY; EVAL_LLM_MODEL로 교체 가능). 채점은 코드 정확 비교라 심판 LLM 없음.
 //
 // 흐름: 시나리오 N개 × R회 판정(워커와 동일한 LLM 1콜 + 같은 게이트) →
 //   게이트 통과분(applied/pending)을 골든과 대조 → supports FP·게이트 통과 FP 집계.
@@ -21,10 +21,9 @@ process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
 process.env["QDRANT_API_KEY"] ??= "eval-unused";
 
 import { loadEnv } from "@server/env";
+import { createEvalLlm } from "@server/eval/eval-llm";
 import { createLimiter } from "@server/infra/llm/limiter";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
-import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
-import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import {
   gateProposals,
   LINKING_EFFORT,
@@ -217,16 +216,7 @@ function withType(precision: ReturnType<typeof precisionRecall>) {
 }
 
 async function main() {
-  const openaiKey = process.env["OPENAI_API_KEY"]?.trim();
-  if (!openaiKey) {
-    console.error("OPENAI_API_KEY is required");
-    process.exit(1);
-  }
-
-  const llm = new OpenAiProvider({
-    apiKey: openaiKey,
-    model: DEFAULT_STANDARD_MODEL,
-  });
+  const llm = createEvalLlm();
 
   const started = Date.now();
   console.log(

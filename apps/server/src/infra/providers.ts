@@ -5,11 +5,6 @@ import { GoogleGenAI } from "@google/genai";
 import { getEnv } from "@server/env";
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import { createVoyageProvider } from "@server/infra/embedding";
-import { AnthropicProvider } from "@server/infra/llm/anthropic-provider";
-import {
-  DEFAULT_TIMEOUT_MS as GEMINI_DEFAULT_TIMEOUT_MS,
-  GeminiProvider,
-} from "@server/infra/llm/gemini-provider";
 import { LlmError } from "@server/infra/llm/llm-error";
 import type {
   GenerateStreamParams,
@@ -18,7 +13,10 @@ import type {
   LlmEffort,
   LlmProvider,
 } from "@server/infra/llm/llm-provider";
-import { getModelSpec } from "@server/infra/llm/model-catalog";
+import {
+  createGeminiClient,
+  createProviderForModel,
+} from "@server/infra/llm/model-factory";
 import type { TieredLlm } from "@server/infra/llm/models";
 import {
   createTieredLlm,
@@ -26,7 +24,6 @@ import {
   DEFAULT_NANO_MODEL,
   DEFAULT_STANDARD_MODEL,
 } from "@server/infra/llm/models";
-import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import type { LlmTask } from "@server/infra/llm/task-routing";
 import {
   getTaskOverride,
@@ -67,8 +64,8 @@ let sharedOpenAiClient: OpenAI | undefined;
 // anthropic 어댑터용 공유 클라이언트 — anthropic 모델이 처음 요청될 때 만든다.
 // 키가 없으면 그 시점에 LlmError("auth")로 끊는다(서버 부팅은 키 없이도 가능).
 let sharedAnthropicClient: Anthropic | undefined;
-// gemini 어댑터용 공유 클라이언트 — AI Studio(apiKey) 모드가 기본.
-// Vertex 모드 배선은 후속 옵션으로 남긴다(키 없이도 서버 부팅 가능).
+// gemini 어댑터용 공유 클라이언트 — GEMINI_VERTEX_PROJECT 있으면 Vertex(ADC), 없으면 AI Studio(apiKey).
+// createGeminiClient가 선택한다(첫 요청 시 생성, 키 없이도 서버 부팅 가능).
 let sharedGeminiClient: GoogleGenAI | undefined;
 
 // tier 묶음을 forTask가 달린 LlmRouter로 감싼다. forTask 해석:
@@ -124,36 +121,13 @@ function resolveOverrideProvider(modelId: string): LlmProvider {
     return cachedProvider;
   }
 
-  const spec = getModelSpec(modelId);
-  if (!spec) {
-    throw new LlmError(
-      "bad_request",
-      `Unknown model id "${modelId}" — not in MODEL_CATALOG`,
-    );
-  }
-
-  let provider: LlmProvider;
-  if (spec.provider === "openai") {
-    provider = new OpenAiProvider({
-      client: sharedOpenAiClient,
-      model: spec.id,
-    });
-  } else if (spec.provider === "anthropic") {
-    provider = new AnthropicProvider({
-      client: getAnthropicClient(),
-      model: spec.id,
-    });
-  } else if (spec.provider === "google") {
-    provider = new GeminiProvider({
-      client: getGeminiClient(),
-      model: spec.id,
-    });
-  } else {
-    throw new LlmError(
-      "bad_request",
-      `No adapter wired for provider "${spec.provider}" (model "${modelId}")`,
-    );
-  }
+  // 가드를 통과한 sharedOpenAiClient를 클로저로 고정 — getter는 매칭 프로바이더에서만 호출된다.
+  const openAiClient = sharedOpenAiClient;
+  const provider = createProviderForModel(modelId, {
+    getOpenAiClient: () => openAiClient,
+    getAnthropicClient,
+    getGeminiClient,
+  });
 
   overrideProviders.set(modelId, provider);
   return provider;
@@ -179,27 +153,10 @@ function getGeminiClient(): GoogleGenAI {
     return sharedGeminiClient;
   }
   const env = getEnv();
-  // GEMINI_VERTEX_PROJECT가 있으면 Vertex(ADC 인증, GCP 크레딧) 경로, 없으면 AI Studio(apiKey).
-  // Vertex는 키 파일 대신 ADC를 자동으로 쓴다(로컬 gcloud / 배포 환경 워크로드 자격증명).
-  if (env.GEMINI_VERTEX_PROJECT) {
-    sharedGeminiClient = new GoogleGenAI({
-      vertexai: true,
-      project: env.GEMINI_VERTEX_PROJECT,
-      location: env.GEMINI_VERTEX_LOCATION ?? "global",
-      // per-call timeoutMs 안 넘기는 경로(dev override drafting/sessionTitle)의 무한 행 방지.
-      httpOptions: { timeout: GEMINI_DEFAULT_TIMEOUT_MS },
-    });
-    return sharedGeminiClient;
-  }
-  if (!env.GEMINI_API_KEY) {
-    throw new LlmError(
-      "auth",
-      "GEMINI_API_KEY or GEMINI_VERTEX_PROJECT is required to use a Google model",
-    );
-  }
-  sharedGeminiClient = new GoogleGenAI({
+  sharedGeminiClient = createGeminiClient({
+    vertexProject: env.GEMINI_VERTEX_PROJECT,
+    vertexLocation: env.GEMINI_VERTEX_LOCATION,
     apiKey: env.GEMINI_API_KEY,
-    httpOptions: { timeout: GEMINI_DEFAULT_TIMEOUT_MS },
   });
   return sharedGeminiClient;
 }
