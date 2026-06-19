@@ -2,7 +2,28 @@
 
 > 평가 러너의 라운드별 기록 — 무엇을 바꿨고, 숫자가 어떻게 움직였고, 무엇을 발견했나.
 > 평가 방식은 [eval-design](../../../../../docs/flows/save-engine-v2/eval-design.md), raw 결과(실패 사례 전수)는 같은 폴더의 `results-*.json`(gitignore, 재실행으로 재생성 가능).
-> 측정 대상 = 제품과 동일한 추출 1콜(`prompts/statement-extraction.ts` + gpt-5 standard)·동일한 검색 경로.
+> 측정 대상 = 제품과 동일한 추출 1콜(`prompts/statement-extraction.ts`)·동일한 검색 경로. 측정 모델은 기본 gpt-5 standard지만 `EVAL_LLM_MODEL`로 교체 가능 — 회차별로 명시한다(#7~).
+
+---
+
+## 측정 #7 — 2026-06-19 · 측정 모델 교체 베이스라인 — Vertex `gemini-3.5-flash` (gpt-5 아님)
+
+**바꾼 것**: 프롬프트·파이프라인은 그대로. **측정 모델만** gpt-5 → Vertex `gemini-3.5-flash`로 교체(`EVAL_LLM_MODEL`, 라우팅 배선은 PR #293). 엔진 개선 단계를 무료 크레딧으로 돌리기 위한 베이스라인 한 컷. judge는 Claude 고정·임베딩 Voyage 유지(불변).
+
+**재현**: `EVAL_LLM_MODEL=gemini-3.5-flash GEMINI_VERTEX_PROJECT=<proj> pnpm tsx src/eval/statement-engine/run-extraction.ts` (골든 문서 7개 × 5회, judge=Claude). Vertex 인증은 ADC(`gcloud auth application-default login`).
+
+| 지표 | flash 5회 | gpt-5 기준(#3·#6) | 합격선 |
+|---|---|---|---|
+| 골든 F1 (P / R) | 0.842 (0.889 / **0.80**) | 0.93~0.958 (~0.95 / 0.917~0.944) | P≥0.8, R≥0.85 |
+| 일관성 (쌍대 F1) | **0.906** | 0.855~0.877 | ≥0.85 ✅ |
+| 타입 정확도 / confidence | 0.969 / 1.0 | — | — |
+| 원자성 / 자기완결 / 충실성 | 0.972 / 1.0 / 0.944 | — | — |
+
+- **뽑은 건 깨끗**: precision·원자성·충실성·일관성 모두 강함. 특히 **일관성 0.906** — run 간 변동이 작아 *같은 모델에서 개선 전후 델타 측정*은 신뢰 가능.
+- **약점은 recall 0.80** — 합격선 0.85·gpt-5(0.917~0.944)에 미달. 누락이 **pronoun-resolution(3/5)** 에 재현적으로 몰림(대명사 풀어 자기완결화). compound-split·decision-reason도 일부.
+- **단발 주의**: `--quick`(1회)에선 recall 0.75로 더 낮게 나왔으나 5회 안정값 0.80 — 단발로 판정 말 것(#5 교훈 재확인).
+
+**이 숫자는 "깰 목표"가 아니라 모델 교체 스냅샷이다.** 합격선·gpt-5 비교는 *최적 모델 선정 단계*의 몫. 엔진 개선 세션은 **시작 시 flash를 재-baseline**하고 그 세션 안에서만 델타로 측정할 것 — 모델이 시간대별로 흔들리므로(#5) 오늘 절대값을 미래 델타의 기준점으로 쓰면 오판한다. recall·대명사 해소 작업은 flash 천장에 막힐 수 있어, 효과가 안 보이면 그 케이스만 gpt-5/pro로 교차검증.
 
 ---
 
