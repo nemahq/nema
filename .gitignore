@@ -11,10 +11,7 @@ dist/
 *.log
 .eslintcache
 .DS_Store
-
-# 로컬 전용 데이터 (예: Tiro 회의록 코퍼스) — 절대 커밋 금지
 .local/
-
 .claude/settings.local.json
 .claude/worktrees/
 .worktrees/
