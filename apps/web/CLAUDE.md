@@ -14,7 +14,7 @@ React 19 + Vite 6 frontend. TanStack Router + TanStack Query.
 
 ```
 src/
-├── app/          # Entry point (providers/, router)
+├── app/          # App bootstrap (init + run)
 ├── features/     # Business domain modules (capture, library, auth)
 ├── components/   # Feature-agnostic shared UI (ui/, layout/)
 ├── lib/          # Feature-independent infrastructure (external clients + internal modules, folder per concern)
