@@ -20,7 +20,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 - Import from compiled `dist/` — always import from `src/`.
 - Call external APIs from frontend — all calls go through tRPC. Exception: Supabase Auth client SDK (sign-in, sign-up, session management), Tolgee CDN (translation fetch), PostHog JS SDK (analytics capture).
 - Expose server-side keys (LLM, DB) to client.
-- Duplicate an env var across repo `.env` and Railway. One home per var: public config → repo `.env.{mode}`, secrets → Railway only. Duplicates let Railway silently override the repo at build/load time and drift.
+- Duplicate an env var across repo and Railway. One home per var: mode-agnostic public config → repo `.env`, mode-specific public config → repo `.env.{mode}`, secrets → Railway only. Duplicates let Railway silently override the repo at build/load time and drift.
 
 ## Terminology
 
@@ -32,6 +32,7 @@ Product terms vs code terms are mapped in `docs/guides/glossary.md`. Code (varia
 | ------------------------------------ | -------------- |
 | `VITE_` prefix for frontend env vars | `VITE_API_URL` |
 
+- MUST follow universal code rules in `docs/guides/conventions.md`. Package-specific rules live in each package's `docs/conventions.md`.
 - `@nema-io/shared` exports raw TypeScript source. Import from `src/`, not compiled output.
 - `AppRouter` type lives in `apps/server/src/router.ts`. Frontend imports for end-to-end type safety.
 - Supabase (PostgreSQL + Auth). Schema migrations: `supabase/migrations/`, managed via Supabase CLI.
