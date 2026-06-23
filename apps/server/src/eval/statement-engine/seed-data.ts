@@ -592,6 +592,7 @@ export const SEED_QUERIES: SeedQuery[] = [
 // 짓지 않고, 질의·기대 진술 매핑만 보존한다.
 // ---------------------------------------------------------------------------
 
+/** @public 시간 경로 eval(설계 8장 B)이 쓸 매핑 — 러너 미구현이라 지금은 미참조(파킹). */
 export const RELOCATED_TEMPORAL_QUERIES = [
   {
     id: "q12",
@@ -602,7 +603,11 @@ export const RELOCATED_TEMPORAL_QUERIES = [
   {
     id: "q13",
     query: "이번 주 안에 마감인 거 있나?",
-    expectedStatementIds: ["braindump-1-s1", "braindump-1-s7", "braindump-1-s8"],
+    expectedStatementIds: [
+      "braindump-1-s1",
+      "braindump-1-s7",
+      "braindump-1-s8",
+    ],
     note: "금요일·수요일·목요일 기한을 '이번 주'로 묻기 (다음주 수요일인 short-1-s1은 교란)",
   },
 ] as const;
