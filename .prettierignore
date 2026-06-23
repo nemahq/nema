@@ -6,3 +6,4 @@ pnpm-lock.yaml
 .claude/
 docs/**/*.html
 poc/
+apps/server/src/eval/**/results-*.json

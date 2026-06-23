@@ -200,21 +200,32 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
     maxTokens: number;
   }): Promise<string> {
     const { systemPrompt, userContent, maxTokens } = params;
-    const response = await fetch(ANTHROPIC_API_URL, {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": ANTHROPIC_VERSION,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: JUDGE_MODEL,
-        max_tokens: maxTokens,
-        temperature: 0,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userContent }],
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(ANTHROPIC_API_URL, {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": ANTHROPIC_VERSION,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: JUDGE_MODEL,
+          max_tokens: maxTokens,
+          temperature: 0,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userContent }],
+        }),
+      });
+    } catch (error) {
+      // fetch 자체가 던지면 전송 계층 실패(네트워크 블립) — HTTP 상태가 없어
+      // retriable 플래그가 안 붙는다. 비싼 run이 일시 블립에 죽지 않게 재시도 대상으로.
+      const wrapped = new Error(
+        `Anthropic API fetch failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      (wrapped as Error & { retriable?: boolean }).retriable = true;
+      throw wrapped;
+    }
 
     if (!response.ok) {
       const errorBody = await response.text();

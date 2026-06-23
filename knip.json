@@ -14,6 +14,7 @@
         "src/eval/run-narration-markers.ts",
         "src/eval/verify-statement-search.ts",
         "src/eval/statement-engine/run-extraction.ts",
+        "src/eval/statement-engine/run-extraction-consistency.ts",
         "src/eval/statement-engine/run-retrieval.ts",
         "src/eval/statement-engine/run-retrieval-dense.ts",
         "src/eval/statement-engine/run-length-curve.ts",
