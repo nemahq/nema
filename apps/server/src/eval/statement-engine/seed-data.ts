@@ -243,14 +243,6 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         needsHumanReview: false,
       },
       {
-        id: "weekly-1-s3a",
-        content: "백엔드는 API 리팩토링을 진행 중이다",
-        type: "claim",
-        confidence: "certain",
-        axes: ["compound-split"],
-        needsHumanReview: false,
-      },
-      {
         id: "weekly-1-s3",
         content: "백엔드 API 리팩토링이 예상보다 늦어지고 있다",
         type: "claim",
