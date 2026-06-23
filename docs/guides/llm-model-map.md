@@ -20,8 +20,8 @@
 | Retrieval | standard | 사용자 직접 노출 + RAG 합성 |
 | Judgment | standard | 오류 시 데이터 손실 + 비교/병합 복잡도 |
 | Intent 분류 | mini | 4지선다 분류, 낮은 복잡도 |
-| Split | mini | 경계 판단, 낮은 복잡도 |
-| Entity 추출 | mini | NER, 재동기화로 복구 가능 |
+| Split | standard | 진술이 검색·관계의 입력 — 추출 오류가 하류 전체로 전파 (코드: `extractStatements`) |
+| Entity 추출 | (미구현) | NER로 계획됐으나 현재 별도 모델 호출 없음 — 도입 시 tier 재평가 |
 | Metadata | mini | 사용자 노출되나 복잡도 중간 |
 | 세션 제목 | nano | 한 줄 생성, 사용자가 직접 수정 가능 |
 
