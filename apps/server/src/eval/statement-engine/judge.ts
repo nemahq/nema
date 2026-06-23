@@ -29,6 +29,10 @@ Answer "same": true if both convey the same decision, fact, question, or task ab
 
 Differences that DO matter: a different subject, a different polarity (affirmed vs negated), or genuinely different information. A statement bundling an extra independent fact (one that could stand as its own statement) is NOT the same — but extra attribution or connective phrasing is fine.
 
+Examples:
+- "첫 번째 고객은 대체로 만족한다" vs "첫 번째 고객은 서비스에 대해 대체로 만족한다고 답변했다" → same (reporting form and an obvious qualifier only).
+- "검색 속도 개선이 공통 요청이다" vs "모바일 지원이 공통 요청이다" → not same (different subject; each stands as its own statement).
+
 Output JSON only: {"same": boolean, "reason": "<one short sentence>"}`;
 
 // 차원 정의는 ingestion-design 절단 원칙 1~3 + eval-design 결정 #8을 그대로 옮긴 것
