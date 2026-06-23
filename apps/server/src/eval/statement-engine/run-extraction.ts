@@ -19,7 +19,7 @@ process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
 process.env["QDRANT_API_KEY"] ??= "eval-unused";
 
 import { loadEnv } from "@server/env";
-import { createEvalLlm } from "@server/eval/eval-llm";
+import { createEvalLlm, resolveEvalModelId } from "@server/eval/eval-llm";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import {
   EXTRACTION_EFFORT,
@@ -507,6 +507,7 @@ async function main() {
     JSON.stringify(
       {
         runAt: new Date().toISOString(),
+        model: resolveEvalModelId(),
         runsPerDoc: RUNS_PER_DOC,
         judgeUsage: judge.usage(),
         failedDocs,
