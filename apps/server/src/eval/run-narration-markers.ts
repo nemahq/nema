@@ -163,25 +163,22 @@ async function main() {
         fixture.query,
         toEvidence(fixture),
       );
-      return Array.from(
-        { length: runsPerFixture },
-        (_, run) => async () => {
-          try {
-            const text = await narrate(llm, message);
-            runs.push({
-              fixtureName: fixture.name,
-              run,
-              omission: measureOmission(text),
-            });
-          } catch (error) {
-            failed.push({
-              fixtureName: fixture.name,
-              run,
-              error: error instanceof Error ? error.message : String(error),
-            });
-          }
-        },
-      ).map((task) => task());
+      return Array.from({ length: runsPerFixture }, (_, run) => async () => {
+        try {
+          const text = await narrate(llm, message);
+          runs.push({
+            fixtureName: fixture.name,
+            run,
+            omission: measureOmission(text),
+          });
+        } catch (error) {
+          failed.push({
+            fixtureName: fixture.name,
+            run,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }).map((task) => task());
     }),
   );
 
