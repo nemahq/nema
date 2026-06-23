@@ -19,6 +19,7 @@
         "src/eval/statement-engine/run-retrieval-dense.ts",
         "src/eval/statement-engine/run-retrieval-degraded.ts",
         "src/eval/statement-engine/run-length-curve.ts",
+        "src/eval/statement-engine/run-time-path.ts",
         "src/eval/relation-engine/run-judgment.ts",
         "src/eval/relation-engine/run-judgment-degraded.ts",
         "src/eval/relation-engine/run-candidate-retrieval.ts",
