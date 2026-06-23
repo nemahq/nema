@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { pointIdOf, scoreF1 } from "./metrics";
+import { classificationMetrics, pointIdOf, scoreF1 } from "./metrics";
 
 // 이 함수들이 틀리면 모든 평가 지표가 조용히 오염된다 — 측정 일지의 라운드 간
 // 비교가 무의미해지는 구체적 실패를 막는 테스트.
@@ -55,5 +55,50 @@ describe("pointIdOf", () => {
       "transcript-1-s4b",
     ].map(pointIdOf);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("classificationMetrics", () => {
+  const TYPES = ["claim", "question", "todo"] as const;
+
+  // 이 지표의 존재 이유 — accuracy가 다수 클래스에 가려 못 보는 소수 클래스 실패를
+  // macro-F1이 드러내는지가 핵심. 이게 틀리면 분류 약점을 놓친다.
+  it("accuracy는 높아도 소수 클래스가 무너지면 macro-F1이 떨어진다", () => {
+    // claim 10개 전부 정답, question 2개는 전부 claim으로 오분류 → accuracy 10/12≈0.83
+    const pairs = [
+      ...Array.from({ length: 10 }, () => ({
+        expected: "claim" as const,
+        actual: "claim" as const,
+      })),
+      ...Array.from({ length: 2 }, () => ({
+        expected: "question" as const,
+        actual: "claim" as const,
+      })),
+    ];
+    const { perClass, macroF1 } = classificationMetrics(TYPES, pairs);
+
+    expect(perClass.claim.recall).toBe(1);
+    // question은 하나도 못 맞춤 — recall·f1 모두 0인데 accuracy엔 안 드러난다
+    expect(perClass.question.recall).toBe(0);
+    expect(perClass.question.f1).toBe(0);
+    // macro는 claim(f1 0.909)과 question(f1 0)의 균등 평균 ≈ 0.455 — accuracy 0.83보다 훨씬 낮다
+    expect(macroF1).toBeCloseTo(0.455, 3);
+  });
+
+  it("골든도 예측도 없는 클래스는 제외 — macro를 0으로 끌어내리지 않는다", () => {
+    const pairs = [
+      { expected: "claim" as const, actual: "claim" as const },
+      { expected: "question" as const, actual: "question" as const },
+    ];
+    const { perClass, macroF1 } = classificationMetrics(TYPES, pairs);
+
+    expect(perClass.todo).toEqual({
+      precision: null,
+      recall: null,
+      f1: null,
+      support: 0,
+    });
+    // 등장한 두 클래스 모두 완벽 → todo(미등장)를 빼고 macro = 1
+    expect(macroF1).toBe(1);
   });
 });

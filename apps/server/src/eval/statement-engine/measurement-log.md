@@ -6,6 +6,21 @@
 
 ---
 
+## 측정 #12 — 2026-06-24 · 측정 도구 보강 — Precision@k · macro-F1 · promptHash (NEM-168 태스크 11 a·b·c)
+
+**바꾼 것**: 엔진·골든 불변, 자(러너)만 보강. (a) `run-retrieval`·`run-retrieval-dense`에 **Precision@k** 추가 — recall만으론 "건진 것 중 잡음"이 안 보인다. 분모는 top-k 실건수(threshold 무관한 순위 품질, 측정 #9의 흔들리는 0.2 임계에 안 묶이게). (b) `run-extraction` 분류 채점에 **클래스별 P/R/F1 + macro-F1** — accuracy가 다수 클래스(claim)에 눌려 소수 클래스(question·todo) 실패를 가린다. 순수 함수로 `metrics.ts`에 빼 단위테스트로 수식 고정. (c) `run-extraction` 결과에 **promptHash**(run-judgment와 동형) — 결과가 어느 추출 프롬프트로 잰 것인지 자기증명.
+
+| 러너 | 코퍼스 | recall@5 | **precision@5** |
+|---|---|---|---|
+| sparse (run-retrieval) | 골든 39 | 1.0 | **0.338** |
+
+**발견**:
+
+- **sparse precision@5(0.338)은 잡음이 아니라 구조적 상한**이다. 정답이 1~2개뿐인 질의가 많아 P@5 ≤ |expected|/5에 묶인다(proper-noun 축 0.2 = 정답 1개, negation 0.4 = 정답 2개). distractor가 없는 sparse라 당연 — **precision의 잡음 신호는 dense(distractor 수천)에서 의미가 산다.** 같은 코드 경로라 dense 러너가 곧 그 값을 낸다.
+- **macro-F1·promptHash는 코드/단위테스트로 검증**(`metrics.test.ts`: accuracy 0.83인데 소수 클래스 전멸 시 macro 0.455로 떨어지는 케이스 고정). 실측 round는 추출 러너가 judge(Anthropic) 키를 요구해 이 세션에선 미실행 — 다음 추출 측정 때 macro-F1이 결과지에 함께 찍힌다.
+
+---
+
 ## 측정 #11 — 2026-06-24 · temporal 의미검색 채점서 제외 — 시간 질의 재배치 1탄 (③ eval A)
 
 **바꾼 것**: 엔진·골든 불변, 채점 대상만. temporal 축(q12·q13)을 의미검색 채점(`SEED_QUERIES`)에서 뺐다. 시간은 날짜 산술이라 임베딩 소관이 아니다 — 측정 #9에서 temporal recall이 0.834 → 0.167로 무너질 때 다른 축은 0.8~1.0을 지켰다. 두 질의는 `RELOCATED_TEMPORAL_QUERIES`로 옮겨 시간 경로 eval(설계 8장 B, ④와 골든 공유)의 재료로 보존했다. 설계: [temporal-query-design](../../../../../docs/flows/save-engine-v2/temporal-query-design.md).
