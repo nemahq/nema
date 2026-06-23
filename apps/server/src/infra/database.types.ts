@@ -709,7 +709,12 @@ export type Database = {
         Returns: string;
       };
       create_source: {
-        Args: { p_body: string; p_session_id?: string; p_space_id: string };
+        Args: {
+          p_author_timezone?: string;
+          p_body: string;
+          p_session_id?: string;
+          p_space_id: string;
+        };
         Returns: string;
       };
       delete_draft: { Args: { p_draft_id: string }; Returns: undefined };
@@ -725,6 +730,7 @@ export type Database = {
         Args: { p_max_retries?: number };
         Returns: {
           author_id: string;
+          author_timezone: string;
           body: string;
           created_at: string;
           id: string;

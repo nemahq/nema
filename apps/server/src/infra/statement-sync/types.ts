@@ -21,6 +21,8 @@ export const PendingSourceSchema = z.object({
   session_id: z.string().uuid().nullable(),
   body: z.string().min(1),
   created_at: z.string().datetime({ offset: true }),
+  // 작성자 존(IANA) — 내용 속 기한을 작성 시점 기준으로 풀 때 쓴다. 옛 글·미전달이면 null.
+  author_timezone: z.string().nullable(),
 });
 
 export type PendingSource = z.infer<typeof PendingSourceSchema>;

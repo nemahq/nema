@@ -17,7 +17,11 @@ export function IngestPanel() {
       return;
     }
     createSource.mutate(
-      { body: trimmedInput },
+      // 작성자 존을 실어 내용 속 기한("금요일까지")이 이 존 기준으로 풀리게 한다.
+      {
+        body: trimmedInput,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
       {
         onSuccess: ({ sourceId }) => {
           setSourceInput("");

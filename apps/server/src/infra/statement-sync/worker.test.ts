@@ -38,6 +38,7 @@ const PENDING_SOURCE: PendingSource = {
   session_id: null,
   body: "테스트 원문",
   created_at: "2026-06-11T00:00:00.000Z",
+  author_timezone: "Asia/Seoul",
 };
 
 function pendingStatement(
@@ -175,14 +176,22 @@ describe("createStatementSyncWorker", () => {
           type: "claim",
           confidence: "certain",
           index: 0,
+          due_date: null,
         },
         {
           content: "확신도 빠진 추정.",
           type: "claim",
           confidence: "guess",
           index: 1,
+          due_date: null,
         },
-        { content: "할 일.", type: "todo", confidence: null, index: 2 },
+        {
+          content: "할 일.",
+          type: "todo",
+          confidence: null,
+          index: 2,
+          due_date: null,
+        },
       ],
     });
     // 메시지는 ack됐다
