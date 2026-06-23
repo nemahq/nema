@@ -5,15 +5,13 @@ import { z } from "zod";
 // 질의 파싱(LLM 구조화 출력)과 기한 추출이 공유하는 계약 — zod로 두어 구조화 레이어가
 // generateStructured로 바로 검증해 뱉을 수 있게 한다.
 
-export const TimeFieldSchema = z.enum(["created", "due"]);
-export type TimeField = z.infer<typeof TimeFieldSchema>;
+// 보조 스키마는 TimeTokenSchema의 부품 — 소비처가 직접 쓰게 되면 그때 export한다.
+const TimeFieldSchema = z.enum(["created", "due"]);
 
 // within = 그 기간 전체, by = 그 시점 이하(마감류 "~까지/내"). 앵커와 직교한다.
-export const TimeBoundarySchema = z.enum(["within", "by"]);
-export type TimeBoundary = z.infer<typeof TimeBoundarySchema>;
+const TimeBoundarySchema = z.enum(["within", "by"]);
 
-export const TimeGrainSchema = z.enum(["day", "week", "month", "quarter"]);
-export type TimeGrain = z.infer<typeof TimeGrainSchema>;
+const TimeGrainSchema = z.enum(["day", "week", "month", "quarter"]);
 
 export const WeekdaySchema = z.enum([
   "mon",

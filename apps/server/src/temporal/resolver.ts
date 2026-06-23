@@ -9,7 +9,7 @@ import type { TimeAnchor, TimeToken, Weekday } from "./token";
 // 한국 사용자의 하루가 어긋난다. 그래서 timeZone(IANA)을 받아 그 존에서 달력 산술을 하고,
 // 존·DST 정확성은 Luxon에 맡긴다. 존의 출처(요청 전달·작성 존 저장)는 호출부 몫.
 
-export interface TimeRange {
+interface TimeRange {
   // 한쪽이 null이면 열린 범위. by(마감)는 아래끝을 열어 둔다 — '지난 마감'을 now로 자를지는
   // 검색 레이어의 제품 판단이라 resolver는 순수하게 둔다(설계 9장).
   from: Date | null;
@@ -17,7 +17,7 @@ export interface TimeRange {
   to: Date | null;
 }
 
-export interface ResolveContext {
+interface ResolveContext {
   reference: Date;
   /** IANA 존 (예: "Asia/Seoul"). */
   timeZone: string;
