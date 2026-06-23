@@ -17,6 +17,7 @@ import {
   canFormRelations,
   chunkStatements,
   createStatementSyncWorker,
+  deadlineContext,
   dedupeChanges,
   gateProposals,
   orderBySourceAppearance,
@@ -196,6 +197,40 @@ describe("createStatementSyncWorker", () => {
     });
     // 메시지는 ack됐다
     expect(rpcCalls(rpc, "ack_sync_event")).toHaveLength(1);
+  });
+
+  it("내용 속 기한을 작성 시점·존 기준 due_date로 풀어 apply에 싣는다", async () => {
+    // PENDING_SOURCE = 서울, created_at 2026-06-11(목). 이번 주 금요일 = 06-12.
+    const { client, rpc } = mockSupabase({
+      read_sync_events: [[NOTIFY_ROW]],
+      fetch_pending_sources: [[PENDING_SOURCE]],
+    });
+    const llm = mockLlm([
+      {
+        content: "금요일까지 보고서 끝내기",
+        type: "todo",
+        confidence: null,
+        deadline: {
+          boundary: "by",
+          anchorKind: "weekday",
+          grain: null,
+          offset: null,
+          weekday: "fri",
+          scope: "this",
+          date: null,
+        },
+      },
+    ]);
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const applies = rpcCalls(rpc, "apply_ingestion_changeset");
+    expect(applies[0][1].p_statements[0].due_date).toBe("2026-06-12");
   });
 
   it("진술 0개(노이즈뿐) — changeset 없이 complete_source_extraction만 호출", async () => {
@@ -1006,5 +1041,27 @@ describe("orderBySourceAppearance", () => {
       row("first", 0),
     ]);
     expect(ordered.map((r) => r.id)).toEqual(["first", "missing"]);
+  });
+});
+
+describe("deadlineContext", () => {
+  it("유효한 작성자 존을 그대로 쓰고 작성일을 그 존 기준으로 낸다", () => {
+    // PENDING_SOURCE = 서울, created_at 2026-06-11T00:00Z → 서울 09:00.
+    const ctx = deadlineContext(PENDING_SOURCE);
+    expect(ctx.timeZone).toBe("Asia/Seoul");
+    expect(ctx.todayIsoDate).toBe("2026-06-11");
+  });
+
+  it("무효한 존은 UTC로 강등", () => {
+    const ctx = deadlineContext({
+      ...PENDING_SOURCE,
+      author_timezone: "Not/AZone",
+    });
+    expect(ctx.timeZone).toBe("UTC");
+  });
+
+  it("존이 없으면(옛 글·미전달) UTC로 강등", () => {
+    const ctx = deadlineContext({ ...PENDING_SOURCE, author_timezone: null });
+    expect(ctx.timeZone).toBe("UTC");
   });
 });

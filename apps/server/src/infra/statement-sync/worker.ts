@@ -289,19 +289,43 @@ async function runExtractionPass(deps: WorkerDeps): Promise<number> {
 
 // 기한 정규화 기준 — 내용 속 "금요일"은 글 쓴 시점·작성자 존 기준이다(temporal-query-design 7장).
 // 존이 없거나 유효하지 않으면 UTC로 강등(옛 글·미전달은 날 경계가 약간 어긋나도 허용).
-function deadlineContext(source: PendingSource): {
+export function deadlineContext(source: PendingSource): {
   reference: Date;
   timeZone: string;
   todayIsoDate: string;
 } {
   const reference = new Date(source.created_at);
-  const timeZone =
-    source.author_timezone !== null &&
-    IANAZone.isValidZone(source.author_timezone)
-      ? source.author_timezone
-      : "UTC";
-  const todayIsoDate =
-    DateTime.fromJSDate(reference, { zone: timeZone }).toISODate() ?? "";
+
+  let timeZone = "UTC";
+  if (source.author_timezone !== null) {
+    if (IANAZone.isValidZone(source.author_timezone)) {
+      timeZone = source.author_timezone;
+    } else {
+      // null은 옛 글·미전달이라 의도된 침묵. 값이 있는데 무효면 클라이언트 버그라
+      // 하루 어긋난 due_date를 낳으니 흔적을 남긴다.
+      Sentry.captureMessage("source.author_timezone is not a valid IANA zone", {
+        level: "warning",
+        tags: { component: "statement-sync" },
+        extra: {
+          sourceId: source.id,
+          authorTimezone: source.author_timezone,
+        },
+      });
+    }
+  }
+
+  const todayIsoDate = DateTime.fromJSDate(reference, {
+    zone: timeZone,
+  }).toISODate();
+  if (todayIsoDate === null) {
+    // created_at은 DB가 보증하는 timestamptz라 사실상 도달 불가 — 도달하면 손상 신호.
+    Sentry.captureMessage("could not derive note date from source.created_at", {
+      level: "warning",
+      tags: { component: "statement-sync" },
+      extra: { sourceId: source.id, createdAt: source.created_at },
+    });
+    return { reference, timeZone, todayIsoDate: "" };
+  }
   return { reference, timeZone, todayIsoDate };
 }
 
@@ -453,17 +477,29 @@ function normalizeStatements(
   index: number;
   due_date: string | null;
 }> {
-  return raw.map((statement, index) => ({
-    content: statement.content,
-    type: statement.type,
-    confidence:
-      statement.type === "claim" ? (statement.confidence ?? "guess") : null,
-    index,
+  return raw.map((statement, index) => {
     // 기한 토큰을 작성 시점·존 기준 절대 날짜로. 기한 없거나 불량 토큰이면 null.
-    due_date: statement.deadline
+    const due_date = statement.deadline
       ? resolveDeadlineToDueDate(statement.deadline, context)
-      : null,
-  }));
+      : null;
+    // 기한 토큰이 있는데 못 풀면(불완전·불가능·존 문제) 무음으로 떨구지 않고 흔적을 남긴다 —
+    // 운영에서 기한이 조용히 사라지는 걸 관측 가능한 사건으로(deadline.ts는 순수라 여기서 잡는다).
+    if (statement.deadline && due_date === null) {
+      Sentry.captureMessage("deadline token did not resolve to a due_date", {
+        level: "warning",
+        tags: { component: "statement-sync" },
+        extra: { deadline: statement.deadline },
+      });
+    }
+    return {
+      content: statement.content,
+      type: statement.type,
+      confidence:
+        statement.type === "claim" ? (statement.confidence ?? "guess") : null,
+      index,
+      due_date,
+    };
+  });
 }
 
 async function fetchPendingSources(

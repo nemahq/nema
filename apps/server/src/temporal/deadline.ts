@@ -2,7 +2,12 @@ import { DateTime } from "luxon";
 import { z } from "zod";
 
 import { resolveTimeToken } from "./resolver";
-import { type TimeAnchor, TimeTokenSchema, WeekdaySchema } from "./token";
+import {
+  ABSOLUTE_DATE_PATTERN,
+  type TimeAnchor,
+  TimeTokenSchema,
+  WeekdaySchema,
+} from "./token";
 
 // 추출이 진술마다 내는 기한 토큰 (temporal-query-design 7장). field는 항상 due(내용 속 기한)라
 // 생략하고, flat 스키마로 둔다 — provider JSON schema에 discriminated union을 안 태우려고.
@@ -13,10 +18,22 @@ export const ExtractedDeadlineSchema = z.object({
   offset: z.number().int().nullable(),
   weekday: WeekdaySchema.nullable(),
   scope: z.enum(["this", "next"]).nullable(),
-  date: z.string().nullable(),
+  date: z.string().regex(ABSOLUTE_DATE_PATTERN).nullable(),
 });
 
 export type ExtractedDeadline = z.infer<typeof ExtractedDeadlineSchema>;
+
+// 컴파일 가드 — flat anchorKind가 TimeAnchor의 종류와 어긋나면(새 앵커 추가 등) 빌드가
+// 깨져 이 스키마·buildAnchor 갱신을 강제한다(런타임 무음 드리프트 방지).
+type AssertEqual<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
+    : never;
+const _anchorKindsMatch: AssertEqual<
+  ExtractedDeadline["anchorKind"],
+  TimeAnchor["kind"]
+> = true;
+void _anchorKindsMatch;
 
 function buildAnchor(deadline: ExtractedDeadline): TimeAnchor | null {
   switch (deadline.anchorKind) {
