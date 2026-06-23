@@ -1,3 +1,4 @@
+import { DateTime, IANAZone } from "luxon";
 import { z } from "zod";
 import * as Sentry from "@sentry/node";
 
@@ -32,6 +33,7 @@ import {
   STATEMENT_EXTRACTION_SYSTEM_PROMPT,
   StatementExtractionSchema,
 } from "@server/prompts/statement-extraction";
+import { resolveDeadlineToDueDate } from "@server/temporal/deadline";
 
 import type { ExtractionChunk } from "./chunking";
 import { chunkForExtraction } from "./chunking";
@@ -285,15 +287,61 @@ async function runExtractionPass(deps: WorkerDeps): Promise<number> {
   return processed;
 }
 
+// 기한 정규화 기준 — 내용 속 "금요일"은 글 쓴 시점·작성자 존 기준이다(temporal-query-design 7장).
+// 존이 없거나 유효하지 않으면 UTC로 강등(옛 글·미전달은 날 경계가 약간 어긋나도 허용).
+export function deadlineContext(source: PendingSource): {
+  reference: Date;
+  timeZone: string;
+  todayIsoDate: string;
+} {
+  const reference = new Date(source.created_at);
+
+  let timeZone = "UTC";
+  if (source.author_timezone !== null) {
+    if (IANAZone.isValidZone(source.author_timezone)) {
+      timeZone = source.author_timezone;
+    } else {
+      // null은 옛 글·미전달이라 의도된 침묵. 값이 있는데 무효면 클라이언트 버그라
+      // 하루 어긋난 due_date를 낳으니 흔적을 남긴다.
+      Sentry.captureMessage("source.author_timezone is not a valid IANA zone", {
+        level: "warning",
+        tags: { component: "statement-sync" },
+        extra: {
+          sourceId: source.id,
+          authorTimezone: source.author_timezone,
+        },
+      });
+    }
+  }
+
+  const todayIsoDate = DateTime.fromJSDate(reference, {
+    zone: timeZone,
+  }).toISODate();
+  if (todayIsoDate === null) {
+    // created_at은 DB가 보증하는 timestamptz라 사실상 도달 불가 — 도달하면 손상 신호.
+    Sentry.captureMessage("could not derive note date from source.created_at", {
+      level: "warning",
+      tags: { component: "statement-sync" },
+      extra: { sourceId: source.id, createdAt: source.created_at },
+    });
+    return { reference, timeZone, todayIsoDate: "" };
+  }
+  return { reference, timeZone, todayIsoDate };
+}
+
 async function processSource(
   source: PendingSource,
   deps: WorkerDeps,
 ): Promise<void> {
+  const { reference, timeZone, todayIsoDate } = deadlineContext(source);
   const extracted = await extractSourceStatements(
     deps.forTask("extractStatements"),
-    source.body,
+    {
+      body: source.body,
+      todayIsoDate,
+    },
   );
-  const statements = normalizeStatements(extracted);
+  const statements = normalizeStatements(extracted, { reference, timeZone });
 
   // 진술 0개(노이즈뿐인 글)면 빈 changeset을 남기지 않는다
   if (statements.length === 0) {
@@ -345,14 +393,17 @@ const limitLlmCall = createLimiter(LLM_CALL_CONCURRENCY);
 
 async function extractSourceStatements(
   llm: LlmProvider,
-  body: string,
+  input: { body: string; todayIsoDate: string },
 ): Promise<ExtractedStatement[]> {
-  const chunks = chunkForExtraction(body);
+  const chunks = chunkForExtraction(input.body);
+  const { todayIsoDate } = input;
 
   // 임계선 이하(1청크, 문맥 없음) — 기존 1콜 경로 그대로
   const single = chunks.length === 1 ? chunks[0] : undefined;
   if (single) {
-    const output = await limitLlmCall(() => callExtraction(llm, single));
+    const output = await limitLlmCall(() =>
+      callExtraction(llm, { chunk: single, todayIsoDate }),
+    );
     return output.statements;
   }
 
@@ -361,14 +412,17 @@ async function extractSourceStatements(
   // Promise.all의 첫 reject가 그대로 전파돼 호출자의 재시도 경로를 탄다.
   const outputs = await Promise.all(
     chunks.map((chunk) =>
-      limitLlmCall(() => callExtractionWithRetry(llm, chunk)),
+      limitLlmCall(() => callExtractionWithRetry(llm, { chunk, todayIsoDate })),
     ),
   );
   // 청크 순서대로 연결 = 원문 등장 순서 — index는 normalizeStatements가 재부여
   return outputs.flatMap((output) => output.statements);
 }
 
-function callExtraction(llm: LlmProvider, chunk: ExtractionChunk) {
+function callExtraction(
+  llm: LlmProvider,
+  args: { chunk: ExtractionChunk; todayIsoDate: string },
+) {
   return llm.generateStructured({
     schema: StatementExtractionSchema,
     schemaName: "statement_extraction",
@@ -376,9 +430,10 @@ function callExtraction(llm: LlmProvider, chunk: ExtractionChunk) {
     messages: [
       {
         role: "user",
-        content: buildStatementExtractionMessage(chunk.body, {
-          before: chunk.contextBefore,
-          after: chunk.contextAfter,
+        content: buildStatementExtractionMessage(args.chunk.body, {
+          todayIsoDate: args.todayIsoDate,
+          before: args.chunk.contextBefore,
+          after: args.chunk.contextAfter,
         }),
       },
     ],
@@ -389,12 +444,12 @@ function callExtraction(llm: LlmProvider, chunk: ExtractionChunk) {
 
 async function callExtractionWithRetry(
   llm: LlmProvider,
-  chunk: ExtractionChunk,
+  args: { chunk: ExtractionChunk; todayIsoDate: string },
 ) {
   let lastError: unknown;
   for (let attempt = 1; attempt <= CHUNK_CALL_MAX_ATTEMPTS; attempt++) {
     try {
-      return await callExtraction(llm, chunk);
+      return await callExtraction(llm, args);
     } catch (err) {
       lastError = err;
       const retryable =
@@ -412,19 +467,39 @@ async function callExtractionWithRetry(
 
 // 출력 순서 = 원문 순서 계약이므로 index는 배열 위치에서 파생.
 // DB 제약(claim만 confidence)과 맞도록 방어 정규화 — 과장 금지 원칙이라 빠진 확신도는 guess.
-function normalizeStatements(raw: ExtractedStatement[]): Array<{
+function normalizeStatements(
+  raw: ExtractedStatement[],
+  context: { reference: Date; timeZone: string },
+): Array<{
   content: string;
   type: ExtractedStatement["type"];
   confidence: ExtractedStatement["confidence"];
   index: number;
+  due_date: string | null;
 }> {
-  return raw.map((statement, index) => ({
-    content: statement.content,
-    type: statement.type,
-    confidence:
-      statement.type === "claim" ? (statement.confidence ?? "guess") : null,
-    index,
-  }));
+  return raw.map((statement, index) => {
+    // 기한 토큰을 작성 시점·존 기준 절대 날짜로. 기한 없거나 불량 토큰이면 null.
+    const due_date = statement.deadline
+      ? resolveDeadlineToDueDate(statement.deadline, context)
+      : null;
+    // 기한 토큰이 있는데 못 풀면(불완전·불가능·존 문제) 무음으로 떨구지 않고 흔적을 남긴다 —
+    // 운영에서 기한이 조용히 사라지는 걸 관측 가능한 사건으로(deadline.ts는 순수라 여기서 잡는다).
+    if (statement.deadline && due_date === null) {
+      Sentry.captureMessage("deadline token did not resolve to a due_date", {
+        level: "warning",
+        tags: { component: "statement-sync" },
+        extra: { deadline: statement.deadline },
+      });
+    }
+    return {
+      content: statement.content,
+      type: statement.type,
+      confidence:
+        statement.type === "claim" ? (statement.confidence ?? "guess") : null,
+      index,
+      due_date,
+    };
+  });
 }
 
 async function fetchPendingSources(

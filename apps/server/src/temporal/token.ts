@@ -24,7 +24,7 @@ export const WeekdaySchema = z.enum([
 ]);
 export type Weekday = z.infer<typeof WeekdaySchema>;
 
-const ABSOLUTE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+export const ABSOLUTE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const RelativeAnchorSchema = z.object({
   kind: z.literal("relative"),
