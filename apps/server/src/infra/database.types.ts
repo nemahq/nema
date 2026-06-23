@@ -334,6 +334,7 @@ export type Database = {
       sources: {
         Row: {
           author_id: string | null;
+          author_timezone: string | null;
           body: string;
           created_at: string;
           error_message: string | null;
@@ -352,6 +353,7 @@ export type Database = {
         };
         Insert: {
           author_id?: string | null;
+          author_timezone?: string | null;
           body: string;
           created_at?: string;
           error_message?: string | null;
@@ -370,6 +372,7 @@ export type Database = {
         };
         Update: {
           author_id?: string | null;
+          author_timezone?: string | null;
           body?: string;
           created_at?: string;
           error_message?: string | null;
@@ -554,6 +557,7 @@ export type Database = {
             | null;
           content: string;
           created_at: string;
+          due_date: string | null;
           duplicate_of: string | null;
           error_message: string | null;
           id: string;
@@ -571,6 +575,7 @@ export type Database = {
             | null;
           content: string;
           created_at?: string;
+          due_date?: string | null;
           duplicate_of?: string | null;
           error_message?: string | null;
           id?: string;
@@ -588,6 +593,7 @@ export type Database = {
             | null;
           content?: string;
           created_at?: string;
+          due_date?: string | null;
           duplicate_of?: string | null;
           error_message?: string | null;
           id?: string;
