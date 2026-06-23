@@ -28,7 +28,7 @@ A JSON object: { "semantic": string | null, "time": <time object> | null }
 - "anchorKind" picks which of the remaining fields are used:
   - "relative": set "grain" ("day" | "week" | "month" | "quarter") and "offset" (integer: this=0, next=+1, last=-1, the day after tomorrow=+2). Leave weekday/scope/date null.
   - "weekday": set "weekday" ("mon".."sun") and "scope" ("this" | "next"). Leave grain/offset/date null. Use for a named weekday ("Friday", "next Wednesday").
-  - "absolute": set "date" ("YYYY-MM-DD"). Leave the others null. Use for an explicit calendar date ("Feb 14"). Infer the year from context if the query omits it; prefer the nearest sensible one.
+  - "absolute": set "date" ("YYYY-MM-DD"). Leave the others null. Use for an explicit calendar date ("Feb 14"). When the query omits the year, resolve it against <today>: pick the nearest sensible occurrence (a deadline is usually today or later).
 
 Unused fields MUST be null. Do not invent a time constraint that is not in the query — when in doubt, set "time" to null and keep everything in "semantic".
 
@@ -48,6 +48,9 @@ Query: "지난주에 결제 관련해서 뭐 정했지?"
 
 Query: "금요일까지 끝내야 하는 거?"
 { "semantic": null, "time": { "field": "due", "boundary": "by", "anchorKind": "weekday", "grain": null, "offset": null, "weekday": "fri", "scope": "this", "date": null } }
+
+Query: "2월 14일까지 마감인 거?" (with <today>2026-01-20</today>)
+{ "semantic": null, "time": { "field": "due", "boundary": "by", "anchorKind": "absolute", "grain": null, "offset": null, "weekday": null, "scope": null, "date": "2026-02-14" } }
 
 Query: "토스로 결제 정한 이유가 뭐였지?"
 { "semantic": "토스로 결제 정한 이유", "time": null }`;
@@ -72,6 +75,11 @@ export const QueryStructuringRawSchema = z.object({
 
 export type QueryStructuringRaw = z.infer<typeof QueryStructuringRawSchema>;
 
-export function buildQueryStructuringMessage(query: string): string {
-  return `<query>${query}</query>`;
+// todayIsoDate(YYYY-MM-DD)는 절대 날짜의 연도 보정 기준 — 프롬프트가 정적이라
+// 이걸 안 주면 모델이 오늘을 몰라 학습 컷오프 기준으로 연도를 추측한다.
+export function buildQueryStructuringMessage(
+  query: string,
+  todayIsoDate: string,
+): string {
+  return `<today>${todayIsoDate}</today>\n<query>${query}</query>`;
 }

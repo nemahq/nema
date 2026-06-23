@@ -103,7 +103,15 @@ export async function searchStatements(args: {
   }
 
   // 질의 구조화 — 시간 표현을 떼어 구조화된 시간 경로로 보낸다 (temporal-query-design 5·6장).
-  const structure = await structureSafely(providers, query);
+  // 절대 날짜 연도 보정·시간 환산이 같은 순간을 쓰게 reference를 한 번만 잡는다.
+  const reference = now ?? new Date();
+  const queryZone =
+    timeZone !== undefined && IANAZone.isValidZone(timeZone) ? timeZone : "utc";
+  const structure = await structureSafely({
+    providers,
+    query,
+    todayIsoDate: zonedISODate(reference, queryZone),
+  });
 
   let scoreByStatementId: Map<string, number>;
   // 순수 시간 질의는 벡터 점수가 없어 묶음을 최신순으로 정렬한다(관련도순 대신).
@@ -116,7 +124,7 @@ export async function searchStatements(args: {
     IANAZone.isValidZone(timeZone)
   ) {
     const range = resolveTimeToken(structure.time, {
-      reference: now ?? new Date(),
+      reference,
       timeZone,
     });
     const candidateIds = await collectTimeCandidateIds(supabase, {
@@ -439,12 +447,13 @@ export function parseLocatorIndex(locator: Json | null): number | null {
 }
 
 // 구조화 LLM이 실패해도 검색은 살린다 — 시간 없는 평범한 의미검색으로 강등한다.
-async function structureSafely(
-  providers: Providers,
-  query: string,
-): Promise<QueryStructure> {
+async function structureSafely(args: {
+  providers: Providers;
+  query: string;
+  todayIsoDate: string;
+}): Promise<QueryStructure> {
   try {
-    return await structureQuery({ providers, query });
+    return await structureQuery(args);
   } catch (error) {
     Sentry.captureException(error, {
       tags: { component: "query-structuring" },
@@ -502,6 +511,9 @@ async function collectTimeCandidateIds(
       .lte("due_date", zonedISODate(to, timeZone))
       .order("due_date", { ascending: false })
       .limit(limit);
+    // from이 null인 by(마감 "~까지")는 아래끝을 열어 둔다 — 연체(지난 마감)도 후보로 띄운다.
+    // 마감 검색의 본질이 "놓친·임박한 기한"이라 연체가 가장 급하다(resolver가 검색 레이어로
+    // 위임한 제품 판단, temporal-query-design 4장). 연체를 빼려면 from을 now로 자른다.
     if (from !== null) {
       query = query.gte("due_date", zonedISODate(from, timeZone));
     }
@@ -536,6 +548,9 @@ async function collectTimeCandidateIds(
   if (scopedStatementIds === undefined) {
     return ids;
   }
+  // TODO(④ 자동 scoping): 지금은 DB limit으로 자른 뒤 메모리에서 스코프 교집합을 취한다 —
+  // limit 밖의 in-scope 진술이 누락될 수 있다. ④가 topicIds를 배선하면 스코프를 DB 쿼리에
+  // 함께 걸어 limit 전에 좁힐 것. (현재 라우터가 topicIds를 안 넘겨 죽은 경로라 무해)
   const scoped = new Set(scopedStatementIds);
   return ids.filter((id) => scoped.has(id));
 }

@@ -61,6 +61,8 @@ export function mapRawToStructure(raw: QueryStructuringRaw): QueryStructure {
 export async function structureQuery(args: {
   providers: Providers;
   query: string;
+  /** 오늘(YYYY-MM-DD) — 절대 날짜("2월 14일")의 연도 보정 기준. 질의자 존 기준 날짜. */
+  todayIsoDate: string;
 }): Promise<QueryStructure> {
   const raw = await args.providers.llm
     .forTask("structureQuery")
@@ -69,7 +71,10 @@ export async function structureQuery(args: {
       schemaName: "query_structuring",
       systemPrompt: QUERY_STRUCTURING_SYSTEM_PROMPT,
       messages: [
-        { role: "user", content: buildQueryStructuringMessage(args.query) },
+        {
+          role: "user",
+          content: buildQueryStructuringMessage(args.query, args.todayIsoDate),
+        },
       ],
     });
   return mapRawToStructure(raw);
