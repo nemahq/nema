@@ -1,3 +1,4 @@
+import { DateTime } from "luxon";
 import { z } from "zod";
 
 // 시간 표현의 구조화 토큰 (temporal-query-design 3장).
@@ -42,7 +43,13 @@ const WeekdayAnchorSchema = z.object({
 
 const AbsoluteAnchorSchema = z.object({
   kind: z.literal("absolute"),
-  date: z.string().regex(ABSOLUTE_DATE_PATTERN),
+  // 형식뿐 아니라 실재 날짜까지 — 2026-02-30 같은 LLM 출력 오류를 parse 단계에서 거른다.
+  date: z
+    .string()
+    .regex(ABSOLUTE_DATE_PATTERN)
+    .refine((value) => DateTime.fromISO(value).isValid, {
+      message: "absolute date must be a real calendar date",
+    }),
 });
 
 export const TimeAnchorSchema = z.discriminatedUnion("kind", [

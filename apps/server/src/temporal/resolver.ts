@@ -13,6 +13,7 @@ export interface TimeRange {
   // 한쪽이 null이면 열린 범위. by(마감)는 아래끝을 열어 둔다 — '지난 마감'을 now로 자를지는
   // 검색 레이어의 제품 판단이라 resolver는 순수하게 둔다(설계 9장).
   from: Date | null;
+  // 포함 끝 — 그 기간의 마지막 순간(23:59:59.999). 소비처는 `<= to`로 거른다(반열림 아님).
   to: Date | null;
 }
 
@@ -45,6 +46,8 @@ export function resolveTimeToken(
     );
   }
 
+  // field(created/due)는 여기서 안 쓴다 — 어느 컬럼에 거나는 호출부(검색·추출)의 몫이고,
+  // resolver는 날짜 범위만 낸다.
   const period = resolveAnchorPeriod(token.anchor, reference);
 
   return {
