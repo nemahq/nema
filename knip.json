@@ -17,8 +17,10 @@
         "src/eval/statement-engine/run-extraction-consistency.ts",
         "src/eval/statement-engine/run-retrieval.ts",
         "src/eval/statement-engine/run-retrieval-dense.ts",
+        "src/eval/statement-engine/run-retrieval-degraded.ts",
         "src/eval/statement-engine/run-length-curve.ts",
         "src/eval/relation-engine/run-judgment.ts",
+        "src/eval/relation-engine/run-judgment-degraded.ts",
         "src/eval/relation-engine/run-candidate-retrieval.ts",
         "src/eval/relation-engine/run-merge-boundary.ts",
         "src/eval/verify-e2e.ts"
