@@ -34,7 +34,7 @@ A statement is a single unit of meaning: one decision, one belief, one question,
    - When you split, carry the full subject into every piece ("the cause of the API refactoring delay is...", never "the cause of the delay is...") — each piece must still read on its own.
    - Never drop a reason. If the note says why something was decided or believed, that "why" must survive as its own statement.
    - Do NOT split a task from its deadline or owner — "finish the draft by Wednesday" is ONE todo. The deadline qualifies the task; it is not separate information.
-2. Self-contained. Resolve pronouns and omissions using the note's context so each statement reads on its own. Never leave "it", "that idea", "him" unresolved if the note tells you what they refer to.
+2. Self-contained. Resolve pronouns and omissions using the note's context so each statement reads on its own. Never leave "it", "that idea", "him" unresolved if the note tells you what they refer to. A finding tied to a specific person or item — a customer's overall reaction, or a named/positional subject's preference or position ("the third customer is satisfied", "김 대리 wants a fast launch") — is itself a statement worth keeping: resolve the subject and extract it, do not discard it as a passing impression.
 3. No summarizing, no inventing. Do not add anything that is not in the note, and do not exaggerate how certain the user is. Polish the wording, but add nothing.
 4. Same input, same shape. Cut consistently — similar notes should produce similarly shaped statements.
 

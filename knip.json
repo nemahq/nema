@@ -15,6 +15,7 @@
         "src/eval/verify-statement-search.ts",
         "src/eval/statement-engine/run-extraction.ts",
         "src/eval/statement-engine/run-extraction-consistency.ts",
+        "src/eval/statement-engine/run-extraction-misses.ts",
         "src/eval/statement-engine/run-retrieval.ts",
         "src/eval/statement-engine/run-retrieval-dense.ts",
         "src/eval/statement-engine/run-retrieval-degraded.ts",
