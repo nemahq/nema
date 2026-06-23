@@ -15,6 +15,7 @@
 - [09-mvp-scope](09-mvp-scope.md) — MVP 스코프 (첫 출시에 넣을 것/뺄 것) ✅
 - [10-concept-collaboration](10-concept-collaboration.md) — 협업 기반 개념 (소유 Space · 접근 Share/Group · 조직 층) ✅
 - [11-first-product-direction](11-first-product-direction.md) — 첫 제품 방향 (누구에게·무엇부터) ✅
+- [12-engine-completion-criteria](12-engine-completion-criteria.md) — 엔진 완성 기준 (각 기능의 통과선) ✅
 
 참고:
 - [faq](faq.md) — 예상 반론과 답 (계속 누적)
@@ -26,6 +27,7 @@
 3. **기존 구현물과 대조** — 기존 nema 코드(memories/revisions/Neo4j 등)와 모델을 맞대봄 ✅ → [08](08-implementation-vs-model.md)
 4. **MVP 스코프 확정** — 대조 결과가 곧 스코프 지도 (이미 구현됨 / 추가 / 재검토) ✅ → [09](09-mvp-scope.md)
 5. **첫 제품 방향** — 첫 사용자·표면 우선순위·완성 기준 ✅ → [11](11-first-product-direction.md)
+6. **엔진 완성 기준** — 표면 작업 전, 엔진이 완성됐는지 판정할 기준 ✅ → [12](12-engine-completion-criteria.md)
 
 ## 컨셉 지도
 
