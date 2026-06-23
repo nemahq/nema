@@ -8,6 +8,7 @@
 //   5회 쌍 10개 → 일관성(쌍대 F1)
 // 결과는 results-extraction-*.json — 집계 숫자 + 실패 사례 전수(결정 #7).
 
+import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,7 +39,12 @@ import {
   type Judge,
   QUALITY_DIMENSIONS,
 } from "./judge";
-import { type PrecisionRecallF1, round, scoreF1 } from "./metrics";
+import {
+  classificationMetrics,
+  type PrecisionRecallF1,
+  round,
+  scoreF1,
+} from "./metrics";
 import { type EvalAxis, SEED_DOCUMENTS, type SeedDocument } from "./seed-data";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -52,6 +58,8 @@ const JUDGE_CONCURRENCY = 8;
 const EXTRACTION_CONCURRENCY = 4;
 const EXTRACTION_MAX_ATTEMPTS = 3;
 const EXTRACTION_RETRY_DELAY_MS = 3_000;
+/** 프롬프트 지문 길이 — 결과가 어느 프롬프트로 잰 것인지 자기증명 (run-judgment와 동형) */
+const PROMPT_HASH_LENGTH = 8;
 
 type StatementType = ExtractedStatement["type"];
 type Confidence = "certain" | "guess" | null;
@@ -486,6 +494,7 @@ async function main() {
     },
     classification: {
       typeAccuracy: typeAccuracy === null ? null : round(typeAccuracy),
+      ...classificationMetrics(["claim", "question", "todo"], allTypePairs),
       typeConfusion: buildConfusionMatrix(allTypePairs),
       confidenceAccuracy:
         confidenceAccuracy === null ? null : round(confidenceAccuracy),
@@ -508,6 +517,11 @@ async function main() {
       {
         runAt: new Date().toISOString(),
         model: resolveEvalModelId(),
+        // 프롬프트 지문 — 결과 파일이 "어느 추출 프롬프트로 잰 것인지" 자기증명 (run-judgment와 동형)
+        promptHash: createHash("sha1")
+          .update(STATEMENT_EXTRACTION_SYSTEM_PROMPT)
+          .digest("hex")
+          .slice(0, PROMPT_HASH_LENGTH),
         runsPerDoc: RUNS_PER_DOC,
         judgeUsage: judge.usage(),
         failedDocs,

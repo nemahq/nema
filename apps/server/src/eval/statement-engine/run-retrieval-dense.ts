@@ -223,9 +223,12 @@ async function main() {
     });
     const isAnswerable = expected.size > 0;
     const topK = results.slice(0, RECALL_K);
-    const recallAtK = isAnswerable
-      ? topK.filter((r) => r.isExpected).length / expected.size
-      : null;
+    const relevantInTopK = topK.filter((r) => r.isExpected).length;
+    const recallAtK = isAnswerable ? relevantInTopK / expected.size : null;
+    // Precision@k — 빽빽한 코퍼스에선 top-k에 distractor가 얼마나 끼나가 핵심 잡음 신호.
+    // 분모는 top-k 실건수(보통 k)라 threshold 무관. 정답이 k보다 적으면 상한 |expected|/k.
+    const precisionAtK =
+      isAnswerable && topK.length > 0 ? relevantInTopK / topK.length : null;
     const firstHitRank = results.findIndex((r) => r.isExpected);
     let reciprocalRank: number | null = null;
     if (isAnswerable) {
@@ -238,6 +241,7 @@ async function main() {
       expected: seedQuery.expectedStatementIds,
       results,
       recallAtK: recallAtK === null ? null : round(recallAtK),
+      precisionAtK: precisionAtK === null ? null : round(precisionAtK),
       reciprocalRank: reciprocalRank === null ? null : round(reciprocalRank),
     });
     let marker = "·";
@@ -262,6 +266,10 @@ async function main() {
   );
   const summary = {
     recallAtK: recallDense,
+    precisionAtK: round(
+      answerable.reduce((sum, r) => sum + (r.precisionAtK ?? 0), 0) /
+        answerable.length,
+    ),
     mrr: round(
       answerable.reduce((sum, r) => sum + (r.reciprocalRank ?? 0), 0) /
         answerable.length,
@@ -275,6 +283,9 @@ async function main() {
             queries: rs.length,
             recallAtK: round(
               rs.reduce((sum, r) => sum + (r.recallAtK ?? 0), 0) / rs.length,
+            ),
+            precisionAtK: round(
+              rs.reduce((sum, r) => sum + (r.precisionAtK ?? 0), 0) / rs.length,
             ),
           },
         ];
