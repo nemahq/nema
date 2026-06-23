@@ -32,6 +32,11 @@ interface GoldenStatementBase {
   needsHumanReview: boolean;
   /** 무엇이 애매한가 (needsHumanReview일 때) */
   reviewNote?: string;
+  /**
+   * 시간 경로 eval(temporal-query-design 8장 B)용 라벨 — 내용 속 기한을 코퍼스 작성 주
+   * (TEMPORAL_EVAL_QUERY_NOW와 같은 주)에서 환산한 절대 날짜(YYYY-MM-DD). 기한 없으면 미지정.
+   */
+  dueDate?: string;
 }
 
 /** schema-design 4.2의 CHECK 제약(claim이면 확신도 필수, 그 외엔 금지)을 타입으로 강제 */
@@ -243,6 +248,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         confidence: "certain",
         axes: ["compound-split"],
         needsHumanReview: false,
+        dueDate: "2026-06-23",
       },
       {
         id: "weekly-1-s3",
@@ -292,6 +298,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         confidence: "certain",
         axes: ["compound-split"],
         needsHumanReview: false,
+        dueDate: "2026-06-25",
       },
       {
         id: "weekly-1-s8",
@@ -321,6 +328,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         type: "todo",
         axes: ["todo-boundary"],
         needsHumanReview: false,
+        dueDate: "2026-06-19",
       },
       {
         id: "braindump-1-s2",
@@ -375,6 +383,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         confidence: "certain",
         axes: ["compound-split"],
         needsHumanReview: false,
+        dueDate: "2026-06-17",
       },
       {
         id: "braindump-1-s8",
@@ -382,6 +391,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         type: "todo",
         axes: ["compound-split", "todo-boundary"],
         needsHumanReview: false,
+        dueDate: "2026-06-18",
       },
       {
         id: "braindump-1-s9",
@@ -405,6 +415,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         type: "todo",
         axes: ["over-extraction-guard", "todo-boundary"],
         needsHumanReview: false,
+        dueDate: "2026-06-24",
       },
     ],
     note: "기대 추출 수 = 정확히 1. 2개 이상이면 과잉 추출",
@@ -592,12 +603,22 @@ export const SEED_QUERIES: SeedQuery[] = [
 // 짓지 않고, 질의·기대 진술 매핑만 보존한다.
 // ---------------------------------------------------------------------------
 
-/** @public 시간 경로 eval(설계 8장 B)이 쓸 매핑 — 러너 미구현이라 지금은 미참조(파킹). */
+// 시간 경로 eval의 고정 질의 기준 — "이번 주/다음주"를 이 날(2026-06-15 월요일) 기준으로 푼다.
+// 골든 dueDate 라벨도 같은 주를 기준으로 환산돼 있다(코퍼스 작성일 = 같은 주).
+export const TEMPORAL_EVAL_QUERY_NOW = "2026-06-15T00:00:00Z";
+
+// expectedToken = 질의가 구조화돼야 하는 토큰(나: 질의→토큰 정확도의 정답).
+// expectedStatementIds = 그 토큰으로 due_date 필터 시 나와야 하는 진술(가: 끝단 정확도).
 export const RELOCATED_TEMPORAL_QUERIES = [
   {
     id: "q12",
     query: "다음주에 예정된 일이 뭐가 있지?",
     expectedStatementIds: ["weekly-1-s2", "weekly-1-s7", "short-1-s1"],
+    expectedToken: {
+      field: "due",
+      boundary: "within",
+      anchor: { kind: "relative", grain: "week", offset: 1 },
+    },
     note: "시간 표현으로 여러 글을 가로질러 묻기",
   },
   {
@@ -608,6 +629,11 @@ export const RELOCATED_TEMPORAL_QUERIES = [
       "braindump-1-s7",
       "braindump-1-s8",
     ],
+    expectedToken: {
+      field: "due",
+      boundary: "by",
+      anchor: { kind: "relative", grain: "week", offset: 0 },
+    },
     note: "금요일·수요일·목요일 기한을 '이번 주'로 묻기 (다음주 수요일인 short-1-s1은 교란)",
   },
 ] as const;
