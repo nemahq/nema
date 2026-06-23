@@ -141,7 +141,7 @@ coarse를 채점하려면 "정답이 어느 주제에 있는지"가 **독립적�
 
 1. **coarse 매칭**: `structureQuery` 출력에 `topics` 추가(프롬프트에 주제 목록 주입 + recall 우선 지시), 구조화 서비스가 주제 이름 → topicId 매핑. 의존: `listTopics`.
 2. **scope 배선**: coarse가 고른 topicIds를 `searchStatements`에 흘리고, narration-router의 클라이언트 `input.topicIds` 제거(프론트 미사용 확인 후).
-3. **무태그 버킷**: `collectScopedStatementIds`에 무태그 진술 합집합 추가. 동시에 statement-search.ts:551의 TODO(scope를 DB limit **전에** 걸기) 해소. 지금 메모리 교집합은 limit 밖 in-scope 진술을 흘린다.
+3. **무태그 버킷**: `collectScopedStatementIds`에 무태그 진술 합집합 추가. 동시에 시간 경로의 스코프 교집합(`collectTimeCandidateIds`)이 남긴 "scope를 DB limit **전에** 걸기" TODO 해소. 지금은 DB limit으로 자른 뒤 메모리에서 교집합해 limit 밖 in-scope 진술을 흘린다.
 4. **eval A (coarse 단독)**: tiro thread를 gold 주제로, 질의→주제 recall 러너.
 5. **eval B (end-to-end)**: `run-retrieval-dense.ts`에 scope 열 추가, 전역 대비 recall@k.
 
