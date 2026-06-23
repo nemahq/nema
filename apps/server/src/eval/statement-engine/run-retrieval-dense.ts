@@ -51,7 +51,9 @@ const SUMMARY_CHAR_CAP = 8_000;
 const EXTRACT_CONCURRENCY = 5;
 /** Voyage 한 번에 임베딩할 진술 수 */
 const UPSERT_BATCH = 100;
-/** 기준선(측정 #1·#8, sparse 코퍼스 39개) */
+// 기준선(측정 #1·#8, sparse 코퍼스). temporal 질의를 의미검색 채점에서 빼기 전 값이라
+// (temporal-query-design 8장 A) SEED_QUERIES가 줄어든 지금은 재측정 대상 — sparse 러너를
+// 다시 돌려 갱신할 것. 그전까지 delta 출력은 참고용.
 const SPARSE_RECALL_BASELINE = 0.978;
 
 interface Distractor {

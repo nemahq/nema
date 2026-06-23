@@ -6,6 +6,16 @@
 
 ---
 
+## 측정 #11 — 2026-06-24 · temporal 의미검색 채점서 제외 — 시간 질의 재배치 1탄 (③ eval A)
+
+**바꾼 것**: 엔진·골든 불변, 채점 대상만. temporal 축(q12·q13)을 의미검색 채점(`SEED_QUERIES`)에서 뺐다. 시간은 날짜 산술이라 임베딩 소관이 아니다 — 측정 #9에서 temporal recall이 0.834 → 0.167로 무너질 때 다른 축은 0.8~1.0을 지켰다. 두 질의는 `RELOCATED_TEMPORAL_QUERIES`로 옮겨 시간 경로 eval(설계 8장 B, ④와 골든 공유)의 재료로 보존했다. 설계: [temporal-query-design](../../../../../docs/flows/save-engine-v2/temporal-query-design.md).
+
+**숫자 없음, 재측정 대기**: VOYAGE 키가 없어 이 세션에선 검색 러너를 못 돌렸다. 부분 실패하던 q12·q13이 빠졌으니 sparse·dense recall은 다시 재면 올라간다. `SPARSE_RECALL_BASELINE`(0.978)은 제외 전 값이라 갱신 대상으로 표시해 뒀다.
+
+**다음**: 키 있는 세션에서 sparse·dense를 재측정해 baseline을 갱신한다. 시간 경로 자체(토큰·resolver·라우팅)는 설계 9장 순서대로 후속.
+
+---
+
 ## 측정 #10 — 2026-06-24 · 측정 정비 검증 — 골든 s3a 제거 + sameMeaning 예시 (태스크 1)
 
 **바꾼 것**: 엔진 불변, 측정 도구만. (1) 골든에서 `weekly-1-s3a`("진행 중") 제거 — `weekly-1-s3`("늦어지고 있다")에 포함돼 과분할이었다(사람 확인). (2) `judge.ts`의 sameMeaning 프롬프트에 한국어 예시 2개(같음 1·다름 1) 추가 — 패러프레이즈 판정 변동을 줄이려고.
