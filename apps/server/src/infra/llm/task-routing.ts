@@ -21,6 +21,7 @@ export const LLM_TASK_SCHEMA = z.enum([
   "judgeRelations",
   "assistDraft",
   "narrate",
+  "structureQuery",
 ]);
 
 export type LlmTask = z.infer<typeof LLM_TASK_SCHEMA>;
@@ -45,6 +46,8 @@ export const TASK_DEFAULTS = {
   assistDraft: { tier: "standard" },
   // 해설: 근거 묶음을 산문으로 풀어 읽는다. 품질이 신뢰의 핵심이라 standard.
   narrate: { tier: "standard" },
+  // 질의 구조화: 검색어를 의미부 + 시간 토큰으로 가른다. 검색 경로라 싸고 빨라야 해 mini.
+  structureQuery: { tier: "mini" },
 } as const satisfies Record<LlmTask, TaskDefault>;
 
 // task → override. effort는 그 모델 프로바이더의 네이티브 값(set 시점에 검증).
