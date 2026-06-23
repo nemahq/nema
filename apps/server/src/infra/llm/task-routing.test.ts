@@ -63,6 +63,7 @@ describe("TASK_DEFAULTS", () => {
       judgeRelations: { tier: "standard", effort: "low" },
       assistDraft: { tier: "standard" },
       narrate: { tier: "standard" },
+      structureQuery: { tier: "mini" },
     });
   });
 });

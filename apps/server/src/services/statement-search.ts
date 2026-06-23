@@ -1,7 +1,17 @@
+import { DateTime, IANAZone } from "luxon";
+import * as Sentry from "@sentry/node";
+
 import type { Database, Json } from "@server/infra/database.types";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import type { StatementSearchHit } from "@server/infra/vector";
+import {
+  type QueryStructure,
+  structureQuery,
+} from "@server/services/query-structuring";
+import { resolveTimeToken } from "@server/temporal/resolver";
+import type { TimeToken } from "@server/temporal/token";
 
 // 평가 하니스 첫 실측으로 보정 (retrieval-design 3장).
 // 골든 질의의 정답 점수대 0.216~0.52, 무정답 질의 최고점 0.239 —
@@ -11,6 +21,10 @@ import { throwIfSupabaseError } from "@server/infra/supabase-error";
 // 코퍼스가 바뀌면 분포가 통째로 이동하므로 재보정 필요 — measurement-log 참고.
 const STATEMENT_SEARCH_LIMIT = 15;
 const STATEMENT_SEARCH_SCORE_THRESHOLD = 0.2;
+// 의미+시간 질의에서 벡터검색에 넘길 시간 후보 상한 — 벡터가 이 안에서 다시 상위 K를 고른다.
+const TIME_FILTER_CANDIDATE_LIMIT = 100;
+// 순수 시간 질의(의미 없음)는 벡터 점수가 없어 동일 점수를 매긴다 — 묶음은 최신순으로 정렬.
+const NEUTRAL_TIME_SCORE = 1;
 
 type SearchedStatementType = Database["public"]["Enums"]["statement_type"];
 type SearchedStatementConfidence =
@@ -59,9 +73,13 @@ export async function searchStatements(args: {
   supabase: TypedSupabaseClient;
   providers: Providers;
   query: string;
+  /** 질의자의 IANA 존 — 시간 질의의 "이번 주/오늘"을 이 존 기준으로 푼다. 없으면 시간 강등. */
+  timeZone?: string;
+  /** 시간 환산의 기준 시각(테스트 주입용). 기본 현재. */
+  now?: Date;
   topicIds?: string[];
 }): Promise<StatementSearchResult> {
-  const { supabase, providers, query, topicIds } = args;
+  const { supabase, providers, query, timeZone, now, topicIds } = args;
 
   // 격리는 내가 멤버인 Space 목록 — 오늘은 개인 Space 1개지만 처음부터 목록으로
   const { data: memberships, error: membershipError } = await supabase
@@ -84,25 +102,78 @@ export async function searchStatements(args: {
     }
   }
 
-  // 전처리 LLM 없이 그대로 임베딩(쿼리 모드) → Qdrant. statement_id+score만 받는다
-  const hits = await providers.vectorStore.search(providers.embedding, {
-    spaceIds,
+  // 질의 구조화 — 시간 표현을 떼어 구조화된 시간 경로로 보낸다 (temporal-query-design 5·6장).
+  // 절대 날짜 연도 보정·시간 환산이 같은 순간을 쓰게 reference를 한 번만 잡는다.
+  const reference = now ?? new Date();
+  const queryZone =
+    timeZone !== undefined && IANAZone.isValidZone(timeZone) ? timeZone : "utc";
+  const structure = await structureSafely({
+    providers,
     query,
-    limit: STATEMENT_SEARCH_LIMIT,
-    scoreThreshold: STATEMENT_SEARCH_SCORE_THRESHOLD,
-    statementIds: scopedStatementIds,
+    todayIsoDate: zonedISODate(reference, queryZone),
   });
 
-  if (hits.length === 0) {
-    return { groups: [] };
+  let scoreByStatementId: Map<string, number>;
+  // 순수 시간 질의는 벡터 점수가 없어 묶음을 최신순으로 정렬한다(관련도순 대신).
+  let sortByRecency = false;
+
+  // 존이 없거나 유효하지 않으면 "이번 주"를 풀 수 없어 시간 경로를 못 탄다 — 의미검색으로 강등.
+  if (
+    structure.time !== null &&
+    timeZone !== undefined &&
+    IANAZone.isValidZone(timeZone)
+  ) {
+    const range = resolveTimeToken(structure.time, {
+      reference,
+      timeZone,
+    });
+    const candidateIds = await collectTimeCandidateIds(supabase, {
+      spaceIds,
+      field: structure.time.field,
+      from: range.from,
+      to: range.to,
+      timeZone,
+      scopedStatementIds,
+      limit:
+        structure.semantic !== null
+          ? TIME_FILTER_CANDIDATE_LIMIT
+          : STATEMENT_SEARCH_LIMIT,
+    });
+    if (candidateIds.length === 0) {
+      return { groups: [] };
+    }
+
+    if (structure.semantic !== null) {
+      // 의미 + 시간: 시간 후보 안에서 의미검색(필터 오버레이, temporal-query-design 6장 ②)
+      const hits = await providers.vectorStore.search(providers.embedding, {
+        spaceIds,
+        query: structure.semantic,
+        limit: STATEMENT_SEARCH_LIMIT,
+        scoreThreshold: STATEMENT_SEARCH_SCORE_THRESHOLD,
+        statementIds: candidateIds,
+      });
+      scoreByStatementId = topScoreByStatementId(hits);
+    } else {
+      // 순수 시간: Qdrant 우회, 시간 후보 그대로 (temporal-query-design 6장 ①)
+      scoreByStatementId = new Map(
+        candidateIds.map((id) => [id, NEUTRAL_TIME_SCORE]),
+      );
+      sortByRecency = true;
+    }
+  } else {
+    // 시간 없음(또는 존 강등): 원 질의 그대로 의미검색
+    const hits = await providers.vectorStore.search(providers.embedding, {
+      spaceIds,
+      query,
+      limit: STATEMENT_SEARCH_LIMIT,
+      scoreThreshold: STATEMENT_SEARCH_SCORE_THRESHOLD,
+      statementIds: scopedStatementIds,
+    });
+    scoreByStatementId = topScoreByStatementId(hits);
   }
 
-  const scoreByStatementId = new Map<string, number>();
-  for (const hit of hits) {
-    const prev = scoreByStatementId.get(hit.statementId);
-    if (prev === undefined || hit.score > prev) {
-      scoreByStatementId.set(hit.statementId, hit.score);
-    }
+  if (scoreByStatementId.size === 0) {
+    return { groups: [] };
   }
 
   // 본문은 항상 Postgres 원장에서 — Qdrant payload 사본이 진실 행세를 못 하게.
@@ -179,14 +250,21 @@ export async function searchStatements(args: {
     );
   }
 
-  return {
-    groups: assembleSourceGroups({
-      statements,
-      scoreByStatementId,
-      activeCountBySourceId,
-      markersByStatementId,
-    }),
-  };
+  const groups = assembleSourceGroups({
+    statements,
+    scoreByStatementId,
+    activeCountBySourceId,
+    markersByStatementId,
+  });
+
+  // 순수 시간 질의는 동일 점수라 조립 정렬이 무의미 — 최신 글이 위로 오게 다시 정렬한다.
+  if (sortByRecency) {
+    groups.sort((a, b) =>
+      b.key.sourceCreatedAt.localeCompare(a.key.sourceCreatedAt),
+    );
+  }
+
+  return { groups };
 }
 
 interface GroupableStatement {
@@ -366,6 +444,115 @@ export function parseLocatorIndex(locator: Json | null): number | null {
     return locator["index"];
   }
   return null;
+}
+
+// 구조화 LLM이 실패해도 검색은 살린다 — 시간 없는 평범한 의미검색으로 강등한다.
+async function structureSafely(args: {
+  providers: Providers;
+  query: string;
+  todayIsoDate: string;
+}): Promise<QueryStructure> {
+  try {
+    return await structureQuery(args);
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "query-structuring" },
+    });
+    return { semantic: null, time: null };
+  }
+}
+
+function topScoreByStatementId(
+  hits: StatementSearchHit[],
+): Map<string, number> {
+  const scoreByStatementId = new Map<string, number>();
+  for (const hit of hits) {
+    const prev = scoreByStatementId.get(hit.statementId);
+    if (prev === undefined || hit.score > prev) {
+      scoreByStatementId.set(hit.statementId, hit.score);
+    }
+  }
+  return scoreByStatementId;
+}
+
+function zonedISODate(instant: Date, timeZone: string): string {
+  const date = DateTime.fromJSDate(instant, { zone: timeZone }).toISODate();
+  if (date === null) {
+    throw new Error(`zonedISODate: invalid date in zone ${timeZone}`);
+  }
+  return date;
+}
+
+// 시간 범위에 드는 진술 id. due는 진술의 due_date(존 달력 날짜로 비교), created는 글의
+// created_at(timestamptz instant로 비교) 기준. status 활성 여부는 호출부 본문 조회가 거른다.
+async function collectTimeCandidateIds(
+  supabase: TypedSupabaseClient,
+  opts: {
+    spaceIds: string[];
+    field: TimeToken["field"];
+    from: Date | null;
+    to: Date;
+    timeZone: string;
+    scopedStatementIds: string[] | undefined;
+    limit: number;
+  },
+): Promise<string[]> {
+  const { spaceIds, field, from, to, timeZone, scopedStatementIds, limit } =
+    opts;
+
+  let ids: string[];
+  if (field === "due") {
+    let query = supabase
+      .from("statements")
+      .select("id")
+      .in("space_id", spaceIds)
+      .eq("status", "active")
+      .not("due_date", "is", null)
+      .lte("due_date", zonedISODate(to, timeZone))
+      .order("due_date", { ascending: false })
+      .limit(limit);
+    // from이 null인 by(마감 "~까지")는 아래끝을 열어 둔다 — 연체(지난 마감)도 후보로 띄운다.
+    // 마감 검색의 본질이 "놓친·임박한 기한"이라 연체가 가장 급하다(resolver가 검색 레이어로
+    // 위임한 제품 판단, temporal-query-design 4장). 연체를 빼려면 from을 now로 자른다.
+    if (from !== null) {
+      query = query.gte("due_date", zonedISODate(from, timeZone));
+    }
+    const { data, error } = await query;
+    throwIfSupabaseError(error);
+    ids = (data ?? []).map((row) => row.id);
+  } else {
+    let query = supabase
+      .from("sources")
+      .select("id")
+      .in("space_id", spaceIds)
+      .lte("created_at", to.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (from !== null) {
+      query = query.gte("created_at", from.toISOString());
+    }
+    const { data: sourceRows, error: sourceError } = await query;
+    throwIfSupabaseError(sourceError);
+    const sourceIds = (sourceRows ?? []).map((row) => row.id);
+    if (sourceIds.length === 0) {
+      return [];
+    }
+    const { data: refRows, error: refError } = await supabase
+      .from("statement_sources")
+      .select("statement_id")
+      .in("source_id", sourceIds);
+    throwIfSupabaseError(refError);
+    ids = [...new Set((refRows ?? []).map((row) => row.statement_id))];
+  }
+
+  if (scopedStatementIds === undefined) {
+    return ids;
+  }
+  // TODO(④ 자동 scoping): 지금은 DB limit으로 자른 뒤 메모리에서 스코프 교집합을 취한다 —
+  // limit 밖의 in-scope 진술이 누락될 수 있다. ④가 topicIds를 배선하면 스코프를 DB 쿼리에
+  // 함께 걸어 limit 전에 좁힐 것. (현재 라우터가 topicIds를 안 넘겨 죽은 경로라 무해)
+  const scoped = new Set(scopedStatementIds);
+  return ids.filter((id) => scoped.has(id));
 }
 
 // archived 진술은 벡터 색인에 없어 검색에서 자동 탈락하므로 여기서 status를 따로 거르지 않는다.

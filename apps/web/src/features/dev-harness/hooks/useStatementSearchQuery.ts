@@ -8,8 +8,13 @@ export function useStatementSearchQuery(
     "queryKey"
   >,
 ) {
-  return trpc.statement.search.useQuery(input, {
-    enabled: input.query.length > 0,
-    ...options,
-  });
+  // 사용자 존을 실어 보낸다 — 시간 질의("이번 주 마감")를 이 존 기준으로 풀게 한다.
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return trpc.statement.search.useQuery(
+    { ...input, timeZone },
+    {
+      enabled: input.query.length > 0,
+      ...options,
+    },
+  );
 }
