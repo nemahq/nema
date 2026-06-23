@@ -21,7 +21,7 @@ process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
 process.env["QDRANT_API_KEY"] ??= "eval-unused";
 
 import { loadEnv } from "@server/env";
-import { createEvalLlm } from "@server/eval/eval-llm";
+import { createEvalLlm, resolveEvalModelId } from "@server/eval/eval-llm";
 import { createLimiter } from "@server/infra/llm/limiter";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import {
@@ -419,6 +419,7 @@ async function main() {
     JSON.stringify(
       {
         runAt: new Date().toISOString(),
+        model: resolveEvalModelId(),
         // 프롬프트 지문 — 전후 결과 파일이 "어느 프롬프트로 잰 것인지" 자기증명
         promptHash,
         runsPerScenario: RUNS_PER_SCENARIO,
