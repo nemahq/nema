@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>모델 가성비 비교 — NEM-149</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        font:
+          14px/1.5 -apple-system,
+          system-ui,
+          "Segoe UI",
+          sans-serif;
+        background: #0f1115;
+        color: #e6e8ec;
+        margin: 0;
+        padding: 32px;
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 18px;
+        margin: 28px 0 4px;
+        border-bottom: 1px solid #2a2f3a;
+        padding-bottom: 6px;
+      }
+      .meta {
+        color: #8b93a1;
+        font-size: 12px;
+        margin-bottom: 18px;
+      }
+      .caveat {
+        background: #1a1d24;
+        border: 1px solid #2a2f3a;
+        border-left: 3px solid #d9a441;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin: 14px 0;
+        font-size: 13px;
+        color: #c7cdd6;
+      }
+      .caveat b {
+        color: #e6e8ec;
+      }
+      .desc {
+        color: #8b93a1;
+        font-size: 12.5px;
+        margin: 2px 0 8px;
+      }
+      .rec {
+        background: #15181f;
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin: 6px 0 10px;
+        font-size: 13px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th {
+        text-align: left;
+        color: #8b93a1;
+        font-weight: 500;
+        padding: 6px 8px;
+        font-size: 11.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      td {
+        padding: 7px 8px;
+        border-top: 1px solid #1c2027;
+        vertical-align: middle;
+      }
+      tr.hl {
+        background: #15211a;
+      }
+      .model {
+        font-weight: 600;
+      }
+      .prov {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+      .prov.openai {
+        background: #10362b;
+        color: #5ee3b3;
+      }
+      .prov.anthropic {
+        background: #3a2a16;
+        color: #e0a060;
+      }
+      .prov.google {
+        background: #16263f;
+        color: #6fb0f0;
+      }
+      .cell {
+        min-width: 150px;
+      }
+      .bar {
+        display: inline-block;
+        width: 80px;
+        height: 6px;
+        background: #222733;
+        border-radius: 3px;
+        vertical-align: middle;
+        overflow: hidden;
+        margin-right: 8px;
+      }
+      .fill {
+        height: 100%;
+      }
+      .fill.q {
+        background: #3fb950;
+      }
+      .fill.c {
+        background: #d9626b;
+      }
+      .num {
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        color: #c7cdd6;
+      }
+      .lat {
+        font-variant-numeric: tabular-nums;
+        color: #9aa3b0;
+      }
+      .sig {
+        color: #8b93a1;
+        font-size: 11.5px;
+        font-variant-numeric: tabular-nums;
+      }
+      .muted {
+        color: #6b7280;
+      }
+      .tag {
+        font-size: 10.5px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        white-space: nowrap;
+      }
+      .tag.best {
+        background: #16331f;
+        color: #5ee388;
+      }
+      .tag.value {
+        background: #142a3a;
+        color: #6fb0f0;
+      }
+      .tag.warn {
+        background: #3a2418;
+        color: #e0915f;
+      }
+      footer {
+        margin-top: 30px;
+        color: #6b7280;
+        font-size: 11.5px;
+        border-top: 1px solid #2a2f3a;
+        padding-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>모델 가성비 비교 — NEM-149</h1>
+    <div class="meta">
+      측정 2026-06-24T05:41:42.592Z · 9종 × 4기능 · staging eval_runs 적재 36행
+      · 채점관(Claude) 2167콜
+    </div>
+
+    <div class="caveat">
+      <b>이 표를 어떻게 읽나.</b> <b>비용·지연은 최종값</b>(실 토큰 usage).
+      <b>품질은 잠정</b> — 진술 39개짜리 작은·쉬운 시험지 위라 절대 점수는
+      부풀려졌고(§3 "쉬운 시험"), 데이터 쌓이면 다시 재야 한다.
+      <b>모델 *상대 순위*는 꽤 오래가지만 절대 점수는 아니다.</b> 추출의 ⚠️
+      Claude 행은 채점관도 Claude라 점수가 후할 수 있음(self-preference).
+      해설·초안은 자동 품질이 없어 <b>비용·지연만</b> — 선택은 저장된 출력
+      눈검사 후.
+    </div>
+
+    <section>
+      <h2>추출 (쪼개기·분류)</h2>
+      <p class="desc">
+        글을 진술로 쪼개고 분류. 품질 = 골든 F1 + 분류정확 합성 (Claude judge).
+      </p>
+      <p class="rec">
+        🏆 최고품질 <b>gpt-5</b> (0.956) · 💰 가성비
+        <b>gemini-3.1-flash-lite</b> (0.940 / $0.002372)
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>모델</th>
+            <th>제공자</th>
+            <th>동작당 비용</th>
+            <th>지연</th>
+            <th>품질</th>
+            <th>핵심 신호</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="">
+            <td class="model">gpt-5</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 49.61697909156453%"></div>
+              </div>
+              <span class="num">$0.013764</span>
+            </td>
+            <td class="lat">13409ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 100%"></div>
+              </div>
+              <span class="num">0.956</span>
+            </td>
+            <td class="sig">F1 0.91 · 분류 1.00</td>
+            <td class="tags"><span class="tag best">🏆 최고품질</span></td>
+          </tr>
+          <tr class="">
+            <td class="model">gemini-3.1-pro-preview</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 64.15799773406118%"></div>
+              </div>
+              <span class="num">$0.017797</span>
+            </td>
+            <td class="lat">11142ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 99.26982509763967%"></div>
+              </div>
+              <span class="num">0.949</span>
+            </td>
+            <td class="sig">F1 0.90 · 분류 1.00</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-haiku-4-5-20251001</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 16.988361314244518%"></div>
+              </div>
+              <span class="num">$0.004713</span>
+            </td>
+            <td class="lat">3749ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 99.01060598516158%"></div>
+              </div>
+              <span class="num">0.946</span>
+            </td>
+            <td class="sig">F1 0.92 · 분류 0.97</td>
+            <td class="tags"><span class="tag warn">⚠️ self-pref</span></td>
+          </tr>
+          <tr class="hl">
+            <td class="model">gemini-3.1-flash-lite</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 8.551215367185089%"></div>
+              </div>
+              <span class="num">$0.002372</span>
+            </td>
+            <td class="lat">6964ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 98.35761589403972%"></div>
+              </div>
+              <span class="num">0.940</span>
+            </td>
+            <td class="sig">F1 0.88 · 분류 1.00</td>
+            <td class="tags"><span class="tag value">💰 가성비</span></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-opus-4-8</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 100%"></div>
+              </div>
+              <span class="num">$0.027740</span>
+            </td>
+            <td class="lat">5182ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 97.39438414935104%"></div>
+              </div>
+              <span class="num">0.931</span>
+            </td>
+            <td class="sig">F1 0.89 · 분류 0.97</td>
+            <td class="tags"><span class="tag warn">⚠️ self-pref</span></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-sonnet-4-6</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 49.863528684725516%"></div>
+              </div>
+              <span class="num">$0.013832</span>
+            </td>
+            <td class="lat">7784ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 96.15178091999283%"></div>
+              </div>
+              <span class="num">0.919</span>
+            </td>
+            <td class="sig">F1 0.84 · 분류 1.00</td>
+            <td class="tags"><span class="tag warn">⚠️ self-pref</span></td>
+          </tr>
+          <tr class="">
+            <td class="model">gpt-5-mini</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 7.35773509115254%"></div>
+              </div>
+              <span class="num">$0.002041</span>
+            </td>
+            <td class="lat">10358ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 95.24931827035451%"></div>
+              </div>
+              <span class="num">0.910</span>
+            </td>
+            <td class="sig">F1 0.85 · 분류 0.97</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gemini-3.5-flash</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 21.653362859202804%"></div>
+              </div>
+              <span class="num">$0.006007</span>
+            </td>
+            <td class="lat">3526ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 90.17124577240239%"></div>
+              </div>
+              <span class="num">0.862</span>
+            </td>
+            <td class="sig">F1 0.76 · 분류 0.96</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gpt-5-nano</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 1.8625244618395307%"></div>
+              </div>
+              <span class="num">$0.000517</span>
+            </td>
+            <td class="lat">8781ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 84.6480131163406%"></div>
+              </div>
+              <span class="num">0.809</span>
+            </td>
+            <td class="sig">F1 0.75 · 분류 0.87</td>
+            <td class="tags"></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+    <section>
+      <h2>관계 (잇기·합치기)</h2>
+      <p class="desc">
+        진술끼리 잇기·합치기. 품질 = 관계 F1 (코드 채점, 편향 없음).
+      </p>
+      <p class="rec">
+        🏆 최고품질 <b>gemini-3.1-pro-preview</b> (0.966) · 💰 가성비
+        <b>gemini-3.1-pro-preview</b> (0.966 / $0.010653)
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>모델</th>
+            <th>제공자</th>
+            <th>동작당 비용</th>
+            <th>지연</th>
+            <th>품질</th>
+            <th>핵심 신호</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="hl">
+            <td class="model">gemini-3.1-pro-preview</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 43.17010749018939%"></div>
+              </div>
+              <span class="num">$0.010653</span>
+            </td>
+            <td class="lat">5064ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 100%"></div>
+              </div>
+              <span class="num">0.966</span>
+            </td>
+            <td class="sig">P 0.93 · R 1.00 · 중복 1.00</td>
+            <td class="tags">
+              <span class="tag best">🏆 최고품질</span>
+              <span class="tag value">💰 가성비</span>
+            </td>
+          </tr>
+          <tr class="">
+            <td class="model">gpt-5-mini</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 4.61274739805494%"></div>
+              </div>
+              <span class="num">$0.001138</span>
+            </td>
+            <td class="lat">3368ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 90.62500000000001%"></div>
+              </div>
+              <span class="num">0.875</span>
+            </td>
+            <td class="sig">P 0.78 · R 1.00 · 중복 1.00</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gemini-3.5-flash</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 28.29871182392083%"></div>
+              </div>
+              <span class="num">$0.006984</span>
+            </td>
+            <td class="lat">3629ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 88.77551020408163%"></div>
+              </div>
+              <span class="num">0.857</span>
+            </td>
+            <td class="sig">P 0.86 · R 0.86 · 중복 1.00</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-opus-4-8</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 100%"></div>
+              </div>
+              <span class="num">$0.024678</span>
+            </td>
+            <td class="lat">4013ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 85.29411764705883%"></div>
+              </div>
+              <span class="num">0.824</span>
+            </td>
+            <td class="sig">P 0.70 · R 1.00 · 중복 1.00</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-sonnet-4-6</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 43.01399078655519%"></div>
+              </div>
+              <span class="num">$0.010615</span>
+            </td>
+            <td class="lat">3554ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 84.15178571428572%"></div>
+              </div>
+              <span class="num">0.813</span>
+            </td>
+            <td class="sig">P 0.72 · R 0.93 · 중복 1.00</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gpt-5</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 29.679502218051525%"></div>
+              </div>
+              <span class="num">$0.007324</span>
+            </td>
+            <td class="lat">6829ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 82.85714285714286%"></div>
+              </div>
+              <span class="num">0.800</span>
+            </td>
+            <td class="sig">P 0.67 · R 1.00 · 중복 1.00</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-haiku-4-5-20251001</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 14.504564067565262%"></div>
+              </div>
+              <span class="num">$0.003579</span>
+            </td>
+            <td class="lat">2077ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 79.20168067226892%"></div>
+              </div>
+              <span class="num">0.765</span>
+            </td>
+            <td class="sig">P 0.65 · R 0.93 · 중복 1.00</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gemini-3.1-flash-lite</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 5.835821532161746%"></div>
+              </div>
+              <span class="num">$0.001440</span>
+            </td>
+            <td class="lat">2803ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 78.57142857142856%"></div>
+              </div>
+              <span class="num">0.759</span>
+            </td>
+            <td class="sig">P 0.73 · R 0.79 · 중복 1.00</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gpt-5-nano</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 1.1160318205084458%"></div>
+              </div>
+              <span class="num">$0.000275</span>
+            </td>
+            <td class="lat">3176ms</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill q" style="width: 73.50230414746542%"></div>
+              </div>
+              <span class="num">0.710</span>
+            </td>
+            <td class="sig">P 0.65 · R 0.79 · 중복 0.89</td>
+            <td class="tags"></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+    <section>
+      <h2>해설</h2>
+      <p class="desc">
+        진술 묶음을 산문으로. 품질 자동채점 없음 → 비용·지연만 (선택은 눈검사
+        필요).
+      </p>
+      <p class="rec">
+        💰 최저비용 <b>gemini-3.1-flash-lite</b> ($0.000309 · 1671ms) —
+        <span class="muted">품질은 눈검사 필요</span>
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>모델</th>
+            <th>제공자</th>
+            <th>동작당 비용</th>
+            <th>지연</th>
+            <th>품질</th>
+            <th>핵심 신호</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="hl">
+            <td class="model">gemini-3.1-flash-lite</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 2.0542204666910076%"></div>
+              </div>
+              <span class="num">$0.000309</span>
+            </td>
+            <td class="lat">1671ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 527→119/call</td>
+            <td class="tags"><span class="tag value">💰 가성비</span></td>
+          </tr>
+          <tr class="">
+            <td class="model">gpt-5-nano</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 7.5642281010389345%"></div>
+              </div>
+              <span class="num">$0.001139</span>
+            </td>
+            <td class="lat">20861ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 521→2784/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-haiku-4-5-20251001</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 11.856474258970358%"></div>
+              </div>
+              <span class="num">$0.001786</span>
+            </td>
+            <td class="lat">3552ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 611→235/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gpt-5-mini</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 28.490639625585025%"></div>
+              </div>
+              <span class="num">$0.004292</span>
+            </td>
+            <td class="lat">25122ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 521→2081/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-sonnet-4-6</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 38.402429714209845%"></div>
+              </div>
+              <span class="num">$0.005785</span>
+            </td>
+            <td class="lat">5011ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 612→263/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-opus-4-8</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 70.76708600258902%"></div>
+              </div>
+              <span class="num">$0.010660</span>
+            </td>
+            <td class="lat">6585ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 765→274/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gemini-3.5-flash</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 76.38911939456301%"></div>
+              </div>
+              <span class="num">$0.011507</span>
+            </td>
+            <td class="lat">11829ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 527→1191/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gpt-5</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 93.6929498456534%"></div>
+              </div>
+              <span class="num">$0.014113</span>
+            </td>
+            <td class="lat">14063ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 521→1346/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gemini-3.1-pro-preview</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 100%"></div>
+              </div>
+              <span class="num">$0.015064</span>
+            </td>
+            <td class="lat">10981ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 527→1168/call</td>
+            <td class="tags"></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+    <section>
+      <h2>초안 다듬기</h2>
+      <p class="desc">
+        거친 입력을 정제. 품질 자동채점 없음 → 비용·지연만 (선택은 눈검사 필요).
+      </p>
+      <p class="rec">
+        💰 최저비용 <b>gemini-3.1-flash-lite</b> ($0.000485 · 1283ms) —
+        <span class="muted">품질은 눈검사 필요</span>
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>모델</th>
+            <th>제공자</th>
+            <th>동작당 비용</th>
+            <th>지연</th>
+            <th>품질</th>
+            <th>핵심 신호</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="hl">
+            <td class="model">gemini-3.1-flash-lite</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 3.1464516966618525%"></div>
+              </div>
+              <span class="num">$0.000485</span>
+            </td>
+            <td class="lat">1283ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 1505→72/call</td>
+            <td class="tags"><span class="tag value">💰 가성비</span></td>
+          </tr>
+          <tr class="">
+            <td class="model">gpt-5-nano</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 4.04557699485565%"></div>
+              </div>
+              <span class="num">$0.000623</span>
+            </td>
+            <td class="lat">10565ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 1495→1371/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gpt-5-mini</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 11.04087892114701%"></div>
+              </div>
+              <span class="num">$0.001701</span>
+            </td>
+            <td class="lat">6927ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 1482→665/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-haiku-4-5-20251001</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 17.002320637445028%"></div>
+              </div>
+              <span class="num">$0.002619</span>
+            </td>
+            <td class="lat">2150ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 2013→121/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-sonnet-4-6</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 51.01426461758166%"></div>
+              </div>
+              <span class="num">$0.007859</span>
+            </td>
+            <td class="lat">2900ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 2014→121/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gemini-3.5-flash</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 68.77079242466041%"></div>
+              </div>
+              <span class="num">$0.010594</span>
+            </td>
+            <td class="lat">5999ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 1505→926/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gpt-5</td>
+            <td class="prov openai">openai</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 70.2236250628844%"></div>
+              </div>
+              <span class="num">$0.010818</span>
+            </td>
+            <td class="lat">9191ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 1482→897/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">claude-opus-4-8</td>
+            <td class="prov anthropic">anthropic</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 98.16052968955388%"></div>
+              </div>
+              <span class="num">$0.015122</span>
+            </td>
+            <td class="lat">3656ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 2386→128/call</td>
+            <td class="tags"></td>
+          </tr>
+          <tr class="">
+            <td class="model">gemini-3.1-pro-preview</td>
+            <td class="prov google">google</td>
+            <td class="cell">
+              <div class="bar">
+                <div class="fill c" style="width: 100%"></div>
+              </div>
+              <span class="num">$0.015405</span>
+            </td>
+            <td class="lat">9222ms</td>
+            <td class="cell"><span class="muted">n/a</span></td>
+            <td class="sig">토큰 1505→1033/call</td>
+            <td class="tags"></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      eval_version·prompt_version이 각 행에 박제됨 → 평가셋이 바뀌면 재측정해
+      추세 비교. 실제 모델 배치(TASK_DEFAULTS)는 NEM-168 §3 최종 합격선 확정 +
+      (필요시) 채점관 교차검증 후 별도 단계.
+    </footer>
+  </body>
+</html>
