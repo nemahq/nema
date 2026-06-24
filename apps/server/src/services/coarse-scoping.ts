@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/node";
+
 import type { Providers } from "@server/infra/providers";
 import {
   buildCoarseScopingMessage,
@@ -33,5 +35,15 @@ export async function selectScopeTopics(args: {
       ],
     });
   const valid = new Set(args.topics.map((t) => t.id));
-  return [...new Set(raw.topicIds.filter((id) => valid.has(id)))];
+  const picked = [...new Set(raw.topicIds.filter((id) => valid.has(id)))];
+  // LLM이 id를 냈는데 전부 목록 밖(환각)이면 빈 scope가 돼 "의도된 전역 강등"과 구분이 안 된다 —
+  // 예외가 안 나 조용히 묻히는 퇴행이라, rate 경보를 걸 수 있게 별도 신호를 남긴다.
+  if (raw.topicIds.length > 0 && picked.length === 0) {
+    Sentry.captureMessage("coarse scoping returned only unknown topic ids", {
+      level: "warning",
+      tags: { component: "coarse-scoping", outcome: "all-invalid-ids" },
+      extra: { returned: raw.topicIds, validCount: args.topics.length },
+    });
+  }
+  return picked;
 }

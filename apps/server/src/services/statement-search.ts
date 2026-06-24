@@ -97,7 +97,7 @@ export async function searchStatements(args: {
   // 라우팅 후보 — 질의자 공간의 주제 목록. coarse가 여기서 고른다. 비면 전역 (auto-scoping §3).
   const { topics } = await listTopics({ supabase });
 
-  // 시간 구조화와 주제 라우팅(coarse)을 병렬로. 한 콜에 합치면 주제 정확도가 깎여(측정 #18) 따로 부른다.
+  // 시간 구조화와 주제 라우팅(coarse)을 병렬로. 한 콜에 합치면 주제 정확도가 깎여(측정 #19) 따로 부른다.
   // 절대 날짜 연도 보정·시간 환산이 같은 순간을 쓰게 reference를 한 번만 잡는다.
   const reference = now ?? new Date();
   const queryZone =
