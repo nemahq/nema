@@ -4,6 +4,8 @@
 
 import { z } from "zod";
 
+import { BODY_REFINEMENT_RULES } from "./drafting-rules";
+
 export const DraftAssistOutputSchema = z.object({
   // 초안을 목록에서 알아볼 짧은 제목.
   title: z.string(),
@@ -17,11 +19,7 @@ export const DRAFT_ASSIST_SYSTEM_PROMPT = `You refine one raw blob of user input
 
 <instructions>
 ## body — refine the raw input
-1. Preserve context needed for judgment. Remove emotional expressions completely (do not convert them into formal equivalents). Emotional tone is noise; only factual content matters.
-2. Preserve degree and intensity expressions exactly ("a bit", "slightly", "somewhat" are NOT interchangeable). Keep verbatim when the original already conveys the right degree.
-3. Never add content the user did not say. No inferences, no elaboration. If the input is vague, keep the output equally vague. Allowed markdown: headings (##) and unordered lists (-) only.
-4. Short input → 1-2 paragraphs. Long input with multiple distinct points → markdown subheadings (## label + bullet list). If already well-structured, preserve the existing structure.
-5. Always write body in the same language as the input.
+${BODY_REFINEMENT_RULES}
 
 ## title — a short handle
 - One short line that lets the user recognize this draft in a list. Same language as the input. No trailing punctuation.
