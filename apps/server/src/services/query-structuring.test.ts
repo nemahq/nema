@@ -4,8 +4,10 @@ import type { QueryStructuringRaw } from "@server/prompts/query-structuring";
 
 import { mapRawToStructure } from "./query-structuring";
 
+const NO_TOPICS = new Set<string>();
+
 function raw(overrides: Partial<QueryStructuringRaw>): QueryStructuringRaw {
-  return { semantic: null, time: null, ...overrides };
+  return { semantic: null, time: null, topicIds: [], ...overrides };
 }
 
 const ABSENT = {
@@ -30,6 +32,7 @@ describe("mapRawToStructure", () => {
           offset: 1,
         },
       }),
+      NO_TOPICS,
     );
     expect(r.semantic).toBe("백엔드 관련");
     expect(r.time).toEqual({
@@ -51,6 +54,7 @@ describe("mapRawToStructure", () => {
           scope: "this",
         },
       }),
+      NO_TOPICS,
     );
     expect(r.time).toEqual({
       field: "due",
@@ -70,6 +74,7 @@ describe("mapRawToStructure", () => {
           date: "2026-02-14",
         },
       }),
+      NO_TOPICS,
     );
     expect(r.time?.anchor).toEqual({ kind: "absolute", date: "2026-02-14" });
   });
@@ -85,6 +90,7 @@ describe("mapRawToStructure", () => {
           date: "2026-02-30",
         },
       }),
+      NO_TOPICS,
     );
     expect(r.time).toBeNull();
   });
@@ -100,18 +106,38 @@ describe("mapRawToStructure", () => {
           ...ABSENT,
         },
       }),
+      NO_TOPICS,
     );
     expect(r.semantic).toBe("마감");
     expect(r.time).toBeNull();
   });
 
   it("시간 없는 질의는 의미만 남는다", () => {
-    const r = mapRawToStructure(raw({ semantic: "토스로 결제 정한 이유" }));
-    expect(r).toEqual({ semantic: "토스로 결제 정한 이유", time: null });
+    const r = mapRawToStructure(
+      raw({ semantic: "토스로 결제 정한 이유" }),
+      NO_TOPICS,
+    );
+    expect(r).toEqual({
+      semantic: "토스로 결제 정한 이유",
+      time: null,
+      topicIds: [],
+    });
   });
 
   it("빈/공백 semantic은 null로", () => {
-    expect(mapRawToStructure(raw({ semantic: "   " })).semantic).toBeNull();
-    expect(mapRawToStructure(raw({ semantic: "" })).semantic).toBeNull();
+    expect(
+      mapRawToStructure(raw({ semantic: "   " }), NO_TOPICS).semantic,
+    ).toBeNull();
+    expect(
+      mapRawToStructure(raw({ semantic: "" }), NO_TOPICS).semantic,
+    ).toBeNull();
+  });
+
+  it("목록에 없는 주제 id는 거르고 중복은 합친다", () => {
+    const r = mapRawToStructure(
+      raw({ semantic: "결제", topicIds: ["pay", "ghost", "pay"] }),
+      new Set(["pay", "b2b"]),
+    );
+    expect(r.topicIds).toEqual(["pay"]);
   });
 });

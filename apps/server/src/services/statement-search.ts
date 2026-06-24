@@ -6,10 +6,12 @@ import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import type { StatementSearchHit } from "@server/infra/vector";
+import type { QueryStructuringTopic } from "@server/prompts/query-structuring";
 import {
   type QueryStructure,
   structureQuery,
 } from "@server/services/query-structuring";
+import { listTopics } from "@server/services/topic-service";
 import { resolveTimeToken } from "@server/temporal/resolver";
 import type { TimeToken } from "@server/temporal/token";
 
@@ -77,9 +79,8 @@ export async function searchStatements(args: {
   timeZone?: string;
   /** 시간 환산의 기준 시각(테스트 주입용). 기본 현재. */
   now?: Date;
-  topicIds?: string[];
 }): Promise<StatementSearchResult> {
-  const { supabase, providers, query, timeZone, now, topicIds } = args;
+  const { supabase, providers, query, timeZone, now } = args;
 
   // 격리는 내가 멤버인 Space 목록 — 오늘은 개인 Space 1개지만 처음부터 목록으로
   const { data: memberships, error: membershipError } = await supabase
@@ -92,18 +93,11 @@ export async function searchStatements(args: {
     return { groups: [] };
   }
 
-  // 줄기 범위 — 주제가 주어지면 그 주제의 진술로 검색을 한정한다 (narration-design 3장).
-  // 빈 집합이면 그 줄기에 진술이 없다는 뜻이라 검색 없이 끝낸다.
-  let scopedStatementIds: string[] | undefined;
-  if (topicIds !== undefined) {
-    scopedStatementIds = await collectScopedStatementIds(supabase, topicIds);
-    if (scopedStatementIds.length === 0) {
-      return { groups: [] };
-    }
-  }
+  // 라우팅 후보 — 질의자 공간의 주제 목록. coarse가 여기서 고른다. 비면 전역 (auto-scoping §3).
+  const { topics } = await listTopics({ supabase });
 
-  // 질의 구조화 — 시간 표현을 떼어 구조화된 시간 경로로 보낸다 (temporal-query-design 5·6장).
-  // 절대 날짜 연도 보정·시간 환산이 같은 순간을 쓰게 reference를 한 번만 잡는다.
+  // 질의 구조화 — 시간 표현을 떼고(temporal-query-design 5·6장) 같은 콜에서 주제를 고른다
+  // (coarse, auto-scoping §3.2). 절대 날짜 연도 보정·시간 환산이 같은 순간을 쓰게 reference를 한 번만.
   const reference = now ?? new Date();
   const queryZone =
     timeZone !== undefined && IANAZone.isValidZone(timeZone) ? timeZone : "utc";
@@ -111,7 +105,22 @@ export async function searchStatements(args: {
     providers,
     query,
     todayIsoDate: zonedISODate(reference, queryZone),
+    topics: topics.map((t) => ({ id: t.id, label: t.name })),
   });
+
+  // 줄기 범위 — coarse가 고른 주제로 검색을 한정한다 (auto-scoping §3·§4).
+  // scope = 고른 주제의 진술 ∪ 무태그 진술. 못 고르면(빈 목록) 전역. 빈 집합이면 범위에 진술이 없어 끝낸다.
+  let scopedStatementIds: string[] | undefined;
+  if (structure.topicIds.length > 0) {
+    scopedStatementIds = await collectScopedStatementIds({
+      supabase,
+      spaceIds,
+      topicIds: structure.topicIds,
+    });
+    if (scopedStatementIds.length === 0) {
+      return { groups: [] };
+    }
+  }
 
   let scoreByStatementId: Map<string, number>;
   // 순수 시간 질의는 벡터 점수가 없어 묶음을 최신순으로 정렬한다(관련도순 대신).
@@ -451,6 +460,7 @@ async function structureSafely(args: {
   providers: Providers;
   query: string;
   todayIsoDate: string;
+  topics: QueryStructuringTopic[];
 }): Promise<QueryStructure> {
   try {
     return await structureQuery(args);
@@ -458,7 +468,7 @@ async function structureSafely(args: {
     Sentry.captureException(error, {
       tags: { component: "query-structuring" },
     });
-    return { semantic: null, time: null };
+    return { semantic: null, time: null, topicIds: [] };
   }
 }
 
@@ -548,39 +558,60 @@ async function collectTimeCandidateIds(
   if (scopedStatementIds === undefined) {
     return ids;
   }
-  // TODO(④ 자동 scoping): 지금은 DB limit으로 자른 뒤 메모리에서 스코프 교집합을 취한다 —
-  // limit 밖의 in-scope 진술이 누락될 수 있다. ④가 topicIds를 배선하면 스코프를 DB 쿼리에
-  // 함께 걸어 limit 전에 좁힐 것. (현재 라우터가 topicIds를 안 넘겨 죽은 경로라 무해)
+  // TODO(scope-before-limit): 지금은 DB limit으로 자른 뒤 메모리에서 스코프 교집합을 취해
+  // limit 밖의 in-scope 진술이 누락될 수 있다. coarse가 scope를 채우는 지금은 live 경로다.
+  // 시간 후보가 limit을 넘길 만큼 많을 때만 문제이니, 스코프를 DB 쿼리에 함께 걸어 좁히는 최적화는 후속.
   const scoped = new Set(scopedStatementIds);
   return ids.filter((id) => scoped.has(id));
 }
 
+// scope = 고른 주제의 진술 ∪ 무태그 진술(미분류함, auto-scoping §4). 무태그를 늘 끼워
+// "아직 정리 안 한 글"이 어떤 scope에서도 안 빠지게 한다 — 그게 어디 뒀는지 모르고 찾는 핵심.
 // archived 진술은 벡터 색인에 없어 검색에서 자동 탈락하므로 여기서 status를 따로 거르지 않는다.
-async function collectScopedStatementIds(
-  supabase: TypedSupabaseClient,
-  topicIds: string[],
-): Promise<string[]> {
-  if (topicIds.length === 0) {
+async function collectScopedStatementIds(args: {
+  supabase: TypedSupabaseClient;
+  spaceIds: string[];
+  topicIds: string[];
+}): Promise<string[]> {
+  const { supabase, spaceIds, topicIds } = args;
+  const { data: sourceRows, error: sourceError } = await supabase
+    .from("sources")
+    .select("id")
+    .in("space_id", spaceIds);
+  throwIfSupabaseError(sourceError);
+
+  const allSourceIds = (sourceRows ?? []).map((row) => row.id);
+  if (allSourceIds.length === 0) {
     return [];
   }
 
-  const { data: topicSources, error: sourceError } = await supabase
+  const { data: topicRows, error: topicError } = await supabase
     .from("source_topics")
-    .select("source_id")
-    .in("topic_id", topicIds);
-  throwIfSupabaseError(sourceError);
+    .select("source_id, topic_id")
+    .in("source_id", allSourceIds);
+  throwIfSupabaseError(topicError);
 
-  const sourceIds = [
-    ...new Set((topicSources ?? []).map((row) => row.source_id)),
-  ];
-  if (sourceIds.length === 0) {
+  const selectedTopics = new Set(topicIds);
+  const taggedSources = new Set<string>();
+  const selectedSources = new Set<string>();
+  for (const row of topicRows ?? []) {
+    taggedSources.add(row.source_id);
+    if (selectedTopics.has(row.topic_id)) {
+      selectedSources.add(row.source_id);
+    }
+  }
+
+  const scopeSourceIds = allSourceIds.filter(
+    (id) => selectedSources.has(id) || !taggedSources.has(id),
+  );
+  if (scopeSourceIds.length === 0) {
     return [];
   }
 
   const { data: scoped, error: scopedError } = await supabase
     .from("statement_sources")
     .select("statement_id")
-    .in("source_id", sourceIds);
+    .in("source_id", scopeSourceIds);
   throwIfSupabaseError(scopedError);
 
   return [...new Set((scoped ?? []).map((row) => row.statement_id))];

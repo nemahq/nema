@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type { VectorStore } from "@server/infra/vector";
+import type { QueryStructuringRaw } from "@server/prompts/query-structuring";
 
 import {
   assembleSourceGroups,
@@ -171,6 +172,7 @@ interface QueryStub {
   in: (...args: unknown[]) => QueryStub;
   eq: (...args: unknown[]) => QueryStub;
   or: (...args: unknown[]) => QueryStub;
+  order: (...args: unknown[]) => QueryStub;
   then: (resolve: (value: { data: unknown; error: null }) => void) => void;
 }
 
@@ -188,6 +190,7 @@ function queryStub(rows: unknown[]): QueryStub {
     in: chain("in"),
     eq: chain("eq"),
     or: chain("or"),
+    order: chain("order"),
     then: (resolve) => {
       resolve({ data: rows, error: null });
     },
@@ -207,7 +210,17 @@ function supabaseStub(responses: Record<string, QueryStub[]>) {
   } as unknown as TypedSupabaseClient;
 }
 
-function providersStub(searchMock: ReturnType<typeof vi.fn>): Providers {
+const EMPTY_STRUCTURE: QueryStructuringRaw = {
+  semantic: null,
+  time: null,
+  topicIds: [],
+};
+
+// coarse가 검색 경로에서 LLM을 쓴다 — 구조화 결과(시간·주제)를 주입한다.
+function providersStub(
+  searchMock: ReturnType<typeof vi.fn>,
+  structured: QueryStructuringRaw = EMPTY_STRUCTURE,
+): Providers {
   const vectorStore: VectorStore = {
     ensureCollection: vi.fn(),
     upsertStatements: vi.fn(),
@@ -216,7 +229,11 @@ function providersStub(searchMock: ReturnType<typeof vi.fn>): Providers {
     searchNeighbors: vi.fn(),
   };
   return {
-    llm: null as never, // 꺼내기 경로엔 LLM이 없다
+    llm: {
+      forTask: () => ({
+        generateStructured: vi.fn().mockResolvedValue(structured),
+      }),
+    } as unknown as Providers["llm"],
     embedding: {
       providerId: "test",
       model: "test-model",
@@ -274,6 +291,7 @@ describe("searchStatements", () => {
     const result = await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
+        topics: [queryStub([])],
         statements: [statementsQuery],
         statement_relations: [queryStub([])],
         statement_sources: [queryStub([{ source_id: "src" }])],
@@ -297,6 +315,7 @@ describe("searchStatements", () => {
     const result = await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
+        topics: [queryStub([])],
         statements: [
           queryStub([
             statementRow({
@@ -327,20 +346,28 @@ describe("searchStatements", () => {
     ]);
   });
 
-  it("줄기 범위(topicIds)를 주면 주제 → 원본 → 진술로 좁혀 검색에 한정한다", async () => {
+  it("coarse가 고른 주제 + 무태그 원본으로 좁혀 검색에 한정한다", async () => {
     const search = vi.fn().mockResolvedValue([]);
 
     await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
-        source_topics: [queryStub([{ source_id: "src-1" }])],
+        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+        sources: [queryStub([{ id: "src-1" }, { id: "src-2" }])],
+        // src-1은 고른 주제, src-2는 무태그 — 둘 다 scope에 든다
+        source_topics: [
+          queryStub([{ source_id: "src-1", topic_id: "topic-1" }]),
+        ],
         statement_sources: [
           queryStub([{ statement_id: "s1" }, { statement_id: "s2" }]),
         ],
       }),
-      providers: providersStub(search),
-      query: "질문",
-      topicIds: ["topic-1"],
+      providers: providersStub(search, {
+        semantic: null,
+        time: null,
+        topicIds: ["topic-1"],
+      }),
+      query: "결제 얘기",
     });
 
     expect(search).toHaveBeenCalledWith(
@@ -349,17 +376,39 @@ describe("searchStatements", () => {
     );
   });
 
-  it("줄기에 속한 진술이 없으면 검색 없이 빈 결과", async () => {
+  it("coarse가 주제를 못 고르면(빈 목록) 전역으로 검색한다", async () => {
+    const search = vi.fn().mockResolvedValue([]);
+
+    await searchStatements({
+      supabase: supabaseStub({
+        space_members: [queryStub([{ space_id: "space-1" }])],
+        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+      }),
+      providers: providersStub(search, EMPTY_STRUCTURE),
+      query: "그때 그거",
+    });
+
+    expect(search).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ statementIds: undefined }),
+    );
+  });
+
+  it("고른 주제 + 무태그가 모두 비면 검색 없이 빈 결과", async () => {
     const search = vi.fn();
 
     const result = await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
-        source_topics: [queryStub([])],
+        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+        sources: [queryStub([])],
       }),
-      providers: providersStub(search),
-      query: "질문",
-      topicIds: ["topic-1"],
+      providers: providersStub(search, {
+        semantic: null,
+        time: null,
+        topicIds: ["topic-1"],
+      }),
+      query: "결제",
     });
 
     expect(result).toEqual({ groups: [] });
