@@ -21,10 +21,10 @@ import { createEvalLlm, resolveEvalModelId } from "@server/eval/eval-llm";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 
 import {
-  type CoarseBand,
-  type CoarseQuery,
   COARSE_QUERIES,
   COARSE_TOPICS,
+  type CoarseBand,
+  type CoarseQuery,
 } from "./coarse-scoping-seed";
 import { round } from "./metrics";
 
@@ -74,11 +74,12 @@ function topicBlock(variant: Variant): string {
   ).join("\n");
 }
 
-async function selectTopics(
-  llm: LlmProvider,
-  query: CoarseQuery,
-  variant: Variant,
-): Promise<string[]> {
+async function selectTopics(args: {
+  llm: LlmProvider;
+  query: CoarseQuery;
+  variant: Variant;
+}): Promise<string[]> {
+  const { llm, query, variant } = args;
   const out = await llm.generateStructured({
     schema: SelectionSchema,
     schemaName: "coarse_selection",
@@ -121,7 +122,9 @@ async function runVariant(
     const batch = COARSE_QUERIES.slice(i, i + CONCURRENCY);
     const scored = await Promise.all(
       batch.map(async (q) => {
-        const selected = await withRetry(() => selectTopics(llm, q, variant));
+        const selected = await withRetry(() =>
+          selectTopics({ llm, query: q, variant }),
+        );
         return {
           id: q.id,
           band: q.band,
@@ -142,20 +145,31 @@ function mean(xs: number[]): number {
   return xs.length === 0 ? 0 : xs.reduce((a, b) => a + b, 0) / xs.length;
 }
 
+interface BandSummary {
+  n: number;
+  recall: number;
+  scopeSize: number;
+}
+
+function bandSummary(results: QueryResult[], band: CoarseBand): BandSummary {
+  const rows = results.filter((r) => r.band === band);
+  return {
+    n: rows.length,
+    recall: round(mean(rows.map((r) => r.recall))),
+    scopeSize: round(mean(rows.map((r) => r.scopeSize))),
+  };
+}
+
 function summarize(results: QueryResult[]) {
-  const byBand = BANDS.map((band) => {
-    const rows = results.filter((r) => r.band === band);
-    return {
-      band,
-      n: rows.length,
-      recall: round(mean(rows.map((r) => r.recall))),
-      scopeSize: round(mean(rows.map((r) => r.scopeSize))),
-    };
-  });
   return {
     overallRecall: round(mean(results.map((r) => r.recall))),
     avgScopeSize: round(mean(results.map((r) => r.scopeSize))),
-    byBand,
+    byBand: {
+      thematic: bandSummary(results, "thematic"),
+      buried: bandSummary(results, "buried"),
+      adjacent: bandSummary(results, "adjacent"),
+      degrade: bandSummary(results, "degrade"),
+    },
   };
 }
 
@@ -178,8 +192,8 @@ async function main() {
   const sumOnly = summarize(byVariant["name-only"]);
   const sumDesc = summarize(byVariant["name+desc"]);
   for (const band of BANDS) {
-    const a = sumOnly.byBand.find((b) => b.band === band)!;
-    const b = sumDesc.byBand.find((x) => x.band === band)!;
+    const a = sumOnly.byBand[band];
+    const b = sumDesc.byBand[band];
     console.log(
       `${band.padEnd(10)} | ${String(a.recall).padEnd(13)} ${String(a.scopeSize).padEnd(10)} | ${String(b.recall).padEnd(13)} ${b.scopeSize}`,
     );
