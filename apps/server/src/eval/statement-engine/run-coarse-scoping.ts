@@ -33,6 +33,7 @@ loadEnv(resolve(__dirname, "../../.."));
 
 const CONCURRENCY = 2;
 const RETRIES = 4;
+const RETRY_BASE_DELAY_MS = 800;
 const VALID_IDS = new Set(COARSE_TOPICS.map((t) => t.id));
 
 const sleep = (ms: number): Promise<void> =>
@@ -46,7 +47,7 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
       return await fn();
     } catch (err) {
       lastErr = err;
-      await sleep(800 * 2 ** attempt);
+      await sleep(RETRY_BASE_DELAY_MS * 2 ** attempt);
     }
   }
   throw lastErr;

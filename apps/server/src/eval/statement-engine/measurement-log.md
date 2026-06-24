@@ -8,7 +8,7 @@
 
 ## 측정 #17 — 2026-06-25 · coarse scoping 첫 측정 — 질의→주제 라우팅 recall (NEM-168 ④ 자동 scoping)
 
-**바꾼 것**: 신규 eval. `run-coarse-scoping.ts` + `coarse-scoping-seed.ts`로 auto-scoping 설계의 載하중 가정("LLM이 질의를 맞는 주제로 보내나")을 격리 측정한다([auto-scoping-design](../../../../../docs/flows/save-engine-v2/auto-scoping-design.md) §6 A). 정답 주제는 tiro `curation.json`의 사람이 묶은 thread 18개를 써 자기채점을 피한다. 질문 28개·난도 4단(테마형·묻힌 사실·인접 구분·강등). 이름만 vs 이름+설명 두 변형으로 설명(§8 #4)의 라우팅 값어치를 가른다. 측정 모델 gemini-3.5-flash(Vertex).
+**바꾼 것**: 신규 eval. `run-coarse-scoping.ts` + `coarse-scoping-seed.ts`로 auto-scoping 설계의 핵심 가정("LLM이 질의를 맞는 주제로 보내나")을 격리 측정한다([auto-scoping-design](../../../../../docs/flows/save-engine-v2/auto-scoping-design.md) §6 A). 정답 주제는 tiro `curation.json`의 사람이 묶은 thread 18개를 써 자기채점을 피한다. 질문 28개·난도 4단(테마형·묻힌 사실·인접 구분·강등). 이름만 vs 이름+설명 두 변형으로 설명(§8 #4)의 라우팅 값어치를 가른다. 측정 모델 gemini-3.5-flash(Vertex).
 
 | 난도 | 이름만 recall / 고른 수 | 이름+설명 recall / 고른 수 |
 |---|---|---|
@@ -20,7 +20,7 @@
 
 **발견**:
 
-- **載하중 가정 통과**: coarse가 맞는 주제로 잘 보낸다(이름만 0.93, 이름+설명 1.0). auto-scoping 나머지를 지어도 된다는 신호.
+- **핵심 가정 통과**: coarse가 맞는 주제로 잘 보낸다(이름만 0.93, 이름+설명 1.0). auto-scoping 나머지를 지어도 된다는 신호.
 - **#4(설명 필요?)가 데이터로 닫힘**: 이름만의 실패 2건이 정확히 "이름에 안 드러난 디테일"이다(월 230만원 비용→Suggest 누락, 프론트 알프 레포 규모→AI 마케팅 엔진 누락). §3.1 예측 그대로. 설명이 그 둘을 메워 묻힌 사실 0.8→1.0이 되고, 고른 수도 1.68→1.14로 좁아진다(더 정확하고 더 좁게). 설명은 켤 값어치가 있다.
 - **강등·인접 정상**: 모호 질문엔 빈 선택(전역 강등), 붙은 형제 주제도 구분한다.
 
