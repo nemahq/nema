@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { LlmError } from "./llm-error";
 import {
@@ -10,6 +10,12 @@ import {
 } from "./task-routing";
 
 describe("setTaskOverride", () => {
+  // 이 블록의 테스트는 assistDraft만 건드린다 — seed task를 오염시키지 않게, 인라인 clear가
+  // 빠지거나 throw로 건너뛰어도 매 테스트 뒤 정리해 형제 테스트 순서 의존을 없앤다.
+  afterEach(() => {
+    clearTaskOverride("assistDraft");
+  });
+
   it("throws LlmError for an uncatalogued model id", () => {
     expect(() =>
       setTaskOverride({ task: "assistDraft", modelId: "not-a-real-model" }),
@@ -70,6 +76,14 @@ describe("기본 모델 배치 (NEM-149)", () => {
     expect(getTaskOverride("judgeRelations")).toEqual({
       modelId: "gemini-3.1-pro-preview",
       effort: "low",
+    });
+    // toEqual은 정확 일치 — narrate/draft에 effort가 없음을 못박는다(스트레이 effort가 조용히
+    // 새지 않게). 관계만 effort를 둔 건 측정과 맞추기 위함이다.
+    expect(getTaskOverride("narrate")).toEqual({
+      modelId: "gemini-3.1-flash-lite",
+    });
+    expect(getTaskOverride("generateDraft")).toEqual({
+      modelId: "gemini-3.1-flash-lite",
     });
   });
 });

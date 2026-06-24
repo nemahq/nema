@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
+import * as Sentry from "@sentry/node";
 
 import { getEnv } from "@server/env";
 import type { EmbeddingProvider } from "@server/infra/embedding";
@@ -13,7 +14,10 @@ import type {
   LlmEffort,
   LlmProvider,
 } from "@server/infra/llm/llm-provider";
-import { getModelSpec } from "@server/infra/llm/model-catalog";
+import {
+  getModelSpec,
+  type LlmProviderId,
+} from "@server/infra/llm/model-catalog";
 import {
   createGeminiClient,
   createProviderForModel,
@@ -27,6 +31,7 @@ import {
 } from "@server/infra/llm/models";
 import type { LlmTask } from "@server/infra/llm/task-routing";
 import {
+  getAllTaskOverrides,
   getTaskOverride,
   setTaskOverride,
   TASK_DEFAULTS,
@@ -69,34 +74,41 @@ let sharedAnthropicClient: Anthropic | undefined;
 // createGeminiClient가 선택한다(첫 요청 시 생성, 키 없이도 서버 부팅 가능).
 let sharedGeminiClient: GoogleGenAI | undefined;
 
-// task override가 가리키는 프로바이더가 env에 설정됐는지. 안 됐으면 forTask가 override를 무시하고
-// tier 기본(gpt-5)으로 폴백한다 — Gemini/Anthropic 키 없는 환경에서 라우팅이 auth 에러로 터지지
-// 않게 하는 안전장치(프로바이더 일원화 게이트웨이 도입 전까지). 첫 폴백 때 1회 경고한다.
+// 부수효과 없는 키 존재 검사 — forTask 가드와 부트 점검이 공유한다(경고는 호출부가 맡는다).
+function isProviderConfigured(provider: LlmProviderId): boolean {
+  const env = getEnv();
+  switch (provider) {
+    case "openai":
+      return Boolean(env.OPENAI_API_KEY);
+    case "anthropic":
+      return Boolean(env.ANTHROPIC_API_KEY);
+    case "google":
+      return Boolean(env.GEMINI_API_KEY ?? env.GEMINI_VERTEX_PROJECT);
+  }
+}
+
+// forTask 핫패스 가드 — override가 못 쓸 상태면 무시하고 tier 기본(gpt-5)으로 폴백한다.
+// Gemini/Anthropic 키 없는 환경에서 라우팅이 auth 에러로 터지지 않게 하는 안전장치(게이트웨이
+// 일원화 전까지). 같은 모델은 1회만 경고하고, 키가 다시 채워지면 엔트리를 비워 다음 폴백을 또
+// 알린다. 미등록 모델과 키 부재를 구분해 운영자가 없는 키를 헛되이 쫓지 않게 한다.
 const unconfiguredOverrideWarned = new Set<string>();
 function isOverrideProviderConfigured(modelId: string): boolean {
   const spec = getModelSpec(modelId);
-  const env = getEnv();
-  let configured = false;
-  switch (spec?.provider) {
-    case "openai":
-      configured = Boolean(env.OPENAI_API_KEY);
-      break;
-    case "anthropic":
-      configured = Boolean(env.ANTHROPIC_API_KEY);
-      break;
-    case "google":
-      configured = Boolean(env.GEMINI_API_KEY ?? env.GEMINI_VERTEX_PROJECT);
-      break;
-    default:
-      configured = false;
+  const configured = spec ? isProviderConfigured(spec.provider) : false;
+  if (configured) {
+    unconfiguredOverrideWarned.delete(modelId);
+    return true;
   }
-  if (!configured && !unconfiguredOverrideWarned.has(modelId)) {
+  if (!unconfiguredOverrideWarned.has(modelId)) {
     unconfiguredOverrideWarned.add(modelId);
+    const reason = spec
+      ? `missing ${spec.provider} provider key`
+      : "unknown model (not in catalog)";
     console.warn(
-      `[llm-router] task override model "${modelId}" is not configured (missing provider key) — falling back to tier default`,
+      `[llm-router] task override "${modelId}" not usable (${reason}) — falling back to tier default`,
     );
   }
-  return configured;
+  return false;
 }
 
 // tier 묶음을 forTask가 달린 LlmRouter로 감싼다. forTask 해석:
@@ -192,6 +204,46 @@ function getGeminiClient(): GoogleGenAI {
   return sharedGeminiClient;
 }
 
+// 배포 오설정이 "멀쩡해 보이게" 묻히지 않도록, seeded 기본 배치가 살아있는지 부팅 때 본다.
+// 키 부재/미등록 모델 → forTask가 조용히 gpt-5 tier로 폴백하는데(비싼 모델·측정과 다름) Sentry로
+// 알린다(index.ts 부트 오설정 패턴과 동일). 키가 있으면 eager resolve로 클라이언트 생성오류를 첫
+// 요청이 아니라 부팅 때 잡는다(setTaskModel의 set-time 검증과 동등).
+// 잔여 위험: 키가 있지만 무효(폐기·잘못된 project)면 여기선 못 거르고 override가 쓰여, 워커가
+// resolve→throw→무한재처리에 빠질 수 있다 — 워커 하드타임아웃(NEM-168)으로 닫는다.
+function reportSeedIssue(message: string): void {
+  console.warn(`[llm-router] ${message}`);
+  Sentry.captureMessage(`[llm-router] ${message}`, { level: "warning" });
+}
+
+function auditSeededOverrides(): void {
+  for (const [task, modelId] of Object.entries(getAllTaskOverrides())) {
+    if (!modelId) {
+      continue;
+    }
+    const spec = getModelSpec(modelId);
+    if (!spec) {
+      reportSeedIssue(
+        `task "${task}" seeds unknown model "${modelId}" — falling back to tier default`,
+      );
+      continue;
+    }
+    if (!isProviderConfigured(spec.provider)) {
+      reportSeedIssue(
+        `task "${task}" seeds ${spec.provider} model "${modelId}" but its key is missing — falling back to tier default`,
+      );
+      continue;
+    }
+    try {
+      resolveOverrideProvider(modelId);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      reportSeedIssue(
+        `task "${task}" seed "${modelId}" failed to initialize (${detail}) — falling back to tier default`,
+      );
+    }
+  }
+}
+
 export function getProviders(): Providers {
   if (cached) {
     return cached;
@@ -235,6 +287,7 @@ export function getProviders(): Providers {
     applyLlmPreset("all-nano");
   }
 
+  auditSeededOverrides();
   return cached;
 }
 
