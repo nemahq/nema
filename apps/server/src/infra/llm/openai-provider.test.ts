@@ -347,6 +347,39 @@ describe("OpenAiProvider", () => {
       expect(parseFn).toHaveBeenCalledOnce();
     });
 
+    // output_tokens엔 reasoning이 이미 포함 — provider가 조용히 usage를 안 주면 비용=0이 된다.
+    it("reports billed token usage via onUsage on success", async () => {
+      const { provider } = mockParse({
+        status: "completed",
+        output: [],
+        output_parsed: { answer: "42" },
+        usage: {
+          input_tokens: 1000,
+          output_tokens: 200,
+          input_tokens_details: { cached_tokens: 100 },
+          output_tokens_details: { reasoning_tokens: 50 },
+        },
+      });
+      const reported: unknown[] = [];
+
+      await provider.generateStructured({
+        schema: TestSchema,
+        schemaName: "test",
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+        onUsage: (usage) => reported.push(usage),
+      });
+
+      expect(reported).toEqual([
+        {
+          inputTokens: 1000,
+          outputTokens: 200,
+          cachedInputTokens: 100,
+          reasoningTokens: 50,
+        },
+      ]);
+    });
+
     it("passes correct parameters to OpenAI SDK", async () => {
       const { provider, parseFn } = mockParse({
         status: "completed",

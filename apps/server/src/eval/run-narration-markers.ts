@@ -26,14 +26,9 @@ import { createEvalLlm, resolveEvalModelId } from "@server/eval/eval-llm";
 import { createLimiter } from "@server/infra/llm/limiter";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import { NARRATION_SYSTEM_PROMPT } from "@server/prompts/narration";
-import type { Evidence } from "@server/services/assemble-evidence";
-import { buildNarrationUserMessage } from "@server/services/narration";
-import type { SearchedStatement } from "@server/services/statement-search";
 
-import {
-  NARRATION_FIXTURES,
-  type NarrationFixture,
-} from "./narration-marker-seed";
+import { buildNarrationMessage } from "./narration-core";
+import { NARRATION_FIXTURES } from "./narration-marker-seed";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadEnv(resolve(__dirname, "../.."));
@@ -48,8 +43,6 @@ const ROUND_SCALE = 1000;
 const PROMPT_HASH_LENGTH = 8;
 /** 마커: [s:<id>] 인라인 근거 (narration 규칙 2) */
 const MARKER_PATTERN = /\[s:[^\]]+\]/;
-/** 고정 타임스탬프 — 시드는 결정적이라 진짜 시각이 불필요 */
-const FIXTURE_TIMESTAMP = "2026-01-01T00:00:00.000Z";
 
 function round(value: number): number {
   return Math.round(value * ROUND_SCALE) / ROUND_SCALE;
@@ -68,42 +61,6 @@ function parseRunsArg(): number {
     process.exit(1);
   }
   return DEFAULT_RUNS_PER_FIXTURE;
-}
-
-// 시드 명세 → 제품 Evidence. 진술을 한 source 묶음으로 싼다 — 흘림은 진술 수·관계 체인이
-// 유발하지 묶음 분할이 아니라서. buildNarrationUserMessage가 제품과 동일한 입력 문자열을 만든다.
-function toEvidence(fixture: NarrationFixture): Evidence {
-  const statements: SearchedStatement[] = fixture.statements.map((s) => ({
-    id: s.id,
-    content: s.content,
-    type: s.type,
-    confidence: s.type === "claim" ? (s.confidence ?? "certain") : null,
-    createdAt: FIXTURE_TIMESTAMP,
-    score: 1,
-    ...(s.supersededBy ? { supersededBy: s.supersededBy } : {}),
-    ...(s.conflictsWith ? { conflictsWith: s.conflictsWith } : {}),
-    ...(s.resolvedBy ? { resolvedBy: s.resolvedBy } : {}),
-  }));
-  return {
-    groups: [
-      {
-        key: {
-          kind: "source",
-          sourceId: `src-${fixture.name}`,
-          sourceCreatedAt: FIXTURE_TIMESTAMP,
-        },
-        totalStatementCount: statements.length,
-        statements,
-      },
-    ],
-    relatedStatements: (fixture.related ?? []).map((r) => ({
-      id: r.id,
-      content: r.content,
-      type: r.type,
-      createdAt: FIXTURE_TIMESTAMP,
-      sourceIds: [],
-    })),
-  };
 }
 
 async function narrate(llm: LlmProvider, message: string): Promise<string> {
@@ -159,10 +116,7 @@ async function main() {
 
   await Promise.all(
     NARRATION_FIXTURES.flatMap((fixture) => {
-      const message = buildNarrationUserMessage(
-        fixture.query,
-        toEvidence(fixture),
-      );
+      const message = buildNarrationMessage(fixture);
       return Array.from({ length: runsPerFixture }, (_, run) => async () => {
         try {
           const text = await narrate(llm, message);

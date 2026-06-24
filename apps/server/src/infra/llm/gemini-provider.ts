@@ -81,6 +81,24 @@ export class GeminiProvider implements LlmProvider {
     this.model = config.model;
   }
 
+  // 성공한 호출의 토큰 usage를 청구 기준으로 보고한다 — Gemini는 thoughts(추론)를
+  // candidates와 별도로 세므로 청구 출력 = candidates + thoughts로 합산한다.
+  private emitUsage(
+    onUsage: GenerateTextParams["onUsage"],
+    usage: GenerateContentResponse["usageMetadata"],
+  ): void {
+    if (!onUsage || !usage) {
+      return;
+    }
+    onUsage({
+      inputTokens: usage.promptTokenCount ?? 0,
+      outputTokens:
+        (usage.candidatesTokenCount ?? 0) + (usage.thoughtsTokenCount ?? 0),
+      cachedInputTokens: usage.cachedContentTokenCount,
+      reasoningTokens: usage.thoughtsTokenCount,
+    });
+  }
+
   async *generateStream(params: GenerateStreamParams): AsyncIterable<string> {
     try {
       const stream = await this.client.models.generateContentStream({
@@ -89,15 +107,20 @@ export class GeminiProvider implements LlmProvider {
         config: this.toConfig(params),
       });
 
+      let lastUsage: GenerateContentResponse["usageMetadata"];
       for await (const chunk of stream) {
         if (params.signal?.aborted) {
           return;
+        }
+        if (chunk.usageMetadata) {
+          lastUsage = chunk.usageMetadata;
         }
         const text = chunk.text;
         if (text) {
           yield text;
         }
       }
+      this.emitUsage(params.onUsage, lastUsage);
     } catch (error) {
       if (params.signal?.aborted) {
         return;
@@ -134,6 +157,7 @@ export class GeminiProvider implements LlmProvider {
           `LLM response failed schema validation: ${result.error.message}`,
         );
       }
+      this.emitUsage(params.onUsage, response.usageMetadata);
       return result.data;
     } catch (error) {
       throw this.mapError(error);
@@ -154,6 +178,7 @@ export class GeminiProvider implements LlmProvider {
       if (!text) {
         throw new LlmError("unknown", "LLM returned no content");
       }
+      this.emitUsage(params.onUsage, response.usageMetadata);
       return text;
     } catch (error) {
       throw this.mapError(error);

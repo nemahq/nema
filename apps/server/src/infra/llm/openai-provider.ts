@@ -91,6 +91,22 @@ export class OpenAiProvider implements LlmProvider {
     return options;
   }
 
+  // 성공한 호출의 토큰 usage를 청구 기준으로 보고한다 — output_tokens엔 reasoning이 이미 포함된다.
+  private emitUsage(
+    onUsage: GenerateTextParams["onUsage"],
+    usage: Response["usage"],
+  ): void {
+    if (!onUsage || !usage) {
+      return;
+    }
+    onUsage({
+      inputTokens: usage.input_tokens,
+      outputTokens: usage.output_tokens,
+      cachedInputTokens: usage.input_tokens_details.cached_tokens,
+      reasoningTokens: usage.output_tokens_details.reasoning_tokens,
+    });
+  }
+
   async *generateStream(params: GenerateStreamParams): AsyncIterable<string> {
     try {
       const stream = await this.client.responses.create(
@@ -139,6 +155,7 @@ export class OpenAiProvider implements LlmProvider {
         if (refusal != null) {
           throw new LlmError("unknown", `LLM refused the request: ${refusal}`);
         }
+        this.emitUsage(params.onUsage, finalResponse.usage);
       }
     } catch (error) {
       if (params.signal?.aborted) {
@@ -184,6 +201,7 @@ export class OpenAiProvider implements LlmProvider {
           `LLM response failed schema validation: ${result.error.message}`,
         );
       }
+      this.emitUsage(params.onUsage, response.usage);
       return result.data;
     } catch (error) {
       throw this.mapError(error);
@@ -212,6 +230,7 @@ export class OpenAiProvider implements LlmProvider {
       if (!content) {
         throw new LlmError("unknown", "LLM returned no content");
       }
+      this.emitUsage(params.onUsage, response.usage);
       return content;
     } catch (error) {
       throw this.mapError(error);
