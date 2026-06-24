@@ -213,7 +213,11 @@ function supabaseStub(responses: Record<string, QueryStub[]>) {
 // 검색 경로가 LLM을 두 번 쓴다(병렬) — 구조화(시간·의미)와 coarse(주제)를 task별로 주입한다.
 function providersStub(
   searchMock: ReturnType<typeof vi.fn>,
-  opts: { structure?: QueryStructuringRaw; topicIds?: string[] } = {},
+  opts: {
+    structure?: QueryStructuringRaw;
+    topicIds?: string[];
+    coarseThrows?: boolean;
+  } = {},
 ): Providers {
   const structure: QueryStructuringRaw = opts.structure ?? {
     semantic: null,
@@ -230,11 +234,14 @@ function providersStub(
   return {
     llm: {
       forTask: (task: string) => ({
-        generateStructured: vi
-          .fn()
-          .mockResolvedValue(
-            task === "selectScopeTopics" ? { topicIds } : structure,
-          ),
+        generateStructured:
+          task === "selectScopeTopics" && opts.coarseThrows
+            ? vi.fn().mockRejectedValue(new Error("coarse llm down"))
+            : vi
+                .fn()
+                .mockResolvedValue(
+                  task === "selectScopeTopics" ? { topicIds } : structure,
+                ),
       }),
     } as unknown as Providers["llm"],
     embedding: {
@@ -408,6 +415,54 @@ describe("searchStatements", () => {
 
     expect(result).toEqual({ groups: [] });
     expect(search).not.toHaveBeenCalled();
+  });
+
+  it("다른 주제로만 태그된 원본은 scope에서 빠진다 — 안 고른 주제가 새지 않게", async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const statementSources = queryStub([{ statement_id: "s1" }]);
+
+    await searchStatements({
+      supabase: supabaseStub({
+        space_members: [queryStub([{ space_id: "space-1" }])],
+        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+        sources: [queryStub([{ id: "src-1" }, { id: "src-3" }])],
+        // src-1=고른 주제, src-3=안 고른 다른 주제로만 태그 → src-3 제외(무태그도 아님)
+        source_topics: [
+          queryStub([
+            { source_id: "src-1", topic_id: "topic-1" },
+            { source_id: "src-3", topic_id: "topic-other" },
+          ]),
+        ],
+        statement_sources: [statementSources],
+      }),
+      providers: providersStub(search, { topicIds: ["topic-1"] }),
+      query: "결제",
+    });
+
+    // 진술 조회가 src-1로만 좁혀지는지 — src-3이 섞이면 안 고른 주제가 scope로 샌다
+    expect(statementSources.calls).toContainEqual([
+      "in",
+      "source_id",
+      ["src-1"],
+    ]);
+  });
+
+  it("coarse LLM이 실패하면 전역으로 강등한다 — scope 못 구해도 검색이 죽지 않게", async () => {
+    const search = vi.fn().mockResolvedValue([]);
+
+    await searchStatements({
+      supabase: supabaseStub({
+        space_members: [queryStub([{ space_id: "space-1" }])],
+        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+      }),
+      providers: providersStub(search, { coarseThrows: true }),
+      query: "결제",
+    });
+
+    expect(search).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ statementIds: undefined }),
+    );
   });
 });
 

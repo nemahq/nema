@@ -9,8 +9,6 @@ import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { z } from "zod";
-
 // loadEnv의 필수 키 스키마 통과용 자리값 — 이 러너는 LLM만 쓴다.
 process.env["SUPABASE_SERVICE_ROLE_KEY"] ??= "eval-unused";
 process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
@@ -19,6 +17,11 @@ process.env["QDRANT_API_KEY"] ??= "local-dev";
 import { loadEnv } from "@server/env";
 import { createEvalLlm, resolveEvalModelId } from "@server/eval/eval-llm";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
+import {
+  buildCoarseScopingMessage,
+  COARSE_SCOPING_SYSTEM_PROMPT,
+  CoarseScopingRawSchema,
+} from "@server/prompts/coarse-scoping";
 
 import {
   COARSE_QUERIES,
@@ -57,37 +60,26 @@ type Variant = "name-only" | "name+desc";
 const VARIANTS: Variant[] = ["name-only", "name+desc"];
 const BANDS: CoarseBand[] = ["thematic", "buried", "adjacent", "degrade"];
 
-const SelectionSchema = z.object({ topicIds: z.array(z.string()) });
-
-const SYSTEM_PROMPT = `You route a user's question to the topics whose notes most likely contain the answer. You get a list of topics, each with an id. Return the ids of the topics that could answer the question.
-
-- Optimize for recall, not precision. If a topic could plausibly hold the answer, include it. A later step searches inside the picked topics, so extra picks are cheap, but missing the right topic loses the answer entirely.
-- If the question spans several topics, pick all of them.
-- If the question is too vague to place, or matches no topic, return an empty list. A later step then falls back to searching everything.
-- Return only ids that appear in the list.`;
-
-function topicBlock(variant: Variant): string {
-  return COARSE_TOPICS.map((t) =>
-    variant === "name-only"
-      ? `- [${t.id}] ${t.label}`
-      : `- [${t.id}] ${t.label}: ${t.description}`,
-  ).join("\n");
-}
-
+// production과 같은 시스템 프롬프트·메시지 빌더를 그대로 쓴다 — eval이 실제 배선과 갈라지지 않게.
+// 이름+설명 변형은 라벨에 설명을 실어 같은 빌더로 흘린다(설명 경로는 §8 #4 후속이라 production 빌더엔 아직 없다).
 async function selectTopics(args: {
   llm: LlmProvider;
   query: CoarseQuery;
   variant: Variant;
 }): Promise<string[]> {
   const { llm, query, variant } = args;
+  const topics = COARSE_TOPICS.map((t) => ({
+    id: t.id,
+    label: variant === "name-only" ? t.label : `${t.label}: ${t.description}`,
+  }));
   const out = await llm.generateStructured({
-    schema: SelectionSchema,
+    schema: CoarseScopingRawSchema,
     schemaName: "coarse_selection",
-    systemPrompt: SYSTEM_PROMPT,
+    systemPrompt: COARSE_SCOPING_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",
-        content: `<topics>\n${topicBlock(variant)}\n</topics>\n\n<question>${query.text}</question>`,
+        content: buildCoarseScopingMessage({ query: query.text, topics }),
       },
     ],
   });
