@@ -37,11 +37,20 @@ export function DraftCard({ draft, topicOptions }: DraftCardProps) {
   const topics = parseTopics(topicsText);
   const datalistId = `topics-${draft.id}`;
 
+  // 한 카드에 저장·확정·버리기 mutation이 얽혀 있어, 새 액션 진입 시 형제 mutation의
+  // 옛 에러를 지운다 — 안 그러면 성공한 액션 뒤에도 직전 실패 에러가 그대로 남는다.
+  function resetErrors() {
+    editDraft.reset();
+    confirmDraft.reset();
+    deleteDraft.reset();
+  }
+
   function handleSave() {
     const trimmedBody = body.trim();
     if (!trimmedBody || pending) {
       return;
     }
+    resetErrors();
     const trimmedTitle = title.trim();
     editDraft.mutate({
       draftId: draft.id,
@@ -56,17 +65,22 @@ export function DraftCard({ draft, topicOptions }: DraftCardProps) {
     if (!trimmedTitle || pending) {
       return;
     }
+    resetErrors();
     // 확정은 저장된 본문을 박제한다 — 바뀐 본문을 먼저 반영한 뒤 확정한다.
     const trimmedBody = body.trim();
-    if (trimmedBody && trimmedBody !== draft.body) {
-      await editDraft.mutateAsync({
-        draftId: draft.id,
-        title: trimmedTitle,
-        body: trimmedBody,
-        proposedTopics: topics,
-      });
+    try {
+      if (trimmedBody && trimmedBody !== draft.body) {
+        await editDraft.mutateAsync({
+          draftId: draft.id,
+          title: trimmedTitle,
+          body: trimmedBody,
+          proposedTopics: topics,
+        });
+      }
+      confirmDraft.mutate({ draftId: draft.id, title: trimmedTitle, topics });
+    } catch {
+      // 본문 저장이 실패하면 확정하지 않는다 — 에러는 editDraft.error로 노출된다.
     }
-    confirmDraft.mutate({ draftId: draft.id, title: trimmedTitle, topics });
   }
 
   return (
@@ -120,7 +134,10 @@ export function DraftCard({ draft, topicOptions }: DraftCardProps) {
         <ConfirmButton
           label="버리기"
           disabled={pending}
-          onConfirm={() => deleteDraft.mutate({ draftId: draft.id })}
+          onConfirm={() => {
+            resetErrors();
+            deleteDraft.mutate({ draftId: draft.id });
+          }}
         />
       </div>
 

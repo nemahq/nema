@@ -4,6 +4,7 @@ import { StatementRow } from "@web/features/dev-harness/components/StatementRow"
 import { useNarration } from "@web/features/dev-harness/hooks/useNarration";
 import type { NarrationEvidence } from "@web/features/dev-harness/types";
 
+// 매칭 못 한 상대 진술은 ID 앞자리만 노출 — 식별엔 충분하고 전체 ID는 잡음
 const COUNTERPART_ID_PREFIX_LENGTH = 8;
 
 type EvidenceGroup = NarrationEvidence["groups"][number];
