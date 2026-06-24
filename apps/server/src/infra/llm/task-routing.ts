@@ -59,7 +59,17 @@ export interface TaskOverride {
   effort?: LlmEffort;
 }
 
-const taskOverrides = new Map<LlmTask, TaskOverride>();
+// NEM-149 가성비 측정 기반 기본 모델 배치(잠정) — 추출은 gpt-5 유지(품질 1등), 나머지는 Gemini가
+// 가성비/품질 우위라 박는다. forTask가 override를 먼저 보므로 이 맵이 prod·staging 공통 기본값이 된다.
+// 관계 effort는 측정과 동일하게 "low" — 빠뜨리면 thinking 없이 돌아 측정과 달라진다.
+// 가역: clearTaskOverride / dev-router로 즉시 gpt-5 tier 기본으로 되돌린다.
+// 전제: Gemini 키(GEMINI_API_KEY 또는 GEMINI_VERTEX_PROJECT)가 env에 있어야 한다 — 없으면
+//   이 task들이 첫 호출에서 auth 에러로 끊긴다(Railway prod·staging에 키 필요).
+const taskOverrides = new Map<LlmTask, TaskOverride>([
+  ["judgeRelations", { modelId: "gemini-3.1-pro-preview", effort: "low" }],
+  ["narrate", { modelId: "gemini-3.1-flash-lite" }],
+  ["generateDraft", { modelId: "gemini-3.1-flash-lite" }],
+]);
 
 export function getTaskOverride(task: LlmTask): TaskOverride | undefined {
   return taskOverrides.get(task);

@@ -13,6 +13,7 @@ import type {
   LlmEffort,
   LlmProvider,
 } from "@server/infra/llm/llm-provider";
+import { getModelSpec } from "@server/infra/llm/model-catalog";
 import {
   createGeminiClient,
   createProviderForModel,
@@ -68,6 +69,36 @@ let sharedAnthropicClient: Anthropic | undefined;
 // createGeminiClient가 선택한다(첫 요청 시 생성, 키 없이도 서버 부팅 가능).
 let sharedGeminiClient: GoogleGenAI | undefined;
 
+// task override가 가리키는 프로바이더가 env에 설정됐는지. 안 됐으면 forTask가 override를 무시하고
+// tier 기본(gpt-5)으로 폴백한다 — Gemini/Anthropic 키 없는 환경에서 라우팅이 auth 에러로 터지지
+// 않게 하는 안전장치(프로바이더 일원화 게이트웨이 도입 전까지). 첫 폴백 때 1회 경고한다.
+const unconfiguredOverrideWarned = new Set<string>();
+function isOverrideProviderConfigured(modelId: string): boolean {
+  const spec = getModelSpec(modelId);
+  const env = getEnv();
+  let configured = false;
+  switch (spec?.provider) {
+    case "openai":
+      configured = Boolean(env.OPENAI_API_KEY);
+      break;
+    case "anthropic":
+      configured = Boolean(env.ANTHROPIC_API_KEY);
+      break;
+    case "google":
+      configured = Boolean(env.GEMINI_API_KEY ?? env.GEMINI_VERTEX_PROJECT);
+      break;
+    default:
+      configured = false;
+  }
+  if (!configured && !unconfiguredOverrideWarned.has(modelId)) {
+    unconfiguredOverrideWarned.add(modelId);
+    console.warn(
+      `[llm-router] task override model "${modelId}" is not configured (missing provider key) — falling back to tier default`,
+    );
+  }
+  return configured;
+}
+
 // tier 묶음을 forTask가 달린 LlmRouter로 감싼다. forTask 해석:
 //  - task override가 있으면 → 카탈로그 모델용 provider(모델별 캐시, 공유 클라이언트 재사용)
 //  - 없으면 → 현재 tier(TASK_DEFAULTS). preset이 cached.llm의 tier를 갈아끼우므로
@@ -76,7 +107,7 @@ function toRouter(tiers: TieredLlm): LlmRouter {
   return {
     forTask(task: LlmTask): LlmProvider {
       const override = getTaskOverride(task);
-      if (override) {
+      if (override && isOverrideProviderConfigured(override.modelId)) {
         return bindEffort(
           resolveOverrideProvider(override.modelId),
           override.effort,

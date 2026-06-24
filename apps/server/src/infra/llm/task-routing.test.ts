@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { LlmError } from "./llm-error";
 import {
   clearTaskOverride,
+  getAllTaskOverrides,
   getTaskOverride,
   setTaskOverride,
   TASK_DEFAULTS,
@@ -11,43 +12,65 @@ import {
 describe("setTaskOverride", () => {
   it("throws LlmError for an uncatalogued model id", () => {
     expect(() =>
-      setTaskOverride({ task: "generateDraft", modelId: "not-a-real-model" }),
+      setTaskOverride({ task: "assistDraft", modelId: "not-a-real-model" }),
     ).toThrow(LlmError);
-    expect(getTaskOverride("generateDraft")).toBeUndefined();
+    expect(getTaskOverride("assistDraft")).toBeUndefined();
   });
 
   it("accepts a known catalog id", () => {
-    setTaskOverride({ task: "generateDraft", modelId: "claude-sonnet-4-6" });
-    expect(getTaskOverride("generateDraft")).toEqual({
+    setTaskOverride({ task: "assistDraft", modelId: "claude-sonnet-4-6" });
+    expect(getTaskOverride("assistDraft")).toEqual({
       modelId: "claude-sonnet-4-6",
     });
-    clearTaskOverride("generateDraft");
+    clearTaskOverride("assistDraft");
   });
 
   it("accepts a native effort for the model's provider", () => {
     // xhigh는 Claude 어휘 — anthropic 모델에 유효하다.
     setTaskOverride({
-      task: "generateDraft",
+      task: "assistDraft",
       modelId: "claude-opus-4-8",
       effort: "xhigh",
     });
-    expect(getTaskOverride("generateDraft")).toEqual({
+    expect(getTaskOverride("assistDraft")).toEqual({
       modelId: "claude-opus-4-8",
       effort: "xhigh",
     });
-    clearTaskOverride("generateDraft");
+    clearTaskOverride("assistDraft");
   });
 
   it("rejects an effort the model's provider does not accept", () => {
     // xhigh는 OpenAI가 받지 않는다 — set 시점에 거른다.
     expect(() =>
       setTaskOverride({
-        task: "generateDraft",
+        task: "assistDraft",
         modelId: "gpt-5",
         effort: "xhigh",
       }),
     ).toThrow(LlmError);
-    expect(getTaskOverride("generateDraft")).toBeUndefined();
+    expect(getTaskOverride("assistDraft")).toBeUndefined();
+  });
+});
+
+describe("기본 모델 배치 (NEM-149)", () => {
+  // golden contract — 가성비 측정으로 박은 배치다. seed가 조용히 빠지면 라우팅이 gpt-5 tier로
+  // 되돌아가 비용/품질이 새므로, 표를 통째로 못박아 오편집을 시끄러운 실패로 바꾼다.
+  it("seeds the cost-effectiveness placement and leaves others on the tier default", () => {
+    expect(getAllTaskOverrides()).toEqual({
+      judgeRelations: "gemini-3.1-pro-preview",
+      narrate: "gemini-3.1-flash-lite",
+      generateDraft: "gemini-3.1-flash-lite",
+      extractStatements: null,
+      classifyDraftIntent: null,
+      generateSessionTitle: null,
+      assistDraft: null,
+      structureQuery: null,
+      selectScopeTopics: null,
+    });
+    expect(getTaskOverride("judgeRelations")).toEqual({
+      modelId: "gemini-3.1-pro-preview",
+      effort: "low",
+    });
   });
 });
 
