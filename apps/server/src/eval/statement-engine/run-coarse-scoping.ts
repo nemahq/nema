@@ -187,8 +187,12 @@ async function main() {
   }
 
   // 변형 비교 표: 밴드별 recall + scope 크기(비용)
-  console.log("band       | name-only recall / scope | name+desc recall / scope");
-  console.log("-----------|--------------------------|-------------------------");
+  console.log(
+    "band       | name-only recall / scope | name+desc recall / scope",
+  );
+  console.log(
+    "-----------|--------------------------|-------------------------",
+  );
   const sumOnly = summarize(byVariant["name-only"]);
   const sumDesc = summarize(byVariant["name+desc"]);
   for (const band of BANDS) {
