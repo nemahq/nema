@@ -35,7 +35,7 @@
     "apps/mcp": {},
     "packages/shared": {},
     "packages/weave": {
-      "project": ["src/**/*.{ts,tsx,css}"]
+      "project": ["src/**/*.{ts,tsx}"]
     }
   }
 }
