@@ -13,7 +13,6 @@ export const narrationRouter = router({
           supabase: ctx.supabase,
           providers: ctx.providers,
           query: input.query,
-          topicIds: input.topicIds,
           signal,
         }),
         ctx.lng,
@@ -28,7 +27,6 @@ export const narrationRouter = router({
         supabase: ctx.supabase,
         providers: ctx.providers,
         query: input.query,
-        topicIds: input.topicIds,
       }),
     ),
 });

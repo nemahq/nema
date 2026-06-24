@@ -64,6 +64,7 @@ describe("TASK_DEFAULTS", () => {
       assistDraft: { tier: "standard" },
       narrate: { tier: "standard" },
       structureQuery: { tier: "mini" },
+      selectScopeTopics: { tier: "mini" },
     });
   });
 });
