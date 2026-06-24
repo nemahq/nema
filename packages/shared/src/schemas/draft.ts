@@ -24,9 +24,11 @@ const TopicNameArray = z
   .array(z.string().trim().min(1).max(TOPIC_NAME_MAX_LENGTH))
   .max(DRAFT_TOPICS_MAX);
 
-// 앱 한 방 어시스턴트 입력 (거친 말뭉치). 결과는 {title, body, topics} 초안.
+// 앱·외부(MCP) 한 방 어시스턴트 입력 (거친 말뭉치). 결과는 {title, body, topics} 초안.
+// origin은 입구 구분 — 앱은 기본 in_app, MCP 도구가 external을 주입한다.
 export const DraftAssistInputSchema = z.object({
   body: z.string().trim().min(1).max(SOURCE_BODY_MAX_LENGTH),
+  origin: DraftOriginSchema.default("in_app"),
 });
 export type DraftAssistInput = z.infer<typeof DraftAssistInputSchema>;
 
