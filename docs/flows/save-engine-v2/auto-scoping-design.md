@@ -66,14 +66,16 @@ statements                      진술의 주제는 statement_sources → source
 - 임베딩 매칭은 못 쓴다: 주제 이름이 짧아 신호가 약하고(측정 #9가 "순수 의미 매칭이 제일 약한 축"이라 짚음), 임베딩 컬럼·백필·갱신 인프라가 새로 든다. **주제가 수백으로 불면** 그때 임베딩으로 갈아탄다(v2 재오픈 조건).
 - LLM이라 **추론으로 디테일→테마를 메운다**: "수수료 부담" 질의가 "토스 연동" 주제에 사는 걸, 글자가 안 겹쳐도 세상 지식으로 연결한다. 임베딩이 못 하는 일.
 
-### 3.2 자리는 구조화 레이어 안 — 별도 콜 아님
+### 3.2 자리는 구조화 옆 — 별도 병렬 콜
 
-coarse를 `structureQuery`에 합쳐 출력을 `{ semantic, time, topics }`로 확장한다.
+처음 계획은 coarse를 `structureQuery`에 합쳐 출력을 `{ semantic, time, topics }`로 내는 한 콜이었다. LLM 콜이 0 추가고(검색 주 경로가 이미 타는 콜), 매칭 입력인 의미부도 거기서 이미 뽑히니 자연스러웠다. **측정이 이 합침을 기각했다(측정 #19).**
 
-- **LLM 콜 0 추가.** 검색 주 경로에 이미 타는 콜이다.
-- 매칭 입력인 의미부(`semantic`)가 거기서 이미 뽑힌다.
-- "질의를 구조화된 라우팅 신호로 분해"라는 이 콜의 본질에 주제도 한 신호로 들어맞는다. 강등 처리도 한 객체로 통일.
-- 비용: 이 콜이 **공간 주제 목록을 입력으로 받아야** 한다(순수 함수 → 공간 의존, `listTopics` 읽기 1개). draft-assist가 이미 하는 패턴.
+한 콜에 시간·의미·주제를 다 시키니 **주제 라우팅이 깎였다 — 묻힌 사실 recall 0.8→0.40 반토막**(시간 토큰 정확도는 무손상). 한 프롬프트가 시간 지시·예시에 눌려 주제 주의가 희석된 것이다. 그래서 coarse를 **독립 프롬프트로 떼어 `structureQuery`와 병렬(`Promise.all`) 호출**한다.
+
+- **분리 비용은 작다.** 주제 목록은 어느 쪽이든 입력으로 보내야 하니 토큰 ~5% 추가뿐, 왕복은 병렬이라 지연 무변.
+- **분리 이득은 컸다.** 합침의 묻힌 사실 0.40 퇴행이 사라지고 #17 수준(이름만 0.93, 이름+설명 1.0)으로 복귀한다.
+- 한쪽이 죽어도 다른 쪽은 산다: 구조화 실패 → 시간·의미 없이, coarse 실패 → 안 좁히고 전역. 강등이 신호별로 독립한다.
+- 비용: coarse 콜이 **공간 주제 목록을 입력으로 받아야** 한다(순수 함수 → 공간 의존, `listTopics` 읽기 1개). draft-assist가 이미 하는 패턴.
 
 ### 3.3 coarse는 recall만 — precision은 fine이 거른다
 
@@ -139,7 +141,7 @@ coarse를 채점하려면 "정답이 어느 주제에 있는지"가 **독립적�
 
 ### 순서
 
-1. **coarse 매칭**: `structureQuery` 출력에 `topics` 추가(프롬프트에 주제 목록 주입 + recall 우선 지시), 구조화 서비스가 주제 이름 → topicId 매핑. 의존: `listTopics`.
+1. **coarse 매칭**: 독립 coarse 프롬프트·서비스(`selectScopeTopics`)로 주제 목록 주입 + recall 우선 지시, 이름 → topicId 매핑. `structureQuery`와 병렬(§3.2). 의존: `listTopics`.
 2. **scope 배선**: coarse가 고른 topicIds를 `searchStatements`에 흘리고, narration-router의 클라이언트 `input.topicIds` 제거(프론트 미사용 확인 후).
 3. **무태그 버킷**: `collectScopedStatementIds`에 무태그 진술 합집합 추가. 동시에 시간 경로의 스코프 교집합(`collectTimeCandidateIds`)이 남긴 "scope를 DB limit **전에** 걸기" TODO 해소. 지금은 DB limit으로 자른 뒤 메모리에서 교집합해 limit 밖 in-scope 진술을 흘린다.
 4. **eval A (coarse 단독)**: tiro thread를 정답 주제로, 질의→주제 recall 러너.
