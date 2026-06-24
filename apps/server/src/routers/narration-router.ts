@@ -39,12 +39,13 @@ export const narrationRouter = router({
   // 그대로 강제한다. 구독을 못 타는 입구(MCP tool)가 앱과 같은 해설을 받는 길.
   narrateText: providerProcedure
     .input(NarrationInputSchema)
-    .query(({ ctx, input }) =>
+    .query(({ ctx, input, signal }) =>
       narrateToText({
         supabase: ctx.supabase,
         providers: ctx.providers,
         query: input.query,
         timeZone: input.timeZone,
+        signal,
       }),
     ),
 });

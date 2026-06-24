@@ -76,7 +76,7 @@ export async function assistDraft(args: {
   return createDraft({
     supabase,
     input: {
-      origin: "in_app",
+      origin: input.origin,
       title: title === "" ? undefined : title,
       body,
       proposedTopics: sanitizeTopics(output.topics),

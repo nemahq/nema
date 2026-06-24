@@ -45,6 +45,8 @@ export async function narrateToText(args: {
   providers: Providers;
   query: string;
   timeZone?: string;
+  // 클라이언트가 끊기면 LLM 생성도 끊어 비용·in-flight를 줄인다(스트리밍 narrate와 같은 결).
+  signal?: AbortSignal;
 }): Promise<{ prose: string; evidence: Evidence }> {
   let prose = "";
   let evidence: Evidence | undefined;
