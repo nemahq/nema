@@ -62,7 +62,8 @@ const BANDS: CoarseBand[] = ["thematic", "buried", "adjacent", "degrade"];
 
 // production과 같은 시스템 프롬프트·메시지 빌더를 그대로 쓴다 — eval이 실제 배선과 갈라지지 않게.
 // 이름+설명 변형은 라벨에 설명을 실어 같은 빌더로 흘린다(설명 경로는 §8 #4 후속이라 production 빌더엔 아직 없다).
-async function selectTopics(args: {
+// eval B(run-retrieval-scoped)가 같은 coarse 라우팅을 재사용한다 — 둘이 갈라지지 않게 export.
+export async function selectTopics(args: {
   llm: LlmProvider;
   query: CoarseQuery;
   variant: Variant;
