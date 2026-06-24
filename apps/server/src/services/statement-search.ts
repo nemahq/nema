@@ -517,7 +517,7 @@ function zonedISODate(instant: Date, timeZone: string): string {
 
 // 시간 범위에 드는 진술 id. due는 진술의 due_date(존 달력 날짜로 비교), created는 글의
 // created_at(timestamptz instant로 비교) 기준. status 활성 여부는 호출부 본문 조회가 거른다.
-async function collectTimeCandidateIds(
+export async function collectTimeCandidateIds(
   supabase: TypedSupabaseClient,
   opts: {
     spaceIds: string[];
@@ -543,6 +543,11 @@ async function collectTimeCandidateIds(
       .lte("due_date", zonedISODate(to, timeZone))
       .order("due_date", { ascending: false })
       .limit(limit);
+    // scope를 limit 전에 DB에 건다 — 메모리 교집합만 하면 limit이 scope 밖 후보로 차서
+    // limit 밖의 in-scope 진술이 누락된다(scope-before-limit).
+    if (scopedStatementIds !== undefined) {
+      query = query.in("id", scopedStatementIds);
+    }
     // from이 null인 by(마감 "~까지")는 아래끝을 열어 둔다 — 연체(지난 마감)도 후보로 띄운다.
     // 마감 검색의 본질이 "놓친·임박한 기한"이라 연체가 가장 급하다(resolver가 검색 레이어로
     // 위임한 제품 판단, temporal-query-design 4장). 연체를 빼려면 from을 now로 자른다.
@@ -553,6 +558,21 @@ async function collectTimeCandidateIds(
     throwIfSupabaseError(error);
     ids = (data ?? []).map((row) => row.id);
   } else {
+    // created는 원본 시간으로 자르므로 scope(진술 집합)를 원본 집합으로 환산해 limit 전에 건다.
+    let scopeSourceIds: string[] | null = null;
+    if (scopedStatementIds !== undefined) {
+      const { data: scopeRefs, error: scopeError } = await supabase
+        .from("statement_sources")
+        .select("source_id")
+        .in("statement_id", scopedStatementIds);
+      throwIfSupabaseError(scopeError);
+      scopeSourceIds = [
+        ...new Set((scopeRefs ?? []).map((row) => row.source_id)),
+      ];
+      if (scopeSourceIds.length === 0) {
+        return [];
+      }
+    }
     let query = supabase
       .from("sources")
       .select("id")
@@ -560,6 +580,9 @@ async function collectTimeCandidateIds(
       .lte("created_at", to.toISOString())
       .order("created_at", { ascending: false })
       .limit(limit);
+    if (scopeSourceIds !== null) {
+      query = query.in("id", scopeSourceIds);
+    }
     if (from !== null) {
       query = query.gte("created_at", from.toISOString());
     }
@@ -580,9 +603,8 @@ async function collectTimeCandidateIds(
   if (scopedStatementIds === undefined) {
     return ids;
   }
-  // TODO(scope-before-limit): 지금은 DB limit으로 자른 뒤 메모리에서 스코프 교집합을 취해
-  // limit 밖의 in-scope 진술이 누락될 수 있다. coarse가 scope를 채우는 지금은 live 경로다.
-  // 시간 후보가 limit을 넘길 만큼 많을 때만 문제이니, 스코프를 DB 쿼리에 함께 걸어 좁히는 최적화는 후속.
+  // scope는 위에서 DB 쿼리에 limit 전에 걸었다 — limit 밖 in-scope 진술이 새지 않게.
+  // 이 교집합은 created 경로에서 한 원본이 scope·비scope 진술을 함께 가질 때를 마저 거른다.
   const scoped = new Set(scopedStatementIds);
   return ids.filter((id) => scoped.has(id));
 }
