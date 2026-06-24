@@ -5,7 +5,7 @@
 // 질문은 난도 4단: 테마형(이름이 보임) / 묻힌 사실(이름엔 없는 디테일) / 인접 구분(붙은 주제 가르기)
 // / 강등(못 좁혀 전역으로 빠져야 함, gold 비움).
 
-export interface CoarseTopic {
+interface CoarseTopic {
   /** tiro thread id */
   id: string;
   /** 제품 주제처럼 짧은 라벨 (coarse가 이름만으로 고를 때 보는 것) */
