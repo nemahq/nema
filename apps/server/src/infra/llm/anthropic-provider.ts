@@ -88,6 +88,20 @@ function isNativeUnsupportedError(error: BadRequestError): boolean {
   return mentionsStructured && mentionsUnsupported;
 }
 
+// 400 메시지가 "이 모델은 adaptive thinking을 못 받는다"는 신호인지 본다(예: haiku).
+// 맞으면 effort 경로가 thinking 없이 폴백한다 — thinking 무지원 모델도 측정·운영되게.
+function isThinkingUnsupportedError(error: BadRequestError): boolean {
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("thinking") &&
+    (message.includes("not support") ||
+      message.includes("unsupported") ||
+      message.includes("does not support") ||
+      message.includes("not available") ||
+      message.includes("not enabled"))
+  );
+}
+
 export class AnthropicProvider implements LlmProvider {
   private readonly client: Anthropic;
   private readonly model: string;
@@ -122,6 +136,28 @@ export class AnthropicProvider implements LlmProvider {
     return options;
   }
 
+  // 성공한 호출의 토큰 usage를 청구 기준으로 보고한다 — output_tokens가 thinking 포함 청구 총량,
+  // thinking_tokens는 그 중 추론 분해다.
+  private reportUsage(
+    onUsage: GenerateTextParams["onUsage"],
+    usage: {
+      input_tokens: number;
+      output_tokens: number;
+      cache_read_input_tokens?: number | null;
+      output_tokens_details?: { thinking_tokens: number } | null;
+    },
+  ): void {
+    if (!onUsage) {
+      return;
+    }
+    onUsage({
+      inputTokens: usage.input_tokens,
+      outputTokens: usage.output_tokens,
+      cachedInputTokens: usage.cache_read_input_tokens ?? undefined,
+      reasoningTokens: usage.output_tokens_details?.thinking_tokens,
+    });
+  }
+
   async *generateStream(params: GenerateStreamParams): AsyncIterable<string> {
     // effort가 있을 때만 adaptive thinking을 켜는 beta 경로로 보낸다. effort 없는
     // streamPlain은 한 바이트도 안 바뀌어 프로덕션 스트리밍 동작이 불변이다.
@@ -149,10 +185,18 @@ export class AnthropicProvider implements LlmProvider {
         this.requestOptions(params),
       );
 
+      let inputTokens = 0;
+      let cacheReadTokens: number | null | undefined;
+      let outputTokens = 0;
+      let thinkingTokens: number | undefined;
       for await (const event of stream) {
         if (params.signal?.aborted) {
           stream.controller.abort();
           return;
+        }
+        if (event.type === "message_start") {
+          inputTokens = event.message.usage.input_tokens;
+          cacheReadTokens = event.message.usage.cache_read_input_tokens;
         }
         if (
           event.type === "content_block_delta" &&
@@ -160,9 +204,11 @@ export class AnthropicProvider implements LlmProvider {
         ) {
           yield event.delta.text;
         }
-        // message_delta가 stop_reason을 싣고 온다. 잘림(max_tokens)·거절(refusal)을
+        // message_delta가 stop_reason과 누적 usage를 싣고 온다. 잘림(max_tokens)·거절(refusal)을
         // 비스트리밍 경로와 같은 LlmError로 끊어야 호출부가 일관되게 처리한다.
         if (event.type === "message_delta") {
+          outputTokens = event.usage.output_tokens;
+          thinkingTokens = event.usage.output_tokens_details?.thinking_tokens;
           const stopReason = event.delta.stop_reason;
           if (stopReason === "max_tokens") {
             throw new LlmError(
@@ -175,6 +221,15 @@ export class AnthropicProvider implements LlmProvider {
           }
         }
       }
+      this.reportUsage(params.onUsage, {
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        cache_read_input_tokens: cacheReadTokens,
+        output_tokens_details:
+          thinkingTokens === undefined
+            ? null
+            : { thinking_tokens: thinkingTokens },
+      });
     } catch (error) {
       if (params.signal?.aborted) {
         return;
@@ -202,10 +257,18 @@ export class AnthropicProvider implements LlmProvider {
         this.requestOptions(params),
       );
 
+      let inputTokens = 0;
+      let cacheReadTokens: number | null | undefined;
+      let outputTokens = 0;
+      let thinkingTokens: number | undefined;
       for await (const event of stream) {
         if (params.signal?.aborted) {
           stream.controller.abort();
           return;
+        }
+        if (event.type === "message_start") {
+          inputTokens = event.message.usage.input_tokens;
+          cacheReadTokens = event.message.usage.cache_read_input_tokens;
         }
         if (
           event.type === "content_block_delta" &&
@@ -214,6 +277,8 @@ export class AnthropicProvider implements LlmProvider {
           yield event.delta.text;
         }
         if (event.type === "message_delta") {
+          outputTokens = event.usage.output_tokens;
+          thinkingTokens = event.usage.output_tokens_details?.thinking_tokens;
           const stopReason = event.delta.stop_reason;
           if (stopReason === "max_tokens") {
             throw new LlmError(
@@ -226,8 +291,25 @@ export class AnthropicProvider implements LlmProvider {
           }
         }
       }
+      this.reportUsage(params.onUsage, {
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        cache_read_input_tokens: cacheReadTokens,
+        output_tokens_details:
+          thinkingTokens === undefined
+            ? null
+            : { thinking_tokens: thinkingTokens },
+      });
     } catch (error) {
       if (params.signal?.aborted) {
+        return;
+      }
+      // thinking 무지원 모델(예: haiku)은 thinking 없는 streamPlain으로 폴백한다.
+      if (
+        error instanceof BadRequestError &&
+        isThinkingUnsupportedError(error)
+      ) {
+        yield* this.streamPlain(params);
         return;
       }
       throw this.mapError(error);
@@ -259,42 +341,57 @@ export class AnthropicProvider implements LlmProvider {
   // 폴백 신호로 안 잡혀 bad_request로 새던 문제를 헬퍼가 정규화로 막는다.
   private async generateStructuredNative<T>(
     params: GenerateStructuredParams<T>,
+    allowThinking = true,
   ): Promise<T> {
     // effort가 있으면 adaptive thinking을 켜고 effort로 사고량을 조절한다(format과 같은
     // output_config에 담는다). 없으면 thinking 미설정 = 사고 없음(동작 불변).
     // adaptive thinking은 custom temperature와 충돌하므로 effort일 땐 temperature를 뺀다.
-    const effort = toAnthropicEffort(params.effort);
+    const effort = allowThinking ? toAnthropicEffort(params.effort) : undefined;
     const format = betaZodOutputFormat(params.schema);
-    const message = await this.client.beta.messages.parse(
-      {
-        model: this.model,
-        max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
-        temperature: effort ? undefined : params.temperature,
-        system: params.systemPrompt,
-        messages: this.toMessages(params.messages),
-        betas: [STRUCTURED_OUTPUTS_BETA],
-        ...(effort ? { thinking: { type: "adaptive" as const } } : {}),
-        output_config: effort ? { format, effort } : { format },
-      },
-      this.requestOptions(params),
-    );
-
-    if (message.stop_reason === "max_tokens") {
-      throw new LlmError(
-        "unknown",
-        "LLM response was truncated (stop_reason: max_tokens)",
+    try {
+      const message = await this.client.beta.messages.parse(
+        {
+          model: this.model,
+          max_tokens: ANTHROPIC_DEFAULT_MAX_TOKENS,
+          temperature: effort ? undefined : params.temperature,
+          system: params.systemPrompt,
+          messages: this.toMessages(params.messages),
+          betas: [STRUCTURED_OUTPUTS_BETA],
+          ...(effort ? { thinking: { type: "adaptive" as const } } : {}),
+          output_config: effort ? { format, effort } : { format },
+        },
+        this.requestOptions(params),
       );
-    }
-    if (message.stop_reason === "refusal") {
-      throw new LlmError("unknown", "LLM refused the request");
-    }
 
-    // 헬퍼가 parsed_output을 이미 zod로 파싱하지만, SDK 출력을 그대로 믿지 않고
-    // 우리 스키마로 한 번 더 좁힌다(as 금지 규약 + 방어). null이면 본문이 비었다는 뜻.
-    if (message.parsed_output == null) {
-      throw new LlmError("unknown", "LLM returned no content");
+      if (message.stop_reason === "max_tokens") {
+        throw new LlmError(
+          "unknown",
+          "LLM response was truncated (stop_reason: max_tokens)",
+        );
+      }
+      if (message.stop_reason === "refusal") {
+        throw new LlmError("unknown", "LLM refused the request");
+      }
+
+      // 헬퍼가 parsed_output을 이미 zod로 파싱하지만, SDK 출력을 그대로 믿지 않고
+      // 우리 스키마로 한 번 더 좁힌다(as 금지 규약 + 방어). null이면 본문이 비었다는 뜻.
+      if (message.parsed_output == null) {
+        throw new LlmError("unknown", "LLM returned no content");
+      }
+      this.reportUsage(params.onUsage, message.usage);
+      return this.parseWithSchema(params.schema, message.parsed_output);
+    } catch (error) {
+      // thinking 무지원 모델(예: haiku)은 effort만 떨궈 thinking 없이 한 번 재시도한다.
+      // 그 외 오류는 그대로 올려 generateStructured의 tool_use 폴백 판정을 거치게 한다.
+      if (
+        effort &&
+        error instanceof BadRequestError &&
+        isThinkingUnsupportedError(error)
+      ) {
+        return this.generateStructuredNative(params, false);
+      }
+      throw error;
     }
-    return this.parseWithSchema(params.schema, message.parsed_output);
   }
 
   // 폴백 경로 — 강제 tool_use. 네이티브 미지원 모델에서만 쓰인다.
@@ -335,6 +432,7 @@ export class AnthropicProvider implements LlmProvider {
         throw new LlmError("unknown", "LLM returned no tool_use block");
       }
 
+      this.reportUsage(params.onUsage, message.usage);
       return this.parseWithSchema(params.schema, toolUse.input);
     } catch (error) {
       throw this.mapError(error);
@@ -347,6 +445,11 @@ export class AnthropicProvider implements LlmProvider {
     if (effort) {
       return this.generateTextWithEffort(params, effort);
     }
+    return this.generateTextPlain(params);
+  }
+
+  // thinking 없는 일반 경로 — no-effort 호출과 effort 경로의 thinking 폴백이 공유한다.
+  private async generateTextPlain(params: GenerateTextParams): Promise<string> {
     try {
       const message = await this.client.messages.create(
         {
@@ -376,6 +479,7 @@ export class AnthropicProvider implements LlmProvider {
       if (!text) {
         throw new LlmError("unknown", "LLM returned no content");
       }
+      this.reportUsage(params.onUsage, message.usage);
       return text;
     } catch (error) {
       throw this.mapError(error);
@@ -417,8 +521,16 @@ export class AnthropicProvider implements LlmProvider {
       if (!text) {
         throw new LlmError("unknown", "LLM returned no content");
       }
+      this.reportUsage(params.onUsage, message.usage);
       return text;
     } catch (error) {
+      // thinking 무지원 모델(예: haiku)은 thinking 없는 plain text로 폴백한다.
+      if (
+        error instanceof BadRequestError &&
+        isThinkingUnsupportedError(error)
+      ) {
+        return this.generateTextPlain(params);
+      }
       throw this.mapError(error);
     }
   }

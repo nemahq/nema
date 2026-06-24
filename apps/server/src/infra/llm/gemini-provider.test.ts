@@ -77,6 +77,37 @@ describe("GeminiProvider", () => {
       expect(result).toBe("Hello world");
     });
 
+    // Gemini는 thoughts(추론)를 candidates와 별도로 세므로 청구 출력 = candidates + thoughts.
+    // 이 합산을 빠뜨리면 추론 모델 비용이 과소계상된다.
+    it("reports billed token usage via onUsage, summing thoughts into output", async () => {
+      const { provider } = mockGenerate({
+        text: "Hello world",
+        candidates: [{ finishReason: "STOP" }],
+        usageMetadata: {
+          promptTokenCount: 500,
+          candidatesTokenCount: 150,
+          thoughtsTokenCount: 80,
+          cachedContentTokenCount: 60,
+        },
+      });
+      const reported: unknown[] = [];
+
+      await provider.generateText({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "hi" }],
+        onUsage: (usage) => reported.push(usage),
+      });
+
+      expect(reported).toEqual([
+        {
+          inputTokens: 500,
+          outputTokens: 230,
+          cachedInputTokens: 60,
+          reasoningTokens: 80,
+        },
+      ]);
+    });
+
     it("passes correct parameters to the Gemini SDK", async () => {
       const { provider, generateContent } = mockGenerate({
         text: "ok",
