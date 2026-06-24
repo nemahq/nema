@@ -1,7 +1,20 @@
+import { DateTime, IANAZone } from "luxon";
+import * as Sentry from "@sentry/node";
+
 import type { Database, Json } from "@server/infra/database.types";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import type { StatementSearchHit } from "@server/infra/vector";
+import type { CoarseScopingTopic } from "@server/prompts/coarse-scoping";
+import { selectScopeTopics } from "@server/services/coarse-scoping";
+import {
+  type QueryStructure,
+  structureQuery,
+} from "@server/services/query-structuring";
+import { listTopics } from "@server/services/topic-service";
+import { resolveTimeToken } from "@server/temporal/resolver";
+import type { TimeToken } from "@server/temporal/token";
 
 // 평가 하니스 첫 실측으로 보정 (retrieval-design 3장).
 // 골든 질의의 정답 점수대 0.216~0.52, 무정답 질의 최고점 0.239 —
@@ -11,6 +24,10 @@ import { throwIfSupabaseError } from "@server/infra/supabase-error";
 // 코퍼스가 바뀌면 분포가 통째로 이동하므로 재보정 필요 — measurement-log 참고.
 const STATEMENT_SEARCH_LIMIT = 15;
 const STATEMENT_SEARCH_SCORE_THRESHOLD = 0.2;
+// 의미+시간 질의에서 벡터검색에 넘길 시간 후보 상한 — 벡터가 이 안에서 다시 상위 K를 고른다.
+const TIME_FILTER_CANDIDATE_LIMIT = 100;
+// 순수 시간 질의(의미 없음)는 벡터 점수가 없어 동일 점수를 매긴다 — 묶음은 최신순으로 정렬.
+const NEUTRAL_TIME_SCORE = 1;
 
 type SearchedStatementType = Database["public"]["Enums"]["statement_type"];
 type SearchedStatementConfidence =
@@ -59,9 +76,12 @@ export async function searchStatements(args: {
   supabase: TypedSupabaseClient;
   providers: Providers;
   query: string;
-  topicIds?: string[];
+  /** 질의자의 IANA 존 — 시간 질의의 "이번 주/오늘"을 이 존 기준으로 푼다. 없으면 시간 강등. */
+  timeZone?: string;
+  /** 시간 환산의 기준 시각(테스트 주입용). 기본 현재. */
+  now?: Date;
 }): Promise<StatementSearchResult> {
-  const { supabase, providers, query, topicIds } = args;
+  const { supabase, providers, query, timeZone, now } = args;
 
   // 격리는 내가 멤버인 Space 목록 — 오늘은 개인 Space 1개지만 처음부터 목록으로
   const { data: memberships, error: membershipError } = await supabase
@@ -74,35 +94,102 @@ export async function searchStatements(args: {
     return { groups: [] };
   }
 
-  // 줄기 범위 — 주제가 주어지면 그 주제의 진술로 검색을 한정한다 (narration-design 3장).
-  // 빈 집합이면 그 줄기에 진술이 없다는 뜻이라 검색 없이 끝낸다.
+  // 라우팅 후보 — 질의자 공간의 주제 목록. coarse가 여기서 고른다. 비면 전역 (auto-scoping §3).
+  const { topics } = await listTopics({ supabase });
+
+  // 시간 구조화와 주제 라우팅(coarse)을 병렬로. 한 콜에 합치면 주제 정확도가 깎여(측정 #19) 따로 부른다.
+  // 절대 날짜 연도 보정·시간 환산이 같은 순간을 쓰게 reference를 한 번만 잡는다.
+  const reference = now ?? new Date();
+  const queryZone =
+    timeZone !== undefined && IANAZone.isValidZone(timeZone) ? timeZone : "utc";
+  const [structure, topicIds] = await Promise.all([
+    structureSafely({
+      providers,
+      query,
+      todayIsoDate: zonedISODate(reference, queryZone),
+    }),
+    coarseSafely({
+      providers,
+      query,
+      topics: topics.map((t) => ({ id: t.id, label: t.name })),
+    }),
+  ]);
+
+  // 줄기 범위 — coarse가 고른 주제로 검색을 한정한다 (auto-scoping §3·§4).
+  // scope = 고른 주제의 진술 ∪ 무태그 진술. 못 고르면(빈 목록) 전역. 빈 집합이면 범위에 진술이 없어 끝낸다.
   let scopedStatementIds: string[] | undefined;
-  if (topicIds !== undefined) {
-    scopedStatementIds = await collectScopedStatementIds(supabase, topicIds);
+  if (topicIds.length > 0) {
+    scopedStatementIds = await collectScopedStatementIds({
+      supabase,
+      spaceIds,
+      topicIds,
+    });
     if (scopedStatementIds.length === 0) {
       return { groups: [] };
     }
   }
 
-  // 전처리 LLM 없이 그대로 임베딩(쿼리 모드) → Qdrant. statement_id+score만 받는다
-  const hits = await providers.vectorStore.search(providers.embedding, {
-    spaceIds,
-    query,
-    limit: STATEMENT_SEARCH_LIMIT,
-    scoreThreshold: STATEMENT_SEARCH_SCORE_THRESHOLD,
-    statementIds: scopedStatementIds,
-  });
+  let scoreByStatementId: Map<string, number>;
+  // 순수 시간 질의는 벡터 점수가 없어 묶음을 최신순으로 정렬한다(관련도순 대신).
+  let sortByRecency = false;
 
-  if (hits.length === 0) {
-    return { groups: [] };
+  // 존이 없거나 유효하지 않으면 "이번 주"를 풀 수 없어 시간 경로를 못 탄다 — 의미검색으로 강등.
+  if (
+    structure.time !== null &&
+    timeZone !== undefined &&
+    IANAZone.isValidZone(timeZone)
+  ) {
+    const range = resolveTimeToken(structure.time, {
+      reference,
+      timeZone,
+    });
+    const candidateIds = await collectTimeCandidateIds(supabase, {
+      spaceIds,
+      field: structure.time.field,
+      from: range.from,
+      to: range.to,
+      timeZone,
+      scopedStatementIds,
+      limit:
+        structure.semantic !== null
+          ? TIME_FILTER_CANDIDATE_LIMIT
+          : STATEMENT_SEARCH_LIMIT,
+    });
+    if (candidateIds.length === 0) {
+      return { groups: [] };
+    }
+
+    if (structure.semantic !== null) {
+      // 의미 + 시간: 시간 후보 안에서 의미검색(필터 오버레이, temporal-query-design 6장 ②)
+      const hits = await providers.vectorStore.search(providers.embedding, {
+        spaceIds,
+        query: structure.semantic,
+        limit: STATEMENT_SEARCH_LIMIT,
+        scoreThreshold: STATEMENT_SEARCH_SCORE_THRESHOLD,
+        statementIds: candidateIds,
+      });
+      scoreByStatementId = topScoreByStatementId(hits);
+    } else {
+      // 순수 시간: Qdrant 우회, 시간 후보 그대로 (temporal-query-design 6장 ①)
+      scoreByStatementId = new Map(
+        candidateIds.map((id) => [id, NEUTRAL_TIME_SCORE]),
+      );
+      sortByRecency = true;
+    }
+  } else {
+    // 시간 없음(또는 존 강등): 원 질의 그대로 의미검색
+    const hits = await providers.vectorStore.search(providers.embedding, {
+      spaceIds,
+      query,
+      limit: STATEMENT_SEARCH_LIMIT,
+      scoreThreshold: STATEMENT_SEARCH_SCORE_THRESHOLD,
+      statementIds: scopedStatementIds,
+    });
+    scoreByStatementId = topScoreByStatementId(hits);
   }
 
-  const scoreByStatementId = new Map<string, number>();
-  for (const hit of hits) {
-    const prev = scoreByStatementId.get(hit.statementId);
-    if (prev === undefined || hit.score > prev) {
-      scoreByStatementId.set(hit.statementId, hit.score);
-    }
+  if (scoreByStatementId.size === 0) {
+    return { groups: [] };
   }
 
   // 본문은 항상 Postgres 원장에서 — Qdrant payload 사본이 진실 행세를 못 하게.
@@ -179,14 +266,21 @@ export async function searchStatements(args: {
     );
   }
 
-  return {
-    groups: assembleSourceGroups({
-      statements,
-      scoreByStatementId,
-      activeCountBySourceId,
-      markersByStatementId,
-    }),
-  };
+  const groups = assembleSourceGroups({
+    statements,
+    scoreByStatementId,
+    activeCountBySourceId,
+    markersByStatementId,
+  });
+
+  // 순수 시간 질의는 동일 점수라 조립 정렬이 무의미 — 최신 글이 위로 오게 다시 정렬한다.
+  if (sortByRecency) {
+    groups.sort((a, b) =>
+      b.key.sourceCreatedAt.localeCompare(a.key.sourceCreatedAt),
+    );
+  }
+
+  return { groups };
 }
 
 interface GroupableStatement {
@@ -368,32 +462,200 @@ export function parseLocatorIndex(locator: Json | null): number | null {
   return null;
 }
 
-// archived 진술은 벡터 색인에 없어 검색에서 자동 탈락하므로 여기서 status를 따로 거르지 않는다.
-async function collectScopedStatementIds(
+// 구조화 LLM이 실패해도 검색은 살린다 — 시간 없는 평범한 의미검색으로 강등한다.
+async function structureSafely(args: {
+  providers: Providers;
+  query: string;
+  todayIsoDate: string;
+}): Promise<QueryStructure> {
+  try {
+    return await structureQuery(args);
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "query-structuring" },
+    });
+    return { semantic: null, time: null };
+  }
+}
+
+// coarse LLM이 실패해도 검색은 살린다 — 주제 못 고르면 전역으로 강등한다 (auto-scoping §3.3).
+async function coarseSafely(args: {
+  providers: Providers;
+  query: string;
+  topics: CoarseScopingTopic[];
+}): Promise<string[]> {
+  try {
+    return await selectScopeTopics(args);
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "coarse-scoping" },
+    });
+    return [];
+  }
+}
+
+function topScoreByStatementId(
+  hits: StatementSearchHit[],
+): Map<string, number> {
+  const scoreByStatementId = new Map<string, number>();
+  for (const hit of hits) {
+    const prev = scoreByStatementId.get(hit.statementId);
+    if (prev === undefined || hit.score > prev) {
+      scoreByStatementId.set(hit.statementId, hit.score);
+    }
+  }
+  return scoreByStatementId;
+}
+
+function zonedISODate(instant: Date, timeZone: string): string {
+  const date = DateTime.fromJSDate(instant, { zone: timeZone }).toISODate();
+  if (date === null) {
+    throw new Error(`zonedISODate: invalid date in zone ${timeZone}`);
+  }
+  return date;
+}
+
+// 시간 범위에 드는 진술 id. due는 진술의 due_date(존 달력 날짜로 비교), created는 글의
+// created_at(timestamptz instant로 비교) 기준. status 활성 여부는 호출부 본문 조회가 거른다.
+export async function collectTimeCandidateIds(
   supabase: TypedSupabaseClient,
-  topicIds: string[],
+  opts: {
+    spaceIds: string[];
+    field: TimeToken["field"];
+    from: Date | null;
+    to: Date;
+    timeZone: string;
+    scopedStatementIds: string[] | undefined;
+    limit: number;
+  },
 ): Promise<string[]> {
-  if (topicIds.length === 0) {
+  const { spaceIds, field, from, to, timeZone, scopedStatementIds, limit } =
+    opts;
+
+  let ids: string[];
+  if (field === "due") {
+    let query = supabase
+      .from("statements")
+      .select("id")
+      .in("space_id", spaceIds)
+      .eq("status", "active")
+      .not("due_date", "is", null)
+      .lte("due_date", zonedISODate(to, timeZone))
+      .order("due_date", { ascending: false })
+      .limit(limit);
+    // scope를 limit 전에 DB에 건다 — 메모리 교집합만 하면 limit이 scope 밖 후보로 차서
+    // limit 밖의 in-scope 진술이 누락된다(scope-before-limit).
+    if (scopedStatementIds !== undefined) {
+      query = query.in("id", scopedStatementIds);
+    }
+    // from이 null인 by(마감 "~까지")는 아래끝을 열어 둔다 — 연체(지난 마감)도 후보로 띄운다.
+    // 마감 검색의 본질이 "놓친·임박한 기한"이라 연체가 가장 급하다(resolver가 검색 레이어로
+    // 위임한 제품 판단, temporal-query-design 4장). 연체를 빼려면 from을 now로 자른다.
+    if (from !== null) {
+      query = query.gte("due_date", zonedISODate(from, timeZone));
+    }
+    const { data, error } = await query;
+    throwIfSupabaseError(error);
+    ids = (data ?? []).map((row) => row.id);
+  } else {
+    // created는 원본 시간으로 자르므로 scope(진술 집합)를 원본 집합으로 환산해 limit 전에 건다.
+    let scopeSourceIds: string[] | null = null;
+    if (scopedStatementIds !== undefined) {
+      const { data: scopeRefs, error: scopeError } = await supabase
+        .from("statement_sources")
+        .select("source_id")
+        .in("statement_id", scopedStatementIds);
+      throwIfSupabaseError(scopeError);
+      scopeSourceIds = [
+        ...new Set((scopeRefs ?? []).map((row) => row.source_id)),
+      ];
+      if (scopeSourceIds.length === 0) {
+        return [];
+      }
+    }
+    let query = supabase
+      .from("sources")
+      .select("id")
+      .in("space_id", spaceIds)
+      .lte("created_at", to.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (scopeSourceIds !== null) {
+      query = query.in("id", scopeSourceIds);
+    }
+    if (from !== null) {
+      query = query.gte("created_at", from.toISOString());
+    }
+    const { data: sourceRows, error: sourceError } = await query;
+    throwIfSupabaseError(sourceError);
+    const sourceIds = (sourceRows ?? []).map((row) => row.id);
+    if (sourceIds.length === 0) {
+      return [];
+    }
+    const { data: refRows, error: refError } = await supabase
+      .from("statement_sources")
+      .select("statement_id")
+      .in("source_id", sourceIds);
+    throwIfSupabaseError(refError);
+    ids = [...new Set((refRows ?? []).map((row) => row.statement_id))];
+  }
+
+  if (scopedStatementIds === undefined) {
+    return ids;
+  }
+  // scope는 위에서 DB 쿼리에 limit 전에 걸었다 — limit 밖 in-scope 진술이 새지 않게.
+  // 이 교집합은 created 경로에서 한 원본이 scope·비scope 진술을 함께 가질 때를 마저 거른다.
+  const scoped = new Set(scopedStatementIds);
+  return ids.filter((id) => scoped.has(id));
+}
+
+// scope = 고른 주제의 진술 ∪ 무태그 진술(미분류함, auto-scoping §4). 무태그를 늘 끼워
+// "아직 정리 안 한 글"이 어떤 scope에서도 안 빠지게 한다 — 그게 어디 뒀는지 모르고 찾는 핵심.
+// archived 진술은 벡터 색인에 없어 검색에서 자동 탈락하므로 여기서 status를 따로 거르지 않는다.
+async function collectScopedStatementIds(args: {
+  supabase: TypedSupabaseClient;
+  spaceIds: string[];
+  topicIds: string[];
+}): Promise<string[]> {
+  const { supabase, spaceIds, topicIds } = args;
+  const { data: sourceRows, error: sourceError } = await supabase
+    .from("sources")
+    .select("id")
+    .in("space_id", spaceIds);
+  throwIfSupabaseError(sourceError);
+
+  const allSourceIds = (sourceRows ?? []).map((row) => row.id);
+  if (allSourceIds.length === 0) {
     return [];
   }
 
-  const { data: topicSources, error: sourceError } = await supabase
+  const { data: topicRows, error: topicError } = await supabase
     .from("source_topics")
-    .select("source_id")
-    .in("topic_id", topicIds);
-  throwIfSupabaseError(sourceError);
+    .select("source_id, topic_id")
+    .in("source_id", allSourceIds);
+  throwIfSupabaseError(topicError);
 
-  const sourceIds = [
-    ...new Set((topicSources ?? []).map((row) => row.source_id)),
-  ];
-  if (sourceIds.length === 0) {
+  const selectedTopics = new Set(topicIds);
+  const taggedSources = new Set<string>();
+  const selectedSources = new Set<string>();
+  for (const row of topicRows ?? []) {
+    taggedSources.add(row.source_id);
+    if (selectedTopics.has(row.topic_id)) {
+      selectedSources.add(row.source_id);
+    }
+  }
+
+  const scopeSourceIds = allSourceIds.filter(
+    (id) => selectedSources.has(id) || !taggedSources.has(id),
+  );
+  if (scopeSourceIds.length === 0) {
     return [];
   }
 
   const { data: scoped, error: scopedError } = await supabase
     .from("statement_sources")
     .select("statement_id")
-    .in("source_id", sourceIds);
+    .in("source_id", scopeSourceIds);
   throwIfSupabaseError(scopedError);
 
   return [...new Set((scoped ?? []).map((row) => row.statement_id))];

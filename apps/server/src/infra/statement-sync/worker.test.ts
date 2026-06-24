@@ -17,12 +17,14 @@ import {
   canFormRelations,
   chunkStatements,
   createStatementSyncWorker,
+  deadlineContext,
   dedupeChanges,
   gateProposals,
   orderBySourceAppearance,
   POLL_INTERVAL_MS,
   reconcileChanges,
   selectCandidateIds,
+  selectDuplicatePairs,
 } from "./worker";
 
 const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
@@ -37,6 +39,7 @@ const PENDING_SOURCE: PendingSource = {
   session_id: null,
   body: "테스트 원문",
   created_at: "2026-06-11T00:00:00.000Z",
+  author_timezone: "Asia/Seoul",
 };
 
 function pendingStatement(
@@ -174,18 +177,60 @@ describe("createStatementSyncWorker", () => {
           type: "claim",
           confidence: "certain",
           index: 0,
+          due_date: null,
         },
         {
           content: "확신도 빠진 추정.",
           type: "claim",
           confidence: "guess",
           index: 1,
+          due_date: null,
         },
-        { content: "할 일.", type: "todo", confidence: null, index: 2 },
+        {
+          content: "할 일.",
+          type: "todo",
+          confidence: null,
+          index: 2,
+          due_date: null,
+        },
       ],
     });
     // 메시지는 ack됐다
     expect(rpcCalls(rpc, "ack_sync_event")).toHaveLength(1);
+  });
+
+  it("내용 속 기한을 작성 시점·존 기준 due_date로 풀어 apply에 싣는다", async () => {
+    // PENDING_SOURCE = 서울, created_at 2026-06-11(목). 이번 주 금요일 = 06-12.
+    const { client, rpc } = mockSupabase({
+      read_sync_events: [[NOTIFY_ROW]],
+      fetch_pending_sources: [[PENDING_SOURCE]],
+    });
+    const llm = mockLlm([
+      {
+        content: "금요일까지 보고서 끝내기",
+        type: "todo",
+        confidence: null,
+        deadline: {
+          boundary: "by",
+          anchorKind: "weekday",
+          grain: null,
+          offset: null,
+          weekday: "fri",
+          scope: "this",
+          date: null,
+        },
+      },
+    ]);
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const applies = rpcCalls(rpc, "apply_ingestion_changeset");
+    expect(applies[0][1].p_statements[0].due_date).toBe("2026-06-12");
   });
 
   it("진술 0개(노이즈뿐) — changeset 없이 complete_source_extraction만 호출", async () => {
@@ -644,6 +689,108 @@ describe("selectCandidateIds", () => {
   });
 });
 
+describe("selectDuplicatePairs", () => {
+  const labelToId = new Map([
+    ["N0", "new-1"],
+    ["E0", "existing-1"],
+  ]);
+  const batchIds = new Set(["new-1"]);
+
+  it("가릴 쪽이 새 진술이면 {가릴, 남길} 쌍을 낸다", () => {
+    const pairs = selectDuplicatePairs({
+      duplicates: [{ duplicate: "N0", of: "E0" }],
+      labelToId,
+      batchIds,
+    });
+    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "existing-1" }]);
+  });
+
+  it("가릴 쪽이 기존 진술이면 안 가린다 — 새 글 투입으로 옛 기록을 안 지운다", () => {
+    const pairs = selectDuplicatePairs({
+      duplicates: [{ duplicate: "E0", of: "N0" }],
+      labelToId,
+      batchIds,
+    });
+    expect(pairs).toEqual([]);
+  });
+
+  it("모르는 가릴-라벨은 버린다", () => {
+    const pairs = selectDuplicatePairs({
+      duplicates: [{ duplicate: "N9", of: "E0" }],
+      labelToId,
+      batchIds,
+    });
+    expect(pairs).toEqual([]);
+  });
+
+  it("한 진술에 keeper가 여러 번이면 첫 keeper만 채택", () => {
+    const twoExisting = new Map([
+      ["N0", "new-1"],
+      ["E0", "existing-1"],
+      ["E1", "existing-2"],
+    ]);
+    const pairs = selectDuplicatePairs({
+      duplicates: [
+        { duplicate: "N0", of: "E0" },
+        { duplicate: "N0", of: "E1" },
+      ],
+      labelToId: twoExisting,
+      batchIds,
+    });
+    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "existing-1" }]);
+  });
+
+  it("무효 keeper가 먼저 와도 뒤의 유효 keeper로 가린다 — 첫 무효가 막지 않음", () => {
+    const pairs = selectDuplicatePairs({
+      duplicates: [
+        { duplicate: "N0", of: "N9" },
+        { duplicate: "N0", of: "E0" },
+      ],
+      labelToId,
+      batchIds,
+    });
+    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "existing-1" }]);
+  });
+
+  it("같은 글 안 비대칭(둘 다 새 진술)은 가린다 — 과거부 안 됨", () => {
+    const twoNew = new Map([
+      ["N0", "new-1"],
+      ["N1", "new-2"],
+    ]);
+    const pairs = selectDuplicatePairs({
+      duplicates: [{ duplicate: "N0", of: "N1" }],
+      labelToId: twoNew,
+      batchIds: new Set(["new-1", "new-2"]),
+    });
+    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "new-2" }]);
+  });
+
+  it("대칭쌍은 둘 다 안 가린다 — 흡수할 원본이 사라지는 무소음 손실 방지", () => {
+    const twoNew = new Map([
+      ["N0", "new-1"],
+      ["N1", "new-2"],
+    ]);
+    const pairs = selectDuplicatePairs({
+      duplicates: [
+        { duplicate: "N0", of: "N1" },
+        { duplicate: "N1", of: "N0" },
+      ],
+      labelToId: twoNew,
+      batchIds: new Set(["new-1", "new-2"]),
+    });
+    expect(pairs).toEqual([]);
+  });
+
+  it("남길 쪽(keeper)이 환각 라벨이면 안 가린다", () => {
+    const pairs = selectDuplicatePairs({
+      duplicates: [{ duplicate: "N0", of: "N9" }],
+      labelToId,
+      batchIds,
+    });
+    expect(pairs).toEqual([]);
+  });
+});
+
 describe("canFormRelations", () => {
   it("후보가 있으면 진술 1개라도 LLM을 부른다", () => {
     expect(canFormRelations(1, 3)).toBe(true);
@@ -711,7 +858,9 @@ describe("dedupeChanges", () => {
 
 function mockRelationLlm(): LlmProvider {
   return {
-    generateStructured: vi.fn().mockResolvedValue({ relations: [] }),
+    generateStructured: vi
+      .fn()
+      .mockResolvedValue({ relations: [], duplicates: [] }),
     async *generateStream() {
       yield "";
     },
@@ -766,6 +915,70 @@ describe("잇기 분할 통합 — 장문 source", () => {
     expect(llm.generateStructured).toHaveBeenCalledTimes(2);
     // 되돌리기 단위는 글 — K개 sub-batch여도 적용은 source당 1번
     expect(rpcCalls(rpc, "apply_relation_changesets")).toHaveLength(1);
+  });
+
+  it("판정의 duplicates가 apply의 p_duplicates 쌍으로 흘러간다 — {가릴, 남길}", async () => {
+    const keeper = {
+      id: "c0000000-0000-4000-a000-000000000000",
+      content: "N잡으로 확정",
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [{ source_id: SOURCE_ID, locator: { index: 0 } }],
+    };
+    const dup = {
+      id: "c0000000-0000-4000-a000-000000000001",
+      content: "N잡으로 정함",
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [{ source_id: SOURCE_ID, locator: { index: 1 } }],
+    };
+    const statements = [keeper, dup];
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_linking_sources: [
+          [
+            {
+              id: SOURCE_ID,
+              space_id: SPACE_ID,
+              created_at: "2026-06-11T00:00:00.000Z",
+            },
+          ],
+        ],
+      },
+      { statements },
+    );
+    // 두 번째 진술(N1)이 첫 진술(N0)의 재진술 — 가려야
+    const llm: LlmProvider = {
+      generateStructured: vi.fn().mockResolvedValue({
+        relations: [],
+        duplicates: [{ duplicate: "N1", of: "N0" }],
+      }),
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    };
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const calls = rpcCalls(rpc, "apply_relation_changesets");
+    expect(calls).toHaveLength(1);
+    const args = calls[0]?.[1] as {
+      p_duplicates: { duplicate: string; keeper: string }[];
+    };
+    expect(args.p_duplicates).toEqual([
+      { duplicate: dup.id, keeper: keeper.id },
+    ]);
   });
 });
 
@@ -828,5 +1041,27 @@ describe("orderBySourceAppearance", () => {
       row("first", 0),
     ]);
     expect(ordered.map((r) => r.id)).toEqual(["first", "missing"]);
+  });
+});
+
+describe("deadlineContext", () => {
+  it("유효한 작성자 존을 그대로 쓰고 작성일을 그 존 기준으로 낸다", () => {
+    // PENDING_SOURCE = 서울, created_at 2026-06-11T00:00Z → 서울 09:00.
+    const ctx = deadlineContext(PENDING_SOURCE);
+    expect(ctx.timeZone).toBe("Asia/Seoul");
+    expect(ctx.todayIsoDate).toBe("2026-06-11");
+  });
+
+  it("무효한 존은 UTC로 강등", () => {
+    const ctx = deadlineContext({
+      ...PENDING_SOURCE,
+      author_timezone: "Not/AZone",
+    });
+    expect(ctx.timeZone).toBe("UTC");
+  });
+
+  it("존이 없으면(옛 글·미전달) UTC로 강등", () => {
+    const ctx = deadlineContext({ ...PENDING_SOURCE, author_timezone: null });
+    expect(ctx.timeZone).toBe("UTC");
   });
 });

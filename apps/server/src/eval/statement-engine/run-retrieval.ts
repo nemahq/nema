@@ -48,6 +48,7 @@ interface QueryReport {
   /** 순위대로 — 골든 id·점수·기대 정답 여부 */
   results: Array<{ goldenId: string; score: number; isExpected: boolean }>;
   recallAtK: number | null;
+  precisionAtK: number | null;
   reciprocalRank: number | null;
 }
 
@@ -110,9 +111,12 @@ async function main() {
     // no-answer 질의는 지표에서 제외하고 점수만 기록 (eval-design 5장)
     const isAnswerable = expected.size > 0;
     const topK = results.slice(0, RECALL_K);
-    const recallAtK = isAnswerable
-      ? topK.filter((r) => r.isExpected).length / expected.size
-      : null;
+    const relevantInTopK = topK.filter((r) => r.isExpected).length;
+    const recallAtK = isAnswerable ? relevantInTopK / expected.size : null;
+    // Precision@k — 건진 top-k 중 맞은 비율(잡음 신호). 분모는 top-k 실건수(보통 k)라
+    // threshold 무관한 순위 품질이다. 정답이 k보다 적은 질의는 상한 |expected|/k에 묶인다.
+    const precisionAtK =
+      isAnswerable && topK.length > 0 ? relevantInTopK / topK.length : null;
     const firstHitRank = results.findIndex((r) => r.isExpected);
     let reciprocalRank: number | null = null;
     if (isAnswerable) {
@@ -126,6 +130,7 @@ async function main() {
       expected: seedQuery.expectedStatementIds,
       results,
       recallAtK: recallAtK === null ? null : round(recallAtK),
+      precisionAtK: precisionAtK === null ? null : round(precisionAtK),
       reciprocalRank: reciprocalRank === null ? null : round(reciprocalRank),
     });
 
@@ -150,6 +155,10 @@ async function main() {
       answerable.reduce((sum, r) => sum + (r.recallAtK ?? 0), 0) /
         answerable.length,
     ),
+    precisionAtK: round(
+      answerable.reduce((sum, r) => sum + (r.precisionAtK ?? 0), 0) /
+        answerable.length,
+    ),
     mrr: round(
       answerable.reduce((sum, r) => sum + (r.reciprocalRank ?? 0), 0) /
         answerable.length,
@@ -163,6 +172,10 @@ async function main() {
             queries: axisReports.length,
             recallAtK: round(
               axisReports.reduce((sum, r) => sum + (r.recallAtK ?? 0), 0) /
+                axisReports.length,
+            ),
+            precisionAtK: round(
+              axisReports.reduce((sum, r) => sum + (r.precisionAtK ?? 0), 0) /
                 axisReports.length,
             ),
             mrr: round(

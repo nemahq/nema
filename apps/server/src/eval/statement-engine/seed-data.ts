@@ -32,6 +32,11 @@ interface GoldenStatementBase {
   needsHumanReview: boolean;
   /** 무엇이 애매한가 (needsHumanReview일 때) */
   reviewNote?: string;
+  /**
+   * 시간 경로 eval(temporal-query-design 8장 B)용 라벨 — 내용 속 기한을 코퍼스 작성 주
+   * (TEMPORAL_EVAL_QUERY_NOW와 같은 주)에서 환산한 절대 날짜(YYYY-MM-DD). 기한 없으면 미지정.
+   */
+  dueDate?: string;
 }
 
 /** schema-design 4.2의 CHECK 제약(claim이면 확신도 필수, 그 외엔 금지)을 타입으로 강제 */
@@ -52,10 +57,12 @@ export interface SeedDocument {
   note?: string;
 }
 
+// temporal은 의미검색 축이 아니다 — 시간은 날짜 산술이라 임베딩 소관이 아니므로
+// 이 채점지에서 뺐다(temporal-query-design 8장 A). 시간 질의는 RELOCATED_TEMPORAL_QUERIES로
+// 옮겨 구조화된 시간 경로의 시험으로 쓴다.
 export type QueryFailureAxis =
   | "paraphrase" // 같은 단어를 안 쓰고 묻기 (09 완료 기준의 직접 검증)
   | "negation" // 부정 표현이 낀 질의
-  | "temporal" // 시간 표현이 낀 질의
   | "proper-noun-variant" // 고유명사 표기 변형
   | "no-answer"; // 코퍼스에 정답이 없는 질의 (threshold 보정 재료)
 
@@ -241,14 +248,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         confidence: "certain",
         axes: ["compound-split"],
         needsHumanReview: false,
-      },
-      {
-        id: "weekly-1-s3a",
-        content: "백엔드는 API 리팩토링을 진행 중이다",
-        type: "claim",
-        confidence: "certain",
-        axes: ["compound-split"],
-        needsHumanReview: false,
+        dueDate: "2026-06-23",
       },
       {
         id: "weekly-1-s3",
@@ -298,6 +298,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         confidence: "certain",
         axes: ["compound-split"],
         needsHumanReview: false,
+        dueDate: "2026-06-25",
       },
       {
         id: "weekly-1-s8",
@@ -327,6 +328,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         type: "todo",
         axes: ["todo-boundary"],
         needsHumanReview: false,
+        dueDate: "2026-06-19",
       },
       {
         id: "braindump-1-s2",
@@ -381,6 +383,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         confidence: "certain",
         axes: ["compound-split"],
         needsHumanReview: false,
+        dueDate: "2026-06-17",
       },
       {
         id: "braindump-1-s8",
@@ -388,6 +391,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         type: "todo",
         axes: ["compound-split", "todo-boundary"],
         needsHumanReview: false,
+        dueDate: "2026-06-18",
       },
       {
         id: "braindump-1-s9",
@@ -411,6 +415,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         type: "todo",
         axes: ["over-extraction-guard", "todo-boundary"],
         needsHumanReview: false,
+        dueDate: "2026-06-24",
       },
     ],
     note: "기대 추출 수 = 정확히 1. 2개 이상이면 과잉 추출",
@@ -553,25 +558,6 @@ export const SEED_QUERIES: SeedQuery[] = [
     description: "채용 → 뽑다",
   },
   {
-    id: "q12",
-    query: "다음주에 예정된 일이 뭐가 있지?",
-    expectedStatementIds: ["weekly-1-s2", "weekly-1-s7", "short-1-s1"],
-    failureAxis: "temporal",
-    description: "시간 표현으로 여러 글을 가로질러 묻기",
-  },
-  {
-    id: "q13",
-    query: "이번 주 안에 마감인 거 있나?",
-    expectedStatementIds: [
-      "braindump-1-s1",
-      "braindump-1-s7",
-      "braindump-1-s8",
-    ],
-    failureAxis: "temporal",
-    description:
-      "금요일·수요일·목요일 기한을 '이번 주'로 묻기 (다음주 수요일인 short-1-s1은 교란)",
-  },
-  {
     id: "q14",
     query: "구독료 얼마 받을지 정해졌나?",
     expectedStatementIds: [
@@ -607,3 +593,47 @@ export const SEED_QUERIES: SeedQuery[] = [
       "원문(smalltalk-1)엔 '사무실 이사'가 있지만 골든 진술은 0개 — 어휘만 겹치는 교란 케이스",
   },
 ];
+
+// ---------------------------------------------------------------------------
+// 시간 경로 질의 — 의미검색에서 떼어낸 시간 질의 (temporal-query-design 8장)
+//
+// 의미검색(SEED_QUERIES)이 아니라 구조화된 시간 경로가 답할 질의다. 여기 둔 채로
+// 의미검색 채점에서 빠진다. 시간 경로 eval(설계 8장 B)이 골든 due_date 라벨을 붙여
+// 이 쌍을 쓴다 — 그 러너는 질의→토큰 정확도를 채점하는 ④와 골든을 공유하므로 지금
+// 짓지 않고, 질의·기대 진술 매핑만 보존한다.
+// ---------------------------------------------------------------------------
+
+// 시간 경로 eval의 고정 질의 기준 — "이번 주/다음주"를 이 날(2026-06-15 월요일) 기준으로 푼다.
+// 골든 dueDate 라벨도 같은 주를 기준으로 환산돼 있다(코퍼스 작성일 = 같은 주).
+export const TEMPORAL_EVAL_QUERY_NOW = "2026-06-15T00:00:00Z";
+
+// expectedToken = 질의가 구조화돼야 하는 토큰(나: 질의→토큰 정확도의 정답).
+// expectedStatementIds = 그 토큰으로 due_date 필터 시 나와야 하는 진술(가: 끝단 정확도).
+export const RELOCATED_TEMPORAL_QUERIES = [
+  {
+    id: "q12",
+    query: "다음주에 예정된 일이 뭐가 있지?",
+    expectedStatementIds: ["weekly-1-s2", "weekly-1-s7", "short-1-s1"],
+    expectedToken: {
+      field: "due",
+      boundary: "within",
+      anchor: { kind: "relative", grain: "week", offset: 1 },
+    },
+    note: "시간 표현으로 여러 글을 가로질러 묻기",
+  },
+  {
+    id: "q13",
+    query: "이번 주 안에 마감인 거 있나?",
+    expectedStatementIds: [
+      "braindump-1-s1",
+      "braindump-1-s7",
+      "braindump-1-s8",
+    ],
+    expectedToken: {
+      field: "due",
+      boundary: "by",
+      anchor: { kind: "relative", grain: "week", offset: 0 },
+    },
+    note: "금요일·수요일·목요일 기한을 '이번 주'로 묻기 (다음주 수요일인 short-1-s1은 교란)",
+  },
+] as const;

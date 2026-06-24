@@ -1,15 +1,11 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
+import * as Sentry from "@sentry/node";
 
 import { getEnv } from "@server/env";
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import { createVoyageProvider } from "@server/infra/embedding";
-import { AnthropicProvider } from "@server/infra/llm/anthropic-provider";
-import {
-  DEFAULT_TIMEOUT_MS as GEMINI_DEFAULT_TIMEOUT_MS,
-  GeminiProvider,
-} from "@server/infra/llm/gemini-provider";
 import { LlmError } from "@server/infra/llm/llm-error";
 import type {
   GenerateStreamParams,
@@ -18,7 +14,14 @@ import type {
   LlmEffort,
   LlmProvider,
 } from "@server/infra/llm/llm-provider";
-import { getModelSpec } from "@server/infra/llm/model-catalog";
+import {
+  getModelSpec,
+  type LlmProviderId,
+} from "@server/infra/llm/model-catalog";
+import {
+  createGeminiClient,
+  createProviderForModel,
+} from "@server/infra/llm/model-factory";
 import type { TieredLlm } from "@server/infra/llm/models";
 import {
   createTieredLlm,
@@ -26,9 +29,9 @@ import {
   DEFAULT_NANO_MODEL,
   DEFAULT_STANDARD_MODEL,
 } from "@server/infra/llm/models";
-import { OpenAiProvider } from "@server/infra/llm/openai-provider";
 import type { LlmTask } from "@server/infra/llm/task-routing";
 import {
+  getAllTaskOverrides,
   getTaskOverride,
   setTaskOverride,
   TASK_DEFAULTS,
@@ -67,9 +70,46 @@ let sharedOpenAiClient: OpenAI | undefined;
 // anthropic 어댑터용 공유 클라이언트 — anthropic 모델이 처음 요청될 때 만든다.
 // 키가 없으면 그 시점에 LlmError("auth")로 끊는다(서버 부팅은 키 없이도 가능).
 let sharedAnthropicClient: Anthropic | undefined;
-// gemini 어댑터용 공유 클라이언트 — AI Studio(apiKey) 모드가 기본.
-// Vertex 모드 배선은 후속 옵션으로 남긴다(키 없이도 서버 부팅 가능).
+// gemini 어댑터용 공유 클라이언트 — GEMINI_VERTEX_PROJECT 있으면 Vertex(ADC), 없으면 AI Studio(apiKey).
+// createGeminiClient가 선택한다(첫 요청 시 생성, 키 없이도 서버 부팅 가능).
 let sharedGeminiClient: GoogleGenAI | undefined;
+
+// 부수효과 없는 키 존재 검사 — forTask 가드와 부트 점검이 공유한다(경고는 호출부가 맡는다).
+function isProviderConfigured(provider: LlmProviderId): boolean {
+  const env = getEnv();
+  switch (provider) {
+    case "openai":
+      return Boolean(env.OPENAI_API_KEY);
+    case "anthropic":
+      return Boolean(env.ANTHROPIC_API_KEY);
+    case "google":
+      return Boolean(env.GEMINI_API_KEY ?? env.GEMINI_VERTEX_PROJECT);
+  }
+}
+
+// forTask 핫패스 가드 — override가 못 쓸 상태면 무시하고 tier 기본(gpt-5)으로 폴백한다.
+// Gemini/Anthropic 키 없는 환경에서 라우팅이 auth 에러로 터지지 않게 하는 안전장치(게이트웨이
+// 일원화 전까지). 같은 모델은 1회만 경고하고, 키가 다시 채워지면 엔트리를 비워 다음 폴백을 또
+// 알린다. 미등록 모델과 키 부재를 구분해 운영자가 없는 키를 헛되이 쫓지 않게 한다.
+const unconfiguredOverrideWarned = new Set<string>();
+function isOverrideProviderConfigured(modelId: string): boolean {
+  const spec = getModelSpec(modelId);
+  const configured = spec ? isProviderConfigured(spec.provider) : false;
+  if (configured) {
+    unconfiguredOverrideWarned.delete(modelId);
+    return true;
+  }
+  if (!unconfiguredOverrideWarned.has(modelId)) {
+    unconfiguredOverrideWarned.add(modelId);
+    const reason = spec
+      ? `missing ${spec.provider} provider key`
+      : "unknown model (not in catalog)";
+    console.warn(
+      `[llm-router] task override "${modelId}" not usable (${reason}) — falling back to tier default`,
+    );
+  }
+  return false;
+}
 
 // tier 묶음을 forTask가 달린 LlmRouter로 감싼다. forTask 해석:
 //  - task override가 있으면 → 카탈로그 모델용 provider(모델별 캐시, 공유 클라이언트 재사용)
@@ -79,7 +119,7 @@ function toRouter(tiers: TieredLlm): LlmRouter {
   return {
     forTask(task: LlmTask): LlmProvider {
       const override = getTaskOverride(task);
-      if (override) {
+      if (override && isOverrideProviderConfigured(override.modelId)) {
         return bindEffort(
           resolveOverrideProvider(override.modelId),
           override.effort,
@@ -124,36 +164,13 @@ function resolveOverrideProvider(modelId: string): LlmProvider {
     return cachedProvider;
   }
 
-  const spec = getModelSpec(modelId);
-  if (!spec) {
-    throw new LlmError(
-      "bad_request",
-      `Unknown model id "${modelId}" — not in MODEL_CATALOG`,
-    );
-  }
-
-  let provider: LlmProvider;
-  if (spec.provider === "openai") {
-    provider = new OpenAiProvider({
-      client: sharedOpenAiClient,
-      model: spec.id,
-    });
-  } else if (spec.provider === "anthropic") {
-    provider = new AnthropicProvider({
-      client: getAnthropicClient(),
-      model: spec.id,
-    });
-  } else if (spec.provider === "google") {
-    provider = new GeminiProvider({
-      client: getGeminiClient(),
-      model: spec.id,
-    });
-  } else {
-    throw new LlmError(
-      "bad_request",
-      `No adapter wired for provider "${spec.provider}" (model "${modelId}")`,
-    );
-  }
+  // 가드를 통과한 sharedOpenAiClient를 클로저로 고정 — getter는 매칭 프로바이더에서만 호출된다.
+  const openAiClient = sharedOpenAiClient;
+  const provider = createProviderForModel(modelId, {
+    getOpenAiClient: () => openAiClient,
+    getAnthropicClient,
+    getGeminiClient,
+  });
 
   overrideProviders.set(modelId, provider);
   return provider;
@@ -179,29 +196,52 @@ function getGeminiClient(): GoogleGenAI {
     return sharedGeminiClient;
   }
   const env = getEnv();
-  // GEMINI_VERTEX_PROJECT가 있으면 Vertex(ADC 인증, GCP 크레딧) 경로, 없으면 AI Studio(apiKey).
-  // Vertex는 키 파일 대신 ADC를 자동으로 쓴다(로컬 gcloud / 배포 환경 워크로드 자격증명).
-  if (env.GEMINI_VERTEX_PROJECT) {
-    sharedGeminiClient = new GoogleGenAI({
-      vertexai: true,
-      project: env.GEMINI_VERTEX_PROJECT,
-      location: env.GEMINI_VERTEX_LOCATION ?? "global",
-      // per-call timeoutMs 안 넘기는 경로(dev override drafting/sessionTitle)의 무한 행 방지.
-      httpOptions: { timeout: GEMINI_DEFAULT_TIMEOUT_MS },
-    });
-    return sharedGeminiClient;
-  }
-  if (!env.GEMINI_API_KEY) {
-    throw new LlmError(
-      "auth",
-      "GEMINI_API_KEY or GEMINI_VERTEX_PROJECT is required to use a Google model",
-    );
-  }
-  sharedGeminiClient = new GoogleGenAI({
+  sharedGeminiClient = createGeminiClient({
+    vertexProject: env.GEMINI_VERTEX_PROJECT,
+    vertexLocation: env.GEMINI_VERTEX_LOCATION,
     apiKey: env.GEMINI_API_KEY,
-    httpOptions: { timeout: GEMINI_DEFAULT_TIMEOUT_MS },
   });
   return sharedGeminiClient;
+}
+
+// 배포 오설정이 "멀쩡해 보이게" 묻히지 않도록, seeded 기본 배치가 살아있는지 부팅 때 본다.
+// 키 부재/미등록 모델 → forTask가 조용히 gpt-5 tier로 폴백하는데(비싼 모델·측정과 다름) Sentry로
+// 알린다(index.ts 부트 오설정 패턴과 동일). 키가 있으면 eager resolve로 클라이언트 생성오류를 첫
+// 요청이 아니라 부팅 때 잡는다(setTaskModel의 set-time 검증과 동등).
+// 잔여 위험: 키가 있지만 무효(폐기·잘못된 project)면 여기선 못 거르고 override가 쓰여, 워커가
+// resolve→throw→무한재처리에 빠질 수 있다 — 워커 하드타임아웃(NEM-168)으로 닫는다.
+function reportSeedIssue(message: string): void {
+  console.warn(`[llm-router] ${message}`);
+  Sentry.captureMessage(`[llm-router] ${message}`, { level: "warning" });
+}
+
+function auditSeededOverrides(): void {
+  for (const [task, modelId] of Object.entries(getAllTaskOverrides())) {
+    if (!modelId) {
+      continue;
+    }
+    const spec = getModelSpec(modelId);
+    if (!spec) {
+      reportSeedIssue(
+        `task "${task}" seeds unknown model "${modelId}" — falling back to tier default`,
+      );
+      continue;
+    }
+    if (!isProviderConfigured(spec.provider)) {
+      reportSeedIssue(
+        `task "${task}" seeds ${spec.provider} model "${modelId}" but its key is missing — falling back to tier default`,
+      );
+      continue;
+    }
+    try {
+      resolveOverrideProvider(modelId);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      reportSeedIssue(
+        `task "${task}" seed "${modelId}" failed to initialize (${detail}) — falling back to tier default`,
+      );
+    }
+  }
 }
 
 export function getProviders(): Providers {
@@ -247,6 +287,7 @@ export function getProviders(): Providers {
     applyLlmPreset("all-nano");
   }
 
+  auditSeededOverrides();
   return cached;
 }
 

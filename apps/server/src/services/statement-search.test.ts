@@ -3,10 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type { VectorStore } from "@server/infra/vector";
+import type { QueryStructuringRaw } from "@server/prompts/query-structuring";
 
 import {
   assembleSourceGroups,
   buildRelationMarkers,
+  collectTimeCandidateIds,
   searchStatements,
 } from "./statement-search";
 
@@ -171,6 +173,11 @@ interface QueryStub {
   in: (...args: unknown[]) => QueryStub;
   eq: (...args: unknown[]) => QueryStub;
   or: (...args: unknown[]) => QueryStub;
+  order: (...args: unknown[]) => QueryStub;
+  not: (...args: unknown[]) => QueryStub;
+  lte: (...args: unknown[]) => QueryStub;
+  gte: (...args: unknown[]) => QueryStub;
+  limit: (...args: unknown[]) => QueryStub;
   then: (resolve: (value: { data: unknown; error: null }) => void) => void;
 }
 
@@ -188,6 +195,11 @@ function queryStub(rows: unknown[]): QueryStub {
     in: chain("in"),
     eq: chain("eq"),
     or: chain("or"),
+    order: chain("order"),
+    not: chain("not"),
+    lte: chain("lte"),
+    gte: chain("gte"),
+    limit: chain("limit"),
     then: (resolve) => {
       resolve({ data: rows, error: null });
     },
@@ -207,7 +219,20 @@ function supabaseStub(responses: Record<string, QueryStub[]>) {
   } as unknown as TypedSupabaseClient;
 }
 
-function providersStub(searchMock: ReturnType<typeof vi.fn>): Providers {
+// 검색 경로가 LLM을 두 번 쓴다(병렬) — 구조화(시간·의미)와 coarse(주제)를 task별로 주입한다.
+function providersStub(
+  searchMock: ReturnType<typeof vi.fn>,
+  opts: {
+    structure?: QueryStructuringRaw;
+    topicIds?: string[];
+    coarseThrows?: boolean;
+  } = {},
+): Providers {
+  const structure: QueryStructuringRaw = opts.structure ?? {
+    semantic: null,
+    time: null,
+  };
+  const topicIds = opts.topicIds ?? [];
   const vectorStore: VectorStore = {
     ensureCollection: vi.fn(),
     upsertStatements: vi.fn(),
@@ -216,7 +241,18 @@ function providersStub(searchMock: ReturnType<typeof vi.fn>): Providers {
     searchNeighbors: vi.fn(),
   };
   return {
-    llm: null as never, // 꺼내기 경로엔 LLM이 없다
+    llm: {
+      forTask: (task: string) => ({
+        generateStructured:
+          task === "selectScopeTopics" && opts.coarseThrows
+            ? vi.fn().mockRejectedValue(new Error("coarse llm down"))
+            : vi
+                .fn()
+                .mockResolvedValue(
+                  task === "selectScopeTopics" ? { topicIds } : structure,
+                ),
+      }),
+    } as unknown as Providers["llm"],
     embedding: {
       providerId: "test",
       model: "test-model",
@@ -274,6 +310,7 @@ describe("searchStatements", () => {
     const result = await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
+        topics: [queryStub([])],
         statements: [statementsQuery],
         statement_relations: [queryStub([])],
         statement_sources: [queryStub([{ source_id: "src" }])],
@@ -297,6 +334,7 @@ describe("searchStatements", () => {
     const result = await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
+        topics: [queryStub([])],
         statements: [
           queryStub([
             statementRow({
@@ -327,20 +365,24 @@ describe("searchStatements", () => {
     ]);
   });
 
-  it("줄기 범위(topicIds)를 주면 주제 → 원본 → 진술로 좁혀 검색에 한정한다", async () => {
+  it("coarse가 고른 주제 + 무태그 원본으로 좁혀 검색에 한정한다", async () => {
     const search = vi.fn().mockResolvedValue([]);
 
     await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
-        source_topics: [queryStub([{ source_id: "src-1" }])],
+        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+        sources: [queryStub([{ id: "src-1" }, { id: "src-2" }])],
+        // src-1은 고른 주제, src-2는 무태그 — 둘 다 scope에 든다
+        source_topics: [
+          queryStub([{ source_id: "src-1", topic_id: "topic-1" }]),
+        ],
         statement_sources: [
           queryStub([{ statement_id: "s1" }, { statement_id: "s2" }]),
         ],
       }),
-      providers: providersStub(search),
-      query: "질문",
-      topicIds: ["topic-1"],
+      providers: providersStub(search, { topicIds: ["topic-1"] }),
+      query: "결제 얘기",
     });
 
     expect(search).toHaveBeenCalledWith(
@@ -349,21 +391,128 @@ describe("searchStatements", () => {
     );
   });
 
-  it("줄기에 속한 진술이 없으면 검색 없이 빈 결과", async () => {
+  it("coarse가 주제를 못 고르면(빈 목록) 전역으로 검색한다", async () => {
+    const search = vi.fn().mockResolvedValue([]);
+
+    await searchStatements({
+      supabase: supabaseStub({
+        space_members: [queryStub([{ space_id: "space-1" }])],
+        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+      }),
+      providers: providersStub(search),
+      query: "그때 그거",
+    });
+
+    expect(search).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ statementIds: undefined }),
+    );
+  });
+
+  it("고른 주제 + 무태그가 모두 비면 검색 없이 빈 결과", async () => {
     const search = vi.fn();
 
     const result = await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
-        source_topics: [queryStub([])],
+        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+        sources: [queryStub([])],
       }),
-      providers: providersStub(search),
-      query: "질문",
-      topicIds: ["topic-1"],
+      providers: providersStub(search, { topicIds: ["topic-1"] }),
+      query: "결제",
     });
 
     expect(result).toEqual({ groups: [] });
     expect(search).not.toHaveBeenCalled();
+  });
+
+  it("다른 주제로만 태그된 원본은 scope에서 빠진다 — 안 고른 주제가 새지 않게", async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    const statementSources = queryStub([{ statement_id: "s1" }]);
+
+    await searchStatements({
+      supabase: supabaseStub({
+        space_members: [queryStub([{ space_id: "space-1" }])],
+        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+        sources: [queryStub([{ id: "src-1" }, { id: "src-3" }])],
+        // src-1=고른 주제, src-3=안 고른 다른 주제로만 태그 → src-3 제외(무태그도 아님)
+        source_topics: [
+          queryStub([
+            { source_id: "src-1", topic_id: "topic-1" },
+            { source_id: "src-3", topic_id: "topic-other" },
+          ]),
+        ],
+        statement_sources: [statementSources],
+      }),
+      providers: providersStub(search, { topicIds: ["topic-1"] }),
+      query: "결제",
+    });
+
+    // 진술 조회가 src-1로만 좁혀지는지 — src-3이 섞이면 안 고른 주제가 scope로 샌다
+    expect(statementSources.calls).toContainEqual([
+      "in",
+      "source_id",
+      ["src-1"],
+    ]);
+  });
+
+  it("coarse LLM이 실패하면 전역으로 강등한다 — scope 못 구해도 검색이 죽지 않게", async () => {
+    const search = vi.fn().mockResolvedValue([]);
+
+    await searchStatements({
+      supabase: supabaseStub({
+        space_members: [queryStub([{ space_id: "space-1" }])],
+        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+      }),
+      providers: providersStub(search, { coarseThrows: true }),
+      query: "결제",
+    });
+
+    expect(search).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ statementIds: undefined }),
+    );
+  });
+});
+
+// scope를 DB limit 전에 거는지 — 메모리 교집합만 하면 limit이 scope 밖 후보로 차서
+// limit 밖 in-scope 진술이 조용히 누락된다(scope-before-limit 회귀).
+describe("collectTimeCandidateIds — scope-before-limit", () => {
+  it("due 경로: scope를 statements 쿼리에 in으로 건다(메모리 교집합 아님)", async () => {
+    const q = queryStub([{ id: "s1" }]);
+    await collectTimeCandidateIds(supabaseStub({ statements: [q] }), {
+      spaceIds: ["sp1"],
+      field: "due",
+      from: null,
+      to: new Date("2026-06-20T00:00:00Z"),
+      timeZone: "UTC",
+      scopedStatementIds: ["s1", "s9"],
+      limit: 10,
+    });
+    expect(q.calls).toContainEqual(["in", "id", ["s1", "s9"]]);
+  });
+
+  it("created 경로: scope를 원본 집합으로 환산해 sources 쿼리에 in으로 건다", async () => {
+    const scopeRefs = queryStub([{ source_id: "src1" }]);
+    const sources = queryStub([{ id: "src1" }]);
+    const bodyRefs = queryStub([{ statement_id: "s1" }]);
+    await collectTimeCandidateIds(
+      supabaseStub({
+        statement_sources: [scopeRefs, bodyRefs],
+        sources: [sources],
+      }),
+      {
+        spaceIds: ["sp1"],
+        field: "created",
+        from: null,
+        to: new Date("2026-06-20T00:00:00Z"),
+        timeZone: "UTC",
+        scopedStatementIds: ["s1"],
+        limit: 10,
+      },
+    );
+    expect(scopeRefs.calls).toContainEqual(["in", "statement_id", ["s1"]]);
+    expect(sources.calls).toContainEqual(["in", "id", ["src1"]]);
   });
 });
 

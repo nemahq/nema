@@ -11,6 +11,9 @@ export const SOURCE_BODY_MAX_LENGTH = 100_000;
 export const SourceCreateInputSchema = z.object({
   body: z.string().trim().min(1).max(SOURCE_BODY_MAX_LENGTH),
   sessionId: z.string().uuid().optional(),
+  // 작성자 존(IANA) — 내용 속 기한("금요일까지")을 이 존 기준으로 풀어 due_date를 채운다.
+  // 클라이언트가 브라우저 존을 싣는다(temporal-query-design 7장).
+  timeZone: z.string().min(1).optional(),
 });
 
 export type SourceCreateInput = z.infer<typeof SourceCreateInputSchema>;

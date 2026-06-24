@@ -20,10 +20,11 @@
 | Retrieval | standard | 사용자 직접 노출 + RAG 합성 |
 | Judgment | standard | 오류 시 데이터 손실 + 비교/병합 복잡도 |
 | Intent 분류 | mini | 4지선다 분류, 낮은 복잡도 |
-| Split | mini | 경계 판단, 낮은 복잡도 |
-| Entity 추출 | mini | NER, 재동기화로 복구 가능 |
+| Split | standard | 진술이 검색·관계의 입력 — 추출 오류가 하류 전체로 전파 (코드: `extractStatements`) |
+| Entity 추출 | (미구현) | NER로 계획됐으나 현재 별도 모델 호출 없음 — 도입 시 tier 재평가 |
 | Metadata | mini | 사용자 노출되나 복잡도 중간 |
 | 세션 제목 | nano | 한 줄 생성, 사용자가 직접 수정 가능 |
+| 질의 구조화 | mini | 검색어를 의미부 + 시간 토큰으로 가르기, 검색 경로라 싸고 빠르게 (코드: `structureQuery`) |
 
 ## Tier → 모델
 
@@ -34,6 +35,33 @@
 | nano | gpt-5-nano | `LLM_MODEL_NANO` |
 
 환경변수는 같은 프로바이더 내 모델 교체용 (예: `gpt-5` → `gpt-5.1`). 프로바이더 변경(예: OpenAI → Anthropic)은 `models.ts`에서 해당 tier의 구현체를 교체해야 한다.
+
+## 모델 교체·이식성 (eval / 무료 크레딧)
+
+엔진 성능 측정 단계에서는 Vertex(Gemini) 무료 크레딧으로 비용 없이 돌릴 수 있다. eval 스크립트는 `EVAL_LLM_MODEL` 환경변수로 측정 대상 모델을 바꾼다 — 미설정이면 prod 기본(`gpt-5` standard)과 동일. 모델 id는 `MODEL_CATALOG`로 검증되고, `createProviderForModel`(`infra/llm/model-factory.ts`)이 프로바이더를 자동 선택한다.
+
+```
+EVAL_LLM_MODEL=gemini-3.5-flash GEMINI_VERTEX_PROJECT=<gcp-project> pnpm tsx apps/server/src/eval/statement-engine/run-extraction.ts
+```
+
+Vertex 인증은 ADC(`gcloud auth application-default login`)를 쓴다. `GEMINI_VERTEX_PROJECT`가 있으면 Vertex, 없고 `GEMINI_API_KEY`만 있으면 AI Studio 경로다. ADC는 클라이언트 생성이 아니라 첫 호출에서 검증되므로, 미인증·만료면 측정 도중 auth 에러로 표면화된다 — 실행 전 `gcloud auth application-default login` 상태를 확인한다.
+
+### 분리선 — 모델 무관 vs 모델 종속
+
+무료 크레딧으로 안전하게 옮길 수 있는 범위는 "모델에 종속되지 않는 작업"이다.
+
+| 구분 | 내용 | 무료 단계 |
+|------|------|----------|
+| 모델 무관 | 파이프라인·청킹·retrieval 배선·스키마·dedup·비회귀 + 규칙 기반 프롬프트 | Gemini로 자유롭게 |
+| 모델 종속 | 프롬프트 미세조정, `judgeRelations`의 `confident` 임계, effort/timeout | prod 모델로 최종 확정 |
+
+프롬프트 본문(시스템 프롬프트·규칙·few-shot)은 모델 중립으로 설계돼 있어 교체해도 대부분 그대로 이식된다. 깨지는 건 프롬프트가 아니라 출력 분포에 맞춰 잡은 소수의 보정값뿐이다.
+
+### 하지 말 것
+
+- 무료(Gemini) 단계에서 잡은 **모델 종속 숫자(임계·effort·timeout)를 prod 기준으로 확정**하지 말 것 — prod 모델로 재측정 후 고정한다.
+- **judge는 Claude 고정**(`eval/statement-engine/judge.ts`) — 엔진과 같은 계열로 채점하면 self-preference 편향이 생긴다.
+- **임베딩은 Voyage 유지** — 프로바이더를 바꾸면 벡터 공간이 달라져 전량 재인덱싱 + retrieval 지표 비교 불가. retrieval 품질 개선 단계가 아니면 건드리지 않는다.
 
 ## 확장 여지
 

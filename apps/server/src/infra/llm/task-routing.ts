@@ -21,6 +21,8 @@ export const LLM_TASK_SCHEMA = z.enum([
   "judgeRelations",
   "assistDraft",
   "narrate",
+  "structureQuery",
+  "selectScopeTopics",
 ]);
 
 export type LlmTask = z.infer<typeof LLM_TASK_SCHEMA>;
@@ -45,6 +47,10 @@ export const TASK_DEFAULTS = {
   assistDraft: { tier: "standard" },
   // 해설: 근거 묶음을 산문으로 풀어 읽는다. 품질이 신뢰의 핵심이라 standard.
   narrate: { tier: "standard" },
+  // 질의 구조화: 검색어를 의미부 + 시간 토큰으로 가른다. 검색 경로라 싸고 빨라야 해 mini.
+  structureQuery: { tier: "mini" },
+  // coarse 라우팅: 질의를 공간 주제로 보낸다. 검색 경로라 mini. structureQuery와 병렬 호출.
+  selectScopeTopics: { tier: "mini" },
 } as const satisfies Record<LlmTask, TaskDefault>;
 
 // task → override. effort는 그 모델 프로바이더의 네이티브 값(set 시점에 검증).
@@ -53,7 +59,18 @@ export interface TaskOverride {
   effort?: LlmEffort;
 }
 
-const taskOverrides = new Map<LlmTask, TaskOverride>();
+// NEM-149 가성비 측정 기반 기본 모델 배치(잠정) — 추출은 gpt-5 유지(품질 1등), 나머지는 Gemini가
+// 가성비/품질 우위라 박는다. forTask가 override를 먼저 보므로 이 맵이 prod·staging 공통 기본값이 된다.
+// 관계 effort는 측정과 동일하게 "low" — 빠뜨리면 thinking 없이 돌아 측정과 달라진다.
+// 되돌리기: staging/dev는 dev-router(clearTaskOverride)로 즉시. prod는 런타임 override 변경이
+//   막혀 있어(dev-router·setTaskModel이 prod에서 throw) 이 맵을 고쳐 재배포해야 한다.
+// Gemini 키 부재 시: forTask가 이 override를 무시하고 gpt-5 tier로 폴백한다(providers.ts 가드).
+//   끊기진 않지만 측정과 다른 비싼 모델로 도므로, 부트 점검이 Sentry로 경고한다.
+const taskOverrides = new Map<LlmTask, TaskOverride>([
+  ["judgeRelations", { modelId: "gemini-3.1-pro-preview", effort: "low" }],
+  ["narrate", { modelId: "gemini-3.1-flash-lite" }],
+  ["generateDraft", { modelId: "gemini-3.1-flash-lite" }],
+]);
 
 export function getTaskOverride(task: LlmTask): TaskOverride | undefined {
   return taskOverrides.get(task);

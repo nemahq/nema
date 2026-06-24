@@ -74,6 +74,7 @@ nema는 사람이 맥락("왜")을 쌓아 두고 다시 꺼내 쓰는 기억 도
 
 **사람 주권 (확정 금지)**
 - 이번에는 읽기 도구만 있으므로 확정 기능(`draft.confirm`)을 아예 노출하지 않는다. "MCP는 확정하지 않는다"는 원칙이 별도 장치 없이 자연히 지켜진다.
+- (후속 갱신) 이 불변식은 도구 세트 작업에서 "사람을 통한 확정은 사람 주권"으로 재정식화되었다. 사람이 직접 명령한 확정은 AI의 자율 확정이 아니므로 `confirm_draft`를 도구로 노출한다. 근거와 안전장치는 `mcp-tools-design.md` §3 참조.
 
 ---
 
@@ -111,7 +112,7 @@ Claude Code (MCP를 호출하는 AI)
         -> 결과 반환
 ```
 
-다음 작업의 `upload_draft`는 이 형태를 그대로 따라, 새 초안은 `draft.create`(origin='external'), 기존 초안 수정은 `draft.edit`에 연결하면 된다. 확정(`draft.confirm`)은 어떤 경우에도 도구로 노출하지 않는다.
+다음 작업의 쓰기 도구는 이 형태를 그대로 따라, 새 초안은 `draft.create`(origin='external'), 기존 초안 수정은 `draft.edit`에 연결한다(도구 세트에서 `create_draft`·`edit_draft`로 구현됨). 확정(`draft.confirm`)을 도구로 노출할지는 위 사람 주권 항목의 후속 갱신을 따른다(`mcp-tools-design.md` §3).
 
 ---
 

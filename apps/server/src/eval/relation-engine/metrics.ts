@@ -150,6 +150,56 @@ export function precisionRecall(counts: {
   });
 }
 
+/** 중복(같음) 쌍 — "같음"은 대칭이라 끝점 순서를 무시하고 맞춘다 */
+export interface DuplicatePair {
+  a: string;
+  b: string;
+}
+
+function duplicateKey(pair: DuplicatePair): string {
+  return [pair.a, pair.b].sort().join("|");
+}
+
+export interface DuplicateScore {
+  matched: number;
+  predicted: number;
+  expected: number;
+  /** 골든에 없는 예측 = 과합치(가장 위험한 오류 — 서로 다른 사실을 한 벌로 뭉갬) */
+  falsePositives: DuplicatePair[];
+  /** 골든인데 못 잡은 것 */
+  missed: DuplicatePair[];
+}
+
+// 중복 채점 — 관계와 별개. 끝점 쌍을 정렬해 방향 무시로 맞추고, 골든 하나는 한 번만 회수.
+export function scoreDuplicates(params: {
+  predicted: DuplicatePair[];
+  expected: DuplicatePair[];
+}): DuplicateScore {
+  const { predicted, expected } = params;
+  const expectedByKey = new Map(expected.map((p) => [duplicateKey(p), p]));
+  const claimed = new Set<string>();
+  const falsePositives: DuplicatePair[] = [];
+
+  for (const pair of predicted) {
+    const key = duplicateKey(pair);
+    if (expectedByKey.has(key) && !claimed.has(key)) {
+      claimed.add(key);
+    } else {
+      falsePositives.push(pair);
+    }
+  }
+
+  const missed = expected.filter((p) => !claimed.has(duplicateKey(p)));
+
+  return {
+    matched: claimed.size,
+    predicted: predicted.length,
+    expected: expected.length,
+    falsePositives,
+    missed,
+  };
+}
+
 interface TypeTally {
   truePositive: number;
   falsePositive: number;

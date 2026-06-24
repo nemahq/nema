@@ -174,6 +174,54 @@ export type Database = {
           },
         ];
       };
+      eval_runs: {
+        Row: {
+          cost_usd: number | null;
+          created_at: string;
+          eval_version: string;
+          id: string;
+          latency_ms: number;
+          model: string;
+          prompt_version: string;
+          provider: string;
+          quality_score: number | null;
+          run_at: string;
+          self_preference: boolean;
+          signals: Json;
+          task: string;
+        };
+        Insert: {
+          cost_usd?: number | null;
+          created_at?: string;
+          eval_version: string;
+          id?: string;
+          latency_ms: number;
+          model: string;
+          prompt_version: string;
+          provider: string;
+          quality_score?: number | null;
+          run_at: string;
+          self_preference?: boolean;
+          signals?: Json;
+          task: string;
+        };
+        Update: {
+          cost_usd?: number | null;
+          created_at?: string;
+          eval_version?: string;
+          id?: string;
+          latency_ms?: number;
+          model?: string;
+          prompt_version?: string;
+          provider?: string;
+          quality_score?: number | null;
+          run_at?: string;
+          self_preference?: boolean;
+          signals?: Json;
+          task?: string;
+        };
+        Relationships: [];
+      };
       events: {
         Row: {
           created_at: string;
@@ -334,6 +382,7 @@ export type Database = {
       sources: {
         Row: {
           author_id: string | null;
+          author_timezone: string | null;
           body: string;
           created_at: string;
           error_message: string | null;
@@ -352,6 +401,7 @@ export type Database = {
         };
         Insert: {
           author_id?: string | null;
+          author_timezone?: string | null;
           body: string;
           created_at?: string;
           error_message?: string | null;
@@ -370,6 +420,7 @@ export type Database = {
         };
         Update: {
           author_id?: string | null;
+          author_timezone?: string | null;
           body?: string;
           created_at?: string;
           error_message?: string | null;
@@ -554,6 +605,8 @@ export type Database = {
             | null;
           content: string;
           created_at: string;
+          due_date: string | null;
+          duplicate_of: string | null;
           error_message: string | null;
           id: string;
           ingestion_retry_count: number;
@@ -570,6 +623,8 @@ export type Database = {
             | null;
           content: string;
           created_at?: string;
+          due_date?: string | null;
+          duplicate_of?: string | null;
           error_message?: string | null;
           id?: string;
           ingestion_retry_count?: number;
@@ -586,6 +641,8 @@ export type Database = {
             | null;
           content?: string;
           created_at?: string;
+          due_date?: string | null;
+          duplicate_of?: string | null;
           error_message?: string | null;
           id?: string;
           ingestion_retry_count?: number;
@@ -597,6 +654,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "statements_duplicate_of_fkey";
+            columns: ["duplicate_of"];
+            isOneToOne: false;
+            referencedRelation: "statements";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "statements_space_id_fkey";
             columns: ["space_id"];
@@ -657,7 +721,12 @@ export type Database = {
         Returns: string;
       };
       apply_relation_changesets: {
-        Args: { p_applied?: Json; p_pending?: Json; p_source_id: string };
+        Args: {
+          p_applied?: Json;
+          p_duplicates?: Json;
+          p_pending?: Json;
+          p_source_id: string;
+        };
         Returns: undefined;
       };
       archive_source: { Args: { p_source_id: string }; Returns: undefined };
@@ -688,7 +757,12 @@ export type Database = {
         Returns: string;
       };
       create_source: {
-        Args: { p_body: string; p_session_id?: string; p_space_id: string };
+        Args: {
+          p_author_timezone?: string;
+          p_body: string;
+          p_session_id?: string;
+          p_space_id: string;
+        };
         Returns: string;
       };
       delete_draft: { Args: { p_draft_id: string }; Returns: undefined };
@@ -704,6 +778,7 @@ export type Database = {
         Args: { p_max_retries?: number };
         Returns: {
           author_id: string;
+          author_timezone: string;
           body: string;
           created_at: string;
           id: string;

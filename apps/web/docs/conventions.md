@@ -50,7 +50,6 @@
 | Scope            | Pattern        | Example           |
 | ---------------- | -------------- | ----------------- |
 | Component        | PascalCase     | `UserProfile.tsx` |
-| `components/ui/` | lowercase (managed by shadcn CLI) | `button.tsx` |
 | Non-component    | camelCase      | `useAuth.ts`      |
 | Component CSS    | kebab-case of component name | `markdown-renderer.css` for `MarkdownRenderer` |
 | Env var          | `VITE_` prefix | `VITE_API_URL`    |
@@ -152,5 +151,6 @@
 ## Design System
 
 - Prefer weave components for UI implementation.
-- Refer to `docs/design/design-system.html` only when custom UI beyond weave is needed.
+- Where a new reusable component lives: app/brand-agnostic primitive (portable to another product) → weave; Nema-specific generic UI → `components/ui/`.
+- Refer to `design/design-system.html` (repo root) only when custom UI beyond weave is needed.
 - Minimize CSS `border` usage. Use `shadow` for surface elevation and separation instead.

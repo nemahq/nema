@@ -52,6 +52,20 @@ The job here is to separate a genuine contradiction from a mere caveat — NOT t
 - This is about meaning, not wording. A conflict need not contain "not", "cancel", or any negation word: "QA finishes the day before release" and "QA runs the morning of release" cannot both hold, so they conflict even though neither negates the other. Judge whether the contents are mutually exclusive, not whether a contradiction is spelled out.
 - Endpoints. A conflict is between two assertions of a present state. A question asserts nothing, so it is never a conflict endpoint — a question re-raised on an already-settled topic is closed by \`resolves\` or is simply unrelated. A task states an intent to act, not a present fact: a task that merely plans to change an existing decision does not conflict with it (at most it foreshadows a future replacement) — treat a task as a conflict endpoint only when its content already asserts a present state incompatible with the other.
 
+## Same — a duplicate to merge, not a relation
+
+Sometimes a new statement is not *related* to an earlier one — it IS the same claim, recorded again. The four relations link two statements that both stay; a duplicate is different — one copy is later hidden so the other absorbs it. So report duplicates separately, not as a relation.
+
+Report a duplicate ONLY for a true restatement: the same proposition, possibly in different words, with NO new information. Merging collapses two records into one, so be strict.
+
+- A firmer or more confident version of the same direction is NOT a duplicate. A guess that later becomes certain is a progression, and that change is information — keep both (emit nothing, or at most \`replaces\` if an explicit switch). Do not merge it.
+- A version that adds a reason, detail, or qualifier is NOT a duplicate — it carries new information (consider \`supports\`, never duplicate).
+- Sharing a topic or keywords is NOT a duplicate.
+- A shared sentence shape is not the same claim. Two statements can reuse one frame or list-counting template — "불리한 이유는 세 가지다" and "병행하지 않는 이유는 세 가지다" — yet count entirely different things; matching shape is not matching content. Likewise, naming a subject ("둘째는 건강 자기관리다") and deciding about it ("건강 자기관리는 2순위로 둔다") are different claims about the same subject, not a restatement. Merge on a matching proposition, never on a shared wording pattern or subject.
+- When unsure whether two statements are truly the same claim or merely close, do NOT report a duplicate. A false merge destroys a distinct fact; abstain.
+- A duplicate may hold between a new statement and an existing one, or between two new statements in the batch.
+- A pair reported as a duplicate must NOT also appear in \`relations\`.
+
 ## Confidence — binary
 
 For each relation output \`confident\`: true or false.
@@ -81,13 +95,16 @@ EXISTING statements:
 Relations:
 - { from: "N0", to: "E0", type: "replaces", confident: true } — N0 explicitly drops Toss for PortOne; E0 is the retired version. Alternation is declared.
 
+Duplicates: none. (No statement here merely restates another. N0 *replaces* E0 — it changes the decision, not restates it.)
+
 No relation is emitted for E1, N1, or E2 — being near in topic is not a relation. E1 (PortOne's reporting is weak) is a *caveat* about the move to PortOne, not a contradiction of it: both hold at once, so it is not a conflict. And do NOT emit \`supports\` from E2 (the PoC task) to N0 just because both concern payments: the note never says the task justifies the decision. A shared topic is neither a reason nor a clash.
 
 ## Output
 
-- JSON object: { "relations": [{ "from": label, "to": label, "type": "supports" | "conflicts" | "replaces" | "resolves", "confident": boolean }] }.
-- \`from\` and \`to\` are the bracketed labels exactly as given (e.g., "N0", "E2").
-- Output an empty array when no genuine relation exists.`;
+- JSON object: { "relations": [{ "from": label, "to": label, "type": "supports" | "conflicts" | "replaces" | "resolves", "confident": boolean }], "duplicates": [{ "duplicate": label, "of": label }] }.
+- \`from\`, \`to\`, \`duplicate\`, \`of\` are the bracketed labels exactly as given (e.g., "N0", "E2").
+- For a duplicate, \`duplicate\` is the redundant copy (prefer the new statement) and \`of\` is the one it restates.
+- Output an empty array for either field when nothing applies.`;
 
 const RelationProposalSchema = z.object({
   // 라벨(N0/E1…) — 워커가 실제 진술 id로 되돌린다. 모르는 라벨·존재↔존재 쌍은 워커가 버린다.
@@ -99,9 +116,19 @@ const RelationProposalSchema = z.object({
 
 export type RelationProposal = z.infer<typeof RelationProposalSchema>;
 
-// 빈 배열 허용 — 관계가 없는 게 가장 흔한 결과(후보는 뜻이 가까울 뿐).
+// 같음(중복) — 관계와 별개 출력(NEM-162). 한쪽을 가려 합치는 동작이라 relations에 안 섞는다.
+// duplicate = 가릴 쪽(새 진술 우선), of = 남길 쪽. 워커가 라벨을 진술 id로 되돌린다.
+const DuplicateProposalSchema = z.object({
+  duplicate: z.string().trim().min(1),
+  of: z.string().trim().min(1),
+});
+
+export type DuplicateProposal = z.infer<typeof DuplicateProposalSchema>;
+
+// 빈 배열 허용 — 관계도 중복도 없는 게 가장 흔한 결과(후보는 뜻이 가까울 뿐).
 export const RelationJudgmentSchema = z.object({
   relations: z.array(RelationProposalSchema),
+  duplicates: z.array(DuplicateProposalSchema),
 });
 
 // 메시지에 들어갈 라벨 진술. 라벨 부여·id 매핑은 워커 몫(프롬프트는 포맷만).

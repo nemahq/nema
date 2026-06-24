@@ -24,6 +24,16 @@ export interface LlmMessage {
   content: string;
 }
 
+// 호출 1건의 토큰 usage — 어댑터가 프로바이더별 필드를 청구 기준으로 정규화해 채운다.
+// input/output은 청구 총량(OpenAI·Claude는 추론/thinking이 output에 포함, Gemini는 thoughts를 더한다).
+// cached/reasoning은 투명성용 선택 분해 — 비용 산출엔 input/output만 쓴다.
+export interface LlmUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens?: number;
+  reasoningTokens?: number;
+}
+
 export interface LlmCallParams {
   systemPrompt: string;
   messages: [LlmMessage, ...LlmMessage[]];
@@ -43,6 +53,11 @@ export interface LlmCallParams {
   timeoutMs?: number;
   /** SDK 자동 재시도 횟수 — 호출자가 자체 재시도를 가지면 0으로 꺼서 주인을 한 층으로 */
   maxRetries?: number;
+  /**
+   * 토큰 usage 보고 — 가성비 측정(eval)이 비용을 산출하려 주입한다. 제품 호출부는
+   * 넘기지 않으므로 동작 불변. 어댑터는 성공한 호출에 한해 청구 기준으로 1회 호출한다.
+   */
+  onUsage?: (usage: LlmUsage) => void;
 }
 
 export interface GenerateStructuredParams<T> extends LlmCallParams {

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { ExtractedDeadlineSchema } from "@server/temporal/deadline";
+
 // =============================================================
 // 추출 — source body를 진술로 쪼개기·종류·확신도 (LLM 1콜)
 //
@@ -32,7 +34,7 @@ A statement is a single unit of meaning: one decision, one belief, one question,
    - When you split, carry the full subject into every piece ("the cause of the API refactoring delay is...", never "the cause of the delay is...") — each piece must still read on its own.
    - Never drop a reason. If the note says why something was decided or believed, that "why" must survive as its own statement.
    - Do NOT split a task from its deadline or owner — "finish the draft by Wednesday" is ONE todo. The deadline qualifies the task; it is not separate information.
-2. Self-contained. Resolve pronouns and omissions using the note's context so each statement reads on its own. Never leave "it", "that idea", "him" unresolved if the note tells you what they refer to.
+2. Self-contained. Resolve pronouns and omissions using the note's context so each statement reads on its own. Never leave "it", "that idea", "him" unresolved if the note tells you what they refer to. A finding tied to a specific person or item — a customer's overall reaction, or a named/positional subject's preference or position ("the third customer is satisfied", "김 대리 wants a fast launch") — is itself a statement worth keeping: resolve the subject and extract it, do not discard it as a passing impression.
 3. No summarizing, no inventing. Do not add anything that is not in the note, and do not exaggerate how certain the user is. Polish the wording, but add nothing.
 4. Same input, same shape. Cut consistently — similar notes should produce similarly shaped statements.
 
@@ -55,12 +57,24 @@ Statements:
 1. "배포 도구는 A로 정했다" — claim, certain
 2. "배포 도구를 A로 정한 이유는 팀이 이미 익숙해서다" — claim, certain (the decision's linked reason, as its own statement)
 3. "B 배포 도구는 학습 비용이 크다는 평이 많다" — claim, certain (a nearby fact stays a plain fact — not recast as another reason)
-4. "다음 주 화요일까지 마이그레이션 계획을 짜야 한다" — todo (deadline stays with the task)
+4. "다음 주 화요일까지 마이그레이션 계획을 짜야 한다" — todo (deadline stays with the task; deadline = next Tuesday → { boundary: "by", anchorKind: "weekday", weekday: "tue", scope: "next", grain/offset/date: null })
 5. "모니터링 대시보드 연동이 필요하다" — claim, certain (conjunction split…)
 6. "알림 연동이 필요하다" — claim, certain (…into parallel statements)
 7. "배포 롤백 정책은 어떻게 할 것인가?" — question (an open issue, recast as the question it is)
 
 "오늘 날씨 좋네" produces nothing.
+
+## Deadlines
+
+A statement may carry a deadline stated IN its content ("금요일까지 끝내기", "이번 주 안에 마감"). Set "deadline" to a token when the content says when the task or obligation is due; otherwise null. Most statements have no deadline → null. The deadline belongs to the task itself — do not invent one from when the note was written.
+
+A deadline token: { "boundary", "anchorKind", "grain", "offset", "weekday", "scope", "date" }
+
+- "boundary": "by" — due by a point ("금요일까지"). "within" — due within a period ("이번 주 안에").
+- "anchorKind" picks which remaining fields are set; the rest MUST be null:
+  - "relative": "grain" ("day" | "week" | "month" | "quarter") + "offset" (this=0, next=+1, last=-1, the day after the note=+2).
+  - "weekday": "weekday" ("mon".."sun") + "scope" ("this" | "next").
+  - "absolute": "date" ("YYYY-MM-DD"). When the content omits the year, resolve it against <today> (the note's own date), picking the nearest sensible occurrence.
 
 ## Surrounding context (present only for long notes)
 
@@ -71,7 +85,7 @@ A long note may be processed in consecutive segments. When the message includes 
 
 ## Output
 
-- JSON object: { "statements": [{ "content": string, "type": "claim" | "question" | "todo", "confidence": "certain" | "guess" | null }] }
+- JSON object: { "statements": [{ "content": string, "type": "claim" | "question" | "todo", "confidence": "certain" | "guess" | null, "deadline": <token> | null }] }
 - Order statements by where they appear in the note (first appearance wins).
 - Write each statement's content in the same language as the note.
 - Content must contain only the statement text — no surrounding XML markup.`;
@@ -81,6 +95,9 @@ const ExtractedStatementSchema = z.object({
   content: z.string().trim().min(1),
   type: z.enum(["claim", "question", "todo"]),
   confidence: z.enum(["certain", "guess"]).nullable(),
+  // 내용 속 기한("금요일까지")을 구조화 토큰으로. 워커가 작성 시점·존 기준으로 풀어
+  // due_date를 채운다 (temporal-query-design 7장). 기한 없으면 null.
+  deadline: ExtractedDeadlineSchema.nullable(),
 });
 
 export type ExtractedStatement = z.infer<typeof ExtractedStatementSchema>;
@@ -90,19 +107,26 @@ export const StatementExtractionSchema = z.object({
   statements: z.array(ExtractedStatementSchema),
 });
 
-// 분할 경로(초장문)에서만 문맥이 붙는다 — 짧은 글은 인자 없이 기존 메시지 그대로.
-// 문맥은 읽기 전용(추출 금지) — 규칙은 시스템 프롬프트의 Surrounding context 절.
+// 문맥(before/after)은 분할 경로(초장문)에서만 붙는다 — 읽기 전용, 규칙은 시스템 프롬프트의
+// Surrounding context 절. todayIsoDate는 절대 날짜의 연도 보정 기준 = 글의 작성일.
 export function buildStatementExtractionMessage(
   body: string,
-  context?: { before: string | null; after: string | null },
+  options?: {
+    todayIsoDate?: string;
+    before?: string | null;
+    after?: string | null;
+  },
 ): string {
   const parts: string[] = [];
-  if (context?.before) {
-    parts.push(`<context_before>${context.before}</context_before>`);
+  if (options?.todayIsoDate) {
+    parts.push(`<today>${options.todayIsoDate}</today>`);
+  }
+  if (options?.before) {
+    parts.push(`<context_before>${options.before}</context_before>`);
   }
   parts.push(`<note>${body}</note>`);
-  if (context?.after) {
-    parts.push(`<context_after>${context.after}</context_after>`);
+  if (options?.after) {
+    parts.push(`<context_after>${options.after}</context_after>`);
   }
   return parts.join("\n");
 }

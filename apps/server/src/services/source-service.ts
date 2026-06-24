@@ -11,8 +11,9 @@ export async function createSource(args: {
   supabase: TypedSupabaseClient;
   body: string;
   sessionId?: string;
+  timeZone?: string;
 }): Promise<{ sourceId: string }> {
-  const { supabase, body, sessionId } = args;
+  const { supabase, body, sessionId, timeZone } = args;
 
   // 1인 단계: 가입 트리거가 만든 개인 Space 1개 (RLS로 내 멤버십만 보임).
   // 멀티 Space가 열리면 입력으로 받는다 — 그때까지 가장 오래된 Space가 개인 칸.
@@ -28,6 +29,7 @@ export async function createSource(args: {
     p_space_id: membership.space_id,
     p_body: body,
     ...(sessionId !== undefined && { p_session_id: sessionId }),
+    ...(timeZone !== undefined && { p_author_timezone: timeZone }),
   });
   throwIfSupabaseError(error);
 
@@ -102,6 +104,9 @@ interface SourceStatement {
   ingestionStatus: Database["public"]["Enums"]["ingestion_status"];
   createdAt: string;
   orderIndex: number | null;
+  // 이 진술로 합쳐진(같은 말) 중복들의 출처 id — 자기 출처 외 추가분 (NEM-162).
+  // 화면이 "이 진술은 글 N개에서도 나옴(쌓일수록 더 믿게 됨)"을 그릴 재료.
+  mergedFromSourceIds: string[];
 }
 
 interface SourceDetail {
@@ -130,7 +135,7 @@ export async function getSource(args: {
     .single();
   throwIfSupabaseError(error);
 
-  const statements = row.statement_sources
+  const baseStatements = row.statement_sources
     .flatMap((ref) =>
       ref.statements && ref.statements.status === "active"
         ? [
@@ -153,6 +158,16 @@ export async function getSource(args: {
         a.createdAt.localeCompare(b.createdAt),
     );
 
+  const mergedSourceIdsByKeeper = await fetchMergedSourceIds({
+    supabase,
+    keeperIds: baseStatements.map((s) => s.id),
+    ownSourceId: sourceId,
+  });
+  const statements: SourceStatement[] = baseStatements.map((s) => ({
+    ...s,
+    mergedFromSourceIds: mergedSourceIdsByKeeper.get(s.id) ?? [],
+  }));
+
   return {
     id: row.id,
     body: row.body,
@@ -161,4 +176,47 @@ export async function getSource(args: {
     createdAt: row.created_at,
     statements,
   };
+}
+
+// 합쳐진(같은 말) 출처 모으기 (NEM-162) — keeper별로, duplicate_of=keeper이고 archived인
+// 중복들의 출처 id(중복 제거). archived만 보므로 되돌리기로 되살아난 중복은 자동 제외된다.
+// ownSourceId(지금 보는 글)는 뺀다 — 같은 글 안 비대칭 합치기가 "다른 글에도 있음"으로
+// 잘못 세어지지 않게(cross-source 보강만 센다). 한 단계만 따른다: keeper는 늘 살아남는
+// 쪽이라(가리는 건 새 진술뿐) duplicate_of 사슬이 안 생겨 1단계로 충분하다.
+async function fetchMergedSourceIds(params: {
+  supabase: TypedSupabaseClient;
+  keeperIds: string[];
+  ownSourceId: string;
+}): Promise<Map<string, string[]>> {
+  const { supabase, keeperIds, ownSourceId } = params;
+  const byKeeper = new Map<string, Set<string>>();
+  if (keeperIds.length === 0) {
+    return new Map();
+  }
+
+  const { data, error } = await supabase
+    .from("statements")
+    .select("duplicate_of, statement_sources(source_id)")
+    .in("duplicate_of", keeperIds)
+    .eq("status", "archived");
+  throwIfSupabaseError(error);
+
+  for (const dup of data ?? []) {
+    if (!dup.duplicate_of) {
+      continue;
+    }
+    const set = byKeeper.get(dup.duplicate_of) ?? new Set<string>();
+    for (const ref of dup.statement_sources) {
+      if (ref.source_id !== ownSourceId) {
+        set.add(ref.source_id);
+      }
+    }
+    byKeeper.set(dup.duplicate_of, set);
+  }
+
+  return new Map(
+    [...byKeeper]
+      .map(([keeper, ids]): [string, string[]] => [keeper, [...ids]])
+      .filter(([, ids]) => ids.length > 0),
+  );
 }

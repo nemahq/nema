@@ -18,6 +18,8 @@ vi.mock("@anthropic-ai/sdk", () => ({ default: vi.fn() }));
 vi.mock("@google/genai", () => ({ GoogleGenAI: vi.fn() }));
 vi.mock("@qdrant/js-client-rest", () => ({ QdrantClient: vi.fn() }));
 vi.mock("voyageai", () => ({ VoyageAIClient: vi.fn() }));
+// 부트 점검(auditSeededOverrides)이 폴백 시 Sentry로 경고한다 — 실제 SDK 호출을 막는다.
+vi.mock("@sentry/node", () => ({ captureMessage: vi.fn() }));
 
 // getEnv를 테스트별로 바꿔 끼울 수 있게 가변 객체로 둔다.
 type FakeEnv = Record<string, unknown>;
@@ -113,8 +115,46 @@ describe("providers — override resolution wiring", () => {
   });
 });
 
+describe("forTask — 키 부재 가드 (seeded 배치)", () => {
+  beforeEach(() => {
+    fakeEnv = baseEnv();
+  });
+
+  it("honors a seeded override when the provider key is present", async () => {
+    fakeEnv = baseEnv({ GEMINI_API_KEY: "gemini-key" });
+    const { getProviders, GeminiProvider } = await loadFresh();
+    // narrate seed = gemini-3.1-flash-lite, effort 없음 → bindEffort 래핑 없이 GeminiProvider 그대로.
+    expect(getProviders().llm.forTask("narrate")).toBeInstanceOf(
+      GeminiProvider,
+    );
+  });
+
+  it("falls back to the tier default when the seeded override's key is missing", async () => {
+    const { getProviders, GeminiProvider } = await loadFresh();
+    const providers = getProviders();
+    // 가드가 gemini override를 버리고 standard tier로 폴백 → Gemini가 아니고, 같은 standard
+    // tier의 unseeded task(assistDraft)와 동일 인스턴스다.
+    expect(providers.llm.forTask("narrate")).not.toBeInstanceOf(GeminiProvider);
+    expect(providers.llm.forTask("narrate")).toBe(
+      providers.llm.forTask("assistDraft"),
+    );
+  });
+
+  it("leaves an unseeded task on the tier default even when keys are present", async () => {
+    fakeEnv = baseEnv({ GEMINI_API_KEY: "gemini-key" });
+    const { getProviders, GeminiProvider } = await loadFresh();
+    // extractStatements는 seed 없음 → gemini 키가 있어도 Gemini로 새지 않는다.
+    expect(getProviders().llm.forTask("extractStatements")).not.toBeInstanceOf(
+      GeminiProvider,
+    );
+  });
+});
+
 describe("forTask effort injection (bindEffort)", () => {
   beforeEach(() => {
+    // env를 명시적으로 잡는다 — 앞 describe가 GEMINI 키를 남기면 generateDraft가 seed(Gemini)를
+    // 타 OpenAI 경로 단언이 깨진다. 형제 describe 순서에 의존하지 않게 매번 초기화.
+    fakeEnv = baseEnv();
     openaiResponsesParse.mockReset();
     openaiResponsesCreate.mockReset();
     // 기본 OpenAI tier 경로(구조화/텍스트)를 성공으로 모킹.

@@ -29,6 +29,10 @@ Answer "same": true if both convey the same decision, fact, question, or task ab
 
 Differences that DO matter: a different subject, a different polarity (affirmed vs negated), or genuinely different information. A statement bundling an extra independent fact (one that could stand as its own statement) is NOT the same — but extra attribution or connective phrasing is fine.
 
+Examples:
+- "첫 번째 고객은 대체로 만족한다" vs "첫 번째 고객은 서비스에 대해 대체로 만족한다고 답변했다" → same (reporting form and an obvious qualifier only).
+- "검색 속도 개선이 공통 요청이다" vs "모바일 지원이 공통 요청이다" → not same (different subject; each stands as its own statement).
+
 Output JSON only: {"same": boolean, "reason": "<one short sentence>"}`;
 
 // 차원 정의는 ingestion-design 절단 원칙 1~3 + eval-design 결정 #8을 그대로 옮긴 것
@@ -196,21 +200,32 @@ export function createJudge(apiKey: string, concurrency: number): Judge {
     maxTokens: number;
   }): Promise<string> {
     const { systemPrompt, userContent, maxTokens } = params;
-    const response = await fetch(ANTHROPIC_API_URL, {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": ANTHROPIC_VERSION,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: JUDGE_MODEL,
-        max_tokens: maxTokens,
-        temperature: 0,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userContent }],
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(ANTHROPIC_API_URL, {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": ANTHROPIC_VERSION,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: JUDGE_MODEL,
+          max_tokens: maxTokens,
+          temperature: 0,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userContent }],
+        }),
+      });
+    } catch (error) {
+      // fetch 자체가 던지면 전송 계층 실패(네트워크 블립) — HTTP 상태가 없어
+      // retriable 플래그가 안 붙는다. 비싼 run이 일시 블립에 죽지 않게 재시도 대상으로.
+      const wrapped = new Error(
+        `Anthropic API fetch failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      (wrapped as Error & { retriable?: boolean }).retriable = true;
+      throw wrapped;
+    }
 
     if (!response.ok) {
       const errorBody = await response.text();

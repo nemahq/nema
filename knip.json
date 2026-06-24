@@ -11,12 +11,23 @@
       "entry": [
         "src/eval/eval-drafting.ts",
         "src/eval/eval-narration.ts",
+        "src/eval/run-narration-markers.ts",
+        "src/eval/run-model-comparison.ts",
         "src/eval/verify-statement-search.ts",
         "src/eval/statement-engine/run-extraction.ts",
+        "src/eval/statement-engine/run-extraction-consistency.ts",
+        "src/eval/statement-engine/run-extraction-misses.ts",
         "src/eval/statement-engine/run-retrieval.ts",
+        "src/eval/statement-engine/run-retrieval-dense.ts",
+        "src/eval/statement-engine/run-retrieval-degraded.ts",
         "src/eval/statement-engine/run-length-curve.ts",
+        "src/eval/statement-engine/run-time-path.ts",
+        "src/eval/statement-engine/run-coarse-scoping.ts",
+        "src/eval/statement-engine/run-retrieval-scoped.ts",
         "src/eval/relation-engine/run-judgment.ts",
+        "src/eval/relation-engine/run-judgment-degraded.ts",
         "src/eval/relation-engine/run-candidate-retrieval.ts",
+        "src/eval/relation-engine/run-merge-boundary.ts",
         "src/eval/verify-e2e.ts"
       ],
       "project": ["src/**/*.ts"],
@@ -25,13 +36,7 @@
     "apps/mcp": {},
     "packages/shared": {},
     "packages/weave": {
-      "entry": [
-        "src/index.ts",
-        "src/icons.ts",
-        "src/styles.css",
-        "src/tokens/index.css"
-      ],
-      "project": ["src/**/*.{ts,tsx,css}"]
+      "project": ["src/**/*.{ts,tsx}"]
     }
   }
 }

@@ -11,6 +11,7 @@ export const statementRouter = router({
         supabase: ctx.supabase,
         providers: ctx.providers,
         query: input.query,
+        timeZone: input.timeZone,
       }),
     ),
 });

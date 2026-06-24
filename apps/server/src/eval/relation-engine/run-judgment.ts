@@ -3,7 +3,7 @@
 // 실행: apps/server에서  pnpm tsx src/eval/relation-engine/run-judgment.ts
 //   --quick  : 시나리오당 1회만 (반복 안정화 생략 — 프롬프트 보정 빠른 루프)
 //   --runs N : 시나리오당 N회 (전후 비교를 촘촘히 — 드문 FP를 안정적으로 잡기)
-// 필요 키: OPENAI_API_KEY (판정 LLM). 채점은 코드 정확 비교라 심판 LLM 없음.
+// 필요 키: 측정 모델 키(기본 OPENAI_API_KEY; EVAL_LLM_MODEL로 교체 가능). 채점은 코드 정확 비교라 심판 LLM 없음.
 //
 // 흐름: 시나리오 N개 × R회 판정(워커와 동일한 LLM 1콜 + 같은 게이트) →
 //   게이트 통과분(applied/pending)을 골든과 대조 → supports FP·게이트 통과 FP 집계.
@@ -21,35 +21,20 @@ process.env["QDRANT_URL"] ??= "http://127.0.0.1:6333";
 process.env["QDRANT_API_KEY"] ??= "eval-unused";
 
 import { loadEnv } from "@server/env";
-import { createLimiter } from "@server/infra/llm/limiter";
-import type { LlmProvider } from "@server/infra/llm/llm-provider";
-import { DEFAULT_STANDARD_MODEL } from "@server/infra/llm/models";
-import { OpenAiProvider } from "@server/infra/llm/openai-provider";
-import {
-  gateProposals,
-  LINKING_EFFORT,
-  LINKING_TIMEOUT_MS,
-} from "@server/infra/statement-sync/worker";
-import type {
-  LabeledStatement,
-  RelationProposal,
-} from "@server/prompts/relation-judgment";
-import {
-  buildRelationJudgmentMessage,
-  RELATION_JUDGMENT_SYSTEM_PROMPT,
-  RelationJudgmentSchema,
-} from "@server/prompts/relation-judgment";
+import { createEvalLlm, resolveEvalModelId } from "@server/eval/eval-llm";
+import { RELATION_JUDGMENT_SYSTEM_PROMPT } from "@server/prompts/relation-judgment";
 
+import { runScenarioOnce } from "./judgment-core";
 import {
   appliedFalsePositives,
-  type GatedRelation,
+  type DuplicatePair,
+  type DuplicateScore,
   precisionRecall,
   round,
-  scorePredictions,
   type ScoreResult,
   tallyByType,
 } from "./metrics";
-import { RELATION_SCENARIOS, type RelationScenario } from "./seed-data";
+import { RELATION_SCENARIOS } from "./seed-data";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadEnv(resolve(__dirname, "../../.."));
@@ -73,122 +58,7 @@ function parseRunsArg(): number {
   return DEFAULT_RUNS_PER_SCENARIO;
 }
 const RUNS_PER_SCENARIO = parseRunsArg();
-// gpt-5는 동시 4 초과 시 제공자 타임아웃이 관찰된다(measurement-log #3, run-extraction과 동일).
-const JUDGMENT_CONCURRENCY = 4;
-const JUDGMENT_MAX_ATTEMPTS = 3;
-const JUDGMENT_RETRY_DELAY_MS = 3_000;
 const PROMPT_HASH_LENGTH = 8;
-
-const limitJudgment = createLimiter(JUDGMENT_CONCURRENCY);
-
-async function judge(
-  llm: LlmProvider,
-  message: string,
-): Promise<RelationProposal[]> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < JUDGMENT_MAX_ATTEMPTS; attempt += 1) {
-    try {
-      const output = await limitJudgment(() =>
-        llm.generateStructured({
-          schema: RelationJudgmentSchema,
-          schemaName: "relation_judgment",
-          systemPrompt: RELATION_JUDGMENT_SYSTEM_PROMPT,
-          messages: [{ role: "user", content: message }],
-          // 제품(worker ③단계)과 동일 설정 — 평가가 같은 경로를 본다
-          effort: LINKING_EFFORT,
-          timeoutMs: LINKING_TIMEOUT_MS,
-          maxRetries: 0,
-        }),
-      );
-      return output.relations;
-    } catch (error) {
-      lastError = error;
-      console.warn(
-        `  판정 재시도 ${attempt + 1}/${JUDGMENT_MAX_ATTEMPTS}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      await new Promise((r) =>
-        setTimeout(r, JUDGMENT_RETRY_DELAY_MS * (attempt + 1)),
-      );
-    }
-  }
-  throw lastError;
-}
-
-// 워커 linkSubBatch와 동일한 라벨 부여 — 새 진술 N{i}, 기존 후보 E{i}. LLM엔 라벨만
-// 보여 uuid 환각을 막고, 판정 후 라벨→id로 되돌린다. id = 시나리오 진술 id.
-function buildLabels(scenario: RelationScenario): {
-  newLabeled: LabeledStatement[];
-  existingLabeled: LabeledStatement[];
-  labelToId: Map<string, string>;
-  batchIds: Set<string>;
-} {
-  const labelToId = new Map<string, string>();
-  const toLabeled = (
-    statement: RelationScenario["statements"][number],
-    label: string,
-  ): LabeledStatement => {
-    labelToId.set(label, statement.id);
-    return {
-      label,
-      content: statement.content,
-      type: statement.type,
-      confidence: statement.type === "claim" ? statement.confidence : null,
-    };
-  };
-
-  const newStatements = scenario.statements.filter((s) => s.role === "new");
-  const existingStatements = scenario.statements.filter(
-    (s) => s.role === "existing",
-  );
-  const newLabeled = newStatements.map((s, i) => toLabeled(s, `N${i}`));
-  const existingLabeled = existingStatements.map((s, i) =>
-    toLabeled(s, `E${i}`),
-  );
-
-  return {
-    newLabeled,
-    existingLabeled,
-    labelToId,
-    batchIds: new Set(newStatements.map((s) => s.id)),
-  };
-}
-
-// 한 시나리오 1회 판정 → 게이트 통과분(applied/pending)을 시나리오 id로 되돌려 채점.
-async function runScenarioOnce(params: {
-  llm: LlmProvider;
-  scenario: RelationScenario;
-}): Promise<ScoreResult> {
-  const { llm, scenario } = params;
-  const { newLabeled, existingLabeled, labelToId, batchIds } =
-    buildLabels(scenario);
-
-  const message = buildRelationJudgmentMessage(newLabeled, existingLabeled);
-  const proposals = await judge(llm, message);
-
-  // 워커와 같은 게이트를 그대로 통과시킨다 — applied/pending 분기가 제품과 동일.
-  // proposals는 judge()가 RelationJudgmentSchema로 이미 검증한 RelationProposal[].
-  const { applied, pending } = gateProposals({
-    proposals,
-    labelToId,
-    batchIds,
-  });
-  const predictions: GatedRelation[] = [
-    ...applied.map((c) => ({
-      from: c.from_id,
-      to: c.to_id,
-      type: c.type,
-      gate: "applied" as const,
-    })),
-    ...pending.map((c) => ({
-      from: c.from_id,
-      to: c.to_id,
-      type: c.type,
-      gate: "pending" as const,
-    })),
-  ];
-
-  return scorePredictions({ predictions, golden: scenario.golden });
-}
 
 function withType(precision: ReturnType<typeof precisionRecall>) {
   return {
@@ -199,16 +69,7 @@ function withType(precision: ReturnType<typeof precisionRecall>) {
 }
 
 async function main() {
-  const openaiKey = process.env["OPENAI_API_KEY"]?.trim();
-  if (!openaiKey) {
-    console.error("OPENAI_API_KEY is required");
-    process.exit(1);
-  }
-
-  const llm = new OpenAiProvider({
-    apiKey: openaiKey,
-    model: DEFAULT_STANDARD_MODEL,
-  });
+  const llm = createEvalLlm();
 
   const started = Date.now();
   console.log(
@@ -228,6 +89,7 @@ async function main() {
     scenarioId: string;
     run: number;
     result: ScoreResult;
+    duplicate: DuplicateScore;
   }
   const runs: ScenarioRun[] = [];
   const failedRuns: Array<{ scenarioId: string; run: number; error: string }> =
@@ -237,8 +99,16 @@ async function main() {
     RELATION_SCENARIOS.flatMap((scenario) =>
       Array.from({ length: RUNS_PER_SCENARIO }, (_, run) => async () => {
         try {
-          const result = await runScenarioOnce({ llm, scenario });
-          runs.push({ scenarioId: scenario.id, run, result });
+          const { relation, duplicate } = await runScenarioOnce({
+            llm,
+            scenario,
+          });
+          runs.push({
+            scenarioId: scenario.id,
+            run,
+            result: relation,
+            duplicate,
+          });
         } catch (error) {
           failedRuns.push({
             scenarioId: scenario.id,
@@ -333,6 +203,34 @@ async function main() {
     })),
   );
 
+  // 중복(같음) 집계 — micro. 과합치(falseMerges)가 가장 위험(서로 다른 사실을 뭉갬).
+  const dupMatched = runs.reduce((s, r) => s + r.duplicate.matched, 0);
+  const dupPredicted = runs.reduce((s, r) => s + r.duplicate.predicted, 0);
+  const dupExpected = runs.reduce((s, r) => s + r.duplicate.expected, 0);
+  const duplicatePR = precisionRecall({
+    truePositive: dupMatched,
+    predicted: dupPredicted,
+    golden: dupExpected,
+  });
+  const toPair = (scenarioId: string, p: DuplicatePair) => ({
+    a: lookup(scenarioId, p.a),
+    b: lookup(scenarioId, p.b),
+  });
+  const duplicateFalseMerges = runs.flatMap(({ scenarioId, run, duplicate }) =>
+    duplicate.falsePositives.map((p) => ({
+      scenarioId,
+      run,
+      ...toPair(scenarioId, p),
+    })),
+  );
+  const duplicateMissed = runs.flatMap(({ scenarioId, run, duplicate }) =>
+    duplicate.missed.map((p) => ({
+      scenarioId,
+      run,
+      ...toPair(scenarioId, p),
+    })),
+  );
+
   // typeTally(Record<string, TypeTally>)에서 직접 — byType은 precision 필드가 섞여 느슨한 타입.
   const supportsFpTotal = typeTally["supports"]?.falsePositive ?? 0;
   const conflictsFpTotal = typeTally["conflicts"]?.falsePositive ?? 0;
@@ -347,6 +245,12 @@ async function main() {
     failedRuns: failedRuns.length,
     overall: withType(overall),
     byType,
+    // 같음(중복) 검출 — NEM-162. falseMerges = 과합치(서로 다른 사실을 뭉갠 것, 가장 위험).
+    duplicates: {
+      ...withType(duplicatePR),
+      falseMerges: duplicateFalseMerges.length,
+      missed: duplicateMissed.length,
+    },
     // 충돌은 늘 pending이라(relation-design §5) applied 충돌 FP는 존재할 수 없다 — 그래서
     // applied 변종은 supports에만 둔다(헤드라인의 supports↔conflicts 비대칭 이유).
     headline: {
@@ -368,12 +272,19 @@ async function main() {
     JSON.stringify(
       {
         runAt: new Date().toISOString(),
+        model: resolveEvalModelId(),
         // 프롬프트 지문 — 전후 결과 파일이 "어느 프롬프트로 잰 것인지" 자기증명
         promptHash,
         runsPerScenario: RUNS_PER_SCENARIO,
         failedRuns,
         summary,
-        failures: { falsePositives, directionErrors, missedGolden },
+        failures: {
+          falsePositives,
+          directionErrors,
+          missedGolden,
+          duplicateFalseMerges,
+          duplicateMissed,
+        },
       },
       null,
       2,
