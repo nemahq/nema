@@ -8,6 +8,7 @@ import type { QueryStructuringRaw } from "@server/prompts/query-structuring";
 import {
   assembleSourceGroups,
   buildRelationMarkers,
+  collectTimeCandidateIds,
   searchStatements,
 } from "./statement-search";
 
@@ -173,6 +174,10 @@ interface QueryStub {
   eq: (...args: unknown[]) => QueryStub;
   or: (...args: unknown[]) => QueryStub;
   order: (...args: unknown[]) => QueryStub;
+  not: (...args: unknown[]) => QueryStub;
+  lte: (...args: unknown[]) => QueryStub;
+  gte: (...args: unknown[]) => QueryStub;
+  limit: (...args: unknown[]) => QueryStub;
   then: (resolve: (value: { data: unknown; error: null }) => void) => void;
 }
 
@@ -191,6 +196,10 @@ function queryStub(rows: unknown[]): QueryStub {
     eq: chain("eq"),
     or: chain("or"),
     order: chain("order"),
+    not: chain("not"),
+    lte: chain("lte"),
+    gte: chain("gte"),
+    limit: chain("limit"),
     then: (resolve) => {
       resolve({ data: rows, error: null });
     },
@@ -463,6 +472,47 @@ describe("searchStatements", () => {
       expect.anything(),
       expect.objectContaining({ statementIds: undefined }),
     );
+  });
+});
+
+// scope를 DB limit 전에 거는지 — 메모리 교집합만 하면 limit이 scope 밖 후보로 차서
+// limit 밖 in-scope 진술이 조용히 누락된다(scope-before-limit 회귀).
+describe("collectTimeCandidateIds — scope-before-limit", () => {
+  it("due 경로: scope를 statements 쿼리에 in으로 건다(메모리 교집합 아님)", async () => {
+    const q = queryStub([{ id: "s1" }]);
+    await collectTimeCandidateIds(supabaseStub({ statements: [q] }), {
+      spaceIds: ["sp1"],
+      field: "due",
+      from: null,
+      to: new Date("2026-06-20T00:00:00Z"),
+      timeZone: "UTC",
+      scopedStatementIds: ["s1", "s9"],
+      limit: 10,
+    });
+    expect(q.calls).toContainEqual(["in", "id", ["s1", "s9"]]);
+  });
+
+  it("created 경로: scope를 원본 집합으로 환산해 sources 쿼리에 in으로 건다", async () => {
+    const scopeRefs = queryStub([{ source_id: "src1" }]);
+    const sources = queryStub([{ id: "src1" }]);
+    const bodyRefs = queryStub([{ statement_id: "s1" }]);
+    await collectTimeCandidateIds(
+      supabaseStub({
+        statement_sources: [scopeRefs, bodyRefs],
+        sources: [sources],
+      }),
+      {
+        spaceIds: ["sp1"],
+        field: "created",
+        from: null,
+        to: new Date("2026-06-20T00:00:00Z"),
+        timeZone: "UTC",
+        scopedStatementIds: ["s1"],
+        limit: 10,
+      },
+    );
+    expect(scopeRefs.calls).toContainEqual(["in", "statement_id", ["s1"]]);
+    expect(sources.calls).toContainEqual(["in", "id", ["src1"]]);
   });
 });
 
