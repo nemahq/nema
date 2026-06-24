@@ -31,13 +31,15 @@ export async function assembleEvidence(args: {
   supabase: TypedSupabaseClient;
   providers: Providers;
   query: string;
+  timeZone?: string;
 }): Promise<Evidence> {
-  const { supabase, providers, query } = args;
+  const { supabase, providers, query, timeZone } = args;
 
   const search = await searchStatements({
     supabase,
     providers,
     query,
+    timeZone,
   });
 
   const relatedStatements = await fillRelatedStatements(supabase, search);

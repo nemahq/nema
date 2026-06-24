@@ -13,6 +13,7 @@ export const narrationRouter = router({
           supabase: ctx.supabase,
           providers: ctx.providers,
           query: input.query,
+          timeZone: input.timeZone,
           signal,
         }),
         ctx.lng,
@@ -27,6 +28,7 @@ export const narrationRouter = router({
         supabase: ctx.supabase,
         providers: ctx.providers,
         query: input.query,
+        timeZone: input.timeZone,
       }),
     ),
 });
