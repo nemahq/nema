@@ -72,8 +72,8 @@ coarse를 `structureQuery`에 합쳐 출력을 `{ semantic, time, topics }`로 �
 
 - **LLM 콜 0 추가.** 검색 주 경로에 이미 타는 콜이다.
 - 매칭 입력인 의미부(`semantic`)가 거기서 이미 뽑힌다.
-- "질의를 구조화된 라우팅 신호로 분해"라는 이 콜의 본질에 주제도 한 신호로 들어맞는다. graceful degrade도 한 객체로 통일.
-- 비용: 이 콜이 **공간 주제 목록을 입력으로 받아야** 한다(순수 함수 → space-aware, `listTopics` 읽기 1개). draft-assist가 이미 하는 패턴.
+- "질의를 구조화된 라우팅 신호로 분해"라는 이 콜의 본질에 주제도 한 신호로 들어맞는다. 강등 처리도 한 객체로 통일.
+- 비용: 이 콜이 **공간 주제 목록을 입력으로 받아야** 한다(순수 함수 → 공간 의존, `listTopics` 읽기 1개). draft-assist가 이미 하는 패턴.
 
 ### 3.3 coarse는 recall만 — precision은 fine이 거른다
 
@@ -81,15 +81,15 @@ coarse를 `structureQuery`에 합쳐 출력을 `{ semantic, time, topics }`로 �
 
 - **애매하면 포함**한다. "관련 있을 수도?" → 넣는다. 여러 주제 걸치면 다 고른다.
 - 과하게 고른 비용은 작다. **fine 단계(벡터 top-15 + threshold 0.2)가 그 안에서 다시 거른다.** coarse에서 precision을 욕심내면 이 안전망을 버리는 것.
-- **못 정하면(0개 / 광범위) 전역으로 강등.** 답을 안 잃되 그 질의엔 scope 이득만 포기. 정말 모호하거나("그때 그거") 진짜 cross-cutting인 질의가 여기 해당.
+- **못 정하면(0개 / 광범위) 전역으로 강등.** 답을 안 잃되 그 질의엔 scope 이득만 포기. 정말 모호하거나("그때 그거") 진짜 여러 주제에 걸친 질의가 여기 해당.
 
-> **한계와 v2 레버**: name-only coarse는 "테마형 질의엔 scope, 디테일·모호 질의엔 전역 안전망"이 된다. 디테일형 질의가 실제로 얼마나 많아 전역 강등이 자주 터지는지는 **측정할 문제**(§6). 많으면 그때 주제에 진술 샘플·요약을 같이 줘 디테일도 라우팅되게 한다(§0의 v2).
+> **한계와 v2 레버**: 이름만 쓰는 coarse는 "테마형 질의엔 scope, 디테일·모호 질의엔 전역 안전망"이 된다. 디테일형 질의가 실제로 얼마나 많아 전역 강등이 자주 터지는지는 **측정할 문제**(§6). 많으면 그때 주제에 진술 샘플·요약을 같이 줘 디테일도 라우팅되게 한다(§0의 v2).
 
 ---
 
 ## 4. 무태그 원본 — 미분류 버킷으로 안 잃는다
 
-§2의 구멍: `collectScopedStatementIds`는 `topic→source→statement` join이라 **어느 주제에도 안 붙은 글은 어떤 scope 검색에도 안 잡힌다.** §3의 "묻힌 디테일"과 달리 여긴 LLM 추론으로도 못 메운다. join 자체가 배제한다. 게다가 무태그 글은 **"아직 정리 안 해 어디 뒀는지 모르는"** 바로 그 글일 확률이 높아(brief의 핵심 쓰임새), 배제하면 제일 아픈 데를 친다.
+§2의 구멍: `collectScopedStatementIds`는 `topic→source→statement` join이라 **어느 주제에도 안 붙은 글은 어떤 scope 검색에도 안 잡힌다.** §3의 "묻힌 디테일"과 달리 여긴 LLM 추론으로도 못 메운다. join 자체가 배제한다. 게다가 무태그 글은 **"아직 정리 안 해 어디 뒀는지 모르는"** 바로 그 글일 확률이 높아(지침의 핵심 쓰임새), 배제하면 제일 아픈 데를 친다.
 
 → **무태그를 항상 포함되는 버킷으로 둔다.** scope 집합 = (고른 주제의 진술) ∪ (무태그 진술 전부). 무태그 = "미분류함"으로 주제 선택과 무관하게 늘 검색하고, fine 단계가 똑같이 거른다.
 
@@ -105,7 +105,7 @@ coarse를 `structureQuery`에 합쳐 출력을 `{ semantic, time, topics }`로 �
 - **사용자 대면(질문 흐름)**: 모드 없음. 질문만 보내면 서버가 coarse → scope, 못 좁히면 전역(§3.3). 주제 선택 UI 없음.
 - **검색 레이어의 `topicIds` 파라미터(내부 기질)**: 유지. 자동 scoping이 곧 "coarse가 topicIds를 만들어 같은 scoped 검색에 먹이는 것". §4의 무태그 버킷 로직도 여기 산다. 사라지는 건 "클라이언트가 채우는" 부분이다. 이제 **coarse가 채운다.**
 
-결과로 모드 구분 필드(`manual/auto/global`)가 증발한다. 바깥에 노출되는 스위치가 없고, §3.3의 graceful degrade가 유일한 분기다. narration-router는 `input.topicIds` 읽기를 뺀다(build 때 프론트가 정말 안 보내는지 확인 후). 강제 전역 수단은 v1에 안 만든다(아직 필요 없다).
+결과로 모드 구분 필드(`manual/auto/global`)가 증발한다. 바깥에 노출되는 스위치가 없고, §3.3의 강등이 유일한 분기다. narration-router는 `input.topicIds` 읽기를 뺀다(구현 때 프론트가 정말 안 보내는지 확인 후). 강제 전역 수단은 v1에 안 만든다(아직 필요 없다).
 
 > 이러면 태스크 5도 "전역 vs 자동 기본값"이 아니라 **"coarse가 언제 전역으로 강등하나의 임계 튜닝"**으로 좁혀진다.
 
@@ -113,23 +113,23 @@ coarse를 `structureQuery`에 합쳐 출력을 `{ semantic, time, topics }`로 �
 
 ## 6. eval — coarse recall을 두 층위로 측정
 
-brief가 "측정 가능한 부분(coarse recall)은 eval로 검증"이라 못박은 지점.
+지침이 "측정 가능한 부분(coarse recall)은 eval로 검증"이라 못박은 지점.
 
 ### A. coarse 단독 recall — 진단용 (필수)
 
-"질의의 정답 진술이 사는 주제를, coarse가 골랐나?" 정답 진술 → source → topic으로 **gold 주제 집합**을 만들고, coarse가 고른 집합이 그걸 **덮나(⊇)** 본다.
-- 결정대로 over-include는 무벌점 → **recall만** 채점. 고른 주제·진술 수는 "비용"으로 따로 보고.
+"질의의 정답 진술이 사는 주제를, coarse가 골랐나?" 정답 진술 → source → topic으로 **정답 주제 집합**을 만들고, coarse가 고른 집합이 그걸 **덮나(⊇)** 본다.
+- 결정대로 과포함은 무벌점 → **recall만** 채점. 고른 주제·진술 수는 "비용"으로 따로 보고.
 - 새로 만든 한 조각만 격리해 실패를 짚는다. 싸다.
 
-### B. end-to-end recall@k vs 전역 — 제품 증명 (성과)
+### B. 전 구간 recall@k vs 전역 — 제품 증명 (성과)
 
-2단계 통째(coarse→fine) 돌려 scope 검색의 recall@k를 **같은 코퍼스의 전역 baseline과 비교.** measurement #9의 표(40→6,521에 recall 0.978→0.72)에 **scope 열을 추가**해, scope가 대규모에서도 recall을 sparse 수준으로 지키는지 본다. #9 러너(`run-retrieval-dense.ts`) + tiro 데이터 재사용.
+2단계 통째(coarse→fine) 돌려 scope 검색의 recall@k를 **같은 코퍼스의 전역 기준과 비교.** 측정 #9의 표(40→6,521에 recall 0.978→0.72)에 **scope 열을 추가**해, scope가 대규모에서도 recall을 sparse 수준으로 지키는지 본다. #9 러너(`run-retrieval-dense.ts`) + tiro 데이터 재사용.
 
 **왜 둘 다**: B만 보면 scope가 깨졌을 때 coarse 탓(서가 잘못 짚음)인지 fine 탓(맞는 서가인데 못 찾음)인지 못 가른다. A가 그 둘을 분리한다.
 
-### gold 주제 라벨 — 순환 주의
+### 정답 주제 라벨 — 순환 주의
 
-coarse를 채점하려면 "정답이 어느 주제에 있는지"가 **독립적으로 맞아야** 한다. 엔진 자동 태깅으로 주제를 붙이고 그걸 coarse가 맞히나 보면 "태거와 라우터가 합의했다"를 잴 뿐 자기 채점이다. → **tiro `curation.json`의 사람이 묶은 thread 구조를 gold 주제로** 쓴다(threads 18 = 사람 라벨). coarse miss가 라우터 탓임이 분명해진다.
+coarse를 채점하려면 "정답이 어느 주제에 있는지"가 **독립적으로 맞아야** 한다. 엔진 자동 태깅으로 주제를 붙이고 그걸 coarse가 맞히나 보면 "태거와 라우터가 합의했다"를 잴 뿐 자기 채점이다. → **tiro `curation.json`의 사람이 묶은 thread 구조를 정답 주제로** 쓴다(threads 18 = 사람 라벨). coarse 누락이 라우터 탓임이 분명해진다.
 
 > 이 LLM 정확도 골든(질의→주제)은 [temporal-query-design 8장](temporal-query-design.md)이 "④와 공유한다"고 미뤄 둔 그 골든이다. 여기서 만든다.
 
@@ -142,8 +142,8 @@ coarse를 채점하려면 "정답이 어느 주제에 있는지"가 **독립적�
 1. **coarse 매칭**: `structureQuery` 출력에 `topics` 추가(프롬프트에 주제 목록 주입 + recall 우선 지시), 구조화 서비스가 주제 이름 → topicId 매핑. 의존: `listTopics`.
 2. **scope 배선**: coarse가 고른 topicIds를 `searchStatements`에 흘리고, narration-router의 클라이언트 `input.topicIds` 제거(프론트 미사용 확인 후).
 3. **무태그 버킷**: `collectScopedStatementIds`에 무태그 진술 합집합 추가. 동시에 시간 경로의 스코프 교집합(`collectTimeCandidateIds`)이 남긴 "scope를 DB limit **전에** 걸기" TODO 해소. 지금은 DB limit으로 자른 뒤 메모리에서 교집합해 limit 밖 in-scope 진술을 흘린다.
-4. **eval A (coarse 단독)**: tiro thread를 gold 주제로, 질의→주제 recall 러너.
-5. **eval B (end-to-end)**: `run-retrieval-dense.ts`에 scope 열 추가, 전역 대비 recall@k.
+4. **eval A (coarse 단독)**: tiro thread를 정답 주제로, 질의→주제 recall 러너.
+5. **eval B (전 구간)**: `run-retrieval-dense.ts`에 scope 열 추가, 전역 대비 recall@k.
 
 ### 미결 (이 태스크가 안 정함)
 
