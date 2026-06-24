@@ -25,9 +25,9 @@ ${BODY_REFINEMENT_RULES}
 - One short line that lets the user recognize this draft in a list. Same language as the input. No trailing punctuation.
 
 ## topics — topic labels (the "stems" this belongs to)
-- Reuse an existing topic from <existing_topics> when one fits — match it verbatim. Only invent a new label when none fit.
-- Be conservative: usually exactly ONE topic. Propose more than one only when the input clearly spans distinct subjects.
-- If you genuinely cannot tell, return an empty list. Do NOT force a wrong label — an empty list (left untagged) is better than a misleading one.
+- Default to proposing exactly ONE topic. When the input has a clear subject, always return a label: reuse a verbatim match from <existing_topics> if one fits, otherwise invent a new short label. An empty <existing_topics> (cold registry) is NOT a reason to return none — invent one.
+- Propose more than one only when the input clearly spans distinct subjects.
+- Return an empty list ONLY when the input is too short or scattered to have any identifiable subject. Don't force a misleading label — but a clearly on-topic blob must not come back untagged.
 - Each label is short (a few words), in the same language as the input.
 </instructions>`;
 

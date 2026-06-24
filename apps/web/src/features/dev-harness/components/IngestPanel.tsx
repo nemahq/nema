@@ -1,35 +1,12 @@
 import { useState } from "react";
 
-import { Button } from "@nema-io/weave";
-
+import { DraftComposer } from "@web/features/dev-harness/components/DraftComposer";
+import { DraftInbox } from "@web/features/dev-harness/components/DraftInbox";
 import { SourceHistoryList } from "@web/features/dev-harness/components/SourceHistoryList";
-import { useCreateSource } from "@web/features/dev-harness/hooks/useCreateSource";
 
+// 넣기 입구 — 초안(직접/assist) → 인박스에서 확정 → 던진 글(추출). 우회 직추출은 없다.
 export function IngestPanel() {
-  const [sourceInput, setSourceInput] = useState("");
   const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null);
-
-  const createSource = useCreateSource();
-
-  function handleSubmit() {
-    const trimmedInput = sourceInput.trim();
-    if (!trimmedInput || createSource.isPending) {
-      return;
-    }
-    createSource.mutate(
-      // 작성자 존을 실어 내용 속 기한("금요일까지")이 이 존 기준으로 풀리게 한다.
-      {
-        body: trimmedInput,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      },
-      {
-        onSuccess: ({ sourceId }) => {
-          setSourceInput("");
-          setExpandedSourceId(sourceId);
-        },
-      },
-    );
-  }
 
   function handleToggleSource(sourceId: string) {
     setExpandedSourceId((prev) => (prev === sourceId ? null : sourceId));
@@ -39,23 +16,8 @@ export function IngestPanel() {
     <section className="flex min-h-0 flex-1 flex-col gap-3 p-4">
       <h2 className="text-sm font-semibold text-fg-primary">넣기</h2>
 
-      <div className="flex flex-col gap-2">
-        <textarea
-          value={sourceInput}
-          onChange={(e) => setSourceInput(e.target.value)}
-          placeholder="다듬지 말고 그대로 던지기 — 회의 메모, 생각, 붙여넣기 무엇이든"
-          rows={5}
-          className="w-full resize-y rounded-lg border border-border bg-surface-raised p-3 text-sm text-fg-primary outline-none focus:border-border-strong"
-        />
-        <Button
-          size="xs"
-          className="self-end"
-          onClick={handleSubmit}
-          disabled={!sourceInput.trim() || createSource.isPending}
-        >
-          던지기
-        </Button>
-      </div>
+      <DraftComposer />
+      <DraftInbox />
 
       <SourceHistoryList
         expandedSourceId={expandedSourceId}
