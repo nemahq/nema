@@ -23,6 +23,7 @@
         "src/eval/statement-engine/run-length-curve.ts",
         "src/eval/statement-engine/run-time-path.ts",
         "src/eval/statement-engine/run-coarse-scoping.ts",
+        "src/eval/statement-engine/run-retrieval-scoped.ts",
         "src/eval/relation-engine/run-judgment.ts",
         "src/eval/relation-engine/run-judgment-degraded.ts",
         "src/eval/relation-engine/run-candidate-retrieval.ts",
