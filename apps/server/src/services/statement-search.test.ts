@@ -210,17 +210,16 @@ function supabaseStub(responses: Record<string, QueryStub[]>) {
   } as unknown as TypedSupabaseClient;
 }
 
-const EMPTY_STRUCTURE: QueryStructuringRaw = {
-  semantic: null,
-  time: null,
-  topicIds: [],
-};
-
-// coarse가 검색 경로에서 LLM을 쓴다 — 구조화 결과(시간·주제)를 주입한다.
+// 검색 경로가 LLM을 두 번 쓴다(병렬) — 구조화(시간·의미)와 coarse(주제)를 task별로 주입한다.
 function providersStub(
   searchMock: ReturnType<typeof vi.fn>,
-  structured: QueryStructuringRaw = EMPTY_STRUCTURE,
+  opts: { structure?: QueryStructuringRaw; topicIds?: string[] } = {},
 ): Providers {
+  const structure: QueryStructuringRaw = opts.structure ?? {
+    semantic: null,
+    time: null,
+  };
+  const topicIds = opts.topicIds ?? [];
   const vectorStore: VectorStore = {
     ensureCollection: vi.fn(),
     upsertStatements: vi.fn(),
@@ -230,8 +229,12 @@ function providersStub(
   };
   return {
     llm: {
-      forTask: () => ({
-        generateStructured: vi.fn().mockResolvedValue(structured),
+      forTask: (task: string) => ({
+        generateStructured: vi
+          .fn()
+          .mockResolvedValue(
+            task === "selectScopeTopics" ? { topicIds } : structure,
+          ),
       }),
     } as unknown as Providers["llm"],
     embedding: {
@@ -362,11 +365,7 @@ describe("searchStatements", () => {
           queryStub([{ statement_id: "s1" }, { statement_id: "s2" }]),
         ],
       }),
-      providers: providersStub(search, {
-        semantic: null,
-        time: null,
-        topicIds: ["topic-1"],
-      }),
+      providers: providersStub(search, { topicIds: ["topic-1"] }),
       query: "결제 얘기",
     });
 
@@ -384,7 +383,7 @@ describe("searchStatements", () => {
         space_members: [queryStub([{ space_id: "space-1" }])],
         topics: [queryStub([{ id: "topic-1", name: "결제" }])],
       }),
-      providers: providersStub(search, EMPTY_STRUCTURE),
+      providers: providersStub(search),
       query: "그때 그거",
     });
 
@@ -403,11 +402,7 @@ describe("searchStatements", () => {
         topics: [queryStub([{ id: "topic-1", name: "결제" }])],
         sources: [queryStub([])],
       }),
-      providers: providersStub(search, {
-        semantic: null,
-        time: null,
-        topicIds: ["topic-1"],
-      }),
+      providers: providersStub(search, { topicIds: ["topic-1"] }),
       query: "결제",
     });
 

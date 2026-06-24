@@ -22,6 +22,7 @@ export const LLM_TASK_SCHEMA = z.enum([
   "assistDraft",
   "narrate",
   "structureQuery",
+  "selectScopeTopics",
 ]);
 
 export type LlmTask = z.infer<typeof LLM_TASK_SCHEMA>;
@@ -48,6 +49,8 @@ export const TASK_DEFAULTS = {
   narrate: { tier: "standard" },
   // 질의 구조화: 검색어를 의미부 + 시간 토큰으로 가른다. 검색 경로라 싸고 빨라야 해 mini.
   structureQuery: { tier: "mini" },
+  // coarse 라우팅: 질의를 공간 주제로 보낸다. 검색 경로라 mini. structureQuery와 병렬 호출.
+  selectScopeTopics: { tier: "mini" },
 } as const satisfies Record<LlmTask, TaskDefault>;
 
 // task → override. effort는 그 모델 프로바이더의 네이티브 값(set 시점에 검증).

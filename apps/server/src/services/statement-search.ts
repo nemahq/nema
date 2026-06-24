@@ -6,7 +6,8 @@ import type { Providers } from "@server/infra/providers";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import type { StatementSearchHit } from "@server/infra/vector";
-import type { QueryStructuringTopic } from "@server/prompts/query-structuring";
+import type { CoarseScopingTopic } from "@server/prompts/coarse-scoping";
+import { selectScopeTopics } from "@server/services/coarse-scoping";
 import {
   type QueryStructure,
   structureQuery,
@@ -96,26 +97,32 @@ export async function searchStatements(args: {
   // 라우팅 후보 — 질의자 공간의 주제 목록. coarse가 여기서 고른다. 비면 전역 (auto-scoping §3).
   const { topics } = await listTopics({ supabase });
 
-  // 질의 구조화 — 시간 표현을 떼고(temporal-query-design 5·6장) 같은 콜에서 주제를 고른다
-  // (coarse, auto-scoping §3.2). 절대 날짜 연도 보정·시간 환산이 같은 순간을 쓰게 reference를 한 번만.
+  // 시간 구조화와 주제 라우팅(coarse)을 병렬로. 한 콜에 합치면 주제 정확도가 깎여(측정 #18) 따로 부른다.
+  // 절대 날짜 연도 보정·시간 환산이 같은 순간을 쓰게 reference를 한 번만 잡는다.
   const reference = now ?? new Date();
   const queryZone =
     timeZone !== undefined && IANAZone.isValidZone(timeZone) ? timeZone : "utc";
-  const structure = await structureSafely({
-    providers,
-    query,
-    todayIsoDate: zonedISODate(reference, queryZone),
-    topics: topics.map((t) => ({ id: t.id, label: t.name })),
-  });
+  const [structure, topicIds] = await Promise.all([
+    structureSafely({
+      providers,
+      query,
+      todayIsoDate: zonedISODate(reference, queryZone),
+    }),
+    coarseSafely({
+      providers,
+      query,
+      topics: topics.map((t) => ({ id: t.id, label: t.name })),
+    }),
+  ]);
 
   // 줄기 범위 — coarse가 고른 주제로 검색을 한정한다 (auto-scoping §3·§4).
   // scope = 고른 주제의 진술 ∪ 무태그 진술. 못 고르면(빈 목록) 전역. 빈 집합이면 범위에 진술이 없어 끝낸다.
   let scopedStatementIds: string[] | undefined;
-  if (structure.topicIds.length > 0) {
+  if (topicIds.length > 0) {
     scopedStatementIds = await collectScopedStatementIds({
       supabase,
       spaceIds,
-      topicIds: structure.topicIds,
+      topicIds,
     });
     if (scopedStatementIds.length === 0) {
       return { groups: [] };
@@ -460,7 +467,6 @@ async function structureSafely(args: {
   providers: Providers;
   query: string;
   todayIsoDate: string;
-  topics: QueryStructuringTopic[];
 }): Promise<QueryStructure> {
   try {
     return await structureQuery(args);
@@ -468,7 +474,23 @@ async function structureSafely(args: {
     Sentry.captureException(error, {
       tags: { component: "query-structuring" },
     });
-    return { semantic: null, time: null, topicIds: [] };
+    return { semantic: null, time: null };
+  }
+}
+
+// coarse LLM이 실패해도 검색은 살린다 — 주제 못 고르면 전역으로 강등한다 (auto-scoping §3.3).
+async function coarseSafely(args: {
+  providers: Providers;
+  query: string;
+  topics: CoarseScopingTopic[];
+}): Promise<string[]> {
+  try {
+    return await selectScopeTopics(args);
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { component: "coarse-scoping" },
+    });
+    return [];
   }
 }
 

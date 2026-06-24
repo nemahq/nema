@@ -50,15 +50,11 @@ async function main() {
       messages: [
         {
           role: "user",
-          content: buildQueryStructuringMessage({
-            query: query.query,
-            todayIsoDate: TODAY,
-            topics: [],
-          }),
+          content: buildQueryStructuringMessage(query.query, TODAY),
         },
       ],
     });
-    const { time } = mapRawToStructure(raw, new Set());
+    const { time } = mapRawToStructure(raw);
     const expected = JSON.stringify(query.expectedToken);
     const got = JSON.stringify(time);
     const ok = expected === got;
