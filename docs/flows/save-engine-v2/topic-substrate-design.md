@@ -1,4 +1,4 @@
-# 주제 substrate 설계 — 진술 엔진 (save-engine-v2)
+# 주제 토대 설계 — 진술 엔진 (save-engine-v2)
 
 > 검색이 읽는 "주제"가 무엇인지 못박고, 그 주제를 만들고·재사용하고·정리하는 생애주기를 정하는 설계. [`auto-scoping-design.md`](auto-scoping-design.md)이 coarse 단계에서 주제를 골라 검색을 좁히는데, 그 주제의 품질이 곧 스코핑의 천장이라 같이 본다. 이미 있는 `topics`·`source_topics` 스키마와 draft-assist의 주제 제안 위에 선다.
 >
@@ -30,7 +30,7 @@
 - `confirm_draft` RPC: 이름으로 find-or-create + 연결.
 - draft-assist: 레지스트리(`listTopicNames`)를 LLM에 줘 재사용 우선으로 제안.
 
-즉 substrate 골격은 있다. 빠진 건 아래 결정들(편집, 갱신 규칙, 정규화 층, 굵기 가이드, 설명 게이트)이다.
+즉 토대 골격은 있다. 빠진 건 아래 결정들(편집, 갱신 규칙, 정규화 층, 굵기 가이드, 설명 게이트)이다.
 
 ---
 
