@@ -73,4 +73,26 @@ describe("createMeteringProvider", () => {
     });
     expect(seen).toEqual([100]);
   });
+
+  // usage 없이 성공한 콜은 $0로 둔갑하면 안 된다 — callsMissingUsage로 표식돼야 한다.
+  it("flags a successful call that never reported usage", async () => {
+    const silent: LlmProvider = {
+      generateStructured: () => {
+        throw new Error("unused in this test");
+      },
+      generateText: async () => "no usage fired",
+      async *generateStream() {
+        yield "";
+      },
+    };
+    const meter = createMeteringProvider(silent);
+    await meter.provider.generateText({
+      systemPrompt: "s",
+      messages: [{ role: "user", content: "q" }],
+    });
+    const totals = meter.totals();
+    expect(totals.calls).toBe(1);
+    expect(totals.callsMissingUsage).toBe(1);
+    expect(totals.inputTokens).toBe(0);
+  });
 });

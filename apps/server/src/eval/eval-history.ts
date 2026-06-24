@@ -3,14 +3,13 @@
 // 같은 이름·단위로 둬 "예측(A) vs 실제(B)" 비교가 컬럼 정렬로 성립한다.
 // 비용·지연·토큰은 동작당(=호출당) 평균으로 환산 — B가 동작당 실비용을 재므로 grain을 맞춘다.
 
-import { createClient } from "@supabase/supabase-js";
-
-import { getEnv } from "@server/env";
+import type { Json } from "@server/infra/database.types";
 import {
   computeCostUsd,
   type LlmProviderId,
 } from "@server/infra/llm/model-catalog";
 import type { LlmTask } from "@server/infra/llm/task-routing";
+import { getSupabaseAdmin } from "@server/infra/supabase";
 
 import type { MeteringTotals } from "./metering-provider";
 
@@ -44,10 +43,15 @@ export function buildEvalRunRow(params: {
 }): EvalRunRow {
   const { totals } = params;
   const calls = Math.max(totals.calls, 1);
-  const totalCostUsd = computeCostUsd(params.model, {
-    inputTokens: totals.inputTokens,
-    outputTokens: totals.outputTokens,
-  });
+  // 콜이 아예 없거나(아무것도 안 잼) usage 없는 콜이 섞이면 토큰 합을 신뢰할 수 없다 —
+  // 가짜 $0 대신 비용을 null로 둔다.
+  const totalCostUsd =
+    totals.calls === 0 || totals.callsMissingUsage > 0
+      ? null
+      : computeCostUsd(params.model, {
+          inputTokens: totals.inputTokens,
+          outputTokens: totals.outputTokens,
+        });
   return {
     model: params.model,
     task: params.task,
@@ -65,6 +69,9 @@ export function buildEvalRunRow(params: {
       inputTokensPerCall: Math.round(totals.inputTokens / calls),
       outputTokensPerCall: Math.round(totals.outputTokens / calls),
       reasoningTokensPerCall: Math.round(totals.reasoningTokens / calls),
+      ...(totals.callsMissingUsage > 0
+        ? { usageMissing: totals.callsMissingUsage }
+        : {}),
       ...params.signals,
     },
   };
@@ -81,7 +88,7 @@ interface EvalRunInsert {
   latency_ms: number;
   quality_score: number | null;
   self_preference: boolean;
-  signals: Record<string, unknown>;
+  signals: Json;
 }
 
 function toInsert(row: EvalRunRow): EvalRunInsert {
@@ -96,24 +103,20 @@ function toInsert(row: EvalRunRow): EvalRunInsert {
     latency_ms: row.latencyMs,
     quality_score: row.qualityScore,
     self_preference: row.selfPreference,
-    signals: row.signals,
+    // signals는 측정 지표(수·문자열) 묶음이라 런타임은 항상 JSON 직렬화 가능 —
+    // unknown 값 백을 jsonb 컬럼(Json)으로 좁히는 경계 캐스트.
+    signals: row.signals as Json,
   };
 }
 
 // staging 적재(--persist). 기본 측정은 JSON만 — 스모크가 staging을 오염시키지 않게
-// 오케스트레이터가 호출 여부를 가른다. 생성된 Database 타입엔 eval_runs가 아직 없어
-// (마이그레이션 staging 반영 후 타입 재생성은 후속), 적재 형태만 EvalRunInsert로 고정하고
-// 클라이언트는 스키마 미지정으로 둔다.
+// 오케스트레이터가 호출 여부를 가른다. service-role admin 클라이언트로 RLS를 우회해 적재한다.
 export async function persistEvalRuns(rows: EvalRunRow[]): Promise<void> {
   if (rows.length === 0) {
     return;
   }
-  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = getEnv();
-  const client = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
   const payload: EvalRunInsert[] = rows.map(toInsert);
-  const { error } = await client.from("eval_runs").insert(payload);
+  const { error } = await getSupabaseAdmin().from("eval_runs").insert(payload);
   if (error) {
     throw new Error(`eval_runs insert failed: ${error.message}`);
   }

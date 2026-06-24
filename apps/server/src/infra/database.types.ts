@@ -174,6 +174,54 @@ export type Database = {
           },
         ];
       };
+      eval_runs: {
+        Row: {
+          cost_usd: number | null;
+          created_at: string;
+          eval_version: string;
+          id: string;
+          latency_ms: number;
+          model: string;
+          prompt_version: string;
+          provider: string;
+          quality_score: number | null;
+          run_at: string;
+          self_preference: boolean;
+          signals: Json;
+          task: string;
+        };
+        Insert: {
+          cost_usd?: number | null;
+          created_at?: string;
+          eval_version: string;
+          id?: string;
+          latency_ms: number;
+          model: string;
+          prompt_version: string;
+          provider: string;
+          quality_score?: number | null;
+          run_at: string;
+          self_preference?: boolean;
+          signals?: Json;
+          task: string;
+        };
+        Update: {
+          cost_usd?: number | null;
+          created_at?: string;
+          eval_version?: string;
+          id?: string;
+          latency_ms?: number;
+          model?: string;
+          prompt_version?: string;
+          provider?: string;
+          quality_score?: number | null;
+          run_at?: string;
+          self_preference?: boolean;
+          signals?: Json;
+          task?: string;
+        };
+        Relationships: [];
+      };
       events: {
         Row: {
           created_at: string;

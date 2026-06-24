@@ -88,17 +88,32 @@ function isNativeUnsupportedError(error: BadRequestError): boolean {
   return mentionsStructured && mentionsUnsupported;
 }
 
-// 400 메시지가 "이 모델은 adaptive thinking을 못 받는다"는 신호인지 본다(예: haiku).
+// 400 메시지가 "이 모델은 adaptive thinking 능력 자체가 없다"는 신호인지 본다(예: haiku).
 // 맞으면 effort 경로가 thinking 없이 폴백한다 — thinking 무지원 모델도 측정·운영되게.
+// 예산·크레딧·플랜 한도發 400은 능력 미지원이 아니다(폴백으로 삼키면 다운그레이드를 숨긴다) —
+// 좁게 잡아 그런 400은 그대로 에러로 올린다.
 function isThinkingUnsupportedError(error: BadRequestError): boolean {
   const message = error.message.toLowerCase();
+  if (!message.includes("thinking")) {
+    return false;
+  }
+  const isBudgetOrEntitlement =
+    message.includes("budget") ||
+    message.includes("credit") ||
+    message.includes("billing") ||
+    message.includes("quota") ||
+    message.includes("plan") ||
+    message.includes("exceed") ||
+    message.includes("limit");
+  if (isBudgetOrEntitlement) {
+    return false;
+  }
   return (
-    message.includes("thinking") &&
-    (message.includes("not support") ||
-      message.includes("unsupported") ||
-      message.includes("does not support") ||
-      message.includes("not available") ||
-      message.includes("not enabled"))
+    message.includes("not support") ||
+    message.includes("does not support") ||
+    message.includes("unsupported") ||
+    message.includes("not available") ||
+    message.includes("not enabled")
   );
 }
 

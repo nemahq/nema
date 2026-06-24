@@ -197,6 +197,57 @@ describe("AnthropicProvider", () => {
       expect(chunks).toEqual(["Hel", "lo"]);
     });
 
+    // 스트림은 usage를 두 이벤트에서 꿰맨다(message_start=입력, message_delta=출력/thinking) —
+    // 유일하게 mutable locals로 누적하는 경로라, 무테스트면 narrate/draft 비용이 조용히 틀어진다.
+    it("reports normalized usage stitched from stream events", async () => {
+      const events = [
+        {
+          type: "message_start",
+          message: {
+            usage: { input_tokens: 800, cache_read_input_tokens: 200 },
+          },
+        },
+        {
+          type: "content_block_delta",
+          delta: { type: "text_delta", text: "hi" },
+        },
+        {
+          type: "message_delta",
+          delta: { stop_reason: null },
+          usage: {
+            output_tokens: 300,
+            output_tokens_details: { thinking_tokens: 120 },
+          },
+        },
+        { type: "message_stop" },
+      ];
+      const stream = {
+        controller: { abort: vi.fn() },
+        async *[Symbol.asyncIterator]() {
+          yield* events;
+        },
+      };
+      const { provider } = mockCreate(stream);
+      const reported: unknown[] = [];
+
+      for await (const chunk of provider.generateStream({
+        systemPrompt: "sys",
+        messages: [{ role: "user", content: "q" }],
+        onUsage: (usage) => reported.push(usage),
+      })) {
+        void chunk;
+      }
+
+      expect(reported).toEqual([
+        {
+          inputTokens: 800,
+          outputTokens: 300,
+          cachedInputTokens: 200,
+          reasoningTokens: 120,
+        },
+      ]);
+    });
+
     it("routes streaming through the beta path with adaptive thinking + effort", async () => {
       const events = [
         {
@@ -624,6 +675,34 @@ describe("AnthropicProvider", () => {
         type: "adaptive",
       });
       expect(betaParseFn.mock.calls[1]?.[0].thinking).toBeUndefined();
+    });
+
+    // 예산/크레딧發 400은 능력 미지원이 아니다 — 폴백으로 삼키면 다운그레이드를 숨긴다.
+    it("does NOT fall back on a thinking budget/billing 400", async () => {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      const budgetError = new BadRequestError(
+        400,
+        { error: { message: "thinking budget exceeded for your plan" } },
+        "thinking budget exceeded for your plan",
+        new Headers(),
+      );
+      const { client, betaParseFn } = createMockClient();
+      betaParseFn.mockRejectedValue(budgetError);
+      const provider = new AnthropicProvider({
+        client,
+        model: "claude-haiku-4-5-20251001",
+      });
+
+      await expect(
+        provider.generateStructured({
+          schema: TestSchema,
+          schemaName: "test",
+          systemPrompt: "sys",
+          messages: [{ role: "user", content: "q" }],
+          effort: "low",
+        }),
+      ).rejects.toThrow(LlmError);
+      expect(betaParseFn).toHaveBeenCalledOnce();
     });
   });
 

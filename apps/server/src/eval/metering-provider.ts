@@ -13,6 +13,8 @@ import type {
 export interface MeteredCall {
   usage: LlmUsage;
   latencyMs: number;
+  // 성공했으나 onUsage가 안 온 콜 — 비용을 0으로 둔갑시키면 안 되므로 표식한다.
+  usageMissing: boolean;
 }
 
 export interface MeteringTotals {
@@ -22,6 +24,8 @@ export interface MeteringTotals {
   reasoningTokens: number;
   cachedInputTokens: number;
   totalLatencyMs: number;
+  // usage 없이 끝난 콜 수 > 0이면 토큰 합이 과소라 비용을 신뢰할 수 없다(buildEvalRunRow가 null 처리).
+  callsMissingUsage: number;
 }
 
 export interface MeteringProvider {
@@ -38,6 +42,7 @@ const EMPTY_TOTALS: MeteringTotals = {
   reasoningTokens: 0,
   cachedInputTokens: 0,
   totalLatencyMs: 0,
+  callsMissingUsage: 0,
 };
 
 export function createMeteringProvider(inner: LlmProvider): MeteringProvider {
@@ -63,6 +68,7 @@ export function createMeteringProvider(inner: LlmProvider): MeteringProvider {
     records.push({
       usage: captured.usage ?? { inputTokens: 0, outputTokens: 0 },
       latencyMs: Date.now() - startedAt,
+      usageMissing: captured.usage === undefined,
     });
   }
 
@@ -106,6 +112,8 @@ export function createMeteringProvider(inner: LlmProvider): MeteringProvider {
           cachedInputTokens:
             acc.cachedInputTokens + (call.usage.cachedInputTokens ?? 0),
           totalLatencyMs: acc.totalLatencyMs + call.latencyMs,
+          callsMissingUsage:
+            acc.callsMissingUsage + (call.usageMissing ? 1 : 0),
         }),
         { ...EMPTY_TOTALS },
       );

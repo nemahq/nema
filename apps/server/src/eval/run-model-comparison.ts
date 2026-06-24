@@ -290,6 +290,8 @@ async function main() {
   const runAt = new Date().toISOString();
   const rows: EvalRunRow[] = [];
   const skipped: Array<{ model: string; reason: string }> = [];
+  // 측정 실패((모델×기능) 단위) — 결과 JSON에 박아, 부분 실패한 적재가 "안 돈 것"과 구분되게.
+  const failed: Array<{ model: string; task: string; error: string }> = [];
 
   for (const model of models) {
     let baseProvider: LlmProvider;
@@ -324,6 +326,11 @@ async function main() {
             (row.selfPreference ? " ⚠️self-pref" : ""),
         );
       } catch (error) {
+        failed.push({
+          model: model.id,
+          task: fn.task,
+          error: error instanceof Error ? error.message : String(error),
+        });
         console.log(
           `  ✗ [${model.id} · ${fn.key}] ${error instanceof Error ? error.message : String(error)}`,
         );
@@ -349,7 +356,7 @@ async function main() {
   writeFileSync(
     outPath,
     JSON.stringify(
-      { runAt, judgeUsage: judge.usage(), skipped, rows },
+      { runAt, judgeUsage: judge.usage(), skipped, failed, rows },
       null,
       2,
     ),
