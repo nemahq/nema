@@ -108,4 +108,22 @@ describe("assembleEvidence 근거 채우기", () => {
     expect(evidence.relatedStatements).toEqual([]);
     expect(fromMock).not.toHaveBeenCalled();
   });
+
+  it("timeZone을 searchStatements로 흘린다 — 해설 경로 시간 질의가 시간 경로를 타게", async () => {
+    vi.mocked(statementSearch.searchStatements).mockResolvedValue({
+      groups: [],
+    });
+    const { client } = supabaseReturning([]);
+
+    await assembleEvidence({
+      supabase: client,
+      providers: noopProviders,
+      query: "이번 주 마감",
+      timeZone: "Asia/Seoul",
+    });
+
+    expect(statementSearch.searchStatements).toHaveBeenCalledWith(
+      expect.objectContaining({ timeZone: "Asia/Seoul" }),
+    );
+  });
 });

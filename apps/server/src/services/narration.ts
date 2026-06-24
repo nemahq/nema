@@ -13,15 +13,17 @@ export async function* handleNarrationStream(args: {
   supabase: TypedSupabaseClient;
   providers: Providers;
   query: string;
+  timeZone?: string;
   signal?: AbortSignal;
 }): AsyncGenerator<NarrationStreamEvent> {
-  const { supabase, providers, query, signal } = args;
+  const { supabase, providers, query, timeZone, signal } = args;
 
   // 근거를 먼저 확정해 통째로 내보낸다 — 산문은 늘 이미 나간 근거 위에서만 자란다 (narration-design 7장).
   const evidence = await assembleEvidence({
     supabase,
     providers,
     query,
+    timeZone,
   });
   yield { type: "evidence", evidence };
 
