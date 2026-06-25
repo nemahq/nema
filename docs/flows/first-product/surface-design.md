@@ -15,7 +15,7 @@
 ### 함께 보는 문서
 
 - 첫 제품 방향(`docs/product/11-first-product-direction.md`, 이하 방향 문서): 누구에게 무엇부터 만드는지 정한 문서. 전제로 깐다.
-- 정보 구조(`docs/flows/first-product/information-architecture.md`, NEM-157): 넣기 표면 IA. 이 문서가 그 사이트맵의 동선 일부를 개정한다(§0, §5.1).
+- 넣기 표면 설계(`docs/flows/first-product/intake-surface-design.md`, NEM-157): 넣기 표면 IA. 이 문서가 그 사이트맵의 동선 일부를 개정한다(§0, §5.1).
 - 해설(`docs/flows/first-product/narration-design.md`): 해설의 서버 설계. 이 문서는 해설을 표면으로만 다루고 세부는 그 문서에 맡긴다.
 - 맥락 넣기(`content-intake-design.md`)·MCP(`mcp-design.md`): 넣기 입구와 외부 연결. 이 라운드 표면 논의에서는 받침으로 두거나 보류한다.
 
