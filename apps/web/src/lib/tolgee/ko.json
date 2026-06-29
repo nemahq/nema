@@ -10,6 +10,9 @@
     "magic_link_sent": "이메일에서 로그인 링크를 확인해주세요.",
     "or": "OR"
   },
+  "coming_soon": {
+    "subtitle": "곧 만나요!"
+  },
   "common": {
     "cancel": "취소",
     "close": "닫기",
