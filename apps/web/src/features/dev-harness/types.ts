@@ -7,8 +7,7 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 export type SourceSummary = RouterOutputs["source"]["list"]["sources"][number];
 export type SourceDetail = RouterOutputs["source"]["get"];
 export type SourceStatement = SourceDetail["statements"][number];
-export type StatementGroup =
-  RouterOutputs["statement"]["search"]["groups"][number];
+type StatementGroup = RouterOutputs["statement"]["search"]["groups"][number];
 export type SearchedStatement = StatementGroup["statements"][number];
 
 // 표식은 상대 진술 ID만 실려온다(content 없음) — 본문은 같은 검색 결과 안에서만 매칭 가능
@@ -16,6 +15,10 @@ export type RelationMarkers = Pick<
   SearchedStatement,
   "supersededBy" | "conflictsWith" | "resolvedBy"
 >;
+
+export type DraftSummary = RouterOutputs["draft"]["list"]["drafts"][number];
+export type TopicSummary = RouterOutputs["topic"]["list"]["topics"][number];
+export type NarrationEvidence = RouterOutputs["narration"]["evidence"];
 
 export type PendingRelation =
   RouterOutputs["changeset"]["listPendingRelations"]["proposals"][number];

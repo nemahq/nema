@@ -12,6 +12,7 @@ import { notFoundAtRoot } from "@web/app/error/notFound";
 import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
+import { ComingSoonPage } from "@web/app/pages/ComingSoonPage";
 import { HomePage } from "@web/app/pages/HomePage";
 import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
@@ -22,7 +23,7 @@ import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback"
 import { requireAuth, requireGuest } from "@web/features/auth";
 import { HarnessPage } from "@web/features/dev-harness";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
-import { setStorage } from "@web/utils/localStorage";
+import { getStorage, setStorage } from "@web/utils/localStorage";
 
 import { App } from "./App";
 
@@ -33,14 +34,29 @@ const rootRoute = createRootRoute({
 
 // -- 공개 라우트 --
 
+// 스텔스 모드(프로덕션)에서는 로그인 대신 Coming Soon을 보여준다. /signin?access=<key>로
+// 프리뷰를 한 번 열어두면 같은 브라우저에서는 계속 실제 로그인이 뜬다.
+function SignInRoute() {
+  const stealth =
+    getEnv().APP_ENV === "production" && getStorage("previewAccess") !== "true";
+  return stealth ? <ComingSoonPage /> : <SignInPage />;
+}
+
 const signinRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/signin",
   validateSearch: z.object({
     redirect: z.string().optional(),
+    access: z.string().optional(),
   }),
-  component: SignInPage,
-  beforeLoad: requireGuest,
+  component: SignInRoute,
+  beforeLoad: async ({ search }) => {
+    const previewKey = getEnv().PREVIEW_KEY;
+    if (previewKey && search.access === previewKey) {
+      setStorage("previewAccess", "true");
+    }
+    await requireGuest();
+  },
 });
 
 const privacyRoute = createRoute({

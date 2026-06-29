@@ -1,5 +1,6 @@
 import { registerApplyPendingRelation } from "@mcp/tools/apply-pending-relation";
 import { registerArchiveStatement } from "@mcp/tools/archive-statement";
+import { registerAssistDraft } from "@mcp/tools/assist-draft";
 import { registerConfirmDraft } from "@mcp/tools/confirm-draft";
 import { registerCreateDraft } from "@mcp/tools/create-draft";
 import { registerEditDraft } from "@mcp/tools/edit-draft";
@@ -10,6 +11,7 @@ import { registerListChangesets } from "@mcp/tools/list-changesets";
 import { registerListDrafts } from "@mcp/tools/list-drafts";
 import { registerListPendingRelations } from "@mcp/tools/list-pending-relations";
 import { registerListTopics } from "@mcp/tools/list-topics";
+import { registerNarrate } from "@mcp/tools/narrate";
 import { registerRejectPendingRelation } from "@mcp/tools/reject-pending-relation";
 import { registerRevertChangeset } from "@mcp/tools/revert-changeset";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -19,8 +21,10 @@ export function createMcpServer(): McpServer {
 
   registerListTopics(server);
   registerGetEvidence(server);
+  registerNarrate(server);
   registerGetSource(server);
 
+  registerAssistDraft(server);
   registerCreateDraft(server);
   registerEditDraft(server);
   registerListDrafts(server);
