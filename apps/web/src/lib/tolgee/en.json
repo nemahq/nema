@@ -10,6 +10,9 @@
     "magic_link_sent": "Check your email for the login link.",
     "or": "OR"
   },
+  "coming_soon": {
+    "subtitle": "See you soon!"
+  },
   "common": {
     "cancel": "Cancel",
     "close": "Close",

@@ -22,6 +22,8 @@ type StorageMap = {
   splitLayout: JsonRecord;
   // OAuth 공급자 왕복에서 URL 쿼리가 깎여도 복구하도록 authorization_id를 잠시 보관.
   oauthAuthorizationId: string;
+  // 스텔스 모드에서 Coming Soon 대신 실제 로그인을 보여줄지 여부. /signin?access=<key>로 심는다.
+  previewAccess: BooleanString;
 };
 
 const isValid: {
@@ -35,6 +37,7 @@ const isValid: {
   openRetrievalTabs: isJsonRecord,
   splitLayout: isJsonRecord,
   oauthAuthorizationId: (v): v is string => v.length > 0,
+  previewAccess: isBooleanString,
 };
 
 export function getStorage<K extends keyof StorageMap>(

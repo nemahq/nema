@@ -31,6 +31,7 @@ const env = {
   TOLGEE_CDN_URL: optional("VITE_TOLGEE_CDN_URL"),
   POSTHOG_KEY: optional("VITE_POSTHOG_KEY"),
   POSTHOG_HOST: optional("VITE_POSTHOG_HOST"),
+  PREVIEW_KEY: optional("VITE_PREVIEW_KEY"),
 } as const;
 
 export function getEnv() {
