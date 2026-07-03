@@ -2,26 +2,43 @@
 
 제품 용어(사용자에게 노출)와 코드 용어(내부 구현)의 매핑.
 
-## 대화 계층
+> "개념 용어"는 코드·설계 문서에서 참조하는 내부 식별자, "코드 용어"는 실제 구현체. 구현이 없는 항목은 표시해둠.
 
-| 제품 용어 (한) | 제품 용어 (영) | 코드 용어 | 역할 |
-| -------------- | -------------- | --------- | ---- |
-| 맥락 | Context | Session | 사용자와 AI 간의 대화 공간 |
-| 메시지 | Message | Message | 세션 내 개별 대화 단위 |
-| 챗 | Chat | Chat | 사용자 메시지에 대한 AI 응답 생성 프로세스 (한 턴) |
-| 초안 | Draft | `drafts` / `Draft` | 확정 전 대기하는 글. 두 입구(앱·MCP) 공유, 사람·AI 공동 편집 |
-| 해설 | Narration | Narration | 저장된 진술을 근거로 질문에 풀어 읽는 산문 답변. 근거에 없는 결론은 짓지 않는다 |
+## 콘텐츠 — 무엇이 쌓이는가
 
-## 지식 계층 (진술 엔진)
+| 제품 용어 (한) | 제품 용어 (영) | 개념 용어 | 코드 용어 | 역할 |
+| -------------- | -------------- | --------- | --------- | ---- |
+| 맥락 | Context | Context | (해당 없음, 파생 개념) | Statement와 Relation이 쌓여 이루는, 신뢰하고 돌아올 수 있는 전체 지식 자산 |
+| 원본 | Source | Source | `sources` | 손대지 않고 들어온 원재료 |
+| 초안 | Digest | Digest | (미구현) | Source를 사람이 읽기 좋게 정리한 것, 여기서 Statement가 추출된다 |
+| 문장 | Sentence | Statement | `statements` | 결정이나 판단의 '왜'를 담는, 문장 크기의 가장 작은 단위 |
+| 연결 | Connection | Relation | `statement_relations` | 두 Statement를 잇는, 방향을 가진 연결 |
+| 레퍼런스 | Reference | Reference | (미구현) | Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력이 들어올 때마다 새로 쌓이지 않고 기존 것이 다듬어진다 |
+| 변경셋 | Changeset | Changeset | `changesets` / `changes` | Statement·Relation·Source·Digest·Reference에 대한 변경을 한 번에 묶는 단위 |
 
-| 제품 용어 (한) | 제품 용어 (영) | 코드 용어 | 역할 |
-| -------------- | -------------- | --------- | ---- |
-| 진술 | Statement | `statements` | 맥락의 최소 단위 — '왜'를 담은 문장 한 조각 (claim/question/todo) |
-| 원본 | Source | `sources` | 진술이 추출된 원재료. 무손실 박제되며 진술이 가리킨다 |
-| 관계 | Relation | `statement_relations` | 진술을 잇는 선 (supports/conflicts/replaces/resolves) |
-| 잇기 | Linking | `linking` (`sources.linking_status` · `runLinkingPass`) | 새 진술이 들어올 때 기존 진술과의 관계를 판정해 잇는 워커 ③단계 (관계 검사) |
-| 변경셋 | Changeset | `changesets` / `changes` | 한 번의 변경 묶음 — 리뷰·되돌리기·이력의 단위 |
-| 스페이스 | Space | `spaces` / `space_members` | 기록의 소유 칸. 개인=팀, 멤버 수만 다르다 |
-| 주제 | Topic | `topics` / `source_topics` | 원본에 붙는 가벼운 단일 라벨(0..N, 무태그 허용). 공간 재사용 레지스트리 |
-| 줄기 | Stem | `topics` (주제 1개 = 줄기 1개) | 다시 켰을 때 지도에서 이어지는 한 갈래. 같은 주제를 가진 원본들의 집합으로 emergent |
-| 개체 | Entity | (저장 안 함, 진술에서 파생) | 진술에서 자동 추출되는 검색용 꼬리표·렌즈(인물·조직 등). 사람이 확정하는 주제와 달리 단위·소유·변경셋에 안 들어가며 언제든 재생성 |
+## 다시 꺼내기 — 어떻게 다시 찾고 보는가
+
+| 제품 용어 (한) | 제품 용어 (영) | 개념 용어 | 코드 용어 | 역할 |
+| -------------- | -------------- | --------- | --------- | ---- |
+| 주제 | Topic | Topic | `topics` / `source_topics` | 재사용되는 라벨. Space 안에서만 재사용되며, 같은 라벨이 붙은 것들은 하나의 흐름으로 모인다 |
+| 태그 | Tag | Tag | (미구현) | 재사용되는 라벨. Topic과 달리 Workspace 안에서 Space를 가로질러 재사용되고, 흐름을 만들지 않는다 |
+| 스레드 | Thread | Thread | `topics` (주제 1개 = 스레드 1개) | 같은 Topic이 붙은 것들이 모여 이루는 하나의 흐름. 별도로 저장되지 않고, 필요할 때 계산되어 나타난다 |
+| 해설 | Narration | Narration | Narration | Context를 근거로 질문에 답하는 산문. 근거에 없는 내용은 지어내지 않는다 |
+
+## 소유·사람 — 누구의 것인가
+
+| 제품 용어 (한) | 제품 용어 (영) | 개념 용어 | 코드 용어 | 역할 |
+| -------------- | -------------- | --------- | --------- | ---- |
+| 워크스페이스 | Workspace | Workspace | (미구현) | 사람과 결제를 묶는 계정 단위. 무엇이 보이고 안 보이는지는 여기서 정해지지 않는다 |
+| 스페이스 | Space | Space | `spaces` / `space_members` | Workspace 안에서 여러 개 가질 수 있는, 일이나 관심사 단위로 나눠 담는 공간 |
+| 유저 | User | User | (미구현) | 로그인하는 사람 단위 |
+| 멤버 | Member | Member | (미구현) | 하나의 Space에 속한 User |
+
+## 폐기된 용어
+
+| 기존 용어 | 폐기 사유 |
+|---|---|
+| 맥락 = Context = Session (대화 공간) | "맥락"이 가리키던 대상 자체가 지식 자산 전체로 재정의됨. 대화 공간이라는 개념은 narration-design.md §9에서 무상태로 설계되어 실체가 없어짐 |
+| 메시지 (Message), 챗 (Chat) | 위와 같은 이유로 v2에 없는 개념 |
+| 개체 (Entity) | Reference로 흡수. "유형" 값(인물/조직/프로젝트 등) 중 하나로 표현 |
+| 줄기 (Stem) | 스레드(Thread)로 대체됨 |
