@@ -79,7 +79,7 @@ export type Database = {
           id: string;
           reverts_id: string | null;
           source_id: string | null;
-          space_id: string | null;
+          space_id: string;
           status: Database["public"]["Enums"]["changeset_status"];
           type: Database["public"]["Enums"]["changeset_type"];
           updated_at: string;
@@ -90,7 +90,7 @@ export type Database = {
           id?: string;
           reverts_id?: string | null;
           source_id?: string | null;
-          space_id?: string | null;
+          space_id: string;
           status: Database["public"]["Enums"]["changeset_status"];
           type: Database["public"]["Enums"]["changeset_type"];
           updated_at?: string;
@@ -101,7 +101,7 @@ export type Database = {
           id?: string;
           reverts_id?: string | null;
           source_id?: string | null;
-          space_id?: string | null;
+          space_id?: string;
           status?: Database["public"]["Enums"]["changeset_status"];
           type?: Database["public"]["Enums"]["changeset_type"];
           updated_at?: string;
@@ -123,6 +123,132 @@ export type Database = {
           },
           {
             foreignKeyName: "changesets_space_id_fkey";
+            columns: ["space_id"];
+            isOneToOne: false;
+            referencedRelation: "spaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      digest_links: {
+        Row: {
+          created_at: string;
+          digest_a_id: string;
+          digest_b_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          digest_a_id: string;
+          digest_b_id: string;
+        };
+        Update: {
+          created_at?: string;
+          digest_a_id?: string;
+          digest_b_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digest_links_digest_a_id_fkey";
+            columns: ["digest_a_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_links_digest_b_id_fkey";
+            columns: ["digest_b_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      digest_references: {
+        Row: {
+          created_at: string;
+          digest_id: string;
+          reference_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          digest_id: string;
+          reference_id: string;
+        };
+        Update: {
+          created_at?: string;
+          digest_id?: string;
+          reference_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digest_references_digest_id_fkey";
+            columns: ["digest_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_references_reference_id_fkey";
+            columns: ["reference_id"];
+            isOneToOne: false;
+            referencedRelation: "references";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      digests: {
+        Row: {
+          author_id: string | null;
+          body: Json;
+          created_at: string;
+          description: string;
+          external_urls: string[] | null;
+          id: string;
+          locator: Json | null;
+          source_id: string;
+          space_id: string;
+          status: Database["public"]["Enums"]["digest_status"];
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_id?: string | null;
+          body: Json;
+          created_at?: string;
+          description: string;
+          external_urls?: string[] | null;
+          id?: string;
+          locator?: Json | null;
+          source_id: string;
+          space_id: string;
+          status?: Database["public"]["Enums"]["digest_status"];
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          author_id?: string | null;
+          body?: Json;
+          created_at?: string;
+          description?: string;
+          external_urls?: string[] | null;
+          id?: string;
+          locator?: Json | null;
+          source_id?: string;
+          space_id?: string;
+          status?: Database["public"]["Enums"]["digest_status"];
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digests_space_id_fkey";
             columns: ["space_id"];
             isOneToOne: false;
             referencedRelation: "spaces";
@@ -1060,14 +1186,16 @@ export type Database = {
     };
     Enums: {
       change_action: "create" | "archive" | "modify" | "restore";
-      change_target_type:
-        | "statement"
-        | "relation"
-        | "source"
-        | "digest"
-        | "reference";
+      change_target_type: "statement" | "relation" | "source";
       changeset_status: "pending" | "applied" | "rejected";
-      changeset_type: "ingestion" | "relation" | "manual" | "revert";
+      changeset_type:
+        | "ingestion"
+        | "conflict"
+        | "merge"
+        | "manual"
+        | "revert"
+        | "relation";
+      digest_status: "active" | "archived";
       draft_origin: "in_app" | "external";
       ingestion_status: "pending" | "completed" | "failed";
       reference_status: "active" | "archived";
@@ -1220,15 +1348,17 @@ export const Constants = {
   public: {
     Enums: {
       change_action: ["create", "archive", "modify", "restore"],
-      change_target_type: [
-        "statement",
-        "relation",
-        "source",
-        "digest",
-        "reference",
-      ],
+      change_target_type: ["statement", "relation", "source"],
       changeset_status: ["pending", "applied", "rejected"],
-      changeset_type: ["ingestion", "relation", "manual", "revert"],
+      changeset_type: [
+        "ingestion",
+        "conflict",
+        "merge",
+        "manual",
+        "revert",
+        "relation",
+      ],
+      digest_status: ["active", "archived"],
       draft_origin: ["in_app", "external"],
       ingestion_status: ["pending", "completed", "failed"],
       reference_status: ["active", "archived"],
