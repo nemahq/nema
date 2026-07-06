@@ -110,7 +110,8 @@ const RelationProposalSchema = z.object({
   // 라벨(N0/E1…) — 워커가 실제 진술 id로 되돌린다. 모르는 라벨·존재↔존재 쌍은 워커가 버린다.
   from: z.string().trim().min(1),
   to: z.string().trim().min(1),
-  type: RelationTypeSchema,
+  // duplicates는 relations가 아니라 아래 duplicates 채널로만 나온다 — 스키마로 차단
+  type: RelationTypeSchema.exclude(["duplicates"]),
   confident: z.boolean(),
 });
 

@@ -724,6 +724,39 @@ export type Database = {
           },
         ];
       };
+      statement_references: {
+        Row: {
+          created_at: string;
+          reference_id: string;
+          statement_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          reference_id: string;
+          statement_id: string;
+        };
+        Update: {
+          created_at?: string;
+          reference_id?: string;
+          statement_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "statement_references_reference_id_fkey";
+            columns: ["reference_id"];
+            isOneToOne: false;
+            referencedRelation: "references";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "statement_references_statement_id_fkey";
+            columns: ["statement_id"];
+            isOneToOne: false;
+            referencedRelation: "statements";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       statement_relations: {
         Row: {
           created_at: string;
@@ -822,6 +855,7 @@ export type Database = {
             | null;
           content: string;
           created_at: string;
+          digest_id: string | null;
           due_date: string | null;
           duplicate_of: string | null;
           error_message: string | null;
@@ -840,6 +874,7 @@ export type Database = {
             | null;
           content: string;
           created_at?: string;
+          digest_id?: string | null;
           due_date?: string | null;
           duplicate_of?: string | null;
           error_message?: string | null;
@@ -858,6 +893,7 @@ export type Database = {
             | null;
           content?: string;
           created_at?: string;
+          digest_id?: string | null;
           due_date?: string | null;
           duplicate_of?: string | null;
           error_message?: string | null;
@@ -871,6 +907,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "statements_digest_id_fkey";
+            columns: ["digest_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "statements_duplicate_of_fkey";
             columns: ["duplicate_of"];
@@ -1205,7 +1248,12 @@ export type Database = {
         | "product"
         | "term";
       relation_status: "active" | "archived";
-      relation_type: "supports" | "conflicts" | "replaces" | "resolves";
+      relation_type:
+        | "supports"
+        | "conflicts"
+        | "replaces"
+        | "resolves"
+        | "duplicates";
       source_status: "pending" | "active" | "trashed";
       space_role: "owner" | "member";
       statement_confidence: "certain" | "guess";
@@ -1362,7 +1410,13 @@ export const Constants = {
       reference_status: ["active", "archived"],
       reference_type: ["person", "organization", "project", "product", "term"],
       relation_status: ["active", "archived"],
-      relation_type: ["supports", "conflicts", "replaces", "resolves"],
+      relation_type: [
+        "supports",
+        "conflicts",
+        "replaces",
+        "resolves",
+        "duplicates",
+      ],
       source_status: ["pending", "active", "trashed"],
       space_role: ["owner", "member"],
       statement_confidence: ["certain", "guess"],
