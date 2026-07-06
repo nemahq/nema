@@ -681,6 +681,44 @@ export type Database = {
           },
         ];
       };
+      tags: {
+        Row: {
+          created_at: string;
+          description: string;
+          id: string;
+          status: Database["public"]["Enums"]["tag_status"];
+          title: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          description: string;
+          id?: string;
+          status?: Database["public"]["Enums"]["tag_status"];
+          title: string;
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string;
+          id?: string;
+          status?: Database["public"]["Enums"]["tag_status"];
+          title?: string;
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tags_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       topics: {
         Row: {
           created_at: string;
@@ -956,6 +994,7 @@ export type Database = {
       statement_confidence: "certain" | "guess";
       statement_status: "active" | "archived";
       statement_type: "claim" | "question" | "todo";
+      tag_status: "active" | "archived";
       workspace_role: "owner" | "member";
     };
     CompositeTypes: {
@@ -1110,6 +1149,7 @@ export const Constants = {
       statement_confidence: ["certain", "guess"],
       statement_status: ["active", "archived"],
       statement_type: ["claim", "question", "todo"],
+      tag_status: ["active", "archived"],
       workspace_role: ["owner", "member"],
     },
   },
