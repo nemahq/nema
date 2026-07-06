@@ -15,6 +15,7 @@ const RELATION_ORDER = [
   "supports",
   "conflicts",
   "replaces",
+  "duplicates",
   "resolves",
 ] as const satisfies RelationType[];
 
@@ -25,6 +26,7 @@ function groupByType(
     supports: [],
     conflicts: [],
     replaces: [],
+    duplicates: [],
     resolves: [],
   };
   for (const relation of relations) {
