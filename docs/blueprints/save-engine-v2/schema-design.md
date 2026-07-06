@@ -1,6 +1,6 @@
 # 저장 구조 설계 — 진술 엔진 (save-engine-v2)
 
-> "저장 비종속"으로 정리한 모델(docs/product 01~10)을 실제 저장소(Postgres/Supabase·Qdrant·Neo4j)에 앉히는 설계. 이 문서를 보고 바로 마이그레이션을 뽑을 수 있는 수준을 목표로 한다.
+> "저장 비종속"으로 정리한 모델(docs/foundations 01~10)을 실제 저장소(Postgres/Supabase·Qdrant·Neo4j)에 앉히는 설계. 이 문서를 보고 바로 마이그레이션을 뽑을 수 있는 수준을 목표로 한다.
 >
 > 이전 세대: [`save-engine-v1`](../save-engine-v1/) (합성 문서 기반). 08-implementation-vs-model이 정리했듯 v1(합성 문서) → v2(진술)는 같은 문제의 두 세대다.
 

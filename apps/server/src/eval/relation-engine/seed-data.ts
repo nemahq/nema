@@ -1,5 +1,5 @@
 // 관계 엔진(save-engine-v2 ③단계) 판정 평가용 씨앗 데이터
-// 설계: docs/flows/save-engine-v2/relation-design.md §5(판정·게이트)
+// 설계: docs/blueprints/save-engine-v2/relation-design.md §5(판정·게이트)
 //
 // 한 시나리오 = 새 진술 배치(role:"new") + 기존 후보(role:"existing") + 그 사이에
 // 성립하는 골든 관계의 "전수". 골든은 닫힌 세계(closed-world)다 — 골든에 없는

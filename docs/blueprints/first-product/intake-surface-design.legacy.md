@@ -2,7 +2,7 @@
 
 > **⚠️ Legacy — 재설계 필요 문서**
 >
-> 이 문서는 v1.5 넣기 구현(초안 페이지·제목/주제만 확정·인박스) 당시의 설계 기록이다. 이후 Source→Digest→Reference 모델(`docs/guides/glossary.md`, `docs/flows/first-product/surface-inventory.md`)로 넣기 흐름 자체가 바뀌면서, 이 문서의 사이트맵·확정 게이트·인박스 설계는 지금 구조와 맞지 않는다.
+> 이 문서는 v1.5 넣기 구현(초안 페이지·제목/주제만 확정·인박스) 당시의 설계 기록이다. 이후 Source→Digest→Reference 모델(`docs/guides/glossary.md`, `docs/blueprints/first-product/surface-inventory.md`)로 넣기 흐름 자체가 바뀌면서, 이 문서의 사이트맵·확정 게이트·인박스 설계는 지금 구조와 맞지 않는다.
 >
 > - "지도"는 Space 오버뷰로 대체됐다(`surface-design.md` §4 참고).
 > - 확정 단위가 "제목·주제"에서 "N개 Digest(Topic·Tag·타입별 구조화 본문 포함) + N개 Reference"로 바뀌었다(`surface-inventory.md`의 Digest 리뷰 화면 참고).
@@ -21,10 +21,10 @@
 
 ## 함께 보는 문서
 
-- 콘텐츠 입구(`docs/flows/first-product/content-intake-design.md`): Track 0가 깐 계약(draft·topic 라우터, 확정 게이트 백엔드)을 정한 문서. 이 문서는 그 계약 위에 앱 표면을 얹는다.
-- 해설(`docs/flows/first-product/narration-design.md`): 다시켜기의 묻기 표면. 이 문서는 해설을 배경으로만 다루고, 넣기가 그 옆에 어떻게 앉는지까지만 본다.
-- MCP(`docs/flows/first-product/mcp-design.md`): 외부에서 올리기 입구. 이번 라운드는 읽기 전용이고, 넣기와 초안·확정 게이트를 공유한다.
-- 첫 제품 방향(`docs/product/11-first-product-direction.md`, 이하 방향 문서): 누구에게 무엇부터 만드는지 정한 문서. 아래에서 "방향 문서 §4"처럼 가리킨다.
+- 콘텐츠 입구(`docs/blueprints/first-product/content-intake-design.md`): Track 0가 깐 계약(draft·topic 라우터, 확정 게이트 백엔드)을 정한 문서. 이 문서는 그 계약 위에 앱 표면을 얹는다.
+- 해설(`docs/blueprints/first-product/narration-design.md`): 다시켜기의 묻기 표면. 이 문서는 해설을 배경으로만 다루고, 넣기가 그 옆에 어떻게 앉는지까지만 본다.
+- MCP(`docs/blueprints/first-product/mcp-design.md`): 외부에서 올리기 입구. 이번 라운드는 읽기 전용이고, 넣기와 초안·확정 게이트를 공유한다.
+- 첫 제품 방향(`docs/foundations/11-first-product-direction.md`, 이하 방향 문서): 누구에게 무엇부터 만드는지 정한 문서. 아래에서 "방향 문서 §4"처럼 가리킨다.
 - 표면 설계(`surface-design.md`): 사용자 여정으로 본 표면 전체의 우산 문서. 이 문서의 사이트맵 중 지도의 역할과 재방문 진입 동선을 거기서 개정한다(지도를 눌러 해설로 가는 허브에서 줄기 현황판으로, 재방문 주 진입을 지도에서 묻기로). 아래 사이트맵은 그 개정 전 그림이다.
 
 ---

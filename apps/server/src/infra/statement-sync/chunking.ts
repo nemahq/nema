@@ -1,5 +1,5 @@
 // 초장문 분할기 — 임계선을 넘는 입력을 추출 청크로 가른다.
-// 설계: docs/flows/save-engine-v2/long-input-chunking.md 2~4장.
+// 설계: docs/blueprints/save-engine-v2/long-input-chunking.md 2~4장.
 //
 // 순수 함수·결정적(같은 입력 → 항상 같은 분할). 절단("하나의 '왜'")은 LLM의
 // 일이고, 분할기의 책임은 '왜' 하나가 걸쳐 있을 확률이 낮은 경계를 고르는 것 —

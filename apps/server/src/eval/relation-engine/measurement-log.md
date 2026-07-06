@@ -1,7 +1,7 @@
 # 관계 엔진 측정 일지
 
 > 관계 판정(③ 잇기) 평가의 라운드별 기록 — 무엇을 바꿨고, 숫자가 어떻게 움직였고, 무엇을 발견했나.
-> 평가 방식은 [relation-design §5](../../../../../docs/flows/save-engine-v2/relation-design.md), raw 결과(실패 사례 전수)는 같은 폴더의 `results-judgment-*.json`(gitignore, 재실행으로 재생성).
+> 평가 방식은 [relation-design §5](../../../../../docs/blueprints/save-engine-v2/relation-design.md), raw 결과(실패 사례 전수)는 같은 폴더의 `results-judgment-*.json`(gitignore, 재실행으로 재생성).
 > 측정 대상 = 제품과 동일한 판정 1콜(`prompts/relation-judgment.ts` + gpt-5 standard, `LINKING_REASONING_EFFORT`/`LINKING_TIMEOUT_MS` 미러) + 동일한 게이트(`gateProposals`). 채점은 LLM 심판이 아니라 코드 정확 비교(라벨→골든 id가 통제돼 있어 해석 불필요).
 
 ---

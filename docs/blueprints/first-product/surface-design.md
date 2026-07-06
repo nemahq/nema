@@ -5,9 +5,9 @@
 ### 함께 보는 문서
 
 - 표면 인벤토리(`surface-inventory.md`): 지금 화면 목록과 각 역할.
-- 첫 제품 방향(`docs/product/11-first-product-direction.md`, 이하 방향 문서): 누구에게 무엇부터 만드는지 정한 문서. 전제로 깐다.
-- 넣기 표면 설계(`docs/flows/first-product/intake-surface-design.legacy.md`, NEM-157): v1.5 넣기 표면 IA. Source→Digest→Reference 모델 이후로 재설계 필요(legacy 마커 참고).
-- 해설(`docs/flows/first-product/narration-design.md`): 해설의 서버 설계.
+- 첫 제품 방향(`docs/foundations/11-first-product-direction.md`, 이하 방향 문서): 누구에게 무엇부터 만드는지 정한 문서. 전제로 깐다.
+- 넣기 표면 설계(`docs/blueprints/first-product/intake-surface-design.legacy.md`, NEM-157): v1.5 넣기 표면 IA. Source→Digest→Reference 모델 이후로 재설계 필요(legacy 마커 참고).
+- 해설(`docs/blueprints/first-product/narration-design.md`): 해설의 서버 설계.
 - 맥락 넣기(`content-intake-design.md`)·MCP(`mcp-design.md`): 넣기 입구와 외부 연결.
 
 ---
