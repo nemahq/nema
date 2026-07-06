@@ -20,12 +20,8 @@ CREATE TABLE tags (
   UNIQUE (workspace_id, title)
 );
 
--- =============================================================
--- Indexes
--- =============================================================
-
--- Workspace별 태그 목록 조회 + UNIQUE가 (workspace_id, title) 등치도 커버
-CREATE INDEX idx_tags_workspace ON tags (workspace_id);
+-- 별도 workspace_id 인덱스 없음 — UNIQUE(workspace_id, title)의 복합 인덱스
+-- 선두 컬럼이 workspace_id라 목록 조회를 이미 커버한다.
 
 -- =============================================================
 -- Triggers
