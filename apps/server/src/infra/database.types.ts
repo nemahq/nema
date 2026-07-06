@@ -79,7 +79,7 @@ export type Database = {
           id: string;
           reverts_id: string | null;
           source_id: string | null;
-          space_id: string;
+          space_id: string | null;
           status: Database["public"]["Enums"]["changeset_status"];
           type: Database["public"]["Enums"]["changeset_type"];
           updated_at: string;
@@ -90,7 +90,7 @@ export type Database = {
           id?: string;
           reverts_id?: string | null;
           source_id?: string | null;
-          space_id: string;
+          space_id?: string | null;
           status: Database["public"]["Enums"]["changeset_status"];
           type: Database["public"]["Enums"]["changeset_type"];
           updated_at?: string;
@@ -101,7 +101,7 @@ export type Database = {
           id?: string;
           reverts_id?: string | null;
           source_id?: string | null;
-          space_id?: string;
+          space_id?: string | null;
           status?: Database["public"]["Enums"]["changeset_status"];
           type?: Database["public"]["Enums"]["changeset_type"];
           updated_at?: string;
@@ -1060,15 +1060,14 @@ export type Database = {
     };
     Enums: {
       change_action: "create" | "archive" | "modify" | "restore";
-      change_target_type: "statement" | "relation" | "source";
+      change_target_type:
+        | "statement"
+        | "relation"
+        | "source"
+        | "digest"
+        | "reference";
       changeset_status: "pending" | "applied" | "rejected";
-      changeset_type:
-        | "ingestion"
-        | "conflict"
-        | "merge"
-        | "manual"
-        | "revert"
-        | "relation";
+      changeset_type: "ingestion" | "relation" | "manual" | "revert";
       draft_origin: "in_app" | "external";
       ingestion_status: "pending" | "completed" | "failed";
       reference_status: "active" | "archived";
@@ -1221,16 +1220,15 @@ export const Constants = {
   public: {
     Enums: {
       change_action: ["create", "archive", "modify", "restore"],
-      change_target_type: ["statement", "relation", "source"],
-      changeset_status: ["pending", "applied", "rejected"],
-      changeset_type: [
-        "ingestion",
-        "conflict",
-        "merge",
-        "manual",
-        "revert",
+      change_target_type: [
+        "statement",
         "relation",
+        "source",
+        "digest",
+        "reference",
       ],
+      changeset_status: ["pending", "applied", "rejected"],
+      changeset_type: ["ingestion", "relation", "manual", "revert"],
       draft_origin: ["in_app", "external"],
       ingestion_status: ["pending", "completed", "failed"],
       reference_status: ["active", "archived"],

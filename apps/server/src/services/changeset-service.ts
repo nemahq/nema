@@ -311,6 +311,8 @@ export async function listChangesets(args: {
         statement: 0,
         relation: 0,
         source: 0,
+        digest: 0,
+        reference: 0,
       };
       for (const c of row.changes) {
         effect[c.target_type] += 1;
