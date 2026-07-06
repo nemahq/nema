@@ -278,6 +278,83 @@ export type Database = {
         };
         Relationships: [];
       };
+      reference_links: {
+        Row: {
+          created_at: string;
+          reference_a_id: string;
+          reference_b_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          reference_a_id: string;
+          reference_b_id: string;
+        };
+        Update: {
+          created_at?: string;
+          reference_a_id?: string;
+          reference_b_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reference_links_reference_a_id_fkey";
+            columns: ["reference_a_id"];
+            isOneToOne: false;
+            referencedRelation: "references";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reference_links_reference_b_id_fkey";
+            columns: ["reference_b_id"];
+            isOneToOne: false;
+            referencedRelation: "references";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      references: {
+        Row: {
+          body: string;
+          created_at: string;
+          external_urls: string[] | null;
+          id: string;
+          status: Database["public"]["Enums"]["reference_status"];
+          title: string;
+          type: Database["public"]["Enums"]["reference_type"];
+          updated_at: string;
+          workspace_id: string;
+        };
+        Insert: {
+          body: string;
+          created_at?: string;
+          external_urls?: string[] | null;
+          id?: string;
+          status?: Database["public"]["Enums"]["reference_status"];
+          title: string;
+          type: Database["public"]["Enums"]["reference_type"];
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          body?: string;
+          created_at?: string;
+          external_urls?: string[] | null;
+          id?: string;
+          status?: Database["public"]["Enums"]["reference_status"];
+          title?: string;
+          type?: Database["public"]["Enums"]["reference_type"];
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "references_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       session_retrievals: {
         Row: {
           body: string;
@@ -987,6 +1064,13 @@ export type Database = {
         | "relation";
       draft_origin: "in_app" | "external";
       ingestion_status: "pending" | "completed" | "failed";
+      reference_status: "active" | "archived";
+      reference_type:
+        | "person"
+        | "organization"
+        | "project"
+        | "product"
+        | "term";
       relation_status: "active" | "archived";
       relation_type: "supports" | "conflicts" | "replaces" | "resolves";
       source_status: "active" | "archived";
@@ -1142,6 +1226,8 @@ export const Constants = {
       ],
       draft_origin: ["in_app", "external"],
       ingestion_status: ["pending", "completed", "failed"],
+      reference_status: ["active", "archived"],
+      reference_type: ["person", "organization", "project", "product", "term"],
       relation_status: ["active", "archived"],
       relation_type: ["supports", "conflicts", "replaces", "resolves"],
       source_status: ["active", "archived"],
