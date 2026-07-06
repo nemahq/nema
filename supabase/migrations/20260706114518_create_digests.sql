@@ -28,8 +28,10 @@ CREATE TABLE digests (
   status        digest_status NOT NULL DEFAULT 'active',
   created_at    timestamptz NOT NULL DEFAULT now(),
   updated_at    timestamptz NOT NULL DEFAULT now(),
+  -- `body ? 'type'`이 없으면 키 부재 시 NULL IN (...) = NULL로 CHECK가 통과해버린다
   CONSTRAINT chk_digest_body_type CHECK (
-    body->>'type' IN ('decision', 'pending', 'learning', 'idea', 'assumption')
+    body ? 'type'
+    AND body->>'type' IN ('decision', 'pending', 'learning', 'idea', 'assumption')
   )
 );
 
