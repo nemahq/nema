@@ -12,7 +12,7 @@
 | `createdAt` | `Date` | 원본이 시스템에 들어온 때 |
 | `status` | `enum: pending / active / trashed` | 존재 상태. `pending`은 파생된 게 없는 상태(갓 생성됐거나, 원본 빼기로 되돌려진 것 — "처리 중인 Source 작업 목록"에 노출). `active`는 확정된 Digest·Statement 등이 있는 상태. `trashed`는 사용자가 명시적으로 삭제를 선택한 상태 — `trashedAt` 이후 보관 기간이 지나면 배치로 완전 삭제됨 |
 | `trashedAt?` | `Date` | `trashed`가 된 시각 — 완전 삭제 배치가 보관 기간 경과 여부를 판단하는 기준 |
-| `authorId` | `uuid` | 누가 넣었나 (사용자 id) |
+| `authorId?` | `uuid` | 누가 넣었나 (사용자 id) — User 삭제 시 `ON DELETE SET NULL`이라 nullable |
 
 ## Digest
 
@@ -31,7 +31,7 @@ Source를 사람이 읽기 좋게 정리한 것. 여기서 Statement가 추출�
 | `relatedDigestIds?` | `uuid[]` | 관련 Digest — 명시적으로 이어지는 다른 Digest들. Topic/Thread와 달리 의도적·정밀한 링크. 의미 관계(지지·충돌 등)가 아니라 느슨한 상호 참조라 방향 없음 |
 | `referenceIds?` | `uuid[]` | 이 Digest가 언급하는 Reference들 (인물·조직·프로젝트·제품·개념) |
 | `externalUrls?` | `string[]` | 정리 과정에서 원문에서 뽑아낸 외부 링크들 (Slack 메시지, Notion 페이지 등) |
-| `authorId` | `uuid` | 작성자(User) |
+| `authorId?` | `uuid` | 작성자(User) — User 삭제 시 `ON DELETE SET NULL`이라 nullable |
 | `createdAt` | `Date` | 만들어진 때 |
 | `status` | `enum: active / archived` | 존재 상태 |
 
@@ -160,7 +160,7 @@ Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력
 | `targetId` | `uuid` | 대상 |
 | `data?` | `object` | `create`: 만들어진 시점의 필드·값 그대로. `modify`: `{ before, after }` — 바뀐 필드만 이전/이후 값을 함께 담아 그 Change 하나만으로 자기완결적으로 복원 가능하게 함(체이닝 불필요). `archive`엔 없음 |
 
-`source`·`digest`·`statement`·`relation`은 `create`/`archive`만 — 확정 후 불변이라 `modify` 없음. `source`는 archive 후 새로 create하는 것을 "원본 수정"으로 편의 노출한다(`manual` changeset, surface-design.md §5.5) — 이건 Source→파생물 전체가 재인제스천되는 무거운 동작이라는 걸 사용자가 감수하는 명시적 선택이다. `digest`는 확정(active) 후엔 이 편의 기능조차 없다 — Statement가 이미 그 Digest를 안정적 근거로 참조하고 있어서, Digest만 콕 집어 고치면 그 위에 쌓인 관계·판정이 고아가 된다(Source 레벨 되돌리기가 겪는 문제를 한 단계 아래서 반복). 확정 전(pending 초안 단계)의 Digest 편집은 별개로, 그냥 확정 전 초안 수정이라 이 문제가 없다. `digest`를 고치려면 Source까지 거슬러 올라가 재인제스천해야 한다. `statement`는 `manual`로 단독 archive("가리기")만 가능하고 create/재생성은 없다 — Narration이 직접 인용하는 증거 단위라 Digest보다도 안 바뀌어야 할 이유가 더 크다. `relation`은 독립적인 `manual` 교정이 없다 — 틀린 관계는 대부분 conflict changeset의 "충돌 아님" 판정으로 잡히고(pending 단계), 그 외엔 끝점 Statement archived의 캐스케이드로만 archived된다(surface-design.md §5.6). `reference`는 `create`·`modify`·`archive` 다 쓴다 — `modify`가 본질(계속 다듬어지는 게 존재 이유)이고, `archive`는 정리용(더 이상 안 쓰는 엔트리를 접음, 과거 인용은 그대로 유효). Reference의 과거 상태는 그 Reference를 대상으로 한 Change들을 시간순으로 훑어 재구성한다(별도 버전 필드 불필요). Reference의 과거 Change에 남는 민감정보(사람이 직접 입력한 경우)는 별도 리댁션 메커니즘을 두지 않는다 — git이 과거 커밋에 남은 평문 비밀값을 이력에서 지워주지 않는 것과 같은 이유로, 발생 확률 대비 복잡성이 안 맞는다.
+`source`·`digest`·`statement`·`relation`은 `create`/`archive`만 — 확정 후 불변이라 `modify` 없음. `source`는 archive 후 새로 create하는 것을 "원본 수정"으로 편의 노출한다(`manual` changeset) — 이건 Source→파생물 전체가 재인제스천되는 무거운 동작이라는 걸 사용자가 감수하는 명시적 선택이다. `digest`는 확정(active) 후엔 이 편의 기능조차 없다 — Statement가 이미 그 Digest를 안정적 근거로 참조하고 있어서, Digest만 콕 집어 고치면 그 위에 쌓인 관계·판정이 고아가 된다(Source 레벨 되돌리기가 겪는 문제를 한 단계 아래서 반복). 확정 전(pending 초안 단계)의 Digest 편집은 별개로, 그냥 확정 전 초안 수정이라 이 문제가 없다. `digest`를 고치려면 Source까지 거슬러 올라가 재인제스천해야 한다. `statement`는 `manual`로 단독 archive("가리기")만 가능하고 create/재생성은 없다 — Narration이 직접 인용하는 증거 단위라 Digest보다도 안 바뀌어야 할 이유가 더 크다. `relation`은 독립적인 `manual` 교정이 없다 — 틀린 관계는 대부분 conflict changeset의 "충돌 아님" 판정으로 잡히고(pending 단계), 그 외엔 끝점 Statement archived의 캐스케이드로만 archived된다. `reference`는 `create`·`modify`·`archive` 다 쓴다 — `modify`가 본질(계속 다듬어지는 게 존재 이유)이고, `archive`는 정리용(더 이상 안 쓰는 엔트리를 접음, 과거 인용은 그대로 유효). Reference의 과거 상태는 그 Reference를 대상으로 한 Change들을 시간순으로 훑어 재구성한다(별도 버전 필드 불필요). Reference의 과거 Change에 남는 민감정보(사람이 직접 입력한 경우)는 별도 리댁션 메커니즘을 두지 않는다 — git이 과거 커밋에 남은 평문 비밀값을 이력에서 지워주지 않는 것과 같은 이유로, 발생 확률 대비 복잡성이 안 맞는다.
 
 Topic·Tag는 `targetType`에 없다 — 판단·사실 콘텐츠가 아니라 찾기용 라벨이라 잘못 바뀌어도 판단을 오염시키지 않으므로, Changeset 리뷰·불변성 없이 가볍게 직접 CRUD한다(soft delete만 유지).
 
@@ -214,7 +214,7 @@ Topic·Tag는 `targetType`에 없다 — 판단·사실 콘텐츠가 아니라 �
 
 ## Space
 
-기록(원본·다이제스트·진술·관계·레퍼런스)이 담기는 소유 단위. Workspace 안에 여러 개 있을 수 있다. 멤버 1명이면 개인, 여러 명이면 공동 소유 — 같은 단위이고 멤버 수만 다르다(`10-concept-collaboration.md`).
+기록(원본·다이제스트·진술·관계)이 담기는 소유 단위 — Reference는 Space가 아니라 Workspace 스코프다. Workspace 안에 여러 개 있을 수 있다. 멤버 1명이면 개인, 여러 명이면 공동 소유 — 같은 단위이고 멤버 수만 다르다(`10-concept-collaboration.md`).
 
 | key | 타입 | 설명 |
 |---|---|---|
@@ -246,7 +246,7 @@ Nema 쪽에서 붙이는 유일한 확장은 `profiles`(`user_id` → `auth.user
 
 - **Owner 0명 금지, 계정 삭제 시 소유권 이전 강제** — Space·Workspace는 항상 `owner` role인 Member가 최소 1명 있어야 한다(Slack·Notion 공통 원칙). User가 계정을 삭제하려는데 자신이 owner이고 다른 멤버가 있으면, 먼저 소유권을 다른 멤버에게 넘겨야 삭제가 진행된다(자동 승계 없음). 정말로 유일한 멤버라면 그 Space·Workspace 전체가 완전 삭제 캐스케이드를 탄다. 다른 멤버가 있는 곳에서 그냥 나가는(비-owner) 경우는 그 Member 행만 제거.
 - **authorId는 사람 삭제와 무관하게 콘텐츠를 보존** — `Source`·`Digest`·`Changeset`의 `authorId`는 소유가 아니라 귀속(누가 만들었나) 정보일 뿐이라, User가 삭제돼도 `ON DELETE SET NULL`로 콘텐츠는 남고 귀속만 사라진다(공유 Space에서 다른 사람이 그 위에 쌓은 관계·판단을 보존하기 위함). `profiles`는 `ON DELETE CASCADE`(이미 구현됨).
-- **원본 빼기 → 파생 효과 전체 되돌림** — 원본을 `pending`으로 되돌리는 건 그 원본이 만든 ingestion Changeset을 되돌리는 것과 같다(surface-design.md §5.5). 그 Changeset이 만든 Digest·Reference·진술·관계도 함께 되돌아간다(archived). 재개하면 그 옛 산출물을 되살리는 게 아니라 처음부터 새로 인제스천한다. 단순 soft-archive가 아니라 파생 효과 전체를 되돌리는 동작이다.
+- **원본 빼기 → 파생 효과 전체 되돌림** — 원본을 `pending`으로 되돌리는 건 그 원본이 만든 ingestion Changeset을 되돌리는 것과 같다. 그 Changeset이 만든 Digest·Reference·진술·관계도 함께 되돌아간다(archived). 재개하면 그 옛 산출물을 되살리는 게 아니라 처음부터 새로 인제스천한다. 단순 soft-archive가 아니라 파생 효과 전체를 되돌리는 동작이다.
 - **끝점 archived → 관계 연쇄** — 끝점 진술이 `archived`되면 걸린 관계도 함께 `archived`된다(연쇄 soft-archive). 끝점을 되살리면 관계도 돌아온다.
 - **변경셋 적용 (트리거별)** — `ingestion`은 항상 `pending`으로 시작한다. Digest·Reference 후보를 사람이 확인해야(1단계, Digest 리뷰 화면) `applied`로 전환되고, 그 순간 Statement·Relation 생성(2단계)이 시작된다 — 애매해서가 아니라 모든 ingestion이 거치는 필수 게이트. `manual`·`revert`는 이미 사람이 확정한 단일 동작이라 곧바로 `applied`. 2단계 생성 중 엔진이 새 Statement를 기존 것들과 대조하다 모순(`conflict`)이나 같은 뜻의 중복(`merge`)을 감지하면, 감지된 진술 쌍 하나마다 별도의 변경셋이 `pending`으로 발생한다(하나의 ingestion에서 conflict N개·duplicate I개가 나오면 changeset도 N+I개 — 사람이 Digest 단위로 하나씩 판정하므로 한 changeset으로 묶으면 부분 판정을 표현 못 함). 활성 그래프 밖에서 대기하다 사람이 적용하며, 둘 다 엔진이 잘못 판단하면 되돌리기 전엔 드러나지 않는 채로 진술이 사라지거나 잘못 엮이므로 확신도와 무관하게 항상 사람 확인을 거친다.
 - **레퍼런스·주제·태그는 병합을 고려하지 않음** — `merge`(중복 병합)는 Statement 전용이다. Reference·Topic·Tag는 Source→Digest/Reference 변환 시 이미 레지스트리에 등록된 것과 매칭해 인용을 제안하므로, 애초에 같은 대상이 중복 생성되는 경우가 최소화된다. 매칭이 안 되면(협업 확장 시 Space 권한이 갈리는 경우 등) 병합 대신 중복을 그대로 허용한다.
