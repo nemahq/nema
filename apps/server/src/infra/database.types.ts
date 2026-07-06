@@ -7,6 +7,11 @@ export type Json =
   | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.4";
+  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -192,6 +197,72 @@ export type Database = {
             columns: ["reference_id"];
             isOneToOne: false;
             referencedRelation: "references";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      digest_tags: {
+        Row: {
+          created_at: string;
+          digest_id: string;
+          tag_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          digest_id: string;
+          tag_id: string;
+        };
+        Update: {
+          created_at?: string;
+          digest_id?: string;
+          tag_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digest_tags_digest_id_fkey";
+            columns: ["digest_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_tags_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: false;
+            referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      digest_topics: {
+        Row: {
+          created_at: string;
+          digest_id: string;
+          topic_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          digest_id: string;
+          topic_id: string;
+        };
+        Update: {
+          created_at?: string;
+          digest_id?: string;
+          topic_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digest_topics_digest_id_fkey";
+            columns: ["digest_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_topics_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
             referencedColumns: ["id"];
           },
         ];
@@ -588,10 +659,13 @@ export type Database = {
           author_timezone: string | null;
           body: string;
           created_at: string;
+          digestion_retry_count: number;
+          digestion_status: Database["public"]["Enums"]["ingestion_status"];
           error_message: string | null;
           extraction_retry_count: number;
           extraction_status: Database["public"]["Enums"]["ingestion_status"];
           id: string;
+          last_digestion_attempt: string | null;
           last_extraction_attempt: string | null;
           last_linking_attempt: string | null;
           linking_retry_count: number;
@@ -608,10 +682,13 @@ export type Database = {
           author_timezone?: string | null;
           body: string;
           created_at?: string;
+          digestion_retry_count?: number;
+          digestion_status?: Database["public"]["Enums"]["ingestion_status"];
           error_message?: string | null;
           extraction_retry_count?: number;
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
+          last_digestion_attempt?: string | null;
           last_extraction_attempt?: string | null;
           last_linking_attempt?: string | null;
           linking_retry_count?: number;
@@ -628,10 +705,13 @@ export type Database = {
           author_timezone?: string | null;
           body?: string;
           created_at?: string;
+          digestion_retry_count?: number;
+          digestion_status?: Database["public"]["Enums"]["ingestion_status"];
           error_message?: string | null;
           extraction_retry_count?: number;
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
+          last_digestion_attempt?: string | null;
           last_extraction_attempt?: string | null;
           last_linking_attempt?: string | null;
           linking_retry_count?: number;
@@ -1084,6 +1164,10 @@ export type Database = {
         Args: { p_statement_id: string };
         Returns: undefined;
       };
+      complete_source_digestion: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
       complete_source_extraction: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -1096,6 +1180,10 @@ export type Database = {
         Args: { p_draft_id: string; p_title: string; p_topics: string[] };
         Returns: string;
       };
+      confirm_ingestion_review: {
+        Args: { p_changeset_id: string };
+        Returns: string;
+      };
       create_draft: {
         Args: {
           p_body: string;
@@ -1104,6 +1192,10 @@ export type Database = {
           p_space_id: string;
           p_title?: string;
         };
+        Returns: string;
+      };
+      create_ingestion_review: {
+        Args: { p_digests: Json; p_new_references?: Json; p_source_id: string };
         Returns: string;
       };
       create_source: {
@@ -1116,6 +1208,17 @@ export type Database = {
         Returns: string;
       };
       delete_draft: { Args: { p_draft_id: string }; Returns: undefined };
+      fetch_pending_digestion_sources: {
+        Args: { p_max_retries?: number };
+        Returns: {
+          author_id: string;
+          body: string;
+          created_at: string;
+          id: string;
+          space_id: string;
+          workspace_id: string;
+        }[];
+      };
       fetch_pending_linking_sources: {
         Args: { p_max_retries?: number };
         Returns: {
@@ -1147,6 +1250,14 @@ export type Database = {
           status: Database["public"]["Enums"]["statement_status"];
           type: Database["public"]["Enums"]["statement_type"];
         }[];
+      };
+      increment_source_digestion_retry: {
+        Args: {
+          p_error_message?: string;
+          p_max_retries?: number;
+          p_source_id: string;
+        };
+        Returns: undefined;
       };
       increment_source_extraction_retry: {
         Args: {
@@ -1197,6 +1308,10 @@ export type Database = {
         Args: { p_source_id: string };
         Returns: undefined;
       };
+      retry_source_digestion: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
       retry_source_extraction: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -1224,6 +1339,22 @@ export type Database = {
       };
       update_message_payload: {
         Args: { p_message_id: string; p_payload: Json; p_session_id: string };
+        Returns: undefined;
+      };
+      update_pending_ingestion: {
+        Args: {
+          p_changeset_id: string;
+          p_digests: Json;
+          p_new_references?: Json;
+        };
+        Returns: undefined;
+      };
+      write_ingestion_review_changes: {
+        Args: {
+          p_changeset_id: string;
+          p_digests: Json;
+          p_new_references: Json;
+        };
         Returns: undefined;
       };
     };

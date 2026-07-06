@@ -6,7 +6,6 @@ import type { RelationType } from "@nema-io/shared";
 
 import type { Json } from "@server/infra/database.types";
 import type { EmbeddingProvider } from "@server/infra/embedding";
-import { createLimiter } from "@server/infra/llm/limiter";
 import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { LlmTask } from "@server/infra/llm/task-routing";
@@ -37,6 +36,8 @@ import { resolveDeadlineToDueDate } from "@server/temporal/deadline";
 
 import type { ExtractionChunk } from "./chunking";
 import { chunkForExtraction } from "./chunking";
+import { runDigestionPass } from "./digestion";
+import { limitLlmCall } from "./llm-limiter";
 import type {
   LinkingBatchStatement,
   LinkingCandidateStatement,
@@ -236,15 +237,18 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
   };
 }
 
-// 사이클: ① 추출 → ② 임베딩 → ③ 잇기, 셋 다 빌 때까지.
+// 사이클: ⓪ 생성 → ① 추출 → ② 임베딩 → ③ 잇기, 넷 다 빌 때까지.
+// ⓪은 리뷰 대기(pending changeset)를 만들 뿐 ①의 입력을 직접 만들지 않는다 —
+// ①은 사람이 리뷰를 확정해 원본이 active가 된 뒤에야 집는다(confirm이 notify를 쏨).
 // ①이 pending 진술을, ②가 잇기 대상(임베딩 끝난 원본)을 만들어내므로 이 순서면
 // 한 번 깨어난 김에 추출·임베딩·잇기까지 끝난다 (relation-design §3).
 async function runCycle(deps: WorkerDeps): Promise<void> {
   while (true) {
+    const digested = await runDigestionPass(deps);
     const extracted = await runExtractionPass(deps);
     const embedded = await runEmbeddingPass(deps);
     const linked = await runLinkingPass(deps);
-    if (extracted === 0 && embedded === 0 && linked === 0) {
+    if (digested === 0 && extracted === 0 && embedded === 0 && linked === 0) {
       break;
     }
   }
@@ -369,10 +373,6 @@ async function processSource(
 
 // --- 추출 — 임계선 이하 1콜, 초과 시 청크 병렬 (long-input-chunking 설계) ---
 
-// 동시 LLM 콜 상한은 이 한 군데서 관리한다 — source 병렬(EXTRACTION_CONCURRENCY)과
-// 청크 병렬이 곱으로 불어나지 않게, 모든 추출 콜이 같은 제한기를 지난다.
-// 동시 4 초과 시 제공자 타임아웃이 관찰된 전례(measurement-log #3)로 3.
-const LLM_CALL_CONCURRENCY = 3;
 // 청크 콜 한정 재시도 — 단일 콜 실패는 DB lease 재시도가 받지만, 분할 경로는
 // 청크 하나의 일시 실패가 성공한 나머지 전부를 버리게 하므로 콜 레벨 방어가 먼저다.
 const CHUNK_CALL_MAX_ATTEMPTS = 3;
@@ -388,8 +388,6 @@ const RETRYABLE_LLM_CODES: ReadonlySet<string> = new Set([
   "rate_limit",
   "unknown",
 ]);
-
-const limitLlmCall = createLimiter(LLM_CALL_CONCURRENCY);
 
 async function extractSourceStatements(
   llm: LlmProvider,

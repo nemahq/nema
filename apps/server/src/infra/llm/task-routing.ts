@@ -18,6 +18,7 @@ export const LLM_TASK_SCHEMA = z.enum([
   "classifyDraftIntent",
   "generateSessionTitle",
   "extractStatements",
+  "generateDigests",
   "judgeRelations",
   "assistDraft",
   "narrate",
@@ -42,6 +43,9 @@ export const TASK_DEFAULTS = {
   classifyDraftIntent: { tier: "mini" },
   generateSessionTitle: { tier: "nano" },
   extractStatements: { tier: "standard", effort: "low" },
+  // Digest 생성: 원문을 유형별 정리본으로 쪼개고 라벨·레퍼런스까지 제안. 사람이 그대로
+  // 확정하는 품질이 목표라 standard, effort는 추출과 같은 이유로 low(타임아웃 변동 억제).
+  generateDigests: { tier: "standard", effort: "low" },
   judgeRelations: { tier: "standard", effort: "low" },
   // 한 방 어시스턴트: 말뭉치를 깎아 본문 + 제목 + 주제 제안(구조화 출력). 정제 작업이라 standard.
   assistDraft: { tier: "standard" },
