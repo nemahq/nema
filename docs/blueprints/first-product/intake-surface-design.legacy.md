@@ -14,10 +14,10 @@
 
 ## 기대는 개념 (자세한 정의는 `docs/guides/glossary.md`)
 
-- 초안(draft): 확정 전 대기하는 글. 두 입구(앱·MCP)가 공유하고, 사람과 AI가 공동 편집한다.
+- 초안(draft): 확정 전 대기하는 글. 두 입구(앱·MCP)가 공유하고, 사람과 AI가 공동 편집한다. 용어 사전 v2의 다이제스트(Digest)와는 다른 자리다(draft는 원본 승격 전, 다이제스트는 원본 이후).
 - 원본(source): 확정된 초안이 승격된 원재료. 진술이 여기서 추출된다.
 - 주제(topic): 원본에 붙는 평평한 단일 라벨(0..N, 무태그 허용). 같은 주제가 붙은 원본들의 묶음이 한 줄기다.
-- 줄기: 한 주제로 묶인 맥락 한 갈래. 주제 하나 = 줄기 하나. 사용자 눈엔 자기가 다루는 주제·프로젝트 하나로 보인다.
+- 줄기: 한 주제로 묶인 맥락 한 갈래. 주제 하나 = 줄기 하나. 사용자 눈엔 자기가 다루는 주제·프로젝트 하나로 보인다. 용어 사전 v2의 스레드(Thread)를 이 문서에서는 줄기로 적었다.
 
 ## 함께 보는 문서
 
@@ -190,7 +190,7 @@ v2 자유 전제다. 넣기·묻기·세션 UI를 전면 철거하고, 그 자�
 - 프론트: `DraftTabContent`, `useDraftTab`, `ChatComposer`의 remember 모드와 모드 토글, `ActionMessage`의 draft intent, `useCancelDraft`, 관련 draft 훅. 묻기 표면(세션 사이드바, MessageList, ask 입력창 등)도 전면 철거에 포함.
 - 백엔드: `orchestrator`의 getDraft/setDraft/clearDraft와 drafting 분기, `cancelDraftAction`, `confirmDraftIntentStream`, `message-router`의 cancelDraft·confirmDraftIntent, `services/chat/drafting.ts`, `prompts/drafting.ts`와 `draft-intent.ts`.
 - 스키마: `SessionDraft`, `DraftIntent`, 관련 message 스키마.
-- DB: `sessions.draft` 컬럼 드롭. `sessions` 테이블 자체는 남긴다.
+- DB: `sessions.draft` 컬럼 드롭. `sessions` 테이블은 이 트랙에서는 남기되, 세션 개념 폐기(용어 사전 v2)에 따라 최종적으로 `sources.session_id`를 끊고 테이블째 드롭한다.
 
 ### 8.2 유지 (받침)
 
