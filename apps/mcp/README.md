@@ -1,6 +1,6 @@
 # @nema-io/mcp
 
-콘텐츠 입구의 외부 입구(Track B). 외부 AI(Claude Code 등)가 원격 MCP로 nema에 닿는 레이어다. 설계 근거는 `docs/flows/first-product/mcp-design.md`.
+콘텐츠 입구의 외부 입구(Track B). 외부 AI(Claude Code 등)가 원격 MCP로 nema에 닿는 레이어다. 설계 근거는 `docs/blueprints/first-product/mcp-design.md`.
 
 이번 슬라이스는 도구를 늘리는 게 아니라 레일을 깐다. 노출 도구는 읽기 하나뿐이다.
 
