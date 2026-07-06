@@ -1,6 +1,5 @@
 import {
   ApplyPendingRelationInputSchema,
-  ArchiveSourceInputSchema,
   ArchiveStatementInputSchema,
   ListActiveRelationsInputSchema,
   ListChangesetsInputSchema,
@@ -10,7 +9,6 @@ import {
 
 import {
   applyPendingRelation,
-  archiveSource,
   archiveStatement,
   listActiveRelations,
   listChangesets,
@@ -28,12 +26,6 @@ export const changesetRouter = router({
         supabase: ctx.supabase,
         statementId: input.statementId,
       }),
-    ),
-
-  archiveSource: protectedProcedure
-    .input(ArchiveSourceInputSchema)
-    .mutation(({ ctx, input }) =>
-      archiveSource({ supabase: ctx.supabase, sourceId: input.sourceId }),
     ),
 
   revert: protectedProcedure

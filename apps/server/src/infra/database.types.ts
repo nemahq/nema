@@ -474,6 +474,7 @@ export type Database = {
           space_id: string;
           status: Database["public"]["Enums"]["source_status"];
           title: string | null;
+          trashed_at: string | null;
           updated_at: string;
         };
         Insert: {
@@ -493,6 +494,7 @@ export type Database = {
           space_id: string;
           status?: Database["public"]["Enums"]["source_status"];
           title?: string | null;
+          trashed_at?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -512,6 +514,7 @@ export type Database = {
           space_id?: string;
           status?: Database["public"]["Enums"]["source_status"];
           title?: string | null;
+          trashed_at?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -908,7 +911,6 @@ export type Database = {
         };
         Returns: undefined;
       };
-      archive_source: { Args: { p_source_id: string }; Returns: undefined };
       archive_statement: {
         Args: { p_statement_id: string };
         Returns: undefined;
@@ -1022,6 +1024,10 @@ export type Database = {
         Args: { p_changeset_id: string };
         Returns: undefined;
       };
+      restore_trashed_source: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
       retry_source_extraction: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -1037,6 +1043,7 @@ export type Database = {
       revert_changeset: { Args: { p_changeset_id: string }; Returns: string };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
+      trash_source: { Args: { p_source_id: string }; Returns: undefined };
       update_draft: {
         Args: {
           p_body?: string;
@@ -1073,7 +1080,7 @@ export type Database = {
         | "term";
       relation_status: "active" | "archived";
       relation_type: "supports" | "conflicts" | "replaces" | "resolves";
-      source_status: "active" | "archived";
+      source_status: "pending" | "active" | "trashed";
       space_role: "owner" | "member";
       statement_confidence: "certain" | "guess";
       statement_status: "active" | "archived";
@@ -1230,7 +1237,7 @@ export const Constants = {
       reference_type: ["person", "organization", "project", "product", "term"],
       relation_status: ["active", "archived"],
       relation_type: ["supports", "conflicts", "replaces", "resolves"],
-      source_status: ["active", "archived"],
+      source_status: ["pending", "active", "trashed"],
       space_role: ["owner", "member"],
       statement_confidence: ["certain", "guess"],
       statement_status: ["active", "archived"],
