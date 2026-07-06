@@ -5,7 +5,6 @@ import { ConfirmButton } from "@web/features/dev-harness/components/ConfirmButto
 import { StatementRelationLine } from "@web/features/dev-harness/components/StatementRelationLine";
 import { StatementRow } from "@web/features/dev-harness/components/StatementRow";
 import { useActiveRelationsSuspenseQuery } from "@web/features/dev-harness/hooks/useActiveRelationsQuery";
-import { useArchiveSource } from "@web/features/dev-harness/hooks/useArchiveSource";
 import { useArchiveStatement } from "@web/features/dev-harness/hooks/useArchiveStatement";
 import { useInterventionInvalidation } from "@web/features/dev-harness/hooks/useInterventionInvalidation";
 import { useSourceSuspenseQuery } from "@web/features/dev-harness/hooks/useSourceQuery";
@@ -58,9 +57,8 @@ function SourceDetailBodyContent({ sourceId }: SourceDetailBodyProps) {
   const [source, sourceQuery] = useSourceSuspenseQuery({ sourceId });
   const [{ relations }] = useActiveRelationsSuspenseQuery({ sourceId });
   const archiveStatement = useArchiveStatement();
-  const archiveSource = useArchiveSource();
   const invalidate = useInterventionInvalidation();
-  const archiving = archiveStatement.isPending || archiveSource.isPending;
+  const archiving = archiveStatement.isPending;
 
   const relationsByStatement = buildRelationsByStatement(relations);
 
@@ -153,16 +151,6 @@ function SourceDetailBodyContent({ sourceId }: SourceDetailBodyProps) {
           })}
         </ul>
       )}
-
-      <div className="flex justify-end pt-1">
-        <ConfirmButton
-          label="이 글 빼기"
-          disabled={archiving}
-          onConfirm={() =>
-            archiveSource.mutate({ sourceId }, { onSuccess: invalidate })
-          }
-        />
-      </div>
     </div>
   );
 }

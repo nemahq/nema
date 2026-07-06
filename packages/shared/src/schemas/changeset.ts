@@ -5,11 +5,6 @@ export const ArchiveStatementInputSchema = z.object({
 });
 export type ArchiveStatementInput = z.infer<typeof ArchiveStatementInputSchema>;
 
-export const ArchiveSourceInputSchema = z.object({
-  sourceId: z.string().uuid(),
-});
-export type ArchiveSourceInput = z.infer<typeof ArchiveSourceInputSchema>;
-
 export const RevertChangesetInputSchema = z.object({
   changesetId: z.string().uuid(),
 });

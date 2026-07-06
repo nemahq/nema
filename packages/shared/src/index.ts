@@ -4,8 +4,6 @@ export {
   ACTIVE_RELATION_LIST_LIMIT_MAX,
   type ApplyPendingRelationInput,
   ApplyPendingRelationInputSchema,
-  type ArchiveSourceInput,
-  ArchiveSourceInputSchema,
   type ArchiveStatementInput,
   ArchiveStatementInputSchema,
   CHANGESET_LIST_LIMIT_DEFAULT,

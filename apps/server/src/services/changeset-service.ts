@@ -48,17 +48,6 @@ export async function archiveStatement(args: {
   throwIfSupabaseError(error);
 }
 
-// 진술 연쇄 없음 — 원본만 가린다(§3.2).
-export async function archiveSource(args: {
-  supabase: TypedSupabaseClient;
-  sourceId: string;
-}): Promise<void> {
-  const { error } = await args.supabase.rpc("archive_source", {
-    p_source_id: args.sourceId,
-  });
-  throwIfSupabaseError(error);
-}
-
 // 되돌리기·redo 공용 — 타겟 타입별 역연산은 RPC가 한다(§4).
 export async function revertChangeset(args: {
   supabase: TypedSupabaseClient;
