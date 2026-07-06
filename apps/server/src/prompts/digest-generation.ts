@@ -114,13 +114,13 @@ export const DigestGenerationSchema = z.object({
   newReferences: z.array(GeneratedReferenceSchema),
 });
 
-export interface ExistingReferenceContext {
+interface ExistingReferenceContext {
   label: string;
   type: string;
   title: string;
 }
 
-export interface ExistingTagContext {
+interface ExistingTagContext {
   title: string;
   description: string;
 }
