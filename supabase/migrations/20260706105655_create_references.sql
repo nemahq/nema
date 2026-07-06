@@ -26,6 +26,8 @@ CREATE TABLE "references" (
 -- ----- 관련 Reference (relatedReferenceIds) — 느슨한 상호 참조라 방향 없음 -----
 -- 무방향을 정규화된 한 행으로 저장: (작은 id, 큰 id) 순서를 CHECK로 강제해
 -- (A,B)·(B,A) 이중 저장을 원천 차단한다. 양쪽에서의 조회는 앱이 OR로 본다.
+-- 쓰기 계약: 링크 생성 RPC가 두 id의 정렬과 존재 검사를 캡슐화해야 한다
+-- (정렬해 넣으면 존재 검사도 한 방향만 보면 된다) — 직접 INSERT 금지.
 CREATE TABLE reference_links (
   reference_a_id  uuid NOT NULL REFERENCES "references"(id) ON DELETE CASCADE,
   reference_b_id  uuid NOT NULL REFERENCES "references"(id) ON DELETE CASCADE,
