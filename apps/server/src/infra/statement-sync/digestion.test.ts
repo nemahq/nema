@@ -148,6 +148,60 @@ describe("normalizeGeneratedDigests", () => {
     ]);
   });
 
+  it("토픽은 개수 상한(5)과 길이 상한(50자)을 코드로 강제한다 — 기계 경로는 Zod를 우회한다", () => {
+    const { digests } = normalizeGeneratedDigests(
+      {
+        digests: [
+          makeGeneratedDigest({
+            topics: [
+              "가".repeat(51),
+              "주제1",
+              "주제1",
+              "주제2",
+              "주제3",
+              "주제4",
+              "주제5",
+              "주제6",
+            ],
+          }),
+        ],
+        newReferences: [],
+      },
+      emptyContext,
+    );
+
+    expect(digests[0]?.topics).toEqual([
+      "주제1",
+      "주제2",
+      "주제3",
+      "주제4",
+      "주제5",
+    ]);
+  });
+
+  it("태그도 개수 상한(5)과 제목 길이 상한(50자)을 코드로 강제한다", () => {
+    const overLength = { title: "가".repeat(51), description: "정의" };
+    const numbered = Array.from({ length: 6 }, (_, index) => ({
+      title: `태그${index}`,
+      description: `정의${index}`,
+    }));
+    const { digests } = normalizeGeneratedDigests(
+      {
+        digests: [makeGeneratedDigest({ tags: [overLength, ...numbered] })],
+        newReferences: [],
+      },
+      emptyContext,
+    );
+
+    expect(digests[0]?.tags.map((tag) => tag.title)).toEqual([
+      "태그0",
+      "태그1",
+      "태그2",
+      "태그3",
+      "태그4",
+    ]);
+  });
+
   it("URL이 아닌 문자열과 http(s) 밖 스킴은 버린다", () => {
     const { digests } = normalizeGeneratedDigests(
       {

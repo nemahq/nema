@@ -22,7 +22,8 @@ export const REVIEW_DIGESTS_MAX = 20;
 export const REVIEW_NEW_REFERENCES_MAX = 20;
 export const DIGEST_EXTERNAL_URLS_MAX = 20;
 // 신규 레퍼런스 참조 키 — LLM 제안·리뷰 편집이 행 생성 전에 서로를 가리키는 로컬 식별자.
-const NEW_REFERENCE_KEY_MAX_LENGTH = 20;
+// 편집 왕복은 예약 행 uuid(36자)를 key로 재사용하므로 상한이 이를 덮어야 한다.
+const NEW_REFERENCE_KEY_MAX_LENGTH = 64;
 
 export const NewReferenceDraftSchema = z.object({
   key: z.string().trim().min(1).max(NEW_REFERENCE_KEY_MAX_LENGTH),
