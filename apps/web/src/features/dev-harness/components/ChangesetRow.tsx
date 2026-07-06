@@ -6,8 +6,6 @@ import { formatDateTime } from "@web/features/dev-harness/utils";
 
 const TYPE_LABEL: Record<ChangesetHistoryEntry["type"], string> = {
   ingestion: "넣기",
-  conflict: "충돌",
-  merge: "병합",
   manual: "수동",
   revert: "되돌림",
   relation: "관계",
