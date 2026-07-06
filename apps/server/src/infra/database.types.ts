@@ -492,20 +492,31 @@ export type Database = {
           id: string;
           name: string | null;
           updated_at: string;
+          workspace_id: string;
         };
         Insert: {
           created_at?: string;
           id?: string;
           name?: string | null;
           updated_at?: string;
+          workspace_id: string;
         };
         Update: {
           created_at?: string;
           id?: string;
           name?: string | null;
           updated_at?: string;
+          workspace_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "spaces_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       statement_relations: {
         Row: {
@@ -702,6 +713,38 @@ export type Database = {
           },
         ];
       };
+      workspace_members: {
+        Row: {
+          created_at: string;
+          role: Database["public"]["Enums"]["workspace_role"];
+          updated_at: string;
+          user_id: string;
+          workspace_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          role: Database["public"]["Enums"]["workspace_role"];
+          updated_at?: string;
+          user_id: string;
+          workspace_id: string;
+        };
+        Update: {
+          created_at?: string;
+          role?: Database["public"]["Enums"]["workspace_role"];
+          updated_at?: string;
+          user_id?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       workspaces: {
         Row: {
           created_at: string;
@@ -848,6 +891,10 @@ export type Database = {
         Returns: boolean;
       };
       is_space_member: { Args: { p_space_id: string }; Returns: boolean };
+      is_workspace_member: {
+        Args: { p_workspace_id: string };
+        Returns: boolean;
+      };
       read_sync_events: {
         Args: { p_batch_size?: number; p_visibility_timeout?: number };
         Returns: {
@@ -909,6 +956,7 @@ export type Database = {
       statement_confidence: "certain" | "guess";
       statement_status: "active" | "archived";
       statement_type: "claim" | "question" | "todo";
+      workspace_role: "owner" | "member";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1062,6 +1110,7 @@ export const Constants = {
       statement_confidence: ["certain", "guess"],
       statement_status: ["active", "archived"],
       statement_type: ["claim", "question", "todo"],
+      workspace_role: ["owner", "member"],
     },
   },
 } as const;
