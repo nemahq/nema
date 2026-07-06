@@ -10,7 +10,7 @@
 | `spaceId` | `uuid` | 어느 Space에 제출됐나 |
 | `body` | `string` | 원문 텍스트 (타이핑·붙여넣기·전사·추출 텍스트) |
 | `createdAt` | `Date` | 원본이 시스템에 들어온 때 |
-| `status` | `enum: pending / active / trashed` | 존재 상태. `pending`은 파생된 게 없는 상태(갓 생성됐거나, 원본 빼기로 되돌려진 것 — "처리 중인 Source 작업 목록"에 노출). `active`는 확정된 Digest·Statement 등이 있는 상태. `trashed`는 사용자가 명시적으로 삭제를 선택한 상태 — `trashedAt` 이후 보관 기간이 지나면 배치로 완전 삭제됨 |
+| `status` | `enum: pending / active / trashed` | 존재 상태. `pending`은 파생된 게 없는 상태(갓 생성됐거나, 원본 빼기로 되돌려진 것 — "처리 중인 Source 작업 목록"에 노출). `active`는 확정된 Digest·Statement 등이 있는 상태. `trashed`는 사용자가 명시적으로 삭제를 선택한 상태 — `trashedAt` 이후 보관 기간(30일)이 지나면 배치로 완전 삭제됨. 전이는 한 방향 사슬 `active →(빼기)→ pending →(삭제)→ trashed`이고 복원은 `trashed → pending`(파생 없는 상태라 pending 정의 그대로) — active에서 파생을 유지한 채 원본만 치우는 동작은 없다. 삭제·복원(pending↔trashed)은 변경이력에 남기지 않는다 — pending 원본은 그래프에 아무것도 심지 않아 리뷰·되돌리기의 대상이 아니다 |
 | `trashedAt?` | `Date` | `trashed`가 된 시각 — 완전 삭제 배치가 보관 기간 경과 여부를 판단하는 기준 |
 | `authorId?` | `uuid` | 누가 넣었나 (사용자 id) — User 삭제 시 `ON DELETE SET NULL`이라 nullable |
 
@@ -140,10 +140,10 @@ Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력
 | key | 타입 | 설명 |
 |---|---|---|
 | `id` | `uuid` | 식별자 |
-| `type` | `enum: ingestion / conflict / merge / manual / revert` | 무엇이 일으킨 변경인가 |
-| `status` | `enum: pending / applied` | 변경셋 생애 (되돌림은 revert 변경셋으로 파생) |
+| `type` | `enum: ingestion / relation / manual / revert` | 무엇이 일으킨 변경인가. `relation`은 관계 엔진이 만든 변경. 모순·중복 같은 관계의 *종류*는 changeset이 아니라 `Relation.type`(conflicts/duplicates)이 구분한다 — changeset 레벨에서 또 나누면 같은 정보를 두 군데 적는 중복 축이라 conflict/merge 타입은 두지 않는다 |
+| `status` | `enum: pending / applied / rejected` | 변경셋 생애 (되돌림은 revert 변경셋으로 파생). `rejected`는 pending 제안을 사람이 거절한 종착 상태 — 행으로 남아 "엔진 제안 → 사람 거절"의 흔적이 되고 재제안 가드가 본다 |
 | `changes` | `Change[]` | 이 변경셋이 가하는 연산들 |
-| `sourceId?` | `uuid` | 인제스천이면 어느 원본에서 |
+| `sourceId?` | `uuid` | `ingestion`·`relation`이면 어느 원본이 방아쇠였나 |
 | `spaceId?` | `uuid` | 소속 Space — Space 콘텐츠(Source·Digest·Statement·Relation)에서 트리거된 경우만 채워짐. Reference 직접 수정처럼 Workspace 스코프 콘텐츠가 대상이면 비움 |
 | `revertsId?` | `uuid` | 되돌리는 대상 변경셋 (`revert`에서만) |
 | `createdAt` | `Date` | 만들어진 때 |
@@ -155,12 +155,12 @@ Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력
 
 | key | 타입 | 설명 |
 |---|---|---|
-| `action` | `enum: create / archive / modify` | 연산 |
+| `action` | `enum: create / archive / restore / modify` | 연산. `restore`는 archive의 역연산(archived→active 되살림) — 되돌리기/redo가 역연산표 하나(create→archive, archive→restore, restore→archive)로 닫힌다 |
 | `targetType` | `enum: statement / relation / source / digest / reference` | 대상 종류 |
 | `targetId` | `uuid` | 대상 |
-| `data?` | `object` | `create`: 만들어진 시점의 필드·값 그대로. `modify`: `{ before, after }` — 바뀐 필드만 이전/이후 값을 함께 담아 그 Change 하나만으로 자기완결적으로 복원 가능하게 함(체이닝 불필요). `archive`엔 없음 |
+| `data?` | `object` | `create`: 만들어진 시점의 필드·값 그대로. `modify`: `{ before, after }` — 바뀐 필드만 이전/이후 값을 함께 담아 그 Change 하나만으로 자기완결적으로 복원 가능하게 함(체이닝 불필요). `archive`·`restore`엔 없음(대상은 `targetId`로 충분) |
 
-`source`·`digest`·`statement`·`relation`은 `create`/`archive`만 — 확정 후 불변이라 `modify` 없음. `source`는 archive 후 새로 create하는 것을 "원본 수정"으로 편의 노출한다(`manual` changeset) — 이건 Source→파생물 전체가 재인제스천되는 무거운 동작이라는 걸 사용자가 감수하는 명시적 선택이다. `digest`도 확정(active) 후 같은 방식의 "Digest 수정" 편의 기능을 갖는다(`manual` changeset) — Statement가 이미 그 Digest를 안정적 근거로 참조하고 있어서 Digest만 콕 집어 고치면 그 위에 쌓인 관계·판정이 고아가 될 수 있지만(Source 레벨 되돌리기가 겪는 문제를 한 단계 아래서 반복), 이건 Source 레벨 수정에서도 이미 감수하기로 한 같은 위험이고, Digest 레벨은 오히려 더 정밀하다(한 Source에서 나온 다른 형제 Digest는 안 건드림). "수정" 버튼을 누르면 그 Digest의 기존 값을 그대로 채운 초안으로 `pending` changeset이 열려 Digest 리뷰 화면과 같은 UI로 편집하고, 확정 시 옛 Digest의 archive와 새 Digest의 create가 그 changeset 안에서 동시에 적용된다(중간에 포기하면 옛 Digest는 그대로 살아있음). 새 Digest도 같은 `sourceId`를 유지한다 — Source 완전 삭제 시 이 수정본도 purge 대상에 잡히게 하기 위함이며, 수동 수정이라는 출처는 `sourceId`가 아니라 그 changeset의 `type: manual`이 구분해준다. 확정 전(pending 초안 단계)의 편집은 이것과 별개로, 애초에 archive할 대상이 없는 첫 확정이라 이 절차가 필요 없다. `statement`는 `manual`로 단독 archive("가리기")만 가능하고 create/재생성은 없다 — Narration이 직접 인용하는 증거 단위라 Digest보다도 안 바뀌어야 할 이유가 더 크다. `relation`은 독립적인 `manual` 교정이 없다 — 틀린 관계는 대부분 conflict changeset의 "충돌 아님" 판정으로 잡히고(pending 단계), 그 외엔 끝점 Statement archived의 캐스케이드로만 archived된다. `reference`는 `create`·`modify`·`archive` 다 쓴다 — `modify`가 본질(계속 다듬어지는 게 존재 이유)이고, `archive`는 정리용(더 이상 안 쓰는 엔트리를 접음, 과거 인용은 그대로 유효). Reference의 과거 상태는 그 Reference를 대상으로 한 Change들을 시간순으로 훑어 재구성한다(별도 버전 필드 불필요). Reference의 과거 Change에 남는 민감정보(사람이 직접 입력한 경우)는 별도 리댁션 메커니즘을 두지 않는다 — git이 과거 커밋에 남은 평문 비밀값을 이력에서 지워주지 않는 것과 같은 이유로, 발생 확률 대비 복잡성이 안 맞는다.
+`source`·`digest`·`statement`·`relation`은 `create`/`archive`만 — 확정 후 불변이라 `modify` 없음. `source`는 archive 후 새로 create하는 것을 "원본 수정"으로 편의 노출한다(`manual` changeset) — 이건 Source→파생물 전체가 재인제스천되는 무거운 동작이라는 걸 사용자가 감수하는 명시적 선택이다. `digest`도 확정(active) 후 같은 방식의 "Digest 수정" 편의 기능을 갖는다(`manual` changeset) — Statement가 이미 그 Digest를 안정적 근거로 참조하고 있어서 Digest만 콕 집어 고치면 그 위에 쌓인 관계·판정이 고아가 될 수 있지만(Source 레벨 되돌리기가 겪는 문제를 한 단계 아래서 반복), 이건 Source 레벨 수정에서도 이미 감수하기로 한 같은 위험이고, Digest 레벨은 오히려 더 정밀하다(한 Source에서 나온 다른 형제 Digest는 안 건드림). "수정" 버튼을 누르면 그 Digest의 기존 값을 그대로 채운 초안으로 `pending` changeset이 열려 Digest 리뷰 화면과 같은 UI로 편집하고, 확정 시 옛 Digest의 archive와 새 Digest의 create가 그 changeset 안에서 동시에 적용된다(중간에 포기하면 옛 Digest는 그대로 살아있음). 새 Digest도 같은 `sourceId`를 유지한다 — Source 완전 삭제 시 이 수정본도 purge 대상에 잡히게 하기 위함이며, 수동 수정이라는 출처는 `sourceId`가 아니라 그 changeset의 `type: manual`이 구분해준다. 확정 전(pending 초안 단계)의 편집은 이것과 별개로, 애초에 archive할 대상이 없는 첫 확정이라 이 절차가 필요 없다. `statement`는 `manual`로 단독 archive("가리기")만 가능하고 create/재생성은 없다 — Narration이 직접 인용하는 증거 단위라 Digest보다도 안 바뀌어야 할 이유가 더 크다. `relation`은 독립적인 `manual` 교정이 없다 — 틀린 관계는 대부분 relation 변경셋의 거절(`rejected`)로 잡히고(pending 단계), 그 외엔 끝점 Statement archived의 캐스케이드로만 archived된다. `reference`는 `create`·`modify`·`archive` 다 쓴다 — `modify`가 본질(계속 다듬어지는 게 존재 이유)이고, `archive`는 정리용(더 이상 안 쓰는 엔트리를 접음, 과거 인용은 그대로 유효). Reference의 과거 상태는 그 Reference를 대상으로 한 Change들을 시간순으로 훑어 재구성한다(별도 버전 필드 불필요). Reference의 과거 Change에 남는 민감정보(사람이 직접 입력한 경우)는 별도 리댁션 메커니즘을 두지 않는다 — git이 과거 커밋에 남은 평문 비밀값을 이력에서 지워주지 않는 것과 같은 이유로, 발생 확률 대비 복잡성이 안 맞는다.
 
 Topic·Tag는 `targetType`에 없다 — 판단·사실 콘텐츠가 아니라 찾기용 라벨이라 잘못 바뀌어도 판단을 오염시키지 않으므로, Changeset 리뷰·불변성 없이 가볍게 직접 CRUD한다(soft delete만 유지).
 
@@ -248,14 +248,14 @@ Nema 쪽에서 붙이는 유일한 확장은 `profiles`(`user_id` → `auth.user
 - **authorId는 사람 삭제와 무관하게 콘텐츠를 보존** — `Source`·`Digest`·`Changeset`의 `authorId`는 소유가 아니라 귀속(누가 만들었나) 정보일 뿐이라, User가 삭제돼도 `ON DELETE SET NULL`로 콘텐츠는 남고 귀속만 사라진다(공유 Space에서 다른 사람이 그 위에 쌓은 관계·판단을 보존하기 위함). `profiles`는 `ON DELETE CASCADE`(이미 구현됨).
 - **원본 빼기 → 파생 효과 전체 되돌림** — 원본을 `pending`으로 되돌리는 건 그 원본이 만든 ingestion Changeset을 되돌리는 것과 같다. 그 Changeset이 만든 Digest·Reference·진술·관계도 함께 되돌아간다(archived). 재개하면 그 옛 산출물을 되살리는 게 아니라 처음부터 새로 인제스천한다. 단순 soft-archive가 아니라 파생 효과 전체를 되돌리는 동작이다.
 - **끝점 archived → 관계 연쇄** — 끝점 진술이 `archived`되면 걸린 관계도 함께 `archived`된다(연쇄 soft-archive). 끝점을 되살리면 관계도 돌아온다.
-- **변경셋 적용 (트리거별)** — `ingestion`은 항상 `pending`으로 시작한다. Digest·Reference 후보를 사람이 확인해야(1단계, Digest 리뷰 화면) `applied`로 전환되고, 그 순간 Statement·Relation 생성(2단계)이 시작된다 — 애매해서가 아니라 모든 ingestion이 거치는 필수 게이트. `manual`·`revert`는 이미 사람이 확정한 단일 동작이라 곧바로 `applied`. 2단계 생성 중 엔진이 새 Statement를 기존 것들과 대조하다 모순(`conflict`)이나 같은 뜻의 중복(`merge`)을 감지하면, 감지된 진술 쌍 하나마다 별도의 변경셋이 `pending`으로 발생한다(하나의 ingestion에서 conflict N개·duplicate I개가 나오면 changeset도 N+I개 — 사람이 Digest 단위로 하나씩 판정하므로 한 changeset으로 묶으면 부분 판정을 표현 못 함). 활성 그래프 밖에서 대기하다 사람이 적용하며, 둘 다 엔진이 잘못 판단하면 되돌리기 전엔 드러나지 않는 채로 진술이 사라지거나 잘못 엮이므로 확신도와 무관하게 항상 사람 확인을 거친다.
-- **레퍼런스·주제·태그는 병합을 고려하지 않음** — `merge`(중복 병합)는 Statement 전용이다. Reference·Topic·Tag는 Source→Digest/Reference 변환 시 이미 레지스트리에 등록된 것과 매칭해 인용을 제안하므로, 애초에 같은 대상이 중복 생성되는 경우가 최소화된다. 매칭이 안 되면(협업 확장 시 Space 권한이 갈리는 경우 등) 병합 대신 중복을 그대로 허용한다.
-- **pending은 확정 전 초안** — `pending` 상태인 changeset의 `changes`는 확정 전까지 사람이 자유롭게 고쳐 쓸 수 있는 초안이다(Digest 리뷰 화면의 본문·주제·태그 수동 편집, conflict 판정 시 제안된 관계를 다른 내용으로 바꾸는 것 모두 여기 해당). `applied`로 전환되는 순간 그 시점 내용으로 고정된다.
+- **변경셋 적용 (트리거별)** — `ingestion`은 항상 `pending`으로 시작한다. Digest·Reference 후보를 사람이 확인해야(1단계, Digest 리뷰 화면) `applied`로 전환되고, 그 순간 Statement·Relation 생성(2단계)이 시작된다 — 애매해서가 아니라 모든 ingestion이 거치는 필수 게이트. `manual`·`revert`는 이미 사람이 확정한 단일 동작이라 곧바로 `applied`. 2단계에서 관계 엔진이 새 Statement를 기존 것들과 대조한 결과는 `relation` 변경셋으로 나온다: 확신·비충돌 관계는 배치당 1개의 `relation` 변경셋이 곧바로 `applied`로 조용히 적용되고, 애매하거나 모순(`conflicts`)·같은 뜻의 중복(`duplicates`)인 쌍은 **쌍 하나마다** 별도의 `relation` 변경셋이 `pending`으로 발생한다(쌍 N개면 changeset도 N개 — 사람이 하나씩 판정하므로 한 changeset으로 묶으면 부분 판정을 표현 못 함). pending 제안은 활성 그래프 밖에서 대기하다 사람이 적용(`applied`)하거나 거절(`rejected`)한다 — 모순·중복은 엔진이 잘못 판단하면 되돌리기 전엔 드러나지 않는 채로 진술이 사라지거나 잘못 엮이므로 확신도와 무관하게 항상 사람 확인을 거친다.
+- **레퍼런스·주제·태그는 병합을 고려하지 않음** — 중복 병합(`duplicates`)은 Statement 전용이다. Reference·Topic·Tag는 Source→Digest/Reference 변환 시 이미 레지스트리에 등록된 것과 매칭해 인용을 제안하므로, 애초에 같은 대상이 중복 생성되는 경우가 최소화된다. 매칭이 안 되면(협업 확장 시 Space 권한이 갈리는 경우 등) 병합 대신 중복을 그대로 허용한다.
+- **pending은 확정 전 초안** — `pending` 상태인 changeset의 `changes`는 확정 전까지 사람이 자유롭게 고쳐 쓸 수 있는 초안이다(Digest 리뷰 화면의 본문·주제·태그 수동 편집, relation 제안 판정 시 제안된 관계를 다른 내용으로 바꾸는 것 모두 여기 해당). `applied`로 전환되는 순간 그 시점 내용으로 고정된다.
 - **되돌리기 (append-only)** — `applied`를 되돌릴 땐 status를 바꾸지 않고, 원본을 가리키는 revert 변경셋을 *추가*한다. "되돌려졌나"는 그 존재로 파생(폐기를 `replaces`에서 파생시킨 것과 같은 방식). 되돌림의 되돌림(redo)도 revert를 또 추가하면 된다.
 - **`authorId` 규칙** — 사람이 *직접 만든 것*에만 붙는다: 원본(제공)·Digest(제공)·사람 주도 변경셋(`ingestion`·`manual`·`revert`). 엔진 산물(진술·관계)엔 없고, 소유·출처는 `digestId` → `Digest.authorId`로 파생. (있음→사람, 없음→엔진)
 - **참·거짓 미판단** — 시스템은 진술의 진위를 가리지 않는다. 진술의 유효함은 *존재 + 대체(`replaces`·`duplicates`) 관계 없음*으로 정해지고, 모순은 `conflicts`로 드러내되 어느 쪽이 옳은지는 사람이 정한다. "언제부터 참인가" 같은 시간 표현은 진술 내용에 담겨 읽기 시점에 풀린다 — 시스템이 "지금 유효한가"를 기계적으로 계산하는 동작이 없으므로 별도 시각 필드를 두지 않는다.
 - **Topic은 Digest 확정 시 붙는 재사용 라벨** — 사람이 Digest 리뷰 화면에서 확정할 때 붙이며(`Digest.topicIds?`), Space별 레지스트리로 영속해 재사용된다. 같은 Topic이 붙은 Digest들이 다시 켰을 때 하나의 Thread로 모인다.
-- **완전 삭제(trashed → 배치 purge)** — `trashed`는 사용자가 명시적으로 삭제를 선택했다는 신호이고(soft archive와 달리 무기한 보존이 아님), `trashedAt` 이후 보관 기간이 지나면 배치 잡이 완전 삭제를 실행한다. 완전 삭제는 대상 changeset의 `changes`를 하나씩 훑어 `create`면 그 대상을 hard delete, `modify`면 이전 값으로 복원한다 — Reference처럼 여러 changeset이 공유하는 대상도 "이 changeset이 만든 것"과 "이 changeset이 다듬은 것"을 create/modify 구분만으로 정확히 나눠 처리한다(별도 케이스 분기 불필요). **그 Change 레코드 자체도 함께 hard delete한다** — `create` Change의 `data`엔 만들어진 내용의 복사본이 남아있어서, 대상만 지우고 Change를 남기면 그 안에 원본 내용이 그대로 남는다(git이 과거 커밋에 남은 비밀값을 못 지우는 것과 같은 구조적 문제라 정면으로 회피). 마지막으로 트리거가 된 레코드 자체도 hard delete한다. 참조가 끊기지 않는 이유는, 대상이 되는 모든 changeset을 그 순서대로 되돌리기 때문이다.
+- **완전 삭제(trashed → 배치 purge)** — `trashed`는 사용자가 명시적으로 삭제를 선택했다는 신호이고(soft archive와 달리 무기한 보존이 아님), `trashedAt` 이후 보관 기간(30일)이 지나면 배치 잡이 완전 삭제를 실행한다. 훑는 대상은 그 원본의 `sourceId`를 가진 **모든** changeset이다(`ingestion` + `relation` — 관계 엔진의 산물도 같은 그물에 걸린다). 완전 삭제는 대상 changeset의 `changes`를 하나씩 훑어 `create`면 그 대상을 hard delete, `modify`면 이전 값으로 복원한다 — Reference처럼 여러 changeset이 공유하는 대상도 "이 changeset이 만든 것"과 "이 changeset이 다듬은 것"을 create/modify 구분만으로 정확히 나눠 처리한다(별도 케이스 분기 불필요). **그 Change 레코드 자체도 함께 hard delete한다** — `create` Change의 `data`엔 만들어진 내용의 복사본이 남아있어서, 대상만 지우고 Change를 남기면 그 안에 원본 내용이 그대로 남는다(git이 과거 커밋에 남은 비밀값을 못 지우는 것과 같은 구조적 문제라 정면으로 회피). 마지막으로 트리거가 된 레코드 자체도 hard delete한다. 참조가 끊기지 않는 이유는, 대상이 되는 모든 changeset을 그 순서대로 되돌리기 때문이다.
 
 ## 열어두는 것
 
@@ -269,6 +269,5 @@ Nema 쪽에서 붙이는 유일한 확장은 `profiles`(`user_id` → `auth.user
 - 원본 에셋(음성·이미지·파일)·`Locator` 형식 — body 외 원재료 묶음, 추후
 - 전사·OCR 주체 — 누가 텍스트로 변환하나 (입력 경계)
 - `trashed` 목록 화면 — 삭제 의도가 확정된 것들을 보여주고 남은 보관 기간을 노출하는 자리. 표면인벤토리에 아직 없음.
-- 보관 기간(며칠?) — 업계 관행은 7~90일(30일이 흔함). Nema 기준으로 정할 필요.
 - Topic·Tag·Reference의 `archived` 복구 화면 — 원칙상 되살릴 수 있어야 하는데, Topic·Tag는 전용 목록 화면 자체가 표면인벤토리에 없어 복구할 자리가 없다(Tag는 "Digest 리뷰 화면의 셀렉트로 생성·수정"뿐). Reference는 "Reference 목록"이 있어 필터만 추가하면 되지만 명시된 건 아니다.
 - 노이즈 필터 — 종류에 묶을지/별도 기준을 둘지 포함해, 기능 구현 단계에서

@@ -12,10 +12,10 @@
 | -------------- | -------------- | --------- | --------- | ---- |
 | 맥락 | Context | Context | (해당 없음, 파생 개념) | Statement와 Relation이 쌓여 이루는, 신뢰하고 돌아올 수 있는 전체 지식 자산 |
 | 원본 | Source | Source | `sources` | 시스템이 손대지 않고, 사람이 작성한 그대로 보존하는 원재료 |
-| 다이제스트 | Digest | Digest | (미구현) | Source를 사람이 읽기 좋게 정리한 것, 여기서 Statement가 추출된다 |
+| 다이제스트 | Digest | Digest | `digests` / `digest_references` / `digest_links` | Source를 사람이 읽기 좋게 정리한 것, 여기서 Statement가 추출된다 |
 | 문장 | Sentence | Statement | `statements` | 결정이나 판단의 '왜'를 담는, 문장 크기의 가장 작은 단위 |
 | 연결 | Connection | Relation | `statement_relations` | 두 Statement를 잇는, 방향을 가진 연결 |
-| 레퍼런스 | Reference | Reference | (미구현) | Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력이 들어올 때마다 새로 쌓이지 않고 기존 것이 다듬어진다 |
+| 레퍼런스 | Reference | Reference | `references` / `reference_links` / `statement_references` | Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력이 들어올 때마다 새로 쌓이지 않고 기존 것이 다듬어진다 |
 | 변경셋 | Changeset | Changeset | `changesets` / `changes` | 콘텐츠 단위들에 대한 변경을 한 번에 묶는 단위 |
 
 - **표식**: Relation이 검색·해설 응답에서 Statement에 붙어 드러난 표시(대체·충돌·해소). 코드 `RelationMarkers`. Relation의 노출 형태이지 별도 단위가 아니다.
@@ -25,7 +25,7 @@
 | 제품 용어 (한) | 제품 용어 (영) | 개념 용어 | 코드 용어 | 역할 |
 | -------------- | -------------- | --------- | --------- | ---- |
 | 주제 | Topic | Topic | `topics` / `source_topics` | 재사용되는 라벨. Space 안에서만 재사용되며, 같은 라벨이 붙은 것들은 하나의 흐름으로 모인다 |
-| 태그 | Tag | Tag | (미구현) | 재사용되는 라벨. Topic과 달리 Workspace 안에서 Space를 가로질러 재사용되고, 흐름을 만들지 않는다 |
+| 태그 | Tag | Tag | `tags` | 재사용되는 라벨. Topic과 달리 Workspace 안에서 Space를 가로질러 재사용되고, 흐름을 만들지 않는다 |
 | 스레드 | Thread | Thread | `topics` (주제 1개 = 스레드 1개) | 같은 Topic이 붙은 것들이 모여 이루는 하나의 흐름. 별도로 저장되지 않고, 필요할 때 계산되어 나타난다 |
 | 해설 | Narration | Narration | Narration | Context를 근거로 질문에 답하는 산문. 근거에 없는 내용은 지어내지 않는다 |
 
@@ -33,7 +33,7 @@
 
 | 제품 용어 (한) | 제품 용어 (영) | 개념 용어 | 코드 용어 | 역할 |
 | -------------- | -------------- | --------- | --------- | ---- |
-| 워크스페이스 | Workspace | Workspace | (미구현) | 사람과 결제를 묶는 계정 단위. 무엇이 보이고 안 보이는지는 여기서 정해지지 않는다 |
+| 워크스페이스 | Workspace | Workspace | `workspaces` / `workspace_members` | 사람과 결제를 묶는 계정 단위. 무엇이 보이고 안 보이는지는 여기서 정해지지 않는다 |
 | 스페이스 | Space | Space | `spaces` / `space_members` | Workspace 안에서 여러 개 가질 수 있는, 일이나 관심사 단위로 나눠 담는 공간 |
 | 유저 | User | User | (미구현) | 로그인하는 사람 단위 |
 | 멤버 | Member | Member | (미구현) | 하나의 Space에 속한 User |
