@@ -179,3 +179,38 @@ export async function confirmReview(args: {
 
   return { sourceId };
 }
+
+// --- 확정 Digest 직접 수정 ---
+
+// 옛 Digest archive + 이 초안으로 새 Digest create를 한 manual changeset으로 확정한다.
+// 리뷰 확정과 달리 pending 초안 persist가 없어 편집 상태는 클라가 들고, 여기선 확정만 받는다.
+export async function confirmDigestEdit(args: {
+  supabase: TypedSupabaseClient;
+  digestId: string;
+  digest: DigestDraft;
+  newReferences: NewReferenceDraft[];
+}): Promise<{ digestId: string }> {
+  const { supabase, digestId, digest, newReferences } = args;
+
+  const { data: newDigestId, error } = await supabase.rpc(
+    "confirm_digest_edit",
+    {
+      p_digest_id: digestId,
+      // RPC 계약 키는 confirm_digest_edit이 읽는 snake_case (update_pending_ingestion과 동일)
+      p_digest: {
+        title: digest.title,
+        description: digest.description,
+        body: digest.body,
+        topics: digest.topics,
+        tags: digest.tags,
+        reference_ids: digest.referenceIds,
+        new_reference_keys: digest.newReferenceKeys,
+        external_urls: digest.externalUrls,
+      } as unknown as Json,
+      p_new_references: newReferences as unknown as Json,
+    },
+  );
+  throwIfSupabaseError(error);
+
+  return { digestId: newDigestId };
+}

@@ -269,6 +269,7 @@ export type Database = {
           created_at: string;
           description: string;
           external_urls: string[] | null;
+          extraction_status: Database["public"]["Enums"]["ingestion_status"];
           id: string;
           locator: Json | null;
           source_id: string;
@@ -283,6 +284,7 @@ export type Database = {
           created_at?: string;
           description: string;
           external_urls?: string[] | null;
+          extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           locator?: Json | null;
           source_id: string;
@@ -297,6 +299,7 @@ export type Database = {
           created_at?: string;
           description?: string;
           external_urls?: string[] | null;
+          extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           locator?: Json | null;
           source_id?: string;
@@ -1085,8 +1088,12 @@ export type Database = {
         Returns: undefined;
       };
       apply_extraction_statements: {
-        Args: { p_source_id: string; p_statements: Json };
-        Returns: string;
+        Args: {
+          p_digest_ids: string[];
+          p_source_id: string;
+          p_statements: Json;
+        };
+        Returns: undefined;
       };
       apply_pending_relation: {
         Args: { p_changeset_id: string };
@@ -1104,13 +1111,13 @@ export type Database = {
         Args: { p_source_id: string };
         Returns: undefined;
       };
-      complete_source_extraction: {
-        Args: { p_source_id: string };
-        Returns: undefined;
-      };
       complete_statement_ingestion: {
         Args: { p_statement_id: string };
         Returns: undefined;
+      };
+      confirm_digest_edit: {
+        Args: { p_digest: Json; p_digest_id: string; p_new_references?: Json };
+        Returns: string;
       };
       confirm_ingestion_review: {
         Args: { p_changeset_id: string };

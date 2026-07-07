@@ -51,6 +51,8 @@ export {
   DIGEST_TOPICS_MAX,
   type DigestDraft,
   DigestDraftSchema,
+  type DigestEditConfirmInput,
+  DigestEditConfirmInputSchema,
   type DigestReviewConfirmInput,
   DigestReviewConfirmInputSchema,
   type DigestReviewGetInput,
