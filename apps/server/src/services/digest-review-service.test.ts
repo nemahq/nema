@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
-import { getReview } from "./digest-review-service";
+import { getReview, updateReview } from "./digest-review-service";
 
 const CHANGESET_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const SOURCE_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -106,5 +106,44 @@ describe("getReview", () => {
     await expect(
       getReview({ supabase, changesetId: CHANGESET_ID }),
     ).rejects.toThrow("not a pending ingestion review");
+  });
+});
+
+describe("updateReview", () => {
+  // p_new_references는 as unknown as Json으로 나가는 객체 리터럴이라 키 오타를
+  // 타입체크가 못 잡는다 — RPC 계약 키(snake_case external_urls)를 고정한다.
+  it("신규 레퍼런스의 externalUrls를 RPC 계약 키(external_urls)로 실어 보낸다", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    await updateReview({
+      supabase,
+      changesetId: CHANGESET_ID,
+      digests: [],
+      newReferences: [
+        {
+          key: NEW_REFERENCE_ID,
+          type: "product",
+          title: "토스",
+          body: "송금 앱",
+          externalUrls: ["https://toss.im"],
+        },
+      ],
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      "update_pending_ingestion",
+      expect.objectContaining({
+        p_new_references: [
+          {
+            key: NEW_REFERENCE_ID,
+            type: "product",
+            title: "토스",
+            body: "송금 앱",
+            external_urls: ["https://toss.im"],
+          },
+        ],
+      }),
+    );
   });
 });

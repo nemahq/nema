@@ -1269,7 +1269,7 @@ export type Database = {
       update_reference: {
         Args: {
           p_body: string;
-          p_external_urls?: string[];
+          p_external_urls: string[];
           p_reference_id: string;
           p_title: string;
           p_type: Database["public"]["Enums"]["reference_type"];

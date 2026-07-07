@@ -25,7 +25,9 @@ const StoredReferenceDataSchema = z.object({
   type: ReferenceTypeSchema,
   title: z.string(),
   body: z.string(),
-  external_urls: z.array(z.string()),
+  // 이 PR 이전에 생성된 reference create-Change엔 external_urls 키가 없다
+  // (#355·#356 배포본이 만든 pending 리뷰) — 옛 Change를 무해하게 읽는다
+  external_urls: z.array(z.string()).default([]),
 });
 
 interface CitedReference {

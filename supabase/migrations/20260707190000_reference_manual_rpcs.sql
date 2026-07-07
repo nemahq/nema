@@ -29,12 +29,14 @@
 --   무방향 링크라 이 modify가 아니라 create_reference_link가 담당한다.
 -- =============================================================
 
+-- 전체 상태를 받아 diff하는 계약이라 p_external_urls도 필수 인자다 — DEFAULT를
+-- 두면 "생략 = 빈 값으로 변경"이 되어 URL을 조용히 지우는 트랩이 된다.
 CREATE FUNCTION update_reference(
   p_reference_id  uuid,
   p_type          reference_type,
   p_title         text,
   p_body          text,
-  p_external_urls text[] DEFAULT NULL
+  p_external_urls text[]
 )
 RETURNS uuid AS $$
 DECLARE
@@ -159,17 +161,21 @@ BEGIN
     RAISE EXCEPTION 'cannot link a reference to itself (%)', p_a;
   END IF;
 
+  -- active만 링크 대상 (update_reference·archive_reference와 같은 가드) —
+  -- 정리(archive)한 엔트리에 새 링크를 거는 건 실수일 가능성이 높다.
   IF NOT EXISTS (
     SELECT 1 FROM "references"
-    WHERE id = p_a AND (auth.uid() IS NULL OR is_workspace_member(workspace_id))
+    WHERE id = p_a AND status = 'active'
+      AND (auth.uid() IS NULL OR is_workspace_member(workspace_id))
   ) THEN
-    RAISE EXCEPTION 'reference % not found or not accessible', p_a;
+    RAISE EXCEPTION 'reference % is not an active reference the caller can link', p_a;
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM "references"
-    WHERE id = p_b AND (auth.uid() IS NULL OR is_workspace_member(workspace_id))
+    WHERE id = p_b AND status = 'active'
+      AND (auth.uid() IS NULL OR is_workspace_member(workspace_id))
   ) THEN
-    RAISE EXCEPTION 'reference % not found or not accessible', p_b;
+    RAISE EXCEPTION 'reference % is not an active reference the caller can link', p_b;
   END IF;
 
   IF p_a < p_b THEN
