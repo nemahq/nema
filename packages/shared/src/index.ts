@@ -92,6 +92,7 @@ export {
 } from "./schemas/profile";
 export {
   REFERENCE_BODY_MAX_LENGTH,
+  REFERENCE_EXTERNAL_URLS_MAX,
   REFERENCE_TITLE_MAX_LENGTH,
   REFERENCE_TYPES,
   type ReferenceType,
