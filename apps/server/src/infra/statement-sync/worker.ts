@@ -16,6 +16,10 @@ import type {
   StatementUpsertItem,
   VectorStore,
 } from "@server/infra/vector";
+import {
+  buildDigestExtractionMessage,
+  DIGEST_EXTRACTION_SYSTEM_PROMPT,
+} from "@server/prompts/digest-extraction";
 import type {
   LabeledStatement,
   RelationProposal,
@@ -26,15 +30,9 @@ import {
   RelationJudgmentSchema,
 } from "@server/prompts/relation-judgment";
 import type { ExtractedStatement } from "@server/prompts/statement-extraction";
-import {
-  buildStatementExtractionMessage,
-  STATEMENT_EXTRACTION_SYSTEM_PROMPT,
-  StatementExtractionSchema,
-} from "@server/prompts/statement-extraction";
+import { StatementExtractionSchema } from "@server/prompts/statement-extraction";
 import { resolveDeadlineToDueDate } from "@server/temporal/deadline";
 
-import type { ExtractionChunk } from "./chunking";
-import { chunkForExtraction } from "./chunking";
 import { runDigestionPass } from "./digestion";
 import { limitLlmCall } from "./llm-limiter";
 import type {
@@ -43,6 +41,7 @@ import type {
   PendingLinkingSource,
   PendingSource,
   PendingStatement,
+  SourceDigest,
 } from "./types";
 import {
   LinkingBatchStatementSchema,
@@ -50,6 +49,7 @@ import {
   PendingLinkingSourceSchema,
   PendingSourceSchema,
   PendingStatementSchema,
+  SourceDigestSchema,
   TriggerMessageSchema,
 } from "./types";
 
@@ -332,21 +332,49 @@ export function deadlineContext(source: PendingSource): {
   return { reference, timeZone, todayIsoDate };
 }
 
+// 추출된 진술 — RPC(apply_extraction_statements) 계약 형태. digest_id는 추출 근거,
+// index는 원본 전체를 관통하는 등장 순서(digest 경계를 넘어 이어짐 — 잇기 정렬이 쓴다).
+// object literal 타입(interface 아님) — Json으로의 암묵적 index signature 할당을 얻어
+// RPC(p_statements: Json) 인자로 캐스트 없이 넘긴다.
+type ExtractionStatement = {
+  content: string;
+  type: ExtractedStatement["type"];
+  confidence: ExtractedStatement["confidence"];
+  due_date: string | null;
+  digest_id: string;
+  index: number;
+};
+
 async function processSource(
   source: PendingSource,
   deps: WorkerDeps,
 ): Promise<void> {
   const { reference, timeZone, todayIsoDate } = deadlineContext(source);
-  const extracted = await extractSourceStatements(
-    deps.forTask("extractStatements"),
-    {
-      body: source.body,
-      todayIsoDate,
-    },
-  );
-  const statements = normalizeStatements(extracted, { reference, timeZone });
+  const digests = await fetchSourceDigests(deps.supabase, source.id);
 
-  // 진술 0개(노이즈뿐인 글)면 빈 changeset을 남기지 않는다
+  // 원본의 확정 Digest들을 순회하며 각 body에서 추출 → digest_id 태깅 + 원본 관통 index.
+  // digest 하나의 콜이 실패하면 전파돼 source 전체가 lease 재시도로 다시 돈다(성공한
+  // digest 콜까지 재실행) — apply가 끝에 1회뿐이라 부분 적용이 없는 대가다(청크 원자성과
+  // 같은 결). 정합성 > 재실행 비용.
+  const statements: ExtractionStatement[] = [];
+  for (const digest of digests) {
+    const extracted = await extractDigestStatements(
+      deps.forTask("extractStatements"),
+      { digest, todayIsoDate },
+    );
+    for (const statement of normalizeStatements(extracted, {
+      reference,
+      timeZone,
+    })) {
+      statements.push({
+        ...statement,
+        digest_id: digest.id,
+        index: statements.length,
+      });
+    }
+  }
+
+  // 진술 0개(판단이 안 나온 Digest들뿐)면 append 없이 완료만 표시한다.
   if (statements.length === 0) {
     const { error } = await deps.supabase.rpc("complete_source_extraction", {
       p_source_id: source.id,
@@ -359,78 +387,56 @@ async function processSource(
     return;
   }
 
-  const { error } = await deps.supabase.rpc("apply_ingestion_changeset", {
+  const { error } = await deps.supabase.rpc("apply_extraction_statements", {
     p_source_id: source.id,
     p_statements: statements,
   });
   if (error) {
     throw new Error(
-      `apply_ingestion_changeset failed for ${source.id}: ${error.message}`,
+      `apply_extraction_statements failed for ${source.id}: ${error.message}`,
     );
   }
 }
 
-// --- 추출 — 임계선 이하 1콜, 초과 시 청크 병렬 (long-input-chunking 설계) ---
+// --- 추출 — Digest 1개당 LLM 1콜 (구조화 body는 짧아 청킹 불필요) ---
 
-// 청크 콜 한정 재시도 — 단일 콜 실패는 DB lease 재시도가 받지만, 분할 경로는
-// 청크 하나의 일시 실패가 성공한 나머지 전부를 버리게 하므로 콜 레벨 방어가 먼저다.
+// 콜 한정 재시도 — digest 하나의 일시 실패가 성공한 다른 digest 콜을 버리게 하지 않도록
+// 콜 레벨에서 먼저 막는다(source 단위 lease 재시도는 그 위 안전망). 잇기 판정 콜과 공유.
 const CHUNK_CALL_MAX_ATTEMPTS = 3;
 // rate_limit 직후 즉시 재시도는 또 걸린다 — 시도 횟수 비례 지연
 const CHUNK_CALL_RETRY_DELAY_MS = 2_000;
 // 결정적 실패(스키마·인증·콘텐츠 필터)는 재시도해도 같다 — 일시 오류만 재시도.
 // unknown은 provider가 분류 못 한 오류로, 일시 장애와 결정적 실패를 함께 묶는다 —
 // 후자면 3회를 헛쓰지만 숨지 않고 결국 Sentry+DB로 전파되므로 보수적으로 포함한다.
-// 청크 콜이 결정적 실패로 죽으면 source 전체가 lease 사이클로 MAX_RETRIES회 통째
-// 재추출되며 매번 같은 자리서 실패한다(원자성 대가의 비용 증폭, 동작은 의도대로).
 const RETRYABLE_LLM_CODES: ReadonlySet<string> = new Set([
   "timeout",
   "rate_limit",
   "unknown",
 ]);
 
-async function extractSourceStatements(
+async function extractDigestStatements(
   llm: LlmProvider,
-  input: { body: string; todayIsoDate: string },
+  input: { digest: SourceDigest; todayIsoDate: string },
 ): Promise<ExtractedStatement[]> {
-  const chunks = chunkForExtraction(input.body);
-  const { todayIsoDate } = input;
-
-  // 임계선 이하(1청크, 문맥 없음) — 기존 1콜 경로 그대로
-  const single = chunks.length === 1 ? chunks[0] : undefined;
-  if (single) {
-    const output = await limitLlmCall(() =>
-      callExtraction(llm, { chunk: single, todayIsoDate }),
-    );
-    return output.statements;
-  }
-
-  // 청크 병렬 — 입력(본문+문맥)이 분할 시점에 전부 확정돼 있어 앞 콜 결과를
-  // 기다릴 필요가 없다. 하나라도 실패하면 source 전체 실패(부분 저장 없음) —
-  // Promise.all의 첫 reject가 그대로 전파돼 호출자의 재시도 경로를 탄다.
-  const outputs = await Promise.all(
-    chunks.map((chunk) =>
-      limitLlmCall(() => callExtractionWithRetry(llm, { chunk, todayIsoDate })),
-    ),
+  const output = await limitLlmCall(() =>
+    callDigestExtractionWithRetry(llm, input),
   );
-  // 청크 순서대로 연결 = 원문 등장 순서 — index는 normalizeStatements가 재부여
-  return outputs.flatMap((output) => output.statements);
+  return output.statements;
 }
 
-function callExtraction(
+function callDigestExtraction(
   llm: LlmProvider,
-  args: { chunk: ExtractionChunk; todayIsoDate: string },
+  input: { digest: SourceDigest; todayIsoDate: string },
 ) {
   return llm.generateStructured({
     schema: StatementExtractionSchema,
     schemaName: "statement_extraction",
-    systemPrompt: STATEMENT_EXTRACTION_SYSTEM_PROMPT,
+    systemPrompt: DIGEST_EXTRACTION_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",
-        content: buildStatementExtractionMessage(args.chunk.body, {
-          todayIsoDate: args.todayIsoDate,
-          before: args.chunk.contextBefore,
-          after: args.chunk.contextAfter,
+        content: buildDigestExtractionMessage(input.digest, {
+          todayIsoDate: input.todayIsoDate,
         }),
       },
     ],
@@ -439,14 +445,14 @@ function callExtraction(
   });
 }
 
-async function callExtractionWithRetry(
+async function callDigestExtractionWithRetry(
   llm: LlmProvider,
-  args: { chunk: ExtractionChunk; todayIsoDate: string },
+  input: { digest: SourceDigest; todayIsoDate: string },
 ) {
   let lastError: unknown;
   for (let attempt = 1; attempt <= CHUNK_CALL_MAX_ATTEMPTS; attempt++) {
     try {
-      return await callExtraction(llm, args);
+      return await callDigestExtraction(llm, input);
     } catch (err) {
       lastError = err;
       const retryable =
@@ -462,8 +468,8 @@ async function callExtractionWithRetry(
   throw lastError;
 }
 
-// 출력 순서 = 원문 순서 계약이므로 index는 배열 위치에서 파생.
 // DB 제약(claim만 confidence)과 맞도록 방어 정규화 — 과장 금지 원칙이라 빠진 확신도는 guess.
+// index·digest_id는 호출자가 원본 관통으로 부여한다(digest 경계를 넘어 이어지는 등장 순서).
 function normalizeStatements(
   raw: ExtractedStatement[],
   context: { reference: Date; timeZone: string },
@@ -471,10 +477,9 @@ function normalizeStatements(
   content: string;
   type: ExtractedStatement["type"];
   confidence: ExtractedStatement["confidence"];
-  index: number;
   due_date: string | null;
 }> {
-  return raw.map((statement, index) => {
+  return raw.map((statement) => {
     // 기한 토큰을 작성 시점·존 기준 절대 날짜로. 기한 없거나 불량 토큰이면 null.
     const due_date = statement.deadline
       ? resolveDeadlineToDueDate(statement.deadline, context)
@@ -493,7 +498,6 @@ function normalizeStatements(
       type: statement.type,
       confidence:
         statement.type === "claim" ? (statement.confidence ?? "guess") : null,
-      index,
       due_date,
     };
   });
@@ -514,6 +518,33 @@ async function fetchPendingSources(
     throw new Error(
       `pending source validation failed: ${parsed.error.message}`,
     );
+  }
+  return parsed.data;
+}
+
+// 추출 입력 = 원본의 확정 Digest들. 정렬은 (created_at, id) — 한 confirm에서 태어난
+// digest들은 created_at이 같아 id가 타이브레이커다. 순서는 원본 관통 index의 뼈대라
+// 결정적이면 충분하다(digest 사이 순서 자체는 판단 단위가 갈려 본질적으로 임의적).
+async function fetchSourceDigests(
+  supabase: TypedSupabaseClient,
+  sourceId: string,
+): Promise<SourceDigest[]> {
+  const { data, error } = await supabase
+    .from("digests")
+    .select("id, title, description, body")
+    .eq("source_id", sourceId)
+    .eq("status", "active")
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) {
+    throw new Error(
+      `fetch source digests failed for ${sourceId}: ${error.message}`,
+    );
+  }
+
+  const parsed = z.array(SourceDigestSchema).safeParse(data ?? []);
+  if (!parsed.success) {
+    throw new Error(`source digest validation failed: ${parsed.error.message}`);
   }
   return parsed.data;
 }
@@ -1062,7 +1093,7 @@ export function orderBySourceAppearance<
 
 // statement_sources의 locator {"index": n}에서 원문 순서를 뽑는다. !inner 필터로
 // 이 source의 행만 임베드돼 첫 원소를 본다.
-// ingestion 경로(apply_ingestion_changeset)는 진술마다 locator를 반드시 채우므로
+// 추출 경로(apply_extraction_statements)는 진술마다 locator를 반드시 채우므로
 // 정상 데이터는 여기 안 걸린다 — MAX_SAFE_INTEGER로 떨어지면(맨 뒤) 상류 불변식
 // 위반 신호다. zod 밖이라 무신호로 정렬만 흐트러지니 의미를 코멘트로 남긴다.
 function sourceOrderIndex(row: {

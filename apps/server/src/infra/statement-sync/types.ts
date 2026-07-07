@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { DigestBodySchema } from "@nema-io/shared";
+
 // --- PGMQ 메시지 ---
 // 메시지는 "깨워라" 하나 — 어떤 RPC가 보냈든 워커는 같은 사이클을 돈다.
 // 미래 계약(archive 계열)이 다른 type을 보내도 깨우기로만 쓰므로 message는 검증하지 않는다.
@@ -41,6 +43,18 @@ export const PendingSourceSchema = z.object({
 });
 
 export type PendingSource = z.infer<typeof PendingSourceSchema>;
+
+// 추출 입력 = 원본의 확정 Digest. 원문 body가 아니라 이 구조화 body에서 진술을 뽑는다.
+// body는 신뢰 경계 밖(DB CHECK는 판별자만 지킴)이라 판별 유니언으로 검증한다 — 어긋나면
+// 추출 프롬프트가 잘못된 구조를 받으니 조용히 넘기지 않고 검증 실패로 드러낸다.
+export const SourceDigestSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  description: z.string(),
+  body: DigestBodySchema,
+});
+
+export type SourceDigest = z.infer<typeof SourceDigestSchema>;
 
 export const PendingStatementSchema = z.object({
   id: z.string().uuid(),
