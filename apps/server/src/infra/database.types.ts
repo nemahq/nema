@@ -1084,7 +1084,7 @@ export type Database = {
         Args: { p_message: Json; p_session_id: string };
         Returns: undefined;
       };
-      apply_ingestion_changeset: {
+      apply_extraction_statements: {
         Args: { p_source_id: string; p_statements: Json };
         Returns: string;
       };
