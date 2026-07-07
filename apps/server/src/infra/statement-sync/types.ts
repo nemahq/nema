@@ -14,6 +14,21 @@ export type TriggerMessage = z.infer<typeof TriggerMessageSchema>;
 
 // --- fetch_pending_* RPC 반환 행 ---
 
+// ⓪ 생성(digestion) 대상 원본. workspace_id는 Tag·Reference 레지스트리(Workspace
+// 스코프)를 프롬프트에 실을 때 필요해 RPC가 함께 반환한다.
+export const PendingDigestionSourceSchema = z.object({
+  id: z.string().uuid(),
+  space_id: z.string().uuid(),
+  workspace_id: z.string().uuid(),
+  author_id: z.string().uuid().nullable(),
+  body: z.string().min(1),
+  created_at: z.string().datetime({ offset: true }),
+});
+
+export type PendingDigestionSource = z.infer<
+  typeof PendingDigestionSourceSchema
+>;
+
 export const PendingSourceSchema = z.object({
   id: z.string().uuid(),
   space_id: z.string().uuid(),

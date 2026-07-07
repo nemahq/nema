@@ -67,6 +67,8 @@ describe("기본 모델 배치 (NEM-149)", () => {
       narrate: "gemini-3.1-flash-lite",
       generateDraft: "gemini-3.1-flash-lite",
       extractStatements: null,
+      // 신규 task — 가성비 측정 전이라 seed 없이 tier 기본값(standard)로 시작
+      generateDigests: null,
       classifyDraftIntent: null,
       generateSessionTitle: null,
       assistDraft: null,
@@ -97,6 +99,7 @@ describe("TASK_DEFAULTS", () => {
       classifyDraftIntent: { tier: "mini" },
       generateSessionTitle: { tier: "nano" },
       extractStatements: { tier: "standard", effort: "low" },
+      generateDigests: { tier: "standard", effort: "low" },
       judgeRelations: { tier: "standard", effort: "low" },
       assistDraft: { tier: "standard" },
       narrate: { tier: "standard" },
