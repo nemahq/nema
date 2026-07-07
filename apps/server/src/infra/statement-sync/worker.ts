@@ -352,10 +352,11 @@ async function processSource(
   const { reference, timeZone, todayIsoDate } = deadlineContext(source);
   const digests = await fetchSourceDigests(deps.supabase, source.id);
 
-  // 확정 원본은 리뷰가 ≥1 Digest를 보장한다 — 0개면 1단계 생성 누락·상태 전이 이상 신호라
-  // 브레드크럼을 남긴다. 완료는 그대로 진행해(아래 빈 분기) 이상 원본이 재시도에 갇히지 않게.
+  // 추출 클레임된 원본은 pending digest가 ≥1 있어야 한다(첫 인제스천분 또는 수정으로 생긴
+  // 새 digest). 0개면 상태 전이 이상 신호라 브레드크럼을 남긴다 — 아래 빈 apply가 source를
+  // completed로 닫아 재시도에 갇히지 않게 한다.
   if (digests.length === 0) {
-    Sentry.captureMessage("active source has no active digests to extract", {
+    Sentry.captureMessage("source pending extraction has no pending digests", {
       level: "warning",
       tags: { component: "statement-sync", phase: "extraction" },
       extra: { sourceId: source.id },
@@ -391,21 +392,11 @@ async function processSource(
     }
   }
 
-  // 진술 0개(판단이 안 나온 Digest들뿐)면 append 없이 완료만 표시한다.
-  if (statements.length === 0) {
-    const { error } = await deps.supabase.rpc("complete_source_extraction", {
-      p_source_id: source.id,
-    });
-    if (error) {
-      throw new Error(
-        `complete_source_extraction failed for ${source.id}: ${error.message}`,
-      );
-    }
-    return;
-  }
-
+  // 진술이 0개여도 apply를 부른다 — 처리한 digest(진술 0개짜리 포함)를 completed로 닫고
+  // source 클레임을 완료 표시한다(빈 statements면 진술·changeset append는 일어나지 않음).
   const { error } = await deps.supabase.rpc("apply_extraction_statements", {
     p_source_id: source.id,
+    p_digest_ids: digests.map((digest) => digest.id),
     p_statements: statements,
   });
   if (error) {
@@ -551,6 +542,9 @@ async function fetchSourceDigests(
     .select("id, title, description, body")
     .eq("source_id", sourceId)
     .eq("status", "active")
+    // 아직 추출 안 된 digest만 — 이미 뽑은 형제(초기 인제스천분)나 다른 수정본은
+    // extraction_status='completed'라 재추출 대상이 아니다(Digest 수정 시 새 digest만 pending).
+    .eq("extraction_status", "pending")
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
   if (error) {

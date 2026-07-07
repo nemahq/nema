@@ -1,6 +1,7 @@
 import { changesetRouter } from "./routers/changeset-router";
 import { devRouter } from "./routers/dev-router";
 import { digestReviewRouter } from "./routers/digest-review-router";
+import { digestRouter } from "./routers/digest-router";
 import { eventRouter } from "./routers/event-router";
 import { messageRouter } from "./routers/message-router";
 import { narrationRouter } from "./routers/narration-router";
@@ -23,6 +24,7 @@ export const appRouter = router({
   statement: statementRouter,
   narration: narrationRouter,
   changeset: changesetRouter,
+  digest: digestRouter,
   digestReview: digestReviewRouter,
   topic: topicRouter,
   dev: devRouter,

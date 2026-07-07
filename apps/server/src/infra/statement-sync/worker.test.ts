@@ -186,6 +186,7 @@ describe("createStatementSyncWorker", () => {
     expect(applies).toHaveLength(1);
     expect(applies[0][1]).toEqual({
       p_source_id: SOURCE_ID,
+      p_digest_ids: [DIGEST_ID_1],
       p_statements: [
         {
           content: "확정 결정.",
@@ -254,7 +255,7 @@ describe("createStatementSyncWorker", () => {
     expect(applies[0][1].p_statements[0].due_date).toBe("2026-06-12");
   });
 
-  it("진술 0개(판단 안 나온 Digest) — append 없이 complete_source_extraction만 호출", async () => {
+  it("진술 0개(판단 안 나온 Digest) — 빈 apply로 digest·source만 완료 표시", async () => {
     const { client, rpc } = mockSupabase(
       {
         read_sync_events: [[NOTIFY_ROW]],
@@ -270,10 +271,14 @@ describe("createStatementSyncWorker", () => {
       vectorStore: mockVectorStore(),
     });
 
-    expect(rpcCalls(rpc, "apply_extraction_statements")).toHaveLength(0);
-    const completes = rpcCalls(rpc, "complete_source_extraction");
-    expect(completes).toHaveLength(1);
-    expect(completes[0][1]).toEqual({ p_source_id: SOURCE_ID });
+    // 진술은 없어도 처리한 digest를 완료 표시해야 재추출 루프에 안 갇힌다
+    const applies = rpcCalls(rpc, "apply_extraction_statements");
+    expect(applies).toHaveLength(1);
+    expect(applies[0][1]).toEqual({
+      p_source_id: SOURCE_ID,
+      p_digest_ids: [DIGEST_ID_1],
+      p_statements: [],
+    });
   });
 
   it("추출 LLM 실패 — increment_source_extraction_retry에 에러 메시지 기록", async () => {
@@ -623,11 +628,17 @@ describe("createStatementSyncWorker", () => {
     });
 
     expect(llm.generateStructured).not.toHaveBeenCalled();
-    expect(rpcCalls(rpc, "apply_extraction_statements")).toHaveLength(0);
-    expect(rpcCalls(rpc, "complete_source_extraction")).toHaveLength(1);
-    // 확정 원본에 active digest가 0개인 건 상류 이상 — 무신호로 넘기지 않는다
+    // digest가 0개여도 빈 apply로 source 클레임을 완료 표시해 재시도에 안 갇히게 한다
+    const applies = rpcCalls(rpc, "apply_extraction_statements");
+    expect(applies).toHaveLength(1);
+    expect(applies[0][1]).toEqual({
+      p_source_id: SOURCE_ID,
+      p_digest_ids: [],
+      p_statements: [],
+    });
+    // pending 추출인데 pending digest가 0개인 건 상류 이상 — 무신호로 넘기지 않는다
     expect(Sentry.captureMessage).toHaveBeenCalledWith(
-      "active source has no active digests to extract",
+      "source pending extraction has no pending digests",
       expect.objectContaining({ level: "warning" }),
     );
   });
