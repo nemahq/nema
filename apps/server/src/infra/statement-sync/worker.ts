@@ -352,16 +352,33 @@ async function processSource(
   const { reference, timeZone, todayIsoDate } = deadlineContext(source);
   const digests = await fetchSourceDigests(deps.supabase, source.id);
 
-  // 원본의 확정 Digest들을 순회하며 각 body에서 추출 → digest_id 태깅 + 원본 관통 index.
-  // digest 하나의 콜이 실패하면 전파돼 source 전체가 lease 재시도로 다시 돈다(성공한
-  // digest 콜까지 재실행) — apply가 끝에 1회뿐이라 부분 적용이 없는 대가다(청크 원자성과
-  // 같은 결). 정합성 > 재실행 비용.
+  // 확정 원본은 리뷰가 ≥1 Digest를 보장한다 — 0개면 1단계 생성 누락·상태 전이 이상 신호라
+  // 브레드크럼을 남긴다. 완료는 그대로 진행해(아래 빈 분기) 이상 원본이 재시도에 갇히지 않게.
+  if (digests.length === 0) {
+    Sentry.captureMessage("active source has no active digests to extract", {
+      level: "warning",
+      tags: { component: "statement-sync", phase: "extraction" },
+      extra: { sourceId: source.id },
+    });
+  }
+
+  // Digest들을 병렬 추출 — 입력이 루프 시작 시 전부 확정돼 있어 앞 콜을 기다릴 이유가 없다.
+  // 순차로 돌리면 다digest 원본이 lease(150초)를 넘겨 완료 못 하고 재시도만 돌 수 있다.
+  // 하나라도 실패하면 Promise.all의 첫 reject가 전파돼 source 전체가 재시도(부분 저장 없음) —
+  // apply가 끝에 1회뿐이라 부분 적용이 없는 대가다(청크 원자성과 같은 결). 정합성 > 재실행 비용.
+  const perDigest = await Promise.all(
+    digests.map(async (digest) => ({
+      digest,
+      extracted: await extractDigestStatements(
+        deps.forTask("extractStatements"),
+        { digest, todayIsoDate },
+      ),
+    })),
+  );
+
+  // digest_id 태깅 + 원본 관통 index — Digest 인출 순서로 이어 붙여 잇기 정렬 계약을 지킨다.
   const statements: ExtractionStatement[] = [];
-  for (const digest of digests) {
-    const extracted = await extractDigestStatements(
-      deps.forTask("extractStatements"),
-      { digest, todayIsoDate },
-    );
+  for (const { digest, extracted } of perDigest) {
     for (const statement of normalizeStatements(extracted, {
       reference,
       timeZone,
@@ -402,9 +419,9 @@ async function processSource(
 
 // 콜 한정 재시도 — digest 하나의 일시 실패가 성공한 다른 digest 콜을 버리게 하지 않도록
 // 콜 레벨에서 먼저 막는다(source 단위 lease 재시도는 그 위 안전망). 잇기 판정 콜과 공유.
-const CHUNK_CALL_MAX_ATTEMPTS = 3;
+const LLM_CALL_MAX_ATTEMPTS = 3;
 // rate_limit 직후 즉시 재시도는 또 걸린다 — 시도 횟수 비례 지연
-const CHUNK_CALL_RETRY_DELAY_MS = 2_000;
+const LLM_CALL_RETRY_DELAY_MS = 2_000;
 // 결정적 실패(스키마·인증·콘텐츠 필터)는 재시도해도 같다 — 일시 오류만 재시도.
 // unknown은 provider가 분류 못 한 오류로, 일시 장애와 결정적 실패를 함께 묶는다 —
 // 후자면 3회를 헛쓰지만 숨지 않고 결국 Sentry+DB로 전파되므로 보수적으로 포함한다.
@@ -450,18 +467,18 @@ async function callDigestExtractionWithRetry(
   input: { digest: SourceDigest; todayIsoDate: string },
 ) {
   let lastError: unknown;
-  for (let attempt = 1; attempt <= CHUNK_CALL_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= LLM_CALL_MAX_ATTEMPTS; attempt++) {
     try {
       return await callDigestExtraction(llm, input);
     } catch (err) {
       lastError = err;
       const retryable =
         err instanceof LlmError && RETRYABLE_LLM_CODES.has(err.code);
-      if (!retryable || attempt === CHUNK_CALL_MAX_ATTEMPTS) {
+      if (!retryable || attempt === LLM_CALL_MAX_ATTEMPTS) {
         throw err;
       }
       await new Promise((resolve) =>
-        setTimeout(resolve, attempt * CHUNK_CALL_RETRY_DELAY_MS),
+        setTimeout(resolve, attempt * LLM_CALL_RETRY_DELAY_MS),
       );
     }
   }
@@ -997,18 +1014,18 @@ function callJudgment(llm: LlmProvider, message: string) {
 // 시도 횟수 비례 지연. 결정적 실패는 source 단위 lease 사이클이 받는다.
 async function callJudgmentWithRetry(llm: LlmProvider, message: string) {
   let lastError: unknown;
-  for (let attempt = 1; attempt <= CHUNK_CALL_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= LLM_CALL_MAX_ATTEMPTS; attempt++) {
     try {
       return await callJudgment(llm, message);
     } catch (err) {
       lastError = err;
       const retryable =
         err instanceof LlmError && RETRYABLE_LLM_CODES.has(err.code);
-      if (!retryable || attempt === CHUNK_CALL_MAX_ATTEMPTS) {
+      if (!retryable || attempt === LLM_CALL_MAX_ATTEMPTS) {
         throw err;
       }
       await new Promise((resolve) =>
-        setTimeout(resolve, attempt * CHUNK_CALL_RETRY_DELAY_MS),
+        setTimeout(resolve, attempt * LLM_CALL_RETRY_DELAY_MS),
       );
     }
   }

@@ -5,6 +5,8 @@ vi.mock("@sentry/node", () => ({
   captureMessage: vi.fn(),
 }));
 
+import * as Sentry from "@sentry/node";
+
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
@@ -540,6 +542,94 @@ describe("createStatementSyncWorker", () => {
       p_source_id: SOURCE_ID,
       p_error_message: expect.stringContaining("schema mismatch"),
     });
+  });
+
+  it("중간 Digest가 진술 0개여도 원본 관통 index는 연속이다", async () => {
+    const IDEA_DIGEST: SourceDigest = {
+      id: "f0000000-0000-4000-a000-000000000003",
+      title: "아이디어",
+      description: "d",
+      body: { type: "idea", concept: "c" },
+    };
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+      },
+      { digests: [DIGEST, LEARNING_DIGEST, IDEA_DIGEST] },
+    );
+
+    // 첫째(decision)·셋째(idea)는 1개, 둘째(learning)는 0개
+    const generateStructured = vi.fn(
+      async (params: { messages: Array<{ content: string }> }) => {
+        const content = params.messages[0]?.content ?? "";
+        if (content.includes("type: learning")) {
+          return { statements: [] };
+        }
+        const isIdea = content.includes("type: idea");
+        return {
+          statements: [
+            {
+              content: isIdea ? "아이디어 진술" : "결정 진술",
+              type: "claim",
+              confidence: "certain",
+            },
+          ],
+        };
+      },
+    );
+    const llm = {
+      generateStructured,
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    } as unknown as LlmProvider;
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const statements = rpcCalls(rpc, "apply_extraction_statements")[0][1]
+      .p_statements as Array<{ digest_id: string; index: number }>;
+    // 둘째 digest가 비어도 index는 digest 위치가 아니라 누적 진술 수 기준으로 연속
+    expect(statements.map((s) => s.index)).toEqual([0, 1]);
+    expect(statements.map((s) => s.digest_id)).toEqual([
+      DIGEST_ID_1,
+      IDEA_DIGEST.id,
+    ]);
+  });
+
+  it("active Digest 0개 — LLM 콜 없이 완료 + 이상 신호 브레드크럼", async () => {
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+      },
+      { digests: [] },
+    );
+    const llm = mockLlm([
+      { content: "안 불림", type: "claim", confidence: "certain" },
+    ]);
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    expect(llm.generateStructured).not.toHaveBeenCalled();
+    expect(rpcCalls(rpc, "apply_extraction_statements")).toHaveLength(0);
+    expect(rpcCalls(rpc, "complete_source_extraction")).toHaveLength(1);
+    // 확정 원본에 active digest가 0개인 건 상류 이상 — 무신호로 넘기지 않는다
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "active source has no active digests to extract",
+      expect.objectContaining({ level: "warning" }),
+    );
   });
 });
 
