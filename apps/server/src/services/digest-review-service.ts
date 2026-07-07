@@ -25,6 +25,9 @@ const StoredReferenceDataSchema = z.object({
   type: ReferenceTypeSchema,
   title: z.string(),
   body: z.string(),
+  // 이 PR 이전에 생성된 reference create-Change엔 external_urls 키가 없다
+  // (#355·#356 배포본이 만든 pending 리뷰) — 옛 Change를 무해하게 읽는다
+  external_urls: z.array(z.string()).default([]),
 });
 
 interface CitedReference {
@@ -88,6 +91,7 @@ export async function getReview(args: {
       type: referenceData.type,
       title: referenceData.title,
       body: referenceData.body,
+      externalUrls: referenceData.external_urls,
     };
   });
 
@@ -160,7 +164,13 @@ export async function updateReview(args: {
       new_reference_keys: digest.newReferenceKeys,
       external_urls: digest.externalUrls,
     })) as unknown as Json,
-    p_new_references: newReferences as unknown as Json,
+    p_new_references: newReferences.map((reference) => ({
+      key: reference.key,
+      type: reference.type,
+      title: reference.title,
+      body: reference.body,
+      external_urls: reference.externalUrls,
+    })) as unknown as Json,
   });
   throwIfSupabaseError(error);
 }

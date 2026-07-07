@@ -99,8 +99,20 @@ describe("normalizeGeneratedDigests", () => {
       {
         digests: [makeGeneratedDigest({ newReferenceKeys: ["R1"] })],
         newReferences: [
-          { key: "R1", type: "person", title: "김 대리", body: "동료" },
-          { key: "R2", type: "term", title: "고아 용어", body: "미인용" },
+          {
+            key: "R1",
+            type: "person",
+            title: "김 대리",
+            body: "동료",
+            externalUrls: ["https://linkedin.com/in/kim", "not-a-url"],
+          },
+          {
+            key: "R2",
+            type: "term",
+            title: "고아 용어",
+            body: "미인용",
+            externalUrls: [],
+          },
         ],
       },
       emptyContext,
@@ -108,6 +120,10 @@ describe("normalizeGeneratedDigests", () => {
 
     expect(digests[0]?.new_reference_keys).toEqual(["R1"]);
     expect(newReferences.map((reference) => reference.key)).toEqual(["R1"]);
+    // 대표 링크는 위생(잘못된 URL 폐기)을 거쳐 RPC 계약 형태로 통과된다
+    expect(newReferences[0]?.external_urls).toEqual([
+      "https://linkedin.com/in/kim",
+    ]);
   });
 
   it("모르는 신규 레퍼런스 키 인용은 버린다 — 끊긴 키가 확정 시 유령 인용이 된다", () => {

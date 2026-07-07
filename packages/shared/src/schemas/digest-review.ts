@@ -7,6 +7,7 @@ import {
 } from "./digest";
 import {
   REFERENCE_BODY_MAX_LENGTH,
+  REFERENCE_EXTERNAL_URLS_MAX,
   REFERENCE_TITLE_MAX_LENGTH,
   ReferenceTypeSchema,
 } from "./reference";
@@ -30,6 +31,7 @@ export const NewReferenceDraftSchema = z.object({
   type: ReferenceTypeSchema,
   title: z.string().trim().min(1).max(REFERENCE_TITLE_MAX_LENGTH),
   body: z.string().trim().min(1).max(REFERENCE_BODY_MAX_LENGTH),
+  externalUrls: z.array(z.string().url()).max(REFERENCE_EXTERNAL_URLS_MAX),
 });
 export type NewReferenceDraft = z.infer<typeof NewReferenceDraftSchema>;
 

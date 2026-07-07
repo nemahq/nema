@@ -8,6 +8,7 @@ import {
   DIGEST_TAGS_MAX,
   DIGEST_TITLE_MAX_LENGTH,
   DIGEST_TOPICS_MAX,
+  REFERENCE_EXTERNAL_URLS_MAX,
   TAG_DESCRIPTION_MAX_LENGTH,
   TAG_TITLE_MAX_LENGTH,
   TOPIC_NAME_MAX_LENGTH,
@@ -139,7 +140,7 @@ async function processDigestion(
     p_source_id: source.id,
     // RPC가 jsonb로 받는다 — 계약 상대는 write_ingestion_review_changes가 읽는
     // 키(digest: title/description/body/topics/tags/reference_ids/new_reference_keys/
-    // external_urls, reference: key/type/title/body)다. 키를 바꾸면 RPC도 함께 고친다.
+    // external_urls, reference: key/type/title/body/external_urls)다. 키를 바꾸면 RPC도 함께 고친다.
     p_digests: normalized.digests as unknown as Json,
     p_new_references: normalized.newReferences as unknown as Json,
   });
@@ -222,6 +223,7 @@ interface RpcNewReference {
   type: string;
   title: string;
   body: string;
+  external_urls: string[];
 }
 
 // 평평한 LLM 출력을 타입별 판별 유니언으로 조립한다 — 타입 밖 필드는 버린다
@@ -302,7 +304,7 @@ function sanitizeLabels(params: {
   return result;
 }
 
-function sanitizeUrls(urls: string[]): string[] {
+function sanitizeUrls(urls: string[], max: number): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
   for (const url of urls) {
@@ -321,7 +323,7 @@ function sanitizeUrls(urls: string[]): string[] {
     }
     seen.add(trimmed);
     result.push(trimmed);
-    if (result.length >= DIGEST_EXTERNAL_URLS_MAX) {
+    if (result.length >= max) {
       break;
     }
   }
@@ -352,6 +354,10 @@ export function normalizeGeneratedDigests(
       type: reference.type,
       title: reference.title.trim(),
       body: reference.body.trim(),
+      external_urls: sanitizeUrls(
+        reference.externalUrls,
+        REFERENCE_EXTERNAL_URLS_MAX,
+      ),
     });
   }
 
@@ -411,7 +417,10 @@ export function normalizeGeneratedDigests(
       tags,
       reference_ids: referenceIds,
       new_reference_keys: newReferenceKeys,
-      external_urls: sanitizeUrls(digest.externalUrls),
+      external_urls: sanitizeUrls(
+        digest.externalUrls,
+        DIGEST_EXTERNAL_URLS_MAX,
+      ),
     });
   }
 

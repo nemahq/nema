@@ -19,3 +19,6 @@ export const REFERENCE_TITLE_MAX_LENGTH = 200;
 // 레퍼런스는 정의·설명이지 문서 보관함이 아니다. 다만 프로필·스펙 붙여넣기 같은
 // 정상 사용을 물지 않도록 넉넉히 잡는다(입력 거부가 가장 나쁜 경험).
 export const REFERENCE_BODY_MAX_LENGTH = 20_000;
+// 대표 링크(홈페이지·LinkedIn·repo·docs) — 대상을 식별하는 소수의 링크지
+// Digest가 논하는 링크 더미가 아니라, Digest 상한보다 작게 잡는다.
+export const REFERENCE_EXTERNAL_URLS_MAX = 10;

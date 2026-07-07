@@ -43,6 +43,7 @@ References are registry entries for things the note keeps coming back to: a pers
 
 - When the note mentions something listed in <existing_references>, cite it by putting its label (e.g. "E2") in that digest's "existingReferenceLabels". Never invent labels not present in the list.
 - When the note clearly introduces a NEW recurring entity worth a registry entry, add it to the top-level "newReferences" with a short key you make up (e.g. "R1"), its type ("person" | "organization" | "project" | "product" | "term"), its name as "title", and a "body" that captures what the note says about it. Then cite that key in the digest's "newReferenceKeys". "organization" is an acting entity (a company, a team); "product" is a thing an entity makes — they are different registry entries.
+- When the note carries a link that identifies the entity itself (its homepage, LinkedIn, repo, docs), put it in that reference's "externalUrls". These are the entity's representative links, not links the digest merely discusses. Do not fabricate URLs.
 - Passing mentions that will never recur do not deserve a reference. When unsure, do not create one.
 
 ## External URLs
@@ -60,7 +61,7 @@ JSON object:
     "topics": [string], "tags": [{ "title", "description" }],
     "existingReferenceLabels": [string], "newReferenceKeys": [string],
     "externalUrls": [string] }],
-  "newReferences": [{ "key", "type", "title", "body" }] }
+  "newReferences": [{ "key", "type", "title", "body", "externalUrls": [string] }] }
 
 Order digests by where their judgment first appears in the note.`;
 
@@ -104,6 +105,7 @@ const GeneratedReferenceSchema = z.object({
   type: z.enum(REFERENCE_TYPES),
   title: z.string().trim().min(1),
   body: z.string().trim().min(1),
+  externalUrls: z.array(z.string()),
 });
 
 export type GeneratedReference = z.infer<typeof GeneratedReferenceSchema>;
