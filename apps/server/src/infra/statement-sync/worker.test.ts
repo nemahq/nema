@@ -25,6 +25,7 @@ import {
   orderBySourceAppearance,
   POLL_INTERVAL_MS,
   reconcileChanges,
+  runVectorPurgePass,
   selectCandidateIds,
 } from "./worker";
 
@@ -72,7 +73,7 @@ function pendingStatement(
 // 테이블 직접 조회(.from) 체인 stub — select/eq/in/order 무시하고 canned rows로 resolve
 function fromStub(rows: unknown[]) {
   const stub: Record<string, unknown> = {};
-  for (const method of ["select", "eq", "in", "order"]) {
+  for (const method of ["select", "eq", "in", "lt", "order"]) {
     stub[method] = () => stub;
   }
   stub["then"] = (resolve: (value: { data: unknown; error: null }) => void) =>
@@ -1130,5 +1131,69 @@ describe("deadlineContext", () => {
   it("존이 없으면(옛 글·미전달) UTC로 강등", () => {
     const ctx = deadlineContext({ ...PENDING_SOURCE, author_timezone: null });
     expect(ctx.timeZone).toBe("UTC");
+  });
+});
+
+describe("runVectorPurgePass", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  type PurgeDeps = Parameters<typeof runVectorPurgePass>[0];
+
+  // read는 배치 크기 미만(1건)만 돌려줘 한 번 읽고 드레인을 끝낸다.
+  function makeDeps(deleteImpl: () => Promise<void>): {
+    deps: PurgeDeps;
+    rpc: ReturnType<typeof vi.fn>;
+    deleteStatements: ReturnType<typeof vi.fn>;
+  } {
+    const deleteStatements = vi.fn(deleteImpl);
+    const rpc = vi.fn((name: string) =>
+      name === "read_vector_purge_events"
+        ? Promise.resolve({
+            data: [
+              {
+                msg_id: 42,
+                message: { statement_ids: [STMT_ID_1, STMT_ID_2] },
+              },
+            ],
+            error: null,
+          })
+        : Promise.resolve({ error: null }),
+    );
+    const deps = {
+      supabase: { rpc },
+      vectorStore: { deleteStatements },
+    } as unknown as PurgeDeps;
+    return { deps, rpc, deleteStatements };
+  }
+
+  it("성공하면 벡터를 지우고 메시지를 ack한다", async () => {
+    const { deps, rpc, deleteStatements } = makeDeps(() => Promise.resolve());
+
+    const processed = await runVectorPurgePass(deps);
+
+    expect(processed).toBe(1);
+    expect(deleteStatements).toHaveBeenCalledWith([STMT_ID_1, STMT_ID_2]);
+    expect(rpc).toHaveBeenCalledWith("ack_vector_purge_event", {
+      p_msg_id: 42,
+    });
+  });
+
+  it("Qdrant 삭제가 실패하면 ack하지 않아 재전달로 재시도된다", async () => {
+    const { deps, rpc, deleteStatements } = makeDeps(() =>
+      Promise.reject(new Error("qdrant down")),
+    );
+
+    const processed = await runVectorPurgePass(deps);
+
+    expect(processed).toBe(0);
+    expect(deleteStatements).toHaveBeenCalledWith([STMT_ID_1, STMT_ID_2]);
+    // ack 금지 — 안 그러면 실패한 벡터 삭제가 조용히 유실돼 죽은 원본 임베딩이 남는다.
+    expect(rpc).not.toHaveBeenCalledWith(
+      "ack_vector_purge_event",
+      expect.anything(),
+    );
+    expect(Sentry.captureException).toHaveBeenCalled();
   });
 });

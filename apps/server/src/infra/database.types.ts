@@ -1083,6 +1083,10 @@ export type Database = {
     };
     Functions: {
       ack_sync_event: { Args: { p_msg_id: number }; Returns: undefined };
+      ack_vector_purge_event: {
+        Args: { p_msg_id: number };
+        Returns: undefined;
+      };
       append_message: {
         Args: { p_message: Json; p_session_id: string };
         Returns: undefined;
@@ -1225,12 +1229,23 @@ export type Database = {
         Args: { p_workspace_id: string };
         Returns: boolean;
       };
+      purge_expired_sources: {
+        Args: { p_batch_limit?: number; p_retention_days?: number };
+        Returns: number;
+      };
       read_sync_events: {
         Args: { p_batch_size?: number; p_visibility_timeout?: number };
         Returns: {
           message: Json;
           msg_id: number;
           read_ct: number;
+        }[];
+      };
+      read_vector_purge_events: {
+        Args: { p_batch_size?: number; p_visibility_timeout?: number };
+        Returns: {
+          message: Json;
+          msg_id: number;
         }[];
       };
       reject_pending_relation: {
