@@ -203,16 +203,26 @@ BEGIN
   VALUES (v_space_id, 'manual', 'applied', v_source_id, v_author_id)
   RETURNING id INTO v_changeset_id;
 
-  -- 신규 Reference 생성 + key→예약 id 매핑
+  -- 신규 Reference 생성 + key→예약 id 매핑. external_urls를 INSERT·Change data 양쪽에
+  -- 통과시킨다(#360 인테이크 경로와 같은 관용구 — 각 Change가 자기완결이어야 되돌리기·purge가 돈다).
   FOR v_item IN SELECT value FROM jsonb_array_elements(coalesce(p_new_references, '[]'::jsonb))
   LOOP
     v_ref_id := gen_random_uuid();
     v_key_ids := v_key_ids || jsonb_build_object(v_item->>'key', v_ref_id::text);
-    INSERT INTO "references" (id, workspace_id, type, title, body)
-    VALUES (v_ref_id, v_workspace_id, (v_item->>'type')::reference_type, v_item->>'title', v_item->>'body');
+    INSERT INTO "references" (id, workspace_id, type, title, body, external_urls)
+    VALUES (
+      v_ref_id, v_workspace_id,
+      (v_item->>'type')::reference_type, v_item->>'title', v_item->>'body',
+      CASE WHEN jsonb_array_length(coalesce(v_item->'external_urls', '[]'::jsonb)) > 0
+        THEN (SELECT array_agg(value #>> '{}') FROM jsonb_array_elements(v_item->'external_urls'))
+      END
+    );
     INSERT INTO changes (changeset_id, action, target_type, target_id, data)
     VALUES (v_changeset_id, 'create', 'reference', v_ref_id,
-      jsonb_build_object('type', v_item->>'type', 'title', v_item->>'title', 'body', v_item->>'body'));
+      jsonb_build_object(
+        'type', v_item->>'type', 'title', v_item->>'title', 'body', v_item->>'body',
+        'external_urls', coalesce(v_item->'external_urls', '[]'::jsonb)
+      ));
   END LOOP;
 
   -- 기존 인용(reference_ids) + 신규 인용(new_reference_keys→예약 id) 합치기
