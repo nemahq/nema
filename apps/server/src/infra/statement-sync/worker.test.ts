@@ -690,6 +690,14 @@ describe("gateProposals", () => {
       { from_id: NEW_1, to_id: NEW_0, type: "duplicates" },
     ]);
   });
+
+  it("같음도 역방향 중복을 collapse한다 — 대칭쌍이 한 pending으로", () => {
+    const { pending } = gate([
+      { from: "N0", to: "N1", type: "duplicates", confident: true },
+      { from: "N1", to: "N0", type: "duplicates", confident: false },
+    ]);
+    expect(pending).toHaveLength(1);
+  });
 });
 
 // 후보 좁히기 — 형제 제외/skip 경계가 틀리면 LLM 판정 대상을 조용히 망친다.
@@ -782,9 +790,7 @@ describe("dedupeChanges", () => {
 
 function mockRelationLlm(): LlmProvider {
   return {
-    generateStructured: vi
-      .fn()
-      .mockResolvedValue({ relations: [], duplicates: [] }),
+    generateStructured: vi.fn().mockResolvedValue({ relations: [] }),
     async *generateStream() {
       yield "";
     },

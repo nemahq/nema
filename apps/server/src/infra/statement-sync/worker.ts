@@ -884,11 +884,14 @@ interface RelationChange {
   type: RelationType;
 }
 
-// 관계의 정체성 키 — 중복 판정의 단일 규칙. conflicts는 대칭이라 양끝을 정렬해
-// 역방향(B→A)까지 같은 키로 collapse. gateProposals·dedupeChanges·교차 dedup이 공유한다.
+// 관계의 정체성 키 — 중복 판정의 단일 규칙. conflicts·duplicates는 양끝을 정렬해
+// 역방향(B→A)까지 같은 키로 collapse — conflicts는 대칭이라, duplicates는 같은 쌍의
+// 방향만 뒤집힌 경쟁 제안(N0→N1, N1→N0)이 각각 별도 pending으로 올라와 둘째 승인이
+// 끝점 검사에 걸려 날 에러를 뱉는 걸 막으려 한 쌍으로 접는다(저장 방향은 첫 제안대로).
+// gateProposals·dedupeChanges·교차 dedup이 공유한다.
 function changeKey(change: RelationChange): string {
-  return change.type === "conflicts"
-    ? `conflicts:${[change.from_id, change.to_id].sort().join(":")}`
+  return change.type === "conflicts" || change.type === "duplicates"
+    ? `${change.type}:${[change.from_id, change.to_id].sort().join(":")}`
     : `${change.type}:${change.from_id}:${change.to_id}`;
 }
 

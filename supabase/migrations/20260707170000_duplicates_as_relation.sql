@@ -33,6 +33,9 @@ BEGIN
   IF NEW.status = 'archived' THEN
     -- 끝점이 가려지면 그 끝점에 걸린 active 관계를 함께 가린다. 단 duplicates는
     -- 제외 — 이 관계는 "to가 archived"가 정상 상태라 여기서 가리면 근거가 사라진다.
+    -- 불변식: keeper(from)는 폐기되지 않는다(가리는 건 새 진술=to뿐). 이 전제가 깨져
+    -- keeper를 archive하는 경로가 생기면 그 duplicates 관계가 active로 stranded된다
+    -- (archived keeper는 화면에 안 떠 실피해는 없으나, 그 경로 신설 시 여기 재검토).
     UPDATE statement_relations
     SET status = 'archived'
     WHERE status = 'active' AND type <> 'duplicates'
@@ -254,10 +257,14 @@ BEGIN
     UPDATE statements
     SET status = 'archived', ingestion_status = 'pending'
     WHERE id = v_to_id AND status = 'active';
-    IF FOUND THEN
-      INSERT INTO changes (changeset_id, action, target_type, target_id)
-      VALUES (p_changeset_id, 'archive', 'statement', v_to_id);
+    -- 끝점 검사와 이 UPDATE 사이(READ COMMITTED) B가 동시 archive되는 좁은 경쟁이면
+    -- 관계만 생기고 archive change가 안 남아 되돌리기가 반쪽이 된다. 조용한 반쪽 병합
+    -- 대신 트랜잭션째 abort — changeset은 pending으로 남아 사람이 재시도한다.
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'duplicate endpoint % no longer active at merge time', v_to_id;
     END IF;
+    INSERT INTO changes (changeset_id, action, target_type, target_id)
+    VALUES (p_changeset_id, 'archive', 'statement', v_to_id);
   END IF;
 
   UPDATE changesets SET status = 'applied' WHERE id = p_changeset_id;

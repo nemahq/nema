@@ -252,7 +252,7 @@ export async function getSource(args: {
 // 병합이 풀리면(관계 archived) 자동 제외된다. ownSourceId(지금 보는 글)는 뺀다 — 같은 글 안
 // 비대칭 합치기가 "다른 글에도 있음"으로 잘못 세어지지 않게(cross-source 보강만 센다). 한
 // 단계만 따른다: keeper는 늘 살아남는 쪽이라(가리는 건 새 진술뿐) 병합 사슬이 안 생긴다.
-async function fetchMergedSourceIds(params: {
+export async function fetchMergedSourceIds(params: {
   supabase: TypedSupabaseClient;
   keeperIds: string[];
   ownSourceId: string;
