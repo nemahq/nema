@@ -122,40 +122,53 @@ export function DigestReviewCard({ changesetId }: DigestReviewCardProps) {
         </p>
       </details>
 
-      {review.digests.map((digest, index) => (
-        <div
-          key={index}
-          className="flex flex-col gap-1 rounded-md border border-border/40 p-2"
-        >
-          <span className="text-[10px] uppercase text-fg-tertiary">
-            {digest.body.type}
-          </span>
-          <input
-            value={current[index].title}
-            onChange={(e) => patch(index, "title", e.target.value)}
-            placeholder="제목"
-            className={INPUT_CLASS}
-          />
-          <input
-            value={current[index].description}
-            onChange={(e) => patch(index, "description", e.target.value)}
-            placeholder="요약"
-            className={INPUT_CLASS}
-          />
-          <BodyFields digest={digest} />
-          <input
-            value={current[index].topicsText}
-            onChange={(e) => patch(index, "topicsText", e.target.value)}
-            placeholder="주제 (쉼표로 구분)"
-            className={INPUT_CLASS}
-          />
-          {digest.tags.length > 0 && (
-            <span className="text-xs text-fg-tertiary">
-              태그: {digest.tags.map((tag) => tag.title).join(", ")}
+      {review.digests.map((digest, index) => {
+        const bodyRows = bodyFieldRows(digest.body);
+        return (
+          <div
+            key={index}
+            className="flex flex-col gap-1 rounded-md border border-border/40 p-2"
+          >
+            <span className="text-[10px] uppercase text-fg-tertiary">
+              {digest.body.type}
             </span>
-          )}
-        </div>
-      ))}
+            <input
+              value={current[index].title}
+              onChange={(e) => patch(index, "title", e.target.value)}
+              placeholder="제목"
+              className={INPUT_CLASS}
+            />
+            <input
+              value={current[index].description}
+              onChange={(e) => patch(index, "description", e.target.value)}
+              placeholder="요약"
+              className={INPUT_CLASS}
+            />
+            {/* 타입별 본문 필드는 읽기 전용 — 구조화 편집은 제품 UI 몫이라 값 확인만 한다. */}
+            {bodyRows.length > 0 && (
+              <dl className="flex flex-col gap-0.5 text-xs">
+                {bodyRows.map(([key, value]) => (
+                  <div key={key} className="flex gap-1">
+                    <dt className="text-fg-tertiary">{key}</dt>
+                    <dd className="text-fg-secondary">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            <input
+              value={current[index].topicsText}
+              onChange={(e) => patch(index, "topicsText", e.target.value)}
+              placeholder="주제 (쉼표로 구분)"
+              className={INPUT_CLASS}
+            />
+            {digest.tags.length > 0 && (
+              <span className="text-xs text-fg-tertiary">
+                태그: {digest.tags.map((tag) => tag.title).join(", ")}
+              </span>
+            )}
+          </div>
+        );
+      })}
 
       {review.newReferences.length > 0 && (
         <span className="text-xs text-fg-tertiary">
@@ -185,26 +198,12 @@ export function DigestReviewCard({ changesetId }: DigestReviewCardProps) {
   );
 }
 
-interface BodyFieldsProps {
-  digest: ReviewDigest;
-}
-
-// 타입별 본문 필드를 읽기 전용으로 편다 — 구조화 편집은 제품 UI 몫이라 값 확인만 한다.
-function BodyFields({ digest }: BodyFieldsProps) {
-  const entries = Object.entries(digest.body).filter(([key]) => key !== "type");
-  if (entries.length === 0) {
-    return null;
-  }
-  return (
-    <dl className="flex flex-col gap-0.5 text-xs">
-      {entries.map(([key, value]) => (
-        <div key={key} className="flex gap-1">
-          <dt className="text-fg-tertiary">{key}</dt>
-          <dd className="text-fg-secondary">
-            {Array.isArray(value) ? value.join(" · ") : String(value)}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
+// 판별자(type)를 뺀 본문 필드를 [키, 표시값] 행으로. 배열 값은 · 로 잇는다.
+function bodyFieldRows(body: ReviewDigest["body"]): [string, string][] {
+  return Object.entries(body)
+    .filter(([key]) => key !== "type")
+    .map(([key, value]) => [
+      key,
+      Array.isArray(value) ? value.join(" · ") : String(value),
+    ]);
 }

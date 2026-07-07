@@ -26,7 +26,7 @@ export function SourceComposer() {
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        placeholder="무엇이든 붙여넣거나 적어보세요 — 그대로 박제되고, nema가 Digest로 정리한다"
+        placeholder="무엇이든 붙여넣거나 적어보세요"
         rows={5}
         className={TEXTAREA_CLASS}
       />
