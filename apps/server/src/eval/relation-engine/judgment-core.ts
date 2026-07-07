@@ -10,7 +10,6 @@ import {
   LINKING_TIMEOUT_MS,
 } from "@server/infra/statement-sync/worker";
 import type {
-  DuplicateProposal,
   LabeledStatement,
   RelationProposal,
 } from "@server/prompts/relation-judgment";
@@ -40,7 +39,7 @@ const limitJudgment = createLimiter(JUDGMENT_CONCURRENCY);
 async function judge(
   llm: LlmProvider,
   message: string,
-): Promise<{ relations: RelationProposal[]; duplicates: DuplicateProposal[] }> {
+): Promise<{ relations: RelationProposal[] }> {
   let lastError: unknown;
   for (let attempt = 0; attempt < JUDGMENT_MAX_ATTEMPTS; attempt += 1) {
     try {
@@ -56,7 +55,7 @@ async function judge(
           maxRetries: 0,
         }),
       );
-      return { relations: output.relations, duplicates: output.duplicates };
+      return { relations: output.relations };
     } catch (error) {
       lastError = error;
       console.warn(
@@ -119,15 +118,16 @@ export async function runScenarioOnce(params: {
     buildLabels(scenario);
 
   const message = buildRelationJudgmentMessage(newLabeled, existingLabeled);
-  const { relations, duplicates } = await judge(llm, message);
+  const { relations } = await judge(llm, message);
 
   // 워커와 같은 게이트를 그대로 통과시킨다 — applied/pending 분기가 제품과 동일.
+  // 같음(duplicates)도 relations에 섞여 오므로 게이트 후 type으로 갈라 각자 채점한다.
   const { applied, pending } = gateProposals({
     proposals: relations,
     labelToId,
     batchIds,
   });
-  const predictions: GatedRelation[] = [
+  const gated: GatedRelation[] = [
     ...applied.map((c) => ({
       from: c.from_id,
       to: c.to_id,
@@ -141,14 +141,14 @@ export async function runScenarioOnce(params: {
       gate: "pending" as const,
     })),
   ];
+  const predictions = gated.filter((p) => p.type !== "duplicates");
   const relation = scorePredictions({ predictions, golden: scenario.golden });
 
-  // 중복: 라벨→id. 모르는 라벨(환각)은 버린다 — 관계와 같은 정책. 끝점은 시나리오 진술 id.
-  const predictedDuplicates: DuplicatePair[] = duplicates.flatMap((d) => {
-    const a = labelToId.get(d.duplicate);
-    const b = labelToId.get(d.of);
-    return a && b ? [{ a, b }] : [];
-  });
+  // 중복: 게이트 통과분 중 type='duplicates'만. 방향은 from=keeper/to=duplicate이나
+  // 채점 키가 정렬(방향 무시)이라 끝점 쌍만 넘긴다. 끝점은 시나리오 진술 id.
+  const predictedDuplicates: DuplicatePair[] = gated
+    .filter((p) => p.type === "duplicates")
+    .map((p) => ({ a: p.from, b: p.to }));
   const expectedDuplicates: DuplicatePair[] = (
     scenario.expectedDuplicates ?? []
   ).map((d) => ({ a: d.duplicate, b: d.of }));

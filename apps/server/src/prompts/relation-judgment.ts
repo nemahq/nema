@@ -3,26 +3,28 @@ import { z } from "zod";
 import { RelationTypeSchema } from "@nema-io/shared";
 
 // =============================================================
-// 관계 판정 — 새 진술 배치 ↔ 후보(기존/형제) 사이 관계 4종 + 이진 확신 (LLM 1콜)
+// 관계 판정 — 새 진술 배치 ↔ 후보(기존/형제) 사이 관계 5종 + 이진 확신 (LLM 1콜)
 //
 // relation-design §5(판단·게이트)·§8(표식 방향)이 뼈대. 게이트(applied/pending)는
 // 워커가 type+confident로 가르고(엔진), 프롬프트는 관계 유무·종류·방향·확신만 낸다.
-// from/to 방향이 꺼내기 표식을 좌우하므로 방향 규칙을 단정적으로 못박는다.
-// 미세 문턱(특히 replaces 교대 판정의 과감함)은 dogfooding 보정에서 데이터로.
+// from/to 방향이 꺼내기 표식·병합 대상을 좌우하므로 방향 규칙을 단정적으로 못박는다.
+// duplicates도 relations 채널로 함께 나온다(정식 관계 종류) — 워커가 항상 pending으로
+// 돌려 사람 검토를 거치게 한다. 미세 문턱(replaces 교대 판정의 과감함)은 dogfooding에서.
 // =============================================================
 
 export const RELATION_JUDGMENT_SYSTEM_PROMPT = `You decide how a person's new statements relate to their earlier statements.
 
 Each statement is one atomic unit of their thinking — a claim, a question, or a task. You are given a batch of NEW statements and a set of EXISTING candidate statements that are semantically near them. Find the genuine relations among them.
 
-## The four relation types — and the direction of each
+## The five relation types — and the direction of each
 
-A relation is directional: \`from\` and \`to\` are NOT interchangeable. The direction decides how each statement is later shown, so get it right.
+A relation is directional: \`from\` and \`to\` are NOT interchangeable. The direction decides how each statement is later shown and, for a duplicate, which copy is retired, so get it right.
 
 - "supports": \`from\` justifies, is evidence for, or backs \`to\`. (A reason supports the decision it explains: from = the reason, to = the decision.)
 - "replaces": \`from\` supersedes \`to\` — \`from\` is the successor, \`to\` becomes the retired/past version. (from = the new direction, to = what is dropped.)
 - "resolves": \`from\` answers or closes \`to\`, where \`to\` is a question or an open task. (from = the answer/closing statement, to = the question or task it closes.)
 - "conflicts": \`from\` and \`to\` both assert something that cannot both hold right now, and neither retires the other. This one is symmetric — direction does not matter, pick either order.
+- "duplicates": \`from\` and \`to\` are the SAME claim recorded twice, so \`to\` is folded away and \`from\` absorbs it. (from = the copy that stays, to = the redundant copy that is retired.) Unlike the other four, a duplicate is not two statements in a relationship — it is one claim written twice. See the dedicated section below; it is the strictest call here.
 
 ## Supports — a real reason, not a shared topic
 
@@ -37,7 +39,7 @@ A relation is directional: \`from\` and \`to\` are NOT interchangeable. The dire
 
 ## Replacement vs conflict — alternation vs contention
 
-This is the hardest and most important call.
+This is the hardest and most important call among the four linking relations.
 
 - **replaces = alternation.** The new statement knows the old one and deliberately retires it, taking its place: "we're dropping Toss for PortOne" declares itself the successor. The old statement is not wrong — it is *past*. Choose replaces ONLY when this supersession is explicit in the content (a switch, a "no longer", a "now we do X instead"). When confident, this silently tidies history for the person.
 - **conflicts = contention.** Two statements each claim to be valid *now*, and they are incompatible — but neither declares it supersedes the other. They just disagree. The system does not judge which is true; it surfaces the clash for the person.
@@ -52,19 +54,18 @@ The job here is to separate a genuine contradiction from a mere caveat — NOT t
 - This is about meaning, not wording. A conflict need not contain "not", "cancel", or any negation word: "QA finishes the day before release" and "QA runs the morning of release" cannot both hold, so they conflict even though neither negates the other. Judge whether the contents are mutually exclusive, not whether a contradiction is spelled out.
 - Endpoints. A conflict is between two assertions of a present state. A question asserts nothing, so it is never a conflict endpoint — a question re-raised on an already-settled topic is closed by \`resolves\` or is simply unrelated. A task states an intent to act, not a present fact: a task that merely plans to change an existing decision does not conflict with it (at most it foreshadows a future replacement) — treat a task as a conflict endpoint only when its content already asserts a present state incompatible with the other.
 
-## Same — a duplicate to merge, not a relation
+## Duplicates — the same claim, not a related one
 
-Sometimes a new statement is not *related* to an earlier one — it IS the same claim, recorded again. The four relations link two statements that both stay; a duplicate is different — one copy is later hidden so the other absorbs it. So report duplicates separately, not as a relation.
+Sometimes a new statement is not *related* to an earlier one — it IS the same claim, recorded again. The other four relations link two statements that BOTH stay; a duplicate is different — one copy is later hidden so the other absorbs it. Because a merge collapses two records into one, this is the strictest call here.
 
-Report a duplicate ONLY for a true restatement: the same proposition, possibly in different words, with NO new information. Merging collapses two records into one, so be strict.
-
+- **Direction is the merge decision.** \`from\` is the copy that STAYS (the survivor), \`to\` is the redundant copy that is RETIRED. When a duplicate holds between a new and an existing statement, make \`to\` the NEW statement and \`from\` the existing one: the older record carries the history other statements may already lean on, and the fresh copy is the throwaway. Only when both are new (a claim written twice in the same note) is either order fine.
+- Report \`duplicates\` ONLY for a true restatement: the same proposition, possibly in different words, with NO new information.
 - A firmer or more confident version of the same direction is NOT a duplicate. A guess that later becomes certain is a progression, and that change is information — keep both (emit nothing, or at most \`replaces\` if an explicit switch). Do not merge it.
 - A version that adds a reason, detail, or qualifier is NOT a duplicate — it carries new information (consider \`supports\`, never duplicate).
 - Sharing a topic or keywords is NOT a duplicate.
 - A shared sentence shape is not the same claim. Two statements can reuse one frame or list-counting template — "불리한 이유는 세 가지다" and "병행하지 않는 이유는 세 가지다" — yet count entirely different things; matching shape is not matching content. Likewise, naming a subject ("둘째는 건강 자기관리다") and deciding about it ("건강 자기관리는 2순위로 둔다") are different claims about the same subject, not a restatement. Merge on a matching proposition, never on a shared wording pattern or subject.
-- When unsure whether two statements are truly the same claim or merely close, do NOT report a duplicate. A false merge destroys a distinct fact; abstain.
-- A duplicate may hold between a new statement and an existing one, or between two new statements in the batch.
-- A pair reported as a duplicate must NOT also appear in \`relations\`.
+- When unsure whether two statements are truly the same claim or merely close, do NOT emit a duplicate. A false merge destroys a distinct fact; abstain.
+- A duplicate may hold between a new statement and an existing one, or between two new statements in the batch. Either way, at least one endpoint must be NEW (see Scope).
 
 ## Confidence — binary
 
@@ -79,6 +80,7 @@ For each relation output \`confident\`: true or false.
 
 - Every relation MUST involve at least one NEW statement. Do not relate two existing statements to each other — those were already checked when they were new.
 - A relation may hold between two new statements (e.g., a decision and its reason in the same note) or between a new and an existing one, in either direction.
+- Emit at most one relation per pair of statements — do not report the same two statements twice.
 - Do not invent statements or restate them. Judge only the relations.
 
 ## Example
@@ -93,43 +95,31 @@ EXISTING statements:
 [E2] (todo) 결제 연동 PoC를 끝낸다.
 
 Relations:
-- { from: "N0", to: "E0", type: "replaces", confident: true } — N0 explicitly drops Toss for PortOne; E0 is the retired version. Alternation is declared.
-
-Duplicates: none. (No statement here merely restates another. N0 *replaces* E0 — it changes the decision, not restates it.)
+- { from: "N0", to: "E0", type: "replaces", confident: true } — N0 explicitly drops Toss for PortOne; E0 is the retired version. Alternation is declared. (Note: N0 *replaces* E0 — it changes the decision. Had N0 merely restated E0 with no change, it would be \`duplicates\` with from = E0, to = N0, retiring the fresh copy.)
 
 No relation is emitted for E1, N1, or E2 — being near in topic is not a relation. E1 (PortOne's reporting is weak) is a *caveat* about the move to PortOne, not a contradiction of it: both hold at once, so it is not a conflict. And do NOT emit \`supports\` from E2 (the PoC task) to N0 just because both concern payments: the note never says the task justifies the decision. A shared topic is neither a reason nor a clash.
 
 ## Output
 
-- JSON object: { "relations": [{ "from": label, "to": label, "type": "supports" | "conflicts" | "replaces" | "resolves", "confident": boolean }], "duplicates": [{ "duplicate": label, "of": label }] }.
-- \`from\`, \`to\`, \`duplicate\`, \`of\` are the bracketed labels exactly as given (e.g., "N0", "E2").
-- For a duplicate, \`duplicate\` is the redundant copy (prefer the new statement) and \`of\` is the one it restates.
-- Output an empty array for either field when nothing applies.`;
+- JSON object: { "relations": [{ "from": label, "to": label, "type": "supports" | "conflicts" | "replaces" | "resolves" | "duplicates", "confident": boolean }] }.
+- \`from\`, \`to\` are the bracketed labels exactly as given (e.g., "N0", "E2").
+- For \`duplicates\`, \`from\` is the copy that stays and \`to\` is the redundant copy retired (prefer the new statement as \`to\`).
+- Output an empty array when no relation applies — that is the most common result.`;
 
 const RelationProposalSchema = z.object({
   // 라벨(N0/E1…) — 워커가 실제 진술 id로 되돌린다. 모르는 라벨·존재↔존재 쌍은 워커가 버린다.
   from: z.string().trim().min(1),
   to: z.string().trim().min(1),
-  // duplicates는 relations가 아니라 아래 duplicates 채널로만 나온다 — 스키마로 차단
-  type: RelationTypeSchema.exclude(["duplicates"]),
+  // duplicates 포함 5종 — 워커가 type별로 게이트(duplicates·conflicts는 항상 pending).
+  type: RelationTypeSchema,
   confident: z.boolean(),
 });
 
 export type RelationProposal = z.infer<typeof RelationProposalSchema>;
 
-// 같음(중복) — 관계와 별개 출력(NEM-162). 한쪽을 가려 합치는 동작이라 relations에 안 섞는다.
-// duplicate = 가릴 쪽(새 진술 우선), of = 남길 쪽. 워커가 라벨을 진술 id로 되돌린다.
-const DuplicateProposalSchema = z.object({
-  duplicate: z.string().trim().min(1),
-  of: z.string().trim().min(1),
-});
-
-export type DuplicateProposal = z.infer<typeof DuplicateProposalSchema>;
-
-// 빈 배열 허용 — 관계도 중복도 없는 게 가장 흔한 결과(후보는 뜻이 가까울 뿐).
+// 빈 배열 허용 — 관계가 없는 게 가장 흔한 결과(후보는 뜻이 가까울 뿐).
 export const RelationJudgmentSchema = z.object({
   relations: z.array(RelationProposalSchema),
-  duplicates: z.array(DuplicateProposalSchema),
 });
 
 // 메시지에 들어갈 라벨 진술. 라벨 부여·id 매핑은 워커 몫(프롬프트는 포맷만).

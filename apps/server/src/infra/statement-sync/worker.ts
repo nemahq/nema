@@ -17,7 +17,6 @@ import type {
   VectorStore,
 } from "@server/infra/vector";
 import type {
-  DuplicateProposal,
   LabeledStatement,
   RelationProposal,
 } from "@server/prompts/relation-judgment";
@@ -687,7 +686,6 @@ async function processLinking(
   const subBatches = chunkStatements(batch, MAX_STATEMENTS_PER_LINKING_CALL);
   const applied: RelationChange[] = [];
   const pending: RelationChange[] = [];
-  const duplicatesByArchive = new Map<string, DuplicateChange>();
   for (const subBatch of subBatches) {
     const result = await linkSubBatch({
       subBatch,
@@ -696,12 +694,6 @@ async function processLinking(
     });
     applied.push(...result.applied);
     pending.push(...result.pending);
-    // 가릴 진술당 한 번만 — sub-batch 사이 같은 진술이 또 와도 첫 쌍만.
-    for (const pair of result.duplicates) {
-      if (!duplicatesByArchive.has(pair.duplicate)) {
-        duplicatesByArchive.set(pair.duplicate, pair);
-      }
-    }
   }
 
   // K개 sub-batch 결과를 모아 source당 1번 적용 — 되돌리기 단위는 글이라 applied 변경셋도
@@ -715,7 +707,6 @@ async function processLinking(
     sourceId: source.id,
     applied: finalApplied,
     pending: finalPending,
-    duplicates: [...duplicatesByArchive.values()],
   });
 }
 
@@ -728,7 +719,6 @@ async function linkSubBatch(params: {
 }): Promise<{
   applied: RelationChange[];
   pending: RelationChange[];
-  duplicates: DuplicateChange[];
 }> {
   const { subBatch, spaceId, deps } = params;
   // ⓐ 뜻의 이웃 — 벡터 있는(임베딩 completed) 새 진술마다 최근접.
@@ -755,7 +745,7 @@ async function linkSubBatch(params: {
 
   // 비교 대상이 둘 미만(새 1개 + 후보 0개)이면 관계가 생길 수 없다 — LLM 생략
   if (!canFormRelations(subBatch.length, candidates.length)) {
-    return { applied: [], pending: [], duplicates: [] };
+    return { applied: [], pending: [] };
   }
 
   // 라벨 부여 + id 매핑 — LLM엔 라벨(N0/E1…)만 보여 uuid 환각을 막는다
@@ -788,17 +778,11 @@ async function linkSubBatch(params: {
     callJudgmentWithRetry(deps.forTask("judgeRelations"), message),
   );
 
-  const gated = gateProposals({
+  return gateProposals({
     proposals: output.relations,
     labelToId,
     batchIds: subBatchIds,
   });
-  const duplicates = selectDuplicatePairs({
-    duplicates: output.duplicates,
-    labelToId,
-    batchIds: subBatchIds,
-  });
-  return { ...gated, duplicates };
 }
 
 // 새 진술을 원문 순서 보존하며 size개씩 끊는다 (장문 source의 잇기 콜 분할).
@@ -886,48 +870,6 @@ export function selectCandidateIds(
   return [...ids];
 }
 
-// 가릴 진술 → 남길 진술 쌍 (NEM-162) — 가릴 쪽(duplicate 라벨)이 이번 배치의 새 진술일 때만.
-// 기존 진술은 새 글 투입으로 가리지 않는다(오래된 기록이 조용히 사라지는 놀람 방지 —
-// 프롬프트도 "duplicate=새 진술 우선"로 유도). 모르는 라벨은 버리고, 가릴 진술당 한 번만.
-//
-// 남길 쪽(keeper)이 살아남는 것까지 보장한다: keeper가 실재하고, keeper 자신이 가려질
-// 대상이 아닐 때만 가린다. 대칭쌍([{dup:A,of:B},{dup:B,of:A}])이나 of 환각이면 둘 다
-// 가려져 흡수할 원본이 사라지므로(무소음 데이터 손실) 그런 쌍은 통째로 버린다.
-// keeper는 archive하며 statements.duplicate_of에 박혀 합쳐진 출처 집계의 뿌리가 된다.
-export function selectDuplicatePairs(params: {
-  duplicates: DuplicateProposal[];
-  labelToId: Map<string, string>;
-  batchIds: Set<string>;
-}): DuplicateChange[] {
-  const { duplicates, labelToId, batchIds } = params;
-  // 1차: 가릴 후보(새 진술)를 모은다 — keeper 생존 검사의 기준 집합.
-  const archiveCandidates = new Set<string>();
-  for (const duplicate of duplicates) {
-    const archiveId = labelToId.get(duplicate.duplicate);
-    if (archiveId && batchIds.has(archiveId)) {
-      archiveCandidates.add(archiveId);
-    }
-  }
-  // 2차: keeper가 실재하고 가려지지 않을 때만 확정. 가릴 진술당 첫 keeper 하나.
-  const byArchive = new Map<string, string>();
-  for (const duplicate of duplicates) {
-    const archiveId = labelToId.get(duplicate.duplicate);
-    const keeperId = labelToId.get(duplicate.of);
-    if (!archiveId || !batchIds.has(archiveId) || byArchive.has(archiveId)) {
-      continue;
-    }
-    if (
-      !keeperId ||
-      keeperId === archiveId ||
-      archiveCandidates.has(keeperId)
-    ) {
-      continue; // keeper가 없거나·자기 자신이거나·함께 가려질 거면 가리지 않는다
-    }
-    byArchive.set(archiveId, keeperId);
-  }
-  return [...byArchive].map(([duplicate, keeper]) => ({ duplicate, keeper }));
-}
-
 // 비교 대상이 둘 미만(새 1개 + 후보 0개)이면 관계가 생길 수 없다 — LLM 콜을 생략한다.
 export function canFormRelations(
   batchLength: number,
@@ -942,12 +884,6 @@ interface RelationChange {
   type: RelationType;
 }
 
-// 가릴 중복 → 남길 진술. RPC가 가릴 진술을 archive하며 duplicate_of=keeper를 박는다(NEM-162).
-interface DuplicateChange {
-  duplicate: string;
-  keeper: string;
-}
-
 // 관계의 정체성 키 — 중복 판정의 단일 규칙. conflicts는 대칭이라 양끝을 정렬해
 // 역방향(B→A)까지 같은 키로 collapse. gateProposals·dedupeChanges·교차 dedup이 공유한다.
 function changeKey(change: RelationChange): string {
@@ -956,8 +892,9 @@ function changeKey(change: RelationChange): string {
     : `${change.type}:${change.from_id}:${change.to_id}`;
 }
 
-// 게이트 (relation-design §5): 확신·비충돌만 조용히 applied. 충돌은 확신해도
-// pending, 애매는 종류 무관 pending. 라벨을 id로 되돌리며 부적격 제안을 거른다.
+// 게이트 (relation-design §5): 확신·비충돌·비중복만 조용히 applied. 충돌·같음은 확신해도
+// pending(진술을 잘못 엮거나 잘못 가리면 되돌리기 전엔 안 드러나 항상 사람 확인), 애매는
+// 종류 무관 pending. 라벨을 id로 되돌리며 부적격 제안을 거른다.
 export function gateProposals(params: {
   proposals: RelationProposal[];
   labelToId: Map<string, string>;
@@ -978,6 +915,11 @@ export function gateProposals(params: {
     if (!batchIds.has(fromId) && !batchIds.has(toId)) {
       continue;
     }
+    // 같음: 가릴 쪽(to)은 반드시 새 진술이어야 한다(하드 가드) — 새 글 투입으로 기존
+    // 기록을 조용히 가리지 않는다. 방향이 뒤집혀 왔으면(to=기존) 통째로 버린다.
+    if (proposal.type === "duplicates" && !batchIds.has(toId)) {
+      continue;
+    }
 
     const change: RelationChange = {
       from_id: fromId,
@@ -992,7 +934,11 @@ export function gateProposals(params: {
     }
     seen.add(key);
 
-    if (proposal.confident && proposal.type !== "conflicts") {
+    if (
+      proposal.confident &&
+      proposal.type !== "conflicts" &&
+      proposal.type !== "duplicates"
+    ) {
       applied.push(change);
     } else {
       pending.push(change);
@@ -1040,18 +986,15 @@ async function applyRelationChangesets(params: {
   sourceId: string;
   applied: RelationChange[];
   pending: RelationChange[];
-  duplicates: DuplicateChange[];
 }): Promise<void> {
-  const { supabase, sourceId, applied, pending, duplicates } = params;
+  const { supabase, sourceId, applied, pending } = params;
   const { error } = await supabase.rpc("apply_relation_changesets", {
     p_source_id: sourceId,
     // RPC가 jsonb 배열로 받는다 — 구조체 배열을 Json으로 넘긴다. 여기서 TS의 필드명
-    // 검증이 끊기고, 계약 상대는 apply_relation_changesets가 읽는 키다(applied/pending은
-    // from_id/to_id/type, duplicates는 duplicate/keeper) — 키를 바꾸면 RPC도 함께 고친다.
+    // 검증이 끊기고, 계약 상대는 apply_relation_changesets가 읽는 키(from_id/to_id/type)다
+    // — 키를 바꾸면 RPC도 함께 고친다. 같음(duplicates)도 pending 관계로 여기 섞여 온다.
     p_applied: applied as unknown as Json,
     p_pending: pending as unknown as Json,
-    // 가릴 중복 → 남길 진술 쌍 — RPC가 archive + duplicate_of 세팅 (NEM-162)
-    p_duplicates: duplicates as unknown as Json,
   });
   if (error) {
     throw new Error(

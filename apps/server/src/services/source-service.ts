@@ -247,40 +247,56 @@ export async function getSource(args: {
   };
 }
 
-// 합쳐진(같은 말) 출처 모으기 (NEM-162) — keeper별로, duplicate_of=keeper이고 archived인
-// 중복들의 출처 id(중복 제거). archived만 보므로 되돌리기로 되살아난 중복은 자동 제외된다.
-// ownSourceId(지금 보는 글)는 뺀다 — 같은 글 안 비대칭 합치기가 "다른 글에도 있음"으로
-// 잘못 세어지지 않게(cross-source 보강만 센다). 한 단계만 따른다: keeper는 늘 살아남는
-// 쪽이라(가리는 건 새 진술뿐) duplicate_of 사슬이 안 생겨 1단계로 충분하다.
+// 합쳐진(같은 말) 출처 모으기 — keeper별로, keeper=from인 active duplicates 관계가 가리킨
+// 중복(to)들의 출처 id(중복 제거). 관계가 active ⇔ 중복이 가려진(병합된) 상태라, 되돌리기로
+// 병합이 풀리면(관계 archived) 자동 제외된다. ownSourceId(지금 보는 글)는 뺀다 — 같은 글 안
+// 비대칭 합치기가 "다른 글에도 있음"으로 잘못 세어지지 않게(cross-source 보강만 센다). 한
+// 단계만 따른다: keeper는 늘 살아남는 쪽이라(가리는 건 새 진술뿐) 병합 사슬이 안 생긴다.
 async function fetchMergedSourceIds(params: {
   supabase: TypedSupabaseClient;
   keeperIds: string[];
   ownSourceId: string;
 }): Promise<Map<string, string[]>> {
   const { supabase, keeperIds, ownSourceId } = params;
-  const byKeeper = new Map<string, Set<string>>();
   if (keeperIds.length === 0) {
     return new Map();
   }
 
-  const { data, error } = await supabase
-    .from("statements")
-    .select("duplicate_of, statement_sources(source_id)")
-    .in("duplicate_of", keeperIds)
-    .eq("status", "archived");
-  throwIfSupabaseError(error);
+  const { data: relations, error: relError } = await supabase
+    .from("statement_relations")
+    .select("from_id, to_id")
+    .in("from_id", keeperIds)
+    .eq("type", "duplicates")
+    .eq("status", "active");
+  throwIfSupabaseError(relError);
 
-  for (const dup of data ?? []) {
-    if (!dup.duplicate_of) {
-      continue;
-    }
-    const set = byKeeper.get(dup.duplicate_of) ?? new Set<string>();
-    for (const ref of dup.statement_sources) {
-      if (ref.source_id !== ownSourceId) {
-        set.add(ref.source_id);
+  const duplicateIds = (relations ?? []).map((r) => r.to_id);
+  if (duplicateIds.length === 0) {
+    return new Map();
+  }
+
+  const { data: refs, error: refError } = await supabase
+    .from("statement_sources")
+    .select("statement_id, source_id")
+    .in("statement_id", duplicateIds);
+  throwIfSupabaseError(refError);
+
+  const sourcesByDuplicate = new Map<string, string[]>();
+  for (const ref of refs ?? []) {
+    const list = sourcesByDuplicate.get(ref.statement_id) ?? [];
+    list.push(ref.source_id);
+    sourcesByDuplicate.set(ref.statement_id, list);
+  }
+
+  const byKeeper = new Map<string, Set<string>>();
+  for (const relation of relations ?? []) {
+    const set = byKeeper.get(relation.from_id) ?? new Set<string>();
+    for (const sourceId of sourcesByDuplicate.get(relation.to_id) ?? []) {
+      if (sourceId !== ownSourceId) {
+        set.add(sourceId);
       }
     }
-    byKeeper.set(dup.duplicate_of, set);
+    byKeeper.set(relation.from_id, set);
   }
 
   return new Map(
