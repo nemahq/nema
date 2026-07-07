@@ -146,7 +146,6 @@ export {
   TagDraftSchema,
 } from "./schemas/tag";
 export {
-  DRAFT_TOPICS_MAX,
   type Topic,
   TOPIC_NAME_MAX_LENGTH,
   TopicSchema,

@@ -1,5 +1,4 @@
-// 본문 정제 규칙 — 사본이 갈리면 drift라 한 곳에만 둔다.
-// 기준의 제품 정의: docs/foundations/13-drafting-criteria.md
+// 본문 정제 규칙의 SSOT. 제품 정의: docs/foundations/13-drafting-criteria.md
 
 export const BODY_REFINEMENT_RULES = `The output is a draft the user will glance at and confirm as "this is what I meant." Preserving meaning is the hard floor; readability serves that glance. Never change, add, or drop meaning.
 

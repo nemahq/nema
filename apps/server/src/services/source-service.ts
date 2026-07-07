@@ -103,14 +103,15 @@ interface PendingSourceItem {
   createdAt: string;
   digestionStatus: ExtractionStatus;
   errorMessage: string | null;
-  // 생성이 끝나 리뷰가 열렸으면 그 pending ingestion changeset. 아직이면 null —
-  // 이 값이 "초안 탭(생성 중)"과 "변경셋 대기 중(리뷰 준비됨)"을 가르는 신호다.
+  // 생성이 끝나 리뷰가 열렸으면 그 pending ingestion changeset. 아직이면 null.
+  // 소비자가 "생성 중"과 "리뷰 준비됨"을 가르는 신호 — 제품에선 이 둘이 각각
+  // 초안 목록과 변경셋 대기 탭으로 갈리지만, 그 분리는 화면 층의 몫이다.
   reviewChangesetId: string | null;
   digestCount: number;
 }
 
-// pending 원본 목록 — 파생 없는 상태(갓 생성·생성 중·되돌려진 것). 두 표면이 이걸 읽는다:
-// 리뷰 changeset이 아직 없으면 "초안" 목록, 생기면 "변경셋 대기 중"으로 넘어간다. RLS가 Space 격리.
+// pending 원본 목록 — 파생 없는 상태(갓 생성·생성 중·되돌려진 것). web(초안 목록)과
+// MCP(list_pending_sources)가 함께 읽는다. RLS가 Space 격리.
 export async function listPendingSources(args: {
   supabase: TypedSupabaseClient;
 }): Promise<{ items: PendingSourceItem[] }> {

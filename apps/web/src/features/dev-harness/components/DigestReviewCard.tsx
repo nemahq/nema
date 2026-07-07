@@ -95,19 +95,21 @@ export function DigestReviewCard({ changesetId }: DigestReviewCardProps) {
     }
     updateReview.reset();
     confirmReview.reset();
+    // 페이로드 조립은 try 밖에서 — 여기서 나는 동기 예외까지 삼키면 확정이 조용히 무반응이 된다.
+    const editedDigests = edits ? buildDigests() : null;
     try {
       // 편집한 내용을 먼저 반영한 뒤 확정한다 — 확정은 저장된 초안을 박제한다.
-      if (edits) {
+      if (editedDigests) {
         await updateReview.mutateAsync({
           changesetId,
-          digests: buildDigests(),
+          digests: editedDigests,
           newReferences: review.newReferences,
         });
         setEdits(null);
       }
       confirmReview.mutate({ changesetId });
     } catch {
-      // 저장 실패 시 확정하지 않는다 — 에러는 updateReview.error로 노출된다.
+      // 저장 mutation 거부 시 확정하지 않는다 — 에러는 updateReview.error로 노출된다.
     }
   }
 
