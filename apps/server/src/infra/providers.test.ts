@@ -132,11 +132,11 @@ describe("forTask — 키 부재 가드 (seeded 배치)", () => {
   it("falls back to the tier default when the seeded override's key is missing", async () => {
     const { getProviders, GeminiProvider } = await loadFresh();
     const providers = getProviders();
-    // 가드가 gemini override를 버리고 standard tier로 폴백 → Gemini가 아니고, 같은 standard
-    // tier의 unseeded task(assistDraft)와 동일 인스턴스다.
+    // 가드가 gemini override를 버리고 standard tier로 폴백 → Gemini가 아니고, 같은 폴백을
+    // 겪는 generateDraft(standard·effort 없음, 키 부재로 함께 폴백)와 동일 인스턴스다.
     expect(providers.llm.forTask("narrate")).not.toBeInstanceOf(GeminiProvider);
     expect(providers.llm.forTask("narrate")).toBe(
-      providers.llm.forTask("assistDraft"),
+      providers.llm.forTask("generateDraft"),
     );
   });
 

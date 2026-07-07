@@ -96,6 +96,75 @@ export async function listSources(args: {
   };
 }
 
+const PENDING_SOURCE_LIST_LIMIT = 50;
+
+interface PendingSourceItem {
+  sourceId: string;
+  createdAt: string;
+  digestionStatus: ExtractionStatus;
+  errorMessage: string | null;
+  // 생성이 끝나 리뷰가 열렸으면 그 pending ingestion changeset. 아직이면 null.
+  // 소비자가 "생성 중"과 "리뷰 준비됨"을 가르는 신호 — 제품에선 이 둘이 각각
+  // 초안 목록과 변경셋 대기 탭으로 갈리지만, 그 분리는 화면 층의 몫이다.
+  reviewChangesetId: string | null;
+  digestCount: number;
+}
+
+// pending 원본 목록 — 파생 없는 상태(갓 생성·생성 중·되돌려진 것). web(초안 목록)과
+// MCP(list_pending_sources)가 함께 읽는다. RLS가 Space 격리.
+export async function listPendingSources(args: {
+  supabase: TypedSupabaseClient;
+}): Promise<{ items: PendingSourceItem[] }> {
+  const { supabase } = args;
+
+  const { data: sources, error } = await supabase
+    .from("sources")
+    .select("id, created_at, digestion_status, error_message")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(PENDING_SOURCE_LIST_LIMIT);
+  throwIfSupabaseError(error);
+
+  const sourceIds = (sources ?? []).map((source) => source.id);
+  if (sourceIds.length === 0) {
+    return { items: [] };
+  }
+
+  const { data: changesets, error: changesetError } = await supabase
+    .from("changesets")
+    .select("id, source_id, changes(target_type)")
+    .eq("type", "ingestion")
+    .eq("status", "pending")
+    .in("source_id", sourceIds);
+  throwIfSupabaseError(changesetError);
+
+  const reviewBySource = new Map(
+    (changesets ?? []).map((changeset) => [
+      changeset.source_id,
+      {
+        reviewChangesetId: changeset.id,
+        digestCount: changeset.changes.filter(
+          (change) => change.target_type === "digest",
+        ).length,
+      },
+    ]),
+  );
+
+  return {
+    items: (sources ?? []).map((source) => {
+      const review = reviewBySource.get(source.id);
+      return {
+        sourceId: source.id,
+        createdAt: source.created_at,
+        digestionStatus: source.digestion_status,
+        errorMessage: source.error_message,
+        reviewChangesetId: review?.reviewChangesetId ?? null,
+        digestCount: review?.digestCount ?? 0,
+      };
+    }),
+  };
+}
+
 interface SourceStatement {
   id: string;
   content: string;
