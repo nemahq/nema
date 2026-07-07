@@ -17,11 +17,3 @@ export async function listTopics(args: {
     topics: (data ?? []).map((row) => ({ id: row.id, name: row.name })),
   };
 }
-
-// 어시스턴트 프롬프트에 넣을 기존 주제 이름 목록(재사용 유도).
-export async function listTopicNames(
-  supabase: TypedSupabaseClient,
-): Promise<string[]> {
-  const { topics } = await listTopics({ supabase });
-  return topics.map((topic) => topic.name);
-}

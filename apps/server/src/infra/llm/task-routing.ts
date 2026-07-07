@@ -20,7 +20,6 @@ export const LLM_TASK_SCHEMA = z.enum([
   "extractStatements",
   "generateDigests",
   "judgeRelations",
-  "assistDraft",
   "narrate",
   "structureQuery",
   "selectScopeTopics",
@@ -47,8 +46,6 @@ export const TASK_DEFAULTS = {
   // 확정하는 품질이 목표라 standard, effort는 추출과 같은 이유로 low(타임아웃 변동 억제).
   generateDigests: { tier: "standard", effort: "low" },
   judgeRelations: { tier: "standard", effort: "low" },
-  // 한 방 어시스턴트: 말뭉치를 깎아 본문 + 제목 + 주제 제안(구조화 출력). 정제 작업이라 standard.
-  assistDraft: { tier: "standard" },
   // 해설: 근거 묶음을 산문으로 풀어 읽는다. 품질이 신뢰의 핵심이라 standard.
   narrate: { tier: "standard" },
   // 질의 구조화: 검색어를 의미부 + 시간 토큰으로 가른다. 검색 경로라 싸고 빨라야 해 mini.

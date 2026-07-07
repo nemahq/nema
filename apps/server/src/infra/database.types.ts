@@ -322,50 +322,6 @@ export type Database = {
           },
         ];
       };
-      drafts: {
-        Row: {
-          author_id: string | null;
-          body: string;
-          created_at: string;
-          id: string;
-          origin: Database["public"]["Enums"]["draft_origin"];
-          proposed_topics: string[];
-          space_id: string;
-          title: string | null;
-          updated_at: string;
-        };
-        Insert: {
-          author_id?: string | null;
-          body?: string;
-          created_at?: string;
-          id?: string;
-          origin: Database["public"]["Enums"]["draft_origin"];
-          proposed_topics?: string[];
-          space_id: string;
-          title?: string | null;
-          updated_at?: string;
-        };
-        Update: {
-          author_id?: string | null;
-          body?: string;
-          created_at?: string;
-          id?: string;
-          origin?: Database["public"]["Enums"]["draft_origin"];
-          proposed_topics?: string[];
-          space_id?: string;
-          title?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "drafts_space_id_fkey";
-            columns: ["space_id"];
-            isOneToOne: false;
-            referencedRelation: "spaces";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       eval_runs: {
         Row: {
           cost_usd: number | null;
@@ -1171,22 +1127,8 @@ export type Database = {
         Args: { p_statement_id: string };
         Returns: undefined;
       };
-      confirm_draft: {
-        Args: { p_draft_id: string; p_title: string; p_topics: string[] };
-        Returns: string;
-      };
       confirm_ingestion_review: {
         Args: { p_changeset_id: string };
-        Returns: string;
-      };
-      create_draft: {
-        Args: {
-          p_body: string;
-          p_origin: Database["public"]["Enums"]["draft_origin"];
-          p_proposed_topics?: string[];
-          p_space_id: string;
-          p_title?: string;
-        };
         Returns: string;
       };
       create_ingestion_review: {
@@ -1202,7 +1144,6 @@ export type Database = {
         };
         Returns: string;
       };
-      delete_draft: { Args: { p_draft_id: string }; Returns: undefined };
       fetch_pending_digestion_sources: {
         Args: { p_max_retries?: number };
         Returns: {
@@ -1323,15 +1264,6 @@ export type Database = {
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
       trash_source: { Args: { p_source_id: string }; Returns: undefined };
-      update_draft: {
-        Args: {
-          p_body?: string;
-          p_draft_id: string;
-          p_proposed_topics?: string[];
-          p_title?: string;
-        };
-        Returns: undefined;
-      };
       update_message_payload: {
         Args: { p_message_id: string; p_payload: Json; p_session_id: string };
         Returns: undefined;
@@ -1364,7 +1296,6 @@ export type Database = {
       changeset_status: "pending" | "applied" | "rejected";
       changeset_type: "ingestion" | "relation" | "manual" | "revert";
       digest_status: "active" | "archived";
-      draft_origin: "in_app" | "external";
       ingestion_status: "pending" | "completed" | "failed";
       reference_status: "active" | "archived";
       reference_type:
@@ -1531,7 +1462,6 @@ export const Constants = {
       changeset_status: ["pending", "applied", "rejected"],
       changeset_type: ["ingestion", "relation", "manual", "revert"],
       digest_status: ["active", "archived"],
-      draft_origin: ["in_app", "external"],
       ingestion_status: ["pending", "completed", "failed"],
       reference_status: ["active", "archived"],
       reference_type: ["person", "organization", "project", "product", "term"],

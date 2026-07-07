@@ -10,51 +10,51 @@ import {
 } from "./task-routing";
 
 describe("setTaskOverride", () => {
-  // 이 블록의 테스트는 assistDraft만 건드린다 — seed task를 오염시키지 않게, 인라인 clear가
+  // 이 블록의 테스트는 generateDigests만 건드린다 — seed task를 오염시키지 않게, 인라인 clear가
   // 빠지거나 throw로 건너뛰어도 매 테스트 뒤 정리해 형제 테스트 순서 의존을 없앤다.
   afterEach(() => {
-    clearTaskOverride("assistDraft");
+    clearTaskOverride("generateDigests");
   });
 
   it("throws LlmError for an uncatalogued model id", () => {
     expect(() =>
-      setTaskOverride({ task: "assistDraft", modelId: "not-a-real-model" }),
+      setTaskOverride({ task: "generateDigests", modelId: "not-a-real-model" }),
     ).toThrow(LlmError);
-    expect(getTaskOverride("assistDraft")).toBeUndefined();
+    expect(getTaskOverride("generateDigests")).toBeUndefined();
   });
 
   it("accepts a known catalog id", () => {
-    setTaskOverride({ task: "assistDraft", modelId: "claude-sonnet-4-6" });
-    expect(getTaskOverride("assistDraft")).toEqual({
+    setTaskOverride({ task: "generateDigests", modelId: "claude-sonnet-4-6" });
+    expect(getTaskOverride("generateDigests")).toEqual({
       modelId: "claude-sonnet-4-6",
     });
-    clearTaskOverride("assistDraft");
+    clearTaskOverride("generateDigests");
   });
 
   it("accepts a native effort for the model's provider", () => {
     // xhigh는 Claude 어휘 — anthropic 모델에 유효하다.
     setTaskOverride({
-      task: "assistDraft",
+      task: "generateDigests",
       modelId: "claude-opus-4-8",
       effort: "xhigh",
     });
-    expect(getTaskOverride("assistDraft")).toEqual({
+    expect(getTaskOverride("generateDigests")).toEqual({
       modelId: "claude-opus-4-8",
       effort: "xhigh",
     });
-    clearTaskOverride("assistDraft");
+    clearTaskOverride("generateDigests");
   });
 
   it("rejects an effort the model's provider does not accept", () => {
     // xhigh는 OpenAI가 받지 않는다 — set 시점에 거른다.
     expect(() =>
       setTaskOverride({
-        task: "assistDraft",
+        task: "generateDigests",
         modelId: "gpt-5",
         effort: "xhigh",
       }),
     ).toThrow(LlmError);
-    expect(getTaskOverride("assistDraft")).toBeUndefined();
+    expect(getTaskOverride("generateDigests")).toBeUndefined();
   });
 });
 
@@ -71,7 +71,6 @@ describe("기본 모델 배치 (NEM-149)", () => {
       generateDigests: null,
       classifyDraftIntent: null,
       generateSessionTitle: null,
-      assistDraft: null,
       structureQuery: null,
       selectScopeTopics: null,
     });
@@ -101,7 +100,6 @@ describe("TASK_DEFAULTS", () => {
       extractStatements: { tier: "standard", effort: "low" },
       generateDigests: { tier: "standard", effort: "low" },
       judgeRelations: { tier: "standard", effort: "low" },
-      assistDraft: { tier: "standard" },
       narrate: { tier: "standard" },
       structureQuery: { tier: "mini" },
       selectScopeTopics: { tier: "mini" },

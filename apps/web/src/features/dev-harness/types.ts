@@ -16,8 +16,10 @@ export type RelationMarkers = Pick<
   "supersededBy" | "conflictsWith" | "resolvedBy"
 >;
 
-export type DraftSummary = RouterOutputs["draft"]["list"]["drafts"][number];
-export type TopicSummary = RouterOutputs["topic"]["list"]["topics"][number];
+export type PendingSourceItem =
+  RouterOutputs["source"]["listPending"]["items"][number];
+export type DigestReviewDetail = RouterOutputs["digestReview"]["get"];
+export type ReviewDigest = DigestReviewDetail["digests"][number];
 export type NarrationEvidence = RouterOutputs["narration"]["evidence"];
 
 export type PendingRelation =

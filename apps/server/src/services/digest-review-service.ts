@@ -3,79 +3,9 @@ import { z } from "zod";
 import type { DigestDraft, NewReferenceDraft } from "@nema-io/shared";
 import { DigestBodySchema, ReferenceTypeSchema } from "@nema-io/shared";
 
-import type { Database, Json } from "@server/infra/database.types";
+import type { Json } from "@server/infra/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
-
-type DigestionStatus = Database["public"]["Enums"]["ingestion_status"];
-
-// --- 리뷰 대기열 — Space 오버뷰의 "처리 중인 Source 작업 목록" 지원 ---
-
-interface ReviewQueueItem {
-  sourceId: string;
-  createdAt: string;
-  digestionStatus: DigestionStatus;
-  errorMessage: string | null;
-  // 생성이 끝나 리뷰가 열렸으면 그 pending ingestion changeset. 아직이면 null.
-  changesetId: string | null;
-  digestCount: number;
-}
-
-const REVIEW_QUEUE_LIMIT = 50;
-
-export async function listReviewQueue(args: {
-  supabase: TypedSupabaseClient;
-}): Promise<{ items: ReviewQueueItem[] }> {
-  const { supabase } = args;
-
-  // pending 원본 = 파생 없는 상태(갓 생성·생성 중·리뷰 대기) — RLS가 Space 격리
-  const { data: sources, error } = await supabase
-    .from("sources")
-    .select("id, created_at, digestion_status, error_message")
-    .eq("status", "pending")
-    .order("created_at", { ascending: false })
-    .limit(REVIEW_QUEUE_LIMIT);
-  throwIfSupabaseError(error);
-
-  const sourceIds = (sources ?? []).map((source) => source.id);
-  if (sourceIds.length === 0) {
-    return { items: [] };
-  }
-
-  const { data: changesets, error: changesetError } = await supabase
-    .from("changesets")
-    .select("id, source_id, changes(target_type)")
-    .eq("type", "ingestion")
-    .eq("status", "pending")
-    .in("source_id", sourceIds);
-  throwIfSupabaseError(changesetError);
-
-  const reviewBySource = new Map(
-    (changesets ?? []).map((changeset) => [
-      changeset.source_id,
-      {
-        changesetId: changeset.id,
-        digestCount: changeset.changes.filter(
-          (change) => change.target_type === "digest",
-        ).length,
-      },
-    ]),
-  );
-
-  return {
-    items: (sources ?? []).map((source) => {
-      const review = reviewBySource.get(source.id);
-      return {
-        sourceId: source.id,
-        createdAt: source.created_at,
-        digestionStatus: source.digestion_status,
-        errorMessage: source.error_message,
-        changesetId: review?.changesetId ?? null,
-        digestCount: review?.digestCount ?? 0,
-      };
-    }),
-  };
-}
 
 // --- 리뷰 상세 — Digest 리뷰 화면의 초안 상태 ---
 

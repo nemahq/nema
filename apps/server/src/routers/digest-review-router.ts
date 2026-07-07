@@ -7,16 +7,11 @@ import {
 import {
   confirmReview,
   getReview,
-  listReviewQueue,
   updateReview,
 } from "@server/services/digest-review-service";
 import { protectedProcedure, router } from "@server/trpc";
 
 export const digestReviewRouter = router({
-  listQueue: protectedProcedure.query(({ ctx }) =>
-    listReviewQueue({ supabase: ctx.supabase }),
-  ),
-
   get: protectedProcedure
     .input(DigestReviewGetInputSchema)
     .query(({ ctx, input }) =>

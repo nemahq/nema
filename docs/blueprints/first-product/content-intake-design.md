@@ -1,5 +1,9 @@
 # 맥락 넣기(context-in): 구현 청사진
 
+> ⚠️ **대체됨 (PR I-a·I-b).** 이 문서가 세운 초안(draft) 스테이징 층은 v2 Digest 파이프라인이 대체했다. 원본은 곧바로 pending으로 박제되고(`create_source`), 워커가 Digest 후보를 생성해 리뷰 게이트(`digestReview`)에 세우며, 사람이 확정하면 추출이 시작된다. 아래 draft 엔티티·RPC·MCP draft 도구 서술은 역사적 기록이다 — 현재 모델은 `docs/foundations/07-modeling.md`가 SSOT다.
+>
+> **뒤집힌 불변식 하나**: 아래 "MCP는 절대 확정하지 않는다"는 v2에서 **MCP도 확정할 수 있다**로 바뀐다. 근거는 확정을 되돌리는 안전망(`revert_changeset`)이 생겨서다 — GitHub이 머지를 API로 여는 것과 같은 논리로, 잘못된 확정은 되돌리기로 무를 수 있으므로 사람 전용 게이트로 묶지 않는다.
+
 > 첫 사용자가 맥락을 넣는 첫 입구. 두 입구(앱 내 작성 / 외부 LLM이 MCP로 올리기)가 같은 초안 대기 자리를 공유하고, 사람이 확정하면 기존 추출·관계 엔진이 자동으로 진술을 쪼개 엮는다. 짝이 되는 맥락 내보내기(context-out)는 별도 슬라이스.
 
 대상 슬라이스: NEM-157 (에픽 NEM-133, 문서 `docs/foundations/11-first-product-direction.md` §3·§5·§10 기준).
