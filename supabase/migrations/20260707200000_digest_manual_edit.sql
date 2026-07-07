@@ -38,11 +38,13 @@ ALTER TABLE changesets ADD CONSTRAINT chk_changeset_shape CHECK (
 ALTER TABLE digests
   ADD COLUMN extraction_status ingestion_status NOT NULL DEFAULT 'pending';
 
--- 백필: 진술이 하나라도 달린 digest는 이미 추출됨 → completed. 그 외(방금 확정돼 추출
--- 대기 중이거나 진술 0개)는 pending으로 남아 다음 사이클에 (재)집힌다 — J 직후 추출
--- 대기 중이던 digest를 놓치지 않게. 0개짜리는 재추출돼도 무해하고 곧 completed로 고정된다.
+-- 백필: 원본의 추출이 이미 끝난(extraction_status='completed') digest는 그 추출 패스에서
+-- 이미 처리된 것이라 completed로 둔다 — 진술 0개짜리(뽑을 게 없던 digest)도 함께 닫혀
+-- latent pending이 안 남는다. 원본이 아직 추출 대기인 digest만 pending으로 남아 다음
+-- 사이클에 집힌다(J 직후 추출 대기 중이던 digest를 놓치지 않게).
 UPDATE digests d SET extraction_status = 'completed'
-WHERE EXISTS (SELECT 1 FROM statements s WHERE s.digest_id = d.id);
+FROM sources s
+WHERE s.id = d.source_id AND s.extraction_status = 'completed';
 
 -- 추출 워커의 digest 게이트 인덱스 (source의 pending digest 조회)
 CREATE INDEX idx_digests_extraction_pending ON digests (source_id)
