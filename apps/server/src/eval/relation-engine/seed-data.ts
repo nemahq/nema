@@ -660,13 +660,14 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
     golden: [],
     note: "s1→e1을 supports로 잇는 게 1순위 FP — e1은 todo라 supports의 to가 될 수 없다(닫으려면 resolves인데 s1은 답이 아님). s2→e2는 '정산' 토픽만 겹치는 무관 쌍(습관 vs 번거로움) — 근거 아님. 둘 다 침묵해야",
   },
-  // --- near-duplicate 함정 (NEM-162) — 거의 같은 두 진술. 엔진엔 "같음" 관계가 없어
-  // 이상은 침묵. 진짜 오답은 conflicts·replaces(둘 다 유효 주장 → '동시 참 불가'로
-  // 충돌 오발, 또는 같은 방향 강화를 번복=replaces로 오판). 약한 supports는 무난. ---
+  // --- near-duplicate 함정 (NEM-162) — 거의 같은 두 진술. 같음은 이제 정식 duplicates
+  // 관계지만 4종 golden엔 안 싣고 expectedDuplicates 채널로 따로 채점한다(golden은 비움).
+  // 진짜 오답은 conflicts·replaces(둘 다 유효 주장 → '동시 참 불가'로 충돌 오발, 또는
+  // 같은 방향 강화를 번복=replaces로 오판). 약한 supports는 무난. ---
   {
     id: "near-dup-reingest",
     description:
-      "이미 넣은 결정을 거의 같은 말로 다시 넣음 — 합칠 동작이 없으니 침묵해야",
+      "이미 넣은 결정을 거의 같은 말로 다시 넣음 — duplicates로 합쳐야",
     traps: ["near-duplicate"],
     statements: [
       {
@@ -686,7 +687,7 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
     ],
     golden: [],
     expectedDuplicates: [{ duplicate: "s1", of: "e1" }],
-    note: "같은 결정의 재진술(표현만 다름) → 합쳐야(duplicate). conflicts로 잡으면 NEM-162 핵심 오판, replaces도 오답(번복·교대 없음). 관계가 아니라 중복으로 잡는 게 정답",
+    note: "같은 결정의 재진술(표현만 다름) → 합쳐야(duplicate). conflicts로 잡으면 NEM-162 핵심 오판, replaces도 오답(번복·교대 없음). conflicts·replaces가 아니라 duplicates로 잡는 게 정답",
   },
   {
     id: "near-dup-harness-c3d1",

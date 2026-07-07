@@ -888,7 +888,6 @@ export type Database = {
           created_at: string;
           digest_id: string | null;
           due_date: string | null;
-          duplicate_of: string | null;
           error_message: string | null;
           id: string;
           ingestion_retry_count: number;
@@ -907,7 +906,6 @@ export type Database = {
           created_at?: string;
           digest_id?: string | null;
           due_date?: string | null;
-          duplicate_of?: string | null;
           error_message?: string | null;
           id?: string;
           ingestion_retry_count?: number;
@@ -926,7 +924,6 @@ export type Database = {
           created_at?: string;
           digest_id?: string | null;
           due_date?: string | null;
-          duplicate_of?: string | null;
           error_message?: string | null;
           id?: string;
           ingestion_retry_count?: number;
@@ -943,13 +940,6 @@ export type Database = {
             columns: ["digest_id"];
             isOneToOne: false;
             referencedRelation: "digests";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "statements_duplicate_of_fkey";
-            columns: ["duplicate_of"];
-            isOneToOne: false;
-            referencedRelation: "statements";
             referencedColumns: ["id"];
           },
           {
@@ -1103,12 +1093,7 @@ export type Database = {
         Returns: string;
       };
       apply_relation_changesets: {
-        Args: {
-          p_applied?: Json;
-          p_duplicates?: Json;
-          p_pending?: Json;
-          p_source_id: string;
-        };
+        Args: { p_applied?: Json; p_pending?: Json; p_source_id: string };
         Returns: undefined;
       };
       archive_statement: {
