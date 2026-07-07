@@ -44,7 +44,12 @@ describe("getReview", () => {
             action: "create",
             target_type: "reference",
             target_id: NEW_REFERENCE_ID,
-            data: { type: "product", title: "신규 제품", body: "설명" },
+            data: {
+              type: "product",
+              title: "신규 제품",
+              body: "설명",
+              external_urls: ["https://example.com"],
+            },
           },
           {
             id: "22222222-2222-4222-8222-222222222222",
@@ -78,6 +83,7 @@ describe("getReview", () => {
         type: "product",
         title: "신규 제품",
         body: "설명",
+        externalUrls: ["https://example.com"],
       },
     ]);
     expect(review.citedReferences).toEqual([

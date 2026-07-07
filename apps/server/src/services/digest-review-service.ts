@@ -25,6 +25,7 @@ const StoredReferenceDataSchema = z.object({
   type: ReferenceTypeSchema,
   title: z.string(),
   body: z.string(),
+  external_urls: z.array(z.string()),
 });
 
 interface CitedReference {
@@ -88,6 +89,7 @@ export async function getReview(args: {
       type: referenceData.type,
       title: referenceData.title,
       body: referenceData.body,
+      externalUrls: referenceData.external_urls,
     };
   });
 
@@ -160,7 +162,13 @@ export async function updateReview(args: {
       new_reference_keys: digest.newReferenceKeys,
       external_urls: digest.externalUrls,
     })) as unknown as Json,
-    p_new_references: newReferences as unknown as Json,
+    p_new_references: newReferences.map((reference) => ({
+      key: reference.key,
+      type: reference.type,
+      title: reference.title,
+      body: reference.body,
+      external_urls: reference.externalUrls,
+    })) as unknown as Json,
   });
   throwIfSupabaseError(error);
 }

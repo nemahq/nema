@@ -1096,6 +1096,7 @@ export type Database = {
         Args: { p_applied?: Json; p_pending?: Json; p_source_id: string };
         Returns: undefined;
       };
+      archive_reference: { Args: { p_reference_id: string }; Returns: string };
       archive_statement: {
         Args: { p_statement_id: string };
         Returns: undefined;
@@ -1119,6 +1120,10 @@ export type Database = {
       create_ingestion_review: {
         Args: { p_digests: Json; p_new_references?: Json; p_source_id: string };
         Returns: string;
+      };
+      create_reference_link: {
+        Args: { p_a: string; p_b: string };
+        Returns: undefined;
       };
       create_source: {
         Args: {
@@ -1260,6 +1265,16 @@ export type Database = {
           p_new_references?: Json;
         };
         Returns: undefined;
+      };
+      update_reference: {
+        Args: {
+          p_body: string;
+          p_external_urls?: string[];
+          p_reference_id: string;
+          p_title: string;
+          p_type: Database["public"]["Enums"]["reference_type"];
+        };
+        Returns: string;
       };
       write_ingestion_review_changes: {
         Args: {
