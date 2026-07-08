@@ -10,3 +10,36 @@ export const TagDraftSchema = z.object({
   description: z.string().trim().min(1).max(TAG_DESCRIPTION_MAX_LENGTH),
 });
 export type TagDraft = z.infer<typeof TagDraftSchema>;
+
+// DB enum tag_status의 SSOT (07-modeling Tag).
+export const TAG_STATUSES = ["active", "archived"] as const;
+export const TagStatusSchema = z.enum(TAG_STATUSES);
+export type TagStatus = z.infer<typeof TagStatusSchema>;
+
+export const TagSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  description: z.string(),
+  status: TagStatusSchema,
+  // Postgres timestamptz는 +00:00 offset을 달고 오므로 offset 허용이 필수.
+  createdAt: z.string().datetime({ offset: true }),
+});
+export type Tag = z.infer<typeof TagSchema>;
+
+// active=기본 조회, archived=복구 대상, all=둘 다.
+export const TAG_LIST_SCOPES = ["active", "archived", "all"] as const;
+export const TagListScopeSchema = z.enum(TAG_LIST_SCOPES).default("active");
+export type TagListScope = z.infer<typeof TagListScopeSchema>;
+
+export const TagListInputSchema = z
+  .object({ scope: TagListScopeSchema })
+  .default({ scope: "active" });
+export type TagListInput = z.infer<typeof TagListInputSchema>;
+
+export const TagUpdateInputSchema = TagDraftSchema.extend({
+  id: z.string().uuid(),
+});
+export type TagUpdateInput = z.infer<typeof TagUpdateInputSchema>;
+
+export const TagIdInputSchema = z.object({ id: z.string().uuid() });
+export type TagIdInput = z.infer<typeof TagIdInputSchema>;
