@@ -130,6 +130,7 @@ Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력
 | `body` | `string` | 다듬어지며 유지되는 내용 (설명 포함) |
 | `externalUrls?` | `string[]` | 대표 링크들 (홈페이지·LinkedIn 등) |
 | `relatedReferenceIds?` | `uuid[]` | 관련 Reference — 명시적으로 이어지는 다른 Reference들(예: 제품과 그 제품을 만든 조직). `Digest.relatedDigestIds?`와 같은 성격 — 의미 관계가 아니라 느슨한 상호 참조라 방향 없음 |
+| `tagIds?` | `uuid[]` | Tag — Digest와 같은 Workspace 태그 풀을 공유하되, 인용한 Digest의 태그에서 파생시키지 않고 독립적으로 직접 부여한다. Reference의 태그는 "왜 계속 중요한가"를, Digest의 태그는 "그 순간 어떤 판단이었나"를 나타내는 별개 축이다 |
 | `createdAt` | `Date` | 만들어진 때 |
 | `status` | `enum: active / archived` | 존재 상태 |
 

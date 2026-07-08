@@ -9,6 +9,7 @@ import { profileRouter } from "./routers/profile-router";
 import { sessionRouter } from "./routers/session-router";
 import { sourceRouter } from "./routers/source-router";
 import { statementRouter } from "./routers/statement-router";
+import { tagRouter } from "./routers/tag-router";
 import { topicRouter } from "./routers/topic-router";
 import { publicProcedure, router } from "./trpc";
 
@@ -27,6 +28,7 @@ export const appRouter = router({
   digest: digestRouter,
   digestReview: digestReviewRouter,
   topic: topicRouter,
+  tag: tagRouter,
   dev: devRouter,
 });
 

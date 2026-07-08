@@ -143,10 +143,24 @@ export {
   StatementSearchInputSchema,
 } from "./schemas/statement-search";
 export {
+  type Tag,
   TAG_DESCRIPTION_MAX_LENGTH,
+  TAG_LIST_SCOPES,
+  TAG_STATUSES,
   TAG_TITLE_MAX_LENGTH,
   type TagDraft,
   TagDraftSchema,
+  type TagIdInput,
+  TagIdInputSchema,
+  type TagListInput,
+  TagListInputSchema,
+  type TagListScope,
+  TagListScopeSchema,
+  TagSchema,
+  type TagStatus,
+  TagStatusSchema,
+  type UpdateTagInput,
+  UpdateTagInputSchema,
 } from "./schemas/tag";
 export {
   type Topic,

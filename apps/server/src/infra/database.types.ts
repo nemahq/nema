@@ -462,6 +462,39 @@ export type Database = {
           },
         ];
       };
+      reference_tags: {
+        Row: {
+          created_at: string;
+          reference_id: string;
+          tag_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          reference_id: string;
+          tag_id: string;
+        };
+        Update: {
+          created_at?: string;
+          reference_id?: string;
+          tag_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reference_tags_reference_id_fkey";
+            columns: ["reference_id"];
+            isOneToOne: false;
+            referencedRelation: "references";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reference_tags_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: false;
+            referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       references: {
         Row: {
           body: string;
@@ -1112,6 +1145,7 @@ export type Database = {
         Args: { p_statement_id: string };
         Returns: undefined;
       };
+      archive_tag: { Args: { p_tag_id: string }; Returns: undefined };
       complete_source_digestion: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -1142,6 +1176,14 @@ export type Database = {
           p_body: string;
           p_session_id?: string;
           p_space_id: string;
+        };
+        Returns: string;
+      };
+      create_tag: {
+        Args: {
+          p_description: string;
+          p_title: string;
+          p_workspace_id: string;
         };
         Returns: string;
       };
@@ -1229,6 +1271,10 @@ export type Database = {
         Args: { p_workspace_id: string };
         Returns: boolean;
       };
+      link_reference_tag: {
+        Args: { p_reference_id: string; p_tag_id: string };
+        Returns: undefined;
+      };
       purge_expired_sources: {
         Args: { p_batch_limit?: number; p_retention_days?: number };
         Returns: number;
@@ -1253,6 +1299,7 @@ export type Database = {
         Args: { p_changeset_id: string };
         Returns: undefined;
       };
+      restore_tag: { Args: { p_tag_id: string }; Returns: undefined };
       restore_trashed_source: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -1277,6 +1324,10 @@ export type Database = {
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
       trash_source: { Args: { p_source_id: string }; Returns: undefined };
+      unlink_reference_tag: {
+        Args: { p_reference_id: string; p_tag_id: string };
+        Returns: undefined;
+      };
       update_message_payload: {
         Args: { p_message_id: string; p_payload: Json; p_session_id: string };
         Returns: undefined;
@@ -1298,6 +1349,10 @@ export type Database = {
           p_type: Database["public"]["Enums"]["reference_type"];
         };
         Returns: string;
+      };
+      update_tag: {
+        Args: { p_description: string; p_tag_id: string; p_title: string };
+        Returns: undefined;
       };
       write_ingestion_review_changes: {
         Args: {

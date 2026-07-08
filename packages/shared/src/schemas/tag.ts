@@ -10,3 +10,36 @@ export const TagDraftSchema = z.object({
   description: z.string().trim().min(1).max(TAG_DESCRIPTION_MAX_LENGTH),
 });
 export type TagDraft = z.infer<typeof TagDraftSchema>;
+
+// DB enum tag_status의 SSOT (07-modeling Tag).
+export const TAG_STATUSES = ["active", "archived"] as const;
+export const TagStatusSchema = z.enum(TAG_STATUSES);
+export type TagStatus = z.infer<typeof TagStatusSchema>;
+
+export const TagSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  description: z.string(),
+  status: TagStatusSchema,
+  createdAt: z.string().datetime(),
+});
+export type Tag = z.infer<typeof TagSchema>;
+
+// 목록 조회 범위 — 관리 화면은 active를, 복구 화면은 archived를 본다.
+export const TAG_LIST_SCOPES = ["active", "archived", "all"] as const;
+export const TagListScopeSchema = z.enum(TAG_LIST_SCOPES).default("active");
+export type TagListScope = z.infer<typeof TagListScopeSchema>;
+
+// 인자 없이 부르면 active만 — 관리 화면의 기본.
+export const TagListInputSchema = z
+  .object({ scope: TagListScopeSchema })
+  .default({ scope: "active" });
+export type TagListInput = z.infer<typeof TagListInputSchema>;
+
+export const UpdateTagInputSchema = TagDraftSchema.extend({
+  id: z.string().uuid(),
+});
+export type UpdateTagInput = z.infer<typeof UpdateTagInputSchema>;
+
+export const TagIdInputSchema = z.object({ id: z.string().uuid() });
+export type TagIdInput = z.infer<typeof TagIdInputSchema>;
