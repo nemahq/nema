@@ -428,9 +428,13 @@
   #panel-digest-detail .related-digest-item:last-child { margin-bottom: 6px; }
   #panel-digest-detail .related-digest-item .chip-label { flex: 1; text-align: left; }
 
-  /* 원문 텍스트 — "원문" 탭(tab-source) 안에서 쓰임. "..." 메뉴에서 원문 탭을 여는 것으로
-     통합됐으니 패널 하단 접기/펼치기는 없앰(위 .source-toggle-area 삭제됨) */
-  #panel-digest-detail .source-text-label { font-size: 12px; color: #8a94a3; margin-bottom: 8px; }
+  /* 원문 텍스트 — Source.title이 붙은 탭(tab-source) 안에서 쓰임. "..." 메뉴에서 원문 탭을
+     여는 것으로 통합됐으니 패널 하단 접기/펼치기는 없앰(위 .source-toggle-area 삭제됨).
+     탭 라벨·본문 모두 "원문"이라는 고정 텍스트 대신 Source.title을 그대로 쓴다 — 다른 탭들도
+     각자 자기 콘텐츠의 이름을 탭 라벨로 쓰지, "이건 다이제스트 탭입니다" 식 메타 라벨을 따로
+     안 두는 것과 같은 일관성. 리뷰가 시작된 뒤(= open ingestion changeset이 있는 이 시점)라
+     읽기 전용 */
+  #panel-digest-detail .source-text-title { font-size: 15px; font-weight: bold; margin-bottom: 8px; }
   #panel-digest-detail .source-text {
     border: 1px solid var(--line); padding: 12px; font-size: 13px;
     color: #8a94a3; margin-bottom: 8px; box-sizing: border-box; line-height: 1.6;
@@ -498,6 +502,13 @@
   /* 처리 중 배지 — Space 오버뷰 피드의 "[진행중 ●]"와 같은 톤(정확한 진행률을 모르는
      작업이라 프로그레스 바 대신 가벼운 점 표시) */
   #screen-drafts .draft-processing-badge { font-size: 12px; color: #8a94a3; }
+  /* Source.title — 초안(open ingestion changeset이 아직 없는 상태)에 머무는 동안만 편집 가능.
+     처리 중일 때는 Space 셀렉트·처리하기·완전히 삭제하기와 마찬가지로 잠김(엔진이 그 원문을
+     한창 보고 있는데 제목까지 바뀌면 처리 대상 자체가 흔들리는 셈이라 나머지 액션들과 같은
+     이유로 막음) — 공용 .doc-input(클릭해 바로 고쳐 쓰는 문서형 입력) 재사용, 처리 중일 땐
+     disabled로 다른 잠긴 요소들과 같은 톤 */
+  #screen-drafts .draft-title { font-size: 15px; font-weight: bold; }
+  #screen-drafts .draft-title:disabled { color: #8a94a3; }
   #screen-drafts .draft-snippet { font-size: 14px; color: var(--ink); line-height: 1.5; }
   #screen-drafts .draft-toggle-expand {
     display: block; margin-top: 2px; border: none; background: none; padding: 0;
@@ -510,6 +521,14 @@
     border: 1px solid var(--line); background: none; padding: 6px 12px;
     font-family: inherit; font-size: 13px; color: var(--ink); cursor: pointer;
   }
+  /* "이전 리뷰 보기" — discarded changeset이 있는 초안에만 붙는 링크. 버튼(처리/삭제)과
+     시각적으로 구분되도록 테두리 없는 밑줄 링크로 — "처리"(처음부터 재추출)와는 다른 성격의
+     선택지(버리기 직전 편집 상태 복원)라는 걸 톤으로도 드러냄 */
+  #screen-drafts .draft-prior-review-link {
+    display: flex; align-items: center; font-size: 13px; color: var(--ink);
+    text-decoration: underline; cursor: pointer; margin-right: auto;
+  }
+  #screen-drafts .draft-prior-review-link.disabled { color: #8a94a3; text-decoration: none; pointer-events: none; }
 
   /* ── Digest 리뷰 화면 ──
      open 변경셋을 직접 고쳐 쓰는 초안 편집 화면 — 후보별 accept/reject이 아니라
@@ -893,7 +912,7 @@
                    충돌·중복은 판정 방식이 달라 각각 예시를 남겨둔다(relation 화면 설계 때 참고용) -->
               <div class="view on" id="changeset-pending">
                 <div class="changeset-list">
-                  <button type="button" class="changeset-row" data-goto-base="screen-digest-review">
+                  <button type="button" class="changeset-row" id="changeset-row-12" data-goto-base="screen-digest-review">
                     <span class="changeset-row-title"><span class="changeset-type-badge">ingestion</span>CS 채팅 UX 개선<span class="changeset-row-number">#12</span></span>
                     <span class="changeset-row-meta">Kyle · 3분 전</span>
                   </button>
@@ -920,7 +939,7 @@
                     <span class="changeset-row-title"><span class="changeset-type-badge">ingestion</span><span class="changeset-outcome-badge applied">적용됨</span>이메일 CC/BCC UX 논의<span class="changeset-row-number">#10</span></span>
                     <span class="changeset-row-meta">Kyle · 어제</span>
                   </button>
-                  <button type="button" class="changeset-row" data-goto-base="screen-changeset-detail" data-case="ingestion-discarded"
+                  <button type="button" class="changeset-row" id="changeset-row-9" data-goto-base="screen-changeset-detail" data-case="ingestion-discarded"
                     data-title="메시지 전송 정책 재검토" data-number="#9" data-status="버려짐" data-author="Kyle" data-time="3일 전">
                     <span class="changeset-row-title"><span class="changeset-type-badge">ingestion</span><span class="changeset-outcome-badge discarded">버려짐</span>메시지 전송 정책 재검토<span class="changeset-row-number">#9</span></span>
                     <span class="changeset-row-meta">Kyle · 3일 전</span>
@@ -983,7 +1002,10 @@
              처리 중인데 옮기거나 지우거나 재트리거하면 앞뒤가 안 맞음) 대신 "취소" 하나만 보여줌 —
              취소하면 진행 중이던 작업이 멈추고 평범한 대기 상태로 돌아가 나머지 액션이 다시 열림 -->
         <section class="base-screen" id="screen-drafts">
-          <!-- 케이스 1: 평범한 대기 상태(버려졌거나 되돌려져서 pending) -->
+          <!-- 케이스 1: 평범한 대기 상태 — discarded changeset(#9, 변경셋 목록 Closed 참고)이 있는
+               경우. "메시지 전송 정책 재검토"로 changeset-row-9와 테마를 맞춰, "이전 리뷰 보기"
+               링크가 실제로 그 행으로 이어지는 걸 보여줌. discarded 이력이 없는 초안(예: 되돌려진
+               것, 한 번도 처리 안 된 것)엔 이 링크 자체가 없다 — 복원할 이전 편집 상태가 없어서 -->
           <div class="draft-card">
             <div class="draft-card-header">
               <select class="draft-space-select">
@@ -991,18 +1013,21 @@
                 <option selected>예시 프로젝트</option>
               </select>
             </div>
+            <input type="text" class="doc-input draft-title" value="메시지 전송 정책 재검토" />
             <div class="view on" id="draft-1-collapsed">
-              <div class="draft-snippet">이커머스 매출 데이터 쪽 보면요, 지난달 대비 재구매율이 좀 빠졌는데 이게 배송 지연 때문인지 아니면 그냥 시즌 이슈인지 아직 정확히 못 갈랐어요. CS 쪽 문의 로그도 같이 봐야 될 것 같고…</div>
+              <div class="draft-snippet">지난번에 정한 커맨드+엔터 전송 기본값 말인데요, 사내 스페이스 쪽에서는 그냥 엔터 전송이 더 편하다는 얘기가 계속 나와서…</div>
               <button type="button" class="draft-toggle-expand" data-goto-view="draft-1-expanded">더 보기</button>
             </div>
             <div class="view" id="draft-1-expanded">
-              <div class="draft-snippet">이커머스 매출 데이터 쪽 보면요, 지난달 대비 재구매율이 좀 빠졌는데 이게 배송 지연 때문인지 아니면 그냥 시즌 이슈인지 아직 정확히 못 갈랐어요. CS 쪽 문의 로그도 같이 봐야 될 것 같고, 일단 재구매율 하락 자체는 확실한 수치라 이번 주 안에 원인 가설 몇 개 추려서 다음 싱크 때 공유하기로 했습니다. 배송 지연 쪽은 물류팀에 데이터 요청 넣어둔 상태고요.</div>
+              <div class="draft-snippet">지난번에 정한 커맨드+엔터 전송 기본값 말인데요, 사내 스페이스 쪽에서는 그냥 엔터 전송이 더 편하다는 얘기가 계속 나와서, 고객 대면 채널만 지금 정책 유지하고 내부는 따로 풀어줄지 다시 한번 검토해볼까 합니다. 일단 이번 주는 그냥 지금 정책대로 가고, 다음 정기 싱크 때 다시 얘기하기로 했어요.</div>
               <button type="button" class="draft-toggle-expand" data-goto-view="draft-1-collapsed">접기</button>
             </div>
             <div class="draft-card-footer">
               <span class="draft-time">어제</span>
               <div class="draft-actions">
-                <button type="button" class="discard-btn">처리</button>
+                <a href="#" class="draft-prior-review-link" data-goto-base="screen-changeset-detail" data-case="ingestion-discarded"
+                  data-title="메시지 전송 정책 재검토" data-number="#9" data-status="버려짐" data-author="Kyle" data-time="3일 전">이전 리뷰 보기</a>
+                <button type="button" class="discard-btn" data-draft-process>처리</button>
                 <button type="button" class="discard-btn">삭제</button>
               </div>
             </div>
@@ -1017,6 +1042,7 @@
               </select>
               <span class="draft-processing-badge">처리 중 ●</span>
             </div>
+            <input type="text" class="doc-input draft-title" value="마케팅 정기 싱크 — 채널 전략" disabled />
             <div class="view on" id="draft-2-collapsed">
               <div class="draft-snippet">아까 그 마케팅 정기 싱크 녹음 방금 올렸는데, 인스타 광고랑 뉴스레터 CPA 비교했던 그거 포함해서…</div>
               <button type="button" class="draft-toggle-expand" data-goto-view="draft-2-expanded">더 보기</button>
@@ -1415,9 +1441,14 @@
             <button type="button" class="panel-tab-close" data-close-tab>×</button>
           </div>
           <!-- 원문 탭: Digest 리뷰 화면의 카드별 "원문에서 보기" 트리거로 열림. 하나의 Source만
-               가리키므로 어느 카드에서 눌러도 탭은 하나 — 하이라이트 영역만 갱신(다음 라운드 배선) -->
+               가리키므로 어느 카드에서 눌러도 탭은 하나 — 하이라이트 영역만 갱신(다음 라운드 배선).
+               Source.title("마케팅팀 정기 싱크")이 위 헤더의 Changeset.title("CS 채팅 UX 개선")과
+               일부러 다르다 — 같은 원문을 가리키지만 생성 시점과 아는 정보가 다르다. Source.title은
+               제출 즉시(1단계 전) 원문 전체만 보고 빠르게 생성돼 "이게 어떤 자리였는지" 정도의
+               일반적인 묘사에 가깝고, Changeset.title은 1단계가 끝나 실제로 어떤 Digest가 나왔는지
+               알고 나서 생성되니 그 결정들의 주제에 더 가깝다 -->
           <div class="panel-tab" data-tab-id="tab-source">
-            <button type="button" class="panel-tab-label" data-open-tab="tab-source">원문</button>
+            <button type="button" class="panel-tab-label" data-open-tab="tab-source">마케팅팀 정기 싱크</button>
             <button type="button" class="panel-tab-close" data-close-tab>×</button>
           </div>
         </div>
@@ -1699,7 +1730,7 @@
                누르면 이 탭 안에서 하이라이트만 갱신되고 새 탭은 안 생김. 실제 Tiro 녹음 전사본
                (2026-01-20-0119-Feat-MKTEmail-싱크) 발췌 — ASR 특유의 어색함도 그대로 보존 -->
           <div class="panel-tab-content" id="tab-source">
-            <div class="source-text-label">원문</div>
+            <div class="source-text-title">마케팅팀 정기 싱크</div>
             <div class="source-text">저는 심플한 의견을 보긴 했어요. 수신함은 확실히 내부 대화든 뭐든 커맨드 멘터가 기본인 게 좋긴 하겠다. 대 고객이니까 되게 실수하는 리스크가 크잖아요. 팀 내부는 아닐 수 있겠다. 그냥 스페이스로 분리하면 안 되나? <span class="source-locator-highlight">그러면 이렇게 하시죠. 인라인 모드는 일단 만들지 말고 이번에 코멘트 엔터를 전송으로 기본으로 바꿔서 출시를 해봅시다. 그다음에 고객 피드백 듣고 좀 불편하다라니면 이게 의견을 듣는 걸로 그리고 도치 옵션을 제공하자</span>라는 커맨드 터가 가동이 아니라 엔터 전송으로 하고 싶다 하면은 설정을 제공한다.</div>
           </div>
         </div>
@@ -1853,6 +1884,57 @@
     if (heading) sizeToContent(heading);
   });
 
+  // changeset #12(CS 채팅 UX 개선)를 Open↔Closed 리스트 사이로 실제로 옮긴다 — 버리기/되살리기가
+  // 헤더 상태만 바꾸는 게 아니라 변경셋 목록에도 그대로 반영되는 걸 보여주기 위함. discarded로
+  // 옮길 땐 목적지가 screen-digest-review에서 screen-changeset-detail로 바뀐다(액션 화면 ↔
+  // 기록 화면 분리 원칙, 위 참고) — 그래서 data-goto-base 자체를 다시 씀
+  function setChangeset12Discarded(discarded) {
+    var row = document.getElementById('changeset-row-12');
+    var titleSpan = row.querySelector('.changeset-row-title');
+    var pendingList = document.querySelector('#changeset-pending .changeset-list');
+    var closedList = document.querySelector('#changeset-closed .changeset-list');
+    var openTabBtn = document.querySelector('[data-goto-view="changeset-pending"]');
+    var closedTabBtn = document.querySelector('[data-goto-view="changeset-closed"]');
+    var changesetsTabBtn = document.querySelector('[data-goto-view="tab-changesets"]');
+
+    function bumpCount(el, label, delta) {
+      var n = parseInt(el.textContent.match(/\d+/)[0], 10) + delta;
+      el.textContent = label + ' (' + n + ')';
+    }
+
+    if (discarded) {
+      closedList.insertBefore(row, closedList.firstChild);
+      titleSpan.innerHTML =
+        '<span class="changeset-type-badge">ingestion</span>' +
+        '<span class="changeset-outcome-badge discarded">버려짐</span>' +
+        'CS 채팅 UX 개선<span class="changeset-row-number">#12</span>';
+      row.dataset.gotoBase = 'screen-changeset-detail';
+      row.dataset.case = 'ingestion-discarded';
+      row.dataset.title = 'CS 채팅 UX 개선';
+      row.dataset.number = '#12';
+      row.dataset.status = '버려짐';
+      row.dataset.author = 'Kyle';
+      row.dataset.time = '방금';
+      bumpCount(openTabBtn, 'Open', -1);
+      bumpCount(closedTabBtn, 'Closed', 1);
+      bumpCount(changesetsTabBtn, '변경셋', -1);
+    } else {
+      pendingList.insertBefore(row, pendingList.firstChild);
+      titleSpan.innerHTML =
+        '<span class="changeset-type-badge">ingestion</span>CS 채팅 UX 개선<span class="changeset-row-number">#12</span>';
+      row.dataset.gotoBase = 'screen-digest-review';
+      delete row.dataset.case;
+      delete row.dataset.title;
+      delete row.dataset.number;
+      delete row.dataset.status;
+      delete row.dataset.author;
+      delete row.dataset.time;
+      bumpCount(openTabBtn, 'Open', 1);
+      bumpCount(closedTabBtn, 'Closed', -1);
+      bumpCount(changesetsTabBtn, '변경셋', 1);
+    }
+  }
+
   // 삭제 확인 모달처럼 트리거마다 대상이 다른 모달을 위해, 지금 삭제하려는 대상의 id를 잠깐 기억해둠
   var pendingDeleteTarget = null;
 
@@ -1933,9 +2015,16 @@
         document.getElementById('detail-status-badge').textContent = base.dataset.status;
         document.getElementById('detail-author').textContent = base.dataset.author;
         document.getElementById('detail-time').textContent = base.dataset.time;
+        // 버려짐 케이스는 [되살리기][원본도 삭제하기] — Digest 리뷰 화면의 버려짐 헤더와 같은
+        // 구성. 되살리기는 data-goto-base+data-restore-review를 같이 달아서, 클릭 시 이 함수
+        // 위쪽의 일반 네비게이션(screen-digest-review로 이동)과 아래쪽의 되살리기 로직이 한
+        // 클릭에 같이 처리되게 한다. 이 와이어프레임엔 Digest 리뷰 화면 예시가 하나뿐이라(#12
+        // "CS 채팅 UX 개선"), 다른 discarded 행(#9)에서 눌러도 그 화면으로 간다 — 이미 다른
+        // 곳(적용됨 프리셋 등)에서도 써온 것과 같은 단순화
         document.getElementById('detail-header-actions').innerHTML =
           base.dataset.status === '버려짐'
-            ? ''
+            ? '<button type="button" class="discard-btn" data-goto-base="screen-digest-review" data-restore-review>되살리기</button>' +
+              '<button type="button" class="discard-btn" data-trash-source-followup>원본도 삭제하기</button>'
             : '<button type="button" class="discard-btn" id="detail-revert-btn">되돌리기</button>';
         showView('detail-body-' + base.dataset.case);
       }
@@ -1968,9 +2057,28 @@
     if (e.target.closest('[data-discard-review]')) {
       document.getElementById('review-status-badge').textContent = '버려짐';
       // 버려짐엔 "되돌리기" 버튼을 안 둠 — discard는 애초에 만든 게 없어 archive할 대상 자체가
-      // 없다. 복구 경로는 revert가 아니라 원본(Source)이 남아있는 "초안"에서 "처리하기"
-      document.getElementById('review-header-actions').innerHTML = '';
+      // 없다. 대신 "되살리기"(같은 changeset을 in-place로 open 복귀, 07-modeling.md 참고) —
+      // "처리하기"(초안에서 처음부터 재추출)와는 달리 버리기 직전 편집 상태를 그대로 보존한다.
+      // 더 건설적인 액션이 먼저 오도록 왼쪽에 둠
+      document.getElementById('review-header-actions').innerHTML =
+        '<button type="button" class="discard-btn" data-restore-review>되살리기</button>';
       addTrashSourceFollowup();
+      setChangeset12Discarded(true);
+    }
+    // 되살리기: 새 changeset을 안 만들고 같은 changeset의 status를 open으로 되돌린다(in-place —
+    // applied를 되돌리는 append-only revert와 다른 메커니즘, 07-modeling.md "버려짐 되살리기"
+    // 참고). 버리기가 한 일을 정확히 반대로: 배지·액션 원복, "초안" 카운트 원복, 변경셋 목록에서
+    // 다시 Open으로. Changeset 상세에서 눌렀을 때도 이 블록이 그대로 처리(data-goto-base로
+    // screen-digest-review 이동은 이 함수 위쪽에서 이미 처리됨)
+    if (e.target.closest('[data-restore-review]')) {
+      document.getElementById('review-status-badge').textContent = '리뷰 대기';
+      document.getElementById('review-header-actions').innerHTML =
+        '<button type="button" class="discard-btn" data-discard-review>버리기</button>' +
+        '<button type="button" class="submit" data-apply-review>확정</button>';
+      var draftsBtn3 = document.getElementById('lnb-drafts-btn');
+      var count3 = parseInt(draftsBtn3.textContent.match(/\d+/)[0], 10);
+      draftsBtn3.textContent = '초안 (' + (count3 - 1) + ')';
+      setChangeset12Discarded(false);
     }
     // 되돌리기: 원래 changeset의 status·outcome은 안 바뀜(closed+applied로 그대로 남는 게
     // "이건 실제로 적용됐었다"는 사실이라 — 되돌리기 append-only 원칙). 대신 이 화면에서는
@@ -1995,13 +2103,26 @@
       addTrashSourceFollowup();
     }
     // 원본도 삭제하기: pending↔trashed 전환은 07-modeling.md상 changeset에 안 남는 동작이라
-    // (변경이력 대상 아님), 되돌릴 방법이 없다 — 버튼이 사라지고 "초안" 카운트도 다시 줄어듦
+    // (변경이력 대상 아님), 되돌릴 방법이 없다 — 버튼이 사라지고 "초안" 카운트도 다시 줄어듦.
+    // 옆에 "되살리기" 버튼이 있었다면 그것도 같이 사라진다 — 되살리기는 Source가 pending이어야
+    // 가능한데, 원본이 trashed가 됐으니 그 조건이 깨져서다(07-modeling.md "버려짐 되살리기"의
+    // 조건 참고)
     if (e.target.closest('[data-trash-source-followup]')) {
       var followup = e.target.closest('[data-trash-source-followup]');
       var draftsBtn2 = document.getElementById('lnb-drafts-btn');
       var count2 = parseInt(draftsBtn2.textContent.match(/\d+/)[0], 10);
       draftsBtn2.textContent = '초안 (' + (count2 - 1) + ')';
+      var siblingRestoreBtn = followup.parentElement.querySelector('[data-restore-review]');
+      if (siblingRestoreBtn) siblingRestoreBtn.remove();
       followup.remove();
+    }
+    // 처리(초안에서 처음부터 재추출): 그 Source에 새 open changeset이 생기므로, "이전 리뷰 보기"
+    // 링크(있었다면)는 더 이상 유효하지 않다 — 되살리기와 같은 조건("open인 changeset이 없을
+    // 때만")이 여기서도 깨진다. 링크 자체를 없애지 않고 흐리게 남겨 "왜 안 눌리는지"가
+    // 힌트로라도 보이게 함
+    if (e.target.closest('[data-draft-process]')) {
+      var priorReviewLink = e.target.closest('.draft-card').querySelector('.draft-prior-review-link');
+      if (priorReviewLink) priorReviewLink.classList.add('disabled');
     }
 
     // Space를 벗어나면 사이드뷰는 닫는다 — Digest·Reference는 Space에 속한 콘텐츠라, 다른
