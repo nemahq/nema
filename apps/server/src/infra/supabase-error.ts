@@ -1,12 +1,27 @@
-export type SupabaseErrorCode = "not_found" | "query_failed";
+export type SupabaseErrorCode =
+  | "not_found"
+  | "forbidden"
+  | "precondition"
+  | "query_failed";
 
 const PG_NOT_FOUND = "P0002";
 const PGRST_NOT_FOUND = "PGRST116";
+const PG_INSUFFICIENT_PRIVILEGE = "42501";
+// RPC가 USING ERRCODE로 붙이는 Nema 커스텀 SQLSTATE — "먼저 소유권을 넘겨라" 전제 위반
+const NEMA_PRECONDITION = "NM001";
 
 export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
-  return pgCode === PG_NOT_FOUND || pgCode === PGRST_NOT_FOUND
-    ? "not_found"
-    : "query_failed";
+  switch (pgCode) {
+    case PG_NOT_FOUND:
+    case PGRST_NOT_FOUND:
+      return "not_found";
+    case PG_INSUFFICIENT_PRIVILEGE:
+      return "forbidden";
+    case NEMA_PRECONDITION:
+      return "precondition";
+    default:
+      return "query_failed";
+  }
 }
 
 export function throwIfSupabaseError(

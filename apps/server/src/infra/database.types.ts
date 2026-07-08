@@ -1187,6 +1187,10 @@ export type Database = {
         };
         Returns: string;
       };
+      delete_workspace: {
+        Args: { p_workspace_id: string };
+        Returns: undefined;
+      };
       fetch_pending_digestion_sources: {
         Args: { p_max_retries?: number };
         Returns: {
@@ -1271,6 +1275,7 @@ export type Database = {
         Args: { p_workspace_id: string };
         Returns: boolean;
       };
+      leave_workspace: { Args: { p_workspace_id: string }; Returns: undefined };
       link_reference_tag: {
         Args: { p_reference_id: string; p_tag_id: string };
         Returns: undefined;
@@ -1352,6 +1357,14 @@ export type Database = {
       };
       update_tag: {
         Args: { p_description: string; p_tag_id: string; p_title: string };
+        Returns: undefined;
+      };
+      update_workspace_member_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["workspace_role"];
+          p_user_id: string;
+          p_workspace_id: string;
+        };
         Returns: undefined;
       };
       write_ingestion_review_changes: {

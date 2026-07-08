@@ -5,7 +5,11 @@ import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify"
 
 import type { Locale } from "@nema-io/shared";
 
-import { getDomainCode, mapDomainError } from "./error-mapper";
+import {
+  getDomainCode,
+  isExpectedDomainError,
+  mapDomainError,
+} from "./error-mapper";
 import { resolveLanguage } from "./infra/i18n";
 import type { Providers } from "./infra/providers";
 import { getProviders } from "./infra/providers";
@@ -81,9 +85,12 @@ const errorHandlingMiddleware = t.middleware(async ({ ctx, next }) => {
     if (error instanceof TRPCError) {
       throw error;
     }
-    Sentry.captureException(error, {
-      tags: { domainCode: getDomainCode(error) ?? "UNKNOWN" },
-    });
+    // 정상적인 거부(권한·전제·대상 없음)는 장애가 아니라 캡처하지 않는다 — 노이즈 방지
+    if (!isExpectedDomainError(error)) {
+      Sentry.captureException(error, {
+        tags: { domainCode: getDomainCode(error) ?? "UNKNOWN" },
+      });
+    }
     throw mapDomainError(error, ctx.lng);
   }
 });

@@ -20,6 +20,8 @@ type DomainErrorCode =
   | "EMBEDDING_ERROR"
   | "VECTOR_STORE_ERROR"
   | "DB_NOT_FOUND"
+  | "DB_FORBIDDEN"
+  | "DB_PRECONDITION"
   | "DB_QUERY_FAILED";
 
 const ERROR_MAP: Record<
@@ -56,14 +58,37 @@ const ERROR_MAP: Record<
     trpcCode: "NOT_FOUND",
     i18nKey: "error.db_not_found",
   },
+  DB_FORBIDDEN: {
+    trpcCode: "FORBIDDEN",
+    i18nKey: "error.forbidden",
+  },
+  DB_PRECONDITION: {
+    trpcCode: "PRECONDITION_FAILED",
+    i18nKey: "error.workspace_last_owner",
+  },
   DB_QUERY_FAILED: {
     trpcCode: "INTERNAL_SERVER_ERROR",
     i18nKey: "error.default",
   },
 };
 
+// 사용자에게 도달하는 정상적인 거부(권한·전제·대상 없음)는 시스템 장애가 아니라
+// Sentry로 캡처하면 진짜 장애를 묻는다. 미들웨어가 이 판정으로 캡처를 건너뛴다.
+const EXPECTED_DOMAIN_CODES = new Set<DomainErrorCode>([
+  "DB_NOT_FOUND",
+  "DB_FORBIDDEN",
+  "DB_PRECONDITION",
+]);
+
+export function isExpectedDomainError(cause: unknown): boolean {
+  const domainCode = getDomainCode(cause);
+  return domainCode !== undefined && EXPECTED_DOMAIN_CODES.has(domainCode);
+}
+
 const SUPABASE_CODE_MAP: Record<SupabaseErrorCode, DomainErrorCode> = {
   not_found: "DB_NOT_FOUND",
+  forbidden: "DB_FORBIDDEN",
+  precondition: "DB_PRECONDITION",
   query_failed: "DB_QUERY_FAILED",
 };
 
