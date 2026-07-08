@@ -9,7 +9,7 @@ export const WorkspaceMemberSchema = z.object({
   workspaceId: z.string().uuid(),
   userId: z.string().uuid(),
   role: WorkspaceRoleSchema,
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
 });
 export type WorkspaceMember = z.infer<typeof WorkspaceMemberSchema>;
 

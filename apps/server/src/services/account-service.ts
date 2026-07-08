@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import { TRPCError } from "@trpc/server";
 
 import type { WorkspaceRole } from "@nema-io/shared";
@@ -101,7 +102,6 @@ export async function deleteAccount(args: {
   userId: string;
 }): Promise<void> {
   const { supabase, userId } = args;
-  const admin = getSupabaseAdmin();
 
   const plan = await loadDeletionPlan(supabase, userId);
 
@@ -112,6 +112,8 @@ export async function deleteAccount(args: {
     });
   }
 
+  const admin = getSupabaseAdmin();
+
   for (const workspaceId of plan.teardownWorkspaceIds) {
     const { error } = await admin.rpc("delete_workspace", {
       p_workspace_id: workspaceId,
@@ -121,6 +123,11 @@ export async function deleteAccount(args: {
 
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) {
+    // teardown이 이미 solo 워크스페이스를 지운 뒤 계정만 남는 반삭제 — TRPCError는
+    // 미들웨어의 Sentry 캡처를 우회하므로 가장 알림이 필요한 이 실패를 직접 캡처한다.
+    Sentry.captureException(error, {
+      tags: { flow: "account-delete", stage: "auth-delete-user" },
+    });
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Failed to delete account.",

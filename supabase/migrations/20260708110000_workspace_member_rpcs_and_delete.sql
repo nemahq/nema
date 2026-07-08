@@ -13,6 +13,14 @@
 -- DEFINER). 1)2)는 사용자 경로(authenticated, 멤버십·소유권 검증) + 운영자
 -- (service_role, auth.uid NULL 통과). 3)은 파괴적이라 service_role 전용
 -- (purge_expired_sources와 같은 계약) — 호출 전 유일-멤버 검증은 계정 삭제 서비스가 한다.
+--
+-- 에러 분류: 거부는 기본 RAISE(P0001)면 앱이 전부 일반 500으로 뭉갠다. 이 RPC들은
+-- 사용자에게 도달해야 하는 거부라 구분되는 SQLSTATE를 붙인다 — 인가 실패는 42501
+-- (insufficient_privilege → 403), "먼저 소유권을 넘겨라"는 커스텀 NM001(→ 412),
+-- 대상 없음은 no_data_found(P0002 → 404). error-mapper가 이 코드들을 실행 가능한
+-- 메시지로 잇는다. 마지막 owner 이탈·강등은 enforce_workspace_owner_exists 트리거가
+-- 이미 막지만(P0001), 그건 동시성 백스톱으로 두고 정상 경로는 여기서 pre-check로
+-- 가로채 친절한 코드를 준다 — 트리거 에러가 매번 Sentry에 쌓이는 것도 피한다.
 -- =============================================================
 
 -- =============================================================
@@ -35,7 +43,22 @@ BEGIN
     SELECT 1 FROM workspace_members
     WHERE workspace_id = p_workspace_id AND user_id = auth.uid() AND role = 'owner'
   ) THEN
-    RAISE EXCEPTION 'only a workspace owner can change member roles';
+    RAISE EXCEPTION 'only a workspace owner can change member roles'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  -- 마지막 owner 강등은 트리거보다 먼저 가로채 친절한 코드(NM001)를 준다
+  IF p_role <> 'owner'
+     AND EXISTS (
+       SELECT 1 FROM workspace_members
+       WHERE workspace_id = p_workspace_id AND user_id = p_user_id AND role = 'owner'
+     )
+     AND NOT EXISTS (
+       SELECT 1 FROM workspace_members
+       WHERE workspace_id = p_workspace_id AND role = 'owner' AND user_id <> p_user_id
+     ) THEN
+    RAISE EXCEPTION 'workspace % must keep an owner — promote another member first', p_workspace_id
+      USING ERRCODE = 'NM001';
   END IF;
 
   UPDATE workspace_members
@@ -43,7 +66,8 @@ BEGIN
   WHERE workspace_id = p_workspace_id AND user_id = p_user_id;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'user % is not a member of workspace %', p_user_id, p_workspace_id;
+    RAISE EXCEPTION 'user % is not a member of workspace %', p_user_id, p_workspace_id
+      USING ERRCODE = 'no_data_found';
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
@@ -59,11 +83,25 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 CREATE FUNCTION leave_workspace(p_workspace_id uuid)
 RETURNS void AS $$
 BEGIN
+  -- 마지막 owner의 이탈은 트리거보다 먼저 가로채 "먼저 소유권을 넘겨라"를 준다
+  IF EXISTS (
+       SELECT 1 FROM workspace_members
+       WHERE workspace_id = p_workspace_id AND user_id = auth.uid() AND role = 'owner'
+     )
+     AND NOT EXISTS (
+       SELECT 1 FROM workspace_members
+       WHERE workspace_id = p_workspace_id AND role = 'owner' AND user_id <> auth.uid()
+     ) THEN
+    RAISE EXCEPTION 'workspace % still needs an owner — transfer ownership before leaving', p_workspace_id
+      USING ERRCODE = 'NM001';
+  END IF;
+
   DELETE FROM workspace_members
   WHERE workspace_id = p_workspace_id AND user_id = auth.uid();
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'not a member of workspace %', p_workspace_id;
+    RAISE EXCEPTION 'not a member of workspace %', p_workspace_id
+      USING ERRCODE = 'no_data_found';
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
