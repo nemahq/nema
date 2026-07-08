@@ -54,7 +54,7 @@ jobs:
           # 커밋본은 pre-commit prettier가 재포맷하므로 raw 생성물도 같은 포맷으로 맞춰 비교
           pnpm exec prettier --write apps/server/src/infra/database.types.ts
           if ! git diff --exit-code apps/server/src/infra/database.types.ts; then
-            echo "::error::database.types.ts is out of date. Run 'supabase gen types --lang=typescript --local > apps/server/src/infra/database.types.ts' locally and commit."
+            echo "::error::database.types.ts is out of date. Run 'pnpm supabase:gen-types' locally and commit."
             exit 1
           fi
 
