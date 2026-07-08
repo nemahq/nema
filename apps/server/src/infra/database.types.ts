@@ -889,7 +889,7 @@ export type Database = {
             | null;
           content: string;
           created_at: string;
-          digest_id: string | null;
+          digest_id: string;
           due_date: string | null;
           error_message: string | null;
           id: string;
@@ -907,7 +907,7 @@ export type Database = {
             | null;
           content: string;
           created_at?: string;
-          digest_id?: string | null;
+          digest_id: string;
           due_date?: string | null;
           error_message?: string | null;
           id?: string;
@@ -925,7 +925,7 @@ export type Database = {
             | null;
           content?: string;
           created_at?: string;
-          digest_id?: string | null;
+          digest_id?: string;
           due_date?: string | null;
           error_message?: string | null;
           id?: string;
@@ -1083,6 +1083,10 @@ export type Database = {
     };
     Functions: {
       ack_sync_event: { Args: { p_msg_id: number }; Returns: undefined };
+      ack_vector_purge_event: {
+        Args: { p_msg_id: number };
+        Returns: undefined;
+      };
       append_message: {
         Args: { p_message: Json; p_session_id: string };
         Returns: undefined;
@@ -1225,12 +1229,24 @@ export type Database = {
         Args: { p_workspace_id: string };
         Returns: boolean;
       };
+      purge_expired_sources: {
+        Args: { p_batch_limit?: number; p_retention_days?: number };
+        Returns: number;
+      };
+      purge_job_last_success: { Args: never; Returns: string };
       read_sync_events: {
         Args: { p_batch_size?: number; p_visibility_timeout?: number };
         Returns: {
           message: Json;
           msg_id: number;
           read_ct: number;
+        }[];
+      };
+      read_vector_purge_events: {
+        Args: { p_batch_size?: number; p_visibility_timeout?: number };
+        Returns: {
+          message: Json;
+          msg_id: number;
         }[];
       };
       reject_pending_relation: {

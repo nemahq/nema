@@ -14,6 +14,17 @@ export const TriggerMessageSchema = z.object({
 
 export type TriggerMessage = z.infer<typeof TriggerMessageSchema>;
 
+// vector_purge 큐 — purge가 hard delete한 진술의 Qdrant 벡터를 워커가 지우도록 넘긴다
+// (행이 사라져 임베딩 패스가 못 보는 벡터를 정리하는 유일한 경로).
+export const VectorPurgeMessageSchema = z.object({
+  msg_id: z.number(),
+  message: z.object({
+    statement_ids: z.array(z.string().uuid()),
+  }),
+});
+
+export type VectorPurgeMessage = z.infer<typeof VectorPurgeMessageSchema>;
+
 // --- fetch_pending_* RPC 반환 행 ---
 
 // ⓪ 생성(digestion) 대상 원본. workspace_id는 Tag·Reference 레지스트리(Workspace

@@ -51,6 +51,7 @@ import {
   PendingStatementSchema,
   SourceDigestSchema,
   TriggerMessageSchema,
+  VectorPurgeMessageSchema,
 } from "./types";
 
 const MAX_RETRIES = 5;
@@ -102,6 +103,19 @@ const NEIGHBOR_SEARCH_RETRY_DELAY_MS = 2_000;
 // 이라 보수적으로 작게: "한입에 판정할 만한" 수십 개. 진짜 무릎은 dogfooding이 측정(§11).
 const MAX_STATEMENTS_PER_LINKING_CALL = 30;
 
+// --- 벡터 정리 (purge 뒷정리) ---
+const VECTOR_PURGE_BATCH_SIZE = 10;
+const VECTOR_PURGE_VISIBILITY_TIMEOUT_SEC = 60;
+
+// --- purge 워치독 (pg_cron이 조용히 멈춘 경우 감지) ---
+const MS_PER_DAY = 86_400_000;
+// 보관기간은 마이그레이션 purge_expired_sources의 기본값과 맞춘다 — 둘이 어긋나면
+// 워치독이 헛경보하거나 지연을 놓친다.
+const PURGE_RETENTION_DAYS = 30;
+// 잡은 매일(03:00) 도므로 26시간 넘게 성공 기록이 없으면 한 사이클을 걸렀다는 신호.
+const PURGE_JOB_STALE_HOURS = 26;
+const PURGE_WATCHDOG_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
 type Phase = "extraction" | "embedding" | "linking";
 
 interface WorkerDeps {
@@ -116,6 +130,7 @@ interface WorkerDeps {
 export function createStatementSyncWorker(deps: WorkerDeps) {
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let sweepTimer: ReturnType<typeof setInterval> | null = null;
+  let watchdogTimer: ReturnType<typeof setInterval> | null = null;
   let processing = false;
   let current: Promise<void> | null = null;
 
@@ -214,8 +229,13 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
           current = sweep();
         }
       }, SWEEP_INTERVAL_MS);
+      // 워치독은 읽기 전용 count라 processing 게이트와 무관하게 자기 주기로 돈다.
+      watchdogTimer = setInterval(() => {
+        void checkPurgeBacklog(deps);
+      }, PURGE_WATCHDOG_INTERVAL_MS);
       // 재기동 직후 1회 — 죽기 전에 ack까지 끝낸 notify의 잔여 pending을 줍는다
       current = sweep();
+      void checkPurgeBacklog(deps);
     },
 
     async stop() {
@@ -226,6 +246,10 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
       if (sweepTimer) {
         clearInterval(sweepTimer);
         sweepTimer = null;
+      }
+      if (watchdogTimer) {
+        clearInterval(watchdogTimer);
+        watchdogTimer = null;
       }
       if (current) {
         await current;
@@ -247,9 +271,167 @@ async function runCycle(deps: WorkerDeps): Promise<void> {
     const extracted = await runExtractionPass(deps);
     const embedded = await runEmbeddingPass(deps);
     const linked = await runLinkingPass(deps);
-    if (digested === 0 && extracted === 0 && embedded === 0 && linked === 0) {
+    const purged = await runVectorPurgePass(deps);
+    if (
+      digested === 0 &&
+      extracted === 0 &&
+      embedded === 0 &&
+      linked === 0 &&
+      purged === 0
+    ) {
       break;
     }
+  }
+}
+
+// --- 벡터 정리: purge가 hard delete한 진술의 Qdrant 벡터를 지운다 ---
+// purge RPC(pg_cron)가 vector_purge 큐에 넣은 진술 id를 드레인해 Qdrant에서 지운다.
+// 임베딩 패스는 archived '행'을 읽어 벡터를 지우지만 purge는 행을 없애 그 경로가
+// 못 보므로, hard delete된 벡터의 유일한 정리 경로다. delete-by-id라 행이 없어도 되고
+// 멱등. 삭제 실패 시 ack하지 않아 visibility timeout 뒤 재전달로 재시도된다.
+export async function runVectorPurgePass(deps: WorkerDeps): Promise<number> {
+  let processed = 0;
+
+  while (true) {
+    const { data, error } = await deps.supabase.rpc(
+      "read_vector_purge_events",
+      {
+        p_batch_size: VECTOR_PURGE_BATCH_SIZE,
+        p_visibility_timeout: VECTOR_PURGE_VISIBILITY_TIMEOUT_SEC,
+      },
+    );
+    if (error) {
+      Sentry.captureMessage(
+        `[statement-sync] vector_purge read error: ${error.message}`,
+        {
+          level: "error",
+          tags: { component: "statement-sync", phase: "vector-purge" },
+        },
+      );
+      break;
+    }
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      break;
+    }
+
+    for (const row of data) {
+      const parsed = VectorPurgeMessageSchema.safeParse(row);
+      if (!parsed.success) {
+        // 발신자를 우리가 통제하므로 malformed는 사실상 버그 — ack해 영구 재전달만 막는다.
+        Sentry.captureMessage(
+          "[statement-sync] vector_purge message validation failed",
+          {
+            level: "error",
+            tags: { component: "statement-sync", phase: "vector-purge" },
+            extra: { validationError: parsed.error },
+          },
+        );
+        const msgId = (row as { msg_id?: unknown })?.msg_id;
+        if (typeof msgId === "number") {
+          await ackVectorPurge(deps, msgId);
+        }
+        continue;
+      }
+
+      try {
+        await deps.vectorStore.deleteStatements(
+          parsed.data.message.statement_ids,
+        );
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: "statement-sync", phase: "vector-purge" },
+          extra: { statementIds: parsed.data.message.statement_ids },
+        });
+        continue; // ack 생략 → 재전달로 재시도
+      }
+
+      await ackVectorPurge(deps, parsed.data.msg_id);
+      processed += 1;
+    }
+
+    if (data.length < VECTOR_PURGE_BATCH_SIZE) {
+      break;
+    }
+  }
+
+  return processed;
+}
+
+async function ackVectorPurge(deps: WorkerDeps, msgId: number): Promise<void> {
+  const { error } = await deps.supabase.rpc("ack_vector_purge_event", {
+    p_msg_id: msgId,
+  });
+  if (error) {
+    Sentry.captureMessage(
+      `[statement-sync] vector_purge ack failed: ${error.message}`,
+      {
+        level: "error",
+        tags: { component: "statement-sync", phase: "vector-purge" },
+        extra: { msgId },
+      },
+    );
+  }
+}
+
+// pg_cron purge가 조용히 멈춘 경우를 잡는 워치독 — 보관기간+유예가 지났는데 아직
+// trashed로 남은 원본이 있으면 잡이 안 도는 신호라 Sentry로 알린다("잡의 주인은 DB,
+// 감시는 서버").
+// 타이머가 fire-and-forget로 부르므로 절대 reject하지 않는다(poll/sweep과 같은 계약).
+// pg_cron purge가 조용히 멈춘 경우를 잡는 워치독 — "밀린 개수"가 아니라 "잡이 최근에
+// 실제로 성공했나"를 본다. 대량 휴지통을 배치 한도 때문에 여러 날 나눠 비우는 정상 상황엔
+// backlog가 커도 헛경보하지 않고, 잡이 오래 안 돌았고(정지 의심) 실제로 만료된 원본이
+// 남아 있을 때만 경고한다(빈 DB·신규 배포는 조용). fire-and-forget 타이머가 부르므로
+// 절대 reject하지 않는다(poll/sweep과 같은 계약).
+export async function checkPurgeBacklog(deps: WorkerDeps): Promise<void> {
+  try {
+    const { data: lastSuccess, error } = await deps.supabase.rpc(
+      "purge_job_last_success",
+    );
+    if (error) {
+      Sentry.captureException(
+        new Error(`purge job health check failed: ${error.message}`),
+        { tags: { component: "statement-sync", phase: "purge-watchdog" } },
+      );
+      return;
+    }
+
+    // 최근에 성공했으면 backlog 크기와 무관하게 정상 — 조용히 끝낸다.
+    const staleMs = PURGE_JOB_STALE_HOURS * 60 * 60 * 1000;
+    if (lastSuccess && Date.now() - Date.parse(lastSuccess) < staleMs) {
+      return;
+    }
+
+    // 잡이 오래 안 돌았다 → 실제로 만료된 원본이 있을 때만 경고.
+    const cutoff = new Date(
+      Date.now() - PURGE_RETENTION_DAYS * MS_PER_DAY,
+    ).toISOString();
+    const { count, error: countError } = await deps.supabase
+      .from("sources")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "trashed")
+      .lt("trashed_at", cutoff);
+    if (countError) {
+      Sentry.captureException(
+        new Error(`purge backlog count failed: ${countError.message}`),
+        { tags: { component: "statement-sync", phase: "purge-watchdog" } },
+      );
+      return;
+    }
+
+    if (count && count > 0) {
+      Sentry.captureMessage(
+        `[statement-sync] purge stalled: pg_cron 'purge-expired-sources' last succeeded ${lastSuccess ? lastSuccess : "never"}, ${count} expired source(s) still trashed`,
+        {
+          level: "warning",
+          tags: { component: "statement-sync", phase: "purge-watchdog" },
+          extra: { count, lastSuccess },
+        },
+      );
+    }
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { component: "statement-sync", phase: "purge-watchdog" },
+    });
   }
 }
 
