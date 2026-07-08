@@ -21,25 +21,25 @@ export const TagSchema = z.object({
   title: z.string(),
   description: z.string(),
   status: TagStatusSchema,
-  createdAt: z.string().datetime(),
+  // Postgres timestamptz는 +00:00 offset을 달고 오므로 offset 허용이 필수.
+  createdAt: z.string().datetime({ offset: true }),
 });
 export type Tag = z.infer<typeof TagSchema>;
 
-// 목록 조회 범위 — 관리 화면은 active를, 복구 화면은 archived를 본다.
+// active=기본 조회, archived=복구 대상, all=둘 다.
 export const TAG_LIST_SCOPES = ["active", "archived", "all"] as const;
 export const TagListScopeSchema = z.enum(TAG_LIST_SCOPES).default("active");
 export type TagListScope = z.infer<typeof TagListScopeSchema>;
 
-// 인자 없이 부르면 active만 — 관리 화면의 기본.
 export const TagListInputSchema = z
   .object({ scope: TagListScopeSchema })
   .default({ scope: "active" });
 export type TagListInput = z.infer<typeof TagListInputSchema>;
 
-export const UpdateTagInputSchema = TagDraftSchema.extend({
+export const TagUpdateInputSchema = TagDraftSchema.extend({
   id: z.string().uuid(),
 });
-export type UpdateTagInput = z.infer<typeof UpdateTagInputSchema>;
+export type TagUpdateInput = z.infer<typeof TagUpdateInputSchema>;
 
 export const TagIdInputSchema = z.object({ id: z.string().uuid() });
 export type TagIdInput = z.infer<typeof TagIdInputSchema>;

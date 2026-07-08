@@ -35,7 +35,8 @@ CREATE FUNCTION create_tag(
 )
 RETURNS uuid AS $$
 DECLARE
-  v_tag_id uuid;
+  v_tag_id     uuid;
+  v_constraint text;
 BEGIN
   IF auth.uid() IS NOT NULL AND NOT is_workspace_member(p_workspace_id) THEN
     RAISE EXCEPTION 'workspace % is not accessible to the caller', p_workspace_id;
@@ -47,6 +48,10 @@ BEGIN
 
   RETURN v_tag_id;
 EXCEPTION WHEN unique_violation THEN
+  -- 제목 중복만 사용자 메시지로 옮긴다 — 나중에 다른 unique 인덱스가 생겨도
+  -- 무관한 위반을 "제목 중복"으로 오보하지 않게 제약 이름에 고정한다.
+  GET STACKED DIAGNOSTICS v_constraint = CONSTRAINT_NAME;
+  IF v_constraint <> 'tags_workspace_id_title_key' THEN RAISE; END IF;
   RAISE EXCEPTION 'a tag titled "%" already exists in this workspace (restore it if archived)', btrim(p_title);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
@@ -65,6 +70,8 @@ CREATE FUNCTION update_tag(
   p_description text
 )
 RETURNS void AS $$
+DECLARE
+  v_constraint text;
 BEGIN
   PERFORM 1 FROM tags
   WHERE id = p_tag_id AND status = 'active'
@@ -79,6 +86,8 @@ BEGIN
   SET title = btrim(p_title), description = btrim(p_description)
   WHERE id = p_tag_id;
 EXCEPTION WHEN unique_violation THEN
+  GET STACKED DIAGNOSTICS v_constraint = CONSTRAINT_NAME;
+  IF v_constraint <> 'tags_workspace_id_title_key' THEN RAISE; END IF;
   RAISE EXCEPTION 'a tag titled "%" already exists in this workspace', btrim(p_title);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

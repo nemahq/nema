@@ -2,7 +2,7 @@ import {
   TagDraftSchema,
   TagIdInputSchema,
   TagListInputSchema,
-  UpdateTagInputSchema,
+  TagUpdateInputSchema,
 } from "@nema-io/shared";
 
 import {
@@ -30,7 +30,7 @@ export const tagRouter = router({
   ),
 
   update: protectedProcedure
-    .input(UpdateTagInputSchema)
+    .input(TagUpdateInputSchema)
     .mutation(({ ctx, input }) =>
       updateTag({
         supabase: ctx.supabase,

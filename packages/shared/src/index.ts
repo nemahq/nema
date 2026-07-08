@@ -159,8 +159,8 @@ export {
   TagSchema,
   type TagStatus,
   TagStatusSchema,
-  type UpdateTagInput,
-  UpdateTagInputSchema,
+  type TagUpdateInput,
+  TagUpdateInputSchema,
 } from "./schemas/tag";
 export {
   type Topic,
