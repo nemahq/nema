@@ -1145,6 +1145,10 @@ export type Database = {
         };
         Returns: string;
       };
+      delete_workspace: {
+        Args: { p_workspace_id: string };
+        Returns: undefined;
+      };
       fetch_pending_digestion_sources: {
         Args: { p_max_retries?: number };
         Returns: {
@@ -1229,6 +1233,7 @@ export type Database = {
         Args: { p_workspace_id: string };
         Returns: boolean;
       };
+      leave_workspace: { Args: { p_workspace_id: string }; Returns: undefined };
       purge_expired_sources: {
         Args: { p_batch_limit?: number; p_retention_days?: number };
         Returns: number;
@@ -1298,6 +1303,14 @@ export type Database = {
           p_type: Database["public"]["Enums"]["reference_type"];
         };
         Returns: string;
+      };
+      update_workspace_member_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["workspace_role"];
+          p_user_id: string;
+          p_workspace_id: string;
+        };
+        Returns: undefined;
       };
       write_ingestion_review_changes: {
         Args: {

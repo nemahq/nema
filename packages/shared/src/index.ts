@@ -153,3 +153,16 @@ export {
   TOPIC_NAME_MAX_LENGTH,
   TopicSchema,
 } from "./schemas/topic";
+export {
+  type LeaveWorkspaceInput,
+  LeaveWorkspaceInputSchema,
+  type UpdateWorkspaceMemberRoleInput,
+  UpdateWorkspaceMemberRoleInputSchema,
+  WORKSPACE_ROLES,
+  type WorkspaceMember,
+  type WorkspaceMemberListInput,
+  WorkspaceMemberListInputSchema,
+  WorkspaceMemberSchema,
+  type WorkspaceRole,
+  WorkspaceRoleSchema,
+} from "./schemas/workspace";

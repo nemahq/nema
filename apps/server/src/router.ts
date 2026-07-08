@@ -1,3 +1,4 @@
+import { accountRouter } from "./routers/account-router";
 import { changesetRouter } from "./routers/changeset-router";
 import { devRouter } from "./routers/dev-router";
 import { digestReviewRouter } from "./routers/digest-review-router";
@@ -10,6 +11,7 @@ import { sessionRouter } from "./routers/session-router";
 import { sourceRouter } from "./routers/source-router";
 import { statementRouter } from "./routers/statement-router";
 import { topicRouter } from "./routers/topic-router";
+import { workspaceMemberRouter } from "./routers/workspace-member-router";
 import { publicProcedure, router } from "./trpc";
 
 export const appRouter = router({
@@ -27,6 +29,8 @@ export const appRouter = router({
   digest: digestRouter,
   digestReview: digestReviewRouter,
   topic: topicRouter,
+  workspaceMember: workspaceMemberRouter,
+  account: accountRouter,
   dev: devRouter,
 });
 
