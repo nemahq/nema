@@ -17,6 +17,7 @@ import type { RelationProposal } from "@server/prompts/relation-judgment";
 import type { PendingSource, PendingStatement, SourceDigest } from "./types";
 import {
   canFormRelations,
+  checkPurgeBacklog,
   chunkStatements,
   createStatementSyncWorker,
   deadlineContext,
@@ -1195,5 +1196,61 @@ describe("runVectorPurgePass", () => {
       expect.anything(),
     );
     expect(Sentry.captureException).toHaveBeenCalled();
+  });
+});
+
+describe("checkPurgeBacklog (purge 워치독)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  type WatchdogDeps = Parameters<typeof checkPurgeBacklog>[0];
+
+  // rpc(purge_job_last_success) → lastSuccess, from(sources) count 조회 → overdueCount
+  function watchdogDeps(params: {
+    lastSuccess: string | null;
+    overdueCount: number;
+  }): WatchdogDeps {
+    const rpc = vi.fn((name: string) =>
+      name === "purge_job_last_success"
+        ? Promise.resolve({ data: params.lastSuccess, error: null })
+        : Promise.resolve({ data: null, error: null }),
+    );
+    const chain: Record<string, unknown> = {};
+    for (const method of ["select", "eq", "lt"]) {
+      chain[method] = () => chain;
+    }
+    chain["then"] = (
+      resolve: (value: { count: number; error: null }) => void,
+    ) => resolve({ count: params.overdueCount, error: null });
+    const from = vi.fn(() => chain);
+    return { supabase: { rpc, from } } as unknown as WatchdogDeps;
+  }
+
+  const hoursAgo = (h: number) =>
+    new Date(Date.now() - h * 60 * 60 * 1000).toISOString();
+
+  it("잡이 최근 성공했으면 만료 원본이 남아도 경고하지 않는다", async () => {
+    await checkPurgeBacklog(
+      watchdogDeps({ lastSuccess: hoursAgo(1), overdueCount: 999 }),
+    );
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+  });
+
+  it("잡이 오래 안 돌았고 만료 원본이 있으면 경고한다", async () => {
+    await checkPurgeBacklog(
+      watchdogDeps({ lastSuccess: hoursAgo(48), overdueCount: 5 }),
+    );
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      expect.stringContaining("purge stalled"),
+      expect.objectContaining({ level: "warning" }),
+    );
+  });
+
+  it("잡이 오래 안 돌았어도 만료 원본이 없으면 조용하다(빈 DB·신규 배포)", async () => {
+    await checkPurgeBacklog(
+      watchdogDeps({ lastSuccess: null, overdueCount: 0 }),
+    );
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
 });

@@ -42,6 +42,30 @@ ALTER TABLE statements
 SELECT pgmq.create('vector_purge');
 
 -- =============================================================
+-- 2.5) legacy null-digest 진술 정리 + digest_id NOT NULL
+--
+--   v2는 모든 진술이 digest에서 추출된다(apply_extraction_statements가 강제). digest_id가
+--   NULL인 진술은 digest 도입(2026-07-06) 이전 v1 잔재로 v2 모델 밖이고, purge는 진술을
+--   digest 경로(원본→Digest→진술)로만 지우므로 이들을 남기면 원본 완전 삭제 시 고아가 된다.
+--   지금 정리하고 NOT NULL로 못박아 그 구멍을 원천 차단한다(현 데이터는 전부 테스트용이라
+--   삭제 합의 — Kyle). 삭제분의 Qdrant 벡터도 vector_purge로 넘겨 워커가 정리한다.
+-- =============================================================
+
+DO $$
+DECLARE
+  v_legacy_ids uuid[];
+BEGIN
+  SELECT array_agg(id) INTO v_legacy_ids FROM statements WHERE digest_id IS NULL;
+  IF v_legacy_ids IS NOT NULL THEN
+    PERFORM pgmq.send('vector_purge',
+      jsonb_build_object('statement_ids', to_jsonb(v_legacy_ids)));
+    DELETE FROM statements WHERE id = ANY(v_legacy_ids);
+  END IF;
+END $$;
+
+ALTER TABLE statements ALTER COLUMN digest_id SET NOT NULL;
+
+-- =============================================================
 -- 3) purge_expired_sources — 보관기간 지난 trashed 원본을 배치로 완전 삭제
 --
 --    삭제 대상 원본을 배치로 집어, 그 원본들의 Digest에 매달린 진술 id를 미리 모아
@@ -74,7 +98,8 @@ BEGIN
   END IF;
 
   -- hard delete될 진술 id를 미리 모은다(삭제 후엔 행이 없다) — 이 원본들의 Digest에
-  -- 매달린 진술 전부. CASCADE가 지울 집합과 정확히 같다.
+  -- 매달린 진술 전부. digest_id NOT NULL(2.5)이라 이 원본의 진술이 빠짐없이 잡히고,
+  -- CASCADE가 지울 집합과 정확히 같다.
   SELECT array_agg(s.id) INTO v_statement_ids
   FROM statements s
   JOIN digests d ON d.id = s.digest_id
@@ -138,3 +163,22 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 SELECT cron.schedule('purge-expired-sources', '0 3 * * *',
   $$ SELECT purge_expired_sources(); $$);
+
+-- =============================================================
+-- 6) purge_job_last_success — 워치독용 pg_cron 잡 마지막 성공 시각
+--
+--    워커 워치독이 "밀린 원본 개수"가 아니라 "잡이 실제로 돌았나"로 정지를 판정하게 한다 —
+--    대량 휴지통을 여러 날 나눠 비우는 정상 상황(배치 한도)에도 헛경보가 안 나게. cron
+--    스키마는 PostgREST에 노출되지 않으므로 SECURITY DEFINER로 감싸 public에 편입한다.
+-- =============================================================
+
+CREATE FUNCTION purge_job_last_success()
+RETURNS timestamptz AS $$
+  SELECT max(d.end_time)
+  FROM cron.job_run_details d
+  JOIN cron.job j ON j.jobid = d.jobid
+  WHERE j.jobname = 'purge-expired-sources' AND d.status = 'succeeded';
+$$ LANGUAGE sql SECURITY DEFINER SET search_path = public, cron;
+
+REVOKE ALL ON FUNCTION purge_job_last_success() FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION purge_job_last_success() TO service_role;

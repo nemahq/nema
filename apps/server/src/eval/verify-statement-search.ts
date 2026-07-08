@@ -124,6 +124,31 @@ async function main() {
   const sourceC = await createSource(spaceId, "점심 메뉴 잡담");
   const sourceOther = await createSource(otherSpaceId, "남의 토스 글");
 
+  // v2는 진술이 digest에서 나온다(digest_id NOT NULL) — 원본마다 seed용 digest 하나.
+  async function createDigest(sourceId: string, ownerSpaceId: string) {
+    const { data, error } = await admin
+      .from("digests")
+      .insert({
+        source_id: sourceId,
+        space_id: ownerSpaceId,
+        title: "eval seed digest",
+        description: "search eval fixture",
+        body: { type: "decision" },
+      })
+      .select("id")
+      .single();
+    if (error) {
+      throw error;
+    }
+    return data.id;
+  }
+  const digestBySource = new Map<string, string>([
+    [sourceA.id, await createDigest(sourceA.id, spaceId)],
+    [sourceB.id, await createDigest(sourceB.id, spaceId)],
+    [sourceC.id, await createDigest(sourceC.id, spaceId)],
+    [sourceOther.id, await createDigest(sourceOther.id, otherSpaceId)],
+  ]);
+
   // 3. 진술 — [원본, 내용, score(쿼리와의 통제된 유사도), 원문순서, status]
   type Seed = {
     source: { id: string };
@@ -213,6 +238,10 @@ async function main() {
 
   for (const seed of seeds) {
     const ownerSpaceId = seed.spaceId ?? spaceId;
+    const digestId = digestBySource.get(seed.source.id);
+    if (!digestId) {
+      throw new Error(`no digest fixture for source ${seed.source.id}`);
+    }
     const { data: statement, error: statementError } = await admin
       .from("statements")
       .insert({
@@ -222,6 +251,7 @@ async function main() {
         confidence: "certain",
         status: seed.status ?? "active",
         ingestion_status: "completed",
+        digest_id: digestId,
       })
       .select("id, created_at")
       .single();

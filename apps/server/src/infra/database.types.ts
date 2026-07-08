@@ -889,7 +889,7 @@ export type Database = {
             | null;
           content: string;
           created_at: string;
-          digest_id: string | null;
+          digest_id: string;
           due_date: string | null;
           error_message: string | null;
           id: string;
@@ -907,7 +907,7 @@ export type Database = {
             | null;
           content: string;
           created_at?: string;
-          digest_id?: string | null;
+          digest_id: string;
           due_date?: string | null;
           error_message?: string | null;
           id?: string;
@@ -925,7 +925,7 @@ export type Database = {
             | null;
           content?: string;
           created_at?: string;
-          digest_id?: string | null;
+          digest_id?: string;
           due_date?: string | null;
           error_message?: string | null;
           id?: string;
@@ -1233,6 +1233,7 @@ export type Database = {
         Args: { p_batch_limit?: number; p_retention_days?: number };
         Returns: number;
       };
+      purge_job_last_success: { Args: never; Returns: string };
       read_sync_events: {
         Args: { p_batch_size?: number; p_visibility_timeout?: number };
         Returns: {

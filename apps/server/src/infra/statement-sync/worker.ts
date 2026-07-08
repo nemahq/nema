@@ -112,8 +112,8 @@ const MS_PER_DAY = 86_400_000;
 // 보관기간은 마이그레이션 purge_expired_sources의 기본값과 맞춘다 — 둘이 어긋나면
 // 워치독이 헛경보하거나 지연을 놓친다.
 const PURGE_RETENTION_DAYS = 30;
-// 보관기간 경과 후에도 하루 안엔 잡이 청소한다 — 그 유예까지 지났는데 남아있으면 이상.
-const PURGE_WATCHDOG_GRACE_DAYS = 1;
+// 잡은 매일(03:00) 도므로 26시간 넘게 성공 기록이 없으면 한 사이클을 걸렀다는 신호.
+const PURGE_JOB_STALE_HOURS = 26;
 const PURGE_WATCHDOG_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 type Phase = "extraction" | "embedding" | "linking";
@@ -377,22 +377,42 @@ async function ackVectorPurge(deps: WorkerDeps, msgId: number): Promise<void> {
 // trashed로 남은 원본이 있으면 잡이 안 도는 신호라 Sentry로 알린다("잡의 주인은 DB,
 // 감시는 서버").
 // 타이머가 fire-and-forget로 부르므로 절대 reject하지 않는다(poll/sweep과 같은 계약).
-async function checkPurgeBacklog(deps: WorkerDeps): Promise<void> {
+// pg_cron purge가 조용히 멈춘 경우를 잡는 워치독 — "밀린 개수"가 아니라 "잡이 최근에
+// 실제로 성공했나"를 본다. 대량 휴지통을 배치 한도 때문에 여러 날 나눠 비우는 정상 상황엔
+// backlog가 커도 헛경보하지 않고, 잡이 오래 안 돌았고(정지 의심) 실제로 만료된 원본이
+// 남아 있을 때만 경고한다(빈 DB·신규 배포는 조용). fire-and-forget 타이머가 부르므로
+// 절대 reject하지 않는다(poll/sweep과 같은 계약).
+export async function checkPurgeBacklog(deps: WorkerDeps): Promise<void> {
   try {
-    const cutoff = new Date(
-      Date.now() -
-        (PURGE_RETENTION_DAYS + PURGE_WATCHDOG_GRACE_DAYS) * MS_PER_DAY,
-    ).toISOString();
+    const { data: lastSuccess, error } = await deps.supabase.rpc(
+      "purge_job_last_success",
+    );
+    if (error) {
+      Sentry.captureException(
+        new Error(`purge job health check failed: ${error.message}`),
+        { tags: { component: "statement-sync", phase: "purge-watchdog" } },
+      );
+      return;
+    }
 
-    const { count, error } = await deps.supabase
+    // 최근에 성공했으면 backlog 크기와 무관하게 정상 — 조용히 끝낸다.
+    const staleMs = PURGE_JOB_STALE_HOURS * 60 * 60 * 1000;
+    if (lastSuccess && Date.now() - Date.parse(lastSuccess) < staleMs) {
+      return;
+    }
+
+    // 잡이 오래 안 돌았다 → 실제로 만료된 원본이 있을 때만 경고.
+    const cutoff = new Date(
+      Date.now() - PURGE_RETENTION_DAYS * MS_PER_DAY,
+    ).toISOString();
+    const { count, error: countError } = await deps.supabase
       .from("sources")
       .select("id", { count: "exact", head: true })
       .eq("status", "trashed")
       .lt("trashed_at", cutoff);
-
-    if (error) {
+    if (countError) {
       Sentry.captureException(
-        new Error(`purge backlog check failed: ${error.message}`),
+        new Error(`purge backlog count failed: ${countError.message}`),
         { tags: { component: "statement-sync", phase: "purge-watchdog" } },
       );
       return;
@@ -400,11 +420,11 @@ async function checkPurgeBacklog(deps: WorkerDeps): Promise<void> {
 
     if (count && count > 0) {
       Sentry.captureMessage(
-        `[statement-sync] purge backlog: ${count} trashed source(s) overdue by >${PURGE_WATCHDOG_GRACE_DAYS}d — pg_cron 'purge-expired-sources' may be stalled`,
+        `[statement-sync] purge stalled: pg_cron 'purge-expired-sources' last succeeded ${lastSuccess ? lastSuccess : "never"}, ${count} expired source(s) still trashed`,
         {
           level: "warning",
           tags: { component: "statement-sync", phase: "purge-watchdog" },
-          extra: { count },
+          extra: { count, lastSuccess },
         },
       );
     }
