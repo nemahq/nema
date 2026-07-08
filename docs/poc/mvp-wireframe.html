@@ -379,7 +379,7 @@
     font-family: inherit; font-size: 12px; color: #8a94a3; cursor: pointer;
   }
   /* "빼기"(Digest 직접 삭제)는 없음: Digest는 확정 후 불변(create/archive만, 그마저 사용자
-     직접 액션이 아니라 원본 빼기의 캐스케이드로만 archived됨). "빼기"는 Statement(진술)
+     직접 액션이 아니라 ingestion 되돌리기의 캐스케이드로만 archived됨). "빼기"는 Statement(진술)
      단위 개념이라, 본문을 문장 단위로 보여주는 재설계가 먼저 필요 — 다음 라운드로 미룸. */
 
   #panel-digest-detail .body-field { margin-bottom: 14px; }
@@ -2090,7 +2090,7 @@
     // 위쪽에서 이미 한 번 검사가 끝난 뒤라, 지금 붙여도 이번 클릭에서 즉시 이동해버리는 문제는
     // 없음(다음 클릭부터 동작) — 재적용이 필요하면 그 화면의 "되돌리기" 버튼을 누르면 됨
     // (revert의 revert = 재적용, 재귀적으로 이미 풀림). 원래 changeset을 되돌리는 것도 결국
-    // 원본을 pending으로 되돌리는 것과 같은 동작(07-modeling.md "원본 빼기" 참고)이라, 버리기와
+    // 원본을 pending으로 되돌리는 것과 같은 동작(07-modeling.md "ingestion 되돌리기" 참고)이라, 버리기와
     // 똑같이 "초안" 카운트가 올라가고 "원본도 삭제하기" 후속 버튼이 나란히 붙는다
     if (e.target.closest('[data-revert-review]')) {
       var revertBtn = e.target.closest('[data-revert-review]');
