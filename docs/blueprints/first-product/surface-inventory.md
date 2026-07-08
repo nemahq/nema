@@ -137,7 +137,7 @@ Space 오버뷰의 변경셋 탭. **Open / Closed** 서브 필터로 나뉜다 �
 
 relation·manual·revert는 이번 라운드에 다듬은 타입이 아니라서(그 화면 자체가 미착수), Open의 relation 두 행은 placeholder(클릭 무반응)이고 Closed 쪽 relation·manual·revert 행은 Changeset 상세에서 스텁으로만 보인다 — 다만 헤더·되돌리기 버튼은 타입 무관 공통이라 지금도 다 동작한다(아래 Changeset 상세 참고).
 
-- (나중에 볼 것) `discarded` 항목을 되살려서 이어가는 흐름(재리뷰), "Source 제출로 생긴 것만 보기" 같은 필터가 필요한지는 아직 안 정했다.
+**`discarded` 항목을 되살리는 흐름(재리뷰)** — Digest 리뷰 화면의 "버려짐" 헤더(현재 "원본도 삭제하기" 버튼만 노출)와 Changeset 상세의 discarded 케이스에 "되살리기" 버튼을 추가할 예정(아직 와이어프레임 미반영, 다음 구현 라운드). 새 changeset을 만들지 않고 같은 changeset의 status를 `open`으로 되돌린다(07-modeling.md "버려짐 되살리기" 참고) — 그 Source가 지금 `pending`이고 `open`인 ingestion changeset이 없을 때만 가능하다.
 
 ## 초안
 

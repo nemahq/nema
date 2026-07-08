@@ -46,4 +46,4 @@
 | 메시지 (Message), 챗 (Chat) | 위와 같은 이유로 v2에 없는 개념 |
 | 개체 (Entity) | Reference로 흡수. "유형" 값(인물/조직/프로젝트 등) 중 하나로 표현 |
 | 줄기 (Stem) | 스레드(Thread)로 대체됨 |
-| Draft (원본 승격 전 대기 글) = `drafts` 테이블·`draft.*` 라우터 | v2 모델엔 없는 자리. 날글은 손대지 않고 Source로 박제되고, 정리본은 그 뒤의 Digest가 맡는다. **엔티티로서의 Draft**만 폐기다(PR I-b에서 테이블·라우터·MCP 도구 제거). 일반어 "초안"은 살아 있다 — pending changeset의 확정 전 편집 상태(07-modeling), 아직 그래프에 안 들어간 pending 원본을 모으는 "초안" 목록이 그 뜻으로 쓴다 |
+| Draft (원본 승격 전 대기 글) = `drafts` 테이블·`draft.*` 라우터 | v2 모델엔 없는 자리. 날글은 손대지 않고 Source로 박제되고, 정리본은 그 뒤의 Digest가 맡는다. **엔티티로서의 Draft**만 폐기다(PR I-b에서 테이블·라우터·MCP 도구 제거). 일반어 "초안"은 살아 있다 — `open` 상태인 changeset의 확정 전 편집 상태(07-modeling.md "open은 확정 전 초안" 참고), changeset 없이 `pending`으로 남은 Source를 모으는 "초안" 화면(surface-inventory.md 참고)이 그 뜻으로 쓴다. v1의 "제출 전 대기 글"과는 다른 개념이니 혼동 주의 |
