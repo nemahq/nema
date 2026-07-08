@@ -2,7 +2,10 @@ import { TRPCError } from "@trpc/server";
 
 import type { WorkspaceRole } from "@nema-io/shared";
 
-import type { TypedSupabaseClient } from "@server/infra/supabase";
+import {
+  getSupabaseAdmin,
+  type TypedSupabaseClient,
+} from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
 interface MembershipRow {
@@ -95,10 +98,10 @@ export async function getAccountDeletionBlockers(args: {
 // 이미 지운 워크스페이스는 그대로 두고 던진다(재시도가 수렴한다).
 export async function deleteAccount(args: {
   supabase: TypedSupabaseClient;
-  admin: TypedSupabaseClient;
   userId: string;
 }): Promise<void> {
-  const { supabase, admin, userId } = args;
+  const { supabase, userId } = args;
+  const admin = getSupabaseAdmin();
 
   const plan = await loadDeletionPlan(supabase, userId);
 

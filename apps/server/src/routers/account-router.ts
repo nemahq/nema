@@ -1,4 +1,3 @@
-import { getSupabaseAdmin } from "@server/infra/supabase";
 import {
   deleteAccount,
   getAccountDeletionBlockers,
@@ -11,10 +10,6 @@ export const accountRouter = router({
   ),
 
   delete: protectedProcedure.mutation(({ ctx }) =>
-    deleteAccount({
-      supabase: ctx.supabase,
-      admin: getSupabaseAdmin(),
-      userId: ctx.user.id,
-    }),
+    deleteAccount({ supabase: ctx.supabase, userId: ctx.user.id }),
   ),
 });
