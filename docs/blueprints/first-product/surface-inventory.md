@@ -115,11 +115,11 @@ Space 오버뷰의 변경셋 탭. **Open / Closed** 서브 필터로 나뉜다 �
 행 구성은 둘 다 같다: **제목+번호 · 리뷰어/작성자 · 시각**(Digest 리뷰 화면 헤더의 "status | authorId | createdAt"과 같은 정보를 리스트 행으로 압축) — 상태는 행에 안 넣는다, 어느 서브탭에 있는지가 이미 상태를 말해주기 때문이다(초안 화면에서 "대기 중" 배지를 생략한 것과 같은 이유).
 
 - **Open**: `status: open`인 Changeset. 4개 타입(ingestion/relation/manual/revert) 중 open이 가능한 건 ingestion·relation뿐이다 — manual·revert는 제출 시점에 바로 `closed`+`applied`로 생성돼 open을 거치지 않는다(lazy changeset creation, 07-modeling.md 참고). 클릭하면 Digest 리뷰 화면으로 이동(ingestion만 — relation은 판정 화면 자체가 아직 없어 이번 라운드는 클릭해도 반응 없는 placeholder 행으로만 둔다).
-- **Closed**: `status: closed`인 Changeset을 `outcome`(적용됨/버려짐) 구분 없이 다 보여준다 — 행마다 작은 outcome 배지로 구분한다(GitHub Closed 탭이 Merged·Closed를 배지로만 나누는 것과 같은 패턴). `discarded`를 숨기지 않는 이유는, 검토했다가 버린 이력 자체가 조용히 사라지면 nema 자신의 원칙(매끄러움이 아니라 충실함, 지난 것을 안 덮는다 — surface-design.md §2·§3)과 부딪히기 때문이다 — 버려도 원본(Source)은 "초안"에 남아 재료는 안 사라지지만, "검토했었다"는 사실 자체는 이 목록에서만 확인할 수 있다. `discarded`는 ingestion에만 존재한다(관계 판정은 결국 어느 쪽으로든 판정이 내려져야 해서 discarded가 없고, manual·revert는 제출=즉시 적용이라 discard 자체가 성립하지 않는다). 클릭하면 [Changeset 상세](#changeset-상세)로 이동.
+- **Closed**: `status: closed`인 Changeset을 `outcome`(적용됨/버려짐) 구분 없이 다 보여준다 — 행마다 작은 outcome 배지로 구분한다(GitHub Closed 탭이 Merged·Closed를 배지로만 나누는 것과 같은 패턴). `discarded`를 숨기지 않는 이유는, 검토했다가 버린 이력 자체가 조용히 사라지면 nema 자신의 원칙(매끄러움이 아니라 충실함, 지난 것을 안 덮는다 — surface-design.md §2·§3)과 부딪히기 때문이다 — 버려도 원본(Source)은 "초안"에 남아 재료는 안 사라지지만, "검토했었다"는 사실 자체는 이 목록에서만 확인할 수 있다. `discarded`는 `ingestion`·`relation` 둘 다 있다 — `ingestion`은 리뷰를 버린 경우, `relation`은 엔진이 제안한 충돌·중복 자체가 틀렸다고("이건 실제로 충돌·중복이 아니다") 사람이 판단해 버린 경우다(그 쌍은 재제안 가드에 걸려 엔진이 다시 안 물어봄, 07-modeling.md 참고) — "진짜 충돌·중복이면 어느 쪽이 맞는지는 반드시 판정해야 한다"는 것과 "애초에 그 제안 자체가 틀렸을 수 있다"는 건 별개의 문제라서다. `manual`·`revert`는 제출=즉시 적용이라 discard 자체가 성립하지 않는다. 클릭하면 [Changeset 상세](#changeset-상세)로 이동.
 
 **타입 배지**도 outcome 배지 옆에 나란히 붙는다(Open·Closed 둘 다) — outcome 배지만으로는 "이게 ingestion인지 relation인지 manual인지"가 제목 문구를 읽어야만 구분돼 스캔하기 약하다는 문제가 있었다. 타입 배지는 outcome 배지와 시각적으로 구분되도록 배경을 채운다(outcome은 테두리만). 값은 모델의 실제 `Changeset.type` 4개(`ingestion`/`relation`/`manual`/`revert`)를 그대로 영문으로 쓴다 — 처음엔 manual 안에서 "수정"/"삭제"로 더 잘게 나눴었는데, 그건 타입이 아니라 그 타입 안에서 벌어지는 액션이라 위계를 섞은 실수였다(Digest·Reference를 뭘 했는지는 지금처럼 제목 문구가 담당). 지금은 행 하나에 배지가 두 개(타입+outcome)까지 붙어 다소 빽빽해 보일 수 있는데, 이번 라운드는 "타입이 스캔 가능해야 한다"는 것만 확인하는 것이고 실제 제품에서 시각적으로 다듬을 것을 전제로 한다.
 
-**11개 케이스를 각각 확인할 수 있도록 행을 하나씩 둔다** — 화면 하나로 4개 타입 × 상태·outcome 조합을 다 검증하기 위한 예시 목록이다:
+**12개 케이스를 각각 확인할 수 있도록 행을 하나씩 둔다** — 화면 하나로 4개 타입 × 상태·outcome 조합을 다 검증하기 위한 예시 목록이다. `relation` 버려짐(엔진이 제안한 충돌·중복 자체가 틀린 경우)은 모델상 존재하지만, 이번 라운드는 와이어프레임에 실 데이터로 반영하지 않았다(Closed 목록엔 아직 없음) — relation 화면을 다듬을 차례에 같이 채운다:
 
 | 상태 | 타입 | 케이스 |
 | --- | --- | --- |
@@ -130,6 +130,7 @@ Space 오버뷰의 변경셋 탭. **Open / Closed** 서브 필터로 나뉜다 �
 | Closed | ingestion | 버려짐 |
 | Closed | relation(충돌) | 판정 완료(적용됨) |
 | Closed | relation(중복) | 판정 완료(적용됨) |
+| Closed | relation | 버려짐(제안 자체가 틀림) — 와이어프레임 미반영, 위 참고 |
 | Closed | manual | Digest 직접 수정(적용됨) |
 | Closed | manual | Digest 삭제(대체 없음, 적용됨) — 트리거 UI 자체가 아직 미설계, 모델상으로만 존재하는 케이스 |
 | Closed | manual | Reference 직접 수정(적용됨) |

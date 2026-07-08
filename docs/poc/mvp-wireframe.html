@@ -929,9 +929,12 @@
               <!-- Closed 목록에서 들어가는 Changeset 상세는 새 화면(screen-changeset-detail) —
                    Digest 리뷰 화면을 preset으로 재사용하던 이전 방식은 걷어냄(액션 화면과 기록
                    화면을 섞으면 안 됨). data-case로 어느 본문 뷰를 보여줄지, data-title/number/
-                   status/author/time으로 헤더를 채운다. discarded는 ingestion에만 존재(관계
-                   판정은 결국 어느 쪽으로든 판정이 내려져야 해서 discarded가 없고, manual·revert는
-                   제출=즉시 적용이라 discard 자체가 없음) -->
+                   status/author/time으로 헤더를 채운다. discarded는 ingestion·relation 둘 다
+                   있다(relation은 엔진이 제안한 충돌·중복 자체가 틀렸다고 판단해 버린 경우 —
+                   "진짜 충돌·중복이면 어느 쪽이 맞는지 판정"과 "그 제안 자체가 틀렸을 수 있음"은
+                   별개 문제라서다, 07-modeling.md 참고). 이번 라운드는 relation 버려짐 케이스를
+                   실 데이터로 안 넣었다(relation 화면 다듬을 차례에). manual·revert는 제출=즉시
+                   적용이라 discard 자체가 없음 -->
               <div class="view" id="changeset-closed">
                 <div class="changeset-list">
                   <button type="button" class="changeset-row" data-goto-base="screen-changeset-detail" data-case="ingestion-applied"
