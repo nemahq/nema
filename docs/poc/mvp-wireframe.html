@@ -53,8 +53,21 @@
   }
   #lnb .lnb-space.active { border-color: var(--line); }
   /* 묻기·해설: nema의 핵심 차별점 기능이라 다른 항목보다 눈에 띄어야 하지만, 시각적 강조
-     스타일은 표면 디자인 라운드에서 다시 잡기로 하고 지금은 원복(위치만 최상단 쪽 유지) */
-  #lnb .lnb-ask { border-color: var(--line); margin-bottom: 4px; }
+     스타일은 표면 디자인 라운드에서 다시 잡기로 하고 지금은 원복(위치만 최상단 쪽 유지).
+     옆의 lnb-quick-ask는 완전히 다른 동작(화면 전환 없이 플로팅 인풋만 띄움)이라 같은
+     버튼 라벨("묻기")을 안 씀 — 아이콘도 "+"(이 파일에서 이미 "새로 만들기" 뜻으로 굳어짐,
+     "+ 새 Space"·"+ 새 레퍼런스로 만들기") 대신 "즉시/빠름" 계열로(정확한 글리프는
+     표면 디자인 라운드에서) */
+  #lnb .lnb-ask-row { display: flex; align-items: stretch; gap: 4px; margin-bottom: 4px; }
+  #lnb .lnb-ask { border-color: var(--line); margin-bottom: 0; flex: 1; }
+  #lnb .lnb-quick-ask { flex: none; width: auto; border-color: var(--line); padding: 8px 10px; }
+  /* 묻기·해설 화면 자체에서는 트리거를 숨긴다 — 이미 그 화면 하단에 같은 역할의 입력창이
+     있어 중복이다. body:has()로 "지금 활성 base-screen이 screen-ask-narrate인가"를
+     확인 — LNB와 base-screen이 DOM 트리에서 멀리 떨어져 있어(#lnb는 #content-area의
+     형제) 부모 선택자 없이 이 방식이 제일 간단하다. 트리거만 숨길 뿐, 이미 열려 있던
+     플로팅 인풋 자체는 안 닫는다(작성 중이던 내용을 그대로 이 화면 입력창으로 옮기는
+     동작은 JS의 data-goto-base 핸들러가 한다) */
+  body:has(#screen-ask-narrate.on) .lnb-quick-ask { display: none; }
   /* 초안: 있을 때만 나타남(Linear Drafts처럼) — 묻기·해설 바로 아래, 긴급도 기준으로
      Workspace 스코프(Reference 목록)보다 위에 둔다 */
   #lnb .lnb-drafts { margin-bottom: 16px; }
@@ -145,6 +158,38 @@
     flex-direction: column;
     gap: 12px;
     box-sizing: border-box;
+  }
+
+  /* 플로팅 인풋 — 모달과 달리 배경(backdrop)을 안 덮는다(뒤 콘텐츠 계속 클릭 가능해야 함).
+     position:absolute + #content(position:relative)의 자식 — #content는 이미 flex라
+     사이드 패널이 열리든 리사이즈되든 자기 폭이 알아서 줄어드니, 여기선 그 안에서
+     left:0/right:0로 가운데만 잡으면 된다(패널 폭을 따로 계산할 필요 없음 — 마크업
+     위치는 아래 HTML 주석 참고). LNB(트리거가 있는 자리)에 앵커링하지 않고 화면 하단에
+     두는 이유는 screen-ask-narrate의 위 CSS 주석 참고 */
+  .floating-ask {
+    display: none; position: absolute; left: 0; right: 0; bottom: 24px;
+    justify-content: center; padding: 0 24px; box-sizing: border-box; z-index: 10;
+  }
+  .floating-ask.open { display: flex; }
+  .floating-ask-box {
+    position: relative; width: 100%; max-width: 640px; box-sizing: border-box;
+    background: var(--bg); border: 1px solid var(--line); padding: 16px;
+  }
+  .floating-ask-box textarea {
+    width: 100%; resize: none; overflow: hidden; font-size: 14px; line-height: 1.5;
+    border: none; font-family: inherit; color: var(--ink); padding: 0;
+  }
+  .floating-ask-close {
+    position: absolute; top: 8px; right: 8px; border: none; background: none;
+    font-family: inherit; font-size: 16px; color: #8a94a3; cursor: pointer; line-height: 1; padding: 4px;
+  }
+  .floating-ask-footer {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px;
+  }
+  .floating-ask-hint { font-size: 12px; color: #8a94a3; }
+  .floating-ask-footer .submit {
+    flex: none; border: 1px solid var(--ink); background: var(--ink); color: var(--bg);
+    padding: 8px 12px; cursor: pointer; font-family: inherit; font-size: 14px;
   }
   /* 조건부 체크박스 줄 — Digest 아카이브 확인 모달의 "대체됐던 판단도 함께 다시 활성화"처럼,
      본문 안내와 액션 버튼 사이에 사람이 그 자리에서 직접 고르는 선택지가 필요할 때 씀 */
@@ -980,6 +1025,229 @@
      중복이라 판단했는지 근거를 보여준다 */
   #screen-relation-merge .rm-overlap-highlight { background: rgba(255, 200, 0, 0.25); font-weight: bold; }
 
+  /* ── 묻기·해설 ── nema의 핵심 차별점: 판별(같은가·충돌하는가·유효한가, 01-problem.md "한계 2")이
+     사람 눈에 보이고, 그 자리에서 판정 가능한 유일한 화면(narration-design.md).
+
+     셸은 챗형(ChatGPT·Perplexity 관습, 익숙함) — 근데 딱 두 군데는 그대로 안 베꼈다:
+     1) 각주(작은 위첨자+호버) 대신 칩. Statement는 "문장 크기의 가장 작은 단위"(07-modeling.md)라
+        원문 그대로 인라인에 넣을 수 있어, 각주로 축약했다가 호버로 펼치는 간접 단계 자체가
+        불필요하다(호버 없는 모바일과도 궁합이 안 맞음).
+     2) Q&A는 쌓이되(narration-design.md §9 "겉모습은 채팅이어도 속은 매번 독립 질의") 챗
+        버블(꼬리로 이어지는 모양)을 안 쓴다 — 버블은 "이전 턴을 기억하는 진짜 대화"라는 형태와
+        의미가 일치하는 ChatGPT·Perplexity에선 맞지만, nema는 매번 독립 질의라 그 형태를 그대로
+        쓰면 형태가 사실과 어긋난다. 대신 질문을 소제목처럼(굵게+가는 밑줄+타임스탬프) 처리해
+        경계만 뚜렷이 준다 — 이러면 페이지에서 테두리·색 있는 요소는 칩뿐이라, 정작 눈에 띄어야
+        할 표식이 카드 테두리 같은 다른 시각 요소와 주의를 다투지 않는다.
+
+     Q&A 세션(대화 공간)은 없다 — glossary.md "폐기된 용어": 해설은 질문마다 독립으로 답해 대화
+     공간 개념 자체가 불필요. 다만 그 결과물(질문+답)은 stale해도 열람용으로는 영속 저장한다(LLM
+     컨텍스트로는 절대 재사용하지 않음, "세션=맥락 나르기"와 "로그=그냥 보여주기"는 다른 문제).
+
+     표식 4종 — 전부 짧게 다듬어진 기존 라벨을 재사용해 칩이 길어지는 문제를 피한다:
+       평범(관계 없음)   → 진술 원문 그대로
+       대체(replaces)    → 대체한 Digest 제목, 취소선(Digest 상세의 archived 진술 취소선(.superseded)과
+                            같은 문법 재사용). 클릭 시 그 Digest로(digest-supersedes-banner와 동일 동작)
+       해소(resolves)    → 해소한 Digest 제목, 취소선 없음(07-modeling.md: "폐기와 달리 B는 틀린 게
+                            아니라 해소된 것" — 무효화 톤을 쓰면 의미가 왜곡됨). 실제 예시 데이터가
+                            없어(어느 화면에도 해소 표식 선례가 없음) 스타일만 정의, 렌더링은 다음 라운드
+       충돌(conflicts)   → changeset "A vs B" 제목(07-modeling.md 148행 제목 규칙). 유일하게 색을
+                            쓰는 표식 — screen-relation-judgment·changeset-detail의 rj-conflict-highlight와
+                            같은 amber를 재사용해 "이 부분은 아직 안 끝났다"를 화면이 달라도 같은 색으로.
+                            클릭하면 Digest 상세가 열리고 이미 그 안에 있는 "리뷰 대기" 섹션(맨 위
+                            고정)으로 자연히 판정까지 이어진다 — 딥링크를 새로 만들 필요가 없다.
+       근거 없음         → 점선 테두리, 비인터랙티브(가리킬 진술이 없어 클릭할 데가 없음).
+                            narration-design.md §5 "빈 곳을 그럴듯하게 메우지 않고 빈 곳이라고 말한다"의
+                            증거 — 아무 표시가 없으면 이 정직함이 다른 연결 문장과 구분이 안 된다.
+
+     스트리밍: 근거 묶음이 산문보다 먼저 오는 서버 계약(narration-design.md §7)을 그대로 살려,
+     로딩을 빈 스켈레톤 대신 "근거 N건 확인·충돌 N건" 요약으로 채운다 — 그 요약 칩들이 뒤이어
+     오는 산문에 흡수되며 제자리를 찾아간다. 성질 급한 사람은 산문을 안 기다려도 표식만으로
+     "아직 안 끝난 게 있다"를 알 수 있다.
+
+     탐색 경로(narration-trail): Space→주제→Changeset→관계→진술로 좁혀가는 다단계 탐색 알고리즘은
+     아직 설계 전(지금은 단일 벡터 검색+선택적 주제 범위뿐, narration-design.md §3)이라 텍스트는
+     스텁이다. 완성되면 "지도"(원래 11-first-product-direction.md가 해설과 나란히 공들일 곳으로
+     꼽았던 것)를 해설 안으로 접어 넣는 역할을 한다 — 답이 사용자 자신의 정보 구조 어디서
+     나왔는지 보여주는, 표식과는 다른 축(표식=무엇을 근거 삼았나, 트레일=내 기억 어디쯤에서 왔나).
+     구현되면 도메인 용어(주제 이름·Changeset 번호)까지만 보여준다 — 알고리즘 노출 우려보다는
+     "큰 그림 먼저"(narration-design.md §10) 원칙 문제라, 벡터 점수·테이블명 같은 구현 디테일은
+     기본적으로 안 보여준다는 뜻.
+
+     그래프·타임라인처럼 진짜 "구조"를 보여줘야 하는 표현은 가운데 영역에 안 놓는다 — 가운데는
+     끝까지 산문(오케스트레이터가 풀어 읽어주는 해설자 자리)으로 남기고, 그런 시각화는 전부
+     사이드 패널로 뺀다. 이건 narration-design.md §10의 "산문이 큰 그림, 진술·원본은 부를 때
+     세부"를 그대로 확장한 것뿐이다 — "부를 때 세부를 보여주는" 자리가 이미 사이드 패널
+     (panel-digest-detail)로 있으니, 탐색 경로도 그 자리를 그대로 쓴다(새 메커니즘 아님). 그래서
+     narration-trail은 텍스트가 아니라 버튼이고, 누르면 사이드 패널에 그래프/타임라인 시각화용
+     탭이 새로 열린다(탭 내용 자체는 지금 스텁 — 알고리즘이 없으니 무엇을 시각화할지도 아직
+     정할 수 없다, 위와 같은 이유).
+
+     Q&A 기록은 영속(위 세션 논의: "세션=맥락 나르기"는 안 만들지만 "로그=그냥 보여주기"는
+     남긴다) — 근데 그 효용(다시 읽는 게 다시 묻는 것보다 가볍다, 나중에 "진짜 이렇게
+     말했었나" 확인 가능)은 전부 "몇 주 전 그 질문을 다시 찾을 수 있어야" 성립한다. 그래서
+     스크롤 위에 가벼운 검색을 얹는다. 세션 목록(위 논의에서 기각)과 다른 점: 이건 그룹을
+     만들지 않고 그냥 하나로 이어진 로그를 찾기 쉽게 도와줄 뿐이다.
+
+     검색은 지금 화면에 이미 그려진 턴을 숨기는 제자리 필터가 아니다 — 로그가 위로 스크롤할
+     때마다 페이지네이션으로 과거를 불러오는 무한 스크롤이라(narration-turn들이 전부
+     DOM에 있지 않음), 화면에 없는 과거 턴은 숨길 수도 없다. 그래서 검색어를 입력하면
+     서버에 별도로 다시 조회해(메인 스크롤과 무관한 독립 쿼리) 그 결과를 입력창 아래
+     팝오버(Digest 본문 @ 멘션의 mention-search와 같은 골격 재사용, 폭은 입력창 폭과
+     정확히 같음)에 미리보기로 보여준다. 항목을 클릭하면 팝오버는 닫히고, 메인 스크롤이
+     (필요하면 그 지점까지 과거 페이지를 마저 불러온 뒤) 그 턴이 원래 있던 자리로 이동해
+     잠깐 강조된다 — 필터링해서 다른 턴을 화면에서 지우는 대신, 원래 흐름 속 제자리에서
+     다시 만나게 한다("안 지우고 가린다" 원칙과 같은 결). 매칭은 질문+답변 전체 대상 단순
+     포함 검색(의미 기반 유사 검색 아님) — "지어내지 않는다"를 검색에도 그대로 적용해,
+     있으면 걸리고 없으면 안 걸리는 예측 가능한 동작만 한다.
+
+     범위 좁히기는 스레드에서 미리 좁혀 진입하는 경로(narration-design.md의 "줄기를 눌러 묻기")
+     대신 입력창 안에서 @ 멘션으로 한다 — 하기로 하지 않음. Digest 본문이 이미 쓰는 @ 멘션
+     문법(Reference 지칭)을 여기서는 Space·주제·태그·Digest를 지칭하는 데 재사용한다. 이게
+     더 유연한 이유: 스레드 진입은 "이미 그 스레드를 보고 있어야" 좁혀 물을 수 있는데, 멘션은
+     아무 데서나(LNB 전역 진입에서도) 즉석으로 특정 대상을 걸고 물을 수 있다. 또 매번 독립
+     질의라는 원칙과도 잘 맞는다 — "이어서 묻기" 없이도 멘션 하나로 각 질문이 스스로 무엇을
+     가리키는지 자기완결적으로 담는다. 지금은 개념 확인용으로 질문 안에 멘션 하나만
+     정적으로 넣어뒀고(narration-mention), 실제 자동완성 검색 팝오버(Digest 본문의
+     mention-search와 같은 것)는 다음 라운드.
+
+     아직 안 정한 것(다음 라운드): 빈 상태(첫 진입) 문구, 전체 근거 0건 상태, 입력창 placeholder
+     최종 카피, 멘션 자동완성 검색 팝오버 배선(narration-mention 관련, 검색 팝오버와는 별개).
+     플로팅 인풋(#floating-ask) 관련도 둘 남음 — (1) 이미 이 화면 안에 있을 때 번개 버튼을
+     누르면 어떻게 되는지(자기 자신의 하단 입력창과 중복됨, 지금은 그냥 똑같이 뜸)
+     (2) 플로팅 인풋이 열린 채로 다른 화면으로 이동하면 어떻게 되는지(지금은 그냥 계속
+     열린 채로 새 화면 위에 떠 있음 — 닫아야 하는지, 작성 중이던 내용을 유지해야 하는지 미정). */
+  #screen-ask-narrate { padding: 0; }
+  /* 검색: 스크롤 영역 맨 위, 입력창과 같은 이유(sticky)로 위쪽에 고정 — 로그가 길어져도
+     항상 손닿는 곳에 있어야 "찾기"라는 목적을 실제로 해낸다. 근데 기본 상태는 아이콘만 —
+     이 화면의 주 행동은 "묻기"(하단 입력창)고 "예전 걸 찾기"는 부차적이라, 상시 펼쳐진
+     입력창을 얹으면 산문 중심으로 가볍게 유지하려던 가운데 영역 위에 또 하나의 입력 UI가
+     항상 떠 있는 셈이 된다. 아이콘 클릭 시 펼쳐지는 정도면 충분하다.
+     검색 대상은 질문 텍스트만이 아니라 답변(인용된 진술·Digest 제목 포함) 전체다 — 사람은
+     그때 자기가 정확히 뭐라고 물었는지보다, nema가 뭘 언급했는지(예: 어떤 Digest 이름)를
+     더 잘 기억하는 경우가 많다. 질문만 검색하면 그 기억을 못 씀 */
+  #screen-ask-narrate .narration-history-controls {
+    position: sticky; top: 0; z-index: 1; background: var(--bg);
+    display: flex; align-items: center;
+    padding: 12px 24px; border-bottom: 1px solid var(--line);
+  }
+  /* 기본: 아이콘만 우측에(margin-left: auto로 오른쪽 끝에 붙임) */
+  #screen-ask-narrate .narration-search-icon {
+    border: none; background: none; padding: 4px 0; cursor: pointer; margin-left: auto;
+    font-family: inherit; font-size: 13px; color: #8a94a3;
+  }
+  /* 펼친 상태: 아이콘은 숨기고, 입력창이 이 줄 전체 너비를 그대로 차지 */
+  #screen-ask-narrate .narration-history-controls.open .narration-search-icon { display: none; }
+  #screen-ask-narrate .narration-search-wrap { display: none; flex: 1; align-items: center; gap: 8px; }
+  #screen-ask-narrate .narration-history-controls.open .narration-search-wrap { display: flex; }
+  /* 인풋 하나만 감싸는 별도 wrap — 팝오버 폭을 "인풋의 폭"에 정확히 맞추기 위해(옆의 ×
+     버튼은 제외). position:relative 기준점이 이 wrap이라, width:100% 팝오버가 인풋 폭과
+     항상 같다 */
+  #screen-ask-narrate .narration-search-input-group { position: relative; flex: 1; }
+  #screen-ask-narrate .narration-search {
+    width: 100%; border: 1px solid var(--line); padding: 8px 12px; font-family: inherit; font-size: 14px; box-sizing: border-box;
+  }
+  #screen-ask-narrate .narration-search-close {
+    border: none; background: none; font-family: inherit; font-size: 16px; color: #8a94a3;
+    cursor: pointer; line-height: 1; padding: 4px; flex: none;
+  }
+
+  /* 검색 팝오버 — mention-search와 같은 골격(그룹 라벨·항목 버튼), 여기서는 항목이
+     이름이 아니라 매칭된 턴 미리보기(질문+스니펫+시각). 인풋 바로 아래, 인풋과 같은 폭 */
+  #screen-ask-narrate .narration-search-popover {
+    position: absolute; top: 100%; left: 0; width: 100%; margin-top: 4px;
+    border: 1px solid var(--line); background: var(--bg); box-sizing: border-box;
+    max-height: 320px; overflow-y: auto; z-index: 2;
+  }
+  #screen-ask-narrate .narration-search-count {
+    font-size: 12px; color: #8a94a3; padding: 10px 12px 4px;
+  }
+  #screen-ask-narrate .narration-search-hit {
+    display: block; width: 100%; text-align: left; box-sizing: border-box;
+    border: none; border-top: 1px solid var(--line); background: none; padding: 10px 12px;
+    font-family: inherit; cursor: pointer;
+  }
+  #screen-ask-narrate .narration-search-hit-q { font-size: 13px; font-weight: bold; margin-bottom: 2px; }
+  #screen-ask-narrate .narration-search-hit-snippet { font-size: 13px; color: #8a94a3; }
+  #screen-ask-narrate .narration-search-hit-snippet mark { background: rgba(255, 200, 0, 0.4); color: inherit; }
+  #screen-ask-narrate .narration-search-hit-time { font-size: 11px; color: #8a94a3; margin-top: 4px; }
+  #screen-ask-narrate .narration-search-empty { padding: 12px; font-size: 13px; color: #8a94a3; }
+
+  /* 검색으로 점프해온 턴 강조 — 잠깐 배경이 도드라졌다 가라앉는다(JS에서 클래스를 잠깐
+     붙였다 뗌). 색은 표식 없는 원래 여기 화면에서 유일하게 쓰던 amber(rj-conflict-highlight
+     계열)를 그대로 재사용 — 새 색을 안 만든다 */
+  #screen-ask-narrate .narration-turn.jump-highlight { background: rgba(255, 200, 0, 0.15); transition: background 1.5s ease; }
+  /* 날짜 구분선 — 세션(그룹)이 아니라 그냥 스캔을 돕는 시각적 이정표. digest-time과 같은
+     상대 시각 어휘("오늘"·"어제") 재사용 */
+  #screen-ask-narrate .narration-date-divider {
+    font-size: 12px; color: #8a94a3; text-align: center; margin: 28px 0 20px;
+    position: relative;
+  }
+  #screen-ask-narrate .narration-scroll { padding: 24px; }
+  #screen-ask-narrate .narration-turn { margin-bottom: 40px; }
+  #screen-ask-narrate .narration-turn:last-child { margin-bottom: 0; }
+  #screen-ask-narrate .narration-turn-header {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px;
+  }
+  #screen-ask-narrate .narration-question { font-size: 16px; font-weight: bold; }
+  #screen-ask-narrate .narration-timestamp { font-size: 12px; color: #8a94a3; flex: none; white-space: nowrap; }
+  #screen-ask-narrate .narration-answer { font-size: 14px; line-height: 1.8; }
+
+  /* 근거 칩 공용 — 진술 원문을 그대로 인라인에 담는다(각주 대신, 위 주석 1번 근거) */
+  #screen-ask-narrate .narration-chip {
+    display: inline; border: 1px solid var(--line); background: #eef0f2; padding: 1px 6px;
+    font-family: inherit; font-size: 14px; color: var(--ink); cursor: pointer;
+  }
+  #screen-ask-narrate .narration-chip-replaced { text-decoration: line-through; color: #8a94a3; background: none; }
+  /* 해소 스타일 정의만 — 실제 렌더링 예시는 다음 라운드(위 주석 참고) */
+  #screen-ask-narrate .narration-chip-resolved { background: none; border-style: dashed; }
+  #screen-ask-narrate .narration-chip-conflict {
+    background: rgba(255, 200, 0, 0.25); border: 1px solid rgba(200, 150, 0, 0.5); font-weight: bold;
+  }
+  #screen-ask-narrate .narration-gap {
+    display: inline; border: 1px dashed var(--line); padding: 1px 6px; color: #8a94a3; cursor: default;
+  }
+  /* 질문 안 @ 멘션 — Digest 본문의 .mention과 같은 문법(#panel-digest-detail .mention 참고),
+     여기서는 Reference가 아니라 Space·주제·태그·Digest를 지칭. 지금은 정적 예시 하나만,
+     자동완성 팝오버는 다음 라운드(위 CSS 주석 참고) */
+  #screen-ask-narrate .narration-mention { background: #eef0f2; padding: 1px 4px; }
+
+  /* 스트리밍 중 상태 — 정적 스냅샷 하나로 예시(케이스가 진짜 애니메이션되진 않음, screen-drafts의
+     "처리 중" 카드와 같은 방식). 근거 요약이 먼저 뜨고 산문은 흐르다 만 채로 커서만 남는다 */
+  #screen-ask-narrate .narration-evidence-summary { font-size: 13px; color: #8a94a3; margin-bottom: 8px; }
+  #screen-ask-narrate .narration-cursor { display: inline-block; width: 2px; height: 14px; background: var(--ink); vertical-align: middle; margin-left: 2px; }
+
+  /* 탐색 경로 — 알고리즘 미정 스텁(위 주석 참고), 지금은 비인터랙티브 텍스트만 */
+  #screen-ask-narrate .narration-trail {
+    display: block; border: none; background: none; padding: 0; margin-top: 10px;
+    font-family: inherit; font-size: 12px; color: #8a94a3; cursor: pointer; text-align: left;
+  }
+  #screen-ask-narrate .narration-trail:hover { text-decoration: underline; }
+  #screen-ask-narrate .narration-trail-label { margin-right: 6px; }
+
+  /* 입력창 — Space 오버뷰 .space-input과 같은 자동 확장 textarea, 화면 하단 고정(넣기와 달리
+     여긴 스크롤 영역과 입력창이 같이 있어야 해서 sticky로 하단 고정).
+     @ 멘션 버튼은 Digest 본문 편집이 이미 쓰는 .body-field-row(textarea+.at-mention-btn 묶음)를
+     그대로 재사용 — pendingMentionField를 잡는 JS가 ".body-field-row → textarea" 순으로
+     찾게 돼 있어서, 이 구조를 그대로 써야 새 JS 없이 붙는다. 멘션 피커도 새 앵커형 팝오버를
+     만들지 않고 기존 modal-mention-picker와 같은 모달 방식으로 통일한다 — 지금 그 모달도
+     "나중 제품에서는 caret+팝오버로 갈 것"을 전제로 한 와이어프레임 단계의 단순화라, 여기서
+     새 패턴을 얹으면 오히려 일관성이 깨진다(아래 modal-narration-mention-picker 참고) */
+  #screen-ask-narrate .narration-input-bar {
+    position: sticky; bottom: 0; display: flex; align-items: flex-end; gap: 8px;
+    padding: 16px 24px; background: var(--bg); border-top: 1px solid var(--line); box-sizing: border-box;
+  }
+  #screen-ask-narrate .narration-input-bar .body-field-row { flex: 1; }
+  #screen-ask-narrate .narration-input-bar textarea {
+    flex: 1; padding: 10px; border: 1px solid var(--line); background: var(--bg);
+    font-family: inherit; font-size: 14px; color: var(--ink); box-sizing: border-box;
+    resize: none; max-height: 200px; overflow-y: auto; line-height: 1.4;
+  }
+  #screen-ask-narrate .narration-input-bar .submit {
+    border: 1px solid var(--ink); background: var(--ink); color: var(--bg);
+    padding: 10px 14px; cursor: pointer; font-family: inherit; font-size: 14px;
+  }
+
   /* Reference 목록 — Digest 피드(시간순 카드)와 다르게 "찾아보기(사전·위키)" 목적이라 컬럼형
      테이블로 간다. 정렬 기본값은 이름 가나다순(최신순 아님) — 여기 오는 이유가 "최근 뭐가
      있었나"가 아니라 "그 대상 다시 찾기"라서. create 진입점(+ 새 Reference)은 없다 — Reference는
@@ -1232,8 +1500,14 @@
            드롭다운(계정 설정) 안으로 이동 -->
       <button type="button" class="lnb-user" data-toggle-dropdown="dropdown-account">Kyle의 워크스페이스</button>
 
-      <!-- 묻기·해설: nema의 핵심 차별점이라 다른 항목보다 눈에 띄게(CSS 참고), 최상단 쪽 -->
-      <button type="button" class="lnb-ask" data-goto-base="screen-ask-narrate">[아이콘] 묻기·해설</button>
+      <!-- 묻기·해설: nema의 핵심 차별점이라 다른 항목보다 눈에 띄게(CSS 참고), 최상단 쪽.
+           옆의 번개 버튼은 화면 전환 없이 지금 화면 위에 플로팅 인풋만 띄운다(아래
+           #floating-ask 참고) — "지난 로그 훑어보기"(라벨 클릭)와 "지금 즉석으로
+           묻기"(번개 클릭)는 같은 기능의 다른 진입일 뿐이라 나란히 둔다 -->
+      <div class="lnb-ask-row">
+        <button type="button" class="lnb-ask" data-goto-base="screen-ask-narrate">[아이콘] 묻기·해설</button>
+        <button type="button" class="lnb-quick-ask" title="화면 이동 없이 빠르게 묻기" data-toggle-floating-ask>[번개 아이콘]</button>
+      </div>
 
       <!-- 초안: changeset 없이 pending으로 남은 Source 목록. 있을 때만 나타남(Linear Drafts처럼) —
            다 처리되면 이 버튼 자체가 없어진다(지금은 예시로 있는 상태를 보여줌). 긴급도 기준으로
@@ -1428,7 +1702,160 @@
           </div>
         </section>
         <section class="base-screen" id="screen-ask-narrate">
-          <div class="stub">[묻기·해설 — 별도 라운드(레퍼런스 조사 필요)에서 채움]</div>
+          <!-- 설계 근거는 위 CSS 주석 참고. 아래는 "채워진 상태" 예시(여러 날에 걸친 턴들) —
+               다른 화면들과 같은 관례(정적 예시로 상태 확인)로, 진짜 스트리밍 애니메이션은 없다.
+               빈 상태(첫 진입, 질문 0개)면: 이 스크롤 영역 전체 대신 짧은 안내 문구 하나만
+               (예: "저장된 기록에만 근거해서 답합니다. 궁금한 걸 물어보세요" 톤 — 정확한 카피는
+               UX 라이팅 몫) + 입력창. 추천 질문 칩 같은 건 넣지 않는다 — 데모 데이터 없이
+               단순 안내만 두는 다른 화면들의 관례(Space 오버뷰 빈 상태 등)와 같은 이유. -->
+          <div class="narration-history-controls">
+            <button type="button" class="narration-search-icon" data-toggle-search>[검색 아이콘] 예전 질문·답변 찾기</button>
+            <div class="narration-search-wrap">
+              <!-- 인풋만 감싸는 별도 그룹(위 CSS 주석) — 팝오버 폭이 인풋 폭과 정확히 같아야
+                   해서 × 버튼은 이 그룹 바깥에 둔다. 팝오버는 "결정"으로 검색한 정적 예시
+                   — 실제로는 타이핑마다 서버에 새로 조회한다(위 CSS 주석 참고) -->
+              <div class="narration-search-input-group">
+                <input type="text" class="narration-search" value="결정" placeholder="예전 질문·답변에서 찾기" />
+                <div class="narration-search-popover">
+                  <div class="narration-search-count">2건</div>
+                  <button type="button" class="narration-search-hit" data-search-jump="turn-message-send">
+                    <div class="narration-search-hit-q">메시지 전송 방식, 왜 이렇게 정해졌지?</div>
+                    <div class="narration-search-hit-snippet">커맨드+엔터 전송이 기본값으로 <mark>결정</mark>됐습니다...</div>
+                    <div class="narration-search-hit-time">오늘 14:02</div>
+                  </button>
+                  <button type="button" class="narration-search-hit" data-search-jump="turn-resolved">
+                    <div class="narration-search-hit-q">메시지 전송 실패하면 어떻게 처리하기로 했었지?</div>
+                    <div class="narration-search-hit-snippet">...자동 3회 재시도 후 실패 배지 표시 <mark>결정</mark>으로 최근 해소됐습니다.</div>
+                    <div class="narration-search-hit-time">오늘 14:05</div>
+                  </button>
+                  <!-- 결과 없음이면 이 자리에 대신: <div class="narration-search-empty">찾는 표현이 없습니다</div> -->
+                </div>
+              </div>
+              <button type="button" class="narration-search-close" data-toggle-search>×</button>
+            </div>
+          </div>
+          <div class="narration-scroll">
+            <!-- 날짜 구분선 — 세션(그룹) 아님, 그냥 스캔 이정표. 로그 전체는 여전히 하나로
+                 이어져 있다(위 CSS 주석 참고) -->
+            <div class="narration-date-divider">지난주</div>
+            <div class="narration-turn">
+              <div class="narration-turn-header">
+                <div class="narration-question">온보딩 이메일에 사용 사례 영상 넣자는 건 왜 나온 아이디어야?</div>
+                <div class="narration-timestamp">6월 30일</div>
+              </div>
+              <div class="narration-answer">
+                신규 유저 이탈 구간을 확인한 뒤 나온 아이디어입니다
+                <button type="button" class="narration-chip" data-open-panel="panel-digest-detail" data-open-tab="tab-related-1">온보딩 이메일에 사용 사례 영상 추가</button>.
+              </div>
+            </div>
+
+            <div class="narration-date-divider">어제</div>
+            <div class="narration-turn">
+              <div class="narration-turn-header">
+                <div class="narration-question">이메일 CC/BCC UX 관련해서 아직 안 정해진 게 뭐였지?</div>
+                <div class="narration-timestamp">어제 11:20</div>
+              </div>
+              <div class="narration-answer">
+                1월 29일 배포를 목표로 이메일 하위 옵션은 진행 중이고,
+                <button type="button" class="narration-chip" data-open-panel="panel-digest-detail" data-open-tab="tab-related-1">이메일 CC/BCC UX, 디자인 확정 후 백엔드 진행</button>
+                — CC/BCC는 디자인 확정을 대기하며 백엔드만 우선 설계하고 있습니다.
+              </div>
+            </div>
+
+            <div class="narration-date-divider">오늘</div>
+            <!-- 턴 1: 평범·대체·충돌 세 표식이 한 답 안에 섞인 예시. 충돌 칩은 review-pending과
+                 같은 예시 데이터(발신자 아바타·이름 표시 논쟁)를 재사용한다 — Digest 상세 패널의
+                 "지금 이 Digest와 판정 화면 예시는 서로 다른 예시 데이터" 주석과 같은 단순화 -->
+            <div class="narration-turn" id="turn-message-send">
+              <div class="narration-turn-header">
+                <div class="narration-question">메시지 전송 방식, 왜 이렇게 정해졌지?</div>
+                <div class="narration-timestamp">오늘 14:02</div>
+              </div>
+              <div class="narration-answer">
+                커맨드+엔터 전송이 기본값으로 결정됐습니다
+                <button type="button" class="narration-chip" data-open-panel="panel-digest-detail" data-open-tab="tab-digest">커맨드+엔터 기본값으로</button>.
+                원래는
+                <button type="button" class="narration-chip narration-chip-replaced" data-open-panel="panel-digest-detail" data-open-tab="tab-digest-superseded">메시지는 항상 엔터로 줄바꿈</button>
+                방식이었으나 이 결정으로 바뀌었습니다.
+                <br /><br />
+                발신자 아바타·이름 표시 여부는 아직 결론이 안 났고,
+                <!-- 충돌 칩 라벨 = changeset "A vs B" 제목(07-modeling.md), 클릭하면 Digest
+                     상세가 열리고 이미 그 안에 있는 "리뷰 대기" 섹션(맨 위 고정)으로 자연히
+                     이어진다 — 별도 딥링크 불필요 -->
+                <button type="button" class="narration-chip narration-chip-conflict" data-open-panel="panel-digest-detail" data-open-tab="tab-digest">충돌 — 항상 표시 vs 생략</button>
+                상충하는 의견이 있습니다.
+              </div>
+              <!-- 탐색 경로: Space→주제→Changeset→관계→진술 다단계 탐색 알고리즘 미정이라
+                   스텁(위 CSS 주석 참고). 비인터랙티브 텍스트만 -->
+              <!-- 텍스트가 아니라 버튼 — 그래프·타임라인처럼 진짜 구조를 보여줘야 하는 표현은
+                   가운데(산문) 영역에 안 두고 사이드 패널로 뺀다(위 CSS 주석 참고). 지금은
+                   그 사이드 탭도 스텁(tab-narration-trail) -->
+              <button type="button" class="narration-trail" data-open-panel="panel-digest-detail" data-open-tab="tab-narration-trail">
+                <span class="narration-trail-label">탐색 경로</span>
+                <span class="narration-trail-path">CS 채팅 UX 개선 주제 → 변경셋 #12 → 진술 3건 →</span>
+              </button>
+            </div>
+
+            <!-- 턴 2: 근거 없음 — narration-design.md §5의 예시("예산은 어떻게 재배분했어?")를
+                 그대로 씀. 찾은 게 없으니 탐색 경로도 생략(보여줄 경로 자체가 없음) -->
+            <div class="narration-turn">
+              <div class="narration-turn-header">
+                <div class="narration-question">예산은 어떻게 재배분했어?</div>
+                <div class="narration-timestamp">오늘 14:03</div>
+              </div>
+              <div class="narration-answer">
+                예산을 어떻게 재배분했는지는 <span class="narration-gap">기록 없음</span> 관련 내용을 찾지 못했습니다.
+              </div>
+            </div>
+
+            <!-- 턴 2.5: 해소(resolves) 예시 — 상상해서 지어낸 데이터. 다른 화면 어디에도 해소
+                 표식 선례가 없어(위 CSS 주석 참고) 실제 예시 재사용이 불가능했다. 취소선 없음
+                 (07-modeling.md: "폐기와 달리 B는 틀린 게 아니라 해소된 것" — 무효화 톤 금지),
+                 라벨은 해소한 Digest 제목(대체 칩과 같은 규칙). 지어낸 Digest라 어디에도 실제
+                 탭이 없어 data-open-* 없이 시각 형태만 — 실제 데이터가 생기면 다른 칩들과
+                 같은 방식(Digest 상세로 이동)으로 배선한다 -->
+            <div class="narration-turn" id="turn-resolved">
+              <div class="narration-turn-header">
+                <div class="narration-question">메시지 전송 실패하면 어떻게 처리하기로 했었지?</div>
+                <div class="narration-timestamp">오늘 14:05</div>
+              </div>
+              <div class="narration-answer">
+                전송 실패 처리 방식은 한동안 미결이었는데,
+                <button type="button" class="narration-chip narration-chip-resolved">전송 실패 시 자동 3회 재시도 후 실패 배지 표시</button>
+                결정으로 최근 해소됐습니다.
+              </div>
+            </div>
+
+            <!-- 턴 3: 스트리밍 중 상태의 정적 스냅샷(screen-drafts "처리 중" 카드와 같은 방식 —
+                 실제 애니메이션은 없음). 근거 요약이 산문보다 먼저 뜨고, 산문은 흐르다 만 채로
+                 커서만 남는다 — 성질 급한 사람은 산문을 안 기다려도 표식 유무를 먼저 안다.
+                 질문 안 @ 멘션 예시도 겸함 — 스레드에서 미리 좁혀 들어오는 대신, 이렇게 아무
+                 데서나 즉석으로 범위를 걸고 물을 수 있다(위 CSS 주석 참고) -->
+            <div class="narration-turn">
+              <div class="narration-turn-header">
+                <div class="narration-question"><span class="narration-mention">@CS 채팅 UX 개선</span> 이번 분기 결정 흐름 알려줘</div>
+                <div class="narration-timestamp">방금</div>
+              </div>
+              <div class="narration-evidence-summary">근거 3건 확인 · 충돌 1건</div>
+              <div class="narration-answer">
+                커맨드+엔터 전송이 기본값으로 결정됐습니다
+                <button type="button" class="narration-chip" data-open-panel="panel-digest-detail" data-open-tab="tab-digest">커맨드+엔터 기본값으로</button>.
+                원래는<span class="narration-cursor"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 입력창: Space 오버뷰 .space-input과 같은 자동 확장 textarea, 화면 하단 고정(sticky).
+               placeholder 최종 카피는 UX 라이팅 몫 — 지금은 "지어내지 않는다"는 정체성만 담아둠.
+               @ 버튼은 Digest 본문 편집과 같은 .body-field-row+.at-mention-btn 조합(위 CSS
+               주석 참고) — 누르면 modal-narration-mention-picker가 열린다 -->
+          <div class="narration-input-bar">
+            <div class="body-field-row">
+              <textarea rows="1" placeholder="저장된 기록에만 근거해서 답합니다. 궁금한 걸 물어보세요"></textarea>
+              <button type="button" class="at-mention-btn" title="멘션" data-open-modal="modal-narration-mention-picker">@</button>
+            </div>
+            <button type="button" class="submit">↑</button>
+          </div>
         </section>
         <!-- Reference 목록: Workspace 스코프 디렉토리(사전·위키 개념) — Digest 피드처럼 시간순으로
              훑는 게 아니라 특정 대상을 찾거나 카테고리로 좁혀보는 화면이라 컬럼형 테이블로 구성.
@@ -2358,6 +2785,41 @@
             </div>
           </div>
         </section>
+
+        <!-- 플로팅 인풋 — LNB의 번개 버튼(#lnb .lnb-quick-ask)이 연다. #content(베이스 화면들의
+             공통 부모)의 자식으로 둔다 — #shell 형제로 두고 position:fixed+left:240px로
+             고정폭 계산하면, 사이드 패널이 열렸을 때 패널 폭(리사이즈 가능이라 고정값이
+             아님)만큼 더 빼줘야 하는데 그 폭을 알 방법이 없어 패널을 침범했었다. #content는
+             이미 flex 레이아웃으로 사이드 패널이 열리든 리사이즈되든 자기 폭이 알아서
+             줄어드니까(#content-area가 flex, .side-panel은 flex:none 고정폭), 그 안에서
+             position:absolute로 두면 별도 계산 없이 항상 "사이드 패널 뺀 콘텐츠 영역"
+             기준으로 가운데 잡힌다.
+             모달과 달리 배경을 안 덮는다 — 지금 보던 화면을 계속 둘러보면서 멘션을 다는 게
+             목적이라 뒤 콘텐츠가 클릭 가능해야 한다.
+             다른 화면으로 이동해도 열린 채로 유지된다(의도적 — 작성 중이던 질문을 이동
+             한 번으로 잃으면 안 됨). 다만 묻기·해설 화면 자체에서는 트리거(번개 버튼)를
+             아예 숨긴다(LNB CSS의 body:has(...) 참고) — 이미 그 화면 하단에 똑같은
+             입력창이 있어 중복이기 때문. 트리거가 안 보여도 이미 열려 있던 플로팅 인풋은
+             유지되다가, 묻기·해설 화면으로 실제 전환되는 순간(라벨 클릭이든 제출이든)
+             JS가 그 안에 작성 중이던 텍스트를 화면 본래 입력창으로 옮기고 스스로 닫는다
+             (data-goto-base 핸들러 참고) — 작성한 걸 버리지 않으면서 입력창 두 개가
+             동시에 떠 있는 상태도 안 생기게 한다.
+             제출하면(data-submit-floating-ask) 묻기·해설 화면으로 전환하고 방금 물은 걸 새
+             턴으로 그 자리에 얹는다(JS 참고) — 실제 검색·해설 생성은 서버 몫이라 여기선
+             "근거 확인 중" 정도의 자리만 채운 채로 멈춘다 -->
+        <div class="floating-ask" id="floating-ask">
+          <div class="floating-ask-box">
+            <button type="button" class="floating-ask-close" data-toggle-floating-ask>×</button>
+            <div class="body-field-row">
+              <textarea rows="1" placeholder="저장된 기록에만 근거해서 답합니다. 궁금한 걸 물어보세요"></textarea>
+              <button type="button" class="at-mention-btn" title="멘션" data-open-modal="modal-narration-mention-picker">@</button>
+            </div>
+            <div class="floating-ask-footer">
+              <span class="floating-ask-hint">제출하면 묻기·해설 화면으로 이동해 답을 확인합니다</span>
+              <button type="button" class="submit" data-submit-floating-ask>↑</button>
+            </div>
+          </div>
+        </div>
       </main>
       <!-- 사이드뷰: 베이스 화면과 나란히, content-area 안에서 독립적으로 토글 -->
       <!-- 평소 열람 모드 예시 — 피드의 "메시지 전송, 인라인 모드 대신 커맨드+엔터 기본값으로"
@@ -2404,6 +2866,13 @@
              (안 지우고 가린다 원칙 — archived여도 직접 링크 타면 계속 읽을 수 있음) -->
           <div class="panel-tab" data-tab-id="tab-digest-superseded">
             <button type="button" class="panel-tab-label" data-open-tab="tab-digest-superseded">메시지는 항상 엔터로 줄바꿈</button>
+            <button type="button" class="panel-tab-close" data-close-tab>×</button>
+          </div>
+          <!-- 묻기·해설의 "탐색 경로" 버튼이 여는 탭 — 그래프·타임라인처럼 진짜 구조를 보여줘야
+               하는 표현은 가운데(산문) 영역에 안 두고 여기로 뺀다는 원칙의 자리(screen-ask-narrate
+               CSS 주석 참고). 탐색 알고리즘 자체가 미정이라 내용은 스텁 -->
+          <div class="panel-tab" data-tab-id="tab-narration-trail">
+            <button type="button" class="panel-tab-label" data-open-tab="tab-narration-trail">탐색 경로</button>
             <button type="button" class="panel-tab-close" data-close-tab>×</button>
           </div>
           <!-- 원문 탭: Digest 리뷰 화면의 카드별 "원문에서 보기" 트리거로 열림. 하나의 Source만
@@ -2898,6 +3367,13 @@
             <div class="source-text-title">발신자 정보 표시 간소화 논의</div>
             <div class="source-text">최근에 이메일 UI가 너무 무겁다는 피드백이 계속 들어오고 있어서요, 발신자 쪽부터 좀 걷어내볼까 하는데. <span class="source-locator-highlight">아바타랑 이름 표시는 빼고 그냥 이메일 주소만 보여주는 식으로 가면 훨씬 간결해질 것 같아요.</span> 일단 이렇게 정리해서 이번 배포에 반영하시죠.</div>
           </div>
+          <!-- 탐색 경로 탭 — 묻기·해설이 어떻게 이 근거까지 좁혀왔는지(Space→주제→Changeset→
+               관계→진술)를 그래프·타임라인으로 보여줄 자리. 다단계 탐색 알고리즘 자체가 아직
+               없어(narration-design.md §3, 지금은 단일 벡터 검색뿐) 뭘 시각화할지 정할 수 없는
+               상태 — 그래서 스텁. 자리(사이드 패널, 산문과 분리)만 지금 확정한다 -->
+          <div class="panel-tab-content" id="tab-narration-trail">
+            <div class="stub">[탐색 경로 그래프·타임라인 — 다단계 탐색 알고리즘 설계 후 채움. 지금은 "CS 채팅 UX 개선 주제 → 변경셋 #12 → 진술 3건" 같은 텍스트 요약만 있음]</div>
+          </div>
         </div>
       </aside>
     </div>
@@ -2988,6 +3464,34 @@
       <div class="mention-group-label">레퍼런스</div>
       <button type="button" class="mention-item" data-mention-name="레드" data-close-modal>레드</button>
       <button type="button" class="mention-create" data-close-modal>+ 새 레퍼런스로 만들기</button>
+    </div>
+  </div>
+
+  <!-- 묻기·해설 전용 @ 멘션 피커 — 위 modal-mention-picker(Digest 본문, 레퍼런스 단일 타입)와
+       다른 모달로 분리한다. 여긴 타입이 5개(주제·Digest·Reference·Space·태그)라 그룹 구성
+       자체가 다르고, "+ 새로 만들기"도 없다 — 저건 콘텐츠를 쓰는 중이라 그 자리에서 새
+       레퍼런스를 만들 수도 있어야 했지만, 여긴 이미 있는 걸 찾아 묻는 맥락이라 없는 걸
+       새로 만들 이유가 없다. 그룹 순서는 고정(주제→Digest→Reference→Space→태그) — 매칭
+       개수로 순서가 바뀌면 스캔하기 어려워진다(검색 팝오버에서 이미 지킨 "예측 가능한
+       동작" 원칙과 같음). 매칭 없는 그룹은 실제로는 숨겨야 하지만 지금은 정적 예시라 5개
+       다 보여줌. 각 항목은 그 대상이 이미 다른 화면에서 쓰는 표기를 재사용(Digest는
+       [타입] 접두, Reference는 [유형] 접두 — 새 배지 컴포넌트를 여기 또 만들지 않음) -->
+  <div class="modal-backdrop" id="modal-narration-mention-picker">
+    <div class="modal">
+      <input type="text" class="mention-search" placeholder="검색" />
+      <div class="mention-group-label">주제</div>
+      <button type="button" class="mention-item" data-mention-name="CS 채팅 UX 개선" data-close-modal>CS 채팅 UX 개선</button>
+      <button type="button" class="mention-item" data-mention-name="온보딩 개선" data-close-modal>온보딩 개선</button>
+      <div class="mention-group-label">Digest</div>
+      <button type="button" class="mention-item" data-mention-name="메시지 전송, 인라인 모드 대신 커맨드+엔터 기본값으로" data-close-modal>[결정] 메시지 전송, 인라인 모드 대신 커맨드+엔터 기본값으로</button>
+      <div class="mention-group-label">Reference</div>
+      <button type="button" class="mention-item" data-mention-name="레드" data-close-modal>[인물] 레드</button>
+      <div class="mention-group-label">Space</div>
+      <button type="button" class="mention-item" data-mention-name="기본" data-close-modal>기본</button>
+      <button type="button" class="mention-item" data-mention-name="예시 프로젝트" data-close-modal>예시 프로젝트</button>
+      <div class="mention-group-label">태그</div>
+      <button type="button" class="mention-item" data-mention-name="메시징" data-close-modal>메시징</button>
+      <button type="button" class="mention-item" data-mention-name="CS" data-close-modal>CS</button>
     </div>
   </div>
 
@@ -3290,7 +3794,7 @@
     ta.style.height = ta.scrollHeight + 'px';
   }
   document.addEventListener('input', function (e) {
-    var ta = e.target.closest('.space-input textarea, #screen-digest-review textarea.doc-input');
+    var ta = e.target.closest('.space-input textarea, #screen-digest-review textarea.doc-input, .narration-input-bar textarea, .floating-ask-box textarea');
     if (ta) autoGrow(ta);
   });
 
@@ -3414,6 +3918,19 @@
     var base = e.target.closest('[data-goto-base]');
     if (base) {
       exclusiveOn('.base-screen', base.dataset.gotoBase);
+      // 묻기·해설로 (라벨 클릭 등으로) 들어올 때, 플로팅 인풋에 작성 중이던 게 있으면
+      // 버리지 않고 이 화면 본래 입력창으로 옮긴 뒤 플로팅은 닫는다 — 트리거도 이 화면에선
+      // 숨는데(위 CSS의 body:has 참고) 그렇다고 작성하던 질문까지 사라지면 안 됨
+      if (base.dataset.gotoBase === 'screen-ask-narrate') {
+        var floatingTaMove = document.querySelector('.floating-ask-box textarea');
+        var mainTa = document.querySelector('#screen-ask-narrate .narration-input-bar textarea');
+        if (floatingTaMove.value.trim()) {
+          mainTa.value = floatingTaMove.value;
+          autoGrow(mainTa);
+          floatingTaMove.value = '';
+        }
+        document.getElementById('floating-ask').classList.remove('open');
+      }
       // Digest 리뷰 화면은 원문 대조가 핵심 작업이라, 들어오자마자 원문 탭이 기본으로 열려있다
       // (첫 후보 카드 locator 하이라이트) — 그 뒤로도 다중 탭이라 자유롭게 열고 닫을 수 있음
       if (base.dataset.gotoBase === 'screen-digest-review') {
@@ -3802,6 +4319,69 @@
 
     var cancelEdit = e.target.closest('[data-cancel-edit]');
     if (cancelEdit) cancelEdit.closest('.body-edit-zone').classList.remove('editing');
+
+    // 묻기·해설 검색 아이콘: 기본은 우측 아이콘만, 누르면 그 줄 전체가 입력창이 되고
+    // 포커스까지 준다(입력창의 × 버튼이나 아이콘을 다시 누르면 접힘) — 상시 노출 입력창
+    // 대신 아이콘으로 둔 이유는 위 CSS 주석 참고
+    var toggleSearch = e.target.closest('[data-toggle-search]');
+    if (toggleSearch) {
+      var searchControls = toggleSearch.closest('.narration-history-controls');
+      searchControls.classList.toggle('open');
+      if (searchControls.classList.contains('open')) searchControls.querySelector('input').focus();
+    }
+
+    // 검색 팝오버에서 결과 클릭: 팝오버·검색창을 닫고, 그 턴이 원래 있던 자리로 스크롤
+    // 이동한 뒤 잠깐 강조한다(실제로는 메인 스크롤에 아직 안 불러온 과거 턴일 수도 있어
+    // 그만큼 페이지를 더 불러온 뒤 이동해야 하지만, 여긴 이미 다 그려진 정적 예시라
+    // scrollIntoView만으로 시연) — "찾은 항목을 지운 목록으로 대체" 대신 "원래 흐름 속
+    // 제자리에서 다시 만나게" 하는 게 이 화면 전체가 지키는 "안 지우고 가린다" 원칙과 같다
+    var searchJump = e.target.closest('[data-search-jump]');
+    if (searchJump) {
+      var targetTurn = document.getElementById(searchJump.dataset.searchJump);
+      searchJump.closest('.narration-history-controls').classList.remove('open');
+      targetTurn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetTurn.classList.add('jump-highlight');
+      setTimeout(function () { targetTurn.classList.remove('jump-highlight'); }, 1800);
+    }
+
+    // 플로팅 인풋 토글 — LNB 번개 버튼과 박스 안 × 버튼이 같은 data 속성을 공유한다(열려
+    //있으면 닫고, 닫혀 있으면 열고 포커스). 모달이 아니라 배경 클릭으로 안 닫힌다 — 뒤
+    // 콘텐츠를 계속 클릭할 수 있어야 하는 게 이 UI의 요점이라, 명시적으로 ×나 제출을
+    // 눌러야만 닫히는 게 맞다(실수로 바깥을 클릭했다고 작성 중이던 질문이 날아가면 안 됨)
+    var toggleFloatingAsk = e.target.closest('[data-toggle-floating-ask]');
+    if (toggleFloatingAsk) {
+      var floatingAsk = document.getElementById('floating-ask');
+      floatingAsk.classList.toggle('open');
+      if (floatingAsk.classList.contains('open')) floatingAsk.querySelector('textarea').focus();
+    }
+
+    // 플로팅 인풋 제출 — 묻기·해설 화면으로 전환(exclusiveOn, data-goto-base와 같은 함수
+    // 재사용)하고, 방금 물은 질문을 로그 맨 끝에 새 턴으로 얹는다. 실제 검색·해설 생성은
+    // 서버 몫이라 정적 와이어프레임에선 "근거 확인 중" 정도의 자리만 채운 채로 멈춘다 —
+    // 다른 턴들처럼 지어낸 답을 보여주면 오히려 "지어내지 않는다" 원칙과 부딪힌다
+    var submitFloatingAsk = e.target.closest('[data-submit-floating-ask]');
+    if (submitFloatingAsk) {
+      var floatingTa = document.querySelector('.floating-ask-box textarea');
+      var question = floatingTa.value.trim();
+      if (question) {
+        document.getElementById('floating-ask').classList.remove('open');
+        exclusiveOn('.base-screen', 'screen-ask-narrate');
+        var scroll = document.querySelector('#screen-ask-narrate .narration-scroll');
+        var turn = document.createElement('div');
+        turn.className = 'narration-turn';
+        turn.innerHTML =
+          '<div class="narration-turn-header">' +
+            '<div class="narration-question"></div>' +
+            '<div class="narration-timestamp">방금</div>' +
+          '</div>' +
+          '<div class="narration-evidence-summary">근거 확인 중···</div>';
+        turn.querySelector('.narration-question').textContent = question;
+        scroll.appendChild(turn);
+        turn.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        floatingTa.value = '';
+        autoGrow(floatingTa);
+      }
+    }
 
     // "제출" 컨펌 모달에서 확정하면(하나뿐인 body-edit-zone이라 문서 전체에서 찾음) 편집
     // 모드를 끄고 읽기 뷰로 되돌아간다 — 실제 changeset 적용은 서버 몫, 여긴 상태 전환만
