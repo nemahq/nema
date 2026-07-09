@@ -331,6 +331,7 @@
 - 충돌 판정 되돌리기
 - 중복 판정 되돌리기
 - 확신 관계 자동 적용 되돌리기
+- Changeset 상세 — 삭제된 원본의 스냅샷 콘텐츠 치환
 
 ### 케이스 상세
 
@@ -450,6 +451,13 @@
 - **Then**:
   1. 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
   2. 관계 타입이 replaces·resolves처럼 상대 진술을 archive시켰다면 그 진술이 active로 복원되고, supports처럼 아무것도 archive하지 않았다면 연결만 제거된다.
+- **관여 화면**: Changeset 상세
+
+#### Changeset 상세 — 삭제된 원본의 스냅샷 콘텐츠 치환
+
+- **Given**: 삭제된 원본의 Digest·진술이 다른(살아있는) 원본 소속 relation changeset에 스냅샷으로 남아 있다.
+- **When**: 배치 purge가 실행된다.
+- **Then**: 그 changeset 자체(배지·시각·판정 결과)는 남지만, 그 안의 삭제된 콘텐츠 필드만 삭제 표시로 치환된다.
 - **관여 화면**: Changeset 상세
 
 ## Manual 편집
