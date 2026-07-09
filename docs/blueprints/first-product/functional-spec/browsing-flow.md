@@ -17,6 +17,9 @@
 - Space 오버뷰 빈 상태 (데이터 전부 제거 후)
 - 변경셋 탭 빈 상태
 - Digest 카드 클릭 → 상세 열람
+- Topic 필터
+- Digest 카드 — 처리 중 표시
+- Digest 카드 — 리뷰 대기 배지
 
 ### 케이스 상세
 
@@ -51,6 +54,27 @@
   1. 그 Digest의 상세가 우측 사이드뷰에 열린다.
   2. 원래 보던 스레드 피드는 그대로 유지된다(화면 전환 없음).
 - **관여 화면**: Space 오버뷰, Digest 상세
+
+#### Topic 필터
+
+- **Given**: 유저가 Space 오버뷰 스레드 탭에서 여러 Topic이 섞인 피드를 보고 있다(기본값은 "전체").
+- **When**: 특정 Topic으로 필터를 적용한다.
+- **Then**: 그 Topic이 붙은 Digest 카드만 표시된다.
+- **관여 화면**: Space 오버뷰
+
+#### Digest 카드 — 처리 중 표시
+
+- **Given**: 유저가 인증을 완료했고, 스레드 피드에 2단계(Statement·Relation 생성) 처리가 진행 중인 Digest가 있다.
+- **When**: Space 오버뷰(스레드 탭)에 진입한다.
+- **Then**: 그 Digest의 카드에 진행 중 표시가 뜬다. 처리가 완료되면 그 표시는 사라진다.
+- **관여 화면**: Space 오버뷰
+
+#### Digest 카드 — 리뷰 대기 배지
+
+- **Given**: 유저가 인증을 완료했고, 스레드 피드의 Digest 중 판정 대기 변경셋(충돌·중복)에 걸린 것이 있다.
+- **When**: Space 오버뷰(스레드 탭)에 진입한다.
+- **Then**: 그 Digest의 카드에 리뷰 대기 배지가 뜬다.
+- **관여 화면**: Space 오버뷰
 
 ## 사이드뷰
 
@@ -92,6 +116,8 @@
 ### 케이스 목록
 
 - 판정 대기 배지 표시
+- 관련 Digest 섹션 표시
+- 외부 링크 섹션 표시
 - 관련 Digest 클릭 → 새 탭 열림
 - Reference 멘션 클릭 → 새 탭 열림
 - Topic 추가
@@ -118,6 +144,20 @@
 - **Given**: 유저가 스레드 피드에서 Digest 카드 목록을 보고 있다.
 - **When**: 카드 하나를 클릭해 그 Digest 상세를 연다.
 - **Then**: 연결된 Statement가 판정 대기 변경셋(충돌·중복)에 걸려 있으면 맨 위에 리뷰 대기 항목 목록과 이동 버튼이 표시되고, 없으면 표시되지 않는다.
+- **관여 화면**: Space 오버뷰, Digest 상세
+
+#### 관련 Digest 섹션 표시
+
+- **Given**: 유저가 스레드 피드에서 Digest 카드 목록을 보고 있다.
+- **When**: 카드 하나를 클릭해 그 Digest 상세를 연다.
+- **Then**: 관련 Digest가 있으면 목록과 함께 표시되고, 없으면 목록 없이 추가 액션만 남는다.
+- **관여 화면**: Space 오버뷰, Digest 상세
+
+#### 외부 링크 섹션 표시
+
+- **Given**: 유저가 스레드 피드에서 Digest 카드 목록을 보고 있다.
+- **When**: 카드 하나를 클릭해 그 Digest 상세를 연다.
+- **Then**: 외부 링크가 있으면 목록과 함께 표시되고, 없으면 목록 없이 추가 액션만 남는다.
 - **관여 화면**: Space 오버뷰, Digest 상세
 
 #### 관련 Digest 클릭 → 새 탭 열림
@@ -283,3 +323,100 @@
 - **When**: 공유 액션을 실행한다.
 - **Then**: 단순 URL 링크가 아니라, 그 Digest의 내용(타입·제목·요약·본문 등)이 외부로 복사·전달할 수 있는 형태로 준비된다.
 - **관여 화면**: Digest 상세
+
+## Reference 목록
+
+### 케이스 목록
+
+- Reference 목록 표시
+- Reference 엔트리 클릭 → 상세 열람
+- Reference 상세 — 변경 이력 표시
+- Reference 직접 수정
+- Reference Tag 추가
+- Reference Tag 제거
+- 관련 Reference 추가
+- 관련 Reference 제거
+- Reference 외부 링크 추가
+- Reference 외부 링크 수정
+- Reference 외부 링크 삭제
+
+### 케이스 상세
+
+#### Reference 목록 표시
+
+- **Given**: 유저가 인증을 완료했다.
+- **When**: LNB에서 Reference 목록에 진입한다.
+- **Then**: 이 Workspace에 Reference 엔트리가 있으면 목록으로 표시되고, 없으면 빈 상태 안내 문구가 표시된다.
+- **관여 화면**: Reference 목록
+
+#### Reference 엔트리 클릭 → 상세 열람
+
+- **Given**: 유저가 Reference 목록에서 엔트리 목록을 보고 있다.
+- **When**: 엔트리 하나를 클릭한다.
+- **Then**: 그 Reference의 상세가 사이드뷰에 열린다.
+- **관여 화면**: Reference 목록, Reference 상세
+
+#### Reference 상세 — 변경 이력 표시
+
+- **Given**: 유저가 Reference 상세를 사이드뷰로 열었다.
+- **When**: 변경 이력 보기 액션을 실행한다.
+- **Then**: 이 Reference를 건드린 Changeset들(Source 제출로 생긴 것과 목록에서 직접 수정한 것 모두)이 이력으로 표시된다.
+- **관여 화면**: Reference 상세
+
+#### Reference 직접 수정
+
+- **Given**: 유저가 Reference 상세를 사이드뷰로 열었다.
+- **When**: 수정 액션을 실행해 이름·설명 등을 고치고 제출을 확인한다.
+- **Then**:
+  1. 그 Reference의 내용이 수정한 값으로 즉시 반영된다.
+  2. 그 수정이 변경 이력에 새 항목으로 추가된다.
+- **관여 화면**: Reference 상세
+
+#### Reference Tag 추가
+
+- **Given**: 유저가 Reference 상세를 사이드뷰로 열었다.
+- **When**: Tag 추가 액션을 실행하고 태그를 입력한다.
+- **Then**: 그 Tag가 즉시 추가된다.
+- **관여 화면**: Reference 상세
+
+#### Reference Tag 제거
+
+- **Given**: 유저가 Reference 상세를 사이드뷰로 열었고, 그 Reference에 Tag가 하나 이상 붙어 있다.
+- **When**: 그중 하나의 제거 액션을 실행한다.
+- **Then**: 그 Tag가 즉시 제거된다.
+- **관여 화면**: Reference 상세
+
+#### 관련 Reference 추가
+
+- **Given**: 유저가 Reference 상세를 사이드뷰로 열었다.
+- **When**: 관련 Reference 추가 액션을 실행하고 다른 Reference를 선택한다.
+- **Then**: 그 Reference가 관련 Reference로 즉시 연결된다.
+- **관여 화면**: Reference 상세
+
+#### 관련 Reference 제거
+
+- **Given**: 유저가 Reference 상세를 사이드뷰로 열었고, 그 Reference에 관련 Reference가 하나 이상 연결되어 있다.
+- **When**: 그중 하나의 제거 액션을 실행한다.
+- **Then**: 그 관련 Reference 연결이 즉시 제거된다.
+- **관여 화면**: Reference 상세
+
+#### Reference 외부 링크 추가
+
+- **Given**: 유저가 Reference 상세를 사이드뷰로 열었다.
+- **When**: 외부 링크 추가 액션을 실행하고 URL을 입력한다.
+- **Then**: 그 링크가 즉시 추가된다.
+- **관여 화면**: Reference 상세
+
+#### Reference 외부 링크 수정
+
+- **Given**: 유저가 Reference 상세를 사이드뷰로 열었고, 그 Reference에 외부 링크가 하나 이상 있다.
+- **When**: 그중 하나의 URL을 수정하는 액션을 실행한다.
+- **Then**: 그 링크가 수정한 URL로 즉시 반영된다.
+- **관여 화면**: Reference 상세
+
+#### Reference 외부 링크 삭제
+
+- **Given**: 유저가 Reference 상세를 사이드뷰로 열었고, 그 Reference에 외부 링크가 하나 이상 있다.
+- **When**: 그중 하나의 삭제 액션을 실행한다.
+- **Then**: 그 외부 링크가 즉시 삭제된다.
+- **관여 화면**: Reference 상세
