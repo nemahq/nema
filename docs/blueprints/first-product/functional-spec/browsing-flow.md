@@ -139,6 +139,7 @@
 - 공유
 - Digest 상세 — 수정 이력 표시
 - Digest 아카이브
+- Digest 아카이브 — 대체했던 판단 함께 되살리기 체크박스
 
 ### 케이스 상세
 
@@ -270,8 +271,8 @@
 - **Given**: 유저가 Digest 상세를 평소 열람 중이다.
 - **When**: 본문 편집 액션을 실행해 제목·요약·본문·타입 중 하나 이상을 수정하고 제출을 확인한다.
 - **Then**:
-  1. 이 Digest의 진술이 다른 Digest와 맺은 관계가 있다면, 제출 시 그 관계도 함께 archive된다는 안내가 컨펌 모달로 먼저 표시된다.
-  2. 확인하면 기존 Digest가 archive되고, 그 진술·관계도 연쇄로 archive된다.
+  1. 제출 시 기존 내용이 archive되고 새 내용으로 대체된다는 안내가 컨펌 모달로 먼저 표시된다. 이 Digest의 진술이 다른 Digest와 맺은 관계가 있다면, 그 관계도 함께 archive된다는 내용이 같은 모달에 추가로 안내된다.
+  2. 확인하면 기존 Digest가 archive되고, 그 진술·관계(있었다면)도 연쇄로 archive된다.
   3. 새 Digest가 수정한 내용으로 생성되고, 그 내용을 바탕으로 진술·관계 생성이 새로 시작된다.
   4. manual changeset이 즉시 closed+applied 상태로 기록된다.
   5. 보고 있던 탭은 새 Digest로 전환되어 계속 그 내용을 보여준다.
@@ -343,9 +344,17 @@
 - **Given**: 유저가 Digest 상세를 평소 열람 중이다.
 - **When**: 아카이브 액션을 실행한다.
 - **Then**:
-  1. 이 Digest의 진술이 다른 Digest와 맺은 관계가 있다면, 아카이브 시 그 관계도 함께 archive된다는 안내가 컨펌 모달로 먼저 표시된다.
+  1. 아카이브하면 피드·검색 등에서는 안 보이지만 스레드에서는 접힌 채로 남는다는 안내가 컨펌 모달로 먼저 표시된다. 이 Digest의 진술이 다른 Digest와 맺은 관계가 있다면, 그 관계도 함께 archive된다는 내용이 같은 모달에 추가로 안내된다.
   2. 확인하면 그 Digest가 archived 상태로 전환된다(대체 없음).
-  3. 이 Digest에 근거한 진술도 연쇄로 archived되고, 그 진술이 걸려 있던 관계도 연쇄로 archived된다.
+  3. 이 Digest에 근거한 진술도 연쇄로 archived되고, 그 진술이 걸려 있던 관계(있었다면)도 연쇄로 archived된다.
+  4. manual changeset이 즉시 closed+applied 상태로 기록된다.
+- **관여 화면**: Digest 상세
+
+#### Digest 아카이브 — 대체했던 판단 함께 되살리기 체크박스
+
+- **Given**: 유저가 아카이브하려는 Digest의 진술이 과거 판정으로 다른 진술을 대체(replaces)해, 그 상대 진술이 archived 상태로 남아 있다.
+- **When**: 아카이브 컨펌 모달에서 "대체됐던 판단도 함께 다시 활성화" 체크박스를 켜거나 끈 채로 확인한다.
+- **Then**: 체크박스를 켰으면 그 상대 진술도 active 상태로 함께 복원되고, 껐으면 archived 상태로 그대로 남는다(자동 복원 없음).
 - **관여 화면**: Digest 상세
 
 ## Reference 목록
@@ -442,5 +451,8 @@
 
 - **Given**: 유저가 Reference 상세를 사이드뷰로 열었다.
 - **When**: 아카이브 액션을 실행한다.
-- **Then**: 그 Reference가 archived 상태로 전환된다. 과거에 이 Reference를 인용한 진술·Digest는 그대로 유효하게 남는다.
+- **Then**:
+  1. 아카이브하면 검색·멘션 추천 등에서는 안 보이지만 이미 인용 중인 Digest에서는 계속 확인할 수 있다는 안내가 컨펌 모달로 먼저 표시된다(Digest와 달리 관계 cascade 경고는 없다 — Reference는 Statement 레벨 관계의 끝점이 아니다).
+  2. 확인하면 그 Reference가 archived 상태로 전환된다.
+  3. manual changeset이 즉시 closed+applied 상태로 기록된다.
 - **관여 화면**: Reference 상세
