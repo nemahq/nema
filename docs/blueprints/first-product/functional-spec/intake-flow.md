@@ -101,9 +101,9 @@
 
 #### 초안에서 이전 리뷰 보기
 
-- **Given**: 유저가 초안에서 평범한 대기 상태인 Source를 보고 있고, 그 Source에 버려진(discarded) changeset이 있다.
+- **Given**: 유저가 초안에서 평범한 대기 상태인 Source를 보고 있고, 그 Source에 버려진(discarded) changeset 또는 되돌려진(revert) changeset이 있다.
 - **When**: 이전 리뷰 보기 액션을 실행한다.
-- **Then**: 그 changeset의 상세로 이동한다(버리기 직전 편집 상태 복원 등 구체적 동작은 review-flow.md 몫).
+- **Then**: discarded 유래면 그 changeset의 상세로 이동해 되살릴 수 있고, revert 유래면 최신 revert changeset의 상세로 이동해 되돌리기(재적용)를 할 수 있다(구체적 동작은 review-flow.md 몫).
 - **관여 화면**: 초안
 
 #### Digest 추출 실패

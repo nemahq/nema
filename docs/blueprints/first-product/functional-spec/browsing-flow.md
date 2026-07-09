@@ -140,6 +140,8 @@
 - Digest 상세 — 수정 이력 표시
 - Digest 아카이브
 - Digest 아카이브 — 대체했던 판단 함께 되살리기 체크박스
+- Digest 상세 — 삭제 안내
+- 원문 — 원본 삭제
 
 ### 케이스 상세
 
@@ -357,6 +359,22 @@
 - **Then**: 체크박스를 켰으면 그 상대 진술도 active 상태로 함께 복원되고, 껐으면 archived 상태로 그대로 남는다(자동 복원 없음).
 - **관여 화면**: Digest 상세
 
+#### Digest 상세 — 삭제 안내
+
+- **Given**: 유저가 Digest 상세를 평소 열람 중이다.
+- **When**: 삭제 액션을 실행한다.
+- **Then**: Digest 단독으로는 삭제할 수 없고, 이 Digest가 속한 원본을 지워야 하며 그러면 같은 원본에서 나온 다른 Digest도 함께 사라진다는 안내가 그 목록과 함께 표시된다. 원문으로 이동하는 버튼만 있고, 여기서 직접 삭제되지 않는다.
+- **관여 화면**: Digest 상세
+
+#### 원문 — 원본 삭제
+
+- **Given**: 유저가 원문 탭을 보고 있고, 그 원본은 이미 확정되어(active) Digest·진술이 파생돼 있다.
+- **When**: 삭제 액션을 실행하고 무거운 확인(이름 타이핑 등)을 거친다.
+- **Then**:
+  1. 그 원본이 만든 Digest들이 archive되고, 원본은 즉시 trashed 상태로 전환된다(되돌리기와 삭제가 한 번에 처리됨).
+  2. 30일 뒤 배치로 완전히 삭제되며, 그 원본에서 파생된 Digest·진술·관계도 함께 cascade로 삭제된다(Reference는 제외).
+- **관여 화면**: Digest 상세
+
 ## Reference 목록
 
 ### 케이스 목록
@@ -372,6 +390,8 @@
 - Reference 외부 링크 수정
 - Reference 외부 링크 삭제
 - Reference 아카이브
+- Reference 삭제 — 인용 없음
+- Reference 삭제 — 인용 있음
 
 ### 케이스 상세
 
@@ -455,4 +475,23 @@
   1. 아카이브하면 검색·멘션 추천 등에서는 안 보이지만 이미 인용 중인 Digest에서는 계속 확인할 수 있다는 안내가 컨펌 모달로 먼저 표시된다(Digest와 달리 관계 cascade 경고는 없다 — Reference는 Statement 레벨 관계의 끝점이 아니다).
   2. 확인하면 그 Reference가 archived 상태로 전환된다.
   3. manual changeset이 즉시 closed+applied 상태로 기록된다.
+- **관여 화면**: Reference 상세
+
+#### Reference 삭제 — 인용 없음
+
+- **Given**: 유저가 Reference 상세를 보고 있고, 이 Reference를 인용하는 Digest가 하나도 없다.
+- **When**: 삭제 액션을 실행하고 가벼운 확인을 거친다.
+- **Then**:
+  1. 그 Reference가 즉시 trashed 상태로 전환되어 검색·멘션 추천 등 모든 표면에서 빠진다.
+  2. 30일 뒤 배치로 완전히 삭제된다.
+- **관여 화면**: Reference 상세
+
+#### Reference 삭제 — 인용 있음
+
+- **Given**: 유저가 Reference 상세를 보고 있고, 이 Reference를 인용하는 Digest가 하나 이상 있다.
+- **When**: 삭제 액션을 실행한다.
+- **Then**:
+  1. 인용 중인 Digest 목록과 함께, 이름을 타이핑해야 하는 무거운 확인이 표시된다.
+  2. 확인을 완료하면 그 Reference가 즉시 trashed 상태로 전환되어 검색·멘션 추천 등 모든 표면에서 빠진다.
+  3. 인용하던 Digest 본문의 멘션은 죽은 링크 표시로 남는다.
 - **관여 화면**: Reference 상세
