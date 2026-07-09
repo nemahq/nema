@@ -380,8 +380,8 @@
 
 #### 판정 모드 진입
 
-- **Given**: open 상태인 relation changeset(충돌 또는 중복)이 변경셋 탭에 있다.
-- **When**: 그 항목을 클릭한다.
+- **Given**: open 상태인 relation changeset(충돌 또는 중복)이 있다.
+- **When**: 변경셋 탭에서 그 항목을 클릭하거나, Digest 상세의 리뷰 대기 이동 버튼을 클릭한다.
 - **Then**: Digest 상세가 판정 모드로 열리고, 근거가 된 두 Statement 각각과 그 두 원본 각각의 하이라이트를 확인할 수 있다.
 - **관여 화면**: 변경셋, Digest 상세
 
