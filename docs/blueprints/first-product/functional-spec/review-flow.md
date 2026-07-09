@@ -400,7 +400,7 @@
 - **Given**: 유저가 판정 모드에서 같은 뜻으로 판단된 두 Statement(중복 후보)를 보고 있고, 각각 서로 다른 Digest에 속해 있다.
 - **When**: 엔진이 제안한 병합 내용을 판정 화면 안에서 문서형으로 확인·수정하고 판정을 확정한다.
 - **Then**:
-  1. 기존 두 Digest는 archive되고, 병합된 새 Digest가 생성된다.
+  1. 기존 두 Digest는 archive되고, 병합된 새 Digest가 생성되어 그 내용을 바탕으로 Statement·Relation 생성이 새로 시작된다.
   2. relation changeset이 closed+applied 상태로 전환된다.
 - **관여 화면**: Digest 상세(판정 모드)
 

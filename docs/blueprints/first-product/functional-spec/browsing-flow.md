@@ -116,6 +116,7 @@
 ### 케이스 목록
 
 - 소속 Space 표시
+- 처리 중 표시
 - 판정 대기 배지 표시
 - 관련 Digest 섹션 표시
 - 외부 링크 섹션 표시
@@ -146,6 +147,13 @@
 - **Given**: 유저가 인증을 완료했다.
 - **When**: Digest 상세를 연다.
 - **Then**: 패널 헤더에 그 Digest가 소속된 Space가 항상 표시된다. 지금 활성 Space와 다르더라도 그대로 표시된다.
+- **관여 화면**: Digest 상세
+
+#### 처리 중 표시
+
+- **Given**: 유저가 인증을 완료했고, Statement·Relation 생성이 진행 중인 Digest가 있다.
+- **When**: 그 Digest의 상세를 연다.
+- **Then**: 패널에 진행 중 표시가 뜬다. 처리가 완료되면 그 표시는 사라진다.
 - **관여 화면**: Digest 상세
 
 #### 판정 대기 배지 표시
@@ -262,10 +270,11 @@
 - **Given**: 유저가 Digest 상세를 평소 열람 중이다.
 - **When**: 본문 편집 액션을 실행해 제목·요약·본문·타입 중 하나 이상을 수정하고 제출을 확인한다.
 - **Then**:
-  1. 기존 Digest는 archive된다.
-  2. 새 Digest가 그 내용으로 생성된다.
-  3. manual changeset이 즉시 closed+applied 상태로 기록된다.
-  4. 보고 있던 탭은 새 Digest로 전환되어 계속 그 내용을 보여준다.
+  1. 이 Digest의 Statement가 다른 Digest와 맺은 Relation이 있다면, 제출 시 그 Relation도 함께 archive된다는 안내가 컨펌 모달로 먼저 표시된다.
+  2. 확인하면 기존 Digest가 archive되고, 그 Statement·Relation도 연쇄로 archive된다.
+  3. 새 Digest가 수정한 내용으로 생성되고, 그 내용을 바탕으로 Statement·Relation 생성이 새로 시작된다.
+  4. manual changeset이 즉시 closed+applied 상태로 기록된다.
+  5. 보고 있던 탭은 새 Digest로 전환되어 계속 그 내용을 보여준다.
 - **관여 화면**: Digest 상세
 
 #### 본문 편집 제출 실패 (동시성 충돌)
