@@ -135,6 +135,8 @@
 - 본문 편집 중 @ 멘션 추가
 - 원문 보기
 - 공유
+- Digest 상세 — 수정 이력 표시
+- Digest 아카이브
 
 ### 케이스 상세
 
@@ -312,6 +314,23 @@
 - **Then**: 단순 URL 링크가 아니라, 그 Digest의 내용(타입·제목·요약·본문 등)이 외부로 복사·전달할 수 있는 형태로 준비된다.
 - **관여 화면**: Digest 상세
 
+#### Digest 상세 — 수정 이력 표시
+
+- **Given**: 유저가 Digest 상세를 평소 열람 중이고, 이 Digest 계보에 manual changeset(직접 수정)이 하나 이상 있다.
+- **When**: 수정 이력 보기 액션을 실행한다.
+- **Then**: 이 Digest를 수정한 manual changeset들이 이력으로 표시된다.
+- **관여 화면**: Digest 상세
+
+#### Digest 아카이브
+
+- **Given**: 유저가 Digest 상세를 평소 열람 중이다.
+- **When**: 아카이브 액션을 실행한다.
+- **Then**:
+  1. 이 Digest의 Statement가 다른 Digest와 맺은 Relation이 있다면, 아카이브 시 그 Relation도 함께 archive된다는 안내가 컨펌 모달로 먼저 표시된다.
+  2. 확인하면 그 Digest가 archived 상태로 전환된다(대체 없음).
+  3. 이 Digest에 근거한 Statement도 연쇄로 archived되고, 그 Statement가 걸려 있던 Relation도 연쇄로 archived된다.
+- **관여 화면**: Digest 상세
+
 ## Reference 목록
 
 ### 케이스 목록
@@ -326,6 +345,7 @@
 - Reference 외부 링크 추가
 - Reference 외부 링크 수정
 - Reference 외부 링크 삭제
+- Reference 아카이브
 
 ### 케이스 상세
 
@@ -399,4 +419,11 @@
 - **Given**: 유저가 Reference 상세를 사이드뷰로 열었고, 그 Reference에 외부 링크가 하나 이상 있다.
 - **When**: 그중 하나의 삭제 액션을 실행한다.
 - **Then**: 그 외부 링크가 즉시 삭제된다.
+- **관여 화면**: Reference 상세
+
+#### Reference 아카이브
+
+- **Given**: 유저가 Reference 상세를 사이드뷰로 열었다.
+- **When**: 아카이브 액션을 실행한다.
+- **Then**: 그 Reference가 archived 상태로 전환된다. 과거에 이 Reference를 인용한 Statement·Digest는 그대로 유효하게 남는다.
 - **관여 화면**: Reference 상세

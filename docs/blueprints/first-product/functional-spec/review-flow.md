@@ -319,6 +319,7 @@
 
 - 확신 관계 자동 적용
 - 관련 Digest 자동 채움
+- Relation archive 시 관련 Digest 목록 표시 규칙
 - 관련 Reference 자동 제안
 - 판정 대기 relation changeset 생성
 - 재제안 가드
@@ -346,6 +347,15 @@
 - **When**: 그 Relation이 active 상태가 된다.
 - **Then**: 두 Digest 모두의 상세에 서로가 관련 Digest로 자동 채워진다(양방향). 판정·확신 관계로만 채워지는 읽기 전용 목록이라 사람이 직접 추가·제거할 수 없다.
 - **관여 화면**: Digest 상세
+
+#### Relation archive 시 관련 Digest 목록 표시 규칙
+
+- **Given**: Digest A가 아카이브되어, A의 Statement가 B(active)의 Statement와 맺고 있던 Relation이 연쇄로 archived됐다.
+- **When**: 유저가 각각의 Digest 상세를 본다.
+- **Then**:
+  1. B(active)의 관련 Digest 목록에서는 A가 더 이상 나타나지 않는다.
+  2. A(archived)의 관련 Digest 목록에서는 B와의 관계가 archived 상태로 여전히 표시된다.
+- **관여 화면**: Digest 상세, Changeset 상세
 
 #### 관련 Reference 자동 제안
 
@@ -441,3 +451,54 @@
   1. 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
   2. 관계 타입이 replaces·resolves처럼 상대 Statement를 archive시켰다면 그 Statement가 active로 복원되고, supports처럼 아무것도 archive하지 않았다면 연결만 제거된다.
 - **관여 화면**: Changeset 상세
+
+## Manual 편집
+
+### 케이스 목록
+
+- 편집 changeset 되돌리기
+- 아카이브 되살리기
+- 아카이브된 상태에서 편집 잠금
+- 수정 이력 항목 클릭 시 상세 확인
+- Reference 직접 수정 동시성 충돌
+
+### 케이스 상세
+
+#### 편집 changeset 되돌리기
+
+- **Given**: 유저가 Digest(또는 Reference)의 수정 이력에서 편집(본문 수정 등)으로 생성된 manual changeset을 보고 있다.
+- **When**: 되돌리기 액션을 실행한다.
+- **Then**:
+  1. 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
+  2. 그 수정으로 archive됐던 이전 버전이 active로 복원되고, 수정으로 만들어진 새 버전은 archive된다.
+- **관여 화면**: Digest 상세, Reference 상세
+
+#### 아카이브 되살리기
+
+- **Given**: 유저가 아카이브된 Digest(또는 Reference) 상세를 보고 있다.
+- **When**: 되살리기 액션을 실행한다.
+- **Then**:
+  1. 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
+  2. 그 Digest(또는 Reference)가 active 상태로 복원된다.
+- **관여 화면**: Digest 상세, Reference 상세
+
+#### 아카이브된 상태에서 편집 잠금
+
+- **Given**: 유저가 아카이브된 Digest(또는 Reference) 상세를 보고 있다.
+- **When**: 그 상세에 진입한다.
+- **Then**: Tag·Topic·외부 링크·본문 편집 등 모든 수정 액션이 비활성화되고, 아카이브된 상태라 그렇다는 이유가 함께 표시된다. 되살리기 액션만 남는다.
+- **관여 화면**: Digest 상세, Reference 상세
+
+#### 수정 이력 항목 클릭 시 상세 확인
+
+- **Given**: 유저가 Digest(또는 Reference) 상세의 수정 이력 목록을 보고 있다.
+- **When**: 특정 changeset 항목을 클릭한다.
+- **Then**: 변경셋 탭을 거치지 않고, 그 changeset의 상세로 바로 이동해 변경 전후 내용을 확인할 수 있다.
+- **관여 화면**: Digest 상세, Reference 상세, Changeset 상세
+
+#### Reference 직접 수정 동시성 충돌
+
+- **Given**: 유저가 Reference 상세에서 수정을 시도하는데, 그 사이 다른 사람이 이미 같은 Reference를 수정해 archive된 상태다.
+- **When**: 수정 제출 액션을 실행한다.
+- **Then**: 제출이 거부되고 새로고침을 유도하는 안내가 표시된다. 편집 내용은 반영되지 않는다.
+- **관여 화면**: Reference 상세
