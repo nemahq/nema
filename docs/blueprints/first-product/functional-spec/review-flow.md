@@ -17,6 +17,15 @@
 - Digest 추출 완료 → ingestion changeset 자동 생성
 - Digest 리뷰 화면 진입
 - 원문에 없는 필드는 비워둠
+- Digest 타입 제안
+- 신규 Topic·Tag 제안
+- 기존 Topic·Tag 재사용 제안
+- 기존 Topic·Tag는 이름 수정 불가
+- 신규 Topic·Tag 이름 수정 가능
+- Digest 리뷰 화면에서 Topic·Tag 추가 — 기존 선택
+- Digest 리뷰 화면에서 Topic·Tag 추가 — 신규 생성
+- Reference 후보 자동 제안 및 매칭
+- Changeset 제목 자동 생성
 - Digest 후보 삭제
 - Digest 리뷰 확정
 - Digest 리뷰 버리기
@@ -61,6 +70,69 @@
 - **Given**: Digest 추출 결과, 특정 optional 필드에 해당하는 내용이 원문에 없다.
 - **When**: Digest 리뷰 화면에서 그 후보를 본다.
 - **Then**: 그 필드는 지어낸 내용 없이 빈 칸으로 제안된다.
+- **관여 화면**: Digest 리뷰 화면
+
+#### Digest 타입 제안
+
+- **Given**: Digest 추출이 진행 중이다.
+- **When**: Digest 후보가 생성된다.
+- **Then**: 엔진이 원문 내용을 분석해 5가지 타입(결정·미결·학습·아이디어·가정) 중 하나를 제안하고, 그 타입에 맞는 본문 필드 구조로 후보가 제시된다.
+- **관여 화면**: Digest 리뷰 화면
+
+#### 신규 Topic·Tag 제안
+
+- **Given**: Digest 추출이 진행 중이고, 원문 내용이 이 Space/Workspace에 아직 없는 주제·태그에 해당한다.
+- **When**: Digest 후보가 생성된다.
+- **Then**: 엔진이 새로 만든 Topic·Tag가 그 후보에 미리 채워진 채로 나타난다. 같은 후보 안에 기존 재사용 라벨과 함께 섞여 나올 수 있다(배타적이지 않음).
+- **관여 화면**: Digest 리뷰 화면
+
+#### 기존 Topic·Tag 재사용 제안
+
+- **Given**: Digest 추출이 진행 중이고, 원문 내용이 이미 존재하는 Topic·Tag와 일치한다.
+- **When**: Digest 후보가 생성된다.
+- **Then**: 새로 만들지 않고 기존 Topic·Tag가 재사용되어 그 후보에 미리 채워진 채로 나타난다. 같은 후보 안에 신규 라벨과 함께 섞여 나올 수 있다(배타적이지 않음).
+- **관여 화면**: Digest 리뷰 화면
+
+#### 기존 Topic·Tag는 이름 수정 불가
+
+- **Given**: 유저가 Digest 리뷰 화면에서 기존 Topic·Tag가 재사용 제안된 후보를 보고 있다.
+- **When**: 그 라벨의 이름을 수정하려 시도한다.
+- **Then**: 이름은 읽기 전용이라 수정할 수 없다. 그 Digest에서 제거하는 것은 계속 가능하다.
+- **관여 화면**: Digest 리뷰 화면
+
+#### 신규 Topic·Tag 이름 수정 가능
+
+- **Given**: 유저가 Digest 리뷰 화면에서 신규로 제안된 Topic·Tag가 있는 후보를 보고 있다.
+- **When**: 그 라벨의 이름을 수정한다.
+- **Then**: 아직 서버에 존재하지 않는 임시 상태이므로, 수정한 이름이 이 changeset의 편집 중인 내용에 즉시 반영된다.
+- **관여 화면**: Digest 리뷰 화면
+
+#### Digest 리뷰 화면에서 Topic·Tag 추가 — 기존 선택
+
+- **Given**: 유저가 Digest 리뷰 화면에서 Digest 후보를 보고 있다.
+- **When**: Topic·Tag 추가 액션을 실행해 검색하고, 일치하는 기존 라벨을 선택한다.
+- **Then**: 그 기존 라벨이 이 changeset의 편집 중인 내용에 즉시 추가된다. 새 라벨은 생성되지 않는다.
+- **관여 화면**: Digest 리뷰 화면
+
+#### Digest 리뷰 화면에서 Topic·Tag 추가 — 신규 생성
+
+- **Given**: 유저가 Digest 리뷰 화면에서 Digest 후보를 보고 있다.
+- **When**: Topic·Tag 추가 액션을 실행해 검색했지만 일치하는 라벨이 없어, 새로 만들기를 선택한다.
+- **Then**: 검색어를 이름으로 하는 새 라벨이 이 changeset의 편집 중인 내용에 즉시 추가된다.
+- **관여 화면**: Digest 리뷰 화면
+
+#### Reference 후보 자동 제안 및 매칭
+
+- **Given**: Digest 추출이 진행 중이고, 원문에 사람·조직·프로젝트·제품·개념으로 분류할 만한 대상이 언급되어 있다.
+- **When**: Digest 후보가 생성된다.
+- **Then**: 그 대상이 레지스트리에 이미 있으면 기존 Reference 후보로, 없으면 신규 Reference 후보로 분류되어 함께 제안된다.
+- **관여 화면**: Digest 리뷰 화면
+
+#### Changeset 제목 자동 생성
+
+- **Given**: Digest 추출이 완료되어 하나 이상의 Digest 후보가 나왔다.
+- **When**: ingestion changeset이 생성된다.
+- **Then**: 엔진이 원문 전체를 보고 그 changeset의 제목을 생성한다(여러 Digest가 같은 주제를 공유하면 그 주제, 갈리면 전체를 아우르는 요약형 제목).
 - **관여 화면**: Digest 리뷰 화면
 
 #### Digest 후보 삭제
