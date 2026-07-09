@@ -32,6 +32,7 @@ Source를 사람이 읽기 좋게 정리한 것. 여기서 Statement가 추출�
 | `relatedDigestIds?` | `uuid[]` | 관련 Digest — 명시적으로 이어지는 다른 Digest들. Topic/Thread와 달리 의도적·정밀한 링크. 의미 관계(지지·충돌 등)가 아니라 느슨한 상호 참조라 방향 없음 |
 | `referenceIds?` | `uuid[]` | 이 Digest가 언급하는 Reference들 (인물·조직·프로젝트·제품·개념) |
 | `externalUrls?` | `string[]` | 정리 과정에서 원문에서 뽑아낸 외부 링크들 (Slack 메시지, Notion 페이지 등) |
+| `mcpVisible` | `boolean` | 기본값 true. MCP로 연결된 외부 AI 클라이언트의 조회 결과에 이 Digest(와 파생된 진술·관계)를 포함할지 — false면 존재 힌트 없이 완전 제외된다. Nema 웹앱 자체의 열람·검색에는 영향을 주지 않는다(외부 접근 경로만 통제하는 값이다) |
 | `authorId?` | `uuid` | 작성자(User) — User 삭제 시 `ON DELETE SET NULL`이라 nullable |
 | `createdAt` | `Date` | 만들어진 때 |
 | `status` | `enum: active / archived` | 존재 상태 |
@@ -178,6 +179,18 @@ Topic·Tag는 `targetType`에 없다 — 판단·사실 콘텐츠가 아니라 �
 
 `referenceIds`는 이 예외에 없다 — 본문 안 `@` 멘션이 유일한 인용 경로라(본문에 없는 걸 레퍼런스로 걸 수 없음, "지어내지 않는다"의 연장), 본문 문자열 자체가 바뀌는 것과 같은 조작이라서 본문 편집(archive+create)에 딸려서만 바뀐다. 별도의 레퍼런스 CRUD 화면·섹션은 없다 — 본문 멘션 클릭이 곧 그 Reference로 이동하는 유일한 진입점이다.
 
+## AccessLog
+
+`mcpVisible=false`로 표시된 콘텐츠에 MCP 클라이언트가 실제로 접근했을 때만 남는 감사 기록. 일반(`mcpVisible=true`) 접근은 Nema를 쓰는 목적 자체라 기록하지 않는다 — 범위를 좁혀야 실제로 봐야 할 때(민감 접근 확인) 노이즈 없이 볼 수 있다.
+
+| key | 타입 | 설명 |
+|---|---|---|
+| `id` | `uuid` | 식별자 |
+| `digestId` | `uuid` | 접근된 Digest — 진술·관계 경유로 접근된 경우도 그 근거가 된 Digest 기준으로 기록 |
+| `userId?` | `uuid` | 이 MCP 세션의 소유자 — User 삭제 시 `ON DELETE SET NULL`이라 nullable |
+| `tool` | `string` | 호출된 MCP 도구 이름 |
+| `accessedAt` | `Date` | 접근한 때 |
+
 ## Topic
 
 재사용되는 라벨. Space 안에서만 재사용되며, 같은 라벨이 붙은 Digest들이 하나의 흐름(Thread)으로 모인다. 이름 자체로 자기설명적인 좁은 화제라 별도 정의(`body`)는 두지 않는다.
@@ -262,6 +275,8 @@ Nema 쪽에서 붙이는 유일한 확장은 `profiles`(`user_id` → `auth.user
 - **authorId는 사람 삭제와 무관하게 콘텐츠를 보존** — `Source`·`Digest`·`Changeset`의 `authorId`는 소유가 아니라 귀속(누가 만들었나) 정보일 뿐이라, User가 삭제돼도 `ON DELETE SET NULL`로 콘텐츠는 남고 귀속만 사라진다(공유 Space에서 다른 사람이 그 위에 쌓은 관계·판단을 보존하기 위함). `profiles`는 `ON DELETE CASCADE`(이미 구현됨).
 - **ingestion 되돌리기 → 파생 효과 되돌림(Reference 제외)** — 확정 원본을 다시 `pending`으로 되돌리는 건 그 원본이 만든 ingestion Changeset을 되돌리는 것과 같다("원본 빼기"라는 말은 안 쓴다 — `archive_source`(원본만 가리고 진술·관계는 안 건드리는 훨씬 좁은 동작, `mcp-tools-design.md`·`intervention-design.md` 참고)가 이미 그 이름을 쓰고 있어 혼동된다). 그 Changeset이 만든 Digest·진술·관계는 함께 되돌아간다(archived, 끝점 archived의 관계 연쇄 포함). **Reference는 예외다** — Workspace 전체가 재사용하는 공유 자원이라, 이 changeset이 "만들었다"는 이유만으로 archive하면 다른 Digest가 그 뒤로도 계속 인용 중인 Reference를 감출 위험이 있어 create→archive 방향은 건너뛴다(완전 삭제 purge가 Reference를 cascade 대상에서 뺀 것과 같은 판단, #366). 반대로 그 changeset이 Reference를 archive했던 경우(예: 사람이 직접 정리)는 archive→restore로 되살아난다 — 공유 여부와 무관하게 안전한 방향이라서다. 재개하면 그 옛 산출물을 되살리는 게 아니라 처음부터 새로 인제스천한다. 단순 soft-archive가 아니라 파생 효과를 되돌리는 동작이다.
 - **끝점 archived → 관계 연쇄** — 끝점 진술이 `archived`되면 걸린 관계도 함께 `archived`된다(연쇄 soft-archive). 끝점을 되살리면 관계도 돌아온다.
+- **`mcpVisible`은 Digest에만 저장되고, 진술·관계는 조회 시점에 동적으로 상속한다** — Statement는 복사 저장 없이 매 조회 시 부모 Digest의 `mcpVisible`을 join해서 확인한다(값이 나중에 바뀌어도 즉시 반영되게 하기 위함). Relation은 양쪽 끝 Statement 중 하나라도 `mcpVisible=false`면 관계 자체도 `mcpVisible=false`로 취급한다 — 두 진술이 각각 무해해도 그 둘을 잇는 선이 민감할 수 있다는 원칙으로, `10-concept-collaboration.md`가 접근(공유) 축에 이미 두고 있는 "관계는 끝점에 종속" 원칙을 그대로 재사용한다. **Reference는 이 상속 대상이 아니다** — Workspace 전체가 공유하는 사전이라, 그걸 언급한 Digest 하나가 `mcpVisible=false`라고 해서 그 개체 자체(이름·설명)까지 가릴 이유가 없다(가려야 하는 건 그 개체에 대해 뭐라고 썼는지이지, 그 개체가 존재한다는 사실이 아니다). 이 필터는 Statement를 실제로 반환하는 단일 조회 경로(choke point)에서 강제돼야 한다 — 검색·관계 순회·Reference 경유·Space를 가로지르는 질의 등 모든 MCP 조회 경로가 이 경로 하나를 거치게 만들어, 경로별로 각각 필터를 구현할 필요가 없게 한다.
+- **`mcpVisible=false` 콘텐츠 접근은 AccessLog로 남는다** — 같은 choke point가 필터링뿐 아니라 감사 로그도 함께 맡는다. `mcpVisible=false`로 걸러졌어야 할 콘텐츠가 별도 경로(게이팅 도구 등)로 실제 반환되는 순간, 누가·어떤 도구로·언제 접근했는지 그 자리에서 기록한다 — 별도 감시 인프라 없이 choke point에 로깅 한 줄을 얹는 것으로 충분하다.
 - **Digest가 사라질 때 relatedDigestIds 정리 — 대체 있으면 치환, 없으면 제거** — 다른 Digest를 `relatedDigestIds`에 담고 있는데 그 대상이 사라지는 경우는 두 갈래다. **대체가 있는 경우**(수정 — archive+create): 옛 Digest를 담고 있던 다른 모든 Digest는 그 항목이 새 Digest ID로 자동 치환된다(재검증 없이 단순 치환 — `relatedDigestIds` 자체가 changeset 없이 가볍게 CRUD하는 참고용 메타라 이 정도 처리로 충분하다고 봄). 새 Digest도 옛 Digest의 `relatedDigestIds`를 그대로 물려받는다. **대체가 없는 경우**(수동 아카이브·ingestion 되돌리기로 인한 archive·완전 삭제 — 셋 다 "새 버전 없이 그냥 사라지거나 가려짐"이라는 점이 같다): 치환할 대상이 없으니 그냥 그 ID를 제거한다. `archived` 상태인 Digest는 피드·검색·관련 Digest 자동 추천 등 모든 목록에서 제외된다(하드 삭제는 아니라 원칙상 되살릴 순 있지만, 지금 MVP엔 그럴 화면이 없음 — 아래 "열어두는 것"의 `archived` 복구 화면 참고) — 이 정리 규칙 덕에 애초에 archived/삭제된 Digest를 `relatedDigestIds`가 가리키는 상태 자체가 안 생긴다. **Thread는 이 제외 규칙의 예외다** — 아래 Topic 항목 참고.
 - **변경셋 적용 (트리거별)** — `ingestion`은 항상 `open`으로 시작한다. Digest·Reference 후보를 사람이 확인해야(1단계, Digest 리뷰 화면) `closed`(`outcome: applied`)로 전환되고, 그 순간 Statement·Relation 생성(2단계)이 시작된다 — 애매해서가 아니라 모든 ingestion이 거치는 필수 게이트. `manual`·`revert`는 이미 사람이 확정한 단일 동작이라 곧바로 `closed`(`outcome: applied`). 2단계에서 관계 엔진이 새 Statement를 기존 것들과 대조한 결과는 `relation` 변경셋으로 나온다: 확신·비충돌 관계는 배치당 1개의 `relation` 변경셋이 곧바로 `closed`(`outcome: applied`)로 조용히 적용되고, 애매하거나 모순(`conflicts`)·같은 뜻의 중복(`duplicates`)인 쌍은 **쌍 하나마다** 별도의 `relation` 변경셋이 `open`으로 발생한다(쌍 N개면 changeset도 N개 — 사람이 하나씩 판정하므로 한 changeset으로 묶으면 부분 판정을 표현 못 함). open 제안은 활성 그래프 밖에서 대기하다 사람이 적용(`closed`+`outcome: applied`)하거나 버린다(`closed`+`outcome: discarded`) — 모순·중복은 엔진이 잘못 판단하면 되돌리기 전엔 드러나지 않는 채로 진술이 사라지거나 잘못 엮이므로 확신도와 무관하게 항상 사람 확인을 거친다.
 - **레퍼런스·주제·태그는 병합을 고려하지 않음** — 중복 병합(`duplicates`)은 Statement 전용이다. Reference·Topic·Tag는 Source→Digest/Reference 변환 시 이미 레지스트리에 등록된 것과 매칭해 인용을 제안하므로, 애초에 같은 대상이 중복 생성되는 경우가 최소화된다. 매칭이 안 되면(협업 확장 시 Space 권한이 갈리는 경우 등) 병합 대신 중복을 그대로 허용한다.
@@ -289,6 +304,7 @@ Nema 쪽에서 붙이는 유일한 확장은 `profiles`(`user_id` → `auth.user
 
 ## 열어두는 것
 
+- AccessLog를 보여주는 화면 — 모델(테이블·기록 시점)은 이번에 정리했지만, 유저가 이걸 어디서·어떤 형태로 확인하는지(Digest 상세에 붙일지, 별도 화면을 둘지)는 표면 설계 단계에서.
 - Reference·Digest 버전 이력의 표면 — 둘 다 자신을 대상으로 한 `manual` changeset들의 Change 기록으로 체인이 연결되지만(모델은 확정), 상세 화면에서 그 이력을 어떻게 나열해 보여줄지(둘을 같은 자리·형태로 통일할지)는 표면 설계 단계에서.
 - 원본 실제 시점(발생·작성) — `createdAt`(시스템에 들어온 때)과 별개인 실제 발생/작성 시각. 소급 입력 등에서 문제되면 추가.
 - 공유·그룹·세부 권한 *규칙* — 협업 단계에서. 소유·멤버십의 자리(Space=콘텐츠 그릇, Member=사람 묶음)는 오늘 확정했으니 재설계 없이 멤버 추가만으로 확장 가능. Group·세밀한 공유 축은 `10-concept-collaboration.md`에 개념만 있고 아직 스키마 반영 전.
