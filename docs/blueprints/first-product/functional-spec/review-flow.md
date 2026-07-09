@@ -1,6 +1,6 @@
 # 리뷰·후처리 플로우
 
-> 4개 changeset 타입(ingestion/relation/manual/revert) 전체의 리뷰·확정·버리기·되돌리기·되살리기를 다룬다. ingestion 1단계 처리가 끝나 후보가 생성된 시점부터 시작.
+> 4개 changeset 타입(ingestion/relation/manual/revert) 전체의 리뷰·확정·버리기·되돌리기·되살리기를 다룬다. Digest 추출이 끝나 후보가 생성된 시점부터 시작.
 
 ### 함께 보는 문서
 
@@ -312,3 +312,132 @@
 - **When**: 화면을 새로고침한다.
 - **Then**: 마지막으로 반영된 편집 상태가 그대로 유지된다. 다만 실행취소로 되돌아갈 수 있는 기록은 사라진다.
 - **관여 화면**: Digest 리뷰 화면
+
+## Relation 판정
+
+### 케이스 목록
+
+- 확신 관계 자동 적용
+- 관련 Digest 자동 채움
+- 관련 Reference 자동 제안
+- 판정 대기 relation changeset 생성
+- 재제안 가드
+- 판정 모드 진입
+- 충돌 판정 — 승자 선택
+- 중복 판정 — 병합
+- 판정 대기 relation changeset 버리기
+- 버려진 relation changeset 되살리기
+- 충돌 판정 되돌리기
+- 중복 판정 되돌리기
+- 확신 관계 자동 적용 되돌리기
+
+### 케이스 상세
+
+#### 확신 관계 자동 적용
+
+- **Given**: 새 Statement가 기존 Statement들과 대조되었고, 관계 판정 결과 확신도가 높고 충돌·중복이 아니다.
+- **When**: 관계 엔진이 그 배치를 처리한다.
+- **Then**: relation changeset이 즉시 closed+applied 상태로 생성되어 조용히 적용된다. 사람의 판정 없이 변경셋 탭의 Closed 목록에서만 확인할 수 있다.
+- **관여 화면**: 변경셋
+
+#### 관련 Digest 자동 채움
+
+- **Given**: Digest가 확정된 후 Statement·Relation 생성이 완료되었고, 그 Digest의 Statement가 다른 Digest의 Statement와 active 상태의 Relation으로 연결되었다(확신 관계로 자동 적용됐거나, 사람이 판정해 적용한 경우 모두 포함).
+- **When**: 그 Relation이 active 상태가 된다.
+- **Then**: 두 Digest 모두의 상세에 서로가 관련 Digest로 자동 채워진다(양방향). 판정·확신 관계로만 채워지는 읽기 전용 목록이라 사람이 직접 추가·제거할 수 없다.
+- **관여 화면**: Digest 상세
+
+#### 관련 Reference 자동 제안
+
+- **Given**: Statement·Relation 생성이 완료되었고, 서로 다른 Statement가 같은 Reference를 함께 언급하고 있다(정확한 매칭 조건은 미정).
+- **When**: 그 생성이 완료된다.
+- **Then**: 그 Reference들이 서로 관련 Reference로 제안되어 채워진다. 사람은 이후 확인·제거만 가능하고, 직접 새로 추가할 수는 없다.
+- **관여 화면**: Reference 상세
+
+#### 판정 대기 relation changeset 생성
+
+- **Given**: 새 Statement가 기존 Statement와 대조되었고, 관계가 애매하거나 충돌(conflicts) 또는 중복(duplicates)으로 판단된다.
+- **When**: 관계 엔진이 그 쌍을 처리한다.
+- **Then**: 그 쌍마다 별도의 relation changeset이 open 상태로 생성되어 변경셋 탭의 Open 목록에서 판정을 기다린다.
+- **관여 화면**: 변경셋
+
+#### 재제안 가드
+
+- **Given**: 유저가 특정 Statement 쌍의 relation changeset을 버려서(discarded), 그 제안 자체가 틀렸다고 판단했다.
+- **When**: 관계 엔진이 그 이후 배치에서 같은 쌍을 다시 검토한다.
+- **Then**: 그 쌍에 대해 relation changeset을 다시 제안하지 않는다.
+- **관여 화면**: 변경셋
+
+#### 판정 모드 진입
+
+- **Given**: open 상태인 relation changeset(충돌 또는 중복)이 변경셋 탭에 있다.
+- **When**: 그 항목을 클릭한다.
+- **Then**: Digest 상세가 판정 모드로 열리고, 근거가 된 두 Statement 각각과 그 두 원본 각각의 하이라이트를 확인할 수 있다.
+- **관여 화면**: 변경셋, Digest 상세
+
+#### 충돌 판정 — 승자 선택
+
+- **Given**: 유저가 판정 모드에서 서로 충돌하는 두 Statement를 보고 있다.
+- **When**: 그중 하나를 선택해 판정을 확정한다.
+- **Then**:
+  1. 선택된 Statement는 active 상태로 남는다.
+  2. 선택되지 않은 Statement는 삭제되지 않고 archived되어 가려진다(보존·되살리기 가능).
+  3. relation changeset이 closed+applied 상태로 전환된다.
+- **관여 화면**: Digest 상세(판정 모드)
+
+#### 중복 판정 — 병합
+
+- **Given**: 유저가 판정 모드에서 같은 뜻으로 판단된 두 Statement(중복 후보)를 보고 있고, 각각 서로 다른 Digest에 속해 있다.
+- **When**: 엔진이 제안한 병합 내용을 판정 화면 안에서 문서형으로 확인·수정하고 판정을 확정한다.
+- **Then**:
+  1. 기존 두 Digest는 archive되고, 병합된 새 Digest가 생성된다.
+  2. relation changeset이 closed+applied 상태로 전환된다.
+- **관여 화면**: Digest 상세(판정 모드)
+
+#### 판정 대기 relation changeset 버리기
+
+- **Given**: 유저가 판정 모드에서 open 상태인 relation changeset(충돌 또는 중복)을 보고 있다.
+- **When**: 버리기 액션을 실행한다.
+- **Then**:
+  1. 이 changeset이 closed+discarded 상태로 전환된다.
+  2. 두 Statement는 그대로 active 상태로 유지된다(제안 자체가 틀렸다는 판단이라 어느 쪽도 안 지워짐).
+  3. 재제안 가드가 걸려 이 쌍은 이후 다시 제안되지 않는다.
+- **관여 화면**: Digest 상세(판정 모드)
+
+#### 버려진 relation changeset 되살리기
+
+- **Given**: 유저가 closed+discarded 상태인 relation changeset을 보고 있다.
+- **When**: 되살리기 액션을 실행한다.
+- **Then**: 이 changeset의 상태가 open으로 되돌아가 다시 판정할 수 있다.
+- **관여 화면**: Changeset 상세
+
+#### 충돌 판정 되돌리기
+
+- **Given**: 유저가 Changeset 상세에서 충돌 판정으로 closed+applied된 relation changeset을 보고 있다.
+- **When**: 되돌리기 액션을 실행한다.
+- **Then**:
+  1. 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
+  2. archived됐던(패배한) Statement가 active 상태로 복원된다.
+  3. 같은 Statement 쌍에 대해 새로운 open 상태의 relation changeset이 생성되어 다시 판정할 수 있게 된다.
+- **관여 화면**: Changeset 상세, Digest 상세(판정 모드)
+
+#### 중복 판정 되돌리기
+
+- **Given**: 유저가 Changeset 상세에서 중복 판정(병합)으로 closed+applied된 relation changeset을 보고 있다.
+- **When**: 되돌리기 액션을 실행한다.
+- **Then**:
+  1. 병합 이후 다른 Digest가 병합된 Digest의 Statement와 새로 관계를 맺었다면, 되돌릴 때 그 관계도 함께 archive된다는 안내가 컨펌 모달로 먼저 표시된다.
+  2. 확인하면 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
+  3. 병합으로 생성됐던 새 Digest와 그 Statement, 그 Statement가 걸린 다른 관계들이 모두 연쇄로 archive된다.
+  4. 원래 있던 두 Digest와 그 원래 Statement가 active 상태로 복원된다.
+  5. 같은 Statement 쌍에 대해 새로운 open 상태의 relation changeset이 생성되어 다시 판정할 수 있게 된다.
+- **관여 화면**: Changeset 상세, Digest 상세(판정 모드)
+
+#### 확신 관계 자동 적용 되돌리기
+
+- **Given**: 유저가 Changeset 상세에서 확신 관계로 자동 적용된 relation changeset을 보고 있다.
+- **When**: 되돌리기 액션을 실행한다.
+- **Then**:
+  1. 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
+  2. 관계 타입이 replaces·resolves처럼 상대 Statement를 archive시켰다면 그 Statement가 active로 복원되고, supports처럼 아무것도 archive하지 않았다면 연결만 제거된다.
+- **관여 화면**: Changeset 상세

@@ -64,7 +64,7 @@
 
 #### Digest 카드 — 처리 중 표시
 
-- **Given**: 유저가 인증을 완료했고, 스레드 피드에 2단계(Statement·Relation 생성) 처리가 진행 중인 Digest가 있다.
+- **Given**: 유저가 인증을 완료했고, 스레드 피드에 Statement·Relation 생성이 진행 중인 Digest가 있다.
 - **When**: Space 오버뷰(스레드 탭)에 진입한다.
 - **Then**: 그 Digest의 카드에 진행 중 표시가 뜬다. 처리가 완료되면 그 표시는 사라진다.
 - **관여 화면**: Space 오버뷰
@@ -119,13 +119,12 @@
 - 관련 Digest 섹션 표시
 - 외부 링크 섹션 표시
 - 관련 Digest 클릭 → 새 탭 열림
+- 관련 Digest 행에서 changeset 링크 클릭
 - Reference 멘션 클릭 → 새 탭 열림
 - Topic 추가
 - Topic 제거
 - Tag 추가
 - Tag 제거
-- 관련 Digest 추가
-- 관련 Digest 제거
 - 외부 링크 추가
 - 외부 링크 수정
 - 외부 링크 삭제
@@ -150,7 +149,7 @@
 
 - **Given**: 유저가 스레드 피드에서 Digest 카드 목록을 보고 있다.
 - **When**: 카드 하나를 클릭해 그 Digest 상세를 연다.
-- **Then**: 관련 Digest가 있으면 목록과 함께 표시되고, 없으면 목록 없이 추가 액션만 남는다.
+- **Then**: 판정·확신 관계로 연결된 관련 Digest가 있으면, 행마다 관계의 종류·그 Digest로 향하는 링크·관계가 판정된 changeset으로 향하는 링크가 표시된다(읽기 전용, 사람이 추가·제거 불가). 없으면 섹션 자체가 생략된다.
 - **관여 화면**: Space 오버뷰, Digest 상세
 
 #### 외부 링크 섹션 표시
@@ -168,6 +167,13 @@
   1. 그 Digest의 상세가 같은 사이드뷰 안에 새 탭으로 열린다.
   2. 원래 보던 탭은 그대로 남아 있다.
 - **관여 화면**: Digest 상세
+
+#### 관련 Digest 행에서 changeset 링크 클릭
+
+- **Given**: 유저가 Digest 상세에서 관련 Digest 행을 보고 있다.
+- **When**: 그 행의 changeset 링크를 클릭한다.
+- **Then**: 그 관계를 판정(또는 자동 적용)한 relation changeset의 상세로 이동한다.
+- **관여 화면**: Digest 상세, Changeset 상세
 
 #### Reference 멘션 클릭 → 새 탭 열림
 
@@ -211,24 +217,6 @@
 - **When**: 그중 하나의 제거 액션을 실행한다.
 - **Then**:
   1. 그 Tag가 즉시 제거된다.
-  2. 별도 changeset은 생성되지 않는다.
-- **관여 화면**: Digest 상세
-
-#### 관련 Digest 추가
-
-- **Given**: 유저가 Digest 상세를 평소 열람 중이다.
-- **When**: 관련 Digest 추가 액션을 실행하고 다른 Digest를 선택한다.
-- **Then**:
-  1. 그 Digest가 관련 Digest로 즉시 연결된다.
-  2. 별도 changeset은 생성되지 않는다.
-- **관여 화면**: Digest 상세
-
-#### 관련 Digest 제거
-
-- **Given**: 유저가 Digest 상세를 평소 열람 중이고, 그 Digest에 관련 Digest가 하나 이상 연결되어 있다.
-- **When**: 그중 하나의 제거 액션을 실행한다.
-- **Then**:
-  1. 그 관련 Digest 연결이 즉시 제거된다.
   2. 별도 changeset은 생성되지 않는다.
 - **관여 화면**: Digest 상세
 
@@ -334,8 +322,7 @@
 - Reference 직접 수정
 - Reference Tag 추가
 - Reference Tag 제거
-- 관련 Reference 추가
-- 관련 Reference 제거
+- 엔진이 제안한 관련 Reference 거부
 - Reference 외부 링크 추가
 - Reference 외부 링크 수정
 - Reference 외부 링크 삭제
@@ -386,18 +373,11 @@
 - **Then**: 그 Tag가 즉시 제거된다.
 - **관여 화면**: Reference 상세
 
-#### 관련 Reference 추가
+#### 엔진이 제안한 관련 Reference 거부
 
-- **Given**: 유저가 Reference 상세를 사이드뷰로 열었다.
-- **When**: 관련 Reference 추가 액션을 실행하고 다른 Reference를 선택한다.
-- **Then**: 그 Reference가 관련 Reference로 즉시 연결된다.
-- **관여 화면**: Reference 상세
-
-#### 관련 Reference 제거
-
-- **Given**: 유저가 Reference 상세를 사이드뷰로 열었고, 그 Reference에 관련 Reference가 하나 이상 연결되어 있다.
+- **Given**: 유저가 Reference 상세를 사이드뷰로 열었고, 엔진이 제안해 채워진 관련 Reference가 하나 이상 있다.
 - **When**: 그중 하나의 제거 액션을 실행한다.
-- **Then**: 그 관련 Reference 연결이 즉시 제거된다.
+- **Then**: 그 관련 Reference 연결이 즉시 제거된다. 사람이 직접 새로운 관련 Reference를 추가하는 기능은 없다 — 관련짓고 싶은 사실이 있다면 그 내용을 새로 저장(Source 제출)하는 것이 정석 경로다.
 - **관여 화면**: Reference 상세
 
 #### Reference 외부 링크 추가

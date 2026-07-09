@@ -12,7 +12,7 @@
 
 | 문서 | 범위 |
 | --- | --- |
-| [넣기](intake-flow.md) | 사용자 입력 → 1단계 처리 시작 (ingestion 완료 전) |
+| [넣기](intake-flow.md) | 사용자 입력 → Digest 추출 시작 (ingestion 완료 전) |
 | [리뷰·후처리](review-flow.md) | 4개 changeset 타입(ingestion/relation/manual/revert) 전체의 리뷰·확정·버리기·되돌리기·되살리기 |
 | [둘러보기](browsing-flow.md) | 스레드 피드 훑어보기, Digest 상세(평소 열람), Reference 목록/상세 |
 | [꺼내기](retrieval-flow.md) | 묻기·해설 |
