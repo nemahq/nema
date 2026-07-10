@@ -1,4 +1,18 @@
 {
+  "account": {
+    "delete_blocked_back": "Back",
+    "delete_blocked_description": "You're the sole owner of {count} workspace(s) that have other members. Transfer ownership to someone else there before you can delete your account.",
+    "delete_blocked_title": "Transfer ownership first",
+    "delete_button": "Delete account",
+    "delete_cancel": "Cancel",
+    "delete_confirm_button": "Yes, delete my account",
+    "delete_confirm_description": "This permanently deletes your account and can't be undone. Workspaces where you're the only member are deleted too.",
+    "delete_confirm_title": "Delete your account?",
+    "delete_deleting": "Deleting your account...",
+    "delete_description": "Permanently delete your account and remove your data from Nema.",
+    "delete_error_precondition": "Your workspaces changed since we last checked. Let's check again.",
+    "delete_title": "Delete account"
+  },
   "app": {
     "title": "Nema"
   },
@@ -111,13 +125,17 @@
     "app_language_description": "Language used for menus, buttons, and interface",
     "content_language": "Content language",
     "content_language_description": "Used when you Remember and Ask",
+    "nav_account": "Account",
+    "nav_general": "General",
     "onboarding_description": "We'll organize what you write based on this language.",
     "onboarding_title": "What language do you write in?",
     "save": "Save",
     "settings": "Settings",
     "sign_out": "Sign out",
     "start": "Get started",
+    "theme": "Theme",
     "theme_dark": "Dark",
+    "theme_description": "Choose how Nema looks on this device.",
     "theme_light": "Light",
     "theme_system": "System"
   },

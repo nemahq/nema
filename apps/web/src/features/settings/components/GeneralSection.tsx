@@ -4,8 +4,6 @@ import type { ContentLanguage } from "@nema-io/shared";
 import {
   Button,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Select,
   SelectContent,
   SelectItem,
@@ -28,12 +26,13 @@ import {
 } from "@web/lib/tolgee";
 
 import { ContentLanguageSection } from "./ContentLanguageSection";
+import { ThemeToggle } from "./ThemeToggle";
 
-interface SettingsFormProps {
+interface GeneralSectionProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function SettingsFormInner({ onOpenChange }: SettingsFormProps) {
+function GeneralSectionInner({ onOpenChange }: GeneralSectionProps) {
   const { t } = useTranslation();
   const [profile] = useProfileSuspenseQuery();
   const appLangId = useId();
@@ -60,12 +59,22 @@ function SettingsFormInner({ onOpenChange }: SettingsFormProps) {
   }
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{t("settings.settings")}</DialogTitle>
-      </DialogHeader>
+    <div className="flex h-full flex-col">
+      <h2 className="text-base font-semibold text-fg-primary">
+        {t("settings.nav_general")}
+      </h2>
 
-      <div className="flex flex-col gap-5">
+      <div className="mt-5 flex flex-1 flex-col gap-5">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-fg-primary">
+            {t("settings.theme")}
+          </span>
+          <p className="text-xs text-fg-tertiary">
+            {t("settings.theme_description")}
+          </p>
+          <ThemeToggle />
+        </div>
+
         <div className="flex flex-col gap-1.5">
           <label
             htmlFor={appLangId}
@@ -100,7 +109,7 @@ function SettingsFormInner({ onOpenChange }: SettingsFormProps) {
         <ContentLanguageSection value={contentLang} onChange={setContentLang} />
       </div>
 
-      <DialogFooter>
+      <DialogFooter className="mt-6">
         <Button variant="ghost" onClick={() => onOpenChange(false)}>
           {t("common.cancel")}
         </Button>
@@ -108,14 +117,14 @@ function SettingsFormInner({ onOpenChange }: SettingsFormProps) {
           {t("settings.save")}
         </Button>
       </DialogFooter>
-    </>
+    </div>
   );
 }
 
-export function SettingsForm({ onOpenChange }: SettingsFormProps) {
+export function GeneralSection({ onOpenChange }: GeneralSectionProps) {
   return (
     <Suspense>
-      <SettingsFormInner onOpenChange={onOpenChange} />
+      <GeneralSectionInner onOpenChange={onOpenChange} />
     </Suspense>
   );
 }

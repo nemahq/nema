@@ -75,3 +75,23 @@
 - 라이트/다크 둘 다 브라우저로 직접 확인(LNB 펼침·접힘, 워크스페이스 드롭다운, 탭 전환/빈 상태 문구 변화, bootstrap 실패 시 라우트 에러 폴백). 실제 인증 해피패스(신규→Space 리다이렉트)는 스테이징 마이그레이션 적용 후 검증 — 스키마가 스테이징 DB에 도달하는 타이밍이 머지 이후라서다.
 
 ---
+
+### 2026-07-10 — 계정 설정: 설정 모달 2단 재구조화 + Theme 토글 + 계정 삭제
+
+`workspace-account-flow.md`의 "계정 설정" 섹션 — 로그아웃·UI 언어 변경(기존 구현 무변경) 제외, Theme 노출·설정 모달 2단 재구조화·계정 삭제 3분기 전체가 이번 슬라이스. 백엔드(`account-router`/`account-service`)는 이전 세션에서 이미 완비돼 있어 순수 프론트엔드 슬라이스로 진행.
+
+- **설정 모달 골격 신규 작성(재사용 아님)**: surface-inventory가 "Digest·Reference 변경 이력 모달과 같은 골격(목록 클릭 시 콘텐츠만 갱신)을 재사용하되 배치는 반대라 클래스는 새로 선언"이라 지시했지만, 감사 결과 그 "변경 이력" 모달은 Digest 상세 사이드 패널(아직 미구현, baseline 인벤토리 "새 디자인 필요")에 속해 코드에 존재하지 않았다 — 재사용할 기존 컴포넌트가 실제로 없어 `SettingsNav`(좌측 내비)+`GeneralSection`/`AccountSection`(우측 콘텐츠, 섹션 전환 시 우측만 갱신)을 새로 작성했다. 패턴만 문서 설명대로(좌측 내비 클릭 → 우측 콘텐츠만 교체, 열릴 때마다 "일반"부터) 따르고 코드 복붙은 없음. 나중에 "변경 이력" 모달을 실제로 만들 때 이 골격(좌우 어느 쪽이 내비인지만 반대)을 참고할 수 있다.
+- **`SettingsModal`**: `DialogContent`를 `md:max-w-2xl p-0 gap-0`으로 오버라이드하고 내부에서 `flex h-[520px]` 컨테이너로 좌(`SettingsNav`, `w-40`)/우(콘텐츠, `flex-1 overflow-y-auto`)를 나눈다. `section` state는 모달이 닫힐 때(`onOpenChange(false)`)마다 `"general"`로 리셋 — 재오픈 시 항상 "일반"부터 보인다는 요구를 로컬 state 초기화로 구현(언마운트 후 재마운트가 아니라 같은 인스턴스가 재사용되는 `WorkspaceMenu`/`UserMenu` 양쪽 진입점 모두에서 성립해야 하므로).
+- **`GeneralSection`**: 기존 `SettingsForm`(앱 언어 Select + `ContentLanguageSection`, Save 클릭 시에만 `changeLocale` 반영)을 그대로 이관 — 로직 변경 없음, 위치만 "일반" 섹션 안으로. `ContentLanguageSection`은 surface-inventory의 "일반" 섹션 설명(Theme+앱 언어)엔 없지만 계정 섹션에도 속하지 않는 언어 축이라 일반 섹션에 남김(별도 섹션을 새로 만들 정도는 아니라고 판단, PM 확인 필요 항목으로 아래 남김). `ThemeToggle`을 그 위에 추가 — Save 게이팅 없이 클릭 즉시 `useTheme().setTheme()` 호출(기존 `theme.ts`/`ThemeProvider`가 이미 즉시 반영+영속화를 갖추고 있어 그대로 사용, 새 로직 없음).
+- **`ThemeToggle`**: `role="radiogroup"`+`role="radio"` 3버튼(Sun/Moon/Monitor 아이콘, `lucide-react`) 세그먼트 컨트롤 신규 작성 — DevToolbar의 임시 토글(`toggleClass`)은 프로덕션 노출용이 아니라 재사용하지 않고 weave 톤(surface-raised 배경, active 시 surface-card+shadow)으로 새로 작성.
+- **계정 삭제 흐름**: `AccountSection`(프로필 표시+삭제 진입점) → 클릭 시 `AccountDeleteFlow`로 전환(모달 안 로컬 step 전환, 별도 다이얼로그 중첩 없음). `AccountDeleteFlow` 진입 즉시 `useAccountDeletionBlockersQuery`(`trpc.account.deletionBlockers`)를 호출해 게이팅부터 계산:
+  - `blockingWorkspaceIds.length > 0` → 이전 필요 안내 + "뒤로"(계정 섹션 복귀)만 제공, 삭제 액션 자체를 렌더링하지 않음(케이스 "계정 삭제 차단").
+  - 0이면 확인 화면(위험 액션 Alert + Cancel/"Yes, delete my account") 렌더 — Cancel은 계정 섹션으로 복귀만 하고 아무 요청도 보내지 않는다(케이스 "계정 삭제 취소").
+  - 확인 클릭 시 `trpc.account.delete`(`useDeleteAccount`) 호출 → 성공 시 `UserMenu`와 동일한 로그아웃 패턴(`supabase.auth.signOut()` → `/signin` navigate) 재사용. 서버가 레이스로 `PRECONDITION_FAILED`를 던지면(확인 화면을 보여준 뒤 다른 워크스페이스가 새로 생기는 등) `blockersQuery.refetch()`로 게이팅 화면으로 되돌리고, 그 외 에러는 인라인 `Alert`로 노출(전역 토스트는 `meta.skipGlobalToast`로 꺼서 이 화면의 인라인 처리와 중복되지 않게 함).
+- **확인 강도 — 버튼 확인 채택(미확정 항목, PM 확인 필요)**: 명세서는 "확인 단계를 거치는 위험 액션"이라고만 하고 강도(버튼 vs 타이핑)를 정하지 않았다. weave에 타이핑 확인 컴포넌트가 없고, 계정 삭제가 이번 슬라이스에서 유일한 "가장 위험한" 액션이라 과설계보다 명확한 경고 문구(Alert, "This permanently deletes your account and can't be undone")를 얹은 버튼 confirm으로 기본값을 잡았다. Space 삭제(다른 미확정 케이스)가 버튼 확인으로 정해지면 이 결정을 그대로 따르면 되고, 타이핑 확인 쪽으로 정해지면 이 화면도 맞춰 강화해야 한다.
+- **차단 워크스페이스 목록 — 개수만 표시, 이름 없음(백엔드 갭 발견)**: `getAccountDeletionBlockers`는 `blockingWorkspaceIds: string[]`(UUID)만 반환하고 이름을 안 준다. UUID를 그대로 나열하면 오히려 신뢰를 깨뜨려, "N개 워크스페이스"라는 개수 안내로 낮췄다(어느 워크스페이스인지는 지금 이 화면에서 특정할 수 없음). 게다가 앱 어디에도 소유권 이전 UI가 아직 없어(검색 결과 0건) 이 게이팅에 걸린 유저는 현재 막다른 길이다 — 백엔드에 워크스페이스 이름을 포함하도록 확장하고, 소유권 이전 화면을 별도로 만드는 후속 작업이 필요하다(이번 슬라이스는 지침대로 백엔드 미변경).
+- **재사용**: weave `Dialog`/`DialogContent`/`DialogFooter`/`Alert`/`Button`(`danger` variant)/`Skeleton`(스피너 금지 관례)/`Avatar`. 프로필 표시는 `WorkspaceMenu`의 아바타+이름+이메일 블록과 같은 마크업 어휘를 따름(컴포넌트 자체는 공유하지 않음, 각자 다른 용도의 작은 블록이라 추출할 정도는 아니라고 판단).
+- **i18n**: 지침대로 en만 실작성, ko는 en과 동일 값(자리만) — 신규 `account.*` 네임스페이스(계정 삭제 전용) + 기존 `settings.*`에 `nav_general`/`nav_account`/`theme`/`theme_description` 추가. 기존 죽은 키 `settings.theme_dark`/`theme_light`/`theme_system`을 `ThemeToggle`에 연결.
+- 라이트/다크 모두 브라우저로 직접 확인(Theme 토글 3종 즉시 반영+새로고침 후 유지, 설정 모달 재오픈 시 "일반" 기본 노출, 계정 섹션→삭제 확인→취소 왕복). 계정 삭제 게이팅·확인 화면은 Kyle 실계정(현재 유일-멤버 워크스페이스만 있어 차단 없음)으로 게이팅 통과·확인 화면 렌더링까지만 확인했고, **"Yes, delete my account" 실제 클릭(실제 삭제 실행)은 하지 않았다** — 실제 삭제 실행·차단 문구(다른 멤버 있는 워크스페이스의 유일 owner 케이스)는 이번 세션에서 검증 못함, 일회용 테스트 계정으로 별도 검증 필요.
+
+---
