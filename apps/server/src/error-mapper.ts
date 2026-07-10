@@ -22,6 +22,8 @@ type DomainErrorCode =
   | "DB_NOT_FOUND"
   | "DB_FORBIDDEN"
   | "DB_PRECONDITION"
+  | "DB_SPACE_MIN_ONE"
+  | "DB_SPACE_NAME_CONFLICT"
   | "DB_QUERY_FAILED";
 
 const ERROR_MAP: Record<
@@ -66,6 +68,14 @@ const ERROR_MAP: Record<
     trpcCode: "PRECONDITION_FAILED",
     i18nKey: "error.workspace_last_owner",
   },
+  DB_SPACE_MIN_ONE: {
+    trpcCode: "PRECONDITION_FAILED",
+    i18nKey: "error.space_min_one",
+  },
+  DB_SPACE_NAME_CONFLICT: {
+    trpcCode: "CONFLICT",
+    i18nKey: "error.space_name_conflict",
+  },
   DB_QUERY_FAILED: {
     trpcCode: "INTERNAL_SERVER_ERROR",
     i18nKey: "error.default",
@@ -78,6 +88,8 @@ const EXPECTED_DOMAIN_CODES = new Set<DomainErrorCode>([
   "DB_NOT_FOUND",
   "DB_FORBIDDEN",
   "DB_PRECONDITION",
+  "DB_SPACE_MIN_ONE",
+  "DB_SPACE_NAME_CONFLICT",
 ]);
 
 export function isExpectedDomainError(cause: unknown): boolean {
@@ -89,6 +101,8 @@ const SUPABASE_CODE_MAP: Record<SupabaseErrorCode, DomainErrorCode> = {
   not_found: "DB_NOT_FOUND",
   forbidden: "DB_FORBIDDEN",
   precondition: "DB_PRECONDITION",
+  space_min_one: "DB_SPACE_MIN_ONE",
+  space_name_conflict: "DB_SPACE_NAME_CONFLICT",
   query_failed: "DB_QUERY_FAILED",
 };
 

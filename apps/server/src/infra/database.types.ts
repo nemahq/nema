@@ -766,21 +766,21 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
-          name: string | null;
+          name: string;
           updated_at: string;
           workspace_id: string;
         };
         Insert: {
           created_at?: string;
           id?: string;
-          name?: string | null;
+          name: string;
           updated_at?: string;
           workspace_id: string;
         };
         Update: {
           created_at?: string;
           id?: string;
-          name?: string | null;
+          name?: string;
           updated_at?: string;
           workspace_id?: string;
         };
@@ -1182,6 +1182,10 @@ export type Database = {
         };
         Returns: string;
       };
+      create_space: {
+        Args: { p_name: string; p_workspace_id: string };
+        Returns: string;
+      };
       create_tag: {
         Args: {
           p_description: string;
@@ -1190,6 +1194,7 @@ export type Database = {
         };
         Returns: string;
       };
+      delete_space: { Args: { p_space_id: string }; Returns: undefined };
       delete_workspace: {
         Args: { p_workspace_id: string };
         Returns: undefined;
@@ -1306,6 +1311,10 @@ export type Database = {
       };
       reject_pending_relation: {
         Args: { p_changeset_id: string };
+        Returns: undefined;
+      };
+      rename_space: {
+        Args: { p_name: string; p_space_id: string };
         Returns: undefined;
       };
       restore_tag: { Args: { p_tag_id: string }; Returns: undefined };

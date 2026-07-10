@@ -131,6 +131,17 @@ export {
   SourceGetInputSchema,
 } from "./schemas/source";
 export {
+  type Space,
+  SPACE_NAME_MAX_LENGTH,
+  type SpaceCreateInput,
+  SpaceCreateInputSchema,
+  type SpaceDeleteInput,
+  SpaceDeleteInputSchema,
+  type SpaceRenameInput,
+  SpaceRenameInputSchema,
+  SpaceSchema,
+} from "./schemas/space";
+export {
   RELATION_STATUSES,
   RELATION_TYPES,
   type RelationStatus,

@@ -9,6 +9,7 @@ import { narrationRouter } from "./routers/narration-router";
 import { profileRouter } from "./routers/profile-router";
 import { sessionRouter } from "./routers/session-router";
 import { sourceRouter } from "./routers/source-router";
+import { spaceRouter } from "./routers/space-router";
 import { statementRouter } from "./routers/statement-router";
 import { tagRouter } from "./routers/tag-router";
 import { topicRouter } from "./routers/topic-router";
@@ -25,6 +26,7 @@ export const appRouter = router({
   message: messageRouter,
   event: eventRouter,
   source: sourceRouter,
+  space: spaceRouter,
   statement: statementRouter,
   narration: narrationRouter,
   changeset: changesetRouter,

@@ -10,6 +10,8 @@
     "llm_content_filter": "We couldn't process your input. Please try different wording.",
     "llm_rate_limit": "Too many requests. Please try again shortly.",
     "llm_timeout": "Response timed out. Please try again.",
+    "space_min_one": "Your Workspace needs at least one Space. Create another Space first.",
+    "space_name_conflict": "That name is already in use. Try a different name.",
     "workspace_last_owner": "Transfer ownership to another member first."
   }
 }
