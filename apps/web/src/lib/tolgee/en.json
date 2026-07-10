@@ -13,7 +13,8 @@
     "delete_deleting": "Deleting your account...",
     "delete_description": "Permanently delete your account and remove your data from Nema.",
     "delete_error_precondition": "Your workspaces changed since we last checked. Let's check again.",
-    "delete_title": "Delete account"
+    "delete_title": "Delete account",
+    "profile_title": "Profile"
   },
   "app": {
     "title": "Nema"
@@ -126,11 +127,12 @@
     "account_subtitle": "Manage your profile and account.",
     "app_language": "App language",
     "app_language_description": "Language used for menus, buttons, and interface",
-    "general_subtitle": "Customize how Nema looks and behaves.",
-    "nav_account": "Account",
-    "nav_general": "General",
+    "appearance_section": "Appearance",
+    "language_section": "Language",
+    "nav_preferences": "Preferences",
     "onboarding_description": "We'll organize what you write based on this language.",
     "onboarding_title": "What language do you write in?",
+    "preferences_subtitle": "Customize how Nema looks and behaves.",
     "save": "Save",
     "settings": "Settings",
     "sign_out": "Sign out",

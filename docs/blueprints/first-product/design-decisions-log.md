@@ -120,3 +120,17 @@ PM이 Notion 설정 모달(라벨+설명/컨트롤 한 줄 정렬, 절제된 dan
 - 라이브 브라우저 검증은 이번 라운드는 생략 — PM이 5176 포트(HMR)로 직접 확인하기로 함. 정적 검증(typecheck/lint/format/knip/depcruise)은 전부 통과 확인, 색 토큰은 코드 레벨로 라이트/다크 둘 다 유효한 기존 시맨틱 토큰만 썼는지 재확인(`surface-raised`/`surface-card`/`border`/`fg-primary`/`fg-tertiary`/`status-error` — 전부 기존에 라이트·다크 값이 정의된 토큰).
 
 ---
+
+### 2026-07-10 — 설정 모달 2차 폴리싱: Preferences 리네이밍 + Theme Select화 + Account nav 최상단
+
+PM이 1차 폴리싱 결과를 보고 추가로 확정한 세 가지 반영. 이번에도 순수 UI 패스 — `trpc.account.*`/게이팅/삭제 로직 무변경.
+
+- **"일반" → "Preferences" 리네이밍**: 코드 식별자까지 끝까지 맞췄다 — `GeneralSection.tsx` 삭제하고 `PreferencesSection.tsx` 신설, `SettingsSection` 타입 값 `"general"`→`"preferences"`(SettingsModal 기본 상태·리셋 로직 포함 전체 동기화). i18n `settings.nav_general`→`settings.nav_preferences`, `settings.general_subtitle`→`settings.preferences_subtitle`로 이름을 맞춰 리네이밍(번역 값 자체는 변경 없이 키만 이동). 아이콘은 `Wrench`→`SlidersHorizontal`(`@nema-io/weave/icons` = lucide-react 재노출)로 교체 — lucide가 제공하는 설정류 아이콘(`Settings`/`Settings2`/`Cog`/`Sliders*`) 중 Notion의 Preferences 아이콘처럼 가로 슬라이더 3개로 보이는 게 `SlidersHorizontal` 하나뿐이라 가장 근접한 선택으로 판단.
+- **Theme 컨트롤 세그먼트 → Select**: `ThemeToggle`을 버튼 그룹에서 `PreferencesSection`의 언어 선택과 동일한 weave `Select` 패턴으로 재작성, `Sun`/`Moon`/`Monitor` 아이콘은 전부 뺐다(텍스트만, 기존 `theme_light`/`dark`/`system` 키 재사용) — Theme·언어 두 컨트롤의 시각적 무게가 같아져 한 행 리듬 안에서 더 통일감 있다.
+- **"Appearance"/"Language" 그룹 헤더**: 재사용 가능한 `SettingsSectionHeader`(라벨 텍스트 + 하단 얇은 구분선)를 새로 뽑아 `PreferencesSection`의 Theme 행 위엔 "Appearance", 앱 언어 행 위엔 "Language" 헤더를 얹었다(`settings.appearance_section`/`language_section` 신규 키). `SettingsRow`(행 자체의 라벨+설명/컨트롤)와는 별도 레이어 — 그룹 헤더는 여러 행을 한 카테고리로 묶는 역할이라 책임이 다르다.
+- **Account nav 항목을 최상단 + 아바타·이름으로**: `SettingsNav`에서 순서를 Account 먼저·Preferences 나중으로 바꾸고, Account 항목은 제네릭 아이콘+라벨 매핑에서 완전히 빼내 `useUser()`로 가져온 `avatarUrl`+`displayName`을 직접 렌더링하는 전용 분기로 처리했다(`Avatar` 컴포넌트를 `size-5`로 축소해 nav 텍스트 크기와 맞춤). 그 결과 `settings.nav_account` i18n 키가 어디서도 안 쓰이게 돼(정적 라벨을 완전히 대체) 삭제했다. **모달 기본 진입 섹션은 그대로 Preferences**(surface-inventory "일반부터 보인다" 규칙 유지) — nav 순서만 바뀌고 `useState` 초기값·리셋 로직은 그대로다.
+- **Account 섹션 제목만 "Profile"로**: `AccountSection.tsx`의 h2 텍스트를 새 키 `account.profile_title`("Profile")로 바꿨다. **코드 식별자(섹션 값 `"account"`, 파일명 `AccountSection.tsx`)는 그대로 유지** — 이 섹션은 프로필 정보뿐 아니라 계정 삭제(Danger zone)까지 포함해 "profile"이라는 이름은 범위가 좁아 코드 이름으로는 부적절하다고 판단, 화면 텍스트만 바꿨다.
+- i18n은 지침대로 en 실작성, ko는 en과 동일 placeholder(이 PR 전체에서 일관된 컨벤션).
+- 이번에도 라이브 브라우저 검증은 생략(PM이 5176에서 직접 확인). 정적 검증 전부 통과, 새로 쓴 클래스(`bg-surface-raised`, `text-fg-tertiary`, `border-border` 등)는 전부 기존에 라이트·다크 값이 있는 토큰 재사용.
+
+---

@@ -28,7 +28,7 @@ export function AccountSection() {
     <div className="flex h-full flex-col">
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold text-fg-primary">
-          {t("settings.nav_account")}
+          {t("account.profile_title")}
         </h2>
         <p className="text-xs text-fg-tertiary">
           {t("settings.account_subtitle")}
