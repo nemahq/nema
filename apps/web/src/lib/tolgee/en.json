@@ -128,5 +128,20 @@
     "category_split": "Split",
     "category_stream": "AI Generation",
     "category_tab": "Tab"
+  },
+  "space": {
+    "changesets_empty": "No changesets yet.",
+    "not_found": "This space doesn't exist.",
+    "tab_changesets": "Changesets",
+    "tab_thread": "Thread",
+    "thread_empty": "Nothing here yet."
+  },
+  "workspace": {
+    "ask": "Ask & Narrate",
+    "coming_soon": "Coming soon",
+    "new_space": "New Space",
+    "references": "References",
+    "section_spaces": "SPACES",
+    "section_workspace": "WORKSPACE"
   }
 }

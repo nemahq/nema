@@ -9,6 +9,7 @@ interface SidebarNavLinkProps {
   icon: ReactNode;
   label: string;
   to: LinkProps["to"];
+  params?: LinkProps["params"];
   showActive?: boolean;
   activeOptions?: LinkProps["activeOptions"];
 }
@@ -17,6 +18,7 @@ export function SidebarNavLink({
   icon,
   label,
   to,
+  params,
   showActive = true,
   activeOptions,
 }: SidebarNavLinkProps) {
@@ -32,6 +34,7 @@ export function SidebarNavLink({
           <TooltipTrigger asChild>
             <Link
               to={to}
+              params={params}
               aria-label={label}
               className="flex size-9 items-center justify-center rounded-md transition-colors duration-fast hover:bg-surface-raised-hover"
               activeProps={activeProps}
@@ -52,8 +55,10 @@ export function SidebarNavLink({
     <div className="px-1.5 py-0.5">
       <Link
         to={to}
+        params={params}
         className="flex h-9 w-full items-center gap-1.5 rounded-md px-1.5 text-sm font-normal transition-colors duration-fast hover:bg-surface-raised-hover"
         activeProps={activeProps}
+        activeOptions={activeOptions}
       >
         {icon}
         {label}
