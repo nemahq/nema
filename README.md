@@ -93,6 +93,8 @@ pnpm dev:local    # 웹 + 서버 (local API, local Supabase)
 
 로그인 이메일은 실제 발송되지 않고 Mailpit(http://127.0.0.1:54324)에 쌓입니다. 자세한 내용은 `supabase/CLAUDE.md`의 "로컬 인증" 절을 참고하세요.
 
+로컬 Supabase 인스턴스가 이전 스키마로 이미 떠 있었다면 마이그레이션이 밀려 있을 수 있습니다 — 아래 "DB 마이그레이션" 절의 `supabase db reset`으로 최신화하세요.
+
 
 ## DB 마이그레이션
 
