@@ -6,7 +6,7 @@
 -- 실제 rename 뮤테이션이 생기며 이름을 NOT NULL + 빈 문자열 금지 +
 -- UNIQUE(workspace_id, name)로 승격한다(topics·tags와 같은 패턴). 기존 NULL은 그
 -- placeholder로 백필하고, 가입 트리거도 이제 NULL 대신 그 문자열을 직접 심는다.
--- shared의 DEFAULT_SPACE_NAME과 반드시 같은 값으로 유지할 것.
+-- shared의 DEFAULT_SPACE_NAME과 값을 맞춰 둘 것 — 리터럴 두 곳이라 자동 강제는 없다.
 -- =============================================================
 
 UPDATE spaces SET name = 'Default' WHERE name IS NULL;
@@ -45,7 +45,8 @@ DECLARE
   v_constraint text;
 BEGIN
   IF auth.uid() IS NOT NULL AND NOT is_workspace_member(p_workspace_id) THEN
-    RAISE EXCEPTION 'workspace % is not accessible to the caller', p_workspace_id;
+    RAISE EXCEPTION 'workspace % is not accessible to the caller', p_workspace_id
+      USING ERRCODE = 'no_data_found';
   END IF;
 
   INSERT INTO spaces (workspace_id, name) VALUES (p_workspace_id, btrim(p_name))
@@ -79,7 +80,8 @@ BEGIN
     AND (auth.uid() IS NULL OR is_space_member(p_space_id));
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'space % is not accessible to the caller', p_space_id;
+    RAISE EXCEPTION 'space % is not accessible to the caller', p_space_id
+      USING ERRCODE = 'no_data_found';
   END IF;
 EXCEPTION WHEN unique_violation THEN
   GET STACKED DIAGNOSTICS v_constraint = CONSTRAINT_NAME;
@@ -115,7 +117,8 @@ BEGIN
     AND (auth.uid() IS NULL OR is_space_member(p_space_id));
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'space % is not accessible to the caller', p_space_id;
+    RAISE EXCEPTION 'space % is not accessible to the caller', p_space_id
+      USING ERRCODE = 'no_data_found';
   END IF;
 
   IF (SELECT count(*) FROM spaces WHERE workspace_id = v_workspace_id) <= 1 THEN
