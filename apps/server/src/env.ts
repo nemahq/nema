@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { config } from "dotenv";
 import { z } from "zod";
 
-const appEnvValues = ["staging", "production"] as const;
+const appEnvValues = ["local", "staging", "production"] as const;
 
 const envSchema = z
   .object({

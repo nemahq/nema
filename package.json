@@ -8,6 +8,7 @@
   "packageManager": "pnpm@10.6.2",
   "scripts": {
     "dev": "turbo run dev",
+    "dev:local": "turbo run dev:local",
     "dev:web": "VITE_DEV_API_TARGET=https://api-staging.getnema.app pnpm --filter web dev",
     "dev:web:prod": "VITE_DEV_API_TARGET=https://api.getnema.app pnpm --filter web dev:prod",
     "dev:server": "pnpm --filter server dev",
