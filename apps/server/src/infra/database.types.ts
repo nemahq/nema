@@ -412,18 +412,21 @@ export type Database = {
         Row: {
           content_language: string;
           created_at: string;
+          first_entered_at: string | null;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           content_language?: string;
           created_at?: string;
+          first_entered_at?: string | null;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           content_language?: string;
           created_at?: string;
+          first_entered_at?: string | null;
           updated_at?: string;
           user_id?: string;
         };
@@ -1280,6 +1283,7 @@ export type Database = {
         Args: { p_reference_id: string; p_tag_id: string };
         Returns: undefined;
       };
+      mark_first_entry: { Args: never; Returns: boolean };
       purge_expired_sources: {
         Args: { p_batch_limit?: number; p_retention_days?: number };
         Returns: number;

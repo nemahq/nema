@@ -13,6 +13,7 @@ import { statementRouter } from "./routers/statement-router";
 import { tagRouter } from "./routers/tag-router";
 import { topicRouter } from "./routers/topic-router";
 import { workspaceMemberRouter } from "./routers/workspace-member-router";
+import { workspaceRouter } from "./routers/workspace-router";
 import { publicProcedure, router } from "./trpc";
 
 export const appRouter = router({
@@ -32,6 +33,7 @@ export const appRouter = router({
   topic: topicRouter,
   tag: tagRouter,
   workspaceMember: workspaceMemberRouter,
+  workspace: workspaceRouter,
   account: accountRouter,
   dev: devRouter,
 });
