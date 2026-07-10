@@ -39,6 +39,25 @@ export function SignInPage() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
+  useEffect(
+    function handleAuthRedirectError() {
+      if (!window.location.hash) {
+        return;
+      }
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      if (!hashParams.has("error")) {
+        return;
+      }
+      setError(t("auth.magic_link_invalid"));
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    },
+    [t],
+  );
+
   // startsWith("/") 가드로 외부 URL 주입(open redirect)을 차단한다.
   function resolveRedirectUrl() {
     return search.redirect?.startsWith("/")

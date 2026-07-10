@@ -7,6 +7,7 @@
     "continue_with_email": "이메일로 계속하기",
     "continue_with_google": "Google로 계속하기",
     "email_placeholder": "이메일",
+    "magic_link_invalid": "로그인 링크가 만료됐거나 이미 사용됐어요. 새 링크를 요청해주세요.",
     "magic_link_sent": "이메일에서 로그인 링크를 확인해주세요.",
     "or": "OR"
   },
