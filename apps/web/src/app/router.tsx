@@ -24,7 +24,10 @@ import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback"
 import { requireAuth, requireGuest } from "@web/features/auth";
 import { HarnessPage } from "@web/features/dev-harness";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
-import { WorkspaceSidebar } from "@web/features/workspace";
+import {
+  useWorkspaceBootstrapQuery,
+  WorkspaceSidebar,
+} from "@web/features/workspace";
 import { getStorage, setStorage } from "@web/utils/localStorage";
 
 import { App } from "./App";
@@ -132,24 +135,37 @@ const sessionRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
-// 새 LNB(워크스페이스·Space 스코프 셸)를 두르는 레이아웃 — 세션 사이드바와 형제.
-// MVP IA 재구축이 진행되면서 새 화면들이 이 아래로 얹힌다.
-const workspaceSidebarRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
-  id: "_workspaceSidebar",
-  component: () => (
+// bootstrap 실패는 LNB·Space 화면 전체가 뜰 수 없는 상태 — 반쪽 렌더(빈 계정 메뉴·
+// Space 0개 착시) 대신 셸 전체를 라우트 에러 폴백으로 올린다. Sentry 보고는 쿼리
+// meta(reportToSentry)가 담당한다.
+function WorkspaceSidebarLayout() {
+  const bootstrapQuery = useWorkspaceBootstrapQuery();
+  if (bootstrapQuery.isError) {
+    throw bootstrapQuery.error;
+  }
+
+  return (
     <>
       <WorkspaceSidebar />
       <Suspense fallback={<ContentAreaFallback />}>
         <Outlet />
       </Suspense>
     </>
-  ),
+  );
+}
+
+// 새 LNB(워크스페이스·Space 스코프 셸)를 두르는 레이아웃 — 세션 사이드바와 형제.
+// MVP IA 재구축이 진행되면서 새 화면들이 이 아래로 얹힌다.
+const workspaceSidebarRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  id: "_workspaceSidebar",
+  component: WorkspaceSidebarLayout,
+  errorComponent: RouteErrorFallback,
 });
 
 function SpaceOverviewShell() {
   const { spaceId } = spaceOverviewRoute.useParams();
-  return <SpaceOverviewPage spaceId={spaceId} />;
+  return <SpaceOverviewPage key={spaceId} spaceId={spaceId} />;
 }
 
 const spaceOverviewRoute = createRoute({

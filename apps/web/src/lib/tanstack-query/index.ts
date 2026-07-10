@@ -17,8 +17,10 @@ export const queryClient = new QueryClient({
     },
   },
   queryCache: new QueryCache({
-    onError(error) {
-      if (!(error instanceof TRPCClientError)) {
+    // TRPCClientError는 기본적으로 제외(예상된 거부·401 등 노이즈). 단 critical 쿼리는
+    // meta.reportToSentry로 실패를 반드시 보고하게 opt-in한다(예: workspace.bootstrap).
+    onError(error, query) {
+      if (!(error instanceof TRPCClientError) || query.meta?.reportToSentry) {
         Sentry.captureException(error);
       }
     },

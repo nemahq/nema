@@ -10,6 +10,7 @@ export function useWorkspaceBootstrapQuery(
 ) {
   return trpc.workspace.bootstrap.useQuery(undefined, {
     staleTime: BOOTSTRAP_STALE_TIME_MS,
+    meta: { reportToSentry: true },
     ...options,
   });
 }
