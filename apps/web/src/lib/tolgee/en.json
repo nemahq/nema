@@ -133,15 +133,15 @@
     "changesets_empty": "No changesets yet.",
     "not_found": "This space doesn't exist.",
     "tab_changesets": "Changesets",
-    "tab_thread": "Thread",
-    "thread_empty": "Nothing here yet."
+    "tab_topic": "Thread",
+    "topic_empty": "Nothing here yet."
   },
   "workspace": {
     "ask": "Ask & Narrate",
     "coming_soon": "Coming soon",
-    "new_space": "New Space",
+    "new_space": "New space",
     "references": "References",
-    "section_spaces": "SPACES",
-    "section_workspace": "WORKSPACE"
+    "section_spaces": "Spaces",
+    "section_workspace": "Workspace"
   }
 }

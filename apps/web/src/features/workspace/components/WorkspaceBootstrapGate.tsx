@@ -13,20 +13,20 @@ interface WorkspaceBootstrapGateProps {
 export function WorkspaceBootstrapGate({
   children,
 }: WorkspaceBootstrapGateProps) {
-  const { data } = useWorkspaceBootstrapQuery();
+  const { data: bootstrap } = useWorkspaceBootstrapQuery();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
   const redirected = useRef(false);
 
   useEffect(
     function redirectFirstEntryToDefaultSpace() {
-      if (redirected.current || !data?.isFirstEntry) {
+      if (redirected.current || !bootstrap?.isFirstEntry) {
         return;
       }
       if (pathname !== "/") {
         return;
       }
-      const [firstSpace] = data.spaces;
+      const [firstSpace] = bootstrap.spaces;
       if (!firstSpace) {
         return;
       }
@@ -37,7 +37,7 @@ export function WorkspaceBootstrapGate({
         replace: true,
       });
     },
-    [data, pathname, navigate],
+    [bootstrap, pathname, navigate],
   );
 
   return <>{children}</>;
