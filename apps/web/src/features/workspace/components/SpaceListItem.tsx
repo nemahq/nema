@@ -13,11 +13,16 @@ import { SpaceModal } from "./SpaceModal";
 const ICON_CLASS = "size-4";
 
 interface SpaceListItemProps {
-  space: { id: string; name: string };
+  spaceId: string;
+  spaceName: string;
   isLastSpace: boolean;
 }
 
-export function SpaceListItem({ space, isLastSpace }: SpaceListItemProps) {
+export function SpaceListItem({
+  spaceId,
+  spaceName,
+  isLastSpace,
+}: SpaceListItemProps) {
   const { collapsed } = useSidebar();
   const navigate = useNavigate();
   const params = useParams({ strict: false });
@@ -28,9 +33,9 @@ export function SpaceListItem({ space, isLastSpace }: SpaceListItemProps) {
     return (
       <SidebarNavLink
         icon={<Hash strokeWidth={1.5} className={ICON_CLASS} />}
-        label={space.name}
+        label={spaceName}
         to="/space/$spaceId"
-        params={{ spaceId: space.id }}
+        params={{ spaceId }}
       />
     );
   }
@@ -39,14 +44,14 @@ export function SpaceListItem({ space, isLastSpace }: SpaceListItemProps) {
     <div className="group relative flex items-center px-1.5 py-0.5">
       <Link
         to="/space/$spaceId"
-        params={{ spaceId: space.id }}
+        params={{ spaceId }}
         className="flex h-9 w-full items-center gap-1.5 truncate rounded-md px-1.5 pr-8 text-sm font-normal transition-colors duration-fast hover:bg-surface-raised-hover"
         activeProps={{
           className: "bg-surface-raised-hover font-medium",
         }}
       >
         <Hash strokeWidth={1.5} className={ICON_CLASS} />
-        {space.name}
+        {spaceName}
       </Link>
 
       <SpaceItemMenu
@@ -56,17 +61,19 @@ export function SpaceListItem({ space, isLastSpace }: SpaceListItemProps) {
 
       <SpaceModal
         mode="rename"
-        space={space}
+        spaceId={spaceId}
+        spaceName={spaceName}
         open={renameOpen}
         onOpenChange={setRenameOpen}
       />
       <SpaceDeleteDialog
-        space={space}
+        spaceId={spaceId}
+        spaceName={spaceName}
         isLastSpace={isLastSpace}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         onDeleted={() => {
-          if ("spaceId" in params && params.spaceId === space.id) {
+          if ("spaceId" in params && params.spaceId === spaceId) {
             navigate({ to: "/" });
           }
         }}

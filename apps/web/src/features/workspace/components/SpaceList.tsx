@@ -23,7 +23,8 @@ export function SpaceList() {
       {spaces.map((space) => (
         <SpaceListItem
           key={space.id}
-          space={space}
+          spaceId={space.id}
+          spaceName={space.name}
           isLastSpace={spaces.length <= 1}
         />
       ))}
