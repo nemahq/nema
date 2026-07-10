@@ -30,7 +30,7 @@ export function toBootstrapUser(user: User): BootstrapUser {
   return {
     id: user.id,
     name: name || user.id,
-    email: user.email ?? "",
+    ...(user.email ? { email: user.email } : {}),
     ...(typeof rawAvatar === "string" && rawAvatar
       ? { avatarUrl: rawAvatar }
       : {}),
@@ -38,7 +38,8 @@ export function toBootstrapUser(user: User): BootstrapUser {
 }
 
 // 워크스페이스 이름 정책은 아직 미정(07-modeling.md "열어두는 것") — 개인 단계
-// 표시용 자리만 채운다. Space와 달리 FE 계약에 없어 shared 상수로 안 뺐다.
+// 표시용 자리만 채운다. FE는 아직 이 값을 실제로 소비하지 않아(목업 유지 중)
+// shared로 뺄 근거가 없다 — Space처럼 FE가 실제로 참조하게 되면 그때 옮긴다.
 const DEFAULT_WORKSPACE_NAME = "Workspace";
 
 // 신규 유저 랜딩 진입점. MVP는 워크스페이스 단수 전제라 가장 오래된 멤버십(=가입
@@ -51,17 +52,23 @@ export async function bootstrapWorkspace(args: {
 }): Promise<WorkspaceBootstrap> {
   const { supabase, user } = args;
 
-  const { data: isFirstEntry, error: firstEntryError } =
-    await supabase.rpc("mark_first_entry");
-  throwIfSupabaseError(firstEntryError);
-
-  const { data: membership, error: membershipError } = await supabase
+  const { data: memberships, error: membershipError } = await supabase
     .from("workspace_members")
     .select("workspace_id, workspaces(id, name)")
     .order("created_at", { ascending: true })
-    .limit(1)
-    .single();
+    .limit(1);
   throwIfSupabaseError(membershipError);
+
+  // 가입 트리거가 항상 워크스페이스 멤버십을 만들어두므로 0건은 정상 케이스가
+  // 아니라 그 불변식이 깨졌다는 뜻(트리거 실패·마이그레이션 문제 등) — SupabaseError가
+  // 아닌 일반 Error로 던져 EXPECTED_DOMAIN_CODES(정상 거부로 취급해 Sentry 캡처를
+  // 건너뜀)에 안 걸리고 확실히 알림이 가게 한다.
+  const membership = memberships?.[0];
+  if (!membership) {
+    throw new Error(
+      `User ${user.id} has no workspace membership — signup trigger invariant broken`,
+    );
+  }
 
   const { data: spaceRows, error: spacesError } = await supabase
     .from("spaces")
@@ -69,6 +76,13 @@ export async function bootstrapWorkspace(args: {
     .eq("workspace_id", membership.workspace_id)
     .order("created_at", { ascending: true });
   throwIfSupabaseError(spacesError);
+
+  // 첫 진입 표식은 그 자체로 커밋되는 별도 RPC라 마지막에 소비한다 — 앞의 조회들이
+  // 실패하면 응답이 아예 안 나가는데, 표식을 먼저 태우면 그 신호가 이 요청과 함께
+  // 영영 사라진다(재시도해도 이미 false).
+  const { data: isFirstEntry, error: firstEntryError } =
+    await supabase.rpc("mark_first_entry");
+  throwIfSupabaseError(firstEntryError);
 
   return {
     user: toBootstrapUser(user),

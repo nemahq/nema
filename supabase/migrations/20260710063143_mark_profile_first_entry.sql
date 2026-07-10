@@ -9,6 +9,17 @@
 
 ALTER TABLE profiles ADD COLUMN first_entered_at timestamptz;
 
+-- 기존 가입자 백필 — 안 하면 이 컬럼은 전원 NULL로 시작해, 마이그레이션 이후
+-- 첫 로그인하는 기존 유저 전원이 mark_first_entry()에서 true(=신규)를 받아
+-- Space 오버뷰로 잘못 리다이렉트된다. "이미 지나간 시점"으로 채워 신규와 구분한다.
+UPDATE profiles SET first_entered_at = now() WHERE first_entered_at IS NULL;
+
+-- profiles 행 자체가 없는 기존 가입자(설정을 한 번도 안 건드린 유저)도 같은 이유로
+-- 백필해야 한다 — 위 UPDATE는 이미 있는 행만 훑어서 이들을 놓친다.
+INSERT INTO profiles (user_id, first_entered_at)
+SELECT id, now() FROM auth.users u
+WHERE NOT EXISTS (SELECT 1 FROM profiles p WHERE p.user_id = u.id);
+
 -- profiles 행이 아직 없으면(설정을 한 번도 안 건드린 신규 유저) 만들면서 동시에
 -- 첫 진입을 표시한다. UPDATE ... WHERE first_entered_at IS NULL은 행 잠금으로
 -- 직렬화되어, 탭 두 개가 동시에 처음 들어와도 정확히 한 호출만 true를 받는다

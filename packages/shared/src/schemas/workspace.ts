@@ -40,7 +40,9 @@ export const DEFAULT_SPACE_NAME = "Default";
 export const BootstrapUserSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  email: z.string().email(),
+  // Supabase User.email은 SDK 타입상 optional(전화번호 인증 등 예외 케이스 대비) —
+  // 항상 채워 보내는 대신 없으면 키 자체를 생략한다(avatarUrl과 같은 패턴).
+  email: z.string().email().optional(),
   avatarUrl: z.string().url().optional(),
 });
 export type BootstrapUser = z.infer<typeof BootstrapUserSchema>;
@@ -61,8 +63,10 @@ export const WorkspaceBootstrapSchema = z.object({
   user: BootstrapUserSchema,
   workspace: BootstrapWorkspaceSchema,
   spaces: z.array(BootstrapSpaceSchema),
-  // 이 유저의 처음 진입이면 true — 방금 만든 Space 오버뷰로 보낸다. 가입 시점에
-  // Space가 이미 만들어져 있어 "Space 존재"로는 신규/기존을 못 가른다.
+  // 이 유저 생애 단 한 번만 true — 방금 만든 Space 오버뷰로 보낸다. 서버가
+  // 호출마다 원자적으로 소비하므로(mark_first_entry), 같은 유저가 bootstrap을
+  // 다시 불러도 이후로는 항상 false. 재시도·폴백에서 다시 true를 기대하면 안 된다.
+  // 가입 시점에 Space가 이미 만들어져 있어 "Space 존재"로는 신규/기존을 못 가른다.
   isFirstEntry: z.boolean(),
 });
 export type WorkspaceBootstrap = z.infer<typeof WorkspaceBootstrapSchema>;
