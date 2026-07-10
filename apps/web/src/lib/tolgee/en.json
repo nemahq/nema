@@ -7,6 +7,7 @@
     "continue_with_email": "Continue with email",
     "continue_with_google": "Continue with Google",
     "email_placeholder": "Email",
+    "magic_link_invalid": "This login link has expired. Please request a new one.",
     "magic_link_sent": "Check your email for the login link.",
     "or": "OR"
   },

@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import * as Sentry from "@sentry/react";
 import type { Session, User } from "@supabase/supabase-js";
 
 import { posthog } from "@web/lib/posthog";
@@ -16,6 +17,58 @@ interface AppUser {
   displayName: string;
   email: string;
   avatarUrl?: string;
+}
+
+// access_denied는 구글 로그인 취소·거부의 정상 종료 신호라 안내 없이 무시해야 한다
+// (workspace-account-flow.md "구글 로그인 취소·거부" 케이스).
+const MAGIC_LINK_EXPIRED_ERROR_CODE = "otp_expired";
+const OAUTH_USER_DENIED_ERROR_CODE = "access_denied";
+
+interface CapturedAuthRedirectError {
+  code: string | null;
+  description: string | null;
+}
+
+let capturedAuthRedirectError: CapturedAuthRedirectError | null = null;
+
+// requireAuth의 beforeLoad가 이 해시를 /signin?redirect=... 쿼리로 통째로
+// 인코딩해버리므로, 그보다 먼저(모듈 로드 시점) 읽고 지워야 한다.
+function captureAuthRedirectErrorFromHash(): void {
+  if (!window.location.hash) {
+    return;
+  }
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  if (!hashParams.has("error")) {
+    return;
+  }
+  capturedAuthRedirectError = {
+    code: hashParams.get("error_code"),
+    description: hashParams.get("error_description"),
+  };
+  window.history.replaceState(
+    null,
+    "",
+    window.location.pathname + window.location.search,
+  );
+}
+captureAuthRedirectErrorFromHash();
+
+// access_denied 외의 예기치 않은 코드는 진짜 기술적 실패일 수 있어 Sentry로 보낸다.
+export function consumeMagicLinkExpiredError(): boolean {
+  const error = capturedAuthRedirectError;
+  capturedAuthRedirectError = null;
+  if (!error) {
+    return false;
+  }
+  if (error.code === MAGIC_LINK_EXPIRED_ERROR_CODE) {
+    return true;
+  }
+  if (error.code !== OAUTH_USER_DENIED_ERROR_CODE) {
+    Sentry.captureMessage("Unhandled auth redirect error", {
+      extra: { code: error.code, description: error.description },
+    });
+  }
+  return false;
 }
 
 interface AuthContext {
