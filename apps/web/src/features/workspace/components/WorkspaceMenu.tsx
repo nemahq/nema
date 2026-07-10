@@ -38,6 +38,11 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
     await navigate({ to: "/signin", search: { redirect: undefined } });
   }
 
+  function handleToggleSidebar() {
+    trackEvent("sidebar.toggle");
+    toggle();
+  }
+
   const accountContent = (
     <DropdownMenuContent
       side="bottom"
@@ -117,7 +122,7 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
           </DropdownMenu>
           <button
             type="button"
-            onClick={toggle}
+            onClick={handleToggleSidebar}
             aria-label={t("layout.collapse_sidebar")}
             className="shrink-0 rounded-md p-1 opacity-0 outline-none transition-opacity duration-fast focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand group-hover/switcher:opacity-100"
           >
