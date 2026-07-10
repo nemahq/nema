@@ -35,28 +35,32 @@ export function AccountSection() {
         </p>
       </div>
 
-      <div className="mt-6 flex items-center gap-3">
-        <Avatar src={user.avatarUrl} fallback={initial} />
-        <div className="min-w-0">
-          <div className="truncate text-sm font-medium text-fg-primary">
-            {user.displayName}
+      <div className="mt-6 flex flex-1 flex-col gap-6">
+        <div className="flex items-center gap-3">
+          <Avatar src={user.avatarUrl} fallback={initial} />
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-fg-primary">
+              {user.displayName}
+            </div>
+            <div className="truncate text-xs text-fg-tertiary">
+              {user.email}
+            </div>
           </div>
-          <div className="truncate text-xs text-fg-tertiary">{user.email}</div>
         </div>
-      </div>
 
-      <div className="mt-8 flex flex-col gap-3 border-t border-border pt-6">
-        <span className="text-xs font-semibold tracking-wide text-status-error/70 uppercase">
-          {t("account.danger_zone_label")}
-        </span>
-        <SettingsRow
-          label={t("account.delete_title")}
-          description={t("account.delete_description")}
-        >
-          <Button variant="danger" onClick={() => setDeleting(true)}>
-            {t("account.delete_button")}
-          </Button>
-        </SettingsRow>
+        <div className="flex flex-col gap-3 border-t border-border pt-6">
+          <span className="text-xs font-semibold tracking-wide text-status-error/70 uppercase">
+            {t("account.danger_zone_label")}
+          </span>
+          <SettingsRow
+            label={t("account.delete_title")}
+            description={t("account.delete_description")}
+          >
+            <Button variant="danger" onClick={() => setDeleting(true)}>
+              {t("account.delete_button")}
+            </Button>
+          </SettingsRow>
+        </div>
       </div>
     </div>
   );

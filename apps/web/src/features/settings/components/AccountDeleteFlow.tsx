@@ -59,15 +59,6 @@ export function AccountDeleteFlow({
     });
   }
 
-  if (blockersQuery.isLoading) {
-    return (
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-16 w-full" />
-      </div>
-    );
-  }
-
   if (blockersQuery.isError) {
     return (
       <div className="flex h-full flex-col">
@@ -83,9 +74,13 @@ export function AccountDeleteFlow({
     );
   }
 
+  const isLoadingBlockers = blockersQuery.isLoading;
   const blockingCount = blockersQuery.data?.blockingWorkspaceIds.length ?? 0;
 
-  if (blockingCount > 0) {
+  // 아직 로딩 중일 땐 게이팅 여부를 몰라 blocked 화면으로 못 넘어간다 — 그동안은
+  // confirm 화면을 낙관적으로 먼저 보여주고, 이메일 확인 폼 자리만 스켈레톤으로
+  // 채운다(제목·경고·버튼은 로딩 여부와 무관하게 항상 같은 모양이라서).
+  if (!isLoadingBlockers && blockingCount > 0) {
     return (
       <div className="flex h-full flex-col">
         <h2 className="text-lg font-semibold text-fg-primary">
@@ -117,22 +112,29 @@ export function AccountDeleteFlow({
       <div className="mt-4 flex flex-1 flex-col gap-4">
         <Alert variant="error">{t("account.delete_confirm_description")}</Alert>
 
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor={confirmEmailId}
-            className="text-sm font-medium text-fg-primary"
-          >
-            {t("account.delete_confirm_email_label", { email: userEmail })}
-          </label>
-          <Input
-            id={confirmEmailId}
-            value={confirmationInput}
-            onChange={(e) => setConfirmationInput(e.target.value)}
-            placeholder={userEmail}
-            autoComplete="off"
-            disabled={deleteMutation.isPending}
-          />
-        </div>
+        {isLoadingBlockers ? (
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor={confirmEmailId}
+              className="text-sm font-medium text-fg-primary"
+            >
+              {t("account.delete_confirm_email_label", { email: userEmail })}
+            </label>
+            <Input
+              id={confirmEmailId}
+              value={confirmationInput}
+              onChange={(e) => setConfirmationInput(e.target.value)}
+              placeholder={userEmail}
+              autoComplete="off"
+              disabled={deleteMutation.isPending}
+            />
+          </div>
+        )}
 
         {mutationError &&
           (isPreconditionFailed(mutationError) ? (
@@ -155,7 +157,9 @@ export function AccountDeleteFlow({
         <Button
           variant="danger"
           onClick={handleConfirmDelete}
-          disabled={!canConfirm || deleteMutation.isPending}
+          disabled={
+            !canConfirm || deleteMutation.isPending || isLoadingBlockers
+          }
         >
           {deleteMutation.isPending
             ? t("account.delete_deleting")

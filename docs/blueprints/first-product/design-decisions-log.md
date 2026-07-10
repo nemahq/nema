@@ -144,3 +144,13 @@ PM 요청으로 `PreferencesSection`의 앱 언어 Select를 Theme 토글과 같
 - `settings.save`가 이 변경으로 앱 전체에서 미사용이 돼(재검색으로 재확인) i18n에서 삭제. `common.cancel`은 `DeleteSessionDialog`/`DraftTabContent`/단축키 맵이 계속 써서 남김.
 
 ---
+
+### 2026-07-10 — Profile 리듬 통일 + 삭제 로딩 스켈레톤 범위 축소 + nav 포커스 스타일 조정
+
+PM 요청 세 가지, 전부 스타일/구조 패스(게이팅·`trpc.account.*` 로직 무변경).
+
+- **`AccountSection` 외곽 리듬을 `PreferencesSection`과 통일**: 프로필 블록·danger zone 블록을 각자 다른 `mt-6`/`mt-8`로 따로 떼지 않고, `PreferencesSection`과 같은 `mt-6 flex flex-1 flex-col gap-6` 컨테이너 하나로 묶어 그 안에 두 블록을 나열했다. danger zone 고유의 시각 요소(빨간 톤 uppercase 라벨, `border-t`)는 유지. 프로필 블록엔 `SettingsSectionHeader`를 얹지 않기로 판단했다 — h2 제목이 이미 "Profile"이라 그 아래 또 헤더를 얹으면 같은 말을 두 번 하는 셈이라서(Preferences는 "Theme"와 "언어"라는 서로 다른 카테고리를 구분해야 해서 헤더가 필요했던 것과 다른 상황).
+- **계정 삭제 로딩 스켈레톤 범위 축소**: `AccountDeleteFlow`가 이전엔 `blockersQuery.isLoading` 동안 화면 전체를 스켈레톤 2개로 덮었는데, 이제 제목(`account.delete_confirm_title`)·위험 경고(`Alert` + `account.delete_confirm_description`)·하단 Cancel/삭제 버튼은 로딩 여부와 무관하게 항상 즉시 렌더링되고, 이메일 타이핑 확인 폼(`label`+`Input`) 자리만 그 모양 그대로(라벨 높이·Input 높이) 스켈레톤으로 대체했다. 데이터가 오면 `blockingCount > 0`이면 blocked 화면 전체로 스왑되고, 아니면 스켈레톤 자리에 실제 폼이 들어온다 — 게이팅 여부를 모르는 로딩 중엔 confirm 화면을 낙관적으로 먼저 보여주는 셈이라, 삭제 버튼은 그동안 `isLoadingBlockers`로 추가 disabled 처리했다(오조작 방지, "로딩 중이니 disabled"라는 PM 요청 그대로).
+- **Nav 포커스 스타일 — 요청과 다르게 처리(플래그)**: PM은 `SettingsNav`의 `focus-visible:ring-2 focus-visible:ring-brand`를 완전히 제거해달라고 했지만, `apps/web/docs/conventions.md` Accessibility 절의 "MUST NOT remove focus styles"와 정면으로 충돌해 **그대로 삭제하지 않고 대체**했다 — 링 대신 `focus-visible:bg-surface-raised-hover`(이미 hover에 쓰는 톤 재사용, 새 토큰 아님)로 키보드 포커스 시 배경이 살짝 바뀌게 했다. PM이 싫어한 "링" 자체는 없어지고, 키보드 전용 사용자를 위한 포커스 신호는 남아있다. 링을 정말 완전히 없애고 싶다면(포커스 신호 자체를 포기) 확인 후 재작업 필요 — PM 판단 필요 지점으로 남김.
+
+---
