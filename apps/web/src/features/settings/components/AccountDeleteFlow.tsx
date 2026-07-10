@@ -1,7 +1,8 @@
+import { useId, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { TRPCClientError } from "@trpc/client";
 
-import { Alert, Button, DialogFooter, Skeleton } from "@nema-io/weave";
+import { Alert, Button, DialogFooter, Input, Skeleton } from "@nema-io/weave";
 
 import {
   useAccountDeletionBlockersQuery,
@@ -12,6 +13,7 @@ import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface AccountDeleteFlowProps {
+  userEmail: string;
   onBack: () => void;
 }
 
@@ -22,9 +24,22 @@ function isPreconditionFailed(error: unknown): boolean {
   );
 }
 
-export function AccountDeleteFlow({ onBack }: AccountDeleteFlowProps) {
+// 삭제 확인은 버튼 클릭만이 아니라 본인 이메일 타이핑까지 요구한다(위험 액션
+// 확인 강도를 타이핑 확인으로 올린 PM 결정, design-decisions-log 참고).
+// 이메일은 대소문자를 구분하지 않는 게 일반적인 이메일 비교 관례라 toLowerCase
+// 비교로 맞추고, 앞뒤 공백은 트리밍한다.
+function isConfirmationEmailMatch(input: string, userEmail: string): boolean {
+  return input.trim().toLowerCase() === userEmail.trim().toLowerCase();
+}
+
+export function AccountDeleteFlow({
+  userEmail,
+  onBack,
+}: AccountDeleteFlowProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const confirmEmailId = useId();
+  const [confirmationInput, setConfirmationInput] = useState("");
   const blockersQuery = useAccountDeletionBlockersQuery();
   const deleteMutation = useDeleteAccount();
 
@@ -83,6 +98,7 @@ export function AccountDeleteFlow({ onBack }: AccountDeleteFlowProps) {
   }
 
   const mutationError = deleteMutation.error;
+  const canConfirm = isConfirmationEmailMatch(confirmationInput, userEmail);
 
   return (
     <div className="flex h-full flex-col">
@@ -92,6 +108,23 @@ export function AccountDeleteFlow({ onBack }: AccountDeleteFlowProps) {
 
       <div className="mt-4 flex flex-1 flex-col gap-3">
         <Alert variant="error">{t("account.delete_confirm_description")}</Alert>
+
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor={confirmEmailId}
+            className="text-sm font-medium text-fg-primary"
+          >
+            {t("account.delete_confirm_email_label", { email: userEmail })}
+          </label>
+          <Input
+            id={confirmEmailId}
+            value={confirmationInput}
+            onChange={(e) => setConfirmationInput(e.target.value)}
+            placeholder={userEmail}
+            autoComplete="off"
+            disabled={deleteMutation.isPending}
+          />
+        </div>
 
         {mutationError &&
           (isPreconditionFailed(mutationError) ? (
@@ -114,7 +147,7 @@ export function AccountDeleteFlow({ onBack }: AccountDeleteFlowProps) {
         <Button
           variant="danger"
           onClick={handleConfirmDelete}
-          disabled={deleteMutation.isPending}
+          disabled={!canConfirm || deleteMutation.isPending}
         >
           {deleteMutation.isPending
             ? t("account.delete_deleting")

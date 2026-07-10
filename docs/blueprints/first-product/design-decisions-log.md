@@ -95,3 +95,14 @@
 - 라이트/다크 모두 브라우저로 직접 확인(Theme 토글 3종 즉시 반영+새로고침 후 유지, 설정 모달 재오픈 시 "일반" 기본 노출, 계정 섹션→삭제 확인→취소 왕복). 계정 삭제 게이팅·확인 화면은 Kyle 실계정(현재 유일-멤버 워크스페이스만 있어 차단 없음)으로 게이팅 통과·확인 화면 렌더링까지만 확인했고, **"Yes, delete my account" 실제 클릭(실제 삭제 실행)은 하지 않았다** — 실제 삭제 실행·차단 문구(다른 멤버 있는 워크스페이스의 유일 owner 케이스)는 이번 세션에서 검증 못함, 일회용 테스트 계정으로 별도 검증 필요.
 
 ---
+
+### 2026-07-10 — 계정 설정 리뷰 반영: 삭제 확인 타이핑화 + ContentLanguageSection 숨김
+
+PM 리뷰 핑퐁 결과 반영, PR #380에 같은 브랜치로 추가 커밋. 위 세션에서 "확인 강도 미확정"으로 남겨뒀던 판단이 타이핑 확인으로 확정됐고, ContentLanguageSection의 "일반" 섹션 배치가 애매하다고 남겨뒀던 질문은 "숨김"으로 정리됐다.
+
+- **계정 삭제 확인 — 버튼 확인 → 타이핑 확인으로 강화**: `AccountDeleteFlow`의 확인 화면에 이메일 입력 필드를 추가했다. 값은 별도 API 호출 없이 이미 인증된 세션에서 온 `useUser().email`을 `AccountSection` → `AccountDeleteFlow`로 그대로 내려받는다(`AccountSection`이 이미 프로필 블록 표시에 같은 값을 쓰고 있어 자연스러운 prop). 비교는 `input.trim().toLowerCase() === userEmail.trim().toLowerCase()` — 이메일은 로컬파트까지 대소문자를 구분하는 게 RFC상 원칙이지만, 실사용에서 대부분의 메일 서버·서비스가 대소문자를 구분하지 않고 사용자도 자기 이메일의 대소문자를 정확히 기억하지 못하는 경우가 흔해(입력 재현성이 오히려 삭제를 막는 마찰이 됨) 대소문자 무시로 정했다. `Yes, delete my account` 버튼은 이 비교가 참일 때만 활성화되고, 그 외 취소·`PRECONDITION_FAILED` 방어 로직은 그대로 유지했다(요청 범위와 일치).
+- **ContentLanguageSection 숨김 + 완전 삭제**: `GeneralSection`에서 렌더링을 뺐다(surface-inventory의 "일반" 섹션 정의가 애초에 Theme+앱 언어만 언급하고 있었던 것과 이제 합치). `profiles.content_language` DB 값·서버 로직은 지침대로 손대지 않았다 — 죽은 시그널로 유지한다는 기존 결정(project memory)은 그대로다. 렌더링을 빼고 나니 `ContentLanguageSection.tsx`가 다른 어디서도 안 쓰여(온보딩은 같은 `ContentLanguage` 타입을 쓰지만 별도의 자체 셀렉트 UI를 갖고 있어 이 컴포넌트에 의존하지 않았다) CLAUDE.md 원칙대로 파일 자체를 삭제했다. **연쇄적으로 죽은 코드도 같이 정리**: `GeneralSection`이 `ContentLanguageSection`에 값을 넘기려고만 쓰던 `useProfileSuspenseQuery`/`useUpdateProfile`/`contentLang` state가 그 용도를 잃어, 남겨두면 Save를 누를 때마다 값이 안 바뀐 `contentLanguage`를 서버에 조용히 재제출하는 죽은 왕복 호출만 남는 상황이었다 — 이 부분도 들어내고 `handleSave`를 `changeLocale(appLang)` 한 줄로 단순화했다(UI 언어 변경 자체의 동작·타이밍은 그대로, "Save 클릭 시 반영"도 안 바뀜). 이 정리로 `useProfileSuspenseQuery`가 앱 전체에서 미사용이 돼(knip이 잡음) `features/profile`에서도 함께 제거했다 — `useProfileQuery`/`useUpdateProfile`은 온보딩이 계속 쓰고 있어 남겼다. `settings.content_language`/`content_language_description` i18n 키도 유일한 소비처가 사라져 함께 삭제했다.
+- **i18n**: `account.delete_confirm_email_label`(en: `"Type {email} to confirm"`) 신규 추가, ko는 지침대로 en과 동일 값(자리만).
+- 라이트/다크 모두 브라우저로 직접 확인 — 잘못된 이메일 입력 시 버튼 비활성 유지, 앞뒤 공백·대소문자가 다른 정확한 이메일 입력 시 버튼이 활성화로 전환되는 것, 일반 섹션에 ContentLanguageSection이 더 이상 안 보이는 것까지 확인했다. Kyle 실계정 보호를 위해 활성화된 버튼을 실제로 누르는 것(실제 삭제 실행)은 여전히 하지 않았다.
+
+---

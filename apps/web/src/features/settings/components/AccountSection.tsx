@@ -13,7 +13,12 @@ export function AccountSection() {
   const [deleting, setDeleting] = useState(false);
 
   if (deleting) {
-    return <AccountDeleteFlow onBack={() => setDeleting(false)} />;
+    return (
+      <AccountDeleteFlow
+        userEmail={user.email}
+        onBack={() => setDeleting(false)}
+      />
+    );
   }
 
   const initial = user.displayName.charAt(0).toUpperCase();

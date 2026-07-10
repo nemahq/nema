@@ -7,6 +7,7 @@
     "delete_cancel": "Cancel",
     "delete_confirm_button": "Yes, delete my account",
     "delete_confirm_description": "This permanently deletes your account and can't be undone. Workspaces where you're the only member are deleted too.",
+    "delete_confirm_email_label": "Type {email} to confirm",
     "delete_confirm_title": "Delete your account?",
     "delete_deleting": "Deleting your account...",
     "delete_description": "Permanently delete your account and remove your data from Nema.",
@@ -123,8 +124,6 @@
   "settings": {
     "app_language": "앱 언어",
     "app_language_description": "메뉴와 버튼 등 화면에 표시되는 언어",
-    "content_language": "기록 언어",
-    "content_language_description": "기억하기와 질문하기에 사용하는 언어",
     "nav_account": "Account",
     "nav_general": "General",
     "onboarding_description": "입력하신 내용을 이 언어 기준으로 정리해드려요.",

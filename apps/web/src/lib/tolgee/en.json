@@ -7,6 +7,7 @@
     "delete_cancel": "Cancel",
     "delete_confirm_button": "Yes, delete my account",
     "delete_confirm_description": "This permanently deletes your account and can't be undone. Workspaces where you're the only member are deleted too.",
+    "delete_confirm_email_label": "Type {email} to confirm",
     "delete_confirm_title": "Delete your account?",
     "delete_deleting": "Deleting your account...",
     "delete_description": "Permanently delete your account and remove your data from Nema.",
@@ -123,8 +124,6 @@
   "settings": {
     "app_language": "App language",
     "app_language_description": "Language used for menus, buttons, and interface",
-    "content_language": "Content language",
-    "content_language_description": "Used when you Remember and Ask",
     "nav_account": "Account",
     "nav_general": "General",
     "onboarding_description": "We'll organize what you write based on this language.",

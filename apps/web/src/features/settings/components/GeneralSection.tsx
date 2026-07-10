@@ -1,6 +1,5 @@
-import { Suspense, useId, useState } from "react";
+import { useId, useState } from "react";
 
-import type { ContentLanguage } from "@nema-io/shared";
 import {
   Button,
   DialogFooter,
@@ -11,11 +10,7 @@ import {
   SelectValue,
 } from "@nema-io/weave";
 
-import {
-  LANGUAGE_LABELS,
-  useProfileSuspenseQuery,
-  useUpdateProfile,
-} from "@web/features/profile";
+import { LANGUAGE_LABELS } from "@web/features/profile";
 import {
   changeLocale,
   isLocale,
@@ -25,37 +20,23 @@ import {
   useTranslation,
 } from "@web/lib/tolgee";
 
-import { ContentLanguageSection } from "./ContentLanguageSection";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface GeneralSectionProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function GeneralSectionInner({ onOpenChange }: GeneralSectionProps) {
+export function GeneralSection({ onOpenChange }: GeneralSectionProps) {
   const { t } = useTranslation();
-  const [profile] = useProfileSuspenseQuery();
   const appLangId = useId();
-  const [contentLang, setContentLang] = useState<ContentLanguage>(
-    profile?.contentLanguage ?? "ko",
-  );
   const [appLang, setAppLang] = useState<Locale>(() => {
     const lang = tolgee.getLanguage();
     return lang && isLocale(lang) ? lang : "ko";
   });
 
-  const updateMutation = useUpdateProfile();
-
   function handleSave() {
-    updateMutation.mutate(
-      { contentLanguage: contentLang },
-      {
-        onSuccess: () => {
-          changeLocale(appLang);
-          onOpenChange(false);
-        },
-      },
-    );
+    changeLocale(appLang);
+    onOpenChange(false);
   }
 
   return (
@@ -105,26 +86,14 @@ function GeneralSectionInner({ onOpenChange }: GeneralSectionProps) {
             </SelectContent>
           </Select>
         </div>
-
-        <ContentLanguageSection value={contentLang} onChange={setContentLang} />
       </div>
 
       <DialogFooter className="mt-6">
         <Button variant="ghost" onClick={() => onOpenChange(false)}>
           {t("common.cancel")}
         </Button>
-        <Button onClick={handleSave} disabled={updateMutation.isPending}>
-          {t("settings.save")}
-        </Button>
+        <Button onClick={handleSave}>{t("settings.save")}</Button>
       </DialogFooter>
     </div>
-  );
-}
-
-export function GeneralSection({ onOpenChange }: GeneralSectionProps) {
-  return (
-    <Suspense>
-      <GeneralSectionInner onOpenChange={onOpenChange} />
-    </Suspense>
   );
 }
