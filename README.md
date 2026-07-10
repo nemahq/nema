@@ -72,11 +72,26 @@ cd apps/server && direnv allow
 ### 3. 개발 서버 실행
 
 ```bash
-pnpm dev          # 웹 + 서버 (local API)
+pnpm dev          # 웹 + 서버 (local API, staging Supabase)
 ```
 
 - 웹: http://localhost:5173
 - 서버: http://localhost:3001
+
+### 4. 로컬 Supabase로 전체 스택 실행 (선택)
+
+원격 staging Supabase 대신 로컬 Supabase(Auth 포함)에 붙여서 매직링크 로그인까지 로컬에서 검증하려면:
+
+```bash
+# Colima 사용 시 (Docker Desktop이 없는 경우)
+brew install docker colima
+colima start
+
+supabase start -x vector,imgproxy,edge-runtime,logflare,studio
+pnpm dev:local    # 웹 + 서버 (local API, local Supabase)
+```
+
+로그인 이메일은 실제 발송되지 않고 Mailpit(http://127.0.0.1:54324)에 쌓입니다. 자세한 내용은 `supabase/CLAUDE.md`의 "로컬 인증" 절을 참고하세요.
 
 
 ## DB 마이그레이션
@@ -88,9 +103,12 @@ pnpm dev          # 웹 + 서버 (local API)
 brew install docker colima
 colima start
 
-# 마이그레이션 적용 + 타입 생성
+# 마이그레이션 적용
 supabase start -x vector,imgproxy,edge-runtime,logflare,studio
-supabase gen types typescript --linked > apps/server/src/infra/database.types.ts
+supabase db reset
+
+# 타입 생성 (버전 고정 + 포맷 스크립트 — supabase gen types를 직접 실행하지 말 것)
+pnpm supabase:gen-types
 supabase stop
 ```
 
@@ -101,7 +119,8 @@ supabase stop
 
 | 명령어 | 설명 |
 | --- | --- |
-| `pnpm dev` | 웹 + 서버 (local API) |
+| `pnpm dev` | 웹 + 서버 (local API, staging Supabase) |
+| `pnpm dev:local` | 웹 + 서버 (local API, local Supabase) |
 | `pnpm dev:web` | 웹만 (staging API) |
 | `pnpm dev:web:prod` | 웹만 (prod API) |
 | `pnpm dev:server` | 서버만 |

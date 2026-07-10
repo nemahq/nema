@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/wait-for-server.mjs && vite --mode staging",
+    "dev:local": "node scripts/wait-for-server.mjs && vite --mode local-dev",
     "dev:prod": "node scripts/wait-for-server.mjs && vite --mode production",
     "build": "vite build --mode ${VITE_APP_ENV:-production}",
     "preview": "vite preview",

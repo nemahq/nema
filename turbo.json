@@ -9,6 +9,10 @@
       "persistent": true,
       "cache": false
     },
+    "dev:local": {
+      "persistent": true,
+      "cache": false
+    },
     "lint": {
       "dependsOn": [],
       "outputs": []
