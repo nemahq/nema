@@ -106,20 +106,20 @@ function mockSupabase(args: {
 }
 
 describe("bootstrapWorkspace", () => {
-  // workspace.name은 아직 nullable(정책 미정)이라 표시용 placeholder가 필요하지만,
-  // spaces.name은 이번 슬라이스의 NOT NULL 제약(space_management_rpcs)으로 DB가
-  // 보장하므로 여기선 워크스페이스 쪽만 검증한다.
-  it("이름 없는 Workspace(가입 트리거 산출물)는 en placeholder로 채워 내려간다", async () => {
+  // workspace.name은 아직 nullable(정책 미정)이라 유저 표시 이름 fallback이
+  // 필요하지만, spaces.name은 이번 슬라이스의 NOT NULL 제약(space_management_rpcs)으로
+  // DB가 보장하므로 여기선 워크스페이스 쪽만 검증한다.
+  it("이름 없는 Workspace(가입 트리거 산출물)는 유저 표시 이름으로 채워 내려간다", async () => {
     const result = await bootstrapWorkspace({
       supabase: mockSupabase({
         isFirstEntry: true,
         workspace: { id: "ws-1", name: null },
         spaces: [{ id: "space-1", name: "Default" }],
       }),
-      user: makeUser(),
+      user: makeUser({ user_metadata: { given_name: "카일" } }),
     });
 
-    expect(result.workspace.name).toBe("Workspace");
+    expect(result.workspace.name).toBe("카일");
     expect(result.spaces).toEqual([{ id: "space-1", name: "Default" }]);
     expect(result.isFirstEntry).toBe(true);
   });

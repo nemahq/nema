@@ -16,9 +16,11 @@ export function WorkspaceSidebar() {
 
   return (
     <Sidebar
+      hideToggle
+      logo={<WorkspaceMenuSlot mode="expanded" />}
       topSlot={
         <div className="pb-1">
-          <WorkspaceMenuSlot />
+          <WorkspaceMenuSlot mode="collapsed" />
         </div>
       }
     >
