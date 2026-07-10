@@ -13,7 +13,7 @@ import { createStatementSyncWorker } from "./infra/statement-sync";
 import { getSupabaseAdmin } from "./infra/supabase";
 import { createQdrantClient, createQdrantStore } from "./infra/vector";
 import { appRouter } from "./router";
-import { createContext } from "./trpc";
+import { createContext, onTRPCError } from "./trpc";
 
 declare const __COMMIT_SHA__: string;
 declare const __BUILD_TIMESTAMP__: string;
@@ -40,6 +40,7 @@ async function bootstrap() {
     trpcOptions: {
       router: appRouter,
       createContext,
+      onError: onTRPCError,
     },
   });
 

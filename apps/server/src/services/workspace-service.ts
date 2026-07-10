@@ -1,7 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 
-import type { WorkspaceBootstrap } from "@nema-io/shared";
-import { type BootstrapUser, DEFAULT_SPACE_NAME } from "@nema-io/shared";
+import type { BootstrapUser, WorkspaceBootstrap } from "@nema-io/shared";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
@@ -92,7 +91,7 @@ export async function bootstrapWorkspace(args: {
     },
     spaces: (spaceRows ?? []).map((row) => ({
       id: row.id,
-      name: row.name ?? DEFAULT_SPACE_NAME,
+      name: row.name,
     })),
     isFirstEntry: Boolean(isFirstEntry),
   };
