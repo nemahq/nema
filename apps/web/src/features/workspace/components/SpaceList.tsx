@@ -1,10 +1,8 @@
 import { Skeleton } from "@nema-io/weave";
-import { Hash } from "@nema-io/weave/icons";
 
-import { SidebarNavLink } from "@web/components/layout/SidebarNavLink";
 import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWorkspaceBootstrapQuery";
 
-const ICON_CLASS = "size-4";
+import { SpaceListItem } from "./SpaceListItem";
 
 export function SpaceList() {
   const { data: bootstrap, isLoading } = useWorkspaceBootstrapQuery();
@@ -18,19 +16,18 @@ export function SpaceList() {
     );
   }
 
+  const spaces = bootstrap?.spaces ?? [];
+
   return (
     <>
-      {(bootstrap?.spaces ?? []).map(function renderSpaceLink(space) {
-        return (
-          <SidebarNavLink
-            key={space.id}
-            icon={<Hash strokeWidth={1.5} className={ICON_CLASS} />}
-            label={space.name}
-            to="/space/$spaceId"
-            params={{ spaceId: space.id }}
-          />
-        );
-      })}
+      {spaces.map((space) => (
+        <SpaceListItem
+          key={space.id}
+          spaceId={space.id}
+          spaceName={space.name}
+          isLastSpace={spaces.length <= 1}
+        />
+      ))}
     </>
   );
 }
