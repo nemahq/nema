@@ -1,7 +1,7 @@
 {
   "account": {
     "delete_blocked_back": "Back",
-    "delete_blocked_description": "You're the sole owner of {count} workspace(s) that have other members. Transfer ownership to someone else there before you can delete your account.",
+    "delete_blocked_description": "You're the sole owner of {count} workspaces that have other members. Transfer ownership to someone else there before you can delete your account.",
     "delete_blocked_title": "Transfer ownership first",
     "delete_button": "Delete account",
     "delete_cancel": "Cancel",
