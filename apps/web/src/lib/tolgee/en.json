@@ -1,5 +1,6 @@
 {
   "account": {
+    "danger_zone_label": "Danger zone",
     "delete_blocked_back": "Back",
     "delete_blocked_description": "You're the sole owner of {count} workspaces that have other members. Transfer ownership to someone else there before you can delete your account.",
     "delete_blocked_title": "Transfer ownership first",
@@ -122,8 +123,10 @@
     "your_contexts": "Your contexts"
   },
   "settings": {
+    "account_subtitle": "Manage your profile and account.",
     "app_language": "App language",
     "app_language_description": "Language used for menus, buttons, and interface",
+    "general_subtitle": "Customize how Nema looks and behaves.",
     "nav_account": "Account",
     "nav_general": "General",
     "onboarding_description": "We'll organize what you write based on this language.",

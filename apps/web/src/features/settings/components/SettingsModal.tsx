@@ -27,9 +27,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0 md:max-w-2xl">
+      <DialogContent className="gap-0 overflow-hidden p-0 md:max-w-3xl">
         <DialogTitle className="sr-only">{t("settings.settings")}</DialogTitle>
-        <div className="flex h-[520px]">
+        <div className="flex h-[560px]">
           <SettingsNav section={section} onSectionChange={setSection} />
           <div className="flex-1 overflow-y-auto p-6">
             {open && section === "general" && (

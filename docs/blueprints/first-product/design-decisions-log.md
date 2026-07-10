@@ -106,3 +106,17 @@ PM 리뷰 핑퐁 결과 반영, PR #380에 같은 브랜치로 추가 커밋. �
 - 라이트/다크 모두 브라우저로 직접 확인 — 잘못된 이메일 입력 시 버튼 비활성 유지, 앞뒤 공백·대소문자가 다른 정확한 이메일 입력 시 버튼이 활성화로 전환되는 것, 일반 섹션에 ContentLanguageSection이 더 이상 안 보이는 것까지 확인했다. Kyle 실계정 보호를 위해 활성화된 버튼을 실제로 누르는 것(실제 삭제 실행)은 여전히 하지 않았다.
 
 ---
+
+### 2026-07-10 — 설정 모달 시각 폴리싱: Notion/Tiro 레퍼런스 + 업계 표준 정렬
+
+PM이 Notion 설정 모달(라벨+설명/컨트롤 한 줄 정렬, 절제된 danger 톤)·Tiro 설정 모달(좌측 내비)·Linear 사이드바·SaaS 설정 UX 리서치를 레퍼런스로 주고 확정한 디자인 결정을 그대로 반영한 순수 레이아웃 패스(로직 무변경). 카드형 그룹핑(Tiro)과 내비 카테고리 헤더는 지금 항목 수(일반/계정 2개)엔 과하다고 판단해 채택하지 않음 — flat row + divider로 통일.
+
+- **모달 셸 확대**: `SettingsModal`의 `DialogContent`를 `md:max-w-2xl`→`md:max-w-3xl`, 콘텐츠 높이 `h-[520px]`→`h-[560px]`. `SettingsNav`는 `w-40`→`w-44`, `p-3`→`p-4`, 배경에 `bg-surface-raised`를 얹어 콘텐츠(surface-card)와 톤 분리 — 새 토큰 없이 기존 weave 시맨틱 토큰만 조합.
+- **새 컴포넌트 `SettingsRow`**(`features/settings/components/`): 라벨+설명(좌)/컨트롤(우) 한 줄 정렬 + 행 사이 `border-b` 구분선(마지막 행은 선 없음) — Notion 등 업계 표준 설정 행 패턴. `htmlFor`가 있으면 `<label>`, 없으면 `<span>`으로 분기해 시맨틱을 지킨다(테마 토글처럼 짝지어지는 폼 컨트롤이 없는 행도 있어서). props-driven UI-only 컴포넌트라 `components/ui/`가 아니라 feature 내부에 둠(아직 이 feature 안에서만 쓰임, 2곳 이상에서 쓰이면 승격 검토).
+- **섹션 헤더에 서브타이틀**: `GeneralSection`/`AccountSection`의 h2를 `text-base`→`text-lg`로 키우고(Notion Preferences의 "큰 타이틀" 인상), 그 아래 한 줄 서브타이틀을 추가했다(`settings.general_subtitle`/`settings.account_subtitle`, en 실작성 + ko는 이 PR 컨벤션대로 en과 동일 placeholder). `GeneralSection`의 Theme·앱 언어 필드, `AccountSection`의 계정 삭제 행을 `SettingsRow`로 재구성.
+- **Danger zone 라벨**: `AccountSection`의 계정 삭제 행 위에 `account.danger_zone_label`("Danger zone") eyebrow 라벨을 얹었다. 톤은 `text-status-error/70`(uppercase, tracking-wide)로 절제 — 꽉 찬 빨강 배경 박스 대신 옅은 텍스트 톤만 쓰는 Notion 패턴을 따름, `/70` 같은 투명도 조합은 이미 `Button` danger variant·DevToolbar 등에서 쓰던 관례라 새 토큰이 아니다. 기존 `border-t pt-6` 구분(프로필 블록과 danger 영역 사이)은 유지.
+- **`AccountDeleteFlow` 리듬 정렬**: 게이팅(로딩·에러·차단)·확인 화면 4개 상태 모두 `h-full flex-col` + 하단 `DialogFooter`(`border-t border-border pt-4`) 구조로 통일했다 — 이전엔 차단/에러 화면만 콘텐츠 바로 아래 `self-start` 버튼이었는데, 이제 모든 상태의 액션이 모달 하단에 구분선과 함께 고정되어 `GeneralSection`과 같은 리듬을 공유한다. h2도 `text-lg`로 맞춤. **문구·게이팅 로직·`trpc.account.*` 호출·확인 로직은 전혀 손대지 않았다** — 지침대로 정렬/spacing만.
+- **Footer 구분선**: `GeneralSection`의 `DialogFooter`에도 `border-t border-border pt-4`를 추가해 콘텐츠와 액션 영역을 시각적으로 분리(Notion류 모달 컨벤션).
+- 라이브 브라우저 검증은 이번 라운드는 생략 — PM이 5176 포트(HMR)로 직접 확인하기로 함. 정적 검증(typecheck/lint/format/knip/depcruise)은 전부 통과 확인, 색 토큰은 코드 레벨로 라이트/다크 둘 다 유효한 기존 시맨틱 토큰만 썼는지 재확인(`surface-raised`/`surface-card`/`border`/`fg-primary`/`fg-tertiary`/`status-error` — 전부 기존에 라이트·다크 값이 정의된 토큰).
+
+---

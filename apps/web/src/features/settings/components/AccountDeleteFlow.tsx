@@ -61,7 +61,7 @@ export function AccountDeleteFlow({
 
   if (blockersQuery.isLoading) {
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-16 w-full" />
       </div>
@@ -70,11 +70,15 @@ export function AccountDeleteFlow({
 
   if (blockersQuery.isError) {
     return (
-      <div className="flex flex-col gap-4">
-        <Alert variant="error">{getErrorMessage(blockersQuery.error)}</Alert>
-        <Button variant="ghost" onClick={onBack} className="self-start">
-          {t("account.delete_blocked_back")}
-        </Button>
+      <div className="flex h-full flex-col">
+        <div className="flex flex-1 flex-col gap-4">
+          <Alert variant="error">{getErrorMessage(blockersQuery.error)}</Alert>
+        </div>
+        <DialogFooter className="mt-6 border-t border-border pt-4">
+          <Button variant="ghost" onClick={onBack}>
+            {t("account.delete_blocked_back")}
+          </Button>
+        </DialogFooter>
       </div>
     );
   }
@@ -83,16 +87,20 @@ export function AccountDeleteFlow({
 
   if (blockingCount > 0) {
     return (
-      <div className="flex flex-col gap-4">
-        <h2 className="text-base font-semibold text-fg-primary">
+      <div className="flex h-full flex-col">
+        <h2 className="text-lg font-semibold text-fg-primary">
           {t("account.delete_blocked_title")}
         </h2>
-        <Alert variant="warning">
-          {t("account.delete_blocked_description", { count: blockingCount })}
-        </Alert>
-        <Button variant="ghost" onClick={onBack} className="self-start">
-          {t("account.delete_blocked_back")}
-        </Button>
+        <div className="mt-4 flex flex-1 flex-col gap-4">
+          <Alert variant="warning">
+            {t("account.delete_blocked_description", { count: blockingCount })}
+          </Alert>
+        </div>
+        <DialogFooter className="mt-6 border-t border-border pt-4">
+          <Button variant="ghost" onClick={onBack}>
+            {t("account.delete_blocked_back")}
+          </Button>
+        </DialogFooter>
       </div>
     );
   }
@@ -102,11 +110,11 @@ export function AccountDeleteFlow({
 
   return (
     <div className="flex h-full flex-col">
-      <h2 className="text-base font-semibold text-fg-primary">
+      <h2 className="text-lg font-semibold text-fg-primary">
         {t("account.delete_confirm_title")}
       </h2>
 
-      <div className="mt-4 flex flex-1 flex-col gap-3">
+      <div className="mt-4 flex flex-1 flex-col gap-4">
         <Alert variant="error">{t("account.delete_confirm_description")}</Alert>
 
         <div className="flex flex-col gap-1.5">
@@ -136,7 +144,7 @@ export function AccountDeleteFlow({
           ))}
       </div>
 
-      <DialogFooter className="mt-6">
+      <DialogFooter className="mt-6 border-t border-border pt-4">
         <Button
           variant="ghost"
           onClick={onBack}

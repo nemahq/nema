@@ -6,6 +6,7 @@ import { useUser } from "@web/lib/auth";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { AccountDeleteFlow } from "./AccountDeleteFlow";
+import { SettingsRow } from "./SettingsRow";
 
 export function AccountSection() {
   const { t } = useTranslation();
@@ -25,11 +26,16 @@ export function AccountSection() {
 
   return (
     <div className="flex h-full flex-col">
-      <h2 className="text-base font-semibold text-fg-primary">
-        {t("settings.nav_account")}
-      </h2>
+      <div className="flex flex-col gap-1">
+        <h2 className="text-lg font-semibold text-fg-primary">
+          {t("settings.nav_account")}
+        </h2>
+        <p className="text-xs text-fg-tertiary">
+          {t("settings.account_subtitle")}
+        </p>
+      </div>
 
-      <div className="mt-5 flex items-center gap-3">
+      <div className="mt-6 flex items-center gap-3">
         <Avatar src={user.avatarUrl} fallback={initial} />
         <div className="min-w-0">
           <div className="truncate text-sm font-medium text-fg-primary">
@@ -39,20 +45,18 @@ export function AccountSection() {
         </div>
       </div>
 
-      <div className="mt-8 flex flex-col gap-2 border-t border-border pt-6">
-        <span className="text-sm font-medium text-fg-primary">
-          {t("account.delete_title")}
+      <div className="mt-8 flex flex-col gap-3 border-t border-border pt-6">
+        <span className="text-xs font-semibold tracking-wide text-status-error/70 uppercase">
+          {t("account.danger_zone_label")}
         </span>
-        <p className="text-xs text-fg-tertiary">
-          {t("account.delete_description")}
-        </p>
-        <Button
-          variant="danger"
-          className="self-start"
-          onClick={() => setDeleting(true)}
+        <SettingsRow
+          label={t("account.delete_title")}
+          description={t("account.delete_description")}
         >
-          {t("account.delete_button")}
-        </Button>
+          <Button variant="danger" onClick={() => setDeleting(true)}>
+            {t("account.delete_button")}
+          </Button>
+        </SettingsRow>
       </div>
     </div>
   );

@@ -20,6 +20,7 @@ import {
   useTranslation,
 } from "@web/lib/tolgee";
 
+import { SettingsRow } from "./SettingsRow";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface GeneralSectionProps {
@@ -41,31 +42,28 @@ export function GeneralSection({ onOpenChange }: GeneralSectionProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <h2 className="text-base font-semibold text-fg-primary">
-        {t("settings.nav_general")}
-      </h2>
+      <div className="flex flex-col gap-1">
+        <h2 className="text-lg font-semibold text-fg-primary">
+          {t("settings.nav_general")}
+        </h2>
+        <p className="text-xs text-fg-tertiary">
+          {t("settings.general_subtitle")}
+        </p>
+      </div>
 
-      <div className="mt-5 flex flex-1 flex-col gap-5">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-fg-primary">
-            {t("settings.theme")}
-          </span>
-          <p className="text-xs text-fg-tertiary">
-            {t("settings.theme_description")}
-          </p>
+      <div className="mt-6 flex flex-1 flex-col">
+        <SettingsRow
+          label={t("settings.theme")}
+          description={t("settings.theme_description")}
+        >
           <ThemeToggle />
-        </div>
+        </SettingsRow>
 
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor={appLangId}
-            className="text-sm font-medium text-fg-primary"
-          >
-            {t("settings.app_language")}
-          </label>
-          <p className="text-xs text-fg-tertiary">
-            {t("settings.app_language_description")}
-          </p>
+        <SettingsRow
+          label={t("settings.app_language")}
+          description={t("settings.app_language_description")}
+          htmlFor={appLangId}
+        >
           <Select
             value={appLang}
             onValueChange={(v) => {
@@ -74,7 +72,7 @@ export function GeneralSection({ onOpenChange }: GeneralSectionProps) {
               }
             }}
           >
-            <SelectTrigger id={appLangId} className="cursor-pointer">
+            <SelectTrigger id={appLangId} className="w-44 cursor-pointer">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -85,10 +83,10 @@ export function GeneralSection({ onOpenChange }: GeneralSectionProps) {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </SettingsRow>
       </div>
 
-      <DialogFooter className="mt-6">
+      <DialogFooter className="mt-6 border-t border-border pt-4">
         <Button variant="ghost" onClick={() => onOpenChange(false)}>
           {t("common.cancel")}
         </Button>
