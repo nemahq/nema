@@ -2,32 +2,37 @@ import { Dialog, DialogContent } from "@nema-io/weave";
 
 import { SpaceModalForm } from "./SpaceModalForm";
 
-interface SpaceModalProps {
-  mode: "create" | "rename";
-  spaceId?: string;
-  spaceName?: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+type SpaceModalProps =
+  | {
+      mode: "create";
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    }
+  | {
+      mode: "rename";
+      spaceId: string;
+      spaceName: string;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    };
 
-export function SpaceModal({
-  mode,
-  spaceId,
-  spaceName,
-  open,
-  onOpenChange,
-}: SpaceModalProps) {
+export function SpaceModal(props: SpaceModalProps) {
+  const { open, onOpenChange } = props;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        {open && (
-          <SpaceModalForm
-            mode={mode}
-            spaceId={spaceId}
-            spaceName={spaceName}
-            onOpenChange={onOpenChange}
-          />
-        )}
+        {open &&
+          (props.mode === "create" ? (
+            <SpaceModalForm mode="create" onOpenChange={onOpenChange} />
+          ) : (
+            <SpaceModalForm
+              mode="rename"
+              spaceId={props.spaceId}
+              spaceName={props.spaceName}
+              onOpenChange={onOpenChange}
+            />
+          ))}
       </DialogContent>
     </Dialog>
   );

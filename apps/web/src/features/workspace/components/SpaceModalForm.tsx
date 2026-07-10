@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { TRPCClientError } from "@trpc/client";
 
 import { SPACE_NAME_MAX_LENGTH } from "@nema-io/shared";
 import {
@@ -14,26 +15,33 @@ import { useCreateSpace } from "@web/features/workspace/hooks/useCreateSpace";
 import { useRenameSpace } from "@web/features/workspace/hooks/useRenameSpace";
 import { useTranslation } from "@web/lib/tolgee";
 
-interface SpaceModalFormProps {
-  mode: "create" | "rename";
-  spaceId?: string;
-  spaceName?: string;
-  onOpenChange: (open: boolean) => void;
-}
+type SpaceModalFormProps =
+  | { mode: "create"; onOpenChange: (open: boolean) => void }
+  | {
+      mode: "rename";
+      spaceId: string;
+      spaceName: string;
+      onOpenChange: (open: boolean) => void;
+    };
 
-export function SpaceModalForm({
-  mode,
-  spaceId,
-  spaceName,
-  onOpenChange,
-}: SpaceModalFormProps) {
+export function SpaceModalForm(props: SpaceModalFormProps) {
+  const { onOpenChange } = props;
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [name, setName] = useState(spaceName ?? "");
+  const [name, setName] = useState(
+    props.mode === "rename" ? props.spaceName : "",
+  );
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [hasConflict, setHasConflict] = useState(false);
   const createMutation = useCreateSpace();
   const renameMutation = useRenameSpace();
-  const mutation = mode === "create" ? createMutation : renameMutation;
+  const mutation = props.mode === "create" ? createMutation : renameMutation;
+
+  function markConflictIfNameTaken(error: unknown) {
+    if (error instanceof TRPCClientError && error.data?.code === "CONFLICT") {
+      setHasConflict(true);
+    }
+  }
 
   function handleSubmit() {
     if (mutation.isPending) {
@@ -45,7 +53,7 @@ export function SpaceModalForm({
       return;
     }
 
-    if (mode === "create") {
+    if (props.mode === "create") {
       createMutation.mutate(
         { name: trimmed },
         {
@@ -53,17 +61,18 @@ export function SpaceModalForm({
             onOpenChange(false);
             navigate({ to: "/space/$spaceId", params: { spaceId } });
           },
+          onError: markConflictIfNameTaken,
         },
       );
       return;
     }
 
-    if (!spaceId) {
-      return;
-    }
     renameMutation.mutate(
-      { spaceId, name: trimmed },
-      { onSuccess: () => onOpenChange(false) },
+      { spaceId: props.spaceId, name: trimmed },
+      {
+        onSuccess: () => onOpenChange(false),
+        onError: markConflictIfNameTaken,
+      },
     );
   }
 
@@ -71,7 +80,11 @@ export function SpaceModalForm({
     <>
       <DialogHeader>
         <DialogTitle>
-          {t(mode === "create" ? "space.create_title" : "space.rename_title")}
+          {t(
+            props.mode === "create"
+              ? "space.create_title"
+              : "space.rename_title",
+          )}
         </DialogTitle>
       </DialogHeader>
 
@@ -82,6 +95,7 @@ export function SpaceModalForm({
           onChange={(e) => {
             setName(e.target.value);
             setValidationError(null);
+            setHasConflict(false);
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -90,7 +104,7 @@ export function SpaceModalForm({
           }}
           placeholder={t("space.name_placeholder")}
           maxLength={SPACE_NAME_MAX_LENGTH}
-          aria-invalid={Boolean(validationError)}
+          aria-invalid={Boolean(validationError) || hasConflict}
         />
         <p
           role="alert"
@@ -105,7 +119,7 @@ export function SpaceModalForm({
           {t("common.cancel")}
         </Button>
         <Button onClick={handleSubmit} disabled={mutation.isPending}>
-          {t(mode === "create" ? "space.create_action" : "space.save")}
+          {t(props.mode === "create" ? "space.create_action" : "space.save")}
         </Button>
       </DialogFooter>
     </>

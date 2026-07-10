@@ -5,6 +5,7 @@ import { Hash } from "@nema-io/weave/icons";
 
 import { useSidebar } from "@web/components/layout/Sidebar";
 import { SidebarNavLink } from "@web/components/layout/SidebarNavLink";
+import { shouldNavigateHomeAfterSpaceDelete } from "@web/features/workspace/shouldNavigateHomeAfterSpaceDelete";
 
 import { SpaceDeleteDialog } from "./SpaceDeleteDialog";
 import { SpaceItemMenu } from "./SpaceItemMenu";
@@ -73,7 +74,10 @@ export function SpaceListItem({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         onDeleted={() => {
-          if ("spaceId" in params && params.spaceId === spaceId) {
+          // 세션 삭제와 같은 관례: 지금 열려 있던 항목을 지웠을 때만 이동한다.
+          const activeSpaceId =
+            "spaceId" in params ? params.spaceId : undefined;
+          if (shouldNavigateHomeAfterSpaceDelete(spaceId, activeSpaceId)) {
             navigate({ to: "/" });
           }
         }}

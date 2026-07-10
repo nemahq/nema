@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import {
   Button,
@@ -26,6 +26,7 @@ export function SpaceDeleteConfirmForm({
   onDeleted,
 }: SpaceDeleteConfirmFormProps) {
   const { t } = useTranslation();
+  const confirmInputId = useId();
   const [confirmText, setConfirmText] = useState("");
   const deleteMutation = useDeleteSpace();
 
@@ -39,8 +40,8 @@ export function SpaceDeleteConfirmForm({
       { spaceId },
       {
         onSuccess: () => {
-          onOpenChange(false);
           onDeleted();
+          onOpenChange(false);
         },
       },
     );
@@ -54,10 +55,11 @@ export function SpaceDeleteConfirmForm({
       </DialogHeader>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-fg-tertiary">
+        <label htmlFor={confirmInputId} className="text-xs text-fg-tertiary">
           {t("space.delete_confirm_instruction", { name: spaceName })}
         </label>
         <Input
+          id={confirmInputId}
           autoFocus
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
