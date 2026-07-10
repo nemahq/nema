@@ -14,38 +14,38 @@
 
 ### 케이스 목록
 
-- Digest 추출 완료 → ingestion changeset 자동 생성
-- Digest 리뷰 화면 진입
-- 원문에 없는 필드는 비워둠
-- Digest 타입 제안
-- 신규 Topic·Tag 제안
-- 기존 Topic·Tag 재사용 제안
-- 기존 Topic·Tag는 이름 수정 불가
-- 신규 Topic·Tag 이름 수정 가능
-- Digest 리뷰 화면에서 Topic·Tag 추가 — 기존 선택
-- Digest 리뷰 화면에서 Topic·Tag 추가 — 신규 생성
-- Reference 후보 자동 제안 및 매칭
-- Changeset 제목 자동 생성
-- Digest 후보 삭제
-- Digest 리뷰 확정
-- Digest 리뷰 버리기
-- 적용된 리뷰 되돌리기
-- 원본도 삭제하기
-- 버려진 리뷰 되살리기
-- 원본 삭제 후 되살리기 비활성화
-- 신규 Reference 후보 편집
-- 기존 Reference 후보 병합 편집
-- 타입 변경 시 필드 초기화
-- 원문 대조 포커스 전환
-- Digest 리뷰 화면에서 외부 링크 추가
-- Digest 리뷰 화면에서 외부 링크 수정
-- Digest 리뷰 화면에서 외부 링크 삭제
-- Digest 리뷰 화면에서 @ 멘션 — 기존 Reference 선택
-- Digest 리뷰 화면에서 @ 멘션 — 새 Reference 생성
-- 엔진 제안 대비 교정 신호 기록
-- Digest 후보 외부 AI 도구 공개 여부 설정
-- 모든 후보 삭제 시 확정 비활성화
-- 제목 없이 확정 비활성화
+- [ ] Digest 추출 완료 → ingestion changeset 자동 생성
+- [ ] Digest 리뷰 화면 진입
+- [ ] 원문에 없는 필드는 비워둠
+- [ ] Digest 타입 제안
+- [ ] 신규 Topic·Tag 제안
+- [ ] 기존 Topic·Tag 재사용 제안
+- [ ] 기존 Topic·Tag는 이름 수정 불가
+- [ ] 신규 Topic·Tag 이름 수정 가능
+- [ ] Digest 리뷰 화면에서 Topic·Tag 추가 — 기존 선택
+- [ ] Digest 리뷰 화면에서 Topic·Tag 추가 — 신규 생성
+- [ ] Reference 후보 자동 제안 및 매칭
+- [ ] Changeset 제목 자동 생성
+- [ ] Digest 후보 삭제
+- [ ] Digest 리뷰 확정
+- [ ] Digest 리뷰 버리기
+- [ ] 적용된 리뷰 되돌리기
+- [ ] 원본도 삭제하기
+- [ ] 버려진 리뷰 되살리기
+- [ ] 원본 삭제 후 되살리기 비활성화
+- [ ] 신규 Reference 후보 편집
+- [ ] 기존 Reference 후보 병합 편집
+- [ ] 타입 변경 시 필드 초기화
+- [ ] 원문 대조 포커스 전환
+- [ ] Digest 리뷰 화면에서 외부 링크 추가
+- [ ] Digest 리뷰 화면에서 외부 링크 수정
+- [ ] Digest 리뷰 화면에서 외부 링크 삭제
+- [ ] Digest 리뷰 화면에서 @ 멘션 — 기존 Reference 선택
+- [ ] Digest 리뷰 화면에서 @ 멘션 — 새 Reference 생성
+- [ ] 엔진 제안 대비 교정 신호 기록
+- [ ] Digest 후보 외부 AI 도구 공개 여부 설정
+- [ ] 모든 후보 삭제 시 확정 비활성화
+- [ ] 제목 없이 확정 비활성화
 
 ### 케이스 상세
 
@@ -309,9 +309,9 @@
 
 ### 케이스 목록
 
-- 실행취소
-- 다시 실행
-- 새로고침 후 최신 저장 상태 유지
+- [ ] 실행취소
+- [ ] 다시 실행
+- [ ] 새로고침 후 최신 저장 상태 유지
 
 ### 케이스 상세
 
@@ -340,21 +340,21 @@
 
 ### 케이스 목록
 
-- 확신 관계 자동 적용
-- 관련 Digest 자동 채움
-- 관계 archive 시 관련 Digest 목록 표시 규칙
-- 관련 Reference 자동 제안
-- 판정 대기 relation changeset 생성
-- 재제안 가드
-- 판정 모드 진입
-- 충돌 판정 — 승자 선택
-- 중복 판정 — 병합
-- 판정 대기 relation changeset 버리기
-- 버려진 relation changeset 되살리기
-- 충돌 판정 되돌리기
-- 중복 판정 되돌리기
-- 확신 관계 자동 적용 되돌리기
-- Changeset 상세 — 삭제된 원본의 스냅샷 콘텐츠 치환
+- [ ] 확신 관계 자동 적용
+- [ ] 관련 Digest 자동 채움
+- [ ] 관계 archive 시 관련 Digest 목록 표시 규칙
+- [ ] 관련 Reference 자동 제안
+- [ ] 판정 대기 relation changeset 생성
+- [ ] 재제안 가드
+- [ ] 판정 모드 진입
+- [ ] 충돌 판정 — 승자 선택
+- [ ] 중복 판정 — 병합
+- [ ] 판정 대기 relation changeset 버리기
+- [ ] 버려진 relation changeset 되살리기
+- [ ] 충돌 판정 되돌리기
+- [ ] 중복 판정 되돌리기
+- [ ] 확신 관계 자동 적용 되돌리기
+- [ ] Changeset 상세 — 삭제된 원본의 스냅샷 콘텐츠 치환
 
 ### 케이스 상세
 
@@ -487,11 +487,11 @@
 
 ### 케이스 목록
 
-- 편집 changeset 되돌리기
-- 아카이브 되살리기
-- 아카이브된 상태에서 편집 잠금
-- 수정 이력 항목 클릭 시 상세 확인
-- Reference 직접 수정 동시성 충돌
+- [ ] 편집 changeset 되돌리기
+- [ ] 아카이브 되살리기
+- [ ] 아카이브된 상태에서 편집 잠금
+- [ ] 수정 이력 항목 클릭 시 상세 확인
+- [ ] Reference 직접 수정 동시성 충돌
 
 ### 케이스 상세
 
