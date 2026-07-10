@@ -134,3 +134,13 @@ PM이 1차 폴리싱 결과를 보고 추가로 확정한 세 가지 반영. 이
 - 이번에도 라이브 브라우저 검증은 생략(PM이 5176에서 직접 확인). 정적 검증 전부 통과, 새로 쓴 클래스(`bg-surface-raised`, `text-fg-tertiary`, `border-border` 등)는 전부 기존에 라이트·다크 값이 있는 토큰 재사용.
 
 ---
+
+### 2026-07-10 — Preferences: Save/Cancel 제거, 선택 즉시 반영
+
+PM 요청으로 `PreferencesSection`의 앱 언어 Select를 Theme 토글과 같은 즉시-반영 방식으로 맞췄다 — 이제 이 화면엔 "저장을 눌러야 반영되는" 필드가 하나도 없어 Save/Cancel 자체가 무의미해져 `DialogFooter`를 통째로 뺐다. 계정 삭제 확인 화면(`AccountDeleteFlow`)의 Cancel/확인 버튼은 별개 성격(되돌릴 수 없는 위험 액션 확인)이라 손대지 않았다.
+
+- `onValueChange`에서 `setAppLang`과 `changeLocale(v)`를 같이 호출 — controlled `Select`라 로컬 state는 유지하되(값 표시용), 실제 반영은 값이 바뀌는 즉시 일어난다. `handleSave`/`onOpenChange` prop 자체를 컴포넌트에서 제거했고, `SettingsModal`이 `<PreferencesSection onOpenChange={onOpenChange} />`로 넘기던 것도 정리했다(안 쓰는 prop 안 남김, typecheck로 확인).
+- Footer 제거 후 레이아웃은 `flex h-full flex-col` 바깥 + `flex-1` 콘텐츠 wrapper 구조 그대로라 남는 공간이 자연스럽게 하단 여백으로 흡수된다(콘텐츠는 위쪽 정렬 유지, 별도 처리 불필요).
+- `settings.save`가 이 변경으로 앱 전체에서 미사용이 돼(재검색으로 재확인) i18n에서 삭제. `common.cancel`은 `DeleteSessionDialog`/`DraftTabContent`/단축키 맵이 계속 써서 남김.
+
+---

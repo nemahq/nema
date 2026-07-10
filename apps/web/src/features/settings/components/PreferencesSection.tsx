@@ -1,8 +1,6 @@
 import { useId, useState } from "react";
 
 import {
-  Button,
-  DialogFooter,
   Select,
   SelectContent,
   SelectItem,
@@ -24,11 +22,7 @@ import { SettingsRow } from "./SettingsRow";
 import { SettingsSectionHeader } from "./SettingsSectionHeader";
 import { ThemeToggle } from "./ThemeToggle";
 
-interface PreferencesSectionProps {
-  onOpenChange: (open: boolean) => void;
-}
-
-export function PreferencesSection({ onOpenChange }: PreferencesSectionProps) {
+export function PreferencesSection() {
   const { t } = useTranslation();
   const appLangId = useId();
   const [appLang, setAppLang] = useState<Locale>(() => {
@@ -36,9 +30,12 @@ export function PreferencesSection({ onOpenChange }: PreferencesSectionProps) {
     return lang && isLocale(lang) ? lang : "ko";
   });
 
-  function handleSave() {
-    changeLocale(appLang);
-    onOpenChange(false);
+  function handleAppLangChange(v: string) {
+    if (!isLocale(v)) {
+      return;
+    }
+    setAppLang(v);
+    changeLocale(v);
   }
 
   return (
@@ -70,14 +67,7 @@ export function PreferencesSection({ onOpenChange }: PreferencesSectionProps) {
             description={t("settings.app_language_description")}
             htmlFor={appLangId}
           >
-            <Select
-              value={appLang}
-              onValueChange={(v) => {
-                if (isLocale(v)) {
-                  setAppLang(v);
-                }
-              }}
-            >
+            <Select value={appLang} onValueChange={handleAppLangChange}>
               <SelectTrigger id={appLangId} className="w-44 cursor-pointer">
                 <SelectValue />
               </SelectTrigger>
@@ -96,13 +86,6 @@ export function PreferencesSection({ onOpenChange }: PreferencesSectionProps) {
           </SettingsRow>
         </div>
       </div>
-
-      <DialogFooter className="mt-6 border-t border-border pt-4">
-        <Button variant="ghost" onClick={() => onOpenChange(false)}>
-          {t("common.cancel")}
-        </Button>
-        <Button onClick={handleSave}>{t("settings.save")}</Button>
-      </DialogFooter>
     </div>
   );
 }

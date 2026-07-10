@@ -33,9 +33,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         <div className="flex h-[560px]">
           <SettingsNav section={section} onSectionChange={setSection} />
           <div className="flex-1 overflow-y-auto p-6">
-            {open && section === "preferences" && (
-              <PreferencesSection onOpenChange={onOpenChange} />
-            )}
+            {open && section === "preferences" && <PreferencesSection />}
             {open && section === "account" && <AccountSection />}
           </div>
         </div>
