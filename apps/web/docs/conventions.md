@@ -101,6 +101,7 @@
 - Interactive elements MUST use semantic tags (button, a). div + onClick is forbidden.
 - Icon-only buttons MUST have aria-label.
 - MUST NOT remove focus styles.
+- Focus rings MUST use `focus-visible:` (not plain `focus:`) so they only appear on keyboard access, not mouse click.
 
 ## Folder Classification
 

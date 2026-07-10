@@ -4,15 +4,28 @@ import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWor
 
 import { SpaceListItem } from "./SpaceListItem";
 
+const SKELETON_WIDTHS = ["w-2/3", "w-1/2"];
+
 export function SpaceList() {
   const { data: bootstrap, isLoading } = useWorkspaceBootstrapQuery();
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-1 px-1.5 py-0.5">
-        <Skeleton className="h-9" />
-        <Skeleton className="h-9" />
-      </div>
+      <>
+        {SKELETON_WIDTHS.map(function renderSkeletonRow(width, i) {
+          return (
+            <div key={width} className="px-1.5 py-0.5">
+              <div className="flex h-9 items-center gap-1.5 rounded-md px-1.5">
+                <Skeleton className="size-4 shrink-0 rounded-sm" />
+                <Skeleton
+                  className={`h-3.5 rounded-sm ${width}`}
+                  style={{ animationDelay: `${i * 100}ms` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </>
     );
   }
 
