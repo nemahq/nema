@@ -5,7 +5,7 @@ import { trpc } from "@web/lib/trpc";
 // 직접 안내해야 하므로, 전역 에러 토스트 대신 호출부가 에러를 직접 다룬다.
 export function useDeleteAccount() {
   return trpc.account.delete.useMutation({
-    meta: { skipGlobalToast: true },
+    meta: { skipGlobalToast: true, reportToSentry: true },
     onSuccess: () => {
       trackEvent("account.delete");
     },

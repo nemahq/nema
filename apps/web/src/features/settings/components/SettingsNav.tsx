@@ -7,13 +7,10 @@ import { useTranslation } from "@web/lib/tolgee";
 export type SettingsSection = "account" | "preferences";
 
 function navItemClass(active: boolean): string {
-  // 링 대신 배경 톤으로 키보드 포커스를 표시한다(hover와 같은 톤 재사용) —
-  // PM이 링 스타일을 빼달라고 했지만, 포커스 표시 자체를 완전히 없애는 건
-  // conventions.md의 "MUST NOT remove focus styles" 규칙과 충돌해 대체했다.
-  return `flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] font-medium transition-colors duration-fast outline-none focus-visible:bg-surface-raised-hover ${
+  return `flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] font-medium transition-colors duration-fast outline-none focus-visible:ring-1 focus-visible:ring-brand ${
     active
       ? "bg-surface-raised-hover text-fg-primary"
-      : "text-fg-tertiary hover:bg-surface-raised-hover hover:text-fg-secondary"
+      : "text-fg-tertiary hover:bg-surface-raised-hover hover:text-fg-secondary focus-visible:bg-surface-raised-hover"
   }`;
 }
 

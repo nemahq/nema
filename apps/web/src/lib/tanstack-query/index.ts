@@ -27,7 +27,10 @@ export const queryClient = new QueryClient({
   }),
   mutationCache: new MutationCache({
     onError(error, _variables, _context, mutation) {
-      if (!(error instanceof TRPCClientError)) {
+      if (
+        !(error instanceof TRPCClientError) ||
+        mutation.meta?.reportToSentry
+      ) {
         Sentry.captureException(error);
       }
       if (mutation.meta?.skipGlobalToast) {

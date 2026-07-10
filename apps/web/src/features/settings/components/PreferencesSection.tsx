@@ -17,10 +17,11 @@ import {
   tolgee,
   useTranslation,
 } from "@web/lib/tolgee";
+import { toastError } from "@web/utils/toast";
 
 import { SettingsRow } from "./SettingsRow";
 import { SettingsSectionHeader } from "./SettingsSectionHeader";
-import { ThemeToggle } from "./ThemeToggle";
+import { ThemeSelect } from "./ThemeSelect";
 
 export function PreferencesSection() {
   const { t } = useTranslation();
@@ -30,12 +31,18 @@ export function PreferencesSection() {
     return lang && isLocale(lang) ? lang : "ko";
   });
 
-  function handleAppLangChange(v: string) {
+  async function handleAppLangChange(v: string) {
     if (!isLocale(v)) {
       return;
     }
+    const previousLang = appLang;
     setAppLang(v);
-    changeLocale(v);
+    try {
+      await changeLocale(v);
+    } catch (error) {
+      setAppLang(previousLang);
+      toastError(error);
+    }
   }
 
   return (
@@ -56,7 +63,7 @@ export function PreferencesSection() {
             label={t("settings.theme")}
             description={t("settings.theme_description")}
           >
-            <ThemeToggle />
+            <ThemeSelect />
           </SettingsRow>
         </div>
 

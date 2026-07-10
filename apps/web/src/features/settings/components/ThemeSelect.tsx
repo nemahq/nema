@@ -26,7 +26,7 @@ const THEME_OPTIONS: {
   { value: "system", labelKey: "settings.theme_system" },
 ];
 
-export function ThemeToggle() {
+export function ThemeSelect() {
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
 

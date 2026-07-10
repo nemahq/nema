@@ -17,6 +17,7 @@ export function AccountSection() {
     return (
       <AccountDeleteFlow
         userEmail={user.email}
+        userDisplayName={user.displayName}
         onBack={() => setDeleting(false)}
       />
     );
