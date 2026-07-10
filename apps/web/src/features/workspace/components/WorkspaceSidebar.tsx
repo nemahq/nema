@@ -1,10 +1,11 @@
-import { BookMarked, MessagesSquare, Plus } from "@nema-io/weave/icons";
+import { BookMarked, MessagesSquare } from "@nema-io/weave/icons";
 
 import { Sidebar } from "@web/components/layout/Sidebar";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { LnbPlaceholderItem } from "./LnbPlaceholderItem";
 import { LnbSection } from "./LnbSection";
+import { NewSpaceButton } from "./NewSpaceButton";
 import { SpaceList } from "./SpaceList";
 import { WorkspaceMenuSlot } from "./WorkspaceMenuSlot";
 
@@ -36,10 +37,7 @@ export function WorkspaceSidebar() {
 
         <LnbSection label={t("workspace.section_spaces")}>
           <SpaceList />
-          <LnbPlaceholderItem
-            icon={<Plus strokeWidth={1.5} className={NAV_ICON_CLASS} />}
-            label={t("workspace.new_space")}
-          />
+          <NewSpaceButton />
         </LnbSection>
       </div>
     </Sidebar>
