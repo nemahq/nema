@@ -53,8 +53,10 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
     <DropdownMenuContent
       side="bottom"
       align="start"
-      // -6: 트리거 버튼(x=12)이 아니라 -mx-1.5로 넓어진 호버 배경 박스(x=6)에 맞춘다.
-      alignOffset={collapsed ? 0 : -6}
+      // 8(접힘): 버튼은 w-full(48px)이지만 보이는 아바타(size-8)는 justify-center로
+      // (48-32)/2=8px 안쪽에서 시작 — 버튼 모서리가 아니라 아바타 모서리에 맞춘다.
+      // -6(펼침): 트리거 버튼(x=12)이 아니라 -mx-1.5로 넓어진 호버 배경 박스(x=6)에 맞춘다.
+      alignOffset={collapsed ? 8 : -6}
       // 10: 배경 박스가 버튼보다 py-1.5(6px) 더 내려가 있어, 그 아래에 여유 4px를 더한다.
       sideOffset={collapsed ? 4 : 10}
       onEscapeKeyDown={() => {
@@ -119,7 +121,7 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
               aria-label={workspaceName}
               className="flex w-full items-center justify-center rounded-md py-1 outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
-              <span className="flex size-8 items-center justify-center rounded-md bg-surface-raised-hover text-sm font-medium text-fg-primary dark:bg-fg-primary/10">
+              <span className="flex size-8 items-center justify-center rounded-md bg-brand-accent text-sm font-medium text-white dark:bg-fg-primary/10 dark:text-fg-primary">
                 {workspaceInitial}
               </span>
             </button>
@@ -142,7 +144,7 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
                 // 안 겹치게 한다(닫힌 채 Tab으로 포커스됐을 땐 그대로 보임).
                 className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-brand data-[state=open]:!ring-0"
               >
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-surface-raised-hover text-xs font-medium text-fg-primary dark:bg-fg-primary/10">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-accent text-xs font-medium text-white dark:bg-fg-primary/10 dark:text-fg-primary">
                   {workspaceInitial}
                 </span>
                 <span className="min-w-0 truncate text-sm font-medium text-fg-primary">
