@@ -54,8 +54,8 @@ const cs = getComputedStyle(el);
 ({ tag: el.tagName, cls: el.className, outline: cs.outlineStyle, boxShadow: cs.boxShadow })
 ```
 
-- 인터랙티브 요소가 `outline-none`을 걸었다면 반드시 대체 스타일(`focus-visible:ring-*`)이 있는지 확인 — 루트 CLAUDE.md "MUST NOT remove focus styles" 직접 위반 사례가 실제로 나온 적 있다.
-- **링은 `focus-visible:`로만 준다.** Plain `focus:`로 링/아웃라인을 넣으면 마우스 클릭에도 뜬다 — weave `Button`/`Input`/`Checkbox`가 이미 이 기준으로 통일돼 있으니 새 컴포넌트도 따른다. `focus:` 자체가 전부 금지는 아니다(Radix 메뉴 아이템의 `focus:bg-*`/`data-[highlighted]:*`는 방향키 탐색용 하이라이트라 다른 목적 — 이건 마우스 호버든 키보드든 항상 떠야 정상).
+- 포커스링은 weave 전역 정책(`packages/weave/src/tokens/index.css`의 `*:focus-visible { outline ... }`)이 모든 포커스 가능 요소에 이미 적용돼 있다 — 컴포넌트가 자체 `focus-visible:ring-*`를 새로 다는 건 정상이 아니라 예외(색만 바꾸는 등 특수 케이스, 예: `Button` danger variant의 `focus-visible:outline-status-error`)다. 인터랙티브 요소가 `outline-none`/`outline-hidden`을 걸었다면 전역 링을 실수로 죽인 건 아닌지부터 확인 — 루트 CLAUDE.md "MUST NOT remove focus styles" 직접 위반 사례가 실제로 나온 적 있다.
+- **링은 `focus-visible:`로만 준다.** Plain `focus:`로 링/아웃라인을 넣으면 마우스 클릭에도 뜬다. `focus:` 자체가 전부 금지는 아니다(Radix 메뉴 아이템의 `focus:bg-*`/`data-[highlighted]:*`는 방향키 탐색용 하이라이트라 다른 목적 — 이건 마우스 호버든 키보드든 항상 떠야 정상, `apps/web/docs/conventions.md` Accessibility 절 참고).
 - 반대로 `aria-disabled`인 비활성 항목은 `tabIndex`가 없어 포커스 대상 자체가 아니어야 한다(있으면 별도 focus 스타일이 필요해짐).
 
 ### 5. 일관성(기존 패턴 재사용)

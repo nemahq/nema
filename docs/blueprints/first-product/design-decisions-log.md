@@ -201,7 +201,7 @@ PR #382에서 LNB 워크스페이스 스위처·Space 목록·설정 모달을 �
 - LNB 행 호버 배경: `surface-raised-hover/75`. 그 행 위에 겹치는 액션 아이콘(우측 "...", "+", 접기 토글)은 진한 토큰 그대로 두고 `hover:brightness-95`(라이트, 어둡게)+`dark:hover:brightness-125`(다크, 반대로 밝게)로 방향을 뒤집어야 구분이 유지된다 — 다크에서 어둡게 하면 오히려 배경과 가까워져 구분이 흐려짐(비직관적이라 재발견 비용 큼, 꼭 기억할 것).
 - "행 위에 겹치는 절대 위치 아이콘"이 있는 곳은 아래 행의 배경 트리거를 `hover:`가 아니라 조상의 `group-hover:`로 걸어야 한다. `hover:`로 걸면 아이콘에 마우스가 있을 때 형제 관계라 :hover가 전파 안 돼 배경이 꺼지는 버그가 생긴다(이번 세션에 실제로 겪고 고침) — `NavItem`/`LnbRowBox`가 이 규칙을 이미 캡슐화하고 있으니 새로 짤 필요 없음.
 - LNB 행 치수(`h-7`, 접힘 `size-7`, 좌우 마진 `px-2`, 상하 패딩 `py-px`)와 액션 아이콘(`size-5`, hover 톤)은 각 파일에 흩어져 있지 않고 공통 프리미티브로 통합됨 — 아래 "공통 프리미티브" 참고. 값을 또 조정할 땐 프리미티브 한 곳만 고치면 된다.
-- Danger 계열(Button danger, DropdownMenuItem danger)은 전부 `bg-status-error-tint text-status-error hover:bg-status-error/15` 톤으로 통일(Alert error 배너와 동일 조합), weave `.surface-danger` 컴포넌트 클래스로 정의돼 있다. 개별 컴포넌트에 로컬 override를 만들지 말 것.
+- Danger 계열(Button danger, DropdownMenuItem danger, Alert error)은 전부 `bg-status-error-tint text-status-error` 계열 톤으로 시각적으로 통일돼 있다. **다만 클래스 자체가 공유되는 건 `Button`의 `danger` variant(weave `.surface-danger` 컴포넌트 클래스로 정의)뿐** — `DropdownMenuItem`은 같은 색 조합을 `data-[variant=danger]:text-status-error`/`data-[variant=danger]:focus:bg-status-error-tint` 등으로 별도 선언하고 있어(속성 셀렉터 기반이라 `.surface-danger`를 그대로 재사용할 수 없는 구조), `.surface-danger`만 고치면 `DropdownMenuItem` 쪽은 조용히 어긋난다. 톤을 바꿀 땐 두 군데 모두 확인할 것 — 개별 컴포넌트에 이 조합과 다른 로컬 override는 만들지 말 것.
 - 포커스링은 `focus-visible:`만 사용(`focus:` 금지), outline 기반 전역 정책이 `packages/weave/src/tokens/index.css`에 이미 구현돼 있어 개별 컴포넌트가 각자 링을 그릴 필요 없음.
 
 **공통 프리미티브 (LNB 폴리싱 중 신설, `apps/web/src/components/layout/`)**
@@ -218,6 +218,9 @@ PR #382에서 LNB 워크스페이스 스위처·Space 목록·설정 모달을 �
 - red/danger 톤은 이 프로젝트에서 유독 왔다 갔다 한 이력이 있다(톤다운 후 전량 원복된 전례) — 로컬 override로 할지 weave 전역으로 할지 범위를 먼저 확인하고 진행.
 - 매 변경 후 `pnpm --filter web typecheck`/`lint`(+ 구조 변경 시 `knip`) 확인, weave 레벨 변경 후엔 dev 서버 재기동.
 
-**PR 상태**: #382 open, 이 세션의 커밋 4개 푸시 완료(`993737f6..8b020a36`). 제목/본문은 PM 요청으로 이번엔 갱신 안 함 — 폴리싱 세션이 이 PR을 이어 쓸지 새 PR로 시작할지 PM 확인 필요.
+**의도된 제품 결정: 접힘 상태에서 Space 추가·이름변경·삭제 불가**
+접힘 LNB에서는 Spaces 섹션의 "+" 버튼(`LnbSection`의 `trailingAction`)과 각 Space 행의 "..." 메뉴(`SpaceItemMenu`, `NavItem`의 `trailingAction`)가 렌더링되지 않는다 — 둘 다 NavItem/LnbSection의 `trailingAction`이 펼침 모드에서만 렌더되는 설계라서다. 회귀가 아니라 확정된 트레이드오프: 접힘은 "잠깐 화면 넓게 쓰기" 용도이고, 이 액션들은 자주 쓰는 동작이 아니라 접힘 상태에서 대체 진입점 없이 빼기로 했다. 필요하면 펼침으로 전환 후 사용.
+
+**PR 상태**: #382 open. 최신 커밋은 `git log`로 확인 — 이 라인에 특정 해시를 박아두면 다음 커밋마다 stale해지므로 의도적으로 안 적는다. 제목/본문은 PM 요청으로 갱신 안 함 — 폴리싱 세션이 이 PR을 이어 쓸지 새 PR로 시작할지 PM 확인 필요.
 
 ---

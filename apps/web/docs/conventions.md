@@ -101,7 +101,7 @@
 - Interactive elements MUST use semantic tags (button, a). div + onClick is forbidden.
 - Icon-only buttons MUST have aria-label.
 - MUST NOT remove focus styles.
-- Focus rings MUST use `focus-visible:` (not plain `focus:`) so they only appear on keyboard access, not mouse click.
+- Focus rings MUST use `focus-visible:` (not plain `focus:`) so they only appear on keyboard access, not mouse click. The global outline (`packages/weave/src/tokens/index.css`) already covers every focusable element — components normally need zero local ring/outline classes. Exception: Radix menu item highlight states (`focus:bg-*`, `data-[highlighted]:*`) are intentional and MUST stay `focus:`/`data-*`-based, not `focus-visible:` — that highlight is arrow-key navigation feedback and must show for mouse hover too, not just keyboard access.
 
 ## Folder Classification
 
