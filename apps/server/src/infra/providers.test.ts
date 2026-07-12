@@ -51,12 +51,14 @@ async function loadFresh() {
     { GeminiProvider },
     { OpenAiProvider },
     { LlmError },
+    { setTaskOverride },
   ] = await Promise.all([
     import("@server/infra/providers"),
     import("@server/infra/llm/anthropic-provider"),
     import("@server/infra/llm/gemini-provider"),
     import("@server/infra/llm/openai-provider"),
     import("@server/infra/llm/llm-error"),
+    import("@server/infra/llm/task-routing"),
   ]);
   return {
     ...providers,
@@ -64,6 +66,7 @@ async function loadFresh() {
     GeminiProvider,
     OpenAiProvider,
     LlmError,
+    setTaskOverride,
   };
 }
 
@@ -127,32 +130,25 @@ describe("providers — override resolution wiring", () => {
   });
 });
 
-describe("forTask — 키 부재 가드 (seeded 배치)", () => {
+describe("forTask — override 키 부재 가드", () => {
   beforeEach(() => {
     fakeEnv = baseEnv();
   });
 
-  it("honors a seeded override when the provider key is present", async () => {
-    fakeEnv = baseEnv({ GEMINI_API_KEY: "gemini-key" });
-    const { getProviders, GeminiProvider } = await loadFresh();
-    // narrate seed = gemini-3.1-flash-lite, effort 없음 → bindEffort 래핑 없이 GeminiProvider 그대로.
-    expect(getProviders().llm.forTask("narrate")).toBeInstanceOf(
-      GeminiProvider,
-    );
-  });
-
-  it("falls back to the tier default when the seeded override's key is missing", async () => {
-    const { getProviders, GeminiProvider } = await loadFresh();
+  it("falls back to the tier default when an override's provider key is missing", async () => {
+    const { getProviders, setTaskOverride, GeminiProvider } = await loadFresh();
     const providers = getProviders();
-    // 가드가 gemini override를 버리고 standard tier로 폴백 → Gemini가 아니고, 같은 폴백을
-    // 겪는 generateDraft(standard·effort 없음, 키 부재로 함께 폴백)와 동일 인스턴스다.
+    // setTaskOverride는 setTaskModel과 달리 키를 검증하지 않는다 — 키 없는 override 상태를 만들어
+    // forTask 가드가 이를 버리고 tier 기본으로 폴백하는지 본다(키 부재 환경 안전장치).
+    setTaskOverride({ task: "narrate", modelId: "gemini-3.1-flash-lite" });
     expect(providers.llm.forTask("narrate")).not.toBeInstanceOf(GeminiProvider);
+    // 같은 폴백을 겪는 generateDraft(둘 다 override 없이 tier 기본)와 동일 인스턴스다.
     expect(providers.llm.forTask("narrate")).toBe(
       providers.llm.forTask("generateDraft"),
     );
   });
 
-  it("does not leak one task's override onto an unseeded task", async () => {
+  it("does not leak one task's override onto an untouched task", async () => {
     fakeEnv = baseEnv({
       GEMINI_API_KEY: "gemini-key",
       ANTHROPIC_API_KEY: "sk-anthropic",
@@ -160,7 +156,7 @@ describe("forTask — 키 부재 가드 (seeded 배치)", () => {
     const { getProviders, setTaskModel, AnthropicProvider } = await loadFresh();
     const providers = getProviders();
     setTaskModel({ task: "classifyDraftIntent", modelId: "claude-opus-4-8" });
-    // generateSessionTitle은 시드·override 없음 → 다른 task의 override로 새지 않고 tier 기본을 탄다.
+    // generateSessionTitle은 override 없음 → 다른 task의 override로 새지 않고 tier 기본을 탄다.
     expect(providers.llm.forTask("generateSessionTitle")).not.toBeInstanceOf(
       AnthropicProvider,
     );
@@ -230,8 +226,8 @@ describe("프로덕션 하드 lock — tier 프로바이더 스왑 무시", () =
 
 describe("forTask effort injection (bindEffort)", () => {
   beforeEach(() => {
-    // env를 명시적으로 잡는다 — 앞 describe가 GEMINI 키를 남기면 generateDraft가 seed(Gemini)를
-    // 타 OpenAI 경로 단언이 깨진다. 형제 describe 순서에 의존하지 않게 매번 초기화.
+    // env를 명시적으로 잡는다 — 앞 describe가 GEMINI 키를 남기면 tier가 Gemini로 resolve돼
+    // OpenAI 스파이 단언이 깨진다. 형제 describe 순서에 의존하지 않게 매번 초기화.
     fakeEnv = baseEnv();
     openaiResponsesParse.mockReset();
     openaiResponsesCreate.mockReset();

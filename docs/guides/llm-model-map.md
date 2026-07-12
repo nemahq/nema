@@ -46,7 +46,7 @@ tier 기본값은 프로바이더 무관이다 — override 경로와 같은 `cr
 - **프리셋** — `all-nano`(전 tier를 nano로, 가장 싸게) ↔ `real-tiers`(tier 그대로) 전환. 현재 활성 프리셋과 각 tier의 실제 resolve 모델을 표시한다.
 - **task별 override** — 9개 LLM 동작마다 `MODEL_CATALOG` 전체(Google 포함)에서 드롭다운으로 모델을 고른다. override는 tier 기본보다 우선하며, "tier 기본"을 고르면 해제된다. 못 쓰는 모델(키 부재·미배선)은 set 시점에 거절돼 토스트로 알린다.
 
-override는 메모리 전용이라 서버 재시작이면 초기화된다(커밋된 seed 배치로 복귀).
+override는 메모리 전용이라 서버 재시작이면 초기화된다. 현재 커밋된 기본 override(seed)는 없어, override를 걸지 않으면 전 task가 tier 기본값으로 돈다(모델 배치를 코드에 박지 않는 baseline).
 
 ## 모델 교체·이식성 (eval / 무료 크레딧)
 

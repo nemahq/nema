@@ -60,18 +60,12 @@ export interface TaskOverride {
   effort?: LlmEffort;
 }
 
-// NEM-149 가성비 측정 기반 기본 모델 배치(잠정) — 추출은 gpt-5 유지(품질 1등), 나머지는 Gemini가
-// 가성비/품질 우위라 박는다. forTask가 override를 먼저 보므로 이 맵이 prod·staging 공통 기본값이 된다.
-// 관계 effort는 측정과 동일하게 "low" — 빠뜨리면 thinking 없이 돌아 측정과 달라진다.
-// 되돌리기: staging/dev는 dev-router(clearTaskOverride)로 즉시. prod는 런타임 override 변경이
-//   막혀 있어(dev-router·setTaskModel이 prod에서 throw) 이 맵을 고쳐 재배포해야 한다.
-// Gemini 키 부재 시: forTask가 이 override를 무시하고 gpt-5 tier로 폴백한다(providers.ts 가드).
-//   끊기진 않지만 측정과 다른 비싼 모델로 도므로, 부트 점검이 Sentry로 경고한다.
-const taskOverrides = new Map<LlmTask, TaskOverride>([
-  ["judgeRelations", { modelId: "gemini-3.1-pro-preview", effort: "low" }],
-  ["narrate", { modelId: "gemini-3.1-flash-lite" }],
-  ["generateDraft", { modelId: "gemini-3.1-flash-lite" }],
-]);
+// 커밋된 기본 override(seed) 없음 — 전 task가 tier 기본값으로 시작한다.
+// (NEM-149 가성비 측정 기반 Gemini 배치를 걷어냈다: 지금은 모델을 깎는 단계가 아니라 깨끗한
+//  baseline이 우선이라, 모델 배치를 코드에 박지 않는다.) 런타임에 dev 패널(setTaskModel)로
+// task별 모델을 갈아끼울 수 있고, 그 override는 메모리 전용이라 재시작하면 전부 tier 기본으로
+// 돌아온다. 다시 기본 배치를 박으려면 이 맵에 항목을 넣는다.
+const taskOverrides = new Map<LlmTask, TaskOverride>();
 
 export function getTaskOverride(task: LlmTask): TaskOverride | undefined {
   return taskOverrides.get(task);
