@@ -6,6 +6,7 @@ import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
 import { LnbSection } from "@web/components/layout/LnbSection";
 import { NavItem } from "@web/components/layout/NavItem";
 import { Sidebar } from "@web/components/layout/Sidebar";
+import { DraftsNavItem } from "@web/features/intake";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SpaceList } from "./SpaceList";
@@ -33,6 +34,8 @@ export function WorkspaceSidebar() {
           label={t("workspace.ask")}
           disabledHint={t("workspace.coming_soon")}
         />
+
+        <DraftsNavItem />
 
         <LnbSection label={t("workspace.section_workspace")}>
           <NavItem

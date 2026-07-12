@@ -11,22 +11,28 @@ export async function createSource(args: {
   supabase: TypedSupabaseClient;
   body: string;
   sessionId?: string;
+  spaceId?: string;
   timeZone?: string;
 }): Promise<{ sourceId: string }> {
-  const { supabase, body, sessionId, timeZone } = args;
+  const { supabase, body, sessionId, spaceId, timeZone } = args;
 
-  // 1인 단계: 가입 트리거가 만든 개인 Space 1개 (RLS로 내 멤버십만 보임).
-  // 멀티 Space가 열리면 입력으로 받는다 — 그때까지 가장 오래된 Space가 개인 칸.
-  const { data: membership, error: memberError } = await supabase
-    .from("space_members")
-    .select("space_id")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .single();
-  throwIfSupabaseError(memberError);
+  // spaceId 미지정 호출(MCP·dev-harness)만 이 경로를 탄다 — 1인 단계엔 가입
+  // 트리거가 만든 개인 Space 1개뿐이라(RLS로 내 멤버십만 보임) 가장 오래된
+  // 것이 곧 그 개인 칸이다. RPC가 SECURITY DEFINER라 소유 검증은 RPC 몫.
+  let targetSpaceId = spaceId;
+  if (targetSpaceId === undefined) {
+    const { data: membership, error: memberError } = await supabase
+      .from("space_members")
+      .select("space_id")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single();
+    throwIfSupabaseError(memberError);
+    targetSpaceId = membership.space_id;
+  }
 
   const { data: sourceId, error } = await supabase.rpc("create_source", {
-    p_space_id: membership.space_id,
+    p_space_id: targetSpaceId,
     p_body: body,
     ...(sessionId !== undefined && { p_session_id: sessionId }),
     ...(timeZone !== undefined && { p_author_timezone: timeZone }),
@@ -100,6 +106,7 @@ const PENDING_SOURCE_LIST_LIMIT = 50;
 
 interface PendingSourceItem {
   sourceId: string;
+  body: string;
   createdAt: string;
   digestionStatus: ExtractionStatus;
   errorMessage: string | null;
@@ -119,7 +126,7 @@ export async function listPendingSources(args: {
 
   const { data: sources, error } = await supabase
     .from("sources")
-    .select("id, created_at, digestion_status, error_message")
+    .select("id, body, created_at, digestion_status, error_message")
     .eq("status", "pending")
     .order("created_at", { ascending: false })
     .limit(PENDING_SOURCE_LIST_LIMIT);
@@ -155,6 +162,7 @@ export async function listPendingSources(args: {
       const review = reviewBySource.get(source.id);
       return {
         sourceId: source.id,
+        body: source.body,
         createdAt: source.created_at,
         digestionStatus: source.digestion_status,
         errorMessage: source.error_message,

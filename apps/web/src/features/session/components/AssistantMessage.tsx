@@ -1,5 +1,6 @@
+import { RelativeTime } from "@web/components/ui/RelativeTime";
+
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { RelativeTime } from "./RelativeTime";
 
 interface AssistantMessageProps {
   content: string;

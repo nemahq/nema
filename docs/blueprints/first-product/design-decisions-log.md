@@ -225,3 +225,22 @@ PR #382에서 LNB 워크스페이스 스위처·Space 목록·설정 모달을 �
 **PR 상태**: #382 open. 최신 커밋은 `git log`로 확인 — 이 라인에 특정 해시를 박아두면 다음 커밋마다 stale해지므로 의도적으로 안 적는다. 제목/본문은 PM 요청으로 갱신 안 함 — 폴리싱 세션이 이 PR을 이어 쓸지 새 PR로 시작할지 PM 확인 필요.
 
 ---
+
+### 2026-07-12 — 인테이크 1차 슬라이스: Space 오버뷰 인라인 컴포저 + 초안 화면
+
+`intake-flow.md`의 "Source 제출"·"초안 관리" 중 1차 케이스(제출·빈 입력 비활성화·처리중/실패/결과없음 상태 표시·LNB 조건부 노출)만. 취소·재시도·삭제·Space재지정·제목편집·액션잠금은 2차. dev-harness의 검증된 tRPC 계약(`source.create`/`source.listPending`)을 재사용하되 UI·훅은 제품용으로 새로 작성.
+
+- **착수 브리핑의 "Source 작성 모달"은 오독이었다 — surface-inventory.md를 다시 보고 정정**: 브리핑이 참조를 준 그 문서 자체에 "넣기 진입점은 모달이 아니라 인라인 자동 확장 textarea다(원래는 별도 화면 'Source 작성 모달'이었으나 폐기)"라고 명시돼 있었다. 처음엔 이걸 놓치고 초안 화면에 "+ New source" 모달(`SourceComposerModal`/`SourceComposerForm`)을 만들었다가, PM 리뷰에서 지적받고 폐기 — 대신 Space 오버뷰에 인라인 컴포저를 얹는 원래 설계로 되돌아갔다. **초안 화면은 관리·열람 전용으로 확정**(생성 진입점 없음, PM 확인) — surface-inventory의 초안 카드 구성(Space 셀렉트·제목편집 등 액션)도 애초에 생성 진입점을 안 갖고 있어 이 결정과 합치한다.
+- **`SourceComposer`**: `components/ui/ChatInput`(자동 확장 textarea+제출 버튼, Enter 제출/Shift+Enter 줄바꿈)을 그대로 재사용 — design-decisions-log 베이스라인이 이미 "정확히 일치, 모드 색상·placeholder만 스와핑하면 재사용 가능"이라 판단해둔 것을 그대로 따름. 모드 색상(remember/ask)은 이 컴포저엔 없는 개념이라 안 씀. `SpaceOverview`의 타이틀과 탭 사이(마크업 순서도 그 순서, 와이어프레임 근거)에 배치.
+- **`spaceId` 배관 — 백엔드 갭 발견하고 같이 고침(PM 확인 후 진행)**: `createSource` 서비스가 spaceId를 인자로 안 받고 "가장 오래된 Space" 멤버십을 자동으로 찾아 쓰고 있었다(1인 단계 가정 코드). 컴포저를 Space 오버뷰(Space별 라우트)에 인라인으로 얹으면 여러 Space를 가진 유저가 지금 보고 있지 않은 Space에서 글을 써도 항상 가장 오래된 Space로 들어가는 조용한 오류가 생긴다 — Space 관리(#381)로 멀티 Space가 이미 열려 있어 실제로 도달 가능한 버그. `SourceCreateInputSchema`에 `spaceId` 선택 필드를 추가하고, `createSource`가 있으면 그대로 쓰고 없으면 기존 멤버십 조회로 폴백하게 했다(MCP·dev-harness는 spaceId를 안 보내므로 동작 불변). RPC(`create_source`)는 이미 `is_space_member(p_space_id)` 검증을 갖고 있어 임의 spaceId를 넘겨도 소유권 검증은 안전하게 RPC가 막는다 — 별도 마이그레이션 불필요.
+- **초안 목록 — `body` 필드 추가(백엔드 확장)**: `listPendingSources`가 `id/created_at/digestion_status/error_message`만 select하고 있어서, title 컬럼이 없는 이번 슬라이스 요구("내용 미리보기로 식별")를 채울 데이터가 없었다. select에 `body` 한 컬럼만 추가 — 새 로직·마이그레이션 없는 순수 additive 확장이라 FE-only 슬라이스 취지와 안 어긋난다고 판단.
+- **초안 판정 — `reviewChangesetId`가 있으면 "초안 아님"**: `isDraftItem`(reviewChangesetId===null)로 필터링. digestion이 끝나 ingestion changeset이 열리면(=리뷰 준비됨) 그 Source는 개념적으로 "변경셋" 탭 소관이라 이 화면에서 사라지는 게 맞다(surface-inventory "Changeset 없이 pending으로 남은 Source"라는 정의 그대로). 변경셋 탭 자체는 아직 빈 스텁이라 그쪽으로 넘어간 뒤엔 화면상 확인할 방법이 없음 — 다음 슬라이스(Digest 리뷰 화면) 몫으로 인지하고 넘어감.
+- **상태 3종 + 에러 메시지 비노출**: `digestionStatus`(pending/completed/failed) + reviewChangesetId 조합으로 `processing`/`failed`/`empty` 파생(`draftStatus`). `error_message`는 워커가 원본 예외 메시지(`err.message`)를 그대로 저장하는 내부 디버그 텍스트라(`statement-sync/digestion.ts` 확인) 사용자에게 그대로 노출하지 않고 고정 안내 문구로 대체 — ux-writing.md "에러: 공감, 해결 안내, 사용자를 탓하지 않음" 원칙.
+- **LNB 항목**: `DraftsNavItem`, 묻기·해설 바로 아래·Workspace 섹션 위(와이어프레임 주석 "긴급도 기준" 그대로). 아이콘은 처음 `Inbox`로 갔다가 PM이 "Linear Drafts 아이콘은 문서 형태"라고 지적해 `FileText`로 교체 — Linear 관례를 따르기로 한 게 이미 이 초안 개념 자체의 근거(surface-inventory "Linear의 Drafts처럼")라 아이콘도 그 참조에 맞췄다.
+- **신규 컴포넌트**: `SourceComposer`(도메인 래퍼) + `DraftsScreen`/`DraftList`/`DraftCard`(관리 전용, 카드에 액션 없음) + `DraftsNavItem`. 훅은 dev-harness 계약을 그대로 미러(`useCreateSource`/`usePendingSourceListQuery`)하되 새로 작성 — dev-harness는 `index.ts`에 `HarnessPage`만 공개해 boundaries 규칙상 훅을 직접 import할 방법이 없었다.
+- **`RelativeTime` 컴포넌트를 `features/session`에서 `components/ui`로 승격**: DraftCard의 타임스탬프 표시에 필요했는데, 기존 `RelativeTime`(date-fns `formatDistanceToNow`, tolgee 언어 연동, 1분 tick)이 도메인 결합 없는 순수 UI라 승격 조건(2개 feature 이상 소비)을 충족 — `AssistantMessage`(session)와 `DraftCard`(intake) 두 곳이 씀. 새로 안 만들고 이동 후 import 경로만 바꿈.
+- **i18n**: `intake.*`(신규 네임스페이스) + `workspace.drafts`(카운트 인터폴레이션 `{count}`) en 실작성, ko는 이 PR 컨벤션대로 en과 동일 placeholder.
+- **검증 — 라이브 E2E 중 인프라 이슈 발견, 별도 정정**: 로컬 `dev:local` 부트스트랩이 Qdrant `statements-local` 컬렉션에서 403으로 막힘. 진단 결과 turbo와 무관하고(직접 `tsx` 실행도 동일 403), 공용 `.env.secret`의 Qdrant 키가 staging 전용이라 로컬 컬렉션엔 권한이 없는 것으로 확인됨 — **2026-07-10 세션 기록("turbo가 QDRANT_COLLECTION 오버라이드를 안 넘기는 것으로 보임")은 오진이었다**, 정정 남김. 이 인테이크 흐름(digest 생성까지)은 임베딩·Qdrant를 실제로 안 건드리므로(그 단계는 사람이 리뷰 확정해야 도달, 화면 자체가 아직 없음) `QDRANT_COLLECTION=statements-staging`으로 존재-체크만 통과시켜도 실제 벡터 쓰기는 없어 안전 — 로컬 서버(포트 충돌 회피용 별도 PORT) 부팅에 이 우회를 씀.
+- **최종 검증은 staging API(`pnpm dev:web`) + Kyle 실계정으로 진행**(로컬 인프라 문제로 로컬 E2E 대신). 상태 전이 자체는 임시 provider stub(`providers.ts`의 `generateDigests` task만 매직 키워드로 분기, PR 전 완전히 되돌림 — 커밋 안 됨)으로 처리중/성공/실패를 반복 확인한 뒤, 실제 LLM 콜로도 1회 확인.
+
+---
