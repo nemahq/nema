@@ -10,6 +10,7 @@ import {
 import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import { getModelSpec } from "@server/infra/llm/model-catalog";
+import type { TieredLlm, TierModelIds } from "@server/infra/llm/models";
 import {
   DEFAULT_TIMEOUT_MS as OPENAI_DEFAULT_TIMEOUT_MS,
   OpenAiProvider,
@@ -91,6 +92,20 @@ export function createProviderForModel(
       );
     }
   }
+}
+
+// 세 tier를 카탈로그 기반 멀티 프로바이더로 조립한다 — override 경로와 같은
+// createProviderForModel을 써서 tier도 어느 프로바이더 모델이든 가리킬 수 있다.
+// 모델 id 해석(prod lock·기본값·키 부재 폴백)은 호출부가 끝내고 확정된 id만 넘긴다.
+export function createTieredLlm(
+  models: TierModelIds,
+  clients: ProviderClients,
+): TieredLlm {
+  return {
+    standard: createProviderForModel(models.standard, clients),
+    mini: createProviderForModel(models.mini, clients),
+    nano: createProviderForModel(models.nano, clients),
+  };
 }
 
 // 스탠드얼론 스크립트(eval)용 — getProviders 싱글턴(QDRANT 등 전부 요구)을 거치지 않고

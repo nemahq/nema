@@ -28,13 +28,25 @@
 
 ## Tier → 모델
 
-| Tier | 기본 모델 | 환경변수 오버라이드 |
-|------|----------|-------------------|
-| standard | gpt-5 | `LLM_MODEL_STANDARD` |
-| mini | gpt-5-mini | `LLM_MODEL_MINI` |
-| nano | gpt-5-nano | `LLM_MODEL_NANO` |
+tier 기본값은 프로바이더 무관이다 — override 경로와 같은 `createProviderForModel` + `MODEL_CATALOG`로 조립되므로, 각 tier가 OpenAI·Anthropic·Google 어느 모델이든 가리킬 수 있다. 해석은 `resolveTierModelIds`(`models.ts`)가 한다.
 
-환경변수는 같은 프로바이더 내 모델 교체용 (예: `gpt-5` → `gpt-5.1`). 프로바이더 변경(예: OpenAI → Anthropic)은 `models.ts`에서 해당 tier의 구현체를 교체해야 한다.
+| 환경 | standard | mini | nano | 비고 |
+|------|----------|------|------|------|
+| 프로덕션 | gpt-5 | gpt-5-mini | gpt-5-nano | **하드 lock** — `LLM_MODEL_*` env를 무시하고 커밋값 강제 |
+| 로컬·스테이징 | gemini-3.5-flash | gemini-3.1-flash-lite | gemini-3.1-flash-lite | 저렴한 Google 기본값 (env 미설정 시) |
+
+- 비프로덕션은 `LLM_MODEL_STANDARD/MINI/NANO`로 tier를 **어느 프로바이더 모델로든** 덮을 수 있다 (카탈로그 등록 모델).
+- 프로덕션은 env를 신뢰하지 않는다 — `APP_ENV === "production"`이면 프로바이더-스왑을 코드 레벨에서 무시하고 위 커밋값을 강제한다. Railway env 오설정으로도 프로덕션이 안 흔들린다.
+- 비프로덕션 기본이 된 Google 모델의 키가 없으면 `providers.ts`가 커밋된 OpenAI 기본값으로 폴백한다(부팅 보호). 실제 resolve 결과는 dev 패널에서 확인한다.
+
+## dev 패널 — 런타임 모델 스위칭
+
+`/dev` 하니스의 **모델** 탭(프로덕션에서는 경로 자체가 안 뜸)에서 재배포 없이 라우팅을 만진다:
+
+- **프리셋** — `all-nano`(전 tier를 nano로, 가장 싸게) ↔ `real-tiers`(tier 그대로) 전환. 현재 활성 프리셋과 각 tier의 실제 resolve 모델을 표시한다.
+- **task별 override** — 9개 LLM 동작마다 `MODEL_CATALOG` 전체(Google 포함)에서 드롭다운으로 모델을 고른다. override는 tier 기본보다 우선하며, "tier 기본"을 고르면 해제된다. 못 쓰는 모델(키 부재·미배선)은 set 시점에 거절돼 토스트로 알린다.
+
+override는 메모리 전용이라 서버 재시작이면 초기화된다(커밋된 seed 배치로 복귀).
 
 ## 모델 교체·이식성 (eval / 무료 크레딧)
 

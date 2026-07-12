@@ -18,17 +18,20 @@ import {
   getModelSpec,
   type LlmProviderId,
 } from "@server/infra/llm/model-catalog";
+import type { ProviderClients } from "@server/infra/llm/model-factory";
 import {
   createGeminiClient,
   createProviderForModel,
-} from "@server/infra/llm/model-factory";
-import type { TieredLlm } from "@server/infra/llm/models";
-import {
   createTieredLlm,
+} from "@server/infra/llm/model-factory";
+import type { TieredLlm, TierModelIds } from "@server/infra/llm/models";
+import {
   DEFAULT_MINI_MODEL,
   DEFAULT_NANO_MODEL,
   DEFAULT_STANDARD_MODEL,
+  resolveTierModelIds,
 } from "@server/infra/llm/models";
+import { DEFAULT_TIMEOUT_MS as OPENAI_DEFAULT_TIMEOUT_MS } from "@server/infra/llm/openai-provider";
 import type { LlmTask } from "@server/infra/llm/task-routing";
 import {
   getAllTaskOverrides,
@@ -156,24 +159,34 @@ function bindEffort(
 }
 
 function resolveOverrideProvider(modelId: string): LlmProvider {
-  if (!overrideProviders || !sharedOpenAiClient) {
+  if (!overrideProviders) {
     throw new Error("Providers not initialized");
   }
   const cachedProvider = overrideProviders.get(modelId);
   if (cachedProvider) {
     return cachedProvider;
   }
-
-  // 가드를 통과한 sharedOpenAiClient를 클로저로 고정 — getter는 매칭 프로바이더에서만 호출된다.
-  const openAiClient = sharedOpenAiClient;
-  const provider = createProviderForModel(modelId, {
-    getOpenAiClient: () => openAiClient,
-    getAnthropicClient,
-    getGeminiClient,
-  });
-
+  const provider = createProviderForModel(modelId, providerClients);
   overrideProviders.set(modelId, provider);
   return provider;
+}
+
+function getOpenAiClient(): OpenAI {
+  if (sharedOpenAiClient) {
+    return sharedOpenAiClient;
+  }
+  const env = getEnv();
+  if (!env.OPENAI_API_KEY) {
+    throw new LlmError(
+      "auth",
+      "OPENAI_API_KEY is required to use an OpenAI model",
+    );
+  }
+  sharedOpenAiClient = new OpenAI({
+    apiKey: env.OPENAI_API_KEY,
+    timeout: OPENAI_DEFAULT_TIMEOUT_MS,
+  });
+  return sharedOpenAiClient;
 }
 
 function getAnthropicClient(): Anthropic {
@@ -202,6 +215,55 @@ function getGeminiClient(): GoogleGenAI {
     apiKey: env.GEMINI_API_KEY,
   });
   return sharedGeminiClient;
+}
+
+// tier·override가 공유하는 클라이언트 게터 묶음. 매칭되는 프로바이더의 게터만 호출되므로
+// 안 쓰는 프로바이더 키 부재로 조립이 터지지 않는다.
+const providerClients: ProviderClients = {
+  getOpenAiClient,
+  getAnthropicClient,
+  getGeminiClient,
+};
+
+// tier 모델 해석 + 부팅 보호. resolveTierModelIds가 prod lock·기본값을 정한 뒤,
+// 비프로덕션에서 기본이 된 Google 모델의 키가 없으면 커밋된 OpenAI 기본값으로 폴백한다
+// (OPENAI_API_KEY는 getProviders가 부팅 시 이미 보장). Google 키 없는 staging도 그대로 뜬다.
+// 프로덕션은 desired가 OpenAI 기본값이라 폴백이 걸리지 않는다(하드 lock 그대로).
+const unconfiguredTierWarned = new Set<string>();
+function ensureConfiguredTierModel(modelId: string, fallback: string): string {
+  const spec = getModelSpec(modelId);
+  if (spec && isProviderConfigured(spec.provider)) {
+    unconfiguredTierWarned.delete(modelId);
+    return modelId;
+  }
+  if (!unconfiguredTierWarned.has(modelId)) {
+    unconfiguredTierWarned.add(modelId);
+    const reason = spec
+      ? `missing ${spec.provider} provider key`
+      : "unknown model (not in catalog)";
+    console.warn(
+      `[llm-router] tier default "${modelId}" not usable (${reason}) — falling back to "${fallback}"`,
+    );
+  }
+  return fallback;
+}
+
+function resolveConfiguredTierModels(): TierModelIds {
+  const env = getEnv();
+  const desired = resolveTierModelIds({
+    appEnv: env.APP_ENV,
+    standard: env.LLM_MODEL_STANDARD,
+    mini: env.LLM_MODEL_MINI,
+    nano: env.LLM_MODEL_NANO,
+  });
+  return {
+    standard: ensureConfiguredTierModel(
+      desired.standard,
+      DEFAULT_STANDARD_MODEL,
+    ),
+    mini: ensureConfiguredTierModel(desired.mini, DEFAULT_MINI_MODEL),
+    nano: ensureConfiguredTierModel(desired.nano, DEFAULT_NANO_MODEL),
+  };
 }
 
 // 배포 오설정이 "멀쩡해 보이게" 묻히지 않도록, seeded 기본 배치가 살아있는지 부팅 때 본다.
@@ -261,29 +323,21 @@ export function getProviders(): Providers {
     throw new Error("QDRANT_URL and QDRANT_API_KEY are required for chat");
   }
 
-  const bundle = createTieredLlm({
-    apiKey: env.OPENAI_API_KEY,
-    modelStandard: env.LLM_MODEL_STANDARD,
-    modelMini: env.LLM_MODEL_MINI,
-    modelNano: env.LLM_MODEL_NANO,
-  });
-  sharedOpenAiClient = bundle.openAiClient;
   overrideProviders = new Map();
 
+  const tierModels = resolveConfiguredTierModels();
+  const tiers = createTieredLlm(tierModels, providerClients);
+
   cached = {
-    llm: toRouter(bundle.tiers),
+    llm: toRouter(tiers),
     embedding: createVoyageProvider({ apiKey: env.VOYAGE_API_KEY }),
     vectorStore: createQdrantStore(createQdrantClient()),
   };
 
   // prod 전용 잠금 — 프로덕션에서 모델 프리셋 교체가 열리면 비용·보안 사고로 이어진다
   if (env.APP_ENV !== "production") {
-    originalTiers = bundle.tiers;
-    resolvedModelNames = {
-      standard: env.LLM_MODEL_STANDARD ?? DEFAULT_STANDARD_MODEL,
-      mini: env.LLM_MODEL_MINI ?? DEFAULT_MINI_MODEL,
-      nano: env.LLM_MODEL_NANO ?? DEFAULT_NANO_MODEL,
-    };
+    originalTiers = tiers;
+    resolvedModelNames = tierModels;
     applyLlmPreset("all-nano");
   }
 
