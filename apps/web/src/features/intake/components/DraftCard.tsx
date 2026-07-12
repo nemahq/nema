@@ -5,6 +5,10 @@ import { RelativeTime } from "@web/components/ui/RelativeTime";
 import type { DraftStatus } from "@web/features/intake/utils";
 import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
 
+// failed 배지는 PendingSourceItem.errorMessage(워커가 원본 예외 메시지를 그대로 저장한
+// 내부 디버그 텍스트)를 절대 안 쓴다 — 고정 안내 문구로 대체한다는 게 의도된 결정이다
+// (design-decisions-log.md 2026-07-12 참고). 나중에 "더 친절하게" errorMessage를
+// 이어붙이고 싶어지면 그 전에 서버가 사용자 노출용 메시지를 별도로 다듬어야 한다.
 const STATUS_META: Record<
   DraftStatus,
   { labelKey: TranslationKey; variant: BadgeVariant }

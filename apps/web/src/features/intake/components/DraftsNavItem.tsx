@@ -17,7 +17,9 @@ export function DraftsNavItem() {
     isDraftItem,
   ).length;
 
-  if (draftCount === 0) {
+  // 조회 실패로 개수를 모르는 상태를 "0개"로 오인해 항목을 숨기지 않는다 — 실제 초안이
+  // 있는데도 조용히 진입점이 사라지는 것보다는, 눌러서 /drafts의 에러 상태를 보는 편이 낫다.
+  if (draftCount === 0 && !pendingQuery.isError) {
     return null;
   }
 

@@ -243,4 +243,13 @@ PR #382에서 LNB 워크스페이스 스위처·Space 목록·설정 모달을 �
 - **검증 — 라이브 E2E 중 인프라 이슈 발견, 별도 정정**: 로컬 `dev:local` 부트스트랩이 Qdrant `statements-local` 컬렉션에서 403으로 막힘. 진단 결과 turbo와 무관하고(직접 `tsx` 실행도 동일 403), 공용 `.env.secret`의 Qdrant 키가 staging 전용이라 로컬 컬렉션엔 권한이 없는 것으로 확인됨 — **2026-07-10 세션 기록("turbo가 QDRANT_COLLECTION 오버라이드를 안 넘기는 것으로 보임")은 오진이었다**, 정정 남김. 이 인테이크 흐름(Digest 생성까지)은 임베딩·Qdrant를 실제로 안 건드리므로(그 단계는 사람이 리뷰 확정해야 도달, 화면 자체가 아직 없음) `QDRANT_COLLECTION=statements-staging`으로 존재-체크만 통과시켜도 실제 벡터 쓰기는 없어 안전 — 로컬 서버(포트 충돌 회피용 별도 PORT) 부팅에 이 우회를 씀.
 - **최종 검증은 staging API(`pnpm dev:web`) + Kyle 실계정으로 진행**(로컬 인프라 문제로 로컬 E2E 대신). 상태 전이 자체는 임시 provider stub(`providers.ts`의 `generateDigests` task만 매직 키워드로 분기, PR 전 완전히 되돌림 — 커밋 안 됨)으로 처리중/성공/실패를 반복 확인한 뒤, 실제 LLM 콜로도 1회 확인.
 
+**amendment(2026-07-12, PR 리뷰 반영)**: 멀티 에이전트 리뷰에서 나온 지적 중 실사용 영향 있는 것만 반영.
+- `draftStatus`가 "호출 전에 `isDraftItem`으로 걸러졌다"는 순서를 암묵적으로 전제하던 걸 없앴다 — `reviewChangesetId`가 있으면 `null`을 반환하도록 판정 자체를 함수 안으로 옮기고, `isDraftItem`은 그 결과의 파생으로 재정의했다. `DraftList`는 이제 `draftStatus`가 `null`이 아닌 항목만 남기는 `map`+타입가드 한 번으로 필터링과 상태 계산을 같이 한다 — 두 번째 소비처가 생기기 전에 구조로 막은 것.
+- `usePendingSourceListQuery` 조회 실패가 "초안 없음"과 똑같이 보이던 문제 — `refetchInterval`이 `data===undefined`일 때 `false`를 반환해 에러 상태에서 자동 복구도 안 됐다. `DraftList`에 `isError` 분기를 따로 추가(빈 상태와 다른 문구), `DraftsNavItem`은 에러일 땐 0개로 오인해 항목을 숨기지 않게 했다.
+- `useCreateSource`의 `spaceId`를 타입 레벨에서 필수로 좁혔다(스키마는 MCP·dev-harness 호환 때문에 optional 유지) — 지금 유일한 소비처(`SourceComposer`)는 이미 항상 넘기고 있어 동작 변화는 없지만, 새 진입점이 spaceId를 빠뜨리면 이번에 고친 버그가 그대로 재발할 수 있는 구조라 타입으로 막았다. `mutate`/`mutateAsync` 함수 타입만 좁히는 대입이라 캐스트 없이 컴파일된다(optional을 받는 함수는 required만 주는 호출자에게도 안전하다는 함수 매개변수 반공변성).
+- `createSource`의 spaceId 우선순위(주어지면 그대로 씀, 없으면 가장 오래된 membership)에 회귀 테스트 추가 — 이 PR의 핵심 버그 수정인데 테스트가 없었다.
+- `DraftCard`의 `failed` 배지가 `errorMessage`를 안 쓰고 고정 문구를 쓴다는 결정에 코드 쪽 WHY 주석이 없어서 추가 — 이 문서에만 있던 근거라 코드만 보는 사람은 "나중에 친절하게 연결해주면 되겠네"로 오해할 수 있었다.
+- **문서 갭 기록만**: surface-inventory.md의 초안 절은 "상태는 딱 하나만 구분한다(처리 중이냐 아니냐)"로 서술돼 있는데, intake-flow.md의 케이스 목록은 실패·결과없음을 서로 다른 안내 문구를 가진 별개 케이스로 요구한다 — 이번 구현은 후자(더 상세하고 최신인 기능 명세)를 따라 3분류로 갔다. surface-inventory.md 쪽 문장이 그 이후 갱신 안 된 것으로 보임, 다음에 그 문서를 만지는 세션이 참고할 것.
+- **반영 안 함(기각)**: "초안 목록을 Space로 스코프해야 하는 것 아니냐"는 지적은 기각 — surface-inventory가 초안 화면을 명시적으로 Workspace 전역으로 설계했다("잘못된 Space에 들어간 걸 여기서 한눈에 보고 바로잡을 수 있어야"). RPC 에러 코드 매핑(P0001 그대로 노출)은 실제 UI 경로로 도달 불가능해서(컴포저의 spaceId는 항상 현재 라우트의 Space이고, 아닌 Space면 SpaceOverview가 애초에 not-found로 막음) 보류.
+
 ---

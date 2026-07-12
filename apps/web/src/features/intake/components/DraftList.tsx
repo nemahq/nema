@@ -2,12 +2,24 @@ import { Skeleton } from "@nema-io/weave";
 
 import { NemaMarkIcon } from "@web/components/ui/NemaMarkIcon";
 import { usePendingSourceListQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
-import { draftStatus, isDraftItem } from "@web/features/intake/utils";
+import type { PendingSourceItem } from "@web/features/intake/types";
+import { type DraftStatus, draftStatus } from "@web/features/intake/utils";
+import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftCard } from "./DraftCard";
 
 const SKELETON_KEYS = ["skeleton-1", "skeleton-2", "skeleton-3"];
+
+interface Draft {
+  source: PendingSourceItem;
+  status: DraftStatus;
+}
+
+function toDraft(source: PendingSourceItem): Draft | null {
+  const status = draftStatus(source);
+  return status === null ? null : { source, status };
+}
 
 export function DraftList() {
   const { t } = useTranslation();
@@ -23,7 +35,27 @@ export function DraftList() {
     );
   }
 
-  const drafts = (pendingQuery.data?.items ?? []).filter(isDraftItem);
+  // 조회 실패는 "초안 없음"과 다른 상태다 — 같은 빈 화면으로 뭉개면 정말 비어 있는 건지
+  // 목록을 못 불러온 건지 구분이 안 된다.
+  if (pendingQuery.isError) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
+        <NemaMarkIcon
+          width={64}
+          height={76}
+          fill="currentColor"
+          className="text-fg-primary opacity-[0.06] dark:opacity-[0.08]"
+        />
+        <p className="text-sm text-status-error">
+          {getErrorMessage(pendingQuery.error)}
+        </p>
+      </div>
+    );
+  }
+
+  const drafts = (pendingQuery.data?.items ?? [])
+    .map(toDraft)
+    .filter((draft): draft is Draft => draft !== null);
 
   if (drafts.length === 0) {
     return (
@@ -41,11 +73,11 @@ export function DraftList() {
 
   return (
     <div className="flex flex-col gap-3">
-      {drafts.map((source) => (
+      {drafts.map(({ source, status }) => (
         <DraftCard
           key={source.sourceId}
           body={source.body}
-          status={draftStatus(source)}
+          status={status}
           createdAt={source.createdAt}
         />
       ))}
