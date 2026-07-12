@@ -28,10 +28,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        className="gap-0 overflow-hidden p-0 md:max-w-3xl"
-      >
+      <DialogContent className="gap-0 overflow-hidden p-0 md:max-w-3xl">
         <DialogTitle className="sr-only">{t("settings.settings")}</DialogTitle>
         <div className="flex h-[560px]">
           <SettingsNav section={section} onSectionChange={setSection} />

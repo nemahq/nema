@@ -1,6 +1,7 @@
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import * as React from "react";
 
+import { useEscapeAwareCloseFocus } from "../hooks/useEscapeAwareCloseFocus";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "../icons";
 import { cn } from "../utils";
 
@@ -32,13 +33,20 @@ function DropdownMenuTrigger({
 function DropdownMenuContent({
   className,
   sideOffset = 4,
+  onEscapeKeyDown,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  const escapeAwareCloseFocus = useEscapeAwareCloseFocus(
+    onEscapeKeyDown,
+    onCloseAutoFocus,
+  );
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
+        {...escapeAwareCloseFocus}
         className={cn(
           "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md bg-surface-card p-1 text-fg-primary shadow-[0_4px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]",
           className,

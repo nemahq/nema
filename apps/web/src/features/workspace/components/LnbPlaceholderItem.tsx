@@ -27,7 +27,7 @@ export function LnbPlaceholderItem({ icon, label }: LnbPlaceholderItemProps) {
               {icon}
             </div>
           </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
+          <TooltipContent side="right" sideOffset={12}>
             {label} · {t("workspace.coming_soon")}
           </TooltipContent>
         </Tooltip>

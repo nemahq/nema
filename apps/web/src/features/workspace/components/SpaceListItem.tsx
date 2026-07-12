@@ -46,7 +46,7 @@ export function SpaceListItem({
       <Link
         to="/space/$spaceId"
         params={{ spaceId }}
-        className="flex h-9 w-full items-center gap-1.5 truncate rounded-md px-1.5 pr-8 text-sm font-normal transition-colors duration-fast hover:bg-surface-raised-hover"
+        className="flex h-8 w-full items-center gap-1.5 truncate rounded-lg px-2.5 pr-8 text-xs font-normal transition-colors duration-fast hover:bg-surface-raised-hover"
         activeProps={{
           className: "bg-surface-raised-hover font-medium",
         }}

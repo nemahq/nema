@@ -282,7 +282,15 @@
 
 @layer base {
   * {
-    @apply border-border outline-brand/50;
+    @apply border-border;
+  }
+  /* Tailwind의 transition/transition-colors 기본값이 outline-color를 포함해서,
+     컴포넌트가 어떤 transition-* 클래스를 쓰든 포커스 링 색이 서서히 번지듯
+     보인다 — !important로 강제해 항상 즉시 뜨게 한다(유틸리티 레이어가
+     base 레이어보다 우선하므로 이렇게 안 하면 컴포넌트 쪽이 이긴다). */
+  *:focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-brand;
+    transition: none !important;
   }
   body {
     @apply bg-surface-base text-fg-primary;

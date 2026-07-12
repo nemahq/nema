@@ -24,12 +24,12 @@ export function NewSpaceButton() {
               type="button"
               aria-label={t("workspace.new_space")}
               onClick={() => setOpen(true)}
-              className="flex size-9 cursor-pointer items-center justify-center rounded-md text-fg-tertiary transition-colors duration-fast hover:bg-surface-raised-hover"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-fg-tertiary transition-colors duration-fast hover:bg-surface-raised-hover"
             >
               <Plus strokeWidth={1.5} className={ICON_CLASS} />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
+          <TooltipContent side="right" sideOffset={12}>
             {t("workspace.new_space")}
           </TooltipContent>
         </Tooltip>
@@ -43,7 +43,7 @@ export function NewSpaceButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-9 w-full cursor-pointer items-center gap-1.5 rounded-md px-1.5 text-sm text-fg-tertiary transition-colors duration-fast hover:bg-surface-raised-hover hover:text-fg-primary"
+        className="flex h-8 w-full cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-xs text-fg-tertiary transition-colors duration-fast hover:bg-surface-raised-hover hover:text-fg-primary"
       >
         <Plus strokeWidth={1.5} className={ICON_CLASS} />
         {t("workspace.new_space")}

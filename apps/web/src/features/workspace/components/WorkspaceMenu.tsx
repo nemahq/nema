@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import {
@@ -33,7 +33,6 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const closedViaEscapeRef = useRef(false);
 
   const userInitial = user.displayName.charAt(0).toUpperCase();
   const workspaceInitial = workspaceName.charAt(0).toUpperCase();
@@ -53,25 +52,11 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
     <DropdownMenuContent
       side="bottom"
       align="start"
-      // 8(접힘): 버튼은 w-full(48px)이지만 보이는 아바타(size-8)는 justify-center로
-      // (48-32)/2=8px 안쪽에서 시작 — 버튼 모서리가 아니라 아바타 모서리에 맞춘다.
+      // 접힘: 버튼 자체가 아바타 크기(size-8)라 트리거 모서리=아바타 모서리, 보정 불필요.
       // -6(펼침): 트리거 버튼(x=12)이 아니라 -mx-1.5로 넓어진 호버 배경 박스(x=6)에 맞춘다.
-      alignOffset={collapsed ? 8 : -6}
+      alignOffset={collapsed ? 0 : -6}
       // 10: 배경 박스가 버튼보다 py-1.5(6px) 더 내려가 있어, 그 아래에 여유 4px를 더한다.
       sideOffset={collapsed ? 4 : 10}
-      onEscapeKeyDown={() => {
-        closedViaEscapeRef.current = true;
-      }}
-      onCloseAutoFocus={(event) => {
-        // Radix는 닫힐 때 트리거에 포커스를 되돌리는데, 이 프로그래매틱 focus가
-        // 마우스로 닫힌 모든 경우(바깥 클릭, 메뉴 아이템 클릭으로 다른 UI를 여는
-        // 경우 포함)에 focus-visible 링이나 호버 배경 잔상을 남긴다 — 실제
-        // 키보드로 닫은 경우(Escape)만 트리거 재포커스를 허용한다.
-        if (!closedViaEscapeRef.current) {
-          event.preventDefault();
-        }
-        closedViaEscapeRef.current = false;
-      }}
       style={
         collapsed
           ? undefined
@@ -114,20 +99,21 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
   return (
     <>
       {collapsed ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={workspaceName}
-              className="flex w-full items-center justify-center rounded-md py-1 outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              <span className="flex size-8 items-center justify-center rounded-md bg-brand-accent text-sm font-medium text-white dark:bg-fg-primary/10 dark:text-fg-primary">
+        // 버튼을 아바타 크기(size-8)로 맞춰 포커스 링이 아바타를 꽉 감싸게 한다.
+        <div className="flex justify-center py-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={workspaceName}
+                className="flex size-8 items-center justify-center rounded-md bg-brand-accent text-sm font-medium text-white dark:bg-fg-primary/10 dark:text-fg-primary"
+              >
                 {workspaceInitial}
-              </span>
-            </button>
-          </DropdownMenuTrigger>
-          {accountContent}
-        </DropdownMenu>
+              </button>
+            </DropdownMenuTrigger>
+            {accountContent}
+          </DropdownMenu>
+        </div>
       ) : (
         // 스위처(드롭다운 트리거)와 접기 토글이 한 pill 안에 같이 산다 — 각자
         // 배경을 갖지 않고 이 wrapper의 hover 배경 하나를 공유해야 노션 웹처럼
@@ -140,9 +126,9 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
               <button
                 type="button"
                 // 열림 상태는 위 wrapper의 has-[[data-state=open]] 배경이 pill 전체에
-                // 이미 퍼져 있으니, 트리거 자체 포커스링은 열렸을 때만 지워 배경과
-                // 안 겹치게 한다(닫힌 채 Tab으로 포커스됐을 땐 그대로 보임).
-                className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-brand data-[state=open]:!ring-0"
+                // 이미 퍼져 있으니, 트리거 자체 포커스 아웃라인은 열렸을 때만 지워
+                // 배경과 안 겹치게 한다(닫힌 채 Tab으로 포커스됐을 땐 그대로 보임).
+                className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md text-left data-[state=open]:focus-visible:outline-none"
               >
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-accent text-xs font-medium text-white dark:bg-fg-primary/10 dark:text-fg-primary">
                   {workspaceInitial}
@@ -159,7 +145,7 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
             type="button"
             onClick={handleToggleSidebar}
             aria-label={t("layout.collapse_sidebar")}
-            className="shrink-0 rounded-md p-1 opacity-0 outline-none transition-opacity duration-fast focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand group-hover/switcher:opacity-100"
+            className="shrink-0 rounded-md p-1 opacity-0 transition-opacity duration-fast focus-visible:opacity-100 group-hover/switcher:opacity-100"
           >
             <PanelLeft strokeWidth={1.5} className="size-4" />
           </button>

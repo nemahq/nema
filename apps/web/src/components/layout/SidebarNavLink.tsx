@@ -36,14 +36,14 @@ export function SidebarNavLink({
               to={to}
               params={params}
               aria-label={label}
-              className="flex size-8 items-center justify-center rounded-lg outline-none transition-colors duration-fast hover:bg-surface-raised-hover focus-visible:ring-2 focus-visible:ring-brand"
+              className="flex size-8 items-center justify-center rounded-lg transition-colors duration-fast hover:bg-surface-raised-hover"
               activeProps={activeProps}
               activeOptions={activeOptions}
             >
               {icon}
             </Link>
           </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
+          <TooltipContent side="right" sideOffset={12}>
             {label}
           </TooltipContent>
         </Tooltip>
@@ -56,7 +56,7 @@ export function SidebarNavLink({
       <Link
         to={to}
         params={params}
-        className="flex h-8 w-full items-center gap-1.5 rounded-lg px-2.5 text-xs font-normal outline-none transition-colors duration-fast hover:bg-surface-raised-hover focus-visible:ring-2 focus-visible:ring-brand"
+        className="flex h-8 w-full items-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition-colors duration-fast hover:bg-surface-raised-hover"
         activeProps={activeProps}
         activeOptions={activeOptions}
       >
