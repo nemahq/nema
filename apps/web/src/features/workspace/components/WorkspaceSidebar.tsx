@@ -2,10 +2,10 @@ import { useState } from "react";
 
 import { BookMarked, MessagesSquare } from "@nema-io/weave/icons";
 
+import { NavItem } from "@web/components/layout/NavItem";
 import { Sidebar } from "@web/components/layout/Sidebar";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { LnbPlaceholderItem } from "./LnbPlaceholderItem";
 import { LnbSection } from "./LnbSection";
 import { SpaceList } from "./SpaceList";
 import { SpaceModal } from "./SpaceModal";
@@ -28,15 +28,17 @@ export function WorkspaceSidebar() {
       }
     >
       <div className="flex flex-col gap-0.5 py-1">
-        <LnbPlaceholderItem
+        <NavItem
           icon={<MessagesSquare strokeWidth={1.5} className={NAV_ICON_CLASS} />}
           label={t("workspace.ask")}
+          disabledHint={t("workspace.coming_soon")}
         />
 
         <LnbSection label={t("workspace.section_workspace")}>
-          <LnbPlaceholderItem
+          <NavItem
             icon={<BookMarked strokeWidth={1.5} className={NAV_ICON_CLASS} />}
             label={t("workspace.references")}
+            disabledHint={t("workspace.coming_soon")}
           />
         </LnbSection>
 

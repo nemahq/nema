@@ -12,6 +12,7 @@ import {
 } from "@nema-io/weave";
 import { ChevronDown, LogOut, PanelLeft, Settings } from "@nema-io/weave/icons";
 
+import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
 import { useSidebar } from "@web/components/layout/Sidebar";
 import { SettingsModal } from "@web/features/settings";
 import { useUser } from "@web/lib/auth";
@@ -144,14 +145,13 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
             </DropdownMenuTrigger>
             {accountContent}
           </DropdownMenu>
-          <button
-            type="button"
+          <LnbHoverIcon
             onClick={handleToggleSidebar}
             aria-label={t("layout.collapse_sidebar")}
-            className="absolute right-2.5 flex size-5 shrink-0 items-center justify-center rounded-md opacity-0 transition-colors duration-fast hover:bg-surface-raised-hover hover:brightness-95 dark:hover:brightness-125 focus-visible:opacity-100 group-hover/switcher:opacity-100"
+            className="absolute right-2.5 group-hover/switcher:opacity-100"
           >
             <PanelLeft strokeWidth={1.5} className="size-4" />
-          </button>
+          </LnbHoverIcon>
         </div>
       )}
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
