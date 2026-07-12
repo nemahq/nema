@@ -41,12 +41,12 @@ export function DraftList() {
 
   return (
     <div className="flex flex-col gap-3">
-      {drafts.map((item) => (
+      {drafts.map((source) => (
         <DraftCard
-          key={item.sourceId}
-          body={item.body}
-          status={draftStatus(item)}
-          createdAt={item.createdAt}
+          key={source.sourceId}
+          body={source.body}
+          status={draftStatus(source)}
+          createdAt={source.createdAt}
         />
       ))}
     </div>
