@@ -9,6 +9,10 @@ import {
   useAccountDeletionBlockersQuery,
   useDeleteAccount,
 } from "@web/features/account";
+import {
+  canConfirmAccountDeletion,
+  resolveConfirmationTarget,
+} from "@web/features/settings/confirmAccountDeletion";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
@@ -26,14 +30,6 @@ function isPreconditionFailed(error: unknown): boolean {
   );
 }
 
-// 삭제 확인은 버튼 클릭만이 아니라 본인 이메일 타이핑까지 요구한다(위험 액션
-// 확인 강도를 타이핑 확인으로 올린 PM 결정, design-decisions-log 참고).
-// 이메일은 대소문자를 구분하지 않는 게 일반적인 이메일 비교 관례라 toLowerCase
-// 비교로 맞추고, 앞뒤 공백은 트리밍한다.
-function isConfirmationMatch(input: string, target: string): boolean {
-  return input.trim().toLowerCase() === target.trim().toLowerCase();
-}
-
 export function AccountDeleteFlow({
   userEmail,
   userDisplayName,
@@ -47,10 +43,11 @@ export function AccountDeleteFlow({
   const blockersQuery = useAccountDeletionBlockersQuery();
   const deleteMutation = useDeleteAccount();
 
-  // 이메일 없는 계정(전화번호 인증 등)은 displayName으로 대체 — 안 그러면
-  // 확인이 영원히 불가능한 채로 버튼만 막혀버린다.
   const hasEmail = userEmail.trim().length > 0;
-  const confirmationTarget = hasEmail ? userEmail : userDisplayName;
+  const confirmationTarget = resolveConfirmationTarget(
+    userEmail,
+    userDisplayName,
+  );
 
   function handleConfirmDelete() {
     deleteMutation.mutate(undefined, {
@@ -136,9 +133,10 @@ export function AccountDeleteFlow({
   }
 
   const mutationError = deleteMutation.error;
-  const canConfirm =
-    confirmationTarget.trim().length > 0 &&
-    isConfirmationMatch(confirmationInput, confirmationTarget);
+  const canConfirm = canConfirmAccountDeletion(
+    confirmationInput,
+    confirmationTarget,
+  );
 
   return (
     <div className="flex h-full flex-col">
