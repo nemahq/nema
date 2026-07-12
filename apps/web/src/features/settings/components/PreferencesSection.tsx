@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 
 import {
   Select,
@@ -25,7 +25,6 @@ import { ThemeSelect } from "./ThemeSelect";
 
 export function PreferencesSection() {
   const { t } = useTranslation();
-  const appLangId = useId();
   const [appLang, setAppLang] = useState<Locale>(() => {
     const lang = tolgee.getLanguage();
     return lang && isLocale(lang) ? lang : "ko";
@@ -72,13 +71,9 @@ export function PreferencesSection() {
           <SettingsRow
             label={t("settings.app_language")}
             description={t("settings.app_language_description")}
-            htmlFor={appLangId}
           >
             <Select value={appLang} onValueChange={handleAppLangChange}>
-              <SelectTrigger
-                id={appLangId}
-                className="w-44 cursor-pointer shadow-none dark:shadow-sm"
-              >
+              <SelectTrigger className="w-44 cursor-pointer shadow-none dark:shadow-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

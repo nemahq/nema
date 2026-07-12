@@ -145,7 +145,9 @@ export function AccountDeleteFlow({
       </h2>
 
       <div className="mt-4 flex flex-1 flex-col gap-4">
-        <Alert variant="error">{t("account.delete_confirm_description")}</Alert>
+        <Alert variant="error" icon={false}>
+          {t("account.delete_confirm_description")}
+        </Alert>
 
         {isLoadingBlockers ? (
           <div className="flex flex-col gap-1.5">
