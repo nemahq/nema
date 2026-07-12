@@ -10,7 +10,7 @@
     "delete_confirm_description": "This permanently deletes your account and can't be undone. Workspaces where you're the only member are deleted too.",
     "delete_confirm_email_label": "Type {email} to confirm",
     "delete_confirm_name_label": "Type {name} to confirm",
-    "delete_confirm_title": "Delete your account?",
+    "delete_confirm_title": "계정을 삭제할까요?",
     "delete_deleting": "Deleting your account...",
     "delete_description": "Permanently delete your account and remove your data from Nema.",
     "delete_error_precondition": "Your workspaces changed since we last checked. Let's check again.",

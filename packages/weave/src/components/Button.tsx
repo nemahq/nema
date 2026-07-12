@@ -5,7 +5,7 @@ import * as React from "react";
 import { cn } from "../utils";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md text-[13px] font-semibold whitespace-nowrap transition-all duration-fast outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface-context disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-status-error/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md text-[13px] font-semibold whitespace-nowrap transition-all duration-fast disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-status-error/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -14,10 +14,11 @@ const buttonVariants = cva(
         secondary:
           "border border-brand-accent text-brand-accent hover:bg-brand-tint hover:border-brand-hover active:scale-[0.98] dark:border-fg-tertiary dark:text-fg-primary dark:hover:bg-surface-raised-hover dark:hover:border-fg-secondary",
         neutral:
-          "border border-border bg-surface-raised text-fg-primary hover:bg-surface-raised-hover active:scale-[0.98]",
-        ghost: "hover:bg-surface-raised-hover active:scale-[0.98]",
+          "border border-border bg-surface-raised text-fg-primary hover:bg-surface-raised-hover/75 active:scale-[0.98] dark:hover:bg-surface-raised-hover",
+        ghost:
+          "hover:bg-surface-raised-hover/75 active:scale-[0.98] dark:hover:bg-surface-raised-hover",
         danger:
-          "bg-status-error text-white hover:bg-status-error/90 focus-visible:ring-status-error active:scale-[0.98] dark:bg-status-error/15 dark:text-status-error dark:hover:bg-status-error/25",
+          "surface-danger focus-visible:outline-status-error active:scale-[0.98]",
         link: "text-brand-accent underline underline-offset-2 hover:text-brand-hover dark:text-fg-secondary dark:hover:text-fg-primary",
       },
       size: {

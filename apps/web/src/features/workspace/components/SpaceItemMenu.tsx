@@ -6,6 +6,7 @@ import {
 } from "@nema-io/weave";
 import { Ellipsis, Pencil, Trash2 } from "@nema-io/weave/icons";
 
+import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface SpaceItemMenuProps {
@@ -19,14 +20,13 @@ export function SpaceItemMenu({ onRename, onDelete }: SpaceItemMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
+        <LnbHoverIcon
           aria-label={t("space.menu")}
-          className="absolute right-1 flex size-6 cursor-pointer items-center justify-center rounded-md opacity-0 transition-opacity duration-fast hover:bg-surface-raised-hover group-hover:opacity-100 data-[state=open]:bg-surface-raised-hover data-[state=open]:opacity-100"
+          className="absolute right-3.5 cursor-pointer group-hover:opacity-100 data-[state=open]:bg-surface-raised-hover data-[state=open]:opacity-100"
           onClick={(e) => e.preventDefault()}
         >
           <Ellipsis className="size-4 text-fg-tertiary" />
-        </button>
+        </LnbHoverIcon>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="start" sideOffset={4}>
         <DropdownMenuItem onClick={onRename}>

@@ -13,7 +13,7 @@ export function SettingsMenuItem({ onClick }: SettingsMenuItemProps) {
   return (
     <DropdownMenuItem
       onClick={onClick}
-      className="cursor-pointer data-[highlighted]:bg-surface-raised-hover dark:data-[highlighted]:bg-fg-primary/10"
+      className="cursor-pointer data-[highlighted]:bg-surface-raised-hover/75 dark:data-[highlighted]:bg-fg-primary/10"
     >
       <Settings />
       {t("settings.settings")}

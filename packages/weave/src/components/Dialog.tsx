@@ -55,6 +55,7 @@ function DialogContent({
   children,
   showCloseButton = true,
   closeLabel,
+  onOpenAutoFocus,
   ...props
 }: DialogContentProps) {
   return (
@@ -62,6 +63,12 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        onOpenAutoFocus={(event) => {
+          // 열릴 때 특정 요소로 자동 포커스하지 않는다 — 포커스 트랩 자체는
+          // 유지되니, 이후 Tab을 누르면 그때 첫 요소로 자연스럽게 이동한다.
+          event.preventDefault();
+          onOpenAutoFocus?.(event);
+        }}
         className={cn(
           "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl bg-surface-card p-6 shadow-[0_4px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)] outline-none [--surface-context:var(--surface-card)] sm:max-w-lg",
           className,
@@ -72,7 +79,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface-context focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+            className="absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
             {closeLabel && <span className="sr-only">{closeLabel}</span>}

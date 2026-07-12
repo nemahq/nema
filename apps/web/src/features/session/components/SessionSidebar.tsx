@@ -2,8 +2,8 @@ import { useNavigate } from "@tanstack/react-router";
 
 import { Plus } from "@nema-io/weave/icons";
 
+import { NavItem } from "@web/components/layout/NavItem";
 import { Sidebar } from "@web/components/layout/Sidebar";
-import { SidebarNavLink } from "@web/components/layout/SidebarNavLink";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -30,7 +30,7 @@ export function SessionSidebar() {
     <Sidebar
       topSlot={
         <>
-          <SidebarNavLink
+          <NavItem
             icon={<NewContextIcon />}
             label={t("session.new_context")}
             to="/"

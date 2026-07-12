@@ -7,10 +7,12 @@ import { useTranslation } from "@web/lib/tolgee";
 export type SettingsSection = "account" | "preferences";
 
 function navItemClass(active: boolean): string {
-  return `flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] font-medium transition-colors duration-fast outline-none focus-visible:ring-1 focus-visible:ring-brand ${
+  // relative + focus-visible:z-10: 포커스된 아이템을 형제 위로 띄워서, 바로
+  // 아래 아이템의 불투명 배경이 이 아이템의 outline을 덮지 않게 한다.
+  return `relative flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] font-medium transition-colors duration-fast focus-visible:z-10 ${
     active
-      ? "bg-surface-raised-hover text-fg-primary"
-      : "text-fg-tertiary hover:bg-surface-raised-hover hover:text-fg-secondary focus-visible:bg-surface-raised-hover"
+      ? "bg-surface-raised-hover/75 text-fg-primary"
+      : "text-fg-tertiary hover:bg-surface-raised-hover/75 hover:text-fg-secondary focus-visible:bg-surface-raised-hover/75 focus-visible:text-fg-secondary"
   }`;
 }
 
@@ -27,7 +29,7 @@ export function SettingsNav({ section, onSectionChange }: SettingsNavProps) {
   return (
     <nav
       aria-label={t("settings.settings")}
-      className="flex w-44 shrink-0 flex-col gap-0.5 bg-surface-raised p-4 dark:bg-surface-card"
+      className="flex w-44 shrink-0 flex-col gap-0.5 bg-surface-raised px-2 py-4 dark:bg-surface-card"
     >
       <button
         type="button"

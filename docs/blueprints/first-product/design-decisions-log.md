@@ -169,3 +169,58 @@ BE의 `space.create/rename/delete`(+`workspace.bootstrap`의 `spaces`) 위에 Sp
 - **브라우저 e2e**: 로컬 서버 부팅이 한 차례 Qdrant 컬렉션 접근(`statements-local`, 403 Forbidden — Space 기능과 무관한 벡터스토어 인프라/키 문제)에서 막혔으나, `apps/server`를 `turbo` 없이 직접 `tsx watch`로 띄우는 우회로 해결(`turbo run dev:local`이 `QDRANT_COLLECTION` 셸 오버라이드를 그대로 전달하지 않는 것으로 보임 — 원인은 별도 확인 필요). 이후 매직링크 로그인 → Space 관리 9개 케이스(생성/미입력/취소/중복·이름변경/중복·전환·삭제(활성/비활성 Space)·마지막 Space 차단) 전부 라이트/다크 모드에서 브라우저로 직접 확인함 — "삭제한 Space가 지금 보던 Space일 때만 홈 이동" 분기도 이 검증 중 발견해 고쳤다(비활성 Space를 지워도 화면이 안 튕기는지 실제로 확인).
 
 ---
+
+### 2026-07-10 — 백로그: LNB 접힘 상태 Space 목록 아이콘 식별성
+
+`SpaceList`(→ `SidebarNavLink` 접힘 분기)는 모든 Space를 동일한 `Hash` 아이콘으로 렌더한다. Space가 1개뿐인 지금은 문제없지만, 여러 Space를 만들게 되면 접힘 상태에서 전부 같은 아이콘으로 보여 hover 툴팁 없이는 구분이 안 된다.
+
+- 웹서치로 확인한 업계 패턴: 고정되고 유한한 메뉴(Ask/References처럼 아이콘 하나에 늘 매핑)는 접힘 상태에서 문제없지만, **사용자가 계속 만들어내는 동적 목록**(Notion 페이지, VS Code 파일 트리 등)은 접힘 시 전부 같은 제네릭 아이콘으로 뭉개지는 문제가 실제로 있다(`shadcn/ui` 이슈 [#5874](https://github.com/shadcn-ui/ui/issues/5874)도 이 지점을 버그로 보고). 그래서 일부 제품은 이런 동적 목록이 있는 사이드바는 아예 접힘=완전히 숨김으로 가기도 한다.
+- **지금 안 고치는 이유**: nema의 접힘은 "잠깐 화면 넓게 쓰기" 용도로 이미 유효하게 쓰이고 있어(워크스페이스 아바타·Ask/References 고정 아이콘은 접힘에서도 식별 가능), Notion/Linear처럼 선제적으로 완전히 숨기는 쪽으로 갈 필요는 없다고 판단. Space 개수가 적은 지금은 체감 문제도 작다.
+- **재검토 시점**: 멀티 Space가 실제로 늘어나는 시점(계정 드롭다운 프로필/워크스페이스 분리 재검토와 같은 타이밍) — 접힘을 없애는 대신, Space 아이템에 워크스페이스 아바타처럼 이니셜/색상 같은 구분자를 넣는 방향을 먼저 검토할 것.
+
+---
+
+### 2026-07-11 — LNB 섹션 라벨·아이템 위계 조정 (이전 결정 번복)
+
+`LnbSection` 라벨("Workspace"/"Spaces")의 대문자 표기를 파스칼 케이스로 되돌렸다. **이전 세션(2026-07-10, 신규 유저 랜딩) 기록엔 "CSS `uppercase`로 대문자화, i18n 값은 문장 케이스"라고 명시돼 있었는데, 실제 서비스들을 둘러본 결과 대문자 라벨을 쓰는 곳이 없다는 판단하에 뒤집었다** — i18n 값(`workspace.section_workspace`/`section_spaces`, en/ko 둘 다 "Workspace"/"Spaces")은 이미 파스칼 케이스라 그대로 쓰고, `LnbSection.tsx`에서 `uppercase`·`tracking-wide` 클래스만 제거(대문자 전용으로 넓힌 자간이라 같이 뺌).
+
+이어서 워크스페이스 스위처(14px, 아바타 포함)만 도드라지고 그 아래(섹션 라벨 + `Ask`/`References`/Space 목록/새 Space 아이템)는 전부 차분해 보이도록 위계를 조정:
+
+- **폰트**: `SidebarNavLink`·`LnbPlaceholderItem` 아이템 텍스트 `text-sm`(14px) → `text-xs`(12px), 라벨과 같은 크기로.
+- **좌측 들여쓰기**: 라벨(`pl-4`=16px)과 아이템 아이콘·텍스트 시작 지점을 x=16으로 통일 — 아이템의 하이라이트 박스 자체는 x=6(워크스페이스 pill과 정렬된 값, 이전 라운드 결정)에 그대로 두고, `Link`/placeholder의 내부 패딩만 `px-1.5`→`px-2.5`로 늘려 박스 위치는 안 건드리고 텍스트만 안쪽으로 밀었다.
+- **행 높이**: `h-9`(36px) → `h-8`(32px), 접힘 정사각 터치 영역도 `size-9`→`size-8`로 같이 축소. `SpaceList` 스켈레톤 치수도 동일하게 맞춰 로딩→실콘텐츠 전환 시 레이아웃 점프 없음.
+- **재사용**: `SidebarNavLink`가 세션 사이드바와 공유되는 컴포넌트라 위 변경이 그쪽에도 그대로 적용됨(의도됨 — 폴더 사이드바 전체가 더 컴팩트해짐).
+
+---
+
+### 2026-07-12 — 폴리싱 세션 인수인계 (별도 폴리싱 전담 세션 신설 전 기록)
+
+PR #382에서 LNB 워크스페이스 스위처·Space 목록·설정 모달을 여러 라운드에 걸쳐 시각 폴리싱한 세션의 마무리 기록. 앞으로 UI 폴리싱을 전담하는 별도 세션이 생길 예정이라, 그 세션이 처음부터 재도출하지 않도록 확정된 규칙과 미해결 항목을 남긴다.
+
+**확정된 디자인 규칙 (재도출 불필요)**
+- LNB 행 호버 배경: `surface-raised-hover/75`. 그 행 위에 겹치는 액션 아이콘(우측 "...", "+", 접기 토글)은 진한 토큰 그대로 두고 `hover:brightness-95`(라이트, 어둡게)+`dark:hover:brightness-125`(다크, 반대로 밝게)로 방향을 뒤집어야 구분이 유지된다 — 다크에서 어둡게 하면 오히려 배경과 가까워져 구분이 흐려짐(비직관적이라 재발견 비용 큼, 꼭 기억할 것).
+- "행 위에 겹치는 절대 위치 아이콘"이 있는 곳은 아래 행의 배경 트리거를 `hover:`가 아니라 조상의 `group-hover:`로 걸어야 한다. `hover:`로 걸면 아이콘에 마우스가 있을 때 형제 관계라 :hover가 전파 안 돼 배경이 꺼지는 버그가 생긴다(이번 세션에 실제로 겪고 고침) — `NavItem`/`LnbRowBox`가 이 규칙을 이미 캡슐화하고 있으니 새로 짤 필요 없음.
+- LNB 행 치수(`h-7`, 접힘 `size-7`, 좌우 마진 `px-2`, 상하 패딩 `py-px`)와 액션 아이콘(`size-5`, hover 톤)은 각 파일에 흩어져 있지 않고 공통 프리미티브로 통합됨 — 아래 "공통 프리미티브" 참고. 값을 또 조정할 땐 프리미티브 한 곳만 고치면 된다.
+- Danger 계열(Button danger, DropdownMenuItem danger, Alert error)은 전부 `bg-status-error-tint text-status-error` 계열 톤으로 시각적으로 통일돼 있다. **다만 클래스 자체가 공유되는 건 `Button`의 `danger` variant(weave `.surface-danger` 컴포넌트 클래스로 정의)뿐** — `DropdownMenuItem`은 같은 색 조합을 `data-[variant=danger]:text-status-error`/`data-[variant=danger]:focus:bg-status-error-tint` 등으로 별도 선언하고 있어(속성 셀렉터 기반이라 `.surface-danger`를 그대로 재사용할 수 없는 구조), `.surface-danger`만 고치면 `DropdownMenuItem` 쪽은 조용히 어긋난다. 톤을 바꿀 땐 두 군데 모두 확인할 것 — 개별 컴포넌트에 이 조합과 다른 로컬 override는 만들지 말 것.
+- 포커스링은 `focus-visible:`만 사용(`focus:` 금지), outline 기반 전역 정책이 `packages/weave/src/tokens/index.css`에 이미 구현돼 있어 개별 컴포넌트가 각자 링을 그릴 필요 없음.
+
+**공통 프리미티브 (LNB 폴리싱 중 신설, `apps/web/src/components/layout/`)**
+- `NavItem` — 탐색 가능한 LNB 행(접힘/펼침, 툴팁, active, 비활성 placeholder, 우측 오버레이 아이콘 슬롯). `SidebarNavLink`/`LnbPlaceholderItem`/`SpaceListItem`의 반복 마크업을 대체했다. 세션 사이드바(`SessionSidebar`)와 워크스페이스 사이드바(`WorkspaceSidebar`) 둘 다 이걸 쓴다.
+- `LnbRowBox` — NavItem 펼침 행과 `LnbSection` 라벨 행이 공유하는 박스 모양(`h-7 rounded-lg px-2.5` 등). `asChild`(weave가 재노출하는 Radix `Slot`)로 Link/div/span 등 어떤 걸 감싸든 같은 박스가 나온다.
+- `LnbHoverIcon` — 행 위에 겹치는 우측 액션 아이콘(`SpaceItemMenu` "...", `LnbSection` "+", `WorkspaceMenu` 토글)의 공통 hover 스타일. NavItem을 거치지 않는 곳(LnbSection, WorkspaceMenu)에서도 직접 쓴다 — NavItem 전용이 아니다.
+- **LNB 바깥(설정 모달 `SettingsNav` 등)은 고려 범위 밖**이다 — Link가 아니라 button, 접힘 상태 없음, 크기 체계도 달라 구조가 다르다. 재사용 압력(2번째 인스턴스)이 생기기 전까진 강제 통합하지 않는다.
+
+**앞으로 폴리싱할 때 적용할 기준**
+- 값 하나(색, 크기, 여백)를 3곳 이상 동시에 고쳐야 한다면 그 자리에서 개별 수정하지 말고 위 프리미티브에 없는 값인지부터 확인 — 프리미티브 커버 범위 밖이면 새로 뽑을지 이 시점에 판단.
+- 색·톤 변경은 항상 라이트/다크 둘 다 확인 — 이번 세션 버그 다수가 다크 모드에서만 터졌다(예: Select 호버가 컨테이너 배경과 같은 색이라 안 보이던 것, brightness 방향이 반대였던 것).
+- 절대 위치로 겹치는 요소를 새로 만들 때는 형제 occlusion으로 아래 요소의 `:hover`가 죽는지 항상 의심할 것(위 규칙 참고).
+- weave(디자인 시스템) 레벨 변경은 항상 다른 소비처를 먼저 grep — 로컬처럼 보여도 전역 영향일 수 있다(danger variant가 실제로 5개 버튼에 영향을 준 사례).
+- red/danger 톤은 이 프로젝트에서 유독 왔다 갔다 한 이력이 있다(톤다운 후 전량 원복된 전례) — 로컬 override로 할지 weave 전역으로 할지 범위를 먼저 확인하고 진행.
+- 매 변경 후 `pnpm --filter web typecheck`/`lint`(+ 구조 변경 시 `knip`) 확인, weave 레벨 변경 후엔 dev 서버 재기동.
+
+**의도된 제품 결정: 접힘 상태에서 Space 추가·이름변경·삭제 불가**
+접힘 LNB에서는 Spaces 섹션의 "+" 버튼(`LnbSection`의 `trailingAction`)과 각 Space 행의 "..." 메뉴(`SpaceItemMenu`, `NavItem`의 `trailingAction`)가 렌더링되지 않는다 — 둘 다 NavItem/LnbSection의 `trailingAction`이 펼침 모드에서만 렌더되는 설계라서다. 회귀가 아니라 확정된 트레이드오프: 접힘은 "잠깐 화면 넓게 쓰기" 용도이고, 이 액션들은 자주 쓰는 동작이 아니라 접힘 상태에서 대체 진입점 없이 빼기로 했다. 필요하면 펼침으로 전환 후 사용.
+
+**PR 상태**: #382 open. 최신 커밋은 `git log`로 확인 — 이 라인에 특정 해시를 박아두면 다음 커밋마다 stale해지므로 의도적으로 안 적는다. 제목/본문은 PM 요청으로 갱신 안 함 — 폴리싱 세션이 이 PR을 이어 쓸지 새 PR로 시작할지 PM 확인 필요.
+
+---

@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as Sentry from "@sentry/node";
 import type { User } from "@supabase/supabase-js";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
 import { bootstrapWorkspace, toBootstrapUser } from "./workspace-service";
+
+vi.mock("@sentry/node", () => ({ captureMessage: vi.fn() }));
 
 function makeUser(overrides: Partial<User> = {}): User {
   return {
@@ -18,6 +21,21 @@ function makeUser(overrides: Partial<User> = {}): User {
 }
 
 describe("toBootstrapUser", () => {
+  beforeEach(() => {
+    vi.mocked(Sentry.captureMessage).mockClear();
+  });
+
+  it("이름 후보 3개(given_name/full_name/email)가 모두 없으면 id로 대체하고 경보를 남긴다", () => {
+    const user = makeUser({ user_metadata: {}, email: undefined });
+    expect(toBootstrapUser(user).name).toBe("user-1");
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        tags: expect.objectContaining({ outcome: "name-fallback-to-id" }),
+      }),
+    );
+  });
+
   it("given_name > full_name > email 순으로 이름을 고른다", () => {
     const user = makeUser({
       user_metadata: { given_name: "카일", full_name: "카일 왕" },
@@ -106,20 +124,20 @@ function mockSupabase(args: {
 }
 
 describe("bootstrapWorkspace", () => {
-  // workspace.name은 아직 nullable(정책 미정)이라 표시용 placeholder가 필요하지만,
-  // spaces.name은 이번 슬라이스의 NOT NULL 제약(space_management_rpcs)으로 DB가
-  // 보장하므로 여기선 워크스페이스 쪽만 검증한다.
-  it("이름 없는 Workspace(가입 트리거 산출물)는 en placeholder로 채워 내려간다", async () => {
+  // workspace.name은 아직 nullable(정책 미정)이라 유저 표시 이름 fallback이
+  // 필요하지만, spaces.name은 이번 슬라이스의 NOT NULL 제약(space_management_rpcs)으로
+  // DB가 보장하므로 여기선 워크스페이스 쪽만 검증한다.
+  it("이름 없는 Workspace(가입 트리거 산출물)는 유저 표시 이름으로 채워 내려간다", async () => {
     const result = await bootstrapWorkspace({
       supabase: mockSupabase({
         isFirstEntry: true,
         workspace: { id: "ws-1", name: null },
         spaces: [{ id: "space-1", name: "Default" }],
       }),
-      user: makeUser(),
+      user: makeUser({ user_metadata: { given_name: "카일" } }),
     });
 
-    expect(result.workspace.name).toBe("Workspace");
+    expect(result.workspace.name).toBe("카일");
     expect(result.spaces).toEqual([{ id: "space-1", name: "Default" }]);
     expect(result.isFirstEntry).toBe(true);
   });

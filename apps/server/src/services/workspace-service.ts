@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import type { User } from "@supabase/supabase-js";
 
 import type { BootstrapUser, WorkspaceBootstrap } from "@nema-io/shared";
@@ -24,6 +25,23 @@ export function toBootstrapUser(user: User): BootstrapUser {
     }
   }
 
+  // 지금 로그인 방식(Google/매직링크)에서는 given_name/full_name/email 중
+  // 하나는 항상 있어 실제로는 도달하지 않지만, UI가 이제 이 이름을 그대로
+  // 노출하므로 raw UUID가 조용히 새 나가지 않게 신호는 남겨둔다.
+  if (!name) {
+    Sentry.captureMessage(
+      "toBootstrapUser: 이름 후보 3개 모두 실패, id로 대체",
+      {
+        level: "warning",
+        tags: {
+          component: "workspace-service",
+          outcome: "name-fallback-to-id",
+        },
+        extra: { userId: user.id },
+      },
+    );
+  }
+
   const rawAvatar = user.user_metadata?.["avatar_url"];
 
   return {
@@ -36,11 +54,6 @@ export function toBootstrapUser(user: User): BootstrapUser {
   };
 }
 
-// 워크스페이스 이름 정책은 아직 미정(07-modeling.md "열어두는 것") — 개인 단계
-// 표시용 자리만 채운다. FE는 아직 이 값을 실제로 소비하지 않아(목업 유지 중)
-// shared로 뺄 근거가 없다 — Space처럼 FE가 실제로 참조하게 되면 그때 옮긴다.
-const DEFAULT_WORKSPACE_NAME = "Workspace";
-
 // 신규 유저 랜딩 진입점. MVP는 워크스페이스 단수 전제라 가장 오래된 멤버십(=가입
 // 트리거가 만든 것) 하나만 본다 — source-service의 "가장 오래된 Space = 개인 칸"과
 // 같은 판단. Space는 가입 트리거가 이미 만들어두므로 여기서 만들지 않고, 대신
@@ -50,6 +63,7 @@ export async function bootstrapWorkspace(args: {
   user: User;
 }): Promise<WorkspaceBootstrap> {
   const { supabase, user } = args;
+  const bootstrapUser = toBootstrapUser(user);
 
   const { data: memberships, error: membershipError } = await supabase
     .from("workspace_members")
@@ -84,10 +98,12 @@ export async function bootstrapWorkspace(args: {
   throwIfSupabaseError(firstEntryError);
 
   return {
-    user: toBootstrapUser(user),
+    user: bootstrapUser,
     workspace: {
       id: membership.workspaces.id,
-      name: membership.workspaces.name ?? DEFAULT_WORKSPACE_NAME,
+      // 이름을 아직 안 지은 워크스페이스는 유저 이름을 값 그대로 쓴다("~의 워크스페이스"
+      // 같은 조합 없이) — 이름 정책 자체는 여전히 미정(07-modeling.md "열어두는 것").
+      name: membership.workspaces.name ?? bootstrapUser.name,
     },
     spaces: (spaceRows ?? []).map((row) => ({
       id: row.id,
