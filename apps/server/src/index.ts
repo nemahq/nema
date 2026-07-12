@@ -31,6 +31,17 @@ async function bootstrap() {
   const server = Fastify({ logger: true });
   const env = getEnv();
 
+  // 프로덕션 안전장치(tier 하드 lock·/dev 차단·preset/override 거부)가 전부 APP_ENV 하나에 걸려
+  // 있어, 값이 어떻게 정해졌는지 부팅 때 남긴다. env var 없이 NODE_ENV로 추론됐으면 경고로 띄워
+  // 오설정을 조기에 잡는다(잘못 추론되면 하드 lock 자체가 무경보로 뚫린다).
+  if (process.env.APP_ENV) {
+    server.log.info(`APP_ENV=${env.APP_ENV} (explicit)`);
+  } else {
+    const message = `APP_ENV not set — derived "${env.APP_ENV}" from NODE_ENV=${process.env.NODE_ENV ?? "unset"}. Production safety gates hinge on APP_ENV; set it explicitly.`;
+    server.log.warn(message);
+    Sentry.captureMessage(`[bootstrap] ${message}`, { level: "warning" });
+  }
+
   await server.register(cors, {
     origin: env.CORS_ORIGIN,
   });

@@ -171,6 +171,8 @@ function resolveOverrideProvider(modelId: string): LlmProvider {
   return provider;
 }
 
+// openai 어댑터용 공유 클라이언트 — tier·override가 OpenAI 모델을 처음 쓸 때 만든다.
+// getProviders가 부팅 시 OPENAI_API_KEY를 보장하므로 auth throw는 방어적(비프로덕션 폴백 tier 포함).
 function getOpenAiClient(): OpenAI {
   if (sharedOpenAiClient) {
     return sharedOpenAiClient;
@@ -241,9 +243,11 @@ function ensureConfiguredTierModel(modelId: string, fallback: string): string {
     const reason = spec
       ? `missing ${spec.provider} provider key`
       : "unknown model (not in catalog)";
-    console.warn(
-      `[llm-router] tier default "${modelId}" not usable (${reason}) — falling back to "${fallback}"`,
-    );
+    // seed 배치를 걷어낸 뒤로 이 폴백이 유일한 비용-안전 신호다(비프로덕션 tier가 저렴한
+    // Google을 못 잡고 gpt-5로 새는 경우). reportSeedIssue와 같은 급으로 Sentry까지 올린다.
+    const message = `[llm-router] tier default "${modelId}" not usable (${reason}) — falling back to "${fallback}"`;
+    console.warn(message);
+    Sentry.captureMessage(message, { level: "warning" });
   }
   return fallback;
 }

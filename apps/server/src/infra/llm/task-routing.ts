@@ -1,4 +1,4 @@
-// task별 모델 라우팅 — 5개 LLM 기능마다 독립적으로 모델을 갈아끼우는 층.
+// task별 모델 라우팅 — 9개 LLM 기능마다 독립적으로 모델을 갈아끼우는 층.
 // 기본값은 각 task가 현재 쓰는 tier를 그대로 가리켜(아래 TASK_DEFAULTS),
 // override가 없으면 동작이 불변이다. override는 메모리 전용(재배포 없이 런타임 스위칭).
 import { z } from "zod";

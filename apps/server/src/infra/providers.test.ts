@@ -191,6 +191,14 @@ describe("tier 기본값 — 비프로덕션 프로바이더 무관화 (Layer 1)
     // 폴백된 실제 tier 모델이 그대로 보여 dev 패널이 진짜 resolve 결과를 읽는다.
     expect(getLlmPreset().models.nano).toBe("gpt-5-nano");
   });
+
+  it("falls a bogus LLM_MODEL_* value (uncatalogued) back to the committed OpenAI default", async () => {
+    // 카탈로그에 없는 모델 문자열 분기 — 오타/폐기된 id를 env에 넣어도 부팅이 안 깨지고 gpt-5로 떨어진다.
+    fakeEnv = baseEnv({ LLM_MODEL_NANO: "totally-not-a-real-model" });
+    const { getProviders, getLlmPreset } = await loadFresh();
+    getProviders();
+    expect(getLlmPreset().models.nano).toBe("gpt-5-nano");
+  });
 });
 
 describe("프로덕션 하드 lock — tier 프로바이더 스왑 무시", () => {

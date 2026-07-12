@@ -2,7 +2,8 @@ import { PresetSection } from "@web/features/dev-harness/components/PresetSectio
 import { TaskOverridesSection } from "@web/features/dev-harness/components/TaskOverridesSection";
 
 // 내부 조종석 — LLM 라우팅 3층(tier 프리셋·task override)을 런타임에 만져본다.
-// 프로덕션에서는 dev-router가 NOT_FOUND라 이 탭 자체가 뜨지 않는다.
+// 프로덕션에서는 /dev 라우트 가드(router.tsx의 beforeLoad)가 막아 이 화면 자체가 안 뜬다
+// (dev-router도 별도로 NOT_FOUND를 내지만, 화면이 안 뜨는 원인은 FE 라우트 가드다).
 export function ModelSettingsPanel() {
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-4">
