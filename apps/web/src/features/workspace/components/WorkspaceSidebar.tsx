@@ -21,13 +21,9 @@ export function WorkspaceSidebar() {
     <Sidebar
       hideToggle
       logo={<WorkspaceMenuSlot mode="expanded" />}
-      topSlot={
-        <div className="pb-1">
-          <WorkspaceMenuSlot mode="collapsed" />
-        </div>
-      }
+      topSlot={<WorkspaceMenuSlot mode="collapsed" />}
     >
-      <div className="flex flex-col gap-0.5 py-1">
+      <div className="flex flex-col py-1">
         <NavItem
           icon={<MessagesSquare strokeWidth={1.5} className={NAV_ICON_CLASS} />}
           label={t("workspace.ask")}

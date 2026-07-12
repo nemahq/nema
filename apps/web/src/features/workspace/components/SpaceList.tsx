@@ -1,5 +1,6 @@
 import { Skeleton } from "@nema-io/weave";
 
+import { LnbRowBox } from "@web/components/layout/LnbRowBox";
 import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWorkspaceBootstrapQuery";
 
 import { SpaceListItem } from "./SpaceListItem";
@@ -14,14 +15,14 @@ export function SpaceList() {
       <>
         {SKELETON_WIDTHS.map(function renderSkeletonRow(width, i) {
           return (
-            <div key={width} className="px-1.5 py-0.5">
-              <div className="flex h-8 items-center gap-1.5 rounded-lg px-2.5">
+            <div key={width} className="px-2 py-px">
+              <LnbRowBox>
                 <Skeleton className="size-4 shrink-0 rounded-sm" />
                 <Skeleton
                   className={`h-3 rounded-sm ${width}`}
                   style={{ animationDelay: `${i * 100}ms` }}
                 />
-              </div>
+              </LnbRowBox>
             </div>
           );
         })}
