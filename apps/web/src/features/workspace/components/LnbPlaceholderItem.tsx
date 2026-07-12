@@ -17,12 +17,12 @@ export function LnbPlaceholderItem({ icon, label }: LnbPlaceholderItemProps) {
 
   if (collapsed) {
     return (
-      <div className="flex justify-center py-0.5">
+      <div className="flex justify-center py-px">
         <Tooltip>
           <TooltipTrigger asChild>
             <div
               aria-disabled
-              className="flex size-8 cursor-default items-center justify-center rounded-lg text-fg-tertiary/60"
+              className="flex size-7 cursor-default items-center justify-center rounded-lg text-fg-tertiary/60"
             >
               {icon}
             </div>
@@ -36,18 +36,18 @@ export function LnbPlaceholderItem({ icon, label }: LnbPlaceholderItemProps) {
   }
 
   return (
-    <div className="px-1.5 py-0.5">
+    <div className="px-2 py-px">
       <Tooltip>
         <TooltipTrigger asChild>
           <div
             aria-disabled
-            className="flex h-8 w-full cursor-default items-center gap-1.5 rounded-lg px-2.5 text-xs text-fg-tertiary/60"
+            className="flex h-7 w-full cursor-default items-center gap-1.5 rounded-lg px-2.5 text-xs text-fg-tertiary/60"
           >
             {icon}
             <span className="truncate">{label}</span>
           </div>
         </TooltipTrigger>
-        <TooltipContent side="right" sideOffset={8}>
+        <TooltipContent side="right" sideOffset={12}>
           {t("workspace.coming_soon")}
         </TooltipContent>
       </Tooltip>

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { BookMarked, MessagesSquare } from "@nema-io/weave/icons";
 
 import { Sidebar } from "@web/components/layout/Sidebar";
@@ -5,14 +7,15 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { LnbPlaceholderItem } from "./LnbPlaceholderItem";
 import { LnbSection } from "./LnbSection";
-import { NewSpaceButton } from "./NewSpaceButton";
 import { SpaceList } from "./SpaceList";
+import { SpaceModal } from "./SpaceModal";
 import { WorkspaceMenuSlot } from "./WorkspaceMenuSlot";
 
 const NAV_ICON_CLASS = "size-4";
 
 export function WorkspaceSidebar() {
   const { t } = useTranslation();
+  const [createSpaceOpen, setCreateSpaceOpen] = useState(false);
 
   return (
     <Sidebar
@@ -37,11 +40,20 @@ export function WorkspaceSidebar() {
           />
         </LnbSection>
 
-        <LnbSection label={t("workspace.section_spaces")}>
+        <LnbSection
+          label={t("workspace.section_spaces")}
+          onAdd={() => setCreateSpaceOpen(true)}
+          addLabel={t("workspace.new_space")}
+        >
           <SpaceList />
-          <NewSpaceButton />
         </LnbSection>
       </div>
+
+      <SpaceModal
+        mode="create"
+        open={createSpaceOpen}
+        onOpenChange={setCreateSpaceOpen}
+      />
     </Sidebar>
   );
 }

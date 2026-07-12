@@ -42,13 +42,13 @@ export function SpaceListItem({
   }
 
   return (
-    <div className="group relative flex items-center px-1.5 py-0.5">
+    <div className="group relative flex items-center px-2 py-px">
       <Link
         to="/space/$spaceId"
         params={{ spaceId }}
-        className="flex h-8 w-full items-center gap-1.5 truncate rounded-lg px-2.5 pr-8 text-xs font-normal transition-colors duration-fast hover:bg-surface-raised-hover"
+        className="flex h-7 w-full items-center gap-1.5 truncate rounded-lg px-2.5 pr-8 text-xs font-normal transition-colors duration-fast group-hover:bg-surface-raised-hover/75"
         activeProps={{
-          className: "bg-surface-raised-hover font-medium",
+          className: "bg-surface-raised-hover/75 font-medium",
         }}
       >
         <Hash strokeWidth={1.5} className={ICON_CLASS} />
