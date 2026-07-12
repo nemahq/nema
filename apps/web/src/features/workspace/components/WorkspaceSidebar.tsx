@@ -1,7 +1,8 @@
 import { useState } from "react";
 
-import { BookMarked, MessagesSquare } from "@nema-io/weave/icons";
+import { BookMarked, MessagesSquare, Plus } from "@nema-io/weave/icons";
 
+import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
 import { NavItem } from "@web/components/layout/NavItem";
 import { Sidebar } from "@web/components/layout/Sidebar";
 import { useTranslation } from "@web/lib/tolgee";
@@ -9,7 +10,10 @@ import { useTranslation } from "@web/lib/tolgee";
 import { LnbSection } from "./LnbSection";
 import { SpaceList } from "./SpaceList";
 import { SpaceModal } from "./SpaceModal";
-import { WorkspaceMenuSlot } from "./WorkspaceMenuSlot";
+import {
+  WorkspaceMenuSlotCollapsed,
+  WorkspaceMenuSlotExpanded,
+} from "./WorkspaceMenuSlot";
 
 const NAV_ICON_CLASS = "size-4";
 
@@ -20,8 +24,8 @@ export function WorkspaceSidebar() {
   return (
     <Sidebar
       hideToggle
-      logo={<WorkspaceMenuSlot mode="expanded" />}
-      topSlot={<WorkspaceMenuSlot mode="collapsed" />}
+      logo={<WorkspaceMenuSlotExpanded />}
+      topSlot={<WorkspaceMenuSlotCollapsed />}
     >
       <div className="flex flex-col py-1">
         <NavItem
@@ -40,8 +44,15 @@ export function WorkspaceSidebar() {
 
         <LnbSection
           label={t("workspace.section_spaces")}
-          onAdd={() => setCreateSpaceOpen(true)}
-          addLabel={t("workspace.new_space")}
+          trailingAction={
+            <LnbHoverIcon
+              onClick={() => setCreateSpaceOpen(true)}
+              aria-label={t("workspace.new_space")}
+              className="absolute right-3.5 text-fg-tertiary hover:text-fg-primary group-hover/section:opacity-100"
+            >
+              <Plus className="size-4" />
+            </LnbHoverIcon>
+          }
         >
           <SpaceList />
         </LnbSection>

@@ -6,6 +6,7 @@ import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWor
 import { SpaceListItem } from "./SpaceListItem";
 
 const SKELETON_WIDTHS = ["w-2/3", "w-1/2"];
+const SKELETON_STAGGER_DELAY_MS = 100;
 
 export function SpaceList() {
   const { data: bootstrap, isLoading } = useWorkspaceBootstrapQuery();
@@ -20,7 +21,9 @@ export function SpaceList() {
                 <Skeleton className="size-4 shrink-0 rounded-sm" />
                 <Skeleton
                   className={`h-3 rounded-sm ${width}`}
-                  style={{ animationDelay: `${i * 100}ms` }}
+                  style={{
+                    animationDelay: `${i * SKELETON_STAGGER_DELAY_MS}ms`,
+                  }}
                 />
               </LnbRowBox>
             </div>
