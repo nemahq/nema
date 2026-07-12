@@ -20,7 +20,7 @@
 
 - **티어 1 (실행 품질)** — spacing 리듬, 타이포 위계, 절제된 톤처럼 신뢰 구조와 무관한 실행 품질. 자유롭게 차용. 판단 기준: 정보 밀도를 실사용 상태에서도 잘 다루는가 + 타겟 유저가 파워유저급으로 정제돼 있는가. **아직 조사 안 함** — 화면마다 다를 수 있어서, 실제 그 화면을 만들 때 가볍게 참고하는 쪽으로 미뤄둠.
 - **티어 2 (신뢰 구조 메커니즘)** — Nema가 지키는 신뢰 구조를 이미 풀어본 제품의 인터랙션 메커니즘. 메커니즘만 참고하고, 색·문구·배치 같은 실제 시각 문법은 새로 만든다. **자격 조건**: 겉보기로 비슷한 UI가 아니라, 그 제품이 자기 도메인에서 이 문제를 "진짜로" 풀어야만 안 돌아가는가 (장식이면 기각).
-- **어디서도 차용 불가** — Relation 타입별 표시, 확신도(certain/guess) 신호 같은 Nema 고유 개념의 실제 시각적 표현. 이 개념을 가진 제품이 없어 처음부터 직접 설계한다.
+- **어디서도 차용 불가** — 관계 타입별 표시, 확신도(certain/guess) 신호 같은 Nema 고유 개념의 실제 시각적 표현. 이 개념을 가진 제품이 없어 처음부터 직접 설계한다.
 
 티어2는 Nema의 신뢰 구조를 5개 요소로 나눠 조사했다: ① 근거 인용 ② 확신도 ③ 원본 무손실 보존 ④ 변경 이력·되돌리기 ⑤ 관계 그래프.
 
@@ -28,15 +28,15 @@
 
 ## ① 근거 인용
 
-Statement가 Reference를 각주처럼 인용하고, Reference 상세에서 역참조(이 Reference를 인용한 Statement들)를 보여주는 문제.
+진술이 레퍼런스를 각주처럼 인용하고, 레퍼런스 상세에서 역참조(이 레퍼런스를 인용한 진술들)를 보여주는 문제.
 
 ### 채택 후보
 
-**Wikipedia 각주 시스템** — [Verifiability 정책](https://en.wikipedia.org/wiki/Wikipedia:Verifiability)이 "각주 없는 자료는 삭제될 수 있다"고 강제할 만큼 생존조건. `[1]` 마커 ↔ References 앵커 간 **양방향** 이동(캐럿 `^` 클릭으로 원위치 복귀), 동일 출처 반복 인용 시 위치별로 a/b/c back-link 분리. → Nema 참고점: 정방향(멘션→Reference)과 역방향(역참조→원래 Digest 문맥) 이동이 둘 다 정확한 위치로 스크롤/하이라이트되는 앵커 기반이어야 함.
+**Wikipedia 각주 시스템** — [Verifiability 정책](https://en.wikipedia.org/wiki/Wikipedia:Verifiability)이 "각주 없는 자료는 삭제될 수 있다"고 강제할 만큼 생존조건. `[1]` 마커 ↔ References 앵커 간 **양방향** 이동(캐럿 `^` 클릭으로 원위치 복귀), 동일 출처 반복 인용 시 위치별로 a/b/c back-link 분리. → Nema 참고점: 정방향(멘션→레퍼런스)과 역방향(역참조→원래 다이제스트 문맥) 이동이 둘 다 정확한 위치로 스크롤/하이라이트되는 앵커 기반이어야 함.
 
-**Roam Research / Logseq — 블록 참조 & Linked References** — 불릿(block) 단위 고유 UID가 제품 근간. 원본 블록 수정 시 참조하는 모든 위치가 즉시 갱신(복사본이 아니라 같은 데이터를 가리키는 창). Linked References는 카운트가 아니라 **인용한 블록의 부모·자식 문맥까지 포함**해서 보여줌. Unlinked References(명시적 링크 없이 텍스트로만 언급된 곳)를 별도로 모아 승격 가능. → Nema 참고점: 역참조 목록은 "N개 Statement가 인용" 카운트에 그치지 말고 그 Statement의 주변 맥락(소속 Digest)까지 보여줘야 함. Reference는 텍스트 복사가 아니라 고유 레코드를 가리키는 구조여야 함.
+**Roam Research / Logseq — 블록 참조 & Linked References** — 불릿(block) 단위 고유 UID가 제품 근간. 원본 블록 수정 시 참조하는 모든 위치가 즉시 갱신(복사본이 아니라 같은 데이터를 가리키는 창). Linked References는 카운트가 아니라 **인용한 블록의 부모·자식 문맥까지 포함**해서 보여줌. Unlinked References(명시적 링크 없이 텍스트로만 언급된 곳)를 별도로 모아 승격 가능. → Nema 참고점: 역참조 목록은 "N개 진술이 인용" 카운트에 그치지 말고 그 진술의 주변 맥락(소속 다이제스트)까지 보여줘야 함. 레퍼런스는 텍스트 복사가 아니라 고유 레코드를 가리키는 구조여야 함.
 
-**법률 인용 확인 — Westlaw KeyCite / LexisNexis Shepard's** — 판례 인용 성격을 followed/distinguished/criticized/overruled 등으로 분류하고, "Depth of Treatment"(examined>discussed>cited>mentioned)로 비중을 구분. "인용 개수 = 신뢰도"라는 착시를 경계하라는 업계 공통 경고 존재. → Nema 참고점(가장 특이적으로 적용 가능): 역참조를 단순 나열이 아니라 이 Reference에 대한 태도(지지/갱신/상충)로 구분해서 보여주는 구조. 인용 개수를 신뢰도 지표처럼 노출하지 않기.
+**법률 인용 확인 — Westlaw KeyCite / LexisNexis Shepard's** — 판례 인용 성격을 followed/distinguished/criticized/overruled 등으로 분류하고, "Depth of Treatment"(examined>discussed>cited>mentioned)로 비중을 구분. "인용 개수 = 신뢰도"라는 착시를 경계하라는 업계 공통 경고 존재. → Nema 참고점(가장 특이적으로 적용 가능): 역참조를 단순 나열이 아니라 이 레퍼런스에 대한 태도(지지/갱신/상충)로 구분해서 보여주는 구조. 인용 개수를 신뢰도 지표처럼 노출하지 않기.
 
 **Perplexity 등 AI 답변 엔진의 인라인 인용** — citation-first를 표방하지만(Perplexity CEO: "hallucination은 우리에겐 bug"), 제3자 검증(CJR Tow Center, 2025)상 실패율이 낮지 않음(37~67%) — 인용 UI 존재와 정확성은 별개. 조사한 AI 답변 도구 전부 **answer→source 단방향**이고, source→answer 역참조 기능은 어디에도 없음. → Nema 참고점: source→statement 역참조는 AI 답변 엔진 UX에 선례가 없는 차별점 — 법률 citator 패턴을 끌어와야 함. 동일 출처의 citation id를 시스템 전체에서 통일 재사용하는 방식은 참고 가능.
 
@@ -49,7 +49,7 @@ Statement가 Reference를 각주처럼 인용하고, Reference 상세에서 역�
 
 ## ② 확신도
 
-Statement의 `confidence`(certain/guess)를 시각적으로 구분하는 문제.
+진술의 `confidence`(certain/guess)를 시각적으로 구분하는 문제.
 
 ### 채택 후보
 
@@ -71,17 +71,17 @@ Statement의 `confidence`(certain/guess)를 시각적으로 구분하는 문제.
 
 ## ③ 원본 무손실 보존
 
-정리된 내용에서 원본으로 즉시 이동해 대조하는 문제 (Digest ↔ Source).
+정리된 내용에서 원본으로 즉시 이동해 대조하는 문제 (다이제스트 ↔ 원본).
 
 ### 채택 후보
 
-**Granola (AI 회의 노트)** — 노트 각 줄 옆 돋보기 아이콘 클릭 시 페이지 이동 없이 팝업으로 원본 트랜스크립트 구간이 열림. → Nema 참고점: locator 진입점을 Digest 문장 단위에 상시 붙는 가벼운 아이콘으로, 클릭 시 현재 화면 이탈 없는 팝업/인라인 확장으로. AI 파생 텍스트와 원문을 시각적으로 구분.
+**Granola (AI 회의 노트)** — 노트 각 줄 옆 돋보기 아이콘 클릭 시 페이지 이동 없이 팝업으로 원본 트랜스크립트 구간이 열림. → Nema 참고점: locator 진입점을 다이제스트 문장 단위에 상시 붙는 가벼운 아이콘으로, 클릭 시 현재 화면 이탈 없는 팝업/인라인 확장으로. AI 파생 텍스트와 원문을 시각적으로 구분.
 
 **Google NotebookLM** — 인용 칩을 호버하면 즉시 툴팁으로 원문 텍스트, 클릭하면 좌측 소스 패널이 정확한 위치로 자동 스크롤·하이라이트. 호버(즉시)와 클릭(정밀 이동)의 2단계 검증 비용 분리. 원문을 링크가 아니라 직접 수집·보관하기 때문에 위치 참조가 안정적 — Nema의 "원문을 손대지 않고 박제" 전제와 동일 조건. → Nema 참고점: locator가 텍스트가 아니라 "렌더링된 하이라이트 + 스크롤 좌표"로 resolve되어야 함.
 
-**Fireflies.ai / Otter.ai** — 요약 아웃라인 클릭 시 오디오/영상이 해당 타임스탬프로 점프 + 트랜스크립트 패널도 동시에 스크롤되는 듀얼 패널 동기화(분할 뷰). → Nema 참고점: 원본이 길고 밀도 높을 때 단일 팝업보다 Digest·Source 패널을 나란히 두는 분할 뷰 옵션.
+**Fireflies.ai / Otter.ai** — 요약 아웃라인 클릭 시 오디오/영상이 해당 타임스탬프로 점프 + 트랜스크립트 패널도 동시에 스크롤되는 듀얼 패널 동기화(분할 뷰). → Nema 참고점: 원본이 길고 밀도 높을 때 단일 팝업보다 다이제스트·원본 패널을 나란히 두는 분할 뷰 옵션.
 
-**Clearbrief (법률 브리프 인용 검증)** — locator(위치 참조)와 신뢰도 신호(그 위치가 실제로 주장을 뒷받침하는가)를 별개 축으로 분리. 의미 유사도로 "mischaracterization"을 플래그하고, 서명 전 전체 인용을 감사하는 리포트 뷰 존재. → Nema 참고점: locator에 "이 Digest 문장이 실제로 Source에서 얼마나 잘 뒷받침되는가"라는 선택적 신호를 얹는 설계, Digest 전체 locator를 한 번에 훑는 감사 뷰.
+**Clearbrief (법률 브리프 인용 검증)** — locator(위치 참조)와 신뢰도 신호(그 위치가 실제로 주장을 뒷받침하는가)를 별개 축으로 분리. 의미 유사도로 "mischaracterization"을 플래그하고, 서명 전 전체 인용을 감사하는 리포트 뷰 존재. → Nema 참고점: locator에 "이 다이제스트 문장이 실제로 원본에서 얼마나 잘 뒷받침되는가"라는 선택적 신호를 얹는 설계, 다이제스트 전체 locator를 한 번에 훑는 감사 뷰.
 
 ### 기각 후보
 
@@ -92,17 +92,17 @@ Statement의 `confidence`(certain/guess)를 시각적으로 구분하는 문제.
 
 ## ④ 변경 이력·되돌리기
 
-제안된 변경을 리뷰하고, 적용 후에도 되돌릴 수 있는 문제 (Changeset).
+제안된 변경을 리뷰하고, 적용 후에도 되돌릴 수 있는 문제 (변경셋).
 
 ### 채택 후보
 
-**OpenStreetMap — Changeset / OSMCha** — Nema와 동일하게 "changeset"이 1차 데이터 모델 용어. open→closed 생명주기, 되돌리기는 히스토리 삭제가 아니라 **원상복구용 새 changeset 생성**(clean revert vs dirty revert 구분 — 그 사이 다른 사람이 같은 객체를 건드렸는가). 리뷰는 별도 대시보드(OSMCha)에서, 자동 탐지가 의심 사유를 태깅하면 사람은 그 큐만 봄(모든 changeset을 동일 무게로 안 봄). → Nema 참고점: 되돌리기=새 Changeset 생성 원칙은 이미 설계와 일치. clean/dirty revert 구분(되돌리려는 대상이 그 사이 또 바뀌었는가) 로직 필요. AI가 확신도/모순 신호로 리뷰 우선순위를 매기는 방식.
+**OpenStreetMap — Changeset / OSMCha** — Nema와 동일하게 "changeset"이 1차 데이터 모델 용어. open→closed 생명주기, 되돌리기는 히스토리 삭제가 아니라 **원상복구용 새 changeset 생성**(clean revert vs dirty revert 구분 — 그 사이 다른 사람이 같은 객체를 건드렸는가). 리뷰는 별도 대시보드(OSMCha)에서, 자동 탐지가 의심 사유를 태깅하면 사람은 그 큐만 봄(모든 changeset을 동일 무게로 안 봄). → Nema 참고점: 되돌리기=새 변경셋 생성 원칙은 이미 설계와 일치. clean/dirty revert 구분(되돌리려는 대상이 그 사이 또 바뀌었는가) 로직 필요. AI가 확신도/모순 신호로 리뷰 우선순위를 매기는 방식.
 
 **Wikidata/Wikipedia — Pending Changes + Patrol/Rollback** — 신뢰 수준에 따라 **사전 리뷰**(신규/저신뢰 편집자는 승인 전까지 비노출)와 **사후 리뷰**(신뢰 편집자는 즉시 반영 후 언제든 rollback)로 갈라지는 이중 트랙. ORES가 악의 가능성을 미리 스코어링해 patrol 큐 우선순위 결정. → Nema 참고점: 신뢰도별로 리뷰 강도를 나누는 것(AI 저확신 변경=사전 리뷰, 이미 검증된 패턴=즉시 적용+사후 되돌리기)이 단일 트랙보다 리뷰 피로도를 줄임. 다만 위키피디아 기준은 이분법적(diff만으로 판단 가능)인데 Nema의 진술 판단은 더 editorial이라 diff만으론 부족 — 원본 출처·확신도·맥락을 함께 보여줘야 함.
 
-**Figma — Branching & Merge Review** — diff가 텍스트가 아니라 "변경된 대상(레이어/컴포넌트) 단위의 구조화된 전/후 비교"(나란히 보기/오버레이). Approve와 Suggest changes를 분리해 이분법 강요 안 함. → Nema 참고점: 진술·관계도 라인 단위 텍스트 diff가 아니라 "이 엔티티에 대해 무엇이 바뀌었는가"를 필드 단위 구조화 비교로. 다만 Figma는 "브랜치 하나→메인 파일 하나"처럼 병합 단위가 명확히 경계 지어지는데, Nema의 맥락 그래프는 그런 경계가 없어 Changeset 안 개별 진술 단위로 더 잘게 승인 가능해야 할 수 있음.
+**Figma — Branching & Merge Review** — diff가 텍스트가 아니라 "변경된 대상(레이어/컴포넌트) 단위의 구조화된 전/후 비교"(나란히 보기/오버레이). Approve와 Suggest changes를 분리해 이분법 강요 안 함. → Nema 참고점: 진술·관계도 라인 단위 텍스트 diff가 아니라 "이 엔티티에 대해 무엇이 바뀌었는가"를 필드 단위 구조화 비교로. 다만 Figma는 "브랜치 하나→메인 파일 하나"처럼 병합 단위가 명확히 경계 지어지는데, Nema의 맥락 그래프는 그런 경계가 없어 변경셋 안 개별 진술 단위로 더 잘게 승인 가능해야 할 수 있음.
 
-**GitHub PR 리뷰** — 습관적으로 나온 이름이라 냉정히 검증: 실제 리뷰 부담을 더는 건 사람 판단력보다 CI(테스트)라는 객관적 게이트이고, 사람은 그 다음 스타일/설계만 봄. 승인 후 새 커밋 푸시 시 **기존 승인 자동 무효화**(stale review dismissal). → Nema 참고점: open Changeset이 리뷰 도중 내용이 수정되면 이전 승인/코멘트를 그대로 유효 취급하면 안 됨. 다만 Nema의 진술에는 CI 같은 기계적 정답 게이트가 없어 GitHub 모델보다 Wikidata의 ORES식 "AI가 의심도를 미리 매겨 사람 판단 보조"가 더 적합.
+**GitHub PR 리뷰** — 습관적으로 나온 이름이라 냉정히 검증: 실제 리뷰 부담을 더는 건 사람 판단력보다 CI(테스트)라는 객관적 게이트이고, 사람은 그 다음 스타일/설계만 봄. 승인 후 새 커밋 푸시 시 **기존 승인 자동 무효화**(stale review dismissal). → Nema 참고점: open 상태의 변경셋이 리뷰 도중 내용이 수정되면 이전 승인/코멘트를 그대로 유효 취급하면 안 됨. 다만 Nema의 진술에는 CI 같은 기계적 정답 게이트가 없어 GitHub 모델보다 Wikidata의 ORES식 "AI가 의심도를 미리 매겨 사람 판단 보조"가 더 적합.
 - 참고(반면교사): Cursor의 AI diff 승인은 체크포인트가 작업 세션 단위로만 존재해 부분 되돌리기가 안 됨 — Nema는 OSM/Wikidata처럼 더 잘게 쪼개진 단위로 되돌릴 수 있어야 함.
 
 ### 기각 후보
@@ -114,17 +114,17 @@ Statement의 `confidence`(certain/guess)를 시각적으로 구분하는 문제.
 
 ## ⑤ 관계 그래프
 
-Statement 간 방향·종류 있는 Relation(supports/conflicts/replaces/duplicates/resolves)을 절제 있게 보여주는 문제.
+진술 간 방향·종류 있는 관계(supports/conflicts/replaces/duplicates/resolves)를 절제 있게 보여주는 문제.
 
 ### 채택 후보
 
 **법률 판례 인용 — Westlaw KeyCite / Shepard's** — 2계층 구조: 최상단 flag(빨강=파기/노랑=비판/파랑=중립)로 대분류 요약 → 그 아래 analysis phrase(followed by/distinguished by 등)로 세부 타입. "같은 사건의 이력"과 "타 사건의 인용"을 처음부터 별도 섹션으로 분리. 축약 시 가장 부정적 취급을 최상단 고정 + depth of treatment로 필터. → Nema 참고점: 5종을 한 화면에 나열 말고 상위 분류(예: "영향을 준 것" vs "긴장 관계인 것")로 먼저 요약 후 펼치기. replaces(같은 진술의 시간적 진화)와 supports/conflicts(다른 진술과의 관계)를 같은 리스트에 섞지 않기. 축약 시 관계 심각도를 정렬 기준으로.
 
-**Semantic Scholar (학술 인용)** — Citations/References를 애초에 별도 리스트로 분리(그래프에 화살표 그리지 않음). background/method/result 3종 intent 분류 + isInfluential 필드로 "관계 존재"와 "관계 중요성"을 분리. → Nema 참고점: 단순 개수가 아니라 "이 Relation이 현재 유효성에 실질적 영향을 주는가"를 우선 노출하고 약한 관계는 접기. 관계 역할을 사후 필터링이 아니라 애초에 별도 컨테이너로.
+**Semantic Scholar (학술 인용)** — Citations/References를 애초에 별도 리스트로 분리(그래프에 화살표 그리지 않음). background/method/result 3종 intent 분류 + isInfluential 필드로 "관계 존재"와 "관계 중요성"을 분리. → Nema 참고점: 단순 개수가 아니라 "이 관계가 현재 유효성에 실질적 영향을 주는가"를 우선 노출하고 약한 관계는 접기. 관계 역할을 사후 필터링이 아니라 애초에 별도 컨테이너로.
 
 **이슈 트래커 — Linear / Jira / GitHub Issues** — 그래프 없이 순수 리스트/사이드바로 관계를 다루는 실무 반증 사례. Linear: 관계 타입별 섹션 + 한쪽에서 걸면 반대쪽에 자동 반대 라벨 생성 + 차단 해소되면 관계가 자동으로 "Related"로 강등(상태 변화에 따른 동적 재분류). Jira: outward/inward 라벨 쌍으로 방향을 그 자체로 인코딩. GitHub: 가벼운 관계(duplicate)는 타임라인 이벤트로, 무거운 관계(blocked by)는 전용 사이드바 섹션으로 승격. → Nema 참고점: 관계 생성 시 반대편에 자동 대칭 라벨(A→B supports면 B 쪽엔 "A의 지지를 받음"). 관계 무게에 따라 다른 UI 레이어(duplicates는 가볍게, conflicts/replaces는 무겁게). resolves 발생 시 관련 conflicts 자동 재분류.
 
-**논증 지도 — Kialo / Argdown** — Kialo는 그래프가 아니라 트리+포커스 드릴다운: 전체를 한 화면에 안 그리고 지금 보는 노드+직접 관계만 보여준 뒤 미니맵(선버스트)으로 위치 보조. Argdown은 지지=초록/반박=빨강 화살표, 비대칭은 단방향·대칭 모순은 양방향으로 인코딩. 다만 Kialo는 관계가 2종(pro/con)이라 좌우 분리만으로 충분했던 한계. → Nema 참고점(가장 직접적): "전체 그래프 대신 초점(하나의 Statement)+직접 관계만 펼치고 위치는 축소 지도로 보조"하는 Kialo의 구조 + Argdown의 타입별 인코딩을 결합 — Nema는 5종이라 좌우 2분할만으론 부족.
+**논증 지도 — Kialo / Argdown** — Kialo는 그래프가 아니라 트리+포커스 드릴다운: 전체를 한 화면에 안 그리고 지금 보는 노드+직접 관계만 보여준 뒤 미니맵(선버스트)으로 위치 보조. Argdown은 지지=초록/반박=빨강 화살표, 비대칭은 단방향·대칭 모순은 양방향으로 인코딩. 다만 Kialo는 관계가 2종(pro/con)이라 좌우 분리만으로 충분했던 한계. → Nema 참고점(가장 직접적): "전체 그래프 대신 초점(하나의 진술)+직접 관계만 펼치고 위치는 축소 지도로 보조"하는 Kialo의 구조 + Argdown의 타입별 인코딩을 결합 — Nema는 5종이라 좌우 2분할만으론 부족.
 
 ### 기각 후보
 
@@ -135,4 +135,4 @@ Statement 간 방향·종류 있는 Relation(supports/conflicts/replaces/duplica
 
 ## 다음 단계
 
-이 문서는 메커니즘 참고용이지 최종 시각 스펙이 아니다. 실제 화면(Digest 리뷰, Changeset 상세, 관계 판정/병합, Reference 상세)을 구현·폴리싱하는 세션이 여기서 관련 요소를 찾아 시각 문법을 새로 설계할 때 근거로 쓴다. 티어1(실행 품질) 레퍼런스는 아직 조사하지 않았으며, 각 화면 작업 시점에 가볍게 별도로 참고한다.
+이 문서는 메커니즘 참고용이지 최종 시각 스펙이 아니다. 실제 화면(다이제스트 리뷰, 변경셋 상세, 관계 판정/병합, 레퍼런스 상세)을 구현·폴리싱하는 세션이 여기서 관련 요소를 찾아 시각 문법을 새로 설계할 때 근거로 쓴다. 티어1(실행 품질) 레퍼런스는 아직 조사하지 않았으며, 각 화면 작업 시점에 가볍게 별도로 참고한다.
