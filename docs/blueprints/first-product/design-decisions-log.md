@@ -192,3 +192,25 @@ BE의 `space.create/rename/delete`(+`workspace.bootstrap`의 `spaces`) 위에 Sp
 - **재사용**: `SidebarNavLink`가 세션 사이드바와 공유되는 컴포넌트라 위 변경이 그쪽에도 그대로 적용됨(의도됨 — 폴더 사이드바 전체가 더 컴팩트해짐).
 
 ---
+
+### 2026-07-12 — 폴리싱 세션 인수인계 (별도 폴리싱 전담 세션 신설 전 기록)
+
+PR #382에서 LNB 워크스페이스 스위처·Space 목록·설정 모달을 여러 라운드에 걸쳐 시각 폴리싱한 세션의 마무리 기록. 앞으로 UI 폴리싱을 전담하는 별도 세션이 생길 예정이라, 그 세션이 처음부터 재도출하지 않도록 확정된 규칙과 미해결 항목을 남긴다.
+
+**확정된 디자인 규칙 (재도출 불필요)**
+- LNB 행 호버 배경: `surface-raised-hover/75`. 그 행 위에 겹치는 액션 아이콘(우측 "...", "+", 접기 토글)은 진한 토큰 그대로 두고 `hover:brightness-95`(라이트, 어둡게)+`dark:hover:brightness-125`(다크, 반대로 밝게)로 방향을 뒤집어야 구분이 유지된다 — 다크에서 어둡게 하면 오히려 배경과 가까워져 구분이 흐려짐(비직관적이라 재발견 비용 큼, 꼭 기억할 것).
+- "행 위에 겹치는 절대 위치 아이콘"이 있는 곳(`SpaceItemMenu`, `LnbSection` "+", `WorkspaceMenu` 토글)은 아래 행의 배경 트리거를 `hover:`가 아니라 조상의 `group-hover:`로 걸어야 한다. `hover:`로 걸면 아이콘에 마우스가 있을 때 형제 관계라 :hover가 전파 안 돼 배경이 꺼지는 버그가 생긴다(이번 세션에 실제로 겪고 고침).
+- LNB 행 치수: `h-7`(28px), 접힘 정사각 `size-7`, 액션 아이콘 `size-5`, 좌우 마진 `px-2`, 상하 패딩 `py-px`. 이 값들이 `SidebarNavLink`/`SpaceListItem`/`LnbPlaceholderItem`/`LnbSection`/`WorkspaceMenu`에 개별 리터럴로 흩어져 있다 — 다음에 또 조정할 땐 5개 파일 전부 확인.
+- Danger 계열(Button danger, DropdownMenuItem danger)은 전부 `bg-status-error-tint text-status-error hover:bg-status-error/15` 톤으로 통일(Alert error 배너와 동일 조합). weave 전역 레벨에서 이미 반영돼 있으니 개별 컴포넌트에 로컬 override를 만들지 말 것.
+- 포커스링은 `focus-visible:`만 사용(`focus:` 금지), outline 기반 전역 정책이 `packages/weave/src/tokens/index.css`에 이미 구현돼 있어 개별 컴포넌트가 각자 링을 그릴 필요 없음.
+
+**미해결/보류 항목**
+- **`NavItem` 공유 프리미티브 도입 여부** — `SidebarNavLink`/`SpaceListItem`/`LnbPlaceholderItem`이 마크업을 반복 구현 중이며, 이번 세션 중 튜닝을 여러 번 거치며 파일 하나가 업데이트에서 누락된 적도 있었다. 폴리싱 라운드가 반복될수록 비용이 커지니 이 세션에서 결론을 낼 것.
+- **접힘 LNB의 "새 Space 추가" 진입점 부재** — "+"가 이제 펼침 상태 Spaces 라벨 호버에만 있어, 접힘 상태에선 Space를 새로 만들 방법이 없다. PM에게 플래그했으나 아직 답변 못 받음.
+- **Settings 모달 Esc/X로 닫을 때 워크스페이스 스위처로 포커스 복귀 안 됨** — 접근성 관점 known limitation으로 수용, PR #382 Notes에 기록돼 있음.
+- **바깥 클릭으로 드롭다운 닫을 때 포커스링이 다시 뜨는 것** — 동일하게 수용된 한계.
+- **"행+오버레이 아이콘" 패턴과 호버 2단계 시스템의 공통 컴포넌트화** — 지금은 컨벤션으로만 존재, weave 프리미티브로 뽑을지는 미결.
+
+**PR 상태**: #382 open, 이 세션의 커밋 4개 푸시 완료(`993737f6..8b020a36`). 제목/본문은 PM 요청으로 이번엔 갱신 안 함 — 폴리싱 세션이 이 PR을 이어 쓸지 새 PR로 시작할지 PM 확인 필요.
+
+---
