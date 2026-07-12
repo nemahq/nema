@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
-import { fetchMergedSourceIds } from "./source-service";
+import { createSource, fetchMergedSourceIds } from "./source-service";
 
 // 테이블별 canned rows를 돌려주는 .from 체인 stub — select/eq/in 무시하고 then으로 resolve.
 // fetchMergedSourceIds는 statement_relations·statement_sources 두 테이블을 각각 조회한다.
@@ -87,5 +87,66 @@ describe("fetchMergedSourceIds", () => {
       ownSourceId: OWN,
     });
     expect(result.size).toBe(0);
+  });
+});
+
+const EXPLICIT_SPACE = "44444444-4444-4444-a444-444444444444";
+const OLDEST_SPACE = "55555555-5555-4555-a555-555555555555";
+
+describe("createSource", () => {
+  it("spaceId가 주어지면 그대로 RPC에 쓰고 space_members는 조회하지 않는다", async () => {
+    const rpcCalls: unknown[] = [];
+    const supabase = {
+      from: () => {
+        throw new Error("spaceId가 있는데 space_members를 조회했다");
+      },
+      rpc: (fn: string, params: unknown) => {
+        rpcCalls.push({ fn, params });
+        return { data: "new-source-id", error: null };
+      },
+    } as unknown as TypedSupabaseClient;
+
+    const result = await createSource({
+      supabase,
+      body: "hello",
+      spaceId: EXPLICIT_SPACE,
+    });
+
+    expect(result).toEqual({ sourceId: "new-source-id" });
+    expect(rpcCalls).toEqual([
+      {
+        fn: "create_source",
+        params: { p_space_id: EXPLICIT_SPACE, p_body: "hello" },
+      },
+    ]);
+  });
+
+  it("spaceId가 없으면 가장 오래된 space_members 행을 조회해 그걸 쓴다", async () => {
+    const rpcCalls: unknown[] = [];
+    const membershipStub: Record<string, unknown> = {};
+    for (const method of ["select", "order", "limit"]) {
+      membershipStub[method] = () => membershipStub;
+    }
+    membershipStub["single"] = () => ({
+      data: { space_id: OLDEST_SPACE },
+      error: null,
+    });
+    const supabase = {
+      from: () => membershipStub,
+      rpc: (fn: string, params: unknown) => {
+        rpcCalls.push({ fn, params });
+        return { data: "new-source-id", error: null };
+      },
+    } as unknown as TypedSupabaseClient;
+
+    const result = await createSource({ supabase, body: "hello" });
+
+    expect(result).toEqual({ sourceId: "new-source-id" });
+    expect(rpcCalls).toEqual([
+      {
+        fn: "create_source",
+        params: { p_space_id: OLDEST_SPACE, p_body: "hello" },
+      },
+    ]);
   });
 });

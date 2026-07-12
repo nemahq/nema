@@ -13,6 +13,7 @@ import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { ComingSoonPage } from "@web/app/pages/ComingSoonPage";
+import { DraftsPage } from "@web/app/pages/DraftsPage";
 import { HomePage } from "@web/app/pages/HomePage";
 import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
@@ -175,6 +176,13 @@ const spaceOverviewRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
+const draftsRoute = createRoute({
+  getParentRoute: () => workspaceSidebarRoute,
+  path: "/drafts",
+  component: DraftsPage,
+  errorComponent: RouteErrorFallback,
+});
+
 // 내부 테스트 조종석 (NEM-125) — 프로덕션에서는 존재하지 않는 경로로 보인다
 const devHarnessRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
@@ -195,7 +203,7 @@ const routeTree = rootRoute.addChildren([
   oauthConsentRoute,
   authenticatedRoute.addChildren([
     sessionSidebarRoute.addChildren([indexRoute, sessionRoute]),
-    workspaceSidebarRoute.addChildren([spaceOverviewRoute]),
+    workspaceSidebarRoute.addChildren([spaceOverviewRoute, draftsRoute]),
     devHarnessRoute,
   ]),
 ]);

@@ -16,6 +16,7 @@ export const sourceRouter = router({
         supabase: ctx.supabase,
         body: input.body,
         sessionId: input.sessionId,
+        spaceId: input.spaceId,
         timeZone: input.timeZone,
       }),
     ),

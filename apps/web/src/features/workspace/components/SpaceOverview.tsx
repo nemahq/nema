@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Skeleton } from "@nema-io/weave";
 
+import { SourceComposer } from "@web/features/intake";
 import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWorkspaceBootstrapQuery";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -48,6 +49,10 @@ export function SpaceOverview({ spaceId }: SpaceOverviewProps) {
             {space.name}
           </h1>
         )}
+
+        <div className="mt-6">
+          <SourceComposer spaceId={spaceId} />
+        </div>
 
         <div className="mt-6 flex gap-1 border-b border-border/50">
           <SpaceTabButton
