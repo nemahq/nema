@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as Sentry from "@sentry/node";
 import type { User } from "@supabase/supabase-js";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
 import { bootstrapWorkspace, toBootstrapUser } from "./workspace-service";
+
+vi.mock("@sentry/node", () => ({ captureMessage: vi.fn() }));
 
 function makeUser(overrides: Partial<User> = {}): User {
   return {
@@ -18,6 +21,21 @@ function makeUser(overrides: Partial<User> = {}): User {
 }
 
 describe("toBootstrapUser", () => {
+  beforeEach(() => {
+    vi.mocked(Sentry.captureMessage).mockClear();
+  });
+
+  it("이름 후보 3개(given_name/full_name/email)가 모두 없으면 id로 대체하고 경보를 남긴다", () => {
+    const user = makeUser({ user_metadata: {}, email: undefined });
+    expect(toBootstrapUser(user).name).toBe("user-1");
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        tags: expect.objectContaining({ outcome: "name-fallback-to-id" }),
+      }),
+    );
+  });
+
   it("given_name > full_name > email 순으로 이름을 고른다", () => {
     const user = makeUser({
       user_metadata: { given_name: "카일", full_name: "카일 왕" },

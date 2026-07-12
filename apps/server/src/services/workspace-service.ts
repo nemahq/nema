@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import type { User } from "@supabase/supabase-js";
 
 import type { BootstrapUser, WorkspaceBootstrap } from "@nema-io/shared";
@@ -22,6 +23,23 @@ export function toBootstrapUser(user: User): BootstrapUser {
       name = resolved;
       break;
     }
+  }
+
+  // 지금 로그인 방식(Google/매직링크)에서는 given_name/full_name/email 중
+  // 하나는 항상 있어 실제로는 도달하지 않지만, UI가 이제 이 이름을 그대로
+  // 노출하므로 raw UUID가 조용히 새 나가지 않게 신호는 남겨둔다.
+  if (!name) {
+    Sentry.captureMessage(
+      "toBootstrapUser: 이름 후보 3개 모두 실패, id로 대체",
+      {
+        level: "warning",
+        tags: {
+          component: "workspace-service",
+          outcome: "name-fallback-to-id",
+        },
+        extra: { userId: user.id },
+      },
+    );
   }
 
   const rawAvatar = user.user_metadata?.["avatar_url"];
