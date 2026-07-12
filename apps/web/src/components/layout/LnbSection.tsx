@@ -2,8 +2,8 @@ import { type ReactNode } from "react";
 
 import { cn } from "@nema-io/weave";
 
-import { LnbRowBox } from "@web/components/layout/LnbRowBox";
-import { useSidebar } from "@web/components/layout/Sidebar";
+import { LnbRowBox } from "./LnbRowBox";
+import { useSidebar } from "./Sidebar";
 
 interface LnbSectionProps {
   label: string;
