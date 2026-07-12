@@ -29,3 +29,9 @@ export type ChangesetHistoryEntry =
 export type ActiveRelation =
   RouterOutputs["changeset"]["listActiveRelations"]["relations"][number];
 export type RelationType = ActiveRelation["type"];
+
+type ModelPresetInfo = RouterOutputs["dev"]["getModelPreset"];
+export type ModelPresetName = ModelPresetInfo["preset"];
+type TaskModels = RouterOutputs["dev"]["getTaskModels"];
+export type ModelCatalogEntry = TaskModels["catalog"][number];
+export type LlmTaskName = keyof TaskModels["overrides"];

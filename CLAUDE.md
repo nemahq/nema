@@ -41,6 +41,8 @@ Product terms vs code terms are mapped in `docs/guides/glossary.md`. Code (varia
 | `pnpm dev:web:prod` | frontend only (prod API)            |
 | `pnpm dev:server`   | server only                         |
 
+Local server secrets live in `~/.config/nema/.env.secret` (auto-loaded, git-ignored).
+
 ## Tests
 
 - MUST test only real user scenarios and edge cases that need pre-validation.

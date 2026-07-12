@@ -6,6 +6,8 @@ import { z } from "zod";
 
 const appEnvValues = ["local", "staging", "production"] as const;
 
+export type AppEnv = (typeof appEnvValues)[number];
+
 const envSchema = z
   .object({
     NODE_ENV: z

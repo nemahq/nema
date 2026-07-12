@@ -58,34 +58,22 @@ describe("setTaskOverride", () => {
   });
 });
 
-describe("기본 모델 배치 (NEM-149)", () => {
-  // golden contract — 가성비 측정으로 박은 배치다. seed가 조용히 빠지면 라우팅이 gpt-5 tier로
-  // 되돌아가 비용/품질이 새므로, 표를 통째로 못박아 오편집을 시끄러운 실패로 바꾼다.
-  it("seeds the cost-effectiveness placement and leaves others on the tier default", () => {
+describe("기본 override 배치", () => {
+  // golden contract — 커밋된 seed는 없다(전 task가 tier 기본값). 실수로 seed가 다시 박히면
+  // prod가 조용히 그 모델로 새므로, "전부 null"을 통째로 못박아 오편집을 시끄러운 실패로 바꾼다.
+  it("leaves every task on the tier default with no committed override", () => {
     expect(getAllTaskOverrides()).toEqual({
-      judgeRelations: "gemini-3.1-pro-preview",
-      narrate: "gemini-3.1-flash-lite",
-      generateDraft: "gemini-3.1-flash-lite",
-      extractStatements: null,
-      // 신규 task — 가성비 측정 전이라 seed 없이 tier 기본값(standard)로 시작
-      generateDigests: null,
+      generateDraft: null,
       classifyDraftIntent: null,
       generateSessionTitle: null,
+      extractStatements: null,
+      generateDigests: null,
+      judgeRelations: null,
+      narrate: null,
       structureQuery: null,
       selectScopeTopics: null,
     });
-    expect(getTaskOverride("judgeRelations")).toEqual({
-      modelId: "gemini-3.1-pro-preview",
-      effort: "low",
-    });
-    // toEqual은 정확 일치 — narrate/draft에 effort가 없음을 못박는다(스트레이 effort가 조용히
-    // 새지 않게). 관계만 effort를 둔 건 측정과 맞추기 위함이다.
-    expect(getTaskOverride("narrate")).toEqual({
-      modelId: "gemini-3.1-flash-lite",
-    });
-    expect(getTaskOverride("generateDraft")).toEqual({
-      modelId: "gemini-3.1-flash-lite",
-    });
+    expect(getTaskOverride("judgeRelations")).toBeUndefined();
   });
 });
 

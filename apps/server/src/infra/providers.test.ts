@@ -45,14 +45,29 @@ function baseEnv(overrides: FakeEnv = {}): FakeEnv {
 // 리셋 이후 그래프에서 동적 import해야 한다(정적 top-level import는 다른 인스턴스).
 async function loadFresh() {
   vi.resetModules();
-  const [providers, { AnthropicProvider }, { GeminiProvider }, { LlmError }] =
-    await Promise.all([
-      import("@server/infra/providers"),
-      import("@server/infra/llm/anthropic-provider"),
-      import("@server/infra/llm/gemini-provider"),
-      import("@server/infra/llm/llm-error"),
-    ]);
-  return { ...providers, AnthropicProvider, GeminiProvider, LlmError };
+  const [
+    providers,
+    { AnthropicProvider },
+    { GeminiProvider },
+    { OpenAiProvider },
+    { LlmError },
+    { setTaskOverride },
+  ] = await Promise.all([
+    import("@server/infra/providers"),
+    import("@server/infra/llm/anthropic-provider"),
+    import("@server/infra/llm/gemini-provider"),
+    import("@server/infra/llm/openai-provider"),
+    import("@server/infra/llm/llm-error"),
+    import("@server/infra/llm/task-routing"),
+  ]);
+  return {
+    ...providers,
+    AnthropicProvider,
+    GeminiProvider,
+    OpenAiProvider,
+    LlmError,
+    setTaskOverride,
+  };
 }
 
 describe("providers — override resolution wiring", () => {
@@ -115,45 +130,112 @@ describe("providers — override resolution wiring", () => {
   });
 });
 
-describe("forTask — 키 부재 가드 (seeded 배치)", () => {
+describe("forTask — override 키 부재 가드", () => {
   beforeEach(() => {
     fakeEnv = baseEnv();
   });
 
-  it("honors a seeded override when the provider key is present", async () => {
-    fakeEnv = baseEnv({ GEMINI_API_KEY: "gemini-key" });
-    const { getProviders, GeminiProvider } = await loadFresh();
-    // narrate seed = gemini-3.1-flash-lite, effort 없음 → bindEffort 래핑 없이 GeminiProvider 그대로.
-    expect(getProviders().llm.forTask("narrate")).toBeInstanceOf(
-      GeminiProvider,
-    );
-  });
-
-  it("falls back to the tier default when the seeded override's key is missing", async () => {
-    const { getProviders, GeminiProvider } = await loadFresh();
+  it("falls back to the tier default when an override's provider key is missing", async () => {
+    const { getProviders, setTaskOverride, GeminiProvider } = await loadFresh();
     const providers = getProviders();
-    // 가드가 gemini override를 버리고 standard tier로 폴백 → Gemini가 아니고, 같은 폴백을
-    // 겪는 generateDraft(standard·effort 없음, 키 부재로 함께 폴백)와 동일 인스턴스다.
+    // setTaskOverride는 setTaskModel과 달리 키를 검증하지 않는다 — 키 없는 override 상태를 만들어
+    // forTask 가드가 이를 버리고 tier 기본으로 폴백하는지 본다(키 부재 환경 안전장치).
+    setTaskOverride({ task: "narrate", modelId: "gemini-3.1-flash-lite" });
     expect(providers.llm.forTask("narrate")).not.toBeInstanceOf(GeminiProvider);
+    // 같은 폴백을 겪는 generateDraft(둘 다 override 없이 tier 기본)와 동일 인스턴스다.
     expect(providers.llm.forTask("narrate")).toBe(
       providers.llm.forTask("generateDraft"),
     );
   });
 
-  it("leaves an unseeded task on the tier default even when keys are present", async () => {
+  it("does not leak one task's override onto an untouched task", async () => {
+    fakeEnv = baseEnv({
+      GEMINI_API_KEY: "gemini-key",
+      ANTHROPIC_API_KEY: "sk-anthropic",
+    });
+    const { getProviders, setTaskModel, AnthropicProvider } = await loadFresh();
+    const providers = getProviders();
+    setTaskModel({ task: "classifyDraftIntent", modelId: "claude-opus-4-8" });
+    // generateSessionTitle은 override 없음 → 다른 task의 override로 새지 않고 tier 기본을 탄다.
+    expect(providers.llm.forTask("generateSessionTitle")).not.toBeInstanceOf(
+      AnthropicProvider,
+    );
+  });
+});
+
+describe("tier 기본값 — 비프로덕션 프로바이더 무관화 (Layer 1)", () => {
+  beforeEach(() => {
+    fakeEnv = baseEnv();
+  });
+
+  it("resolves non-prod tier defaults to Google when the Google key is present", async () => {
     fakeEnv = baseEnv({ GEMINI_API_KEY: "gemini-key" });
     const { getProviders, GeminiProvider } = await loadFresh();
-    // extractStatements는 seed 없음 → gemini 키가 있어도 Gemini로 새지 않는다.
-    expect(getProviders().llm.forTask("extractStatements")).not.toBeInstanceOf(
+    // 시드·override·effort 없는 task → all-nano로 nano tier(Google 기본값)를 그대로 탄다.
+    expect(getProviders().llm.forTask("generateSessionTitle")).toBeInstanceOf(
       GeminiProvider,
     );
+  });
+
+  it("falls back non-prod tier defaults to committed OpenAI when the Google key is absent", async () => {
+    const { getProviders, GeminiProvider, OpenAiProvider } = await loadFresh();
+    // Google 키 부재 → nano tier가 gpt-5-nano(OpenAI)로 폴백해 부팅이 그대로 뜬다.
+    const provider = getProviders().llm.forTask("generateSessionTitle");
+    expect(provider).toBeInstanceOf(OpenAiProvider);
+    expect(provider).not.toBeInstanceOf(GeminiProvider);
+  });
+
+  it("reports the fallback in getLlmPreset when the Google key is absent", async () => {
+    const { getProviders, getLlmPreset } = await loadFresh();
+    getProviders();
+    // 폴백된 실제 tier 모델이 그대로 보여 dev 패널이 진짜 resolve 결과를 읽는다.
+    expect(getLlmPreset().models.nano).toBe("gpt-5-nano");
+  });
+
+  it("falls a bogus LLM_MODEL_* value (uncatalogued) back to the committed OpenAI default", async () => {
+    // 카탈로그에 없는 모델 문자열 분기 — 오타/폐기된 id를 env에 넣어도 부팅이 안 깨지고 gpt-5로 떨어진다.
+    fakeEnv = baseEnv({ LLM_MODEL_NANO: "totally-not-a-real-model" });
+    const { getProviders, getLlmPreset } = await loadFresh();
+    getProviders();
+    expect(getLlmPreset().models.nano).toBe("gpt-5-nano");
+  });
+});
+
+describe("프로덕션 하드 lock — tier 프로바이더 스왑 무시", () => {
+  it("ignores LLM_MODEL_* env and forces committed OpenAI tier defaults", async () => {
+    fakeEnv = baseEnv({
+      APP_ENV: "production",
+      GEMINI_API_KEY: "gemini-key",
+      LLM_MODEL_STANDARD: "gemini-3.1-pro-preview",
+      LLM_MODEL_MINI: "gemini-3.1-flash-lite",
+      LLM_MODEL_NANO: "gemini-3.1-flash-lite",
+    });
+    const { getProviders, GeminiProvider, OpenAiProvider } = await loadFresh();
+    // classifyDraftIntent = mini tier·시드/override/effort 없음 → env가 Gemini를 가리켜도
+    // 커밋된 gpt-5-mini(OpenAI)로 강제된다.
+    const provider = getProviders().llm.forTask("classifyDraftIntent");
+    expect(provider).toBeInstanceOf(OpenAiProvider);
+    expect(provider).not.toBeInstanceOf(GeminiProvider);
+  });
+
+  it("rejects runtime preset and task overrides in production", async () => {
+    fakeEnv = baseEnv({ APP_ENV: "production", GEMINI_API_KEY: "gemini-key" });
+    const { getProviders, setLlmPreset, setTaskModel } = await loadFresh();
+    getProviders();
+    expect(() => setLlmPreset("all-nano")).toThrow();
+    expect(() =>
+      setTaskModel({
+        task: "classifyDraftIntent",
+        modelId: "gemini-3.1-flash-lite",
+      }),
+    ).toThrow();
   });
 });
 
 describe("forTask effort injection (bindEffort)", () => {
   beforeEach(() => {
-    // env를 명시적으로 잡는다 — 앞 describe가 GEMINI 키를 남기면 generateDraft가 seed(Gemini)를
-    // 타 OpenAI 경로 단언이 깨진다. 형제 describe 순서에 의존하지 않게 매번 초기화.
+    // env를 명시적으로 잡는다 — 앞 describe가 GEMINI 키를 남기면 tier가 Gemini로 resolve돼
+    // OpenAI 스파이 단언이 깨진다. 형제 describe 순서에 의존하지 않게 매번 초기화.
     fakeEnv = baseEnv();
     openaiResponsesParse.mockReset();
     openaiResponsesCreate.mockReset();

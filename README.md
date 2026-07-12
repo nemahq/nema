@@ -58,10 +58,10 @@ pnpm install
 # direnv 셸 후킹 (최초 1회)
 echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc && source ~/.zshrc
 
-# 비밀키 파일 생성
+# 비밀키 파일 생성 (apps/server/.envrc 가 자동 로드하는 경로)
 mkdir -p ~/.config/nema
-cp apps/server/.env.example ~/.config/nema/server.env
-# ~/.config/nema/server.env 를 열어 실제 값으로 채우기
+cp apps/server/.env.example ~/.config/nema/.env.secret
+# ~/.config/nema/.env.secret 을 열어 실제 값으로 채우기
 
 # direnv 허용
 cd apps/server && direnv allow
