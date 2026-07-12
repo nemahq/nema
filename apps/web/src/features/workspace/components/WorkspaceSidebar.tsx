@@ -3,11 +3,11 @@ import { useState } from "react";
 import { BookMarked, MessagesSquare, Plus } from "@nema-io/weave/icons";
 
 import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
+import { LnbSection } from "@web/components/layout/LnbSection";
 import { NavItem } from "@web/components/layout/NavItem";
 import { Sidebar } from "@web/components/layout/Sidebar";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { LnbSection } from "./LnbSection";
 import { SpaceList } from "./SpaceList";
 import { SpaceModal } from "./SpaceModal";
 import {

@@ -209,6 +209,7 @@ PR #382에서 LNB 워크스페이스 스위처·Space 목록·설정 모달을 �
 - `LnbRowBox` — NavItem 펼침 행과 `LnbSection` 라벨 행이 공유하는 박스 모양(`h-7 rounded-lg px-2.5` 등). `asChild`(weave가 재노출하는 Radix `Slot`)로 Link/div/span 등 어떤 걸 감싸든 같은 박스가 나온다.
 - `LnbHoverIcon` — 행 위에 겹치는 우측 액션 아이콘(`SpaceItemMenu` "...", `LnbSection` "+", `WorkspaceMenu` 토글)의 공통 hover 스타일. NavItem을 거치지 않는 곳(LnbSection, WorkspaceMenu)에서도 직접 쓴다 — NavItem 전용이 아니다.
 - **LNB 바깥(설정 모달 `SettingsNav` 등)은 고려 범위 밖**이다 — Link가 아니라 button, 접힘 상태 없음, 크기 체계도 달라 구조가 다르다. 재사용 압력(2번째 인스턴스)이 생기기 전까진 강제 통합하지 않는다.
+- `LnbSection` — 라벨 행 + 접기 대응 섹션 래퍼(`NavItem`/`LnbRowBox`/`LnbHoverIcon`과 같은 층위의 공용 LNB 프리미티브). 최초 도입 시 `features/workspace/components/`에 남아 있었는데(워크스페이스 도메인 로직 없이 `label`/`children`/`trailingAction`만 받는 순수 레이아웃 컴포넌트), 위 세 프리미티브와 나란히 `components/layout/`로 이동(2026-07-12). 사용처는 지금 `WorkspaceSidebar` 하나뿐이지만 위치는 도메인이 아니라 레이어로 정함.
 
 **앞으로 폴리싱할 때 적용할 기준**
 - 값 하나(색, 크기, 여백)를 3곳 이상 동시에 고쳐야 한다면 그 자리에서 개별 수정하지 말고 위 프리미티브에 없는 값인지부터 확인 — 프리미티브 커버 범위 밖이면 새로 뽑을지 이 시점에 판단.
