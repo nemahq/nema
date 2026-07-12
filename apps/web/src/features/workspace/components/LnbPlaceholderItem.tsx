@@ -22,7 +22,7 @@ export function LnbPlaceholderItem({ icon, label }: LnbPlaceholderItemProps) {
           <TooltipTrigger asChild>
             <div
               aria-disabled
-              className="flex size-9 cursor-default items-center justify-center rounded-md text-fg-tertiary/60"
+              className="flex size-8 cursor-default items-center justify-center rounded-lg text-fg-tertiary/60"
             >
               {icon}
             </div>
@@ -41,7 +41,7 @@ export function LnbPlaceholderItem({ icon, label }: LnbPlaceholderItemProps) {
         <TooltipTrigger asChild>
           <div
             aria-disabled
-            className="flex h-9 w-full cursor-default items-center gap-1.5 rounded-md px-1.5 text-sm text-fg-tertiary/60"
+            className="flex h-8 w-full cursor-default items-center gap-1.5 rounded-lg px-2.5 text-xs text-fg-tertiary/60"
           >
             {icon}
             <span className="truncate">{label}</span>

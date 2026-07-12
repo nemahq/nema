@@ -13,7 +13,7 @@ export function LnbSection({ label, children }: LnbSectionProps) {
   return (
     <div className="mt-2 flex flex-col gap-0.5">
       {!collapsed && (
-        <div className="px-3 pb-0.5 text-xs font-medium uppercase tracking-wide text-fg-tertiary">
+        <div className="pl-4 pr-3 pb-0.5 text-xs font-medium text-fg-tertiary">
           {label}
         </div>
       )}
