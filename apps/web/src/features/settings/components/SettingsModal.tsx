@@ -28,11 +28,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0 md:max-w-3xl">
+      <DialogContent
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="gap-0 overflow-hidden p-0 md:max-w-3xl"
+      >
         <DialogTitle className="sr-only">{t("settings.settings")}</DialogTitle>
         <div className="flex h-[560px]">
           <SettingsNav section={section} onSectionChange={setSection} />
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-6 dark:bg-surface-base">
             {open && section === "preferences" && <PreferencesSection />}
             {open && section === "account" && <AccountSection />}
           </div>

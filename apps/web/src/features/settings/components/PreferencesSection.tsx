@@ -48,10 +48,10 @@ export function PreferencesSection() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-fg-primary">
+        <h2 className="text-xl font-semibold text-fg-primary">
           {t("settings.nav_preferences")}
         </h2>
-        <p className="text-xs text-fg-tertiary">
+        <p className="text-sm text-fg-tertiary">
           {t("settings.preferences_subtitle")}
         </p>
       </div>
@@ -75,7 +75,10 @@ export function PreferencesSection() {
             htmlFor={appLangId}
           >
             <Select value={appLang} onValueChange={handleAppLangChange}>
-              <SelectTrigger id={appLangId} className="w-44 cursor-pointer">
+              <SelectTrigger
+                id={appLangId}
+                className="w-44 cursor-pointer shadow-none dark:shadow-sm"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

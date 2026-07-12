@@ -1,6 +1,5 @@
 {
   "account": {
-    "danger_zone_label": "Danger zone",
     "delete_blocked_back": "Back",
     "delete_blocked_description": "You're the sole owner of {count} workspaces that have other members. Transfer ownership to someone else there before you can delete your account.",
     "delete_blocked_title": "Transfer ownership first",
@@ -17,7 +16,8 @@
     "delete_error_precondition": "Your workspaces changed since we last checked. Let's check again.",
     "delete_go_to_signin": "Go to sign in",
     "delete_title": "Delete account",
-    "profile_title": "Profile"
+    "profile_title": "Profile",
+    "support_label": "Support"
   },
   "app": {
     "title": "Nema"
@@ -127,6 +127,7 @@
     "your_contexts": "내 맥락"
   },
   "settings": {
+    "account_section": "Account",
     "account_subtitle": "Manage your profile and account.",
     "app_language": "앱 언어",
     "app_language_description": "메뉴와 버튼 등 화면에 표시되는 언어",

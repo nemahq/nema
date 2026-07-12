@@ -64,6 +64,7 @@ export function UserMenu() {
           align={collapsed ? "start" : "center"}
           alignOffset={collapsed ? 8 : 0}
           sideOffset={collapsed ? 2 : 4}
+          onCloseAutoFocus={(e) => e.preventDefault()}
           className="w-60 border-0 bg-surface-card dark:bg-surface-raised-hover !animate-none"
         >
           <SettingsMenuItem onClick={() => setSettingsOpen(true)} />

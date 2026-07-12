@@ -27,7 +27,7 @@ export function SettingsNav({ section, onSectionChange }: SettingsNavProps) {
   return (
     <nav
       aria-label={t("settings.settings")}
-      className="flex w-44 shrink-0 flex-col gap-0.5 border-r border-border bg-surface-raised p-4"
+      className="flex w-44 shrink-0 flex-col gap-0.5 bg-surface-raised p-4 dark:bg-surface-card"
     >
       <button
         type="button"

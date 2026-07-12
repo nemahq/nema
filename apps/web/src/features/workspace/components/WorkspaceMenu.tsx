@@ -70,6 +70,7 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
           side="bottom"
           align="start"
           sideOffset={4}
+          onCloseAutoFocus={(e) => e.preventDefault()}
           className="w-60 border-0 bg-surface-card dark:bg-surface-raised-hover !animate-none"
         >
           <div className="flex items-center gap-2.5 px-2 py-1.5">
