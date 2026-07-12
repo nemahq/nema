@@ -1,4 +1,24 @@
 {
+  "account": {
+    "delete_blocked_back": "Back",
+    "delete_blocked_description": "You're the sole owner of {count} workspaces that have other members. Transfer ownership to someone else there before you can delete your account.",
+    "delete_blocked_title": "Transfer ownership first",
+    "delete_button": "Delete account",
+    "delete_cancel": "Cancel",
+    "delete_cleanup_failed": "Your account was deleted, but we couldn't sign you out automatically. Please sign in again to continue.",
+    "delete_confirm_button": "Yes, delete my account",
+    "delete_confirm_description": "This permanently deletes your account and can't be undone. Workspaces where you're the only member are deleted too.",
+    "delete_confirm_email_label": "Type {email} to confirm",
+    "delete_confirm_name_label": "Type {name} to confirm",
+    "delete_confirm_title": "Delete your account?",
+    "delete_deleting": "Deleting your account...",
+    "delete_description": "Permanently delete your account and remove your data from Nema.",
+    "delete_error_precondition": "Your workspaces changed since we last checked. Let's check again.",
+    "delete_go_to_signin": "Go to sign in",
+    "delete_title": "Delete account",
+    "profile_title": "Profile",
+    "support_label": "Support"
+  },
   "app": {
     "title": "Nema"
   },
@@ -107,17 +127,22 @@
     "your_contexts": "Your contexts"
   },
   "settings": {
+    "account_section": "Account",
+    "account_subtitle": "Manage your profile and account.",
     "app_language": "App language",
     "app_language_description": "Language used for menus, buttons, and interface",
-    "content_language": "Content language",
-    "content_language_description": "Used when you Remember and Ask",
+    "appearance_section": "Appearance",
+    "language_section": "Language",
+    "nav_preferences": "Preferences",
     "onboarding_description": "We'll organize what you write based on this language.",
     "onboarding_title": "What language do you write in?",
-    "save": "Save",
+    "preferences_subtitle": "Customize how Nema looks and behaves.",
     "settings": "Settings",
     "sign_out": "Sign out",
     "start": "Get started",
+    "theme": "Theme",
     "theme_dark": "Dark",
+    "theme_description": "Choose how Nema looks on this device.",
     "theme_light": "Light",
     "theme_system": "System"
   },
