@@ -286,11 +286,17 @@
   }
   /* Tailwind의 transition/transition-colors 기본값이 outline-color를 포함해서,
      컴포넌트가 어떤 transition-* 클래스를 쓰든 포커스 링 색이 서서히 번지듯
-     보인다 — !important로 강제해 항상 즉시 뜨게 한다(유틸리티 레이어가
-     base 레이어보다 우선하므로 이렇게 안 하면 컴포넌트 쪽이 이긴다). */
+     보인다. transition: none !important로 전부 죽이면 같은 순간의 다른
+     의도된 트랜지션(예: Button의 active:scale)까지 같이 끊기므로, outline-color만
+     0초로 override하고 나머지는 all로 그대로 살린다 — 같은 프로퍼티가 리스트에
+     두 번 걸리면 나중 항목의 duration이 이긴다(표준 동작). !important는 여전히
+     필요(유틸리티 레이어가 base 레이어보다 우선하므로 이렇게 안 하면 컴포넌트
+     쪽이 이긴다). */
   *:focus-visible {
     @apply outline outline-2 outline-offset-2 outline-brand;
-    transition: none !important;
+    transition:
+      all var(--duration-fast),
+      outline-color 0s !important;
   }
   body {
     @apply bg-surface-base text-fg-primary;
