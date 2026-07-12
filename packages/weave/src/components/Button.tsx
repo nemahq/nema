@@ -18,7 +18,7 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-surface-raised-hover/75 active:scale-[0.98] dark:hover:bg-surface-raised-hover",
         danger:
-          "bg-status-error-tint text-status-error hover:bg-status-error/15 focus-visible:outline-status-error active:scale-[0.98]",
+          "surface-danger focus-visible:outline-status-error active:scale-[0.98]",
         link: "text-brand-accent underline underline-offset-2 hover:text-brand-hover dark:text-fg-secondary dark:hover:text-fg-primary",
       },
       size: {
