@@ -49,7 +49,7 @@ export function UserMenu() {
           ) : (
             <button
               type="button"
-              className="flex w-full cursor-pointer items-center gap-2.5 rounded-md py-2.5 pl-2.5 pr-3 text-left transition-colors duration-fast outline-none hover:bg-surface-raised-hover data-[state=open]:bg-surface-raised-hover"
+              className="flex w-full cursor-pointer items-center gap-2.5 rounded-md py-2.5 pl-2.5 pr-3 text-left transition-colors duration-fast outline-none hover:bg-surface-raised-hover/75 data-[state=open]:bg-surface-raised-hover/75"
             >
               <Avatar src={user.avatarUrl} fallback={initial} />
               <span className="truncate text-sm text-fg-primary animate-in fade-in slide-in-from-left-2 duration-normal">
@@ -71,7 +71,7 @@ export function UserMenu() {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleSignOut}
-            className="cursor-pointer data-[highlighted]:bg-surface-raised-hover dark:data-[highlighted]:bg-fg-primary/10"
+            className="cursor-pointer data-[highlighted]:bg-surface-raised-hover/75 dark:data-[highlighted]:bg-fg-primary/10"
           >
             <LogOut />
             {t("settings.sign_out")}
