@@ -132,13 +132,13 @@ describe("bootstrapWorkspace", () => {
       supabase: mockSupabase({
         isFirstEntry: true,
         workspace: { id: "ws-1", name: null },
-        spaces: [{ id: "space-1", name: "Default" }],
+        spaces: [{ id: "space-1", name: "My Space" }],
       }),
       user: makeUser({ user_metadata: { given_name: "카일" } }),
     });
 
     expect(result.workspace.name).toBe("카일");
-    expect(result.spaces).toEqual([{ id: "space-1", name: "Default" }]);
+    expect(result.spaces).toEqual([{ id: "space-1", name: "My Space" }]);
     expect(result.isFirstEntry).toBe(true);
   });
 

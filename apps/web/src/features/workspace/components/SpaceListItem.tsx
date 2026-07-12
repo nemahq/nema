@@ -6,7 +6,7 @@ import { shouldNavigateHomeAfterSpaceDelete } from "@web/features/workspace/shou
 
 import { SpaceDeleteDialog } from "./SpaceDeleteDialog";
 import { SpaceItemMenu } from "./SpaceItemMenu";
-import { SpaceModal } from "./SpaceModal";
+import { SpaceSettingsModal } from "./SpaceSettingsModal";
 
 // WorkspaceMenu 배지의 다크모드 fallback과 같은 조합(테마별로 자동 조정됨).
 const BADGE_CLASS =
@@ -25,7 +25,7 @@ export function SpaceListItem({
 }: SpaceListItemProps) {
   const navigate = useNavigate();
   const params = useParams({ strict: false });
-  const [renameOpen, setRenameOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
@@ -41,18 +41,17 @@ export function SpaceListItem({
         params={{ spaceId }}
         trailingAction={
           <SpaceItemMenu
-            onRename={() => setRenameOpen(true)}
+            onOpenSettings={() => setSettingsOpen(true)}
             onDelete={() => setDeleteOpen(true)}
           />
         }
       />
 
-      <SpaceModal
-        mode="rename"
+      <SpaceSettingsModal
         spaceId={spaceId}
         spaceName={spaceName}
-        open={renameOpen}
-        onOpenChange={setRenameOpen}
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
       />
       <SpaceDeleteDialog
         spaceId={spaceId}

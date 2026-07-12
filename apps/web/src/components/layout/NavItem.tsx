@@ -58,7 +58,7 @@ export function NavItem({
     );
 
     return (
-      <div className="flex justify-center py-px">
+      <div className="flex justify-center py-1">
         <Tooltip>
           <TooltipTrigger asChild>{content}</TooltipTrigger>
           <TooltipContent side="right" sideOffset={12}>

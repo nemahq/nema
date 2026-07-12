@@ -4,17 +4,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@nema-io/weave";
-import { Ellipsis, Pencil, Trash2 } from "@nema-io/weave/icons";
+import { Ellipsis, Settings, Trash2 } from "@nema-io/weave/icons";
 
 import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface SpaceItemMenuProps {
-  onRename: () => void;
+  onOpenSettings: () => void;
   onDelete: () => void;
 }
 
-export function SpaceItemMenu({ onRename, onDelete }: SpaceItemMenuProps) {
+export function SpaceItemMenu({
+  onOpenSettings,
+  onDelete,
+}: SpaceItemMenuProps) {
   const { t } = useTranslation();
 
   return (
@@ -29,9 +32,9 @@ export function SpaceItemMenu({ onRename, onDelete }: SpaceItemMenuProps) {
         </LnbHoverIcon>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="start" sideOffset={4}>
-        <DropdownMenuItem onClick={onRename}>
-          <Pencil />
-          {t("space.rename")}
+        <DropdownMenuItem onClick={onOpenSettings}>
+          <Settings />
+          {t("space.settings")}
         </DropdownMenuItem>
         <DropdownMenuItem variant="danger" onClick={onDelete}>
           <Trash2 />

@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import {
   BookOpenText,
+  Home,
   MessageCircleQuestionMark,
   Plus,
 } from "@nema-io/weave/icons";
@@ -13,8 +14,8 @@ import { Sidebar } from "@web/components/layout/Sidebar";
 import { DraftsNavItem } from "@web/features/intake";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { SpaceCreateModal } from "./SpaceCreateModal";
 import { SpaceList } from "./SpaceList";
-import { SpaceModal } from "./SpaceModal";
 import {
   WorkspaceMenuSlotCollapsed,
   WorkspaceMenuSlotExpanded,
@@ -33,6 +34,12 @@ export function WorkspaceSidebar() {
       topSlot={<WorkspaceMenuSlotCollapsed />}
     >
       <div className="flex flex-col py-1">
+        <NavItem
+          icon={<Home strokeWidth={2} className={NAV_ICON_CLASS} />}
+          label={t("common.home")}
+          to="/"
+        />
+
         <NavItem
           icon={
             <MessageCircleQuestionMark
@@ -70,8 +77,7 @@ export function WorkspaceSidebar() {
         </LnbSection>
       </div>
 
-      <SpaceModal
-        mode="create"
+      <SpaceCreateModal
         open={createSpaceOpen}
         onOpenChange={setCreateSpaceOpen}
       />

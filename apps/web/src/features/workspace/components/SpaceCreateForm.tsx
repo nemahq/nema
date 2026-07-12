@@ -12,39 +12,24 @@ import {
 } from "@nema-io/weave";
 
 import { useCreateSpace } from "@web/features/workspace/hooks/useCreateSpace";
-import { useRenameSpace } from "@web/features/workspace/hooks/useRenameSpace";
 import { useTranslation } from "@web/lib/tolgee";
 
-type SpaceModalFormProps =
-  | { mode: "create"; onOpenChange: (open: boolean) => void }
-  | {
-      mode: "rename";
-      spaceId: string;
-      spaceName: string;
-      onOpenChange: (open: boolean) => void;
-    };
+const NAME_INPUT_ID = "space-create-name";
 
-export function SpaceModalForm(props: SpaceModalFormProps) {
-  const { onOpenChange } = props;
+interface SpaceCreateFormProps {
+  onOpenChange: (open: boolean) => void;
+}
+
+export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [name, setName] = useState(
-    props.mode === "rename" ? props.spaceName : "",
-  );
+  const [name, setName] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [hasConflict, setHasConflict] = useState(false);
   const createMutation = useCreateSpace();
-  const renameMutation = useRenameSpace();
-  const mutation = props.mode === "create" ? createMutation : renameMutation;
-
-  function markConflictIfNameTaken(error: unknown) {
-    if (error instanceof TRPCClientError && error.data?.code === "CONFLICT") {
-      setHasConflict(true);
-    }
-  }
 
   function handleSubmit() {
-    if (mutation.isPending) {
+    if (createMutation.isPending) {
       return;
     }
     const trimmed = name.trim();
@@ -53,25 +38,21 @@ export function SpaceModalForm(props: SpaceModalFormProps) {
       return;
     }
 
-    if (props.mode === "create") {
-      createMutation.mutate(
-        { name: trimmed },
-        {
-          onSuccess: ({ spaceId }) => {
-            onOpenChange(false);
-            navigate({ to: "/space/$spaceId", params: { spaceId } });
-          },
-          onError: markConflictIfNameTaken,
-        },
-      );
-      return;
-    }
-
-    renameMutation.mutate(
-      { spaceId: props.spaceId, name: trimmed },
+    createMutation.mutate(
+      { name: trimmed },
       {
-        onSuccess: () => onOpenChange(false),
-        onError: markConflictIfNameTaken,
+        onSuccess: ({ spaceId }) => {
+          onOpenChange(false);
+          navigate({ to: "/space/$spaceId", params: { spaceId } });
+        },
+        onError: (error) => {
+          if (
+            error instanceof TRPCClientError &&
+            error.data?.code === "CONFLICT"
+          ) {
+            setHasConflict(true);
+          }
+        },
       },
     );
   }
@@ -79,17 +60,18 @@ export function SpaceModalForm(props: SpaceModalFormProps) {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>
-          {t(
-            props.mode === "create"
-              ? "space.create_title"
-              : "space.rename_title",
-          )}
-        </DialogTitle>
+        <DialogTitle>{t("space.create_title")}</DialogTitle>
       </DialogHeader>
 
       <div className="flex flex-col gap-1.5">
+        <label
+          htmlFor={NAME_INPUT_ID}
+          className="text-sm font-medium text-fg-primary"
+        >
+          {t("space.name_placeholder")}
+        </label>
         <Input
+          id={NAME_INPUT_ID}
           autoFocus
           value={name}
           onChange={(e) => {
@@ -102,7 +84,6 @@ export function SpaceModalForm(props: SpaceModalFormProps) {
               handleSubmit();
             }
           }}
-          placeholder={t("space.name_placeholder")}
           maxLength={SPACE_NAME_MAX_LENGTH}
           aria-invalid={Boolean(validationError) || hasConflict}
         />
@@ -118,8 +99,8 @@ export function SpaceModalForm(props: SpaceModalFormProps) {
         <Button variant="ghost" onClick={() => onOpenChange(false)}>
           {t("common.cancel")}
         </Button>
-        <Button onClick={handleSubmit} disabled={mutation.isPending}>
-          {t(props.mode === "create" ? "space.create_action" : "space.save")}
+        <Button onClick={handleSubmit} disabled={createMutation.isPending}>
+          {t("space.create_action")}
         </Button>
       </DialogFooter>
     </>

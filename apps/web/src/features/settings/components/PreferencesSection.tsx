@@ -1,6 +1,11 @@
 import { useState } from "react";
 
 import {
+  CONTENT_LANGUAGES,
+  type ContentLanguage,
+  ContentLanguageSchema,
+} from "@nema-io/shared";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -8,7 +13,11 @@ import {
   SelectValue,
 } from "@nema-io/weave";
 
-import { LANGUAGE_LABELS } from "@web/features/profile";
+import {
+  LANGUAGE_LABELS,
+  useProfileQuery,
+  useUpdateProfile,
+} from "@web/features/profile";
 import {
   changeLocale,
   isLocale,
@@ -30,6 +39,13 @@ export function PreferencesSection() {
     return lang && isLocale(lang) ? lang : "ko";
   });
 
+  // 온보딩을 거쳐야 설정 화면에 닿으므로 profile은 항상 존재한다.
+  const { data: profile } = useProfileQuery();
+  const updateProfileMutation = useUpdateProfile();
+  const [contentLang, setContentLang] = useState<ContentLanguage>(
+    () => profile?.contentLanguage ?? "en",
+  );
+
   async function handleAppLangChange(v: string) {
     if (!isLocale(v)) {
       return;
@@ -42,6 +58,24 @@ export function PreferencesSection() {
       setAppLang(previousLang);
       toastError(error);
     }
+  }
+
+  function handleContentLangChange(v: string) {
+    const parsed = ContentLanguageSchema.safeParse(v);
+    if (!parsed.success) {
+      return;
+    }
+    const previousLang = contentLang;
+    setContentLang(parsed.data);
+    updateProfileMutation.mutate(
+      { contentLanguage: parsed.data },
+      {
+        onError: (error) => {
+          setContentLang(previousLang);
+          toastError(error);
+        },
+      },
+    );
   }
 
   return (
@@ -71,6 +105,7 @@ export function PreferencesSection() {
           <SettingsRow
             label={t("settings.app_language")}
             description={t("settings.app_language_description")}
+            divider={false}
           >
             <Select value={appLang} onValueChange={handleAppLangChange}>
               <SelectTrigger className="w-44 cursor-pointer shadow-none dark:shadow-sm">
@@ -78,6 +113,27 @@ export function PreferencesSection() {
               </SelectTrigger>
               <SelectContent>
                 {LOCALES.map((lang) => (
+                  <SelectItem
+                    key={lang}
+                    value={lang}
+                    className="cursor-pointer"
+                  >
+                    {LANGUAGE_LABELS[lang]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingsRow>
+          <SettingsRow
+            label={t("settings.content_language")}
+            description={t("settings.content_language_description")}
+          >
+            <Select value={contentLang} onValueChange={handleContentLangChange}>
+              <SelectTrigger className="w-44 cursor-pointer shadow-none dark:shadow-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CONTENT_LANGUAGES.map((lang) => (
                   <SelectItem
                     key={lang}
                     value={lang}

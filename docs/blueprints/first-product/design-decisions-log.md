@@ -295,3 +295,55 @@ Space와 달리 이 배지는 **한 번에 하나만 보이는 단독 요소**�
 **다음 라운드**: Space 메인 콘텐츠(오버뷰 피드)로 이동 예정.
 
 ---
+
+### 2026-07-12 — Space 오버뷰 마무리 + 설정 모달 Content language 재도입 (2026-07-10 결정 번복)
+
+**v1 홈 완전 퇴장**: `/`가 v1 `HomePage`(세션 사이드바 셸) 대신 v2 `WorkspaceSidebar` 셸 아래 stub `WorkspaceHome`로 직접 연결되도록 라우트를 바꿨다. 처음엔 `/home`으로 별도 경로를 만들고 `/`는 리다이렉트만 하게 했었는데, Kyle이 "v1으로 이제 안 가도 되는데 굳이 리다이렉트를 거칠 이유가 있나"라고 지적 — 맞는 말이라 `/`를 v2 홈의 실제 경로로 바꾸고 리다이렉트 계층을 걷어냈다. v1 `HomePage`가 죽으면서 그 전용 의존이었던 `Greeting`·`useStartSession`·`useCreateSession`과, 그것들만 쓰던 캐시 프라임 함수 4개(`presetMessageCache`/`clearMessageCache`/`prependSessionCache`/`presetSessionCache`)도 연쇄로 죽어 함께 삭제(knip이 파일 단위는 잡았지만 정확히는 이 export 단위는 못 잡아서 수동 확인 후 정리 — JSON i18n 키의 죽은 참조도 knip은 못 잡는다는 걸 재확인, `session.empty_heading_*`/`empty_subheading_*` 10개도 같은 이유로 같이 정리).
+
+**Space 없음 에러뷰**: 처음엔 앱 전역 `NotFoundErrorFallback`(워터마크+단일 문구) 재사용을 시도했다가, Kyle이 다른 레퍼런스(Linear "Team not found", X "This account doesn't exist")를 검토한 뒤 "전역 404는 원복하고, Space 쪽만 title+description으로 가자"고 정리 — 전역 404는 워터마크 있는 원래 형태 그대로 유지, `SpaceOverview.tsx`의 Space-없음 분기만 워터마크 없이 제목+설명 2줄 구조로 바꿨다(`space.not_found_title`/`not_found_description` 신규, 기존 `space.not_found` 대체). 제목엔 마침표 안 붙임(레이블성 타이틀은 마침표 없음 — Kyle 지적).
+
+**Space 오버뷰 타이틀에 아이콘 추가**: LNB `SpaceListItem`과 같은 중립 배지(`bg-fg-primary/10 text-fg-primary rounded-md`, 첫 글자)를 타이틀 폰트 크기(`text-xl`)에 맞춰 `size-8`로 키워 재사용. 로딩 스켈레톤도 아이콘 자리를 같이 넣어 짝을 맞췄다. 이 김에 타이틀에 `truncate`가 빠져있던 것(긴 Space 이름이 줄바꿈되던 버그)도 같이 고쳤고, `WorkspaceHome.tsx`가 `t("common.home")` 대신 "Home"을 하드코딩해 한국어 로케일에서도 영어로 뜨던 버그도 발견해 고쳤다.
+
+**LNB Space 목록 스켈레톤 들여쓰기 누락**: 실제 `NavItem` 행엔 `pl-3`(2026-07-11 라운드에서 결정한 라벨 대비 살짝 들여쓰기)이 있는데, `SpaceList.tsx`의 펼침 스켈레톤은 그 클래스 없이 기본 `LnbRowBox`만 써서 로딩 중엔 아이콘·텍스트가 실제 행보다 2px 왼쪽에 있었다 — `pl-3` 추가로 정합.
+
+**설정 모달 Content language 재도입 — 2026-07-10 결정 번복**: Kyle이 "붙여넣는 원문 언어와 무관하게, 저장된 요약은 본인이 고른 언어로 구조화하고 싶을 것"이라며 재도입을 요청. **주의**: 2026-07-10 항목("계정 설정 리뷰 반영")에서 이미 한 번 "일반 섹션에 넣기 애매하다"는 이유로 `ContentLanguageSection` 자체를 완전히 삭제한 이력이 있다 — 이번 재도입 전 그 사실을 놓치고 "이미 glossary/코드에 있으니 그냥 넣으면 된다"고 판단할 뻔했으나, Kyle이 지적해 바로잡았다. `surface-inventory.md`의 "설정 (모달)" § "일반" 항목도 Theme+앱 언어만 언급하던 걸 콘텐츠 언어 포함으로 같이 갱신했다 — **문서와 실제 반영 상태가 다시 어긋나지 않도록, 이 결정 번복은 스펙 문서 갱신까지 세트로 처리**. 구현은 이미 있던 `useProfileQuery`/`useUpdateProfile`(온보딩이 계속 써서 안 지워져 있었음)을 그대로 재사용, `PreferencesSection`의 "Language" 섹션에 App language 바로 아래 행으로 추가(같은 낙관적 업데이트+실패 롤백 패턴). 두 행이 같은 섹션 헤더 아래 묶인 한 쌍으로 보이도록 `SettingsRow`에 `divider` prop(기본 true)을 추가해 App language 행만 `divider={false}`로 구분선을 껐다.
+
+**설정 모달 설명 문구 — 마침표 전부 제거**: `SettingsRow`의 `description`(작은 회색 설명)과 섹션 상단 서브타이틀(`account_subtitle`/`preferences_subtitle`) 전부 마침표를 뗐다 — 레이블성 문구는 마침표 없음(`docs/guides/ux-writing.md` 규칙)에 맞춘 것. 새로 쓴 `content_language`/`content_language_description` 카피도 대시(—) 없이 다듬었고(Kyle: "대시는 절대 안 씀" — 향후 카피에도 적용할 규칙), ko는 아직 Kyle이 직접 다듬지 않아 en과 동일한 placeholder로 남겨뒀다(이 세션의 기존 관례 그대로).
+
+---
+
+### 2026-07-12 — Space 오버뷰 탭 제품 용어: Thread 유지, Changeset → Changes
+
+`묻기`/`위키`를 정했던 것과 같은 방식(실제 제품 충돌 리서치 → 대안 검토 → 확정)으로 Space 오버뷰의 두 탭(`space.tab_topic`/`space.tab_changesets`) 이름을 다시 검토했다. 개념·코드 용어(Thread/`topics`, Changeset/`changesets`)는 전혀 안 건드리고, 탭에 노출되는 제품 용어만 다뤘다.
+
+**Thread — 그대로 유지, Feed로 안 바꿈**: 처음엔 "이 탭 기본 상태(Topic 필터 없음)는 사실 여러 Topic이 섞인 피드지, 하나의 Thread가 아니다"는 이유로 "Feed"/"피드"를 제안했었다. 그런데 Thread/Feed의 통상적 어감을 되짚어보니(Thread = 연결된 한 가닥, Feed = 서로 무관한 것들이 넓게 모인 것) Kyle이 "Nema는 스레드가 맞다"고 판단 — Nema가 지키려는 게 "느슨하게 모인 콘텐츠 더미"가 아니라 "서로 이어진 지식"이라, 어감상 Thread가 Nema의 정체성에 더 맞다는 결론. 기본 상태의 실제 UI(믹스된 피드)와 이름이 100% 일치하진 않지만, 그 어긋남보다 브랜드 어감이 우선한다고 판단한 사례 — **"실제 UI와 정확히 일치하는 이름"이 항상 최우선 기준은 아니라는 걸 보여주는 근거로 남겨둔다.**
+
+**Changeset → "Changes"(en) / "변경사항"(ko)로 제품 용어 분리**:
+- 1차 시도 "Suggestions"/"제안"은 기각됐다 — Kyle이 "이 탭에 들어갈 컨텐츠를 다 보고 제안한 거 맞냐"고 물어서 다시 확인해보니, 이 탭엔 `ingestion`/`relation`(둘 다 승인 대기 "제안"에 맞음) 말고 `revert`(제출=즉시 적용, 승인 대기 단계 자체가 없음)도 있었고, 무엇보다 Closed 목록은 버려진 것까지 **의도적으로 영구 보존**한다(surface-inventory.md "변경셋" 섹션, nema 원칙 "매끄러움이 아니라 충실함"). Grammarly Suggestions·Google Contacts 병합 제안은 처리하면 목록에서 사라지는 일시적 패턴이라 이 영구 보존 원칙과 구조가 반대라 기각.
+- 재조사 결과 Gerrit(Google 코드리뷰 툴)의 "Changes"(Open/Merged/Abandoned, 영구 보존, 되돌리기 가능 — Nema 변경셋과 거의 동일한 생애주기)를 발견, 상태를 특정 안 하는 중립적 단어라 Open(대기)·Closed(완료·버려짐·되돌림) 전부를 자연스럽게 감싼다는 점에서 채택.
+- 한국어는 "변경이력" 대신 "변경사항"으로 확정 — 이미 이 문서 자체("Space 오버뷰" 섹션)에 "탭 이름은 '변경 이력'이 아니라 '변경셋' — 대기 중인 것은 아직 '일어난' 게 아니라 '이력'이라는 이름과 안 맞음"이라고 기각 사유가 기록돼 있었고, 그 이유가 "Changes"로 바꾼 지금도 그대로 유효하다. 게다가 "변경 이력"은 이미 Digest/Reference 각자의 "..." 메뉴 → 변경 이력 모달(스코프: 항목 하나)에 쓰이고 있어, 탭(스코프: Space 전체)에도 같은 이름을 쓰면 서로 다른 두 기능이 이름까지 겹쳤을 것.
+- npm/pnpm 생태계의 실제 `changesets` 툴(버전 관리 자동화 도구, 이 리포 자체가 pnpm 모노레포라 더 직접적인 충돌 우려)과의 충돌도 이번 교체로 자연히 해소됐다.
+
+**Workspace·Space는 그대로 "워크스페이스"·"스페이스" 유지 확정** — 새 한국어 번역을 만들지 않고 기존 자연스러운 외래어 그대로 쓰기로 확인. 이 김에 그동안 영어 placeholder로 남아있던 LNB 섹션 라벨(`workspace.section_workspace`/`section_spaces`)도 실제 한국어("워크스페이스"/"스페이스")로 반영했다 — 이 둘은 이번에 새로 결정한 게 아니라 원래도 확정 용어였는데 ko.json 반영만 밀려 있었던 것.
+
+**구현**: `apps/web/src/lib/tolgee/en.json`/`ko.json`의 `space.tab_topic`(ko: "스레드")·`space.tab_changesets`(en: "Changes", ko: "변경사항")·`space.changesets_empty`(en/ko: "No changes yet.", 탭 이름 변경에 맞춘 표현 통일)를 갱신. `SpaceOverview.tsx`의 `SpaceTab` 타입(`"topic" | "changesets"`)과 컴포넌트 코드는 무변경 — 코드 식별자와 노출 카피를 분리하는 이 세션의 기존 원칙 그대로.
+
+---
+
+### 2026-07-12 — ko.json 전체 placeholder 번역 + Space 탭 빈 상태 정리 + Space 이름·설정 UI 재구조화
+
+**ko.json 잔여 placeholder 48개 전량 번역**: `/check-ux-writing` 체크리스트(해요체·마침표 규칙·용어 통일) 기준으로 en과 동일 값으로 남아있던 `account`/`app`/`auth`/`settings`/`space`/`workspace` 네임스페이스 키를 전부 실제 한국어로 옮겼다. 과정에서 `session.rename`(기존 "이름 바꾸기")과 새로 쓴 `space.rename`("이름 변경")이 같은 개념에 다른 표현을 쓰고 있던 동의어 충돌을 발견해 "이름 바꾸기"로 통일. `settings.theme`("테마")는 Notion·Slack 한국어판 레퍼런스로 재확인 — 이미 맞았음.
+
+**Space 탭 빈 상태 — 문구 제거, 워터마크만**: `SpaceEmptyState`에서 `message` prop 자체를 없애고 워터마크 아이콘만 남겼다(Kyle 요청). 유일한 소비처였던 `space.topic_empty`/`space.changesets_empty` i18n 키도 함께 삭제.
+
+**Space 이름 변경 — 미변경 시 저장 비활성화**: `SpaceSettingsForm`(구 `SpaceModalForm` rename 모드)에 `isUnchanged = name.trim() === spaceName` 가드 추가 — 버튼 disabled뿐 아니라 Enter 키 제출도 막아 무의미한 rename 뮤테이션 호출 자체를 방지.
+
+**Space 생성/설정 모달 분리**: 기존 `SpaceModal`/`SpaceModalForm`(create/rename 모드를 하나의 discriminated union으로 공유)을 `SpaceCreateModal`+`SpaceCreateForm`, `SpaceSettingsModal`+`SpaceSettingsForm` 4개 파일로 완전히 분리했다. 이유: 설정 쪽은 앞으로 필드가 늘 것(아이콘·색상 등, `surface-inventory.md` "Space 설정 모달" 섹션이 이미 명시한 확장 방향)이라 지금 합쳐두면 나중에 갈라내기가 더 번거로움 — Kyle 판단으로 지금 갈라둠. 두 폼 사이 중복(Input+에러 처리+Footer 구조)은 의도적으로 허용 — 이 폴더에 이미 `SpaceDeleteBlockedForm`/`SpaceDeleteConfirmForm`처럼 "시나리오별 작은 폼 분리" 선례가 있어 결을 맞춤.
+
+**LNB "..." 메뉴: Rename → Settings**: Linear(Team)·Notion(Teamspace) 레퍼런스 확인 — 둘 다 Space와 비슷한 무게의 컨테이너인데 "..." 메뉴가 진입점인 건 같지만, 실제 이름 변경은 그 안의 별도 설정 화면에서 일어난다(Notion은 거기에 더해 되돌릴 수 있는 "Archive"만 "..."에 직접 노출, 영구 삭제는 아님). Nema의 삭제는 영구·전체 콘텐츠 삭제라 Notion의 archive보다 무거운 액션이지만, 이미 타이핑 확인이라는 강한 안전장치가 있어 "삭제는 그대로 "..." 직접 액션 유지, 이름 변경은 '설정' 진입점 뒤로"로 정리했다(Delete를 설정 모달 안으로 옮기는 것은 필드가 늘어날 때로 유보). `SpaceItemMenu`의 `onRename` prop→`onOpenSettings`, 아이콘 `Pencil`→`Settings`(gear), 라벨 `space.rename`("이름 바꾸기")→`space.settings`("설정")로 교체 — 이제 안 쓰는 `space.rename`/`space.rename_title` 키 삭제, `space.settings`/`space.settings_title`(en: "Settings"/"Space settings", ko: "설정"/"스페이스 설정") 신규.
+
+**이름 입력 필드에 label 추가**: `SpaceCreateForm`/`SpaceSettingsForm` 둘 다 placeholder만 있고 별도 `<label>`이 없었다 — Kyle 지적으로 `htmlFor`+`id` 연결된 `<label>`(`space.name_placeholder` 텍스트 재사용, "Space name"/"스페이스 이름")을 추가하고 placeholder는 뗐다(라벨과 중복이라).
+
+**신규 유저 기본 Space 이름 — "Default" → "My Space"**: 처음엔 "지금 DB에 name이 NULL이라 프론트가 크래시난다"고 잘못 짚었다 — 실제로는 이후 마이그레이션(`20260710070941_space_management_rpcs.sql`)이 이미 `spaces.name`을 NOT NULL로 승격하고 가입 트리거가 리터럴 `'Default'`를 직접 심도록 바꿔둔 뒤였다(더 오래된 `20260611091632_create_spaces.sql`만 보고 판단해 생긴 오류 — 최신 마이그레이션까지 다 확인했어야 함, 이후 세션 교훈으로 남김). 세 가지 대안(A. 리터럴만 교체 B. 가입 시점 로케일 캡처 후 트리거 분기 C. 센티널 문자열 방식 표시 시점 치환) 중 Kyle이 A 선택 — 지금 "Default"도 원래 로케일 무관 하드코딩이었고, B는 이 세션 스코프 밖, C는 사용자가 우연히 같은 문자열로 개명하면 오치환되는 새 버그를 만들 수 있어서. 새 마이그레이션(`20260712230000_default_space_name_my_space.sql`)으로 `handle_new_user()` 트리거 함수의 리터럴을 `'My Space'`로 교체 + 기존에 아직 "Default" 그대로인 Space도 함께 백필(20260710070941의 NULL 백필과 같은 논리 — 사용자가 실제로 "Default"를 의도적으로 고른 경우는 사실상 없다고 판단). `packages/shared`의 `DEFAULT_SPACE_NAME` 상수도 값 맞춰 갱신(SQL 리터럴과 동기화는 여전히 수동, 자동 강제 없음 — 코드 주석에 명시). **이 환경엔 Supabase CLI가 없어 `supabase db reset`으로 실제 적용 검증을 못 했다 — 머지 전 CI/로컬에서 마이그레이션이 깨끗하게 적용되는지 반드시 확인 필요.** 스키마 변경은 없어(함수 body + 1회성 UPDATE) `pnpm supabase:gen-types` 재생성은 불필요 판단.
+
+---
