@@ -93,6 +93,15 @@
   --palette-light-orange: #ea580c; /* orange-600 */
   --palette-dark-orange: #fb923c; /* orange-400 */
 
+  /* Identity badge — 개인화 배지(현재 워크스페이스) 배경, 테마 무관 고정값.
+     전부 흰 텍스트로 통일해 각 색이 흰 글자 대비(4.5:1)를 만족하는 톤까지 내렸다.
+     rose는 너무 튀어서 제외. */
+  --palette-identity-violet: #6d28d9; /* violet-700 */
+  --palette-identity-fuchsia: #86198f; /* fuchsia-800 */
+  --palette-identity-cyan: #0e7490; /* cyan-700 */
+  --palette-identity-lime: #4d7c0f; /* lime-700 */
+  --palette-identity-yellow: #a16207; /* yellow-700 */
+
   /* Border */
   --palette-light-border: #d6d3d1; /* stone-300 */
   --palette-dark-border: #57534e; /* stone-600 */

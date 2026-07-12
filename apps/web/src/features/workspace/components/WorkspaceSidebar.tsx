@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-import { BookMarked, MessagesSquare, Plus } from "@nema-io/weave/icons";
+import {
+  BookOpenText,
+  MessageCircleQuestionMark,
+  Plus,
+} from "@nema-io/weave/icons";
 
 import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
 import { LnbSection } from "@web/components/layout/LnbSection";
@@ -16,7 +20,7 @@ import {
   WorkspaceMenuSlotExpanded,
 } from "./WorkspaceMenuSlot";
 
-const NAV_ICON_CLASS = "size-4";
+const NAV_ICON_CLASS = "size-4 shrink-0";
 
 export function WorkspaceSidebar() {
   const { t } = useTranslation();
@@ -30,7 +34,12 @@ export function WorkspaceSidebar() {
     >
       <div className="flex flex-col py-1">
         <NavItem
-          icon={<MessagesSquare strokeWidth={1.5} className={NAV_ICON_CLASS} />}
+          icon={
+            <MessageCircleQuestionMark
+              strokeWidth={2}
+              className={NAV_ICON_CLASS}
+            />
+          }
           label={t("workspace.ask")}
           disabledHint={t("workspace.coming_soon")}
         />
@@ -39,7 +48,7 @@ export function WorkspaceSidebar() {
 
         <LnbSection label={t("workspace.section_workspace")}>
           <NavItem
-            icon={<BookMarked strokeWidth={1.5} className={NAV_ICON_CLASS} />}
+            icon={<BookOpenText strokeWidth={2} className={NAV_ICON_CLASS} />}
             label={t("workspace.references")}
             disabledHint={t("workspace.coming_soon")}
           />

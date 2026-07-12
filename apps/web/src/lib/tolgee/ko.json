@@ -183,11 +183,11 @@
     "topic_empty": "Nothing here yet."
   },
   "workspace": {
-    "ask": "Ask & Narrate",
+    "ask": "묻기",
     "coming_soon": "Coming soon",
     "drafts": "Drafts ({count})",
     "new_space": "New space",
-    "references": "References",
+    "references": "위키",
     "section_spaces": "Spaces",
     "section_workspace": "Workspace"
   }

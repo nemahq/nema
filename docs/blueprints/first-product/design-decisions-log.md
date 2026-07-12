@@ -253,3 +253,45 @@ PR #382에서 LNB 워크스페이스 스위처·Space 목록·설정 모달을 �
 - **반영 안 함(기각)**: "초안 목록을 Space로 스코프해야 하는 것 아니냐"는 지적은 기각 — surface-inventory가 초안 화면을 명시적으로 Workspace 전역으로 설계했다("잘못된 Space에 들어간 걸 여기서 한눈에 보고 바로잡을 수 있어야"). RPC 에러 코드 매핑(P0001 그대로 노출)은 실제 UI 경로로 도달 불가능해서(컴포저의 spaceId는 항상 현재 라우트의 Space이고, 아닌 Space면 SpaceOverview가 애초에 not-found로 막음) 보류.
 
 ---
+
+### 2026-07-12 — 폴리싱 세션(전담) 1라운드: LNB 레이블·아이콘·워크스페이스 아이덴티티
+
+#382 머지 후 새 워크트리에서 전담 폴리싱 세션이 시작한 첫 라운드. `docs/blueprints/first-product/design-reference-log.md`(레퍼런스 기준) 확립 이후 실제 화면(LNB)에 처음 적용한 결과. Kyle과 한 번에 하나씩 핑퐁하며 진행 — 결정 다수가 몇 차례 번복을 거쳐 정착됐다.
+
+**제품 용어 재검토 (개념/코드 용어는 유지, 제품 용어만)**
+- **Ask & Narrate → "Ask"(en) / "묻기"(ko)**: "Narrate"가 실제 시장에서 오디오 내레이션(NotebookLM Audio Overviews)·접근성 스크린리더(Windows Narrator)와 강하게 충돌한다는 걸 웹서치로 확인. 개념 용어 "Narration"·코드(`narrateText` 등)는 그대로 두고 제품 용어만 분리(glossary에 이미 있는 Statement/"Sentence" 분리 선례를 따름). "Ask" 단독으로 갈지 "Ask & Brief"로 갈지 오래 논의했으나, 최종적으로 nav 라벨은 "X & Y" 동사 조합보다 단일 명사가 표준(NN/g 가이드, Perplexity 실제 사례 확인)이라는 근거로 단독 "Ask"로 확정. 국문 "묻기"도 같은 이유로 단독.
+- **References → "Wiki"(en) / "위키"(ko)**: "References"가 학술 인용/참고문헌과 강하게 충돌(확인됨). 대체 후보로 "Index"를 먼저 제안했으나 실제 선례가 약해, Notion의 실제 "Wiki" 기능(검증 상태 포함 구조화 지식베이스)이 Nema의 Reference(인물·조직·프로젝트·제품·용어를 다듬어가며 유지)와 구조적으로 더 잘 맞아 최종 채택. 아이콘은 `BookMarked`(책갈피, 인용 연상 강화) → `Contact`(사람 아이콘, 이질적 엔티티 대표 못함, 기각) → `BookOpenText`(펼친 책, 위키/백과사전 인상)로 정착.
+- 아이콘 선정은 실제 설치된 `lucide-react` 버전(`node_modules`)에서 export 이름을 직접 확인하고 골랐다 — 기억으로 추측하지 않음.
+
+**타이포·간격**
+- `LnbRowBox`에 `font-medium`을 기본값으로 넣어 Ask/Wiki/Space 이름 전부 기본 bold. `NavItem`의 `activeProps`에 있던 중복 `font-medium`은 제거(활성 상태는 배경 하이라이트만으로 구분).
+- `NavItem` 텍스트를 `text-sm`(라벨 `text-xs`보다 한 단계 큼)으로 — 2026-07-11 라운드가 "레이블과 통일"로 내렸던 걸 다시 뒤집은 것. 이유: 레이블(카테고리 제목)과 아이템(실제 클릭 콘텐츠)은 역할이 달라 크기로도 구분돼야 한다는 판단(Notion/Linear류 사이드바 공통 패턴).
+- `NavItem` 행에 `pl-3`(레이블 대비 2px)로 아주 살짝 들여쓰기 — 하이라이트 박스 위치는 안 건드리고 아이콘·텍스트만 안쪽으로 밀었다(2026-07-11 라운드와 같은 기법 재사용).
+- `LnbSection`(레이블 행)에 `py-px` 추가 — `NavItem` 행엔 있었는데 레이블 행엔 없어서 레이블↔첫 아이템 간격(1px)과 아이템↔아이템 간격(2px)이 실측상 달랐던 것을 통일(둘 다 2px).
+
+**긴 이름 처리**
+- `NavItem` 펼침 상태의 활성(Link) 행에 `title={label}` 추가 — 잘린 이름은 네이티브 브라우저 툴팁으로 확인 가능(Carbon/PatternFly 등 실제 가이드가 권장하는 표준 패턴, 커스텀 `Tooltip`보다 단순해 이 케이스엔 이걸 채택). 처음엔 Radix `Tooltip`으로 감쌌다가, `LnbRowBox`가 `{ asChild, className, children }`만 받고 나머지 props(이벤트 핸들러)를 전달 안 해서 실제로 안 뜨는 버그를 발견 → `title` 속성으로 우회(이 저장소엔 "잘린 텍스트+툴팁" 선례 자체가 없었음, `SessionItem`/`UserMenu`/`WorkspaceMenu`도 다 `truncate`만 쓰고 툴팁 없음 확인).
+- 아이콘에 `shrink-0` 누락돼 있어 긴 텍스트가 아이콘을 찌그러뜨리던 버그 발견·수정(`WorkspaceSidebar`의 `NAV_ICON_CLASS`, `SpaceListItem`의 아이콘 클래스).
+- 텍스트 자체의 말줄임(`truncate`)이 `LnbRowBox`(flex 컨테이너) 레벨에 걸려 있어 실제로 동작 안 하던 버그 — `min-w-0 truncate`를 텍스트 전용 `<span>`으로 분리해 해결(flex item은 기본 `min-width: auto`라 내용 크기 이하로 안 줄어듦).
+- 트레일링 액션(`SpaceItemMenu` "...") 자리로 쓰던 고정 `pr-8`을 `group-hover:pr-8`로 변경 — 평소엔 레이블이 끝까지 채우고, 호버 시에만 그만큼 패딩이 생겨 텍스트가 실시간으로 다시 말줄임된다(CSS만으로 동작, JS 불필요).
+
+**Space 아이콘 — 색상 실험 후 중립으로 회귀**
+`Hash` 아이콘(Slack/Discord식 "채널" 연상, Nema의 Space 개념과 안 맞음)을 대체하려고 이름 첫 글자 + Space id 해시 기반 색상 배지를 시도했으나(팔레트까지 설계·weave에 추가), Kyle이 실제로 보고 "여러 색이 리스트에 있으니 시끄럽다"고 판단해 철회. **이 판단은 사실 이미 내려져 있었다** — 2026-07-10 기록의 "백로그: LNB 접힘 상태 Space 목록 아이콘 식별성" 항목이 "지금 안 고침, 멀티 Space 실제로 늘어날 때 재검토"라고 이미 정리해뒀던 걸 이번에 배경 확인 없이 다시 열었던 것. 최종 정착: `Avatar`/색상 팔레트 다 걷어내고 `bg-fg-primary/10 text-fg-primary`(워크스페이스 배지가 다크모드에서 쓰던 것과 같은 조합, 테마별로 자동 조정)로 단순화. **위 백로그 판단은 여전히 유효 — 다음에 이 영역 만지는 세션은 재도출하지 말 것.**
+
+**워크스페이스 배지 — 개인화 색상 도입 (Space와는 다른 결론)**
+Space와 달리 이 배지는 **한 번에 하나만 보이는 단독 요소**라 색상 다양성이 시각적 소음이 되지 않는다고 판단(Slack/Notion의 워크스페이스 스위처가 실제로 브랜드색 대신 워크스페이스별 색을 쓰는 선례 확인). workspaceId 해시 기반으로 5색(violet-700/fuchsia-800/cyan-700/lime-700/yellow-700, 전부 흰 텍스트, WCAG AA 확인) 중 하나를 고정 배정. 몇 차례 조정 있었음:
+- 처음엔 진한 3색(흰 텍스트)+밝은 3색(어두운 텍스트) 조합이었는데 Kyle이 "Rose가 너무 쨍하다" → rose 제외, 나머지 5색을 한 단계씩 더 어둡게, **가운데 텍스트는 전부 흰색으로 통일**(요청) → cyan/lime/yellow도 흰 텍스트가 통과하는 톤(-700)까지 다시 내림.
+- 중간에 "옅은 틴트 배경+진한 텍스트"(status-tint와 같은 패턴)도 시도했다가 "이게 아닌 것 같다"는 피드백으로 원래의 꽉 찬 채우기 방식으로 복귀 — 틴트 버전 코드는 완전히 되돌림.
+- `packages/weave`엔 `--palette-identity-*`(5색, 테마 무관 고정값 — 흰 텍스트 대비를 유지하려면 다크모드에서 밝아지는 일반 패턴을 못 씀)만 추가, workspaceId→색 매핑 로직(`apps/web/src/features/workspace/workspaceAvatarColor.ts`)은 앱 레벨.
+- 접힘 배지 크기 `size-8`→`size-7`(다른 접힘 LNB 아이템과 통일, 이전엔 유독 4px 컸음). 로딩 스켈레톤 크기도 같이 맞춤.
+
+**포커스링이 다음 행 배경에 가려지는 버그**
+`NavItem`(펼침·접힘 모두)에 `relative` + `focus-visible:z-10` 추가 — outline이 `outline-offset-2`로 박스 밖까지 번지는데, LNB 행 간격이 좁아(2px) 다음 행에 가려지고 있었다. `SettingsNav`가 이미 같은 문제를 같은 방식으로 고쳐뒀던 선례를 그대로 따름. 워크스페이스 스위처 버튼 자체는 확인 결과 인접 요소가 없어 이 문제 대상 아님(Kyle 확인).
+
+**접힘 사이드바 토글 버튼**: weave `Button`의 `icon-sm`(size-8)을 그대로 쓰고 있어 다른 접힘 아이템보다 컸음 — `Sidebar.tsx`에서 접힘일 때만 `size-7`로 로컬 override(펼침은 기존 유지). `Sidebar`가 `SessionSidebar`와 공유되는 컴포넌트라 그쪽 접힘 토글도 같이 맞춰짐(의도됨, 그쪽 `NavItem`도 이미 size-7).
+
+**접힘 Space 스켈레톤**: `SpaceList`가 접힘 여부를 아예 안 보고 펼침용 스켈레톤(아이콘+긴 텍스트 바)을 그대로 썼던 버그 — 접힘 전용 분기(가운데 정렬 `size-7 rounded-lg`) 추가.
+
+**다음 라운드**: Space 메인 콘텐츠(오버뷰 피드)로 이동 예정.
+
+---

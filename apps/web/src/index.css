@@ -8,6 +8,13 @@
 @theme inline {
   --color-mode-remember: var(--palette-light-indigo);
   --color-mode-ask: var(--palette-light-orange);
+
+  /* Identity 배지 — 테마 무관 고정값 */
+  --color-identity-violet: var(--palette-identity-violet);
+  --color-identity-fuchsia: var(--palette-identity-fuchsia);
+  --color-identity-cyan: var(--palette-identity-cyan);
+  --color-identity-lime: var(--palette-identity-lime);
+  --color-identity-yellow: var(--palette-identity-yellow);
 }
 
 .dark {

@@ -33,7 +33,7 @@ export function NavItem({
   const disabled = !to;
   const activeProps =
     !disabled && showActive
-      ? { className: "bg-surface-raised-hover/75 font-medium" }
+      ? { className: "bg-surface-raised-hover/75" }
       : undefined;
 
   if (collapsed) {
@@ -49,7 +49,7 @@ export function NavItem({
         to={to}
         params={params}
         aria-label={label}
-        className="flex size-7 items-center justify-center rounded-lg transition-colors duration-fast hover:bg-surface-raised-hover/75"
+        className="relative flex size-7 items-center justify-center rounded-lg transition-colors duration-fast hover:bg-surface-raised-hover/75 focus-visible:z-10"
         activeProps={activeProps}
         activeOptions={activeOptions}
       >
@@ -82,13 +82,21 @@ export function NavItem({
     hoverClassName = "group-hover:bg-surface-raised-hover/75";
   }
 
-  const rowExtraClassName = cn(trailingAction && "pr-8", hoverClassName);
+  // relative + focus-visible:z-10: SettingsNav와 같은 이유로, 포커스된 행을
+  // 형제 위로 띄워 바로 아래 행의 배경이 이 행의 outline을 덮지 않게 한다.
+  // pl-3: 하이라이트 박스 위치(LnbRowBox 공유 px-2.5)는 안 건드리고, 아이콘·
+  // 텍스트만 라벨보다 아주 살짝(2px) 안쪽에서 시작하게 민다.
+  const rowExtraClassName = cn(
+    "relative pl-3 text-sm focus-visible:z-10",
+    trailingAction && "group-hover:pr-8",
+    hoverClassName,
+  );
 
   const row = disabled ? (
     <LnbRowBox asChild className={rowExtraClassName}>
       <div aria-disabled>
         {icon}
-        {label}
+        <span className="min-w-0 truncate">{label}</span>
       </div>
     </LnbRowBox>
   ) : (
@@ -96,11 +104,12 @@ export function NavItem({
       <Link
         to={to}
         params={params}
+        title={label}
         activeProps={activeProps}
         activeOptions={activeOptions}
       >
         {icon}
-        {label}
+        <span className="min-w-0 truncate">{label}</span>
       </Link>
     </LnbRowBox>
   );

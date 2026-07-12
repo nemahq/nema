@@ -15,12 +15,14 @@ import { ChevronDown, LogOut, PanelLeft, Settings } from "@nema-io/weave/icons";
 import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
 import { useSidebar } from "@web/components/layout/Sidebar";
 import { SettingsModal } from "@web/features/settings";
+import { getWorkspaceAvatarColorClass } from "@web/features/workspace/workspaceAvatarColor";
 import { useUser } from "@web/lib/auth";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface WorkspaceMenuProps {
+  workspaceId: string;
   workspaceName: string;
 }
 
@@ -28,7 +30,10 @@ interface WorkspaceMenuProps {
 // 배경 박스 전체 폭과 같아지려면 그만큼 더해야 한다.
 const PILL_HORIZONTAL_PADDING_PX = 12;
 
-export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
+export function WorkspaceMenu({
+  workspaceId,
+  workspaceName,
+}: WorkspaceMenuProps) {
   const { collapsed, toggle } = useSidebar();
   const user = useUser();
   const { t } = useTranslation();
@@ -37,6 +42,7 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
 
   const userInitial = user.displayName.charAt(0).toUpperCase();
   const workspaceInitial = workspaceName.charAt(0).toUpperCase();
+  const avatarColorClass = getWorkspaceAvatarColorClass(workspaceId);
 
   async function handleSignOut() {
     trackEvent("auth.signout");
@@ -53,7 +59,7 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
     <DropdownMenuContent
       side="bottom"
       align="start"
-      // 접힘: 버튼 자체가 아바타 크기(size-8)라 트리거 모서리=아바타 모서리, 보정 불필요.
+      // 접힘: 버튼 자체가 아바타 크기(size-7)라 트리거 모서리=아바타 모서리, 보정 불필요.
       // -6(펼침): 트리거 버튼이 아니라 -mx-1로 넓어진 호버 배경 박스에 맞춘다 —
       // 배경 박스와 트리거 사이 거리(pill 내부 px-1.5=6px)는 -mx 값과 무관하게
       // 고정이라 오프셋도 항상 -6으로 고정.
@@ -103,14 +109,17 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
   return (
     <>
       {collapsed ? (
-        // 버튼을 아바타 크기(size-8)로 맞춰 포커스 링이 아바타를 꽉 감싸게 한다.
+        // 버튼을 다른 접힘 LNB 아이템과 같은 크기(size-7)로 맞춰 포커스 링이 아바타를 꽉 감싸게 한다.
         <div className="flex justify-center py-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
                 aria-label={workspaceName}
-                className="flex size-8 items-center justify-center rounded-md bg-brand-accent text-sm font-medium text-white dark:bg-fg-primary/10 dark:text-fg-primary"
+                className={cn(
+                  "flex size-7 items-center justify-center rounded-md text-sm font-medium text-white",
+                  avatarColorClass,
+                )}
               >
                 {workspaceInitial}
               </button>
@@ -134,7 +143,12 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
                 // 배경과 안 겹치게 한다(닫힌 채 Tab으로 포커스됐을 땐 그대로 보임).
                 className="flex h-8 w-full min-w-0 items-center gap-1.5 rounded-md pr-8 text-left data-[state=open]:focus-visible:outline-none"
               >
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-accent text-xs font-medium text-white dark:bg-fg-primary/10 dark:text-fg-primary">
+                <span
+                  className={cn(
+                    "flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-medium text-white",
+                    avatarColorClass,
+                  )}
+                >
                   {workspaceInitial}
                 </span>
                 <span className="min-w-0 truncate text-sm font-medium text-fg-primary">
