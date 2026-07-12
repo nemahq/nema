@@ -199,17 +199,24 @@ PR #382에서 LNB 워크스페이스 스위처·Space 목록·설정 모달을 �
 
 **확정된 디자인 규칙 (재도출 불필요)**
 - LNB 행 호버 배경: `surface-raised-hover/75`. 그 행 위에 겹치는 액션 아이콘(우측 "...", "+", 접기 토글)은 진한 토큰 그대로 두고 `hover:brightness-95`(라이트, 어둡게)+`dark:hover:brightness-125`(다크, 반대로 밝게)로 방향을 뒤집어야 구분이 유지된다 — 다크에서 어둡게 하면 오히려 배경과 가까워져 구분이 흐려짐(비직관적이라 재발견 비용 큼, 꼭 기억할 것).
-- "행 위에 겹치는 절대 위치 아이콘"이 있는 곳(`SpaceItemMenu`, `LnbSection` "+", `WorkspaceMenu` 토글)은 아래 행의 배경 트리거를 `hover:`가 아니라 조상의 `group-hover:`로 걸어야 한다. `hover:`로 걸면 아이콘에 마우스가 있을 때 형제 관계라 :hover가 전파 안 돼 배경이 꺼지는 버그가 생긴다(이번 세션에 실제로 겪고 고침).
-- LNB 행 치수: `h-7`(28px), 접힘 정사각 `size-7`, 액션 아이콘 `size-5`, 좌우 마진 `px-2`, 상하 패딩 `py-px`. 이 값들이 `SidebarNavLink`/`SpaceListItem`/`LnbPlaceholderItem`/`LnbSection`/`WorkspaceMenu`에 개별 리터럴로 흩어져 있다 — 다음에 또 조정할 땐 5개 파일 전부 확인.
-- Danger 계열(Button danger, DropdownMenuItem danger)은 전부 `bg-status-error-tint text-status-error hover:bg-status-error/15` 톤으로 통일(Alert error 배너와 동일 조합). weave 전역 레벨에서 이미 반영돼 있으니 개별 컴포넌트에 로컬 override를 만들지 말 것.
+- "행 위에 겹치는 절대 위치 아이콘"이 있는 곳은 아래 행의 배경 트리거를 `hover:`가 아니라 조상의 `group-hover:`로 걸어야 한다. `hover:`로 걸면 아이콘에 마우스가 있을 때 형제 관계라 :hover가 전파 안 돼 배경이 꺼지는 버그가 생긴다(이번 세션에 실제로 겪고 고침) — `NavItem`/`LnbRowBox`가 이 규칙을 이미 캡슐화하고 있으니 새로 짤 필요 없음.
+- LNB 행 치수(`h-7`, 접힘 `size-7`, 좌우 마진 `px-2`, 상하 패딩 `py-px`)와 액션 아이콘(`size-5`, hover 톤)은 각 파일에 흩어져 있지 않고 공통 프리미티브로 통합됨 — 아래 "공통 프리미티브" 참고. 값을 또 조정할 땐 프리미티브 한 곳만 고치면 된다.
+- Danger 계열(Button danger, DropdownMenuItem danger)은 전부 `bg-status-error-tint text-status-error hover:bg-status-error/15` 톤으로 통일(Alert error 배너와 동일 조합), weave `.surface-danger` 컴포넌트 클래스로 정의돼 있다. 개별 컴포넌트에 로컬 override를 만들지 말 것.
 - 포커스링은 `focus-visible:`만 사용(`focus:` 금지), outline 기반 전역 정책이 `packages/weave/src/tokens/index.css`에 이미 구현돼 있어 개별 컴포넌트가 각자 링을 그릴 필요 없음.
 
-**미해결/보류 항목**
-- **`NavItem` 공유 프리미티브 도입 여부** — `SidebarNavLink`/`SpaceListItem`/`LnbPlaceholderItem`이 마크업을 반복 구현 중이며, 이번 세션 중 튜닝을 여러 번 거치며 파일 하나가 업데이트에서 누락된 적도 있었다. 폴리싱 라운드가 반복될수록 비용이 커지니 이 세션에서 결론을 낼 것.
-- **접힘 LNB의 "새 Space 추가" 진입점 부재** — "+"가 이제 펼침 상태 Spaces 라벨 호버에만 있어, 접힘 상태에선 Space를 새로 만들 방법이 없다. PM에게 플래그했으나 아직 답변 못 받음.
-- **Settings 모달 Esc/X로 닫을 때 워크스페이스 스위처로 포커스 복귀 안 됨** — 접근성 관점 known limitation으로 수용, PR #382 Notes에 기록돼 있음.
-- **바깥 클릭으로 드롭다운 닫을 때 포커스링이 다시 뜨는 것** — 동일하게 수용된 한계.
-- **"행+오버레이 아이콘" 패턴과 호버 2단계 시스템의 공통 컴포넌트화** — 지금은 컨벤션으로만 존재, weave 프리미티브로 뽑을지는 미결.
+**공통 프리미티브 (LNB 폴리싱 중 신설, `apps/web/src/components/layout/`)**
+- `NavItem` — 탐색 가능한 LNB 행(접힘/펼침, 툴팁, active, 비활성 placeholder, 우측 오버레이 아이콘 슬롯). `SidebarNavLink`/`LnbPlaceholderItem`/`SpaceListItem`의 반복 마크업을 대체했다. 세션 사이드바(`SessionSidebar`)와 워크스페이스 사이드바(`WorkspaceSidebar`) 둘 다 이걸 쓴다.
+- `LnbRowBox` — NavItem 펼침 행과 `LnbSection` 라벨 행이 공유하는 박스 모양(`h-7 rounded-lg px-2.5` 등). `asChild`(weave가 재노출하는 Radix `Slot`)로 Link/div/span 등 어떤 걸 감싸든 같은 박스가 나온다.
+- `LnbHoverIcon` — 행 위에 겹치는 우측 액션 아이콘(`SpaceItemMenu` "...", `LnbSection` "+", `WorkspaceMenu` 토글)의 공통 hover 스타일. NavItem을 거치지 않는 곳(LnbSection, WorkspaceMenu)에서도 직접 쓴다 — NavItem 전용이 아니다.
+- **LNB 바깥(설정 모달 `SettingsNav` 등)은 고려 범위 밖**이다 — Link가 아니라 button, 접힘 상태 없음, 크기 체계도 달라 구조가 다르다. 재사용 압력(2번째 인스턴스)이 생기기 전까진 강제 통합하지 않는다.
+
+**앞으로 폴리싱할 때 적용할 기준**
+- 값 하나(색, 크기, 여백)를 3곳 이상 동시에 고쳐야 한다면 그 자리에서 개별 수정하지 말고 위 프리미티브에 없는 값인지부터 확인 — 프리미티브 커버 범위 밖이면 새로 뽑을지 이 시점에 판단.
+- 색·톤 변경은 항상 라이트/다크 둘 다 확인 — 이번 세션 버그 다수가 다크 모드에서만 터졌다(예: Select 호버가 컨테이너 배경과 같은 색이라 안 보이던 것, brightness 방향이 반대였던 것).
+- 절대 위치로 겹치는 요소를 새로 만들 때는 형제 occlusion으로 아래 요소의 `:hover`가 죽는지 항상 의심할 것(위 규칙 참고).
+- weave(디자인 시스템) 레벨 변경은 항상 다른 소비처를 먼저 grep — 로컬처럼 보여도 전역 영향일 수 있다(danger variant가 실제로 5개 버튼에 영향을 준 사례).
+- red/danger 톤은 이 프로젝트에서 유독 왔다 갔다 한 이력이 있다(톤다운 후 전량 원복된 전례) — 로컬 override로 할지 weave 전역으로 할지 범위를 먼저 확인하고 진행.
+- 매 변경 후 `pnpm --filter web typecheck`/`lint`(+ 구조 변경 시 `knip`) 확인, weave 레벨 변경 후엔 dev 서버 재기동.
 
 **PR 상태**: #382 open, 이 세션의 커밋 4개 푸시 완료(`993737f6..8b020a36`). 제목/본문은 PM 요청으로 이번엔 갱신 안 함 — 폴리싱 세션이 이 PR을 이어 쓸지 새 PR로 시작할지 PM 확인 필요.
 
