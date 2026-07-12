@@ -23,9 +23,9 @@ interface WorkspaceMenuProps {
   workspaceName: string;
 }
 
-// Radix 트리거 폭은 토글 버튼을 뺀 스위처 버튼만 잰다 — wrapper 자체 px-1.5
-// (12px)+gap-1(4px)+토글 버튼(p-1×2+size-4=24px)을 더해야 pill 전체 폭과 같아진다.
-const DROPDOWN_TOGGLE_AREA_WIDTH_PX = 40;
+// 트리거는 pill의 px-1.5(6px×2) 안쪽 컨텐츠 폭만 재므로, 드롭다운이 pill
+// 배경 박스 전체 폭과 같아지려면 그만큼 더해야 한다.
+const PILL_HORIZONTAL_PADDING_PX = 12;
 
 export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
   const { collapsed, toggle } = useSidebar();
@@ -53,15 +53,18 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
       side="bottom"
       align="start"
       // 접힘: 버튼 자체가 아바타 크기(size-8)라 트리거 모서리=아바타 모서리, 보정 불필요.
-      // -6(펼침): 트리거 버튼(x=12)이 아니라 -mx-1.5로 넓어진 호버 배경 박스(x=6)에 맞춘다.
+      // -6(펼침): 트리거 버튼이 아니라 -mx-1로 넓어진 호버 배경 박스에 맞춘다 —
+      // 배경 박스와 트리거 사이 거리(pill 내부 px-1.5=6px)는 -mx 값과 무관하게
+      // 고정이라 오프셋도 항상 -6으로 고정.
       alignOffset={collapsed ? 0 : -6}
-      // 10: 배경 박스가 버튼보다 py-1.5(6px) 더 내려가 있어, 그 아래에 여유 4px를 더한다.
-      sideOffset={collapsed ? 4 : 10}
+      // 트리거 버튼이 이제 pill과 같은 높이(h-8)라 배경 박스 모서리 = 버튼 모서리 —
+      // 접힘·펼침 모두 보정 없이 여유 4px만 둔다.
+      sideOffset={4}
       style={
         collapsed
           ? undefined
           : {
-              width: `calc(var(--radix-dropdown-menu-trigger-width) + ${DROPDOWN_TOGGLE_AREA_WIDTH_PX}px)`,
+              width: `calc(var(--radix-dropdown-menu-trigger-width) + ${PILL_HORIZONTAL_PADDING_PX}px)`,
             }
       }
       className={cn(
@@ -81,14 +84,14 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
       <DropdownMenuSeparator />
       <DropdownMenuItem
         onClick={() => setSettingsOpen(true)}
-        className="cursor-pointer data-[highlighted]:bg-surface-raised-hover dark:data-[highlighted]:bg-fg-primary/10"
+        className="cursor-pointer data-[highlighted]:bg-surface-raised-hover/75 dark:data-[highlighted]:bg-fg-primary/10"
       >
         <Settings />
         {t("settings.settings")}
       </DropdownMenuItem>
       <DropdownMenuItem
         onClick={handleSignOut}
-        className="cursor-pointer data-[highlighted]:bg-surface-raised-hover dark:data-[highlighted]:bg-fg-primary/10"
+        className="cursor-pointer data-[highlighted]:bg-surface-raised-hover/75 dark:data-[highlighted]:bg-fg-primary/10"
       >
         <LogOut />
         {t("settings.sign_out")}
@@ -115,12 +118,12 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
           </DropdownMenu>
         </div>
       ) : (
-        // 스위처(드롭다운 트리거)와 접기 토글이 한 pill 안에 같이 산다 — 각자
-        // 배경을 갖지 않고 이 wrapper의 hover 배경 하나를 공유해야 노션 웹처럼
-        // 하나로 뭉쳐 보인다(따로 배경을 가지면 두 영역으로 쪼개져 보임).
-        // -mx-1.5: 부모 헤더 row의 px-3을 상쇄해, 아래 LNB 아이템 행(px-1.5)과
+        // 트리거 클릭/포커스 영역이 접기 토글 자리까지 포함한 pill 전체다 — 토글은
+        // 그 위에 겹쳐진 절대 위치 아이콘(SpaceItemMenu "..."와 동일 패턴)이라
+        // 트리거의 pr-8이 토글 자리만큼 공간을 비워둔다.
+        // -mx-1: 부모 헤더 row의 px-3을 상쇄해, 아래 LNB 아이템 행(px-2)과
         // 하이라이트 박스 좌우 인셋을 맞춘다.
-        <div className="group/switcher -mx-1.5 flex min-w-0 flex-1 items-center gap-1 rounded-lg px-1.5 py-1.5 hover:bg-surface-raised-hover has-[[data-state=open]]:bg-surface-raised-hover">
+        <div className="group/switcher relative -mx-1 flex min-w-0 flex-1 items-center rounded-lg px-1.5 hover:bg-surface-raised-hover/75 has-[[data-state=open]]:bg-surface-raised-hover/75 has-[:focus-visible]:bg-surface-raised-hover/75">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -128,7 +131,7 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
                 // 열림 상태는 위 wrapper의 has-[[data-state=open]] 배경이 pill 전체에
                 // 이미 퍼져 있으니, 트리거 자체 포커스 아웃라인은 열렸을 때만 지워
                 // 배경과 안 겹치게 한다(닫힌 채 Tab으로 포커스됐을 땐 그대로 보임).
-                className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md text-left data-[state=open]:focus-visible:outline-none"
+                className="flex h-8 w-full min-w-0 items-center gap-1.5 rounded-md pr-8 text-left data-[state=open]:focus-visible:outline-none"
               >
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-accent text-xs font-medium text-white dark:bg-fg-primary/10 dark:text-fg-primary">
                   {workspaceInitial}
@@ -145,7 +148,7 @@ export function WorkspaceMenu({ workspaceName }: WorkspaceMenuProps) {
             type="button"
             onClick={handleToggleSidebar}
             aria-label={t("layout.collapse_sidebar")}
-            className="shrink-0 rounded-md p-1 opacity-0 transition-opacity duration-fast focus-visible:opacity-100 group-hover/switcher:opacity-100"
+            className="absolute right-2.5 flex size-5 shrink-0 items-center justify-center rounded-md opacity-0 transition-colors duration-fast hover:bg-surface-raised-hover hover:brightness-95 dark:hover:brightness-125 focus-visible:opacity-100 group-hover/switcher:opacity-100"
           >
             <PanelLeft strokeWidth={1.5} className="size-4" />
           </button>

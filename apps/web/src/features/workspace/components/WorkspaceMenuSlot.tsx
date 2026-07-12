@@ -23,7 +23,7 @@ export function WorkspaceMenuSlot({ mode }: WorkspaceMenuSlotProps) {
       // 실제 pill(아바타 size-6 + 이름) 구조를 그대로 따라 아이콘·텍스트 자리만
       // 얇게 표시 — pill 전체를 단색으로 채우면 투박해 보인다.
       return (
-        <div className="-mx-1.5 flex flex-1 items-center gap-1.5 rounded-md px-1.5 py-1.5">
+        <div className="-mx-1 flex h-8 flex-1 items-center gap-1.5 rounded-md px-1.5">
           <Skeleton className="size-6 shrink-0 rounded-md" />
           <Skeleton className="h-3.5 w-24 rounded-sm" />
         </div>
