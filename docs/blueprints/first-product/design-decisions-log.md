@@ -454,3 +454,9 @@ Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감*
 - **참고만, 미반영(PM 확인 후 별도)**: "삭제가 cancelled 상태에만 연결돼 있고 failed/empty는 안 된다"는 지적은 버그가 아니라 기존에 이미 의도적으로 내린 결정(위 `DraftCard` 항목)이라 코드는 안 건드리고, `intake-flow.md`의 "초안에서 Source 삭제" 케이스에 그 범위를 명시하는 참고만 추가했다.
 
 ---
+
+### 2026-07-13 — 초안 탭 처리중 표시 색상: 파란색(`status-info`), 노랑/주황 아님
+
+`DraftsNavItem`의 처리중 pulse 점 색상은 `text-status-info`(파랑)로 확정. GitHub Actions·Vercel(Geist Status Dot)류의 "진행중=노랑/주황" 관례를 실제로 조사했으나 기각 — Nema는 `status-warning`(경고 전용 톤)과 색이 겹치면 "그냥 처리중"과 "실제 주의 필요"의 심각도 구분이 흐려진다고 판단, 일반 디자인 시스템(Carbon류)의 "파랑=정보성/진행중" 관례를 따랐다. 이후 세션이 GitHub Actions식 노랑/주황으로 되돌리기 전에 이 트레이드오프를 먼저 확인할 것.
+
+---
