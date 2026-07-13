@@ -61,7 +61,8 @@
     "section_load_failed": "이 부분을 다시 불러올게요."
   },
   "intake": {
-    "compose_body_placeholder": "Paste or write anything",
+    "compose_body_placeholder": "무엇을 기억해둘까요?",
+    "compose_submit": "기억하기",
     "draft_delete_confirm_description": "This is permanent. It won't go to trash, and can't be undone.",
     "draft_delete_confirm_title": "Delete this source?",
     "draft_extract": "Extract",
@@ -186,7 +187,7 @@
   "workspace": {
     "ask": "묻기",
     "coming_soon": "곧 지원 예정",
-    "drafts": "초안 ({count})",
+    "drafts": "초안",
     "new_space": "새 스페이스 추가",
     "references": "위키",
     "section_spaces": "스페이스",

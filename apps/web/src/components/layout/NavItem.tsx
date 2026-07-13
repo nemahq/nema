@@ -15,8 +15,12 @@ interface NavItemProps {
   activeOptions?: LinkProps["activeOptions"];
   // to가 없으면 비활성(placeholder) 모드 — 툴팁에 이 힌트가 덧붙는다.
   disabledHint?: ReactNode;
-  // 행 위에 겹치는 우측 액션 아이콘(예: SpaceItemMenu) — 펼침 모드에서만 렌더된다.
-  trailingAction?: ReactNode;
+  // 행 우측 슬롯(카운트 뱃지·hover 전용 메뉴 등) — 펼침 모드에서만 렌더되고, 항상
+  // 보일지 hover에만 보일지는 소비처가 자기 스타일(opacity 등)로 정한다.
+  rightContent?: ReactNode;
+  // 라벨 텍스트 바로 뒤에 붙는 슬롯(예: 상태 점) — rightContent와 달리 절대위치가
+  // 아니라 라벨 옆에 자연스럽게 이어진다. 펼침 모드에서만 렌더된다.
+  labelSuffix?: ReactNode;
 }
 
 export function NavItem({
@@ -27,7 +31,8 @@ export function NavItem({
   showActive = true,
   activeOptions,
   disabledHint,
-  trailingAction,
+  rightContent,
+  labelSuffix,
 }: NavItemProps) {
   const { collapsed } = useSidebar();
   const disabled = !to;
@@ -78,7 +83,7 @@ export function NavItem({
   let hoverClassName = "hover:bg-surface-raised-hover/75";
   if (disabled) {
     hoverClassName = "cursor-default text-fg-tertiary/60";
-  } else if (trailingAction) {
+  } else if (rightContent) {
     hoverClassName = "group-hover:bg-surface-raised-hover/75";
   }
 
@@ -86,9 +91,11 @@ export function NavItem({
   // 형제 위로 띄워 바로 아래 행의 배경이 이 행의 outline을 덮지 않게 한다.
   // pl-3: 하이라이트 박스 위치(LnbRowBox 공유 px-2.5)는 안 건드리고, 아이콘·
   // 텍스트만 라벨보다 아주 살짝(2px) 안쪽에서 시작하게 민다.
+  // pr-8: rightContent는 절대위치로 겹쳐 그려지니(아래 참고), hover에서만 보이든
+  // 항상 보이든 상관없이 라벨 텍스트가 그 자리 밑으로 안 들어가게 항상 비워둔다.
   const rowExtraClassName = cn(
     "relative pl-3 text-sm focus-visible:z-10",
-    trailingAction && "group-hover:pr-8",
+    rightContent && "pr-8",
     hoverClassName,
   );
 
@@ -97,6 +104,7 @@ export function NavItem({
       <div aria-disabled>
         {icon}
         <span className="min-w-0 truncate">{label}</span>
+        {labelSuffix}
       </div>
     </LnbRowBox>
   ) : (
@@ -110,6 +118,7 @@ export function NavItem({
       >
         {icon}
         <span className="min-w-0 truncate">{label}</span>
+        {labelSuffix}
       </Link>
     </LnbRowBox>
   );
@@ -118,7 +127,7 @@ export function NavItem({
     <div
       className={cn(
         "px-2 py-px",
-        trailingAction && "group relative flex items-center",
+        rightContent && "group relative flex items-center",
       )}
     >
       {disabled ? (
@@ -131,7 +140,7 @@ export function NavItem({
       ) : (
         row
       )}
-      {trailingAction}
+      {rightContent}
     </div>
   );
 }
