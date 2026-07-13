@@ -25,3 +25,12 @@ export const SourceGetInputSchema = z.object({
 });
 
 export type SourceGetInput = z.infer<typeof SourceGetInputSchema>;
+
+// 초안 액션(취소·삭제·Digest 추출 실행) 공용 입력 — 셋 다 "이 원본에" 말고는 인자가 없다.
+// 어떤 상태에서 무엇이 허용되는지는 전부 서버 판정이라(RPC의 WHERE 가드) 클라이언트가
+// 상태를 실어 보낼 게 없다.
+export const SourceActionInputSchema = z.object({
+  sourceId: z.string().uuid(),
+});
+
+export type SourceActionInput = z.infer<typeof SourceActionInputSchema>;

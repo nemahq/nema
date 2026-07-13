@@ -4,6 +4,7 @@ export type SupabaseErrorCode =
   | "precondition"
   | "space_min_one"
   | "space_name_conflict"
+  | "source_state_changed"
   | "query_failed";
 
 const PG_NOT_FOUND = "P0002";
@@ -19,6 +20,11 @@ const NEMA_SPACE_MIN_ONE = "NM002";
 // 두면 나중에 이 테이블에 다른 unique 제약이 생겨도 전부 "이름 중복"으로 오매핑되니,
 // RPC가 제약 이름을 확인한 뒤에만 이 커스텀 코드로 바꿔 던진다.
 const NEMA_SPACE_NAME_CONFLICT = "NM003";
+// 초안 액션(취소·삭제·Digest 추출 실행)의 상태 가드 실패 — 셋 다 "이 초안이 그 사이 다른
+// 상태로 갔다"는 한 가지 사실이라 코드를 쪼개지 않는다(취소하려는데 이미 끝났음, 이미
+// 취소된 걸 또 취소, 리뷰가 열린 뒤 재추출 클릭, 처리 중인데 삭제 클릭 — 전부 같은 말).
+// 장애가 아니라 정상적인 동시성 결과라 Sentry로 올리지 않는다(EXPECTED_DOMAIN_CODES).
+const NEMA_SOURCE_STATE_CHANGED = "NM004";
 
 export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
   switch (pgCode) {
@@ -33,6 +39,8 @@ export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
       return "space_min_one";
     case NEMA_SPACE_NAME_CONFLICT:
       return "space_name_conflict";
+    case NEMA_SOURCE_STATE_CHANGED:
+      return "source_state_changed";
     default:
       return "query_failed";
   }

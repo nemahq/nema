@@ -28,6 +28,10 @@ import {
   DigestGenerationSchema,
 } from "@server/prompts/digest-generation";
 
+import {
+  registerDigestion,
+  unregisterDigestion,
+} from "./digestion-cancellation";
 import { limitLlmCall } from "./llm-limiter";
 import type { PendingDigestionSource } from "./types";
 import { PendingDigestionSourceSchema } from "./types";
@@ -83,10 +87,44 @@ export async function runDigestionPass(deps: DigestionDeps): Promise<number> {
   return processed;
 }
 
+// 취소 창구 — 사람이 "처리 중 취소"를 누르면 cancel_source_digestion이 DB를 'cancelled'로
+// 옮기고(워커가 재클레임 못 함), 이 controller가 떠 있는 LLM 콜을 끊는다.
+//
+// 취소로 끊긴 콜은 실패가 아니다: Sentry에도 안 올리고 retry도 안 올린다(둘 다 했다간 사람이
+// 의도한 정지가 오류 알림과 재시도 예산 소모로 둔갑한다). abort가 콜을 끊은 시점부터 나오는
+// 예외는 종류를 안 가리고 전부 취소로 친다 — 진짜 오류가 그 찰나에 겹쳤더라도 원본은 이미
+// cancelled라 재시도할 대상이 아니라서 결론이 같다.
+//
+// 취소가 LLM 콜이 끝난 뒤·적재 RPC 전에 도착하는 경우: create_ingestion_review가
+// digestion_status='pending'을 WHERE로 걸어 예외를 뱉으므로 changeset은 어느 쪽이 이기든
+// 안 생긴다 — 이건 DB 가드가 보장한다. 다만 그 예외가 올라오는 시점에 abort가 아직 안
+// 도착했으면 아래 aborted 가드를 못 타고 Sentry에 한 건 올라간다(데이터는 멀쩡하고 알림만
+// 뜨는, 좁고 무해한 창). 정합성은 DB가, 알림 억제는 아래 가드가 맡는 식으로 갈려 있다.
 async function processDigestion(
   source: PendingDigestionSource,
   deps: DigestionDeps,
 ): Promise<void> {
+  const controller = new AbortController();
+  registerDigestion(source.id, controller);
+
+  try {
+    await digestSource({ source, deps, signal: controller.signal });
+  } catch (err) {
+    if (controller.signal.aborted) {
+      return;
+    }
+    throw err;
+  } finally {
+    unregisterDigestion(source.id, controller);
+  }
+}
+
+async function digestSource(params: {
+  source: PendingDigestionSource;
+  deps: DigestionDeps;
+  signal: AbortSignal;
+}): Promise<void> {
+  const { source, deps, signal } = params;
   const registries = await fetchRegistries(deps.supabase, {
     spaceId: source.space_id,
     workspaceId: source.workspace_id,
@@ -114,8 +152,15 @@ async function processDigestion(
       messages: [{ role: "user", content: message }],
       timeoutMs: DIGESTION_TIMEOUT_MS,
       maxRetries: 0,
+      signal,
     }),
   );
+
+  // 콜이 끝난 뒤 도착한 취소 — 결과를 버린다. 여기서 안 걸러도 적재 RPC의 pending 가드가
+  // 막지만, 그건 예외 경로라 취소가 조용한 정지가 아니라 오류처럼 보이게 된다.
+  if (signal.aborted) {
+    return;
+  }
 
   const normalized = normalizeGeneratedDigests(output, {
     labelToId,

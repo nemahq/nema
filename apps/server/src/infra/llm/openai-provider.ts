@@ -78,15 +78,25 @@ export class OpenAiProvider implements LlmProvider {
   }
 
   // SDK가 명시적 undefined timeout/maxRetries를 거부하므로 정의된 옵션만 담아 전달
+  // signal은 SDK 요청 옵션으로 내려야 실제로 HTTP 요청이 끊긴다 — 스트리밍 루프의
+  // aborted 가드는 이미 받은 청크를 그만 읽을 뿐이라, 비스트리밍 호출(generateStructured)엔
+  // 그런 루프조차 없어 취소가 아무것도 안 끊는다(콜은 끝까지 돌고 토큰을 태운다).
   private requestOptions(
-    params: Pick<GenerateTextParams, "timeoutMs" | "maxRetries">,
-  ): { timeout?: number; maxRetries?: number } {
-    const options: { timeout?: number; maxRetries?: number } = {};
+    params: Pick<GenerateTextParams, "timeoutMs" | "maxRetries" | "signal">,
+  ): { timeout?: number; maxRetries?: number; signal?: AbortSignal } {
+    const options: {
+      timeout?: number;
+      maxRetries?: number;
+      signal?: AbortSignal;
+    } = {};
     if (params.timeoutMs !== undefined) {
       options.timeout = params.timeoutMs;
     }
     if (params.maxRetries !== undefined) {
       options.maxRetries = params.maxRetries;
+    }
+    if (params.signal !== undefined) {
+      options.signal = params.signal;
     }
     return options;
   }
@@ -161,7 +171,7 @@ export class OpenAiProvider implements LlmProvider {
       if (params.signal?.aborted) {
         return;
       }
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -204,7 +214,7 @@ export class OpenAiProvider implements LlmProvider {
       this.emitUsage(params.onUsage, response.usage);
       return result.data;
     } catch (error) {
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -233,7 +243,7 @@ export class OpenAiProvider implements LlmProvider {
       this.emitUsage(params.onUsage, response.usage);
       return content;
     } catch (error) {
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -287,9 +297,20 @@ export class OpenAiProvider implements LlmProvider {
     return null;
   }
 
-  private mapError(error: unknown): LlmError {
+  // abort 판정이 맨 앞에 온다 — SDK가 abort를 어떤 예외로 던지는지에 기대지 않고 signal만
+  // 본다. 이게 뒤로 밀리면 취소가 "unknown"으로 분류되고, 워커의 재시도 정책이 unknown을
+  // 재시도 대상에 넣고 있어 방금 사람이 취소한 작업을 다시 부른다. 취소를 실패로 안 보는
+  // 책임을 호출부 규율이 아니라 provider 레이어가 진다.
+  private mapError(error: unknown, signal?: AbortSignal): LlmError {
     if (error instanceof LlmError) {
       return error;
+    }
+    if (signal?.aborted) {
+      return new LlmError(
+        "aborted",
+        "LLM call was aborted by the caller",
+        error,
+      );
     }
     if (error instanceof APIConnectionTimeoutError) {
       return new LlmError("timeout", "LLM request timed out", error);

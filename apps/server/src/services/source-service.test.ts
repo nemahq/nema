@@ -1,8 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@server/infra/statement-sync", () => ({
+  abortDigestion: vi.fn(),
+}));
+
+import { abortDigestion } from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
-import { createSource, fetchMergedSourceIds } from "./source-service";
+import {
+  cancelSourceDigestion,
+  createSource,
+  deleteSource,
+  fetchMergedSourceIds,
+  startSourceDigestion,
+} from "./source-service";
 
 // 테이블별 canned rows를 돌려주는 .from 체인 stub — select/eq/in 무시하고 then으로 resolve.
 // fetchMergedSourceIds는 statement_relations·statement_sources 두 테이블을 각각 조회한다.
@@ -148,5 +159,99 @@ describe("createSource", () => {
         params: { p_space_id: OLDEST_SPACE, p_body: "hello" },
       },
     ]);
+  });
+});
+
+// --- 초안 액션 취소 (intake-flow "처리 중 취소") ---
+
+const CANCEL_SOURCE_ID = "cccccccc-0000-4000-a000-000000000001";
+
+function mockRpcSupabase(error: { message: string } | null) {
+  const rpc = vi.fn(async () => ({ data: null, error }));
+  return { supabase: { rpc } as unknown as TypedSupabaseClient, rpc };
+}
+
+describe("cancelSourceDigestion", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("RPC로 취소를 확정한 뒤에야 떠 있는 콜을 끊는다", async () => {
+    const { supabase, rpc } = mockRpcSupabase(null);
+
+    await cancelSourceDigestion({ supabase, sourceId: CANCEL_SOURCE_ID });
+
+    expect(rpc).toHaveBeenCalledWith("cancel_source_digestion", {
+      p_source_id: CANCEL_SOURCE_ID,
+    });
+    expect(abortDigestion).toHaveBeenCalledWith(CANCEL_SOURCE_ID);
+  });
+
+  it("RPC가 거부하면 콜을 끊지 않는다 — 멤버십 검증이 RPC 안에 있어, abort를 앞세우면 남의 Space 처리를 방해할 수 있다", async () => {
+    const { supabase } = mockRpcSupabase({
+      message:
+        "source ... is not a source being digested that the caller can cancel",
+    });
+
+    await expect(
+      cancelSourceDigestion({ supabase, sourceId: CANCEL_SOURCE_ID }),
+    ).rejects.toThrow();
+
+    expect(abortDigestion).not.toHaveBeenCalled();
+  });
+});
+
+describe("startSourceDigestion", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("추출 실행은 RPC 하나로 끝난다 — 떠 있는 콜이 없으니 abort는 부르지 않는다", async () => {
+    const { supabase, rpc } = mockRpcSupabase(null);
+
+    await startSourceDigestion({ supabase, sourceId: CANCEL_SOURCE_ID });
+
+    expect(rpc).toHaveBeenCalledWith("start_source_digestion", {
+      p_source_id: CANCEL_SOURCE_ID,
+    });
+    expect(abortDigestion).not.toHaveBeenCalled();
+  });
+
+  it("가드가 지면(리뷰가 이미 열림 등) 오류를 그대로 올린다", async () => {
+    const { supabase } = mockRpcSupabase({
+      message: "source ... already has a review awaiting confirmation",
+    });
+
+    await expect(
+      startSourceDigestion({ supabase, sourceId: CANCEL_SOURCE_ID }),
+    ).rejects.toThrow();
+  });
+});
+
+describe("deleteSource", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // 완전 삭제의 정본은 trash_source다 — 결정 #2대로 사용자에겐 복원 표면이 없고,
+  // 백엔드의 30일 purge 유예는 사용자 눈에 안 보이는 backstop이다.
+  it("삭제는 기존 trash_source RPC를 그대로 쓴다", async () => {
+    const { supabase, rpc } = mockRpcSupabase(null);
+
+    await deleteSource({ supabase, sourceId: CANCEL_SOURCE_ID });
+
+    expect(rpc).toHaveBeenCalledWith("trash_source", {
+      p_source_id: CANCEL_SOURCE_ID,
+    });
+  });
+
+  it("처리 중이라 가드가 지면 오류를 그대로 올린다", async () => {
+    const { supabase } = mockRpcSupabase({
+      message: "source ... is not an idle pending source the caller can trash",
+    });
+
+    await expect(
+      deleteSource({ supabase, sourceId: CANCEL_SOURCE_ID }),
+    ).rejects.toThrow();
   });
 });

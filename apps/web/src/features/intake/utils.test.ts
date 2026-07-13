@@ -47,6 +47,12 @@ describe("draftStatus", () => {
       "empty",
     );
   });
+
+  it("cancelled면 cancelled", () => {
+    expect(draftStatus(buildSource({ digestionStatus: "cancelled" }))).toBe(
+      "cancelled",
+    );
+  });
 });
 
 describe("isDraftItem", () => {

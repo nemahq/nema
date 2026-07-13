@@ -650,7 +650,7 @@ export type Database = {
           body: string;
           created_at: string;
           digestion_retry_count: number;
-          digestion_status: Database["public"]["Enums"]["ingestion_status"];
+          digestion_status: Database["public"]["Enums"]["digestion_status"];
           error_message: string | null;
           extraction_retry_count: number;
           extraction_status: Database["public"]["Enums"]["ingestion_status"];
@@ -673,7 +673,7 @@ export type Database = {
           body: string;
           created_at?: string;
           digestion_retry_count?: number;
-          digestion_status?: Database["public"]["Enums"]["ingestion_status"];
+          digestion_status?: Database["public"]["Enums"]["digestion_status"];
           error_message?: string | null;
           extraction_retry_count?: number;
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
@@ -696,7 +696,7 @@ export type Database = {
           body?: string;
           created_at?: string;
           digestion_retry_count?: number;
-          digestion_status?: Database["public"]["Enums"]["ingestion_status"];
+          digestion_status?: Database["public"]["Enums"]["digestion_status"];
           error_message?: string | null;
           extraction_retry_count?: number;
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
@@ -1149,6 +1149,10 @@ export type Database = {
         Returns: undefined;
       };
       archive_tag: { Args: { p_tag_id: string }; Returns: undefined };
+      cancel_source_digestion: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
       complete_source_digestion: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -1322,10 +1326,6 @@ export type Database = {
         Args: { p_source_id: string };
         Returns: undefined;
       };
-      retry_source_digestion: {
-        Args: { p_source_id: string };
-        Returns: undefined;
-      };
       retry_source_extraction: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -1341,6 +1341,10 @@ export type Database = {
       revert_changeset: { Args: { p_changeset_id: string }; Returns: string };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
+      start_source_digestion: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
       trash_source: { Args: { p_source_id: string }; Returns: undefined };
       unlink_reference_tag: {
         Args: { p_reference_id: string; p_tag_id: string };
@@ -1400,6 +1404,7 @@ export type Database = {
       changeset_status: "pending" | "applied" | "rejected";
       changeset_type: "ingestion" | "relation" | "manual" | "revert";
       digest_status: "active" | "archived";
+      digestion_status: "pending" | "completed" | "failed" | "cancelled";
       ingestion_status: "pending" | "completed" | "failed";
       reference_status: "active" | "archived";
       reference_type:
@@ -1566,6 +1571,7 @@ export const Constants = {
       changeset_status: ["pending", "applied", "rejected"],
       changeset_type: ["ingestion", "relation", "manual", "revert"],
       digest_status: ["active", "archived"],
+      digestion_status: ["pending", "completed", "failed", "cancelled"],
       ingestion_status: ["pending", "completed", "failed"],
       reference_status: ["active", "archived"],
       reference_type: ["person", "organization", "project", "product", "term"],

@@ -432,3 +432,25 @@ Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감*
 **시각 검증**: 실제 화면에 없는 것(Checkbox 미사용, Avatar fallback은 프로필 사진 있는 계정이라 안 보임, TabbedPanel/ResizeHandle은 v1 세션이 하나도 없어 라우트 자체가 없음)은 `SpaceOverview.tsx`에 임시 디버그 프리뷰 블록을 추가해 브라우저로 직접 확인 후 삭제(커밋 안 됨, diff 없음 확인). Input 포커스 보더/선택 하이라이트는 실제 Space 설정 모달에서 스크린샷으로 확인.
 
 ---
+
+### 2026-07-13 — 초안 관리 2차 슬라이스: 취소·삭제·수동 추출 실행
+
+`intake-flow.md` "초안 관리" 4케이스(처리 중 취소, 초안에서 Source 삭제, 처리 중 액션 잠금, 초안에서 Digest 추출 실행)만. Space 재지정·제목편집·실패/결과없음 재시도는 여전히 다음 슬라이스(2026-07-12 세션 결정 그대로). BE(취소·삭제·수동 실행 mutation 3개 + `digestion_status` enum 확장)는 같은 워크트리에서 다른 세션이 동시 진행 — 착수 시점엔 계약이 없어 예상 이름으로 먼저 짜고, BE 커밋이 워킹 트리에 들어올 때마다 실제 라우터(`source-router.ts`)·스키마(`SourceActionInputSchema`)를 다시 읽어 맞췄다. 최종 확인된 계약: `source.cancelDigestion`/`source.startDigestion`/`source.delete`, 입력은 셋 다 `{ sourceId }`(`SourceActionInputSchema`) — 상태별 허용 여부는 전부 서버 RPC의 WHERE 가드가 판정하므로 클라가 상태를 실어 보낼 게 없다.
+
+- **`draftStatus` 확장 — `cancelled` 추가**: `digestionStatus`가 `pending|completed|failed`(3종)에서 `cancelled` 포함 4종으로 늘어난 게 BE 마이그레이션(`20260713090000_source_digestion_cancel.sql`)의 핵심 — 취소가 필드만 되돌리면 워커 폴링(2초)이 그대로 재클레임해버려서, "재클레임 안 되는 진짜 상태"가 별도 enum 값으로 필요했다고 함(BE 판단, 마이그레이션 주석 참고). FE는 이 4번째 값을 `draftStatus`에 그대로 매핑만 하면 됐다 — `PendingSourceItem.digestionStatus` 타입이 `AppRouter` 추론을 통해 자동으로 반영되니 `types.ts`는 손댈 게 없었다.
+- **`isDraftLocked` 헬퍼 신설**: intake-flow.md 케이스 3의 "처리 중 상태에서 액션 잠금"은 `processing`(즉 `digestionStatus==='pending'`) 하나만 해당 — `cancelled`/`failed`/`empty` 셋 다 명세가 말하는 "평범한 대기 상태"라 액션이 열린다. 이 판정을 `DraftCard`에 흩어두지 않고 `utils.ts`에 `draftStatus`와 같이 둬서, 나중에 잠금 조건이 바뀌어도 한 곳만 고치면 되게 했다.
+- **`DraftCard`는 분기만, 액션은 하위 컴포넌트로 분리**: `apps/web/docs/conventions.md`의 "2개 이상 독립 상태 그룹은 컴포넌트로 분리" 규칙대로 — 취소 훅(처리 중 전용)과 추출·삭제 훅(+삭제 다이얼로그 open 상태, 평범한 대기 전용)은 상태가 상호 배타적이라 겹치지 않는다. `DraftProcessingActions`(취소)/`DraftIdleActions`(추출+삭제, `DeleteSourceDialog` 포함)로 나누고, `DraftCard`는 `STATUS_META`/`FOOTER_BY_STATUS` 두 `Record` 맵(`docs/guides/conventions.md` "판별자 값 매핑은 Record 우선")으로 상태→배지·상태→풋터 컴포넌트를 고르기만 한다. `failed`/`empty`는 이번에도 풋터가 없음(그대로 유지) — 재시도 액션은 여전히 범위 밖.
+- **Space 재지정·제목편집 — 별도 disabled placeholder 버튼을 만들지 않음(내 판단, PM 확인 필요)**: 브리핑은 "처리 중일 땐 이 액션들과 Space 재지정·제목편집도 자리는 잠긴 걸로 표시"였는데, 이 둘은 평범한 대기 상태에서도 아직 버튼 자체가 없다(다음 슬라이스 몫). 잠금 상태에서만 갑자기 등장하는 dead 버튼 4개를 만드는 대신, `DraftProcessingActions`에 공용 캡션 하나(Lock 아이콘 + `intake.draft_locked_reason`, "처리 중엔 편집할 수 없어요")로 4개 액션이 다 잠겼다는 사유를 뭉쳐 전달했다. 두 미구현 액션이 실제 버튼으로 생기면 이 캡션 방식이 맞는지 재검토 필요 — PM 확인 전 임시 판단으로 남겨둠.
+- **삭제 확인 다이얼로그 — `DeleteSessionDialog` 패턴 재사용(버튼 확인, 타이핑 확인 아님)**: `SpaceDeleteDialog`(타이핑 확인)와 달리 무게가 가벼운 쪽을 골랐다 — draft 단계 Source는 아직 Digest/Statement 같은 파생물이 없어(결정 #2가 말하는 "복원 시맨틱이 복잡해지는" 케이스가 아님) 실수해도 되돌릴 파급이 작다. BE `deleteSource`는 내부적으로 `trash_source`(소프트 trashed + 30일 purge)를 호출하지만, 복원 UI가 없는 이상(결정 #2) 사용자 경험상 결과는 영구 삭제와 같다 — 다이얼로그 카피("완전히 삭제돼요. 휴지통에 남지 않고, 되돌릴 수 없어요")는 내부 구현이 아니라 사용자가 실제로 겪는 결과를 기준으로 썼다.
+- **i18n**: `intake.draft_delete*`/`draft_extract`/`draft_locked_reason` 추가, en 실작성 + ko는 같은 네임스페이스의 기존 컨벤션(2026-07-12 세션, "en과 동일 placeholder") 그대로 계승 — 같은 화면 안에서 일부 키만 실제 한국어로 먼저 쓰면 오히려 일관성이 깨진다고 판단.
+- **검증**: 로컬 브라우저 E2E는 생략(PM 지시 — 로컬 인프라가 이 세션에서 안정적으로 안 될 걸로 예상). 대신 `pnpm --filter @nema-io/web typecheck`/`lint`/`test`(utils 8케이스, `cancelled`·`isDraftLocked` 신규 포함)로 확인하고, BE가 워킹 트리에 반영한 최종 라우터·서비스 코드를 직접 읽어 훅의 tRPC 경로명이 실제 계약과 정확히 일치하는지 대조했다.
+
+**amendment(2026-07-13, PR #394 멀티 에이전트 리뷰 반영, FE 항목만)**: BE 쪽(RPC ERRCODE, provider abort-awareness 등)은 별도 처리. FE는 아래 5건.
+- `isDraftLocked` 삭제 — 자기 테스트 말고는 아무도 안 부르는 죽은 함수였다(실제 잠금 판정은 `DraftCard`의 `FOOTER_BY_STATUS` 맵이 함). CLAUDE.md "커버리지만을 위한 테스트 금지" 위반이기도 해서 함수+테스트 같이 뺐다. 나중에 정말 쓰는 소비처가 생기면 그때 다시 추가.
+- `draftStatus`에 exhaustiveness 체크 추가 — 기존엔 마지막 `if` 없이 캐치올로 `"processing"`을 반환했는데, 이 PR이 실제로 DB enum을 3종→4종으로 늘린 마당이라 5번째 값이 추가될 가능성이 낮지 않다. `model-factory.ts` 등이 쓰는 `never` exhaustiveness 관용구로 바꾸되, FE는 `ChatLifecycleContext.tsx`가 이미 쓰는 쪽(스트리밍 콜백 중간에 throw하면 그 컴포넌트 트리 전체가 죽으므로 조용히 무시)을 따라 throw 대신 `null`(초안 아님 취급) 반환으로 갔다 — 알 수 없는 상태를 "처리 중"(가장 파괴적인 기본값, 액션 잠금)으로 조용히 매핑하던 것보다는, 카드 하나가 목록에서 조용히 빠지는 쪽이 안전하다고 판단.
+- `FOOTER_BY_STATUS`를 `STATUS_META`와 같은 강제 수준으로 맞춤 — `Partial<Record<...>>`(failed/empty는 키 자체가 없음)에서 완전한 `Record<DraftStatus, ... | null>`(failed/empty를 `null`로 명시)로 바꿔, 새 상태가 추가될 때 "풋터 없음"을 빠뜨리지 않고 의식적으로 선언하도록 강제.
+- 신규 훅 3개(`useCancelSource`/`useDeleteSource`/`useExtractSource`)가 raw `trpc.source.xxx.useMutation`을 직접 호출하고 있었다 — 이 브랜치가 PR #391("CRUD 뮤테이션 로딩 피드백 표준화") 머지 전에 갈라져서 생긴 격차. `origin/staging` 머지로 `useMutation`(`@web/lib/tanstack-query`) 래퍼를 받아와 세 훅 모두 옮기고, `isPendingAfterDelay`로 버튼 라벨을 스왑하게 했다(취소/추출/삭제 각각 "취소 중…"/"추출 중…"/"삭제 중…"). `common.cancelling`(신규, en/ko 실작성 — common 네임스페이스는 이미 #391에서 전체 한국어 작성돼 있어 이 관례를 따름) + `intake.draft_extracting`(신규, intake 네임스페이스 기존 관례대로 en과 동일 ko placeholder) 추가.
+- `intake.draft_delete` 키 제거 — PR #391이 `session.delete`/`space.delete`를 `common.delete`로 이미 통합해뒀길래, 이 PR에서 새로 만든 중복 키도 `common.delete`로 맞췄다(다이얼로그 확인 버튼 + 삭제 아이콘 버튼 aria-label 둘 다).
+- **참고만, 미반영(PM 확인 후 별도)**: "삭제가 cancelled 상태에만 연결돼 있고 failed/empty는 안 된다"는 지적은 버그가 아니라 기존에 이미 의도적으로 내린 결정(위 `DraftCard` 항목)이라 코드는 안 건드리고, `intake-flow.md`의 "초안에서 Source 삭제" 케이스에 그 범위를 명시하는 참고만 추가했다.
+
+---

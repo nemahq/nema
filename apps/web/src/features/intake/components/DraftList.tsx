@@ -76,6 +76,7 @@ export function DraftList() {
       {drafts.map(({ source, status }) => (
         <DraftCard
           key={source.sourceId}
+          sourceId={source.sourceId}
           body={source.body}
           status={status}
           createdAt={source.createdAt}
