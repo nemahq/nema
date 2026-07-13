@@ -26,6 +26,7 @@ import { requireAuth, requireGuest } from "@web/features/auth";
 import { HarnessPage } from "@web/features/dev-harness";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 import {
+  useSpaceList,
   useWorkspaceBootstrapQuery,
   WorkspaceSidebar,
 } from "@web/features/workspace";
@@ -129,13 +130,18 @@ const sessionRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
-// bootstrap 실패는 LNB·Space 화면 전체가 뜰 수 없는 상태 — 반쪽 렌더(빈 계정 메뉴·
-// Space 0개 착시) 대신 셸 전체를 라우트 에러 폴백으로 올린다. Sentry 보고는 쿼리
-// meta(reportToSentry)가 담당한다.
+// bootstrap·space.list 실패는 LNB·Space 화면 전체가 뜰 수 없는 상태 — 반쪽 렌더(빈
+// 계정 메뉴·Space 0개 착시) 대신 셸 전체를 라우트 에러 폴백으로 올린다. LNB의 Space
+// 목록과 SpaceOverview 둘 다 space.list 하나에 의존하므로 이 레이아웃 한 곳에서 막으면
+// 충분하다. Sentry 보고는 쿼리 meta(reportToSentry)가 담당한다.
 function WorkspaceSidebarLayout() {
   const bootstrapQuery = useWorkspaceBootstrapQuery();
+  const spaceListQuery = useSpaceList();
   if (bootstrapQuery.isError) {
     throw bootstrapQuery.error;
+  }
+  if (spaceListQuery.isError) {
+    throw spaceListQuery.error;
   }
 
   return (
