@@ -102,8 +102,11 @@ export function NavItem({
   // 텍스트만 라벨보다 아주 살짝(2px) 안쪽에서 시작하게 민다.
   // pr-8: rightContent는 절대위치로 겹쳐 그려지니(아래 참고), hover에서만 보이든
   // 항상 보이든 상관없이 라벨 텍스트가 그 자리 밑으로 안 들어가게 항상 비워둔다.
+  // text-sm으로 따로 올리지 않고 LnbRowBox의 text-xs를 그대로 둔다 — 워크스페이스명
+  // (text-sm)이 이 셸의 최상위 개체라는 크기 위계를 갖도록, 아이템은 Section 라벨과
+  // 같은 크기를 공유하고 색(fg-primary vs fg-tertiary)으로만 구분한다.
   const rowExtraClassName = cn(
-    "relative pl-3 text-sm focus-visible:z-10",
+    "relative pl-3 focus-visible:z-10",
     rightContent && "pr-8",
     hoverClassName,
   );

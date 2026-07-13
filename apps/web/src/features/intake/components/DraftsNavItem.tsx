@@ -11,9 +11,11 @@ import { draftStatus, isDraftItem } from "@web/features/intake/utils";
 import { useTranslation } from "@web/lib/tolgee";
 
 const NAV_ICON_CLASS = "size-4";
-const EXIT_ANIMATION_MS = 300;
+// weave --duration-slow(300ms)와 값을 맞춘다 — 애니메이션이 다 재생된 뒤에
+// 다음 단계(visible/hidden)로 넘어가야 뚝 끊기지 않는다.
+const TRANSITION_ANIMATION_MS = 300;
 
-type RenderState = "hidden" | "visible" | "exiting";
+type RenderState = "hidden" | "entering" | "visible" | "exiting";
 
 // Linear Drafts처럼 대기 중인 초안이 있을 때만 노출 — 다 처리되면 항목 자체가 사라진다
 // (intake-flow.md "LNB 초안 버튼 조건부 노출").
@@ -22,16 +24,19 @@ export function DraftsNavItem() {
   const pathname = useLocation({ select: (location) => location.pathname });
   const { collapsed } = useSidebar();
   const pendingQuery = usePendingSourceListQuery();
-  const [hasSeenEmpty, setHasSeenEmpty] = useState(false);
   const [renderState, setRenderState] = useState<RenderState>("hidden");
   // isVisible이 false로 바뀌기 직전에 true였는지(=접힘 애니메이션을 거쳐야 하는지)
   // 판단하는 용도 — 이펙트 안에서만 읽고 쓰므로 렌더 중 ref 접근 금지 규칙에 안 걸린다.
   const wasVisibleRef = useRef(false);
+  // 마운트 후 이 이펙트가 한 번이라도 정착한 적이 있는지 — 최초 정착(새로고침 등으로
+  // 처음 그려지는 순간)은 hidden→visible이어도 "방금 생김"이 아니므로 entering을
+  // 건너뛰고 바로 visible로 정착해야 한다.
+  const hasSettledRef = useRef(false);
 
   const draftItems = (pendingQuery.data?.items ?? []).filter(isDraftItem);
   const draftCount = draftItems.length;
-  // 우선순위: 실패 > 처리중 > (대기중만 있으면 표시 없음). 섞여 있어도 가장 급한
-  // 상태 하나만 보여준다 — 구성 비율까지 숫자로 쪼개면 오히려 더 복잡해 보인다.
+  // 우선순위: 실패 > 처리중 > (cancelled/empty만 있으면 표시 없음). 섞여 있어도
+  // 가장 급한 상태 하나만 보여준다 — 구성 비율까지 숫자로 쪼개면 오히려 더 복잡해 보인다.
   const hasFailed = draftItems.some((item) => draftStatus(item) === "failed");
   const hasProcessing = draftItems.some(
     (item) => draftStatus(item) === "processing",
@@ -42,37 +47,49 @@ export function DraftsNavItem() {
   // /drafts를 보고 있는 동안은 0개가 되어도 계속 보여준다 — 지금 보고 있는 화면의
   // 진입점이 눈앞에서 먼저 사라지면 어색하다. 다른 곳으로 이동한 뒤에야 접힌다.
   const isVisible = hasData || pathname === "/drafts";
-  // 진짜 0개였던 순간을 확인한 적이 있어야만 그 다음 등장을 "방금 생김"으로 본다 —
-  // 안 그러면 새로고침 때 이미 있던 초안도 매번 펼쳐지는 걸로 오인된다. 과거에 있었던
-  // 일을 기억하는 값이라 파생 계산만으론 못 구하고, 렌더 중 setState로 다음 렌더에 반영한다.
-  if (!pendingQuery.isLoading && draftCount === 0 && !hasSeenEmpty) {
-    setHasSeenEmpty(true);
-  }
 
   useEffect(
     function syncVisibility() {
+      const wasVisible = wasVisibleRef.current;
+      const hasSettledBefore = hasSettledRef.current;
+      hasSettledRef.current = true;
+
+      // setState를 이펙트 본문에서 동기 호출하면 react-hooks/set-state-in-effect
+      // 린트에 걸려(cascading render 경고) setTimeout 콜백 안에서 부른다.
       if (isVisible) {
         wasVisibleRef.current = true;
-        // setState를 이펙트 본문에서 동기 호출하면 react-compiler 린트에 걸려
-        // (cascading render 경고) setTimeout 콜백 안에서 부른다.
-        const timer = setTimeout(() => setRenderState("visible"), 0);
-        return () => clearTimeout(timer);
+        if (!hasSettledBefore || wasVisible) {
+          // 최초 정착이거나 이미 보이던 중이면(카운트만 바뀐 경우 등) entering을
+          // 건너뛰고 바로 visible로 둔다 — 방금 생긴 게 아니다.
+          const timer = setTimeout(() => setRenderState("visible"), 0);
+          return () => clearTimeout(timer);
+        }
+        const enterTimer = setTimeout(() => setRenderState("entering"), 0);
+        const settleTimer = setTimeout(
+          () => setRenderState("visible"),
+          TRANSITION_ANIMATION_MS,
+        );
+        return () => {
+          clearTimeout(enterTimer);
+          clearTimeout(settleTimer);
+        };
       }
-      if (!wasVisibleRef.current) {
+
+      if (!wasVisible) {
         // 직전에 보이고 있었을 때만 접히는 애니메이션을 거친다 — 처음부터
         // 0개였던 경우(새로고침 등)는 접을 것도 없이 바로 숨긴다.
         const timer = setTimeout(() => setRenderState("hidden"), 0);
         return () => clearTimeout(timer);
       }
       wasVisibleRef.current = false;
-      const enterExitingTimer = setTimeout(() => setRenderState("exiting"), 0);
-      const finishExitTimer = setTimeout(
+      const exitTimer = setTimeout(() => setRenderState("exiting"), 0);
+      const hideTimer = setTimeout(
         () => setRenderState("hidden"),
-        EXIT_ANIMATION_MS,
+        TRANSITION_ANIMATION_MS,
       );
       return () => {
-        clearTimeout(enterExitingTimer);
-        clearTimeout(finishExitTimer);
+        clearTimeout(exitTimer);
+        clearTimeout(hideTimer);
       };
     },
     [isVisible],
@@ -106,8 +123,7 @@ export function DraftsNavItem() {
       role="status"
       className={cn(
         "grid",
-        hasSeenEmpty &&
-          renderState === "visible" &&
+        renderState === "entering" &&
           "[animation:expand-down_var(--duration-slow)_var(--ease-out)]",
         renderState === "exiting" &&
           "[animation:collapse-up_var(--duration-slow)_var(--ease-out)_forwards]",
@@ -126,12 +142,12 @@ export function DraftsNavItem() {
           }
           // exiting 중엔 이미 0개라 실제 카운트·상태를 보여주면 오해를 준다(예:
           // "Drafts 0") — 사라지는 동안은 라벨만 남기고 조용히 접히게 둔다.
-          labelSuffix={renderState === "visible" ? statusIndicator : null}
+          labelSuffix={renderState !== "exiting" ? statusIndicator : null}
           to="/drafts"
           rightContent={
             // 0개(에러 포함)일 땐 숫자를 안 보여준다 — /drafts에 남아있느라 항목
             // 자체는 떠 있어도, "0"이라는 무의미한 카운트까지 노출할 필요는 없다.
-            renderState === "visible" && draftCount > 0 ? (
+            renderState !== "exiting" && draftCount > 0 ? (
               // "+"(LnbHoverIcon)가 size-5 박스 안에서 아이콘을 중앙정렬해 실제
               // 보이는 획이 right-3.5보다 안쪽에서 끝난다 — 숫자도 같은 크기 박스로
               // 감싸야 시각적 우측 끝이 맞는다(박스 없이 바로 두면 더 바깥으로 붙어 보임).
