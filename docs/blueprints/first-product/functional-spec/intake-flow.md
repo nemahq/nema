@@ -109,6 +109,7 @@
 - **Then**: 그 Source의 제목이 즉시 반영된다.
 - **관여 화면**: 초안
 - **범위 참고**: cancelled·failed·empty 셋 다 "평범한 대기 상태"라 전부 편집 가능(Extract/Delete와 달리 failed/empty를 좁힐 이유가 없다 — BE 가드도 `digestion_status<>'pending'` 전체를 허용). 다이얼로그(`EditSourceTitleDialog`) 저장 시 `source.updateTitle` 뮤테이션 성공 후 `listPending` 쿼리를 invalidate해 반영 — 코드 레벨(typecheck/lint/test)로만 확인, 실동작 브라우저 확인은 아직 없음(design-decisions-log.md 참고). 그래서 미체크로 남김.
+- **범위 참고 (2026-07-13, 리뷰 반영)**: "즉시 반영된다"는 그 한 번의 편집에 한정 — 이후 같은 Source에서 "초안에서 Digest 추출 실행"(재시도)이 다시 돌면, 워커가 새로 뽑은 제목이 방금 편집한 값을 덮어쓰지 않는다(`sources.title_edited` 플래그, `update_source_title`이 세우고 `complete_source_digestion`/`create_ingestion_review`가 확인). 리뷰에서 발견된 무음 데이터 유실을 막기 위한 후속 수정.
 
 #### 초안에서 이전 리뷰 보기
 
