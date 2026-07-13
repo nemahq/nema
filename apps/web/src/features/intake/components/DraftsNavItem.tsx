@@ -28,10 +28,12 @@ export function DraftsNavItem() {
   // isVisible이 false로 바뀌기 직전에 true였는지(=접힘 애니메이션을 거쳐야 하는지)
   // 판단하는 용도 — 이펙트 안에서만 읽고 쓰므로 렌더 중 ref 접근 금지 규칙에 안 걸린다.
   const wasVisibleRef = useRef(false);
-  // 마운트 후 이 이펙트가 한 번이라도 정착한 적이 있는지 — 최초 정착(새로고침 등으로
-  // 처음 그려지는 순간)은 hidden→visible이어도 "방금 생김"이 아니므로 entering을
-  // 건너뛰고 바로 visible로 정착해야 한다.
-  const hasSettledRef = useRef(false);
+  // pendingQuery가 실제로 한 번이라도 로딩을 끝낸 적이 있는지 — "이펙트가 실행된
+  // 적 있는지"로 판단하면 안 된다. /drafts 체류처럼 pathname은 마운트 즉시(네트워크
+  // 없이) 알 수 있지만, 카운트는 서버 응답이 와야 알 수 있어서, 로딩 중에 이미
+  // 이펙트가 한 번 돌고 난 뒤 응답이 도착하는 게 "두 번째 전환"으로 잘못 잡혀
+  // entering이 재생되는 문제가 있었다.
+  const hasLoadedOnceRef = useRef(false);
 
   const draftItems = (pendingQuery.data?.items ?? []).filter(isDraftItem);
   const draftCount = draftItems.length;
@@ -51,16 +53,18 @@ export function DraftsNavItem() {
   useEffect(
     function syncVisibility() {
       const wasVisible = wasVisibleRef.current;
-      const hasSettledBefore = hasSettledRef.current;
-      hasSettledRef.current = true;
+      const hadLoadedBefore = hasLoadedOnceRef.current;
+      if (!pendingQuery.isLoading) {
+        hasLoadedOnceRef.current = true;
+      }
 
       // setState를 이펙트 본문에서 동기 호출하면 react-hooks/set-state-in-effect
       // 린트에 걸려(cascading render 경고) setTimeout 콜백 안에서 부른다.
       if (isVisible) {
         wasVisibleRef.current = true;
-        if (!hasSettledBefore || wasVisible) {
-          // 최초 정착이거나 이미 보이던 중이면(카운트만 바뀐 경우 등) entering을
-          // 건너뛰고 바로 visible로 둔다 — 방금 생긴 게 아니다.
+        if (!hadLoadedBefore || wasVisible) {
+          // 첫 로딩이 아직 안 끝났었거나(=지금이 그 첫 로딩 결과) 이미 보이던 중이면
+          // (카운트만 바뀐 경우 등) entering을 건너뛰고 바로 visible로 둔다.
           const timer = setTimeout(() => setRenderState("visible"), 0);
           return () => clearTimeout(timer);
         }
@@ -92,7 +96,7 @@ export function DraftsNavItem() {
         clearTimeout(hideTimer);
       };
     },
-    [isVisible],
+    [isVisible, pendingQuery.isLoading],
   );
 
   if (renderState === "hidden") {
