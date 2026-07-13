@@ -110,6 +110,7 @@ interface PendingSourceItem {
   sourceId: string;
   spaceId: string;
   body: string;
+  title: string | null;
   createdAt: string;
   digestionStatus: DigestionStatus;
   errorMessage: string | null;
@@ -129,7 +130,9 @@ export async function listPendingSources(args: {
 
   const { data: sources, error } = await supabase
     .from("sources")
-    .select("id, space_id, body, created_at, digestion_status, error_message")
+    .select(
+      "id, space_id, body, title, created_at, digestion_status, error_message",
+    )
     .eq("status", "pending")
     .order("created_at", { ascending: false })
     .limit(PENDING_SOURCE_LIST_LIMIT);
@@ -167,6 +170,7 @@ export async function listPendingSources(args: {
         sourceId: source.id,
         spaceId: source.space_id,
         body: source.body,
+        title: source.title,
         createdAt: source.created_at,
         digestionStatus: source.digestion_status,
         errorMessage: source.error_message,
@@ -239,6 +243,21 @@ export async function startSourceDigestion(args: {
 
   const { error } = await supabase.rpc("start_source_digestion", {
     p_source_id: sourceId,
+  });
+  throwIfSupabaseError(error);
+}
+
+// 초안에서 Source 제목 편집 — "평범한 대기 상태"에서만 허용(RPC의 WHERE 가드).
+export async function updateSourceTitle(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+  title: string;
+}): Promise<void> {
+  const { supabase, sourceId, title } = args;
+
+  const { error } = await supabase.rpc("update_source_title", {
+    p_source_id: sourceId,
+    p_title: title,
   });
   throwIfSupabaseError(error);
 }

@@ -45,8 +45,8 @@
 - [x] 초안에서 Digest 추출 실행
 - [x] 초안에서 Source 삭제
 - [x] 초안에서 Space 재지정
-- [ ] 처리 중 상태에서 액션 잠금 (부분: Space 셀렉트 잠금은 됨. 제목 편집은 그 기능 자체가 아직 없어 미완)
-- [ ] 초안에서 Source 제목 편집 (미구현 — title 컬럼 자체가 DB에 없음)
+- [ ] 처리 중 상태에서 액션 잠금 (부분: Space 셀렉트 잠금은 코드 레벨로 확인됨. 제목 편집 잠금도 코드 레벨 구현 완료지만 실동작 브라우저 확인은 PM이 별도 진행 예정 — 그래서 미체크로 남김)
+- [ ] 초안에서 Source 제목 편집 (코드 레벨 구현·검증 완료, 실동작 브라우저 확인은 PM이 별도 진행 예정 — 그래서 미체크로 남김)
 - [ ] 초안에서 이전 리뷰 보기 (의도적 보류 — review 1차의 Digest 리뷰 화면 랜딩 후 착수)
 - [x] Digest 추출 실패
 - [x] Digest 추출 결과 없음
@@ -100,6 +100,7 @@
 - **관여 화면**: 초안
 - **범위 참고 (2026-07-13, PR #394)**: Digest 추출 실행·삭제 버튼이 처리 중엔 아예 안 보이고(카드 풋터가 `DraftProcessingActions`로 교체), Lock 아이콘 + 잠금 사유 캡션(`intake.draft_locked_reason`) + 취소 버튼만 남는 것은 구현·검증됨. Space 셀렉트·제목 편집은 기능 자체가 아직 없어(각각 별도 미체크 케이스) "비활성화"를 검증할 대상이 없다 — 이 둘을 위한 개별 disabled 버튼 대신 공용 캡션 하나로 잠금 사유를 뭉쳐 전달하는 현재 방식이 두 기능이 실제로 생겼을 때도 맞는 표현인지는 PM 확인 필요(design-decisions-log.md 2026-07-13 참고).
 - **범위 참고 (2026-07-13, PR #399)**: "초안에서 Space 재지정" 슬라이스 랜딩으로 Space 셀렉트가 실제 버튼이 됐다 — 위 PM 확인 대상이던 질문에 대한 답: 캡션은 특정 액션 이름을 나열하지 않는 일반 문구(`intake.draft_locked_reason`, "처리 중엔 편집할 수 없어요")라 액션이 몇 개든 그대로 맞는다(내 판단, design-decisions-log.md 참고). Space 셀렉트 잠금(processing 상태에선 `DraftIdleActions` 자체가 안 그려짐)은 이걸로 검증됨 — 다만 제목 편집은 여전히 기능 자체가 없어(케이스 "초안에서 Source 제목 편집" 참고) Then절 전체("Space 셀렉트·Digest 추출 실행·삭제·제목 편집이 모두 비활성화")를 검증할 수 없다 — 그래서 계속 미체크로 남김.
+- **범위 참고 (제목편집 슬라이스)**: 제목 편집 액션(펜슬 버튼)도 Extract/Delete와 같은 패턴으로 처리 중엔 렌더링 자체가 안 된다(`DraftCard`의 `canEditTitle = status !== "processing"`, 별도 disabled 버튼 없음). Space 셀렉트 잠금과 합쳐 Then절의 네 액션(Space 셀렉트·Digest 추출 실행·삭제·제목 편집) 모두 코드 레벨로는 확인됐다 — 실동작 브라우저 확인만 남아 있어(PM이 별도 진행) 미체크로 남김.
 
 #### 초안에서 Source 제목 편집
 
@@ -107,6 +108,8 @@
 - **When**: 제목 편집 액션을 실행하고 새 제목을 입력한다.
 - **Then**: 그 Source의 제목이 즉시 반영된다.
 - **관여 화면**: 초안
+- **범위 참고**: cancelled·failed·empty 셋 다 "평범한 대기 상태"라 전부 편집 가능(Extract/Delete와 달리 failed/empty를 좁힐 이유가 없다 — BE 가드도 `digestion_status<>'pending'` 전체를 허용). 다이얼로그(`EditSourceTitleDialog`) 저장 시 `source.updateTitle` 뮤테이션 성공 후 `listPending` 쿼리를 invalidate해 반영 — 코드 레벨(typecheck/lint/test)로만 확인, 실동작 브라우저 확인은 아직 없음(design-decisions-log.md 참고). 그래서 미체크로 남김.
+- **범위 참고 (2026-07-13, 리뷰 반영)**: "즉시 반영된다"는 그 한 번의 편집에 한정 — 이후 같은 Source에서 "초안에서 Digest 추출 실행"(재시도)이 다시 돌면, 워커가 새로 뽑은 제목이 방금 편집한 값을 덮어쓰지 않는다(`sources.title_edited` 플래그, `update_source_title`이 세우고 `complete_source_digestion`/`create_ingestion_review`가 확인). 리뷰에서 발견된 무음 데이터 유실을 막기 위한 후속 수정.
 
 #### 초안에서 이전 리뷰 보기
 

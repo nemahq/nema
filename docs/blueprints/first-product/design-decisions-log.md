@@ -479,3 +479,24 @@ Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감*
 `DraftsNavItem`의 처리중 pulse 점 색상은 `text-status-info`(파랑)로 확정. GitHub Actions·Vercel(Geist Status Dot)류의 "진행중=노랑/주황" 관례를 실제로 조사했으나 기각 — Nema는 `status-warning`(경고 전용 톤)과 색이 겹치면 "그냥 처리중"과 "실제 주의 필요"의 심각도 구분이 흐려진다고 판단, 일반 디자인 시스템(Carbon류)의 "파랑=정보성/진행중" 관례를 따랐다. 이후 세션이 GitHub Actions식 노랑/주황으로 되돌리기 전에 이 트레이드오프를 먼저 확인할 것.
 
 ---
+
+### 2026-07-13 — 초안 관리 3차 슬라이스: Source 제목 자동 채움 + 편집
+
+`intake-flow.md` "초안에서 Source 제목 편집" 1케이스(product-decisions-log.md #15 결정 반영). BE(`sources.title` 컬럼 + digest-generation LLM 콜 출력에 `sourceTitle` 얹기 + `update_source_title` RPC)는 같은 워크트리에서 다른 세션이 동시 진행 — 착수 시점엔 계약이 없어 예상 이름(`source.updateTitle`, 입력 `{sourceId, title}`)으로 먼저 짜뒀고, BE 착지 후 대조 결과 이름·형태 모두 정확히 일치해 FE 쪽 수정은 없었다.
+
+- **제목 표시 위치 — 본문 미리보기 위, 배지 아래**: `title`이 있으면 굵게, 없으면(아직 인제스천 전) `intake.draft_title_placeholder`("Generating title...")를 옅은 톤(fg-tertiary, italic)으로 대체 — 결정 #15의 "제목 미충전 시 placeholder" 그대로. digestionStatus가 `completed`(empty 포함)면 판단 없는 글도 title은 항상 채워지므로(BE 쪽 결정), null인 케이스는 사실상 processing/cancelled/failed뿐이다.
+- **편집 액션 게이팅 — Extract/Delete 풋터(`FOOTER_BY_STATUS`)와 묶지 않고 `DraftCard`에서 독립 판정**: `canEditTitle = status !== "processing"`으로 cancelled·failed·empty 전부에서 열린다. Extract/Delete는 2차 슬라이스에서 "재시도 액션은 범위 밖"이라는 이유로 의도적으로 cancelled만 연결했지만(design-decisions-log.md 2026-07-13 "초안 관리 2차 슬라이스" 참고), 제목 편집은 그 스코프 제한의 근거(재시도 액션 여부)가 애초에 없고 BE 가드(`update_source_title` RPC의 WHERE)도 `digestion_status<>'pending'` 전체를 허용한다 — Extract/Delete 풋터와 같은 `Record<DraftStatus, ...>`에 억지로 끼워 넣으면 failed/empty에서 title 편집만 되고 풋터는 없는 조합을 표현할 수 없어서, 펜슬 버튼을 풋터와 별개로 제목 옆에 직접 뒀다.
+- **처리 중 잠금 — 코드 변경 없음(기존 캡션이 이미 포괄)**: `DraftProcessingActions`의 공용 캡션(Lock 아이콘 + `intake.draft_locked_reason`)이 "이 액션들과 Space 재지정·제목편집도 잠긴 걸로"라는 브리핑을 이미 커버하도록 2차 슬라이스에서 설계돼 있었다(그때는 검증 대상이 없어 미체크였던 판단) — 이번에 제목 편집 버튼이 실제로 생기면서 그 판단을 재확인: `canEditTitle`이 processing에서 false라 펜슬 버튼 자체가 안 보이고, 별도 disabled 버튼을 추가하지 않는 기존 방식이 그대로 맞았다.
+- **다이얼로그 패턴 — `DeleteSourceDialog`/`AccountDeleteFlow` 확인 다이얼로그 계열 재사용, 인라인 편집 안 씀**: `EditSourceTitleDialog` 신설(작은 Dialog + 라벨 있는 `Input` 1개 + Cancel/Save). 카드가 좁은 리스트 아이템이라 인라인 편집은 레이아웃 시프트·별도 확정 상태가 필요한데, 이 화면이 이미 Dialog 확인 패턴(삭제)을 쓰고 있어 그 결을 따르는 게 더 일관적이라고 판단. 다이얼로그는 열림 상태만 토글되고 언마운트되지 않으므로, `onOpenChange(true)` 시점에 입력값을 현재 `title`로 재초기화해 이전에 취소한 입력이 다음 오픈에 남지 않게 했다.
+- **유효성 검사 — trim 후 빈 값이면 Save만 비활성화, 실시간 에러 문구 없음**: `useSpaceNameField`류의 `touched` 상태까지는 이 다이얼로그 스코프에 과하다고 판단해 안 씀 — Save 버튼 disabled 하나로 "빈 제목 제출 불가"를 막는다. `maxLength`는 BE `SOURCE_TITLE_MAX_LENGTH`(200, `@nema-io/shared`)를 그대로 재사용(`SpaceNameField`가 `SPACE_NAME_MAX_LENGTH`를 쓰는 것과 같은 패턴).
+- **저장 반영 — invalidate 기반(낙관적 업데이트 아님)**: `useUpdateSourceTitle`은 `useExtractSource`/`useDeleteSource`와 같은 결로 `onSuccess`에서 `listPending`을 invalidate만 한다. Space 이름변경이 한때 진짜 낙관적 업데이트였다가 "무게감 있는 CRUD는 서버 확인 후 반영"으로 철회된 선례(위 2026-07-13 "Space 이름변경 낙관적 업데이트 철회" 항목)를 따라, 굳이 먼저 낙관적으로 갈 이유를 만들지 않았다.
+- **i18n**: `intake.draft_title_placeholder`/`draft_title_edit_action`/`draft_title_edit_label`/`draft_title_edit_title` 신규, en 실작성 + ko는 intake 네임스페이스 기존 관례대로 en과 동일 placeholder. Save/Cancel/Saving은 새 키를 안 만들고 기존 `common.save`/`common.cancel`/`common.saving` 재사용(PR #391의 "action 라벨은 common으로 통합" 결정 계승).
+- **검증**: 로컬 브라우저 E2E는 PM이 직접 진행하기로 해 이번 세션에서는 생략 — `pnpm typecheck`/`lint`/`test`(모노레포 전체, server 385 + web 67 케이스, `utils.test.ts`의 `buildSource` title 필드 추가 포함)로 확인하고, BE가 최종 착지시킨 `source-router.ts`/`source-service.ts`/`schemas/source.ts`를 다시 읽어 훅·다이얼로그의 트림/타입이 실제 계약(`SourceUpdateTitleInputSchema`)과 정확히 일치하는지 대조했다.
+
+**amendment(2026-07-13, 멀티 에이전트 리뷰 반영)**: 세 건.
+- **수동 편집한 제목이 재인제스천에 덮어써지던 무음 데이터 유실 수정**: `complete_source_digestion`/`create_ingestion_review` 둘 다 `title` 컬럼을 무조건 덮어써서, cancelled·failed·empty 상태에서 유저가 제목을 고친 뒤 "추출 실행"으로 재시도하면 워커가 새로 뽑은 제목이 그 편집을 아무 신호 없이 지웠다. `sources.title_edited`(boolean, 기본 false) 컬럼을 추가해 `update_source_title`이 세우고, 두 완료 RPC는 `CASE WHEN title_edited THEN title ELSE p_title END`로 사람이 정한 값을 지킨다.
+- **`draft_title_edit_required` 죽은 i18n 키 제거**: 실시간 에러 문구 없이 Save 버튼 disabled만으로 빈 제목 제출을 막는 설계(위 "유효성 검사" 항목)와 모순되게, 어디서도 안 쓰이는 키가 en/ko 둘 다에 남아있었다 — 삭제.
+- **`useUpdateSourceTitle`에 `meta: { skipGlobalToast: true }` 추가**: `EditSourceTitleDialog`가 이미 인라인 `Alert`로 실패를 보여주는데 이 플래그가 없어 전역 토스트(닫기 전까지 안 사라짐)까지 중복 노출됐다 — `useDeleteAccount`가 같은 이유로 이미 쓰고 있던 패턴을 그대로 적용.
+- 마이그레이션 파일명이 PR #399(Space 재지정, `20260713100000_source_space_reassign.sql`)와 같은 타임스탬프였던 걸 `20260713110000`으로 bump해 정리. 헤더 주석의 zod 강제 지점 인용도 `digest-generation.ts`→`digest-review.ts`로 정정(실제 코드는 처음부터 맞았음, 주석만 오기).
+
+---

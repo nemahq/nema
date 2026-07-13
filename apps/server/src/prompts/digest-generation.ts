@@ -50,10 +50,15 @@ References are registry entries for things the note keeps coming back to: a pers
 
 Collect URLs that appear in the note (Slack links, Notion pages, articles) into the digest that discusses them, as "externalUrls". Do not fabricate URLs.
 
+## Source title
+
+"sourceTitle" is a short headline for the note as a whole (not per digest) — what a person scanning a list of raw notes would need to tell this one apart from others. Always produce one, even when the note yields zero digests (greetings, filler): summarize what the note is about in one short phrase. Write it in the same language as the note.
+
 ## Output
 
 JSON object:
-{ "digests": [{ "type", "title", "description",
+{ "sourceTitle",
+  "digests": [{ "type", "title", "description",
     "situation", "choice", "reason", "tradeoff", "alternatives",
     "question", "background", "branches", "resolutionCondition",
     "finding", "evidence", "concept",
@@ -110,8 +115,12 @@ const GeneratedReferenceSchema = z.object({
 
 export type GeneratedReference = z.infer<typeof GeneratedReferenceSchema>;
 
-// 빈 배열 허용 — 판단이 없는 글(인사말·잡담)은 Digest가 안 나오는 게 정의
+// 빈 배열 허용 — 판단이 없는 글(인사말·잡담)은 Digest가 안 나오는 게 정의.
+// sourceTitle은 digests가 비어도 항상 나온다(product-decisions-log #15) —
+// 판단과 무관하게 글 자체를 가리키는 요약형 제목이라 별도 LLM 콜 없이 이
+// 콜 출력에 얹는다.
 export const DigestGenerationSchema = z.object({
+  sourceTitle: z.string().trim().min(1),
   digests: z.array(GeneratedDigestSchema),
   newReferences: z.array(GeneratedReferenceSchema),
 });

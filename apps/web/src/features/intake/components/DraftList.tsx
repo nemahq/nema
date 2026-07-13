@@ -78,6 +78,7 @@ export function DraftList() {
           key={source.sourceId}
           sourceId={source.sourceId}
           spaceId={source.spaceId}
+          title={source.title}
           body={source.body}
           status={status}
           createdAt={source.createdAt}
