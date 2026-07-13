@@ -15,6 +15,10 @@ const CONTEXT_BUDGET_TOLERANCE_FACTOR = 2;
 // 균등 패킹 경로에서 가장 작은 청크가 가장 큰 청크의 이 비율 이상이어야 한다
 // (꼬투리 청크 방지 — 설계 3장). 실측 변동은 ~1%라 0.5는 넉넉한 회귀 가드.
 const MIN_CHUNK_BALANCE_RATIO = 0.5;
+// 아래 비균등 경계 테스트는 실제 BPE 토크나이저(js-tiktoken)로 여러 후보 경계를
+// 반복 재측정해 로컬에서도 ~3.4초 걸린다 — CI 공유 러너는 기본 5초 제한을 자주
+// 넘겨 타임아웃(로직 실패 아님)이 났다. 계산량 자체를 줄이는 게 아니라 여유를 둔다.
+const SKEWED_BOUNDARY_TEST_TIMEOUT_MS = 15_000;
 
 function buildParagraphText(sentenceCount: number): string {
   const paragraphs: string[] = [];
@@ -87,35 +91,40 @@ describe("chunkForExtraction", () => {
     }
   });
 
-  it("비균등 경계 입력에서도 모든 청크(꼬리 포함)가 임계선 이하 — 추정 오차·잔차 안전망", () => {
-    // 균등 문단(buildParagraphText)은 추정 오차·잔차 누적을 못 드러낸다. 문단 길이를
-    // 바꿔가며 경계 간격을 비균등으로 만들면 비종단·꼬리 청크가 임계선을 넘던 회귀.
-    const sentence =
-      "배포 파이프라인의 캐시 무효화 정책을 재검토했고 결론은 위키에 정리하기로 했다 ";
-    const buildSkewed = (paraLen: number, paraCount: number): string => {
-      const para = sentence
-        .repeat(Math.ceil(paraLen / sentence.length))
-        .slice(0, paraLen);
-      return Array.from({ length: paraCount }, (_, i) => `${i}번 ${para}`).join(
-        "\n\n",
-      );
-    };
+  it(
+    "비균등 경계 입력에서도 모든 청크(꼬리 포함)가 임계선 이하 — 추정 오차·잔차 안전망",
+    () => {
+      // 균등 문단(buildParagraphText)은 추정 오차·잔차 누적을 못 드러낸다. 문단 길이를
+      // 바꿔가며 경계 간격을 비균등으로 만들면 비종단·꼬리 청크가 임계선을 넘던 회귀.
+      const sentence =
+        "배포 파이프라인의 캐시 무효화 정책을 재검토했고 결론은 위키에 정리하기로 했다 ";
+      const buildSkewed = (paraLen: number, paraCount: number): string => {
+        const para = sentence
+          .repeat(Math.ceil(paraLen / sentence.length))
+          .slice(0, paraLen);
+        return Array.from(
+          { length: paraCount },
+          (_, i) => `${i}번 ${para}`,
+        ).join("\n\n");
+      };
 
-    // [650,60]은 안전망 없을 때 9청크가 초과하던 최강 회귀 케이스, [800,30]은 다른 모양
-    for (const [paraLen, paraCount] of [
-      [650, 60],
-      [800, 30],
-    ] as const) {
-      const body = buildSkewed(paraLen, paraCount);
-      const chunks = chunkForExtraction(body);
-      expect(chunks.map((c) => c.body).join("")).toBe(body);
-      for (const chunk of chunks) {
-        expect(countTokens(chunk.body)).toBeLessThanOrEqual(
-          EXTRACTION_CHUNK_THRESHOLD_TOKENS,
-        );
+      // [650,60]은 안전망 없을 때 9청크가 초과하던 최강 회귀 케이스, [800,30]은 다른 모양
+      for (const [paraLen, paraCount] of [
+        [650, 60],
+        [800, 30],
+      ] as const) {
+        const body = buildSkewed(paraLen, paraCount);
+        const chunks = chunkForExtraction(body);
+        expect(chunks.map((c) => c.body).join("")).toBe(body);
+        for (const chunk of chunks) {
+          expect(countTokens(chunk.body)).toBeLessThanOrEqual(
+            EXTRACTION_CHUNK_THRESHOLD_TOKENS,
+          );
+        }
       }
-    }
-  });
+    },
+    SKEWED_BOUNDARY_TEST_TIMEOUT_MS,
+  );
 
   it("경계가 전무한 한 덩어리도 하드 컷으로 무손실 분할된다", () => {
     // 공백·구두점 없는 연속 텍스트 (최악 입력)
