@@ -165,6 +165,7 @@
     "menu": "Space menu",
     "name_placeholder": "Space name",
     "name_required": "Enter a name for this space.",
+    "name_taken": "A space with this name already exists.",
     "not_found_description": "The link may be broken, or the space has been removed.",
     "not_found_title": "This space doesn't exist",
     "save": "Save",

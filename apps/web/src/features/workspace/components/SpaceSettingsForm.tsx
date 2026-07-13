@@ -7,6 +7,8 @@ import {
 
 import { useRenameSpace } from "@web/features/workspace/hooks/useRenameSpace";
 import { useSpaceNameField } from "@web/features/workspace/hooks/useSpaceNameField";
+import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWorkspaceBootstrapQuery";
+import { isSpaceNameTaken } from "@web/features/workspace/isSpaceNameTaken";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SpaceNameField } from "./SpaceNameField";
@@ -25,12 +27,17 @@ export function SpaceSettingsForm({
   onOpenChange,
 }: SpaceSettingsFormProps) {
   const { t } = useTranslation();
+  const { data: bootstrap } = useWorkspaceBootstrapQuery();
   const field = useSpaceNameField(spaceName);
   const renameMutation = useRenameSpace();
-  const isUnchanged = field.name.trim() === spaceName;
+  const trimmedName = field.name.trim();
+  const isUnchanged = trimmedName === spaceName;
+  const isDuplicate =
+    !isUnchanged &&
+    isSpaceNameTaken(bootstrap?.spaces ?? [], trimmedName, spaceId);
 
   function handleSubmit() {
-    if (renameMutation.isPending || isUnchanged) {
+    if (renameMutation.isPending || isUnchanged || isDuplicate) {
       return;
     }
     const trimmed = field.validate();
@@ -58,7 +65,9 @@ export function SpaceSettingsForm({
         value={field.name}
         onChange={field.handleChange}
         onEnter={handleSubmit}
-        error={field.validationError}
+        error={
+          field.validationError ?? (isDuplicate ? t("space.name_taken") : null)
+        }
         hasConflict={field.hasConflict}
       />
 
@@ -68,7 +77,7 @@ export function SpaceSettingsForm({
         </Button>
         <Button
           onClick={handleSubmit}
-          disabled={renameMutation.isPending || isUnchanged}
+          disabled={renameMutation.isPending || isUnchanged || isDuplicate}
         >
           {t("space.save")}
         </Button>

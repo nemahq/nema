@@ -9,6 +9,8 @@ import {
 
 import { useCreateSpace } from "@web/features/workspace/hooks/useCreateSpace";
 import { useSpaceNameField } from "@web/features/workspace/hooks/useSpaceNameField";
+import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWorkspaceBootstrapQuery";
+import { isSpaceNameTaken } from "@web/features/workspace/isSpaceNameTaken";
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
 
@@ -24,12 +26,16 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const utils = trpc.useUtils();
+  const { data: bootstrap } = useWorkspaceBootstrapQuery();
   const field = useSpaceNameField();
   const createMutation = useCreateSpace();
-  const isEmpty = field.name.trim() === "";
+  const trimmedName = field.name.trim();
+  const isEmpty = trimmedName === "";
+  const isDuplicate =
+    !isEmpty && isSpaceNameTaken(bootstrap?.spaces ?? [], trimmedName);
 
   function handleSubmit() {
-    if (createMutation.isPending) {
+    if (createMutation.isPending || isDuplicate) {
       return;
     }
     const trimmed = field.validate();
@@ -66,7 +72,9 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
         value={field.name}
         onChange={field.handleChange}
         onEnter={handleSubmit}
-        error={field.validationError}
+        error={
+          field.validationError ?? (isDuplicate ? t("space.name_taken") : null)
+        }
         hasConflict={field.hasConflict}
       />
 
@@ -76,7 +84,7 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
         </Button>
         <Button
           onClick={handleSubmit}
-          disabled={createMutation.isPending || isEmpty}
+          disabled={createMutation.isPending || isEmpty || isDuplicate}
         >
           {t("space.create_action")}
         </Button>
