@@ -64,7 +64,7 @@
   3. Space 셀렉트, Digest 추출 실행, 삭제 액션이 다시 열린다.
 - **관여 화면**: 초안
 - **범위 참고 (2026-07-13, PR #394)**: Then #1·#2와 Then #3의 "Digest 추출 실행·삭제 액션이 다시 열린다"는 구현·검증됨 — DB `cancel_source_digestion`(재클레임 불가능한 `cancelled` 상태로 전환) + 인메모리 `AbortController`로 떠 있는 LLM 콜 중단(`digestion-cancellation.test.ts`, `digestion.test.ts`의 취소 테스트 5종, `source-service.test.ts`로 코드 레벨 검증, 실 동작 검증은 아직 없음).
-- **확정 (2026-07-13, PR TBD)**: Then #3의 "Space 셀렉트가 다시 열린다"도 "초안에서 Space 재지정" 슬라이스 랜딩으로 구현됨 — cancelled 상태는 `DraftIdleActions`를 풋터로 쓰고, 여기 Space 셀렉트가 포함된다. 세 액션 모두 확인됐으므로 체크.
+- **확정 (2026-07-13, PR #399)**: Then #3의 "Space 셀렉트가 다시 열린다"도 "초안에서 Space 재지정" 슬라이스 랜딩으로 구현됨 — cancelled 상태는 `DraftIdleActions`를 풋터로 쓰고, 여기 Space 셀렉트가 포함된다. 세 액션 모두 확인됐으므로 체크.
 
 #### 초안에서 Digest 추출 실행
 
@@ -90,7 +90,7 @@
 - **When**: Space 셀렉트 액션을 실행해 다른 Space를 선택한다.
 - **Then**: 그 Source가 선택한 Space로 즉시 재지정된다.
 - **관여 화면**: 초안
-- **확정 (2026-07-13, PR TBD)**: `reassign_source_space` RPC(양쪽 Space 멤버십 가드, `source-service.test.ts`)와 `DraftIdleActions`의 Space 셀렉트(`space.list` + `useReassignSourceSpace`, 선택 즉시 반영)로 구현. failed/empty는 다른 초안 액션과 같은 이유로 범위 밖(cancelled만 연결) — design-decisions-log.md 참고.
+- **확정 (2026-07-13, PR #399)**: `reassign_source_space` RPC(원본 Space·대상 Space 양쪽 멤버십 체크 — 대상 Space 접근권 없음은 `42501`, 상태 가드 실패·확정 대기 리뷰 있음은 `NM004`로 리뷰 반영 후 분리, `source-service.test.ts`)와 `DraftIdleActions`의 Space 셀렉트(`space.list` + `useReassignSourceSpace`, 선택 즉시 반영)로 구현. failed/empty는 다른 초안 액션과 같은 이유로 범위 밖(cancelled만 연결) — design-decisions-log.md 참고.
 
 #### 처리 중 상태에서 액션 잠금
 
@@ -99,7 +99,7 @@
 - **Then**: 그 Source 카드는 Space 셀렉트·Digest 추출 실행·삭제·제목 편집이 모두 비활성화되고, 처리 중이라 그렇다는 이유가 함께 표시된다. 취소 액션만 남는다.
 - **관여 화면**: 초안
 - **범위 참고 (2026-07-13, PR #394)**: Digest 추출 실행·삭제 버튼이 처리 중엔 아예 안 보이고(카드 풋터가 `DraftProcessingActions`로 교체), Lock 아이콘 + 잠금 사유 캡션(`intake.draft_locked_reason`) + 취소 버튼만 남는 것은 구현·검증됨. Space 셀렉트·제목 편집은 기능 자체가 아직 없어(각각 별도 미체크 케이스) "비활성화"를 검증할 대상이 없다 — 이 둘을 위한 개별 disabled 버튼 대신 공용 캡션 하나로 잠금 사유를 뭉쳐 전달하는 현재 방식이 두 기능이 실제로 생겼을 때도 맞는 표현인지는 PM 확인 필요(design-decisions-log.md 2026-07-13 참고).
-- **범위 참고 (2026-07-13, PR TBD)**: "초안에서 Space 재지정" 슬라이스 랜딩으로 Space 셀렉트가 실제 버튼이 됐다 — 위 PM 확인 대상이던 질문에 대한 답: 캡션은 특정 액션 이름을 나열하지 않는 일반 문구(`intake.draft_locked_reason`, "처리 중엔 편집할 수 없어요")라 액션이 몇 개든 그대로 맞는다(내 판단, design-decisions-log.md 참고). Space 셀렉트 잠금(processing 상태에선 `DraftIdleActions` 자체가 안 그려짐)은 이걸로 검증됨 — 다만 제목 편집은 여전히 기능 자체가 없어(케이스 "초안에서 Source 제목 편집" 참고) Then절 전체("Space 셀렉트·Digest 추출 실행·삭제·제목 편집이 모두 비활성화")를 검증할 수 없다 — 그래서 계속 미체크로 남김.
+- **범위 참고 (2026-07-13, PR #399)**: "초안에서 Space 재지정" 슬라이스 랜딩으로 Space 셀렉트가 실제 버튼이 됐다 — 위 PM 확인 대상이던 질문에 대한 답: 캡션은 특정 액션 이름을 나열하지 않는 일반 문구(`intake.draft_locked_reason`, "처리 중엔 편집할 수 없어요")라 액션이 몇 개든 그대로 맞는다(내 판단, design-decisions-log.md 참고). Space 셀렉트 잠금(processing 상태에선 `DraftIdleActions` 자체가 안 그려짐)은 이걸로 검증됨 — 다만 제목 편집은 여전히 기능 자체가 없어(케이스 "초안에서 Source 제목 편집" 참고) Then절 전체("Space 셀렉트·Digest 추출 실행·삭제·제목 편집이 모두 비활성화")를 검증할 수 없다 — 그래서 계속 미체크로 남김.
 
 #### 초안에서 Source 제목 편집
 

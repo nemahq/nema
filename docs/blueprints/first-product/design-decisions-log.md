@@ -467,4 +467,9 @@ Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감*
 - **i18n**: `intake.draft_reassign_space`(신규, Select 트리거 aria-label) — en 실작성 + ko는 기존 `draft_*` 관례(en과 동일 placeholder) 계승.
 - **검증**: `pnpm --filter @nema-io/server test`(383개, `reassignSourceSpace` BE 테스트 포함) + `pnpm --filter @nema-io/web typecheck`/`lint`/`test`(67개, `PendingSourceItem` fixture에 `spaceId` 추가) 전부 통과. 로컬 브라우저 E2E는 2026-07-13 2차 슬라이스와 같은 이유로 생략 — 이번 세션에서도 확인 안 함.
 
+**amendment(2026-07-13, 멀티 에이전트 리뷰 반영)**: `reassign_source_space` RPC를 두 건 강화.
+- **확정 대기 중인 리뷰가 있는 원본 제외**: 기존 가드(`status='pending' AND digestion_status<>'pending'`)는 `digestion_status='completed'`이면서 아직 확정 안 된 ingestion changeset이 있는 상태(=이전 결과가 확정 대기 중인 상태)도 통과시켰다 — `changesets.space_id`는 옮기지 않으므로, 이 상태에서 재지정하면 나중에 그 리뷰가 확정될 때 멤버십 판정과 결과 Digest 생성이 옛 Space 기준으로 어긋난다. `start_source_digestion`이 이미 같은 이유로 이 상태를 배제하고 있어(`EXISTS` 체크), 같은 배제를 여기도 추가(`NM004`).
+- **대상 Space 접근권 거부를 별도 에러 코드로 분리**: 상태 가드 실패와 대상 Space 비멤버십을 같은 `NM004`("초안 상태가 바뀌었어요, 새로고침 후 재시도")로 뭉쳐두면, 실제로는 접근권이 없는 시도인데도 새로고침하면 될 것처럼 안내하게 된다 — `space.list`가 10분 staleTime을 가져 방금 스페이스 접근권을 잃은 유저도 그 스페이스가 최대 10분간 셀렉트 옵션으로 남는, 실제로 도달 가능한 시나리오라 더 그렇다. 대상 Space 비멤버십은 다른 RPC의 `insufficient_privilege`와 같은 `42501`로 분리(error-mapper가 이미 "forbidden"으로 매핑). `useReassignSourceSpace`도 실패 시 `space.list`를 invalidate해 stale 옵션이 다음 시도까지 남지 않게 했다.
+- `FOOTER_BY_STATUS`의 `{sourceId, spaceId}` 인라인 prop 타입이 `DraftCard`/`DraftIdleActions`/`DraftSpaceSelect` 세 곳에 중복돼 있던 걸 `types.ts`의 `DraftFooterProps`로 추출.
+
 ---
