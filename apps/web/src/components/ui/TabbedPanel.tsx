@@ -130,8 +130,10 @@ function DraggableTab({
               !isFirst && "border-l border-l-border",
             )
           : "border border-transparent border-r-border/30",
-        dropSide === "left" && "border-l-2 border-l-brand",
-        dropSide === "right" && "border-r-2 border-r-brand",
+        dropSide === "left" &&
+          "border-l-2 border-l-brand dark:border-l-fg-primary",
+        dropSide === "right" &&
+          "border-r-2 border-r-brand dark:border-r-fg-primary",
       )}
       draggable={draggable}
       onDragStart={(e) => onTabDragStart?.(tab.id, e)}

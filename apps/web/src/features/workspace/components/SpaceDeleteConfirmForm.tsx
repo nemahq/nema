@@ -76,7 +76,9 @@ export function SpaceDeleteConfirmForm({
           onClick={handleDelete}
           disabled={!canDelete || deleteMutation.isPending}
         >
-          {t("space.delete")}
+          {deleteMutation.isPendingAfterDelay
+            ? t("common.deleting")
+            : t("common.delete")}
         </Button>
       </DialogFooter>
     </>

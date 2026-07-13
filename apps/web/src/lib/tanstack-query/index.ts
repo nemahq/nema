@@ -4,6 +4,8 @@ import { TRPCClientError } from "@trpc/client";
 
 import { toastError } from "@web/utils/toast";
 
+export { useMutation } from "./useMutation";
+
 const DEFAULT_STALE_TIME_MS = 30_000;
 
 export const queryClient = new QueryClient({

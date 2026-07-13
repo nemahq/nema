@@ -1,3 +1,4 @@
+import { useMutation } from "@web/lib/tanstack-query";
 import { trpc } from "@web/lib/trpc";
 
 interface CreateSourceInput {
@@ -9,7 +10,7 @@ interface CreateSourceInput {
 
 export function useCreateSource() {
   const utils = trpc.useUtils();
-  const mutation = trpc.source.create.useMutation({
+  const mutation = useMutation(trpc.source.create, {
     onSuccess: () => utils.source.listPending.invalidate(),
   });
 

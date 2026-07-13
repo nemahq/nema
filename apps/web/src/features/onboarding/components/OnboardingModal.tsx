@@ -69,7 +69,9 @@ export function OnboardingModal() {
             onClick={() => updateMutation.mutate({ contentLanguage: selected })}
             disabled={updateMutation.isPending}
           >
-            {t("settings.start")}
+            {updateMutation.isPendingAfterDelay
+              ? t("settings.start_pending")
+              : t("settings.start")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -34,23 +34,27 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
   const isDuplicate =
     !isEmpty && isSpaceNameTaken(spaceList?.spaces ?? [], trimmedName);
 
+  let nameError: string | null = null;
+  if (field.touched && isEmpty) {
+    nameError = t("space.name_required");
+  } else if (isDuplicate) {
+    nameError = t("space.name_taken");
+  }
+
   function handleSubmit() {
-    if (createMutation.isPending || isDuplicate) {
-      return;
-    }
-    const trimmed = field.validate();
-    if (!trimmed) {
+    if (createMutation.isPending || isEmpty || isDuplicate) {
       return;
     }
 
     createMutation.mutate(
-      { name: trimmed },
+      { name: trimmedName },
       {
         // 여기서 한 번 더 기다리는 이유: space.list에 새 Space가 반영되기
         // 전에 navigate하면 SpaceOverview가 "존재하지 않음"을 잠깐 flash한다 —
         // 이 화면 전환이 필요로 하는 것이지 useCreateSpace 자체의 책임은 아니라
         // 여기서 명시적으로 기다린다(훅의 자체 invalidate와 중복 호출되지만
-        // TanStack이 같은 쿼리 키 refetch를 dedupe해 실제로는 한 번만 나간다).
+        // TanStack이 같은 쿼리 키 refetch를 dedupe해 실제로는 한 번만 나간다 —
+        // dedupe가 안 되는 타이밍이어도 정확성엔 문제없고 낭비 요청 하나만 늘 뿐).
         onSuccess: async ({ spaceId }) => {
           await utils.space.list.invalidate();
           onOpenChange(false);
@@ -72,9 +76,7 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
         value={field.name}
         onChange={field.handleChange}
         onEnter={handleSubmit}
-        error={
-          field.validationError ?? (isDuplicate ? t("space.name_taken") : null)
-        }
+        error={nameError}
         hasConflict={field.hasConflict}
       />
 
@@ -86,7 +88,9 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
           onClick={handleSubmit}
           disabled={createMutation.isPending || isEmpty || isDuplicate}
         >
-          {t("space.create_action")}
+          {createMutation.isPendingAfterDelay
+            ? t("common.creating")
+            : t("common.create")}
         </Button>
       </DialogFooter>
     </>

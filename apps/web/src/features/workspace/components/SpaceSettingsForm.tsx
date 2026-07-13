@@ -31,22 +31,27 @@ export function SpaceSettingsForm({
   const field = useSpaceNameField(spaceName);
   const updateMutation = useUpdateSpace();
   const trimmedName = field.name.trim();
+  const isEmpty = trimmedName === "";
   const isUnchanged = trimmedName === spaceName;
   const isDuplicate =
+    !isEmpty &&
     !isUnchanged &&
     isSpaceNameTaken(spaceList?.spaces ?? [], trimmedName, spaceId);
 
+  let nameError: string | null = null;
+  if (field.touched && isEmpty) {
+    nameError = t("space.name_required");
+  } else if (isDuplicate) {
+    nameError = t("space.name_taken");
+  }
+
   function handleSubmit() {
-    if (updateMutation.isPending || isUnchanged || isDuplicate) {
-      return;
-    }
-    const trimmed = field.validate();
-    if (!trimmed) {
+    if (updateMutation.isPending || isEmpty || isUnchanged || isDuplicate) {
       return;
     }
 
     updateMutation.mutate(
-      { spaceId, name: trimmed },
+      { spaceId, name: trimmedName },
       {
         onSuccess: () => onOpenChange(false),
         onError: field.markConflictIfNameTaken,
@@ -65,9 +70,7 @@ export function SpaceSettingsForm({
         value={field.name}
         onChange={field.handleChange}
         onEnter={handleSubmit}
-        error={
-          field.validationError ?? (isDuplicate ? t("space.name_taken") : null)
-        }
+        error={nameError}
         hasConflict={field.hasConflict}
       />
 
@@ -77,9 +80,13 @@ export function SpaceSettingsForm({
         </Button>
         <Button
           onClick={handleSubmit}
-          disabled={updateMutation.isPending || isUnchanged || isDuplicate}
+          disabled={
+            updateMutation.isPending || isEmpty || isUnchanged || isDuplicate
+          }
         >
-          {t("space.save")}
+          {updateMutation.isPendingAfterDelay
+            ? t("common.saving")
+            : t("common.save")}
         </Button>
       </DialogFooter>
     </>

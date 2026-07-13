@@ -12,7 +12,8 @@ function Avatar({ src, fallback, className, ...props }: AvatarProps) {
     <span
       className={cn(
         "flex size-7 shrink-0 items-center justify-center rounded-full",
-        !src && "bg-brand text-xs font-medium text-brand-fg",
+        !src &&
+          "bg-brand text-xs font-medium text-brand-fg dark:bg-fg-primary dark:text-surface-base",
         className,
       )}
       {...props}

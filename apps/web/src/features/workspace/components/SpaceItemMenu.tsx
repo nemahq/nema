@@ -38,7 +38,7 @@ export function SpaceItemMenu({
         </DropdownMenuItem>
         <DropdownMenuItem variant="danger" onClick={onDelete}>
           <Trash2 />
-          {t("space.delete")}
+          {t("common.delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
