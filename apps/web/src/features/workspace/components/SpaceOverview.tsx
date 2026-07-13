@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Skeleton } from "@nema-io/weave";
 
 import { SourceComposer } from "@web/features/intake";
-import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWorkspaceBootstrapQuery";
+import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SpaceEmptyState } from "./SpaceEmptyState";
@@ -21,10 +21,10 @@ interface SpaceOverviewProps {
 
 export function SpaceOverview({ spaceId }: SpaceOverviewProps) {
   const { t } = useTranslation();
-  const { data: bootstrap, isLoading } = useWorkspaceBootstrapQuery();
+  const { data: spaceList, isLoading } = useSpaceList();
   const [tab, setTab] = useState<SpaceTab>("topic");
 
-  const space = bootstrap?.spaces.find((candidate) => candidate.id === spaceId);
+  const space = spaceList?.spaces.find((candidate) => candidate.id === spaceId);
 
   // 조회가 끝났는데 그 Space가 없으면(지워졌거나 잘못된 링크) 무한 스켈레톤 대신 안내.
   if (!isLoading && !space) {

@@ -6,8 +6,8 @@ import {
 } from "@nema-io/weave";
 
 import { useRenameSpace } from "@web/features/workspace/hooks/useRenameSpace";
+import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
 import { useSpaceNameField } from "@web/features/workspace/hooks/useSpaceNameField";
-import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWorkspaceBootstrapQuery";
 import { isSpaceNameTaken } from "@web/features/workspace/isSpaceNameTaken";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -27,14 +27,14 @@ export function SpaceSettingsForm({
   onOpenChange,
 }: SpaceSettingsFormProps) {
   const { t } = useTranslation();
-  const { data: bootstrap } = useWorkspaceBootstrapQuery();
+  const { data: spaceList } = useSpaceList();
   const field = useSpaceNameField(spaceName);
   const renameMutation = useRenameSpace();
   const trimmedName = field.name.trim();
   const isUnchanged = trimmedName === spaceName;
   const isDuplicate =
     !isUnchanged &&
-    isSpaceNameTaken(bootstrap?.spaces ?? [], trimmedName, spaceId);
+    isSpaceNameTaken(spaceList?.spaces ?? [], trimmedName, spaceId);
 
   function handleSubmit() {
     if (renameMutation.isPending || isUnchanged || isDuplicate) {

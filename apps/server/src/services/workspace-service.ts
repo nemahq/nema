@@ -83,14 +83,7 @@ export async function bootstrapWorkspace(args: {
     );
   }
 
-  const { data: spaceRows, error: spacesError } = await supabase
-    .from("spaces")
-    .select("id, name")
-    .eq("workspace_id", membership.workspace_id)
-    .order("created_at", { ascending: true });
-  throwIfSupabaseError(spacesError);
-
-  // 첫 진입 표식은 그 자체로 커밋되는 별도 RPC라 마지막에 소비한다 — 앞의 조회들이
+  // 첫 진입 표식은 그 자체로 커밋되는 별도 RPC라 마지막에 소비한다 — 앞의 조회가
   // 실패하면 응답이 아예 안 나가는데, 표식을 먼저 태우면 그 신호가 이 요청과 함께
   // 영영 사라진다(재시도해도 이미 false).
   const { data: isFirstEntry, error: firstEntryError } =
@@ -105,10 +98,6 @@ export async function bootstrapWorkspace(args: {
       // 같은 조합 없이) — 이름 정책 자체는 여전히 미정(07-modeling.md "열어두는 것").
       name: membership.workspaces.name ?? bootstrapUser.name,
     },
-    spaces: (spaceRows ?? []).map((row) => ({
-      id: row.id,
-      name: row.name,
-    })),
     isFirstEntry: Boolean(isFirstEntry),
   };
 }

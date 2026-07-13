@@ -50,16 +50,9 @@ export const BootstrapWorkspaceSchema = z.object({
 });
 export type BootstrapWorkspace = z.infer<typeof BootstrapWorkspaceSchema>;
 
-export const BootstrapSpaceSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-});
-export type BootstrapSpace = z.infer<typeof BootstrapSpaceSchema>;
-
 export const WorkspaceBootstrapSchema = z.object({
   user: BootstrapUserSchema,
   workspace: BootstrapWorkspaceSchema,
-  spaces: z.array(BootstrapSpaceSchema),
   // 이 유저 생애 단 한 번만 true — 방금 만든 Space 오버뷰로 보낸다. 서버가
   // 호출마다 원자적으로 소비하므로(mark_first_entry), 같은 유저가 bootstrap을
   // 다시 불러도 이후로는 항상 false. 재시도·폴백에서 다시 true를 기대하면 안 된다.

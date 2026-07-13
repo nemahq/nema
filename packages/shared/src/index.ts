@@ -179,8 +179,6 @@ export {
   TopicSchema,
 } from "./schemas/topic";
 export {
-  type BootstrapSpace,
-  BootstrapSpaceSchema,
   type BootstrapUser,
   BootstrapUserSchema,
   type BootstrapWorkspace,

@@ -2,7 +2,7 @@ import { Skeleton } from "@nema-io/weave";
 
 import { LnbRowBox } from "@web/components/layout/LnbRowBox";
 import { useSidebar } from "@web/components/layout/Sidebar";
-import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWorkspaceBootstrapQuery";
+import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
 
 import { SpaceListItem } from "./SpaceListItem";
 
@@ -11,7 +11,7 @@ const SKELETON_STAGGER_DELAY_MS = 100;
 
 export function SpaceList() {
   const { collapsed } = useSidebar();
-  const { data: bootstrap, isLoading } = useWorkspaceBootstrapQuery();
+  const { data: spaceList, isLoading } = useSpaceList();
 
   if (isLoading && collapsed) {
     return (
@@ -52,7 +52,7 @@ export function SpaceList() {
     );
   }
 
-  const spaces = bootstrap?.spaces ?? [];
+  const spaces = spaceList?.spaces ?? [];
 
   return (
     <>

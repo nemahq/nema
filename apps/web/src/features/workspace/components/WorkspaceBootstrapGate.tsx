@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
+import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
 import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWorkspaceBootstrapQuery";
 
 interface WorkspaceBootstrapGateProps {
@@ -14,6 +15,7 @@ export function WorkspaceBootstrapGate({
   children,
 }: WorkspaceBootstrapGateProps) {
   const { data: bootstrap } = useWorkspaceBootstrapQuery();
+  const { data: spaceList } = useSpaceList();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
   const redirected = useRef(false);
@@ -26,7 +28,7 @@ export function WorkspaceBootstrapGate({
       if (pathname !== "/") {
         return;
       }
-      const [firstSpace] = bootstrap.spaces;
+      const [firstSpace] = spaceList?.spaces ?? [];
       if (!firstSpace) {
         return;
       }
@@ -37,7 +39,7 @@ export function WorkspaceBootstrapGate({
         replace: true,
       });
     },
-    [bootstrap, pathname, navigate],
+    [bootstrap, spaceList, pathname, navigate],
   );
 
   return <>{children}</>;
