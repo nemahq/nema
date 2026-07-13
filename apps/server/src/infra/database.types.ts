@@ -664,6 +664,7 @@ export type Database = {
           space_id: string;
           status: Database["public"]["Enums"]["source_status"];
           title: string | null;
+          title_edited: boolean;
           trashed_at: string | null;
           updated_at: string;
         };
@@ -687,6 +688,7 @@ export type Database = {
           space_id: string;
           status?: Database["public"]["Enums"]["source_status"];
           title?: string | null;
+          title_edited?: boolean;
           trashed_at?: string | null;
           updated_at?: string;
         };
@@ -710,6 +712,7 @@ export type Database = {
           space_id?: string;
           status?: Database["public"]["Enums"]["source_status"];
           title?: string | null;
+          title_edited?: boolean;
           trashed_at?: string | null;
           updated_at?: string;
         };
