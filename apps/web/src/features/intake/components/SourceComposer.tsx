@@ -10,7 +10,9 @@ import { useTranslation } from "@web/lib/tolgee";
 const PROGRESS_CLIMB_DURATION_MS = 2_500;
 
 interface SourceComposerProps {
-  spaceId: string;
+  // Space 조회가 끝나기 전엔 아직 없다 — 그동안도 컴포저 자체는 자리를 지키고
+  // disabled로만 막는다(로딩 중 컴포저가 통째로 안 보이다 늦게 나타나는 것보다 낫다).
+  spaceId?: string;
 }
 
 const progressClimbStyle: CSSProperties & {
@@ -23,9 +25,10 @@ export function SourceComposer({ spaceId }: SourceComposerProps) {
   const { t } = useTranslation();
   const [body, setBody] = useState("");
   const createSource = useCreateSource();
+  const disabled = !spaceId || createSource.isPending;
 
   function handleSubmit(content: string) {
-    if (createSource.isPending) {
+    if (!spaceId || createSource.isPending) {
       return;
     }
     createSource.mutate(
@@ -53,8 +56,8 @@ export function SourceComposer({ spaceId }: SourceComposerProps) {
         onChange={setBody}
         onSubmit={handleSubmit}
         placeholder={t("intake.compose_body_placeholder")}
-        disabled={createSource.isPending}
-        submitDisabled={createSource.isPending}
+        disabled={disabled}
+        submitDisabled={disabled}
         maxLength={SOURCE_BODY_MAX_LENGTH}
         renderSubmitButton={({ onClick, disabled }) => (
           <Button

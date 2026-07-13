@@ -61,11 +61,9 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
           </div>
         )}
 
-        {space && (
-          <div className="mt-6">
-            <SourceComposer spaceId={space.id} />
-          </div>
-        )}
+        <div className="mt-6">
+          <SourceComposer spaceId={space?.id} />
+        </div>
 
         <div className="mt-6 flex gap-1 border-b border-border/50">
           <SpaceTabButton
