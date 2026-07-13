@@ -6,6 +6,7 @@ const SpaceNameSchema = z.string().trim().min(1).max(SPACE_NAME_MAX_LENGTH);
 
 export const SpaceSchema = z.object({
   id: z.string().uuid(),
+  publicId: z.string(),
   name: z.string(),
   createdAt: z.string().datetime({ offset: true }),
 });

@@ -15,12 +15,14 @@ const BADGE_CLASS =
 
 interface SpaceListItemProps {
   spaceId: string;
+  publicId: string;
   spaceName: string;
   isLastSpace: boolean;
 }
 
 export function SpaceListItem({
   spaceId,
+  publicId,
   spaceName,
   isLastSpace,
 }: SpaceListItemProps) {
@@ -39,7 +41,7 @@ export function SpaceListItem({
         }
         label={spaceName}
         to="/space/$spaceId"
-        params={{ spaceId }}
+        params={{ spaceId: publicId }}
         trailingAction={
           <SpaceItemMenu
             onOpenSettings={() => setSettingsOpen(true)}
@@ -64,7 +66,7 @@ export function SpaceListItem({
           // 세션 삭제와 같은 관례: 지금 열려 있던 항목을 지웠을 때만 이동한다.
           const activeSpaceId =
             "spaceId" in params ? params.spaceId : undefined;
-          if (shouldNavigateHomeAfterSpaceDelete(spaceId, activeSpaceId)) {
+          if (shouldNavigateHomeAfterSpaceDelete(publicId, activeSpaceId)) {
             navigate({ to: "/" });
           }
         }}
