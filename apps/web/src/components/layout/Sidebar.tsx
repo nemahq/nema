@@ -80,6 +80,8 @@ export function Sidebar({
               <Button
                 variant="ghost"
                 size="icon-sm"
+                // 접힘 상태에서 LNB 아이템(size-7)과 크기를 맞춘다 — 펼침은 기존 icon-sm(size-8) 유지.
+                className={cn(collapsed && "size-7")}
                 onClick={toggle}
                 aria-label={t(
                   collapsed

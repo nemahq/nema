@@ -24,7 +24,12 @@ export function WorkspaceMenuSlotExpanded() {
   if (!bootstrap) {
     return null;
   }
-  return <WorkspaceMenu workspaceName={bootstrap.workspace.name} />;
+  return (
+    <WorkspaceMenu
+      workspaceId={bootstrap.workspace.id}
+      workspaceName={bootstrap.workspace.name}
+    />
+  );
 }
 
 // Sidebar의 topSlot 자리에 꽂는다 — 이 자리는 접힘 여부와 무관하게 항상
@@ -40,12 +45,17 @@ export function WorkspaceMenuSlotCollapsed() {
   if (isLoading) {
     return (
       <div className="flex w-full items-center justify-center py-1">
-        <Skeleton className="size-8 rounded-md" />
+        <Skeleton className="size-7 rounded-md" />
       </div>
     );
   }
   if (!bootstrap) {
     return null;
   }
-  return <WorkspaceMenu workspaceName={bootstrap.workspace.name} />;
+  return (
+    <WorkspaceMenu
+      workspaceId={bootstrap.workspace.id}
+      workspaceName={bootstrap.workspace.name}
+    />
+  );
 }

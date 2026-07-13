@@ -1,10 +1,6 @@
 import { NemaMarkIcon } from "@web/components/ui/NemaMarkIcon";
 
-interface SpaceEmptyStateProps {
-  message: string;
-}
-
-export function SpaceEmptyState({ message }: SpaceEmptyStateProps) {
+export function SpaceEmptyState() {
   return (
     <div className="flex flex-col items-center gap-4 text-center">
       <NemaMarkIcon
@@ -13,7 +9,6 @@ export function SpaceEmptyState({ message }: SpaceEmptyStateProps) {
         fill="currentColor"
         className="text-fg-primary opacity-[0.06] dark:opacity-[0.08]"
       />
-      <p className="text-sm text-fg-tertiary">{message}</p>
     </div>
   );
 }

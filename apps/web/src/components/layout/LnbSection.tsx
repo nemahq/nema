@@ -39,7 +39,7 @@ export function LnbSection({
           </div>
         )
       ) : (
-        <div className="group/section relative flex items-center px-2">
+        <div className="group/section relative flex items-center px-2 py-px">
           <LnbRowBox
             className={cn(
               hoverable && "group-hover/section:bg-surface-raised-hover/75",

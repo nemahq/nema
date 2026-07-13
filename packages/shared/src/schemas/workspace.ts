@@ -34,9 +34,6 @@ export const LeaveWorkspaceInputSchema = z.object({
 });
 export type LeaveWorkspaceInput = z.infer<typeof LeaveWorkspaceInputSchema>;
 
-// 가입 트리거가 만드는 기본 Space의 이름 자리 — en placeholder, ko UX 패스에서 재검토 대상.
-export const DEFAULT_SPACE_NAME = "Default";
-
 export const BootstrapUserSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),

@@ -14,13 +14,13 @@ import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { ComingSoonPage } from "@web/app/pages/ComingSoonPage";
 import { DraftsPage } from "@web/app/pages/DraftsPage";
-import { HomePage } from "@web/app/pages/HomePage";
 import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { SessionPage } from "@web/app/pages/SessionPage";
 import { SignInPage } from "@web/app/pages/SignInPage";
 import { SpaceOverviewPage } from "@web/app/pages/SpaceOverviewPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
+import { WorkspaceHomePage } from "@web/app/pages/WorkspaceHomePage";
 import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { requireAuth, requireGuest } from "@web/features/auth";
 import { HarnessPage } from "@web/features/dev-harness";
@@ -117,13 +117,6 @@ const sessionSidebarRoute = createRoute({
   ),
 });
 
-const indexRoute = createRoute({
-  getParentRoute: () => sessionSidebarRoute,
-  path: "/",
-  component: HomePage,
-  errorComponent: RouteErrorFallback,
-});
-
 function SessionPageShell() {
   const { sessionId } = sessionRoute.useParams();
   return <SessionPage key={sessionId} />;
@@ -161,6 +154,13 @@ const workspaceSidebarRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   id: "_workspaceSidebar",
   component: WorkspaceSidebarLayout,
+  errorComponent: RouteErrorFallback,
+});
+
+const workspaceHomeRoute = createRoute({
+  getParentRoute: () => workspaceSidebarRoute,
+  path: "/",
+  component: WorkspaceHomePage,
   errorComponent: RouteErrorFallback,
 });
 
@@ -202,8 +202,12 @@ const routeTree = rootRoute.addChildren([
   termsRoute,
   oauthConsentRoute,
   authenticatedRoute.addChildren([
-    sessionSidebarRoute.addChildren([indexRoute, sessionRoute]),
-    workspaceSidebarRoute.addChildren([spaceOverviewRoute, draftsRoute]),
+    sessionSidebarRoute.addChildren([sessionRoute]),
+    workspaceSidebarRoute.addChildren([
+      workspaceHomeRoute,
+      spaceOverviewRoute,
+      draftsRoute,
+    ]),
     devHarnessRoute,
   ]),
 ]);

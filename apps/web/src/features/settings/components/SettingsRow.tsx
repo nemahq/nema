@@ -1,9 +1,13 @@
 import type { ReactNode } from "react";
 
+import { cn } from "@nema-io/weave";
+
 interface SettingsRowProps {
   label: string;
   description?: string;
   htmlFor?: string;
+  // 서로 붙어있어야 할 관련 행 쌍(예: App/Content language) 사이에선 false로 끈다.
+  divider?: boolean;
   children: ReactNode;
 }
 
@@ -11,10 +15,16 @@ export function SettingsRow({
   label,
   description,
   htmlFor,
+  divider = true,
   children,
 }: SettingsRowProps) {
   return (
-    <div className="flex items-center justify-between gap-6 border-b border-border py-4 first:pt-0 last:border-b-0 last:pb-0">
+    <div
+      className={cn(
+        "flex items-center justify-between gap-6 py-4 first:pt-0 last:pb-0",
+        divider && "border-b border-border last:border-b-0",
+      )}
+    >
       <div className="flex flex-col gap-0.5 pr-4">
         {htmlFor ? (
           <label

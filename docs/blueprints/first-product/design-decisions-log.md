@@ -253,3 +253,123 @@ PR #382에서 LNB 워크스페이스 스위처·Space 목록·설정 모달을 �
 - **반영 안 함(기각)**: "초안 목록을 Space로 스코프해야 하는 것 아니냐"는 지적은 기각 — surface-inventory가 초안 화면을 명시적으로 Workspace 전역으로 설계했다("잘못된 Space에 들어간 걸 여기서 한눈에 보고 바로잡을 수 있어야"). RPC 에러 코드 매핑(P0001 그대로 노출)은 실제 UI 경로로 도달 불가능해서(컴포저의 spaceId는 항상 현재 라우트의 Space이고, 아닌 Space면 SpaceOverview가 애초에 not-found로 막음) 보류.
 
 ---
+
+### 2026-07-12 — 폴리싱 세션(전담) 1라운드: LNB 레이블·아이콘·워크스페이스 아이덴티티
+
+#382 머지 후 새 워크트리에서 전담 폴리싱 세션이 시작한 첫 라운드. `docs/blueprints/first-product/design-reference-log.md`(레퍼런스 기준) 확립 이후 실제 화면(LNB)에 처음 적용한 결과. Kyle과 한 번에 하나씩 핑퐁하며 진행 — 결정 다수가 몇 차례 번복을 거쳐 정착됐다.
+
+**제품 용어 재검토 (개념/코드 용어는 유지, 제품 용어만)**
+- **Ask & Narrate → "Ask"(en) / "묻기"(ko)**: "Narrate"가 실제 시장에서 오디오 내레이션(NotebookLM Audio Overviews)·접근성 스크린리더(Windows Narrator)와 강하게 충돌한다는 걸 웹서치로 확인. 개념 용어 "Narration"·코드(`narrateText` 등)는 그대로 두고 제품 용어만 분리(glossary에 이미 있는 Statement/"Sentence" 분리 선례를 따름). "Ask" 단독으로 갈지 "Ask & Brief"로 갈지 오래 논의했으나, 최종적으로 nav 라벨은 "X & Y" 동사 조합보다 단일 명사가 표준(NN/g 가이드, Perplexity 실제 사례 확인)이라는 근거로 단독 "Ask"로 확정. 국문 "묻기"도 같은 이유로 단독.
+- **References → "Wiki"(en) / "위키"(ko)**: "References"가 학술 인용/참고문헌과 강하게 충돌(확인됨). 대체 후보로 "Index"를 먼저 제안했으나 실제 선례가 약해, Notion의 실제 "Wiki" 기능(검증 상태 포함 구조화 지식베이스)이 Nema의 Reference(인물·조직·프로젝트·제품·용어를 다듬어가며 유지)와 구조적으로 더 잘 맞아 최종 채택. 아이콘은 `BookMarked`(책갈피, 인용 연상 강화) → `Contact`(사람 아이콘, 이질적 엔티티 대표 못함, 기각) → `BookOpenText`(펼친 책, 위키/백과사전 인상)로 정착.
+- 아이콘 선정은 실제 설치된 `lucide-react` 버전(`node_modules`)에서 export 이름을 직접 확인하고 골랐다 — 기억으로 추측하지 않음.
+
+**타이포·간격**
+- `LnbRowBox`에 `font-medium`을 기본값으로 넣어 Ask/Wiki/Space 이름 전부 기본 bold. `NavItem`의 `activeProps`에 있던 중복 `font-medium`은 제거(활성 상태는 배경 하이라이트만으로 구분).
+- `NavItem` 텍스트를 `text-sm`(라벨 `text-xs`보다 한 단계 큼)으로 — 2026-07-11 라운드가 "레이블과 통일"로 내렸던 걸 다시 뒤집은 것. 이유: 레이블(카테고리 제목)과 아이템(실제 클릭 콘텐츠)은 역할이 달라 크기로도 구분돼야 한다는 판단(Notion/Linear류 사이드바 공통 패턴).
+- `NavItem` 행에 `pl-3`(레이블 대비 2px)로 아주 살짝 들여쓰기 — 하이라이트 박스 위치는 안 건드리고 아이콘·텍스트만 안쪽으로 밀었다(2026-07-11 라운드와 같은 기법 재사용).
+- `LnbSection`(레이블 행)에 `py-px` 추가 — `NavItem` 행엔 있었는데 레이블 행엔 없어서 레이블↔첫 아이템 간격(1px)과 아이템↔아이템 간격(2px)이 실측상 달랐던 것을 통일(둘 다 2px).
+
+**긴 이름 처리**
+- `NavItem` 펼침 상태의 활성(Link) 행에 `title={label}` 추가 — 잘린 이름은 네이티브 브라우저 툴팁으로 확인 가능(Carbon/PatternFly 등 실제 가이드가 권장하는 표준 패턴, 커스텀 `Tooltip`보다 단순해 이 케이스엔 이걸 채택). 처음엔 Radix `Tooltip`으로 감쌌다가, `LnbRowBox`가 `{ asChild, className, children }`만 받고 나머지 props(이벤트 핸들러)를 전달 안 해서 실제로 안 뜨는 버그를 발견 → `title` 속성으로 우회(이 저장소엔 "잘린 텍스트+툴팁" 선례 자체가 없었음, `SessionItem`/`UserMenu`/`WorkspaceMenu`도 다 `truncate`만 쓰고 툴팁 없음 확인).
+- 아이콘에 `shrink-0` 누락돼 있어 긴 텍스트가 아이콘을 찌그러뜨리던 버그 발견·수정(`WorkspaceSidebar`의 `NAV_ICON_CLASS`, `SpaceListItem`의 아이콘 클래스).
+- 텍스트 자체의 말줄임(`truncate`)이 `LnbRowBox`(flex 컨테이너) 레벨에 걸려 있어 실제로 동작 안 하던 버그 — `min-w-0 truncate`를 텍스트 전용 `<span>`으로 분리해 해결(flex item은 기본 `min-width: auto`라 내용 크기 이하로 안 줄어듦).
+- 트레일링 액션(`SpaceItemMenu` "...") 자리로 쓰던 고정 `pr-8`을 `group-hover:pr-8`로 변경 — 평소엔 레이블이 끝까지 채우고, 호버 시에만 그만큼 패딩이 생겨 텍스트가 실시간으로 다시 말줄임된다(CSS만으로 동작, JS 불필요).
+
+**Space 아이콘 — 색상 실험 후 중립으로 회귀**
+`Hash` 아이콘(Slack/Discord식 "채널" 연상, Nema의 Space 개념과 안 맞음)을 대체하려고 이름 첫 글자 + Space id 해시 기반 색상 배지를 시도했으나(팔레트까지 설계·weave에 추가), Kyle이 실제로 보고 "여러 색이 리스트에 있으니 시끄럽다"고 판단해 철회. **이 판단은 사실 이미 내려져 있었다** — 2026-07-10 기록의 "백로그: LNB 접힘 상태 Space 목록 아이콘 식별성" 항목이 "지금 안 고침, 멀티 Space 실제로 늘어날 때 재검토"라고 이미 정리해뒀던 걸 이번에 배경 확인 없이 다시 열었던 것. 최종 정착: `Avatar`/색상 팔레트 다 걷어내고 `bg-fg-primary/10 text-fg-primary`(워크스페이스 배지가 다크모드에서 쓰던 것과 같은 조합, 테마별로 자동 조정)로 단순화. **위 백로그 판단은 여전히 유효 — 다음에 이 영역 만지는 세션은 재도출하지 말 것.**
+
+**워크스페이스 배지 — 개인화 색상 도입 (Space와는 다른 결론)**
+Space와 달리 이 배지는 **한 번에 하나만 보이는 단독 요소**라 색상 다양성이 시각적 소음이 되지 않는다고 판단(Slack/Notion의 워크스페이스 스위처가 실제로 브랜드색 대신 워크스페이스별 색을 쓰는 선례 확인). workspaceId 해시 기반으로 5색(violet-700/fuchsia-800/cyan-700/lime-700/yellow-700, 전부 흰 텍스트, WCAG AA 확인) 중 하나를 고정 배정. 몇 차례 조정 있었음:
+- 처음엔 진한 3색(흰 텍스트)+밝은 3색(어두운 텍스트) 조합이었는데 Kyle이 "Rose가 너무 쨍하다" → rose 제외, 나머지 5색을 한 단계씩 더 어둡게, **가운데 텍스트는 전부 흰색으로 통일**(요청) → cyan/lime/yellow도 흰 텍스트가 통과하는 톤(-700)까지 다시 내림.
+- 중간에 "옅은 틴트 배경+진한 텍스트"(status-tint와 같은 패턴)도 시도했다가 "이게 아닌 것 같다"는 피드백으로 원래의 꽉 찬 채우기 방식으로 복귀 — 틴트 버전 코드는 완전히 되돌림.
+- `packages/weave`엔 `--palette-identity-*`(5색, 테마 무관 고정값 — 흰 텍스트 대비를 유지하려면 다크모드에서 밝아지는 일반 패턴을 못 씀)만 추가, workspaceId→색 매핑 로직(`apps/web/src/features/workspace/workspaceAvatarColor.ts`)은 앱 레벨.
+- 접힘 배지 크기 `size-8`→`size-7`(다른 접힘 LNB 아이템과 통일, 이전엔 유독 4px 컸음). 로딩 스켈레톤 크기도 같이 맞춤.
+
+**포커스링이 다음 행 배경에 가려지는 버그**
+`NavItem`(펼침·접힘 모두)에 `relative` + `focus-visible:z-10` 추가 — outline이 `outline-offset-2`로 박스 밖까지 번지는데, LNB 행 간격이 좁아(2px) 다음 행에 가려지고 있었다. `SettingsNav`가 이미 같은 문제를 같은 방식으로 고쳐뒀던 선례를 그대로 따름. 워크스페이스 스위처 버튼 자체는 확인 결과 인접 요소가 없어 이 문제 대상 아님(Kyle 확인).
+
+**접힘 사이드바 토글 버튼**: weave `Button`의 `icon-sm`(size-8)을 그대로 쓰고 있어 다른 접힘 아이템보다 컸음 — `Sidebar.tsx`에서 접힘일 때만 `size-7`로 로컬 override(펼침은 기존 유지). `Sidebar`가 `SessionSidebar`와 공유되는 컴포넌트라 그쪽 접힘 토글도 같이 맞춰짐(의도됨, 그쪽 `NavItem`도 이미 size-7).
+
+**접힘 Space 스켈레톤**: `SpaceList`가 접힘 여부를 아예 안 보고 펼침용 스켈레톤(아이콘+긴 텍스트 바)을 그대로 썼던 버그 — 접힘 전용 분기(가운데 정렬 `size-7 rounded-lg`) 추가.
+
+**다음 라운드**: Space 메인 콘텐츠(오버뷰 피드)로 이동 예정.
+
+---
+
+### 2026-07-12 — Space 오버뷰 마무리 + 설정 모달 Content language 재도입 (2026-07-10 결정 번복)
+
+**v1 홈 완전 퇴장(2026-07-10 "LNB에 홈 항목은 뺐다" 결정의 후속 조치)**: 그 결정은 "홈이 아직 옛 세션 사이드바 셸이라 새 LNB에서 누르면 셸 전체가 어색하게 전환된다"는 이유로 LNB에서 홈 항목 자체를 뺐고, "홈은 v2 홈 화면을 새 LNB 아래로 옮기는 슬라이스에서 함께 붙인다"고 명시해뒀다. 이번 라운드가 정확히 그 슬라이스다 — v2 stub이라도 `WorkspaceSidebar`(새 LNB) 아래로 홈을 옮겨왔으니 LNB에 Home NavItem을 다시 추가했다. `/`가 v1 `HomePage`(세션 사이드바 셸) 대신 v2 `WorkspaceSidebar` 셸 아래 stub `WorkspaceHome`로 직접 연결되도록 라우트를 바꿨다. 처음엔 `/home`으로 별도 경로를 만들고 `/`는 리다이렉트만 하게 했었는데, Kyle이 "v1으로 이제 안 가도 되는데 굳이 리다이렉트를 거칠 이유가 있나"라고 지적 — 맞는 말이라 `/`를 v2 홈의 실제 경로로 바꾸고 리다이렉트 계층을 걷어냈다. v1 `HomePage`가 죽으면서 그 전용 의존이었던 `Greeting`·`useStartSession`·`useCreateSession`과, 그것들만 쓰던 캐시 프라임 함수 4개(`presetMessageCache`/`clearMessageCache`/`prependSessionCache`/`presetSessionCache`)도 연쇄로 죽어 함께 삭제(knip이 파일 단위는 잡았지만 정확히는 이 export 단위는 못 잡아서 수동 확인 후 정리 — JSON i18n 키의 죽은 참조도 knip은 못 잡는다는 걸 재확인, `session.empty_heading_*`/`empty_subheading_*` 10개도 같은 이유로 같이 정리).
+
+**Space 없음 에러뷰**: 처음엔 앱 전역 `NotFoundErrorFallback`(워터마크+단일 문구) 재사용을 시도했다가, Kyle이 다른 레퍼런스(Linear "Team not found", X "This account doesn't exist")를 검토한 뒤 "전역 404는 원복하고, Space 쪽만 title+description으로 가자"고 정리 — 전역 404는 워터마크 있는 원래 형태 그대로 유지, `SpaceOverview.tsx`의 Space-없음 분기만 워터마크 없이 제목+설명 2줄 구조로 바꿨다(`space.not_found_title`/`not_found_description` 신규, 기존 `space.not_found` 대체). 제목엔 마침표 안 붙임(레이블성 타이틀은 마침표 없음 — Kyle 지적).
+
+**Space 오버뷰 타이틀에 아이콘 추가**: LNB `SpaceListItem`과 같은 중립 배지(`bg-fg-primary/10 text-fg-primary rounded-md`, 첫 글자)를 타이틀 폰트 크기(`text-xl`)에 맞춰 `size-8`로 키워 재사용. 로딩 스켈레톤도 아이콘 자리를 같이 넣어 짝을 맞췄다. 이 김에 타이틀에 `truncate`가 빠져있던 것(긴 Space 이름이 줄바꿈되던 버그)도 같이 고쳤고, `WorkspaceHome.tsx`가 `t("common.home")` 대신 "Home"을 하드코딩해 한국어 로케일에서도 영어로 뜨던 버그도 발견해 고쳤다.
+
+**LNB Space 목록 스켈레톤 들여쓰기 누락**: 실제 `NavItem` 행엔 `pl-3`(2026-07-11 라운드에서 결정한 라벨 대비 살짝 들여쓰기)이 있는데, `SpaceList.tsx`의 펼침 스켈레톤은 그 클래스 없이 기본 `LnbRowBox`만 써서 로딩 중엔 아이콘·텍스트가 실제 행보다 2px 왼쪽에 있었다 — `pl-3` 추가로 정합.
+
+**설정 모달 Content language 재도입 — 2026-07-10 결정 번복**: Kyle이 "붙여넣는 원문 언어와 무관하게, 저장된 요약은 본인이 고른 언어로 구조화하고 싶을 것"이라며 재도입을 요청. **주의**: 2026-07-10 항목("계정 설정 리뷰 반영")에서 이미 한 번 "일반 섹션에 넣기 애매하다"는 이유로 `ContentLanguageSection` 자체를 완전히 삭제한 이력이 있다 — 이번 재도입 전 그 사실을 놓치고 "이미 glossary/코드에 있으니 그냥 넣으면 된다"고 판단할 뻔했으나, Kyle이 지적해 바로잡았다. `surface-inventory.md`의 "설정 (모달)" § "일반" 항목도 Theme+앱 언어만 언급하던 걸 콘텐츠 언어 포함으로 같이 갱신했다 — **문서와 실제 반영 상태가 다시 어긋나지 않도록, 이 결정 번복은 스펙 문서 갱신까지 세트로 처리**. 구현은 이미 있던 `useProfileQuery`/`useUpdateProfile`(온보딩이 계속 써서 안 지워져 있었음)을 그대로 재사용, `PreferencesSection`의 "Language" 섹션에 App language 바로 아래 행으로 추가(같은 낙관적 업데이트+실패 롤백 패턴). 두 행이 같은 섹션 헤더 아래 묶인 한 쌍으로 보이도록 `SettingsRow`에 `divider` prop(기본 true)을 추가해 App language 행만 `divider={false}`로 구분선을 껐다.
+
+**설정 모달 설명 문구 — 마침표 전부 제거**: `SettingsRow`의 `description`(작은 회색 설명)과 섹션 상단 서브타이틀(`account_subtitle`/`preferences_subtitle`) 전부 마침표를 뗐다 — 레이블성 문구는 마침표 없음(`docs/guides/ux-writing.md` 규칙)에 맞춘 것. 새로 쓴 `content_language`/`content_language_description` 카피도 대시(—) 없이 다듬었고(Kyle: "대시는 절대 안 씀" — 향후 카피에도 적용할 규칙), ko는 아직 Kyle이 직접 다듬지 않아 en과 동일한 placeholder로 남겨뒀다(이 세션의 기존 관례 그대로).
+
+---
+
+### 2026-07-12 — Space 오버뷰 탭 제품 용어: Thread 유지, Changeset → Changes
+
+`묻기`/`위키`를 정했던 것과 같은 방식(실제 제품 충돌 리서치 → 대안 검토 → 확정)으로 Space 오버뷰의 두 탭(`space.tab_topic`/`space.tab_changesets`) 이름을 다시 검토했다. 개념·코드 용어(Thread/`topics`, Changeset/`changesets`)는 전혀 안 건드리고, 탭에 노출되는 제품 용어만 다뤘다.
+
+**Thread — 그대로 유지, Feed로 안 바꿈**: 처음엔 "이 탭 기본 상태(Topic 필터 없음)는 사실 여러 Topic이 섞인 피드지, 하나의 Thread가 아니다"는 이유로 "Feed"/"피드"를 제안했었다. 그런데 Thread/Feed의 통상적 어감을 되짚어보니(Thread = 연결된 한 가닥, Feed = 서로 무관한 것들이 넓게 모인 것) Kyle이 "Nema는 스레드가 맞다"고 판단 — Nema가 지키려는 게 "느슨하게 모인 콘텐츠 더미"가 아니라 "서로 이어진 지식"이라, 어감상 Thread가 Nema의 정체성에 더 맞다는 결론. 기본 상태의 실제 UI(믹스된 피드)와 이름이 100% 일치하진 않지만, 그 어긋남보다 브랜드 어감이 우선한다고 판단한 사례 — **"실제 UI와 정확히 일치하는 이름"이 항상 최우선 기준은 아니라는 걸 보여주는 근거로 남겨둔다.**
+
+**Changeset → "Changes"(en) / "변경사항"(ko)로 제품 용어 분리**:
+- 1차 시도 "Suggestions"/"제안"은 기각됐다 — Kyle이 "이 탭에 들어갈 컨텐츠를 다 보고 제안한 거 맞냐"고 물어서 다시 확인해보니, 이 탭엔 `ingestion`/`relation`(둘 다 승인 대기 "제안"에 맞음) 말고 `revert`(제출=즉시 적용, 승인 대기 단계 자체가 없음)도 있었고, 무엇보다 Closed 목록은 버려진 것까지 **의도적으로 영구 보존**한다(surface-inventory.md "변경셋" 섹션, nema 원칙 "매끄러움이 아니라 충실함"). Grammarly Suggestions·Google Contacts 병합 제안은 처리하면 목록에서 사라지는 일시적 패턴이라 이 영구 보존 원칙과 구조가 반대라 기각.
+- 재조사 결과 Gerrit(Google 코드리뷰 툴)의 "Changes"(Open/Merged/Abandoned, 영구 보존, 되돌리기 가능 — Nema 변경셋과 거의 동일한 생애주기)를 발견, 상태를 특정 안 하는 중립적 단어라 Open(대기)·Closed(완료·버려짐·되돌림) 전부를 자연스럽게 감싼다는 점에서 채택.
+- 한국어는 "변경이력" 대신 "변경사항"으로 확정 — 이미 이 문서 자체("Space 오버뷰" 섹션)에 "탭 이름은 '변경 이력'이 아니라 '변경셋' — 대기 중인 것은 아직 '일어난' 게 아니라 '이력'이라는 이름과 안 맞음"이라고 기각 사유가 기록돼 있었고, 그 이유가 "Changes"로 바꾼 지금도 그대로 유효하다. 게다가 "변경 이력"은 이미 Digest/Reference 각자의 "..." 메뉴 → 변경 이력 모달(스코프: 항목 하나)에 쓰이고 있어, 탭(스코프: Space 전체)에도 같은 이름을 쓰면 서로 다른 두 기능이 이름까지 겹쳤을 것.
+- npm/pnpm 생태계의 실제 `changesets` 툴(버전 관리 자동화 도구, 이 리포 자체가 pnpm 모노레포라 더 직접적인 충돌 우려)과의 충돌도 이번 교체로 자연히 해소됐다.
+
+**Workspace·Space는 그대로 "워크스페이스"·"스페이스" 유지 확정** — 새 한국어 번역을 만들지 않고 기존 자연스러운 외래어 그대로 쓰기로 확인. 이 김에 그동안 영어 placeholder로 남아있던 LNB 섹션 라벨(`workspace.section_workspace`/`section_spaces`)도 실제 한국어("워크스페이스"/"스페이스")로 반영했다 — 이 둘은 이번에 새로 결정한 게 아니라 원래도 확정 용어였는데 ko.json 반영만 밀려 있었던 것.
+
+**구현**: `apps/web/src/lib/tolgee/en.json`/`ko.json`의 `space.tab_topic`(ko: "스레드")·`space.tab_changesets`(en: "Changes", ko: "변경사항")·`space.changesets_empty`(en/ko: "No changes yet.", 탭 이름 변경에 맞춘 표현 통일)를 갱신. `SpaceOverview.tsx`의 `SpaceTab` 타입(`"topic" | "changesets"`)과 컴포넌트 코드는 무변경 — 코드 식별자와 노출 카피를 분리하는 이 세션의 기존 원칙 그대로.
+
+---
+
+### 2026-07-12 — ko.json 전체 placeholder 번역 + Space 탭 빈 상태 정리 + Space 이름·설정 UI 재구조화
+
+**ko.json 잔여 placeholder 48개 전량 번역**: `/check-ux-writing` 체크리스트(해요체·마침표 규칙·용어 통일) 기준으로 en과 동일 값으로 남아있던 `account`/`app`/`auth`/`settings`/`space`/`workspace` 네임스페이스 키를 전부 실제 한국어로 옮겼다. 과정에서 `session.rename`(기존 "이름 바꾸기")과 새로 쓴 `space.rename`("이름 변경")이 같은 개념에 다른 표현을 쓰고 있던 동의어 충돌을 발견해 "이름 바꾸기"로 통일. `settings.theme`("테마")는 Notion·Slack 한국어판 레퍼런스로 재확인 — 이미 맞았음. **스코프 명시(리뷰에서 지적받음)**: 이 48개는 이 라운드 시점에 ko.json에 이미 있던 placeholder 전부다. 이후 `staging` 리베이스로 다른 세션(#385 인테이크 슬라이스)의 신규 `intake.*` 키 6개가 새로 들어왔는데, 그건 이 번역 작업 범위 밖이다(그 슬라이스 자신의 "전체 구현 끝난 뒤 ko 일괄 번역" 단계가 아직 안 왔을 뿐 — `nema-slice-implementation-workflow.md`의 i18n 관례 그대로). 다음 세션은 `intake.*` 잔여 placeholder를 "이 로그가 놓친 것"으로 오해하지 말 것 — 해당 슬라이스 담당이 처리할 몫이다. 다만 `workspace.drafts`(같은 리베이스로 들어온 LNB 라이브 라벨)는 이 PR에서 함께 번역해뒀다.
+
+**Space 탭 빈 상태 — 문구 제거, 워터마크만**: `SpaceEmptyState`에서 `message` prop 자체를 없애고 워터마크 아이콘만 남겼다(Kyle 요청). 유일한 소비처였던 `space.topic_empty`/`space.changesets_empty` i18n 키도 함께 삭제.
+
+**Space 이름 변경 — 미변경 시 저장 비활성화**: `SpaceSettingsForm`(구 `SpaceModalForm` rename 모드)에 `isUnchanged = name.trim() === spaceName` 가드 추가 — 버튼 disabled뿐 아니라 Enter 키 제출도 막아 무의미한 rename 뮤테이션 호출 자체를 방지.
+
+**Space 생성/설정 모달 분리**: 기존 `SpaceModal`/`SpaceModalForm`(create/rename 모드를 하나의 discriminated union으로 공유)을 `SpaceCreateModal`+`SpaceCreateForm`, `SpaceSettingsModal`+`SpaceSettingsForm` 4개 파일로 완전히 분리했다. 이유: 설정 쪽은 앞으로 필드가 늘 것(아이콘·색상 등, `surface-inventory.md` "Space 설정 모달" 섹션이 이미 명시한 확장 방향)이라 지금 합쳐두면 나중에 갈라내기가 더 번거로움 — Kyle 판단으로 지금 갈라둠. 두 폼 사이 중복(Input+에러 처리+Footer 구조)은 의도적으로 허용 — 이 폴더에 이미 `SpaceDeleteBlockedForm`/`SpaceDeleteConfirmForm`처럼 "시나리오별 작은 폼 분리" 선례가 있어 결을 맞춤.
+
+**LNB "..." 메뉴: Rename → Settings**: Linear(Team)·Notion(Teamspace) 레퍼런스 확인 — 둘 다 Space와 비슷한 무게의 컨테이너인데 "..." 메뉴가 진입점인 건 같지만, 실제 이름 변경은 그 안의 별도 설정 화면에서 일어난다(Notion은 거기에 더해 되돌릴 수 있는 "Archive"만 "..."에 직접 노출, 영구 삭제는 아님). Nema의 삭제는 영구·전체 콘텐츠 삭제라 Notion의 archive보다 무거운 액션이지만, 이미 타이핑 확인이라는 강한 안전장치가 있어 "삭제는 그대로 "..." 직접 액션 유지, 이름 변경은 '설정' 진입점 뒤로"로 정리했다(Delete를 설정 모달 안으로 옮기는 것은 필드가 늘어날 때로 유보). `SpaceItemMenu`의 `onRename` prop→`onOpenSettings`, 아이콘 `Pencil`→`Settings`(gear), 라벨 `space.rename`("이름 바꾸기")→`space.settings`("설정")로 교체 — 이제 안 쓰는 `space.rename`/`space.rename_title` 키 삭제, `space.settings`/`space.settings_title`(en: "Settings"/"Space settings", ko: "설정"/"스페이스 설정") 신규.
+
+**이름 입력 필드에 label 추가**: `SpaceCreateForm`/`SpaceSettingsForm` 둘 다 placeholder만 있고 별도 `<label>`이 없었다 — Kyle 지적으로 `htmlFor`+`id` 연결된 `<label>`(`space.name_placeholder` 텍스트 재사용, "Space name"/"스페이스 이름")을 추가하고 placeholder는 뗐다(라벨과 중복이라).
+
+**신규 유저 기본 Space 이름 — "Default" → "My Space"**: 처음엔 "지금 DB에 name이 NULL이라 프론트가 크래시난다"고 잘못 짚었다 — 실제로는 이후 마이그레이션(`20260710070941_space_management_rpcs.sql`)이 이미 `spaces.name`을 NOT NULL로 승격하고 가입 트리거가 리터럴 `'Default'`를 직접 심도록 바꿔둔 뒤였다(더 오래된 `20260611091632_create_spaces.sql`만 보고 판단해 생긴 오류 — 최신 마이그레이션까지 다 확인했어야 함, 이후 세션 교훈으로 남김). 세 가지 대안(A. 리터럴만 교체 B. 가입 시점 로케일 캡처 후 트리거 분기 C. 센티널 문자열 방식 표시 시점 치환) 중 Kyle이 A 선택 — 지금 "Default"도 원래 로케일 무관 하드코딩이었고, B는 이 세션 스코프 밖, C는 사용자가 우연히 같은 문자열로 개명하면 오치환되는 새 버그를 만들 수 있어서. 새 마이그레이션(`20260712230000_default_space_name_my_space.sql`)으로 `handle_new_user()` 트리거 함수의 리터럴을 `'My Space'`로 교체 + 기존에 아직 "Default" 그대로인 Space도 함께 백필(20260710070941의 NULL 백필과 같은 논리 — 사용자가 실제로 "Default"를 의도적으로 고른 경우는 사실상 없다고 판단). `packages/shared`의 `DEFAULT_SPACE_NAME` 상수도 값 맞춰 갱신(SQL 리터럴과 동기화는 여전히 수동, 자동 강제 없음 — 코드 주석에 명시). **이 환경엔 Supabase CLI가 없어 `supabase db reset`으로 실제 적용 검증을 못 했다 — 머지 전 CI/로컬에서 마이그레이션이 깨끗하게 적용되는지 반드시 확인 필요.** 스키마 변경은 없어(함수 body + 1회성 UPDATE) `pnpm supabase:gen-types` 재생성은 불필요 판단.
+
+---
+
+### 2026-07-13 — PR #387 리뷰 반영 + Space 이름 필드 공유 추출
+
+멀티 에이전트 리뷰(code-reviewer·silent-failure-hunter·pr-test-analyzer·comment-analyzer·type-design-analyzer) 결과 반영. 4개 에이전트가 독립적으로 수렴한 Critical 2건 우선 처리, 나머지는 판단해서 선별 반영.
+
+**마이그레이션 UNIQUE 충돌 방어**: `20260712230000_default_space_name_my_space.sql`의 무방비 `UPDATE spaces SET name = 'My Space' WHERE name = 'Default'`가 `spaces_workspace_id_name_key` UNIQUE(workspace_id, name) 제약과 충돌할 수 있었다 — `create_space`/`rename_space`가 임의 이름을 허용해서, 같은 워크스페이스에 "Default"와 "My Space"가 동시에 있으면 실제로 터지는 시나리오. `rename_space`가 이미 쓰는 방어(대상 이름이 그 워크스페이스에 없을 때만)로 고쳤다. staging은 이미 이 마이그레이션을 충돌 없이 적용해버린 뒤라(그 시점엔 실제 충돌이 없었음) 재실행은 안 되지만, 파일을 고쳐뒀으니 프로덕션 첫 적용 때는 안전하다 — staging 전용 마이그레이션은 이미 적용된 뒤에도 고쳐도 된다고 판단(프로덕션에 적용된 마이그레이션을 사후 수정하는 것과는 무게가 다름).
+
+**ko.json 번역 완료 주장 스코프 정정**: "48개 전량 번역"이 리베이스로 새로 들어온 `intake.*` 6개를 놓쳤다는 지적 — 그 키들은 다른 세션(#385) 몫이라 로그에 스코프를 명시했고, 같은 리베이스로 들어온 LNB 라이브 라벨 `workspace.drafts`만 이 PR에서 같이 번역했다("초안 ({count})").
+
+**죽은 코드 정리**: v1 홈 삭제로 유일한 writer(`useStartSession`)를 잃은 `ChatPanel`의 initialMessage/initialMode 라우트 상태 메커니즘 전체와 그 전용 `routeState` 상수/유틸 파일 2개 삭제. 어디서도 안 쓰이는 `DEFAULT_SPACE_NAME` 상수도 제거(마이그레이션 리터럴과 "맞춰 둘 것"이라는 주석만 있고 강제력 없었음).
+
+**문서 교차 참조 보강**: 2026-07-10 "LNB에 홈 항목은 뺐다" 결정에 이번 폴리싱 라운드가 그 후속 슬라이스라는 참조를 추가(문서 자신의 "이전 결정 재도출 방지" 원칙을 스스로 어기고 있었음). `SpaceListItem` 배지 주석이 이미 사라진 WorkspaceMenu 다크모드 fallback을 근거로 들고 있던 것도 실제 근거(색상 실험 후 중립 회귀)로 교체.
+
+**Space 이름 폼필드 공유 추출**: type-design-analyzer가 지적한 "Create/Settings 폼이 이름 검증 로직을 완전히 독립 재구현"은 Kyle과 논의해 별도로 처리 — 겉 모달/폼 분리(제목·Footer·제출 대상)는 "설정 쪽 필드가 미래에 늘어난다"는 이유가 여전히 유효해 그대로 두되, 이름 필드 자체(값·검증·conflict)는 create/rename 둘 다 규칙이 동일해야 하는 부분이라 분리 이유가 안 맞았다. `useSpaceNameField` 훅(상태+검증+conflict 로직)과 `SpaceNameField` 컴포넌트(순수 컨트롤드 프레젠테이션)로 나눠 양쪽 폼이 합성해서 쓰게 만들었다 — `SpaceNameField`를 상태를 내부에 숨기는 방식(ref 기반 imperative API)으로 만들면 `SpaceSettingsForm`의 "이름 미변경 시 저장 비활성화"가 매 키 입력마다 재계산돼야 하는데 부모가 그 값을 못 보게 돼 깨진다는 걸 설계 중 발견 — 그래서 값은 부모(각 Form)가 계속 들고, 컴포넌트는 렌더링만 맡는 컨트롤드 방식으로 확정.
+
+**Space 생성 모달 — 이름 비어있으면 만들기 버튼 비활성화**: `SpaceSettingsForm`의 "미변경 시 저장 비활성화"와 같은 결.
+
+**Space 생성/이름변경 — 낙관적 업데이트 적용 범위, Kyle과 논의 후 둘을 다르게 처리**: 생성 직후 `navigate({to: "/space/$spaceId"})`가 `utils.workspace.bootstrap.invalidate()`(백그라운드 refetch)보다 먼저 끝나면, `SpaceOverview`가 아직 새 Space가 없는 캐시를 보고 "존재하지 않음" 화면을 잠깐 flash하는 실제 글리치가 있었다. 처음엔 생성 응답(`spaceId`)+입력한 이름으로 캐시에 새 항목을 직접 구성해 넣는 안(진짜 낙관적 업데이트)을 검토했으나, Kyle이 "앞으로를 생각하면 괜찮은 자리인가"라고 재확인 — `BootstrapSpace`가 지금은 `{id, name}` 뿐이지만 이미 문서에 "아이콘·색상은 필요성 커지면 추가"라고 명시돼 있어, 그 시점에 클라이언트가 서버 계산값(예: 배정된 색)을 못 채우는 채로 손수 만든 객체를 캐시에 꽂으면 잘못된/기본값 UI가 잠깐 보일 새 버그가 생길 수 있다고 판단. **생성은 그래서 캐시 손수 구성 대신 await-then-navigate로 갔다** — 처음엔 이 await를 `useCreateSpace`(훅) 자체의 `onSuccess`에 넣어 TanStack Query의 콜백 순서(useMutation onSuccess가 mutate-call onSuccess보다 먼저 실행되고 await됨)로 우회시켰는데, Kyle이 "useCreateSpace 쪽에서 await 거는 게 맞아? 사용처 쪽이 아니라?"라고 지적 — 맞는 지적이었다. 이 대기는 "생성 직후 그 Space로 바로 이동한다"는 `SpaceCreateForm`만의 사정이지 Space 생성이라는 훅 자체의 책임이 아니라서, 다른 미래 소비처(예: 생성만 하고 이동은 안 하는 흐름)까지 이 지연을 암묵적으로 강제하면 안 됐다. `useCreateSpace`는 원래의 단순한(await 없는) invalidate로 되돌리고, `SpaceCreateForm`이 `trpc.useUtils()`를 직접 받아 자기 `onSuccess`(navigate 바로 앞)에서 명시적으로 `await utils.workspace.bootstrap.invalidate()`하도록 옮겼다 — 훅의 자체 invalidate와 중복 호출되지만 TanStack이 같은 쿼리 키의 동시 refetch를 dedupe해 실제로는 한 번만 나간다.
+
+**이름변경은 반대로 진짜 낙관적 업데이트를 적용**: 기존 캐시 항목의 `name` 필드 하나만 덮어쓰는 거라(새 객체를 통째로 만드는 게 아님) 스키마가 커져도 다른 필드가 그대로 보존돼 생성과 같은 위험이 없다고 판단. `useRenameSpace`에 표준 TanStack 패턴 적용: `onMutate`에서 진행 중인 refetch를 취소하고 이전 상태를 스냅샷한 뒤 캐시를 즉시 갱신, `onError`에서 그 스냅샷으로 롤백(이름 충돌 등 실패 시), `onSettled`에서 항상 invalidate로 최종 서버 상태와 동기화. 저장 버튼을 누르는 즉시 LNB 라벨·오버뷰 타이틀이 반영되고, 서버가 거부하면 원래 이름으로 되돌아간다.
+
+**모달은 mutate 완료 후에만 닫는다(의도됨)**: 데이터(캐시)는 낙관적으로 즉시 바뀌어도 모달 자체는 `onSuccess`에서만 닫는다 — Kyle이 이 비대칭을 지적해 확인. 모달은 conflict/validation 에러를 보여주는 유일한 창구라, 제출 즉시(낙관적으로) 닫아버리면 서버가 나중에 거부했을 때 사용자가 그 이유를 볼 방법이 없어진다(조용한 롤백만 보임). 그래서 "가벼운 값(라벨 텍스트)은 낙관적으로, 에러를 보여줘야 하는 모달은 확인 후에"로 의도적으로 갈랐다.
+
+**Space 이름 중복 — 서버 응답 기다리지 않고 클라에서 미리 검사**: `bootstrap.spaces`에 워크스페이스의 모든 Space `id`+`name`이 이미 캐시돼 있다는 걸 활용 — 서버 유니크 제약(`spaces_workspace_id_name_key`)이 `btrim()`만 하고 대소문자는 구분하므로, 클라 쪽도 같은 규칙(trim, 대소문자 구분)으로 비교하는 순수 함수 `isSpaceNameTaken(spaces, name, excludeSpaceId?)`를 만들어 `SpaceCreateForm`/`SpaceSettingsForm` 양쪽에 적용했다(이름변경은 자기 자신을 제외해야 "미변경" 케이스가 오탐되지 않음 — 테스트로 커버). 저장/만들기 버튼을 즉시 비활성화하고 `space.name_taken` 메시지를 보여준다. **서버 쪽 유니크 제약·CONFLICT 처리는 그대로 유지** — `bootstrap`의 10분 staleTime 동안 다른 탭/사용자가 먼저 같은 이름을 썼을 수 있는 레이스 컨디션이 있어, 클라 검사는 빠른 피드백용이지 최종 방어선이 아니다.
+
+---

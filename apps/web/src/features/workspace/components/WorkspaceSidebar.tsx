@@ -1,6 +1,11 @@
 import { useState } from "react";
 
-import { BookMarked, MessagesSquare, Plus } from "@nema-io/weave/icons";
+import {
+  BookOpenText,
+  Home,
+  MessageCircleQuestionMark,
+  Plus,
+} from "@nema-io/weave/icons";
 
 import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
 import { LnbSection } from "@web/components/layout/LnbSection";
@@ -9,14 +14,14 @@ import { Sidebar } from "@web/components/layout/Sidebar";
 import { DraftsNavItem } from "@web/features/intake";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { SpaceCreateModal } from "./SpaceCreateModal";
 import { SpaceList } from "./SpaceList";
-import { SpaceModal } from "./SpaceModal";
 import {
   WorkspaceMenuSlotCollapsed,
   WorkspaceMenuSlotExpanded,
 } from "./WorkspaceMenuSlot";
 
-const NAV_ICON_CLASS = "size-4";
+const NAV_ICON_CLASS = "size-4 shrink-0";
 
 export function WorkspaceSidebar() {
   const { t } = useTranslation();
@@ -30,7 +35,18 @@ export function WorkspaceSidebar() {
     >
       <div className="flex flex-col py-1">
         <NavItem
-          icon={<MessagesSquare strokeWidth={1.5} className={NAV_ICON_CLASS} />}
+          icon={<Home strokeWidth={2} className={NAV_ICON_CLASS} />}
+          label={t("common.home")}
+          to="/"
+        />
+
+        <NavItem
+          icon={
+            <MessageCircleQuestionMark
+              strokeWidth={2}
+              className={NAV_ICON_CLASS}
+            />
+          }
           label={t("workspace.ask")}
           disabledHint={t("workspace.coming_soon")}
         />
@@ -39,7 +55,7 @@ export function WorkspaceSidebar() {
 
         <LnbSection label={t("workspace.section_workspace")}>
           <NavItem
-            icon={<BookMarked strokeWidth={1.5} className={NAV_ICON_CLASS} />}
+            icon={<BookOpenText strokeWidth={2} className={NAV_ICON_CLASS} />}
             label={t("workspace.references")}
             disabledHint={t("workspace.coming_soon")}
           />
@@ -61,8 +77,7 @@ export function WorkspaceSidebar() {
         </LnbSection>
       </div>
 
-      <SpaceModal
-        mode="create"
+      <SpaceCreateModal
         open={createSpaceOpen}
         onOpenChange={setCreateSpaceOpen}
       />

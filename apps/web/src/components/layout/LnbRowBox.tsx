@@ -16,7 +16,7 @@ export function LnbRowBox({ asChild, className, children }: LnbRowBoxProps) {
   return (
     <Comp
       className={cn(
-        "flex h-7 w-full items-center gap-1.5 truncate rounded-lg px-2.5 text-xs font-normal transition-colors duration-fast",
+        "flex h-7 w-full items-center gap-1.5 truncate rounded-lg px-2.5 text-xs font-medium transition-colors duration-fast",
         className,
       )}
     >

@@ -1,14 +1,7 @@
-import { Suspense, useEffect, useLayoutEffect, useRef } from "react";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { Suspense, useLayoutEffect } from "react";
 
-import {
-  HOME_TO_SESSION_INITIAL_MESSAGE_KEY,
-  HOME_TO_SESSION_INITIAL_MODE_KEY,
-} from "@web/app/constants/routeState";
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
-import { getRouteState } from "@web/app/utils/routeState";
-import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useScrollAnchor } from "@web/features/session/hooks/useScrollAnchor";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 
@@ -69,31 +62,6 @@ function ChatPanelContent() {
 }
 
 export function ChatPanel() {
-  const navigate = useNavigate();
-  const { initialMessage, initialMode } = useLocation({
-    select: (loc) => ({
-      initialMessage: getRouteState(
-        loc.state,
-        HOME_TO_SESSION_INITIAL_MESSAGE_KEY,
-      ),
-      initialMode: getRouteState(loc.state, HOME_TO_SESSION_INITIAL_MODE_KEY),
-    }),
-  });
-  const { send } = useChatLifecycle();
-
-  const sentRef = useRef(false);
-  useEffect(
-    function sendInitialMessage() {
-      if (!initialMessage || sentRef.current) {
-        return;
-      }
-      sentRef.current = true;
-      send(initialMessage, initialMode === "ask" ? "ask" : "remember");
-      navigate({ replace: true, state: {} });
-    },
-    [initialMessage, initialMode, navigate, send],
-  );
-
   return (
     <SidePanel>
       <ErrorBoundary

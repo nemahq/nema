@@ -4,20 +4,6 @@ import { trpc } from "@web/lib/trpc";
 
 const MESSAGE_LIST_STALE_TIME_MS = 300_000;
 
-export function presetMessageCache(
-  utils: ReturnType<typeof trpc.useUtils>,
-  sessionId: string,
-) {
-  utils.message.list.setData({ sessionId }, []);
-}
-
-export function clearMessageCache(
-  utils: ReturnType<typeof trpc.useUtils>,
-  sessionId: string,
-) {
-  utils.message.list.setData({ sessionId }, undefined);
-}
-
 export function addOptimisticMessage(
   utils: ReturnType<typeof trpc.useUtils>,
   sessionId: string,
