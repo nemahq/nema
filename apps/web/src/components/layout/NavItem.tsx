@@ -40,9 +40,15 @@ export function NavItem({
 }: NavItemProps) {
   const { collapsed } = useSidebar();
   const disabled = !to;
-  const activeProps =
+  // activeProps.className은 TanStack Router가 기본 className 뒤에 문자열로 그냥
+  // 이어붙일 뿐 tailwind-merge를 거치지 않는다 — text-fg-secondary(평상시)와
+  // text-fg-primary(active)가 동일 특이도라 어느 게 이기는지 클래스 문자열 순서가
+  // 아니라 컴파일된 스타일시트 순서에 좌우돼 실제로 안 이기는 경우가 있었다.
+  // data-[status=active]:* 는 속성 선택자라 특이도가 더 높아 순서와 무관하게
+  // 항상 이겨서, hover:*와 같은 방식으로 base className 안에 직접 넣는다.
+  const activeClassName =
     !disabled && showActive
-      ? { className: "bg-surface-raised-hover/75" }
+      ? "data-[status=active]:bg-surface-raised-hover/75 data-[status=active]:text-fg-primary"
       : undefined;
 
   if (collapsed) {
@@ -58,8 +64,10 @@ export function NavItem({
         to={to}
         params={params}
         aria-label={tooltipLabel}
-        className="relative flex size-7 items-center justify-center rounded-lg transition-colors duration-fast hover:bg-surface-raised-hover/75 focus-visible:z-10"
-        activeProps={activeProps}
+        className={cn(
+          "relative flex size-7 items-center justify-center rounded-lg text-fg-secondary transition-colors duration-fast hover:bg-surface-raised-hover/75 hover:text-fg-primary focus-visible:z-10",
+          activeClassName,
+        )}
         activeOptions={activeOptions}
       >
         {icon}
@@ -89,11 +97,13 @@ export function NavItem({
     );
   }
 
-  let hoverClassName = "hover:bg-surface-raised-hover/75";
+  let hoverClassName =
+    "text-fg-secondary hover:bg-surface-raised-hover/75 hover:text-fg-primary";
   if (disabled) {
     hoverClassName = "cursor-default text-fg-tertiary/60";
   } else if (rightContent) {
-    hoverClassName = "group-hover:bg-surface-raised-hover/75";
+    hoverClassName =
+      "text-fg-secondary group-hover:bg-surface-raised-hover/75 group-hover:text-fg-primary";
   }
 
   // relative + focus-visible:z-10: SettingsNav와 같은 이유로, 포커스된 행을
@@ -104,11 +114,13 @@ export function NavItem({
   // 항상 보이든 상관없이 라벨 텍스트가 그 자리 밑으로 안 들어가게 항상 비워둔다.
   // text-sm으로 따로 올리지 않고 LnbRowBox의 text-xs를 그대로 둔다 — 워크스페이스명
   // (text-sm)이 이 셸의 최상위 개체라는 크기 위계를 갖도록, 아이템은 Section 라벨과
-  // 같은 크기를 공유하고 색(fg-primary vs fg-tertiary)으로만 구분한다.
+  // 같은 크기를 공유한다. 평상시엔 색(fg-secondary vs fg-tertiary)으로만 구분하고,
+  // hover·active 상태에서만 fg-primary로 올라와 상호작용 가능함을 신호한다.
   const rowExtraClassName = cn(
     "relative pl-3 focus-visible:z-10",
     rightContent && "pr-8",
     hoverClassName,
+    activeClassName,
   );
 
   const row = disabled ? (
@@ -125,7 +137,6 @@ export function NavItem({
         to={to}
         params={params}
         title={tooltipLabel}
-        activeProps={activeProps}
         activeOptions={activeOptions}
       >
         {icon}
