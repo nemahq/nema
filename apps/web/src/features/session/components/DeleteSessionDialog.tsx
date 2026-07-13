@@ -57,7 +57,7 @@ export function DeleteSessionDialog({
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
           >
-            {t("session.delete")}
+            {t("common.delete")}
           </Button>
         </DialogFooter>
       </DialogContent>
