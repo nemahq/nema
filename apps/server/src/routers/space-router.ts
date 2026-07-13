@@ -1,14 +1,14 @@
 import {
   SpaceCreateInputSchema,
   SpaceDeleteInputSchema,
-  SpaceRenameInputSchema,
+  SpaceUpdateInputSchema,
 } from "@nema-io/shared";
 
 import {
   createSpace,
   deleteSpace,
   listSpaces,
-  renameSpace,
+  updateSpace,
 } from "@server/services/space-service";
 import { protectedProcedure, router } from "@server/trpc";
 
@@ -23,10 +23,10 @@ export const spaceRouter = router({
       createSpace({ supabase: ctx.supabase, name: input.name }),
     ),
 
-  rename: protectedProcedure
-    .input(SpaceRenameInputSchema)
+  update: protectedProcedure
+    .input(SpaceUpdateInputSchema)
     .mutation(({ ctx, input }) =>
-      renameSpace({
+      updateSpace({
         supabase: ctx.supabase,
         spaceId: input.spaceId,
         name: input.name,

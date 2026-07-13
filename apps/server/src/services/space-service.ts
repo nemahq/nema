@@ -53,7 +53,7 @@ export async function createSpace(args: {
   return { spaceId };
 }
 
-export async function renameSpace(args: {
+export async function updateSpace(args: {
   supabase: TypedSupabaseClient;
   spaceId: string;
   name: string;

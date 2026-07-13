@@ -1,9 +1,9 @@
 import { trpc } from "@web/lib/trpc";
 
-export function useRenameSpace() {
+export function useUpdateSpace() {
   const utils = trpc.useUtils();
 
-  return trpc.space.rename.useMutation({
+  return trpc.space.update.useMutation({
     async onMutate(input) {
       await utils.space.list.cancel();
       const previousSpaceList = utils.space.list.getData();
