@@ -171,7 +171,7 @@ export class OpenAiProvider implements LlmProvider {
       if (params.signal?.aborted) {
         return;
       }
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -214,7 +214,7 @@ export class OpenAiProvider implements LlmProvider {
       this.emitUsage(params.onUsage, response.usage);
       return result.data;
     } catch (error) {
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -243,7 +243,7 @@ export class OpenAiProvider implements LlmProvider {
       this.emitUsage(params.onUsage, response.usage);
       return content;
     } catch (error) {
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -297,9 +297,20 @@ export class OpenAiProvider implements LlmProvider {
     return null;
   }
 
-  private mapError(error: unknown): LlmError {
+  // abort 판정이 맨 앞에 온다 — SDK가 abort를 어떤 예외로 던지는지에 기대지 않고 signal만
+  // 본다. 이게 뒤로 밀리면 취소가 "unknown"으로 분류되고, 워커의 재시도 정책이 unknown을
+  // 재시도 대상에 넣고 있어 방금 사람이 취소한 작업을 다시 부른다. 취소를 실패로 안 보는
+  // 책임을 호출부 규율이 아니라 provider 레이어가 진다.
+  private mapError(error: unknown, signal?: AbortSignal): LlmError {
     if (error instanceof LlmError) {
       return error;
+    }
+    if (signal?.aborted) {
+      return new LlmError(
+        "aborted",
+        "LLM call was aborted by the caller",
+        error,
+      );
     }
     if (error instanceof APIConnectionTimeoutError) {
       return new LlmError("timeout", "LLM request timed out", error);

@@ -95,10 +95,11 @@ export async function runDigestionPass(deps: DigestionDeps): Promise<number> {
 // 예외는 종류를 안 가리고 전부 취소로 친다 — 진짜 오류가 그 찰나에 겹쳤더라도 원본은 이미
 // cancelled라 재시도할 대상이 아니라서 결론이 같다.
 //
-// 취소가 LLM 콜이 끝난 뒤·적재 RPC 전에 도착하는 경우도 여기로 모인다: create_ingestion_review는
-// digestion_status='pending'을 WHERE로 걸어 예외를 뱉고, 그 예외가 올라올 때쯤이면 abort가
-// 도착해 있어(RPC 왕복은 ms, abort 전파는 µs) 같은 가드에 걸린다. DB 가드가 최종 방어선이라
-// 어느 쪽이 이기든 changeset은 안 생긴다.
+// 취소가 LLM 콜이 끝난 뒤·적재 RPC 전에 도착하는 경우: create_ingestion_review가
+// digestion_status='pending'을 WHERE로 걸어 예외를 뱉으므로 changeset은 어느 쪽이 이기든
+// 안 생긴다 — 이건 DB 가드가 보장한다. 다만 그 예외가 올라오는 시점에 abort가 아직 안
+// 도착했으면 아래 aborted 가드를 못 타고 Sentry에 한 건 올라간다(데이터는 멀쩡하고 알림만
+// 뜨는, 좁고 무해한 창). 정합성은 DB가, 알림 억제는 아래 가드가 맡는 식으로 갈려 있다.
 async function processDigestion(
   source: PendingDigestionSource,
   deps: DigestionDeps,

@@ -125,7 +125,7 @@ export class GeminiProvider implements LlmProvider {
       if (params.signal?.aborted) {
         return;
       }
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -160,7 +160,7 @@ export class GeminiProvider implements LlmProvider {
       this.emitUsage(params.onUsage, response.usageMetadata);
       return result.data;
     } catch (error) {
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -181,7 +181,7 @@ export class GeminiProvider implements LlmProvider {
       this.emitUsage(params.onUsage, response.usageMetadata);
       return text;
     } catch (error) {
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -263,13 +263,21 @@ export class GeminiProvider implements LlmProvider {
     }
   }
 
-  private mapError(error: unknown): LlmError {
+  private mapError(error: unknown, signal?: AbortSignal): LlmError {
     if (error instanceof LlmError) {
       return error;
     }
-    // SDK는 httpOptions.timeout을 abortController.abort()로 구현하므로, 사용자 취소가
-    // 아닌데도 여기까지 온 AbortError는 곧 타임아웃이다(취소 경로는 호출부에서
-    // signal.aborted 가드로 이미 걸러진 뒤다). "Request timed out" 문구도 함께 본다.
+    // 취소 판정이 타임아웃보다 먼저다 — SDK가 httpOptions.timeout을 abort()로 구현해서
+    // 취소와 타임아웃이 똑같은 AbortError로 도착하기 때문이다. signal을 봐야 둘이 갈린다.
+    // (예전엔 "취소는 호출부가 걸러준다"고 보고 전부 타임아웃으로 뭉갰는데, 그러면 취소가
+    // 재시도 가능한 코드로 새어 워커가 방금 취소한 작업을 다시 부른다.)
+    if (signal?.aborted) {
+      return new LlmError(
+        "aborted",
+        "LLM call was aborted by the caller",
+        error,
+      );
+    }
     if (isTimeoutError(error)) {
       return new LlmError("timeout", "LLM request timed out", error);
     }

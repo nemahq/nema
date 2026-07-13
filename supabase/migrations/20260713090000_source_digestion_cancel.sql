@@ -93,8 +93,13 @@ BEGIN
     AND digestion_status = 'pending'
     AND (auth.uid() IS NULL OR is_space_member(space_id));
 
+  -- 가드가 지는 건 장애가 아니라 정상적인 경합 결과다(취소를 누르는 사이 추출이 끝났거나,
+  -- 이미 취소된 걸 또 취소했거나). NM004로 던져야 error-mapper가 이걸 예상된 도메인 오류로
+  -- 받아 Sentry를 건너뛰고 전용 문구를 준다 — 맨 RAISE(P0001)면 query_failed로 떨어져
+  -- 매번 진짜 장애처럼 잡히고 사용자는 "잠깐 문제가 생겼어요"만 본다.
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'source % is not a source being digested that the caller can cancel', p_source_id;
+    RAISE EXCEPTION 'source % is not being digested, or the caller cannot cancel it', p_source_id
+      USING ERRCODE = 'NM004';
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
@@ -125,7 +130,8 @@ BEGIN
       AND c.type = 'ingestion'
       AND c.status = 'pending'
   ) THEN
-    RAISE EXCEPTION 'source % already has a review awaiting confirmation', p_source_id;
+    RAISE EXCEPTION 'source % already has a review awaiting confirmation', p_source_id
+      USING ERRCODE = 'NM004';
   END IF;
 
   -- last_digestion_attempt도 비워 lease 대기 없이 즉시 재인출되게 한다
@@ -140,7 +146,8 @@ BEGIN
     AND (auth.uid() IS NULL OR is_space_member(space_id));
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'source % is not an idle draft the caller can digest', p_source_id;
+    RAISE EXCEPTION 'source % is not an idle draft the caller can digest', p_source_id
+      USING ERRCODE = 'NM004';
   END IF;
 
   PERFORM pgmq.send('statement_sync', jsonb_build_object('type', 'notify'));
@@ -171,7 +178,8 @@ BEGIN
     AND (auth.uid() IS NULL OR is_space_member(space_id));
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'source % is not an idle pending source the caller can trash', p_source_id;
+    RAISE EXCEPTION 'source % is not an idle pending source the caller can trash', p_source_id
+      USING ERRCODE = 'NM004';
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

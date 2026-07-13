@@ -16,6 +16,7 @@ type DomainErrorCode =
   | "LLM_AUTH"
   | "LLM_BAD_REQUEST"
   | "LLM_CONTENT_FILTER"
+  | "LLM_ABORTED"
   | "LLM_ERROR"
   | "EMBEDDING_ERROR"
   | "VECTOR_STORE_ERROR"
@@ -24,6 +25,7 @@ type DomainErrorCode =
   | "DB_PRECONDITION"
   | "DB_SPACE_MIN_ONE"
   | "DB_SPACE_NAME_CONFLICT"
+  | "DB_SOURCE_STATE_CHANGED"
   | "DB_QUERY_FAILED";
 
 const ERROR_MAP: Record<
@@ -76,6 +78,10 @@ const ERROR_MAP: Record<
     trpcCode: "CONFLICT",
     i18nKey: "error.space_name_conflict",
   },
+  DB_SOURCE_STATE_CHANGED: {
+    trpcCode: "CONFLICT",
+    i18nKey: "error.source_state_changed",
+  },
   DB_QUERY_FAILED: {
     trpcCode: "INTERNAL_SERVER_ERROR",
     i18nKey: "error.default",
@@ -90,6 +96,7 @@ const EXPECTED_DOMAIN_CODES = new Set<DomainErrorCode>([
   "DB_PRECONDITION",
   "DB_SPACE_MIN_ONE",
   "DB_SPACE_NAME_CONFLICT",
+  "DB_SOURCE_STATE_CHANGED",
 ]);
 
 export function isExpectedDomainError(cause: unknown): boolean {
@@ -103,6 +110,7 @@ const SUPABASE_CODE_MAP: Record<SupabaseErrorCode, DomainErrorCode> = {
   precondition: "DB_PRECONDITION",
   space_min_one: "DB_SPACE_MIN_ONE",
   space_name_conflict: "DB_SPACE_NAME_CONFLICT",
+  source_state_changed: "DB_SOURCE_STATE_CHANGED",
   query_failed: "DB_QUERY_FAILED",
 };
 

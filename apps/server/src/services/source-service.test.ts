@@ -10,7 +10,9 @@ import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   cancelSourceDigestion,
   createSource,
+  deleteSource,
   fetchMergedSourceIds,
+  startSourceDigestion,
 } from "./source-service";
 
 // 테이블별 canned rows를 돌려주는 .from 체인 stub — select/eq/in 무시하고 then으로 resolve.
@@ -196,5 +198,60 @@ describe("cancelSourceDigestion", () => {
     ).rejects.toThrow();
 
     expect(abortDigestion).not.toHaveBeenCalled();
+  });
+});
+
+describe("startSourceDigestion", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("추출 실행은 RPC 하나로 끝난다 — 떠 있는 콜이 없으니 abort는 부르지 않는다", async () => {
+    const { supabase, rpc } = mockRpcSupabase(null);
+
+    await startSourceDigestion({ supabase, sourceId: CANCEL_SOURCE_ID });
+
+    expect(rpc).toHaveBeenCalledWith("start_source_digestion", {
+      p_source_id: CANCEL_SOURCE_ID,
+    });
+    expect(abortDigestion).not.toHaveBeenCalled();
+  });
+
+  it("가드가 지면(리뷰가 이미 열림 등) 오류를 그대로 올린다", async () => {
+    const { supabase } = mockRpcSupabase({
+      message: "source ... already has a review awaiting confirmation",
+    });
+
+    await expect(
+      startSourceDigestion({ supabase, sourceId: CANCEL_SOURCE_ID }),
+    ).rejects.toThrow();
+  });
+});
+
+describe("deleteSource", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // 완전 삭제의 정본은 trash_source다 — 결정 #2대로 사용자에겐 복원 표면이 없고,
+  // 백엔드의 30일 purge 유예는 사용자 눈에 안 보이는 backstop이다.
+  it("삭제는 기존 trash_source RPC를 그대로 쓴다", async () => {
+    const { supabase, rpc } = mockRpcSupabase(null);
+
+    await deleteSource({ supabase, sourceId: CANCEL_SOURCE_ID });
+
+    expect(rpc).toHaveBeenCalledWith("trash_source", {
+      p_source_id: CANCEL_SOURCE_ID,
+    });
+  });
+
+  it("처리 중이라 가드가 지면 오류를 그대로 올린다", async () => {
+    const { supabase } = mockRpcSupabase({
+      message: "source ... is not an idle pending source the caller can trash",
+    });
+
+    await expect(
+      deleteSource({ supabase, sourceId: CANCEL_SOURCE_ID }),
+    ).rejects.toThrow();
   });
 });

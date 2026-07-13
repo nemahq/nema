@@ -258,7 +258,7 @@ export class AnthropicProvider implements LlmProvider {
       if (params.signal?.aborted) {
         return;
       }
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -336,7 +336,7 @@ export class AnthropicProvider implements LlmProvider {
         yield* this.streamPlain(params);
         return;
       }
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -354,7 +354,7 @@ export class AnthropicProvider implements LlmProvider {
       if (error instanceof BadRequestError && isNativeUnsupportedError(error)) {
         return this.generateStructuredViaToolUse(params);
       }
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -459,7 +459,7 @@ export class AnthropicProvider implements LlmProvider {
       this.reportUsage(params.onUsage, message.usage);
       return this.parseWithSchema(params.schema, toolUse.input);
     } catch (error) {
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -506,7 +506,7 @@ export class AnthropicProvider implements LlmProvider {
       this.reportUsage(params.onUsage, message.usage);
       return text;
     } catch (error) {
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -555,7 +555,7 @@ export class AnthropicProvider implements LlmProvider {
       ) {
         return this.generateTextPlain(params);
       }
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -588,9 +588,18 @@ export class AnthropicProvider implements LlmProvider {
     return result.data;
   }
 
-  private mapError(error: unknown): LlmError {
+  // abort 판정이 맨 앞 — 취소를 실패로 안 보는 책임을 호출부가 아니라 provider가 진다
+  // (openai-provider와 같은 계약: 취소가 "unknown"으로 새면 워커가 재시도해버린다).
+  private mapError(error: unknown, signal?: AbortSignal): LlmError {
     if (error instanceof LlmError) {
       return error;
+    }
+    if (signal?.aborted) {
+      return new LlmError(
+        "aborted",
+        "LLM call was aborted by the caller",
+        error,
+      );
     }
     if (error instanceof APIConnectionTimeoutError) {
       return new LlmError("timeout", "LLM request timed out", error);
