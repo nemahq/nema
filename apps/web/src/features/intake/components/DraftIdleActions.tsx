@@ -4,17 +4,13 @@ import { Button } from "@nema-io/weave";
 import { Play, Trash2 } from "@nema-io/weave/icons";
 
 import { useExtractSource } from "@web/features/intake/hooks/useExtractSource";
+import type { DraftFooterProps } from "@web/features/intake/types";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DeleteSourceDialog } from "./DeleteSourceDialog";
 import { DraftSpaceSelect } from "./DraftSpaceSelect";
 
-interface DraftIdleActionsProps {
-  sourceId: string;
-  spaceId: string;
-}
-
-export function DraftIdleActions({ sourceId, spaceId }: DraftIdleActionsProps) {
+export function DraftIdleActions({ sourceId, spaceId }: DraftFooterProps) {
   const { t } = useTranslation();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const extractMutation = useExtractSource();

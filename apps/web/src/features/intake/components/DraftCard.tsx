@@ -4,6 +4,7 @@ import { Badge, type BadgeVariant } from "@nema-io/weave";
 import { Circle } from "@nema-io/weave/icons";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
+import type { DraftFooterProps } from "@web/features/intake/types";
 import type { DraftStatus } from "@web/features/intake/utils";
 import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
 
@@ -31,7 +32,7 @@ const STATUS_META: Record<
 // cancelled(취소 뒤 평범한 대기)만 액션을 연결한다.
 const FOOTER_BY_STATUS: Record<
   DraftStatus,
-  ComponentType<{ sourceId: string; spaceId: string }> | null
+  ComponentType<DraftFooterProps> | null
 > = {
   processing: DraftProcessingActions,
   cancelled: DraftIdleActions,
