@@ -56,12 +56,16 @@
   --palette-dark-shadow: rgba(0, 0, 0, 0.3);
 
   /* Foreground — light */
-  --palette-light-fg-primary: #1c1917; /* stone-900 */
+  /* stone-900 대신 한 단계 낮춘 stone-800 — 배경(stone-50/white)과의 대비가 최대치에
+     가까워 굵은 글씨·큰 텍스트에서 번져 보이는(glare) 느낌이 있어 한 단계 완화. */
+  --palette-light-fg-primary: #292524; /* stone-800 */
   --palette-light-fg-secondary: #57534e; /* stone-600 */
   --palette-light-fg-tertiary: #78716c; /* stone-500 */
 
   /* Foreground — dark */
-  --palette-dark-fg-primary: #f5f5f4; /* stone-100 */
+  /* stone-100 대신 한 단계 낮춘 stone-200 — 어두운 배경 위 거의 순백에 가까운 텍스트가
+     halation(빛 번짐)을 일으켜 라이트보다 더 도드라지는 문제라 같은 이유로 완화. */
+  --palette-dark-fg-primary: #e7e5e4; /* stone-200 */
   --palette-dark-fg-secondary: #a8a29e; /* stone-400 */
   --palette-dark-fg-tertiary: #a8a29e; /* stone-400 */
 
