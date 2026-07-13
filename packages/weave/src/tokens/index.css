@@ -325,6 +325,18 @@
   }
 }
 
+/* expand-down의 역순 — 있던 요소가 아래에서 위로 접히듯 사라진다. */
+@keyframes collapse-up {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

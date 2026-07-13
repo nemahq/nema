@@ -18,9 +18,12 @@ interface NavItemProps {
   // 행 우측 슬롯(카운트 뱃지·hover 전용 메뉴 등) — 펼침 모드에서만 렌더되고, 항상
   // 보일지 hover에만 보일지는 소비처가 자기 스타일(opacity 등)로 정한다.
   rightContent?: ReactNode;
-  // 라벨 텍스트 바로 뒤에 붙는 슬롯(예: 상태 점) — rightContent와 달리 절대위치가
-  // 아니라 라벨 옆에 자연스럽게 이어진다. 펼침 모드에서만 렌더된다.
+  // 라벨 텍스트 바로 뒤에 붙는 슬롯(예: 상태 점) — 펼침 모드에선 라벨 옆에 이어지고,
+  // 접힘 모드에선 아이콘 우상단 배지로 얹힌다(정확한 수치보다 "상태 있음" 신호 위주).
   labelSuffix?: ReactNode;
+  // title/aria-label/접힘 툴팁에 쓰는 문자열. 생략하면 label을 그대로 쓴다 — 라벨
+  // 자체엔 못 넣는 부가 정보(예: 카운트)를 붙이고 싶을 때만 별도로 준다.
+  tooltipLabel?: string;
 }
 
 export function NavItem({
@@ -33,6 +36,7 @@ export function NavItem({
   disabledHint,
   rightContent,
   labelSuffix,
+  tooltipLabel = label,
 }: NavItemProps) {
   const { collapsed } = useSidebar();
   const disabled = !to;
@@ -53,12 +57,17 @@ export function NavItem({
       <Link
         to={to}
         params={params}
-        aria-label={label}
+        aria-label={tooltipLabel}
         className="relative flex size-7 items-center justify-center rounded-lg transition-colors duration-fast hover:bg-surface-raised-hover/75 focus-visible:z-10"
         activeProps={activeProps}
         activeOptions={activeOptions}
       >
         {icon}
+        {labelSuffix && (
+          <span className="absolute -top-1 -right-1 flex size-3.5 items-center justify-center">
+            {labelSuffix}
+          </span>
+        )}
       </Link>
     );
 
@@ -69,10 +78,10 @@ export function NavItem({
           <TooltipContent side="right" sideOffset={12}>
             {disabled ? (
               <>
-                {label} · {disabledHint}
+                {tooltipLabel} · {disabledHint}
               </>
             ) : (
-              label
+              tooltipLabel
             )}
           </TooltipContent>
         </Tooltip>
@@ -104,7 +113,7 @@ export function NavItem({
       <div aria-disabled>
         {icon}
         <span className="min-w-0 truncate">{label}</span>
-        {labelSuffix}
+        {labelSuffix && <span className="ml-1">{labelSuffix}</span>}
       </div>
     </LnbRowBox>
   ) : (
@@ -112,13 +121,13 @@ export function NavItem({
       <Link
         to={to}
         params={params}
-        title={label}
+        title={tooltipLabel}
         activeProps={activeProps}
         activeOptions={activeOptions}
       >
         {icon}
         <span className="min-w-0 truncate">{label}</span>
-        {labelSuffix}
+        {labelSuffix && <span className="ml-1">{labelSuffix}</span>}
       </Link>
     </LnbRowBox>
   );

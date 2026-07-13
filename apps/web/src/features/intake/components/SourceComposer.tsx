@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type CSSProperties, useState } from "react";
 
 import { SOURCE_BODY_MAX_LENGTH } from "@nema-io/shared";
 import { Button, cn } from "@nema-io/weave";
@@ -7,9 +7,17 @@ import { ACTION_BUTTON_BASE, ChatInput } from "@web/components/ui/ChatInput";
 import { useCreateSource } from "@web/features/intake/hooks/useCreateSource";
 import { useTranslation } from "@web/lib/tolgee";
 
+const PROGRESS_CLIMB_DURATION_MS = 2_500;
+
 interface SourceComposerProps {
   spaceId: string;
 }
+
+const progressClimbStyle: CSSProperties & {
+  "--progress-climb-duration": string;
+} = {
+  "--progress-climb-duration": `${PROGRESS_CLIMB_DURATION_MS}ms`,
+};
 
 export function SourceComposer({ spaceId }: SourceComposerProps) {
   const { t } = useTranslation();
@@ -34,7 +42,10 @@ export function SourceComposer({ spaceId }: SourceComposerProps) {
     <div className="relative">
       {createSource.isPendingAfterDelay && (
         <div className="absolute inset-x-4 top-0 z-10 h-0.5 overflow-hidden rounded-full">
-          <div className="h-full w-0 rounded-full bg-fg-secondary [animation:progress-climb_2.5s_ease-out_forwards] dark:bg-fg-primary" />
+          <div
+            className="h-full w-0 rounded-full bg-fg-secondary [animation:progress-climb_var(--progress-climb-duration)_ease-out_forwards] dark:bg-fg-primary"
+            style={progressClimbStyle}
+          />
         </div>
       )}
       <ChatInput
