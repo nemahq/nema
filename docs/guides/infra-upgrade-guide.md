@@ -34,6 +34,8 @@
 
 ### Qdrant Cloud
 
+로컬 개발은 이 클라우드 클러스터와 무관한 별도 Docker 인스턴스를 쓴다 — `.env.secret`의 키는 staging/production 공유 클러스터 전용이며 로컬에 재사용하지 않는다 (README "로컬 Qdrant 실행" 절 참고).
+
 **전환 시점:** Free Tier 한도 도달 시 (1GB RAM, 0.5 vCPU), 또는 staging/production 완전 격리가 필요할 때.
 
 **방법:**
