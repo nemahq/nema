@@ -36,7 +36,7 @@ function formatModelMap(models: {
 function toggleClass(active: boolean) {
   return `cursor-pointer rounded px-2 py-0.5 transition-colors duration-fast ${
     active
-      ? "bg-brand text-brand-fg"
+      ? "bg-brand text-brand-fg dark:bg-fg-primary dark:text-surface-base"
       : "text-fg-secondary hover:bg-surface-raised-hover"
   }`;
 }

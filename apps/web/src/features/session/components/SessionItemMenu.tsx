@@ -50,7 +50,7 @@ export function SessionItemMenu({
             onClick={() => setDeleteOpen(true)}
           >
             <Trash2 />
-            {t("session.delete")}
+            {t("common.delete")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -4,6 +4,8 @@
 
 **규칙**: 화면·플로우 구현을 마무리하는 세션은 작업을 끝내기 전에 이 문서 맨 아래에 새 항목을 추가한다 — 어떤 weave/v1 컴포넌트·토큰을 재사용했는지, 새로 만든 프리미티브가 있다면 무엇이고 왜 기존 것으로 안 됐는지를 남긴다. 항목은 시간순으로 쌓이며, 이전 항목을 고치지 않고 새로 추가만 한다(append-only). 뒤 세션은 착수 전에 이 문서를 훑어 이미 내려진 결정을 재도출하지 않는다.
 
+**작성 스코프(2026-07-13 정리)**: 남기는 건 **확정된 규칙과 그 이유**다 — "group-hover 안 쓰면 배경이 죽는다", "danger 톤은 두 군데 따로 선언돼 있다" 같이 안 남기면 다음 세션이 똑같이 재발견해야 하는 것들. **"어떤 라운드를 거쳐 이 결론에 왔는지"(누가 뭘 요청했다가 리뷰에서 바뀌었다는 식의 서사)는 웬만하면 줄인다** — 그건 PR 리뷰 스레드·커밋 히스토리가 원래 담당할 정보고, 여기 계속 쌓이면 문서가 길어질수록 진짜 규칙이 서사에 묻혀 "먼저 읽기"의 신호 대 잡음비가 나빠진다. 백엔드/데이터 아키텍처 판단(쿼리 invalidate 전략, 마이그레이션 안전성 등)은 이 문서(FE 시각·패턴 전용) 스코프 밖 — 결정된 게 아니라 논의만 한 것이면 아예 안 남기고(필요해지면 그때 PR에서 근거로 남김), 결정까지 됐다면 `product-decisions-log.md` 쪽이 더 맞는 자리인지 먼저 확인한다. 기존 항목은 소급 정리하지 않는다(위 append-only 원칙).
+
 ---
 
 ## 베이스라인 (기존 자산 인벤토리)
@@ -306,6 +308,8 @@ Space와 달리 이 배지는 **한 번에 하나만 보이는 단독 요소**�
 
 **LNB Space 목록 스켈레톤 들여쓰기 누락**: 실제 `NavItem` 행엔 `pl-3`(2026-07-11 라운드에서 결정한 라벨 대비 살짝 들여쓰기)이 있는데, `SpaceList.tsx`의 펼침 스켈레톤은 그 클래스 없이 기본 `LnbRowBox`만 써서 로딩 중엔 아이콘·텍스트가 실제 행보다 2px 왼쪽에 있었다 — `pl-3` 추가로 정합.
 
+**접힘 LNB 아이콘 간격 통일**: Kyle이 "접힘 상태 아이콘이 다닥다닥 붙어있다"고 지적 — `NavItem`(접힘)·`SpaceList`(접힘 스켈레톤) 둘 다 `py-px`(아이콘 사이 총 2px)였는데, 펼침 행은 텍스트가 있어 같은 2px도 덜 빽빽해 보이지만 접힘은 순수 정사각형 아이콘만 쌓여 훨씬 눈에 띄었다. 워크스페이스 스위처(`WorkspaceMenuSlotCollapsed`)는 이미 `py-1`(8px 간격)을 쓰고 있어 스위처-첫 아이콘, 아이콘-아이콘 간격이 서로 다른 상태였던 것도 같이 발견 — 둘 다 `py-1`로 올려 전체 접힘 아이콘 리스트를 8px 간격으로 통일. 펼침 상태 리듬(`py-px`)은 2026-07-11 라운드에서 이미 다듬어둔 것이라 손대지 않음.
+
 **설정 모달 Content language 재도입 — 2026-07-10 결정 번복**: Kyle이 "붙여넣는 원문 언어와 무관하게, 저장된 요약은 본인이 고른 언어로 구조화하고 싶을 것"이라며 재도입을 요청. **주의**: 2026-07-10 항목("계정 설정 리뷰 반영")에서 이미 한 번 "일반 섹션에 넣기 애매하다"는 이유로 `ContentLanguageSection` 자체를 완전히 삭제한 이력이 있다 — 이번 재도입 전 그 사실을 놓치고 "이미 glossary/코드에 있으니 그냥 넣으면 된다"고 판단할 뻔했으나, Kyle이 지적해 바로잡았다. `surface-inventory.md`의 "설정 (모달)" § "일반" 항목도 Theme+앱 언어만 언급하던 걸 콘텐츠 언어 포함으로 같이 갱신했다 — **문서와 실제 반영 상태가 다시 어긋나지 않도록, 이 결정 번복은 스펙 문서 갱신까지 세트로 처리**. 구현은 이미 있던 `useProfileQuery`/`useUpdateProfile`(온보딩이 계속 써서 안 지워져 있었음)을 그대로 재사용, `PreferencesSection`의 "Language" 섹션에 App language 바로 아래 행으로 추가(같은 낙관적 업데이트+실패 롤백 패턴). 두 행이 같은 섹션 헤더 아래 묶인 한 쌍으로 보이도록 `SettingsRow`에 `divider` prop(기본 true)을 추가해 App language 행만 `divider={false}`로 구분선을 껐다.
 
 **설정 모달 설명 문구 — 마침표 전부 제거**: `SettingsRow`의 `description`(작은 회색 설명)과 섹션 상단 서브타이틀(`account_subtitle`/`preferences_subtitle`) 전부 마침표를 뗐다 — 레이블성 문구는 마침표 없음(`docs/guides/ux-writing.md` 규칙)에 맞춘 것. 새로 쓴 `content_language`/`content_language_description` 카피도 대시(—) 없이 다듬었고(Kyle: "대시는 절대 안 씀" — 향후 카피에도 적용할 규칙), ko는 아직 Kyle이 직접 다듬지 않아 en과 동일한 placeholder로 남겨뒀다(이 세션의 기존 관례 그대로).
@@ -371,5 +375,44 @@ Space와 달리 이 배지는 **한 번에 하나만 보이는 단독 요소**�
 **모달은 mutate 완료 후에만 닫는다(의도됨)**: 데이터(캐시)는 낙관적으로 즉시 바뀌어도 모달 자체는 `onSuccess`에서만 닫는다 — Kyle이 이 비대칭을 지적해 확인. 모달은 conflict/validation 에러를 보여주는 유일한 창구라, 제출 즉시(낙관적으로) 닫아버리면 서버가 나중에 거부했을 때 사용자가 그 이유를 볼 방법이 없어진다(조용한 롤백만 보임). 그래서 "가벼운 값(라벨 텍스트)은 낙관적으로, 에러를 보여줘야 하는 모달은 확인 후에"로 의도적으로 갈랐다.
 
 **Space 이름 중복 — 서버 응답 기다리지 않고 클라에서 미리 검사**: `bootstrap.spaces`에 워크스페이스의 모든 Space `id`+`name`이 이미 캐시돼 있다는 걸 활용 — 서버 유니크 제약(`spaces_workspace_id_name_key`)이 `btrim()`만 하고 대소문자는 구분하므로, 클라 쪽도 같은 규칙(trim, 대소문자 구분)으로 비교하는 순수 함수 `isSpaceNameTaken(spaces, name, excludeSpaceId?)`를 만들어 `SpaceCreateForm`/`SpaceSettingsForm` 양쪽에 적용했다(이름변경은 자기 자신을 제외해야 "미변경" 케이스가 오탐되지 않음 — 테스트로 커버). 저장/만들기 버튼을 즉시 비활성화하고 `space.name_taken` 메시지를 보여준다. **서버 쪽 유니크 제약·CONFLICT 처리는 그대로 유지** — `bootstrap`의 10분 staleTime 동안 다른 탭/사용자가 먼저 같은 이름을 썼을 수 있는 레이스 컨디션이 있어, 클라 검사는 빠른 피드백용이지 최종 방어선이 아니다.
+
+**PR 상태**: #387 머지 완료(`staging`, merge commit `be357694`). 마이그레이션(`20260712230000_default_space_name_my_space.sql`)도 `/migrate`로 staging에 적용 완료. **다음 라운드**: 여전히 유효한 건 2026-07-12 폴리싱 1라운드의 "Space 메인 콘텐츠(오버뷰 피드)로 이동 예정" — `SpaceOverview`의 스레드/변경사항 탭은 아직 `SpaceEmptyState` 스텁뿐, 실제 피드 구현은 이번 라운드에도 안 함.
+
+---
+
+### 2026-07-13 — Space 이름변경 낙관적 업데이트 철회 (직전 결정 번복)
+
+바로 위 PR #387 항목의 "이름변경은 반대로 진짜 낙관적 업데이트를 적용"을 철회 — `useRenameSpace`를 `onMutate`/`onError`/`onSettled` 낙관적 갱신에서 `useCreateSpace`와 같은 단순 `onSuccess` invalidate로 되돌렸다(캐시를 먼저 안 바꾸고, 서버 응답 후에만 반영).
+
+Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감**으로 다뤄야 한다 — 폴더 이름 바꾸듯 즉시 반영되는 가벼운 경험보다, 실제 서버 반영을 기다리는 편이 이 단위의 무게에 맞는다. (2) **CRUD 경험의 일관성** — 생성(C)은 `BootstrapSpace` 스키마 확장 위험 때문에 이미 await-then-navigate(비낙관)로 가 있는데, 수정(U)만 낙관적이면 같은 도메인 안에서 삭제(D, 이미 확인 후 진행)·생성과 다르게 수정만 "먼저 바뀌고 실패하면 되돌아가는" 경험이 되어 CRUD 전체의 체감이 어긋난다. **캐시가 즉시 안 바뀌므로 저장 버튼 클릭 후 서버 응답까지의 지연이 다시 보인다** — 이건 회귀가 아니라 위 판단에 따른 의도된 트레이드오프.
+
+---
+
+### 2026-07-13 — Space 이름 빈값도 중복처럼 실시간 에러 표시 + `useSpaceNameField` 단순화
+
+생성/설정 폼 둘 다 이름이 비어있을 때 제출 시도(Enter·버튼 클릭) 후에만 에러가 뜨던 것을, 중복 이름 체크와 동일하게 **입력값이 바뀔 때마다 즉시 계산**되도록 바꿨다(`isEmpty` 파생값을 `nameError` 우선순위 분기 — 빈값 > 중복 — 에 추가).
+
+**단, 생성 모달은 최초 진입 시 이름이 원래 빈 문자열이라, 위 규칙을 그대로 적용하면 모달을 열자마자(아무것도 안 쳤는데) 에러가 바로 보이는 문제가 있었다** — 중복 체크는 사용자가 실제로 값을 입력해야만 조건이 참이 될 수 있는 구조라 이 문제 자체가 없었는데, 빈값 체크는 시작부터 조건이 참이라 다르다. Kyle 확인 후 "입력을 시작한 뒤부터만 표시"로 확정 — `useSpaceNameField`에 `touched`(첫 `handleChange` 호출 시 true) state를 추가해 `nameError`의 빈값 분기를 `touched && isEmpty`로 게이팅했다. 제출 버튼의 `disabled`는 `touched`와 무관하게 계속 `isEmpty` 하나로 막는다(에러 문구 노출 시점만 늦추는 것이지, 제출 자체를 막는 로직은 그대로).
+
+**`useSpaceNameField`의 `validate()`/`validationError` 제거**: 위 변경으로 빈값·중복 둘 다 각 Form이 실시간으로 직접 계산하게 되면서, 훅이 갖고 있던 "제출 시점에만 트리거되는" `validate()`(트림+빈값 체크+에러 세팅)가 완전히 죽은 코드가 됐다 — 각 Form은 이미 렌더 시점에 계산해둔 `trimmedName`을 그대로 mutate에 넘기면 되고(제출 전에 `isEmpty`로 이미 막았으니 재확인 불필요), 에러 메시지도 Form 레벨의 `nameError`가 전담한다. 훅은 이제 `name`/`handleChange`/`hasConflict`/`touched`/`markConflictIfNameTaken`만 남아 순수하게 "필드 상태 + conflict 표시"만 책임진다.
+
+---
+
+### 2026-07-13 — CRUD 뮤테이션 로딩 피드백 표준화: 공통 `useMutation` + disabled·지연 후 텍스트 스왑
+
+**규칙**: Nema의 CRUD 뮤테이션 제출 버튼은 스피너 없이 **"disabled + ~250ms 지연 후 '-ing' 텍스트 라벨 스왑"**으로 통일한다. 250ms 안에 끝나는 요청은 라벨이 아예 안 바뀌고 지나간다(깜빡임 방지). 근거: GitHub Primer(공식 문서, 아이콘 슬롯 스피너 방식)·NN/g·LogRocket 등 외부 UX 리서치가 공통으로 "200ms~1초 미만은 로딩 표시가 오히려 소음"이라 가리킴 — 다만 Nema는 아이콘 스피너 대신 텍스트 스왑을 표준으로 확정(Kyle의 "스피너 안 씀" 원칙에 더 맞고, 이미 있던 `account.delete_deleting` 패턴을 승격한 것에 가까움). `SignInPage`(매직링크 전송)의 아이콘 스피너는 인지된 유일한 예외로 남겨둠(로그인은 다른 무게감의 플로우, 안 건드림). 조회(R)는 그대로 스켈레톤 유지 — 콜드 스타트 쿼리는 네트워크 왕복으로 이미 250ms를 넘기는 경우가 많고 캐시가 재방문 플리커를 막아줘 뮤테이션만큼 자주 겪는 문제가 아니며, `useSuspenseQuery`(실사용 중 — `useSessionQuery`/`useMessageListQuery`)는 로딩을 Suspense 경계의 `fallback`이 담당해 뮤테이션과 같은 방식으로 wrapping 자체가 안 됨 — 그래서 이 최적화는 뮤테이션 전용이다.
+
+**구현**:
+- `usePendingAfterDelay(isPending, delayMs=250)`(`apps/web/src/hooks/usePendingAfterDelay.ts`) — `isPending`이 지연 시간 넘게 유지될 때만 `true`를 반환하는 순수 타이머 훅(구현 자체엔 tRPC/데이터 인식 없음). 대화로만 판단하다 한때 `lib/tanstack-query/`(→`useMutation`과 같은 폴더)로 옮겼었는데, `/create-pr`의 컨벤션 검사가 `apps/web/docs/conventions.md`의 "Folder Classification" 표를 근거로 되짚어줬다 — `lib/`는 "외부 서비스 클라이언트 래퍼" 전용이고 "순수 유틸리티 함수"는 명시적으로 제외, `hooks/`는 "feature-agnostic 커스텀 훅". 이 훅은 외부 서비스 의존이 전혀 없는 순수 타이머라 `hooks/`가 문서상 맞는 자리 — **재사용 가능성 논쟁(hover-intent 등) 없이 "외부 서비스에 의존하는가" 하나로 간단히 정리되는 문제였다.** `useMutation`(tRPC 프로시저를 실제로 감싸는 래퍼)은 이 기준으로도 `lib/tanstack-query/`가 맞다. **교훈: 폴더 배치는 대화로 추론하기 전에 `apps/web/docs/conventions.md`의 Folder Classification부터 먼저 확인할 것.**
+- `useMutation(procedure, options)`(`apps/web/src/lib/tanstack-query/useMutation.ts`, `index.ts`에서 재노출) — tRPC 프로시저를 그대로 호출하고 결과에 `isPendingAfterDelay`를 얹어 반환하는 공통 래퍼. **이름을 tRPC/TanStack의 원래 `useMutation`과 동일하게 지어서, 이 앱에서 뮤테이션을 만들 땐 이거 하나만 쓰는 단일 진입점으로 삼는다**(`trpc.xxx.useMutation({...})` 직접 호출은 이제 안 함 — `useMutation(trpc.xxx, {...})`로 대체). 위치는 `lib/tanstack-query/`(기존 전역 `mutationCache` 인프라와 같은 폴더) — feature-agnostic 상호작용 훅이 아니라 "우리 뮤테이션이 앱 전체에서 어떻게 동작하는가"에 대한 데이터 레이어 인프라라서.
+  - `procedure.useMutation(options)`처럼 인자로 받은 값의 메서드를 훅으로 호출하는 형태라 `react-compiler/react-compiler` 린트가 오탐 — `procedure`가 항상 `trpc.xxx` 고정 프록시 참조라 안전하다는 이유를 달아 해당 줄만 `eslint-disable-next-line`(`useScrollAnchor.ts` 선례와 같은 패턴).
+  - **반환 필드명은 `isPendingAfterDelay`**(중간에 `showPending`→`showPendingLabel`→`pendingAfterDelay`로 몇 차례 조정 후 정착). `disabled`는 반드시 `isPending`(즉시)으로 걸고 `isPendingAfterDelay`는 라벨 표시에만 쓴다 — 후자로 `disabled`를 걸면 지연 구간(최대 250ms) 동안 중복 클릭이 새는 실제 버그가 된다. "Label" 같은 특정 UI 형태를 이름에 박지 않고(나중에 라벨이 아닌 다른 표현으로 쓰일 수 있어서) `is`로 시작해 이 저장소의 다른 boolean(`isPending`/`isEmpty`/`isDuplicate`) 명명 관례와도 맞췄다.
+
+**적용 범위(v2 표면 뮤테이션 훅 전수, dev-harness·devtools·레거시 v1 세션 제외) — 6곳**: `useCreateSpace`/`useRenameSpace`/`useDeleteSpace`/`useUpdateProfile`/`useDeleteAccount`(각각 `SpaceCreateForm`/`SpaceSettingsForm`/`SpaceDeleteConfirmForm`/`OnboardingModal`/`AccountDeleteFlow`가 소비) + `useCreateSource`(intake — `SourceComposer`가 아이콘 전용이라 지금 당장 라벨로 보여줄 자리는 없지만 훅 레이어엔 `isPendingAfterDelay`가 있음).
+
+**i18n — action 라벨을 `common`으로 통합**:
+- `-ing`형 pending 라벨(`creating`/`saving`/`deleting`)은 Space 관련 문구가 없는 순수 범용 카피라 `common`에 둔다.
+- 기본 상태 라벨 `delete`/`create`/`save`도 `common.delete`/`common.create`/`common.save`로 통합했다 — `delete`는 `space.delete`/`session.delete`가 이미 완전히 같은 값이라 실제 중복 근거가 있었고, `create`/`save`는 소비처가 각 1곳뿐이라 증명된 중복은 없었지만 Kyle이 일관성을 우선해 함께 합치기로 결정했다(다음 세션은 "왜 증명된 중복 없이 공통화했지"라고 재도출하지 말 것 — 의도적 선결정).
+- `settings.start_pending`("Getting started...")과 `account.delete_deleting`("Deleting your account...")은 각자 특정 맥락(온보딩 완료, 계정 전체 삭제라는 고위험 액션의 의도적 구체적 카피)이라 local로 유지 — 범용화 대상 아님.
 
 ---

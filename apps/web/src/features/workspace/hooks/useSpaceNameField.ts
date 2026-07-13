@@ -1,27 +1,15 @@
 import { useState } from "react";
 import { TRPCClientError } from "@trpc/client";
 
-import { useTranslation } from "@web/lib/tolgee";
-
 export function useSpaceNameField(initialValue = "") {
-  const { t } = useTranslation();
   const [name, setName] = useState(initialValue);
-  const [validationError, setValidationError] = useState<string | null>(null);
   const [hasConflict, setHasConflict] = useState(false);
+  const [touched, setTouched] = useState(false);
 
   function handleChange(value: string) {
     setName(value);
-    setValidationError(null);
     setHasConflict(false);
-  }
-
-  function validate(): string | null {
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setValidationError(t("space.name_required"));
-      return null;
-    }
-    return trimmed;
+    setTouched(true);
   }
 
   function markConflictIfNameTaken(error: unknown) {
@@ -33,9 +21,8 @@ export function useSpaceNameField(initialValue = "") {
   return {
     name,
     handleChange,
-    validationError,
     hasConflict,
-    validate,
+    touched,
     markConflictIfNameTaken,
   };
 }

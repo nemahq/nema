@@ -37,9 +37,15 @@
   "common": {
     "cancel": "취소",
     "close": "닫기",
+    "create": "만들기",
+    "creating": "만드는 중...",
+    "delete": "삭제",
+    "deleting": "삭제하는 중...",
     "home": "홈",
     "overflow_count": "외 {count}개",
     "retry": "다시 시도",
+    "save": "저장",
+    "saving": "저장하는 중...",
     "send": "보내기",
     "stop": "중지",
     "unknown_error": "알 수 없는 오류가 발생했어요."
@@ -74,7 +80,6 @@
   "session": {
     "copied": "복사됨",
     "copy_code": "코드 복사",
-    "delete": "삭제",
     "delete_confirm_description": "삭제하면 되돌릴 수 없어요.",
     "delete_confirm_title": "맥락을 삭제할까요?",
     "draft": "초안",
@@ -140,6 +145,7 @@
     "settings": "설정",
     "sign_out": "로그아웃",
     "start": "시작하기",
+    "start_pending": "시작하는 중...",
     "theme": "테마",
     "theme_dark": "다크",
     "theme_description": "이 기기에서 Nema가 보이는 방식을 선택해요",
@@ -155,9 +161,7 @@
     "category_tab": "탭"
   },
   "space": {
-    "create_action": "만들기",
     "create_title": "새 스페이스",
-    "delete": "삭제",
     "delete_confirm_instruction": "확인하려면 \"{name}\" 입력",
     "delete_last_blocked": "워크스페이스엔 스페이스가 최소 하나 있어야 해요. 다른 스페이스를 먼저 만들어주세요.",
     "delete_title": "스페이스 삭제",
@@ -168,7 +172,6 @@
     "name_taken": "이미 사용 중인 이름이에요.",
     "not_found_description": "링크가 잘못됐거나 스페이스가 삭제됐을 수 있어요.",
     "not_found_title": "이 스페이스는 존재하지 않아요",
-    "save": "저장",
     "settings": "설정",
     "settings_title": "스페이스 설정",
     "tab_changesets": "변경사항",

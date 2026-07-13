@@ -204,7 +204,7 @@ export function AccountDeleteFlow({
             !canConfirm || deleteMutation.isPending || blockersQuery.isFetching
           }
         >
-          {deleteMutation.isPending
+          {deleteMutation.isPendingAfterDelay
             ? t("account.delete_deleting")
             : t("account.delete_confirm_button")}
         </Button>
