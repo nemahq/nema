@@ -23,7 +23,7 @@
     "quality": "turbo run lint && pnpm knip && pnpm depcruise",
     "prepare": "husky",
     "tolgee:push": "tolgee push",
-    "supabase:gen-types": "npx -y supabase@2.84.2 gen types --lang=typescript --local > apps/server/src/infra/database.types.ts && prettier --write apps/server/src/infra/database.types.ts"
+    "supabase:gen-types": "npx -y supabase@2.110.0-beta.10 gen types --lang=typescript --local > apps/server/src/infra/database.types.ts && prettier --write apps/server/src/infra/database.types.ts"
   },
   "lint-staged": {
     "*.{js,ts,tsx}": [
