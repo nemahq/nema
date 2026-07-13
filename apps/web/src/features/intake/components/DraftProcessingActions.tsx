@@ -31,7 +31,9 @@ export function DraftProcessingActions({
         disabled={cancelMutation.isPending}
       >
         <X />
-        {t("common.cancel")}
+        {cancelMutation.isPendingAfterDelay
+          ? t("common.cancelling")
+          : t("common.cancel")}
       </Button>
     </div>
   );

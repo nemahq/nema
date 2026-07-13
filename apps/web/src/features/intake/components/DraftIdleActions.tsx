@@ -30,12 +30,14 @@ export function DraftIdleActions({ sourceId }: DraftIdleActionsProps) {
         disabled={extractMutation.isPending}
       >
         <Play />
-        {t("intake.draft_extract")}
+        {extractMutation.isPendingAfterDelay
+          ? t("intake.draft_extracting")
+          : t("intake.draft_extract")}
       </Button>
       <Button
         size="icon-sm"
         variant="ghost"
-        aria-label={t("intake.draft_delete")}
+        aria-label={t("common.delete")}
         onClick={() => setDeleteDialogOpen(true)}
       >
         <Trash2 />

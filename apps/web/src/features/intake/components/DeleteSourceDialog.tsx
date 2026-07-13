@@ -50,7 +50,9 @@ export function DeleteSourceDialog({
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
           >
-            {t("intake.draft_delete")}
+            {deleteMutation.isPendingAfterDelay
+              ? t("common.deleting")
+              : t("common.delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

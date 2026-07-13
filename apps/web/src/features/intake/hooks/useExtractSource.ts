@@ -1,3 +1,4 @@
+import { useMutation } from "@web/lib/tanstack-query";
 import { trpc } from "@web/lib/trpc";
 
 // cancelled·failed·empty 셋 다 이 훅으로 (다시) 처리를 건다 — 출발 상태가 달라도
@@ -6,7 +7,7 @@ import { trpc } from "@web/lib/trpc";
 export function useExtractSource() {
   const utils = trpc.useUtils();
 
-  return trpc.source.startDigestion.useMutation({
+  return useMutation(trpc.source.startDigestion, {
     onSuccess: () => utils.source.listPending.invalidate(),
   });
 }

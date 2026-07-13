@@ -9,22 +9,23 @@ export function draftStatus(source: PendingSourceItem): DraftStatus | null {
   if (source.reviewChangesetId !== null) {
     return null;
   }
-  if (source.digestionStatus === "cancelled") {
-    return "cancelled";
+  switch (source.digestionStatus) {
+    case "cancelled":
+      return "cancelled";
+    case "failed":
+      return "failed";
+    case "completed":
+      return "empty";
+    case "pending":
+      return "processing";
+    default: {
+      // 5번째 digestion_status 값이 추가돼도 "처리 중"(가장 파괴적인 기본값 — 액션
+      // 잠금)으로 조용히 매핑되지 않도록, 모르는 값은 초안이 아닌 것으로 취급한다.
+      const exhaustive: never = source.digestionStatus;
+      void exhaustive;
+      return null;
+    }
   }
-  if (source.digestionStatus === "failed") {
-    return "failed";
-  }
-  if (source.digestionStatus === "completed") {
-    return "empty";
-  }
-  return "processing";
-}
-
-// cancelled·failed·empty 셋 다 명세가 말하는 "평범한 대기 상태" — 액션이 열린다
-// (intake-flow.md "처리 중 상태에서 액션 잠금"). processing만 잠긴다.
-export function isDraftLocked(status: DraftStatus): boolean {
-  return status === "processing";
 }
 
 export function isDraftItem(source: PendingSourceItem): boolean {

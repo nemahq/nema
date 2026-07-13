@@ -445,4 +445,12 @@ Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감*
 - **i18n**: `intake.draft_delete*`/`draft_extract`/`draft_locked_reason` 추가, en 실작성 + ko는 같은 네임스페이스의 기존 컨벤션(2026-07-12 세션, "en과 동일 placeholder") 그대로 계승 — 같은 화면 안에서 일부 키만 실제 한국어로 먼저 쓰면 오히려 일관성이 깨진다고 판단.
 - **검증**: 로컬 브라우저 E2E는 생략(PM 지시 — 로컬 인프라가 이 세션에서 안정적으로 안 될 걸로 예상). 대신 `pnpm --filter @nema-io/web typecheck`/`lint`/`test`(utils 8케이스, `cancelled`·`isDraftLocked` 신규 포함)로 확인하고, BE가 워킹 트리에 반영한 최종 라우터·서비스 코드를 직접 읽어 훅의 tRPC 경로명이 실제 계약과 정확히 일치하는지 대조했다.
 
+**amendment(2026-07-13, PR #394 멀티 에이전트 리뷰 반영, FE 항목만)**: BE 쪽(RPC ERRCODE, provider abort-awareness 등)은 별도 처리. FE는 아래 5건.
+- `isDraftLocked` 삭제 — 자기 테스트 말고는 아무도 안 부르는 죽은 함수였다(실제 잠금 판정은 `DraftCard`의 `FOOTER_BY_STATUS` 맵이 함). CLAUDE.md "커버리지만을 위한 테스트 금지" 위반이기도 해서 함수+테스트 같이 뺐다. 나중에 정말 쓰는 소비처가 생기면 그때 다시 추가.
+- `draftStatus`에 exhaustiveness 체크 추가 — 기존엔 마지막 `if` 없이 캐치올로 `"processing"`을 반환했는데, 이 PR이 실제로 DB enum을 3종→4종으로 늘린 마당이라 5번째 값이 추가될 가능성이 낮지 않다. `model-factory.ts` 등이 쓰는 `never` exhaustiveness 관용구로 바꾸되, FE는 `ChatLifecycleContext.tsx`가 이미 쓰는 쪽(스트리밍 콜백 중간에 throw하면 그 컴포넌트 트리 전체가 죽으므로 조용히 무시)을 따라 throw 대신 `null`(초안 아님 취급) 반환으로 갔다 — 알 수 없는 상태를 "처리 중"(가장 파괴적인 기본값, 액션 잠금)으로 조용히 매핑하던 것보다는, 카드 하나가 목록에서 조용히 빠지는 쪽이 안전하다고 판단.
+- `FOOTER_BY_STATUS`를 `STATUS_META`와 같은 강제 수준으로 맞춤 — `Partial<Record<...>>`(failed/empty는 키 자체가 없음)에서 완전한 `Record<DraftStatus, ... | null>`(failed/empty를 `null`로 명시)로 바꿔, 새 상태가 추가될 때 "풋터 없음"을 빠뜨리지 않고 의식적으로 선언하도록 강제.
+- 신규 훅 3개(`useCancelSource`/`useDeleteSource`/`useExtractSource`)가 raw `trpc.source.xxx.useMutation`을 직접 호출하고 있었다 — 이 브랜치가 PR #391("CRUD 뮤테이션 로딩 피드백 표준화") 머지 전에 갈라져서 생긴 격차. `origin/staging` 머지로 `useMutation`(`@web/lib/tanstack-query`) 래퍼를 받아와 세 훅 모두 옮기고, `isPendingAfterDelay`로 버튼 라벨을 스왑하게 했다(취소/추출/삭제 각각 "취소 중…"/"추출 중…"/"삭제 중…"). `common.cancelling`(신규, en/ko 실작성 — common 네임스페이스는 이미 #391에서 전체 한국어 작성돼 있어 이 관례를 따름) + `intake.draft_extracting`(신규, intake 네임스페이스 기존 관례대로 en과 동일 ko placeholder) 추가.
+- `intake.draft_delete` 키 제거 — PR #391이 `session.delete`/`space.delete`를 `common.delete`로 이미 통합해뒀길래, 이 PR에서 새로 만든 중복 키도 `common.delete`로 맞췄다(다이얼로그 확인 버튼 + 삭제 아이콘 버튼 aria-label 둘 다).
+- **참고만, 미반영(PM 확인 후 별도)**: "삭제가 cancelled 상태에만 연결돼 있고 failed/empty는 안 된다"는 지적은 버그가 아니라 기존에 이미 의도적으로 내린 결정(위 `DraftCard` 항목)이라 코드는 안 건드리고, `intake-flow.md`의 "초안에서 Source 삭제" 케이스에 그 범위를 명시하는 참고만 추가했다.
+
 ---

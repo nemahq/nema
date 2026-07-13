@@ -29,11 +29,14 @@ const STATUS_META: Record<
 // failed/empty는 재시도 액션을 2차 슬라이스로 미룬 기존 결정 그대로(intake-flow.md
 // "Digest 추출 실패"/"결과 없음" 범위 참고) — 이번 슬라이스는 processing(잠금)과
 // cancelled(취소 뒤 평범한 대기)만 액션을 연결한다.
-const FOOTER_BY_STATUS: Partial<
-  Record<DraftStatus, ComponentType<{ sourceId: string }>>
+const FOOTER_BY_STATUS: Record<
+  DraftStatus,
+  ComponentType<{ sourceId: string }> | null
 > = {
   processing: DraftProcessingActions,
   cancelled: DraftIdleActions,
+  failed: null,
+  empty: null,
 };
 
 interface DraftCardProps {

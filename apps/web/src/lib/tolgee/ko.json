@@ -36,6 +36,7 @@
   },
   "common": {
     "cancel": "취소",
+    "cancelling": "취소하는 중...",
     "close": "닫기",
     "create": "만들기",
     "creating": "만드는 중...",
@@ -61,10 +62,10 @@
   },
   "intake": {
     "compose_body_placeholder": "Paste or write anything",
-    "draft_delete": "Delete",
     "draft_delete_confirm_description": "This is permanent. It won't go to trash, and can't be undone.",
     "draft_delete_confirm_title": "Delete this source?",
     "draft_extract": "Extract",
+    "draft_extracting": "Extracting...",
     "draft_failed": "We couldn't process this.",
     "draft_locked_reason": "You can't edit this while it's processing.",
     "draft_no_result": "We couldn't find anything to extract from this.",
