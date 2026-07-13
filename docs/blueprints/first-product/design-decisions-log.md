@@ -347,3 +347,19 @@ Space와 달리 이 배지는 **한 번에 하나만 보이는 단독 요소**�
 **신규 유저 기본 Space 이름 — "Default" → "My Space"**: 처음엔 "지금 DB에 name이 NULL이라 프론트가 크래시난다"고 잘못 짚었다 — 실제로는 이후 마이그레이션(`20260710070941_space_management_rpcs.sql`)이 이미 `spaces.name`을 NOT NULL로 승격하고 가입 트리거가 리터럴 `'Default'`를 직접 심도록 바꿔둔 뒤였다(더 오래된 `20260611091632_create_spaces.sql`만 보고 판단해 생긴 오류 — 최신 마이그레이션까지 다 확인했어야 함, 이후 세션 교훈으로 남김). 세 가지 대안(A. 리터럴만 교체 B. 가입 시점 로케일 캡처 후 트리거 분기 C. 센티널 문자열 방식 표시 시점 치환) 중 Kyle이 A 선택 — 지금 "Default"도 원래 로케일 무관 하드코딩이었고, B는 이 세션 스코프 밖, C는 사용자가 우연히 같은 문자열로 개명하면 오치환되는 새 버그를 만들 수 있어서. 새 마이그레이션(`20260712230000_default_space_name_my_space.sql`)으로 `handle_new_user()` 트리거 함수의 리터럴을 `'My Space'`로 교체 + 기존에 아직 "Default" 그대로인 Space도 함께 백필(20260710070941의 NULL 백필과 같은 논리 — 사용자가 실제로 "Default"를 의도적으로 고른 경우는 사실상 없다고 판단). `packages/shared`의 `DEFAULT_SPACE_NAME` 상수도 값 맞춰 갱신(SQL 리터럴과 동기화는 여전히 수동, 자동 강제 없음 — 코드 주석에 명시). **이 환경엔 Supabase CLI가 없어 `supabase db reset`으로 실제 적용 검증을 못 했다 — 머지 전 CI/로컬에서 마이그레이션이 깨끗하게 적용되는지 반드시 확인 필요.** 스키마 변경은 없어(함수 body + 1회성 UPDATE) `pnpm supabase:gen-types` 재생성은 불필요 판단.
 
 ---
+
+### 2026-07-13 — PR #387 리뷰 반영 + Space 이름 필드 공유 추출
+
+멀티 에이전트 리뷰(code-reviewer·silent-failure-hunter·pr-test-analyzer·comment-analyzer·type-design-analyzer) 결과 반영. 4개 에이전트가 독립적으로 수렴한 Critical 2건 우선 처리, 나머지는 판단해서 선별 반영.
+
+**마이그레이션 UNIQUE 충돌 방어**: `20260712230000_default_space_name_my_space.sql`의 무방비 `UPDATE spaces SET name = 'My Space' WHERE name = 'Default'`가 `spaces_workspace_id_name_key` UNIQUE(workspace_id, name) 제약과 충돌할 수 있었다 — `create_space`/`rename_space`가 임의 이름을 허용해서, 같은 워크스페이스에 "Default"와 "My Space"가 동시에 있으면 실제로 터지는 시나리오. `rename_space`가 이미 쓰는 방어(대상 이름이 그 워크스페이스에 없을 때만)로 고쳤다. staging은 이미 이 마이그레이션을 충돌 없이 적용해버린 뒤라(그 시점엔 실제 충돌이 없었음) 재실행은 안 되지만, 파일을 고쳐뒀으니 프로덕션 첫 적용 때는 안전하다 — staging 전용 마이그레이션은 이미 적용된 뒤에도 고쳐도 된다고 판단(프로덕션에 적용된 마이그레이션을 사후 수정하는 것과는 무게가 다름).
+
+**ko.json 번역 완료 주장 스코프 정정**: "48개 전량 번역"이 리베이스로 새로 들어온 `intake.*` 6개를 놓쳤다는 지적 — 그 키들은 다른 세션(#385) 몫이라 로그에 스코프를 명시했고, 같은 리베이스로 들어온 LNB 라이브 라벨 `workspace.drafts`만 이 PR에서 같이 번역했다("초안 ({count})").
+
+**죽은 코드 정리**: v1 홈 삭제로 유일한 writer(`useStartSession`)를 잃은 `ChatPanel`의 initialMessage/initialMode 라우트 상태 메커니즘 전체와 그 전용 `routeState` 상수/유틸 파일 2개 삭제. 어디서도 안 쓰이는 `DEFAULT_SPACE_NAME` 상수도 제거(마이그레이션 리터럴과 "맞춰 둘 것"이라는 주석만 있고 강제력 없었음).
+
+**문서 교차 참조 보강**: 2026-07-10 "LNB에 홈 항목은 뺐다" 결정에 이번 폴리싱 라운드가 그 후속 슬라이스라는 참조를 추가(문서 자신의 "이전 결정 재도출 방지" 원칙을 스스로 어기고 있었음). `SpaceListItem` 배지 주석이 이미 사라진 WorkspaceMenu 다크모드 fallback을 근거로 들고 있던 것도 실제 근거(색상 실험 후 중립 회귀)로 교체.
+
+**Space 이름 폼필드 공유 추출**: type-design-analyzer가 지적한 "Create/Settings 폼이 이름 검증 로직을 완전히 독립 재구현"은 Kyle과 논의해 별도로 처리 — 겉 모달/폼 분리(제목·Footer·제출 대상)는 "설정 쪽 필드가 미래에 늘어난다"는 이유가 여전히 유효해 그대로 두되, 이름 필드 자체(값·검증·conflict)는 create/rename 둘 다 규칙이 동일해야 하는 부분이라 분리 이유가 안 맞았다. `useSpaceNameField` 훅(상태+검증+conflict 로직)과 `SpaceNameField` 컴포넌트(순수 컨트롤드 프레젠테이션)로 나눠 양쪽 폼이 합성해서 쓰게 만들었다 — `SpaceNameField`를 상태를 내부에 숨기는 방식(ref 기반 imperative API)으로 만들면 `SpaceSettingsForm`의 "이름 미변경 시 저장 비활성화"가 매 키 입력마다 재계산돼야 하는데 부모가 그 값을 못 보게 돼 깨진다는 걸 설계 중 발견 — 그래서 값은 부모(각 Form)가 계속 들고, 컴포넌트는 렌더링만 맡는 컨트롤드 방식으로 확정.
+
+---

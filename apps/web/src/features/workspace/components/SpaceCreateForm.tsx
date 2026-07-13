@@ -1,18 +1,17 @@
-import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { TRPCClientError } from "@trpc/client";
 
-import { SPACE_NAME_MAX_LENGTH } from "@nema-io/shared";
 import {
   Button,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
 } from "@nema-io/weave";
 
 import { useCreateSpace } from "@web/features/workspace/hooks/useCreateSpace";
+import { useSpaceNameField } from "@web/features/workspace/hooks/useSpaceNameField";
 import { useTranslation } from "@web/lib/tolgee";
+
+import { SpaceNameField } from "./SpaceNameField";
 
 const NAME_INPUT_ID = "space-create-name";
 
@@ -23,18 +22,15 @@ interface SpaceCreateFormProps {
 export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [hasConflict, setHasConflict] = useState(false);
+  const field = useSpaceNameField();
   const createMutation = useCreateSpace();
 
   function handleSubmit() {
     if (createMutation.isPending) {
       return;
     }
-    const trimmed = name.trim();
+    const trimmed = field.validate();
     if (!trimmed) {
-      setValidationError(t("space.name_required"));
       return;
     }
 
@@ -45,14 +41,7 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
           onOpenChange(false);
           navigate({ to: "/space/$spaceId", params: { spaceId } });
         },
-        onError: (error) => {
-          if (
-            error instanceof TRPCClientError &&
-            error.data?.code === "CONFLICT"
-          ) {
-            setHasConflict(true);
-          }
-        },
+        onError: field.markConflictIfNameTaken,
       },
     );
   }
@@ -63,37 +52,14 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
         <DialogTitle>{t("space.create_title")}</DialogTitle>
       </DialogHeader>
 
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor={NAME_INPUT_ID}
-          className="text-sm font-medium text-fg-primary"
-        >
-          {t("space.name_placeholder")}
-        </label>
-        <Input
-          id={NAME_INPUT_ID}
-          autoFocus
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            setValidationError(null);
-            setHasConflict(false);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleSubmit();
-            }
-          }}
-          maxLength={SPACE_NAME_MAX_LENGTH}
-          aria-invalid={Boolean(validationError) || hasConflict}
-        />
-        <p
-          role="alert"
-          className={`text-xs ${validationError ? "text-status-error" : "text-transparent"}`}
-        >
-          {validationError ?? " "}
-        </p>
-      </div>
+      <SpaceNameField
+        id={NAME_INPUT_ID}
+        value={field.name}
+        onChange={field.handleChange}
+        onEnter={handleSubmit}
+        error={field.validationError}
+        hasConflict={field.hasConflict}
+      />
 
       <DialogFooter>
         <Button variant="ghost" onClick={() => onOpenChange(false)}>
