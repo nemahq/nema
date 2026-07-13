@@ -125,6 +125,7 @@ export {
 } from "./schemas/session";
 export {
   SOURCE_BODY_MAX_LENGTH,
+  SOURCE_TITLE_MAX_LENGTH,
   type SourceActionInput,
   SourceActionInputSchema,
   type SourceCreateInput,
@@ -133,6 +134,8 @@ export {
   SourceGetInputSchema,
   type SourceReassignSpaceInput,
   SourceReassignSpaceInputSchema,
+  type SourceUpdateTitleInput,
+  SourceUpdateTitleInputSchema,
 } from "./schemas/source";
 export {
   type Space,

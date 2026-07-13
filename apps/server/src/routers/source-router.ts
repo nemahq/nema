@@ -3,6 +3,7 @@ import {
   SourceCreateInputSchema,
   SourceGetInputSchema,
   SourceReassignSpaceInputSchema,
+  SourceUpdateTitleInputSchema,
 } from "@nema-io/shared";
 
 import {
@@ -14,6 +15,7 @@ import {
   listSources,
   reassignSourceSpace,
   startSourceDigestion,
+  updateSourceTitle,
 } from "@server/services/source-service";
 import { protectedProcedure, router } from "@server/trpc";
 
@@ -79,6 +81,16 @@ export const sourceRouter = router({
         supabase: ctx.supabase,
         sourceId: input.sourceId,
         spaceId: input.spaceId,
+      }),
+    ),
+
+  updateTitle: protectedProcedure
+    .input(SourceUpdateTitleInputSchema)
+    .mutation(({ ctx, input }) =>
+      updateSourceTitle({
+        supabase: ctx.supabase,
+        sourceId: input.sourceId,
+        title: input.title,
       }),
     ),
 });

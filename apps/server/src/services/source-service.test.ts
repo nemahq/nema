@@ -14,6 +14,7 @@ import {
   fetchMergedSourceIds,
   reassignSourceSpace,
   startSourceDigestion,
+  updateSourceTitle,
 } from "./source-service";
 
 // 테이블별 canned rows를 돌려주는 .from 체인 stub — select/eq/in 무시하고 then으로 resolve.
@@ -292,6 +293,41 @@ describe("reassignSourceSpace", () => {
         supabase,
         sourceId: CANCEL_SOURCE_ID,
         spaceId: TARGET_SPACE_ID,
+      }),
+    ).rejects.toThrow();
+  });
+});
+
+describe("updateSourceTitle", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("update_source_title RPC로 제목을 반영한다", async () => {
+    const { supabase, rpc } = mockRpcSupabase(null);
+
+    await updateSourceTitle({
+      supabase,
+      sourceId: CANCEL_SOURCE_ID,
+      title: "새 제목",
+    });
+
+    expect(rpc).toHaveBeenCalledWith("update_source_title", {
+      p_source_id: CANCEL_SOURCE_ID,
+      p_title: "새 제목",
+    });
+  });
+
+  it("처리 중이거나 pending이 아니라 가드가 지면 오류를 그대로 올린다", async () => {
+    const { supabase } = mockRpcSupabase({
+      message: "source ... is not an idle draft the caller can retitle",
+    });
+
+    await expect(
+      updateSourceTitle({
+        supabase,
+        sourceId: CANCEL_SOURCE_ID,
+        title: "새 제목",
       }),
     ).rejects.toThrow();
   });

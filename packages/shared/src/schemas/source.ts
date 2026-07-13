@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { DIGEST_TITLE_MAX_LENGTH } from "./digest";
+
 // 원본 입구 상한 — 한 글이 비정상적으로 크면(책·덤프) 추출·임베딩·잇기를 한꺼번에
 // 폭주시키므로 박제 전에 거부한다(쪼개서 다시 넣게). 정확성이 아니라 비용/폭주
 // 브레이크라 정밀할 필요 없이 "확실히 비정상"만 잡으면 된다 — 정당한 장문(긴 회의록·
@@ -7,6 +9,10 @@ import { z } from "zod";
 // 노션 페이지(~1,000블록/~20만자)의 절반 앵커. 진짜 값은 dogfooding의 문서 길이
 // 분포로 보정(relation-design §11).
 export const SOURCE_BODY_MAX_LENGTH = 100_000;
+
+// 헤드라인 상한 — Digest 제목과 같은 성격(짧은 한 문장)이라 값 자체를 그대로 물려받는다
+// (리터럴 복사가 아니라 참조라 두 상한이 나중에 갈릴 일이 없다).
+export const SOURCE_TITLE_MAX_LENGTH = DIGEST_TITLE_MAX_LENGTH;
 
 export const SourceCreateInputSchema = z.object({
   body: z.string().trim().min(1).max(SOURCE_BODY_MAX_LENGTH),
@@ -43,4 +49,14 @@ export const SourceReassignSpaceInputSchema = SourceActionInputSchema.extend({
 
 export type SourceReassignSpaceInput = z.infer<
   typeof SourceReassignSpaceInputSchema
+>;
+
+// 초안에서 Source 제목 편집 — 어떤 상태에서 허용되는지는 RPC의 WHERE 가드가 판정한다.
+export const SourceUpdateTitleInputSchema = z.object({
+  sourceId: z.string().uuid(),
+  title: z.string().trim().min(1).max(SOURCE_TITLE_MAX_LENGTH),
+});
+
+export type SourceUpdateTitleInput = z.infer<
+  typeof SourceUpdateTitleInputSchema
 >;

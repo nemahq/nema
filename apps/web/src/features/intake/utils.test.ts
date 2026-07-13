@@ -10,6 +10,7 @@ function buildSource(
     sourceId: "source-1",
     spaceId: "space-1",
     body: "본문",
+    title: null,
     createdAt: "2026-07-12T00:00:00.000Z",
     digestionStatus: "pending",
     errorMessage: null,

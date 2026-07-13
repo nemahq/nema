@@ -1157,7 +1157,7 @@ export type Database = {
         Returns: undefined;
       };
       complete_source_digestion: {
-        Args: { p_source_id: string };
+        Args: { p_source_id: string; p_title: string };
         Returns: undefined;
       };
       complete_statement_ingestion: {
@@ -1173,7 +1173,12 @@ export type Database = {
         Returns: string;
       };
       create_ingestion_review: {
-        Args: { p_digests: Json; p_new_references?: Json; p_source_id: string };
+        Args: {
+          p_digests: Json;
+          p_new_references?: Json;
+          p_source_id: string;
+          p_title: string;
+        };
         Returns: string;
       };
       create_reference_link: {
@@ -1379,6 +1384,10 @@ export type Database = {
           p_type: Database["public"]["Enums"]["reference_type"];
         };
         Returns: string;
+      };
+      update_source_title: {
+        Args: { p_source_id: string; p_title: string };
+        Returns: undefined;
       };
       update_tag: {
         Args: { p_description: string; p_tag_id: string; p_title: string };
