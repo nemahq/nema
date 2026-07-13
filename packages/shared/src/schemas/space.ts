@@ -16,11 +16,11 @@ export const SpaceCreateInputSchema = z.object({
 });
 export type SpaceCreateInput = z.infer<typeof SpaceCreateInputSchema>;
 
-export const SpaceRenameInputSchema = z.object({
+export const SpaceUpdateInputSchema = z.object({
   spaceId: z.string().uuid(),
   name: SpaceNameSchema,
 });
-export type SpaceRenameInput = z.infer<typeof SpaceRenameInputSchema>;
+export type SpaceUpdateInput = z.infer<typeof SpaceUpdateInputSchema>;
 
 export const SpaceDeleteInputSchema = z.object({
   spaceId: z.string().uuid(),

@@ -13,7 +13,7 @@ export function SpaceCreateModal({
 }: SpaceCreateModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent aria-describedby={undefined}>
         {open && <SpaceCreateForm onOpenChange={onOpenChange} />}
       </DialogContent>
     </Dialog>

@@ -5,9 +5,9 @@ import {
   DialogTitle,
 } from "@nema-io/weave";
 
-import { useRenameSpace } from "@web/features/workspace/hooks/useRenameSpace";
 import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
 import { useSpaceNameField } from "@web/features/workspace/hooks/useSpaceNameField";
+import { useUpdateSpace } from "@web/features/workspace/hooks/useUpdateSpace";
 import { isSpaceNameTaken } from "@web/features/workspace/isSpaceNameTaken";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -29,7 +29,7 @@ export function SpaceSettingsForm({
   const { t } = useTranslation();
   const { data: spaceList } = useSpaceList();
   const field = useSpaceNameField(spaceName);
-  const renameMutation = useRenameSpace();
+  const updateMutation = useUpdateSpace();
   const trimmedName = field.name.trim();
   const isUnchanged = trimmedName === spaceName;
   const isDuplicate =
@@ -37,7 +37,7 @@ export function SpaceSettingsForm({
     isSpaceNameTaken(spaceList?.spaces ?? [], trimmedName, spaceId);
 
   function handleSubmit() {
-    if (renameMutation.isPending || isUnchanged || isDuplicate) {
+    if (updateMutation.isPending || isUnchanged || isDuplicate) {
       return;
     }
     const trimmed = field.validate();
@@ -45,7 +45,7 @@ export function SpaceSettingsForm({
       return;
     }
 
-    renameMutation.mutate(
+    updateMutation.mutate(
       { spaceId, name: trimmed },
       {
         onSuccess: () => onOpenChange(false),
@@ -77,7 +77,7 @@ export function SpaceSettingsForm({
         </Button>
         <Button
           onClick={handleSubmit}
-          disabled={renameMutation.isPending || isUnchanged || isDuplicate}
+          disabled={updateMutation.isPending || isUnchanged || isDuplicate}
         >
           {t("space.save")}
         </Button>

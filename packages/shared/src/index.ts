@@ -137,9 +137,9 @@ export {
   SpaceCreateInputSchema,
   type SpaceDeleteInput,
   SpaceDeleteInputSchema,
-  type SpaceRenameInput,
-  SpaceRenameInputSchema,
   SpaceSchema,
+  type SpaceUpdateInput,
+  SpaceUpdateInputSchema,
 } from "./schemas/space";
 export {
   RELATION_STATUSES,

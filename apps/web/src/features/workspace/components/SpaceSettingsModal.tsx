@@ -17,7 +17,7 @@ export function SpaceSettingsModal({
 }: SpaceSettingsModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent aria-describedby={undefined}>
         {open && (
           <SpaceSettingsForm
             spaceId={spaceId}
