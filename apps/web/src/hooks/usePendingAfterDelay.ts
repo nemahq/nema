@@ -11,20 +11,18 @@ export function usePendingAfterDelay(
 
   useEffect(
     function scheduleDelayedPending() {
-      const resetTimer = setTimeout(
-        () => setPending(false),
-        IMMEDIATE_RESET_MS,
-      );
-      const revealTimer = isPending
-        ? setTimeout(() => setPending(true), delayMs)
-        : undefined;
+      // setPending을 effect 본문에서 동기 호출하면 react-compiler 린트에 걸려
+      // (cascading render 경고) 두 분기 다 setTimeout 콜백 안에서 부른다.
+      if (!isPending) {
+        const resetTimer = setTimeout(
+          () => setPending(false),
+          IMMEDIATE_RESET_MS,
+        );
+        return () => clearTimeout(resetTimer);
+      }
 
-      return () => {
-        clearTimeout(resetTimer);
-        if (revealTimer !== undefined) {
-          clearTimeout(revealTimer);
-        }
-      };
+      const revealTimer = setTimeout(() => setPending(true), delayMs);
+      return () => clearTimeout(revealTimer);
     },
     [isPending, delayMs],
   );
