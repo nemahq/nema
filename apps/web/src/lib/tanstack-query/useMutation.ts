@@ -1,4 +1,4 @@
-import { usePendingAfterDelay } from "./usePendingAfterDelay";
+import { usePendingAfterDelay } from "@web/hooks/usePendingAfterDelay";
 
 interface MutationProcedure<TOptions, TResult extends { isPending: boolean }> {
   useMutation(options?: TOptions): TResult;
