@@ -11,34 +11,28 @@ import { draftStatus, isDraftItem } from "@web/features/intake/utils";
 import { useTranslation } from "@web/lib/tolgee";
 
 const NAV_ICON_CLASS = "size-4";
-// weave --duration-slow(300ms)와 값을 맞춘다 — 애니메이션이 다 재생된 뒤에
-// 다음 단계(visible/hidden)로 넘어가야 뚝 끊기지 않는다.
+// --duration-slow와 맞춰, 애니메이션이 끝난 뒤에 다음 단계로 넘어가게 한다.
 const TRANSITION_ANIMATION_MS = 300;
 
 type RenderState = "hidden" | "entering" | "visible" | "exiting";
 
-// Linear Drafts처럼 대기 중인 초안이 있을 때만 노출 — 다 처리되면 항목 자체가 사라진다
-// (intake-flow.md "LNB 초안 버튼 조건부 노출").
+// 대기 중인 초안이 있을 때만 노출 — 다 처리되면 사라진다(intake-flow.md 참고).
 export function DraftsNavItem() {
   const { t } = useTranslation();
   const pathname = useLocation({ select: (location) => location.pathname });
   const { collapsed } = useSidebar();
   const pendingQuery = usePendingSourceListQuery();
   const [renderState, setRenderState] = useState<RenderState>("hidden");
-  // isVisible이 false로 바뀌기 직전에 true였는지(=접힘 애니메이션을 거쳐야 하는지)
-  // 판단하는 용도 — 이펙트 안에서만 읽고 쓰므로 렌더 중 ref 접근 금지 규칙에 안 걸린다.
+  // 직전 가시성 — 이펙트 안에서만 갱신(렌더 중 ref 접근 금지 규칙 회피).
   const wasVisibleRef = useRef(false);
-  // pendingQuery가 실제로 한 번이라도 로딩을 끝낸 적이 있는지 — "이펙트가 실행된
-  // 적 있는지"로 판단하면 안 된다. /drafts 체류처럼 pathname은 마운트 즉시(네트워크
-  // 없이) 알 수 있지만, 카운트는 서버 응답이 와야 알 수 있어서, 로딩 중에 이미
-  // 이펙트가 한 번 돌고 난 뒤 응답이 도착하는 게 "두 번째 전환"으로 잘못 잡혀
-  // entering이 재생되는 문제가 있었다.
+  // 쿼리가 처음 로딩을 끝낸 적 있는지. 이펙트 실행 횟수로 판단하면 안 된다 —
+  // 새로고침 시 응답이 늦게 와서 기존 초안이 뒤늦게 드러나는 걸 "방금 생김"으로
+  // 오인해 entering이 잘못 재생되는 문제가 있었다.
   const hasLoadedOnceRef = useRef(false);
 
   const draftItems = (pendingQuery.data?.items ?? []).filter(isDraftItem);
   const draftCount = draftItems.length;
-  // 우선순위: 실패 > 처리중 > (cancelled/empty만 있으면 표시 없음). 섞여 있어도
-  // 가장 급한 상태 하나만 보여준다 — 구성 비율까지 숫자로 쪼개면 오히려 더 복잡해 보인다.
+  // 우선순위: 실패 > 처리중 > (cancelled/empty는 표시 없음) — 구성 비율 대신 가장 급한 상태 하나만.
   const hasFailed = draftItems.some((item) => draftStatus(item) === "failed");
   const hasProcessing = draftItems.some(
     (item) => draftStatus(item) === "processing",
@@ -58,13 +52,10 @@ export function DraftsNavItem() {
         hasLoadedOnceRef.current = true;
       }
 
-      // setState를 이펙트 본문에서 동기 호출하면 react-hooks/set-state-in-effect
-      // 린트에 걸려(cascading render 경고) setTimeout 콜백 안에서 부른다.
+      // setState를 이펙트에서 동기 호출하면 set-state-in-effect 린트에 걸려 setTimeout으로 미룬다.
       if (isVisible) {
         wasVisibleRef.current = true;
         if (!hadLoadedBefore || wasVisible) {
-          // 첫 로딩이 아직 안 끝났었거나(=지금이 그 첫 로딩 결과) 이미 보이던 중이면
-          // (카운트만 바뀐 경우 등) entering을 건너뛰고 바로 visible로 둔다.
           const timer = setTimeout(() => setRenderState("visible"), 0);
           return () => clearTimeout(timer);
         }
@@ -80,8 +71,7 @@ export function DraftsNavItem() {
       }
 
       if (!wasVisible) {
-        // 직전에 보이고 있었을 때만 접히는 애니메이션을 거친다 — 처음부터
-        // 0개였던 경우(새로고침 등)는 접을 것도 없이 바로 숨긴다.
+        // 처음부터 0개였다면(새로고침 등) 접을 것도 없이 바로 숨긴다.
         const timer = setTimeout(() => setRenderState("hidden"), 0);
         return () => clearTimeout(timer);
       }
@@ -109,9 +99,8 @@ export function DraftsNavItem() {
       <TriangleAlert
         className={cn(
           "size-3.5 shrink-0 text-status-error",
-          // 아이콘 자체의 도형이 뷰박스 안에서 살짝 오른쪽으로 치우쳐 있어서, 펼침
-          // 모드(라벨 옆 인라인)에서 펄스 점과 나란히 두면 중심축이 안 맞아 보인다
-          // — 접힘 모드(아이콘 위 배지)는 이 보정이 필요 없어 collapsed일 땐 안 준다.
+          // 아이콘 도형이 뷰박스 안에서 오른쪽으로 치우쳐 있어 펼침 모드에서 펄스
+          // 점과 축이 안 맞는다 — 접힘 모드(코너 배지)는 이 보정이 필요 없다.
           !collapsed && "-translate-x-1",
         )}
       />
@@ -137,24 +126,20 @@ export function DraftsNavItem() {
         <NavItem
           icon={<FileText strokeWidth={1.5} className={NAV_ICON_CLASS} />}
           label={t("workspace.drafts")}
-          // 접힘 모드는 아이콘 위 배지로만 상태를 보여주고 정확한 개수는 안 보이니,
-          // 툴팁 텍스트에 개수를 붙여 hover로 확인할 수 있게 한다.
+          // 접힘 모드는 정확한 개수를 안 보여주니 툴팁에 붙여 hover로 확인하게 한다.
           tooltipLabel={
             draftCount > 0
               ? `${t("workspace.drafts")} · ${draftCount}`
               : t("workspace.drafts")
           }
-          // exiting 중엔 이미 0개라 실제 카운트·상태를 보여주면 오해를 준다(예:
-          // "Drafts 0") — 사라지는 동안은 라벨만 남기고 조용히 접히게 둔다.
+          // exiting 중엔 이미 0개라 카운트·상태를 보여주면 오해를 준다(예: "Drafts 0").
           labelSuffix={renderState !== "exiting" ? statusIndicator : null}
           to="/drafts"
           rightContent={
-            // 0개(에러 포함)일 땐 숫자를 안 보여준다 — /drafts에 남아있느라 항목
-            // 자체는 떠 있어도, "0"이라는 무의미한 카운트까지 노출할 필요는 없다.
+            // 0개(에러 포함)일 땐 무의미한 "0" 노출을 피한다.
             renderState !== "exiting" && draftCount > 0 ? (
-              // "+"(LnbHoverIcon)가 size-5 박스 안에서 아이콘을 중앙정렬해 실제
-              // 보이는 획이 right-3.5보다 안쪽에서 끝난다 — 숫자도 같은 크기 박스로
-              // 감싸야 시각적 우측 끝이 맞는다(박스 없이 바로 두면 더 바깥으로 붙어 보임).
+              // "+"(LnbHoverIcon)가 size-5 박스 안에서 중앙정렬돼 실제 획이 안쪽에서
+              // 끝난다 — 숫자도 같은 박스로 감싸야 시각적 우측 끝이 맞는다.
               <span className="absolute right-3.5 flex size-5 items-center justify-center text-xs text-fg-tertiary">
                 {draftCount}
               </span>
