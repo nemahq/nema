@@ -9,10 +9,21 @@
 -- 아직 이름을 안 바꾼(리터럴 "Default" 그대로인) 기존 Space도 20260710070941의
 -- NULL 백필과 같은 논리로 함께 백필한다 — 사용자가 실제로 "Default"라는 이름을
 -- 의도적으로 고른 경우는 사실상 없다고 봄.
--- shared의 DEFAULT_SPACE_NAME과 값을 맞춰 둘 것 — 리터럴 두 곳이라 자동 강제는 없다.
+--
+-- 이 UPDATE는 spaces_workspace_id_name_key UNIQUE(workspace_id, name) 제약과
+-- 부딪힐 수 있다 — 같은 워크스페이스에 "Default"와 "My Space"가 동시에 있으면
+-- unique_violation. create_space/rename_space는 임의 이름을 허용하므로(이미
+-- 이 값과 겹치는 이름을 유저가 직접 지었을 수 있음) 실제로 일어날 수 있는
+-- 충돌이다. rename_space가 이미 쓰는 것과 같은 방어(대상 이름이 그 워크스페이스에
+-- 없을 때만 백필)로 안전하게 처리한다.
 -- =============================================================
 
-UPDATE spaces SET name = 'My Space' WHERE name = 'Default';
+UPDATE spaces s SET name = 'My Space'
+WHERE s.name = 'Default'
+  AND NOT EXISTS (
+    SELECT 1 FROM spaces s2
+    WHERE s2.workspace_id = s.workspace_id AND s2.name = 'My Space'
+  );
 
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS trigger AS $$

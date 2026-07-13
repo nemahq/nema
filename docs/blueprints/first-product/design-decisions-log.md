@@ -298,7 +298,7 @@ Space와 달리 이 배지는 **한 번에 하나만 보이는 단독 요소**�
 
 ### 2026-07-12 — Space 오버뷰 마무리 + 설정 모달 Content language 재도입 (2026-07-10 결정 번복)
 
-**v1 홈 완전 퇴장**: `/`가 v1 `HomePage`(세션 사이드바 셸) 대신 v2 `WorkspaceSidebar` 셸 아래 stub `WorkspaceHome`로 직접 연결되도록 라우트를 바꿨다. 처음엔 `/home`으로 별도 경로를 만들고 `/`는 리다이렉트만 하게 했었는데, Kyle이 "v1으로 이제 안 가도 되는데 굳이 리다이렉트를 거칠 이유가 있나"라고 지적 — 맞는 말이라 `/`를 v2 홈의 실제 경로로 바꾸고 리다이렉트 계층을 걷어냈다. v1 `HomePage`가 죽으면서 그 전용 의존이었던 `Greeting`·`useStartSession`·`useCreateSession`과, 그것들만 쓰던 캐시 프라임 함수 4개(`presetMessageCache`/`clearMessageCache`/`prependSessionCache`/`presetSessionCache`)도 연쇄로 죽어 함께 삭제(knip이 파일 단위는 잡았지만 정확히는 이 export 단위는 못 잡아서 수동 확인 후 정리 — JSON i18n 키의 죽은 참조도 knip은 못 잡는다는 걸 재확인, `session.empty_heading_*`/`empty_subheading_*` 10개도 같은 이유로 같이 정리).
+**v1 홈 완전 퇴장(2026-07-10 "LNB에 홈 항목은 뺐다" 결정의 후속 조치)**: 그 결정은 "홈이 아직 옛 세션 사이드바 셸이라 새 LNB에서 누르면 셸 전체가 어색하게 전환된다"는 이유로 LNB에서 홈 항목 자체를 뺐고, "홈은 v2 홈 화면을 새 LNB 아래로 옮기는 슬라이스에서 함께 붙인다"고 명시해뒀다. 이번 라운드가 정확히 그 슬라이스다 — v2 stub이라도 `WorkspaceSidebar`(새 LNB) 아래로 홈을 옮겨왔으니 LNB에 Home NavItem을 다시 추가했다. `/`가 v1 `HomePage`(세션 사이드바 셸) 대신 v2 `WorkspaceSidebar` 셸 아래 stub `WorkspaceHome`로 직접 연결되도록 라우트를 바꿨다. 처음엔 `/home`으로 별도 경로를 만들고 `/`는 리다이렉트만 하게 했었는데, Kyle이 "v1으로 이제 안 가도 되는데 굳이 리다이렉트를 거칠 이유가 있나"라고 지적 — 맞는 말이라 `/`를 v2 홈의 실제 경로로 바꾸고 리다이렉트 계층을 걷어냈다. v1 `HomePage`가 죽으면서 그 전용 의존이었던 `Greeting`·`useStartSession`·`useCreateSession`과, 그것들만 쓰던 캐시 프라임 함수 4개(`presetMessageCache`/`clearMessageCache`/`prependSessionCache`/`presetSessionCache`)도 연쇄로 죽어 함께 삭제(knip이 파일 단위는 잡았지만 정확히는 이 export 단위는 못 잡아서 수동 확인 후 정리 — JSON i18n 키의 죽은 참조도 knip은 못 잡는다는 걸 재확인, `session.empty_heading_*`/`empty_subheading_*` 10개도 같은 이유로 같이 정리).
 
 **Space 없음 에러뷰**: 처음엔 앱 전역 `NotFoundErrorFallback`(워터마크+단일 문구) 재사용을 시도했다가, Kyle이 다른 레퍼런스(Linear "Team not found", X "This account doesn't exist")를 검토한 뒤 "전역 404는 원복하고, Space 쪽만 title+description으로 가자"고 정리 — 전역 404는 워터마크 있는 원래 형태 그대로 유지, `SpaceOverview.tsx`의 Space-없음 분기만 워터마크 없이 제목+설명 2줄 구조로 바꿨다(`space.not_found_title`/`not_found_description` 신규, 기존 `space.not_found` 대체). 제목엔 마침표 안 붙임(레이블성 타이틀은 마침표 없음 — Kyle 지적).
 
@@ -332,7 +332,7 @@ Space와 달리 이 배지는 **한 번에 하나만 보이는 단독 요소**�
 
 ### 2026-07-12 — ko.json 전체 placeholder 번역 + Space 탭 빈 상태 정리 + Space 이름·설정 UI 재구조화
 
-**ko.json 잔여 placeholder 48개 전량 번역**: `/check-ux-writing` 체크리스트(해요체·마침표 규칙·용어 통일) 기준으로 en과 동일 값으로 남아있던 `account`/`app`/`auth`/`settings`/`space`/`workspace` 네임스페이스 키를 전부 실제 한국어로 옮겼다. 과정에서 `session.rename`(기존 "이름 바꾸기")과 새로 쓴 `space.rename`("이름 변경")이 같은 개념에 다른 표현을 쓰고 있던 동의어 충돌을 발견해 "이름 바꾸기"로 통일. `settings.theme`("테마")는 Notion·Slack 한국어판 레퍼런스로 재확인 — 이미 맞았음.
+**ko.json 잔여 placeholder 48개 전량 번역**: `/check-ux-writing` 체크리스트(해요체·마침표 규칙·용어 통일) 기준으로 en과 동일 값으로 남아있던 `account`/`app`/`auth`/`settings`/`space`/`workspace` 네임스페이스 키를 전부 실제 한국어로 옮겼다. 과정에서 `session.rename`(기존 "이름 바꾸기")과 새로 쓴 `space.rename`("이름 변경")이 같은 개념에 다른 표현을 쓰고 있던 동의어 충돌을 발견해 "이름 바꾸기"로 통일. `settings.theme`("테마")는 Notion·Slack 한국어판 레퍼런스로 재확인 — 이미 맞았음. **스코프 명시(리뷰에서 지적받음)**: 이 48개는 이 라운드 시점에 ko.json에 이미 있던 placeholder 전부다. 이후 `staging` 리베이스로 다른 세션(#385 인테이크 슬라이스)의 신규 `intake.*` 키 6개가 새로 들어왔는데, 그건 이 번역 작업 범위 밖이다(그 슬라이스 자신의 "전체 구현 끝난 뒤 ko 일괄 번역" 단계가 아직 안 왔을 뿐 — `nema-slice-implementation-workflow.md`의 i18n 관례 그대로). 다음 세션은 `intake.*` 잔여 placeholder를 "이 로그가 놓친 것"으로 오해하지 말 것 — 해당 슬라이스 담당이 처리할 몫이다. 다만 `workspace.drafts`(같은 리베이스로 들어온 LNB 라이브 라벨)는 이 PR에서 함께 번역해뒀다.
 
 **Space 탭 빈 상태 — 문구 제거, 워터마크만**: `SpaceEmptyState`에서 `message` prop 자체를 없애고 워터마크 아이콘만 남겼다(Kyle 요청). 유일한 소비처였던 `space.topic_empty`/`space.changesets_empty` i18n 키도 함께 삭제.
 

@@ -176,7 +176,7 @@
   "workspace": {
     "ask": "묻기",
     "coming_soon": "곧 지원 예정",
-    "drafts": "Drafts ({count})",
+    "drafts": "초안 ({count})",
     "new_space": "새 스페이스 추가",
     "references": "위키",
     "section_spaces": "스페이스",

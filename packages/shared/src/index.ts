@@ -185,7 +185,6 @@ export {
   BootstrapUserSchema,
   type BootstrapWorkspace,
   BootstrapWorkspaceSchema,
-  DEFAULT_SPACE_NAME,
   type LeaveWorkspaceInput,
   LeaveWorkspaceInputSchema,
   type UpdateWorkspaceMemberRoleInput,
