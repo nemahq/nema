@@ -95,6 +95,17 @@ pnpm dev:local    # 웹 + 서버 (local API, local Supabase)
 
 로컬 Supabase 인스턴스가 이전 스키마로 이미 떠 있었다면 마이그레이션이 밀려 있을 수 있습니다 — 아래 "DB 마이그레이션" 절의 `supabase db reset`으로 최신화하세요.
 
+### 5. 로컬 Qdrant 실행 (dev:local 사용 시 필수)
+
+`pnpm dev:local`은 부팅 시 Qdrant 컬렉션을 무조건 확인합니다 — 떠 있지 않으면 서버가 즉시 종료됩니다. staging/production은 클라우드 클러스터를 공유하므로 로컬 전용 인스턴스를 Docker로 별도 기동합니다:
+
+```bash
+docker run -d --name nema-qdrant -p 6333:6333 -v nema-qdrant:/qdrant/storage qdrant/qdrant:v1.18.2
+pnpm dev:local    # 웹 + 서버 (local API, local Supabase, local Qdrant)
+```
+
+대시보드는 http://localhost:6333/dashboard 에서 확인할 수 있습니다. 접속 정보는 `apps/server/.env.local`에 이미 설정되어 있습니다.
+
 
 ## DB 마이그레이션
 
