@@ -8,6 +8,7 @@ function buildSource(
 ): PendingSourceItem {
   return {
     sourceId: "source-1",
+    spaceId: "space-1",
     body: "본문",
     createdAt: "2026-07-12T00:00:00.000Z",
     digestionStatus: "pending",

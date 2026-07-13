@@ -1317,6 +1317,10 @@ export type Database = {
           msg_id: number;
         }[];
       };
+      reassign_source_space: {
+        Args: { p_source_id: string; p_space_id: string };
+        Returns: undefined;
+      };
       reject_pending_relation: {
         Args: { p_changeset_id: string };
         Returns: undefined;

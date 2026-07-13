@@ -4,6 +4,7 @@ import { Badge, type BadgeVariant } from "@nema-io/weave";
 import { Circle } from "@nema-io/weave/icons";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
+import type { DraftFooterProps } from "@web/features/intake/types";
 import type { DraftStatus } from "@web/features/intake/utils";
 import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
 
@@ -31,7 +32,7 @@ const STATUS_META: Record<
 // cancelled(취소 뒤 평범한 대기)만 액션을 연결한다.
 const FOOTER_BY_STATUS: Record<
   DraftStatus,
-  ComponentType<{ sourceId: string }> | null
+  ComponentType<DraftFooterProps> | null
 > = {
   processing: DraftProcessingActions,
   cancelled: DraftIdleActions,
@@ -41,6 +42,7 @@ const FOOTER_BY_STATUS: Record<
 
 interface DraftCardProps {
   sourceId: string;
+  spaceId: string;
   body: string;
   status: DraftStatus;
   createdAt: string;
@@ -48,6 +50,7 @@ interface DraftCardProps {
 
 export function DraftCard({
   sourceId,
+  spaceId,
   body,
   status,
   createdAt,
@@ -71,7 +74,7 @@ export function DraftCard({
       )}
       <p className="line-clamp-2 text-sm text-fg-secondary">{body}</p>
       <RelativeTime dateTime={createdAt} />
-      {Footer && <Footer sourceId={sourceId} />}
+      {Footer && <Footer sourceId={sourceId} spaceId={spaceId} />}
     </div>
   );
 }

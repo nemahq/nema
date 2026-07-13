@@ -2,6 +2,7 @@ import {
   SourceActionInputSchema,
   SourceCreateInputSchema,
   SourceGetInputSchema,
+  SourceReassignSpaceInputSchema,
 } from "@nema-io/shared";
 
 import {
@@ -11,6 +12,7 @@ import {
   getSource,
   listPendingSources,
   listSources,
+  reassignSourceSpace,
   startSourceDigestion,
 } from "@server/services/source-service";
 import { protectedProcedure, router } from "@server/trpc";
@@ -67,6 +69,16 @@ export const sourceRouter = router({
       deleteSource({
         supabase: ctx.supabase,
         sourceId: input.sourceId,
+      }),
+    ),
+
+  reassignSpace: protectedProcedure
+    .input(SourceReassignSpaceInputSchema)
+    .mutation(({ ctx, input }) =>
+      reassignSourceSpace({
+        supabase: ctx.supabase,
+        sourceId: input.sourceId,
+        spaceId: input.spaceId,
       }),
     ),
 });

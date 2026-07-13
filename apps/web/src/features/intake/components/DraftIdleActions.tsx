@@ -4,15 +4,13 @@ import { Button } from "@nema-io/weave";
 import { Play, Trash2 } from "@nema-io/weave/icons";
 
 import { useExtractSource } from "@web/features/intake/hooks/useExtractSource";
+import type { DraftFooterProps } from "@web/features/intake/types";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DeleteSourceDialog } from "./DeleteSourceDialog";
+import { DraftSpaceSelect } from "./DraftSpaceSelect";
 
-interface DraftIdleActionsProps {
-  sourceId: string;
-}
-
-export function DraftIdleActions({ sourceId }: DraftIdleActionsProps) {
+export function DraftIdleActions({ sourceId, spaceId }: DraftFooterProps) {
   const { t } = useTranslation();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const extractMutation = useExtractSource();
@@ -23,17 +21,20 @@ export function DraftIdleActions({ sourceId }: DraftIdleActionsProps) {
 
   return (
     <div className="flex items-center justify-between gap-2 pt-1">
-      <Button
-        size="sm"
-        variant="secondary"
-        onClick={handleExtract}
-        disabled={extractMutation.isPending}
-      >
-        <Play />
-        {extractMutation.isPendingAfterDelay
-          ? t("intake.draft_extracting")
-          : t("intake.draft_extract")}
-      </Button>
+      <div className="flex items-center gap-2">
+        <DraftSpaceSelect sourceId={sourceId} spaceId={spaceId} />
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={handleExtract}
+          disabled={extractMutation.isPending}
+        >
+          <Play />
+          {extractMutation.isPendingAfterDelay
+            ? t("intake.draft_extracting")
+            : t("intake.draft_extract")}
+        </Button>
+      </div>
       <Button
         size="icon-sm"
         variant="ghost"

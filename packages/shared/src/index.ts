@@ -131,6 +131,8 @@ export {
   SourceCreateInputSchema,
   type SourceGetInput,
   SourceGetInputSchema,
+  type SourceReassignSpaceInput,
+  SourceReassignSpaceInputSchema,
 } from "./schemas/source";
 export {
   type Space,

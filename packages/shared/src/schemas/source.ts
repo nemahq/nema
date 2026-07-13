@@ -34,3 +34,13 @@ export const SourceActionInputSchema = z.object({
 });
 
 export type SourceActionInput = z.infer<typeof SourceActionInputSchema>;
+
+// 위 공용 입력과 달리 spaceId가 있다 — 상태 가드는 여전히 서버 몫이지만,
+// 목적지는 서버가 판정할 수 없는 클라이언트 선택값이라 인자로 실어야 한다.
+export const SourceReassignSpaceInputSchema = SourceActionInputSchema.extend({
+  spaceId: z.string().uuid(),
+});
+
+export type SourceReassignSpaceInput = z.infer<
+  typeof SourceReassignSpaceInputSchema
+>;
