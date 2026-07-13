@@ -61,7 +61,8 @@
     "section_load_failed": "Let's reload this section."
   },
   "intake": {
-    "compose_body_placeholder": "Paste or write anything",
+    "compose_body_placeholder": "What should I remember?",
+    "compose_submit": "Remember",
     "draft_delete_confirm_description": "This is permanent. It won't go to trash, and can't be undone.",
     "draft_delete_confirm_title": "Delete this source?",
     "draft_extract": "Extract",
@@ -186,7 +187,7 @@
   "workspace": {
     "ask": "Ask",
     "coming_soon": "Coming soon",
-    "drafts": "Drafts ({count})",
+    "drafts": "Drafts",
     "new_space": "New space",
     "references": "Wiki",
     "section_spaces": "Spaces",

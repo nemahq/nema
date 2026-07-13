@@ -289,6 +289,54 @@
   }
 }
 
+/* 실제 진행률을 알 수 없는 작업을 "그럴듯하게" 보여주는 감속 진행 바 — 초반엔 빠르게
+   차오르다 끝에 가까워질수록 느려지며 한 값에 멈춘다(끝나지 않고 계속 도는 부정형
+   스피너보다, 진행되고 있다는 인상을 준다는 게 이 트릭의 요점). 완료 시 100%를
+   채우지 않고 그 자리에서 바로 사라지는 쪽으로 소비처가 결정했다. */
+@keyframes progress-climb {
+  0% {
+    width: 0%;
+  }
+  15% {
+    width: 30%;
+  }
+  40% {
+    width: 55%;
+  }
+  70% {
+    width: 72%;
+  }
+  100% {
+    width: 85%;
+  }
+}
+
+/* 없던 요소가 위에서 아래로 펼쳐지듯 나타나는 한 번짜리 트랜지션. grid-template-rows를
+   0fr→1fr로 움직여 높이를 "auto"처럼 부드럽게 키운다(고정 높이를 몰라도 됨) — 이 값을
+   먹으려면 소비처가 바깥에 display:grid, 안쪽 콘텐츠에 overflow:hidden 래퍼를 둬야 한다. */
+@keyframes expand-down {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+/* expand-down의 역순 — 있던 요소가 아래에서 위로 접히듯 사라진다. */
+@keyframes collapse-up {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

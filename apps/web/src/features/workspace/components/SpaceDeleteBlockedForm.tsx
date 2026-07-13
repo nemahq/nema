@@ -24,7 +24,9 @@ export function SpaceDeleteBlockedForm({
         <DialogDescription>{t("space.delete_last_blocked")}</DialogDescription>
       </DialogHeader>
       <DialogFooter>
-        <Button onClick={() => onOpenChange(false)}>{t("common.close")}</Button>
+        <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          {t("common.close")}
+        </Button>
       </DialogFooter>
     </>
   );

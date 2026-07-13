@@ -42,7 +42,7 @@ export function SpaceListItem({
         label={spaceName}
         to="/space/$spacePublicId"
         params={{ spacePublicId }}
-        trailingAction={
+        rightContent={
           <SpaceItemMenu
             onOpenSettings={() => setSettingsOpen(true)}
             onDelete={() => setDeleteOpen(true)}
