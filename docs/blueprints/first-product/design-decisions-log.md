@@ -362,4 +362,10 @@ Space와 달리 이 배지는 **한 번에 하나만 보이는 단독 요소**�
 
 **Space 이름 폼필드 공유 추출**: type-design-analyzer가 지적한 "Create/Settings 폼이 이름 검증 로직을 완전히 독립 재구현"은 Kyle과 논의해 별도로 처리 — 겉 모달/폼 분리(제목·Footer·제출 대상)는 "설정 쪽 필드가 미래에 늘어난다"는 이유가 여전히 유효해 그대로 두되, 이름 필드 자체(값·검증·conflict)는 create/rename 둘 다 규칙이 동일해야 하는 부분이라 분리 이유가 안 맞았다. `useSpaceNameField` 훅(상태+검증+conflict 로직)과 `SpaceNameField` 컴포넌트(순수 컨트롤드 프레젠테이션)로 나눠 양쪽 폼이 합성해서 쓰게 만들었다 — `SpaceNameField`를 상태를 내부에 숨기는 방식(ref 기반 imperative API)으로 만들면 `SpaceSettingsForm`의 "이름 미변경 시 저장 비활성화"가 매 키 입력마다 재계산돼야 하는데 부모가 그 값을 못 보게 돼 깨진다는 걸 설계 중 발견 — 그래서 값은 부모(각 Form)가 계속 들고, 컴포넌트는 렌더링만 맡는 컨트롤드 방식으로 확정.
 
+**Space 생성 모달 — 이름 비어있으면 만들기 버튼 비활성화**: `SpaceSettingsForm`의 "미변경 시 저장 비활성화"와 같은 결.
+
+**Space 생성/이름변경 — 낙관적 업데이트 적용 범위, Kyle과 논의 후 둘을 다르게 처리**: 생성 직후 `navigate({to: "/space/$spaceId"})`가 `utils.workspace.bootstrap.invalidate()`(백그라운드 refetch)보다 먼저 끝나면, `SpaceOverview`가 아직 새 Space가 없는 캐시를 보고 "존재하지 않음" 화면을 잠깐 flash하는 실제 글리치가 있었다. 처음엔 생성 응답(`spaceId`)+입력한 이름으로 캐시에 새 항목을 직접 구성해 넣는 안(진짜 낙관적 업데이트)을 검토했으나, Kyle이 "앞으로를 생각하면 괜찮은 자리인가"라고 재확인 — `BootstrapSpace`가 지금은 `{id, name}` 뿐이지만 이미 문서에 "아이콘·색상은 필요성 커지면 추가"라고 명시돼 있어, 그 시점에 클라이언트가 서버 계산값(예: 배정된 색)을 못 채우는 채로 손수 만든 객체를 캐시에 꽂으면 잘못된/기본값 UI가 잠깐 보일 새 버그가 생길 수 있다고 판단. **생성은 그래서 캐시 손수 구성 대신 `useCreateSpace`의 `onSuccess`를 `await utils.workspace.bootstrap.invalidate()`로 바꿔, 실제 서버 shape를 다 받은 뒤에 `SpaceCreateForm`의 navigate가 이어지게 했다**(useMutation onSuccess가 mutate-call onSuccess보다 먼저 실행되고 await된다는 TanStack Query 콜백 순서 활용) — 체감 지연 없이 flash만 없앰, 스키마가 커져도 안전.
+
+**이름변경은 반대로 진짜 낙관적 업데이트를 적용**: 기존 캐시 항목의 `name` 필드 하나만 덮어쓰는 거라(새 객체를 통째로 만드는 게 아님) 스키마가 커져도 다른 필드가 그대로 보존돼 생성과 같은 위험이 없다고 판단. `useRenameSpace`에 표준 TanStack 패턴 적용: `onMutate`에서 진행 중인 refetch를 취소하고 이전 상태를 스냅샷한 뒤 캐시를 즉시 갱신, `onError`에서 그 스냅샷으로 롤백(이름 충돌 등 실패 시), `onSettled`에서 항상 invalidate로 최종 서버 상태와 동기화. 저장 버튼을 누르는 즉시 LNB 라벨·오버뷰 타이틀이 반영되고, 서버가 거부하면 원래 이름으로 되돌아간다.
+
 ---
