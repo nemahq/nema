@@ -7,7 +7,7 @@ import {
 } from "@nema-io/weave";
 
 import { useReassignSourceSpace } from "@web/features/intake/hooks/useReassignSourceSpace";
-import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
+import { useSpaceList } from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface DraftSpaceSelectProps {
