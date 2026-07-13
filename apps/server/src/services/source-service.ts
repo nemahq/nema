@@ -108,6 +108,7 @@ const PENDING_SOURCE_LIST_LIMIT = 50;
 
 interface PendingSourceItem {
   sourceId: string;
+  spaceId: string;
   body: string;
   createdAt: string;
   digestionStatus: DigestionStatus;
@@ -128,7 +129,7 @@ export async function listPendingSources(args: {
 
   const { data: sources, error } = await supabase
     .from("sources")
-    .select("id, body, created_at, digestion_status, error_message")
+    .select("id, space_id, body, created_at, digestion_status, error_message")
     .eq("status", "pending")
     .order("created_at", { ascending: false })
     .limit(PENDING_SOURCE_LIST_LIMIT);
@@ -164,6 +165,7 @@ export async function listPendingSources(args: {
       const review = reviewBySource.get(source.id);
       return {
         sourceId: source.id,
+        spaceId: source.space_id,
         body: source.body,
         createdAt: source.created_at,
         digestionStatus: source.digestion_status,
@@ -207,6 +209,22 @@ export async function deleteSource(args: {
 
   const { error } = await supabase.rpc("trash_source", {
     p_source_id: sourceId,
+  });
+  throwIfSupabaseError(error);
+}
+
+// 초안에서 Space 재지정 — 순수 메타데이터 이동이라 statements·statement_sources는
+// 그대로 두고 sources.space_id만 옮긴다. 멤버십은 RPC가 양쪽 Space 다 확인한다.
+export async function reassignSourceSpace(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+  spaceId: string;
+}): Promise<void> {
+  const { supabase, sourceId, spaceId } = args;
+
+  const { error } = await supabase.rpc("reassign_source_space", {
+    p_source_id: sourceId,
+    p_space_id: spaceId,
   });
   throwIfSupabaseError(error);
 }

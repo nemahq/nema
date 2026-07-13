@@ -12,6 +12,7 @@ import {
   createSource,
   deleteSource,
   fetchMergedSourceIds,
+  reassignSourceSpace,
   startSourceDigestion,
 } from "./source-service";
 
@@ -252,6 +253,46 @@ describe("deleteSource", () => {
 
     await expect(
       deleteSource({ supabase, sourceId: CANCEL_SOURCE_ID }),
+    ).rejects.toThrow();
+  });
+});
+
+// --- 초안에서 Space 재지정 (intake-flow "초안에서 Space 재지정") ---
+
+const TARGET_SPACE_ID = "dddddddd-0000-4000-a000-000000000001";
+
+describe("reassignSourceSpace", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("RPC로 source·spaceId를 그대로 넘긴다", async () => {
+    const { supabase, rpc } = mockRpcSupabase(null);
+
+    await reassignSourceSpace({
+      supabase,
+      sourceId: CANCEL_SOURCE_ID,
+      spaceId: TARGET_SPACE_ID,
+    });
+
+    expect(rpc).toHaveBeenCalledWith("reassign_source_space", {
+      p_source_id: CANCEL_SOURCE_ID,
+      p_space_id: TARGET_SPACE_ID,
+    });
+  });
+
+  it("처리 중이거나 대상 Space 멤버가 아니라 가드가 지면 오류를 그대로 올린다", async () => {
+    const { supabase } = mockRpcSupabase({
+      message:
+        "source ... is not an idle pending source the caller can reassign to space ...",
+    });
+
+    await expect(
+      reassignSourceSpace({
+        supabase,
+        sourceId: CANCEL_SOURCE_ID,
+        spaceId: TARGET_SPACE_ID,
+      }),
     ).rejects.toThrow();
   });
 });

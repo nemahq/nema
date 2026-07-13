@@ -453,4 +453,18 @@ Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감*
 - `intake.draft_delete` 키 제거 — PR #391이 `session.delete`/`space.delete`를 `common.delete`로 이미 통합해뒀길래, 이 PR에서 새로 만든 중복 키도 `common.delete`로 맞췄다(다이얼로그 확인 버튼 + 삭제 아이콘 버튼 aria-label 둘 다).
 - **참고만, 미반영(PM 확인 후 별도)**: "삭제가 cancelled 상태에만 연결돼 있고 failed/empty는 안 된다"는 지적은 버그가 아니라 기존에 이미 의도적으로 내린 결정(위 `DraftCard` 항목)이라 코드는 안 건드리고, `intake-flow.md`의 "초안에서 Source 삭제" 케이스에 그 범위를 명시하는 참고만 추가했다.
 
+### 2026-07-13 — 초안 관리 3차 슬라이스: Space 재지정
+
+`intake-flow.md` "초안에서 Space 재지정" 하나만. BE(`reassign_source_space` RPC, `source.reassignSpace` 프로시저)는 같은 워크트리에서 다른 세션이 먼저 끝내둔 상태로 착수 — `cancel_source_digestion`/`trash_source`와 같은 가드 모양(`status='pending' AND digestion_status <> 'pending'`)에 대상 Space까지 `is_space_member` 이중 체크가 더해져 있었다. 계약 그대로 FE만 얹었다.
+
+- **`listPendingSources`에 `spaceId` 추가**: Space 셀렉트가 "지금 어느 Space에 있는지"를 표시(선택값 프리셀렉트)하려면 `PendingSourceItem`에 현재 Space가 필요했다 — 기존엔 `sources.space_id`를 아예 select하지 않았다. RPC/마이그레이션 변경이 아니라 이미 있는 컬럼을 노출만 하는 거라 BE 슬라이스가 아니라 이 PR에서 같이 처리(BE가 먼저 만들어둔 `source-service.ts`/`source-router.ts` 위에 얹음, 겹치는 훅은 없었음).
+- **`/drafts`는 Space 비종속 화면이라는 게 이번에 다시 확인됨**: `source.listPending`이 애초에 space 필터가 없고(RLS로만 격리), 라우트(`/drafts`)도 `/space/$spacePublicId`와 달리 spaceId 파라미터가 없다 — 즉 유저의 모든 Space를 가로지르는 뷰다. 그래서 브리핑에 있던 "재지정하면 현재 Space 화면에서 사라져야 한다"는 걱정은 애초에 해당 없음(재지정 대상도 유저가 멤버인 Space로 한정되니 카드는 계속 `/drafts`에 남고, 셀렉트 표시만 새 Space로 바뀐다) — 별도 invalidate 범위 조정 없이 기존 `listPending.invalidate()` 패턴 그대로.
+- **Space 셀렉트 프리셀렉트는 내 판단(PM 확인 필요)**: intake-flow.md의 Then은 "선택하면 재지정된다"뿐, 현재 값을 보여주라는 요구는 없다. 하지만 `weave Select`는 항상 트리거에 현재 선택값을 보여주는 컴포넌트라 값 없이 쓰면 오히려 어색해 보인다 — `spaceId`를 `value`로 넘겨 현재 Space를 프리셀렉트하는 쪽을 기본으로 택함.
+- **범위는 cancelled만 — failed/empty 제외**: "초안에서 Digest 추출 실행"/"초안에서 Source 삭제"와 같은 이유(2026-07-13 PR #394 결정 그대로) — 재시도류 액션 전체가 2차 슬라이스 밖이라 `FOOTER_BY_STATUS`(`processing`/`cancelled`만 풋터 있음)를 안 건드림. `DraftIdleActions`에 `spaceId` prop만 추가하고 Space 셀렉트를 그 안에 얹었다.
+- **`DraftSpaceSelect` 별도 파일로 분리**: `apps/web/docs/conventions.md`의 "1파일 1컴포넌트" + "훅/상태가 2개 이상 독립 그룹이면 분리" 규칙대로 — `DraftIdleActions`는 이미 추출(mutation)·삭제 다이얼로그(로컬 open 상태) 두 그룹을 갖고 있었는데, 여기에 Space 재지정(`useSpaceList` 쿼리 + `useReassignSourceSpace` 뮤테이션)까지 인라인으로 얹으면 세 번째 독립 그룹이 된다. `DeleteSourceDialog`가 이미 그렇듯 새 그룹도 자기 파일로 뺐다.
+- **`useReassignSourceSpace`는 낙관적 업데이트 없이 `onSuccess` invalidate만** — `useCancelSource`/`useDeleteSource`/`useExtractSource`와 같은 패턴. Space 이름변경 쪽 낙관적 업데이트는 2026-07-13에 이미 철회된 결정이라(위 항목 참고) 새 훅에 그 패턴을 다시 들이지 않음.
+- **처리 중 잠금 캡션 재검토(2026-07-13 PR #394가 남긴 PM 확인 사항)**: "Space 셀렉트·제목편집이 실제 버튼으로 생기면 공용 캡션 방식이 맞는지 재검토 필요"였는데, Space 셀렉트가 이번에 실제로 생겼다 — 캡션(`intake.draft_locked_reason`)이 액션 이름을 나열하지 않는 일반 문구라 그대로 둬도 무방하다고 판단(내 판단, PM 확인 필요). `DraftProcessingActions.tsx`는 안 건드림 — processing 상태는 `DraftIdleActions` 자체가 안 그려지니 Space 셀렉트도 자동으로 잠긴다.
+- **i18n**: `intake.draft_reassign_space`(신규, Select 트리거 aria-label) — en 실작성 + ko는 기존 `draft_*` 관례(en과 동일 placeholder) 계승.
+- **검증**: `pnpm --filter @nema-io/server test`(383개, `reassignSourceSpace` BE 테스트 포함) + `pnpm --filter @nema-io/web typecheck`/`lint`/`test`(67개, `PendingSourceItem` fixture에 `spaceId` 추가) 전부 통과. 로컬 브라우저 E2E는 2026-07-13 2차 슬라이스와 같은 이유로 생략 — 이번 세션에서도 확인 안 함.
+
 ---

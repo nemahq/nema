@@ -77,6 +77,7 @@ export function DraftList() {
         <DraftCard
           key={source.sourceId}
           sourceId={source.sourceId}
+          spaceId={source.spaceId}
           body={source.body}
           status={status}
           createdAt={source.createdAt}
