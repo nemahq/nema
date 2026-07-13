@@ -30,8 +30,8 @@ export function DraftsNavItem() {
 
   const draftItems = (pendingQuery.data?.items ?? []).filter(isDraftItem);
   const draftCount = draftItems.length;
-  // 우선순위: 실패 > 처리중 > (대기중만 있으면 표시 없음). 섞여 있어도 가장 급한
-  // 상태 하나만 보여준다 — 구성 비율까지 숫자로 쪼개면 오히려 더 복잡해 보인다.
+  // 우선순위: 실패 > 처리중 > (cancelled/empty만 있으면 표시 없음). 섞여 있어도
+  // 가장 급한 상태 하나만 보여준다 — 구성 비율까지 숫자로 쪼개면 오히려 더 복잡해 보인다.
   const hasFailed = draftItems.some((item) => draftStatus(item) === "failed");
   const hasProcessing = draftItems.some(
     (item) => draftStatus(item) === "processing",
@@ -45,7 +45,14 @@ export function DraftsNavItem() {
   // 진짜 0개였던 순간을 확인한 적이 있어야만 그 다음 등장을 "방금 생김"으로 본다 —
   // 안 그러면 새로고침 때 이미 있던 초안도 매번 펼쳐지는 걸로 오인된다. 과거에 있었던
   // 일을 기억하는 값이라 파생 계산만으론 못 구하고, 렌더 중 setState로 다음 렌더에 반영한다.
-  if (!pendingQuery.isLoading && draftCount === 0 && !hasSeenEmpty) {
+  // isError로 인한 0개는 "확인된 빈 상태"가 아니라서 제외한다 — 안 그러면 첫 로드가
+  // 에러로 끝난 세션에서 진입 애니메이션이 잘못 재생된다.
+  if (
+    !pendingQuery.isLoading &&
+    !pendingQuery.isError &&
+    draftCount === 0 &&
+    !hasSeenEmpty
+  ) {
     setHasSeenEmpty(true);
   }
 
@@ -53,8 +60,8 @@ export function DraftsNavItem() {
     function syncVisibility() {
       if (isVisible) {
         wasVisibleRef.current = true;
-        // setState를 이펙트 본문에서 동기 호출하면 react-compiler 린트에 걸려
-        // (cascading render 경고) setTimeout 콜백 안에서 부른다.
+        // setState를 이펙트 본문에서 동기 호출하면 react-hooks/set-state-in-effect
+        // 린트에 걸려(cascading render 경고) setTimeout 콜백 안에서 부른다.
         const timer = setTimeout(() => setRenderState("visible"), 0);
         return () => clearTimeout(timer);
       }
