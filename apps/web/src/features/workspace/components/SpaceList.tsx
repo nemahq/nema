@@ -60,7 +60,7 @@ export function SpaceList() {
         <SpaceListItem
           key={space.id}
           spaceId={space.id}
-          publicId={space.publicId}
+          spacePublicId={space.publicId}
           spaceName={space.name}
           isLastSpace={spaces.length <= 1}
         />

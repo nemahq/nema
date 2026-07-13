@@ -133,6 +133,10 @@ export {
 export {
   type Space,
   SPACE_NAME_MAX_LENGTH,
+  SPACE_PUBLIC_ID_ALPHABET,
+  SPACE_PUBLIC_ID_LENGTH,
+  SPACE_PUBLIC_ID_PATTERN,
+  SPACE_PUBLIC_ID_PREFIX,
   type SpaceCreateInput,
   SpaceCreateInputSchema,
   type SpaceDeleteInput,

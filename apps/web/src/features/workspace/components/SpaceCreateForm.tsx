@@ -58,7 +58,10 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
         onSuccess: async ({ publicId }) => {
           await utils.space.list.invalidate();
           onOpenChange(false);
-          navigate({ to: "/space/$spaceId", params: { spaceId: publicId } });
+          navigate({
+            to: "/space/$spacePublicId",
+            params: { spacePublicId: publicId },
+          });
         },
         onError: field.markConflictIfNameTaken,
       },

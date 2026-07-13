@@ -16,16 +16,16 @@ const TITLE_BADGE_CLASS =
 type SpaceTab = "topic" | "changesets";
 
 interface SpaceOverviewProps {
-  spaceId: string;
+  spacePublicId: string;
 }
 
-export function SpaceOverview({ spaceId }: SpaceOverviewProps) {
+export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
   const { t } = useTranslation();
   const { data: spaceList, isLoading } = useSpaceList();
   const [tab, setTab] = useState<SpaceTab>("topic");
 
   const space = spaceList?.spaces.find(
-    (candidate) => candidate.publicId === spaceId,
+    (candidate) => candidate.publicId === spacePublicId,
   );
 
   // 조회가 끝났는데 그 Space가 없으면(지워졌거나 잘못된 링크) 무한 스켈레톤 대신 안내.

@@ -1,6 +1,6 @@
 export function shouldNavigateHomeAfterSpaceDelete(
-  deletedSpaceId: string,
-  activeSpaceId: string | undefined,
+  deletedSpacePublicId: string,
+  activeSpacePublicId: string | undefined,
 ): boolean {
-  return activeSpaceId === deletedSpaceId;
+  return activeSpacePublicId === deletedSpacePublicId;
 }

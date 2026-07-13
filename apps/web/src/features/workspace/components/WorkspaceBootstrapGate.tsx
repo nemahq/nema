@@ -29,18 +29,18 @@ export function WorkspaceBootstrapGate({
       if (redirected.current) {
         return;
       }
-      const spaceId = getFirstEntryRedirectSpaceId(
+      const spacePublicId = getFirstEntryRedirectSpaceId(
         bootstrap?.isFirstEntry,
         pathname,
         spaceList?.spaces,
       );
-      if (!spaceId) {
+      if (!spacePublicId) {
         return;
       }
       redirected.current = true;
       void navigate({
-        to: "/space/$spaceId",
-        params: { spaceId },
+        to: "/space/$spacePublicId",
+        params: { spacePublicId },
         replace: true,
       });
     },

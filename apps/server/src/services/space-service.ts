@@ -1,14 +1,18 @@
 import { customAlphabet } from "nanoid";
 
-import type { Space } from "@nema-io/shared";
+import {
+  type Space,
+  SPACE_PUBLIC_ID_ALPHABET,
+  SPACE_PUBLIC_ID_LENGTH,
+  SPACE_PUBLIC_ID_PREFIX,
+} from "@nema-io/shared";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
-const SPACE_PUBLIC_ID_PREFIX = "spc_";
-const SPACE_PUBLIC_ID_LENGTH = 12;
-const SPACE_PUBLIC_ID_ALPHABET =
-  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+// CSPRNG(nanoid) — DB 쪽 generate_space_public_id()는 트리거 안이라 앱 레이어를
+// 못 타서 Postgres random()(비CSPRNG)을 쓴다. public_id는 RLS로 보호되는 목록
+// 매칭용일 뿐 인증 토큰이 아니라 두 등급이 섞여도 안전하다.
 const generateSpacePublicIdSuffix = customAlphabet(
   SPACE_PUBLIC_ID_ALPHABET,
   SPACE_PUBLIC_ID_LENGTH,

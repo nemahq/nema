@@ -13,14 +13,18 @@
 --   - handle_new_user 트리거(가입 시 자동 생성되는 기본 Space): 앱 레이어를
 --     거칠 방법이 없어 DB 헬퍼 generate_space_public_id()로 자체 생성한다.
 --     같은 이유로 기존 행 백필에도 이 헬퍼를 재사용한다.
--- 62^12 키스페이스라 두 경로 모두 충돌 재시도 없이 충돌 시 unique_violation을
--- 그대로 드러낸다 — create_space처럼 "이름 중복"으로 오보하면 안 되는 케이스라
--- 아래 EXCEPTION 블록에서도 spaces_public_id_key는 걸러내지 않고 그대로 RAISE.
+-- 62^12 키스페이스라 실질 충돌 확률은 0에 가깝지만, 백필·가입 트리거 둘 다
+-- 최대 5회까지는 충돌을 감지해 재시도한다(마지막 시도까지 충돌하면 그대로 두고
+-- 넘긴다 — UNIQUE 제약이나 unique_violation이 대신 잡아준다). create_space RPC의
+-- EXCEPTION 블록은 spaces_public_id_key 위반을 "이름 중복"으로 오보하면 안 되는
+-- 케이스라 걸러내지 않고 그대로 RAISE.
 -- =============================================================
 
 CREATE FUNCTION generate_space_public_id()
 RETURNS text AS $$
 DECLARE
+  -- 형식은 SpaceSchema(packages/shared/src/schemas/space.ts)의 SPACE_PUBLIC_ID_*
+  -- 상수와 맞춰져 있다 — 한쪽을 바꾸면 다른 쪽도 맞춰야 한다.
   v_alphabet text := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   v_id       text := '';
   i          int;
@@ -30,7 +34,7 @@ BEGIN
   END LOOP;
   RETURN 'spc_' || v_id;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 ALTER TABLE spaces ADD COLUMN public_id text;
 
@@ -40,9 +44,10 @@ DO $$
 DECLARE
   v_space     record;
   v_candidate text;
+  v_attempt   int;
 BEGIN
   FOR v_space IN SELECT id FROM spaces WHERE public_id IS NULL LOOP
-    LOOP
+    FOR v_attempt IN 1..5 LOOP
       v_candidate := generate_space_public_id();
       EXIT WHEN NOT EXISTS (SELECT 1 FROM spaces WHERE public_id = v_candidate);
     END LOOP;
@@ -99,11 +104,19 @@ RETURNS trigger AS $$
 DECLARE
   v_workspace_id uuid;
   v_space_id     uuid;
+  v_public_id    text;
+  v_attempt      int;
 BEGIN
   INSERT INTO workspaces (name) VALUES (NULL) RETURNING id INTO v_workspace_id;
   INSERT INTO workspace_members (workspace_id, user_id, role) VALUES (v_workspace_id, NEW.id, 'owner');
+
+  FOR v_attempt IN 1..5 LOOP
+    v_public_id := generate_space_public_id();
+    EXIT WHEN NOT EXISTS (SELECT 1 FROM spaces WHERE public_id = v_public_id);
+  END LOOP;
+
   INSERT INTO spaces (name, workspace_id, public_id)
-  VALUES ('My Space', v_workspace_id, generate_space_public_id())
+  VALUES ('My Space', v_workspace_id, v_public_id)
   RETURNING id INTO v_space_id;
   INSERT INTO space_members (space_id, user_id, role) VALUES (v_space_id, NEW.id, 'owner');
   RETURN NEW;
