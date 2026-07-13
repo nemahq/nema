@@ -46,6 +46,13 @@ const ERROR_MAP: Record<
     trpcCode: "BAD_REQUEST",
     i18nKey: "error.llm_content_filter",
   },
+  // 호출자가 스스로 끊은 것 — 장애가 아니다. 이 매핑이 없으면 LLM_ERROR로 떨어져
+  // INTERNAL_SERVER_ERROR + Sentry가 되고, "취소는 실패가 아니다"라는 계약이 provider·
+  // 워커 층에서만 지켜지고 API 경계에서 깨진다.
+  LLM_ABORTED: {
+    trpcCode: "CLIENT_CLOSED_REQUEST",
+    i18nKey: "error.llm_aborted",
+  },
   LLM_ERROR: {
     trpcCode: "INTERNAL_SERVER_ERROR",
     i18nKey: "error.default",
@@ -97,6 +104,7 @@ const EXPECTED_DOMAIN_CODES = new Set<DomainErrorCode>([
   "DB_SPACE_MIN_ONE",
   "DB_SPACE_NAME_CONFLICT",
   "DB_SOURCE_STATE_CHANGED",
+  "LLM_ABORTED",
 ]);
 
 export function isExpectedDomainError(cause: unknown): boolean {
@@ -120,6 +128,7 @@ const LLM_CODE_MAP: Record<string, DomainErrorCode> = {
   auth: "LLM_AUTH",
   bad_request: "LLM_BAD_REQUEST",
   content_filter: "LLM_CONTENT_FILTER",
+  aborted: "LLM_ABORTED",
 };
 
 export function getDomainCode(cause: unknown): DomainErrorCode | undefined {

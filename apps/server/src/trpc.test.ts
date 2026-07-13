@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as Sentry from "@sentry/node";
 import { TRPCError } from "@trpc/server";
 
+import { LlmError } from "./infra/llm/llm-error";
 import { SupabaseError } from "./infra/supabase-error";
 import { onTRPCError } from "./trpc";
 
@@ -42,6 +43,46 @@ describe("onTRPCError", () => {
       error: new TRPCError({ code: "CONFLICT", message: "dup", cause }),
     });
     expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  // 초안 액션(취소·삭제·추출 실행)의 상태 가드 실패는 정상적인 경합 결과다 — 취소를
+  // 누르는 사이 추출이 끝났거나, 이미 취소된 걸 또 취소했거나. 이게 캡처되면 사람이
+  // 버튼을 누를 때마다 Sentry가 울린다.
+  it("초안 상태가 그새 바뀐 거부(source_state_changed)는 캡처하지 않는다", () => {
+    const cause = new SupabaseError("source_state_changed", "stale draft");
+    onTRPCError({
+      error: new TRPCError({ code: "CONFLICT", message: "stale", cause }),
+    });
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  // 취소는 호출자가 스스로 끊은 것 — provider·워커 층에서 "실패가 아니다"로 다루므로
+  // API 경계에서도 같아야 한다.
+  it("사람이 끊은 LLM 콜(aborted)은 캡처하지 않는다", () => {
+    const cause = new LlmError("aborted", "LLM call was aborted by the caller");
+    onTRPCError({
+      error: new TRPCError({
+        code: "CLIENT_CLOSED_REQUEST",
+        message: "cancelled",
+        cause,
+      }),
+    });
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("취소가 아닌 LLM 실패(unknown)는 캡처한다 — aborted 예외가 진짜 장애까지 삼키지 않는다", () => {
+    const cause = new LlmError("unknown", "provider exploded");
+    onTRPCError({
+      error: new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "boom",
+        cause,
+      }),
+    });
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      cause,
+      expect.objectContaining({ tags: { domainCode: "LLM_ERROR" } }),
+    );
   });
 
   it("EXPECTED_DOMAIN_CODES 밖의 도메인 에러(query_failed)는 캡처한다", () => {
