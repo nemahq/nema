@@ -11,6 +11,7 @@ import type { Session, User } from "@supabase/supabase-js";
 
 import { posthog } from "@web/lib/posthog";
 import { supabase } from "@web/lib/supabase";
+import { queryClient } from "@web/lib/tanstack-query";
 
 interface AppUser {
   id: string;
@@ -126,6 +127,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
       } else if (event === "SIGNED_OUT") {
         posthog.reset();
+        // 쿼리 키가 유저 스코프가 아니라, 같은 탭에서 계정을 전환하면 이전
+        // 계정의 캐시(예: space.list)가 그대로 재사용될 수 있다.
+        queryClient.clear();
       }
 
       if (event === "SIGNED_IN" && window.location.href.includes("#")) {
