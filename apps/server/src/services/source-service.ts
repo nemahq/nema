@@ -1,9 +1,11 @@
 import type { Database } from "@server/infra/database.types";
+import { abortDigestion } from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 import { parseLocatorIndex } from "@server/services/statement-search";
 
 type ExtractionStatus = Database["public"]["Enums"]["ingestion_status"];
+type DigestionStatus = Database["public"]["Enums"]["digestion_status"];
 
 // 박제까지만 동기 — 추출·임베딩은 statement-sync 워커가 이어받는다.
 // 응답은 source_id 하나. 화면은 이 id로 처리 상태를 추적한다 (ingestion-design 2장).
@@ -108,7 +110,7 @@ interface PendingSourceItem {
   sourceId: string;
   body: string;
   createdAt: string;
-  digestionStatus: ExtractionStatus;
+  digestionStatus: DigestionStatus;
   errorMessage: string | null;
   // 생성이 끝나 리뷰가 열렸으면 그 pending ingestion changeset. 아직이면 null.
   // 소비자가 "생성 중"과 "리뷰 준비됨"을 가르는 신호 — 제품에선 이 둘이 각각
@@ -171,6 +173,56 @@ export async function listPendingSources(args: {
       };
     }),
   };
+}
+
+// --- 초안 액션 (intake-flow "초안 관리") ---
+// 셋 다 상태 판정을 RPC의 WHERE 가드에 맡긴다 — 서비스가 먼저 조회해 상태를 확인하고
+// 분기하면 그 사이 워커가 상태를 바꿔(2초 폴링) 판정이 낡는다. 가드를 UPDATE와 한
+// 트랜잭션에 두는 게 유일하게 안 어긋나는 방법이다.
+
+// 처리 중 취소 — 워커가 다시 안 집게 DB를 옮기고(RPC), 떠 있는 LLM 콜을 끊는다.
+// 순서가 중요하다: RPC 먼저라야 멤버십 검증을 통과한 취소만 콜을 끊는다. abort를 앞세우면
+// 남의 Space 원본 id를 아는 것만으로 그 처리를 방해할 수 있다(검증은 RPC 안에 있으므로).
+export async function cancelSourceDigestion(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+}): Promise<void> {
+  const { supabase, sourceId } = args;
+
+  const { error } = await supabase.rpc("cancel_source_digestion", {
+    p_source_id: sourceId,
+  });
+  throwIfSupabaseError(error);
+
+  abortDigestion(sourceId);
+}
+
+// 초안에서 Source 삭제 — 결정 #2대로 사용자에겐 완전 삭제(복원 표면 없음). 백엔드는
+// trashed→30일→pg_cron purge라 물리 삭제만 지연될 뿐, 목록·검색에선 즉시 사라진다.
+export async function deleteSource(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+}): Promise<void> {
+  const { supabase, sourceId } = args;
+
+  const { error } = await supabase.rpc("trash_source", {
+    p_source_id: sourceId,
+  });
+  throwIfSupabaseError(error);
+}
+
+// Digest 추출 실행 — 취소·실패·결과없음 어느 쪽에서 출발하든 같은 도착지(처리 중).
+// review 1차의 "실패 시 재시도"도 이 액션을 그대로 쓴다.
+export async function startSourceDigestion(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+}): Promise<void> {
+  const { supabase, sourceId } = args;
+
+  const { error } = await supabase.rpc("start_source_digestion", {
+    p_source_id: sourceId,
+  });
+  throwIfSupabaseError(error);
 }
 
 interface SourceStatement {

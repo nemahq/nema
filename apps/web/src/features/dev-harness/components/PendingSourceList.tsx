@@ -10,6 +10,9 @@ function statusLabel(item: PendingSourceItem): string {
   if (item.reviewChangesetId) {
     return `리뷰 준비됨 · Digest ${item.digestCount}`;
   }
+  if (item.digestionStatus === "cancelled") {
+    return "취소됨";
+  }
   if (item.digestionStatus === "failed") {
     return "생성 실패";
   }

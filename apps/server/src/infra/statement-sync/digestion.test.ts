@@ -1,8 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@sentry/node", () => ({
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
+}));
+
+import * as Sentry from "@sentry/node";
+
+import type { LlmProvider } from "@server/infra/llm/llm-provider";
+import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type { GeneratedDigest } from "@server/prompts/digest-generation";
 
-import { buildDigestBody, normalizeGeneratedDigests } from "./digestion";
+import {
+  buildDigestBody,
+  normalizeGeneratedDigests,
+  runDigestionPass,
+} from "./digestion";
+import { abortDigestion } from "./digestion-cancellation";
 
 function makeGeneratedDigest(
   overrides: Partial<GeneratedDigest> = {},
@@ -236,5 +250,159 @@ describe("normalizeGeneratedDigests", () => {
     );
 
     expect(digests[0]?.external_urls).toEqual(["https://example.com/doc"]);
+  });
+});
+
+// --- 취소 (intake-flow "처리 중 취소") ---
+
+const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
+const SPACE_ID = "b0000000-0000-4000-a000-000000000001";
+const WORKSPACE_ID = "d0000000-0000-4000-a000-000000000001";
+
+const PENDING_DIGESTION_SOURCE = {
+  id: SOURCE_ID,
+  space_id: SPACE_ID,
+  workspace_id: WORKSPACE_ID,
+  author_id: null,
+  body: "테스트 원문",
+  created_at: "2026-07-13T00:00:00.000Z",
+};
+
+// 레지스트리 조회(.from) 체인 stub — 전부 빈 목록으로 resolve
+function registryStub() {
+  const stub: Record<string, unknown> = {};
+  for (const method of ["select", "eq", "order", "limit"]) {
+    stub[method] = () => stub;
+  }
+  stub["then"] = (resolve: (value: { data: unknown[]; error: null }) => void) =>
+    resolve({ data: [], error: null });
+  return stub;
+}
+
+// fetch_pending_digestion_sources는 첫 호출만 원본 1개, 이후 빈 배열(패스 종료)
+function mockDigestionSupabase() {
+  let fetched = false;
+  const rpc = vi.fn(async (name: string) => {
+    if (name === "fetch_pending_digestion_sources") {
+      if (fetched) {
+        return { data: [], error: null };
+      }
+      fetched = true;
+      return { data: [PENDING_DIGESTION_SOURCE], error: null };
+    }
+    return { data: null, error: null };
+  });
+  const from = vi.fn(() => registryStub());
+  return { supabase: { rpc, from } as unknown as TypedSupabaseClient, rpc };
+}
+
+function digestionLlm(
+  generateStructured: LlmProvider["generateStructured"],
+): LlmProvider {
+  return {
+    generateStructured,
+    async *generateStream() {
+      yield "";
+    },
+    generateText: vi.fn().mockResolvedValue(""),
+  };
+}
+
+const ONE_DIGEST_OUTPUT = {
+  digests: [makeGeneratedDigest()],
+  newReferences: [],
+};
+
+function rpcNames(rpc: ReturnType<typeof vi.fn>): string[] {
+  return rpc.mock.calls.map(([name]) => name as string);
+}
+
+describe("runDigestionPass — 취소", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("취소가 진행 중인 LLM 콜을 끊는다 — signal을 콜에 실어 보낸다", async () => {
+    const { supabase } = mockDigestionSupabase();
+    let received: AbortSignal | undefined;
+
+    const llm = digestionLlm(
+      vi.fn(async (params: { signal?: AbortSignal }) => {
+        received = params.signal;
+        return ONE_DIGEST_OUTPUT;
+      }) as unknown as LlmProvider["generateStructured"],
+    );
+
+    await runDigestionPass({ supabase, forTask: () => llm });
+
+    // signal이 안 실리면 취소는 프로바이더까지 못 닿아 콜이 끝까지 돌고 토큰만 태운다
+    expect(received).toBeInstanceOf(AbortSignal);
+  });
+
+  it("취소로 끊긴 콜은 실패가 아니다 — retry도 Sentry도 없다", async () => {
+    const { supabase, rpc } = mockDigestionSupabase();
+
+    // 콜이 떠 있는 동안 취소가 도착한 상황 — abort가 프로바이더 요청을 끊어 예외로 돌아온다
+    const llm = digestionLlm(
+      vi.fn(
+        ({ signal }: { signal: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            signal.addEventListener("abort", () =>
+              reject(new Error("Request was aborted.")),
+            );
+            abortDigestion(SOURCE_ID);
+          }),
+      ) as unknown as LlmProvider["generateStructured"],
+    );
+
+    await runDigestionPass({ supabase, forTask: () => llm });
+
+    // 사람이 의도한 정지가 오류 알림·재시도 예산 소모로 둔갑하면 안 된다
+    expect(rpcNames(rpc)).not.toContain("increment_source_digestion_retry");
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("콜이 끝난 뒤 도착한 취소 — 결과를 버리고 리뷰를 만들지 않는다", async () => {
+    const { supabase, rpc } = mockDigestionSupabase();
+
+    const llm = digestionLlm(
+      vi.fn(async () => {
+        abortDigestion(SOURCE_ID);
+        return ONE_DIGEST_OUTPUT;
+      }) as unknown as LlmProvider["generateStructured"],
+    );
+
+    await runDigestionPass({ supabase, forTask: () => llm });
+
+    // 취소한 초안에 리뷰가 뒤늦게 튀어나오면 "멈췄다"는 약속이 깨진다
+    expect(rpcNames(rpc)).not.toContain("create_ingestion_review");
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("취소가 없으면 평소대로 리뷰를 적재한다", async () => {
+    const { supabase, rpc } = mockDigestionSupabase();
+    const llm = digestionLlm(
+      vi.fn(
+        async () => ONE_DIGEST_OUTPUT,
+      ) as unknown as LlmProvider["generateStructured"],
+    );
+
+    await runDigestionPass({ supabase, forTask: () => llm });
+
+    expect(rpcNames(rpc)).toContain("create_ingestion_review");
+  });
+
+  it("진짜 LLM 실패는 그대로 retry 경로를 탄다 — 취소 가드가 오류를 삼키지 않는다", async () => {
+    const { supabase, rpc } = mockDigestionSupabase();
+    const llm = digestionLlm(
+      vi.fn(async () => {
+        throw new Error("provider exploded");
+      }) as unknown as LlmProvider["generateStructured"],
+    );
+
+    await runDigestionPass({ supabase, forTask: () => llm });
+
+    expect(rpcNames(rpc)).toContain("increment_source_digestion_retry");
+    expect(Sentry.captureException).toHaveBeenCalled();
   });
 });

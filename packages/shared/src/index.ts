@@ -125,6 +125,8 @@ export {
 } from "./schemas/session";
 export {
   SOURCE_BODY_MAX_LENGTH,
+  type SourceActionInput,
+  SourceActionInputSchema,
   type SourceCreateInput,
   SourceCreateInputSchema,
   type SourceGetInput,

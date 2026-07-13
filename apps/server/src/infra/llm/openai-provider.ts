@@ -78,15 +78,25 @@ export class OpenAiProvider implements LlmProvider {
   }
 
   // SDK가 명시적 undefined timeout/maxRetries를 거부하므로 정의된 옵션만 담아 전달
+  // signal은 SDK 요청 옵션으로 내려야 실제로 HTTP 요청이 끊긴다 — 스트리밍 루프의
+  // aborted 가드는 이미 받은 청크를 그만 읽을 뿐이라, 비스트리밍 호출(generateStructured)엔
+  // 그런 루프조차 없어 취소가 아무것도 안 끊는다(콜은 끝까지 돌고 토큰을 태운다).
   private requestOptions(
-    params: Pick<GenerateTextParams, "timeoutMs" | "maxRetries">,
-  ): { timeout?: number; maxRetries?: number } {
-    const options: { timeout?: number; maxRetries?: number } = {};
+    params: Pick<GenerateTextParams, "timeoutMs" | "maxRetries" | "signal">,
+  ): { timeout?: number; maxRetries?: number; signal?: AbortSignal } {
+    const options: {
+      timeout?: number;
+      maxRetries?: number;
+      signal?: AbortSignal;
+    } = {};
     if (params.timeoutMs !== undefined) {
       options.timeout = params.timeoutMs;
     }
     if (params.maxRetries !== undefined) {
       options.maxRetries = params.maxRetries;
+    }
+    if (params.signal !== undefined) {
+      options.signal = params.signal;
     }
     return options;
   }

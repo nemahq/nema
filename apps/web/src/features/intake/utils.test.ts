@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { PendingSourceItem } from "@web/features/intake/types";
-import { draftStatus, isDraftItem } from "@web/features/intake/utils";
+import {
+  draftStatus,
+  isDraftItem,
+  isDraftLocked,
+} from "@web/features/intake/utils";
 
 function buildSource(
   overrides: Partial<PendingSourceItem> = {},
@@ -46,6 +50,21 @@ describe("draftStatus", () => {
     expect(draftStatus(buildSource({ digestionStatus: "completed" }))).toBe(
       "empty",
     );
+  });
+
+  it("cancelled면 cancelled", () => {
+    expect(draftStatus(buildSource({ digestionStatus: "cancelled" }))).toBe(
+      "cancelled",
+    );
+  });
+});
+
+describe("isDraftLocked", () => {
+  it("processing만 잠긴다", () => {
+    expect(isDraftLocked("processing")).toBe(true);
+    expect(isDraftLocked("cancelled")).toBe(false);
+    expect(isDraftLocked("failed")).toBe(false);
+    expect(isDraftLocked("empty")).toBe(false);
   });
 });
 
