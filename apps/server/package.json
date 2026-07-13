@@ -26,6 +26,7 @@
     "fastify": "^5.2.1",
     "js-tiktoken": "^1.0.21",
     "luxon": "^3.7.2",
+    "nanoid": "^6.0.0",
     "openai": "^6.25.0",
     "posthog-node": "^5.28.1",
     "voyageai": "^0.1.0",

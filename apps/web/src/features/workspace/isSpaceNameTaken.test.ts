@@ -3,8 +3,18 @@ import { describe, expect, it } from "vitest";
 import { isSpaceNameTaken } from "./isSpaceNameTaken";
 
 const spaces = [
-  { id: "space-a", name: "Marketing", createdAt: "2024-01-01T00:00:00Z" },
-  { id: "space-b", name: "Engineering", createdAt: "2024-01-02T00:00:00Z" },
+  {
+    id: "space-a",
+    publicId: "spc_a",
+    name: "Marketing",
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "space-b",
+    publicId: "spc_b",
+    name: "Engineering",
+    createdAt: "2024-01-02T00:00:00Z",
+  },
 ];
 
 describe("isSpaceNameTaken", () => {

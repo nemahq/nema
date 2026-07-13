@@ -171,13 +171,15 @@ const workspaceHomeRoute = createRoute({
 });
 
 function SpaceOverviewShell() {
-  const { spaceId } = spaceOverviewRoute.useParams();
-  return <SpaceOverviewPage key={spaceId} spaceId={spaceId} />;
+  const { spacePublicId } = spaceOverviewRoute.useParams();
+  return (
+    <SpaceOverviewPage key={spacePublicId} spacePublicId={spacePublicId} />
+  );
 }
 
 const spaceOverviewRoute = createRoute({
   getParentRoute: () => workspaceSidebarRoute,
-  path: "/space/$spaceId",
+  path: "/space/$spacePublicId",
   component: SpaceOverviewShell,
   errorComponent: RouteErrorFallback,
 });

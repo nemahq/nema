@@ -767,6 +767,7 @@ export type Database = {
           created_at: string;
           id: string;
           name: string;
+          public_id: string;
           updated_at: string;
           workspace_id: string;
         };
@@ -774,6 +775,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           name: string;
+          public_id: string;
           updated_at?: string;
           workspace_id: string;
         };
@@ -781,6 +783,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           name?: string;
+          public_id?: string;
           updated_at?: string;
           workspace_id?: string;
         };
@@ -1187,7 +1190,7 @@ export type Database = {
         Returns: string;
       };
       create_space: {
-        Args: { p_name: string; p_workspace_id: string };
+        Args: { p_name: string; p_public_id: string; p_workspace_id: string };
         Returns: string;
       };
       create_tag: {
@@ -1246,6 +1249,7 @@ export type Database = {
           type: Database["public"]["Enums"]["statement_type"];
         }[];
       };
+      generate_space_public_id: { Args: never; Returns: string };
       increment_source_digestion_retry: {
         Args: {
           p_error_message?: string;

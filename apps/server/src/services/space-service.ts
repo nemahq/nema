@@ -1,7 +1,22 @@
-import type { Space } from "@nema-io/shared";
+import { customAlphabet } from "nanoid";
+
+import {
+  type Space,
+  SPACE_PUBLIC_ID_ALPHABET,
+  SPACE_PUBLIC_ID_LENGTH,
+  SPACE_PUBLIC_ID_PREFIX,
+} from "@nema-io/shared";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
+
+// CSPRNG(nanoid) — DB 쪽 generate_space_public_id()는 트리거 안이라 앱 레이어를
+// 못 타서 Postgres random()(비CSPRNG)을 쓴다. public_id는 RLS로 보호되는 목록
+// 매칭용일 뿐 인증 토큰이 아니라 두 등급이 섞여도 안전하다.
+const generateSpacePublicIdSuffix = customAlphabet(
+  SPACE_PUBLIC_ID_ALPHABET,
+  SPACE_PUBLIC_ID_LENGTH,
+);
 
 // 격리는 RLS(spaces_member_select)가 담당한다.
 export async function listSpaces(args: {
@@ -9,13 +24,14 @@ export async function listSpaces(args: {
 }): Promise<{ spaces: Space[] }> {
   const { data, error } = await args.supabase
     .from("spaces")
-    .select("id, name, created_at")
+    .select("id, public_id, name, created_at")
     .order("created_at", { ascending: true });
   throwIfSupabaseError(error);
 
   return {
     spaces: (data ?? []).map((row) => ({
       id: row.id,
+      publicId: row.public_id,
       name: row.name,
       createdAt: row.created_at,
     })),
@@ -25,7 +41,7 @@ export async function listSpaces(args: {
 export async function createSpace(args: {
   supabase: TypedSupabaseClient;
   name: string;
-}): Promise<{ spaceId: string }> {
+}): Promise<{ spaceId: string; publicId: string }> {
   // 1인 단계: 가입 트리거가 만든 개인 Workspace 1개 (RLS로 내 멤버십만 보임).
   // 멀티 Workspace가 열리면 입력으로 받는다 — createTag·createSource와 같은 방식.
   const { data: memberships, error: memberError } = await args.supabase
@@ -44,13 +60,16 @@ export async function createSpace(args: {
     );
   }
 
+  const publicId = SPACE_PUBLIC_ID_PREFIX + generateSpacePublicIdSuffix();
+
   const { data: spaceId, error } = await args.supabase.rpc("create_space", {
     p_workspace_id: membership.workspace_id,
     p_name: args.name,
+    p_public_id: publicId,
   });
   throwIfSupabaseError(error);
 
-  return { spaceId };
+  return { spaceId, publicId };
 }
 
 export async function updateSpace(args: {

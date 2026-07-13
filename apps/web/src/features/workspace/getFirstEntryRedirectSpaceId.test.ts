@@ -5,13 +5,15 @@ import { getFirstEntryRedirectSpaceId } from "./getFirstEntryRedirectSpaceId";
 describe("getFirstEntryRedirectSpaceId", () => {
   it("첫 진입이 아니면 Space 목록이 있어도 리다이렉트하지 않는다", () => {
     expect(
-      getFirstEntryRedirectSpaceId(false, "/", [{ id: "space-a" }]),
+      getFirstEntryRedirectSpaceId(false, "/", [{ publicId: "space-a" }]),
     ).toBeNull();
   });
 
   it("첫 진입이어도 홈이 아닌 경로면 리다이렉트하지 않는다", () => {
     expect(
-      getFirstEntryRedirectSpaceId(true, "/space/space-a", [{ id: "space-a" }]),
+      getFirstEntryRedirectSpaceId(true, "/space/space-a", [
+        { publicId: "space-a" },
+      ]),
     ).toBeNull();
   });
 
@@ -26,8 +28,8 @@ describe("getFirstEntryRedirectSpaceId", () => {
   it("첫 진입 + 홈 + Space 존재 시 첫 번째 Space로 리다이렉트한다", () => {
     expect(
       getFirstEntryRedirectSpaceId(true, "/", [
-        { id: "space-a" },
-        { id: "space-b" },
+        { publicId: "space-a" },
+        { publicId: "space-b" },
       ]),
     ).toBe("space-a");
   });

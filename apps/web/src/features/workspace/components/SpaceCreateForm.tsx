@@ -55,10 +55,13 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
         // 여기서 명시적으로 기다린다(훅의 자체 invalidate와 중복 호출되지만
         // TanStack이 같은 쿼리 키 refetch를 dedupe해 실제로는 한 번만 나간다 —
         // dedupe가 안 되는 타이밍이어도 정확성엔 문제없고 낭비 요청 하나만 늘 뿐).
-        onSuccess: async ({ spaceId }) => {
+        onSuccess: async ({ publicId }) => {
           await utils.space.list.invalidate();
           onOpenChange(false);
-          navigate({ to: "/space/$spaceId", params: { spaceId } });
+          navigate({
+            to: "/space/$spacePublicId",
+            params: { spacePublicId: publicId },
+          });
         },
         onError: field.markConflictIfNameTaken,
       },
