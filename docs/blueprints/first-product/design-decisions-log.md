@@ -416,3 +416,19 @@ Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감*
 - `settings.start_pending`("Getting started...")과 `account.delete_deleting`("Deleting your account...")은 각자 특정 맥락(온보딩 완료, 계정 전체 삭제라는 고위험 액션의 의도적 구체적 카피)이라 local로 유지 — 범용화 대상 아님.
 
 ---
+
+### 2026-07-13 — 다크 모드 brand 컬러 정합성 감사
+
+**원인**: `packages/weave/src/tokens/index.css`의 `--brand`/`--brand-fg`가 `.dark`에서 재정의되지 않는다(`--brand-hover`/`--brand-accent`/`--brand-tint`는 재정의됨). 그래서 이 두 변수를 직접 쓰는 클래스(`bg-brand`/`border-brand`/`text-brand-fg` 등)는 각 컴포넌트가 `dark:` override를 따로 안 넣으면 다크에서도 라이트와 같은 teal을 그대로 보여준다. 전수 조사(웹서치 아님, 코드 grep) 결과 8곳에서 이 상태로 방치돼 있었다.
+
+**규칙 — 판단 기준은 "지속되는 정체성 신호냐, 일시적 인터랙션 상태냐"**:
+- **정체성 신호(brand 유지)**: 전역 tab 포커스 링(`*:focus-visible`, 키보드 내비게이션 시 항상 같은 색으로 "여기"를 표시). `Input`의 자체 포커스 보더도 처음엔 같은 논리로 유지하려 했으나, Kyle이 "탭 포커스 링과 인풋 자체 포커스는 다르게 취급"하기로 정정 — 인풋 포커스는 아래 중립 처리로.
+- **일시적 인터랙션 상태(중립 톤 `fg-primary`로 override)**: `Checkbox` checked, `Avatar` fallback 이니셜, `DevToolbar` 프리셋 토글 active(개발자 전용이지만 통일성 위해 포함), `TabbedPanel` 드래그 중 탭 삽입 위치 표시 보더, `ResizeHandle`(스플릿뷰) hover/active/focus 배경. 전부 `Button` primary가 이미 쓰던 `dark:bg-fg-primary dark:text-surface-base`(또는 `border`/`text` 변형) 패턴 재사용 — 새 토큰 없음.
+- **`Input` 자체 포커스 보더**: 위 두 범주와 또 달라서 별도 처리 — 처음엔 `dark:focus-visible:border-fg-primary`로 갔다가, Kyle이 "더 얇고 연한 색"을 요청해 `dark:focus-visible:border-fg-tertiary/70`로 조정(더 옅은 토큰 + 불투명도 인하로 "얇아 보이는" 효과, 실제 border-width는 1px 그대로).
+- **텍스트 선택 하이라이트**(`selection:bg-brand`, `Input`): 커스텀 클래스를 아예 제거하고 브라우저 네이티브 선택색을 쓰기로 함(포커스/인터랙션 상태 어느 쪽도 아닌 별개 affordance라는 판단).
+
+**스코프에서 제외**: `RetrievalMessage`/`SidePanel`/`RenameInput`(전부 `features/session/`, v1 레거시) — "v1 잔재는 무시한다"는 기준으로 스킵. `TabbedPanel`/`ResizeHandle`은 지금 v1이 쓰고 있지만 `components/ui/`의 공용 프리미티브(v2 재사용 예정)라 스킵 대상에서 제외하고 같이 고쳤다.
+
+**시각 검증**: 실제 화면에 없는 것(Checkbox 미사용, Avatar fallback은 프로필 사진 있는 계정이라 안 보임, TabbedPanel/ResizeHandle은 v1 세션이 하나도 없어 라우트 자체가 없음)은 `SpaceOverview.tsx`에 임시 디버그 프리뷰 블록을 추가해 브라우저로 직접 확인 후 삭제(커밋 안 됨, diff 없음 확인). Input 포커스 보더/선택 하이라이트는 실제 Space 설정 모달에서 스크린샷으로 확인.
+
+---
