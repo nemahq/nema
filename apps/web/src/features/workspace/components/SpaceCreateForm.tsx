@@ -24,6 +24,7 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
   const navigate = useNavigate();
   const field = useSpaceNameField();
   const createMutation = useCreateSpace();
+  const isEmpty = field.name.trim() === "";
 
   function handleSubmit() {
     if (createMutation.isPending) {
@@ -65,7 +66,10 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
         <Button variant="ghost" onClick={() => onOpenChange(false)}>
           {t("common.cancel")}
         </Button>
-        <Button onClick={handleSubmit} disabled={createMutation.isPending}>
+        <Button
+          onClick={handleSubmit}
+          disabled={createMutation.isPending || isEmpty}
+        >
           {t("space.create_action")}
         </Button>
       </DialogFooter>
