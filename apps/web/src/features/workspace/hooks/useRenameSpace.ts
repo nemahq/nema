@@ -5,10 +5,10 @@ export function useRenameSpace() {
 
   return trpc.space.rename.useMutation({
     async onMutate(input) {
-      await utils.workspace.bootstrap.cancel();
-      const previousBootstrap = utils.workspace.bootstrap.getData();
+      await utils.space.list.cancel();
+      const previousSpaceList = utils.space.list.getData();
 
-      utils.workspace.bootstrap.setData(undefined, (old) => {
+      utils.space.list.setData(undefined, (old) => {
         if (!old) {
           return old;
         }
@@ -20,15 +20,15 @@ export function useRenameSpace() {
         };
       });
 
-      return { previousBootstrap };
+      return { previousSpaceList };
     },
     onError(_err, _input, context) {
-      if (context?.previousBootstrap) {
-        utils.workspace.bootstrap.setData(undefined, context.previousBootstrap);
+      if (context?.previousSpaceList) {
+        utils.space.list.setData(undefined, context.previousSpaceList);
       }
     },
     onSettled() {
-      utils.workspace.bootstrap.invalidate();
+      utils.space.list.invalidate();
     },
   });
 }

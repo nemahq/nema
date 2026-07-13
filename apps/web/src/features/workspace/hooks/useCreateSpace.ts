@@ -5,7 +5,7 @@ export function useCreateSpace() {
 
   return trpc.space.create.useMutation({
     onSuccess() {
-      utils.workspace.bootstrap.invalidate();
+      utils.space.list.invalidate();
     },
   });
 }

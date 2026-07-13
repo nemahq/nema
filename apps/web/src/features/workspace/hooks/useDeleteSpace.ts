@@ -5,7 +5,7 @@ export function useDeleteSpace() {
 
   return trpc.space.delete.useMutation({
     onSuccess() {
-      utils.workspace.bootstrap.invalidate();
+      utils.space.list.invalidate();
     },
   });
 }
