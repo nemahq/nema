@@ -18,7 +18,7 @@ export function SpaceTabButton({
       className={cn(
         "-mb-px border-b-2 px-3 py-2 text-sm transition-colors duration-fast",
         active
-          ? "border-fg-primary font-medium text-fg-primary"
+          ? "border-fg-primary font-bold text-fg-primary"
           : "border-transparent text-fg-tertiary hover:text-fg-secondary",
       )}
     >
