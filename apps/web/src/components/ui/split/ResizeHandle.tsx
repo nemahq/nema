@@ -101,8 +101,8 @@ export function ResizeHandle({
       onKeyDown={handleKeyDown}
       className={cn(
         "relative z-10 shrink-0 touch-none select-none bg-border/50",
-        "hover:bg-brand active:bg-brand",
-        "focus-visible:bg-brand focus-visible:outline-none",
+        "hover:bg-brand active:bg-brand dark:hover:bg-fg-primary dark:active:bg-fg-primary",
+        "focus-visible:bg-brand focus-visible:outline-none dark:focus-visible:bg-fg-primary",
         isHorizontal
           ? "w-px cursor-col-resize -mx-px px-px"
           : "h-px cursor-row-resize -my-px py-px",
