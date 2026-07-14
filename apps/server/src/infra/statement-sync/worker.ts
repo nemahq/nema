@@ -6,7 +6,11 @@ import type { RelationType } from "@nema-io/shared";
 
 import type { Json } from "@server/infra/database.types";
 import type { EmbeddingProvider } from "@server/infra/embedding";
-import { LlmError } from "@server/infra/llm/llm-error";
+import {
+  LlmError,
+  resolveMaxRetries,
+  RETRYABLE_LLM_CODES,
+} from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { LlmTask } from "@server/infra/llm/task-routing";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
@@ -462,6 +466,7 @@ async function runExtractionPass(deps: WorkerDeps): Promise<number> {
               phase: "extraction",
               id: source.id,
               errorMessage: err instanceof Error ? err.message : String(err),
+              maxRetries: resolveMaxRetries(err, MAX_RETRIES),
             });
           }
         }),
@@ -595,14 +600,7 @@ async function processSource(
 const LLM_CALL_MAX_ATTEMPTS = 3;
 // rate_limit 직후 즉시 재시도는 또 걸린다 — 시도 횟수 비례 지연
 const LLM_CALL_RETRY_DELAY_MS = 2_000;
-// 결정적 실패(스키마·인증·콘텐츠 필터)는 재시도해도 같다 — 일시 오류만 재시도.
-// unknown은 provider가 분류 못 한 오류로, 일시 장애와 결정적 실패를 함께 묶는다 —
-// 후자면 3회를 헛쓰지만 숨지 않고 결국 Sentry+DB로 전파되므로 보수적으로 포함한다.
-const RETRYABLE_LLM_CODES: ReadonlySet<string> = new Set([
-  "timeout",
-  "rate_limit",
-  "unknown",
-]);
+// source 단위 lease 재시도(incrementRetry)와 기준을 공유한다 — llm-error.ts 참고.
 
 async function extractDigestStatements(
   llm: LlmProvider,
@@ -801,6 +799,7 @@ async function syncBatch(params: {
           phase: "embedding",
           id: statement.id,
           errorMessage: err instanceof Error ? err.message : String(err),
+          maxRetries: MAX_RETRIES,
         }),
       ),
     );
@@ -884,6 +883,7 @@ async function runLinkingPass(deps: WorkerDeps): Promise<number> {
               phase: "linking",
               id: source.id,
               errorMessage: err instanceof Error ? err.message : String(err),
+              maxRetries: resolveMaxRetries(err, MAX_RETRIES),
             });
           }
         }),
@@ -1328,15 +1328,21 @@ async function fetchCandidateStatements(
 
 async function incrementRetry(
   supabase: TypedSupabaseClient,
-  params: { phase: Phase; id: string; errorMessage: string },
+  params: {
+    phase: Phase;
+    id: string;
+    errorMessage: string;
+    maxRetries: number;
+  },
 ): Promise<void> {
-  const { phase, id, errorMessage } = params;
+  const { phase, id, errorMessage, maxRetries } = params;
 
   const { error } = await runIncrementRpc({
     supabase,
     phase,
     id,
     errorMessage,
+    maxRetries,
   });
 
   if (error) {
@@ -1352,25 +1358,26 @@ function runIncrementRpc(params: {
   phase: Phase;
   id: string;
   errorMessage: string;
+  maxRetries: number;
 }) {
-  const { supabase, phase, id, errorMessage } = params;
+  const { supabase, phase, id, errorMessage, maxRetries } = params;
   switch (phase) {
     case "extraction":
       return supabase.rpc("increment_source_extraction_retry", {
         p_source_id: id,
-        p_max_retries: MAX_RETRIES,
+        p_max_retries: maxRetries,
         p_error_message: errorMessage,
       });
     case "linking":
       return supabase.rpc("increment_source_linking_retry", {
         p_source_id: id,
-        p_max_retries: MAX_RETRIES,
+        p_max_retries: maxRetries,
         p_error_message: errorMessage,
       });
     case "embedding":
       return supabase.rpc("increment_statement_ingestion_retry", {
         p_statement_id: id,
-        p_max_retries: MAX_RETRIES,
+        p_max_retries: maxRetries,
         p_error_message: errorMessage,
       });
   }

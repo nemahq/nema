@@ -11,6 +11,14 @@ export type LlmErrorCode =
   | "aborted"
   | "unknown";
 
+// 결정적 실패(auth/bad_request/content_filter)는 재시도해도 결과가 같다 — 콜 레벨
+// 재시도(워커)와 source 단위 lease 재시도가 공유하는 단일 기준.
+export const RETRYABLE_LLM_CODES: ReadonlySet<LlmErrorCode> = new Set([
+  "timeout",
+  "rate_limit",
+  "unknown",
+]);
+
 export class LlmError extends Error {
   // cause는 Error 기본 필드를 그대로 쓴다. 여기서 필드로 재선언하면
   // useDefineForClassFields(ES2024) 환경에서 super가 채운 cause를 undefined로 덮어쓴다.
@@ -22,4 +30,12 @@ export class LlmError extends Error {
     super(message, { cause });
     this.name = "LlmError";
   }
+}
+
+// source 단위 lease 재시도(digestion/extraction/linking 공통)가 쓰는 재시도 상한 결정.
+// 결정적 실패는 defaultMax를 다 태우지 않고 1회 만에 종결한다.
+export function resolveMaxRetries(err: unknown, defaultMax: number): number {
+  return err instanceof LlmError && !RETRYABLE_LLM_CODES.has(err.code)
+    ? 1
+    : defaultMax;
 }

@@ -7,6 +7,7 @@ vi.mock("@sentry/node", () => ({
 
 import * as Sentry from "@sentry/node";
 
+import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type { GeneratedDigest } from "@server/prompts/digest-generation";
@@ -439,5 +440,21 @@ describe("runDigestionPass — 취소", () => {
 
     expect(rpcNames(rpc)).toContain("increment_source_digestion_retry");
     expect(Sentry.captureException).toHaveBeenCalled();
+  });
+
+  it("결정적 LLM 실패(auth)는 lease 재시도를 1회 만에 종결한다", async () => {
+    const { supabase, rpc } = mockDigestionSupabase();
+    const llm = digestionLlm(
+      vi.fn(async () => {
+        throw new LlmError("auth", "GEMINI_API_KEY is invalid");
+      }) as unknown as LlmProvider["generateStructured"],
+    );
+
+    await runDigestionPass({ supabase, forTask: () => llm });
+
+    expect(rpc).toHaveBeenCalledWith(
+      "increment_source_digestion_retry",
+      expect.objectContaining({ p_max_retries: 1 }),
+    );
   });
 });

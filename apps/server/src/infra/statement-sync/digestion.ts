@@ -16,6 +16,7 @@ import {
 } from "@nema-io/shared";
 
 import type { Json } from "@server/infra/database.types";
+import { resolveMaxRetries } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { LlmTask } from "@server/infra/llm/task-routing";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
@@ -78,6 +79,7 @@ export async function runDigestionPass(deps: DigestionDeps): Promise<number> {
             await incrementDigestionRetry(deps.supabase, {
               id: source.id,
               errorMessage: err instanceof Error ? err.message : String(err),
+              maxRetries: resolveMaxRetries(err, MAX_RETRIES),
             });
           }
         }),
@@ -505,11 +507,11 @@ async function fetchPendingDigestionSources(
 
 async function incrementDigestionRetry(
   supabase: TypedSupabaseClient,
-  params: { id: string; errorMessage: string },
+  params: { id: string; errorMessage: string; maxRetries: number },
 ): Promise<void> {
   const { error } = await supabase.rpc("increment_source_digestion_retry", {
     p_source_id: params.id,
-    p_max_retries: MAX_RETRIES,
+    p_max_retries: params.maxRetries,
     p_error_message: params.errorMessage,
   });
   if (error) {

@@ -548,6 +548,8 @@ describe("createStatementSyncWorker", () => {
     expect(retries[0]?.[1]).toMatchObject({
       p_source_id: SOURCE_ID,
       p_error_message: expect.stringContaining("schema mismatch"),
+      // 결정적 실패라 나머지 재시도 예산을 안 태우고 1회 만에 failed로 종결한다.
+      p_max_retries: 1,
     });
   });
 
