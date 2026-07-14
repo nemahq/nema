@@ -18,7 +18,7 @@ import { useChangesetListQuery } from "@web/features/review/hooks/useChangesetLi
 import { useRestoreReview } from "@web/features/review/hooks/useRestoreReview";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
 import { useTrashReviewSource } from "@web/features/review/hooks/useTrashReviewSource";
-import { summarizeChangesetEffect } from "@web/features/review/utils";
+import { changesetDisplayTitle } from "@web/features/review/utils";
 import { useSpaceList } from "@web/features/workspace";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
@@ -158,7 +158,7 @@ export function ChangesetDetailScreen({
           <div className="flex items-center justify-between gap-2">
             <h1 className="min-w-0 truncate text-lg font-semibold text-fg-primary">
               <span className="text-fg-tertiary">#{entry.number} · </span>
-              {summarizeChangesetEffect(entry.effect, t)}
+              {changesetDisplayTitle(entry, t)}
             </h1>
             <div className="flex shrink-0 items-center gap-2">
               {applied && !entry.reverted && (

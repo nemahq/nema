@@ -40,6 +40,7 @@ interface DigestReviewDetail {
   changesetId: string;
   changesetNumber: number;
   sourceId: string;
+  sourceTitle: string | null;
   sourceBody: string;
   sourceCreatedAt: string;
   digests: DigestDraft[];
@@ -58,7 +59,7 @@ export async function getReview(args: {
   const { data: changeset, error } = await supabase
     .from("changesets")
     .select(
-      "id, number, type, status, source_id, changes(id, action, target_type, target_id, data), sources(body, created_at)",
+      "id, number, type, status, source_id, changes(id, action, target_type, target_id, data), sources(title, body, created_at)",
     )
     .eq("id", changesetId)
     .single();
@@ -136,6 +137,7 @@ export async function getReview(args: {
     changesetId: changeset.id,
     changesetNumber: changeset.number,
     sourceId: changeset.source_id,
+    sourceTitle: changeset.sources.title,
     sourceBody: changeset.sources.body,
     sourceCreatedAt: changeset.sources.created_at,
     digests,

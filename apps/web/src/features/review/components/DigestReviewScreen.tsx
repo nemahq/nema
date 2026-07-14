@@ -173,11 +173,11 @@ export function DigestReviewScreen({
             <RelativeTime dateTime={review.sourceCreatedAt} />
           </div>
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-lg font-semibold text-fg-primary">
-              {t("review.digest_review_title")}{" "}
+            <h1 className="min-w-0 truncate text-lg font-semibold text-fg-primary">
               <span className="text-fg-tertiary">
-                #{review.changesetNumber}
+                #{review.changesetNumber} ·{" "}
               </span>
+              {review.sourceTitle ?? t("review.digest_review_title")}
             </h1>
             {outcome === null ? (
               <div className="flex items-center gap-2">

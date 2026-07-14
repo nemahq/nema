@@ -6,7 +6,7 @@ import {
   isOpenChangeset,
 } from "@web/features/review/constants";
 import type { ChangesetListEntry } from "@web/features/review/types";
-import { summarizeChangesetEffect } from "@web/features/review/utils";
+import { changesetDisplayTitle } from "@web/features/review/utils";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetStatusBadge } from "./ChangesetStatusBadge";
@@ -34,7 +34,7 @@ export function ChangesetListRow({ entry, onClick }: ChangesetListRowProps) {
       </Badge>
       <span className="min-w-0 flex-1 truncate text-sm text-fg-primary">
         <span className="text-fg-tertiary">#{entry.number} · </span>
-        {summarizeChangesetEffect(entry.effect, t)}
+        {changesetDisplayTitle(entry, t)}
       </span>
       {entry.reverted && (
         <Badge variant="neutral" className="shrink-0">
