@@ -28,6 +28,7 @@
   3. 추출이 진행되는 동안 그 원본이 "초안"에 진행 중 상태로 나타난다.
 - **관여 화면**: Space 오버뷰, 초안
 - **확정 (2026-07-12, PR #385)**: Space 오버뷰 인라인 컴포저(`ChatInput` 재사용)로 구현. staging API + 실계정 라이브 검증 완료(`design-decisions-log.md` 참고).
+- **범위 참고 (2026-07-15, PR #415)**: 제목이 채워지는 시점이 바뀌었다 — 이전엔 Digest 추출(무거운 콜) 결과에 얹혀 나왔지만, 이제 Source 생성 직후 별도의 가벼운 콜(nano, body 앞부분만)이 응답을 기다리지 않고 떠서 채운다. Then절은 제목을 언급하지 않아 케이스 자체엔 영향 없음 — 초안 목록이 제목 없는 카드를 body 미리보기로 대신 그리는 기존 폴백을 그대로 쓰므로 화면상 새 상태가 생기지 않는다. BE 코드 레벨(`source-service.test.ts`)로만 확인, 실동작 확인 대상 아님.
 
 #### 빈 입력창 제출 버튼 비활성화
 
@@ -47,6 +48,7 @@
 - [x] 초안에서 Space 재지정
 - [x] 처리 중 상태에서 액션 잠금 (2026-07-14, Kyle 실동작 확인 완료)
 - [x] 초안에서 Source 제목 편집 (2026-07-14, Kyle 실동작 확인 완료 — 재추출 후 편집값 유지 회귀 확인 포함)
+- [ ] 초안에서 Source 원본 편집 (BE만 착지, PR #415 — FE 미착지로 미체크)
 - [ ] 초안에서 이전 리뷰 보기 (의도적 보류 — review 1차의 Digest 리뷰 화면 랜딩 후 착수)
 - [x] Digest 추출 실패
 - [x] Digest 추출 결과 없음
@@ -112,6 +114,16 @@
 - **범위 참고**: cancelled·failed·empty 셋 다 "평범한 대기 상태"라 전부 편집 가능(Extract/Delete와 달리 failed/empty를 좁힐 이유가 없다 — BE 가드도 `digestion_status<>'pending'` 전체를 허용). 다이얼로그(`EditSourceTitleDialog`) 저장 시 `source.updateTitle` 뮤테이션 성공 후 `listPending` 쿼리를 invalidate해 반영 — 코드 레벨(typecheck/lint/test)로 확인됨.
 - **확정 (2026-07-14)**: Kyle이 staging에서 제목 편집 즉시 반영 + 재추출 후 편집값 유지(회귀 방지 확인 포함)를 실동작으로 확인.
 - **범위 참고 (2026-07-13, 리뷰 반영)**: "즉시 반영된다"는 그 한 번의 편집에 한정 — 이후 같은 Source에서 "초안에서 Digest 추출 실행"(재시도)이 다시 돌면, 워커가 새로 뽑은 제목이 방금 편집한 값을 덮어쓰지 않는다(`sources.title_edited` 플래그, `update_source_title`이 세우고 `complete_source_digestion`/`create_ingestion_review`가 확인). 리뷰에서 발견된 무음 데이터 유실을 막기 위한 후속 수정.
+- **범위 참고 (2026-07-15, PR #415)**: 위 메커니즘이 바뀌었다 — `sources.title_edited` 플래그는 제거됐고, 제목 생성 자체가 디제스천에서 완전히 분리됐다(Source 생성 시점 1회, 별도 nano 콜). 재추출(`complete_source_digestion`/`create_ingestion_review`)은 이제 title 컬럼을 아예 안 건드려 덮어쓸 경로 자체가 없다 — `fill_source_title`의 `title IS NULL` 가드가 "평생 한 번만 채워짐"을 구조적으로 보장한다. 사용자가 관찰하는 동작(제목 편집 후 재추출해도 유지됨)은 그대로이고 오히려 더 견고해졌을 뿐이라 체크박스·실동작 확인 기록은 유지.
+
+#### 초안에서 Source 원본 편집
+
+- **Given**: 유저가 초안에서 평범한 대기 상태인 Source를 보고 있고, 열린(pending) 리뷰가 없다.
+- **When**: 원본(body) 편집 액션을 실행하고 내용을 수정한다.
+- **Then**: 그 Source의 원본이 즉시 반영된다. 이후 Digest 추출을 다시 실행하면 수정된 원본을 기준으로 새로 추출한다. 제목은 그대로 유지된다.
+- **관여 화면**: 초안
+- **범위 참고 (2026-07-15, PR #415)**: BE만 착지 — RPC `update_source_body` + 서비스 `updateSourceBody` + tRPC `source.updateBody`(멀티 에이전트 코드 리뷰 + `source-service.test.ts` 통과). FE(편집 액션 버튼·다이얼로그)는 아직 없어 이번 슬라이스에선 검증 대상이 없다 — 그래서 미체크.
+- **범위 참고**: "평범한 대기 상태"가 실제로 편집 가능한 자리는 cancelled·failed·empty, 그리고 리뷰가 열렸다가 사람이 버린(discarded) 경우까지 넷이다 — 열린 pending 리뷰가 있으면 거부된다(`NM004`, 리뷰에 뜬 Digest 후보가 편집 전 원본에서 뽑힌 것이라 원본을 바꾸면 후보가 무효화되기 때문). 리뷰를 확정하거나 버려야 원본을 고칠 수 있다. 처리 중(digestion_status='pending')인 Source도 같은 이유로 거부된다.
 
 #### 초안에서 이전 리뷰 보기
 
