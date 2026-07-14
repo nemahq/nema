@@ -506,6 +506,7 @@ export type Database = {
           id: string;
           status: Database["public"]["Enums"]["reference_status"];
           title: string;
+          trashed_at: string | null;
           type: Database["public"]["Enums"]["reference_type"];
           updated_at: string;
           workspace_id: string;
@@ -517,6 +518,7 @@ export type Database = {
           id?: string;
           status?: Database["public"]["Enums"]["reference_status"];
           title: string;
+          trashed_at?: string | null;
           type: Database["public"]["Enums"]["reference_type"];
           updated_at?: string;
           workspace_id: string;
@@ -528,6 +530,7 @@ export type Database = {
           id?: string;
           status?: Database["public"]["Enums"]["reference_status"];
           title?: string;
+          trashed_at?: string | null;
           type?: Database["public"]["Enums"]["reference_type"];
           updated_at?: string;
           workspace_id?: string;
@@ -1262,6 +1265,13 @@ export type Database = {
         }[];
       };
       generate_space_public_id: { Args: never; Returns: string };
+      get_reference_citing_digests: {
+        Args: { p_reference_id: string };
+        Returns: {
+          digest_id: string;
+          digest_title: string;
+        }[];
+      };
       increment_source_digestion_retry: {
         Args: {
           p_error_message?: string;
@@ -1309,6 +1319,10 @@ export type Database = {
         Returns: undefined;
       };
       mark_first_entry: { Args: never; Returns: boolean };
+      purge_expired_references: {
+        Args: { p_batch_limit?: number; p_retention_days?: number };
+        Returns: number;
+      };
       purge_expired_sources: {
         Args: { p_batch_limit?: number; p_retention_days?: number };
         Returns: number;
@@ -1366,6 +1380,7 @@ export type Database = {
         Args: { p_source_id: string };
         Returns: undefined;
       };
+      trash_reference: { Args: { p_reference_id: string }; Returns: undefined };
       trash_source: { Args: { p_source_id: string }; Returns: undefined };
       unlink_reference_tag: {
         Args: { p_reference_id: string; p_tag_id: string };
@@ -1435,7 +1450,7 @@ export type Database = {
       digest_status: "active" | "archived";
       digestion_status: "pending" | "completed" | "failed" | "cancelled";
       ingestion_status: "pending" | "completed" | "failed";
-      reference_status: "active" | "archived";
+      reference_status: "active" | "archived" | "trashed";
       reference_type:
         | "person"
         | "organization"
@@ -1603,7 +1618,7 @@ export const Constants = {
       digest_status: ["active", "archived"],
       digestion_status: ["pending", "completed", "failed", "cancelled"],
       ingestion_status: ["pending", "completed", "failed"],
-      reference_status: ["active", "archived"],
+      reference_status: ["active", "archived", "trashed"],
       reference_type: ["person", "organization", "project", "product", "term"],
       relation_status: ["active", "archived"],
       relation_type: [

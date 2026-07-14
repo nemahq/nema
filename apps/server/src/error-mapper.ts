@@ -28,6 +28,7 @@ type DomainErrorCode =
   | "DB_SOURCE_STATE_CHANGED"
   | "DB_TOPIC_STATE_CHANGED"
   | "DB_TOPIC_NAME_CONFLICT"
+  | "DB_REFERENCE_STATE_CHANGED"
   | "DB_QUERY_FAILED";
 
 const ERROR_MAP: Record<
@@ -99,6 +100,10 @@ const ERROR_MAP: Record<
     trpcCode: "CONFLICT",
     i18nKey: "error.topic_name_conflict",
   },
+  DB_REFERENCE_STATE_CHANGED: {
+    trpcCode: "CONFLICT",
+    i18nKey: "error.reference_state_changed",
+  },
   DB_QUERY_FAILED: {
     trpcCode: "INTERNAL_SERVER_ERROR",
     i18nKey: "error.default",
@@ -116,6 +121,7 @@ const EXPECTED_DOMAIN_CODES = new Set<DomainErrorCode>([
   "DB_SOURCE_STATE_CHANGED",
   "DB_TOPIC_STATE_CHANGED",
   "DB_TOPIC_NAME_CONFLICT",
+  "DB_REFERENCE_STATE_CHANGED",
   "LLM_ABORTED",
 ]);
 
@@ -133,6 +139,7 @@ const SUPABASE_CODE_MAP: Record<SupabaseErrorCode, DomainErrorCode> = {
   source_state_changed: "DB_SOURCE_STATE_CHANGED",
   topic_state_changed: "DB_TOPIC_STATE_CHANGED",
   topic_name_conflict: "DB_TOPIC_NAME_CONFLICT",
+  reference_state_changed: "DB_REFERENCE_STATE_CHANGED",
   query_failed: "DB_QUERY_FAILED",
 };
 

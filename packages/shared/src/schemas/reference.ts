@@ -14,6 +14,11 @@ export const REFERENCE_TYPES = [
 export const ReferenceTypeSchema = z.enum(REFERENCE_TYPES);
 export type ReferenceType = z.infer<typeof ReferenceTypeSchema>;
 
+// DB enum reference_status의 SSOT (07-modeling §완전 삭제).
+export const REFERENCE_STATUSES = ["active", "archived", "trashed"] as const;
+export const ReferenceStatusSchema = z.enum(REFERENCE_STATUSES);
+export type ReferenceStatus = z.infer<typeof ReferenceStatusSchema>;
+
 export const REFERENCE_TITLE_MAX_LENGTH = 200;
 // body는 "다듬어지며 유지되는 내용"이라 상한을 원본(10만 자)보다 훨씬 작게 —
 // 레퍼런스는 정의·설명이지 문서 보관함이 아니다. 다만 프로필·스펙 붙여넣기 같은
@@ -22,3 +27,11 @@ export const REFERENCE_BODY_MAX_LENGTH = 20_000;
 // 대표 링크(홈페이지·LinkedIn·repo·docs) — 대상을 식별하는 소수의 링크지
 // Digest가 논하는 링크 더미가 아니라, Digest 상한보다 작게 잡는다.
 export const REFERENCE_EXTERNAL_URLS_MAX = 10;
+
+// Reference 액션(삭제·인용 조회) 공용 입력 — 어떤 상태에서 무엇이 허용되는지는
+// 전부 서버 판정이라(RPC의 WHERE 가드) source의 SourceActionInputSchema와 같은 결.
+export const ReferenceActionInputSchema = z.object({
+  referenceId: z.string().uuid(),
+});
+
+export type ReferenceActionInput = z.infer<typeof ReferenceActionInputSchema>;
