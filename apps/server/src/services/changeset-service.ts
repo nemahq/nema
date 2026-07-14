@@ -277,6 +277,10 @@ interface ChangesetHistoryEntry {
   // ingestion의 "되살리기" 활성 여부는 원본이 pending인지에 달려있다(restore_ingestion_review
   // 가드) — 목록 단계에서 미리 알아야 클릭 전에 버튼을 비활성화할 수 있다.
   sourceStatus: SourceStatus | null;
+  // Changeset.title(엔진 자동 생성)은 아직 스키마에 없다 — 착지 전까지는 연결된
+  // Source의 제목을 화면 표시용으로 대신 쓴다. non-ingestion(source_id 없음)이거나
+  // 아직 추출 중이라 제목이 안 채워졌으면 null — 그때는 FE가 효과 요약으로 대체한다.
+  sourceTitle: string | null;
   revertsId: string | null;
   // 되돌림 여부 — is_changeset_reverted(SQL)와 같은 재귀를 revert 간선으로 계산(§4.4).
   reverted: boolean;
@@ -309,7 +313,7 @@ export async function listChangesets(args: {
   const { data: rows, error } = await supabase
     .from("changesets")
     .select(
-      "id, number, type, status, source_id, reverts_id, created_at, changes(target_type), sources(status)",
+      "id, number, type, status, source_id, reverts_id, created_at, changes(target_type), sources(status, title)",
     )
     .eq("space_id", targetSpaceId)
     .order("created_at", { ascending: false })
@@ -356,6 +360,7 @@ export async function listChangesets(args: {
         status: row.status,
         sourceId: row.source_id,
         sourceStatus: row.sources?.status ?? null,
+        sourceTitle: row.sources?.title ?? null,
         revertsId: row.reverts_id,
         reverted: isReverted(row.id),
         effect,

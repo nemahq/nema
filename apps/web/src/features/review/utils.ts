@@ -10,9 +10,10 @@ const EFFECT_LABEL_KEY: Record<string, TranslationKey> = {
   reference: "review.effect_reference",
 };
 
-// Changeset.title이 아직 스키마에 없어(design-decisions-log 참고) 목록 행의 임시
-// 대체 표기로 쓴다 — title 컬럼이 생기면 이 호출부를 그 값으로 바꾸면 된다.
-export function summarizeChangesetEffect(
+// Changeset.title이 아직 스키마에 없어(design-decisions-log 참고) 대체 표기로 쓴다 —
+// sourceTitle이 있는 ingestion은 changesetDisplayTitle이 이 함수보다 그 값을 우선한다.
+// non-ingestion(sourceTitle 없음)이나 아직 추출 중인 ingestion만 이 폴백을 그대로 본다.
+function summarizeChangesetEffect(
   effect: ChangesetListEntry["effect"],
   t: (key: TranslationKey) => string,
 ): string {
@@ -23,4 +24,11 @@ export function summarizeChangesetEffect(
       return `${key ? t(key) : type} ${count}`;
     });
   return parts.length > 0 ? parts.join(" · ") : t("review.effect_none");
+}
+
+export function changesetDisplayTitle(
+  entry: Pick<ChangesetListEntry, "sourceTitle" | "effect">,
+  t: (key: TranslationKey) => string,
+): string {
+  return entry.sourceTitle ?? summarizeChangesetEffect(entry.effect, t);
 }

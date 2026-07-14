@@ -43,7 +43,11 @@ describe("getReview", () => {
         type: "ingestion",
         status: "pending",
         source_id: SOURCE_ID,
-        sources: { body: "원문", created_at: "2026-07-07T00:00:00Z" },
+        sources: {
+          title: "원문 제목",
+          body: "원문",
+          created_at: "2026-07-07T00:00:00Z",
+        },
         changes: [
           {
             id: "11111111-1111-4111-8111-111111111111",
@@ -82,6 +86,7 @@ describe("getReview", () => {
     const review = await getReview({ supabase, changesetId: CHANGESET_ID });
 
     expect(review.changesetNumber).toBe(12);
+    expect(review.sourceTitle).toBe("원문 제목");
     expect(review.digests[0]?.referenceIds).toEqual([EXISTING_REFERENCE_ID]);
     expect(review.digests[0]?.newReferenceKeys).toEqual([NEW_REFERENCE_ID]);
     expect(review.newReferences).toEqual([
@@ -105,7 +110,11 @@ describe("getReview", () => {
         type: "ingestion",
         status: "applied",
         source_id: SOURCE_ID,
-        sources: { body: "원문", created_at: "2026-07-07T00:00:00Z" },
+        sources: {
+          title: "원문 제목",
+          body: "원문",
+          created_at: "2026-07-07T00:00:00Z",
+        },
         changes: [],
       },
     });
