@@ -214,6 +214,7 @@ function getGeminiClient(): GoogleGenAI {
   sharedGeminiClient = createGeminiClient({
     vertexProject: env.GEMINI_VERTEX_PROJECT,
     vertexLocation: env.GEMINI_VERTEX_LOCATION,
+    vertexServiceAccountJson: env.GEMINI_VERTEX_SERVICE_ACCOUNT_JSON,
     apiKey: env.GEMINI_API_KEY,
   });
   return sharedGeminiClient;
