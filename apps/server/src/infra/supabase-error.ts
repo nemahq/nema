@@ -8,6 +8,7 @@ export type SupabaseErrorCode =
   | "topic_state_changed"
   | "topic_name_conflict"
   | "reference_state_changed"
+  | "ingestion_review_state_changed"
   | "query_failed";
 
 const PG_NOT_FOUND = "P0002";
@@ -36,6 +37,9 @@ const NEMA_TOPIC_NAME_CONFLICT = "NM006";
 // Reference 상태 가드 실패(trash_reference) — NM004·NM005와 같은 "그 사이 상태가
 // 바뀜" 결이지만 엔티티가 달라 메시지가 다르므로 코드를 나눈다.
 const NEMA_REFERENCE_STATE_CHANGED = "NM007";
+// ingestion 리뷰 상태 가드 실패(discard_ingestion_review·restore_ingestion_review) —
+// NM004·NM005·NM007과 같은 "그 사이 상태가 바뀜" 결이지만 엔티티가 달라 코드를 나눈다.
+const NEMA_INGESTION_REVIEW_STATE_CHANGED = "NM008";
 
 export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
   switch (pgCode) {
@@ -58,6 +62,8 @@ export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
       return "topic_name_conflict";
     case NEMA_REFERENCE_STATE_CHANGED:
       return "reference_state_changed";
+    case NEMA_INGESTION_REVIEW_STATE_CHANGED:
+      return "ingestion_review_state_changed";
     default:
       return "query_failed";
   }

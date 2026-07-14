@@ -38,6 +38,7 @@ interface CitedReference {
 
 interface DigestReviewDetail {
   changesetId: string;
+  changesetNumber: number;
   sourceId: string;
   sourceBody: string;
   sourceCreatedAt: string;
@@ -57,7 +58,7 @@ export async function getReview(args: {
   const { data: changeset, error } = await supabase
     .from("changesets")
     .select(
-      "id, type, status, source_id, changes(id, action, target_type, target_id, data), sources(body, created_at)",
+      "id, number, type, status, source_id, changes(id, action, target_type, target_id, data), sources(body, created_at)",
     )
     .eq("id", changesetId)
     .single();
@@ -67,7 +68,8 @@ export async function getReview(args: {
     changeset.type !== "ingestion" ||
     changeset.status !== "pending" ||
     changeset.source_id === null ||
-    changeset.sources === null
+    changeset.sources === null ||
+    changeset.number === null
   ) {
     throw new Error(
       `changeset ${changesetId} is not a pending ingestion review`,
@@ -132,6 +134,7 @@ export async function getReview(args: {
 
   return {
     changesetId: changeset.id,
+    changesetNumber: changeset.number,
     sourceId: changeset.source_id,
     sourceBody: changeset.sources.body,
     sourceCreatedAt: changeset.sources.created_at,
@@ -188,6 +191,32 @@ export async function confirmReview(args: {
   throwIfSupabaseError(error);
 
   return { sourceId };
+}
+
+// 버리기 — changes를 하나도 적용하지 않고 changeset을 닫는다(하드 삭제 아님).
+export async function discardReview(args: {
+  supabase: TypedSupabaseClient;
+  changesetId: string;
+}): Promise<void> {
+  const { supabase, changesetId } = args;
+
+  const { error } = await supabase.rpc("discard_ingestion_review", {
+    p_changeset_id: changesetId,
+  });
+  throwIfSupabaseError(error);
+}
+
+// 되살리기 — 새 changeset을 안 만들고 같은 changeset을 in-place로 되돌린다.
+export async function restoreReview(args: {
+  supabase: TypedSupabaseClient;
+  changesetId: string;
+}): Promise<void> {
+  const { supabase, changesetId } = args;
+
+  const { error } = await supabase.rpc("restore_ingestion_review", {
+    p_changeset_id: changesetId,
+  });
+  throwIfSupabaseError(error);
 }
 
 // --- 확정 Digest 직접 수정 ---

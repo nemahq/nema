@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
-import { getReview, updateReview } from "./digest-review-service";
+import {
+  discardReview,
+  getReview,
+  restoreReview,
+  updateReview,
+} from "./digest-review-service";
 
 const CHANGESET_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const SOURCE_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -34,6 +39,7 @@ describe("getReview", () => {
     const supabase = mockSupabase({
       changesets: {
         id: CHANGESET_ID,
+        number: 12,
         type: "ingestion",
         status: "pending",
         source_id: SOURCE_ID,
@@ -75,6 +81,7 @@ describe("getReview", () => {
 
     const review = await getReview({ supabase, changesetId: CHANGESET_ID });
 
+    expect(review.changesetNumber).toBe(12);
     expect(review.digests[0]?.referenceIds).toEqual([EXISTING_REFERENCE_ID]);
     expect(review.digests[0]?.newReferenceKeys).toEqual([NEW_REFERENCE_ID]);
     expect(review.newReferences).toEqual([
@@ -145,5 +152,31 @@ describe("updateReview", () => {
         ],
       }),
     );
+  });
+});
+
+describe("discardReview", () => {
+  it("discard_ingestion_review RPC를 호출한다", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    await discardReview({ supabase, changesetId: CHANGESET_ID });
+
+    expect(rpc).toHaveBeenCalledWith("discard_ingestion_review", {
+      p_changeset_id: CHANGESET_ID,
+    });
+  });
+});
+
+describe("restoreReview", () => {
+  it("restore_ingestion_review RPC를 호출한다", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    await restoreReview({ supabase, changesetId: CHANGESET_ID });
+
+    expect(rpc).toHaveBeenCalledWith("restore_ingestion_review", {
+      p_changeset_id: CHANGESET_ID,
+    });
   });
 });
