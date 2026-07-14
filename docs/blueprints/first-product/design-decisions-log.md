@@ -511,3 +511,14 @@ Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감*
 - **검증**: `pnpm --filter @nema-io/web typecheck`/`lint`/`test`(67개, 전부 기존 케이스 그대로) 통과 확인. 로컬 브라우저 E2E는 앞선 슬라이스들과 같은 이유로 생략.
 
 ---
+
+### 2026-07-14 — Topic 관리: 이름변경/아카이브/되살리기 RPC (browsing-flow.md BE 계약)
+
+`browsing-flow.md` "Topic·Tag 관리" 섹션 4케이스(칩 클릭→팝오버, 이름변경, 아카이브, 되살리기) 중 BE 계약만 착지 — Tag(#404)를 Space 스코프로 미러링한 `update_topic`/`archive_topic`/`restore_topic` RPC + `topics.status` 컬럼. FE는 실제 "Digest 상세 편집 팝오버"가 아니라 `/dev` 확인용 하니스뿐이라 케이스 체크는 전부 미룸(각 케이스 상세의 범위 참고 참고).
+
+**amendment(2026-07-14, 멀티 에이전트 리뷰 반영)**:
+- **`update_topic`/`archive_topic`/`restore_topic`에 `USING ERRCODE` 추가**: 원래 코드 없이 `RAISE EXCEPTION`만 쓰고 있어, `toSupabaseErrorCode`가 인식 못 하고 전부 `query_failed`(`DB_QUERY_FAILED`, i18n `error.default`="Something went wrong")로 뭉개졌다 — 정상적인 이름 중복·이미 처리된 상태 재클릭까지 매번 Sentry에 캡처되는 부작용도 있었다. `NM005`(상태 가드 실패, source의 `NM004`와 같은 결)/`NM006`(이름 중복, space의 `NM003`과 같은 결)으로 분리하고 `EXPECTED_DOMAIN_CODES`에 등록 + 전용 i18n 메시지 추가.
+- **`useUpdateTopic`/`useArchiveTopic`/`useRestoreTopic`에 `skipGlobalToast` 추가**: `TopicRow`가 이미 인라인으로 에러를 보여주는데 빠져 있어 전역 토스트까지 중복 노출됐다 — `useUpdateSourceTitle`(2026-07-13 항목 참고)과 같은 이유, 같은 수정.
+- **`fetchRegistries`의 `status='active'` 필터에 회귀 테스트 추가**: 이 PR이 고친 실제 버그(재사용 제안 후보에 archived Topic이 새던 것)인데 테스트가 없었다 — `digestion.test.ts`에 topics 쿼리의 `eq` 인자를 기록하는 스텁을 추가해 필터 자체를 검증하게 함.
+- **알려진 한계, 이번 PR에서 미반영(별도 트래킹 필요)**: Topic을 실제로 만드는 세 find-or-create 경로(`write_ingestion_review_changes`/`confirm_digest_edit`/`confirm_draft`, 전부 `ON CONFLICT (space_id, name) DO UPDATE`)가 `status`를 안 본다 — archived 이름으로 재생성을 시도하면 status는 archived로 남은 채 새 링크만 조용히 붙는다(마이그레이션 헤더 주석에 명시). Tag의 동일한 find-or-create 경로에도 이미 있던 결함이라 이번 PR에서 Topic만 따로 고치지 않기로 함 — Tag·Topic 양쪽을 함께 다룰 별도 작업 필요.
+- **알려진 한계, 문서화만 함(코드 미반영)**: `listTopics`(topic.list)가 상태 필터 없이 전체를 반환하는 건 의도된 설계(스레드 피드 Topic 필터가 archived도 계속 선택 가능해야 함)지만, 이 목록이 `statement-search.ts`의 코스 스코핑(묻기 기능의 쿼리 라우팅 후보)에도 그대로 흘러들어간다 — 즉 archived Topic이 재사용 제안에서는 빠지지만 라우팅 후보에서는 안 빠진다. 아직 Topic 아카이브가 `/dev` 하니스로만 가능해 실사용자 경로로는 도달 안 하지만, 실제 Digest 상세 팝오버가 랜딩하면 재검토 필요.
