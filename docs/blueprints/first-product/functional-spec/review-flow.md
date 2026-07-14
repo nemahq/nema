@@ -66,6 +66,7 @@
   1. 추출된 Digest 후보와 Reference 후보가 문서형 편집 카드로 나열된다.
   2. 사이드뷰의 원문 탭이 첫 후보의 위치가 하이라이트된 채로 기본으로 열려 있다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-14, PR #412)**: Then #1은 구현됨(`DigestCandidateCard`/`ReferenceCandidateCard`로 카드 나열). Then #2는 축소 구현 — `Digest.locator`가 리뷰 draft에 실리지 않아 후보별 위치 하이라이트를 만들 수 없어서, 사이드뷰 원문 탭 대신 원문 전체를 보여주는 접이식 패널(`SourceTextPanel`)로 대체했다(design-decisions-log.md 참고). 그래서 미체크로 남김.
 
 #### 원문에 없는 필드는 비워둠
 
@@ -143,6 +144,7 @@
 - **When**: 후보 하나의 삭제 액션을 실행한다.
 - **Then**: 컨펌 모달 없이 그 후보가 즉시 이 changeset의 편집 중인 내용에서 제거된다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-14, PR #412)**: 구현됨 — `onRemove`로 컨펌 없이 즉시 로컬 상태(`removedDigestIndexes`)에서 제거. Reference 후보 삭제도 같은 방식으로 함께 구현됨(별도 케이스 없음, 이 케이스가 겸함). 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### Digest 리뷰 확정
 
@@ -154,6 +156,7 @@
   3. 진술·관계 생성이 시작된다.
   4. 화면은 이동하지 않고 그대로 남아, 상태 표시만 적용 완료를 나타내도록 바뀐다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-14, PR #412)**: Then #1·#4는 이 PR이 구현(`useConfirmReview`, 로컬 `outcome` 상태로 이동 없이 배지만 갱신). Then #2·#3(후보 확정·진술/관계 생성)은 기존 `confirm_ingestion_review` RPC가 이미 담당하던 부분이라 이 PR에서 변경 없음. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### Digest 리뷰 버리기
 
@@ -165,6 +168,7 @@
   3. 원본 Source는 초안(pending)으로 돌아간다.
   4. 화면은 이동하지 않고 그대로 남아, 상태 표시만 버려짐을 나타내도록 바뀐다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-14, PR #412)**: 신설된 `discard_ingestion_review` RPC(가드: `type='ingestion' AND status='pending'`, changes 미생성)와 `useDiscardReview`로 Then 전부 구현. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### 적용된 리뷰 되돌리기
 
@@ -175,6 +179,7 @@
   2. 이 changeset이 만든 Digest들이 archive되고, 원본 Source는 초안(pending)으로 돌아간다.
   3. 되돌리기 액션은 그 revert changeset의 상세로 이동하는 링크로 바뀐다.
 - **관여 화면**: Digest 리뷰 화면, Changeset 상세
+- **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다 — `digestReview.get` RPC 가드가 `status='pending'`만 허용해 적용된 changeset은 애초에 Digest 리뷰 화면에서 조회가 안 된다. 그래서 되돌리기 액션은 Digest 리뷰 화면이 아니라 Changeset 상세에만 뒀다(`useRevertChangeset`). 기존 `revert_changeset` RPC(ingestion 타입 처리 포함)를 그대로 호출하는 UI만 이번에 새로 얹은 것 — Then 자체는 그 RPC가 이미 구현. Then #3의 "링크로 바뀐다"는 부분은 미구현(되돌리기 후 새로 생긴 revert changeset 상세로 자동 이동하는 링크는 없음, invalidate만 함). 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### 원본도 삭제하기
 
@@ -184,6 +189,7 @@
   1. 그 원본(Source)이 즉시 trashed 상태로 전환된다.
   2. 원본도 삭제하기 액션이 사라진다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다(위 "적용된 리뷰 되돌리기"와 같은 이유) — 버려지거나 되돌려진 changeset은 Digest 리뷰 화면에서 조회가 안 되므로, "원본도 삭제하기" 액션은 Changeset 상세에만 뒀다(`useTrashReviewSource`, 기존 `trash_source` RPC 재사용). Then 자체는 구현(확인 다이얼로그 → 즉시 trashed 전환 → 액션 비활성화). 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### 버려진 리뷰 되살리기
 
@@ -194,6 +200,7 @@
   2. 버리기 직전의 편집 상태(삭제했던 후보 등)가 그대로 복원된다.
   3. 변경셋 탭에서도 이 changeset이 Closed에서 Open으로 옮겨간다.
 - **관여 화면**: Digest 리뷰 화면, 변경셋
+- **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다(위 두 케이스와 같은 이유) — 되살리기 액션은 Changeset 상세에만 뒀다(`useRestoreReview` + 신설 `restore_ingestion_review` RPC). Then #1·#3은 구현. Then #2("버리기 직전의 편집 상태가 복원된다")는 구조적으로 불가능 — `discard_ingestion_review`가 changes를 아예 안 만드는 방식이라(변경이력 없음, 마이그레이션 주석 참고) 서버에 복원할 "편집 중이던 상태" 자체가 없다. `restore_ingestion_review`는 changeset.status만 되돌릴 뿐, 후보 삭제·제목 수정 같은 로컬 편집 내용은 애초에 저장된 적이 없어 복원 대상이 아니다 — 되살리면 원래(추출 직후) 상태의 Digest 리뷰 화면으로 돌아간다. 이 케이스의 Then #2는 스펙과 실제 구현이 근본적으로 다른 지점이라 PM 확인 필요(design-decisions-log.md 참고). 그래서 미체크로 남김.
 
 #### 원본 삭제 후 되살리기 비활성화
 
@@ -201,6 +208,7 @@
 - **When**: Digest 리뷰 화면에 진입한다.
 - **Then**: 되살리기 액션이 비활성화된 채로 남아 있고, 원본이 삭제되어 되살릴 수 없다는 이유가 함께 표시된다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다(위 세 케이스와 같은 이유) — 비활성화·이유 표시는 Changeset 상세에서 구현됨(`restoreBlocked`). 리뷰에서 발견된 두 번째 케이스(원본이 trashed가 아니라 그 사이 다른 경로로 재인제스천되어 active가 된 경우)도 별도 이유 문구로 함께 처리하도록 리뷰 반영 후 보강함. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### 신규 Reference 후보 편집
 
@@ -297,6 +305,7 @@
 - **When**: 그 마지막 남은 후보를 삭제한다.
 - **Then**: 확정 액션이 비활성화되고, 후보가 하나도 없어 확정할 게 없다는 이유가 함께 표시된다. 버리기 액션은 계속 사용할 수 있다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-14, PR #412)**: 구현됨 — `confirmDisabledReason`(순수 함수로 추출, 유닛 테스트 있음)이 `hasCandidates`를 최우선으로 판정. 버리기 액션은 이 비활성화와 무관하게 항상 사용 가능. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### 제목 없이 확정 비활성화
 
@@ -304,6 +313,7 @@
 - **When**: 그 제목을 모두 지운다.
 - **Then**: 확정 액션이 비활성화되고, 제목이 필요하다는 이유가 함께 표시된다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-14, PR #412)**: 구현됨 — "제목"은 Changeset 제목이 아니라 Digest 후보 자체의 제목(`DigestCandidateCard`의 `Input`, `Changeset.title` 컬럼은 이번 PR 스코프 밖). `confirmDisabledReason`이 `hasEmptyTitle`을 판정. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 ## 실행취소
 
