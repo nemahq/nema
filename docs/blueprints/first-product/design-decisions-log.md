@@ -600,3 +600,23 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 - **Important — 팝오버 로딩/에러 상태가 "결과 없음"과 구분 안 되던 문제**: `isLoading`/`isError`를 읽어 별도 문구로 분리, 검색/정확매치 로직은 `labelSearch.ts`로 추출해 순수 함수 테스트로 고정.
 - **Suggestions 3건 반영**: 같은 Digest 안 신규 라벨 이름 중복 생성 방지(`isDuplicateLabelName`), `EditableLabelChip`의 `readOnly`/`onNameChange` 페어링을 discriminated union으로 강제(편집 가능한데 핸들러 없는 상태를 타입으로 원천 차단), `DigestTagDraft.id`(쓰기 시 무시되는 표시용 힌트)와 `TagUpdateInputSchema.id`(신뢰되는 PK) 의미 차이를 스키마 주석으로 문서화.
 - **검증**: 위 수정 전부 리뷰에서 실제 diff를 대조해 정확성 확인(4개 에이전트 병렬 리뷰 — code-reviewer/silent-failure-hunter/type-design-analyzer/pr-test-analyzer). CI(`check`) 통과, `mergeStateStatus: CLEAN`.
+
+---
+
+### 2026-07-15 — Source 원본 편집 + 제목 생성을 디제스천에서 분리 (PR #415)
+
+"결과없음(empty)"에서 재추출을 눌러봐야 원본이 그대로면 같은 결과가 나올 뿐이다 — 재추출이 의미를 가지려면 그 전에 원본(body)을 고칠 수 있어야 한다. 이 김에 제목 생성 방식도 다시 봤다: 제목은 Digest 추출 결과에 의존하지 않는데도 추출과 같은 무거운 LLM 콜(원문 전체 분석, standard 티어)에 얹혀 나오고 있었다.
+
+- **제목 생성을 디제스천에서 완전히 분리**: body만 보는 별도 nano 콜로 떼어내 Source 생성 시점에 한 번 띄운다(ChatGPT 사이드바 제목이 응답 완료를 안 기다리고 첫 메시지만 보고 뽑히는 것과 같은 패턴). 응답을 안 붙잡는다(`fillSourceTitle`, fire-and-forget) — 제목 콜이 죽어도 원본 저장은 이미 끝난 일이고, 제목 없는 원본은 화면이 body 미리보기로 그린다. 재시도·큐도 없다 — 제목은 평생 한 번만 시도하는 값이다(`trackEvent`와 같은 부수효과 호출 규약). nano엔 body 전체(최대 100k자) 대신 앞 4,000자만 넣는다 — 도입부만 봐도 제목은 나오고, 장문 하나가 콜 비용·지연을 튀게 하는 손해가 크다.
+- **`title_edited` 플래그 제거, `title IS NULL` 구조 가드로 대체**: 이 플래그는 "누가 title을 채웠나(사람/LLM)"를 구분했지만, 제목 생성이 생성 시점 한 번뿐인 지금은 "이미 채워진 적 있나"만 보면 충분하다. 새 RPC `fill_source_title`은 `title IS NULL`이 유일한 가드라 한 번 채워진 제목을 구조적으로 못 덮는다 — 사람이 먼저 고쳤든 앞선 콜이 채웠든 두 번째 쓰기는 조용히 no-op(사람 편집과 달리 예외를 안 던진다). `complete_source_digestion`·`create_ingestion_review`는 이제 `p_title` 파라미터가 없고 title과 완전히 무관해졌다.
+- **`update_source_body` 신설 — 원본 편집 가드**: `update_source_title`과 같은 가드(pending + 처리 중 아님)에 "열린 pending 리뷰 없음"을 하나 더 얹는다. 리뷰에 뜬 Digest 후보들이 바로 그 body에서 뽑힌 것이라, 원본을 갈아치우면 더는 존재하지 않는 문장에서 나온 후보가 된다. 실제로 열리는 자리는 cancelled·failed·empty·discarded(리뷰를 사람이 버린 뒤) 넷 — 전부 "지금 화면에 걸린 후보가 없는" 자리다. body를 고쳐도 title은 그대로 둔다(비우면 사람이 정한 제목이 다음 생성 콜에 덮이는, 방금 없앤 문제가 되돌아온다 — 애초에 재추출도 title을 안 건드리므로 이 우려 자체가 구조적으로 사라졌다).
+- **BE만 착지, FE는 후속**: `source.updateBody` tRPC 뮤테이션까지는 이번 슬라이스에 포함되지만 편집 액션 UI(버튼·다이얼로그)는 없다 — `intake-flow.md`의 "초안에서 Source 원본 편집" 케이스는 미체크로 남김.
+- **배포 순서 주의**: `complete_source_digestion`·`create_ingestion_review`의 시그니처가 바뀐다(`p_title` 제거) — 마이그레이션이 먼저 반영되고 새 서버 코드가 아직 안 뜬 창에서는 구 워커가 없는 시그니처를 호출해 디제스천이 실패한다(워커 재시도가 흡수). PR #413의 `20260713110000` 선례와 같은 패턴.
+
+**amendment(2026-07-15, 멀티 에이전트 리뷰 반영)**:
+
+- **Important — `fillSourceTitle`의 "공백뿐인 제목" 분기가 완전히 무음이었음**: LLM 프로바이더의 빈 응답 가드는 완전히 빈 문자열만 막아, 공백만 있는 응답은 trim 후 서비스까지 와서 조용히 return됐다 — 같은 함수의 다른 두 실패 경로(RPC 에러, LLM 예외)는 전부 Sentry로 가는데 이 경로만 무음이라, 프로바이더가 통째로 망가져도 아무도 몰랐을 것. `Sentry.captureMessage` 추가 + 테스트로 고정.
+- **Important — `fillSourceTitle`의 RPC 에러 분기가 미검증**: `fill_source_title` RPC 자체가 에러를 반환하는 경로(마이그레이션 주석이 명시한 실제 시나리오 — 사람이 async 콜 도착 전에 직접 제목을 편집)에 대한 테스트가 없었다 — `titleSupabase()` 목을 확장해 `fill_source_title`에 에러를 주입할 수 있게 하고 테스트 추가.
+- **주석 정정 2건**: (1) `update_source_body`가 열리는 자리를 "cancelled·failed·empty 셋"이라고 했지만 실제론 리뷰를 사람이 버린(discarded) 경우까지 넷이다 — discarded는 changeset이 pending에서 빠져 가드를 통과하는데, "판단이 안 나와서"가 아니라 "판단은 나왔지만 사람이 버려서"라 원래 주석의 근거 자체가 그 케이스엔 안 맞았다. (2) `fill_source_title`의 무음 no-op가 사실 둘로 갈린다는 것(title 이미 채워짐 — 정상 / 호출자가 Space 멤버 아님 — 비정상이지만 현재 호출부 구조상 도달 불가)을 주석에 추가.
+- **Suggestion — `task-routing.ts`의 stale 카운트 주석**: "9개 LLM 기능"이 이 PR로 10개가 되며 stale해진 걸 발견해 카운트 표기를 뗌.
+- **검증**: 위 수정 전부 리뷰에서 실제 diff를 대조해 정확성 확인(4개 에이전트 병렬 리뷰 — code-reviewer/silent-failure-hunter/pr-test-analyzer/comment-analyzer). `pnpm typecheck`/`lint`/`format:check`/`knip`/`depcruise`/`test` 전부 통과, CI(`check`) 통과, `mergeStateStatus: CLEAN`.

@@ -1,4 +1,4 @@
-// task별 모델 라우팅 — 9개 LLM 기능마다 독립적으로 모델을 갈아끼우는 층.
+// task별 모델 라우팅 — LLM 기능마다 독립적으로 모델을 갈아끼우는 층.
 // 기본값은 각 task가 현재 쓰는 tier를 그대로 가리켜(아래 TASK_DEFAULTS),
 // override가 없으면 동작이 불변이다. override는 메모리 전용(재배포 없이 런타임 스위칭).
 import { z } from "zod";
@@ -17,6 +17,7 @@ export const LLM_TASK_SCHEMA = z.enum([
   "generateDraft",
   "classifyDraftIntent",
   "generateSessionTitle",
+  "generateSourceTitle",
   "extractStatements",
   "generateDigests",
   "judgeRelations",
@@ -41,6 +42,8 @@ export const TASK_DEFAULTS = {
   generateDraft: { tier: "standard" },
   classifyDraftIntent: { tier: "mini" },
   generateSessionTitle: { tier: "nano" },
+  // Source 제목: body 도입부만 보고 헤드라인 한 줄. 세션 제목과 같은 일이라 같은 nano.
+  generateSourceTitle: { tier: "nano" },
   extractStatements: { tier: "standard", effort: "low" },
   // Digest 생성: 원문을 유형별 정리본으로 쪼개고 라벨·레퍼런스까지 제안. 사람이 그대로
   // 확정하는 품질이 목표라 standard, effort는 추출과 같은 이유로 low(타임아웃 변동 억제).

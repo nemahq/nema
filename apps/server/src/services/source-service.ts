@@ -1,22 +1,33 @@
+import * as Sentry from "@sentry/node";
+
+import { SOURCE_TITLE_MAX_LENGTH } from "@nema-io/shared";
+
 import type { Database } from "@server/infra/database.types";
+import type { Providers } from "@server/infra/providers";
 import { abortDigestion } from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import {
+  buildSourceTitleMessage,
+  SOURCE_TITLE_SYSTEM_PROMPT,
+} from "@server/prompts/source-title";
 import { parseLocatorIndex } from "@server/services/statement-search";
 
 type ExtractionStatus = Database["public"]["Enums"]["ingestion_status"];
 type DigestionStatus = Database["public"]["Enums"]["digestion_status"];
 
-// 박제까지만 동기 — 추출·임베딩은 statement-sync 워커가 이어받는다.
+// 박제까지만 동기 — 추출·임베딩은 statement-sync 워커가 이어받고, 제목은 여기서 띄운
+// 콜이 뒤에서 채운다(응답을 안 붙잡는다).
 // 응답은 source_id 하나. 화면은 이 id로 처리 상태를 추적한다 (ingestion-design 2장).
 export async function createSource(args: {
   supabase: TypedSupabaseClient;
+  providers: Providers;
   body: string;
   sessionId?: string;
   spaceId?: string;
   timeZone?: string;
 }): Promise<{ sourceId: string }> {
-  const { supabase, body, sessionId, spaceId, timeZone } = args;
+  const { supabase, providers, body, sessionId, spaceId, timeZone } = args;
 
   // spaceId 미지정 호출(MCP·dev-harness)만 이 경로를 탄다 — 1인 단계엔 가입
   // 트리거가 만든 개인 Space 1개뿐이라(RLS로 내 멤버십만 보임) 가장 오래된
@@ -40,6 +51,8 @@ export async function createSource(args: {
     ...(timeZone !== undefined && { p_author_timezone: timeZone }),
   });
   throwIfSupabaseError(error);
+
+  fillSourceTitle({ supabase, providers, sourceId, body });
 
   return { sourceId };
 }
@@ -260,6 +273,77 @@ export async function updateSourceTitle(args: {
     p_title: title,
   });
   throwIfSupabaseError(error);
+}
+
+// 재추출 전에 원본 고치기 — "결과없음"에서 다시 돌려봐야 원본이 그대로면 결과도 같다.
+// 열린 리뷰가 있으면 RPC 가드가 막는다: 리뷰에 떠 있는 Digest들이 바로 이 body에서
+// 뽑힌 것들이라, 갈아치우면 화면의 후보들이 없는 문장에서 나온 것이 된다.
+export async function updateSourceBody(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+  body: string;
+}): Promise<void> {
+  const { supabase, sourceId, body } = args;
+
+  const { error } = await supabase.rpc("update_source_body", {
+    p_source_id: sourceId,
+    p_body: body,
+  });
+  throwIfSupabaseError(error);
+}
+
+// Source 제목 생성 — 생성 직후 딱 한 번, 응답을 안 붙잡고 뒤에서 돈다(trackEvent와 같은
+// 부수효과 호출 규약: 절대 안 던지고, 실패는 Sentry로만 샌다). 제목이 없다고 원본 저장이
+// 실패할 이유는 없고, 화면도 제목 없는 원본을 body 미리보기로 그린다.
+//
+// 재시도·큐가 없는 건 의도다. 제목은 평생 한 번만 시도하는 값이라(fill_source_title의 null
+// 가드가 그걸 구조로 못박는다) 이 콜이 죽으면 그 원본은 제목 없이 남고, 그 뒤론 사람이
+// 직접 붙이는 것 외엔 아무도 안 건드린다.
+function fillSourceTitle(args: {
+  supabase: TypedSupabaseClient;
+  providers: Providers;
+  sourceId: string;
+  body: string;
+}): void {
+  const { supabase, providers, sourceId, body } = args;
+
+  void (async () => {
+    try {
+      const raw = await providers.llm
+        .forTask("generateSourceTitle")
+        .generateText({
+          systemPrompt: SOURCE_TITLE_SYSTEM_PROMPT,
+          messages: [{ role: "user", content: buildSourceTitleMessage(body) }],
+        });
+
+      // 공백뿐인 응답은 프로바이더의 빈 응답 가드(완전히 빈 문자열)를 통과해 여기까지 온다.
+      // 조용히 돌아서면 프로바이더가 통째로 망가져 전 원본의 제목이 안 붙어도 아무도 모른다.
+      const title = raw.trim().slice(0, SOURCE_TITLE_MAX_LENGTH);
+      if (!title) {
+        Sentry.captureMessage("[source-title] LLM returned a blank title", {
+          level: "warning",
+          extra: { sourceId },
+        });
+        return;
+      }
+
+      const { error } = await supabase.rpc("fill_source_title", {
+        p_source_id: sourceId,
+        p_title: title,
+      });
+      if (error) {
+        Sentry.captureMessage(
+          `[source-title] fill_source_title failed: ${error.message}`,
+          { level: "warning", extra: { sourceId } },
+        );
+      }
+    } catch (err) {
+      Sentry.captureException(err, {
+        tags: { component: "source-title" },
+        extra: { sourceId },
+      });
+    }
+  })();
 }
 
 interface SourceStatement {

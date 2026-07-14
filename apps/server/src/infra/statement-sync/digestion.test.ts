@@ -323,7 +323,6 @@ function digestionLlm(
 }
 
 const ONE_DIGEST_OUTPUT = {
-  sourceTitle: "배포 도구 결정",
   digests: [makeGeneratedDigest()],
   newReferences: [],
 };
@@ -420,27 +419,10 @@ describe("runDigestionPass — 취소", () => {
     expect(eqCallsByTable.topics).toContainEqual(["status", "active"]);
   });
 
-  it("생성 콜의 sourceTitle을 별도 콜 없이 create_ingestion_review에 함께 싣는다", async () => {
-    const { supabase, rpc } = mockDigestionSupabase();
-    const llm = digestionLlm(
-      vi.fn(
-        async () => ONE_DIGEST_OUTPUT,
-      ) as unknown as LlmProvider["generateStructured"],
-    );
-
-    await runDigestionPass({ supabase, forTask: () => llm });
-
-    expect(rpc).toHaveBeenCalledWith(
-      "create_ingestion_review",
-      expect.objectContaining({ p_title: "배포 도구 결정" }),
-    );
-  });
-
-  it("판단 없는 글(빈 digests)도 sourceTitle은 complete_source_digestion에 실어 저장한다", async () => {
+  it("판단 없는 글(빈 digests)은 리뷰를 안 열고 완료만 찍는다", async () => {
     const { supabase, rpc } = mockDigestionSupabase();
     const llm = digestionLlm(
       vi.fn(async () => ({
-        sourceTitle: "안부 인사",
         digests: [],
         newReferences: [],
       })) as unknown as LlmProvider["generateStructured"],
@@ -448,10 +430,11 @@ describe("runDigestionPass — 취소", () => {
 
     await runDigestionPass({ supabase, forTask: () => llm });
 
+    // 후보가 0개인데 리뷰가 열리면 사용자는 빈 리뷰 화면을 마주한다
     expect(rpc).toHaveBeenCalledWith("complete_source_digestion", {
       p_source_id: SOURCE_ID,
-      p_title: "안부 인사",
     });
+    expect(rpcNames(rpc)).not.toContain("create_ingestion_review");
   });
 
   it("진짜 LLM 실패는 그대로 retry 경로를 탄다 — 취소 가드가 오류를 삼키지 않는다", async () => {

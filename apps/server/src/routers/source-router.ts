@@ -3,9 +3,11 @@ import {
   SourceCreateInputSchema,
   SourceGetInputSchema,
   SourceReassignSpaceInputSchema,
+  SourceUpdateBodyInputSchema,
   SourceUpdateTitleInputSchema,
 } from "@nema-io/shared";
 
+import { getProviders } from "@server/infra/providers";
 import {
   cancelSourceDigestion,
   createSource,
@@ -15,6 +17,7 @@ import {
   listSources,
   reassignSourceSpace,
   startSourceDigestion,
+  updateSourceBody,
   updateSourceTitle,
 } from "@server/services/source-service";
 import { protectedProcedure, router } from "@server/trpc";
@@ -25,6 +28,7 @@ export const sourceRouter = router({
     .mutation(({ ctx, input }) =>
       createSource({
         supabase: ctx.supabase,
+        providers: getProviders(),
         body: input.body,
         sessionId: input.sessionId,
         spaceId: input.spaceId,
@@ -91,6 +95,16 @@ export const sourceRouter = router({
         supabase: ctx.supabase,
         sourceId: input.sourceId,
         title: input.title,
+      }),
+    ),
+
+  updateBody: protectedProcedure
+    .input(SourceUpdateBodyInputSchema)
+    .mutation(({ ctx, input }) =>
+      updateSourceBody({
+        supabase: ctx.supabase,
+        sourceId: input.sourceId,
+        body: input.body,
       }),
     ),
 });

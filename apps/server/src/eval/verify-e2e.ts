@@ -189,9 +189,16 @@ async function runPipeline(args: {
   const vectorStore = createQdrantStore(createQdrantClient());
   await vectorStore.ensureCollection();
 
+  const providers = {
+    llm: { forTask: () => llm },
+    embedding,
+    vectorStore,
+  };
+
   // ── ① create_source 박제 ──────────────────────────────────────────
   const { sourceId } = await createSource({
     supabase: userClient,
+    providers,
     body: SOURCE_BODY,
   });
   const { data: source, error: sourceError } = await admin
@@ -298,12 +305,7 @@ async function runPipeline(args: {
   // ── ④ 뜻 검색 → 원장 조회 → 원본 묶음 반환 ────────────────────────
   const searchResult = await searchStatements({
     supabase: userClient,
-    // 검색은 vectorStore·embedding만 쓴다 — llm은 타입 충족용.
-    providers: {
-      llm: { forTask: () => llm },
-      embedding,
-      vectorStore,
-    },
+    providers,
     query: SEARCH_QUERY,
   });
   const hitContents = searchResult.groups.flatMap((g) =>
@@ -335,6 +337,7 @@ async function runPipeline(args: {
   );
   const { sourceId: longSourceId } = await createSource({
     supabase: userClient,
+    providers,
     body: longBody,
   });
 
