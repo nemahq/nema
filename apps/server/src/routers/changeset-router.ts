@@ -62,7 +62,11 @@ export const changesetRouter = router({
   listChangesets: protectedProcedure
     .input(ListChangesetsInputSchema)
     .query(({ ctx, input }) =>
-      listChangesets({ supabase: ctx.supabase, limit: input.limit }),
+      listChangesets({
+        supabase: ctx.supabase,
+        spaceId: input.spaceId,
+        limit: input.limit,
+      }),
     ),
 
   listActiveRelations: protectedProcedure

@@ -12,7 +12,9 @@ import { notFoundAtRoot } from "@web/app/error/notFound";
 import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
+import { ChangesetDetailPage } from "@web/app/pages/ChangesetDetailPage";
 import { ComingSoonPage } from "@web/app/pages/ComingSoonPage";
+import { DigestReviewPage } from "@web/app/pages/DigestReviewPage";
 import { DraftsPage } from "@web/app/pages/DraftsPage";
 import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
@@ -191,6 +193,42 @@ const draftsRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
+function DigestReviewShell() {
+  const { spacePublicId, changesetId } = digestReviewRoute.useParams();
+  return (
+    <DigestReviewPage
+      key={changesetId}
+      spacePublicId={spacePublicId}
+      changesetId={changesetId}
+    />
+  );
+}
+
+const digestReviewRoute = createRoute({
+  getParentRoute: () => workspaceSidebarRoute,
+  path: "/space/$spacePublicId/review/$changesetId",
+  component: DigestReviewShell,
+  errorComponent: RouteErrorFallback,
+});
+
+function ChangesetDetailShell() {
+  const { spacePublicId, changesetId } = changesetDetailRoute.useParams();
+  return (
+    <ChangesetDetailPage
+      key={changesetId}
+      spacePublicId={spacePublicId}
+      changesetId={changesetId}
+    />
+  );
+}
+
+const changesetDetailRoute = createRoute({
+  getParentRoute: () => workspaceSidebarRoute,
+  path: "/space/$spacePublicId/changesets/$changesetId",
+  component: ChangesetDetailShell,
+  errorComponent: RouteErrorFallback,
+});
+
 // 내부 테스트 조종석 (NEM-125) — 프로덕션에서는 존재하지 않는 경로로 보인다
 const devHarnessRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
@@ -215,6 +253,8 @@ const routeTree = rootRoute.addChildren([
       workspaceHomeRoute,
       spaceOverviewRoute,
       draftsRoute,
+      digestReviewRoute,
+      changesetDetailRoute,
     ]),
     devHarnessRoute,
   ]),

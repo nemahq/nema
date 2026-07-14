@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
-import { getReview, updateReview } from "./digest-review-service";
+import {
+  discardReview,
+  getReview,
+  restoreReview,
+  updateReview,
+} from "./digest-review-service";
 
 const CHANGESET_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const SOURCE_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -34,6 +39,7 @@ describe("getReview", () => {
     const supabase = mockSupabase({
       changesets: {
         id: CHANGESET_ID,
+        number: 12,
         type: "ingestion",
         status: "pending",
         source_id: SOURCE_ID,
@@ -75,6 +81,7 @@ describe("getReview", () => {
 
     const review = await getReview({ supabase, changesetId: CHANGESET_ID });
 
+    expect(review.changesetNumber).toBe(12);
     expect(review.digests[0]?.referenceIds).toEqual([EXISTING_REFERENCE_ID]);
     expect(review.digests[0]?.newReferenceKeys).toEqual([NEW_REFERENCE_ID]);
     expect(review.newReferences).toEqual([
@@ -145,5 +152,65 @@ describe("updateReview", () => {
         ],
       }),
     );
+  });
+});
+
+describe("discardReview", () => {
+  it("discard_ingestion_review RPC를 호출한다", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    await discardReview({ supabase, changesetId: CHANGESET_ID });
+
+    expect(rpc).toHaveBeenCalledWith("discard_ingestion_review", {
+      p_changeset_id: CHANGESET_ID,
+    });
+  });
+
+  // NM008(ingestion_review_state_changed)이 빠지면 error-mapper가 예상 밖 장애로
+  // 오분류해 매 클릭마다 스퓨리어스 Sentry 캡처 + "Something went wrong"만 뜬다.
+  it("가드가 지면(이미 pending이 아님) ingestion_review_state_changed로 매핑된다", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: {
+        code: "NM008",
+        message:
+          "changeset ... is not a pending ingestion review the caller can discard",
+      },
+    });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    await expect(
+      discardReview({ supabase, changesetId: CHANGESET_ID }),
+    ).rejects.toMatchObject({ code: "ingestion_review_state_changed" });
+  });
+});
+
+describe("restoreReview", () => {
+  it("restore_ingestion_review RPC를 호출한다", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    await restoreReview({ supabase, changesetId: CHANGESET_ID });
+
+    expect(rpc).toHaveBeenCalledWith("restore_ingestion_review", {
+      p_changeset_id: CHANGESET_ID,
+    });
+  });
+
+  it("가드가 지면(discarded가 아니거나 원본이 trashed됨) ingestion_review_state_changed로 매핑된다", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: {
+        code: "NM008",
+        message:
+          "source ... is not pending — cannot restore a review over a trashed source",
+      },
+    });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    await expect(
+      restoreReview({ supabase, changesetId: CHANGESET_ID }),
+    ).rejects.toMatchObject({ code: "ingestion_review_state_changed" });
   });
 });

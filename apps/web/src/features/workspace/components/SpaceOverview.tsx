@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 
 import { Skeleton } from "@nema-io/weave";
 
 import { SourceComposer } from "@web/features/intake";
+import { ChangesPanel } from "@web/features/review";
 import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -21,6 +23,7 @@ interface SpaceOverviewProps {
 
 export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { data: spaceList, isLoading } = useSpaceList();
   const [tab, setTab] = useState<SpaceTab>("topic");
 
@@ -80,9 +83,27 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
           </SpaceTabButton>
         </div>
 
-        <div className="flex flex-1 items-center justify-center py-16">
-          <SpaceEmptyState />
-        </div>
+        {tab === "topic" ? (
+          <div className="flex flex-1 items-center justify-center py-16">
+            <SpaceEmptyState />
+          </div>
+        ) : (
+          <ChangesPanel
+            spaceId={space?.id}
+            onOpenReview={(changesetId) =>
+              navigate({
+                to: "/space/$spacePublicId/review/$changesetId",
+                params: { spacePublicId, changesetId },
+              })
+            }
+            onOpenDetail={(changesetId) =>
+              navigate({
+                to: "/space/$spacePublicId/changesets/$changesetId",
+                params: { spacePublicId, changesetId },
+              })
+            }
+          />
+        )}
       </div>
     </main>
   );

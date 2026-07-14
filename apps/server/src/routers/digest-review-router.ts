@@ -1,12 +1,16 @@
 import {
   DigestReviewConfirmInputSchema,
+  DigestReviewDiscardInputSchema,
   DigestReviewGetInputSchema,
+  DigestReviewRestoreInputSchema,
   DigestReviewUpdateInputSchema,
 } from "@nema-io/shared";
 
 import {
   confirmReview,
+  discardReview,
   getReview,
+  restoreReview,
   updateReview,
 } from "@server/services/digest-review-service";
 import { protectedProcedure, router } from "@server/trpc";
@@ -33,5 +37,17 @@ export const digestReviewRouter = router({
     .input(DigestReviewConfirmInputSchema)
     .mutation(({ ctx, input }) =>
       confirmReview({ supabase: ctx.supabase, changesetId: input.changesetId }),
+    ),
+
+  discard: protectedProcedure
+    .input(DigestReviewDiscardInputSchema)
+    .mutation(({ ctx, input }) =>
+      discardReview({ supabase: ctx.supabase, changesetId: input.changesetId }),
+    ),
+
+  restore: protectedProcedure
+    .input(DigestReviewRestoreInputSchema)
+    .mutation(({ ctx, input }) =>
+      restoreReview({ supabase: ctx.supabase, changesetId: input.changesetId }),
     ),
 });

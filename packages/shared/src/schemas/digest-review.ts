@@ -96,6 +96,20 @@ export type DigestReviewConfirmInput = z.infer<
   typeof DigestReviewConfirmInputSchema
 >;
 
+export const DigestReviewDiscardInputSchema = z.object({
+  changesetId: z.string().uuid(),
+});
+export type DigestReviewDiscardInput = z.infer<
+  typeof DigestReviewDiscardInputSchema
+>;
+
+export const DigestReviewRestoreInputSchema = z.object({
+  changesetId: z.string().uuid(),
+});
+export type DigestReviewRestoreInput = z.infer<
+  typeof DigestReviewRestoreInputSchema
+>;
+
 // 확정 Digest 직접 수정 — 옛 Digest를 archive하고 이 초안으로 새 Digest를 만든다(manual
 // changeset). 초안 편집은 클라 상태로 하고 확정 때만 서버로 오므로 리뷰(pending 초안 persist)와
 // 달리 단일 확정 페이로드다. newReferenceKeys 무결성은 리뷰와 같은 규칙으로 경계에서 막는다.

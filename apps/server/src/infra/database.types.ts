@@ -77,6 +77,7 @@ export type Database = {
           author_id: string | null;
           created_at: string;
           id: string;
+          number: number | null;
           reverts_id: string | null;
           source_id: string | null;
           space_id: string | null;
@@ -88,6 +89,7 @@ export type Database = {
           author_id?: string | null;
           created_at?: string;
           id?: string;
+          number?: number | null;
           reverts_id?: string | null;
           source_id?: string | null;
           space_id?: string | null;
@@ -99,6 +101,7 @@ export type Database = {
           author_id?: string | null;
           created_at?: string;
           id?: string;
+          number?: number | null;
           reverts_id?: string | null;
           source_id?: string | null;
           space_id?: string | null;
@@ -773,6 +776,7 @@ export type Database = {
           created_at: string;
           id: string;
           name: string;
+          next_changeset_number: number;
           public_id: string;
           updated_at: string;
           workspace_id: string;
@@ -781,6 +785,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           name: string;
+          next_changeset_number?: number;
           public_id: string;
           updated_at?: string;
           workspace_id: string;
@@ -789,6 +794,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           name?: string;
+          next_changeset_number?: number;
           public_id?: string;
           updated_at?: string;
           workspace_id?: string;
@@ -1221,6 +1227,10 @@ export type Database = {
         Args: { p_workspace_id: string };
         Returns: undefined;
       };
+      discard_ingestion_review: {
+        Args: { p_changeset_id: string };
+        Returns: undefined;
+      };
       fetch_pending_digestion_sources: {
         Args: { p_max_retries?: number };
         Returns: {
@@ -1353,6 +1363,10 @@ export type Database = {
       };
       rename_space: {
         Args: { p_name: string; p_space_id: string };
+        Returns: undefined;
+      };
+      restore_ingestion_review: {
+        Args: { p_changeset_id: string };
         Returns: undefined;
       };
       restore_tag: { Args: { p_tag_id: string }; Returns: undefined };

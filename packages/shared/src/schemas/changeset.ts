@@ -28,6 +28,11 @@ export const CHANGESET_LIST_LIMIT_DEFAULT = 50;
 export const CHANGESET_LIST_LIMIT_MAX = 100;
 
 export const ListChangesetsInputSchema = z.object({
+  // changesets.number는 Space 안에서만 유일해서, 스코프 없이 여러 Space를 섞어
+  // 반환하면 서로 다른 Space의 changeset이 같은 번호로 보일 수 있다 — 실제 화면은
+  // 항상 넘겨야 한다. 미지정(source.create와 같은 결의 MCP·dev-harness 전용 폴백)
+  // 시에만 서버가 기본 Space(가장 오래된 멤버십)로 대체한다.
+  spaceId: z.string().uuid().optional(),
   limit: z
     .number()
     .int()
