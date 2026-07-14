@@ -1,7 +1,9 @@
-import type { ReferenceType } from "@nema-io/shared";
 import { Badge } from "@nema-io/weave";
 
-import { REFERENCE_TYPE_LABEL } from "@web/features/review/constants";
+import {
+  isReferenceType,
+  REFERENCE_TYPE_LABEL,
+} from "@web/features/review/constants";
 import type { ReviewCitedReference } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -27,7 +29,9 @@ export function ReferenceMergeCard({
     <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-surface-raised p-4">
       <div className="flex min-w-0 items-center gap-2">
         <Badge variant="info">
-          {REFERENCE_TYPE_LABEL[reference.type as ReferenceType]}
+          {isReferenceType(reference.type)
+            ? REFERENCE_TYPE_LABEL[reference.type]
+            : reference.type}
         </Badge>
         <span className="min-w-0 truncate text-sm font-medium text-fg-primary">
           {reference.title}

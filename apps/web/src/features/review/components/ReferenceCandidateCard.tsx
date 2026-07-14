@@ -10,7 +10,10 @@ import {
 } from "@nema-io/weave";
 import { Trash2 } from "@nema-io/weave/icons";
 
-import { REFERENCE_TYPE_LABEL } from "@web/features/review/constants";
+import {
+  isReferenceType,
+  REFERENCE_TYPE_LABEL,
+} from "@web/features/review/constants";
 import type { ReviewNewReference } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -35,12 +38,11 @@ export function ReferenceCandidateCard({
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <Select
             value={reference.type}
-            onValueChange={(type) =>
-              onChange({
-                ...reference,
-                type: type as ReviewNewReference["type"],
-              })
-            }
+            onValueChange={(type) => {
+              if (isReferenceType(type)) {
+                onChange({ ...reference, type });
+              }
+            }}
             disabled={disabled}
           >
             <SelectTrigger

@@ -20,6 +20,7 @@ import { Trash2 } from "@nema-io/weave/icons";
 import {
   DIGEST_BODY_FIELDS,
   DIGEST_TYPE_LABEL,
+  isDigestType,
 } from "@web/features/review/constants";
 import type {
   ReviewCitedReference,
@@ -115,11 +116,13 @@ export function DigestCandidateCard({
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <Select
             value={body.type}
-            onValueChange={(type) =>
+            onValueChange={(type) => {
               // 타입을 바꾸면 새 타입의 빈 body로 갈아끼운다 — 이전 타입 전용
               // 필드는 판별자가 달라 그대로 버려진다(review-flow.md "타입 변경 시 필드 초기화").
-              onBodyChange({ type: type as ReviewDigest["body"]["type"] })
-            }
+              if (isDigestType(type)) {
+                onBodyChange({ type });
+              }
+            }}
             disabled={disabled}
           >
             <SelectTrigger
