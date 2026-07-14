@@ -500,3 +500,14 @@ Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감*
 - 마이그레이션 파일명이 PR #399(Space 재지정, `20260713100000_source_space_reassign.sql`)와 같은 타임스탬프였던 걸 `20260713110000`으로 bump해 정리. 헤더 주석의 zod 강제 지점 인용도 `digest-generation.ts`→`digest-review.ts`로 정정(실제 코드는 처음부터 맞았음, 주석만 오기).
 
 ---
+
+### 2026-07-14 — 초안 관리: failed·empty 재시도 액션 연결 (intake 흐름 마지막 조각)
+
+`intake-flow.md` "Digest 추출 실패"/"Digest 추출 결과 없음" 두 케이스의 Then #3(재시도 액션)만. BE `start_source_digestion`은 cancelled·failed·completed(결과없음) 셋 다 이미 재클레임 가능하도록 만들어져 있었고(PR #394), FE `useExtractSource`도 애초에 그 셋을 모두 염두에 두고 하나로 만들어져 있었다(2026-07-13 "초안 관리 2차 슬라이스" 항목의 훅 주석 참고) — 이번 슬라이스는 `DraftCard.tsx`의 `FOOTER_BY_STATUS` 맵에서 failed/empty를 `null`→`DraftIdleActions`로 바꾸는 한 줄, 그리고 그 위 낡은 주석("2차 슬라이스로 미룸") 정리가 전부다.
+
+- **재시도 버튼 하나만이 아니라 `DraftIdleActions` 전체(추출 실행·삭제·Space 재지정)가 열림 — 문제 없다고 판단, PM 확인 없이 진행**: intake-flow.md의 Then 문구는 "Digest 추출 실행 액션으로 다시 시도할 수 있다"뿐이라 재시도 버튼만 여는 것도 문구상 가능했지만, `DraftIdleActions`가 애초에 상태 무관 컴포넌트(`sourceId`/`spaceId`만 받음)라 재시도만 쏙 빼서 넣으려면 새 컴포넌트가 필요했다. 대신 이미 확립된 선례를 따름: (1) cancelled 상태가 이미 이 컴포넌트 전체를 풋터로 쓰고 있고, (2) 제목 편집(`canEditTitle`)은 2026-07-13 "3차 슬라이스: 제목 편집" 항목에서 이미 "failed/empty를 cancelled와 동일한 평범한 대기 상태로 취급 — 재시도 스코프 제한의 근거가 애초에 없다"고 명시적으로 판단해뒀다, (3) 서버 가드(`start_source_digestion`/`trash_source`/`reassign_source_space`)가 전부 `digestion_status<>'pending'` 기준이라 failed/empty를 cancelled와 다르게 취급할 서버 쪽 근거도 없다. 세 근거가 일관되게 같은 방향을 가리켜 PM 확인 없이 그대로 진행 — 문제가 드러나면 되돌리기 쉬운 변경(맵 한 줄)이라는 점도 고려함.
+- **케이스 코드 변경 없음, 문서만 갱신**: `intake-flow.md`의 두 케이스에 확정 노트 추가, 이 항목 신설. `DraftCard.tsx` 자체는 이미 이번 슬라이스 이전부터 컴파일 가능한 상태였다(빠진 건 매핑 두 줄뿐).
+- **테스트 변경 없음**: `DraftCard`/`DraftIdleActions`엔 컴포넌트 테스트가 없고(`utils.test.ts`는 `draftStatus`/`isDraftItem` 순수 함수만 다룸), 이번 변경이 그 함수들의 동작을 바꾸지 않아 기존 스위트로 충분하다고 판단.
+- **검증**: `pnpm --filter @nema-io/web typecheck`/`lint`/`test`(67개, 전부 기존 케이스 그대로) 통과 확인. 로컬 브라우저 E2E는 앞선 슬라이스들과 같은 이유로 생략.
+
+---

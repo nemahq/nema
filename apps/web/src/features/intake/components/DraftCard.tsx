@@ -28,17 +28,18 @@ const STATUS_META: Record<
   empty: { labelKey: "intake.draft_no_result", variant: "neutral" },
 };
 
-// failed/empty는 재시도 액션을 2차 슬라이스로 미룬 기존 결정 그대로(intake-flow.md
-// "Digest 추출 실패"/"결과 없음" 범위 참고) — 이번 슬라이스는 processing(잠금)과
-// cancelled(취소 뒤 평범한 대기)만 액션을 연결한다.
+// processing(잠금)만 예외고, cancelled·failed·empty는 전부 같은 "평범한 대기" 상태라
+// 동일한 DraftIdleActions(추출 실행·삭제·Space 재지정)를 쓴다 — start_source_digestion
+// RPC가 이미 셋 다 재클레임 가능하도록 서버에서 가드하고 있고(PR #394), 제목 편집도
+// 같은 기준으로 이미 cancelled·failed·empty 전부 열려 있다(canEditTitle 참고).
 const FOOTER_BY_STATUS: Record<
   DraftStatus,
   ComponentType<DraftFooterProps> | null
 > = {
   processing: DraftProcessingActions,
   cancelled: DraftIdleActions,
-  failed: null,
-  empty: null,
+  failed: DraftIdleActions,
+  empty: DraftIdleActions,
 };
 
 interface DraftCardProps {
