@@ -38,6 +38,9 @@ export type NewReferenceDraft = z.infer<typeof NewReferenceDraftSchema>;
 // 리뷰 draft의 Topic/Tag 한 항목 — 레지스트리(topics/tags) 이름 매칭 결과를 얹는다.
 // id가 있으면 기존 항목(재사용, 이름 읽기 전용) / null이면 신규 항목(이름 편집 가능) —
 // review-flow.md "기존 Topic·Tag는 이름 수정 불가"/"신규 Topic·Tag 이름 수정 가능".
+// 이 id는 표시·판정 전용 힌트일 뿐 쓰기 계약엔 없다 — 저장 시 이름만 남고, id는
+// TagUpdateInputSchema의 id(신뢰되는 PK, 그 레코드를 직접 수정)와 달리 확정 시
+// 이름으로 다시 find-or-create되어 무시된다(digest-review-service.ts updateReview 참고).
 export const DigestTopicDraftSchema = z.object({
   id: z.string().uuid().nullable(),
   name: z.string().trim().min(1).max(TOPIC_NAME_MAX_LENGTH),

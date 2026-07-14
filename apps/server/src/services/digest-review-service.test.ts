@@ -21,12 +21,24 @@ const EXISTING_TAG_ID = "33333333-4444-4444-8444-444444444444";
 // getReview의 기존/신규 인용 분리는 write_ingestion_review_changes 병합의 역함수다 —
 // 두 필터 술어가 뒤바뀌면 미확정 신규 레퍼런스가 referenceIds로 새어 확정 시
 // 중복 레퍼런스가 생기는데, 어느 층도 소리 내지 않아 테스트로 고정한다.
-function mockSupabase(perTable: Record<string, unknown>): TypedSupabaseClient {
+// eq() 호출을 테이블별로 기록해 archived 제외 필터(status='active')가 빠지는
+// 회귀도 같은 방식으로 고정한다(statement-search.test.ts의 active 필터 단언과 같은 결).
+function mockSupabase(
+  perTable: Record<string, unknown>,
+): TypedSupabaseClient & {
+  eqCallsByTable: Record<string, unknown[][]>;
+} {
+  const eqCallsByTable: Record<string, unknown[][]> = {};
   return {
+    eqCallsByTable,
     from: vi.fn((table: string) => {
+      const calls = (eqCallsByTable[table] ??= []);
       const chain: Record<string, ReturnType<typeof vi.fn>> = {};
       chain.select = vi.fn().mockReturnValue(chain);
-      chain.eq = vi.fn().mockReturnValue(chain);
+      chain.eq = vi.fn((...args: unknown[]) => {
+        calls.push(args);
+        return chain;
+      });
       chain.in = vi
         .fn()
         .mockResolvedValue({ data: perTable[table], error: null });
@@ -35,7 +47,9 @@ function mockSupabase(perTable: Record<string, unknown>): TypedSupabaseClient {
         .mockResolvedValue({ data: perTable[table], error: null });
       return chain;
     }),
-  } as unknown as TypedSupabaseClient;
+  } as unknown as TypedSupabaseClient & {
+    eqCallsByTable: Record<string, unknown[][]>;
+  };
 }
 
 describe("getReview", () => {
@@ -157,6 +171,8 @@ describe("getReview", () => {
       { id: EXISTING_TAG_ID, title: "기존 태그", description: "기존 정의" },
       { id: null, title: "새 태그", description: "새 정의" },
     ]);
+    expect(supabase.eqCallsByTable.topics).toContainEqual(["status", "active"]);
+    expect(supabase.eqCallsByTable.tags).toContainEqual(["status", "active"]);
   });
 
   it("pending ingestion이 아니면 리뷰로 취급하지 않는다", async () => {

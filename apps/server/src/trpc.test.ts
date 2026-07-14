@@ -1,12 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import * as Sentry from "@sentry/node";
 import { TRPCError } from "@trpc/server";
 
 import { LlmError } from "./infra/llm/llm-error";
 import { SupabaseError } from "./infra/supabase-error";
-import { onTRPCError } from "./trpc";
+import { isZodInputError, onTRPCError } from "./trpc";
 
 vi.mock("@sentry/node", () => ({ captureException: vi.fn() }));
+
+// tRPC 입력 파서가 던지는 TRPCError.message는 이 판정이 실려 있어야 할 자리에서
+// ZodError를 그대로 실어보낸다(원문 issue 배열, 영문 JSON) — errorFormatter가 이
+// 판정으로 그 메시지를 유저 대면 문구로 갈아치운다. 판정 자체가 틀리면 원문이 그대로 샌다.
+describe("isZodInputError", () => {
+  it("zod 파싱 실패의 cause(ZodError)를 판별한다", () => {
+    const { error } = z.string().uuid().safeParse("not-a-uuid");
+    expect(isZodInputError(error)).toBe(true);
+  });
+
+  it("도메인 에러 등 ZodError가 아닌 cause는 판별하지 않는다", () => {
+    expect(isZodInputError(new SupabaseError("not_found", "boom"))).toBe(false);
+    expect(isZodInputError(new Error("plain"))).toBe(false);
+    expect(isZodInputError(undefined)).toBe(false);
+  });
+});
 
 // 미들웨어 try/catch가 tRPC 내부 구조상 resolver 에러를 절대 못 잡는다는 걸 모르고
 // 짠 코드였다 — 이 테스트가 없었다면 그 죽은 코드 사고가 onTRPCError에서도 조용히

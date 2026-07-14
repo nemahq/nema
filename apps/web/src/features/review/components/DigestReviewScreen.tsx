@@ -114,20 +114,28 @@ export function DigestReviewScreen({
     removedReferenceKeys.size > 0;
   const hasCandidates = digestRows.length + referenceRows.length > 0;
   const hasEmptyTitle = digestRows.some((row) => row.title.trim() === "");
+  const hasEmptyLabel = digestRows.some(
+    (row) =>
+      row.topics.some((topic) => topic.name.trim() === "") ||
+      row.tags.some((tag) => tag.title.trim() === ""),
+  );
   const locked = pending || outcome !== null;
-  const confirmDisabled = locked || !hasCandidates || hasEmptyTitle;
+  const confirmDisabled =
+    locked || !hasCandidates || hasEmptyTitle || hasEmptyLabel;
 
   const confirmDisabledReasonCode = computeConfirmDisabledReason(
     hasCandidates,
     hasEmptyTitle,
+    hasEmptyLabel,
   );
+  const CONFIRM_DISABLED_REASON_KEY = {
+    no_candidates: "review.confirm_disabled_no_candidates",
+    missing_title: "review.confirm_disabled_missing_title",
+    empty_label: "review.confirm_disabled_empty_label",
+  } as const;
   const confirmDisabledReasonText =
     confirmDisabledReasonCode &&
-    t(
-      confirmDisabledReasonCode === "no_candidates"
-        ? "review.confirm_disabled_no_candidates"
-        : "review.confirm_disabled_missing_title",
-    );
+    t(CONFIRM_DISABLED_REASON_KEY[confirmDisabledReasonCode]);
 
   async function handleConfirm() {
     if (confirmDisabled) {
@@ -236,6 +244,7 @@ export function DigestReviewScreen({
           {digestRows.map(({ digest, index, title, topics, tags }) => (
             <DigestCandidateCard
               key={index}
+              spaceId={review.spaceId}
               digest={digest}
               title={title}
               topics={topics}

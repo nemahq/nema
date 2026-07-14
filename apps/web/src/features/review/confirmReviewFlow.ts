@@ -1,15 +1,23 @@
 import type { ReviewDigest, ReviewNewReference } from "./types";
 
-type ConfirmDisabledReason = "no_candidates" | "missing_title" | null;
+type ConfirmDisabledReason =
+  | "no_candidates"
+  | "missing_title"
+  | "empty_label"
+  | null;
 
 export function confirmDisabledReason(
   hasCandidates: boolean,
   hasEmptyTitle: boolean,
+  hasEmptyLabel: boolean,
 ): ConfirmDisabledReason {
   if (!hasCandidates) {
     return "no_candidates";
   }
-  return hasEmptyTitle ? "missing_title" : null;
+  if (hasEmptyTitle) {
+    return "missing_title";
+  }
+  return hasEmptyLabel ? "empty_label" : null;
 }
 
 interface ConfirmReviewFlowArgs {
@@ -51,8 +59,8 @@ export async function runConfirmReview(
       digests: digestRows.map(({ digest, title, topics, tags }) => ({
         ...digest,
         title: title.trim(),
-        topics,
-        tags,
+        topics: topics.map((topic) => ({ ...topic, name: topic.name.trim() })),
+        tags: tags.map((tag) => ({ ...tag, title: tag.title.trim() })),
       })),
       newReferences,
     });

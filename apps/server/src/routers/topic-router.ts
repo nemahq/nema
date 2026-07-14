@@ -1,4 +1,8 @@
-import { TopicIdInputSchema, TopicUpdateInputSchema } from "@nema-io/shared";
+import {
+  TopicIdInputSchema,
+  TopicListInputSchema,
+  TopicUpdateInputSchema,
+} from "@nema-io/shared";
 
 import {
   archiveTopic,
@@ -9,9 +13,11 @@ import {
 import { protectedProcedure, router } from "@server/trpc";
 
 export const topicRouter = router({
-  list: protectedProcedure.query(({ ctx }) =>
-    listTopics({ supabase: ctx.supabase }),
-  ),
+  list: protectedProcedure
+    .input(TopicListInputSchema)
+    .query(({ ctx, input }) =>
+      listTopics({ supabase: ctx.supabase, spaceId: input.spaceId }),
+    ),
 
   update: protectedProcedure
     .input(TopicUpdateInputSchema)

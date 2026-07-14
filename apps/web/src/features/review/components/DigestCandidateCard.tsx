@@ -45,6 +45,7 @@ function bodyFieldValues(
 }
 
 interface DigestCandidateCardProps {
+  spaceId: string;
   digest: ReviewDigest;
   title: string;
   topics: DigestTopicDraft[];
@@ -58,6 +59,7 @@ interface DigestCandidateCardProps {
 }
 
 export function DigestCandidateCard({
+  spaceId,
   digest,
   title,
   topics,
@@ -134,23 +136,37 @@ export function DigestCandidateCard({
       )}
 
       <div className="flex flex-wrap items-center gap-1.5">
-        {topics.map((topic, index) => (
-          <EditableLabelChip
-            key={topic.id ?? `new-topic-${index}`}
-            label={topic.name}
-            readOnly={topic.id !== null}
-            disabled={disabled}
-            variant="brand"
-            removeAriaLabel={t("review.topic_remove_action")}
-            onNameChange={(name) => updateTopicAt(index, { ...topic, name })}
-            onRemove={() => removeTopicAt(index)}
-          />
-        ))}
+        {topics.map((topic, index) =>
+          topic.id !== null ? (
+            <EditableLabelChip
+              key={topic.id}
+              label={topic.name}
+              readOnly
+              disabled={disabled}
+              variant="brand"
+              removeAriaLabel={t("review.topic_remove_action")}
+              onRemove={() => removeTopicAt(index)}
+            />
+          ) : (
+            <EditableLabelChip
+              key={`new-topic-${index}`}
+              label={topic.name}
+              readOnly={false}
+              disabled={disabled}
+              variant="brand"
+              removeAriaLabel={t("review.topic_remove_action")}
+              onNameChange={(name) => updateTopicAt(index, { ...topic, name })}
+              onRemove={() => removeTopicAt(index)}
+            />
+          ),
+        )}
         <TopicAddPopover
+          spaceId={spaceId}
           disabled={disabled || topics.length >= DIGEST_TOPICS_MAX}
           excludedTopicIds={topics
             .map((topic) => topic.id)
             .filter((id): id is string => id !== null)}
+          existingLabels={topics.map((topic) => topic.name)}
           onSelectExisting={(topic) =>
             onTopicsChange([...topics, { id: topic.id, name: topic.name }])
           }
@@ -161,23 +177,36 @@ export function DigestCandidateCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        {tags.map((tag, index) => (
-          <EditableLabelChip
-            key={tag.id ?? `new-tag-${index}`}
-            label={tag.title}
-            readOnly={tag.id !== null}
-            disabled={disabled}
-            variant="neutral"
-            removeAriaLabel={t("review.tag_remove_action")}
-            onNameChange={(title) => updateTagAt(index, { ...tag, title })}
-            onRemove={() => removeTagAt(index)}
-          />
-        ))}
+        {tags.map((tag, index) =>
+          tag.id !== null ? (
+            <EditableLabelChip
+              key={tag.id}
+              label={tag.title}
+              readOnly
+              disabled={disabled}
+              variant="neutral"
+              removeAriaLabel={t("review.tag_remove_action")}
+              onRemove={() => removeTagAt(index)}
+            />
+          ) : (
+            <EditableLabelChip
+              key={`new-tag-${index}`}
+              label={tag.title}
+              readOnly={false}
+              disabled={disabled}
+              variant="neutral"
+              removeAriaLabel={t("review.tag_remove_action")}
+              onNameChange={(title) => updateTagAt(index, { ...tag, title })}
+              onRemove={() => removeTagAt(index)}
+            />
+          ),
+        )}
         <TagAddPopover
           disabled={disabled || tags.length >= DIGEST_TAGS_MAX}
           excludedTagIds={tags
             .map((tag) => tag.id)
             .filter((id): id is string => id !== null)}
+          existingLabels={tags.map((tag) => tag.title)}
           onSelectExisting={(tag) => onTagsChange([...tags, tag])}
           onCreateNew={(draft) =>
             onTagsChange([...tags, { id: null, ...draft }])

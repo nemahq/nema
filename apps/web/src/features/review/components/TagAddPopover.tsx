@@ -10,11 +10,17 @@ import {
 import { Plus } from "@nema-io/weave/icons";
 
 import { useTagListQuery } from "@web/features/review/hooks/useTagListQuery";
+import {
+  filterActiveLabelCandidates,
+  hasExactLabelMatch,
+  isDuplicateLabelName,
+} from "@web/features/review/labelSearch";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface TagAddPopoverProps {
   disabled: boolean;
   excludedTagIds: string[];
+  existingLabels: string[];
   onSelectExisting: (tag: {
     id: string;
     title: string;
@@ -26,6 +32,7 @@ interface TagAddPopoverProps {
 export function TagAddPopover({
   disabled,
   excludedTagIds,
+  existingLabels,
   onSelectExisting,
   onCreateNew,
 }: TagAddPopoverProps) {
@@ -39,17 +46,20 @@ export function TagAddPopover({
   const [description, setDescription] = useState("");
   const tagListQuery = useTagListQuery(open);
 
+  const getLabel = (tag: { title: string }) => tag.title;
+  const candidates = filterActiveLabelCandidates(
+    tagListQuery.data?.tags ?? [],
+    getLabel,
+    query,
+    new Set(excludedTagIds),
+  );
   const trimmed = query.trim();
-  const excluded = new Set(excludedTagIds);
-  const candidates = (tagListQuery.data?.tags ?? []).filter(
-    (tag) =>
-      tag.status === "active" &&
-      !excluded.has(tag.id) &&
-      tag.title.toLowerCase().includes(trimmed.toLowerCase()),
-  );
-  const hasExactMatch = candidates.some(
-    (tag) => tag.title.toLowerCase() === trimmed.toLowerCase(),
-  );
+  const hasExactMatch = hasExactLabelMatch(candidates, getLabel, query);
+  const canStartCreateNew =
+    trimmed !== "" &&
+    !hasExactMatch &&
+    !isDuplicateLabelName(trimmed, existingLabels);
+  const settled = !tagListQuery.isLoading && !tagListQuery.isError;
 
   function reset() {
     setQuery("");
@@ -76,7 +86,11 @@ export function TagAddPopover({
   function handleSubmitNew() {
     const title = (creatingTitle ?? "").trim();
     const trimmedDescription = description.trim();
-    if (title === "" || trimmedDescription === "") {
+    if (
+      title === "" ||
+      trimmedDescription === "" ||
+      isDuplicateLabelName(title, existingLabels)
+    ) {
       return;
     }
     onCreateNew({ title, description: trimmedDescription });
@@ -101,28 +115,40 @@ export function TagAddPopover({
               placeholder={t("review.label_search_placeholder")}
             />
             <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
-              {candidates.map((tag) => (
-                <li key={tag.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectExisting(tag)}
-                    className="w-full truncate rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-raised-hover"
-                  >
-                    {tag.title}
-                  </button>
+              {tagListQuery.isLoading && (
+                <li className="px-2 py-1.5 text-sm text-fg-tertiary">
+                  {t("review.label_search_loading")}
                 </li>
-              ))}
-              {candidates.length === 0 && trimmed === "" && (
+              )}
+              {tagListQuery.isError && (
+                <li className="px-2 py-1.5 text-sm text-status-error">
+                  {t("review.label_search_error")}
+                </li>
+              )}
+              {settled &&
+                candidates.map((tag) => (
+                  <li key={tag.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectExisting(tag)}
+                      className="w-full truncate rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-raised-hover"
+                    >
+                      {tag.title}
+                    </button>
+                  </li>
+                ))}
+              {settled && candidates.length === 0 && trimmed === "" && (
                 <li className="px-2 py-1.5 text-sm text-fg-tertiary">
                   {t("review.label_search_empty")}
                 </li>
               )}
             </ul>
-            {trimmed !== "" && !hasExactMatch && (
+            {settled && trimmed !== "" && !hasExactMatch && (
               <button
                 type="button"
+                disabled={!canStartCreateNew}
                 onClick={() => setCreatingTitle(trimmed)}
-                className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover"
+                className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover disabled:pointer-events-none disabled:opacity-50"
               >
                 {t("review.label_create_new_action", { name: trimmed })}
               </button>
@@ -161,7 +187,9 @@ export function TagAddPopover({
                 type="button"
                 size="xs"
                 disabled={
-                  creatingTitle.trim() === "" || description.trim() === ""
+                  creatingTitle.trim() === "" ||
+                  description.trim() === "" ||
+                  isDuplicateLabelName(creatingTitle, existingLabels)
                 }
                 onClick={handleSubmitNew}
               >

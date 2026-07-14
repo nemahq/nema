@@ -39,6 +39,9 @@ interface CitedReference {
 interface DigestReviewDetail {
   changesetId: string;
   changesetNumber: number;
+  // Topic 검색(topic.list)을 이 Space로 좁히는 데 쓴다 — 다른 Space의 동명
+  // Topic이 "기존"으로 잘못 노출되지 않도록.
+  spaceId: string;
   sourceId: string;
   sourceTitle: string | null;
   sourceBody: string;
@@ -181,6 +184,7 @@ export async function getReview(args: {
   return {
     changesetId: changeset.id,
     changesetNumber: changeset.number,
+    spaceId: changeset.space_id,
     sourceId: changeset.source_id,
     sourceTitle: changeset.sources.title,
     sourceBody: changeset.sources.body,

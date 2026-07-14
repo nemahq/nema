@@ -1,36 +1,30 @@
 import { Badge, type BadgeVariant } from "@nema-io/weave";
 import { XIcon } from "@nema-io/weave/icons";
 
-interface EditableLabelChipProps {
+type EditableLabelChipProps = {
   label: string;
-  readOnly: boolean;
   disabled: boolean;
   variant: BadgeVariant;
   removeAriaLabel: string;
-  onNameChange?: (value: string) => void;
   onRemove: () => void;
-}
+} & (
+  | { readOnly: true }
+  | { readOnly: false; onNameChange: (value: string) => void }
+);
 
-export function EditableLabelChip({
-  label,
-  readOnly,
-  disabled,
-  variant,
-  removeAriaLabel,
-  onNameChange,
-  onRemove,
-}: EditableLabelChipProps) {
+export function EditableLabelChip(props: EditableLabelChipProps) {
+  const { label, disabled, variant, removeAriaLabel, onRemove } = props;
   return (
     <Badge
       variant={variant}
       className="inline-flex items-center gap-1 py-0.5 pr-1"
     >
-      {readOnly ? (
+      {props.readOnly ? (
         <span>{label}</span>
       ) : (
         <input
           value={label}
-          onChange={(e) => onNameChange?.(e.target.value)}
+          onChange={(e) => props.onNameChange(e.target.value)}
           disabled={disabled}
           size={Math.max(label.length, 1)}
           className="min-w-[2ch] bg-transparent disabled:opacity-50"

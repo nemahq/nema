@@ -203,6 +203,8 @@ export {
   TOPIC_STATUSES,
   type TopicIdInput,
   TopicIdInputSchema,
+  type TopicListInput,
+  TopicListInputSchema,
   TopicSchema,
   type TopicStatus,
   TopicStatusSchema,

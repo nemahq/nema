@@ -1,3 +1,4 @@
+import { ZodError } from "zod";
 import * as Sentry from "@sentry/node";
 import type { User } from "@supabase/supabase-js";
 import { initTRPC, TRPCError } from "@trpc/server";
@@ -11,7 +12,7 @@ import {
   isExpectedDomainError,
   mapDomainError,
 } from "./error-mapper";
-import { resolveLanguage } from "./infra/i18n";
+import { resolveLanguage, t as translate } from "./infra/i18n";
 import type { Providers } from "./infra/providers";
 import { getProviders } from "./infra/providers";
 import { createSupabaseUser, getSupabaseAdmin } from "./infra/supabase";
@@ -75,14 +76,32 @@ type Context = Awaited<ReturnType<typeof createContext>>;
 // 그래서 요청 하나가 끝나는 지점에서 항상 호출되는 두 훅으로 옮긴다:
 // errorFormatter(응답 shape 확정, 아래) + onTRPCError(부수효과, index.ts에서
 // fastifyTRPCPlugin의 onError로 등록).
+// tRPC 입력 파서(inputValidatorMiddleware)가 ZodError를 그대로 TRPCError.message로
+// 실어보낸다 — errorFormatter가 개입하기 전이라 도메인 에러 매핑망을 안 탄다. 여기서
+// 안 막으면 화면에 원문 zod issue 배열(영문 JSON)이 그대로 노출된다. 이 실패는 항상
+// FE가 서버로 보내기 전에 막았어야 할 계약 위반이라(사용자가 자유 텍스트로 이 JSON
+// 자체를 구성하지 않음), 유저에게 뭘 고치라고 안내할 수 없어 default 메시지로 뭉갠다.
+export function isZodInputError(cause: unknown): boolean {
+  return cause instanceof ZodError;
+}
+
 const t = initTRPC.context<Context>().create({
   errorFormatter({ shape, error, ctx }) {
+    const lng = ctx?.lng ?? "ko";
+    if (isZodInputError(error.cause)) {
+      return {
+        ...shape,
+        message: translate("error.default", lng),
+        data: { ...shape.data, domainCode: undefined },
+      };
+    }
+
     const domainCode = getDomainCode(error.cause);
     if (!domainCode) {
       return { ...shape, data: { ...shape.data, domainCode } };
     }
 
-    const mapped = mapDomainError(error.cause, ctx?.lng ?? "ko");
+    const mapped = mapDomainError(error.cause, lng);
     return {
       ...shape,
       message: mapped.message,

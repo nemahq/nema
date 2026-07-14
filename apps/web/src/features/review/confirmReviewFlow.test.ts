@@ -16,19 +16,27 @@ const DIGEST: ReviewDigest = {
 
 describe("confirmDisabledReason", () => {
   it("후보가 하나도 없으면 no_candidates", () => {
-    expect(confirmDisabledReason(false, false)).toBe("no_candidates");
+    expect(confirmDisabledReason(false, false, false)).toBe("no_candidates");
   });
 
   it("후보는 있지만 제목이 빈 게 있으면 missing_title", () => {
-    expect(confirmDisabledReason(true, true)).toBe("missing_title");
+    expect(confirmDisabledReason(true, true, false)).toBe("missing_title");
   });
 
-  it("후보가 있고 제목도 다 있으면 null(비활성 아님)", () => {
-    expect(confirmDisabledReason(true, false)).toBeNull();
+  it("제목은 다 있지만 주제·태그 이름이 빈 게 있으면 empty_label", () => {
+    expect(confirmDisabledReason(true, false, true)).toBe("empty_label");
   });
 
-  it("후보가 없으면 제목 문제와 무관하게 no_candidates가 우선", () => {
-    expect(confirmDisabledReason(false, true)).toBe("no_candidates");
+  it("후보가 있고 제목·라벨 다 있으면 null(비활성 아님)", () => {
+    expect(confirmDisabledReason(true, false, false)).toBeNull();
+  });
+
+  it("후보가 없으면 다른 문제와 무관하게 no_candidates가 우선", () => {
+    expect(confirmDisabledReason(false, true, true)).toBe("no_candidates");
+  });
+
+  it("제목이 비어 있으면 라벨 문제보다 missing_title이 우선", () => {
+    expect(confirmDisabledReason(true, true, true)).toBe("missing_title");
   });
 });
 
@@ -42,6 +50,13 @@ describe("runConfirmReview", () => {
       calls.push("confirm");
     });
 
+    const overriddenTopics: ReviewDigest["topics"] = [
+      { id: null, name: "새 주제" },
+    ];
+    const overriddenTags: ReviewDigest["tags"] = [
+      { id: null, title: "새 태그", description: "설명" },
+    ];
+
     await runConfirmReview({
       changesetId: "cs-1",
       dirty: true,
@@ -49,8 +64,8 @@ describe("runConfirmReview", () => {
         {
           digest: DIGEST,
           title: "  새 제목  ",
-          topics: DIGEST.topics,
-          tags: DIGEST.tags,
+          topics: overriddenTopics,
+          tags: overriddenTags,
         },
       ],
       newReferences: [],
@@ -61,7 +76,14 @@ describe("runConfirmReview", () => {
     expect(calls).toEqual(["update", "confirm"]);
     expect(updateReview).toHaveBeenCalledWith({
       changesetId: "cs-1",
-      digests: [{ ...DIGEST, title: "새 제목" }],
+      digests: [
+        {
+          ...DIGEST,
+          title: "새 제목",
+          topics: overriddenTopics,
+          tags: overriddenTags,
+        },
+      ],
       newReferences: [],
     });
     expect(confirmReview).toHaveBeenCalledWith({ changesetId: "cs-1" });
