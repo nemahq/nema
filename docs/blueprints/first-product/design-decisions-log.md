@@ -478,6 +478,8 @@ Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감*
 
 `DraftsNavItem`의 처리중 pulse 점 색상은 `text-status-info`(파랑)로 확정. GitHub Actions·Vercel(Geist Status Dot)류의 "진행중=노랑/주황" 관례를 실제로 조사했으나 기각 — Nema는 `status-warning`(경고 전용 톤)과 색이 겹치면 "그냥 처리중"과 "실제 주의 필요"의 심각도 구분이 흐려진다고 판단, 일반 디자인 시스템(Carbon류)의 "파랑=정보성/진행중" 관례를 따랐다. 이후 세션이 GitHub Actions식 노랑/주황으로 되돌리기 전에 이 트레이드오프를 먼저 확인할 것.
 
+**amendment(2026-07-14, 파랑 결정 번복)**: `text-status-info`(파랑)를 중립톤(`text-fg-tertiary`)으로 교체. `animate-pulse`(투명도 애니메이션) 자체가 이미 "지금 활동 중"이라는 신호라, 그 위에 심각도 색을 얹을 근거가 약하다고 재판단 — AI 프로세싱 UI 레퍼런스(SAP Fiori의 AI progress indicator, GitHub Copilot coding agent)를 확인해보니 둘 다 "진행중"을 색상 심각도가 아니라 전용 애니메이션·아이콘+텍스트로 표현하고 있었다. 같은 컴포넌트의 `failed`(빨간 삼각형, `status-error`)는 그대로 유지 — "색은 실제 주의가 필요할 때만 쓰고, 처리중 같은 루틴 활동은 무채색"으로 원칙을 좁혔다. 노랑/주황 기각 근거(위 문단)는 그대로 유효하나(오히려 재조사 결과 GitHub·Vercel도 실제로는 노랑/주황을 경고와 겸용 중이라는 게 확인돼 강화됨), 최종적으로는 파랑도 같은 논리 연장선에서 재고 대상이 됐다.
+
 ---
 
 ### 2026-07-13 — 초안 관리 3차 슬라이스: Source 제목 자동 채움 + 편집
