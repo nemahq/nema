@@ -5,6 +5,8 @@ export type SupabaseErrorCode =
   | "space_min_one"
   | "space_name_conflict"
   | "source_state_changed"
+  | "topic_state_changed"
+  | "topic_name_conflict"
   | "query_failed";
 
 const PG_NOT_FOUND = "P0002";
@@ -25,6 +27,11 @@ const NEMA_SPACE_NAME_CONFLICT = "NM003";
 // 취소된 걸 또 취소, 리뷰가 열린 뒤 재추출 클릭, 처리 중인데 삭제 클릭 — 전부 같은 말).
 // 장애가 아니라 정상적인 동시성 결과라 Sentry로 올리지 않는다(EXPECTED_DOMAIN_CODES).
 const NEMA_SOURCE_STATE_CHANGED = "NM004";
+// Topic 상태 가드 실패(update/archive/restore) — NM004와 같은 "그 사이 상태가
+// 바뀜" 결이지만 엔티티가 달라 메시지가 다르므로 코드를 나눈다.
+const NEMA_TOPIC_STATE_CHANGED = "NM005";
+// Topic 이름 중복(update_topic) — NM003(Space 이름 중복)과 같은 결.
+const NEMA_TOPIC_NAME_CONFLICT = "NM006";
 
 export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
   switch (pgCode) {
@@ -41,6 +48,10 @@ export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
       return "space_name_conflict";
     case NEMA_SOURCE_STATE_CHANGED:
       return "source_state_changed";
+    case NEMA_TOPIC_STATE_CHANGED:
+      return "topic_state_changed";
+    case NEMA_TOPIC_NAME_CONFLICT:
+      return "topic_name_conflict";
     default:
       return "query_failed";
   }
