@@ -12,7 +12,7 @@ import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import { useDigestReviewQuery } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
-import type { ChangesetStatus } from "@web/features/review/types";
+import type { ChangesetStatus, ReviewDigest } from "@web/features/review/types";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -48,6 +48,12 @@ export function DigestReviewScreen({
   const [titleOverrides, setTitleOverrides] = useState<Map<number, string>>(
     new Map(),
   );
+  const [topicsOverrides, setTopicsOverrides] = useState<
+    Map<number, ReviewDigest["topics"]>
+  >(new Map());
+  const [tagsOverrides, setTagsOverrides] = useState<
+    Map<number, ReviewDigest["tags"]>
+  >(new Map());
   const [removedReferenceKeys, setRemovedReferenceKeys] = useState<Set<string>>(
     new Set(),
   );
@@ -92,6 +98,8 @@ export function DigestReviewScreen({
       digest,
       index,
       title: titleOverrides.get(index) ?? digest.title,
+      topics: topicsOverrides.get(index) ?? digest.topics,
+      tags: tagsOverrides.get(index) ?? digest.tags,
     }))
     .filter((row) => !removedDigestIndexes.has(row.index));
   const referenceRows = review.newReferences.filter(
@@ -101,23 +109,33 @@ export function DigestReviewScreen({
   const dirty =
     removedDigestIndexes.size > 0 ||
     titleOverrides.size > 0 ||
+    topicsOverrides.size > 0 ||
+    tagsOverrides.size > 0 ||
     removedReferenceKeys.size > 0;
   const hasCandidates = digestRows.length + referenceRows.length > 0;
   const hasEmptyTitle = digestRows.some((row) => row.title.trim() === "");
+  const hasEmptyLabel = digestRows.some(
+    (row) =>
+      row.topics.some((topic) => topic.name.trim() === "") ||
+      row.tags.some((tag) => tag.title.trim() === ""),
+  );
   const locked = pending || outcome !== null;
-  const confirmDisabled = locked || !hasCandidates || hasEmptyTitle;
+  const confirmDisabled =
+    locked || !hasCandidates || hasEmptyTitle || hasEmptyLabel;
 
   const confirmDisabledReasonCode = computeConfirmDisabledReason(
     hasCandidates,
     hasEmptyTitle,
+    hasEmptyLabel,
   );
+  const CONFIRM_DISABLED_REASON_KEY = {
+    no_candidates: "review.confirm_disabled_no_candidates",
+    missing_title: "review.confirm_disabled_missing_title",
+    empty_label: "review.confirm_disabled_empty_label",
+  } as const;
   const confirmDisabledReasonText =
     confirmDisabledReasonCode &&
-    t(
-      confirmDisabledReasonCode === "no_candidates"
-        ? "review.confirm_disabled_no_candidates"
-        : "review.confirm_disabled_missing_title",
-    );
+    t(CONFIRM_DISABLED_REASON_KEY[confirmDisabledReasonCode]);
 
   async function handleConfirm() {
     if (confirmDisabled) {
@@ -223,15 +241,24 @@ export function DigestReviewScreen({
           <h2 className="text-sm font-semibold text-fg-secondary">
             {t("review.digest_section_title", { count: digestRows.length })}
           </h2>
-          {digestRows.map(({ digest, index, title }) => (
+          {digestRows.map(({ digest, index, title, topics, tags }) => (
             <DigestCandidateCard
               key={index}
+              spaceId={review.spaceId}
               digest={digest}
               title={title}
+              topics={topics}
+              tags={tags}
               citedReferences={review.citedReferences}
               disabled={locked}
               onTitleChange={(value) =>
                 setTitleOverrides((prev) => new Map(prev).set(index, value))
+              }
+              onTopicsChange={(topics) =>
+                setTopicsOverrides((prev) => new Map(prev).set(index, topics))
+              }
+              onTagsChange={(tags) =>
+                setTagsOverrides((prev) => new Map(prev).set(index, tags))
               }
               onRemove={() =>
                 setRemovedDigestIndexes((prev) => new Set(prev).add(index))

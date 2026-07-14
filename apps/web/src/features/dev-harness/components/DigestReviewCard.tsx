@@ -24,7 +24,7 @@ function toEdit(digest: ReviewDigest): DigestEdit {
   return {
     title: digest.title,
     description: digest.description,
-    topicsText: digest.topics.join(", "),
+    topicsText: digest.topics.map((topic) => topic.name).join(", "),
   };
 }
 
@@ -69,7 +69,10 @@ export function DigestReviewCard({ changesetId }: DigestReviewCardProps) {
       ...digest,
       title: current[index].title.trim(),
       description: current[index].description.trim(),
-      topics: parseTopics(current[index].topicsText),
+      topics: parseTopics(current[index].topicsText).map((name) => ({
+        id: null,
+        name,
+      })),
     }));
   }
 

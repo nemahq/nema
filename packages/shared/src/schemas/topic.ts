@@ -15,6 +15,14 @@ export const TopicSchema = z.object({
 });
 export type Topic = z.infer<typeof TopicSchema>;
 
+// spaceId 미지정 = 워크스페이스 전역(모든 소속 Space) 목록 — Topic 관리 화면처럼
+// Space를 가로질러 훑어보는 화면용. 지정 시 그 Space로만 좁혀 반환한다 — Digest 리뷰의
+// "기존 Topic 검색"처럼 다른 Space의 동명 Topic을 오재사용하면 안 되는 화면이 쓴다.
+export const TopicListInputSchema = z
+  .object({ spaceId: z.string().uuid().optional() })
+  .default({});
+export type TopicListInput = z.infer<typeof TopicListInputSchema>;
+
 export const TopicUpdateInputSchema = z.object({
   id: z.string().uuid(),
   name: z.string().trim().min(1).max(TOPIC_NAME_MAX_LENGTH),

@@ -50,6 +50,12 @@ export {
 export { Input } from "./components/Input";
 export { Kbd } from "./components/Kbd";
 export { Label } from "./components/Label";
+export {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
+} from "./components/Popover";
 export { ScrollArea, ScrollBar } from "./components/ScrollArea";
 export {
   Select,
