@@ -1186,7 +1186,12 @@ export type Database = {
         Returns: string;
       };
       create_ingestion_review: {
-        Args: { p_digests: Json; p_new_references?: Json; p_source_id: string };
+        Args: {
+          p_digests: Json;
+          p_new_references?: Json;
+          p_reference_updates?: Json;
+          p_source_id: string;
+        };
         Returns: string;
       };
       create_reference_link: {
@@ -1405,6 +1410,7 @@ export type Database = {
           p_changeset_id: string;
           p_digests: Json;
           p_new_references?: Json;
+          p_reference_updates?: Json;
         };
         Returns: undefined;
       };
@@ -1447,6 +1453,7 @@ export type Database = {
           p_changeset_id: string;
           p_digests: Json;
           p_new_references: Json;
+          p_reference_updates?: Json;
         };
         Returns: undefined;
       };

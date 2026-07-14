@@ -41,7 +41,8 @@ Each digest captures ONE judgment, classified as:
 
 References are registry entries for things the note keeps coming back to: a person, an organization, a project, a product, or a term of art.
 
-- When the note mentions something listed in <existing_references>, cite it by putting its label (e.g. "E2") in that digest's "existingReferenceLabels". Never invent labels not present in the list.
+- When the note mentions something listed in <existing_references>, cite it by putting its label (e.g. "E2") in that digest's "existingReferenceLabels". Never invent labels not present in the list. Each existing reference is shown with its current description under its label line.
+- When the note adds new information about an existing reference you cited — a new fact, a correction, a fuller account — produce a refined FULL description that folds the new information into that reference's current description, and add it to the top-level "existingReferenceUpdates" as { "label": "E2", "body": <the whole refined description> }. Keep everything in the current description that is still true; you are refining it, not rewriting it from scratch, and not appending a changelog. When the note only mentions the entity in passing with nothing new to record, cite it via "existingReferenceLabels" and add no update — leave its description untouched.
 - When the note clearly introduces a NEW recurring entity worth a registry entry, add it to the top-level "newReferences" with a short key you make up (e.g. "R1"), its type ("person" | "organization" | "project" | "product" | "term"), its name as "title", and a "body" that captures what the note says about it. Then cite that key in the digest's "newReferenceKeys". "organization" is an acting entity (a company, a team); "product" is a thing an entity makes — they are different registry entries.
 - When the note carries a link that identifies the entity itself (its homepage, LinkedIn, repo, docs), put it in that reference's "externalUrls". These are the entity's representative links, not links the digest merely discusses. Do not fabricate URLs.
 - Passing mentions that will never recur do not deserve a reference. When unsure, do not create one.
@@ -61,7 +62,8 @@ JSON object:
     "topics": [string], "tags": [{ "title", "description" }],
     "existingReferenceLabels": [string], "newReferenceKeys": [string],
     "externalUrls": [string] }],
-  "newReferences": [{ "key", "type", "title", "body", "externalUrls": [string] }] }
+  "newReferences": [{ "key", "type", "title", "body", "externalUrls": [string] }],
+  "existingReferenceUpdates": [{ "label", "body" }] }
 
 Order digests by where their judgment first appears in the note.`;
 
@@ -110,16 +112,32 @@ const GeneratedReferenceSchema = z.object({
 
 export type GeneratedReference = z.infer<typeof GeneratedReferenceSchema>;
 
+// 기존 Reference 병합 제안 — label로 기존 항목을 가리키고, body는 새 정보를 녹인
+// 완성본(부분 delta가 아니라 references.body 전체를 대체할 값). 환각 라벨·미인용은
+// normalize가 버린다(신규 레퍼런스와 같은 신뢰 경계 처리).
+const GeneratedReferenceUpdateSchema = z.object({
+  label: z.string().trim().min(1),
+  body: z.string().trim().min(1),
+});
+
+export type GeneratedReferenceUpdate = z.infer<
+  typeof GeneratedReferenceUpdateSchema
+>;
+
 // 빈 배열 허용 — 판단이 없는 글(인사말·잡담)은 Digest가 안 나오는 게 정의.
 export const DigestGenerationSchema = z.object({
   digests: z.array(GeneratedDigestSchema),
   newReferences: z.array(GeneratedReferenceSchema),
+  existingReferenceUpdates: z.array(GeneratedReferenceUpdateSchema),
 });
 
 interface ExistingReferenceContext {
   label: string;
   type: string;
   title: string;
+  // 병합 제안(existingReferenceUpdates)을 만들려면 다듬을 원본이 필요하다 — 라벨·유형·
+  // 이름만으론 기존 설명을 보존한 채 새 정보를 녹일 수 없다.
+  body: string;
 }
 
 interface ExistingTagContext {
@@ -148,12 +166,12 @@ export function buildDigestGenerationMessage(
     parts.push(`<existing_tags>\n${lines.join("\n")}\n</existing_tags>`);
   }
   if (context.existingReferences.length > 0) {
-    const lines = context.existingReferences.map(
+    const blocks = context.existingReferences.map(
       (reference) =>
-        `${reference.label} · ${reference.type} · ${reference.title}`,
+        `${reference.label} · ${reference.type} · ${reference.title}\n${reference.body}`,
     );
     parts.push(
-      `<existing_references>\n${lines.join("\n")}\n</existing_references>`,
+      `<existing_references>\n${blocks.join("\n\n")}\n</existing_references>`,
     );
   }
   parts.push(`<note>${body}</note>`);

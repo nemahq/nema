@@ -12,13 +12,19 @@ import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import { useDigestReviewQuery } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
-import type { ChangesetStatus, ReviewDigest } from "@web/features/review/types";
+import type {
+  ChangesetStatus,
+  ReviewCitedReference,
+  ReviewDigest,
+  ReviewNewReference,
+} from "@web/features/review/types";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetStatusBadge } from "./ChangesetStatusBadge";
 import { DigestCandidateCard } from "./DigestCandidateCard";
 import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
+import { ReferenceMergeCard } from "./ReferenceMergeCard";
 import { SourceTextPanel } from "./SourceTextPanel";
 
 interface DigestReviewScreenProps {
@@ -48,6 +54,9 @@ export function DigestReviewScreen({
   const [titleOverrides, setTitleOverrides] = useState<Map<number, string>>(
     new Map(),
   );
+  const [bodyOverrides, setBodyOverrides] = useState<
+    Map<number, ReviewDigest["body"]>
+  >(new Map());
   const [topicsOverrides, setTopicsOverrides] = useState<
     Map<number, ReviewDigest["topics"]>
   >(new Map());
@@ -57,6 +66,14 @@ export function DigestReviewScreen({
   const [removedReferenceKeys, setRemovedReferenceKeys] = useState<Set<string>>(
     new Set(),
   );
+  // 신규 Reference 후보 편집(타입·이름·설명) — key로 원본 draft를 덮어쓴다.
+  const [referenceOverrides, setReferenceOverrides] = useState<
+    Map<string, ReviewNewReference>
+  >(new Map());
+  // 기존 Reference 병합 편집 — referenceId로 엔진 제안 mergeNote를 덮어쓴다.
+  const [mergeNoteOverrides, setMergeNoteOverrides] = useState<
+    Map<string, string>
+  >(new Map());
 
   const pending =
     updateReview.isPending ||
@@ -98,20 +115,40 @@ export function DigestReviewScreen({
       digest,
       index,
       title: titleOverrides.get(index) ?? digest.title,
+      body: bodyOverrides.get(index) ?? digest.body,
       topics: topicsOverrides.get(index) ?? digest.topics,
       tags: tagsOverrides.get(index) ?? digest.tags,
     }))
     .filter((row) => !removedDigestIndexes.has(row.index));
-  const referenceRows = review.newReferences.filter(
-    (reference) => !removedReferenceKeys.has(reference.key),
+  const referenceRows = review.newReferences
+    .filter((reference) => !removedReferenceKeys.has(reference.key))
+    .map((reference) => referenceOverrides.get(reference.key) ?? reference);
+  // 병합 제안이 붙은 기존 인용(mergeNote != null)만 병합 편집 대상 — 그 Reference를
+  // 인용하던 Digest가 전부 제거되면 병합도 의미를 잃으므로 살아있는 후보로 좁힌다.
+  const citedIdsInView = new Set(
+    digestRows.flatMap((row) => row.digest.referenceIds),
   );
+  const mergeRows: { reference: ReviewCitedReference; mergeNote: string }[] =
+    review.citedReferences
+      .filter(
+        (reference) =>
+          reference.mergeNote !== null && citedIdsInView.has(reference.id),
+      )
+      .map((reference) => ({
+        reference,
+        mergeNote:
+          mergeNoteOverrides.get(reference.id) ?? reference.mergeNote ?? "",
+      }));
 
   const dirty =
     removedDigestIndexes.size > 0 ||
     titleOverrides.size > 0 ||
+    bodyOverrides.size > 0 ||
     topicsOverrides.size > 0 ||
     tagsOverrides.size > 0 ||
-    removedReferenceKeys.size > 0;
+    removedReferenceKeys.size > 0 ||
+    referenceOverrides.size > 0 ||
+    mergeNoteOverrides.size > 0;
   const hasCandidates = digestRows.length + referenceRows.length > 0;
   const hasEmptyTitle = digestRows.some((row) => row.title.trim() === "");
   const hasEmptyLabel = digestRows.some(
@@ -119,19 +156,38 @@ export function DigestReviewScreen({
       row.topics.some((topic) => topic.name.trim() === "") ||
       row.tags.some((tag) => tag.title.trim() === ""),
   );
+  // 신규 Reference 이름·설명, 기존 Reference 병합 설명 모두 필수(zod min(1)) — 비우면
+  // 확정 시 원문 에러가 새므로 라벨 공백과 같은 결로 사전 차단한다.
+  const hasEmptyReference =
+    referenceRows.some(
+      (reference) =>
+        reference.title.trim() === "" || reference.body.trim() === "",
+    ) || mergeRows.some((row) => row.mergeNote.trim() === "");
+  // 초안 편집은 changes를 통째로 교체하므로(update_pending_ingestion), 편집 여부와
+  // 무관하게 살아있는 병합 제안을 전부 실어 보내야 엔진 제안이 유실되지 않는다.
+  const referenceUpdates = mergeRows.map((row) => ({
+    referenceId: row.reference.id,
+    mergeNote: row.mergeNote,
+  }));
   const locked = pending || outcome !== null;
   const confirmDisabled =
-    locked || !hasCandidates || hasEmptyTitle || hasEmptyLabel;
+    locked ||
+    !hasCandidates ||
+    hasEmptyTitle ||
+    hasEmptyLabel ||
+    hasEmptyReference;
 
   const confirmDisabledReasonCode = computeConfirmDisabledReason(
     hasCandidates,
     hasEmptyTitle,
     hasEmptyLabel,
+    hasEmptyReference,
   );
   const CONFIRM_DISABLED_REASON_KEY = {
     no_candidates: "review.confirm_disabled_no_candidates",
     missing_title: "review.confirm_disabled_missing_title",
     empty_label: "review.confirm_disabled_empty_label",
+    empty_reference: "review.confirm_disabled_empty_reference",
   } as const;
   const confirmDisabledReasonText =
     confirmDisabledReasonCode &&
@@ -149,6 +205,7 @@ export function DigestReviewScreen({
         dirty,
         digestRows,
         newReferences: referenceRows,
+        referenceUpdates,
         updateReview: updateReview.mutateAsync,
         confirmReview: confirmReview.mutateAsync,
       });
@@ -241,18 +298,22 @@ export function DigestReviewScreen({
           <h2 className="text-sm font-semibold text-fg-secondary">
             {t("review.digest_section_title", { count: digestRows.length })}
           </h2>
-          {digestRows.map(({ digest, index, title, topics, tags }) => (
+          {digestRows.map(({ digest, index, title, body, topics, tags }) => (
             <DigestCandidateCard
               key={index}
               spaceId={review.spaceId}
               digest={digest}
               title={title}
+              body={body}
               topics={topics}
               tags={tags}
               citedReferences={review.citedReferences}
               disabled={locked}
               onTitleChange={(value) =>
                 setTitleOverrides((prev) => new Map(prev).set(index, value))
+              }
+              onBodyChange={(value) =>
+                setBodyOverrides((prev) => new Map(prev).set(index, value))
               }
               onTopicsChange={(topics) =>
                 setTopicsOverrides((prev) => new Map(prev).set(index, topics))
@@ -267,11 +328,11 @@ export function DigestReviewScreen({
           ))}
         </div>
 
-        {referenceRows.length > 0 && (
+        {referenceRows.length + mergeRows.length > 0 && (
           <div className="flex flex-col gap-3">
             <h2 className="text-sm font-semibold text-fg-secondary">
               {t("review.reference_section_title", {
-                count: referenceRows.length,
+                count: referenceRows.length + mergeRows.length,
               })}
             </h2>
             {referenceRows.map((reference) => (
@@ -279,9 +340,27 @@ export function DigestReviewScreen({
                 key={reference.key}
                 reference={reference}
                 disabled={locked}
+                onChange={(next) =>
+                  setReferenceOverrides((prev) =>
+                    new Map(prev).set(reference.key, next),
+                  )
+                }
                 onRemove={() =>
                   setRemovedReferenceKeys((prev) =>
                     new Set(prev).add(reference.key),
+                  )
+                }
+              />
+            ))}
+            {mergeRows.map(({ reference, mergeNote }) => (
+              <ReferenceMergeCard
+                key={reference.id}
+                reference={reference}
+                mergeNote={mergeNote}
+                disabled={locked}
+                onMergeNoteChange={(value) =>
+                  setMergeNoteOverrides((prev) =>
+                    new Map(prev).set(reference.id, value),
                   )
                 }
               />

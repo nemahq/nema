@@ -117,7 +117,72 @@ describe("getReview", () => {
       },
     ]);
     expect(review.citedReferences).toEqual([
-      { id: EXISTING_REFERENCE_ID, type: "person", title: "기존 인물" },
+      {
+        id: EXISTING_REFERENCE_ID,
+        type: "person",
+        title: "기존 인물",
+        mergeNote: null,
+      },
+    ]);
+  });
+
+  it("기존 Reference의 병합 modify-Change를 citedReferences의 mergeNote로 얹는다", async () => {
+    const supabase = mockSupabase({
+      changesets: {
+        id: CHANGESET_ID,
+        number: 12,
+        type: "ingestion",
+        status: "pending",
+        source_id: SOURCE_ID,
+        space_id: SPACE_ID,
+        spaces: { workspace_id: WORKSPACE_ID },
+        sources: {
+          title: "원문 제목",
+          body: "원문",
+          created_at: "2026-07-07T00:00:00Z",
+        },
+        changes: [
+          {
+            id: "22222222-2222-4222-8222-222222222222",
+            action: "create",
+            target_type: "digest",
+            target_id: "33333333-3333-4333-8333-333333333333",
+            data: {
+              title: "제목",
+              description: "요약",
+              body: { type: "learning", finding: "발견" },
+              topics: [],
+              tags: [],
+              reference_ids: [EXISTING_REFERENCE_ID],
+              external_urls: [],
+            },
+          },
+          {
+            id: "44444444-4444-4444-8444-444444444444",
+            action: "modify",
+            target_type: "reference",
+            target_id: EXISTING_REFERENCE_ID,
+            data: {
+              before: { body: "기존 설명" },
+              after: { body: "새 정보를 녹인 다듬은 설명" },
+            },
+          },
+        ],
+      },
+      references: [
+        { id: EXISTING_REFERENCE_ID, type: "person", title: "기존 인물" },
+      ],
+    });
+
+    const review = await getReview({ supabase, changesetId: CHANGESET_ID });
+
+    expect(review.citedReferences).toEqual([
+      {
+        id: EXISTING_REFERENCE_ID,
+        type: "person",
+        title: "기존 인물",
+        mergeNote: "새 정보를 녹인 다듬은 설명",
+      },
     ]);
   });
 
@@ -217,6 +282,7 @@ describe("updateReview", () => {
           externalUrls: ["https://toss.im"],
         },
       ],
+      referenceUpdates: [],
     });
 
     expect(rpc).toHaveBeenCalledWith(
@@ -230,6 +296,32 @@ describe("updateReview", () => {
             body: "송금 앱",
             external_urls: ["https://toss.im"],
           },
+        ],
+      }),
+    );
+  });
+
+  // 병합 편집(mergeNote)은 RPC 계약 키(reference_id/body)로 실어 보낸다 — 계약 키가
+  // 어긋나면 확정 시 references.body가 안 바뀌는데 어느 층도 소리 내지 않는다.
+  it("병합 편집을 RPC 계약 키(reference_id/body)로 실어 보낸다", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    await updateReview({
+      supabase,
+      changesetId: CHANGESET_ID,
+      digests: [],
+      newReferences: [],
+      referenceUpdates: [
+        { referenceId: EXISTING_REFERENCE_ID, mergeNote: "다듬은 설명" },
+      ],
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      "update_pending_ingestion",
+      expect.objectContaining({
+        p_reference_updates: [
+          { reference_id: EXISTING_REFERENCE_ID, body: "다듬은 설명" },
         ],
       }),
     );
@@ -268,6 +360,7 @@ describe("updateReview", () => {
         },
       ],
       newReferences: [],
+      referenceUpdates: [],
     });
 
     expect(rpc).toHaveBeenCalledWith(

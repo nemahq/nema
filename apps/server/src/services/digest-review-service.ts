@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import type { DigestDraft, NewReferenceDraft } from "@nema-io/shared";
+import type {
+  DigestDraft,
+  NewReferenceDraft,
+  ReferenceMergeUpdate,
+} from "@nema-io/shared";
 import { DigestBodySchema, ReferenceTypeSchema } from "@nema-io/shared";
 
 import type { Json } from "@server/infra/database.types";
@@ -30,10 +34,18 @@ const StoredReferenceDataSchema = z.object({
   external_urls: z.array(z.string()).default([]),
 });
 
+// 기존 Reference 병합 modify-Change의 편집 대상은 after.body뿐(type/title 읽기 전용) —
+// update_reference와 같은 {before, after} 형태에서 다듬을 값만 읽는다.
+const StoredReferenceMergeDataSchema = z.object({
+  after: z.object({ body: z.string() }),
+});
+
 interface CitedReference {
   id: string;
   type: string;
   title: string;
+  // 엔진이 병합 제안을 낸 경우에만 편집 가능한 다듬음 본문 / 단순 인용이면 null(읽기 전용)
+  mergeNote: string | null;
 }
 
 interface DigestReviewDetail {
@@ -168,6 +180,15 @@ export async function getReview(args: {
     externalUrls: digestData.external_urls,
   }));
 
+  // 병합 제안(modify)의 다듬음 본문을 id로 얹는다 — 제안이 없는 인용은 mergeNote=null
+  const mergeNoteById = new Map<string, string>();
+  for (const change of changeset.changes) {
+    if (change.target_type === "reference" && change.action === "modify") {
+      const mergeData = StoredReferenceMergeDataSchema.parse(change.data);
+      mergeNoteById.set(change.target_id, mergeData.after.body);
+    }
+  }
+
   const citedIds = [
     ...new Set(digests.flatMap((digest) => digest.referenceIds)),
   ];
@@ -178,7 +199,10 @@ export async function getReview(args: {
       .select("id, type, title")
       .in("id", citedIds);
     throwIfSupabaseError(referenceError);
-    citedReferences = references ?? [];
+    citedReferences = (references ?? []).map((reference) => ({
+      ...reference,
+      mergeNote: mergeNoteById.get(reference.id) ?? null,
+    }));
   }
 
   return {
@@ -202,8 +226,10 @@ export async function updateReview(args: {
   changesetId: string;
   digests: DigestDraft[];
   newReferences: NewReferenceDraft[];
+  referenceUpdates: ReferenceMergeUpdate[];
 }): Promise<void> {
-  const { supabase, changesetId, digests, newReferences } = args;
+  const { supabase, changesetId, digests, newReferences, referenceUpdates } =
+    args;
 
   const { error } = await supabase.rpc("update_pending_ingestion", {
     p_changeset_id: changesetId,
@@ -229,6 +255,11 @@ export async function updateReview(args: {
       title: reference.title,
       body: reference.body,
       external_urls: reference.externalUrls,
+    })) as unknown as Json,
+    // 병합 편집 → RPC 계약 키(snake_case): mergeNote가 references.body를 대체할 body가 된다
+    p_reference_updates: referenceUpdates.map((update) => ({
+      reference_id: update.referenceId,
+      body: update.mergeNote,
     })) as unknown as Json,
   });
   throwIfSupabaseError(error);

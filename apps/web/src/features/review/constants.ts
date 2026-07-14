@@ -1,4 +1,4 @@
-import type { DigestType } from "@nema-io/shared";
+import type { DigestType, ReferenceType } from "@nema-io/shared";
 import type { BadgeVariant } from "@nema-io/weave";
 
 import type { TranslationKey } from "@web/lib/tolgee";
@@ -11,6 +11,16 @@ export const DIGEST_TYPE_LABEL: Record<DigestType, string> = {
   learning: "학습",
   idea: "아이디어",
   assumption: "가정",
+};
+
+// organization은 행위주체(법인·팀), product는 그 주체가 만든 것 — 라벨만 봐선
+// 헷갈리는 구분이라 reference.ts SSOT 주석과 짝지어 둔다.
+export const REFERENCE_TYPE_LABEL: Record<ReferenceType, string> = {
+  person: "인물",
+  organization: "조직",
+  project: "프로젝트",
+  product: "제품",
+  term: "개념",
 };
 
 // 07-modeling.md의 DigestBody 필드 정의 순서·한글 라벨을 그대로 따른다.

@@ -21,6 +21,9 @@ export const DIGEST_TAGS_MAX = 5;
 // 정상 범위는 한 자릿수, 상한은 폭주 브레이크.
 export const REVIEW_DIGESTS_MAX = 20;
 export const REVIEW_NEW_REFERENCES_MAX = 20;
+// 한 리뷰에서 병합 편집되는 기존 Reference 수 — 인용된 기존 Reference의 부분집합이라
+// 신규 상한과 같은 결의 폭주 브레이크.
+export const REVIEW_REFERENCE_UPDATES_MAX = 20;
 export const DIGEST_EXTERNAL_URLS_MAX = 20;
 // 신규 레퍼런스 참조 키 — LLM 제안·리뷰 편집이 행 생성 전에 서로를 가리키는 로컬 식별자.
 // 편집 왕복은 예약 행 uuid(36자)를 key로 재사용하므로 상한이 이를 덮어야 한다.
@@ -34,6 +37,15 @@ export const NewReferenceDraftSchema = z.object({
   externalUrls: z.array(z.string().url()).max(REFERENCE_EXTERNAL_URLS_MAX),
 });
 export type NewReferenceDraft = z.infer<typeof NewReferenceDraftSchema>;
+
+// 기존 Reference 병합 편집 — 매칭된 기존 Reference(id, 읽기 전용 type/title)의 설명을
+// 새 정보를 녹인 완성본으로 다듬는다. mergeNote는 references.body를 통째로 대체하는
+// 값이라 신규 body와 같은 상한을 쓴다(review-flow.md "기존 Reference 후보 병합 편집").
+export const ReferenceMergeUpdateSchema = z.object({
+  referenceId: z.string().uuid(),
+  mergeNote: z.string().trim().min(1).max(REFERENCE_BODY_MAX_LENGTH),
+});
+export type ReferenceMergeUpdate = z.infer<typeof ReferenceMergeUpdateSchema>;
 
 // 리뷰 draft의 Topic/Tag 한 항목 — 레지스트리(topics/tags) 이름 매칭 결과를 얹는다.
 // id가 있으면 기존 항목(재사용, 이름 읽기 전용) / null이면 신규 항목(이름 편집 가능) —
@@ -93,6 +105,12 @@ export const DigestReviewUpdateInputSchema = z
     newReferences: z
       .array(NewReferenceDraftSchema)
       .max(REVIEW_NEW_REFERENCES_MAX),
+    // 병합 편집 없이 저장하는 왕복(제목만 고침 등)도 흔하므로 생략 시 빈 목록으로 —
+    // 어느 기존 Reference도 다듬지 않았다는 뜻.
+    referenceUpdates: z
+      .array(ReferenceMergeUpdateSchema)
+      .max(REVIEW_REFERENCE_UPDATES_MAX)
+      .default([]),
   })
   .superRefine(refineReviewPayload);
 export type DigestReviewUpdateInput = z.infer<

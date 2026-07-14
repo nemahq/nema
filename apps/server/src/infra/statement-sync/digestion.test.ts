@@ -100,6 +100,7 @@ describe("normalizeGeneratedDigests", () => {
           }),
         ],
         newReferences: [],
+        existingReferenceUpdates: [],
       },
       { labelToId, existingTags: [] },
     );
@@ -129,6 +130,7 @@ describe("normalizeGeneratedDigests", () => {
             externalUrls: [],
           },
         ],
+        existingReferenceUpdates: [],
       },
       emptyContext,
     );
@@ -146,6 +148,7 @@ describe("normalizeGeneratedDigests", () => {
       {
         digests: [makeGeneratedDigest({ newReferenceKeys: ["R9"] })],
         newReferences: [],
+        existingReferenceUpdates: [],
       },
       emptyContext,
     );
@@ -165,6 +168,7 @@ describe("normalizeGeneratedDigests", () => {
           }),
         ],
         newReferences: [],
+        existingReferenceUpdates: [],
       },
       {
         labelToId: new Map(),
@@ -197,6 +201,7 @@ describe("normalizeGeneratedDigests", () => {
           }),
         ],
         newReferences: [],
+        existingReferenceUpdates: [],
       },
       emptyContext,
     );
@@ -220,6 +225,7 @@ describe("normalizeGeneratedDigests", () => {
       {
         digests: [makeGeneratedDigest({ tags: [overLength, ...numbered] })],
         newReferences: [],
+        existingReferenceUpdates: [],
       },
       emptyContext,
     );
@@ -246,11 +252,55 @@ describe("normalizeGeneratedDigests", () => {
           }),
         ],
         newReferences: [],
+        existingReferenceUpdates: [],
       },
       emptyContext,
     );
 
     expect(digests[0]?.external_urls).toEqual(["https://example.com/doc"]);
+  });
+
+  it("병합 제안은 인용된 기존 Reference만 id로 해석하고, 한 대상엔 첫 제안만 남긴다", () => {
+    const CITED = "11111111-1111-1111-1111-111111111111";
+    const UNCITED = "22222222-2222-2222-2222-222222222222";
+    const labelToId = new Map([
+      ["E0", CITED],
+      ["E1", UNCITED],
+    ]);
+    const { referenceUpdates } = normalizeGeneratedDigests(
+      {
+        digests: [makeGeneratedDigest({ existingReferenceLabels: ["E0"] })],
+        newReferences: [],
+        existingReferenceUpdates: [
+          { label: "E0", body: "다듬은 설명" },
+          // 인용 안 한 기존 Reference를 다듬으라는 제안 — 노이즈라 버린다
+          { label: "E1", body: "인용 안 됨" },
+          // 환각 라벨 — 버린다
+          { label: "E9", body: "없는 라벨" },
+          // 같은 대상 두 번째 제안 — 첫 것만 남긴다
+          { label: "E0", body: "두 번째 제안" },
+        ],
+      },
+      { labelToId, existingTags: [] },
+    );
+
+    expect(referenceUpdates).toEqual([
+      { reference_id: CITED, body: "다듬은 설명" },
+    ]);
+  });
+
+  it("빈 병합 본문은 버린다 — 빈 body로 references.body를 지우면 안 된다", () => {
+    const CITED = "11111111-1111-1111-1111-111111111111";
+    const { referenceUpdates } = normalizeGeneratedDigests(
+      {
+        digests: [makeGeneratedDigest({ existingReferenceLabels: ["E0"] })],
+        newReferences: [],
+        existingReferenceUpdates: [{ label: "E0", body: "   " }],
+      },
+      { labelToId: new Map([["E0", CITED]]), existingTags: [] },
+    );
+
+    expect(referenceUpdates).toEqual([]);
   });
 });
 
@@ -325,6 +375,7 @@ function digestionLlm(
 const ONE_DIGEST_OUTPUT = {
   digests: [makeGeneratedDigest()],
   newReferences: [],
+  existingReferenceUpdates: [],
 };
 
 function rpcNames(rpc: ReturnType<typeof vi.fn>): string[] {
@@ -425,6 +476,7 @@ describe("runDigestionPass — 취소", () => {
       vi.fn(async () => ({
         digests: [],
         newReferences: [],
+        existingReferenceUpdates: [],
       })) as unknown as LlmProvider["generateStructured"],
     );
 

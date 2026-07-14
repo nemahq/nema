@@ -1,10 +1,20 @@
 import {
   DIGEST_TAGS_MAX,
   DIGEST_TOPICS_MAX,
+  DIGEST_TYPES,
   type DigestTagDraft,
   type DigestTopicDraft,
 } from "@nema-io/shared";
-import { Badge, Button, Input } from "@nema-io/weave";
+import {
+  Badge,
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@nema-io/weave";
 import { Trash2 } from "@nema-io/weave/icons";
 
 import {
@@ -48,11 +58,13 @@ interface DigestCandidateCardProps {
   spaceId: string;
   digest: ReviewDigest;
   title: string;
+  body: ReviewDigest["body"];
   topics: DigestTopicDraft[];
   tags: DigestTagDraft[];
   citedReferences: ReviewCitedReference[];
   disabled: boolean;
   onTitleChange: (title: string) => void;
+  onBodyChange: (body: ReviewDigest["body"]) => void;
   onTopicsChange: (topics: DigestTopicDraft[]) => void;
   onTagsChange: (tags: DigestTagDraft[]) => void;
   onRemove: () => void;
@@ -62,17 +74,19 @@ export function DigestCandidateCard({
   spaceId,
   digest,
   title,
+  body,
   topics,
   tags,
   citedReferences,
   disabled,
   onTitleChange,
+  onBodyChange,
   onTopicsChange,
   onTagsChange,
   onRemove,
 }: DigestCandidateCardProps) {
   const { t } = useTranslation();
-  const bodyRows = bodyFieldValues(digest.body);
+  const bodyRows = bodyFieldValues(body);
   const cited = digest.referenceIds
     .map((id) => citedReferences.find((reference) => reference.id === id))
     .filter((reference): reference is ReviewCitedReference =>
@@ -99,9 +113,29 @@ export function DigestCandidateCard({
     <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-surface-raised p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <Badge variant="neutral" className="w-fit">
-            {DIGEST_TYPE_LABEL[digest.body.type]}
-          </Badge>
+          <Select
+            value={body.type}
+            onValueChange={(type) =>
+              // 타입을 바꾸면 새 타입의 빈 body로 갈아끼운다 — 이전 타입 전용
+              // 필드는 판별자가 달라 그대로 버려진다(review-flow.md "타입 변경 시 필드 초기화").
+              onBodyChange({ type: type as ReviewDigest["body"]["type"] })
+            }
+            disabled={disabled}
+          >
+            <SelectTrigger
+              aria-label={t("review.digest_type_label")}
+              className="h-8 w-28 cursor-pointer text-xs shadow-none dark:shadow-sm"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DIGEST_TYPES.map((type) => (
+                <SelectItem key={type} value={type} className="cursor-pointer">
+                  {DIGEST_TYPE_LABEL[type]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
