@@ -24,6 +24,7 @@ const VERTEX_DEFAULT_LOCATION = "global";
 export function createGeminiClient(opts: {
   vertexProject?: string;
   vertexLocation?: string;
+  vertexServiceAccountJson?: string;
   apiKey?: string;
 }): GoogleGenAI {
   if (opts.vertexProject) {
@@ -32,6 +33,11 @@ export function createGeminiClient(opts: {
       project: opts.vertexProject,
       location: opts.vertexLocation ?? VERTEX_DEFAULT_LOCATION,
       httpOptions: { timeout: GEMINI_DEFAULT_TIMEOUT_MS },
+      ...(opts.vertexServiceAccountJson && {
+        googleAuthOptions: {
+          credentials: JSON.parse(opts.vertexServiceAccountJson),
+        },
+      }),
     });
   }
   if (!opts.apiKey) {
@@ -131,6 +137,8 @@ export function createLlmProviderFromEnv(modelId: string): LlmProvider {
       createGeminiClient({
         vertexProject: process.env["GEMINI_VERTEX_PROJECT"]?.trim(),
         vertexLocation: process.env["GEMINI_VERTEX_LOCATION"]?.trim(),
+        vertexServiceAccountJson:
+          process.env["GEMINI_VERTEX_SERVICE_ACCOUNT_JSON"]?.trim(),
         apiKey: process.env["GEMINI_API_KEY"]?.trim(),
       }),
   });
