@@ -341,6 +341,14 @@
   }
 }
 
+/* to를 일부러 안 둔다 — 100%가 없으면 소비처의 실제 opacity 유틸리티 값(예:
+   0.06)까지 자동 보간되어, 1을 거쳤다가 툭 떨어지는 튐 없이 그 값에서 끝난다. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

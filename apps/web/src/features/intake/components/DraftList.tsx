@@ -1,7 +1,6 @@
-import { Skeleton } from "@nema-io/weave";
 import { Circle, Inbox } from "@nema-io/weave/icons";
 
-import { NemaMarkIcon } from "@web/components/ui/NemaMarkIcon";
+import { Watermark } from "@web/components/ui/Watermark";
 import { usePendingSourceListQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
 import type { PendingSourceItem } from "@web/features/intake/types";
 import { type DraftStatus, draftStatus } from "@web/features/intake/utils";
@@ -10,8 +9,6 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftCard } from "./DraftCard";
 import { DraftSection } from "./DraftSection";
-
-const SKELETON_KEYS = ["skeleton-1", "skeleton-2", "skeleton-3"];
 
 interface Draft {
   source: PendingSourceItem;
@@ -25,29 +22,16 @@ function toDraft(source: PendingSourceItem): Draft | null {
 
 export function DraftList() {
   const { t } = useTranslation();
+  // DraftsScreen이 이미 이 쿼리의 최초 로딩(isLoading)을 헤더까지 포함해 걸러주므로,
+  // 여기서는 그 이후 상태(에러·빈 목록·목록)만 다루면 된다.
   const pendingQuery = usePendingSourceListQuery();
-
-  if (pendingQuery.isLoading) {
-    return (
-      <div className="flex flex-col gap-3">
-        {SKELETON_KEYS.map((key) => (
-          <Skeleton key={key} className="h-24 w-full" />
-        ))}
-      </div>
-    );
-  }
 
   // 조회 실패는 "초안 없음"과 다른 상태다 — 같은 빈 화면으로 뭉개면 정말 비어 있는 건지
   // 목록을 못 불러온 건지 구분이 안 된다.
   if (pendingQuery.isError) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
-        <NemaMarkIcon
-          width={64}
-          height={76}
-          fill="currentColor"
-          className="text-fg-primary opacity-[0.06] dark:opacity-[0.08]"
-        />
+        <Watermark />
         <p className="text-sm text-status-error">
           {getErrorMessage(pendingQuery.error)}
         </p>
@@ -62,12 +46,7 @@ export function DraftList() {
   if (drafts.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
-        <NemaMarkIcon
-          width={64}
-          height={76}
-          fill="currentColor"
-          className="text-fg-primary opacity-[0.06] dark:opacity-[0.08]"
-        />
+        <Watermark />
         <p className="text-sm text-fg-tertiary">{t("intake.drafts_empty")}</p>
       </div>
     );

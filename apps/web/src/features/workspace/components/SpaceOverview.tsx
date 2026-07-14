@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
-import { Skeleton } from "@nema-io/weave";
-
 import { NavigationBar } from "@web/components/layout/NavigationBar";
+import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
 import { SourceComposer } from "@web/features/intake";
 import { ChangesPanel } from "@web/features/review";
 import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
@@ -35,8 +34,18 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
     (candidate) => candidate.publicId === spacePublicId,
   );
 
-  // 조회가 끝났는데 그 Space가 없으면(지워졌거나 잘못된 링크) 무한 스켈레톤 대신 안내.
-  if (!isLoading && !space) {
+  // 이 페이지의 주축 데이터(Space)가 뜨기 전엔 스켈레톤 대신 워터마크만 — 로딩이
+  // 끝나는 순간 곧장 실제 페이지로 전환된다.
+  if (isLoading) {
+    return (
+      <main className="flex flex-1 items-center justify-center bg-surface-card">
+        <LoadingWatermark />
+      </main>
+    );
+  }
+
+  // 조회가 끝났는데 그 Space가 없으면(지워졌거나 잘못된 링크) 안내.
+  if (!space) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-1 bg-surface-card px-6 text-center">
         <h1 className="text-lg font-semibold text-fg-primary">
@@ -52,43 +61,29 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
   return (
     <main className="flex flex-1 flex-col bg-surface-card">
       <NavigationBar>
-        {isLoading || !space ? (
-          <div className="flex items-center gap-2">
-            <Skeleton className="size-6 rounded-md" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-        ) : (
-          <div className="flex min-w-0 items-center gap-2">
-            <span className={NAV_BADGE_CLASS}>
-              {space.name.charAt(0).toUpperCase()}
-            </span>
-            <p className="min-w-0 truncate text-sm font-medium text-fg-primary">
-              {space.name}
-            </p>
-          </div>
-        )}
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={NAV_BADGE_CLASS}>
+            {space.name.charAt(0).toUpperCase()}
+          </span>
+          <p className="min-w-0 truncate text-sm font-medium text-fg-primary">
+            {space.name}
+          </p>
+        </div>
       </NavigationBar>
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-8">
-          {isLoading || !space ? (
-            <div className="flex items-center gap-2">
-              <Skeleton className="size-8 rounded-md" />
-              <Skeleton className="h-7 w-40" />
-            </div>
-          ) : (
-            <div className="flex min-w-0 items-center gap-2">
-              <span className={CONTENT_BADGE_CLASS}>
-                {space.name.charAt(0).toUpperCase()}
-              </span>
-              <h1 className="min-w-0 truncate text-xl font-semibold text-fg-primary">
-                {space.name}
-              </h1>
-            </div>
-          )}
+          <div className="flex min-w-0 items-center gap-2">
+            <span className={CONTENT_BADGE_CLASS}>
+              {space.name.charAt(0).toUpperCase()}
+            </span>
+            <h1 className="min-w-0 truncate text-xl font-semibold text-fg-primary">
+              {space.name}
+            </h1>
+          </div>
 
           <div className="mt-6">
-            <SourceComposer spaceId={space?.id} />
+            <SourceComposer spaceId={space.id} />
           </div>
 
           <div className="mt-6 flex gap-1 border-b border-border/50">
@@ -112,7 +107,7 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
             </div>
           ) : (
             <ChangesPanel
-              spaceId={space?.id}
+              spaceId={space.id}
               onOpenReview={(changesetId) =>
                 navigate({
                   to: "/space/$spacePublicId/review/$changesetId",
