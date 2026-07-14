@@ -49,17 +49,17 @@ export function ChangesPanel({
   onOpenDetail,
 }: ChangesPanelProps) {
   const { t } = useTranslation();
-  const query = useChangesetListQuery();
+  const changesetListQuery = useChangesetListQuery();
   const [subTab, setSubTab] = useState<ChangesSubTab>("open");
 
-  if (query.isError) {
+  if (changesetListQuery.isError) {
     return (
       <p className="py-16 text-center text-sm text-status-error">
-        {getErrorMessage(query.error)}
+        {getErrorMessage(changesetListQuery.error)}
       </p>
     );
   }
-  if (!query.data) {
+  if (!changesetListQuery.data) {
     return (
       <div className="flex w-full flex-col gap-2 py-4">
         <Skeleton className="h-12 w-full" />
@@ -69,10 +69,10 @@ export function ChangesPanel({
     );
   }
 
-  const open = query.data.changesets.filter((entry) =>
+  const open = changesetListQuery.data.changesets.filter((entry) =>
     isOpenChangeset(entry.status),
   );
-  const closed = query.data.changesets.filter(
+  const closed = changesetListQuery.data.changesets.filter(
     (entry) => !isOpenChangeset(entry.status),
   );
   const entries = subTab === "open" ? open : closed;
@@ -95,13 +95,13 @@ export function ChangesPanel({
           active={subTab === "open"}
           onClick={() => setSubTab("open")}
         >
-          {`Open (${open.length})`}
+          {t("review.tab_open", { count: open.length })}
         </ChangesSubTabButton>
         <ChangesSubTabButton
           active={subTab === "closed"}
           onClick={() => setSubTab("closed")}
         >
-          {`Closed (${closed.length})`}
+          {t("review.tab_closed", { count: closed.length })}
         </ChangesSubTabButton>
       </div>
 

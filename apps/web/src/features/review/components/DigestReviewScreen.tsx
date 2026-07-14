@@ -214,7 +214,7 @@ export function DigestReviewScreen({
 
         <div className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-fg-secondary">
-            Digest ({digestRows.length})
+            {t("review.digest_section_title", { count: digestRows.length })}
           </h2>
           {digestRows.map(({ digest, index, title }) => (
             <DigestCandidateCard
@@ -236,7 +236,9 @@ export function DigestReviewScreen({
         {referenceRows.length > 0 && (
           <div className="flex flex-col gap-3">
             <h2 className="text-sm font-semibold text-fg-secondary">
-              Reference ({referenceRows.length})
+              {t("review.reference_section_title", {
+                count: referenceRows.length,
+              })}
             </h2>
             {referenceRows.map((reference) => (
               <ReferenceCandidateCard

@@ -35,23 +35,23 @@ export function ChangesetDetailScreen({
 }: ChangesetDetailScreenProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const listQuery = useChangesetListQuery();
+  const changesetListQuery = useChangesetListQuery();
   const restoreReview = useRestoreReview();
   const revertChangeset = useRevertChangeset();
   const trashSource = useTrashReviewSource();
 
   const [trashDialogOpen, setTrashDialogOpen] = useState(false);
 
-  if (listQuery.isError) {
+  if (changesetListQuery.isError) {
     return (
       <main className="flex flex-1 items-center justify-center bg-surface-card">
         <p className="text-sm text-status-error">
-          {getErrorMessage(listQuery.error)}
+          {getErrorMessage(changesetListQuery.error)}
         </p>
       </main>
     );
   }
-  if (!listQuery.data) {
+  if (!changesetListQuery.data) {
     return (
       <main className="flex flex-1 flex-col overflow-y-auto bg-surface-card">
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-8">
@@ -62,7 +62,9 @@ export function ChangesetDetailScreen({
     );
   }
 
-  const entry = listQuery.data.changesets.find((c) => c.id === changesetId);
+  const entry = changesetListQuery.data.changesets.find(
+    (c) => c.id === changesetId,
+  );
   if (!entry) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-1 bg-surface-card px-6 text-center">
@@ -142,7 +144,7 @@ export function ChangesetDetailScreen({
               {entry.number !== null && (
                 <span className="text-fg-tertiary">#{entry.number} · </span>
               )}
-              {summarizeChangesetEffect(entry.effect)}
+              {summarizeChangesetEffect(entry.effect, t)}
             </h1>
             <div className="flex shrink-0 items-center gap-2">
               {applied && !entry.reverted && (

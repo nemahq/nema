@@ -7,6 +7,7 @@ import {
 } from "@web/features/review/constants";
 import type { ChangesetListEntry } from "@web/features/review/types";
 import { summarizeChangesetEffect } from "@web/features/review/utils";
+import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetStatusBadge } from "./ChangesetStatusBadge";
 
@@ -16,6 +17,7 @@ interface ChangesetListRowProps {
 }
 
 export function ChangesetListRow({ entry, onClick }: ChangesetListRowProps) {
+  const { t } = useTranslation();
   const open = isOpenChangeset(entry.status);
   const typeLabel =
     entry.type === "manual" ? entry.type : CHANGESET_TYPE_LABEL[entry.type];
@@ -34,11 +36,11 @@ export function ChangesetListRow({ entry, onClick }: ChangesetListRowProps) {
         {entry.number !== null && (
           <span className="text-fg-tertiary">#{entry.number} · </span>
         )}
-        {summarizeChangesetEffect(entry.effect)}
+        {summarizeChangesetEffect(entry.effect, t)}
       </span>
       {entry.reverted && (
         <Badge variant="neutral" className="shrink-0">
-          되돌려짐
+          {t("review.status_reverted")}
         </Badge>
       )}
       {!open && (
