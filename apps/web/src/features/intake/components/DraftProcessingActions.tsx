@@ -1,15 +1,18 @@
 import { Button } from "@nema-io/weave";
 import { Lock, X } from "@nema-io/weave/icons";
 
+import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { useCancelSource } from "@web/features/intake/hooks/useCancelSource";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface DraftProcessingActionsProps {
   sourceId: string;
+  createdAt: string;
 }
 
 export function DraftProcessingActions({
   sourceId,
+  createdAt,
 }: DraftProcessingActionsProps) {
   const { t } = useTranslation();
   const cancelMutation = useCancelSource();
@@ -23,6 +26,8 @@ export function DraftProcessingActions({
       <p className="flex items-center gap-1 text-xs text-fg-tertiary">
         <Lock className="size-3" />
         {t("intake.draft_locked_reason")}
+        <span aria-hidden>·</span>
+        <RelativeTime dateTime={createdAt} />
       </p>
       <Button
         size="sm"

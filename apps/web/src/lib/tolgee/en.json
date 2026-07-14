@@ -72,6 +72,8 @@
     "draft_no_result": "We couldn't find anything to extract from this.",
     "draft_processing": "Processing",
     "draft_reassign_space": "Reassign space",
+    "draft_section_waiting": "Waiting for you",
+    "draft_section_working": "Working",
     "draft_title_edit_action": "Edit title",
     "draft_title_edit_label": "Title",
     "draft_title_edit_title": "Edit title",

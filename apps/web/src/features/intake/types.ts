@@ -10,4 +10,5 @@ export type PendingSourceItem =
 export interface DraftFooterProps {
   sourceId: string;
   spaceId: string;
+  createdAt: string;
 }

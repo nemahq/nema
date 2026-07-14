@@ -1,7 +1,7 @@
 import { type ComponentType, useState } from "react";
 
 import { Badge, type BadgeVariant, Button } from "@nema-io/weave";
-import { Circle, Pencil } from "@nema-io/weave/icons";
+import { Pencil } from "@nema-io/weave/icons";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import type { DraftFooterProps } from "@web/features/intake/types";
@@ -17,12 +17,13 @@ import { EditSourceTitleDialog } from "./EditSourceTitleDialog";
 // (design-decisions-log.md 2026-07-12 참고). 나중에 "더 친절하게" errorMessage를
 // 이어붙이고 싶어지면 그 전에 서버가 사용자 노출용 메시지를 별도로 다듬어야 한다.
 // cancelled는 배지 없음 — 취소는 사용자가 스스로 한 행동이라 별도 안내가 필요 없는
-// 평범한 대기 상태다(failed/empty처럼 서버가 알려야 하는 사정이 없다).
+// 평범한 대기 상태다(failed/empty처럼 서버가 알려야 하는 사정이 없다). processing도
+// 배지 없음 — Working 섹션 소속·풋터의 잠금 문구가 이미 같은 정보를 전달해 중복이었다.
 const STATUS_META: Record<
   DraftStatus,
   { labelKey: TranslationKey; variant: BadgeVariant } | null
 > = {
-  processing: { labelKey: "intake.draft_processing", variant: "info" },
+  processing: null,
   cancelled: null,
   failed: { labelKey: "intake.draft_failed", variant: "error" },
   empty: { labelKey: "intake.draft_no_result", variant: "neutral" },
@@ -76,9 +77,6 @@ export function DraftCard({
           variant={meta.variant}
           className="inline-flex w-fit items-center gap-1.5"
         >
-          {status === "processing" && (
-            <Circle className="size-1.5 animate-pulse fill-current" />
-          )}
           {t(meta.labelKey)}
         </Badge>
       )}
@@ -104,8 +102,10 @@ export function DraftCard({
         )}
       </div>
       <p className="line-clamp-2 text-sm text-fg-secondary">{body}</p>
-      <RelativeTime dateTime={createdAt} />
-      {Footer && <Footer sourceId={sourceId} spaceId={spaceId} />}
+      {status !== "processing" && <RelativeTime dateTime={createdAt} />}
+      {Footer && (
+        <Footer sourceId={sourceId} spaceId={spaceId} createdAt={createdAt} />
+      )}
       <EditSourceTitleDialog
         sourceId={sourceId}
         title={title}

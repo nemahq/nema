@@ -1,4 +1,5 @@
 import { Skeleton } from "@nema-io/weave";
+import { Circle, Inbox } from "@nema-io/weave/icons";
 
 import { NemaMarkIcon } from "@web/components/ui/NemaMarkIcon";
 import { usePendingSourceListQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
@@ -8,6 +9,7 @@ import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftCard } from "./DraftCard";
+import { DraftSection } from "./DraftSection";
 
 const SKELETON_KEYS = ["skeleton-1", "skeleton-2", "skeleton-3"];
 
@@ -71,19 +73,50 @@ export function DraftList() {
     );
   }
 
+  // 사용자가 할 일이 있는지(재시도·삭제·이동 vs 그냥 대기)로 섹션을 나눈다.
+  const waitingDrafts = drafts.filter(({ status }) => status !== "processing");
+  const workingDrafts = drafts.filter(({ status }) => status === "processing");
+
   return (
-    <div className="flex flex-col gap-3">
-      {drafts.map(({ source, status }) => (
-        <DraftCard
-          key={source.sourceId}
-          sourceId={source.sourceId}
-          spaceId={source.spaceId}
-          title={source.title}
-          body={source.body}
-          status={status}
-          createdAt={source.createdAt}
-        />
-      ))}
+    <div className="flex flex-col gap-6">
+      <DraftSection
+        label={t("intake.draft_section_waiting")}
+        count={waitingDrafts.length}
+        icon={<Inbox className="size-4 shrink-0 text-status-warning" />}
+        tone="warning"
+      >
+        {waitingDrafts.map(({ source, status }) => (
+          <DraftCard
+            key={source.sourceId}
+            sourceId={source.sourceId}
+            spaceId={source.spaceId}
+            title={source.title}
+            body={source.body}
+            status={status}
+            createdAt={source.createdAt}
+          />
+        ))}
+      </DraftSection>
+
+      <DraftSection
+        label={t("intake.draft_section_working")}
+        count={workingDrafts.length}
+        icon={
+          <Circle className="size-2.5 shrink-0 fill-current text-fg-tertiary" />
+        }
+      >
+        {workingDrafts.map(({ source, status }) => (
+          <DraftCard
+            key={source.sourceId}
+            sourceId={source.sourceId}
+            spaceId={source.spaceId}
+            title={source.title}
+            body={source.body}
+            status={status}
+            createdAt={source.createdAt}
+          />
+        ))}
+      </DraftSection>
     </div>
   );
 }

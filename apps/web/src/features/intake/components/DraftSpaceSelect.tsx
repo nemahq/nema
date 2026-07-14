@@ -7,11 +7,15 @@ import {
 } from "@nema-io/weave";
 
 import { useReassignSourceSpace } from "@web/features/intake/hooks/useReassignSourceSpace";
-import type { DraftFooterProps } from "@web/features/intake/types";
 import { useSpaceList } from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
 
-export function DraftSpaceSelect({ sourceId, spaceId }: DraftFooterProps) {
+interface DraftSpaceSelectProps {
+  sourceId: string;
+  spaceId: string;
+}
+
+export function DraftSpaceSelect({ sourceId, spaceId }: DraftSpaceSelectProps) {
   const { t } = useTranslation();
   const spaceListQuery = useSpaceList();
   const reassignMutation = useReassignSourceSpace();
