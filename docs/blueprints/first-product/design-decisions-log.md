@@ -522,3 +522,17 @@ Kyle 판단: (1) **Space는 폴더보다 리포지토리에 가까운 무게감*
 - **`fetchRegistries`의 `status='active'` 필터에 회귀 테스트 추가**: 이 PR이 고친 실제 버그(재사용 제안 후보에 archived Topic이 새던 것)인데 테스트가 없었다 — `digestion.test.ts`에 topics 쿼리의 `eq` 인자를 기록하는 스텁을 추가해 필터 자체를 검증하게 함.
 - **알려진 한계, 이번 PR에서 미반영(별도 트래킹 필요)**: Topic을 실제로 만드는 세 find-or-create 경로(`write_ingestion_review_changes`/`confirm_digest_edit`/`confirm_draft`, 전부 `ON CONFLICT (space_id, name) DO UPDATE`)가 `status`를 안 본다 — archived 이름으로 재생성을 시도하면 status는 archived로 남은 채 새 링크만 조용히 붙는다(마이그레이션 헤더 주석에 명시). Tag의 동일한 find-or-create 경로에도 이미 있던 결함이라 이번 PR에서 Topic만 따로 고치지 않기로 함 — Tag·Topic 양쪽을 함께 다룰 별도 작업 필요.
 - **알려진 한계, 문서화만 함(코드 미반영)**: `listTopics`(topic.list)가 상태 필터 없이 전체를 반환하는 건 의도된 설계(스레드 피드 Topic 필터가 archived도 계속 선택 가능해야 함)지만, 이 목록이 `statement-search.ts`의 코스 스코핑(묻기 기능의 쿼리 라우팅 후보)에도 그대로 흘러들어간다 — 즉 archived Topic이 재사용 제안에서는 빠지지만 라우팅 후보에서는 안 빠진다. 아직 Topic 아카이브가 `/dev` 하니스로만 가능해 실사용자 경로로는 도달 안 하지만, 실제 Digest 상세 팝오버가 랜딩하면 재검토 필요.
+
+---
+
+### 2026-07-14 — Reference 삭제: trashed 전환 + 30일 배치 완전 삭제
+
+`browsing-flow.md` "Reference 삭제 — 인용 없음/있음" 2케이스 중 BE 계약만 착지 — `source_status_v2`와 같은 모양으로 `reference_status`에 `trashed` 추가, `trash_reference`(active→trashed 전이) + `purge_expired_references`(30일 보관 배치, pg_cron 매일 실행) RPC. Reference는 임베딩 대상이 아니라 벡터 정리 큐 연동 없이 순수 관계형 DELETE + CASCADE로 끝남. FE는 `/dev` 하니스뿐이라 케이스 체크는 전부 미룸(각 케이스 상세의 범위 참고 참고).
+
+**amendment(2026-07-14, 멀티 에이전트 리뷰 반영)**:
+- **`trash_reference`에 `USING ERRCODE` 추가**: Topic RPC(바로 위 항목)와 정확히 같은 실수를 이 PR도 반복했다 — 이 브랜치가 Topic의 리뷰 반영 커밋보다 먼저 갈라져서 그 수정을 픽업할 기회가 없었다. `NM007`(source의 `NM004`·topic의 `NM005`와 같은 결)로 분리하고 `EXPECTED_DOMAIN_CODES`+i18n 메시지 추가. 가드 실패 테스트도 `.rejects.toThrow()`(무엇이든 던지면 통과)에서 `.rejects.toMatchObject({code: "reference_state_changed"})`(정확한 분류까지 확인)로 강화해, 이 클래스의 버그가 다시 생기면 테스트가 잡도록 함.
+- **`getReferenceCitingDigests`를 direct select에서 전용 RPC(`get_reference_citing_digests`)로 교체**: 기존 구현은 `digest_references`의 SELECT RLS(citing Digest가 속한 **Space** 멤버십 기준)에 의존했는데, Reference는 **Workspace** 스코프라 그 Space에 속하지 않은 워크스페이스 멤버는 실제 인용이 조용히 빠져 보였다 — 삭제 확인 UI가 "인용 없음"으로 잘못 판정해 확인 없이 지워버릴 수 있는 안전 문제. 새 RPC는 SECURITY DEFINER로 Workspace 멤버십만 확인하고 Space 경계를 넘어 전부 반환한다.
+- **`ReferenceSummary`에 `status` 추가 + `ReferenceRow`에 `canTrash = status === "active"` 게이팅**: 기존엔 `trash_reference`가 active만 대상으로 하는데도 목록이 상태를 안 돌려줘서 archived Reference에도 삭제 버튼이 떴다 — 지금은 `archive_reference` 호출부가 앱 어디에도 없어(grep 확인) 잠재적이었지만, Topic의 같은 패턴(`TopicRow`의 status 분기)을 그대로 적용해 지금 막음. `REFERENCE_STATUSES`/`ReferenceStatusSchema`도 신설(Tag/Topic과 같은 SSOT 패턴, 기존엔 Reference만 없었음).
+- **`ReferenceRow`에 `trashReference.error` 인라인 렌더 + `skipGlobalToast` 추가**: `TopicRow`와 같은 이유·같은 수정.
+- **마이그레이션 헤더 주석 정정**: CASCADE 근거로 든 테이블 목록과 마이그레이션 ID 목록의 순서가 안 맞아 위치 대응으로 잘못 읽힐 수 있었던 것, `reference_links`를 다른 두 테이블과 같은 컬럼명(`reference_id`)으로 뭉뚱그린 것(실제로는 `reference_a_id`/`reference_b_id`) 정정.
+- **미반영, 문서화만 함**: `purge_expired_references`엔 source_purge의 `purge_job_last_success`류 워치독이 없다 — 이번 PR에서 의도적으로 유보한 결정(마이그레이션 주석·PR 노트에 명시). cron job이 조용히 죽어도 알림이 없다는 뜻이라, 필요해지면 워치독을 job명 인자화해 일반화하는 후속 작업 필요.
