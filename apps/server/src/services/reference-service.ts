@@ -3,6 +3,7 @@ import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
 type ReferenceType = Database["public"]["Enums"]["reference_type"];
+type ReferenceStatus = Database["public"]["Enums"]["reference_status"];
 
 const REFERENCE_LIST_LIMIT = 100;
 
@@ -10,10 +11,13 @@ interface ReferenceSummary {
   id: string;
   type: ReferenceType;
   title: string;
+  status: ReferenceStatus;
   createdAt: string;
 }
 
 // 내 Workspace의 Reference 목록(trashed 제외) — 격리는 RLS(Workspace 멤버십)가 담당한다.
+// status를 함께 돌려줘야 화면이 archived Reference에 삭제 버튼을 잘못 띄우지 않는다
+// (trash_reference RPC는 active만 대상으로 하므로).
 export async function listReferences(args: {
   supabase: TypedSupabaseClient;
 }): Promise<{ references: ReferenceSummary[] }> {
@@ -21,7 +25,7 @@ export async function listReferences(args: {
 
   const { data, error } = await supabase
     .from("references")
-    .select("id, type, title, created_at")
+    .select("id, type, title, status, created_at")
     .neq("status", "trashed")
     .order("created_at", { ascending: false })
     .limit(REFERENCE_LIST_LIMIT);
@@ -32,6 +36,7 @@ export async function listReferences(args: {
       id: row.id,
       type: row.type,
       title: row.title,
+      status: row.status,
       createdAt: row.created_at,
     })),
   };
@@ -44,25 +49,26 @@ interface CitingDigest {
 
 // 이 Reference를 인용하는(활성) Digest 목록 — 삭제 확인 UI가 "인용 있음/없음"을 가르는
 // 재료이자 Reference 상세 화면의 역참조 표시 재료(statement_references의 문장 단위
-// 정밀 인용과는 다른 층위 — Digest 단위 인용, 20260706115232 주석 참고). digest_references
-// SELECT RLS가 이미 Space 멤버십으로 격리하므로 RPC 없이 direct select로 충분하다.
+// 정밀 인용과는 다른 층위 — Digest 단위 인용, 20260706115232 주석 참고). digest_references의
+// SELECT RLS는 citing Digest가 속한 Space 멤버십으로 격리하는데 Reference는 Workspace
+// 스코프라, 그 Space에 속하지 않은 워크스페이스 멤버는 실제 인용이 direct select에서
+// 조용히 빠진다 — 삭제 확인이 "인용 없음"으로 잘못 판정할 수 있는 안전 문제라 RPC로
+// Space 경계를 넘어 워크스페이스 멤버십만으로 조회한다.
 export async function getReferenceCitingDigests(args: {
   supabase: TypedSupabaseClient;
   referenceId: string;
 }): Promise<{ digests: CitingDigest[] }> {
   const { supabase, referenceId } = args;
 
-  const { data, error } = await supabase
-    .from("digest_references")
-    .select("digests!inner(id, title)")
-    .eq("reference_id", referenceId)
-    .eq("digests.status", "active");
+  const { data, error } = await supabase.rpc("get_reference_citing_digests", {
+    p_reference_id: referenceId,
+  });
   throwIfSupabaseError(error);
 
   return {
     digests: (data ?? []).map((row) => ({
-      id: row.digests.id,
-      title: row.digests.title,
+      id: row.digest_id,
+      title: row.digest_title,
     })),
   };
 }

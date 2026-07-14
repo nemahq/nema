@@ -7,6 +7,7 @@ export type SupabaseErrorCode =
   | "source_state_changed"
   | "topic_state_changed"
   | "topic_name_conflict"
+  | "reference_state_changed"
   | "query_failed";
 
 const PG_NOT_FOUND = "P0002";
@@ -32,6 +33,9 @@ const NEMA_SOURCE_STATE_CHANGED = "NM004";
 const NEMA_TOPIC_STATE_CHANGED = "NM005";
 // Topic 이름 중복(update_topic) — NM003(Space 이름 중복)과 같은 결.
 const NEMA_TOPIC_NAME_CONFLICT = "NM006";
+// Reference 상태 가드 실패(trash_reference) — NM004·NM005와 같은 "그 사이 상태가
+// 바뀜" 결이지만 엔티티가 달라 메시지가 다르므로 코드를 나눈다.
+const NEMA_REFERENCE_STATE_CHANGED = "NM007";
 
 export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
   switch (pgCode) {
@@ -52,6 +56,8 @@ export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
       return "topic_state_changed";
     case NEMA_TOPIC_NAME_CONFLICT:
       return "topic_name_conflict";
+    case NEMA_REFERENCE_STATE_CHANGED:
+      return "reference_state_changed";
     default:
       return "query_failed";
   }

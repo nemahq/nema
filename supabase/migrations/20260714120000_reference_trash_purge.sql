@@ -9,9 +9,10 @@
 --
 -- Reference는 임베딩 대상이 아니므로(07-modeling: Reference는 벡터 검색 색인 밖 —
 -- 진술만 임베딩된다) source_purge의 vector_purge 큐 연동이 필요 없다 — purge는
--- 순수 관계형 DELETE 하나. digest_references·statement_references·reference_links는
--- 전부 reference_id를 ON DELETE CASCADE로 걸어뒀으니(20260706105655·114518·115232)
--- Reference가 지워지면 인용·링크 행도 함께 사라진다. Digest 본문의 @[ref:uuid]
+-- 순수 관계형 DELETE 하나. reference_links(20260706105655, reference_a_id·
+-- reference_b_id)·digest_references(20260706114518, reference_id)·
+-- statement_references(20260706115232, reference_id)는 전부 ON DELETE CASCADE로
+-- 걸어뒀으니 Reference가 지워지면 인용·링크 행도 함께 사라진다. Digest 본문의 @[ref:uuid]
 -- 마커는 그 자체론 FK가 아니라(자유 텍스트 안 마커) 안 지워지고 그대로 남는데,
 -- 이게 곧 "죽은 링크"의 데이터 쪽 절반이다 — 렌더링에서 대상을 못 찾아 죽은
 -- 링크로 그리는 건 Digest 상세 화면이 생길 때의 몫(이번 슬라이스 밖, 데이터
@@ -64,13 +65,39 @@ BEGIN
     AND (auth.uid() IS NULL OR is_workspace_member(workspace_id));
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'reference % is not an active reference the caller can trash', p_reference_id;
+    RAISE EXCEPTION 'reference % is not an active reference the caller can trash', p_reference_id
+      USING ERRCODE = 'NM007';
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- =============================================================
--- 3) purge_expired_references — 보관기간 지난 trashed Reference를 배치로 완전 삭제
+-- 3) get_reference_citing_digests — 이 Reference를 인용하는(활성) Digest 목록
+--
+--    삭제 확인 UI가 "인용 있음/없음"을 가르는 재료. digest_references의 SELECT RLS는
+--    citing Digest가 속한 Space 멤버십으로 격리하는데(20260706114518), Reference는
+--    Workspace 스코프라 그 Space에 속하지 않은 워크스페이스 멤버는 실제 인용이
+--    RLS에 가려 조용히 빠진다 — 삭제 확인이 "인용 없음"으로 잘못 판정해 확인 없이
+--    지워버릴 수 있는 안전 문제라, direct select 대신 SECURITY DEFINER RPC로
+--    워크스페이스 멤버십만 확인하고 Space 경계를 넘어 전부 반환한다.
+-- =============================================================
+
+CREATE FUNCTION get_reference_citing_digests(p_reference_id uuid)
+RETURNS TABLE(digest_id uuid, digest_title text) AS $$
+  SELECT d.id, d.title
+  FROM digest_references dr
+  JOIN digests d ON d.id = dr.digest_id
+  WHERE dr.reference_id = p_reference_id
+    AND d.status = 'active'
+    AND EXISTS (
+      SELECT 1 FROM "references" r
+      WHERE r.id = p_reference_id
+        AND (auth.uid() IS NULL OR is_workspace_member(r.workspace_id))
+    );
+$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
+
+-- =============================================================
+-- 4) purge_expired_references — 보관기간 지난 trashed Reference를 배치로 완전 삭제
 --
 --    purge_expired_sources를 미러링하되 벡터 정리 단계가 없어 훨씬 단순하다 —
 --    대상을 집어 그대로 DELETE, 나머지(인용·링크)는 reference_id CASCADE가 처리한다.
@@ -113,11 +140,14 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 REVOKE ALL ON FUNCTION trash_reference(uuid) FROM public, anon;
 GRANT EXECUTE ON FUNCTION trash_reference(uuid) TO authenticated, service_role;
 
+REVOKE ALL ON FUNCTION get_reference_citing_digests(uuid) FROM public, anon;
+GRANT EXECUTE ON FUNCTION get_reference_citing_digests(uuid) TO authenticated, service_role;
+
 REVOKE ALL ON FUNCTION purge_expired_references(int, int) FROM public, anon, authenticated;
 GRANT EXECUTE ON FUNCTION purge_expired_references(int, int) TO service_role;
 
 -- =============================================================
--- 4) pg_cron — 매일 실행 (purge-expired-sources와 같은 스케줄 패턴).
+-- 5) pg_cron — 매일 실행 (purge-expired-sources와 같은 스케줄 패턴).
 --    03:05 UTC — sources 배치(03:00)와 겹치지 않게 5분 띄운다. 이름 있는 잡이라
 --    재적용 시 upsert. 워치독(purge_job_last_success)은 이번 슬라이스에 없음 —
 --    필요해지면 job명을 인자로 받게 일반화해서 추가한다.

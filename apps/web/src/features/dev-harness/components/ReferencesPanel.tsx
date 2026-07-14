@@ -27,6 +27,7 @@ function ReferencesPanelContent() {
             referenceId={reference.id}
             title={reference.title}
             type={reference.type}
+            status={reference.status}
           />
         ))}
       </ul>

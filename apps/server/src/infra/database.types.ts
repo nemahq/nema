@@ -1265,6 +1265,13 @@ export type Database = {
         }[];
       };
       generate_space_public_id: { Args: never; Returns: string };
+      get_reference_citing_digests: {
+        Args: { p_reference_id: string };
+        Returns: {
+          digest_id: string;
+          digest_title: string;
+        }[];
+      };
       increment_source_digestion_retry: {
         Args: {
           p_error_message?: string;
