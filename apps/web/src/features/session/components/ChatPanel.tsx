@@ -47,7 +47,7 @@ function ChatPanelContent() {
       <div
         ref={scrollRef}
         data-scroll-container
-        className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]"
+        className="flex-1 min-h-0 overflow-y-auto"
       >
         <MessageList />
       </div>

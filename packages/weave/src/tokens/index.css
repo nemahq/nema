@@ -360,8 +360,15 @@
       outline-color 0s !important;
   }
   body {
-    @apply bg-surface-base text-fg-primary;
+    @apply bg-surface-card text-fg-primary;
     font-family: "Satoshi", "Wanted Sans Variable", "Wanted Sans", sans-serif;
+  }
+  /* scrollbar-width/color는 상속 속성이라 html 한 곳에만 선언하면 앱 전역
+     스크롤 영역에 다 적용된다 — 화면마다 개별 유틸리티 클래스를 반복할 필요가
+     없다. */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
   }
   button,
   [role="button"] {

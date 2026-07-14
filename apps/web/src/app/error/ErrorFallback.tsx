@@ -27,6 +27,8 @@ interface ErrorFallbackProps {
   size?: ErrorFallbackSize;
 }
 
+// 배경색을 일부러 안 준다 — 어디 쓰이든 그 컨테이너의 평소 배경을 그대로 물려받아,
+// 에러가 떠도 주변과 색이 안 튀게 한다(모든 위치를 하나의 색으로 통일하는 대신).
 export function ErrorFallback({
   detail,
   onRetry,

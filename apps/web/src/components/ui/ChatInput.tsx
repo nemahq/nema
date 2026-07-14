@@ -153,7 +153,7 @@ export function ChatInput({
         maxLength={maxLength}
         rows={1}
         className={cn(
-          "w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-tertiary focus:outline-none [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]",
+          "w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-tertiary focus:outline-none",
           disabled && "cursor-not-allowed opacity-50",
         )}
       />
