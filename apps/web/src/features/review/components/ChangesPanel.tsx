@@ -40,16 +40,18 @@ function ChangesSubTabButton({
 }
 
 interface ChangesPanelProps {
+  spaceId: string | undefined;
   onOpenReview: (changesetId: string) => void;
   onOpenDetail: (changesetId: string) => void;
 }
 
 export function ChangesPanel({
+  spaceId,
   onOpenReview,
   onOpenDetail,
 }: ChangesPanelProps) {
   const { t } = useTranslation();
-  const changesetListQuery = useChangesetListQuery();
+  const changesetListQuery = useChangesetListQuery(spaceId);
   const [subTab, setSubTab] = useState<ChangesSubTab>("open");
 
   if (changesetListQuery.isError) {

@@ -89,6 +89,7 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
           </div>
         ) : (
           <ChangesPanel
+            spaceId={space?.id}
             onOpenReview={(changesetId) =>
               navigate({
                 to: "/space/$spacePublicId/review/$changesetId",

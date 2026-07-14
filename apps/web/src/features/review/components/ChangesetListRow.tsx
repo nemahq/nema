@@ -33,9 +33,7 @@ export function ChangesetListRow({ entry, onClick }: ChangesetListRowProps) {
         {typeLabel}
       </Badge>
       <span className="min-w-0 flex-1 truncate text-sm text-fg-primary">
-        {entry.number !== null && (
-          <span className="text-fg-tertiary">#{entry.number} · </span>
-        )}
+        <span className="text-fg-tertiary">#{entry.number} · </span>
         {summarizeChangesetEffect(entry.effect, t)}
       </span>
       {entry.reverted && (
@@ -44,7 +42,11 @@ export function ChangesetListRow({ entry, onClick }: ChangesetListRowProps) {
         </Badge>
       )}
       {!open && (
-        <ChangesetStatusBadge status={entry.status} className="shrink-0" />
+        <ChangesetStatusBadge
+          status={entry.status}
+          type={entry.type}
+          className="shrink-0"
+        />
       )}
       <RelativeTime dateTime={entry.createdAt} className="shrink-0" />
     </button>

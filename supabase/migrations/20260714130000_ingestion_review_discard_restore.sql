@@ -18,7 +18,8 @@
 --   confirm_ingestion_review와 같은 가드(type='ingestion' AND status='pending').
 --   changes를 하나도 적용하지 않는다 — Digest·Reference를 안 만든다. 원본은 리뷰
 --   내내 pending이라(create_ingestion_review 참고) 옮길 것도 없지만, 그 불변식이
---   깨진 경우까지 조용히 덮지 않도록 명시적으로 재확인한다(pending일 때만 손댐).
+--   깨진 경우(리뷰가 열린 채로 원본이 다른 경로로 trashed된 경우 등)는 UPDATE가
+--   0행을 건드리고 끝나는 대신 명시적으로 RAISE해 조용히 넘어가지 않는다.
 -- =============================================================
 
 CREATE FUNCTION discard_ingestion_review(p_changeset_id uuid)
@@ -46,6 +47,11 @@ BEGIN
 
   UPDATE sources SET status = 'pending'
   WHERE id = v_source_id AND status = 'pending';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'source % is not pending — cannot discard a review whose source drifted', v_source_id
+      USING ERRCODE = 'NM008';
+  END IF;
 
   UPDATE changesets SET status = 'rejected' WHERE id = p_changeset_id;
 END;

@@ -4,6 +4,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button, Skeleton } from "@nema-io/weave";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
+import {
+  confirmDisabledReason as computeConfirmDisabledReason,
+  runConfirmReview,
+} from "@web/features/review/confirmReviewFlow";
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import { useDigestReviewQuery } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
@@ -56,11 +60,16 @@ export function DigestReviewScreen({
     updateReview.error ?? confirmReview.error ?? discardReview.error;
 
   if (reviewQuery.isError) {
+    // confirm·discard 후 재조회하면 여기로 온다(getReview 가드가 pending만 허용) —
+    // 그 changeset은 이미 Changeset 상세에서 정상 조회되니 막다른 길로 두지 않는다.
     return (
-      <main className="flex flex-1 items-center justify-center bg-surface-card">
+      <main className="flex flex-1 flex-col items-center justify-center gap-3 bg-surface-card">
         <p className="text-sm text-status-error">
           {getErrorMessage(reviewQuery.error)}
         </p>
+        <Button variant="neutral" onClick={goToChangesetDetail}>
+          {t("review.view_changeset_detail_action")}
+        </Button>
       </main>
     );
   }
@@ -98,16 +107,17 @@ export function DigestReviewScreen({
   const locked = pending || outcome !== null;
   const confirmDisabled = locked || !hasCandidates || hasEmptyTitle;
 
-  function confirmDisabledReason(): string | null {
-    if (!hasCandidates) {
-      return t("review.confirm_disabled_no_candidates");
-    }
-    if (hasEmptyTitle) {
-      return t("review.confirm_disabled_missing_title");
-    }
-    return null;
-  }
-  const confirmDisabledReasonText = confirmDisabledReason();
+  const confirmDisabledReasonCode = computeConfirmDisabledReason(
+    hasCandidates,
+    hasEmptyTitle,
+  );
+  const confirmDisabledReasonText =
+    confirmDisabledReasonCode &&
+    t(
+      confirmDisabledReasonCode === "no_candidates"
+        ? "review.confirm_disabled_no_candidates"
+        : "review.confirm_disabled_missing_title",
+    );
 
   async function handleConfirm() {
     if (confirmDisabled) {
@@ -116,17 +126,14 @@ export function DigestReviewScreen({
     updateReview.reset();
     confirmReview.reset();
     try {
-      if (dirty) {
-        await updateReview.mutateAsync({
-          changesetId,
-          digests: digestRows.map(({ digest, title }) => ({
-            ...digest,
-            title: title.trim(),
-          })),
-          newReferences: referenceRows,
-        });
-      }
-      await confirmReview.mutateAsync({ changesetId });
+      await runConfirmReview({
+        changesetId,
+        dirty,
+        digestRows,
+        newReferences: referenceRows,
+        updateReview: updateReview.mutateAsync,
+        confirmReview: confirmReview.mutateAsync,
+      });
       setOutcome("applied");
     } catch {
       // 에러는 updateReview.error/confirmReview.error로 화면에 노출된다.
@@ -162,7 +169,7 @@ export function DigestReviewScreen({
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-8">
         <header className="flex flex-col gap-3 border-b border-border/50 pb-4">
           <div className="flex items-center gap-2">
-            <ChangesetStatusBadge status={displayedStatus()} />
+            <ChangesetStatusBadge status={displayedStatus()} type="ingestion" />
             <RelativeTime dateTime={review.sourceCreatedAt} />
           </div>
           <div className="flex items-center justify-between gap-2">

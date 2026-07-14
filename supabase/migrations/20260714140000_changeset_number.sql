@@ -5,10 +5,10 @@
 -- review-flow.md의 별도 백로그 "Changeset 제목 자동 생성"으로 남겨둔다.)
 --
 -- 부여 방식: changesets INSERT 트리거가 spaces.next_changeset_number를 원자적으로
--- 증가시켜 번호를 채운다 — INSERT INTO changesets 구문이 30곳 넘게 흩어져 있어
--- (ingestion·relation·manual·revert 전 타입, 여러 마이그레이션에 걸침) 그 전부를
--- 고치는 대신, 트리거 하나로 앞으로의 모든 생성 경로에 투명하게 적용한다("manual도
--- 이 시퀀스를 그대로 공유한다"는 07-modeling 규칙과도 맞음 — 어떤 INSERT든 예외 없음).
+-- 증가시켜 번호를 채운다 — INSERT INTO changesets 구문이 여러 마이그레이션에 걸쳐
+-- 흩어져 있어(ingestion·relation·manual·revert 전 타입) 그 전부를 고치는 대신,
+-- 트리거 하나로 앞으로의 모든 생성 경로에 투명하게 적용한다("manual도 이 시퀀스를
+-- 그대로 공유한다"는 07-modeling 규칙과도 맞음 — 어떤 INSERT든 예외 없음).
 --
 -- space_id가 NULL인 manual(Reference 직접 수정, Workspace 스코프)은 07-modeling에
 -- "변경셋 목록엔 안 뜬다"고 이미 정해져 있어 번호가 화면에 노출될 일이 없다 — 그 행은

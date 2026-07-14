@@ -267,9 +267,10 @@ export async function listActiveRelations(args: {
 
 interface ChangesetHistoryEntry {
   id: string;
-  // Space 안에서 순차 증가하는 표시용 번호(GitHub PR 번호와 같은 역할) — Space가
-  // 없는 manual(Reference 직접 수정)은 목록에 안 뜨는 타입이라 null.
-  number: number | null;
+  // Space 안에서 순차 증가하는 표시용 번호(GitHub PR 번호와 같은 역할). listChangesets가
+  // 항상 하나의 spaceId로 스코프하므로 이 목록엔 manual(Reference 직접 수정, space_id
+  // 없음)이 섞일 일이 없어 null이 아니다(DB CHECK: space_id IS NULL = number IS NULL).
+  number: number;
   type: ChangesetType;
   status: ChangesetStatus;
   sourceId: string | null;
@@ -286,23 +287,42 @@ interface ChangesetHistoryEntry {
 
 export async function listChangesets(args: {
   supabase: TypedSupabaseClient;
+  spaceId?: string;
   limit: number;
 }): Promise<{ changesets: ChangesetHistoryEntry[] }> {
-  const { supabase, limit } = args;
+  const { supabase, spaceId, limit } = args;
+
+  // spaceId 미지정 호출(MCP·dev-harness)만 이 경로를 탄다 — createSource와 같은
+  // 결의 폴백(1인 단계 기본 Space).
+  let targetSpaceId = spaceId;
+  if (targetSpaceId === undefined) {
+    const { data: membership, error: memberError } = await supabase
+      .from("space_members")
+      .select("space_id")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single();
+    throwIfSupabaseError(memberError);
+    targetSpaceId = membership.space_id;
+  }
 
   const { data: rows, error } = await supabase
     .from("changesets")
     .select(
       "id, number, type, status, source_id, reverts_id, created_at, changes(target_type), sources(status)",
     )
+    .eq("space_id", targetSpaceId)
     .order("created_at", { ascending: false })
     .limit(limit);
   throwIfSupabaseError(error);
 
   // 되돌림 여부는 revert 간선 전체를 모아 재귀로 계산한다(페이지 밖 redo 사슬 포함).
+  // revert 변경셋은 되돌리는 대상과 항상 같은 space_id를 갖는다(revert_changeset RPC)
+  // 이므로 이 space로 스코프해도 재귀가 끊기지 않는다.
   const { data: edges, error: edgeError } = await supabase
     .from("changesets")
     .select("id, reverts_id")
+    .eq("space_id", targetSpaceId)
     .not("reverts_id", "is", null);
   throwIfSupabaseError(edgeError);
 
@@ -314,6 +334,11 @@ export async function listChangesets(args: {
 
   return {
     changesets: (rows ?? []).map((row) => {
+      if (row.number === null) {
+        throw new Error(
+          `changeset ${row.id} has no number despite being scoped to space ${targetSpaceId}`,
+        );
+      }
       const effect: Record<ChangeTargetType, number> = {
         statement: 0,
         relation: 0,

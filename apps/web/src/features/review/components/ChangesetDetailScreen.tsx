@@ -19,6 +19,7 @@ import { useRestoreReview } from "@web/features/review/hooks/useRestoreReview";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
 import { useTrashReviewSource } from "@web/features/review/hooks/useTrashReviewSource";
 import { summarizeChangesetEffect } from "@web/features/review/utils";
+import { useSpaceList } from "@web/features/workspace";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
 
@@ -35,7 +36,14 @@ export function ChangesetDetailScreen({
 }: ChangesetDetailScreenProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const changesetListQuery = useChangesetListQuery();
+  const spaceListQuery = useSpaceList();
+  const space = spaceListQuery.data?.spaces.find(
+    (candidate) => candidate.publicId === spacePublicId,
+  );
+  // listChangesets가 spaceId로 스코프하므로, entry를 못 찾는 것 자체가 "이 Space
+  // 소속이 아님"까지 겸해 막아준다 — 다른 Space의 changesetId를 URL에 넣어도 조용히
+  // 안 뜨고 detail_not_found로 떨어진다.
+  const changesetListQuery = useChangesetListQuery(space?.id);
   const restoreReview = useRestoreReview();
   const revertChangeset = useRevertChangeset();
   const trashSource = useTrashReviewSource();
@@ -51,7 +59,7 @@ export function ChangesetDetailScreen({
       </main>
     );
   }
-  if (!changesetListQuery.data) {
+  if (!spaceListQuery.data || !changesetListQuery.data) {
     return (
       <main className="flex flex-1 flex-col overflow-y-auto bg-surface-card">
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-8">
@@ -65,7 +73,7 @@ export function ChangesetDetailScreen({
   const entry = changesetListQuery.data.changesets.find(
     (c) => c.id === changesetId,
   );
-  if (!entry) {
+  if (!space || !entry) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-1 bg-surface-card px-6 text-center">
         <h1 className="text-lg font-semibold text-fg-primary">
@@ -83,9 +91,17 @@ export function ChangesetDetailScreen({
   const applied = entry.status === "applied";
   // restore_ingestion_review는 원본이 pending일 때만 허용한다 — listChangesets가
   // 내려주는 sourceStatus로 클릭 전에 미리 비활성화한다(원본 완전 삭제 직후의
-  // invalidate 반영 지연은 trashSource.isSuccess로 즉시 커버).
-  const sourceTrashed =
-    trashSource.isSuccess || entry.sourceStatus !== "pending";
+  // invalidate 반영 지연은 trashSource.isSuccess로 즉시 커버). "trashed"만이 아니라
+  // "active"(그 사이 다른 리뷰가 이 원본을 재인제스천해 확정한 경우)도 막는 이유가
+  // 서로 달라 사유 문구를 따로 고른다 — active인데 "삭제되어"라고 하면 틀린 안내다.
+  const sourceStatus = entry.sourceStatus;
+  let blockReason: "trashed" | "reprocessed" | null = null;
+  if (trashSource.isSuccess || sourceStatus === "trashed") {
+    blockReason = "trashed";
+  } else if (sourceStatus === "active") {
+    blockReason = "reprocessed";
+  }
+  const restoreBlocked = blockReason !== null;
   const error =
     restoreReview.error ?? revertChangeset.error ?? trashSource.error;
 
@@ -136,14 +152,12 @@ export function ChangesetDetailScreen({
                 {CHANGESET_TYPE_LABEL[entry.type]}
               </span>
             )}
-            <ChangesetStatusBadge status={entry.status} />
+            <ChangesetStatusBadge status={entry.status} type={entry.type} />
             <RelativeTime dateTime={entry.createdAt} />
           </div>
           <div className="flex items-center justify-between gap-2">
             <h1 className="min-w-0 truncate text-lg font-semibold text-fg-primary">
-              {entry.number !== null && (
-                <span className="text-fg-tertiary">#{entry.number} · </span>
-              )}
+              <span className="text-fg-tertiary">#{entry.number} · </span>
               {summarizeChangesetEffect(entry.effect, t)}
             </h1>
             <div className="flex shrink-0 items-center gap-2">
@@ -163,7 +177,7 @@ export function ChangesetDetailScreen({
                   <Button
                     variant="neutral"
                     onClick={handleRestore}
-                    disabled={restoreReview.isPending || sourceTrashed}
+                    disabled={restoreReview.isPending || restoreBlocked}
                   >
                     {restoreReview.isPendingAfterDelay
                       ? t("common.saving")
@@ -172,7 +186,7 @@ export function ChangesetDetailScreen({
                   <Button
                     variant="neutral"
                     onClick={() => setTrashDialogOpen(true)}
-                    disabled={sourceTrashed}
+                    disabled={restoreBlocked}
                   >
                     {t("review.detail_trash_source_action")}
                   </Button>
@@ -180,9 +194,13 @@ export function ChangesetDetailScreen({
               )}
             </div>
           </div>
-          {discarded && isIngestion && sourceTrashed && (
+          {discarded && isIngestion && blockReason && (
             <p className="text-xs text-fg-tertiary">
-              {t("review.detail_trash_source_disabled_reason")}
+              {t(
+                blockReason === "trashed"
+                  ? "review.detail_trash_source_disabled_reason"
+                  : "review.detail_source_reprocessed_disabled_reason",
+              )}
             </p>
           )}
           {error && (
