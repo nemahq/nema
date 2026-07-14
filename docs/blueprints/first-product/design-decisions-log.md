@@ -591,3 +591,12 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 - **`DigestReviewScreen`에 `topicsOverrides`/`tagsOverrides` 추가 — 기존 `titleOverrides`와 같은 패턴**: `Map<index, DigestTopicDraft[]|DigestTagDraft[]>`로 편집 상태를 들고, `digestRows` 계산 시 override 우선·없으면 원본 draft로 병합(title과 동일 결). `dirty` 판정에도 두 Map의 size를 추가해, topics/tags만 바꾸고 title은 안 바꿔도 확정 시 저장이 걸리게 했다. `confirmReviewFlow.ts`의 `digestRows`/`updateReview` 페이로드 타입에 `topics`/`tags`를 추가하고 `runConfirmReview`가 스프레드하도록 확장 — `confirmReviewFlow.test.ts`의 기존 3케이스는 topics/tags를 빈 배열로 채워 넣는 선에서 그대로 유지(로직 자체는 안 바뀜, dirty 우선순위·update-then-confirm 순서 검증은 그대로 유효).
 - **Digest 타입 배지는 이번 슬라이스 대상 아님**: 브리핑이 "Digest 타입 표시도 후보 카드에 반영"이라고 했지만 확인해보니 PR #412가 이미 `DIGEST_TYPE_LABEL` Badge로 구현해뒀다 — 추가 작업 없음.
 - **검증**: `pnpm typecheck`/`lint`/`test`/`depcruise`/`knip`/`format:check`(모노레포 전체, server 406케이스 + web 74케이스, 둘 다 이번 변경으로 늘거나 준 케이스 없음 — 순수 FE 슬라이스) 전부 통과. **브라우저 라이트/다크 확인은 PM이 직접 진행**(이번 세션은 로컬 dev 서버만 띄워두고 자동화 브라우저 조작은 PM 요청으로 하지 않음) — 위 세션들의 "자격증명 없어 생략"과 달리 이번엔 세션에 로그인된 브라우저가 있었지만, 검증 주체를 PM으로 넘긴 것.
+
+**amendment(2026-07-15, 멀티 에이전트 리뷰 반영)**:
+
+- **Critical — 신규 Topic·Tag 이름을 빈 값으로 지워도 확정 버튼이 안 막혀 원문 zod 에러(영문 JSON)가 그대로 노출**: `hasEmptyTitle`(Digest 제목)만 검사하던 확정 비활성화 조건에 `hasEmptyLabel`(신규 라벨 이름 공백 여부)을 추가해 사전 차단. 더불어 `trpc.ts`의 `errorFormatter`에 `isZodInputError` 판정을 신설해, 이 케이스가 아니더라도 tRPC 입력 파서가 던지는 `ZodError`가 도메인 에러 매핑망을 안 타고 원문 issue 배열로 새는 경로 자체를 전역적으로 막았다(이번 기능에 국한되지 않는 방어).
+- **Critical — `confirmReviewFlow.test.ts`의 "dirty" 테스트가 topics/tags 배선을 실질적으로 검증 못 하던 가짜 통과**: 공유 `DIGEST` fixture가 `topics: []`/`tags: []`라 override 로직이 깨져도 assertion이 그대로 통과했다 — override 값이 원본과 다른 별도 fixture로 교체해 실제 회귀 감지력을 갖게 했다.
+- **Important — `TopicAddPopover`가 다른 Space의 동명 Topic을 "기존"으로 노출하던 크로스-Space 버그(`listChangesets`와 같은 패턴)**: `topic.list`에 옵셔널 `spaceId`를 추가(미지정 시 기존 동작 그대로 전 Space, Topic 관리 화면이 계속 씀)해 Digest 리뷰만 현재 Space로 좁힘 + `archived` 제외 필터에 `statement-search.test.ts`와 같은 결의 `eq()` 호출 회귀 단언 추가.
+- **Important — 팝오버 로딩/에러 상태가 "결과 없음"과 구분 안 되던 문제**: `isLoading`/`isError`를 읽어 별도 문구로 분리, 검색/정확매치 로직은 `labelSearch.ts`로 추출해 순수 함수 테스트로 고정.
+- **Suggestions 3건 반영**: 같은 Digest 안 신규 라벨 이름 중복 생성 방지(`isDuplicateLabelName`), `EditableLabelChip`의 `readOnly`/`onNameChange` 페어링을 discriminated union으로 강제(편집 가능한데 핸들러 없는 상태를 타입으로 원천 차단), `DigestTagDraft.id`(쓰기 시 무시되는 표시용 힌트)와 `TagUpdateInputSchema.id`(신뢰되는 PK) 의미 차이를 스키마 주석으로 문서화.
+- **검증**: 위 수정 전부 리뷰에서 실제 diff를 대조해 정확성 확인(4개 에이전트 병렬 리뷰 — code-reviewer/silent-failure-hunter/type-design-analyzer/pr-test-analyzer). CI(`check`) 통과, `mergeStateStatus: CLEAN`.
