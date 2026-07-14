@@ -15,7 +15,12 @@ export function confirmDisabledReason(
 interface ConfirmReviewFlowArgs {
   changesetId: string;
   dirty: boolean;
-  digestRows: { digest: ReviewDigest; title: string }[];
+  digestRows: {
+    digest: ReviewDigest;
+    title: string;
+    topics: ReviewDigest["topics"];
+    tags: ReviewDigest["tags"];
+  }[];
   newReferences: ReviewNewReference[];
   updateReview: (payload: {
     changesetId: string;
@@ -43,9 +48,11 @@ export async function runConfirmReview(
   if (dirty) {
     await updateReview({
       changesetId,
-      digests: digestRows.map(({ digest, title }) => ({
+      digests: digestRows.map(({ digest, title, topics, tags }) => ({
         ...digest,
         title: title.trim(),
+        topics,
+        tags,
       })),
       newReferences,
     });

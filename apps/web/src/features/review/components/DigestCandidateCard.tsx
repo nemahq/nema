@@ -1,3 +1,9 @@
+import {
+  DIGEST_TAGS_MAX,
+  DIGEST_TOPICS_MAX,
+  type DigestTagDraft,
+  type DigestTopicDraft,
+} from "@nema-io/shared";
 import { Badge, Button, Input } from "@nema-io/weave";
 import { Trash2 } from "@nema-io/weave/icons";
 
@@ -10,6 +16,10 @@ import type {
   ReviewDigest,
 } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
+
+import { EditableLabelChip } from "./EditableLabelChip";
+import { TagAddPopover } from "./TagAddPopover";
+import { TopicAddPopover } from "./TopicAddPopover";
 
 function bodyFieldValues(
   body: ReviewDigest["body"],
@@ -37,18 +47,26 @@ function bodyFieldValues(
 interface DigestCandidateCardProps {
   digest: ReviewDigest;
   title: string;
+  topics: DigestTopicDraft[];
+  tags: DigestTagDraft[];
   citedReferences: ReviewCitedReference[];
   disabled: boolean;
   onTitleChange: (title: string) => void;
+  onTopicsChange: (topics: DigestTopicDraft[]) => void;
+  onTagsChange: (tags: DigestTagDraft[]) => void;
   onRemove: () => void;
 }
 
 export function DigestCandidateCard({
   digest,
   title,
+  topics,
+  tags,
   citedReferences,
   disabled,
   onTitleChange,
+  onTopicsChange,
+  onTagsChange,
   onRemove,
 }: DigestCandidateCardProps) {
   const { t } = useTranslation();
@@ -58,6 +76,22 @@ export function DigestCandidateCard({
     .filter((reference): reference is ReviewCitedReference =>
       Boolean(reference),
     );
+
+  function updateTopicAt(index: number, next: DigestTopicDraft): void {
+    onTopicsChange(topics.map((topic, i) => (i === index ? next : topic)));
+  }
+
+  function removeTopicAt(index: number): void {
+    onTopicsChange(topics.filter((_, i) => i !== index));
+  }
+
+  function updateTagAt(index: number, next: DigestTagDraft): void {
+    onTagsChange(tags.map((tag, i) => (i === index ? next : tag)));
+  }
+
+  function removeTagAt(index: number): void {
+    onTagsChange(tags.filter((_, i) => i !== index));
+  }
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-surface-raised p-4">
@@ -99,13 +133,60 @@ export function DigestCandidateCard({
         </dl>
       )}
 
-      {(digest.topics.length > 0 || cited.length > 0) && (
+      <div className="flex flex-wrap items-center gap-1.5">
+        {topics.map((topic, index) => (
+          <EditableLabelChip
+            key={topic.id ?? `new-topic-${index}`}
+            label={topic.name}
+            readOnly={topic.id !== null}
+            disabled={disabled}
+            variant="brand"
+            removeAriaLabel={t("review.topic_remove_action")}
+            onNameChange={(name) => updateTopicAt(index, { ...topic, name })}
+            onRemove={() => removeTopicAt(index)}
+          />
+        ))}
+        <TopicAddPopover
+          disabled={disabled || topics.length >= DIGEST_TOPICS_MAX}
+          excludedTopicIds={topics
+            .map((topic) => topic.id)
+            .filter((id): id is string => id !== null)}
+          onSelectExisting={(topic) =>
+            onTopicsChange([...topics, { id: topic.id, name: topic.name }])
+          }
+          onCreateNew={(name) =>
+            onTopicsChange([...topics, { id: null, name }])
+          }
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {tags.map((tag, index) => (
+          <EditableLabelChip
+            key={tag.id ?? `new-tag-${index}`}
+            label={tag.title}
+            readOnly={tag.id !== null}
+            disabled={disabled}
+            variant="neutral"
+            removeAriaLabel={t("review.tag_remove_action")}
+            onNameChange={(title) => updateTagAt(index, { ...tag, title })}
+            onRemove={() => removeTagAt(index)}
+          />
+        ))}
+        <TagAddPopover
+          disabled={disabled || tags.length >= DIGEST_TAGS_MAX}
+          excludedTagIds={tags
+            .map((tag) => tag.id)
+            .filter((id): id is string => id !== null)}
+          onSelectExisting={(tag) => onTagsChange([...tags, tag])}
+          onCreateNew={(draft) =>
+            onTagsChange([...tags, { id: null, ...draft }])
+          }
+        />
+      </div>
+
+      {cited.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {digest.topics.map((topic) => (
-            <Badge key={topic} variant="brand">
-              {topic}
-            </Badge>
-          ))}
           {cited.map((reference) => (
             <Badge key={reference.id} variant="info">
               {reference.title}

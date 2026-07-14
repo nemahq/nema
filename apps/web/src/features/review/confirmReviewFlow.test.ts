@@ -45,7 +45,14 @@ describe("runConfirmReview", () => {
     await runConfirmReview({
       changesetId: "cs-1",
       dirty: true,
-      digestRows: [{ digest: DIGEST, title: "  새 제목  " }],
+      digestRows: [
+        {
+          digest: DIGEST,
+          title: "  새 제목  ",
+          topics: DIGEST.topics,
+          tags: DIGEST.tags,
+        },
+      ],
       newReferences: [],
       updateReview,
       confirmReview,
@@ -67,7 +74,9 @@ describe("runConfirmReview", () => {
     await runConfirmReview({
       changesetId: "cs-1",
       dirty: false,
-      digestRows: [{ digest: DIGEST, title: DIGEST.title }],
+      digestRows: [
+        { digest: DIGEST, title: DIGEST.title, topics: [], tags: [] },
+      ],
       newReferences: [],
       updateReview,
       confirmReview,
@@ -85,7 +94,9 @@ describe("runConfirmReview", () => {
       runConfirmReview({
         changesetId: "cs-1",
         dirty: true,
-        digestRows: [{ digest: DIGEST, title: DIGEST.title }],
+        digestRows: [
+          { digest: DIGEST, title: DIGEST.title, topics: [], tags: [] },
+        ],
         newReferences: [],
         updateReview,
         confirmReview,

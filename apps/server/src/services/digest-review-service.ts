@@ -59,7 +59,7 @@ export async function getReview(args: {
   const { data: changeset, error } = await supabase
     .from("changesets")
     .select(
-      "id, number, type, status, source_id, changes(id, action, target_type, target_id, data), sources(title, body, created_at)",
+      "id, number, type, status, source_id, space_id, changes(id, action, target_type, target_id, data), sources(title, body, created_at), spaces(workspace_id)",
     )
     .eq("id", changesetId)
     .single();
@@ -70,7 +70,9 @@ export async function getReview(args: {
     changeset.status !== "pending" ||
     changeset.source_id === null ||
     changeset.sources === null ||
-    changeset.number === null
+    changeset.number === null ||
+    changeset.space_id === null ||
+    changeset.spaces === null
   ) {
     throw new Error(
       `changeset ${changesetId} is not a pending ingestion review`,
@@ -98,27 +100,70 @@ export async function getReview(args: {
     };
   });
 
-  const digests: DigestDraft[] = changeset.changes
+  const rawDigests = changeset.changes
     .filter(
       (change) => change.target_type === "digest" && change.action === "create",
     )
-    .map((change) => {
-      const digestData = StoredDigestDataSchema.parse(change.data);
-      return {
-        title: digestData.title,
-        description: digestData.description,
-        body: digestData.body,
-        topics: digestData.topics,
-        tags: digestData.tags,
-        referenceIds: digestData.reference_ids.filter(
-          (id) => !newReferenceIds.has(id),
-        ),
-        newReferenceKeys: digestData.reference_ids.filter((id) =>
-          newReferenceIds.has(id),
-        ),
-        externalUrls: digestData.external_urls,
-      };
-    });
+    .map((change) => StoredDigestDataSchema.parse(change.data));
+
+  // 기존/신규 판정 — 이름이 Space(topics)·Workspace(tags) 레지스트리와 매치하면 기존
+  // (id 포함, 읽기 전용), 매치하지 않으면 신규(id 없음, 이름 편집 가능). archived 항목은
+  // 재사용 후보에서 제외한다(update_topic 마이그레이션 주석과 같은 결 — restore 없이
+  // 조용히 재사용되면 안 된다).
+  const topicNames = [...new Set(rawDigests.flatMap((d) => d.topics))];
+  const tagTitles = [
+    ...new Set(rawDigests.flatMap((d) => d.tags.map((tag) => tag.title))),
+  ];
+
+  const topicIdByName = new Map<string, string>();
+  if (topicNames.length > 0) {
+    const { data: topicRows, error: topicError } = await supabase
+      .from("topics")
+      .select("id, name")
+      .eq("space_id", changeset.space_id)
+      .eq("status", "active")
+      .in("name", topicNames);
+    throwIfSupabaseError(topicError);
+    for (const row of topicRows ?? []) {
+      topicIdByName.set(row.name, row.id);
+    }
+  }
+
+  const tagIdByTitle = new Map<string, string>();
+  if (tagTitles.length > 0) {
+    const { data: tagRows, error: tagError } = await supabase
+      .from("tags")
+      .select("id, title")
+      .eq("workspace_id", changeset.spaces.workspace_id)
+      .eq("status", "active")
+      .in("title", tagTitles);
+    throwIfSupabaseError(tagError);
+    for (const row of tagRows ?? []) {
+      tagIdByTitle.set(row.title, row.id);
+    }
+  }
+
+  const digests: DigestDraft[] = rawDigests.map((digestData) => ({
+    title: digestData.title,
+    description: digestData.description,
+    body: digestData.body,
+    topics: digestData.topics.map((name) => ({
+      id: topicIdByName.get(name) ?? null,
+      name,
+    })),
+    tags: digestData.tags.map((tag) => ({
+      id: tagIdByTitle.get(tag.title) ?? null,
+      title: tag.title,
+      description: tag.description,
+    })),
+    referenceIds: digestData.reference_ids.filter(
+      (id) => !newReferenceIds.has(id),
+    ),
+    newReferenceKeys: digestData.reference_ids.filter((id) =>
+      newReferenceIds.has(id),
+    ),
+    externalUrls: digestData.external_urls,
+  }));
 
   const citedIds = [
     ...new Set(digests.flatMap((digest) => digest.referenceIds)),
@@ -158,13 +203,18 @@ export async function updateReview(args: {
 
   const { error } = await supabase.rpc("update_pending_ingestion", {
     p_changeset_id: changesetId,
-    // RPC 계약 키는 write_ingestion_review_changes가 읽는 snake_case다
+    // RPC 계약 키는 write_ingestion_review_changes가 읽는 snake_case다.
+    // topics/tags의 id는 getReview가 붙인 표시용 힌트라 저장 형태(name/{title,description})엔
+    // 없다 — confirm 시 이름으로 다시 find-or-create되므로 id 없이도 기존 항목이 재사용된다.
     p_digests: digests.map((digest) => ({
       title: digest.title,
       description: digest.description,
       body: digest.body,
-      topics: digest.topics,
-      tags: digest.tags,
+      topics: digest.topics.map((topic) => topic.name),
+      tags: digest.tags.map((tag) => ({
+        title: tag.title,
+        description: tag.description,
+      })),
       reference_ids: digest.referenceIds,
       new_reference_keys: digest.newReferenceKeys,
       external_urls: digest.externalUrls,
@@ -237,13 +287,17 @@ export async function confirmDigestEdit(args: {
     "confirm_digest_edit",
     {
       p_digest_id: digestId,
-      // RPC 계약 키는 confirm_digest_edit이 읽는 snake_case (update_pending_ingestion과 동일)
+      // RPC 계약 키는 confirm_digest_edit이 읽는 snake_case (update_pending_ingestion과 동일,
+      // topics/tags의 id를 저장 형태에서 벗겨내는 것도 동일)
       p_digest: {
         title: digest.title,
         description: digest.description,
         body: digest.body,
-        topics: digest.topics,
-        tags: digest.tags,
+        topics: digest.topics.map((topic) => topic.name),
+        tags: digest.tags.map((tag) => ({
+          title: tag.title,
+          description: tag.description,
+        })),
         reference_ids: digest.referenceIds,
         new_reference_keys: digest.newReferenceKeys,
         external_urls: digest.externalUrls,
