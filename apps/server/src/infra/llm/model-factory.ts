@@ -24,8 +24,18 @@ const ServiceAccountCredentialsSchema = z.object({
   private_key: z.string().min(1),
 });
 
-function parseServiceAccountJson(json: string) {
-  const result = ServiceAccountCredentialsSchema.safeParse(JSON.parse(json));
+export function parseServiceAccountJson(json: string) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    // SyntaxError 메시지엔 private_key가 포함된 원문 일부가 그대로 실릴 수 있어 던지지 않는다.
+    throw new LlmError(
+      "auth",
+      "GEMINI_VERTEX_SERVICE_ACCOUNT_JSON is not valid JSON",
+    );
+  }
+  const result = ServiceAccountCredentialsSchema.safeParse(parsed);
   if (!result.success) {
     throw new LlmError(
       "auth",
@@ -35,9 +45,8 @@ function parseServiceAccountJson(json: string) {
   return result.data;
 }
 
-// Gemini 클라이언트 생성 — vertexProject가 있으면 Vertex(ADC 인증·GCP 크레딧),
-// 없으면 AI Studio(apiKey). 두 경로의 단일 진입점이라 providers(요청 경로)와
-// eval 스크립트가 같은 규칙으로 Vertex를 켠다.
+// Gemini 클라이언트 생성 — 단일 진입점이라 providers(요청 경로)와 eval 스크립트가
+// 같은 규칙으로 Vertex/AI Studio를 켠다.
 export function createGeminiClient(opts: {
   vertexProject?: string;
   vertexLocation?: string;
