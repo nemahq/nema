@@ -9,7 +9,6 @@ import {
   DIGEST_TITLE_MAX_LENGTH,
   DIGEST_TOPICS_MAX,
   REFERENCE_EXTERNAL_URLS_MAX,
-  SOURCE_TITLE_MAX_LENGTH,
   TAG_DESCRIPTION_MAX_LENGTH,
   TAG_TITLE_MAX_LENGTH,
   TOPIC_NAME_MAX_LENGTH,
@@ -169,14 +168,12 @@ async function digestSource(params: {
     labelToId,
     existingTags: registries.tags,
   });
-  const title = output.sourceTitle.trim().slice(0, SOURCE_TITLE_MAX_LENGTH);
 
   // 판단이 없는 글(잡담뿐) — 리뷰 없이 완료만. 원본은 pending에 남아
   // 사용자가 휴지통으로 정리한다.
   if (normalized.digests.length === 0) {
     const { error } = await deps.supabase.rpc("complete_source_digestion", {
       p_source_id: source.id,
-      p_title: title,
     });
     if (error) {
       throw new Error(
@@ -192,7 +189,6 @@ async function digestSource(params: {
     // 키(digest: title/description/body/topics/tags/reference_ids/new_reference_keys/
     // external_urls, reference: key/type/title/body/external_urls)다. 키를 바꾸면 RPC도 함께 고친다.
     p_digests: normalized.digests as unknown as Json,
-    p_title: title,
     p_new_references: normalized.newReferences as unknown as Json,
   });
   if (error) {

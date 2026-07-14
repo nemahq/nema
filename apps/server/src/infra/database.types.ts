@@ -670,7 +670,6 @@ export type Database = {
           space_id: string;
           status: Database["public"]["Enums"]["source_status"];
           title: string | null;
-          title_edited: boolean;
           trashed_at: string | null;
           updated_at: string;
         };
@@ -694,7 +693,6 @@ export type Database = {
           space_id: string;
           status?: Database["public"]["Enums"]["source_status"];
           title?: string | null;
-          title_edited?: boolean;
           trashed_at?: string | null;
           updated_at?: string;
         };
@@ -718,7 +716,6 @@ export type Database = {
           space_id?: string;
           status?: Database["public"]["Enums"]["source_status"];
           title?: string | null;
-          title_edited?: boolean;
           trashed_at?: string | null;
           updated_at?: string;
         };
@@ -1173,7 +1170,7 @@ export type Database = {
         Returns: undefined;
       };
       complete_source_digestion: {
-        Args: { p_source_id: string; p_title: string };
+        Args: { p_source_id: string };
         Returns: undefined;
       };
       complete_statement_ingestion: {
@@ -1189,12 +1186,7 @@ export type Database = {
         Returns: string;
       };
       create_ingestion_review: {
-        Args: {
-          p_digests: Json;
-          p_new_references?: Json;
-          p_source_id: string;
-          p_title: string;
-        };
+        Args: { p_digests: Json; p_new_references?: Json; p_source_id: string };
         Returns: string;
       };
       create_reference_link: {
@@ -1273,6 +1265,10 @@ export type Database = {
           status: Database["public"]["Enums"]["statement_status"];
           type: Database["public"]["Enums"]["statement_type"];
         }[];
+      };
+      fill_source_title: {
+        Args: { p_source_id: string; p_title: string };
+        Returns: undefined;
       };
       generate_space_public_id: { Args: never; Returns: string };
       get_reference_citing_digests: {
@@ -1421,6 +1417,10 @@ export type Database = {
           p_type: Database["public"]["Enums"]["reference_type"];
         };
         Returns: string;
+      };
+      update_source_body: {
+        Args: { p_body: string; p_source_id: string };
+        Returns: undefined;
       };
       update_source_title: {
         Args: { p_source_id: string; p_title: string };

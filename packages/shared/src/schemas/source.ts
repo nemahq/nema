@@ -60,3 +60,13 @@ export const SourceUpdateTitleInputSchema = z.object({
 export type SourceUpdateTitleInput = z.infer<
   typeof SourceUpdateTitleInputSchema
 >;
+
+// 재추출 전에 원본 고치기 — 상한은 생성과 같은 SOURCE_BODY_MAX_LENGTH(같은 글이
+// 입구를 통과하는 기준과 편집을 통과하는 기준이 다를 이유가 없다). 어떤 상태에서
+// 허용되는지는 RPC의 WHERE 가드가 판정한다(열린 리뷰가 있으면 잠긴다).
+export const SourceUpdateBodyInputSchema = z.object({
+  sourceId: z.string().uuid(),
+  body: z.string().trim().min(1).max(SOURCE_BODY_MAX_LENGTH),
+});
+
+export type SourceUpdateBodyInput = z.infer<typeof SourceUpdateBodyInputSchema>;

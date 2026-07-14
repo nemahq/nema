@@ -4,6 +4,14 @@ vi.mock("@server/infra/statement-sync", () => ({
   abortDigestion: vi.fn(),
 }));
 
+vi.mock("@sentry/node", () => ({
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
+}));
+
+import * as Sentry from "@sentry/node";
+
+import type { Providers } from "@server/infra/providers";
 import { abortDigestion } from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
@@ -12,8 +20,10 @@ import {
   createSource,
   deleteSource,
   fetchMergedSourceIds,
+  fillSourceTitle,
   reassignSourceSpace,
   startSourceDigestion,
+  updateSourceBody,
   updateSourceTitle,
 } from "./source-service";
 
@@ -330,5 +340,96 @@ describe("updateSourceTitle", () => {
         title: "새 제목",
       }),
     ).rejects.toThrow();
+  });
+});
+
+// --- 재추출 전에 원본 고치기 ---
+
+describe("updateSourceBody", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("update_source_body RPC로 원본을 반영한다", async () => {
+    const { supabase, rpc } = mockRpcSupabase(null);
+
+    await updateSourceBody({
+      supabase,
+      sourceId: CANCEL_SOURCE_ID,
+      body: "고친 원본",
+    });
+
+    expect(rpc).toHaveBeenCalledWith("update_source_body", {
+      p_source_id: CANCEL_SOURCE_ID,
+      p_body: "고친 원본",
+    });
+  });
+
+  // 리뷰가 열린 채로 원본이 바뀌면 화면의 Digest 후보들이 더는 존재하지 않는 문장에서
+  // 나온 것이 된다 — 가드는 RPC 안에 있고, 서비스는 그 거부를 삼키지 않아야 한다.
+  it("처리 중이거나 리뷰가 열려 가드가 지면 오류를 그대로 올린다", async () => {
+    const { supabase } = mockRpcSupabase({
+      message: "source ... is not an idle draft the caller can rewrite",
+    });
+
+    await expect(
+      updateSourceBody({
+        supabase,
+        sourceId: CANCEL_SOURCE_ID,
+        body: "고친 원본",
+      }),
+    ).rejects.toThrow();
+  });
+});
+
+// --- Source 제목 생성 (생성 직후 1회, 뒤에서 도는 부수효과) ---
+
+function titleProviders(generateText: () => Promise<string>): Providers {
+  return {
+    llm: { forTask: () => ({ generateText }) },
+  } as unknown as Providers;
+}
+
+describe("fillSourceTitle", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("LLM이 뽑은 제목을 fill_source_title RPC로 채운다", async () => {
+    const { supabase, rpc } = mockRpcSupabase(null);
+
+    fillSourceTitle({
+      supabase,
+      providers: titleProviders(async () => "  배포 도구 선정  "),
+      sourceId: CANCEL_SOURCE_ID,
+      body: "배포 도구 다시 봤는데 Railway가 나을 듯",
+    });
+
+    await vi.waitFor(() =>
+      expect(rpc).toHaveBeenCalledWith("fill_source_title", {
+        p_source_id: CANCEL_SOURCE_ID,
+        p_title: "배포 도구 선정",
+      }),
+    );
+  });
+
+  // 제목은 없어도 그만인 값이다(화면은 body 미리보기로 그린다) — 제목 콜이 죽었다고
+  // 원본 저장(이미 커밋된)이 오류로 되돌아오면 사용자는 글을 잃은 걸로 읽는다.
+  it("LLM이 실패해도 던지지 않는다 — 원본 저장은 이미 끝난 일이다", async () => {
+    const { supabase, rpc } = mockRpcSupabase(null);
+
+    expect(() =>
+      fillSourceTitle({
+        supabase,
+        providers: titleProviders(() =>
+          Promise.reject(new Error("nano is down")),
+        ),
+        sourceId: CANCEL_SOURCE_ID,
+        body: "아무 글",
+      }),
+    ).not.toThrow();
+
+    await vi.waitFor(() => expect(Sentry.captureException).toHaveBeenCalled());
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

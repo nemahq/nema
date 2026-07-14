@@ -143,6 +143,8 @@ export {
   SourceGetInputSchema,
   type SourceReassignSpaceInput,
   SourceReassignSpaceInputSchema,
+  type SourceUpdateBodyInput,
+  SourceUpdateBodyInputSchema,
   type SourceUpdateTitleInput,
   SourceUpdateTitleInputSchema,
 } from "./schemas/source";
