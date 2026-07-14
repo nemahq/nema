@@ -120,11 +120,12 @@ function rpcNames(rpc: ReturnType<typeof vi.fn>): string[] {
   return rpc.mock.calls.map(([name]) => name as string);
 }
 
-// create_source는 새 id를, 그 뒤 제목 채우기는 아무것도 안 돌려준다
-function titleSupabase() {
+// create_source는 새 id를, 그 뒤 제목 채우기는 아무것도 안 돌려준다.
+// fillError를 주면 제목 채우기 RPC만 실패한다(박제는 성공).
+function titleSupabase(fillError?: { message: string }) {
   const rpc = vi.fn(async (fn: string) => ({
     data: fn === "create_source" ? NEW_SOURCE_ID : null,
-    error: null,
+    error: fn === "fill_source_title" ? (fillError ?? null) : null,
   }));
   return { supabase: { rpc } as unknown as TypedSupabaseClient, rpc };
 }
@@ -450,6 +451,47 @@ describe("createSource — 제목 생성", () => {
 
     expect(result).toEqual({ sourceId: NEW_SOURCE_ID });
     await vi.waitFor(() => expect(Sentry.captureException).toHaveBeenCalled());
+    expect(rpcNames(rpc)).not.toContain("fill_source_title");
+  });
+
+  // 제목 채우기 실패는 사용자에게 보일 표면이 없다 — Sentry가 유일한 창구라, 여기가
+  // 무음이면 제목이 조직적으로 안 붙어도 아무도 모른다.
+  it("제목 채우기 RPC가 실패하면 Sentry로 보고한다 — 저장은 그대로 성공", async () => {
+    const { supabase } = titleSupabase({ message: "db is down" });
+
+    const result = await createSource({
+      supabase,
+      providers: titleProviders(async () => "배포 도구 선정"),
+      body: "아무 글",
+      spaceId: EXPLICIT_SPACE,
+    });
+
+    expect(result).toEqual({ sourceId: NEW_SOURCE_ID });
+    await vi.waitFor(() =>
+      expect(Sentry.captureMessage).toHaveBeenCalledWith(
+        expect.stringContaining("db is down"),
+        expect.objectContaining({ level: "warning" }),
+      ),
+    );
+  });
+
+  // 공백뿐인 응답은 프로바이더의 빈 응답 가드를 통과해 서비스까지 온다
+  it("LLM이 공백뿐인 제목을 주면 RPC를 안 부르고 Sentry로 보고한다", async () => {
+    const { supabase, rpc } = titleSupabase();
+
+    await createSource({
+      supabase,
+      providers: titleProviders(async () => "   "),
+      body: "아무 글",
+      spaceId: EXPLICIT_SPACE,
+    });
+
+    await vi.waitFor(() =>
+      expect(Sentry.captureMessage).toHaveBeenCalledWith(
+        expect.stringContaining("blank title"),
+        expect.objectContaining({ level: "warning" }),
+      ),
+    );
     expect(rpcNames(rpc)).not.toContain("fill_source_title");
   });
 });

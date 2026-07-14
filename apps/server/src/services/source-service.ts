@@ -316,8 +316,14 @@ function fillSourceTitle(args: {
           messages: [{ role: "user", content: buildSourceTitleMessage(body) }],
         });
 
+      // 공백뿐인 응답은 프로바이더의 빈 응답 가드(완전히 빈 문자열)를 통과해 여기까지 온다.
+      // 조용히 돌아서면 프로바이더가 통째로 망가져 전 원본의 제목이 안 붙어도 아무도 모른다.
       const title = raw.trim().slice(0, SOURCE_TITLE_MAX_LENGTH);
       if (!title) {
+        Sentry.captureMessage("[source-title] LLM returned a blank title", {
+          level: "warning",
+          extra: { sourceId },
+        });
         return;
       }
 
