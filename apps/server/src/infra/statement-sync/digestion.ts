@@ -219,6 +219,7 @@ async function fetchRegistries(
       .from("topics")
       .select("name")
       .eq("space_id", scope.spaceId)
+      .eq("status", "active")
       .order("updated_at", { ascending: false })
       .limit(REGISTRY_PROMPT_LIMIT),
     supabase

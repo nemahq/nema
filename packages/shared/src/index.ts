@@ -187,7 +187,14 @@ export {
 export {
   type Topic,
   TOPIC_NAME_MAX_LENGTH,
+  TOPIC_STATUSES,
+  type TopicIdInput,
+  TopicIdInputSchema,
   TopicSchema,
+  type TopicStatus,
+  TopicStatusSchema,
+  type TopicUpdateInput,
+  TopicUpdateInputSchema,
 } from "./schemas/topic";
 export {
   type BootstrapUser,
