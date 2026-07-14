@@ -30,6 +30,9 @@ export type ActiveRelation =
   RouterOutputs["changeset"]["listActiveRelations"]["relations"][number];
 export type RelationType = ActiveRelation["type"];
 
+export type ReferenceSummary =
+  RouterOutputs["reference"]["list"]["references"][number];
+
 type ModelPresetInfo = RouterOutputs["dev"]["getModelPreset"];
 export type ModelPresetName = ModelPresetInfo["preset"];
 type TaskModels = RouterOutputs["dev"]["getTaskModels"];

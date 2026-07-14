@@ -22,3 +22,11 @@ export const REFERENCE_BODY_MAX_LENGTH = 20_000;
 // 대표 링크(홈페이지·LinkedIn·repo·docs) — 대상을 식별하는 소수의 링크지
 // Digest가 논하는 링크 더미가 아니라, Digest 상한보다 작게 잡는다.
 export const REFERENCE_EXTERNAL_URLS_MAX = 10;
+
+// Reference 액션(삭제·인용 조회) 공용 입력 — 어떤 상태에서 무엇이 허용되는지는
+// 전부 서버 판정이라(RPC의 WHERE 가드) source의 SourceActionInputSchema와 같은 결.
+export const ReferenceActionInputSchema = z.object({
+  referenceId: z.string().uuid(),
+});
+
+export type ReferenceActionInput = z.infer<typeof ReferenceActionInputSchema>;
