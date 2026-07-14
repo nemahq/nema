@@ -269,12 +269,17 @@ const PENDING_DIGESTION_SOURCE = {
   created_at: "2026-07-13T00:00:00.000Z",
 };
 
-// 레지스트리 조회(.from) 체인 stub — 전부 빈 목록으로 resolve
-function registryStub() {
+// 레지스트리 조회(.from) 체인 stub — 전부 빈 목록으로 resolve. eq 호출은 테이블별로
+// 기록해, "topics 조회가 status=active로 좁혀지는지"처럼 필터 자체를 검증할 수 있게 한다.
+function registryStub(onEq?: (args: unknown[]) => void) {
   const stub: Record<string, unknown> = {};
-  for (const method of ["select", "eq", "order", "limit"]) {
+  for (const method of ["select", "order", "limit"]) {
     stub[method] = () => stub;
   }
+  stub["eq"] = (...args: unknown[]) => {
+    onEq?.(args);
+    return stub;
+  };
   stub["then"] = (resolve: (value: { data: unknown[]; error: null }) => void) =>
     resolve({ data: [], error: null });
   return stub;
@@ -293,8 +298,16 @@ function mockDigestionSupabase() {
     }
     return { data: null, error: null };
   });
-  const from = vi.fn(() => registryStub());
-  return { supabase: { rpc, from } as unknown as TypedSupabaseClient, rpc };
+  const eqCallsByTable: Record<string, unknown[][]> = {};
+  const from = vi.fn((table: string) => {
+    eqCallsByTable[table] ??= [];
+    return registryStub((args) => eqCallsByTable[table].push(args));
+  });
+  return {
+    supabase: { rpc, from } as unknown as TypedSupabaseClient,
+    rpc,
+    eqCallsByTable,
+  };
 }
 
 function digestionLlm(
@@ -392,6 +405,19 @@ describe("runDigestionPass — 취소", () => {
     await runDigestionPass({ supabase, forTask: () => llm });
 
     expect(rpcNames(rpc)).toContain("create_ingestion_review");
+  });
+
+  it("재사용 제안 레지스트리는 archived 주제를 걸러 active만 LLM에 준다", async () => {
+    const { supabase, eqCallsByTable } = mockDigestionSupabase();
+    const llm = digestionLlm(
+      vi.fn(
+        async () => ONE_DIGEST_OUTPUT,
+      ) as unknown as LlmProvider["generateStructured"],
+    );
+
+    await runDigestionPass({ supabase, forTask: () => llm });
+
+    expect(eqCallsByTable.topics).toContainEqual(["status", "active"]);
   });
 
   it("생성 콜의 sourceTitle을 별도 콜 없이 create_ingestion_review에 함께 싣는다", async () => {

@@ -486,6 +486,7 @@
 - **When**: 그중 하나의 칩을 클릭한다.
 - **Then**: 이름 변경과 아카이브 액션을 담은 편집 팝오버가 뜬다.
 - **관여 화면**: Digest 상세
+- **범위 참고 (2026-07-14, PR #410)**: 이 Given이 전제하는 "Digest 상세의 Topic 칩·편집 팝오버" UI 자체가 아직 없다 — 이번 PR은 BE 계약(`update_topic`/`archive_topic`/`restore_topic` RPC)과 기능 확인용 `/dev` 하니스(디자인 없음)만 랜딩했다. 그래서 미체크로 남김.
 
 #### Topic 이름 변경
 
@@ -493,6 +494,7 @@
 - **When**: 이름을 수정해 저장한다.
 - **Then**: 그 Topic 이름이 즉시 바뀌고, 이 Topic이 붙은 모든 Digest에 새 이름이 함께 반영된다.
 - **관여 화면**: Digest 상세
+- **범위 참고 (2026-07-14, PR #410)**: `update_topic` RPC(active 상태만 대상, 이름 중복은 `NM006`으로 명확한 에러)로 BE는 구현·리뷰 완료 — `topics.name`이 단일 레지스트리 행이라 "붙은 모든 Digest에 함께 반영"은 스키마상 자동으로 참(별도 반영 로직 불필요). 다만 편집 팝오버 UI가 없어(케이스 "Topic 칩 클릭 → 편집 팝오버" 참고) 실동작 검증 대상이 없다 — 그래서 미체크로 남김.
 
 #### Topic 아카이브
 
@@ -503,6 +505,7 @@
   2. 이미 붙어 있던 Digest와의 연결은 그대로 유지된다(연쇄 해제 없음).
   3. 새 Digest에 붙일 때 뜨는 재사용 제안 후보에서는 제외되지만, 스레드 피드의 Topic 필터에서는 계속 선택할 수 있어 이미 태그된 Digest를 계속 찾을 수 있다.
 - **관여 화면**: Digest 상세, 스레드 피드
+- **범위 참고 (2026-07-14, PR #410)**: `archive_topic` RPC로 Then #1·#2 구현됨(status만 바꾸고 digest_topics·source_topics는 안 건드림). Then #3의 "재사용 제안 후보에서 제외"는 `fetchRegistries`가 `status='active'`만 조회하도록 고쳐 구현·테스트됨(`digestion.test.ts`). "스레드 피드의 Topic 필터"는 그 필터 UI 자체가 아직 없어 검증 대상이 없다. **알려진 한계(design-decisions-log.md 참고)**: 재사용 제안 레지스트리와 별개로, 인제스천·Digest 직접 수정의 Topic find-or-create(`ON CONFLICT ... DO UPDATE`)는 status를 보지 않아 archived 이름으로 재생성을 시도하면 status는 archived로 남은 채 새 링크만 조용히 붙는다(Tag에도 이미 있던 결함, 이번 PR에서 함께 고치지 않음) — Then #2("연쇄 해제 없음")의 취지와는 맞지만 "재사용 제안 후보 제외"가 실제로 재사용을 완전히 막지는 못한다는 뜻이라 별도 트래킹 필요. 그래서 미체크로 남김.
 
 #### Topic 아카이브 되살리기
 
@@ -510,6 +513,7 @@
 - **When**: 그 Topic 칩을 클릭해 편집 팝오버를 열고 되살리기 액션을 실행한다.
 - **Then**: 그 Topic이 active 상태로 복원되고, 재사용 제안 후보에도 다시 포함된다.
 - **관여 화면**: Digest 상세
+- **범위 참고 (2026-07-14, PR #410)**: `restore_topic` RPC로 BE는 구현·리뷰 완료(UNIQUE 제약이 상태 무관하게 걸려 있어 되살리기 자체가 이름 충돌을 일으킬 수 없음을 확인함). Given이 전제하는 스레드 피드 Topic 필터·Digest 상세 진입 경로가 없어 실동작 검증 대상이 없다 — 그래서 미체크로 남김.
 
 #### Tag 칩 클릭 → 편집 팝오버
 

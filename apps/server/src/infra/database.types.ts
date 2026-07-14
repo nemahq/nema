@@ -1040,6 +1040,7 @@ export type Database = {
           id: string;
           name: string;
           space_id: string;
+          status: Database["public"]["Enums"]["topic_status"];
           updated_at: string;
         };
         Insert: {
@@ -1047,6 +1048,7 @@ export type Database = {
           id?: string;
           name: string;
           space_id: string;
+          status?: Database["public"]["Enums"]["topic_status"];
           updated_at?: string;
         };
         Update: {
@@ -1054,6 +1056,7 @@ export type Database = {
           id?: string;
           name?: string;
           space_id?: string;
+          status?: Database["public"]["Enums"]["topic_status"];
           updated_at?: string;
         };
         Relationships: [
@@ -1155,6 +1158,7 @@ export type Database = {
         Returns: undefined;
       };
       archive_tag: { Args: { p_tag_id: string }; Returns: undefined };
+      archive_topic: { Args: { p_topic_id: string }; Returns: undefined };
       cancel_source_digestion: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -1338,6 +1342,7 @@ export type Database = {
         Returns: undefined;
       };
       restore_tag: { Args: { p_tag_id: string }; Returns: undefined };
+      restore_topic: { Args: { p_topic_id: string }; Returns: undefined };
       restore_trashed_source: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -1396,6 +1401,10 @@ export type Database = {
         Args: { p_description: string; p_tag_id: string; p_title: string };
         Returns: undefined;
       };
+      update_topic: {
+        Args: { p_name: string; p_topic_id: string };
+        Returns: undefined;
+      };
       update_workspace_member_role: {
         Args: {
           p_role: Database["public"]["Enums"]["workspace_role"];
@@ -1446,6 +1455,7 @@ export type Database = {
       statement_status: "active" | "archived";
       statement_type: "claim" | "question" | "todo";
       tag_status: "active" | "archived";
+      topic_status: "active" | "archived";
       workspace_role: "owner" | "member";
     };
     CompositeTypes: {
@@ -1609,6 +1619,7 @@ export const Constants = {
       statement_status: ["active", "archived"],
       statement_type: ["claim", "question", "todo"],
       tag_status: ["active", "archived"],
+      topic_status: ["active", "archived"],
       workspace_role: ["owner", "member"],
     },
   },

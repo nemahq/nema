@@ -14,6 +14,8 @@
     "source_state_changed": "This draft's state changed. Reload the list and try again.",
     "space_min_one": "Your Workspace needs at least one Space. Create another Space first.",
     "space_name_conflict": "That name is already in use. Try a different name.",
+    "topic_name_conflict": "That topic name is already in use. Try a different name.",
+    "topic_state_changed": "This topic's state changed. Reload the list and try again.",
     "workspace_last_owner": "Transfer ownership to another member first."
   }
 }
