@@ -6,21 +6,21 @@ import { useReferenceCitingDigestsQuery } from "@web/features/dev-harness/hooks/
 import { useTrashReference } from "@web/features/dev-harness/hooks/useTrashReference";
 import type { ReferenceSummary } from "@web/features/dev-harness/types";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
-import { trpc } from "@web/lib/trpc";
 
 interface ReferenceRowProps {
-  reference: ReferenceSummary;
+  referenceId: string;
+  title: string;
+  type: ReferenceSummary["type"];
 }
 
 // ConfirmButton의 단순 무장/실행 두 단계로는 안 맞는다 — 무장 시 인용 Digest 목록을
 // 먼저 보여준 뒤에 실행해야 한다(intake-flow "레퍼런스 삭제" 인용 있음 케이스).
-export function ReferenceRow({ reference }: ReferenceRowProps) {
+export function ReferenceRow({ referenceId, title, type }: ReferenceRowProps) {
   const [armed, setArmed] = useState(false);
-  const citingQuery = useReferenceCitingDigestsQuery(reference.id, {
+  const citingQuery = useReferenceCitingDigestsQuery(referenceId, {
     enabled: armed,
   });
   const trashReference = useTrashReference();
-  const utils = trpc.useUtils();
 
   const citingDigests = citingQuery.data?.digests ?? [];
 
@@ -28,10 +28,8 @@ export function ReferenceRow({ reference }: ReferenceRowProps) {
     <li className="flex flex-col gap-1 rounded-lg border border-border/60 bg-surface-card p-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-col">
-          <span className="text-xs font-semibold text-fg-primary">
-            {reference.title}
-          </span>
-          <span className="text-[10px] text-fg-tertiary">{reference.type}</span>
+          <span className="text-xs font-semibold text-fg-primary">{title}</span>
+          <span className="text-[10px] text-fg-tertiary">{type}</span>
         </div>
 
         {!armed && (
@@ -54,8 +52,8 @@ export function ReferenceRow({ reference }: ReferenceRowProps) {
           {!citingQuery.isLoading && citingDigests.length > 0 && (
             <div className="flex flex-col gap-0.5">
               <span className="text-xs text-status-error">
-                인용 중인 Digest {citingDigests.length}개 — 삭제하면 죽은 링크로
-                남음
+                인용 중인 Digest {citingDigests.length}개예요 — 삭제하면 죽은
+                링크로 남아요
               </span>
               <ul className="list-disc pl-4">
                 {citingDigests.map((digest) => (
@@ -72,12 +70,7 @@ export function ReferenceRow({ reference }: ReferenceRowProps) {
               size="xs"
               variant="danger"
               disabled={citingQuery.isLoading || trashReference.isPending}
-              onClick={() =>
-                trashReference.mutate(
-                  { referenceId: reference.id },
-                  { onSuccess: () => utils.reference.list.invalidate() },
-                )
-              }
+              onClick={() => trashReference.mutate({ referenceId })}
             >
               확실히 삭제
             </Button>

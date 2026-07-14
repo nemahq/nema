@@ -4,10 +4,10 @@ import { trpc } from "@web/lib/trpc";
 // 조회하면 레퍼런스 수만큼 쿼리가 뜬다.
 export function useReferenceCitingDigestsQuery(
   referenceId: string,
-  options: { enabled: boolean },
+  options?: Omit<
+    Parameters<typeof trpc.reference.citingDigests.useQuery>[1],
+    "queryKey"
+  >,
 ) {
-  return trpc.reference.citingDigests.useQuery(
-    { referenceId },
-    { enabled: options.enabled },
-  );
+  return trpc.reference.citingDigests.useQuery({ referenceId }, options);
 }
