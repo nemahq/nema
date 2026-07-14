@@ -16,16 +16,18 @@ import { parseLocatorIndex } from "@server/services/statement-search";
 type ExtractionStatus = Database["public"]["Enums"]["ingestion_status"];
 type DigestionStatus = Database["public"]["Enums"]["digestion_status"];
 
-// 박제까지만 동기 — 추출·임베딩은 statement-sync 워커가 이어받는다.
+// 박제까지만 동기 — 추출·임베딩은 statement-sync 워커가 이어받고, 제목은 여기서 띄운
+// 콜이 뒤에서 채운다(응답을 안 붙잡는다).
 // 응답은 source_id 하나. 화면은 이 id로 처리 상태를 추적한다 (ingestion-design 2장).
 export async function createSource(args: {
   supabase: TypedSupabaseClient;
+  providers: Providers;
   body: string;
   sessionId?: string;
   spaceId?: string;
   timeZone?: string;
 }): Promise<{ sourceId: string }> {
-  const { supabase, body, sessionId, spaceId, timeZone } = args;
+  const { supabase, providers, body, sessionId, spaceId, timeZone } = args;
 
   // spaceId 미지정 호출(MCP·dev-harness)만 이 경로를 탄다 — 1인 단계엔 가입
   // 트리거가 만든 개인 Space 1개뿐이라(RLS로 내 멤버십만 보임) 가장 오래된
@@ -49,6 +51,8 @@ export async function createSource(args: {
     ...(timeZone !== undefined && { p_author_timezone: timeZone }),
   });
   throwIfSupabaseError(error);
+
+  fillSourceTitle({ supabase, providers, sourceId, body });
 
   return { sourceId };
 }
@@ -295,7 +299,7 @@ export async function updateSourceBody(args: {
 // 재시도·큐가 없는 건 의도다. 제목은 평생 한 번만 시도하는 값이라(fill_source_title의 null
 // 가드가 그걸 구조로 못박는다) 이 콜이 죽으면 그 원본은 제목 없이 남고, 그 뒤론 사람이
 // 직접 붙이는 것 외엔 아무도 안 건드린다.
-export function fillSourceTitle(args: {
+function fillSourceTitle(args: {
   supabase: TypedSupabaseClient;
   providers: Providers;
   sourceId: string;

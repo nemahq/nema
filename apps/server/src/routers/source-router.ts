@@ -12,7 +12,6 @@ import {
   cancelSourceDigestion,
   createSource,
   deleteSource,
-  fillSourceTitle,
   getSource,
   listPendingSources,
   listSources,
@@ -24,28 +23,18 @@ import {
 import { protectedProcedure, router } from "@server/trpc";
 
 export const sourceRouter = router({
-  // 제목 생성은 응답을 안 기다린다 — 박제(create_source)만 끝나면 사용자에겐 저장이
-  // 끝난 것이고, 제목은 뒤늦게 채워져도 되는 부수효과다(fillSourceTitle이 안 던진다).
   create: protectedProcedure
     .input(SourceCreateInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      const result = await createSource({
+    .mutation(({ ctx, input }) =>
+      createSource({
         supabase: ctx.supabase,
+        providers: getProviders(),
         body: input.body,
         sessionId: input.sessionId,
         spaceId: input.spaceId,
         timeZone: input.timeZone,
-      });
-
-      fillSourceTitle({
-        supabase: ctx.supabase,
-        providers: getProviders(),
-        sourceId: result.sourceId,
-        body: input.body,
-      });
-
-      return result;
-    }),
+      }),
+    ),
 
   list: protectedProcedure.query(({ ctx }) =>
     listSources({ supabase: ctx.supabase }),

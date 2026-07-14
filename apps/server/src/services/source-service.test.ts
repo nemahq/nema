@@ -20,7 +20,6 @@ import {
   createSource,
   deleteSource,
   fetchMergedSourceIds,
-  fillSourceTitle,
   reassignSourceSpace,
   startSourceDigestion,
   updateSourceBody,
@@ -115,6 +114,29 @@ describe("fetchMergedSourceIds", () => {
 
 const EXPLICIT_SPACE = "44444444-4444-4444-a444-444444444444";
 const OLDEST_SPACE = "55555555-5555-4555-a555-555555555555";
+const NEW_SOURCE_ID = "66666666-6666-4666-a666-666666666666";
+
+function rpcNames(rpc: ReturnType<typeof vi.fn>): string[] {
+  return rpc.mock.calls.map(([name]) => name as string);
+}
+
+// create_source는 새 id를, 그 뒤 제목 채우기는 아무것도 안 돌려준다
+function titleSupabase() {
+  const rpc = vi.fn(async (fn: string) => ({
+    data: fn === "create_source" ? NEW_SOURCE_ID : null,
+    error: null,
+  }));
+  return { supabase: { rpc } as unknown as TypedSupabaseClient, rpc };
+}
+
+function titleProviders(generateText: () => Promise<string>): Providers {
+  return {
+    llm: { forTask: () => ({ generateText }) },
+  } as unknown as Providers;
+}
+
+// 제목 콜은 뒤에서 도는 부수효과라, 박제 경로만 보는 테스트에선 안 뜨게 막아둔다
+const NO_TITLE_CALL = titleProviders(() => new Promise<string>(() => {}));
 
 describe("createSource", () => {
   it("spaceId가 주어지면 그대로 RPC에 쓰고 space_members는 조회하지 않는다", async () => {
@@ -131,6 +153,7 @@ describe("createSource", () => {
 
     const result = await createSource({
       supabase,
+      providers: NO_TITLE_CALL,
       body: "hello",
       spaceId: EXPLICIT_SPACE,
     });
@@ -162,7 +185,11 @@ describe("createSource", () => {
       },
     } as unknown as TypedSupabaseClient;
 
-    const result = await createSource({ supabase, body: "hello" });
+    const result = await createSource({
+      supabase,
+      providers: NO_TITLE_CALL,
+      body: "hello",
+    });
 
     expect(result).toEqual({ sourceId: "new-source-id" });
     expect(rpcCalls).toEqual([
@@ -384,52 +411,45 @@ describe("updateSourceBody", () => {
 
 // --- Source 제목 생성 (생성 직후 1회, 뒤에서 도는 부수효과) ---
 
-function titleProviders(generateText: () => Promise<string>): Providers {
-  return {
-    llm: { forTask: () => ({ generateText }) },
-  } as unknown as Providers;
-}
-
-describe("fillSourceTitle", () => {
+describe("createSource — 제목 생성", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("LLM이 뽑은 제목을 fill_source_title RPC로 채운다", async () => {
-    const { supabase, rpc } = mockRpcSupabase(null);
+  it("생성 직후 LLM이 뽑은 제목을 fill_source_title로 채운다", async () => {
+    const { supabase, rpc } = titleSupabase();
 
-    fillSourceTitle({
+    await createSource({
       supabase,
       providers: titleProviders(async () => "  배포 도구 선정  "),
-      sourceId: CANCEL_SOURCE_ID,
       body: "배포 도구 다시 봤는데 Railway가 나을 듯",
+      spaceId: EXPLICIT_SPACE,
     });
 
     await vi.waitFor(() =>
       expect(rpc).toHaveBeenCalledWith("fill_source_title", {
-        p_source_id: CANCEL_SOURCE_ID,
+        p_source_id: NEW_SOURCE_ID,
         p_title: "배포 도구 선정",
       }),
     );
   });
 
   // 제목은 없어도 그만인 값이다(화면은 body 미리보기로 그린다) — 제목 콜이 죽었다고
-  // 원본 저장(이미 커밋된)이 오류로 되돌아오면 사용자는 글을 잃은 걸로 읽는다.
-  it("LLM이 실패해도 던지지 않는다 — 원본 저장은 이미 끝난 일이다", async () => {
-    const { supabase, rpc } = mockRpcSupabase(null);
+  // 이미 커밋된 원본 저장이 오류로 되돌아오면 사용자는 글을 잃은 걸로 읽는다.
+  it("제목 콜이 실패해도 원본 저장은 성공으로 끝난다", async () => {
+    const { supabase, rpc } = titleSupabase();
 
-    expect(() =>
-      fillSourceTitle({
-        supabase,
-        providers: titleProviders(() =>
-          Promise.reject(new Error("nano is down")),
-        ),
-        sourceId: CANCEL_SOURCE_ID,
-        body: "아무 글",
-      }),
-    ).not.toThrow();
+    const result = await createSource({
+      supabase,
+      providers: titleProviders(() =>
+        Promise.reject(new Error("nano is down")),
+      ),
+      body: "아무 글",
+      spaceId: EXPLICIT_SPACE,
+    });
 
+    expect(result).toEqual({ sourceId: NEW_SOURCE_ID });
     await vi.waitFor(() => expect(Sentry.captureException).toHaveBeenCalled());
-    expect(rpc).not.toHaveBeenCalled();
+    expect(rpcNames(rpc)).not.toContain("fill_source_title");
   });
 });
