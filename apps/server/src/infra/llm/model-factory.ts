@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 
@@ -18,6 +19,22 @@ import {
 
 const VERTEX_DEFAULT_LOCATION = "global";
 
+const ServiceAccountCredentialsSchema = z.object({
+  client_email: z.string().min(1),
+  private_key: z.string().min(1),
+});
+
+function parseServiceAccountJson(json: string) {
+  const result = ServiceAccountCredentialsSchema.safeParse(JSON.parse(json));
+  if (!result.success) {
+    throw new LlmError(
+      "auth",
+      `GEMINI_VERTEX_SERVICE_ACCOUNT_JSON is not a valid service account key: ${result.error.message}`,
+    );
+  }
+  return result.data;
+}
+
 // Gemini 클라이언트 생성 — vertexProject가 있으면 Vertex(ADC 인증·GCP 크레딧),
 // 없으면 AI Studio(apiKey). 두 경로의 단일 진입점이라 providers(요청 경로)와
 // eval 스크립트가 같은 규칙으로 Vertex를 켠다.
@@ -35,7 +52,7 @@ export function createGeminiClient(opts: {
       httpOptions: { timeout: GEMINI_DEFAULT_TIMEOUT_MS },
       ...(opts.vertexServiceAccountJson && {
         googleAuthOptions: {
-          credentials: JSON.parse(opts.vertexServiceAccountJson),
+          credentials: parseServiceAccountJson(opts.vertexServiceAccountJson),
         },
       }),
     });
