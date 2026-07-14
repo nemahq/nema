@@ -1,21 +1,34 @@
 import type { ReviewDigest, ReviewNewReference } from "./types";
 
-type ConfirmDisabledReason = "no_candidates" | "missing_title" | null;
+type ConfirmDisabledReason =
+  | "no_candidates"
+  | "missing_title"
+  | "empty_label"
+  | null;
 
 export function confirmDisabledReason(
   hasCandidates: boolean,
   hasEmptyTitle: boolean,
+  hasEmptyLabel: boolean,
 ): ConfirmDisabledReason {
   if (!hasCandidates) {
     return "no_candidates";
   }
-  return hasEmptyTitle ? "missing_title" : null;
+  if (hasEmptyTitle) {
+    return "missing_title";
+  }
+  return hasEmptyLabel ? "empty_label" : null;
 }
 
 interface ConfirmReviewFlowArgs {
   changesetId: string;
   dirty: boolean;
-  digestRows: { digest: ReviewDigest; title: string }[];
+  digestRows: {
+    digest: ReviewDigest;
+    title: string;
+    topics: ReviewDigest["topics"];
+    tags: ReviewDigest["tags"];
+  }[];
   newReferences: ReviewNewReference[];
   updateReview: (payload: {
     changesetId: string;
@@ -43,9 +56,11 @@ export async function runConfirmReview(
   if (dirty) {
     await updateReview({
       changesetId,
-      digests: digestRows.map(({ digest, title }) => ({
+      digests: digestRows.map(({ digest, title, topics, tags }) => ({
         ...digest,
         title: title.trim(),
+        topics: topics.map((topic) => ({ ...topic, name: topic.name.trim() })),
+        tags: tags.map((tag) => ({ ...tag, title: tag.title.trim() })),
       })),
       newReferences,
     });

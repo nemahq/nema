@@ -103,12 +103,16 @@
 - **Then**: 이름은 읽기 전용이라 수정할 수 없다. 그 Digest에서 제거하는 것은 계속 가능하다.
 - **관여 화면**: Digest 리뷰 화면
 
+**범위 참고 (2026-07-15, PR #414)**: `EditableLabelChip`이 `id !== null`(레지스트리 매치)일 때 `readOnly`로 렌더링 — 스펙 그대로 구현·멀티 에이전트 코드 리뷰 + 서버/FE 테스트로 검증됨. 라이트/다크 브라우저 실측은 PM이 별도 진행 예정이라 체크는 보류.
+
 #### 신규 Topic·Tag 이름 수정 가능
 
 - **Given**: 유저가 Digest 리뷰 화면에서 신규로 제안된 Topic·Tag가 있는 후보를 보고 있다.
 - **When**: 그 라벨의 이름을 수정한다.
 - **Then**: 아직 서버에 존재하지 않는 임시 상태이므로, 수정한 이름이 이 changeset의 편집 중인 내용에 즉시 반영된다.
 - **관여 화면**: Digest 리뷰 화면
+
+**범위 참고 (2026-07-15, PR #414)**: `id === null`일 때 인라인 `<input>`으로 편집 가능, `DigestReviewScreen`의 `topicsOverrides`/`tagsOverrides`(기존 `titleOverrides`와 동일 패턴)로 즉시 반영. 빈 값으로 지운 채 확정을 시도하면(리뷰에서 발견된 회귀) 확정 버튼이 비활성화되도록 수정 완료. 실측은 PM이 별도 진행, 체크는 보류.
 
 #### Digest 리뷰 화면에서 Topic·Tag 추가 — 기존 선택
 
@@ -117,12 +121,16 @@
 - **Then**: 그 기존 라벨이 이 changeset의 편집 중인 내용에 즉시 추가된다. 새 라벨은 생성되지 않는다.
 - **관여 화면**: Digest 리뷰 화면
 
+**범위 참고 (2026-07-15, PR #414)**: `TopicAddPopover`/`TagAddPopover`의 검색·선택 구현됨. 리뷰에서 `topic.list`가 Space 스코프 없이 다른 Space의 동명 Topic까지 "기존"으로 노출하던 크로스-Space 버그를 발견해 `spaceId` 파라미터 추가로 수정 — Tag는 원래 Workspace 스코프라 해당 없음. 실측은 PM이 별도 진행, 체크는 보류.
+
 #### Digest 리뷰 화면에서 Topic·Tag 추가 — 신규 생성
 
 - **Given**: 유저가 Digest 리뷰 화면에서 Digest 후보를 보고 있다.
 - **When**: Topic·Tag 추가 액션을 실행해 검색했지만 일치하는 라벨이 없어, 새로 만들기를 선택한다.
 - **Then**: 검색어를 이름으로 하는 새 라벨이 이 changeset의 편집 중인 내용에 즉시 추가된다.
 - **관여 화면**: Digest 리뷰 화면
+
+**범위 참고 (2026-07-15, PR #414)**: Topic은 스펙 그대로 검색어가 즉시 새 라벨로 추가된다. Tag는 데이터 모델상 `description`이 필수(`TagDraftSchema`)라 스펙의 "즉시 추가"가 그대로 적용되지 않음 — PM 확인 후, Tag만 이름(검색어 프리필)+description 2필드 미니 폼을 한 단계 거치도록 확정(`design-decisions-log.md` 2026-07-15 항목 참고). 실측은 PM이 별도 진행, 체크는 보류.
 
 #### Reference 후보 자동 제안 및 매칭
 

@@ -35,14 +35,29 @@ export const NewReferenceDraftSchema = z.object({
 });
 export type NewReferenceDraft = z.infer<typeof NewReferenceDraftSchema>;
 
+// 리뷰 draft의 Topic/Tag 한 항목 — 레지스트리(topics/tags) 이름 매칭 결과를 얹는다.
+// id가 있으면 기존 항목(재사용, 이름 읽기 전용) / null이면 신규 항목(이름 편집 가능) —
+// review-flow.md "기존 Topic·Tag는 이름 수정 불가"/"신규 Topic·Tag 이름 수정 가능".
+// 이 id는 표시·판정 전용 힌트일 뿐 쓰기 계약엔 없다 — 저장 시 이름만 남고, id는
+// TagUpdateInputSchema의 id(신뢰되는 PK, 그 레코드를 직접 수정)와 달리 확정 시
+// 이름으로 다시 find-or-create되어 무시된다(digest-review-service.ts updateReview 참고).
+export const DigestTopicDraftSchema = z.object({
+  id: z.string().uuid().nullable(),
+  name: z.string().trim().min(1).max(TOPIC_NAME_MAX_LENGTH),
+});
+export type DigestTopicDraft = z.infer<typeof DigestTopicDraftSchema>;
+
+export const DigestTagDraftSchema = TagDraftSchema.extend({
+  id: z.string().uuid().nullable(),
+});
+export type DigestTagDraft = z.infer<typeof DigestTagDraftSchema>;
+
 export const DigestDraftSchema = z.object({
   title: z.string().trim().min(1).max(DIGEST_TITLE_MAX_LENGTH),
   description: z.string().trim().min(1).max(DIGEST_DESCRIPTION_MAX_LENGTH),
   body: DigestBodySchema,
-  topics: z
-    .array(z.string().trim().min(1).max(TOPIC_NAME_MAX_LENGTH))
-    .max(DIGEST_TOPICS_MAX),
-  tags: z.array(TagDraftSchema).max(DIGEST_TAGS_MAX),
+  topics: z.array(DigestTopicDraftSchema).max(DIGEST_TOPICS_MAX),
+  tags: z.array(DigestTagDraftSchema).max(DIGEST_TAGS_MAX),
   // 기존 레퍼런스 인용(id)과 이 리뷰에서 새로 만들 레퍼런스 참조(key)는 별도 축 —
   // 신규는 확정 시점에야 id가 생기므로 key로만 가리킬 수 있다.
   referenceIds: z.array(z.string().uuid()),
