@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import {
   Button,
   DialogContent,
@@ -10,9 +8,8 @@ import {
 } from "@nema-io/weave";
 
 import { Dialog } from "@web/components/ui/Dialog";
-import { usePendingAfterDelay } from "@web/hooks/usePendingAfterDelay";
+import { useDeleteWaitingDrafts } from "@web/features/intake/hooks/useDeleteWaitingDrafts";
 import { useTranslation } from "@web/lib/tolgee";
-import { trpc } from "@web/lib/trpc";
 import { toast } from "@web/utils/toast";
 
 interface DeleteWaitingDraftsDialogProps {
@@ -27,36 +24,18 @@ export function DeleteWaitingDraftsDialog({
   onOpenChange,
 }: DeleteWaitingDraftsDialogProps) {
   const { t } = useTranslation();
-  const utils = trpc.useUtils();
-  const [isDeleting, setIsDeleting] = useState(false);
-  const isDeletingAfterDelay = usePendingAfterDelay(isDeleting);
+  const { deleteAll, isDeleting, isDeletingAfterDelay } =
+    useDeleteWaitingDrafts();
 
-  // useDeleteSource(단건용 훅)는 성공마다 자기 onSuccess에서 listPending을
-  // invalidate한다 — 이 훅 하나로 N번 병렬 호출하면 삭제가 끝날 때마다 목록
-  // refetch가 줄줄이 걸려 체감 속도가 크게 느려진다. utils.client로 훅을
-  // 거치지 않고 직접 호출해 개별 invalidate를 피하고, 다 끝난 뒤 한 번만 한다.
   async function handleDeleteAll() {
-    setIsDeleting(true);
-    try {
-      const results = await Promise.allSettled(
-        sourceIds.map((sourceId) =>
-          utils.client.source.delete.mutate({ sourceId }),
-        ),
+    const { failedCount } = await deleteAll(sourceIds);
+    onOpenChange(false);
+    if (failedCount > 0) {
+      toast.error(
+        t("intake.drafts_delete_waiting_partial_failure", {
+          failed: failedCount,
+        }),
       );
-      await utils.source.listPending.invalidate();
-      const failedCount = results.filter(
-        (result) => result.status === "rejected",
-      ).length;
-      if (failedCount > 0) {
-        toast.error(
-          t("intake.drafts_delete_waiting_partial_failure", {
-            failed: failedCount,
-          }),
-        );
-      }
-    } finally {
-      setIsDeleting(false);
-      onOpenChange(false);
     }
   }
 

@@ -7,8 +7,6 @@ import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
 import { SourceComposer } from "@web/features/intake";
 import { ChangesPanel } from "@web/features/review";
-import { isOpenChangeset } from "@web/features/review/constants";
-import { useChangesetListQuery } from "@web/features/review/hooks/useChangesetListQuery";
 import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -36,12 +34,6 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
   const space = spaceList?.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
   );
-  // 탭을 안 열어도 대기 중임을 알 수 있어야 해서, 그 탭이 활성일 때만이 아니라
-  // 항상 조회한다(surface-inventory.md "변경셋" 참고).
-  const changesetListQuery = useChangesetListQuery(space?.id);
-  const openChangesetCount = (changesetListQuery.data?.changesets ?? []).filter(
-    (entry) => isOpenChangeset(entry.status),
-  ).length;
 
   // 이 페이지의 주축 데이터(Space)가 뜨기 전엔 스켈레톤 대신 워터마크만 — 로딩이
   // 끝나는 순간 곧장 실제 페이지로 전환된다.
@@ -105,7 +97,7 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
             <SpaceTabButton
               active={tab === "changesets"}
               onClick={() => setTab("changesets")}
-              count={openChangesetCount}
+              count={space.openChangesetCount}
             >
               {t("space.tab_changesets")}
             </SpaceTabButton>
