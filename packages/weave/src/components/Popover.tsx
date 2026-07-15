@@ -4,7 +4,7 @@ import { Popover as PopoverPrimitive } from "radix-ui";
 import * as React from "react";
 
 import { useEscapeAwareCloseFocus } from "../hooks/useEscapeAwareCloseFocus";
-import { cn } from "../utils";
+import { cn, POPOVER_SURFACE_CLASSNAME } from "../utils";
 
 function Popover({
   ...props
@@ -44,7 +44,8 @@ function PopoverContent({
         sideOffset={sideOffset}
         {...escapeAwareCloseFocus}
         className={cn(
-          "z-50 w-72 rounded-md border border-border bg-surface-card p-2 text-fg-primary shadow-[0_4px_16px_rgba(0,0,0,0.12)] outline-none dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]",
+          POPOVER_SURFACE_CLASSNAME,
+          "z-50 w-72 p-2 outline-none",
           className,
         )}
         {...props}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { SOURCE_TITLE_MAX_LENGTH } from "@nema-io/shared";
 import {
+  Alert,
   Button,
   Tooltip,
   TooltipContent,
@@ -12,6 +13,7 @@ import { Trash2 } from "@nema-io/weave/icons";
 import { useReassignSourceSpace } from "@web/features/intake/hooks/useReassignSourceSpace";
 import { useUpdateSourceTitle } from "@web/features/intake/hooks/useUpdateSourceTitle";
 import type { DraftDetailPanelProps } from "@web/features/intake/types";
+import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DeleteSourceDialog } from "./DeleteSourceDialog";
@@ -119,8 +121,16 @@ export function IdleDraftDetailPanel({
         }}
         placeholder={t("intake.draft_untitled")}
         maxLength={SOURCE_TITLE_MAX_LENGTH}
+        aria-invalid={updateTitleMutation.isError}
         className="bg-transparent px-6 pt-4 text-xl font-bold text-fg-primary outline-none placeholder:text-fg-tertiary"
       />
+      {updateTitleMutation.isError && (
+        <div className="px-6 pt-2">
+          <Alert variant="error">
+            {getErrorMessage(updateTitleMutation.error)}
+          </Alert>
+        </div>
+      )}
       <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
         <textarea
           value={body}

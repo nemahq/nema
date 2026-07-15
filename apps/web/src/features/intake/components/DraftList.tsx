@@ -2,10 +2,7 @@ import { Circle, Inbox } from "@nema-io/weave/icons";
 
 import { Watermark } from "@web/components/ui/Watermark";
 import { usePendingSourceListQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
-import type {
-  DraftCardData,
-  PendingSourceItem,
-} from "@web/features/intake/types";
+import type { PendingSourceItem } from "@web/features/intake/types";
 import { type DraftStatus, draftStatus } from "@web/features/intake/utils";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
@@ -25,7 +22,10 @@ function toDraft(source: PendingSourceItem): Draft | null {
 }
 
 interface DraftListProps {
-  onSelectSource: (draft: DraftCardData) => void;
+  // DraftsScreen이 선택된 초안을 폴링되는 최신 쿼리 데이터에서 직접 다시 찾아
+  // 쓰므로, 여기서는 어떤 draft를 골랐는지가 아니라 어떤 sourceId를 골랐는지만
+  // 알리면 된다.
+  onSelectSource: (sourceId: string) => void;
   // 결과없음 카드의 상태 아이콘 표시 여부에 쓰는, 현재 상세에서 편집 중인 sourceId.
   editedDraftId: string | null;
 }
@@ -74,29 +74,19 @@ export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
         icon={<Inbox className="size-4 shrink-0 text-status-warning" />}
         tone="warning"
       >
-        {waitingDrafts.map(({ source, status }) => {
-          const draft: DraftCardData = {
-            sourceId: source.sourceId,
-            spaceId: source.spaceId,
-            title: source.title,
-            body: source.body,
-            status,
-            createdAt: source.createdAt,
-          };
-          return (
-            <IdleDraftCard
-              key={source.sourceId}
-              sourceId={draft.sourceId}
-              spaceId={draft.spaceId}
-              title={draft.title}
-              body={draft.body}
-              status={draft.status}
-              createdAt={draft.createdAt}
-              isEdited={source.sourceId === editedDraftId}
-              onSelect={() => onSelectSource(draft)}
-            />
-          );
-        })}
+        {waitingDrafts.map(({ source, status }) => (
+          <IdleDraftCard
+            key={source.sourceId}
+            sourceId={source.sourceId}
+            spaceId={source.spaceId}
+            title={source.title}
+            body={source.body}
+            status={status}
+            createdAt={source.createdAt}
+            isEdited={source.sourceId === editedDraftId}
+            onSelect={() => onSelectSource(source.sourceId)}
+          />
+        ))}
       </DraftSection>
 
       <DraftSection
@@ -106,28 +96,18 @@ export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
           <Circle className="size-2.5 shrink-0 animate-pulse fill-current text-fg-tertiary" />
         }
       >
-        {workingDrafts.map(({ source, status }) => {
-          const draft: DraftCardData = {
-            sourceId: source.sourceId,
-            spaceId: source.spaceId,
-            title: source.title,
-            body: source.body,
-            status,
-            createdAt: source.createdAt,
-          };
-          return (
-            <WorkingDraftCard
-              key={source.sourceId}
-              sourceId={draft.sourceId}
-              spaceId={draft.spaceId}
-              title={draft.title}
-              body={draft.body}
-              status={draft.status}
-              createdAt={draft.createdAt}
-              onSelect={() => onSelectSource(draft)}
-            />
-          );
-        })}
+        {workingDrafts.map(({ source, status }) => (
+          <WorkingDraftCard
+            key={source.sourceId}
+            sourceId={source.sourceId}
+            spaceId={source.spaceId}
+            title={source.title}
+            body={source.body}
+            status={status}
+            createdAt={source.createdAt}
+            onSelect={() => onSelectSource(source.sourceId)}
+          />
+        ))}
       </DraftSection>
     </div>
   );

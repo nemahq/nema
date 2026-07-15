@@ -5,6 +5,7 @@ import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
 import { SidePanel } from "@web/components/ui/SidePanel";
 import { usePendingSourceListQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
 import type { DraftCardData } from "@web/features/intake/types";
+import { draftStatus } from "@web/features/intake/utils";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftList } from "./DraftList";
@@ -14,14 +15,32 @@ import { WorkingDraftDetailPanel } from "./WorkingDraftDetailPanel";
 export function DraftsScreen() {
   const { t } = useTranslation();
   const pendingQuery = usePendingSourceListQuery();
-  const [selectedDraft, setSelectedDraft] = useState<DraftCardData | null>(
-    null,
-  );
+  // 선택된 초안 자체가 아니라 id만 든다 — 목록은 폴링으로 계속 최신화되는데
+  // 클릭 시점 스냅샷을 그대로 들고 있으면, 열어둔 패널이 그 갱신(타이틀 도착,
+  // processing→완료/실패 전환)을 영영 못 본다. 매 렌더 최신 쿼리 데이터에서
+  // 다시 찾아 만든다.
+  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   // 결과없음 카드의 상태 아이콘은 "아직 원문을 안 고쳤다"는 신호라, 상세에서
   // 실제로 고치는 순간(재생성 버튼이 풀리는 시점과 동일 조건) 리스트 카드에서도
   // 같이 사라져야 한다 — 카드와 상세가 서로 다른 컴포넌트라 이 여닫이 상태를
   // 공통 부모(여기)가 들고 있다가 양쪽에 내려준다.
   const [editedDraftId, setEditedDraftId] = useState<string | null>(null);
+
+  const selectedSource = pendingQuery.data?.items.find(
+    (item) => item.sourceId === selectedSourceId,
+  );
+  const selectedStatus = selectedSource ? draftStatus(selectedSource) : null;
+  const selectedDraft: DraftCardData | null =
+    selectedSource && selectedStatus
+      ? {
+          sourceId: selectedSource.sourceId,
+          spaceId: selectedSource.spaceId,
+          title: selectedSource.title,
+          body: selectedSource.body,
+          status: selectedStatus,
+          createdAt: selectedSource.createdAt,
+        }
+      : null;
   const DetailPanel =
     selectedDraft?.status === "processing"
       ? WorkingDraftDetailPanel
@@ -49,7 +68,7 @@ export function DraftsScreen() {
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 pb-8">
             <DraftList
-              onSelectSource={setSelectedDraft}
+              onSelectSource={setSelectedSourceId}
               editedDraftId={editedDraftId}
             />
           </div>
@@ -57,7 +76,7 @@ export function DraftsScreen() {
       </div>
 
       {selectedDraft && (
-        <SidePanel onClose={() => setSelectedDraft(null)}>
+        <SidePanel onClose={() => setSelectedSourceId(null)}>
           <DetailPanel
             key={selectedDraft.sourceId}
             sourceId={selectedDraft.sourceId}
@@ -66,7 +85,7 @@ export function DraftsScreen() {
             body={selectedDraft.body}
             status={selectedDraft.status}
             createdAt={selectedDraft.createdAt}
-            onClose={() => setSelectedDraft(null)}
+            onClose={() => setSelectedSourceId(null)}
             onBodyDirtyChange={(dirty) =>
               setEditedDraftId(dirty ? selectedDraft.sourceId : null)
             }
