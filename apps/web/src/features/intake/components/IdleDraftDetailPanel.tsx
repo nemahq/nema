@@ -13,8 +13,8 @@ import {
 } from "@nema-io/weave";
 import { Trash2 } from "@nema-io/weave/icons";
 
-import { useExtractSource } from "@web/features/intake/hooks/useExtractSource";
 import { useReassignSourceSpace } from "@web/features/intake/hooks/useReassignSourceSpace";
+import { useStartSourceDigestion } from "@web/features/intake/hooks/useStartSourceDigestion";
 import { useUpdateSourceBody } from "@web/features/intake/hooks/useUpdateSourceBody";
 import { useUpdateSourceTitle } from "@web/features/intake/hooks/useUpdateSourceTitle";
 import type { DraftDetailPanelProps } from "@web/features/intake/types";
@@ -41,7 +41,7 @@ export function IdleDraftDetailPanel({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const updateTitleMutation = useUpdateSourceTitle();
   const updateBodyMutation = useUpdateSourceBody();
-  const extractMutation = useExtractSource();
+  const startDigestionMutation = useStartSourceDigestion();
   const reassignSpaceMutation = useReassignSourceSpace();
   const bodyDirty = body !== initialBody;
   // 결과없음은 원본을 안 바꾸고 재생성해봐야 또 결과없음이 나올 가능성이 높다 —
@@ -70,7 +70,7 @@ export function IdleDraftDetailPanel({
       if (bodyDirty && body.trim().length > 0) {
         await updateBodyMutation.mutateAsync({ sourceId, body });
       }
-      await extractMutation.mutateAsync({ sourceId });
+      await startDigestionMutation.mutateAsync({ sourceId });
     } catch {
       // 실패는 각 뮤테이션의 isError로 인라인 표시된다 — 추가 처리 없음.
     } finally {
@@ -177,9 +177,9 @@ export function IdleDraftDetailPanel({
         )}
       </div>
       <div className="flex shrink-0 flex-col gap-2 px-6 py-4">
-        {extractMutation.isError && (
+        {startDigestionMutation.isError && (
           <Alert variant="error">
-            {getErrorMessage(extractMutation.error)}
+            {getErrorMessage(startDigestionMutation.error)}
           </Alert>
         )}
         <div className="flex justify-start">
@@ -189,7 +189,7 @@ export function IdleDraftDetailPanel({
             onClick={handleRegenerate}
           >
             {isRegenerating
-              ? t("intake.draft_extracting")
+              ? t("intake.draft_regenerating")
               : t("intake.draft_regenerate")}
           </Button>
         </div>
