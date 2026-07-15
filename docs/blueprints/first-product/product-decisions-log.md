@@ -107,8 +107,13 @@
 - **#6 판정 대기(open) 관계를 해설 근거로 포함·표시**: narration 근거 조립에 open changeset을 넣고 "미결" 표식할지. 명세는 (a)포함 요구, narration 코어엔 없음.
 - **#7 후속 질문의 이전 맥락 해석 (단발 vs 맥락 참고)**: 명세(참고함) vs narration-design §9(매번 독립 질의) 정면 충돌.
 
-## 보류 (추후 재논의) — 실시간 갱신 아키텍처 (pull vs push)
+## 실시간 갱신 아키텍처 (pull vs push) — Supabase Realtime 채택 (확정)
 
-- **비동기 작업 완료를 클라이언트에 어떻게 반영할지**: 현재 `usePendingSourceListQuery`(초안 탭·LNB)가 "처리 중인 항목이 있는 동안만 2초 간격 폴링, 없으면 중단"하는 조건부 pull 방식을 쓰고 있고, Space별 열린 Changeset 카운트(`useSpaceList`, staleTime 10분)는 이 갱신 신호가 아예 없다. PM 의견: 실시간성을 고려하면 서버가 완료 시점에 클라이언트로 직접 신호를 주는 push 방식(예: Supabase Realtime)이 맞다.
-- **왜 보류인가**: 코드베이스에 웹소켓/Realtime 등 push 인프라가 전혀 없음(전수 조사 확인) — 채널 구독·인증·재연결·해제 수명주기를 처음부터 설계해야 하는 아키텍처 결정이라 디자인 폴리싱 세션 스코프 밖. 도입한다면 초안 탭의 기존 폴링도 같이 교체 대상이 될 수 있어, 특정 화면 하나가 아니라 앱 전역 갱신 전략으로 다뤄야 함.
-- **다음 단계**: 백엔드 아키텍처 세션에서 Supabase Realtime 채택 여부·구독 스코프(Space별/워크스페이스 전체)·기존 폴링 대체 범위를 정한 뒤 이 항목을 확정으로 옮긴다.
+**결정: Supabase Realtime(Postgres CDC)로 push. 초안 탭·Space/변경사항 배지 모두 이 방식으로 통일하고 기존 폴링은 완전히 걷어낸다.**
+
+- 걸리는 곳: 비동기 작업(AI가 초안 정리 → Changeset 생성) 완료를 사람이 놓치지 않게 하는 신뢰 구조의 전제조건. `usePendingSourceListQuery`(초안 탭·LNB)의 조건부 2초 폴링과, 갱신 신호가 아예 없던 Space LNB 배지(`useSpaceList`)·변경사항 탭 배지(`useChangesetListQuery`)를 함께 해결.
+- 근거: 이미 Supabase를 쓰고 있어 커스텀 웹소켓 서버가 불필요. `sources`·`changesets`에 RLS가 이미 걸려 있어 Realtime 브로드캐스트도 구독자 Space 범위로 자동 스코프됨.
+- **핵심 판단 — invalidate만, patch 안 함**: 이벤트 payload를 클라이언트 캐시에 직접 patch하지 않고 "뭔가 바뀌었다" 신호로만 써서 해당 쿼리를 `invalidate()`한다. payload 기반 동기화는 서버 응답 shape이 조금만 바뀌어도 클라이언트 재구성 로직이 깨지기 쉬운 반면, invalidate는 검증된 기존 조회 로직(RLS 필터 포함)을 그대로 재사용해 견고하다. 부수 효과로, RLS 범위 밖 이벤트가 새더라도 자기 데이터를 다시 읽을 뿐이라 유출이 없다.
+- 구독 스코프: 워크스페이스 전체(서버측 필터 없음) — RLS가 이미 스코프하고, invalidate만 하므로 Space별 필터를 따로 관리할 이득이 없다.
+- 폴백: TanStack Query 기본 `refetchOnWindowFocus`를 재연결·복귀 안전망으로 유지. Realtime 재연결·토큰 갱신은 supabase-js가 자동 처리(auth 이벤트 → `realtime.setAuth`).
+- 구현: 마이그레이션(`ALTER PUBLICATION supabase_realtime ADD TABLE`) + 앱 세션당 1회 마운트되는 구독(`useRealtimeInvalidation`, AppLayout). 연결 자체는 유닛 테스트 불가라 탭 두 개로 수동 검증.
