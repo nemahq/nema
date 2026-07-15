@@ -12,3 +12,10 @@ export function cn(...inputs: ClassValue[]) {
 // 같은 흰색이지만, 다크는 LNB·메인·사이드뷰 어디와도 안 겹치는 새 톤이다.
 export const POPOVER_SURFACE_CLASSNAME =
   "rounded-md border border-border/50 bg-surface-overlay text-fg-primary shadow-[0_2px_10px_rgba(0,0,0,0.05)] dark:shadow-none";
+
+// 이미 자체적으로 호버 반응하는 표면(카드·행) 안에 얹힌 작은 액션 아이콘이 그
+// 부모와 같은 톤(surface-raised-hover)만으로는 구분이 잘 안 돼서, 밝기 필터를
+// 더해 신호를 분리한다. 다크에서 방향이 반대(밝게)인 이유: 어둡게 하면 오히려
+// 배경 쪽으로 가까워져 구분이 더 흐려지기 때문.
+export const NESTED_HOVER_ICON_CLASSNAME =
+  "hover:bg-surface-raised-hover hover:brightness-95 dark:hover:brightness-125";

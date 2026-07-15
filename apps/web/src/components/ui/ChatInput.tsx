@@ -98,14 +98,14 @@ export function ChatInput({
   if (isStreaming) {
     submitAction = (
       <Button
-        variant="neutral"
+        variant="ghost"
         size="icon-sm"
         onClick={onStop}
         aria-label={t("common.stop")}
         className={cn(
           ACTION_BUTTON_BASE,
-          "bg-fg-secondary text-surface-card border-transparent hover:opacity-80",
-          "dark:bg-fg-primary dark:text-surface-base",
+          "bg-fg-secondary text-surface-card hover:bg-fg-secondary hover:opacity-80",
+          "dark:bg-fg-primary dark:text-surface-base dark:hover:bg-fg-primary",
         )}
       >
         <Square className="size-3 fill-current" />
@@ -120,17 +120,17 @@ export function ChatInput({
   } else {
     submitAction = (
       <Button
-        variant="neutral"
+        variant="ghost"
         size="icon-sm"
         disabled={submitDisabled || !hasContent}
         onClick={handleSubmit}
         aria-label={t("common.send")}
         className={cn(
           ACTION_BUTTON_BASE,
-          "disabled:scale-90 disabled:bg-surface-raised-hover disabled:text-fg-tertiary disabled:border-transparent disabled:opacity-100",
+          "disabled:scale-90 disabled:bg-surface-raised-hover disabled:text-fg-tertiary disabled:opacity-100",
           "dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-tertiary",
-          "enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80",
-          "dark:enabled:bg-fg-primary dark:enabled:text-surface-base",
+          "enabled:bg-fg-secondary enabled:text-surface-card enabled:hover:bg-fg-secondary enabled:hover:opacity-80",
+          "dark:enabled:bg-fg-primary dark:enabled:text-surface-base dark:enabled:hover:bg-fg-primary",
           hasContent ? "opacity-100 scale-100" : "opacity-0 scale-90",
         )}
       >

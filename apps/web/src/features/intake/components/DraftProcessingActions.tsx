@@ -1,5 +1,7 @@
 import {
   Button,
+  cn,
+  NESTED_HOVER_ICON_CLASSNAME,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -45,7 +47,10 @@ export function DraftProcessingActions({
             aria-label={t("common.cancel")}
             onClick={handleCancel}
             disabled={cancelMutation.isPending}
-            className="size-6 rounded-full text-fg-tertiary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-surface-raised-hover/70 hover:brightness-95 dark:hover:brightness-125"
+            className={cn(
+              "size-6 rounded-full text-fg-tertiary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
+              NESTED_HOVER_ICON_CLASSNAME,
+            )}
           >
             <RotateCcw />
           </Button>

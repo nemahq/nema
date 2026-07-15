@@ -61,16 +61,16 @@ export function SourceComposer({ spaceId }: SourceComposerProps) {
         maxLength={SOURCE_BODY_MAX_LENGTH}
         renderSubmitButton={({ onClick, disabled }) => (
           <Button
-            variant="neutral"
+            variant="ghost"
             size="sm"
             disabled={disabled}
             onClick={onClick}
             className={cn(
               ACTION_BUTTON_BASE,
-              "disabled:bg-surface-raised-hover disabled:text-fg-tertiary disabled:border-transparent",
+              "disabled:bg-surface-raised-hover disabled:text-fg-tertiary",
               "dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-tertiary",
-              "enabled:bg-fg-secondary enabled:text-surface-card enabled:border-transparent enabled:hover:opacity-80",
-              "dark:enabled:bg-fg-primary dark:enabled:text-surface-base",
+              "enabled:bg-fg-secondary enabled:text-surface-card enabled:hover:bg-fg-secondary enabled:hover:opacity-80",
+              "dark:enabled:bg-fg-primary dark:enabled:text-surface-base dark:enabled:hover:bg-fg-primary",
             )}
           >
             {t("intake.compose_submit")}
