@@ -55,8 +55,7 @@ export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
 
   if (drafts.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
-        <Watermark />
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
         <p className="text-sm text-fg-tertiary">{t("intake.drafts_empty")}</p>
       </div>
     );
