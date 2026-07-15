@@ -13,6 +13,7 @@ import { Dialog } from "@web/components/ui/Dialog";
 import { usePendingAfterDelay } from "@web/hooks/usePendingAfterDelay";
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
+import { toast } from "@web/utils/toast";
 
 interface DeleteWaitingDraftsDialogProps {
   sourceIds: string[];
@@ -37,12 +38,22 @@ export function DeleteWaitingDraftsDialog({
   async function handleDeleteAll() {
     setIsDeleting(true);
     try {
-      await Promise.allSettled(
+      const results = await Promise.allSettled(
         sourceIds.map((sourceId) =>
           utils.client.source.delete.mutate({ sourceId }),
         ),
       );
       await utils.source.listPending.invalidate();
+      const failedCount = results.filter(
+        (result) => result.status === "rejected",
+      ).length;
+      if (failedCount > 0) {
+        toast.error(
+          t("intake.drafts_delete_waiting_partial_failure", {
+            failed: failedCount,
+          }),
+        );
+      }
     } finally {
       setIsDeleting(false);
       onOpenChange(false);

@@ -82,6 +82,7 @@
     "draft_untitled": "Untitled",
     "drafts_delete_waiting_action": "Delete all waiting drafts",
     "drafts_delete_waiting_confirm_title": "Delete {count} waiting drafts?",
+    "drafts_delete_waiting_partial_failure": "{failed} couldn't be deleted. Try again.",
     "drafts_empty": "All caught up. No drafts waiting.",
     "drafts_title": "Drafts"
   },
