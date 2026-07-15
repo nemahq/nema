@@ -65,6 +65,7 @@
   "intake": {
     "compose_body_placeholder": "What should I remember?",
     "compose_submit": "Remember",
+    "draft_change_space": "Change space",
     "draft_delete_confirm_description": "This can't be undone.",
     "draft_delete_confirm_title": "Delete this draft?",
     "draft_failed": "We couldn't process this.",
@@ -73,7 +74,6 @@
     "draft_no_result_tooltip": "Nothing to generate",
     "draft_open": "Open draft",
     "draft_processing": "Processing",
-    "draft_reassign_space": "Reassign space",
     "draft_regenerate": "Regenerate",
     "draft_regenerating": "Regenerating...",
     "draft_section_waiting": "Waiting for you",

@@ -53,7 +53,7 @@ export function DraftDetailHeader({
           <button
             type="button"
             disabled={reassignPending}
-            aria-label={t("intake.draft_reassign_space")}
+            aria-label={t("intake.draft_change_space")}
             className={cn(
               SPACE_PILL_CLASSNAME,
               "cursor-pointer hover:bg-fg-primary/15",
