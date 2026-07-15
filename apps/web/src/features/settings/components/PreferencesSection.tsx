@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import {
   CONTENT_LANGUAGES,
@@ -11,11 +11,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Skeleton,
 } from "@nema-io/weave";
 
 import {
   LANGUAGE_LABELS,
-  useProfileQuery,
+  useProfileSuspenseQuery,
   useUpdateProfile,
 } from "@web/features/profile";
 import {
@@ -32,33 +33,15 @@ import { SettingsRow } from "./SettingsRow";
 import { SettingsSectionHeader } from "./SettingsSectionHeader";
 import { ThemeSelect } from "./ThemeSelect";
 
-export function PreferencesSection() {
-  const { t } = useTranslation();
-  const [appLang, setAppLang] = useState<Locale>(() => {
-    const lang = tolgee.getLanguage();
-    return lang && isLocale(lang) ? lang : "ko";
-  });
-
-  // 온보딩을 거쳐야 설정 화면에 닿으므로 profile은 항상 존재한다.
-  const { data: profile } = useProfileQuery();
+// contentLanguage를 마운트 시점에 useState로 시드하므로, 여기만 profile을 서스펜드해
+// 값이 확정된 뒤 초기화한다 — 그러지 않으면 profile 도착 전 마운트 시 "en"으로 잘못
+// 시드되고(useState 초기화는 1회뿐) 실제 값이 와도 갱신되지 않는다.
+function ContentLanguageSelect() {
+  const [profile] = useProfileSuspenseQuery();
   const updateProfileMutation = useUpdateProfile();
   const [contentLang, setContentLang] = useState<ContentLanguage>(
-    () => profile?.contentLanguage ?? "en",
+    profile?.contentLanguage ?? "en",
   );
-
-  async function handleAppLangChange(v: string) {
-    if (!isLocale(v)) {
-      return;
-    }
-    const previousLang = appLang;
-    setAppLang(v);
-    try {
-      await changeLocale(v);
-    } catch (error) {
-      setAppLang(previousLang);
-      toastError(error);
-    }
-  }
 
   function handleContentLangChange(v: string) {
     const parsed = ContentLanguageSchema.safeParse(v);
@@ -76,6 +59,43 @@ export function PreferencesSection() {
         },
       },
     );
+  }
+
+  return (
+    <Select value={contentLang} onValueChange={handleContentLangChange}>
+      <SelectTrigger className="w-36 cursor-pointer shadow-none dark:shadow-sm">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {CONTENT_LANGUAGES.map((lang) => (
+          <SelectItem key={lang} value={lang} className="cursor-pointer">
+            {LANGUAGE_LABELS[lang]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+export function PreferencesSection() {
+  const { t } = useTranslation();
+  const [appLang, setAppLang] = useState<Locale>(() => {
+    const lang = tolgee.getLanguage();
+    return lang && isLocale(lang) ? lang : "ko";
+  });
+
+  async function handleAppLangChange(v: string) {
+    if (!isLocale(v)) {
+      return;
+    }
+    const previousLang = appLang;
+    setAppLang(v);
+    try {
+      await changeLocale(v);
+    } catch (error) {
+      setAppLang(previousLang);
+      toastError(error);
+    }
   }
 
   return (
@@ -128,22 +148,9 @@ export function PreferencesSection() {
             label={t("settings.content_language")}
             description={t("settings.content_language_description")}
           >
-            <Select value={contentLang} onValueChange={handleContentLangChange}>
-              <SelectTrigger className="w-36 cursor-pointer shadow-none dark:shadow-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CONTENT_LANGUAGES.map((lang) => (
-                  <SelectItem
-                    key={lang}
-                    value={lang}
-                    className="cursor-pointer"
-                  >
-                    {LANGUAGE_LABELS[lang]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Suspense fallback={<Skeleton className="h-9 w-36 rounded-md" />}>
+              <ContentLanguageSelect />
+            </Suspense>
           </SettingsRow>
         </div>
       </div>

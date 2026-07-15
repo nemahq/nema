@@ -4,10 +4,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { NavigationBar } from "@web/components/layout/NavigationBar";
-import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
 import { SourceComposer } from "@web/features/intake";
 import { ChangesPanel } from "@web/features/review";
-import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
+// 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
+// eslint-disable-next-line nema/require-suspense-boundary
+import { useSpaceListSuspenseQuery } from "@web/features/workspace/hooks/useSpaceList";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SpaceTabButton } from "./SpaceTabButton";
@@ -28,22 +29,12 @@ interface SpaceOverviewProps {
 export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data: spaceList, isLoading } = useSpaceList();
+  const [spaceList] = useSpaceListSuspenseQuery();
   const [tab, setTab] = useState<SpaceTab>("topic");
 
-  const space = spaceList?.spaces.find(
+  const space = spaceList.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
   );
-
-  // 이 페이지의 주축 데이터(Space)가 뜨기 전엔 스켈레톤 대신 워터마크만 — 로딩이
-  // 끝나는 순간 곧장 실제 페이지로 전환된다.
-  if (isLoading) {
-    return (
-      <main className="flex flex-1 items-center justify-center bg-surface-card">
-        <LoadingWatermark />
-      </main>
-    );
-  }
 
   // 조회가 끝났는데 그 Space가 없으면(지워졌거나 잘못된 링크) 안내.
   if (!space) {

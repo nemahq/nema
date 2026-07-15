@@ -1,5 +1,5 @@
 import { trpc } from "@web/lib/trpc";
 
-export function useSpacePendingDraftCount(spaceId: string) {
-  return trpc.space.countPendingDrafts.useQuery({ spaceId });
+export function useSpacePendingDraftCountSuspenseQuery(spaceId: string) {
+  return trpc.space.countPendingDrafts.useSuspenseQuery({ spaceId });
 }

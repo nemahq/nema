@@ -1,2 +1,2 @@
-export { useAccountDeletionBlockersQuery } from "./hooks/useAccountDeletionBlockersQuery";
+export { useAccountDeletionBlockersSuspenseQuery } from "./hooks/useAccountDeletionBlockersQuery";
 export { useDeleteAccount } from "./hooks/useDeleteAccount";

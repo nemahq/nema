@@ -71,8 +71,12 @@
 
 ### Loading
 
-- Default: Suspense + `useSuspenseQuery` / `useSuspenseInfiniteQuery`. Fallback is a Spinner or minimal loading indicator.
-- `isLoading` branching is allowed only when Skeleton UI is required for UX.
+- **Default is Suspense.** Use `useSuspenseQuery` / `useSuspenseInfiniteQuery` and let the component suspend. The main content area (`<Outlet>`) already has a shared Suspense boundary whose fallback (`ContentAreaFallback`, a watermark) is the default page-loading UI — a page that suspends into it needs **no** local `isLoading` branch and **no** local boundary.
+- **A Skeleton does not justify a manual `isLoading` branch.** Extract the loading-dependent region into a child that calls `useSuspenseQuery`, and wrap that child in `<Suspense fallback={<Skeleton/>}>`. A local boundary earns its place only by keeping always-visible siblings rendered while the data-dependent region falls back — sibling chrome (headers, tabs, inputs) stays put. (`DraftDetailHeader` keeps the header, suspends only the Space pill; `TagAddPopover` keeps the search input, suspends only the results.)
+- **Whole screen waits → suspend into the shared watermark, no local boundary.** If nothing renders before the data (header included), a screen-level boundary would be functionally identical to the shared one — skip it (`DraftsScreen`, `SpaceOverview`). Add a local boundary only to override the watermark with a tailored skeleton (`DigestReviewScreen`).
+- **Conditional / dependent queries still suspend — gate by mounting, not `enabled`.** `useSuspenseQuery` has no `enabled: false`, so mount the suspending child only once its precondition holds: `{open && <Suspense>…}` (popover open) or `{spaceId && <Suspense>…}` (dependent on a prior query). (`TagAddPopover`, `TopicAddPopover`.)
+- **Inline error UI → pair the local Suspense with a local ErrorBoundary** whose fallback renders the error, instead of letting a `useSuspenseQuery` error escalate to the route `errorComponent`. (`TagAddPopover`, `TopicAddPopover`.)
+- **Manual `isLoading` / `!data` is the last resort — the one case Suspense cannot express: the loading flag drives imperative logic, not a render fork** (e.g. an `isLoading` `useEffect` dependency for enter/exit animation). Keep it manual and comment the reason. (`DraftsNavItem`.)
 
 ### Error
 

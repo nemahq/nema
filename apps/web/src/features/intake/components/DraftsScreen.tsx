@@ -9,9 +9,10 @@ import {
 import { Trash2 } from "@nema-io/weave/icons";
 
 import { NavigationBar } from "@web/components/layout/NavigationBar";
-import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
 import { SidePanel } from "@web/components/ui/SidePanel";
-import { usePendingSourceListQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
+// 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
+// eslint-disable-next-line nema/require-suspense-boundary
+import { usePendingSourceListSuspenseQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
 import type { DraftCardData } from "@web/features/intake/types";
 import { draftStatus } from "@web/features/intake/utils";
 import { useTranslation } from "@web/lib/tolgee";
@@ -23,7 +24,7 @@ import { WorkingDraftDetailPanel } from "./WorkingDraftDetailPanel";
 
 export function DraftsScreen() {
   const { t } = useTranslation();
-  const pendingQuery = usePendingSourceListQuery();
+  const [pendingSources] = usePendingSourceListSuspenseQuery();
   // 선택된 초안 자체가 아니라 id만 든다 — 목록은 폴링으로 계속 최신화되는데
   // 클릭 시점 스냅샷을 그대로 들고 있으면, 열어둔 패널이 그 갱신(타이틀 도착,
   // processing→완료/실패 전환)을 영영 못 본다. 매 렌더 최신 쿼리 데이터에서
@@ -36,14 +37,14 @@ export function DraftsScreen() {
   const [editedDraftId, setEditedDraftId] = useState<string | null>(null);
   const [deleteWaitingDialogOpen, setDeleteWaitingDialogOpen] = useState(false);
 
-  const waitingSourceIds = (pendingQuery.data?.items ?? [])
+  const waitingSourceIds = pendingSources.items
     .filter((item) => {
       const status = draftStatus(item);
       return status !== null && status !== "processing";
     })
     .map((item) => item.sourceId);
 
-  const selectedSource = pendingQuery.data?.items.find(
+  const selectedSource = pendingSources.items.find(
     (item) => item.sourceId === selectedSourceId,
   );
   const selectedStatus = selectedSource ? draftStatus(selectedSource) : null;
@@ -63,16 +64,6 @@ export function DraftsScreen() {
     selectedDraft?.status === "processing"
       ? WorkingDraftDetailPanel
       : IdleDraftDetailPanel;
-
-  // 이 페이지의 주축 데이터(초안 목록)가 뜨기 전엔 헤더까지 다 숨기고 워터마크만 —
-  // 로딩이 끝나는 순간 헤더 포함 실제 페이지로 곧장 전환된다.
-  if (pendingQuery.isLoading) {
-    return (
-      <main className="flex flex-1 items-center justify-center bg-surface-card">
-        <LoadingWatermark />
-      </main>
-    );
-  }
 
   return (
     <main className="flex flex-1 bg-surface-card">

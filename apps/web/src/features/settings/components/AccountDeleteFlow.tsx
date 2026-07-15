@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { Suspense, useId, useState } from "react";
 import * as Sentry from "@sentry/react";
 import { useNavigate } from "@tanstack/react-router";
 import { TRPCClientError } from "@trpc/client";
@@ -6,7 +6,7 @@ import { TRPCClientError } from "@trpc/client";
 import { Alert, Button, DialogFooter, Input, Skeleton } from "@nema-io/weave";
 
 import {
-  useAccountDeletionBlockersQuery,
+  useAccountDeletionBlockersSuspenseQuery,
   useDeleteAccount,
 } from "@web/features/account";
 import {
@@ -30,7 +30,7 @@ function isPreconditionFailed(error: unknown): boolean {
   );
 }
 
-export function AccountDeleteFlow({
+function AccountDeleteContent({
   userEmail,
   userDisplayName,
   onBack,
@@ -40,7 +40,7 @@ export function AccountDeleteFlow({
   const confirmFieldId = useId();
   const [confirmationInput, setConfirmationInput] = useState("");
   const [postDeleteCleanupFailed, setPostDeleteCleanupFailed] = useState(false);
-  const blockersQuery = useAccountDeletionBlockersQuery();
+  const [blockers, blockersQuery] = useAccountDeletionBlockersSuspenseQuery();
   const deleteMutation = useDeleteAccount();
 
   const hasEmail = userEmail.trim().length > 0;
@@ -88,31 +88,9 @@ export function AccountDeleteFlow({
     );
   }
 
-  if (blockersQuery.isError) {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="flex flex-1 flex-col gap-4">
-          <Alert variant="error">{getErrorMessage(blockersQuery.error)}</Alert>
-        </div>
-        <DialogFooter className="mt-6 border-t border-border pt-4">
-          <Button variant="ghost" onClick={onBack}>
-            {t("account.delete_blocked_back")}
-          </Button>
-          <Button onClick={() => blockersQuery.refetch()}>
-            {t("common.retry")}
-          </Button>
-        </DialogFooter>
-      </div>
-    );
-  }
+  const blockingCount = blockers.blockingWorkspaceIds.length;
 
-  const isLoadingBlockers = blockersQuery.isLoading;
-  const blockingCount = blockersQuery.data?.blockingWorkspaceIds.length ?? 0;
-
-  // 아직 로딩 중일 땐 게이팅 여부를 몰라 blocked 화면으로 못 넘어간다 — 그동안은
-  // confirm 화면을 낙관적으로 먼저 보여주고, 이메일 확인 폼 자리만 스켈레톤으로
-  // 채운다(제목·경고·버튼은 로딩 여부와 무관하게 항상 같은 모양이라서).
-  if (!isLoadingBlockers && blockingCount > 0) {
+  if (blockingCount > 0) {
     return (
       <div className="flex h-full flex-col">
         <h2 className="text-lg font-semibold text-fg-primary">
@@ -149,35 +127,28 @@ export function AccountDeleteFlow({
           {t("account.delete_confirm_description")}
         </Alert>
 
-        {isLoadingBlockers ? (
-          <div className="flex flex-col gap-1.5">
-            <Skeleton className="h-4 w-48" />
-            <Skeleton className="h-9 w-full" />
-          </div>
-        ) : (
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor={confirmFieldId}
-              className="text-sm font-medium text-fg-primary"
-            >
-              {hasEmail
-                ? t("account.delete_confirm_email_label", {
-                    email: userEmail,
-                  })
-                : t("account.delete_confirm_name_label", {
-                    name: userDisplayName,
-                  })}
-            </label>
-            <Input
-              id={confirmFieldId}
-              value={confirmationInput}
-              onChange={(e) => setConfirmationInput(e.target.value)}
-              placeholder={confirmationTarget}
-              autoComplete="off"
-              disabled={deleteMutation.isPending}
-            />
-          </div>
-        )}
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor={confirmFieldId}
+            className="text-sm font-medium text-fg-primary"
+          >
+            {hasEmail
+              ? t("account.delete_confirm_email_label", {
+                  email: userEmail,
+                })
+              : t("account.delete_confirm_name_label", {
+                  name: userDisplayName,
+                })}
+          </label>
+          <Input
+            id={confirmFieldId}
+            value={confirmationInput}
+            onChange={(e) => setConfirmationInput(e.target.value)}
+            placeholder={confirmationTarget}
+            autoComplete="off"
+            disabled={deleteMutation.isPending}
+          />
+        </div>
 
         {mutationError &&
           (isPreconditionFailed(mutationError) ? (
@@ -210,5 +181,27 @@ export function AccountDeleteFlow({
         </Button>
       </DialogFooter>
     </div>
+  );
+}
+
+export function AccountDeleteFlow(props: AccountDeleteFlowProps) {
+  const { t } = useTranslation();
+
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-full flex-col">
+          <h2 className="text-lg font-semibold text-fg-primary">
+            {t("account.delete_confirm_title")}
+          </h2>
+          <div className="mt-4 flex flex-col gap-1.5">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        </div>
+      }
+    >
+      <AccountDeleteContent {...props} />
+    </Suspense>
   );
 }

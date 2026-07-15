@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Button, Skeleton } from "@nema-io/weave";
@@ -9,7 +9,7 @@ import {
   runConfirmReview,
 } from "@web/features/review/confirmReviewFlow";
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
-import { useDigestReviewQuery } from "@web/features/review/hooks/useDigestReviewQuery";
+import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
 import {
@@ -39,13 +39,13 @@ interface DigestReviewScreenProps {
 // status='pending'만 허용) — 화면은 이동하지 않고 이 로컬 결과만으로 상태를 바꾼다.
 type ReviewOutcome = "applied" | "discarded" | null;
 
-export function DigestReviewScreen({
+function DigestReviewScreenContent({
   spacePublicId,
   changesetId,
 }: DigestReviewScreenProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const reviewQuery = useDigestReviewQuery(changesetId);
+  const [review] = useDigestReviewSuspenseQuery(changesetId);
   const updateReview = useUpdateReview(changesetId);
   const confirmReview = useConfirmReview();
   const discardReview = useDiscardReview();
@@ -85,34 +85,6 @@ export function DigestReviewScreen({
     discardReview.isPendingAfterDelay;
   const error =
     updateReview.error ?? confirmReview.error ?? discardReview.error;
-
-  if (reviewQuery.isError) {
-    // confirm·discard 후 재조회하면 여기로 온다(getReview 가드가 pending만 허용) —
-    // 그 changeset은 이미 Changeset 상세에서 정상 조회되니 막다른 길로 두지 않는다.
-    return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-3 bg-surface-card">
-        <p className="text-sm text-status-error">
-          {getErrorMessage(reviewQuery.error)}
-        </p>
-        <Button variant="neutral" onClick={goToChangesetDetail}>
-          {t("review.view_changeset_detail_action")}
-        </Button>
-      </main>
-    );
-  }
-  if (!reviewQuery.data) {
-    return (
-      <main className="flex flex-1 flex-col overflow-y-auto bg-surface-card">
-        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-8">
-          <Skeleton className="h-8 w-1/2" />
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </div>
-      </main>
-    );
-  }
-
-  const review = reviewQuery.data;
 
   const digestRows = review.digests
     .map((digest, index) => ({
@@ -359,5 +331,23 @@ export function DigestReviewScreen({
         )}
       </div>
     </main>
+  );
+}
+
+export function DigestReviewScreen(props: DigestReviewScreenProps) {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex flex-1 flex-col overflow-y-auto bg-surface-card">
+          <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-8">
+            <Skeleton className="h-8 w-1/2" />
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </main>
+      }
+    >
+      <DigestReviewScreenContent {...props} />
+    </Suspense>
   );
 }

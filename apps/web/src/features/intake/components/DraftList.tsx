@@ -1,6 +1,8 @@
 import { Circle, CircleCheck, Inbox } from "@nema-io/weave/icons";
 
-import { usePendingSourceListQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
+// 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
+// eslint-disable-next-line nema/require-suspense-boundary
+import { usePendingSourceListSuspenseQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
 import type { PendingSourceItem } from "@web/features/intake/types";
 import { type DraftStatus, draftStatus } from "@web/features/intake/utils";
 import { useTranslation } from "@web/lib/tolgee";
@@ -30,18 +32,11 @@ interface DraftListProps {
 
 export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
   const { t } = useTranslation();
-  // DraftsScreen이 이미 이 쿼리의 최초 로딩(isLoading)을 헤더까지 포함해 걸러주므로,
-  // 여기서는 그 이후 상태(에러·빈 목록·목록)만 다루면 된다.
-  const pendingQuery = usePendingSourceListQuery();
+  // 로딩은 메인 영역 Outlet Suspense(워터마크)로, 에러는 draftsRoute errorComponent로
+  // 자동 위임된다 — 이 쿼리가 화면 콘텐츠 전체의 존재 이유라 부분 격리하지 않는다.
+  const [pendingSources] = usePendingSourceListSuspenseQuery();
 
-  // 이 쿼리가 이 화면 콘텐츠 전체의 존재 이유라 부분 격리할 이유가 없다 — 그냥 던져서
-  // draftsRoute의 RouteErrorFallback이 잡게 한다(컨벤션 기본값: 쿼리 에러는 라우트
-  // errorComponent가 처리).
-  if (pendingQuery.isError) {
-    throw pendingQuery.error;
-  }
-
-  const drafts = (pendingQuery.data?.items ?? [])
+  const drafts = pendingSources.items
     .map(toDraft)
     .filter((draft): draft is Draft => draft !== null);
 

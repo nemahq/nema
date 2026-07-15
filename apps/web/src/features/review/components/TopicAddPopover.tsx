@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import {
   Button,
@@ -9,13 +9,84 @@ import {
 } from "@nema-io/weave";
 import { Plus } from "@nema-io/weave/icons";
 
-import { useTopicListQuery } from "@web/features/review/hooks/useTopicListQuery";
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { useTopicListSuspenseQuery } from "@web/features/review/hooks/useTopicListQuery";
 import {
   filterActiveLabelCandidates,
   hasExactLabelMatch,
   isDuplicateLabelName,
 } from "@web/features/review/labelSearch";
 import { useTranslation } from "@web/lib/tolgee";
+
+const SEARCH_LIST_CLASSNAME = "flex max-h-48 flex-col gap-0.5 overflow-y-auto";
+
+interface TopicSearchResultsProps {
+  spaceId: string;
+  query: string;
+  excludedTopicIds: string[];
+  existingLabels: string[];
+  onSelectExisting: (topic: { id: string; name: string }) => void;
+  onCreateNew: (name: string) => void;
+}
+
+function TopicSearchResults({
+  spaceId,
+  query,
+  excludedTopicIds,
+  existingLabels,
+  onSelectExisting,
+  onCreateNew,
+}: TopicSearchResultsProps) {
+  const { t } = useTranslation();
+  const [topicList] = useTopicListSuspenseQuery(spaceId);
+
+  const getLabel = (topic: { name: string }) => topic.name;
+  const candidates = filterActiveLabelCandidates(
+    topicList.topics,
+    getLabel,
+    query,
+    new Set(excludedTopicIds),
+  );
+  const trimmed = query.trim();
+  const hasExactMatch = hasExactLabelMatch(candidates, getLabel, query);
+  const canCreateNew =
+    trimmed !== "" &&
+    !hasExactMatch &&
+    !isDuplicateLabelName(trimmed, existingLabels);
+
+  return (
+    <>
+      <ul className={SEARCH_LIST_CLASSNAME}>
+        {candidates.map((topic) => (
+          <li key={topic.id}>
+            <button
+              type="button"
+              onClick={() => onSelectExisting(topic)}
+              className="w-full truncate rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-raised-hover"
+            >
+              {topic.name}
+            </button>
+          </li>
+        ))}
+        {candidates.length === 0 && trimmed === "" && (
+          <li className="px-2 py-1.5 text-sm text-fg-tertiary">
+            {t("review.label_search_empty")}
+          </li>
+        )}
+      </ul>
+      {trimmed !== "" && !hasExactMatch && (
+        <button
+          type="button"
+          disabled={!canCreateNew}
+          onClick={() => onCreateNew(trimmed)}
+          className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover disabled:pointer-events-none disabled:opacity-50"
+        >
+          {t("review.label_create_new_action", { name: trimmed })}
+        </button>
+      )}
+    </>
+  );
+}
 
 interface TopicAddPopoverProps {
   spaceId: string;
@@ -37,22 +108,6 @@ export function TopicAddPopover({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const topicListQuery = useTopicListQuery(spaceId, open);
-
-  const getLabel = (topic: { name: string }) => topic.name;
-  const candidates = filterActiveLabelCandidates(
-    topicListQuery.data?.topics ?? [],
-    getLabel,
-    query,
-    new Set(excludedTopicIds),
-  );
-  const trimmed = query.trim();
-  const hasExactMatch = hasExactLabelMatch(candidates, getLabel, query);
-  const canCreateNew =
-    trimmed !== "" &&
-    !hasExactMatch &&
-    !isDuplicateLabelName(trimmed, existingLabels);
-  const settled = !topicListQuery.isLoading && !topicListQuery.isError;
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
@@ -66,11 +121,8 @@ export function TopicAddPopover({
     handleOpenChange(false);
   }
 
-  function handleCreateNew() {
-    if (!canCreateNew) {
-      return;
-    }
-    onCreateNew(trimmed);
+  function handleCreateNew(name: string) {
+    onCreateNew(name);
     handleOpenChange(false);
   }
 
@@ -89,45 +141,35 @@ export function TopicAddPopover({
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("review.label_search_placeholder")}
         />
-        <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
-          {topicListQuery.isLoading && (
-            <li className="px-2 py-1.5 text-sm text-fg-tertiary">
-              {t("review.label_search_loading")}
-            </li>
-          )}
-          {topicListQuery.isError && (
-            <li className="px-2 py-1.5 text-sm text-status-error">
-              {t("review.label_search_error")}
-            </li>
-          )}
-          {settled &&
-            candidates.map((topic) => (
-              <li key={topic.id}>
-                <button
-                  type="button"
-                  onClick={() => handleSelectExisting(topic)}
-                  className="w-full truncate rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-raised-hover"
-                >
-                  {topic.name}
-                </button>
+        <ErrorBoundary
+          boundaryName="topic-search"
+          fallbackRender={() => (
+            <ul className={SEARCH_LIST_CLASSNAME}>
+              <li className="px-2 py-1.5 text-sm text-status-error">
+                {t("review.label_search_error")}
               </li>
-            ))}
-          {settled && candidates.length === 0 && trimmed === "" && (
-            <li className="px-2 py-1.5 text-sm text-fg-tertiary">
-              {t("review.label_search_empty")}
-            </li>
+            </ul>
           )}
-        </ul>
-        {settled && trimmed !== "" && !hasExactMatch && (
-          <button
-            type="button"
-            disabled={!canCreateNew}
-            onClick={handleCreateNew}
-            className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover disabled:pointer-events-none disabled:opacity-50"
+        >
+          <Suspense
+            fallback={
+              <ul className={SEARCH_LIST_CLASSNAME}>
+                <li className="px-2 py-1.5 text-sm text-fg-tertiary">
+                  {t("review.label_search_loading")}
+                </li>
+              </ul>
+            }
           >
-            {t("review.label_create_new_action", { name: trimmed })}
-          </button>
-        )}
+            <TopicSearchResults
+              spaceId={spaceId}
+              query={query}
+              excludedTopicIds={excludedTopicIds}
+              existingLabels={existingLabels}
+              onSelectExisting={handleSelectExisting}
+              onCreateNew={handleCreateNew}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </PopoverContent>
     </Popover>
   );
