@@ -97,7 +97,12 @@ describe("getReview", () => {
         ],
       },
       references: [
-        { id: EXISTING_REFERENCE_ID, type: "person", title: "기존 인물" },
+        {
+          id: EXISTING_REFERENCE_ID,
+          type: "person",
+          title: "기존 인물",
+          body: "기존 설명",
+        },
       ],
     });
 
@@ -121,12 +126,18 @@ describe("getReview", () => {
         id: EXISTING_REFERENCE_ID,
         type: "person",
         title: "기존 인물",
+        body: "기존 설명",
         mergeNote: null,
       },
     ]);
   });
 
-  it("기존 Reference의 병합 modify-Change를 citedReferences의 mergeNote로 얹는다", async () => {
+  // 한 changeset에 인용된 기존 Reference가 여럿이고 그중 일부만 병합 제안이 있는 실제
+  // 상황 — 제안 있는 것만 mergeNote가 붙고 나머지는 null이어야 한다. "제안 하나라도
+  // 있으면 전부에 적용" 같은 mergeNoteById 회귀를 이 혼합 케이스로 고정한다.
+  it("일부 인용 Reference에만 병합 제안이 있으면 그것만 mergeNote, 나머지는 null", async () => {
+    const MERGED_REFERENCE_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+    const PLAIN_REFERENCE_ID = "eeeeeeee-1111-4eee-8eee-eeeeeeeeeeee";
     const supabase = mockSupabase({
       changesets: {
         id: CHANGESET_ID,
@@ -153,7 +164,7 @@ describe("getReview", () => {
               body: { type: "learning", finding: "발견" },
               topics: [],
               tags: [],
-              reference_ids: [EXISTING_REFERENCE_ID],
+              reference_ids: [MERGED_REFERENCE_ID, PLAIN_REFERENCE_ID],
               external_urls: [],
             },
           },
@@ -161,7 +172,7 @@ describe("getReview", () => {
             id: "44444444-4444-4444-8444-444444444444",
             action: "modify",
             target_type: "reference",
-            target_id: EXISTING_REFERENCE_ID,
+            target_id: MERGED_REFERENCE_ID,
             data: {
               before: { body: "기존 설명" },
               after: { body: "새 정보를 녹인 다듬은 설명" },
@@ -170,7 +181,18 @@ describe("getReview", () => {
         ],
       },
       references: [
-        { id: EXISTING_REFERENCE_ID, type: "person", title: "기존 인물" },
+        {
+          id: MERGED_REFERENCE_ID,
+          type: "person",
+          title: "병합된 인물",
+          body: "기존 설명",
+        },
+        {
+          id: PLAIN_REFERENCE_ID,
+          type: "product",
+          title: "단순 인용 제품",
+          body: "제품 설명",
+        },
       ],
     });
 
@@ -178,10 +200,18 @@ describe("getReview", () => {
 
     expect(review.citedReferences).toEqual([
       {
-        id: EXISTING_REFERENCE_ID,
+        id: MERGED_REFERENCE_ID,
         type: "person",
-        title: "기존 인물",
+        title: "병합된 인물",
+        body: "기존 설명",
         mergeNote: "새 정보를 녹인 다듬은 설명",
+      },
+      {
+        id: PLAIN_REFERENCE_ID,
+        type: "product",
+        title: "단순 인용 제품",
+        body: "제품 설명",
+        mergeNote: null,
       },
     ]);
   });

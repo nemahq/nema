@@ -14,6 +14,11 @@
 -- update_pending_ingestion)에 p_reference_updates(원소 { "reference_id", "body" })를
 -- 더한다 — 인자 개수가 바뀌어 CREATE OR REPLACE로는 못 덮으므로 DROP 후 재생성한다.
 -- confirm_ingestion_review는 시그니처가 그대로라 REPLACE로 modify 적용만 얹는다.
+--
+-- 동시성: 리뷰 도중 병합 대상 Reference가 정리(archive/trash)되면, 사용자가 직접 쓴
+-- 병합 설명이 조용히 유실된 채 확정이 성공으로 보이는 걸 막는다 — 사용자 경로
+-- (update_pending 저장 시·confirm 적용 시)는 NM008(ingestion_review_state_changed)로
+-- 막아 새로고침을 유도하고, 워커(create) 경로는 리뷰 생성을 막지 않도록 관대히 스킵한다.
 -- =============================================================
 
 DROP FUNCTION update_pending_ingestion(uuid, jsonb, jsonb);
@@ -60,10 +65,15 @@ BEGIN
   END LOOP;
 
   -- 기존 Reference 병합 — 대상은 확정 전 다듬을 값이므로 지금 원본 body를 before로
-  -- 잡아 {before, after}로 자기완결하게 남긴다. 대상은 이 changeset의 워크스페이스
-  -- 소속 active Reference만 — 다른 워크스페이스 id를 실은 draft가 남의 body를 before
-  -- 스냅샷으로 changes에 끌어오지 못하게 막는다(confirm의 workspace 가드와 이중). 실제
-  -- 변화가 없으면 빈 modify를 만들지 않는다.
+  -- 잡아 {before, after}로 자기완결하게 남긴다. before/after 형태는 update_reference와
+  -- 같지만 archive된 대상 처리 정책은 다르다: 여기(공통 헬퍼)는 non-active면 조용히
+  -- 스킵한다 — 워커(create) 경로에서 생성~적재 사이 대상이 정리돼도 리뷰 생성 전체를
+  -- 막지 않기 위함이다. 사용자가 직접 쓴 병합이 조용히 유실되지 않도록 하는 엄격성은
+  -- 사용자 경로(update_pending_ingestion·confirm)가 NM008로 따로 강제한다.
+  -- 대상은 이 changeset의 워크스페이스 소속 active Reference만 — 다른 워크스페이스 id를
+  -- 실은 draft가 남의 body를 before 스냅샷으로 끌어오지 못하게 막는다(confirm의 workspace
+  -- 가드와 이중). 실제 변화가 없으면 빈 modify를 안 만든다. 인용·중복 필터는 호출부가
+  -- 책임진다(worker=normalize, user=FE) — p_new_references와 같은 신뢰 계약.
   FOR v_item IN SELECT value FROM jsonb_array_elements(coalesce(p_reference_updates, '[]'::jsonb))
   LOOP
     SELECT r.body INTO v_before
@@ -172,6 +182,24 @@ BEGIN
     RAISE EXCEPTION 'p_digests must not be empty — trash the source instead';
   END IF;
 
+  -- 사용자가 병합 설명을 쓰는 사이 그 Reference가 정리(archive/trash)됐으면, 그대로
+  -- 저장하면 write 헬퍼가 조용히 스킵해 사람이 직접 쓴 값이 유실된 채 확정이 성공으로
+  -- 보인다. 워커의 관대한 스킵과 달리 사용자 경로는 여기서 막아 새로고침을 유도한다.
+  IF EXISTS (
+    SELECT 1
+    FROM jsonb_array_elements(coalesce(p_reference_updates, '[]'::jsonb)) AS upd(value)
+    JOIN changesets c ON c.id = p_changeset_id
+    JOIN spaces sp ON sp.id = c.space_id
+    LEFT JOIN "references" r
+      ON r.id = (upd.value->>'reference_id')::uuid
+     AND r.workspace_id = sp.workspace_id
+     AND r.status = 'active'
+    WHERE r.id IS NULL
+  ) THEN
+    RAISE EXCEPTION 'a reference being merged was archived or removed since review — refresh'
+      USING ERRCODE = 'NM008';
+  END IF;
+
   DELETE FROM changes WHERE changeset_id = p_changeset_id;
   PERFORM write_ingestion_review_changes(p_changeset_id, p_digests, p_new_references, p_reference_updates);
 END;
@@ -233,7 +261,9 @@ BEGIN
   END LOOP;
 
   -- 기존 Reference 병합 반영 — after.body로 통째 교체(updated_at은 트리거가 갱신).
-  -- 생성~확정 사이 그 Reference가 정리(archive)됐으면 status 가드로 조용히 건너뛴다.
+  -- 저장~확정 사이 그 Reference가 정리(archive/trash)됐으면 사람이 쓴 병합이 조용히
+  -- 유실된 채 확정만 성공한다 — status 가드에 0행이 걸리면 NM008로 막아 새로고침을
+  -- 유도한다(update_pending의 저장 시 검사와 같은 취지, 그 사이 창을 여기서 닫는다).
   FOR ch IN
     SELECT * FROM changes
     WHERE changeset_id = p_changeset_id AND target_type = 'reference' AND action = 'modify'
@@ -241,6 +271,10 @@ BEGIN
     UPDATE "references"
     SET body = ch.data->'after'->>'body'
     WHERE id = ch.target_id AND workspace_id = v_workspace_id AND status = 'active';
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'reference % was archived or removed since review — refresh', ch.target_id
+        USING ERRCODE = 'NM008';
+    END IF;
   END LOOP;
 
   FOR ch IN

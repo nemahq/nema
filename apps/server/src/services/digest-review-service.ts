@@ -44,6 +44,8 @@ interface CitedReference {
   id: string;
   type: string;
   title: string;
+  // 현재(병합 전) 설명 — 화면이 원본을 읽기 전용으로 보여주고 "원래대로" 되돌릴 기준.
+  body: string;
   // 엔진이 병합 제안을 낸 경우에만 편집 가능한 다듬음 본문 / 단순 인용이면 null(읽기 전용)
   mergeNote: string | null;
 }
@@ -196,7 +198,7 @@ export async function getReview(args: {
   if (citedIds.length > 0) {
     const { data: references, error: referenceError } = await supabase
       .from("references")
-      .select("id, type, title")
+      .select("id, type, title, body")
       .in("id", citedIds);
     throwIfSupabaseError(referenceError);
     citedReferences = (references ?? []).map((reference) => ({
