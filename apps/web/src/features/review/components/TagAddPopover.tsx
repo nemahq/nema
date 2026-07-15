@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import {
   Button,
@@ -9,13 +9,86 @@ import {
 } from "@nema-io/weave";
 import { Plus } from "@nema-io/weave/icons";
 
-import { useTagListQuery } from "@web/features/review/hooks/useTagListQuery";
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { useTagListSuspenseQuery } from "@web/features/review/hooks/useTagListQuery";
 import {
   filterActiveLabelCandidates,
   hasExactLabelMatch,
   isDuplicateLabelName,
 } from "@web/features/review/labelSearch";
 import { useTranslation } from "@web/lib/tolgee";
+
+const SEARCH_LIST_CLASSNAME = "flex max-h-48 flex-col gap-0.5 overflow-y-auto";
+
+interface TagSearchResultsProps {
+  query: string;
+  excludedTagIds: string[];
+  existingLabels: string[];
+  onSelectExisting: (tag: {
+    id: string;
+    title: string;
+    description: string;
+  }) => void;
+  onStartCreate: (title: string) => void;
+}
+
+function TagSearchResults({
+  query,
+  excludedTagIds,
+  existingLabels,
+  onSelectExisting,
+  onStartCreate,
+}: TagSearchResultsProps) {
+  const { t } = useTranslation();
+  const [tagList] = useTagListSuspenseQuery();
+
+  const getLabel = (tag: { title: string }) => tag.title;
+  const candidates = filterActiveLabelCandidates(
+    tagList.tags,
+    getLabel,
+    query,
+    new Set(excludedTagIds),
+  );
+  const trimmed = query.trim();
+  const hasExactMatch = hasExactLabelMatch(candidates, getLabel, query);
+  const canStartCreateNew =
+    trimmed !== "" &&
+    !hasExactMatch &&
+    !isDuplicateLabelName(trimmed, existingLabels);
+
+  return (
+    <>
+      <ul className={SEARCH_LIST_CLASSNAME}>
+        {candidates.map((tag) => (
+          <li key={tag.id}>
+            <button
+              type="button"
+              onClick={() => onSelectExisting(tag)}
+              className="w-full truncate rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-raised-hover"
+            >
+              {tag.title}
+            </button>
+          </li>
+        ))}
+        {candidates.length === 0 && trimmed === "" && (
+          <li className="px-2 py-1.5 text-sm text-fg-tertiary">
+            {t("review.label_search_empty")}
+          </li>
+        )}
+      </ul>
+      {trimmed !== "" && !hasExactMatch && (
+        <button
+          type="button"
+          disabled={!canStartCreateNew}
+          onClick={() => onStartCreate(trimmed)}
+          className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover disabled:pointer-events-none disabled:opacity-50"
+        >
+          {t("review.label_create_new_action", { name: trimmed })}
+        </button>
+      )}
+    </>
+  );
+}
 
 interface TagAddPopoverProps {
   disabled: boolean;
@@ -44,22 +117,6 @@ export function TagAddPopover({
   // 저장이 안 되기 때문(07-modeling Tag 예외 조항).
   const [creatingTitle, setCreatingTitle] = useState<string | null>(null);
   const [description, setDescription] = useState("");
-  const tagListQuery = useTagListQuery(open);
-
-  const getLabel = (tag: { title: string }) => tag.title;
-  const candidates = filterActiveLabelCandidates(
-    tagListQuery.data?.tags ?? [],
-    getLabel,
-    query,
-    new Set(excludedTagIds),
-  );
-  const trimmed = query.trim();
-  const hasExactMatch = hasExactLabelMatch(candidates, getLabel, query);
-  const canStartCreateNew =
-    trimmed !== "" &&
-    !hasExactMatch &&
-    !isDuplicateLabelName(trimmed, existingLabels);
-  const settled = !tagListQuery.isLoading && !tagListQuery.isError;
 
   function reset() {
     setQuery("");
@@ -114,45 +171,34 @@ export function TagAddPopover({
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t("review.label_search_placeholder")}
             />
-            <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
-              {tagListQuery.isLoading && (
-                <li className="px-2 py-1.5 text-sm text-fg-tertiary">
-                  {t("review.label_search_loading")}
-                </li>
-              )}
-              {tagListQuery.isError && (
-                <li className="px-2 py-1.5 text-sm text-status-error">
-                  {t("review.label_search_error")}
-                </li>
-              )}
-              {settled &&
-                candidates.map((tag) => (
-                  <li key={tag.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectExisting(tag)}
-                      className="w-full truncate rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-raised-hover"
-                    >
-                      {tag.title}
-                    </button>
+            <ErrorBoundary
+              boundaryName="tag-search"
+              fallbackRender={() => (
+                <ul className={SEARCH_LIST_CLASSNAME}>
+                  <li className="px-2 py-1.5 text-sm text-status-error">
+                    {t("review.label_search_error")}
                   </li>
-                ))}
-              {settled && candidates.length === 0 && trimmed === "" && (
-                <li className="px-2 py-1.5 text-sm text-fg-tertiary">
-                  {t("review.label_search_empty")}
-                </li>
+                </ul>
               )}
-            </ul>
-            {settled && trimmed !== "" && !hasExactMatch && (
-              <button
-                type="button"
-                disabled={!canStartCreateNew}
-                onClick={() => setCreatingTitle(trimmed)}
-                className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover disabled:pointer-events-none disabled:opacity-50"
+            >
+              <Suspense
+                fallback={
+                  <ul className={SEARCH_LIST_CLASSNAME}>
+                    <li className="px-2 py-1.5 text-sm text-fg-tertiary">
+                      {t("review.label_search_loading")}
+                    </li>
+                  </ul>
+                }
               >
-                {t("review.label_create_new_action", { name: trimmed })}
-              </button>
-            )}
+                <TagSearchResults
+                  query={query}
+                  excludedTagIds={excludedTagIds}
+                  existingLabels={existingLabels}
+                  onSelectExisting={handleSelectExisting}
+                  onStartCreate={setCreatingTitle}
+                />
+              </Suspense>
+            </ErrorBoundary>
           </>
         ) : (
           <>

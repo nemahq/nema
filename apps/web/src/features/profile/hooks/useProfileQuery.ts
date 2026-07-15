@@ -10,3 +10,15 @@ export function useProfileQuery(
     ...options,
   });
 }
+
+export function useProfileSuspenseQuery(
+  options?: Omit<
+    Parameters<typeof trpc.profile.get.useSuspenseQuery>[1],
+    "queryKey"
+  >,
+) {
+  return trpc.profile.get.useSuspenseQuery(undefined, {
+    staleTime: PROFILE_STALE_TIME_MS,
+    ...options,
+  });
+}
