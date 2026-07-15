@@ -5,7 +5,7 @@ import type { DraftCardProps } from "@web/features/intake/types";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftCardShell } from "./DraftCardShell";
-import { DraftIdleFooter } from "./DraftIdleFooter";
+import { DraftIdleHeader } from "./DraftIdleHeader";
 
 interface IdleDraftCardProps extends DraftCardProps {
   // 상세에서 원문을 이미 고친 상태 — empty의 "결과없음" 아이콘은 이 신호가
@@ -51,7 +51,7 @@ export function IdleDraftCard({
 
   return (
     <DraftCardShell onSelect={onSelect}>
-      <DraftIdleFooter
+      <DraftIdleHeader
         sourceId={sourceId}
         spaceId={spaceId}
         title={title}

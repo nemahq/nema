@@ -9,7 +9,7 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 export type PendingSourceItem =
   RouterOutputs["source"]["listPending"]["items"][number];
 
-export interface DraftFooterProps {
+export interface DraftHeaderProps {
   sourceId: string;
   spaceId: string;
   title: string | null;

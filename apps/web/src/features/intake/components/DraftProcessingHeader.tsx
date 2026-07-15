@@ -10,7 +10,7 @@ import { RotateCcw } from "@nema-io/weave/icons";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { useCancelSource } from "@web/features/intake/hooks/useCancelSource";
-import type { DraftFooterProps } from "@web/features/intake/types";
+import type { DraftHeaderProps } from "@web/features/intake/types";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftTitle } from "./DraftTitle";
@@ -18,11 +18,11 @@ import { DraftTitle } from "./DraftTitle";
 // 문구 없이 아이콘만 — 처리 중엔 다른 액션(추출·삭제·Space변경)이 전부 비활성
 // 이라 설명할 대상이 없다. Space 정보는 카드에서 뺐다 — 상세 클릭이 한 번이면
 // 되는 만큼, 카드는 시각+취소만 남기고 나머지는 상세에서 확인한다.
-export function DraftProcessingActions({
+export function DraftProcessingHeader({
   sourceId,
   title,
   createdAt,
-}: DraftFooterProps) {
+}: DraftHeaderProps) {
   const { t } = useTranslation();
   const cancelMutation = useCancelSource();
 
