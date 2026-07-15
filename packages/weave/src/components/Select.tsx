@@ -2,6 +2,7 @@ import { Select as SelectPrimitive } from "radix-ui";
 import * as React from "react";
 
 import { useEscapeAwareCloseFocus } from "../hooks/useEscapeAwareCloseFocus";
+import { useIsOverflowing } from "../hooks/useIsOverflowing";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "../icons";
 import { cn, POPOVER_SURFACE_CLASSNAME } from "../utils";
 
@@ -85,19 +86,29 @@ function SelectContent({
   className,
   children,
   position = "popper",
+  width,
+  style,
   onEscapeKeyDown,
   onCloseAutoFocus,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content>) {
+}: React.ComponentProps<typeof SelectPrimitive.Content> & {
+  width?: number | string;
+}) {
   const escapeAwareCloseFocus = useEscapeAwareCloseFocus(
     onEscapeKeyDown,
     onCloseAutoFocus,
   );
+  const fixedWidth = typeof width === "number" ? `${width}px` : width;
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         data-slot="select-content"
         {...escapeAwareCloseFocus}
+        style={
+          fixedWidth === undefined
+            ? style
+            : { ...style, width: fixedWidth, minWidth: fixedWidth }
+        }
         className={cn(
           POPOVER_SURFACE_CLASSNAME,
           "relative z-50 max-h-96 min-w-[8rem] overflow-hidden !animate-none",
@@ -113,7 +124,11 @@ function SelectContent({
           className={cn(
             "p-1",
             position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]",
+              cn(
+                "h-[var(--radix-select-trigger-height)] w-full",
+                fixedWidth === undefined &&
+                  "min-w-[var(--radix-select-trigger-width)]",
+              ),
           )}
         >
           {children}
@@ -142,6 +157,7 @@ function SelectItem({
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Item>) {
+  const { ref, isOverflowing } = useIsOverflowing<HTMLSpanElement>();
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
@@ -151,7 +167,15 @@ function SelectItem({
       )}
       {...props}
     >
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      <SelectPrimitive.ItemText
+        ref={ref}
+        className="min-w-0 flex-1 truncate"
+        title={
+          isOverflowing ? (ref.current?.textContent ?? undefined) : undefined
+        }
+      >
+        {children}
+      </SelectPrimitive.ItemText>
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
           <CheckIcon className="size-4" />

@@ -2,6 +2,7 @@ import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import * as React from "react";
 
 import { useEscapeAwareCloseFocus } from "../hooks/useEscapeAwareCloseFocus";
+import { useIsOverflowing } from "../hooks/useIsOverflowing";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "../icons";
 import { cn, POPOVER_SURFACE_CLASSNAME } from "../utils";
 
@@ -33,21 +34,31 @@ function DropdownMenuTrigger({
 function DropdownMenuContent({
   className,
   sideOffset = 4,
+  width,
+  style,
   onEscapeKeyDown,
   onCloseAutoFocus,
   children,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Content> & {
+  width?: number | string;
+}) {
   const escapeAwareCloseFocus = useEscapeAwareCloseFocus(
     onEscapeKeyDown,
     onCloseAutoFocus,
   );
+  const fixedWidth = typeof width === "number" ? `${width}px` : width;
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         {...escapeAwareCloseFocus}
+        style={
+          fixedWidth === undefined
+            ? style
+            : { ...style, width: fixedWidth, minWidth: fixedWidth }
+        }
         className={cn(
           POPOVER_SURFACE_CLASSNAME,
           "z-50 min-w-[8rem]",
@@ -74,15 +85,66 @@ function DropdownMenuGroup({
   );
 }
 
+// 순수 텍스트 children은 감쌀 엘리먼트가 없으면 min-width를 줄 수 없어 flex item
+// 기본값(min-width: auto)에 막혀 ellipsis 없이 그냥 잘린다 — 텍스트 구간만 별도
+// span으로 감싸 min-w-0을 걸어준다.
+function wrapDropdownMenuItemLabel(
+  children: React.ReactNode,
+  labelRef: React.Ref<HTMLSpanElement>,
+  labelTitle: string | undefined,
+): React.ReactNode[] {
+  const content: React.ReactNode[] = [];
+  let labelRun: React.ReactNode[] = [];
+  let labelWrapped = false;
+
+  function flushLabelRun() {
+    if (labelRun.length === 0) {
+      return;
+    }
+    const isFirstLabelRun = !labelWrapped;
+    labelWrapped = true;
+    content.push(
+      <span
+        key={`label-${content.length}`}
+        ref={isFirstLabelRun ? labelRef : undefined}
+        className="min-w-0 flex-1 truncate"
+        title={isFirstLabelRun ? labelTitle : undefined}
+      >
+        {labelRun}
+      </span>,
+    );
+    labelRun = [];
+  }
+
+  for (const child of React.Children.toArray(children)) {
+    if (typeof child === "string" || typeof child === "number") {
+      labelRun.push(child);
+    } else {
+      flushLabelRun();
+      content.push(child);
+    }
+  }
+  flushLabelRun();
+
+  return content;
+}
+
 function DropdownMenuItem({
   className,
   inset,
   variant = "default",
+  title,
+  children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Item> & {
   inset?: boolean;
   variant?: "default" | "danger";
 }) {
+  const { ref, isOverflowing } = useIsOverflowing<HTMLSpanElement>();
+  const resolvedTitle =
+    title ??
+    (isOverflowing ? (ref.current?.textContent ?? undefined) : undefined);
+
   return (
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
@@ -93,7 +155,9 @@ function DropdownMenuItem({
         className,
       )}
       {...props}
-    />
+    >
+      {wrapDropdownMenuItemLabel(children, ref, resolvedTitle)}
+    </DropdownMenuPrimitive.Item>
   );
 }
 

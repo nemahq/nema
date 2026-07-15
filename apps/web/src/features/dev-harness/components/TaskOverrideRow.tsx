@@ -89,7 +89,7 @@ export function TaskOverrideRow({ task }: TaskOverrideRowProps) {
         <SelectTrigger className="w-72 shrink-0">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent width={288}>
           <SelectItem value={TIER_DEFAULT_VALUE}>
             tier 기본 (override 해제)
           </SelectItem>
