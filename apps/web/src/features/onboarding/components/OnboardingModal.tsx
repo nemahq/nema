@@ -60,11 +60,6 @@ export function OnboardingModal() {
         </Select>
 
         <DialogFooter>
-          {updateMutation.isError && (
-            <p className="text-sm text-status-error">
-              {t("common.unknown_error")}
-            </p>
-          )}
           <Button
             onClick={() => updateMutation.mutate({ contentLanguage: selected })}
             disabled={updateMutation.isPending}

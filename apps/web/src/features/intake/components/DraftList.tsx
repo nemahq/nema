@@ -1,10 +1,8 @@
 import { Circle, CircleCheck, Inbox } from "@nema-io/weave/icons";
 
-import { Watermark } from "@web/components/ui/Watermark";
 import { usePendingSourceListQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
 import type { PendingSourceItem } from "@web/features/intake/types";
 import { type DraftStatus, draftStatus } from "@web/features/intake/utils";
-import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftSection } from "./DraftSection";
@@ -36,17 +34,11 @@ export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
   // 여기서는 그 이후 상태(에러·빈 목록·목록)만 다루면 된다.
   const pendingQuery = usePendingSourceListQuery();
 
-  // 조회 실패는 "초안 없음"과 다른 상태다 — 같은 빈 화면으로 뭉개면 정말 비어 있는 건지
-  // 목록을 못 불러온 건지 구분이 안 된다.
+  // 이 쿼리가 이 화면 콘텐츠 전체의 존재 이유라 부분 격리할 이유가 없다 — 그냥 던져서
+  // draftsRoute의 RouteErrorFallback이 잡게 한다(컨벤션 기본값: 쿼리 에러는 라우트
+  // errorComponent가 처리).
   if (pendingQuery.isError) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
-        <Watermark />
-        <p className="text-sm text-status-error">
-          {getErrorMessage(pendingQuery.error)}
-        </p>
-      </div>
-    );
+    throw pendingQuery.error;
   }
 
   const drafts = (pendingQuery.data?.items ?? [])
@@ -90,7 +82,7 @@ export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
       </DraftSection>
 
       <DraftSection
-        label={t("intake.draft_section_working")}
+        label={t("intake.draft_section_organizing")}
         count={workingDrafts.length}
         icon={
           <Circle className="size-2.5 shrink-0 animate-pulse fill-current text-fg-tertiary" />

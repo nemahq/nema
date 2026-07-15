@@ -1,7 +1,5 @@
 import { Suspense, useLayoutEffect } from "react";
 
-import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
-import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { SidePanel } from "@web/components/ui/SidePanel";
 import { useScrollAnchor } from "@web/features/session/hooks/useScrollAnchor";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
@@ -63,15 +61,10 @@ function ChatPanelContent() {
 
 export function ChatPanel() {
   return (
-    <SidePanel>
-      <ErrorBoundary
-        boundaryName="chat-panel"
-        fallbackRender={(props) => <SectionErrorFallback {...props} />}
-      >
-        <Suspense fallback={<MessageListSkeleton />}>
-          <ChatPanelContent />
-        </Suspense>
-      </ErrorBoundary>
+    <SidePanel boundaryName="chat-panel">
+      <Suspense fallback={<MessageListSkeleton />}>
+        <ChatPanelContent />
+      </Suspense>
     </SidePanel>
   );
 }

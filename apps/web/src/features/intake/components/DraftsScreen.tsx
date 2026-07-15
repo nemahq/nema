@@ -30,7 +30,7 @@ export function DraftsScreen() {
   // 다시 찾아 만든다.
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   // 결과없음 카드의 상태 아이콘은 "아직 원문을 안 고쳤다"는 신호라, 상세에서
-  // 실제로 고치는 순간(재생성 버튼이 풀리는 시점과 동일 조건) 리스트 카드에서도
+  // 실제로 고치는 순간(정리 버튼이 풀리는 시점과 동일 조건) 리스트 카드에서도
   // 같이 사라져야 한다 — 카드와 상세가 서로 다른 컴포넌트라 이 여닫이 상태를
   // 공통 부모(여기)가 들고 있다가 양쪽에 내려준다.
   const [editedDraftId, setEditedDraftId] = useState<string | null>(null);
@@ -115,7 +115,10 @@ export function DraftsScreen() {
       </div>
 
       {selectedDraft && (
-        <SidePanel onClose={() => setSelectedSourceId(null)}>
+        <SidePanel
+          boundaryName="draft-detail"
+          onClose={() => setSelectedSourceId(null)}
+        >
           <DetailPanel
             key={selectedDraft.sourceId}
             sourceId={selectedDraft.sourceId}

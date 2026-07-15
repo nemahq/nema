@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 
 const DEFAULT_WIDTH = 600;
@@ -12,9 +14,11 @@ const MAX_WIDTH_RATIO = 0.5;
 interface SidePanelProps {
   children: ReactNode;
   onClose?: () => void;
+  // Sentry에서 이 바운더리를 구분할 태그 — 소비처마다 자기 컨텍스트를 넘긴다.
+  boundaryName: string;
 }
 
-export function SidePanel({ children, onClose }: SidePanelProps) {
+export function SidePanel({ children, onClose, boundaryName }: SidePanelProps) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -79,7 +83,12 @@ export function SidePanel({ children, onClose }: SidePanelProps) {
         className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize border-l border-border/50 hover:border-l-2 hover:border-fg-tertiary/40 active:border-l-2 active:border-fg-secondary/60 dark:hover:border-fg-tertiary dark:active:border-fg-secondary"
       />
 
-      {children}
+      <ErrorBoundary
+        boundaryName={boundaryName}
+        fallbackRender={(props) => <SectionErrorFallback {...props} />}
+      >
+        {children}
+      </ErrorBoundary>
     </aside>
   );
 }

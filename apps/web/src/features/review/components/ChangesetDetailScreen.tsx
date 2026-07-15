@@ -50,14 +50,10 @@ export function ChangesetDetailScreen({
 
   const [trashDialogOpen, setTrashDialogOpen] = useState(false);
 
+  // 컨벤션 기본값(쿼리 에러는 라우트 errorComponent가 처리)대로 던진다 — 이 화면은
+  // changesetListQuery 하나가 콘텐츠 전체의 존재 이유라 부분 격리할 이유가 없다.
   if (changesetListQuery.isError) {
-    return (
-      <main className="flex flex-1 items-center justify-center bg-surface-card">
-        <p className="text-sm text-status-error">
-          {getErrorMessage(changesetListQuery.error)}
-        </p>
-      </main>
-    );
+    throw changesetListQuery.error;
   }
   if (!spaceListQuery.data || !changesetListQuery.data) {
     return (

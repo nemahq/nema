@@ -5,7 +5,6 @@ import { cn, Skeleton } from "@nema-io/weave";
 import { isOpenChangeset } from "@web/features/review/constants";
 import { useChangesetListQuery } from "@web/features/review/hooks/useChangesetListQuery";
 import type { ChangesetListEntry } from "@web/features/review/types";
-import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetListRow } from "./ChangesetListRow";
@@ -54,12 +53,11 @@ export function ChangesPanel({
   const changesetListQuery = useChangesetListQuery(spaceId);
   const [subTab, setSubTab] = useState<ChangesSubTab>("open");
 
+  // Topic 탭·SourceComposer는 이 쿼리와 무관하게 계속 써야 해서 페이지 전체로
+  // 전파시키지 않는다 — SpaceOverview.tsx가 이 컴포넌트를 컴포넌트 레벨
+  // ErrorBoundary로 감싸 여기서 던진 에러를 격리해서 잡는다.
   if (changesetListQuery.isError) {
-    return (
-      <p className="py-16 text-center text-sm text-status-error">
-        {getErrorMessage(changesetListQuery.error)}
-      </p>
-    );
+    throw changesetListQuery.error;
   }
   if (!changesetListQuery.data) {
     return (
