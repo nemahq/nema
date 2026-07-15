@@ -129,6 +129,8 @@
     "label_search_placeholder": "검색 또는 새로 만들기",
     "reference_body_placeholder": "이 레퍼런스가 뭘 가리키나요?",
     "reference_merge_label": "바뀔 설명",
+    "reference_merge_original_label": "기존 설명",
+    "reference_merge_restore_action": "원래 설명으로 되돌리기 — 병합 안 함",
     "reference_remove_action": "이 레퍼런스 후보 삭제",
     "reference_section_title": "레퍼런스 ({count})",
     "reference_title_placeholder": "이름",

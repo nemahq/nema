@@ -637,3 +637,12 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
   - **원본 대비 diff("기존 설명")는 생략**: 와이어프레임은 삭제=취소선/추가=밑줄 diff를 제안하지만, `getReview`의 `citedReferences`가 현재 body를 안 내려줘(id·type·title·mergeNote뿐) diff 렌더에 필요한 원본이 없다. 병합 결과("바뀔 설명")만 편집 필드로 보여주는 것으로 축소 — diff 표시는 후속(BE가 현재 body를 함께 내려주면).
   - **인용 배지는 그대로 둔다**: 병합 제안이 붙은 Reference는 이제 병합 섹션 카드(설명 편집)와 Digest 카드 안 `variant="info"` 배지(인용 맥락) 양쪽에 나타난다 — 배지는 "이 Digest가 X를 인용", 카드는 "X의 설명을 이렇게 바꾼다"로 뜻이 달라 중복이 아니다.
 - **검증**: `pnpm typecheck`/`lint`/`format:check`/`knip`/`depcruise`/`test`(모노레포 전체 — web 89케이스·`confirmReviewFlow` 6→13으로 확장[body override 흐름·신규 Reference trim·병합 제안 전량 전송+trim을 원본과 다른 fixture로 회귀 감지], server 419케이스) 전부 통과. **브라우저 라이트/다크 확인은 PM이 직접 진행**(pending ingestion 리뷰 시드 데이터가 필요해 자동화는 위 Topic·Tag 슬라이스와 같이 PM에게 넘김).
+
+**amendment(2026-07-15, PR #416 멀티 에이전트 리뷰 반영)**:
+
+- **원본 body를 화면에 노출 + "원래대로"로 병합 거부(위 "diff 생략" 판단 갱신)**: 리뷰가 "제안을 거부할 방법도, 원본을 볼 방법도 없다"고 지적했고, BE가 `getReview`의 `citedReferences`에 `body`(현재 설명)를 실어주면서 전제가 바뀌었다. `ReferenceMergeCard`가 "기존 설명"(읽기전용)+"바뀔 설명"(편집)을 나란히 보여주고, "원래대로" 버튼은 mergeNote를 원본 body로 되돌린다 — RPC가 `before===after`면 modify를 안 만드는(no-op) 성질을 이용해 별도 삭제 상태 없이 "거부"를 표현한다(더 가역적이고 목록에 남아 재편집 가능). 앞선 항목의 "diff 생략"은 여전히 유효하지만(취소선/밑줄 하이라이트는 후속), 원본 자체는 이제 보인다.
+- **자유 텍스트 길이 상한 사전 차단(PR #414의 빈값 버그가 길이 차원에서 재발)**: `hasEmptyReference`는 빈값만 막았고 상한이 없어 초과 입력 시 zod 원문 에러가 샜다 — 신규 Reference 제목·설명·병합 mergeNote·Digest 제목 입력에 `maxLength`(repo 표준 패턴: SpaceNameField·RenameInput 등)를 얹어 애초에 초과 입력이 안 되게 했다.
+- **병합 후보 계산을 순수 함수로 추출(불변식이 UI 배선에만 의존하던 문제)**: "살아있는 인용만·mergeNote 있는 것만"(`buildMergeRows`)과 "전량 재전송"(`toReferenceUpdates`)을 `referenceMerge.ts`로 빼고 테스트를 붙였다(null/non-null 혼합, 인용 사라진 후보 pruning, override, "원래대로"). `DigestReviewScreen` 인라인 로직에만 있어 회귀 감지가 안 되던 걸 고정.
+- **`as` 단언 3건을 타입 가드로(convention 게이트)**: Reference·Digest 타입 Select·서버 문자열의 `type as …`를 `isDigestType`/`isReferenceType`(SSOT 배열 기반 가드)로 대체 — `apps/web/docs/conventions.md` "가드 없는 as 금지".
+- **BE 동반 착지(같은 워크트리)**: 사용자 경로(update·confirm)에서 병합 대상이 그 사이 archive/trash되면 조용히 스킵 대신 `NM008`을 던져 새로고침을 유도한다(워커 경로는 관대히 스킵 — 정책 분기 근거를 마이그레이션 주석에 문서화). FE는 이미 mutation 에러를 헤더에 인라인 표면화하므로 "유실됐는데 성공으로 보임"이 해소된다.
+- **검증**: 위 전부 반영 후 `typecheck`/`lint`/`format:check`/`knip`/`depcruise`/`test`(web 94케이스[`referenceMerge` 5케이스 신설], server 419케이스) 통과.

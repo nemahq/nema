@@ -129,6 +129,8 @@
     "label_search_placeholder": "Search or create new",
     "reference_body_placeholder": "What does this reference point to?",
     "reference_merge_label": "Revised description",
+    "reference_merge_original_label": "Current description",
+    "reference_merge_restore_action": "Restore the current description — don't merge",
     "reference_remove_action": "Remove this reference candidate",
     "reference_section_title": "Reference ({count})",
     "reference_title_placeholder": "Name",

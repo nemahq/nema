@@ -1,5 +1,6 @@
 import {
   DIGEST_TAGS_MAX,
+  DIGEST_TITLE_MAX_LENGTH,
   DIGEST_TOPICS_MAX,
   DIGEST_TYPES,
   type DigestTagDraft,
@@ -143,6 +144,7 @@ export function DigestCandidateCard({
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
             disabled={disabled}
+            maxLength={DIGEST_TITLE_MAX_LENGTH}
             placeholder={t("review.digest_title_placeholder")}
             aria-invalid={title.trim() === ""}
           />

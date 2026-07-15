@@ -12,9 +12,12 @@ import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import { useDigestReviewQuery } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
+import {
+  buildMergeRows,
+  toReferenceUpdates,
+} from "@web/features/review/referenceMerge";
 import type {
   ChangesetStatus,
-  ReviewCitedReference,
   ReviewDigest,
   ReviewNewReference,
 } from "@web/features/review/types";
@@ -71,6 +74,7 @@ export function DigestReviewScreen({
     Map<string, ReviewNewReference>
   >(new Map());
   // 기존 Reference 병합 편집 — referenceId로 엔진 제안 mergeNote를 덮어쓴다.
+  // "원래대로"(거부)도 원본 body로 되돌리는 override라 별도 상태가 필요 없다.
   const [mergeNoteOverrides, setMergeNoteOverrides] = useState<
     Map<string, string>
   >(new Map());
@@ -123,22 +127,13 @@ export function DigestReviewScreen({
   const referenceRows = review.newReferences
     .filter((reference) => !removedReferenceKeys.has(reference.key))
     .map((reference) => referenceOverrides.get(reference.key) ?? reference);
-  // 병합 제안이 붙은 기존 인용(mergeNote != null)만 병합 편집 대상 — 그 Reference를
-  // 인용하던 Digest가 전부 제거되면 병합도 의미를 잃으므로 살아있는 후보로 좁힌다.
-  const citedIdsInView = new Set(
-    digestRows.flatMap((row) => row.digest.referenceIds),
-  );
-  const mergeRows: { reference: ReviewCitedReference; mergeNote: string }[] =
-    review.citedReferences
-      .filter(
-        (reference) =>
-          reference.mergeNote !== null && citedIdsInView.has(reference.id),
-      )
-      .map((reference) => ({
-        reference,
-        mergeNote:
-          mergeNoteOverrides.get(reference.id) ?? reference.mergeNote ?? "",
-      }));
+  const mergeRows = buildMergeRows({
+    citedReferences: review.citedReferences,
+    citedReferenceIds: new Set(
+      digestRows.flatMap((row) => row.digest.referenceIds),
+    ),
+    mergeNoteOverrides,
+  });
 
   const dirty =
     removedDigestIndexes.size > 0 ||
@@ -163,12 +158,7 @@ export function DigestReviewScreen({
       (reference) =>
         reference.title.trim() === "" || reference.body.trim() === "",
     ) || mergeRows.some((row) => row.mergeNote.trim() === "");
-  // 초안 편집은 changes를 통째로 교체하므로(update_pending_ingestion), 편집 여부와
-  // 무관하게 살아있는 병합 제안을 전부 실어 보내야 엔진 제안이 유실되지 않는다.
-  const referenceUpdates = mergeRows.map((row) => ({
-    referenceId: row.reference.id,
-    mergeNote: row.mergeNote,
-  }));
+  const referenceUpdates = toReferenceUpdates(mergeRows);
   const locked = pending || outcome !== null;
   const confirmDisabled =
     locked ||

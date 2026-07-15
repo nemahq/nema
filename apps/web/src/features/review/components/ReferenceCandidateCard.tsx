@@ -1,4 +1,8 @@
-import { REFERENCE_TYPES } from "@nema-io/shared";
+import {
+  REFERENCE_BODY_MAX_LENGTH,
+  REFERENCE_TITLE_MAX_LENGTH,
+  REFERENCE_TYPES,
+} from "@nema-io/shared";
 import {
   Button,
   Input,
@@ -63,6 +67,7 @@ export function ReferenceCandidateCard({
             value={reference.title}
             onChange={(e) => onChange({ ...reference, title: e.target.value })}
             disabled={disabled}
+            maxLength={REFERENCE_TITLE_MAX_LENGTH}
             placeholder={t("review.reference_title_placeholder")}
             aria-invalid={reference.title.trim() === ""}
           />
@@ -84,6 +89,7 @@ export function ReferenceCandidateCard({
         disabled={disabled}
         placeholder={t("review.reference_body_placeholder")}
         rows={3}
+        maxLength={REFERENCE_BODY_MAX_LENGTH}
         aria-invalid={reference.body.trim() === ""}
         className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-1.5 text-sm placeholder:text-fg-tertiary focus-visible:border-brand focus-visible:outline-none aria-invalid:border-status-error disabled:opacity-50 dark:focus-visible:border-fg-tertiary/70"
       />
