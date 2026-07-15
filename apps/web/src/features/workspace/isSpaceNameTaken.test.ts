@@ -8,12 +8,14 @@ const spaces = [
     publicId: "spc_a",
     name: "Marketing",
     createdAt: "2024-01-01T00:00:00Z",
+    openChangesetCount: 0,
   },
   {
     id: "space-b",
     publicId: "spc_b",
     name: "Engineering",
     createdAt: "2024-01-02T00:00:00Z",
+    openChangesetCount: 0,
   },
 ];
 

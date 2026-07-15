@@ -9,10 +9,16 @@ const SOME_ERROR = { code: "XXXXX", message: "boom" };
 function mockSupabase(args: {
   error?: typeof SOME_ERROR;
   row?: { id: string; public_id: string; name: string; created_at: string };
+  pendingChangesets?: Array<{ space_id: string | null }>;
 }): TypedSupabaseClient {
-  const from = () => {
+  const from = (table: string) => {
     const stub: Record<string, unknown> = {};
     stub["select"] = () => stub;
+    if (table === "changesets") {
+      stub["eq"] = () =>
+        Promise.resolve({ data: args.pendingChangesets ?? [], error: null });
+      return stub;
+    }
     stub["order"] = () =>
       Promise.resolve(
         args.error
@@ -44,6 +50,28 @@ describe("listSpaces", () => {
     };
     const result = await listSpaces({ supabase: mockSupabase({ row }) });
     expect(result.spaces[0]?.publicId).toBe("spc_abc123def456");
+  });
+
+  // LNB 넛지는 이 카운트 하나로 "검토할 게 있다"를 신호하므로, 여러 건이 같은
+  // Space에 몰려도 정확히 합산되는지가 회귀 방지의 핵심이다.
+  it("같은 Space의 pending changeset을 합산해 openChangesetCount로 반환한다", async () => {
+    const row = {
+      id: "11111111-1111-1111-1111-111111111111",
+      public_id: "spc_abc123def456",
+      name: "My Space",
+      created_at: "2026-07-13T00:00:00.000Z",
+    };
+    const result = await listSpaces({
+      supabase: mockSupabase({
+        row,
+        pendingChangesets: [
+          { space_id: row.id },
+          { space_id: row.id },
+          { space_id: null },
+        ],
+      }),
+    });
+    expect(result.spaces[0]?.openChangesetCount).toBe(2);
   });
 });
 
