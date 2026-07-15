@@ -8,7 +8,6 @@ import { ChangesPanel } from "@web/features/review";
 import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { SpaceEmptyState } from "./SpaceEmptyState";
 import { SpaceTabButton } from "./SpaceTabButton";
 
 // SpaceListItem 뱃지와 같은 조합(중립색·rounded-md). 내비게이션 바(작게)와
@@ -101,11 +100,7 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
             </SpaceTabButton>
           </div>
 
-          {tab === "topic" ? (
-            <div className="flex flex-1 items-center justify-center py-16">
-              <SpaceEmptyState />
-            </div>
-          ) : (
+          {tab === "changesets" && (
             <ChangesPanel
               spaceId={space.id}
               onOpenReview={(changesetId) =>
