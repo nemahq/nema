@@ -36,6 +36,10 @@ export const spaceRouter = router({
   delete: protectedProcedure
     .input(SpaceDeleteInputSchema)
     .mutation(({ ctx, input }) =>
-      deleteSpace({ supabase: ctx.supabase, spaceId: input.spaceId }),
+      deleteSpace({
+        supabase: ctx.supabase,
+        spaceId: input.spaceId,
+        targetSpaceId: input.targetSpaceId,
+      }),
     ),
 });

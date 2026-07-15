@@ -7,9 +7,16 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@nema-io/weave";
 
+import { useSpacePendingDraftCount } from "@web/features/intake";
 import { useDeleteSpace } from "@web/features/workspace/hooks/useDeleteSpace";
+import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface SpaceDeleteConfirmFormProps {
@@ -29,15 +36,26 @@ export function SpaceDeleteConfirmForm({
   const confirmInputId = useId();
   const [confirmText, setConfirmText] = useState("");
   const deleteMutation = useDeleteSpace();
+  const draftCount = useSpacePendingDraftCount(spaceId);
+  const { data: spaceList } = useSpaceList();
+  // useSpaceList는 created_at 오름차순이라 필터링 후 첫 항목이 곧 가장 오래된 Space.
+  const otherSpaces = (spaceList?.spaces ?? []).filter(
+    (space) => space.id !== spaceId,
+  );
+  const [manualTargetSpaceId, setManualTargetSpaceId] = useState<string | null>(
+    null,
+  );
+  const targetSpaceId = manualTargetSpaceId ?? otherSpaces[0]?.id;
 
-  const canDelete = confirmText === spaceName;
+  const canDelete =
+    confirmText === spaceName && (draftCount === 0 || Boolean(targetSpaceId));
 
   function handleDelete() {
     if (!canDelete) {
       return;
     }
     deleteMutation.mutate(
-      { spaceId },
+      { spaceId, targetSpaceId: draftCount > 0 ? targetSpaceId : undefined },
       {
         onSuccess: () => {
           onDeleted();
@@ -66,6 +84,33 @@ export function SpaceDeleteConfirmForm({
           placeholder={spaceName}
         />
       </div>
+
+      {draftCount > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-fg-tertiary">
+            {t("space.delete_move_drafts_label", { count: draftCount })}
+          </label>
+          {otherSpaces.length > 1 ? (
+            <Select
+              value={targetSpaceId}
+              onValueChange={setManualTargetSpaceId}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {otherSpaces.map((space) => (
+                  <SelectItem key={space.id} value={space.id}>
+                    {space.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="text-sm text-fg-primary">{otherSpaces[0]?.name}</p>
+          )}
+        </div>
+      )}
 
       <DialogFooter>
         <Button variant="ghost" onClick={() => onOpenChange(false)}>

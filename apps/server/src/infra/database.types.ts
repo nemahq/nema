@@ -1219,7 +1219,10 @@ export type Database = {
         };
         Returns: string;
       };
-      delete_space: { Args: { p_space_id: string }; Returns: undefined };
+      delete_space: {
+        Args: { p_space_id: string; p_target_space_id?: string };
+        Returns: undefined;
+      };
       delete_workspace: {
         Args: { p_workspace_id: string };
         Returns: undefined;

@@ -87,9 +87,11 @@ export async function updateSpace(args: {
 export async function deleteSpace(args: {
   supabase: TypedSupabaseClient;
   spaceId: string;
+  targetSpaceId?: string;
 }): Promise<void> {
   const { error } = await args.supabase.rpc("delete_space", {
     p_space_id: args.spaceId,
+    p_target_space_id: args.targetSpaceId,
   });
   throwIfSupabaseError(error);
 }
