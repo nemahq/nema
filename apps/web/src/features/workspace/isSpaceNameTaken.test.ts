@@ -26,8 +26,8 @@ describe("isSpaceNameTaken", () => {
     expect(isSpaceNameTaken(spaces, "Design")).toBe(false);
   });
 
-  it("대소문자가 다르면 다른 이름으로 취급한다(서버 uniq 제약과 동일)", () => {
-    expect(isSpaceNameTaken(spaces, "marketing")).toBe(false);
+  it("대소문자가 달라도 같은 이름으로 취급한다(서버 uniq 인덱스와 동일)", () => {
+    expect(isSpaceNameTaken(spaces, "marketing")).toBe(true);
   });
 
   it("자기 자신의 현재 이름은 제외 대상이라 true가 아니다(이름변경 — 미변경 케이스)", () => {
