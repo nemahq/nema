@@ -11,31 +11,27 @@ import { Trash2 } from "@nema-io/weave/icons";
 
 import { useReassignSourceSpace } from "@web/features/intake/hooks/useReassignSourceSpace";
 import { useUpdateSourceTitle } from "@web/features/intake/hooks/useUpdateSourceTitle";
-import type { DraftCardData } from "@web/features/intake/types";
+import type { DraftDetailPanelProps } from "@web/features/intake/types";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DeleteSourceDialog } from "./DeleteSourceDialog";
 import { DraftDetailHeader } from "./DraftDetailHeader";
 
-interface IdleDraftDetailPanelProps {
-  draft: DraftCardData;
-  onClose: () => void;
-  // 리스트의 카드(예: 결과없음 상태 아이콘)가 "원문이 편집됐는지"를 반영해야 할 때 씀.
-  onBodyDirtyChange?: (dirty: boolean) => void;
-}
-
-// TODO(임시): 원문 편집·"재생성" 버튼은 UI만 — 원본(body) 저장 API가 아직 없어
-// 실제 저장·재생성 연동은 안 했다(백엔드 준비 후 연결할 것). 지금 이대로 기존
-// 추출 뮤테이션에 연결하면 편집 내용이 조용히 무시되는 실패가 생겨 일부러
-// 비워뒀다. 제목은 기존 update_source_title RPC가 있어 실제로 저장된다.
+// TODO: 원본(body) 저장 API(update_source_body)는 이미 있다(#415) — 재생성
+// 버튼과의 실제 연동(로딩·실패 처리 설계 포함)은 아직 후속 작업으로 남겨뒀다.
+// 제목은 기존 update_source_title RPC로 실제 저장된다.
 export function IdleDraftDetailPanel({
-  draft,
+  sourceId,
+  spaceId,
+  title: initialTitle,
+  body: initialBody,
+  status,
   onClose,
   onBodyDirtyChange,
-}: IdleDraftDetailPanelProps) {
+}: DraftDetailPanelProps) {
   const { t } = useTranslation();
-  const [title, setTitle] = useState(draft.title ?? "");
-  const [body, setBody] = useState(draft.body);
+  const [title, setTitle] = useState(initialTitle ?? "");
+  const [body, setBody] = useState(initialBody);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const updateTitleMutation = useUpdateSourceTitle();
@@ -43,14 +39,12 @@ export function IdleDraftDetailPanel({
   // 결과없음은 원본을 안 바꾸고 재생성해봐야 또 결과없음이 나올 가능성이 높다 —
   // 원문이 실제로 바뀌기 전까진 재생성을 막아 헛수고를 예방한다. failed/cancelled는
   // 내용 문제가 아닐 수 있어(일시적 시스템 오류 등) 이 제약을 안 둔다.
-  const regenerateDisabled = draft.status === "empty" && body === draft.body;
+  const regenerateDisabled = status === "empty" && body === initialBody;
 
-  useEffect(
-    function reportBodyDirtyChange() {
-      onBodyDirtyChange?.(body !== draft.body);
-    },
-    [body, draft.body, onBodyDirtyChange],
-  );
+  function handleBodyChange(nextBody: string) {
+    setBody(nextBody);
+    onBodyDirtyChange?.(nextBody !== initialBody);
+  }
 
   useEffect(function focusTitleAtEnd() {
     const el = titleInputRef.current;
@@ -66,18 +60,18 @@ export function IdleDraftDetailPanel({
   // 된다 — 지우고 나가면 그냥 저장을 시도하지 않고 이전 제목으로 남는다.
   function handleTitleBlur() {
     const trimmed = title.trim();
-    if (trimmed.length === 0 || trimmed === (draft.title ?? "")) {
+    if (trimmed.length === 0 || trimmed === (initialTitle ?? "")) {
       return;
     }
-    updateTitleMutation.mutate({ sourceId: draft.sourceId, title: trimmed });
+    updateTitleMutation.mutate({ sourceId, title: trimmed });
   }
 
   function handleReassignSpace(nextSpaceId: string) {
-    if (nextSpaceId === draft.spaceId) {
+    if (nextSpaceId === spaceId) {
       return;
     }
     reassignSpaceMutation.mutate({
-      sourceId: draft.sourceId,
+      sourceId,
       spaceId: nextSpaceId,
     });
   }
@@ -85,7 +79,7 @@ export function IdleDraftDetailPanel({
   return (
     <div className="flex h-full flex-col">
       <DraftDetailHeader
-        spaceId={draft.spaceId}
+        spaceId={spaceId}
         onClose={onClose}
         onReassignSpace={handleReassignSpace}
         reassignPending={reassignSpaceMutation.isPending}
@@ -107,7 +101,7 @@ export function IdleDraftDetailPanel({
         }
       />
       <DeleteSourceDialog
-        sourceId={draft.sourceId}
+        sourceId={sourceId}
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onDeleted={onClose}
@@ -130,7 +124,7 @@ export function IdleDraftDetailPanel({
       <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
         <textarea
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(e) => handleBodyChange(e.target.value)}
           className="flex-1 resize-none text-sm leading-relaxed text-fg-primary outline-none"
         />
       </div>

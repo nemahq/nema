@@ -1,24 +1,26 @@
-import type { DraftCardData } from "@web/features/intake/types";
+import type { DraftCardProps } from "@web/features/intake/types";
 
 import { DraftCardShell } from "./DraftCardShell";
 import { DraftProcessingActions } from "./DraftProcessingActions";
 
-interface WorkingDraftCardProps {
-  draft: DraftCardData;
-  onSelect: () => void;
-}
-
-export function WorkingDraftCard({ draft, onSelect }: WorkingDraftCardProps) {
+export function WorkingDraftCard({
+  sourceId,
+  spaceId,
+  title,
+  body,
+  createdAt,
+  onSelect,
+}: DraftCardProps) {
   return (
     <DraftCardShell onSelect={onSelect}>
       <DraftProcessingActions
-        sourceId={draft.sourceId}
-        spaceId={draft.spaceId}
-        title={draft.title}
-        createdAt={draft.createdAt}
+        sourceId={sourceId}
+        spaceId={spaceId}
+        title={title}
+        createdAt={createdAt}
       />
       <p className="line-clamp-4 text-sm leading-relaxed text-fg-tertiary">
-        {draft.body}
+        {body}
       </p>
     </DraftCardShell>
   );

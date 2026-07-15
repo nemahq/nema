@@ -1,15 +1,13 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@nema-io/weave";
 import { SearchX, TriangleAlert } from "@nema-io/weave/icons";
 
-import type { DraftCardData } from "@web/features/intake/types";
+import type { DraftCardProps } from "@web/features/intake/types";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftCardShell } from "./DraftCardShell";
 import { DraftIdleFooter } from "./DraftIdleFooter";
 
-interface IdleDraftCardProps {
-  draft: DraftCardData;
-  onSelect: () => void;
+interface IdleDraftCardProps extends DraftCardProps {
   // 상세에서 원문을 이미 고친 상태 — empty의 "결과없음" 아이콘은 이 신호가
   // 사라져야 할 근거(재생성 버튼이 풀리는 조건과 동일)라 카드에서도 뗀다.
   isEdited?: boolean;
@@ -22,18 +20,23 @@ interface IdleDraftCardProps {
 // (돋보기+X)는 관용화된 기호가 아니라 툴팁으로 의미를 보완한다 — 일괄 적용이
 // 아니라 실제로 모호한 것만.
 export function IdleDraftCard({
-  draft,
+  sourceId,
+  spaceId,
+  title,
+  body,
+  status,
+  createdAt,
   onSelect,
   isEdited,
 }: IdleDraftCardProps) {
   const { t } = useTranslation();
 
   let statusIcon = null;
-  if (draft.status === "failed") {
+  if (status === "failed") {
     statusIcon = (
       <TriangleAlert className="size-4 shrink-0 text-status-error" />
     );
-  } else if (draft.status === "empty" && !isEdited) {
+  } else if (status === "empty" && !isEdited) {
     statusIcon = (
       <Tooltip>
         <TooltipTrigger asChild>
@@ -49,14 +52,14 @@ export function IdleDraftCard({
   return (
     <DraftCardShell onSelect={onSelect}>
       <DraftIdleFooter
-        sourceId={draft.sourceId}
-        spaceId={draft.spaceId}
-        title={draft.title}
-        createdAt={draft.createdAt}
+        sourceId={sourceId}
+        spaceId={spaceId}
+        title={title}
+        createdAt={createdAt}
         icon={statusIcon}
       />
       <p className="line-clamp-4 text-sm leading-relaxed text-fg-tertiary">
-        {draft.body}
+        {body}
       </p>
     </DraftCardShell>
   );

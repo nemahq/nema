@@ -60,7 +60,12 @@ export function DraftsScreen() {
         <SidePanel onClose={() => setSelectedDraft(null)}>
           <DetailPanel
             key={selectedDraft.sourceId}
-            draft={selectedDraft}
+            sourceId={selectedDraft.sourceId}
+            spaceId={selectedDraft.spaceId}
+            title={selectedDraft.title}
+            body={selectedDraft.body}
+            status={selectedDraft.status}
+            createdAt={selectedDraft.createdAt}
             onClose={() => setSelectedDraft(null)}
             onBodyDirtyChange={(dirty) =>
               setEditedDraftId(dirty ? selectedDraft.sourceId : null)

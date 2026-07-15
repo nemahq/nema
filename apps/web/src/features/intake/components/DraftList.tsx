@@ -86,7 +86,12 @@ export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
           return (
             <IdleDraftCard
               key={source.sourceId}
-              draft={draft}
+              sourceId={draft.sourceId}
+              spaceId={draft.spaceId}
+              title={draft.title}
+              body={draft.body}
+              status={draft.status}
+              createdAt={draft.createdAt}
               isEdited={source.sourceId === editedDraftId}
               onSelect={() => onSelectSource(draft)}
             />
@@ -113,7 +118,12 @@ export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
           return (
             <WorkingDraftCard
               key={source.sourceId}
-              draft={draft}
+              sourceId={draft.sourceId}
+              spaceId={draft.spaceId}
+              title={draft.title}
+              body={draft.body}
+              status={draft.status}
+              createdAt={draft.createdAt}
               onSelect={() => onSelectSource(draft)}
             />
           );
