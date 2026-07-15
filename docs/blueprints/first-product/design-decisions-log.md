@@ -731,3 +731,15 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 코드 식별자(`handleRegenerate`, `useStartSourceDigestion`, `draft.regenerate` 단축키 액션 ID 등)는 안 건드림 — glossary의 "제품 용어는 카피 전용, 코드 용어는 구현체" 원칙대로 유지(`useStartSourceDigestion`이 애초에 이 분리를 이유로 그렇게 지어졌다).
 
 ---
+
+### 2026-07-15 — 검토 대기 Changeset 넛지: 알림 채널·카운트 배지 색 규칙
+
+**배경**: 초안 정리가 끝나면 Changeset이 열린 상태로 생기는데, 이 전환을 사람이 놓치지 않게 하는 알림 채널이 없었다. `design-reference-log.md` "⑥ 작업 완료 알림" 참고.
+
+**알림 채널 — 지속되는 카운트 배지로 확정, 토스트·자동 라우트 이동은 기각**: 이 이벤트는 LangChain의 Notify/Review/Question 모델 기준 Review급(사람이 반드시 검증)이라, 토스트(자동으로 사라짐·접근성 문제)나 정리 완료 시 자동 리뷰 화면 이동(사용자 통제권 박탈, Space 생성 후 auto-navigate 제거 전례와 같은 이유)보다 지속적으로 보이는 배지가 맞다고 판단. Space LNB 행과 Space 오버뷰의 변경사항 탭 양쪽에 동일 카운트(그 Space의 `pending` changeset 수)를 배지로 노출 — "읽음"이 아니라 confirm/discard 처리 시에만 사라지므로 별도 읽음 상태 관리가 필요 없다.
+
+**카운트 배지 색 — neutral(백로그)·info tint(검토 대기)·error(실패) 3단 확정**: 처음엔 warning을 검토했으나 "warning은 무시하면 에러가 날 위험이 있는 상태"에 쓰는 톤이라 단순 검토 대기와 안 맞아 기각(웹서치 기반). 최종적으로 neutral은 "아직 시작 안 한 백로그"(초안 탭 카운트), info는 "AI가 끝냈고 사람 차례로 넘어온 워크플로우 진행 상황"(변경셋 카운트), error는 기존 실패 상태 전용으로 역할을 나눴다. info도 처음엔 solid 배경+흰 텍스트로 시도했으나 화면 전체가 무채색인 Nema 톤에서 유일한 고채도 요소가 되어 과했다 — weave `Badge`의 `info` variant(tint 배경) 기본값으로 되돌림. 이 판단은 "Space 아이콘 — 색상 실험 후 중립으로 회귀"(위 항목)와 같은 반복 패턴 — 리스트/네비게이션 안 색 배지는 solid보다 tint가 Nema 톤에 맞는다는 규칙으로 일반화할 수 있음.
+
+**미해결(후속 논의로 이월)**: `useSpaceList`가 10분 staleTime이라 changeset 생성·해소가 실시간으로 반영 안 됨. 초안 탭 폴링 패턴(`usePendingSourceListQuery`의 조건부 `refetchInterval`)을 재사용하는 안을 제시했으나 "별로 좋은 방향은 아닌 것 같다"는 피드백으로 보류 — 갱신 전략은 다음 세션에서 다시 논의.
+
+---
