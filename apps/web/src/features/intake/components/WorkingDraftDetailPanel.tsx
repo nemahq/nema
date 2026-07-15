@@ -10,27 +10,35 @@ import { useCancelSource } from "@web/features/intake/hooks/useCancelSource";
 import type { DraftDetailPanelProps } from "@web/features/intake/types";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { DraftBodyView } from "./DraftBodyView";
 import { DraftDetailHeader } from "./DraftDetailHeader";
+import { DraftOrganizingIndicator } from "./DraftOrganizingIndicator";
 import { DraftTitle } from "./DraftTitle";
 
-// 처리 중엔 원본 편집·재생성 둘 다 막는다 — 엔진이 지금 이 내용으로 한창
-// 처리 중인데 고치거나 재트리거하면 앞뒤가 안 맞는다(Space재지정·삭제가 같은
-// 이유로 처리 중엔 막혀있는 것과 동일). 읽기 전용 전문만 보여준다. 취소는
+// 정리 중엔 원본 편집도, 정리 버튼 재실행도 막는다 — 엔진이 지금 이 내용으로
+// 한창 정리하고 있는데 고치거나 재트리거하면 앞뒤가 안 맞는다(Space재지정·삭제가
+// 같은 이유로 정리 중엔 막혀있는 것과 동일). 읽기 전용 전문만 보여준다. 취소는
 // 카드의 취소 버튼과 같은 무게(작은 ghost 아이콘)라 닫기 옆 헤더에 같이 둔다 —
-// 재생성처럼 primary 톤이었다면 닫기와 안 어울렸겠지만, 취소는 닫기와 성격이
+// 정리 버튼처럼 primary 톤이었다면 닫기와 안 어울렸겠지만, 취소는 닫기와 성격이
 // 비슷한 chrome급 액션이라 무리 없다.
 // status/onBodyDirtyChange는 IdleDraftDetailPanel과 상세 패널 자리를 동적으로
 // 바꿔 끼우는 소비처(DraftsScreen)가 두 컴포넌트에 같은 prop 모양을 넘기므로
-// 받아만 두고 쓰지 않는다 — 처리 중엔 읽기 전용이라 원문이 편집될 일이 없다.
+// 받아만 두고 쓰지 않는다 — 정리 중엔 읽기 전용이라 원문이 편집될 일이 없다.
 export function WorkingDraftDetailPanel({
   sourceId,
   spaceId,
   title,
   body,
+  createdAt,
+  lastDigestionAttempt,
   onClose,
 }: DraftDetailPanelProps) {
   const { t } = useTranslation();
   const cancelMutation = useCancelSource();
+  // 재시도·정리 재실행처럼 뒤늦게 다시 붙잡힌 시도는 lastDigestionAttempt가
+  // 실제 시작 시점 — 아직 한 번도 안 붙잡혔으면(막 생성돼 큐에 갓 들어간 경우)
+  // null이라 createdAt으로 대체한다.
+  const organizingSince = lastDigestionAttempt ?? createdAt;
 
   function handleCancel() {
     cancelMutation.mutate({ sourceId });
@@ -59,25 +67,16 @@ export function WorkingDraftDetailPanel({
           </Tooltip>
         }
       />
+      <div className="px-6 pt-4">
+        <DraftOrganizingIndicator since={organizingSince} />
+      </div>
       <DraftTitle
         title={title}
         showPlaceholder
-        className="block px-6 pt-4 text-xl font-bold text-fg-primary"
+        className="block px-6 pt-3 text-xl font-bold text-fg-primary"
       />
-      <div className="flex-1 overflow-y-auto px-6 py-4">
-        <div className="space-y-4">
-          {body
-            .split(/\n{2,}/)
-            .filter((paragraph) => paragraph.trim() !== "")
-            .map((paragraph, index) => (
-              <p
-                key={index}
-                className="text-sm leading-relaxed text-fg-primary"
-              >
-                {paragraph}
-              </p>
-            ))}
-        </div>
+      <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
+        <DraftBodyView value={body} readOnly />
       </div>
     </div>
   );

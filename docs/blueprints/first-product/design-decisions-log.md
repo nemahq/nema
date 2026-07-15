@@ -710,3 +710,53 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 - **Popover 팝업 표면 통일 누락 보정**: 직전 항목(695~698줄)의 `POPOVER_SURFACE_CLASSNAME` 전역 통일 작업에서 `Popover.tsx`가 빠져 다크모드에서 혼자 달라 보였던 게 이번에 발견·수정됨 — 통일 대상 컴포넌트 목록에 Popover 포함 확정.
 
 ---
+
+### 2026-07-15 — 초안 탭 "AI가 진행 중인 작업" 용어를 "정리"/"Organize"로 통일
+
+**배경**: 상세 사이드뷰에 처리중 인지 인디케이터를 추가하다 보니, Put-in→Digest Review 사이의 이 AI 작업을 코드베이스가 "Working"/"처리 중", "Regenerate"/"재생성", "Creating"/"작성 중", "Generate"/"생성" 등 화면마다 다른 단어로 부르고 있다는 게 드러났다.
+
+**"정리"/"Organize" 채택 근거**: (1) `session.empty_subheading_1`("정리는 맡겨두세요."/"The organizing is on us.")이 이미 Nema의 핵심 가치 제안을 이 단어로 못박아둔 브랜드 레벨 카피였다. (2) `glossary.md`의 Digest 정의 자체가 "Source를 사람이 읽기 좋게 **정리한 것**"이라 — "정리 중"으로 부르면 진행형 라벨과 완료 결과물 정의가 한 단어로 자연스럽게 이어진다. (3) Mem.ai("Mem organizes every capture"), Notion AI, Capacities 등 AI-native SaaS가 이 raw→구조화 전환을 "generate"가 아니라 "organize/structure"로 부르는 게 트렌드 — Statement가 사용자 원문 기반 판단을 담는 단위(새로 지어내지 않음)인 Nema 모델과 "생성"보다 "정리"가 더 정직하게 맞는다.
+
+**적용 범위**: Ask 플로우(`session.status_answering` "답변 생성 중..." 등 — narration은 실제로 근거에서 산문을 합성하는 진짜 "생성"이라 별개)와 v1 세션 레거시 키(`session.draft_creating` 등 — glossary "폐기된 용어"의 v1 Draft 개념, v2 초안과 무관)는 스코프 밖. v2 Drafts 탭(intake feature)의 번역키·컴포넌트만 교체:
+
+| Before (key/값) | After (key/값) |
+|---|---|
+| `draft_section_working` "Working"/"처리 중" | `draft_section_organizing` "Organizing"/"정리 중" |
+| `draft_regenerate` "Regenerate"/"재생성" | `draft_organize` "Organize"/"정리" |
+| `draft_regenerating` "Regenerating..."/"재생성 중..." | `draft_organizing` "Organizing..."/"정리 중..." |
+| `draft_processing`(죽은 키) | 삭제 — `draft_section_organizing`으로 통합 |
+| `draft_processing_elapsed_*` | `draft_organizing_elapsed_*` (값은 그대로, 접두어만) |
+| `draft_no_result_tooltip` "Nothing to generate"/"생성할 내용이 없어요." | 값만 "Nothing to organize"/"정리할 내용이 없어요." |
+
+코드 식별자(`handleRegenerate`, `useStartSourceDigestion`, `draft.regenerate` 단축키 액션 ID 등)는 안 건드림 — glossary의 "제품 용어는 카피 전용, 코드 용어는 구현체" 원칙대로 유지(`useStartSourceDigestion`이 애초에 이 분리를 이유로 그렇게 지어졌다).
+
+---
+
+### 2026-07-15 — 검토 대기 Changeset 넛지: 알림 채널·카운트 배지 색 규칙
+
+**배경**: 초안 정리가 끝나면 Changeset이 열린 상태로 생기는데, 이 전환을 사람이 놓치지 않게 하는 알림 채널이 없었다. `design-reference-log.md` "⑥ 작업 완료 알림" 참고.
+
+**알림 채널 — 지속되는 카운트 배지로 확정, 토스트·자동 라우트 이동은 기각**: 이 이벤트는 LangChain의 Notify/Review/Question 모델 기준 Review급(사람이 반드시 검증)이라, 토스트(자동으로 사라짐·접근성 문제)나 정리 완료 시 자동 리뷰 화면 이동(사용자 통제권 박탈, Space 생성 후 auto-navigate 제거 전례와 같은 이유)보다 지속적으로 보이는 배지가 맞다고 판단. Space LNB 행과 Space 오버뷰의 변경사항 탭 양쪽에 동일 카운트(그 Space의 `pending` changeset 수)를 배지로 노출 — "읽음"이 아니라 confirm/discard 처리 시에만 사라지므로 별도 읽음 상태 관리가 필요 없다.
+
+**카운트 배지 색 — neutral(백로그)·info tint(검토 대기)·error(실패) 3단 확정**: 처음엔 warning을 검토했으나 "warning은 무시하면 에러가 날 위험이 있는 상태"에 쓰는 톤이라 단순 검토 대기와 안 맞아 기각(웹서치 기반). 최종적으로 neutral은 "아직 시작 안 한 백로그"(초안 탭 카운트), info는 "AI가 끝냈고 사람 차례로 넘어온 워크플로우 진행 상황"(변경셋 카운트), error는 기존 실패 상태 전용으로 역할을 나눴다. info도 처음엔 solid 배경+흰 텍스트로 시도했으나 화면 전체가 무채색인 Nema 톤에서 유일한 고채도 요소가 되어 과했다 — weave `Badge`의 `info` variant(tint 배경) 기본값으로 되돌림. 이 판단은 "Space 아이콘 — 색상 실험 후 중립으로 회귀"(위 항목)와 같은 반복 패턴 — 리스트/네비게이션 안 색 배지는 solid보다 tint가 Nema 톤에 맞는다는 규칙으로 일반화할 수 있음.
+
+**미해결(후속 논의로 이월)**: `useSpaceList`가 10분 staleTime이라 changeset 생성·해소가 실시간으로 반영 안 됨. 초안 탭 폴링 패턴(`usePendingSourceListQuery`의 조건부 `refetchInterval`)을 재사용하는 안을 제시했으나 "별로 좋은 방향은 아닌 것 같다"는 피드백으로 보류 — 갱신 전략은 다음 세션에서 다시 논의.
+
+---
+
+### 2026-07-16 — 상태 색 체계 재정정: Changeset 배지는 info(파랑)가 아니라 success(초록), "정리 중"은 info(파랑)
+
+바로 위 항목의 "카운트 배지 색" 판단(neutral·info·error 3단)을 뒤집는다. append-only 원칙상 위 항목은 고치지 않고 최종 규칙만 여기 남긴다.
+
+**계기**: 일반 엔터프라이즈 디자인 시스템(Carbon 등) 기준으로 info(파랑)를 채택했으나, PM이 OpenAI Codex Micro(하드웨어 키패드, 2026-07-15 출시)의 실제 상태등 관례를 제시 — Agent Key RGB 매핑이 **white=idle · blue=thinking(작업 중) · green=complete(완료) · amber=input required(입력 필요) · red=error**. 이게 일반 디자인 시스템보다 Nema의 실제 성격(AI가 비동기로 작업하고 결과를 사람이 확인)에 더 직접 대응하는 레퍼런스라고 판단해 재검토했다.
+
+**핵심 구분**: Codex의 "amber(input required)"는 에이전트가 작업 도중 막혀서 사람에게 물어봐야 하는 상태다 — Nema엔 이런 상태가 없다. Changeset이 생기는 시점은 AI가 결과물(Digest·Statement)을 **이미 다 만들어낸 뒤**라 Codex 기준 "green(complete)"에 해당한다. 반대로 "정리 중"(digestion 진행 중)이 정확히 "blue(thinking)"에 해당하는데, 기존엔 이 상태를 표시하는 색이 아예 없었다(중립 회색 pulse).
+
+**최종 색 배정 3단(확정)**:
+- **주황(warning)** — 초안 탭 "확인 필요"(Waiting for you): 사람이 손대야 진행되는 상태. 기존 그대로.
+- **파랑(info)** — "정리 중"(Organizing) 배너·섹션 배경 tint·pulse 아이콘: AI가 실제로 작업 중인 상태. 이번에 새로 배정.
+- **초록(success)** — Changeset 검토 대기 배지(LNB·변경사항 탭): AI가 작업을 완료해 결과물이 나온 상태. info에서 재변경.
+
+**섹션 헤더 텍스트는 tone과 무관하게 중립 유지**: `DraftSection`의 라벨·카운트 텍스트는 tone(warning/info)에 따라 색이 안 바뀐다 — 배경 tint와 아이콘만으로 상태를 신호하고, 문구 자체까지 물들이면 과하다는 판단(기존 warning 섹션의 관례를 그대로 따름). 경과 시간 카운터도 상태 신호가 아니라 부가 정보라 중립 유지.
+
+**최초 반박이 틀렸던 이유(기록용)**: green을 처음 검토할 때 "리뷰 대기 항목을 초록으로 칠하면 이미 끝났다는 착각을 준다"는 GitHub PR 리뷰 커뮤니티 논쟁을 근거로 기각했었는데, 이건 AI 에이전트 맥락이 아니라 순수 사람-사람 코드리뷰 워크플로우 논쟁이었다 — Codex Micro라는 실제 AI 에이전트 하드웨어의 직접 사례가 나오자 이 근거는 기각됐다. 일반 UX 선례를 그대로 가져오기 전에 "AI가 만든 결과물을 사람이 확인하는 상황"이라는 Nema의 실제 성격에 맞는 레퍼런스인지부터 확인해야 한다는 교훈.

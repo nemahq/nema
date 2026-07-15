@@ -63,6 +63,7 @@ export function SpaceList() {
           spacePublicId={space.publicId}
           spaceName={space.name}
           isLastSpace={spaces.length <= 1}
+          openChangesetCount={space.openChangesetCount}
         />
       ))}
     </>

@@ -3,6 +3,8 @@ import { useState } from "react";
 
 import {
   Button,
+  cn,
+  NESTED_HOVER_ICON_CLASSNAME,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -10,23 +12,23 @@ import {
 import { Trash2 } from "@nema-io/weave/icons";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
-import type { DraftFooterProps } from "@web/features/intake/types";
+import type { DraftHeaderProps } from "@web/features/intake/types";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DeleteSourceDialog } from "./DeleteSourceDialog";
 import { DraftTitle } from "./DraftTitle";
 
-interface DraftIdleFooterProps extends DraftFooterProps {
+interface DraftIdleHeaderProps extends DraftHeaderProps {
   // failed/empty 상태 아이콘 — 있으면 시각 옆에 같이 묶어 보여준다.
   icon?: ReactNode;
 }
 
-export function DraftIdleFooter({
+export function DraftIdleHeader({
   sourceId,
   title,
   createdAt,
   icon,
-}: DraftIdleFooterProps) {
+}: DraftIdleHeaderProps) {
   const { t } = useTranslation();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -51,7 +53,10 @@ export function DraftIdleFooter({
             variant="ghost"
             aria-label={t("common.delete")}
             onClick={() => setDeleteDialogOpen(true)}
-            className="size-6 rounded-full text-fg-tertiary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-surface-raised-hover/70 hover:brightness-95 dark:hover:brightness-125"
+            className={cn(
+              "pointer-events-auto size-6 rounded-full text-fg-tertiary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
+              NESTED_HOVER_ICON_CLASSNAME,
+            )}
           >
             <Trash2 />
           </Button>

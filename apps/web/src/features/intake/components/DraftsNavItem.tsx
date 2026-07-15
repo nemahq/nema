@@ -107,7 +107,7 @@ export function DraftsNavItem() {
     );
   } else if (hasProcessing) {
     statusIndicator = (
-      <Circle className="size-1.5 shrink-0 animate-pulse fill-current text-fg-tertiary" />
+      <Circle className="size-1.5 shrink-0 animate-pulse fill-current text-status-info" />
     );
   }
 
@@ -135,6 +135,7 @@ export function DraftsNavItem() {
           // exiting 중엔 이미 0개라 카운트·상태를 보여주면 오해를 준다(예: "Drafts 0").
           labelSuffix={renderState !== "exiting" ? statusIndicator : null}
           to="/drafts"
+          rightContentAlwaysVisible
           rightContent={
             // 0개(에러 포함)일 땐 무의미한 "0" 노출을 피한다.
             renderState !== "exiting" && draftCount > 0 ? (

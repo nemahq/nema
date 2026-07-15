@@ -19,6 +19,7 @@ export const SpaceSchema = z.object({
   publicId: z.string().regex(SPACE_PUBLIC_ID_PATTERN),
   name: z.string(),
   createdAt: z.string().datetime({ offset: true }),
+  openChangesetCount: z.number().int().min(0),
 });
 export type Space = z.infer<typeof SpaceSchema>;
 

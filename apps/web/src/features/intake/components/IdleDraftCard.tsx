@@ -5,11 +5,11 @@ import type { DraftCardProps } from "@web/features/intake/types";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftCardShell } from "./DraftCardShell";
-import { DraftIdleFooter } from "./DraftIdleFooter";
+import { DraftIdleHeader } from "./DraftIdleHeader";
 
 interface IdleDraftCardProps extends DraftCardProps {
   // 상세에서 원문을 이미 고친 상태 — empty의 "결과없음" 아이콘은 이 신호가
-  // 사라져야 할 근거(재생성 버튼이 풀리는 조건과 동일)라 카드에서도 뗀다.
+  // 사라져야 할 근거(정리 버튼이 풀리는 조건과 동일)라 카드에서도 뗀다.
   isEdited?: boolean;
 }
 
@@ -40,7 +40,7 @@ export function IdleDraftCard({
     statusIcon = (
       <Tooltip>
         <TooltipTrigger asChild>
-          <SearchX className="size-4 shrink-0 text-fg-tertiary" />
+          <SearchX className="pointer-events-auto size-4 shrink-0 text-fg-tertiary" />
         </TooltipTrigger>
         <TooltipContent side="bottom">
           {t("intake.draft_no_result_tooltip")}
@@ -51,7 +51,7 @@ export function IdleDraftCard({
 
   return (
     <DraftCardShell onSelect={onSelect}>
-      <DraftIdleFooter
+      <DraftIdleHeader
         sourceId={sourceId}
         spaceId={spaceId}
         title={title}

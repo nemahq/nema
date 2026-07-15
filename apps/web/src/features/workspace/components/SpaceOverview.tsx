@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
 import { SourceComposer } from "@web/features/intake";
@@ -95,27 +97,33 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
             <SpaceTabButton
               active={tab === "changesets"}
               onClick={() => setTab("changesets")}
+              count={space.openChangesetCount}
             >
               {t("space.tab_changesets")}
             </SpaceTabButton>
           </div>
 
           {tab === "changesets" && (
-            <ChangesPanel
-              spaceId={space.id}
-              onOpenReview={(changesetId) =>
-                navigate({
-                  to: "/space/$spacePublicId/review/$changesetId",
-                  params: { spacePublicId, changesetId },
-                })
-              }
-              onOpenDetail={(changesetId) =>
-                navigate({
-                  to: "/space/$spacePublicId/changesets/$changesetId",
-                  params: { spacePublicId, changesetId },
-                })
-              }
-            />
+            <ErrorBoundary
+              boundaryName="changes-panel"
+              fallbackRender={(props) => <SectionErrorFallback {...props} />}
+            >
+              <ChangesPanel
+                spaceId={space.id}
+                onOpenReview={(changesetId) =>
+                  navigate({
+                    to: "/space/$spacePublicId/review/$changesetId",
+                    params: { spacePublicId, changesetId },
+                  })
+                }
+                onOpenDetail={(changesetId) =>
+                  navigate({
+                    to: "/space/$spacePublicId/changesets/$changesetId",
+                    params: { spacePublicId, changesetId },
+                  })
+                }
+              />
+            </ErrorBoundary>
           )}
         </div>
       </div>

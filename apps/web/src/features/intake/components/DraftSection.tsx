@@ -7,8 +7,7 @@ interface DraftSectionProps {
   label: string;
   count: number;
   icon: ReactNode;
-  // 색은 실제 판단이 필요한 섹션에만 준다 — 처리중은 항상 neutral.
-  tone?: "neutral" | "warning";
+  tone?: "neutral" | "warning" | "info";
   children: ReactNode;
 }
 
@@ -40,9 +39,9 @@ export function DraftSection({
           aria-controls={contentId}
           className={cn(
             "group flex w-full items-center gap-2 rounded-md px-4 py-1.5 text-sm font-medium text-fg-primary",
-            tone === "warning"
-              ? "bg-status-warning-tint"
-              : "bg-surface-raised-hover/40",
+            tone === "warning" && "bg-status-warning-tint",
+            tone === "info" && "bg-status-info-tint",
+            tone === "neutral" && "bg-surface-raised-hover/40",
           )}
         >
           <Triangle

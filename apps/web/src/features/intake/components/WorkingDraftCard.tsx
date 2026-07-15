@@ -1,7 +1,7 @@
 import type { DraftCardProps } from "@web/features/intake/types";
 
 import { DraftCardShell } from "./DraftCardShell";
-import { DraftProcessingActions } from "./DraftProcessingActions";
+import { DraftProcessingHeader } from "./DraftProcessingHeader";
 
 export function WorkingDraftCard({
   sourceId,
@@ -13,7 +13,7 @@ export function WorkingDraftCard({
 }: DraftCardProps) {
   return (
     <DraftCardShell onSelect={onSelect}>
-      <DraftProcessingActions
+      <DraftProcessingHeader
         sourceId={sourceId}
         spaceId={spaceId}
         title={title}

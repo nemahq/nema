@@ -1,18 +1,24 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 
 const DEFAULT_WIDTH = 600;
-const MIN_WIDTH = 280;
+// 280은 버튼 한 줄(취소/Organize)+Space pill이 밀리기 시작하는 폭이라
+// 400으로 올렸다 — 기본값(600)의 2/3 수준이라 리사이즈 여지는 그대로 남는다.
+const MIN_WIDTH = 400;
 const MAX_WIDTH_RATIO = 0.5;
 
 interface SidePanelProps {
   children: ReactNode;
   onClose?: () => void;
+  // Sentry에서 이 바운더리를 구분할 태그 — 소비처마다 자기 컨텍스트를 넘긴다.
+  boundaryName: string;
 }
 
-export function SidePanel({ children, onClose }: SidePanelProps) {
+export function SidePanel({ children, onClose, boundaryName }: SidePanelProps) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -77,7 +83,12 @@ export function SidePanel({ children, onClose }: SidePanelProps) {
         className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize border-l border-border/50 hover:border-l-2 hover:border-fg-tertiary/40 active:border-l-2 active:border-fg-secondary/60 dark:hover:border-fg-tertiary dark:active:border-fg-secondary"
       />
 
-      {children}
+      <ErrorBoundary
+        boundaryName={boundaryName}
+        fallbackRender={(props) => <SectionErrorFallback {...props} />}
+      >
+        {children}
+      </ErrorBoundary>
     </aside>
   );
 }

@@ -19,6 +19,9 @@ const MIN_CHUNK_BALANCE_RATIO = 0.5;
 // 반복 재측정해 로컬에서도 ~3.4초 걸린다 — CI 공유 러너는 기본 5초 제한을 자주
 // 넘겨 타임아웃(로직 실패 아님)이 났다. 계산량 자체를 줄이는 게 아니라 여유를 둔다.
 const SKEWED_BOUNDARY_TEST_TIMEOUT_MS = 15_000;
+// 아래 무경계 하드컷 테스트도 같은 이유(실제 BPE 토크나이저 반복 재측정)로 로컬 ~2.3초,
+// CI 공유 러너에선 기본 5초를 넘겨 타임아웃 났다(로직 실패 아님) — 위와 동일 처방.
+const NO_BOUNDARY_TEST_TIMEOUT_MS = 15_000;
 
 function buildParagraphText(sentenceCount: number): string {
   const paragraphs: string[] = [];
@@ -126,14 +129,18 @@ describe("chunkForExtraction", () => {
     SKEWED_BOUNDARY_TEST_TIMEOUT_MS,
   );
 
-  it("경계가 전무한 한 덩어리도 하드 컷으로 무손실 분할된다", () => {
-    // 공백·구두점 없는 연속 텍스트 (최악 입력)
-    const body = "가나다라마바사아자차카타파하".repeat(500);
-    const chunks = chunkForExtraction(body);
+  it(
+    "경계가 전무한 한 덩어리도 하드 컷으로 무손실 분할된다",
+    () => {
+      // 공백·구두점 없는 연속 텍스트 (최악 입력)
+      const body = "가나다라마바사아자차카타파하".repeat(500);
+      const chunks = chunkForExtraction(body);
 
-    expect(chunks.length).toBeGreaterThan(1);
-    expect(chunks.map((c) => c.body).join("")).toBe(body);
-  });
+      expect(chunks.length).toBeGreaterThan(1);
+      expect(chunks.map((c) => c.body).join("")).toBe(body);
+    },
+    NO_BOUNDARY_TEST_TIMEOUT_MS,
+  );
 
   it("같은 입력은 항상 같은 분할 — 결정성 (절단 원칙 4의 분할기 버전)", () => {
     const body = buildParagraphText(300);

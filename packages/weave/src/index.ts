@@ -84,7 +84,11 @@ export {
   TooltipProvider,
   TooltipTrigger,
 } from "./components/Tooltip";
-export { cn, POPOVER_SURFACE_CLASSNAME } from "./utils";
+export {
+  cn,
+  NESTED_HOVER_ICON_CLASSNAME,
+  POPOVER_SURFACE_CLASSNAME,
+} from "./utils";
 // asChild 패턴(Button 등)과 동일한 근거로 소비처가 자체 asChild 컴포넌트를
 // 만들 때 재사용하도록 재노출 — radix-ui를 apps/web의 직접 의존성으로 새로
 // 추가하지 않기 위함.

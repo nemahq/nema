@@ -9,7 +9,7 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 export type PendingSourceItem =
   RouterOutputs["source"]["listPending"]["items"][number];
 
-export interface DraftFooterProps {
+export interface DraftHeaderProps {
   sourceId: string;
   spaceId: string;
   title: string | null;
@@ -27,6 +27,7 @@ export interface DraftCardData {
   body: string;
   status: DraftStatus;
   createdAt: string;
+  lastDigestionAttempt: string | null;
 }
 
 // IdleDraftCard/WorkingDraftCard가 공유하는 primitive props — DraftCardData를
@@ -52,6 +53,7 @@ export interface DraftDetailPanelProps {
   body: string;
   status: DraftStatus;
   createdAt: string;
+  lastDigestionAttempt: string | null;
   onClose: () => void;
   // 리스트의 카드(예: 결과없음 상태 아이콘)가 "원문이 편집됐는지"를 반영해야 할 때 씀.
   onBodyDirtyChange?: (dirty: boolean) => void;
