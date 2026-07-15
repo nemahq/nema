@@ -37,29 +37,70 @@ async function getHeaders() {
 
 let isRedirectingToSignIn = false;
 
+function isUnauthorizedError(
+  error: unknown,
+): error is TRPCClientError<AppRouter> {
+  return (
+    error instanceof TRPCClientError && error.data?.code === "UNAUTHORIZED"
+  );
+}
+
+function triggerSignOutRedirect() {
+  if (isRedirectingToSignIn) {
+    return;
+  }
+  isRedirectingToSignIn = true;
+  const redirect = window.location.pathname + window.location.search;
+  supabase.auth.signOut().finally(() => {
+    window.location.href = `/signin?redirect=${encodeURIComponent(redirect)}`;
+  });
+}
+
+// access token 자동 갱신과 요청 타이밍이 겹치면 세션이 살아있어도 일시적으로
+// UNAUTHORIZED가 날 수 있다 — 즉시 로그아웃하지 않고 세션을 재확인한 뒤에도
+// 실패할 때만 로그아웃 처리한다.
 function authRedirectLink(): TRPCLink<AppRouter> {
   return () =>
     ({ next, op }) =>
       observable((observer) => {
-        return next(op).subscribe({
+        let unsubscribed = false;
+        let subscription = next(op).subscribe({
           next: (value) => observer.next(value),
           error: (error) => {
-            if (
-              !isRedirectingToSignIn &&
-              error instanceof TRPCClientError &&
-              error.data?.code === "UNAUTHORIZED"
-            ) {
-              isRedirectingToSignIn = true;
-              const redirect =
-                window.location.pathname + window.location.search;
-              supabase.auth.signOut().finally(() => {
-                window.location.href = `/signin?redirect=${encodeURIComponent(redirect)}`;
-              });
+            if (isRedirectingToSignIn || !isUnauthorizedError(error)) {
+              observer.error(error);
+              return;
             }
-            observer.error(error);
+            supabase.auth
+              .refreshSession()
+              .then(({ data, error: refreshError }) => {
+                if (unsubscribed) {
+                  return;
+                }
+                if (refreshError || !data.session) {
+                  triggerSignOutRedirect();
+                  observer.error(error);
+                  return;
+                }
+                subscription = next(op).subscribe({
+                  next: (value) => observer.next(value),
+                  error: (retryError) => {
+                    if (isUnauthorizedError(retryError)) {
+                      triggerSignOutRedirect();
+                    }
+                    observer.error(retryError);
+                  },
+                  complete: () => observer.complete(),
+                });
+              });
           },
           complete: () => observer.complete(),
         });
+
+        return () => {
+          unsubscribed = true;
+          subscription.unsubscribe();
+        };
       });
 }
 
