@@ -22,7 +22,7 @@ export function SpaceTabButton({
       className={cn(
         "-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors duration-fast",
         active
-          ? "border-fg-primary font-bold text-fg-primary"
+          ? "border-amber-600 font-bold text-fg-primary dark:border-amber-500"
           : "border-transparent text-fg-tertiary hover:text-fg-secondary",
       )}
     >

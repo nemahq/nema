@@ -65,7 +65,7 @@ export function SpaceOverview({
         </div>
       </NavigationBar>
 
-      <div className="flex-1 overflow-y-auto">
+      <div data-main-scroll-area className="flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6">
           <div className="flex min-w-0 items-center gap-2">
             <span className={CONTENT_BADGE_CLASS}>
@@ -80,7 +80,10 @@ export function SpaceOverview({
             <SourceComposer spaceId={space.id} />
           </div>
 
-          <div className="mt-6 flex gap-1 border-b border-border/50">
+          {/* 탭만 sticky — 스크롤 중 자연스러운 위치가 top:0(네비게이션 바 바로
+              아래)에 닿는 순간부터만 고정된다(sticky의 기본 동작), 그 전까진
+              컴포저·제목과 함께 평소처럼 스크롤된다. */}
+          <div className="sticky top-0 z-10 mt-6 flex gap-1 border-b border-border/50 bg-surface-card">
             <SpaceTabButton
               active={activeTab === "topic"}
               onClick={() =>
