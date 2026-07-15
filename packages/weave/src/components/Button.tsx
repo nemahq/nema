@@ -14,7 +14,7 @@ const buttonVariants = cva(
         secondary:
           "border border-brand-accent text-brand-accent hover:bg-brand-tint hover:border-brand-hover active:scale-[0.98] dark:border-fg-tertiary dark:text-fg-primary dark:hover:bg-surface-raised-hover dark:hover:border-fg-secondary",
         neutral:
-          "border border-border bg-surface-raised text-fg-primary hover:bg-surface-raised-hover/75 active:scale-[0.98] dark:hover:bg-surface-raised-hover",
+          "border border-border bg-surface-card text-fg-primary hover:bg-surface-raised/75 active:scale-[0.98] dark:bg-surface-raised dark:hover:bg-surface-raised-hover",
         ghost:
           "hover:bg-surface-raised-hover/75 active:scale-[0.98] dark:hover:bg-surface-raised-hover",
         danger:
