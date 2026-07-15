@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 
 const DEFAULT_WIDTH = 600;
-const MIN_WIDTH = 280;
+// 280은 버튼 한 줄(취소/Regenerate)+Space pill이 밀리기 시작하는 폭이라
+// 400으로 올렸다 — 기본값(600)의 2/3 수준이라 리사이즈 여지는 그대로 남는다.
+const MIN_WIDTH = 400;
 const MAX_WIDTH_RATIO = 0.5;
 
 interface SidePanelProps {
