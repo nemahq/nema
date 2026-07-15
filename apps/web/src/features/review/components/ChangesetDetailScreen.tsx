@@ -3,7 +3,6 @@ import { useNavigate } from "@tanstack/react-router";
 
 import {
   Button,
-  Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -12,6 +11,7 @@ import {
   Skeleton,
 } from "@nema-io/weave";
 
+import { Dialog } from "@web/components/ui/Dialog";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { CHANGESET_TYPE_LABEL } from "@web/features/review/constants";
 import { useChangesetListQuery } from "@web/features/review/hooks/useChangesetListQuery";

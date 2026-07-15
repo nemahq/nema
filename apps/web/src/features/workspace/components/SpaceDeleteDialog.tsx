@@ -1,4 +1,6 @@
-import { Dialog, DialogContent } from "@nema-io/weave";
+import { DialogContent } from "@nema-io/weave";
+
+import { Dialog } from "@web/components/ui/Dialog";
 
 import { SpaceDeleteBlockedForm } from "./SpaceDeleteBlockedForm";
 import { SpaceDeleteConfirmForm } from "./SpaceDeleteConfirmForm";

@@ -1,6 +1,5 @@
 import {
   Button,
-  Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -8,6 +7,7 @@ import {
   DialogTitle,
 } from "@nema-io/weave";
 
+import { Dialog } from "@web/components/ui/Dialog";
 import { useDeleteSession } from "@web/features/session/hooks/useDeleteSession";
 import { useTranslation } from "@web/lib/tolgee";
 

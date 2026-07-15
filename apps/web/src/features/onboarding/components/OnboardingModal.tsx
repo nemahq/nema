@@ -7,7 +7,6 @@ import {
 } from "@nema-io/shared";
 import {
   Button,
-  Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -20,6 +19,7 @@ import {
   SelectValue,
 } from "@nema-io/weave";
 
+import { Dialog } from "@web/components/ui/Dialog";
 import { LANGUAGE_LABELS, useUpdateProfile } from "@web/features/profile";
 import { useTranslation } from "@web/lib/tolgee";
 

@@ -28,6 +28,9 @@ interface ActionRegistryContextValue {
   unregister: (id: ActionId) => void;
   getAll: () => RegisteredAction[];
   isShortcutOverridden: (id: ActionId) => boolean;
+  pushModal: () => void;
+  popModal: () => void;
+  isModalOpen: () => boolean;
   registryVersion: number;
 }
 
@@ -44,6 +47,9 @@ export function ActionRegistryProvider({
 }: ActionRegistryProviderProps) {
   const actionsRef = useRef(new Map<ActionId, RegisteredAction>());
   const [registryVersion, setRegistryVersion] = useState(0);
+  // 렌더와 무관한 카운터라 ref로 충분 — 모달이 열려있는지는 useHotkeys 콜백(렌더
+  // 바깥) 안에서 그때그때 읽으면 되고, 값이 바뀔 때마다 리렌더를 유발할 이유가 없다.
+  const openModalCountRef = useRef(0);
 
   const register = useCallback(function register(action: RegisteredAction) {
     const isNew = !actionsRef.current.has(action.id);
@@ -83,15 +89,39 @@ export function ActionRegistryProvider({
     return false;
   }, []);
 
+  const pushModal = useCallback(function pushModal() {
+    openModalCountRef.current += 1;
+  }, []);
+
+  const popModal = useCallback(function popModal() {
+    openModalCountRef.current = Math.max(0, openModalCountRef.current - 1);
+  }, []);
+
+  const isModalOpen = useCallback(function isModalOpen() {
+    return openModalCountRef.current > 0;
+  }, []);
+
   const contextValue = useMemo(
     () => ({
       register,
       unregister,
       getAll,
       isShortcutOverridden,
+      pushModal,
+      popModal,
+      isModalOpen,
       registryVersion,
     }),
-    [register, unregister, getAll, isShortcutOverridden, registryVersion],
+    [
+      register,
+      unregister,
+      getAll,
+      isShortcutOverridden,
+      pushModal,
+      popModal,
+      isModalOpen,
+      registryVersion,
+    ],
   );
 
   return (

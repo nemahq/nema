@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import {
   Button,
-  Dialog,
   DialogClose,
   DialogContent,
   DialogTitle,
@@ -12,6 +11,7 @@ import {
 } from "@nema-io/weave";
 import { X } from "@nema-io/weave/icons";
 
+import { Dialog } from "@web/components/ui/Dialog";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { AccountSection } from "./AccountSection";
