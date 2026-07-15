@@ -175,7 +175,11 @@ const workspaceHomeRoute = createRoute({
 function SpaceOverviewShell() {
   const { spacePublicId } = spaceOverviewRoute.useParams();
   return (
-    <SpaceOverviewPage key={spacePublicId} spacePublicId={spacePublicId} />
+    <SpaceOverviewPage
+      key={spacePublicId}
+      spacePublicId={spacePublicId}
+      activeTab="topic"
+    />
   );
 }
 
@@ -183,6 +187,24 @@ const spaceOverviewRoute = createRoute({
   getParentRoute: () => workspaceSidebarRoute,
   path: "/space/$spacePublicId",
   component: SpaceOverviewShell,
+  errorComponent: RouteErrorFallback,
+});
+
+function SpaceChangesShell() {
+  const { spacePublicId } = spaceChangesRoute.useParams();
+  return (
+    <SpaceOverviewPage
+      key={spacePublicId}
+      spacePublicId={spacePublicId}
+      activeTab="changesets"
+    />
+  );
+}
+
+const spaceChangesRoute = createRoute({
+  getParentRoute: () => workspaceSidebarRoute,
+  path: "/space/$spacePublicId/changes",
+  component: SpaceChangesShell,
   errorComponent: RouteErrorFallback,
 });
 
@@ -252,6 +274,7 @@ const routeTree = rootRoute.addChildren([
     workspaceSidebarRoute.addChildren([
       workspaceHomeRoute,
       spaceOverviewRoute,
+      spaceChangesRoute,
       draftsRoute,
       digestReviewRoute,
       changesetDetailRoute,

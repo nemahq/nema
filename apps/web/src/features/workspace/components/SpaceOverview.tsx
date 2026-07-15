@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
@@ -20,17 +19,20 @@ const NAV_BADGE_CLASS =
 const CONTENT_BADGE_CLASS =
   "flex size-8 shrink-0 items-center justify-center rounded-md bg-fg-primary/10 text-sm font-medium text-fg-primary";
 
-type SpaceTab = "topic" | "changesets";
+export type SpaceTab = "topic" | "changesets";
 
 interface SpaceOverviewProps {
   spacePublicId: string;
+  activeTab: SpaceTab;
 }
 
-export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
+export function SpaceOverview({
+  spacePublicId,
+  activeTab,
+}: SpaceOverviewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [spaceList] = useSpaceListSuspenseQuery();
-  const [tab, setTab] = useState<SpaceTab>("topic");
 
   const space = spaceList.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
@@ -80,21 +82,31 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
 
           <div className="mt-6 flex gap-1 border-b border-border/50">
             <SpaceTabButton
-              active={tab === "topic"}
-              onClick={() => setTab("topic")}
+              active={activeTab === "topic"}
+              onClick={() =>
+                navigate({
+                  to: "/space/$spacePublicId",
+                  params: { spacePublicId },
+                })
+              }
             >
               {t("space.tab_topic")}
             </SpaceTabButton>
             <SpaceTabButton
-              active={tab === "changesets"}
-              onClick={() => setTab("changesets")}
+              active={activeTab === "changesets"}
+              onClick={() =>
+                navigate({
+                  to: "/space/$spacePublicId/changes",
+                  params: { spacePublicId },
+                })
+              }
               count={space.openChangesetCount}
             >
               {t("space.tab_changesets")}
             </SpaceTabButton>
           </div>
 
-          {tab === "changesets" && (
+          {activeTab === "changesets" && (
             <ErrorBoundary
               boundaryName="changes-panel"
               fallbackRender={(props) => <SectionErrorFallback {...props} />}
