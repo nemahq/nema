@@ -126,6 +126,10 @@ interface PendingSourceItem {
   title: string | null;
   createdAt: string;
   digestionStatus: DigestionStatus;
+  // 지금 처리중인 시도가 실제로 언제 시작됐는지 — createdAt은 원본이 처음
+  // 만들어진 시점이라, 재시도·재생성처럼 뒤늦게 다시 돌기 시작한 시도의
+  // 경과 시간을 재는 기준으론 안 맞는다(아직 한 번도 안 붙잡혔으면 null).
+  lastDigestionAttempt: string | null;
   errorMessage: string | null;
   // 생성이 끝나 리뷰가 열렸으면 그 pending ingestion changeset. 아직이면 null.
   // 소비자가 "생성 중"과 "리뷰 준비됨"을 가르는 신호 — 제품에선 이 둘이 각각
@@ -144,7 +148,7 @@ export async function listPendingSources(args: {
   const { data: sources, error } = await supabase
     .from("sources")
     .select(
-      "id, space_id, body, title, created_at, digestion_status, error_message",
+      "id, space_id, body, title, created_at, digestion_status, last_digestion_attempt, error_message",
     )
     .eq("status", "pending")
     .order("created_at", { ascending: false })
@@ -186,6 +190,7 @@ export async function listPendingSources(args: {
         title: source.title,
         createdAt: source.created_at,
         digestionStatus: source.digestion_status,
+        lastDigestionAttempt: source.last_digestion_attempt,
         errorMessage: source.error_message,
         reviewChangesetId: review?.reviewChangesetId ?? null,
         digestCount: review?.digestCount ?? 0,

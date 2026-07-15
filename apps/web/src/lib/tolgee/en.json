@@ -74,6 +74,8 @@
     "draft_no_result_tooltip": "Nothing to generate",
     "draft_open": "Open draft",
     "draft_processing": "Processing",
+    "draft_processing_elapsed_minutes": "{minutes}m {seconds}s",
+    "draft_processing_elapsed_seconds": "{count}s",
     "draft_regenerate": "Regenerate",
     "draft_regenerating": "Regenerating...",
     "draft_section_waiting": "Waiting for you",

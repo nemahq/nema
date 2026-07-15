@@ -13,6 +13,7 @@ function buildSource(
     title: null,
     createdAt: "2026-07-12T00:00:00.000Z",
     digestionStatus: "pending",
+    lastDigestionAttempt: null,
     errorMessage: null,
     reviewChangesetId: null,
     digestCount: 0,

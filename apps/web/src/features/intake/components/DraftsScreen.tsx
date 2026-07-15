@@ -56,6 +56,7 @@ export function DraftsScreen() {
           body: selectedSource.body,
           status: selectedStatus,
           createdAt: selectedSource.createdAt,
+          lastDigestionAttempt: selectedSource.lastDigestionAttempt,
         }
       : null;
   const DetailPanel =
@@ -123,6 +124,7 @@ export function DraftsScreen() {
             body={selectedDraft.body}
             status={selectedDraft.status}
             createdAt={selectedDraft.createdAt}
+            lastDigestionAttempt={selectedDraft.lastDigestionAttempt}
             onClose={() => setSelectedSourceId(null)}
             onBodyDirtyChange={(dirty) =>
               setEditedDraftId(dirty ? selectedDraft.sourceId : null)

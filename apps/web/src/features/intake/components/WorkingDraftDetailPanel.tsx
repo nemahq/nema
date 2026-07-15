@@ -12,6 +12,7 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftBodyView } from "./DraftBodyView";
 import { DraftDetailHeader } from "./DraftDetailHeader";
+import { DraftProcessingIndicator } from "./DraftProcessingIndicator";
 import { DraftTitle } from "./DraftTitle";
 
 // 처리 중엔 원본 편집·재생성 둘 다 막는다 — 엔진이 지금 이 내용으로 한창
@@ -28,10 +29,16 @@ export function WorkingDraftDetailPanel({
   spaceId,
   title,
   body,
+  createdAt,
+  lastDigestionAttempt,
   onClose,
 }: DraftDetailPanelProps) {
   const { t } = useTranslation();
   const cancelMutation = useCancelSource();
+  // 재시도·재생성처럼 뒤늦게 다시 붙잡힌 시도는 lastDigestionAttempt가 실제
+  // 시작 시점 — 아직 한 번도 안 붙잡혔으면(막 생성돼 큐에 갓 들어간 경우)
+  // null이라 createdAt으로 대체한다.
+  const processingSince = lastDigestionAttempt ?? createdAt;
 
   function handleCancel() {
     cancelMutation.mutate({ sourceId });
@@ -60,10 +67,13 @@ export function WorkingDraftDetailPanel({
           </Tooltip>
         }
       />
+      <div className="px-6 pt-4">
+        <DraftProcessingIndicator since={processingSince} />
+      </div>
       <DraftTitle
         title={title}
         showPlaceholder
-        className="block px-6 pt-4 text-xl font-bold text-fg-primary"
+        className="block px-6 pt-3 text-xl font-bold text-fg-primary"
       />
       <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
         <DraftBodyView value={body} readOnly />
