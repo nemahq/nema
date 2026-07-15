@@ -25,7 +25,7 @@ export function DraftOrganizingIndicator({
     <div className="flex items-center justify-between text-xs text-fg-tertiary">
       <div className="flex items-center gap-1.5">
         <Circle className="size-2.5 shrink-0 animate-pulse fill-current" />
-        {t("intake.draft_section_organizing")}
+        {t("intake.draft_organizing")}
       </div>
       {elapsedLabel}
     </div>
