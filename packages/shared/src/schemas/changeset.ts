@@ -39,6 +39,11 @@ export const ListChangesetsInputSchema = z.object({
     .min(1)
     .max(CHANGESET_LIST_LIMIT_MAX)
     .default(CHANGESET_LIST_LIMIT_DEFAULT),
+  // 미지정 시 전체(open+closed 안 가림) — ChangesetDetailScreen처럼 changeset을
+  // id로 찾으려고 전체를 훑는 소비처를 위한 폴백.
+  open: z.boolean().optional(),
+  // changesets.number(Space 안 순차 증가값) 기준 커서.
+  cursor: z.number().int().nullish(),
 });
 export type ListChangesetsInput = z.infer<typeof ListChangesetsInputSchema>;
 

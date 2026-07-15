@@ -43,6 +43,7 @@
     "delete": "Delete",
     "deleting": "Deleting...",
     "home": "Home",
+    "list_end": "You're all caught up.",
     "name_required": "Name required",
     "name_taken": "Name already taken",
     "overflow_count": "and {count} more",

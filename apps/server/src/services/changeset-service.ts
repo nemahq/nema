@@ -293,8 +293,17 @@ export async function listChangesets(args: {
   supabase: TypedSupabaseClient;
   spaceId?: string;
   limit: number;
-}): Promise<{ changesets: ChangesetHistoryEntry[] }> {
-  const { supabase, spaceId, limit } = args;
+  // 미지정 시 open/closed 구분 없이 전부 — ChangesetDetailScreen처럼 특정 changeset을
+  // id로 찾으려고 전체를 훑는 소비처가 있어 이 폴백을 남겨둔다.
+  open?: boolean;
+  // number(Space 안 순차 증가값) 기준 커서 — created_at 대신 쓰는 이유는 동시 생성 시
+  // 동률 가능성이 없는 정수라 페이지 경계가 항상 안정적이기 때문.
+  cursor?: number | null;
+}): Promise<{
+  changesets: ChangesetHistoryEntry[];
+  nextCursor: number | null;
+}> {
+  const { supabase, spaceId, limit, open, cursor } = args;
 
   // spaceId 미지정 호출(MCP·dev-harness)만 이 경로를 탄다 — createSource와 같은
   // 결의 폴백(1인 단계 기본 Space).
@@ -310,15 +319,30 @@ export async function listChangesets(args: {
     targetSpaceId = membership.space_id;
   }
 
-  const { data: rows, error } = await supabase
+  let query = supabase
     .from("changesets")
     .select(
       "id, number, type, status, source_id, reverts_id, created_at, changes(target_type), sources(status, title)",
     )
     .eq("space_id", targetSpaceId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("number", { ascending: false })
+    // 다음 페이지 존재 여부를 별도 count 쿼리 없이 알려고 하나 더 얹어 받는다.
+    .limit(limit + 1);
+  if (open !== undefined) {
+    query = open
+      ? query.eq("status", "pending")
+      : query.in("status", ["applied", "rejected"]);
+  }
+  if (cursor != null) {
+    query = query.lt("number", cursor);
+  }
+
+  const { data: rows, error } = await query;
   throwIfSupabaseError(error);
+
+  const hasMore = (rows ?? []).length > limit;
+  const pageRows = hasMore ? (rows ?? []).slice(0, limit) : (rows ?? []);
+  const nextCursor = hasMore ? (pageRows.at(-1)?.number ?? null) : null;
 
   // 되돌림 여부는 revert 간선 전체를 모아 재귀로 계산한다(페이지 밖 redo 사슬 포함).
   // revert 변경셋은 되돌리는 대상과 항상 같은 space_id를 갖는다(revert_changeset RPC)
@@ -337,7 +361,8 @@ export async function listChangesets(args: {
   );
 
   return {
-    changesets: (rows ?? []).map((row) => {
+    nextCursor,
+    changesets: pageRows.map((row) => {
       if (row.number === null) {
         throw new Error(
           `changeset ${row.id} has no number despite being scoped to space ${targetSpaceId}`,

@@ -43,6 +43,7 @@
     "delete": "삭제",
     "deleting": "삭제하는 중...",
     "home": "홈",
+    "list_end": "모두 확인했어요.",
     "name_required": "이름을 입력해주세요.",
     "name_taken": "이미 사용 중인 이름이에요.",
     "overflow_count": "외 {count}개",
