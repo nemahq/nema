@@ -13,8 +13,14 @@ export function usePendingSourceListQuery() {
   });
 }
 
-export function usePendingSourceListSuspenseQuery() {
+export function usePendingSourceListSuspenseQuery(
+  options?: Omit<
+    Parameters<typeof trpc.source.listPending.useSuspenseQuery>[1],
+    "queryKey"
+  >,
+) {
   return trpc.source.listPending.useSuspenseQuery(undefined, {
     meta: { reportToSentry: true },
+    ...options,
   });
 }

@@ -15,9 +15,15 @@ export function useWorkspaceBootstrapQuery(
   });
 }
 
-export function useWorkspaceBootstrapSuspenseQuery() {
+export function useWorkspaceBootstrapSuspenseQuery(
+  options?: Omit<
+    Parameters<typeof trpc.workspace.bootstrap.useSuspenseQuery>[1],
+    "queryKey"
+  >,
+) {
   return trpc.workspace.bootstrap.useSuspenseQuery(undefined, {
     staleTime: BOOTSTRAP_STALE_TIME_MS,
     meta: { reportToSentry: true },
+    ...options,
   });
 }
