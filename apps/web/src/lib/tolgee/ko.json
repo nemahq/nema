@@ -43,7 +43,7 @@
     "delete": "삭제",
     "deleting": "삭제하는 중...",
     "home": "홈",
-    "name_required": "스페이스 이름을 입력해주세요.",
+    "name_required": "이름을 입력해주세요.",
     "name_taken": "이미 사용 중인 이름이에요.",
     "overflow_count": "외 {count}개",
     "retry": "다시 시도",
@@ -73,14 +73,14 @@
     "draft_no_result_tooltip": "생성할 내용이 없어요.",
     "draft_open": "초안 열기",
     "draft_processing": "Processing",
-    "draft_reassign_space": "Reassign space",
+    "draft_reassign_space": "스페이스 변경",
     "draft_regenerate": "재생성",
     "draft_regenerating": "재생성 중...",
     "draft_section_waiting": "확인 필요",
     "draft_section_working": "처리 중",
     "draft_untitled": "제목 없음",
-    "drafts_empty": "Nothing here yet. Paste something to get started.",
-    "drafts_title": "Drafts"
+    "drafts_empty": "모두 확인했어요. 대기 중인 초안이 없어요.",
+    "drafts_title": "초안"
   },
   "layout": {
     "collapse_sidebar": "사이드바 접기",
@@ -259,7 +259,6 @@
     "ask": "묻기",
     "coming_soon": "곧 지원 예정",
     "drafts": "초안",
-    "new_space": "새 스페이스 추가",
     "references": "위키",
     "section_spaces": "스페이스",
     "section_workspace": "워크스페이스"

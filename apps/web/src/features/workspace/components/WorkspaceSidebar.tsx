@@ -69,14 +69,14 @@ export function WorkspaceSidebar() {
               <TooltipTrigger asChild>
                 <LnbHoverIcon
                   onClick={() => setCreateSpaceOpen(true)}
-                  aria-label={t("workspace.new_space")}
+                  aria-label={t("space.create_title")}
                   className="absolute right-3.5 text-fg-tertiary hover:text-fg-primary group-hover/section:opacity-100"
                 >
                   <Plus className="size-4" />
                 </LnbHoverIcon>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                {t("workspace.new_space")}
+                {t("space.create_title")}
               </TooltipContent>
             </Tooltip>
           }
