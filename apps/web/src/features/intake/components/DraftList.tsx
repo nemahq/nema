@@ -1,6 +1,6 @@
 import { Circle, CircleCheck, Inbox } from "@nema-io/weave/icons";
 
-// 로딩은 조상 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
+// 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
 // eslint-disable-next-line nema/require-suspense-boundary
 import { usePendingSourceListSuspenseQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
 import type { PendingSourceItem } from "@web/features/intake/types";

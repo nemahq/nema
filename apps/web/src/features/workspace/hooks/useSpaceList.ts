@@ -7,8 +7,8 @@ export function useSpaceList(
 ) {
   return trpc.space.list.useQuery(undefined, {
     staleTime: SPACE_LIST_STALE_TIME_MS,
-    meta: { reportToSentry: true },
     ...options,
+    meta: { reportToSentry: true },
   });
 }
 
@@ -20,7 +20,7 @@ export function useSpaceListSuspenseQuery(
 ) {
   return trpc.space.list.useSuspenseQuery(undefined, {
     staleTime: SPACE_LIST_STALE_TIME_MS,
-    meta: { reportToSentry: true },
     ...options,
+    meta: { reportToSentry: true },
   });
 }

@@ -20,7 +20,7 @@ export function usePendingSourceListSuspenseQuery(
   >,
 ) {
   return trpc.source.listPending.useSuspenseQuery(undefined, {
-    meta: { reportToSentry: true },
     ...options,
+    meta: { reportToSentry: true },
   });
 }
