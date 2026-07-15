@@ -25,7 +25,7 @@ export function TabbedPanelLayout({
       >
         {header}
       </div>
-      <div className="relative flex flex-1 flex-col overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]">
+      <div className="relative flex flex-1 flex-col overflow-y-auto p-5">
         {children}
       </div>
     </main>

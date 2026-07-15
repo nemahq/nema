@@ -58,7 +58,6 @@ export function UserMessage({ content }: UserMessageProps) {
     "w-full text-left rounded-xl border border-border bg-surface-raised px-4 py-3",
     isExpanded ? "overflow-y-auto" : "overflow-hidden",
     isOverflowing && "cursor-pointer",
-    "[scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]",
   );
 
   const textContent = (

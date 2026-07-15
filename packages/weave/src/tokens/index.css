@@ -45,6 +45,7 @@
   --palette-light-surface-raised-hover: #e7e5e4; /* stone-200 */
   --palette-light-surface-card: #ffffff;
   --palette-light-surface-tooltip: #ffffff;
+  --palette-light-surface-overlay: #ffffff;
   --palette-light-shadow: rgba(0, 0, 0, 0.06);
 
   /* Surface — dark */
@@ -53,6 +54,10 @@
   --palette-dark-surface-raised-hover: #44403c; /* stone-700 */
   --palette-dark-surface-card: #292524; /* stone-800 */
   --palette-dark-surface-tooltip: #0c0a09; /* stone-950 */
+  /* LNB(base=stone-900)·메인/사이드뷰(card=stone-800)보다 밝고, raised-hover(stone-700)
+     보다는 어두운 중간값 — 드롭다운/모달 안 아이템이 raised-hover로 호버될 때 이
+     배경보다 밝아져서 항상 구분되게 하려고 일부러 raised-hover와 다른 값을 새로 판다. */
+  --palette-dark-surface-overlay: #363230;
   --palette-dark-shadow: rgba(0, 0, 0, 0.3);
 
   /* Foreground — light */
@@ -126,6 +131,7 @@
   --surface-raised-hover: var(--palette-light-surface-raised-hover);
   --surface-card: var(--palette-light-surface-card);
   --surface-tooltip: var(--palette-light-surface-tooltip);
+  --surface-overlay: var(--palette-light-surface-overlay);
   --surface-context: var(--surface-base);
   --shadow: var(--palette-light-shadow);
 
@@ -156,6 +162,7 @@
   --surface-raised-hover: var(--palette-dark-surface-raised-hover);
   --surface-card: var(--palette-dark-surface-card);
   --surface-tooltip: var(--palette-dark-surface-tooltip);
+  --surface-overlay: var(--palette-dark-surface-overlay);
   --shadow: var(--palette-dark-shadow);
 
   --fg-primary: var(--palette-dark-fg-primary);
@@ -188,6 +195,7 @@
   --surface-raised-hover: var(--palette-dark-surface-raised-hover);
   --surface-card: var(--palette-dark-surface-card);
   --surface-tooltip: var(--palette-dark-surface-tooltip);
+  --surface-overlay: var(--palette-dark-surface-overlay);
   --shadow: var(--palette-dark-shadow);
 
   --fg-primary: var(--palette-dark-fg-primary);
@@ -217,6 +225,7 @@
   --surface-raised-hover: var(--palette-light-surface-raised-hover);
   --surface-card: var(--palette-light-surface-card);
   --surface-tooltip: var(--palette-light-surface-tooltip);
+  --surface-overlay: var(--palette-light-surface-overlay);
   --shadow: var(--palette-light-shadow);
 
   --fg-primary: var(--palette-light-fg-primary);
@@ -252,6 +261,7 @@
   --color-surface-raised-hover: var(--surface-raised-hover);
   --color-surface-card: var(--surface-card);
   --color-surface-tooltip: var(--surface-tooltip);
+  --color-surface-overlay: var(--surface-overlay);
   --color-surface-context: var(--surface-context);
 
   /* Foreground */
@@ -341,6 +351,14 @@
   }
 }
 
+/* to를 일부러 안 둔다 — 100%가 없으면 소비처의 실제 opacity 유틸리티 값(예:
+   0.06)까지 자동 보간되어, 1을 거쳤다가 툭 떨어지는 튐 없이 그 값에서 끝난다. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -353,15 +371,27 @@
      두 번 걸리면 나중 항목의 duration이 이긴다(표준 동작). !important는 여전히
      필요(유틸리티 레이어가 base 레이어보다 우선하므로 이렇게 안 하면 컴포넌트
      쪽이 이긴다). */
+  /* offset을 음수(inset)로 줘서 링이 박스 바깥이 아니라 안쪽으로 파고들게 한다 —
+     양수 offset은 촘촘한 리스트(LNB 등)에서 바로 옆 형제 요소가 그 삐져나온
+     부분을 덮어버리는 문제가 반복됐다(z-index로 개별 대응해왔음). 링이 애초에
+     박스를 못 벗어나면 옆 요소가 덮을 자리 자체가 없어진다. */
   *:focus-visible {
-    @apply outline outline-2 outline-offset-2 outline-brand;
+    @apply outline outline-2 outline-brand;
+    outline-offset: -2px;
     transition:
       all var(--duration-fast),
       outline-color 0s !important;
   }
   body {
-    @apply bg-surface-base text-fg-primary;
+    @apply bg-surface-card text-fg-primary;
     font-family: "Satoshi", "Wanted Sans Variable", "Wanted Sans", sans-serif;
+  }
+  /* scrollbar-width/color는 상속 속성이라 html 한 곳에만 선언하면 앱 전역
+     스크롤 영역에 다 적용된다 — 화면마다 개별 유틸리티 클래스를 반복할 필요가
+     없다. */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
   }
   button,
   [role="button"] {

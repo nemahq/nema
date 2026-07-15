@@ -7,9 +7,7 @@ import { useTranslation } from "@web/lib/tolgee";
 export type SettingsSection = "account" | "preferences";
 
 function navItemClass(active: boolean): string {
-  // relative + focus-visible:z-10: 포커스된 아이템을 형제 위로 띄워서, 바로
-  // 아래 아이템의 불투명 배경이 이 아이템의 outline을 덮지 않게 한다.
-  return `relative flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] font-medium transition-colors duration-fast focus-visible:z-10 ${
+  return `flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] font-medium transition-colors duration-fast ${
     active
       ? "bg-surface-raised-hover/75 text-fg-primary"
       : "text-fg-tertiary hover:bg-surface-raised-hover/75 hover:text-fg-secondary focus-visible:bg-surface-raised-hover/75 focus-visible:text-fg-secondary"

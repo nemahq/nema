@@ -1,5 +1,3 @@
-import { formatDistanceToNow } from "date-fns";
-import { enUS, ko } from "date-fns/locale";
 import { useSyncExternalStore } from "react";
 
 import { cn } from "@nema-io/weave";
@@ -7,7 +5,8 @@ import { cn } from "@nema-io/weave";
 import { useTranslation } from "@web/lib/tolgee";
 import { tolgee } from "@web/lib/tolgee/client";
 
-const LOCALE_MAP = { ko, en: enUS } as const;
+import { formatCompactDistance, type Lang } from "./relativeTimeFormat";
+
 const TICK_INTERVAL_MS = 60_000;
 
 let globalTick = 0;
@@ -47,11 +46,8 @@ export function RelativeTime({ dateTime, className }: RelativeTimeProps) {
   useTranslation();
   useSyncExternalStore(subscribe, getSnapshot);
 
-  const lang = tolgee.getLanguage() as keyof typeof LOCALE_MAP;
-  const label = formatDistanceToNow(new Date(dateTime), {
-    addSuffix: true,
-    locale: LOCALE_MAP[lang] ?? ko,
-  });
+  const lang: Lang = tolgee.getLanguage() === "ko" ? "ko" : "en";
+  const label = formatCompactDistance(dateTime, lang);
 
   return (
     <time

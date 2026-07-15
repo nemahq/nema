@@ -65,14 +65,11 @@ export function UserMenu() {
           alignOffset={collapsed ? 8 : 0}
           sideOffset={collapsed ? 2 : 4}
           onCloseAutoFocus={(e) => e.preventDefault()}
-          className="w-60 border-0 bg-surface-card dark:bg-surface-raised-hover !animate-none"
+          className="w-60 bg-surface-card dark:bg-surface-raised-hover !animate-none"
         >
           <SettingsMenuItem onClick={() => setSettingsOpen(true)} />
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={handleSignOut}
-            className="cursor-pointer data-[highlighted]:bg-surface-raised-hover/75 dark:data-[highlighted]:bg-fg-primary/10"
-          >
+          <DropdownMenuItem onClick={handleSignOut}>
             <LogOut />
             {t("settings.sign_out")}
           </DropdownMenuItem>

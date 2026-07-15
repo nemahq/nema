@@ -108,7 +108,7 @@ export function PreferencesSection() {
             divider={false}
           >
             <Select value={appLang} onValueChange={handleAppLangChange}>
-              <SelectTrigger className="w-44 cursor-pointer shadow-none dark:shadow-sm">
+              <SelectTrigger className="w-36 cursor-pointer shadow-none dark:shadow-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -129,7 +129,7 @@ export function PreferencesSection() {
             description={t("settings.content_language_description")}
           >
             <Select value={contentLang} onValueChange={handleContentLangChange}>
-              <SelectTrigger className="w-44 cursor-pointer shadow-none dark:shadow-sm">
+              <SelectTrigger className="w-36 cursor-pointer shadow-none dark:shadow-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

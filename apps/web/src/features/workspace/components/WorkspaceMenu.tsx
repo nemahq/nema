@@ -9,6 +9,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "@nema-io/weave";
 import { ChevronDown, LogOut, PanelLeft, Settings } from "@nema-io/weave/icons";
 
@@ -74,10 +77,7 @@ export function WorkspaceMenu({
               width: `calc(var(--radix-dropdown-menu-trigger-width) + ${PILL_HORIZONTAL_PADDING_PX}px)`,
             }
       }
-      className={cn(
-        "border-0 bg-surface-card dark:bg-surface-raised-hover !animate-none",
-        collapsed && "w-60",
-      )}
+      className={cn("!animate-none", collapsed && "w-60")}
     >
       <div className="flex items-center gap-2.5 px-2 py-1.5">
         <Avatar src={user.avatarUrl} fallback={userInitial} />
@@ -89,17 +89,11 @@ export function WorkspaceMenu({
         </div>
       </div>
       <DropdownMenuSeparator />
-      <DropdownMenuItem
-        onClick={() => setSettingsOpen(true)}
-        className="cursor-pointer data-[highlighted]:bg-surface-raised-hover/75 dark:data-[highlighted]:bg-fg-primary/10"
-      >
+      <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
         <Settings />
         {t("settings.settings")}
       </DropdownMenuItem>
-      <DropdownMenuItem
-        onClick={handleSignOut}
-        className="cursor-pointer data-[highlighted]:bg-surface-raised-hover/75 dark:data-[highlighted]:bg-fg-primary/10"
-      >
+      <DropdownMenuItem onClick={handleSignOut}>
         <LogOut />
         {t("settings.sign_out")}
       </DropdownMenuItem>
@@ -159,13 +153,20 @@ export function WorkspaceMenu({
             </DropdownMenuTrigger>
             {accountContent}
           </DropdownMenu>
-          <LnbHoverIcon
-            onClick={handleToggleSidebar}
-            aria-label={t("layout.collapse_sidebar")}
-            className="absolute right-2.5 group-hover/switcher:opacity-100"
-          >
-            <PanelLeft strokeWidth={1.5} className="size-4" />
-          </LnbHoverIcon>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <LnbHoverIcon
+                onClick={handleToggleSidebar}
+                aria-label={t("layout.collapse_sidebar")}
+                className="absolute right-2.5 group-hover/switcher:opacity-100"
+              >
+                <PanelLeft strokeWidth={1.5} className="size-4" />
+              </LnbHoverIcon>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {t("layout.collapse_sidebar")}
+            </TooltipContent>
+          </Tooltip>
         </div>
       )}
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />

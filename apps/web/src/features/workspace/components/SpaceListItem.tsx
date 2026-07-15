@@ -10,8 +10,10 @@ import { SpaceSettingsModal } from "./SpaceSettingsModal";
 
 // 색상 배지는 리스트에서 시각적으로 시끄러워 중립 톤으로 회귀(design-decisions-log.md
 // "Space 아이콘 — 색상 실험 후 중립으로 회귀" 참고) — 테마별로 자동 조정되는 중립 tint.
+// -ml-1: 다른 LNB 아이템 아이콘(size-4)보다 4px 넓어서(size-5) 아이콘 자체를
+// 왼쪽으로 밀어 오른쪽 끝(→ 뒤따르는 라벨 위치)을 다른 아이템과 맞춘다.
 const BADGE_CLASS =
-  "flex size-5 shrink-0 items-center justify-center rounded-md bg-fg-primary/10 text-[10px] font-medium text-fg-primary";
+  "flex size-5 shrink-0 -ml-1 items-center justify-center rounded-md bg-fg-primary/10 text-[10px] font-medium text-fg-primary";
 
 interface SpaceListItemProps {
   spaceId: string;

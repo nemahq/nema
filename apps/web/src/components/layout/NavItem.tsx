@@ -65,7 +65,7 @@ export function NavItem({
         params={params}
         aria-label={tooltipLabel}
         className={cn(
-          "relative flex size-7 items-center justify-center rounded-lg text-fg-secondary transition-colors duration-fast hover:bg-surface-raised-hover/75 hover:text-fg-primary focus-visible:z-10",
+          "relative flex size-7 items-center justify-center rounded-lg text-fg-secondary transition-colors duration-fast hover:bg-surface-raised-hover/75 hover:text-fg-primary",
           activeClassName,
         )}
         activeOptions={activeOptions}
@@ -106,8 +106,6 @@ export function NavItem({
       "text-fg-secondary group-hover:bg-surface-raised-hover/75 group-hover:text-fg-primary";
   }
 
-  // relative + focus-visible:z-10: SettingsNav와 같은 이유로, 포커스된 행을
-  // 형제 위로 띄워 바로 아래 행의 배경이 이 행의 outline을 덮지 않게 한다.
   // pl-3: 하이라이트 박스 위치(LnbRowBox 공유 px-2.5)는 안 건드리고, 아이콘·
   // 텍스트만 라벨보다 아주 살짝(2px) 안쪽에서 시작하게 민다.
   // pr-8: rightContent는 절대위치로 겹쳐 그려지니(아래 참고), hover에서만 보이든
@@ -117,7 +115,7 @@ export function NavItem({
   // 같은 크기를 공유한다. 평상시엔 색(fg-secondary vs fg-tertiary)으로만 구분하고,
   // hover·active 상태에서만 fg-primary로 올라와 상호작용 가능함을 신호한다.
   const rowExtraClassName = cn(
-    "relative pl-3 focus-visible:z-10",
+    "pl-3",
     rightContent && "pr-8",
     hoverClassName,
     activeClassName,

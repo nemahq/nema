@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Tooltip, TooltipContent, TooltipTrigger } from "@nema-io/weave";
 import {
   BookOpenText,
   Home,
@@ -64,13 +65,20 @@ export function WorkspaceSidebar() {
         <LnbSection
           label={t("workspace.section_spaces")}
           trailingAction={
-            <LnbHoverIcon
-              onClick={() => setCreateSpaceOpen(true)}
-              aria-label={t("workspace.new_space")}
-              className="absolute right-3.5 text-fg-tertiary hover:text-fg-primary group-hover/section:opacity-100"
-            >
-              <Plus className="size-4" />
-            </LnbHoverIcon>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <LnbHoverIcon
+                  onClick={() => setCreateSpaceOpen(true)}
+                  aria-label={t("workspace.new_space")}
+                  className="absolute right-3.5 text-fg-tertiary hover:text-fg-primary group-hover/section:opacity-100"
+                >
+                  <Plus className="size-4" />
+                </LnbHoverIcon>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {t("workspace.new_space")}
+              </TooltipContent>
+            </Tooltip>
           }
         >
           <SpaceList />

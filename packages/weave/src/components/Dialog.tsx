@@ -4,7 +4,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import * as React from "react";
 
 import { XIcon } from "../icons";
-import { cn } from "../utils";
+import { cn, POPOVER_SURFACE_CLASSNAME } from "../utils";
 
 type DialogContentProps = React.ComponentProps<
   typeof DialogPrimitive.Content
@@ -70,7 +70,8 @@ function DialogContent({
           onOpenAutoFocus?.(event);
         }}
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl bg-surface-card p-6 shadow-[0_4px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)] outline-none [--surface-context:var(--surface-card)] sm:max-w-lg",
+          POPOVER_SURFACE_CLASSNAME,
+          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl p-6 outline-none [--surface-context:var(--surface-overlay)] sm:max-w-lg",
           className,
         )}
         {...props}
