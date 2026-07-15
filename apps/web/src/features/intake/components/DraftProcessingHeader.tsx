@@ -48,7 +48,7 @@ export function DraftProcessingHeader({
             onClick={handleCancel}
             disabled={cancelMutation.isPending}
             className={cn(
-              "size-6 rounded-full text-fg-tertiary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
+              "pointer-events-auto size-6 rounded-full text-fg-tertiary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
               NESTED_HOVER_ICON_CLASSNAME,
             )}
           >

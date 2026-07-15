@@ -40,7 +40,7 @@ export function IdleDraftCard({
     statusIcon = (
       <Tooltip>
         <TooltipTrigger asChild>
-          <SearchX className="size-4 shrink-0 text-fg-tertiary" />
+          <SearchX className="pointer-events-auto size-4 shrink-0 text-fg-tertiary" />
         </TooltipTrigger>
         <TooltipContent side="bottom">
           {t("intake.draft_no_result_tooltip")}
