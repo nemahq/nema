@@ -710,3 +710,24 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 - **Popover 팝업 표면 통일 누락 보정**: 직전 항목(695~698줄)의 `POPOVER_SURFACE_CLASSNAME` 전역 통일 작업에서 `Popover.tsx`가 빠져 다크모드에서 혼자 달라 보였던 게 이번에 발견·수정됨 — 통일 대상 컴포넌트 목록에 Popover 포함 확정.
 
 ---
+
+### 2026-07-15 — 초안 탭 "AI가 진행 중인 작업" 용어를 "정리"/"Organize"로 통일
+
+**배경**: 상세 사이드뷰에 처리중 인지 인디케이터를 추가하다 보니, Put-in→Digest Review 사이의 이 AI 작업을 코드베이스가 "Working"/"처리 중", "Regenerate"/"재생성", "Creating"/"작성 중", "Generate"/"생성" 등 화면마다 다른 단어로 부르고 있다는 게 드러났다.
+
+**"정리"/"Organize" 채택 근거**: (1) `session.empty_subheading_1`("정리는 맡겨두세요."/"The organizing is on us.")이 이미 Nema의 핵심 가치 제안을 이 단어로 못박아둔 브랜드 레벨 카피였다. (2) `glossary.md`의 Digest 정의 자체가 "Source를 사람이 읽기 좋게 **정리한 것**"이라 — "정리 중"으로 부르면 진행형 라벨과 완료 결과물 정의가 한 단어로 자연스럽게 이어진다. (3) Mem.ai("Mem organizes every capture"), Notion AI, Capacities 등 AI-native SaaS가 이 raw→구조화 전환을 "generate"가 아니라 "organize/structure"로 부르는 게 트렌드 — Statement가 사용자 원문 기반 판단을 담는 단위(새로 지어내지 않음)인 Nema 모델과 "생성"보다 "정리"가 더 정직하게 맞는다.
+
+**적용 범위**: Ask 플로우(`session.status_answering` "답변 생성 중..." 등 — narration은 실제로 근거에서 산문을 합성하는 진짜 "생성"이라 별개)와 v1 세션 레거시 키(`session.draft_creating` 등 — glossary "폐기된 용어"의 v1 Draft 개념, v2 초안과 무관)는 스코프 밖. v2 Drafts 탭(intake feature)의 번역키·컴포넌트만 교체:
+
+| Before (key/값) | After (key/값) |
+|---|---|
+| `draft_section_working` "Working"/"처리 중" | `draft_section_organizing` "Organizing"/"정리 중" |
+| `draft_regenerate` "Regenerate"/"재생성" | `draft_organize` "Organize"/"정리" |
+| `draft_regenerating` "Regenerating..."/"재생성 중..." | `draft_organizing` "Organizing..."/"정리 중..." |
+| `draft_processing`(죽은 키) | 삭제 — `draft_section_organizing`으로 통합 |
+| `draft_processing_elapsed_*` | `draft_organizing_elapsed_*` (값은 그대로, 접두어만) |
+| `draft_no_result_tooltip` "Nothing to generate"/"생성할 내용이 없어요." | 값만 "Nothing to organize"/"정리할 내용이 없어요." |
+
+코드 식별자(`handleRegenerate`, `useStartSourceDigestion`, `draft.regenerate` 단축키 액션 ID 등)는 안 건드림 — glossary의 "제품 용어는 카피 전용, 코드 용어는 구현체" 원칙대로 유지(`useStartSourceDigestion`이 애초에 이 분리를 이유로 그렇게 지어졌다).
+
+---

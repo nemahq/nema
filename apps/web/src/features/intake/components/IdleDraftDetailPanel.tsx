@@ -46,8 +46,8 @@ export function IdleDraftDetailPanel({
   const startDigestionMutation = useStartSourceDigestion();
   const reassignSpaceMutation = useReassignSourceSpace();
   const bodyDirty = body !== initialBody;
-  // 결과없음은 원본을 안 바꾸고 재생성해봐야 또 결과없음이 나올 가능성이 높다 —
-  // 원문이 실제로 바뀌기 전까진 재생성을 막아 헛수고를 예방한다. failed/cancelled는
+  // 결과없음은 원본을 안 바꾸고 정리해봐야 또 결과없음이 나올 가능성이 높다 —
+  // 원문이 실제로 바뀌기 전까진 정리를 막아 헛수고를 예방한다. failed/cancelled는
   // 내용 문제가 아닐 수 있어(일시적 시스템 오류 등) 이 제약을 안 둔다.
   const regenerateDisabled =
     (status === "empty" && !bodyDirty) || isRegenerating;
@@ -57,7 +57,7 @@ export function IdleDraftDetailPanel({
   }
 
   // onChange 시점에만 알리면, 저장 후 폴링으로 initialBody가 따라잡아도(예:
-  // Regenerate가 body를 저장한 뒤) 재계산할 트리거가 없어 dirty가 그대로
+  // Organize가 body를 저장한 뒤) 재계산할 트리거가 없어 dirty가 그대로
   // 굳어버린다 — bodyDirty 자체를 구독해 매번 최신값으로 동기화한다.
   useEffect(
     function syncBodyDirty() {
@@ -67,7 +67,7 @@ export function IdleDraftDetailPanel({
   );
 
   // blur 시점에 저장해 편집 중 이탈(다른 초안 클릭 등)로 잃는 걸 막는다 — 다만
-  // Regenerate는 이 시점에 기대지 않고 클릭 시점에 한 번 더 직접 저장한다(아래).
+  // Organize는 이 시점에 기대지 않고 클릭 시점에 한 번 더 직접 저장한다(아래).
   function handleBodyBlur() {
     if (!bodyDirty || body.trim().length === 0) {
       return;
@@ -204,8 +204,8 @@ export function IdleDraftDetailPanel({
             onClick={handleRegenerate}
           >
             {isRegenerating
-              ? t("intake.draft_regenerating")
-              : t("intake.draft_regenerate")}
+              ? t("intake.draft_organizing")
+              : t("intake.draft_organize")}
           </Button>
         </div>
       </div>

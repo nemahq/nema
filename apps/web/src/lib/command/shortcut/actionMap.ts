@@ -16,7 +16,7 @@ function def(
 const actionMap = {
   draft: {
     cancel: def("common.cancel", "escape", "global"),
-    regenerate: def("intake.draft_regenerate", "mod+enter", "global"),
+    regenerate: def("intake.draft_organize", "mod+enter", "global"),
   },
   stream: {
     stop: def("session.stream_stop", "escape", "global", 1),

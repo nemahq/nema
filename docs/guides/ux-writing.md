@@ -27,6 +27,7 @@ Nema는 B2C "되찾기 도구" — 사용자가 매일 편하게 생각을 맡�
 | Pull-out 모드 | 묻기 | Ask |
 | 대화 공간 | 맥락 | Context |
 | AI 중간 결과 | 초안 | Draft |
+| AI 정리 작업 | 정리 | Organize |
 
 - 한국어: 기능명을 문장에 쓸 때 "기억하기와 묻기에 사용하는 언어" 식으로 자연스럽게 녹임
 - 영어: 기능명은 대문자로 고유명사 취급 — "Used when you Remember and Ask"
