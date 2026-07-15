@@ -143,11 +143,13 @@
 **Hatchworks — "대화와 활동 스트림의 분리"** — 프로덕션 에이전트 UX가 chat-first로 실패하는 이유(invisible actions, no user control)의 해법으로 "대화(목표 지시)"와 "활동 스트림(비동기 결과 확인)"을 별도 표면으로 분리하는 패턴 제시. → Nema 참고점: 초안 탭(넣기)과 변경셋 탭(결과 검토)이 이미 이 구조 — 우연이 아니라 검증된 패턴임을 확인.
 **Notion/Linear — 사이드바 배지 + 인박스** — 미해결 개수를 사이드바에 상시 노출, 서버 데이터 기반이라 세션·탭 전환과 무관하게 지속됨. → Nema 참고점: Space LNB·변경사항 탭 카운트 배지의 직접 근거. "읽음"이 아니라 "처리함"(confirm/discard) 기준으로만 사라져야 함 — GitHub PR 알림처럼 읽음 처리로 사라지는 방식과 다르게, Nema는 열린 changeset 개수를 그대로 쓰므로 구조적으로 이미 이 조건을 만족.
 **GitHub "Review requested"** — CI 통과·리뷰 요청을 토스트가 아니라 타겟 알림+지속되는 리스트(Your pull requests) 조합으로 처리. 완료됐다고 PR 화면으로 강제 이동 안 시킴. → Nema 참고점: 자동 라우트 이동 기각의 직접 근거.
+**OpenAI Codex Micro — Agent Key RGB 상태등** — 2026-07-15 출시한 개발자용 하드웨어 키패드(Work Louder 공동 개발). 6개의 물리 키가 에이전트별 상태를 색으로 상시 표시: white=idle · blue=thinking(작업 중) · green=complete(완료) · amber=input required(입력 필요, 작업 중 막혀서 사람에게 물어봐야 함) · red=error. → Nema 참고점(가장 직접적): "AI가 작업을 완료해 결과물이 나온 상태"(green)와 "AI가 막혀서 사람 입력이 필요한 상태"(amber)를 명확히 분리하는 게 핵심 — Nema의 Changeset(정리 완료, 결과물 있음)은 amber가 아니라 green에 대응한다. 일반 엔터프라이즈 디자인 시스템보다 "AI가 비동기로 작업하고 사람이 결과를 확인"하는 Nema의 실제 성격에 더 직접 대응하는 레퍼런스.
 
 ### 기각 후보
 
 - **토스트를 주 채널로 사용** — Carbon Design System·MagicBell 등 다수 소스가 일관 지적: "자동으로 사라지는 toast는 반드시 처리해야 하는 정보에 쓰면 안 된다"(접근성 문제 포함 — 스크린리더가 못 읽고 사라짐). Review급 이벤트와 근본적으로 안 맞음.
 - **정리 완료 시 리뷰 화면으로 자동 이동** — Hatchworks가 지적한 "no user control" 안티패턴 그 자체. Nema 자체도 이번 세션에서 Space 생성 후 auto-navigate를 제거한 전례가 있어 원칙이 재확인됨.
+- **"검토 대기 항목엔 초록을 쓰면 안 된다"(GitHub PR 리뷰 커뮤니티 논쟁 근거)** — 한때 Changeset 배지의 success(초록) 채택을 막는 근거로 썼으나, 이건 AI 에이전트 맥락이 아니라 순수 사람-사람 코드리뷰 워크플로우 논쟁이었다. Codex Micro의 직접 사례(위)가 나오면서 기각 — 일반 UX 선례를 AI 에이전트 상황에 그대로 전용하기 전에 그 선례가 실제로 같은 맥락(AI가 만든 결과물 vs 사람이 만든 결과물)인지부터 확인해야 한다.
 
 ---
 

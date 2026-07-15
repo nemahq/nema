@@ -743,3 +743,20 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 **미해결(후속 논의로 이월)**: `useSpaceList`가 10분 staleTime이라 changeset 생성·해소가 실시간으로 반영 안 됨. 초안 탭 폴링 패턴(`usePendingSourceListQuery`의 조건부 `refetchInterval`)을 재사용하는 안을 제시했으나 "별로 좋은 방향은 아닌 것 같다"는 피드백으로 보류 — 갱신 전략은 다음 세션에서 다시 논의.
 
 ---
+
+### 2026-07-16 — 상태 색 체계 재정정: Changeset 배지는 info(파랑)가 아니라 success(초록), "정리 중"은 info(파랑)
+
+바로 위 항목의 "카운트 배지 색" 판단(neutral·info·error 3단)을 뒤집는다. append-only 원칙상 위 항목은 고치지 않고 최종 규칙만 여기 남긴다.
+
+**계기**: 일반 엔터프라이즈 디자인 시스템(Carbon 등) 기준으로 info(파랑)를 채택했으나, PM이 OpenAI Codex Micro(하드웨어 키패드, 2026-07-15 출시)의 실제 상태등 관례를 제시 — Agent Key RGB 매핑이 **white=idle · blue=thinking(작업 중) · green=complete(완료) · amber=input required(입력 필요) · red=error**. 이게 일반 디자인 시스템보다 Nema의 실제 성격(AI가 비동기로 작업하고 결과를 사람이 확인)에 더 직접 대응하는 레퍼런스라고 판단해 재검토했다.
+
+**핵심 구분**: Codex의 "amber(input required)"는 에이전트가 작업 도중 막혀서 사람에게 물어봐야 하는 상태다 — Nema엔 이런 상태가 없다. Changeset이 생기는 시점은 AI가 결과물(Digest·Statement)을 **이미 다 만들어낸 뒤**라 Codex 기준 "green(complete)"에 해당한다. 반대로 "정리 중"(digestion 진행 중)이 정확히 "blue(thinking)"에 해당하는데, 기존엔 이 상태를 표시하는 색이 아예 없었다(중립 회색 pulse).
+
+**최종 색 배정 3단(확정)**:
+- **주황(warning)** — 초안 탭 "확인 필요"(Waiting for you): 사람이 손대야 진행되는 상태. 기존 그대로.
+- **파랑(info)** — "정리 중"(Organizing) 배너·섹션 배경 tint·pulse 아이콘: AI가 실제로 작업 중인 상태. 이번에 새로 배정.
+- **초록(success)** — Changeset 검토 대기 배지(LNB·변경사항 탭): AI가 작업을 완료해 결과물이 나온 상태. info에서 재변경.
+
+**섹션 헤더 텍스트는 tone과 무관하게 중립 유지**: `DraftSection`의 라벨·카운트 텍스트는 tone(warning/info)에 따라 색이 안 바뀐다 — 배경 tint와 아이콘만으로 상태를 신호하고, 문구 자체까지 물들이면 과하다는 판단(기존 warning 섹션의 관례를 그대로 따름). 경과 시간 카운터도 상태 신호가 아니라 부가 정보라 중립 유지.
+
+**최초 반박이 틀렸던 이유(기록용)**: green을 처음 검토할 때 "리뷰 대기 항목을 초록으로 칠하면 이미 끝났다는 착각을 준다"는 GitHub PR 리뷰 커뮤니티 논쟁을 근거로 기각했었는데, 이건 AI 에이전트 맥락이 아니라 순수 사람-사람 코드리뷰 워크플로우 논쟁이었다 — Codex Micro라는 실제 AI 에이전트 하드웨어의 직접 사례가 나오자 이 근거는 기각됐다. 일반 UX 선례를 그대로 가져오기 전에 "AI가 만든 결과물을 사람이 확인하는 상황"이라는 Nema의 실제 성격에 맞는 레퍼런스인지부터 확인해야 한다는 교훈.
