@@ -41,7 +41,7 @@ export function ThemeSelect() {
     >
       <SelectTrigger
         aria-label={t("settings.theme")}
-        className="w-44 cursor-pointer shadow-none dark:shadow-sm"
+        className="w-36 cursor-pointer shadow-none dark:shadow-sm"
       >
         <SelectValue />
       </SelectTrigger>

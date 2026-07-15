@@ -1,7 +1,13 @@
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { Link } from "@tanstack/react-router";
 
-import { Button, cn } from "@nema-io/weave";
+import {
+  Button,
+  cn,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@nema-io/weave";
 import { PanelLeft } from "@nema-io/weave/icons";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
@@ -64,7 +70,7 @@ export function Sidebar({
     <SidebarContext value={{ collapsed, toggle }}>
       <aside
         className={cn(
-          "flex h-full flex-col overflow-y-auto border-r border-border/50 bg-surface-raised dark:bg-surface-base",
+          "flex h-full flex-col overflow-y-auto overscroll-none border-r border-border/50 bg-surface-raised dark:bg-surface-base",
           collapsed ? "w-12" : "w-64",
         )}
       >
@@ -77,23 +83,37 @@ export function Sidebar({
           >
             {!collapsed && logo}
             {(collapsed || !hideToggle) && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                // 접힘 상태에서 LNB 아이템(size-7)과 크기를 맞춘다 — 펼침은 기존 icon-sm(size-8) 유지.
-                className={cn(collapsed && "size-7")}
-                onClick={toggle}
-                aria-label={t(
-                  collapsed
-                    ? "layout.expand_sidebar"
-                    : "layout.collapse_sidebar",
-                )}
-              >
-                <PanelLeft
-                  strokeWidth={1.5}
-                  className={cn(collapsed && "rotate-180")}
-                />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    // 접힘 상태에서 LNB 아이템(size-7)과 크기를 맞춘다 — 펼침은 기존 icon-sm(size-8) 유지.
+                    className={cn(collapsed && "size-7")}
+                    onClick={toggle}
+                    aria-label={t(
+                      collapsed
+                        ? "layout.expand_sidebar"
+                        : "layout.collapse_sidebar",
+                    )}
+                  >
+                    <PanelLeft
+                      strokeWidth={1.5}
+                      className={cn(collapsed && "rotate-180")}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent
+                  side={collapsed ? "right" : "bottom"}
+                  sideOffset={collapsed ? 12 : 3}
+                >
+                  {t(
+                    collapsed
+                      ? "layout.expand_sidebar"
+                      : "layout.collapse_sidebar",
+                  )}
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
 

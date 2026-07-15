@@ -1,0 +1,74 @@
+import type { ReactNode } from "react";
+import { useState } from "react";
+
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@nema-io/weave";
+import { Trash2 } from "@nema-io/weave/icons";
+
+import { RelativeTime } from "@web/components/ui/RelativeTime";
+import type { DraftFooterProps } from "@web/features/intake/types";
+import { useTranslation } from "@web/lib/tolgee";
+
+import { DeleteSourceDialog } from "./DeleteSourceDialog";
+import { DraftTitle } from "./DraftTitle";
+
+interface DraftIdleFooterProps extends DraftFooterProps {
+  // failed/empty 상태 아이콘 — 있으면 시각 옆에 같이 묶어 보여준다.
+  icon?: ReactNode;
+}
+
+export function DraftIdleFooter({
+  sourceId,
+  title,
+  createdAt,
+  icon,
+}: DraftIdleFooterProps) {
+  const { t } = useTranslation();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  return (
+    <div className="flex h-6 items-center justify-between gap-2">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <DraftTitle
+          title={title}
+          className="text-sm font-medium text-fg-primary"
+        />
+        <RelativeTime dateTime={createdAt} className="text-xs" />
+        {icon && (
+          <span className="flex size-6 shrink-0 items-center justify-center">
+            {icon}
+          </span>
+        )}
+      </div>
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- 삭제 버튼·다이얼로그 클릭만 카드 onClick(상세 열기)으로 버블링되는 걸 막는 래퍼다. 나머지(제목·시각·아이콘) 영역은 그대로 버블링돼 카드 전체가 상세 열기 트리거가 되게 한다. */}
+      <div onClick={(e) => e.stopPropagation()}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("common.delete")}
+              onClick={() => setDeleteDialogOpen(true)}
+              className="size-6 rounded-full text-fg-tertiary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-surface-raised-hover/70 hover:brightness-95 dark:hover:brightness-125"
+            >
+              <Trash2 />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={3}>
+            {t("common.delete")}
+          </TooltipContent>
+        </Tooltip>
+
+        <DeleteSourceDialog
+          sourceId={sourceId}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+        />
+      </div>
+    </div>
+  );
+}

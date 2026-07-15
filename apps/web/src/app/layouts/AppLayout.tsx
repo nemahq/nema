@@ -7,7 +7,7 @@ export function AppLayout() {
   return (
     <OnboardingGate>
       <WorkspaceBootstrapGate>
-        <div className="flex h-dvh">
+        <div className="flex h-dvh overflow-hidden">
           <Outlet />
         </div>
       </WorkspaceBootstrapGate>

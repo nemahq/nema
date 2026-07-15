@@ -6,6 +6,8 @@
 
 **작성 스코프(2026-07-13 정리)**: 남기는 건 **확정된 규칙과 그 이유**다 — "group-hover 안 쓰면 배경이 죽는다", "danger 톤은 두 군데 따로 선언돼 있다" 같이 안 남기면 다음 세션이 똑같이 재발견해야 하는 것들. **"어떤 라운드를 거쳐 이 결론에 왔는지"(누가 뭘 요청했다가 리뷰에서 바뀌었다는 식의 서사)는 웬만하면 줄인다** — 그건 PR 리뷰 스레드·커밋 히스토리가 원래 담당할 정보고, 여기 계속 쌓이면 문서가 길어질수록 진짜 규칙이 서사에 묻혀 "먼저 읽기"의 신호 대 잡음비가 나빠진다. 백엔드/데이터 아키텍처 판단(쿼리 invalidate 전략, 마이그레이션 안전성 등)은 이 문서(FE 시각·패턴 전용) 스코프 밖 — 결정된 게 아니라 논의만 한 것이면 아예 안 남기고(필요해지면 그때 PR에서 근거로 남김), 결정까지 됐다면 `product-decisions-log.md` 쪽이 더 맞는 자리인지 먼저 확인한다. 기존 항목은 소급 정리하지 않는다(위 append-only 원칙).
 
+**(2026-07-14 추가) 코드 diff만 봐도 재구성되는 내용은 안 남긴다** — 어떤 컴포넌트를 새로 만들었는지, 어떤 클래스·토큰을 적용했는지, 어떤 파일을 옮겼는지 같은 "무엇을 어떻게 바꿨는지"는 diff·커밋이 이미 정확한 원본이다. 여기 남길 건 diff만 봐서는 알 수 없는 것 — **왜 그렇게 했는지, 어떤 대안을 검토했다가 기각했는지** — 뿐이다.
+
 ---
 
 ## 베이스라인 (기존 자산 인벤토리)
@@ -648,3 +650,52 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 - **`as` 단언 3건을 타입 가드로(convention 게이트)**: Reference·Digest 타입 Select·서버 문자열의 `type as …`를 `isDigestType`/`isReferenceType`(SSOT 배열 기반 가드)로 대체 — `apps/web/docs/conventions.md` "가드 없는 as 금지".
 - **BE 동반 착지(같은 워크트리)**: 사용자 경로(update·confirm)에서 병합 대상이 그 사이 archive/trash되면 조용히 스킵 대신 `NM008`을 던져 새로고침을 유도한다(워커 경로는 관대히 스킵 — 정책 분기 근거를 마이그레이션 주석에 문서화). FE는 이미 mutation 에러를 헤더에 인라인 표면화하므로 "유실됐는데 성공으로 보임"이 해소된다.
 - **검증**: 위 전부 반영 후 `typecheck`/`lint`/`format:check`/`knip`/`depcruise`/`test`(web 94케이스[`referenceMerge` 5케이스 신설], server 419케이스) 통과.
+
+---
+
+### 2026-07-15 — 디자인 폴리싱: 초안 카드/상세 상태별 재설계 + 전역 UI 정비 (PR #409)
+
+`/drafts` 화면(초안 목록 + 사이드 상세) 폴리싱. 화면 국한 결정과 전역 영향 결정이 섞여 있어 나눠 기록한다.
+
+**전역 영향 (Drafts 밖에도 적용됨)**
+
+- **포커스링 전역 inset 처리**: `*:focus-visible`의 `outline-offset`을 양수(바깥으로 삐져나옴)에서 `-2px`(안쪽)로 바꿨다. 근거: 촘촘한 리스트(LNB 등)에서 형제 요소가 삐져나온 링을 덮어버리는 문제가 반복돼 그때마다 `relative`+`focus-visible:z-10`을 개별 컴포넌트에 붙여왔는데, 링이 박스 밖으로 못 나가면 애초에 덮일 자리가 없어져 이 패치들이 구조적으로 불필요해진다. 기존 패치는 제거했으나, `relative`가 포커스링이 아니라 다른 절대위치 자식(예: `NavItem`의 배지)의 기준점으로도 쓰이는 곳은 `relative`만 남기고 `focus-visible:z-10`만 뺐다.
+- **툴팁 — 아이콘 전용 액션 버튼에만, 전역 딜레이 300ms**: 텍스트 라벨이 있는 버튼엔 안 붙인다(설명 대상이 이미 버튼에 있어서). LNB 접힘 상태에서는 `side="right"`. 페이드 애니메이션은 추가했다가 뺐다 — 불필요한 모션으로 판단.
+- **SidePanel 승격 + 폭 전역 상수화**: `features/session/`(1st consumer: ChatPanel) 전용이던 걸 `components/ui/`로 승격(2nd consumer: DraftsScreen). 기본 폭(600px)은 `defaultWidth` prop이 아니라 모듈 상수로 뒀다 — "폭은 항상 통일될 것"이라는 판단(prop화하면 화면마다 값이 갈릴 여지를 만듦). Esc 닫기는 raw `document.addEventListener` 대신 기존 단축키 레지스트리(`useRegisterAction`/`actionMap.ts`)를 통해 등록 — 새 이벤트 경로를 만들지 않기 위함.
+- **RelativeTime — "ago"/"전" 접미사 완전 제거**: date-fns 기본 로케일 문구("about 3 hours ago"/"약 3시간 전")가 11px 캡션엔 장황하다고 판단해 커스텀 압축 포맷("3h"/"3시간")으로 교체, 이후 접미사까지 국문·영문 동일하게 뺐다(하나만 빼면 언어 간 표현 규칙이 갈라짐).
+
+**초안(Drafts) 화면 전용**
+
+- **카드/상세 패널을 상태별 컴포넌트로 분리** (`WorkingDraftCard`/`IdleDraftCard`, `WorkingDraftDetailPanel`/`IdleDraftDetailPanel` + 공유 `DraftCardShell`/`DraftDetailHeader`): 기존 `DraftCard`/`DraftDetailPanel` 안에서 상태별 분기가 계속 누적되던 구조를 상태 하나당 컴포넌트 하나로 바꿨다. Shell은 클릭/키보드 핸들링만, Header는 Space pill+닫기+상태별 `extraAction` 슬롯만 공유.
+- **사이드뷰 = 상세페이지로 취급**: `NavigationBar`를 목록 컬럼에만 스코프하고, SidePanel은 헤더 행을 포함한 전체 높이로 목록 컬럼과 나란한 형제로 배치(이전처럼 NavigationBar 아래 중첩 아님).
+- **사이드뷰 상태 URL/스토리지 미유지**: 선택된 draft는 순수 로컬 `useState`. 근거: URL이나 스토리지로 남길 만큼 중요한 영역이 아니라고 판단(리뷰/브라우징 화면과는 다른 무게감).
+- **"Regenerate" 용어 채택, 기존 "Extract" 재사용 안 함**: 편집 후 재생성은 최초 추출과 성격이 달라 같은 단어를 쓰면 혼동 소지가 있다고 판단. Granola(편집 후 재처리를 "Regenerate"로 표기), ChatGPT/Claude의 재생성 관용구를 근거로 확인 후 채택.
+- **Regenerate 버튼 — 패널 하단좌측 고정**: 헤더 우측(닫기 옆)은 무게감이 안 맞아 기각(닫기는 chrome급 ghost 액션, Regenerate는 콘텐츠 액션). 우측하단도 챗봇/개발자패널류 위젯 자리 관례와 겹쳐 기각. Fluent 2 Design System 공식 Drawer 가이드("주 액션은 다른 버튼의 왼쪽에 배치")를 근거로 하단좌측 확정.
+- **본문 편집 UI는 저장에 연결하지 않음(의도적 미완성)**: `sources.body`를 저장하는 API가 아직 없다(코드베이스 확인). 지금 상태로 기존 추출 뮤테이션에 연결하면 "편집한 내용이 조용히 무시되는" 실패가 생기므로 클릭 핸들러 자체를 안 붙였다 — 백엔드 준비 후 연결 필요(후속 작업으로 남김).
+- **재생성 비활성화 — `empty` 상태에 한정**: 원문이 안 바뀐 채 재시도하면 결과없음이 또 나올 가능성이 높은 `empty`만 원문 미변경 시 비활성화. `failed`/`cancelled`는 내용이 원인이 아닐 수 있어 이 제약을 안 둠.
+- **상태 아이콘 툴팁 — 비대칭 적용**: `failed`(TriangleAlert)는 업계에서 이미 명시적인 경고 기호라 툴팁 없음. `empty`(SearchX)는 관용화된 기호가 아니라 툴팁으로 의미 보완("Nothing to generate"). `cancelled`는 아이콘 자체 없음(자기 행동이라 설명 불필요). 일괄 규칙이 아니라 실제로 모호한 것만 골라 적용.
+- **타이틀을 카드 헤더로 승격, "Untitled" 임시 텍스트 추가**: 백엔드가 타이틀 생성 LLM 호출을 다이제스천 완료 호출에서 분리하기로 하면서, 기존에 검증했던 "title과 digestion 완료는 원자적으로 결합돼 있어 processing 중엔 title이 존재 불가"라는 전제가 깨졌다 — title이 앞으로는 Working 상태에서도 존재할 수 있다. 카드 하단 풋터를 상단 헤더로 올리고 시각 왼쪽에 "Untitled" 자리를 미리 마련했다("Untitled" 문자열 자체는 타이틀 분리 작업 완료 전까지 임시).
+- **미반영 상태로 남은 것(후속 슬라이스 몫)**: 타이틀 편집(`EditSourceTitleDialog`)·Space 재지정(`DraftSpaceSelect`)·삭제(`DeleteSourceDialog`) 등 기존 idle 액션 컴포넌트가 이번 상태별 분리 이후 새 카드/상세 구조에 아직 재연결되지 않았다 — 타이틀이 실제 기능이 되는 시점(백엔드 분리 완료)에 맞춰 재연결 여부·위치를 다시 판단해야 한다.
+
+---
+
+### 2026-07-15 — 디자인 폴리싱: 초안 액션 재연결 + 팝업 표면(드롭다운/셀렉트/모달) 전역 통일
+
+바로 위 항목의 "미반영 idle 액션"을 전부 재연결했고, 그 과정에서 드롭다운/셀렉트/모달의 시각 언어를 앱 전체 단위로 통일했다.
+
+**초안(Drafts) 액션 재연결**
+
+- **삭제 — 카드(호버 리빌)+상세 헤더 양쪽에 재연결**: 기존 `DeleteSourceDialog`/`useDeleteSource`를 그대로 재사용. 상세에서 삭제하면 다이얼로그만 닫던 기존 컴포넌트에 `onDeleted` 콜백을 추가해 패널 자체도 같이 닫히게 했다 — 안 닫으면 이미 삭제된 항목이 패널에 계속 떠 있는 상태가 됨.
+- **Space 재지정 — Select가 아니라 pill 자체를 드롭다운 트리거로**: `DraftSpaceSelect`(weave `Select` 기반)를 새로 쓰지 않고, 헤더의 Space pill을 `DropdownMenu` 트리거로 바꿨다 — 상세 헤더 안에서 pill의 시각적 무게를 유지하려면 박스형 Select 트리거보다 pill 그대로가 자연스럽다는 판단. 선택 표시는 처음엔 `DropdownMenuRadioGroup`(좌측 원형 점)이었다가, weave `Select`의 우측 체크마크 관례를 따르는 게 이 앱의 기존 패턴과 더 맞다고 판단해 평범한 `DropdownMenuItem`+수동 체크마크로 바꿨다. 이 재구성으로 `DraftSpaceSelect.tsx`/`DraftIdleActions.tsx`(추출·삭제·Space재지정을 한데 묶었던 옛 컴포넌트)가 완전히 중복돼 삭제했다.
+- **제목 — Idle 상세에 실제 저장 연동**: 기존 `useUpdateSourceTitle`/`update_source_title` RPC를 그대로 재사용해 인라인 제목 입력에 blur 시 저장을 붙였다. 본문(body)과 달리 제목은 이미 저장 API가 있어 실제로 연동했다 — 단, 스키마가 빈 제목 저장을 막고 있어(`min(1)`) 지우고 나가면 저장 시도 자체를 안 하고 이전 값이 남는다(빈 제목을 지원하려면 스키마 변경이 먼저 필요, 이번 스코프 아님).
+- **결과없음 카드 아이콘 — 상세 편집과 실시간 연동**: 상세에서 원문을 실제로 고치면(재생성 버튼이 풀리는 조건과 동일: `body !== draft.body`) 리스트 카드의 SearchX 아이콘도 같이 사라진다. 카드와 상세가 다른 컴포넌트 인스턴스라 이 "편집됨" 상태를 `DraftsScreen`(공통 부모)이 들고 양쪽에 내려주는 구조로 구현 — `failed`/`cancelled` 아이콘은 이 로직 대상이 아님(원래도 편집 여부와 무관).
+
+**팝업 표면 전역 통일**
+
+- **공유 상수 `POPOVER_SURFACE_CLASSNAME`(`packages/weave/src/utils.ts`) 신설**: `DropdownMenuContent`/`SelectContent`/`DialogContent`/앱의 `DevToolbar` 패널까지 전부 이 상수로 배경·보더·그림자를 통일. 라이트는 그림자로, 다크는 보더로 경계를 표현(다크에서는 그림자가 존재감이 약해 보더 쪽이 낫다고 판단). `Select`와 `DropdownMenu`는 서로 다른 Radix primitive(폼 컨트롤 vs 액션 메뉴)라 완전히 하나로 합칠 순 없어, "겉보기 표면 스타일만" 공유하는 선에서 통일했다.
+- **다크 전용 신규 토큰 `surface-overlay`**: 기존엔 팝업 배경이 `surface-card`라 LNB(`surface-base`)와는 구분됐지만 메인 콘텐츠·사이드뷰(둘 다 `surface-card`)와는 다크에서 안 구분됐다. LNB·메인·사이드뷰 어느 것과도 안 겹치는 새 값(`#363230`, card와 raised-hover 사이)을 팔레트→시맨틱→Tailwind 3계층에 전부 추가했다 — 기존 `surface-raised-hover`를 재사용하지 않은 이유: 드롭다운 아이템 호버가 이미 이 토큰을 쓰고 있어서, 팝업 배경까지 같은 값이면 호버해도 구분이 안 됨.
+- **DropdownMenu의 overflow가 자기 그림자를 가리던 버그**: `overflow-x-hidden overflow-y-auto`(스크롤용)가 그림자를 가진 바로 그 요소에 같이 걸려 있어서 그림자가 안 보였다. 오버플로우 클리핑을 안쪽 스크롤 전용 래퍼로 옮기고, 바깥 박스(보더·그림자·배경)는 클리핑 없이 그대로 뒀다. `Select`는 이번엔 손대지 않음(v2에서 더 이상 채택 안 할 예정이라 우선순위 낮음).
+- **Tailwind가 `packages/weave`(pnpm 워크스페이스 심볼릭 링크) 안 변경을 반영 안 하던 문제**: Tailwind v4 기본 콘텐츠 스캔이 심볼릭 링크 너머 패키지까지 안 따라가서, `utils.ts`처럼 클래스명이 문자열 상수로만 존재하는 파일은 값을 바꿔도 컴파일된 CSS에 전혀 반영되지 않았다(서버 재시작·캐시 삭제로도 해결 안 됨 — 애초에 스캔 대상이 아니었던 것). `apps/web/src/index.css`에 `@source "../../../packages/weave/src/**/*.{ts,tsx}"`를 추가해 명시적으로 스캔 대상에 포함시켜 해결.
+- **Select만의 자동 포커스는 그대로, DropdownMenu엔 억지로 안 만든다(확정)**: Space 재지정 드롭다운에서 "열릴 때 현재 선택값에 포커스"를 `onOpenAutoFocus`+`ref`로 흉내 내봤으나, Radix의 `DropdownMenu.Content`는 이 prop이 타입 선언엔 없고(실제 런타임엔 있음 — `radix-ui` 재노출 패키지의 타입 갭으로 확인됨) 걸어도 유지보수 비용이 계속 발생했다. Select의 자동 포커스는 `listbox`/`combobox` 시맨틱을 가진 진짜 폼 컨트롤이라 Radix가 공짜로 주는 네이티브 동작이고, DropdownMenu는 애초에 "현재 값" 개념이 없는 액션 메뉴 primitive라 이 동작을 억지로 맞출 이유가 없다고 최종 판단 — 커스텀 코드를 전부 걷어내고 선택 표시는 체크마크만 남겼다.
+
+---

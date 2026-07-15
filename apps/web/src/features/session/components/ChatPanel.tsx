@@ -2,13 +2,13 @@ import { Suspense, useLayoutEffect } from "react";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
+import { SidePanel } from "@web/components/ui/SidePanel";
 import { useScrollAnchor } from "@web/features/session/hooks/useScrollAnchor";
 import { useSessionMessages } from "@web/features/session/hooks/useSessionMessages";
 
 import { ChatComposer } from "./ChatComposer";
 import { MessageList } from "./MessageList";
 import { MessageListSkeleton } from "./MessageListSkeleton";
-import { SidePanel } from "./SidePanel";
 
 function ChatPanelContent() {
   const messages = useSessionMessages();

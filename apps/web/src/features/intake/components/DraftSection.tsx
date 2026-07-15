@@ -28,11 +28,11 @@ export function DraftSection({
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      {/* 페이지 타이틀 바가 이제 스크롤 컨테이너 밖에 있어, 이 스크롤 영역 안에서는
-          top-0이 곧 타이틀 바로 아래 지점이다. 불투명 bg-surface-card로 뒤에서
-          스크롤되는 카드가 안 비치게 막는다. */}
-      <div className="sticky top-0 z-10 bg-surface-card py-1">
+    <section className="flex flex-col">
+      {/* 간격을 top 오프셋이 아니라 sticky 박스 안쪽 padding-top으로 준다 — top을
+          올리면 그 틈이 이 박스 바깥이 되어 버려서, 아래에서 스크롤되어 올라오는
+          카드가 그 틈으로 비쳐 보인다. padding은 여전히 불투명 배경 안쪽이라 안 비친다. */}
+      <div className="sticky top-0 z-10 bg-surface-card pt-1 will-change-transform">
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
@@ -52,14 +52,16 @@ export function DraftSection({
               expanded ? "rotate-180" : "rotate-90",
             )}
           />
-          <span className="ml-1.5 flex items-center">{icon}</span>
+          <span className="ml-1.5 flex size-4 shrink-0 items-center justify-center">
+            {icon}
+          </span>
           {label}
           <span className="text-xs text-fg-tertiary">{count}</span>
         </button>
       </div>
 
       {expanded && (
-        <div id={contentId} className="flex flex-col gap-3">
+        <div id={contentId} className="flex flex-col pt-1">
           {children}
         </div>
       )}

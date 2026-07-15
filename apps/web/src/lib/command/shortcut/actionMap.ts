@@ -20,6 +20,9 @@ const actionMap = {
   stream: {
     stop: def("session.stream_stop", "escape", "global", 1),
   },
+  sidePanel: {
+    close: def("common.close", "escape", "global"),
+  },
   navigation: {
     focusComposer: def("session.focus_composer", "mod+l", "global"),
     newContext: def("session.new_context", "mod+shift+o", "global"),

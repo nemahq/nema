@@ -11,10 +11,7 @@ export function SettingsMenuItem({ onClick }: SettingsMenuItemProps) {
   const { t } = useTranslation();
 
   return (
-    <DropdownMenuItem
-      onClick={onClick}
-      className="cursor-pointer data-[highlighted]:bg-surface-raised-hover/75 dark:data-[highlighted]:bg-fg-primary/10"
-    >
+    <DropdownMenuItem onClick={onClick}>
       <Settings />
       {t("settings.settings")}
     </DropdownMenuItem>

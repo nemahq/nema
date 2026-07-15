@@ -72,7 +72,7 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
       </NavigationBar>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-8">
+        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6">
           <div className="flex min-w-0 items-center gap-2">
             <span className={CONTENT_BADGE_CLASS}>
               {space.name.charAt(0).toUpperCase()}
@@ -82,7 +82,7 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
             </h1>
           </div>
 
-          <div className="mt-6">
+          <div className="mt-4">
             <SourceComposer spaceId={space.id} />
           </div>
 

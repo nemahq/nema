@@ -10,7 +10,7 @@ interface NavigationBarProps {
 // 필요가 없다(Notion 브레드크럼과 같은 성격).
 export function NavigationBar({ children }: NavigationBarProps) {
   return (
-    <div className="flex h-11 shrink-0 items-center border-b border-border/50 bg-surface-card px-4">
+    <div className="flex h-11 shrink-0 items-center overscroll-none border-b border-border/50 bg-surface-card px-4">
       {children}
     </div>
   );

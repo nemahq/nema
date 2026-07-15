@@ -2,6 +2,10 @@
 @plugin "@tailwindcss/typography";
 @source "../../node_modules/streamdown/dist/*.js";
 @source "../../node_modules/@streamdown/code/dist/*.js";
+/* pnpm 워크스페이스 심볼릭 링크 너머 패키지라 Tailwind 기본 자동 스캔이 못
+   따라간다 — utils.ts처럼 클래스명이 문자열 상수로만 존재하는 파일은 명시
+   안 하면 여기 정의된 유틸리티가 전혀 생성되지 않는다. */
+@source "../../../packages/weave/src/**/*.{ts,tsx}";
 
 /* 앱 수준 모드 색상 — weave 팔레트를 앱 도메인 이름으로 매핑 */
 

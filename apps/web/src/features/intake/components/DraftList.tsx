@@ -2,13 +2,17 @@ import { Circle, Inbox } from "@nema-io/weave/icons";
 
 import { Watermark } from "@web/components/ui/Watermark";
 import { usePendingSourceListQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
-import type { PendingSourceItem } from "@web/features/intake/types";
+import type {
+  DraftCardData,
+  PendingSourceItem,
+} from "@web/features/intake/types";
 import { type DraftStatus, draftStatus } from "@web/features/intake/utils";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { DraftCard } from "./DraftCard";
 import { DraftSection } from "./DraftSection";
+import { IdleDraftCard } from "./IdleDraftCard";
+import { WorkingDraftCard } from "./WorkingDraftCard";
 
 interface Draft {
   source: PendingSourceItem;
@@ -20,7 +24,13 @@ function toDraft(source: PendingSourceItem): Draft | null {
   return status === null ? null : { source, status };
 }
 
-export function DraftList() {
+interface DraftListProps {
+  onSelectSource: (draft: DraftCardData) => void;
+  // 결과없음 카드의 상태 아이콘 표시 여부에 쓰는, 현재 상세에서 편집 중인 sourceId.
+  editedDraftId: string | null;
+}
+
+export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
   const { t } = useTranslation();
   // DraftsScreen이 이미 이 쿼리의 최초 로딩(isLoading)을 헤더까지 포함해 걸러주므로,
   // 여기서는 그 이후 상태(에러·빈 목록·목록)만 다루면 된다.
@@ -57,44 +67,57 @@ export function DraftList() {
   const workingDrafts = drafts.filter(({ status }) => status === "processing");
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col">
       <DraftSection
         label={t("intake.draft_section_waiting")}
         count={waitingDrafts.length}
         icon={<Inbox className="size-4 shrink-0 text-status-warning" />}
         tone="warning"
       >
-        {waitingDrafts.map(({ source, status }) => (
-          <DraftCard
-            key={source.sourceId}
-            sourceId={source.sourceId}
-            spaceId={source.spaceId}
-            title={source.title}
-            body={source.body}
-            status={status}
-            createdAt={source.createdAt}
-          />
-        ))}
+        {waitingDrafts.map(({ source, status }) => {
+          const draft: DraftCardData = {
+            sourceId: source.sourceId,
+            spaceId: source.spaceId,
+            title: source.title,
+            body: source.body,
+            status,
+            createdAt: source.createdAt,
+          };
+          return (
+            <IdleDraftCard
+              key={source.sourceId}
+              draft={draft}
+              isEdited={source.sourceId === editedDraftId}
+              onSelect={() => onSelectSource(draft)}
+            />
+          );
+        })}
       </DraftSection>
 
       <DraftSection
         label={t("intake.draft_section_working")}
         count={workingDrafts.length}
         icon={
-          <Circle className="size-2.5 shrink-0 fill-current text-fg-tertiary" />
+          <Circle className="size-2.5 shrink-0 animate-pulse fill-current text-fg-tertiary" />
         }
       >
-        {workingDrafts.map(({ source, status }) => (
-          <DraftCard
-            key={source.sourceId}
-            sourceId={source.sourceId}
-            spaceId={source.spaceId}
-            title={source.title}
-            body={source.body}
-            status={status}
-            createdAt={source.createdAt}
-          />
-        ))}
+        {workingDrafts.map(({ source, status }) => {
+          const draft: DraftCardData = {
+            sourceId: source.sourceId,
+            spaceId: source.spaceId,
+            title: source.title,
+            body: source.body,
+            status,
+            createdAt: source.createdAt,
+          };
+          return (
+            <WorkingDraftCard
+              key={source.sourceId}
+              draft={draft}
+              onSelect={() => onSelectSource(draft)}
+            />
+          );
+        })}
       </DraftSection>
     </div>
   );

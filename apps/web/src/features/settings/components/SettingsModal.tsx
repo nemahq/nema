@@ -1,6 +1,16 @@
 import { useState } from "react";
 
-import { Dialog, DialogContent, DialogTitle } from "@nema-io/weave";
+import {
+  Button,
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@nema-io/weave";
+import { X } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -30,9 +40,25 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         aria-describedby={undefined}
+        showCloseButton={false}
         className="gap-0 overflow-hidden p-0 md:max-w-3xl"
       >
         <DialogTitle className="sr-only">{t("settings.settings")}</DialogTitle>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogClose asChild>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                aria-label={t("common.close")}
+                className="absolute top-4 right-4 size-7 text-fg-tertiary"
+              >
+                <X className="size-5" />
+              </Button>
+            </DialogClose>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{t("common.close")}</TooltipContent>
+        </Tooltip>
         <div className="flex h-[560px]">
           <SettingsNav section={section} onSectionChange={setSection} />
           <div className="flex-1 overflow-y-auto p-6 dark:bg-surface-base">

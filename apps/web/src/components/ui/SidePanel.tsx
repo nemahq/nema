@@ -1,15 +1,18 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
-const DEFAULT_WIDTH = 480;
+import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
+
+const DEFAULT_WIDTH = 600;
 const MIN_WIDTH = 280;
 const MAX_WIDTH_RATIO = 0.5;
 
 interface SidePanelProps {
   children: ReactNode;
+  onClose?: () => void;
 }
 
-export function SidePanel({ children }: SidePanelProps) {
+export function SidePanel({ children, onClose }: SidePanelProps) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -17,6 +20,11 @@ export function SidePanel({ children }: SidePanelProps) {
   useEffect(function cleanupOnUnmount() {
     return () => cleanupRef.current?.();
   }, []);
+
+  useRegisterAction("sidePanel.close", {
+    execute: () => onClose?.(),
+    enabled: !!onClose,
+  });
 
   function handleResizeStart(e: React.MouseEvent) {
     e.preventDefault();
@@ -58,7 +66,7 @@ export function SidePanel({ children }: SidePanelProps) {
 
   return (
     <aside
-      className="relative flex shrink-0 flex-col min-h-0 bg-surface-base"
+      className="relative flex shrink-0 flex-col min-h-0 bg-surface-card"
       style={{ width }}
     >
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
@@ -66,7 +74,7 @@ export function SidePanel({ children }: SidePanelProps) {
         role="separator"
         aria-orientation="vertical"
         onMouseDown={handleResizeStart}
-        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize border-l border-border/50 hover:border-brand active:border-brand"
+        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize border-l border-border/50 hover:border-l-2 hover:border-fg-tertiary/40 active:border-l-2 active:border-fg-secondary/60 dark:hover:border-fg-tertiary dark:active:border-fg-secondary"
       />
 
       {children}

@@ -15,12 +15,16 @@ interface DeleteSourceDialogProps {
   sourceId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // 상세 패널에서 열었을 때, 삭제된 항목을 계속 띄워두지 않도록 패널도 같이
+  // 닫기 위한 훅 — 카드(목록)에서 열었을 때는 필요 없어 옵셔널.
+  onDeleted?: () => void;
 }
 
 export function DeleteSourceDialog({
   sourceId,
   open,
   onOpenChange,
+  onDeleted,
 }: DeleteSourceDialogProps) {
   const { t } = useTranslation();
   const deleteMutation = useDeleteSource();
@@ -28,7 +32,12 @@ export function DeleteSourceDialog({
   function handleDelete() {
     deleteMutation.mutate(
       { sourceId },
-      { onSuccess: () => onOpenChange(false) },
+      {
+        onSuccess: () => {
+          onOpenChange(false);
+          onDeleted?.();
+        },
+      },
     );
   }
 
