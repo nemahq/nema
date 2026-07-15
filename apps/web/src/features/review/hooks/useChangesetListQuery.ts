@@ -7,6 +7,8 @@ import { trpc } from "@web/lib/trpc";
 export function useChangesetListQuery(spaceId: string | undefined) {
   return trpc.changeset.listChangesets.useQuery(
     { spaceId: spaceId ?? "", limit: CHANGESET_LIST_LIMIT_MAX },
-    { enabled: spaceId !== undefined },
+    // 변경사항 탭 배지를 떠받치는 쿼리 — 실패를 조용히 넘기지 않고 보고한다
+    // (형제 쿼리 space.list와 동일 패턴).
+    { enabled: spaceId !== undefined, meta: { reportToSentry: true } },
   );
 }

@@ -20,5 +20,21 @@ BEGIN
   END IF;
 END $$;
 
-ALTER PUBLICATION supabase_realtime ADD TABLE sources;
-ALTER PUBLICATION supabase_realtime ADD TABLE changesets;
+-- 대시보드로 수동 추가된 환경 등 이미 멤버면 ADD TABLE이 에러라, 멤버십을 확인해
+-- 없을 때만 추가한다(멱등).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'sources'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE sources;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'changesets'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE changesets;
+  END IF;
+END $$;
