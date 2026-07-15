@@ -9,6 +9,7 @@ export type SupabaseErrorCode =
   | "topic_name_conflict"
   | "reference_state_changed"
   | "ingestion_review_state_changed"
+  | "space_delete_target_required"
   | "query_failed";
 
 const PG_NOT_FOUND = "P0002";
@@ -40,6 +41,10 @@ const NEMA_REFERENCE_STATE_CHANGED = "NM007";
 // ingestion 리뷰 상태 가드 실패(discard_ingestion_review·restore_ingestion_review) —
 // NM004·NM005·NM007과 같은 "그 사이 상태가 바뀜" 결이지만 엔티티가 달라 코드를 나눈다.
 const NEMA_INGESTION_REVIEW_STATE_CHANGED = "NM008";
+// Space 삭제 시 대기 초안이 있는데 이동 대상이 없음(delete_space) — 클라이언트가
+// 항상 미리 계산해서 넘기므로 정상 경로에선 안 뜨는 방어 가드지만, NM002와 같은
+// "정상적인 사용자 유도" 결이라 시스템 장애(query_failed)와 분리해둔다.
+const NEMA_SPACE_DELETE_TARGET_REQUIRED = "NM009";
 
 export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
   switch (pgCode) {
@@ -64,6 +69,8 @@ export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
       return "reference_state_changed";
     case NEMA_INGESTION_REVIEW_STATE_CHANGED:
       return "ingestion_review_state_changed";
+    case NEMA_SPACE_DELETE_TARGET_REQUIRED:
+      return "space_delete_target_required";
     default:
       return "query_failed";
   }

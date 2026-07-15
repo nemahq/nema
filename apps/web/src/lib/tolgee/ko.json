@@ -248,6 +248,7 @@
     "create_title": "새 스페이스",
     "delete_confirm_instruction": "확인하려면 \"{name}\" 입력",
     "delete_last_blocked": "워크스페이스엔 스페이스가 최소 하나 이상 있어야 해요. 다른 스페이스를 먼저 만들어주세요.",
+    "delete_move_drafts_label": "대기 중인 초안 {count}개 이동 위치",
     "delete_title": "스페이스 삭제",
     "delete_warning": "이 스페이스를 삭제하면 안의 모든 콘텐츠가 영구적으로 삭제돼요. 되돌릴 수 없어요.",
     "menu": "스페이스 메뉴",

@@ -1,10 +1,12 @@
 import {
+  SpaceCountPendingDraftsInputSchema,
   SpaceCreateInputSchema,
   SpaceDeleteInputSchema,
   SpaceUpdateInputSchema,
 } from "@nema-io/shared";
 
 import {
+  countPendingDrafts,
   createSpace,
   deleteSpace,
   listSpaces,
@@ -36,6 +38,16 @@ export const spaceRouter = router({
   delete: protectedProcedure
     .input(SpaceDeleteInputSchema)
     .mutation(({ ctx, input }) =>
-      deleteSpace({ supabase: ctx.supabase, spaceId: input.spaceId }),
+      deleteSpace({
+        supabase: ctx.supabase,
+        spaceId: input.spaceId,
+        targetSpaceId: input.targetSpaceId,
+      }),
+    ),
+
+  countPendingDrafts: protectedProcedure
+    .input(SpaceCountPendingDraftsInputSchema)
+    .query(({ ctx, input }) =>
+      countPendingDrafts({ supabase: ctx.supabase, spaceId: input.spaceId }),
     ),
 });
