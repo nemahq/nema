@@ -1,15 +1,19 @@
+import type { ReferenceMergeUpdate } from "@nema-io/shared";
+
 import type { ReviewDigest, ReviewNewReference } from "./types";
 
 type ConfirmDisabledReason =
   | "no_candidates"
   | "missing_title"
   | "empty_label"
+  | "empty_reference"
   | null;
 
 export function confirmDisabledReason(
   hasCandidates: boolean,
   hasEmptyTitle: boolean,
   hasEmptyLabel: boolean,
+  hasEmptyReference: boolean,
 ): ConfirmDisabledReason {
   if (!hasCandidates) {
     return "no_candidates";
@@ -17,7 +21,10 @@ export function confirmDisabledReason(
   if (hasEmptyTitle) {
     return "missing_title";
   }
-  return hasEmptyLabel ? "empty_label" : null;
+  if (hasEmptyLabel) {
+    return "empty_label";
+  }
+  return hasEmptyReference ? "empty_reference" : null;
 }
 
 interface ConfirmReviewFlowArgs {
@@ -26,14 +33,17 @@ interface ConfirmReviewFlowArgs {
   digestRows: {
     digest: ReviewDigest;
     title: string;
+    body: ReviewDigest["body"];
     topics: ReviewDigest["topics"];
     tags: ReviewDigest["tags"];
   }[];
   newReferences: ReviewNewReference[];
+  referenceUpdates: ReferenceMergeUpdate[];
   updateReview: (payload: {
     changesetId: string;
     digests: ReviewDigest[];
     newReferences: ReviewNewReference[];
+    referenceUpdates: ReferenceMergeUpdate[];
   }) => Promise<unknown>;
   confirmReview: (payload: { changesetId: string }) => Promise<unknown>;
 }
@@ -49,6 +59,7 @@ export async function runConfirmReview(
     dirty,
     digestRows,
     newReferences,
+    referenceUpdates,
     updateReview,
     confirmReview,
   } = args;
@@ -56,13 +67,22 @@ export async function runConfirmReview(
   if (dirty) {
     await updateReview({
       changesetId,
-      digests: digestRows.map(({ digest, title, topics, tags }) => ({
+      digests: digestRows.map(({ digest, title, body, topics, tags }) => ({
         ...digest,
         title: title.trim(),
+        body,
         topics: topics.map((topic) => ({ ...topic, name: topic.name.trim() })),
         tags: tags.map((tag) => ({ ...tag, title: tag.title.trim() })),
       })),
-      newReferences,
+      newReferences: newReferences.map((reference) => ({
+        ...reference,
+        title: reference.title.trim(),
+        body: reference.body.trim(),
+      })),
+      referenceUpdates: referenceUpdates.map((update) => ({
+        ...update,
+        mergeNote: update.mergeNote.trim(),
+      })),
     });
   }
   await confirmReview({ changesetId });

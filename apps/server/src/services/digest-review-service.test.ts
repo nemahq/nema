@@ -97,7 +97,12 @@ describe("getReview", () => {
         ],
       },
       references: [
-        { id: EXISTING_REFERENCE_ID, type: "person", title: "기존 인물" },
+        {
+          id: EXISTING_REFERENCE_ID,
+          type: "person",
+          title: "기존 인물",
+          body: "기존 설명",
+        },
       ],
     });
 
@@ -117,7 +122,97 @@ describe("getReview", () => {
       },
     ]);
     expect(review.citedReferences).toEqual([
-      { id: EXISTING_REFERENCE_ID, type: "person", title: "기존 인물" },
+      {
+        id: EXISTING_REFERENCE_ID,
+        type: "person",
+        title: "기존 인물",
+        body: "기존 설명",
+        mergeNote: null,
+      },
+    ]);
+  });
+
+  // 한 changeset에 인용된 기존 Reference가 여럿이고 그중 일부만 병합 제안이 있는 실제
+  // 상황 — 제안 있는 것만 mergeNote가 붙고 나머지는 null이어야 한다. "제안 하나라도
+  // 있으면 전부에 적용" 같은 mergeNoteById 회귀를 이 혼합 케이스로 고정한다.
+  it("일부 인용 Reference에만 병합 제안이 있으면 그것만 mergeNote, 나머지는 null", async () => {
+    const MERGED_REFERENCE_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+    const PLAIN_REFERENCE_ID = "eeeeeeee-1111-4eee-8eee-eeeeeeeeeeee";
+    const supabase = mockSupabase({
+      changesets: {
+        id: CHANGESET_ID,
+        number: 12,
+        type: "ingestion",
+        status: "pending",
+        source_id: SOURCE_ID,
+        space_id: SPACE_ID,
+        spaces: { workspace_id: WORKSPACE_ID },
+        sources: {
+          title: "원문 제목",
+          body: "원문",
+          created_at: "2026-07-07T00:00:00Z",
+        },
+        changes: [
+          {
+            id: "22222222-2222-4222-8222-222222222222",
+            action: "create",
+            target_type: "digest",
+            target_id: "33333333-3333-4333-8333-333333333333",
+            data: {
+              title: "제목",
+              description: "요약",
+              body: { type: "learning", finding: "발견" },
+              topics: [],
+              tags: [],
+              reference_ids: [MERGED_REFERENCE_ID, PLAIN_REFERENCE_ID],
+              external_urls: [],
+            },
+          },
+          {
+            id: "44444444-4444-4444-8444-444444444444",
+            action: "modify",
+            target_type: "reference",
+            target_id: MERGED_REFERENCE_ID,
+            data: {
+              before: { body: "기존 설명" },
+              after: { body: "새 정보를 녹인 다듬은 설명" },
+            },
+          },
+        ],
+      },
+      references: [
+        {
+          id: MERGED_REFERENCE_ID,
+          type: "person",
+          title: "병합된 인물",
+          body: "기존 설명",
+        },
+        {
+          id: PLAIN_REFERENCE_ID,
+          type: "product",
+          title: "단순 인용 제품",
+          body: "제품 설명",
+        },
+      ],
+    });
+
+    const review = await getReview({ supabase, changesetId: CHANGESET_ID });
+
+    expect(review.citedReferences).toEqual([
+      {
+        id: MERGED_REFERENCE_ID,
+        type: "person",
+        title: "병합된 인물",
+        body: "기존 설명",
+        mergeNote: "새 정보를 녹인 다듬은 설명",
+      },
+      {
+        id: PLAIN_REFERENCE_ID,
+        type: "product",
+        title: "단순 인용 제품",
+        body: "제품 설명",
+        mergeNote: null,
+      },
     ]);
   });
 
@@ -217,6 +312,7 @@ describe("updateReview", () => {
           externalUrls: ["https://toss.im"],
         },
       ],
+      referenceUpdates: [],
     });
 
     expect(rpc).toHaveBeenCalledWith(
@@ -230,6 +326,32 @@ describe("updateReview", () => {
             body: "송금 앱",
             external_urls: ["https://toss.im"],
           },
+        ],
+      }),
+    );
+  });
+
+  // 병합 편집(mergeNote)은 RPC 계약 키(reference_id/body)로 실어 보낸다 — 계약 키가
+  // 어긋나면 확정 시 references.body가 안 바뀌는데 어느 층도 소리 내지 않는다.
+  it("병합 편집을 RPC 계약 키(reference_id/body)로 실어 보낸다", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    await updateReview({
+      supabase,
+      changesetId: CHANGESET_ID,
+      digests: [],
+      newReferences: [],
+      referenceUpdates: [
+        { referenceId: EXISTING_REFERENCE_ID, mergeNote: "다듬은 설명" },
+      ],
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      "update_pending_ingestion",
+      expect.objectContaining({
+        p_reference_updates: [
+          { reference_id: EXISTING_REFERENCE_ID, body: "다듬은 설명" },
         ],
       }),
     );
@@ -268,6 +390,7 @@ describe("updateReview", () => {
         },
       ],
       newReferences: [],
+      referenceUpdates: [],
     });
 
     expect(rpc).toHaveBeenCalledWith(

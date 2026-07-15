@@ -30,6 +30,7 @@ export const digestReviewRouter = router({
         changesetId: input.changesetId,
         digests: input.digests,
         newReferences: input.newReferences,
+        referenceUpdates: input.referenceUpdates,
       }),
     ),
 

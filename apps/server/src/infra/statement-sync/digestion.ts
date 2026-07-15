@@ -8,6 +8,7 @@ import {
   DIGEST_TAGS_MAX,
   DIGEST_TITLE_MAX_LENGTH,
   DIGEST_TOPICS_MAX,
+  REFERENCE_BODY_MAX_LENGTH,
   REFERENCE_EXTERNAL_URLS_MAX,
   TAG_DESCRIPTION_MAX_LENGTH,
   TAG_TITLE_MAX_LENGTH,
@@ -22,6 +23,7 @@ import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type {
   GeneratedDigest,
   GeneratedReference,
+  GeneratedReferenceUpdate,
 } from "@server/prompts/digest-generation";
 import {
   buildDigestGenerationMessage,
@@ -137,7 +139,12 @@ async function digestSource(params: {
   const referenceContext = registries.references.map((reference, index) => {
     const label = `E${index}`;
     labelToId.set(label, reference.id);
-    return { label, type: reference.type, title: reference.title };
+    return {
+      label,
+      type: reference.type,
+      title: reference.title,
+      body: reference.body,
+    };
   });
 
   const message = buildDigestGenerationMessage(source.body, {
@@ -187,9 +194,11 @@ async function digestSource(params: {
     p_source_id: source.id,
     // RPC가 jsonb로 받는다 — 계약 상대는 write_ingestion_review_changes가 읽는
     // 키(digest: title/description/body/topics/tags/reference_ids/new_reference_keys/
-    // external_urls, reference: key/type/title/body/external_urls)다. 키를 바꾸면 RPC도 함께 고친다.
+    // external_urls, reference: key/type/title/body/external_urls, update: reference_id/body)다.
+    // 키를 바꾸면 RPC도 함께 고친다.
     p_digests: normalized.digests as unknown as Json,
     p_new_references: normalized.newReferences as unknown as Json,
+    p_reference_updates: normalized.referenceUpdates as unknown as Json,
   });
   if (error) {
     throw new Error(
@@ -203,7 +212,7 @@ async function digestSource(params: {
 interface Registries {
   topics: string[];
   tags: Array<{ title: string; description: string }>;
-  references: Array<{ id: string; type: string; title: string }>;
+  references: Array<{ id: string; type: string; title: string; body: string }>;
 }
 
 async function fetchRegistries(
@@ -227,7 +236,7 @@ async function fetchRegistries(
       .limit(REGISTRY_PROMPT_LIMIT),
     supabase
       .from("references")
-      .select("id, type, title")
+      .select("id, type, title, body")
       .eq("workspace_id", scope.workspaceId)
       .eq("status", "active")
       .order("updated_at", { ascending: false })
@@ -272,6 +281,11 @@ interface RpcNewReference {
   title: string;
   body: string;
   external_urls: string[];
+}
+
+interface RpcReferenceUpdate {
+  reference_id: string;
+  body: string;
 }
 
 // 평평한 LLM 출력을 타입별 판별 유니언으로 조립한다 — 타입 밖 필드는 버린다
@@ -381,12 +395,20 @@ function sanitizeUrls(urls: string[], max: number): string[] {
 // LLM 출력은 신뢰 경계 밖 — 라벨·키 환각은 버리고, 길이·개수 상한을 코드로 강제한다.
 // 어떤 Digest도 인용하지 않는 신규 레퍼런스 제안은 버린다(인용 없는 등록은 노이즈).
 export function normalizeGeneratedDigests(
-  output: { digests: GeneratedDigest[]; newReferences: GeneratedReference[] },
+  output: {
+    digests: GeneratedDigest[];
+    newReferences: GeneratedReference[];
+    existingReferenceUpdates: GeneratedReferenceUpdate[];
+  },
   context: {
     labelToId: Map<string, string>;
     existingTags: Array<{ title: string; description: string }>;
   },
-): { digests: RpcDigest[]; newReferences: RpcNewReference[] } {
+): {
+  digests: RpcDigest[];
+  newReferences: RpcNewReference[];
+  referenceUpdates: RpcReferenceUpdate[];
+} {
   const tagDescriptionByTitle = new Map(
     context.existingTags.map((tag) => [tag.title, tag.description]),
   );
@@ -411,6 +433,7 @@ export function normalizeGeneratedDigests(
 
   const digests: RpcDigest[] = [];
   const citedKeys = new Set<string>();
+  const citedExistingRefIds = new Set<string>();
 
   for (const digest of output.digests) {
     const referenceIds = [
@@ -420,6 +443,9 @@ export function normalizeGeneratedDigests(
           .filter((id): id is string => id !== undefined),
       ),
     ];
+    for (const id of referenceIds) {
+      citedExistingRefIds.add(id);
+    }
     const newReferenceKeys = [
       ...new Set(
         digest.newReferenceKeys
@@ -472,11 +498,32 @@ export function normalizeGeneratedDigests(
     });
   }
 
+  // 병합 제안은 인용된 기존 Reference에만 — 인용도 안 한 항목을 다듬으라는 제안은
+  // 노이즈(미인용 신규 레퍼런스를 버리는 것과 같은 결). 라벨은 인용과 같은 표에서
+  // 해석하고, 한 Reference에 여러 제안이 오면 첫 것만 취한다.
+  const referenceUpdates: RpcReferenceUpdate[] = [];
+  const updatedRefIds = new Set<string>();
+  for (const update of output.existingReferenceUpdates) {
+    const referenceId = context.labelToId.get(update.label.trim());
+    const body = update.body.trim().slice(0, REFERENCE_BODY_MAX_LENGTH);
+    if (
+      referenceId === undefined ||
+      !citedExistingRefIds.has(referenceId) ||
+      updatedRefIds.has(referenceId) ||
+      body === ""
+    ) {
+      continue;
+    }
+    updatedRefIds.add(referenceId);
+    referenceUpdates.push({ reference_id: referenceId, body });
+  }
+
   return {
     digests,
     newReferences: [...referencesByKey.values()].filter((reference) =>
       citedKeys.has(reference.key),
     ),
+    referenceUpdates,
   };
 }
 

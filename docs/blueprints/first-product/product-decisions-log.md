@@ -89,6 +89,16 @@
 - 근거: 사람이 upfront로 제목 붙이는 부담 없이(= 작성 시점엔 여전히 raw), Source에 스캔 가능한 식별자를 줌. 제목이 엔진 파생 메타데이터라 "untouched raw" 성격과 충돌 안 함.
 - intake 슬라이싱: **1차 슬라이스(FE-only) 영향 없음**(컴포저 제목 없음, 목록은 미리보기/상태로, 제목 미충전 시 placeholder). **제목 기능(컬럼+LLM채움+편집)은 별도 후속 BE+FE 슬라이스**(마이그레이션 → 2-PR/로컬검증).
 
+## #16 기존 Reference 병합 편집 — 다듬음 완성본 교체 (확정)
+
+**결정: 기존 Reference가 다시 언급되고 새 정보가 있으면, 엔진이 '기존 설명 + 새 정보'를 녹인 완성본(body 전체)을 제안 → 사람이 리뷰에서 편집 → 확정 시 references.body를 통째로 교체.**
+
+- 걸리는 곳: review-flow "기존 Reference 후보 병합 편집". glossary "새로 쌓이지 않고 기존 것이 다듬어진다".
+- 대안 "새 정보만 덧붙임(append)"은 시간이 지나면 body가 조각으로 쌓여 glossary 원칙과 어긋나 기각.
+- 시맨틱: 병합은 인용된 기존 Reference에만(미인용 제안은 노이즈로 폐기), 새 정보 없는 단순 인용은 제안 없음(body 그대로·읽기 전용). type·title 읽기 전용, body만 편집.
+- 비용: 엔진이 다듬으려면 기존 body를 프롬프트에 실어야 함(기존엔 label·type·title만) — 재사용 후보 상한(REGISTRY_PROMPT_LIMIT=200)만큼 body가 실려 토큰 부담. dogfooding 데이터로 상한 조정 예정(PM 수용).
+- 동시성 단순화(첫 출시): 확정은 워크스페이스 전역 Reference의 body를 교체한다. 생성~확정 사이 그 Reference가 archive되면 조용히 건너뛰고, 그 사이 다른 경로가 body를 바꿨어도 last-write-wins로 덮는다(update_reference의 in-place modify와 같은 계약). {before, after} modify Change로 남겨 자기완결.
+
 ## 보류 (추후 재논의) — retrieval/검색 클러스터
 
 검색은 Nema 핵심 기능이라 지금 급히 못박지 않고, Kyle의 검색 지식이 깊어질 때 검색/retrieval 설계와 함께 첨예하게 다룬다. 아래 3개를 한 묶음으로 보류.
