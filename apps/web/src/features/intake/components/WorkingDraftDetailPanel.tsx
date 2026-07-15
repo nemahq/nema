@@ -10,6 +10,7 @@ import { useCancelSource } from "@web/features/intake/hooks/useCancelSource";
 import type { DraftDetailPanelProps } from "@web/features/intake/types";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { DraftBodyView } from "./DraftBodyView";
 import { DraftDetailHeader } from "./DraftDetailHeader";
 import { DraftTitle } from "./DraftTitle";
 
@@ -64,20 +65,8 @@ export function WorkingDraftDetailPanel({
         showPlaceholder
         className="block px-6 pt-4 text-xl font-bold text-fg-primary"
       />
-      <div className="flex-1 overflow-y-auto px-6 py-4">
-        <div className="space-y-4">
-          {body
-            .split(/\n{2,}/)
-            .filter((paragraph) => paragraph.trim() !== "")
-            .map((paragraph, index) => (
-              <p
-                key={index}
-                className="text-sm leading-relaxed text-fg-primary"
-              >
-                {paragraph}
-              </p>
-            ))}
-        </div>
+      <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
+        <DraftBodyView value={body} readOnly />
       </div>
     </div>
   );

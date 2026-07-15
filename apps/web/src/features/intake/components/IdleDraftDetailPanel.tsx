@@ -23,6 +23,7 @@ import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DeleteSourceDialog } from "./DeleteSourceDialog";
+import { DraftBodyView } from "./DraftBodyView";
 import { DraftDetailHeader } from "./DraftDetailHeader";
 
 export function IdleDraftDetailPanel({
@@ -177,13 +178,12 @@ export function IdleDraftDetailPanel({
         </div>
       )}
       <div className="flex min-h-0 flex-1 flex-col gap-2 px-6 py-4">
-        <textarea
+        <DraftBodyView
           value={body}
-          onChange={(e) => handleBodyChange(e.target.value)}
+          onChange={handleBodyChange}
           onBlur={handleBodyBlur}
           maxLength={SOURCE_BODY_MAX_LENGTH}
-          aria-invalid={updateBodyMutation.isError}
-          className="flex-1 resize-none text-sm leading-relaxed text-fg-primary outline-none"
+          ariaInvalid={updateBodyMutation.isError}
         />
         {updateBodyMutation.isError && (
           <Alert variant="error">
