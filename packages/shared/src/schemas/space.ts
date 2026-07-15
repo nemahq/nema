@@ -38,3 +38,10 @@ export const SpaceDeleteInputSchema = z.object({
   targetSpaceId: z.string().uuid().optional(),
 });
 export type SpaceDeleteInput = z.infer<typeof SpaceDeleteInputSchema>;
+
+export const SpaceCountPendingDraftsInputSchema = z.object({
+  spaceId: z.string().uuid(),
+});
+export type SpaceCountPendingDraftsInput = z.infer<
+  typeof SpaceCountPendingDraftsInputSchema
+>;

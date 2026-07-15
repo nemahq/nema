@@ -50,7 +50,8 @@ jobs:
           supabase gen types --lang=typescript --local > apps/server/src/infra/database.types.ts
           # CLI가 exit 0으로 빈 출력을 내면 아래 diff가 "재생성하라"는 엉뚱한 안내로 실패하므로 원인을 먼저 가린다
           [ -s apps/server/src/infra/database.types.ts ] || { echo "::error::supabase gen types produced empty output"; exit 1; }
-          supabase stop || true # 정리용 — 실패해도 드리프트 판정을 막지 않는다
+          # supabase stop은 여기서 안 한다 — DB 통합 테스트(apps/server/src/services/
+          # *.integration.test.ts)가 Test 스텝에서 이 인스턴스를 그대로 쓴다.
           # 커밋본은 pre-commit prettier가 재포맷하므로 raw 생성물도 같은 포맷으로 맞춰 비교
           pnpm exec prettier --write apps/server/src/infra/database.types.ts
           if ! git diff --exit-code apps/server/src/infra/database.types.ts; then
@@ -78,6 +79,10 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Stop Supabase
+        if: always() && steps.migrations.outputs.changed == 'true'
+        run: supabase stop || true
 
   # Railway staging auto-deploy must be OFF — this job manages deployment sequencing.
   deploy-staging:

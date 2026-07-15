@@ -14,6 +14,7 @@
     "llm_timeout": "Response timed out. Please try again.",
     "reference_state_changed": "This reference's state changed. Reload the list and try again.",
     "source_state_changed": "This draft's state changed. Reload the list and try again.",
+    "space_delete_target_required": "This space now has waiting drafts. Refresh and try again.",
     "space_min_one": "Your Workspace needs at least one Space. Create another Space first.",
     "space_name_conflict": "That name is already in use. Try a different name.",
     "topic_name_conflict": "That topic name is already in use. Try a different name.",

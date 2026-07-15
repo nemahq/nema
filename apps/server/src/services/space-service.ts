@@ -95,3 +95,18 @@ export async function deleteSpace(args: {
   });
   throwIfSupabaseError(error);
 }
+
+// source.listPending은 워크스페이스 전체를 최근 PENDING_SOURCE_LIST_LIMIT개로
+// 자르므로 특정 Space의 정확한 개수 판정엔 못 쓴다 — Space 삭제 확인 UI가
+// "몇 개나 옮겨지는지" 정확히 알아야 해서 별도 카운트 RPC를 부른다.
+export async function countPendingDrafts(args: {
+  supabase: TypedSupabaseClient;
+  spaceId: string;
+}): Promise<number> {
+  const { data, error } = await args.supabase.rpc("count_pending_drafts", {
+    p_space_id: args.spaceId,
+  });
+  throwIfSupabaseError(error);
+
+  return data;
+}

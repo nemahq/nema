@@ -162,6 +162,8 @@ export {
   SPACE_PUBLIC_ID_LENGTH,
   SPACE_PUBLIC_ID_PATTERN,
   SPACE_PUBLIC_ID_PREFIX,
+  type SpaceCountPendingDraftsInput,
+  SpaceCountPendingDraftsInputSchema,
   type SpaceCreateInput,
   SpaceCreateInputSchema,
   type SpaceDeleteInput,
