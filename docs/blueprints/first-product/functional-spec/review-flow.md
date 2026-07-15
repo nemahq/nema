@@ -224,6 +224,7 @@
 - **When**: 타입·이름·설명을 수정한다.
 - **Then**: 수정한 내용이 이 changeset의 편집 중인 내용에 즉시 반영된다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-15, PR #416)**: `ReferenceCandidateCard`의 타입 Select·이름 Input·설명 textarea가 `referenceOverrides`(키별 즉시 반영)로 구현됨 — 코드 리뷰 + `confirmReviewFlow.test.ts`(원본과 다른 값으로 trim 검증)로 확인. 길이 상한(`maxLength`)도 멀티 에이전트 리뷰에서 반영. 실측 브라우저 확인은 PM이 별도 진행 예정이라 체크는 보류.
 
 #### 기존 Reference 후보 병합 편집
 
@@ -231,6 +232,7 @@
 - **When**: 엔진이 제안한 병합 설명을 수정한다.
 - **Then**: 수정한 내용이 이 changeset의 편집 중인 내용에 즉시 반영된다. 타입·이름은 읽기 전용으로 유지되어 수정할 수 없다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-15, PR #416)**: `ReferenceMergeCard`로 구현 — 타입·이름 읽기 전용, "바뀔 설명"(mergeNote)만 편집 가능, `mergeNoteOverrides`로 즉시 반영. 리뷰에서 "제안을 거부할 방법도 원본을 볼 방법도 없다"는 지적이 나와, 원본 body를 읽기 전용으로 나란히 노출 + "원래대로" 버튼(mergeNote를 원본으로 되돌려 병합을 no-op으로 만듦)을 추가로 반영했다 — 순수 함수(`referenceMerge.ts`)로 추출해 테스트로 고정(null/non-null 혼합, 인용 사라진 후보 제외, override, "원래대로" 각각). 삭제/추가(취소선·밑줄) 형태의 diff 표시는 여전히 스코프 밖(`design-decisions-log.md` 참고) — 원본은 보이지만 시각적 대조는 후속. 실측 브라우저 확인은 PM이 별도 진행 예정이라 체크는 보류.
 
 #### 타입 변경 시 필드 초기화
 
@@ -238,6 +240,7 @@
 - **When**: 그 후보의 타입을 다른 타입으로 변경한다.
 - **Then**: 컨펌 모달 없이 기존 타입 전용 필드 내용이 즉시 초기화되고 새 타입의 필드로 전환된다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-15, PR #416)**: `DigestCandidateCard`의 타입 Select `onValueChange`가 `onBodyChange({ type })`(이전 타입 필드 없이 새 타입만)를 호출 — 컨펌 모달 없이 즉시 전환되는 스펙 그대로 구현. `DigestBodySchema`가 타입별 필드를 전부 optional로 둬 스키마 레벨 안전망은 있으나, 이 리셋 생성 자체(타입 Select 핸들러)를 직접 검증하는 테스트는 아직 없음(`confirmReviewFlow.test.ts`는 override 값이 주어졌을 때 잘 흘러가는지만 검증) — 멀티 에이전트 리뷰에서 지적됐고 이번 라운드엔 미반영. 코드 레벨 확인만 됐고 실측·전용 테스트 둘 다 없어 미체크로 남김.
 
 #### 원문 대조 포커스 전환
 
