@@ -78,10 +78,10 @@
     "draft_organizing_elapsed_minutes": "{minutes}m {seconds}s",
     "draft_organizing_elapsed_seconds": "{count}s",
     "draft_section_organizing": "Organizing",
-    "draft_section_waiting": "Waiting for you",
+    "draft_section_waiting": "Needs attention",
     "draft_untitled": "Untitled",
-    "drafts_delete_waiting_action": "Delete all waiting drafts",
-    "drafts_delete_waiting_confirm_title": "Delete {count} waiting drafts?",
+    "drafts_delete_waiting_action": "Delete drafts needing attention",
+    "drafts_delete_waiting_confirm_title": "Delete {count} drafts needing attention?",
     "drafts_delete_waiting_partial_failure": "{failed} couldn't be deleted. Try again.",
     "drafts_empty": "All caught up. No drafts waiting.",
     "drafts_title": "Drafts"
