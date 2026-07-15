@@ -186,7 +186,7 @@ export function DevToolbar() {
         <button
           type="button"
           onClick={() => setOpen((prev) => !prev)}
-          className="cursor-pointer rounded-md bg-surface-raised px-2.5 py-1 text-xs font-semibold text-fg-secondary shadow-md border border-border transition-colors duration-fast hover:bg-surface-raised-hover"
+          className="cursor-pointer rounded-md bg-surface-overlay px-2.5 py-1 text-xs font-semibold text-fg-secondary shadow-md border border-border transition-colors duration-fast hover:bg-surface-raised-hover"
         >
           Dev
         </button>
