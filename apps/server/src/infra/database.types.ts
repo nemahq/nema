@@ -1185,6 +1185,7 @@ export type Database = {
         Args: { p_changeset_id: string };
         Returns: string;
       };
+      count_pending_drafts: { Args: { p_space_id: string }; Returns: number };
       create_ingestion_review: {
         Args: {
           p_digests: Json;
@@ -1219,7 +1220,10 @@ export type Database = {
         };
         Returns: string;
       };
-      delete_space: { Args: { p_space_id: string }; Returns: undefined };
+      delete_space: {
+        Args: { p_space_id: string; p_target_space_id?: string };
+        Returns: undefined;
+      };
       delete_workspace: {
         Args: { p_workspace_id: string };
         Returns: undefined;
@@ -1330,6 +1334,10 @@ export type Database = {
         Returns: undefined;
       };
       mark_first_entry: { Args: never; Returns: boolean };
+      pending_draft_source_ids: {
+        Args: { p_space_id: string };
+        Returns: string[];
+      };
       purge_expired_references: {
         Args: { p_batch_limit?: number; p_retention_days?: number };
         Returns: number;

@@ -242,6 +242,7 @@
     "create_title": "New space",
     "delete_confirm_instruction": "Type \"{name}\" to confirm",
     "delete_last_blocked": "Your workspace needs at least one space. Create another space first.",
+    "delete_move_drafts_label": "Move waiting drafts ({count}) to",
     "delete_title": "Delete space",
     "delete_warning": "Deleting this space will permanently delete all its content. This action cannot be undone.",
     "menu": "Space menu",
