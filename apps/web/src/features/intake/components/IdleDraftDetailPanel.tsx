@@ -18,6 +18,7 @@ import { useStartSourceDigestion } from "@web/features/intake/hooks/useStartSour
 import { useUpdateSourceBody } from "@web/features/intake/hooks/useUpdateSourceBody";
 import { useUpdateSourceTitle } from "@web/features/intake/hooks/useUpdateSourceTitle";
 import type { DraftDetailPanelProps } from "@web/features/intake/types";
+import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -52,8 +53,17 @@ export function IdleDraftDetailPanel({
 
   function handleBodyChange(nextBody: string) {
     setBody(nextBody);
-    onBodyDirtyChange?.(nextBody !== initialBody);
   }
+
+  // onChange 시점에만 알리면, 저장 후 폴링으로 initialBody가 따라잡아도(예:
+  // Regenerate가 body를 저장한 뒤) 재계산할 트리거가 없어 dirty가 그대로
+  // 굳어버린다 — bodyDirty 자체를 구독해 매번 최신값으로 동기화한다.
+  useEffect(
+    function syncBodyDirty() {
+      onBodyDirtyChange?.(bodyDirty);
+    },
+    [bodyDirty, onBodyDirtyChange],
+  );
 
   // blur 시점에 저장해 편집 중 이탈(다른 초안 클릭 등)로 잃는 걸 막는다 — 다만
   // Regenerate는 이 시점에 기대지 않고 클릭 시점에 한 번 더 직접 저장한다(아래).
@@ -77,6 +87,11 @@ export function IdleDraftDetailPanel({
       setIsRegenerating(false);
     }
   }
+
+  useRegisterAction("draft.regenerate", {
+    execute: handleRegenerate,
+    enabled: !regenerateDisabled,
+  });
 
   useEffect(function focusTitleAtEnd() {
     const el = titleInputRef.current;
