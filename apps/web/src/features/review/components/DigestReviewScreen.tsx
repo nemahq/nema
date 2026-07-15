@@ -45,6 +45,9 @@ export function DigestReviewScreen({
 }: DigestReviewScreenProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  // 다른 페이지처럼 Suspense로 넘기지 않는다 — 이 쿼리의 에러는 route errorComponent로
+  // 올리는 대신 여기서 직접 복구 UI(아래 isError 분기)로 잡아야 한다. 에러를 로컬에서
+  // 다루려면 쿼리가 non-suspense여야 하므로 로딩(!data)도 함께 수동으로 처리한다.
   const reviewQuery = useDigestReviewQuery(changesetId);
   const updateReview = useUpdateReview(changesetId);
   const confirmReview = useConfirmReview();

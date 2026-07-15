@@ -71,8 +71,14 @@
 
 ### Loading
 
-- Default: Suspense + `useSuspenseQuery` / `useSuspenseInfiniteQuery`. Fallback is a Spinner or minimal loading indicator.
-- `isLoading` branching is allowed only when Skeleton UI is required for UX.
+- **Default is Suspense.** Use `useSuspenseQuery` / `useSuspenseInfiniteQuery` and let the component suspend. The main content area (`<Outlet>`) already has a shared Suspense boundary whose fallback (`ContentAreaFallback`, a watermark) is the default page-loading UI — a page that suspends needs **no** local `isLoading` branch and **no** local boundary.
+- **Needing a Skeleton does not justify a manual `isLoading` branch.** Prefer `<Suspense fallback={<Skeleton/>}>`: extract the loading-dependent region into a child that calls `useSuspenseQuery`, and wrap that child. The point of a local boundary is to keep always-visible siblings rendered while only the data-dependent region falls back. Example — `ChangesPanel`: the sub-tab bar renders immediately, only the list is a Suspense child.
+- **Whole screen waits → just suspend, no local boundary.** If nothing renders before the data (header included), don't wrap the screen in a redundant local Suspense — let it fall back to the shared watermark. A screen-level boundary would be functionally identical to the shared one, only with more indirection.
+- **Manual `isLoading` / `!data` branching is a documented exception, allowed only when Suspense cannot apply. Each use MUST carry a short comment naming which case:**
+  - **Conditional query** — `useSuspenseQuery` has no `enabled: false`. Popover-open gating; dependent queries (query B needs query A's result). (`TagAddPopover`, `TopicAddPopover`)
+  - **Interleaved with always-visible controls** — the loading indicator shares render-scope state with siblings that must always render (form validation, inline list rows), so it can't be split into its own boundary. (`SpaceDeleteConfirmForm`, `AccountDeleteFlow`)
+  - **Local error recovery** — the error must be handled inline (custom UI, not escalated to the route `errorComponent`), which requires a non-suspense query; loading then stays manual too. (`DigestReviewScreen`)
+  - **`isLoading` feeds imperative logic** — consumed as an effect dependency (animation/visibility state machine), not a render fork. (`DraftsNavItem`)
 
 ### Error
 

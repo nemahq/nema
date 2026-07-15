@@ -11,3 +11,10 @@ export function useSpaceList(
     ...options,
   });
 }
+
+export function useSpaceListSuspenseQuery() {
+  return trpc.space.list.useSuspenseQuery(undefined, {
+    staleTime: SPACE_LIST_STALE_TIME_MS,
+    meta: { reportToSentry: true },
+  });
+}

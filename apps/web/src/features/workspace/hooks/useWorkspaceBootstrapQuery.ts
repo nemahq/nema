@@ -14,3 +14,10 @@ export function useWorkspaceBootstrapQuery(
     ...options,
   });
 }
+
+export function useWorkspaceBootstrapSuspenseQuery() {
+  return trpc.workspace.bootstrap.useSuspenseQuery(undefined, {
+    staleTime: BOOTSTRAP_STALE_TIME_MS,
+    meta: { reportToSentry: true },
+  });
+}
