@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
-import { SOURCE_TITLE_MAX_LENGTH } from "@nema-io/shared";
+import {
+  SOURCE_BODY_MAX_LENGTH,
+  SOURCE_TITLE_MAX_LENGTH,
+} from "@nema-io/shared";
 import {
   Alert,
   Button,
@@ -10,7 +13,9 @@ import {
 } from "@nema-io/weave";
 import { Trash2 } from "@nema-io/weave/icons";
 
+import { useExtractSource } from "@web/features/intake/hooks/useExtractSource";
 import { useReassignSourceSpace } from "@web/features/intake/hooks/useReassignSourceSpace";
+import { useUpdateSourceBody } from "@web/features/intake/hooks/useUpdateSourceBody";
 import { useUpdateSourceTitle } from "@web/features/intake/hooks/useUpdateSourceTitle";
 import type { DraftDetailPanelProps } from "@web/features/intake/types";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
@@ -19,9 +24,6 @@ import { useTranslation } from "@web/lib/tolgee";
 import { DeleteSourceDialog } from "./DeleteSourceDialog";
 import { DraftDetailHeader } from "./DraftDetailHeader";
 
-// TODO: 원본(body) 저장 API(update_source_body)는 이미 있다(#415) — 재생성
-// 버튼과의 실제 연동(로딩·실패 처리 설계 포함)은 아직 후속 작업으로 남겨뒀다.
-// 제목은 기존 update_source_title RPC로 실제 저장된다.
 export function IdleDraftDetailPanel({
   sourceId,
   spaceId,
@@ -35,17 +37,45 @@ export function IdleDraftDetailPanel({
   const [title, setTitle] = useState(initialTitle ?? "");
   const [body, setBody] = useState(initialBody);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const updateTitleMutation = useUpdateSourceTitle();
+  const updateBodyMutation = useUpdateSourceBody();
+  const extractMutation = useExtractSource();
   const reassignSpaceMutation = useReassignSourceSpace();
+  const bodyDirty = body !== initialBody;
   // 결과없음은 원본을 안 바꾸고 재생성해봐야 또 결과없음이 나올 가능성이 높다 —
   // 원문이 실제로 바뀌기 전까진 재생성을 막아 헛수고를 예방한다. failed/cancelled는
   // 내용 문제가 아닐 수 있어(일시적 시스템 오류 등) 이 제약을 안 둔다.
-  const regenerateDisabled = status === "empty" && body === initialBody;
+  const regenerateDisabled =
+    (status === "empty" && !bodyDirty) || isRegenerating;
 
   function handleBodyChange(nextBody: string) {
     setBody(nextBody);
     onBodyDirtyChange?.(nextBody !== initialBody);
+  }
+
+  // blur 시점에 저장해 편집 중 이탈(다른 초안 클릭 등)로 잃는 걸 막는다 — 다만
+  // Regenerate는 이 시점에 기대지 않고 클릭 시점에 한 번 더 직접 저장한다(아래).
+  function handleBodyBlur() {
+    if (!bodyDirty || body.trim().length === 0) {
+      return;
+    }
+    updateBodyMutation.mutate({ sourceId, body });
+  }
+
+  async function handleRegenerate() {
+    setIsRegenerating(true);
+    try {
+      if (bodyDirty && body.trim().length > 0) {
+        await updateBodyMutation.mutateAsync({ sourceId, body });
+      }
+      await extractMutation.mutateAsync({ sourceId });
+    } catch {
+      // 실패는 각 뮤테이션의 isError로 인라인 표시된다 — 추가 처리 없음.
+    } finally {
+      setIsRegenerating(false);
+    }
   }
 
   useEffect(function focusTitleAtEnd() {
@@ -131,17 +161,38 @@ export function IdleDraftDetailPanel({
           </Alert>
         </div>
       )}
-      <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 px-6 py-4">
         <textarea
           value={body}
           onChange={(e) => handleBodyChange(e.target.value)}
+          onBlur={handleBodyBlur}
+          maxLength={SOURCE_BODY_MAX_LENGTH}
+          aria-invalid={updateBodyMutation.isError}
           className="flex-1 resize-none text-sm leading-relaxed text-fg-primary outline-none"
         />
+        {updateBodyMutation.isError && (
+          <Alert variant="error">
+            {getErrorMessage(updateBodyMutation.error)}
+          </Alert>
+        )}
       </div>
-      <div className="flex shrink-0 justify-start px-6 py-4">
-        <Button size="sm" disabled={regenerateDisabled}>
-          {t("intake.draft_regenerate")}
-        </Button>
+      <div className="flex shrink-0 flex-col gap-2 px-6 py-4">
+        {extractMutation.isError && (
+          <Alert variant="error">
+            {getErrorMessage(extractMutation.error)}
+          </Alert>
+        )}
+        <div className="flex justify-start">
+          <Button
+            size="sm"
+            disabled={regenerateDisabled}
+            onClick={handleRegenerate}
+          >
+            {isRegenerating
+              ? t("intake.draft_extracting")
+              : t("intake.draft_regenerate")}
+          </Button>
+        </div>
       </div>
     </div>
   );
