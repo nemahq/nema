@@ -40,9 +40,9 @@ export function SpaceSettingsForm({
 
   let nameError: string | null = null;
   if (field.touched && isEmpty) {
-    nameError = t("space.name_required");
+    nameError = t("common.name_required");
   } else if (isDuplicate) {
-    nameError = t("space.name_taken");
+    nameError = t("common.name_taken");
   }
 
   function handleSubmit() {
