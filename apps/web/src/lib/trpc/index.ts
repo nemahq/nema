@@ -71,15 +71,24 @@ function authRedirectLink(): TRPCLink<AppRouter> {
               observer.error(error);
               return;
             }
+            const reportRefreshFailure = () => {
+              // refreshSession()이 정말로 죽은 세션을 확인해준 경우이므로,
+              // 이 요청의 구독이 이미 취소됐더라도(예: 라우트 이동) 로그아웃은
+              // 스킵하면 안 된다. observer 호출만 unsubscribed로 막는다.
+              triggerSignOutRedirect();
+              if (!unsubscribed) {
+                observer.error(error);
+              }
+            };
+
             supabase.auth
               .refreshSession()
               .then(({ data, error: refreshError }) => {
-                if (unsubscribed) {
+                if (refreshError || !data.session) {
+                  reportRefreshFailure();
                   return;
                 }
-                if (refreshError || !data.session) {
-                  triggerSignOutRedirect();
-                  observer.error(error);
+                if (unsubscribed) {
                   return;
                 }
                 subscription = next(op).subscribe({
@@ -92,7 +101,11 @@ function authRedirectLink(): TRPCLink<AppRouter> {
                   },
                   complete: () => observer.complete(),
                 });
-              });
+              })
+              // refreshSession()은 lock 획득 실패(NavigatorLockAcquireTimeoutError 등)
+              // 같은 이유로 {error} resolve가 아니라 reject될 수도 있다 — 못 잡으면
+              // observer.error/complete가 영영 안 불려 요청이 pending에 멈춘다.
+              .catch(reportRefreshFailure);
           },
           complete: () => observer.complete(),
         });
