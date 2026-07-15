@@ -1,4 +1,4 @@
-import { Circle, Inbox } from "@nema-io/weave/icons";
+import { Circle, CircleCheck, Inbox } from "@nema-io/weave/icons";
 
 import { Watermark } from "@web/components/ui/Watermark";
 import { usePendingSourceListQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
@@ -55,7 +55,8 @@ export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
 
   if (drafts.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+        <CircleCheck className="size-12 text-fg-tertiary" strokeWidth={1.5} />
         <p className="text-sm text-fg-tertiary">{t("intake.drafts_empty")}</p>
       </div>
     );
