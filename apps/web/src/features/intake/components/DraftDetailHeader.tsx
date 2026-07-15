@@ -48,7 +48,11 @@ export function DraftDetailHeader({
 
   let spaceArea: ReactNode = <span />;
   if (space && !onReassignSpace) {
-    spaceArea = <span className={SPACE_PILL_CLASSNAME}>{space.name}</span>;
+    spaceArea = (
+      <span className={SPACE_PILL_CLASSNAME} title={space.name}>
+        {space.name}
+      </span>
+    );
   } else if (space && onReassignSpace) {
     spaceArea = (
       <DropdownMenu>
@@ -57,6 +61,7 @@ export function DraftDetailHeader({
             type="button"
             disabled={reassignPending}
             aria-label={t("intake.draft_change_space")}
+            title={space.name}
             className={cn(
               SPACE_PILL_CLASSNAME,
               "cursor-pointer hover:bg-fg-primary/15",
@@ -88,9 +93,13 @@ export function DraftDetailHeader({
   }
 
   return (
-    <div className="flex h-11 shrink-0 items-center justify-between px-6">
+    <div className="flex h-11 shrink-0 items-center justify-between gap-3 px-6">
       {spaceArea}
-      <div className="flex shrink-0 items-center gap-1">
+      {/* -mr-1: 닫기 버튼(size-7)의 아이콘(size-5)이 히트박스 안에서 4px
+          안쪽으로 들어가 있어, 보정 없이는 아이콘이 px-6보다 더 안쪽에서
+          끝나 버린다(pill이 -ml-2.5로 텍스트를 px-6 경계에 맞춘 것과 비대칭).
+          그만큼 오른쪽으로 밀어 아이콘 우측 끝을 px-6 경계에 맞춘다. */}
+      <div className="-mr-1 flex shrink-0 items-center gap-1">
         {extraAction}
         <Tooltip>
           <TooltipTrigger asChild>
