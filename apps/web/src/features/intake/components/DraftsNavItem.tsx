@@ -107,7 +107,7 @@ export function DraftsNavItem() {
     );
   } else if (hasProcessing) {
     statusIndicator = (
-      <Circle className="size-1.5 shrink-0 animate-pulse fill-current text-fg-tertiary" />
+      <Circle className="size-1.5 shrink-0 animate-pulse fill-current text-status-info" />
     );
   }
 

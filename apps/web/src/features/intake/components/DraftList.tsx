@@ -85,8 +85,9 @@ export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
         label={t("intake.draft_section_organizing")}
         count={workingDrafts.length}
         icon={
-          <Circle className="size-2.5 shrink-0 animate-pulse fill-current text-fg-tertiary" />
+          <Circle className="size-2.5 shrink-0 animate-pulse fill-current text-status-info" />
         }
+        tone="info"
       >
         {workingDrafts.map(({ source, status }) => (
           <WorkingDraftCard

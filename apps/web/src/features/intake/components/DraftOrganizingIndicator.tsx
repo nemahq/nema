@@ -22,12 +22,12 @@ export function DraftOrganizingIndicator({
       : t("intake.draft_organizing_elapsed_seconds", { count: seconds });
 
   return (
-    <div className="flex items-center justify-between text-xs text-fg-tertiary">
-      <div className="flex items-center gap-1.5">
+    <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center gap-1.5 text-status-info">
         <Circle className="size-2.5 shrink-0 animate-pulse fill-current" />
         {t("intake.draft_organizing")}
       </div>
-      {elapsedLabel}
+      <span className="text-fg-tertiary">{elapsedLabel}</span>
     </div>
   );
 }

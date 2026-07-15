@@ -29,7 +29,7 @@ export function SpaceTabButton({
       {children}
       {!!count && (
         <Badge
-          variant="info"
+          variant="success"
           className="rounded-full px-2 py-0.5 text-xs leading-none"
         >
           {count}
