@@ -97,8 +97,8 @@
     "deny": "Deny"
   },
   "review": {
-    "changes_empty_closed": "No closed changes yet.",
-    "changes_empty_open": "No open changes yet.",
+    "changes_empty_closed": "No reviewed changes yet.",
+    "changes_empty_open": "No changes need review yet.",
     "confirm_action": "Confirm",
     "confirm_disabled_empty_label": "One of the digest candidates has a topic or tag with no name.",
     "confirm_disabled_empty_reference": "One of the reference candidates has no name or description.",
@@ -148,8 +148,8 @@
     "status_pending": "Review pending",
     "status_rejected": "Rejected",
     "status_reverted": "Reverted",
-    "tab_closed": "Closed ({count})",
-    "tab_open": "Open ({count})",
+    "tab_closed": "Reviewed",
+    "tab_open": "Needs review",
     "tag_add_action": "+ Tag",
     "tag_create_cancel_action": "Back",
     "tag_create_description_label": "Description",

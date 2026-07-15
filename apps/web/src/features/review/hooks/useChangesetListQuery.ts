@@ -12,3 +12,10 @@ export function useChangesetListQuery(spaceId: string | undefined) {
     { enabled: spaceId !== undefined, meta: { reportToSentry: true } },
   );
 }
+
+export function useChangesetListSuspenseQuery(spaceId: string) {
+  return trpc.changeset.listChangesets.useSuspenseQuery({
+    spaceId,
+    limit: CHANGESET_LIST_LIMIT_MAX,
+  });
+}

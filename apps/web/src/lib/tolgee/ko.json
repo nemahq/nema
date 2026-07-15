@@ -97,8 +97,8 @@
     "deny": "거부"
   },
   "review": {
-    "changes_empty_closed": "Closed 상태인 변경사항이 없어요.",
-    "changes_empty_open": "Open 상태인 변경사항이 없어요.",
+    "changes_empty_closed": "리뷰된 변경사항이 없어요.",
+    "changes_empty_open": "리뷰 대기 중인 변경사항이 없어요.",
     "confirm_action": "확정",
     "confirm_disabled_empty_label": "이름이 비어 있는 주제 또는 태그가 있는 다이제스트 후보가 있어요.",
     "confirm_disabled_empty_reference": "이름이나 설명이 비어 있는 레퍼런스 후보가 있어요.",
@@ -148,8 +148,8 @@
     "status_pending": "리뷰 대기",
     "status_rejected": "거절됨",
     "status_reverted": "되돌려짐",
-    "tab_closed": "Closed ({count})",
-    "tab_open": "Open ({count})",
+    "tab_closed": "리뷰됨",
+    "tab_open": "리뷰 대기",
     "tag_add_action": "+ 태그",
     "tag_create_cancel_action": "뒤로",
     "tag_create_description_label": "설명",
