@@ -49,12 +49,50 @@ function ChangesSubTabButton({
 // 페칭 페이지 크기(CHANGESET_LIST_LIMIT_DEFAULT)와는 무관하게, 뷰포트에 실제로
 // 보이는 만큼만 흉내낸다 — 화면 밖까지 스켈레톤을 채우는 건 낭비.
 const CHANGES_LIST_SKELETON_COUNT = 8;
+// ChangesetListRow의 1줄(아이콘+제목)·2줄 구조를 그대로 흉내내야 로딩→데이터
+// 전환 시 행 높이가 튀지 않는다.
+const SKELETON_TITLE_WIDTHS = ["w-2/5", "w-1/2", "w-1/3"];
+const SKELETON_STAGGER_DELAY_MS = 60;
+
+interface ChangesetRowSkeletonProps {
+  index: number;
+  hideDivider: boolean;
+}
+
+function ChangesetRowSkeleton({
+  index,
+  hideDivider,
+}: ChangesetRowSkeletonProps) {
+  const delay = { animationDelay: `${index * SKELETON_STAGGER_DELAY_MS}ms` };
+  return (
+    <div>
+      <div className="flex w-full flex-col gap-0.5 px-4 py-3">
+        <div className="flex items-center gap-1.5">
+          <Skeleton className="size-3.5 shrink-0 rounded-sm" style={delay} />
+          <Skeleton
+            className={cn(
+              "h-3.5",
+              SKELETON_TITLE_WIDTHS[index % SKELETON_TITLE_WIDTHS.length],
+            )}
+            style={delay}
+          />
+        </div>
+        <Skeleton className="h-[11px] w-1/4" style={delay} />
+      </div>
+      {!hideDivider && <div className="mx-2 border-b border-border/50" />}
+    </div>
+  );
+}
 
 function ChangesListSkeleton() {
   return (
     <>
       {Array.from({ length: CHANGES_LIST_SKELETON_COUNT }).map((_, i) => (
-        <Skeleton key={i} className="h-12 w-full" />
+        <ChangesetRowSkeleton
+          key={i}
+          index={i}
+          hideDivider={i === CHANGES_LIST_SKELETON_COUNT - 1}
+        />
       ))}
     </>
   );
