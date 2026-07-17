@@ -34,9 +34,13 @@ export function SpaceOverview(props: SpaceOverviewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [spaceList] = useSpaceListSuspenseQuery();
-  const scrollContainerRef = useMainScrollRestoration(
-    `${spacePublicId}:${activeTab}`,
-  );
+  // Open/Closed는 같은 라우트 안 search param 전환이라 컨테이너가 언마운트되지
+  // 않는다 — subTab을 key에 포함해야 서브탭끼리도 독립된 스크롤 위치를 갖는다.
+  const scrollKey =
+    props.activeTab === "changesets"
+      ? `${spacePublicId}:changesets:${props.subTab}`
+      : `${spacePublicId}:topic`;
+  const scrollContainerRef = useMainScrollRestoration(scrollKey);
 
   const space = spaceList.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
