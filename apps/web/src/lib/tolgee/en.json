@@ -91,6 +91,12 @@
     "expand_sidebar": "Expand sidebar",
     "toggle_sidebar": "Toggle sidebar"
   },
+  "notification": {
+    "changeset_ready_body": "Nema needs your review",
+    "changeset_ready_title": "Nema",
+    "permission_prompt_allow_action": "Allow",
+    "permission_prompt_message": "Get notified when a review is ready, even while you're away?"
+  },
   "oauth": {
     "approve": "Allow",
     "consent_request": "Allow {client} to access your nema account?",

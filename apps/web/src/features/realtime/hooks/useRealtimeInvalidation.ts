@@ -1,12 +1,20 @@
 import { useEffect, useRef } from "react";
 import * as Sentry from "@sentry/react";
+import type { RealtimePostgresInsertPayload } from "@supabase/supabase-js";
 
+import { useChangesetReadyNotifier } from "@web/features/notifications";
 import { supabase } from "@web/lib/supabase";
 import { trpc } from "@web/lib/trpc";
 
 const CHANNEL_NAME = "realtime-invalidation";
 
 type TrpcUtils = ReturnType<typeof trpc.useUtils>;
+type NotifyChangesetReady = ReturnType<typeof useChangesetReadyNotifier>;
+
+interface ChangesetRow {
+  id: string;
+  space_id: string;
+}
 
 // Supabase Realtime(Postgres CDC)로 비동기 작업 완료를 폴링 없이 반영한다.
 // 설계: payload를 캐시에 직접 patch하지 않고 "바뀌었다" 신호로만 써서 해당 쿼리를
@@ -26,6 +34,18 @@ export function useRealtimeInvalidation() {
     [utils],
   );
 
+  // notifyChangesetReady도 utilsRef와 같은 이유로 ref에 담아 최신 참조만 넘긴다 —
+  // 구독은 마운트 시 한 번만 걸어야 하므로 deps로 삼지 않는다.
+  const notifyChangesetReady = useChangesetReadyNotifier();
+  const notifyChangesetReadyRef =
+    useRef<NotifyChangesetReady>(notifyChangesetReady);
+  useEffect(
+    function syncNotifyChangesetReadyRef() {
+      notifyChangesetReadyRef.current = notifyChangesetReady;
+    },
+    [notifyChangesetReady],
+  );
+
   useEffect(function subscribeRealtimeInvalidation() {
     function invalidatePendingSources() {
       void utilsRef.current.source.listPending.invalidate();
@@ -33,6 +53,12 @@ export function useRealtimeInvalidation() {
     function invalidateChangesetBadges() {
       void utilsRef.current.space.list.invalidate();
       void utilsRef.current.changeset.listChangesets.invalidate();
+    }
+    function handleChangesetInsert(
+      payload: RealtimePostgresInsertPayload<ChangesetRow>,
+    ) {
+      invalidateChangesetBadges();
+      notifyChangesetReadyRef.current(payload.new);
     }
 
     const channel = supabase
@@ -45,7 +71,7 @@ export function useRealtimeInvalidation() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "changesets" },
-        invalidateChangesetBadges,
+        handleChangesetInsert,
       )
       .on(
         "postgres_changes",
