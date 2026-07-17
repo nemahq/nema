@@ -164,7 +164,7 @@
     "topic_add_action": "+ Topic",
     "topic_remove_action": "Remove this topic",
     "type_ingestion": "Organize",
-    "type_relation": "Connection",
+    "type_relation": "Discovery",
     "type_revert": "Revert",
     "view_changeset_detail_action": "View change detail"
   },

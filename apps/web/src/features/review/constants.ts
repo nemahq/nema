@@ -79,8 +79,10 @@ export const DIGEST_BODY_FIELDS: Record<DigestType, DigestBodyFieldMeta[]> = {
 
 // manual은 이 목록에 절대 안 나온다 — 확정 즉시 applied로 끝나 Space 오버뷰의
 // Changes 탭 대신 각 Digest·Reference의 "변경 이력"에서만 노출된다(surface-inventory.md).
-// 라벨은 코드 타입명이 아니라 glossary 제품 용어를 그대로 쓴다 — ingestion=정리,
-// relation=연결(glossary.md 매핑), revert는 대응 제품 용어가 없어 명사형으로 새로 정함.
+// 라벨은 이 changeset을 만든 AI 활동을 가리킨다(결과물 개념어가 아님) — ingestion=정리,
+// relation=발견. "연결"(glossary.md의 Relation 개념어)은 사용자가 먼저 겪는 접점이
+// 없고 충돌류 관계엔 안 맞아, AI가 스스로 알아챘다는 뜻의 "발견"으로 바꿨다.
+// revert는 대응 제품 용어가 없어 명사형으로 새로 정함.
 export const CHANGESET_TYPE_LABEL: Record<
   Exclude<ChangesetType, "manual">,
   TranslationKey
