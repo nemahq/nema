@@ -136,6 +136,12 @@ interface PendingSourceItem {
   // 초안 목록과 변경셋 대기 탭으로 갈리지만, 그 분리는 화면 층의 몫이다.
   reviewChangesetId: string | null;
   digestCount: number;
+  // 이 원본을 대상으로 한 ingestion 리뷰가 버려진(rejected) 적이 있는지 — discard가
+  // digestion_status는 안 건드려 completed로 남기 때문에, 소비자가 "AI가 실제로 후보를
+  // 만들었지만 사람이 버렸다"와 "AI가 애초에 아무것도 못 찾았다"를 가르는 데 쓴다. 존재
+  // 여부만 볼 뿐 시점은 안 따진다(버림 후 원본을 고쳐 재시도해도 true로 남음) — digestionStatus와
+  // 독립적으로 단독 판단하지 말 것, draftStatus()처럼 항상 둘을 같이 봐야 한다.
+  hasDiscardedReview: boolean;
 }
 
 // pending 원본 목록 — 파생 없는 상태(갓 생성·생성 중·되돌려진 것). web(초안 목록)과
@@ -162,23 +168,32 @@ export async function listPendingSources(args: {
 
   const { data: changesets, error: changesetError } = await supabase
     .from("changesets")
-    .select("id, source_id, changes(target_type)")
+    .select("id, source_id, status, changes(target_type)")
     .eq("type", "ingestion")
-    .eq("status", "pending")
+    .in("status", ["pending", "rejected"])
     .in("source_id", sourceIds);
   throwIfSupabaseError(changesetError);
 
-  const reviewBySource = new Map(
-    (changesets ?? []).map((changeset) => [
-      changeset.source_id,
-      {
+  const reviewBySource = new Map<
+    string,
+    { reviewChangesetId: string; digestCount: number }
+  >();
+  const discardedSourceIds = new Set<string>();
+  for (const changeset of changesets ?? []) {
+    if (changeset.source_id === null) {
+      continue;
+    }
+    if (changeset.status === "pending") {
+      reviewBySource.set(changeset.source_id, {
         reviewChangesetId: changeset.id,
         digestCount: changeset.changes.filter(
           (change) => change.target_type === "digest",
         ).length,
-      },
-    ]),
-  );
+      });
+    } else if (changeset.status === "rejected") {
+      discardedSourceIds.add(changeset.source_id);
+    }
+  }
 
   return {
     items: (sources ?? []).map((source) => {
@@ -194,6 +209,7 @@ export async function listPendingSources(args: {
         errorMessage: source.error_message,
         reviewChangesetId: review?.reviewChangesetId ?? null,
         digestCount: review?.digestCount ?? 0,
+        hasDiscardedReview: discardedSourceIds.has(source.id),
       };
     }),
   };

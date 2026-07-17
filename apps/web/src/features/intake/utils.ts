@@ -1,6 +1,11 @@
 import type { PendingSourceItem } from "@web/features/intake/types";
 
-export type DraftStatus = "processing" | "cancelled" | "failed" | "empty";
+export type DraftStatus =
+  | "processing"
+  | "cancelled"
+  | "failed"
+  | "empty"
+  | "discarded";
 
 // 리뷰가 열린(reviewChangesetId 있음) Source는 이미 초안을 벗어나 변경셋 대기로
 // 넘어간 상태라 null을 반환한다 — surface-inventory.md "초안" 참고. 판정을 여기 한
@@ -15,7 +20,7 @@ export function draftStatus(source: PendingSourceItem): DraftStatus | null {
     case "failed":
       return "failed";
     case "completed":
-      return "empty";
+      return source.hasDiscardedReview ? "discarded" : "empty";
     case "pending":
       return "processing";
     default: {

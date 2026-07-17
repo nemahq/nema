@@ -795,6 +795,16 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 
 ---
 
+### 2026-07-17 — 버려진 리뷰의 원본이 초안 탭에서 "결과없음"으로 오분류되던 문제 해결
+
+**해결**: 같은 날 다른 세션(polish/changeset)이 "미해결로 남긴 것"으로 킥오프 프롬프트만 써서 별도 세션(`fix/discarded-draft-status`)에 위임했던 갭 — `discard_ingestion_review`가 `sources.digestion_status`는 안 건드려 `completed`로 남기 때문에, `draftStatus()`가 이걸 진짜 결과없음(`empty`)과 구분 못 하고 있었다. 그 세션이 확정해둔 설계 그대로 착지: `listPendingSources`가 `type='ingestion'` changeset을 `pending`뿐 아니라 `rejected`까지 함께 조회해 `hasDiscardedReview`(원본별 rejected changeset 존재 여부)를 `PendingSourceItem`에 additive로 추가하고, `draftStatus()`는 `digestion_status='completed'`일 때 이 플래그로 `empty`/`discarded`(신설 `DraftStatus` 값)를 가른다. UI는 `cancelled`와 동일하게 아이콘·툴팁 없이 평범한 대기 카드로 처리(`IdleDraftCard`가 `status === "empty"`만 보므로 `discarded`는 자동으로 아무 아이콘도 안 그린다) — `IdleDraftDetailPanel`의 재시도 비활성화 가드(`status === "empty" && !bodyDirty`)와 `DraftList`의 "확인 필요" 섹션 분류(`status !== "processing"`)도 같은 이유로 코드 변경 없이 자동으로 맞물렸다.
+
+**정확도 범위를 의도적으로 좁힘 — "rejected changeset이 하나라도 있는가"만 보고 시점(가장 최근 시도 이후인지)은 안 따진다**: 버림 → 원본 편집 → 재시도했는데 이번엔 진짜로 empty인 드문 시퀀스에서 과거 rejected changeset 때문에 여전히 `discarded`로 잘못 표시될 수 있다. `last_digestion_attempt`와 rejected changeset의 시각을 비교하는 correlate 로직까지 이번 스코프에 넣는 건 드문 엣지케이스 대비 과설계로 판단해 뺐다 — 실사용에서 체감되면 그때 추가.
+
+**검증**: 로컬 Supabase(빈 DB)에 테스트 유저로 rejected changeset 있는 원본 하나, 진짜 결과없음 원본 하나를 직접 시딩해 `source.listPending`을 실제로 호출 — `hasDiscardedReview`가 각각 `true`/`false`로 정확히 갈리는 것을 API 응답으로 직접 확인(브라우저 자동화 도구를 이 세션에서 못 붙여 API 레벨로 대체). `pnpm typecheck`/`lint`/`test`(server 436케이스, web 123케이스 — `utils.test.ts`에 discarded 케이스 1건 추가) 모노레포 전체 통과. 브라우저 실동작(라이트/다크, 아이콘 유무)은 세션 환경 제약으로 Kyle이 직접 확인.
+
+---
+
 ### 2026-07-17 — Space Overview: 탭 전환 시 스크롤·서브탭 유지
 
 **배경**: Thread↔Changes가 서로 다른 라우트라 전환마다 하위 트리 전체가 언마운트/재마운트돼, Changes 안 Open/Closed 서브탭(로컬 `useState`)과 스크롤 위치가 매번 초기화됐다. 라우트를 하나로 합치는 재구조화는 이번 스코프 밖(PM 확정) — 기존 두 라우트 구조를 유지한 채 그 위에 상태 영속만 얹었다.

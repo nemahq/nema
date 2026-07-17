@@ -17,7 +17,7 @@ function statusLabel(item: PendingSourceItem): string {
     return "생성 실패";
   }
   if (item.digestionStatus === "completed") {
-    return "정리할 내용 없음";
+    return item.hasDiscardedReview ? "리뷰 버려짐" : "정리할 내용 없음";
   }
   return "생성 중…";
 }
