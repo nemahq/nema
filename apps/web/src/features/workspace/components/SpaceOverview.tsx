@@ -20,8 +20,6 @@ const NAV_BADGE_CLASS =
 const CONTENT_BADGE_CLASS =
   "flex size-8 shrink-0 items-center justify-center rounded-md bg-fg-primary/10 text-sm font-medium text-fg-primary";
 
-export type SpaceTab = "topic" | "changesets";
-
 export type SpaceOverviewProps = { spacePublicId: string } & (
   | { activeTab: "topic" }
   | {

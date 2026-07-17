@@ -1,7 +1,6 @@
 export {
   SpaceOverview,
   type SpaceOverviewProps,
-  type SpaceTab,
 } from "./components/SpaceOverview";
 export { WorkspaceBootstrapGate } from "./components/WorkspaceBootstrapGate";
 export { WorkspaceHome } from "./components/WorkspaceHome";
