@@ -119,13 +119,40 @@ export async function listSources(args: {
 
 const PENDING_SOURCE_LIST_LIMIT = 50;
 
+// digestion_status 원본 값 + "그 리뷰가 버려졌는가"를 서버가 미리 조합해 내려주는 단일
+// 값 — 소비처가 두 신호를 직접 AND해야 하는 구조였을 때 dev-harness가 hasDiscardedReview를
+// 빠뜨려 같은 오분류를 재현한 적이 있다(#428). 특히 MCP 소비처는 타입 체커 없이 이 JSON을
+// 그대로 읽으므로, 조합을 서버가 끝내 잘못 조합할 길 자체를 없앤다.
+type DigestionOutcome =
+  | "processing"
+  | "failed"
+  | "cancelled"
+  | "empty"
+  | "discarded";
+
+function toDigestionOutcome(args: {
+  digestionStatus: DigestionStatus;
+  hasDiscardedReview: boolean;
+}): DigestionOutcome {
+  switch (args.digestionStatus) {
+    case "pending":
+      return "processing";
+    case "failed":
+      return "failed";
+    case "cancelled":
+      return "cancelled";
+    case "completed":
+      return args.hasDiscardedReview ? "discarded" : "empty";
+  }
+}
+
 interface PendingSourceItem {
   sourceId: string;
   spaceId: string;
   body: string;
   title: string | null;
   createdAt: string;
-  digestionStatus: DigestionStatus;
+  digestionOutcome: DigestionOutcome;
   // 지금 처리중인 시도가 실제로 언제 시작됐는지 — createdAt은 원본이 처음
   // 만들어진 시점이라, 재시도·재생성처럼 뒤늦게 다시 돌기 시작한 시도의
   // 경과 시간을 재는 기준으론 안 맞는다(아직 한 번도 안 붙잡혔으면 null).
@@ -136,12 +163,6 @@ interface PendingSourceItem {
   // 초안 목록과 변경셋 대기 탭으로 갈리지만, 그 분리는 화면 층의 몫이다.
   reviewChangesetId: string | null;
   digestCount: number;
-  // 이 원본을 대상으로 한 ingestion 리뷰가 버려진(rejected) 적이 있는지 — discard가
-  // digestion_status는 안 건드려 completed로 남기 때문에, 소비자가 "AI가 실제로 후보를
-  // 만들었지만 사람이 버렸다"와 "AI가 애초에 아무것도 못 찾았다"를 가르는 데 쓴다. 존재
-  // 여부만 볼 뿐 시점은 안 따진다(버림 후 원본을 고쳐 재시도해도 true로 남음) — digestionStatus와
-  // 독립적으로 단독 판단하지 말 것, draftStatus()처럼 항상 둘을 같이 봐야 한다.
-  hasDiscardedReview: boolean;
 }
 
 // pending 원본 목록 — 파생 없는 상태(갓 생성·생성 중·되돌려진 것). web(초안 목록)과
@@ -204,12 +225,14 @@ export async function listPendingSources(args: {
         body: source.body,
         title: source.title,
         createdAt: source.created_at,
-        digestionStatus: source.digestion_status,
+        digestionOutcome: toDigestionOutcome({
+          digestionStatus: source.digestion_status,
+          hasDiscardedReview: discardedSourceIds.has(source.id),
+        }),
         lastDigestionAttempt: source.last_digestion_attempt,
         errorMessage: source.error_message,
         reviewChangesetId: review?.reviewChangesetId ?? null,
         digestCount: review?.digestCount ?? 0,
-        hasDiscardedReview: discardedSourceIds.has(source.id),
       };
     }),
   };

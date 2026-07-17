@@ -10,16 +10,18 @@ function statusLabel(item: PendingSourceItem): string {
   if (item.reviewChangesetId) {
     return `리뷰 준비됨 · Digest ${item.digestCount}`;
   }
-  if (item.digestionStatus === "cancelled") {
-    return "취소됨";
+  switch (item.digestionOutcome) {
+    case "cancelled":
+      return "취소됨";
+    case "failed":
+      return "생성 실패";
+    case "discarded":
+      return "리뷰 버려짐";
+    case "empty":
+      return "정리할 내용 없음";
+    case "processing":
+      return "생성 중…";
   }
-  if (item.digestionStatus === "failed") {
-    return "생성 실패";
-  }
-  if (item.digestionStatus === "completed") {
-    return item.hasDiscardedReview ? "리뷰 버려짐" : "정리할 내용 없음";
-  }
-  return "생성 중…";
 }
 
 // 대기 원본(초안) — 그래프에 아직 안 들어간 것들. 리뷰가 열린 원본만 펼쳐 확정할 수 있다.
