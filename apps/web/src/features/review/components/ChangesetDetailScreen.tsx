@@ -4,8 +4,7 @@ import { linkOptions } from "@tanstack/react-router";
 import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { useChangesetListSuspenseQuery } from "@web/features/review/hooks/useChangesetListQuery";
 import { changesetDisplayTitle } from "@web/features/review/utils";
-import { SpaceBadge } from "@web/features/workspace";
-import { useSpaceListSuspenseQuery } from "@web/features/workspace/hooks/useSpaceList";
+import { SpaceBadge, useSpaceListSuspenseQuery } from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface ChangesetDetailScreenProps {

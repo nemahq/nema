@@ -14,10 +14,12 @@ export interface LooseLinkTarget {
   search?: Record<string, unknown>;
 }
 
-export function asLinkProps(target: LooseLinkTarget) {
-  return {
-    to: target.to as LinkComponentProps["to"],
-    params: target.params as LinkComponentProps["params"],
-    search: target.search as LinkComponentProps["search"],
-  };
+export function asLinkProps(target: LooseLinkTarget): LinkComponentProps {
+  if (typeof target.to !== "string") {
+    throw new Error("asLinkProps requires a resolved `to`");
+  }
+  // to가 문자열임을 위에서 런타임으로 확인했다 — 그 값이 실제 등록된 라우트인지는
+  // 호출부의 linkOptions() 검증이 이미 보장하므로, 여기서는 unknown을 경유해
+  // Link가 기대하는 모양으로 좁히기만 한다(다른 값으로 다시 단언하지 않음).
+  return target as unknown as LinkComponentProps;
 }
