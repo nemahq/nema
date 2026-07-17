@@ -5,6 +5,8 @@ import {
   type ReferenceType,
 } from "@nema-io/shared";
 import type { BadgeVariant } from "@nema-io/weave";
+import type { IconComponent } from "@nema-io/weave/icons";
+import { Funnel, Share2 } from "@nema-io/weave/icons";
 
 import type { TranslationKey } from "@web/lib/tolgee";
 
@@ -77,13 +79,25 @@ export const DIGEST_BODY_FIELDS: Record<DigestType, DigestBodyFieldMeta[]> = {
 
 // manual은 이 목록에 절대 안 나온다 — 확정 즉시 applied로 끝나 Space 오버뷰의
 // Changes 탭 대신 각 Digest·Reference의 "변경 이력"에서만 노출된다(surface-inventory.md).
+// 라벨은 코드 타입명이 아니라 glossary 제품 용어를 그대로 쓴다 — ingestion=정리,
+// relation=연결(glossary.md 매핑), revert는 대응 제품 용어가 없어 명사형으로 새로 정함.
 export const CHANGESET_TYPE_LABEL: Record<
   Exclude<ChangesetType, "manual">,
-  string
+  TranslationKey
 > = {
-  ingestion: "ingestion",
-  relation: "relation",
-  revert: "revert",
+  ingestion: "review.type_ingestion",
+  relation: "review.type_relation",
+  revert: "review.type_revert",
+};
+
+// revert는 아이콘이 없다 — 제목 자체가 "{원본 제목} 되돌림"으로 이미 되돌리기임을
+// 말해주게 될 예정이라(별도 후속 작업), 아이콘까지 얹으면 같은 정보의 중복 신호가 된다.
+export const CHANGESET_TYPE_ICON: Record<
+  Exclude<ChangesetType, "manual" | "revert">,
+  IconComponent
+> = {
+  ingestion: Funnel,
+  relation: Share2,
 };
 
 // changeset_status는 아직 pending/applied/rejected 셋뿐이다(status+outcome 2필드
@@ -117,8 +131,4 @@ export function changesetStatusMeta(
     labelKey: CHANGESET_STATUS_LABEL_KEY[status],
     variant: CHANGESET_STATUS_VARIANT[status],
   };
-}
-
-export function isOpenChangeset(status: ChangesetStatus): boolean {
-  return status === "pending";
 }

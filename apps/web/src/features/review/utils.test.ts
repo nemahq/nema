@@ -3,49 +3,60 @@ import type { CombinedOptions, DefaultParamType } from "@tolgee/web";
 
 import type { TranslationKey } from "@web/lib/tolgee";
 
-import { changesetDisplayTitle } from "./utils";
-
-const ZERO_EFFECT = {
-  statement: 0,
-  relation: 0,
-  source: 0,
-  digest: 0,
-  reference: 0,
-};
+import { changesetDisplayTitle, summarizeChangesetEffect } from "./utils";
 
 const fakeT = (
   key: TranslationKey,
   options?: CombinedOptions<DefaultParamType>,
-) => (options ? `${key}(${options.count})` : key);
+) => (options ? `${key}(${options.count ?? options.number})` : key);
 
 describe("changesetDisplayTitle", () => {
-  it("sourceTitle이 있으면 effect 요약 대신 그 값을 쓴다", () => {
+  it("sourceTitle이 있으면 그 값을 그대로 쓴다", () => {
     const title = changesetDisplayTitle(
-      { sourceTitle: "회의록 요약", effect: { ...ZERO_EFFECT, digest: 3 } },
+      { sourceTitle: "회의록 요약", number: 3 },
       fakeT,
     );
 
     expect(title).toBe("회의록 요약");
   });
 
-  it("sourceTitle이 없으면 0보다 큰 effect만 라벨-카운트로 나열한다", () => {
+  it("sourceTitle이 없으면 번호 플레이스홀더로 폴백한다", () => {
     const title = changesetDisplayTitle(
-      {
-        sourceTitle: null,
-        effect: { ...ZERO_EFFECT, digest: 2, reference: 1 },
-      },
+      { sourceTitle: null, number: 3 },
       fakeT,
     );
 
-    expect(title).toBe("review.effect_digest(2) · review.effect_reference(1)");
+    expect(title).toBe("review.changeset_fallback_title(3)");
+  });
+});
+
+describe("summarizeChangesetEffect", () => {
+  it("digest만 0보다 크면 digest 카운트만 보여준다", () => {
+    const summary = summarizeChangesetEffect(
+      { digest: 2, reference: 0 },
+      fakeT,
+    );
+
+    expect(summary).toBe("review.effect_digest(2)");
   });
 
-  it("모든 effect가 0이면 review.effect_none으로 폴백한다", () => {
-    const title = changesetDisplayTitle(
-      { sourceTitle: null, effect: ZERO_EFFECT },
+  it("digest·reference 둘 다 0보다 크면 순서대로 이어붙인다", () => {
+    const summary = summarizeChangesetEffect(
+      { digest: 2, reference: 1 },
       fakeT,
     );
 
-    expect(title).toBe("review.effect_none");
+    expect(summary).toBe(
+      "review.effect_digest(2) · review.effect_reference(1)",
+    );
+  });
+
+  it("둘 다 0이면 null을 반환한다(호출부가 폴백 문구를 직접 고른다)", () => {
+    const summary = summarizeChangesetEffect(
+      { digest: 0, reference: 0 },
+      fakeT,
+    );
+
+    expect(summary).toBeNull();
   });
 });

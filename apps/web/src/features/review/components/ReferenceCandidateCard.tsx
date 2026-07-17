@@ -51,13 +51,13 @@ export function ReferenceCandidateCard({
           >
             <SelectTrigger
               aria-label={t("review.reference_type_label")}
-              className="h-8 w-28 cursor-pointer text-xs shadow-none dark:shadow-sm"
+              className="h-8 w-28 text-xs"
             >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {REFERENCE_TYPES.map((type) => (
-                <SelectItem key={type} value={type} className="cursor-pointer">
+                <SelectItem key={type} value={type}>
                   {REFERENCE_TYPE_LABEL[type]}
                 </SelectItem>
               ))}

@@ -1,5 +1,6 @@
 import { Suspense, useRef } from "react";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
+import { linkOptions } from "@tanstack/react-router";
 
 import { Button, cn, Skeleton } from "@nema-io/weave";
 
@@ -11,6 +12,7 @@ import type {
   ChangesSubTab,
 } from "@web/features/review/types";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
+import type { LooseLinkTarget } from "@web/lib/link";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetListRow } from "./ChangesetListRow";
@@ -44,19 +46,65 @@ function ChangesSubTabButton({
   );
 }
 
-interface ChangesListProps {
-  spaceId: string;
-  subTab: ChangesSubTab;
-  onOpenReview: (changesetId: string) => void;
-  onOpenDetail: (changesetId: string) => void;
+// 페칭 페이지 크기(CHANGESET_LIST_LIMIT_DEFAULT)와는 무관하게, 뷰포트에 실제로
+// 보이는 만큼만 흉내낸다 — 화면 밖까지 스켈레톤을 채우는 건 낭비.
+const CHANGES_LIST_SKELETON_COUNT = 8;
+// ChangesetListRow의 1줄(아이콘+제목)·2줄 구조를 그대로 흉내내야 로딩→데이터
+// 전환 시 행 높이가 튀지 않는다.
+const SKELETON_TITLE_WIDTHS = ["w-2/5", "w-1/2", "w-1/3"];
+const SKELETON_STAGGER_DELAY_MS = 60;
+
+interface ChangesetRowSkeletonProps {
+  index: number;
+  hideDivider: boolean;
 }
 
-function ChangesList({
-  spaceId,
-  subTab,
-  onOpenReview,
-  onOpenDetail,
-}: ChangesListProps) {
+function ChangesetRowSkeleton({
+  index,
+  hideDivider,
+}: ChangesetRowSkeletonProps) {
+  const delay = { animationDelay: `${index * SKELETON_STAGGER_DELAY_MS}ms` };
+  return (
+    <div>
+      <div className="flex w-full flex-col gap-0.5 px-4 py-3">
+        <div className="flex items-center gap-1.5">
+          <Skeleton className="size-3.5 shrink-0 rounded-sm" style={delay} />
+          <Skeleton
+            className={cn(
+              "h-3.5",
+              SKELETON_TITLE_WIDTHS[index % SKELETON_TITLE_WIDTHS.length],
+            )}
+            style={delay}
+          />
+        </div>
+        <Skeleton className="h-[11px] w-1/4" style={delay} />
+      </div>
+      {!hideDivider && <div className="mx-2 border-b border-border/50" />}
+    </div>
+  );
+}
+
+function ChangesListSkeleton() {
+  return (
+    <>
+      {Array.from({ length: CHANGES_LIST_SKELETON_COUNT }).map((_, i) => (
+        <ChangesetRowSkeleton
+          key={i}
+          index={i}
+          hideDivider={i === CHANGES_LIST_SKELETON_COUNT - 1}
+        />
+      ))}
+    </>
+  );
+}
+
+interface ChangesListProps {
+  spacePublicId: string;
+  spaceId: string;
+  subTab: ChangesSubTab;
+}
+
+function ChangesList({ spacePublicId, spaceId, subTab }: ChangesListProps) {
   const { t } = useTranslation();
   const [changesetPages, query] = useChangesetListInfiniteQuery(
     spaceId,
@@ -73,13 +121,19 @@ function ChangesList({
 
   // Open에서는 ingestion만 실제 리뷰 화면이 있다 — relation 상세는 review 2차 몫이라
   // 이번 슬라이스는 목록에 보이기만 하고 클릭은 막는다(surface-inventory.md).
-  function handleClick(entry: ChangesetListEntry): (() => void) | undefined {
+  function linkTarget(entry: ChangesetListEntry): LooseLinkTarget {
     if (subTab === "closed") {
-      return () => onOpenDetail(entry.id);
+      return linkOptions({
+        to: "/space/$spacePublicId/changesets/$changesetId",
+        params: { spacePublicId, changesetId: entry.id },
+      });
     }
     return entry.type === "ingestion"
-      ? () => onOpenReview(entry.id)
-      : undefined;
+      ? linkOptions({
+          to: "/space/$spacePublicId/review/$changesetId",
+          params: { spacePublicId, changesetId: entry.id },
+        })
+      : {};
   }
 
   if (entries.length === 0) {
@@ -93,23 +147,18 @@ function ChangesList({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      {entries.map((entry) => (
+    <div className="flex flex-col">
+      {entries.map((entry, index) => (
         <ChangesetListRow
           key={entry.id}
           entry={entry}
-          onClick={handleClick(entry)}
+          {...linkTarget(entry)}
+          hideDivider={index === entries.length - 1 && !query.hasNextPage}
         />
       ))}
       {query.hasNextPage ? (
         <div ref={sentinelRef} className="flex flex-col gap-2">
-          {query.isFetchingNextPage && (
-            <>
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </>
-          )}
+          {query.isFetchingNextPage && <ChangesListSkeleton />}
         </div>
       ) : (
         <p className="py-4 text-center text-xs text-fg-tertiary">
@@ -121,19 +170,17 @@ function ChangesList({
 }
 
 interface ChangesPanelProps {
+  spacePublicId: string;
   spaceId: string | undefined;
   subTab: ChangesSubTab;
   onSubTabChange: (subTab: ChangesSubTab) => void;
-  onOpenReview: (changesetId: string) => void;
-  onOpenDetail: (changesetId: string) => void;
 }
 
 export function ChangesPanel({
+  spacePublicId,
   spaceId,
   subTab,
   onSubTabChange,
-  onOpenReview,
-  onOpenDetail,
 }: ChangesPanelProps) {
   const { t } = useTranslation();
 
@@ -172,17 +219,14 @@ export function ChangesPanel({
               <Suspense
                 fallback={
                   <div className="flex flex-col gap-2">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
+                    <ChangesListSkeleton />
                   </div>
                 }
               >
                 <ChangesList
+                  spacePublicId={spacePublicId}
                   spaceId={spaceId}
                   subTab={subTab}
-                  onOpenReview={onOpenReview}
-                  onOpenDetail={onOpenDetail}
                 />
               </Suspense>
             </ErrorBoundary>

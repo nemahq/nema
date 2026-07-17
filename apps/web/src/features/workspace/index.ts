@@ -1,3 +1,4 @@
+export { SpaceBadge } from "./components/SpaceBadge";
 export {
   SpaceOverview,
   type SpaceOverviewProps,
@@ -5,5 +6,5 @@ export {
 export { WorkspaceBootstrapGate } from "./components/WorkspaceBootstrapGate";
 export { WorkspaceHome } from "./components/WorkspaceHome";
 export { WorkspaceSidebar } from "./components/WorkspaceSidebar";
-export { useSpaceList } from "./hooks/useSpaceList";
+export { useSpaceList, useSpaceListSuspenseQuery } from "./hooks/useSpaceList";
 export { useWorkspaceBootstrapQuery } from "./hooks/useWorkspaceBootstrapQuery";

@@ -16,7 +16,7 @@
 | 문장 | Sentence | Statement | `statements` | 결정이나 판단의 '왜'를 담는, 문장 크기의 가장 작은 단위 |
 | 연결 | Connection | Relation | `statement_relations` | 두 Statement를 잇는, 방향을 가진 연결 |
 | 위키 | Wiki | Reference | `references` / `reference_links` / `statement_references` | Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력이 들어올 때마다 새로 쌓이지 않고 기존 것이 다듬어진다 |
-| 변경셋 | Changeset | Changeset | `changesets` / `changes` | 콘텐츠 단위들에 대한 변경을 한 번에 묶는 단위 |
+| 변경사항 | Change | Changeset | `changesets` / `changes` | 콘텐츠 단위들에 대한 변경을 한 번에 묶는 단위 |
 
 - **표식**: Relation이 검색·해설 응답에서 Statement에 붙어 드러난 표시(대체·충돌·해소). 코드 `RelationMarkers`. Relation의 노출 형태이지 별도 단위가 아니다.
 

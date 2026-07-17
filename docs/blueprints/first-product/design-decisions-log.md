@@ -795,6 +795,24 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 
 ---
 
+### 2026-07-17 — 디자인 폴리싱: weave Select/Checkbox 캡슐화 + Space 삭제 다이얼로그 후속 정리
+
+**"함께 삭제" 옵션을 Select 밖 체크박스로 재구성 — 바로 위 항목의 Select 내부 방식을 대체**: append-only 원칙상 위 항목(786~792줄)은 안 고치지만, 그 설계를 이번에 뒤집었다. Select 안에 이동 옵션과 파괴적 옵션을 함께 두면 "옵션 색으로만 위험을 구분"해야 하는 구조라, `SelectSeparator`+danger 톤을 아무리 더해도 근본적으로 약하다고 판단 — Select는 순수 "이동 대상 선택"으로 좁히고, "함께 삭제"는 그 아래 독립된 체크박스+레이블로 뺐다(선택 시 Select는 `disabled`). 라벨도 각 item이 스스로 설명하는 방식("{name}으로 이동") 대신, 라벨 하나에 이동 의미를 다시 실어 항목은 이름만 남겼다(`확인 필요 초안 {count}개를 이동`) — 이동 대상이 하나뿐이든 여럿이든 이제 목적이 분명한 문장 하나로 통일된다.
+
+**체크박스 체크 상태 색 — 여러 후보를 실험 후 전부 기각, weave 기본값으로 회귀**: brand(기본)→`status-success` solid→`status-success` tint 순으로 시도했으나 전부 기각했다. success(초록)는 이미 "Changeset 검토 준비완료"로 예약된 의미인데, 파괴적 동의(delete) 체크박스에 재사용하면 그 의미가 오염된다 — success와 brand의 hue가 가깝다는 점(teal `#14b8a6` vs emerald `#10b981`, ~13° 차이)을 실측 확인했지만, 이 체크박스에 필요했던 건 "브랜드와 안 겹치는 색"이 아니라 애초에 "상태색을 쓰지 말아야 함"이었다. 위험 신호는 이미 라벨 문구·다이얼로그 상단 `Alert`·하단 `danger` 버튼이 겹겹이 전달하고 있어 체크박스 자체는 weave 기본(라이트 brand·다크 중립)으로 충분 — 새 색을 정하는 문제가 아니라 애초에 상태색을 안 쓰는 게 답이었다.
+
+**weave `CheckIcon`(체크마크, `CircleCheckIcon`과는 다른 아이콘) 굵기를 `strokeWidth={3}`으로 통일**: 이 체크박스 작업 중 기본 두께가 얇아 보여 굵혔는데, weave 전체에서 `CheckIcon`을 쓰는 곳이 `Checkbox`/`Select`(SelectItem 선택 표시)/`DropdownMenu`(RadioItem 선택 표시) 셋뿐이라, 하나만 굵어지면 서로 어긋나 셋 다 맞췄다. 소비처가 정확히 3곳이라 프로퍼티화 대신 각 컴포넌트에서 직접 `strokeWidth` 지정.
+
+**weave `SelectTrigger` 기본 클래스에 `shadow-none dark:shadow-sm`·`cursor-pointer` 승격, 사용처 중복 오버라이드 제거**: `ThemeSelect`/`PreferencesSection`(2곳)/`ReferenceCandidateCard`/`DigestCandidateCard`/`OnboardingModal` 전부가 `shadow-none dark:shadow-sm`을 각자 반복하고 있었고(Space 삭제의 이동 대상 Select만 이 오버라이드가 없어 인라인 상태였음), `cursor-pointer`도 5~6곳이 반복 중이었다 — weave 기본값으로 승격하고 전부 제거. `SelectItem`의 `cursor-pointer`는 승격이 아니라 애초에 base 클래스에 이미 있던 걸 사용처마다 헛되이 재선언하고 있던 죽은 코드라 그냥 삭제(공통화 문제가 아니었음). 이 두 축(shadow, cursor)을 감사하며 확인한 기준: **화면별 사이즈 변주(`w-36`, `h-8 w-28 text-xs` 등)는 공통화 대상이 아니다** — 여러 곳에서 반복돼도 "항상 같아야 하는 값"이 아니라 "우연히 같은 값을 썼을 뿐"이면 그대로 로컬에 남긴다.
+
+**Space 삭제 다이얼로그 — 타이틀·상단 경고 `Alert` 간격 확대**: `DialogHeader`의 기본 `gap-2`는 타이틀+평문 설명 조합 기준이라, 테두리 있는 `Alert` 배너가 바로 붙으면 답답해 보였다 — `Alert`에 `mt-2`. 이 조합(`DialogHeader` 안에 `Alert`)을 쓰는 유일한 곳이라 weave `DialogHeader` 기본값은 안 건드리고 로컬 오버라이드로 처리.
+
+**Space 삭제 시 초안 탭이 안 갱신되던 버그(Realtime DELETE 미커버) — DB 보강 대신 직접 invalidate로 해결**: "함께 삭제" 선택 시 `delete_space`가 대기 초안을 UPDATE 없이 `spaces` cascade `DELETE`로 지우는데, Realtime의 `sources` 구독은 UPDATE만 듣는다(DELETE 이벤트는 RLS 판정에 `REPLICA IDENTITY FULL`이 필요해 애초에 안 옴, 기존 마이그레이션 주석에 이미 명시된 트레이드오프). `REPLICA IDENTITY FULL`을 추가해 DELETE까지 커버하는 안을 검토했으나 기각 — 초안은 언제나 본인만 볼 수 있어(팀 협업이 생겨도 이 시나리오는 안 커짐) "다른 탭이 실시간으로 보고 있는" 경우는 항상 좁은 엣지케이스이고, `refetchOnWindowFocus` 폴백으로 결국 맞춰진다. 대신 `useDeleteSpace`의 `onSuccess`에서 `source.listPending`을 직접 invalidate — `useConfirmReview`/`useDiscardReview`가 이미 쓰던, Realtime과 별개로 자기 mutation 성공 시 직접 invalidate하는 패턴을 그대로 따름.
+
+**미해결로 남긴 것 — "버려진 리뷰의 원본이 초안 탭에서 '결과없음'으로 오분류"**: `discard_ingestion_review`가 `sources.digestion_status`를 안 건드려서(그대로 `completed`), 버려진 리뷰의 원본이 `draftStatus()`에서 진짜 결과없음(`empty`)과 구분이 안 된다 — 2026-07-13에 이미 한 번 발견됐던 것과 같은 갭(`product-decisions-log.md`). 이번 세션에선 코드를 안 고치고, 설계 결정(새 `DraftStatus` 값 `discarded` 추가, 서버가 rejected changeset 존재 여부를 같이 내려주기, UI는 `cancelled`와 동일하게 아이콘 없음)을 확정한 킥오프 프롬프트만 작성해 별도 세션(`wt-6`, `fix/discarded-draft-status`)에 위임했다.
+
+---
+
 ### 2026-07-17 — 버려진 리뷰의 원본이 초안 탭에서 "결과없음"으로 오분류되던 문제 해결
 
 **해결**: 같은 날 다른 세션(polish/changeset)이 "미해결로 남긴 것"으로 킥오프 프롬프트만 써서 별도 세션(`fix/discarded-draft-status`)에 위임했던 갭 — `discard_ingestion_review`가 `sources.digestion_status`는 안 건드려 `completed`로 남기 때문에, `draftStatus()`가 이걸 진짜 결과없음(`empty`)과 구분 못 하고 있었다. 그 세션이 확정해둔 설계 그대로 착지: `listPendingSources`가 `type='ingestion'` changeset을 `pending`뿐 아니라 `rejected`까지 함께 조회해 `hasDiscardedReview`(원본별 rejected changeset 존재 여부)를 `PendingSourceItem`에 additive로 추가하고, `draftStatus()`는 `digestion_status='completed'`일 때 이 플래그로 `empty`/`discarded`(신설 `DraftStatus` 값)를 가른다. UI는 `cancelled`와 동일하게 아이콘·툴팁 없이 평범한 대기 카드로 처리(`IdleDraftCard`가 `status === "empty"`만 보므로 `discarded`는 자동으로 아무 아이콘도 안 그린다) — `IdleDraftDetailPanel`의 재시도 비활성화 가드(`status === "empty" && !bodyDirty`)와 `DraftList`의 "확인 필요" 섹션 분류(`status !== "processing"`)도 같은 이유로 코드 변경 없이 자동으로 맞물렸다.

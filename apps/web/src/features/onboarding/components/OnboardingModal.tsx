@@ -47,12 +47,12 @@ export function OnboardingModal() {
             }
           }}
         >
-          <SelectTrigger className="cursor-pointer">
+          <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {CONTENT_LANGUAGES.map((lang) => (
-              <SelectItem key={lang} value={lang} className="cursor-pointer">
+              <SelectItem key={lang} value={lang}>
                 {LANGUAGE_LABELS[lang]}
               </SelectItem>
             ))}

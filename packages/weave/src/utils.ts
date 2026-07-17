@@ -19,3 +19,9 @@ export const POPOVER_SURFACE_CLASSNAME =
 // 배경 쪽으로 가까워져 구분이 더 흐려지기 때문.
 export const NESTED_HOVER_ICON_CLASSNAME =
   "hover:bg-surface-raised-hover hover:brightness-95 dark:hover:brightness-125";
+
+// 클릭 가능한 리스트 항목(초안 카드, 변경사항 행 등)이 공유하는 호버 반응 —
+// 경계(보더 유무)는 콘텐츠 성격(임시 vs 영구 기록)에 따라 갈리지만, 호버
+// 톤만큼은 앱 전체에서 하나로 맞춘다.
+export const LIST_ITEM_HOVER_CLASSNAME =
+  "rounded-lg transition-colors duration-fast hover:bg-surface-raised-hover/40";

@@ -24,7 +24,7 @@ export type RejectPendingRelationInput = z.infer<
   typeof RejectPendingRelationInputSchema
 >;
 
-export const CHANGESET_LIST_LIMIT_DEFAULT = 50;
+export const CHANGESET_LIST_LIMIT_DEFAULT = 20;
 export const CHANGESET_LIST_LIMIT_MAX = 100;
 
 export const ListChangesetsInputSchema = z.object({

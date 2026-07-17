@@ -1,54 +1,106 @@
-import { Badge } from "@nema-io/weave";
+import { Link } from "@tanstack/react-router";
+
+import {
+  cn,
+  LIST_ITEM_HOVER_CLASSNAME,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@nema-io/weave";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import {
+  CHANGESET_TYPE_ICON,
   CHANGESET_TYPE_LABEL,
-  isOpenChangeset,
 } from "@web/features/review/constants";
 import type { ChangesetListEntry } from "@web/features/review/types";
-import { changesetDisplayTitle } from "@web/features/review/utils";
+import {
+  changesetAuthorLabel,
+  changesetDisplayTitle,
+  summarizeChangesetEffect,
+} from "@web/features/review/utils";
+import { useUser } from "@web/lib/auth";
+import { asLinkProps, type LooseLinkTarget } from "@web/lib/link";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { ChangesetStatusBadge } from "./ChangesetStatusBadge";
-
-interface ChangesetListRowProps {
+interface ChangesetListRowProps extends LooseLinkTarget {
   entry: ChangesetListEntry;
-  onClick?: () => void;
+  hideDivider?: boolean;
 }
 
-export function ChangesetListRow({ entry, onClick }: ChangesetListRowProps) {
+export function ChangesetListRow({
+  entry,
+  to,
+  params,
+  search,
+  hideDivider,
+}: ChangesetListRowProps) {
   const { t } = useTranslation();
-  const open = isOpenChangeset(entry.status);
-  const typeLabel =
-    entry.type === "manual" ? entry.type : CHANGESET_TYPE_LABEL[entry.type];
+  const user = useUser();
+  // manual은 이 리스트에 구조적으로 절대 안 나오지만(constants.ts 참고),
+  // CHANGESET_TYPE_ICON/LABEL이 그 타입을 안 다뤄 인덱싱 전에 좁혀야 한다.
+  const TypeIcon =
+    entry.type === "ingestion" || entry.type === "relation"
+      ? CHANGESET_TYPE_ICON[entry.type]
+      : null;
+  const typeLabelKey =
+    entry.type === "manual" ? null : CHANGESET_TYPE_LABEL[entry.type];
+  // effect 요약은 digest·reference만 다뤄(summarizeChangesetEffect 주석 참고) —
+  // ingestion 타입 changeset에서만 그 두 필드가 의미 있는 카운트를 갖는다.
+  // relation·revert에서 이대로 부르면 실제 relation/statement effect가 있어도
+  // 늘 빈 문자열로 보여 조용히 정보가 사라진다.
+  const effectSummary =
+    entry.type === "ingestion"
+      ? summarizeChangesetEffect(entry.effect, t)
+      : null;
+
+  const content = (
+    <>
+      <div className="flex items-center gap-1.5">
+        {TypeIcon && typeLabelKey && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex shrink-0 text-fg-tertiary">
+                <TypeIcon className="size-3.5" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">{t(typeLabelKey)}</TooltipContent>
+          </Tooltip>
+        )}
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-fg-primary">
+          {changesetDisplayTitle(entry, t)}
+        </span>
+      </div>
+      <div className="text-[11px] leading-[1.4] text-fg-tertiary">
+        #{entry.number} · <RelativeTime dateTime={entry.createdAt} />
+        {/* "누가·언제 했는가"가 "무엇을 했는가"(effect)보다 먼저 오는 게
+            자연스러운 서술 순서라 시간 바로 뒤에 둔다. */}
+        {` · ${changesetAuthorLabel(entry.authorId, user.displayName, t)}`}
+        {effectSummary && ` · ${effectSummary}`}
+      </div>
+    </>
+  );
+
+  const rowClassName = cn(
+    "flex w-full flex-col gap-0.5 px-4 py-3 text-left",
+    to ? LIST_ITEM_HOVER_CLASSNAME : "cursor-default",
+  );
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!onClick}
-      className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-surface-raised px-3 py-2.5 text-left transition-colors duration-fast enabled:hover:bg-surface-raised-hover disabled:cursor-default"
-    >
-      <Badge variant="neutral" className="shrink-0">
-        {typeLabel}
-      </Badge>
-      <span className="min-w-0 flex-1 truncate text-sm text-fg-primary">
-        <span className="text-fg-tertiary">#{entry.number} · </span>
-        {changesetDisplayTitle(entry, t)}
-      </span>
-      {entry.reverted && (
-        <Badge variant="neutral" className="shrink-0">
-          {t("review.status_reverted")}
-        </Badge>
+    // 구분선을 버튼 폭 그대로 두면 버튼의 rounded-lg 모서리를 따라 선이 살짝
+    // 휘어 보여서, 별도 줄로 분리하고 rounded-lg와 같은 반경(2=8px)만큼
+    // 인셋해 호버 박스가 평평해지는 지점과 끝을 맞춘다.
+    <div>
+      {to ? (
+        // cmd/middle click으로 새 탭에서 열 수 있어야 해서 button+onClick이
+        // 아니라 진짜 <a href>를 내는 Link로 렌더한다.
+        <Link {...asLinkProps({ to, params, search })} className={rowClassName}>
+          {content}
+        </Link>
+      ) : (
+        <div className={rowClassName}>{content}</div>
       )}
-      {!open && (
-        <ChangesetStatusBadge
-          status={entry.status}
-          type={entry.type}
-          className="shrink-0"
-        />
-      )}
-      <RelativeTime dateTime={entry.createdAt} className="shrink-0" />
-    </button>
+      {!hideDivider && <div className="mx-2 border-b border-border/50" />}
+    </div>
   );
 }

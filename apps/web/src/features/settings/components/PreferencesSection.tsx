@@ -63,12 +63,12 @@ function ContentLanguageSelect() {
 
   return (
     <Select value={contentLang} onValueChange={handleContentLangChange}>
-      <SelectTrigger className="w-36 cursor-pointer shadow-none dark:shadow-sm">
+      <SelectTrigger className="w-36">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {CONTENT_LANGUAGES.map((lang) => (
-          <SelectItem key={lang} value={lang} className="cursor-pointer">
+          <SelectItem key={lang} value={lang}>
             {LANGUAGE_LABELS[lang]}
           </SelectItem>
         ))}
@@ -128,16 +128,12 @@ export function PreferencesSection() {
             divider={false}
           >
             <Select value={appLang} onValueChange={handleAppLangChange}>
-              <SelectTrigger className="w-36 cursor-pointer shadow-none dark:shadow-sm">
+              <SelectTrigger className="w-36">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {LOCALES.map((lang) => (
-                  <SelectItem
-                    key={lang}
-                    value={lang}
-                    className="cursor-pointer"
-                  >
+                  <SelectItem key={lang} value={lang}>
                     {LANGUAGE_LABELS[lang]}
                   </SelectItem>
                 ))}
