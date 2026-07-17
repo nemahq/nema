@@ -96,8 +96,8 @@
     "deny": "Deny"
   },
   "review": {
-    "changes_empty_closed": "No reviewed changes yet.",
-    "changes_empty_open": "No changes need review yet.",
+    "changes_empty_closed": "No reviewed changes.",
+    "changes_empty_open": "No changes need review.",
     "changes_load_error": "Couldn't load the list.",
     "confirm_action": "Confirm",
     "confirm_disabled_empty_label": "One of the digest candidates has a topic or tag with no name.",
