@@ -2,7 +2,7 @@
 -- 한다 — changeset의 구체적 내용(Digest 분할·제목·Reference 후보)은 사람이 아니라
 -- 엔진이 만들기 때문에 relation과 같은 엔진 산물로 취급한다. 근데 create_ingestion_review가
 -- 여기에 Source 제출자 id를 그대로 넣고 있었다 — Source·Digest의 author_id(제출자 귀속)와
--- Changeset의 author_id(그 changeset 내용을 만든 주체)를 混동한 것으로, 리뷰 화면에서
+-- Changeset의 author_id(그 changeset 내용을 만든 주체)를 혼동한 것으로, 리뷰 화면에서
 -- ingestion·relation이 항상 "엔진 제안"으로 보여야 하는데 실제로는 제출자 이름이 뜨는
 -- 버그였다. Source·Digest 레벨의 author_id(제출자 귀속)는 이미 올바르게 별도로 기록되고
 -- 있어(confirm_ingestion_review가 Digest 생성 시 Source.author_id를 독립적으로 다시
