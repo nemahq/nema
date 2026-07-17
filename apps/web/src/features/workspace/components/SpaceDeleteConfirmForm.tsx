@@ -197,7 +197,7 @@ export function SpaceDeleteConfirmForm({
       <DialogHeader>
         <DialogTitle>{t("space.delete_confirm_title")}</DialogTitle>
         <DialogDescription asChild>
-          <Alert variant="error" icon={false}>
+          <Alert variant="error" icon={false} className="mt-2">
             {t("space.delete_warning")}
           </Alert>
         </DialogDescription>
