@@ -46,10 +46,9 @@ export function useChangesetReadyNotifier() {
       }
 
       try {
-        const notification = new Notification(
-          t("notification.changeset_ready_title"),
-          { body: t("notification.changeset_ready_body") },
-        );
+        const notification = new Notification(t("app.title"), {
+          body: t("notification.changeset_ready_body"),
+        });
         notification.onclick = function focusAndOpenReview() {
           window.focus();
           void navigate({

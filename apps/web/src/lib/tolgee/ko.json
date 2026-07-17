@@ -93,9 +93,8 @@
   },
   "notification": {
     "changeset_ready_body": "리뷰할 변경사항이 생겼어요",
-    "changeset_ready_title": "Nema",
     "permission_prompt_allow_action": "허용",
-    "permission_prompt_message": "자리를 비워도 리뷰가 준비되면 알려드릴까요?"
+    "permission_prompt_message": "이 탭을 안 보고 있어도 리뷰가 준비되면 알려드릴까요?"
   },
   "oauth": {
     "approve": "허용",

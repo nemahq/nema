@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 
-import { BellIcon } from "@nema-io/weave/icons";
-
+import { NotificationSoftAskToast } from "@web/features/notifications/components/NotificationSoftAskToast";
 import { useTranslation } from "@web/lib/tolgee";
 import { getStorage, setStorage } from "@web/utils/localStorage";
 import { toast } from "@web/utils/toast";
@@ -40,22 +39,25 @@ export function useNotificationSoftAsk() {
         setStorage("notificationSoftAskSeen", "true");
       }
 
-      toast.info(t("notification.permission_prompt_message"), {
-        id: SOFT_ASK_TOAST_ID,
-        icon: <BellIcon className="size-4" />,
-        duration: Infinity,
-        cancel: {
-          label: "✕",
-          onClick: markSeen,
-        },
-        action: {
-          label: t("notification.permission_prompt_allow_action"),
-          onClick: () => {
-            markSeen();
-            void requestPermission();
-          },
-        },
-      });
+      toast.custom(
+        (id) => (
+          <NotificationSoftAskToast
+            message={t("notification.permission_prompt_message")}
+            allowLabel={t("notification.permission_prompt_allow_action")}
+            dismissLabel={t("common.close")}
+            onAllow={() => {
+              markSeen();
+              void requestPermission();
+              toast.dismiss(id);
+            }}
+            onDismiss={() => {
+              markSeen();
+              toast.dismiss(id);
+            }}
+          />
+        ),
+        { id: SOFT_ASK_TOAST_ID, duration: Infinity },
+      );
     },
     [isSupported, permission, requestPermission, t],
   );
