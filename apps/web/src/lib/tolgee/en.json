@@ -94,7 +94,7 @@
   "notification": {
     "changeset_ready_body": "Nema needs your review",
     "permission_prompt_allow_action": "Allow",
-    "permission_prompt_message": "Get notified when a review is ready, even when you're not on this tab?"
+    "permission_prompt_message": "From now on, get notified when a review is ready, even when you're not on this tab?"
   },
   "oauth": {
     "approve": "Allow",
