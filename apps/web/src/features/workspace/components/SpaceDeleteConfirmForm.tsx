@@ -99,7 +99,6 @@ function SpaceDeleteMoveDraftsField({
           onCheckedChange={(checked) =>
             onDeleteTogetherChange(checked === true)
           }
-          className="data-[state=checked]:border-status-success data-[state=checked]:bg-status-success data-[state=checked]:text-white"
         />
         {t("space.delete_together_option")}
       </label>
