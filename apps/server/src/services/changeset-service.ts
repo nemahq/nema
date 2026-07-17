@@ -289,10 +289,10 @@ interface ChangesetHistoryEntry {
   // 효과 요약 — 대상 종류별 변경 수("이 글 → 진술 N + 관계 M").
   effect: Record<ChangeTargetType, number>;
   createdAt: string;
-  // closed(applied/rejected) 전환 시점 — trg_changesets_updated_at이 status UPDATE마다
-  // 갱신한다. revert_changeset은 되돌려지는 원본을 UPDATE하지 않고 새 changeset만
-  // INSERT하므로(§4.4), 이 값은 나중에 되돌려져도 오염되지 않고 "그 판단이 최종
-  // 내려진 시각"만 담는다.
+  // closed(applied/rejected) 전환 시점(의도). trg_changesets_updated_at은 status
+  // 변경뿐 아니라 이 행에 대한 모든 UPDATE에 반응하므로, revert_changeset처럼 원본을
+  // UPDATE하지 않는 경로(§4.4)에서만 "판단이 내려진 시각"이 보장된다 — 컬럼만 고치는
+  // UPDATE(예: 백필)를 추가하면 이 값도 함께 갱신되니 주의.
   updatedAt: string;
 }
 
@@ -300,7 +300,7 @@ export async function listChangesets(args: {
   supabase: TypedSupabaseClient;
   spaceId?: string;
   limit: number;
-  // 미지정 시 open/closed 구분 없이 전부 — ChangesetDetailScreen처럼 특정 changeset을
+  // 미지정 시 open/closed 구분 없이 전부 — ClosedReviewScreen처럼 특정 changeset을
   // id로 찾으려고 전체를 훑는 소비처가 있어 이 폴백을 남겨둔다.
   open?: boolean;
   // number(Space 안 순차 증가값) 기준 커서 — created_at 대신 쓰는 이유는 동시 생성 시
