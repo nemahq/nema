@@ -97,7 +97,7 @@ export const CHANGESET_TYPE_LABEL: Record<
 // relation 도메인이 먼저 쓰던 rejected를 ingestion도 그대로 재사용한다
 // (supabase/migrations/20260714130000_ingestion_review_discard_restore.sql 참고).
 // relation의 거절도 지금은 되살리기가 없지만 후속으로 ingestion과 동일하게 열 예정이라
-// (intervention-design.md §10 백로그), type별로 라벨을 나누지 않고 "버려짐"으로 통일한다.
+// (intervention-design.md §10 백로그), type별로 라벨을 나누지 않고 "반려됨"으로 통일한다.
 const CHANGESET_STATUS_VARIANT: Record<ChangesetStatus, BadgeVariant> = {
   pending: "warning",
   applied: "success",
@@ -123,7 +123,7 @@ export function changesetStatusMeta(status: ChangesetStatus): {
 // pending은 아직 진행 중이라 배경 없이 브랜드색 테두리(원 아이콘 자체)만 — applied·
 // rejected는 결론이 난 것이라 배경을 채운 칩으로 더 무겁게 낸다. applied는 무채색
 // 톤(Button primary 다크 배색)이라 pending의 브랜드 teal과 안 겹친다. rejected는
-// 버려짐(ingestion)·거절됨(relation) 둘 다 같은 아이콘·라벨.
+// ingestion·relation 둘 다 "반려됨"으로 같은 아이콘·라벨.
 type ChangesetStatusIcon =
   | { kind: "outline"; Icon: IconComponent; tone: string }
   | { kind: "filled"; Icon: IconComponent; bg: string; iconTone: string };

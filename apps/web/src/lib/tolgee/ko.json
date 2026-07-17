@@ -149,7 +149,7 @@
     "reference_type_label": "레퍼런스 유형",
     "source_text_panel_title": "원문 보기",
     "status_applied": "적용됨",
-    "status_discarded": "버려짐",
+    "status_discarded": "반려됨",
     "status_pending": "리뷰 대기",
     "status_reverted": "되돌려짐",
     "tab_closed": "리뷰됨",
