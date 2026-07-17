@@ -2,7 +2,21 @@ import { z } from "zod";
 
 export const SPACE_NAME_MAX_LENGTH = 50;
 
-const SpaceNameSchema = z.string().trim().min(1).max(SPACE_NAME_MAX_LENGTH);
+// 비가시 문자만으로 채워 화면상 빈 이름처럼 보이게 하거나, 양방향 텍스트
+// 방향 제어 문자로 표시를 위장하는 것을 막는다.
+const SPACE_NAME_FORBIDDEN_CHARS_PATTERN =
+  // eslint-disable-next-line no-control-regex -- 제어문자를 의도적으로 차단 대상에 포함
+  /[\u0000-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/;
+
+const SpaceNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(SPACE_NAME_MAX_LENGTH)
+  .refine((name) => !SPACE_NAME_FORBIDDEN_CHARS_PATTERN.test(name), {
+    message: "Space name contains control or invisible characters",
+  })
+  .transform((name) => name.normalize("NFC"));
 
 // generate_space_public_id() (supabase/migrations)가 SQL로 같은 형식을 만든다 —
 // 한쪽을 바꾸면 다른 쪽도 맞춰야 한다.
