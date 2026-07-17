@@ -66,6 +66,8 @@ export const changesetRouter = router({
         supabase: ctx.supabase,
         spaceId: input.spaceId,
         limit: input.limit,
+        open: input.open,
+        cursor: input.cursor,
       }),
     ),
 

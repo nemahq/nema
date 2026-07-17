@@ -41,7 +41,7 @@ export function AccountDeleteConfirmShell({
 
       <DialogFooter className="mt-6 border-t border-border pt-4">
         <Button variant="ghost" onClick={onBack} disabled={cancelDisabled}>
-          {t("account.delete_cancel")}
+          {t("common.cancel")}
         </Button>
         <Button
           variant="danger"

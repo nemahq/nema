@@ -1,4 +1,5 @@
-import { type ReactNode, Suspense } from "react";
+import { type ReactNode } from "react";
+import { keepPreviousData } from "@tanstack/react-query";
 
 import {
   Button,
@@ -14,7 +15,7 @@ import {
 } from "@nema-io/weave";
 import { Check, X } from "@nema-io/weave/icons";
 
-import { useSpaceListSuspenseQuery } from "@web/features/workspace";
+import { useSpaceList } from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
 
 // min-w-0: flex item 기본값(min-width: auto)이 내용 크기 이하로 안 줄어들게
@@ -35,8 +36,24 @@ function DraftSpacePill({
   reassignPending,
 }: DraftSpacePillProps) {
   const { t } = useTranslation();
-  const [spaceList] = useSpaceListSuspenseQuery();
-  const space = spaceList.spaces.find((candidate) => candidate.id === spaceId);
+  // Space 삭제로 draft가 다른 Space로 재배정되면 space.list가 무효화된다 —
+  // Suspense 쿼리는 그때마다 이 pill을 다시 매달아 깜빡이므로, 대신 이전
+  // 목록을 보여준 채 조용히 갱신한다(placeholderData는 useSuspenseQuery에서
+  // 지원 안 해 일반 쿼리로 내려감).
+  const { data: spaceList, isError } = useSpaceList({
+    placeholderData: keepPreviousData,
+  });
+  const space = spaceList?.spaces.find((candidate) => candidate.id === spaceId);
+
+  // isError여도 keepPreviousData가 채워둔 이전 목록이 있으면 그걸 계속 보여준다 —
+  // 배경 갱신 실패로 보여줄 게 아예 없을 때만 로딩과 구분해 빈 상태로 내린다.
+  if (!spaceList) {
+    return isError ? (
+      <span />
+    ) : (
+      <Skeleton className="-ml-2.5 h-6 w-24 rounded-full" />
+    );
+  }
 
   if (!space) {
     return <span />;
@@ -110,15 +127,11 @@ export function DraftDetailHeader({
 
   return (
     <div className="flex h-11 shrink-0 items-center justify-between gap-3 px-6">
-      <Suspense
-        fallback={<Skeleton className="-ml-2.5 h-6 w-24 rounded-full" />}
-      >
-        <DraftSpacePill
-          spaceId={spaceId}
-          onReassignSpace={onReassignSpace}
-          reassignPending={reassignPending}
-        />
-      </Suspense>
+      <DraftSpacePill
+        spaceId={spaceId}
+        onReassignSpace={onReassignSpace}
+        reassignPending={reassignPending}
+      />
       {/* -mr-1: 닫기 버튼(size-7)의 아이콘(size-5)이 히트박스 안에서 4px
           안쪽으로 들어가 있어, 보정 없이는 아이콘이 px-6보다 더 안쪽에서
           끝나 버린다(pill이 -ml-2.5로 텍스트를 px-6 경계에 맞춘 것과 비대칭).

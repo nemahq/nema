@@ -40,11 +40,9 @@ export function AccountDeleteConfirmField({
           htmlFor={confirmFieldId}
           className="text-sm font-medium text-fg-primary"
         >
-          {hasEmail
-            ? t("account.delete_confirm_email_label", { email: user.email })
-            : t("account.delete_confirm_name_label", {
-                name: user.displayName,
-              })}
+          {t("common.delete_confirm_instruction", {
+            value: hasEmail ? user.email : user.displayName,
+          })}
         </label>
         <Input
           id={confirmFieldId}

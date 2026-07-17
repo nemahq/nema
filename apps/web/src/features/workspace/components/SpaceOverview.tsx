@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
@@ -20,17 +19,20 @@ const NAV_BADGE_CLASS =
 const CONTENT_BADGE_CLASS =
   "flex size-8 shrink-0 items-center justify-center rounded-md bg-fg-primary/10 text-sm font-medium text-fg-primary";
 
-type SpaceTab = "topic" | "changesets";
+export type SpaceTab = "topic" | "changesets";
 
 interface SpaceOverviewProps {
   spacePublicId: string;
+  activeTab: SpaceTab;
 }
 
-export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
+export function SpaceOverview({
+  spacePublicId,
+  activeTab,
+}: SpaceOverviewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [spaceList] = useSpaceListSuspenseQuery();
-  const [tab, setTab] = useState<SpaceTab>("topic");
 
   const space = spaceList.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
@@ -63,7 +65,7 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
         </div>
       </NavigationBar>
 
-      <div className="flex-1 overflow-y-auto">
+      <div data-main-scroll-area className="flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6">
           <div className="flex min-w-0 items-center gap-2">
             <span className={CONTENT_BADGE_CLASS}>
@@ -78,23 +80,36 @@ export function SpaceOverview({ spacePublicId }: SpaceOverviewProps) {
             <SourceComposer spaceId={space.id} />
           </div>
 
-          <div className="mt-6 flex gap-1 border-b border-border/50">
+          {/* 탭만 sticky — 스크롤 중 자연스러운 위치가 top:0(네비게이션 바 바로
+              아래)에 닿는 순간부터만 고정된다(sticky의 기본 동작), 그 전까진
+              컴포저·제목과 함께 평소처럼 스크롤된다. */}
+          <div className="sticky top-0 z-10 mt-6 flex gap-1 border-b border-border/50 bg-surface-card">
             <SpaceTabButton
-              active={tab === "topic"}
-              onClick={() => setTab("topic")}
+              active={activeTab === "topic"}
+              onClick={() =>
+                navigate({
+                  to: "/space/$spacePublicId",
+                  params: { spacePublicId },
+                })
+              }
             >
               {t("space.tab_topic")}
             </SpaceTabButton>
             <SpaceTabButton
-              active={tab === "changesets"}
-              onClick={() => setTab("changesets")}
+              active={activeTab === "changesets"}
+              onClick={() =>
+                navigate({
+                  to: "/space/$spacePublicId/changes",
+                  params: { spacePublicId },
+                })
+              }
               count={space.openChangesetCount}
             >
               {t("space.tab_changesets")}
             </SpaceTabButton>
           </div>
 
-          {tab === "changesets" && (
+          {activeTab === "changesets" && (
             <ErrorBoundary
               boundaryName="changes-panel"
               fallbackRender={(props) => <SectionErrorFallback {...props} />}
