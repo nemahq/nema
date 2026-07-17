@@ -103,33 +103,31 @@ CREATE TRIGGER trg_sources_propagate_title_to_changeset
 --
 --   "A(Digest 제목) vs B(Digest 제목)" — 끝점 두 Statement가 각각 속한
 --   Digest의 제목을 합친다. applied 블록(자동 적용, 여러 관계를 한 changeset에
---   배치)과 duplicates 블록(같음 가리기)은 changeset 하나가 여러 쌍을 담을 수
---   있어 "A vs B" 단일 제목이 안 맞는다 — 사람이 판정하는 pending 제안(changeset
---   1개 = 쌍 1개)만 채운다. 나머지 둘은 계속 효과 요약 폴백으로 남긴다.
+--   배치)은 changeset 하나가 여러 쌍을 담을 수 있어 "A vs B" 단일 제목이 안
+--   맞는다 — 사람이 판정하는 pending 제안(changeset 1개 = 쌍 1개, conflicts·
+--   duplicates 모두 여기로 흘러온다, 20260707170000)만 채운다. duplicates 승인은
+--   apply_pending_relation이 기존 changeset을 그대로 쓰므로(새 changeset 안 만듦)
+--   여기서 채운 title이 그대로 남는다.
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION apply_relation_changesets(
-  p_source_id  uuid,
-  p_applied    jsonb DEFAULT '[]'::jsonb,
-  p_pending    jsonb DEFAULT '[]'::jsonb,
-  p_duplicates jsonb DEFAULT '[]'::jsonb
+  p_source_id uuid,
+  p_applied   jsonb DEFAULT '[]'::jsonb,
+  p_pending   jsonb DEFAULT '[]'::jsonb
 )
 RETURNS void AS $$
 DECLARE
-  v_space_id           uuid;
-  v_changeset_id       uuid;
-  v_relation_id        uuid;
-  v_item               jsonb;
-  v_applied_any        boolean := false;
-  v_archived_id        uuid;
-  v_merge_changeset_id uuid;
-  v_from_title         text;
-  v_to_title           text;
+  v_space_id     uuid;
+  v_changeset_id uuid;
+  v_relation_id  uuid;
+  v_item         jsonb;
+  v_applied_any  boolean := false;
+  v_from_title   text;
+  v_to_title     text;
 BEGIN
   IF jsonb_typeof(p_applied) != 'array'
-     OR jsonb_typeof(p_pending) != 'array'
-     OR jsonb_typeof(p_duplicates) != 'array' THEN
-    RAISE EXCEPTION 'p_applied, p_pending, p_duplicates must be JSON arrays';
+     OR jsonb_typeof(p_pending) != 'array' THEN
+    RAISE EXCEPTION 'p_applied, p_pending must be JSON arrays';
   END IF;
 
   -- 완료 표시 = pending 클레임. 이미 completed/failed면 멈춰 늦게 도착한 적용이
@@ -180,8 +178,11 @@ BEGIN
   END IF;
 
   -- ----- pending: 건당 변경셋 1개. title = 끝점 Digest "A vs B" -----
+  -- 애매·모순(conflicts)·같음(duplicates) 모두 여기로 흘러 사람 검토를 거친다.
   FOR v_item IN SELECT value FROM jsonb_array_elements(p_pending)
   LOOP
+    -- 재시도가 같은 쌍을 다시 제안하면 기존 pending 변경셋을 건너뛴다. 사람이
+    -- 거절(rejected)한 쌍도 다시 올리지 않는다 — pending·rejected를 함께 본다.
     CONTINUE WHEN EXISTS (
       SELECT 1
       FROM changesets c
@@ -220,29 +221,6 @@ BEGIN
         'to_id',   v_item->>'to_id'
       )
     );
-  END LOOP;
-
-  -- ----- 같음(중복) 가리기: relation 변경셋 + archive + 남길 진술 링크 -----
-  FOR v_item IN SELECT value FROM jsonb_array_elements(p_duplicates)
-  LOOP
-    UPDATE statements
-    SET status = 'archived',
-        ingestion_status = 'pending',
-        duplicate_of = (v_item->>'keeper')::uuid
-    WHERE id = (v_item->>'duplicate')::uuid
-      AND space_id = v_space_id
-      AND status = 'active'
-    RETURNING id INTO v_archived_id;
-
-    IF v_archived_id IS NOT NULL THEN
-      IF v_merge_changeset_id IS NULL THEN
-        INSERT INTO changesets (space_id, type, status, source_id)
-        VALUES (v_space_id, 'relation', 'applied', p_source_id)
-        RETURNING id INTO v_merge_changeset_id;
-      END IF;
-      INSERT INTO changes (changeset_id, action, target_type, target_id)
-      VALUES (v_merge_changeset_id, 'archive', 'statement', v_archived_id);
-    END IF;
   END LOOP;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
@@ -383,11 +361,14 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 -- =============================================================
 -- 5) manual — 대상 콘텐츠의 title을 그대로 옮겨온다
 --
---   confirm_digest_edit(Digest 수정)은 브리핑이 명시한 케이스. 나머지 셋
---   (update_reference/archive_reference/archive_source)은 명시되진 않았지만
---   대상 행에 title이 이미 있어 추가 조회 없이(또는 RETURNING 한 컬럼만
---   늘려서) 같은 패턴을 일관되게 적용할 수 있어 함께 채운다. archive_statement
---   는 대상(Statement)에 title 개념 자체가 없어 제외 — 계속 효과 요약 폴백.
+--   confirm_digest_edit(Digest 수정)은 브리핑이 명시한 케이스. update_reference·
+--   archive_reference는 명시되진 않았지만 대상 행에 title이 이미 있어 추가
+--   조회 없이(또는 RETURNING 한 컬럼만 늘려서) 같은 패턴을 일관되게 적용할 수
+--   있어 함께 채운다. archive_statement는 대상(Statement)에 title 개념 자체가
+--   없어 제외 — 계속 효과 요약 폴백. archive_source는 v2 Source 상태 모델
+--   (20260706112433)에서 이미 제거된 RPC라 애초에 대상이 아니다 — "빼기"는
+--   이제 trash_source(pending→trashed)뿐이고, 그 경로는 changeset을 만들지
+--   않는다("삭제·복원은 변경이력에 남기지 않는다", 같은 마이그레이션 주석).
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION confirm_digest_edit(
@@ -643,40 +624,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
-CREATE OR REPLACE FUNCTION archive_source(p_source_id uuid)
-RETURNS void AS $$
-DECLARE
-  v_space_id     uuid;
-  v_title        text;
-  v_changeset_id uuid;
-BEGIN
-  UPDATE sources
-  SET status = 'archived'
-  WHERE id = p_source_id AND status = 'active'
-    AND (auth.uid() IS NULL OR is_space_member(space_id))
-  RETURNING space_id, title INTO v_space_id, v_title;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'source % is not an active source the caller can archive', p_source_id;
-  END IF;
-
-  INSERT INTO changesets (space_id, type, status, author_id, title)
-  VALUES (v_space_id, 'manual', 'applied', auth.uid(), v_title)
-  RETURNING id INTO v_changeset_id;
-
-  INSERT INTO changes (changeset_id, action, target_type, target_id)
-  VALUES (v_changeset_id, 'archive', 'source', p_source_id);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-
 -- =============================================================
 -- 6) 기존 changeset 백필
 --
---   ingestion → 그 시점 Source 제목. manual → 대상 콘텐츠(Digest/Reference/
---   Source)의 현재 제목. relation → pending 제안만 끝점 Digest 제목으로
---   재계산(applied/duplicates 배치는 위 3번과 같은 이유로 제외, null 유지 —
---   효과 요약 폴백 그대로). revert → 원본 title + " 되돌림", 체인 깊이만큼
---   수렴할 때까지 반복.
+--   ingestion → 그 시점 Source 제목. manual → 대상 콘텐츠(Digest/Reference)의
+--   현재 제목. relation → pending 제안(conflicts·duplicates 전부 포함)만 끝점
+--   Digest 제목으로 재계산 — applied 배치(위 3번과 같은 이유로 여러 쌍이 한
+--   changeset에 실림)는 null 유지, 효과 요약 폴백 그대로. revert → 원본 title
+--   + " 되돌림", 체인 깊이만큼 수렴할 때까지 반복.
 -- =============================================================
 
 UPDATE changesets c
@@ -707,13 +662,6 @@ SET title = r.title
 FROM changes ch JOIN "references" r ON r.id = ch.target_id
 WHERE ch.changeset_id = c.id
   AND ch.target_type = 'reference' AND ch.action = 'archive'
-  AND c.type = 'manual' AND c.title IS NULL;
-
-UPDATE changesets c
-SET title = s.title
-FROM changes ch JOIN sources s ON s.id = ch.target_id
-WHERE ch.changeset_id = c.id
-  AND ch.target_type = 'source' AND ch.action = 'archive'
   AND c.type = 'manual' AND c.title IS NULL;
 
 UPDATE changesets c
