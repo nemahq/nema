@@ -1,8 +1,9 @@
 import { Suspense, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { linkOptions, useNavigate } from "@tanstack/react-router";
 
 import { Button, Skeleton } from "@nema-io/weave";
 
+import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { useNotificationSoftAsk } from "@web/features/notifications";
 import {
@@ -21,10 +22,11 @@ import type {
   ReviewDigest,
   ReviewNewReference,
 } from "@web/features/review/types";
+import { SpaceBadge, useSpaceListSuspenseQuery } from "@web/features/workspace";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { ChangesetStatusBadge } from "./ChangesetStatusBadge";
+import { ChangesetStatusPill } from "./ChangesetStatusPill";
 import { DigestCandidateCard } from "./DigestCandidateCard";
 import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
 import { ReferenceMergeCard } from "./ReferenceMergeCard";
@@ -46,6 +48,9 @@ function OpenReviewContent({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [review] = useDigestReviewSuspenseQuery(changesetId);
+  const [spaceList] = useSpaceListSuspenseQuery();
+  const space = spaceList.spaces.find((s) => s.publicId === spacePublicId);
+  const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
   const updateReview = useUpdateReview(changesetId);
   const confirmReview = useConfirmReview();
   const discardReview = useDiscardReview();
@@ -203,120 +208,142 @@ function OpenReviewContent({
   }
 
   return (
-    <main className="flex flex-1 flex-col overflow-y-auto bg-surface-card">
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-8">
-        <header className="flex flex-col gap-2 border-b border-border/50 pb-4">
-          <div className="flex items-start justify-between gap-4">
-            <h1 className="flex min-w-0 items-baseline gap-2 text-2xl font-semibold text-fg-primary">
-              <span className="min-w-0 truncate">
-                {review.sourceTitle ?? t("review.digest_review_title")}
-              </span>
-              <span className="shrink-0 text-lg font-normal text-fg-tertiary">
-                #{review.changesetNumber}
-              </span>
-            </h1>
-            <ReviewHeaderActions
-              onDiscard={handleDiscard}
-              onConfirm={handleConfirm}
-              discardPending={discardReview.isPendingAfterDelay}
-              discardDisabled={locked}
-              confirmDisabled={confirmDisabled}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <ChangesetStatusBadge status="pending" />
-            <RelativeTime
-              dateTime={review.sourceCreatedAt}
-              className="text-sm leading-none"
-            />
-          </div>
-          {confirmDisabledReasonText && (
-            <p className="text-xs text-fg-tertiary">
-              {confirmDisabledReasonText}
-            </p>
-          )}
-          {error && (
-            <p className="text-sm text-status-error">
-              {getErrorMessage(error)}
-            </p>
-          )}
-        </header>
+    <main className="flex flex-1 flex-col bg-surface-card">
+      <NavigationBar
+        items={[
+          {
+            label: space?.name ?? "",
+            icon: space && <SpaceBadge name={space.name} size="sm" />,
+            ...linkOptions({
+              to: "/space/$spacePublicId",
+              params: { spacePublicId },
+            }),
+          },
+          {
+            label: t("space.tab_changesets"),
+            ...linkOptions({
+              to: "/space/$spacePublicId/changes",
+              params: { spacePublicId },
+              search: { subTab: "open" },
+            }),
+          },
+          { label: reviewTitle },
+        ]}
+      />
 
-        <SourceTextPanel body={review.sourceBody} />
+      <div data-main-scroll-area className="flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-8">
+          <header className="flex flex-col gap-2 border-b border-border/50 pb-4">
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="flex min-w-0 items-baseline gap-2 text-2xl font-semibold text-fg-primary">
+                <span className="min-w-0 truncate">{reviewTitle}</span>
+                <span className="shrink-0 text-lg font-normal text-fg-tertiary">
+                  #{review.changesetNumber}
+                </span>
+              </h1>
+              <ReviewHeaderActions
+                onDiscard={handleDiscard}
+                onConfirm={handleConfirm}
+                discardPending={discardReview.isPendingAfterDelay}
+                discardDisabled={locked}
+                confirmDisabled={confirmDisabled}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <ChangesetStatusPill status="pending" />
+              <RelativeTime
+                dateTime={review.sourceCreatedAt}
+                className="text-sm leading-none"
+              />
+            </div>
+            {confirmDisabledReasonText && (
+              <p className="text-xs text-fg-tertiary">
+                {confirmDisabledReasonText}
+              </p>
+            )}
+            {error && (
+              <p className="text-sm text-status-error">
+                {getErrorMessage(error)}
+              </p>
+            )}
+          </header>
 
-        <div className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-fg-secondary">
-            {t("review.digest_section_title", { count: digestRows.length })}
-          </h2>
-          {digestRows.map(({ digest, index, title, body, topics, tags }) => (
-            <DigestCandidateCard
-              key={index}
-              spaceId={review.spaceId}
-              digest={digest}
-              title={title}
-              body={body}
-              topics={topics}
-              tags={tags}
-              citedReferences={review.citedReferences}
-              disabled={locked}
-              onTitleChange={(value) =>
-                setTitleOverrides((prev) => new Map(prev).set(index, value))
-              }
-              onBodyChange={(value) =>
-                setBodyOverrides((prev) => new Map(prev).set(index, value))
-              }
-              onTopicsChange={(topics) =>
-                setTopicsOverrides((prev) => new Map(prev).set(index, topics))
-              }
-              onTagsChange={(tags) =>
-                setTagsOverrides((prev) => new Map(prev).set(index, tags))
-              }
-              onRemove={() =>
-                setRemovedDigestIndexes((prev) => new Set(prev).add(index))
-              }
-            />
-          ))}
-        </div>
+          <SourceTextPanel body={review.sourceBody} />
 
-        {referenceRows.length + mergeRows.length > 0 && (
           <div className="flex flex-col gap-3">
             <h2 className="text-sm font-semibold text-fg-secondary">
-              {t("review.reference_section_title", {
-                count: referenceRows.length + mergeRows.length,
-              })}
+              {t("review.digest_section_title", { count: digestRows.length })}
             </h2>
-            {referenceRows.map((reference) => (
-              <ReferenceCandidateCard
-                key={reference.key}
-                reference={reference}
+            {digestRows.map(({ digest, index, title, body, topics, tags }) => (
+              <DigestCandidateCard
+                key={index}
+                spaceId={review.spaceId}
+                digest={digest}
+                title={title}
+                body={body}
+                topics={topics}
+                tags={tags}
+                citedReferences={review.citedReferences}
                 disabled={locked}
-                onChange={(next) =>
-                  setReferenceOverrides((prev) =>
-                    new Map(prev).set(reference.key, next),
-                  )
+                onTitleChange={(value) =>
+                  setTitleOverrides((prev) => new Map(prev).set(index, value))
+                }
+                onBodyChange={(value) =>
+                  setBodyOverrides((prev) => new Map(prev).set(index, value))
+                }
+                onTopicsChange={(topics) =>
+                  setTopicsOverrides((prev) => new Map(prev).set(index, topics))
+                }
+                onTagsChange={(tags) =>
+                  setTagsOverrides((prev) => new Map(prev).set(index, tags))
                 }
                 onRemove={() =>
-                  setRemovedReferenceKeys((prev) =>
-                    new Set(prev).add(reference.key),
-                  )
-                }
-              />
-            ))}
-            {mergeRows.map(({ reference, mergeNote }) => (
-              <ReferenceMergeCard
-                key={reference.id}
-                reference={reference}
-                mergeNote={mergeNote}
-                disabled={locked}
-                onMergeNoteChange={(value) =>
-                  setMergeNoteOverrides((prev) =>
-                    new Map(prev).set(reference.id, value),
-                  )
+                  setRemovedDigestIndexes((prev) => new Set(prev).add(index))
                 }
               />
             ))}
           </div>
-        )}
+
+          {referenceRows.length + mergeRows.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <h2 className="text-sm font-semibold text-fg-secondary">
+                {t("review.reference_section_title", {
+                  count: referenceRows.length + mergeRows.length,
+                })}
+              </h2>
+              {referenceRows.map((reference) => (
+                <ReferenceCandidateCard
+                  key={reference.key}
+                  reference={reference}
+                  disabled={locked}
+                  onChange={(next) =>
+                    setReferenceOverrides((prev) =>
+                      new Map(prev).set(reference.key, next),
+                    )
+                  }
+                  onRemove={() =>
+                    setRemovedReferenceKeys((prev) =>
+                      new Set(prev).add(reference.key),
+                    )
+                  }
+                />
+              ))}
+              {mergeRows.map(({ reference, mergeNote }) => (
+                <ReferenceMergeCard
+                  key={reference.id}
+                  reference={reference}
+                  mergeNote={mergeNote}
+                  disabled={locked}
+                  onMergeNoteChange={(value) =>
+                    setMergeNoteOverrides((prev) =>
+                      new Map(prev).set(reference.id, value),
+                    )
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );
@@ -354,11 +381,14 @@ export function OpenReviewScreen(props: OpenReviewScreenProps) {
   return (
     <Suspense
       fallback={
-        <main className="flex flex-1 flex-col overflow-y-auto bg-surface-card">
-          <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-8">
-            <Skeleton className="h-8 w-1/2" />
-            <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-32 w-full" />
+        <main className="flex flex-1 flex-col bg-surface-card">
+          <NavigationBar />
+          <div data-main-scroll-area className="flex-1 overflow-y-auto">
+            <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-8">
+              <Skeleton className="h-8 w-1/2" />
+              <Skeleton className="h-40 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
           </div>
         </main>
       }

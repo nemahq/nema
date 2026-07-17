@@ -861,9 +861,11 @@ Digest 리뷰 화면 헤더 폴리싱에서 출발했는데, "리뷰 대기 화�
 
 **딸린 정리**: 로컬 `outcome`/`ReviewOutcome` state·`displayedStatus()`가 통째로 사라졌다(닫힌 상태가 이 화면에 더는 존재하지 않으므로 배지는 항상 `pending` 고정). "변경사항 상세 보기" 버튼과 버려짐 안내(`review.discarded_notice`)도 자동 이동에 흡수돼 제거, 유일 소비처가 사라진 i18n 키 `review.discarded_notice`/`review.view_changeset_detail_action`도 en/ko 양쪽 삭제. 헤더의 `outcome === null ? ... : ...` 분기 자체가 없어져, 헤더는 이제 단일 구성(제목+번호 / 배지+시각 / 사유·에러)만 남고 버튼 로직(저장 중 라벨 스왑·disabled)은 `ReviewHeaderActions` 로컬 컴포넌트로 캡슐화했다.
 
-**헤더 시각은 `ClosedReviewScreen`의 확정 패턴에 맞췄다**: 번호를 제목 앞 prefix(`#N · 제목`)에서 제목 뒤 suffix(`제목  #N`, 작고 옅은 톤)로, 배지+시각을 제목 위 줄에서 아래 줄로 옮겨 두 화면의 헤더 chrome을 일치시켰다. 같은 changeset을 대기→완료로 이어 보는 짝이라 배치가 갈리면 화면 전환 시 같은 정보가 재배치되는 것처럼 읽힌다. 지정된 `ChangesetStatusBadge`(Digest 리뷰용, weave `Badge`)는 그대로 두고 배치만 맞췄다 — `ClosedReviewScreen`이 쓰는 `ChangesetStatusPill`과는 다른 컴포넌트라 시각 문법까지 통일하진 않았다(리스트는 아이콘 스캔, 상세는 라벨 노출이라 원래 결이 다름).
+**헤더 시각은 `ClosedReviewScreen`의 확정 패턴에 맞췄다**: 번호를 제목 앞 prefix(`#N · 제목`)에서 제목 뒤 suffix(`제목  #N`, 작고 옅은 톤)로, 배지+시각을 제목 위 줄에서 아래 줄로 옮겨 두 화면의 헤더 chrome을 일치시켰다. 같은 changeset을 대기→완료로 이어 보는 짝이라 배치가 갈리면 화면 전환 시 같은 정보가 재배치되는 것처럼 읽힌다. 상태 표시도 `ClosedReviewScreen`이 만든 `ChangesetStatusPill`(아이콘+라벨)을 그대로 재사용해 두 화면의 시각 문법까지 통일했다 — 처음엔 Digest 리뷰 전용 `ChangesetStatusBadge`(weave `Badge`)를 유지하고 배치만 맞췄으나, 짝 화면끼리 같은 상태 신호를 다른 컴포넌트로 내는 게 오히려 어긋나 보여 Pill로 합쳤다. 그 결과 `ChangesetStatusBadge`는 유일 소비처가 사라져 파일째 삭제(knip 확인).
 
-**검증**: `pnpm typecheck`/`lint`/`test`/`knip`/`depcruise`/`format:check` 모노레포 전체 통과(web 128 케이스). 리네임 누락은 typecheck·depcruise(순환 참조 없음, 937 모듈)·knip(죽은 export 없음)으로 교차 확인. 라이트/다크 브라우저 실측은 인증 데이터가 필요한 화면이라 이번에도 PM 진행 몫으로 남긴다(위 리뷰 세션들과 같은 사유).
+**`OpenReviewScreen`에 `NavigationBar` 브레드크럼 추가**: `ClosedReviewScreen`엔 있고 이 화면엔 없어 화면 짝의 chrome이 어긋나 있었다 — 같은 `[Space] › 변경사항(open) › 제목` 3단 브레드크럼을 얹어 맞췄다. Space 이름은 `digestReview.get`이 안 줘서(`spaceId`만 반환) `ClosedReviewScreen`과 동일하게 `useSpaceListSuspenseQuery`로 publicId를 이름으로 해석한다(사이드바가 이미 캐시). `NavigationBar`는 스크롤 컨테이너 밖 형제로 둬야 해(sticky 바운스 문제, 그 컴포넌트 주석 참고) `main`을 스크롤 담당에서 떼고 `NavigationBar` + `data-main-scroll-area` 2단으로 재구성했다.
+
+**검증**: `pnpm typecheck`/`lint`/`test`/`knip`/`depcruise`/`format:check` 모노레포 전체 통과(web 128 케이스). 리네임 누락·죽은 컴포넌트는 typecheck·depcruise(순환 참조 없음)·knip(죽은 export/파일 없음)으로 교차 확인. 라이트/다크 브라우저 실측은 인증 데이터가 필요한 화면이라 이번에도 PM 진행 몫으로 남긴다(위 리뷰 세션들과 같은 사유).
 
 ---
 
