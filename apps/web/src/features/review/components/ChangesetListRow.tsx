@@ -68,7 +68,7 @@ export function ChangesetListRow({
       ? summarizeChangesetEffect(entry.effect, t)
       : null;
   const statusIcon = changesetStatusIcon(entry.status);
-  const statusLabelKey = changesetStatusMeta(entry.status, entry.type).labelKey;
+  const statusLabelKey = changesetStatusMeta(entry.status).labelKey;
   const statusIconEl =
     statusIcon.kind === "filled" ? (
       <span

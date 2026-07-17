@@ -94,10 +94,8 @@ export const CHANGESET_TYPE_LABEL: Record<
 // 모델은 07-modeling.md가 그리는 목표 스키마일 뿐 미구현) — "적용 안 하고 닫힘"을
 // relation 도메인이 먼저 쓰던 rejected를 ingestion도 그대로 재사용한다
 // (supabase/migrations/20260714130000_ingestion_review_discard_restore.sql 참고).
-// 다만 값은 같아도 뜻은 타입마다 다르다 — relation의 rejected는 사람이 "충돌·중복이
-// 아니다"라고 판정해 영구히 끝난 것(되살리기 없음)이고, ingestion의 rejected는 리뷰를
-// 버린 것뿐이라 되살리기가 열려 있다. 배지가 status만 보고 라벨을 고르면 이 둘이 같은
-// "버려짐"으로 보여 앱 자신의 되살리기 시맨틱과 모순되므로, type까지 함께 본다.
+// relation의 거절도 지금은 되살리기가 없지만 후속으로 ingestion과 동일하게 열 예정이라
+// (intervention-design.md §10 백로그), type별로 라벨을 나누지 않고 "버려짐"으로 통일한다.
 const CHANGESET_STATUS_VARIANT: Record<ChangesetStatus, BadgeVariant> = {
   pending: "warning",
   applied: "success",
@@ -110,13 +108,10 @@ const CHANGESET_STATUS_LABEL_KEY: Record<ChangesetStatus, TranslationKey> = {
   rejected: "review.status_discarded",
 };
 
-export function changesetStatusMeta(
-  status: ChangesetStatus,
-  type: ChangesetType,
-): { labelKey: TranslationKey; variant: BadgeVariant } {
-  if (status === "rejected" && type === "relation") {
-    return { labelKey: "review.status_rejected", variant: "neutral" };
-  }
+export function changesetStatusMeta(status: ChangesetStatus): {
+  labelKey: TranslationKey;
+  variant: BadgeVariant;
+} {
   return {
     labelKey: CHANGESET_STATUS_LABEL_KEY[status],
     variant: CHANGESET_STATUS_VARIANT[status],

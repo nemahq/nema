@@ -151,7 +151,6 @@
     "status_applied": "적용됨",
     "status_discarded": "버려짐",
     "status_pending": "리뷰 대기",
-    "status_rejected": "거절됨",
     "status_reverted": "되돌려짐",
     "tab_closed": "리뷰됨",
     "tab_open": "리뷰 대기",
