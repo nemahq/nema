@@ -86,6 +86,7 @@ export {
 } from "./components/Tooltip";
 export {
   cn,
+  LIST_ITEM_HOVER_CLASSNAME,
   NESTED_HOVER_ICON_CLASSNAME,
   POPOVER_SURFACE_CLASSNAME,
 } from "./utils";

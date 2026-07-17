@@ -1,7 +1,6 @@
 import { Suspense, useRef } from "react";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 
-import { CHANGESET_LIST_LIMIT_DEFAULT } from "@nema-io/shared";
 import { Button, cn, Skeleton } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
@@ -45,10 +44,14 @@ function ChangesSubTabButton({
   );
 }
 
+// 페칭 페이지 크기(CHANGESET_LIST_LIMIT_DEFAULT)와는 무관하게, 뷰포트에 실제로
+// 보이는 만큼만 흉내낸다 — 화면 밖까지 스켈레톤을 채우는 건 낭비.
+const CHANGES_LIST_SKELETON_COUNT = 8;
+
 function ChangesListSkeleton() {
   return (
     <>
-      {Array.from({ length: CHANGESET_LIST_LIMIT_DEFAULT }).map((_, i) => (
+      {Array.from({ length: CHANGES_LIST_SKELETON_COUNT }).map((_, i) => (
         <Skeleton key={i} className="h-12 w-full" />
       ))}
     </>
@@ -104,12 +107,13 @@ function ChangesList({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      {entries.map((entry) => (
+    <div className="flex flex-col">
+      {entries.map((entry, index) => (
         <ChangesetListRow
           key={entry.id}
           entry={entry}
           onClick={handleClick(entry)}
+          hideDivider={index === entries.length - 1 && !query.hasNextPage}
         />
       ))}
       {query.hasNextPage ? (

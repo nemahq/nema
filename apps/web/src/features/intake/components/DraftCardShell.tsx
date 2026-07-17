@@ -1,5 +1,7 @@
 import { type ReactNode } from "react";
 
+import { cn, LIST_ITEM_HOVER_CLASSNAME } from "@nema-io/weave";
+
 import { useTranslation } from "@web/lib/tolgee";
 
 interface DraftCardShellProps {
@@ -19,7 +21,12 @@ export function DraftCardShell({ onSelect, children }: DraftCardShellProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="group relative flex flex-col gap-2 rounded-lg px-4 py-3 transition-colors duration-fast hover:bg-surface-raised-hover/40">
+    <div
+      className={cn(
+        "group relative flex flex-col gap-2 px-4 py-3",
+        LIST_ITEM_HOVER_CLASSNAME,
+      )}
+    >
       <button
         type="button"
         aria-label={t("intake.draft_open")}
