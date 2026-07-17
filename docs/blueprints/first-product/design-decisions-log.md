@@ -828,3 +828,21 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 **MCP 툴 설명에 `digestionOutcome`의 다섯 값을 전부 명시**: 예전 설명(`reviewChangesetId`만 언급)은 `digestionStatus`/`hasDiscardedReview` 조합을 AI 에이전트가 프롬프트만으로 추론하게 방치했다 — 정확히 이 리팩터가 없애려는 위험이 MCP 경로엔 여전히 남아있었어서, 설명 문자열에 다섯 값의 의미를 직접 적어 최소 비용으로 막았다.
 
 **검증**: 로컬 Supabase에 `digestion_status` 4값(pending/failed/cancelled/completed) × rejected changeset 유무 조합으로 원본 4개를 시딩해 `source.listPending`을 직접 호출 — `digestionOutcome`이 `processing`/`failed`/`cancelled`/`empty`/`discarded` 각각 정확히 나오는 것을 API 응답으로 확인. `listPendingSources`에 `digestion_status`별 매핑 유닛 테스트 추가(`rejected` 이력이 있어도 `completed`가 아니면 `discarded`로 새지 않는 것까지 포함). `pnpm typecheck`/`lint`/`test`/`format:check`/`knip`/`depcruise` 모노레포 전체 통과 — 특히 dev-harness `statusLabel()`이 쓰는 `DIGESTION_OUTCOME_LABEL`(`Record<..., string>`)이 5값을 빠짐없이 처리하는지는 타입 체크 자체가 검증(값 하나만 빠뜨려도 타입 에러).
+
+---
+
+### 2026-07-17 — Tolgee ICU 포맷 도입 (영문 복수형 지원)
+
+**배경**: `review.digest_section_title`(`"Digest ({count})"`) 같은 카운트 표시가 앱 전체에 여러 곳 있는데 영문 복수형 처리가 전혀 없어(`Digest (1)`이든 `Digest (5)`든 항상 "Digest") 문법이 틀렸다. Tolgee는 ICU MessageFormat(`{count, plural, one {...} other {...}}`)을 지원하지만 이 프로젝트는 `FormatSimple()`만 쓰고 있어 못 쓰는 상태였다 — `@tolgee/format-icu` 도입.
+
+**`FormatIcu`가 `FormatSimple`을 완전히 대체함(병행 전략 불필요)**: 교체 전에 `FormatIcu`가 기존 `{count}` 같은 단순 보간까지 그대로 처리하는지가 관건이었다. `@tolgee/format-icu`는 내부적으로 `intl-messageformat`(FormatJS)을 그대로 감싼 것뿐이라, ICU MessageFormat 표준상 `{count}`는 plural 블록 없이도 단순 변수 보간으로 해석된다 — 실제로 설치된 패키지를 Node로 직접 구동해 확인(`Digest ({count})` → `Digest (1)` 그대로 통과). 이스케이프 문자로 취급될까 걱정했던 아포스트로피(`"You're..."`, `"can't"` 등, en.json에 25곳)도 ICU 표준의 비-strict 아포스트로피 규칙(중괄호/`#`/따옴표 앞이 아니면 리터럴로 취급) 덕에 그대로 통과 — `FormatSimple` 제거하고 `FormatIcu` 하나로 전량 교체.
+
+**회귀 확인 — 기존 `{count}` 단순 보간 키 8개**: `overflow_count`, `retrieval_doc_count`, `drafts_delete_waiting_confirm_title`, `delete_pending_drafts_label`, `draft_organizing_elapsed_seconds`, `delete_blocked_description`, `digest_section_title`/`reference_section_title`(원래 값) — 개발 서버가 서빙 중인 실제 `tolgee` 싱글턴을 브라우저 콘솔에서 호출해 한/영 양쪽 전부 회귀 없음을 확인. `drafts_delete_waiting_partial_failure`는 `{count}`가 아니라 `{failed}`를 보간하는 별개 키라 이 목록엔 안 넣지만 같은 방식으로 별도 확인했다. 상세 절차는 PR #433 본문 참고.
+
+**버그 발견 및 수정 — ICU `#`는 plural 블록 밖에서 무효**: `effect_digest`/`effect_reference` 등을 처음엔 카운트를 블록 밖 `#`로 뺀 형태(`"{count, plural, one {digest} other {digests}} #"`)로 썼는데, 블록 밖 `#`는 ICU MessageFormat 표준상 치환되지 않는 리터럴 문자라 "digest #"처럼 깨졌다 — 브라우저에서 `tolgee.t()`를 직접 호출해 발견. `#`는 plural/selectordinal 블록 **안에서만** 카운트로 치환된다. 라벨과 카운트를 한 문자열에 압축하는 리팩터에서 반복될 수 있는 함정이라 남긴다. 최종 값은 카운트를 앞에 두는 영어 관용 어순("1 digest")으로 한 번 더 조정했다(PR #433 리뷰 반영).
+
+**전환 범위 — 요청받은 2곳 외 effect 5개 키 전부**: `digest_section_title`/`reference_section_title`은 그대로, `effect_*`는 `summarizeChangesetEffect`(`utils.ts`)가 `statement`/`relation`/`source`/`digest`/`reference` 5개 타입을 같은 루프로 처리하는 구조라 2개만 바꾸면 나머지 3개의 카운트 표시가 사라지거나 콜사이트가 타입별로 분기해야 했다 — 5개 전부를 동일 패턴(`t(key, {count})`)으로 맞췄다.
+
+**한국어는 ICU plural 블록을 쓰지 않고 `{count}` 단순 보간 그대로 둠**: 한국어는 문법상 단/복수 구분이 없고, `Intl.PluralRules`의 `ko` locale은 CLDR상 `other` 카테고리만 존재해 `one` 분기가 런타임에 절대 선택되지 않는 죽은 코드가 된다 — `plural` 블록으로 감싸는 대신 기존 표기를 그대로 둔다.
+
+**전환 안 한 곳**: 위 회귀 확인 대상 키들은 카운트 뒤에 조사/단위가 붙는 한국어 문구가 원본이고 영문판도 복수형 분기가 의미를 더하지 않아, 이번 스코프(섹션 타이틀 + effect 요약)와 성격이 달라 손대지 않았다.

@@ -226,6 +226,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.166.2
         version: 1.166.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@tolgee/format-icu':
+        specifier: ^6.4.0
+        version: 6.6.0
       '@tolgee/react':
         specifier: ^6.4.0
         version: 6.4.0(react@19.2.4)
@@ -3254,6 +3257,9 @@ packages:
 
   '@tolgee/core@6.4.0':
     resolution: {integrity: sha512-LeoAYSaGoY0vqiIhjUiTThwmFufj83zeR35CizibR13ZQjHUbNaC07DwWOTmhR7f2ZSFPj8M/CkdxWXpN4kewg==}
+
+  '@tolgee/format-icu@6.6.0':
+    resolution: {integrity: sha512-LXCfJCZ9UeMY578aT7uADMZ+vo3qzHJ2QL4wTvq9ky6fb+m42T2P3hOUgnqxq8uIfkWRIzk8dsP56kQKHzMFSA==}
 
   '@tolgee/react@6.4.0':
     resolution: {integrity: sha512-6p/M97RPS3eYoyyKE+JU5zPIkOu3mp+8BHEeIAetKP0If22Z6vSFKj9ulZuYPAtL3euMDE0Z+6W1YnVkuyHbzQ==}
@@ -10607,6 +10613,8 @@ snapshots:
       - utf-8-validate
 
   '@tolgee/core@6.4.0': {}
+
+  '@tolgee/format-icu@6.6.0': {}
 
   '@tolgee/react@6.4.0(react@19.2.4)':
     dependencies:
