@@ -17,6 +17,7 @@ function buildSource(
     errorMessage: null,
     reviewChangesetId: null,
     digestCount: 0,
+    hasDiscardedReview: false,
     ...overrides,
   };
 }
@@ -49,6 +50,14 @@ describe("draftStatus", () => {
     expect(draftStatus(buildSource({ digestionStatus: "completed" }))).toBe(
       "empty",
     );
+  });
+
+  it("completed + hasDiscardedReview면 discarded (AI가 찾았지만 사람이 버림)", () => {
+    expect(
+      draftStatus(
+        buildSource({ digestionStatus: "completed", hasDiscardedReview: true }),
+      ),
+    ).toBe("discarded");
   });
 
   it("cancelled면 cancelled", () => {
