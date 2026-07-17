@@ -1,6 +1,7 @@
 import { Suspense, useRef } from "react";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 
+import { CHANGESET_LIST_LIMIT_DEFAULT } from "@nema-io/shared";
 import { Button, cn, Skeleton } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
@@ -41,6 +42,16 @@ function ChangesSubTabButton({
     >
       {children}
     </Button>
+  );
+}
+
+function ChangesListSkeleton() {
+  return (
+    <>
+      {Array.from({ length: CHANGESET_LIST_LIMIT_DEFAULT }).map((_, i) => (
+        <Skeleton key={i} className="h-12 w-full" />
+      ))}
+    </>
   );
 }
 
@@ -103,13 +114,7 @@ function ChangesList({
       ))}
       {query.hasNextPage ? (
         <div ref={sentinelRef} className="flex flex-col gap-2">
-          {query.isFetchingNextPage && (
-            <>
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </>
-          )}
+          {query.isFetchingNextPage && <ChangesListSkeleton />}
         </div>
       ) : (
         <p className="py-4 text-center text-xs text-fg-tertiary">
@@ -172,9 +177,7 @@ export function ChangesPanel({
               <Suspense
                 fallback={
                   <div className="flex flex-col gap-2">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
+                    <ChangesListSkeleton />
                   </div>
                 }
               >
