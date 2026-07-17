@@ -4,6 +4,7 @@ import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { Button, cn, Skeleton } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { useChangesetListInfiniteQuery } from "@web/features/review/hooks/useChangesetListQuery";
 import type { ChangesetListEntry } from "@web/features/review/types";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
@@ -154,21 +155,14 @@ export function ChangesPanel({
           {({ reset: resetQueryError }) => (
             <ErrorBoundary
               boundaryName="changes-list"
-              fallbackRender={({ reset }) => (
-                <div className="flex flex-col items-center gap-2 py-12 text-sm text-fg-tertiary">
-                  <p>{t("review.changes_load_error")}</p>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      resetQueryError();
-                      reset();
-                    }}
-                  >
-                    {t("common.retry")}
-                  </Button>
-                </div>
+              fallbackRender={(props) => (
+                <SectionErrorFallback
+                  {...props}
+                  reset={() => {
+                    resetQueryError();
+                    props.reset();
+                  }}
+                />
               )}
             >
               <Suspense
