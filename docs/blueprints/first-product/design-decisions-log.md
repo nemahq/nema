@@ -792,3 +792,15 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 **옵션 목록 안에서 구분선으로 위험도 분리**: 이동 옵션들과 삭제 옵션 사이에 `SelectSeparator`를 넣어 "다른 종류의 선택"이라는 시각적 신호를 하나 더 얹었다 — 색만으로 구분하면 목록이 길어졌을 때(Space가 많은 워크스페이스) 위험한 옵션이 다른 이동 옵션들 사이에 섞여 눈에 덜 띌 수 있어서.
 
 **기본 선택은 그대로 "이동"(가장 오래된 다른 Space)**: 새 옵션 추가로 기본값 자체는 안 바꿨다 — "함께 삭제"는 명시적으로 골라야만 실행되는, 07-modeling.md 원칙(Source는 손대지 않고 그대로 박제)에 맞는 안전한 기본을 유지.
+
+---
+
+### 2026-07-17 — Space Overview: 탭 전환 시 스크롤·서브탭 유지
+
+**배경**: Thread↔Changes가 서로 다른 라우트라 전환마다 하위 트리 전체가 언마운트/재마운트돼, Changes 안 Open/Closed 서브탭(로컬 `useState`)과 스크롤 위치가 매번 초기화됐다. 라우트를 하나로 합치는 재구조화는 이번 스코프 밖(PM 확정) — 기존 두 라우트 구조를 유지한 채 그 위에 상태 영속만 얹었다.
+
+**스크롤 복원 — `useScrollAnchor.ts`는 그대로 재사용하지 않음**: 그 훅은 "같은 컴포넌트 인스턴스가 살아있는 동안 메시지 추가에 맞춰 스크롤을 재조정"하는 문제(ref는 마운트 내내 유지)라, "컨테이너 자체가 언마운트됐다가 다른 시점에 재마운트됐을 때 이전 위치를 복원"하는 이번 문제와 전제가 다르다. 참고한 건 오직 "named effect + cleanup에서 리스너 해제" 골격뿐, 앵커링 로직 자체는 재사용 대상이 아니었음. 신규 `useMainScrollRestoration(key)`은 컴포넌트 state가 아니라 모듈 스코프 `Map<string, number>`에 스크롤값을 둔다 — `key`(`spacePublicId:activeTab`)별 위치는 세션 동안만 유지되면 충분해(새로고침·탭 재방문 시 처음부터 봐도 무방) sessionStorage 직렬화·읽기 비용을 들일 이유가 없었다. Context/Provider로 워크스페이스 셸에서 내려주는 안도 검토했으나, 이 정도 캐시엔 React 트리 경유가 과설계라 판단해 기각.
+**서브탭 — `ChangesPanel.tsx`는 최대한 얇게, 상태 소유는 라우트로 이동**: 이 파일이 같은 시점에 다른 세션(`polish/changeset`, row 레벨 폴리싱)이 동시에 건드리는 중이라, diff 충돌 표면을 줄이려고 로컬 `useState`를 controlled props(`subTab`/`onSubTabChange`)로만 바꿨다 — 상태 자체의 소유·URL 동기화 로직은 전부 `app/router.tsx`의 `SpaceChangesShell`로 옮겨서 이 파일엔 한 줄짜리 prop 교체만 남았다. `ChangesSubTab` 타입은 `features/review/types.ts`로 승격해 app 레이어(`router.tsx`)에서도 참조 가능하게 export.
+**`SpaceOverview`/`SpaceOverviewPage` props를 discriminated union으로**: `activeTab: "changesets"`일 때만 `subTab`/`onSubTabChange`가 필요해, optional prop 대신 유니온으로 타입 레벨에서 강제했다(topic 분기에서 subTab을 실수로 참조하면 컴파일 에러). 대신 `props.activeTab === "changesets"` 형태로만 좁혀지므로(구조분해한 로컬 변수로는 안 좁혀짐) 그 분기 안에서는 원본 `props` 객체를 그대로 참조.
+**라우트 검색 파라미터는 route 인스턴스 메서드로**: 처음엔 `useSearch({ from: "/space/$spacePublicId/changes" })` 문자열 경로 방식(`SignInPage` 선례)을 썼는데, 이 라우트가 `_authenticated`/`_workspaceSidebar` id 전용 부모 아래 중첩돼 있어 등록된 전체 경로 리터럴과 안 맞아 타입 에러가 났다. `spaceChangesRoute.useSearch()`/`useNavigate()`(라우트 객체 자신의 메서드, 이미 `useParams()`에 쓰이던 것과 같은 패턴)로 바꾸니 별도 경로 문자열 없이 타입이 맞았다 — 중첩 id 라우트에서는 이 방식이 더 안전.
+**Thread 탭 — 지금은 손댈 대상 없음, 구조상 자동 커버**: Thread(topic) 탭은 아직 `SourceComposer` 아래가 빈 스텁이라 스크롤할 콘텐츠가 없다. 복원 훅을 `SpaceOverview`의 공용 스크롤 컨테이너(`data-main-scroll-area`)에 `activeTab` 포함 key로 걸어뒀기 때문에, 후속 세션이 Thread 피드를 채워도 이 훅을 다시 손대지 않고 그대로 적용된다.

@@ -4,7 +4,8 @@ import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { SourceComposer } from "@web/features/intake";
-import { ChangesPanel } from "@web/features/review";
+import { ChangesPanel, type ChangesSubTab } from "@web/features/review";
+import { useMainScrollRestoration } from "@web/features/workspace/hooks/useMainScrollRestoration";
 // 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
 // eslint-disable-next-line nema/require-suspense-boundary
 import { useSpaceListSuspenseQuery } from "@web/features/workspace/hooks/useSpaceList";
@@ -21,18 +22,23 @@ const CONTENT_BADGE_CLASS =
 
 export type SpaceTab = "topic" | "changesets";
 
-interface SpaceOverviewProps {
-  spacePublicId: string;
-  activeTab: SpaceTab;
-}
+export type SpaceOverviewProps = { spacePublicId: string } & (
+  | { activeTab: "topic" }
+  | {
+      activeTab: "changesets";
+      subTab: ChangesSubTab;
+      onSubTabChange: (subTab: ChangesSubTab) => void;
+    }
+);
 
-export function SpaceOverview({
-  spacePublicId,
-  activeTab,
-}: SpaceOverviewProps) {
+export function SpaceOverview(props: SpaceOverviewProps) {
+  const { spacePublicId, activeTab } = props;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [spaceList] = useSpaceListSuspenseQuery();
+  const scrollContainerRef = useMainScrollRestoration(
+    `${spacePublicId}:${activeTab}`,
+  );
 
   const space = spaceList.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
@@ -65,7 +71,11 @@ export function SpaceOverview({
         </div>
       </NavigationBar>
 
-      <div data-main-scroll-area className="flex-1 overflow-y-auto">
+      <div
+        ref={scrollContainerRef}
+        data-main-scroll-area
+        className="flex-1 overflow-y-auto"
+      >
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6">
           <div className="flex min-w-0 items-center gap-2">
             <span className={CONTENT_BADGE_CLASS}>
@@ -101,6 +111,7 @@ export function SpaceOverview({
                 navigate({
                   to: "/space/$spacePublicId/changes",
                   params: { spacePublicId },
+                  search: { subTab: "open" },
                 })
               }
               count={space.openChangesetCount}
@@ -109,13 +120,17 @@ export function SpaceOverview({
             </SpaceTabButton>
           </div>
 
-          {activeTab === "changesets" && (
+          {props.activeTab === "changesets" && (
             <ErrorBoundary
               boundaryName="changes-panel"
-              fallbackRender={(props) => <SectionErrorFallback {...props} />}
+              fallbackRender={(fallbackProps) => (
+                <SectionErrorFallback {...fallbackProps} />
+              )}
             >
               <ChangesPanel
                 spaceId={space.id}
+                subTab={props.subTab}
+                onSubTabChange={props.onSubTabChange}
                 onOpenReview={(changesetId) =>
                   navigate({
                     to: "/space/$spacePublicId/review/$changesetId",

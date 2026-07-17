@@ -9,6 +9,8 @@ export type ChangesetListEntry =
 export type ChangesetType = ChangesetListEntry["type"];
 export type ChangesetStatus = ChangesetListEntry["status"];
 
+export type ChangesSubTab = "open" | "closed";
+
 export type DigestReviewDetail = RouterOutputs["digestReview"]["get"];
 export type ReviewDigest = DigestReviewDetail["digests"][number];
 export type ReviewNewReference = DigestReviewDetail["newReferences"][number];
