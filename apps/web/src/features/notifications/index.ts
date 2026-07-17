@@ -1,2 +1,2 @@
+export { NotificationSoftAskTrigger } from "./components/NotificationSoftAskTrigger";
 export { useChangesetReadyNotifier } from "./hooks/useChangesetReadyNotifier";
-export { useNotificationSoftAsk } from "./hooks/useNotificationSoftAsk";
