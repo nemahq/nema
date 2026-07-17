@@ -32,7 +32,7 @@ interface NavigationBarProps {
 export function NavigationBar({ items, rightContent }: NavigationBarProps) {
   return (
     <div className="flex h-11 shrink-0 items-center justify-between overscroll-none border-b border-border/50 bg-surface-card px-4">
-      <div className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-fg-primary">
+      <div className="flex min-w-0 items-center gap-1.5 text-sm text-fg-primary">
         {items === undefined && <Skeleton className="h-4 w-56" />}
         {items?.map((item, index) => {
           const isLast = index === (items?.length ?? 0) - 1;
