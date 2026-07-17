@@ -106,8 +106,10 @@ export async function deleteAccount(args: {
   const plan = await loadDeletionPlan(supabase, userId);
 
   if (plan.blockingWorkspaceIds.length > 0) {
-    // delete_workspace RPC의 NM001(→ error.workspace_last_owner)과 같은 전제 위반이라
+    // leave_workspace RPC의 NM001(→ error.workspace_last_owner)과 같은 전제 위반이라
     // 같은 도메인 코드를 재사용한다 — error-mapper가 이걸로 번역된 메시지를 붙인다.
+    // message 인자는 이 코드가 항상 i18n 메시지로 덮어써지고 EXPECTED_DOMAIN_CODES에
+    // 있어 Sentry도 안 잡으므로, 실제로 어디에도 도달하지 않는다(디버깅 흔적용).
     throw new SupabaseError(
       "precondition",
       "Transfer workspace ownership before deleting your account.",

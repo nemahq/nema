@@ -2,11 +2,12 @@ import { useId } from "react";
 
 import { Alert, Input } from "@nema-io/weave";
 
-import { resolveConfirmationTarget } from "@web/features/settings/confirmAccountDeletion";
+import {
+  type AccountDeleteError,
+  resolveConfirmationTarget,
+} from "@web/features/settings/confirmAccountDeletion";
 import { useUser } from "@web/lib/auth";
 import { useTranslation } from "@web/lib/tolgee";
-
-type AccountDeleteError = "precondition" | "other" | null;
 
 interface AccountDeleteConfirmFieldProps {
   confirmationInput: string;

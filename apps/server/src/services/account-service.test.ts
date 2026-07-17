@@ -4,7 +4,9 @@ import type { TypedSupabaseClient } from "@server/infra/supabase";
 
 const { getSupabaseAdminMock, rpcSpy, deleteUserSpy } = vi.hoisted(() => {
   const rpcSpy = vi.fn(() => ({ error: null }));
-  const deleteUserSpy = vi.fn(() => ({ error: null }));
+  const deleteUserSpy = vi.fn((): { error: { message: string } | null } => ({
+    error: null,
+  }));
   return {
     rpcSpy,
     deleteUserSpy,
@@ -173,5 +175,18 @@ describe("deleteAccount", () => {
     expect(getSupabaseAdminMock).not.toHaveBeenCalled();
     expect(rpcSpy).not.toHaveBeenCalled();
     expect(deleteUserSpy).not.toHaveBeenCalled();
+  });
+
+  it("deleteUser가 실패하면 SupabaseError(query_failed)로 감싸 던진다", async () => {
+    deleteUserSpy.mockReturnValueOnce({
+      error: { message: "admin api unavailable" },
+    });
+
+    await expect(
+      deleteAccount({
+        supabase: mockUserSupabase([{ data: [], error: null }]),
+        userId: ME,
+      }),
+    ).rejects.toMatchObject({ name: "SupabaseError", code: "query_failed" });
   });
 });

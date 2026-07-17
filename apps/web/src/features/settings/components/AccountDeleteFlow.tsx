@@ -9,6 +9,7 @@ import {
   useDeleteAccount,
 } from "@web/features/account";
 import {
+  type AccountDeleteError,
   canConfirmAccountDeletion,
   isPreconditionFailed,
   resolveConfirmationTarget,
@@ -25,7 +26,7 @@ interface AccountDeleteFlowProps {
   onBack: () => void;
 }
 
-function deleteErrorKind(error: unknown): "precondition" | "other" | null {
+function deleteErrorKind(error: unknown): AccountDeleteError {
   if (!error) {
     return null;
   }
