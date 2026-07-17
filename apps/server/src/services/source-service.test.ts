@@ -117,21 +117,28 @@ const SPACE_ID = "77777777-7777-4777-a777-777777777777";
 const SOURCE_A = "88888888-8888-4888-a888-888888888888";
 const SOURCE_B = "99999999-9999-4999-a999-999999999999";
 
-function pendingSourceRow(id: string) {
+function pendingSourceRow(
+  id: string,
+  digestionStatus:
+    | "pending"
+    | "failed"
+    | "cancelled"
+    | "completed" = "completed",
+) {
   return {
     id,
     space_id: SPACE_ID,
     body: "본문",
     title: null,
     created_at: "2026-07-17T00:00:00.000Z",
-    digestion_status: "completed",
+    digestion_status: digestionStatus,
     last_digestion_attempt: null,
     error_message: null,
   };
 }
 
 describe("listPendingSources", () => {
-  it("rejected changeset만 있으면 hasDiscardedReview=true, reviewChangesetId는 null", async () => {
+  it("rejected changeset만 있으면 digestionOutcome=discarded, reviewChangesetId는 null", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({
         sources: [pendingSourceRow(SOURCE_A)],
@@ -151,12 +158,12 @@ describe("listPendingSources", () => {
         sourceId: SOURCE_A,
         reviewChangesetId: null,
         digestCount: 0,
-        hasDiscardedReview: true,
+        digestionOutcome: "discarded",
       }),
     ]);
   });
 
-  it("pending+rejected가 같은 원본에 함께 있으면(재시도) pending을 리뷰로 쓰면서도 hasDiscardedReview는 유지", async () => {
+  it("pending+rejected가 같은 원본에 함께 있으면(재시도) pending을 리뷰로 쓰면서도 discarded는 유지", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({
         sources: [pendingSourceRow(SOURCE_A)],
@@ -182,12 +189,12 @@ describe("listPendingSources", () => {
         sourceId: SOURCE_A,
         reviewChangesetId: "cs-pending-new",
         digestCount: 1,
-        hasDiscardedReview: true,
+        digestionOutcome: "discarded",
       }),
     ]);
   });
 
-  it("changeset이 전혀 없으면 진짜 결과없음 — hasDiscardedReview=false", async () => {
+  it("changeset이 전혀 없으면 진짜 결과없음 — digestionOutcome=empty", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({
         sources: [pendingSourceRow(SOURCE_B)],
@@ -199,10 +206,35 @@ describe("listPendingSources", () => {
       expect.objectContaining({
         sourceId: SOURCE_B,
         reviewChangesetId: null,
-        hasDiscardedReview: false,
+        digestionOutcome: "empty",
       }),
     ]);
   });
+
+  it.each([
+    ["pending", "processing"],
+    ["failed", "failed"],
+    ["cancelled", "cancelled"],
+  ] as const)(
+    "digestion_status=%s → digestionOutcome=%s (rejected 이력과 무관)",
+    async (digestionStatus, outcome) => {
+      const { items } = await listPendingSources({
+        supabase: mockSupabase({
+          sources: [pendingSourceRow(SOURCE_A, digestionStatus)],
+          changesets: [
+            {
+              id: "cs-rejected",
+              source_id: SOURCE_A,
+              status: "rejected",
+              changes: [],
+            },
+          ],
+        }),
+      });
+
+      expect(items[0]?.digestionOutcome).toBe(outcome);
+    },
+  );
 });
 
 const EXPLICIT_SPACE = "44444444-4444-4444-a444-444444444444";

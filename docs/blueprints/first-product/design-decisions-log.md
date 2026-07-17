@@ -814,3 +814,17 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 **`SpaceOverview`/`SpaceOverviewPage` props를 discriminated union으로**: `activeTab: "changesets"`일 때만 `subTab`/`onSubTabChange`가 필요해, optional prop 대신 유니온으로 타입 레벨에서 강제했다(topic 분기에서 subTab을 실수로 참조하면 컴파일 에러). 대신 `props.activeTab === "changesets"` 형태로만 좁혀지므로(구조분해한 로컬 변수로는 안 좁혀짐) 그 분기 안에서는 원본 `props` 객체를 그대로 참조.
 **라우트 검색 파라미터는 route 인스턴스 메서드로**: 처음엔 `useSearch({ from: "/space/$spacePublicId/changes" })` 문자열 경로 방식(`SignInPage` 선례)을 썼는데, 이 라우트가 `_authenticated`/`_workspaceSidebar` id 전용 부모 아래 중첩돼 있어 등록된 전체 경로 리터럴과 안 맞아 타입 에러가 났다. `spaceChangesRoute.useSearch()`/`useNavigate()`(라우트 객체 자신의 메서드, 이미 `useParams()`에 쓰이던 것과 같은 패턴)로 바꾸니 별도 경로 문자열 없이 타입이 맞았다 — 중첩 id 라우트에서는 이 방식이 더 안전.
 **Thread 탭 — 지금은 손댈 대상 없음, 구조상 자동 커버**: Thread(topic) 탭은 아직 `SourceComposer` 아래가 빈 스텁이라 스크롤할 콘텐츠가 없다. 복원 훅을 `SpaceOverview`의 공용 스크롤 컨테이너(`data-main-scroll-area`)에 `activeTab` 포함 key로 걸어뒀기 때문에, 후속 세션이 Thread 피드를 채워도 이 훅을 다시 손대지 않고 그대로 적용된다.
+
+---
+
+### 2026-07-17 — `listPendingSources`: digestionStatus+hasDiscardedReview 두 필드를 digestionOutcome 하나로 접음 (PR #428 후속)
+
+**배경**: #428에서 `PendingSourceItem`에 `hasDiscardedReview: boolean`을 `digestionStatus`와 별도 필드로 추가했는데, 멀티 에이전트 리뷰(type-design-analyzer)가 "소비처가 두 필드를 직접 AND해야 하는 구조라 위험하다"고 지적했다 — 실제로 dev-harness `PendingSourceList.tsx`가 정확히 그 조합을 빠뜨려서 같은 오분류를 재현하고 있었다(같은 PR에서 발견해 수정). PM 확인 후 별도 리팩터 세션으로 착수.
+
+**서버가 조합을 끝내고 단일 enum(`digestionOutcome`)으로 내려줌**: `digestion_status`(DB 원본 4값)와 "rejected changeset 존재 여부"를 소비처마다 각자 조합하게 두는 대신, `listPendingSources` 안에서 `toDigestionOutcome()`이 한 번만 조합해 `processing`/`failed`/`cancelled`/`empty`/`discarded` 중 하나로 확정한다. 두 필드를 하나로 줄인 게 핵심이 아니라, "조합을 깜빡할 길 자체를 없앤 것"이 핵심 — TypeScript 소비처는 switch exhaustiveness로, MCP처럼 타입 체커가 없는 소비처(`list_pending_sources`가 이 결과를 그대로 AI 에이전트에게 JSON으로 넘긴다)는 서버가 미리 계산해준 값 하나만 보면 되므로 컴파일러 net이 없는 소비처에서 특히 이득이 크다.
+
+**웹 `DraftStatus`를 별도 유니온으로 다시 선언하지 않고 `PendingSourceItem["digestionOutcome"]`에서 직접 뽑아씀**: 두 곳에 같은 5값 유니온을 따로 적어두면 서버가 값을 추가했을 때 웹 쪽이 깜빡하고 안 넓히는 사고가 또 날 수 있다 — 타입을 소스에서 직접 파생시켜 구조적으로 동기화되게 했다. 그 결과 `draftStatus()`는 `reviewChangesetId` 유무만 보는 한 줄 게이트로 줄었다(예전엔 `digestionStatus`에 대한 4-way switch + exhaustiveness 가드가 필요했다).
+
+**MCP 툴 설명에 `digestionOutcome`의 다섯 값을 전부 명시**: 예전 설명(`reviewChangesetId`만 언급)은 `digestionStatus`/`hasDiscardedReview` 조합을 AI 에이전트가 프롬프트만으로 추론하게 방치했다 — 정확히 이 리팩터가 없애려는 위험이 MCP 경로엔 여전히 남아있었어서, 설명 문자열에 다섯 값의 의미를 직접 적어 최소 비용으로 막았다.
+
+**검증**: 로컬 Supabase에 `digestion_status` 4값(pending/failed/cancelled/completed) × rejected changeset 유무 조합으로 원본 4개를 시딩해 `source.listPending`을 직접 호출 — `digestionOutcome`이 `processing`/`failed`/`cancelled`/`empty`/`discarded` 각각 정확히 나오는 것을 API 응답으로 확인. `listPendingSources`에 `digestion_status`별 매핑 유닛 테스트 추가(`rejected` 이력이 있어도 `completed`가 아니면 `discarded`로 새지 않는 것까지 포함). `pnpm typecheck`/`lint`/`test`/`format:check`/`knip`/`depcruise` 모노레포 전체 통과 — 특히 dev-harness `statusLabel()`이 쓰는 `DIGESTION_OUTCOME_LABEL`(`Record<..., string>`)이 5값을 빠짐없이 처리하는지는 타입 체크 자체가 검증(값 하나만 빠뜨려도 타입 에러).

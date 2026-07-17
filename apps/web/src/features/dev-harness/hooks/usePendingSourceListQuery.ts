@@ -6,7 +6,9 @@ import { trpc } from "@web/lib/trpc";
 export function usePendingSourceListQuery() {
   return trpc.source.listPending.useQuery(undefined, {
     refetchInterval: (query) =>
-      query.state.data?.items.some((item) => item.digestionStatus === "pending")
+      query.state.data?.items.some(
+        (item) => item.digestionOutcome === "processing",
+      )
         ? SOURCE_POLL_INTERVAL_MS
         : false,
   });

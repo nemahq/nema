@@ -12,64 +12,39 @@ function buildSource(
     body: "본문",
     title: null,
     createdAt: "2026-07-12T00:00:00.000Z",
-    digestionStatus: "pending",
+    digestionOutcome: "processing",
     lastDigestionAttempt: null,
     errorMessage: null,
     reviewChangesetId: null,
     digestCount: 0,
-    hasDiscardedReview: false,
     ...overrides,
   };
 }
 
 describe("draftStatus", () => {
-  it("reviewChangesetId가 있으면 digestionStatus와 무관하게 null(초안 아님)", () => {
+  it("reviewChangesetId가 있으면 digestionOutcome과 무관하게 null(초안 아님)", () => {
     expect(
       draftStatus(
         buildSource({
-          digestionStatus: "completed",
+          digestionOutcome: "empty",
           reviewChangesetId: "cs-1",
         }),
       ),
     ).toBeNull();
   });
 
-  it("pending이면 processing", () => {
-    expect(draftStatus(buildSource({ digestionStatus: "pending" }))).toBe(
-      "processing",
-    );
-  });
-
-  it("failed면 failed", () => {
-    expect(draftStatus(buildSource({ digestionStatus: "failed" }))).toBe(
-      "failed",
-    );
-  });
-
-  it("completed + reviewChangesetId 없음이면 empty", () => {
-    expect(draftStatus(buildSource({ digestionStatus: "completed" }))).toBe(
-      "empty",
-    );
-  });
-
-  it("completed + hasDiscardedReview면 discarded (AI가 찾았지만 사람이 버림)", () => {
-    expect(
-      draftStatus(
-        buildSource({ digestionStatus: "completed", hasDiscardedReview: true }),
-      ),
-    ).toBe("discarded");
-  });
-
-  it("cancelled면 cancelled", () => {
-    expect(draftStatus(buildSource({ digestionStatus: "cancelled" }))).toBe(
-      "cancelled",
+  it("reviewChangesetId가 없으면 서버가 조합한 digestionOutcome을 그대로 통과시킨다", () => {
+    expect(draftStatus(buildSource({ digestionOutcome: "discarded" }))).toBe(
+      "discarded",
     );
   });
 });
 
 describe("isDraftItem", () => {
   it("draftStatus가 null이 아니면 true", () => {
-    expect(isDraftItem(buildSource({ digestionStatus: "pending" }))).toBe(true);
+    expect(isDraftItem(buildSource({ digestionOutcome: "processing" }))).toBe(
+      true,
+    );
   });
 
   it("reviewChangesetId가 있으면 false", () => {

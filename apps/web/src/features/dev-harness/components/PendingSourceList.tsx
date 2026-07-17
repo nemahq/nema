@@ -6,20 +6,22 @@ import type { PendingSourceItem } from "@web/features/dev-harness/types";
 import { formatDateTime } from "@web/features/dev-harness/utils";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
+const DIGESTION_OUTCOME_LABEL: Record<
+  PendingSourceItem["digestionOutcome"],
+  string
+> = {
+  cancelled: "취소됨",
+  failed: "생성 실패",
+  discarded: "리뷰 버려짐",
+  empty: "정리할 내용 없음",
+  processing: "생성 중…",
+};
+
 function statusLabel(item: PendingSourceItem): string {
   if (item.reviewChangesetId) {
     return `리뷰 준비됨 · Digest ${item.digestCount}`;
   }
-  if (item.digestionStatus === "cancelled") {
-    return "취소됨";
-  }
-  if (item.digestionStatus === "failed") {
-    return "생성 실패";
-  }
-  if (item.digestionStatus === "completed") {
-    return item.hasDiscardedReview ? "리뷰 버려짐" : "정리할 내용 없음";
-  }
-  return "생성 중…";
+  return DIGESTION_OUTCOME_LABEL[item.digestionOutcome];
 }
 
 // 대기 원본(초안) — 그래프에 아직 안 들어간 것들. 리뷰가 열린 원본만 펼쳐 확정할 수 있다.
