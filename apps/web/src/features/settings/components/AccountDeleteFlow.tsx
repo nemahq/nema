@@ -1,9 +1,8 @@
-import { type ReactNode, Suspense, useId, useState } from "react";
+import { Suspense, useState } from "react";
 import * as Sentry from "@sentry/react";
 import { useNavigate } from "@tanstack/react-router";
-import { TRPCClientError } from "@trpc/client";
 
-import { Alert, Button, DialogFooter, Input, Skeleton } from "@nema-io/weave";
+import { Alert, Button, DialogFooter, Skeleton } from "@nema-io/weave";
 
 import {
   useAccountDeletionBlockersSuspenseQuery,
@@ -11,11 +10,15 @@ import {
 } from "@web/features/account";
 import {
   canConfirmAccountDeletion,
+  isPreconditionFailed,
   resolveConfirmationTarget,
 } from "@web/features/settings/confirmAccountDeletion";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
+
+import { AccountDeleteConfirmField } from "./AccountDeleteConfirmField";
+import { AccountDeleteConfirmShell } from "./AccountDeleteConfirmShell";
 
 interface AccountDeleteFlowProps {
   userEmail: string;
@@ -23,120 +26,11 @@ interface AccountDeleteFlowProps {
   onBack: () => void;
 }
 
-function isPreconditionFailed(error: unknown): boolean {
-  return (
-    error instanceof TRPCClientError &&
-    error.data?.code === "PRECONDITION_FAILED"
-  );
-}
-
-interface AccountDeleteConfirmShellProps {
-  onBack: () => void;
-  cancelDisabled?: boolean;
-  deleteDisabled: boolean;
-  deleteLabel: string;
-  onConfirmDelete?: () => void;
-  children: ReactNode;
-}
-
-// 제목·경고 배너·footer는 차단 여부 조회와 무관하게 항상 같은 모양이라, 로딩 중
-// fallback과 실제 화면이 이 shell을 그대로 공유한다 — 데이터 의존 영역(필드)만
-// children으로 갈아끼운다.
-function AccountDeleteConfirmShell({
-  onBack,
-  cancelDisabled,
-  deleteDisabled,
-  deleteLabel,
-  onConfirmDelete,
-  children,
-}: AccountDeleteConfirmShellProps) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="flex h-full flex-col">
-      <h2 className="text-lg font-semibold text-fg-primary">
-        {t("account.delete_confirm_title")}
-      </h2>
-
-      <div className="mt-4 flex flex-1 flex-col gap-4">
-        <Alert variant="error" icon={false}>
-          {t("account.delete_confirm_description")}
-        </Alert>
-        {children}
-      </div>
-
-      <DialogFooter className="mt-6 border-t border-border pt-4">
-        <Button variant="ghost" onClick={onBack} disabled={cancelDisabled}>
-          {t("account.delete_cancel")}
-        </Button>
-        <Button
-          variant="danger"
-          onClick={onConfirmDelete}
-          disabled={deleteDisabled}
-        >
-          {deleteLabel}
-        </Button>
-      </DialogFooter>
-    </div>
-  );
-}
-
-interface AccountDeleteConfirmFieldProps {
-  userEmail: string;
-  userDisplayName: string;
-  confirmationTarget: string;
-  confirmationInput: string;
-  onConfirmationInputChange: (value: string) => void;
-  disabled: boolean;
-  mutationError: unknown;
-}
-
-function AccountDeleteConfirmField({
-  userEmail,
-  userDisplayName,
-  confirmationTarget,
-  confirmationInput,
-  onConfirmationInputChange,
-  disabled,
-  mutationError,
-}: AccountDeleteConfirmFieldProps) {
-  const { t } = useTranslation();
-  const confirmFieldId = useId();
-  const hasEmail = userEmail.trim().length > 0;
-
-  return (
-    <>
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor={confirmFieldId}
-          className="text-sm font-medium text-fg-primary"
-        >
-          {hasEmail
-            ? t("account.delete_confirm_email_label", { email: userEmail })
-            : t("account.delete_confirm_name_label", {
-                name: userDisplayName,
-              })}
-        </label>
-        <Input
-          id={confirmFieldId}
-          value={confirmationInput}
-          onChange={(e) => onConfirmationInputChange(e.target.value)}
-          placeholder={confirmationTarget}
-          autoComplete="off"
-          disabled={disabled}
-        />
-      </div>
-
-      {mutationError &&
-        (isPreconditionFailed(mutationError) ? (
-          <Alert variant="warning">
-            {t("account.delete_error_precondition")}
-          </Alert>
-        ) : (
-          <Alert variant="error">{getErrorMessage(mutationError)}</Alert>
-        ))}
-    </>
-  );
+function deleteErrorKind(error: unknown): "precondition" | "other" | null {
+  if (!error) {
+    return null;
+  }
+  return isPreconditionFailed(error) ? "precondition" : "other";
 }
 
 interface AccountDeleteGateProps {
@@ -209,6 +103,8 @@ function AccountDeleteGate({
     confirmationInput,
     confirmationTarget,
   );
+  const mutationError = deleteMutation.error;
+  const error = deleteErrorKind(mutationError);
 
   return (
     <AccountDeleteConfirmShell
@@ -231,7 +127,8 @@ function AccountDeleteGate({
         confirmationInput={confirmationInput}
         onConfirmationInputChange={setConfirmationInput}
         disabled={deleteMutation.isPending}
-        mutationError={deleteMutation.error}
+        error={error}
+        errorMessage={mutationError ? getErrorMessage(mutationError) : null}
       />
     </AccountDeleteConfirmShell>
   );
