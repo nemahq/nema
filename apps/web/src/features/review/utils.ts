@@ -1,3 +1,5 @@
+import type { CombinedOptions, DefaultParamType } from "@tolgee/web";
+
 import type { TranslationKey } from "@web/lib/tolgee";
 
 import type { ChangesetListEntry } from "./types";
@@ -15,7 +17,10 @@ const EFFECT_LABEL_KEY: Record<string, TranslationKey> = {
 // non-ingestion(sourceTitle 없음)이나 아직 추출 중인 ingestion만 이 폴백을 그대로 본다.
 function summarizeChangesetEffect(
   effect: ChangesetListEntry["effect"],
-  t: (key: TranslationKey, params?: { count: number }) => string,
+  t: (
+    key: TranslationKey,
+    options?: CombinedOptions<DefaultParamType>,
+  ) => string,
 ): string {
   const parts = Object.entries(effect)
     .filter(([, count]) => count > 0)
@@ -28,7 +33,10 @@ function summarizeChangesetEffect(
 
 export function changesetDisplayTitle(
   entry: Pick<ChangesetListEntry, "sourceTitle" | "effect">,
-  t: (key: TranslationKey, params?: { count: number }) => string,
+  t: (
+    key: TranslationKey,
+    options?: CombinedOptions<DefaultParamType>,
+  ) => string,
 ): string {
   return entry.sourceTitle ?? summarizeChangesetEffect(entry.effect, t);
 }
