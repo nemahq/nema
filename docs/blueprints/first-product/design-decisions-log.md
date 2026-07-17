@@ -828,3 +828,17 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 **MCP 툴 설명에 `digestionOutcome`의 다섯 값을 전부 명시**: 예전 설명(`reviewChangesetId`만 언급)은 `digestionStatus`/`hasDiscardedReview` 조합을 AI 에이전트가 프롬프트만으로 추론하게 방치했다 — 정확히 이 리팩터가 없애려는 위험이 MCP 경로엔 여전히 남아있었어서, 설명 문자열에 다섯 값의 의미를 직접 적어 최소 비용으로 막았다.
 
 **검증**: 로컬 Supabase에 `digestion_status` 4값(pending/failed/cancelled/completed) × rejected changeset 유무 조합으로 원본 4개를 시딩해 `source.listPending`을 직접 호출 — `digestionOutcome`이 `processing`/`failed`/`cancelled`/`empty`/`discarded` 각각 정확히 나오는 것을 API 응답으로 확인. `listPendingSources`에 `digestion_status`별 매핑 유닛 테스트 추가(`rejected` 이력이 있어도 `completed`가 아니면 `discarded`로 새지 않는 것까지 포함). `pnpm typecheck`/`lint`/`test`/`format:check`/`knip`/`depcruise` 모노레포 전체 통과 — 특히 dev-harness `statusLabel()`이 쓰는 `DIGESTION_OUTCOME_LABEL`(`Record<..., string>`)이 5값을 빠짐없이 처리하는지는 타입 체크 자체가 검증(값 하나만 빠뜨려도 타입 에러).
+
+---
+
+### 2026-07-17 — 초안 벌크 삭제 전체 실패 + 에러 토스트 dismiss 버튼 정렬 수정
+
+**배경**: staging에서 초안(Drafts) 전체 삭제가 매번 "N개를 삭제하지 못했습니다"로 100% 실패한다는 리포트. `useDeleteWaitingDrafts`는 `utils.client.source.delete.mutate()`를 sourceId 개수만큼 동시에 호출하는데, tRPC `httpBatchStreamLink`가 이걸 한 HTTP 요청으로 묶으면서 URL 경로를 `source.delete,source.delete,...`처럼 프로시저명을 반복 이어붙인다.
+
+**근본 원인 — Fastify(find-my-way) 기본 `maxParamLength: 100`**: 브라우저에서 `window.fetch`를 몽키패치해 실제 배치 요청을 가로채보니, 11개 삭제 시 경로가 `.../trpc/source.delete,source.delete,...(11회)?batch=1`(153자)였고 응답은 `404 Route not found`였다. `curl`로 배치 개수를 5~10개까지 늘려가며 재현한 결과 **경로 길이 97자(7개)까지는 정상 매칭, 111자(8개)부터 404** — find-my-way의 파라미터 길이 기본 상한(100자)에 정확히 걸리는 지점이었다. `Promise.allSettled`가 이 404들을 전부 실패로 잡아 "N개 삭제 실패" 토스트가 뜨고, 실제로는 라우팅조차 안 된 상태라 부분 성공도 없었다(사람이 흔히 한 번에 지우는 초안 개수인 8개 이상에서 100% 재현).
+
+**해결 — `Fastify({ maxParamLength: 5000 })`**: tRPC 배치 링크를 쓰는 한 이 문제는 배치 크기가 커질 때마다 재발할 수 있어, 서버 부트스트랩에서 넉넉한 값(5000자, "source.delete" 기준 300회 이상 배치도 여유)으로 한 번에 올렸다. `curl`로 16개 배치 재현 시나리오를 그대로 다시 태워 404→401(정상 라우팅 후 인증 단계에서 거부)로 바뀌는 것을 확인 — 라우팅 자체가 더는 안 깨진다.
+
+**같은 리포트에 딸려온 별개 버그 — 에러 토스트 dismiss(✕) 버튼이 우측 끝에 안 붙음**: `packages/weave/src/components/Toast.tsx`의 `TOAST_CLASS_NAMES`가 `actionButton`에만 `!ml-auto`를 걸어뒀는데(action·cancel 버튼 그룹을 본문에서 오른쪽으로 밀어내는 용도), `toast.error()`처럼 action 없이 cancel(dismiss)만 있는 토스트에선 `actionButton` 자체가 안 그려져 그 margin이 아예 안 실렸다. 브라우저에서 실제 DOM의 `getBoundingClientRect()`로 측정해 dismiss 버튼과 토스트 우측 경계 사이 간격이 약 89px(기본 패딩보다 훨씬 큼)임을 확인 — `cancelButton`에 `only:!ml-auto`(`:only-child`일 때만 적용)를 추가해, action이 없을 때만 이 버튼이 유일한 자식으로서 오른쪽 끝까지 밀리게 했다. action이 있는 토스트는 `:only-child`가 안 걸려 기존 순서·간격 그대로.
+
+**검증**: staging에 실제 로그인한 브라우저 세션에서 벌크 삭제를 직접 재현(11~16개), `window.fetch` 몽키패치로 실제 배치 요청 URL·응답을 캡처해 근본 원인을 확정. dismiss 버튼은 `style.setProperty('margin-left','auto','important')`로 라이브 DOM에 강제 적용해 우측 정렬되는 것을 스크린샷으로 먼저 확인한 뒤 동일한 CSS 규칙을 코드에 반영. `pnpm typecheck`/`lint`/`test`/`format:check`/`knip`/`depcruise` 모노레포 전체 통과. Fastify 부트스트랩 자체의 자동 테스트는 없어(기존 `index.ts`에도 전례 없음) `curl`로 라우팅 동작만 수동 검증 — 회귀는 벌크 삭제를 실제로 눌러보는 수동 확인이 가장 정확하다고 판단.
