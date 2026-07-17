@@ -22,11 +22,16 @@ const ICONS = {
 // 중요도가 같으면 레이어 밖 sonner 규칙이 항상 이긴다(스펙상 명시). !important만
 // 레이어 순서를 무시하고 이길 수 있다. bg·text·border는 이미 !important가 있어
 // 문제없었지만 shadow만 빠져 있어 sonner 기본 shadow에 지고 있었다.
+// sonner는 cancel을 action보다 먼저 그린다(DOM 순서 고정, props로 못 바꿈) —
+// action이 왼쪽에 오게 하려면 flex order로 시각 순서만 뒤집어야 한다. 버튼
+// 그룹을 본문에서 떼어놓는 margin-left:auto도 이제 시각적으로 먼저 오는
+// actionButton으로 옮겨야 한다(안 옮기면 action·cancel 사이가 벌어짐).
 const TOAST_CLASS_NAMES = {
   toast:
     "!bg-(--palette-dark-surface-raised-hover) !text-(--palette-dark-fg-primary) !border-transparent !shadow-[0_4px_16px_rgba(0,0,0,0.12)] dark:!shadow-[0_4px_16px_rgba(0,0,0,0.5)]",
+  actionButton: "order-1 !ml-auto",
   cancelButton:
-    "!bg-transparent !text-(--palette-dark-fg-tertiary) hover:!text-(--palette-dark-fg-primary) !border-0 !p-0 !ring-0 !ml-auto !text-xs",
+    "!bg-transparent !text-(--palette-dark-fg-tertiary) hover:!text-(--palette-dark-fg-primary) !border-0 !p-0 !ring-0 !text-xs order-2",
 };
 
 const TOASTER_STYLE = {

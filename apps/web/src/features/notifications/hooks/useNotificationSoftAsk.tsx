@@ -18,7 +18,8 @@ const SOFT_ASK_TOAST_ID = "notification-soft-ask";
 // 불러야 한다(가치를 체감하기 전에 물어보지 않기 위해).
 export function useNotificationSoftAsk() {
   const { t } = useTranslation();
-  const { isSupported, permission } = useNotificationPermission();
+  const { isSupported, permission, requestPermission } =
+    useNotificationPermission();
 
   return useCallback(
     function showSoftAskIfEligible() {
@@ -29,18 +30,27 @@ export function useNotificationSoftAsk() {
         return;
       }
 
+      function markSeen() {
+        setStorage("notificationSoftAskSeen", "true");
+      }
+
       toast.info(t("notification.permission_prompt_message"), {
         id: SOFT_ASK_TOAST_ID,
         icon: <BellIcon className="size-4" />,
         duration: Infinity,
         cancel: {
           label: "✕",
+          onClick: markSeen,
+        },
+        action: {
+          label: t("notification.permission_prompt_allow_action"),
           onClick: () => {
-            setStorage("notificationSoftAskSeen", "true");
+            markSeen();
+            void requestPermission();
           },
         },
       });
     },
-    [isSupported, permission, t],
+    [isSupported, permission, requestPermission, t],
   );
 }
