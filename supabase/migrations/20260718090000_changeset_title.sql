@@ -16,7 +16,8 @@
 -- nullable로 시작한다 — ingestion의 Source 제목은 생성 콜과 분리된 별도 LLM
 -- 콜(fill_source_title)이라 changeset 생성 시점에 아직 없을 수 있고(도착 시
 -- 트리거가 갱신), relation·revert·manual도 원천이 없으면 null로 둔다.
--- changesetDisplayTitle(FE)은 이미 null을 효과 요약으로 폴백하는 경로가 있다.
+-- changesetDisplayTitle(FE)은 이미 null을 번호 기반 자리표시자(review.changeset_
+-- fallback_title)로 폴백하는 경로가 있다.
 -- =============================================================
 
 ALTER TABLE changesets ADD COLUMN title text;
@@ -78,8 +79,17 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 --   트리거로 묶은 것과 같은 이유(20260714140000): 앞으로 title UPDATE 경로가
 --   늘어나도 이 트리거가 자동으로 따라간다.
 --
---   type='ingestion'만 갱신한다 — relation도 source_id를 가지지만(중복 판정
---   배치), 그쪽 title은 끝점 Digest 제목 조합이라 Source 제목과 무관하다.
+--   type='ingestion'만 갱신한다 — relation도 source_id를 갖는 경로가 셋(applied·
+--   pending·duplicates, 전부 §3)이나 그쪽 title은 끝점 Digest 제목 조합이라
+--   Source 제목과 무관하다.
+--
+--   status='pending'인 것만 갱신한다 — confirm(applied)·discard(rejected)로
+--   리뷰가 닫히면 title도 "그 시점 리뷰가 무엇에 대한 것이었는지"를 굳힌
+--   기록이 된다. 가드가 없으면 리뷰 종료 후 Source 제목이 또 바뀔 때(재인제스천
+--   으로 같은 source_id에 새 ingestion changeset이 또 생기는 경우 등) 이미 닫힌
+--   과거 changeset의 title까지 소급으로 덮어써 그 changeset이 실제로 무엇에
+--   대한 리뷰였는지가 사후에 바뀌어 보인다 — changes 전체가 append-only·불변
+--   기록이라는 07-modeling 원칙과 어긋난다.
 -- =============================================================
 
 CREATE FUNCTION propagate_source_title_to_changeset()
@@ -88,7 +98,7 @@ BEGIN
   IF NEW.title IS DISTINCT FROM OLD.title THEN
     UPDATE changesets
     SET title = NEW.title
-    WHERE source_id = NEW.id AND type = 'ingestion';
+    WHERE source_id = NEW.id AND type = 'ingestion' AND status = 'pending';
   END IF;
   RETURN NEW;
 END;
@@ -230,8 +240,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 --
 --   원본이 그 자신도 revert(redo)일 수 있어 title이 체인으로 이어진다 —
 --   "X 되돌림 되돌림"처럼 겹쳐 쌓이는 게 정확한 표현이다(되돌리기를 두 번
---   하면 실제로 그런 상태이므로). 원본 title이 null이면(효과 요약 폴백 중인
---   원본) 이 revert도 null로 남아 같은 폴백을 그대로 물려받는다.
+--   하면 실제로 그런 상태이므로). 원본 title이 null이면(번호 자리표시자 폴백
+--   중인 원본) 이 revert도 null로 남아 같은 폴백을 그대로 물려받는다.
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION revert_changeset(p_changeset_id uuid)
@@ -365,7 +375,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 --   archive_reference는 명시되진 않았지만 대상 행에 title이 이미 있어 추가
 --   조회 없이(또는 RETURNING 한 컬럼만 늘려서) 같은 패턴을 일관되게 적용할 수
 --   있어 함께 채운다. archive_statement는 대상(Statement)에 title 개념 자체가
---   없어 제외 — 계속 효과 요약 폴백. archive_source는 v2 Source 상태 모델
+--   없어 제외 — 계속 번호 자리표시자 폴백. archive_source는 v2 Source 상태 모델
 --   (20260706112433)에서 이미 제거된 RPC라 애초에 대상이 아니다 — "빼기"는
 --   이제 trash_source(pending→trashed)뿐이고, 그 경로는 changeset을 만들지
 --   않는다("삭제·복원은 변경이력에 남기지 않는다", 같은 마이그레이션 주석).
@@ -627,11 +637,13 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 -- =============================================================
 -- 6) 기존 changeset 백필
 --
---   ingestion → 그 시점 Source 제목. manual → 대상 콘텐츠(Digest/Reference)의
---   현재 제목. relation → pending 제안(conflicts·duplicates 전부 포함)만 끝점
---   Digest 제목으로 재계산 — applied 배치(위 3번과 같은 이유로 여러 쌍이 한
---   changeset에 실림)는 null 유지, 효과 요약 폴백 그대로. revert → 원본 title
---   + " 되돌림", 체인 깊이만큼 수렴할 때까지 반복.
+--   ingestion → 지금 이 순간의 Source 제목(과거 시점 값을 복원하는 게 아니라
+--   그냥 현재 값을 복사 — 이후 트리거가 있어도 사후적으로 소급 적용은 안 한다).
+--   manual → 대상 콘텐츠(Digest/Reference)의 현재 제목. relation → pending
+--   제안(conflicts·duplicates 전부 포함)만 끝점 Digest 제목으로 재계산 —
+--   applied 배치(위 3번과 같은 이유로 여러 쌍이 한 changeset에 실림)는 null
+--   유지, 번호 자리표시자 폴백 그대로. revert → 원본 title + " 되돌림", 체인
+--   깊이만큼 수렴할 때까지 반복.
 -- =============================================================
 
 UPDATE changesets c
