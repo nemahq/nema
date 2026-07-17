@@ -91,7 +91,7 @@ function SpaceDeleteMoveDraftsField({
       </Select>
       <label
         htmlFor={checkboxId}
-        className="flex items-center gap-2 text-sm text-fg-secondary"
+        className="flex cursor-pointer items-center gap-2 text-sm text-fg-secondary"
       >
         <Checkbox
           id={checkboxId}
@@ -99,6 +99,7 @@ function SpaceDeleteMoveDraftsField({
           onCheckedChange={(checked) =>
             onDeleteTogetherChange(checked === true)
           }
+          className="data-[state=checked]:border-status-success data-[state=checked]:bg-status-success data-[state=checked]:text-white"
         />
         {t("space.delete_together_option")}
       </label>
