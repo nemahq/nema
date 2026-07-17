@@ -903,6 +903,33 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 
 ---
 
+### 2026-07-18 — Changeset 상세 재설계 착수: NavigationBar 캡슐화, sticky 헤더, 폭 확대 (PR #434)
+
+**포커스 전환 — Digest 리뷰/Changeset 상세 화면 폴리싱 시작**: 지금까지 구현이 `docs/poc/mvp-wireframe.html`을 빠르게 옮긴 것이지 다듬어진 게 아니라는 전제로, Changeset 상세부터 화면을 사실상 빈 상태에서 재설계하기로 했다(기존 되돌리기/되살리기/원본삭제 로직·훅 파일 전부 제거, `knip`이 고아 코드로 잡아냄). 착수 전 정통 리뷰 UI 패턴(GitHub PR diff, Google Docs/Word 교정, Reddit 모더레이션 큐 등)과 AI-native 리뷰 트렌드(Cursor/Windsurf diff 승인, Linear Triage Intelligence, Devin 사전 플랜 승인 등)를 리서치해 참고 근거로 남겼다 — Linear의 "AI 제안값과 사람 편집값을 시각적으로 절대 안 섞는다"는 원칙이 Nema의 "판단 근거 추적 가능"이라는 최상위 기준과 가장 맞닿아 있어 후속 작업(콘텐츠 헤더·본문)에서 참고 대상.
+
+**Changeset 상세가 먼저인 이유 — Digest 리뷰 화면보다 완성도 격차가 크고 레버리지가 넓음**: Digest 리뷰 화면은 이미 편집 카드로 "무엇이 바뀌는지" 질문에 답하고 있지만, Changeset 상세는 제네릭 문장 한 줄뿐이라 지금까지 확정·버려진 모든 changeset이 "뭐가 바뀌었는지 확인 불가" 상태로 방치돼 있었다. `changes` 테이블에 이미 자기완결적 JSONB 스냅샷(`create digest`/`create reference`/`modify reference`의 `{before, after}`)이 쌓이고 있어 새 백엔드 설계 없이 노출만 하면 되는 것도 확인 — 이 세션에선 노출 UI 자체는 아직 안 만들고 화면 뼈대(breadcrumb·헤더)까지만 진행.
+
+**`NavigationBar`를 `items` 배열로 캡슐화 — breadcrumb 렌더링을 세 화면에서 한 곳으로**: `SpaceOverview`(스레드/변경사항 탭)·`DraftsScreen`(초안 탭)·`ChangesetDetailScreen`이 각자 `Link`+`ChevronRight`+`span` 조합을 손으로 짜고 있던 걸, `NavigationBar`가 `children` 대신 `{ label, icon?, to?, params?, search? }[]`를 받는 걸로 통합했다. `to`가 없는 항목은 클릭 불가한 평문(현재 위치)으로 자동 렌더 — 항목 1개면 breadcrumb 없이 단일 라벨이 되어 `DraftsScreen`의 기존 모습과도 자연스럽게 합쳐진다. `items`를 아예 안 넘기면 로딩 스켈레톤으로 대체(별도 `loading` prop 불필요, 처음엔 만들었다가 "안 넘기면 로딩"으로 더 단순화).
+- **breadcrumb 링크도 평문과 똑같이 보이게 — 색·밑줄로 강조 안 함**: 이 화면이 "지금 어디 있는지"를 나타내는 chrome이지 클릭을 유도하는 CTA가 아니라는 판단. 클릭 가능 여부는 커서로만 구분되고, hover에도 underline을 안 넣는다(nav chrome류 한정 — `markdown-renderer.css`/`legal.css`의 프로즈 안 링크 밑줄은 그대로 유지, 앱 전체 강제 규칙이 아님).
+- **TanStack Router 타입 한계 → `linkOptions()` 호출부 검증 + 컴포넌트 경계의 격리된 캐스팅**: `Link`는 `to`에 물린 리터럴에 따라 `params`/`search` 모양이 달라지는 제네릭이라, 여러 라우트를 배열 하나의 원소 타입으로 못 담는다(배열이라는 자료구조 자체의 구조적 한계, 받는 타입을 아무리 좁혀도 못 피함). `apps/web/src/lib/link.ts`에 `LooseLinkTarget`(느슨한 타입)+`asLinkProps()`를 만들어, 호출부는 `linkOptions({...})`로 실제 라우트 존재를 타입 검증받고, 컴포넌트 내부(`NavigationBar`·`ChangesetListRow`)는 그 결과를 한 곳에서만 좁혀 렌더한다 — 실수하기 쉬운 지점(라우트·params·search 매칭)은 호출부에서 완전히 보호되고, 타입 이탈은 격리된 한 지점(`asLinkProps`)에만 남는다. PR 리뷰에서 이 캐스팅이 "런타임 가드 없는 `as` 단언" 규칙 위반으로 지적돼, `to`가 `string`인지 확인하는 최소 가드 뒤에 `unknown` 경유로 좁히는 형태로 수정.
+- **변경사항 리스트 행도 `button`+`onClick` 대신 `Link`로 전환**: cmd/middle click으로 새 탭을 열 수 없던 게 진짜 gap이었다(변경사항 상세로 가는 라우트는 실제 독립 URL인데 버튼이라 브라우저 네이티브 새 탭 기능이 아예 안 됐음). `ChangesPanel`의 `onOpenReview`/`onOpenDetail` 콜백을 없애고 `spacePublicId`만 받아 `linkOptions()`로 라우트 타깃을 직접 계산하는 걸로 단순화. 초안 탭(`DraftList`)의 클릭은 그대로 뒀다 — 그건 URL 없는 로컬 SidePanel 상태 전환이라 애초에 "새 탭에서 열 대상"이 없는 다른 문제.
+
+**Changeset 상세 sticky 헤더 — 풀블리드가 아니라 본문과 같은 컬럼 폭**: 처음엔 와이어프레임의 `#screen-digest-review .review-header-row`(negative margin으로 화면 패딩을 뚫고 나가 풀블리드+sticky)를 따라가려 했지만, 그 기법의 실제 이유는 "detail 화면은 헤더를 넓게 쓴다"는 미학이 아니라 **sticky 헤더가 스크롤되는 본문 위에 떠 있을 때 폭이 다르면 본문이 양옆으로 삐져나와 보이는 문제**를 막기 위한 것이었다(주석에서 확인). Changeset 상세는 헤더와 본문이 애초에 같은 컬럼 폭이라 이 문제 자체가 없어, `SpaceOverview`의 sticky 탭바와 같은 구조(본문 컬럼 `px-6` 안의 자식으로 sticky 헤더를 넣어 border·배경이 컬럼 폭만큼만 감)로 확정. 상하 여백도 이중 padding(부모 `py-8`+헤더 자체 `py-4`)으로 SpaceOverview 대비 두 배 벌어져 있던 걸 `py-6` 하나로 좁혀 맞췄다.
+
+**Changeset 상세·Digest 리뷰 화면만 `max-w-3xl` → `max-w-5xl`**: 두 화면 다 와이어프레임 단계부터 폭 제한이 없었다(`#screen-digest-review`엔 `padding: 24px`만 있고 컬럼 wrapper 자체가 없음, `max-width: 1000px`은 컬럼이 아니라 제목 텍스트 트렁케이션 상한이었음) — 완전 무제한 대신 상한만 두는 절충으로 `max-w-5xl`(1024px) 채택. 다른 화면(`SpaceOverview`·`DraftsScreen`)은 프로즈 읽기 좋은 줄 길이를 위해 `max-w-3xl` 그대로 유지 — 두 화면만 넓히는 게 "리뷰 상세라서" 라는 일반 원칙이 아니라, 이 두 화면에 한해 이미 내려져 있던 폭 결정을 따르는 것.
+
+**제목 크기 통일 — `SpaceOverview`·Changeset 상세 둘 다 `text-2xl font-semibold`**: 기존엔 `text-xl`(SpaceOverview)과 `text-lg`(Changeset 상세, 예전 구현에서 그대로 가져온 값이라 의도된 통일이 아니었음)로 갈려 있던 걸 맞추면서, 한 단계 더 키웠다 — 다만 Changeset 제목은 Space 이름과 달리 문장형으로 길어질 수 있어(예: Digest 제목을 그대로 쓰는 fallback), 더 키운 크기에서 트렁케이션이 얼마나 자주 체감되는지는 실사용 후 재조정 여지를 열어둠.
+
+**Changeset 제품 용어 — "변경셋"/"Changeset" → "변경사항"/"Change"**: PR 리뷰(UX 라이팅 체크)가 새로 추가된 카피 키 하나가 기존 "변경셋" 관례와 어긋난다고 지적한 게 발단 — 확인해보니 오히려 "변경셋"이라는 제품 용어 자체가 국문으로 어색했다("변경"은 "변경하다"의 어간형이라 미완성된 느낌, "공지사항"처럼 "-사항"이 붙어야 단수·복수 구분 없이 자연스럽게 쓰이는 국문 관용 패턴과 맞물림). `glossary.md`의 제품 용어(한) 컬럼만 "변경사항"으로, 영문은 "Change"(이미 자연스러운 단/복수 구분)로 확정 — 개념 용어·코드 용어(`changesets`/`changes`, `isOpenChangeset` 등)는 전혀 안 건드림, 코드는 여전히 07-modeling.md의 changeset 모델(OSM open/closed 생명주기 차용) 용어를 그대로 쓴다. 카피 3곳(`detail_generic_body`/`detail_not_found_title`/`view_changeset_detail_action`)과 `changeset_fallback_title`을 새 용어로 일괄 반영.
+
+**`subTab`(open/closed)은 UI 라벨과 분리된 코드 용어 — 안 바꿈**: breadcrumb의 "변경사항" 링크가 항상 `subTab=open`으로 가는 걸 처음엔 버그로 판단했다가(Changeset 상세는 Closed 탭에서만 도달 가능한데 Open으로 되돌아감), `SpaceOverview`의 `SpaceTabButton`(변경사항 탭 진입 시 이미 항상 `subTab=open`으로 이동)과 `ChangesPanel`의 내부 기본 상태도 똑같이 Open이 기본값이라는 걸 확인하고 정정 — "어디서 왔든 변경사항 섹션은 항상 Open에서 시작한다"는 기존 관례와 일치해 버그가 아니었다. `open`/`closed`라는 이름 자체도 UI 라벨("리뷰 대기"/"리뷰됨")과 다르다고 헷갈릴 이유가 없다고 판단 — 07-modeling.md가 정의한 changeset 모델 상태 용어(코드 용어)이지 UI 카피가 아니고, `isOpenChangeset()`·`useChangesetListQuery`의 `open` 파라미터 등 이미 여러 곳에서 일관되게 쓰이는 확립된 용어라 코드-제품 용어 분리 원칙 그대로 유지.
+
+**PR #434 리뷰 대응 — 3-에이전트 리뷰가 잡아낸 실제 결함들**: `code-reviewer`/`pr-test-analyzer`/`type-design-analyzer`/`comment-analyzer` 리뷰가 낸 7건을 전부 직접 재검증 후 반영. 그중 핵심 둘: (1) `ChangesetListRow`가 `search`를 prop으로 받고도 렌더 시 누락시키던 것 — 오늘은 무해하지만 향후 search 필요한 라우트가 추가되면 타입은 통과하고 런타임에만 깨지는 함정이었다. (2) `summarizeChangesetEffect`(digest·reference만 다룸)가 `entry.type` 분기 없이 모든 changeset에 무조건 호출돼, relation·revert의 실제 effect가 있어도 항상 빈 요약으로 보이던 것을 `ingestion` 전용으로 스코프. `create_ingestion_review`의 author_id 수정(§authorId 정합화)에 대한 통합 테스트도 이때 추가 — `space-service.integration.test.ts`와 같은 BEGIN/ROLLBACK 트랜잭션 패턴, author_id 있는 Source 픽스처가 있어야 회귀를 실제로 잡아낼 수 있어 `auth.users` 픽스처 헬퍼를 새로 만들었다.
+
+**staging 병합 충돌 — `changesetDisplayTitle` 폴백 설계가 다른 세션과 갈렸던 것 해소**: 같은 함수를 이 브랜치는 "제목 없으면 번호 플레이스홀더, effect 요약은 리스트 행 2번째 줄에 별도"로, 동시 진행 중이던 Tolgee ICU PR(#433, staging에 먼저 병합됨)은 "제목 없으면 effect 요약 자체를 폴백으로"로 서로 다르게 완성해 텍스트 충돌이 났다. 이 브랜치의 설계(이번 세션 여러 라운드 거쳐 확정한 것)를 그대로 유지하고, staging에서 가져올 건 진짜 개선점인 ICU 복수형 `t()` 타입(`CombinedOptions<DefaultParamType>`)뿐이라고 판단해 그것만 병합 — `summarizeChangesetEffect`가 개수를 JS 문자열로 직접 이어붙이던 것(`"2 digest"`처럼 영문 단복수가 틀리던 버그)을 `t(key, {count})` 위임으로 같이 고쳤다.
+
+---
+
 ### 2026-07-18 — Changeset 목록 행: title 컬럼 착지로 `changesetDisplayTitle` 폴백 단순화
 
 백엔드 슬라이스(`changesets.title` 스키마 도입, product-decisions-log #17)의 FE 반영분만. title이 이제 거의 항상 채워져 `summarizeChangesetEffect`(effect 5종 요약)가 폴백으로 설 자리가 없어져 통째로 제거하고 `effect_*` i18n 키 6개(effect_none 포함)도 함께 삭제했다 — 유일한 소비처가 사라졌다(2026-07-17 Tolgee ICU 세션이 막 손본 키들이라 손이 아까웠지만, 코드 죽은 채 남기는 것보다 낫다).

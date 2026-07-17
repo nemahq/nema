@@ -6,7 +6,7 @@ import {
 } from "@nema-io/shared";
 import type { BadgeVariant } from "@nema-io/weave";
 import type { IconComponent } from "@nema-io/weave/icons";
-import { Funnel, Share2 } from "@nema-io/weave/icons";
+import { Check, Circle, Funnel, Share2, X } from "@nema-io/weave/icons";
 
 import type { TranslationKey } from "@web/lib/tolgee";
 
@@ -130,5 +130,38 @@ export function changesetStatusMeta(
   return {
     labelKey: CHANGESET_STATUS_LABEL_KEY[status],
     variant: CHANGESET_STATUS_VARIANT[status],
+  };
+}
+
+// pending은 아직 진행 중이라 배경 없이 브랜드색 테두리(원 아이콘 자체)만 — applied·
+// rejected는 결론이 난 것이라 배경을 채운 칩으로 더 무겁게 낸다. applied는 무채색
+// 톤(Button primary 다크 배색)이라 pending의 브랜드 teal과 안 겹친다. rejected는
+// 버려짐(ingestion)·거절됨(relation) 둘 다 같은 아이콘 — 위 배지처럼 type별로
+// 라벨 텍스트만 갈린다.
+export type ChangesetStatusIcon =
+  | { kind: "outline"; Icon: IconComponent; tone: string }
+  | { kind: "filled"; Icon: IconComponent; bg: string; iconTone: string };
+
+export function changesetStatusIcon(
+  status: ChangesetStatus,
+): ChangesetStatusIcon {
+  if (status === "pending") {
+    return { kind: "outline", Icon: Circle, tone: "text-brand" };
+  }
+  if (status === "applied") {
+    return {
+      kind: "filled",
+      Icon: Check,
+      bg: "bg-fg-primary",
+      iconTone: "text-surface-base",
+    };
+  }
+  // fg-tertiary가 다크에서 더 밝아져(팔레트 stone-400) 흰 아이콘 대비가 떨어지므로
+  // 다크에서만 아이콘을 어둡게(surface-base) 뒤집는다.
+  return {
+    kind: "filled",
+    Icon: X,
+    bg: "bg-fg-tertiary",
+    iconTone: "text-white dark:text-surface-base",
   };
 }
