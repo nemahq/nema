@@ -1,6 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-
-import { ChevronRight } from "@nema-io/weave/icons";
+import { linkOptions, useNavigate } from "@tanstack/react-router";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
@@ -58,31 +56,28 @@ export function SpaceOverview(props: SpaceOverviewProps) {
 
   return (
     <main className="flex flex-1 flex-col bg-surface-card">
-      <NavigationBar>
-        <div className="flex min-w-0 items-center gap-1.5 text-fg-primary">
-          {activeTab === "topic" ? (
-            <>
-              <SpaceBadge name={space.name} size="sm" />
-              <p className="min-w-0 truncate">{space.name}</p>
-            </>
-          ) : (
-            <>
-              <Link
-                to="/space/$spacePublicId"
-                params={{ spacePublicId }}
-                className="flex min-w-0 shrink items-center gap-1.5"
-              >
-                <SpaceBadge name={space.name} size="sm" />
-                <span className="min-w-0 max-w-48 truncate">{space.name}</span>
-              </Link>
-              <ChevronRight className="size-3.5 shrink-0 text-fg-tertiary/60" />
-              <span className="min-w-0 truncate">
-                {t("space.tab_changesets")}
-              </span>
-            </>
-          )}
-        </div>
-      </NavigationBar>
+      <NavigationBar
+        items={
+          activeTab === "topic"
+            ? [
+                {
+                  label: space.name,
+                  icon: <SpaceBadge name={space.name} size="sm" />,
+                },
+              ]
+            : [
+                {
+                  label: space.name,
+                  icon: <SpaceBadge name={space.name} size="sm" />,
+                  ...linkOptions({
+                    to: "/space/$spacePublicId",
+                    params: { spacePublicId },
+                  }),
+                },
+                { label: t("space.tab_changesets") },
+              ]
+        }
+      />
 
       <div
         ref={scrollContainerRef}

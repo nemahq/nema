@@ -1,8 +1,5 @@
 import { Suspense } from "react";
-import { Link } from "@tanstack/react-router";
-
-import { Skeleton } from "@nema-io/weave";
-import { ChevronRight } from "@nema-io/weave/icons";
+import { linkOptions } from "@tanstack/react-router";
 
 import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { useChangesetListSuspenseQuery } from "@web/features/review/hooks/useChangesetListQuery";
@@ -17,11 +14,7 @@ interface ChangesetDetailScreenProps {
 }
 
 function ChangesetDetailNavSkeleton() {
-  return (
-    <NavigationBar>
-      <Skeleton className="h-4 w-56" />
-    </NavigationBar>
-  );
+  return <NavigationBar />;
 }
 
 function ChangesetDetailNotFound() {
@@ -63,31 +56,27 @@ function ChangesetDetailBody({
 
   return (
     <>
-      <NavigationBar>
-        <div className="flex min-w-0 items-center gap-1.5 text-fg-primary">
-          <Link
-            to="/space/$spacePublicId"
-            params={{ spacePublicId }}
-            className="flex min-w-0 shrink items-center gap-1.5"
-          >
-            <SpaceBadge name={spaceName} size="sm" />
-            <span className="min-w-0 max-w-48 truncate">{spaceName}</span>
-          </Link>
-          <ChevronRight className="size-3.5 shrink-0 text-fg-tertiary/60" />
-          <Link
-            to="/space/$spacePublicId/changes"
-            params={{ spacePublicId }}
-            search={{ subTab: "open" }}
-            className="shrink-0"
-          >
-            {t("space.tab_changesets")}
-          </Link>
-          <ChevronRight className="size-3.5 shrink-0 text-fg-tertiary/60" />
-          <span className="min-w-0 max-w-96 truncate">
-            {changesetDisplayTitle(entry, t)}
-          </span>
-        </div>
-      </NavigationBar>
+      <NavigationBar
+        items={[
+          {
+            label: spaceName,
+            icon: <SpaceBadge name={spaceName} size="sm" />,
+            ...linkOptions({
+              to: "/space/$spacePublicId",
+              params: { spacePublicId },
+            }),
+          },
+          {
+            label: t("space.tab_changesets"),
+            ...linkOptions({
+              to: "/space/$spacePublicId/changes",
+              params: { spacePublicId },
+              search: { subTab: "open" },
+            }),
+          },
+          { label: changesetDisplayTitle(entry, t) },
+        ]}
+      />
 
       <div data-main-scroll-area className="flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-8" />
