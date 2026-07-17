@@ -79,9 +79,9 @@ function ChangesetDetailBody({
       />
 
       <div data-main-scroll-area className="flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-8">
-          <header className="sticky top-0 z-10 bg-surface-card py-4">
-            <h1 className="min-w-0 truncate text-lg font-semibold text-fg-primary">
+        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
+          <header className="sticky top-0 z-10 bg-surface-card">
+            <h1 className="min-w-0 truncate text-2xl font-semibold text-fg-primary">
               {changesetDisplayTitle(entry, t)}
             </h1>
           </header>

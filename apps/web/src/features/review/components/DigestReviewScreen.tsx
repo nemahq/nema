@@ -211,7 +211,7 @@ function DigestReviewScreenContent({
 
   return (
     <main className="flex flex-1 flex-col overflow-y-auto bg-surface-card">
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-8">
         <header className="flex flex-col gap-3 border-b border-border/50 pb-4">
           <div className="flex items-center gap-2">
             <ChangesetStatusBadge status={displayedStatus()} type="ingestion" />
@@ -347,7 +347,7 @@ export function DigestReviewScreen(props: DigestReviewScreenProps) {
     <Suspense
       fallback={
         <main className="flex flex-1 flex-col overflow-y-auto bg-surface-card">
-          <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-8">
+          <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-8">
             <Skeleton className="h-8 w-1/2" />
             <Skeleton className="h-40 w-full" />
             <Skeleton className="h-32 w-full" />

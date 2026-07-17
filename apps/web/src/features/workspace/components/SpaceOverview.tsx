@@ -87,7 +87,7 @@ export function SpaceOverview(props: SpaceOverviewProps) {
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6">
           <div className="flex min-w-0 items-center gap-2">
             <SpaceBadge name={space.name} />
-            <h1 className="min-w-0 truncate text-xl font-semibold text-fg-primary">
+            <h1 className="min-w-0 truncate text-2xl font-semibold text-fg-primary">
               {space.name}
             </h1>
           </div>
