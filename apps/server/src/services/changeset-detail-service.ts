@@ -34,7 +34,7 @@ interface RelationEndpointSnapshot {
 }
 
 // 이번 라운드가 채운 7케이스(ingestion 2 + relation 4 + revert 스텁) 밖은 전부
-// "unsupported"로 묶는다 — manual(변경셋 목록에 애초에 안 뜸), 확신 관계 자동 적용
+// "unsupported"로 묶는다 — manual(changeset 목록에 애초에 안 뜸), 확신 관계 자동 적용
 // (supports/replaces/resolves 타입, 승자·패자 판정 UI 자체가 아직 백엔드에 없음),
 // pending(이 화면은 closed 전용, open은 별도 리뷰 화면이 담당) 등.
 type ChangesetDetailBody =
@@ -241,7 +241,7 @@ async function resolveBody(args: {
     return { kind: "revert" };
   }
 
-  // manual — 변경셋 목록에 애초에 안 뜨는 타입이라(07-modeling.md) 이 경로를 탈 일이
+  // manual — changeset 목록에 애초에 안 뜨는 타입이라(07-modeling.md) 이 경로를 탈 일이
   // 실질적으로 없지만 방어적으로 둔다.
   return { kind: "unsupported" };
 }

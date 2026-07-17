@@ -9,7 +9,7 @@ import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { isChangesetNotFound } from "@web/features/review/changesetErrors";
 import { ReviewHeader } from "@web/features/review/components/ReviewHeader";
 import { ReviewNavigationBar } from "@web/features/review/components/ReviewNavigationBar";
-import { useChangesetByNumberQuery } from "@web/features/review/hooks/useChangesetListQuery";
+import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
 import { changesetDisplayTitle } from "@web/features/review/utils";
 import { useSpaceListSuspenseQuery } from "@web/features/workspace";
@@ -53,12 +53,12 @@ function ClosedReviewBody({
 }: ClosedReviewBodyProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [detail] = useChangesetByNumberQuery(spaceId, number);
+  const [changesetDetail] = useChangesetDetailSuspenseQuery(spaceId, number);
   const revertChangeset = useRevertChangeset();
 
   function handleRevert() {
     revertChangeset.mutate(
-      { changesetId: detail.id },
+      { changesetId: changesetDetail.id },
       {
         onSuccess: ({ revertChangesetNumber }) => {
           navigate({
@@ -77,18 +77,18 @@ function ClosedReviewBody({
     <>
       <ReviewNavigationBar
         spacePublicId={spacePublicId}
-        title={changesetDisplayTitle(detail, t)}
+        title={changesetDisplayTitle(changesetDetail, t)}
       />
 
       <div data-main-scroll-area className="flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
           <ReviewHeader
-            title={changesetDisplayTitle(detail, t)}
-            number={detail.number}
-            status={detail.status}
-            time={detail.updatedAt}
+            title={changesetDisplayTitle(changesetDetail, t)}
+            number={changesetDetail.number}
+            status={changesetDetail.status}
+            time={changesetDetail.updatedAt}
             actions={
-              detail.status === "applied" && (
+              changesetDetail.status === "applied" && (
                 <Button
                   variant="neutral"
                   size="sm"
