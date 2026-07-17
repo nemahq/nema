@@ -156,6 +156,7 @@ export {
   SourceUpdateTitleInputSchema,
 } from "./schemas/source";
 export {
+  containsForbiddenSpaceNameChars,
   type Space,
   SPACE_NAME_MAX_LENGTH,
   SPACE_PUBLIC_ID_ALPHABET,

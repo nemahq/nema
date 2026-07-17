@@ -10,7 +10,9 @@
 -- 표현식 UNIQUE는 ADD CONSTRAINT로 못 걸어 CREATE UNIQUE INDEX로 대체한다.
 -- 인덱스 생성 전, 같은 워크스페이스 안에 lower(normalize(name, NFC))가 같은
 -- 기존 행이 있으면(있을 가능성은 낮지만) 나중에 만들어진 쪽에 " (2)"류
--- 접미사를 붙여 충돌을 피한다 — 지우거나 합치지 않고 그대로 보존.
+-- 접미사를 붙여 충돌을 피한다 — 지우거나 합치지 않고 그대로 보존. id는
+-- gen_random_uuid()라 생성 순서와 무관하므로, "나중"은 created_at으로
+-- 판단한다(id는 동시각 tie-break용).
 -- =============================================================
 
 DO $$
@@ -26,13 +28,16 @@ BEGIN
       SELECT 1 FROM spaces s2
       WHERE s2.workspace_id = s.workspace_id
         AND lower(normalize(s2.name, NFC)) = lower(normalize(s.name, NFC))
-        AND s2.id < s.id
+        AND (s2.created_at, s2.id) < (s.created_at, s.id)
     )
-    ORDER BY id
+    ORDER BY created_at, id
   LOOP
     v_suffix := 2;
     LOOP
-      v_candidate := v_dup.name || ' (' || v_suffix || ')';
+      -- SPACE_NAME_MAX_LENGTH(packages/shared)를 넘지 않도록, 접미사 길이만큼
+      -- 원래 이름을 잘라서 붙인다.
+      v_candidate := left(v_dup.name, 50 - length(' (' || v_suffix || ')'))
+        || ' (' || v_suffix || ')';
       EXIT WHEN NOT EXISTS (
         SELECT 1 FROM spaces
         WHERE workspace_id = v_dup.workspace_id

@@ -276,3 +276,58 @@ describe("delete_space RPC (integration)", () => {
     expect(rows[0]?.count_pending_drafts).toBe(1);
   });
 });
+
+// create_space는 GRANT EXECUTE ... TO authenticated로 PostgREST를 통해
+// tRPC/zod를 거치지 않고 직접 호출 가능하다 — 여기서는 그 경로를 흉내 내
+// DB 레벨 CHECK(spaces_name_no_forbidden_chars, spaces_name_max_length)가
+// 실제로 막는지 확인한다.
+describe("create_space RPC — DB 레벨 이름 검증 (integration)", () => {
+  it("zod를 거치지 않은 직접 호출이어도 zero-width 문자만 있는 이름은 CHECK로 거부한다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const publicId = `spc_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+
+    await expect(
+      client.query("SELECT create_space($1, $2, $3)", [
+        workspaceId,
+        String.fromCharCode(0x200b, 0x200b),
+        publicId,
+      ]),
+    ).rejects.toMatchObject({ code: "23514" });
+  });
+
+  it("zod를 거치지 않은 직접 호출이어도 50자 초과 이름은 CHECK로 거부한다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const publicId = `spc_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+
+    await expect(
+      client.query("SELECT create_space($1, $2, $3)", [
+        workspaceId,
+        "a".repeat(51),
+        publicId,
+      ]),
+    ).rejects.toMatchObject({ code: "23514" });
+  });
+
+  it("정상 이름은 CHECK를 통과해 그대로 생성된다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const publicId = `spc_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+
+    const { rows } = await client.query<{ create_space: string }>(
+      "SELECT create_space($1, $2, $3)",
+      [workspaceId, "우리 팀 🚀", publicId],
+    );
+    expect(rows[0]?.create_space).toBeTruthy();
+  });
+});

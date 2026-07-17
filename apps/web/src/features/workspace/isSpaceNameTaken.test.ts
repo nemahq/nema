@@ -39,4 +39,19 @@ describe("isSpaceNameTaken", () => {
   it("자기 자신을 제외해도 다른 Space가 그 이름을 쓰고 있으면 여전히 true", () => {
     expect(isSpaceNameTaken(spaces, "Engineering", "space-a")).toBe(true);
   });
+
+  it("NFC/NFD 정규화 형태가 달라도 같은 이름으로 취급한다(서버 uniq 인덱스와 동일)", () => {
+    const nfcName = "Marketing " + String.fromCharCode(0x00e9); // "e" + acute (precomposed)
+    const nfdName = "Marketing e" + String.fromCharCode(0x0301); // "e" + combining acute (decomposed)
+    const spacesWithAccent = [
+      {
+        id: "space-c",
+        publicId: "spc_c",
+        name: nfcName,
+        createdAt: "2024-01-03T00:00:00Z",
+        openChangesetCount: 0,
+      },
+    ];
+    expect(isSpaceNameTaken(spacesWithAccent, nfdName)).toBe(true);
+  });
 });
