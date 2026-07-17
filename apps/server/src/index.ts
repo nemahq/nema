@@ -36,7 +36,7 @@ async function bootstrap() {
   await initI18n();
   const server = Fastify({
     logger: true,
-    maxParamLength: FASTIFY_MAX_PARAM_LENGTH,
+    routerOptions: { maxParamLength: FASTIFY_MAX_PARAM_LENGTH },
   });
   const env = getEnv();
 

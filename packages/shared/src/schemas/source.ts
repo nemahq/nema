@@ -41,6 +41,18 @@ export const SourceActionInputSchema = z.object({
 
 export type SourceActionInput = z.infer<typeof SourceActionInputSchema>;
 
+// 벌크 삭제 상한 — tRPC 배치 링크로 sourceId 개수만큼 source.delete를 개별 호출하면
+// URL이 프로시저명을 반복 이어붙여 Fastify maxParamLength를 넘길 수 있었다(#432).
+// deleteMany는 프로시저 호출 자체가 하나뿐이라 그 문제는 안 나지만, 그렇다고 무제한
+// 배열을 받으면 다른 종류의 남용(초대형 페이로드)에 열리므로 넉넉한 상한을 둔다.
+export const SOURCE_DELETE_MANY_MAX = 200;
+
+export const SourceDeleteManyInputSchema = z.object({
+  sourceIds: z.array(z.string().uuid()).min(1).max(SOURCE_DELETE_MANY_MAX),
+});
+
+export type SourceDeleteManyInput = z.infer<typeof SourceDeleteManyInputSchema>;
+
 // 위 공용 입력과 달리 spaceId가 있다 — 상태 가드는 여전히 서버 몫이지만,
 // 목적지는 서버가 판정할 수 없는 클라이언트 선택값이라 인자로 실어야 한다.
 export const SourceReassignSpaceInputSchema = SourceActionInputSchema.extend({

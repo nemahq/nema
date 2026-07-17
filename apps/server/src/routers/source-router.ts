@@ -1,6 +1,7 @@
 import {
   SourceActionInputSchema,
   SourceCreateInputSchema,
+  SourceDeleteManyInputSchema,
   SourceGetInputSchema,
   SourceReassignSpaceInputSchema,
   SourceUpdateBodyInputSchema,
@@ -12,6 +13,7 @@ import {
   cancelSourceDigestion,
   createSource,
   deleteSource,
+  deleteSources,
   getSource,
   listPendingSources,
   listSources,
@@ -75,6 +77,15 @@ export const sourceRouter = router({
       deleteSource({
         supabase: ctx.supabase,
         sourceId: input.sourceId,
+      }),
+    ),
+
+  deleteMany: protectedProcedure
+    .input(SourceDeleteManyInputSchema)
+    .mutation(({ ctx, input }) =>
+      deleteSources({
+        supabase: ctx.supabase,
+        sourceIds: input.sourceIds,
       }),
     ),
 

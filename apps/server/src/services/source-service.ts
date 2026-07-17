@@ -6,7 +6,10 @@ import type { Database } from "@server/infra/database.types";
 import type { Providers } from "@server/infra/providers";
 import { abortDigestion } from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
-import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import {
+  SupabaseError,
+  throwIfSupabaseError,
+} from "@server/infra/supabase-error";
 import {
   buildSourceTitleMessage,
   SOURCE_TITLE_SYSTEM_PROMPT,
@@ -274,6 +277,38 @@ export async function deleteSource(args: {
     p_source_id: sourceId,
   });
   throwIfSupabaseError(error);
+}
+
+// 초안 벌크 삭제 — sourceId 개수만큼 source.delete를 개별 tRPC 호출로 배치하면(구
+// useDeleteWaitingDrafts) URL이 프로시저명을 반복 이어붙여 Fastify maxParamLength를
+// 넘겨 전체 실패하던 문제(#432)의 근본 수정. 프로시저 호출 자체를 하나로 묶어 배치
+// 링크를 안 태우고, 개별 trash_source 실패는 이전 클라이언트 구현과 동일하게 "동시성
+// 충돌(source_state_changed)이면 무시, 그 외 예상 밖 실패만 Sentry로 올림 + 카운트"로
+// 취급한다 — 이미 trashed거나 아직 처리 중이면 원하는 최종 상태에 수렴하는 정상 동시성
+// 결과지 장애가 아니다.
+export async function deleteSources(args: {
+  supabase: TypedSupabaseClient;
+  sourceIds: string[];
+}): Promise<{ failedCount: number }> {
+  const { supabase, sourceIds } = args;
+
+  const results = await Promise.allSettled(
+    sourceIds.map((sourceId) => deleteSource({ supabase, sourceId })),
+  );
+  const unexpectedFailures = results.filter(
+    (result): result is PromiseRejectedResult =>
+      result.status === "rejected" && !isSourceStateConflict(result.reason),
+  );
+  for (const failure of unexpectedFailures) {
+    Sentry.captureException(failure.reason);
+  }
+  return { failedCount: unexpectedFailures.length };
+}
+
+function isSourceStateConflict(error: unknown): boolean {
+  return (
+    error instanceof SupabaseError && error.code === "source_state_changed"
+  );
 }
 
 // 초안에서 Space 재지정 — 순수 메타데이터 이동이라 statements·statement_sources는
