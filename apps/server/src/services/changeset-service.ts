@@ -282,6 +282,9 @@ interface ChangesetHistoryEntry {
   // 아직 추출 중이라 제목이 안 채워졌으면 null — 그때는 FE가 효과 요약으로 대체한다.
   sourceTitle: string | null;
   revertsId: string | null;
+  // 사람이 이 changeset의 내용 자체를 만든 경우에만 있음(07-modeling.md §authorId
+  // 규칙) — ingestion·relation은 엔진 산물이라 항상 null, revert만 있음.
+  authorId: string | null;
   // 되돌림 여부 — is_changeset_reverted(SQL)와 같은 재귀를 revert 간선으로 계산(§4.4).
   reverted: boolean;
   // 효과 요약 — 대상 종류별 변경 수("이 글 → 진술 N + 관계 M").
@@ -322,7 +325,7 @@ export async function listChangesets(args: {
   let query = supabase
     .from("changesets")
     .select(
-      "id, number, type, status, source_id, reverts_id, created_at, changes(target_type), sources(status, title)",
+      "id, number, type, status, source_id, reverts_id, author_id, created_at, changes(target_type), sources(status, title)",
     )
     .eq("space_id", targetSpaceId)
     .order("number", { ascending: false })
@@ -392,6 +395,7 @@ export async function listChangesets(args: {
         sourceStatus: row.sources?.status ?? null,
         sourceTitle: row.sources?.title ?? null,
         revertsId: row.reverts_id,
+        authorId: row.author_id,
         reverted: isReverted(row.id),
         effect,
         createdAt: row.created_at,

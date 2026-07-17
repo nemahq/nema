@@ -101,8 +101,10 @@
     "deny": "Deny"
   },
   "review": {
+    "author_engine": "Engine suggestion",
     "changes_empty_closed": "No reviewed changes.",
     "changes_empty_open": "No changes need review.",
+    "changeset_fallback_title": "Change #{number}",
     "confirm_action": "Confirm",
     "confirm_disabled_empty_label": "One of the digest candidates has a topic or tag with no name.",
     "confirm_disabled_empty_reference": "One of the reference candidates has no name or description.",
@@ -163,6 +165,9 @@
     "tag_remove_action": "Remove this tag",
     "topic_add_action": "+ Topic",
     "topic_remove_action": "Remove this topic",
+    "type_ingestion": "Organize",
+    "type_relation": "Connection",
+    "type_revert": "Revert",
     "view_changeset_detail_action": "View changeset detail"
   },
   "session": {
