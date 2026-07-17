@@ -128,8 +128,8 @@ function ChangesList({ spacePublicId, spaceId, subTab }: ChangesListProps) {
   function linkTarget(entry: ChangesetListEntry): LooseLinkTarget {
     if (subTab === "closed") {
       return linkOptions({
-        to: "/space/$spacePublicId/changesets/$changesetId",
-        params: { spacePublicId, changesetId: entry.id },
+        to: "/space/$spacePublicId/changesets/$changesetNumber",
+        params: { spacePublicId, changesetNumber: String(entry.number) },
       });
     }
     return entry.type === "ingestion"

@@ -1,12 +1,14 @@
 import {
   ApplyPendingRelationInputSchema,
   ArchiveStatementInputSchema,
+  GetChangesetByNumberInputSchema,
   ListActiveRelationsInputSchema,
   ListChangesetsInputSchema,
   RejectPendingRelationInputSchema,
   RevertChangesetInputSchema,
 } from "@nema-io/shared";
 
+import { getChangesetByNumber } from "@server/services/changeset-detail-service";
 import {
   applyPendingRelation,
   archiveStatement,
@@ -78,6 +80,16 @@ export const changesetRouter = router({
         supabase: ctx.supabase,
         sourceId: input.sourceId,
         limit: input.limit,
+      }),
+    ),
+
+  getByNumber: protectedProcedure
+    .input(GetChangesetByNumberInputSchema)
+    .query(({ ctx, input }) =>
+      getChangesetByNumber({
+        supabase: ctx.supabase,
+        spaceId: input.spaceId,
+        number: input.number,
       }),
     ),
 });

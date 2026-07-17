@@ -39,8 +39,8 @@ export const ListChangesetsInputSchema = z.object({
     .min(1)
     .max(CHANGESET_LIST_LIMIT_MAX)
     .default(CHANGESET_LIST_LIMIT_DEFAULT),
-  // 미지정 시 전체(open+closed 안 가림) — ClosedReviewScreen처럼 changeset을
-  // id로 찾으려고 전체를 훑는 소비처를 위한 폴백.
+  // 미지정 시 전체(open+closed 안 가림) — MCP 등 상태 필터가 필요 없는 소비처를 위한
+  // 기본값.
   open: z
     .boolean()
     .optional()
@@ -51,6 +51,14 @@ export const ListChangesetsInputSchema = z.object({
   cursor: z.number().int().nullish(),
 });
 export type ListChangesetsInput = z.infer<typeof ListChangesetsInputSchema>;
+
+export const GetChangesetByNumberInputSchema = z.object({
+  spaceId: z.string().uuid(),
+  number: z.number().int(),
+});
+export type GetChangesetByNumberInput = z.infer<
+  typeof GetChangesetByNumberInputSchema
+>;
 
 export const ACTIVE_RELATION_LIST_LIMIT_DEFAULT = 100;
 export const ACTIVE_RELATION_LIST_LIMIT_MAX = 500;

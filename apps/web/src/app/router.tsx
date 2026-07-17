@@ -247,19 +247,19 @@ const openReviewRoute = createRoute({
 });
 
 function ClosedReviewShell() {
-  const { spacePublicId, changesetId } = closedReviewRoute.useParams();
+  const { spacePublicId, changesetNumber } = closedReviewRoute.useParams();
   return (
     <ClosedReviewPage
-      key={changesetId}
+      key={changesetNumber}
       spacePublicId={spacePublicId}
-      changesetId={changesetId}
+      changesetNumber={changesetNumber}
     />
   );
 }
 
 const closedReviewRoute = createRoute({
   getParentRoute: () => workspaceSidebarRoute,
-  path: "/space/$spacePublicId/changesets/$changesetId",
+  path: "/space/$spacePublicId/changesets/$changesetNumber",
   component: ClosedReviewShell,
   errorComponent: RouteErrorFallback,
 });

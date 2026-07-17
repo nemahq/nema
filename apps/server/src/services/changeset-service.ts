@@ -50,15 +50,31 @@ export async function archiveStatement(args: {
 }
 
 // 되돌리기·redo 공용 — 타겟 타입별 역연산은 RPC가 한다(§4).
+// number까지 함께 돌려주는 이유: Changeset 상세 URL이 UUID가 아니라 number 기준이라,
+// 되돌리기 성공 후 새로 생긴 revert changeset으로 바로 이동하려면 number가 필요하다
+// (RevertChangesetInputSchema 등 기존 UUID 입력 계약은 그대로 — 응답만 확장).
 export async function revertChangeset(args: {
   supabase: TypedSupabaseClient;
   changesetId: string;
-}): Promise<{ revertChangesetId: string }> {
-  const { data, error } = await args.supabase.rpc("revert_changeset", {
-    p_changeset_id: args.changesetId,
+}): Promise<{ revertChangesetId: string; revertChangesetNumber: number }> {
+  const { supabase, changesetId } = args;
+
+  const { data, error } = await supabase.rpc("revert_changeset", {
+    p_changeset_id: changesetId,
   });
   throwIfSupabaseError(error);
-  return { revertChangesetId: data };
+
+  const { data: revertRow, error: numberError } = await supabase
+    .from("changesets")
+    .select("number")
+    .eq("id", data)
+    .single();
+  throwIfSupabaseError(numberError);
+  if (revertRow.number === null) {
+    throw new Error(`revert changeset ${data} has no number`);
+  }
+
+  return { revertChangesetId: data, revertChangesetNumber: revertRow.number };
 }
 
 // 반환은 active가 보장된 관계 id — 없으면 생성, archived면 복귀(§5.1).
@@ -100,7 +116,8 @@ interface PendingRelationProposal {
 }
 
 // changes.data는 jsonb(런타임 미보장)라 as 단언 대신 가드로 모양을 검증한다.
-function parseRelationProposal(
+// changeset-detail-service도 재사용(승인·거절 후에도 이 change row는 그대로 남음).
+export function parseRelationProposal(
   data: unknown,
 ): { type: RelationType; fromId: string; toId: string } | null {
   if (typeof data !== "object" || data === null) {
@@ -296,12 +313,16 @@ interface ChangesetHistoryEntry {
   updatedAt: string;
 }
 
+// 이 목록은 메타데이터 전용으로 유지한다 — changes.data(실제 변경 콘텐츠)는 절대
+// 여기 얹지 않는다. 단건 상세 콘텐츠(스냅샷 등)가 필요하면 getChangesetByNumber를
+// 새로 만든다(changeset-detail-service.ts) — list 응답을 키워 재사용하지 않는다.
+// 근거: design-decisions-log.md 2026-07-18 "listChangesets는 메타데이터 전용으로 유지" 참고.
 export async function listChangesets(args: {
   supabase: TypedSupabaseClient;
   spaceId?: string;
   limit: number;
-  // 미지정 시 open/closed 구분 없이 전부 — ClosedReviewScreen처럼 특정 changeset을
-  // id로 찾으려고 전체를 훑는 소비처가 있어 이 폴백을 남겨둔다.
+  // 미지정 시 open/closed 구분 없이 전부 — MCP 등 상태 필터가 필요 없는 소비처를 위한
+  // 기본값(source.create 미지정 Space 폴백과 같은 결).
   open?: boolean;
   // number(Space 안 순차 증가값) 기준 커서 — created_at 대신 쓰는 이유는 동시 생성 시
   // 동률 가능성이 없는 정수라 페이지 경계가 항상 안정적이기 때문.
