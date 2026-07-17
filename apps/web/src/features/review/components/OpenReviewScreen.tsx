@@ -151,7 +151,7 @@ function OpenReviewContent({
       <ReviewNavigationBar spacePublicId={spacePublicId} title={reviewTitle} />
 
       <div data-main-scroll-area className="flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-8">
+        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
           <header className="flex flex-col gap-2 border-b border-border/50 pb-4">
             <div className="flex items-start justify-between gap-4">
               <h1 className="flex min-w-0 items-baseline gap-2 text-2xl font-semibold text-fg-primary">
@@ -283,7 +283,7 @@ export function OpenReviewScreen(props: OpenReviewScreenProps) {
         <main className="flex flex-1 flex-col bg-surface-card">
           <NavigationBar />
           <div data-main-scroll-area className="flex-1 overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-8">
+            <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
               <Skeleton className="h-8 w-1/2" />
               <Skeleton className="h-40 w-full" />
               <Skeleton className="h-32 w-full" />
