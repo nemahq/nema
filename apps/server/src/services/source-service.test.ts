@@ -19,6 +19,7 @@ import {
   cancelSourceDigestion,
   createSource,
   deleteSource,
+  deleteSources,
   fetchMergedSourceIds,
   listPendingSources,
   reassignSourceSpace,
@@ -418,6 +419,74 @@ describe("deleteSource", () => {
     await expect(
       deleteSource({ supabase, sourceId: CANCEL_SOURCE_ID }),
     ).rejects.toThrow();
+  });
+});
+
+describe("deleteSources", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // sourceId별로 결과를 다르게 주는 rpc mock — deleteSources는 trash_source를
+  // sourceId마다 개별 호출하므로, id를 보고 성공/충돌/예상밖 실패를 갈라줘야 한다.
+  function mockPerSourceRpc(
+    outcomes: Record<string, { code: string; message: string } | null>,
+  ) {
+    const rpc = vi.fn(async (_fn: string, args: { p_source_id: string }) => ({
+      data: null,
+      error: outcomes[args.p_source_id] ?? null,
+    }));
+    return { supabase: { rpc } as unknown as TypedSupabaseClient, rpc };
+  }
+
+  const ID_A = "eeeeeeee-0000-4000-a000-000000000001";
+  const ID_B = "eeeeeeee-0000-4000-a000-000000000002";
+  const ID_C = "eeeeeeee-0000-4000-a000-000000000003";
+
+  it("전부 성공하면 failedCount 0", async () => {
+    const { supabase } = mockPerSourceRpc({});
+
+    const result = await deleteSources({
+      supabase,
+      sourceIds: [ID_A, ID_B],
+    });
+
+    expect(result).toEqual({ failedCount: 0 });
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("동시성 충돌(NM004)은 실패로 안 세고 Sentry로도 안 올린다 — 원하는 최종 상태에 이미 수렴했거나 곧 수렴하는 정상 결과", async () => {
+    const { supabase } = mockPerSourceRpc({
+      [ID_A]: {
+        code: "NM004",
+        message:
+          "source ... is not an idle pending source the caller can trash",
+      },
+    });
+
+    const result = await deleteSources({ supabase, sourceIds: [ID_A, ID_B] });
+
+    expect(result).toEqual({ failedCount: 0 });
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("예상 밖 실패만 failedCount에 세고 Sentry로 올린다", async () => {
+    const { supabase } = mockPerSourceRpc({
+      [ID_A]: { code: "XXUNKNOWN", message: "boom" },
+      [ID_B]: {
+        code: "NM004",
+        message:
+          "source ... is not an idle pending source the caller can trash",
+      },
+    });
+
+    const result = await deleteSources({
+      supabase,
+      sourceIds: [ID_A, ID_B, ID_C],
+    });
+
+    expect(result).toEqual({ failedCount: 1 });
+    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
   });
 });
 

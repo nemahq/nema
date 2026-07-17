@@ -141,11 +141,14 @@ export {
 } from "./schemas/session";
 export {
   SOURCE_BODY_MAX_LENGTH,
+  SOURCE_DELETE_MANY_MAX,
   SOURCE_TITLE_MAX_LENGTH,
   type SourceActionInput,
   SourceActionInputSchema,
   type SourceCreateInput,
   SourceCreateInputSchema,
+  type SourceDeleteManyInput,
+  SourceDeleteManyInputSchema,
   type SourceGetInput,
   SourceGetInputSchema,
   type SourceReassignSpaceInput,
