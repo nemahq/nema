@@ -149,7 +149,7 @@ describe("delete_space RPC (integration)", () => {
     expect(spaceARows).toHaveLength(0);
   });
 
-  it("대기 초안이 있는데 target이 없으면 NM009로 거부한다", async () => {
+  it("대기 초안이 있는데 target도 delete_pending_drafts도 없으면 NM009로 거부한다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -162,6 +162,49 @@ describe("delete_space RPC (integration)", () => {
     await expect(
       client.query("SELECT delete_space($1)", [spaceA]),
     ).rejects.toMatchObject({ code: "NM009" });
+  });
+
+  it("p_delete_pending_drafts=true면 target 없이도 대기 초안을 cascade 삭제한다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const spaceA = await createFixtureSpace(workspaceId, "Space A");
+    await createFixtureSpace(workspaceId, "Space B");
+    const draftId = await createFixtureSource({
+      spaceId: spaceA,
+      status: "pending",
+    });
+
+    await client.query("SELECT delete_space($1, $2, $3)", [spaceA, null, true]);
+
+    const { rows: draftRows } = await client.query(
+      "SELECT id FROM sources WHERE id = $1",
+      [draftId],
+    );
+    expect(draftRows).toHaveLength(0);
+
+    const { rows: spaceARows } = await client.query(
+      "SELECT id FROM spaces WHERE id = $1",
+      [spaceA],
+    );
+    expect(spaceARows).toHaveLength(0);
+  });
+
+  it("target과 delete_pending_drafts=true를 동시에 보내면 거부한다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const spaceA = await createFixtureSpace(workspaceId, "Space A");
+    const spaceB = await createFixtureSpace(workspaceId, "Space B");
+    await createFixtureSource({ spaceId: spaceA, status: "pending" });
+
+    await expect(
+      client.query("SELECT delete_space($1, $2, $3)", [spaceA, spaceB, true]),
+    ).rejects.toThrow(/mutually exclusive/);
   });
 
   it("target이 삭제 대상 Space 자신이면 거부한다", async () => {

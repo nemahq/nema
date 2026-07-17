@@ -111,10 +111,12 @@ export async function deleteSpace(args: {
   supabase: TypedSupabaseClient;
   spaceId: string;
   targetSpaceId?: string;
+  deletePendingDrafts?: boolean;
 }): Promise<void> {
   const { error } = await args.supabase.rpc("delete_space", {
     p_space_id: args.spaceId,
     p_target_space_id: args.targetSpaceId,
+    p_delete_pending_drafts: args.deletePendingDrafts,
   });
   throwIfSupabaseError(error);
 }

@@ -776,3 +776,19 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 **권한 요청 — Soft ask(double permission) 패턴, 필수**: 네이티브 권한 요청을 먼저 띄우지 않는다. 유저의 첫 Changeset 생성 직후 자체 인앱 UI로 먼저 설명 → 동의 시에만 네이티브 `Notification.requestPermission()`. 근거·업계 사례는 `design-reference-log.md` "⑥"에 기록.
 
 **구현은 새 세션에 위임(미착수)**: 기존 Realtime 구독(`useRealtimeInvalidation.ts`, PR #419)에 얹는 형태로 스코프. 상세 스펙은 핸드오프 프롬프트로 별도 전달.
+
+---
+
+### 2026-07-17 — Space 삭제: 대기 초안 "함께 삭제" 옵션 추가 (PR #424 후속)
+
+**배경**: `SpaceDeleteConfirmForm`(PR #424가 select→이름 입력 순서, 필드/footer 분리 Suspense로 재구성)의 이동 위치 select가 지금까지 "다른 Space로 이동"만 지원했다 — 대기 초안을 보존하는 안전한 기본값이지만, Space 자체를 통째로 정리하고 싶은 경우(실험용/취소된 프로젝트) 초안이 다른 Space로 흘러들어가는 게 오히려 원치 않는 결과였다. 백엔드에 `delete_space`의 `p_delete_pending_drafts` 플래그가 추가되면서 FE도 이 선택지를 명시적으로 노출.
+
+**Select 옵션을 항상 렌더링 — 대상 Space가 1개뿐이어도 텍스트 폴백 안 씀**: 기존엔 `otherSpaces.length <= 1`이면 select 대신 평범한 텍스트로 유일한 대상 Space 이름만 보여줬다("고를 게 없으니 select 자체가 불필요"는 판단). 이제는 "함께 삭제"가 대상 Space 개수와 무관하게 항상 유효한 선택지라, 대상이 하나뿐이어도 select는 그대로 유지하고 그 하나의 이동 옵션 + 삭제 옵션 두 가지를 고르게 한다.
+
+**옵션 라벨을 "자기 설명형"으로 바꿈**: 기존엔 라벨(`delete_move_drafts_label`, "초안 N개를 이동할 위치")이 "이동"이라는 의미를 이미 지고 있어서 아래 select item엔 Space 이름만 있으면 충분했다. 이제 select 안에 "이동" 계열과 "삭제" 계열 옵션이 같이 있으므로, 라벨은 중립적인 사실만 말하게 하고(`delete_pending_drafts_label`, "확인 필요 초안 N개") 각 item이 스스로 뜻을 설명하게 했다("{name}으로 이동" / "스페이스와 함께 영구 삭제") — 라벨만 보고는 뭘 고르는 건지 모호해지는 걸 막기 위함.
+
+**"함께 삭제" 옵션에 danger 톤 적용, weave `Select`엔 `variant` prop 안 만듦**: `DropdownMenuItem`엔 이미 `data-[variant=danger]` 패턴(`text-status-error`/`focus:bg-status-error-tint`)이 있지만, `SelectItem`엔 이런 위험도 구분 자체가 필요했던 소비처가 지금까지 없었다. 이번 한 곳만을 위해 weave 컴포넌트에 새 prop을 추가하는 대신, `DropdownMenuItem`이 쓰는 것과 같은 토큰을 `className`으로 직접 얹었다(기존 코드베이스에도 `SelectItem`에 케이스별 `className`을 얹는 선례 다수 — `ThemeSelect`, `ReferenceCandidateCard` 등). 소비처가 늘면 그때 `variant` prop 승격을 재검토.
+
+**옵션 목록 안에서 구분선으로 위험도 분리**: 이동 옵션들과 삭제 옵션 사이에 `SelectSeparator`를 넣어 "다른 종류의 선택"이라는 시각적 신호를 하나 더 얹었다 — 색만으로 구분하면 목록이 길어졌을 때(Space가 많은 워크스페이스) 위험한 옵션이 다른 이동 옵션들 사이에 섞여 눈에 덜 띌 수 있어서.
+
+**기본 선택은 그대로 "이동"(가장 오래된 다른 Space)**: 새 옵션 추가로 기본값 자체는 안 바꿨다 — "함께 삭제"는 명시적으로 골라야만 실행되는, 07-modeling.md 원칙(Source는 손대지 않고 그대로 박제)에 맞는 안전한 기본을 유지.

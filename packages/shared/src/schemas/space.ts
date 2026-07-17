@@ -37,6 +37,7 @@ export type SpaceUpdateInput = z.infer<typeof SpaceUpdateInputSchema>;
 export const SpaceDeleteInputSchema = z.object({
   spaceId: z.string().uuid(),
   targetSpaceId: z.string().uuid().optional(),
+  deletePendingDrafts: z.boolean().optional(),
 });
 export type SpaceDeleteInput = z.infer<typeof SpaceDeleteInputSchema>;
 

@@ -11,6 +11,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
   Skeleton,
@@ -19,27 +20,30 @@ import {
 import { useDeleteSpace } from "@web/features/workspace/hooks/useDeleteSpace";
 import { useSpaceListSuspenseQuery } from "@web/features/workspace/hooks/useSpaceList";
 import { useSpacePendingDraftCountSuspenseQuery } from "@web/features/workspace/hooks/useSpacePendingDraftCount";
+import {
+  DELETE_PENDING_DRAFTS_OPTION,
+  resolveSpaceDeletePayload,
+} from "@web/features/workspace/resolveSpaceDeletePayload";
 import { useTranslation } from "@web/lib/tolgee";
 
-function useOtherSpaces(spaceId: string) {
+// otherSpaces·draftDisposition 파생을 한 곳에 둔다 — Field와 Footer가 각자
+// 따로 계산하면(과거엔 그랬음) 둘 중 하나만 고쳤을 때 "화면에 보이는 선택"과
+// "실제로 실행되는 선택"이 어긋날 수 있다.
+function useDraftDisposition(
+  spaceId: string,
+  manualDraftDisposition: string | null,
+) {
   const [spaceList] = useSpaceListSuspenseQuery();
   // useSpaceList는 created_at 오름차순이라 필터링 후 첫 항목이 곧 가장 오래된 Space.
-  return spaceList.spaces.filter((space) => space.id !== spaceId);
-}
-
-// 필드와 footer가 각자 이 값을 다시 계산하면 두 곳이 어긋날 여지가 생긴다 —
-// 한 곳으로 모아 항상 같은 값을 쓰게 한다.
-function resolveTargetSpaceId(
-  manualTargetSpaceId: string | null,
-  otherSpaces: { id: string }[],
-): string | undefined {
-  return manualTargetSpaceId ?? otherSpaces[0]?.id;
+  const otherSpaces = spaceList.spaces.filter((space) => space.id !== spaceId);
+  const draftDisposition = manualDraftDisposition ?? otherSpaces[0]?.id;
+  return { otherSpaces, draftDisposition };
 }
 
 interface SpaceDeleteMoveDraftsFieldProps {
   spaceId: string;
-  manualTargetSpaceId: string | null;
-  onManualTargetSpaceIdChange: (spaceId: string) => void;
+  manualDraftDisposition: string | null;
+  onManualDraftDispositionChange: (draftDisposition: string) => void;
 }
 
 // 이름 입력(확인 제스처)보다 먼저 와야 한다 — 실행에 영향을 주는 선택지는 항상
@@ -48,43 +52,47 @@ interface SpaceDeleteMoveDraftsFieldProps {
 // 그 대가로 입력창을 별도 Suspense 경계 밖에 둬서 로딩과 무관하게 항상 즉시 뜨게 한다.
 function SpaceDeleteMoveDraftsField({
   spaceId,
-  manualTargetSpaceId,
-  onManualTargetSpaceIdChange,
+  manualDraftDisposition,
+  onManualDraftDispositionChange,
 }: SpaceDeleteMoveDraftsFieldProps) {
   const { t } = useTranslation();
   const [draftCount] = useSpacePendingDraftCountSuspenseQuery(spaceId);
-  const otherSpaces = useOtherSpaces(spaceId);
+  const { otherSpaces, draftDisposition } = useDraftDisposition(
+    spaceId,
+    manualDraftDisposition,
+  );
 
   if (draftCount === 0) {
     return null;
   }
 
-  const targetSpaceId = resolveTargetSpaceId(manualTargetSpaceId, otherSpaces);
-
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs text-fg-tertiary">
-        {t("space.delete_move_drafts_label", { count: draftCount })}
+        {t("space.delete_pending_drafts_label", { count: draftCount })}
       </label>
-      {otherSpaces.length > 1 ? (
-        <Select
-          value={targetSpaceId}
-          onValueChange={onManualTargetSpaceIdChange}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {otherSpaces.map((space) => (
-              <SelectItem key={space.id} value={space.id}>
-                {space.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : (
-        <p className="text-sm text-fg-primary">{otherSpaces[0]?.name}</p>
-      )}
+      <Select
+        value={draftDisposition}
+        onValueChange={onManualDraftDispositionChange}
+      >
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {otherSpaces.map((space) => (
+            <SelectItem key={space.id} value={space.id}>
+              {t("space.delete_move_drafts_option", { name: space.name })}
+            </SelectItem>
+          ))}
+          <SelectSeparator />
+          <SelectItem
+            value={DELETE_PENDING_DRAFTS_OPTION}
+            className="text-status-error focus:bg-status-error-tint focus:text-status-error"
+          >
+            {t("space.delete_together_option")}
+          </SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -93,7 +101,7 @@ interface SpaceDeleteConfirmFooterProps {
   spaceId: string;
   spaceName: string;
   confirmText: string;
-  manualTargetSpaceId: string | null;
+  manualDraftDisposition: string | null;
   onOpenChange: (open: boolean) => void;
   onDeleted: () => void;
 }
@@ -102,25 +110,28 @@ function SpaceDeleteConfirmFooter({
   spaceId,
   spaceName,
   confirmText,
-  manualTargetSpaceId,
+  manualDraftDisposition,
   onOpenChange,
   onDeleted,
 }: SpaceDeleteConfirmFooterProps) {
   const { t } = useTranslation();
   const deleteMutation = useDeleteSpace();
   const [draftCount] = useSpacePendingDraftCountSuspenseQuery(spaceId);
-  const otherSpaces = useOtherSpaces(spaceId);
-  const targetSpaceId = resolveTargetSpaceId(manualTargetSpaceId, otherSpaces);
+  const { draftDisposition } = useDraftDisposition(
+    spaceId,
+    manualDraftDisposition,
+  );
 
   const canDelete =
-    confirmText === spaceName && (draftCount === 0 || Boolean(targetSpaceId));
+    confirmText === spaceName &&
+    (draftCount === 0 || Boolean(draftDisposition));
 
   function handleDelete() {
     if (!canDelete) {
       return;
     }
     deleteMutation.mutate(
-      { spaceId, targetSpaceId: draftCount > 0 ? targetSpaceId : undefined },
+      { spaceId, ...resolveSpaceDeletePayload(draftCount, draftDisposition) },
       {
         onSuccess: () => {
           onDeleted();
@@ -164,9 +175,9 @@ export function SpaceDeleteConfirmForm({
   const { t } = useTranslation();
   const confirmInputId = useId();
   const [confirmText, setConfirmText] = useState("");
-  const [manualTargetSpaceId, setManualTargetSpaceId] = useState<string | null>(
-    null,
-  );
+  const [manualDraftDisposition, setManualDraftDisposition] = useState<
+    string | null
+  >(null);
 
   return (
     <>
@@ -189,8 +200,8 @@ export function SpaceDeleteConfirmForm({
       >
         <SpaceDeleteMoveDraftsField
           spaceId={spaceId}
-          manualTargetSpaceId={manualTargetSpaceId}
-          onManualTargetSpaceIdChange={setManualTargetSpaceId}
+          manualDraftDisposition={manualDraftDisposition}
+          onManualDraftDispositionChange={setManualDraftDisposition}
         />
       </Suspense>
 
@@ -226,7 +237,7 @@ export function SpaceDeleteConfirmForm({
           spaceId={spaceId}
           spaceName={spaceName}
           confirmText={confirmText}
-          manualTargetSpaceId={manualTargetSpaceId}
+          manualDraftDisposition={manualDraftDisposition}
           onOpenChange={onOpenChange}
           onDeleted={onDeleted}
         />

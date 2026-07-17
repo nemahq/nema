@@ -1221,7 +1221,11 @@ export type Database = {
         Returns: string;
       };
       delete_space: {
-        Args: { p_space_id: string; p_target_space_id?: string };
+        Args: {
+          p_delete_pending_drafts?: boolean;
+          p_space_id: string;
+          p_target_space_id?: string;
+        };
         Returns: undefined;
       };
       delete_workspace: {
