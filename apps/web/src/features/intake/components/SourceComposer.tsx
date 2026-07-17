@@ -73,7 +73,7 @@ export function SourceComposer({ spaceId }: SourceComposerProps) {
               "dark:enabled:bg-fg-primary dark:enabled:text-surface-base dark:enabled:hover:bg-fg-primary",
             )}
           >
-            {t("intake.compose_submit")}
+            {t("intake.remember")}
           </Button>
         )}
       />

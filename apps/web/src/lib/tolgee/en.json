@@ -63,7 +63,6 @@
   },
   "intake": {
     "compose_body_placeholder": "What should I remember?",
-    "compose_submit": "Remember",
     "draft_change_space": "Change space",
     "draft_delete_confirm_description": "This can't be undone.",
     "draft_delete_confirm_title": "Delete this draft?",
@@ -72,7 +71,6 @@
     "draft_no_result": "We couldn't find anything to extract from this.",
     "draft_no_result_tooltip": "Nothing to organize",
     "draft_open": "Open draft",
-    "draft_organize": "Organize",
     "draft_organizing": "Organizing...",
     "draft_organizing_elapsed_minutes": "{minutes}m {seconds}s",
     "draft_organizing_elapsed_seconds": "{count}s",
@@ -83,7 +81,8 @@
     "drafts_delete_waiting_confirm_title": "Delete {count} drafts needing attention?",
     "drafts_delete_waiting_partial_failure": "{failed} couldn't be deleted. Try again.",
     "drafts_empty": "All caught up. Nothing needs your attention.",
-    "drafts_title": "Drafts"
+    "drafts_title": "Drafts",
+    "remember": "Remember"
   },
   "layout": {
     "collapse_sidebar": "Collapse sidebar",

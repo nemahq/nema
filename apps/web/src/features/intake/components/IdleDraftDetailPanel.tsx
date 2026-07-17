@@ -205,7 +205,7 @@ export function IdleDraftDetailPanel({
           >
             {isRegenerating
               ? t("intake.draft_organizing")
-              : t("intake.draft_organize")}
+              : t("intake.remember")}
           </Button>
         </div>
       </div>
