@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import { linkOptions, useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@nema-io/weave";
@@ -6,7 +6,6 @@ import { Button } from "@nema-io/weave";
 import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { ChangesetStatusPill } from "@web/features/review/components/ChangesetStatusPill";
-import { RevertChangesetDialog } from "@web/features/review/components/RevertChangesetDialog";
 import { useChangesetListSuspenseQuery } from "@web/features/review/hooks/useChangesetListQuery";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
 import { changesetDisplayTitle } from "@web/features/review/utils";
@@ -55,19 +54,17 @@ function ChangesetDetailBody({
   const navigate = useNavigate();
   const [changesetList] = useChangesetListSuspenseQuery(spaceId);
   const entry = changesetList.changesets.find((c) => c.id === changesetId);
-  const [revertDialogOpen, setRevertDialogOpen] = useState(false);
   const revertChangeset = useRevertChangeset();
 
   if (!entry) {
     return <ChangesetDetailNotFound />;
   }
 
-  function handleConfirmRevert() {
+  function handleRevert() {
     revertChangeset.mutate(
       { changesetId },
       {
         onSuccess: ({ revertChangesetId }) => {
-          setRevertDialogOpen(false);
           navigate({
             to: "/space/$spacePublicId/changesets/$changesetId",
             params: { spacePublicId, changesetId: revertChangesetId },
@@ -118,7 +115,8 @@ function ChangesetDetailBody({
                   variant="neutral"
                   size="sm"
                   className="shrink-0"
-                  onClick={() => setRevertDialogOpen(true)}
+                  onClick={handleRevert}
+                  disabled={revertChangeset.isPending}
                 >
                   {t("review.detail_revert_action")}
                 </Button>
@@ -134,12 +132,6 @@ function ChangesetDetailBody({
           </header>
         </div>
       </div>
-      <RevertChangesetDialog
-        open={revertDialogOpen}
-        onOpenChange={setRevertDialogOpen}
-        onConfirm={handleConfirmRevert}
-        isPending={revertChangeset.isPending}
-      />
     </>
   );
 }
