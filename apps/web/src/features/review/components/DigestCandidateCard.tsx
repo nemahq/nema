@@ -128,13 +128,13 @@ export function DigestCandidateCard({
           >
             <SelectTrigger
               aria-label={t("review.digest_type_label")}
-              className="h-8 w-28 cursor-pointer text-xs shadow-none dark:shadow-sm"
+              className="h-8 w-28 text-xs"
             >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {DIGEST_TYPES.map((type) => (
-                <SelectItem key={type} value={type} className="cursor-pointer">
+                <SelectItem key={type} value={type}>
                   {DIGEST_TYPE_LABEL[type]}
                 </SelectItem>
               ))}

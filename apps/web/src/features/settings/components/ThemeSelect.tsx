@@ -39,15 +39,12 @@ export function ThemeSelect() {
         }
       }}
     >
-      <SelectTrigger
-        aria-label={t("settings.theme")}
-        className="w-36 cursor-pointer shadow-none dark:shadow-sm"
-      >
+      <SelectTrigger aria-label={t("settings.theme")} className="w-36">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {THEME_OPTIONS.map(({ value, labelKey }) => (
-          <SelectItem key={value} value={value} className="cursor-pointer">
+          <SelectItem key={value} value={value}>
             {t(labelKey)}
           </SelectItem>
         ))}
