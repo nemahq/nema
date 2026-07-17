@@ -5,13 +5,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { Alert, Button, DialogFooter, Skeleton } from "@nema-io/weave";
 
 import {
+  isPreconditionFailed,
   useAccountDeletionBlockersSuspenseQuery,
   useDeleteAccount,
 } from "@web/features/account";
 import {
   type AccountDeleteError,
   canConfirmAccountDeletion,
-  isPreconditionFailed,
   resolveConfirmationTarget,
 } from "@web/features/settings/confirmAccountDeletion";
 import { useUser } from "@web/lib/auth";
