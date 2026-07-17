@@ -39,7 +39,6 @@ CREATE OR REPLACE FUNCTION create_ingestion_review(
 RETURNS uuid AS $$
 DECLARE
   v_space_id     uuid;
-  v_author_id    uuid;
   v_source_title text;
   v_changeset_id uuid;
 BEGIN
@@ -47,7 +46,7 @@ BEGIN
   SET digestion_status = 'completed',
       error_message    = NULL
   WHERE id = p_source_id AND digestion_status = 'pending' AND status = 'pending'
-  RETURNING space_id, author_id, title INTO v_space_id, v_author_id, v_source_title;
+  RETURNING space_id, title INTO v_space_id, v_source_title;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'source % is not pending digestion', p_source_id;
@@ -57,9 +56,10 @@ BEGIN
     RAISE EXCEPTION 'p_digests must not be empty — use complete_source_digestion for empty results';
   END IF;
 
-  -- author_id = 원본 제공자: ingestion은 사람 주도 변경셋(07-modeling authorId 규칙)
-  INSERT INTO changesets (space_id, type, status, source_id, author_id, title)
-  VALUES (v_space_id, 'ingestion', 'pending', p_source_id, v_author_id, v_source_title)
+  -- author_id는 안 채운다 — ingestion은 엔진 산물이라 항상 null(07-modeling authorId
+  -- 규칙, 20260717140000이 Source 제출자 id를 잘못 채우던 버그를 고쳤다).
+  INSERT INTO changesets (space_id, type, status, source_id, title)
+  VALUES (v_space_id, 'ingestion', 'pending', p_source_id, v_source_title)
   RETURNING id INTO v_changeset_id;
 
   PERFORM write_ingestion_review_changes(v_changeset_id, p_digests, p_new_references, p_reference_updates);
