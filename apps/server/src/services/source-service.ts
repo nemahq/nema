@@ -138,7 +138,9 @@ interface PendingSourceItem {
   digestCount: number;
   // 이 원본을 대상으로 한 ingestion 리뷰가 버려진(rejected) 적이 있는지 — discard가
   // digestion_status는 안 건드려 completed로 남기 때문에, 소비자가 "AI가 실제로 후보를
-  // 만들었지만 사람이 버렸다"와 "AI가 애초에 아무것도 못 찾았다"를 가르는 데 쓴다.
+  // 만들었지만 사람이 버렸다"와 "AI가 애초에 아무것도 못 찾았다"를 가르는 데 쓴다. 존재
+  // 여부만 볼 뿐 시점은 안 따진다(버림 후 원본을 고쳐 재시도해도 true로 남음) — digestionStatus와
+  // 독립적으로 단독 판단하지 말 것, draftStatus()처럼 항상 둘을 같이 봐야 한다.
   hasDiscardedReview: boolean;
 }
 
@@ -188,7 +190,7 @@ export async function listPendingSources(args: {
           (change) => change.target_type === "digest",
         ).length,
       });
-    } else {
+    } else if (changeset.status === "rejected") {
       discardedSourceIds.add(changeset.source_id);
     }
   }
