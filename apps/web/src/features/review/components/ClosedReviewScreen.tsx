@@ -1,15 +1,16 @@
 import { Suspense } from "react";
-import { linkOptions, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@nema-io/weave";
 
 import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { ChangesetStatusPill } from "@web/features/review/components/ChangesetStatusPill";
+import { ReviewNavigationBar } from "@web/features/review/components/ReviewNavigationBar";
 import { useChangesetListSuspenseQuery } from "@web/features/review/hooks/useChangesetListQuery";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
 import { changesetDisplayTitle } from "@web/features/review/utils";
-import { SpaceBadge, useSpaceListSuspenseQuery } from "@web/features/workspace";
+import { useSpaceListSuspenseQuery } from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface ClosedReviewScreenProps {
@@ -38,7 +39,6 @@ function ClosedReviewNotFound() {
 interface ClosedReviewBodyProps {
   spacePublicId: string;
   spaceId: string;
-  spaceName: string;
   changesetId: string;
 }
 
@@ -47,7 +47,6 @@ interface ClosedReviewBodyProps {
 function ClosedReviewBody({
   spacePublicId,
   spaceId,
-  spaceName,
   changesetId,
 }: ClosedReviewBodyProps) {
   const { t } = useTranslation();
@@ -76,26 +75,9 @@ function ClosedReviewBody({
 
   return (
     <>
-      <NavigationBar
-        items={[
-          {
-            label: spaceName,
-            icon: <SpaceBadge name={spaceName} size="sm" />,
-            ...linkOptions({
-              to: "/space/$spacePublicId",
-              params: { spacePublicId },
-            }),
-          },
-          {
-            label: t("space.tab_changesets"),
-            ...linkOptions({
-              to: "/space/$spacePublicId/changes",
-              params: { spacePublicId },
-              search: { subTab: "open" },
-            }),
-          },
-          { label: changesetDisplayTitle(entry, t) },
-        ]}
+      <ReviewNavigationBar
+        spacePublicId={spacePublicId}
+        title={changesetDisplayTitle(entry, t)}
       />
 
       <div data-main-scroll-area className="flex-1 overflow-y-auto">
@@ -154,7 +136,6 @@ function ClosedReviewSpaceGate({
       <ClosedReviewBody
         spacePublicId={spacePublicId}
         spaceId={space.id}
-        spaceName={space.name}
         changesetId={changesetId}
       />
     </Suspense>

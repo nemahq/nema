@@ -1,5 +1,5 @@
-import { Suspense, useState } from "react";
-import { linkOptions, useNavigate } from "@tanstack/react-router";
+import { Suspense } from "react";
+import { useNavigate } from "@tanstack/react-router";
 
 import { Button, Skeleton } from "@nema-io/weave";
 
@@ -13,16 +13,8 @@ import {
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
+import { useReviewEditingState } from "@web/features/review/hooks/useReviewEditingState";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
-import {
-  buildMergeRows,
-  toReferenceUpdates,
-} from "@web/features/review/referenceMerge";
-import type {
-  ReviewDigest,
-  ReviewNewReference,
-} from "@web/features/review/types";
-import { SpaceBadge, useSpaceListSuspenseQuery } from "@web/features/workspace";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -30,6 +22,7 @@ import { ChangesetStatusPill } from "./ChangesetStatusPill";
 import { DigestCandidateCard } from "./DigestCandidateCard";
 import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
 import { ReferenceMergeCard } from "./ReferenceMergeCard";
+import { ReviewNavigationBar } from "./ReviewNavigationBar";
 import { SourceTextPanel } from "./SourceTextPanel";
 
 // open(=pending) 상태인 ingestion changeset의 리뷰 화면 — 확정/버리기로 닫히면
@@ -48,41 +41,32 @@ function OpenReviewContent({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [review] = useDigestReviewSuspenseQuery(changesetId);
-  const [spaceList] = useSpaceListSuspenseQuery();
-  const space = spaceList.spaces.find((s) => s.publicId === spacePublicId);
   const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
+
   const updateReview = useUpdateReview(changesetId);
   const confirmReview = useConfirmReview();
   const discardReview = useDiscardReview();
   const showNotificationSoftAsk = useNotificationSoftAsk();
 
-  const [removedDigestIndexes, setRemovedDigestIndexes] = useState<Set<number>>(
-    new Set(),
-  );
-  const [titleOverrides, setTitleOverrides] = useState<Map<number, string>>(
-    new Map(),
-  );
-  const [bodyOverrides, setBodyOverrides] = useState<
-    Map<number, ReviewDigest["body"]>
-  >(new Map());
-  const [topicsOverrides, setTopicsOverrides] = useState<
-    Map<number, ReviewDigest["topics"]>
-  >(new Map());
-  const [tagsOverrides, setTagsOverrides] = useState<
-    Map<number, ReviewDigest["tags"]>
-  >(new Map());
-  const [removedReferenceKeys, setRemovedReferenceKeys] = useState<Set<string>>(
-    new Set(),
-  );
-  // 신규 Reference 후보 편집(타입·이름·설명) — key로 원본 draft를 덮어쓴다.
-  const [referenceOverrides, setReferenceOverrides] = useState<
-    Map<string, ReviewNewReference>
-  >(new Map());
-  // 기존 Reference 병합 편집 — referenceId로 엔진 제안 mergeNote를 덮어쓴다.
-  // "원래대로"(거부)도 원본 body로 되돌리는 override라 별도 상태가 필요 없다.
-  const [mergeNoteOverrides, setMergeNoteOverrides] = useState<
-    Map<string, string>
-  >(new Map());
+  const {
+    digestRows,
+    referenceRows,
+    mergeRows,
+    dirty,
+    hasCandidates,
+    hasEmptyTitle,
+    hasEmptyLabel,
+    hasEmptyReference,
+    referenceUpdates,
+    setDigestTitle,
+    setDigestBody,
+    setDigestTopics,
+    setDigestTags,
+    removeDigest,
+    setReference,
+    removeReference,
+    setMergeNote,
+  } = useReviewEditingState(review);
 
   const pending =
     updateReview.isPending ||
@@ -90,52 +74,6 @@ function OpenReviewContent({
     discardReview.isPendingAfterDelay;
   const error =
     updateReview.error ?? confirmReview.error ?? discardReview.error;
-
-  const digestRows = review.digests
-    .map((digest, index) => ({
-      digest,
-      index,
-      title: titleOverrides.get(index) ?? digest.title,
-      body: bodyOverrides.get(index) ?? digest.body,
-      topics: topicsOverrides.get(index) ?? digest.topics,
-      tags: tagsOverrides.get(index) ?? digest.tags,
-    }))
-    .filter((row) => !removedDigestIndexes.has(row.index));
-  const referenceRows = review.newReferences
-    .filter((reference) => !removedReferenceKeys.has(reference.key))
-    .map((reference) => referenceOverrides.get(reference.key) ?? reference);
-  const mergeRows = buildMergeRows({
-    citedReferences: review.citedReferences,
-    citedReferenceIds: new Set(
-      digestRows.flatMap((row) => row.digest.referenceIds),
-    ),
-    mergeNoteOverrides,
-  });
-
-  const dirty =
-    removedDigestIndexes.size > 0 ||
-    titleOverrides.size > 0 ||
-    bodyOverrides.size > 0 ||
-    topicsOverrides.size > 0 ||
-    tagsOverrides.size > 0 ||
-    removedReferenceKeys.size > 0 ||
-    referenceOverrides.size > 0 ||
-    mergeNoteOverrides.size > 0;
-  const hasCandidates = digestRows.length + referenceRows.length > 0;
-  const hasEmptyTitle = digestRows.some((row) => row.title.trim() === "");
-  const hasEmptyLabel = digestRows.some(
-    (row) =>
-      row.topics.some((topic) => topic.name.trim() === "") ||
-      row.tags.some((tag) => tag.title.trim() === ""),
-  );
-  // 신규 Reference 이름·설명, 기존 Reference 병합 설명 모두 필수(zod min(1)) — 비우면
-  // 확정 시 원문 에러가 새므로 라벨 공백과 같은 결로 사전 차단한다.
-  const hasEmptyReference =
-    referenceRows.some(
-      (reference) =>
-        reference.title.trim() === "" || reference.body.trim() === "",
-    ) || mergeRows.some((row) => row.mergeNote.trim() === "");
-  const referenceUpdates = toReferenceUpdates(mergeRows);
   const locked = pending;
   const confirmDisabled =
     locked ||
@@ -209,27 +147,7 @@ function OpenReviewContent({
 
   return (
     <main className="flex flex-1 flex-col bg-surface-card">
-      <NavigationBar
-        items={[
-          {
-            label: space?.name ?? "",
-            icon: space && <SpaceBadge name={space.name} size="sm" />,
-            ...linkOptions({
-              to: "/space/$spacePublicId",
-              params: { spacePublicId },
-            }),
-          },
-          {
-            label: t("space.tab_changesets"),
-            ...linkOptions({
-              to: "/space/$spacePublicId/changes",
-              params: { spacePublicId },
-              search: { subTab: "open" },
-            }),
-          },
-          { label: reviewTitle },
-        ]}
-      />
+      <ReviewNavigationBar spacePublicId={spacePublicId} title={reviewTitle} />
 
       <div data-main-scroll-area className="flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-8">
@@ -285,21 +203,11 @@ function OpenReviewContent({
                 tags={tags}
                 citedReferences={review.citedReferences}
                 disabled={locked}
-                onTitleChange={(value) =>
-                  setTitleOverrides((prev) => new Map(prev).set(index, value))
-                }
-                onBodyChange={(value) =>
-                  setBodyOverrides((prev) => new Map(prev).set(index, value))
-                }
-                onTopicsChange={(topics) =>
-                  setTopicsOverrides((prev) => new Map(prev).set(index, topics))
-                }
-                onTagsChange={(tags) =>
-                  setTagsOverrides((prev) => new Map(prev).set(index, tags))
-                }
-                onRemove={() =>
-                  setRemovedDigestIndexes((prev) => new Set(prev).add(index))
-                }
+                onTitleChange={(value) => setDigestTitle(index, value)}
+                onBodyChange={(value) => setDigestBody(index, value)}
+                onTopicsChange={(next) => setDigestTopics(index, next)}
+                onTagsChange={(next) => setDigestTags(index, next)}
+                onRemove={() => removeDigest(index)}
               />
             ))}
           </div>
@@ -316,16 +224,8 @@ function OpenReviewContent({
                   key={reference.key}
                   reference={reference}
                   disabled={locked}
-                  onChange={(next) =>
-                    setReferenceOverrides((prev) =>
-                      new Map(prev).set(reference.key, next),
-                    )
-                  }
-                  onRemove={() =>
-                    setRemovedReferenceKeys((prev) =>
-                      new Set(prev).add(reference.key),
-                    )
-                  }
+                  onChange={(next) => setReference(reference.key, next)}
+                  onRemove={() => removeReference(reference.key)}
                 />
               ))}
               {mergeRows.map(({ reference, mergeNote }) => (
@@ -335,9 +235,7 @@ function OpenReviewContent({
                   mergeNote={mergeNote}
                   disabled={locked}
                   onMergeNoteChange={(value) =>
-                    setMergeNoteOverrides((prev) =>
-                      new Map(prev).set(reference.id, value),
-                    )
+                    setMergeNote(reference.id, value)
                   }
                 />
               ))}
