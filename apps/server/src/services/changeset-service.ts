@@ -289,13 +289,18 @@ interface ChangesetHistoryEntry {
   // 효과 요약 — 대상 종류별 변경 수("이 글 → 진술 N + 관계 M").
   effect: Record<ChangeTargetType, number>;
   createdAt: string;
+  // closed(applied/rejected) 전환 시점(의도). trg_changesets_updated_at은 status
+  // 변경뿐 아니라 이 행에 대한 모든 UPDATE에 반응하므로, revert_changeset처럼 원본을
+  // UPDATE하지 않는 경로(§4.4)에서만 "판단이 내려진 시각"이 보장된다 — 컬럼만 고치는
+  // UPDATE(예: 백필)를 추가하면 이 값도 함께 갱신되니 주의.
+  updatedAt: string;
 }
 
 export async function listChangesets(args: {
   supabase: TypedSupabaseClient;
   spaceId?: string;
   limit: number;
-  // 미지정 시 open/closed 구분 없이 전부 — ChangesetDetailScreen처럼 특정 changeset을
+  // 미지정 시 open/closed 구분 없이 전부 — ClosedReviewScreen처럼 특정 changeset을
   // id로 찾으려고 전체를 훑는 소비처가 있어 이 폴백을 남겨둔다.
   open?: boolean;
   // number(Space 안 순차 증가값) 기준 커서 — created_at 대신 쓰는 이유는 동시 생성 시
@@ -324,7 +329,7 @@ export async function listChangesets(args: {
   let query = supabase
     .from("changesets")
     .select(
-      "id, number, type, status, title, source_id, reverts_id, author_id, created_at, changes(target_type), sources(status)",
+      "id, number, type, status, title, source_id, reverts_id, author_id, created_at, updated_at, changes(target_type), sources(status)",
     )
     .eq("space_id", targetSpaceId)
     .order("number", { ascending: false })
@@ -398,6 +403,7 @@ export async function listChangesets(args: {
         reverted: isReverted(row.id),
         effect,
         createdAt: row.created_at,
+        updatedAt: row.updated_at,
       };
     }),
   };

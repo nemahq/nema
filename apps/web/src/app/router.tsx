@@ -12,11 +12,11 @@ import { notFoundAtRoot } from "@web/app/error/notFound";
 import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
-import { ChangesetDetailPage } from "@web/app/pages/ChangesetDetailPage";
+import { ClosedReviewPage } from "@web/app/pages/ClosedReviewPage";
 import { ComingSoonPage } from "@web/app/pages/ComingSoonPage";
-import { DigestReviewPage } from "@web/app/pages/DigestReviewPage";
 import { DraftsPage } from "@web/app/pages/DraftsPage";
 import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
+import { OpenReviewPage } from "@web/app/pages/OpenReviewPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { SessionPage } from "@web/app/pages/SessionPage";
 import { SignInPage } from "@web/app/pages/SignInPage";
@@ -228,10 +228,10 @@ const draftsRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
-function DigestReviewShell() {
-  const { spacePublicId, changesetId } = digestReviewRoute.useParams();
+function OpenReviewShell() {
+  const { spacePublicId, changesetId } = openReviewRoute.useParams();
   return (
-    <DigestReviewPage
+    <OpenReviewPage
       key={changesetId}
       spacePublicId={spacePublicId}
       changesetId={changesetId}
@@ -239,17 +239,17 @@ function DigestReviewShell() {
   );
 }
 
-const digestReviewRoute = createRoute({
+const openReviewRoute = createRoute({
   getParentRoute: () => workspaceSidebarRoute,
   path: "/space/$spacePublicId/review/$changesetId",
-  component: DigestReviewShell,
+  component: OpenReviewShell,
   errorComponent: RouteErrorFallback,
 });
 
-function ChangesetDetailShell() {
-  const { spacePublicId, changesetId } = changesetDetailRoute.useParams();
+function ClosedReviewShell() {
+  const { spacePublicId, changesetId } = closedReviewRoute.useParams();
   return (
-    <ChangesetDetailPage
+    <ClosedReviewPage
       key={changesetId}
       spacePublicId={spacePublicId}
       changesetId={changesetId}
@@ -257,10 +257,10 @@ function ChangesetDetailShell() {
   );
 }
 
-const changesetDetailRoute = createRoute({
+const closedReviewRoute = createRoute({
   getParentRoute: () => workspaceSidebarRoute,
   path: "/space/$spacePublicId/changesets/$changesetId",
-  component: ChangesetDetailShell,
+  component: ClosedReviewShell,
   errorComponent: RouteErrorFallback,
 });
 
@@ -289,8 +289,8 @@ const routeTree = rootRoute.addChildren([
       spaceOverviewRoute,
       spaceChangesRoute,
       draftsRoute,
-      digestReviewRoute,
-      changesetDetailRoute,
+      openReviewRoute,
+      closedReviewRoute,
     ]),
     devHarnessRoute,
   ]),

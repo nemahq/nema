@@ -1,4 +1,4 @@
-export { ChangesetDetailScreen } from "./components/ChangesetDetailScreen";
 export { ChangesPanel } from "./components/ChangesPanel";
-export { DigestReviewScreen } from "./components/DigestReviewScreen";
+export { ClosedReviewScreen } from "./components/ClosedReviewScreen";
+export { OpenReviewScreen } from "./components/OpenReviewScreen";
 export type { ChangesetType, ChangesSubTab } from "./types";

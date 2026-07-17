@@ -162,9 +162,10 @@
   1. 이 changeset이 closed+applied 상태로 전환된다.
   2. 남은 Digest·Reference 후보가 모두 확정되어 활성 상태가 된다.
   3. 진술·관계 생성이 시작된다.
-  4. 화면은 이동하지 않고 그대로 남아, 상태 표시만 적용 완료를 나타내도록 바뀐다.
-- **관여 화면**: Digest 리뷰 화면
-- **범위 참고 (2026-07-14, PR #412)**: Then #1·#4는 이 PR이 구현(`useConfirmReview`, 로컬 `outcome` 상태로 이동 없이 배지만 갱신). Then #2·#3(후보 확정·진술/관계 생성)은 기존 `confirm_ingestion_review` RPC가 이미 담당하던 부분이라 이 PR에서 변경 없음. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+  4. 리뷰 화면(open 전용)은 유효하지 않게 되므로, 처리 결과의 정본 위치인 변경사항 상세로 곧바로 이동한다.
+- **관여 화면**: Digest 리뷰 화면, Changeset 상세
+- **범위 참고 (2026-07-14, PR #412)**: Then #1은 이 PR이 구현(`useConfirmReview`). Then #2·#3(후보 확정·진술/관계 생성)은 기존 `confirm_ingestion_review` RPC가 이미 담당하던 부분이라 이 PR에서 변경 없음.
+- **갱신 (2026-07-18)**: Then #4를 뒤집었다 — 처음엔 "화면 안 이동, 로컬 `outcome`으로 배지만 갱신"이었는데, changeset이 실제 closed로 전이하면 open 전용 `digestReview.get`이 재조회 불가라 정본 위치가 구조적으로 변경사항 상세(`ClosedReviewScreen`)다. 확정 성공 즉시 그리로 자동 이동하도록 바꿨다(design-decisions-log.md 2026-07-18 항목 참고). 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### Digest 리뷰 버리기
 
@@ -174,9 +175,10 @@
   1. 이 changeset이 closed+discarded 상태로 전환된다.
   2. Digest·Reference가 아무것도 생성되지 않는다.
   3. 원본 Source는 초안(pending)으로 돌아간다.
-  4. 화면은 이동하지 않고 그대로 남아, 상태 표시만 버려짐을 나타내도록 바뀐다.
-- **관여 화면**: Digest 리뷰 화면
-- **범위 참고 (2026-07-14, PR #412)**: 신설된 `discard_ingestion_review` RPC(가드: `type='ingestion' AND status='pending'`, changes 미생성)와 `useDiscardReview`로 Then 전부 구현. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+  4. 리뷰 화면(open 전용)은 유효하지 않게 되므로, 처리 결과의 정본 위치인 변경사항 상세로 곧바로 이동한다.
+- **관여 화면**: Digest 리뷰 화면, Changeset 상세
+- **범위 참고 (2026-07-14, PR #412)**: 신설된 `discard_ingestion_review` RPC(가드: `type='ingestion' AND status='pending'`, changes 미생성)와 `useDiscardReview`로 Then #1~#3 구현.
+- **갱신 (2026-07-18)**: Then #4를 확정과 같은 이유로 뒤집어 자동 이동으로 바꿨다(위 "Digest 리뷰 확정" 갱신·design-decisions-log.md 2026-07-18 항목 참고). 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### 적용된 리뷰 되돌리기
 

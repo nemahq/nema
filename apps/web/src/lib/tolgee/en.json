@@ -127,7 +127,6 @@
     "digest_title_placeholder": "Title",
     "digest_type_label": "Digest type",
     "discard_action": "Discard",
-    "discarded_notice": "Discarded — nothing was created, and the source is back in Drafts.",
     "effect_digest": "{count, plural, one {# digest} other {# digests}}",
     "effect_none": "No changes",
     "effect_reference": "{count, plural, one {# reference} other {# references}}",
@@ -149,9 +148,8 @@
     "reference_type_label": "Reference type",
     "source_text_panel_title": "View original text",
     "status_applied": "Applied",
-    "status_discarded": "Discarded",
-    "status_pending": "Review pending",
-    "status_rejected": "Rejected",
+    "status_discarded": "Declined",
+    "status_pending": "Needs review",
     "status_reverted": "Reverted",
     "tab_closed": "Reviewed",
     "tab_open": "Needs review",
@@ -165,9 +163,8 @@
     "topic_add_action": "+ Topic",
     "topic_remove_action": "Remove this topic",
     "type_ingestion": "Organize",
-    "type_relation": "Connection",
-    "type_revert": "Revert",
-    "view_changeset_detail_action": "View change detail"
+    "type_relation": "Discovery",
+    "type_revert": "Revert"
   },
   "session": {
     "copied": "Copied",

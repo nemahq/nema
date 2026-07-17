@@ -644,7 +644,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 --   applied 배치(위 3번과 같은 이유로 여러 쌍이 한 changeset에 실림)는 null
 --   유지, 번호 자리표시자 폴백 그대로. revert → 원본 title + " 되돌림", 체인
 --   깊이만큼 수렴할 때까지 반복.
+--
+--   trg_changesets_updated_at은 컬럼 무관 모든 UPDATE에 반응하는 범용 트리거라,
+--   이 백필을 그대로 돌리면 이미 closed(applied/rejected)인 changeset들의
+--   updated_at이 전부 이 배포 시각으로 리셋된다 — ClosedReviewScreen이 그 값을
+--   "판단이 최종 내려진 시각"으로 보여주므로, 배포 직후 과거 판단들이 전부 방금
+--   일어난 것처럼 보이게 된다. 백필 구간만 트리거를 꺼서 막는다.
 -- =============================================================
+
+ALTER TABLE changesets DISABLE TRIGGER trg_changesets_updated_at;
 
 UPDATE changesets c
 SET title = s.title
@@ -707,3 +715,5 @@ BEGIN
     EXIT WHEN v_updated = 0;
   END LOOP;
 END $$;
+
+ALTER TABLE changesets ENABLE TRIGGER trg_changesets_updated_at;

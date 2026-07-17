@@ -6,7 +6,7 @@ import {
 } from "@nema-io/shared";
 import type { BadgeVariant } from "@nema-io/weave";
 import type { IconComponent } from "@nema-io/weave/icons";
-import { Funnel, Share2 } from "@nema-io/weave/icons";
+import { Check, Circle, X } from "@nema-io/weave/icons";
 
 import type { TranslationKey } from "@web/lib/tolgee";
 
@@ -79,8 +79,10 @@ export const DIGEST_BODY_FIELDS: Record<DigestType, DigestBodyFieldMeta[]> = {
 
 // manual은 이 목록에 절대 안 나온다 — 확정 즉시 applied로 끝나 Space 오버뷰의
 // Changes 탭 대신 각 Digest·Reference의 "변경 이력"에서만 노출된다(surface-inventory.md).
-// 라벨은 코드 타입명이 아니라 glossary 제품 용어를 그대로 쓴다 — ingestion=정리,
-// relation=연결(glossary.md 매핑), revert는 대응 제품 용어가 없어 명사형으로 새로 정함.
+// 라벨은 이 changeset을 만든 AI 활동을 가리킨다(결과물 개념어가 아님) — ingestion=정리,
+// relation=발견. "연결"(glossary.md의 Relation 개념어)은 사용자가 먼저 겪는 접점이
+// 없고 충돌류 관계엔 안 맞아, AI가 스스로 알아챘다는 뜻의 "발견"으로 바꿨다.
+// revert는 대응 제품 용어가 없어 명사형으로 새로 정함.
 export const CHANGESET_TYPE_LABEL: Record<
   Exclude<ChangesetType, "manual">,
   TranslationKey
@@ -90,24 +92,12 @@ export const CHANGESET_TYPE_LABEL: Record<
   revert: "review.type_revert",
 };
 
-// revert는 아이콘이 없다 — 제목 자체가 "{원본 제목} 되돌림"으로 이미 되돌리기임을
-// 말해주게 될 예정이라(별도 후속 작업), 아이콘까지 얹으면 같은 정보의 중복 신호가 된다.
-export const CHANGESET_TYPE_ICON: Record<
-  Exclude<ChangesetType, "manual" | "revert">,
-  IconComponent
-> = {
-  ingestion: Funnel,
-  relation: Share2,
-};
-
 // changeset_status는 아직 pending/applied/rejected 셋뿐이다(status+outcome 2필드
 // 모델은 07-modeling.md가 그리는 목표 스키마일 뿐 미구현) — "적용 안 하고 닫힘"을
 // relation 도메인이 먼저 쓰던 rejected를 ingestion도 그대로 재사용한다
 // (supabase/migrations/20260714130000_ingestion_review_discard_restore.sql 참고).
-// 다만 값은 같아도 뜻은 타입마다 다르다 — relation의 rejected는 사람이 "충돌·중복이
-// 아니다"라고 판정해 영구히 끝난 것(되살리기 없음)이고, ingestion의 rejected는 리뷰를
-// 버린 것뿐이라 되살리기가 열려 있다. 배지가 status만 보고 라벨을 고르면 이 둘이 같은
-// "버려짐"으로 보여 앱 자신의 되살리기 시맨틱과 모순되므로, type까지 함께 본다.
+// relation의 거절도 지금은 되살리기가 없지만 후속으로 ingestion과 동일하게 열 예정이라
+// (intervention-design.md §10 백로그), type별로 라벨을 나누지 않고 "반려됨"으로 통일한다.
 const CHANGESET_STATUS_VARIANT: Record<ChangesetStatus, BadgeVariant> = {
   pending: "warning",
   applied: "success",
@@ -120,15 +110,44 @@ const CHANGESET_STATUS_LABEL_KEY: Record<ChangesetStatus, TranslationKey> = {
   rejected: "review.status_discarded",
 };
 
-export function changesetStatusMeta(
-  status: ChangesetStatus,
-  type: ChangesetType,
-): { labelKey: TranslationKey; variant: BadgeVariant } {
-  if (status === "rejected" && type === "relation") {
-    return { labelKey: "review.status_rejected", variant: "neutral" };
-  }
+export function changesetStatusMeta(status: ChangesetStatus): {
+  labelKey: TranslationKey;
+  variant: BadgeVariant;
+} {
   return {
     labelKey: CHANGESET_STATUS_LABEL_KEY[status],
     variant: CHANGESET_STATUS_VARIANT[status],
+  };
+}
+
+// pending은 아직 진행 중이라 배경 없이 브랜드색 테두리(원 아이콘 자체)만 — applied·
+// rejected는 결론이 난 것이라 배경을 채운 칩으로 더 무겁게 낸다. applied는 무채색
+// 톤(Button primary 다크 배색)이라 pending의 브랜드 teal과 안 겹친다. rejected는
+// ingestion·relation 둘 다 "반려됨"으로 같은 아이콘·라벨.
+export type ChangesetStatusIcon =
+  | { kind: "outline"; Icon: IconComponent; tone: string }
+  | { kind: "filled"; Icon: IconComponent; bg: string; iconTone: string };
+
+export function changesetStatusIcon(
+  status: ChangesetStatus,
+): ChangesetStatusIcon {
+  if (status === "pending") {
+    return { kind: "outline", Icon: Circle, tone: "text-brand" };
+  }
+  if (status === "applied") {
+    return {
+      kind: "filled",
+      Icon: Check,
+      bg: "bg-fg-primary",
+      iconTone: "text-surface-base",
+    };
+  }
+  // fg-tertiary가 다크에서 더 밝아져(팔레트 stone-400) 흰 아이콘 대비가 떨어지므로
+  // 다크에서만 아이콘을 어둡게(surface-base) 뒤집는다.
+  return {
+    kind: "filled",
+    Icon: X,
+    bg: "bg-fg-tertiary",
+    iconTone: "text-white dark:text-surface-base",
   };
 }
