@@ -24,12 +24,20 @@ const COMMIT_SHA =
 const BUILD_TIMESTAMP =
   typeof __BUILD_TIMESTAMP__ !== "undefined" ? __BUILD_TIMESTAMP__ : "unknown";
 const SENTRY_FLUSH_TIMEOUT_MS = 2000;
+// find-my-way(Fastify 라우터)의 기본 maxParamLength(100)에 걸려, tRPC 배치 링크가
+// 같은 프로시저를 여러 번 이어붙인 경로(예: source.delete,source.delete,...)가
+// 100자를 넘으면(대략 7~8건) 라우트 자체가 안 잡혀 404가 난다 — 벌크 삭제처럼
+// 여러 건을 한 번에 배치 호출하는 흐름을 감안해 넉넉히 올려둔다.
+const FASTIFY_MAX_PARAM_LENGTH = 5000;
 
 loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 
 async function bootstrap() {
   await initI18n();
-  const server = Fastify({ logger: true });
+  const server = Fastify({
+    logger: true,
+    routerOptions: { maxParamLength: FASTIFY_MAX_PARAM_LENGTH },
+  });
   const env = getEnv();
 
   // 프로덕션 안전장치(tier 하드 lock·/dev 차단·preset/override 거부)가 전부 APP_ENV 하나에 걸려

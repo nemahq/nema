@@ -1,3 +1,5 @@
+import type { CombinedOptions, DefaultParamType } from "@tolgee/web";
+
 import type { TranslationKey } from "@web/lib/tolgee";
 
 import type { ChangesetListEntry } from "./types";
@@ -9,12 +11,15 @@ import type { ChangesetListEntry } from "./types";
 // 아직 범위 밖이라 나머지 필드는 코드에 아예 안 들인다.
 export function summarizeChangesetEffect(
   effect: Pick<ChangesetListEntry["effect"], "digest" | "reference">,
-  t: (key: TranslationKey) => string,
+  t: (
+    key: TranslationKey,
+    options?: CombinedOptions<DefaultParamType>,
+  ) => string,
 ): string | null {
   const parts = [
-    effect.digest > 0 && `${effect.digest} ${t("review.effect_digest")}`,
+    effect.digest > 0 && t("review.effect_digest", { count: effect.digest }),
     effect.reference > 0 &&
-      `${effect.reference} ${t("review.effect_reference")}`,
+      t("review.effect_reference", { count: effect.reference }),
   ].filter((part): part is string => Boolean(part));
   return parts.length > 0 ? parts.join(" · ") : null;
 }
@@ -24,7 +29,10 @@ export function summarizeChangesetEffect(
 // 전인 ingestion) effect 요약 대신 번호만 있는 정직한 자리표시자를 보여준다.
 export function changesetDisplayTitle(
   entry: Pick<ChangesetListEntry, "sourceTitle" | "number">,
-  t: (key: TranslationKey, options?: Record<string, string | number>) => string,
+  t: (
+    key: TranslationKey,
+    options?: CombinedOptions<DefaultParamType>,
+  ) => string,
 ): string {
   return (
     entry.sourceTitle ??

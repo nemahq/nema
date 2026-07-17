@@ -846,3 +846,57 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 **MCP 툴 설명에 `digestionOutcome`의 다섯 값을 전부 명시**: 예전 설명(`reviewChangesetId`만 언급)은 `digestionStatus`/`hasDiscardedReview` 조합을 AI 에이전트가 프롬프트만으로 추론하게 방치했다 — 정확히 이 리팩터가 없애려는 위험이 MCP 경로엔 여전히 남아있었어서, 설명 문자열에 다섯 값의 의미를 직접 적어 최소 비용으로 막았다.
 
 **검증**: 로컬 Supabase에 `digestion_status` 4값(pending/failed/cancelled/completed) × rejected changeset 유무 조합으로 원본 4개를 시딩해 `source.listPending`을 직접 호출 — `digestionOutcome`이 `processing`/`failed`/`cancelled`/`empty`/`discarded` 각각 정확히 나오는 것을 API 응답으로 확인. `listPendingSources`에 `digestion_status`별 매핑 유닛 테스트 추가(`rejected` 이력이 있어도 `completed`가 아니면 `discarded`로 새지 않는 것까지 포함). `pnpm typecheck`/`lint`/`test`/`format:check`/`knip`/`depcruise` 모노레포 전체 통과 — 특히 dev-harness `statusLabel()`이 쓰는 `DIGESTION_OUTCOME_LABEL`(`Record<..., string>`)이 5값을 빠짐없이 처리하는지는 타입 체크 자체가 검증(값 하나만 빠뜨려도 타입 에러).
+
+---
+
+### 2026-07-17 — 초안 벌크 삭제 전체 실패 + 에러 토스트 dismiss 버튼 정렬 수정
+
+**배경**: staging에서 초안(Drafts) 전체 삭제가 매번 "N개를 삭제하지 못했습니다"로 100% 실패한다는 리포트. `useDeleteWaitingDrafts`는 `utils.client.source.delete.mutate()`를 sourceId 개수만큼 동시에 호출하는데, tRPC `httpBatchStreamLink`가 이걸 한 HTTP 요청으로 묶으면서 URL 경로를 `source.delete,source.delete,...`처럼 프로시저명을 반복 이어붙인다.
+
+**근본 원인 — Fastify(find-my-way) 기본 `maxParamLength: 100`**: 브라우저에서 `window.fetch`를 몽키패치해 실제 배치 요청을 가로채보니, 11개 삭제 시 경로가 `.../trpc/source.delete,source.delete,...(11회)?batch=1`(153자)였고 응답은 `404 Route not found`였다. `curl`로 배치 개수를 5~10개까지 늘려가며 재현한 결과 **경로 길이 97자(7개)까지는 정상 매칭, 111자(8개)부터 404** — find-my-way의 파라미터 길이 기본 상한(100자)에 정확히 걸리는 지점이었다. `Promise.allSettled`가 이 404들을 전부 실패로 잡아 "N개 삭제 실패" 토스트가 뜨고, 실제로는 라우팅조차 안 된 상태라 부분 성공도 없었다(사람이 흔히 한 번에 지우는 초안 개수인 8개 이상에서 100% 재현).
+
+**해결 — `Fastify({ maxParamLength: 5000 })`**: tRPC 배치 링크를 쓰는 한 이 문제는 배치 크기가 커질 때마다 재발할 수 있어, 서버 부트스트랩에서 넉넉한 값(5000자, "source.delete" 기준 300회 이상 배치도 여유)으로 한 번에 올렸다. `curl`로 16개 배치 재현 시나리오를 그대로 다시 태워 404→401(정상 라우팅 후 인증 단계에서 거부)로 바뀌는 것을 확인 — 라우팅 자체가 더는 안 깨진다.
+
+**같은 리포트에 딸려온 별개 버그 — 에러 토스트 dismiss(✕) 버튼이 우측 끝에 안 붙음**: `packages/weave/src/components/Toast.tsx`의 `TOAST_CLASS_NAMES`가 `actionButton`에만 `!ml-auto`를 걸어뒀는데(action·cancel 버튼 그룹을 본문에서 오른쪽으로 밀어내는 용도), `toast.error()`처럼 action 없이 cancel(dismiss)만 있는 토스트에선 `actionButton` 자체가 안 그려져 그 margin이 아예 안 실렸다. 브라우저에서 실제 DOM의 `getBoundingClientRect()`로 측정해 dismiss 버튼과 토스트 우측 경계 사이 간격이 약 89px(기본 패딩보다 훨씬 큼)임을 확인 — `cancelButton`에 `only:!ml-auto`(`:only-child`일 때만 적용)를 추가해, action이 없을 때만 이 버튼이 유일한 자식으로서 오른쪽 끝까지 밀리게 했다. action이 있는 토스트는 `:only-child`가 안 걸려 기존 순서·간격 그대로.
+
+**검증**: staging에 실제 로그인한 브라우저 세션에서 벌크 삭제를 직접 재현(11~16개), `window.fetch` 몽키패치로 실제 배치 요청 URL·응답을 캡처해 근본 원인을 확정. dismiss 버튼은 `style.setProperty('margin-left','auto','important')`로 라이브 DOM에 강제 적용해 우측 정렬되는 것을 스크린샷으로 먼저 확인한 뒤 동일한 CSS 규칙을 코드에 반영. `pnpm typecheck`/`lint`/`test`/`format:check`/`knip`/`depcruise` 모노레포 전체 통과. Fastify 부트스트랩 자체의 자동 테스트는 없어(기존 `index.ts`에도 전례 없음) `curl`로 라우팅 동작만 수동 검증 — 회귀는 벌크 삭제를 실제로 눌러보는 수동 확인이 가장 정확하다고 판단.
+
+---
+
+### 2026-07-17 — 초안 벌크 삭제: maxParamLength 완화에서 전용 `source.deleteMany` 프로시저로 (같은 세션 팔로우업)
+
+**배경**: 바로 위 항목에서 `maxParamLength`를 5000으로 올려 신고된 증상(8개 이상 삭제 시 100% 실패)은 해결했지만, 이건 "URL이 삭제 개수만큼 길어지는" 구조 자체를 없앤 게 아니라 한계선을 뒤로 미룬 것뿐이었다 — Kyle이 "지금 방식을 수정하자"고 판단해, `useDeleteWaitingDrafts`가 `source.delete`를 N번 동시 호출(tRPC 배치 링크가 URL에 프로시저명을 반복 이어붙임)하던 근본 패턴 자체를 전용 벌크 프로시저로 교체했다.
+
+**이름 — `deleteMany` (웹서치로 관행 확인 후 결정)**: gRPC/Google API 표준(AIP-235, `BatchDelete{Resource}`)과 Prisma 관용구(`deleteMany`/`createMany`/`updateMany`) 두 갈래를 비교했다. 이 프로젝트는 TypeScript+Zod+tRPC+Supabase로 Prisma와 같은 JS/TS 생태계 결이고, 이미 프로시저 네이밍이 "리소스는 네임스페이스(`source.`)가 담당, 메서드는 동사만"(`source.delete`, `source.updateTitle`) 구조라 리소스명을 동사 뒤에 반복하는 AIP-235 방식의 근거가 약함 — `source.deleteMany`로 결정.
+
+**서버 구현 — DB 트랜잭션 통합이 아니라 프로시저 호출만 하나로 묶음**: `deleteSources()`는 여전히 `trash_source` RPC를 sourceId마다 개별 호출한다(`Promise.allSettled`) — SQL 레벨에서 배열을 받는 새 함수를 만드는 대신, 기존에 이미 검증된 `deleteSource()`(단건)를 그대로 재사용했다. 이걸로 URL 길이 문제는 구조적으로 사라진다(프로시저 호출 자체가 `source.deleteMany` 하나뿐이라 개수와 무관하게 경로 길이가 고정) — DB 트랜잭션 통합·원자성은 이번 스코프 밖(굳이 필요해지면 그때 SQL 함수로).
+
+**부분 실패 판정 로직을 클라이언트에서 서버로 그대로 옮김**: "동시성 충돌(`source_state_changed`, 이미 지워졌거나 아직 처리 중)이면 실패로 안 세고 Sentry로도 안 올림, 그 외 예상 밖 실패만 카운트+Sentry"라는 기존 `useDeleteWaitingDrafts`의 판정 기준을 그대로 서버 `deleteSources()`로 옮겼다 — 사용자가 보는 동작(부분 실패 시 "N개 실패" 토스트)은 그대로 유지.
+
+**프런트 훅이 `utils.client` 직접 호출에서 표준 `useMutation(trpc.source.deleteMany)`로**: 예전엔 "N번 호출마다 `onSuccess` invalidate가 줄줄이 걸리는 걸 피하려고" `utils.client`로 훅을 우회했다(그 대가로 전역 `MutationCache`의 Sentry 캡처를 못 받아 훅 안에서 직접 `Sentry.captureException`을 호출해야 했다). 이제 호출이 하나뿐이라 그 우회 이유가 사라져 표준 `useMutation` 패턴(`useDeleteSource`와 동일한 결)으로 되돌렸다 — `skipGlobalToast`는 안 씀: 개별 항목 실패는 다이얼로그가 이미 인라인 토스트로 보여주지만, 요청 전체가 실패하는 경우(네트워크 오류 등)에 대한 인라인 처리가 다이얼로그에 따로 없어 전역 토스트가 그 안전망 역할을 해야 한다.
+
+**입력 배열 상한(200) — 새로운 종류의 남용 표면을 막는 방어선**: URL 길이 문제는 없어졌지만 배열 자체가 무제한이면 다른 성격의 남용(초대형 페이로드)이 가능해, `SourceDeleteManyInputSchema`에 `max(200)`을 뒀다. 실사용 규모(이번 세션 재현 최대 20개) 대비 넉넉하지만 절대 상한은 아니다.
+
+**리뷰 반영 — `SOURCE_DELETE_MANY_MAX`(200)는 배열 길이만 막지 동시성은 안 막음**: 세마포어 없이 두면 최악의 경우 한 요청에서 `trash_source` RPC 200개가 동시에 나갈 수 있어, 이미 LLM 콜 fan-out에 쓰던 `createLimiter`(`infra/llm/limiter.ts`, 외부 의존성 없는 세마포어)를 그대로 재사용해 동시성 10으로 제한했다. 같은 리뷰에서 `DeleteWaitingDraftsDialog.handleDeleteAll`이 `deleteAll` 호출을 try/catch 없이 두고 있던 것도 발견 — 예전 구현은 내부에서 `Promise.allSettled`를 써서 절대 reject하지 않았지만, `useMutation`으로 되돌리며 `mutateAsync`가 요청 전체 실패(네트워크 오류 등) 시 reject하게 된 계약 변화가 이 소비처엔 안 반영돼 있었다. try/catch를 추가하되 다이얼로그는 안 닫는다 — 삭제가 안 됐으니 열어둔 채 재시도하게 두는 게 맞고, 사용자 피드백은 전역 `MutationCache.onError` 토스트가 이미 담당한다.
+
+**검증**: 로컬 Supabase에 원본 20개를 시딩해 `source.deleteMany`를 실제로 한 번 호출 — 이전 방식이라면 URL 길이 초과로 404가 났을 개수인데 `{failedCount: 0}`로 성공, 전부 `trashed`로 바뀐 것을 DB에서 직접 확인. `deleteSources`에 동시성 충돌/예상 밖 실패 구분 유닛 테스트 3건 추가. `pnpm typecheck`/`lint`/`test`/`format:check`/`knip`/`depcruise` 모노레포 전체 통과 — 특히 `packages/shared/src/index.ts`의 배럴 export 갱신을 빠뜨렸을 때 `router.test.ts`가 런타임 에러로 바로 잡아준 것을 확인(스키마가 배럴에 없으면 라우터 로드 시점에 `undefined`로 깨짐).
+
+**부수 발견 — Fastify `maxParamLength` deprecation**: 같은 코드를 다시 만지다가, Fastify 5.7의 최상위 `maxParamLength` 옵션이 `routerOptions.maxParamLength`로 이동하며 deprecated된 것을 로그 경고로 발견 — `routerOptions: { maxParamLength }`로 옮겨 경고를 없앴다(동작은 동일, `deleteMany`가 이 안전망을 대체하진 않으므로 값은 그대로 유지).
+
+---
+
+### 2026-07-17 — Tolgee ICU 포맷 도입 (영문 복수형 지원)
+
+**배경**: `review.digest_section_title`(`"Digest ({count})"`) 같은 카운트 표시가 앱 전체에 여러 곳 있는데 영문 복수형 처리가 전혀 없어(`Digest (1)`이든 `Digest (5)`든 항상 "Digest") 문법이 틀렸다. Tolgee는 ICU MessageFormat(`{count, plural, one {...} other {...}}`)을 지원하지만 이 프로젝트는 `FormatSimple()`만 쓰고 있어 못 쓰는 상태였다 — `@tolgee/format-icu` 도입.
+
+**`FormatIcu`가 `FormatSimple`을 완전히 대체함(병행 전략 불필요)**: 교체 전에 `FormatIcu`가 기존 `{count}` 같은 단순 보간까지 그대로 처리하는지가 관건이었다. `@tolgee/format-icu`는 내부적으로 `intl-messageformat`(FormatJS)을 그대로 감싼 것뿐이라, ICU MessageFormat 표준상 `{count}`는 plural 블록 없이도 단순 변수 보간으로 해석된다 — 실제로 설치된 패키지를 Node로 직접 구동해 확인(`Digest ({count})` → `Digest (1)` 그대로 통과). 이스케이프 문자로 취급될까 걱정했던 아포스트로피(`"You're..."`, `"can't"` 등, en.json에 25곳)도 ICU 표준의 비-strict 아포스트로피 규칙(중괄호/`#`/따옴표 앞이 아니면 리터럴로 취급) 덕에 그대로 통과 — `FormatSimple` 제거하고 `FormatIcu` 하나로 전량 교체.
+
+**회귀 확인 — 기존 `{count}` 단순 보간 키 8개**: `overflow_count`, `retrieval_doc_count`, `drafts_delete_waiting_confirm_title`, `delete_pending_drafts_label`, `draft_organizing_elapsed_seconds`, `delete_blocked_description`, `digest_section_title`/`reference_section_title`(원래 값) — 개발 서버가 서빙 중인 실제 `tolgee` 싱글턴을 브라우저 콘솔에서 호출해 한/영 양쪽 전부 회귀 없음을 확인. `drafts_delete_waiting_partial_failure`는 `{count}`가 아니라 `{failed}`를 보간하는 별개 키라 이 목록엔 안 넣지만 같은 방식으로 별도 확인했다. 상세 절차는 PR #433 본문 참고.
+
+**버그 발견 및 수정 — ICU `#`는 plural 블록 밖에서 무효**: `effect_digest`/`effect_reference` 등을 처음엔 카운트를 블록 밖 `#`로 뺀 형태(`"{count, plural, one {digest} other {digests}} #"`)로 썼는데, 블록 밖 `#`는 ICU MessageFormat 표준상 치환되지 않는 리터럴 문자라 "digest #"처럼 깨졌다 — 브라우저에서 `tolgee.t()`를 직접 호출해 발견. `#`는 plural/selectordinal 블록 **안에서만** 카운트로 치환된다. 라벨과 카운트를 한 문자열에 압축하는 리팩터에서 반복될 수 있는 함정이라 남긴다. 최종 값은 카운트를 앞에 두는 영어 관용 어순("1 digest")으로 한 번 더 조정했다(PR #433 리뷰 반영).
+
+**전환 범위 — 요청받은 2곳 외 effect 5개 키 전부**: `digest_section_title`/`reference_section_title`은 그대로, `effect_*`는 `summarizeChangesetEffect`(`utils.ts`)가 `statement`/`relation`/`source`/`digest`/`reference` 5개 타입을 같은 루프로 처리하는 구조라 2개만 바꾸면 나머지 3개의 카운트 표시가 사라지거나 콜사이트가 타입별로 분기해야 했다 — 5개 전부를 동일 패턴(`t(key, {count})`)으로 맞췄다.
+
+**한국어는 ICU plural 블록을 쓰지 않고 `{count}` 단순 보간 그대로 둠**: 한국어는 문법상 단/복수 구분이 없고, `Intl.PluralRules`의 `ko` locale은 CLDR상 `other` 카테고리만 존재해 `one` 분기가 런타임에 절대 선택되지 않는 죽은 코드가 된다 — `plural` 블록으로 감싸는 대신 기존 표기를 그대로 둔다.
+
+**전환 안 한 곳**: 위 회귀 확인 대상 키들은 카운트 뒤에 조사/단위가 붙는 한국어 문구가 원본이고 영문판도 복수형 분기가 의미를 더하지 않아, 이번 스코프(섹션 타이틀 + effect 요약)와 성격이 달라 손대지 않았다.
