@@ -38,7 +38,7 @@
     "create": "만들기",
     "creating": "만드는 중...",
     "delete": "삭제",
-    "delete_confirm_instruction": "확인하려면 \"{value}\"라고 입력하세요",
+    "delete_confirm_instruction": "확인하려면 \"{value}\"라고 입력하세요.",
     "deleting": "삭제하는 중...",
     "home": "홈",
     "list_end": "모두 확인했어요.",

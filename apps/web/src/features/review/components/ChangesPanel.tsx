@@ -53,11 +53,11 @@ function ChangesList({
   onOpenDetail,
 }: ChangesListProps) {
   const { t } = useTranslation();
-  const [data, query] = useChangesetListInfiniteQuery(
+  const [changesetPages, query] = useChangesetListInfiniteQuery(
     spaceId,
     subTab === "open",
   );
-  const entries = data.pages.flatMap((page) => page.changesets);
+  const entries = changesetPages.pages.flatMap((page) => page.changesets);
 
   const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
   useEffect(
