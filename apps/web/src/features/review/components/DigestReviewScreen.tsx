@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button, Skeleton } from "@nema-io/weave";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
-import { NotificationSoftAskTrigger } from "@web/features/notifications";
+import { useNotificationSoftAsk } from "@web/features/notifications";
 import {
   confirmDisabledReason as computeConfirmDisabledReason,
   runConfirmReview,
@@ -50,6 +50,7 @@ function DigestReviewScreenContent({
   const updateReview = useUpdateReview(changesetId);
   const confirmReview = useConfirmReview();
   const discardReview = useDiscardReview();
+  const showNotificationSoftAsk = useNotificationSoftAsk();
 
   const [outcome, setOutcome] = useState<ReviewOutcome>(null);
   const [removedDigestIndexes, setRemovedDigestIndexes] = useState<Set<number>>(
@@ -173,6 +174,7 @@ function DigestReviewScreenContent({
         confirmReview: confirmReview.mutateAsync,
       });
       setOutcome("applied");
+      showNotificationSoftAsk();
     } catch {
       // 에러는 updateReview.error/confirmReview.error로 화면에 노출된다.
     }
@@ -184,7 +186,12 @@ function DigestReviewScreenContent({
     }
     discardReview.mutate(
       { changesetId },
-      { onSuccess: () => setOutcome("discarded") },
+      {
+        onSuccess: () => {
+          setOutcome("discarded");
+          showNotificationSoftAsk();
+        },
+      },
     );
   }
 
@@ -204,7 +211,6 @@ function DigestReviewScreenContent({
 
   return (
     <main className="flex flex-1 flex-col overflow-y-auto bg-surface-card">
-      <NotificationSoftAskTrigger />
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-8">
         <header className="flex flex-col gap-3 border-b border-border/50 pb-4">
           <div className="flex items-center gap-2">
