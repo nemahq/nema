@@ -9,9 +9,12 @@ interface NotificationSoftAskToastProps {
   onDismiss: () => void;
 }
 
-// toast.custom()으로 렌더링되면 sonner의 기본 배경·패딩·radius가 안 붙는다
+// toast.custom()으로 렌더링되면 sonner의 기본 배경·패딩·radius·width가 안 붙는다
 // (data-styled=false) — 그래서 이 컴포넌트가 chrome을 직접 그린다.
-// TOAST_SURFACE_CLASSNAME을 재사용해 일반 토스트와 같은 소스에서 톤을 맞춘다.
+// TOAST_SURFACE_CLASSNAME을 재사용해 일반 토스트와 같은 소스에서 톤을 맞추고,
+// width는 356px를 하드코딩하는 대신 [data-sonner-toaster]가 내려주는 --width를
+// 그대로 상속해 쓴다 — 모바일에서 sonner가 --width를 오버라이드하는 반응형
+// 규칙도 그대로 따라간다.
 export function NotificationSoftAskToast({
   message,
   allowLabel,
@@ -22,7 +25,7 @@ export function NotificationSoftAskToast({
   return (
     <div
       className={cn(
-        "flex w-full items-start gap-3 rounded-xl border p-4",
+        "flex w-(--width) items-start gap-3 rounded-xl border p-4",
         TOAST_SURFACE_CLASSNAME,
       )}
     >
@@ -32,7 +35,7 @@ export function NotificationSoftAskToast({
         <Button size="sm" onClick={onAllow}>
           {allowLabel}
         </Button>
-        <Button size="sm" variant="ghost" onClick={onDismiss}>
+        <Button size="sm" variant="neutral" onClick={onDismiss}>
           {dismissLabel}
         </Button>
       </div>
