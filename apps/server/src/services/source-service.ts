@@ -120,9 +120,8 @@ export async function listSources(args: {
 const PENDING_SOURCE_LIST_LIMIT = 50;
 
 // digestion_status 원본 값 + "그 리뷰가 버려졌는가"를 서버가 미리 조합해 내려주는 단일
-// 값 — 소비처가 두 신호를 직접 AND해야 하는 구조였을 때 dev-harness가 hasDiscardedReview를
-// 빠뜨려 같은 오분류를 재현한 적이 있다(#428). 특히 MCP 소비처는 타입 체커 없이 이 JSON을
-// 그대로 읽으므로, 조합을 서버가 끝내 잘못 조합할 길 자체를 없앤다.
+// 값 — 소비처(특히 타입 체커 없이 JSON을 그대로 읽는 MCP)가 두 신호를 각자 조합하다
+// 놓치는 사고를 구조적으로 막는다(경위는 design-decisions-log.md 2026-07-17 참고).
 type DigestionOutcome =
   | "processing"
   | "failed"
@@ -199,6 +198,9 @@ export async function listPendingSources(args: {
     string,
     { reviewChangesetId: string; digestCount: number }
   >();
+  // 존재 여부만 볼 뿐 시점은 안 따진다 — 버림 후 원본을 고쳐 재시도해도 그 원본은
+  // 계속 discardedSourceIds에 남는다(design-decisions-log.md 2026-07-17 "정확도
+  // 범위를 의도적으로 좁힘" 참고, 의도된 트레이드오프).
   const discardedSourceIds = new Set<string>();
   for (const changeset of changesets ?? []) {
     if (changeset.source_id === null) {
