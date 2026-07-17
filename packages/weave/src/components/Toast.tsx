@@ -31,7 +31,7 @@ const TOAST_CLASS_NAMES = {
     "!bg-(--palette-dark-surface-raised-hover) !text-(--palette-dark-fg-primary) !border-transparent !shadow-[0_4px_16px_rgba(0,0,0,0.12)] dark:!shadow-[0_4px_16px_rgba(0,0,0,0.5)]",
   actionButton: "order-1 !ml-auto",
   cancelButton:
-    "!bg-transparent !text-(--palette-dark-fg-tertiary) hover:!text-(--palette-dark-fg-primary) !border-0 !p-0 !ring-0 !text-xs order-2",
+    "!bg-transparent !text-(--palette-dark-fg-tertiary) hover:!text-(--palette-dark-fg-primary) !border-0 !p-0 !ring-0 !ml-2 !text-xs order-2",
 };
 
 const TOASTER_STYLE = {
