@@ -6,7 +6,7 @@ import {
 } from "@nema-io/shared";
 import type { BadgeVariant } from "@nema-io/weave";
 import type { IconComponent } from "@nema-io/weave/icons";
-import { Check, Circle, Funnel, Share2, X } from "@nema-io/weave/icons";
+import { Check, Circle, X } from "@nema-io/weave/icons";
 
 import type { TranslationKey } from "@web/lib/tolgee";
 
@@ -90,16 +90,6 @@ export const CHANGESET_TYPE_LABEL: Record<
   revert: "review.type_revert",
 };
 
-// revert는 아이콘이 없다 — 제목 자체가 "{원본 제목} 되돌림"으로 이미 되돌리기임을
-// 말해주게 될 예정이라(별도 후속 작업), 아이콘까지 얹으면 같은 정보의 중복 신호가 된다.
-export const CHANGESET_TYPE_ICON: Record<
-  Exclude<ChangesetType, "manual" | "revert">,
-  IconComponent
-> = {
-  ingestion: Funnel,
-  relation: Share2,
-};
-
 // changeset_status는 아직 pending/applied/rejected 셋뿐이다(status+outcome 2필드
 // 모델은 07-modeling.md가 그리는 목표 스키마일 뿐 미구현) — "적용 안 하고 닫힘"을
 // relation 도메인이 먼저 쓰던 rejected를 ingestion도 그대로 재사용한다
@@ -138,7 +128,7 @@ export function changesetStatusMeta(
 // 톤(Button primary 다크 배색)이라 pending의 브랜드 teal과 안 겹친다. rejected는
 // 버려짐(ingestion)·거절됨(relation) 둘 다 같은 아이콘 — 위 배지처럼 type별로
 // 라벨 텍스트만 갈린다.
-export type ChangesetStatusIcon =
+type ChangesetStatusIcon =
   | { kind: "outline"; Icon: IconComponent; tone: string }
   | { kind: "filled"; Icon: IconComponent; bg: string; iconTone: string };
 
