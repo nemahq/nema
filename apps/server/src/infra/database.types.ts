@@ -82,6 +82,7 @@ export type Database = {
           source_id: string | null;
           space_id: string | null;
           status: Database["public"]["Enums"]["changeset_status"];
+          title: string | null;
           type: Database["public"]["Enums"]["changeset_type"];
           updated_at: string;
         };
@@ -94,6 +95,7 @@ export type Database = {
           source_id?: string | null;
           space_id?: string | null;
           status: Database["public"]["Enums"]["changeset_status"];
+          title?: string | null;
           type: Database["public"]["Enums"]["changeset_type"];
           updated_at?: string;
         };
@@ -106,6 +108,7 @@ export type Database = {
           source_id?: string | null;
           space_id?: string | null;
           status?: Database["public"]["Enums"]["changeset_status"];
+          title?: string | null;
           type?: Database["public"]["Enums"]["changeset_type"];
           updated_at?: string;
         };

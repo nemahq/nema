@@ -117,3 +117,17 @@
 - 구독 스코프: 워크스페이스 전체(서버측 필터 없음) — RLS가 이미 스코프하고, invalidate만 하므로 Space별 필터를 따로 관리할 이득이 없다.
 - 폴백: TanStack Query 기본 `refetchOnWindowFocus`를 재연결·복귀 안전망으로 유지. Realtime 재연결·토큰 갱신은 supabase-js가 자동 처리(auth 이벤트 → `realtime.setAuth`).
 - 구현: 마이그레이션(`ALTER PUBLICATION supabase_realtime ADD TABLE`) + 앱 세션당 1회 마운트되는 구독(`useRealtimeInvalidation`, AppLayout). 연결 자체는 유닛 테스트 불가라 탭 두 개로 수동 검증.
+
+## #17 Changeset.title 스키마 도입 — (확정)
+
+**결정: `changesets.title text` nullable 컬럼 신설. number(#14의 트리거 방식)와 달리 공용 트리거로 못 채우고, 타입별 생성 RPC 안에서 각각 명시적으로 채운다. ingestion만 예외로 Source 제목의 비동기 갱신을 트리거로 전파한다.**
+
+- 걸리는 곳: review-flow(Changes 탭·Changeset 상세·Digest 리뷰 헤더). #15(Source 제목)의 자매 결정이자, `20260714140000_changeset_number` 마이그레이션 헤더 주석이 "title은 다음 슬라이스"로 남겨둔 백로그의 후속.
+- **number처럼 단일 트리거로 못 묶는 이유**: number는 어느 타입이든 "다음 정수"라 원천 데이터가 필요 없어 BEFORE INSERT 트리거 하나로 충분했다. title은 타입마다 원천이 다르고(ingestion=Source 제목, relation=끝점 두 Statement가 속한 Digest 제목 조합, revert=원본 제목, manual=대상 콘텐츠 제목), 특히 relation의 원천(from/to statement id)은 changesets INSERT 시점엔 아직 없는 `changes` 자식 행에 있어 BEFORE INSERT 트리거로 계산 자체가 불가능하다 — 그래서 `create_ingestion_review`/`apply_relation_changesets`/`revert_changeset`/`confirm_digest_edit`/`update_reference`/`archive_reference`/`archive_source` 안에서 각각 채운다.
+- **ingestion 비동기 동기화 — 트리거 채택**: title 생성 LLM 콜(`fill_source_title`)이 다이제스천 완료 콜과 분리돼 있어(`20260715090000`), changeset 생성 시점에 `sources.title`이 아직 없을 수 있다(둘의 도착 순서가 레이스). 착지 지점이 `fill_source_title`(엔진)과 `update_source_title`(사람 편집 — `update_source_body`와 달리 열린 리뷰 중에도 허용) 두 곳이라, 각 RPC에 개별 UPDATE를 심는 대신 `sources` `AFTER UPDATE OF title` 트리거 하나로 연결된 `type='ingestion'` changeset의 title을 동기화한다 — number 트리거와 같은 논리(흩어진 착지점 전체를 앞으로도 자동으로 따라가게).
+- **relation — pending 제안만**: 사람이 판정하는 pending 제안(changeset 1개 = Statement 쌍 1개)만 끝점 Digest 제목을 "A vs B"로 합쳐 채운다. 자동 적용 배치·중복 병합 배치(`apply_relation_changesets`의 나머지 두 블록)는 changeset 하나에 여러 쌍이 실릴 수 있어 단일 제목이 안 맞아 제외 — 계속 effect 기반 표시로 남는다.
+- **revert — 원본 title + " 되돌림"**: 원본이 null이면 그대로 null 상속(원본도 폴백 중이라는 뜻이므로). redo 체인은 재귀적으로 겹쳐 쌓인다("X 되돌림 되돌림") — 실제로 되돌리기를 두 번 한 상태를 그대로 반영하는 것이라 의도된 동작.
+- **manual — 범위를 브리핑보다 넓힘**: 브리핑은 Digest 수정(`confirm_digest_edit`)만 예시로 들었지만, `update_reference`/`archive_reference`/`archive_source`도 대상 행에 title이 이미 있어 추가 조회 없이(RETURNING 컬럼만 확장) 같은 패턴을 일관되게 적용할 수 있어 함께 채웠다. `archive_statement`는 대상(Statement)에 title 개념 자체가 없어 제외.
+- **백필**: ingestion=그 시점 Source 제목, manual=대상 콘텐츠의 현재 제목(Reference `modify`는 `changes.data.after.title`이 있으면 그 편집 시점 값을 우선하고, 없으면 — title 자체는 그 편집으로 안 바뀌었다는 뜻이라 — 현재 값을 그대로 씀), relation=pending 제안만 재계산, revert=원본 title 체인이 수렴할 때까지 반복 적용. 전부 한 마이그레이션 파일 안에서 스키마·RPC·백필을 함께 실행(`20260714140000`과 같은 단일 파일 관례).
+- **로컬 실행 검증 범위 — 코드 리뷰만, 실행은 CI가 처음**: 워크트리 공유 로컬 Supabase(고정 포트, 전 워크트리 공유)가 이 작업과 동시에 진행 중인 `polish/changeset`(미병합, 아래 참고)의 마이그레이션을 이미 적용해둔 상태라, 격리된 실행 검증이 마땅치 않았다(Kyle 확인 후 코드 리뷰만으로 진행하기로 결정). PL/pgSQL을 직접 실행해보지 못했으므로 CI의 첫 실행 결과를 각별히 확인할 것.
+- **`polish/changeset`(wt-3, 미병합)와의 겹침**: 그 브랜치가 이미 `sourceTitle` 기반의 다른 해법(폴백 문구 `review.changeset_fallback_title`="{번호}번째 변경사항" 도입 + `summarizeChangesetEffect`를 별도 diffstat 표시로 재활용 + `changesets.author_id` 노출 + "변경셋"→"변경" 용어 정정)을 `apps/web/src/features/review/*`·`apps/server/src/services/changeset-service.ts`에 이미 적용해 두고 있다. 이번 슬라이스는 그 폴백 문구 텍스트만 그대로 재사용했고(동일 i18n 키·값), 나머지(용어 정정, author 노출, diffstat 레이아웃)는 손대지 않았다 — 두 브랜치 중 나중에 머지되는 쪽이 `apps/web/src/features/review/utils.ts`·`changeset-service.ts`·`apps/web/src/lib/tolgee/{en,ko}.json`에서 리베이스 충돌을 겪을 것이 확실하므로, 머지 순서를 미리 정하거나 리베이스 시점에 이 문서를 참고할 것.
