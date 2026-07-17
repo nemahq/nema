@@ -77,7 +77,12 @@ export {
   type TextProps,
   type TextSize,
 } from "./components/Text";
-export { Toast, toast, type ToasterProps } from "./components/Toast";
+export {
+  Toast,
+  toast,
+  TOAST_SURFACE_CLASSNAME,
+  type ToasterProps,
+} from "./components/Toast";
 export {
   Tooltip,
   TooltipContent,

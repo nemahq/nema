@@ -1,4 +1,4 @@
-import { Button } from "@nema-io/weave";
+import { Button, cn, TOAST_SURFACE_CLASSNAME } from "@nema-io/weave";
 import { BellIcon } from "@nema-io/weave/icons";
 
 interface NotificationSoftAskToastProps {
@@ -10,9 +10,8 @@ interface NotificationSoftAskToastProps {
 }
 
 // toast.custom()으로 렌더링되면 sonner의 기본 배경·패딩·radius가 안 붙는다
-// (data-styled=false) — 그래서 이 컴포넌트가 chrome을 직접 그린다. weave
-// Toast.tsx와 같은 다크 톤 팔레트 토큰을 그대로 참조해 다른 토스트와 톤을
-// 맞춘다.
+// (data-styled=false) — 그래서 이 컴포넌트가 chrome을 직접 그린다.
+// TOAST_SURFACE_CLASSNAME을 재사용해 일반 토스트와 같은 소스에서 톤을 맞춘다.
 export function NotificationSoftAskToast({
   message,
   allowLabel,
@@ -21,7 +20,12 @@ export function NotificationSoftAskToast({
   onDismiss,
 }: NotificationSoftAskToastProps) {
   return (
-    <div className="flex w-full items-start gap-3 rounded-xl bg-(--palette-dark-surface-raised-hover) p-4 text-(--palette-dark-fg-primary) shadow-[0_4px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]">
+    <div
+      className={cn(
+        "flex w-full items-start gap-3 rounded-xl p-4",
+        TOAST_SURFACE_CLASSNAME,
+      )}
+    >
       <BellIcon className="mt-0.5 size-4 shrink-0" />
       <p className="flex-1 text-sm">{message}</p>
       <div className="flex shrink-0 flex-col gap-1">

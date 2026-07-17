@@ -17,9 +17,13 @@ const ICONS = {
   loading: <Loader2Icon className="size-4 animate-spin" />,
 };
 
+// toast.custom()으로 내용을 직접 그리는 소비처는 sonner의 기본 배경(data-styled)을
+// 못 받으므로, 같은 톤을 내려면 이 클래스를 그대로 재사용해야 한다.
+const TOAST_SURFACE_CLASSNAME =
+  "!bg-(--palette-dark-surface-raised-hover) !text-(--palette-dark-fg-primary) !border-transparent shadow-[0_4px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]";
+
 const TOAST_CLASS_NAMES = {
-  toast:
-    "!bg-(--palette-dark-surface-raised-hover) !text-(--palette-dark-fg-primary) !border-transparent shadow-[0_4px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]",
+  toast: TOAST_SURFACE_CLASSNAME,
   cancelButton:
     "!bg-transparent !text-(--palette-dark-fg-tertiary) hover:!text-(--palette-dark-fg-primary) !border-0 !p-0 !ring-0 !ml-auto !text-xs",
 };
@@ -42,4 +46,4 @@ function Toast(props: ToasterProps) {
   );
 }
 
-export { Toast, toast, type ToasterProps };
+export { Toast, toast, TOAST_SURFACE_CLASSNAME, type ToasterProps };
