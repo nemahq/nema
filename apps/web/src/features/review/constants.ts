@@ -132,7 +132,3 @@ export function changesetStatusMeta(
     variant: CHANGESET_STATUS_VARIANT[status],
   };
 }
-
-export function isOpenChangeset(status: ChangesetStatus): boolean {
-  return status === "pending";
-}
