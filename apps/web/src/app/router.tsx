@@ -26,6 +26,7 @@ import { WorkspaceHomePage } from "@web/app/pages/WorkspaceHomePage";
 import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { requireAuth, requireGuest } from "@web/features/auth";
 import { HarnessPage } from "@web/features/dev-harness";
+import type { ChangesSubTab } from "@web/features/review";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 import {
   useSpaceList,
@@ -192,11 +193,20 @@ const spaceOverviewRoute = createRoute({
 
 function SpaceChangesShell() {
   const { spacePublicId } = spaceChangesRoute.useParams();
+  const { subTab } = spaceChangesRoute.useSearch();
+  const navigate = spaceChangesRoute.useNavigate();
+
+  function handleSubTabChange(nextSubTab: ChangesSubTab) {
+    void navigate({ search: { subTab: nextSubTab }, replace: true });
+  }
+
   return (
     <SpaceOverviewPage
       key={spacePublicId}
       spacePublicId={spacePublicId}
       activeTab="changesets"
+      subTab={subTab}
+      onSubTabChange={handleSubTabChange}
     />
   );
 }
@@ -206,6 +216,9 @@ const spaceChangesRoute = createRoute({
   path: "/space/$spacePublicId/changes",
   component: SpaceChangesShell,
   errorComponent: RouteErrorFallback,
+  validateSearch: z.object({
+    subTab: z.enum(["open", "closed"]).catch("open"),
+  }),
 });
 
 const draftsRoute = createRoute({

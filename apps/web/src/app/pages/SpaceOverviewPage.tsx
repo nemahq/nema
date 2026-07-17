@@ -1,13 +1,8 @@
-import { SpaceOverview, type SpaceTab } from "@web/features/workspace";
+import {
+  SpaceOverview,
+  type SpaceOverviewProps,
+} from "@web/features/workspace";
 
-interface SpaceOverviewPageProps {
-  spacePublicId: string;
-  activeTab: SpaceTab;
-}
-
-export function SpaceOverviewPage({
-  spacePublicId,
-  activeTab,
-}: SpaceOverviewPageProps) {
-  return <SpaceOverview spacePublicId={spacePublicId} activeTab={activeTab} />;
+export function SpaceOverviewPage(props: SpaceOverviewProps) {
+  return <SpaceOverview {...props} />;
 }
