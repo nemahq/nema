@@ -22,7 +22,7 @@ export function NotificationSoftAskToast({
   return (
     <div
       className={cn(
-        "flex w-full items-start gap-3 rounded-xl p-4",
+        "flex w-full items-start gap-3 rounded-xl border p-4",
         TOAST_SURFACE_CLASSNAME,
       )}
     >
