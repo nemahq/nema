@@ -124,7 +124,7 @@ export function changesetStatusMeta(status: ChangesetStatus): {
 // rejected는 결론이 난 것이라 배경을 채운 칩으로 더 무겁게 낸다. applied는 무채색
 // 톤(Button primary 다크 배색)이라 pending의 브랜드 teal과 안 겹친다. rejected는
 // ingestion·relation 둘 다 "반려됨"으로 같은 아이콘·라벨.
-type ChangesetStatusIcon =
+export type ChangesetStatusIcon =
   | { kind: "outline"; Icon: IconComponent; tone: string }
   | { kind: "filled"; Icon: IconComponent; bg: string; iconTone: string };
 

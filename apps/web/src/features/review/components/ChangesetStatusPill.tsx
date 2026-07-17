@@ -1,6 +1,7 @@
 import { cn } from "@nema-io/weave";
 
 import {
+  type ChangesetStatusIcon,
   changesetStatusIcon,
   changesetStatusMeta,
 } from "@web/features/review/constants";
@@ -10,6 +11,21 @@ import { useTranslation } from "@web/lib/tolgee";
 interface ChangesetStatusPillProps {
   status: ChangesetStatus;
   className?: string;
+}
+
+interface PillVisual {
+  container: string;
+  label: string | undefined;
+}
+
+function pillVisual(icon: ChangesetStatusIcon): PillVisual {
+  if (icon.kind === "filled") {
+    return { container: cn(icon.bg, icon.iconTone), label: undefined };
+  }
+  return {
+    container: cn("border border-current", icon.tone),
+    label: "text-fg-primary",
+  };
 }
 
 // ChangesetListRow는 아이콘 자체에만 원형 배경을 칠하고 라벨은 툴팁 뒤에 숨기지만,
@@ -23,23 +39,18 @@ export function ChangesetStatusPill({
   const { t } = useTranslation();
   const icon = changesetStatusIcon(status);
   const { labelKey } = changesetStatusMeta(status);
+  const visual = pillVisual(icon);
 
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full py-1 pl-2 pr-3 text-sm font-medium",
-        icon.kind === "filled"
-          ? cn(icon.bg, icon.iconTone)
-          : cn("border border-current", icon.tone),
+        visual.container,
         className,
       )}
     >
       <icon.Icon className="size-4 shrink-0" strokeWidth={2.5} />
-      <span
-        className={icon.kind === "outline" ? "text-fg-secondary" : undefined}
-      >
-        {t(labelKey)}
-      </span>
+      <span className={visual.label}>{t(labelKey)}</span>
     </span>
   );
 }
