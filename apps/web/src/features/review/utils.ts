@@ -15,20 +15,20 @@ const EFFECT_LABEL_KEY: Record<string, TranslationKey> = {
 // non-ingestion(sourceTitle 없음)이나 아직 추출 중인 ingestion만 이 폴백을 그대로 본다.
 function summarizeChangesetEffect(
   effect: ChangesetListEntry["effect"],
-  t: (key: TranslationKey) => string,
+  t: (key: TranslationKey, params?: { count: number }) => string,
 ): string {
   const parts = Object.entries(effect)
     .filter(([, count]) => count > 0)
     .map(([type, count]) => {
       const key = EFFECT_LABEL_KEY[type];
-      return `${key ? t(key) : type} ${count}`;
+      return key ? t(key, { count }) : `${type} ${count}`;
     });
   return parts.length > 0 ? parts.join(" · ") : t("review.effect_none");
 }
 
 export function changesetDisplayTitle(
   entry: Pick<ChangesetListEntry, "sourceTitle" | "effect">,
-  t: (key: TranslationKey) => string,
+  t: (key: TranslationKey, params?: { count: number }) => string,
 ): string {
   return entry.sourceTitle ?? summarizeChangesetEffect(entry.effect, t);
 }
