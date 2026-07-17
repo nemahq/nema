@@ -116,6 +116,8 @@
     "detail_not_found_title": "이 변경사항을 찾을 수 없어요",
     "detail_restore_action": "되살리기",
     "detail_revert_action": "되돌리기",
+    "detail_revert_dialog_description": "새 변경사항으로 기록되며, 이 변경사항이 만든 내용은 원래대로 돌아가요.",
+    "detail_revert_dialog_title": "되돌릴까요?",
     "detail_source_reprocessed_disabled_reason": "원본이 이미 다른 리뷰로 처리됐어요.",
     "detail_trash_source_action": "원본도 삭제하기",
     "detail_trash_source_dialog_description": "이 리뷰의 원본을 완전히 삭제해요. 삭제하면 이 리뷰는 되살릴 수 없어요.",
