@@ -4,7 +4,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button, Skeleton } from "@nema-io/weave";
 
 import { NavigationBar } from "@web/components/layout/NavigationBar";
-import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { useNotificationSoftAsk } from "@web/features/notifications";
 import {
   confirmDisabledReason as computeConfirmDisabledReason,
@@ -18,10 +17,10 @@ import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { ChangesetStatusPill } from "./ChangesetStatusPill";
 import { DigestCandidateCard } from "./DigestCandidateCard";
 import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
 import { ReferenceMergeCard } from "./ReferenceMergeCard";
+import { ReviewHeader } from "./ReviewHeader";
 import { ReviewNavigationBar } from "./ReviewNavigationBar";
 import { SourceTextPanel } from "./SourceTextPanel";
 
@@ -152,14 +151,12 @@ function OpenReviewContent({
 
       <div data-main-scroll-area className="flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
-          <header className="flex flex-col gap-2 border-b border-border/50 pb-4">
-            <div className="flex items-start justify-between gap-4">
-              <h1 className="flex min-w-0 items-baseline gap-2 text-2xl font-semibold text-fg-primary">
-                <span className="min-w-0 truncate">{reviewTitle}</span>
-                <span className="shrink-0 text-lg font-normal text-fg-tertiary">
-                  #{review.changesetNumber}
-                </span>
-              </h1>
+          <ReviewHeader
+            title={reviewTitle}
+            number={review.changesetNumber}
+            status="pending"
+            time={review.sourceCreatedAt}
+            actions={
               <ReviewHeaderActions
                 onDiscard={handleDiscard}
                 onConfirm={handleConfirm}
@@ -167,25 +164,18 @@ function OpenReviewContent({
                 discardDisabled={locked}
                 confirmDisabled={confirmDisabled}
               />
-            </div>
-            <div className="flex items-center gap-2">
-              <ChangesetStatusPill status="pending" />
-              <RelativeTime
-                dateTime={review.sourceCreatedAt}
-                className="text-sm leading-none"
-              />
-            </div>
-            {confirmDisabledReasonText && (
-              <p className="text-xs text-fg-tertiary">
-                {confirmDisabledReasonText}
-              </p>
-            )}
-            {error && (
-              <p className="text-sm text-status-error">
-                {getErrorMessage(error)}
-              </p>
-            )}
-          </header>
+            }
+          />
+          {confirmDisabledReasonText && (
+            <p className="text-xs text-fg-tertiary">
+              {confirmDisabledReasonText}
+            </p>
+          )}
+          {error && (
+            <p className="text-sm text-status-error">
+              {getErrorMessage(error)}
+            </p>
+          )}
 
           <SourceTextPanel body={review.sourceBody} />
 

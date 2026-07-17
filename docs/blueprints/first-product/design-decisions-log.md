@@ -867,6 +867,10 @@ Digest 리뷰 화면 헤더 폴리싱에서 출발했는데, "리뷰 대기 화�
 
 **리뷰 편집 상태를 `useReviewEditingState` 훅으로 분리**: `OpenReviewContent`가 후보별 override·삭제 8종을 `useState`로 직접 들고 파생 행·플래그까지 한 컴포넌트에서 계산해, 화면 오케스트레이션과 편집 세션 로직이 뒤섞여 있었다 — "확정 직전 한 번에 반영할 로컬 편집 세션"이라는 한 덩어리의 관심사를 훅으로 떼어, 컴포넌트는 훅이 준 행 목록·플래그·update 헬퍼만 읽는다. raw setter를 밖으로 흘리지 않고 `setDigestTitle`·`removeDigest` 같은 이름 있는 헬퍼로 감싸 카드 콜백이 `new Map(prev).set(...)` 같은 상태 갱신 세부를 안 만지게 했다(컴포넌트 안에 상태를 무한정 쌓지 않기·불필요한 prop 전달 대신 훅 직접 호출 — Kyle 지침).
 
+**헤더 chrome을 `ReviewHeader`로 추가 공유, sticky+구분선은 상시 고정으로 확정**: 브레드크럼을 맞추고 나니 두 화면의 헤더 자체(sticky 여부·하단 구분선·제목 세로 정렬)가 미묘하게 갈려 있던 게 드러났다 — `ClosedReviewScreen`은 `sticky`인데 구분선이 없고, `OpenReviewScreen`은 구분선은 있는데 `sticky`가 아니었다. `title`/`number`/`status`/`time`(값만 다름, 마크업은 완전 동일)과 `actions`(화면마다 내용이 달라 슬롯으로 남김)로 나눠 `ReviewHeader`를 추출하면서 이 드리프트 자체를 구조적으로 없앴다 — 이제 sticky·구분선·정렬은 한 곳에만 존재해 두 화면이 따로 어긋날 수가 없다. Kyle 확정: **sticky 기본 유지, 하단 `border-b border-border/50 pb-4`는 상시**(스크롤 중 고정되는 헤더가 아래 콘텐츠와 경계 없이 붙어 보이는 걸 막음).
+
+**`messages` 슬롯은 만들지 않고 각 화면이 헤더 밖에서 직접 렌더**: 처음엔 확정 비활성 사유·에러 문구를 위한 공용 슬롯도 검토했으나(Closed 쪽 되돌리기 에러 미노출 갭도 같이 메울 수 있어서), Kyle 판단으로 스코프에서 뺐다 — `OpenReviewScreen`의 `confirmDisabledReasonText`/`error` 문구는 `ReviewHeader` 컴포넌트가 아니라 그 형제 자리에서 그대로 렌더한다(기존 UX 유지, 헤더 자체의 책임은 좁게). `ClosedReviewScreen`의 되돌리기 에러 미노출 갭은 이번 스코프에서 안 건드림 — 후속 필요.
+
 **검증**: `pnpm typecheck`/`lint`/`test`/`knip`/`depcruise`/`format:check` 모노레포 전체 통과(web 128 케이스). 리네임 누락·죽은 컴포넌트는 typecheck·depcruise(순환 참조 없음)·knip(죽은 export/파일 없음)으로 교차 확인. 라이트/다크 브라우저 실측은 인증 데이터가 필요한 화면이라 이번에도 PM 진행 몫으로 남긴다(위 리뷰 세션들과 같은 사유).
 
 ---
