@@ -127,7 +127,6 @@
     "digest_title_placeholder": "Title",
     "digest_type_label": "Digest type",
     "discard_action": "Discard",
-    "discarded_notice": "Discarded — nothing was created, and the source is back in Drafts.",
     "effect_digest": "{count, plural, one {# digest} other {# digests}}",
     "effect_none": "No changes",
     "effect_reference": "{count, plural, one {# reference} other {# references}}",
@@ -165,8 +164,7 @@
     "topic_remove_action": "Remove this topic",
     "type_ingestion": "Organize",
     "type_relation": "Discovery",
-    "type_revert": "Revert",
-    "view_changeset_detail_action": "View change detail"
+    "type_revert": "Revert"
   },
   "session": {
     "copied": "Copied",

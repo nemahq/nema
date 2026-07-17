@@ -12,16 +12,16 @@ import { changesetDisplayTitle } from "@web/features/review/utils";
 import { SpaceBadge, useSpaceListSuspenseQuery } from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
 
-interface ChangesetDetailScreenProps {
+interface ClosedReviewScreenProps {
   spacePublicId: string;
   changesetId: string;
 }
 
-function ChangesetDetailNavSkeleton() {
+function ClosedReviewNavSkeleton() {
   return <NavigationBar />;
 }
 
-function ChangesetDetailNotFound() {
+function ClosedReviewNotFound() {
   const { t } = useTranslation();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 text-center">
@@ -35,21 +35,21 @@ function ChangesetDetailNotFound() {
   );
 }
 
-interface ChangesetDetailBodyProps {
+interface ClosedReviewBodyProps {
   spacePublicId: string;
   spaceId: string;
   spaceName: string;
   changesetId: string;
 }
 
-// space가 해석된 뒤에만 마운트된다(ChangesetDetailSpaceGate 참고) — changesetList
+// space가 해석된 뒤에만 마운트된다(ClosedReviewSpaceGate 참고) — changesetList
 // suspense query가 spaceId를 필수 인자로 받아야 해서, 이 단계가 분리돼 있다.
-function ChangesetDetailBody({
+function ClosedReviewBody({
   spacePublicId,
   spaceId,
   spaceName,
   changesetId,
-}: ChangesetDetailBodyProps) {
+}: ClosedReviewBodyProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [changesetList] = useChangesetListSuspenseQuery(spaceId);
@@ -57,7 +57,7 @@ function ChangesetDetailBody({
   const revertChangeset = useRevertChangeset();
 
   if (!entry) {
-    return <ChangesetDetailNotFound />;
+    return <ClosedReviewNotFound />;
   }
 
   function handleRevert() {
@@ -136,22 +136,22 @@ function ChangesetDetailBody({
   );
 }
 
-function ChangesetDetailSpaceGate({
+function ClosedReviewSpaceGate({
   spacePublicId,
   changesetId,
-}: ChangesetDetailScreenProps) {
+}: ClosedReviewScreenProps) {
   const [spaceList] = useSpaceListSuspenseQuery();
   const space = spaceList.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
   );
 
   if (!space) {
-    return <ChangesetDetailNotFound />;
+    return <ClosedReviewNotFound />;
   }
 
   return (
-    <Suspense fallback={<ChangesetDetailNavSkeleton />}>
-      <ChangesetDetailBody
+    <Suspense fallback={<ClosedReviewNavSkeleton />}>
+      <ClosedReviewBody
         spacePublicId={spacePublicId}
         spaceId={space.id}
         spaceName={space.name}
@@ -161,14 +161,14 @@ function ChangesetDetailSpaceGate({
   );
 }
 
-export function ChangesetDetailScreen({
+export function ClosedReviewScreen({
   spacePublicId,
   changesetId,
-}: ChangesetDetailScreenProps) {
+}: ClosedReviewScreenProps) {
   return (
     <main className="flex flex-1 flex-col bg-surface-card">
-      <Suspense fallback={<ChangesetDetailNavSkeleton />}>
-        <ChangesetDetailSpaceGate
+      <Suspense fallback={<ClosedReviewNavSkeleton />}>
+        <ClosedReviewSpaceGate
           spacePublicId={spacePublicId}
           changesetId={changesetId}
         />

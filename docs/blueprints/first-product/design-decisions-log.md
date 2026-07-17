@@ -849,6 +849,24 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 
 ---
 
+### 2026-07-18 — 리뷰 화면 쌍을 Open/Closed로 리네임 + 확정·버리기 후 자동 이동
+
+Digest 리뷰 화면 헤더 폴리싱에서 출발했는데, "리뷰 대기 화면"과 "리뷰 상세 화면"의 헤더 chrome(번호·배지·시각 배치)이 서로 달라 어느 쪽에 맞출지가 쟁점이었다. 파고들다 두 화면이 사실은 같은 축(changeset의 open/closed 생애주기)의 짝이라는 게 드러나, 이름·동작·헤더를 한 번에 정렬했다. `ChangesetDetailScreen`(방금 전 세션이 헤더 pill·되돌리기까지 착지시킨 화면)도 이번 스코프에 포함해 같이 리네임했다.
+
+**리네임 — 두 화면은 이미 라우팅 레벨에서 Open/Closed로 갈려 있었다**: `ChangesPanel`의 `linkTarget`이 이미 `subTab === "closed" → /changesets/:id`, open이면서 ingestion이면 `→ /review/:id`로 목적지를 나눈다. 즉 "리뷰 대기"와 "리뷰 완료"는 서로 다른 두 라우트·화면(`DigestReviewScreen`·`ChangesetDetailScreen`)이었는데 이름이 그 짝을 안 드러내고 있었다. `OpenReviewScreen`/`ClosedReviewScreen`(+ `OpenReviewPage`/`ClosedReviewPage`, 라우트 식별자 `openReviewRoute`/`closedReviewRoute`)으로 통일해 두 화면이 한 축의 양끝임을 이름으로 드러냈다. **URL 경로 문자열(`/review/:id`, `/changesets/:id`)은 그대로 뒀다** — 이미 나가 있는 링크·북마크를 깰 이유가 없고, 코드 식별자 정합성과는 별개 문제다.
+
+**`OpenReviewScreen`은 open ingestion 전용이다(이름이 과대표기되지 않도록 주석 명시)**: relation의 open 리뷰는 이 화면이 아니라 Digest 상세 판정 모드가 맡는다(review-flow.md). 그래서 "모든 open 리뷰"가 아니라 "open ingestion 리뷰"만 담당한다 — 파일 상단 주석에 이 스코프를 박아, 나중에 relation까지 여기로 들어올지 판단할 때 근거가 되게 했다.
+
+**확정·버리기 후 자동 이동으로 전환 — review-flow.md "화면 안 이동" 결정을 뒤집음**: 기존 구현은 확정/버리기 성공 시 화면을 그대로 두고 로컬 `outcome` state로 배지만 바꾼 뒤, "변경사항 상세 보기" 버튼을 눌러야 상세로 넘어갔다(review-flow.md "Digest 리뷰 확정/버리기" Then #4, design-reference-log의 Hatchworks "no user control" 근거). 이번에 뒤집은 근거 — changeset은 확정/버리기로 실제 pending→closed 상태 전이가 일어나고, `OpenReviewScreen`이 기대는 `digestReview.get` RPC는 `status='pending'`에만 유효해 **닫힌 뒤엔 이 URL 자체가 재조회 불가**다. 즉 닫힌 changeset의 정본 위치는 구조적으로 `ClosedReviewScreen`(`/changesets/:id`)이므로, 상태가 바뀐 순간 그 정본으로 넘기는 게 "결과를 조용히 덮지 않는다" 원칙과도 맞는다. Hatchworks 기각 근거(강제 이동=통제권 박탈)는 여기 안 걸린다 — 유저가 방금 명시적으로 확정/버리기를 눌러 이 화면을 끝낸 것이라, 그 결과의 정본으로 가는 건 통제권 박탈이 아니라 자연스러운 귀결이다. Space 생성 후 auto-navigate를 뺐던 전례와도 다르다(그건 유저가 "끝낸" 게 아니라 방금 만든 것을 계속 쓸 수 있어야 했던 경우).
+
+**딸린 정리**: 로컬 `outcome`/`ReviewOutcome` state·`displayedStatus()`가 통째로 사라졌다(닫힌 상태가 이 화면에 더는 존재하지 않으므로 배지는 항상 `pending` 고정). "변경사항 상세 보기" 버튼과 버려짐 안내(`review.discarded_notice`)도 자동 이동에 흡수돼 제거, 유일 소비처가 사라진 i18n 키 `review.discarded_notice`/`review.view_changeset_detail_action`도 en/ko 양쪽 삭제. 헤더의 `outcome === null ? ... : ...` 분기 자체가 없어져, 헤더는 이제 단일 구성(제목+번호 / 배지+시각 / 사유·에러)만 남고 버튼 로직(저장 중 라벨 스왑·disabled)은 `ReviewHeaderActions` 로컬 컴포넌트로 캡슐화했다.
+
+**헤더 시각은 `ClosedReviewScreen`의 확정 패턴에 맞췄다**: 번호를 제목 앞 prefix(`#N · 제목`)에서 제목 뒤 suffix(`제목  #N`, 작고 옅은 톤)로, 배지+시각을 제목 위 줄에서 아래 줄로 옮겨 두 화면의 헤더 chrome을 일치시켰다. 같은 changeset을 대기→완료로 이어 보는 짝이라 배치가 갈리면 화면 전환 시 같은 정보가 재배치되는 것처럼 읽힌다. 지정된 `ChangesetStatusBadge`(Digest 리뷰용, weave `Badge`)는 그대로 두고 배치만 맞췄다 — `ClosedReviewScreen`이 쓰는 `ChangesetStatusPill`과는 다른 컴포넌트라 시각 문법까지 통일하진 않았다(리스트는 아이콘 스캔, 상세는 라벨 노출이라 원래 결이 다름).
+
+**검증**: `pnpm typecheck`/`lint`/`test`/`knip`/`depcruise`/`format:check` 모노레포 전체 통과(web 128 케이스). 리네임 누락은 typecheck·depcruise(순환 참조 없음, 937 모듈)·knip(죽은 export 없음)으로 교차 확인. 라이트/다크 브라우저 실측은 인증 데이터가 필요한 화면이라 이번에도 PM 진행 몫으로 남긴다(위 리뷰 세션들과 같은 사유).
+
+---
+
 ### 2026-07-17 — 초안 벌크 삭제 전체 실패 + 에러 토스트 dismiss 버튼 정렬 수정
 
 **배경**: staging에서 초안(Drafts) 전체 삭제가 매번 "N개를 삭제하지 못했습니다"로 100% 실패한다는 리포트. `useDeleteWaitingDrafts`는 `utils.client.source.delete.mutate()`를 sourceId 개수만큼 동시에 호출하는데, tRPC `httpBatchStreamLink`가 이걸 한 HTTP 요청으로 묶으면서 URL 경로를 `source.delete,source.delete,...`처럼 프로시저명을 반복 이어붙인다.

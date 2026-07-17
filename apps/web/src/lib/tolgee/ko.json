@@ -127,7 +127,6 @@
     "digest_title_placeholder": "제목",
     "digest_type_label": "다이제스트 유형",
     "discard_action": "버리기",
-    "discarded_notice": "버려졌어요 — 아무것도 만들어지지 않았고, 원본은 초안으로 남아 있어요.",
     "effect_digest": "다이제스트 {count}",
     "effect_none": "변경 없음",
     "effect_reference": "레퍼런스 {count}",
@@ -165,8 +164,7 @@
     "topic_remove_action": "이 주제 삭제",
     "type_ingestion": "정리",
     "type_relation": "발견",
-    "type_revert": "되돌림",
-    "view_changeset_detail_action": "변경사항 상세 보기"
+    "type_revert": "되돌림"
   },
   "session": {
     "copied": "복사됨",

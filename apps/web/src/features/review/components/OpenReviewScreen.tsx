@@ -18,7 +18,6 @@ import {
   toReferenceUpdates,
 } from "@web/features/review/referenceMerge";
 import type {
-  ChangesetStatus,
   ReviewDigest,
   ReviewNewReference,
 } from "@web/features/review/types";
@@ -31,19 +30,19 @@ import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
 import { ReferenceMergeCard } from "./ReferenceMergeCard";
 import { SourceTextPanel } from "./SourceTextPanel";
 
-interface DigestReviewScreenProps {
+// open(=pending) 상태인 ingestion changeset의 리뷰 화면 — 확정/버리기로 닫히면
+// 곧바로 짝 화면인 ClosedReviewScreen(변경사항 상세)으로 이동한다. 그래서 이 화면
+// 자체엔 "닫힌" 상태가 없다(digestReview.get RPC 가드도 status='pending'만 허용).
+// relation의 open 리뷰는 여기가 아니라 Digest 상세 판정 모드가 맡는다(review-flow.md).
+interface OpenReviewScreenProps {
   spacePublicId: string;
   changesetId: string;
 }
 
-// confirm/discard 뒤에는 digestReview.get을 다시 못 부른다(그 RPC 가드가
-// status='pending'만 허용) — 화면은 이동하지 않고 이 로컬 결과만으로 상태를 바꾼다.
-type ReviewOutcome = "applied" | "discarded" | null;
-
-function DigestReviewScreenContent({
+function OpenReviewContent({
   spacePublicId,
   changesetId,
-}: DigestReviewScreenProps) {
+}: OpenReviewScreenProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [review] = useDigestReviewSuspenseQuery(changesetId);
@@ -52,7 +51,6 @@ function DigestReviewScreenContent({
   const discardReview = useDiscardReview();
   const showNotificationSoftAsk = useNotificationSoftAsk();
 
-  const [outcome, setOutcome] = useState<ReviewOutcome>(null);
   const [removedDigestIndexes, setRemovedDigestIndexes] = useState<Set<number>>(
     new Set(),
   );
@@ -133,7 +131,7 @@ function DigestReviewScreenContent({
         reference.title.trim() === "" || reference.body.trim() === "",
     ) || mergeRows.some((row) => row.mergeNote.trim() === "");
   const referenceUpdates = toReferenceUpdates(mergeRows);
-  const locked = pending || outcome !== null;
+  const locked = pending;
   const confirmDisabled =
     locked ||
     !hasCandidates ||
@@ -157,6 +155,15 @@ function DigestReviewScreenContent({
     confirmDisabledReasonCode &&
     t(CONFIRM_DISABLED_REASON_KEY[confirmDisabledReasonCode]);
 
+  // 확정·버리기로 changeset이 닫히면 이 화면(open 전용)은 유효하지 않게 되므로,
+  // 처리 결과의 정본 위치인 ClosedReviewScreen(변경사항 상세)으로 곧바로 넘긴다.
+  function goToClosedReview() {
+    navigate({
+      to: "/space/$spacePublicId/changesets/$changesetId",
+      params: { spacePublicId, changesetId },
+    });
+  }
+
   async function handleConfirm() {
     if (confirmDisabled) {
       return;
@@ -173,8 +180,8 @@ function DigestReviewScreenContent({
         updateReview: updateReview.mutateAsync,
         confirmReview: confirmReview.mutateAsync,
       });
-      setOutcome("applied");
       showNotificationSoftAsk();
+      goToClosedReview();
     } catch {
       // 에러는 updateReview.error/confirmReview.error로 화면에 노출된다.
     }
@@ -188,71 +195,44 @@ function DigestReviewScreenContent({
       { changesetId },
       {
         onSuccess: () => {
-          setOutcome("discarded");
           showNotificationSoftAsk();
+          goToClosedReview();
         },
       },
     );
   }
 
-  function goToChangesetDetail() {
-    navigate({
-      to: "/space/$spacePublicId/changesets/$changesetId",
-      params: { spacePublicId, changesetId },
-    });
-  }
-
-  function displayedStatus(): ChangesetStatus {
-    if (outcome === "applied") {
-      return "applied";
-    }
-    return outcome === "discarded" ? "rejected" : "pending";
-  }
-
   return (
     <main className="flex flex-1 flex-col overflow-y-auto bg-surface-card">
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-8">
-        <header className="flex flex-col gap-3 border-b border-border/50 pb-4">
-          <div className="flex items-center gap-2">
-            <ChangesetStatusBadge status={displayedStatus()} />
-            <RelativeTime dateTime={review.sourceCreatedAt} />
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="min-w-0 truncate text-lg font-semibold text-fg-primary">
-              <span className="text-fg-tertiary">
-                #{review.changesetNumber} ·{" "}
+        <header className="flex flex-col gap-2 border-b border-border/50 pb-4">
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="flex min-w-0 items-baseline gap-2 text-2xl font-semibold text-fg-primary">
+              <span className="min-w-0 truncate">
+                {review.sourceTitle ?? t("review.digest_review_title")}
               </span>
-              {review.sourceTitle ?? t("review.digest_review_title")}
+              <span className="shrink-0 text-lg font-normal text-fg-tertiary">
+                #{review.changesetNumber}
+              </span>
             </h1>
-            {outcome === null ? (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="neutral"
-                  onClick={handleDiscard}
-                  disabled={locked}
-                >
-                  {discardReview.isPendingAfterDelay
-                    ? t("common.saving")
-                    : t("review.discard_action")}
-                </Button>
-                <Button onClick={handleConfirm} disabled={confirmDisabled}>
-                  {t("review.confirm_action")}
-                </Button>
-              </div>
-            ) : (
-              <Button variant="neutral" onClick={goToChangesetDetail}>
-                {t("review.view_changeset_detail_action")}
-              </Button>
-            )}
+            <ReviewHeaderActions
+              onDiscard={handleDiscard}
+              onConfirm={handleConfirm}
+              discardPending={discardReview.isPendingAfterDelay}
+              discardDisabled={locked}
+              confirmDisabled={confirmDisabled}
+            />
           </div>
-          {outcome === null && confirmDisabledReasonText && (
+          <div className="flex items-center gap-2">
+            <ChangesetStatusBadge status="pending" />
+            <RelativeTime
+              dateTime={review.sourceCreatedAt}
+              className="text-sm leading-none"
+            />
+          </div>
+          {confirmDisabledReasonText && (
             <p className="text-xs text-fg-tertiary">
               {confirmDisabledReasonText}
-            </p>
-          )}
-          {outcome === "discarded" && (
-            <p className="text-sm text-fg-tertiary">
-              {t("review.discarded_notice")}
             </p>
           )}
           {error && (
@@ -342,7 +322,35 @@ function DigestReviewScreenContent({
   );
 }
 
-export function DigestReviewScreen(props: DigestReviewScreenProps) {
+interface ReviewHeaderActionsProps {
+  onDiscard: () => void;
+  onConfirm: () => void;
+  discardPending: boolean;
+  discardDisabled: boolean;
+  confirmDisabled: boolean;
+}
+
+function ReviewHeaderActions({
+  onDiscard,
+  onConfirm,
+  discardPending,
+  discardDisabled,
+  confirmDisabled,
+}: ReviewHeaderActionsProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <Button variant="neutral" onClick={onDiscard} disabled={discardDisabled}>
+        {discardPending ? t("common.saving") : t("review.discard_action")}
+      </Button>
+      <Button onClick={onConfirm} disabled={confirmDisabled}>
+        {t("review.confirm_action")}
+      </Button>
+    </div>
+  );
+}
+
+export function OpenReviewScreen(props: OpenReviewScreenProps) {
   return (
     <Suspense
       fallback={
@@ -355,7 +363,7 @@ export function DigestReviewScreen(props: DigestReviewScreenProps) {
         </main>
       }
     >
-      <DigestReviewScreenContent {...props} />
+      <OpenReviewContent {...props} />
     </Suspense>
   );
 }

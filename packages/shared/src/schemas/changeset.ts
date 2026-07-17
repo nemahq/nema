@@ -39,7 +39,7 @@ export const ListChangesetsInputSchema = z.object({
     .min(1)
     .max(CHANGESET_LIST_LIMIT_MAX)
     .default(CHANGESET_LIST_LIMIT_DEFAULT),
-  // 미지정 시 전체(open+closed 안 가림) — ChangesetDetailScreen처럼 changeset을
+  // 미지정 시 전체(open+closed 안 가림) — ClosedReviewScreen처럼 changeset을
   // id로 찾으려고 전체를 훑는 소비처를 위한 폴백.
   open: z
     .boolean()
