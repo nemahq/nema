@@ -7,6 +7,7 @@ import * as Sentry from "@sentry/node";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 
 import { getEnv, loadEnv } from "./env";
+import { resolveCorsOrigin } from "./infra/cors-origin";
 import { initI18n } from "./infra/i18n";
 import { shutdown as shutdownPostHog } from "./infra/posthog";
 import { createStatementSyncWorker } from "./infra/statement-sync";
@@ -43,7 +44,7 @@ async function bootstrap() {
   }
 
   await server.register(cors, {
-    origin: env.CORS_ORIGIN,
+    origin: resolveCorsOrigin(env.APP_ENV, env.CORS_ORIGIN),
   });
 
   await server.register(fastifyTRPCPlugin, {

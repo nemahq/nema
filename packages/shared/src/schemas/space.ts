@@ -6,8 +6,8 @@ export const SPACE_NAME_MAX_LENGTH = 50;
 // 화면상 빈 이름처럼 보이게 하거나, 양방향 텍스트 방향 제어 문자로 표시를
 // 위장하는 것을 막는다. 서버 zod 검증과 클라이언트 사전 검사가 같은 판정을
 // 쓰도록 containsForbiddenSpaceNameChars로 노출한다.
-// eslint-disable-next-line no-control-regex -- 제어문자를 의도적으로 차단 대상에 포함
 const SPACE_NAME_FORBIDDEN_CHARS_PATTERN =
+  // eslint-disable-next-line no-control-regex -- 제어문자를 의도적으로 차단 대상에 포함
   /[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF\u3164\uFFA0\u{E0000}-\u{E007F}]/u;
 
 export function containsForbiddenSpaceNameChars(name: string): boolean {
