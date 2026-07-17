@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import * as Sentry from "@sentry/react";
 import type { RealtimePostgresInsertPayload } from "@supabase/supabase-js";
 
+import type { ChangesetInsertRow } from "@web/features/notifications";
 import { useChangesetReadyNotifier } from "@web/features/notifications";
 import { supabase } from "@web/lib/supabase";
 import { trpc } from "@web/lib/trpc";
@@ -10,11 +11,6 @@ const CHANNEL_NAME = "realtime-invalidation";
 
 type TrpcUtils = ReturnType<typeof trpc.useUtils>;
 type NotifyChangesetReady = ReturnType<typeof useChangesetReadyNotifier>;
-
-interface ChangesetRow {
-  id: string;
-  space_id: string;
-}
 
 // Supabase Realtime(Postgres CDC)로 비동기 작업 완료를 폴링 없이 반영한다.
 // 설계: payload를 캐시에 직접 patch하지 않고 "바뀌었다" 신호로만 써서 해당 쿼리를
@@ -34,8 +30,9 @@ export function useRealtimeInvalidation() {
     [utils],
   );
 
-  // notifyChangesetReady도 utilsRef와 같은 이유로 ref에 담아 최신 참조만 넘긴다 —
-  // 구독은 마운트 시 한 번만 걸어야 하므로 deps로 삼지 않는다.
+  // notifyChangesetReady도 같은 이유(구독은 마운트 시 한 번만)로 ref에 담아 최신
+  // 참조만 넘긴다 — 다만 이쪽은 utils뿐 아니라 navigate·t도 의존하는 만큼 식별자가
+  // utils보다 훨씬 자주 바뀔 수 있어, deps로 삼지 않는 실익이 utilsRef보다 크다.
   const notifyChangesetReady = useChangesetReadyNotifier();
   const notifyChangesetReadyRef =
     useRef<NotifyChangesetReady>(notifyChangesetReady);
@@ -55,7 +52,7 @@ export function useRealtimeInvalidation() {
       void utilsRef.current.changeset.listChangesets.invalidate();
     }
     function handleChangesetInsert(
-      payload: RealtimePostgresInsertPayload<ChangesetRow>,
+      payload: RealtimePostgresInsertPayload<ChangesetInsertRow>,
     ) {
       invalidateChangesetBadges();
       notifyChangesetReadyRef.current(payload.new);
