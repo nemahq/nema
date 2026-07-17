@@ -1,3 +1,4 @@
+import { containsForbiddenSpaceNameChars } from "@nema-io/shared";
 import {
   Button,
   DialogFooter,
@@ -26,18 +27,24 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
   const createMutation = useCreateSpace();
   const trimmedName = field.name.trim();
   const isEmpty = trimmedName === "";
+  const hasInvalidChars =
+    !isEmpty && containsForbiddenSpaceNameChars(trimmedName);
   const isDuplicate =
-    !isEmpty && isSpaceNameTaken(spaceList?.spaces ?? [], trimmedName);
+    !isEmpty &&
+    !hasInvalidChars &&
+    isSpaceNameTaken(spaceList?.spaces ?? [], trimmedName);
 
   let nameError: string | null = null;
   if (field.touched && isEmpty) {
     nameError = t("common.name_required");
+  } else if (hasInvalidChars) {
+    nameError = t("common.name_invalid_chars");
   } else if (isDuplicate) {
     nameError = t("common.name_taken");
   }
 
   function handleSubmit() {
-    if (createMutation.isPending || isEmpty || isDuplicate) {
+    if (createMutation.isPending || isEmpty || hasInvalidChars || isDuplicate) {
       return;
     }
 
@@ -71,7 +78,12 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
         </Button>
         <Button
           onClick={handleSubmit}
-          disabled={createMutation.isPending || isEmpty || isDuplicate}
+          disabled={
+            createMutation.isPending ||
+            isEmpty ||
+            hasInvalidChars ||
+            isDuplicate
+          }
         >
           {createMutation.isPendingAfterDelay
             ? t("common.creating")

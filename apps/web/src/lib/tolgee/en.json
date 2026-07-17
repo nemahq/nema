@@ -42,6 +42,7 @@
     "deleting": "Deleting...",
     "home": "Home",
     "list_end": "You're all caught up.",
+    "name_invalid_chars": "Contains characters that can't be used. Try a different character.",
     "name_required": "Name required",
     "name_taken": "Name already taken",
     "overflow_count": "and {count} more",
