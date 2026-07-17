@@ -4,7 +4,8 @@ import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { SourceComposer } from "@web/features/intake";
-import { ChangesPanel } from "@web/features/review";
+import { ChangesPanel, type ChangesSubTab } from "@web/features/review";
+import { useMainScrollRestoration } from "@web/features/workspace/hooks/useMainScrollRestoration";
 // 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
 // eslint-disable-next-line nema/require-suspense-boundary
 import { useSpaceListSuspenseQuery } from "@web/features/workspace/hooks/useSpaceList";
@@ -19,20 +20,27 @@ const NAV_BADGE_CLASS =
 const CONTENT_BADGE_CLASS =
   "flex size-8 shrink-0 items-center justify-center rounded-md bg-fg-primary/10 text-sm font-medium text-fg-primary";
 
-export type SpaceTab = "topic" | "changesets";
+export type SpaceOverviewProps = { spacePublicId: string } & (
+  | { activeTab: "topic" }
+  | {
+      activeTab: "changesets";
+      subTab: ChangesSubTab;
+      onSubTabChange: (subTab: ChangesSubTab) => void;
+    }
+);
 
-interface SpaceOverviewProps {
-  spacePublicId: string;
-  activeTab: SpaceTab;
-}
-
-export function SpaceOverview({
-  spacePublicId,
-  activeTab,
-}: SpaceOverviewProps) {
+export function SpaceOverview(props: SpaceOverviewProps) {
+  const { spacePublicId, activeTab } = props;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [spaceList] = useSpaceListSuspenseQuery();
+  // Open/Closed는 같은 라우트 안 search param 전환이라 컨테이너가 언마운트되지
+  // 않는다 — subTab을 key에 포함해야 서브탭끼리도 독립된 스크롤 위치를 갖는다.
+  const scrollKey =
+    props.activeTab === "changesets"
+      ? `${spacePublicId}:changesets:${props.subTab}`
+      : `${spacePublicId}:topic`;
+  const scrollContainerRef = useMainScrollRestoration(scrollKey);
 
   const space = spaceList.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
@@ -65,7 +73,11 @@ export function SpaceOverview({
         </div>
       </NavigationBar>
 
-      <div data-main-scroll-area className="flex-1 overflow-y-auto">
+      <div
+        ref={scrollContainerRef}
+        data-main-scroll-area
+        className="flex-1 overflow-y-auto"
+      >
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6">
           <div className="flex min-w-0 items-center gap-2">
             <span className={CONTENT_BADGE_CLASS}>
@@ -101,6 +113,7 @@ export function SpaceOverview({
                 navigate({
                   to: "/space/$spacePublicId/changes",
                   params: { spacePublicId },
+                  search: { subTab: "open" },
                 })
               }
               count={space.openChangesetCount}
@@ -109,13 +122,17 @@ export function SpaceOverview({
             </SpaceTabButton>
           </div>
 
-          {activeTab === "changesets" && (
+          {props.activeTab === "changesets" && (
             <ErrorBoundary
               boundaryName="changes-panel"
-              fallbackRender={(props) => <SectionErrorFallback {...props} />}
+              fallbackRender={(fallbackProps) => (
+                <SectionErrorFallback {...fallbackProps} />
+              )}
             >
               <ChangesPanel
                 spaceId={space.id}
+                subTab={props.subTab}
+                onSubTabChange={props.onSubTabChange}
                 onOpenReview={(changesetId) =>
                   navigate({
                     to: "/space/$spacePublicId/review/$changesetId",

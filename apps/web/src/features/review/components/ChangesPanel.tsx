@@ -1,4 +1,4 @@
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useRef } from "react";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 
 import { Button, cn, Skeleton } from "@nema-io/weave";
@@ -6,13 +6,14 @@ import { Button, cn, Skeleton } from "@nema-io/weave";
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { useChangesetListInfiniteQuery } from "@web/features/review/hooks/useChangesetListQuery";
-import type { ChangesetListEntry } from "@web/features/review/types";
+import type {
+  ChangesetListEntry,
+  ChangesSubTab,
+} from "@web/features/review/types";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetListRow } from "./ChangesetListRow";
-
-type ChangesSubTab = "open" | "closed";
 
 interface ChangesSubTabButtonProps {
   active: boolean;
@@ -121,30 +122,33 @@ function ChangesList({
 
 interface ChangesPanelProps {
   spaceId: string | undefined;
+  subTab: ChangesSubTab;
+  onSubTabChange: (subTab: ChangesSubTab) => void;
   onOpenReview: (changesetId: string) => void;
   onOpenDetail: (changesetId: string) => void;
 }
 
 export function ChangesPanel({
   spaceId,
+  subTab,
+  onSubTabChange,
   onOpenReview,
   onOpenDetail,
 }: ChangesPanelProps) {
   const { t } = useTranslation();
-  const [subTab, setSubTab] = useState<ChangesSubTab>("open");
 
   return (
     <div className="flex w-full flex-col gap-3 py-4">
       <div className="flex w-fit gap-1 rounded-lg bg-surface-card p-1">
         <ChangesSubTabButton
           active={subTab === "open"}
-          onClick={() => setSubTab("open")}
+          onClick={() => onSubTabChange("open")}
         >
           {t("review.tab_open")}
         </ChangesSubTabButton>
         <ChangesSubTabButton
           active={subTab === "closed"}
-          onClick={() => setSubTab("closed")}
+          onClick={() => onSubTabChange("closed")}
         >
           {t("review.tab_closed")}
         </ChangesSubTabButton>
