@@ -42,6 +42,7 @@ export const spaceRouter = router({
         supabase: ctx.supabase,
         spaceId: input.spaceId,
         targetSpaceId: input.targetSpaceId,
+        deletePendingDrafts: input.deletePendingDrafts,
       }),
     ),
 
