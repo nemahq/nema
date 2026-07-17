@@ -136,9 +136,9 @@ export function onTRPCError({ error }: { error: TRPCError }): void {
   //    이 경우 개발자가 고른 code 자체가 "정상 거부"라는 의도 표시라 캡처 대상이
   //    아니다. ② tRPC가 원시 에러를 자동으로 감싼 것(항상 INTERNAL_SERVER_ERROR)
   //    이거나, 앱 코드가 의도적으로 INTERNAL_SERVER_ERROR로 던진 것(예:
-  //    account-service의 계정 삭제 실패) — 둘 다 진짜 장애라 캡처해야 한다.
-  //    code만으로 ①·②를 가르면 두 경우 모두 맞물린다: 자동 wrap과 의도적
-  //    INTERNAL_SERVER_ERROR 던지기가 같은 code를 쓰기 때문.
+  //    session-service의 "LLM returned empty title") — 둘 다 진짜 장애라
+  //    캡처해야 한다. code만으로 ①·②를 가르면 두 경우 모두 맞물린다: 자동 wrap과
+  //    의도적 INTERNAL_SERVER_ERROR 던지기가 같은 code를 쓰기 때문.
   if (error.code !== "INTERNAL_SERVER_ERROR") {
     return;
   }
