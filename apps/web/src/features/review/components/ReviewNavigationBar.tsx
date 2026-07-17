@@ -20,7 +20,8 @@ function ReviewNavigationBarContent({
   const { t } = useTranslation();
   const [spaceList] = useSpaceListSuspenseQuery();
   const spaceName =
-    spaceList.spaces.find((s) => s.publicId === spacePublicId)?.name ?? "";
+    spaceList.spaces.find((space) => space.publicId === spacePublicId)?.name ??
+    "";
 
   return (
     <NavigationBar

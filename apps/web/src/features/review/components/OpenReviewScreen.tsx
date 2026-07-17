@@ -25,6 +25,13 @@ import { ReferenceMergeCard } from "./ReferenceMergeCard";
 import { ReviewNavigationBar } from "./ReviewNavigationBar";
 import { SourceTextPanel } from "./SourceTextPanel";
 
+const CONFIRM_DISABLED_REASON_KEY = {
+  no_candidates: "review.confirm_disabled_no_candidates",
+  missing_title: "review.confirm_disabled_missing_title",
+  empty_label: "review.confirm_disabled_empty_label",
+  empty_reference: "review.confirm_disabled_empty_reference",
+} as const;
+
 // open(=pending) 상태인 ingestion changeset의 리뷰 화면 — 확정/버리기로 닫히면
 // 곧바로 짝 화면인 ClosedReviewScreen(변경사항 상세)으로 이동한다. 그래서 이 화면
 // 자체엔 "닫힌" 상태가 없다(digestReview.get RPC 가드도 status='pending'만 허용).
@@ -88,12 +95,6 @@ function OpenReviewContent({
     hasEmptyLabel,
     hasEmptyReference,
   );
-  const CONFIRM_DISABLED_REASON_KEY = {
-    no_candidates: "review.confirm_disabled_no_candidates",
-    missing_title: "review.confirm_disabled_missing_title",
-    empty_label: "review.confirm_disabled_empty_label",
-    empty_reference: "review.confirm_disabled_empty_reference",
-  } as const;
   const confirmDisabledReasonText =
     confirmDisabledReasonCode &&
     t(CONFIRM_DISABLED_REASON_KEY[confirmDisabledReasonCode]);
