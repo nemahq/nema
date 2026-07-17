@@ -6,7 +6,7 @@ import { ChevronRight } from "@nema-io/weave/icons";
 
 import { asLinkProps, type LooseLinkTarget } from "@web/lib/link";
 
-export interface NavigationBarItem extends LooseLinkTarget {
+interface NavigationBarItem extends LooseLinkTarget {
   label: string;
   icon?: ReactNode;
   // to가 없으면 현재 위치 — 클릭 불가한 평문으로 렌더된다.
