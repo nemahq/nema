@@ -35,7 +35,11 @@ export function ChangesetStatusPill({
       )}
     >
       <icon.Icon className="size-4 shrink-0" strokeWidth={2.5} />
-      {t(labelKey)}
+      <span
+        className={icon.kind === "outline" ? "text-fg-secondary" : undefined}
+      >
+        {t(labelKey)}
+      </span>
     </span>
   );
 }
