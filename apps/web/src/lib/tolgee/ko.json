@@ -101,7 +101,6 @@
     "deny": "거부"
   },
   "review": {
-    "author_engine": "엔진 제안",
     "changes_empty_closed": "리뷰된 변경사항이 없어요.",
     "changes_empty_open": "리뷰 대기 중인 변경사항이 없어요.",
     "changeset_fallback_title": "{number}번째 변경",

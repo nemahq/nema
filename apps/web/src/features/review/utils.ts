@@ -39,5 +39,5 @@ export function changesetAuthorLabel(
   currentUserDisplayName: string,
   t: (key: TranslationKey) => string,
 ): string {
-  return authorId === null ? t("review.author_engine") : currentUserDisplayName;
+  return authorId === null ? t("app.title") : currentUserDisplayName;
 }

@@ -101,7 +101,6 @@
     "deny": "Deny"
   },
   "review": {
-    "author_engine": "Engine suggestion",
     "changes_empty_closed": "No reviewed changes.",
     "changes_empty_open": "No changes need review.",
     "changeset_fallback_title": "Change #{number}",
