@@ -134,21 +134,10 @@ export function SpaceOverview(props: SpaceOverviewProps) {
               )}
             >
               <ChangesPanel
+                spacePublicId={spacePublicId}
                 spaceId={space.id}
                 subTab={props.subTab}
                 onSubTabChange={props.onSubTabChange}
-                onOpenReview={(changesetId) =>
-                  navigate({
-                    to: "/space/$spacePublicId/review/$changesetId",
-                    params: { spacePublicId, changesetId },
-                  })
-                }
-                onOpenDetail={(changesetId) =>
-                  navigate({
-                    to: "/space/$spacePublicId/changesets/$changesetId",
-                    params: { spacePublicId, changesetId },
-                  })
-                }
               />
             </ErrorBoundary>
           )}

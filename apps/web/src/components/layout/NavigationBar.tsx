@@ -1,21 +1,15 @@
-import { type ComponentProps, Fragment, type ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { cn, Skeleton } from "@nema-io/weave";
 import { ChevronRight } from "@nema-io/weave/icons";
 
-type LinkComponentProps = ComponentProps<typeof Link>;
+import { asLinkProps, type LooseLinkTarget } from "@web/lib/link";
 
-export interface NavigationBarItem {
+export interface NavigationBarItem extends LooseLinkTarget {
   label: string;
   icon?: ReactNode;
-  // to가 없으면 현재 위치 — 클릭 불가한 평문으로 렌더된다. TanStack Router의
-  // Link 제네릭(to에 물린 리터럴에 따라 params/search 모양이 바뀜)은 배열 원소
-  // 하나의 타입으로 못 담아 느슨한 string으로 받고, 실제 라우트 존재는 호출부가
-  // 문자열 리터럴을 그대로 쓰는 것으로 보장한다(아래 렌더 지점의 단언 참고).
-  to?: string;
-  params?: Record<string, string>;
-  search?: Record<string, unknown>;
+  // to가 없으면 현재 위치 — 클릭 불가한 평문으로 렌더된다.
 }
 
 interface NavigationBarProps {
@@ -58,12 +52,8 @@ export function NavigationBar({ items, rightContent }: NavigationBarProps) {
                 <ChevronRight className="size-3.5 shrink-0 text-fg-tertiary/60" />
               )}
               {item.to ? (
-                // NavigationBarItem 주석 참고 — 배열 원소 하나의 타입으로는
-                // Link의 to별 params/search 제네릭을 못 물어 여기서 되돌려 준다.
                 <Link
-                  to={item.to as LinkComponentProps["to"]}
-                  params={item.params as LinkComponentProps["params"]}
-                  search={item.search as LinkComponentProps["search"]}
+                  {...asLinkProps(item)}
                   className="flex min-w-0 shrink items-center gap-1.5"
                 >
                   {item.icon}

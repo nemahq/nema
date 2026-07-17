@@ -1,5 +1,6 @@
 import { Suspense, useRef } from "react";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
+import { linkOptions } from "@tanstack/react-router";
 
 import { Button, cn, Skeleton } from "@nema-io/weave";
 
@@ -11,6 +12,7 @@ import type {
   ChangesSubTab,
 } from "@web/features/review/types";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
+import type { LooseLinkTarget } from "@web/lib/link";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetListRow } from "./ChangesetListRow";
@@ -59,18 +61,12 @@ function ChangesListSkeleton() {
 }
 
 interface ChangesListProps {
+  spacePublicId: string;
   spaceId: string;
   subTab: ChangesSubTab;
-  onOpenReview: (changesetId: string) => void;
-  onOpenDetail: (changesetId: string) => void;
 }
 
-function ChangesList({
-  spaceId,
-  subTab,
-  onOpenReview,
-  onOpenDetail,
-}: ChangesListProps) {
+function ChangesList({ spacePublicId, spaceId, subTab }: ChangesListProps) {
   const { t } = useTranslation();
   const [changesetPages, query] = useChangesetListInfiniteQuery(
     spaceId,
@@ -87,13 +83,19 @@ function ChangesList({
 
   // Open에서는 ingestion만 실제 리뷰 화면이 있다 — relation 상세는 review 2차 몫이라
   // 이번 슬라이스는 목록에 보이기만 하고 클릭은 막는다(surface-inventory.md).
-  function handleClick(entry: ChangesetListEntry): (() => void) | undefined {
+  function linkTarget(entry: ChangesetListEntry): LooseLinkTarget {
     if (subTab === "closed") {
-      return () => onOpenDetail(entry.id);
+      return linkOptions({
+        to: "/space/$spacePublicId/changesets/$changesetId",
+        params: { spacePublicId, changesetId: entry.id },
+      });
     }
     return entry.type === "ingestion"
-      ? () => onOpenReview(entry.id)
-      : undefined;
+      ? linkOptions({
+          to: "/space/$spacePublicId/review/$changesetId",
+          params: { spacePublicId, changesetId: entry.id },
+        })
+      : {};
   }
 
   if (entries.length === 0) {
@@ -112,7 +114,7 @@ function ChangesList({
         <ChangesetListRow
           key={entry.id}
           entry={entry}
-          onClick={handleClick(entry)}
+          {...linkTarget(entry)}
           hideDivider={index === entries.length - 1 && !query.hasNextPage}
         />
       ))}
@@ -130,19 +132,17 @@ function ChangesList({
 }
 
 interface ChangesPanelProps {
+  spacePublicId: string;
   spaceId: string | undefined;
   subTab: ChangesSubTab;
   onSubTabChange: (subTab: ChangesSubTab) => void;
-  onOpenReview: (changesetId: string) => void;
-  onOpenDetail: (changesetId: string) => void;
 }
 
 export function ChangesPanel({
+  spacePublicId,
   spaceId,
   subTab,
   onSubTabChange,
-  onOpenReview,
-  onOpenDetail,
 }: ChangesPanelProps) {
   const { t } = useTranslation();
 
@@ -186,10 +186,9 @@ export function ChangesPanel({
                 }
               >
                 <ChangesList
+                  spacePublicId={spacePublicId}
                   spaceId={spaceId}
                   subTab={subTab}
-                  onOpenReview={onOpenReview}
-                  onOpenDetail={onOpenDetail}
                 />
               </Suspense>
             </ErrorBoundary>
