@@ -1,3 +1,4 @@
+export { SpaceBadge } from "./components/SpaceBadge";
 export {
   SpaceOverview,
   type SpaceOverviewProps,

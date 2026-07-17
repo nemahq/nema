@@ -12,7 +12,9 @@ interface NavigationBarProps {
 export function NavigationBar({ children, rightContent }: NavigationBarProps) {
   return (
     <div className="flex h-11 shrink-0 items-center justify-between overscroll-none border-b border-border/50 bg-surface-card px-4">
-      <div className="flex min-w-0 items-center">{children}</div>
+      <div className="flex min-w-0 items-center text-sm font-medium">
+        {children}
+      </div>
       {rightContent}
     </div>
   );

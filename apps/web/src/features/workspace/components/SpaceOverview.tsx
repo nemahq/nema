@@ -1,4 +1,6 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+
+import { ChevronRight } from "@nema-io/weave/icons";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
@@ -11,14 +13,8 @@ import { useMainScrollRestoration } from "@web/features/workspace/hooks/useMainS
 import { useSpaceListSuspenseQuery } from "@web/features/workspace/hooks/useSpaceList";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { SpaceBadge } from "./SpaceBadge";
 import { SpaceTabButton } from "./SpaceTabButton";
-
-// SpaceListItem 뱃지와 같은 조합(중립색·rounded-md). 내비게이션 바(작게)와
-// 콘텐츠 헤더(크게) 둘 다 같은 조합을 쓰되 크기만 다르다.
-const NAV_BADGE_CLASS =
-  "flex size-6 shrink-0 items-center justify-center rounded-md bg-fg-primary/10 text-xs font-medium text-fg-primary";
-const CONTENT_BADGE_CLASS =
-  "flex size-8 shrink-0 items-center justify-center rounded-md bg-fg-primary/10 text-sm font-medium text-fg-primary";
 
 export type SpaceOverviewProps = { spacePublicId: string } & (
   | { activeTab: "topic" }
@@ -63,13 +59,28 @@ export function SpaceOverview(props: SpaceOverviewProps) {
   return (
     <main className="flex flex-1 flex-col bg-surface-card">
       <NavigationBar>
-        <div className="flex min-w-0 items-center gap-2">
-          <span className={NAV_BADGE_CLASS}>
-            {space.name.charAt(0).toUpperCase()}
-          </span>
-          <p className="min-w-0 truncate text-sm font-medium text-fg-primary">
-            {space.name}
-          </p>
+        <div className="flex min-w-0 items-center gap-1.5 text-fg-primary">
+          {activeTab === "topic" ? (
+            <>
+              <SpaceBadge name={space.name} size="sm" />
+              <p className="min-w-0 truncate">{space.name}</p>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/space/$spacePublicId"
+                params={{ spacePublicId }}
+                className="flex min-w-0 shrink items-center gap-1.5"
+              >
+                <SpaceBadge name={space.name} size="sm" />
+                <span className="min-w-0 max-w-48 truncate">{space.name}</span>
+              </Link>
+              <ChevronRight className="size-3.5 shrink-0 text-fg-tertiary/60" />
+              <span className="min-w-0 truncate">
+                {t("space.tab_changesets")}
+              </span>
+            </>
+          )}
         </div>
       </NavigationBar>
 
@@ -80,9 +91,7 @@ export function SpaceOverview(props: SpaceOverviewProps) {
       >
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6">
           <div className="flex min-w-0 items-center gap-2">
-            <span className={CONTENT_BADGE_CLASS}>
-              {space.name.charAt(0).toUpperCase()}
-            </span>
+            <SpaceBadge name={space.name} />
             <h1 className="min-w-0 truncate text-xl font-semibold text-fg-primary">
               {space.name}
             </h1>

@@ -90,9 +90,7 @@ export function DraftsScreen() {
             )
           }
         >
-          <h1 className="text-sm font-medium text-fg-primary">
-            {t("intake.drafts_title")}
-          </h1>
+          <h1 className="text-fg-primary">{t("intake.drafts_title")}</h1>
         </NavigationBar>
 
         <div className="flex-1 overflow-y-auto">
