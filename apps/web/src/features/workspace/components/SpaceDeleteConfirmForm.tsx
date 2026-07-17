@@ -1,8 +1,8 @@
 import { Suspense, useId, useState } from "react";
 
 import {
+  Alert,
   Button,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -103,8 +103,8 @@ function SpaceDeleteConfirmBody({
           disabled={!canDelete || deleteMutation.isPending}
         >
           {deleteMutation.isPendingAfterDelay
-            ? t("common.deleting")
-            : t("common.delete")}
+            ? t("space.delete_deleting")
+            : t("space.delete_confirm_button")}
         </Button>
       </DialogFooter>
     </>
@@ -134,7 +134,7 @@ export function SpaceDeleteConfirmForm({
         {t("common.cancel")}
       </Button>
       <Button variant="danger" disabled>
-        {t("common.delete")}
+        {t("space.delete_confirm_button")}
       </Button>
     </DialogFooter>
   );
@@ -142,12 +142,18 @@ export function SpaceDeleteConfirmForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t("space.delete_title")}</DialogTitle>
-        <DialogDescription>{t("space.delete_warning")}</DialogDescription>
+        <DialogTitle>{t("space.delete_confirm_title")}</DialogTitle>
       </DialogHeader>
 
+      <Alert variant="error" icon={false}>
+        {t("space.delete_warning")}
+      </Alert>
+
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={confirmInputId} className="text-xs text-fg-tertiary">
+        <label
+          htmlFor={confirmInputId}
+          className="text-sm font-medium text-fg-primary"
+        >
           {t("common.delete_confirm_instruction", { value: spaceName })}
         </label>
         <Input

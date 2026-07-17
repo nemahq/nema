@@ -162,7 +162,7 @@ function AccountDeleteContent({
           onClick={onBack}
           disabled={deleteMutation.isPending}
         >
-          {t("account.delete_cancel")}
+          {t("common.cancel")}
         </Button>
         <Button
           variant="danger"
