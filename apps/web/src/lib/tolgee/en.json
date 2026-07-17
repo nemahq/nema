@@ -82,7 +82,7 @@
     "drafts_delete_waiting_action": "Delete drafts needing attention",
     "drafts_delete_waiting_confirm_title": "Delete {count} drafts needing attention?",
     "drafts_delete_waiting_partial_failure": "{failed} couldn't be deleted. Try again.",
-    "drafts_empty": "All caught up. No drafts waiting.",
+    "drafts_empty": "All caught up. Nothing needs your attention.",
     "drafts_title": "Drafts"
   },
   "layout": {
