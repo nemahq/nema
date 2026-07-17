@@ -859,5 +859,8 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 
 **입력 배열 상한(200) — 새로운 종류의 남용 표면을 막는 방어선**: URL 길이 문제는 없어졌지만 배열 자체가 무제한이면 다른 성격의 남용(초대형 페이로드)이 가능해, `SourceDeleteManyInputSchema`에 `max(200)`을 뒀다. 실사용 규모(이번 세션 재현 최대 20개) 대비 넉넉하지만 절대 상한은 아니다.
 
+**리뷰 반영 — `SOURCE_DELETE_MANY_MAX`(200)는 배열 길이만 막지 동시성은 안 막음**: 세마포어 없이 두면 최악의 경우 한 요청에서 `trash_source` RPC 200개가 동시에 나갈 수 있어, 이미 LLM 콜 fan-out에 쓰던 `createLimiter`(`infra/llm/limiter.ts`, 외부 의존성 없는 세마포어)를 그대로 재사용해 동시성 10으로 제한했다. 같은 리뷰에서 `DeleteWaitingDraftsDialog.handleDeleteAll`이 `deleteAll` 호출을 try/catch 없이 두고 있던 것도 발견 — 예전 구현은 내부에서 `Promise.allSettled`를 써서 절대 reject하지 않았지만, `useMutation`으로 되돌리며 `mutateAsync`가 요청 전체 실패(네트워크 오류 등) 시 reject하게 된 계약 변화가 이 소비처엔 안 반영돼 있었다. try/catch를 추가하되 다이얼로그는 안 닫는다 — 삭제가 안 됐으니 열어둔 채 재시도하게 두는 게 맞고, 사용자 피드백은 전역 `MutationCache.onError` 토스트가 이미 담당한다.
+
 **검증**: 로컬 Supabase에 원본 20개를 시딩해 `source.deleteMany`를 실제로 한 번 호출 — 이전 방식이라면 URL 길이 초과로 404가 났을 개수인데 `{failedCount: 0}`로 성공, 전부 `trashed`로 바뀐 것을 DB에서 직접 확인. `deleteSources`에 동시성 충돌/예상 밖 실패 구분 유닛 테스트 3건 추가. `pnpm typecheck`/`lint`/`test`/`format:check`/`knip`/`depcruise` 모노레포 전체 통과 — 특히 `packages/shared/src/index.ts`의 배럴 export 갱신을 빠뜨렸을 때 `router.test.ts`가 런타임 에러로 바로 잡아준 것을 확인(스키마가 배럴에 없으면 라우터 로드 시점에 `undefined`로 깨짐).
+
 **부수 발견 — Fastify `maxParamLength` deprecation**: 같은 코드를 다시 만지다가, Fastify 5.7의 최상위 `maxParamLength` 옵션이 `routerOptions.maxParamLength`로 이동하며 deprecated된 것을 로그 경고로 발견 — `routerOptions: { maxParamLength }`로 옮겨 경고를 없앴다(동작은 동일, `deleteMany`가 이 안전망을 대체하진 않으므로 값은 그대로 유지).

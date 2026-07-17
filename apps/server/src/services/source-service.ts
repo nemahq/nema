@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/node";
 import { SOURCE_TITLE_MAX_LENGTH } from "@nema-io/shared";
 
 import type { Database } from "@server/infra/database.types";
+import { createLimiter } from "@server/infra/llm/limiter";
 import type { Providers } from "@server/infra/providers";
 import { abortDigestion } from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
@@ -279,6 +280,12 @@ export async function deleteSource(args: {
   throwIfSupabaseError(error);
 }
 
+// SOURCE_DELETE_MANY_MAX(200)이 배열 길이는 막아주지만 동시성까지 막아주진 않는다
+// — 세마포어 없이 그대로 두면 최악의 경우 한 요청에서 trash_source RPC 200개가
+// 한꺼번에 나간다. LLM 콜처럼 비싸진 않아도 무제한 fan-out은 안 두는 게 안전하다.
+const SOURCE_DELETE_CONCURRENCY = 10;
+const limitDelete = createLimiter(SOURCE_DELETE_CONCURRENCY);
+
 // 초안 벌크 삭제 — sourceId 개수만큼 source.delete를 개별 tRPC 호출로 배치하면(구
 // useDeleteWaitingDrafts) URL이 프로시저명을 반복 이어붙여 Fastify maxParamLength를
 // 넘겨 전체 실패하던 문제(#432)의 근본 수정. 프로시저 호출 자체를 하나로 묶어 배치
@@ -293,7 +300,9 @@ export async function deleteSources(args: {
   const { supabase, sourceIds } = args;
 
   const results = await Promise.allSettled(
-    sourceIds.map((sourceId) => deleteSource({ supabase, sourceId })),
+    sourceIds.map((sourceId) =>
+      limitDelete(() => deleteSource({ supabase, sourceId })),
+    ),
   );
   const unexpectedFailures = results.filter(
     (result): result is PromiseRejectedResult =>
