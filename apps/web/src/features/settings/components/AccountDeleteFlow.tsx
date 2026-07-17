@@ -1,53 +1,53 @@
-import { Suspense, useId, useState } from "react";
+import { Suspense, useState } from "react";
 import * as Sentry from "@sentry/react";
 import { useNavigate } from "@tanstack/react-router";
-import { TRPCClientError } from "@trpc/client";
 
-import { Alert, Button, DialogFooter, Input, Skeleton } from "@nema-io/weave";
+import { Alert, Button, DialogFooter, Skeleton } from "@nema-io/weave";
 
 import {
+  isPreconditionFailed,
   useAccountDeletionBlockersSuspenseQuery,
   useDeleteAccount,
 } from "@web/features/account";
 import {
+  type AccountDeleteError,
   canConfirmAccountDeletion,
   resolveConfirmationTarget,
 } from "@web/features/settings/confirmAccountDeletion";
+import { useUser } from "@web/lib/auth";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { AccountDeleteConfirmField } from "./AccountDeleteConfirmField";
+import { AccountDeleteConfirmShell } from "./AccountDeleteConfirmShell";
+
 interface AccountDeleteFlowProps {
-  userEmail: string;
-  userDisplayName: string;
   onBack: () => void;
 }
 
-function isPreconditionFailed(error: unknown): boolean {
-  return (
-    error instanceof TRPCClientError &&
-    error.data?.code === "PRECONDITION_FAILED"
-  );
+function deleteErrorKind(error: unknown): AccountDeleteError {
+  if (!error) {
+    return null;
+  }
+  return isPreconditionFailed(error) ? "precondition" : "other";
 }
 
-function AccountDeleteContent({
-  userEmail,
-  userDisplayName,
+interface AccountDeleteGateProps {
+  onBack: () => void;
+  onCleanupFailed: () => void;
+}
+
+function AccountDeleteGate({
   onBack,
-}: AccountDeleteFlowProps) {
+  onCleanupFailed,
+}: AccountDeleteGateProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const confirmFieldId = useId();
+  const user = useUser();
   const [confirmationInput, setConfirmationInput] = useState("");
-  const [postDeleteCleanupFailed, setPostDeleteCleanupFailed] = useState(false);
   const [blockers, blockersQuery] = useAccountDeletionBlockersSuspenseQuery();
   const deleteMutation = useDeleteAccount();
-
-  const hasEmail = userEmail.trim().length > 0;
-  const confirmationTarget = resolveConfirmationTarget(
-    userEmail,
-    userDisplayName,
-  );
 
   function handleConfirmDelete() {
     deleteMutation.mutate(undefined, {
@@ -57,7 +57,7 @@ function AccountDeleteContent({
           await navigate({ to: "/signin", search: { redirect: undefined } });
         } catch (error) {
           Sentry.captureException(error);
-          setPostDeleteCleanupFailed(true);
+          onCleanupFailed();
         }
       },
       onError: (error) => {
@@ -68,24 +68,6 @@ function AccountDeleteContent({
         }
       },
     });
-  }
-
-  if (postDeleteCleanupFailed) {
-    return (
-      <div className="flex h-full flex-col">
-        <h2 className="text-lg font-semibold text-fg-primary">
-          {t("account.delete_confirm_title")}
-        </h2>
-        <div className="mt-4 flex flex-1 flex-col gap-4">
-          <Alert variant="warning">{t("account.delete_cleanup_failed")}</Alert>
-        </div>
-        <DialogFooter className="mt-6 border-t border-border pt-4">
-          <Button onClick={() => (window.location.href = "/signin")}>
-            {t("account.delete_go_to_signin")}
-          </Button>
-        </DialogFooter>
-      </div>
-    );
   }
 
   const blockingCount = blockers.blockingWorkspaceIds.length;
@@ -110,94 +92,83 @@ function AccountDeleteContent({
     );
   }
 
-  const mutationError = deleteMutation.error;
+  const confirmationTarget = resolveConfirmationTarget(
+    user.email,
+    user.displayName,
+  );
   const canConfirm = canConfirmAccountDeletion(
     confirmationInput,
     confirmationTarget,
   );
+  const mutationError = deleteMutation.error;
+  const error = deleteErrorKind(mutationError);
 
   return (
-    <div className="flex h-full flex-col">
-      <h2 className="text-lg font-semibold text-fg-primary">
-        {t("account.delete_confirm_title")}
-      </h2>
-
-      <div className="mt-4 flex flex-1 flex-col gap-4">
-        <Alert variant="error" icon={false}>
-          {t("account.delete_confirm_description")}
-        </Alert>
-
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor={confirmFieldId}
-            className="text-sm font-medium text-fg-primary"
-          >
-            {t("common.delete_confirm_instruction", {
-              value: hasEmail ? userEmail : userDisplayName,
-            })}
-          </label>
-          <Input
-            id={confirmFieldId}
-            value={confirmationInput}
-            onChange={(e) => setConfirmationInput(e.target.value)}
-            placeholder={confirmationTarget}
-            autoComplete="off"
-            disabled={deleteMutation.isPending}
-          />
-        </div>
-
-        {mutationError &&
-          (isPreconditionFailed(mutationError) ? (
-            <Alert variant="warning">
-              {t("account.delete_error_precondition")}
-            </Alert>
-          ) : (
-            <Alert variant="error">{getErrorMessage(mutationError)}</Alert>
-          ))}
-      </div>
-
-      <DialogFooter className="mt-6 border-t border-border pt-4">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          disabled={deleteMutation.isPending}
-        >
-          {t("common.cancel")}
-        </Button>
-        <Button
-          variant="danger"
-          onClick={handleConfirmDelete}
-          disabled={
-            !canConfirm || deleteMutation.isPending || blockersQuery.isFetching
-          }
-        >
-          {deleteMutation.isPendingAfterDelay
-            ? t("account.delete_deleting")
-            : t("account.delete_confirm_button")}
-        </Button>
-      </DialogFooter>
-    </div>
+    <AccountDeleteConfirmShell
+      onBack={onBack}
+      cancelDisabled={deleteMutation.isPending}
+      deleteDisabled={
+        !canConfirm || deleteMutation.isPending || blockersQuery.isFetching
+      }
+      deleteLabel={
+        deleteMutation.isPendingAfterDelay
+          ? t("account.delete_deleting")
+          : t("account.delete_confirm_button")
+      }
+      onConfirmDelete={handleConfirmDelete}
+    >
+      <AccountDeleteConfirmField
+        confirmationInput={confirmationInput}
+        onConfirmationInputChange={setConfirmationInput}
+        disabled={deleteMutation.isPending}
+        error={error}
+        errorMessage={mutationError ? getErrorMessage(mutationError) : null}
+      />
+    </AccountDeleteConfirmShell>
   );
 }
 
-export function AccountDeleteFlow(props: AccountDeleteFlowProps) {
+export function AccountDeleteFlow({ onBack }: AccountDeleteFlowProps) {
   const { t } = useTranslation();
+  const [postDeleteCleanupFailed, setPostDeleteCleanupFailed] = useState(false);
+
+  if (postDeleteCleanupFailed) {
+    return (
+      <div className="flex h-full flex-col">
+        <h2 className="text-lg font-semibold text-fg-primary">
+          {t("account.delete_confirm_title")}
+        </h2>
+        <div className="mt-4 flex flex-1 flex-col gap-4">
+          <Alert variant="warning">{t("account.delete_cleanup_failed")}</Alert>
+        </div>
+        <DialogFooter className="mt-6 border-t border-border pt-4">
+          <Button onClick={() => (window.location.href = "/signin")}>
+            {t("account.delete_go_to_signin")}
+          </Button>
+        </DialogFooter>
+      </div>
+    );
+  }
 
   return (
     <Suspense
       fallback={
-        <div className="flex h-full flex-col">
-          <h2 className="text-lg font-semibold text-fg-primary">
-            {t("account.delete_confirm_title")}
-          </h2>
-          <div className="mt-4 flex flex-col gap-1.5">
+        <AccountDeleteConfirmShell
+          onBack={onBack}
+          deleteDisabled
+          deleteLabel={t("account.delete_confirm_button")}
+        >
+          <div className="flex flex-col gap-1.5">
             <Skeleton className="h-4 w-48" />
             <Skeleton className="h-9 w-full" />
           </div>
-        </div>
+        </AccountDeleteConfirmShell>
       }
     >
-      <AccountDeleteContent {...props} />
+      <AccountDeleteGate
+        onBack={onBack}
+        onCleanupFailed={() => setPostDeleteCleanupFailed(true)}
+      />
     </Suspense>
   );
 }
