@@ -33,9 +33,11 @@ export function useNotificationSoftAsk() {
         id: SOFT_ASK_TOAST_ID,
         icon: <BellIcon className="size-4" />,
         duration: Infinity,
-        closeButton: true,
-        onDismiss: () => {
-          setStorage("notificationSoftAskSeen", "true");
+        cancel: {
+          label: "✕",
+          onClick: () => {
+            setStorage("notificationSoftAskSeen", "true");
+          },
         },
       });
     },
