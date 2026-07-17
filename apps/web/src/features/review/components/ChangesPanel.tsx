@@ -67,8 +67,8 @@ function ChangesetRowSkeleton({
   return (
     <div>
       <div className="flex w-full flex-col gap-0.5 px-4 py-3">
-        <div className="flex items-center gap-1.5">
-          <Skeleton className="size-3.5 shrink-0 rounded-sm" style={delay} />
+        <div className="flex items-center gap-2.5">
+          <Skeleton className="size-4 shrink-0 rounded-full" style={delay} />
           <Skeleton
             className={cn(
               "h-3.5",
@@ -77,7 +77,11 @@ function ChangesetRowSkeleton({
             style={delay}
           />
         </div>
-        <Skeleton className="h-[11px] w-1/4" style={delay} />
+        <div className="flex items-center gap-2.5">
+          {/* 실제 행의 2줄 자리맞춤용 스페이서(ChangesetListRow 참고)와 같은 폭 */}
+          <span aria-hidden="true" className="inline-flex size-4 shrink-0" />
+          <Skeleton className="h-[11px] w-1/4" style={delay} />
+        </div>
       </div>
       {!hideDivider && <div className="mx-2 border-b border-border/50" />}
     </div>
