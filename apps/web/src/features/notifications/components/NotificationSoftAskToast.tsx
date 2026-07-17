@@ -21,12 +21,10 @@ export function NotificationSoftAskToast({
   onDismiss,
 }: NotificationSoftAskToastProps) {
   return (
-    <div className="flex w-full flex-col gap-3 rounded-xl bg-(--palette-dark-surface-raised-hover) p-4 text-(--palette-dark-fg-primary) shadow-[0_4px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]">
-      <div className="flex items-start gap-2">
-        <BellIcon className="mt-0.5 size-4 shrink-0" />
-        <p className="text-sm">{message}</p>
-      </div>
-      <div className="flex flex-col gap-1">
+    <div className="flex w-full items-start gap-3 rounded-xl bg-(--palette-dark-surface-raised-hover) p-4 text-(--palette-dark-fg-primary) shadow-[0_4px_16px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]">
+      <BellIcon className="mt-0.5 size-4 shrink-0" />
+      <p className="flex-1 text-sm">{message}</p>
+      <div className="flex shrink-0 flex-col gap-1">
         <Button size="sm" onClick={onAllow}>
           {allowLabel}
         </Button>
