@@ -286,10 +286,6 @@ const routeTree = rootRoute.addChildren([
 export const router = createRouter({
   routeTree,
   defaultNotFoundComponent: NotFoundErrorFallback,
-  // 기본 스크롤 리셋은 window만 대상으로 한다 — 실제 스크롤은 페이지마다 자체
-  // overflow-y-auto 컨테이너에서 일어나서, 그 컨테이너도 같이 등록해야 탭
-  // 전환처럼 콘텐츠만 바뀌는 라우팅에서도 최상단으로 리셋된다.
-  scrollToTopSelectors: ["[data-main-scroll-area]"],
 });
 
 declare module "@tanstack/react-router" {

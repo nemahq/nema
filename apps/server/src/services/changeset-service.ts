@@ -347,6 +347,11 @@ export async function listChangesets(args: {
   // 되돌림 여부는 revert 간선 전체를 모아 재귀로 계산한다(페이지 밖 redo 사슬 포함).
   // revert 변경셋은 되돌리는 대상과 항상 같은 space_id를 갖는다(revert_changeset RPC)
   // 이므로 이 space로 스코프해도 재귀가 끊기지 않는다.
+  // 페이지마다(즉 fetchNextPage 호출마다) 이 space의 간선 전체를 다시 조회한다 — 재귀가
+  // 페이지 경계를 넘어설 수 있어 부분 조회로는 정확히 계산할 수 없기 때문. 행 단위로
+  // SQL의 is_changeset_reverted를 호출하면 N+1이 되니 지금 방식(간선 1회 조회 + 인메모리
+  // 재귀)이 더 낫다. Space당 changeset 수가 아직 적어 비용은 낮지만, 커지면 요청 단위로
+  // 캐싱하거나 뷰/구체화 테이블로 옮기는 걸 고려할 것.
   const { data: edges, error: edgeError } = await supabase
     .from("changesets")
     .select("id, reverts_id")

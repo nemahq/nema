@@ -3,6 +3,7 @@ import { Suspense, useId, useState } from "react";
 import {
   Alert,
   Button,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -24,6 +25,15 @@ function useOtherSpaces(spaceId: string) {
   const [spaceList] = useSpaceListSuspenseQuery();
   // useSpaceList는 created_at 오름차순이라 필터링 후 첫 항목이 곧 가장 오래된 Space.
   return spaceList.spaces.filter((space) => space.id !== spaceId);
+}
+
+// 필드와 footer가 각자 이 값을 다시 계산하면 두 곳이 어긋날 여지가 생긴다 —
+// 한 곳으로 모아 항상 같은 값을 쓰게 한다.
+function resolveTargetSpaceId(
+  manualTargetSpaceId: string | null,
+  otherSpaces: { id: string }[],
+): string | undefined {
+  return manualTargetSpaceId ?? otherSpaces[0]?.id;
 }
 
 interface SpaceDeleteMoveDraftsFieldProps {
@@ -49,7 +59,7 @@ function SpaceDeleteMoveDraftsField({
     return null;
   }
 
-  const targetSpaceId = manualTargetSpaceId ?? otherSpaces[0]?.id;
+  const targetSpaceId = resolveTargetSpaceId(manualTargetSpaceId, otherSpaces);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -100,7 +110,7 @@ function SpaceDeleteConfirmFooter({
   const deleteMutation = useDeleteSpace();
   const [draftCount] = useSpacePendingDraftCountSuspenseQuery(spaceId);
   const otherSpaces = useOtherSpaces(spaceId);
-  const targetSpaceId = manualTargetSpaceId ?? otherSpaces[0]?.id;
+  const targetSpaceId = resolveTargetSpaceId(manualTargetSpaceId, otherSpaces);
 
   const canDelete =
     confirmText === spaceName && (draftCount === 0 || Boolean(targetSpaceId));
@@ -162,11 +172,12 @@ export function SpaceDeleteConfirmForm({
     <>
       <DialogHeader>
         <DialogTitle>{t("space.delete_confirm_title")}</DialogTitle>
+        <DialogDescription asChild>
+          <Alert variant="error" icon={false}>
+            {t("space.delete_warning")}
+          </Alert>
+        </DialogDescription>
       </DialogHeader>
-
-      <Alert variant="error" icon={false}>
-        {t("space.delete_warning")}
-      </Alert>
 
       <Suspense
         fallback={

@@ -98,6 +98,7 @@
   "review": {
     "changes_empty_closed": "리뷰된 변경사항이 없어요.",
     "changes_empty_open": "리뷰 대기 중인 변경사항이 없어요.",
+    "changes_load_error": "목록을 불러오지 못했어요.",
     "confirm_action": "확정",
     "confirm_disabled_empty_label": "이름이 비어 있는 주제 또는 태그가 있는 다이제스트 후보가 있어요.",
     "confirm_disabled_empty_reference": "이름이나 설명이 비어 있는 레퍼런스 후보가 있어요.",

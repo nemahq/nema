@@ -98,6 +98,7 @@
   "review": {
     "changes_empty_closed": "No reviewed changes yet.",
     "changes_empty_open": "No changes need review yet.",
+    "changes_load_error": "Couldn't load the list.",
     "confirm_action": "Confirm",
     "confirm_disabled_empty_label": "One of the digest candidates has a topic or tag with no name.",
     "confirm_disabled_empty_reference": "One of the reference candidates has no name or description.",

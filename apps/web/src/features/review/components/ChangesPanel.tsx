@@ -1,9 +1,12 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useRef, useState } from "react";
+import { QueryErrorResetBoundary } from "@tanstack/react-query";
 
 import { Button, cn, Skeleton } from "@nema-io/weave";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useChangesetListInfiniteQuery } from "@web/features/review/hooks/useChangesetListQuery";
 import type { ChangesetListEntry } from "@web/features/review/types";
+import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetListRow } from "./ChangesetListRow";
@@ -59,27 +62,12 @@ function ChangesList({
   );
   const entries = changesetPages.pages.flatMap((page) => page.changesets);
 
-  const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
-  useEffect(
-    function fetchNextPageOnSentinelVisible() {
-      if (!sentinel || !query.hasNextPage || query.isFetchingNextPage) {
-        return;
-      }
-      const observer = new IntersectionObserver((observed) => {
-        if (observed[0]?.isIntersecting) {
-          query.fetchNextPage();
-        }
-      });
-      observer.observe(sentinel);
-      return () => observer.disconnect();
-    },
-    [
-      sentinel,
-      query.hasNextPage,
-      query.isFetchingNextPage,
-      query.fetchNextPage,
-    ],
-  );
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useIntersectionEffect({
+    ref: sentinelRef,
+    onIntersect: query.fetchNextPage,
+    enabled: query.hasNextPage && !query.isFetchingNextPage,
+  });
 
   // Open에서는 ingestion만 실제 리뷰 화면이 있다 — relation 상세는 review 2차 몫이라
   // 이번 슬라이스는 목록에 보이기만 하고 클릭은 막는다(surface-inventory.md).
@@ -112,7 +100,7 @@ function ChangesList({
         />
       ))}
       {query.hasNextPage ? (
-        <div ref={setSentinel} className="flex flex-col gap-2">
+        <div ref={sentinelRef} className="flex flex-col gap-2">
           {query.isFetchingNextPage && (
             <>
               <Skeleton className="h-12 w-full" />
@@ -162,22 +150,46 @@ export function ChangesPanel({
       </div>
 
       {spaceId && (
-        <Suspense
-          fallback={
-            <div className="flex flex-col gap-2">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          }
-        >
-          <ChangesList
-            spaceId={spaceId}
-            subTab={subTab}
-            onOpenReview={onOpenReview}
-            onOpenDetail={onOpenDetail}
-          />
-        </Suspense>
+        <QueryErrorResetBoundary>
+          {({ reset: resetQueryError }) => (
+            <ErrorBoundary
+              boundaryName="changes-list"
+              fallbackRender={({ reset }) => (
+                <div className="flex flex-col items-center gap-2 py-12 text-sm text-fg-tertiary">
+                  <p>{t("review.changes_load_error")}</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      resetQueryError();
+                      reset();
+                    }}
+                  >
+                    {t("common.retry")}
+                  </Button>
+                </div>
+              )}
+            >
+              <Suspense
+                fallback={
+                  <div className="flex flex-col gap-2">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                }
+              >
+                <ChangesList
+                  spaceId={spaceId}
+                  subTab={subTab}
+                  onOpenReview={onOpenReview}
+                  onOpenDetail={onOpenDetail}
+                />
+              </Suspense>
+            </ErrorBoundary>
+          )}
+        </QueryErrorResetBoundary>
       )}
     </div>
   );

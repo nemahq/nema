@@ -21,6 +21,6 @@ export function useChangesetListQuery(spaceId: string | undefined) {
 export function useChangesetListInfiniteQuery(spaceId: string, open: boolean) {
   return trpc.changeset.listChangesets.useSuspenseInfiniteQuery(
     { spaceId, open, limit: CHANGESET_LIST_LIMIT_DEFAULT },
-    { getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined },
+    { getNextPageParam: (lastPage) => lastPage.nextCursor },
   );
 }
