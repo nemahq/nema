@@ -77,6 +77,7 @@ function ChangesetDetailBody({
           <Link
             to="/space/$spacePublicId/changes"
             params={{ spacePublicId }}
+            search={{ subTab: "open" }}
             className="shrink-0"
           >
             {t("space.tab_changesets")}
