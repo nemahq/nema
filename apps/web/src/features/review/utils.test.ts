@@ -11,22 +11,19 @@ const fakeT = (
 ) => (options ? `${key}(${options.count ?? options.number})` : key);
 
 describe("changesetDisplayTitle", () => {
-  it("sourceTitle이 있으면 그 값을 그대로 쓴다", () => {
+  it("title이 있으면 그 값을 그대로 쓴다", () => {
     const title = changesetDisplayTitle(
-      { sourceTitle: "회의록 요약", number: 3 },
+      { title: "회의록 요약", number: 12 },
       fakeT,
     );
 
     expect(title).toBe("회의록 요약");
   });
 
-  it("sourceTitle이 없으면 번호 플레이스홀더로 폴백한다", () => {
-    const title = changesetDisplayTitle(
-      { sourceTitle: null, number: 3 },
-      fakeT,
-    );
+  it("title이 없으면 번호 기반 자리표시자로 대체한다", () => {
+    const title = changesetDisplayTitle({ title: null, number: 12 }, fakeT);
 
-    expect(title).toBe("review.changeset_fallback_title(3)");
+    expect(title).toBe("review.changeset_fallback_title(12)");
   });
 });
 

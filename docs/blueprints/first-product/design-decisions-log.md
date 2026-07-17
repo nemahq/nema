@@ -900,3 +900,11 @@ PR #412가 "Changeset.title 컬럼이 없어 효과 요약으로 대체, 컬럼 
 **한국어는 ICU plural 블록을 쓰지 않고 `{count}` 단순 보간 그대로 둠**: 한국어는 문법상 단/복수 구분이 없고, `Intl.PluralRules`의 `ko` locale은 CLDR상 `other` 카테고리만 존재해 `one` 분기가 런타임에 절대 선택되지 않는 죽은 코드가 된다 — `plural` 블록으로 감싸는 대신 기존 표기를 그대로 둔다.
 
 **전환 안 한 곳**: 위 회귀 확인 대상 키들은 카운트 뒤에 조사/단위가 붙는 한국어 문구가 원본이고 영문판도 복수형 분기가 의미를 더하지 않아, 이번 스코프(섹션 타이틀 + effect 요약)와 성격이 달라 손대지 않았다.
+
+---
+
+### 2026-07-18 — Changeset 목록 행: title 컬럼 착지로 `changesetDisplayTitle` 폴백 단순화
+
+백엔드 슬라이스(`changesets.title` 스키마 도입, product-decisions-log #17)의 FE 반영분만. title이 이제 거의 항상 채워져 `summarizeChangesetEffect`(effect 5종 요약)가 폴백으로 설 자리가 없어져 통째로 제거하고 `effect_*` i18n 키 6개(effect_none 포함)도 함께 삭제했다 — 유일한 소비처가 사라졌다(2026-07-17 Tolgee ICU 세션이 막 손본 키들이라 손이 아까웠지만, 코드 죽은 채 남기는 것보다 낫다).
+
+**폴백 문구는 새로 만들지 않고 `polish/changeset`(wt-3, 미병합)가 이미 도입해 둔 `review.changeset_fallback_title`("{번호}번째 변경사항"/"Change #{number}")을 그대로 재사용했다** — 그 브랜치가 같은 `sourceTitle` null 케이스를 위해 먼저 만들어 둔 키라, 새 키를 따로 만들면 두 브랜치가 같은 개념에 다른 키로 갈라져 나중에 리베이스할 때 더 헷갈린다. 다만 그 브랜치의 나머지 변경(diffstat 재활용, author 노출, "변경셋"→"변경" 용어 정정, Row/DetailScreen 레이아웃 재구성)은 이번 슬라이스 스코프 밖이라 손대지 않았다 — 두 브랜치 중 나중에 머지되는 쪽이 `utils.ts`/`ChangesetListRow.tsx`/`ChangesetDetailScreen.tsx`/`en.json`/`ko.json`에서 리베이스 충돌을 겪을 것이 확실하다(product-decisions-log #17에 상세).

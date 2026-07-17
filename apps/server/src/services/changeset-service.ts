@@ -277,10 +277,9 @@ interface ChangesetHistoryEntry {
   // ingestion의 "되살리기" 활성 여부는 원본이 pending인지에 달려있다(restore_ingestion_review
   // 가드) — 목록 단계에서 미리 알아야 클릭 전에 버튼을 비활성화할 수 있다.
   sourceStatus: SourceStatus | null;
-  // Changeset.title(엔진 자동 생성)은 아직 스키마에 없다 — 착지 전까지는 연결된
-  // Source의 제목을 화면 표시용으로 대신 쓴다. non-ingestion(source_id 없음)이거나
-  // 아직 추출 중이라 제목이 안 채워졌으면 null — 그때는 FE가 효과 요약으로 대체한다.
-  sourceTitle: string | null;
+  // 생성 시점에 채워지는 표시용 제목(타입별 채움 규칙은 changeset_title 마이그레이션
+  // 참고). null이면 FE가 효과 요약으로 대체한다.
+  title: string | null;
   revertsId: string | null;
   // 사람이 이 changeset의 내용 자체를 만든 경우에만 있음(07-modeling.md §authorId
   // 규칙) — ingestion·relation은 엔진 산물이라 항상 null, revert만 있음.
@@ -325,7 +324,7 @@ export async function listChangesets(args: {
   let query = supabase
     .from("changesets")
     .select(
-      "id, number, type, status, source_id, reverts_id, author_id, created_at, changes(target_type), sources(status, title)",
+      "id, number, type, status, title, source_id, reverts_id, author_id, created_at, changes(target_type), sources(status)",
     )
     .eq("space_id", targetSpaceId)
     .order("number", { ascending: false })
@@ -393,7 +392,7 @@ export async function listChangesets(args: {
         status: row.status,
         sourceId: row.source_id,
         sourceStatus: row.sources?.status ?? null,
-        sourceTitle: row.sources?.title ?? null,
+        title: row.title,
         revertsId: row.reverts_id,
         authorId: row.author_id,
         reverted: isReverted(row.id),

@@ -24,18 +24,17 @@ export function summarizeChangesetEffect(
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-// Changeset.title이 아직 스키마에 없어(design-decisions-log 참고) 대체 표기로 쓴다 —
-// sourceTitle이 있으면 그 값을 우선하고, 없으면(non-ingestion이거나 아직 제목 생성
-// 전인 ingestion) effect 요약 대신 번호만 있는 정직한 자리표시자를 보여준다.
+// title은 생성 시점에 채워져 거의 항상 있다(changeset_title 마이그레이션) — null인
+// 극히 드문 경우(예: 아직 채워지지 않은 대상)에만 번호 기반 자리표시자로 대체한다.
 export function changesetDisplayTitle(
-  entry: Pick<ChangesetListEntry, "sourceTitle" | "number">,
+  entry: Pick<ChangesetListEntry, "title" | "number">,
   t: (
     key: TranslationKey,
     options?: CombinedOptions<DefaultParamType>,
   ) => string,
 ): string {
   return (
-    entry.sourceTitle ??
+    entry.title ??
     t("review.changeset_fallback_title", { number: entry.number })
   );
 }
