@@ -1,12 +1,13 @@
-import { TRPCError } from "@trpc/server";
-
 import type { WorkspaceRole } from "@nema-io/shared";
 
 import {
   getSupabaseAdmin,
   type TypedSupabaseClient,
 } from "@server/infra/supabase";
-import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import {
+  SupabaseError,
+  throwIfSupabaseError,
+} from "@server/infra/supabase-error";
 
 interface MembershipRow {
   workspace_id: string;
@@ -105,10 +106,12 @@ export async function deleteAccount(args: {
   const plan = await loadDeletionPlan(supabase, userId);
 
   if (plan.blockingWorkspaceIds.length > 0) {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "Transfer workspace ownership before deleting your account.",
-    });
+    // delete_workspace RPC의 NM001(→ error.workspace_last_owner)과 같은 전제 위반이라
+    // 같은 도메인 코드를 재사용한다 — error-mapper가 이걸로 번역된 메시지를 붙인다.
+    throw new SupabaseError(
+      "precondition",
+      "Transfer workspace ownership before deleting your account.",
+    );
   }
 
   const admin = getSupabaseAdmin();
@@ -123,12 +126,8 @@ export async function deleteAccount(args: {
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) {
     // teardown이 이미 solo 워크스페이스를 지운 뒤 계정만 남는 반삭제라 알림이 특히
-    // 중요하다 — cause 있는 INTERNAL_SERVER_ERROR는 onTRPCError(trpc.ts)가 캡처하므로
-    // 여기서 따로 잡지 않는다(중복 캡처 방지).
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Failed to delete account.",
-      cause: error,
-    });
+    // 중요하다 — SupabaseError(query_failed)는 DB_QUERY_FAILED로 매핑돼 EXPECTED_
+    // DOMAIN_CODES에 없으므로 onTRPCError(trpc.ts)가 캡처한다(여기서 따로 안 잡음).
+    throw new SupabaseError("query_failed", "Failed to delete account.", error);
   }
 }

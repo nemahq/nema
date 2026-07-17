@@ -168,7 +168,7 @@ describe("deleteAccount", () => {
         ]),
         userId: ME,
       }),
-    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    ).rejects.toMatchObject({ name: "SupabaseError", code: "precondition" });
 
     expect(getSupabaseAdminMock).not.toHaveBeenCalled();
     expect(rpcSpy).not.toHaveBeenCalled();
