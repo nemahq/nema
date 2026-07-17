@@ -13,6 +13,7 @@ import {
   isPreconditionFailed,
   resolveConfirmationTarget,
 } from "@web/features/settings/confirmAccountDeletion";
+import { useUser } from "@web/lib/auth";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
@@ -21,8 +22,6 @@ import { AccountDeleteConfirmField } from "./AccountDeleteConfirmField";
 import { AccountDeleteConfirmShell } from "./AccountDeleteConfirmShell";
 
 interface AccountDeleteFlowProps {
-  userEmail: string;
-  userDisplayName: string;
   onBack: () => void;
 }
 
@@ -34,20 +33,17 @@ function deleteErrorKind(error: unknown): "precondition" | "other" | null {
 }
 
 interface AccountDeleteGateProps {
-  userEmail: string;
-  userDisplayName: string;
   onBack: () => void;
   onCleanupFailed: () => void;
 }
 
 function AccountDeleteGate({
-  userEmail,
-  userDisplayName,
   onBack,
   onCleanupFailed,
 }: AccountDeleteGateProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const user = useUser();
   const [confirmationInput, setConfirmationInput] = useState("");
   const [blockers, blockersQuery] = useAccountDeletionBlockersSuspenseQuery();
   const deleteMutation = useDeleteAccount();
@@ -96,8 +92,8 @@ function AccountDeleteGate({
   }
 
   const confirmationTarget = resolveConfirmationTarget(
-    userEmail,
-    userDisplayName,
+    user.email,
+    user.displayName,
   );
   const canConfirm = canConfirmAccountDeletion(
     confirmationInput,
@@ -121,9 +117,6 @@ function AccountDeleteGate({
       onConfirmDelete={handleConfirmDelete}
     >
       <AccountDeleteConfirmField
-        userEmail={userEmail}
-        userDisplayName={userDisplayName}
-        confirmationTarget={confirmationTarget}
         confirmationInput={confirmationInput}
         onConfirmationInputChange={setConfirmationInput}
         disabled={deleteMutation.isPending}
@@ -134,11 +127,7 @@ function AccountDeleteGate({
   );
 }
 
-export function AccountDeleteFlow({
-  userEmail,
-  userDisplayName,
-  onBack,
-}: AccountDeleteFlowProps) {
+export function AccountDeleteFlow({ onBack }: AccountDeleteFlowProps) {
   const { t } = useTranslation();
   const [postDeleteCleanupFailed, setPostDeleteCleanupFailed] = useState(false);
 
@@ -176,8 +165,6 @@ export function AccountDeleteFlow({
       }
     >
       <AccountDeleteGate
-        userEmail={userEmail}
-        userDisplayName={userDisplayName}
         onBack={onBack}
         onCleanupFailed={() => setPostDeleteCleanupFailed(true)}
       />

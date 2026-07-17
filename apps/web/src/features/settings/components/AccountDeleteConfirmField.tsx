@@ -2,14 +2,13 @@ import { useId } from "react";
 
 import { Alert, Input } from "@nema-io/weave";
 
+import { resolveConfirmationTarget } from "@web/features/settings/confirmAccountDeletion";
+import { useUser } from "@web/lib/auth";
 import { useTranslation } from "@web/lib/tolgee";
 
 type AccountDeleteError = "precondition" | "other" | null;
 
 interface AccountDeleteConfirmFieldProps {
-  userEmail: string;
-  userDisplayName: string;
-  confirmationTarget: string;
   confirmationInput: string;
   onConfirmationInputChange: (value: string) => void;
   disabled: boolean;
@@ -18,9 +17,6 @@ interface AccountDeleteConfirmFieldProps {
 }
 
 export function AccountDeleteConfirmField({
-  userEmail,
-  userDisplayName,
-  confirmationTarget,
   confirmationInput,
   onConfirmationInputChange,
   disabled,
@@ -29,7 +25,12 @@ export function AccountDeleteConfirmField({
 }: AccountDeleteConfirmFieldProps) {
   const { t } = useTranslation();
   const confirmFieldId = useId();
-  const hasEmail = userEmail.trim().length > 0;
+  const user = useUser();
+  const hasEmail = user.email.trim().length > 0;
+  const confirmationTarget = resolveConfirmationTarget(
+    user.email,
+    user.displayName,
+  );
 
   return (
     <>
@@ -39,9 +40,9 @@ export function AccountDeleteConfirmField({
           className="text-sm font-medium text-fg-primary"
         >
           {hasEmail
-            ? t("account.delete_confirm_email_label", { email: userEmail })
+            ? t("account.delete_confirm_email_label", { email: user.email })
             : t("account.delete_confirm_name_label", {
-                name: userDisplayName,
+                name: user.displayName,
               })}
         </label>
         <Input
