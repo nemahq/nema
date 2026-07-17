@@ -148,7 +148,7 @@ export function SpaceDeleteConfirmForm({
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor={confirmInputId} className="text-xs text-fg-tertiary">
-          {t("space.delete_confirm_instruction", { name: spaceName })}
+          {t("common.delete_confirm_instruction", { value: spaceName })}
         </label>
         <Input
           id={confirmInputId}

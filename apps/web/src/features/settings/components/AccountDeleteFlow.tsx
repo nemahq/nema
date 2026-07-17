@@ -132,13 +132,9 @@ function AccountDeleteContent({
             htmlFor={confirmFieldId}
             className="text-sm font-medium text-fg-primary"
           >
-            {hasEmail
-              ? t("account.delete_confirm_email_label", {
-                  email: userEmail,
-                })
-              : t("account.delete_confirm_name_label", {
-                  name: userDisplayName,
-                })}
+            {t("common.delete_confirm_instruction", {
+              value: hasEmail ? userEmail : userDisplayName,
+            })}
           </label>
           <Input
             id={confirmFieldId}
