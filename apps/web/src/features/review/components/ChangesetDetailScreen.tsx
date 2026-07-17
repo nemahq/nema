@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { linkOptions } from "@tanstack/react-router";
 
 import { NavigationBar } from "@web/components/layout/NavigationBar";
+import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { useChangesetListSuspenseQuery } from "@web/features/review/hooks/useChangesetListQuery";
 import { changesetDisplayTitle } from "@web/features/review/utils";
 import { SpaceBadge, useSpaceListSuspenseQuery } from "@web/features/workspace";
@@ -79,10 +80,19 @@ function ChangesetDetailBody({
 
       <div data-main-scroll-area className="flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
-          <header className="sticky top-0 z-10 bg-surface-card">
-            <h1 className="min-w-0 truncate text-2xl font-semibold text-fg-primary">
-              {changesetDisplayTitle(entry, t)}
+          <header className="sticky top-0 z-10 flex flex-col gap-1 bg-surface-card">
+            <h1 className="flex min-w-0 items-baseline gap-2 text-2xl font-semibold text-fg-primary">
+              <span className="min-w-0 truncate">
+                {changesetDisplayTitle(entry, t)}
+              </span>
+              <span className="shrink-0 text-lg font-normal text-fg-tertiary">
+                #{entry.number}
+              </span>
             </h1>
+            <RelativeTime
+              dateTime={entry.updatedAt}
+              className="text-sm leading-none"
+            />
           </header>
         </div>
       </div>

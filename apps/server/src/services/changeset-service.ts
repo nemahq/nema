@@ -289,6 +289,11 @@ interface ChangesetHistoryEntry {
   // 효과 요약 — 대상 종류별 변경 수("이 글 → 진술 N + 관계 M").
   effect: Record<ChangeTargetType, number>;
   createdAt: string;
+  // closed(applied/rejected) 전환 시점 — trg_changesets_updated_at이 status UPDATE마다
+  // 갱신한다. revert_changeset은 되돌려지는 원본을 UPDATE하지 않고 새 changeset만
+  // INSERT하므로(§4.4), 이 값은 나중에 되돌려져도 오염되지 않고 "그 판단이 최종
+  // 내려진 시각"만 담는다.
+  updatedAt: string;
 }
 
 export async function listChangesets(args: {
@@ -324,7 +329,7 @@ export async function listChangesets(args: {
   let query = supabase
     .from("changesets")
     .select(
-      "id, number, type, status, title, source_id, reverts_id, author_id, created_at, changes(target_type), sources(status)",
+      "id, number, type, status, title, source_id, reverts_id, author_id, created_at, updated_at, changes(target_type), sources(status)",
     )
     .eq("space_id", targetSpaceId)
     .order("number", { ascending: false })
@@ -398,6 +403,7 @@ export async function listChangesets(args: {
         reverted: isReverted(row.id),
         effect,
         createdAt: row.created_at,
+        updatedAt: row.updated_at,
       };
     }),
   };
