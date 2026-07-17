@@ -91,6 +91,11 @@
     "expand_sidebar": "사이드바 펼치기",
     "toggle_sidebar": "사이드바 토글"
   },
+  "notification": {
+    "changeset_ready_body": "리뷰할 변경사항이 생겼어요",
+    "permission_prompt_allow_action": "허용",
+    "permission_prompt_message": "앞으로 이 탭을 벗어나도 리뷰가 준비되면 알려드릴까요?"
+  },
   "oauth": {
     "approve": "허용",
     "consent_request": "{client}에 nema 계정 접근을 허용하시겠어요?",

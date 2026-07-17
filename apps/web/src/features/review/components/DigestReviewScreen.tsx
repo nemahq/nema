@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button, Skeleton } from "@nema-io/weave";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
+import { useNotificationSoftAsk } from "@web/features/notifications";
 import {
   confirmDisabledReason as computeConfirmDisabledReason,
   runConfirmReview,
@@ -49,6 +50,7 @@ function DigestReviewScreenContent({
   const updateReview = useUpdateReview(changesetId);
   const confirmReview = useConfirmReview();
   const discardReview = useDiscardReview();
+  const showNotificationSoftAsk = useNotificationSoftAsk();
 
   const [outcome, setOutcome] = useState<ReviewOutcome>(null);
   const [removedDigestIndexes, setRemovedDigestIndexes] = useState<Set<number>>(
@@ -172,6 +174,7 @@ function DigestReviewScreenContent({
         confirmReview: confirmReview.mutateAsync,
       });
       setOutcome("applied");
+      showNotificationSoftAsk();
     } catch {
       // 에러는 updateReview.error/confirmReview.error로 화면에 노출된다.
     }
@@ -183,7 +186,12 @@ function DigestReviewScreenContent({
     }
     discardReview.mutate(
       { changesetId },
-      { onSuccess: () => setOutcome("discarded") },
+      {
+        onSuccess: () => {
+          setOutcome("discarded");
+          showNotificationSoftAsk();
+        },
+      },
     );
   }
 

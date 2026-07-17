@@ -24,6 +24,8 @@ type StorageMap = {
   oauthAuthorizationId: string;
   // 스텔스 모드에서 Coming Soon 대신 실제 로그인을 보여줄지 여부. /signin?access=<key>로 심는 write-once 플래그라 "true"만 가능.
   previewAccess: "true";
+  // 브라우저 알림 soft-ask 배너를 "첫 성공 순간"에 한 번만 물어보기 위한 write-once 플래그.
+  notificationSoftAskSeen: "true";
 };
 
 const isValid: {
@@ -38,6 +40,7 @@ const isValid: {
   splitLayout: isJsonRecord,
   oauthAuthorizationId: (v): v is string => v.length > 0,
   previewAccess: (v): v is "true" => v === "true",
+  notificationSoftAskSeen: (v): v is "true" => v === "true",
 };
 
 export function getStorage<K extends keyof StorageMap>(
