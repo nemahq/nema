@@ -15,25 +15,25 @@ function buildSource(
     digestionOutcome: "processing",
     lastDigestionAttempt: null,
     errorMessage: null,
-    reviewChangesetId: null,
+    review: null,
     digestCount: 0,
     ...overrides,
   };
 }
 
 describe("draftStatus", () => {
-  it("reviewChangesetId가 있으면 digestionOutcome과 무관하게 null(초안 아님)", () => {
+  it("review가 있으면 digestionOutcome과 무관하게 null(초안 아님)", () => {
     expect(
       draftStatus(
         buildSource({
           digestionOutcome: "empty",
-          reviewChangesetId: "cs-1",
+          review: { changesetId: "cs-1", changesetNumber: 1 },
         }),
       ),
     ).toBeNull();
   });
 
-  it("reviewChangesetId가 없으면 서버가 조합한 digestionOutcome을 그대로 통과시킨다", () => {
+  it("review가 없으면 서버가 조합한 digestionOutcome을 그대로 통과시킨다", () => {
     expect(draftStatus(buildSource({ digestionOutcome: "discarded" }))).toBe(
       "discarded",
     );
@@ -47,7 +47,11 @@ describe("isDraftItem", () => {
     );
   });
 
-  it("reviewChangesetId가 있으면 false", () => {
-    expect(isDraftItem(buildSource({ reviewChangesetId: "cs-1" }))).toBe(false);
+  it("review가 있으면 false", () => {
+    expect(
+      isDraftItem(
+        buildSource({ review: { changesetId: "cs-1", changesetNumber: 1 } }),
+      ),
+    ).toBe(false);
   });
 });

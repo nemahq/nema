@@ -7,11 +7,11 @@ import type { PendingSourceItem } from "@web/features/intake/types";
 // 만 새 값 누락 시 컴파일 에러가 난다.
 export type DraftStatus = PendingSourceItem["digestionOutcome"];
 
-// 리뷰가 열린(reviewChangesetId 있음) Source는 이미 초안을 벗어나 변경셋 대기로
-// 넘어간 상태라 null을 반환한다 — surface-inventory.md "초안" 참고. 판정을 여기 한
-// 곳에 모아둬서, 호출부가 "먼저 필터링부터"라는 순서를 따로 기억하지 않아도 된다.
+// 리뷰가 열린(review 있음) Source는 이미 초안을 벗어나 변경셋 대기로 넘어간 상태라
+// null을 반환한다 — surface-inventory.md "초안" 참고. 판정을 여기 한 곳에 모아둬서,
+// 호출부가 "먼저 필터링부터"라는 순서를 따로 기억하지 않아도 된다.
 export function draftStatus(source: PendingSourceItem): DraftStatus | null {
-  return source.reviewChangesetId !== null ? null : source.digestionOutcome;
+  return source.review !== null ? null : source.digestionOutcome;
 }
 
 export function isDraftItem(source: PendingSourceItem): boolean {

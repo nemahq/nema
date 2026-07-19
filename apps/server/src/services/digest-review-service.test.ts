@@ -106,10 +106,15 @@ describe("getReview", () => {
       ],
     });
 
-    const review = await getReview({ supabase, changesetId: CHANGESET_ID });
+    const review = await getReview({ supabase, spaceId: SPACE_ID, number: 12 });
 
     expect(review.changesetNumber).toBe(12);
     expect(review.sourceTitle).toBe("원문 제목");
+    expect(supabase.eqCallsByTable.changesets).toContainEqual([
+      "space_id",
+      SPACE_ID,
+    ]);
+    expect(supabase.eqCallsByTable.changesets).toContainEqual(["number", 12]);
     expect(review.digests[0]?.referenceIds).toEqual([EXISTING_REFERENCE_ID]);
     expect(review.digests[0]?.newReferenceKeys).toEqual([NEW_REFERENCE_ID]);
     expect(review.newReferences).toEqual([
@@ -196,7 +201,7 @@ describe("getReview", () => {
       ],
     });
 
-    const review = await getReview({ supabase, changesetId: CHANGESET_ID });
+    const review = await getReview({ supabase, spaceId: SPACE_ID, number: 12 });
 
     expect(review.citedReferences).toEqual([
       {
@@ -256,7 +261,7 @@ describe("getReview", () => {
       tags: [{ id: EXISTING_TAG_ID, title: "기존 태그" }],
     });
 
-    const review = await getReview({ supabase, changesetId: CHANGESET_ID });
+    const review = await getReview({ supabase, spaceId: SPACE_ID, number: 12 });
 
     expect(review.digests[0]?.topics).toEqual([
       { id: EXISTING_TOPIC_ID, name: "기존 주제" },
@@ -287,8 +292,11 @@ describe("getReview", () => {
     });
 
     await expect(
-      getReview({ supabase, changesetId: CHANGESET_ID }),
-    ).rejects.toThrow("not a pending ingestion review");
+      getReview({ supabase, spaceId: SPACE_ID, number: 12 }),
+    ).rejects.toMatchObject({
+      code: "not_found",
+      message: expect.stringContaining("not a pending ingestion review"),
+    });
   });
 });
 

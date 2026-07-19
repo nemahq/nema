@@ -139,7 +139,7 @@ function pendingSourceRow(
 }
 
 describe("listPendingSources", () => {
-  it("rejected changeset만 있으면 digestionOutcome=discarded, reviewChangesetId는 null", async () => {
+  it("rejected changeset만 있으면 digestionOutcome=discarded, review는 null", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({
         sources: [pendingSourceRow(SOURCE_A)],
@@ -157,7 +157,7 @@ describe("listPendingSources", () => {
     expect(items).toEqual([
       expect.objectContaining({
         sourceId: SOURCE_A,
-        reviewChangesetId: null,
+        review: null,
         digestCount: 0,
         digestionOutcome: "discarded",
       }),
@@ -177,6 +177,7 @@ describe("listPendingSources", () => {
           },
           {
             id: "cs-pending-new",
+            number: 7,
             source_id: SOURCE_A,
             status: "pending",
             changes: [{ target_type: "digest" }, { target_type: "reference" }],
@@ -188,7 +189,7 @@ describe("listPendingSources", () => {
     expect(items).toEqual([
       expect.objectContaining({
         sourceId: SOURCE_A,
-        reviewChangesetId: "cs-pending-new",
+        review: { changesetId: "cs-pending-new", changesetNumber: 7 },
         digestCount: 1,
         digestionOutcome: "discarded",
       }),
@@ -206,7 +207,7 @@ describe("listPendingSources", () => {
     expect(items).toEqual([
       expect.objectContaining({
         sourceId: SOURCE_B,
-        reviewChangesetId: null,
+        review: null,
         digestionOutcome: "empty",
       }),
     ]);

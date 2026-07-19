@@ -37,7 +37,7 @@ function ReviewNavigationBarContent({
         {
           label: t("space.tab_changesets"),
           ...linkOptions({
-            to: "/space/$spacePublicId/changes",
+            to: "/space/$spacePublicId/changesets",
             params: { spacePublicId },
             search: { subTab: "open" },
           }),

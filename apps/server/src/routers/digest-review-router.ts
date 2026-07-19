@@ -19,7 +19,11 @@ export const digestReviewRouter = router({
   get: protectedProcedure
     .input(DigestReviewGetInputSchema)
     .query(({ ctx, input }) =>
-      getReview({ supabase: ctx.supabase, changesetId: input.changesetId }),
+      getReview({
+        supabase: ctx.supabase,
+        spaceId: input.spaceId,
+        number: input.number,
+      }),
     ),
 
   update: protectedProcedure

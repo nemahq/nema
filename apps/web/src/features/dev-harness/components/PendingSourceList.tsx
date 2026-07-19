@@ -18,7 +18,7 @@ const DIGESTION_OUTCOME_LABEL: Record<
 };
 
 function statusLabel(item: PendingSourceItem): string {
-  if (item.reviewChangesetId) {
+  if (item.review) {
     return `리뷰 준비됨 · Digest ${item.digestCount}`;
   }
   return DIGESTION_OUTCOME_LABEL[item.digestionOutcome];
@@ -50,9 +50,9 @@ export function PendingSourceList() {
 
       <div className="flex max-h-96 flex-col gap-2 overflow-y-auto">
         {items.map((item) => {
-          const canReview = item.reviewChangesetId !== null;
+          const { review } = item;
           const isOpen =
-            canReview && openChangesetId === item.reviewChangesetId;
+            review !== null && openChangesetId === review.changesetId;
           return (
             <div
               key={item.sourceId}
@@ -60,9 +60,11 @@ export function PendingSourceList() {
             >
               <button
                 type="button"
-                disabled={!canReview}
+                disabled={!review}
                 onClick={() =>
-                  setOpenChangesetId(isOpen ? null : item.reviewChangesetId)
+                  setOpenChangesetId(
+                    isOpen ? null : (review?.changesetId ?? null),
+                  )
                 }
                 className="flex items-center justify-between gap-2 text-left disabled:cursor-default"
               >
@@ -77,8 +79,11 @@ export function PendingSourceList() {
               {item.errorMessage && (
                 <p className="text-xs text-status-error">{item.errorMessage}</p>
               )}
-              {isOpen && item.reviewChangesetId && (
-                <DigestReviewCard changesetId={item.reviewChangesetId} />
+              {isOpen && review && (
+                <DigestReviewCard
+                  spaceId={item.spaceId}
+                  number={review.changesetNumber}
+                />
               )}
             </div>
           );

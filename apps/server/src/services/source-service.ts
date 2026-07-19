@@ -161,10 +161,11 @@ interface PendingSourceItem {
   // 경과 시간을 재는 기준으론 안 맞는다(아직 한 번도 안 붙잡혔으면 null).
   lastDigestionAttempt: string | null;
   errorMessage: string | null;
-  // 생성이 끝나 리뷰가 열렸으면 그 pending ingestion changeset. 아직이면 null.
-  // 소비자가 "생성 중"과 "리뷰 준비됨"을 가르는 신호 — 제품에선 이 둘이 각각
-  // 초안 목록과 변경셋 대기 탭으로 갈리지만, 그 분리는 화면 층의 몫이다.
-  reviewChangesetId: string | null;
+  // 생성이 끝나 리뷰가 열렸으면 그 pending ingestion changeset(상세 URL이 number
+  // 기준이라 changesetNumber도 함께 내려준다). 아직이면 null — 소비자가 "생성 중"과
+  // "리뷰 준비됨"을 가르는 단일 신호다. 제품에선 이 둘이 각각 초안 목록과 변경셋
+  // 대기 탭으로 갈리지만, 그 분리는 화면 층의 몫이다.
+  review: { changesetId: string; changesetNumber: number } | null;
   digestCount: number;
 }
 
@@ -192,7 +193,7 @@ export async function listPendingSources(args: {
 
   const { data: changesets, error: changesetError } = await supabase
     .from("changesets")
-    .select("id, source_id, status, changes(target_type)")
+    .select("id, number, source_id, status, changes(target_type)")
     .eq("type", "ingestion")
     .in("status", ["pending", "rejected"])
     .in("source_id", sourceIds);
@@ -200,7 +201,7 @@ export async function listPendingSources(args: {
 
   const reviewBySource = new Map<
     string,
-    { reviewChangesetId: string; digestCount: number }
+    { changesetId: string; changesetNumber: number; digestCount: number }
   >();
   // 존재 여부만 볼 뿐 시점은 안 따진다 — 버림 후 원본을 고쳐 재시도해도 그 원본은
   // 계속 discardedSourceIds에 남는다(design-decisions-log.md 2026-07-17 "정확도
@@ -210,9 +211,13 @@ export async function listPendingSources(args: {
     if (changeset.source_id === null) {
       continue;
     }
-    if (changeset.status === "pending") {
+    // number가 null인 pending changeset은 트리거가 아직 번호를 못 붙인 것이라
+    // changesetId/changesetNumber를 함께 요구하는 이 계약상 아직 "리뷰 준비됨"으로
+    // 볼 수 없다 — 리뷰 없음과 동일하게 취급한다.
+    if (changeset.status === "pending" && changeset.number !== null) {
       reviewBySource.set(changeset.source_id, {
-        reviewChangesetId: changeset.id,
+        changesetId: changeset.id,
+        changesetNumber: changeset.number,
         digestCount: changeset.changes.filter(
           (change) => change.target_type === "digest",
         ).length,
@@ -237,7 +242,12 @@ export async function listPendingSources(args: {
         }),
         lastDigestionAttempt: source.last_digestion_attempt,
         errorMessage: source.error_message,
-        reviewChangesetId: review?.reviewChangesetId ?? null,
+        review: review
+          ? {
+              changesetId: review.changesetId,
+              changesetNumber: review.changesetNumber,
+            }
+          : null,
         digestCount: review?.digestCount ?? 0,
       };
     }),
