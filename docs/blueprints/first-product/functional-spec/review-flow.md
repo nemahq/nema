@@ -14,11 +14,11 @@
 
 ### 케이스 목록
 
-- [ ] Digest 추출 완료 → ingestion changeset 자동 생성
+- [x] Digest 추출 완료 → ingestion changeset 자동 생성
 - [ ] Digest 리뷰 화면 진입
-- [ ] 원문에 없는 필드는 비워둠
-- [ ] Digest 타입 제안
-- [ ] 신규 Topic·Tag 제안
+- [x] 원문에 없는 필드는 비워둠
+- [x] Digest 타입 제안
+- [x] 신규 Topic·Tag 제안
 - [ ] 기존 Topic·Tag 재사용 제안
 - [ ] 기존 Topic·Tag는 이름 수정 불가
 - [ ] 신규 Topic·Tag 이름 수정 가능
@@ -57,6 +57,7 @@
   1. ingestion changeset이 open 상태로 자동 생성된다.
   2. 그 changeset은 변경셋 탭의 Open 목록과 Digest 리뷰 화면에서 확인할 수 있게 된다.
 - **관여 화면**: 변경셋, Digest 리뷰 화면
+- **확정 (2026-07-20, Kyle 실동작 확인)**: `digestSource`가 추출 완료 후 `create_ingestion_review` RPC를 호출해 changeset을 `status='pending'`(제품 용어 open)으로 생성한다(`apps/server/src/infra/statement-sync/digestion.ts`). 변경셋 탭(Open)과 Digest 리뷰 화면(`digestReview.get`) 모두 같은 `status='pending'` 가드로 조회하므로 Then #1·#2가 구조적으로 보장됨. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
 
 #### Digest 리뷰 화면 진입
 
@@ -74,6 +75,7 @@
 - **When**: Digest 리뷰 화면에서 그 후보를 본다.
 - **Then**: 그 필드는 지어낸 내용 없이 빈 칸으로 제안된다.
 - **관여 화면**: Digest 리뷰 화면
+- **확정 (2026-07-20, Kyle 실동작 확인)**: 시스템 프롬프트("Fill only what the note says... never invent, never pad")와 `DigestBodySchema`의 optional 필드, `buildDigestBody`의 빈 값→undefined 정규화까지 3중으로 구조적 보장됨(`apps/server/src/prompts/digest-generation.ts`, `packages/shared/src/schemas/digest.ts`, `apps/server/src/infra/statement-sync/digestion.ts`). 실제 LLM 판단 품질은 코드로 검증 불가한 영역이라 제외. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
 
 #### Digest 타입 제안
 
@@ -81,6 +83,7 @@
 - **When**: Digest 후보가 생성된다.
 - **Then**: 엔진이 원문 내용을 분석해 5가지 타입(결정·미결·학습·아이디어·가정) 중 하나를 제안하고, 그 타입에 맞는 본문 필드 구조로 후보가 제시된다.
 - **관여 화면**: Digest 리뷰 화면
+- **확정 (2026-07-20, Kyle 실동작 확인)**: `DIGEST_TYPES`(결정·미결·학습·아이디어·가정 5종, `packages/shared/src/schemas/digest.ts`)와 타입별 프롬프트 지시, `buildDigestBody`의 판별 유니언 조립(타입 밖 필드 폐기)으로 타입에 맞는 필드 구조가 구조적으로 보장됨. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
 
 #### 신규 Topic·Tag 제안
 
@@ -88,6 +91,7 @@
 - **When**: Digest 후보가 생성된다.
 - **Then**: 엔진이 새로 만든 Topic·Tag가 그 후보에 미리 채워진 채로 나타난다. 같은 후보 안에 기존 재사용 라벨과 함께 섞여 나올 수 있다(배타적이지 않음).
 - **관여 화면**: Digest 리뷰 화면
+- **확정 (2026-07-20, Kyle 실동작 확인)**: `digest-review-service.ts`의 `getReview`가 레지스트리에 매칭 안 되는 Topic·Tag를 `id: null`(신규)로 후보에 미리 채우고, 확정 시 `confirm_ingestion_review`가 find-or-create(`ON CONFLICT ... DO UPDATE`)로 실제 행을 만든다. 같은 후보 안에서 기존/신규 라벨이 배타적이지 않게 섞일 수 있는 구조. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
 
 #### 기존 Topic·Tag 재사용 제안
 
@@ -95,6 +99,7 @@
 - **When**: Digest 후보가 생성된다.
 - **Then**: 새로 만들지 않고 기존 Topic·Tag가 재사용되어 그 후보에 미리 채워진 채로 나타난다. 같은 후보 안에 신규 라벨과 함께 섞여 나올 수 있다(배타적이지 않음).
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-20, QA 세션)**: 이름이 일치하는 `status='active'` Topic·Tag는 `id`가 채워져 재사용되고, archived 항목은 재사용 후보에서 제외된다(`digest-review-service.ts`). 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### 기존 Topic·Tag는 이름 수정 불가
 
@@ -138,6 +143,7 @@
 - **When**: Digest 후보가 생성된다.
 - **Then**: 그 대상이 레지스트리에 이미 있으면 기존 Reference 후보로, 없으면 신규 Reference 후보로 분류되어 함께 제안된다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-20, QA 세션)**: `digest-generation.ts` 프롬프트가 사람·조직·프로젝트·제품·개념(person/organization/project/product/term) 분류와 레지스트리 매칭 여부에 따른 기존/신규 분기를 명시적으로 지시한다. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### Changeset 제목 자동 생성
 
@@ -166,6 +172,7 @@
 - **관여 화면**: Digest 리뷰 화면, Changeset 상세
 - **범위 참고 (2026-07-14, PR #412)**: Then #1은 이 PR이 구현(`useConfirmReview`). Then #2·#3(후보 확정·진술/관계 생성)은 기존 `confirm_ingestion_review` RPC가 이미 담당하던 부분이라 이 PR에서 변경 없음.
 - **갱신 (2026-07-18)**: Then #4를 뒤집었다 — 처음엔 "화면 안 이동, 로컬 `outcome`으로 배지만 갱신"이었는데, changeset이 실제 closed로 전이하면 open 전용 `digestReview.get`이 재조회 불가라 정본 위치가 구조적으로 변경사항 상세(`ClosedReviewScreen`)다. 확정 성공 즉시 그리로 자동 이동하도록 바꿨다(design-decisions-log.md 2026-07-18 항목 참고). 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+- **갱신 (2026-07-20, QA 세션)**: Then #4(자동 이동)가 `OpenReviewScreen.tsx`의 `goToClosedReview()`(확정 성공 콜백에서 호출)로 실제 구현된 것을 코드 레벨로 확인. Kyle 확인 결과 실동작 브라우저 확인은 여전히 없어(미확인) 체크는 계속 보류.
 
 #### Digest 리뷰 버리기
 
@@ -179,6 +186,7 @@
 - **관여 화면**: Digest 리뷰 화면, Changeset 상세
 - **범위 참고 (2026-07-14, PR #412)**: 신설된 `discard_ingestion_review` RPC(가드: `type='ingestion' AND status='pending'`, changes 미생성)와 `useDiscardReview`로 Then #1~#3 구현.
 - **갱신 (2026-07-18)**: Then #4를 확정과 같은 이유로 뒤집어 자동 이동으로 바꿨다(위 "Digest 리뷰 확정" 갱신·design-decisions-log.md 2026-07-18 항목 참고). 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+- **갱신 (2026-07-20, QA 세션)**: Then #4(자동 이동)가 `useDiscardReview`의 `onSuccess` 콜백에서 `goToClosedReview()` 호출로 구현된 것을 코드 레벨로 확인. Kyle 확인 결과 실동작 브라우저 확인은 여전히 없어(미확인) 체크는 계속 보류.
 
 #### 적용된 리뷰 되돌리기
 
