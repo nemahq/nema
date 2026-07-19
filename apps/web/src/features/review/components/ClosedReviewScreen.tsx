@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
+import { GetChangesetByNumberInputSchema } from "@nema-io/shared";
 import { Button } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
@@ -116,8 +117,10 @@ function ClosedReviewSpaceGate({
     (candidate) => candidate.publicId === spacePublicId,
   );
   const number = Number(changesetNumber);
+  const numberIsValid =
+    GetChangesetByNumberInputSchema.shape.number.safeParse(number).success;
 
-  if (!space || !Number.isInteger(number)) {
+  if (!space || !numberIsValid) {
     return <ClosedReviewNotFound />;
   }
 

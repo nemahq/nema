@@ -1,10 +1,11 @@
-import { TRPCError } from "@trpc/server";
-
 import { type DigestBody, DigestBodySchema } from "@nema-io/shared";
 
 import type { Database } from "@server/infra/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
-import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import {
+  SupabaseError,
+  throwIfSupabaseError,
+} from "@server/infra/supabase-error";
 import { parseRelationProposal } from "@server/services/changeset-service";
 
 type ChangesetType = Database["public"]["Enums"]["changeset_type"];
@@ -149,7 +150,10 @@ async function fetchRelationEndpoint(args: {
   });
   const digest = digests.get(statement.digest_id);
   if (!digest) {
-    throw new Error(
+    // 정상 경로에선 절대 안 생기는 참조 무결성 위반(진짜 장애) — DB_QUERY_FAILED로
+    // 던져 원문 메시지가 클라이언트에 새지 않게 하고 Sentry로도 잡히게 한다.
+    throw new SupabaseError(
+      "query_failed",
       `digest ${statement.digest_id} not found for statement ${statementId}`,
     );
   }
@@ -182,7 +186,10 @@ async function resolveBody(args: {
       const digests = digestIds.map((id) => {
         const snapshot = snapshots.get(id);
         if (!snapshot) {
-          throw new Error(`digest ${id} created by this changeset not found`);
+          throw new SupabaseError(
+            "query_failed",
+            `digest ${id} created by this changeset not found`,
+          );
         }
         return snapshot;
       });
@@ -195,12 +202,21 @@ async function resolveBody(args: {
     // pending 제안의 {type, from_id, to_id}는 승인(applied)·거절(rejected) 후에도
     // changes 행에 그대로 남는다(apply_pending_relation/reject_pending_relation 둘 다
     // 이 change row를 안 건드림) — 결과와 무관하게 항상 이걸로 관계 종류를 가른다.
+    // relation 행 자체가 없거나 파싱이 실패하는 건 "아직 안 다루는 타입"과 달리
+    // 불변식 위반(진짜 버그)이라 unsupported로 뭉개지 않고 던진다.
     const relationChange = changes.find((c) => c.target_type === "relation");
-    const proposal = relationChange
-      ? parseRelationProposal(relationChange.data)
-      : null;
+    if (!relationChange) {
+      throw new SupabaseError(
+        "query_failed",
+        "relation changeset has no relation change row",
+      );
+    }
+    const proposal = parseRelationProposal(relationChange.data);
     if (!proposal) {
-      return { kind: "unsupported" };
+      throw new SupabaseError(
+        "query_failed",
+        "relation change data does not match the expected proposal shape",
+      );
     }
 
     if (proposal.type === "conflicts") {
@@ -263,11 +279,20 @@ export async function getChangesetByNumber(args: {
     .maybeSingle();
   throwIfSupabaseError(error);
 
-  if (!row || row.number === null) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: `changeset #${number} not found in space ${spaceId}`,
-    });
+  if (!row) {
+    // 세션-서비스의 같은 패턴(session-service.ts)을 따른다 — TRPCError를 직접
+    // 던지면 errorFormatter의 도메인 코드 매핑을 안 타 원문 메시지가 그대로 샌다.
+    throw new SupabaseError(
+      "not_found",
+      `changeset #${number} not found in space ${spaceId}`,
+    );
+  }
+  if (row.number === null) {
+    // space_id IS NULL ⟺ number IS NULL(DB CHECK) — 특정 space_id로 걸러 찾은
+    // 행이라 이론상 불가능하지만, listChangesets의 같은 방어 체크와 일관되게 둔다.
+    throw new Error(
+      `changeset ${row.id} has no number despite being scoped to space ${spaceId}`,
+    );
   }
 
   let revertsNumber: number | null = null;

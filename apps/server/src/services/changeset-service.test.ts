@@ -4,6 +4,7 @@ import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   buildRevertedPredicate,
   listChangesets,
+  revertChangeset,
 } from "@server/services/changeset-service";
 
 // "되돌림 여부" 재귀(§4.4)는 단순 카운트가 아니라 redo·분기에서 갈린다 —
@@ -221,5 +222,45 @@ describe("listChangesets", () => {
 
     expect(chains[0].eq).not.toHaveBeenCalledWith("status", expect.anything());
     expect(chains[0].in).not.toHaveBeenCalled();
+  });
+});
+
+// Changeset 상세 URL이 number 기준이라, 되돌리기 응답에 실린 number를 FE가 그대로
+// 내비게이션에 쓴다 — 이 값이 틀리면 되돌린 직후 엉뚱한 changeset으로 이동한다.
+describe("revertChangeset", () => {
+  function mockRevertRpc(
+    rpcData: string,
+    numberRow: { number: number | null },
+  ) {
+    return {
+      rpc: vi.fn(() => Promise.resolve({ data: rpcData, error: null })),
+      from: vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn(() => Promise.resolve({ data: numberRow, error: null })),
+      })),
+    } as unknown as TypedSupabaseClient;
+  }
+
+  it("RPC가 만든 revert changeset의 id와 number를 함께 돌려준다", async () => {
+    const supabase = mockRevertRpc("revert-cs-1", { number: 13 });
+
+    const result = await revertChangeset({
+      supabase,
+      changesetId: "original-cs-1",
+    });
+
+    expect(result).toEqual({
+      revertChangesetId: "revert-cs-1",
+      revertChangesetNumber: 13,
+    });
+  });
+
+  it("revert changeset에 number가 없으면(불변식 위반) 던진다", async () => {
+    const supabase = mockRevertRpc("revert-cs-2", { number: null });
+
+    await expect(
+      revertChangeset({ supabase, changesetId: "original-cs-2" }),
+    ).rejects.toThrow(/has no number/);
   });
 });

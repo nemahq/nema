@@ -444,11 +444,96 @@ describe("getChangesetByNumber", () => {
     expect(result.body).toEqual({ kind: "unsupported" });
   });
 
-  it("존재하지 않는 번호 — NOT_FOUND를 던진다", async () => {
+  it("존재하지 않는 번호 — SupabaseError(not_found)를 던진다(원문 메시지가 그대로 새지 않게)", async () => {
     const supabase = mockSupabase({ changesets: [] });
 
     await expect(
       getChangesetByNumber({ supabase, spaceId: SPACE_ID, number: 999 }),
-    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    ).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("다른 Space에 같은 number가 있어도 이 Space 스코프에선 안 보인다(크로스 스페이스 유출 방지)", async () => {
+    const OTHER_SPACE_ID = "77777777-7777-4777-8777-777777777777";
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-other-space",
+          space_id: OTHER_SPACE_ID,
+          number: 1,
+          type: "ingestion",
+          status: "applied",
+          title: "다른 Space의 changeset",
+          source_id: null,
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [],
+        },
+      ],
+    });
+
+    await expect(
+      getChangesetByNumber({ supabase, spaceId: SPACE_ID, number: 1 }),
+    ).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("ingestion 적용됨인데 생성된 digest가 실제로는 없음(참조 무결성 위반) — 원문 메시지 노출 없이 SupabaseError로 던진다", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-9",
+          space_id: SPACE_ID,
+          number: 9,
+          type: "ingestion",
+          status: "applied",
+          title: "제목",
+          source_id: null,
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              action: "create",
+              target_type: "digest",
+              target_id: DIGEST_ID,
+              data: null,
+            },
+          ],
+        },
+      ],
+      // digests 픽스처를 일부러 비워둔다 — 배치 purge 등으로 참조된 digest가
+      // 실제로 하드 삭제된 상황을 재현.
+    });
+
+    await expect(
+      getChangesetByNumber({ supabase, spaceId: SPACE_ID, number: 9 }),
+    ).rejects.toMatchObject({ code: "query_failed" });
+  });
+
+  it("relation changeset인데 relation change row 자체가 없음(불변식 위반) — unsupported로 뭉개지 않고 던진다", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-10",
+          space_id: SPACE_ID,
+          number: 10,
+          type: "relation",
+          status: "applied",
+          title: "제목",
+          source_id: null,
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [], // relation 타입 change가 없음 — 정상 경로에선 불가능한 상태
+        },
+      ],
+    });
+
+    await expect(
+      getChangesetByNumber({ supabase, spaceId: SPACE_ID, number: 10 }),
+    ).rejects.toMatchObject({ code: "query_failed" });
   });
 });

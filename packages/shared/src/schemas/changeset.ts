@@ -54,7 +54,7 @@ export type ListChangesetsInput = z.infer<typeof ListChangesetsInputSchema>;
 
 export const GetChangesetByNumberInputSchema = z.object({
   spaceId: z.string().uuid(),
-  number: z.number().int(),
+  number: z.number().int().min(1),
 });
 export type GetChangesetByNumberInput = z.infer<
   typeof GetChangesetByNumberInputSchema
