@@ -92,7 +92,6 @@ function ClosedReviewBody({
               changesetDetail.status === "applied" && (
                 <Button
                   variant="neutral"
-                  size="sm"
                   className="shrink-0"
                   onClick={handleRevert}
                   disabled={revertChangeset.isPending}
