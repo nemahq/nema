@@ -147,7 +147,7 @@ function OpenReviewContent({
             status="pending"
             time={review.sourceCreatedAt}
             actions={
-              <ReviewHeaderActions
+              <OpenReviewHeaderActions
                 onDiscard={handleDiscard}
                 onConfirm={handleConfirm}
                 discardPending={discardReview.isPendingAfterDelay}
@@ -228,7 +228,7 @@ function OpenReviewContent({
   );
 }
 
-interface ReviewHeaderActionsProps {
+interface OpenReviewHeaderActionsProps {
   onDiscard: () => void;
   onConfirm: () => void;
   discardPending: boolean;
@@ -236,13 +236,13 @@ interface ReviewHeaderActionsProps {
   confirmDisabled: boolean;
 }
 
-function ReviewHeaderActions({
+function OpenReviewHeaderActions({
   onDiscard,
   onConfirm,
   discardPending,
   discardDisabled,
   confirmDisabled,
-}: ReviewHeaderActionsProps) {
+}: OpenReviewHeaderActionsProps) {
   const { t } = useTranslation();
   return (
     <div className="flex shrink-0 items-center gap-2">
