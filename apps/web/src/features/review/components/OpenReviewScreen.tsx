@@ -1,14 +1,9 @@
 import { Suspense } from "react";
-import { useNavigate } from "@tanstack/react-router";
 
-import { DigestReviewGetInputSchema } from "@nema-io/shared";
 import { Button, Skeleton } from "@nema-io/weave";
 
-import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
-import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { useNotificationSoftAsk } from "@web/features/notifications";
-import { isChangesetNotFound } from "@web/features/review/changesetErrors";
 import {
   confirmDisabledReason as computeConfirmDisabledReason,
   runConfirmReview,
@@ -18,7 +13,6 @@ import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDige
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useReviewEditingState } from "@web/features/review/hooks/useReviewEditingState";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
-import { useSpaceListSuspenseQuery } from "@web/features/workspace";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -27,7 +21,6 @@ import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
 import { ReferenceMergeCard } from "./ReferenceMergeCard";
 import { ReviewHeader } from "./ReviewHeader";
 import { ReviewNavigationBar } from "./ReviewNavigationBar";
-import { ReviewNotFound } from "./ReviewNotFound";
 import { SourceTextPanel } from "./SourceTextPanel";
 
 const CONFIRM_DISABLED_REASON_KEY = {
@@ -37,38 +30,33 @@ const CONFIRM_DISABLED_REASON_KEY = {
   empty_reference: "review.confirm_disabled_empty_reference",
 } as const;
 
-// open(=pending) 상태인 ingestion changeset의 리뷰 화면 — 확정/버리기로 닫히면
-// 곧바로 짝 화면인 ClosedReviewScreen(변경사항 상세)으로 이동한다. 그래서 이 화면
-// 자체엔 "닫힌" 상태가 없다(digestReview.get RPC 가드도 status='pending'만 허용).
+// open(=pending) 상태인 ingestion changeset의 리뷰 화면 — Open/Closed가 URL을
+// 공유하므로(ChangesetDetailScreen 게이트), 확정·버리기 성공 시 별도 이동 없이
+// getByNumber를 무효화하기만 하면 같은 URL이 자연히 ClosedReviewScreen으로 넘어간다
+// (useConfirmReview/useDiscardReview가 그 무효화를 담당).
 // relation의 open 리뷰는 여기가 아니라 Digest 상세 판정 모드가 맡는다(review-flow.md).
 interface OpenReviewScreenProps {
   spacePublicId: string;
-  changesetNumber: string;
+  spaceId: string;
+  number: number;
 }
 
 function OpenReviewNavSkeleton() {
   return <NavigationBar />;
 }
 
-interface OpenReviewContentProps {
-  spacePublicId: string;
-  spaceId: string;
-  number: number;
-}
-
 function OpenReviewContent({
   spacePublicId,
   spaceId,
   number,
-}: OpenReviewContentProps) {
+}: OpenReviewScreenProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [review] = useDigestReviewSuspenseQuery(spaceId, number);
   const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
 
   const updateReview = useUpdateReview(spaceId, number);
-  const confirmReview = useConfirmReview();
-  const discardReview = useDiscardReview();
+  const confirmReview = useConfirmReview(spaceId, number);
+  const discardReview = useDiscardReview(spaceId, number);
   const showNotificationSoftAsk = useNotificationSoftAsk();
 
   const {
@@ -115,18 +103,6 @@ function OpenReviewContent({
     confirmDisabledReasonCode &&
     t(CONFIRM_DISABLED_REASON_KEY[confirmDisabledReasonCode]);
 
-  // 확정·버리기로 changeset이 닫히면 이 화면(open 전용)은 유효하지 않게 되므로,
-  // 처리 결과의 정본 위치인 ClosedReviewScreen(변경사항 상세)으로 곧바로 넘긴다.
-  function goToClosedReview() {
-    navigate({
-      to: "/space/$spacePublicId/changesets/$changesetNumber",
-      params: {
-        spacePublicId,
-        changesetNumber: String(review.changesetNumber),
-      },
-    });
-  }
-
   async function handleConfirm() {
     if (confirmDisabled) {
       return;
@@ -144,7 +120,6 @@ function OpenReviewContent({
         confirmReview: confirmReview.mutateAsync,
       });
       showNotificationSoftAsk();
-      goToClosedReview();
     } catch {
       // 에러는 updateReview.error/confirmReview.error로 화면에 노출된다.
     }
@@ -156,12 +131,7 @@ function OpenReviewContent({
     }
     discardReview.mutate(
       { changesetId: review.changesetId },
-      {
-        onSuccess: () => {
-          showNotificationSoftAsk();
-          goToClosedReview();
-        },
-      },
+      { onSuccess: () => showNotificationSoftAsk() },
     );
   }
 
@@ -286,67 +256,26 @@ function ReviewHeaderActions({
   );
 }
 
-function OpenReviewSpaceGate({
-  spacePublicId,
-  changesetNumber,
-}: OpenReviewScreenProps) {
-  const [spaceList] = useSpaceListSuspenseQuery();
-  const space = spaceList.spaces.find(
-    (candidate) => candidate.publicId === spacePublicId,
-  );
-  const number = Number(changesetNumber);
-  const numberIsValid =
-    DigestReviewGetInputSchema.shape.number.safeParse(number).success;
-
-  if (!space || !numberIsValid) {
-    return <ReviewNotFound />;
-  }
-
+// space·number 유효성 검증과 NOT_FOUND 처리는 ChangesetDetailScreen(부모 게이트)이
+// 이미 마쳤으므로, 여기서는 이 리뷰 콘텐츠 쿼리(digestReview.get)에 대한 Suspense만
+// 책임진다.
+export function OpenReviewScreen(props: OpenReviewScreenProps) {
   return (
-    <ErrorBoundary
-      boundaryName="open-review-detail"
-      fallbackRender={(props) =>
-        isChangesetNotFound(props.error) ? (
-          <ReviewNotFound />
-        ) : (
-          <SectionErrorFallback {...props} />
-        )
+    <Suspense
+      fallback={
+        <main className="flex flex-1 flex-col bg-surface-card">
+          <OpenReviewNavSkeleton />
+          <div data-main-scroll-area className="flex-1 overflow-y-auto">
+            <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
+              <Skeleton className="h-8 w-1/2" />
+              <Skeleton className="h-40 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          </div>
+        </main>
       }
     >
-      <Suspense
-        fallback={
-          <main className="flex flex-1 flex-col bg-surface-card">
-            <OpenReviewNavSkeleton />
-            <div data-main-scroll-area className="flex-1 overflow-y-auto">
-              <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
-                <Skeleton className="h-8 w-1/2" />
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-32 w-full" />
-              </div>
-            </div>
-          </main>
-        }
-      >
-        <OpenReviewContent
-          spacePublicId={spacePublicId}
-          spaceId={space.id}
-          number={number}
-        />
-      </Suspense>
-    </ErrorBoundary>
-  );
-}
-
-export function OpenReviewScreen({
-  spacePublicId,
-  changesetNumber,
-}: OpenReviewScreenProps) {
-  return (
-    <Suspense fallback={<OpenReviewNavSkeleton />}>
-      <OpenReviewSpaceGate
-        spacePublicId={spacePublicId}
-        changesetNumber={changesetNumber}
-      />
+      <OpenReviewContent {...props} />
     </Suspense>
   );
 }

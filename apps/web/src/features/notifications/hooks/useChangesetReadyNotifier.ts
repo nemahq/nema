@@ -52,7 +52,7 @@ export function useChangesetReadyNotifier() {
         notification.onclick = function focusAndOpenReview() {
           window.focus();
           void navigate({
-            to: "/space/$spacePublicId/review/$changesetNumber",
+            to: "/space/$spacePublicId/changesets/$changesetNumber",
             params: { spacePublicId, changesetNumber: String(row.number) },
           });
           notification.close();

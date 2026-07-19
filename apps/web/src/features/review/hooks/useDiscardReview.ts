@@ -2,15 +2,17 @@ import { useMutation } from "@web/lib/tanstack-query";
 import { trpc } from "@web/lib/trpc";
 
 // digestReview.get은 여기서 invalidate하지 않는다 — 그 RPC 가드가 status='pending'만
-// 허용해서, 버려진 뒤 재조회하면 에러가 난다. 성공하면 OpenReviewScreen이 이 changeset을
-// 다시 그리지 않고 ClosedReviewScreen으로 바로 이동하므로 재조회 자체가 필요 없다.
-export function useDiscardReview() {
+// 허용해서, 버려진 뒤 재조회하면 에러가 난다. 대신 changeset.getByNumber를 무효화한다 —
+// Open/Closed가 URL을 공유해서(변경사항 상세 게이트), 이 쿼리가 새 status(rejected)로
+// 다시 읽히기만 하면 같은 URL이 자연히 ClosedReviewScreen으로 넘어간다.
+export function useDiscardReview(spaceId: string, number: number) {
   const utils = trpc.useUtils();
   return useMutation(trpc.digestReview.discard, {
     meta: { skipGlobalToast: true },
     onSuccess: () => {
       utils.source.listPending.invalidate();
       utils.changeset.listChangesets.invalidate();
+      utils.changeset.getByNumber.invalidate({ spaceId, number });
     },
   });
 }

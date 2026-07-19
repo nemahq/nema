@@ -124,20 +124,16 @@ function ChangesList({ spacePublicId, spaceId, subTab }: ChangesListProps) {
   });
 
   // Open에서는 ingestion만 실제 리뷰 화면이 있다 — relation 상세는 review 2차 몫이라
-  // 이번 슬라이스는 목록에 보이기만 하고 클릭은 막는다(surface-inventory.md).
+  // 이번 슬라이스는 목록에 보이기만 하고 클릭은 막는다(surface-inventory.md). Open·Closed
+  // 모두 같은 changeset 상세 URL을 쓴다(status에 따라 게이트가 화면을 가른다).
   function linkTarget(entry: ChangesetListEntry): LooseLinkTarget {
-    if (subTab === "closed") {
-      return linkOptions({
-        to: "/space/$spacePublicId/changesets/$changesetNumber",
-        params: { spacePublicId, changesetNumber: String(entry.number) },
-      });
+    if (subTab === "open" && entry.type !== "ingestion") {
+      return {};
     }
-    return entry.type === "ingestion"
-      ? linkOptions({
-          to: "/space/$spacePublicId/review/$changesetNumber",
-          params: { spacePublicId, changesetNumber: String(entry.number) },
-        })
-      : {};
+    return linkOptions({
+      to: "/space/$spacePublicId/changesets/$changesetNumber",
+      params: { spacePublicId, changesetNumber: String(entry.number) },
+    });
   }
 
   if (entries.length === 0) {

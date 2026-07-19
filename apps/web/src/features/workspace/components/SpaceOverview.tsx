@@ -115,7 +115,7 @@ export function SpaceOverview(props: SpaceOverviewProps) {
               active={activeTab === "changesets"}
               onClick={() =>
                 navigate({
-                  to: "/space/$spacePublicId/changes",
+                  to: "/space/$spacePublicId/changesets",
                   params: { spacePublicId },
                   search: { subTab: "open" },
                 })

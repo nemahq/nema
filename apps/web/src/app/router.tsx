@@ -12,11 +12,10 @@ import { notFoundAtRoot } from "@web/app/error/notFound";
 import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
-import { ClosedReviewPage } from "@web/app/pages/ClosedReviewPage";
+import { ChangesetDetailPage } from "@web/app/pages/ChangesetDetailPage";
 import { ComingSoonPage } from "@web/app/pages/ComingSoonPage";
 import { DraftsPage } from "@web/app/pages/DraftsPage";
 import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
-import { OpenReviewPage } from "@web/app/pages/OpenReviewPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { SessionPage } from "@web/app/pages/SessionPage";
 import { SignInPage } from "@web/app/pages/SignInPage";
@@ -213,7 +212,7 @@ function SpaceChangesShell() {
 
 const spaceChangesRoute = createRoute({
   getParentRoute: () => workspaceSidebarRoute,
-  path: "/space/$spacePublicId/changes",
+  path: "/space/$spacePublicId/changesets",
   component: SpaceChangesShell,
   errorComponent: RouteErrorFallback,
   validateSearch: z.object({
@@ -228,10 +227,13 @@ const draftsRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
-function OpenReviewShell() {
-  const { spacePublicId, changesetNumber } = openReviewRoute.useParams();
+// open(리뷰 대기)·closed(기록) 상태와 무관하게 changeset 하나는 URL 하나 — GitHub의
+// PR 번호 URL이 merge 여부와 무관하게 그대로인 것과 같다. 상태에 따라 어느 화면을
+// 그릴지는 ChangesetDetailPage 안의 게이트가 정한다(라우트는 number만 안다).
+function ChangesetDetailShell() {
+  const { spacePublicId, changesetNumber } = changesetDetailRoute.useParams();
   return (
-    <OpenReviewPage
+    <ChangesetDetailPage
       key={changesetNumber}
       spacePublicId={spacePublicId}
       changesetNumber={changesetNumber}
@@ -239,28 +241,10 @@ function OpenReviewShell() {
   );
 }
 
-const openReviewRoute = createRoute({
-  getParentRoute: () => workspaceSidebarRoute,
-  path: "/space/$spacePublicId/review/$changesetNumber",
-  component: OpenReviewShell,
-  errorComponent: RouteErrorFallback,
-});
-
-function ClosedReviewShell() {
-  const { spacePublicId, changesetNumber } = closedReviewRoute.useParams();
-  return (
-    <ClosedReviewPage
-      key={changesetNumber}
-      spacePublicId={spacePublicId}
-      changesetNumber={changesetNumber}
-    />
-  );
-}
-
-const closedReviewRoute = createRoute({
+const changesetDetailRoute = createRoute({
   getParentRoute: () => workspaceSidebarRoute,
   path: "/space/$spacePublicId/changesets/$changesetNumber",
-  component: ClosedReviewShell,
+  component: ChangesetDetailShell,
   errorComponent: RouteErrorFallback,
 });
 
@@ -289,8 +273,7 @@ const routeTree = rootRoute.addChildren([
       spaceOverviewRoute,
       spaceChangesRoute,
       draftsRoute,
-      openReviewRoute,
-      closedReviewRoute,
+      changesetDetailRoute,
     ]),
     devHarnessRoute,
   ]),
