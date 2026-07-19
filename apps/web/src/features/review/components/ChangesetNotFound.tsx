@@ -1,6 +1,6 @@
 import { useTranslation } from "@web/lib/tolgee";
 
-export function ReviewNotFound() {
+export function ChangesetNotFound() {
   const { t } = useTranslation();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 text-center">

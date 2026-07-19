@@ -6,9 +6,9 @@ import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { isChangesetNotFound } from "@web/features/review/changesetErrors";
+import { ChangesetNotFound } from "@web/features/review/components/ChangesetNotFound";
 import { ClosedReviewScreen } from "@web/features/review/components/ClosedReviewScreen";
 import { OpenReviewScreen } from "@web/features/review/components/OpenReviewScreen";
-import { ReviewNotFound } from "@web/features/review/components/ReviewNotFound";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useSpaceListSuspenseQuery } from "@web/features/workspace";
 
@@ -69,7 +69,7 @@ function ChangesetDetailSpaceGate({
     GetChangesetByNumberInputSchema.shape.number.safeParse(number).success;
 
   if (!space || !numberIsValid) {
-    return <ReviewNotFound />;
+    return <ChangesetNotFound />;
   }
 
   return (
@@ -77,7 +77,7 @@ function ChangesetDetailSpaceGate({
       boundaryName="changeset-detail"
       fallbackRender={(props) =>
         isChangesetNotFound(props.error) ? (
-          <ReviewNotFound />
+          <ChangesetNotFound />
         ) : (
           <SectionErrorFallback {...props} />
         )
