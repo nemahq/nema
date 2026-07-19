@@ -2,17 +2,17 @@ import { ClosedReviewScreen } from "@web/features/review";
 
 interface ClosedReviewPageProps {
   spacePublicId: string;
-  changesetId: string;
+  changesetNumber: string;
 }
 
 export function ClosedReviewPage({
   spacePublicId,
-  changesetId,
+  changesetNumber,
 }: ClosedReviewPageProps) {
   return (
     <ClosedReviewScreen
       spacePublicId={spacePublicId}
-      changesetId={changesetId}
+      changesetNumber={changesetNumber}
     />
   );
 }

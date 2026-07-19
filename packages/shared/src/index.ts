@@ -8,6 +8,8 @@ export {
   ArchiveStatementInputSchema,
   CHANGESET_LIST_LIMIT_DEFAULT,
   CHANGESET_LIST_LIMIT_MAX,
+  type GetChangesetByNumberInput,
+  GetChangesetByNumberInputSchema,
   type ListActiveRelationsInput,
   ListActiveRelationsInputSchema,
   type ListChangesetsInput,

@@ -1,12 +1,16 @@
 import { Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
+import { GetChangesetByNumberInputSchema } from "@nema-io/shared";
 import { Button } from "@nema-io/weave";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { NavigationBar } from "@web/components/layout/NavigationBar";
+import { isChangesetNotFound } from "@web/features/review/changesetErrors";
 import { ReviewHeader } from "@web/features/review/components/ReviewHeader";
 import { ReviewNavigationBar } from "@web/features/review/components/ReviewNavigationBar";
-import { useChangesetListSuspenseQuery } from "@web/features/review/hooks/useChangesetListQuery";
+import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
 import { changesetDisplayTitle } from "@web/features/review/utils";
 import { useSpaceListSuspenseQuery } from "@web/features/workspace";
@@ -14,7 +18,7 @@ import { useTranslation } from "@web/lib/tolgee";
 
 interface ClosedReviewScreenProps {
   spacePublicId: string;
-  changesetId: string;
+  changesetNumber: string;
 }
 
 function ClosedReviewNavSkeleton() {
@@ -38,34 +42,32 @@ function ClosedReviewNotFound() {
 interface ClosedReviewBodyProps {
   spacePublicId: string;
   spaceId: string;
-  changesetId: string;
+  number: number;
 }
 
-// space가 해석된 뒤에만 마운트된다(ClosedReviewSpaceGate 참고) — changesetList
-// suspense query가 spaceId를 필수 인자로 받아야 해서, 이 단계가 분리돼 있다.
+// space·number가 해석된 뒤에만 마운트된다(ClosedReviewSpaceGate 참고) — getByNumber
+// suspense query가 둘 다 필수 인자로 받아야 해서, 이 단계가 분리돼 있다.
 function ClosedReviewBody({
   spacePublicId,
   spaceId,
-  changesetId,
+  number,
 }: ClosedReviewBodyProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [changesetList] = useChangesetListSuspenseQuery(spaceId);
-  const entry = changesetList.changesets.find((c) => c.id === changesetId);
+  const [changesetDetail] = useChangesetDetailSuspenseQuery(spaceId, number);
   const revertChangeset = useRevertChangeset();
-
-  if (!entry) {
-    return <ClosedReviewNotFound />;
-  }
 
   function handleRevert() {
     revertChangeset.mutate(
-      { changesetId },
+      { changesetId: changesetDetail.id },
       {
-        onSuccess: ({ revertChangesetId }) => {
+        onSuccess: ({ revertChangesetNumber }) => {
           navigate({
-            to: "/space/$spacePublicId/changesets/$changesetId",
-            params: { spacePublicId, changesetId: revertChangesetId },
+            to: "/space/$spacePublicId/changesets/$changesetNumber",
+            params: {
+              spacePublicId,
+              changesetNumber: String(revertChangesetNumber),
+            },
           });
         },
       },
@@ -76,18 +78,18 @@ function ClosedReviewBody({
     <>
       <ReviewNavigationBar
         spacePublicId={spacePublicId}
-        title={changesetDisplayTitle(entry, t)}
+        title={changesetDisplayTitle(changesetDetail, t)}
       />
 
       <div data-main-scroll-area className="flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
           <ReviewHeader
-            title={changesetDisplayTitle(entry, t)}
-            number={entry.number}
-            status={entry.status}
-            time={entry.updatedAt}
+            title={changesetDisplayTitle(changesetDetail, t)}
+            number={changesetDetail.number}
+            status={changesetDetail.status}
+            time={changesetDetail.updatedAt}
             actions={
-              entry.status === "applied" && (
+              changesetDetail.status === "applied" && (
                 <Button
                   variant="neutral"
                   size="sm"
@@ -108,38 +110,52 @@ function ClosedReviewBody({
 
 function ClosedReviewSpaceGate({
   spacePublicId,
-  changesetId,
+  changesetNumber,
 }: ClosedReviewScreenProps) {
   const [spaceList] = useSpaceListSuspenseQuery();
   const space = spaceList.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
   );
+  const number = Number(changesetNumber);
+  const numberIsValid =
+    GetChangesetByNumberInputSchema.shape.number.safeParse(number).success;
 
-  if (!space) {
+  if (!space || !numberIsValid) {
     return <ClosedReviewNotFound />;
   }
 
   return (
-    <Suspense fallback={<ClosedReviewNavSkeleton />}>
-      <ClosedReviewBody
-        spacePublicId={spacePublicId}
-        spaceId={space.id}
-        changesetId={changesetId}
-      />
-    </Suspense>
+    <ErrorBoundary
+      boundaryName="closed-review-detail"
+      fallbackRender={(props) =>
+        isChangesetNotFound(props.error) ? (
+          <ClosedReviewNotFound />
+        ) : (
+          <SectionErrorFallback {...props} />
+        )
+      }
+    >
+      <Suspense fallback={<ClosedReviewNavSkeleton />}>
+        <ClosedReviewBody
+          spacePublicId={spacePublicId}
+          spaceId={space.id}
+          number={number}
+        />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
 export function ClosedReviewScreen({
   spacePublicId,
-  changesetId,
+  changesetNumber,
 }: ClosedReviewScreenProps) {
   return (
     <main className="flex flex-1 flex-col bg-surface-card">
       <Suspense fallback={<ClosedReviewNavSkeleton />}>
         <ClosedReviewSpaceGate
           spacePublicId={spacePublicId}
-          changesetId={changesetId}
+          changesetNumber={changesetNumber}
         />
       </Suspense>
     </main>

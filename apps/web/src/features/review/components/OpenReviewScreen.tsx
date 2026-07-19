@@ -102,8 +102,11 @@ function OpenReviewContent({
   // 처리 결과의 정본 위치인 ClosedReviewScreen(변경사항 상세)으로 곧바로 넘긴다.
   function goToClosedReview() {
     navigate({
-      to: "/space/$spacePublicId/changesets/$changesetId",
-      params: { spacePublicId, changesetId },
+      to: "/space/$spacePublicId/changesets/$changesetNumber",
+      params: {
+        spacePublicId,
+        changesetNumber: String(review.changesetNumber),
+      },
     });
   }
 
