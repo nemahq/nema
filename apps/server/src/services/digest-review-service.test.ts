@@ -110,6 +110,11 @@ describe("getReview", () => {
 
     expect(review.changesetNumber).toBe(12);
     expect(review.sourceTitle).toBe("원문 제목");
+    expect(supabase.eqCallsByTable.changesets).toContainEqual([
+      "space_id",
+      SPACE_ID,
+    ]);
+    expect(supabase.eqCallsByTable.changesets).toContainEqual(["number", 12]);
     expect(review.digests[0]?.referenceIds).toEqual([EXISTING_REFERENCE_ID]);
     expect(review.digests[0]?.newReferenceKeys).toEqual([NEW_REFERENCE_ID]);
     expect(review.newReferences).toEqual([

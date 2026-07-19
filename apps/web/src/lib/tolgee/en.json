@@ -114,6 +114,7 @@
     "detail_ingestion_discarded_body": "Discarded — nothing was created. The source is back in Drafts.",
     "detail_not_found_description": "The link may be wrong, or this is an older item outside the recent list.",
     "detail_not_found_title": "We couldn't find this change",
+    "detail_refresh_failed": "Saved, but the screen couldn't refresh. Please refresh manually.",
     "detail_restore_action": "Restore",
     "detail_revert_action": "Revert",
     "detail_source_reprocessed_disabled_reason": "The source has already been processed by another review.",
