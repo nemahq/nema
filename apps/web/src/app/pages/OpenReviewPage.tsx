@@ -2,14 +2,17 @@ import { OpenReviewScreen } from "@web/features/review";
 
 interface OpenReviewPageProps {
   spacePublicId: string;
-  changesetId: string;
+  changesetNumber: string;
 }
 
 export function OpenReviewPage({
   spacePublicId,
-  changesetId,
+  changesetNumber,
 }: OpenReviewPageProps) {
   return (
-    <OpenReviewScreen spacePublicId={spacePublicId} changesetId={changesetId} />
+    <OpenReviewScreen
+      spacePublicId={spacePublicId}
+      changesetNumber={changesetNumber}
+    />
   );
 }

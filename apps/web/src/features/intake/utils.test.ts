@@ -16,6 +16,7 @@ function buildSource(
     lastDigestionAttempt: null,
     errorMessage: null,
     reviewChangesetId: null,
+    reviewChangesetNumber: null,
     digestCount: 0,
     ...overrides,
   };

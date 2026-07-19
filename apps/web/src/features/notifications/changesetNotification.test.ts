@@ -10,6 +10,7 @@ function buildRow(overrides: Partial<ChangesetInsertRow>): ChangesetInsertRow {
   return {
     id: "changeset-1",
     space_id: "space-1",
+    number: 1,
     type: "ingestion",
     ...overrides,
   };
@@ -30,6 +31,10 @@ describe("isIngestionChangeset", () => {
 
   it("space_id가 null — 딥링크할 space가 없어 거른다", () => {
     expect(isIngestionChangeset(buildRow({ space_id: null }))).toBe(false);
+  });
+
+  it("number가 null — 딥링크할 번호가 없어 거른다", () => {
+    expect(isIngestionChangeset(buildRow({ number: null }))).toBe(false);
   });
 });
 

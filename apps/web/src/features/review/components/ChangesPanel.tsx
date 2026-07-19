@@ -134,8 +134,8 @@ function ChangesList({ spacePublicId, spaceId, subTab }: ChangesListProps) {
     }
     return entry.type === "ingestion"
       ? linkOptions({
-          to: "/space/$spacePublicId/review/$changesetId",
-          params: { spacePublicId, changesetId: entry.id },
+          to: "/space/$spacePublicId/review/$changesetNumber",
+          params: { spacePublicId, changesetNumber: String(entry.number) },
         })
       : {};
   }

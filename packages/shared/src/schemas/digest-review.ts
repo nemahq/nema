@@ -118,7 +118,8 @@ export type DigestReviewUpdateInput = z.infer<
 >;
 
 export const DigestReviewGetInputSchema = z.object({
-  changesetId: z.string().uuid(),
+  spaceId: z.string().uuid(),
+  number: z.number().int().min(1),
 });
 export type DigestReviewGetInput = z.infer<typeof DigestReviewGetInputSchema>;
 

@@ -9,7 +9,7 @@ export function registerGetIngestionReview(server: McpServer): void {
     {
       title: "Get ingestion review",
       description:
-        "리뷰 대기 중인 Digest 초안들을 changesetId로 펼쳐 조회한다. 원문과 나란히 놓고 확인·수정할 때 부른다.",
+        "리뷰 대기 중인 Digest 초안들을 spaceId+number(changeset 번호)로 펼쳐 조회한다. 원문과 나란히 놓고 확인·수정할 때 부른다.",
       inputSchema: DigestReviewGetInputSchema.shape,
       annotations: {
         readOnlyHint: true,

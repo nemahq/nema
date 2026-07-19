@@ -77,8 +77,11 @@ export function PendingSourceList() {
               {item.errorMessage && (
                 <p className="text-xs text-status-error">{item.errorMessage}</p>
               )}
-              {isOpen && item.reviewChangesetId && (
-                <DigestReviewCard changesetId={item.reviewChangesetId} />
+              {isOpen && item.reviewChangesetNumber !== null && (
+                <DigestReviewCard
+                  spaceId={item.spaceId}
+                  number={item.reviewChangesetNumber}
+                />
               )}
             </div>
           );

@@ -3,6 +3,7 @@ import type { ChangesetType } from "@web/features/review";
 export interface ChangesetInsertRow {
   id: string;
   space_id: string | null;
+  number: number | null;
   type: ChangesetType;
 }
 
@@ -12,8 +13,10 @@ export interface ChangesetInsertRow {
 // 알림도 같은 조건으로 걸러야 클릭이 에러 화면으로 떨어지지 않는다.
 export function isIngestionChangeset(
   row: ChangesetInsertRow,
-): row is ChangesetInsertRow & { space_id: string } {
-  return row.type === "ingestion" && row.space_id !== null;
+): row is ChangesetInsertRow & { space_id: string; number: number } {
+  return (
+    row.type === "ingestion" && row.space_id !== null && row.number !== null
+  );
 }
 
 export function resolveSpacePublicId(

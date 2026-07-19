@@ -1,5 +1,5 @@
 import { trpc } from "@web/lib/trpc";
 
-export function useDigestReviewSuspenseQuery(changesetId: string) {
-  return trpc.digestReview.get.useSuspenseQuery({ changesetId });
+export function useDigestReviewSuspenseQuery(spaceId: string, number: number) {
+  return trpc.digestReview.get.useSuspenseQuery({ spaceId, number });
 }

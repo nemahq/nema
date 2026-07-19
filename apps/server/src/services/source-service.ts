@@ -165,6 +165,8 @@ interface PendingSourceItem {
   // 소비자가 "생성 중"과 "리뷰 준비됨"을 가르는 신호 — 제품에선 이 둘이 각각
   // 초안 목록과 변경셋 대기 탭으로 갈리지만, 그 분리는 화면 층의 몫이다.
   reviewChangesetId: string | null;
+  // Open 리뷰 화면 URL이 number 기준이라(변경사항 상세와 통일) 함께 내려준다.
+  reviewChangesetNumber: number | null;
   digestCount: number;
 }
 
@@ -192,7 +194,7 @@ export async function listPendingSources(args: {
 
   const { data: changesets, error: changesetError } = await supabase
     .from("changesets")
-    .select("id, source_id, status, changes(target_type)")
+    .select("id, number, source_id, status, changes(target_type)")
     .eq("type", "ingestion")
     .in("status", ["pending", "rejected"])
     .in("source_id", sourceIds);
@@ -200,7 +202,11 @@ export async function listPendingSources(args: {
 
   const reviewBySource = new Map<
     string,
-    { reviewChangesetId: string; digestCount: number }
+    {
+      reviewChangesetId: string;
+      reviewChangesetNumber: number | null;
+      digestCount: number;
+    }
   >();
   // 존재 여부만 볼 뿐 시점은 안 따진다 — 버림 후 원본을 고쳐 재시도해도 그 원본은
   // 계속 discardedSourceIds에 남는다(design-decisions-log.md 2026-07-17 "정확도
@@ -213,6 +219,7 @@ export async function listPendingSources(args: {
     if (changeset.status === "pending") {
       reviewBySource.set(changeset.source_id, {
         reviewChangesetId: changeset.id,
+        reviewChangesetNumber: changeset.number,
         digestCount: changeset.changes.filter(
           (change) => change.target_type === "digest",
         ).length,
@@ -238,6 +245,7 @@ export async function listPendingSources(args: {
         lastDigestionAttempt: source.last_digestion_attempt,
         errorMessage: source.error_message,
         reviewChangesetId: review?.reviewChangesetId ?? null,
+        reviewChangesetNumber: review?.reviewChangesetNumber ?? null,
         digestCount: review?.digestCount ?? 0,
       };
     }),

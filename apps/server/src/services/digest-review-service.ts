@@ -9,7 +9,10 @@ import { DigestBodySchema, ReferenceTypeSchema } from "@nema-io/shared";
 
 import type { Json } from "@server/infra/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
-import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import {
+  SupabaseError,
+  throwIfSupabaseError,
+} from "@server/infra/supabase-error";
 
 // --- 리뷰 상세 — Digest 리뷰 화면의 초안 상태 ---
 
@@ -69,16 +72,18 @@ interface DigestReviewDetail {
 
 export async function getReview(args: {
   supabase: TypedSupabaseClient;
-  changesetId: string;
+  spaceId: string;
+  number: number;
 }): Promise<DigestReviewDetail> {
-  const { supabase, changesetId } = args;
+  const { supabase, spaceId, number } = args;
 
   const { data: changeset, error } = await supabase
     .from("changesets")
     .select(
       "id, number, type, status, source_id, space_id, changes(id, action, target_type, target_id, data), sources(title, body, created_at), spaces(workspace_id)",
     )
-    .eq("id", changesetId)
+    .eq("space_id", spaceId)
+    .eq("number", number)
     .single();
   throwIfSupabaseError(error);
 
@@ -91,8 +96,13 @@ export async function getReview(args: {
     changeset.space_id === null ||
     changeset.spaces === null
   ) {
-    throw new Error(
-      `changeset ${changesetId} is not a pending ingestion review`,
+    // 존재하지 않는 changeset(위 .single()이 이미 잡음)과 달리 이건 "있긴 한데
+    // 지금 이 화면 자격이 아니다"(이미 닫힘·타입이 다름 등) — 그래도 FE 입장에선
+    // "이 리뷰에 지금 접근할 수 없다"는 같은 결과라 not_found로 통일한다. 원문
+    // 메시지가 그대로 클라이언트에 새지 않도록 SupabaseError로 던진다(session-service.ts 패턴).
+    throw new SupabaseError(
+      "not_found",
+      `changeset #${number} in space ${spaceId} is not a pending ingestion review`,
     );
   }
 

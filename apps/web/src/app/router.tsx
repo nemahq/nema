@@ -229,19 +229,19 @@ const draftsRoute = createRoute({
 });
 
 function OpenReviewShell() {
-  const { spacePublicId, changesetId } = openReviewRoute.useParams();
+  const { spacePublicId, changesetNumber } = openReviewRoute.useParams();
   return (
     <OpenReviewPage
-      key={changesetId}
+      key={changesetNumber}
       spacePublicId={spacePublicId}
-      changesetId={changesetId}
+      changesetNumber={changesetNumber}
     />
   );
 }
 
 const openReviewRoute = createRoute({
   getParentRoute: () => workspaceSidebarRoute,
-  path: "/space/$spacePublicId/review/$changesetId",
+  path: "/space/$spacePublicId/review/$changesetNumber",
   component: OpenReviewShell,
   errorComponent: RouteErrorFallback,
 });

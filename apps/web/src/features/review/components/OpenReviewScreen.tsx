@@ -1,10 +1,14 @@
 import { Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
+import { DigestReviewGetInputSchema } from "@nema-io/shared";
 import { Button, Skeleton } from "@nema-io/weave";
 
+import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { useNotificationSoftAsk } from "@web/features/notifications";
+import { isChangesetNotFound } from "@web/features/review/changesetErrors";
 import {
   confirmDisabledReason as computeConfirmDisabledReason,
   runConfirmReview,
@@ -14,6 +18,7 @@ import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDige
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useReviewEditingState } from "@web/features/review/hooks/useReviewEditingState";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
+import { useSpaceListSuspenseQuery } from "@web/features/workspace";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -22,6 +27,7 @@ import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
 import { ReferenceMergeCard } from "./ReferenceMergeCard";
 import { ReviewHeader } from "./ReviewHeader";
 import { ReviewNavigationBar } from "./ReviewNavigationBar";
+import { ReviewNotFound } from "./ReviewNotFound";
 import { SourceTextPanel } from "./SourceTextPanel";
 
 const CONFIRM_DISABLED_REASON_KEY = {
@@ -37,19 +43,30 @@ const CONFIRM_DISABLED_REASON_KEY = {
 // relation의 open 리뷰는 여기가 아니라 Digest 상세 판정 모드가 맡는다(review-flow.md).
 interface OpenReviewScreenProps {
   spacePublicId: string;
-  changesetId: string;
+  changesetNumber: string;
+}
+
+function OpenReviewNavSkeleton() {
+  return <NavigationBar />;
+}
+
+interface OpenReviewContentProps {
+  spacePublicId: string;
+  spaceId: string;
+  number: number;
 }
 
 function OpenReviewContent({
   spacePublicId,
-  changesetId,
-}: OpenReviewScreenProps) {
+  spaceId,
+  number,
+}: OpenReviewContentProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [review] = useDigestReviewSuspenseQuery(changesetId);
+  const [review] = useDigestReviewSuspenseQuery(spaceId, number);
   const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
 
-  const updateReview = useUpdateReview(changesetId);
+  const updateReview = useUpdateReview(spaceId, number);
   const confirmReview = useConfirmReview();
   const discardReview = useDiscardReview();
   const showNotificationSoftAsk = useNotificationSoftAsk();
@@ -118,7 +135,7 @@ function OpenReviewContent({
     confirmReview.reset();
     try {
       await runConfirmReview({
-        changesetId,
+        changesetId: review.changesetId,
         dirty,
         digestRows,
         newReferences: referenceRows,
@@ -138,7 +155,7 @@ function OpenReviewContent({
       return;
     }
     discardReview.mutate(
-      { changesetId },
+      { changesetId: review.changesetId },
       {
         onSuccess: () => {
           showNotificationSoftAsk();
@@ -269,23 +286,67 @@ function ReviewHeaderActions({
   );
 }
 
-export function OpenReviewScreen(props: OpenReviewScreenProps) {
+function OpenReviewSpaceGate({
+  spacePublicId,
+  changesetNumber,
+}: OpenReviewScreenProps) {
+  const [spaceList] = useSpaceListSuspenseQuery();
+  const space = spaceList.spaces.find(
+    (candidate) => candidate.publicId === spacePublicId,
+  );
+  const number = Number(changesetNumber);
+  const numberIsValid =
+    DigestReviewGetInputSchema.shape.number.safeParse(number).success;
+
+  if (!space || !numberIsValid) {
+    return <ReviewNotFound />;
+  }
+
   return (
-    <Suspense
-      fallback={
-        <main className="flex flex-1 flex-col bg-surface-card">
-          <NavigationBar />
-          <div data-main-scroll-area className="flex-1 overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
-              <Skeleton className="h-8 w-1/2" />
-              <Skeleton className="h-40 w-full" />
-              <Skeleton className="h-32 w-full" />
-            </div>
-          </div>
-        </main>
+    <ErrorBoundary
+      boundaryName="open-review-detail"
+      fallbackRender={(props) =>
+        isChangesetNotFound(props.error) ? (
+          <ReviewNotFound />
+        ) : (
+          <SectionErrorFallback {...props} />
+        )
       }
     >
-      <OpenReviewContent {...props} />
+      <Suspense
+        fallback={
+          <main className="flex flex-1 flex-col bg-surface-card">
+            <OpenReviewNavSkeleton />
+            <div data-main-scroll-area className="flex-1 overflow-y-auto">
+              <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
+                <Skeleton className="h-8 w-1/2" />
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+            </div>
+          </main>
+        }
+      >
+        <OpenReviewContent
+          spacePublicId={spacePublicId}
+          spaceId={space.id}
+          number={number}
+        />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+export function OpenReviewScreen({
+  spacePublicId,
+  changesetNumber,
+}: OpenReviewScreenProps) {
+  return (
+    <Suspense fallback={<OpenReviewNavSkeleton />}>
+      <OpenReviewSpaceGate
+        spacePublicId={spacePublicId}
+        changesetNumber={changesetNumber}
+      />
     </Suspense>
   );
 }

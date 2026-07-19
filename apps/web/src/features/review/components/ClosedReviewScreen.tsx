@@ -10,6 +10,7 @@ import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { isChangesetNotFound } from "@web/features/review/changesetErrors";
 import { ReviewHeader } from "@web/features/review/components/ReviewHeader";
 import { ReviewNavigationBar } from "@web/features/review/components/ReviewNavigationBar";
+import { ReviewNotFound } from "@web/features/review/components/ReviewNotFound";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
 import { changesetDisplayTitle } from "@web/features/review/utils";
@@ -23,20 +24,6 @@ interface ClosedReviewScreenProps {
 
 function ClosedReviewNavSkeleton() {
   return <NavigationBar />;
-}
-
-function ClosedReviewNotFound() {
-  const { t } = useTranslation();
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 text-center">
-      <h1 className="text-lg font-semibold text-fg-primary">
-        {t("review.detail_not_found_title")}
-      </h1>
-      <p className="text-sm text-fg-tertiary">
-        {t("review.detail_not_found_description")}
-      </p>
-    </div>
-  );
 }
 
 interface ClosedReviewBodyProps {
@@ -120,7 +107,7 @@ function ClosedReviewSpaceGate({
     GetChangesetByNumberInputSchema.shape.number.safeParse(number).success;
 
   if (!space || !numberIsValid) {
-    return <ClosedReviewNotFound />;
+    return <ReviewNotFound />;
   }
 
   return (
@@ -128,7 +115,7 @@ function ClosedReviewSpaceGate({
       boundaryName="closed-review-detail"
       fallbackRender={(props) =>
         isChangesetNotFound(props.error) ? (
-          <ClosedReviewNotFound />
+          <ReviewNotFound />
         ) : (
           <SectionErrorFallback {...props} />
         )

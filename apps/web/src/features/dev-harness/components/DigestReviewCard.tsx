@@ -29,12 +29,13 @@ function toEdit(digest: ReviewDigest): DigestEdit {
 }
 
 interface DigestReviewCardProps {
-  changesetId: string;
+  spaceId: string;
+  number: number;
 }
 
-export function DigestReviewCard({ changesetId }: DigestReviewCardProps) {
-  const reviewQuery = useDigestReviewQuery(changesetId);
-  const updateReview = useUpdateReview(changesetId);
+export function DigestReviewCard({ spaceId, number }: DigestReviewCardProps) {
+  const reviewQuery = useDigestReviewQuery(spaceId, number);
+  const updateReview = useUpdateReview(spaceId, number);
   const confirmReview = useConfirmReview();
 
   const [edits, setEdits] = useState<DigestEdit[] | null>(null);
@@ -84,7 +85,7 @@ export function DigestReviewCard({ changesetId }: DigestReviewCardProps) {
     confirmReview.reset();
     updateReview.mutate(
       {
-        changesetId,
+        changesetId: review.changesetId,
         digests: buildDigests(),
         newReferences: review.newReferences,
       },
@@ -104,13 +105,13 @@ export function DigestReviewCard({ changesetId }: DigestReviewCardProps) {
       // 편집한 내용을 먼저 반영한 뒤 확정한다 — 확정은 저장된 초안을 박제한다.
       if (editedDigests) {
         await updateReview.mutateAsync({
-          changesetId,
+          changesetId: review.changesetId,
           digests: editedDigests,
           newReferences: review.newReferences,
         });
         setEdits(null);
       }
-      confirmReview.mutate({ changesetId });
+      confirmReview.mutate({ changesetId: review.changesetId });
     } catch {
       // 저장 mutation 거부 시 확정하지 않는다 — 에러는 updateReview.error로 노출된다.
     }

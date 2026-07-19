@@ -177,6 +177,7 @@ describe("listPendingSources", () => {
           },
           {
             id: "cs-pending-new",
+            number: 7,
             source_id: SOURCE_A,
             status: "pending",
             changes: [{ target_type: "digest" }, { target_type: "reference" }],
@@ -189,6 +190,7 @@ describe("listPendingSources", () => {
       expect.objectContaining({
         sourceId: SOURCE_A,
         reviewChangesetId: "cs-pending-new",
+        reviewChangesetNumber: 7,
         digestCount: 1,
         digestionOutcome: "discarded",
       }),
