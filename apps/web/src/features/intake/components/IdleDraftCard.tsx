@@ -2,7 +2,6 @@ import { memo, type ReactNode } from "react";
 
 import { TriangleAlert } from "@nema-io/weave/icons";
 
-import { useIsDraftEdited } from "@web/features/intake/contexts/DraftEditingContext";
 import type { IdleDraftStatus } from "@web/features/intake/utils";
 
 import { DraftCardShell } from "./DraftCardShell";
@@ -28,6 +27,7 @@ interface IdleDraftCardProps {
   body: string;
   status: IdleDraftStatus;
   createdAt: string;
+  inputChangedSinceDigestion: boolean;
   onSelect: (sourceId: string) => void;
 }
 
@@ -37,13 +37,15 @@ export const IdleDraftCard = memo(function IdleDraftCard({
   body,
   status,
   createdAt,
+  inputChangedSinceDigestion,
   onSelect,
 }: IdleDraftCardProps) {
-  // 결과없음 아이콘의 근거는 "원문을 아직 안 고쳤다"라, 상세에서 실제로 고치는
-  // 순간(정리 버튼이 풀리는 조건과 동일) 카드에서도 같이 뗀다.
-  const isEdited = useIsDraftEdited(sourceId);
+  // 결과없음 아이콘의 근거는 "정리해봤자 같은 결과"라, 원문·Space가 실제로 바뀌어
+  // 다른 결과가 나올 여지가 생기면(재정리 버튼이 풀리는 조건과 동일) 뗀다.
   const statusIcon =
-    status === "empty" && isEdited ? null : STATUS_ICON[status];
+    status === "empty" && inputChangedSinceDigestion
+      ? null
+      : STATUS_ICON[status];
 
   function handleSelect() {
     onSelect(sourceId);

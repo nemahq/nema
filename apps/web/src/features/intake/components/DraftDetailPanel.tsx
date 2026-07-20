@@ -65,6 +65,7 @@ export function DraftDetailPanel({ sourceId, onClose }: DraftDetailPanelProps) {
           title={source.title}
           body={source.body}
           status={status}
+          inputChangedSinceDigestion={source.inputChangedSinceDigestion}
           onClose={onClose}
         />
       )}

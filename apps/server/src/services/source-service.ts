@@ -149,6 +149,21 @@ function toDigestionOutcome(args: {
   }
 }
 
+function hasInputChangedSinceDigestion(args: {
+  digestionInputUpdatedAt: string;
+  lastDigestionAttempt: string | null;
+}): boolean {
+  // 아직 한 번도 안 붙잡힌 원본은 비교할 시도가 없다 — 정리를 해본 적이 없으니
+  // "다시 해봐야 소용없다"는 판정 자체가 성립하지 않는다.
+  if (args.lastDigestionAttempt === null) {
+    return false;
+  }
+  return (
+    new Date(args.digestionInputUpdatedAt).getTime() >
+    new Date(args.lastDigestionAttempt).getTime()
+  );
+}
+
 interface PendingSourceItem {
   sourceId: string;
   spaceId: string;
@@ -160,6 +175,10 @@ interface PendingSourceItem {
   // 만들어진 시점이라, 재시도·재생성처럼 뒤늦게 다시 돌기 시작한 시도의
   // 경과 시간을 재는 기준으론 안 맞는다(아직 한 번도 안 붙잡혔으면 null).
   lastDigestionAttempt: string | null;
+  // 마지막 정리 이후 정리 입력(본문·Space)이 바뀌었는지 — "원본을 안 고치고 다시
+  // 정리해봐야 같은 결과"라는 판정에 쓴다. 두 시각을 소비처가 각자 비교하면 그 규칙이
+  // 화면마다 흩어지므로 digestionOutcome과 같은 이유로 서버가 조합해 내려준다.
+  inputChangedSinceDigestion: boolean;
   errorMessage: string | null;
   // 생성이 끝나 리뷰가 열렸으면 그 pending ingestion changeset(상세 URL이 number
   // 기준이라 changesetNumber도 함께 내려준다). 아직이면 null — 소비자가 "생성 중"과
@@ -179,7 +198,7 @@ export async function listPendingSources(args: {
   const { data: sources, error } = await supabase
     .from("sources")
     .select(
-      "id, space_id, body, title, created_at, digestion_status, last_digestion_attempt, error_message",
+      "id, space_id, body, title, created_at, digestion_status, last_digestion_attempt, digestion_input_updated_at, error_message",
     )
     .eq("status", "pending")
     .order("created_at", { ascending: false })
@@ -241,6 +260,10 @@ export async function listPendingSources(args: {
           hasDiscardedReview: discardedSourceIds.has(source.id),
         }),
         lastDigestionAttempt: source.last_digestion_attempt,
+        inputChangedSinceDigestion: hasInputChangedSinceDigestion({
+          digestionInputUpdatedAt: source.digestion_input_updated_at,
+          lastDigestionAttempt: source.last_digestion_attempt,
+        }),
         errorMessage: source.error_message,
         review: review
           ? {

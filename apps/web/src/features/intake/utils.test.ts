@@ -14,6 +14,7 @@ function buildSource(
     createdAt: "2026-07-12T00:00:00.000Z",
     digestionOutcome: "processing",
     lastDigestionAttempt: null,
+    inputChangedSinceDigestion: false,
     errorMessage: null,
     review: null,
     digestCount: 0,

@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { SOURCE_BODY_MAX_LENGTH } from "@nema-io/shared";
 import { Alert, Button } from "@nema-io/weave";
 
-import { useMarkDraftEdited } from "@web/features/intake/contexts/DraftEditingContext";
 import { useStartSourceDigestion } from "@web/features/intake/hooks/useStartSourceDigestion";
 import { useUpdateSourceBody } from "@web/features/intake/hooks/useUpdateSourceBody";
 import type { IdleDraftStatus } from "@web/features/intake/utils";
@@ -17,6 +16,7 @@ interface DraftBodyEditorProps {
   sourceId: string;
   initialBody: string;
   status: IdleDraftStatus;
+  inputChangedSinceDigestion: boolean;
   // 정리 시작은 제목·삭제·Space까지 같이 잠그므로 상위가 알아야 한다.
   onStartingDigestionChange: (starting: boolean) => void;
   isStartingDigestion: boolean;
@@ -26,33 +26,26 @@ export function DraftBodyEditor({
   sourceId,
   initialBody,
   status,
+  inputChangedSinceDigestion,
   onStartingDigestionChange,
   isStartingDigestion,
 }: DraftBodyEditorProps) {
   const { t } = useTranslation();
   const [body, setBody] = useState(initialBody);
-  const markDraftEdited = useMarkDraftEdited();
   const updateBodyMutation = useUpdateSourceBody();
   const startDigestionMutation = useStartSourceDigestion();
   const bodyDirty = body !== initialBody;
   // 결과없음은 원본을 안 바꾸고 정리해봐야 또 결과없음이 나올 가능성이 높다 —
   // 원문이 실제로 바뀌기 전까진 정리를 막아 헛수고를 예방한다. failed/cancelled는
   // 내용 문제가 아닐 수 있어(일시적 시스템 오류 등) 이 제약을 안 둔다.
+  //
+  // 저장된 변경(서버 판정)과 아직 저장 안 된 편집을 모두 인정한다 — 후자를 빼면
+  // 고치자마자 누르려는데 버튼이 잠겨 blur부터 시켜야 하고, 전자를 빼면 blur로
+  // 저장되는 순간 버튼이 도로 잠긴다. 저장 전에 눌러도 handleRegenerate가 먼저
+  // 저장하므로 결과는 같다.
   const regenerateDisabled =
-    (status === "empty" && !bodyDirty) || isStartingDigestion;
-
-  // onChange 시점에만 알리면, 저장 후 폴링으로 initialBody가 따라잡아도(예:
-  // Organize가 body를 저장한 뒤) 재계산할 트리거가 없어 dirty가 그대로
-  // 굳어버린다 — bodyDirty 자체를 구독해 매번 최신값으로 동기화한다.
-  useEffect(
-    function syncBodyDirty() {
-      markDraftEdited(bodyDirty ? sourceId : null);
-      return function clearOnUnmount() {
-        markDraftEdited(null);
-      };
-    },
-    [bodyDirty, sourceId, markDraftEdited],
-  );
+    (status === "empty" && !inputChangedSinceDigestion && !bodyDirty) ||
+    isStartingDigestion;
 
   // blur 시점에 저장해 편집 중 이탈(다른 초안 클릭 등)로 잃는 걸 막는다 — 다만
   // Organize는 이 시점에 기대지 않고 클릭 시점에 한 번 더 직접 저장한다(아래).

@@ -14,6 +14,7 @@ interface IdleDraftDetailPanelProps {
   title: string | null;
   body: string;
   status: IdleDraftStatus;
+  inputChangedSinceDigestion: boolean;
   onClose: () => void;
 }
 
@@ -25,6 +26,7 @@ export function IdleDraftDetailPanel({
   title,
   body,
   status,
+  inputChangedSinceDigestion,
   onClose,
 }: IdleDraftDetailPanelProps) {
   const [isStartingDigestion, setIsStartingDigestion] = useState(false);
@@ -57,6 +59,7 @@ export function IdleDraftDetailPanel({
         sourceId={sourceId}
         initialBody={body}
         status={status}
+        inputChangedSinceDigestion={inputChangedSinceDigestion}
         isStartingDigestion={isStartingDigestion}
         onStartingDigestionChange={setIsStartingDigestion}
       />

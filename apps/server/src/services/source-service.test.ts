@@ -118,22 +118,23 @@ const SPACE_ID = "77777777-7777-4777-a777-777777777777";
 const SOURCE_A = "88888888-8888-4888-a888-888888888888";
 const SOURCE_B = "99999999-9999-4999-a999-999999999999";
 
-function pendingSourceRow(
-  id: string,
-  digestionStatus:
-    | "pending"
-    | "failed"
-    | "cancelled"
-    | "completed" = "completed",
-) {
+const DIGESTED_AT = "2026-07-17T00:00:00.000Z";
+
+function pendingSourceRow(args: {
+  id: string;
+  digestionStatus?: "pending" | "failed" | "cancelled" | "completed";
+  lastDigestionAttempt?: string | null;
+  digestionInputUpdatedAt?: string;
+}) {
   return {
-    id,
+    id: args.id,
     space_id: SPACE_ID,
     body: "본문",
     title: null,
-    created_at: "2026-07-17T00:00:00.000Z",
-    digestion_status: digestionStatus,
-    last_digestion_attempt: null,
+    created_at: DIGESTED_AT,
+    digestion_status: args.digestionStatus ?? "completed",
+    last_digestion_attempt: args.lastDigestionAttempt ?? null,
+    digestion_input_updated_at: args.digestionInputUpdatedAt ?? DIGESTED_AT,
     error_message: null,
   };
 }
@@ -142,7 +143,7 @@ describe("listPendingSources", () => {
   it("rejected changeset만 있으면 digestionOutcome=discarded, review는 null", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({
-        sources: [pendingSourceRow(SOURCE_A)],
+        sources: [pendingSourceRow({ id: SOURCE_A })],
         changesets: [
           {
             id: "cs-rejected",
@@ -167,7 +168,7 @@ describe("listPendingSources", () => {
   it("pending+rejected가 같은 원본에 함께 있으면(재시도) pending을 리뷰로 쓰면서도 discarded는 유지", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({
-        sources: [pendingSourceRow(SOURCE_A)],
+        sources: [pendingSourceRow({ id: SOURCE_A })],
         changesets: [
           {
             id: "cs-rejected-old",
@@ -196,10 +197,72 @@ describe("listPendingSources", () => {
     ]);
   });
 
+  it("마지막 정리 이후 입력이 바뀌었으면 inputChangedSinceDigestion=true", async () => {
+    const { items } = await listPendingSources({
+      supabase: mockSupabase({
+        sources: [
+          pendingSourceRow({
+            id: SOURCE_A,
+            digestionStatus: "completed",
+            lastDigestionAttempt: "2026-07-17T01:00:00.000Z",
+            digestionInputUpdatedAt: "2026-07-17T02:00:00.000Z",
+          }),
+        ],
+        changesets: [],
+      }),
+    });
+
+    expect(items[0]).toEqual(
+      expect.objectContaining({ inputChangedSinceDigestion: true }),
+    );
+  });
+
+  it("입력 변경 뒤에 정리가 다시 돌았으면 false — 재정리 게이트가 도로 닫힌다", async () => {
+    const { items } = await listPendingSources({
+      supabase: mockSupabase({
+        sources: [
+          pendingSourceRow({
+            id: SOURCE_A,
+            digestionStatus: "completed",
+            lastDigestionAttempt: "2026-07-17T03:00:00.000Z",
+            digestionInputUpdatedAt: "2026-07-17T02:00:00.000Z",
+          }),
+        ],
+        changesets: [],
+      }),
+    });
+
+    expect(items[0]).toEqual(
+      expect.objectContaining({ inputChangedSinceDigestion: false }),
+    );
+  });
+
+  // new Date(null)이 epoch(0)이라 null 가드가 없으면 모든 원본이 true로 새어
+  // 헛수고 방지가 통째로 무력화된다 — 경계값이라 명시적으로 잠근다.
+  it("정리를 한 번도 시도한 적 없으면 false", async () => {
+    const { items } = await listPendingSources({
+      supabase: mockSupabase({
+        sources: [
+          pendingSourceRow({
+            id: SOURCE_A,
+            digestionStatus: "pending",
+            lastDigestionAttempt: null,
+            digestionInputUpdatedAt: "2026-07-17T02:00:00.000Z",
+          }),
+        ],
+        changesets: [],
+      }),
+    });
+
+    expect(items[0]).toEqual(
+      expect.objectContaining({ inputChangedSinceDigestion: false }),
+    );
+  });
+
   it("changeset이 전혀 없으면 진짜 결과없음 — digestionOutcome=empty", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({
-        sources: [pendingSourceRow(SOURCE_B)],
+        sources: [pendingSourceRow({ id: SOURCE_B })],
         changesets: [],
       }),
     });
@@ -222,7 +285,7 @@ describe("listPendingSources", () => {
     async (digestionStatus, outcome) => {
       const { items } = await listPendingSources({
         supabase: mockSupabase({
-          sources: [pendingSourceRow(SOURCE_A, digestionStatus)],
+          sources: [pendingSourceRow({ id: SOURCE_A, digestionStatus })],
           changesets: [
             {
               id: "cs-rejected",
