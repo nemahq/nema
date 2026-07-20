@@ -1,6 +1,4 @@
-import { Suspense, useMemo } from "react";
-
-import { Skeleton } from "@nema-io/weave";
+import { Suspense, useEffect, useMemo } from "react";
 
 import { useNotificationSoftAsk } from "@web/features/notifications";
 import {
@@ -20,11 +18,11 @@ import { useTranslation } from "@web/lib/tolgee";
 import { ChangesetDetailHeader } from "./ChangesetDetailHeader";
 import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
 import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
+import { useChangesetSidePanel } from "./ChangesetSidePanel";
 import { DigestSection } from "./DigestSection";
 import { EditingProvider, useEditing } from "./EditingProvider";
 import { IngestionActions } from "./IngestionActions";
 import { ReferenceSection } from "./ReferenceSection";
-import { SourceTextPanel } from "./SourceTextPanel";
 
 const CONFIRM_DISABLED_REASON_KEY = {
   no_candidates: "review.confirm_disabled_no_candidates",
@@ -62,6 +60,36 @@ function IngestionContent() {
     [review, overrides],
   );
   const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
+
+  // 사이드 패널(ChangesetSidePanelProvider)은 이 데이터가 로드되기 전인
+  // ChangesetDetailScreen 레벨에서 이미 마운트돼 있어, 렌더 중 값을 파생시킬 수
+  // 없다 — Suspense 경계 너머 이미 떠 있는 트리에 이 화면의 콘텐츠를 알리는
+  // 유일한 방법이라 effect로 연결한다(다른 트리로의 동기화는 파생으로 못 없앤다).
+  const { openTab } = useChangesetSidePanel();
+  useEffect(
+    function openSourceTabOnEntry() {
+      openTab({
+        id: `source:${review.sourceId}`,
+        label: review.sourceTitle ?? t("review.source_text_panel_title"),
+        content: (
+          <div className="flex flex-col gap-4">
+            <p className="text-xl font-bold text-fg-primary">{reviewTitle}</p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg-primary">
+              {review.sourceBody}
+            </p>
+          </div>
+        ),
+      });
+    },
+    [
+      openTab,
+      review.sourceId,
+      review.sourceTitle,
+      review.sourceBody,
+      reviewTitle,
+      t,
+    ],
+  );
 
   const updateReview = useUpdateReview(spaceId, changesetNumber);
   const confirmReview = useConfirmReview(spaceId, changesetNumber);
@@ -148,8 +176,6 @@ function IngestionContent() {
         <p className="text-sm text-status-error">{getErrorMessage(error)}</p>
       )}
 
-      <SourceTextPanel body={review.sourceBody} />
-
       <DigestSection
         digests={review.digests}
         citedReferences={review.citedReferences}
@@ -171,15 +197,7 @@ function IngestionContent() {
 // 책임진다.
 export function IngestionScreen() {
   return (
-    <Suspense
-      fallback={
-        <ChangesetDetailLayoutSkeleton>
-          <Skeleton className="h-8 w-1/2" />
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </ChangesetDetailLayoutSkeleton>
-      }
-    >
+    <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
       <EditingProvider>
         <IngestionContent />
       </EditingProvider>

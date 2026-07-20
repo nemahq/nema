@@ -11,6 +11,7 @@ import { isChangesetNotFound } from "@web/features/review/changesetErrors";
 import { ChangesetDetailLayoutSkeleton } from "@web/features/review/components/ChangesetDetailLayoutSkeleton";
 import { renderChangesetDetailScreen } from "@web/features/review/components/changesetDetailRegistry";
 import { ChangesetNotFound } from "@web/features/review/components/ChangesetNotFound";
+import { ChangesetSidePanelProvider } from "@web/features/review/components/ChangesetSidePanel";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import {
@@ -117,14 +118,19 @@ function ChangesetDetailSpaceGate({
   );
 }
 
+// 원문 등 사이드 패널 탭은 changeset 단위로 살고 죽는다 — 라우트 shell이 이미
+// changesetNumber로 key를 걸어두므로(router.tsx), 다른 changeset으로 넘어가면
+// 이 Provider째로 리마운트되어 열려있던 탭도 자연히 정리된다.
 export function ChangesetDetailScreen({
   changesetNumber,
 }: ChangesetDetailRouteProps) {
   return (
-    <div className="flex flex-1 flex-col bg-surface-card">
-      <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
-        <ChangesetDetailSpaceGate changesetNumber={changesetNumber} />
-      </Suspense>
-    </div>
+    <ChangesetSidePanelProvider>
+      <div className="flex min-h-0 flex-1 flex-col bg-surface-card">
+        <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
+          <ChangesetDetailSpaceGate changesetNumber={changesetNumber} />
+        </Suspense>
+      </div>
+    </ChangesetSidePanelProvider>
   );
 }
