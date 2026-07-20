@@ -168,7 +168,7 @@ export function IdleDraftDetailPanel({
         placeholder={t("intake.draft_untitled")}
         maxLength={SOURCE_TITLE_MAX_LENGTH}
         aria-invalid={updateTitleMutation.isError}
-        className="bg-transparent px-6 pt-4 text-xl font-bold text-fg-primary outline-none placeholder:text-fg-tertiary"
+        className="bg-transparent px-6 pt-4 text-xl font-bold text-fg-primary outline-none placeholder:text-fg-quaternary"
       />
       {updateTitleMutation.isError && (
         <div className="px-6 pt-2">

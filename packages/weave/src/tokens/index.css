@@ -138,6 +138,11 @@
   --fg-primary: var(--palette-light-fg-primary);
   --fg-secondary: var(--palette-light-fg-secondary);
   --fg-tertiary: var(--palette-light-fg-tertiary);
+  /* fg-tertiary의 파생값(60% 알파) — placeholder·disabled처럼 tertiary보다 한 단계
+     더 죽여야 하는 곳 전용. color-mix로 fg-tertiary를 참조해서 계산하므로, 이 한
+     선언만으로 .dark/.theme-inverted에서 fg-tertiary가 바뀌면 자동으로 따라간다
+     (커스텀 프로퍼티는 참조 시점의 값으로 재계산됨 — 테마별 블록에 중복 선언 불필요). */
+  --fg-quaternary: color-mix(in srgb, var(--fg-tertiary) 60%, transparent);
 
   --status-success: var(--palette-light-status-success);
   --status-success-tint: var(--palette-light-status-success-tint);
@@ -268,6 +273,7 @@
   --color-fg-primary: var(--fg-primary);
   --color-fg-secondary: var(--fg-secondary);
   --color-fg-tertiary: var(--fg-tertiary);
+  --color-fg-quaternary: var(--fg-quaternary);
 
   /* Status */
   --color-status-success: var(--status-success);

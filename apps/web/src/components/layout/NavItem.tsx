@@ -60,7 +60,7 @@ export function NavItem({
     const content = disabled ? (
       <div
         aria-disabled
-        className="flex size-7 cursor-default items-center justify-center rounded-lg text-fg-tertiary/60"
+        className="flex size-7 cursor-default items-center justify-center rounded-lg text-fg-quaternary"
       >
         {icon}
       </div>
@@ -105,7 +105,7 @@ export function NavItem({
   let hoverClassName =
     "text-fg-secondary hover:bg-surface-raised-hover/75 hover:text-fg-primary";
   if (disabled) {
-    hoverClassName = "cursor-default text-fg-tertiary/60";
+    hoverClassName = "cursor-default text-fg-quaternary";
   } else if (rightContent) {
     hoverClassName =
       "text-fg-secondary group-hover:bg-surface-raised-hover/75 group-hover:text-fg-primary";
