@@ -29,11 +29,10 @@ type RenderChangesetDetailScreen = (
 ) => ReactNode;
 
 function throwImpossiblePendingChangeset({
-  spaceId,
   changesetNumber,
 }: ChangesetDetailScreenProps): never {
   throw new Error(
-    `changeset #${changesetNumber} in space ${spaceId} is pending but its type never has a pending state`,
+    `changeset #${changesetNumber} is pending but its type never has a pending state`,
   );
 }
 

@@ -7,6 +7,7 @@ import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useC
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
 import type { ChangesetDetailScreenProps } from "@web/features/review/types";
 import { changesetDisplayTitle } from "@web/features/review/utils";
+import { useCurrentSpaceId, useSpacePublicId } from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetDetailHeader } from "./ChangesetDetailHeader";
@@ -14,12 +15,12 @@ import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
 import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
 
 function ChangesetRecordContent({
-  spacePublicId,
-  spaceId,
   changesetNumber,
 }: ChangesetDetailScreenProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const spacePublicId = useSpacePublicId();
+  const spaceId = useCurrentSpaceId();
   const [changesetDetail] = useChangesetDetailSuspenseQuery(
     spaceId,
     changesetNumber,
@@ -46,7 +47,7 @@ function ChangesetRecordContent({
   const title = changesetDisplayTitle(changesetDetail, t);
 
   return (
-    <ChangesetDetailLayout spacePublicId={spacePublicId} title={title}>
+    <ChangesetDetailLayout title={title}>
       <ChangesetDetailHeader
         title={title}
         changesetNumber={changesetDetail.number}

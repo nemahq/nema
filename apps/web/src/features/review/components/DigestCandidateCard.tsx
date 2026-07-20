@@ -19,7 +19,6 @@ import { TopicChipRow } from "./TopicChipRow";
 
 interface DigestCandidateCardProps {
   index: number;
-  spaceId: string;
   // 쿼리 캐시에서 그대로 온 원본이라 참조가 안정적이다 — memo의 얕은 비교가 먹는다.
   digest: ReviewDigest;
   citedReferences: ReviewCitedReference[];
@@ -31,7 +30,6 @@ interface DigestCandidateCardProps {
 // props가 전부 안정적이라 memo가 실제로 동작한다.
 export const DigestCandidateCard = memo(function DigestCandidateCard({
   index,
-  spaceId,
   digest,
   citedReferences,
   disabled,
@@ -94,7 +92,6 @@ export const DigestCandidateCard = memo(function DigestCandidateCard({
       <DigestBodyFields body={body} />
 
       <TopicChipRow
-        spaceId={spaceId}
         topics={topics}
         disabled={disabled}
         onChange={(next) =>

@@ -8,7 +8,6 @@ import { DigestCandidateCard } from "./DigestCandidateCard";
 import { useEditing } from "./EditingProvider";
 
 interface DigestSectionProps {
-  spaceId: string;
   digests: ReviewDigest[];
   citedReferences: ReviewCitedReference[];
   disabled: boolean;
@@ -18,7 +17,6 @@ interface DigestSectionProps {
 // 다시 그리는 건 후보가 빠질 때와 편집 잠금이 바뀔 때(부모가 disabled를 넘긴다)뿐이고,
 // 그때 카드가 버티는 건 DigestCandidateCard의 memo 몫이다.
 export function DigestSection({
-  spaceId,
   digests,
   citedReferences,
   disabled,
@@ -40,7 +38,6 @@ export function DigestSection({
         <DigestCandidateCard
           key={index}
           index={index}
-          spaceId={spaceId}
           digest={digest}
           citedReferences={citedReferences}
           disabled={disabled}

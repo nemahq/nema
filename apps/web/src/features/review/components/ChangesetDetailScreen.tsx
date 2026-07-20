@@ -13,21 +13,23 @@ import { renderChangesetDetailScreen } from "@web/features/review/components/cha
 import { ChangesetNotFound } from "@web/features/review/components/ChangesetNotFound";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import type { ChangesetDetailScreenProps } from "@web/features/review/types";
-import { useSpaceListSuspenseQuery } from "@web/features/workspace";
+import {
+  useCurrentSpaceId,
+  useSpaceListSuspenseQuery,
+  useSpacePublicId,
+} from "@web/features/workspace";
 import { trpc } from "@web/lib/trpc";
 
 // 라우트 파라미터 그대로 — 숫자 변환·검증 전이라 changesetNumber가 문자열이다.
 interface ChangesetDetailRouteProps {
-  spacePublicId: string;
   changesetNumber: string;
 }
 
 // 화면 선택만 하고 그리지 않는다 — 어느 화면을 띄울지는 레지스트리가 정한다.
 function ChangesetDetailRouter({
-  spacePublicId,
-  spaceId,
   changesetNumber,
 }: ChangesetDetailScreenProps) {
+  const spaceId = useCurrentSpaceId();
   const [changesetDetail] = useChangesetDetailSuspenseQuery(
     spaceId,
     changesetNumber,
@@ -35,7 +37,7 @@ function ChangesetDetailRouter({
   return renderChangesetDetailScreen(
     changesetDetail.type,
     changesetDetail.status,
-    { spacePublicId, spaceId, changesetNumber },
+    { changesetNumber },
   );
 }
 
@@ -81,9 +83,9 @@ function ChangesetDetailErrorFallback({
 }
 
 function ChangesetDetailSpaceGate({
-  spacePublicId,
   changesetNumber: rawChangesetNumber,
 }: ChangesetDetailRouteProps) {
+  const spacePublicId = useSpacePublicId();
   const [spaceList] = useSpaceListSuspenseQuery();
   const space = spaceList.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
@@ -111,27 +113,19 @@ function ChangesetDetailSpaceGate({
       )}
     >
       <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
-        <ChangesetDetailRouter
-          spacePublicId={spacePublicId}
-          spaceId={space.id}
-          changesetNumber={changesetNumber}
-        />
+        <ChangesetDetailRouter changesetNumber={changesetNumber} />
       </Suspense>
     </ErrorBoundary>
   );
 }
 
 export function ChangesetDetailScreen({
-  spacePublicId,
   changesetNumber,
 }: ChangesetDetailRouteProps) {
   return (
     <div className="flex flex-1 flex-col bg-surface-card">
       <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
-        <ChangesetDetailSpaceGate
-          spacePublicId={spacePublicId}
-          changesetNumber={changesetNumber}
-        />
+        <ChangesetDetailSpaceGate changesetNumber={changesetNumber} />
       </Suspense>
     </div>
   );

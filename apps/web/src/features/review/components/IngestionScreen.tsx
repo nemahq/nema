@@ -13,6 +13,7 @@ import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
 import { computeReviewEditingState } from "@web/features/review/reviewEditingState";
 import type { ChangesetDetailScreenProps } from "@web/features/review/types";
+import { useCurrentSpaceId } from "@web/features/workspace";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -40,12 +41,9 @@ const CONFIRM_DISABLED_REASON_KEY = {
 // 확정 페이로드와 확정 차단 조건은 후보 전체를 봐야 나오는 값이라 여기서 편집 상태를
 // 통째로 구독한다. 타이핑마다 이 함수는 다시 돌지만 두 섹션 요소는 overrides에
 // 의존하지 않아 React 컴파일러가 캐시하므로, 아래 트리는 통째로 건너뛴다.
-function IngestionContent({
-  spacePublicId,
-  spaceId,
-  changesetNumber,
-}: ChangesetDetailScreenProps) {
+function IngestionContent({ changesetNumber }: ChangesetDetailScreenProps) {
   const { t } = useTranslation();
+  const spaceId = useCurrentSpaceId();
   const [review] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
   const overrides = useEditing((state) => state.overrides);
   const resetEditing = useEditing((state) => state.reset);
@@ -126,7 +124,7 @@ function IngestionContent({
   }
 
   return (
-    <ChangesetDetailLayout spacePublicId={spacePublicId} title={reviewTitle}>
+    <ChangesetDetailLayout title={reviewTitle}>
       <ChangesetDetailHeader
         title={reviewTitle}
         changesetNumber={review.changesetNumber}
@@ -152,7 +150,6 @@ function IngestionContent({
       <SourceTextPanel body={review.sourceBody} />
 
       <DigestSection
-        spaceId={review.spaceId}
         digests={review.digests}
         citedReferences={review.citedReferences}
         disabled={locked}
