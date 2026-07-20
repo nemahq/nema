@@ -16,7 +16,7 @@ interface MergeRow {
 export function buildMergeRows(args: {
   citedReferences: ReviewCitedReference[];
   citedReferenceIds: Set<string>;
-  mergeNoteOverrides: Map<string, string>;
+  mergeNoteOverrides: ReadonlyMap<string, string>;
 }): MergeRow[] {
   const { citedReferences, citedReferenceIds, mergeNoteOverrides } = args;
   return citedReferences

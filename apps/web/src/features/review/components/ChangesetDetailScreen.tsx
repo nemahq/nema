@@ -29,7 +29,7 @@ function ChangesetDetailNavSkeleton() {
 interface ChangesetDetailRouterProps {
   spacePublicId: string;
   spaceId: string;
-  number: number;
+  changesetNumber: number;
 }
 
 // changesetStatusMeta(constants.ts)와 같은 이유로 if/else 대신 Record를 쓴다 —
@@ -49,16 +49,19 @@ const CHANGESET_DETAIL_SCREEN_KIND: Record<ChangesetStatus, "open" | "closed"> =
 function ChangesetDetailRouter({
   spacePublicId,
   spaceId,
-  number,
+  changesetNumber,
 }: ChangesetDetailRouterProps) {
-  const [changesetDetail] = useChangesetDetailSuspenseQuery(spaceId, number);
+  const [changesetDetail] = useChangesetDetailSuspenseQuery(
+    spaceId,
+    changesetNumber,
+  );
 
   if (CHANGESET_DETAIL_SCREEN_KIND[changesetDetail.status] === "open") {
     return (
       <OpenReviewScreen
         spacePublicId={spacePublicId}
         spaceId={spaceId}
-        number={number}
+        changesetNumber={changesetNumber}
       />
     );
   }
@@ -66,14 +69,14 @@ function ChangesetDetailRouter({
     <ClosedReviewScreen
       spacePublicId={spacePublicId}
       spaceId={spaceId}
-      number={number}
+      changesetNumber={changesetNumber}
     />
   );
 }
 
 interface ChangesetDetailErrorFallbackProps extends ErrorFallbackProps {
   spaceId: string;
-  number: number;
+  changesetNumber: number;
 }
 
 // digestReview.get 같은 하위 쿼리가 NOT_FOUND를 던진 경우, changeset 자체가 사라진
@@ -85,7 +88,7 @@ function ChangesetDetailErrorFallback({
   reset,
   hasRetried,
   spaceId,
-  number,
+  changesetNumber,
 }: ChangesetDetailErrorFallbackProps) {
   const utils = trpc.useUtils();
   const notFound = isChangesetNotFound(error);
@@ -94,11 +97,11 @@ function ChangesetDetailErrorFallback({
     function retryOnceBeforeNotFound() {
       if (notFound && !hasRetried) {
         void utils.changeset.getByNumber
-          .invalidate({ spaceId, number })
+          .invalidate({ spaceId, number: changesetNumber })
           .then(reset);
       }
     },
-    [notFound, hasRetried, spaceId, number, reset, utils],
+    [notFound, hasRetried, spaceId, changesetNumber, reset, utils],
   );
 
   if (notFound && !hasRetried) {
@@ -114,17 +117,19 @@ function ChangesetDetailErrorFallback({
 
 function ChangesetDetailSpaceGate({
   spacePublicId,
-  changesetNumber,
+  changesetNumber: rawChangesetNumber,
 }: ChangesetDetailScreenProps) {
   const [spaceList] = useSpaceListSuspenseQuery();
   const space = spaceList.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
   );
-  const number = Number(changesetNumber);
-  const numberIsValid =
-    GetChangesetByNumberInputSchema.shape.number.safeParse(number).success;
+  const changesetNumber = Number(rawChangesetNumber);
+  const changesetNumberIsValid =
+    GetChangesetByNumberInputSchema.shape.number.safeParse(
+      changesetNumber,
+    ).success;
 
-  if (!space || !numberIsValid) {
+  if (!space || !changesetNumberIsValid) {
     return <ChangesetNotFound />;
   }
 
@@ -136,7 +141,7 @@ function ChangesetDetailSpaceGate({
         <ChangesetDetailErrorFallback
           {...props}
           spaceId={space.id}
-          number={number}
+          changesetNumber={changesetNumber}
         />
       )}
     >
@@ -144,7 +149,7 @@ function ChangesetDetailSpaceGate({
         <ChangesetDetailRouter
           spacePublicId={spacePublicId}
           spaceId={space.id}
-          number={number}
+          changesetNumber={changesetNumber}
         />
       </Suspense>
     </ErrorBoundary>

@@ -143,3 +143,15 @@
 - 대안(listChangesets 응답에 콘텐츠를 얹어 100건 문제만 우회)은 기각 — list는 무한 스크롤로 훑는 화면(변경사항 탭)의 계약이라 가볍게 유지해야 하고, 상세를 한 번도 안 여는 사용자에게까지 그 무게를 강제하면 안 된다.
 - URL도 changesetId(UUID)에서 changesetNumber로 전환 — number가 Space당 유니크한, 사람이 읽는 안정적 앵커라(GitHub PR 번호와 같은 역할) 별도 opaque id가 필요 없다(Space public_id, #395와는 다른 패턴 — Space는 이런 식별자가 없어 opaque id를 새로 만들었던 것과 대비).
 - **발견한 갭 — relation 판정 모드(승자·패자, Digest 병합)가 백엔드에 없음**: surface-inventory.md·review-flow.md는 충돌 판정 시 패자 진술 archive, 중복 판정 시 두 Digest를 병합해 새 Digest를 만드는 것으로 서술하지만, 실제 `apply_pending_relation` RPC(`20260707170000_duplicates_as_relation.sql`)는 충돌이면 관계 엣지만 만들고 아무것도 archive하지 않으며, 중복이면 진술 하나(duplicate)만 archive할 뿐 Digest 병합이 없다 — 판정 모드(승자 선택 UI·병합 UI) 자체가 아직 어디에도 구현돼 있지 않다. `getByNumber`는 지어내지 않고 지금 실제로 있는 것(from/to 진술 각각의 Digest 스냅샷)만 그대로 반환한다 — 판정 모드는 별도 설계·구현이 필요한 후속 스코프.
+
+## #19 Digest 리뷰 편집 상태 — 화면 인스턴스 zustand store로 전환 (확정)
+
+**결정: 리뷰 편집 상태를 `useReviewEditingState`(useState 8개)에서 `reviewEditingStore`(zustand `createStore` + Context 주입)로 옮긴다. 전역 싱글톤 store는 만들지 않는다 — 화면당 인스턴스라 화면을 벗어나면 store째 소멸한다. 파생 계산(`computeReviewEditingState`)은 순수 함수 파일에 그대로 두고 store는 상태 보관과 dispatch만 맡는다.**
+
+- 걸리는 곳: review-flow "실행취소·다시 실행"(세션 스코프), "새로고침 후 최신 저장 상태 유지", "@ 멘션 — 새 Reference 생성", "원문 대조 포커스 전환". 넷 다 지금 구조로는 표현 자체가 안 된다.
+- 근거 ①(실행취소): 편집이 useState 8개(`titleOverrides`·`bodyOverrides`·… )로 흩어져 있어 그 사이를 가로지르는 시간 순서가 어디에도 없었다 — "가장 최근 액션"이라는 개념이 성립하지 않는다. 단일 `dispatch`로 모으면 액션 로그가 곧 실행취소 스택이 되므로, 나중에 얹을 때 컴포넌트는 건드리지 않는다.
+- 근거 ②(구독 범위): "@ 멘션 → 새 Reference 생성"은 Digest 본문 편집이 Reference 후보 목록을 바꾸고, "원문 대조 포커스 전환"은 카드가 형제 패널과 연동된다 — 상태를 카드로 내릴 수 없다. 그런데 Context로 올리면 selector가 없어 어느 필드가 바뀌든 모든 소비자가 리렌더된다. 이 딜레마를 푸는 게 selector 구독이고, 그게 zustand를 들이는 유일한 이유다.
+- 대안(Context + useReducer)은 기각 — 근거 ①만 풀고 ②를 못 푼다. 다만 dispatch 구조가 같아 나중에 store로 바꾸는 건 내부 교체라, 이 결정이 틀렸다고 판명돼도 되돌리는 비용은 낮다.
+- **적용 범위는 이 화면 하나뿐**: 기존 Context 7개 중 리렌더가 실제로 문제인 건 `ChatLifecycleContext`(LLM 토큰마다 13필드 값 객체가 재생성돼 소비자 11개가 전부 리렌더)였는데, 세션 채팅은 v1(URL로만 접근 가능) 표면이라 삭제 예정이다. 나머지(`Sidebar` 2필드, `auth` 세션 객체, `ThemeProvider`)는 갱신이 드물어 Context가 맞다 — "store를 들였으니 다 옮긴다"가 되지 않도록 `apps/web/CLAUDE.md`에 두 조건(콜로케이션 불가 + 구독 분리 필요)을 동시에 만족할 때만 쓰도록 못 박았다.
+- 위치는 `features/review/` 안(`src/stores/` 신설 기각) — 소비자가 이 feature 하나뿐이라 기존 co-location 규칙("used in one feature only, keep it inside that feature")에 그대로 맞고, ESLint `boundaries/elements`가 `src/` 루트 폴더만 분류하므로 새 루트 폴더는 element 타입 추가 없이는 import 전부가 lint 에러가 된다. feature 내부에 두면 `boundaries/entry-point`가 다른 feature의 접근까지 자동으로 막아준다.
+- override Map 구조는 그대로 유지 — 원본(엔진 제안)과 편집값을 분리해 들고 있어야 "엔진 제안 대비 교정 신호 기록"을 확정 시점에 뽑을 수 있다. 편집값을 원본에 머지하면 그 기능이 구조적으로 불가능해진다.

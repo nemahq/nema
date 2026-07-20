@@ -5,7 +5,10 @@ import { trpc } from "@web/lib/trpc";
 // 본문 콘텐츠(changes.data 기반 스냅샷)까지 함께 온다.
 export function useChangesetDetailSuspenseQuery(
   spaceId: string,
-  number: number,
+  changesetNumber: number,
 ) {
-  return trpc.changeset.getByNumber.useSuspenseQuery({ spaceId, number });
+  return trpc.changeset.getByNumber.useSuspenseQuery({
+    spaceId,
+    number: changesetNumber,
+  });
 }

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 
 import { Button, Skeleton } from "@nema-io/weave";
 
@@ -11,14 +11,18 @@ import {
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
-import { useReviewEditingState } from "@web/features/review/hooks/useReviewEditingState";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
+import { computeReviewEditingState } from "@web/features/review/reviewEditingState";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DigestCandidateCard } from "./DigestCandidateCard";
 import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
 import { ReferenceMergeCard } from "./ReferenceMergeCard";
+import {
+  ReviewEditingProvider,
+  useReviewEditing,
+} from "./ReviewEditingProvider";
 import { ReviewHeader } from "./ReviewHeader";
 import { ReviewNavigationBar } from "./ReviewNavigationBar";
 import { SourceTextPanel } from "./SourceTextPanel";
@@ -38,7 +42,7 @@ const CONFIRM_DISABLED_REASON_KEY = {
 interface OpenReviewScreenProps {
   spacePublicId: string;
   spaceId: string;
-  number: number;
+  changesetNumber: number;
 }
 
 function OpenReviewNavSkeleton() {
@@ -48,17 +52,12 @@ function OpenReviewNavSkeleton() {
 function OpenReviewContent({
   spacePublicId,
   spaceId,
-  number,
+  changesetNumber,
 }: OpenReviewScreenProps) {
   const { t } = useTranslation();
-  const [review] = useDigestReviewSuspenseQuery(spaceId, number);
-  const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
-
-  const updateReview = useUpdateReview(spaceId, number);
-  const confirmReview = useConfirmReview(spaceId, number);
-  const discardReview = useDiscardReview(spaceId, number);
-  const showNotificationSoftAsk = useNotificationSoftAsk();
-
+  const [review] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
+  const overrides = useReviewEditing((state) => state.overrides);
+  const dispatch = useReviewEditing((state) => state.dispatch);
   const {
     digestRows,
     referenceRows,
@@ -69,15 +68,16 @@ function OpenReviewContent({
     hasEmptyLabel,
     hasEmptyReference,
     referenceUpdates,
-    setDigestTitle,
-    setDigestBody,
-    setDigestTopics,
-    setDigestTags,
-    removeDigest,
-    setReference,
-    removeReference,
-    setMergeNote,
-  } = useReviewEditingState(review);
+  } = useMemo(
+    () => computeReviewEditingState(review, overrides),
+    [review, overrides],
+  );
+  const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
+
+  const updateReview = useUpdateReview(spaceId, changesetNumber);
+  const confirmReview = useConfirmReview(spaceId, changesetNumber);
+  const discardReview = useDiscardReview(spaceId, changesetNumber);
+  const showNotificationSoftAsk = useNotificationSoftAsk();
 
   const pending =
     updateReview.isPending ||
@@ -143,7 +143,7 @@ function OpenReviewContent({
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
           <ReviewHeader
             title={reviewTitle}
-            number={review.changesetNumber}
+            changesetNumber={review.changesetNumber}
             status="pending"
             time={review.sourceCreatedAt}
             actions={
@@ -184,11 +184,19 @@ function OpenReviewContent({
                 tags={tags}
                 citedReferences={review.citedReferences}
                 disabled={locked}
-                onTitleChange={(value) => setDigestTitle(index, value)}
-                onBodyChange={(value) => setDigestBody(index, value)}
-                onTopicsChange={(next) => setDigestTopics(index, next)}
-                onTagsChange={(next) => setDigestTags(index, next)}
-                onRemove={() => removeDigest(index)}
+                onTitleChange={(title) =>
+                  dispatch({ type: "digest/setTitle", index, title })
+                }
+                onBodyChange={(body) =>
+                  dispatch({ type: "digest/setBody", index, body })
+                }
+                onTopicsChange={(topics) =>
+                  dispatch({ type: "digest/setTopics", index, topics })
+                }
+                onTagsChange={(tags) =>
+                  dispatch({ type: "digest/setTags", index, tags })
+                }
+                onRemove={() => dispatch({ type: "digest/remove", index })}
               />
             ))}
           </div>
@@ -205,8 +213,16 @@ function OpenReviewContent({
                   key={reference.key}
                   reference={reference}
                   disabled={locked}
-                  onChange={(next) => setReference(reference.key, next)}
-                  onRemove={() => removeReference(reference.key)}
+                  onChange={(next) =>
+                    dispatch({
+                      type: "reference/set",
+                      key: reference.key,
+                      reference: next,
+                    })
+                  }
+                  onRemove={() =>
+                    dispatch({ type: "reference/remove", key: reference.key })
+                  }
                 />
               ))}
               {mergeRows.map(({ reference, mergeNote }) => (
@@ -215,8 +231,12 @@ function OpenReviewContent({
                   reference={reference}
                   mergeNote={mergeNote}
                   disabled={locked}
-                  onMergeNoteChange={(value) =>
-                    setMergeNote(reference.id, value)
+                  onMergeNoteChange={(mergeNote) =>
+                    dispatch({
+                      type: "reference/setMergeNote",
+                      referenceId: reference.id,
+                      mergeNote,
+                    })
                   }
                 />
               ))}
@@ -275,7 +295,9 @@ export function OpenReviewScreen(props: OpenReviewScreenProps) {
         </main>
       }
     >
-      <OpenReviewContent {...props} />
+      <ReviewEditingProvider>
+        <OpenReviewContent {...props} />
+      </ReviewEditingProvider>
     </Suspense>
   );
 }
