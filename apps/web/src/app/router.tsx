@@ -226,17 +226,15 @@ function DraftsShell() {
   const { source } = draftsRoute.useSearch();
   const navigate = draftsRoute.useNavigate();
 
-  // 히스토리에는 목록↔상세 전환만 남긴다 — 초안을 훑을 때마다 쌓이면 목록으로
-  // 돌아가는 데 뒤로가기를 그만큼 눌러야 해서 "뒤로가기=패널 닫기"가 깨진다.
-  // 이미 열려 있는 상태에서의 이동(다른 초안 선택·닫기)은 현재 항목을 갈아끼운다.
+  // 열고·바꾸고·닫는 모든 이동이 히스토리에 남는다 — 뒤로가기는 언제나 "마지막
+  // 행동을 되돌린다"는 한 규칙으로 굴러가고, 초안을 훑다가 잘못 눌러도 이전 초안으로
+  // 돌아올 수 있다. 상세를 URL에 올린 이유(주소로 가리킬 수 있는 자리)와도 맞다.
+  // 목록으로 나가는 길은 뒤로가기 말고 닫기 버튼·단축키가 따로 있다.
   const handleSelectSource = useCallback(
     function selectSource(sourceId: string | null) {
-      void navigate({
-        search: sourceId ? { source: sourceId } : {},
-        replace: source !== undefined,
-      });
+      void navigate({ search: sourceId ? { source: sourceId } : {} });
     },
-    [navigate, source],
+    [navigate],
   );
 
   return (
