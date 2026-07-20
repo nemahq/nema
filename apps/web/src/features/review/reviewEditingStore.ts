@@ -1,11 +1,7 @@
 import { createStore } from "zustand/vanilla";
 
-import {
-  computeReviewEditingState,
-  type ReviewOverrides,
-} from "@web/features/review/reviewEditingState";
+import type { ReviewOverrides } from "@web/features/review/reviewEditingState";
 import type {
-  DigestReviewDetail,
   ReviewDigest,
   ReviewNewReference,
 } from "@web/features/review/types";
@@ -105,29 +101,23 @@ export function reviewEditingReducer(
   }
 }
 
-export type ReviewEditingDerived = ReturnType<typeof computeReviewEditingState>;
-
 export interface ReviewEditingStoreState {
-  // 편집의 기준이 되는 원본 스냅샷. override와 분리해 들고 있어야 review-flow.md의
-  // "엔진 제안 대비 교정 신호"를 확정 시점에 뽑아낼 수 있다.
-  review: DigestReviewDetail;
   overrides: ReviewOverrides;
-  derived: ReviewEditingDerived;
   dispatch: (action: ReviewEditingAction) => void;
 }
 
 export type ReviewEditingStore = ReturnType<typeof createReviewEditingStore>;
 
+// 유저가 덮어쓴 값만 담는다 — 편집의 기준이 되는 원본은 digestReview.get 캐시가
+// 그대로 갖고 있고(refetch되면 그쪽이 갱신된다), 파생은 둘을 합쳐 계산한다.
+// 원본을 여기 복사해 두면 refetch 이후 화면이 옛 스냅샷에 갇힌다.
+//
 // 서버엔 확정 직전에만 보낸다(중간 저장 없음) — 새로고침하면 편집 내용은 사라진다.
 // 전역 싱글톤이 아닌 화면당 인스턴스라, 화면을 벗어나면 store째 소멸한다.
-export function createReviewEditingStore(review: DigestReviewDetail) {
+export function createReviewEditingStore() {
   return createStore<ReviewEditingStoreState>()((set, get) => ({
-    review,
     overrides: emptyOverrides(),
-    derived: computeReviewEditingState(review, emptyOverrides()),
-    dispatch: (action) => {
-      const overrides = reviewEditingReducer(get().overrides, action);
-      set({ overrides, derived: computeReviewEditingState(review, overrides) });
-    },
+    dispatch: (action) =>
+      set({ overrides: reviewEditingReducer(get().overrides, action) }),
   }));
 }

@@ -9,14 +9,14 @@ import type {
 } from "@web/features/review/types";
 
 export interface ReviewOverrides {
-  removedDigestIndexes: Set<number>;
-  titleOverrides: Map<number, string>;
-  bodyOverrides: Map<number, ReviewDigest["body"]>;
-  topicsOverrides: Map<number, ReviewDigest["topics"]>;
-  tagsOverrides: Map<number, ReviewDigest["tags"]>;
-  removedReferenceKeys: Set<string>;
-  referenceOverrides: Map<string, ReviewNewReference>;
-  mergeNoteOverrides: Map<string, string>;
+  removedDigestIndexes: ReadonlySet<number>;
+  titleOverrides: ReadonlyMap<number, string>;
+  bodyOverrides: ReadonlyMap<number, ReviewDigest["body"]>;
+  topicsOverrides: ReadonlyMap<number, ReviewDigest["topics"]>;
+  tagsOverrides: ReadonlyMap<number, ReviewDigest["tags"]>;
+  removedReferenceKeys: ReadonlySet<string>;
+  referenceOverrides: ReadonlyMap<string, ReviewNewReference>;
+  mergeNoteOverrides: ReadonlyMap<string, string>;
 }
 
 // reviewEditingStore의 파생 로직 — React를 몰라도 되는 순수 계산이라 store에서 떼어

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 
 import { Button, Skeleton } from "@nema-io/weave";
 
@@ -12,6 +12,7 @@ import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
+import { computeReviewEditingState } from "@web/features/review/reviewEditingState";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -53,26 +54,9 @@ function OpenReviewContent({
   spaceId,
   changesetNumber,
 }: OpenReviewScreenProps) {
-  const [review] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
-
-  return (
-    <ReviewEditingProvider review={review}>
-      <OpenReviewBody
-        spacePublicId={spacePublicId}
-        spaceId={spaceId}
-        changesetNumber={changesetNumber}
-      />
-    </ReviewEditingProvider>
-  );
-}
-
-function OpenReviewBody({
-  spacePublicId,
-  spaceId,
-  changesetNumber,
-}: OpenReviewScreenProps) {
   const { t } = useTranslation();
-  const review = useReviewEditing((state) => state.review);
+  const [review] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
+  const overrides = useReviewEditing((state) => state.overrides);
   const dispatch = useReviewEditing((state) => state.dispatch);
   const {
     digestRows,
@@ -84,7 +68,10 @@ function OpenReviewBody({
     hasEmptyLabel,
     hasEmptyReference,
     referenceUpdates,
-  } = useReviewEditing((state) => state.derived);
+  } = useMemo(
+    () => computeReviewEditingState(review, overrides),
+    [review, overrides],
+  );
   const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
 
   const updateReview = useUpdateReview(spaceId, changesetNumber);
@@ -308,7 +295,9 @@ export function OpenReviewScreen(props: OpenReviewScreenProps) {
         </main>
       }
     >
-      <OpenReviewContent {...props} />
+      <ReviewEditingProvider>
+        <OpenReviewContent {...props} />
+      </ReviewEditingProvider>
     </Suspense>
   );
 }
