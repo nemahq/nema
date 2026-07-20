@@ -9,6 +9,8 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 
+// SW 갱신(#450) 실측 검증용 트리거 커밋 — 실제 배포 산출물 바이트를 바꿔야
+// registerSW가 새 버전을 감지하는지 real staging에서 확인할 수 있다.
 const MAX_CACHE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{7,40}$/i;
