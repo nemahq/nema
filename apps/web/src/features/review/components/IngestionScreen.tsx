@@ -5,6 +5,7 @@ import {
   confirmDisabledReason as computeConfirmDisabledReason,
   runConfirmReview,
 } from "@web/features/review/confirmReviewFlow";
+import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDigestReviewQuery";
@@ -96,10 +97,20 @@ function IngestionContent() {
   const discardReview = useDiscardReview(spaceId, changesetNumber);
   const showNotificationSoftAsk = useNotificationSoftAsk();
 
+  // ChangesetDetailRouter가 이미 구독 중인 같은 쿼리라 새 요청은 안 나간다 — 확정·
+  // 버리기 성공 후 이 쿼리가 다시 fetch되어야 실제로 ChangesetRecordScreen으로
+  // 넘어가므로, 그 재조회가 끝날 때까지도 버튼을 계속 잠가둔다(그 전엔 mutation
+  // 자체는 끝났어도 화면은 아직 안 바뀐 상태).
+  const [, changesetDetailQuery] = useChangesetDetailSuspenseQuery(
+    spaceId,
+    changesetNumber,
+  );
+
   const locked =
     updateReview.isPending ||
     confirmReview.isPending ||
-    discardReview.isPendingAfterDelay;
+    discardReview.isPendingAfterDelay ||
+    changesetDetailQuery.isFetching;
   const error =
     updateReview.error ?? confirmReview.error ?? discardReview.error;
   const confirmDisabled =
