@@ -37,7 +37,7 @@ async function getHeaders() {
 
 let isRedirectingToSignIn = false;
 
-function isUnauthorizedError(
+export function isUnauthorizedError(
   error: unknown,
 ): error is TRPCClientError<AppRouter> {
   return (
