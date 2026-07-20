@@ -619,6 +619,41 @@ export type Database = {
         };
         Relationships: [];
       };
+      source_digestion_state: {
+        Row: {
+          digestion_retry_count: number;
+          extraction_retry_count: number;
+          last_extraction_attempt: string | null;
+          last_linking_attempt: string | null;
+          linking_retry_count: number;
+          source_id: string;
+        };
+        Insert: {
+          digestion_retry_count?: number;
+          extraction_retry_count?: number;
+          last_extraction_attempt?: string | null;
+          last_linking_attempt?: string | null;
+          linking_retry_count?: number;
+          source_id: string;
+        };
+        Update: {
+          digestion_retry_count?: number;
+          extraction_retry_count?: number;
+          last_extraction_attempt?: string | null;
+          last_linking_attempt?: string | null;
+          linking_retry_count?: number;
+          source_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "source_digestion_state_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: true;
+            referencedRelation: "sources";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       source_topics: {
         Row: {
           created_at: string;
