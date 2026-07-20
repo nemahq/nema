@@ -1,0 +1,101 @@
+import { buildMergeRows } from "@web/features/review/referenceMerge";
+import type {
+  ReviewCitedReference,
+  ReviewDigest,
+  ReviewNewReference,
+} from "@web/features/review/types";
+import { useTranslation } from "@web/lib/tolgee";
+
+import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
+import { ReferenceMergeCard } from "./ReferenceMergeCard";
+import { useReviewEditing } from "./ReviewEditingProvider";
+
+interface ReferenceSectionProps {
+  digests: ReviewDigest[];
+  newReferences: ReviewNewReference[];
+  citedReferences: ReviewCitedReference[];
+  disabled: boolean;
+}
+
+// 병합 행은 살아남은 Digest가 무엇을 인용하는지에 달려 있어(referenceMerge.ts) Digest
+// 삭제까지 함께 구독한다 — 마지막으로 인용하던 후보가 빠지면 병합 행도 사라져야 한다.
+export function ReferenceSection({
+  digests,
+  newReferences,
+  citedReferences,
+  disabled,
+}: ReferenceSectionProps) {
+  const { t } = useTranslation();
+  const dispatch = useReviewEditing((state) => state.dispatch);
+  const removedDigestIndexes = useReviewEditing(
+    (state) => state.overrides.removedDigestIndexes,
+  );
+  const removedReferenceKeys = useReviewEditing(
+    (state) => state.overrides.removedReferenceKeys,
+  );
+  const referenceOverrides = useReviewEditing(
+    (state) => state.overrides.referenceOverrides,
+  );
+  const mergeNoteOverrides = useReviewEditing(
+    (state) => state.overrides.mergeNoteOverrides,
+  );
+
+  const referenceRows = newReferences
+    .filter((reference) => !removedReferenceKeys.has(reference.key))
+    .map((reference) => referenceOverrides.get(reference.key) ?? reference);
+  const mergeRows = buildMergeRows({
+    citedReferences,
+    citedReferenceIds: new Set(
+      digests
+        .filter((_, index) => !removedDigestIndexes.has(index))
+        .flatMap((digest) => digest.referenceIds),
+    ),
+    mergeNoteOverrides,
+  });
+
+  if (referenceRows.length + mergeRows.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <h2 className="text-sm font-semibold text-fg-secondary">
+        {t("review.reference_section_title", {
+          count: referenceRows.length + mergeRows.length,
+        })}
+      </h2>
+      {referenceRows.map((reference) => (
+        <ReferenceCandidateCard
+          key={reference.key}
+          reference={reference}
+          disabled={disabled}
+          onChange={(next) =>
+            dispatch({
+              type: "reference/set",
+              key: reference.key,
+              reference: next,
+            })
+          }
+          onRemove={() =>
+            dispatch({ type: "reference/remove", key: reference.key })
+          }
+        />
+      ))}
+      {mergeRows.map(({ reference, mergeNote }) => (
+        <ReferenceMergeCard
+          key={reference.id}
+          reference={reference}
+          mergeNote={mergeNote}
+          disabled={disabled}
+          onMergeNoteChange={(next) =>
+            dispatch({
+              type: "reference/setMergeNote",
+              referenceId: reference.id,
+              mergeNote: next,
+            })
+          }
+        />
+      ))}
+    </div>
+  );
+}
