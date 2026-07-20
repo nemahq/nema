@@ -23,7 +23,7 @@ export function ChangesetDetailHeader({
   actions,
 }: ChangesetDetailHeaderProps) {
   return (
-    <header className="sticky top-0 z-10 flex flex-col gap-2 border-b border-border/50 bg-surface-card pb-4">
+    <header className="sticky top-0 z-10 -mt-6 flex flex-col gap-2 border-b border-border/50 bg-surface-card pt-6 pb-4">
       <div className="flex items-center justify-between gap-4">
         <h1 className="flex min-w-0 items-baseline gap-2 text-2xl font-semibold text-fg-primary">
           <span className="min-w-0 truncate">{title}</span>
