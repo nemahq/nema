@@ -67,7 +67,16 @@ function authRedirectLink(): TRPCLink<AppRouter> {
         let subscription = next(op).subscribe({
           next: (value) => observer.next(value),
           error: (error) => {
-            if (isRedirectingToSignIn || !isUnauthorizedError(error)) {
+            // /signin에 이미 도착한 뒤 뒤늦게 도착한 요청이 UNAUTHORIZED를
+            // 내는 경우, 여기서 또 리다이렉트를 걸면 이미 정상 진입한 로그인
+            // 화면 위에 불필요한 하드 리로드가 한 번 더 겹친다.
+            const alreadyOnSignIn =
+              window.location.pathname.startsWith("/signin");
+            if (
+              isRedirectingToSignIn ||
+              alreadyOnSignIn ||
+              !isUnauthorizedError(error)
+            ) {
               observer.error(error);
               return;
             }
