@@ -149,6 +149,28 @@ function toDigestionOutcome(args: {
   }
 }
 
+// lastDigestionAttempt는 워커가 큐에서 집어드는 시점에 찍힌다(완료 시각이 아니다)
+// — 그래서 이 비교의 의미는 "마지막 정리가 시작된 뒤에 입력이 바뀌었나"이고, 정리
+// 도중의 편집도 바뀐 것으로 잡힌다. 그 편집은 지금 도는 정리에 반영될 수 없으니
+// 맞는 판정이다. 스탬핑 시점을 완료 시각으로 옮기면 이 성질이 조용히 깨진다.
+function hasInputChangedSinceDigestion(args: {
+  digestionInputUpdatedAt: string;
+  lastDigestionAttempt: string | null;
+}): boolean {
+  // 비교할 시도 시각이 없으면 열어준다. 이 게이트는 사용자의 재정리를 막는
+  // 방향이라 판정 불가는 막는 쪽이 아니라 푸는 쪽이어야 한다 — 잘못 열리면
+  // 헛수고 한 번이지만 잘못 잠기면 영영 재정리할 수 없다. 실제로 v1 파이프라인
+  // 시절 원본은 digestion_status만 completed로 소급되고 시도 시각은 NULL로 남아
+  // (20260707100000), 잠그면 그 초안들이 영구히 묶인다.
+  if (args.lastDigestionAttempt === null) {
+    return true;
+  }
+  return (
+    new Date(args.digestionInputUpdatedAt).getTime() >
+    new Date(args.lastDigestionAttempt).getTime()
+  );
+}
+
 interface PendingSourceItem {
   sourceId: string;
   spaceId: string;
@@ -160,6 +182,10 @@ interface PendingSourceItem {
   // 만들어진 시점이라, 재시도·재생성처럼 뒤늦게 다시 돌기 시작한 시도의
   // 경과 시간을 재는 기준으론 안 맞는다(아직 한 번도 안 붙잡혔으면 null).
   lastDigestionAttempt: string | null;
+  // 마지막 정리 이후 정리 입력(본문·Space)이 바뀌었는지 — "원본을 안 고치고 다시
+  // 정리해봐야 같은 결과"라는 판정에 쓴다. 두 시각을 소비처가 각자 비교하면 그 규칙이
+  // 화면마다 흩어지므로 digestionOutcome과 같은 이유로 서버가 조합해 내려준다.
+  inputChangedSinceDigestion: boolean;
   errorMessage: string | null;
   // 생성이 끝나 리뷰가 열렸으면 그 pending ingestion changeset(상세 URL이 number
   // 기준이라 changesetNumber도 함께 내려준다). 아직이면 null — 소비자가 "생성 중"과
@@ -179,7 +205,7 @@ export async function listPendingSources(args: {
   const { data: sources, error } = await supabase
     .from("sources")
     .select(
-      "id, space_id, body, title, created_at, digestion_status, last_digestion_attempt, error_message",
+      "id, space_id, body, title, created_at, digestion_status, last_digestion_attempt, digestion_input_updated_at, error_message",
     )
     .eq("status", "pending")
     .order("created_at", { ascending: false })
@@ -241,6 +267,10 @@ export async function listPendingSources(args: {
           hasDiscardedReview: discardedSourceIds.has(source.id),
         }),
         lastDigestionAttempt: source.last_digestion_attempt,
+        inputChangedSinceDigestion: hasInputChangedSinceDigestion({
+          digestionInputUpdatedAt: source.digestion_input_updated_at,
+          lastDigestionAttempt: source.last_digestion_attempt,
+        }),
         errorMessage: source.error_message,
         review: review
           ? {

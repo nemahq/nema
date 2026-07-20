@@ -59,6 +59,7 @@ export function DraftList({ onSelectSource }: DraftListProps) {
             body={source.body}
             status={status}
             createdAt={source.createdAt}
+            inputChangedSinceDigestion={source.inputChangedSinceDigestion}
             onSelect={onSelectSource}
           />
         ))}

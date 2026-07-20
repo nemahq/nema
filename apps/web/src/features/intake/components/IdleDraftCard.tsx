@@ -2,7 +2,6 @@ import { memo, type ReactNode } from "react";
 
 import { TriangleAlert } from "@nema-io/weave/icons";
 
-import { useIsDraftEdited } from "@web/features/intake/contexts/DraftEditingContext";
 import type { IdleDraftStatus } from "@web/features/intake/utils";
 
 import { DraftCardShell } from "./DraftCardShell";
@@ -28,6 +27,7 @@ interface IdleDraftCardProps {
   body: string;
   status: IdleDraftStatus;
   createdAt: string;
+  inputChangedSinceDigestion: boolean;
   onSelect: (sourceId: string) => void;
 }
 
@@ -37,13 +37,20 @@ export const IdleDraftCard = memo(function IdleDraftCard({
   body,
   status,
   createdAt,
+  inputChangedSinceDigestion,
   onSelect,
 }: IdleDraftCardProps) {
-  // 결과없음 아이콘의 근거는 "원문을 아직 안 고쳤다"라, 상세에서 실제로 고치는
-  // 순간(정리 버튼이 풀리는 조건과 동일) 카드에서도 같이 뗀다.
-  const isEdited = useIsDraftEdited(sourceId);
+  // 결과없음 아이콘의 근거는 "정리해봤자 같은 결과"라, 원문·Space가 실제로 바뀌어
+  // 다른 결과가 나올 여지가 생기면 뗀다.
+  //
+  // 상세의 재정리 버튼과 조건이 완전히 같지는 않다 — 버튼은 아직 저장 안 된 편집도
+  // 인정해서 blur 없이 바로 누를 수 있게 하지만, 목록 카드는 저장된 변경만 본다.
+  // 타이핑 중(blur 전)에는 버튼이 먼저 풀리고 아이콘은 저장된 뒤에 사라진다. 카드는
+  // 여러 초안을 훑는 자리라 아직 확정 안 된 편집으로 표시가 흔들리면 안 된다.
   const statusIcon =
-    status === "empty" && isEdited ? null : STATUS_ICON[status];
+    status === "empty" && inputChangedSinceDigestion
+      ? null
+      : STATUS_ICON[status];
 
   function handleSelect() {
     onSelect(sourceId);

@@ -693,6 +693,7 @@ export type Database = {
           author_timezone: string | null;
           body: string;
           created_at: string;
+          digestion_input_updated_at: string;
           digestion_retry_count: number;
           digestion_status: Database["public"]["Enums"]["digestion_status"];
           error_message: string | null;
@@ -716,6 +717,7 @@ export type Database = {
           author_timezone?: string | null;
           body: string;
           created_at?: string;
+          digestion_input_updated_at?: string;
           digestion_retry_count?: number;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           error_message?: string | null;
@@ -739,6 +741,7 @@ export type Database = {
           author_timezone?: string | null;
           body?: string;
           created_at?: string;
+          digestion_input_updated_at?: string;
           digestion_retry_count?: number;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           error_message?: string | null;
