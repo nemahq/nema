@@ -81,7 +81,7 @@ function TagSearchResults({
           type="button"
           disabled={!canStartCreateNew}
           onClick={() => onStartCreate(trimmed)}
-          className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover disabled:pointer-events-none disabled:opacity-50"
+          className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quaternary"
         >
           {t("review.label_create_new_action", { name: trimmed })}
         </button>

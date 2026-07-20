@@ -154,7 +154,7 @@ export function ChatInput({
         rows={1}
         className={cn(
           "w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-quaternary focus:outline-none",
-          disabled && "cursor-not-allowed opacity-50",
+          disabled && "cursor-not-allowed text-fg-quaternary",
         )}
       />
       {submitAction}
