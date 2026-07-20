@@ -1,16 +1,16 @@
 import { Button, cn } from "@nema-io/weave";
 
-interface ChangesSubTabButtonProps {
+interface ChangesetSubTabButtonProps {
   active: boolean;
   onClick: () => void;
   children: string;
 }
 
-export function ChangesSubTabButton({
+export function ChangesetSubTabButton({
   active,
   onClick,
   children,
-}: ChangesSubTabButtonProps) {
+}: ChangesetSubTabButtonProps) {
   return (
     <Button
       type="button"

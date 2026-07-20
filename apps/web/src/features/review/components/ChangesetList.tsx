@@ -87,7 +87,7 @@ export function ChangesetList(props: ChangesetListProps) {
     <QueryErrorResetBoundary>
       {({ reset: resetQueryError }) => (
         <ErrorBoundary
-          boundaryName="changes-list"
+          boundaryName="changeset-list"
           fallbackRender={(fallbackProps) => (
             <SectionErrorFallback
               {...fallbackProps}

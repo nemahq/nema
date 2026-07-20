@@ -18,7 +18,7 @@ export function ChangesetsTab({
 }: ChangesetsTabProps) {
   return (
     <ErrorBoundary
-      boundaryName="changes-panel"
+      boundaryName="changeset-panel"
       fallbackRender={(fallbackProps) => (
         <SectionErrorFallback {...fallbackProps} />
       )}

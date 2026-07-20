@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from "react";
+import { memo } from "react";
 import { Link, linkOptions } from "@tanstack/react-router";
 
 import {
@@ -35,20 +35,6 @@ interface ChangesetListRowProps {
   // 목적지 객체를 prop으로 받으면 매 렌더 새 객체가 되어 memo가 무력화된다.
   linkable: boolean;
   hideDivider?: boolean;
-}
-
-interface RowIconTooltipProps {
-  label: string;
-  children: ReactNode;
-}
-
-function RowIconTooltip({ label, children }: RowIconTooltipProps) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side="bottom">{label}</TooltipContent>
-    </Tooltip>
-  );
 }
 
 export const ChangesetListRow = memo(function ChangesetListRow({
@@ -95,9 +81,10 @@ export const ChangesetListRow = memo(function ChangesetListRow({
   const content = (
     <>
       <div className="flex items-center gap-2.5">
-        <RowIconTooltip label={t(statusLabelKey)}>
-          {statusIconEl}
-        </RowIconTooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>{statusIconEl}</TooltipTrigger>
+          <TooltipContent side="bottom">{t(statusLabelKey)}</TooltipContent>
+        </Tooltip>
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
           <span className="min-w-0 truncate text-sm font-medium text-fg-primary">
             {changesetDisplayTitle(entry, t)}
