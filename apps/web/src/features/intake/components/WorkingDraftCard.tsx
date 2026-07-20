@@ -1,21 +1,31 @@
-import type { DraftCardProps } from "@web/features/intake/types";
+import { memo } from "react";
 
 import { DraftCardShell } from "./DraftCardShell";
 import { DraftProcessingHeader } from "./DraftProcessingHeader";
 
-export function WorkingDraftCard({
+interface WorkingDraftCardProps {
+  sourceId: string;
+  title: string | null;
+  body: string;
+  createdAt: string;
+  onSelect: (sourceId: string) => void;
+}
+
+export const WorkingDraftCard = memo(function WorkingDraftCard({
   sourceId,
-  spaceId,
   title,
   body,
   createdAt,
   onSelect,
-}: DraftCardProps) {
+}: WorkingDraftCardProps) {
+  function handleSelect() {
+    onSelect(sourceId);
+  }
+
   return (
-    <DraftCardShell onSelect={onSelect}>
+    <DraftCardShell onSelect={handleSelect}>
       <DraftProcessingHeader
         sourceId={sourceId}
-        spaceId={spaceId}
         title={title}
         createdAt={createdAt}
       />
@@ -24,4 +34,4 @@ export function WorkingDraftCard({
       </p>
     </DraftCardShell>
   );
-}
+});

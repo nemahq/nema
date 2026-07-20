@@ -3,42 +3,33 @@ import { Circle, CircleCheck, Inbox } from "@nema-io/weave/icons";
 // 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
 // eslint-disable-next-line nema/require-suspense-boundary
 import { usePendingSourceListSuspenseQuery } from "@web/features/intake/hooks/usePendingSourceListQuery";
-import type { PendingSourceItem } from "@web/features/intake/types";
-import { type DraftStatus, draftStatus } from "@web/features/intake/utils";
+import { isWaitingDraft, toDrafts } from "@web/features/intake/utils";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftSection } from "./DraftSection";
 import { IdleDraftCard } from "./IdleDraftCard";
 import { WorkingDraftCard } from "./WorkingDraftCard";
 
-interface Draft {
-  source: PendingSourceItem;
-  status: DraftStatus;
-}
-
-function toDraft(source: PendingSourceItem): Draft | null {
-  const status = draftStatus(source);
-  return status === null ? null : { source, status };
-}
+const WAITING_ICON = <Inbox className="size-4 shrink-0 text-status-warning" />;
+const ORGANIZING_ICON = (
+  <Circle className="size-2.5 shrink-0 animate-pulse fill-current text-status-info" />
+);
 
 interface DraftListProps {
-  // DraftsScreen이 선택된 초안을 폴링되는 최신 쿼리 데이터에서 직접 다시 찾아
-  // 쓰므로, 여기서는 어떤 draft를 골랐는지가 아니라 어떤 sourceId를 골랐는지만
-  // 알리면 된다.
+  // 카드가 memo라 이 참조가 안정적이어야 의미가 있다 — 여기서 인라인 화살표
+  // (onSelect={() => onSelectSource(id)})로 감싸면 매 렌더 새 함수가 되어
+  // Realtime invalidate마다 카드 전체가 다시 그려진다. 카드가 sourceId를 받아
+  // 스스로 넘기는 건 그래서다.
   onSelectSource: (sourceId: string) => void;
-  // 결과없음 카드의 상태 아이콘 표시 여부에 쓰는, 현재 상세에서 편집 중인 sourceId.
-  editedDraftId: string | null;
 }
 
-export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
+export function DraftList({ onSelectSource }: DraftListProps) {
   const { t } = useTranslation();
   // 로딩은 메인 영역 Outlet Suspense(워터마크)로, 에러는 draftsRoute errorComponent로
   // 자동 위임된다 — 이 쿼리가 화면 콘텐츠 전체의 존재 이유라 부분 격리하지 않는다.
   const [pendingSources] = usePendingSourceListSuspenseQuery();
 
-  const drafts = pendingSources.items
-    .map(toDraft)
-    .filter((draft): draft is Draft => draft !== null);
+  const drafts = toDrafts(pendingSources.items);
 
   if (drafts.length === 0) {
     return (
@@ -49,29 +40,26 @@ export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
     );
   }
 
-  // 사용자가 할 일이 있는지(재시도·삭제·이동 vs 그냥 대기)로 섹션을 나눈다.
-  const waitingDrafts = drafts.filter(({ status }) => status !== "processing");
-  const workingDrafts = drafts.filter(({ status }) => status === "processing");
+  const waitingDrafts = drafts.filter(isWaitingDraft);
+  const workingDrafts = drafts.filter((draft) => !isWaitingDraft(draft));
 
   return (
     <div className="flex flex-col">
       <DraftSection
         label={t("intake.draft_section_waiting")}
         count={waitingDrafts.length}
-        icon={<Inbox className="size-4 shrink-0 text-status-warning" />}
+        icon={WAITING_ICON}
         tone="warning"
       >
         {waitingDrafts.map(({ source, status }) => (
           <IdleDraftCard
             key={source.sourceId}
             sourceId={source.sourceId}
-            spaceId={source.spaceId}
             title={source.title}
             body={source.body}
             status={status}
             createdAt={source.createdAt}
-            isEdited={source.sourceId === editedDraftId}
-            onSelect={() => onSelectSource(source.sourceId)}
+            onSelect={onSelectSource}
           />
         ))}
       </DraftSection>
@@ -79,21 +67,17 @@ export function DraftList({ onSelectSource, editedDraftId }: DraftListProps) {
       <DraftSection
         label={t("intake.draft_section_organizing")}
         count={workingDrafts.length}
-        icon={
-          <Circle className="size-2.5 shrink-0 animate-pulse fill-current text-status-info" />
-        }
+        icon={ORGANIZING_ICON}
         tone="info"
       >
-        {workingDrafts.map(({ source, status }) => (
+        {workingDrafts.map(({ source }) => (
           <WorkingDraftCard
             key={source.sourceId}
             sourceId={source.sourceId}
-            spaceId={source.spaceId}
             title={source.title}
             body={source.body}
-            status={status}
             createdAt={source.createdAt}
-            onSelect={() => onSelectSource(source.sourceId)}
+            onSelect={onSelectSource}
           />
         ))}
       </DraftSection>

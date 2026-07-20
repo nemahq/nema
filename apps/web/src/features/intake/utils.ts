@@ -7,6 +7,12 @@ import type { PendingSourceItem } from "@web/features/intake/types";
 // 만 새 값 누락 시 컴파일 에러가 난다.
 export type DraftStatus = PendingSourceItem["digestionOutcome"];
 
+// 정리가 끝난(또는 멈춘) 초안의 상태 — 대기 섹션 카드와 Idle 상세 패널이 다루는
+// 범위다. processing을 타입에서 빼두면 "Idle 자리에 정리 중 초안이 오는" 불가능한
+// 조합이 아예 표현되지 않고, 이 집합을 키로 쓰는 Record가 새 서버 값 누락 시
+// 컴파일 에러를 낸다.
+export type IdleDraftStatus = Exclude<DraftStatus, "processing">;
+
 // 리뷰가 열린(review 있음) Source는 이미 초안을 벗어나 변경셋 대기로 넘어간 상태라
 // null을 반환한다 — surface-inventory.md "초안" 참고. 판정을 여기 한 곳에 모아둬서,
 // 호출부가 "먼저 필터링부터"라는 순서를 따로 기억하지 않아도 된다.
@@ -16,4 +22,34 @@ export function draftStatus(source: PendingSourceItem): DraftStatus | null {
 
 export function isDraftItem(source: PendingSourceItem): boolean {
   return draftStatus(source) !== null;
+}
+
+// status가 null이 아님을 타입으로 확정한 초안 — 소비처가 매번 null 체크를
+// 되풀이하지 않게 목록 변환 시점에 한 번만 걸러낸다.
+interface Draft {
+  source: PendingSourceItem;
+  status: DraftStatus;
+}
+
+export function toDrafts(sources: PendingSourceItem[]): Draft[] {
+  return sources.flatMap((source) => {
+    const status = draftStatus(source);
+    return status === null ? [] : [{ source, status }];
+  });
+}
+
+interface WaitingDraft extends Draft {
+  status: IdleDraftStatus;
+}
+
+// 사용자가 할 일이 있는지(재시도·삭제·이동 vs 그냥 대기)로 갈리는 기준 —
+// 목록 섹션 분리와 "대기 중 일괄 삭제"가 같은 판정을 쓴다.
+export function isWaitingDraft(draft: Draft): draft is WaitingDraft {
+  return draft.status !== "processing";
+}
+
+export function waitingDraftIds(sources: PendingSourceItem[]): string[] {
+  return toDrafts(sources)
+    .filter(isWaitingDraft)
+    .map(({ source }) => source.sourceId);
 }

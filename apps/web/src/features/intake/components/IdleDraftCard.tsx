@@ -1,59 +1,58 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from "@nema-io/weave";
-import { SearchX, TriangleAlert } from "@nema-io/weave/icons";
+import { memo, type ReactNode } from "react";
 
-import type { DraftCardProps } from "@web/features/intake/types";
-import { useTranslation } from "@web/lib/tolgee";
+import { TriangleAlert } from "@nema-io/weave/icons";
+
+import { useIsDraftEdited } from "@web/features/intake/contexts/DraftEditingContext";
+import type { IdleDraftStatus } from "@web/features/intake/utils";
 
 import { DraftCardShell } from "./DraftCardShell";
 import { DraftIdleHeader } from "./DraftIdleHeader";
+import { DraftNoResultIcon } from "./DraftNoResultIcon";
 
-interface IdleDraftCardProps extends DraftCardProps {
-  // 상세에서 원문을 이미 고친 상태 — empty의 "결과없음" 아이콘은 이 신호가
-  // 사라져야 할 근거(정리 버튼이 풀리는 조건과 동일)라 카드에서도 뗀다.
-  isEdited?: boolean;
+// failed/empty만 "왜 여기 있는지"를 알려준다 — 배지 문구 대신 LNB(DraftsNavItem)의
+// 실패 표시와 같은 아이콘 언어를 그대로 쓴다. cancelled·discarded는 사용자가 스스로
+// 한 행동이라 별도 안내가 필요 없다.
+//
+// Partial이 아니라 모든 키를 채운 Record다 — 서버 digestionOutcome에 값이 추가되면
+// 여기서 컴파일 에러가 나야 한다. null은 누락이 아니라 "아이콘 없음"이라는 판단이다.
+const STATUS_ICON: Record<IdleDraftStatus, ReactNode | null> = {
+  failed: <TriangleAlert className="size-4 shrink-0 text-status-error" />,
+  empty: <DraftNoResultIcon />,
+  cancelled: null,
+  discarded: null,
+};
+
+interface IdleDraftCardProps {
+  sourceId: string;
+  title: string | null;
+  body: string;
+  status: IdleDraftStatus;
+  createdAt: string;
+  onSelect: (sourceId: string) => void;
 }
 
-// cancelled는 표시 없음 — 취소는 사용자가 스스로 한 행동이라 별도 안내가
-// 필요 없다. failed/empty만 아이콘으로 "왜 여기 있는지"를 알려준다 — 배지
-// 문구 대신 LNB(DraftsNavItem)의 실패 표시와 같은 아이콘 언어를 그대로 쓴다.
-// failed(경고 삼각형)는 업계에서 이미 명시적인 기호라 툴팁 없이 두고, empty
-// (돋보기+X)는 관용화된 기호가 아니라 툴팁으로 의미를 보완한다 — 일괄 적용이
-// 아니라 실제로 모호한 것만.
-export function IdleDraftCard({
+export const IdleDraftCard = memo(function IdleDraftCard({
   sourceId,
-  spaceId,
   title,
   body,
   status,
   createdAt,
   onSelect,
-  isEdited,
 }: IdleDraftCardProps) {
-  const { t } = useTranslation();
+  // 결과없음 아이콘의 근거는 "원문을 아직 안 고쳤다"라, 상세에서 실제로 고치는
+  // 순간(정리 버튼이 풀리는 조건과 동일) 카드에서도 같이 뗀다.
+  const isEdited = useIsDraftEdited(sourceId);
+  const statusIcon =
+    status === "empty" && isEdited ? null : STATUS_ICON[status];
 
-  let statusIcon = null;
-  if (status === "failed") {
-    statusIcon = (
-      <TriangleAlert className="size-4 shrink-0 text-status-error" />
-    );
-  } else if (status === "empty" && !isEdited) {
-    statusIcon = (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <SearchX className="pointer-events-auto size-4 shrink-0 text-fg-tertiary" />
-        </TooltipTrigger>
-        <TooltipContent side="bottom">
-          {t("intake.draft_no_result_tooltip")}
-        </TooltipContent>
-      </Tooltip>
-    );
+  function handleSelect() {
+    onSelect(sourceId);
   }
 
   return (
-    <DraftCardShell onSelect={onSelect}>
+    <DraftCardShell onSelect={handleSelect}>
       <DraftIdleHeader
         sourceId={sourceId}
-        spaceId={spaceId}
         title={title}
         createdAt={createdAt}
         icon={statusIcon}
@@ -63,4 +62,4 @@ export function IdleDraftCard({
       </p>
     </DraftCardShell>
   );
-}
+});

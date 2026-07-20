@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
 import { z } from "zod";
 import {
   createRootRoute,
@@ -220,11 +220,41 @@ const spaceChangesRoute = createRoute({
   }),
 });
 
+// 열려 있는 초안 상세를 URL에 둔다 — 새로고침·링크 공유로 같은 상세가 다시 열리고,
+// 뒤로가기가 패널 닫기가 된다.
+function DraftsShell() {
+  const { source } = draftsRoute.useSearch();
+  const navigate = draftsRoute.useNavigate();
+
+  // 히스토리에는 목록↔상세 전환만 남긴다 — 초안을 훑을 때마다 쌓이면 목록으로
+  // 돌아가는 데 뒤로가기를 그만큼 눌러야 해서 "뒤로가기=패널 닫기"가 깨진다.
+  // 이미 열려 있는 상태에서의 이동(다른 초안 선택·닫기)은 현재 항목을 갈아끼운다.
+  const handleSelectSource = useCallback(
+    function selectSource(sourceId: string | null) {
+      void navigate({
+        search: sourceId ? { source: sourceId } : {},
+        replace: source !== undefined,
+      });
+    },
+    [navigate, source],
+  );
+
+  return (
+    <DraftsPage
+      selectedSourceId={source ?? null}
+      onSelectSource={handleSelectSource}
+    />
+  );
+}
+
 const draftsRoute = createRoute({
   getParentRoute: () => workspaceSidebarRoute,
   path: "/drafts",
-  component: DraftsPage,
+  component: DraftsShell,
   errorComponent: RouteErrorFallback,
+  validateSearch: z.object({
+    source: z.string().optional().catch(undefined),
+  }),
 });
 
 // open(리뷰 대기)·closed(기록) 상태와 무관하게 changeset 하나는 URL 하나 — GitHub의
