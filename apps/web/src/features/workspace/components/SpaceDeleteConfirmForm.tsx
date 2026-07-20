@@ -195,12 +195,17 @@ export function SpaceDeleteConfirmForm({
     <>
       <DialogHeader>
         <DialogTitle>{t("space.delete_confirm_title")}</DialogTitle>
-        <DialogDescription asChild>
-          <Alert variant="error" icon={false} className="mt-2">
-            {t("space.delete_warning")}
-          </Alert>
+        {/* asChild로 Alert를 감싸면 Radix Slot이 DialogDescription 기본
+            className(text-fg-tertiary)을 tailwind-merge 없이 그냥 이어붙여
+            Alert의 text-status-error와 충돌한다 — 접근성용 설명은 시각적으로
+            숨기고, 실제 배너는 별도 형제로 분리해 충돌을 피한다. */}
+        <DialogDescription className="sr-only">
+          {t("space.delete_warning")}
         </DialogDescription>
       </DialogHeader>
+      <Alert variant="error" icon={false} className="mt-2">
+        {t("space.delete_warning")}
+      </Alert>
 
       <Suspense
         fallback={

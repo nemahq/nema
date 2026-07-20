@@ -67,8 +67,8 @@ export function SourceComposer({ spaceId }: SourceComposerProps) {
             onClick={onClick}
             className={cn(
               ACTION_BUTTON_BASE,
-              "disabled:bg-surface-raised-hover disabled:text-fg-tertiary",
-              "dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-tertiary",
+              "disabled:bg-surface-raised-hover disabled:text-fg-quaternary",
+              "dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-quaternary",
               "enabled:bg-fg-secondary enabled:text-surface-card enabled:hover:bg-fg-secondary enabled:hover:opacity-80",
               "dark:enabled:bg-fg-primary dark:enabled:text-surface-base dark:enabled:hover:bg-fg-primary",
             )}

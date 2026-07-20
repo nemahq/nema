@@ -39,7 +39,7 @@ export function IdleDraftDetailPanel({
   const [title, setTitle] = useState(initialTitle ?? "");
   const [body, setBody] = useState(initialBody);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isStartingDigestion, setIsStartingDigestion] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const updateTitleMutation = useUpdateSourceTitle();
   const updateBodyMutation = useUpdateSourceBody();
@@ -50,7 +50,7 @@ export function IdleDraftDetailPanel({
   // 원문이 실제로 바뀌기 전까진 정리를 막아 헛수고를 예방한다. failed/cancelled는
   // 내용 문제가 아닐 수 있어(일시적 시스템 오류 등) 이 제약을 안 둔다.
   const regenerateDisabled =
-    (status === "empty" && !bodyDirty) || isRegenerating;
+    (status === "empty" && !bodyDirty) || isStartingDigestion;
 
   function handleBodyChange(nextBody: string) {
     setBody(nextBody);
@@ -76,7 +76,7 @@ export function IdleDraftDetailPanel({
   }
 
   async function handleRegenerate() {
-    setIsRegenerating(true);
+    setIsStartingDigestion(true);
     try {
       if (bodyDirty && body.trim().length > 0) {
         await updateBodyMutation.mutateAsync({ sourceId, body });
@@ -85,7 +85,7 @@ export function IdleDraftDetailPanel({
     } catch {
       // 실패는 각 뮤테이션의 isError로 인라인 표시된다 — 추가 처리 없음.
     } finally {
-      setIsRegenerating(false);
+      setIsStartingDigestion(false);
     }
   }
 
@@ -130,7 +130,7 @@ export function IdleDraftDetailPanel({
         spaceId={spaceId}
         onClose={onClose}
         onReassignSpace={handleReassignSpace}
-        reassignPending={reassignSpaceMutation.isPending}
+        reassignPending={reassignSpaceMutation.isPending || isStartingDigestion}
         extraAction={
           <Tooltip>
             <TooltipTrigger asChild>
@@ -139,6 +139,7 @@ export function IdleDraftDetailPanel({
                 variant="ghost"
                 aria-label={t("common.delete")}
                 onClick={() => setDeleteDialogOpen(true)}
+                disabled={isStartingDigestion}
                 className="size-7 text-fg-tertiary"
               >
                 <Trash2 className="size-4" />
@@ -168,7 +169,8 @@ export function IdleDraftDetailPanel({
         placeholder={t("intake.draft_untitled")}
         maxLength={SOURCE_TITLE_MAX_LENGTH}
         aria-invalid={updateTitleMutation.isError}
-        className="bg-transparent px-6 pt-4 text-xl font-bold text-fg-primary outline-none placeholder:text-fg-tertiary"
+        readOnly={isStartingDigestion}
+        className="bg-transparent px-6 pt-4 text-xl font-bold text-fg-primary outline-none placeholder:text-fg-quaternary"
       />
       {updateTitleMutation.isError && (
         <div className="px-6 pt-2">
@@ -182,6 +184,7 @@ export function IdleDraftDetailPanel({
           value={body}
           onChange={handleBodyChange}
           onBlur={handleBodyBlur}
+          readOnly={isStartingDigestion}
           maxLength={SOURCE_BODY_MAX_LENGTH}
           ariaInvalid={updateBodyMutation.isError}
         />
@@ -203,7 +206,7 @@ export function IdleDraftDetailPanel({
             disabled={regenerateDisabled}
             onClick={handleRegenerate}
           >
-            {isRegenerating
+            {isStartingDigestion
               ? t("intake.draft_organizing")
               : t("intake.remember")}
           </Button>

@@ -81,7 +81,7 @@ function TagSearchResults({
           type="button"
           disabled={!canStartCreateNew}
           onClick={() => onStartCreate(trimmed)}
-          className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover disabled:pointer-events-none disabled:opacity-50"
+          className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quaternary"
         >
           {t("review.label_create_new_action", { name: trimmed })}
         </button>
@@ -217,7 +217,7 @@ export function TagAddPopover({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={t("review.tag_create_description_placeholder")}
                 rows={3}
-                className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-1.5 text-sm placeholder:text-fg-tertiary focus-visible:border-brand focus-visible:outline-none dark:focus-visible:border-fg-tertiary/70"
+                className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-1.5 text-sm placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none dark:focus-visible:border-fg-tertiary/70"
               />
             </label>
             <div className="flex justify-end gap-2">
