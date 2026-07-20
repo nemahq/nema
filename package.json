@@ -30,7 +30,7 @@
       "eslint --cache --cache-strategy content",
       "prettier --write"
     ],
-    "*.{json,css,md}": "prettier --write",
+    "*.{json,css,md,mdx}": "prettier --write",
     "apps/web/src/lib/tolgee/*.json": [
       "eslint --fix",
       "prettier --write"
