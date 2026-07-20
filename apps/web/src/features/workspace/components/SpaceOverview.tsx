@@ -82,8 +82,6 @@ export function SpaceOverview(props: SpaceOverviewProps) {
               "스레드 탭"). 그전까지 탭 바 아래가 비는 건 의도된 현재 상태다. */}
           {props.activeTab === "changesets" && (
             <ChangesetsTab
-              spacePublicId={spacePublicId}
-              spaceId={space.id}
               subTab={props.subTab}
               onSubTabChange={props.onSubTabChange}
             />

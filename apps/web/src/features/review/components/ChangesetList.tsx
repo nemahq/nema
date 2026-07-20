@@ -8,6 +8,7 @@ import type {
   ChangesetListEntry,
   ChangesSubTab,
 } from "@web/features/review/types";
+import { useCurrentSpaceId } from "@web/features/workspace";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -15,8 +16,6 @@ import { ChangesetListRow } from "./ChangesetListRow";
 import { ChangesetListSkeleton } from "./ChangesetListSkeleton";
 
 interface ChangesetListProps {
-  spacePublicId: string;
-  spaceId: string;
   subTab: ChangesSubTab;
 }
 
@@ -30,12 +29,9 @@ function isLinkable(entry: ChangesetListEntry, subTab: ChangesSubTab): boolean {
   return !(subTab === "open" && entry.type !== "ingestion");
 }
 
-function ChangesetListContent({
-  spacePublicId,
-  spaceId,
-  subTab,
-}: ChangesetListProps) {
+function ChangesetListContent({ subTab }: ChangesetListProps) {
   const { t } = useTranslation();
+  const spaceId = useCurrentSpaceId();
   const [changesetPages, query] = useChangesetListInfiniteQuery(
     spaceId,
     subTab === "open",
@@ -72,7 +68,6 @@ function ChangesetListContent({
           authorId={entry.authorId}
           effectDigest={entry.effect.digest}
           effectReference={entry.effect.reference}
-          spacePublicId={spacePublicId}
           linkable={isLinkable(entry, subTab)}
           hideDivider={index === entries.length - 1 && !query.hasNextPage}
         />

@@ -24,6 +24,7 @@ import {
   changesetDisplayTitle,
   summarizeChangesetEffect,
 } from "@web/features/review/utils";
+import { useSpacePublicId } from "@web/features/workspace";
 import { useUser } from "@web/lib/auth";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -36,7 +37,6 @@ interface ChangesetListRowProps {
   authorId: string | null;
   effectDigest: number;
   effectReference: number;
-  spacePublicId: string;
   // 링크로 열 수 있는 항목인지 — 판정은 목록이 한다(ChangesetList.isLinkable).
   // 목적지 객체를 prop으로 받으면 매 렌더 새 객체가 되어 memo가 무력화된다.
   linkable: boolean;
@@ -52,12 +52,14 @@ export const ChangesetListRow = memo(function ChangesetListRow({
   authorId,
   effectDigest,
   effectReference,
-  spacePublicId,
   linkable,
   hideDivider,
 }: ChangesetListRowProps) {
   const { t } = useTranslation();
   const user = useUser();
+  // 라우트에서 직접 읽는다 — 목록을 거쳐 내려받으면 행마다 같은 값을 나르는 셈이고,
+  // 이 값이 바뀔 땐 어차피 Space가 바뀌어 목록이 통째로 다시 그려진다.
+  const spacePublicId = useSpacePublicId();
   // revert는 라벨을 안 낸다 — 제목 자체가 "{원본 제목} 되돌림"으로 이미 되돌리기임을
   // 말해주게 될 예정이라(별도 후속 작업), 배지까지 얹으면 같은 정보의 중복 신호가 된다.
   const typeLabelKey =
