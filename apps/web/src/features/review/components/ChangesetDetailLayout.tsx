@@ -8,8 +8,7 @@ interface ChangesetDetailLayoutProps {
   children: ReactNode;
 }
 
-// changeset 타입(ingestion/relation/manual/revert)과 무관하게 상세 화면이 공유하는
-// 껍데기 — 타입별 화면은 본문만 채운다.
+// changeset 타입과 무관하게 상세 화면이 공유하는 껍데기 — 타입별 화면은 본문만 채운다.
 export function ChangesetDetailLayout({
   spacePublicId,
   title,

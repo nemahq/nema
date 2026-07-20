@@ -13,8 +13,8 @@ interface ChangesetDetailHeaderProps {
   actions?: ReactNode;
 }
 
-// Open/Closed 리뷰 화면이 공유하는 헤더 chrome(제목+번호 / 상태+시각) — 액션만
-// 화면마다 다른 슬롯으로 남긴다.
+// 상세 화면들이 공유하는 헤더 chrome(제목+번호 / 상태+시각) — 액션만 화면마다
+// 다른 슬롯으로 남긴다.
 export function ChangesetDetailHeader({
   title,
   changesetNumber,

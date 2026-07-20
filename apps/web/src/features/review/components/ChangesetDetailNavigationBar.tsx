@@ -48,9 +48,9 @@ function ChangesetDetailNavigationBarContent({
   );
 }
 
-// Open/Closed 리뷰 화면이 공유하는 브레드크럼(`[Space] › 변경사항 › 제목`) — 상태와
-// 무관해 두 화면이 같은 chrome을 낸다. 가운데 항목은 open/closed 모두 변경사항 탭의
-// 기본 진입(open 서브탭)으로 보낸다.
+// 상세 화면들이 공유하는 브레드크럼(`[Space] › 변경사항 › 제목`) — 타입·상태와 무관해
+// 모두 같은 chrome을 낸다. 가운데 항목은 어느 경우든 변경사항 탭의 기본 진입
+// (open 서브탭)으로 보낸다.
 export function ChangesetDetailNavigationBar(
   props: ChangesetDetailNavigationBarProps,
 ) {
