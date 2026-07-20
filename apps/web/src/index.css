@@ -49,7 +49,6 @@ html.cursor-row-resize * {
 html {
   overflow-x: hidden;
   overscroll-behavior-y: none;
-  scrollbar-gutter: stable;
 }
 
 /* scrollbar-gutter: stable이 이미 스크롤바 폭을 상시 예약해두므로, Radix가
