@@ -28,7 +28,9 @@ export function RouteErrorFallback({ error, reset }: ErrorComponentProps) {
       onRetry={hasRetried ? undefined : handleRetry}
       onRefresh={hasRetried ? () => window.location.reload() : undefined}
       size="page"
-      className="flex-1"
+      // min-h-dvh: 루트 라우트 에러는 App이 flex 부모 없는 Fragment라 flex-1이
+      // 안 먹는다 — 중첩 라우트(AppLayout의 flex h-dvh 안)에선 이미 꽉 차 있어 no-op.
+      className="min-h-dvh flex-1"
     />
   );
 }
