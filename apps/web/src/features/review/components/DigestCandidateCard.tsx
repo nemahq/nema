@@ -13,13 +13,12 @@ import { useTranslation } from "@web/lib/tolgee";
 import { CitedReferenceBadges } from "./CitedReferenceBadges";
 import { DigestBodyFields } from "./DigestBodyFields";
 import { DigestTypeSelect } from "./DigestTypeSelect";
-import { useReviewEditing } from "./ReviewEditingProvider";
+import { useEditing } from "./EditingProvider";
 import { TagChipRow } from "./TagChipRow";
 import { TopicChipRow } from "./TopicChipRow";
 
 interface DigestCandidateCardProps {
   index: number;
-  spaceId: string;
   // 쿼리 캐시에서 그대로 온 원본이라 참조가 안정적이다 — memo의 얕은 비교가 먹는다.
   digest: ReviewDigest;
   citedReferences: ReviewCitedReference[];
@@ -31,24 +30,23 @@ interface DigestCandidateCardProps {
 // props가 전부 안정적이라 memo가 실제로 동작한다.
 export const DigestCandidateCard = memo(function DigestCandidateCard({
   index,
-  spaceId,
   digest,
   citedReferences,
   disabled,
 }: DigestCandidateCardProps) {
   const { t } = useTranslation();
-  const dispatch = useReviewEditing((state) => state.dispatch);
+  const dispatch = useEditing((state) => state.dispatch);
   const title =
-    useReviewEditing((state) => state.overrides.titleOverrides.get(index)) ??
+    useEditing((state) => state.overrides.titleOverrides.get(index)) ??
     digest.title;
   const body =
-    useReviewEditing((state) => state.overrides.bodyOverrides.get(index)) ??
+    useEditing((state) => state.overrides.bodyOverrides.get(index)) ??
     digest.body;
   const topics =
-    useReviewEditing((state) => state.overrides.topicsOverrides.get(index)) ??
+    useEditing((state) => state.overrides.topicsOverrides.get(index)) ??
     digest.topics;
   const tags =
-    useReviewEditing((state) => state.overrides.tagsOverrides.get(index)) ??
+    useEditing((state) => state.overrides.tagsOverrides.get(index)) ??
     digest.tags;
 
   return (
@@ -94,7 +92,6 @@ export const DigestCandidateCard = memo(function DigestCandidateCard({
       <DigestBodyFields body={body} />
 
       <TopicChipRow
-        spaceId={spaceId}
         topics={topics}
         disabled={disabled}
         onChange={(next) =>

@@ -57,6 +57,7 @@
 - Hook name = caller perspective. Name by what the caller does, not by API endpoint or DB table.
 - Hook return variable: drop `use` prefix → camelCase. `useSessionList()` → `sessionList`. Array return → plural entity (`messages`).
 - Component name MUST NOT repeat the parent folder name. `session/components/MessageList` — O, `session/components/SessionMessageList` — X.
+- An entity prefix among sibling components means "bound to that entity's shape". `DigestTypeSelect` reads the Digest discriminated union directly and cannot serve another entity; `TopicChipRow` next to it takes a plain label array and can. Sibling names differing only in that prefix is a signal, not an inconsistency — but state which side a component is on when it is not obvious from its props.
 - Generic names like `value`, `data`, `item` MUST NOT be used for variables. Use domain-specific names that convey intent (e.g., `inputValue` → `messageInput`, `data` → `sessionDetail`).
 
 ## Data Fetching
@@ -153,6 +154,9 @@
   - `{ key: "value" } satisfies Record<string, string>` → type-checked AND inferred as `{ key: "value" }`, not widened to `Record<string, string>`.
 - MUST NOT use `as` type assertions to silence the compiler. Allowed only for narrowing from `unknown` after a runtime guard.
 - Component data props MUST be primitive values (string, number, boolean). Do NOT pass objects — primitive props enable effective `memo` shallow comparison and minimize re-renders. Callbacks (`on*`), render functions, and `children` are exempt.
+  - The rule targets values **built during render** — object/array literals, `.map()` results, spreads, inline arrow callbacks. Those get a new identity every render, so `memo` can never hit.
+  - A reference **passed through unchanged** from a query cache or a module constant is exempt: its identity is already stable, which is exactly what the shallow comparison needs. `DigestCandidateCard` takes `digest` and `citedReferences` straight off the `digestReview.get` cache for this reason.
+  - Lint cannot tell the two apart, so the burden is on the author: if a component takes an object prop, its identity must be traceable to a stable source.
 
 ## Design System
 

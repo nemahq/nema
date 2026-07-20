@@ -2,11 +2,14 @@ import { Suspense } from "react";
 import { linkOptions } from "@tanstack/react-router";
 
 import { NavigationBar } from "@web/components/layout/NavigationBar";
-import { SpaceBadge, useSpaceListSuspenseQuery } from "@web/features/workspace";
+import {
+  SpaceBadge,
+  useSpaceListSuspenseQuery,
+  useSpacePublicId,
+} from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface ChangesetDetailNavigationBarProps {
-  spacePublicId: string;
   title: string;
 }
 
@@ -14,10 +17,10 @@ interface ChangesetDetailNavigationBarProps {
 // 해석한다(사이드바가 이미 캐시). suspense 쿼리를 쓰므로 Suspense 경계를 이 파일에
 // 함께 두고, 이름이 아직 없는 짧은 구간은 브레드크럼 스켈레톤으로 대체한다.
 function ChangesetDetailNavigationBarContent({
-  spacePublicId,
   title,
 }: ChangesetDetailNavigationBarProps) {
   const { t } = useTranslation();
+  const spacePublicId = useSpacePublicId();
   const [spaceList] = useSpaceListSuspenseQuery();
   const spaceName =
     spaceList.spaces.find((space) => space.publicId === spacePublicId)?.name ??

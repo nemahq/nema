@@ -259,11 +259,10 @@ const draftsRoute = createRoute({
 // PR 번호 URL이 merge 여부와 무관하게 그대로인 것과 같다. 상태에 따라 어느 화면을
 // 그릴지는 ChangesetDetailPage 안의 게이트가 정한다(라우트는 number만 안다).
 function ChangesetDetailShell() {
-  const { spacePublicId, changesetNumber } = changesetDetailRoute.useParams();
+  const { changesetNumber } = changesetDetailRoute.useParams();
   return (
     <ChangesetDetailPage
       key={changesetNumber}
-      spacePublicId={spacePublicId}
       changesetNumber={changesetNumber}
     />
   );

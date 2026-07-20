@@ -1,5 +1,6 @@
 import {
   DIGEST_TYPES,
+  type DigestBody,
   type DigestType,
   REFERENCE_TYPES,
   type ReferenceType,
@@ -41,12 +42,15 @@ export function isReferenceType(value: string): value is ReferenceType {
 }
 
 // 07-modeling.md의 DigestBody 필드 정의 순서·한글 라벨을 그대로 따른다.
-interface DigestBodyFieldMeta {
-  key: string;
+// key를 타입별 본문 필드로 좁혀, 없는 필드나 오타가 컴파일 에러로 드러나게 한다.
+interface DigestBodyFieldMeta<T extends DigestType> {
+  key: Exclude<keyof Extract<DigestBody, { type: T }>, "type">;
   label: string;
 }
 
-export const DIGEST_BODY_FIELDS: Record<DigestType, DigestBodyFieldMeta[]> = {
+export const DIGEST_BODY_FIELDS: {
+  [T in DigestType]: DigestBodyFieldMeta<T>[];
+} = {
   decision: [
     { key: "situation", label: "상황" },
     { key: "choice", label: "선택" },

@@ -7,12 +7,13 @@ import {
   confirmDisabledReason as computeConfirmDisabledReason,
   runConfirmReview,
 } from "@web/features/review/confirmReviewFlow";
+import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
 import { computeReviewEditingState } from "@web/features/review/reviewEditingState";
-import type { ChangesetDetailScreenProps } from "@web/features/review/types";
+import { useCurrentSpaceId } from "@web/features/workspace";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -20,12 +21,9 @@ import { ChangesetDetailHeader } from "./ChangesetDetailHeader";
 import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
 import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
 import { DigestSection } from "./DigestSection";
-import { IngestionReviewActions } from "./IngestionReviewActions";
+import { EditingProvider, useEditing } from "./EditingProvider";
+import { IngestionActions } from "./IngestionActions";
 import { ReferenceSection } from "./ReferenceSection";
-import {
-  ReviewEditingProvider,
-  useReviewEditing,
-} from "./ReviewEditingProvider";
 import { SourceTextPanel } from "./SourceTextPanel";
 
 const CONFIRM_DISABLED_REASON_KEY = {
@@ -41,16 +39,15 @@ const CONFIRM_DISABLED_REASON_KEY = {
 // (useConfirmReview/useDiscardReview가 그 무효화를 담당).
 //
 // 확정 페이로드와 확정 차단 조건은 후보 전체를 봐야 나오는 값이라 여기서 편집 상태를
-// 통째로 구독한다 — 타이핑마다 이 컴포넌트와 두 섹션은 다시 그려지지만, 카드는 자기
-// 편집값만 구독하는 memo라 그대로 있는다.
-function IngestionReviewContent({
-  spacePublicId,
-  spaceId,
-  changesetNumber,
-}: ChangesetDetailScreenProps) {
+// 통째로 구독한다. 타이핑마다 이 함수는 다시 돌지만 두 섹션 요소는 overrides에
+// 의존하지 않아 React 컴파일러가 캐시하므로, 아래 트리는 통째로 건너뛴다.
+function IngestionContent() {
   const { t } = useTranslation();
+  const spaceId = useCurrentSpaceId();
+  const changesetNumber = useChangesetNumber();
   const [review] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
-  const overrides = useReviewEditing((state) => state.overrides);
+  const overrides = useEditing((state) => state.overrides);
+  const resetEditing = useEditing((state) => state.reset);
   const {
     digestRows,
     referenceRows,
@@ -109,6 +106,7 @@ function IngestionReviewContent({
         referenceUpdates,
         updateReview: updateReview.mutateAsync,
         confirmReview: confirmReview.mutateAsync,
+        onSaved: resetEditing,
       });
       showNotificationSoftAsk();
     } catch {
@@ -127,14 +125,14 @@ function IngestionReviewContent({
   }
 
   return (
-    <ChangesetDetailLayout spacePublicId={spacePublicId} title={reviewTitle}>
+    <ChangesetDetailLayout title={reviewTitle}>
       <ChangesetDetailHeader
         title={reviewTitle}
         changesetNumber={review.changesetNumber}
         status="pending"
         time={review.sourceCreatedAt}
         actions={
-          <IngestionReviewActions
+          <IngestionActions
             onDiscard={handleDiscard}
             onConfirm={handleConfirm}
             discardPending={discardReview.isPendingAfterDelay}
@@ -153,7 +151,6 @@ function IngestionReviewContent({
       <SourceTextPanel body={review.sourceBody} />
 
       <DigestSection
-        spaceId={review.spaceId}
         digests={review.digests}
         citedReferences={review.citedReferences}
         disabled={locked}
@@ -172,7 +169,7 @@ function IngestionReviewContent({
 // space·number 유효성 검증과 NOT_FOUND 처리는 ChangesetDetailScreen(부모 게이트)이
 // 이미 마쳤으므로, 여기서는 이 리뷰 콘텐츠 쿼리(digestReview.get)에 대한 Suspense만
 // 책임진다.
-export function IngestionReviewScreen(props: ChangesetDetailScreenProps) {
+export function IngestionScreen() {
   return (
     <Suspense
       fallback={
@@ -183,9 +180,9 @@ export function IngestionReviewScreen(props: ChangesetDetailScreenProps) {
         </ChangesetDetailLayoutSkeleton>
       }
     >
-      <ReviewEditingProvider>
-        <IngestionReviewContent {...props} />
-      </ReviewEditingProvider>
+      <EditingProvider>
+        <IngestionContent />
+      </EditingProvider>
     </Suspense>
   );
 }

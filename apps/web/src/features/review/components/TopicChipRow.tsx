@@ -1,5 +1,6 @@
 import { DIGEST_TOPICS_MAX, type DigestTopicDraft } from "@nema-io/shared";
 
+import { useCurrentSpaceId } from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftLabelChip } from "./DraftLabelChip";
@@ -7,19 +8,18 @@ import { RegisteredLabelChip } from "./RegisteredLabelChip";
 import { TopicAddPopover } from "./TopicAddPopover";
 
 interface TopicChipRowProps {
-  spaceId: string;
   topics: DigestTopicDraft[];
   disabled: boolean;
   onChange: (topics: DigestTopicDraft[]) => void;
 }
 
 export function TopicChipRow({
-  spaceId,
   topics,
   disabled,
   onChange,
 }: TopicChipRowProps) {
   const { t } = useTranslation();
+  const spaceId = useCurrentSpaceId();
 
   function replaceAt(index: number, next: DigestTopicDraft) {
     onChange(topics.map((topic, i) => (i === index ? next : topic)));

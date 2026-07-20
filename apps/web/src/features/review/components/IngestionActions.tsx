@@ -2,7 +2,7 @@ import { Button } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 
-interface IngestionReviewActionsProps {
+interface IngestionActionsProps {
   onDiscard: () => void;
   onConfirm: () => void;
   discardPending: boolean;
@@ -10,13 +10,13 @@ interface IngestionReviewActionsProps {
   confirmDisabled: boolean;
 }
 
-export function IngestionReviewActions({
+export function IngestionActions({
   onDiscard,
   onConfirm,
   discardPending,
   discardDisabled,
   confirmDisabled,
-}: IngestionReviewActionsProps) {
+}: IngestionActionsProps) {
   const { t } = useTranslation();
   return (
     <div className="flex shrink-0 items-center gap-2">
