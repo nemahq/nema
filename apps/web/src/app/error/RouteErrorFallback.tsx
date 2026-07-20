@@ -7,14 +7,18 @@ import { isUnauthorizedError } from "@web/lib/trpc";
 
 let lastRetriedError: string | null = null;
 
+// 로그아웃 처리 중 인증이 사라져서 나는 에러(UNAUTHORIZED, 언마운트
+// 직전 useUser() 등)는 이미 /signin 리다이렉트가 보장돼 있다 — 화면과
+// Sentry 보고 양쪽에서 같은 기준으로 "예상된 에러"로 취급한다.
+export function isExpectedAuthTransitionError(error: unknown): boolean {
+  return isUnauthorizedError(error) || error instanceof NotAuthenticatedError;
+}
+
 export function RouteErrorFallback({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   const hasRetried = lastRetriedError === error.message;
 
-  // 로그아웃 처리 중 인증이 사라져서 나는 에러(UNAUTHORIZED, 언마운트
-  // 직전 useUser() 등)는 이미 /signin 리다이렉트가 보장돼 있으므로
-  // 에러 화면 대신 빈 화면으로 넘긴다.
-  if (isUnauthorizedError(error) || error instanceof NotAuthenticatedError) {
+  if (isExpectedAuthTransitionError(error)) {
     return null;
   }
 
