@@ -6,10 +6,42 @@
 --
 -- 두 테이블에 걸친 쓰기는 순서를 지킨다: sources row를 먼저 잠그거나(FOR UPDATE)
 -- sources를 먼저 UPDATE해서 그 row를 우선 잠근 다음에만 source_digestion_state를
--- 건드린다 — 그래야 두 테이블에 걸친 쓰기 사이에 다른 트랜잭션이 끼어들 수 없다.
--- (기존엔 한 테이블 안의 단일 UPDATE라 이 문제가 없었다.)
+-- 건드린다. (기존엔 한 테이블 안의 단일 UPDATE라 이 문제가 없었다.)
+--
+-- 주의: row를 "잠그기만" 하는 것으론 부족하다 — claim 폴링(fetch_pending_sources,
+-- fetch_pending_linking_sources)처럼 WHERE의 lease 조건이 source_digestion_state
+-- 컬럼을 읽는 경우, FOR UPDATE OF s2만 걸면 sources에 새 버전이 안 생겨 EvalPlanQual
+-- 재검증이 안 걸린다 — 늦게 도착한 트랜잭션이 이미 커밋된 최신 sd 값 대신 자기
+-- 스냅샷의 낡은 값으로 조건을 통과해 같은 소스를 중복 claim할 수 있다. WHERE가
+-- 참조하는 테이블은 전부 FOR UPDATE OF에 같이 넣어야 한다(FOR UPDATE OF s2, sd).
 
--- ── source_digestion_state에 짝 row를 함께 만든다 ──────────────────────────
+-- 130000의 백필과 이 마이그레이션이 적용되는 사이 생성된 source는 state row 없이
+-- 존재할 수 있다(db push가 마이그레이션을 파일별로 개별 커밋하므로) — 멱등 백필로
+-- 한 번 더 닫는다.
+INSERT INTO source_digestion_state (source_id)
+SELECT id FROM sources
+ON CONFLICT (source_id) DO NOTHING;
+
+-- source가 생기는 모든 경로에서 state row가 항상 같이 생기도록 트리거로 강제한다
+-- — FK는 state → source 방향만 보장하고 반대는 안 해주는데, 호출부(현재는
+-- create_source 하나)가 잊지 않는 것에만 기대면 새 삽입 경로가 생길 때마다 같은
+-- 실수가 재발할 수 있다. 세 claim RPC가 전부 INNER JOIN이라, state row가 없는
+-- source는 워커에게 영원히 안 보이고 에러도 없이 방치된다 — 스키마로 막는다.
+CREATE OR REPLACE FUNCTION ensure_source_digestion_state()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO source_digestion_state (source_id)
+  VALUES (NEW.id)
+  ON CONFLICT (source_id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE TRIGGER sources_ensure_digestion_state
+  AFTER INSERT ON sources
+  FOR EACH ROW EXECUTE FUNCTION ensure_source_digestion_state();
+
+-- ── create_source: 짝 row는 이제 트리거가 만드므로 여기서 직접 INSERT 안 함 ──
 CREATE OR REPLACE FUNCTION create_source(
   p_space_id        uuid,
   p_body            text,
@@ -31,8 +63,6 @@ BEGIN
   INSERT INTO sources (space_id, author_id, session_id, body, author_timezone, status)
   VALUES (p_space_id, auth.uid(), p_session_id, p_body, p_author_timezone, 'pending')
   RETURNING id INTO v_source_id;
-
-  INSERT INTO source_digestion_state (source_id) VALUES (v_source_id);
 
   PERFORM pgmq.send('statement_sync', jsonb_build_object('type', 'notify'));
 
@@ -67,12 +97,17 @@ BEGIN
       AND (sd.last_extraction_attempt IS NULL
            OR sd.last_extraction_attempt + (sd.extraction_retry_count + 1) * interval '150 seconds' < now())
     LIMIT 10
-    FOR UPDATE OF s2 SKIP LOCKED
+    FOR UPDATE OF s2, sd SKIP LOCKED
   ),
   touched AS (
+    -- picked에 이미 걸러졌어도, lease 조건을 UPDATE 자신의 WHERE에도 한 번 더
+    -- 걸어 이중 방어한다 — UPDATE는 자기 qual을 최신 버전 기준으로 재확인한다.
     UPDATE source_digestion_state sd
     SET last_extraction_attempt = now()
     WHERE sd.source_id IN (SELECT picked.id FROM picked)
+      AND sd.extraction_retry_count < p_max_retries
+      AND (sd.last_extraction_attempt IS NULL
+           OR sd.last_extraction_attempt + (sd.extraction_retry_count + 1) * interval '150 seconds' < now())
     RETURNING sd.source_id
   )
   SELECT s.id, s.space_id, s.author_id, s.session_id, s.body, s.created_at, s.author_timezone
@@ -106,6 +141,10 @@ BEGIN
       last_extraction_attempt = now()
   WHERE source_id = p_source_id
   RETURNING extraction_retry_count INTO v_new_count;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'source_digestion_state row missing for source %', p_source_id;
+  END IF;
 
   UPDATE sources
   SET error_message = COALESCE(p_error_message, error_message),
@@ -142,6 +181,10 @@ BEGIN
   SET extraction_retry_count  = 0,
       last_extraction_attempt = NULL
   WHERE source_id = p_source_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'source_digestion_state row missing for source %', p_source_id;
+  END IF;
 
   PERFORM pgmq.send('statement_sync', jsonb_build_object('type', 'notify'));
 END;
@@ -206,6 +249,10 @@ BEGIN
   WHERE source_id = p_source_id
   RETURNING digestion_retry_count INTO v_new_count;
 
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'source_digestion_state row missing for source %', p_source_id;
+  END IF;
+
   UPDATE sources
   SET last_digestion_attempt = now(),
       error_message          = COALESCE(p_error_message, error_message),
@@ -247,6 +294,10 @@ BEGIN
   SET digestion_retry_count = 0
   WHERE source_id = p_source_id;
 
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'source_digestion_state row missing for source %', p_source_id;
+  END IF;
+
   PERFORM pgmq.send('statement_sync', jsonb_build_object('type', 'notify'));
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
@@ -271,6 +322,10 @@ BEGIN
   UPDATE source_digestion_state
   SET digestion_retry_count = 0
   WHERE source_id = p_source_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'source_digestion_state row missing for source %', p_source_id;
+  END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -295,12 +350,15 @@ BEGIN
         WHERE ss.source_id = s2.id AND st.ingestion_status = 'pending'
       )
     LIMIT 10
-    FOR UPDATE OF s2 SKIP LOCKED
+    FOR UPDATE OF s2, sd SKIP LOCKED
   ),
   touched AS (
     UPDATE source_digestion_state sd
     SET last_linking_attempt = now()
     WHERE sd.source_id IN (SELECT picked.id FROM picked)
+      AND sd.linking_retry_count < p_max_retries
+      AND (sd.last_linking_attempt IS NULL
+           OR sd.last_linking_attempt + (sd.linking_retry_count + 1) * interval '150 seconds' < now())
     RETURNING sd.source_id
   )
   SELECT s.id, s.space_id, s.created_at
@@ -332,6 +390,10 @@ BEGIN
       last_linking_attempt = now()
   WHERE source_id = p_source_id
   RETURNING linking_retry_count INTO v_new_count;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'source_digestion_state row missing for source %', p_source_id;
+  END IF;
 
   UPDATE sources
   SET error_message = COALESCE(p_error_message, error_message),
@@ -367,6 +429,10 @@ BEGIN
   SET linking_retry_count  = 0,
       last_linking_attempt = NULL
   WHERE source_id = p_source_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'source_digestion_state row missing for source %', p_source_id;
+  END IF;
 
   PERFORM pgmq.send('statement_sync', jsonb_build_object('type', 'notify'));
 END;

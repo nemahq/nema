@@ -29,15 +29,12 @@ SELECT id, extraction_retry_count, last_extraction_attempt,
        digestion_retry_count, linking_retry_count, last_linking_attempt
 FROM sources;
 
--- fetch_pending_sources/fetch_pending_linking_sources의 폴링 WHERE가 이 두
--- 컬럼으로 후보를 좁힌다 — sources 쪽 파티셜 인덱스(idx_sources_pending 등)는
--- extraction_status/linking_status(안 옮김) 기준이라 그대로 유효하지만, 재시도
--- 카운트 조건은 새 테이블에서 걸리므로 여기에도 인덱스가 필요하다.
-CREATE INDEX idx_source_digestion_state_extraction_retry
-  ON source_digestion_state (extraction_retry_count, last_extraction_attempt);
-
-CREATE INDEX idx_source_digestion_state_linking_retry
-  ON source_digestion_state (linking_retry_count, last_linking_attempt);
+-- 재시도 카운트·인덱스 관련: 별도 인덱스를 안 둔다. fetch_pending_sources 등의
+-- 폴링은 sources 쪽 파티셜 인덱스(idx_sources_pending 등)로 후보를 먼저 좁힌 뒤
+-- source_id PK로 이 표를 조인하고, 재시도 카운트·마지막 시도 시각은 그 뒤에
+-- 필터로만 걸린다 — 여기에 인덱스를 걸어도 플래너가 access path로 못 씀. 게다가
+-- last_*_attempt는 클레임마다 갱신되는 컬럼이라 인덱스가 있으면 HOT update가
+-- 막혀 이 PR이 줄이려는 쓰기 비용을 오히려 늘린다.
 
 -- 클라이언트가 직접 읽을 일이 없는 순수 내부 테이블 — RPC(SECURITY DEFINER)만 접근.
 -- authenticated에는 아무 권한도 주지 않는다(sources처럼 SELECT조차 열지 않음).
