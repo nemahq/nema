@@ -9,6 +9,10 @@ import { trpc } from "@web/lib/trpc";
 
 const CHANNEL_NAME = "realtime-invalidation";
 
+// digestion 파이프라인이 소스 하나를 처리하며 sources row를 여러 번 UPDATE하므로,
+// 짧은 간격으로 연달아 오는 이벤트를 마지막 것 기준 한 번으로 묶는다.
+const PENDING_SOURCES_INVALIDATE_DEBOUNCE_MS = 500;
+
 type TrpcUtils = ReturnType<typeof trpc.useUtils>;
 type NotifyChangesetReady = ReturnType<typeof useChangesetReadyNotifier>;
 
@@ -44,8 +48,15 @@ export function useRealtimeInvalidation() {
   );
 
   useEffect(function subscribeRealtimeInvalidation() {
+    let pendingSourcesTimer: ReturnType<typeof setTimeout> | undefined;
     function invalidatePendingSources() {
-      void utilsRef.current.source.listPending.invalidate();
+      clearTimeout(pendingSourcesTimer);
+      pendingSourcesTimer = setTimeout(
+        function flushPendingSourcesInvalidate() {
+          void utilsRef.current.source.listPending.invalidate();
+        },
+        PENDING_SOURCES_INVALIDATE_DEBOUNCE_MS,
+      );
     }
     function invalidateChangesetBadges() {
       void utilsRef.current.space.list.invalidate();
@@ -89,6 +100,7 @@ export function useRealtimeInvalidation() {
       });
 
     return function unsubscribe() {
+      clearTimeout(pendingSourcesTimer);
       void supabase.removeChannel(channel);
     };
   }, []);
