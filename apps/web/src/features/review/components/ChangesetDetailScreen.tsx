@@ -12,7 +12,7 @@ import { ChangesetDetailLayoutSkeleton } from "@web/features/review/components/C
 import { renderChangesetDetailScreen } from "@web/features/review/components/changesetDetailRegistry";
 import { ChangesetNotFound } from "@web/features/review/components/ChangesetNotFound";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
-import type { ChangesetDetailScreenProps } from "@web/features/review/types";
+import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import {
   useCurrentSpaceId,
   useSpaceListSuspenseQuery,
@@ -26,10 +26,9 @@ interface ChangesetDetailRouteProps {
 }
 
 // 화면 선택만 하고 그리지 않는다 — 어느 화면을 띄울지는 레지스트리가 정한다.
-function ChangesetDetailRouter({
-  changesetNumber,
-}: ChangesetDetailScreenProps) {
+function ChangesetDetailRouter() {
   const spaceId = useCurrentSpaceId();
+  const changesetNumber = useChangesetNumber();
   const [changesetDetail] = useChangesetDetailSuspenseQuery(
     spaceId,
     changesetNumber,
@@ -37,7 +36,6 @@ function ChangesetDetailRouter({
   return renderChangesetDetailScreen(
     changesetDetail.type,
     changesetDetail.status,
-    { changesetNumber },
   );
 }
 
@@ -113,7 +111,7 @@ function ChangesetDetailSpaceGate({
       )}
     >
       <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
-        <ChangesetDetailRouter changesetNumber={changesetNumber} />
+        <ChangesetDetailRouter />
       </Suspense>
     </ErrorBoundary>
   );

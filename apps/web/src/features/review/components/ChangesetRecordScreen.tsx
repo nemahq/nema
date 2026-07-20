@@ -4,8 +4,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@nema-io/weave";
 
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
+import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
-import type { ChangesetDetailScreenProps } from "@web/features/review/types";
 import { changesetDisplayTitle } from "@web/features/review/utils";
 import { useCurrentSpaceId, useSpacePublicId } from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
@@ -14,13 +14,12 @@ import { ChangesetDetailHeader } from "./ChangesetDetailHeader";
 import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
 import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
 
-function ChangesetRecordContent({
-  changesetNumber,
-}: ChangesetDetailScreenProps) {
+function ChangesetRecordContent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const spacePublicId = useSpacePublicId();
   const spaceId = useCurrentSpaceId();
+  const changesetNumber = useChangesetNumber();
   const [changesetDetail] = useChangesetDetailSuspenseQuery(
     spaceId,
     changesetNumber,
@@ -73,10 +72,10 @@ function ChangesetRecordContent({
 // space·number 유효성 검증과 NOT_FOUND 처리는 ChangesetDetailScreen(부모 게이트)이
 // 이미 마쳤으므로, 여기서는 이 changeset 상세만의 콘텐츠 쿼리(useChangesetDetailSuspenseQuery)
 // 에 대한 Suspense만 책임진다.
-export function ChangesetRecordScreen(props: ChangesetDetailScreenProps) {
+export function ChangesetRecordScreen() {
   return (
     <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
-      <ChangesetRecordContent {...props} />
+      <ChangesetRecordContent />
     </Suspense>
   );
 }
