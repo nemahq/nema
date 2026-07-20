@@ -216,13 +216,13 @@
 
 #### 원본도 삭제하기
 
-- **Given**: 유저가 Digest 리뷰 화면에서 버려지거나 되돌려진 changeset을 보고 있다.
+- **Given**: 유저가 Changeset 상세에서 버려지거나 되돌려진 changeset을 보고 있다(Digest 리뷰 화면은 open 전용이라 여기 해당 없음).
 - **When**: 원본도 삭제하기 액션을 실행한다.
 - **Then**:
   1. 그 원본(Source)이 즉시 trashed 상태로 전환된다.
   2. 원본도 삭제하기 액션이 사라진다.
-- **관여 화면**: Digest 리뷰 화면
-- **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다(위 "적용된 리뷰 되돌리기"와 같은 이유) — 버려지거나 되돌려진 changeset은 Digest 리뷰 화면에서 조회가 안 되므로, "원본도 삭제하기" 액션은 Changeset 상세에만 뒀다(`useTrashReviewSource`, 기존 `trash_source` RPC 재사용). Then 자체는 구현(확인 다이얼로그 → 즉시 trashed 전환 → 액션 비활성화). 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+- **관여 화면**: Changeset 상세
+- **범위 참고 (2026-07-14, PR #412)**: `useTrashReviewSource`(기존 `trash_source` RPC 재사용)로 구현 — 확인 다이얼로그 → 즉시 trashed 전환 → 액션 비활성화.
 
 #### 버려진 리뷰 되살리기
 
