@@ -15,7 +15,7 @@ interface NavigationBarItem extends LooseLinkTarget {
 interface NavigationBarProps {
   // 아직 items를 채울 데이터(예: Space 이름)가 없는 로딩 구간엔 통째로 생략한다 —
   // 항목별로 따로 로딩되는 모습 대신 자리만 차지하는 스켈레톤 한 덩어리로 대체된다
-  // (ClosedReviewScreen 논의 참고).
+  // (ChangesetRecordScreen 논의 참고).
   items?: NavigationBarItem[];
   rightContent?: ReactNode;
 }

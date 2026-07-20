@@ -7,70 +7,35 @@ import {
   type ErrorFallbackProps,
 } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
-import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { isChangesetNotFound } from "@web/features/review/changesetErrors";
+import { ChangesetDetailLayoutSkeleton } from "@web/features/review/components/ChangesetDetailLayoutSkeleton";
+import { renderChangesetDetailScreen } from "@web/features/review/components/changesetDetailRegistry";
 import { ChangesetNotFound } from "@web/features/review/components/ChangesetNotFound";
-import { ClosedReviewScreen } from "@web/features/review/components/ClosedReviewScreen";
-import { OpenReviewScreen } from "@web/features/review/components/OpenReviewScreen";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
-import type { ChangesetStatus } from "@web/features/review/types";
+import type { ChangesetDetailScreenProps } from "@web/features/review/types";
 import { useSpaceListSuspenseQuery } from "@web/features/workspace";
 import { trpc } from "@web/lib/trpc";
 
-interface ChangesetDetailScreenProps {
+// 라우트 파라미터 그대로 — 숫자 변환·검증 전이라 changesetNumber가 문자열이다.
+interface ChangesetDetailRouteProps {
   spacePublicId: string;
   changesetNumber: string;
 }
 
-function ChangesetDetailNavSkeleton() {
-  return <NavigationBar />;
-}
-
-interface ChangesetDetailRouterProps {
-  spacePublicId: string;
-  spaceId: string;
-  changesetNumber: number;
-}
-
-// changesetStatusMeta(constants.ts)와 같은 이유로 if/else 대신 Record를 쓴다 —
-// status에 값이 추가되면 여기서 컴파일 에러로 드러나야, 조용히 Closed로 잘못
-// 분류되는 걸 막는다.
-const CHANGESET_DETAIL_SCREEN_KIND: Record<ChangesetStatus, "open" | "closed"> =
-  {
-    pending: "open",
-    applied: "closed",
-    rejected: "closed",
-  };
-
-// GitHub의 PR 페이지(merge 여부와 무관하게 /pull/123 URL 그대로)를 참고한 패턴 —
-// pending이면 편집 가능한 리뷰 화면, 아니면 읽기전용 기록 화면을 같은 URL에서 그린다.
-// 두 화면을 하나로 합치지 않는 이유: 편집 중인 초안 vs 확정된 기록은 성격이 달라
-// 각자의 쿼리·상태를 그대로 유지하는 편이 낫다(이 게이트는 어느 쪽을 보여줄지만 정한다).
+// 화면 선택만 하고 그리지 않는다 — 어느 화면을 띄울지는 레지스트리가 정한다.
 function ChangesetDetailRouter({
   spacePublicId,
   spaceId,
   changesetNumber,
-}: ChangesetDetailRouterProps) {
+}: ChangesetDetailScreenProps) {
   const [changesetDetail] = useChangesetDetailSuspenseQuery(
     spaceId,
     changesetNumber,
   );
-
-  if (CHANGESET_DETAIL_SCREEN_KIND[changesetDetail.status] === "open") {
-    return (
-      <OpenReviewScreen
-        spacePublicId={spacePublicId}
-        spaceId={spaceId}
-        changesetNumber={changesetNumber}
-      />
-    );
-  }
-  return (
-    <ClosedReviewScreen
-      spacePublicId={spacePublicId}
-      spaceId={spaceId}
-      changesetNumber={changesetNumber}
-    />
+  return renderChangesetDetailScreen(
+    changesetDetail.type,
+    changesetDetail.status,
+    { spacePublicId, spaceId, changesetNumber },
   );
 }
 
@@ -105,7 +70,7 @@ function ChangesetDetailErrorFallback({
   );
 
   if (notFound && !hasRetried) {
-    return <ChangesetDetailNavSkeleton />;
+    return <ChangesetDetailLayoutSkeleton />;
   }
   if (notFound) {
     return <ChangesetNotFound />;
@@ -118,7 +83,7 @@ function ChangesetDetailErrorFallback({
 function ChangesetDetailSpaceGate({
   spacePublicId,
   changesetNumber: rawChangesetNumber,
-}: ChangesetDetailScreenProps) {
+}: ChangesetDetailRouteProps) {
   const [spaceList] = useSpaceListSuspenseQuery();
   const space = spaceList.spaces.find(
     (candidate) => candidate.publicId === spacePublicId,
@@ -145,7 +110,7 @@ function ChangesetDetailSpaceGate({
         />
       )}
     >
-      <Suspense fallback={<ChangesetDetailNavSkeleton />}>
+      <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
         <ChangesetDetailRouter
           spacePublicId={spacePublicId}
           spaceId={space.id}
@@ -159,10 +124,10 @@ function ChangesetDetailSpaceGate({
 export function ChangesetDetailScreen({
   spacePublicId,
   changesetNumber,
-}: ChangesetDetailScreenProps) {
+}: ChangesetDetailRouteProps) {
   return (
     <div className="flex flex-1 flex-col bg-surface-card">
-      <Suspense fallback={<ChangesetDetailNavSkeleton />}>
+      <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
         <ChangesetDetailSpaceGate
           spacePublicId={spacePublicId}
           changesetNumber={changesetNumber}

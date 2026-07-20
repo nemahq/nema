@@ -5,7 +5,7 @@ import type { ChangesetStatus } from "@web/features/review/types";
 
 import { ChangesetStatusPill } from "./ChangesetStatusPill";
 
-interface ReviewHeaderProps {
+interface ChangesetDetailHeaderProps {
   title: string;
   changesetNumber: number;
   status: ChangesetStatus;
@@ -13,15 +13,15 @@ interface ReviewHeaderProps {
   actions?: ReactNode;
 }
 
-// Open/Closed 리뷰 화면이 공유하는 헤더 chrome(제목+번호 / 상태+시각) — 액션만
-// 화면마다 다른 슬롯으로 남긴다.
-export function ReviewHeader({
+// 상세 화면들이 공유하는 헤더 chrome(제목+번호 / 상태+시각) — 액션만 화면마다
+// 다른 슬롯으로 남긴다.
+export function ChangesetDetailHeader({
   title,
   changesetNumber,
   status,
   time,
   actions,
-}: ReviewHeaderProps) {
+}: ChangesetDetailHeaderProps) {
   return (
     <header className="sticky top-0 z-10 flex flex-col gap-2 border-b border-border/50 bg-surface-card pb-4">
       <div className="flex items-center justify-between gap-4">
