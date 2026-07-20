@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { memo, type ReactNode } from "react";
+import { Link, linkOptions } from "@tanstack/react-router";
 
 import {
   cn,
@@ -22,11 +22,18 @@ import {
   summarizeChangesetEffect,
 } from "@web/features/review/utils";
 import { useUser } from "@web/lib/auth";
-import { asLinkProps, type LooseLinkTarget } from "@web/lib/link";
 import { useTranslation } from "@web/lib/tolgee";
 
-interface ChangesetListRowProps extends LooseLinkTarget {
+interface ChangesetListRowProps {
+  // 유일한 객체 prop — memo 얕은 비교가 유효한 이유는 TanStack Query의 structural
+  // sharing이 안 바뀐 항목의 참조를 그대로 유지하기 때문이다. 필드를 primitive로
+  // 풀면 changesetDisplayTitle·summarizeChangesetEffect가 entry 전체를 받는
+  // 계약이라 도로 조립해야 해서 얻는 게 없다.
   entry: ChangesetListEntry;
+  spacePublicId: string;
+  // 링크로 열 수 있는 항목인지 — 판정은 목록이 한다(ChangesetList.isLinkable).
+  // 목적지 객체를 prop으로 받으면 매 렌더 새 객체가 되어 memo가 무력화된다.
+  linkable: boolean;
   hideDivider?: boolean;
 }
 
@@ -44,11 +51,10 @@ function RowIconTooltip({ label, children }: RowIconTooltipProps) {
   );
 }
 
-export function ChangesetListRow({
+export const ChangesetListRow = memo(function ChangesetListRow({
   entry,
-  to,
-  params,
-  search,
+  spacePublicId,
+  linkable,
   hideDivider,
 }: ChangesetListRowProps) {
   const { t } = useTranslation();
@@ -120,7 +126,7 @@ export function ChangesetListRow({
 
   const rowClassName = cn(
     "flex w-full flex-col gap-0.5 px-4 py-3 text-left",
-    to ? LIST_ITEM_HOVER_CLASSNAME : "cursor-default",
+    linkable ? LIST_ITEM_HOVER_CLASSNAME : "cursor-default",
   );
 
   return (
@@ -128,10 +134,19 @@ export function ChangesetListRow({
     // 휘어 보여서, 별도 줄로 분리하고 rounded-lg와 같은 반경(2=8px)만큼
     // 인셋해 호버 박스가 평평해지는 지점과 끝을 맞춘다.
     <div>
-      {to ? (
+      {linkable ? (
         // cmd/middle click으로 새 탭에서 열 수 있어야 해서 button+onClick이
         // 아니라 진짜 <a href>를 내는 Link로 렌더한다.
-        <Link {...asLinkProps({ to, params, search })} className={rowClassName}>
+        <Link
+          {...linkOptions({
+            to: "/space/$spacePublicId/changesets/$changesetNumber",
+            params: {
+              spacePublicId,
+              changesetNumber: String(entry.number),
+            },
+          })}
+          className={rowClassName}
+        >
           {content}
         </Link>
       ) : (
@@ -140,4 +155,4 @@ export function ChangesetListRow({
       {!hideDivider && <div className="mx-2 border-b border-border/50" />}
     </div>
   );
-}
+});
