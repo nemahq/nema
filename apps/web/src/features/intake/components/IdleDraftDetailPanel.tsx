@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { DraftStatus } from "@web/features/intake/utils";
+import type { IdleDraftStatus } from "@web/features/intake/utils";
 
 import { DraftBodyEditor } from "./DraftBodyEditor";
 import { DraftDeleteAction } from "./DraftDeleteAction";
@@ -13,7 +13,7 @@ interface IdleDraftDetailPanelProps {
   spaceId: string;
   title: string | null;
   body: string;
-  status: DraftStatus;
+  status: IdleDraftStatus;
   onClose: () => void;
 }
 

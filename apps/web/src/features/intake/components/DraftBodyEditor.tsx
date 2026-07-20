@@ -6,7 +6,7 @@ import { Alert, Button } from "@nema-io/weave";
 import { useMarkDraftEdited } from "@web/features/intake/contexts/DraftEditingContext";
 import { useStartSourceDigestion } from "@web/features/intake/hooks/useStartSourceDigestion";
 import { useUpdateSourceBody } from "@web/features/intake/hooks/useUpdateSourceBody";
-import type { DraftStatus } from "@web/features/intake/utils";
+import type { IdleDraftStatus } from "@web/features/intake/utils";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
@@ -16,7 +16,7 @@ import { DraftBodyView } from "./DraftBodyView";
 interface DraftBodyEditorProps {
   sourceId: string;
   initialBody: string;
-  status: DraftStatus;
+  status: IdleDraftStatus;
   // 정리 시작은 제목·삭제·Space까지 같이 잠그므로 상위가 알아야 한다.
   onStartingDigestionChange: (starting: boolean) => void;
   isStartingDigestion: boolean;

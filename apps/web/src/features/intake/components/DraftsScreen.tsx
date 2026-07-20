@@ -34,12 +34,11 @@ export function DraftsScreen({
           </div>
         </div>
 
+        {/* key를 여기 걸면 초안을 바꿀 때마다 SidePanel까지 리마운트돼 사용자가
+            드래그로 맞춰둔 폭이 초기화된다 — 초안별 리셋이 필요한 건 패널 내용물
+            뿐이라 key는 DraftDetailPanel 안쪽에 있다. */}
         {selectedSourceId && (
-          <DraftDetailPanel
-            key={selectedSourceId}
-            sourceId={selectedSourceId}
-            onClose={handleClose}
-          />
+          <DraftDetailPanel sourceId={selectedSourceId} onClose={handleClose} />
         )}
       </main>
     </DraftEditingProvider>

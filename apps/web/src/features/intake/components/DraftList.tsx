@@ -16,6 +16,10 @@ const ORGANIZING_ICON = (
 );
 
 interface DraftListProps {
+  // 카드가 memo라 이 참조가 안정적이어야 의미가 있다 — 여기서 인라인 화살표
+  // (onSelect={() => onSelectSource(id)})로 감싸면 매 렌더 새 함수가 되어
+  // Realtime invalidate마다 카드 전체가 다시 그려진다. 카드가 sourceId를 받아
+  // 스스로 넘기는 건 그래서다.
   onSelectSource: (sourceId: string) => void;
 }
 
