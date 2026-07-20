@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/react";
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 
+import { isUnauthorizedError } from "@web/lib/trpc";
 import { toastError } from "@web/utils/toast";
 
 export { useMutation } from "./useMutation";
@@ -21,7 +22,11 @@ export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     // TRPCClientError는 기본적으로 제외(예상된 거부·401 등 노이즈). 단 critical 쿼리는
     // meta.reportToSentry로 실패를 반드시 보고하게 opt-in한다(예: workspace.bootstrap).
+    // UNAUTHORIZED는 opt-in 쿼리여도 로그아웃 레이스로 인한 예상된 실패라 항상 제외한다.
     onError(error, query) {
+      if (isUnauthorizedError(error)) {
+        return;
+      }
       if (!(error instanceof TRPCClientError) || query.meta?.reportToSentry) {
         Sentry.captureException(error);
       }

@@ -160,10 +160,17 @@ export function useAuth() {
   return ctx;
 }
 
+// 로그아웃 처리 중 user가 null로 바뀌는 순간, 아직 언마운트되지 않은
+// 인증 화면(예: 로그아웃 버튼을 쥔 컴포넌트 자신)이 리렌더되며 여기서
+// throw할 수 있다.
+export class NotAuthenticatedError extends Error {}
+
 export function useUser(): AppUser {
   const { user } = useAuth();
   if (!user) {
-    throw new Error("useUser is only available in authenticated routes");
+    throw new NotAuthenticatedError(
+      "useUser is only available in authenticated routes",
+    );
   }
   return user;
 }

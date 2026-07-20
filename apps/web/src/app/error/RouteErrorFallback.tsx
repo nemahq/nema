@@ -2,17 +2,23 @@ import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useRouter } from "@tanstack/react-router";
 
 import { ErrorFallback } from "@web/app/error/ErrorFallback";
+import { NotAuthenticatedError } from "@web/lib/auth";
 import { isUnauthorizedError } from "@web/lib/trpc";
 
 let lastRetriedError: string | null = null;
+
+// 로그아웃 처리 중 인증이 사라져서 나는 에러(UNAUTHORIZED, 언마운트
+// 직전 useUser() 등)는 이미 /signin 리다이렉트가 보장돼 있다 — 화면과
+// Sentry 보고 양쪽에서 같은 기준으로 "예상된 에러"로 취급한다.
+export function isExpectedAuthTransitionError(error: unknown): boolean {
+  return isUnauthorizedError(error) || error instanceof NotAuthenticatedError;
+}
 
 export function RouteErrorFallback({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   const hasRetried = lastRetriedError === error.message;
 
-  // UNAUTHORIZED는 authRedirectLink가 이미 /signin 리다이렉트를 보장하므로
-  // 리다이렉트 직전 순간적으로 에러 화면을 띄우지 않는다.
-  if (isUnauthorizedError(error)) {
+  if (isExpectedAuthTransitionError(error)) {
     return null;
   }
 
