@@ -17,7 +17,9 @@
     "support_label": "고객 지원"
   },
   "app": {
-    "title": "Nema"
+    "title": "Nema",
+    "update_available_action": "새로고침",
+    "update_available_message": "새 버전이 나왔어요."
   },
   "auth": {
     "back_to_login": "돌아가기",

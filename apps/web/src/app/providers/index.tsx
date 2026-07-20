@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { Toast, TooltipProvider } from "@nema-io/weave";
 
+import { ServiceWorkerUpdatePrompt } from "@web/features/pwa";
 import { AuthProvider } from "@web/lib/auth";
 import { ActionRegistryProvider } from "@web/lib/command/shortcut/context";
 
@@ -28,6 +29,7 @@ export function AppProviders({ children }: AppProvidersProps) {
               <TooltipProvider>
                 {children}
                 <ThemedToast />
+                <ServiceWorkerUpdatePrompt />
               </TooltipProvider>
             </ActionRegistryProvider>
           </AuthProvider>

@@ -17,7 +17,9 @@
     "support_label": "Support"
   },
   "app": {
-    "title": "Nema"
+    "title": "Nema",
+    "update_available_action": "Refresh",
+    "update_available_message": "A new version is available."
   },
   "auth": {
     "back_to_login": "Go back",
