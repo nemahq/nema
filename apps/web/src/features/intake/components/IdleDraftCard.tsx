@@ -41,7 +41,12 @@ export const IdleDraftCard = memo(function IdleDraftCard({
   onSelect,
 }: IdleDraftCardProps) {
   // 결과없음 아이콘의 근거는 "정리해봤자 같은 결과"라, 원문·Space가 실제로 바뀌어
-  // 다른 결과가 나올 여지가 생기면(재정리 버튼이 풀리는 조건과 동일) 뗀다.
+  // 다른 결과가 나올 여지가 생기면 뗀다.
+  //
+  // 상세의 재정리 버튼과 조건이 완전히 같지는 않다 — 버튼은 아직 저장 안 된 편집도
+  // 인정해서 blur 없이 바로 누를 수 있게 하지만, 목록 카드는 저장된 변경만 본다.
+  // 타이핑 중(blur 전)에는 버튼이 먼저 풀리고 아이콘은 저장된 뒤에 사라진다. 카드는
+  // 여러 초안을 훑는 자리라 아직 확정 안 된 편집으로 표시가 흔들리면 안 된다.
   const statusIcon =
     status === "empty" && inputChangedSinceDigestion
       ? null

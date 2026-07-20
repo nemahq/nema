@@ -149,14 +149,21 @@ function toDigestionOutcome(args: {
   }
 }
 
+// lastDigestionAttempt는 워커가 큐에서 집어드는 시점에 찍힌다(완료 시각이 아니다)
+// — 그래서 이 비교의 의미는 "마지막 정리가 시작된 뒤에 입력이 바뀌었나"이고, 정리
+// 도중의 편집도 바뀐 것으로 잡힌다. 그 편집은 지금 도는 정리에 반영될 수 없으니
+// 맞는 판정이다. 스탬핑 시점을 완료 시각으로 옮기면 이 성질이 조용히 깨진다.
 function hasInputChangedSinceDigestion(args: {
   digestionInputUpdatedAt: string;
   lastDigestionAttempt: string | null;
 }): boolean {
-  // 아직 한 번도 안 붙잡힌 원본은 비교할 시도가 없다 — 정리를 해본 적이 없으니
-  // "다시 해봐야 소용없다"는 판정 자체가 성립하지 않는다.
+  // 비교할 시도 시각이 없으면 열어준다. 이 게이트는 사용자의 재정리를 막는
+  // 방향이라 판정 불가는 막는 쪽이 아니라 푸는 쪽이어야 한다 — 잘못 열리면
+  // 헛수고 한 번이지만 잘못 잠기면 영영 재정리할 수 없다. 실제로 v1 파이프라인
+  // 시절 원본은 digestion_status만 completed로 소급되고 시도 시각은 NULL로 남아
+  // (20260707100000), 잠그면 그 초안들이 영구히 묶인다.
   if (args.lastDigestionAttempt === null) {
-    return false;
+    return true;
   }
   return (
     new Date(args.digestionInputUpdatedAt).getTime() >

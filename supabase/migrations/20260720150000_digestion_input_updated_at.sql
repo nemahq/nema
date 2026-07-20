@@ -15,6 +15,8 @@ ALTER TABLE sources
 
 -- 기존 행은 생성 시각으로 되돌린다 — now()로 두면 이미 정리를 마친 초안까지
 -- "정리 이후 입력이 바뀌었다"로 잘못 판정돼 재정리가 일제히 풀린다.
+-- 전체 재작성이라 정리 워커의 FOR UPDATE SKIP LOCKED와 부딪힐 수 있지만, 아직
+-- sources가 수천 행 규모라 배치 분할 없이 한 번에 간다.
 UPDATE sources SET digestion_input_updated_at = created_at;
 
 CREATE OR REPLACE FUNCTION update_digestion_input_updated_at()
@@ -23,7 +25,7 @@ BEGIN
   NEW.digestion_input_updated_at = now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- UPDATE OF는 SET 목록에 그 컬럼이 있으면 값이 같아도 발동하므로, WHEN으로
 -- 실제 변경만 남긴다.

@@ -118,7 +118,7 @@ const SPACE_ID = "77777777-7777-4777-a777-777777777777";
 const SOURCE_A = "88888888-8888-4888-a888-888888888888";
 const SOURCE_B = "99999999-9999-4999-a999-999999999999";
 
-const DIGESTED_AT = "2026-07-17T00:00:00.000Z";
+const CREATED_AT = "2026-07-17T00:00:00.000Z";
 
 function pendingSourceRow(args: {
   id: string;
@@ -131,10 +131,10 @@ function pendingSourceRow(args: {
     space_id: SPACE_ID,
     body: "본문",
     title: null,
-    created_at: DIGESTED_AT,
+    created_at: CREATED_AT,
     digestion_status: args.digestionStatus ?? "completed",
     last_digestion_attempt: args.lastDigestionAttempt ?? null,
-    digestion_input_updated_at: args.digestionInputUpdatedAt ?? DIGESTED_AT,
+    digestion_input_updated_at: args.digestionInputUpdatedAt ?? CREATED_AT,
     error_message: null,
   };
 }
@@ -237,17 +237,18 @@ describe("listPendingSources", () => {
     );
   });
 
-  // new Date(null)이 epoch(0)이라 null 가드가 없으면 모든 원본이 true로 새어
-  // 헛수고 방지가 통째로 무력화된다 — 경계값이라 명시적으로 잠근다.
-  it("정리를 한 번도 시도한 적 없으면 false", async () => {
+  // v1 파이프라인 시절 원본은 digestion_status만 completed로 소급되고 시도 시각은
+  // NULL로 남았다(20260707100000). 잠그는 쪽으로 판정하면 그 초안들이 영구히 묶여
+  // 재정리가 불가능해지므로, 판정 불가는 여는 쪽으로 떨어져야 한다.
+  it("정리 시도 시각이 없으면 열어준다 — 레거시 초안이 영구히 잠기지 않게", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({
         sources: [
           pendingSourceRow({
             id: SOURCE_A,
-            digestionStatus: "pending",
+            digestionStatus: "completed",
             lastDigestionAttempt: null,
-            digestionInputUpdatedAt: "2026-07-17T02:00:00.000Z",
+            digestionInputUpdatedAt: CREATED_AT,
           }),
         ],
         changesets: [],
@@ -255,7 +256,10 @@ describe("listPendingSources", () => {
     });
 
     expect(items[0]).toEqual(
-      expect.objectContaining({ inputChangedSinceDigestion: false }),
+      expect.objectContaining({
+        digestionOutcome: "empty",
+        inputChangedSinceDigestion: true,
+      }),
     );
   });
 
