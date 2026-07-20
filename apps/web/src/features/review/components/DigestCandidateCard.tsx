@@ -10,10 +10,13 @@ import type {
 } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
+// Digest 접두사는 Digest에 묶였다는 표시다 — DigestBodyFields·DigestTypeSelect는
+// Digest 판별 유니언을 직접 읽어 다른 곳에 못 쓴다. 접두사 없는 것들은 일반 라벨·
+// 레퍼런스 배열만 받아 Digest 상세의 라벨 편집에도 그대로 꽂힌다.
 import { CitedReferenceBadges } from "./CitedReferenceBadges";
 import { DigestBodyFields } from "./DigestBodyFields";
 import { DigestTypeSelect } from "./DigestTypeSelect";
-import { useReviewEditing } from "./ReviewEditingProvider";
+import { useEditing } from "./EditingProvider";
 import { TagChipRow } from "./TagChipRow";
 import { TopicChipRow } from "./TopicChipRow";
 
@@ -37,18 +40,18 @@ export const DigestCandidateCard = memo(function DigestCandidateCard({
   disabled,
 }: DigestCandidateCardProps) {
   const { t } = useTranslation();
-  const dispatch = useReviewEditing((state) => state.dispatch);
+  const dispatch = useEditing((state) => state.dispatch);
   const title =
-    useReviewEditing((state) => state.overrides.titleOverrides.get(index)) ??
+    useEditing((state) => state.overrides.titleOverrides.get(index)) ??
     digest.title;
   const body =
-    useReviewEditing((state) => state.overrides.bodyOverrides.get(index)) ??
+    useEditing((state) => state.overrides.bodyOverrides.get(index)) ??
     digest.body;
   const topics =
-    useReviewEditing((state) => state.overrides.topicsOverrides.get(index)) ??
+    useEditing((state) => state.overrides.topicsOverrides.get(index)) ??
     digest.topics;
   const tags =
-    useReviewEditing((state) => state.overrides.tagsOverrides.get(index)) ??
+    useEditing((state) => state.overrides.tagsOverrides.get(index)) ??
     digest.tags;
 
   return (

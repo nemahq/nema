@@ -20,12 +20,9 @@ import { ChangesetDetailHeader } from "./ChangesetDetailHeader";
 import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
 import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
 import { DigestSection } from "./DigestSection";
-import { IngestionReviewActions } from "./IngestionReviewActions";
+import { EditingProvider, useEditing } from "./EditingProvider";
+import { IngestionActions } from "./IngestionActions";
 import { ReferenceSection } from "./ReferenceSection";
-import {
-  ReviewEditingProvider,
-  useReviewEditing,
-} from "./ReviewEditingProvider";
 import { SourceTextPanel } from "./SourceTextPanel";
 
 const CONFIRM_DISABLED_REASON_KEY = {
@@ -43,14 +40,14 @@ const CONFIRM_DISABLED_REASON_KEY = {
 // 확정 페이로드와 확정 차단 조건은 후보 전체를 봐야 나오는 값이라 여기서 편집 상태를
 // 통째로 구독한다 — 타이핑마다 이 컴포넌트와 두 섹션은 다시 그려지지만, 카드는 자기
 // 편집값만 구독하는 memo라 그대로 있는다.
-function IngestionReviewContent({
+function IngestionContent({
   spacePublicId,
   spaceId,
   changesetNumber,
 }: ChangesetDetailScreenProps) {
   const { t } = useTranslation();
   const [review] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
-  const overrides = useReviewEditing((state) => state.overrides);
+  const overrides = useEditing((state) => state.overrides);
   const {
     digestRows,
     referenceRows,
@@ -134,7 +131,7 @@ function IngestionReviewContent({
         status="pending"
         time={review.sourceCreatedAt}
         actions={
-          <IngestionReviewActions
+          <IngestionActions
             onDiscard={handleDiscard}
             onConfirm={handleConfirm}
             discardPending={discardReview.isPendingAfterDelay}
@@ -172,7 +169,7 @@ function IngestionReviewContent({
 // space·number 유효성 검증과 NOT_FOUND 처리는 ChangesetDetailScreen(부모 게이트)이
 // 이미 마쳤으므로, 여기서는 이 리뷰 콘텐츠 쿼리(digestReview.get)에 대한 Suspense만
 // 책임진다.
-export function IngestionReviewScreen(props: ChangesetDetailScreenProps) {
+export function IngestionScreen(props: ChangesetDetailScreenProps) {
   return (
     <Suspense
       fallback={
@@ -183,9 +180,9 @@ export function IngestionReviewScreen(props: ChangesetDetailScreenProps) {
         </ChangesetDetailLayoutSkeleton>
       }
     >
-      <ReviewEditingProvider>
-        <IngestionReviewContent {...props} />
-      </ReviewEditingProvider>
+      <EditingProvider>
+        <IngestionContent {...props} />
+      </EditingProvider>
     </Suspense>
   );
 }

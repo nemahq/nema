@@ -39,6 +39,7 @@ function mockSupabase(
         calls.push(args);
         return chain;
       });
+      chain.order = vi.fn().mockReturnValue(chain);
       chain.in = vi
         .fn()
         .mockResolvedValue({ data: perTable[table], error: null });

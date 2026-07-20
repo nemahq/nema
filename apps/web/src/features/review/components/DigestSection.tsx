@@ -5,7 +5,7 @@ import type {
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DigestCandidateCard } from "./DigestCandidateCard";
-import { useReviewEditing } from "./ReviewEditingProvider";
+import { useEditing } from "./EditingProvider";
 
 interface DigestSectionProps {
   spaceId: string;
@@ -23,7 +23,7 @@ export function DigestSection({
   disabled,
 }: DigestSectionProps) {
   const { t } = useTranslation();
-  const removedIndexes = useReviewEditing(
+  const removedIndexes = useEditing(
     (state) => state.overrides.removedDigestIndexes,
   );
   const visible = digests

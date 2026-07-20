@@ -6,9 +6,9 @@ import type {
 } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { useEditing } from "./EditingProvider";
 import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
 import { ReferenceMergeCard } from "./ReferenceMergeCard";
-import { useReviewEditing } from "./ReviewEditingProvider";
 
 interface ReferenceSectionProps {
   digests: ReviewDigest[];
@@ -26,17 +26,17 @@ export function ReferenceSection({
   disabled,
 }: ReferenceSectionProps) {
   const { t } = useTranslation();
-  const dispatch = useReviewEditing((state) => state.dispatch);
-  const removedDigestIndexes = useReviewEditing(
+  const dispatch = useEditing((state) => state.dispatch);
+  const removedDigestIndexes = useEditing(
     (state) => state.overrides.removedDigestIndexes,
   );
-  const removedReferenceKeys = useReviewEditing(
+  const removedReferenceKeys = useEditing(
     (state) => state.overrides.removedReferenceKeys,
   );
-  const referenceOverrides = useReviewEditing(
+  const referenceOverrides = useEditing(
     (state) => state.overrides.referenceOverrides,
   );
-  const mergeNoteOverrides = useReviewEditing(
+  const mergeNoteOverrides = useEditing(
     (state) => state.overrides.mergeNoteOverrides,
   );
 

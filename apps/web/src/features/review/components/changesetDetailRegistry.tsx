@@ -8,7 +8,7 @@ import type {
 
 import { ChangesetNotFound } from "./ChangesetNotFound";
 import { ChangesetRecordScreen } from "./ChangesetRecordScreen";
-import { IngestionReviewScreen } from "./IngestionReviewScreen";
+import { IngestionScreen } from "./IngestionScreen";
 
 type ChangesetDetailKind = "open" | "closed";
 
@@ -49,7 +49,7 @@ const CHANGESET_DETAIL_SCREEN: Record<
   Record<ChangesetDetailKind, RenderChangesetDetailScreen>
 > = {
   ingestion: {
-    open: (props) => <IngestionReviewScreen {...props} />,
+    open: (props) => <IngestionScreen {...props} />,
     closed: (props) => <ChangesetRecordScreen {...props} />,
   },
   // relation의 pending은 실제로 생성되지만 판정 모드가 아직 없다 — Digest 상세가
@@ -64,6 +64,9 @@ const CHANGESET_DETAIL_SCREEN: Record<
   // "찾을 수 없음"으로 덮지 않고 던져서 Sentry까지 올린다.
   manual: {
     open: throwImpossiblePendingChangeset,
+    // TODO: manual은 변경 전/후 내용을 보여줘야 한다(review-flow.md "수정 이력 항목
+    // 클릭 시 상세 확인"). 메타데이터만 있는 기록 화면으로 보내는 건 그때까지의
+    // 임시 매핑이지 확정된 배치가 아니다.
     closed: (props) => <ChangesetRecordScreen {...props} />,
   },
   revert: {

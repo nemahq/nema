@@ -84,6 +84,11 @@ export async function getReview(args: {
     )
     .eq("space_id", spaceId)
     .eq("number", number)
+    // 프론트의 편집 상태(제목 override·후보 삭제)가 digests 배열의 인덱스를 키로 쓴다.
+    // ORDER BY가 없으면 Postgres가 행 순서를 보장하지 않아, refetch 때 순서가 바뀌면
+    // 편집 내용이 다른 후보에 붙는다. id는 created_at이 같을 때의 결정적 tiebreak.
+    .order("created_at", { referencedTable: "changes" })
+    .order("id", { referencedTable: "changes" })
     .single();
   throwIfSupabaseError(error);
 
