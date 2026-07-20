@@ -61,7 +61,14 @@ function ChangesetListContent({
       {entries.map((entry, index) => (
         <ChangesetListRow
           key={entry.id}
-          entry={entry}
+          changesetNumber={entry.number}
+          title={entry.title}
+          type={entry.type}
+          status={entry.status}
+          createdAt={entry.createdAt}
+          authorId={entry.authorId}
+          effectDigest={entry.effect.digest}
+          effectReference={entry.effect.reference}
           spacePublicId={spacePublicId}
           linkable={isLinkable(entry, subTab)}
           hideDivider={index === entries.length - 1 && !query.hasNextPage}
