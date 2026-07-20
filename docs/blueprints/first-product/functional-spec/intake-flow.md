@@ -65,34 +65,32 @@
   2. 평범한 대기 상태로 돌아간다.
   3. Space 셀렉트, Digest 추출 실행, 삭제 액션이 다시 열린다.
 - **관여 화면**: 초안
-- **범위 참고 (2026-07-13, PR #394)**: Then #1·#2와 Then #3의 "Digest 추출 실행·삭제 액션이 다시 열린다"는 구현·검증됨 — DB `cancel_source_digestion`(재클레임 불가능한 `cancelled` 상태로 전환) + 인메모리 `AbortController`로 떠 있는 LLM 콜 중단(`digestion-cancellation.test.ts`, `digestion.test.ts`의 취소 테스트 5종, `source-service.test.ts`로 코드 레벨 검증, 실 동작 검증은 아직 없음).
+- **범위 참고 (2026-07-13, PR #394)**: Then #1·#2와 Then #3의 "Digest 추출 실행·삭제 액션이 다시 열린다"는 구현·검증됨 — DB `cancel_source_digestion`(재클레임 불가능한 `cancelled` 상태로 전환) + 인메모리 `AbortController`로 떠 있는 LLM 콜 중단(`digestion-cancellation.test.ts`, `digestion.test.ts`의 취소 테스트 5종, `source-service.test.ts`로 코드 레벨 검증).
 - **확정 (2026-07-13, PR #399)**: Then #3의 "Space 셀렉트가 다시 열린다"도 "초안에서 Space 재지정" 슬라이스 랜딩으로 구현됨 — cancelled 상태는 `DraftIdleActions`를 풋터로 쓰고, 여기 Space 셀렉트가 포함된다. 세 액션 모두 확인됐으므로 체크.
 
 #### 초안에서 Digest 추출 실행
 
-- **Given**: 유저가 초안에서 평범한 대기 상태인 Source를 보고 있다.
+- **Given**: 유저가 초안에서 cancelled(취소 뒤 평범한 대기) 상태인 Source를 보고 있다.
 - **When**: Digest 추출 실행 액션을 실행한다.
 - **Then**: Digest 추출이 시작되고, 그 원본이 진행 중 상태로 전환된다.
 - **관여 화면**: 초안
-- **범위 참고 (2026-07-13, PR #394)**: cancelled(취소 뒤 평범한 대기) 상태에서만 이 액션이 연결됨(`DraftCard.tsx`의 `FOOTER_BY_STATUS`). failed/empty는 "초안에서 Source 삭제"와 같은 이유로 2차 슬라이스 범위 밖(design-decisions-log.md 참고) — 그래서 미체크로 남김.
 
 #### 초안에서 Source 삭제
 
-- **Given**: 유저가 초안에서 평범한 대기 상태인 Source를 보고 있다.
+- **Given**: 유저가 초안에서 평범한 대기 상태(cancelled·failed·empty)인 Source를 보고 있다.
 - **When**: 삭제 액션을 실행한다.
 - **Then**:
   1. 그 Source가 즉시 삭제되고 초안 목록에서 제거된다.
   2. 휴지통·보관 기간 없이 완전히 삭제된다.
 - **관여 화면**: 초안
-- **범위 참고 (2026-07-13, PR #394)**: 삭제 액션은 이번 슬라이스에서 cancelled(취소 뒤 평범한 대기) 상태에만 연결됨. failed/empty는 재시도 액션과 마찬가지로 2차 슬라이스 몫(design-decisions-log.md 참고) — 그래서 이 케이스도 아직 미체크로 남김.
 
 #### 초안에서 Space 재지정
 
-- **Given**: 유저가 초안에서 평범한 대기 상태인 Source를 보고 있다.
+- **Given**: 유저가 초안에서 평범한 대기 상태(cancelled·failed·empty)인 Source를 보고 있다.
 - **When**: Space 셀렉트 액션을 실행해 다른 Space를 선택한다.
 - **Then**: 그 Source가 선택한 Space로 즉시 재지정된다.
 - **관여 화면**: 초안
-- **확정 (2026-07-13, PR #399)**: `reassign_source_space` RPC(원본 Space·대상 Space 양쪽 멤버십 체크 — 대상 Space 접근권 없음은 `42501`, 상태 가드 실패·확정 대기 리뷰 있음은 `NM004`로 리뷰 반영 후 분리, `source-service.test.ts`)와 `DraftIdleActions`의 Space 셀렉트(`space.list` + `useReassignSourceSpace`, 선택 즉시 반영)로 구현. failed/empty는 다른 초안 액션과 같은 이유로 범위 밖(cancelled만 연결) — design-decisions-log.md 참고.
+- **확정 (2026-07-13, PR #399)**: `reassign_source_space` RPC(원본 Space·대상 Space 양쪽 멤버십 체크 — 대상 Space 접근권 없음은 `42501`, 상태 가드 실패·확정 대기 리뷰 있음은 `NM004`로 리뷰 반영 후 분리, `source-service.test.ts`)와 `DraftIdleActions`의 Space 셀렉트(`space.list` + `useReassignSourceSpace`, 선택 즉시 반영)로 구현.
 
 #### 처리 중 상태에서 액션 잠금
 
@@ -100,9 +98,6 @@
 - **When**: 초안에 진입한다.
 - **Then**: 그 Source 카드는 Space 셀렉트·Digest 추출 실행·삭제·제목 편집이 모두 비활성화되고, 처리 중이라 그렇다는 이유가 함께 표시된다. 취소 액션만 남는다.
 - **관여 화면**: 초안
-- **범위 참고 (2026-07-13, PR #394)**: Digest 추출 실행·삭제 버튼이 처리 중엔 아예 안 보이고(카드 풋터가 `DraftProcessingActions`로 교체), Lock 아이콘 + 잠금 사유 캡션(`intake.draft_locked_reason`) + 취소 버튼만 남는 것은 구현·검증됨. Space 셀렉트·제목 편집은 기능 자체가 아직 없어(각각 별도 미체크 케이스) "비활성화"를 검증할 대상이 없다 — 이 둘을 위한 개별 disabled 버튼 대신 공용 캡션 하나로 잠금 사유를 뭉쳐 전달하는 현재 방식이 두 기능이 실제로 생겼을 때도 맞는 표현인지는 PM 확인 필요(design-decisions-log.md 2026-07-13 참고).
-- **범위 참고 (2026-07-13, PR #399)**: "초안에서 Space 재지정" 슬라이스 랜딩으로 Space 셀렉트가 실제 버튼이 됐다 — 위 PM 확인 대상이던 질문에 대한 답: 캡션은 특정 액션 이름을 나열하지 않는 일반 문구(`intake.draft_locked_reason`, "처리 중엔 편집할 수 없어요")라 액션이 몇 개든 그대로 맞는다(내 판단, design-decisions-log.md 참고). Space 셀렉트 잠금(processing 상태에선 `DraftIdleActions` 자체가 안 그려짐)은 이걸로 검증됨 — 다만 제목 편집은 여전히 기능 자체가 없어(케이스 "초안에서 Source 제목 편집" 참고) Then절 전체("Space 셀렉트·Digest 추출 실행·삭제·제목 편집이 모두 비활성화")를 검증할 수 없다 — 그래서 계속 미체크로 남김.
-- **범위 참고 (제목편집 슬라이스)**: 제목 편집 액션(펜슬 버튼)도 Extract/Delete와 같은 패턴으로 처리 중엔 렌더링 자체가 안 된다(`DraftCard`의 `canEditTitle = status !== "processing"`, 별도 disabled 버튼 없음). Space 셀렉트 잠금과 합쳐 Then절의 네 액션(Space 셀렉트·Digest 추출 실행·삭제·제목 편집) 모두 코드 레벨로는 확인됐다.
 - **확정 (2026-07-14)**: Kyle이 staging에서 처리 중 카드에 네 액션 다 안 보이고 잠금 캡션+취소만 남는 것을 실동작으로 확인.
 
 #### 초안에서 Source 제목 편집
@@ -113,8 +108,7 @@
 - **관여 화면**: 초안
 - **범위 참고**: cancelled·failed·empty 셋 다 "평범한 대기 상태"라 전부 편집 가능(Extract/Delete와 달리 failed/empty를 좁힐 이유가 없다 — BE 가드도 `digestion_status<>'pending'` 전체를 허용). 다이얼로그(`EditSourceTitleDialog`) 저장 시 `source.updateTitle` 뮤테이션 성공 후 `listPending` 쿼리를 invalidate해 반영 — 코드 레벨(typecheck/lint/test)로 확인됨.
 - **확정 (2026-07-14)**: Kyle이 staging에서 제목 편집 즉시 반영 + 재추출 후 편집값 유지(회귀 방지 확인 포함)를 실동작으로 확인.
-- **범위 참고 (2026-07-13, 리뷰 반영)**: "즉시 반영된다"는 그 한 번의 편집에 한정 — 이후 같은 Source에서 "초안에서 Digest 추출 실행"(재시도)이 다시 돌면, 워커가 새로 뽑은 제목이 방금 편집한 값을 덮어쓰지 않는다(`sources.title_edited` 플래그, `update_source_title`이 세우고 `complete_source_digestion`/`create_ingestion_review`가 확인). 리뷰에서 발견된 무음 데이터 유실을 막기 위한 후속 수정.
-- **범위 참고 (2026-07-15, PR #415)**: 위 메커니즘이 바뀌었다 — `sources.title_edited` 플래그는 제거됐고, 제목 생성 자체가 디제스천에서 완전히 분리됐다(Source 생성 시점 1회, 별도 nano 콜). 재추출(`complete_source_digestion`/`create_ingestion_review`)은 이제 title 컬럼을 아예 안 건드려 덮어쓸 경로 자체가 없다 — `fill_source_title`의 `title IS NULL` 가드가 "평생 한 번만 채워짐"을 구조적으로 보장한다. 사용자가 관찰하는 동작(제목 편집 후 재추출해도 유지됨)은 그대로이고 오히려 더 견고해졌을 뿐이라 체크박스·실동작 확인 기록은 유지.
+- **범위 참고 (2026-07-15, PR #415)**: 메커니즘이 바뀌었다 — `sources.title_edited` 플래그는 제거됐고, 제목 생성 자체가 디제스천에서 완전히 분리됐다(Source 생성 시점 1회, 별도 nano 콜). 재추출(`complete_source_digestion`/`create_ingestion_review`)은 이제 title 컬럼을 아예 안 건드려 덮어쓸 경로 자체가 없다 — `fill_source_title`의 `title IS NULL` 가드가 "평생 한 번만 채워짐"을 구조적으로 보장한다. 사용자가 관찰하는 동작(제목 편집 후 재추출해도 유지됨)은 그대로이고 오히려 더 견고해졌을 뿐이라 체크박스·실동작 확인 기록은 유지.
 
 #### 초안에서 Source 원본 편집
 
@@ -122,7 +116,6 @@
 - **When**: 원본(body) 편집 액션을 실행하고 내용을 수정한다.
 - **Then**: 그 Source의 원본이 즉시 반영된다. 이후 Digest 추출을 다시 실행하면 수정된 원본을 기준으로 새로 추출한다. 제목은 그대로 유지된다.
 - **관여 화면**: 초안
-- **범위 참고 (2026-07-15, PR #415)**: BE만 착지 — RPC `update_source_body` + 서비스 `updateSourceBody` + tRPC `source.updateBody`(멀티 에이전트 코드 리뷰 + `source-service.test.ts` 통과). FE(편집 액션 버튼·다이얼로그)는 아직 없어 이번 슬라이스에선 검증 대상이 없다 — 그래서 미체크.
 - **범위 참고**: "평범한 대기 상태"가 실제로 편집 가능한 자리는 cancelled·failed·empty, 그리고 리뷰가 열렸다가 사람이 버린(discarded) 경우까지 넷이다 — 열린 pending 리뷰가 있으면 거부된다(`NM004`, 리뷰에 뜬 Digest 후보가 편집 전 원본에서 뽑힌 것이라 원본을 바꾸면 후보가 무효화되기 때문). 리뷰를 확정하거나 버려야 원본을 고칠 수 있다. 처리 중(digestion_status='pending')인 Source도 같은 이유로 거부된다.
 - **확정 (2026-07-20, Kyle 실동작 확인)**: FE가 그 사이 착지했다 — `IdleDraftDetailPanel`의 body 인라인 textarea(blur 시 `useUpdateSourceBody` 저장)로 구현. cancelled·failed·empty·discarded 4개 상태 전부에서 편집 가능, 열린 pending 리뷰가 있으면 `NM004`로 거부되는 서버 가드 그대로 유지, 제목은 별도 뮤테이션이라 그대로 보존. 원본 편집 저장 + 재추출 시 수정된 원본 기준으로 동작하는 것을 Kyle이 실사용으로 확인해 체크.
 
