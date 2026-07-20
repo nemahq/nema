@@ -10,6 +10,9 @@ import type { DigestReviewDetail } from "@web/features/review/types";
 
 const ReviewEditingContext = createContext<ReviewEditingStore | null>(null);
 
+// review는 primitive-props 규칙의 예외 — 조회는 Suspense 경계를 co-locate한
+// OpenReviewScreen이 하고(nema/require-suspense-boundary), Provider는 그 결과를
+// store 초기값으로 한 번만 받는다. memo 대상이 아니라 얕은 비교 이점도 없다.
 interface ReviewEditingProviderProps {
   review: DigestReviewDetail;
   children: ReactNode;

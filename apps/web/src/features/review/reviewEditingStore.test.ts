@@ -22,7 +22,7 @@ function emptyOverrides(): ReviewOverrides {
 const ACTIONS: ReviewEditingAction[] = [
   { type: "digest/setTitle", index: 0, title: "제목" },
   { type: "digest/setBody", index: 0, body: { type: "decision" } },
-  { type: "digest/setTopics", index: 0, topics: [{ id: null, name: "토픽" }] },
+  { type: "digest/setTopics", index: 0, topics: [{ id: null, name: "주제" }] },
   {
     type: "digest/setTags",
     index: 0,
