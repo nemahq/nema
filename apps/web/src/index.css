@@ -51,11 +51,12 @@ html {
   overscroll-behavior-y: none;
 }
 
-/* scrollbar-gutter: stable이 이미 스크롤바 폭을 상시 예약해두므로, Radix가
-   스크롤 락 시 react-remove-scroll로 주입하는 body margin-right 보정은
-   중복 적용되어 오히려 레이아웃을 흔든다 — 무력화한다. react-remove-scroll이
-   런타임에 삽입하는 동일 셀렉터(body[data-scroll-locked])보다 상세도를
-   높여야 삽입 순서와 무관하게 항상 이긴다. */
+/* AppLayout이 html/body 자체의 스크롤을 이미 overflow-hidden으로 막아뒀다
+   (실제 스크롤은 전부 안쪽 overflow-y-auto div 몫) — 그래서 문서 자체엔 애초에
+   숨길 스크롤바가 없는데도, Radix가 스크롤 락 시 react-remove-scroll로 body에
+   margin-right을 주입해 존재하지 않는 스크롤바를 보정하려 하면서 레이아웃이
+   흔들린다(#445). react-remove-scroll이 런타임에 삽입하는 동일 셀렉터
+   (body[data-scroll-locked])보다 상세도를 높여야 삽입 순서와 무관하게 항상 이긴다. */
 html body[data-scroll-locked] {
   margin-right: 0 !important;
 }
