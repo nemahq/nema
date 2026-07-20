@@ -19,10 +19,9 @@ import { useTranslation } from "@web/lib/tolgee";
 import { ChangesetDetailHeader } from "./ChangesetDetailHeader";
 import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
 import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
-import { DigestCandidateCard } from "./DigestCandidateCard";
+import { DigestSection } from "./DigestSection";
 import { IngestionReviewActions } from "./IngestionReviewActions";
-import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
-import { ReferenceMergeCard } from "./ReferenceMergeCard";
+import { ReferenceSection } from "./ReferenceSection";
 import {
   ReviewEditingProvider,
   useReviewEditing,
@@ -40,6 +39,10 @@ const CONFIRM_DISABLED_REASON_KEY = {
 // (changesetDetailRegistry), 확정·버리기 성공 시 별도 이동 없이 getByNumber를
 // 무효화하기만 하면 같은 URL이 자연히 ChangesetRecordScreen으로 넘어간다
 // (useConfirmReview/useDiscardReview가 그 무효화를 담당).
+//
+// 확정 페이로드와 확정 차단 조건은 후보 전체를 봐야 나오는 값이라 여기서 편집 상태를
+// 통째로 구독한다 — 타이핑마다 이 컴포넌트와 두 섹션은 다시 그려지지만, 카드는 자기
+// 편집값만 구독하는 memo라 그대로 있는다.
 function IngestionReviewContent({
   spacePublicId,
   spaceId,
@@ -48,11 +51,9 @@ function IngestionReviewContent({
   const { t } = useTranslation();
   const [review] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
   const overrides = useReviewEditing((state) => state.overrides);
-  const dispatch = useReviewEditing((state) => state.dispatch);
   const {
     digestRows,
     referenceRows,
-    mergeRows,
     dirty,
     hasCandidates,
     hasEmptyTitle,
@@ -70,13 +71,12 @@ function IngestionReviewContent({
   const discardReview = useDiscardReview(spaceId, changesetNumber);
   const showNotificationSoftAsk = useNotificationSoftAsk();
 
-  const pending =
+  const locked =
     updateReview.isPending ||
     confirmReview.isPending ||
     discardReview.isPendingAfterDelay;
   const error =
     updateReview.error ?? confirmReview.error ?? discardReview.error;
-  const locked = pending;
   const confirmDisabled =
     locked ||
     !hasCandidates ||
@@ -152,79 +152,19 @@ function IngestionReviewContent({
 
       <SourceTextPanel body={review.sourceBody} />
 
-      <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-fg-secondary">
-          {t("review.digest_section_title", { count: digestRows.length })}
-        </h2>
-        {digestRows.map(({ digest, index, title, body, topics, tags }) => (
-          <DigestCandidateCard
-            key={index}
-            spaceId={review.spaceId}
-            digest={digest}
-            title={title}
-            body={body}
-            topics={topics}
-            tags={tags}
-            citedReferences={review.citedReferences}
-            disabled={locked}
-            onTitleChange={(title) =>
-              dispatch({ type: "digest/setTitle", index, title })
-            }
-            onBodyChange={(body) =>
-              dispatch({ type: "digest/setBody", index, body })
-            }
-            onTopicsChange={(topics) =>
-              dispatch({ type: "digest/setTopics", index, topics })
-            }
-            onTagsChange={(tags) =>
-              dispatch({ type: "digest/setTags", index, tags })
-            }
-            onRemove={() => dispatch({ type: "digest/remove", index })}
-          />
-        ))}
-      </div>
+      <DigestSection
+        spaceId={review.spaceId}
+        digests={review.digests}
+        citedReferences={review.citedReferences}
+        disabled={locked}
+      />
 
-      {referenceRows.length + mergeRows.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-fg-secondary">
-            {t("review.reference_section_title", {
-              count: referenceRows.length + mergeRows.length,
-            })}
-          </h2>
-          {referenceRows.map((reference) => (
-            <ReferenceCandidateCard
-              key={reference.key}
-              reference={reference}
-              disabled={locked}
-              onChange={(next) =>
-                dispatch({
-                  type: "reference/set",
-                  key: reference.key,
-                  reference: next,
-                })
-              }
-              onRemove={() =>
-                dispatch({ type: "reference/remove", key: reference.key })
-              }
-            />
-          ))}
-          {mergeRows.map(({ reference, mergeNote }) => (
-            <ReferenceMergeCard
-              key={reference.id}
-              reference={reference}
-              mergeNote={mergeNote}
-              disabled={locked}
-              onMergeNoteChange={(mergeNote) =>
-                dispatch({
-                  type: "reference/setMergeNote",
-                  referenceId: reference.id,
-                  mergeNote,
-                })
-              }
-            />
-          ))}
-        </div>
-      )}
+      <ReferenceSection
+        digests={review.digests}
+        newReferences={review.newReferences}
+        citedReferences={review.citedReferences}
+        disabled={locked}
+      />
     </ChangesetDetailLayout>
   );
 }

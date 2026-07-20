@@ -1,0 +1,32 @@
+import type { BadgeVariant } from "@nema-io/weave";
+
+import { LabelChipShell } from "./LabelChipShell";
+
+interface RegisteredLabelChipProps {
+  label: string;
+  variant: BadgeVariant;
+  disabled: boolean;
+  removeAriaLabel: string;
+  onRemove: () => void;
+}
+
+// 레지스트리에 이미 있는 Topic·Tag — 이름은 읽기 전용이고 제거만 된다
+// (review-flow.md "기존 Topic·Tag는 이름 수정 불가").
+export function RegisteredLabelChip({
+  label,
+  variant,
+  disabled,
+  removeAriaLabel,
+  onRemove,
+}: RegisteredLabelChipProps) {
+  return (
+    <LabelChipShell
+      variant={variant}
+      disabled={disabled}
+      removeAriaLabel={removeAriaLabel}
+      onRemove={onRemove}
+    >
+      <span>{label}</span>
+    </LabelChipShell>
+  );
+}
