@@ -6,6 +6,9 @@ import {
   createRouter,
   Outlet,
 } from "@tanstack/react-router";
+import { createTRPCQueryUtils } from "@trpc/react-query";
+
+import { GetChangesetByNumberInputSchema } from "@nema-io/shared";
 
 import { getEnv } from "@web/app/env";
 import { notFoundAtRoot } from "@web/app/error/notFound";
@@ -28,13 +31,23 @@ import { HarnessPage } from "@web/features/dev-harness";
 import type { ChangesSubTab } from "@web/features/review";
 import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 import {
+  SPACE_LIST_STALE_TIME_MS,
   useSpaceList,
   useWorkspaceBootstrapQuery,
   WorkspaceSidebar,
 } from "@web/features/workspace";
+import { queryClient } from "@web/lib/tanstack-query";
+import { trpcClient } from "@web/lib/trpc";
 import { getStorage, setStorage } from "@web/utils/localStorage";
 
 import { App } from "./App";
+
+// 라우트 loader(컴포넌트 밖)에서 react-query 캐시를 직접 다루기 위한 vanilla
+// utils — trpc.useUtils()와 같은 메서드 집합이지만 훅이 아니라 어디서든 호출 가능하다.
+const trpcQueryUtils = createTRPCQueryUtils({
+  queryClient,
+  client: trpcClient,
+});
 
 const rootRoute = createRootRoute({
   component: App,
@@ -273,6 +286,35 @@ const changesetDetailRoute = createRoute({
   path: "/space/$spacePublicId/changesets/$changesetNumber",
   component: ChangesetDetailShell,
   errorComponent: RouteErrorFallback,
+  // 목록에서 클릭해 들어올 때 라우트 커밋 전에 캐시를 채워, 화면 전체가 다시
+  // 워터마크로 바뀌지 않게 한다(전환은 이미 startTransition으로 묶여 있어 이전
+  // 화면이 유지되지만, 안에서 새 useSuspenseQuery가 곧바로 도는 건 못 막는다).
+  // 실패는 조용히 무시 — 검증·에러 처리는 컴포넌트의 게이트·ErrorBoundary가 맡는다.
+  loader: async ({ params }) => {
+    const number = Number(params.changesetNumber);
+    if (
+      !GetChangesetByNumberInputSchema.shape.number.safeParse(number).success
+    ) {
+      return;
+    }
+    try {
+      const spaceList = await trpcQueryUtils.space.list.ensureData(undefined, {
+        staleTime: SPACE_LIST_STALE_TIME_MS,
+      });
+      const space = spaceList.spaces.find(
+        (candidate) => candidate.publicId === params.spacePublicId,
+      );
+      if (!space) {
+        return;
+      }
+      await trpcQueryUtils.changeset.getByNumber.ensureData({
+        spaceId: space.id,
+        number,
+      });
+    } catch {
+      // no-op
+    }
+  },
 });
 
 // 내부 테스트 조종석 (NEM-125) — 프로덕션에서는 존재하지 않는 경로로 보인다
