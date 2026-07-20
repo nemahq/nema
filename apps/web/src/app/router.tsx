@@ -307,10 +307,22 @@ const changesetDetailRoute = createRoute({
       if (!space) {
         return;
       }
-      await trpcQueryUtils.changeset.getByNumber.ensureData({
-        spaceId: space.id,
-        number,
-      });
+      const changesetDetail =
+        await trpcQueryUtils.changeset.getByNumber.ensureData({
+          spaceId: space.id,
+          number,
+        });
+      // ingestion·pending(=IngestionScreen)은 changeset.getByNumber가 아니라
+      // digestReview.get을 그려 별도로 채워야 한다 — changesetDetailRegistry 참고.
+      if (
+        changesetDetail.type === "ingestion" &&
+        changesetDetail.status === "pending"
+      ) {
+        await trpcQueryUtils.digestReview.get.ensureData({
+          spaceId: space.id,
+          number,
+        });
+      }
     } catch {
       // no-op
     }
