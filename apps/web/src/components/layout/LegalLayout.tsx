@@ -49,7 +49,7 @@ export function LegalLayout({
             }
           }}
         >
-          <SelectTrigger className="w-auto text-sm">
+          <SelectTrigger className="w-28 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent align="end">
