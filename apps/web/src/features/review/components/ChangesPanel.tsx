@@ -5,18 +5,11 @@ import { ChangesetList } from "./ChangesetList";
 import { ChangesetSubTabButton } from "./ChangesetSubTabButton";
 
 interface ChangesPanelProps {
-  spacePublicId: string;
-  spaceId: string;
   subTab: ChangesSubTab;
   onSubTabChange: (subTab: ChangesSubTab) => void;
 }
 
-export function ChangesPanel({
-  spacePublicId,
-  spaceId,
-  subTab,
-  onSubTabChange,
-}: ChangesPanelProps) {
+export function ChangesPanel({ subTab, onSubTabChange }: ChangesPanelProps) {
   const { t } = useTranslation();
 
   function selectOpen() {
@@ -41,11 +34,7 @@ export function ChangesPanel({
         </ChangesetSubTabButton>
       </div>
 
-      <ChangesetList
-        spacePublicId={spacePublicId}
-        spaceId={spaceId}
-        subTab={subTab}
-      />
+      <ChangesetList subTab={subTab} />
     </div>
   );
 }
