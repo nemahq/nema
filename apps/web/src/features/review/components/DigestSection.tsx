@@ -14,8 +14,9 @@ interface DigestSectionProps {
   disabled: boolean;
 }
 
-// 삭제 집합만 구독한다 — 카드 안의 제목·본문·라벨을 아무리 고쳐도 이 selector 결과가
-// 그대로라 섹션은 리렌더되지 않고, 후보가 실제로 빠질 때만 다시 그린다.
+// 삭제 집합만 구독한다 — 카드 안의 제목·본문·라벨을 고쳐도 이 selector 결과가 그대로다.
+// 다시 그리는 건 후보가 빠질 때와 편집 잠금이 바뀔 때(부모가 disabled를 넘긴다)뿐이고,
+// 그때 카드가 버티는 건 DigestCandidateCard의 memo 몫이다.
 export function DigestSection({
   spaceId,
   digests,

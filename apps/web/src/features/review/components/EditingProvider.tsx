@@ -19,8 +19,8 @@ export function EditingProvider({ children }: EditingProviderProps) {
   return <EditingContext value={store}>{children}</EditingContext>;
 }
 
-// selector를 필수로 받아 구독 범위를 좁힌다. 지금은 소비자가 하나뿐이라 이점이
-// 드러나지 않지만, 카드별 구독(후속 PR)은 이 형태를 전제로 한다.
+// selector를 필수로 받는다. 카드가 자기 index의 편집값만 구독할 수 있는 게 이 형태
+// 덕이고, 그래서 다른 카드를 고쳐도 리렌더가 번지지 않는다.
 export function useEditing<T>(
   selector: (state: ReviewEditingStoreState) => T,
 ): T {

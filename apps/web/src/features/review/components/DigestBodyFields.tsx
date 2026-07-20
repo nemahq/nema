@@ -6,8 +6,7 @@ interface BodyFieldRow {
   value: string;
 }
 
-// 타입별 필드 정의를 돌며 값이 있는 것만 표시용 행으로 만든다 — 원문에 없던 필드는
-// 빈 채로 오므로(review-flow.md "원문에 없는 필드는 비워둠") 걸러낸다.
+// 원문에 없던 필드는 빈 채로 오므로 걸러낸다(review-flow.md "원문에 없는 필드는 비워둠").
 function bodyFieldRows(body: ReviewDigest["body"]): BodyFieldRow[] {
   // 필드 목록과 body는 같은 판별자에서 나오지만 TypeScript가 둘의 상관관계를 추론하지
   // 못해, 직접 인덱싱하면 단언이 필요해진다. 펼쳐두면 단언 없이 같은 값을 얻는다.

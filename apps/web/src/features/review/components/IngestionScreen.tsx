@@ -38,8 +38,8 @@ const CONFIRM_DISABLED_REASON_KEY = {
 // (useConfirmReview/useDiscardReview가 그 무효화를 담당).
 //
 // 확정 페이로드와 확정 차단 조건은 후보 전체를 봐야 나오는 값이라 여기서 편집 상태를
-// 통째로 구독한다 — 타이핑마다 이 컴포넌트와 두 섹션은 다시 그려지지만, 카드는 자기
-// 편집값만 구독하는 memo라 그대로 있는다.
+// 통째로 구독한다. 타이핑마다 이 함수는 다시 돌지만 두 섹션 요소는 overrides에
+// 의존하지 않아 React 컴파일러가 캐시하므로, 아래 트리는 통째로 건너뛴다.
 function IngestionContent({
   spacePublicId,
   spaceId,

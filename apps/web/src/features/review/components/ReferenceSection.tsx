@@ -19,6 +19,10 @@ interface ReferenceSectionProps {
 
 // 병합 행은 살아남은 Digest가 무엇을 인용하는지에 달려 있어(referenceMerge.ts) Digest
 // 삭제까지 함께 구독한다 — 마지막으로 인용하던 후보가 빠지면 병합 행도 사라져야 한다.
+//
+// Digest 쪽과 달리 카드가 memo도 아니고 콜백도 여기서 만들어 넘긴다. Reference는 행
+// 파생이 Digest 삭제와 얽혀 있어 카드가 자기 몫만 구독하기 어렵고, 후보 수도 적어
+// 아직 값이 없다고 봤다. 후보가 늘거나 편집 필드가 붙으면 Digest 쪽 형태로 옮긴다.
 export function ReferenceSection({
   digests,
   newReferences,
