@@ -32,6 +32,7 @@
     "react-dom": "^19.0.0",
     "react-hotkeys-hook": "^5.2.4",
     "streamdown": "^2.5.0",
+    "workbox-window": "^7.4.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
