@@ -11,7 +11,6 @@ import {
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
-import { useReviewEditingState } from "@web/features/review/hooks/useReviewEditingState";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
@@ -19,6 +18,10 @@ import { useTranslation } from "@web/lib/tolgee";
 import { DigestCandidateCard } from "./DigestCandidateCard";
 import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
 import { ReferenceMergeCard } from "./ReferenceMergeCard";
+import {
+  ReviewEditingProvider,
+  useReviewEditing,
+} from "./ReviewEditingProvider";
 import { ReviewHeader } from "./ReviewHeader";
 import { ReviewNavigationBar } from "./ReviewNavigationBar";
 import { SourceTextPanel } from "./SourceTextPanel";
@@ -50,15 +53,27 @@ function OpenReviewContent({
   spaceId,
   number,
 }: OpenReviewScreenProps) {
-  const { t } = useTranslation();
   const [review] = useDigestReviewSuspenseQuery(spaceId, number);
-  const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
 
-  const updateReview = useUpdateReview(spaceId, number);
-  const confirmReview = useConfirmReview(spaceId, number);
-  const discardReview = useDiscardReview(spaceId, number);
-  const showNotificationSoftAsk = useNotificationSoftAsk();
+  return (
+    <ReviewEditingProvider review={review}>
+      <OpenReviewBody
+        spacePublicId={spacePublicId}
+        spaceId={spaceId}
+        number={number}
+      />
+    </ReviewEditingProvider>
+  );
+}
 
+function OpenReviewBody({
+  spacePublicId,
+  spaceId,
+  number,
+}: OpenReviewScreenProps) {
+  const { t } = useTranslation();
+  const review = useReviewEditing((state) => state.review);
+  const dispatch = useReviewEditing((state) => state.dispatch);
   const {
     digestRows,
     referenceRows,
@@ -69,15 +84,13 @@ function OpenReviewContent({
     hasEmptyLabel,
     hasEmptyReference,
     referenceUpdates,
-    setDigestTitle,
-    setDigestBody,
-    setDigestTopics,
-    setDigestTags,
-    removeDigest,
-    setReference,
-    removeReference,
-    setMergeNote,
-  } = useReviewEditingState(review);
+  } = useReviewEditing((state) => state.derived);
+  const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
+
+  const updateReview = useUpdateReview(spaceId, number);
+  const confirmReview = useConfirmReview(spaceId, number);
+  const discardReview = useDiscardReview(spaceId, number);
+  const showNotificationSoftAsk = useNotificationSoftAsk();
 
   const pending =
     updateReview.isPending ||
@@ -184,11 +197,19 @@ function OpenReviewContent({
                 tags={tags}
                 citedReferences={review.citedReferences}
                 disabled={locked}
-                onTitleChange={(value) => setDigestTitle(index, value)}
-                onBodyChange={(value) => setDigestBody(index, value)}
-                onTopicsChange={(next) => setDigestTopics(index, next)}
-                onTagsChange={(next) => setDigestTags(index, next)}
-                onRemove={() => removeDigest(index)}
+                onTitleChange={(title) =>
+                  dispatch({ type: "digest/setTitle", index, title })
+                }
+                onBodyChange={(body) =>
+                  dispatch({ type: "digest/setBody", index, body })
+                }
+                onTopicsChange={(topics) =>
+                  dispatch({ type: "digest/setTopics", index, topics })
+                }
+                onTagsChange={(tags) =>
+                  dispatch({ type: "digest/setTags", index, tags })
+                }
+                onRemove={() => dispatch({ type: "digest/remove", index })}
               />
             ))}
           </div>
@@ -205,8 +226,16 @@ function OpenReviewContent({
                   key={reference.key}
                   reference={reference}
                   disabled={locked}
-                  onChange={(next) => setReference(reference.key, next)}
-                  onRemove={() => removeReference(reference.key)}
+                  onChange={(next) =>
+                    dispatch({
+                      type: "reference/set",
+                      key: reference.key,
+                      reference: next,
+                    })
+                  }
+                  onRemove={() =>
+                    dispatch({ type: "reference/remove", key: reference.key })
+                  }
                 />
               ))}
               {mergeRows.map(({ reference, mergeNote }) => (
@@ -215,8 +244,12 @@ function OpenReviewContent({
                   reference={reference}
                   mergeNote={mergeNote}
                   disabled={locked}
-                  onMergeNoteChange={(value) =>
-                    setMergeNote(reference.id, value)
+                  onMergeNoteChange={(mergeNote) =>
+                    dispatch({
+                      type: "reference/setMergeNote",
+                      referenceId: reference.id,
+                      mergeNote,
+                    })
                   }
                 />
               ))}

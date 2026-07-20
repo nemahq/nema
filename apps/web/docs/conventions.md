@@ -15,7 +15,7 @@
 | Stateful unit | Owns a cohesive slice of state or data. May call custom hooks internally.   |
 | Page          | Composes child components. NOT a state hub — does not fetch on their behalf.|
 
-- State lives as close to the consuming UI as possible. Lift to a parent only when 2+ siblings share the same state.
+- State lives as close to the consuming UI as possible. Lift to a parent only when 2+ siblings share the same state. When lifting would make every consumer re-render on every change, lift into a per-screen store instead (see `CLAUDE.md` → State Management) — the store is the lift, not an escape from it.
 - If only one child uses a piece of data, that child should own the hook call — the page should not fetch and prop-drill it down.
 
 ### Generic UI vs domain wrapper

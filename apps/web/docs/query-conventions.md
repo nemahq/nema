@@ -2,6 +2,8 @@
 
 Rules for tRPC query and mutation hooks in `features/*/hooks/`.
 
+Server state lives here, in the TanStack Query cache — never mirrored into a zustand store. A store may hold a query result as an immutable snapshot to diff local edits against, but the query remains the source of truth and the store never refetches or invalidates.
+
 ## Query Hooks
 
 ### One hook per endpoint

@@ -33,7 +33,8 @@
     "react-hotkeys-hook": "^5.2.4",
     "streamdown": "^2.5.0",
     "workbox-window": "^7.4.0",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@mdx-js/rollup": "^3.1.1",

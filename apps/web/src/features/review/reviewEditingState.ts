@@ -19,8 +19,8 @@ export interface ReviewOverrides {
   mergeNoteOverrides: Map<string, string>;
 }
 
-// useReviewEditingState의 파생 로직 — React state를 몰라도 되는 순수 계산이라
-// 훅에서 떼어 직접 테스트한다.
+// reviewEditingStore의 파생 로직 — React를 몰라도 되는 순수 계산이라 store에서 떼어
+// 직접 테스트한다.
 export function computeReviewEditingState(
   review: DigestReviewDetail,
   overrides: ReviewOverrides,

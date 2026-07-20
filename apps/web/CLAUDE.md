@@ -28,7 +28,10 @@ src/
 ## State Management
 
 - Server state: TanStack Query (tRPC integration deferred to feature implementation)
-- UI state: React built-ins (useState, useContext)
+- UI state: React built-ins (useState, useContext) by default.
+- zustand ONLY when a shared slice meets BOTH: (1) it cannot be colocated in one component because siblings mutate each other, AND (2) consumers need to subscribe to disjoint parts — the case Context cannot express, since any change re-renders every consumer. Rare: a 2-field toggle read by 9 components still belongs in Context.
+- zustand stores MUST be per-screen instances (`createStore` + Context injection), never module-level singletons — the store dies with the screen, so there is no manual reset/cleanup.
+- Store state MUST be derived by pure functions kept in their own file; the store only holds state and dispatches. Keep the engine's original snapshot separate from user edits rather than merging them.
 
 ## Conventions
 
