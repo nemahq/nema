@@ -9,7 +9,9 @@ interface ChangesetsTabProps {
   onSubTabChange: (subTab: ChangesSubTab) => void;
 }
 
-// 목록이 터져도 헤더·컴포저·탭은 남아야 해서 탭 콘텐츠에만 경계를 두른다.
+// 목록의 로딩·실패는 ChangesetList가 자체 경계로 처리한다 — 여기 경계가 잡는 건
+// 서브탭 chrome 자체가 렌더 중 터지는 경우뿐이다. 도달 경로는 드물지만 지우면 그
+// 크래시가 화면 전체로 올라가 Space 오버뷰가 통째로 날아간다.
 export function ChangesetsTab({
   spacePublicId,
   spaceId,
@@ -18,7 +20,7 @@ export function ChangesetsTab({
 }: ChangesetsTabProps) {
   return (
     <ErrorBoundary
-      boundaryName="changeset-panel"
+      boundaryName="changes-panel"
       fallbackRender={(fallbackProps) => (
         <SectionErrorFallback {...fallbackProps} />
       )}

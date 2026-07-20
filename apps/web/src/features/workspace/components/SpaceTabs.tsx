@@ -23,7 +23,7 @@ export function SpaceTabs({
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  function goToThread() {
+  function goToTopic() {
     void navigate({ to: "/space/$spacePublicId", params: { spacePublicId } });
   }
 
@@ -40,7 +40,7 @@ export function SpaceTabs({
     // 닿는 순간부터만 고정된다(sticky의 기본 동작), 그 전까진 컴포저·제목과 함께
     // 평소처럼 스크롤된다.
     <div className="sticky top-0 z-10 mt-6 flex gap-1 border-b border-border/50 bg-surface-card">
-      <SpaceTabButton active={activeTab === "topic"} onClick={goToThread}>
+      <SpaceTabButton active={activeTab === "topic"} onClick={goToTopic}>
         {t("space.tab_topic")}
       </SpaceTabButton>
       <SpaceTabButton

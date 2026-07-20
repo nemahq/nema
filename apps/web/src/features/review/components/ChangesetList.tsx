@@ -20,9 +20,12 @@ interface ChangesetListProps {
   subTab: ChangesSubTab;
 }
 
-// Open에서는 ingestion만 실제 리뷰 화면이 있다 — relation 상세는 review 2차 몫이라
-// 이번 슬라이스는 목록에 보이기만 하고 클릭은 막는다(surface-inventory.md).
-// Open·Closed 모두 같은 changeset 상세 URL을 쓴다(status에 따라 게이트가 화면을 가른다).
+// surface-inventory.md는 Open의 relation도 관계 판정 화면으로 이동한다고 적어뒀지만
+// 그 화면이 아직 없다 — 목적지가 생길 때까지 목록에 보이기만 하고 클릭은 막는다.
+// 즉 이건 목적지 설계가 아니라 이번 슬라이스의 구현 한계다.
+//
+// Closed에서는 막지 않는다 — 이미 끝난 항목은 status에 따라 상세 쪽 게이트가
+// 알맞은 화면을 고른다.
 function isLinkable(entry: ChangesetListEntry, subTab: ChangesSubTab): boolean {
   return !(subTab === "open" && entry.type !== "ingestion");
 }
@@ -94,7 +97,7 @@ export function ChangesetList(props: ChangesetListProps) {
     <QueryErrorResetBoundary>
       {({ reset: resetQueryError }) => (
         <ErrorBoundary
-          boundaryName="changeset-list"
+          boundaryName="changes-list"
           fallbackRender={(fallbackProps) => (
             <SectionErrorFallback
               {...fallbackProps}
