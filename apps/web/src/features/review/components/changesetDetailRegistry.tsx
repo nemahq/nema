@@ -71,6 +71,8 @@ const CHANGESET_DETAIL_SCREEN: Record<
   },
   revert: {
     open: throwImpossiblePendingChangeset,
+    // TODO: revert도 무엇을 되돌렸는지 보여줘야 한다(review-flow.md "충돌 판정 되돌리기"
+    // 등이 만드는 changeset이다). manual과 같은 임시 매핑이다.
     closed: (props) => <ChangesetRecordScreen {...props} />,
   },
 };

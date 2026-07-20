@@ -104,6 +104,10 @@ export function reviewEditingReducer(
 export interface ReviewEditingStoreState {
   overrides: ReviewOverrides;
   dispatch: (action: ReviewEditingAction) => void;
+  // 편집 내용이 서버에 반영된 뒤 부르는 것 — override는 그 시점에 중복이고, 더
+  // 중요하게는 위험하다. 저장 RPC가 changes를 전량 재삽입해 digests 배열의 순서가
+  // 다시 섞이는데, override는 인덱스로 키를 잡으므로 남겨두면 다른 후보에 붙는다.
+  reset: () => void;
 }
 
 export type ReviewEditingStore = ReturnType<typeof createReviewEditingStore>;
@@ -119,5 +123,6 @@ export function createReviewEditingStore() {
     overrides: emptyOverrides(),
     dispatch: (action) =>
       set({ overrides: reviewEditingReducer(get().overrides, action) }),
+    reset: () => set({ overrides: emptyOverrides() }),
   }));
 }

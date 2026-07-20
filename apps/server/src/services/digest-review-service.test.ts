@@ -27,19 +27,26 @@ function mockSupabase(
   perTable: Record<string, unknown>,
 ): TypedSupabaseClient & {
   eqCallsByTable: Record<string, unknown[][]>;
+  orderCallsByTable: Record<string, unknown[][]>;
 } {
   const eqCallsByTable: Record<string, unknown[][]> = {};
+  const orderCallsByTable: Record<string, unknown[][]> = {};
   return {
     eqCallsByTable,
+    orderCallsByTable,
     from: vi.fn((table: string) => {
       const calls = (eqCallsByTable[table] ??= []);
+      const orderCalls = (orderCallsByTable[table] ??= []);
       const chain: Record<string, ReturnType<typeof vi.fn>> = {};
       chain.select = vi.fn().mockReturnValue(chain);
       chain.eq = vi.fn((...args: unknown[]) => {
         calls.push(args);
         return chain;
       });
-      chain.order = vi.fn().mockReturnValue(chain);
+      chain.order = vi.fn((...args: unknown[]) => {
+        orderCalls.push(args);
+        return chain;
+      });
       chain.in = vi
         .fn()
         .mockResolvedValue({ data: perTable[table], error: null });
@@ -50,6 +57,7 @@ function mockSupabase(
     }),
   } as unknown as TypedSupabaseClient & {
     eqCallsByTable: Record<string, unknown[][]>;
+    orderCallsByTable: Record<string, unknown[][]>;
   };
 }
 
@@ -116,6 +124,17 @@ describe("getReview", () => {
       SPACE_ID,
     ]);
     expect(supabase.eqCallsByTable.changesets).toContainEqual(["number", 12]);
+    // 정렬이 빠지면 Postgres가 changes 행 순서를 보장하지 않는다. 프론트 편집 상태가
+    // digests 배열의 인덱스를 키로 쓰므로, refetch 때 순서가 달라지면 제목 수정이나
+    // 후보 삭제가 다른 후보에 붙는다 — 어느 층도 에러를 내지 않는 회귀라 여기서 막는다.
+    expect(supabase.orderCallsByTable.changesets).toContainEqual([
+      "created_at",
+      { referencedTable: "changes" },
+    ]);
+    expect(supabase.orderCallsByTable.changesets).toContainEqual([
+      "id",
+      { referencedTable: "changes" },
+    ]);
     expect(review.digests[0]?.referenceIds).toEqual([EXISTING_REFERENCE_ID]);
     expect(review.digests[0]?.newReferenceKeys).toEqual([NEW_REFERENCE_ID]);
     expect(review.newReferences).toEqual([

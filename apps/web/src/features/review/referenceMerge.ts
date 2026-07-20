@@ -11,7 +11,8 @@ interface MergeRow {
 // 편집할 게 없다), 살아있는 Digest가 아직 그 Reference를 인용하는 것만(인용하던 후보를
 // 다 지우면 병합도 의미를 잃는다). 제안 거부는 별도로 빼지 않는다 — "원래대로"가
 // mergeNote를 원본 body로 되돌리면 RPC의 before===after no-op으로 병합이 안 걸린다.
-// UI 렌더와 저장 페이로드(referenceUpdates)가 같은 목록을 쓰도록 한 곳에서 계산한다 —
+// UI 렌더와 저장 페이로드(referenceUpdates)가 같은 함수를 쓴다 — 입력(살아남은 Digest의
+// 인용 집합)은 호출부마다 따로 만들므로, 그 파생이 갈라지면 두 목록도 갈라진다.
 // update_pending_ingestion이 changes를 통째로 교체하므로, 여기서 빠진 제안은 확정 시 유실된다.
 export function buildMergeRows(args: {
   citedReferences: ReviewCitedReference[];

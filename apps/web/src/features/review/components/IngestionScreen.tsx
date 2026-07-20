@@ -48,6 +48,7 @@ function IngestionContent({
   const { t } = useTranslation();
   const [review] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
   const overrides = useEditing((state) => state.overrides);
+  const resetEditing = useEditing((state) => state.reset);
   const {
     digestRows,
     referenceRows,
@@ -106,6 +107,7 @@ function IngestionContent({
         referenceUpdates,
         updateReview: updateReview.mutateAsync,
         confirmReview: confirmReview.mutateAsync,
+        onSaved: resetEditing,
       });
       showNotificationSoftAsk();
     } catch {

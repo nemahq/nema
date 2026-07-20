@@ -46,6 +46,10 @@ interface ConfirmReviewFlowArgs {
     referenceUpdates: ReferenceMergeUpdate[];
   }) => Promise<unknown>;
   confirmReview: (payload: { changesetId: string }) => Promise<unknown>;
+  // 저장이 성공한 직후 로컬 편집 상태를 버리는 콜백. 저장 RPC가 changes를 전량
+  // 재삽입해 digests 순서가 다시 섞이는데, 인덱스로 키를 잡은 override를 남겨두면
+  // 확정이 실패해 화면에 머무를 때 다른 후보에 붙는다.
+  onSaved: () => void;
 }
 
 // 편집한 내용을 먼저 저장해야만 확정한다 — 순서가 바뀌면(예: 확정을 먼저 부르고
@@ -62,6 +66,7 @@ export async function runConfirmReview(
     referenceUpdates,
     updateReview,
     confirmReview,
+    onSaved,
   } = args;
 
   if (dirty) {
@@ -84,6 +89,7 @@ export async function runConfirmReview(
         mergeNote: update.mergeNote.trim(),
       })),
     });
+    onSaved();
   }
   await confirmReview({ changesetId });
 }

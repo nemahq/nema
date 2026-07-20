@@ -85,8 +85,14 @@ export async function getReview(args: {
     .eq("space_id", spaceId)
     .eq("number", number)
     // 프론트의 편집 상태(제목 override·후보 삭제)가 digests 배열의 인덱스를 키로 쓴다.
-    // ORDER BY가 없으면 Postgres가 행 순서를 보장하지 않아, refetch 때 순서가 바뀌면
-    // 편집 내용이 다른 후보에 붙는다. id는 created_at이 같을 때의 결정적 tiebreak.
+    // ORDER BY가 없으면 Postgres가 행 순서를 보장하지 않아, 같은 행을 다시 읽을 때마다
+    // 순서가 달라질 수 있고 그러면 편집 내용이 다른 후보에 붙는다.
+    //
+    // 다만 이 정렬이 고정하는 건 "같은 행 집합을 다시 읽을 때"뿐이다. created_at은
+    // now()(트랜잭션 타임스탬프)라 한 RPC가 쓴 행이 전부 같은 값이고, 실제 순서는
+    // 랜덤 uuid인 id가 정한다 — 엔진이 만든 순서와는 무관하다. 저장(update_pending_
+    // ingestion)은 changes를 전량 재삽입하므로 그때마다 순서가 다시 섞이는데, 그쪽은
+    // 프론트가 저장 성공 시 편집 상태를 버리는 것으로 막는다(confirmReviewFlow.onSaved).
     .order("created_at", { referencedTable: "changes" })
     .order("id", { referencedTable: "changes" })
     .single();

@@ -10,9 +10,6 @@ import type {
 } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
-// Digest 접두사는 Digest에 묶였다는 표시다 — DigestBodyFields·DigestTypeSelect는
-// Digest 판별 유니언을 직접 읽어 다른 곳에 못 쓴다. 접두사 없는 것들은 일반 라벨·
-// 레퍼런스 배열만 받아 Digest 상세의 라벨 편집에도 그대로 꽂힌다.
 import { CitedReferenceBadges } from "./CitedReferenceBadges";
 import { DigestBodyFields } from "./DigestBodyFields";
 import { DigestTypeSelect } from "./DigestTypeSelect";
