@@ -15,21 +15,23 @@
 ### 케이스 목록
 
 - [x] Digest 추출 완료 → ingestion changeset 자동 생성
-- [ ] Digest 리뷰 화면 진입
+- [x] 검토 대기 배지 실시간 갱신 (LNB·Space 오버뷰)
+- [x] Digest 리뷰 화면 진입
 - [x] 원문에 없는 필드는 비워둠
 - [x] Digest 타입 제안
 - [x] 신규 Topic·Tag 제안
 - [ ] 기존 Topic·Tag 재사용 제안
 - [ ] 기존 Topic·Tag는 이름 수정 불가
-- [ ] 신규 Topic·Tag 이름 수정 가능
+- [x] 신규 Topic·Tag 이름 수정 가능
 - [ ] Digest 리뷰 화면에서 Topic·Tag 추가 — 기존 선택
-- [ ] Digest 리뷰 화면에서 Topic·Tag 추가 — 신규 생성
+- [x] Digest 리뷰 화면에서 Topic·Tag 추가 — 신규 생성
 - [ ] Reference 후보 자동 제안 및 매칭
-- [ ] Changeset 제목 자동 생성
-- [ ] Digest 후보 삭제
-- [ ] Digest 리뷰 확정
-- [ ] Digest 리뷰 버리기
-- [ ] 적용된 리뷰 되돌리기
+- [x] Changeset 제목 자동 생성 (ingestion)
+- [x] Digest 후보 삭제
+- [x] Digest 리뷰 확정
+- [x] Digest 리뷰 버리기
+- [x] 적용된 리뷰 되돌리기
+- [ ] Changeset 제목 자동 생성 (revert)
 - [ ] 원본도 삭제하기
 - [ ] 버려진 리뷰 되살리기
 - [ ] 원본 삭제 후 되살리기 비활성화
@@ -59,15 +61,21 @@
 - **관여 화면**: 변경셋, Digest 리뷰 화면
 - **확정 (2026-07-20, Kyle 실동작 확인)**: `digestSource`가 추출 완료 후 `create_ingestion_review` RPC를 호출해 changeset을 `status='pending'`(제품 용어 open)으로 생성한다(`apps/server/src/infra/statement-sync/digestion.ts`). 변경셋 탭(Open)과 Digest 리뷰 화면(`digestReview.get`) 모두 같은 `status='pending'` 가드로 조회하므로 Then #1·#2가 구조적으로 보장됨. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
 
+#### 검토 대기 배지 실시간 갱신 (LNB·Space 오버뷰)
+
+- **Given**: 유저가 LNB/Space 오버뷰를 보고 있다.
+- **When**: ingestion changeset이 새로 열린다.
+- **Then**: 새로고침 없이 LNB의 Space 목록 배지와 Space 오버뷰의 변경사항 탭 배지가 실시간으로 갱신된다.
+- **관여 화면**: LNB, Space 오버뷰, 변경셋
+- **범위 참고**: 두 배지 모두 `space.openChangesetCount` 하나를 공유(`SpaceListItem.tsx`/`SpaceTabButton.tsx`). Supabase Realtime 도입(PR #419)으로 실시간 갱신.
+
 #### Digest 리뷰 화면 진입
 
-- **Given**: open 상태인 ingestion changeset이 있다.
-- **When**: 그 changeset의 Digest 리뷰 화면에 진입한다.
-- **Then**:
-  1. 추출된 Digest 후보와 Reference 후보가 문서형 편집 카드로 나열된다.
-  2. 사이드뷰의 원문 탭이 첫 후보의 위치가 하이라이트된 채로 기본으로 열려 있다.
-- **관여 화면**: Digest 리뷰 화면
-- **범위 참고 (2026-07-14, PR #412)**: Then #1은 구현됨(`DigestCandidateCard`/`ReferenceCandidateCard`로 카드 나열). Then #2는 축소 구현 — `Digest.locator`가 리뷰 draft에 실리지 않아 후보별 위치 하이라이트를 만들 수 없어서, 사이드뷰 원문 탭 대신 원문 전체를 보여주는 접이식 패널(`SourceTextPanel`)로 대체했다(design-decisions-log.md 참고). 그래서 미체크로 남김.
+- **Given**: 유저가 변경사항 리스트(Open)에서 ingestion changeset 행을 본다.
+- **When**: 그 행을 클릭해 Digest 리뷰 화면에 진입한다.
+- **Then**: 추출된 Digest 후보와 Reference 후보가 문서형 편집 카드로 나열된다.
+- **관여 화면**: 변경셋, Digest 리뷰 화면
+- **범위 참고**: 원문 위치 하이라이트 동기화는 별도 케이스 "원문 대조 포커스 전환"으로 이관 — 여기선 중복 검증하지 않는다.
 
 #### 원문에 없는 필드는 비워둠
 
@@ -75,7 +83,7 @@
 - **When**: Digest 리뷰 화면에서 그 후보를 본다.
 - **Then**: 그 필드는 지어낸 내용 없이 빈 칸으로 제안된다.
 - **관여 화면**: Digest 리뷰 화면
-- **확정 (2026-07-20, Kyle 실동작 확인)**: 시스템 프롬프트("Fill only what the note says... never invent, never pad")와 `DigestBodySchema`의 optional 필드, `buildDigestBody`의 빈 값→undefined 정규화까지 3중으로 구조적 보장됨(`apps/server/src/prompts/digest-generation.ts`, `packages/shared/src/schemas/digest.ts`, `apps/server/src/infra/statement-sync/digestion.ts`). 실제 LLM 판단 품질은 코드로 검증 불가한 영역이라 제외. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
+- **확정 (2026-07-20, Kyle 실동작 확인)**: 시스템 프롬프트("Fill only what the note says... never invent, never pad")와 `DigestBodySchema`의 optional 필드, `buildDigestBody`의 빈 값→undefined 정규화까지 3중으로 구조적 보장됨(`apps/server/src/prompts/digest-generation.ts`, `packages/shared/src/schemas/digest.ts`, `apps/server/src/infra/statement-sync/digestion.ts`).
 
 #### Digest 타입 제안
 
@@ -108,7 +116,7 @@
 - **Then**: 이름은 읽기 전용이라 수정할 수 없다. 그 Digest에서 제거하는 것은 계속 가능하다.
 - **관여 화면**: Digest 리뷰 화면
 
-**범위 참고 (2026-07-15, PR #414)**: `EditableLabelChip`이 `id !== null`(레지스트리 매치)일 때 `readOnly`로 렌더링 — 스펙 그대로 구현·멀티 에이전트 코드 리뷰 + 서버/FE 테스트로 검증됨. 라이트/다크 브라우저 실측은 PM이 별도 진행 예정이라 체크는 보류.
+- **범위 참고 (2026-07-15, PR #414)**: `EditableLabelChip`이 `id !== null`(레지스트리 매치)일 때 `readOnly`로 렌더링 — 스펙 그대로 구현·멀티 에이전트 코드 리뷰 + 서버/FE 테스트로 검증됨. 실동작 확인 아직 안 됨.
 
 #### 신규 Topic·Tag 이름 수정 가능
 
@@ -117,7 +125,7 @@
 - **Then**: 아직 서버에 존재하지 않는 임시 상태이므로, 수정한 이름이 이 changeset의 편집 중인 내용에 즉시 반영된다.
 - **관여 화면**: Digest 리뷰 화면
 
-**범위 참고 (2026-07-15, PR #414)**: `id === null`일 때 인라인 `<input>`으로 편집 가능, `DigestReviewScreen`의 `topicsOverrides`/`tagsOverrides`(기존 `titleOverrides`와 동일 패턴)로 즉시 반영. 빈 값으로 지운 채 확정을 시도하면(리뷰에서 발견된 회귀) 확정 버튼이 비활성화되도록 수정 완료. 실측은 PM이 별도 진행, 체크는 보류.
+- **확정 (2026-07-20, Kyle 실동작 확인)**: `id === null`일 때 인라인 `<input>`으로 편집 가능, `DigestReviewScreen`의 `topicsOverrides`/`tagsOverrides`(기존 `titleOverrides`와 동일 패턴)로 즉시 반영. 빈 값으로 지운 채 확정을 시도하면(리뷰에서 발견된 회귀) 확정 버튼이 비활성화되도록 수정 완료.
 
 #### Digest 리뷰 화면에서 Topic·Tag 추가 — 기존 선택
 
@@ -126,16 +134,15 @@
 - **Then**: 그 기존 라벨이 이 changeset의 편집 중인 내용에 즉시 추가된다. 새 라벨은 생성되지 않는다.
 - **관여 화면**: Digest 리뷰 화면
 
-**범위 참고 (2026-07-15, PR #414)**: `TopicAddPopover`/`TagAddPopover`의 검색·선택 구현됨. 리뷰에서 `topic.list`가 Space 스코프 없이 다른 Space의 동명 Topic까지 "기존"으로 노출하던 크로스-Space 버그를 발견해 `spaceId` 파라미터 추가로 수정 — Tag는 원래 Workspace 스코프라 해당 없음. 실측은 PM이 별도 진행, 체크는 보류.
+- **범위 참고 (2026-07-15, PR #414)**: `TopicAddPopover`/`TagAddPopover`의 검색·선택 구현됨. 리뷰에서 `topic.list`가 Space 스코프 없이 다른 Space의 동명 Topic까지 "기존"으로 노출하던 크로스-Space 버그를 발견해 `spaceId` 파라미터 추가로 수정 — Tag는 원래 Workspace 스코프라 해당 없음. 실동작 확인 아직 안 됨.
 
 #### Digest 리뷰 화면에서 Topic·Tag 추가 — 신규 생성
 
 - **Given**: 유저가 Digest 리뷰 화면에서 Digest 후보를 보고 있다.
 - **When**: Topic·Tag 추가 액션을 실행해 검색했지만 일치하는 라벨이 없어, 새로 만들기를 선택한다.
-- **Then**: 검색어를 이름으로 하는 새 라벨이 이 changeset의 편집 중인 내용에 즉시 추가된다.
+- **Then**: Topic은 검색어를 이름으로 하는 새 라벨이 즉시 추가된다. Tag는 이름(검색어 프리필)+설명 2필드 미니 폼을 거쳐야 추가된다(`description`이 필수 필드라서).
 - **관여 화면**: Digest 리뷰 화면
-
-**범위 참고 (2026-07-15, PR #414)**: Topic은 스펙 그대로 검색어가 즉시 새 라벨로 추가된다. Tag는 데이터 모델상 `description`이 필수(`TagDraftSchema`)라 스펙의 "즉시 추가"가 그대로 적용되지 않음 — PM 확인 후, Tag만 이름(검색어 프리필)+description 2필드 미니 폼을 한 단계 거치도록 확정(`design-decisions-log.md` 2026-07-15 항목 참고). 실측은 PM이 별도 진행, 체크는 보류.
+- **확정 (2026-07-20, Kyle 실동작 확인)**: Tag가 Topic과 다르게 description 필수라 미니 폼을 거치는 것까지 확인(`design-decisions-log.md` 2026-07-15 항목 참고).
 
 #### Reference 후보 자동 제안 및 매칭
 
@@ -145,12 +152,13 @@
 - **관여 화면**: Digest 리뷰 화면
 - **범위 참고 (2026-07-20, QA 세션)**: `digest-generation.ts` 프롬프트가 사람·조직·프로젝트·제품·개념(person/organization/project/product/term) 분류와 레지스트리 매칭 여부에 따른 기존/신규 분기를 명시적으로 지시한다. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
-#### Changeset 제목 자동 생성
+#### Changeset 제목 자동 생성 (ingestion)
 
 - **Given**: Digest 추출이 완료되어 하나 이상의 Digest 후보가 나왔다.
 - **When**: ingestion changeset이 생성된다.
-- **Then**: 엔진이 원문 전체를 보고 그 changeset의 제목을 생성한다(여러 Digest가 같은 주제를 공유하면 그 주제, 갈리면 전체를 아우르는 요약형 제목).
+- **Then**: 그 changeset의 제목은 원본 Source의 제목을 그대로 사용한다. Source 제목이 별도의 nano LLM 콜(`fill_source_title`)로 아직 안 채워졌으면 changeset 제목도 null로 시작했다가, 나중에 채워지면 트리거로 갱신된다.
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (PR #435)**: `create_ingestion_review`가 그 시점 Source 제목을 복사, `sources.title` 변경 시 연결된 ingestion changeset title로 전파하는 트리거로 갱신 유지.
 
 #### Digest 후보 삭제
 
@@ -158,7 +166,7 @@
 - **When**: 후보 하나의 삭제 액션을 실행한다.
 - **Then**: 컨펌 모달 없이 그 후보가 즉시 이 changeset의 편집 중인 내용에서 제거된다.
 - **관여 화면**: Digest 리뷰 화면
-- **범위 참고 (2026-07-14, PR #412)**: 구현됨 — `onRemove`로 컨펌 없이 즉시 로컬 상태(`removedDigestIndexes`)에서 제거. Reference 후보 삭제도 같은 방식으로 함께 구현됨(별도 케이스 없음, 이 케이스가 겸함). 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+- **범위 참고 (2026-07-14, PR #412)**: `onRemove`로 컨펌 없이 즉시 로컬 상태(`removedDigestIndexes`)에서 제거. Reference 후보 삭제도 같은 방식으로 함께 구현됨(별도 케이스 없음, 이 케이스가 겸함).
 
 #### Digest 리뷰 확정
 
@@ -171,8 +179,7 @@
   4. 리뷰 화면(open 전용)은 유효하지 않게 되므로, 처리 결과의 정본 위치인 변경사항 상세로 곧바로 이동한다.
 - **관여 화면**: Digest 리뷰 화면, Changeset 상세
 - **범위 참고 (2026-07-14, PR #412)**: Then #1은 이 PR이 구현(`useConfirmReview`). Then #2·#3(후보 확정·진술/관계 생성)은 기존 `confirm_ingestion_review` RPC가 이미 담당하던 부분이라 이 PR에서 변경 없음.
-- **갱신 (2026-07-18)**: Then #4를 뒤집었다 — 처음엔 "화면 안 이동, 로컬 `outcome`으로 배지만 갱신"이었는데, changeset이 실제 closed로 전이하면 open 전용 `digestReview.get`이 재조회 불가라 정본 위치가 구조적으로 변경사항 상세(`ClosedReviewScreen`)다. 확정 성공 즉시 그리로 자동 이동하도록 바꿨다(design-decisions-log.md 2026-07-18 항목 참고). 실동작 브라우저 확인은 아직 없어 미체크로 남김.
-- **갱신 (2026-07-20, QA 세션)**: Then #4(자동 이동)가 `OpenReviewScreen.tsx`의 `goToClosedReview()`(확정 성공 콜백에서 호출)로 실제 구현된 것을 코드 레벨로 확인. Kyle 확인 결과 실동작 브라우저 확인은 여전히 없어(미확인) 체크는 계속 보류.
+- **갱신 (2026-07-18)**: Then #4를 뒤집었다 — 처음엔 "화면 안 이동, 로컬 `outcome`으로 배지만 갱신"이었는데, changeset이 실제 closed로 전이하면 open 전용 `digestReview.get`이 재조회 불가라 정본 위치가 구조적으로 변경사항 상세(`ClosedReviewScreen`)다. 확정 성공 즉시 그리로 자동 이동하도록 바꿨다(design-decisions-log.md 2026-07-18 항목 참고). `OpenReviewScreen.tsx`의 `goToClosedReview()`(확정 성공 콜백에서 호출)로 구현.
 
 #### Digest 리뷰 버리기
 
@@ -185,29 +192,37 @@
   4. 리뷰 화면(open 전용)은 유효하지 않게 되므로, 처리 결과의 정본 위치인 변경사항 상세로 곧바로 이동한다.
 - **관여 화면**: Digest 리뷰 화면, Changeset 상세
 - **범위 참고 (2026-07-14, PR #412)**: 신설된 `discard_ingestion_review` RPC(가드: `type='ingestion' AND status='pending'`, changes 미생성)와 `useDiscardReview`로 Then #1~#3 구현.
-- **갱신 (2026-07-18)**: Then #4를 확정과 같은 이유로 뒤집어 자동 이동으로 바꿨다(위 "Digest 리뷰 확정" 갱신·design-decisions-log.md 2026-07-18 항목 참고). 실동작 브라우저 확인은 아직 없어 미체크로 남김.
-- **갱신 (2026-07-20, QA 세션)**: Then #4(자동 이동)가 `useDiscardReview`의 `onSuccess` 콜백에서 `goToClosedReview()` 호출로 구현된 것을 코드 레벨로 확인. Kyle 확인 결과 실동작 브라우저 확인은 여전히 없어(미확인) 체크는 계속 보류.
+- **갱신 (2026-07-18)**: Then #4를 확정과 같은 이유로 뒤집어 자동 이동으로 바꿨다(위 "Digest 리뷰 확정" 갱신·design-decisions-log.md 2026-07-18 항목 참고). `useDiscardReview`의 `onSuccess` 콜백에서 `goToClosedReview()` 호출로 구현.
 
 #### 적용된 리뷰 되돌리기
 
-- **Given**: 유저가 Digest 리뷰 화면에서 적용된 상태인 changeset을 보고 있다.
+- **Given**: 유저가 Changeset 상세에서 적용된 상태인 changeset을 보고 있다(Digest 리뷰 화면은 open 전용이라 여기 해당 없음 — `digestReview.get` RPC 가드가 `status='pending'`만 허용).
 - **When**: 되돌리기 액션을 실행한다.
 - **Then**:
-  1. 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
-  2. 이 changeset이 만든 Digest들이 archive되고, 원본 Source는 초안(pending)으로 돌아간다.
-  3. 되돌리기 액션은 그 revert changeset의 상세로 이동하는 링크로 바뀐다.
-- **관여 화면**: Digest 리뷰 화면, Changeset 상세
-- **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다 — `digestReview.get` RPC 가드가 `status='pending'`만 허용해 적용된 changeset은 애초에 Digest 리뷰 화면에서 조회가 안 된다. 그래서 되돌리기 액션은 Digest 리뷰 화면이 아니라 Changeset 상세에만 뒀다(`useRevertChangeset`). 기존 `revert_changeset` RPC(ingestion 타입 처리 포함)를 그대로 호출하는 UI만 이번에 새로 얹은 것 — Then 자체는 그 RPC가 이미 구현. Then #3의 "링크로 바뀐다"는 부분은 미구현(되돌리기 후 새로 생긴 revert changeset 상세로 자동 이동하는 링크는 없음, invalidate만 함). 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+  1. 컨펌 다이얼로그 없이 즉시 실행된다.
+  2. 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
+  3. 이 changeset이 만든 Digest들이 archive되고, 원본 Source는 초안(pending)으로 돌아간다.
+  4. 성공 시 새로 생성된 revert changeset의 상세로 자동 이동한다.
+- **관여 화면**: Changeset 상세
+- **범위 참고 (2026-07-14, PR #412; 갱신 PR #438)**: `useRevertChangeset`이 `revert_changeset` RPC를 호출, 응답의 `revertChangesetNumber`로 `ClosedReviewScreen.tsx`가 즉시 navigate.
+
+#### Changeset 제목 자동 생성 (revert)
+
+- **Given**: 유저가 적용된 changeset을 되돌린다(이미 되돌려진 changeset을 다시 되돌리는 체이닝 포함).
+- **When**: 되돌리기(revert) changeset이 생성된다.
+- **Then**: 제목이 원본 제목 + "되돌려짐" 여부를 UI 언어에 맞는 자연스러운 표현으로 보여준다(반복 접미사를 그대로 이어붙이지 않음). 원본 제목이 없으면(번호 자리표시자 폴백 중) 이 되돌리기도 같은 폴백을 물려받는다.
+- **관여 화면**: Changeset 상세, 변경셋
+- **범위 참고**: 저장은 원본 제목+되돌려진 횟수(depth)로, 표시는 클라이언트가 UI 언어별 자연스러운 문구(Tolgee ICU 복수형 키)로 조합해야 함. 현재 구현(`revert_changeset` RPC)은 SQL에서 `title || ' 되돌림'`으로 한국어 문자열을 직접 이어붙여 저장 — 영어 UI에서 한/영 혼재되는 버그, 수정 필요.
 
 #### 원본도 삭제하기
 
-- **Given**: 유저가 Digest 리뷰 화면에서 버려지거나 되돌려진 changeset을 보고 있다.
+- **Given**: 유저가 Changeset 상세에서 버려지거나 되돌려진 changeset을 보고 있다(Digest 리뷰 화면은 open 전용이라 여기 해당 없음).
 - **When**: 원본도 삭제하기 액션을 실행한다.
 - **Then**:
   1. 그 원본(Source)이 즉시 trashed 상태로 전환된다.
   2. 원본도 삭제하기 액션이 사라진다.
-- **관여 화면**: Digest 리뷰 화면
-- **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다(위 "적용된 리뷰 되돌리기"와 같은 이유) — 버려지거나 되돌려진 changeset은 Digest 리뷰 화면에서 조회가 안 되므로, "원본도 삭제하기" 액션은 Changeset 상세에만 뒀다(`useTrashReviewSource`, 기존 `trash_source` RPC 재사용). Then 자체는 구현(확인 다이얼로그 → 즉시 trashed 전환 → 액션 비활성화). 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+- **관여 화면**: Changeset 상세
+- **범위 참고 (2026-07-14, PR #412)**: `useTrashReviewSource`(기존 `trash_source` RPC 재사용)로 구현 — 확인 다이얼로그 → 즉시 trashed 전환 → 액션 비활성화.
 
 #### 버려진 리뷰 되살리기
 
@@ -376,6 +391,8 @@
 - [ ] 관계 archive 시 관련 Digest 목록 표시 규칙
 - [ ] 관련 Reference 자동 제안
 - [ ] 판정 대기 relation changeset 생성
+- [ ] Changeset 제목 자동 생성 (relation - 충돌)
+- [ ] Changeset 제목 자동 생성 (relation - 중복)
 - [ ] 재제안 가드
 - [ ] 판정 모드 진입
 - [ ] 충돌 판정 — 승자 선택
@@ -425,6 +442,22 @@
 - **When**: 관계 엔진이 그 쌍을 처리한다.
 - **Then**: 그 쌍마다 별도의 relation changeset이 open 상태로 생성되어 변경셋 탭의 Open 목록에서 판정을 기다린다.
 - **관여 화면**: 변경셋
+
+#### Changeset 제목 자동 생성 (relation - 충돌)
+
+- **Given**: 판정 대기 relation changeset이 충돌(conflicts) 제안으로 생성된다.
+- **When**: changeset이 생성된다.
+- **Then**: 제목이 "A(끝점1 Statement 내용 요약) vs B(끝점2 Statement 내용 요약)" 형태로 채워진다. Digest 제목이 아니라 실제로 부딪히는 Statement 내용 요약이다 — Digest 제목은 더 넓은 주제를 담을 수 있어서 그대로 쓰면 정작 뭐가 부딪히는지 안 보일 수 있다.
+- **관여 화면**: Changeset 상세, 관계 판정 화면
+- **범위 참고 (surface-inventory.md 256행, mvp-wireframe.html)**: 07-modeling.md `Changeset.title` 규칙.
+
+#### Changeset 제목 자동 생성 (relation - 중복)
+
+- **Given**: 판정 대기 relation changeset이 중복(duplicates) 제안으로 생성된다.
+- **When**: changeset이 생성된다.
+- **Then**: "A vs B" 대립 프레임이 아니라, 이 changeset의 결과물인 병합 제안 Digest 자신의 제목을 changeset 제목으로 그대로 쓴다. 헤더 제목은 읽기 전용이고, 실제 편집은 병합 제안 카드의 제목 입력 하나뿐이며 헤더는 그 값을 따라간다.
+- **관여 화면**: Changeset 상세, 관계 판정 화면
+- **범위 참고 (surface-inventory.md 294행)**: 병합 제안 Digest 자체가 백엔드에 아직 없어(판정 모드 미구현, product-decisions-log.md #18) 검증 불가 — 현재 코드는 충돌과 동일하게 "A vs B"를 채우는 임시(stopgap) 상태.
 
 #### 재제안 가드
 
@@ -518,6 +551,7 @@
 
 ### 케이스 목록
 
+- [ ] Changeset 제목 미생성 (manual)
 - [ ] 편집 changeset 되돌리기
 - [ ] 아카이브 되살리기
 - [ ] 아카이브된 상태에서 편집 잠금
@@ -525,6 +559,14 @@
 - [ ] Reference 직접 수정 동시성 충돌
 
 ### 케이스 상세
+
+#### Changeset 제목 미생성 (manual)
+
+- **Given**: 유저가 Digest 또는 Reference를 직접 수정(또는 아카이브)한다.
+- **When**: manual changeset이 생성된다.
+- **Then**: changeset 제목을 채우지 않는다(항상 null). manual changeset은 변경셋 목록·Changeset 상세 어디에도 뜨지 않고, 오직 그 대상(Digest·Reference)의 "변경 이력" 모달에서만 조회되며 그 모달의 행 라벨은 제목이 아니라 수정 시각+수정한 사람이라, changeset 제목 자체가 읽힐 자리가 없다.
+- **관여 화면**: (해당 없음 — 변경셋 목록·Changeset 상세에 안 뜨는 것 자체가 이 케이스의 요점)
+- **범위 참고 (surface-inventory.md 74·246행)**: "manual은 변경셋 탭엔 아예 안 뜬다"·"번호는 이 화면 밖(변경셋 목록)에서만 의미 있는 앵커" — 같은 원칙이 제목에도 적용됨. 현재 구현(`confirm_digest_edit` 등, PR #435)은 대상 콘텐츠 제목을 changeset 제목에 채우고 있는데, 이건 아무 데도 안 쓰이는 불필요한 작업이라 제거 대상(코드 수정 필요).
 
 #### 편집 changeset 되돌리기
 
