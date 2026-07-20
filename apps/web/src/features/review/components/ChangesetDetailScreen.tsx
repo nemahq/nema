@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 
 import { GetChangesetByNumberInputSchema } from "@nema-io/shared";
 
@@ -7,17 +7,14 @@ import {
   type ErrorFallbackProps,
 } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
-import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 import { isChangesetNotFound } from "@web/features/review/changesetErrors";
+import { ChangesetDetailLayoutSkeleton } from "@web/features/review/components/ChangesetDetailLayoutSkeleton";
 import { renderChangesetDetailScreen } from "@web/features/review/components/changesetDetailRegistry";
 import { ChangesetNotFound } from "@web/features/review/components/ChangesetNotFound";
-// 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
-// eslint-disable-next-line nema/require-suspense-boundary
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import {
   useCurrentSpaceId,
-  // eslint-disable-next-line nema/require-suspense-boundary
   useSpaceListSuspenseQuery,
   useSpacePublicId,
 } from "@web/features/workspace";
@@ -73,7 +70,7 @@ function ChangesetDetailErrorFallback({
   );
 
   if (notFound && !hasRetried) {
-    return <ContentAreaFallback />;
+    return <ChangesetDetailLayoutSkeleton />;
   }
   if (notFound) {
     return <ChangesetNotFound />;
@@ -113,7 +110,9 @@ function ChangesetDetailSpaceGate({
         />
       )}
     >
-      <ChangesetDetailRouter />
+      <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
+        <ChangesetDetailRouter />
+      </Suspense>
     </ErrorBoundary>
   );
 }
@@ -123,7 +122,9 @@ export function ChangesetDetailScreen({
 }: ChangesetDetailRouteProps) {
   return (
     <div className="flex flex-1 flex-col bg-surface-card">
-      <ChangesetDetailSpaceGate changesetNumber={changesetNumber} />
+      <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
+        <ChangesetDetailSpaceGate changesetNumber={changesetNumber} />
+      </Suspense>
     </div>
   );
 }

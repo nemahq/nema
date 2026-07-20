@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
+
+import { Skeleton } from "@nema-io/weave";
 
 import { useNotificationSoftAsk } from "@web/features/notifications";
 import {
@@ -7,8 +9,6 @@ import {
 } from "@web/features/review/confirmReviewFlow";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
-// 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
-// eslint-disable-next-line nema/require-suspense-boundary
 import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
@@ -19,6 +19,7 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetDetailHeader } from "./ChangesetDetailHeader";
 import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
+import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
 import { DigestSection } from "./DigestSection";
 import { EditingProvider, useEditing } from "./EditingProvider";
 import { IngestionActions } from "./IngestionActions";
@@ -165,11 +166,23 @@ function IngestionContent() {
   );
 }
 
-// space·number 유효성 검증과 NOT_FOUND 처리는 ChangesetDetailScreen(부모 게이트)이 이미 마쳤다.
+// space·number 유효성 검증과 NOT_FOUND 처리는 ChangesetDetailScreen(부모 게이트)이
+// 이미 마쳤으므로, 여기서는 이 리뷰 콘텐츠 쿼리(digestReview.get)에 대한 Suspense만
+// 책임진다.
 export function IngestionScreen() {
   return (
-    <EditingProvider>
-      <IngestionContent />
-    </EditingProvider>
+    <Suspense
+      fallback={
+        <ChangesetDetailLayoutSkeleton>
+          <Skeleton className="h-8 w-1/2" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </ChangesetDetailLayoutSkeleton>
+      }
+    >
+      <EditingProvider>
+        <IngestionContent />
+      </EditingProvider>
+    </Suspense>
   );
 }
