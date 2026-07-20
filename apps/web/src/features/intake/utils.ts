@@ -17,3 +17,29 @@ export function draftStatus(source: PendingSourceItem): DraftStatus | null {
 export function isDraftItem(source: PendingSourceItem): boolean {
   return draftStatus(source) !== null;
 }
+
+// status가 null이 아님을 타입으로 확정한 초안 — 소비처가 매번 null 체크를
+// 되풀이하지 않게 목록 변환 시점에 한 번만 걸러낸다.
+interface Draft {
+  source: PendingSourceItem;
+  status: DraftStatus;
+}
+
+export function toDrafts(sources: PendingSourceItem[]): Draft[] {
+  return sources.flatMap((source) => {
+    const status = draftStatus(source);
+    return status === null ? [] : [{ source, status }];
+  });
+}
+
+// 사용자가 할 일이 있는지(재시도·삭제·이동 vs 그냥 대기)로 갈리는 기준 —
+// 목록 섹션 분리와 "대기 중 일괄 삭제"가 같은 판정을 쓴다.
+export function isWaitingDraft({ status }: Draft): boolean {
+  return status !== "processing";
+}
+
+export function waitingDraftIds(sources: PendingSourceItem[]): string[] {
+  return toDrafts(sources)
+    .filter(isWaitingDraft)
+    .map(({ source }) => source.sourceId);
+}
