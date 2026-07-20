@@ -9,7 +9,7 @@ import { toast } from "@web/utils/toast";
 // 같은 URL이 자연히 ClosedReviewScreen으로 넘어간다 — 별도 navigate가 필요 없다.
 // 이 invalidate 자체가 실패하면(네트워크 등) 확정은 이미 성공했는데 화면만 Open에
 // 멈춰 있게 되므로, 그 경우만 별도로 알린다.
-export function useConfirmReview(spaceId: string, number: number) {
+export function useConfirmReview(spaceId: string, changesetNumber: number) {
   const utils = trpc.useUtils();
   const { t } = useTranslation();
   return useMutation(trpc.digestReview.confirm, {
@@ -19,7 +19,7 @@ export function useConfirmReview(spaceId: string, number: number) {
       utils.source.list.invalidate();
       utils.changeset.listChangesets.invalidate();
       utils.changeset.getByNumber
-        .invalidate({ spaceId, number })
+        .invalidate({ spaceId, number: changesetNumber })
         .catch(() => toast.error(t("review.detail_refresh_failed")));
     },
   });

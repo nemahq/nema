@@ -41,7 +41,7 @@ const CONFIRM_DISABLED_REASON_KEY = {
 interface OpenReviewScreenProps {
   spacePublicId: string;
   spaceId: string;
-  number: number;
+  changesetNumber: number;
 }
 
 function OpenReviewNavSkeleton() {
@@ -51,16 +51,16 @@ function OpenReviewNavSkeleton() {
 function OpenReviewContent({
   spacePublicId,
   spaceId,
-  number,
+  changesetNumber,
 }: OpenReviewScreenProps) {
-  const [review] = useDigestReviewSuspenseQuery(spaceId, number);
+  const [review] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
 
   return (
     <ReviewEditingProvider review={review}>
       <OpenReviewBody
         spacePublicId={spacePublicId}
         spaceId={spaceId}
-        number={number}
+        changesetNumber={changesetNumber}
       />
     </ReviewEditingProvider>
   );
@@ -69,7 +69,7 @@ function OpenReviewContent({
 function OpenReviewBody({
   spacePublicId,
   spaceId,
-  number,
+  changesetNumber,
 }: OpenReviewScreenProps) {
   const { t } = useTranslation();
   const review = useReviewEditing((state) => state.review);
@@ -87,9 +87,9 @@ function OpenReviewBody({
   } = useReviewEditing((state) => state.derived);
   const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
 
-  const updateReview = useUpdateReview(spaceId, number);
-  const confirmReview = useConfirmReview(spaceId, number);
-  const discardReview = useDiscardReview(spaceId, number);
+  const updateReview = useUpdateReview(spaceId, changesetNumber);
+  const confirmReview = useConfirmReview(spaceId, changesetNumber);
+  const discardReview = useDiscardReview(spaceId, changesetNumber);
   const showNotificationSoftAsk = useNotificationSoftAsk();
 
   const pending =
@@ -156,7 +156,7 @@ function OpenReviewBody({
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
           <ReviewHeader
             title={reviewTitle}
-            number={review.changesetNumber}
+            changesetNumber={review.changesetNumber}
             status="pending"
             time={review.sourceCreatedAt}
             actions={

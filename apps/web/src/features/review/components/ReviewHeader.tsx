@@ -7,7 +7,7 @@ import { ChangesetStatusPill } from "./ChangesetStatusPill";
 
 interface ReviewHeaderProps {
   title: string;
-  number: number;
+  changesetNumber: number;
   status: ChangesetStatus;
   time: string;
   actions?: ReactNode;
@@ -17,7 +17,7 @@ interface ReviewHeaderProps {
 // 화면마다 다른 슬롯으로 남긴다.
 export function ReviewHeader({
   title,
-  number,
+  changesetNumber,
   status,
   time,
   actions,
@@ -28,7 +28,7 @@ export function ReviewHeader({
         <h1 className="flex min-w-0 items-baseline gap-2 text-2xl font-semibold text-fg-primary">
           <span className="min-w-0 truncate">{title}</span>
           <span className="shrink-0 text-lg font-normal text-fg-tertiary">
-            #{number}
+            #{changesetNumber}
           </span>
         </h1>
         {actions}

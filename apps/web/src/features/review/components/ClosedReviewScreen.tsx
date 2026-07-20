@@ -14,21 +14,24 @@ import { useTranslation } from "@web/lib/tolgee";
 interface ClosedReviewScreenProps {
   spacePublicId: string;
   spaceId: string;
-  number: number;
+  changesetNumber: number;
 }
 
 function ClosedReviewNavSkeleton() {
   return <NavigationBar />;
 }
 
-function ClosedReviewBody({
+function ClosedReviewContent({
   spacePublicId,
   spaceId,
-  number,
+  changesetNumber,
 }: ClosedReviewScreenProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [changesetDetail] = useChangesetDetailSuspenseQuery(spaceId, number);
+  const [changesetDetail] = useChangesetDetailSuspenseQuery(
+    spaceId,
+    changesetNumber,
+  );
   const revertChangeset = useRevertChangeset();
 
   function handleRevert() {
@@ -59,7 +62,7 @@ function ClosedReviewBody({
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
           <ReviewHeader
             title={changesetDisplayTitle(changesetDetail, t)}
-            number={changesetDetail.number}
+            changesetNumber={changesetDetail.number}
             status={changesetDetail.status}
             time={changesetDetail.updatedAt}
             actions={
@@ -88,7 +91,7 @@ export function ClosedReviewScreen(props: ClosedReviewScreenProps) {
   return (
     <main className="flex flex-1 flex-col bg-surface-card">
       <Suspense fallback={<ClosedReviewNavSkeleton />}>
-        <ClosedReviewBody {...props} />
+        <ClosedReviewContent {...props} />
       </Suspense>
     </main>
   );
