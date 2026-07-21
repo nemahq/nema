@@ -70,7 +70,7 @@ export function Sidebar({
     <SidebarContext value={{ collapsed, toggle }}>
       <aside
         className={cn(
-          "flex h-full flex-col overflow-y-auto overscroll-none border-r border-border/50 bg-surface-raised dark:bg-surface-base",
+          "flex h-full flex-col overflow-y-auto overscroll-none border-r border-border bg-surface-raised dark:bg-surface-base",
           collapsed ? "w-12" : "w-64",
         )}
       >
@@ -131,7 +131,7 @@ export function Sidebar({
           <div
             className={cn(
               "sticky bottom-0 bg-surface-raised dark:bg-surface-base",
-              !collapsed && "border-t border-border/50",
+              !collapsed && "border-t border-border",
             )}
           >
             {footer}

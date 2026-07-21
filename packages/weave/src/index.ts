@@ -56,7 +56,6 @@ export {
   PopoverContent,
   PopoverTrigger,
 } from "./components/Popover";
-export { ScrollArea, ScrollBar } from "./components/ScrollArea";
 export {
   Select,
   SelectContent,

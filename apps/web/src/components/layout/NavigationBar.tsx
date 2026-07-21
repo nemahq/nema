@@ -31,7 +31,7 @@ interface NavigationBarProps {
 // 뒤에 더 긴 텍스트(예: changeset 제목)가 오는 경우가 많아 폭을 더 준다.
 export function NavigationBar({ items, rightContent }: NavigationBarProps) {
   return (
-    <div className="flex h-11 shrink-0 items-center justify-between overscroll-none border-b border-border/50 bg-surface-card px-4">
+    <div className="flex h-11 shrink-0 items-center justify-between overscroll-none border-b border-border bg-surface-card px-4">
       <div className="flex min-w-0 items-center gap-1.5 text-sm text-fg-primary">
         {items === undefined && <Skeleton className="h-4 w-56" />}
         {items?.map((item, index) => {

@@ -1,4 +1,4 @@
-import { Skeleton, TextSkeleton } from "@nema-io/weave";
+import { Separator, Skeleton, TextSkeleton } from "@nema-io/weave";
 
 // ChangesetListRow의 1줄(아이콘+제목)·2줄 구조를 그대로 흉내내야 로딩→데이터
 // 전환 시 행 높이가 튀지 않는다.
@@ -35,7 +35,7 @@ export function ChangesetListRowSkeleton({
           <TextSkeleton size="xs" className="w-1/4" style={delay} />
         </div>
       </div>
-      {!hideDivider && <div className="mx-2 border-b border-border/50" />}
+      {!hideDivider && <Separator className="mx-2 w-auto" />}
     </div>
   );
 }

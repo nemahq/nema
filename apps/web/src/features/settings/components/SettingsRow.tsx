@@ -22,7 +22,7 @@ export function SettingsRow({
     <div
       className={cn(
         "flex items-center justify-between gap-6 py-4 first:pt-0 last:pb-0",
-        divider && "border-b border-border last:border-b-0",
+        divider && "border-b border-border-subtle last:border-b-0",
       )}
     >
       <div className="flex flex-col gap-0.5 pr-4">

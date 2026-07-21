@@ -111,9 +111,15 @@
   --palette-identity-lime: #4d7c0f; /* lime-700 */
   --palette-identity-yellow: #a16207; /* yellow-700 */
 
-  /* Border */
+  /* Border — 선의 무게는 길이·대비·반복 횟수의 곱이라, 한 값으로는 구조 경계와
+     반복되는 목록 구분선을 같이 감당할 수 없다. strong(짧고 닫힌 윤곽·포커스) /
+     기본(화면을 가르는 영역 경계) / subtle(여러 번 반복되는 구분선) 3단. */
+  --palette-light-border-strong: #a8a29e; /* stone-400 */
+  --palette-dark-border-strong: #78716c; /* stone-500 */
   --palette-light-border: #d6d3d1; /* stone-300 */
   --palette-dark-border: #57534e; /* stone-600 */
+  --palette-light-border-subtle: #e7e5e4; /* stone-200 */
+  --palette-dark-border-subtle: #44403c; /* stone-700 */
 }
 
 /* ── Semantic Tokens ─────────────────────── */
@@ -153,7 +159,9 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
+  --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
+  --border-subtle: var(--palette-light-border-subtle);
 }
 
 .dark {
@@ -183,7 +191,9 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
+  --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
+  --border-subtle: var(--palette-dark-border-subtle);
 }
 
 /* ── Theme Inversion ─────────────────────── */
@@ -216,7 +226,9 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
+  --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
+  --border-subtle: var(--palette-dark-border-subtle);
 }
 
 .dark .theme-inverted {
@@ -246,7 +258,9 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
+  --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
+  --border-subtle: var(--palette-light-border-subtle);
 }
 
 /* ── Tailwind Theme (semantic tokens only) ── */
@@ -286,7 +300,9 @@
   --color-status-info-tint: var(--status-info-tint);
 
   /* Border */
+  --color-border-strong: var(--border-strong);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
 
   /* Shadow */
   --color-shadow: var(--shadow);

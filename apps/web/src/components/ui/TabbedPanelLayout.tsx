@@ -16,7 +16,7 @@ export function TabbedPanelLayout({
       <div
         role="tablist"
         tabIndex={-1}
-        className="relative flex items-end border-b border-border/50 bg-surface-base"
+        className="relative flex items-end border-b border-border bg-surface-base"
         onDragOver={(e) => {
           e.stopPropagation();
           onHeaderDragOver?.(e);
