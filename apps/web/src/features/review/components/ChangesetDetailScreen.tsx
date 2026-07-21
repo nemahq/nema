@@ -11,7 +11,7 @@ import { isChangesetNotFound } from "@web/features/review/changesetErrors";
 import { ChangesetDetailLayoutSkeleton } from "@web/features/review/components/ChangesetDetailLayoutSkeleton";
 import { renderChangesetDetailScreen } from "@web/features/review/components/changesetDetailRegistry";
 import { ChangesetNotFound } from "@web/features/review/components/ChangesetNotFound";
-import { ChangesetSidePanelProvider } from "@web/features/review/components/ChangesetSidePanel";
+import { ChangesetSidePanelProvider } from "@web/features/review/components/ChangesetSidePanelProvider";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import {

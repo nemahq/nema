@@ -30,7 +30,7 @@ export function useChangesetSidePanel(): ChangesetSidePanelContextValue {
   const context = useContext(ChangesetSidePanelContext);
   if (!context) {
     throw new Error(
-      "useChangesetSidePanel은 ChangesetSidePanelProvider 안에서만 호출할 수 있다",
+      "useChangesetSidePanel must be called within ChangesetSidePanelProvider.",
     );
   }
   return context;
