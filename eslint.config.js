@@ -12,6 +12,7 @@ import js from "@eslint/js";
 import noDirectTrpcHooks from "./eslint-rules/no-direct-trpc-hooks.js";
 import noForbiddenBreakpoints from "./eslint-rules/no-forbidden-breakpoints.js";
 import noGenericVariableNames from "./eslint-rules/no-generic-variable-names.js";
+import noRawColorValue from "./eslint-rules/no-raw-color-value.js";
 import requireNamedPropsInterface from "./eslint-rules/require-named-props-interface.js";
 import requireObjectParams from "./eslint-rules/require-object-params.js";
 import requireStateFgToken from "./eslint-rules/require-state-fg-token.js";
@@ -22,6 +23,7 @@ const nemaPlugin = {
     "no-direct-trpc-hooks": noDirectTrpcHooks,
     "no-forbidden-breakpoints": noForbiddenBreakpoints,
     "no-generic-variable-names": noGenericVariableNames,
+    "no-raw-color-value": noRawColorValue,
     "require-named-props-interface": requireNamedPropsInterface,
     "require-object-params": requireObjectParams,
     "require-state-fg-token": requireStateFgToken,
@@ -56,6 +58,7 @@ export default tseslint.config(
       ],
       "nema/no-generic-variable-names": "error",
       "nema/require-state-fg-token": "error",
+      "nema/no-raw-color-value": "error",
     },
   },
   {

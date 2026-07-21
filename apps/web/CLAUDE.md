@@ -37,6 +37,10 @@ src/
 
 - MUST follow rules in `docs/conventions.md`.
 
+## UI Components
+
+- Check `@nema-io/weave` for an existing component before writing raw DOM. Decision guide: `docs/guides/weave-usage.md`.
+
 ## I18n
 
 - MUST follow UX writing rules in `docs/guides/ux-writing.md` when adding or modifying translation keys.
