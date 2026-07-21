@@ -74,11 +74,12 @@ export function SpaceListItem({
             {hasPendingChangesets && (
               <Badge
                 variant="success"
+                shape="pill"
                 className={cn(
                   PENDING_BADGE_CLASS,
                   // 메뉴(...)가 호버로 나타나는 같은 자리에 겹쳐 얹혀있다가,
                   // 호버 시엔 메뉴에게 자리를 양보하고 사라진다.
-                  "absolute right-3.5 flex items-center justify-center rounded-full group-hover:opacity-0",
+                  "absolute right-3.5 flex items-center justify-center group-hover:opacity-0",
                 )}
               >
                 {openChangesetCount}
