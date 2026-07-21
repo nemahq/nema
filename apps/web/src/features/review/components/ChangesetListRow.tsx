@@ -116,12 +116,11 @@ export const ChangesetListRow = memo(function ChangesetListRow({
             {changesetDisplayTitle({ title, number: changesetNumber }, t)}
           </Text>
           {typeLabelKey && (
-            // 제목 옆 보조 라벨이라 Badge 기본 크기(12px)보다 한 단계 작게 —
-            // Badge에 size prop을 새로 파기엔 이 크기를 쓰는 자리가 아직 여기뿐이다.
             <Badge
               variant="outline"
               shape="pill"
-              className="shrink-0 px-1.5 text-[10px]"
+              size="sm"
+              className="shrink-0"
             >
               {t(typeLabelKey)}
             </Badge>

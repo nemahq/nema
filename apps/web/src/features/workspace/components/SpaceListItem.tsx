@@ -16,10 +16,12 @@ import { SpaceSettingsModal } from "./SpaceSettingsModal";
 const BADGE_CLASS =
   "flex size-5 shrink-0 items-center justify-center rounded-md bg-fg-primary/10";
 
-// 검토 대기 카운트 — 메뉴(...)와 같은 자리(size-5, right-3.5)에 겹쳐 앉는다.
-// SpaceTabButton과 같은 Badge(variant="success")를 재사용해 같은 신호는 같은
-// 컴포넌트로 표현한다.
-const PENDING_BADGE_CLASS = "h-5 px-2 text-xs";
+// 검토 대기 카운트 — 메뉴(...)와 같은 자리(size-5, right-3.5)에 겹쳐 앉아있다가,
+// 호버 시엔 메뉴에게 자리를 양보하고 사라진다. SpaceTabButton과 같은
+// Badge(variant="success", 기본 크기)를 재사용해 같은 신호는 같은 컴포넌트·같은
+// 크기로 표현한다.
+const PENDING_BADGE_CLASS =
+  "absolute right-3.5 flex items-center justify-center group-hover:opacity-0";
 
 interface SpaceListItemProps {
   spaceId: string;
@@ -75,12 +77,7 @@ export function SpaceListItem({
               <Badge
                 variant="success"
                 shape="pill"
-                className={cn(
-                  PENDING_BADGE_CLASS,
-                  // 메뉴(...)가 호버로 나타나는 같은 자리에 겹쳐 얹혀있다가,
-                  // 호버 시엔 메뉴에게 자리를 양보하고 사라진다.
-                  "absolute right-3.5 flex items-center justify-center group-hover:opacity-0",
-                )}
+                className={PENDING_BADGE_CLASS}
               >
                 {openChangesetCount}
               </Badge>

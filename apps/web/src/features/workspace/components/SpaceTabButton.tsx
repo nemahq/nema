@@ -28,7 +28,7 @@ export function SpaceTabButton({
     >
       {children}
       {!!count && (
-        <Badge variant="success" shape="pill" className="leading-none">
+        <Badge variant="success" shape="pill">
           {count}
         </Badge>
       )}

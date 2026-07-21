@@ -31,20 +31,32 @@ const SHAPE_CLASSNAME: Record<BadgeShape, string> = {
   pill: "rounded-full",
 };
 
+// sm은 제목·라벨 옆에 곁들이는 보조 표시용 — 주인공 텍스트보다 한 단계 낮은
+// 무게로 읽혀야 하는 자리(예: changeset 타입 라벨)에서 쓴다.
+type BadgeSize = "default" | "sm";
+
+const SIZE_CLASSNAME: Record<BadgeSize, string> = {
+  default: "px-2 text-[12px]",
+  sm: "px-1.5 text-[10px]",
+};
+
 function Badge({
   variant = "brand",
   shape = "rounded",
+  size = "default",
   className,
   ...props
 }: React.ComponentProps<"span"> & {
   variant?: BadgeVariant;
   shape?: BadgeShape;
+  size?: BadgeSize;
 }) {
   return (
     <span
       data-slot="badge"
       className={cn(
-        "inline-block px-2 py-0.5 text-[12px] font-medium leading-[1.4]",
+        "inline-block py-0.5 font-medium leading-[1.4]",
+        SIZE_CLASSNAME[size],
         SHAPE_CLASSNAME[shape],
         variantClasses[variant],
         className,
@@ -54,4 +66,4 @@ function Badge({
   );
 }
 
-export { Badge, type BadgeShape, type BadgeVariant };
+export { Badge, type BadgeShape, type BadgeSize, type BadgeVariant };
