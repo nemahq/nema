@@ -11,13 +11,13 @@ import {
 import { Plus } from "@nema-io/weave/icons";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
-import { useTagListSuspenseQuery } from "@web/features/review/hooks/useTagListQuery";
+import { useTagListSuspenseQuery } from "@web/hooks/useTagListQuery";
+import { useTranslation } from "@web/lib/tolgee";
 import {
   filterActiveLabelCandidates,
   hasExactLabelMatch,
   isDuplicateLabelName,
-} from "@web/features/review/labelSearch";
-import { useTranslation } from "@web/lib/tolgee";
+} from "@web/utils/labelSearch";
 
 const SEARCH_LIST_CLASSNAME = "flex max-h-48 flex-col gap-0.5 overflow-y-auto";
 

@@ -1,6 +1,6 @@
 import type { BadgeVariant } from "@nema-io/weave";
 
-import { LabelChipShell } from "./LabelChipShell";
+import { LabelChipShell } from "@web/components/ui/LabelChipShell";
 
 interface DraftLabelChipProps {
   label: string;

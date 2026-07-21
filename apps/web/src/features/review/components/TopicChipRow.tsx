@@ -1,10 +1,10 @@
 import { DIGEST_TOPICS_MAX, type DigestTopicDraft } from "@nema-io/shared";
 
+import { RegisteredLabelChip } from "@web/components/ui/RegisteredLabelChip";
 import { useCurrentSpaceId } from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftLabelChip } from "./DraftLabelChip";
-import { RegisteredLabelChip } from "./RegisteredLabelChip";
 import { TopicAddPopover } from "./TopicAddPopover";
 
 interface TopicChipRowProps {

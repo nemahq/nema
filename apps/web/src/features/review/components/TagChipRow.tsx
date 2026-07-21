@@ -1,10 +1,10 @@
 import { DIGEST_TAGS_MAX, type DigestTagDraft } from "@nema-io/shared";
 
+import { RegisteredLabelChip } from "@web/components/ui/RegisteredLabelChip";
+import { TagAddPopover } from "@web/components/ui/TagAddPopover";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftLabelChip } from "./DraftLabelChip";
-import { RegisteredLabelChip } from "./RegisteredLabelChip";
-import { TagAddPopover } from "./TagAddPopover";
 
 interface TagChipRowProps {
   tags: DigestTagDraft[];

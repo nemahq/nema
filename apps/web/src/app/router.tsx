@@ -17,6 +17,7 @@ import { ComingSoonPage } from "@web/app/pages/ComingSoonPage";
 import { DraftsPage } from "@web/app/pages/DraftsPage";
 import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
+import { ReferenceListPage } from "@web/app/pages/ReferenceListPage";
 import { SessionPage } from "@web/app/pages/SessionPage";
 import { SignInPage } from "@web/app/pages/SignInPage";
 import { SpaceOverviewPage } from "@web/app/pages/SpaceOverviewPage";
@@ -255,6 +256,37 @@ const draftsRoute = createRoute({
   }),
 });
 
+// 열려 있는 Reference 상세를 URL에 둔다 — 초안 상세와 같은 이유(공유 가능한 주소,
+// 뒤로가기=패널 닫기).
+function ReferencesShell() {
+  const { reference } = referencesRoute.useSearch();
+  const navigate = referencesRoute.useNavigate();
+
+  const handleSelectReference = useCallback(
+    function selectReference(referenceId: string | null) {
+      void navigate({ search: referenceId ? { reference: referenceId } : {} });
+    },
+    [navigate],
+  );
+
+  return (
+    <ReferenceListPage
+      selectedReferenceId={reference ?? null}
+      onSelectReference={handleSelectReference}
+    />
+  );
+}
+
+const referencesRoute = createRoute({
+  getParentRoute: () => workspaceSidebarRoute,
+  path: "/references",
+  component: ReferencesShell,
+  errorComponent: RouteErrorFallback,
+  validateSearch: z.object({
+    reference: z.string().optional().catch(undefined),
+  }),
+});
+
 // open(리뷰 대기)·closed(기록) 상태와 무관하게 changeset 하나는 URL 하나 — GitHub의
 // PR 번호 URL이 merge 여부와 무관하게 그대로인 것과 같다. 상태에 따라 어느 화면을
 // 그릴지는 ChangesetDetailPage 안의 게이트가 정한다(라우트는 number만 안다).
@@ -300,6 +332,7 @@ const routeTree = rootRoute.addChildren([
       spaceOverviewRoute,
       spaceChangesRoute,
       draftsRoute,
+      referencesRoute,
       changesetDetailRoute,
     ]),
     devHarnessRoute,
