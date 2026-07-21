@@ -59,3 +59,44 @@ export const ReferenceTagActionInputSchema = z.object({
 export type ReferenceTagActionInput = z.infer<
   typeof ReferenceTagActionInputSchema
 >;
+
+export const REFERENCE_LIST_LIMIT_DEFAULT = 30;
+export const REFERENCE_LIST_LIMIT_MAX = 100;
+
+export const REFERENCE_LIST_SORT_KEYS = ["title", "createdAt"] as const;
+export const ReferenceListSortKeySchema = z.enum(REFERENCE_LIST_SORT_KEYS);
+export type ReferenceListSortKey = z.infer<typeof ReferenceListSortKeySchema>;
+
+export const ReferenceListSortDirectionSchema = z.enum(["asc", "desc"]);
+export type ReferenceListSortDirection = z.infer<
+  typeof ReferenceListSortDirectionSchema
+>;
+
+export const ReferenceListStatusFilterSchema = z.enum([
+  "active",
+  "archived",
+  "all",
+]);
+export type ReferenceListStatusFilter = z.infer<
+  typeof ReferenceListStatusFilterSchema
+>;
+
+// 검색·필터·정렬·페이지네이션을 전부 서버로 옮긴 목록 계약(사전·위키 찾아보기
+// 목적이라 100건 캡 안에서만 도는 클라이언트 필터로는 전체를 못 찾는 문제가
+// 있었다). status·type 미지정 시 필터 없음(trashed만 항상 제외) — 기존
+// dev-harness처럼 전체를 보던 소비처와 호환.
+export const ReferenceListInputSchema = z.object({
+  search: z.string().trim().max(REFERENCE_TITLE_MAX_LENGTH).optional(),
+  type: ReferenceTypeSchema.optional(),
+  status: ReferenceListStatusFilterSchema.optional(),
+  sortKey: ReferenceListSortKeySchema.default("title"),
+  sortDirection: ReferenceListSortDirectionSchema.default("asc"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(REFERENCE_LIST_LIMIT_MAX)
+    .default(REFERENCE_LIST_LIMIT_DEFAULT),
+  cursor: z.string().optional(),
+});
+export type ReferenceListInput = z.infer<typeof ReferenceListInputSchema>;
