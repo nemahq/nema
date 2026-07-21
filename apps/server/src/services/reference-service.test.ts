@@ -7,6 +7,7 @@ import {
   archiveReference,
   getReference,
   getReferenceCitingDigests,
+  listReferences,
   removeReferenceTag,
   trashReference,
   updateReference,
@@ -18,6 +19,44 @@ const TAG_ID = "22222222-2222-4222-a222-222222222222";
 function mockRpcSupabase(error: { code: string; message: string } | null) {
   const rpc = vi.fn(async () => ({ data: null, error }));
   return { supabase: { rpc } as unknown as TypedSupabaseClient, rpc };
+}
+
+function encodeReferenceCursor(sortValue: string, id: string): string {
+  return Buffer.from(JSON.stringify([sortValue, id])).toString("base64url");
+}
+
+function decodeReferenceCursor(cursor: string): [string, string] {
+  return JSON.parse(Buffer.from(cursor, "base64url").toString()) as [
+    string,
+    string,
+  ];
+}
+
+function makeReferenceRow(overrides: {
+  id: string;
+  title: string;
+  created_at: string;
+}) {
+  return { type: "term", status: "active", ...overrides };
+}
+
+function mockListSupabase(resolved: { data?: unknown; error?: unknown }) {
+  const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+  chain.select = vi.fn().mockReturnValue(chain);
+  chain.neq = vi.fn().mockReturnValue(chain);
+  chain.order = vi.fn().mockReturnValue(chain);
+  chain.limit = vi.fn().mockReturnValue(chain);
+  chain.eq = vi.fn().mockReturnValue(chain);
+  chain.ilike = vi.fn().mockReturnValue(chain);
+  chain.or = vi.fn().mockReturnValue(chain);
+  chain.then = vi.fn((resolve) => resolve(resolved));
+
+  return {
+    client: {
+      from: vi.fn().mockReturnValue(chain),
+    } as unknown as TypedSupabaseClient,
+    chain,
+  };
 }
 
 // getReference는 두 테이블(references 단건, reference_tags 조인)을 병렬 조회한다 —
@@ -44,6 +83,173 @@ function mockGetReferenceSupabase(args: {
   });
   return { from } as unknown as TypedSupabaseClient;
 }
+
+describe("listReferences", () => {
+  const baseArgs = {
+    sortKey: "title" as const,
+    sortDirection: "asc" as const,
+    limit: 2,
+  };
+
+  it("결과가 limit 이하이면 nextCursor가 null", async () => {
+    const rows = [
+      makeReferenceRow({
+        id: "a",
+        title: "가",
+        created_at: "2026-01-01T00:00:00Z",
+      }),
+    ];
+    const { client } = mockListSupabase({ data: rows });
+
+    const page = await listReferences({ supabase: client, ...baseArgs });
+
+    expect(page.references).toHaveLength(1);
+    expect(page.nextCursor).toBeNull();
+  });
+
+  it("결과가 limit+1이면 nextCursor가 마지막 항목의 (정렬값, id) 인코딩", async () => {
+    const rows = [
+      makeReferenceRow({
+        id: "a",
+        title: "가",
+        created_at: "2026-01-01T00:00:00Z",
+      }),
+      makeReferenceRow({
+        id: "b",
+        title: "나",
+        created_at: "2026-01-02T00:00:00Z",
+      }),
+      makeReferenceRow({
+        id: "c",
+        title: "다",
+        created_at: "2026-01-03T00:00:00Z",
+      }),
+    ];
+    const { client } = mockListSupabase({ data: rows });
+
+    const page = await listReferences({ supabase: client, ...baseArgs });
+
+    expect(page.references).toHaveLength(2);
+    const [sortValue, id] = decodeReferenceCursor(page.nextCursor as string);
+    expect(sortValue).toBe("나");
+    expect(id).toBe("b");
+  });
+
+  // sortKey가 createdAt이면 커서도 created_at 기준이어야 정렬 기준을 바꿔도
+  // 페이지 경계가 어긋나지 않는다.
+  it("sortKey가 createdAt이면 nextCursor도 created_at 기준", async () => {
+    const rows = [
+      makeReferenceRow({
+        id: "a",
+        title: "다",
+        created_at: "2026-01-01T00:00:00Z",
+      }),
+      makeReferenceRow({
+        id: "b",
+        title: "가",
+        created_at: "2026-01-02T00:00:00Z",
+      }),
+    ];
+    const { client } = mockListSupabase({ data: rows });
+
+    const page = await listReferences({
+      supabase: client,
+      sortKey: "createdAt",
+      sortDirection: "asc",
+      limit: 1,
+    });
+
+    const [sortValue] = decodeReferenceCursor(page.nextCursor as string);
+    expect(sortValue).toBe("2026-01-01T00:00:00Z");
+  });
+
+  it("cursor가 있으면 정렬값+id 복합 필터를 적용한다", async () => {
+    const { client, chain } = mockListSupabase({ data: [] });
+    const cursor = encodeReferenceCursor("나", "some-id");
+
+    await listReferences({ supabase: client, ...baseArgs, cursor });
+
+    expect(chain.or).toHaveBeenCalledWith(
+      'title.gt."나",and(title.eq."나",id.gt.some-id)',
+    );
+  });
+
+  // 정렬값(title)에 콤마·괄호가 들어가면 PostgREST or() 문법의 구분자와
+  // 충돌하므로 큰따옴표로 감싸 리터럴 처리해야 한다.
+  it("정렬값에 콤마·괄호가 있어도 or() 필터가 값 전체를 리터럴로 감싼다", async () => {
+    const { client, chain } = mockListSupabase({ data: [] });
+    const cursor = encodeReferenceCursor("OpenAI, Inc. (사례)", "some-id");
+
+    await listReferences({ supabase: client, ...baseArgs, cursor });
+
+    expect(chain.or).toHaveBeenCalledWith(
+      'title.gt."OpenAI, Inc. (사례)",and(title.eq."OpenAI, Inc. (사례)",id.gt.some-id)',
+    );
+  });
+
+  it("내림차순이면 gt 대신 lt로 비교한다", async () => {
+    const { client, chain } = mockListSupabase({ data: [] });
+    const cursor = encodeReferenceCursor("나", "some-id");
+
+    await listReferences({
+      supabase: client,
+      sortKey: "title",
+      sortDirection: "desc",
+      limit: 2,
+      cursor,
+    });
+
+    expect(chain.or).toHaveBeenCalledWith(
+      'title.lt."나",and(title.eq."나",id.lt.some-id)',
+    );
+  });
+
+  it("깨진 cursor는 BAD_REQUEST로 거부한다", async () => {
+    const { client } = mockListSupabase({ data: [] });
+
+    await expect(
+      listReferences({
+        supabase: client,
+        ...baseArgs,
+        cursor: "not-valid-base64url-json",
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("search는 %·_·\\를 이스케이프해 ilike 패턴으로 넘긴다", async () => {
+    const { client, chain } = mockListSupabase({ data: [] });
+
+    await listReferences({
+      supabase: client,
+      ...baseArgs,
+      search: "50%_off\\deal",
+    });
+
+    expect(chain.ilike).toHaveBeenCalledWith("title", "%50\\%\\_off\\\\deal%");
+  });
+
+  it("type·status 필터는 각각 eq()를 호출한다", async () => {
+    const { client, chain } = mockListSupabase({ data: [] });
+
+    await listReferences({
+      supabase: client,
+      ...baseArgs,
+      type: "person",
+      status: "archived",
+    });
+
+    expect(chain.eq).toHaveBeenCalledWith("type", "person");
+    expect(chain.eq).toHaveBeenCalledWith("status", "archived");
+  });
+
+  it("status가 all이면 eq()를 호출하지 않는다", async () => {
+    const { client, chain } = mockListSupabase({ data: [] });
+
+    await listReferences({ supabase: client, ...baseArgs, status: "all" });
+
+    expect(chain.eq).not.toHaveBeenCalledWith("status", expect.anything());
+  });
+});
 
 describe("trashReference", () => {
   beforeEach(() => {

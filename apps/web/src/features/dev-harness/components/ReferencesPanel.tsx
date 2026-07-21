@@ -1,12 +1,19 @@
 import { Suspense } from "react";
 
+import { REFERENCE_LIST_LIMIT_MAX } from "@nema-io/shared";
+
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { ReferenceRow } from "@web/features/dev-harness/components/ReferenceRow";
 import { useReferenceListSuspenseQuery } from "@web/hooks/useReferenceListQuery";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
+// 디버그 패널이라 필터 없이 전체(trashed 제외)를 한 번에 본다 — 상한(100)을
+// 넘는 워크스페이스는 지원 밖(디버그 도구 범위).
 function ReferencesPanelContent() {
-  const [{ references }] = useReferenceListSuspenseQuery();
+  const [{ references }] = useReferenceListSuspenseQuery({
+    status: "all",
+    limit: REFERENCE_LIST_LIMIT_MAX,
+  });
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3 p-4">

@@ -1,11 +1,17 @@
+import { TRPCError } from "@trpc/server";
+
+import type {
+  ReferenceListSortDirection,
+  ReferenceListSortKey,
+  ReferenceListStatusFilter,
+} from "@nema-io/shared";
+
 import type { Database } from "@server/infra/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
 type ReferenceType = Database["public"]["Enums"]["reference_type"];
 type ReferenceStatus = Database["public"]["Enums"]["reference_status"];
-
-const REFERENCE_LIST_LIMIT = 100;
 
 interface ReferenceSummary {
   id: string;
@@ -15,30 +21,128 @@ interface ReferenceSummary {
   createdAt: string;
 }
 
-// 내 Workspace의 Reference 목록(trashed 제외) — 격리는 RLS(Workspace 멤버십)가 담당한다.
-// status를 함께 돌려줘야 화면이 archived Reference에 삭제 버튼을 잘못 띄우지 않는다
-// (trash_reference RPC는 active만 대상으로 하므로).
+const REFERENCE_LIST_SORT_COLUMN = {
+  title: "title",
+  createdAt: "created_at",
+} as const;
+
+// ILIKE는 기본으로 `\`를 이스케이프 문자로 쓴다(Postgres 기본값) — 검색어에
+// 든 %·_·\ 를 와일드카드가 아니라 글자 그대로 매칭하려면 먼저 이스케이프해야
+// 한다(기존 클라이언트 .includes()는 와일드카드 개념이 없었다).
+function escapeIlikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
+// PostgREST의 or()/and() 필터 문법은 콤마·괄호·점을 구분자로 쓴다 — 정렬값이
+// 임의 텍스트(title)라 그 문자들을 포함할 수 있어(예: "OpenAI, Inc."),
+// 큰따옴표로 감싸 리터럴로 취급시킨다.
+function quoteFilterValue(value: string): string {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function encodeReferenceCursor(sortValue: string, id: string): string {
+  return Buffer.from(JSON.stringify([sortValue, id])).toString("base64url");
+}
+
+function decodeReferenceCursor(cursor: string): {
+  sortValue: string;
+  id: string;
+} {
+  try {
+    const parsed: unknown = JSON.parse(
+      Buffer.from(cursor, "base64url").toString(),
+    );
+    if (
+      !Array.isArray(parsed) ||
+      typeof parsed[0] !== "string" ||
+      typeof parsed[1] !== "string"
+    ) {
+      throw new Error();
+    }
+    return { sortValue: parsed[0], id: parsed[1] };
+  } catch {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid cursor" });
+  }
+}
+
+// 내 Workspace의 Reference 목록(trashed는 항상 제외) — 격리는 RLS(Workspace
+// 멤버십)가 담당한다. search·type·status·정렬·커서를 전부 서버에서 처리한다 —
+// 사전·위키 찾아보기 목적이라 클라이언트가 로드한 페이지 안에서만 걸러지는
+// 필터로는 전체를 찾을 수 없었다(surface-inventory.md "Reference 목록").
 export async function listReferences(args: {
   supabase: TypedSupabaseClient;
-}): Promise<{ references: ReferenceSummary[] }> {
-  const { supabase } = args;
+  search?: string;
+  type?: ReferenceType;
+  status?: ReferenceListStatusFilter;
+  sortKey: ReferenceListSortKey;
+  sortDirection: ReferenceListSortDirection;
+  limit: number;
+  cursor?: string;
+}): Promise<{ references: ReferenceSummary[]; nextCursor: string | null }> {
+  const {
+    supabase,
+    search,
+    type,
+    status,
+    sortKey,
+    sortDirection,
+    limit,
+    cursor,
+  } = args;
+  const sortColumn = REFERENCE_LIST_SORT_COLUMN[sortKey];
+  const ascending = sortDirection === "asc";
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("references")
     .select("id, type, title, status, created_at")
     .neq("status", "trashed")
-    .order("created_at", { ascending: false })
-    .limit(REFERENCE_LIST_LIMIT);
+    .order(sortColumn, { ascending })
+    .order("id", { ascending })
+    // 다음 페이지 존재 여부를 별도 count 쿼리 없이 알려고 하나 더 얹어 받는다.
+    .limit(limit + 1);
+
+  if (type) {
+    query = query.eq("type", type);
+  }
+  if (status && status !== "all") {
+    query = query.eq("status", status);
+  }
+  if (search) {
+    query = query.ilike("title", `%${escapeIlikePattern(search)}%`);
+  }
+  if (cursor) {
+    const decoded = decodeReferenceCursor(cursor);
+    const op = ascending ? "gt" : "lt";
+    const quotedValue = quoteFilterValue(decoded.sortValue);
+    query = query.or(
+      `${sortColumn}.${op}.${quotedValue},and(${sortColumn}.eq.${quotedValue},id.${op}.${decoded.id})`,
+    );
+  }
+
+  const { data, error } = await query;
   throwIfSupabaseError(error);
 
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const pageRows = hasMore ? rows.slice(0, limit) : rows;
+  const lastRow = pageRows.at(-1);
+  const nextCursor =
+    hasMore && lastRow
+      ? encodeReferenceCursor(
+          sortKey === "title" ? lastRow.title : lastRow.created_at,
+          lastRow.id,
+        )
+      : null;
+
   return {
-    references: (data ?? []).map((row) => ({
+    references: pageRows.map((row) => ({
       id: row.id,
       type: row.type,
       title: row.title,
       status: row.status,
       createdAt: row.created_at,
     })),
+    nextCursor,
   };
 }
 

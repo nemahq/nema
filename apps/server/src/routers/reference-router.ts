@@ -1,5 +1,6 @@
 import {
   ReferenceActionInputSchema,
+  ReferenceListInputSchema,
   ReferenceTagActionInputSchema,
   ReferenceUpdateInputSchema,
 } from "@nema-io/shared";
@@ -17,9 +18,20 @@ import {
 import { protectedProcedure, router } from "@server/trpc";
 
 export const referenceRouter = router({
-  list: protectedProcedure.query(({ ctx }) =>
-    listReferences({ supabase: ctx.supabase }),
-  ),
+  list: protectedProcedure
+    .input(ReferenceListInputSchema)
+    .query(({ ctx, input }) =>
+      listReferences({
+        supabase: ctx.supabase,
+        search: input.search,
+        type: input.type,
+        status: input.status,
+        sortKey: input.sortKey,
+        sortDirection: input.sortDirection,
+        limit: input.limit,
+        cursor: input.cursor,
+      }),
+    ),
 
   get: protectedProcedure
     .input(ReferenceActionInputSchema)
