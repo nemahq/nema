@@ -1,10 +1,15 @@
 import {
+  DigestActionInputSchema,
   DigestEditConfirmInputSchema,
   DigestListInputSchema,
 } from "@nema-io/shared";
 
 import { confirmDigestEdit } from "@server/services/digest-review-service";
-import { listDigests } from "@server/services/digest-service";
+import {
+  archiveDigest,
+  listDigests,
+  restoreDigest,
+} from "@server/services/digest-service";
 import { protectedProcedure, router } from "@server/trpc";
 
 export const digestRouter = router({
@@ -30,5 +35,17 @@ export const digestRouter = router({
         cursor: input.cursor,
         limit: input.limit,
       }),
+    ),
+
+  archive: protectedProcedure
+    .input(DigestActionInputSchema)
+    .mutation(({ ctx, input }) =>
+      archiveDigest({ supabase: ctx.supabase, digestId: input.digestId }),
+    ),
+
+  restore: protectedProcedure
+    .input(DigestActionInputSchema)
+    .mutation(({ ctx, input }) =>
+      restoreDigest({ supabase: ctx.supabase, digestId: input.digestId }),
     ),
 });

@@ -2,6 +2,7 @@ import {
   type DigestBody,
   DigestBodySchema,
   type DigestDraft,
+  type ManualChangeHistoryTargetType,
   type NewReferenceDraft,
   type RelationType,
   RelationTypeSchema,
@@ -14,6 +15,7 @@ import { throwIfSupabaseError } from "@server/infra/supabase-error";
 type ChangesetType = Database["public"]["Enums"]["changeset_type"];
 type ChangesetStatus = Database["public"]["Enums"]["changeset_status"];
 type ChangeTargetType = Database["public"]["Enums"]["change_target_type"];
+type ChangeAction = Database["public"]["Enums"]["change_action"];
 type SourceStatus = Database["public"]["Enums"]["source_status"];
 
 // 되돌림 여부 술어 — is_changeset_reverted(SQL §4.4)의 TS 쌍.
@@ -512,5 +514,46 @@ export async function listChangesets(args: {
         updatedAt: row.updated_at,
       };
     }),
+  };
+}
+
+interface ManualChangeHistoryEntry {
+  id: string;
+  changesetId: string;
+  // 이 changeset이 Reference를 대상으로 하면 space_id가 없어(Workspace 스코프)
+  // number도 없다(DB CHECK: space_id IS NULL ⟺ number IS NULL) — Digest 대상만 있음.
+  changesetNumber: number | null;
+  authorId: string | null;
+  createdAt: string;
+  action: ChangeAction;
+  data: unknown;
+}
+
+// 변경 이력 모달(Digest 상세·Reference 상세 공용, surface-inventory.md "변경 이력")
+// — RLS(is_space_member)가 space_id NULL인 Reference manual changeset을 걸러내므로
+// (get_reference_citing_digests와 같은 이유) RPC로 멤버십을 직접 검증해 우회한다.
+export async function listManualChangeHistory(args: {
+  supabase: TypedSupabaseClient;
+  targetType: ManualChangeHistoryTargetType;
+  targetId: string;
+}): Promise<{ entries: ManualChangeHistoryEntry[] }> {
+  const { supabase, targetType, targetId } = args;
+
+  const { data, error } = await supabase.rpc("list_manual_changes_for_target", {
+    p_target_type: targetType,
+    p_target_id: targetId,
+  });
+  throwIfSupabaseError(error);
+
+  return {
+    entries: (data ?? []).map((row) => ({
+      id: row.id,
+      changesetId: row.changeset_id,
+      changesetNumber: row.changeset_number,
+      authorId: row.author_id,
+      createdAt: row.created_at,
+      action: row.action,
+      data: row.data,
+    })),
   };
 }

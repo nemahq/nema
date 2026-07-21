@@ -144,6 +144,27 @@ async function createFixturePendingRelation(args: {
   return changesetId;
 }
 
+async function addFixtureWorkspaceMember(
+  workspaceId: string,
+  userId: string,
+): Promise<void> {
+  await client.query(
+    "INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'owner')",
+    [workspaceId, userId],
+  );
+}
+
+async function createFixtureReference(
+  workspaceId: string,
+  title: string,
+): Promise<string> {
+  const { rows } = await client.query<{ id: string }>(
+    "INSERT INTO \"references\" (workspace_id, type, title, body) VALUES ($1, 'term', $2, 'fixture body') RETURNING id",
+    [workspaceId, title],
+  );
+  return rows[0].id;
+}
+
 describe("create_ingestion_review RPC (integration)", () => {
   it("Source 제출자가 있어도 ingestion changeset의 author_id는 항상 null이다", async () => {
     if (!localDbAvailable) {
@@ -988,5 +1009,53 @@ describe("resolve_duplicate_relation RPC (integration)", () => {
 
     expect(rows[0]?.status).toBe("rejected");
     expect(rows[0]?.invalidated_by_id).toBe(changesetA1B);
+  });
+});
+
+describe("revert_changeset RPC — Reference manual changeset 멤버십 (integration)", () => {
+  // 위의 다른 테스트들은 전부 슈퍼유저로 직접 쿼리해 auth.uid()가 NULL인 채로
+  // 돈다 — is_space_member(NULL)이 항상 false라는 실제 로그인 유저의 실패
+  // 경로를 이 방식으로는 절대 못 잡는다. request.jwt.claim.sub을 트랜잭션
+  // 스코프로 세팅해 진짜 로그인 유저를 흉내 낸다.
+  it("실제 로그인 유저가 Reference manual changeset(space_id NULL)을 되돌릴 수 있다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    await addFixtureWorkspaceMember(workspaceId, userId);
+    const referenceId = await createFixtureReference(
+      workspaceId,
+      "픽스처 레퍼런스",
+    );
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      userId,
+    ]);
+
+    const { rows: archiveRows } = await client.query<{
+      archive_reference: string;
+    }>("SELECT archive_reference($1)", [referenceId]);
+    const changesetId = archiveRows[0].archive_reference;
+
+    const { rows: archivedStatus } = await client.query<{ status: string }>(
+      'SELECT status FROM "references" WHERE id = $1',
+      [referenceId],
+    );
+    expect(archivedStatus[0]?.status).toBe("archived");
+
+    // 고치기 전엔 여기서 "changeset % not found or not accessible"로 실패했다
+    // (space_id가 NULL이라 is_space_member(NULL)이 항상 false였으므로).
+    const { rows: revertRows } = await client.query<{
+      revert_changeset: string;
+    }>("SELECT revert_changeset($1)", [changesetId]);
+    expect(revertRows[0]?.revert_changeset).toBeTruthy();
+
+    const { rows: restoredStatus } = await client.query<{ status: string }>(
+      'SELECT status FROM "references" WHERE id = $1',
+      [referenceId],
+    );
+    expect(restoredStatus[0]?.status).toBe("active");
   });
 });

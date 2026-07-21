@@ -5,6 +5,7 @@
   "error": {
     "db_not_found": "The requested item was not found.",
     "default": "Something went wrong. Please try again.",
+    "digest_state_changed": "This digest's state changed. Reload the list and try again.",
     "forbidden": "You don't have permission to do this.",
     "ingestion_review_state_changed": "This review's state changed. Reload the list and try again.",
     "llm_aborted": "The request was cancelled.",

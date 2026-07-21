@@ -5,6 +5,7 @@
   "error": {
     "db_not_found": "요청한 항목을 찾지 못했어요.",
     "default": "잠깐 문제가 생겼어요. 다시 시도해주세요.",
+    "digest_state_changed": "Digest 상태가 바뀌었어요. 목록을 새로 불러온 뒤 다시 시도해주세요.",
     "forbidden": "이 작업을 할 권한이 없어요.",
     "ingestion_review_state_changed": "리뷰 상태가 바뀌었어요. 목록을 새로 불러온 뒤 다시 시도해주세요.",
     "llm_aborted": "요청을 취소했어요.",

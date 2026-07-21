@@ -10,6 +10,7 @@ export type SupabaseErrorCode =
   | "reference_state_changed"
   | "ingestion_review_state_changed"
   | "space_delete_target_required"
+  | "digest_state_changed"
   | "query_failed";
 
 const PG_NOT_FOUND = "P0002";
@@ -45,6 +46,9 @@ const NEMA_INGESTION_REVIEW_STATE_CHANGED = "NM008";
 // 항상 미리 계산해서 넘기므로 정상 경로에선 안 뜨는 방어 가드지만, NM002와 같은
 // "정상적인 사용자 유도" 결이라 시스템 장애(query_failed)와 분리해둔다.
 const NEMA_SPACE_DELETE_TARGET_REQUIRED = "NM009";
+// Digest 상태 가드 실패(archive_digest·restore_digest) — NM004·NM005·NM007·NM008과
+// 같은 "그 사이 상태가 바뀜" 결이지만 엔티티가 달라 메시지가 다르므로 코드를 나눈다.
+const NEMA_DIGEST_STATE_CHANGED = "NM010";
 
 export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
   switch (pgCode) {
@@ -71,6 +75,8 @@ export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
       return "ingestion_review_state_changed";
     case NEMA_SPACE_DELETE_TARGET_REQUIRED:
       return "space_delete_target_required";
+    case NEMA_DIGEST_STATE_CHANGED:
+      return "digest_state_changed";
     default:
       return "query_failed";
   }

@@ -11,6 +11,7 @@ import {
   getReferenceCitingDigests,
   listReferences,
   removeReferenceTag,
+  restoreReference,
   trashReference,
   updateReference,
 } from "@server/services/reference-service";
@@ -53,6 +54,15 @@ export const referenceRouter = router({
     .input(ReferenceActionInputSchema)
     .mutation(({ ctx, input }) =>
       archiveReference({
+        supabase: ctx.supabase,
+        referenceId: input.referenceId,
+      }),
+    ),
+
+  restore: protectedProcedure
+    .input(ReferenceActionInputSchema)
+    .mutation(({ ctx, input }) =>
+      restoreReference({
         supabase: ctx.supabase,
         referenceId: input.referenceId,
       }),

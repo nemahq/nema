@@ -262,3 +262,29 @@ export async function listDigests(args: {
 
   return { items, nextCursor };
 }
+
+// Digest 단독 아카이브(대체 없음) — 진술 연쇄 archive·manual changeset 기록은
+// archive_digest RPC가 담당(관계는 트리거가 처리).
+export async function archiveDigest(args: {
+  supabase: TypedSupabaseClient;
+  digestId: string;
+}): Promise<{ changesetId: string }> {
+  const { data, error } = await args.supabase.rpc("archive_digest", {
+    p_digest_id: args.digestId,
+  });
+  throwIfSupabaseError(error);
+  return { changesetId: data };
+}
+
+// 아카이브 되살리기 — 이 Digest를 마지막으로 archive한 changeset을
+// revert_changeset으로 되돌린다(review-flow.md "아카이브 되살리기").
+export async function restoreDigest(args: {
+  supabase: TypedSupabaseClient;
+  digestId: string;
+}): Promise<{ revertChangesetId: string }> {
+  const { data, error } = await args.supabase.rpc("restore_digest", {
+    p_digest_id: args.digestId,
+  });
+  throwIfSupabaseError(error);
+  return { revertChangesetId: data };
+}

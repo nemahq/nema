@@ -134,3 +134,10 @@ export const DigestListItemSchema = z.object({
   isStale: z.boolean(),
 });
 export type DigestListItem = z.infer<typeof DigestListItemSchema>;
+
+// Digest 액션(아카이브·되살리기) 공용 입력 — 어떤 상태에서 무엇이 허용되는지는
+// 전부 서버 판정(RPC의 WHERE 가드)이라 ReferenceActionInputSchema와 같은 결.
+export const DigestActionInputSchema = z.object({
+  digestId: z.string().uuid(),
+});
+export type DigestActionInput = z.infer<typeof DigestActionInputSchema>;
