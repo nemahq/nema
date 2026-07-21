@@ -115,8 +115,12 @@ export {
   ReferenceActionInputSchema,
   type ReferenceStatus,
   ReferenceStatusSchema,
+  type ReferenceTagActionInput,
+  ReferenceTagActionInputSchema,
   type ReferenceType,
   ReferenceTypeSchema,
+  type ReferenceUpdateInput,
+  ReferenceUpdateInputSchema,
 } from "./schemas/reference";
 export {
   type DeleteRetrievalInput,
