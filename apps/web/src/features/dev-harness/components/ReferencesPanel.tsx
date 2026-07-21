@@ -7,8 +7,8 @@ import { ReferenceRow } from "@web/features/dev-harness/components/ReferenceRow"
 import { useReferenceListSuspenseQuery } from "@web/hooks/useReferenceListQuery";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
-// 디버그 패널이라 필터 없이 전체(trashed 제외)를 한 번에 본다 — 상한(100)을
-// 넘는 워크스페이스는 지원 밖(디버그 도구 범위).
+// 디버그 패널이라 필터 없이 전체(trashed 제외)를 한 번에 본다 —
+// REFERENCE_LIST_LIMIT_MAX를 넘는 워크스페이스는 지원 밖(디버그 도구 범위).
 function ReferencesPanelContent() {
   const [{ references }] = useReferenceListSuspenseQuery({
     status: "all",

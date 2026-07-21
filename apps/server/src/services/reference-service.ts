@@ -1,9 +1,11 @@
+import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import type {
-  ReferenceListSortDirection,
-  ReferenceListSortKey,
-  ReferenceListStatusFilter,
+import {
+  type ReferenceListSortDirection,
+  type ReferenceListSortKey,
+  ReferenceListSortKeySchema,
+  type ReferenceListStatusFilter,
 } from "@nema-io/shared";
 
 import type { Database } from "@server/infra/database.types";
@@ -40,11 +42,32 @@ function quoteFilterValue(value: string): string {
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
-function encodeReferenceCursor(sortValue: string, id: string): string {
-  return Buffer.from(JSON.stringify([sortValue, id])).toString("base64url");
+// sortKey를 커서 안에 같이 실어서, title 기준으로 발급된 커서를 createdAt
+// 정렬로(또는 그 반대로) 잘못 재사용하면 값 타입이 안 맞기 전에 sortKey
+// 불일치로 먼저 걸러진다. id는 uuid로 검증한다 — 그러지 않으면 이 값이
+// or() 필터에 그대로 꽂혀 Postgres가 22P02(invalid uuid)를 던지는데,
+// toSupabaseErrorCode가 이 코드를 모르니 BAD_REQUEST가 아니라 예상치
+// 못한 500(query_failed)으로 새 나간다.
+const ReferenceCursorPayloadSchema = z.tuple([
+  ReferenceListSortKeySchema,
+  z.string(),
+  z.string().uuid(),
+]);
+
+function encodeReferenceCursor(args: {
+  sortKey: ReferenceListSortKey;
+  sortValue: string;
+  id: string;
+}): string {
+  return Buffer.from(
+    JSON.stringify([args.sortKey, args.sortValue, args.id]),
+  ).toString("base64url");
 }
 
-function decodeReferenceCursor(cursor: string): {
+function decodeReferenceCursor(
+  cursor: string,
+  sortKey: ReferenceListSortKey,
+): {
   sortValue: string;
   id: string;
 } {
@@ -52,14 +75,12 @@ function decodeReferenceCursor(cursor: string): {
     const parsed: unknown = JSON.parse(
       Buffer.from(cursor, "base64url").toString(),
     );
-    if (
-      !Array.isArray(parsed) ||
-      typeof parsed[0] !== "string" ||
-      typeof parsed[1] !== "string"
-    ) {
-      throw new Error();
+    const [cursorSortKey, sortValue, id] =
+      ReferenceCursorPayloadSchema.parse(parsed);
+    if (cursorSortKey !== sortKey) {
+      throw new Error("cursor was issued for a different sortKey");
     }
-    return { sortValue: parsed[0], id: parsed[1] };
+    return { sortValue, id };
   } catch {
     throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid cursor" });
   }
@@ -111,7 +132,7 @@ export async function listReferences(args: {
     query = query.ilike("title", `%${escapeIlikePattern(search)}%`);
   }
   if (cursor) {
-    const decoded = decodeReferenceCursor(cursor);
+    const decoded = decodeReferenceCursor(cursor, sortKey);
     const op = ascending ? "gt" : "lt";
     const quotedValue = quoteFilterValue(decoded.sortValue);
     query = query.or(
@@ -128,10 +149,11 @@ export async function listReferences(args: {
   const lastRow = pageRows.at(-1);
   const nextCursor =
     hasMore && lastRow
-      ? encodeReferenceCursor(
-          sortKey === "title" ? lastRow.title : lastRow.created_at,
-          lastRow.id,
-        )
+      ? encodeReferenceCursor({
+          sortKey,
+          sortValue: sortKey === "title" ? lastRow.title : lastRow.created_at,
+          id: lastRow.id,
+        })
       : null;
 
   return {
