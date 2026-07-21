@@ -107,7 +107,7 @@ export const ChangesetListRow = memo(function ChangesetListRow({
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
           <Text
             as="span"
-            size="sm"
+            size="base"
             weight="medium"
             className="min-w-0 truncate"
           >

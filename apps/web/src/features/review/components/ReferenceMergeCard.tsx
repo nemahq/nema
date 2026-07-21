@@ -39,7 +39,7 @@ export function ReferenceMergeCard({
           </Badge>
           <Text
             as="span"
-            size="sm"
+            size="base"
             weight="medium"
             className="min-w-0 truncate"
           >
@@ -58,11 +58,11 @@ export function ReferenceMergeCard({
         </Button>
       </div>
       <div className="flex flex-col gap-1">
-        <Text as="span" size="xs" color="tertiary">
+        <Text as="span" size="sm" color="tertiary">
           {t("review.reference_merge_original_label")}
         </Text>
         <Text
-          size="sm"
+          size="base"
           color="secondary"
           className="rounded-md bg-surface-card px-3 py-1.5"
         >
@@ -71,7 +71,7 @@ export function ReferenceMergeCard({
       </div>
       <Text
         as="label"
-        size="xs"
+        size="sm"
         color="tertiary"
         className="flex flex-col gap-1"
       >

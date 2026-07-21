@@ -49,7 +49,7 @@ function ChangesetListContent({ subTab }: ChangesetListProps) {
 
   if (entries.length === 0) {
     return (
-      <Text size="sm" color="tertiary" className="py-12 text-center">
+      <Text size="base" color="tertiary" className="py-12 text-center">
         {subTab === "open"
           ? t("review.changes_empty_open")
           : t("review.changes_empty_closed")}
@@ -79,7 +79,7 @@ function ChangesetListContent({ subTab }: ChangesetListProps) {
           {query.isFetchingNextPage && <ChangesetListSkeleton />}
         </div>
       ) : (
-        <Text size="xs" color="tertiary" className="py-4 text-center">
+        <Text size="sm" color="tertiary" className="py-4 text-center">
           {t("common.list_end")}
         </Text>
       )}

@@ -71,7 +71,12 @@ function SpaceDeleteMoveDraftsField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <Text as="label" size="xs" color="tertiary">
+      <Text
+        as="label"
+        size="sm"
+        color="tertiary"
+        className="peer-disabled:cursor-not-allowed peer-disabled:text-fg-quaternary"
+      >
         {t("space.delete_pending_drafts_label", { count: draftCount })}
       </Text>
       <Select
@@ -79,7 +84,7 @@ function SpaceDeleteMoveDraftsField({
         onValueChange={onManualTargetSpaceIdChange}
         disabled={deleteTogether}
       >
-        <SelectTrigger>
+        <SelectTrigger className="peer">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -93,7 +98,7 @@ function SpaceDeleteMoveDraftsField({
       <Text
         as="label"
         htmlFor={checkboxId}
-        size="sm"
+        size="base"
         color="secondary"
         className="flex cursor-pointer items-center gap-2"
       >
@@ -232,7 +237,7 @@ export function SpaceDeleteConfirmForm({
         <Text
           as="label"
           htmlFor={confirmInputId}
-          size="sm"
+          size="base"
           weight="medium"
           color="primary"
         >

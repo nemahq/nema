@@ -35,7 +35,7 @@ export function DraftIdleHeader({
   return (
     <div className="flex h-6 items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-1.5">
-        <DraftTitle title={title} size="sm" weight="medium" color="primary" />
+        <DraftTitle title={title} size="base" weight="medium" color="primary" />
         <RelativeTime dateTime={createdAt} className="text-xs" />
         {icon && (
           <span className="flex size-6 shrink-0 items-center justify-center">

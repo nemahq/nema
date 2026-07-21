@@ -143,7 +143,7 @@ export function DraftsNavItem() {
               // 끝난다 — 숫자도 같은 박스로 감싸야 시각적 우측 끝이 맞는다.
               <Text
                 as="span"
-                size="xs"
+                size="sm"
                 color="tertiary"
                 className="absolute right-3.5 flex size-5 items-center justify-center"
               >

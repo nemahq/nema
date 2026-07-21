@@ -157,12 +157,12 @@ function IngestionContent() {
         }
       />
       {confirmDisabledReasonText && (
-        <Text size="xs" color="tertiary">
+        <Text size="sm" color="tertiary">
           {confirmDisabledReasonText}
         </Text>
       )}
       {error && (
-        <Text size="sm" color="error">
+        <Text size="base" color="error">
           {getErrorMessage(error)}
         </Text>
       )}

@@ -55,7 +55,7 @@ export function ActionMessage({ message }: ActionMessageProps) {
 
   return (
     <div className="py-2">
-      <Text size="sm" color="secondary" className="mb-3">
+      <Text size="base" color="secondary" className="mb-3">
         {t("session.draft_intent_question", {
           draftContext: payload.draftContext,
         })}

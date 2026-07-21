@@ -105,7 +105,7 @@ export function PreferencesSection() {
         <Text as="h2" size="xl" weight="semibold">
           {t("settings.nav_preferences")}
         </Text>
-        <Text size="sm" color="tertiary">
+        <Text size="base" color="tertiary">
           {t("settings.preferences_subtitle")}
         </Text>
       </div>

@@ -65,7 +65,7 @@ export const IdleDraftCard = memo(function IdleDraftCard({
         createdAt={createdAt}
         icon={statusIcon}
       />
-      <Text size="sm" color="tertiary" className="line-clamp-4">
+      <Text size="base" color="tertiary" className="line-clamp-4">
         {body}
       </Text>
     </DraftCardShell>

@@ -51,7 +51,7 @@ export function DigestBodyFields({ body }: DigestBodyFieldsProps) {
         <div key={row.label}>
           <Text
             as="dt"
-            size="xs"
+            size="sm"
             weight="medium"
             color="tertiary"
             className="uppercase"

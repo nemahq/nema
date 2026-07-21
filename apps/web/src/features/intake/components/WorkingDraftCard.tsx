@@ -31,7 +31,7 @@ export const WorkingDraftCard = memo(function WorkingDraftCard({
         title={title}
         createdAt={createdAt}
       />
-      <Text size="sm" color="tertiary" className="line-clamp-4">
+      <Text size="base" color="tertiary" className="line-clamp-4">
         {body}
       </Text>
     </DraftCardShell>

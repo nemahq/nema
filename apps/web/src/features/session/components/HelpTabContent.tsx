@@ -37,7 +37,7 @@ export function HelpTabContent() {
         <div key={category}>
           <Text
             as="h3"
-            size="xs"
+            size="sm"
             weight="medium"
             color="tertiary"
             className="mb-3"
@@ -50,7 +50,7 @@ export function HelpTabContent() {
                 key={action.id}
                 className="flex items-center justify-between rounded px-2 py-1.5"
               >
-                <Text as="span" size="sm" color="primary">
+                <Text as="span" size="base" color="primary">
                   {t(action.labelKey)}
                 </Text>
                 <ShortcutKeys shortcut={action.shortcut} />

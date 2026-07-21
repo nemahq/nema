@@ -100,7 +100,7 @@ export function ReferenceCandidateCard({
             <Text
               key={url}
               as="li"
-              size="xs"
+              size="sm"
               color="brand"
               className="truncate"
             >

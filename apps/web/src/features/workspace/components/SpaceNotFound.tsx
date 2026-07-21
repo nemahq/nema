@@ -11,7 +11,7 @@ export function SpaceNotFound() {
       <Text as="h1" size="lg" weight="semibold" color="primary">
         {t("space.not_found_title")}
       </Text>
-      <Text size="sm" color="tertiary">
+      <Text size="base" color="tertiary">
         {t("space.not_found_description")}
       </Text>
     </main>

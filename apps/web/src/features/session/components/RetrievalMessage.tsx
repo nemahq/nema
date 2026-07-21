@@ -66,7 +66,7 @@ function RetrievalMessageInner({
         />
         <Text
           as="span"
-          size="sm"
+          size="base"
           color="secondary"
           className="line-clamp-2 flex-1"
         >
@@ -130,7 +130,7 @@ function RetrievalMessageInner({
       )}
 
       {!isStreaming && content && (
-        <Text size="xs" color="tertiary" className="line-clamp-2">
+        <Text size="sm" color="tertiary" className="line-clamp-2">
           {content}
         </Text>
       )}
@@ -150,7 +150,7 @@ export function RetrievalMessage(props: RetrievalMessageProps) {
             />
             <Text
               as="span"
-              size="sm"
+              size="base"
               color="secondary"
               className="line-clamp-2 flex-1"
             >

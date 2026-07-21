@@ -53,7 +53,7 @@ export function SessionItem({
       >
         <Text
           as="span"
-          size="sm"
+          size="base"
           weight={isActive ? "medium" : "normal"}
           color={isActive ? "primary" : "secondary"}
         >
