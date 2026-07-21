@@ -48,6 +48,7 @@
     "name_required": "Name required",
     "name_taken": "Name already taken",
     "overflow_count": "and {count} more",
+    "refresh_failed": "Saved, but the screen couldn't refresh. Please refresh manually.",
     "retry": "Retry",
     "save": "Save",
     "saving": "Saving...",

@@ -48,6 +48,7 @@
     "name_required": "이름을 입력해주세요.",
     "name_taken": "이미 사용 중인 이름이에요.",
     "overflow_count": "외 {count}개",
+    "refresh_failed": "저장은 됐지만 화면을 새로고침하지 못했어요. 새로고침 해주세요.",
     "retry": "다시 시도",
     "save": "저장",
     "saving": "저장하는 중...",

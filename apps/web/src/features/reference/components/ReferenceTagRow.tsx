@@ -6,6 +6,7 @@ import type { ReferenceTagSummary } from "@web/features/reference/types";
 import { useMutation } from "@web/lib/tanstack-query";
 import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
+import { toast } from "@web/utils/toast";
 
 interface ReferenceTagRowProps {
   referenceId: string;
@@ -24,7 +25,16 @@ export function ReferenceTagRow({
   const { t } = useTranslation();
   const utils = trpc.useUtils();
   const createTag = useMutation(trpc.tag.create, {
-    onSuccess: () => utils.tag.list.invalidate(),
+    // "새로 만들기" 미니 폼이 떠 있는 동안 검색 목록(tag.list 구독자)이 언마운트
+    // 상태라 기본 invalidate(활성 구독만 재조회)로는 새 태그가 캐시에 안 실린다 —
+    // refetchType: "all"로 구독자 없이도 강제 재조회하고, 그 재조회를 반환(await)해서
+    // 팝오버가 검색 화면으로 돌아갔을 때 이미 최신 목록이 보이게 한다(그러지
+    // 않으면 곧바로 같은 이름을 또 만들려다 고아 태그가 하나 더 생길 수 있다).
+    // reject해도 mutation 자체가 실패로 뒤집히지 않도록 catch로 흡수한다.
+    onSuccess: () =>
+      utils.tag.list
+        .invalidate(undefined, { refetchType: "all" })
+        .catch(() => toast.error(t("common.refresh_failed"))),
   });
   const addTag = useAddReferenceTag();
   const removeTag = useRemoveReferenceTag();
