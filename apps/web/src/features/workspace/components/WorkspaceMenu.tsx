@@ -113,12 +113,13 @@ export function WorkspaceMenu({
               <button
                 type="button"
                 aria-label={workspaceName}
-                className={cn(
-                  "flex size-7 items-center justify-center rounded-md text-sm font-medium text-white",
-                  avatarColorClass,
-                )}
+                className="rounded-md"
               >
-                {workspaceInitial}
+                <Avatar
+                  shape="square"
+                  fallback={workspaceInitial}
+                  className={cn("text-sm text-white", avatarColorClass)}
+                />
               </button>
             </DropdownMenuTrigger>
             {accountContent}
@@ -140,17 +141,11 @@ export function WorkspaceMenu({
                 // 배경과 안 겹치게 한다(닫힌 채 Tab으로 포커스됐을 땐 그대로 보임).
                 className="flex h-8 w-full min-w-0 items-center gap-1.5 rounded-md pr-8 text-left data-[state=open]:focus-visible:outline-none"
               >
-                <Text
-                  as="span"
-                  size="xs"
-                  weight="medium"
-                  className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-md text-white",
-                    avatarColorClass,
-                  )}
-                >
-                  {workspaceInitial}
-                </Text>
+                <Avatar
+                  shape="square"
+                  fallback={workspaceInitial}
+                  className={cn("size-6 text-white", avatarColorClass)}
+                />
                 <Text
                   as="span"
                   size="sm"

@@ -16,7 +16,7 @@
  *   3. Tailwind theme: maps semantic tokens to utility classes
  *
  * Naming: --{group}-{role}-{state}
- * Groups: brand, surface, fg, status, border
+ * Groups: brand, surface, fg, status, border, avatar
  * Non-color: duration, ease
  */
 
@@ -162,6 +162,9 @@
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
   --border-subtle: var(--palette-light-border-subtle);
+
+  --avatar-fallback: var(--brand);
+  --avatar-fallback-fg: var(--brand-fg);
 }
 
 .dark {
@@ -194,6 +197,9 @@
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
   --border-subtle: var(--palette-dark-border-subtle);
+
+  --avatar-fallback: var(--fg-primary);
+  --avatar-fallback-fg: var(--surface-base);
 }
 
 /* ── Theme Inversion ─────────────────────── */
@@ -229,6 +235,9 @@
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
   --border-subtle: var(--palette-dark-border-subtle);
+
+  --avatar-fallback: var(--fg-primary);
+  --avatar-fallback-fg: var(--surface-base);
 }
 
 .dark .theme-inverted {
@@ -261,6 +270,9 @@
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
   --border-subtle: var(--palette-light-border-subtle);
+
+  --avatar-fallback: var(--brand);
+  --avatar-fallback-fg: var(--brand-fg);
 }
 
 /* ── Tailwind Theme (semantic tokens only) ── */
@@ -303,6 +315,12 @@
   --color-border-strong: var(--border-strong);
   --color-border: var(--border);
   --color-border-subtle: var(--border-subtle);
+
+  /* Avatar — 이미지 없는 아바타의 이니셜 배경. 라이트/다크 분기를 dark: 변형이
+     아니라 토큰으로 두는 이유: 소비처가 className으로 다른 배경(워크스페이스
+     identity 색 등)을 줄 때, dark:bg-*는 특이도가 높아 소비처를 이겨버린다. */
+  --color-avatar-fallback: var(--avatar-fallback);
+  --color-avatar-fallback-fg: var(--avatar-fallback-fg);
 
   /* Shadow */
   --color-shadow: var(--shadow);
