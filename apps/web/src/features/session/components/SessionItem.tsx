@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 
+import { Text } from "@nema-io/weave";
+
 import { useTypewriter } from "@web/hooks/useTypewriter";
 import { trackEvent } from "@web/lib/posthog/trackEvent";
 import { useTranslation } from "@web/lib/tolgee";
@@ -11,9 +13,14 @@ import { SessionItemMenu } from "./SessionItemMenu";
 interface SessionItemProps {
   sessionId: string;
   title: string | null;
+  isActive: boolean;
 }
 
-export function SessionItem({ sessionId, title: rawTitle }: SessionItemProps) {
+export function SessionItem({
+  sessionId,
+  title: rawTitle,
+  isActive,
+}: SessionItemProps) {
   const { t } = useTranslation();
   const animatedTitle = useTypewriter(rawTitle);
   const title = animatedTitle || t("session.untitled");
@@ -44,7 +51,14 @@ export function SessionItem({ sessionId, title: rawTitle }: SessionItemProps) {
           className: "text-fg-secondary hover:bg-surface-raised-hover",
         }}
       >
-        {title}
+        <Text
+          as="span"
+          size="sm"
+          bold={isActive}
+          color={isActive ? "primary" : "secondary"}
+        >
+          {title}
+        </Text>
       </Link>
 
       <SessionItemMenu

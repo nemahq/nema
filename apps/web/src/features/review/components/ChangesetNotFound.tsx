@@ -1,15 +1,17 @@
+import { Text } from "@nema-io/weave";
+
 import { useTranslation } from "@web/lib/tolgee";
 
 export function ChangesetNotFound() {
   const { t } = useTranslation();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 text-center">
-      <h1 className="text-lg font-semibold text-fg-primary">
+      <Text as="h1" size="lg" bold>
         {t("review.detail_not_found_title")}
-      </h1>
-      <p className="text-sm text-fg-tertiary">
+      </Text>
+      <Text size="sm" color="tertiary">
         {t("review.detail_not_found_description")}
-      </p>
+      </Text>
     </div>
   );
 }

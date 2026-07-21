@@ -6,6 +6,7 @@ import {
   cn,
   Input,
   NESTED_HOVER_ICON_CLASSNAME,
+  Text,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -107,7 +108,9 @@ export const DigestCandidateCard = memo(function DigestCandidateCard({
         </Tooltip>
       </div>
 
-      <p className="text-sm text-fg-tertiary">{digest.description}</p>
+      <Text size="sm" color="tertiary">
+        {digest.description}
+      </Text>
 
       <DigestBodyFields body={body} />
 

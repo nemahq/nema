@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Text,
 } from "@nema-io/weave";
 import { LogOut } from "@nema-io/weave/icons";
 
@@ -52,9 +53,14 @@ export function UserMenu() {
               className="flex w-full cursor-pointer items-center gap-2.5 rounded-md py-2.5 pl-2.5 pr-3 text-left transition-colors duration-fast outline-none hover:bg-surface-raised-hover/75 data-[state=open]:bg-surface-raised-hover/75"
             >
               <Avatar src={user.avatarUrl} fallback={initial} />
-              <span className="truncate text-sm text-fg-primary animate-in fade-in slide-in-from-left-2 duration-normal">
+              <Text
+                as="span"
+                size="sm"
+                color="primary"
+                className="truncate animate-in fade-in slide-in-from-left-2 duration-normal"
+              >
                 {user.displayName}
-              </span>
+              </Text>
             </button>
           )}
         </DropdownMenuTrigger>

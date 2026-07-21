@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 
-import { cn } from "@nema-io/weave";
+import { cn, Text } from "@nema-io/weave";
 
 import { LnbRowBox } from "./LnbRowBox";
 import { useSidebar } from "./Sidebar";
@@ -45,7 +45,9 @@ export function LnbSection({
               hoverable && "group-hover/section:bg-surface-raised-hover/75",
             )}
           >
-            <span className="font-medium text-fg-tertiary">{label}</span>
+            <Text as="span" size="xs" bold color="tertiary">
+              {label}
+            </Text>
           </LnbRowBox>
           {trailingAction}
         </div>

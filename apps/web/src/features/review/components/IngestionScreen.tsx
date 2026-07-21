@@ -1,5 +1,7 @@
 import { Suspense, useMemo } from "react";
 
+import { Text } from "@nema-io/weave";
+
 import { useNotificationSoftAsk } from "@web/features/notifications";
 import {
   confirmDisabledReason as computeConfirmDisabledReason,
@@ -155,10 +157,14 @@ function IngestionContent() {
         }
       />
       {confirmDisabledReasonText && (
-        <p className="text-xs text-fg-tertiary">{confirmDisabledReasonText}</p>
+        <Text size="xs" color="tertiary">
+          {confirmDisabledReasonText}
+        </Text>
       )}
       {error && (
-        <p className="text-sm text-status-error">{getErrorMessage(error)}</p>
+        <Text size="sm" color="error">
+          {getErrorMessage(error)}
+        </Text>
       )}
 
       <DigestSection

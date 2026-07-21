@@ -1,6 +1,6 @@
 import { useId } from "react";
 
-import { Alert, Input } from "@nema-io/weave";
+import { Alert, Input, Text } from "@nema-io/weave";
 
 import {
   type AccountDeleteError,
@@ -36,14 +36,11 @@ export function AccountDeleteConfirmField({
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor={confirmFieldId}
-          className="text-sm font-medium text-fg-primary"
-        >
+        <Text as="label" htmlFor={confirmFieldId} size="sm" bold>
           {t("common.delete_confirm_instruction", {
             value: hasEmail ? user.email : user.displayName,
           })}
-        </label>
+        </Text>
         <Input
           id={confirmFieldId}
           value={confirmationInput}

@@ -1,4 +1,4 @@
-import { Kbd } from "@nema-io/weave";
+import { Kbd, Text } from "@nema-io/weave";
 
 import { getAllActionDefs } from "@web/lib/command/shortcut/actionMap";
 import { formatKeySegments } from "@web/lib/command/shortcut/formatKey";
@@ -35,18 +35,18 @@ export function HelpTabContent() {
     <div className="max-w-sm space-y-6">
       {Object.entries(GROUPED_ACTIONS).map(([category, categoryActions]) => (
         <div key={category}>
-          <h3 className="mb-3 text-xs font-medium tracking-wider text-fg-tertiary">
+          <Text as="h3" size="xs" bold color="tertiary" className="mb-3">
             {t(`shortcut.category_${category}` as Parameters<typeof t>[0])}
-          </h3>
+          </Text>
           <div className="space-y-1">
             {categoryActions.map((action) => (
               <div
                 key={action.id}
                 className="flex items-center justify-between rounded px-2 py-1.5"
               >
-                <span className="text-sm text-fg-primary">
+                <Text as="span" size="sm" color="primary">
                   {t(action.labelKey)}
-                </span>
+                </Text>
                 <ShortcutKeys shortcut={action.shortcut} />
               </div>
             ))}

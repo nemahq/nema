@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
   Skeleton,
+  Text,
 } from "@nema-io/weave";
 
 import { useDeleteSpace } from "@web/features/workspace/hooks/useDeleteSpace";
@@ -70,9 +71,9 @@ function SpaceDeleteMoveDraftsField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs text-fg-tertiary">
+      <Text as="label" size="xs" color="tertiary">
         {t("space.delete_pending_drafts_label", { count: draftCount })}
-      </label>
+      </Text>
       <Select
         value={targetSpaceId}
         onValueChange={onManualTargetSpaceIdChange}
@@ -89,9 +90,12 @@ function SpaceDeleteMoveDraftsField({
           ))}
         </SelectContent>
       </Select>
-      <label
+      <Text
+        as="label"
         htmlFor={checkboxId}
-        className="flex cursor-pointer items-center gap-2 text-sm text-fg-secondary"
+        size="sm"
+        color="secondary"
+        className="flex cursor-pointer items-center gap-2"
       >
         <Checkbox
           id={checkboxId}
@@ -101,7 +105,7 @@ function SpaceDeleteMoveDraftsField({
           }
         />
         {t("space.delete_together_option")}
-      </label>
+      </Text>
     </div>
   );
 }
@@ -225,12 +229,15 @@ export function SpaceDeleteConfirmForm({
       </Suspense>
 
       <div className="flex flex-col gap-1.5">
-        <label
+        <Text
+          as="label"
           htmlFor={confirmInputId}
-          className="text-sm font-medium text-fg-primary"
+          size="sm"
+          bold
+          color="primary"
         >
           {t("common.delete_confirm_instruction", { value: spaceName })}
-        </label>
+        </Text>
         <Input
           id={confirmInputId}
           autoFocus

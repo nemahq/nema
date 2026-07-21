@@ -1,6 +1,8 @@
 import { Suspense, useRef } from "react";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 
+import { Text } from "@nema-io/weave";
+
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { useChangesetListInfiniteQuery } from "@web/features/review/hooks/useChangesetListQuery";
@@ -47,11 +49,11 @@ function ChangesetListContent({ subTab }: ChangesetListProps) {
 
   if (entries.length === 0) {
     return (
-      <p className="py-12 text-center text-sm text-fg-tertiary">
+      <Text size="sm" color="tertiary" className="py-12 text-center">
         {subTab === "open"
           ? t("review.changes_empty_open")
           : t("review.changes_empty_closed")}
-      </p>
+      </Text>
     );
   }
 
@@ -77,9 +79,9 @@ function ChangesetListContent({ subTab }: ChangesetListProps) {
           {query.isFetchingNextPage && <ChangesetListSkeleton />}
         </div>
       ) : (
-        <p className="py-4 text-center text-xs text-fg-tertiary">
+        <Text size="xs" color="tertiary" className="py-4 text-center">
           {t("common.list_end")}
-        </p>
+        </Text>
       )}
     </div>
   );

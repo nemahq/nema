@@ -4,6 +4,7 @@ import { Link, linkOptions } from "@tanstack/react-router";
 import {
   cn,
   LIST_ITEM_HOVER_CLASSNAME,
+  Text,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -104,13 +105,19 @@ export const ChangesetListRow = memo(function ChangesetListRow({
           <TooltipContent side="bottom">{t(statusLabelKey)}</TooltipContent>
         </Tooltip>
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <span className="min-w-0 truncate text-sm font-medium text-fg-primary">
+          <Text as="span" size="sm" bold className="min-w-0 truncate">
             {changesetDisplayTitle({ title, number: changesetNumber }, t)}
-          </span>
+          </Text>
           {typeLabelKey && (
-            <span className="shrink-0 rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-fg-tertiary">
+            <Text
+              as="span"
+              size="xs"
+              bold
+              color="tertiary"
+              className="shrink-0 rounded-full border border-border px-1.5 py-0.5"
+            >
               {t(typeLabelKey)}
-            </span>
+            </Text>
           )}
         </div>
       </div>
@@ -118,13 +125,13 @@ export const ChangesetListRow = memo(function ChangesetListRow({
         {/* 2줄을 상태 아이콘이 아니라 타입 아이콘과 좌측 정렬시키기 위한
             자리맞춤용 — 상태 아이콘과 같은 폭(size-4)만 차지하고 안 보인다. */}
         <span aria-hidden="true" className="inline-flex size-4 shrink-0" />
-        <div className="text-[11px] leading-[1.4] text-fg-tertiary">
+        <Text as="div" size="xs" color="tertiary">
           #{changesetNumber} · <RelativeTime dateTime={createdAt} />
           {/* "누가·언제 했는가"가 "무엇을 했는가"(effect)보다 먼저 오는 게
               자연스러운 서술 순서라 시간 바로 뒤에 둔다. */}
           {` · ${changesetAuthorLabel(authorId, user.displayName, t)}`}
           {effectSummary && ` · ${effectSummary}`}
-        </div>
+        </Text>
       </div>
     </>
   );

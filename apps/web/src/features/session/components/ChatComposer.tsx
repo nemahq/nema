@@ -1,6 +1,8 @@
 import { useIsMutating } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
 
+import { Text } from "@nema-io/weave";
+
 import {
   CHAT_COMPOSER_SELECTOR,
   ChatInput,
@@ -103,12 +105,12 @@ export function ChatComposer() {
           onSelect={selectCommand}
         />
       )}
-      <p className="px-2 pb-1 text-xs text-fg-tertiary">
+      <Text size="xs" color="tertiary" className="px-2 pb-1">
         <span className={`font-semibold ${MODE_CONFIG[mode].color}`}>
           {t(MODE_CONFIG[mode].labelKey)}
         </span>{" "}
         {t("session.mode_hint_shortcut")}
-      </p>
+      </Text>
       <ChatInput
         value={inputValue}
         onChange={handleChange}

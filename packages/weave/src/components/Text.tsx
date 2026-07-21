@@ -7,6 +7,7 @@ type TextColor =
   | "primary"
   | "secondary"
   | "tertiary"
+  | "quaternary"
   | "brand"
   | "success"
   | "warning"
@@ -26,6 +27,7 @@ const colorClasses: Record<TextColor, string> = {
   primary: "text-fg-primary",
   secondary: "text-fg-secondary",
   tertiary: "text-fg-tertiary",
+  quaternary: "text-fg-quaternary",
   brand: "text-brand-accent",
   success: "text-status-success",
   warning: "text-status-warning",

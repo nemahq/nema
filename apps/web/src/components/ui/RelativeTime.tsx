@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import { cn } from "@nema-io/weave";
+import { Text } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 import { tolgee } from "@web/lib/tolgee/client";
@@ -50,11 +50,14 @@ export function RelativeTime({ dateTime, className }: RelativeTimeProps) {
   const label = formatCompactDistance(dateTime, lang);
 
   return (
-    <time
+    <Text
+      as="time"
       dateTime={dateTime}
-      className={cn("text-[11px] leading-[1.4] text-fg-tertiary", className)}
+      size="xs"
+      color="tertiary"
+      className={className}
     >
       {label}
-    </time>
+    </Text>
   );
 }

@@ -1,4 +1,4 @@
-import { cn } from "@nema-io/weave";
+import { cn, Text } from "@nema-io/weave";
 
 import {
   type ChangesetStatusIcon,
@@ -44,13 +44,21 @@ export function ChangesetStatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full py-1 pl-2 pr-3 text-sm font-medium",
+        "inline-flex items-center gap-1.5 rounded-full py-1 pl-2 pr-3",
         visual.container,
         className,
       )}
     >
       <icon.Icon className="size-4 shrink-0" strokeWidth={2.5} />
-      <span className={visual.label}>{t(labelKey)}</span>
+      <Text
+        as="span"
+        size="sm"
+        bold
+        color={visual.label ? "primary" : undefined}
+        className={cn(!visual.label && "text-inherit")}
+      >
+        {t(labelKey)}
+      </Text>
     </span>
   );
 }

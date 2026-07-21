@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
   Skeleton,
+  Text,
 } from "@nema-io/weave";
 
 import {
@@ -101,12 +102,12 @@ export function PreferencesSection() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-semibold text-fg-primary">
+        <Text as="h2" size="lg" bold>
           {t("settings.nav_preferences")}
-        </h2>
-        <p className="text-sm text-fg-tertiary">
+        </Text>
+        <Text size="sm" color="tertiary">
           {t("settings.preferences_subtitle")}
-        </p>
+        </Text>
       </div>
 
       <div className="mt-6 flex flex-1 flex-col gap-6">

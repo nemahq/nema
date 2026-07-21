@@ -1,3 +1,5 @@
+import { Text } from "@nema-io/weave";
+
 import { DIGEST_BODY_FIELDS } from "@web/features/review/constants";
 import type { ReviewDigest } from "@web/features/review/types";
 
@@ -47,12 +49,12 @@ export function DigestBodyFields({ body }: DigestBodyFieldsProps) {
     <dl className="flex flex-col gap-3">
       {rows.map((row) => (
         <div key={row.label}>
-          <dt className="text-xs font-medium tracking-wide text-fg-tertiary uppercase">
+          <Text as="dt" size="xs" bold color="tertiary" className="uppercase">
             {row.label}
-          </dt>
-          <dd className="mt-0.5 text-[15px] leading-relaxed text-fg-primary">
+          </Text>
+          <Text as="dd" className="mt-0.5">
             {row.value}
-          </dd>
+          </Text>
         </div>
       ))}
     </dl>

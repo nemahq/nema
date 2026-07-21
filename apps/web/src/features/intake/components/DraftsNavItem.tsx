@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "@tanstack/react-router";
 
-import { cn } from "@nema-io/weave";
+import { cn, Text } from "@nema-io/weave";
 import { Circle, FileText, TriangleAlert } from "@nema-io/weave/icons";
 
 import { NavItem } from "@web/components/layout/NavItem";
@@ -141,9 +141,14 @@ export function DraftsNavItem() {
             renderState !== "exiting" && draftCount > 0 ? (
               // "+"(LnbHoverIcon)가 size-5 박스 안에서 중앙정렬돼 실제 획이 안쪽에서
               // 끝난다 — 숫자도 같은 박스로 감싸야 시각적 우측 끝이 맞는다.
-              <span className="absolute right-3.5 flex size-5 items-center justify-center text-xs text-fg-tertiary">
+              <Text
+                as="span"
+                size="xs"
+                color="tertiary"
+                className="absolute right-3.5 flex size-5 items-center justify-center"
+              >
                 {draftCount}
-              </span>
+              </Text>
             ) : undefined
           }
         />

@@ -1,4 +1,4 @@
-import { Button } from "@nema-io/weave";
+import { Button, Text } from "@nema-io/weave";
 import { RotateCcw, X } from "@nema-io/weave/icons";
 
 import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
@@ -14,7 +14,9 @@ export function StreamErrorMessage() {
 
   return (
     <div className="mt-4 flex items-center gap-2 rounded-md bg-surface-raised px-3 py-2">
-      <p className="min-w-0 flex-1 text-sm text-fg-secondary">{streamError}</p>
+      <Text size="sm" color="secondary" className="min-w-0 flex-1">
+        {streamError}
+      </Text>
       <div className="flex shrink-0 gap-1">
         <Button variant="ghost" size="xs" onClick={retryStream}>
           <RotateCcw className="size-3" />

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
-import { cn } from "@nema-io/weave";
+import { cn, Text } from "@nema-io/weave";
 
 const USER_MESSAGE_COLLAPSED_HEIGHT_PX = 160;
 const USER_MESSAGE_EXPANDED_HEIGHT_PX = 400;
@@ -61,9 +61,9 @@ export function UserMessage({ content }: UserMessageProps) {
   );
 
   const textContent = (
-    <span className="block text-[15px] leading-[1.7] text-fg-primary whitespace-pre-wrap">
+    <Text as="span" color="primary" className="block whitespace-pre-wrap">
       {content}
-    </span>
+    </Text>
   );
 
   return (

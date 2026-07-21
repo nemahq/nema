@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Text,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -82,10 +83,12 @@ export function WorkspaceMenu({
       <div className="flex items-center gap-2.5 px-2 py-1.5">
         <Avatar src={user.avatarUrl} fallback={userInitial} />
         <div className="min-w-0">
-          <div className="truncate text-sm text-fg-primary">
+          <Text as="div" size="sm" color="primary" className="truncate">
             {user.displayName}
-          </div>
-          <div className="truncate text-xs text-fg-tertiary">{user.email}</div>
+          </Text>
+          <Text as="div" size="xs" color="tertiary" className="truncate">
+            {user.email}
+          </Text>
         </div>
       </div>
       <DropdownMenuSeparator />
@@ -137,17 +140,26 @@ export function WorkspaceMenu({
                 // 배경과 안 겹치게 한다(닫힌 채 Tab으로 포커스됐을 땐 그대로 보임).
                 className="flex h-8 w-full min-w-0 items-center gap-1.5 rounded-md pr-8 text-left data-[state=open]:focus-visible:outline-none"
               >
-                <span
+                <Text
+                  as="span"
+                  size="xs"
+                  bold
                   className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-medium text-white",
+                    "flex size-6 shrink-0 items-center justify-center rounded-md text-white",
                     avatarColorClass,
                   )}
                 >
                   {workspaceInitial}
-                </span>
-                <span className="min-w-0 truncate text-sm font-medium text-fg-primary">
+                </Text>
+                <Text
+                  as="span"
+                  size="sm"
+                  bold
+                  color="primary"
+                  className="min-w-0 truncate"
+                >
                   {workspaceName}
-                </span>
+                </Text>
                 <ChevronDown className="size-3.5 shrink-0 text-fg-tertiary" />
               </button>
             </DropdownMenuTrigger>
