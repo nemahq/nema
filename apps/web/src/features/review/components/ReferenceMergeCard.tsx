@@ -83,7 +83,7 @@ export function ReferenceMergeCard({
           rows={3}
           maxLength={REFERENCE_BODY_MAX_LENGTH}
           aria-invalid={mergeNote.trim() === ""}
-          className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-1.5 text-sm text-fg-primary placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none aria-invalid:border-status-error disabled:text-fg-quaternary dark:focus-visible:border-fg-tertiary/70"
+          className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-1.5 text-sm text-fg-primary placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none aria-invalid:border-status-error disabled:text-fg-quinary disabled:placeholder:text-fg-quinary dark:focus-visible:border-fg-tertiary/70"
         />
       </Text>
     </div>

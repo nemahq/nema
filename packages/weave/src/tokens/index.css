@@ -144,11 +144,20 @@
   --fg-primary: var(--palette-light-fg-primary);
   --fg-secondary: var(--palette-light-fg-secondary);
   --fg-tertiary: var(--palette-light-fg-tertiary);
-  /* fg-tertiary의 파생값(60% 알파) — placeholder·disabled처럼 tertiary보다 한 단계
-     더 죽여야 하는 곳 전용. color-mix로 fg-tertiary를 참조해서 계산하므로, 이 한
-     선언만으로 .dark/.theme-inverted에서 fg-tertiary가 바뀌면 자동으로 따라간다
-     (커스텀 프로퍼티는 참조 시점의 값으로 재계산됨 — 테마별 블록에 중복 선언 불필요). */
-  --fg-quaternary: color-mix(in srgb, var(--fg-tertiary) 60%, transparent);
+  /* tertiary 아래로 두 단계 더 — 둘 다 fg-tertiary의 알파 파생값이다. color-mix로
+     fg-tertiary를 참조해서 계산하므로, 이 한 선언만으로 .dark/.theme-inverted에서
+     fg-tertiary가 바뀌면 자동으로 따라간다(커스텀 프로퍼티는 참조 시점의 값으로
+     재계산됨 — 테마별 블록에 중복 선언 불필요).
+
+     quaternary(placeholder): 활성 필드의 안내문이라 읽혀야 한다. 라이트 배경(순백)
+     에서 tertiary가 이미 4.80:1이라 AA(4.5:1)를 지키면서 더 연하게 만들 여지가
+     없어서, WCAG가 큰 텍스트·UI 요소에 쓰는 최소선 3:1을 바닥으로 잡고 80%까지만
+     내렸다(라이트 3.26:1 / 다크 4.39:1).
+
+     quinary(disabled): 비활성 UI 요소는 대비 요건에서 면제된다 — 흐릿한 것 자체가
+     신호라 placeholder보다 한 단계 더 물러난다. */
+  --fg-quaternary: color-mix(in srgb, var(--fg-tertiary) 80%, transparent);
+  --fg-quinary: color-mix(in srgb, var(--fg-tertiary) 60%, transparent);
 
   --status-success: var(--palette-light-status-success);
   --status-success-tint: var(--palette-light-status-success-tint);
@@ -300,6 +309,7 @@
   --color-fg-secondary: var(--fg-secondary);
   --color-fg-tertiary: var(--fg-tertiary);
   --color-fg-quaternary: var(--fg-quaternary);
+  --color-fg-quinary: var(--fg-quinary);
 
   /* Status */
   --color-status-success: var(--status-success);

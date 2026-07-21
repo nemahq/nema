@@ -67,8 +67,10 @@ export function SourceComposer({ spaceId }: SourceComposerProps) {
             onClick={onClick}
             className={cn(
               ACTION_BUTTON_BASE,
-              "disabled:bg-surface-raised-hover disabled:text-fg-quaternary",
-              "dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-quaternary",
+              // 채워진 버튼이라 Button 기본값(opacity-50)으로 죽이면 배경까지 비쳐
+              // 흐린 알약이 남는다 — 투명도 대신 배경·글자색을 바꿔 비활성을 알린다.
+              "disabled:bg-surface-raised-hover disabled:text-fg-quinary disabled:opacity-100",
+              "dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-quinary",
               "enabled:bg-fg-secondary enabled:text-surface-card enabled:hover:bg-fg-secondary enabled:hover:opacity-80",
               "dark:enabled:bg-fg-primary dark:enabled:text-surface-base dark:enabled:hover:bg-fg-primary",
             )}

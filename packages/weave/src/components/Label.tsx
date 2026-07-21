@@ -15,7 +15,7 @@ function Label({ className, color = "primary", ...props }: LabelProps) {
       className={cn(
         "text-sm font-medium leading-none",
         colorClasses[color],
-        "peer-disabled:cursor-not-allowed peer-disabled:text-fg-quaternary",
+        "peer-disabled:cursor-not-allowed peer-disabled:text-fg-quinary",
         className,
       )}
       {...props}

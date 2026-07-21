@@ -151,7 +151,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1 text-sm outline-hidden select-none focus:bg-surface-raised-hover/75 dark:focus:bg-surface-raised-hover data-[disabled]:pointer-events-none data-[disabled]:text-fg-quaternary data-[inset]:pl-8 data-[variant=danger]:text-status-error data-[variant=danger]:focus:bg-status-error-tint data-[variant=danger]:focus:text-status-error [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-fg-tertiary data-[variant=danger]:*:[svg]:text-status-error! data-[disabled]:[&_svg:not([class*='text-'])]:text-fg-quaternary",
+        "relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1 text-sm outline-hidden select-none focus:bg-surface-raised-hover/75 dark:focus:bg-surface-raised-hover data-[disabled]:pointer-events-none data-[disabled]:text-fg-quinary data-[inset]:pl-8 data-[variant=danger]:text-status-error data-[variant=danger]:focus:bg-status-error-tint data-[variant=danger]:focus:text-status-error [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-fg-tertiary data-[variant=danger]:*:[svg]:text-status-error! data-[disabled]:[&_svg:not([class*='text-'])]:text-fg-quinary",
         className,
       )}
       {...props}
