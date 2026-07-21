@@ -4,6 +4,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  pinSelectedToTop,
   Skeleton,
   Text,
 } from "@nema-io/weave";
@@ -46,6 +47,11 @@ export function DraftSpaceSelect({
     return <span />;
   }
 
+  const orderedSpaces = pinSelectedToTop(
+    spaces,
+    (candidate) => candidate.id === spaceId,
+  );
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -67,7 +73,7 @@ export function DraftSpaceSelect({
       <DropdownMenuContent side="bottom" align="start" width={240}>
         {/* weave Select의 선택 표시(우측 체크마크)를 그대로 따른다 — 라디오
             점 대신, 좌측 텍스트는 그대로 두고 우측에만 체크를 얹는다. */}
-        {spaces.map((candidate) => (
+        {orderedSpaces.map((candidate) => (
           <DropdownMenuItem
             key={candidate.id}
             className="pr-8"

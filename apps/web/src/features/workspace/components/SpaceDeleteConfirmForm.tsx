@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  pinSelectedToTop,
   Select,
   SelectContent,
   SelectItem,
@@ -32,9 +33,17 @@ function useDeleteMoveTarget(
   manualTargetSpaceId: string | null,
 ) {
   const [spaceList] = useSpaceListSuspenseQuery();
-  // useSpaceList는 created_at 오름차순이라 필터링 후 첫 항목이 곧 가장 오래된 Space.
-  const otherSpaces = spaceList.spaces.filter((space) => space.id !== spaceId);
-  const targetSpaceId = manualTargetSpaceId ?? otherSpaces[0]?.id;
+  // useSpaceList는 created_at 오름차순이라 필터링 후 첫 항목이 곧 가장 오래된 Space
+  // — 아래 targetSpaceId 기본값 계산에만 쓰고, 화면에 보여줄 목록(otherSpaces)은
+  // 현재 targetSpaceId를 상단에 고정해 별도로 재정렬한다.
+  const spacesByCreatedAt = spaceList.spaces.filter(
+    (space) => space.id !== spaceId,
+  );
+  const targetSpaceId = manualTargetSpaceId ?? spacesByCreatedAt[0]?.id;
+  const otherSpaces = pinSelectedToTop(
+    spacesByCreatedAt,
+    (space) => space.id === targetSpaceId,
+  );
   return { otherSpaces, targetSpaceId };
 }
 

@@ -25,3 +25,21 @@ export const NESTED_HOVER_ICON_CLASSNAME =
 // 톤만큼은 앱 전체에서 하나로 맞춘다.
 export const LIST_ITEM_HOVER_CLASSNAME =
   "rounded-lg transition-colors duration-fast hover:bg-surface-raised-hover/40";
+
+// Select/DropdownMenu 옵션이 동적으로 늘어나 스크롤 없이는 현재 선택을 찾기
+// 어려워지는 목록(예: 카탈로그, Space 목록)에서만 쓴다. 순서 자체가 의미(분류·
+// 우선순위)를 가진 고정 소수 옵션 목록에는 적용하지 않는다 — 재배치가 그 의미를
+// 깨뜨린다.
+export function pinSelectedToTop<T>(
+  items: T[],
+  isSelected: (item: T) => boolean,
+): T[] {
+  const index = items.findIndex(isSelected);
+  if (index <= 0) {
+    return items;
+  }
+  const next = [...items];
+  const [selected] = next.splice(index, 1);
+  next.unshift(selected);
+  return next;
+}
