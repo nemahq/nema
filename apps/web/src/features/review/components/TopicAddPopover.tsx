@@ -12,12 +12,12 @@ import { Plus } from "@nema-io/weave/icons";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTopicListSuspenseQuery } from "@web/features/review/hooks/useTopicListQuery";
+import { useTranslation } from "@web/lib/tolgee";
 import {
   filterActiveLabelCandidates,
   hasExactLabelMatch,
   isDuplicateLabelName,
-} from "@web/features/review/labelSearch";
-import { useTranslation } from "@web/lib/tolgee";
+} from "@web/utils/labelSearch";
 
 const SEARCH_LIST_CLASSNAME = "flex max-h-48 flex-col gap-0.5 overflow-y-auto";
 

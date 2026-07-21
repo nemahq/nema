@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { ReferenceRow } from "@web/features/dev-harness/components/ReferenceRow";
-import { useReferenceListSuspenseQuery } from "@web/features/dev-harness/hooks/useReferenceListQuery";
+import { useReferenceListSuspenseQuery } from "@web/hooks/useReferenceListQuery";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
 function ReferencesPanelContent() {
