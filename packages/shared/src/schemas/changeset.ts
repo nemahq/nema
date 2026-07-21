@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import {
+  DigestDraftSchema,
+  NewReferenceDraftSchema,
+  REVIEW_NEW_REFERENCES_MAX,
+} from "./digest-review";
+
 export const ArchiveStatementInputSchema = z.object({
   statementId: z.string().uuid(),
 });
@@ -10,11 +16,41 @@ export const RevertChangesetInputSchema = z.object({
 });
 export type RevertChangesetInput = z.infer<typeof RevertChangesetInputSchema>;
 
-export const ApplyPendingRelationInputSchema = z.object({
+// 충돌 판정 — 승자 선택. 패자는 서버가 제안의 다른 끝점으로 유도한다(review-flow.md
+// "충돌 판정 — 승자 선택").
+export const ResolveConflictRelationInputSchema = z.object({
   changesetId: z.string().uuid(),
+  winnerStatementId: z.string().uuid(),
 });
-export type ApplyPendingRelationInput = z.infer<
-  typeof ApplyPendingRelationInputSchema
+export type ResolveConflictRelationInput = z.infer<
+  typeof ResolveConflictRelationInputSchema
+>;
+
+// 중복 판정 — 병합. mergedDigest는 DigestEditConfirmInputSchema의 digest와 같은
+// 계약(엔진 제안을 사람이 검토·수정한 최종 콘텐츠) — review-flow.md "중복 판정 — 병합".
+export const ResolveDuplicateRelationInputSchema = z
+  .object({
+    changesetId: z.string().uuid(),
+    mergedDigest: DigestDraftSchema,
+    newReferences: z
+      .array(NewReferenceDraftSchema)
+      .max(REVIEW_NEW_REFERENCES_MAX)
+      .default([]),
+  })
+  .superRefine((value, ctx) => {
+    const keys = new Set(value.newReferences.map((reference) => reference.key));
+    for (const key of value.mergedDigest.newReferenceKeys) {
+      if (!keys.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["mergedDigest", "newReferenceKeys"],
+          message: `unknown new reference key: ${key}`,
+        });
+      }
+    }
+  });
+export type ResolveDuplicateRelationInput = z.infer<
+  typeof ResolveDuplicateRelationInputSchema
 >;
 
 export const RejectPendingRelationInputSchema = z.object({

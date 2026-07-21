@@ -4,8 +4,69 @@ import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   buildRevertedPredicate,
   listChangesets,
+  resolveDuplicateRelation,
   revertChangeset,
 } from "@server/services/changeset-service";
+
+// resolveDuplicateRelation은 as unknown as Json으로 나가는 객체 리터럴이라 키
+// 오타를 타입체크가 못 잡는다(digest-review-service.test.ts의 같은 목적 테스트와
+// 동일 이유) — RPC 계약 키(snake_case)를 고정한다.
+describe("resolveDuplicateRelation", () => {
+  it("mergedDigest·newReferences를 RPC 계약 키(snake_case)로 실어 보낸다", async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ data: "new-digest-id", error: null });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    const result = await resolveDuplicateRelation({
+      supabase,
+      changesetId: "changeset-1",
+      mergedDigest: {
+        title: "병합된 다이제스트",
+        description: "설명",
+        body: { type: "decision" },
+        topics: [{ id: null, name: "새 주제" }],
+        tags: [{ id: null, title: "새 태그", description: "정의" }],
+        referenceIds: ["ref-1"],
+        newReferenceKeys: ["new-ref-key"],
+        externalUrls: ["https://example.com"],
+      },
+      newReferences: [
+        {
+          key: "new-ref-key",
+          type: "product",
+          title: "토스",
+          body: "송금 앱",
+          externalUrls: ["https://toss.im"],
+        },
+      ],
+    });
+
+    expect(rpc).toHaveBeenCalledWith("resolve_duplicate_relation", {
+      p_changeset_id: "changeset-1",
+      p_merged_digest: {
+        title: "병합된 다이제스트",
+        description: "설명",
+        body: { type: "decision" },
+        topics: ["새 주제"],
+        tags: [{ title: "새 태그", description: "정의" }],
+        reference_ids: ["ref-1"],
+        new_reference_keys: ["new-ref-key"],
+        external_urls: ["https://example.com"],
+      },
+      p_new_references: [
+        {
+          key: "new-ref-key",
+          type: "product",
+          title: "토스",
+          body: "송금 앱",
+          external_urls: ["https://toss.im"],
+        },
+      ],
+    });
+    expect(result).toEqual({ digestId: "new-digest-id" });
+  });
+});
 
 // "되돌림 여부" 재귀(§4.4)는 단순 카운트가 아니라 redo·분기에서 갈린다 —
 // 이 술어가 틀리면 이력의 되돌림 표시와 멱등 가드가 함께 어긋난다.

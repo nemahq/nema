@@ -1,21 +1,23 @@
 import {
-  ApplyPendingRelationInputSchema,
   ArchiveStatementInputSchema,
   GetChangesetByNumberInputSchema,
   ListActiveRelationsInputSchema,
   ListChangesetsInputSchema,
   RejectPendingRelationInputSchema,
+  ResolveConflictRelationInputSchema,
+  ResolveDuplicateRelationInputSchema,
   RevertChangesetInputSchema,
 } from "@nema-io/shared";
 
 import { getChangesetByNumber } from "@server/services/changeset-detail-service";
 import {
-  applyPendingRelation,
   archiveStatement,
   listActiveRelations,
   listChangesets,
   listPendingRelations,
   rejectPendingRelation,
+  resolveConflictRelation,
+  resolveDuplicateRelation,
   revertChangeset,
 } from "@server/services/changeset-service";
 import { protectedProcedure, router } from "@server/trpc";
@@ -39,12 +41,24 @@ export const changesetRouter = router({
       }),
     ),
 
-  applyPendingRelation: protectedProcedure
-    .input(ApplyPendingRelationInputSchema)
+  resolveConflictRelation: protectedProcedure
+    .input(ResolveConflictRelationInputSchema)
     .mutation(({ ctx, input }) =>
-      applyPendingRelation({
+      resolveConflictRelation({
         supabase: ctx.supabase,
         changesetId: input.changesetId,
+        winnerStatementId: input.winnerStatementId,
+      }),
+    ),
+
+  resolveDuplicateRelation: protectedProcedure
+    .input(ResolveDuplicateRelationInputSchema)
+    .mutation(({ ctx, input }) =>
+      resolveDuplicateRelation({
+        supabase: ctx.supabase,
+        changesetId: input.changesetId,
+        mergedDigest: input.mergedDigest,
+        newReferences: input.newReferences,
       }),
     ),
 

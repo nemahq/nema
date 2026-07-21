@@ -1,6 +1,13 @@
-import { type RelationType, RelationTypeSchema } from "@nema-io/shared";
+import {
+  type DigestBody,
+  DigestBodySchema,
+  type DigestDraft,
+  type NewReferenceDraft,
+  type RelationType,
+  RelationTypeSchema,
+} from "@nema-io/shared";
 
-import type { Database } from "@server/infra/database.types";
+import type { Database, Json } from "@server/infra/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
@@ -77,16 +84,56 @@ export async function revertChangeset(args: {
   return { revertChangesetId: data, revertChangesetNumber: revertRow.number };
 }
 
-// 반환은 active가 보장된 관계 id — 없으면 생성, archived면 복귀(§5.1).
-export async function applyPendingRelation(args: {
+// 충돌 판정 — 승자 선택. 패자는 archive되고 승자→패자 replaces 관계가 세워진다
+// (review-flow.md "충돌 판정 — 승자 선택").
+export async function resolveConflictRelation(args: {
   supabase: TypedSupabaseClient;
   changesetId: string;
+  winnerStatementId: string;
 }): Promise<{ relationId: string }> {
-  const { data, error } = await args.supabase.rpc("apply_pending_relation", {
+  const { data, error } = await args.supabase.rpc("resolve_conflict_relation", {
     p_changeset_id: args.changesetId,
+    p_winner_statement_id: args.winnerStatementId,
   });
   throwIfSupabaseError(error);
   return { relationId: data };
+}
+
+// 중복 판정 — 병합. mergedDigest/newReferences는 confirmDigestEdit과 같은 snake_case
+// RPC 계약(review-flow.md "중복 판정 — 병합").
+export async function resolveDuplicateRelation(args: {
+  supabase: TypedSupabaseClient;
+  changesetId: string;
+  mergedDigest: DigestDraft;
+  newReferences: NewReferenceDraft[];
+}): Promise<{ digestId: string }> {
+  const { supabase, changesetId, mergedDigest, newReferences } = args;
+
+  const { data, error } = await supabase.rpc("resolve_duplicate_relation", {
+    p_changeset_id: changesetId,
+    p_merged_digest: {
+      title: mergedDigest.title,
+      description: mergedDigest.description,
+      body: mergedDigest.body,
+      topics: mergedDigest.topics.map((topic) => topic.name),
+      tags: mergedDigest.tags.map((tag) => ({
+        title: tag.title,
+        description: tag.description,
+      })),
+      reference_ids: mergedDigest.referenceIds,
+      new_reference_keys: mergedDigest.newReferenceKeys,
+      external_urls: mergedDigest.externalUrls,
+    } as unknown as Json,
+    p_new_references: newReferences.map((reference) => ({
+      key: reference.key,
+      type: reference.type,
+      title: reference.title,
+      body: reference.body,
+      external_urls: reference.externalUrls,
+    })) as unknown as Json,
+  });
+  throwIfSupabaseError(error);
+  return { digestId: data };
 }
 
 export async function rejectPendingRelation(args: {
@@ -99,9 +146,21 @@ export async function rejectPendingRelation(args: {
   throwIfSupabaseError(error);
 }
 
+// 중복(duplicates) 제안 하니스 판정의 병합 기본값 재료 — 병합 제안 편집 UI가 아직
+// 없는 소비처(/dev 하니스)가 keeper(from) Digest 내용을 그대로 기본 병합안으로 쓸 수
+// 있게, 끝점 진술이 속한 Digest 스냅샷을 함께 실어둔다.
+interface PendingRelationEndpointDigest {
+  id: string;
+  title: string;
+  description: string;
+  body: DigestBody;
+  externalUrls: string[];
+}
+
 interface PendingRelationEndpoint {
   id: string;
   content: string;
+  digest: PendingRelationEndpointDigest;
 }
 
 interface PendingRelationProposal {
@@ -178,14 +237,27 @@ export async function listPendingRelations(args: {
   ];
   const { data: statements, error: stmtError } = await supabase
     .from("statements")
-    .select("id, content, status")
+    .select(
+      "id, content, status, digest:digests(id, title, description, body, external_urls)",
+    )
     .in("id", endpointIds);
   throwIfSupabaseError(stmtError);
 
   const byId = new Map(
     (statements ?? []).map((s) => [
       s.id,
-      { id: s.id, content: s.content, active: s.status === "active" },
+      {
+        id: s.id,
+        content: s.content,
+        active: s.status === "active",
+        digest: {
+          id: s.digest.id,
+          title: s.digest.title,
+          description: s.digest.description,
+          body: DigestBodySchema.parse(s.digest.body),
+          externalUrls: s.digest.external_urls ?? [],
+        },
+      },
     ]),
   );
 
@@ -197,8 +269,12 @@ export async function listPendingRelations(args: {
         changesetId: p.changesetId,
         relationType: p.relationType,
         isConflict: p.relationType === "conflicts",
-        from: from && { id: from.id, content: from.content },
-        to: to && { id: to.id, content: to.content },
+        from: from && {
+          id: from.id,
+          content: from.content,
+          digest: from.digest,
+        },
+        to: to && { id: to.id, content: to.content, digest: to.digest },
         stale: !from?.active || !to?.active,
         createdAt: p.createdAt,
       };
@@ -298,6 +374,13 @@ interface ChangesetHistoryEntry {
   // 참고). null이면 FE가 효과 요약으로 대체한다.
   title: string | null;
   revertsId: string | null;
+  // revert 체인에서 몇 단계째 되돌리기/되살리기(redo)인지 — origin=0, 1차 revert=1,
+  // 그 redo=2, ... FE가 문구를 조합할 재료(revert_changeset_depth 마이그레이션 참고).
+  revertDepth: number;
+  // 다른 병합(중복 판정)이 이 pending 제안의 끝점을 먼저 archive해 자동으로
+  // rejected 처리됐으면 그 원인 changeset id — 사람이 거절한 일반 rejected와
+  // 구분하는 신호(07-modeling.md "한 Digest가 여러 곳과 동시에 중복될 수 있다").
+  invalidatedById: string | null;
   // 사람이 이 changeset의 내용 자체를 만든 경우에만 있음(07-modeling.md §authorId
   // 규칙) — ingestion·relation은 엔진 산물이라 항상 null, revert만 있음.
   authorId: string | null;
@@ -350,7 +433,7 @@ export async function listChangesets(args: {
   let query = supabase
     .from("changesets")
     .select(
-      "id, number, type, status, title, source_id, reverts_id, author_id, created_at, updated_at, changes(target_type), sources(status)",
+      "id, number, type, status, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, created_at, updated_at, changes(target_type), sources(status)",
     )
     .eq("space_id", targetSpaceId)
     .order("number", { ascending: false })
@@ -420,6 +503,8 @@ export async function listChangesets(args: {
         sourceStatus: row.sources?.status ?? null,
         title: row.title,
         revertsId: row.reverts_id,
+        revertDepth: row.revert_depth,
+        invalidatedById: row.invalidated_by_id,
         authorId: row.author_id,
         reverted: isReverted(row.id),
         effect,

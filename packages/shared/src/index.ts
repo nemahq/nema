@@ -2,8 +2,6 @@ export { isLocale, type Locale, LOCALES } from "./i18n";
 export {
   ACTIVE_RELATION_LIST_LIMIT_DEFAULT,
   ACTIVE_RELATION_LIST_LIMIT_MAX,
-  type ApplyPendingRelationInput,
-  ApplyPendingRelationInputSchema,
   type ArchiveStatementInput,
   ArchiveStatementInputSchema,
   CHANGESET_LIST_LIMIT_DEFAULT,
@@ -16,6 +14,10 @@ export {
   ListChangesetsInputSchema,
   type RejectPendingRelationInput,
   RejectPendingRelationInputSchema,
+  type ResolveConflictRelationInput,
+  ResolveConflictRelationInputSchema,
+  type ResolveDuplicateRelationInput,
+  ResolveDuplicateRelationInputSchema,
   type RevertChangesetInput,
   RevertChangesetInputSchema,
 } from "./schemas/changeset";

@@ -77,7 +77,9 @@ export type Database = {
           author_id: string | null;
           created_at: string;
           id: string;
+          invalidated_by_id: string | null;
           number: number | null;
+          revert_depth: number;
           reverts_id: string | null;
           source_id: string | null;
           space_id: string | null;
@@ -90,7 +92,9 @@ export type Database = {
           author_id?: string | null;
           created_at?: string;
           id?: string;
+          invalidated_by_id?: string | null;
           number?: number | null;
+          revert_depth?: number;
           reverts_id?: string | null;
           source_id?: string | null;
           space_id?: string | null;
@@ -103,7 +107,9 @@ export type Database = {
           author_id?: string | null;
           created_at?: string;
           id?: string;
+          invalidated_by_id?: string | null;
           number?: number | null;
+          revert_depth?: number;
           reverts_id?: string | null;
           source_id?: string | null;
           space_id?: string | null;
@@ -113,6 +119,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "changesets_invalidated_by_id_fkey";
+            columns: ["invalidated_by_id"];
+            isOneToOne: false;
+            referencedRelation: "changesets";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "changesets_reverts_id_fkey";
             columns: ["reverts_id"];
@@ -1191,10 +1204,6 @@ export type Database = {
         };
         Returns: undefined;
       };
-      apply_pending_relation: {
-        Args: { p_changeset_id: string };
-        Returns: string;
-      };
       apply_relation_changesets: {
         Args: { p_applied?: Json; p_pending?: Json; p_source_id: string };
         Returns: undefined;
@@ -1364,6 +1373,10 @@ export type Database = {
         };
         Returns: undefined;
       };
+      invalidate_stale_relation_proposals: {
+        Args: { p_invalidated_by: string; p_statement_id: string };
+        Returns: undefined;
+      };
       is_changeset_reverted: {
         Args: { p_changeset_id: string };
         Returns: boolean;
@@ -1418,6 +1431,18 @@ export type Database = {
       rename_space: {
         Args: { p_name: string; p_space_id: string };
         Returns: undefined;
+      };
+      resolve_conflict_relation: {
+        Args: { p_changeset_id: string; p_winner_statement_id: string };
+        Returns: string;
+      };
+      resolve_duplicate_relation: {
+        Args: {
+          p_changeset_id: string;
+          p_merged_digest: Json;
+          p_new_references?: Json;
+        };
+        Returns: string;
       };
       restore_ingestion_review: {
         Args: { p_changeset_id: string };

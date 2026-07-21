@@ -67,6 +67,8 @@ interface ChangesetDetail {
   sourceId: string | null;
   revertsId: string | null;
   revertsNumber: number | null;
+  revertDepth: number;
+  invalidatedById: string | null;
   createdAt: string;
   updatedAt: string;
   body: ChangesetDetailBody;
@@ -272,7 +274,7 @@ export async function getChangesetByNumber(args: {
   const { data: row, error } = await supabase
     .from("changesets")
     .select(
-      "id, number, type, status, title, source_id, reverts_id, author_id, created_at, updated_at, changes(action, target_type, target_id, data)",
+      "id, number, type, status, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, created_at, updated_at, changes(action, target_type, target_id, data)",
     )
     .eq("space_id", spaceId)
     .eq("number", number)
@@ -324,6 +326,8 @@ export async function getChangesetByNumber(args: {
     sourceId: row.source_id,
     revertsId: row.reverts_id,
     revertsNumber,
+    revertDepth: row.revert_depth,
+    invalidatedById: row.invalidated_by_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     body,
