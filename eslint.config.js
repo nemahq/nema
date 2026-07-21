@@ -14,6 +14,7 @@ import noForbiddenBreakpoints from "./eslint-rules/no-forbidden-breakpoints.js";
 import noGenericVariableNames from "./eslint-rules/no-generic-variable-names.js";
 import requireNamedPropsInterface from "./eslint-rules/require-named-props-interface.js";
 import requireObjectParams from "./eslint-rules/require-object-params.js";
+import requireStateFgToken from "./eslint-rules/require-state-fg-token.js";
 import requireSuspenseBoundary from "./eslint-rules/require-suspense-boundary.js";
 
 const nemaPlugin = {
@@ -23,6 +24,7 @@ const nemaPlugin = {
     "no-generic-variable-names": noGenericVariableNames,
     "require-named-props-interface": requireNamedPropsInterface,
     "require-object-params": requireObjectParams,
+    "require-state-fg-token": requireStateFgToken,
     "require-suspense-boundary": requireSuspenseBoundary,
   },
 };
@@ -53,6 +55,7 @@ export default tseslint.config(
         },
       ],
       "nema/no-generic-variable-names": "error",
+      "nema/require-state-fg-token": "error",
     },
   },
   {
