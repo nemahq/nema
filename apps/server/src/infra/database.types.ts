@@ -291,6 +291,7 @@ export type Database = {
           extraction_status: Database["public"]["Enums"]["ingestion_status"];
           id: string;
           locator: Json | null;
+          public_id: string;
           source_id: string;
           space_id: string;
           status: Database["public"]["Enums"]["digest_status"];
@@ -306,6 +307,7 @@ export type Database = {
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           locator?: Json | null;
+          public_id?: string;
           source_id: string;
           space_id: string;
           status?: Database["public"]["Enums"]["digest_status"];
@@ -321,6 +323,7 @@ export type Database = {
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           locator?: Json | null;
+          public_id?: string;
           source_id?: string;
           space_id?: string;
           status?: Database["public"]["Enums"]["digest_status"];
@@ -1333,6 +1336,7 @@ export type Database = {
         Args: { p_source_id: string; p_title: string };
         Returns: undefined;
       };
+      generate_digest_public_id: { Args: never; Returns: string };
       generate_space_public_id: { Args: never; Returns: string };
       get_reference_citing_digests: {
         Args: { p_reference_id: string };
