@@ -2,6 +2,7 @@ import { memo } from "react";
 import { Link, linkOptions } from "@tanstack/react-router";
 
 import {
+  Badge,
   cn,
   LIST_ITEM_HOVER_CLASSNAME,
   Separator,
@@ -115,15 +116,14 @@ export const ChangesetListRow = memo(function ChangesetListRow({
             {changesetDisplayTitle({ title, number: changesetNumber }, t)}
           </Text>
           {typeLabelKey && (
-            <Text
-              as="span"
-              size="xs"
-              weight="medium"
-              color="tertiary"
-              className="shrink-0 rounded-full border border-border px-1.5 py-0.5"
+            <Badge
+              variant="outline"
+              shape="pill"
+              size="sm"
+              className="shrink-0"
             >
               {t(typeLabelKey)}
-            </Text>
+            </Badge>
           )}
         </div>
       </div>

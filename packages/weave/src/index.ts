@@ -1,6 +1,11 @@
 export { Alert, type AlertVariant } from "./components/Alert";
 export { Avatar, type AvatarShape } from "./components/Avatar";
-export { Badge, type BadgeVariant } from "./components/Badge";
+export {
+  Badge,
+  type BadgeShape,
+  type BadgeSize,
+  type BadgeVariant,
+} from "./components/Badge";
 export { Button, buttonVariants } from "./components/Button";
 export {
   Card,
