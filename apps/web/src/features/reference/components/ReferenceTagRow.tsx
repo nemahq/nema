@@ -30,15 +30,19 @@ export function ReferenceTagRow({
   const removeTag = useRemoveReferenceTag();
 
   function handleSelectExisting(tag: { id: string; title: string }) {
-    addTag.mutate({ referenceId, tagId: tag.id });
+    return addTag.mutateAsync({ referenceId, tagId: tag.id });
   }
 
-  function handleCreateNew(draft: { title: string; description: string }) {
-    createTag.mutate(draft, {
-      onSuccess: ({ tagId }) => {
-        addTag.mutate({ referenceId, tagId });
-      },
-    });
+  // 생성 성공 후 연결(addTag)만 실패해도 태그 자체는 이미 만들어진 채로 남는다
+  // (고아 태그) — 이걸 여기서 지우거나 재시도하지 않는다. TagAddPopover가 실패
+  // 시 검색 화면으로 돌아가고, tag.list는 createTag.onSuccess에서 이미
+  // invalidate돼 있어 방금 만든 태그가 후보로 뜨니 거기서 다시 선택하면 된다.
+  async function handleCreateNew(draft: {
+    title: string;
+    description: string;
+  }) {
+    const { tagId } = await createTag.mutateAsync(draft);
+    await addTag.mutateAsync({ referenceId, tagId });
   }
 
   return (

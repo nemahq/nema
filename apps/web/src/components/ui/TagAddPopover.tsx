@@ -95,12 +95,15 @@ interface TagAddPopoverProps {
   disabled: boolean;
   excludedTagIds: string[];
   existingLabels: string[];
+  // review-flow는 로컬 draft 배열만 바꾸는 동기 콜백을 넘기고(반환값 없음),
+  // reference-flow는 실제 뮤테이션을 무는 Promise를 반환한다 — 실패 시 팝오버를
+  // 열어둔 채로 재시도할 수 있어야 해서 반환값을 기다린다.
   onSelectExisting: (tag: {
     id: string;
     title: string;
     description: string;
-  }) => void;
-  onCreateNew: (draft: { title: string; description: string }) => void;
+  }) => unknown;
+  onCreateNew: (draft: { title: string; description: string }) => unknown;
 }
 
 export function TagAddPopover({
@@ -132,16 +135,21 @@ export function TagAddPopover({
     }
   }
 
-  function handleSelectExisting(tag: {
+  async function handleSelectExisting(tag: {
     id: string;
     title: string;
     description: string;
   }) {
-    onSelectExisting(tag);
-    handleOpenChange(false);
+    try {
+      await onSelectExisting(tag);
+      handleOpenChange(false);
+    } catch {
+      // 실패하면 팝오버를 열어둔다 — 토스트는 전역 MutationCache가 띄우고,
+      // 검색 결과는 그대로 남아 있어 바로 재시도할 수 있다.
+    }
   }
 
-  function handleSubmitNew() {
+  async function handleSubmitNew() {
     const title = (creatingTitle ?? "").trim();
     const trimmedDescription = description.trim();
     if (
@@ -151,8 +159,15 @@ export function TagAddPopover({
     ) {
       return;
     }
-    onCreateNew({ title, description: trimmedDescription });
-    handleOpenChange(false);
+    try {
+      await onCreateNew({ title, description: trimmedDescription });
+      handleOpenChange(false);
+    } catch {
+      // 생성까지는 됐는데 그 다음 단계(예: reference에 연결)만 실패했을 수 있다 —
+      // 검색 화면으로 돌아가면 이미 만들어진 태그가 후보 목록에 뜨니 거기서 다시
+      // 고르면 된다(같은 이름으로 재생성을 시도해 막히는 것 대신).
+      setCreatingTitle(null);
+    }
   }
 
   return (
