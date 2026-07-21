@@ -91,7 +91,7 @@ export const DigestCandidateCard = memo(function DigestCandidateCard({
               size="icon-sm"
               variant="ghost"
               disabled={disabled}
-              aria-label={t("common.delete")}
+              aria-label={t("review.digest_remove_action")}
               onClick={() => dispatch({ type: "digest/remove", index })}
               className={cn(
                 "size-6 rounded-full text-fg-tertiary opacity-0 transition-none group-hover:opacity-100 focus-visible:opacity-100",
@@ -102,7 +102,7 @@ export const DigestCandidateCard = memo(function DigestCandidateCard({
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" sideOffset={3}>
-            {t("common.delete")}
+            {t("review.digest_remove_action")}
           </TooltipContent>
         </Tooltip>
       </div>

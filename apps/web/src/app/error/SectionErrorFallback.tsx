@@ -13,12 +13,7 @@ export function SectionErrorFallback({
       detail={error.message}
       onRetry={hasRetried ? undefined : reset}
       onRefresh={hasRetried ? () => window.location.reload() : undefined}
-      labels={{
-        pageError: t("error.section_load_failed"),
-        retry: t("common.retry"),
-        refresh: t("error.refresh"),
-        copyError: t("error.copy_error"),
-      }}
+      labels={{ pageError: t("error.section_load_failed") }}
       className="flex-1"
     />
   );

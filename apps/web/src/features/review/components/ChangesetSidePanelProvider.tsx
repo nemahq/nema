@@ -3,6 +3,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useMemo,
   useState,
 } from "react";
 
@@ -72,8 +73,10 @@ export function ChangesetSidePanelProvider({
     setActiveTabId(null);
   }
 
+  const contextValue = useMemo(() => ({ openTab }), [openTab]);
+
   return (
-    <ChangesetSidePanelContext.Provider value={{ openTab }}>
+    <ChangesetSidePanelContext.Provider value={contextValue}>
       <div className="flex min-h-0 flex-1">
         {children}
         {tabs.length > 0 && activeTabId && (
