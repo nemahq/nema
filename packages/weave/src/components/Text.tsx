@@ -77,6 +77,7 @@ function Text<T extends React.ElementType = "p">({
 
 export {
   colorClasses,
+  sizeClasses,
   Text,
   type TextColor,
   type TextProps,

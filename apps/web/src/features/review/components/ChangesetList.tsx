@@ -75,7 +75,7 @@ function ChangesetListContent({ subTab }: ChangesetListProps) {
         />
       ))}
       {query.hasNextPage ? (
-        <div ref={sentinelRef} className="flex flex-col gap-2">
+        <div ref={sentinelRef} className="flex flex-col">
           {query.isFetchingNextPage && <ChangesetListSkeleton />}
         </div>
       ) : (
@@ -107,7 +107,7 @@ export function ChangesetList(props: ChangesetListProps) {
         >
           <Suspense
             fallback={
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col">
                 <ChangesetListSkeleton />
               </div>
             }
