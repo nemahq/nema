@@ -18,6 +18,7 @@ Verify changed code against project conventions. Fix violations in place.
 Identify affected packages from file paths:
 - `apps/web/` → web
 - `apps/server/` → server
+- `packages/weave/` → weave
 - Other (`packages/`, root config) → that package's CLAUDE.md only
 
 ## Step 3 — Load conventions
@@ -25,6 +26,8 @@ Identify affected packages from file paths:
 Read **all** applicable convention sources for each affected package:
 - web: `apps/web/docs/conventions.md` + `apps/web/CLAUDE.md`
 - server: `apps/server/docs/conventions.md` + `apps/server/CLAUDE.md`
+- weave: `docs/guides/weave-usage.md`
+- Any `.tsx` change under `apps/web/` also loads `docs/guides/weave-usage.md` — it governs when to reach for a weave component vs. raw DOM, not just weave's own source.
 - Root `CLAUDE.md` is already in context — do not re-read, but DO include its rules in the checklist.
 
 ## Step 4 — Build checklist
