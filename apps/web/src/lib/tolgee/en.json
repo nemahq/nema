@@ -124,7 +124,6 @@
     "detail_trash_source_dialog_description": "This permanently deletes the source behind this review. Once deleted, this review can't be restored.",
     "detail_trash_source_dialog_title": "Delete the source too?",
     "detail_trash_source_disabled_reason": "The source was already deleted, so this can't be restored.",
-    "digest_remove_action": "Remove this digest candidate",
     "digest_review_title": "Digest review",
     "digest_section_title": "{count, plural, one {Digest (#)} other {Digests (#)}}",
     "digest_title_placeholder": "Title",

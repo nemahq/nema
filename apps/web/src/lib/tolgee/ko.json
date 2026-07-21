@@ -124,7 +124,6 @@
     "detail_trash_source_dialog_description": "이 리뷰의 원본을 완전히 삭제해요. 삭제하면 이 리뷰는 되살릴 수 없어요.",
     "detail_trash_source_dialog_title": "원본도 삭제할까요?",
     "detail_trash_source_disabled_reason": "원본이 이미 삭제되어 되살릴 수 없어요.",
-    "digest_remove_action": "이 다이제스트 후보 삭제",
     "digest_review_title": "다이제스트 리뷰",
     "digest_section_title": "다이제스트 ({count})",
     "digest_title_placeholder": "제목",

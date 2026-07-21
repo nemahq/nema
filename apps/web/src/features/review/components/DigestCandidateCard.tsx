@@ -1,7 +1,15 @@
 import { memo } from "react";
 
 import { DIGEST_TITLE_MAX_LENGTH } from "@nema-io/shared";
-import { Button, Input } from "@nema-io/weave";
+import {
+  Button,
+  cn,
+  Input,
+  NESTED_HOVER_ICON_CLASSNAME,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@nema-io/weave";
 import { Trash2 } from "@nema-io/weave/icons";
 
 import type {
@@ -50,9 +58,9 @@ export const DigestCandidateCard = memo(function DigestCandidateCard({
     digest.tags;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-surface-raised p-4">
+    <div className="group flex flex-col gap-3 rounded-lg border border-border/60 p-4">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <DigestTypeSelect
             bodyType={body.type}
             disabled={disabled}
@@ -73,21 +81,33 @@ export const DigestCandidateCard = memo(function DigestCandidateCard({
             maxLength={DIGEST_TITLE_MAX_LENGTH}
             placeholder={t("review.digest_title_placeholder")}
             aria-invalid={title.trim() === ""}
+            className="h-auto border-transparent bg-transparent px-0 py-1 text-xl font-semibold shadow-none"
           />
         </div>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          disabled={disabled}
-          aria-label={t("review.digest_remove_action")}
-          onClick={() => dispatch({ type: "digest/remove", index })}
-        >
-          <Trash2 />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              disabled={disabled}
+              aria-label={t("common.delete")}
+              onClick={() => dispatch({ type: "digest/remove", index })}
+              className={cn(
+                "size-6 rounded-full text-fg-tertiary opacity-0 transition-none group-hover:opacity-100 focus-visible:opacity-100",
+                NESTED_HOVER_ICON_CLASSNAME,
+              )}
+            >
+              <Trash2 />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={3}>
+            {t("common.delete")}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
-      <p className="text-sm text-fg-secondary">{digest.description}</p>
+      <p className="text-sm text-fg-tertiary">{digest.description}</p>
 
       <DigestBodyFields body={body} />
 
