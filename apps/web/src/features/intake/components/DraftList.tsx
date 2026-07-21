@@ -36,7 +36,7 @@ export function DraftList({ onSelectSource }: DraftListProps) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
         <CircleCheck className="size-12 text-fg-tertiary" strokeWidth={1.5} />
-        <Text size="base" color="tertiary">
+        <Text size="sm" color="tertiary">
           {t("intake.drafts_empty")}
         </Text>
       </div>

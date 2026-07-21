@@ -52,7 +52,7 @@ export function ChangesetStatusPill({
       <icon.Icon className="size-4 shrink-0" strokeWidth={2.5} />
       <Text
         as="span"
-        size="base"
+        size="sm"
         weight="medium"
         color={visual.label ? "primary" : undefined}
         className={cn(!visual.label && "text-inherit")}

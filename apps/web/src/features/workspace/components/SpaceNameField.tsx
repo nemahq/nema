@@ -24,7 +24,7 @@ export function SpaceNameField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <Text as="label" htmlFor={id} size="base" weight="medium" color="primary">
+      <Text as="label" htmlFor={id} size="sm" weight="medium" color="primary">
         {t("space.name_placeholder")}
       </Text>
       <Input

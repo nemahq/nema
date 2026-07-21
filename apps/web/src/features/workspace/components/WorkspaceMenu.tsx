@@ -83,10 +83,10 @@ export function WorkspaceMenu({
       <div className="flex items-center gap-2.5 px-2 py-1.5">
         <Avatar src={user.avatarUrl} fallback={userInitial} />
         <div className="min-w-0">
-          <Text as="div" size="base" color="primary" className="truncate">
+          <Text as="div" size="sm" color="primary" className="truncate">
             {user.displayName}
           </Text>
-          <Text as="div" size="sm" color="tertiary" className="truncate">
+          <Text as="div" size="xs" color="tertiary" className="truncate">
             {user.email}
           </Text>
         </div>

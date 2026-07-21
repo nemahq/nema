@@ -26,7 +26,7 @@ export function AccountSection() {
         <Text as="h2" size="xl" weight="semibold">
           {t("account.profile_title")}
         </Text>
-        <Text size="base" color="tertiary">
+        <Text size="sm" color="tertiary">
           {t("settings.account_subtitle")}
         </Text>
       </div>
@@ -37,10 +37,10 @@ export function AccountSection() {
           <div className="flex items-center gap-3 pt-4">
             <Avatar src={user.avatarUrl} fallback={initial} />
             <div className="min-w-0">
-              <Text as="div" size="base" weight="medium" className="truncate">
+              <Text as="div" size="sm" weight="medium" className="truncate">
                 {user.displayName}
               </Text>
-              <Text as="div" size="sm" color="tertiary" className="truncate">
+              <Text as="div" size="xs" color="tertiary" className="truncate">
                 {user.email}
               </Text>
             </div>

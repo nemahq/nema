@@ -73,7 +73,7 @@ function SpaceDeleteMoveDraftsField({
     <div className="flex flex-col gap-1.5">
       <Text
         as="label"
-        size="sm"
+        size="xs"
         color="tertiary"
         className="peer-disabled:cursor-not-allowed peer-disabled:text-fg-quaternary"
       >
@@ -98,7 +98,7 @@ function SpaceDeleteMoveDraftsField({
       <Text
         as="label"
         htmlFor={checkboxId}
-        size="base"
+        size="sm"
         color="secondary"
         className="flex cursor-pointer items-center gap-2"
       >
@@ -237,7 +237,7 @@ export function SpaceDeleteConfirmForm({
         <Text
           as="label"
           htmlFor={confirmInputId}
-          size="base"
+          size="sm"
           weight="medium"
           color="primary"
         >

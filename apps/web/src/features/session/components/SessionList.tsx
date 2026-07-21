@@ -66,7 +66,7 @@ function SessionListContent() {
     <div className="px-1.5">
       <Text
         as="h2"
-        size="sm"
+        size="xs"
         weight="medium"
         color="tertiary"
         className="px-1.5 pb-1 pt-3"

@@ -9,7 +9,7 @@ export function ChangesetNotFound() {
       <Text as="h1" size="lg" weight="semibold">
         {t("review.detail_not_found_title")}
       </Text>
-      <Text size="base" color="tertiary">
+      <Text size="sm" color="tertiary">
         {t("review.detail_not_found_description")}
       </Text>
     </div>

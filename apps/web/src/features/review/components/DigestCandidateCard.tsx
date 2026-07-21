@@ -108,7 +108,7 @@ export const DigestCandidateCard = memo(function DigestCandidateCard({
         </Tooltip>
       </div>
 
-      <Text size="base" color="tertiary">
+      <Text size="sm" color="tertiary">
         {digest.description}
       </Text>
 

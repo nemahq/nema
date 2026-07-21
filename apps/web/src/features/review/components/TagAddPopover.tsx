@@ -72,7 +72,7 @@ function TagSearchResults({
           </li>
         ))}
         {candidates.length === 0 && trimmed === "" && (
-          <Text as="li" size="base" color="tertiary" className="px-2 py-1.5">
+          <Text as="li" size="sm" color="tertiary" className="px-2 py-1.5">
             {t("review.label_search_empty")}
           </Text>
         )}
@@ -176,12 +176,7 @@ export function TagAddPopover({
               boundaryName="tag-search"
               fallbackRender={() => (
                 <ul className={SEARCH_LIST_CLASSNAME}>
-                  <Text
-                    as="li"
-                    size="base"
-                    color="error"
-                    className="px-2 py-1.5"
-                  >
+                  <Text as="li" size="sm" color="error" className="px-2 py-1.5">
                     {t("review.label_search_error")}
                   </Text>
                 </ul>
@@ -192,7 +187,7 @@ export function TagAddPopover({
                   <ul className={SEARCH_LIST_CLASSNAME}>
                     <Text
                       as="li"
-                      size="base"
+                      size="sm"
                       color="tertiary"
                       className="px-2 py-1.5"
                     >

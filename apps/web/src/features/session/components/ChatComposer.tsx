@@ -105,7 +105,7 @@ export function ChatComposer() {
           onSelect={selectCommand}
         />
       )}
-      <Text size="sm" color="tertiary" className="px-2 pb-1">
+      <Text size="xs" color="tertiary" className="px-2 pb-1">
         <span className={`font-semibold ${MODE_CONFIG[mode].color}`}>
           {t(MODE_CONFIG[mode].labelKey)}
         </span>{" "}

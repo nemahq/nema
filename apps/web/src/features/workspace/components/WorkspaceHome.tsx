@@ -8,7 +8,7 @@ export function WorkspaceHome() {
 
   return (
     <main className="flex flex-1 items-center justify-center bg-surface-card">
-      <Text size="base" color="tertiary">
+      <Text size="sm" color="tertiary">
         {t("common.home")}
       </Text>
     </main>

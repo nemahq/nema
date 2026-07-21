@@ -16,9 +16,9 @@ type TextColor =
   | "info";
 
 const sizeClasses: Record<TextSize, string> = {
-  xs: "text-[11px] leading-[1.4]",
-  sm: "text-[13px] leading-[1.5]",
-  base: "text-[15px] leading-[1.7]",
+  xs: "text-[12px] leading-[1.4]",
+  sm: "text-[14px] leading-[1.5]",
+  base: "text-[16px] leading-[1.7]",
   lg: "text-[18px] leading-[1.4]",
   xl: "text-[20px] leading-[1.4]",
   "2xl": "text-[24px] leading-[1.35]",

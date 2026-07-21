@@ -21,7 +21,7 @@ export function DraftSpaceLabel({ spaceId }: DraftSpaceLabelProps) {
 
   return (
     <span className={SPACE_PILL_CLASSNAME} title={spaceName}>
-      <Text as="span" size="sm" weight="medium" color="primary">
+      <Text as="span" size="xs" weight="medium" color="primary">
         {spaceName}
       </Text>
     </span>

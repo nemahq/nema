@@ -14,7 +14,7 @@ export function StreamErrorMessage() {
 
   return (
     <div className="mt-4 flex items-center gap-2 rounded-md bg-surface-raised px-3 py-2">
-      <Text size="base" color="secondary" className="min-w-0 flex-1">
+      <Text size="sm" color="secondary" className="min-w-0 flex-1">
         {streamError}
       </Text>
       <div className="flex shrink-0 gap-1">

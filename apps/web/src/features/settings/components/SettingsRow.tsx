@@ -27,16 +27,16 @@ export function SettingsRow({
     >
       <div className="flex flex-col gap-0.5 pr-4">
         {htmlFor ? (
-          <Text as="label" htmlFor={htmlFor} size="base" weight="medium">
+          <Text as="label" htmlFor={htmlFor} size="sm" weight="medium">
             {label}
           </Text>
         ) : (
-          <Text as="span" size="base" weight="medium">
+          <Text as="span" size="sm" weight="medium">
             {label}
           </Text>
         )}
         {description && (
-          <Text size="sm" color="tertiary">
+          <Text size="xs" color="tertiary">
             {description}
           </Text>
         )}
