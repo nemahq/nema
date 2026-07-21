@@ -77,7 +77,9 @@ export type Database = {
           author_id: string | null;
           created_at: string;
           id: string;
+          invalidated_by_id: string | null;
           number: number | null;
+          revert_depth: number;
           reverts_id: string | null;
           source_id: string | null;
           space_id: string | null;
@@ -90,7 +92,9 @@ export type Database = {
           author_id?: string | null;
           created_at?: string;
           id?: string;
+          invalidated_by_id?: string | null;
           number?: number | null;
+          revert_depth?: number;
           reverts_id?: string | null;
           source_id?: string | null;
           space_id?: string | null;
@@ -103,7 +107,9 @@ export type Database = {
           author_id?: string | null;
           created_at?: string;
           id?: string;
+          invalidated_by_id?: string | null;
           number?: number | null;
+          revert_depth?: number;
           reverts_id?: string | null;
           source_id?: string | null;
           space_id?: string | null;
@@ -113,6 +119,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "changesets_invalidated_by_id_fkey";
+            columns: ["invalidated_by_id"];
+            isOneToOne: false;
+            referencedRelation: "changesets";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "changesets_reverts_id_fkey";
             columns: ["reverts_id"];
@@ -278,6 +291,7 @@ export type Database = {
           extraction_status: Database["public"]["Enums"]["ingestion_status"];
           id: string;
           locator: Json | null;
+          public_id: string;
           source_id: string;
           space_id: string;
           status: Database["public"]["Enums"]["digest_status"];
@@ -293,6 +307,7 @@ export type Database = {
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           locator?: Json | null;
+          public_id?: string;
           source_id: string;
           space_id: string;
           status?: Database["public"]["Enums"]["digest_status"];
@@ -308,6 +323,7 @@ export type Database = {
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           locator?: Json | null;
+          public_id?: string;
           source_id?: string;
           space_id?: string;
           status?: Database["public"]["Enums"]["digest_status"];
@@ -1191,14 +1207,11 @@ export type Database = {
         };
         Returns: undefined;
       };
-      apply_pending_relation: {
-        Args: { p_changeset_id: string };
-        Returns: string;
-      };
       apply_relation_changesets: {
         Args: { p_applied?: Json; p_pending?: Json; p_source_id: string };
         Returns: undefined;
       };
+      archive_digest: { Args: { p_digest_id: string }; Returns: string };
       archive_reference: { Args: { p_reference_id: string }; Returns: string };
       archive_statement: {
         Args: { p_statement_id: string };
@@ -1324,6 +1337,7 @@ export type Database = {
         Args: { p_source_id: string; p_title: string };
         Returns: undefined;
       };
+      generate_digest_public_id: { Args: never; Returns: string };
       generate_space_public_id: { Args: never; Returns: string };
       get_reference_citing_digests: {
         Args: { p_reference_id: string };
@@ -1364,6 +1378,10 @@ export type Database = {
         };
         Returns: undefined;
       };
+      invalidate_stale_relation_proposals: {
+        Args: { p_invalidated_by: string; p_statement_id: string };
+        Returns: undefined;
+      };
       is_changeset_reverted: {
         Args: { p_changeset_id: string };
         Returns: boolean;
@@ -1377,6 +1395,21 @@ export type Database = {
       link_reference_tag: {
         Args: { p_reference_id: string; p_tag_id: string };
         Returns: undefined;
+      };
+      list_manual_changes_for_target: {
+        Args: {
+          p_target_id: string;
+          p_target_type: Database["public"]["Enums"]["change_target_type"];
+        };
+        Returns: {
+          action: Database["public"]["Enums"]["change_action"];
+          author_id: string;
+          changeset_id: string;
+          changeset_number: number;
+          created_at: string;
+          data: Json;
+          id: string;
+        }[];
       };
       mark_first_entry: { Args: never; Returns: boolean };
       pending_draft_source_ids: {
@@ -1419,10 +1452,24 @@ export type Database = {
         Args: { p_name: string; p_space_id: string };
         Returns: undefined;
       };
+      resolve_conflict_relation: {
+        Args: { p_changeset_id: string; p_winner_statement_id: string };
+        Returns: string;
+      };
+      resolve_duplicate_relation: {
+        Args: {
+          p_changeset_id: string;
+          p_merged_digest: Json;
+          p_new_references?: Json;
+        };
+        Returns: string;
+      };
+      restore_digest: { Args: { p_digest_id: string }; Returns: string };
       restore_ingestion_review: {
         Args: { p_changeset_id: string };
         Returns: undefined;
       };
+      restore_reference: { Args: { p_reference_id: string }; Returns: string };
       restore_tag: { Args: { p_tag_id: string }; Returns: undefined };
       restore_topic: { Args: { p_topic_id: string }; Returns: undefined };
       restore_trashed_source: {

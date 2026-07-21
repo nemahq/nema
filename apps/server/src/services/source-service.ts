@@ -563,6 +563,12 @@ export async function getSource(args: {
 // 병합이 풀리면(관계 archived) 자동 제외된다. ownSourceId(지금 보는 글)는 뺀다 — 같은 글 안
 // 비대칭 합치기가 "다른 글에도 있음"으로 잘못 세어지지 않게(cross-source 보강만 센다). 한
 // 단계만 따른다: keeper는 늘 살아남는 쪽이라(가리는 건 새 진술뿐) 병합 사슬이 안 생긴다.
+//
+// resolve_duplicate_relation(relation_judgment 마이그레이션) 도입 이후로는 이 전제가
+// 새 병합 건에는 더 이상 성립하지 않는다 — 실제 판정 병합은 duplicates 관계를 만들지
+// 않고 keeper·duplicate 양쪽 Digest·진술을 모두 archive하기 때문이다(surface-inventory.md
+// "관계 판정 화면(중복/병합)"). 이 함수는 그 이전에 즉시-병합으로 만들어진 과거 데이터만
+// 계속 찾아낸다 — Kyle 확인 후 의도적으로 남겨둔 상태(2026-07-21).
 export async function fetchMergedSourceIds(params: {
   supabase: TypedSupabaseClient;
   keeperIds: string[];

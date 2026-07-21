@@ -1,4 +1,3 @@
-import { registerApplyPendingRelation } from "@mcp/tools/apply-pending-relation";
 import { registerArchiveStatement } from "@mcp/tools/archive-statement";
 import { registerConfirmIngestionReview } from "@mcp/tools/confirm-ingestion-review";
 import { registerCreateSource } from "@mcp/tools/create-source";
@@ -11,6 +10,8 @@ import { registerListPendingSources } from "@mcp/tools/list-pending-sources";
 import { registerListTopics } from "@mcp/tools/list-topics";
 import { registerNarrate } from "@mcp/tools/narrate";
 import { registerRejectPendingRelation } from "@mcp/tools/reject-pending-relation";
+import { registerResolveConflictRelation } from "@mcp/tools/resolve-conflict-relation";
+import { registerResolveDuplicateRelation } from "@mcp/tools/resolve-duplicate-relation";
 import { registerRevertChangeset } from "@mcp/tools/revert-changeset";
 import { registerUpdateIngestionReview } from "@mcp/tools/update-ingestion-review";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -34,7 +35,8 @@ export function createMcpServer(): McpServer {
   registerRevertChangeset(server);
   registerArchiveStatement(server);
   registerListPendingRelations(server);
-  registerApplyPendingRelation(server);
+  registerResolveConflictRelation(server);
+  registerResolveDuplicateRelation(server);
   registerRejectPendingRelation(server);
 
   return server;

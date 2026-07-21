@@ -3,15 +3,37 @@ import { Suspense, useState } from "react";
 import { Button } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import type { Marking } from "@web/features/dev-harness/components/PendingRelationCard";
 import { PendingRelationCard } from "@web/features/dev-harness/components/PendingRelationCard";
-import { useApplyPendingRelation } from "@web/features/dev-harness/hooks/useApplyPendingRelation";
 import { useInterventionInvalidation } from "@web/features/dev-harness/hooks/useInterventionInvalidation";
 import { usePendingRelationListSuspenseQuery } from "@web/features/dev-harness/hooks/usePendingRelationListQuery";
 import { useRejectPendingRelation } from "@web/features/dev-harness/hooks/useRejectPendingRelation";
+import { useResolveConflictRelation } from "@web/features/dev-harness/hooks/useResolveConflictRelation";
+import { useResolveDuplicateRelation } from "@web/features/dev-harness/hooks/useResolveDuplicateRelation";
+import type { PendingRelation } from "@web/features/dev-harness/types";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
-type Marking = "apply" | "reject";
 type SubmitResult = { ok: true } | { ok: false; message: string };
+
+// 하니스는 병합 제안 편집 UI가 없다 — keeper(from) Digest의 현재 내용을 그대로
+// 기본 병합안으로 써서 RPC 계약만 실 데이터로 검증한다(review-flow.md "중복 판정 —
+// 병합"의 실사용 편집 화면은 후속 세션 몫).
+function defaultMergedDigest(proposal: PendingRelation) {
+  const digest = proposal.from?.digest;
+  if (!digest) {
+    return null;
+  }
+  return {
+    title: digest.title,
+    description: digest.description,
+    body: digest.body,
+    topics: [],
+    tags: [],
+    referenceIds: [],
+    newReferenceKeys: [],
+    externalUrls: digest.externalUrls,
+  };
+}
 
 function ReviewPanelContent() {
   const [{ proposals }] = usePendingRelationListSuspenseQuery();
@@ -22,7 +44,8 @@ function ReviewPanelContent() {
   );
   const [submitting, setSubmitting] = useState(false);
 
-  const applyRelation = useApplyPendingRelation();
+  const resolveConflict = useResolveConflictRelation();
+  const resolveDuplicate = useResolveDuplicateRelation();
   const rejectRelation = useRejectPendingRelation();
   const invalidate = useInterventionInvalidation();
 
@@ -42,6 +65,7 @@ function ReviewPanelContent() {
   // 항목별 결과를 남기고 성공분만 마킹에서 비운다(실패분은 카드에 에러와 함께 유지).
   async function handleSubmit() {
     setSubmitting(true);
+    const proposalsById = new Map(proposals.map((p) => [p.changesetId, p]));
     const nextResults = new Map<string, SubmitResult>();
     const remaining = new Map<string, Marking>();
     let ok = 0;
@@ -49,8 +73,24 @@ function ReviewPanelContent() {
 
     for (const [changesetId, action] of markings) {
       try {
-        if (action === "apply") {
-          await applyRelation.mutateAsync({ changesetId });
+        if (action.kind === "winner") {
+          await resolveConflict.mutateAsync({
+            changesetId,
+            winnerStatementId: action.statementId,
+          });
+        } else if (action.kind === "merge") {
+          const proposal = proposalsById.get(changesetId);
+          const mergedDigest = proposal && defaultMergedDigest(proposal);
+          if (!mergedDigest) {
+            throw new Error(
+              "merge default unavailable — keeper digest missing",
+            );
+          }
+          await resolveDuplicate.mutateAsync({
+            changesetId,
+            mergedDigest,
+            newReferences: [],
+          });
         } else {
           await rejectRelation.mutateAsync({ changesetId });
         }
@@ -116,8 +156,8 @@ function ReviewPanelContent() {
               relationType={proposal.relationType}
               stale={proposal.stale}
               createdAt={proposal.createdAt}
-              fromContent={proposal.from?.content}
-              toContent={proposal.to?.content}
+              from={proposal.from ?? undefined}
+              to={proposal.to ?? undefined}
               marking={markings.get(proposal.changesetId)}
               resultOk={result?.ok === true}
               resultMessage={result && !result.ok ? result.message : undefined}
