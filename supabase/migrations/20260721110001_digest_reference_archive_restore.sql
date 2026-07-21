@@ -326,7 +326,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 
 -- =============================================================
--- 4) 대상(Digest/Reference)별 manual changeset 이력 조회
+-- 4) 대상(Digest/Reference)별 수정 이력 조회
 --
 --   surface-inventory.md "변경 이력" 모달(좌측 diff, 우측 시각+수정자 목록,
 --   changeset 번호·라벨은 안 보여줌) 설계 참고. changesets/changes의 RLS는
@@ -335,6 +335,14 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 --   막힌다 — RLS 정책 자체를 넓히는 대신(다른 소비처에 영향이 갈 블라스트
 --   반경이라) get_reference_citing_digests와 같은 이유로 전용 RPC로
 --   멤버십을 직접 검증한다.
+--
+--   manual뿐 아니라 revert도 함께 조회한다 — 이 모달의 목적이 "이 대상에게
+--   무슨 일이 있었는지 추적"인데, manual만 보면 archive_digest/archive_reference·
+--   confirm_digest_edit·update_reference가 만든 이력만 보이고 그걸 되돌린
+--   revert_changeset(되살리기 포함)은 안 보인다 — 실제로는 active인 대상이
+--   이력엔 "archived됨"만 남아 실제 상태와 화면이 어긋난다. revert changeset도
+--   ch.target_id로 이미 좁혀져 있어(대상과 무관한 revert는 안 걸림) manual과
+--   합쳐도 안전하다.
 -- =============================================================
 
 CREATE FUNCTION list_manual_changes_for_target(
@@ -371,7 +379,8 @@ BEGIN
   SELECT ch.id, ch.changeset_id, cs.number, cs.author_id, ch.created_at, ch.action, ch.data
   FROM changes ch
   JOIN changesets cs ON cs.id = ch.changeset_id
-  WHERE ch.target_type = p_target_type AND ch.target_id = p_target_id AND cs.type = 'manual'
+  WHERE ch.target_type = p_target_type AND ch.target_id = p_target_id
+    AND cs.type IN ('manual', 'revert')
   ORDER BY ch.created_at DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;

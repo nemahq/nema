@@ -532,6 +532,7 @@ interface ManualChangeHistoryEntry {
 // 변경 이력 모달(Digest 상세·Reference 상세 공용, surface-inventory.md "변경 이력")
 // — RLS(is_space_member)가 space_id NULL인 Reference manual changeset을 걸러내므로
 // (get_reference_citing_digests와 같은 이유) RPC로 멤버십을 직접 검증해 우회한다.
+// manual뿐 아니라 revert(되살리기 포함)도 함께 내려온다 — RPC 주석 참고.
 export async function listManualChangeHistory(args: {
   supabase: TypedSupabaseClient;
   targetType: ManualChangeHistoryTargetType;
