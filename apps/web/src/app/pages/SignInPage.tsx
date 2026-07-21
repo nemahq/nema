@@ -127,9 +127,9 @@ export function SignInPage() {
               </Button>
 
               <div className="flex items-center gap-3">
-                <Separator className="flex-1" />
+                <Separator className="flex-1 bg-border" />
                 <span className="text-sm text-fg-tertiary">{t("auth.or")}</span>
-                <Separator className="flex-1" />
+                <Separator className="flex-1 bg-border" />
               </div>
 
               <form

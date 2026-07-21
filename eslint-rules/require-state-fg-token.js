@@ -6,13 +6,14 @@ const EXPECTED = {
   placeholder: "quaternary",
 };
 
-// 한 클래스 토큰이 어떤 상태를 칠하는지 판정한다. disabled가 우선인 이유:
-// disabled:placeholder:text-* 는 "비활성일 때의 placeholder"라 비활성 쪽이다.
+// disabled가 우선인 이유: disabled:placeholder:text-* 는 "비활성일 때의
+// placeholder"라 비활성 쪽이다. peer-disabled:/group-disabled:의 "-disabled:"는
+// 하이픈 결합이라 "(^|:)disabled:"만으론 안 걸린다.
 function stateOf(token) {
-  if (/(^|:)disabled:/.test(token) || token.includes("[disabled]")) {
+  if (/(^|:|-)disabled:/.test(token) || token.includes("[disabled]")) {
     return "disabled";
   }
-  if (/(^|:)placeholder:/.test(token) || token.includes("[placeholder]")) {
+  if (/(^|:|-)placeholder:/.test(token) || token.includes("[placeholder]")) {
     return "placeholder";
   }
   return null;

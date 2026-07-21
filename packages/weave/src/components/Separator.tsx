@@ -16,9 +16,10 @@ function Separator({
   decorative = true,
   ...props
 }: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
-  // 방향 분기를 data-[orientation=*] 대신 JS로 가른다 — 속성 선택자는 특이도가
-  // 유틸리티 클래스보다 높아 소비처의 w-auto가 base의 w-full에 지고,
-  // tailwind-merge도 variant가 달라 둘을 충돌로 안 본다(인셋 구분선을 못 만든다).
+  // 방향 분기를 data-[orientation=*] 대신 JS로 가른다 — Tailwind가 이 variant를
+  // 클래스+속성 복합 선택자로 컴파일해 특이도가 (0,2,0)이 되고, 소비처가 넘긴
+  // 평범한 w-auto(0,1,0)가 진다. tailwind-merge도 variant가 달라 둘을 충돌로
+  // 안 봐서 둘 다 남는다(인셋 구분선을 못 만든다).
   return (
     <SeparatorPrimitive.Root
       data-slot="separator"

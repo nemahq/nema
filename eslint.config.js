@@ -57,6 +57,16 @@ export default tseslint.config(
         },
       ],
       "nema/no-generic-variable-names": "error",
+    },
+  },
+  {
+    // Tailwind className 문자열을 겨냥한 룰 — 서버·설정 파일 등 JSX/스타일링과
+    // 무관한 영역까지 스캔하면 우연히 매칭되는 문자열에 오탐할 수 있어 범위를
+    // 좁힌다. .ts도 포함하는 이유: className 상수(SPACE_PILL_CLASSNAME 등)가
+    // .tsx가 아닌 .ts 파일에도 있다.
+    files: ["apps/web/**/*.{ts,tsx}", "packages/weave/**/*.{ts,tsx}"],
+    plugins: { nema: nemaPlugin },
+    rules: {
       "nema/require-state-fg-token": "error",
       "nema/no-raw-color-value": "error",
     },

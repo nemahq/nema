@@ -51,4 +51,4 @@ function Avatar({
   );
 }
 
-export { Avatar };
+export { Avatar, type AvatarShape };
