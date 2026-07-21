@@ -19,7 +19,7 @@ const BADGE_CLASS =
 // 검토 대기 카운트 — 메뉴(...)와 같은 자리(size-5, right-3.5)에 겹쳐 앉는다.
 // SpaceTabButton과 같은 Badge(variant="success")를 재사용해 같은 신호는 같은
 // 컴포넌트로 표현한다.
-const PENDING_BADGE_CLASS = "h-5 px-2 text-[10px]";
+const PENDING_BADGE_CLASS = "h-5 px-2 text-xs";
 
 interface SpaceListItemProps {
   spaceId: string;

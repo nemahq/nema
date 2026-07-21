@@ -74,8 +74,7 @@ function SpaceDeleteMoveDraftsField({
       <Text
         as="label"
         size="xs"
-        color="tertiary"
-        className="peer-disabled:cursor-not-allowed peer-disabled:text-fg-quaternary"
+        color={deleteTogether ? "quaternary" : "tertiary"}
       >
         {t("space.delete_pending_drafts_label", { count: draftCount })}
       </Text>
@@ -84,7 +83,7 @@ function SpaceDeleteMoveDraftsField({
         onValueChange={onManualTargetSpaceIdChange}
         disabled={deleteTogether}
       >
-        <SelectTrigger className="peer">
+        <SelectTrigger>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

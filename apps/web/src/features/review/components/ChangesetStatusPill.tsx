@@ -44,7 +44,7 @@ export function ChangesetStatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full py-1 pl-2 pr-3",
+        "inline-flex items-center gap-1.5 rounded-full py-1 pl-2 pr-3 text-sm",
         visual.container,
         className,
       )}
@@ -54,7 +54,6 @@ export function ChangesetStatusPill({
         as="span"
         size="sm"
         weight="medium"
-        color={visual.label ? "primary" : undefined}
         className={cn(!visual.label && "text-inherit")}
       >
         {t(labelKey)}

@@ -2,6 +2,8 @@ import { TextSkeleton } from "@nema-io/weave";
 
 const SKELETON_COUNT = 4;
 const WIDTHS = ["w-3/4", "w-1/2", "w-5/6", "w-2/3"];
+const SKELETON_STAGGER_DELAY_MS = 100;
+const SKELETON_OPACITY_STEP = 0.15;
 
 export function SessionListSkeleton() {
   return (
@@ -17,8 +19,8 @@ export function SessionListSkeleton() {
               size="sm"
               className={WIDTHS[i]}
               style={{
-                animationDelay: `${i * 100}ms`,
-                opacity: 1 - i * 0.15,
+                animationDelay: `${i * SKELETON_STAGGER_DELAY_MS}ms`,
+                opacity: 1 - i * SKELETON_OPACITY_STEP,
               }}
             />
           </div>

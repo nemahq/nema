@@ -36,7 +36,11 @@ export function AccountDeleteConfirmField({
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor={confirmFieldId}>
+        <Label
+          htmlFor={confirmFieldId}
+          color={disabled ? "quaternary" : "primary"}
+          className="leading-normal"
+        >
           {t("common.delete_confirm_instruction", {
             value: hasEmail ? user.email : user.displayName,
           })}
@@ -48,7 +52,6 @@ export function AccountDeleteConfirmField({
           placeholder={confirmationTarget}
           autoComplete="off"
           disabled={disabled}
-          className="peer"
         />
       </div>
 
