@@ -149,7 +149,6 @@
     "reference_section_title": "{count, plural, one {Reference (#)} other {References (#)}}",
     "reference_title_placeholder": "Name",
     "reference_type_label": "Reference type",
-    "source_text_panel_title": "View original text",
     "status_applied": "Applied",
     "status_discarded": "Declined",
     "status_pending": "Needs review",

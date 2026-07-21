@@ -44,11 +44,15 @@ export function DigestBodyFields({ body }: DigestBodyFieldsProps) {
   }
 
   return (
-    <dl className="flex flex-col gap-1.5 rounded-md bg-surface-card p-3 text-sm">
+    <dl className="flex flex-col gap-3">
       {rows.map((row) => (
-        <div key={row.label} className="flex gap-2">
-          <dt className="w-20 shrink-0 text-fg-tertiary">{row.label}</dt>
-          <dd className="min-w-0 flex-1 text-fg-primary">{row.value}</dd>
+        <div key={row.label}>
+          <dt className="text-xs font-medium tracking-wide text-fg-tertiary uppercase">
+            {row.label}
+          </dt>
+          <dd className="mt-0.5 text-[15px] leading-relaxed text-fg-primary">
+            {row.value}
+          </dd>
         </div>
       ))}
     </dl>

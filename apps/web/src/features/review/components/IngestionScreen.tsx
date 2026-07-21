@@ -1,12 +1,11 @@
 import { Suspense, useMemo } from "react";
 
-import { Skeleton } from "@nema-io/weave";
-
 import { useNotificationSoftAsk } from "@web/features/notifications";
 import {
   confirmDisabledReason as computeConfirmDisabledReason,
   runConfirmReview,
 } from "@web/features/review/confirmReviewFlow";
+import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDigestReviewQuery";
@@ -24,7 +23,6 @@ import { DigestSection } from "./DigestSection";
 import { EditingProvider, useEditing } from "./EditingProvider";
 import { IngestionActions } from "./IngestionActions";
 import { ReferenceSection } from "./ReferenceSection";
-import { SourceTextPanel } from "./SourceTextPanel";
 
 const CONFIRM_DISABLED_REASON_KEY = {
   no_candidates: "review.confirm_disabled_no_candidates",
@@ -68,10 +66,25 @@ function IngestionContent() {
   const discardReview = useDiscardReview(spaceId, changesetNumber);
   const showNotificationSoftAsk = useNotificationSoftAsk();
 
+  // ChangesetDetailRouter가 이미 구독 중인 같은 쿼리라 새 요청은 안 나간다 — 확정·
+  // 버리기 성공 후 이 쿼리가 다시 fetch되어야 실제로 ChangesetRecordScreen으로
+  // 넘어가므로, 그 재조회가 끝날 때까지도 버튼을 계속 잠가둔다(그 전엔 mutation
+  // 자체는 끝났어도 화면은 아직 안 바뀐 상태). isFetching을 mutation 성공 여부와
+  // 무관하게 걸면 포커스 재진입 등 무관한 백그라운드 재조회에도 폼이 잠기므로,
+  // 확정·버리기가 실제로 성공한 뒤의 재조회로만 좁힌다.
+  const [, changesetDetailQuery] = useChangesetDetailSuspenseQuery(
+    spaceId,
+    changesetNumber,
+  );
+  const settling =
+    (confirmReview.isSuccess || discardReview.isSuccess) &&
+    changesetDetailQuery.isFetching;
+
   const locked =
     updateReview.isPending ||
     confirmReview.isPending ||
-    discardReview.isPendingAfterDelay;
+    discardReview.isPendingAfterDelay ||
+    settling;
   const error =
     updateReview.error ?? confirmReview.error ?? discardReview.error;
   const confirmDisabled =
@@ -148,8 +161,6 @@ function IngestionContent() {
         <p className="text-sm text-status-error">{getErrorMessage(error)}</p>
       )}
 
-      <SourceTextPanel body={review.sourceBody} />
-
       <DigestSection
         digests={review.digests}
         citedReferences={review.citedReferences}
@@ -171,15 +182,7 @@ function IngestionContent() {
 // 책임진다.
 export function IngestionScreen() {
   return (
-    <Suspense
-      fallback={
-        <ChangesetDetailLayoutSkeleton>
-          <Skeleton className="h-8 w-1/2" />
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </ChangesetDetailLayoutSkeleton>
-      }
-    >
+    <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
       <EditingProvider>
         <IngestionContent />
       </EditingProvider>

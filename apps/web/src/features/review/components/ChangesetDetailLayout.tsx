@@ -13,9 +13,9 @@ export function ChangesetDetailLayout({
   children,
 }: ChangesetDetailLayoutProps) {
   return (
-    <main className="flex flex-1 flex-col bg-surface-card">
+    <main className="flex min-h-0 flex-1 flex-col bg-surface-card">
       <ChangesetDetailNavigationBar title={title} />
-      <div data-main-scroll-area className="flex-1 overflow-y-auto">
+      <div data-main-scroll-area className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-6">
           {children}
         </div>

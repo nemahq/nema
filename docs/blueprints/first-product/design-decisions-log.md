@@ -993,3 +993,35 @@ Digest 리뷰 화면 헤더 폴리싱에서 출발했는데, "리뷰 대기 화�
 **확정/버리기 후 별도 navigate 제거 — invalidate만으로 화면 전환**: 통합 전엔 Open에서 확정·버리기가 성공하면 `goToClosedReview()`로 `/changesets/$number`(Closed URL)로 명시적으로 이동해야 했다. 이제 두 화면이 URL을 공유하므로, `useConfirmReview`/`useDiscardReview`가 `changeset.getByNumber`를 무효화하기만 하면 같은 URL의 게이트가 새 status를 읽어 자연히 `ClosedReviewScreen`으로 넘어간다 — GitHub이 PR을 merge해도 페이지를 안 옮기고 같은 자리에서 상태 배지만 바뀌는 것과 같은 동작.
 
 **게이트 레이어링 — 공통 게이트가 space·number 해석과 NOT_FOUND를 전담, 두 화면은 콘텐츠 쿼리만**: 통합 전엔 `OpenReviewScreen`·`ClosedReviewScreen` 각자가 자기 안에 space 해석 + NOT_FOUND 처리를 중복으로 갖고 있었다. `ChangesetDetailScreen`이 이를 한 번만 하고 나면 두 화면은 이미 유효한 `{spacePublicId, spaceId, number}`만 받아 자기 콘텐츠 쿼리(`digestReview.get`/`changeset.getByNumber`)의 Suspense만 책임지면 돼, 두 화면에서 게이트 관련 코드(ErrorBoundary·`ReviewNotFound`·`useSpaceListSuspenseQuery`)를 걷어냈다.
+
+---
+
+### 2026-07-21 — Digest 리뷰 카드 정보 위계 재정렬 착수 (인수인계, wt-3 `polish/changeset-detail-body`)
+
+Digest 리뷰 카드가 지금까지 "판단 대상·근거·부가정보가 다 같은 무게로 나열된 폼"처럼 보인다는 문제의식에서, 레퍼런스 조사부터 새로 하고 실제 화면에 처음 적용한 라운드(레퍼런스 판단 자체는 design-reference-log.md ⑦번 "정보 위계 — Digest 리뷰 화면 실행 품질" 참고, 여기엔 적용 규칙만). 순서는 카드 구조 → 페이지 레이아웃 → 디테일이고, 카드 중에서도 다이제스트가 먼저(필드 종류·개수가 더 다양해 위계 패턴을 여기서 검증한 뒤 레퍼런스 카드에 재사용하는 게 순서) — **레퍼런스 카드는 아직 착수 전**이고, 그 카드의 "기존 설명→바뀔 설명" diff 문제는 이미 ④(Figma 구조화 diff — 라인 단위 텍스트 diff가 아니라 필드 단위 전/후 비교)에 답이 있어 그대로 가져다 쓸 예정.
+
+**확정된 규칙**
+- `body`(구조화 필드)가 이 카드의 판단 대상이지 `title`이 아니다 — `title`은 스캔용 라벨(헤드라인 취급), `description`은 3티어로 낮춤. `description`은 원래 "피드 미리보기"용 필드(07-modeling.md)인데 그 피드가 아직 없어 이 리뷰 카드가 유일하게 사람이 검증하는 자리다 — 그래서 화면에서 완전히 빼지 않고 낮춰서만 유지한다(완전히 빼면 나중에 피드가 생겼을 때 한 번도 사람이 검토 안 한 문구가 그대로 노출됨).
+- 카드는 border만, 배경 채움·그림자 둘 다 없음 — 이 앱에서 그림자는 팝오버/모달 같은 elevated 레이어 전용(`POPOVER_SURFACE_CLASSNAME` 주석 참고)이고 인라인 카드·행에 쓰는 전례가 어디에도 없다. 카드 자체엔 호버 배경도 안 넣는다 — `LIST_ITEM_HOVER_CLASSNAME`은 "카드 전체를 누르면 어딘가로 이동하는 행"에만 쓰는 톤인데, 이 카드는 전체 클릭 액션이 없고 내부 요소마다 개별 인터랙션이라 그 신호가 안 맞는다.
+- 삭제 버튼은 호버·focus-visible 시에만 노출(초안 리스트 우측 아이콘과 동일 패턴 — `NESTED_HOVER_ICON_CLASSNAME`, 애니메이션 없음). **`Button` 컴포넌트 기본 클래스에 `transition-all`이 박혀 있어서, `opacity-0 → 100` 자체엔 트랜지션을 안 얹어도 그 기본값이 살아서 스르륵 뜬다 — 진짜 즉시 나타나게 하려면 `transition-none`으로 명시로 꺼야 한다**(diff만 봐선 놓치기 쉬운 함정이라 남김).
+- 상태 pill(`ChangesetStatusPill`) 크기는 원래 값(`text-sm`/`size-4`)에서 안 바꾸는 걸로 확정 — 실제 화면에서 확인해보니 색(틸)이 흑백 위주 헤더에서 크기와 무관하게 이미 충분히 튀어서, 크기를 키우는 대신 색 대비가 스캔성을 담당한다고 판단(더 크게/중간 크기 다 시도해봤으나 원래 크기로 복귀).
+
+**아직 안 정한 것**
+- "+주제"/"+태그" 추가 버튼, 태그·토픽 칩의 "×" 제거 버튼도 삭제 버튼과 같은 이유로 호버-리빌 후보로 제안됐으나, `TagAddPopover`/`LabelChipShell`이 다이제스트 카드 밖(레퍼런스 카드 등)에서도 같이 쓰는 공용 컴포넌트라 범위가 이 라운드보다 넓어져 보류 — 다음에 이 부분 만질 때 결정.
+- 레퍼런스 카드, 페이지 전체 레이아웃(카드 간 배치·원문 사이드패널과의 관계)은 전부 착수 전.
+
+관련 커밋: `0f5538ee`(Digest 카드 위계 재정렬 + 삭제 버튼 호버화).
+
+---
+
+### 2026-07-21 — 원문 사이드 패널 인프라 도입, 확정/버리기/온보딩 버튼 깜빡임 수정
+
+**원문 보기를 본문 인라인 박스에서 사이드 패널 다중 탭으로 전환**: 초안 페이지의 `SidePanel`(리사이즈 가능한 셸)과 v1 세션 화면(`features/session/`)의 `TabbedPanel`/`TabbedPanelLayout`을 그대로 재사용하고, `ChangesetSidePanelProvider`로 감쌌다. Digest·Reference 상세도 같은 사이드뷰를 공유하게 될 걸 감안해(surface-inventory.md "Digest 상세" §사이드뷰) 처음부터 다중 탭 컨테이너로 잡았다 — 같은 id로 다시 `openTab`하면 새 탭 대신 기존 탭을 포커스하는 규약도 그 스펙을 따른 것.
+
+**Provider는 그 훅을 쓰는 컴포넌트의 조상이어야 한다 — 처음엔 반대로 둬서 런타임 에러가 났다.** `ChangesetDetailLayout`(각 화면 컴포넌트가 호출하는, 즉 트리상 자식) 안에 Provider를 두고 그 화면 컴포넌트에서 `useChangesetSidePanel()`을 불렀더니, 훅 호출 시점엔 Provider가 아직 트리에 없어 매번 throw — 이게 겉으로는 staging 503처럼 보이는 노이즈를 만들어 한참 삽질했다(디버깅 중 브라우저 확인을 여러 번 반복하는 대신 코드로 원인을 추론하라는 피드백을 받음). 실제 원인은 에러 메시지 원문("useReviewSidePanel은 ReviewSidePanelProvider 안에서만 호출할 수 있다")을 사용자가 그대로 전달해준 뒤에야 확인됨. Provider를 두 화면(Ingestion/Record)의 공통 진입점인 `ChangesetDetailScreen`으로 옮겨 해결 — 라우트 shell이 `changesetNumber`로 이미 key를 걸어둬서, 다른 changeset으로 넘어가면 Provider째로 리마운트되어 열려있던 탭도 자연히 정리된다.
+
+**자동 오픈은 결국 걷어냈다.** 진입 시 원문 탭을 자동으로 여는 `useEffect`를 넣었다가(Provider가 Suspense 경계 밖에 이미 떠 있어 렌더 중 파생이 안 되는 구조라 effect가 유일한 연결 수단이었음), "원문 보기" 트리거 버튼도 만들었다가, 결국 둘 다 뺐다 — 트리거는 원래 다이제스트·레퍼런스 카드 쪽에 붙어야 하는 거라(아직 미착수) 화면 최상단에 임시로 버튼을 두는 게 어색했고, 트리거가 없는 상태에서 패널만 자동으로 뜨는 것도 안 맞았다. `ChangesetSidePanelProvider`(`ChangesetSidePanelProvider.tsx`) 인프라 자체는 그대로 남겨뒀다 — 카드 쪽 트리거가 생기면 바로 `openTab`을 호출하면 된다. 패널 안 제목·본문 타이포그래피(`text-xl font-bold`/`text-sm leading-relaxed`, 둘 다 `text-fg-primary`)는 초안 사이드 패널(`DraftTitleInput`/`DraftBodyEditor`)과 맞춰뒀다.
+
+**확정·버리기·온보딩 버튼이 성공 직후 잠깐 다시 눌리는 것처럼 보이는 버그 수정**: 원인은 mutation의 `isPending`이 서버 요청 자체가 끝나는 순간 꺼지는데, `onSuccess`가 건 `invalidate()`의 재조회가 끝나야 실제로 화면이 다음 상태로 넘어가서(리뷰 화면 전환, 온보딩 모달 닫힘) 그 사이 공백이 생기는 것. 같은 화면에 계속 머무는 케이스(`useDiscardReview`/`useConfirmReview`/`useUpdateReview`, `useUpdateProfile`)에서만 사용자 눈에 보이고, 바로 navigate하거나 모달이 닫히는 케이스(`useRevertChangeset`, Space 생성/수정/삭제)는 버튼 자체가 사라져서 안 보임 — 후자는 안 고쳤다.
+
+처음엔 `onSuccess`가 invalidate를 `await`하게 만들고(`invalidateAll` 헬퍼 + 커스텀 eslint 규칙 `require-await-invalidate`까지 만들어 전역 강제하려 했음) 넘어가려 했으나, "mutation 하나가 무효화하는 쿼리 중엔 이 버튼이랑 상관없는 것도 섞여 있어서, 그것까지 다 기다리게 만드는 건 과하다"는 지적으로 뒤집었다(TanStack이 await을 강제 안 하는 것도 낙관적 업데이트 등 의도적으로 기다리지 않아야 하는 케이스가 있어서라는 논리). 대신 **화면 전환을 실제로 만드는 그 쿼리를 소비 컴포넌트가 한 번 더 구독해서 `isFetching`을 잠금 조건에 추가**하는 쪽으로 최종 정리 — 같은 쿼리 키라 새 네트워크 요청은 안 나가고, 이 화면과 무관한 다른 invalidate(초안·변경셋 목록 등)까지 기다리지 않아도 된다. eslint 규칙은 만들었다가 폐기(등록 후 다시 제거, 파일도 삭제 — 최종 diff는 없음). 관련 커밋: `9c62e64e`(사이드 패널 도입), `29d0a137`(버튼 깜빡임 수정), `63c66700`(자동 오픈 제거).

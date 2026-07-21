@@ -3,6 +3,7 @@
   "ignoreBinaries": ["supabase"],
   "ignoreDependencies": ["estree", "vitest"],
   "ignore": [".claude/**"],
+  "tags": ["-lintignore"],
   "workspaces": {
     "apps/web": {
       "project": ["src/**/*.{ts,tsx}"]

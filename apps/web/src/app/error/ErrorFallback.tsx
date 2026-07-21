@@ -23,7 +23,7 @@ interface ErrorFallbackProps {
   onRefresh?: () => void;
   showBranding?: boolean;
   className?: string;
-  labels?: ErrorFallbackLabels;
+  labels?: Partial<ErrorFallbackLabels>;
   size?: ErrorFallbackSize;
 }
 

@@ -20,13 +20,21 @@ import {
 } from "@nema-io/weave";
 
 import { Dialog } from "@web/components/ui/Dialog";
-import { LANGUAGE_LABELS, useUpdateProfile } from "@web/features/profile";
+import {
+  LANGUAGE_LABELS,
+  useProfileQuery,
+  useUpdateProfile,
+} from "@web/features/profile";
 import { useTranslation } from "@web/lib/tolgee";
 
 export function OnboardingModal() {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<ContentLanguage>("en");
   const updateMutation = useUpdateProfile();
+  // OnboardingGate가 이미 구독 중인 같은 쿼리다 — 저장 성공 후 이 쿼리가 다시
+  // fetch되어 profile이 채워져야 모달이 실제로 닫히므로, 그 재조회가 끝날
+  // 때까지 버튼을 계속 잠가둔다.
+  const profileQuery = useProfileQuery();
 
   return (
     <Dialog open>
@@ -62,9 +70,9 @@ export function OnboardingModal() {
         <DialogFooter>
           <Button
             onClick={() => updateMutation.mutate({ contentLanguage: selected })}
-            disabled={updateMutation.isPending}
+            disabled={updateMutation.isPending || profileQuery.isFetching}
           >
-            {updateMutation.isPendingAfterDelay
+            {updateMutation.isPendingAfterDelay || profileQuery.isFetching
               ? t("settings.start_pending")
               : t("settings.start")}
           </Button>
