@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  pinSelectedToTop,
   Select,
   SelectContent,
   SelectItem,
@@ -35,7 +36,11 @@ function useDeleteMoveTarget(
   // useSpaceList는 created_at 오름차순이라 필터링 후 첫 항목이 곧 가장 오래된 Space.
   const otherSpaces = spaceList.spaces.filter((space) => space.id !== spaceId);
   const targetSpaceId = manualTargetSpaceId ?? otherSpaces[0]?.id;
-  return { otherSpaces, targetSpaceId };
+  const orderedOtherSpaces = pinSelectedToTop(
+    otherSpaces,
+    (space) => space.id === targetSpaceId,
+  );
+  return { otherSpaces: orderedOtherSpaces, targetSpaceId };
 }
 
 interface SpaceDeleteMoveDraftsFieldProps {

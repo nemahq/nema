@@ -94,6 +94,7 @@ export {
   cn,
   LIST_ITEM_HOVER_CLASSNAME,
   NESTED_HOVER_ICON_CLASSNAME,
+  pinSelectedToTop,
   POPOVER_SURFACE_CLASSNAME,
 } from "./utils";
 // asChild 패턴(Button 등)과 동일한 근거로 소비처가 자체 asChild 컴포넌트를
