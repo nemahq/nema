@@ -291,7 +291,6 @@ export type Database = {
           extraction_status: Database["public"]["Enums"]["ingestion_status"];
           id: string;
           locator: Json | null;
-          public_id: string;
           source_id: string;
           space_id: string;
           status: Database["public"]["Enums"]["digest_status"];
@@ -307,7 +306,6 @@ export type Database = {
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           locator?: Json | null;
-          public_id?: string;
           source_id: string;
           space_id: string;
           status?: Database["public"]["Enums"]["digest_status"];
@@ -323,7 +321,6 @@ export type Database = {
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
           locator?: Json | null;
-          public_id?: string;
           source_id?: string;
           space_id?: string;
           status?: Database["public"]["Enums"]["digest_status"];
@@ -1211,7 +1208,6 @@ export type Database = {
         Args: { p_applied?: Json; p_pending?: Json; p_source_id: string };
         Returns: undefined;
       };
-      archive_digest: { Args: { p_digest_id: string }; Returns: string };
       archive_reference: { Args: { p_reference_id: string }; Returns: string };
       archive_statement: {
         Args: { p_statement_id: string };
@@ -1337,7 +1333,6 @@ export type Database = {
         Args: { p_source_id: string; p_title: string };
         Returns: undefined;
       };
-      generate_digest_public_id: { Args: never; Returns: string };
       generate_space_public_id: { Args: never; Returns: string };
       get_reference_citing_digests: {
         Args: { p_reference_id: string };
@@ -1396,21 +1391,6 @@ export type Database = {
         Args: { p_reference_id: string; p_tag_id: string };
         Returns: undefined;
       };
-      list_manual_changes_for_target: {
-        Args: {
-          p_target_id: string;
-          p_target_type: Database["public"]["Enums"]["change_target_type"];
-        };
-        Returns: {
-          action: Database["public"]["Enums"]["change_action"];
-          author_id: string;
-          changeset_id: string;
-          changeset_number: number;
-          created_at: string;
-          data: Json;
-          id: string;
-        }[];
-      };
       mark_first_entry: { Args: never; Returns: boolean };
       pending_draft_source_ids: {
         Args: { p_space_id: string };
@@ -1464,12 +1444,10 @@ export type Database = {
         };
         Returns: string;
       };
-      restore_digest: { Args: { p_digest_id: string }; Returns: string };
       restore_ingestion_review: {
         Args: { p_changeset_id: string };
         Returns: undefined;
       };
-      restore_reference: { Args: { p_reference_id: string }; Returns: string };
       restore_tag: { Args: { p_tag_id: string }; Returns: undefined };
       restore_topic: { Args: { p_topic_id: string }; Returns: undefined };
       restore_trashed_source: {

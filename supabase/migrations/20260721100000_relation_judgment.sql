@@ -25,7 +25,7 @@
 --     (이 배포 이전) 병합 데이터는 영향 없다. Kyle 확인 후 진행(2026-07-21).
 --  3) 한 Digest가 여러 곳과 동시에 중복될 수 있다 — 캐스케이드: 병합으로 archive된
 --     진술을 끝점으로 삼던 다른 pending relation changeset(충돌·중복 모두)은
---     closed+rejected로 자동 전환하되, invalidated_by_id로 "사람이 아니라
+--     closed(rejected)로 자동 전환하되, invalidated_by_id로 "사람이 아니라
 --     대상 소실로 무효화됐다"는 사유를 남긴다(일반 discarded와 구분, 07-modeling.md
 --     "한 Digest가 여러 곳과 동시에 중복될 수 있다" 참고). resolve_conflict_relation
 --     에도 같은 원리를 일반화 적용(패자 진술이 다른 대기 제안의 끝점일 수 있음).
@@ -35,6 +35,11 @@
 --     행까지 같은 UPDATE가 archive해버려 "이겼다는 근거"가 사라진다(duplicates_as_
 --     relation.sql 원래 주석과 같은 이유 — 이 관계의 상태는 끝점 연쇄가 아니라
 --     그 changeset이 몬다).
+--  5) apply_relation_changesets 재제안 가드 — invalidated_by_id 반영. 기존 가드는
+--     rejected를 전부 "사람이 아니라고 판단함"으로 취급해 영구 차단하는데, 3)의
+--     캐스케이드 무효화도 같은 rejected를 쓴다. 대상 소실로 무효화된 쌍은(예: 되돌리기로
+--     끝점이 다시 active가 됨) 사람의 판단이 아니었으므로 재제안이 막히면 안 된다 —
+--     invalidated_by_id IS NULL(사람이 실제로 거절한 것)일 때만 계속 차단한다.
 --
 -- Reference·Topic·Tag는 이 병합 대상이 아니다 — 07-modeling.md "레퍼런스·주제·태그는
 -- 병합을 고려하지 않음"(Statement 전용).
@@ -74,6 +79,20 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 ALTER TABLE changesets
   ADD COLUMN invalidated_by_id uuid REFERENCES changesets(id) ON DELETE SET NULL;
+
+-- =============================================================
+-- 0-c) changes(data->>'from_id'|'to_id') 부분 인덱스 — relation 제안 룩업용
+--
+--   invalidate_stale_relation_proposals(판정 1건마다, 중복 병합은 진술 수만큼
+--   반복)와 apply_relation_changesets의 재제안 가드가 둘 다 이 jsonb 텍스트
+--   비교로 relation changeset을 찾는다. target_type='relation'으로 좁힌 부분
+--   인덱스라 다른 target_type의 changes 행은 인덱스에 안 들어간다.
+-- =============================================================
+
+CREATE INDEX idx_changes_relation_from_id ON changes ((data->>'from_id'))
+  WHERE target_type = 'relation';
+CREATE INDEX idx_changes_relation_to_id ON changes ((data->>'to_id'))
+  WHERE target_type = 'relation';
 
 -- =============================================================
 -- 1) invalidate_stale_relation_proposals — 내부 헬퍼
@@ -127,6 +146,7 @@ DECLARE
   v_to_id        uuid;
   v_loser_id     uuid;
   v_relation_id  uuid;
+  v_existing     record;
 BEGIN
   SELECT space_id, status, type INTO v_space_id, v_status, v_type
   FROM changesets
@@ -167,15 +187,20 @@ BEGIN
     RAISE EXCEPTION 'endpoint no longer active for relation proposal %', p_changeset_id;
   END IF;
 
-  -- 승자→패자 replaces 관계. 이미 있으면(드문 재시도) 새로 만들지 않고 그 id를 쓴다 —
-  -- 실제 전이가 없었다는 뜻이라 change row도 안 남긴다(apply_pending_relation의
-  -- "이미 active" 분기와 같은 원리).
-  INSERT INTO statement_relations (space_id, type, from_id, to_id)
-  VALUES (v_space_id, 'replaces', p_winner_statement_id, v_loser_id)
-  ON CONFLICT (from_id, to_id, type) DO NOTHING
-  RETURNING id INTO v_relation_id;
+  -- 승자→패자 replaces 관계. (from,to,type)는 상태 무관 유니크라 기존 행을 먼저
+  -- 본다 — 단순 INSERT ON CONFLICT DO NOTHING은 archived 행과도 충돌해 "적용했는데
+  -- active가 안 생기는" 조용한 no-op이 된다(옛 apply_pending_relation이 §5.1 A로
+  -- 경고하던 바로 그 함정 — 충돌 판정→되돌리기→재제안→재판정 시 이 경로를 탄다).
+  SELECT id, status INTO v_existing
+  FROM statement_relations
+  WHERE from_id = p_winner_statement_id AND to_id = v_loser_id AND type = 'replaces';
 
-  IF v_relation_id IS NOT NULL THEN
+  IF NOT FOUND THEN
+    -- 없음 → 새로 생성. change는 {create, 새 id}.
+    INSERT INTO statement_relations (space_id, type, from_id, to_id)
+    VALUES (v_space_id, 'replaces', p_winner_statement_id, v_loser_id)
+    RETURNING id INTO v_relation_id;
+
     INSERT INTO changes (changeset_id, action, target_type, target_id, data)
     VALUES (
       p_changeset_id, 'create', 'relation', v_relation_id,
@@ -183,9 +208,18 @@ BEGIN
         'type', 'replaces', 'from_id', p_winner_statement_id, 'to_id', v_loser_id
       )
     );
+  ELSIF v_existing.status = 'archived' THEN
+    -- 가려져 있던 같은 replaces → 되살림. change는 {restore, 기존 id}(data 없음 —
+    -- archive·restore는 target_id로 충분, 07-modeling.md Change.data 정의).
+    UPDATE statement_relations SET status = 'active' WHERE id = v_existing.id;
+    v_relation_id := v_existing.id;
+
+    INSERT INTO changes (changeset_id, action, target_type, target_id)
+    VALUES (p_changeset_id, 'restore', 'relation', v_relation_id);
   ELSE
-    SELECT id INTO v_relation_id FROM statement_relations
-    WHERE from_id = p_winner_statement_id AND to_id = v_loser_id AND type = 'replaces';
+    -- 이미 active(드문 중복 판정) → 전이 없음. change row도 안 남긴다(§4.4 "실제
+    -- 전이만 기록").
+    v_relation_id := v_existing.id;
   END IF;
 
   -- 패자 archive + 벡터 축출 예약(ingestion_status='pending'). 걸린 다른 관계는
@@ -401,6 +435,14 @@ BEGIN
   END LOOP;
 
   -- 재트리거: 새 Digest가 속한 source만 추출·재연결 대기로(confirm_digest_edit과 동일).
+  --
+  -- 알려진 갭: 이 시점에 v_new_digest는 extraction_status='pending'이라 진술이 아직
+  -- 없다. 비동기 추출(apply_extraction_statements)이 끝나기 전에 이 changeset을
+  -- revert하면, revert_changeset은 지금 이 changes 행들(digest create/archive 등)만
+  -- 역연산하므로 새 Digest는 archive되지만, *나중에* 도착하는 추출 결과가 그 archived
+  -- Digest 밑에 active 진술을 만들어 붙인다(진술 생성이 digest 상태를 안 본다) —
+  -- confirm_digest_edit(manual 수정)도 같은 2단계·revert 경쟁을 그대로 가진 기존
+  -- 구조적 갭이라 이번 스코프에서 새로 고치지 않는다.
   UPDATE sources SET extraction_status = 'pending', linking_status = 'pending'
   WHERE id = v_source_id;
 
@@ -423,3 +465,137 @@ GRANT EXECUTE ON FUNCTION resolve_duplicate_relation(uuid, jsonb, jsonb) TO auth
 -- =============================================================
 
 DROP FUNCTION IF EXISTS apply_pending_relation(uuid);
+
+-- =============================================================
+-- 5) apply_relation_changesets — 재제안 가드에 invalidated_by_id 반영
+--
+--   pending·rejected 쌍을 다시 안 올리는 재제안 가드(20260718090000)는 원래
+--   "사람이 거절하면 계속 아니다"만 염두에 둔 것이었다. 이제 rejected에는 캐스케이드로
+--   무효화된 것도 섞이는데(3), 그건 사람의 판단이 아니라 대상 소실일 뿐이라 — 예를
+--   들어 그 병합 changeset이 나중에 revert돼 끝점 진술이 다시 active가 되면 —
+--   재제안을 계속 막을 이유가 없다. invalidated_by_id가 있는 rejected는 가드에서
+--   뺀다(사람이 실제로 거절한, invalidated_by_id가 NULL인 rejected만 계속 막는다).
+--   나머지 로직은 20260718090000과 동일 — 가드 조건 한 줄만 바뀐다.
+-- =============================================================
+
+CREATE OR REPLACE FUNCTION apply_relation_changesets(
+  p_source_id uuid,
+  p_applied   jsonb DEFAULT '[]'::jsonb,
+  p_pending   jsonb DEFAULT '[]'::jsonb
+)
+RETURNS void AS $$
+DECLARE
+  v_space_id     uuid;
+  v_changeset_id uuid;
+  v_relation_id  uuid;
+  v_item         jsonb;
+  v_applied_any  boolean := false;
+  v_from_title   text;
+  v_to_title     text;
+BEGIN
+  IF jsonb_typeof(p_applied) != 'array'
+     OR jsonb_typeof(p_pending) != 'array' THEN
+    RAISE EXCEPTION 'p_applied, p_pending must be JSON arrays';
+  END IF;
+
+  -- 완료 표시 = pending 클레임. 이미 completed/failed면 멈춰 늦게 도착한 적용이
+  -- 관계를 중복 생성하지 못하게 한다 (apply_ingestion_changeset과 같은 논리).
+  UPDATE sources
+  SET linking_status = 'completed',
+      error_message  = NULL
+  WHERE id = p_source_id AND linking_status = 'pending'
+  RETURNING space_id INTO v_space_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'source % is not pending linking', p_source_id;
+  END IF;
+
+  -- ----- applied: 관계 행 생성 후, 실제로 생긴 게 있을 때만 변경셋을 묶는다 -----
+  INSERT INTO changesets (space_id, type, status, source_id)
+  VALUES (v_space_id, 'relation', 'applied', p_source_id)
+  RETURNING id INTO v_changeset_id;
+
+  FOR v_item IN SELECT value FROM jsonb_array_elements(p_applied)
+  LOOP
+    INSERT INTO statement_relations (space_id, type, from_id, to_id)
+    VALUES (
+      v_space_id,
+      (v_item->>'type')::relation_type,
+      (v_item->>'from_id')::uuid,
+      (v_item->>'to_id')::uuid
+    )
+    ON CONFLICT (from_id, to_id, type) DO NOTHING
+    RETURNING id INTO v_relation_id;
+
+    IF v_relation_id IS NOT NULL THEN
+      INSERT INTO changes (changeset_id, action, target_type, target_id, data)
+      VALUES (
+        v_changeset_id, 'create', 'relation', v_relation_id,
+        jsonb_build_object(
+          'type',    v_item->>'type',
+          'from_id', v_item->>'from_id',
+          'to_id',   v_item->>'to_id'
+        )
+      );
+      v_applied_any := true;
+    END IF;
+  END LOOP;
+
+  IF NOT v_applied_any THEN
+    DELETE FROM changesets WHERE id = v_changeset_id;
+  END IF;
+
+  -- ----- pending: 건당 변경셋 1개. title = 끝점 Digest "A vs B" -----
+  -- 애매·모순(conflicts)·같음(duplicates) 모두 여기로 흘러 사람 검토를 거친다.
+  FOR v_item IN SELECT value FROM jsonb_array_elements(p_pending)
+  LOOP
+    -- 재시도가 같은 쌍을 다시 제안하면 기존 pending 변경셋을 건너뛴다. 사람이
+    -- 실제로 거절한(invalidated_by_id가 NULL인) rejected 쌍도 다시 안 올린다 —
+    -- 캐스케이드로 무효화된(invalidated_by_id가 있는) rejected는 막지 않는다(5).
+    CONTINUE WHEN EXISTS (
+      SELECT 1
+      FROM changesets c
+      JOIN changes ch ON ch.changeset_id = c.id
+      WHERE c.space_id = v_space_id
+        AND (
+          c.status = 'pending'
+          OR (c.status = 'rejected' AND c.invalidated_by_id IS NULL)
+        )
+        AND ch.target_type = 'relation'
+        AND ch.data->>'from_id' = v_item->>'from_id'
+        AND ch.data->>'to_id'   = v_item->>'to_id'
+        AND ch.data->>'type'    = v_item->>'type'
+    );
+
+    SELECT d.title INTO v_from_title
+    FROM statements s JOIN digests d ON d.id = s.digest_id
+    WHERE s.id = (v_item->>'from_id')::uuid;
+
+    SELECT d.title INTO v_to_title
+    FROM statements s JOIN digests d ON d.id = s.digest_id
+    WHERE s.id = (v_item->>'to_id')::uuid;
+
+    INSERT INTO changesets (space_id, type, status, source_id, title)
+    VALUES (
+      v_space_id, 'relation', 'pending', p_source_id,
+      CASE WHEN v_from_title IS NOT NULL AND v_to_title IS NOT NULL
+        THEN v_from_title || ' vs ' || v_to_title
+      END
+    )
+    RETURNING id INTO v_changeset_id;
+
+    INSERT INTO changes (changeset_id, action, target_type, target_id, data)
+    VALUES (
+      v_changeset_id, 'create', 'relation', gen_random_uuid(),
+      jsonb_build_object(
+        'type',    v_item->>'type',
+        'from_id', v_item->>'from_id',
+        'to_id',   v_item->>'to_id'
+      )
+    );
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+REVOKE ALL ON FUNCTION apply_relation_changesets FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION apply_relation_changesets TO service_role;
