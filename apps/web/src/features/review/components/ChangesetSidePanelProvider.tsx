@@ -26,6 +26,10 @@ const ChangesetSidePanelContext =
 // 다중 탭 시스템(surface-inventory.md "Digest 상세" §사이드뷰) — 지금은 원문
 // 탭만 열리지만, 같은 id로 다시 openTab하면 새 탭을 추가하지 않고 기존 탭을
 // 포커스하는 규약은 다른 탭 종류가 추가될 때도 그대로 재사용된다.
+// 다이제스트·레퍼런스 카드에 원문 보기 트리거가 아직 안 붙어서(폴리싱 다음 라운드
+// 예정) 이 훅의 소비처가 지금은 없다 — knip이 dead export로 잡는 걸 막기 위해
+// @lintignore 태그를 붙인다.
+/** @lintignore */
 export function useChangesetSidePanel(): ChangesetSidePanelContextValue {
   const context = useContext(ChangesetSidePanelContext);
   if (!context) {
