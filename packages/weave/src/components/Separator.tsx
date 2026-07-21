@@ -5,6 +5,11 @@ import * as React from "react";
 
 import { cn } from "../utils";
 
+const ORIENTATION_CLASSNAME: Record<"horizontal" | "vertical", string> = {
+  horizontal: "h-px w-full",
+  vertical: "h-full w-px",
+};
+
 function Separator({
   className,
   orientation = "horizontal",
@@ -21,7 +26,7 @@ function Separator({
       orientation={orientation}
       className={cn(
         "shrink-0 bg-border-subtle",
-        orientation === "horizontal" ? "h-px w-full" : "h-full w-px",
+        ORIENTATION_CLASSNAME[orientation],
         className,
       )}
       {...props}
