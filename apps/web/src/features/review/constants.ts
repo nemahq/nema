@@ -87,13 +87,40 @@ export const DIGEST_BODY_FIELDS: {
 // relation=발견. "연결"(glossary.md의 Relation 개념어)은 사용자가 먼저 겪는 접점이
 // 없고 충돌류 관계엔 안 맞아, AI가 스스로 알아챘다는 뜻의 "발견"으로 바꿨다.
 // revert는 대응 제품 용어가 없어 명사형으로 새로 정함.
-export const CHANGESET_TYPE_LABEL: Record<
+const CHANGESET_TYPE_LABEL: Record<
   Exclude<ChangesetType, "manual">,
   TranslationKey
 > = {
   ingestion: "review.type_ingestion",
   relation: "review.type_relation",
   revert: "review.type_revert",
+};
+
+interface ChangesetRowTypeSlots {
+  // revert는 배지를 안 낸다 — 제목 자체가 "{원본 제목} 되돌림"으로 이미 되돌리기임을
+  // 말해줘서, 배지까지 얹으면 같은 정보의 중복 신호가 된다.
+  badgeLabelKey: TranslationKey | null;
+  // ingestion만 digest·reference 카운트가 의미 있는 effect를 갖는다
+  // (summarizeChangesetEffect 주석 참고) — 나머지 타입은 요약을 안 낸다.
+  showsEffectSummary: boolean;
+}
+
+// manual은 이 목록에 구조적으로 안 뜨지만(위 CHANGESET_TYPE_LABEL 주석), 타입이
+// 늘 때 이 표를 안 채우면 컴파일 에러로 드러나야 해서 방어적으로 원소를 채워 넣는다.
+export const CHANGESET_ROW_TYPE_SLOTS: Record<
+  ChangesetType,
+  ChangesetRowTypeSlots
+> = {
+  ingestion: {
+    badgeLabelKey: CHANGESET_TYPE_LABEL.ingestion,
+    showsEffectSummary: true,
+  },
+  relation: {
+    badgeLabelKey: CHANGESET_TYPE_LABEL.relation,
+    showsEffectSummary: false,
+  },
+  revert: { badgeLabelKey: null, showsEffectSummary: false },
+  manual: { badgeLabelKey: null, showsEffectSummary: false },
 };
 
 // changeset_status는 아직 pending/applied/rejected 셋뿐이다(status+outcome 2필드

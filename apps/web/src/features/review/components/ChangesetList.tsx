@@ -6,10 +6,7 @@ import { Text } from "@nema-io/weave";
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { useChangesetListInfiniteQuery } from "@web/features/review/hooks/useChangesetListQuery";
-import type {
-  ChangesetListEntry,
-  ChangesSubTab,
-} from "@web/features/review/types";
+import type { ChangesSubTab } from "@web/features/review/types";
 import { useCurrentSpaceId } from "@web/features/workspace";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
@@ -19,16 +16,6 @@ import { ChangesetListSkeleton } from "./ChangesetListSkeleton";
 
 interface ChangesetListProps {
   subTab: ChangesSubTab;
-}
-
-// surface-inventory.md는 Open의 relation도 관계 판정 화면으로 이동한다고 적어뒀지만
-// 그 화면이 아직 없다 — 목적지가 생길 때까지 목록에 보이기만 하고 클릭은 막는다.
-// 즉 이건 목적지 설계가 아니라 이번 슬라이스의 구현 한계다.
-//
-// Closed에서는 막지 않는다 — 이미 끝난 항목은 status에 따라 상세 쪽 게이트가
-// 알맞은 화면을 고른다.
-function isLinkable(entry: ChangesetListEntry, subTab: ChangesSubTab): boolean {
-  return !(subTab === "open" && entry.type !== "ingestion");
 }
 
 function ChangesetListContent({ subTab }: ChangesetListProps) {
@@ -67,10 +54,8 @@ function ChangesetListContent({ subTab }: ChangesetListProps) {
           type={entry.type}
           status={entry.status}
           createdAt={entry.createdAt}
-          authorId={entry.authorId}
           effectDigest={entry.effect.digest}
           effectReference={entry.effect.reference}
-          linkable={isLinkable(entry, subTab)}
           hideDivider={index === entries.length - 1 && !query.hasNextPage}
         />
       ))}

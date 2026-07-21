@@ -38,13 +38,3 @@ export function changesetDisplayTitle(
     t("review.changeset_fallback_title", { number: entry.number })
   );
 }
-
-// authorId가 있는 changeset은 현재 워크스페이스가 단일 유저뿐이라 항상 조회자
-// 본인이다(멀티유저 확장 시 authorId → 표시 이름 조회가 별도로 필요해진다).
-export function changesetAuthorLabel(
-  authorId: string | null,
-  currentUserDisplayName: string,
-  t: (key: TranslationKey) => string,
-): string {
-  return authorId === null ? t("app.title") : currentUserDisplayName;
-}
