@@ -49,7 +49,13 @@ export function DigestBodyFields({ body }: DigestBodyFieldsProps) {
     <dl className="flex flex-col gap-3">
       {rows.map((row) => (
         <div key={row.label}>
-          <Text as="dt" size="xs" bold color="tertiary" className="uppercase">
+          <Text
+            as="dt"
+            size="xs"
+            weight="medium"
+            color="tertiary"
+            className="uppercase"
+          >
             {row.label}
           </Text>
           <Text as="dd" className="mt-0.5">

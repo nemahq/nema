@@ -75,7 +75,7 @@ function AccountDeleteGate({
   if (blockingCount > 0) {
     return (
       <div className="flex h-full flex-col">
-        <Text as="h2" size="lg" bold>
+        <Text as="h2" size="lg" weight="semibold">
           {t("account.delete_blocked_title")}
         </Text>
         <div className="mt-4 flex flex-1 flex-col gap-4">
@@ -135,7 +135,7 @@ export function AccountDeleteFlow({ onBack }: AccountDeleteFlowProps) {
   if (postDeleteCleanupFailed) {
     return (
       <div className="flex h-full flex-col">
-        <Text as="h2" size="lg" bold>
+        <Text as="h2" size="lg" weight="semibold">
           {t("account.delete_confirm_title")}
         </Text>
         <div className="mt-4 flex flex-1 flex-col gap-4">

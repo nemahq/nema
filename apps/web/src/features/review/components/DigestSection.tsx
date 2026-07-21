@@ -33,7 +33,7 @@ export function DigestSection({
 
   return (
     <div className="flex flex-col gap-3">
-      <Text as="h2" size="sm" bold color="secondary">
+      <Text as="h2" size="sm" weight="semibold" color="secondary">
         {t("review.digest_section_title", { count: visible.length })}
       </Text>
       {visible.map(({ digest, index }) => (

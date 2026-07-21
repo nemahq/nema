@@ -36,7 +36,7 @@ export function AccountDeleteConfirmField({
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        <Text as="label" htmlFor={confirmFieldId} size="sm" bold>
+        <Text as="label" htmlFor={confirmFieldId} size="sm" weight="medium">
           {t("common.delete_confirm_instruction", {
             value: hasEmail ? user.email : user.displayName,
           })}

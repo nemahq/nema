@@ -66,7 +66,7 @@ export function SpaceOverview(props: SpaceOverviewProps) {
             <Text
               as="h1"
               size="2xl"
-              bold
+              weight="semibold"
               color="primary"
               className="min-w-0 truncate"
             >

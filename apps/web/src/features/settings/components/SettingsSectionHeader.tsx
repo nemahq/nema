@@ -7,7 +7,7 @@ interface SettingsSectionHeaderProps {
 export function SettingsSectionHeader({ label }: SettingsSectionHeaderProps) {
   return (
     <div className="border-b border-border pb-2">
-      <Text as="span" size="base" bold>
+      <Text as="span" size="base" weight="semibold">
         {label}
       </Text>
     </div>

@@ -12,7 +12,7 @@ export function SpaceBadge({ name, size = "md" }: SpaceBadgeProps) {
     <Text
       as="span"
       size={size === "sm" ? "xs" : "sm"}
-      bold
+      weight="medium"
       color="primary"
       className={cn(
         "flex shrink-0 items-center justify-center rounded-md bg-fg-primary/10",

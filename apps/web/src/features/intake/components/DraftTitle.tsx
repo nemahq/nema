@@ -1,4 +1,9 @@
-import { Text, type TextColor, type TextSize } from "@nema-io/weave";
+import {
+  Text,
+  type TextColor,
+  type TextSize,
+  type TextWeight,
+} from "@nema-io/weave";
 
 import { useTypewriter } from "@web/hooks/useTypewriter";
 import { useTranslation } from "@web/lib/tolgee";
@@ -6,7 +11,7 @@ import { useTranslation } from "@web/lib/tolgee";
 interface DraftTitleProps {
   title: string | null;
   size: TextSize;
-  bold?: boolean;
+  weight?: TextWeight;
   color?: TextColor;
   className?: string;
   // 상세 패널처럼 제목 영역이 고정 레이아웃이어야 하는 곳에서만 true — 리스트
@@ -18,7 +23,7 @@ interface DraftTitleProps {
 export function DraftTitle({
   title,
   size,
-  bold = false,
+  weight = "normal",
   color = "primary",
   className,
   showPlaceholder = false,
@@ -34,7 +39,7 @@ export function DraftTitle({
       <Text
         as="span"
         size={size}
-        bold={bold}
+        weight={weight}
         // "미정" 상태임을 알리는 게 우선이라, 호출부가 넘긴 color는 여기서 무시한다.
         color="tertiary"
         className={className}
@@ -45,7 +50,13 @@ export function DraftTitle({
   }
 
   return (
-    <Text as="span" size={size} bold={bold} color={color} className={className}>
+    <Text
+      as="span"
+      size={size}
+      weight={weight}
+      color={color}
+      className={className}
+    >
       {animatedTitle}
     </Text>
   );

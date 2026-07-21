@@ -8,7 +8,7 @@ export function SpaceNotFound() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-1 bg-surface-card px-6 text-center">
-      <Text as="h1" size="lg" bold color="primary">
+      <Text as="h1" size="lg" weight="semibold" color="primary">
         {t("space.not_found_title")}
       </Text>
       <Text size="sm" color="tertiary">

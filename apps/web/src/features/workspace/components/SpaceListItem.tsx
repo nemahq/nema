@@ -50,7 +50,7 @@ export function SpaceListItem({
           <Text
             as="span"
             size="xs"
-            bold
+            weight="medium"
             color="primary"
             className={cn(
               BADGE_CLASS,

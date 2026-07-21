@@ -80,8 +80,8 @@ export function WorkingDraftDetailPanel({
       <DraftTitle
         title={title}
         showPlaceholder
-        size="lg"
-        bold
+        size="xl"
+        weight="bold"
         color="primary"
         className="block px-6 pt-3"
       />

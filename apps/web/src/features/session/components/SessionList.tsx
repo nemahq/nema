@@ -67,7 +67,7 @@ function SessionListContent() {
       <Text
         as="h2"
         size="xs"
-        bold
+        weight="medium"
         color="tertiary"
         className="px-1.5 pb-1 pt-3"
       >

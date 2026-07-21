@@ -105,14 +105,19 @@ export const ChangesetListRow = memo(function ChangesetListRow({
           <TooltipContent side="bottom">{t(statusLabelKey)}</TooltipContent>
         </Tooltip>
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <Text as="span" size="sm" bold className="min-w-0 truncate">
+          <Text
+            as="span"
+            size="sm"
+            weight="medium"
+            className="min-w-0 truncate"
+          >
             {changesetDisplayTitle({ title, number: changesetNumber }, t)}
           </Text>
           {typeLabelKey && (
             <Text
               as="span"
               size="xs"
-              bold
+              weight="medium"
               color="tertiary"
               className="shrink-0 rounded-full border border-border px-1.5 py-0.5"
             >

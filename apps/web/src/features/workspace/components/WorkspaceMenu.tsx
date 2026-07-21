@@ -143,7 +143,7 @@ export function WorkspaceMenu({
                 <Text
                   as="span"
                   size="xs"
-                  bold
+                  weight="medium"
                   className={cn(
                     "flex size-6 shrink-0 items-center justify-center rounded-md text-white",
                     avatarColorClass,
@@ -154,7 +154,7 @@ export function WorkspaceMenu({
                 <Text
                   as="span"
                   size="sm"
-                  bold
+                  weight="medium"
                   color="primary"
                   className="min-w-0 truncate"
                 >

@@ -17,7 +17,7 @@ export function SearchResultsList({ documents }: SearchResultsListProps) {
 
   return (
     <div className="mb-3 rounded-lg border border-border/40 bg-surface-card p-3 shadow-sm">
-      <Text as="span" size="xs" bold color="secondary">
+      <Text as="span" size="xs" weight="medium" color="secondary">
         {t("session.status_search_results_title")} ({documents.length})
       </Text>
       <ul className="mt-2 space-y-1">

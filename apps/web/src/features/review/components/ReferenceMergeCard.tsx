@@ -37,7 +37,12 @@ export function ReferenceMergeCard({
               ? REFERENCE_TYPE_LABEL[reference.type]
               : reference.type}
           </Badge>
-          <Text as="span" size="sm" bold className="min-w-0 truncate">
+          <Text
+            as="span"
+            size="sm"
+            weight="medium"
+            className="min-w-0 truncate"
+          >
             {reference.title}
           </Text>
         </div>
@@ -52,8 +57,10 @@ export function ReferenceMergeCard({
           <Undo2 />
         </Button>
       </div>
-      <Text as="div" size="xs" color="tertiary" className="flex flex-col gap-1">
-        {t("review.reference_merge_original_label")}
+      <div className="flex flex-col gap-1">
+        <Text as="span" size="xs" color="tertiary">
+          {t("review.reference_merge_original_label")}
+        </Text>
         <Text
           size="sm"
           color="secondary"
@@ -61,7 +68,7 @@ export function ReferenceMergeCard({
         >
           {reference.body}
         </Text>
-      </Text>
+      </div>
       <Text
         as="label"
         size="xs"

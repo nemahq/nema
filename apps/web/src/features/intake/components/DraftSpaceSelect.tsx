@@ -59,7 +59,7 @@ export function DraftSpaceSelect({
             "cursor-pointer hover:bg-fg-primary/15",
           )}
         >
-          <Text as="span" size="xs" bold color="primary">
+          <Text as="span" size="xs" weight="medium" color="primary">
             {spaceName}
           </Text>
         </button>

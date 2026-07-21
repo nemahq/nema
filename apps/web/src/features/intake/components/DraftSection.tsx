@@ -54,7 +54,7 @@ export function DraftSection({
           <span className="ml-1.5 flex size-4 shrink-0 items-center justify-center">
             {icon}
           </span>
-          <Text as="span" size="sm" bold color="primary">
+          <Text as="span" size="sm" weight="medium" color="primary">
             {label}
           </Text>
           <Text as="span" size="xs" color="tertiary">

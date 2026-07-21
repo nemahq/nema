@@ -65,7 +65,7 @@ export function ReferenceSection({
 
   return (
     <div className="flex flex-col gap-3">
-      <Text as="h2" size="sm" bold color="secondary">
+      <Text as="h2" size="sm" weight="semibold" color="secondary">
         {t("review.reference_section_title", {
           count: referenceRows.length + mergeRows.length,
         })}

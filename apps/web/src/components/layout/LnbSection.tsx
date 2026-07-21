@@ -45,7 +45,7 @@ export function LnbSection({
               hoverable && "group-hover/section:bg-surface-raised-hover/75",
             )}
           >
-            <Text as="span" size="xs" bold color="tertiary">
+            <Text as="span" size="xs" weight="medium" color="tertiary">
               {label}
             </Text>
           </LnbRowBox>

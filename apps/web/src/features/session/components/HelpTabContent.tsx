@@ -35,7 +35,13 @@ export function HelpTabContent() {
     <div className="max-w-sm space-y-6">
       {Object.entries(GROUPED_ACTIONS).map(([category, categoryActions]) => (
         <div key={category}>
-          <Text as="h3" size="xs" bold color="tertiary" className="mb-3">
+          <Text
+            as="h3"
+            size="xs"
+            weight="medium"
+            color="tertiary"
+            className="mb-3"
+          >
             {t(`shortcut.category_${category}` as Parameters<typeof t>[0])}
           </Text>
           <div className="space-y-1">

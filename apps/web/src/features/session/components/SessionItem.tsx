@@ -54,7 +54,7 @@ export function SessionItem({
         <Text
           as="span"
           size="sm"
-          bold={isActive}
+          weight={isActive ? "medium" : "normal"}
           color={isActive ? "primary" : "secondary"}
         >
           {title}

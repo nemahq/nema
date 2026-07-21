@@ -33,7 +33,7 @@ export function DraftProcessingHeader({
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-1.5">
-        <DraftTitle title={title} size="sm" bold color="primary" />
+        <DraftTitle title={title} size="sm" weight="medium" color="primary" />
         <RelativeTime dateTime={createdAt} className="text-xs" />
       </div>
       <Tooltip>

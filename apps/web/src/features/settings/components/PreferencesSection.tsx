@@ -102,7 +102,7 @@ export function PreferencesSection() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-col gap-1">
-        <Text as="h2" size="lg" bold>
+        <Text as="h2" size="xl" weight="semibold">
           {t("settings.nav_preferences")}
         </Text>
         <Text size="sm" color="tertiary">

@@ -30,7 +30,7 @@ export function ChangesetDetailHeader({
         <Text
           as="h1"
           size="2xl"
-          bold
+          weight="semibold"
           className="flex min-w-0 items-baseline gap-2"
         >
           <span className="min-w-0 truncate">{title}</span>

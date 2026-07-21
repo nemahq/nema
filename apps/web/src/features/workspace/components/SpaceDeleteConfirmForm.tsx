@@ -233,7 +233,7 @@ export function SpaceDeleteConfirmForm({
           as="label"
           htmlFor={confirmInputId}
           size="sm"
-          bold
+          weight="medium"
           color="primary"
         >
           {t("common.delete_confirm_instruction", { value: spaceName })}

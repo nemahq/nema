@@ -2,7 +2,8 @@ import * as React from "react";
 
 import { cn } from "../utils";
 
-type TextSize = "xs" | "sm" | "base" | "lg" | "2xl" | "3xl";
+type TextSize = "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl";
+type TextWeight = "normal" | "medium" | "semibold" | "bold";
 type TextColor =
   | "primary"
   | "secondary"
@@ -19,8 +20,16 @@ const sizeClasses: Record<TextSize, string> = {
   sm: "text-[13px] leading-[1.5]",
   base: "text-[15px] leading-[1.7]",
   lg: "text-[18px] leading-[1.4]",
+  xl: "text-[20px] leading-[1.4]",
   "2xl": "text-[24px] leading-[1.35]",
   "3xl": "text-[32px] leading-[1.3]",
+};
+
+const weightClasses: Record<TextWeight, string> = {
+  normal: "font-normal",
+  medium: "font-medium",
+  semibold: "font-semibold",
+  bold: "font-bold",
 };
 
 const colorClasses: Record<TextColor, string> = {
@@ -38,14 +47,14 @@ const colorClasses: Record<TextColor, string> = {
 type TextProps<T extends React.ElementType = "p"> = {
   as?: T;
   size?: TextSize;
-  bold?: boolean;
+  weight?: TextWeight;
   color?: TextColor;
 } & Omit<React.ComponentPropsWithRef<T>, "as" | "color">;
 
 function Text<T extends React.ElementType = "p">({
   as,
   size = "base",
-  bold = false,
+  weight = "normal",
   color = "primary",
   className,
   ...props
@@ -58,7 +67,7 @@ function Text<T extends React.ElementType = "p">({
       className={cn(
         sizeClasses[size],
         colorClasses[color],
-        bold && "font-bold",
+        weightClasses[weight],
         className,
       )}
       {...props}
@@ -66,4 +75,4 @@ function Text<T extends React.ElementType = "p">({
   );
 }
 
-export { Text, type TextColor, type TextProps, type TextSize };
+export { Text, type TextColor, type TextProps, type TextSize, type TextWeight };

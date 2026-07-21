@@ -28,7 +28,7 @@ export function AccountDeleteConfirmShell({
 
   return (
     <div className="flex h-full flex-col">
-      <Text as="h2" size="lg" bold>
+      <Text as="h2" size="lg" weight="semibold">
         {t("account.delete_confirm_title")}
       </Text>
 

@@ -53,7 +53,7 @@ export function ChangesetStatusPill({
       <Text
         as="span"
         size="sm"
-        bold
+        weight="medium"
         color={visual.label ? "primary" : undefined}
         className={cn(!visual.label && "text-inherit")}
       >
