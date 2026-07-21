@@ -92,7 +92,7 @@ export function ReferenceCandidateCard({
         rows={3}
         maxLength={REFERENCE_BODY_MAX_LENGTH}
         aria-invalid={reference.body.trim() === ""}
-        className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-1.5 text-sm placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none aria-invalid:border-status-error disabled:text-fg-quaternary dark:focus-visible:border-fg-tertiary/70"
+        className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-1.5 text-sm placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none aria-invalid:border-status-error disabled:text-fg-quinary disabled:placeholder:text-fg-quinary dark:focus-visible:border-fg-tertiary/70"
       />
       {reference.externalUrls.length > 0 && (
         <ul className="flex flex-col gap-0.5">

@@ -127,8 +127,8 @@ export function ChatInput({
         aria-label={t("common.send")}
         className={cn(
           ACTION_BUTTON_BASE,
-          "disabled:scale-90 disabled:bg-surface-raised-hover disabled:text-fg-quaternary disabled:opacity-100",
-          "dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-quaternary",
+          "disabled:scale-90 disabled:bg-surface-raised-hover disabled:text-fg-quinary disabled:opacity-100",
+          "dark:disabled:bg-fg-tertiary/20 dark:disabled:text-fg-quinary",
           "enabled:bg-fg-secondary enabled:text-surface-card enabled:hover:bg-fg-secondary enabled:hover:opacity-80",
           "dark:enabled:bg-fg-primary dark:enabled:text-surface-base dark:enabled:hover:bg-fg-primary",
           hasContent ? "opacity-100 scale-100" : "opacity-0 scale-90",
@@ -154,7 +154,8 @@ export function ChatInput({
         rows={1}
         className={cn(
           "w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-quaternary focus:outline-none",
-          disabled && "cursor-not-allowed text-fg-quaternary",
+          disabled &&
+            "cursor-not-allowed text-fg-quinary placeholder:text-fg-quinary",
         )}
       />
       {submitAction}

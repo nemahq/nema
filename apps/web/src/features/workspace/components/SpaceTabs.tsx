@@ -39,7 +39,7 @@ export function SpaceTabs({
     // 탭만 sticky — 스크롤 중 자연스러운 위치가 top:0(네비게이션 바 바로 아래)에
     // 닿는 순간부터만 고정된다(sticky의 기본 동작), 그 전까진 컴포저·제목과 함께
     // 평소처럼 스크롤된다.
-    <div className="sticky top-0 z-10 mt-6 flex gap-1 border-b border-border/50 bg-surface-card">
+    <div className="sticky top-0 z-10 mt-6 flex gap-1 border-b border-border bg-surface-card">
       <SpaceTabButton active={activeTab === "topic"} onClick={goToTopic}>
         {t("space.tab_topic")}
       </SpaceTabButton>

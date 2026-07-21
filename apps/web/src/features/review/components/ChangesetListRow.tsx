@@ -4,6 +4,7 @@ import { Link, linkOptions } from "@tanstack/react-router";
 import {
   cn,
   LIST_ITEM_HOVER_CLASSNAME,
+  Separator,
   Text,
   Tooltip,
   TooltipContent,
@@ -169,7 +170,7 @@ export const ChangesetListRow = memo(function ChangesetListRow({
       ) : (
         <div className={rowClassName}>{content}</div>
       )}
-      {!hideDivider && <div className="mx-2 border-b border-border/50" />}
+      {!hideDivider && <Separator className="mx-2 w-auto" />}
     </div>
   );
 });

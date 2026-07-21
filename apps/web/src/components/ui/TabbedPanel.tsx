@@ -1,6 +1,6 @@
 import { type ReactNode, useRef, useState } from "react";
 
-import { cn } from "@nema-io/weave";
+import { Button, cn } from "@nema-io/weave";
 import { X } from "@nema-io/weave/icons";
 
 import type { TranslationKey } from "@web/lib/tolgee";
@@ -159,14 +159,15 @@ function DraggableTab({
         {label}
       </button>
       {tab.onClose && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon-xs"
           onClick={(e) => onTabClose(e, tab)}
-          className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
+          className="mr-1 text-fg-tertiary hover:text-fg-primary"
           aria-label={closeLabel}
         >
           <X className="size-3" />
-        </button>
+        </Button>
       )}
     </div>
   );

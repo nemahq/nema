@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 
-import { cn, Text } from "@nema-io/weave";
+import { cn, Separator, Text } from "@nema-io/weave";
 
 import { LnbRowBox } from "./LnbRowBox";
 import { useSidebar } from "./Sidebar";
@@ -35,7 +35,7 @@ export function LnbSection({
         // 보인다.
         hoverable && (
           <div className="flex justify-center py-1">
-            <div aria-hidden className="h-px w-4 bg-border" />
+            <Separator className="w-4 bg-border" />
           </div>
         )
       ) : (

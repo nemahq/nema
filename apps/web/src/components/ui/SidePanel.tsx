@@ -80,7 +80,7 @@ export function SidePanel({ children, onClose, boundaryName }: SidePanelProps) {
         role="separator"
         aria-orientation="vertical"
         onMouseDown={handleResizeStart}
-        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize border-l border-border/50 hover:border-l-2 hover:border-fg-tertiary/40 active:border-l-2 active:border-fg-secondary/60 dark:hover:border-fg-tertiary dark:active:border-fg-secondary"
+        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize border-l border-border hover:border-l-2 hover:border-fg-tertiary/40 active:border-l-2 active:border-fg-secondary/60 dark:hover:border-fg-tertiary dark:active:border-fg-secondary"
       />
 
       <ErrorBoundary

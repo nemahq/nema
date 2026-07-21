@@ -16,7 +16,7 @@
  *   3. Tailwind theme: maps semantic tokens to utility classes
  *
  * Naming: --{group}-{role}-{state}
- * Groups: brand, surface, fg, status, border
+ * Groups: brand, surface, fg, status, border, avatar
  * Non-color: duration, ease
  */
 
@@ -111,9 +111,15 @@
   --palette-identity-lime: #4d7c0f; /* lime-700 */
   --palette-identity-yellow: #a16207; /* yellow-700 */
 
-  /* Border */
+  /* Border — 선의 무게는 길이·대비·반복 횟수의 곱이라, 한 값으로는 구조 경계와
+     반복되는 목록 구분선을 같이 감당할 수 없다. strong(짧고 닫힌 윤곽·포커스) /
+     기본(화면을 가르는 영역 경계) / subtle(여러 번 반복되는 구분선) 3단. */
+  --palette-light-border-strong: #a8a29e; /* stone-400 */
+  --palette-dark-border-strong: #78716c; /* stone-500 */
   --palette-light-border: #d6d3d1; /* stone-300 */
   --palette-dark-border: #57534e; /* stone-600 */
+  --palette-light-border-subtle: #e7e5e4; /* stone-200 */
+  --palette-dark-border-subtle: #44403c; /* stone-700 */
 }
 
 /* ── Semantic Tokens ─────────────────────── */
@@ -138,11 +144,22 @@
   --fg-primary: var(--palette-light-fg-primary);
   --fg-secondary: var(--palette-light-fg-secondary);
   --fg-tertiary: var(--palette-light-fg-tertiary);
-  /* fg-tertiary의 파생값(60% 알파) — placeholder·disabled처럼 tertiary보다 한 단계
-     더 죽여야 하는 곳 전용. color-mix로 fg-tertiary를 참조해서 계산하므로, 이 한
-     선언만으로 .dark/.theme-inverted에서 fg-tertiary가 바뀌면 자동으로 따라간다
-     (커스텀 프로퍼티는 참조 시점의 값으로 재계산됨 — 테마별 블록에 중복 선언 불필요). */
-  --fg-quaternary: color-mix(in srgb, var(--fg-tertiary) 60%, transparent);
+  /* tertiary 아래로 두 단계 더 — 둘 다 fg-tertiary의 알파 파생값이다. color-mix로
+     fg-tertiary를 참조해서 계산하므로, 이 한 선언만으로 .dark/.theme-inverted에서
+     fg-tertiary가 바뀌면 자동으로 따라간다(커스텀 프로퍼티는 참조 시점의 값으로
+     재계산됨 — 테마별 블록에 중복 선언 불필요).
+
+     quaternary(placeholder): 활성 필드의 안내문이라 읽혀야 한다. 대비 계산 기준은
+     surface-card(라이트 순백) — surface-raised는 라이트에서 이보다 살짝 어둡고
+     (stone-100), 다크에서는 surface-card와 완전히 같은 값이라 이 수치가 그대로
+     적용된다. tertiary가 이미 4.80:1이라 AA(4.5:1)를 지키면서 더 연하게 만들
+     여지가 없어서, WCAG가 큰 텍스트·UI 요소에 쓰는 최소선 3:1을 바닥으로 잡고
+     80%까지만 내렸다(surface-card 기준 라이트 3.26:1 / 다크 4.39:1).
+
+     quinary(disabled): 비활성 UI 요소는 대비 요건에서 면제된다 — 흐릿한 것 자체가
+     신호라 placeholder보다 한 단계 더 물러난다. */
+  --fg-quaternary: color-mix(in srgb, var(--fg-tertiary) 80%, transparent);
+  --fg-quinary: color-mix(in srgb, var(--fg-tertiary) 60%, transparent);
 
   --status-success: var(--palette-light-status-success);
   --status-success-tint: var(--palette-light-status-success-tint);
@@ -153,7 +170,12 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
+  --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
+  --border-subtle: var(--palette-light-border-subtle);
+
+  --avatar-fallback: var(--brand);
+  --avatar-fallback-fg: var(--brand-fg);
 }
 
 .dark {
@@ -183,7 +205,12 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
+  --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
+  --border-subtle: var(--palette-dark-border-subtle);
+
+  --avatar-fallback: var(--fg-primary);
+  --avatar-fallback-fg: var(--surface-base);
 }
 
 /* ── Theme Inversion ─────────────────────── */
@@ -216,7 +243,12 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
+  --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
+  --border-subtle: var(--palette-dark-border-subtle);
+
+  --avatar-fallback: var(--fg-primary);
+  --avatar-fallback-fg: var(--surface-base);
 }
 
 .dark .theme-inverted {
@@ -246,7 +278,12 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
+  --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
+  --border-subtle: var(--palette-light-border-subtle);
+
+  --avatar-fallback: var(--brand);
+  --avatar-fallback-fg: var(--brand-fg);
 }
 
 /* ── Tailwind Theme (semantic tokens only) ── */
@@ -274,6 +311,7 @@
   --color-fg-secondary: var(--fg-secondary);
   --color-fg-tertiary: var(--fg-tertiary);
   --color-fg-quaternary: var(--fg-quaternary);
+  --color-fg-quinary: var(--fg-quinary);
 
   /* Status */
   --color-status-success: var(--status-success);
@@ -286,7 +324,15 @@
   --color-status-info-tint: var(--status-info-tint);
 
   /* Border */
+  --color-border-strong: var(--border-strong);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+
+  /* Avatar — 이미지 없는 아바타의 이니셜 배경. 라이트/다크 분기를 dark: 변형이
+     아니라 토큰으로 두는 이유: 소비처가 className으로 다른 배경(워크스페이스
+     identity 색 등)을 줄 때, dark:bg-*는 특이도가 높아 소비처를 이겨버린다. */
+  --color-avatar-fallback: var(--avatar-fallback);
+  --color-avatar-fallback-fg: var(--avatar-fallback-fg);
 
   /* Shadow */
   --color-shadow: var(--shadow);
