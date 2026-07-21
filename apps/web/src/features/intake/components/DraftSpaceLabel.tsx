@@ -1,4 +1,4 @@
-import { Skeleton } from "@nema-io/weave";
+import { Skeleton, Text } from "@nema-io/weave";
 
 import { SPACE_PILL_CLASSNAME } from "@web/features/intake/constants";
 import { useDraftSpace } from "@web/features/intake/hooks/useDraftSpace";
@@ -21,7 +21,9 @@ export function DraftSpaceLabel({ spaceId }: DraftSpaceLabelProps) {
 
   return (
     <span className={SPACE_PILL_CLASSNAME} title={spaceName}>
-      {spaceName}
+      <Text as="span" size="xs" weight="medium" color="primary">
+        {spaceName}
+      </Text>
     </span>
   );
 }

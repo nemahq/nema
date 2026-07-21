@@ -1,3 +1,5 @@
+import { Text } from "@nema-io/weave";
+
 import { SourceComposer } from "@web/features/intake";
 import type { ChangesSubTab } from "@web/features/review";
 import { useMainScrollRestoration } from "@web/features/workspace/hooks/useMainScrollRestoration";
@@ -61,9 +63,15 @@ export function SpaceOverview(props: SpaceOverviewProps) {
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6">
           <div className="flex min-w-0 items-center gap-2">
             <SpaceBadge name={space.name} />
-            <h1 className="min-w-0 truncate text-2xl font-semibold text-fg-primary">
+            <Text
+              as="h1"
+              size="2xl"
+              weight="semibold"
+              color="primary"
+              className="min-w-0 truncate"
+            >
               {space.name}
-            </h1>
+            </Text>
           </div>
 
           <div className="mt-4">

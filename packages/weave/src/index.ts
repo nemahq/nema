@@ -76,7 +76,9 @@ export {
   type TextColor,
   type TextProps,
   type TextSize,
+  type TextWeight,
 } from "./components/Text";
+export { TextSkeleton } from "./components/TextSkeleton";
 export { Toast, toast, type ToasterProps } from "./components/Toast";
 export {
   Tooltip,

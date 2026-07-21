@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { Text } from "@nema-io/weave";
+
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import type { ChangesetStatus } from "@web/features/review/types";
 
@@ -25,12 +27,17 @@ export function ChangesetDetailHeader({
   return (
     <header className="sticky top-0 z-10 -mt-6 flex flex-col gap-2 border-b border-border/50 bg-surface-card pt-6 pb-4">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="flex min-w-0 items-baseline gap-2 text-2xl font-semibold text-fg-primary">
+        <Text
+          as="h1"
+          size="2xl"
+          weight="semibold"
+          className="flex min-w-0 items-baseline gap-2"
+        >
           <span className="min-w-0 truncate">{title}</span>
-          <span className="shrink-0 text-lg font-normal text-fg-tertiary">
+          <Text as="span" size="lg" color="tertiary" className="shrink-0">
             #{changesetNumber}
-          </span>
-        </h1>
+          </Text>
+        </Text>
         {actions}
       </div>
       <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Alert, Button, DialogFooter } from "@nema-io/weave";
+import { Alert, Button, DialogFooter, Text } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -28,9 +28,9 @@ export function AccountDeleteConfirmShell({
 
   return (
     <div className="flex h-full flex-col">
-      <h2 className="text-lg font-semibold text-fg-primary">
+      <Text as="h2" size="lg" weight="semibold">
         {t("account.delete_confirm_title")}
-      </h2>
+      </Text>
 
       <div className="mt-4 flex flex-1 flex-col gap-4">
         <Alert variant="error" icon={false}>

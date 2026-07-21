@@ -1,5 +1,5 @@
 import { REFERENCE_BODY_MAX_LENGTH } from "@nema-io/shared";
-import { Badge, Button } from "@nema-io/weave";
+import { Badge, Button, Text } from "@nema-io/weave";
 import { Undo2 } from "@nema-io/weave/icons";
 
 import {
@@ -37,9 +37,14 @@ export function ReferenceMergeCard({
               ? REFERENCE_TYPE_LABEL[reference.type]
               : reference.type}
           </Badge>
-          <span className="min-w-0 truncate text-sm font-medium text-fg-primary">
+          <Text
+            as="span"
+            size="sm"
+            weight="medium"
+            className="min-w-0 truncate"
+          >
             {reference.title}
-          </span>
+          </Text>
         </div>
         <Button
           type="button"
@@ -52,13 +57,24 @@ export function ReferenceMergeCard({
           <Undo2 />
         </Button>
       </div>
-      <div className="flex flex-col gap-1 text-xs text-fg-tertiary">
-        {t("review.reference_merge_original_label")}
-        <p className="rounded-md bg-surface-card px-3 py-1.5 text-sm text-fg-secondary">
+      <div className="flex flex-col gap-1">
+        <Text as="span" size="xs" color="tertiary">
+          {t("review.reference_merge_original_label")}
+        </Text>
+        <Text
+          size="sm"
+          color="secondary"
+          className="rounded-md bg-surface-card px-3 py-1.5"
+        >
           {reference.body}
-        </p>
+        </Text>
       </div>
-      <label className="flex flex-col gap-1 text-xs text-fg-tertiary">
+      <Text
+        as="label"
+        size="xs"
+        color="tertiary"
+        className="flex flex-col gap-1"
+      >
         {t("review.reference_merge_label")}
         <textarea
           value={mergeNote}
@@ -69,7 +85,7 @@ export function ReferenceMergeCard({
           aria-invalid={mergeNote.trim() === ""}
           className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-1.5 text-sm text-fg-primary placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none aria-invalid:border-status-error disabled:text-fg-quaternary dark:focus-visible:border-fg-tertiary/70"
         />
-      </label>
+      </Text>
     </div>
   );
 }

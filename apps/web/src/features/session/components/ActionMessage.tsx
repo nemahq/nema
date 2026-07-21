@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import type { Message } from "@nema-io/shared";
-import { Button, Kbd } from "@nema-io/weave";
+import { Button, Kbd, Text } from "@nema-io/weave";
 
 import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
 import { useTranslation } from "@web/lib/tolgee";
@@ -55,11 +55,11 @@ export function ActionMessage({ message }: ActionMessageProps) {
 
   return (
     <div className="py-2">
-      <p className="mb-3 text-sm text-fg-secondary">
+      <Text size="sm" color="secondary" className="mb-3">
         {t("session.draft_intent_question", {
           draftContext: payload.draftContext,
         })}
-      </p>
+      </Text>
       <div className="flex gap-2">
         <Button
           variant="neutral"

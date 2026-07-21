@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { cn } from "@nema-io/weave";
+import { cn, Text } from "@nema-io/weave";
 import { FileText, PanelRight, Search } from "@nema-io/weave/icons";
 
 import { useChatLifecycle } from "@web/features/session/contexts/ChatLifecycleContext";
@@ -64,9 +64,14 @@ function RetrievalMessageInner({
           className="mt-0.5 size-4 shrink-0 text-fg-tertiary"
           aria-hidden
         />
-        <span className="line-clamp-2 flex-1 text-sm text-fg-secondary">
+        <Text
+          as="span"
+          size="sm"
+          color="secondary"
+          className="line-clamp-2 flex-1"
+        >
           &ldquo;{query}&rdquo;
-        </span>
+        </Text>
         {canToggleTab && (
           <button
             type="button"
@@ -125,7 +130,9 @@ function RetrievalMessageInner({
       )}
 
       {!isStreaming && content && (
-        <p className="line-clamp-2 text-xs text-fg-tertiary">{content}</p>
+        <Text size="xs" color="tertiary" className="line-clamp-2">
+          {content}
+        </Text>
       )}
     </div>
   );
@@ -141,9 +148,14 @@ export function RetrievalMessage(props: RetrievalMessageProps) {
               className="mt-0.5 size-4 shrink-0 text-fg-tertiary"
               aria-hidden
             />
-            <span className="line-clamp-2 flex-1 text-sm text-fg-secondary">
+            <Text
+              as="span"
+              size="sm"
+              color="secondary"
+              className="line-clamp-2 flex-1"
+            >
               &ldquo;{props.query}&rdquo;
-            </span>
+            </Text>
           </div>
         </div>
       }

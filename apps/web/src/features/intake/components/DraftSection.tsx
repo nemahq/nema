@@ -1,6 +1,6 @@
 import { type ReactNode, useId, useState } from "react";
 
-import { cn } from "@nema-io/weave";
+import { cn, Text } from "@nema-io/weave";
 import { Triangle } from "@nema-io/weave/icons";
 
 interface DraftSectionProps {
@@ -38,7 +38,7 @@ export function DraftSection({
           aria-expanded={expanded}
           aria-controls={contentId}
           className={cn(
-            "group flex w-full items-center gap-2 rounded-md px-4 py-1.5 text-sm font-medium text-fg-primary",
+            "group flex w-full items-center gap-2 rounded-md px-4 py-1.5",
             tone === "warning" && "bg-status-warning-tint",
             tone === "info" && "bg-status-info-tint",
             tone === "neutral" && "bg-surface-raised-hover/40",
@@ -54,8 +54,12 @@ export function DraftSection({
           <span className="ml-1.5 flex size-4 shrink-0 items-center justify-center">
             {icon}
           </span>
-          {label}
-          <span className="text-xs text-fg-tertiary">{count}</span>
+          <Text as="span" size="sm" weight="medium" color="primary">
+            {label}
+          </Text>
+          <Text as="span" size="xs" color="tertiary">
+            {count}
+          </Text>
         </button>
       </div>
 

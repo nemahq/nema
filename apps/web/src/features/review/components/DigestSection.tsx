@@ -1,3 +1,5 @@
+import { Text } from "@nema-io/weave";
+
 import type {
   ReviewCitedReference,
   ReviewDigest,
@@ -31,9 +33,9 @@ export function DigestSection({
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-fg-secondary">
+      <Text as="h2" size="sm" weight="semibold" color="secondary">
         {t("review.digest_section_title", { count: visible.length })}
-      </h2>
+      </Text>
       {visible.map(({ digest, index }) => (
         <DigestCandidateCard
           key={index}

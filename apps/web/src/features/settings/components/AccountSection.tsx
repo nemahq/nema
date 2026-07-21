@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Avatar, Button } from "@nema-io/weave";
+import { Avatar, Button, Text } from "@nema-io/weave";
 
 import { useUser } from "@web/lib/auth";
 import { useTranslation } from "@web/lib/tolgee";
@@ -23,12 +23,12 @@ export function AccountSection() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-semibold text-fg-primary">
+        <Text as="h2" size="xl" weight="semibold">
           {t("account.profile_title")}
-        </h2>
-        <p className="text-sm text-fg-tertiary">
+        </Text>
+        <Text size="sm" color="tertiary">
           {t("settings.account_subtitle")}
-        </p>
+        </Text>
       </div>
 
       <div className="mt-6 flex flex-1 flex-col gap-6">
@@ -37,12 +37,12 @@ export function AccountSection() {
           <div className="flex items-center gap-3 pt-4">
             <Avatar src={user.avatarUrl} fallback={initial} />
             <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-fg-primary">
+              <Text as="div" size="sm" weight="medium" className="truncate">
                 {user.displayName}
-              </div>
-              <div className="truncate text-xs text-fg-tertiary">
+              </Text>
+              <Text as="div" size="xs" color="tertiary" className="truncate">
                 {user.email}
-              </div>
+              </Text>
             </div>
           </div>
         </div>

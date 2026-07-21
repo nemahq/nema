@@ -1,3 +1,4 @@
+import { Text } from "@nema-io/weave";
 import { Circle, CircleCheck, Inbox } from "@nema-io/weave/icons";
 
 // 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
@@ -35,7 +36,9 @@ export function DraftList({ onSelectSource }: DraftListProps) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
         <CircleCheck className="size-12 text-fg-tertiary" strokeWidth={1.5} />
-        <p className="text-sm text-fg-tertiary">{t("intake.drafts_empty")}</p>
+        <Text size="sm" color="tertiary">
+          {t("intake.drafts_empty")}
+        </Text>
       </div>
     );
   }

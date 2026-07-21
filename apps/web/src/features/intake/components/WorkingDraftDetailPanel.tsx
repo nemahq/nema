@@ -80,7 +80,10 @@ export function WorkingDraftDetailPanel({
       <DraftTitle
         title={title}
         showPlaceholder
-        className="block px-6 pt-3 text-xl font-bold text-fg-primary"
+        size="xl"
+        weight="bold"
+        color="primary"
+        className="block px-6 pt-3"
       />
       <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
         <DraftBodyView value={body} readOnly />

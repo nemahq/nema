@@ -6,6 +6,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Text,
 } from "@nema-io/weave";
 import { Plus } from "@nema-io/weave/icons";
 
@@ -69,9 +70,9 @@ function TopicSearchResults({
           </li>
         ))}
         {candidates.length === 0 && trimmed === "" && (
-          <li className="px-2 py-1.5 text-sm text-fg-tertiary">
+          <Text as="li" size="sm" color="tertiary" className="px-2 py-1.5">
             {t("review.label_search_empty")}
-          </li>
+          </Text>
         )}
       </ul>
       {trimmed !== "" && !hasExactMatch && (
@@ -145,18 +146,23 @@ export function TopicAddPopover({
           boundaryName="topic-search"
           fallbackRender={() => (
             <ul className={SEARCH_LIST_CLASSNAME}>
-              <li className="px-2 py-1.5 text-sm text-status-error">
+              <Text as="li" size="sm" color="error" className="px-2 py-1.5">
                 {t("review.label_search_error")}
-              </li>
+              </Text>
             </ul>
           )}
         >
           <Suspense
             fallback={
               <ul className={SEARCH_LIST_CLASSNAME}>
-                <li className="px-2 py-1.5 text-sm text-fg-tertiary">
+                <Text
+                  as="li"
+                  size="sm"
+                  color="tertiary"
+                  className="px-2 py-1.5"
+                >
                   {t("review.label_search_loading")}
-                </li>
+                </Text>
               </ul>
             }
           >

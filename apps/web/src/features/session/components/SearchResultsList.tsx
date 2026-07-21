@@ -1,4 +1,5 @@
 import type { SearchResultDoc } from "@nema-io/shared";
+import { Text } from "@nema-io/weave";
 import { FileText } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
@@ -16,9 +17,9 @@ export function SearchResultsList({ documents }: SearchResultsListProps) {
 
   return (
     <div className="mb-3 rounded-lg border border-border/40 bg-surface-card p-3 shadow-sm">
-      <span className="text-xs font-medium text-fg-secondary">
+      <Text as="span" size="xs" weight="medium" color="secondary">
         {t("session.status_search_results_title")} ({documents.length})
-      </span>
+      </Text>
       <ul className="mt-2 space-y-1">
         {documents.map((doc) => (
           <li

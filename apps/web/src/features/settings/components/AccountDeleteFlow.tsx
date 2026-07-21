@@ -2,7 +2,7 @@ import { Suspense, useState } from "react";
 import * as Sentry from "@sentry/react";
 import { useNavigate } from "@tanstack/react-router";
 
-import { Alert, Button, DialogFooter, Skeleton } from "@nema-io/weave";
+import { Alert, Button, DialogFooter, Skeleton, Text } from "@nema-io/weave";
 
 import {
   isPreconditionFailed,
@@ -75,9 +75,9 @@ function AccountDeleteGate({
   if (blockingCount > 0) {
     return (
       <div className="flex h-full flex-col">
-        <h2 className="text-lg font-semibold text-fg-primary">
+        <Text as="h2" size="lg" weight="semibold">
           {t("account.delete_blocked_title")}
-        </h2>
+        </Text>
         <div className="mt-4 flex flex-1 flex-col gap-4">
           <Alert variant="warning">
             {t("account.delete_blocked_description", { count: blockingCount })}
@@ -135,9 +135,9 @@ export function AccountDeleteFlow({ onBack }: AccountDeleteFlowProps) {
   if (postDeleteCleanupFailed) {
     return (
       <div className="flex h-full flex-col">
-        <h2 className="text-lg font-semibold text-fg-primary">
+        <Text as="h2" size="lg" weight="semibold">
           {t("account.delete_confirm_title")}
-        </h2>
+        </Text>
         <div className="mt-4 flex flex-1 flex-col gap-4">
           <Alert variant="warning">{t("account.delete_cleanup_failed")}</Alert>
         </div>

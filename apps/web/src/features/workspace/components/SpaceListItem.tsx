@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 
-import { Badge, cn } from "@nema-io/weave";
+import { Badge, cn, Text } from "@nema-io/weave";
 
 import { NavItem } from "@web/components/layout/NavItem";
 import { useSidebar } from "@web/components/layout/Sidebar";
@@ -14,12 +14,12 @@ import { SpaceSettingsModal } from "./SpaceSettingsModal";
 // 색상 배지는 리스트에서 시각적으로 시끄러워 중립 톤으로 회귀했다
 // (design-decisions-log.md "Space 아이콘 — 색상 실험 후 중립으로 회귀" 참고).
 const BADGE_CLASS =
-  "flex size-5 shrink-0 items-center justify-center rounded-md bg-fg-primary/10 text-[10px] font-medium text-fg-primary";
+  "flex size-5 shrink-0 items-center justify-center rounded-md bg-fg-primary/10";
 
 // 검토 대기 카운트 — 메뉴(...)와 같은 자리(size-5, right-3.5)에 겹쳐 앉는다.
 // SpaceTabButton과 같은 Badge(variant="success")를 재사용해 같은 신호는 같은
 // 컴포넌트로 표현한다.
-const PENDING_BADGE_CLASS = "h-5 px-2 text-[10px]";
+const PENDING_BADGE_CLASS = "h-5 px-2 text-xs";
 
 interface SpaceListItemProps {
   spaceId: string;
@@ -47,7 +47,11 @@ export function SpaceListItem({
     <>
       <NavItem
         icon={
-          <span
+          <Text
+            as="span"
+            size="xs"
+            weight="medium"
+            color="primary"
             className={cn(
               BADGE_CLASS,
               // 다른 LNB 아이콘(size-4)보다 4px 넓은 만큼 왼쪽으로 밀어 오른쪽 끝을
@@ -57,7 +61,7 @@ export function SpaceListItem({
             )}
           >
             {spaceName.charAt(0).toUpperCase()}
-          </span>
+          </Text>
         }
         label={spaceName}
         to="/space/$spacePublicId"

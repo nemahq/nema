@@ -1,5 +1,7 @@
 import { memo } from "react";
 
+import { Text } from "@nema-io/weave";
+
 import { DraftCardShell } from "./DraftCardShell";
 import { DraftProcessingHeader } from "./DraftProcessingHeader";
 
@@ -29,9 +31,9 @@ export const WorkingDraftCard = memo(function WorkingDraftCard({
         title={title}
         createdAt={createdAt}
       />
-      <p className="line-clamp-4 text-sm leading-relaxed text-fg-tertiary">
+      <Text size="sm" color="tertiary" className="line-clamp-4">
         {body}
-      </p>
+      </Text>
     </DraftCardShell>
   );
 });

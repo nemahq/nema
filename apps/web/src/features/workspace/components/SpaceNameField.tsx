@@ -1,5 +1,5 @@
 import { SPACE_NAME_MAX_LENGTH } from "@nema-io/shared";
-import { Input } from "@nema-io/weave";
+import { Input, Text } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -24,9 +24,9 @@ export function SpaceNameField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-fg-primary">
+      <Text as="label" htmlFor={id} size="sm" weight="medium" color="primary">
         {t("space.name_placeholder")}
-      </label>
+      </Text>
       <Input
         id={id}
         autoFocus

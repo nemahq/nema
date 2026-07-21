@@ -1,3 +1,4 @@
+import { Text } from "@nema-io/weave";
 import { Circle } from "@nema-io/weave/icons";
 
 import { useElapsedSeconds } from "@web/features/intake/hooks/useElapsedSeconds";
@@ -22,12 +23,19 @@ export function DraftOrganizingIndicator({
       : t("intake.draft_organizing_elapsed_seconds", { count: seconds });
 
   return (
-    <div className="flex items-center justify-between text-xs">
-      <div className="flex items-center gap-1.5 text-status-info">
+    <div className="flex items-center justify-between">
+      <Text
+        as="div"
+        size="xs"
+        color="info"
+        className="flex items-center gap-1.5"
+      >
         <Circle className="size-2.5 shrink-0 animate-pulse fill-current" />
         {t("intake.draft_organizing")}
-      </div>
-      <span className="text-fg-tertiary">{elapsedLabel}</span>
+      </Text>
+      <Text as="span" size="xs" color="tertiary">
+        {elapsedLabel}
+      </Text>
     </div>
   );
 }

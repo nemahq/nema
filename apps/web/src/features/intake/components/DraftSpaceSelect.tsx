@@ -5,6 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Skeleton,
+  Text,
 } from "@nema-io/weave";
 import { Check } from "@nema-io/weave/icons";
 
@@ -58,7 +59,9 @@ export function DraftSpaceSelect({
             "cursor-pointer hover:bg-fg-primary/15",
           )}
         >
-          {spaceName}
+          <Text as="span" size="xs" weight="medium" color="primary">
+            {spaceName}
+          </Text>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="start" width={240}>

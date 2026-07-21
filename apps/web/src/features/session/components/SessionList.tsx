@@ -1,7 +1,7 @@
 import { Suspense, useRef } from "react";
 import { useMatch, useNavigate } from "@tanstack/react-router";
 
-import { Skeleton } from "@nema-io/weave";
+import { Text, TextSkeleton } from "@nema-io/weave";
 
 import { useSidebar } from "@web/components/layout/Sidebar";
 import { useSessionList } from "@web/features/session/hooks/useSessionList";
@@ -64,9 +64,15 @@ function SessionListContent() {
 
   return (
     <div className="px-1.5">
-      <h2 className="px-1.5 pb-1 pt-3 text-xs font-medium text-fg-tertiary">
+      <Text
+        as="h2"
+        size="xs"
+        weight="medium"
+        color="tertiary"
+        className="px-1.5 pb-1 pt-3"
+      >
         {t("session.your_contexts")}
-      </h2>
+      </Text>
 
       <div className="flex flex-col gap-0.5">
         {sessions.map((session) => (
@@ -74,6 +80,7 @@ function SessionListContent() {
             key={session.id}
             sessionId={session.id}
             title={session.title}
+            isActive={session.id === currentSessionId}
           />
         ))}
       </div>
@@ -83,11 +90,12 @@ function SessionListContent() {
           {isFetchingNextPage && (
             <>
               <div className="px-2 py-1.5">
-                <Skeleton className="h-[18px] w-2/3 rounded-sm" />
+                <TextSkeleton size="sm" className="w-2/3" />
               </div>
               <div className="px-2 py-1.5">
-                <Skeleton
-                  className="h-[18px] w-1/2 rounded-sm"
+                <TextSkeleton
+                  size="sm"
+                  className="w-1/2"
                   style={{ opacity: 0.6 }}
                 />
               </div>

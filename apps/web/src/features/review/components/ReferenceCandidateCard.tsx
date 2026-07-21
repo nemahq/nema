@@ -11,6 +11,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Text,
 } from "@nema-io/weave";
 import { Trash2 } from "@nema-io/weave/icons";
 
@@ -96,9 +97,15 @@ export function ReferenceCandidateCard({
       {reference.externalUrls.length > 0 && (
         <ul className="flex flex-col gap-0.5">
           {reference.externalUrls.map((url) => (
-            <li key={url} className="truncate text-xs text-brand-accent">
+            <Text
+              key={url}
+              as="li"
+              size="xs"
+              color="brand"
+              className="truncate"
+            >
               {url}
-            </li>
+            </Text>
           ))}
         </ul>
       )}

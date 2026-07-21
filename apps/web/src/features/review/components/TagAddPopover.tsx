@@ -6,6 +6,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Text,
 } from "@nema-io/weave";
 import { Plus } from "@nema-io/weave/icons";
 
@@ -71,9 +72,9 @@ function TagSearchResults({
           </li>
         ))}
         {candidates.length === 0 && trimmed === "" && (
-          <li className="px-2 py-1.5 text-sm text-fg-tertiary">
+          <Text as="li" size="sm" color="tertiary" className="px-2 py-1.5">
             {t("review.label_search_empty")}
-          </li>
+          </Text>
         )}
       </ul>
       {trimmed !== "" && !hasExactMatch && (
@@ -175,18 +176,23 @@ export function TagAddPopover({
               boundaryName="tag-search"
               fallbackRender={() => (
                 <ul className={SEARCH_LIST_CLASSNAME}>
-                  <li className="px-2 py-1.5 text-sm text-status-error">
+                  <Text as="li" size="sm" color="error" className="px-2 py-1.5">
                     {t("review.label_search_error")}
-                  </li>
+                  </Text>
                 </ul>
               )}
             >
               <Suspense
                 fallback={
                   <ul className={SEARCH_LIST_CLASSNAME}>
-                    <li className="px-2 py-1.5 text-sm text-fg-tertiary">
+                    <Text
+                      as="li"
+                      size="sm"
+                      color="tertiary"
+                      className="px-2 py-1.5"
+                    >
                       {t("review.label_search_loading")}
-                    </li>
+                    </Text>
                   </ul>
                 }
               >
@@ -202,15 +208,25 @@ export function TagAddPopover({
           </>
         ) : (
           <>
-            <label className="flex flex-col gap-1 text-xs text-fg-tertiary">
+            <Text
+              as="label"
+              size="xs"
+              color="tertiary"
+              className="flex flex-col gap-1"
+            >
               {t("review.tag_create_title_label")}
               <Input
                 autoFocus
                 value={creatingTitle}
                 onChange={(e) => setCreatingTitle(e.target.value)}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-fg-tertiary">
+            </Text>
+            <Text
+              as="label"
+              size="xs"
+              color="tertiary"
+              className="flex flex-col gap-1"
+            >
               {t("review.tag_create_description_label")}
               <textarea
                 value={description}
@@ -219,7 +235,7 @@ export function TagAddPopover({
                 rows={3}
                 className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-1.5 text-sm placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none dark:focus-visible:border-fg-tertiary/70"
               />
-            </label>
+            </Text>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"

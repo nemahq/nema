@@ -1,5 +1,6 @@
 import { memo, type ReactNode } from "react";
 
+import { Text } from "@nema-io/weave";
 import { TriangleAlert } from "@nema-io/weave/icons";
 
 import type { IdleDraftStatus } from "@web/features/intake/utils";
@@ -64,9 +65,9 @@ export const IdleDraftCard = memo(function IdleDraftCard({
         createdAt={createdAt}
         icon={statusIcon}
       />
-      <p className="line-clamp-4 text-sm leading-relaxed text-fg-tertiary">
+      <Text size="sm" color="tertiary" className="line-clamp-4">
         {body}
-      </p>
+      </Text>
     </DraftCardShell>
   );
 });
