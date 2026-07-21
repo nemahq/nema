@@ -87,7 +87,7 @@ export const DIGEST_BODY_FIELDS: {
 // relation=발견. "연결"(glossary.md의 Relation 개념어)은 사용자가 먼저 겪는 접점이
 // 없고 충돌류 관계엔 안 맞아, AI가 스스로 알아챘다는 뜻의 "발견"으로 바꿨다.
 // revert는 대응 제품 용어가 없어 명사형으로 새로 정함.
-export const CHANGESET_TYPE_LABEL: Record<
+const CHANGESET_TYPE_LABEL: Record<
   Exclude<ChangesetType, "manual">,
   TranslationKey
 > = {
