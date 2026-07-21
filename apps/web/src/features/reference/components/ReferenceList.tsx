@@ -2,7 +2,6 @@ import { Suspense, useState } from "react";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
-import { useReferenceListSuspenseQuery } from "@web/features/reference/hooks/useReferenceListQuery";
 import {
   DEFAULT_REFERENCE_LIST_FILTER,
   filterReferences,
@@ -11,6 +10,7 @@ import {
   type ReferenceSortKey,
   sortReferences,
 } from "@web/features/reference/utils/referenceListFilters";
+import { useReferenceListSuspenseQuery } from "@web/hooks/useReferenceListQuery";
 
 import { ReferenceEmptyState } from "./ReferenceEmptyState";
 import { ReferenceListFilters } from "./ReferenceListFilters";

@@ -11,3 +11,16 @@ export function useReferenceCitingDigestsQuery(
 ) {
   return trpc.reference.citingDigests.useQuery({ referenceId }, options);
 }
+
+export function useReferenceCitingDigestsSuspenseQuery(
+  referenceId: string,
+  options?: Omit<
+    Parameters<typeof trpc.reference.citingDigests.useSuspenseQuery>[1],
+    "queryKey"
+  >,
+) {
+  return trpc.reference.citingDigests.useSuspenseQuery(
+    { referenceId },
+    options,
+  );
+}

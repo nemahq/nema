@@ -15,7 +15,6 @@ import {
 import { MoreHorizontal } from "@nema-io/weave/icons";
 
 import { useArchiveReference } from "@web/features/reference/hooks/useArchiveReference";
-import { usePendingAfterDelay } from "@web/hooks/usePendingAfterDelay";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface ReferenceDetailMoreMenuProps {
@@ -30,7 +29,6 @@ export function ReferenceDetailMoreMenu({
   const { t } = useTranslation();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const archiveReference = useArchiveReference();
-  const isPendingAfterDelay = usePendingAfterDelay(archiveReference.isPending);
 
   function handleConfirmArchive() {
     archiveReference.mutate(
@@ -79,7 +77,7 @@ export function ReferenceDetailMoreMenu({
               onClick={handleConfirmArchive}
               disabled={archiveReference.isPending}
             >
-              {isPendingAfterDelay
+              {archiveReference.isPendingAfterDelay
                 ? t("common.saving")
                 : t("reference.archive_action")}
             </Button>

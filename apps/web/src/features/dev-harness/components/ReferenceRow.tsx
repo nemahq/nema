@@ -2,9 +2,9 @@ import { useState } from "react";
 
 import { Button } from "@nema-io/weave";
 
-import { useReferenceCitingDigestsQuery } from "@web/features/dev-harness/hooks/useReferenceCitingDigestsQuery";
 import { useTrashReference } from "@web/features/dev-harness/hooks/useTrashReference";
 import type { ReferenceSummary } from "@web/features/dev-harness/types";
+import { useReferenceCitingDigestsQuery } from "@web/hooks/useReferenceCitingDigestsQuery";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
 interface ReferenceRowProps {

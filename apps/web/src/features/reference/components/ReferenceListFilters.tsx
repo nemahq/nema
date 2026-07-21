@@ -48,7 +48,10 @@ export function ReferenceListFilters({
           }
         }}
       >
-        <SelectTrigger className="w-36">
+        <SelectTrigger
+          aria-label={t("reference.filter_type_label")}
+          className="w-36"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -69,7 +72,10 @@ export function ReferenceListFilters({
           }
         }}
       >
-        <SelectTrigger className="w-36">
+        <SelectTrigger
+          aria-label={t("reference.filter_status_label")}
+          className="w-36"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

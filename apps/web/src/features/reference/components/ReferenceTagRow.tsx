@@ -48,7 +48,10 @@ export function ReferenceTagRow({
           key={tag.id}
           label={tag.title}
           variant="neutral"
-          disabled={disabled || removeTag.isPending}
+          disabled={
+            disabled ||
+            (removeTag.isPending && removeTag.variables?.tagId === tag.id)
+          }
           removeAriaLabel={t("reference.tag_remove_action")}
           onRemove={() => removeTag.mutate({ referenceId, tagId: tag.id })}
         />

@@ -1,4 +1,5 @@
-import { Text } from "@nema-io/weave";
+import { Button, Text } from "@nema-io/weave";
+import { X } from "@nema-io/weave/icons";
 
 import { SidePanel } from "@web/components/ui/SidePanel";
 import { useTranslation } from "@web/lib/tolgee";
@@ -33,16 +34,29 @@ export function ReferenceListScreen({
         </div>
 
         {selectedReferenceId && (
-          <SidePanel
-            boundaryName="reference-detail-panel"
-            onClose={() => onSelectReference(null)}
-          >
-            <ReferenceDetailPanel
-              key={selectedReferenceId}
-              referenceId={selectedReferenceId}
+          <div className="relative flex">
+            <SidePanel
+              boundaryName="reference-detail-panel"
               onClose={() => onSelectReference(null)}
-            />
-          </SidePanel>
+            >
+              <ReferenceDetailPanel
+                key={selectedReferenceId}
+                referenceId={selectedReferenceId}
+              />
+            </SidePanel>
+            {/* SidePanel의 ErrorBoundary 밖에 둔다 — reference.get이 죽은 링크·
+                권한 없는 워크스페이스로 실패해도 항상 닫을 수 있어야 한다. */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("common.close")}
+              onClick={() => onSelectReference(null)}
+              className="absolute top-2 right-2 z-10"
+            >
+              <X />
+            </Button>
+          </div>
         )}
       </div>
     </div>

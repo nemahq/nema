@@ -1,6 +1,6 @@
 import { memo } from "react";
 
-import { Badge, Text } from "@nema-io/weave";
+import { Badge, LIST_ITEM_HOVER_CLASSNAME, Text } from "@nema-io/weave";
 
 import type { ReferenceSummary } from "@web/features/reference/types";
 import { formatAbsoluteDateTime } from "@web/features/reference/utils/formatAbsoluteDateTime";
@@ -27,7 +27,7 @@ export const ReferenceTableRow = memo(function ReferenceTableRow({
     <button
       type="button"
       onClick={() => onSelect(reference.id)}
-      className={`${REFERENCE_TABLE_GRID_CLASSNAME} items-center rounded-lg px-3 py-2.5 text-left transition-colors duration-fast hover:bg-surface-raised-hover/40`}
+      className={`${REFERENCE_TABLE_GRID_CLASSNAME} ${LIST_ITEM_HOVER_CLASSNAME} items-center px-3 py-2.5 text-left`}
     >
       <ReferenceTypeBadge type={reference.type} />
       <Text as="span" size="sm" weight="medium" className="min-w-0 truncate">

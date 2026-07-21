@@ -13,7 +13,6 @@ import {
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { useUpdateReference } from "@web/features/reference/hooks/useUpdateReference";
 import type { ReferenceDetail } from "@web/features/reference/types";
-import { usePendingAfterDelay } from "@web/hooks/usePendingAfterDelay";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ReferenceTypeBadge } from "./ReferenceTypeBadge";
@@ -33,7 +32,6 @@ export function ReferenceEditor({ reference, readOnly }: ReferenceEditorProps) {
   const [bodyDraft, setBodyDraft] = useState(reference.body);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const updateReference = useUpdateReference();
-  const isPendingAfterDelay = usePendingAfterDelay(updateReference.isPending);
 
   function startEdit() {
     setTitleDraft(reference.title);
@@ -63,7 +61,10 @@ export function ReferenceEditor({ reference, readOnly }: ReferenceEditorProps) {
     );
   }
 
-  const canSubmit = titleDraft.trim() !== "" && bodyDraft.trim() !== "";
+  const isDirty =
+    titleDraft !== reference.title || bodyDraft !== reference.body;
+  const canSubmit =
+    isDirty && titleDraft.trim() !== "" && bodyDraft.trim() !== "";
 
   if (mode === "read") {
     return (
@@ -105,10 +106,10 @@ export function ReferenceEditor({ reference, readOnly }: ReferenceEditorProps) {
           <Button
             type="button"
             size="xs"
-            disabled={!canSubmit}
+            disabled={!canSubmit || readOnly}
             onClick={() => setConfirmOpen(true)}
           >
-            {t("reference.submit_action")}
+            {t("common.save")}
           </Button>
         </div>
       </div>
@@ -116,8 +117,10 @@ export function ReferenceEditor({ reference, readOnly }: ReferenceEditorProps) {
         <ReferenceTypeBadge type={reference.type} />
         <Input
           autoFocus
+          aria-label={t("reference.title_input_label")}
           value={titleDraft}
           onChange={(e) => setTitleDraft(e.target.value)}
+          disabled={readOnly}
           className="min-w-0 flex-1"
         />
       </div>
@@ -127,7 +130,8 @@ export function ReferenceEditor({ reference, readOnly }: ReferenceEditorProps) {
         rows={4}
         value={bodyDraft}
         onChange={(e) => setBodyDraft(e.target.value)}
-        className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-2 text-sm leading-relaxed focus-visible:border-brand focus-visible:outline-none dark:focus-visible:border-fg-tertiary/70"
+        disabled={readOnly}
+        className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-2 text-sm leading-relaxed focus-visible:border-brand focus-visible:outline-none dark:focus-visible:border-fg-tertiary/70 disabled:opacity-60"
       />
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -149,9 +153,9 @@ export function ReferenceEditor({ reference, readOnly }: ReferenceEditorProps) {
               onClick={handleConfirmSubmit}
               disabled={updateReference.isPending}
             >
-              {isPendingAfterDelay
+              {updateReference.isPendingAfterDelay
                 ? t("common.saving")
-                : t("reference.submit_action")}
+                : t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
