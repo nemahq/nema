@@ -31,6 +31,8 @@ type DomainErrorCode =
   | "DB_REFERENCE_STATE_CHANGED"
   | "DB_INGESTION_REVIEW_STATE_CHANGED"
   | "DB_SPACE_DELETE_TARGET_REQUIRED"
+  | "DB_DIGEST_STATE_CHANGED"
+  | "DB_CHANGESET_STATE_CHANGED"
   | "DB_QUERY_FAILED";
 
 const ERROR_MAP: Record<
@@ -114,6 +116,14 @@ const ERROR_MAP: Record<
     trpcCode: "PRECONDITION_FAILED",
     i18nKey: "error.space_delete_target_required",
   },
+  DB_DIGEST_STATE_CHANGED: {
+    trpcCode: "CONFLICT",
+    i18nKey: "error.digest_state_changed",
+  },
+  DB_CHANGESET_STATE_CHANGED: {
+    trpcCode: "CONFLICT",
+    i18nKey: "error.changeset_state_changed",
+  },
   DB_QUERY_FAILED: {
     trpcCode: "INTERNAL_SERVER_ERROR",
     i18nKey: "error.default",
@@ -134,6 +144,8 @@ const EXPECTED_DOMAIN_CODES = new Set<DomainErrorCode>([
   "DB_REFERENCE_STATE_CHANGED",
   "DB_INGESTION_REVIEW_STATE_CHANGED",
   "DB_SPACE_DELETE_TARGET_REQUIRED",
+  "DB_DIGEST_STATE_CHANGED",
+  "DB_CHANGESET_STATE_CHANGED",
   "LLM_ABORTED",
 ]);
 
@@ -154,6 +166,8 @@ const SUPABASE_CODE_MAP: Record<SupabaseErrorCode, DomainErrorCode> = {
   reference_state_changed: "DB_REFERENCE_STATE_CHANGED",
   ingestion_review_state_changed: "DB_INGESTION_REVIEW_STATE_CHANGED",
   space_delete_target_required: "DB_SPACE_DELETE_TARGET_REQUIRED",
+  digest_state_changed: "DB_DIGEST_STATE_CHANGED",
+  changeset_state_changed: "DB_CHANGESET_STATE_CHANGED",
   query_failed: "DB_QUERY_FAILED",
 };
 

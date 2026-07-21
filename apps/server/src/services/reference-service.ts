@@ -138,6 +138,18 @@ export async function archiveReference(args: {
   throwIfSupabaseError(error);
 }
 
+// 아카이브 되살리기 — 이 Reference를 마지막으로 archive한 changeset을
+// revert_changeset으로 되돌린다(review-flow.md "아카이브 되살리기").
+export async function restoreReference(args: {
+  supabase: TypedSupabaseClient;
+  referenceId: string;
+}): Promise<void> {
+  const { error } = await args.supabase.rpc("restore_reference", {
+    p_reference_id: args.referenceId,
+  });
+  throwIfSupabaseError(error);
+}
+
 // Reference에 기존 Tag 연결 — link_reference_tag RPC가 양쪽 active·멤버십
 // 검사와 멱등 삽입을 담당한다.
 export async function addReferenceTag(args: {

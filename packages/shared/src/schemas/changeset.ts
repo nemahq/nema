@@ -96,6 +96,25 @@ export type GetChangesetByNumberInput = z.infer<
   typeof GetChangesetByNumberInputSchema
 >;
 
+// 변경 이력 모달(Digest 상세·Reference 상세 공용, surface-inventory.md "변경 이력")
+// — 대상을 향한 manual changeset만. digest/reference 외 target_type은 이 모달의
+// 대상이 아니다(manual은 애초에 그 둘만 만든다, 07-modeling.md).
+export const ManualChangeHistoryTargetTypeSchema = z.enum([
+  "digest",
+  "reference",
+]);
+export type ManualChangeHistoryTargetType = z.infer<
+  typeof ManualChangeHistoryTargetTypeSchema
+>;
+
+export const ManualChangeHistoryInputSchema = z.object({
+  targetType: ManualChangeHistoryTargetTypeSchema,
+  targetId: z.string().uuid(),
+});
+export type ManualChangeHistoryInput = z.infer<
+  typeof ManualChangeHistoryInputSchema
+>;
+
 export const ACTIVE_RELATION_LIST_LIMIT_DEFAULT = 100;
 export const ACTIVE_RELATION_LIST_LIMIT_MAX = 500;
 

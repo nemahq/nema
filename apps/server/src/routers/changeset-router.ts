@@ -3,6 +3,7 @@ import {
   GetChangesetByNumberInputSchema,
   ListActiveRelationsInputSchema,
   ListChangesetsInputSchema,
+  ManualChangeHistoryInputSchema,
   RejectPendingRelationInputSchema,
   ResolveConflictRelationInputSchema,
   ResolveDuplicateRelationInputSchema,
@@ -14,6 +15,7 @@ import {
   archiveStatement,
   listActiveRelations,
   listChangesets,
+  listManualChangeHistory,
   listPendingRelations,
   rejectPendingRelation,
   resolveConflictRelation,
@@ -104,6 +106,16 @@ export const changesetRouter = router({
         supabase: ctx.supabase,
         spaceId: input.spaceId,
         number: input.number,
+      }),
+    ),
+
+  manualHistory: protectedProcedure
+    .input(ManualChangeHistoryInputSchema)
+    .query(({ ctx, input }) =>
+      listManualChangeHistory({
+        supabase: ctx.supabase,
+        targetType: input.targetType,
+        targetId: input.targetId,
       }),
     ),
 });
