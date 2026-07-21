@@ -3,6 +3,7 @@
     "retrieval_empty": "No relevant information found."
   },
   "error": {
+    "changeset_state_changed": "This change's state changed. Refresh and try again.",
     "db_not_found": "The requested item was not found.",
     "default": "Something went wrong. Please try again.",
     "digest_state_changed": "This digest's state changed. Reload the list and try again.",

@@ -154,6 +154,16 @@ async function addFixtureWorkspaceMember(
   );
 }
 
+async function addFixtureSpaceMember(
+  spaceId: string,
+  userId: string,
+): Promise<void> {
+  await client.query(
+    "INSERT INTO space_members (space_id, user_id, role) VALUES ($1, $2, 'owner')",
+    [spaceId, userId],
+  );
+}
+
 async function createFixtureReference(
   workspaceId: string,
   title: string,
@@ -1057,5 +1067,133 @@ describe("revert_changeset RPC — Reference manual changeset 멤버십 (integra
       [referenceId],
     );
     expect(restoredStatus[0]?.status).toBe("active");
+  });
+});
+
+describe("restore_digest RPC — 되살리기 대상 changeset 범위 (integration)", () => {
+  it("중복 병합(relation changeset)으로 archive된 Digest는 되살리지 못한다 — 병합 전체를 되돌리면 안 됨", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    await addFixtureWorkspaceMember(workspaceId, userId);
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, userId);
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "Digest A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "Digest B",
+    });
+    const digestC = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "Merged C",
+    });
+
+    // resolve_duplicate_relation이 만드는 모양을 직접 재현한다 — 하나의 relation
+    // changeset 안에 create/digest(C) + archive/digest(A) + archive/digest(B).
+    const { rows: mergeRows } = await client.query<{ id: string }>(
+      "INSERT INTO changesets (space_id, type, status, source_id) VALUES ($1, 'relation', 'applied', $2) RETURNING id",
+      [spaceId, sourceId],
+    );
+    const mergeChangesetId = mergeRows[0].id;
+    await client.query(
+      "INSERT INTO changes (changeset_id, action, target_type, target_id, data) VALUES ($1, 'create', 'digest', $2, '{}'::jsonb)",
+      [mergeChangesetId, digestC],
+    );
+    await client.query(
+      "UPDATE digests SET status = 'archived' WHERE id IN ($1, $2)",
+      [digestA, digestB],
+    );
+    await client.query(
+      "INSERT INTO changes (changeset_id, action, target_type, target_id) VALUES ($1, 'archive', 'digest', $2)",
+      [mergeChangesetId, digestA],
+    );
+    await client.query(
+      "INSERT INTO changes (changeset_id, action, target_type, target_id) VALUES ($1, 'archive', 'digest', $2)",
+      [mergeChangesetId, digestB],
+    );
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      userId,
+    ]);
+
+    // 고치기 전엔 여기서 restore_digest(A)가 relation changeset을 통째로
+    // revert_changeset에 넘겨, C가 archive되고 A·B가 둘 다 부활했다. 실패한
+    // 문(statement) 하나 때문에 트랜잭션 전체가 abort되지 않도록 SAVEPOINT로 감싼다.
+    await client.query("SAVEPOINT before_restore_attempt");
+    await expect(
+      client.query("SELECT restore_digest($1)", [digestA]),
+    ).rejects.toThrow(/no archiving changeset to revert/);
+    await client.query("ROLLBACK TO SAVEPOINT before_restore_attempt");
+
+    const { rows: statuses } = await client.query<{
+      title: string;
+      status: string;
+    }>("SELECT title, status FROM digests WHERE id IN ($1, $2, $3)", [
+      digestA,
+      digestB,
+      digestC,
+    ]);
+    const statusByTitle = new Map(statuses.map((r) => [r.title, r.status]));
+    expect(statusByTitle.get("Digest A")).toBe("archived");
+    expect(statusByTitle.get("Digest B")).toBe("archived");
+    expect(statusByTitle.get("Merged C")).toBe("active");
+  });
+});
+
+describe("restore_digest RPC — 원본 재추출 트리거 (integration)", () => {
+  it("추출 완료 전에 archive된 Digest를 되살리면 원본의 extraction_status·linking_status를 함께 pending으로 되돌린다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    await addFixtureWorkspaceMember(workspaceId, userId);
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, userId);
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestId = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "Digest still extracting",
+    });
+    await client.query(
+      "UPDATE digests SET extraction_status = 'pending' WHERE id = $1",
+      [digestId],
+    );
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      userId,
+    ]);
+
+    await client.query("SELECT archive_digest($1)", [digestId]);
+
+    // 이 Digest 없이 원본의 추출 배치가 완료된 상황을 재현한다(워커가 archived를 걸러냄).
+    await client.query(
+      "UPDATE sources SET extraction_status = 'completed', linking_status = 'completed' WHERE id = $1",
+      [sourceId],
+    );
+
+    await client.query("SELECT restore_digest($1)", [digestId]);
+
+    const { rows } = await client.query<{
+      extraction_status: string;
+      linking_status: string;
+    }>("SELECT extraction_status, linking_status FROM sources WHERE id = $1", [
+      sourceId,
+    ]);
+    expect(rows[0]?.extraction_status).toBe("pending");
+    expect(rows[0]?.linking_status).toBe("pending");
   });
 });

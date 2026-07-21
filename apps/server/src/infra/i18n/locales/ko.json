@@ -3,6 +3,7 @@
     "retrieval_empty": "관련된 정보를 찾지 못했어요."
   },
   "error": {
+    "changeset_state_changed": "변경 상태가 바뀌었어요. 새로고침 후 다시 시도해주세요.",
     "db_not_found": "요청한 항목을 찾지 못했어요.",
     "default": "잠깐 문제가 생겼어요. 다시 시도해주세요.",
     "digest_state_changed": "Digest 상태가 바뀌었어요. 목록을 새로 불러온 뒤 다시 시도해주세요.",

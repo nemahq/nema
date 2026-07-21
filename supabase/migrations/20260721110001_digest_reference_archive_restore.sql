@@ -81,18 +81,26 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 -- =============================================================
 -- 2) restore_digest / restore_reference — 아카이브 되살리기
 --
---   이 대상을 마지막으로 archive한 changeset(manual이든 revert든, 위 설명
---   참고)을 찾아 revert_changeset에 위임한다 — 새 로직을 만들지 않고 기존
---   되돌리기 규칙을 재사용(review-flow.md 세션 노트가 지시한 그대로). 동률
---   방지용으로 (created_at, id) 튜플 정렬을 쓴다(#468 keyset 커서와 같은 이유
---   — 같은 트랜잭션 안에서 여러 change가 같은 now()를 가질 수 있음).
+--   이 대상을 마지막으로 archive한 changeset을 찾아 revert_changeset에
+--   위임한다 — 새 로직을 만들지 않고 기존 되돌리기 규칙을 재사용
+--   (review-flow.md 세션 노트가 지시한 그대로). 단 manual·revert 타입으로
+--   좁힌다 — resolve_duplicate_relation(relation_judgment.sql)처럼 중복
+--   병합이 'relation' changeset 안에 "새 Digest 생성 + 옛 Digest 여럿 archive"를
+--   함께 담는 경우, 그 changeset을 통째로 revert하면 이 Digest 하나만
+--   되살리려던 것이 병합 전체를 취소해버린다(새 Digest도 archive되고 병합
+--   상대까지 함께 부활) — 그건 "아카이브 되살리기"가 아니라 "판정 되돌리기"
+--   (Changeset 상세의 별도 액션) 몫이라 여기선 대상이 아니다. 동률 방지용으로
+--   (created_at, id) 튜플 정렬을 쓴다(#468 keyset 커서와 같은 이유 — 같은
+--   트랜잭션 안에서 여러 change가 같은 now()를 가질 수 있음).
 --
 --   restore_digest는 되살아나는 Digest가 아직 extraction_status='pending'인
 --   채로 archive됐다면(추출 완료 전에 아카이브된 경우), 그 사이 원본(source)의
 --   추출 배치가 이 Digest 없이 완료되며 sources.extraction_status를 이미
 --   completed로 닫았을 수 있다(워커의 fetchSourceDigests가 archived를 걸러내
 --   므로) — 그대로 두면 이 Digest는 영원히 "처리 중"(isProcessing)에 갇힌다.
---   원본을 다시 pending으로 돌려 워커가 이 Digest를 다시 집도록 한다.
+--   원본을 extraction_status·linking_status 둘 다 다시 pending으로 돌려
+--   워커가 이 Digest를 다시 집고 그 결과가 링킹 단계까지 흘러가게 한다
+--   (confirm_digest_edit·resolve_duplicate_relation과 같은 2컬럼 리셋 관용구).
 -- =============================================================
 
 CREATE FUNCTION restore_digest(p_digest_id uuid)
@@ -113,10 +121,12 @@ BEGIN
       USING ERRCODE = 'NM010';
   END IF;
 
-  SELECT changeset_id INTO v_changeset_id
-  FROM changes
-  WHERE target_type = 'digest' AND target_id = p_digest_id AND action = 'archive'
-  ORDER BY created_at DESC, id DESC
+  SELECT ch.changeset_id INTO v_changeset_id
+  FROM changes ch
+  JOIN changesets cs ON cs.id = ch.changeset_id
+  WHERE ch.target_type = 'digest' AND ch.target_id = p_digest_id AND ch.action = 'archive'
+    AND cs.type IN ('manual', 'revert')
+  ORDER BY ch.created_at DESC, ch.id DESC
   LIMIT 1;
 
   IF v_changeset_id IS NULL THEN
@@ -127,7 +137,8 @@ BEGIN
   v_revert_id := revert_changeset(v_changeset_id);
 
   IF v_extraction_status = 'pending' THEN
-    UPDATE sources SET extraction_status = 'pending' WHERE id = v_source_id;
+    UPDATE sources SET extraction_status = 'pending', linking_status = 'pending'
+    WHERE id = v_source_id;
     PERFORM pgmq.send('statement_sync', jsonb_build_object('type', 'notify'));
   END IF;
 
@@ -149,10 +160,12 @@ BEGIN
       USING ERRCODE = 'NM007';
   END IF;
 
-  SELECT changeset_id INTO v_changeset_id
-  FROM changes
-  WHERE target_type = 'reference' AND target_id = p_reference_id AND action = 'archive'
-  ORDER BY created_at DESC, id DESC
+  SELECT ch.changeset_id INTO v_changeset_id
+  FROM changes ch
+  JOIN changesets cs ON cs.id = ch.changeset_id
+  WHERE ch.target_type = 'reference' AND ch.target_id = p_reference_id AND ch.action = 'archive'
+    AND cs.type IN ('manual', 'revert')
+  ORDER BY ch.created_at DESC, ch.id DESC
   LIMIT 1;
 
   IF v_changeset_id IS NULL THEN
@@ -185,6 +198,17 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 --   space_id가 NULL인 changeset은 change 행의 target_id로 Reference를
 --   찾아 그 workspace_id로 멤버십을 판단한다 — changesets 테이블 자체엔
 --   workspace_id가 없어 changes를 거쳐야 한다.
+--
+--   이 참에 이 함수(#467에서 넘어온 기존 코드)의 세 RAISE EXCEPTION에
+--   ERRCODE도 붙인다 — 없으면 query_failed로 떨어져 "이미 되살린 걸 또
+--   되살리기"(두 탭 동시 클릭 등, 정상적인 동시성 결과) 같은 흔한 레이스가
+--   이 PR이 새로 여는 되살리기 진입점을 통해 스퓨리어스 500/Sentry로 샌다
+--   — 이 PR의 목적(NM007/NM010 도입)과 정면으로 어긋나는 구멍이라 함께
+--   막는다. "not found or not accessible"은 기존 not_found 버킷(P0002)을
+--   그대로 쓰고, "already reverted"·"nothing to revert"는 changeset
+--   자체의 상태 가드 실패라 엔티티 전용 코드(NM007/NM010)가 아닌 새 코드
+--   NM011(changeset_state_changed)로 — NM004처럼 결이 같은 여러 상황을
+--   한 코드로 묶는다.
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION revert_changeset(p_changeset_id uuid)
@@ -221,11 +245,13 @@ BEGIN
     );
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'changeset % not found or not accessible', p_changeset_id;
+    RAISE EXCEPTION 'changeset % not found or not accessible', p_changeset_id
+      USING ERRCODE = 'P0002';
   END IF;
 
   IF is_changeset_reverted(p_changeset_id) THEN
-    RAISE EXCEPTION 'changeset % is already reverted', p_changeset_id;
+    RAISE EXCEPTION 'changeset % is already reverted', p_changeset_id
+      USING ERRCODE = 'NM011';
   END IF;
 
   INSERT INTO changesets (space_id, type, status, reverts_id, author_id, title, revert_depth)
@@ -314,7 +340,8 @@ BEGIN
   END LOOP;
 
   IF NOT v_did_anything THEN
-    RAISE EXCEPTION 'nothing to revert for changeset %', p_changeset_id;
+    RAISE EXCEPTION 'nothing to revert for changeset %', p_changeset_id
+      USING ERRCODE = 'NM011';
   END IF;
 
   IF v_touched_stmt THEN
@@ -363,13 +390,15 @@ BEGIN
     IF auth.uid() IS NOT NULL AND NOT EXISTS (
       SELECT 1 FROM digests d WHERE d.id = p_target_id AND is_space_member(d.space_id)
     ) THEN
-      RAISE EXCEPTION 'digest % not found or not accessible', p_target_id;
+      RAISE EXCEPTION 'digest % not found or not accessible', p_target_id
+        USING ERRCODE = 'P0002';
     END IF;
   ELSIF p_target_type = 'reference' THEN
     IF auth.uid() IS NOT NULL AND NOT EXISTS (
       SELECT 1 FROM "references" r WHERE r.id = p_target_id AND is_workspace_member(r.workspace_id)
     ) THEN
-      RAISE EXCEPTION 'reference % not found or not accessible', p_target_id;
+      RAISE EXCEPTION 'reference % not found or not accessible', p_target_id
+        USING ERRCODE = 'P0002';
     END IF;
   ELSE
     RAISE EXCEPTION 'list_manual_changes_for_target only supports digest/reference targets (got %)', p_target_type;
@@ -381,7 +410,7 @@ BEGIN
   JOIN changesets cs ON cs.id = ch.changeset_id
   WHERE ch.target_type = p_target_type AND ch.target_id = p_target_id
     AND cs.type IN ('manual', 'revert')
-  ORDER BY ch.created_at DESC;
+  ORDER BY ch.created_at DESC, ch.id DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
 
