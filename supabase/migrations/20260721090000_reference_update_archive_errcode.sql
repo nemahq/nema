@@ -66,7 +66,8 @@ BEGIN
   END IF;
 
   IF v_before = '{}'::jsonb THEN
-    RAISE EXCEPTION 'reference % unchanged — nothing to modify', p_reference_id;
+    RAISE EXCEPTION 'reference % unchanged — nothing to modify', p_reference_id
+      USING ERRCODE = 'NM007';
   END IF;
 
   INSERT INTO changesets (space_id, type, status, author_id)
