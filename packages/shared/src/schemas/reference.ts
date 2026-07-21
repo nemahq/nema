@@ -28,10 +28,34 @@ export const REFERENCE_BODY_MAX_LENGTH = 20_000;
 // Digest가 논하는 링크 더미가 아니라, Digest 상한보다 작게 잡는다.
 export const REFERENCE_EXTERNAL_URLS_MAX = 10;
 
-// Reference 액션(삭제·인용 조회) 공용 입력 — 어떤 상태에서 무엇이 허용되는지는
-// 전부 서버 판정이라(RPC의 WHERE 가드) source의 SourceActionInputSchema와 같은 결.
+// Reference 액션(삭제·인용 조회·단건 조회) 공용 입력 — 어떤 상태에서 무엇이
+// 허용되는지는 전부 서버 판정이라(RPC의 WHERE 가드) source의
+// SourceActionInputSchema와 같은 결.
 export const ReferenceActionInputSchema = z.object({
   referenceId: z.string().uuid(),
 });
 
 export type ReferenceActionInput = z.infer<typeof ReferenceActionInputSchema>;
+
+// Reference 직접 수정 — update_reference RPC와 같은 계약: 전체 상태를 받아
+// 서버가 필드별 diff를 계산한다(생략 필드 없음 — externalUrls를 빼면 "생략 =
+// 빈 값으로 변경"이 되는 트랩, RPC 주석 참고). type·title·body 상한은 신규
+// 생성(NewReferenceDraftSchema)과 같은 상수를 공유한다.
+export const ReferenceUpdateInputSchema = z.object({
+  referenceId: z.string().uuid(),
+  type: ReferenceTypeSchema,
+  title: z.string().trim().min(1).max(REFERENCE_TITLE_MAX_LENGTH),
+  body: z.string().trim().min(1).max(REFERENCE_BODY_MAX_LENGTH),
+  externalUrls: z.array(z.string().url()).max(REFERENCE_EXTERNAL_URLS_MAX),
+});
+export type ReferenceUpdateInput = z.infer<typeof ReferenceUpdateInputSchema>;
+
+// Reference Tag 추가/제거 공용 입력 — link_reference_tag/unlink_reference_tag
+// RPC와 같은 계약(둘 다 reference_id·tag_id 한 쌍만 받는다).
+export const ReferenceTagActionInputSchema = z.object({
+  referenceId: z.string().uuid(),
+  tagId: z.string().uuid(),
+});
+export type ReferenceTagActionInput = z.infer<
+  typeof ReferenceTagActionInputSchema
+>;

@@ -42,6 +42,129 @@ export async function listReferences(args: {
   };
 }
 
+interface ReferenceTagRef {
+  id: string;
+  title: string;
+}
+
+interface ReferenceDetail {
+  id: string;
+  type: ReferenceType;
+  title: string;
+  body: string;
+  status: ReferenceStatus;
+  externalUrls: string[];
+  tags: ReferenceTagRef[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Reference 상세 단건 조회 — 격리는 RLS(references_member_select)가 담당한다.
+// externalUrls는 update_reference의 "전체 상태 diff" 계약(RPC 주석 참고) 때문에
+// 편집 폼이 그대로 들고 있다가 되돌려 보내야 해서 필수로 포함한다. tags는 별도
+// 쿼리(reference_tags 조인)로 붙인다 — reference_tags(tags(...)) 2단 중첩 임베드
+// 대신 changeset-service.ts의 changes(target_type, data) 패턴처럼 1단 임베드만
+// 쓰는 게 이 코드베이스의 기존 관례다.
+export async function getReference(args: {
+  supabase: TypedSupabaseClient;
+  referenceId: string;
+}): Promise<ReferenceDetail> {
+  const { supabase, referenceId } = args;
+
+  const [referenceResult, tagResult] = await Promise.all([
+    supabase
+      .from("references")
+      .select(
+        "id, type, title, body, status, external_urls, created_at, updated_at",
+      )
+      .eq("id", referenceId)
+      .single(),
+    supabase
+      .from("reference_tags")
+      .select("tags(id, title)")
+      .eq("reference_id", referenceId),
+  ]);
+  throwIfSupabaseError(referenceResult.error);
+  throwIfSupabaseError(tagResult.error);
+
+  const reference = referenceResult.data;
+
+  return {
+    id: reference.id,
+    type: reference.type,
+    title: reference.title,
+    body: reference.body,
+    status: reference.status,
+    externalUrls: reference.external_urls ?? [],
+    tags: (tagResult.data ?? []).flatMap((row) =>
+      row.tags ? [{ id: row.tags.id, title: row.tags.title }] : [],
+    ),
+    createdAt: reference.created_at,
+    updatedAt: reference.updated_at,
+  };
+}
+
+// Reference 직접 수정 — update_reference RPC가 전체 상태를 받아 필드별 diff·
+// manual changeset 기록을 전부 담당한다(RPC 주석 참고). 서버는 호출만.
+export async function updateReference(args: {
+  supabase: TypedSupabaseClient;
+  referenceId: string;
+  type: ReferenceType;
+  title: string;
+  body: string;
+  externalUrls: string[];
+}): Promise<void> {
+  const { supabase, referenceId, type, title, body, externalUrls } = args;
+
+  const { error } = await supabase.rpc("update_reference", {
+    p_reference_id: referenceId,
+    p_type: type,
+    p_title: title,
+    p_body: body,
+    p_external_urls: externalUrls,
+  });
+  throwIfSupabaseError(error);
+}
+
+// Reference 아카이브 — archive_reference RPC가 active→archived 전이 + manual
+// changeset 기록을 전부 담당한다. 인용은 끊기지 않는다(RPC 주석 참고).
+export async function archiveReference(args: {
+  supabase: TypedSupabaseClient;
+  referenceId: string;
+}): Promise<void> {
+  const { error } = await args.supabase.rpc("archive_reference", {
+    p_reference_id: args.referenceId,
+  });
+  throwIfSupabaseError(error);
+}
+
+// Reference에 기존 Tag 연결 — link_reference_tag RPC가 양쪽 active·멤버십
+// 검사와 멱등 삽입을 담당한다.
+export async function addReferenceTag(args: {
+  supabase: TypedSupabaseClient;
+  referenceId: string;
+  tagId: string;
+}): Promise<void> {
+  const { error } = await args.supabase.rpc("link_reference_tag", {
+    p_reference_id: args.referenceId,
+    p_tag_id: args.tagId,
+  });
+  throwIfSupabaseError(error);
+}
+
+// Reference에서 Tag 떼기 — unlink_reference_tag RPC가 멱등 삭제를 담당한다.
+export async function removeReferenceTag(args: {
+  supabase: TypedSupabaseClient;
+  referenceId: string;
+  tagId: string;
+}): Promise<void> {
+  const { error } = await args.supabase.rpc("unlink_reference_tag", {
+    p_reference_id: args.referenceId,
+    p_tag_id: args.tagId,
+  });
+  throwIfSupabaseError(error);
+}
+
 interface CitingDigest {
   id: string;
   title: string;
