@@ -1,6 +1,5 @@
 import {
   Badge,
-  pinSelectedToTop,
   Select,
   SelectContent,
   SelectGroup,
@@ -40,22 +39,6 @@ function groupByProvider(
   return byProvider;
 }
 
-function orderProviderGroups(
-  byProvider: Map<string, ModelCatalogEntry[]>,
-  overrideId: string | null | undefined,
-): [string, ModelCatalogEntry[]][] {
-  const groups: [string, ModelCatalogEntry[]][] = [...byProvider].map(
-    ([provider, entries]) => [
-      provider,
-      pinSelectedToTop(entries, (entry) => entry.id === overrideId),
-    ],
-  );
-  return pinSelectedToTop(
-    groups,
-    ([, entries]) => entries[0]?.id === overrideId,
-  );
-}
-
 interface TaskOverrideRowProps {
   task: LlmTaskName;
 }
@@ -83,10 +66,7 @@ export function TaskOverrideRow({ task }: TaskOverrideRowProps) {
     setTaskModel.mutate({ task, modelId: value });
   }
 
-  const orderedGroups = orderProviderGroups(
-    groupByProvider(taskModels.catalog),
-    override,
-  );
+  const byProvider = groupByProvider(taskModels.catalog);
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-border/40 bg-surface-card px-3 py-2">
@@ -113,7 +93,7 @@ export function TaskOverrideRow({ task }: TaskOverrideRowProps) {
           <SelectItem value={TIER_DEFAULT_VALUE}>
             tier 기본 (override 해제)
           </SelectItem>
-          {orderedGroups.map(([provider, entries]) => (
+          {[...byProvider].map(([provider, entries]) => (
             <SelectGroup key={provider}>
               <SelectLabel>{provider}</SelectLabel>
               {entries.map((entry) => (
