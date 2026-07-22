@@ -1,13 +1,12 @@
 import { useState } from "react";
 
 import { SOURCE_BODY_MAX_LENGTH } from "@nema-io/shared";
-import { Alert, Button } from "@nema-io/weave";
+import { Button } from "@nema-io/weave";
 
 import { useStartSourceDigestion } from "@web/features/intake/hooks/useStartSourceDigestion";
 import { useUpdateSourceBody } from "@web/features/intake/hooks/useUpdateSourceBody";
 import type { IdleDraftStatus } from "@web/features/intake/utils";
 import { useRegisterAction } from "@web/lib/command/shortcut/useRegisterAction";
-import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftBodyView } from "./DraftBodyView";
@@ -72,7 +71,7 @@ export function DraftBodyEditor({
       }
       await startDigestionMutation.mutateAsync({ sourceId });
     } catch {
-      // 실패는 각 뮤테이션의 isError로 인라인 표시된다 — 추가 처리 없음.
+      // 전역 토스트(mutationCache.onError)가 이미 띄운다.
     } finally {
       onStartingDigestionChange(false);
     }
@@ -93,19 +92,10 @@ export function DraftBodyEditor({
           readOnly={isStartingDigestion}
           maxLength={SOURCE_BODY_MAX_LENGTH}
           ariaInvalid={updateBodyMutation.isError}
+          placeholder={t("intake.compose_body_placeholder")}
         />
-        {updateBodyMutation.isError && (
-          <Alert variant="error">
-            {getErrorMessage(updateBodyMutation.error)}
-          </Alert>
-        )}
       </div>
       <div className="flex shrink-0 flex-col gap-2 px-6 py-4">
-        {startDigestionMutation.isError && (
-          <Alert variant="error">
-            {getErrorMessage(startDigestionMutation.error)}
-          </Alert>
-        )}
         <div className="flex justify-start">
           <Button
             size="sm"
