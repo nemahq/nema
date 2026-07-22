@@ -48,9 +48,8 @@ export function ReferenceMergeCard({
         <div className="flex items-center justify-between gap-2">
           {/* ReferenceTypePicker(Chip)와 같은 자리 — 정적/인터랙티브 버전이 크기·
               모양이 같아야 해서 shape="pill"로 맞춘다(Badge 기본은 각진
-              rounded-[4px]). 글자색(Badge outline은 text-fg-primary, Chip outline은
-              text-fg-tertiary)은 아직 안 맞다 — Badge outline이 이 앱 전역
-              4곳에 걸려 있어 다른 세션에서 별도로 정리하기로 함. */}
+              rounded-[4px]). 글자색은 OUTLINE_TONE_CLASSNAME을 Badge·Chip이
+              공유해 이미 일치한다. */}
           <Badge variant="outline" shape="pill">
             {isReferenceType(reference.type)
               ? REFERENCE_TYPE_LABEL[reference.type]

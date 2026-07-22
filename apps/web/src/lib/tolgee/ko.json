@@ -244,6 +244,7 @@
     "tag_create_submit_action": "추가",
     "tag_create_title_label": "이름",
     "tag_max_reached": "태그는 최대 {max}개까지 담을 수 있어요.",
+    "tag_remove_action": "이 태그 삭제",
     "topic_add_action": "+ 주제",
     "topic_max_reached": "주제는 최대 {max}개까지 담을 수 있어요.",
     "topic_remove_action": "{label} 주제 제거",

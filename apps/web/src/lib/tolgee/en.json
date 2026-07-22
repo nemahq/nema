@@ -244,6 +244,7 @@
     "tag_create_submit_action": "Add",
     "tag_create_title_label": "Name",
     "tag_max_reached": "You can add up to {max} tags.",
+    "tag_remove_action": "Remove this tag",
     "topic_add_action": "+ Topic",
     "topic_max_reached": "You can add up to {max} topics.",
     "topic_remove_action": "Remove {label} topic",
