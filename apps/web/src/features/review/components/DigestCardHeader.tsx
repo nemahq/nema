@@ -20,17 +20,17 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { DigestCardMenu } from "./DigestCardMenu";
 import { DigestTopicPicker } from "./DigestTopicPicker";
+import { useEditing } from "./EditingProvider";
 
 interface DigestCardHeaderProps {
   digestIndex: number;
   type: DigestType;
-  topics: ReviewDigest["topics"];
+  baseTopics: ReviewDigest["topics"];
   disabled: boolean;
   viewed: boolean;
   sourceActive: boolean;
   onToggleViewed: () => void;
   onViewSource: () => void;
-  onChangeTopics: (next: ReviewDigest["topics"]) => void;
   onChangeType: (next: DigestType) => void;
   onRemove: () => void;
 }
@@ -38,17 +38,20 @@ interface DigestCardHeaderProps {
 export function DigestCardHeader({
   digestIndex,
   type,
-  topics,
+  baseTopics,
   disabled,
   viewed,
   sourceActive,
   onToggleViewed,
   onViewSource,
-  onChangeTopics,
   onChangeType,
   onRemove,
 }: DigestCardHeaderProps) {
   const { t } = useTranslation();
+  const dispatch = useEditing((state) => state.dispatch);
+  const topics = useEditing(
+    (state) => state.overrides.topicsOverrides.get(digestIndex) ?? baseTopics,
+  );
   const viewedFieldId = `digest-${digestIndex}-viewed`;
 
   return (
@@ -70,7 +73,13 @@ export function DigestCardHeader({
         <DigestTopicPicker
           topics={topics}
           disabled={disabled}
-          onChange={onChangeTopics}
+          onChange={(next) =>
+            dispatch({
+              type: "digest/setTopics",
+              index: digestIndex,
+              topics: next,
+            })
+          }
         />
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -103,10 +112,10 @@ export function DigestCardHeader({
           as="label"
           htmlFor={viewedFieldId}
           size="xs"
-          color="tertiary"
+          color={viewed ? "primary" : "tertiary"}
           className={cn(
             "flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 py-1",
-            viewed && "bg-fg-primary/10 text-fg-primary",
+            viewed && "bg-fg-primary/10",
           )}
         >
           <Checkbox

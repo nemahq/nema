@@ -10,6 +10,7 @@ type BadgeVariant =
   | "info"
   | "neutral"
   | "outline"
+  | "outline-value"
   | "digest-decision"
   | "digest-pending"
   | "digest-learning"
@@ -32,7 +33,12 @@ const variantClasses: Record<BadgeVariant, string> = {
   error: "bg-status-error-tint text-status-error",
   info: "bg-status-info-tint text-status-info",
   neutral: NEUTRAL_TONE_CLASSNAME,
+  // 같은 테두리 표현이라도 담는 게 다르다 — outline은 타입·상태처럼 곁들이는
+  // 메타데이터라 조용하고, outline-value는 주제 이름처럼 사용자가 읽고 고르는 값
+  // 자체라 본문과 같은 무게를 갖는다. 하나로 두면 값 자리마다 소비처가 색을
+  // 덮어쓰게 된다(weave-usage.md 원칙).
   outline: "border border-border text-fg-tertiary",
+  "outline-value": "border border-border text-fg-primary",
   "digest-decision": "bg-digest-type-decision-tint text-digest-type-decision",
   "digest-pending": "bg-digest-type-pending-tint text-digest-type-pending",
   "digest-learning": "bg-digest-type-learning-tint text-digest-type-learning",

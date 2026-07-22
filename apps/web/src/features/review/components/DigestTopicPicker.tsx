@@ -24,12 +24,12 @@ interface DigestTopicPickerProps {
 // 요소로 우측으로만 40px 확장한다(사방으로 넓히면 gap-1로 붙어 있는 아래 타입·
 // 제목 행과 겹칠 수 있어서 위아래는 안 건드림). Topic 텍스트가 이미 있는 경우는
 // 클릭 정밀도 문제가 덜해 히트박스 확장을 따로 안 얹는다.
-// self-start를 안 쓰는 이유 — 지금 부모(IngestionScreen의 Topic·액션 행)가
+// self-start를 안 쓰는 이유 — 지금 부모(DigestCardHeader의 Topic·액션 행)가
 // items-center로 세로 중앙 정렬을 이미 맡고 있어서, self-start를 두면 그 정렬을
 // 무시하고 위쪽에 고정돼버린다.
 //
-// 평소엔 조용한 브레드크럼 텍스트, 클릭하면 팝오버 안에서 기존 TopicChipRow(추가·
-// 삭제)가 그대로 나타난다 — 편집 UI 자체는 안 바꾸고 노출 시점만 상시 → 클릭 시로
+// 평소엔 조용한 브레드크럼 텍스트, 클릭하면 팝오버 안에서 TopicEditPanel(추가·
+// 삭제)이 나타난다 — 편집 UI 자체는 안 바꾸고 노출 시점만 상시 → 클릭 시로
 // 옮긴다. Topic이 0개면 브레드크럼 텍스트 자체가 없어 추가할 진입점이 사라지므로,
 // outline 톤의 원형 "+" 자리를 대신 보여준다 — 조용한 텍스트가 아니라 눈에 띄는
 // 모양인 이유는, 채워진 값과 달리 "여기 추가할 수 있다"는 발견성이 필요해서다.
@@ -54,7 +54,7 @@ export function DigestTopicPicker({
           >
             {/* color를 제목·본문 값과 같은 primary로 맞춘다 — 굵기·크기는 그대로
                 둬서 위계는 유지하되, 눈에 덜 띄던 tertiary 대비 가독성만 올린다.
-                구분자는 텍스트 글리프 "·" 대신 본문 리스트 불릿(DigestFieldListInput)과
+                구분자는 텍스트 글리프 "·" 대신 본문 리스트 불릿(DigestListField)과
                 같은 Circle+fill-current — 12px에서 "·"는 잉크가 너무 적어 안 보인다.
                 hover 밑줄은 text-decoration이 아니라 border-b — flex 자식(각 주제
                 span·Circle)마다 데코레이션이 끊겨 그려지는 문제가 있어, 버튼 전체에

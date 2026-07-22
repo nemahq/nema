@@ -1,6 +1,9 @@
 import { cn, Text } from "@nema-io/weave";
 
-import type { DigestBodyFieldKind } from "@web/features/review/constants";
+import type {
+  DigestBodyFieldKey,
+  DigestBodyFieldKind,
+} from "@web/features/review/constants";
 import type { ReviewDigest } from "@web/features/review/types";
 import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
 
@@ -12,7 +15,7 @@ import { useEditing } from "./EditingProvider";
 // 넓어진다 — 단언 대신 실제 값 모양을 확인해 좁힌다.
 function readFieldValue(
   body: ReviewDigest["body"],
-  key: string,
+  key: DigestBodyFieldKey,
 ): string | string[] | undefined {
   const raw: unknown = Object.getOwnPropertyDescriptor(body, key)?.value;
   if (typeof raw === "string") {
@@ -54,7 +57,7 @@ const FIELD_RENDERER: Record<
   (args: FieldRendererArgs) => React.ReactNode
 > = {
   text: ({ value, ...rest }) => (
-    <DigestTextField value={typeof value === "string" ? value : ""} {...rest} />
+    <DigestTextField text={typeof value === "string" ? value : ""} {...rest} />
   ),
   list: ({ value, ...rest }) => (
     <DigestListField items={Array.isArray(value) ? value : [value]} {...rest} />
@@ -66,7 +69,7 @@ interface DigestBodyFieldProps {
   // 오버라이드가 아직 없을 때의 바탕 — 쿼리 결과라 참조가 안정적이어서, 이 prop이
   // 바뀌지 않는 한 형제 필드를 고쳐도 이 필드는 다시 그려지지 않는다.
   baseBody: ReviewDigest["body"];
-  fieldKey: string;
+  fieldKey: DigestBodyFieldKey;
   kind: DigestBodyFieldKind;
   labelKey: TranslationKey;
   placeholderKey: TranslationKey;

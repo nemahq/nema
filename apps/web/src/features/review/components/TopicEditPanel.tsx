@@ -73,14 +73,9 @@ function TopicSearchList({
             <button
               type="button"
               onClick={() => onSelectExisting(topic)}
-              className="flex w-full items-center rounded-sm py-1 text-left hover:bg-surface-raised-hover/75 dark:hover:bg-surface-raised-hover"
+              className="flex w-full items-center rounded-sm py-1 text-left hover:bg-surface-raised-hover"
             >
-              <Badge
-                variant="outline"
-                shape="rounded"
-                truncated
-                className="text-fg-primary"
-              >
+              <Badge variant="outline-value" shape="rounded" truncated>
                 {topic.name}
               </Badge>
             </button>
@@ -104,18 +99,13 @@ function TopicSearchList({
           type="button"
           disabled={!canCreateNew}
           onClick={() => onCreateNew(trimmed)}
-          className="flex w-full items-center gap-1 rounded-sm px-2 py-1 text-left text-sm hover:bg-surface-raised-hover/75 disabled:pointer-events-none disabled:text-fg-quinary dark:hover:bg-surface-raised-hover"
+          className="flex w-full items-center gap-1 rounded-sm px-2 py-1 text-left text-sm hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quinary"
         >
           {/* Badge를 문장 안에 끼우기 위해 앞/뒤 문구를 분리한다 — tolgee의
               t()는 문자열 파라미터만 받아 컴포넌트를 끼워 넣을 수 없다(어순이
               언어마다 달라 국문은 뒤쪽, 영문은 앞쪽에 문구가 붙는다). */}
           {t("review.label_create_new_before")}
-          <Badge
-            variant="outline"
-            shape="rounded"
-            truncated
-            className="text-fg-primary"
-          >
+          <Badge variant="outline-value" shape="rounded" truncated>
             {trimmed}
           </Badge>
           {t("review.label_create_new_after")}
@@ -131,10 +121,10 @@ interface TopicEditPanelProps {
   onChange: (topics: DigestTopicDraft[]) => void;
 }
 
-// TopicChipRow(구현) 대신 새로 만든다 — 이름 재사용은 아이디어(칩+제거 버튼)뿐,
-// 색은 neutral(Topic은 색 없이 조용하게라는 이번 라운드 원칙과 맞춤), shape는
-// 각진 기본값(여러 개를 나란히 늘어놓는 자리라 pill이 아님). 제거 버튼은 hover-
-// reveal이 아니라 상시 노출 — 팝오버를 연 시점 자체가 편집 의도가 명확해서다.
+// 색은 안 쓴다 — Topic은 조용하게 두고 테두리로만 구분한다(이번 라운드 원칙).
+// shape는 각진 기본값 — 여러 개를 나란히 늘어놓는 자리라 pill이 아니다. 제거
+// 버튼은 hover-reveal이 아니라 상시 노출 — 팝오버를 연 시점 자체가 편집 의도가
+// 명확해서다.
 // weave Button 대신 raw button인 이유는 칩 안에서 Badge의 색·크기를 물려받아야
 // 하는데 Button base가 자기 타이포를 강제해 안 맞기 때문(weave-usage.md "칩·pill
 // 안 버튼" 제외 규칙, LabelChipShell과 같은 이유).
@@ -172,9 +162,9 @@ export function TopicEditPanel({
         {topics.map((topic, index) => (
           <Badge
             key={topic.id ?? `draft-${index}`}
-            variant="outline"
+            variant="outline-value"
             shape="rounded"
-            className="inline-flex items-center gap-1 py-0.5 pr-1 text-fg-primary"
+            className="inline-flex items-center gap-1 py-0.5 pr-1"
           >
             {topic.name}
             <button
@@ -182,7 +172,7 @@ export function TopicEditPanel({
               disabled={disabled}
               aria-label={t("review.topic_remove_action")}
               onClick={() => removeAt(index)}
-              className="rounded-full p-0.5 text-current/70 hover:bg-black/10 disabled:pointer-events-none dark:hover:bg-white/10"
+              className="rounded-full p-0.5 text-current/70 hover:bg-fg-primary/15 disabled:pointer-events-none"
             >
               <XIcon className="size-3" />
             </button>

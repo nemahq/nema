@@ -37,28 +37,28 @@ export function DigestCandidateCard({
     (state) =>
       (state.overrides.bodyOverrides.get(digestIndex) ?? digest.body).type,
   );
-  const topics = useEditing(
-    (state) =>
-      state.overrides.topicsOverrides.get(digestIndex) ?? digest.topics,
-  );
+
+  // 실제 편집 필드에 포커스가 들어올 때만 펼친다. ⋯ 메뉴처럼 Portal로 렌더되는
+  // 요소도 합성 이벤트는 여기까지 버블링되는데, data-nav-field가 안 붙어 있어
+  // 액션마다 예외를 추가하지 않아도 걸러진다.
+  function handleFieldFocus(e: React.FocusEvent<HTMLDivElement>) {
+    if (e.target instanceof Element && e.target.closest("[data-nav-field]")) {
+      setFocused(true);
+    }
+  }
+
+  // 같은 카드 안 다른 필드로 옮겨가는 중간엔 접히면 안 되므로 onBlur만으론
+  // 부족하다 — 포커스가 카드를 완전히 벗어났는지 relatedTarget으로 본다.
+  function handleCardBlur(e: React.FocusEvent<HTMLDivElement>) {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setFocused(false);
+    }
+  }
 
   return (
     <div
-      onFocus={(e) => {
-        // 실제 편집 필드에 포커스가 들어올 때만 펼친다. ⋯ 메뉴처럼 Portal로 렌더되는
-        // 요소도 합성 이벤트는 여기까지 버블링되는데, data-nav-field가 안 붙어 있어
-        // 액션마다 예외를 추가하지 않아도 걸러진다.
-        if ((e.target as Element).closest("[data-nav-field]")) {
-          setFocused(true);
-        }
-      }}
-      onBlur={(e) => {
-        // 같은 카드 안 다른 필드로 옮겨가는 중간엔 접히면 안 되므로 onBlur만으론
-        // 부족하다 — 포커스가 카드를 완전히 벗어났는지 relatedTarget으로 본다.
-        if (!e.currentTarget.contains(e.relatedTarget)) {
-          setFocused(false);
-        }
-      }}
+      onFocus={handleFieldFocus}
+      onBlur={handleCardBlur}
       className={cn(
         "flex flex-col gap-2",
         // 접힌 카드는 3줄로 짧아져서 같은 여백이면 헐거워 보인다 — 뒤쪽이 더
@@ -72,19 +72,22 @@ export function DigestCandidateCard({
         <DigestCardHeader
           digestIndex={digestIndex}
           type={type}
-          topics={topics}
+          baseTopics={digest.topics}
           disabled={disabled}
           viewed={viewed}
           sourceActive={sourceActive}
           onToggleViewed={() => setViewed((current) => !current)}
           onViewSource={onViewSource}
-          onChangeTopics={(next) =>
-            dispatch({ type: "digest/setTopics", index: digestIndex, topics: next })
-          }
           onChangeType={(next) =>
-            dispatch({ type: "digest/setBody", index: digestIndex, body: { type: next } })
+            dispatch({
+              type: "digest/setBody",
+              index: digestIndex,
+              body: { type: next },
+            })
           }
-          onRemove={() => dispatch({ type: "digest/remove", index: digestIndex })}
+          onRemove={() =>
+            dispatch({ type: "digest/remove", index: digestIndex })
+          }
         />
         {/* Topic·제목·description을 한 워시 구역에 묶는다 — 셋이 나중에 피드
             미리보기 카드에 그대로 나갈 것들이라, "조작 가능한가"보다 이 묶음이

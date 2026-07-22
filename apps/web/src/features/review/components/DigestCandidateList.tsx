@@ -1,6 +1,7 @@
 import type { ReviewDigest } from "@web/features/review/types";
 
 import { DigestCandidateCard } from "./DigestCandidateCard";
+import { useEditing } from "./EditingProvider";
 
 interface DigestCandidateListProps {
   digests: ReviewDigest[];
@@ -18,9 +19,18 @@ export function DigestCandidateList({
   activeSourceIndex,
   onViewSource,
 }: DigestCandidateListProps) {
+  const removedIndexes = useEditing(
+    (state) => state.overrides.removedDigestIndexes,
+  );
+  // 삭제는 서버로 바로 안 나가고 확정 시 반영되는 오버라이드라, 화면에서 빼는 건
+  // 이 목록의 몫이다. index는 오버라이드의 키라서 걸러낸 뒤에도 원래 값을 유지한다.
+  const visible = digests
+    .map((digest, index) => ({ digest, index }))
+    .filter(({ index }) => !removedIndexes.has(index));
+
   return (
     <div className="flex flex-col pt-4">
-      {digests.map((digest, index) => (
+      {visible.map(({ digest, index }) => (
         <DigestCandidateCard
           key={index}
           digestIndex={index}

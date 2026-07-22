@@ -101,7 +101,9 @@ export function DigestListField({
             disabled={disabled}
             placeholder={focusedIndex === itemIndex ? placeholder : undefined}
             onChange={(next) =>
-              onChange(items.map((v, i) => (i === itemIndex ? next : v)))
+              onChange(
+                items.map((current, i) => (i === itemIndex ? next : current)),
+              )
             }
             onKeyDown={(e) => handleKeyDown(itemIndex, e)}
             onFocus={() => setFocusedIndex(itemIndex)}

@@ -48,6 +48,12 @@ export function isReferenceType(value: string): value is ReferenceType {
 // key를 타입별 본문 필드로 좁혀, 없는 필드나 오타가 컴파일 에러로 드러나게 한다.
 export type DigestBodyFieldKind = "text" | "list";
 
+// 타입별로 갈리는 본문 필드 이름 전체 — body가 유니온이라 keyof를 그냥 쓰면
+// 교집합("type")만 남으므로 분배해서 모은다. 오타나 없는 필드가 컴파일 에러로
+// 드러나게 하는 게 목적이다.
+type BodyFieldKeyOf<T> = T extends unknown ? Exclude<keyof T, "type"> : never;
+export type DigestBodyFieldKey = BodyFieldKeyOf<DigestBody>;
+
 interface DigestBodyFieldMeta<T extends DigestType> {
   key: Exclude<keyof Extract<DigestBody, { type: T }>, "type">;
   // 스키마상 string인지 string[]인지를 정의가 직접 들고 있는다 — 렌더가 값을 보고

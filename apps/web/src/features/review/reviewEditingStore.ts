@@ -1,5 +1,6 @@
 import { createStore } from "zustand/vanilla";
 
+import type { DigestBodyFieldKey } from "@web/features/review/constants";
 import type { ReviewOverrides } from "@web/features/review/reviewEditingState";
 import type {
   ReviewDigest,
@@ -17,7 +18,7 @@ export type ReviewEditingAction =
       type: "digest/setBodyField";
       index: number;
       baseBody: ReviewDigest["body"];
-      key: string;
+      key: DigestBodyFieldKey;
       value: string | string[];
     }
   | { type: "digest/setTopics"; index: number; topics: ReviewDigest["topics"] }
