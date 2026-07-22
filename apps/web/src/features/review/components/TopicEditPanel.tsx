@@ -75,7 +75,7 @@ function TopicSearchList({
               onClick={() => onSelectExisting(topic)}
               className="flex w-full items-center rounded-sm py-1 text-left hover:bg-surface-raised-hover"
             >
-              <Badge variant="outline-value" shape="rounded" truncated>
+              <Badge variant="outline" shape="rounded" truncated>
                 {topic.name}
               </Badge>
             </button>
@@ -107,7 +107,7 @@ function TopicSearchList({
           <Text as="span" size="sm">
             {t("review.label_create_new_before")}
           </Text>
-          <Badge variant="outline-value" shape="rounded" truncated>
+          <Badge variant="outline" shape="rounded" truncated>
             {trimmed}
           </Badge>
           <Text as="span" size="sm">
@@ -166,7 +166,7 @@ export function TopicEditPanel({
         {topics.map((topic, index) => (
           <Badge
             key={topic.id ?? `draft-${index}`}
-            variant="outline-value"
+            variant="outline"
             shape="rounded"
             className="inline-flex items-center gap-1 py-0.5 pr-1"
           >

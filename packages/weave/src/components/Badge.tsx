@@ -11,8 +11,8 @@ type BadgeVariant =
   | "error"
   | "info"
   | "neutral"
-  | "outline"
-  | "outline-value";
+  | "outline-subtle"
+  | "outline";
 
 // color는 반대로 "무슨 색인가"를 직접 고르는 축 — weave가 뜻을 모르는 분류(앱마다
 // 다른 5종 타입 같은 것)를 서로 구별해야 할 때만 쓴다. 의미가 있는 자리에 이걸 쓰면
@@ -31,12 +31,12 @@ const variantClasses: Record<BadgeVariant, string> = {
   error: "bg-status-error-tint text-status-error",
   info: "bg-status-info-tint text-status-info",
   neutral: NEUTRAL_TONE_CLASSNAME,
-  // 같은 테두리 표현이라도 담는 게 다르다 — outline은 타입·상태처럼 곁들이는
-  // 메타데이터라 조용하고, outline-value는 주제 이름처럼 사용자가 읽고 고르는 값
-  // 자체라 본문과 같은 무게를 갖는다. 하나로 두면 값 자리마다 소비처가 색을
-  // 덮어쓰게 된다(weave-usage.md 원칙).
-  outline: "border border-border text-fg-tertiary",
-  "outline-value": "border border-border text-fg-primary",
+  // 테두리만 쓰는 배지의 기본은 값을 담는 쪽(outline) — 그 자체가 읽는 대상이라
+  // 본문과 같은 무게를 갖는다. subtle은 제목 옆에 곁들이는 유형·상태 라벨처럼
+  // 부가 정보일 때만 쓴다. 하나로 두면 값 자리마다 소비처가 색을 덮어쓰게 된다
+  // (weave-usage.md 원칙).
+  "outline-subtle": "border border-border text-fg-tertiary",
+  outline: "border border-border text-fg-primary",
 };
 
 const colorClasses: Record<BadgeColor, string> = {
