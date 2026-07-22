@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from "react";
 
 import { Circle } from "@nema-io/weave/icons";
 
+import {
+  mergeListItemIntoPrevious,
+  splitListItem,
+} from "@web/features/review/digestListEditing";
+
 import { InvisibleTextarea } from "./InvisibleTextarea";
 
 interface DigestListFieldProps {
@@ -44,21 +49,17 @@ export function DigestListField({
     [items],
   );
 
-  function splitItem(itemIndex: number, cursor: number) {
-    const next = [...items];
-    next[itemIndex] = items[itemIndex].slice(0, cursor);
-    next.splice(itemIndex + 1, 0, items[itemIndex].slice(cursor));
+  function splitItem(itemIndex: number, start: number, end: number) {
     pendingFocusRef.current = { index: itemIndex + 1, cursor: 0 };
-    onChange(next);
+    onChange(splitListItem(items, itemIndex, start, end));
   }
 
   function mergeIntoPrevious(itemIndex: number) {
-    const previous = items[itemIndex - 1];
-    const next = [...items];
-    next[itemIndex - 1] = previous + items[itemIndex];
-    next.splice(itemIndex, 1);
-    pendingFocusRef.current = { index: itemIndex - 1, cursor: previous.length };
-    onChange(next);
+    pendingFocusRef.current = {
+      index: itemIndex - 1,
+      cursor: items[itemIndex - 1].length,
+    };
+    onChange(mergeListItemIntoPrevious(items, itemIndex));
   }
 
   function handleKeyDown(
@@ -68,7 +69,12 @@ export function DigestListField({
     const input = e.currentTarget;
     if (e.key === "Enter") {
       e.preventDefault();
-      splitItem(itemIndex, input.selectionStart ?? items[itemIndex].length);
+      const fallback = items[itemIndex].length;
+      splitItem(
+        itemIndex,
+        input.selectionStart ?? fallback,
+        input.selectionEnd ?? fallback,
+      );
       return;
     }
     // 맨 앞 커서에서만 병합한다 — 그 외 위치는 브라우저 기본 동작(한 글자 지우기)에

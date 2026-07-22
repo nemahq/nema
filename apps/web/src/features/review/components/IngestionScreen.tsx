@@ -116,10 +116,14 @@ function IngestionContent() {
         confirmReview: confirmReview.mutateAsync,
         onSaved: resetEditing,
       });
-      showNotificationSoftAsk();
     } catch {
       // 전역 토스트(mutationCache.onError)가 이미 띄운다.
+      return;
     }
+    // try 밖에 둔다 — 여기서 던지면(예: localStorage 접근 실패) 위 catch가
+    // "mutation 실패는 전역 토스트가 이미 처리한다"는 전제로 조용히 삼켜버린다.
+    // 밖에 두면 앱 전역 unhandled rejection 리포트로 정상 노출된다.
+    showNotificationSoftAsk();
   }
 
   function handleDiscard() {

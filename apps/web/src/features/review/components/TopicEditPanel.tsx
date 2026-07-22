@@ -27,13 +27,9 @@ interface TopicSearchListProps {
   onCreateNew: (name: string) => void;
 }
 
-// 로직(필터·중복 판정)은 TopicAddPopover의 TopicSearchResults와 같은 유틸을
-// 재사용하지만, 마크업은 새로 짠다 — Notion처럼 이 팝오버 전체가 하나의 편집
-// 표면이라 별도 팝오버로 검색 결과를 또 띄우지 않고 같은 화면에 바로 이어 붙인다.
-// 목록 행도 TopicSearchResults와 같은 이유로 raw button — 전체 폭 hover 행이라
-// weave Button의 고정 패딩·타이포가 안 맞는다. 리스트 마크업(ul/li)·빈 목록 높이
-// (max-h-48)는 TopicSearchResults와 그대로 맞춘다 — 목록 자체의 성격이 같아서
-// 여기서만 다르게 할 이유가 없다.
+// Notion처럼 이 팝오버 전체가 하나의 편집 표면이라, 별도 팝오버로 검색 결과를
+// 또 띄우지 않고 같은 화면에 바로 이어 붙인다. 목록 행은 raw button — 전체 폭
+// hover 행이라 weave Button의 고정 패딩·타이포가 안 맞는다.
 function TopicSearchList({
   spaceId,
   query,
@@ -184,10 +180,10 @@ export function TopicEditPanel({
         ))}
         {!atMax && (
           // weave Input 대신 raw — border·h-9·px-3 같은 base chrome을 걷어내면
-          // 남는 게 없어서, 칩과 한 행에 이어 붙는 무테두리 인라인 입력엔 안 맞는다
-          // (TopicAddPopover의 독립형 Input과는 자리 성격이 다름). placeholder를
-          // 여기 안 두는 이유 — 칩이 쌓일수록 이 인풋 자체가 좁아져 placeholder
-          // 문구가 잘릴 수 있어서, 안내문은 아래 리스트 위 고정 폭 자리에 따로 둔다.
+          // 남는 게 없어서, 칩과 한 행에 이어 붙는 무테두리 인라인 입력엔 안 맞는다.
+          // placeholder를 여기 안 두는 이유 — 칩이 쌓일수록 이 인풋 자체가 좁아져
+          // placeholder 문구가 잘릴 수 있어서, 안내문은 아래 리스트 위 고정 폭
+          // 자리에 따로 둔다.
           <input
             value={query}
             disabled={disabled}

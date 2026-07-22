@@ -160,6 +160,19 @@ describe("digest/setBodyField", () => {
       choice: "고친 선택",
     });
   });
+
+  it("현재 타입에 없는 필드 키는 무시하고 오버라이드를 그대로 둔다", () => {
+    const overrides = reviewEditingReducer(emptyOverrides(), {
+      // "tradeoff"는 decision 전용 — learning 타입 body에 잘못 합쳐지는 걸 막는다.
+      type: "digest/setBodyField",
+      index: 0,
+      baseBody: { type: "learning", finding: "발견" },
+      key: "tradeoff",
+      value: ["a"],
+    });
+
+    expect(overrides.bodyOverrides.has(0)).toBe(false);
+  });
 });
 
 describe("createReviewEditingStore", () => {
