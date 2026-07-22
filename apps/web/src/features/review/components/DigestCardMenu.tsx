@@ -45,9 +45,10 @@ export function DigestCardMenu({
               type="button"
               size="icon-sm"
               variant="ghost"
+              shape="circle"
               disabled={disabled}
               aria-label={t("review.digest_menu_label")}
-              className="size-6 rounded-full text-fg-tertiary"
+              className="size-6 text-fg-tertiary"
             >
               <Ellipsis />
             </Button>

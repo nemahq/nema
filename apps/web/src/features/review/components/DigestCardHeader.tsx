@@ -93,11 +93,12 @@ export function DigestCardHeader({
               type="button"
               size="icon-sm"
               variant="ghost"
+              shape="circle"
               disabled={disabled}
               aria-label={t("review.digest_view_source_action")}
               onClick={onViewSource}
               className={cn(
-                "size-6 rounded-full text-fg-tertiary",
+                "size-6 text-fg-tertiary",
                 sourceActive && "bg-fg-primary/10 text-fg-primary",
               )}
             >
