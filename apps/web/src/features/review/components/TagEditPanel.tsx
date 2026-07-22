@@ -1,7 +1,17 @@
 import { type ReactNode, Suspense, useId, useState } from "react";
 
 import { DIGEST_TAGS_MAX, type DigestTagDraft } from "@nema-io/shared";
-import { Badge, Button, cn, Separator, Skeleton, Text } from "@nema-io/weave";
+import {
+  Badge,
+  Button,
+  cn,
+  Separator,
+  Skeleton,
+  Text,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@nema-io/weave";
 import { XIcon } from "@nema-io/weave/icons";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
@@ -61,15 +71,33 @@ function TagSearchList({
       <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
         {candidates.map((tag) => (
           <li key={tag.id}>
-            <button
-              type="button"
-              onClick={() => onSelectExisting(tag)}
-              className="flex w-full items-center rounded-sm py-1 text-left hover:bg-surface-raised-hover"
-            >
-              <Badge variant="outline" shape="rounded" truncated>
-                {tag.title}
-              </Badge>
-            </button>
+            {/* description을 hover에 얹는다 — Tag는 이름만으로 재사용 여부를
+                판단 못 하는 라벨이라(07-modeling.md), 고르기 전에 그 판단
+                기준을 볼 방법이 없으면 description을 강제한 이유가 무색해진다. */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => onSelectExisting(tag)}
+                  className="flex w-full items-center rounded-sm py-1 text-left hover:bg-surface-raised-hover"
+                >
+                  <Badge variant="outline" shape="rounded" truncated>
+                    {tag.title}
+                  </Badge>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="right"
+                align="start"
+                sideOffset={8}
+                // 기본 text-balance가 max-w보다 먼저 줄을 접어 여백을 남긴다 —
+                // 설명은 균형 잡힌 헤드라인이 아니라 그냥 문장이라 일반 줄바꿈이
+                // 맞다.
+                className="max-w-60 text-wrap"
+              >
+                {tag.description}
+              </TooltipContent>
+            </Tooltip>
           </li>
         ))}
         {/* Topic과 같은 원인 분리 — "일치 항목 없음"과 "이미 다 붙어서 후보가
