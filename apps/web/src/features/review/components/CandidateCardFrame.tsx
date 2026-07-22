@@ -38,8 +38,12 @@ export function CandidateCardFrame({
       )}
     >
       {/* 각진 모서리 — 둥근 모서리는 이 앱에서 클릭 가능한 컨트롤의 시각 언어라,
-          여기 쓰면 헤더가 영역 표시가 아니라 또 하나의 컨트롤처럼 보인다. */}
-      <div className="flex flex-col gap-2 bg-fg-primary/5 px-2 py-2">
+          여기 쓰면 헤더가 영역 표시가 아니라 또 하나의 컨트롤처럼 보인다. 배경은
+          LNB(Sidebar)와 같은 톤(라이트 surface-raised·다크 surface-base) — 반투명
+          틴트 대신 이 페이지가 얹힌 surface-card와 항상 같은 정도로 구분되는 절대
+          색이라, 다크에서 카드 배경(surface-card)에 얹은 틴트가 흐려 보이던 문제가
+          없다. */}
+      <div className="flex flex-col gap-2 bg-surface-raised px-2 py-2 dark:bg-surface-base">
         {wash}
       </div>
       {/* 읽음 처리되면 본문을 통째로 안 그린다 — 헤더만 남아 피드 행처럼 접힌다. */}
