@@ -96,9 +96,13 @@ function TopicSearchList({
           type="button"
           disabled={!canCreateNew}
           onClick={() => onCreateNew(trimmed)}
-          className="flex w-full items-center gap-1 rounded-sm px-2 py-1 text-left hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quinary"
+          className="flex w-full items-center gap-1 rounded-sm py-1 text-left hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quinary"
         >
-          {/* Badge를 문장 안에 끼우기 위해 앞/뒤 문구를 분리한다 — tolgee의
+          {/* px-2를 안 두는 이유는 위 후보 행과 동일 — Badge가 이미 자기
+              패딩(px-2)을 갖고 있어 행에 또 주면 이중으로 밀린다. 국문은
+              label_create_new_before가 빈 문자열이라 이 값이 특히 중요하다
+              (아니면 Badge 앞에 눈에 띄는 여백이 생긴다).
+              Badge를 문장 안에 끼우기 위해 앞/뒤 문구를 분리한다 — tolgee의
               t()는 문자열 파라미터만 받아 컴포넌트를 끼워 넣을 수 없다(어순이
               언어마다 달라 국문은 뒤쪽, 영문은 앞쪽에 문구가 붙는다). */}
           <Text as="span" size="sm">

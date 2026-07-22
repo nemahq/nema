@@ -4,7 +4,7 @@ import {
   REFERENCE_TYPES,
   type ReferenceType,
 } from "@nema-io/shared";
-import type { BadgeColor, BadgeVariant } from "@nema-io/weave";
+import type { BadgeVariant, TagColor } from "@nema-io/weave";
 import type { IconComponent } from "@nema-io/weave/icons";
 import { Check, Circle, X } from "@nema-io/weave/icons";
 
@@ -22,13 +22,15 @@ export const DIGEST_TYPE_LABEL_KEY: Record<DigestType, TranslationKey> = {
 
 // weave는 색조만 알고 그게 무엇을 가리키는지는 모른다 — Digest 타입을 어느 색에
 // 앉힐지는 이 표가 정한다(apps/web/src/index.css의 mode-* 매핑과 같은 결). 색을
-// 바꾸는 것도 타입이 느는 것도 여기서 끝나고 디자인 시스템은 안 흔들린다.
-export const DIGEST_TYPE_BADGE_COLOR: Record<DigestType, BadgeColor> = {
-  decision: "indigo",
-  pending: "pink",
-  learning: "lime",
-  idea: "yellow",
-  assumption: "purple",
+// 바꾸는 것도 타입이 느는 것도 여기서 끝나고 디자인 시스템은 안 흔들린다. TagColor는
+// 원래 사용자 태그용(해시로 자동 배정)이지만, Chip이 받는 색 축이 이거 하나뿐이라
+// 타입마다 하나씩 고정 배정해 재사용한다.
+export const DIGEST_TYPE_TAG_COLOR: Record<DigestType, TagColor> = {
+  decision: "violet",
+  pending: "rose",
+  learning: "sage",
+  idea: "olive",
+  assumption: "mauve",
 };
 
 // organization은 행위주체(법인·팀), product는 그 주체가 만든 것 — 라벨만 봐선

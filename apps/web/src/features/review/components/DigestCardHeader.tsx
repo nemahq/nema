@@ -1,25 +1,20 @@
 import type { DigestType } from "@nema-io/shared";
 import {
-  Badge,
   Button,
-  Checkbox,
   cn,
-  Text,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@nema-io/weave";
 import { FileText } from "@nema-io/weave/icons";
 
-import {
-  DIGEST_TYPE_BADGE_COLOR,
-  DIGEST_TYPE_LABEL_KEY,
-} from "@web/features/review/constants";
 import type { ReviewDigest } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { CardViewedToggle } from "./CardViewedToggle";
 import { DigestCardMenu } from "./DigestCardMenu";
 import { DigestTopicPicker } from "./DigestTopicPicker";
+import { DigestTypePicker } from "./DigestTypePicker";
 import { useEditing } from "./EditingProvider";
 
 interface DigestCardHeaderProps {
@@ -57,19 +52,13 @@ export function DigestCardHeader({
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-1.5">
-        {/* 펼친 상태에선 타입별 전용 필드가 이미 타입을 드러내므로 배지를 안 낸다.
-            접히면 그 단서가 사라져서 이때만 읽기 전용 배지로 되살린다 — 편집은
-            여전히 ⋯ 메뉴 전담이라 클릭 가능한 Chip이 아니다. Topic 왼쪽에 두는
-            건 가변폭 텍스트 뒤에 붙으면 지터가 생기기 때문. */}
-        {viewed && (
-          <Badge
-            color={DIGEST_TYPE_BADGE_COLOR[type]}
-            shape="rounded"
-            className="shrink-0"
-          >
-            {t(DIGEST_TYPE_LABEL_KEY[type])}
-          </Badge>
-        )}
+        {/* 상시 노출, Topic 왼쪽 고정 슬롯 — 가변폭 텍스트(Topic) 뒤에 붙으면
+            지터가 생겨서 앞에 둔다. */}
+        <DigestTypePicker
+          type={type}
+          disabled={disabled}
+          onChangeType={onChangeType}
+        />
         <DigestTopicPicker
           topics={topics}
           disabled={disabled}
@@ -109,30 +98,14 @@ export function DigestCardHeader({
             {t("review.digest_view_source_action")}
           </TooltipContent>
         </Tooltip>
-        <Text
-          as="label"
-          htmlFor={viewedFieldId}
-          size="xs"
-          color={viewed ? "primary" : "tertiary"}
-          className={cn(
-            "flex cursor-pointer items-center gap-1.5 rounded-md border border-border-strong px-2 py-1",
-            viewed && "bg-fg-primary/10",
-          )}
-        >
-          <Checkbox
-            id={viewedFieldId}
-            disabled={disabled}
-            checked={viewed}
-            onCheckedChange={onToggleViewed}
-          />
-          {t("review.digest_viewed_action")}
-        </Text>
-        <DigestCardMenu
-          currentType={type}
+        <CardViewedToggle
+          fieldId={viewedFieldId}
+          label={t("review.digest_viewed_action")}
+          viewed={viewed}
           disabled={disabled}
-          onChangeType={onChangeType}
-          onRemove={onRemove}
+          onToggleViewed={onToggleViewed}
         />
+        <DigestCardMenu disabled={disabled} onRemove={onRemove} />
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import type { ReviewDigest } from "@web/features/review/types";
 import { DigestBodyFields } from "./DigestBodyFields";
 import { DigestCardHeader } from "./DigestCardHeader";
 import { DigestDescriptionField } from "./DigestDescriptionField";
+import { DigestTagPicker } from "./DigestTagPicker";
 import { DigestTitleField } from "./DigestTitleField";
 import { useEditing } from "./EditingProvider";
 
@@ -36,6 +37,9 @@ export function DigestCandidateCard({
   const type = useEditing(
     (state) =>
       (state.overrides.bodyOverrides.get(digestIndex) ?? digest.body).type,
+  );
+  const tags = useEditing(
+    (state) => state.overrides.tagsOverrides.get(digestIndex) ?? digest.tags,
   );
 
   // 실제 편집 필드에 포커스가 들어올 때만 펼친다. ⋯ 메뉴처럼 Portal로 렌더되는
@@ -104,15 +108,36 @@ export function DigestCandidateCard({
         />
       </div>
 
-      {/* 읽음 처리되면 본문을 통째로 안 그린다 — 헤더만 남아 피드 행처럼 접힌다. */}
+      {/* 읽음 처리되면 본문을 통째로 안 그린다 — 헤더만 남아 피드 행처럼 접힌다.
+          태그도 검색·분류용 메타라 카드를 이해하는 데 필수가 아니므로 같이
+          접는다(타입과 달리 접힘 상태에서 따로 되살리지 않는다). */}
       {!viewed && (
-        <DigestBodyFields
-          digestIndex={digestIndex}
-          type={type}
-          baseBody={digest.body}
-          disabled={disabled}
-          cardFocused={focused}
-        />
+        <>
+          <DigestBodyFields
+            digestIndex={digestIndex}
+            type={type}
+            baseBody={digest.body}
+            disabled={disabled}
+            cardFocused={focused}
+          />
+          {/* pl-2를 여기 안 두는 이유 — DigestTagPicker 트리거 자신이 본문
+              필드와 같은 값(px-2)의 패딩을 이미 갖고 있어, 여기서 또 주면
+              이중으로 밀린다. mt-3만 둬서 필드 사이 간격(gap-3)과 같은
+              무게로 리듬만 유지한다. */}
+          <div className="mt-3">
+            <DigestTagPicker
+              tags={tags}
+              disabled={disabled}
+              onChange={(next) =>
+                dispatch({
+                  type: "digest/setTags",
+                  index: digestIndex,
+                  tags: next,
+                })
+              }
+            />
+          </div>
+        </>
       )}
     </div>
   );
