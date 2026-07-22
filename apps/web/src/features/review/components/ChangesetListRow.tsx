@@ -122,7 +122,7 @@ export const ChangesetListRow = memo(function ChangesetListRow({
             </Text>
             {badgeLabelKey && (
               <Badge
-                variant="outline-subtle"
+                variant="outline"
                 shape="pill"
                 size="sm"
                 className="shrink-0"

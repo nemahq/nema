@@ -11,7 +11,6 @@ type BadgeVariant =
   | "error"
   | "info"
   | "neutral"
-  | "outline-subtle"
   | "outline";
 
 // color는 반대로 "무슨 색인가"를 직접 고르는 축 — weave가 뜻을 모르는 분류(앱마다
@@ -31,12 +30,11 @@ const variantClasses: Record<BadgeVariant, string> = {
   error: "bg-status-error-tint text-status-error",
   info: "bg-status-info-tint text-status-info",
   neutral: NEUTRAL_TONE_CLASSNAME,
-  // 테두리만 쓰는 배지의 기본은 값을 담는 쪽(outline) — 그 자체가 읽는 대상이라
-  // 본문과 같은 무게를 갖는다. subtle은 제목 옆에 곁들이는 유형·상태 라벨처럼
-  // 부가 정보일 때만 쓴다. 하나로 두면 값 자리마다 소비처가 색을 덮어쓰게 된다
-  // (weave-usage.md 원칙).
-  "outline-subtle": "border border-border text-fg-tertiary",
-  outline: "border border-border text-fg-primary",
+  // chrome이 약해질수록 글자도 한 단계씩 내려간다 — 틴트 배경이 있는 위 variant들이
+  // 가장 강하고, 배경 없이 테두리만 남는 outline이 사다리의 맨 아래다. 어떤 variant도
+  // fg-primary를 쓰지 않는 건 배지가 늘 주변 본문에 종속된 표시이기 때문 — 더 무겁게
+  // 보여야 하면 글자를 올리는 대신 채운 variant(neutral 등)로 한 칸 올린다.
+  outline: "border border-border text-fg-tertiary",
 };
 
 const colorClasses: Record<BadgeColor, string> = {

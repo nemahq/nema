@@ -11,7 +11,7 @@ interface ReferenceTypeBadgeProps {
 export function ReferenceTypeBadge({ type }: ReferenceTypeBadgeProps) {
   const { t } = useTranslation();
   return (
-    <Badge variant="outline-subtle" size="sm">
+    <Badge variant="outline" size="sm">
       {t(REFERENCE_TYPE_LABEL_KEY[type])}
     </Badge>
   );
