@@ -30,11 +30,10 @@ const variantClasses: Record<BadgeVariant, string> = {
   error: "bg-status-error-tint text-status-error",
   info: "bg-status-info-tint text-status-info",
   neutral: NEUTRAL_TONE_CLASSNAME,
-  // chrome이 약해질수록 글자도 한 단계씩 내려간다 — 틴트 배경이 있는 위 variant들이
-  // 가장 강하고, 배경 없이 테두리만 남는 outline이 사다리의 맨 아래다. 어떤 variant도
-  // fg-primary를 쓰지 않는 건 배지가 늘 주변 본문에 종속된 표시이기 때문 — 더 무겁게
-  // 보여야 하면 글자를 올리는 대신 채운 variant(neutral 등)로 한 칸 올린다.
-  outline: "border border-border text-fg-tertiary",
+  // 틴트 배경이 없는 만큼 글자로 존재감을 만든다 — 채운 variant들은 배경이 이미
+  // 영역을 잡아줘서 글자를 낮춰도 읽히지만, 테두리만 있는 outline은 글자까지 낮추면
+  // 배지 자체가 배경에 묻힌다.
+  outline: "border border-border text-fg-primary",
 };
 
 const colorClasses: Record<BadgeColor, string> = {
