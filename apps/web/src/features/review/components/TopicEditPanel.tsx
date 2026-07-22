@@ -99,16 +99,20 @@ function TopicSearchList({
           type="button"
           disabled={!canCreateNew}
           onClick={() => onCreateNew(trimmed)}
-          className="flex w-full items-center gap-1 rounded-sm px-2 py-1 text-left text-sm hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quinary"
+          className="flex w-full items-center gap-1 rounded-sm px-2 py-1 text-left hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quinary"
         >
           {/* Badge를 문장 안에 끼우기 위해 앞/뒤 문구를 분리한다 — tolgee의
               t()는 문자열 파라미터만 받아 컴포넌트를 끼워 넣을 수 없다(어순이
               언어마다 달라 국문은 뒤쪽, 영문은 앞쪽에 문구가 붙는다). */}
-          {t("review.label_create_new_before")}
+          <Text as="span" size="sm">
+            {t("review.label_create_new_before")}
+          </Text>
           <Badge variant="outline-value" shape="rounded" truncated>
             {trimmed}
           </Badge>
-          {t("review.label_create_new_after")}
+          <Text as="span" size="sm">
+            {t("review.label_create_new_after")}
+          </Text>
         </button>
       )}
     </>

@@ -11,21 +11,20 @@ type BadgeVariant =
   | "neutral"
   | "outline"
   | "outline-value"
-  | "digest-decision"
-  | "digest-pending"
-  | "digest-learning"
-  | "digest-idea"
-  | "digest-assumption";
+  | "category-1"
+  | "category-2"
+  | "category-3"
+  | "category-4"
+  | "category-5";
 
 // Chip과 공유 — surface-raised는 다크 모드에서 surface-card와 완전히 같은 값이
 // 돼(tokens/index.css) 카드 배경 위에서 안 보이므로, surface 토큰 대신 배경에
 // 상대적으로 대비가 생기는 fg 알파 틴트를 쓴다.
 export const NEUTRAL_TONE_CLASSNAME = "bg-fg-primary/10 text-fg-secondary";
 
-// digest-* 5종은 Digest 타입(결정·미결·학습·아이디어·가정) 전용 — status 톤과
-// 이름을 분리해 이 앱의 다른 Badge 소비처가 실수로 가져다 쓰지 않게 한다
-// (design-reference-log.md ⑪ 참고: status 색 재사용은 이미 있는 의미를
-// 잘못 빌려오는 문제로 한 번 걸렸다).
+// category-* 5종은 좋다/나쁘다 축이 없는 분류용 — 서로 구별되는 것만이 목적이라
+// status 톤과 이름을 분리한다(status를 빌려 쓰면 없는 의미가 생긴다,
+// design-reference-log.md ⑪ 참고). 무엇을 가리키는지는 소비처가 정한다.
 const variantClasses: Record<BadgeVariant, string> = {
   brand: "bg-brand-tint text-brand-accent",
   success: "bg-status-success-tint text-status-success",
@@ -39,12 +38,11 @@ const variantClasses: Record<BadgeVariant, string> = {
   // 덮어쓰게 된다(weave-usage.md 원칙).
   outline: "border border-border text-fg-tertiary",
   "outline-value": "border border-border text-fg-primary",
-  "digest-decision": "bg-digest-type-decision-tint text-digest-type-decision",
-  "digest-pending": "bg-digest-type-pending-tint text-digest-type-pending",
-  "digest-learning": "bg-digest-type-learning-tint text-digest-type-learning",
-  "digest-idea": "bg-digest-type-idea-tint text-digest-type-idea",
-  "digest-assumption":
-    "bg-digest-type-assumption-tint text-digest-type-assumption",
+  "category-1": "bg-category-1-tint text-category-1",
+  "category-2": "bg-category-2-tint text-category-2",
+  "category-3": "bg-category-3-tint text-category-3",
+  "category-4": "bg-category-4-tint text-category-4",
+  "category-5": "bg-category-5-tint text-category-5",
 };
 
 // 원형(pill)은 카운트·이름표처럼 통째로 하나의 값을 담는 자리, 각진 모서리(rounded)는
@@ -58,7 +56,7 @@ const SHAPE_CLASSNAME: Record<BadgeShape, string> = {
 };
 
 // sm은 제목·라벨 옆에 곁들이는 보조 표시용 — 주인공 텍스트보다 한 단계 낮은
-// 무게로 읽혀야 하는 자리(예: changeset 타입 라벨)에서 쓴다.
+// 무게로 읽혀야 하는 자리에서 쓴다.
 type BadgeSize = "default" | "sm";
 
 const SIZE_CLASSNAME: Record<BadgeSize, string> = {

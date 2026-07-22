@@ -20,12 +20,15 @@ export const DIGEST_TYPE_LABEL_KEY: Record<DigestType, TranslationKey> = {
   assumption: "review.digest_type_assumption",
 };
 
+// weave는 "서로 구별되는 분류 색 5개"만 알고 그게 무엇인지는 모른다 — Digest 타입을
+// 어느 슬롯에 앉힐지는 이 표가 정한다. 타입이 늘거나 이름이 바뀌어도 여기만 고치면
+// 되고 디자인 시스템은 안 흔들린다.
 export const DIGEST_TYPE_BADGE_VARIANT: Record<DigestType, BadgeVariant> = {
-  decision: "digest-decision",
-  pending: "digest-pending",
-  learning: "digest-learning",
-  idea: "digest-idea",
-  assumption: "digest-assumption",
+  decision: "category-1",
+  pending: "category-2",
+  learning: "category-3",
+  idea: "category-4",
+  assumption: "category-5",
 };
 
 // organization은 행위주체(법인·팀), product는 그 주체가 만든 것 — 라벨만 봐선

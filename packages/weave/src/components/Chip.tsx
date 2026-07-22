@@ -10,7 +10,7 @@ type ChipVariant = "neutral" | "outline";
 // outline variant와 같은 자리(값이 아직 없는 자리의 "추가" 트리거 등, 배경 틴트를
 // 얹을 만한 값이 없을 때)에 쓴다. hover 없는 톤만 export하는 이유는, 넓은 투명
 // 히트박스 안에 시각 전용 span으로 얹는 소비처는 자기 자신이 아니라 group-hover로
-// 반응해야 해서(DigestTopicPicker 참고) — hover 트리거를 Chip이 강제하면 못 쓴다.
+// 반응해야 해서 — hover 트리거를 Chip이 강제하면 그런 자리엔 못 쓴다.
 export const CHIP_OUTLINE_TONE_CLASSNAME =
   "border border-border text-fg-tertiary";
 
