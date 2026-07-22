@@ -23,6 +23,13 @@ type BadgeColor = "indigo" | "pink" | "lime" | "yellow" | "purple";
 // 상대적으로 대비가 생기는 fg 알파 틴트를 쓴다.
 export const NEUTRAL_TONE_CLASSNAME = "bg-fg-primary/10 text-fg-secondary";
 
+// Chip과 공유 — 틴트 배경이 없는 만큼 테두리·글자 둘 다 강하게 존재감을 만든다.
+// 한쪽만 진하게 두면(예: Badge는 글자만, Chip은 테두리만) 같은 outline인데
+// 컴포넌트마다 톤이 갈려서, Topic처럼 정적 미리보기(Badge)와 실제 칩(Chip)이
+// 나란히 보이는 자리에서 미묘하게 달라 보이는 문제가 있었다.
+export const OUTLINE_TONE_CLASSNAME =
+  "border border-border-strong text-fg-primary";
+
 const variantClasses: Record<BadgeVariant, string> = {
   brand: "bg-brand-tint text-brand-accent",
   success: "bg-status-success-tint text-status-success",
@@ -30,10 +37,7 @@ const variantClasses: Record<BadgeVariant, string> = {
   error: "bg-status-error-tint text-status-error",
   info: "bg-status-info-tint text-status-info",
   neutral: NEUTRAL_TONE_CLASSNAME,
-  // 틴트 배경이 없는 만큼 글자로 존재감을 만든다 — 채운 variant들은 배경이 이미
-  // 영역을 잡아줘서 글자를 낮춰도 읽히지만, 테두리만 있는 outline은 글자까지 낮추면
-  // 배지 자체가 배경에 묻힌다.
-  outline: "border border-border text-fg-primary",
+  outline: OUTLINE_TONE_CLASSNAME,
 };
 
 const colorClasses: Record<BadgeColor, string> = {

@@ -128,7 +128,7 @@
     "list_filtered_empty": "No matches for these filters.",
     "more_actions_label": "More actions",
     "search_placeholder": "Search by name",
-    "tag_remove_action": "Remove tag",
+    "tag_remove_action": "Remove {label} tag",
     "title_input_label": "Name",
     "type_organization": "Organization",
     "type_person": "Person",
@@ -241,7 +241,7 @@
     "tag_remove_action": "Remove this tag",
     "topic_add_action": "+ Topic",
     "topic_max_reached": "You can add up to {max} topics.",
-    "topic_remove_action": "Remove this topic",
+    "topic_remove_action": "Remove {label} topic",
     "type_ingestion": "Organize",
     "type_relation": "Discovery",
     "type_revert": "Revert"

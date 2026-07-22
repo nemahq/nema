@@ -6,6 +6,7 @@ export {
   type BadgeShape,
   type BadgeSize,
   type BadgeVariant,
+  OUTLINE_TONE_CLASSNAME,
 } from "./components/Badge";
 export { Button, buttonVariants } from "./components/Button";
 export {
@@ -18,11 +19,7 @@ export {
   CardTitle,
 } from "./components/Card";
 export { Checkbox } from "./components/Checkbox";
-export {
-  Chip,
-  CHIP_OUTLINE_TONE_CLASSNAME,
-  type ChipVariant,
-} from "./components/Chip";
+export { Chip, type ChipShape, type ChipVariant } from "./components/Chip";
 export {
   Dialog,
   DialogClose,

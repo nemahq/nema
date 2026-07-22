@@ -128,7 +128,7 @@
     "list_filtered_empty": "조건에 맞는 항목이 없어요.",
     "more_actions_label": "더보기",
     "search_placeholder": "이름으로 검색",
-    "tag_remove_action": "태그 제거",
+    "tag_remove_action": "{label} 태그 제거",
     "title_input_label": "이름",
     "type_organization": "조직",
     "type_person": "인물",
@@ -241,7 +241,7 @@
     "tag_remove_action": "이 태그 삭제",
     "topic_add_action": "+ 주제",
     "topic_max_reached": "주제는 최대 {max}개까지 담을 수 있어요.",
-    "topic_remove_action": "이 주제 삭제",
+    "topic_remove_action": "{label} 주제 제거",
     "type_ingestion": "정리",
     "type_relation": "발견",
     "type_revert": "되돌림"

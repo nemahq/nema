@@ -1,8 +1,7 @@
 import { Suspense, useState } from "react";
 
 import { DIGEST_TOPICS_MAX, type DigestTopicDraft } from "@nema-io/shared";
-import { Badge, cn, Separator, Skeleton, Text } from "@nema-io/weave";
-import { XIcon } from "@nema-io/weave/icons";
+import { Badge, Chip, cn, Separator, Skeleton, Text } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTopicListSuspenseQuery } from "@web/features/review/hooks/useTopicListQuery";
@@ -60,12 +59,14 @@ function TopicSearchList({
       <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
         {candidates.map((topic) => (
           <li key={topic.id}>
-            {/* 후보 이름을 위 칩 목록과 같은 Badge로 감싼다 — 선택하면 그대로 저
-                모양의 칩이 된다는 걸 고르기 전에 미리 보여준다. 행 자체(버튼)는
-                그대로 두고 내용만 Badge로 바꿔서 히트박스는 안 줄어든다. 행
-                자체엔 좌우 패딩을 안 준다 — Badge가 이미 자기 padding(px-2)을
-                갖고 있어서, 행에 또 주면 팝오버 가장자리부터 텍스트까지 이중으로
-                밀려 과하게 벌어진다. */}
+            {/* 후보 이름을 위 칩 목록과 같은 톤의 Badge로 감싼다 — 선택하면 그대로
+                저 모양의 칩이 된다는 걸 고르기 전에 미리 보여준다. Chip이 아니라
+                Badge인 이유 — 이 자리는 순수 정적 미리보기라(행 자체가 이미
+                버튼) Chip을 쓰면 버튼 안에 버튼이 중첩된다. outline 톤은
+                Badge·Chip이 공유(OUTLINE_TONE_CLASSNAME)해서 둘이 갈라지지
+                않는다. 행 자체엔 좌우 패딩을 안 준다 — Badge가 이미 자기
+                padding(px-2)을 갖고 있어서, 행에 또 주면 팝오버 가장자리부터
+                텍스트까지 이중으로 밀려 과하게 벌어진다. */}
             <button
               type="button"
               onClick={() => onSelectExisting(topic)}
@@ -122,12 +123,8 @@ interface TopicEditPanelProps {
 }
 
 // 색은 안 쓴다 — Topic은 조용하게 두고 테두리로만 구분한다(이번 라운드 원칙).
-// shape는 각진 기본값 — 여러 개를 나란히 늘어놓는 자리라 pill이 아니다. 제거
-// 버튼은 hover-reveal이 아니라 상시 노출 — 팝오버를 연 시점 자체가 편집 의도가
-// 명확해서다.
-// weave Button 대신 raw button인 이유는 칩 안에서 Badge의 색·크기를 물려받아야
-// 하는데 Button base가 자기 타이포를 강제해 안 맞기 때문(weave-usage.md "칩·pill
-// 안 버튼" 제외 규칙, LabelChipShell과 같은 이유).
+// shape="rounded"를 명시하는 이유 — Chip 기본값은 pill인데, 여러 개를 나란히
+// 늘어놓는 이 자리엔 pill이 아니라 각진 모양이 맞다.
 //
 // Notion 참고 — 칩이 놓인 우측 영역 자체가 인풋이라 거기서 바로 검색·추가가
 // 된다(design-decisions-log.md). 그래서 칩 목록과 검색 입력을 별도 팝오버로
@@ -160,23 +157,20 @@ export function TopicEditPanel({
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-1 px-2 pt-2">
         {topics.map((topic, index) => (
-          <Badge
+          <Chip
             key={topic.id ?? `draft-${index}`}
             variant="outline"
             shape="rounded"
-            className="inline-flex items-center gap-1 py-0.5 pr-1"
+            disabled={disabled}
+            remove={{
+              onClick: () => removeAt(index),
+              ariaLabel: t("review.topic_remove_action", {
+                label: topic.name,
+              }),
+            }}
           >
             {topic.name}
-            <button
-              type="button"
-              disabled={disabled}
-              aria-label={t("review.topic_remove_action")}
-              onClick={() => removeAt(index)}
-              className="rounded-full p-0.5 text-current/70 hover:bg-fg-primary/15 disabled:pointer-events-none"
-            >
-              <XIcon className="size-3" />
-            </button>
-          </Badge>
+          </Chip>
         ))}
         {!atMax && (
           // weave Input 대신 raw — border·h-9·px-3 같은 base chrome을 걷어내면

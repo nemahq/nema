@@ -1,10 +1,8 @@
-import type { BadgeVariant } from "@nema-io/weave";
-
-import { LabelChipShell } from "./LabelChipShell";
+import { Chip, type ChipVariant } from "@nema-io/weave";
 
 interface RegisteredLabelChipProps {
   label: string;
-  variant: BadgeVariant;
+  variant: ChipVariant;
   disabled: boolean;
   removeAriaLabel: string;
   onRemove: () => void;
@@ -20,13 +18,13 @@ export function RegisteredLabelChip({
   onRemove,
 }: RegisteredLabelChipProps) {
   return (
-    <LabelChipShell
+    <Chip
       variant={variant}
+      shape="rounded"
       disabled={disabled}
-      removeAriaLabel={removeAriaLabel}
-      onRemove={onRemove}
+      remove={{ onClick: onRemove, ariaLabel: removeAriaLabel }}
     >
-      <span>{label}</span>
-    </LabelChipShell>
+      {label}
+    </Chip>
   );
 }
