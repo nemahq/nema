@@ -185,6 +185,87 @@
 
 ---
 
+## ⑧ 인터랙티브 pill·용어 — Digest 카드 헤더 실행 품질 (티어1)
+
+⑦번의 후속 라운드. 카드 헤더(Topic·타입·제목)를 실제로 만들면서 "정적 라벨과 클릭 가능한 pill을 어떻게 구분할지", "타입 5종·필드 15개를 뭐라고 부를지" 두 갈래에서 나온 조사.
+
+### 채택 후보
+
+**Material Design(2/3) — Badge vs Chip** — [Chips – Material Design 3](https://m3.material.io/components/chips): Badge는 정적·비상호작용(카운트·상태), Chip은 선택·필터링·트리거용 인터랙티브 컴포넌트로 최상위에서 갈린다. MD2엔 "Choice Chip"(닫힌 선택지 중 하나를 고르는 chip)이라는 하위 타입이 명시적으로 있음. → Nema 참고점: Badge를 Button variant로 확장하거나 Badge에 onClick을 얹는 대신, 별도의 `Chip` 컴포넌트(weave)로 분리한 근거. 실사용성 연구도 인용됨 — 정적 chip과 인터랙티브 chip이 시각적으로 구분 안 되면 사용자가 클릭 가능 여부를 못 알아본다는 지적이 hover 상태(배경 틴트 hover 시에만 진해짐)를 넣은 근거.
+
+**Architecture Decision Record(ADR) — Context/Decision/Consequences** — [adr.github.io](https://adr.github.io/): 결정을 기록하는 업계 표준 프레임워크. "상황" 필드의 표준 명칭은 Context인데, Nema 글로서리에서 Context는 이미 "맥락"(전체 지식 자산)에 예약돼 있어 충돌 — 영문 필드명을 Situation으로 피해간 근거. Options(Pros/Cons) 구조도 대안(Alternatives)·트레이드오프(Trade-offs) 영문 표기를 확인해줌.
+
+**RAID 로그(Risks/Assumptions/Issues/Decisions)** — 프로젝트 매니지먼트 표준. Assumptions("사실로 놓고 진행하는 요소들") 정의가 Digest의 `assumption` 타입과 정확히 일치 — 영문 타입명을 Hypothesis가 아니라 Assumption으로 확정한 근거. Decisions 정의도 동일 확인. 다만 Risk(잠재적 미래 문제) 카테고리를 Digest 5번째 타입 후보로 검토했다가 기각 — 실제 사례로 검증해보니 "위험"은 결국 가정 타입의 `impact` 필드(틀렸을 때 뭐가 바뀌는가)로 이미 흡수되는 정보라, Nema는 액션 아이템·오너십을 추적하는 도구가 아니라서 별도 타입 분리 실익이 없다고 판단.
+
+**"Pending" vs "Open question" 뉴앙스** — 검색 결과, "pending"은 처리해야 할 액션 아이템에 가깝고 "open question"은 아직 답 안 나온 질문/논의에 가깝다는 관용적 구분이 있음. `pending` 타입 필드(`question`/`background`/`branches`/`resolutionCondition`)는 후자에 정확히 해당 — 영문 타입명을 Pending에서 Unresolved로 바꾼 근거(단어 하나로, "Question" 필드명과도 안 겹침, 앱이 이미 쓰는 GitHub PR 비유의 Resolved/Unresolved 코멘트 스레드 용어와도 톤이 맞음).
+
+**Notion 데이터베이스 프로퍼티 행 — 평소엔 값만, 클릭해야 편집** — Notion의 Tag 프로퍼티는 평소 칩만 보이고, 클릭해야 검색+전체 목록이 있는 팝오버가 뜬다. 프로퍼티 행 자체가 상시 편집 가능한 인라인 목록이 아님. → Nema 참고점: Topic을 "타이틀 위 라인에서 상시 생성·수정·삭제 가능"하게 할지, "클릭 → 팝오버"로 할지 고민했을 때, Notion처럼 대량의 행을 훑어야 하는 화면일수록 후자를 택한다는 근거로 채택 — Nema의 벌크 리뷰(카드 여러 개를 한 번에 확정)도 같은 성격의 문제.
+
+### 기각 후보
+
+- **AI 에이전트 메모리 분류(episodic/semantic/procedural, CoALA 프레임워크)** — Digest 5개 타입(결정/미결/학습/아이디어/가정) 자체의 재설계 여부를 검토하며 참고했으나, 이건 "정보가 어떻게 저장·인출되는가"의 축이라 "무슨 종류의 판단인가"라는 Digest 타입 축과 층위가 달라 직접적인 용어·구조 근거로는 못 씀.
+
+→ **이 라운드의 코어**: 인터랙티브 pill은 Badge(정적)와 분리된 별도 컴포넌트(Chip)로, 색은 의미 매핑이 없으면 안 쓰고(타입 5종 전부 neutral), 편집 UI는 상시 노출이 아니라 클릭 시에만 드러난다 — 전부 "이미 업계가 검증한 패턴과 우리 판단이 수렴한다"는 방향으로 확인됨.
+
+---
+
+## ⑨ 헤더 내 고정폭 슬롯 배치 — Type Chip 위치 문제
+
+⑧번의 후속. Type Chip을 Topic·제목처럼 가변폭 텍스트 옆에 붙이면(좌/우 어느 쪽이든) 그 텍스트 길이에 따라 Chip 위치가 흔들리거나 텍스트와 Chip 사이에 어색한 빈 공간이 생기는 문제 — 제목 왼쪽(길이 변동으로 제목 시작 위치 흔들림), 제목 오른쪽(짧은 제목 뒤에 Chip이 뚝 떨어짐), 주제 오른쪽(주제도 결국 가변폭이라 같은 문제 반복) 세 자리 모두 이 이유로 기각됐다.
+
+### 채택 후보
+
+**Material Design 3 — List item의 leading/text/trailing 3슬롯 구조** — [Lists – Material Design 3](https://m3.material.io/components/lists/specs): 리스트 행을 leading(고정, 좌)·text(가변, 가운데, 필요시 truncate)·trailing(고정, 우) 3슬롯으로 나누고, 가운데 text 슬롯만 폭이 변하며 leading·trailing은 내용 길이와 무관하게 항상 같은 위치에 고정된다("leading slot and text slot are always aligned to center left, whereas the trailing slot is always aligned to center right"). trailing 슬롯은 공식 문서상 "종종 액션을 나타내거나 액션을 수행하게 한다"고만 돼 있지만, 실제 구현(안읽음 배지·체크박스·화살표 아이콘 등)은 액션과 상태 표시가 한 자리에 같이 있는 경우가 흔하다. → Nema 참고점: Type Chip을 Topic·제목이 있는 가변폭 컬럼에 끼워 넣지 말고, 별도의 고정 슬롯(지금 우측에 비워둔 접힘·액션 예약 자리)에 둬야 한다는 직접 근거. 그 자리가 "액션 전용"이 아니라 "고정폭 요소 전반"의 자리라는 점도 확인돼, Type(분류 정보)과 향후 접힘 토글(액션)이 같은 자리에 있어도 무리가 없다는 근거가 됨.
+
+**MDN CSS 레이아웃 쿡북 — List group with badges** — [layout_cookbook/list_group_with_badges](https://github.com/mdn/content/blob/main/files/en-us/web/css/layout_cookbook/list_group_with_badges/index.md): flexbox로 텍스트는 왼쪽에서 자연스럽게 흐르고 배지는 항상 우측 끝에 정렬되어, 배지 위치가 텍스트 길이에 영향받지 않는 표준 패턴을 별도 쿡북 항목으로 다룰 만큼 흔한 문제임을 확인. → Nema 참고점: 지금 겪은 "가변폭 텍스트 옆 고정폭 요소" 지터 문제가 특수 사례가 아니라 일반적인 레이아웃 문제이고, 해법도 이미 표준화돼 있다는 방증.
+
+### 기각 후보
+
+- **범용 배지 UI 마케팅 블로그(Setproduct, Preline 등)** — "배지는 카운트·상태용으로 쓰고 텍스트는 짧게 유지하라" 수준의 원론적 조언이라, 이 레이아웃 문제의 구체적 근거로 쓰기엔 약함. 명세·코드 레벨 근거인 MD3 slot 구조·MDN 쿡북을 우선 채택.
+
+→ **이 라운드의 코어**: Type Chip은 Topic·제목이 있는 가변폭 컬럼이 아니라, 헤더 우측의 고정 슬롯(현재 접힘·액션 예약 자리)으로 옮긴다 — 그 자리는 액션 전용이 아니라 고정폭 요소 전반의 자리라는 게 업계 명세로 확인됐다.
+
+---
+
+## ⑩ Topic 클릭 어포던스 — 상시 밑줄 여부
+
+⑧번 이후 반복 재검토된 질문. Topic이 색(⑦·⑨ 사이 별도 라운드에서 검토·기각 — 자동 색상 할당은 태그 쪽에 이미 예약돼 있어 Topic과 톤이 겹치면 안 됨)도 안 되고, Chip 모양(둥근 배경)도 안 쓰기로 했을 때, 클릭 가능함을 상시 밑줄로 표시할지 hover-only로 둘지의 문제.
+
+### 채택 후보
+
+**NN/g — Guidelines for Visualizing Links** — [nngroup.com/articles/guidelines-for-visualizing-links](https://www.nngroup.com/articles/guidelines-for-visualizing-links/): 밑줄은 클릭 가능성을 가장 강하게 지각시키는 신호이고, 원칙적으로 링크가 아닌 텍스트엔 밑줄을 안 쓴다. 다만 예외를 명시 — "네비게이션 메뉴·링크 목록"은 "그 영역의 기능이 디자인상 이미 명확히 드러난다면" 밑줄 없이도 된다. 2026년 갱신판은 한 걸음 더 나가 "오늘날 대부분의 사용자는 색·위치·맥락만으로도 링크를 식별할 수 있다"고 명시. → Nema 참고점: Topic은 카드마다 반복되는 고정 위치(헤더 좌상단, 헤드라인 앞)에 항상 같은 자리를 차지하는 "목록 항목"에 가까운 성격이라, NN/g가 명시한 예외 조건("영역의 기능이 이미 명확")에 부합할 수 있음 — 상시 밑줄 없이 위치 반복만으로 학습되게 하는 hover-only 선택에 대한 근거.
+
+**NN/g — Beyond Blue Links: Making Clickable Elements Recognizable** — [nngroup.com/articles/clickable-elements](https://www.nngroup.com/articles/clickable-elements/): 밑줄·파란색 외에 클릭 가능성을 알리는 대체 신호로 "버튼처럼 각(대개 둥근 모서리) 있는 형태"를 제시 — 그림자·그라데이션 없이도 이 모양 자체가 클릭 신호가 된다고 명시. 아이콘을 신호로 쓸 땐 그 아이콘이 즉각 알아볼 만큼 표준화돼 있지 않은 한 텍스트 라벨과 같이 써야 한다고 경고. → Nema 참고점(반증 자료로 유용): 지금 Topic은 밑줄도, 둥근 배경(Chip 모양)도, 아이콘도 다 뺀 "순수 텍스트" 상태라 이 글이 말하는 두 가지 표준 신호(모양·밑줄) 중 아무것도 안 쓰고 있음 — hover-only로 계속 갈 경우, 최소한 하나(코드에 이미 있는 cursor:pointer + hover 밑줄)는 상호작용 "순간"에라도 반드시 나와야 한다는 근거로 오히려 지금 구현을 보강.
+
+### 기각 후보
+
+- **뉴스 사이트 카테고리 색상 태그** — 위 ⑨·태그 관련 라운드에서 검토: 뉴스 카테고리는 에디터가 정한 작고 고정된 집합이라 값별 색 매핑이 가능하지만, Topic은 유저가 Space 안에서 무한히 만드는 개방형 라벨이라 같은 방식이 스케일 안 됨. 태그 쪽에 이미 예약된 자동 색상 할당과도 톤이 겹쳐 이중 사용 불가.
+
+→ **이 라운드의 코어**: 상시 밑줄은 NN/g 원칙(밑줄=링크 전용 신호)과 어긋나고, 우리 인터랙션(팝오버 인라인 편집)이 밑줄이 암시하는 "이동"과도 다르다. 대신 NN/g의 예외 조건(반복되는 고정 위치=영역 기능이 이미 명확)에 기대 hover-only를 유지하되, hover 시점의 신호(cursor pointer + 밑줄)만큼은 명확히 유지한다.
+
+---
+
+## ⑪ Digest 타입 5종 색상 팔레트
+
+⑨·⑩에서 Topic엔 색을 못 쓰는 이유를 "유저가 무한히 만드는 개방형 라벨이라 값별 매핑이 스케일 안 됨"으로 정리했는데, Digest 타입(결정·미결·학습·아이디어·가정)은 정확히 반대 조건이다 — 제품이 정한 5개 고정 집합이라, Topic에 못 쓴 바로 그 "뉴스 카테고리처럼 작고 고정된 집합" 조건에 실제로 들어맞는다. 다만 Nema는 이미 상태 의미가 못 박힌 색 토큰(brand=teal, success=초록, warning=amber, error=빨강, info=파랑)을 쓰고 있어서, 그 색을 그대로 재사용하면 "AI 작업중 블루"처럼 다른 의미를 잘못 빌려오는 문제가 반복된다 — 5종 타입에 쓸 색은 이 다섯과 구별되는 새 팔레트가 필요하다.
+
+### 채택 후보
+
+**Notion Select 프로퍼티 — 10색 고정 팔레트, 채도 낮춤** — [notion 색상 가이드 다수 출처 종합](https://matthiasfrank.de/en/notion-colors/): Default·Gray·Brown·Orange·Yellow·Green·Blue·Purple·Pink·Red 10색으로 구성되고, "배경에 얹혀도 자연스럽도록 의도적으로 채도를 낮춘"(desaturated) 톤이 특징 — 상태 배지처럼 주의를 끌어야 하는 색과 달리, 태그 색은 차분해야 여러 개가 한 화면에 있어도 안 시끄럽다. → Nema 참고점: 타입 5종 색도 상태 토큰(진하고 채도 높음)과 다르게 **낮은 채도**로 만들어야, 색상(hue)이 우연히 비슷해도(예: 노랑↔warning의 amber) "이건 상태가 아니라 분류"라는 게 채도 차이만으로 구분된다 — 색상 선택보다 이 채도 원칙이 더 근본적인 안전장치.
+
+**Notion 10색 중 Nema 기존 상태 토큰과 안 겹치는 5개** — brand(teal)·success(초록)·warning(amber)·error(빨강)·info(파랑)를 제외하면 Notion 10색 중 **Gray·Brown·Yellow·Purple·Pink** 5개가 남아, 공교롭게 타입 5종 개수와 정확히 일치한다. → Nema 참고점: 이 5개를 그대로 타입 5종에 배정하면 기존 상태 색과 색상 축에서부터 겹치지 않는다.
+
+**아이디어=노랑(전구) 관례** — 전구 아이콘 색상 관례 검색 결과: 노란 전구가 "아이디어·창의성·영감"을 뜻하는 건 UI 전반에서 매우 널리 쓰이는 확립된 관례(idea/solution/business/strategy 맥락에서 반복 확인). → Nema 참고점: 5개 중 유일하게 외부 관례로 뒷받침되는 배정 — 아이디어=Yellow.
+
+### 기각 후보
+
+- **GitHub 기본 라벨 색(bug/question/enhancement 등)** — "question" 라벨이 미결(pending)과 개념적으로 가장 가깝지만, 검색으로 정확한 헥스값을 확인 못 해 근거로 인용하기엔 약함(레포마다 커스터마이즈된 값이 섞여 나옴). 색상 관례 자체보다 "라벨엔 색이 있다"는 사실만 확인됨.
+- **결정/학습/미결/가정 각각에 "의미 있는" 색 스토리를 억지로 붙이는 것** — 아이디어=노랑 외엔 조사 결과 뚜렷한 외부 관례가 없었다. Notion·Linear 태그 색도 대부분 "그 값에 무슨 의미냐"가 아니라 "서로 구별되면 충분하다"는 원칙으로 배정되므로, 나머지 4개에 무리하게 서사를 지어내지 않고 구별성 우선으로 배정.
+
+→ **이 라운드의 코어**: 아이디어=Yellow(외부 근거 있음), 나머지 4종(결정·미결·학습·가정)은 Notion 10색 중 남는 Gray·Brown·Purple·Pink를 구별성 우선으로 배정. 전부 **낮은 채도**로 둬서 Nema의 기존 상태 토큰(진하고 채도 높음)과 시각적으로 다른 카테고리에 있다는 게 색상보다 채도로 먼저 읽히게 한다. 실제 적용은 weave 토큰 3단계(팔레트→시맨틱→Tailwind 노출)가 필요해 배지 하나 바꾸는 것보다 스코프가 크다.
+
+---
+
 ## 다음 단계
 
 이 문서는 메커니즘 참고용이지 최종 시각 스펙이 아니다. 실제 화면(다이제스트 리뷰, 변경셋 상세, 관계 판정/병합, 레퍼런스 상세)을 구현·폴리싱하는 세션이 여기서 관련 요소를 찾아 시각 문법을 새로 설계할 때 근거로 쓴다. 티어1(실행 품질) 레퍼런스는 아직 조사하지 않았으며, 각 화면 작업 시점에 가볍게 별도로 참고한다.

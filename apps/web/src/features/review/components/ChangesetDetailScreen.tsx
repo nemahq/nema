@@ -126,7 +126,7 @@ export function ChangesetDetailScreen({
 }: ChangesetDetailRouteProps) {
   return (
     <ChangesetSidePanelProvider>
-      <div className="flex min-h-0 flex-1 flex-col bg-surface-card">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface-card">
         <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
           <ChangesetDetailSpaceGate changesetNumber={changesetNumber} />
         </Suspense>

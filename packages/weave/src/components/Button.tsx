@@ -31,10 +31,18 @@ const buttonVariants = cva(
         "icon-sm": "size-8",
         "icon-lg": "size-10",
       },
+      // size(치수)와 직교하는 축 — Badge의 shape(rounded/pill), Avatar의
+      // shape(circle/square)와 같은 이유로 분리한다. circle은 rounded-full만
+      // 담당하고 치수는 그대로 size가 정한다.
+      shape: {
+        default: "",
+        circle: "rounded-full",
+      },
     },
     defaultVariants: {
       variant: "primary",
       size: "default",
+      shape: "default",
     },
   },
 );
@@ -43,6 +51,7 @@ function Button({
   className,
   variant = "primary",
   size = "default",
+  shape = "default",
   asChild = false,
   ...props
 }: React.ComponentProps<"button"> &
@@ -56,7 +65,7 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, shape, className }))}
       {...props}
     />
   );

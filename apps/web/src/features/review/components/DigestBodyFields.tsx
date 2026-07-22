@@ -1,68 +1,43 @@
-import { Text } from "@nema-io/weave";
+import type { DigestType } from "@nema-io/shared";
 
 import { DIGEST_BODY_FIELDS } from "@web/features/review/constants";
 import type { ReviewDigest } from "@web/features/review/types";
 
-interface BodyFieldRow {
-  label: string;
-  value: string;
-}
-
-// 원문에 없던 필드는 빈 채로 오므로 걸러낸다(review-flow.md "원문에 없는 필드는 비워둠").
-function bodyFieldRows(body: ReviewDigest["body"]): BodyFieldRow[] {
-  // key는 constants.ts에서 타입별로 좁혀져 있지만 여기서 body.type과의 상관관계가
-  // 끊겨 string으로 넓어지고, 그래서 body를 직접 인덱싱하면 단언이 필요해진다.
-  // 펼쳐두면 단언 없이 같은 값을 얻는다 — 컴파일 안전은 상수 정의부에서만 온다.
-  const fieldValues: Record<string, unknown> = { ...body };
-
-  return DIGEST_BODY_FIELDS[body.type]
-    .map(({ key, label }) => {
-      const fieldValue = fieldValues[key];
-      if (
-        fieldValue === undefined ||
-        fieldValue === null ||
-        fieldValue === ""
-      ) {
-        return null;
-      }
-      return {
-        label,
-        value: Array.isArray(fieldValue)
-          ? fieldValue.join(" · ")
-          : String(fieldValue),
-      };
-    })
-    .filter((row): row is BodyFieldRow => row !== null);
-}
+import { DigestBodyField } from "./DigestBodyField";
 
 interface DigestBodyFieldsProps {
-  body: ReviewDigest["body"];
+  digestIndex: number;
+  type: DigestType;
+  baseBody: ReviewDigest["body"];
+  disabled: boolean;
+  cardFocused: boolean;
 }
 
-export function DigestBodyFields({ body }: DigestBodyFieldsProps) {
-  const rows = bodyFieldRows(body);
-  if (rows.length === 0) {
-    return null;
-  }
-
+// 타입별 필드를 항상 전부 그린다 — 원문에 없어 비어 있는 필드도 자리를 지키고
+// 클릭하면 바로 채울 수 있어야 "AI가 놓친 걸 사람이 채운다"는 교정 경로가
+// 생긴다(design-decisions-log.md).
+export function DigestBodyFields({
+  digestIndex,
+  type,
+  baseBody,
+  disabled,
+  cardFocused,
+}: DigestBodyFieldsProps) {
   return (
-    <dl className="flex flex-col gap-3">
-      {rows.map((row) => (
-        <div key={row.label}>
-          <Text
-            as="dt"
-            size="xs"
-            weight="medium"
-            color="tertiary"
-            className="uppercase"
-          >
-            {row.label}
-          </Text>
-          <Text as="dd" className="mt-0.5">
-            {row.value}
-          </Text>
-        </div>
+    <div className="mt-2 flex flex-col gap-3 pl-2">
+      {DIGEST_BODY_FIELDS[type].map((field) => (
+        <DigestBodyField
+          key={field.key}
+          digestIndex={digestIndex}
+          baseBody={baseBody}
+          fieldKey={field.key}
+          kind={field.kind}
+          labelKey={field.labelKey}
+          placeholderKey={field.placeholderKey}
+          disabled={disabled}
+          cardFocused={cardFocused}
+        />
       ))}
-    </dl>
+    </div>
   );
 }

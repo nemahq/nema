@@ -1,11 +1,10 @@
 import {
-  DIGEST_TYPES,
   type DigestBody,
   type DigestType,
   REFERENCE_TYPES,
   type ReferenceType,
 } from "@nema-io/shared";
-import type { BadgeVariant } from "@nema-io/weave";
+import type { BadgeColor, BadgeVariant } from "@nema-io/weave";
 import type { IconComponent } from "@nema-io/weave/icons";
 import { Check, Circle, X } from "@nema-io/weave/icons";
 
@@ -13,12 +12,23 @@ import type { TranslationKey } from "@web/lib/tolgee";
 
 import type { ChangesetStatus, ChangesetType } from "./types";
 
-export const DIGEST_TYPE_LABEL: Record<DigestType, string> = {
-  decision: "결정",
-  pending: "미결",
-  learning: "학습",
-  idea: "아이디어",
-  assumption: "가정",
+export const DIGEST_TYPE_LABEL_KEY: Record<DigestType, TranslationKey> = {
+  decision: "review.digest_type_decision",
+  pending: "review.digest_type_pending",
+  learning: "review.digest_type_learning",
+  idea: "review.digest_type_idea",
+  assumption: "review.digest_type_assumption",
+};
+
+// weave는 색조만 알고 그게 무엇을 가리키는지는 모른다 — Digest 타입을 어느 색에
+// 앉힐지는 이 표가 정한다(apps/web/src/index.css의 mode-* 매핑과 같은 결). 색을
+// 바꾸는 것도 타입이 느는 것도 여기서 끝나고 디자인 시스템은 안 흔들린다.
+export const DIGEST_TYPE_BADGE_COLOR: Record<DigestType, BadgeColor> = {
+  decision: "indigo",
+  pending: "pink",
+  learning: "lime",
+  idea: "yellow",
+  assumption: "purple",
 };
 
 // organization은 행위주체(법인·팀), product는 그 주체가 만든 것 — 라벨만 봐선
@@ -33,51 +43,152 @@ export const REFERENCE_TYPE_LABEL: Record<ReferenceType, string> = {
 
 // Select의 onValueChange·서버가 준 문자열을 유니언으로 좁힌다 — `as` 없이(가드 없는
 // 단언 금지, apps/web/docs/conventions.md) 값이 실제 판별자 집합에 드는지 확인한다.
-export function isDigestType(value: string): value is DigestType {
-  return DIGEST_TYPES.some((type) => type === value);
-}
-
 export function isReferenceType(value: string): value is ReferenceType {
   return REFERENCE_TYPES.some((type) => type === value);
 }
 
 // 07-modeling.md의 DigestBody 필드 정의 순서·한글 라벨을 그대로 따른다.
 // key를 타입별 본문 필드로 좁혀, 없는 필드나 오타가 컴파일 에러로 드러나게 한다.
+export type DigestBodyFieldKind = "text" | "list";
+
+// 타입별로 갈리는 본문 필드 이름 전체 — body가 유니온이라 keyof를 그냥 쓰면
+// 교집합("type")만 남으므로 분배해서 모은다. 오타나 없는 필드가 컴파일 에러로
+// 드러나게 하는 게 목적이다.
+type BodyFieldKeyOf<T> = T extends unknown ? Exclude<keyof T, "type"> : never;
+export type DigestBodyFieldKey = BodyFieldKeyOf<DigestBody>;
+
 interface DigestBodyFieldMeta<T extends DigestType> {
   key: Exclude<keyof Extract<DigestBody, { type: T }>, "type">;
-  label: string;
+  // 스키마상 string인지 string[]인지를 정의가 직접 들고 있는다 — 렌더가 값을 보고
+  // 되짚으면 값이 비어있는 필드에서 어느 쪽인지 알 수 없다.
+  kind: DigestBodyFieldKind;
+  labelKey: TranslationKey;
+  // 라벨은 "무슨 필드인지"만 말해줘서, 빈 필드에 뭘 적어야 할지는 별도 질문형
+  // placeholder가 안내한다(design-decisions-log.md 참고) — 포커스됐을 때만
+  // 노출해 리스트 필드에서 빈 줄마다 같은 문구가 반복되는 걸 피한다.
+  placeholderKey: TranslationKey;
 }
 
 export const DIGEST_BODY_FIELDS: {
   [T in DigestType]: DigestBodyFieldMeta<T>[];
 } = {
   decision: [
-    { key: "situation", label: "상황" },
-    { key: "choice", label: "선택" },
-    { key: "reason", label: "이유" },
-    { key: "tradeoff", label: "트레이드오프" },
-    { key: "alternatives", label: "대안" },
+    {
+      key: "situation",
+      kind: "text",
+      labelKey: "review.digest_field_situation",
+      placeholderKey: "review.digest_field_situation_placeholder",
+    },
+    {
+      key: "choice",
+      kind: "text",
+      labelKey: "review.digest_field_choice",
+      placeholderKey: "review.digest_field_choice_placeholder",
+    },
+    {
+      key: "reason",
+      kind: "text",
+      labelKey: "review.digest_field_reason",
+      placeholderKey: "review.digest_field_reason_placeholder",
+    },
+    {
+      key: "tradeoff",
+      kind: "list",
+      labelKey: "review.digest_field_tradeoff",
+      placeholderKey: "review.digest_field_tradeoff_placeholder",
+    },
+    {
+      key: "alternatives",
+      kind: "list",
+      labelKey: "review.digest_field_alternatives",
+      placeholderKey: "review.digest_field_alternatives_placeholder",
+    },
   ],
   pending: [
-    { key: "question", label: "질문" },
-    { key: "background", label: "배경" },
-    { key: "branches", label: "갈래" },
-    { key: "resolutionCondition", label: "해소 조건" },
+    {
+      key: "question",
+      kind: "text",
+      labelKey: "review.digest_field_question",
+      placeholderKey: "review.digest_field_question_placeholder",
+    },
+    {
+      key: "background",
+      kind: "text",
+      labelKey: "review.digest_field_background",
+      placeholderKey: "review.digest_field_background_placeholder",
+    },
+    {
+      key: "branches",
+      kind: "list",
+      labelKey: "review.digest_field_branches",
+      placeholderKey: "review.digest_field_branches_placeholder",
+    },
+    {
+      key: "resolutionCondition",
+      kind: "text",
+      labelKey: "review.digest_field_resolution_condition",
+      placeholderKey: "review.digest_field_resolution_condition_placeholder",
+    },
   ],
   learning: [
-    { key: "finding", label: "발견" },
-    { key: "evidence", label: "근거" },
+    {
+      key: "finding",
+      kind: "text",
+      labelKey: "review.digest_field_finding",
+      placeholderKey: "review.digest_field_finding_placeholder",
+    },
+    {
+      key: "evidence",
+      kind: "text",
+      labelKey: "review.digest_field_evidence",
+      placeholderKey: "review.digest_field_evidence_placeholder",
+    },
   ],
   idea: [
-    { key: "concept", label: "발상" },
-    { key: "background", label: "배경" },
-    { key: "branches", label: "갈래" },
+    {
+      key: "concept",
+      kind: "text",
+      labelKey: "review.digest_field_concept",
+      placeholderKey: "review.digest_field_concept_placeholder",
+    },
+    {
+      key: "background",
+      kind: "text",
+      labelKey: "review.digest_field_background",
+      placeholderKey: "review.digest_field_background_placeholder",
+    },
+    {
+      key: "branches",
+      kind: "list",
+      labelKey: "review.digest_field_branches",
+      placeholderKey: "review.digest_field_branches_placeholder",
+    },
   ],
   assumption: [
-    { key: "assumption", label: "가정 내용" },
-    { key: "evidence", label: "근거" },
-    { key: "impact", label: "영향" },
-    { key: "verificationCondition", label: "검증 조건" },
+    {
+      key: "assumption",
+      kind: "text",
+      labelKey: "review.digest_field_assumption",
+      placeholderKey: "review.digest_field_assumption_placeholder",
+    },
+    {
+      key: "evidence",
+      kind: "text",
+      labelKey: "review.digest_field_evidence",
+      placeholderKey: "review.digest_field_evidence_placeholder",
+    },
+    {
+      key: "impact",
+      kind: "text",
+      labelKey: "review.digest_field_impact",
+      placeholderKey: "review.digest_field_impact_placeholder",
+    },
+    {
+      key: "verificationCondition",
+      kind: "text",
+      labelKey: "review.digest_field_verification_condition",
+      placeholderKey: "review.digest_field_verification_condition_placeholder",
+    },
   ],
 };
 

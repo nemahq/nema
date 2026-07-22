@@ -1,5 +1,9 @@
 import { createStore } from "zustand/vanilla";
 
+import {
+  DIGEST_BODY_FIELDS,
+  type DigestBodyFieldKey,
+} from "@web/features/review/constants";
 import type { ReviewOverrides } from "@web/features/review/reviewEditingState";
 import type {
   ReviewDigest,
@@ -8,7 +12,18 @@ import type {
 
 export type ReviewEditingAction =
   | { type: "digest/setTitle"; index: number; title: string }
+  | { type: "digest/setDescription"; index: number; description: string }
   | { type: "digest/setBody"; index: number; body: ReviewDigest["body"] }
+  // 본문 필드 하나만 고치는 경로 — 필드가 자기 값만 구독하고 나머지 형제 필드를
+  // 안 읽어도 되게 한다. overrides는 서버 상태 위의 차분이라 아직 오버라이드가
+  // 없는 첫 수정엔 합칠 바탕이 필요해서, 호출부가 서버 body를 같이 넘긴다.
+  | {
+      type: "digest/setBodyField";
+      index: number;
+      baseBody: ReviewDigest["body"];
+      key: DigestBodyFieldKey;
+      value: string | string[];
+    }
   | { type: "digest/setTopics"; index: number; topics: ReviewDigest["topics"] }
   | { type: "digest/setTags"; index: number; tags: ReviewDigest["tags"] }
   | { type: "digest/remove"; index: number }
@@ -20,6 +35,7 @@ function emptyOverrides(): ReviewOverrides {
   return {
     removedDigestIndexes: new Set(),
     titleOverrides: new Map(),
+    descriptionOverrides: new Map(),
     bodyOverrides: new Map(),
     topicsOverrides: new Map(),
     tagsOverrides: new Map(),
@@ -44,6 +60,14 @@ export function reviewEditingReducer(
           action.title,
         ),
       };
+    case "digest/setDescription":
+      return {
+        ...overrides,
+        descriptionOverrides: new Map(overrides.descriptionOverrides).set(
+          action.index,
+          action.description,
+        ),
+      };
     case "digest/setBody":
       return {
         ...overrides,
@@ -52,6 +76,27 @@ export function reviewEditingReducer(
           action.body,
         ),
       };
+    case "digest/setBodyField": {
+      const current =
+        overrides.bodyOverrides.get(action.index) ?? action.baseBody;
+      // key는 DigestBodyFieldKey(모든 타입의 필드를 합친 union)라 current.type과
+      // 무관한 값도 타입 체크를 통과한다 — 실제로 섞이면 서버 zod가 조용히
+      // 스트립하지만, 그 전에 여기서 막아 오버라이드 자체를 오염시키지 않는다.
+      const isValidForCurrentType = DIGEST_BODY_FIELDS[current.type].some(
+        (field) => field.key === action.key,
+      );
+      if (!isValidForCurrentType) {
+        return overrides;
+      }
+      const next: ReviewDigest["body"] = {
+        ...current,
+        [action.key]: action.value,
+      };
+      return {
+        ...overrides,
+        bodyOverrides: new Map(overrides.bodyOverrides).set(action.index, next),
+      };
+    }
     case "digest/setTopics":
       return {
         ...overrides,

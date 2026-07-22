@@ -70,7 +70,7 @@ export function Sidebar({
     <SidebarContext value={{ collapsed, toggle }}>
       <aside
         className={cn(
-          "flex h-full flex-col overflow-y-auto overscroll-none border-r border-border bg-surface-raised dark:bg-surface-base",
+          "flex h-full shrink-0 flex-col overflow-y-auto overscroll-none border-r border-border bg-surface-raised dark:bg-surface-base",
           collapsed ? "w-12" : "w-64",
         )}
       >

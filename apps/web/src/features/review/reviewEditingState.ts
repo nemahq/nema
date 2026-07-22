@@ -11,6 +11,7 @@ import type {
 export interface ReviewOverrides {
   removedDigestIndexes: ReadonlySet<number>;
   titleOverrides: ReadonlyMap<number, string>;
+  descriptionOverrides: ReadonlyMap<number, string>;
   bodyOverrides: ReadonlyMap<number, ReviewDigest["body"]>;
   topicsOverrides: ReadonlyMap<number, ReviewDigest["topics"]>;
   tagsOverrides: ReadonlyMap<number, ReviewDigest["tags"]>;
@@ -28,6 +29,7 @@ export function computeReviewEditingState(
   const {
     removedDigestIndexes,
     titleOverrides,
+    descriptionOverrides,
     bodyOverrides,
     topicsOverrides,
     tagsOverrides,
@@ -41,6 +43,7 @@ export function computeReviewEditingState(
       digest,
       index,
       title: titleOverrides.get(index) ?? digest.title,
+      description: descriptionOverrides.get(index) ?? digest.description,
       body: bodyOverrides.get(index) ?? digest.body,
       topics: topicsOverrides.get(index) ?? digest.topics,
       tags: tagsOverrides.get(index) ?? digest.tags,
@@ -60,6 +63,7 @@ export function computeReviewEditingState(
   const dirty =
     removedDigestIndexes.size > 0 ||
     titleOverrides.size > 0 ||
+    descriptionOverrides.size > 0 ||
     bodyOverrides.size > 0 ||
     topicsOverrides.size > 0 ||
     tagsOverrides.size > 0 ||
@@ -68,6 +72,9 @@ export function computeReviewEditingState(
     mergeNoteOverrides.size > 0;
   const hasCandidates = digestRows.length + referenceRows.length > 0;
   const hasEmptyTitle = digestRows.some((row) => row.title.trim() === "");
+  const hasEmptyDescription = digestRows.some(
+    (row) => row.description.trim() === "",
+  );
   const hasEmptyLabel = digestRows.some(
     (row) =>
       row.topics.some((topic) => topic.name.trim() === "") ||
@@ -89,6 +96,7 @@ export function computeReviewEditingState(
     dirty,
     hasCandidates,
     hasEmptyTitle,
+    hasEmptyDescription,
     hasEmptyLabel,
     hasEmptyReference,
     referenceUpdates,

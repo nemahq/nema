@@ -2,6 +2,7 @@ export { Alert, type AlertVariant } from "./components/Alert";
 export { Avatar, type AvatarShape } from "./components/Avatar";
 export {
   Badge,
+  type BadgeColor,
   type BadgeShape,
   type BadgeSize,
   type BadgeVariant,
@@ -17,7 +18,11 @@ export {
   CardTitle,
 } from "./components/Card";
 export { Checkbox } from "./components/Checkbox";
-export { Chip, type ChipVariant } from "./components/Chip";
+export {
+  Chip,
+  CHIP_OUTLINE_TONE_CLASSNAME,
+  type ChipVariant,
+} from "./components/Chip";
 export {
   Dialog,
   DialogClose,

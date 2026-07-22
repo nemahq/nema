@@ -94,12 +94,37 @@
   --palette-dark-status-info: #60a5fa; /* blue-400 */
   --palette-dark-status-info-tint: rgba(59, 130, 246, 0.12);
 
-  /* Indigo */
+  /* Hue — 도메인 의미가 없는 색조 팔레트. 무엇을 가리키는지는 이 레이어가 모르고,
+     소비하는 앱이 자기 분류를 색조에 매핑한다(apps/web/src/index.css의 mode-* 참고).
+     status(brand·success·warning·error·info)와 색상 축을 겹치지 않게 골랐다 —
+     겹치면 "AI 작업중 블루"처럼 이미 다른 뜻이 붙은 색을 빌려오게 된다
+     (design-reference-log.md ⑪ 참고). 기본은 500(라이트)/400(다크)이되,
+     yellow·lime은 500 자체가 밝아 텍스트 대비가 약해서 라이트만 600을 쓴다.
+     tint는 채운 배경이 필요한 색조에만 둔다 — status와 같은 패턴으로 라이트 hex의
+     rgba를 라이트·다크 공통으로 쓰고 투명도만 다르다. */
   --palette-light-indigo: #6366f1; /* indigo-500 */
-  --palette-dark-indigo: #818cf8; /* indigo-400 */
-
-  /* Orange */
+  --palette-light-indigo-tint: rgba(99, 102, 241, 0.08);
+  --palette-light-pink: #ec4899; /* pink-500 */
+  --palette-light-pink-tint: rgba(236, 72, 153, 0.08);
+  --palette-light-lime: #65a30d; /* lime-600 */
+  --palette-light-lime-tint: rgba(101, 163, 13, 0.08);
+  --palette-light-yellow: #ca8a04; /* yellow-600 */
+  --palette-light-yellow-tint: rgba(202, 138, 4, 0.08);
+  --palette-light-purple: #a855f7; /* purple-500 */
+  --palette-light-purple-tint: rgba(168, 85, 247, 0.08);
   --palette-light-orange: #ea580c; /* orange-600 */
+
+  /* Hue — dark */
+  --palette-dark-indigo: #818cf8; /* indigo-400 */
+  --palette-dark-indigo-tint: rgba(99, 102, 241, 0.12);
+  --palette-dark-pink: #f472b6; /* pink-400 */
+  --palette-dark-pink-tint: rgba(236, 72, 153, 0.12);
+  --palette-dark-lime: #a3e635; /* lime-400 */
+  --palette-dark-lime-tint: rgba(101, 163, 13, 0.12);
+  --palette-dark-yellow: #facc15; /* yellow-400 */
+  --palette-dark-yellow-tint: rgba(202, 138, 4, 0.12);
+  --palette-dark-purple: #c084fc; /* purple-400 */
+  --palette-dark-purple-tint: rgba(168, 85, 247, 0.12);
   --palette-dark-orange: #fb923c; /* orange-400 */
 
   /* Identity badge — 개인화 배지(현재 워크스페이스) 배경, 테마 무관 고정값.
@@ -170,6 +195,17 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
+  --indigo: var(--palette-light-indigo);
+  --indigo-tint: var(--palette-light-indigo-tint);
+  --pink: var(--palette-light-pink);
+  --pink-tint: var(--palette-light-pink-tint);
+  --lime: var(--palette-light-lime);
+  --lime-tint: var(--palette-light-lime-tint);
+  --yellow: var(--palette-light-yellow);
+  --yellow-tint: var(--palette-light-yellow-tint);
+  --purple: var(--palette-light-purple);
+  --purple-tint: var(--palette-light-purple-tint);
+
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
   --border-subtle: var(--palette-light-border-subtle);
@@ -204,6 +240,17 @@
   --status-error-tint: var(--palette-dark-status-error-tint);
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
+
+  --indigo: var(--palette-dark-indigo);
+  --indigo-tint: var(--palette-dark-indigo-tint);
+  --pink: var(--palette-dark-pink);
+  --pink-tint: var(--palette-dark-pink-tint);
+  --lime: var(--palette-dark-lime);
+  --lime-tint: var(--palette-dark-lime-tint);
+  --yellow: var(--palette-dark-yellow);
+  --yellow-tint: var(--palette-dark-yellow-tint);
+  --purple: var(--palette-dark-purple);
+  --purple-tint: var(--palette-dark-purple-tint);
 
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
@@ -243,6 +290,17 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
+  --indigo: var(--palette-dark-indigo);
+  --indigo-tint: var(--palette-dark-indigo-tint);
+  --pink: var(--palette-dark-pink);
+  --pink-tint: var(--palette-dark-pink-tint);
+  --lime: var(--palette-dark-lime);
+  --lime-tint: var(--palette-dark-lime-tint);
+  --yellow: var(--palette-dark-yellow);
+  --yellow-tint: var(--palette-dark-yellow-tint);
+  --purple: var(--palette-dark-purple);
+  --purple-tint: var(--palette-dark-purple-tint);
+
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
   --border-subtle: var(--palette-dark-border-subtle);
@@ -277,6 +335,17 @@
   --status-error-tint: var(--palette-light-status-error-tint);
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
+
+  --indigo: var(--palette-light-indigo);
+  --indigo-tint: var(--palette-light-indigo-tint);
+  --pink: var(--palette-light-pink);
+  --pink-tint: var(--palette-light-pink-tint);
+  --lime: var(--palette-light-lime);
+  --lime-tint: var(--palette-light-lime-tint);
+  --yellow: var(--palette-light-yellow);
+  --yellow-tint: var(--palette-light-yellow-tint);
+  --purple: var(--palette-light-purple);
+  --purple-tint: var(--palette-light-purple-tint);
 
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
@@ -322,6 +391,18 @@
   --color-status-error-tint: var(--status-error-tint);
   --color-status-info: var(--status-info);
   --color-status-info-tint: var(--status-info-tint);
+
+  /* Hue */
+  --color-indigo: var(--indigo);
+  --color-indigo-tint: var(--indigo-tint);
+  --color-pink: var(--pink);
+  --color-pink-tint: var(--pink-tint);
+  --color-lime: var(--lime);
+  --color-lime-tint: var(--lime-tint);
+  --color-yellow: var(--yellow);
+  --color-yellow-tint: var(--yellow-tint);
+  --color-purple: var(--purple);
+  --color-purple-tint: var(--purple-tint);
 
   /* Border */
   --color-border-strong: var(--border-strong);
