@@ -74,17 +74,19 @@
   --palette-dark-fg-secondary: #a8a29e; /* stone-400 */
   --palette-dark-fg-tertiary: #a8a29e; /* stone-400 */
 
-  /* Status — light. 500 원색은 순백 카드 위에서 텍스트 대비가 WCAG AA(4.5:1)에
-     못 미쳐(success 2.54:1, warning 2.15:1, error 3.76:1, info 3.68:1) 텍스트
-     전용으로 한 단계씩 더 진한 값을 쓴다 — success·warning은 600도 모자라
-     700까지 내려야 한다. tint는 배경에 깔리는 용도라 텍스트와 별개로 진하게
-     맞춘 hex를 그대로 8%로 미러링한다(아래 hue와 같은 패턴). */
+  /* Status — light. 대비는 순백이 아니라 실제 렌더 배경(이 텍스트와 짝지어
+     쓰이는 bg-status-*-tint, 즉 이 hex를 8%로 알파 합성한 색) 기준으로 잰다 —
+     처음엔 순백 기준으로만 재서 통과한 걸로 봤지만, warning·error가 tint
+     합성 배경에서는 여전히 미달이었다(순백 대비 5.02·4.83이 tint 위에선
+     4.50·4.28로 떨어짐). 둘 다 tint 합성 기준 AA를 만족하는 단계까지 다시
+     내렸다(success·info는 이미 여유 있어 안 건드림). tint는 텍스트와 별개로,
+     진하게 맞춘 hex를 그대로 8%로 미러링한다(아래 hue와 같은 패턴). */
   --palette-light-status-success: #047857; /* green-700, was #10b981(500) */
   --palette-light-status-success-tint: rgba(4, 120, 87, 0.08);
-  --palette-light-status-warning: #b45309; /* amber-700, was #f59e0b(500) */
-  --palette-light-status-warning-tint: rgba(180, 83, 9, 0.08);
-  --palette-light-status-error: #dc2626; /* red-600, was #ef4444(500) */
-  --palette-light-status-error-tint: rgba(220, 38, 38, 0.08);
+  --palette-light-status-warning: #92400e; /* amber-800, was #b45309(700) */
+  --palette-light-status-warning-tint: rgba(146, 64, 14, 0.08);
+  --palette-light-status-error: #b91c1c; /* red-700, was #dc2626(600) */
+  --palette-light-status-error-tint: rgba(185, 28, 28, 0.08);
   --palette-light-status-info: #2563eb; /* blue-600, was #3b82f6(500) */
   --palette-light-status-info-tint: rgba(37, 99, 235, 0.08);
 
@@ -102,20 +104,20 @@
      소비하는 앱이 자기 분류를 색조에 매핑한다(apps/web/src/index.css의 mode-* 참고).
      status(brand·success·warning·error·info)와 색상 축을 겹치지 않게 골랐다 —
      겹치면 "AI 작업중 블루"처럼 이미 다른 뜻이 붙은 색을 빌려오게 된다
-     (design-reference-log.md ⑪ 참고). 다크는 400을 쓰되, 라이트는 순백 카드
-     위 텍스트 대비가 500(대부분) 또는 600(yellow·lime, 이미 한 번 조정됐던 값도
-     여전히 미달— 각각 2.94:1/3.09:1)으로는 WCAG AA(4.5:1)에 못 미쳐, 색마다
-     대비를 만족하는 단계까지 진하게 내린다(indigo·pink·purple은 600, yellow·
-     lime은 700까지). tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로
-     미러링한다. */
+     (design-reference-log.md ⑪ 참고). 다크는 400을 쓰되, 라이트는 실제 렌더
+     배경(이 hex를 8%로 합성한 tint) 기준 대비를 만족하는 단계까지 진하게
+     내린다 — indigo·purple은 600, pink는 700, yellow·lime은 800까지(순백
+     기준으로만 재면 다 통과하는 것처럼 보이지만, 실제 tint 배경 위에선
+     여전히 미달이라 한 단계씩 더 내렸다). tint는 텍스트와 별개로, 진하게
+     맞춘 hex를 그대로 8%로 미러링한다. */
   --palette-light-indigo: #4f46e5; /* indigo-600, was #6366f1(500) */
   --palette-light-indigo-tint: rgba(79, 70, 229, 0.08);
-  --palette-light-pink: #db2777; /* pink-600, was #ec4899(500) */
-  --palette-light-pink-tint: rgba(219, 39, 119, 0.08);
-  --palette-light-lime: #4d7c0f; /* lime-700, was #65a30d(600) */
-  --palette-light-lime-tint: rgba(77, 124, 15, 0.08);
-  --palette-light-yellow: #a16207; /* yellow-700, was #ca8a04(600) */
-  --palette-light-yellow-tint: rgba(161, 98, 7, 0.08);
+  --palette-light-pink: #be185d; /* pink-700, was #db2777(600) */
+  --palette-light-pink-tint: rgba(190, 24, 93, 0.08);
+  --palette-light-lime: #365314; /* lime-800, was #4d7c0f(700) */
+  --palette-light-lime-tint: rgba(54, 83, 20, 0.08);
+  --palette-light-yellow: #854d0e; /* yellow-800, was #a16207(700) */
+  --palette-light-yellow-tint: rgba(133, 77, 14, 0.08);
   --palette-light-purple: #9333ea; /* purple-600, was #a855f7(500) */
   --palette-light-purple-tint: rgba(147, 51, 234, 0.08);
   --palette-light-orange: #ea580c; /* orange-600 */

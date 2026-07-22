@@ -20,12 +20,15 @@ type TextareaVariant = "default" | "borderless";
 const VARIANT_CLASSNAME: Record<TextareaVariant, string> = {
   default:
     "rounded-md border border-border bg-transparent px-3 py-1.5 placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none aria-invalid:border-status-error disabled:text-fg-quinary disabled:placeholder:text-fg-quinary dark:focus-visible:border-fg-tertiary/70",
-  // outline 관련 클래스를 일부러 안 둔다 — 전역 *:focus-visible 링(tokens/index.css)이
-  // 이미 모든 포커스 가능 엘리먼트를 커버해서, 여기서 focus:outline-none을 얹으면
-  // 그 전역 링을 죽이기만 하고 대체 표시가 없다(conventions.md "MUST NOT remove
-  // focus styles").
+  // focus:outline-none을 다시 둔다 — 텍스트 입력은 버튼과 달리 포커스되면
+  // 깜빡이는 caret이 항상 같이 뜨는데, 이게 이미 네이티브 포커스 표시라
+  // conventions.md "MUST NOT remove focus styles"가 겨냥한 상황(대체 표시가
+  // 아예 없는 경우)이 아니다. 게다가 :focus-visible은 버튼류와 달리
+  // input/textarea에서는 마우스 클릭에도 매칭돼(브라우저 공통 휴리스틱),
+  // 지우지 않으면 "무입력 티가 없게"(#476)가 핵심인 InvisibleTextarea 등에서
+  // 클릭할 때마다 사각 링이 떴다.
   borderless:
-    "border-none bg-transparent p-0 placeholder:text-fg-quaternary disabled:text-fg-quinary disabled:placeholder:text-fg-quinary",
+    "border-none bg-transparent p-0 placeholder:text-fg-quaternary focus:outline-none disabled:text-fg-quinary disabled:placeholder:text-fg-quinary",
 };
 
 // Tailwind 유틸리티 이름 그대로("resize-y") 매핑 — resize prop 값(예: "vertical")을
