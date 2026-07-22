@@ -94,36 +94,6 @@
   --palette-dark-status-info: #60a5fa; /* blue-400 */
   --palette-dark-status-info-tint: rgba(59, 130, 246, 0.12);
 
-  /* Digest type — 5개 고정 분류(결정·미결·학습·아이디어·가정)용 배지 색.
-     status 색(brand·success·warning·error·info)과 색상 축 자체를 겹치지 않게
-     골랐다 — 재사용하면 "AI 작업중 블루"처럼 이미 다른 뜻이 있는 색을 빌려오는
-     문제가 재발한다(design-reference-log.md ⑪ 참고). tint는 status와 같은
-     패턴으로 라이트 hex의 rgba를 라이트·다크 공통으로 쓰고 투명도만 다르다.
-     기본은 500(라이트)/400(다크)이되, yellow·lime은 500 자체가 밝기가 높아
-     텍스트 대비가 약해서 라이트 쪽만 한 단계 더 진한 600을 쓴다. */
-  --palette-light-digest-type-decision: #6366f1; /* indigo-500 */
-  --palette-light-digest-type-decision-tint: rgba(99, 102, 241, 0.08);
-  --palette-light-digest-type-pending: #ec4899; /* pink-500 */
-  --palette-light-digest-type-pending-tint: rgba(236, 72, 153, 0.08);
-  --palette-light-digest-type-learning: #65a30d; /* lime-600 */
-  --palette-light-digest-type-learning-tint: rgba(101, 163, 13, 0.08);
-  --palette-light-digest-type-idea: #ca8a04; /* yellow-600 */
-  --palette-light-digest-type-idea-tint: rgba(202, 138, 4, 0.08);
-  --palette-light-digest-type-assumption: #a855f7; /* purple-500 */
-  --palette-light-digest-type-assumption-tint: rgba(168, 85, 247, 0.08);
-
-  /* Digest type — dark */
-  --palette-dark-digest-type-decision: #818cf8; /* indigo-400 */
-  --palette-dark-digest-type-decision-tint: rgba(99, 102, 241, 0.12);
-  --palette-dark-digest-type-pending: #f472b6; /* pink-400 */
-  --palette-dark-digest-type-pending-tint: rgba(236, 72, 153, 0.12);
-  --palette-dark-digest-type-learning: #a3e635; /* lime-400 */
-  --palette-dark-digest-type-learning-tint: rgba(101, 163, 13, 0.12);
-  --palette-dark-digest-type-idea: #facc15; /* yellow-400 */
-  --palette-dark-digest-type-idea-tint: rgba(202, 138, 4, 0.12);
-  --palette-dark-digest-type-assumption: #c084fc; /* purple-400 */
-  --palette-dark-digest-type-assumption-tint: rgba(168, 85, 247, 0.12);
-
   /* Indigo */
   --palette-light-indigo: #6366f1; /* indigo-500 */
   --palette-dark-indigo: #818cf8; /* indigo-400 */
@@ -200,19 +170,6 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
-  --digest-type-decision: var(--palette-light-digest-type-decision);
-  --digest-type-decision-tint: var(--palette-light-digest-type-decision-tint);
-  --digest-type-pending: var(--palette-light-digest-type-pending);
-  --digest-type-pending-tint: var(--palette-light-digest-type-pending-tint);
-  --digest-type-learning: var(--palette-light-digest-type-learning);
-  --digest-type-learning-tint: var(--palette-light-digest-type-learning-tint);
-  --digest-type-idea: var(--palette-light-digest-type-idea);
-  --digest-type-idea-tint: var(--palette-light-digest-type-idea-tint);
-  --digest-type-assumption: var(--palette-light-digest-type-assumption);
-  --digest-type-assumption-tint: var(
-    --palette-light-digest-type-assumption-tint
-  );
-
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
   --border-subtle: var(--palette-light-border-subtle);
@@ -247,19 +204,6 @@
   --status-error-tint: var(--palette-dark-status-error-tint);
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
-
-  --digest-type-decision: var(--palette-dark-digest-type-decision);
-  --digest-type-decision-tint: var(--palette-dark-digest-type-decision-tint);
-  --digest-type-pending: var(--palette-dark-digest-type-pending);
-  --digest-type-pending-tint: var(--palette-dark-digest-type-pending-tint);
-  --digest-type-learning: var(--palette-dark-digest-type-learning);
-  --digest-type-learning-tint: var(--palette-dark-digest-type-learning-tint);
-  --digest-type-idea: var(--palette-dark-digest-type-idea);
-  --digest-type-idea-tint: var(--palette-dark-digest-type-idea-tint);
-  --digest-type-assumption: var(--palette-dark-digest-type-assumption);
-  --digest-type-assumption-tint: var(
-    --palette-dark-digest-type-assumption-tint
-  );
 
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
@@ -299,19 +243,6 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
-  --digest-type-decision: var(--palette-dark-digest-type-decision);
-  --digest-type-decision-tint: var(--palette-dark-digest-type-decision-tint);
-  --digest-type-pending: var(--palette-dark-digest-type-pending);
-  --digest-type-pending-tint: var(--palette-dark-digest-type-pending-tint);
-  --digest-type-learning: var(--palette-dark-digest-type-learning);
-  --digest-type-learning-tint: var(--palette-dark-digest-type-learning-tint);
-  --digest-type-idea: var(--palette-dark-digest-type-idea);
-  --digest-type-idea-tint: var(--palette-dark-digest-type-idea-tint);
-  --digest-type-assumption: var(--palette-dark-digest-type-assumption);
-  --digest-type-assumption-tint: var(
-    --palette-dark-digest-type-assumption-tint
-  );
-
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
   --border-subtle: var(--palette-dark-border-subtle);
@@ -346,19 +277,6 @@
   --status-error-tint: var(--palette-light-status-error-tint);
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
-
-  --digest-type-decision: var(--palette-light-digest-type-decision);
-  --digest-type-decision-tint: var(--palette-light-digest-type-decision-tint);
-  --digest-type-pending: var(--palette-light-digest-type-pending);
-  --digest-type-pending-tint: var(--palette-light-digest-type-pending-tint);
-  --digest-type-learning: var(--palette-light-digest-type-learning);
-  --digest-type-learning-tint: var(--palette-light-digest-type-learning-tint);
-  --digest-type-idea: var(--palette-light-digest-type-idea);
-  --digest-type-idea-tint: var(--palette-light-digest-type-idea-tint);
-  --digest-type-assumption: var(--palette-light-digest-type-assumption);
-  --digest-type-assumption-tint: var(
-    --palette-light-digest-type-assumption-tint
-  );
 
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
@@ -404,18 +322,6 @@
   --color-status-error-tint: var(--status-error-tint);
   --color-status-info: var(--status-info);
   --color-status-info-tint: var(--status-info-tint);
-
-  /* Digest type */
-  --color-digest-type-decision: var(--digest-type-decision);
-  --color-digest-type-decision-tint: var(--digest-type-decision-tint);
-  --color-digest-type-pending: var(--digest-type-pending);
-  --color-digest-type-pending-tint: var(--digest-type-pending-tint);
-  --color-digest-type-learning: var(--digest-type-learning);
-  --color-digest-type-learning-tint: var(--digest-type-learning-tint);
-  --color-digest-type-idea: var(--digest-type-idea);
-  --color-digest-type-idea-tint: var(--digest-type-idea-tint);
-  --color-digest-type-assumption: var(--digest-type-assumption);
-  --color-digest-type-assumption-tint: var(--digest-type-assumption-tint);
 
   /* Border */
   --color-border-strong: var(--border-strong);
