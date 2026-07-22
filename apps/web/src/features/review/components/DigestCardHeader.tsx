@@ -1,21 +1,12 @@
 import type { DigestType } from "@nema-io/shared";
-import {
-  Button,
-  cn,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@nema-io/weave";
-import { FileText } from "@nema-io/weave/icons";
 
 import type { ReviewDigest } from "@web/features/review/types";
-import { useTranslation } from "@web/lib/tolgee";
 
 import { CardViewedToggle } from "./CardViewedToggle";
 import { DigestCardMenu } from "./DigestCardMenu";
+import { DigestSourceButton } from "./DigestSourceButton";
 import { DigestTopicPicker } from "./DigestTopicPicker";
 import { DigestTypePicker } from "./DigestTypePicker";
-import { useEditing } from "./EditingProvider";
 
 interface DigestCardHeaderProps {
   digestIndex: number;
@@ -30,6 +21,8 @@ interface DigestCardHeaderProps {
   onRemove: () => void;
 }
 
+// 좌: 상시 노출 타입·Topic, 우: 원문 보기·읽음·메뉴. 이 헤더 자신은 편집값을
+// 구독하지 않는다 — Topic이 바뀌어도 리렌더는 DigestTopicPicker 안에서 끝나야 한다.
 export function DigestCardHeader({
   digestIndex,
   type,
@@ -42,13 +35,6 @@ export function DigestCardHeader({
   onChangeType,
   onRemove,
 }: DigestCardHeaderProps) {
-  const { t } = useTranslation();
-  const dispatch = useEditing((state) => state.dispatch);
-  const topics = useEditing(
-    (state) => state.overrides.topicsOverrides.get(digestIndex) ?? baseTopics,
-  );
-  const viewedFieldId = `digest-${digestIndex}-viewed`;
-
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-1.5">
@@ -60,46 +46,18 @@ export function DigestCardHeader({
           onChangeType={onChangeType}
         />
         <DigestTopicPicker
-          topics={topics}
+          digestIndex={digestIndex}
+          baseTopics={baseTopics}
           disabled={disabled}
-          onChange={(next) =>
-            dispatch({
-              type: "digest/setTopics",
-              index: digestIndex,
-              topics: next,
-            })
-          }
         />
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {/* 원문 보기는 리뷰 작업의 핵심(원문 대조)이라 ⋯ 뒤에 숨기지 않는다.
-            아이콘이 텍스트 없이 혼자 의미를 전달해야 해서, 이 앱이 이미 "문서"
-            의미로 쓰는 FileText를 재사용한다 — Search는 같은 앱에서 "검색
-            쿼리"라는 다른 뜻으로 이미 쓰인다. */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon-xs"
-              variant="ghost"
-              shape="circle"
-              disabled={disabled}
-              aria-label={t("review.digest_view_source_action")}
-              onClick={onViewSource}
-              className={cn(
-                "text-fg-tertiary",
-                sourceActive && "bg-fg-primary/10 text-fg-primary",
-              )}
-            >
-              <FileText className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            {t("review.digest_view_source_action")}
-          </TooltipContent>
-        </Tooltip>
+        <DigestSourceButton
+          active={sourceActive}
+          disabled={disabled}
+          onClick={onViewSource}
+        />
         <CardViewedToggle
-          fieldId={viewedFieldId}
           viewed={viewed}
           disabled={disabled}
           onToggleViewed={onToggleViewed}

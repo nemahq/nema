@@ -1,9 +1,8 @@
 import { useState } from "react";
 
-import { cn } from "@nema-io/weave";
-
 import type { ReviewDigest } from "@web/features/review/types";
 
+import { CandidateCardFrame } from "./CandidateCardFrame";
 import { DigestBodyFields } from "./DigestBodyFields";
 import { DigestCardHeader } from "./DigestCardHeader";
 import { DigestDescriptionField } from "./DigestDescriptionField";
@@ -19,9 +18,8 @@ interface DigestCandidateCardProps {
   onViewSource: () => void;
 }
 
-// 후보 하나는 독립된 메모지 폼이 아니라는 게 이 카드의 전제다 — 4방향 테두리 대신
-// 헤더에만 옅은 워시를 깔아 "여기부터 새 카드"만 알리고, 본문은 배경 없이 그대로
-// 둔다(design-decisions-log.md).
+// 타입만 이 카드가 구독한다 — 본문 필드 구성이 타입에 따라 갈려서 카드 자신이
+// 알아야 하는 유일한 편집값이다. Topic·태그는 각 Picker가 자기 몫만 구독한다.
 export function DigestCandidateCard({
   digestIndex,
   digest,
@@ -37,9 +35,6 @@ export function DigestCandidateCard({
   const type = useEditing(
     (state) =>
       (state.overrides.bodyOverrides.get(digestIndex) ?? digest.body).type,
-  );
-  const tags = useEditing(
-    (state) => state.overrides.tagsOverrides.get(digestIndex) ?? digest.tags,
   );
 
   // 실제 편집 필드에 포커스가 들어올 때만 펼친다. ⋯ 메뉴처럼 Portal로 렌더되는
@@ -60,85 +55,67 @@ export function DigestCandidateCard({
   }
 
   return (
-    <div
+    <CandidateCardFrame
+      viewed={viewed}
       onFocus={handleFieldFocus}
       onBlur={handleCardBlur}
-      className={cn(
-        "flex flex-col gap-2",
-        // 접힌 카드는 3줄로 짧아져서 같은 여백이면 헐거워 보인다 — 뒤쪽이 더
-        // 촘촘한 피드 리듬이 되도록 좁힌다.
-        viewed ? "pb-4" : "pb-8",
-      )}
+      wash={
+        /* Topic·제목·description을 한 워시 구역에 묶는다 — 셋이 나중에 피드
+           미리보기 카드에 그대로 나갈 것들이라, "조작 가능한가"보다 이 묶음이
+           더 안정적인 기준이라고 봤다(design-decisions-log.md). */
+        <>
+          <DigestCardHeader
+            digestIndex={digestIndex}
+            type={type}
+            baseTopics={digest.topics}
+            disabled={disabled}
+            viewed={viewed}
+            sourceActive={sourceActive}
+            onToggleViewed={() => setViewed((current) => !current)}
+            onViewSource={onViewSource}
+            onChangeType={(next) =>
+              dispatch({
+                type: "digest/setBody",
+                index: digestIndex,
+                body: { type: next },
+              })
+            }
+            onRemove={() =>
+              dispatch({ type: "digest/remove", index: digestIndex })
+            }
+          />
+          <DigestTitleField
+            digestIndex={digestIndex}
+            baseTitle={digest.title}
+            disabled={disabled}
+          />
+          <DigestDescriptionField
+            digestIndex={digestIndex}
+            baseDescription={digest.description}
+            disabled={disabled}
+          />
+        </>
+      }
     >
-      {/* 각진 모서리 — 둥근 모서리는 이 앱에서 클릭 가능한 컨트롤의 시각 언어라,
-          여기 쓰면 헤더가 영역 표시가 아니라 또 하나의 컨트롤처럼 보인다. */}
-      <div className="flex flex-col gap-2 bg-fg-primary/5 px-2 py-2">
-        <DigestCardHeader
+      <DigestBodyFields
+        digestIndex={digestIndex}
+        type={type}
+        baseBody={digest.body}
+        disabled={disabled}
+        cardFocused={focused}
+      />
+      {/* 태그도 검색·분류용 메타라 카드를 이해하는 데 필수가 아니므로 본문과 같이
+          접힌다(타입과 달리 접힘 상태에서 따로 되살리지 않는다).
+          pl-2를 여기 안 두는 이유 — DigestTagPicker 트리거 자신이 본문 필드와 같은
+          값(px-2)의 패딩을 이미 갖고 있어, 여기서 또 주면 이중으로 밀린다. mt-3만
+          둬서 필드 사이 간격(gap-3)과 같은 무게로 리듬만 유지한다. */}
+      <div className="mt-3">
+        <DigestTagPicker
           digestIndex={digestIndex}
-          type={type}
-          baseTopics={digest.topics}
-          disabled={disabled}
-          viewed={viewed}
-          sourceActive={sourceActive}
-          onToggleViewed={() => setViewed((current) => !current)}
-          onViewSource={onViewSource}
-          onChangeType={(next) =>
-            dispatch({
-              type: "digest/setBody",
-              index: digestIndex,
-              body: { type: next },
-            })
-          }
-          onRemove={() =>
-            dispatch({ type: "digest/remove", index: digestIndex })
-          }
-        />
-        {/* Topic·제목·description을 한 워시 구역에 묶는다 — 셋이 나중에 피드
-            미리보기 카드에 그대로 나갈 것들이라, "조작 가능한가"보다 이 묶음이
-            더 안정적인 기준이라고 봤다(design-decisions-log.md). */}
-        <DigestTitleField
-          digestIndex={digestIndex}
-          baseTitle={digest.title}
-          disabled={disabled}
-        />
-        <DigestDescriptionField
-          digestIndex={digestIndex}
-          baseDescription={digest.description}
+          baseTags={digest.tags}
           disabled={disabled}
         />
       </div>
-
-      {/* 읽음 처리되면 본문을 통째로 안 그린다 — 헤더만 남아 피드 행처럼 접힌다.
-          태그도 검색·분류용 메타라 카드를 이해하는 데 필수가 아니므로 같이
-          접는다(타입과 달리 접힘 상태에서 따로 되살리지 않는다). */}
-      {!viewed && (
-        <>
-          <DigestBodyFields
-            digestIndex={digestIndex}
-            type={type}
-            baseBody={digest.body}
-            disabled={disabled}
-            cardFocused={focused}
-          />
-          {/* pl-2를 여기 안 두는 이유 — DigestTagPicker 트리거 자신이 본문
-              필드와 같은 값(px-2)의 패딩을 이미 갖고 있어, 여기서 또 주면
-              이중으로 밀린다. mt-3만 둬서 필드 사이 간격(gap-3)과 같은
-              무게로 리듬만 유지한다. */}
-          <div className="mt-3">
-            <DigestTagPicker
-              tags={tags}
-              disabled={disabled}
-              onChange={(next) =>
-                dispatch({
-                  type: "digest/setTags",
-                  index: digestIndex,
-                  tags: next,
-                })
-              }
-            />
-          </div>
-        </>
-      )}
-    </div>
+    </CandidateCardFrame>
   );
 }

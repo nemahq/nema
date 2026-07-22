@@ -10,12 +10,13 @@ import { Tag as TagIcon } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
+import { useEditing } from "./EditingProvider";
 import { TagEditPanel } from "./TagEditPanel";
 
 interface DigestTagPickerProps {
-  tags: DigestTagDraft[];
+  digestIndex: number;
+  baseTags: DigestTagDraft[];
   disabled: boolean;
-  onChange: (tags: DigestTagDraft[]) => void;
 }
 
 // 칩은 바깥 화면에선 읽기 전용이다 — 추가·제거는 전부 TagEditPanel 안에서만
@@ -35,12 +36,18 @@ interface DigestTagPickerProps {
 // 그 둘이 겹쳐 빈 상태만 왼쪽 패딩이 두 배로 쌓이는 비대칭이 났다 — 트리거를
 // 감싸는 컨테이너 하나에 고정 패딩만 주고 안쪽(Badge·아이콘)엔 더 손대지 않는
 // 지금 방식이 상태와 무관하게 항상 같다.
+// 태그 편집값을 카드가 아니라 여기서 구독한다 — 카드가 들면 태그 하나 추가할
+// 때마다 본문 필드 전체가 같이 다시 그려진다.
 export function DigestTagPicker({
-  tags,
+  digestIndex,
+  baseTags,
   disabled,
-  onChange,
 }: DigestTagPickerProps) {
   const { t } = useTranslation();
+  const dispatch = useEditing((state) => state.dispatch);
+  const tags = useEditing(
+    (state) => state.overrides.tagsOverrides.get(digestIndex) ?? baseTags,
+  );
 
   return (
     <Popover>
@@ -72,7 +79,13 @@ export function DigestTagPicker({
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={-24} className="p-0">
-        <TagEditPanel tags={tags} disabled={disabled} onChange={onChange} />
+        <TagEditPanel
+          tags={tags}
+          disabled={disabled}
+          onChange={(next) =>
+            dispatch({ type: "digest/setTags", index: digestIndex, tags: next })
+          }
+        />
       </PopoverContent>
     </Popover>
   );

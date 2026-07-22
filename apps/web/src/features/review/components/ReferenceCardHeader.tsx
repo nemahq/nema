@@ -5,7 +5,6 @@ import { ReferenceCardMenu } from "./ReferenceCardMenu";
 import { ReferenceTypePicker } from "./ReferenceTypePicker";
 
 interface ReferenceCardHeaderProps {
-  referenceKey: string;
   type: ReferenceType;
   disabled: boolean;
   viewed: boolean;
@@ -17,7 +16,6 @@ interface ReferenceCardHeaderProps {
 // DigestCardHeader와 같은 좌우 구조 — 좌: 상시 노출 타입, 우: 읽음·메뉴. Topic·
 // 원문 보기는 없다(Reference는 Topic에 안 묶이고, 원문 대조는 이번 라운드 범위 밖).
 export function ReferenceCardHeader({
-  referenceKey,
   type,
   disabled,
   viewed,
@@ -25,8 +23,6 @@ export function ReferenceCardHeader({
   onChangeType,
   onRemove,
 }: ReferenceCardHeaderProps) {
-  const viewedFieldId = `reference-${referenceKey}-viewed`;
-
   return (
     <div className="flex items-center justify-between gap-2">
       <ReferenceTypePicker
@@ -36,7 +32,6 @@ export function ReferenceCardHeader({
       />
       <div className="flex shrink-0 items-center gap-2">
         <CardViewedToggle
-          fieldId={viewedFieldId}
           viewed={viewed}
           disabled={disabled}
           onToggleViewed={onToggleViewed}
