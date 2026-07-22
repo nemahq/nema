@@ -1,6 +1,5 @@
 {
   "account": {
-    "delete_blocked_back": "Back",
     "delete_blocked_description": "You're the sole owner of {count} workspaces that have other members. Transfer ownership to someone else there before you can delete your account.",
     "delete_blocked_title": "Transfer ownership first",
     "delete_button": "Delete account",
@@ -34,6 +33,7 @@
     "subtitle": "See you soon!"
   },
   "common": {
+    "back": "Back",
     "cancel": "Cancel",
     "cancelling": "Cancelling...",
     "close": "Close",
@@ -240,7 +240,6 @@
     "tab_closed": "Reviewed",
     "tab_open": "Needs review",
     "tag_add_action": "Add tag",
-    "tag_create_cancel_action": "Back",
     "tag_create_description_label": "Description",
     "tag_create_description_placeholder": "What does this tag mean?",
     "tag_create_submit_action": "Add",

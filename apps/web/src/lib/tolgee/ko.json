@@ -1,6 +1,5 @@
 {
   "account": {
-    "delete_blocked_back": "뒤로",
     "delete_blocked_description": "다른 멤버가 있는 워크스페이스 {count}개의 유일한 소유자예요. 계정을 삭제하려면 먼저 그 워크스페이스들의 소유권을 다른 사람에게 넘겨주세요.",
     "delete_blocked_title": "소유권 이전이 필요해요",
     "delete_button": "계정 삭제",
@@ -34,6 +33,7 @@
     "subtitle": "곧 만나요!"
   },
   "common": {
+    "back": "뒤로",
     "cancel": "취소",
     "cancelling": "취소하는 중...",
     "close": "닫기",
@@ -240,7 +240,6 @@
     "tab_closed": "리뷰됨",
     "tab_open": "리뷰 대기",
     "tag_add_action": "태그 추가",
-    "tag_create_cancel_action": "뒤로",
     "tag_create_description_label": "설명",
     "tag_create_description_placeholder": "이 태그가 뭘 의미하나요?",
     "tag_create_submit_action": "추가",

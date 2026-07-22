@@ -85,7 +85,7 @@ function AccountDeleteGate({
         </div>
         <DialogFooter className="mt-6 border-t border-border pt-4">
           <Button variant="ghost" onClick={onBack}>
-            {t("account.delete_blocked_back")}
+            {t("common.back")}
           </Button>
         </DialogFooter>
       </div>

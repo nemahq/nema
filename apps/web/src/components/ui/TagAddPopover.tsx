@@ -267,7 +267,7 @@ export function TagAddPopover({
                 size="xs"
                 onClick={() => setCreatingTitle(null)}
               >
-                {t("review.tag_create_cancel_action")}
+                {t("common.back")}
               </Button>
               <Button
                 type="button"

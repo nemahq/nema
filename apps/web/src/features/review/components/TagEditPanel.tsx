@@ -254,13 +254,15 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
           />
         </div>
         <div className="flex justify-end gap-2">
+          {/* 취소(common.cancel)가 아니라 뒤로(common.back) — 팝오버를 닫는
+              게 아니라 검색 화면으로만 돌아간다. */}
           <Button
             type="button"
             variant="ghost"
             size="xs"
             onClick={() => setCreatingTitle(null)}
           >
-            {t("review.tag_create_cancel_action")}
+            {t("common.back")}
           </Button>
           <Button
             type="button"
@@ -275,7 +277,7 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
             }
             onClick={handleSubmitNew}
           >
-            {t("review.tag_create_submit_action")}
+            {t("common.create")}
           </Button>
         </div>
       </div>
