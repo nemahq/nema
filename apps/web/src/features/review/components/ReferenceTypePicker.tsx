@@ -8,7 +8,7 @@ import {
 } from "@nema-io/weave";
 import { Check } from "@nema-io/weave/icons";
 
-import { REFERENCE_TYPE_LABEL } from "@web/features/review/constants";
+import { REFERENCE_TYPE_LABEL_KEY } from "@web/features/review/constants";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface ReferenceTypePickerProps {
@@ -38,7 +38,7 @@ export function ReferenceTypePicker({
           disabled={disabled}
           aria-label={t("review.reference_type_change_action")}
         >
-          {REFERENCE_TYPE_LABEL[type]}
+          {t(REFERENCE_TYPE_LABEL_KEY[type])}
         </Chip>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="start" width={140}>
@@ -48,7 +48,7 @@ export function ReferenceTypePicker({
             className="pr-8"
             onClick={() => onChangeType(candidate)}
           >
-            {REFERENCE_TYPE_LABEL[candidate]}
+            {t(REFERENCE_TYPE_LABEL_KEY[candidate])}
             {candidate === type && (
               <span className="absolute right-2 flex size-3.5 items-center justify-center">
                 <Check className="size-4" />

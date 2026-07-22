@@ -35,12 +35,12 @@ export const DIGEST_TYPE_TAG_COLOR: Record<DigestType, TagColor> = {
 
 // organization은 행위주체(법인·팀), product는 그 주체가 만든 것 — 라벨만 봐선
 // 헷갈리는 구분이라 reference.ts SSOT 주석과 짝지어 둔다.
-export const REFERENCE_TYPE_LABEL: Record<ReferenceType, string> = {
-  person: "인물",
-  organization: "조직",
-  project: "프로젝트",
-  product: "제품",
-  term: "개념",
+export const REFERENCE_TYPE_LABEL_KEY: Record<ReferenceType, TranslationKey> = {
+  person: "review.reference_type_person",
+  organization: "review.reference_type_organization",
+  project: "review.reference_type_project",
+  product: "review.reference_type_product",
+  term: "review.reference_type_term",
 };
 
 // Select의 onValueChange·서버가 준 문자열을 유니언으로 좁힌다 — `as` 없이(가드 없는

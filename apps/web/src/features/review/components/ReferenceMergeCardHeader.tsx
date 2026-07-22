@@ -2,8 +2,9 @@ import { Badge } from "@nema-io/weave";
 
 import {
   isReferenceType,
-  REFERENCE_TYPE_LABEL,
+  REFERENCE_TYPE_LABEL_KEY,
 } from "@web/features/review/constants";
+import { useTranslation } from "@web/lib/tolgee";
 
 import { CardViewedToggle } from "./CardViewedToggle";
 import { ReferenceMergeCardMenu } from "./ReferenceMergeCardMenu";
@@ -28,13 +29,15 @@ export function ReferenceMergeCardHeader({
   onToggleViewed,
   onRestore,
 }: ReferenceMergeCardHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center justify-between gap-2">
       {/* ReferenceTypePicker(Chip)와 같은 자리 — 정적/인터랙티브 버전이 크기·모양이
           같아야 해서 shape="pill"로 맞춘다(Badge 기본은 각진 rounded-[4px]).
           글자색은 OUTLINE_TONE_CLASSNAME을 Badge·Chip이 공유해 이미 일치한다. */}
       <Badge variant="outline" shape="pill">
-        {isReferenceType(type) ? REFERENCE_TYPE_LABEL[type] : type}
+        {isReferenceType(type) ? t(REFERENCE_TYPE_LABEL_KEY[type]) : type}
       </Badge>
       <div className="flex shrink-0 items-center gap-2">
         <CardViewedToggle
