@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  mergeListItemIntoPrevious,
-  splitListItem,
-} from "./digestListEditing";
+import { mergeListItemIntoPrevious, splitListItem } from "./digestListEditing";
 
 describe("splitListItem", () => {
   it("커서 위치(start===end)에서 항목을 둘로 쪼갠다", () => {

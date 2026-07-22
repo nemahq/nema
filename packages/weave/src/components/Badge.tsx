@@ -86,9 +86,7 @@ function Badge({
   className,
   ...props
 }: BadgeProps) {
-  const tone = color
-    ? colorClasses[color]
-    : variantClasses[variant ?? "brand"];
+  const tone = color ? colorClasses[color] : variantClasses[variant ?? "brand"];
 
   return (
     <span

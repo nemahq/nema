@@ -77,7 +77,8 @@ export function reviewEditingReducer(
         ),
       };
     case "digest/setBodyField": {
-      const current = overrides.bodyOverrides.get(action.index) ?? action.baseBody;
+      const current =
+        overrides.bodyOverrides.get(action.index) ?? action.baseBody;
       // key는 DigestBodyFieldKey(모든 타입의 필드를 합친 union)라 current.type과
       // 무관한 값도 타입 체크를 통과한다 — 실제로 섞이면 서버 zod가 조용히
       // 스트립하지만, 그 전에 여기서 막아 오버라이드 자체를 오염시키지 않는다.
