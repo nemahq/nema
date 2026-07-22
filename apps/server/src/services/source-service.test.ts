@@ -124,6 +124,7 @@ function pendingSourceRow(args: {
   id: string;
   digestionStatus?: "pending" | "failed" | "cancelled" | "completed";
   lastDigestionAttempt?: string | null;
+  digestionStartedAt?: string | null;
   digestionInputUpdatedAt?: string;
 }) {
   return {
@@ -134,6 +135,7 @@ function pendingSourceRow(args: {
     created_at: CREATED_AT,
     digestion_status: args.digestionStatus ?? "completed",
     last_digestion_attempt: args.lastDigestionAttempt ?? null,
+    digestion_started_at: args.digestionStartedAt ?? null,
     digestion_input_updated_at: args.digestionInputUpdatedAt ?? CREATED_AT,
     error_message: null,
   };

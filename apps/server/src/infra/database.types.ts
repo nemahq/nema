@@ -711,6 +711,7 @@ export type Database = {
           created_at: string;
           digestion_input_updated_at: string;
           digestion_retry_count: number;
+          digestion_started_at: string | null;
           digestion_status: Database["public"]["Enums"]["digestion_status"];
           error_message: string | null;
           extraction_retry_count: number;
@@ -735,6 +736,7 @@ export type Database = {
           created_at?: string;
           digestion_input_updated_at?: string;
           digestion_retry_count?: number;
+          digestion_started_at?: string | null;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           error_message?: string | null;
           extraction_retry_count?: number;
@@ -759,6 +761,7 @@ export type Database = {
           created_at?: string;
           digestion_input_updated_at?: string;
           digestion_retry_count?: number;
+          digestion_started_at?: string | null;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           error_message?: string | null;
           extraction_retry_count?: number;
