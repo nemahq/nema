@@ -8,6 +8,7 @@ import {
   DialogTitle,
   Input,
   Text,
+  Textarea,
 } from "@nema-io/weave";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
@@ -124,14 +125,11 @@ export function ReferenceEditor({ reference, readOnly }: ReferenceEditorProps) {
           className="min-w-0 flex-1"
         />
       </div>
-      {/* weave에 Textarea가 없어(Input은 단일 행 전용) TagAddPopover의 설명
-          필드와 같은 raw textarea 스타일을 그대로 재사용 */}
-      <textarea
+      <Textarea
         rows={4}
         value={bodyDraft}
         onChange={(e) => setBodyDraft(e.target.value)}
         disabled={readOnly}
-        className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-2 text-sm leading-relaxed focus-visible:border-brand focus-visible:outline-none dark:focus-visible:border-fg-tertiary/70 disabled:opacity-60"
       />
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

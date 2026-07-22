@@ -1,5 +1,5 @@
 import { REFERENCE_BODY_MAX_LENGTH } from "@nema-io/shared";
-import { Badge, Button, Text } from "@nema-io/weave";
+import { Badge, Button, Text, Textarea } from "@nema-io/weave";
 import { Undo2 } from "@nema-io/weave/icons";
 
 import {
@@ -76,14 +76,13 @@ export function ReferenceMergeCard({
         className="flex flex-col gap-1"
       >
         {t("review.reference_merge_label")}
-        <textarea
+        <Textarea
           value={mergeNote}
           onChange={(e) => onMergeNoteChange(e.target.value)}
           disabled={disabled}
           rows={3}
           maxLength={REFERENCE_BODY_MAX_LENGTH}
           aria-invalid={mergeNote.trim() === ""}
-          className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-1.5 text-sm text-fg-primary placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none aria-invalid:border-status-error disabled:text-fg-quinary disabled:placeholder:text-fg-quinary dark:focus-visible:border-fg-tertiary/70"
         />
       </Text>
     </div>

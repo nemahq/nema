@@ -8,6 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
   Text,
+  Textarea,
 } from "@nema-io/weave";
 import { Plus } from "@nema-io/weave/icons";
 
@@ -252,12 +253,11 @@ export function TagAddPopover({
               className="flex flex-col gap-1"
             >
               {t("review.tag_create_description_label")}
-              <textarea
+              <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={t("review.tag_create_description_placeholder")}
                 rows={3}
-                className="w-full min-w-0 resize-none rounded-md border border-border bg-transparent px-3 py-1.5 text-sm placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none dark:focus-visible:border-fg-tertiary/70"
               />
             </Text>
             <div className="flex justify-end gap-2">

@@ -90,6 +90,7 @@ export {
   type TextSize,
   type TextWeight,
 } from "./components/Text";
+export { Textarea, type TextareaVariant } from "./components/Textarea";
 export { TextSkeleton } from "./components/TextSkeleton";
 export { Toast, toast, type ToasterProps } from "./components/Toast";
 export {
