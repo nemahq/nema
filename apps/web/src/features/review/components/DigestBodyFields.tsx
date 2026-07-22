@@ -2,9 +2,10 @@ import { Text } from "@nema-io/weave";
 
 import { DIGEST_BODY_FIELDS } from "@web/features/review/constants";
 import type { ReviewDigest } from "@web/features/review/types";
+import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
 
 interface BodyFieldRow {
-  label: string;
+  labelKey: TranslationKey;
   value: string;
 }
 
@@ -16,7 +17,7 @@ function bodyFieldRows(body: ReviewDigest["body"]): BodyFieldRow[] {
   const fieldValues: Record<string, unknown> = { ...body };
 
   return DIGEST_BODY_FIELDS[body.type]
-    .map(({ key, label }) => {
+    .map(({ key, labelKey }) => {
       const fieldValue = fieldValues[key];
       if (
         fieldValue === undefined ||
@@ -26,7 +27,7 @@ function bodyFieldRows(body: ReviewDigest["body"]): BodyFieldRow[] {
         return null;
       }
       return {
-        label,
+        labelKey,
         value: Array.isArray(fieldValue)
           ? fieldValue.join(" · ")
           : String(fieldValue),
@@ -40,6 +41,7 @@ interface DigestBodyFieldsProps {
 }
 
 export function DigestBodyFields({ body }: DigestBodyFieldsProps) {
+  const { t } = useTranslation();
   const rows = bodyFieldRows(body);
   if (rows.length === 0) {
     return null;
@@ -48,7 +50,7 @@ export function DigestBodyFields({ body }: DigestBodyFieldsProps) {
   return (
     <dl className="flex flex-col gap-3">
       {rows.map((row) => (
-        <div key={row.label}>
+        <div key={row.labelKey}>
           <Text
             as="dt"
             size="xs"
@@ -56,7 +58,7 @@ export function DigestBodyFields({ body }: DigestBodyFieldsProps) {
             color="tertiary"
             className="uppercase"
           >
-            {row.label}
+            {t(row.labelKey)}
           </Text>
           <Text as="dd" className="mt-0.5">
             {row.value}

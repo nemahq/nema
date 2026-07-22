@@ -59,6 +59,7 @@ function review(
 const EMPTY_OVERRIDES: ReviewOverrides = {
   removedDigestIndexes: new Set(),
   titleOverrides: new Map(),
+  descriptionOverrides: new Map(),
   bodyOverrides: new Map(),
   topicsOverrides: new Map(),
   tagsOverrides: new Map(),
@@ -147,6 +148,21 @@ describe("computeReviewEditingState — hasEmptyTitle", () => {
       titleOverrides: new Map([[0, "   "]]),
     });
     expect(result.hasEmptyTitle).toBe(true);
+  });
+});
+
+describe("computeReviewEditingState — hasEmptyDescription", () => {
+  it("모든 Digest 설명이 있으면 false", () => {
+    const result = computeReviewEditingState(review(), EMPTY_OVERRIDES);
+    expect(result.hasEmptyDescription).toBe(false);
+  });
+
+  it("설명을 빈 문자열로 override하면 true", () => {
+    const result = computeReviewEditingState(review(), {
+      ...EMPTY_OVERRIDES,
+      descriptionOverrides: new Map([[0, "   "]]),
+    });
+    expect(result.hasEmptyDescription).toBe(true);
   });
 });
 

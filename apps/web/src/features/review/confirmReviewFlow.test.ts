@@ -18,43 +18,61 @@ const DIGEST: ReviewDigest = {
 
 describe("confirmDisabledReason", () => {
   it("후보가 하나도 없으면 no_candidates", () => {
-    expect(confirmDisabledReason(false, false, false, false)).toBe(
+    expect(confirmDisabledReason(false, false, false, false, false)).toBe(
       "no_candidates",
     );
   });
 
   it("후보는 있지만 제목이 빈 게 있으면 missing_title", () => {
-    expect(confirmDisabledReason(true, true, false, false)).toBe(
+    expect(confirmDisabledReason(true, true, false, false, false)).toBe(
       "missing_title",
     );
   });
 
-  it("제목은 다 있지만 주제·태그 이름이 빈 게 있으면 empty_label", () => {
-    expect(confirmDisabledReason(true, false, true, false)).toBe("empty_label");
+  it("제목은 있지만 설명이 빈 게 있으면 missing_description", () => {
+    expect(confirmDisabledReason(true, false, true, false, false)).toBe(
+      "missing_description",
+    );
   });
 
-  it("제목·라벨은 다 있지만 신규 Reference 필드가 빈 게 있으면 empty_reference", () => {
-    expect(confirmDisabledReason(true, false, false, true)).toBe(
+  it("제목·설명은 다 있지만 주제·태그 이름이 빈 게 있으면 empty_label", () => {
+    expect(confirmDisabledReason(true, false, false, true, false)).toBe(
+      "empty_label",
+    );
+  });
+
+  it("제목·설명·라벨은 다 있지만 신규 Reference 필드가 빈 게 있으면 empty_reference", () => {
+    expect(confirmDisabledReason(true, false, false, false, true)).toBe(
       "empty_reference",
     );
   });
 
-  it("후보가 있고 제목·라벨·레퍼런스 다 있으면 null(비활성 아님)", () => {
-    expect(confirmDisabledReason(true, false, false, false)).toBeNull();
+  it("후보가 있고 제목·설명·라벨·레퍼런스 다 있으면 null(비활성 아님)", () => {
+    expect(confirmDisabledReason(true, false, false, false, false)).toBeNull();
   });
 
   it("후보가 없으면 다른 문제와 무관하게 no_candidates가 우선", () => {
-    expect(confirmDisabledReason(false, true, true, true)).toBe(
+    expect(confirmDisabledReason(false, true, true, true, true)).toBe(
       "no_candidates",
     );
   });
 
-  it("제목이 비어 있으면 라벨 문제보다 missing_title이 우선", () => {
-    expect(confirmDisabledReason(true, true, true, true)).toBe("missing_title");
+  it("제목이 비어 있으면 다른 문제보다 missing_title이 우선", () => {
+    expect(confirmDisabledReason(true, true, true, true, true)).toBe(
+      "missing_title",
+    );
+  });
+
+  it("설명이 비어 있으면 라벨 문제보다 missing_description이 우선", () => {
+    expect(confirmDisabledReason(true, false, true, true, true)).toBe(
+      "missing_description",
+    );
   });
 
   it("라벨이 비어 있으면 레퍼런스 문제보다 empty_label이 우선", () => {
-    expect(confirmDisabledReason(true, false, true, true)).toBe("empty_label");
+    expect(confirmDisabledReason(true, false, false, true, true)).toBe(
+      "empty_label",
+    );
   });
 });
 
@@ -84,6 +102,7 @@ describe("runConfirmReview", () => {
         {
           digest: DIGEST,
           title: "  새 제목  ",
+          description: "  새 설명  ",
           body: overriddenBody,
           topics: overriddenTopics,
           tags: overriddenTags,
@@ -103,6 +122,7 @@ describe("runConfirmReview", () => {
         {
           ...DIGEST,
           title: "새 제목",
+          description: "새 설명",
           body: overriddenBody,
           topics: overriddenTopics,
           tags: overriddenTags,
@@ -133,6 +153,7 @@ describe("runConfirmReview", () => {
         {
           digest: DIGEST,
           title: DIGEST.title,
+          description: DIGEST.description,
           body: DIGEST.body,
           topics: [],
           tags: [],
@@ -165,6 +186,7 @@ describe("runConfirmReview", () => {
         {
           digest: DIGEST,
           title: DIGEST.title,
+          description: DIGEST.description,
           body: DIGEST.body,
           topics: [],
           tags: [],
@@ -213,6 +235,7 @@ describe("runConfirmReview", () => {
         {
           digest: DIGEST,
           title: DIGEST.title,
+          description: DIGEST.description,
           body: DIGEST.body,
           topics: [],
           tags: [],
@@ -241,6 +264,7 @@ describe("runConfirmReview", () => {
           {
             digest: DIGEST,
             title: DIGEST.title,
+            description: DIGEST.description,
             body: DIGEST.body,
             topics: [],
             tags: [],
@@ -275,6 +299,7 @@ describe("runConfirmReview", () => {
           {
             digest: DIGEST,
             title: DIGEST.title,
+            description: DIGEST.description,
             body: DIGEST.body,
             topics: [],
             tags: [],

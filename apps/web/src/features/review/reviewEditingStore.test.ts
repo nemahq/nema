@@ -11,6 +11,7 @@ function emptyOverrides(): ReviewOverrides {
   return {
     removedDigestIndexes: new Set(),
     titleOverrides: new Map(),
+    descriptionOverrides: new Map(),
     bodyOverrides: new Map(),
     topicsOverrides: new Map(),
     tagsOverrides: new Map(),
@@ -20,7 +21,7 @@ function emptyOverrides(): ReviewOverrides {
   };
 }
 
-// 액션마다 "어느 슬롯에 써야 하는지"를 픽스처에 박아둔다 — 8개가 같은 모양이라
+// 액션마다 "어느 슬롯에 써야 하는지"를 픽스처에 박아둔다 — 9개가 같은 모양이라
 // topicsOverrides에 쓸 것을 tagsOverrides에 쓰는 복붙 실수가 가장 나기 쉽고,
 // 채워진 슬롯 개수만 세면 그 실수가 그대로 통과한다.
 const ACTIONS: { action: ReviewEditingAction; slot: keyof ReviewOverrides }[] =
@@ -28,6 +29,14 @@ const ACTIONS: { action: ReviewEditingAction; slot: keyof ReviewOverrides }[] =
     {
       action: { type: "digest/setTitle", index: 0, title: "제목" },
       slot: "titleOverrides",
+    },
+    {
+      action: {
+        type: "digest/setDescription",
+        index: 0,
+        description: "설명",
+      },
+      slot: "descriptionOverrides",
     },
     {
       action: { type: "digest/setBody", index: 0, body: { type: "decision" } },

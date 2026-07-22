@@ -8,6 +8,7 @@ import type {
 
 export type ReviewEditingAction =
   | { type: "digest/setTitle"; index: number; title: string }
+  | { type: "digest/setDescription"; index: number; description: string }
   | { type: "digest/setBody"; index: number; body: ReviewDigest["body"] }
   | { type: "digest/setTopics"; index: number; topics: ReviewDigest["topics"] }
   | { type: "digest/setTags"; index: number; tags: ReviewDigest["tags"] }
@@ -20,6 +21,7 @@ function emptyOverrides(): ReviewOverrides {
   return {
     removedDigestIndexes: new Set(),
     titleOverrides: new Map(),
+    descriptionOverrides: new Map(),
     bodyOverrides: new Map(),
     topicsOverrides: new Map(),
     tagsOverrides: new Map(),
@@ -42,6 +44,14 @@ export function reviewEditingReducer(
         titleOverrides: new Map(overrides.titleOverrides).set(
           action.index,
           action.title,
+        ),
+      };
+    case "digest/setDescription":
+      return {
+        ...overrides,
+        descriptionOverrides: new Map(overrides.descriptionOverrides).set(
+          action.index,
+          action.description,
         ),
       };
     case "digest/setBody":

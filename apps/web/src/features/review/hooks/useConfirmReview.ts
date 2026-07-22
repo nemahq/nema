@@ -3,7 +3,6 @@ import { useTranslation } from "@web/lib/tolgee";
 import { trpc } from "@web/lib/trpc";
 import { toast } from "@web/utils/toast";
 
-// 실패는 Digest 리뷰 화면이 인라인으로 표면화한다 — 전역 토스트는 중복이라 끈다.
 // changeset.getByNumber만 반환(await)해서 화면 전환을 만드는 이 재조회가 끝날 때까지
 // mutation을 pending 상태로 붙든다 — 모든 상태가 URL을 공유해서(changesetDetailRegistry),
 // 이 쿼리가 새 status(applied)로 다시 읽혀야 같은 URL이 ChangesetRecordScreen으로
@@ -14,7 +13,6 @@ export function useConfirmReview(spaceId: string, changesetNumber: number) {
   const utils = trpc.useUtils();
   const { t } = useTranslation();
   return useMutation(trpc.digestReview.confirm, {
-    meta: { skipGlobalToast: true },
     onSuccess: () => {
       utils.source.listPending.invalidate();
       utils.source.list.invalidate();

@@ -25,7 +25,10 @@ export function ChangesetDetailHeader({
   actions,
 }: ChangesetDetailHeaderProps) {
   return (
-    <header className="sticky top-0 z-10 -mt-6 flex flex-col gap-2 border-b border-border bg-surface-card pt-6 pb-4">
+    <header
+      data-sticky-header
+      className="sticky top-0 z-10 -mt-6 flex flex-col gap-2 border-b border-border bg-surface-card pt-6 pb-4"
+    >
       <div className="flex items-center justify-between gap-4">
         <Text
           as="h1"

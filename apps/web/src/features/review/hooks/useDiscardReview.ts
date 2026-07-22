@@ -13,7 +13,6 @@ export function useDiscardReview(spaceId: string, changesetNumber: number) {
   const utils = trpc.useUtils();
   const { t } = useTranslation();
   return useMutation(trpc.digestReview.discard, {
-    meta: { skipGlobalToast: true },
     onSuccess: () => {
       utils.source.listPending.invalidate();
       utils.changeset.listChangesets.invalidate();

@@ -21,7 +21,6 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { CitedReferenceBadges } from "./CitedReferenceBadges";
 import { DigestBodyFields } from "./DigestBodyFields";
-import { DigestTypeSelect } from "./DigestTypeSelect";
 import { useEditing } from "./EditingProvider";
 import { TagChipRow } from "./TagChipRow";
 import { TopicChipRow } from "./TopicChipRow";
@@ -62,13 +61,6 @@ export const DigestCandidateCard = memo(function DigestCandidateCard({
     <div className="group flex flex-col gap-3 rounded-lg border border-border/60 p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <DigestTypeSelect
-            bodyType={body.type}
-            disabled={disabled}
-            onChange={(next) =>
-              dispatch({ type: "digest/setBody", index, body: next })
-            }
-          />
           <Input
             value={title}
             onChange={(e) =>
