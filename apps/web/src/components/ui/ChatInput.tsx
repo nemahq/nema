@@ -1,17 +1,14 @@
-import {
-  type ComponentType,
-  type KeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useRef,
-} from "react";
+import { type ComponentType, type KeyboardEvent, type ReactNode } from "react";
 
-import { Button, cn } from "@nema-io/weave";
+import { Button, cn, Textarea } from "@nema-io/weave";
 import { ArrowUp, Square } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
-const MAX_TEXTAREA_HEIGHT_PX = 200;
+// 이전 값 MAX_TEXTAREA_HEIGHT_PX(200px, 근거 기록 없음)를 대체 — text-sm
+// (14px/leading-[1.5]=21px) 기준 21×10=210px로, 원래 값과 정확히 같지는
+// 않지만 근접한 "10줄 상한"으로 근사했다.
+const MAX_TEXTAREA_ROWS = 10;
 
 const CHAT_COMPOSER_DATA_ATTR = "data-chat-composer";
 export const CHAT_COMPOSER_SELECTOR = `[${CHAT_COMPOSER_DATA_ATTR}]`;
@@ -57,19 +54,6 @@ export function ChatInput({
   renderSubmitButton,
 }: ChatInputProps) {
   const { t } = useTranslation();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(
-    function adjustHeight() {
-      const el = textareaRef.current;
-      if (!el) {
-        return;
-      }
-      el.style.height = "auto";
-      el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
-    },
-    [value],
-  );
 
   const isStreaming = !!onStop;
   const hasContent = !!value.trim();
@@ -141,8 +125,10 @@ export function ChatInput({
 
   return (
     <div className="flex w-full flex-col gap-2 rounded-2xl border border-border bg-surface-card p-3 shadow-sm transition-shadow duration-normal focus-within:border-border-strong focus-within:shadow-md dark:bg-surface-raised-hover">
-      <textarea
-        ref={textareaRef}
+      <Textarea
+        variant="borderless"
+        autoSize
+        maxRows={MAX_TEXTAREA_ROWS}
         {...{ [CHAT_COMPOSER_DATA_ATTR]: true }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -152,11 +138,7 @@ export function ChatInput({
         autoFocus={autoFocus}
         maxLength={maxLength}
         rows={1}
-        className={cn(
-          "w-full resize-none bg-transparent px-2 py-1 text-sm text-fg-primary placeholder:text-fg-quaternary focus:outline-none",
-          disabled &&
-            "cursor-not-allowed text-fg-quinary placeholder:text-fg-quinary",
-        )}
+        className="px-2 py-1"
       />
       {submitAction}
     </div>

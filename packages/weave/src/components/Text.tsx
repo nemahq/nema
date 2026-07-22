@@ -83,4 +83,5 @@ export {
   type TextProps,
   type TextSize,
   type TextWeight,
+  weightClasses,
 };

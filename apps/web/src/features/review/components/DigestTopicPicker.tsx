@@ -1,7 +1,7 @@
 import type { DigestTopicDraft } from "@nema-io/shared";
 import {
-  CHIP_OUTLINE_TONE_CLASSNAME,
   cn,
+  OUTLINE_TONE_CLASSNAME,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -84,7 +84,7 @@ export function DigestTopicPicker({
           >
             <span
               className={cn(
-                CHIP_OUTLINE_TONE_CLASSNAME,
+                OUTLINE_TONE_CLASSNAME,
                 "inline-flex size-5 items-center justify-center rounded-full border-dashed transition-colors group-hover:bg-fg-primary/5 group-data-[state=open]:bg-fg-primary/5",
               )}
             >

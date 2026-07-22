@@ -6,6 +6,7 @@ export {
   type BadgeShape,
   type BadgeSize,
   type BadgeVariant,
+  OUTLINE_TONE_CLASSNAME,
 } from "./components/Badge";
 export { Button, buttonVariants } from "./components/Button";
 export {
@@ -20,8 +21,9 @@ export {
 export { Checkbox } from "./components/Checkbox";
 export {
   Chip,
-  CHIP_OUTLINE_TONE_CLASSNAME,
+  type ChipShape,
   type ChipVariant,
+  type TagColor,
 } from "./components/Chip";
 export {
   Dialog,
@@ -88,6 +90,7 @@ export {
   type TextSize,
   type TextWeight,
 } from "./components/Text";
+export { Textarea, type TextareaVariant } from "./components/Textarea";
 export { TextSkeleton } from "./components/TextSkeleton";
 export { Toast, toast, type ToasterProps } from "./components/Toast";
 export {

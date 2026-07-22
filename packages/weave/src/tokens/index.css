@@ -74,15 +74,24 @@
   --palette-dark-fg-secondary: #a8a29e; /* stone-400 */
   --palette-dark-fg-tertiary: #a8a29e; /* stone-400 */
 
-  /* Status — light */
-  --palette-light-status-success: #10b981; /* green-500 */
-  --palette-light-status-success-tint: rgba(16, 185, 129, 0.08);
-  --palette-light-status-warning: #f59e0b; /* amber-500 */
-  --palette-light-status-warning-tint: rgba(245, 158, 11, 0.08);
-  --palette-light-status-error: #ef4444; /* red-500 */
-  --palette-light-status-error-tint: rgba(239, 68, 68, 0.08);
-  --palette-light-status-info: #3b82f6; /* blue-500 */
-  --palette-light-status-info-tint: rgba(59, 130, 246, 0.08);
+  /* Status — light. 대비는 순백이 아니라 실제 렌더 배경(이 텍스트와 짝지어
+     쓰이는 bg-status-*-tint, 즉 이 hex를 8%로 알파 합성한 색) 기준으로 잰다 —
+     처음엔 순백 기준으로만 재서 통과한 걸로 봤지만, warning·error가 tint
+     합성 배경에서는 여전히 미달이었다(순백 대비 5.02·4.83이 tint 위에선
+     4.50·4.28로 떨어짐). 둘 다 tint 합성 기준 AA를 만족하는 단계까지 다시
+     내렸다(success·info는 이미 여유 있어 안 건드림). warning은 그 김에
+     hue도 23°→40°로 옮겼다 — Tailwind amber 스웨치를 그대로 따라가다 보니
+     error(H=0°)와 23°까지 좁혀져 있었다(아래 hue의 yellow와도 9°로 이미
+     가까웠음). tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로
+     미러링한다(아래 hue와 같은 패턴). */
+  --palette-light-status-success: #047857; /* green-700, was #10b981(500) */
+  --palette-light-status-success-tint: rgba(4, 120, 87, 0.08);
+  --palette-light-status-warning: #916308; /* custom, was #92400e(amber-800) */
+  --palette-light-status-warning-tint: rgba(145, 99, 8, 0.08);
+  --palette-light-status-error: #b91c1c; /* red-700, was #dc2626(600) */
+  --palette-light-status-error-tint: rgba(185, 28, 28, 0.08);
+  --palette-light-status-info: #2563eb; /* blue-600, was #3b82f6(500) */
+  --palette-light-status-info-tint: rgba(37, 99, 235, 0.08);
 
   /* Status — dark */
   --palette-dark-status-success: #34d399; /* green-400 */
@@ -98,20 +107,26 @@
      소비하는 앱이 자기 분류를 색조에 매핑한다(apps/web/src/index.css의 mode-* 참고).
      status(brand·success·warning·error·info)와 색상 축을 겹치지 않게 골랐다 —
      겹치면 "AI 작업중 블루"처럼 이미 다른 뜻이 붙은 색을 빌려오게 된다
-     (design-reference-log.md ⑪ 참고). 기본은 500(라이트)/400(다크)이되,
-     yellow·lime은 500 자체가 밝아 텍스트 대비가 약해서 라이트만 600을 쓴다.
-     tint는 채운 배경이 필요한 색조에만 둔다 — status와 같은 패턴으로 라이트 hex의
-     rgba를 라이트·다크 공통으로 쓰고 투명도만 다르다. */
-  --palette-light-indigo: #6366f1; /* indigo-500 */
-  --palette-light-indigo-tint: rgba(99, 102, 241, 0.08);
-  --palette-light-pink: #ec4899; /* pink-500 */
-  --palette-light-pink-tint: rgba(236, 72, 153, 0.08);
-  --palette-light-lime: #65a30d; /* lime-600 */
-  --palette-light-lime-tint: rgba(101, 163, 13, 0.08);
-  --palette-light-yellow: #ca8a04; /* yellow-600 */
-  --palette-light-yellow-tint: rgba(202, 138, 4, 0.08);
-  --palette-light-purple: #a855f7; /* purple-500 */
-  --palette-light-purple-tint: rgba(168, 85, 247, 0.08);
+     (design-reference-log.md ⑪ 참고). 다크는 400을 쓰되, 라이트는 실제 렌더
+     배경(이 hex를 8%로 합성한 tint) 기준 대비를 만족하는 단계까지 진하게
+     내린다 — indigo·purple은 600, pink는 700, lime은 800까지(순백 기준으로만
+     재면 다 통과하는 것처럼 보이지만, 실제 tint 배경 위에선 여전히 미달이라
+     한 단계씩 더 내렸다). yellow는 hue(32°)는 그대로 두고 채도만 81%→50%로
+     크게 낮췄다 — status-warning과 hue가 9°밖에 안 떨어져 있는데 채도까지
+     거의 같아서(82% vs 81%) 구분이 안 됐다. ⑪이 원래 의도했던 "hue는 status
+     보다 낮은 채도로 둬서 색상이 겹쳐도 채도로 구분된다"는 원칙이 실제로는
+     구현된 적이 없었던 것 — yellow에 한해 지금 적용한다(나머지 4색은 그대로).
+     tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로 미러링한다. */
+  --palette-light-indigo: #4f46e5; /* indigo-600, was #6366f1(500) */
+  --palette-light-indigo-tint: rgba(79, 70, 229, 0.08);
+  --palette-light-pink: #be185d; /* pink-700, was #db2777(600) */
+  --palette-light-pink-tint: rgba(190, 24, 93, 0.08);
+  --palette-light-lime: #365314; /* lime-800, was #4d7c0f(700) */
+  --palette-light-lime-tint: rgba(54, 83, 20, 0.08);
+  --palette-light-yellow: #916430; /* custom(저채도), was #854d0e(yellow-800) */
+  --palette-light-yellow-tint: rgba(145, 100, 48, 0.08);
+  --palette-light-purple: #9333ea; /* purple-600, was #a855f7(500) */
+  --palette-light-purple-tint: rgba(147, 51, 234, 0.08);
   --palette-light-orange: #ea580c; /* orange-600 */
 
   /* Hue — dark */
@@ -126,6 +141,36 @@
   --palette-dark-purple: #c084fc; /* purple-400 */
   --palette-dark-purple-tint: rgba(168, 85, 247, 0.12);
   --palette-dark-orange: #fb923c; /* orange-400 */
+
+  /* Tag — 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 팔레트. 유저가
+     직접 색을 고르지 않고 태그 id 해시로 자동 배정한다(Notion 태그처럼) — 그래서
+     status·Hue처럼 "채움 배경 + 원색 텍스트"가 아니라 "옅은 파스텔 채움 + 고정
+     중립 텍스트"다(Notion 태그 배경 실측 참고). 라이트는 매우 밝게(L92%) 고정해
+     자기 테마의 fg-primary(어두운 텍스트)로 8색 전부 여유 있게 AA를 만족하고,
+     다크는 명도를 라이트만큼 올릴 여지가 없어(텍스트 대비가 이미 한계선이라
+     조금만 밝혀도 AA 미달) 대신 채도를 낮춰(25%) 같은 "옅음"을 낸다 — 카드
+     배경과는 구분되면서 자기 테마 fg-primary(밝은 텍스트)로 AA를 만족하는
+     선에서 색마다 명도도 다르게 맞췄다(hue별 지각 밝기가 달라 균일한 명도로는
+     안 맞음 — status·Hue 대비 보정 때와 같은 이유). status·Hue보다 훨씬
+     옅어서 "쨍함(Badge류) vs 은은함(Tag)"으로 한눈에 구분된다. */
+  --palette-light-tag-slate: #e0e9f5;
+  --palette-light-tag-cyan: #e0f0f5;
+  --palette-light-tag-sage: #e9f5e0;
+  --palette-light-tag-olive: #f5f3e0;
+  --palette-light-tag-terracotta: #f5e6e0;
+  --palette-light-tag-rose: #f5e0e4;
+  --palette-light-tag-mauve: #f5e0f5;
+  --palette-light-tag-violet: #e7e0f5;
+
+  /* Tag — dark */
+  --palette-dark-tag-slate: #506786;
+  --palette-dark-tag-cyan: #436470;
+  --palette-dark-tag-sage: #496039;
+  --palette-dark-tag-olive: #5c5937;
+  --palette-dark-tag-terracotta: #835b4e;
+  --palette-dark-tag-rose: #8f5660;
+  --palette-dark-tag-mauve: #895289;
+  --palette-dark-tag-violet: #69568f;
 
   /* Identity badge — 개인화 배지(현재 워크스페이스) 배경, 테마 무관 고정값.
      전부 흰 텍스트로 통일해 각 색이 흰 글자 대비(4.5:1)를 만족하는 톤까지 내렸다.
@@ -205,6 +250,14 @@
   --yellow-tint: var(--palette-light-yellow-tint);
   --purple: var(--palette-light-purple);
   --purple-tint: var(--palette-light-purple-tint);
+  --tag-slate: var(--palette-light-tag-slate);
+  --tag-cyan: var(--palette-light-tag-cyan);
+  --tag-sage: var(--palette-light-tag-sage);
+  --tag-olive: var(--palette-light-tag-olive);
+  --tag-terracotta: var(--palette-light-tag-terracotta);
+  --tag-rose: var(--palette-light-tag-rose);
+  --tag-mauve: var(--palette-light-tag-mauve);
+  --tag-violet: var(--palette-light-tag-violet);
 
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
@@ -251,6 +304,14 @@
   --yellow-tint: var(--palette-dark-yellow-tint);
   --purple: var(--palette-dark-purple);
   --purple-tint: var(--palette-dark-purple-tint);
+  --tag-slate: var(--palette-dark-tag-slate);
+  --tag-cyan: var(--palette-dark-tag-cyan);
+  --tag-sage: var(--palette-dark-tag-sage);
+  --tag-olive: var(--palette-dark-tag-olive);
+  --tag-terracotta: var(--palette-dark-tag-terracotta);
+  --tag-rose: var(--palette-dark-tag-rose);
+  --tag-mauve: var(--palette-dark-tag-mauve);
+  --tag-violet: var(--palette-dark-tag-violet);
 
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
@@ -300,6 +361,14 @@
   --yellow-tint: var(--palette-dark-yellow-tint);
   --purple: var(--palette-dark-purple);
   --purple-tint: var(--palette-dark-purple-tint);
+  --tag-slate: var(--palette-dark-tag-slate);
+  --tag-cyan: var(--palette-dark-tag-cyan);
+  --tag-sage: var(--palette-dark-tag-sage);
+  --tag-olive: var(--palette-dark-tag-olive);
+  --tag-terracotta: var(--palette-dark-tag-terracotta);
+  --tag-rose: var(--palette-dark-tag-rose);
+  --tag-mauve: var(--palette-dark-tag-mauve);
+  --tag-violet: var(--palette-dark-tag-violet);
 
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
@@ -346,6 +415,14 @@
   --yellow-tint: var(--palette-light-yellow-tint);
   --purple: var(--palette-light-purple);
   --purple-tint: var(--palette-light-purple-tint);
+  --tag-slate: var(--palette-light-tag-slate);
+  --tag-cyan: var(--palette-light-tag-cyan);
+  --tag-sage: var(--palette-light-tag-sage);
+  --tag-olive: var(--palette-light-tag-olive);
+  --tag-terracotta: var(--palette-light-tag-terracotta);
+  --tag-rose: var(--palette-light-tag-rose);
+  --tag-mauve: var(--palette-light-tag-mauve);
+  --tag-violet: var(--palette-light-tag-violet);
 
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
@@ -403,6 +480,16 @@
   --color-yellow-tint: var(--yellow-tint);
   --color-purple: var(--purple);
   --color-purple-tint: var(--purple-tint);
+
+  /* Tag */
+  --color-tag-slate: var(--tag-slate);
+  --color-tag-cyan: var(--tag-cyan);
+  --color-tag-sage: var(--tag-sage);
+  --color-tag-olive: var(--tag-olive);
+  --color-tag-terracotta: var(--tag-terracotta);
+  --color-tag-rose: var(--tag-rose);
+  --color-tag-mauve: var(--tag-mauve);
+  --color-tag-violet: var(--tag-violet);
 
   /* Border */
   --color-border-strong: var(--border-strong);

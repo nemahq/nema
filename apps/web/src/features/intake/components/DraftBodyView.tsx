@@ -1,3 +1,5 @@
+import { Textarea } from "@nema-io/weave";
+
 interface DraftBodyViewProps {
   value: string;
   onChange?: (value: string) => void;
@@ -21,7 +23,8 @@ export function DraftBodyView({
   placeholder,
 }: DraftBodyViewProps) {
   return (
-    <textarea
+    <Textarea
+      variant="borderless"
       value={value}
       onChange={onChange ? (e) => onChange(e.target.value) : undefined}
       onBlur={onBlur}
@@ -29,7 +32,7 @@ export function DraftBodyView({
       maxLength={maxLength}
       aria-invalid={ariaInvalid}
       placeholder={placeholder}
-      className="flex-1 resize-none text-sm leading-relaxed text-fg-primary outline-none"
+      className="flex-1"
     />
   );
 }

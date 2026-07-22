@@ -66,7 +66,9 @@ export function ReferenceTagRow({
             disabled ||
             (removeTag.isPending && removeTag.variables?.tagId === tag.id)
           }
-          removeAriaLabel={t("reference.tag_remove_action")}
+          removeAriaLabel={t("reference.tag_remove_action", {
+            label: tag.title,
+          })}
           onRemove={() => removeTag.mutate({ referenceId, tagId: tag.id })}
         />
       ))}
