@@ -79,12 +79,15 @@
      처음엔 순백 기준으로만 재서 통과한 걸로 봤지만, warning·error가 tint
      합성 배경에서는 여전히 미달이었다(순백 대비 5.02·4.83이 tint 위에선
      4.50·4.28로 떨어짐). 둘 다 tint 합성 기준 AA를 만족하는 단계까지 다시
-     내렸다(success·info는 이미 여유 있어 안 건드림). tint는 텍스트와 별개로,
-     진하게 맞춘 hex를 그대로 8%로 미러링한다(아래 hue와 같은 패턴). */
+     내렸다(success·info는 이미 여유 있어 안 건드림). warning은 그 김에
+     hue도 23°→40°로 옮겼다 — Tailwind amber 스웨치를 그대로 따라가다 보니
+     error(H=0°)와 23°까지 좁혀져 있었다(아래 hue의 yellow와도 9°로 이미
+     가까웠음). tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로
+     미러링한다(아래 hue와 같은 패턴). */
   --palette-light-status-success: #047857; /* green-700, was #10b981(500) */
   --palette-light-status-success-tint: rgba(4, 120, 87, 0.08);
-  --palette-light-status-warning: #92400e; /* amber-800, was #b45309(700) */
-  --palette-light-status-warning-tint: rgba(146, 64, 14, 0.08);
+  --palette-light-status-warning: #916308; /* custom, was #92400e(amber-800) */
+  --palette-light-status-warning-tint: rgba(145, 99, 8, 0.08);
   --palette-light-status-error: #b91c1c; /* red-700, was #dc2626(600) */
   --palette-light-status-error-tint: rgba(185, 28, 28, 0.08);
   --palette-light-status-info: #2563eb; /* blue-600, was #3b82f6(500) */
@@ -106,18 +109,22 @@
      겹치면 "AI 작업중 블루"처럼 이미 다른 뜻이 붙은 색을 빌려오게 된다
      (design-reference-log.md ⑪ 참고). 다크는 400을 쓰되, 라이트는 실제 렌더
      배경(이 hex를 8%로 합성한 tint) 기준 대비를 만족하는 단계까지 진하게
-     내린다 — indigo·purple은 600, pink는 700, yellow·lime은 800까지(순백
-     기준으로만 재면 다 통과하는 것처럼 보이지만, 실제 tint 배경 위에선
-     여전히 미달이라 한 단계씩 더 내렸다). tint는 텍스트와 별개로, 진하게
-     맞춘 hex를 그대로 8%로 미러링한다. */
+     내린다 — indigo·purple은 600, pink는 700, lime은 800까지(순백 기준으로만
+     재면 다 통과하는 것처럼 보이지만, 실제 tint 배경 위에선 여전히 미달이라
+     한 단계씩 더 내렸다). yellow는 hue(32°)는 그대로 두고 채도만 81%→50%로
+     크게 낮췄다 — status-warning과 hue가 9°밖에 안 떨어져 있는데 채도까지
+     거의 같아서(82% vs 81%) 구분이 안 됐다. ⑪이 원래 의도했던 "hue는 status
+     보다 낮은 채도로 둬서 색상이 겹쳐도 채도로 구분된다"는 원칙이 실제로는
+     구현된 적이 없었던 것 — yellow에 한해 지금 적용한다(나머지 4색은 그대로).
+     tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로 미러링한다. */
   --palette-light-indigo: #4f46e5; /* indigo-600, was #6366f1(500) */
   --palette-light-indigo-tint: rgba(79, 70, 229, 0.08);
   --palette-light-pink: #be185d; /* pink-700, was #db2777(600) */
   --palette-light-pink-tint: rgba(190, 24, 93, 0.08);
   --palette-light-lime: #365314; /* lime-800, was #4d7c0f(700) */
   --palette-light-lime-tint: rgba(54, 83, 20, 0.08);
-  --palette-light-yellow: #854d0e; /* yellow-800, was #a16207(700) */
-  --palette-light-yellow-tint: rgba(133, 77, 14, 0.08);
+  --palette-light-yellow: #916430; /* custom(저채도), was #854d0e(yellow-800) */
+  --palette-light-yellow-tint: rgba(145, 100, 48, 0.08);
   --palette-light-purple: #9333ea; /* purple-600, was #a855f7(500) */
   --palette-light-purple-tint: rgba(147, 51, 234, 0.08);
   --palette-light-orange: #ea580c; /* orange-600 */
