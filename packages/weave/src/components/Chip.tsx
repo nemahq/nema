@@ -7,11 +7,14 @@ type ChipVariant = "neutral" | "outline";
 
 // neutral은 Badge neutral variant와 톤을 공유해서(NEUTRAL_TONE_CLASSNAME) 정적/
 // 인터랙티브 버전이 항상 같은 색이다. outline은 채움 없이 테두리만 — 값이 아직
-// 없는 자리의 "추가" 트리거처럼 배경 틴트를 얹을 만한 값이 없을 때 쓴다. hover 없는 톤만 export하는 이유는, 넓은 투명
-// 히트박스 안에 시각 전용 span으로 얹는 소비처는 자기 자신이 아니라 group-hover로
-// 반응해야 해서 — hover 트리거를 Chip이 강제하면 그런 자리엔 못 쓴다.
+// 없는 자리의 "추가" 트리거처럼 배경 틴트를 얹을 만한 값이 없을 때 쓴다. Chip은
+// 짧고 닫힌 윤곽(pill)이라 border-strong을 쓴다 — 길이가 짧아 대비로 존재감을
+// 만들어야 한다(weave-usage.md 구분선 3단 위계). hover 없는 톤만 export하는
+// 이유는, 넓은 투명 히트박스 안에 시각 전용 span으로 얹는 소비처는 자기 자신이
+// 아니라 group-hover로 반응해야 해서 — hover 트리거를 Chip이 강제하면 그런
+// 자리엔 못 쓴다.
 export const CHIP_OUTLINE_TONE_CLASSNAME =
-  "border border-border text-fg-tertiary";
+  "border border-border-strong text-fg-tertiary";
 
 const VARIANT_CLASSNAME: Record<ChipVariant, string> = {
   neutral: cn(NEUTRAL_TONE_CLASSNAME, "hover:bg-fg-primary/15"),
