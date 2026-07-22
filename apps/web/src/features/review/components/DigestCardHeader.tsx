@@ -91,18 +91,18 @@ export function DigestCardHeader({
           <TooltipTrigger asChild>
             <Button
               type="button"
-              size="icon-sm"
+              size="icon-xs"
               variant="ghost"
               shape="circle"
               disabled={disabled}
               aria-label={t("review.digest_view_source_action")}
               onClick={onViewSource}
               className={cn(
-                "size-6 text-fg-tertiary",
+                "text-fg-tertiary",
                 sourceActive && "bg-fg-primary/10 text-fg-primary",
               )}
             >
-              <FileText />
+              <FileText className="size-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">

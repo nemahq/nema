@@ -39,18 +39,18 @@ export function DraftProcessingHeader({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            size="icon-sm"
+            size="icon-xs"
             variant="ghost"
             shape="circle"
             aria-label={t("common.cancel")}
             onClick={handleCancel}
             disabled={cancelMutation.isPending}
             className={cn(
-              "pointer-events-auto size-6 text-fg-tertiary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
+              "pointer-events-auto text-fg-tertiary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
               NESTED_HOVER_ICON_CLASSNAME,
             )}
           >
-            <RotateCcw />
+            <RotateCcw className="size-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom" sideOffset={3}>

@@ -46,17 +46,17 @@ export function DraftIdleHeader({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            size="icon-sm"
+            size="icon-xs"
             variant="ghost"
             shape="circle"
             aria-label={t("common.delete")}
             onClick={() => setDeleteDialogOpen(true)}
             className={cn(
-              "pointer-events-auto size-6 text-fg-tertiary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
+              "pointer-events-auto text-fg-tertiary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
               NESTED_HOVER_ICON_CLASSNAME,
             )}
           >
-            <Trash2 />
+            <Trash2 className="size-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom" sideOffset={3}>

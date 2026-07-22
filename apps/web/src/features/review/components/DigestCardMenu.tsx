@@ -43,14 +43,14 @@ export function DigestCardMenu({
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
-              size="icon-sm"
+              size="icon-xs"
               variant="ghost"
               shape="circle"
               disabled={disabled}
               aria-label={t("review.digest_menu_label")}
-              className="size-6 text-fg-tertiary"
+              className="text-fg-tertiary"
             >
-              <Ellipsis />
+              <Ellipsis className="size-4" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
