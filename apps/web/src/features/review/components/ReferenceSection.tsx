@@ -70,38 +70,43 @@ export function ReferenceSection({
           count: referenceRows.length + mergeRows.length,
         })}
       </Text>
-      {referenceRows.map((reference) => (
-        <ReferenceCandidateCard
-          key={reference.key}
-          reference={reference}
-          disabled={disabled}
-          onChange={(next) =>
-            dispatch({
-              type: "reference/set",
-              key: reference.key,
-              reference: next,
-            })
-          }
-          onRemove={() =>
-            dispatch({ type: "reference/remove", key: reference.key })
-          }
-        />
-      ))}
-      {mergeRows.map(({ reference, mergeNote }) => (
-        <ReferenceMergeCard
-          key={reference.id}
-          reference={reference}
-          mergeNote={mergeNote}
-          disabled={disabled}
-          onMergeNoteChange={(next) =>
-            dispatch({
-              type: "reference/setMergeNote",
-              referenceId: reference.id,
-              mergeNote: next,
-            })
-          }
-        />
-      ))}
+      {/* DigestCandidateList와 같은 이유로 라벨과 별도 wrapper — 카드들을 gap 없는
+          안쪽 div로 묶어야 카드 간 간격이 부모 gap-3와 안 겹치고 각 카드 자신의
+          pb 하나로만 정해진다(겹치면 카드 사이만 이중으로 벌어짐, 실측 확인됨). */}
+      <div className="flex flex-col">
+        {referenceRows.map((reference) => (
+          <ReferenceCandidateCard
+            key={reference.key}
+            reference={reference}
+            disabled={disabled}
+            onChange={(next) =>
+              dispatch({
+                type: "reference/set",
+                key: reference.key,
+                reference: next,
+              })
+            }
+            onRemove={() =>
+              dispatch({ type: "reference/remove", key: reference.key })
+            }
+          />
+        ))}
+        {mergeRows.map(({ reference, mergeNote }) => (
+          <ReferenceMergeCard
+            key={reference.id}
+            reference={reference}
+            mergeNote={mergeNote}
+            disabled={disabled}
+            onMergeNoteChange={(next) =>
+              dispatch({
+                type: "reference/setMergeNote",
+                referenceId: reference.id,
+                mergeNote: next,
+              })
+            }
+          />
+        ))}
+      </div>
     </div>
   );
 }

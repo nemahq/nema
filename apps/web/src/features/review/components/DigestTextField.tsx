@@ -7,6 +7,7 @@ interface DigestTextFieldProps {
   disabled: boolean;
   placeholder: string;
   onChange: (next: string) => void;
+  maxLength?: number;
 }
 
 // 포커스된 필드에만 placeholder를 보여준다 — 카드를 훑을 때 빈 필드마다 질문형
@@ -16,6 +17,7 @@ export function DigestTextField({
   disabled,
   placeholder,
   onChange,
+  maxLength,
 }: DigestTextFieldProps) {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -25,6 +27,7 @@ export function DigestTextField({
       disabled={disabled}
       onChange={onChange}
       placeholder={isFocused ? placeholder : undefined}
+      maxLength={maxLength}
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
     />

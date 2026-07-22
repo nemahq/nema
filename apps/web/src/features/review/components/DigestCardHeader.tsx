@@ -100,7 +100,6 @@ export function DigestCardHeader({
         </Tooltip>
         <CardViewedToggle
           fieldId={viewedFieldId}
-          label={t("review.digest_viewed_action")}
           viewed={viewed}
           disabled={disabled}
           onToggleViewed={onToggleViewed}

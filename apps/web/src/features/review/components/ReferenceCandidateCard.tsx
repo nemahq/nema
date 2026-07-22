@@ -1,7 +1,11 @@
 import { useState } from "react";
 
-import { REFERENCE_TITLE_MAX_LENGTH } from "@nema-io/shared";
+import {
+  REFERENCE_BODY_MAX_LENGTH,
+  REFERENCE_TITLE_MAX_LENGTH,
+} from "@nema-io/shared";
 import { cn, Text } from "@nema-io/weave";
+import { Plus } from "@nema-io/weave/icons";
 
 import type { ReviewNewReference } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
@@ -32,7 +36,22 @@ export function ReferenceCandidateCard({
   const { t } = useTranslation();
 
   return (
-    <div className={cn("flex flex-col gap-2", viewed ? "pb-4" : "pb-8")}>
+    <div
+      className={cn("relative flex flex-col gap-2", viewed ? "pb-4" : "pb-8")}
+    >
+      {/* git 스타일 added 표시 — 헤더 워시 폭을 안 줄이려고 flex 형제 대신
+          absolute로 페이지 여백(px-6) 쪽에 얹는다. 이 목록엔 신규/기존이 섞여
+          있어(기존은 ReferenceMergeCard가 맡음) 구분이 의미 있다 — "있으면
+          신규, 없으면 기존" 이분법이라 기존 쪽엔 대칭 아이콘을 안 둔다. Digest는
+          이 목록이 항상 신규뿐이라(기존 Digest를 여기서 고치는 경로 자체가
+          없음) 같은 표시가 정보량이 없어 안 둔다. top-3는 헤더 워시 상단
+          패딩(py-2)+타입 Chip 높이 중앙에 맞춘 값, left는 페이지 좌우 여백
+          (ChangesetDetailLayout의 px-6) 안으로 들어가는 값. */}
+      <Plus
+        className="absolute top-3 left-[-20px] size-3.5 text-status-success"
+        aria-hidden="true"
+      />
+      <span className="sr-only">{t("review.reference_new_indicator")}</span>
       <div className="flex flex-col gap-2 bg-fg-primary/5 px-2 py-2">
         <ReferenceCardHeader
           referenceKey={reference.key}
@@ -61,6 +80,7 @@ export function ReferenceCandidateCard({
           <DigestTextField
             text={reference.body}
             disabled={disabled}
+            maxLength={REFERENCE_BODY_MAX_LENGTH}
             placeholder={t("review.reference_body_placeholder")}
             onChange={(next) => onChange({ ...reference, body: next })}
           />

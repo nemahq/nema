@@ -1,7 +1,5 @@
 import type { ReferenceType } from "@nema-io/shared";
 
-import { useTranslation } from "@web/lib/tolgee";
-
 import { CardViewedToggle } from "./CardViewedToggle";
 import { ReferenceCardMenu } from "./ReferenceCardMenu";
 import { ReferenceTypePicker } from "./ReferenceTypePicker";
@@ -27,7 +25,6 @@ export function ReferenceCardHeader({
   onChangeType,
   onRemove,
 }: ReferenceCardHeaderProps) {
-  const { t } = useTranslation();
   const viewedFieldId = `reference-${referenceKey}-viewed`;
 
   return (
@@ -40,7 +37,6 @@ export function ReferenceCardHeader({
       <div className="flex shrink-0 items-center gap-2">
         <CardViewedToggle
           fieldId={viewedFieldId}
-          label={t("review.reference_viewed_action")}
           viewed={viewed}
           disabled={disabled}
           onToggleViewed={onToggleViewed}
