@@ -97,7 +97,13 @@ function useAutoSize(
           const verticalPadding =
             parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
           if (!Number.isNaN(lineHeight)) {
-            next = Math.min(next, lineHeight * maxRows + verticalPadding);
+            const cap = lineHeight * maxRows + verticalPadding;
+            // 클래스의 overflow-hidden은 "자라는 동안 스크롤바 깜빡임 방지"용이지,
+            // 상한에 닿은 뒤에도 유효한 게 아니다 — 안 넘치면 그대로 hidden(스크롤
+            // 없이 자라기만), 상한을 넘기면 인라인 스타일로 auto를 얹어 안에서
+            // 스크롤할 수 있게 한다(인라인이 클래스보다 우선).
+            el.style.overflowY = next > cap ? "auto" : "hidden";
+            next = Math.min(next, cap);
           }
         }
         el.style.height = `${next}px`;
