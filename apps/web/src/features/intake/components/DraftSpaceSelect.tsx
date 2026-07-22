@@ -1,16 +1,14 @@
 import {
-  cn,
+  Chip,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   pinSelectedToTop,
   Skeleton,
-  Text,
 } from "@nema-io/weave";
 import { Check } from "@nema-io/weave/icons";
 
-import { SPACE_PILL_CLASSNAME } from "@web/features/intake/constants";
 import { useDraftSpace } from "@web/features/intake/hooks/useDraftSpace";
 import { useReassignSourceSpace } from "@web/features/intake/hooks/useReassignSourceSpace";
 import { useTranslation } from "@web/lib/tolgee";
@@ -55,20 +53,15 @@ export function DraftSpaceSelect({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
+        <Chip
           disabled={disabled || reassignMutation.isPending}
           aria-label={t("intake.draft_change_space")}
           title={spaceName}
-          className={cn(
-            SPACE_PILL_CLASSNAME,
-            "cursor-pointer hover:bg-fg-primary/15",
-          )}
+          truncated
+          className="-ml-2.5"
         >
-          <Text as="span" size="xs" weight="medium" color="primary">
-            {spaceName}
-          </Text>
-        </button>
+          {spaceName}
+        </Chip>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="start" width={240}>
         {/* weave Select의 선택 표시(우측 체크마크)를 그대로 따른다 — 라디오

@@ -18,6 +18,11 @@ export {
 } from "./components/Card";
 export { Checkbox } from "./components/Checkbox";
 export {
+  Chip,
+  CHIP_OUTLINE_TONE_CLASSNAME,
+  type ChipVariant,
+} from "./components/Chip";
+export {
   Dialog,
   DialogClose,
   DialogContent,
