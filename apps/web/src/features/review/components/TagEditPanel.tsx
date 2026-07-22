@@ -212,7 +212,7 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
     );
   } else {
     panelBody = (
-      <div className="flex flex-col gap-3 px-2 pb-2">
+      <div className="flex flex-col gap-3 px-2 pt-2 pb-2">
         <div className="flex flex-col gap-1.5">
           <Text size="sm" weight="medium" color="primary">
             {t("review.tag_create_title_label")}
@@ -286,43 +286,50 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-1 px-2 pt-2">
-        {tags.map((tag, index) => (
-          <Badge
-            key={tag.id ?? `draft-${index}`}
-            variant="outline"
-            shape="rounded"
-            className="inline-flex items-center gap-1 py-0.5 pr-1"
-          >
-            {tag.title}
-            {/* weave Button 대신 raw button — 칩 안에서 Badge의 색·크기를
-                물려받아야 하는데 Button base가 자기 타이포를 강제해 안 맞는다
-                (weave-usage.md 같은 예외, LabelChipShell과 동일 사정). */}
-            <button
-              type="button"
-              disabled={disabled}
-              aria-label={t("review.tag_remove_action")}
-              onClick={() => removeAt(index)}
-              className="rounded-full p-0.5 text-current/70 hover:bg-fg-primary/15 disabled:pointer-events-none"
-            >
-              <XIcon className="size-3" />
-            </button>
-          </Badge>
-        ))}
-        {!atMax && creatingTitle === null && (
-          // weave Input 대신 raw — border·h-9·px-3 같은 base chrome을 걷어내면
-          // 남는 게 없어서, 칩과 한 행에 이어 붙는 무테두리 인라인 입력엔 안
-          // 맞는다(TopicEditPanel과 동일 사정). placeholder는 칩이 쌓일수록
-          // 이 인풋이 좁아져 잘릴 수 있어 여기 안 두고 아래 안내문으로 대신한다.
-          <input
-            value={query}
-            disabled={disabled}
-            onChange={(e) => setQuery(e.target.value)}
-            className="min-w-[4rem] flex-1 border-none bg-transparent text-sm outline-none disabled:pointer-events-none"
-          />
-        )}
-      </div>
-      <Separator />
+      {/* 이름+설명 생성 폼일 땐 이 칩 목록·구분선을 통째로 숨긴다 — 위에
+          가릴 게 없는 채로 구분선만 남으면 그 자체가 목적 없는 테두리로
+          보인다. */}
+      {creatingTitle === null && (
+        <>
+          <div className="flex flex-wrap items-center gap-1 px-2 pt-2">
+            {tags.map((tag, index) => (
+              <Badge
+                key={tag.id ?? `draft-${index}`}
+                variant="outline"
+                shape="rounded"
+                className="inline-flex items-center gap-1 py-0.5 pr-1"
+              >
+                {tag.title}
+                {/* weave Button 대신 raw button — 칩 안에서 Badge의 색·크기를
+                    물려받아야 하는데 Button base가 자기 타이포를 강제해 안 맞는다
+                    (weave-usage.md 같은 예외, LabelChipShell과 동일 사정). */}
+                <button
+                  type="button"
+                  disabled={disabled}
+                  aria-label={t("review.tag_remove_action")}
+                  onClick={() => removeAt(index)}
+                  className="rounded-full p-0.5 text-current/70 hover:bg-fg-primary/15 disabled:pointer-events-none"
+                >
+                  <XIcon className="size-3" />
+                </button>
+              </Badge>
+            ))}
+            {!atMax && (
+              // weave Input 대신 raw — border·h-9·px-3 같은 base chrome을 걷어내면
+              // 남는 게 없어서, 칩과 한 행에 이어 붙는 무테두리 인라인 입력엔 안
+              // 맞는다(TopicEditPanel과 동일 사정). placeholder는 칩이 쌓일수록
+              // 이 인풋이 좁아져 잘릴 수 있어 여기 안 두고 아래 안내문으로 대신한다.
+              <input
+                value={query}
+                disabled={disabled}
+                onChange={(e) => setQuery(e.target.value)}
+                className="min-w-[4rem] flex-1 border-none bg-transparent text-sm outline-none disabled:pointer-events-none"
+              />
+            )}
+          </div>
+          <Separator />
+        </>
+      )}
       {panelBody}
     </div>
   );
