@@ -11,13 +11,18 @@ type BadgeVariant =
   | "neutral"
   | "outline";
 
+// Chip과 공유 — surface-raised는 다크 모드에서 surface-card와 완전히 같은 값이
+// 돼(tokens/index.css) 카드 배경 위에서 안 보이므로, surface 토큰 대신 배경에
+// 상대적으로 대비가 생기는 fg 알파 틴트를 쓴다.
+export const NEUTRAL_TONE_CLASSNAME = "bg-fg-primary/10 text-fg-secondary";
+
 const variantClasses: Record<BadgeVariant, string> = {
   brand: "bg-brand-tint text-brand-accent",
   success: "bg-status-success-tint text-status-success",
   warning: "bg-status-warning-tint text-status-warning",
   error: "bg-status-error-tint text-status-error",
   info: "bg-status-info-tint text-status-info",
-  neutral: "bg-surface-raised text-fg-secondary",
+  neutral: NEUTRAL_TONE_CLASSNAME,
   outline: "border border-border text-fg-tertiary",
 };
 
@@ -44,12 +49,15 @@ function Badge({
   variant = "brand",
   shape = "rounded",
   size = "default",
+  truncated = false,
   className,
   ...props
 }: React.ComponentProps<"span"> & {
   variant?: BadgeVariant;
   shape?: BadgeShape;
   size?: BadgeSize;
+  // min-w-0 없이 truncate만 있으면 flex 안에서 조용히 안 먹으므로 항상 같이 묶는다.
+  truncated?: boolean;
 }) {
   return (
     <span
@@ -59,6 +67,7 @@ function Badge({
         SIZE_CLASSNAME[size],
         SHAPE_CLASSNAME[shape],
         variantClasses[variant],
+        truncated && "min-w-0 truncate",
         className,
       )}
       {...props}
