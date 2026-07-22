@@ -152,7 +152,6 @@
   --palette-light-tag-rose: #f5e0e4;
   --palette-light-tag-mauve: #f5e0f5;
   --palette-light-tag-violet: #e7e0f5;
-  --palette-light-tag-gray: #ebebeb;
 
   /* Tag — dark */
   --palette-dark-tag-slate: #506786;
@@ -163,7 +162,6 @@
   --palette-dark-tag-rose: #8f5660;
   --palette-dark-tag-mauve: #895289;
   --palette-dark-tag-violet: #69568f;
-  --palette-dark-tag-gray: #666666;
 
   /* Identity badge — 개인화 배지(현재 워크스페이스) 배경, 테마 무관 고정값.
      전부 흰 텍스트로 통일해 각 색이 흰 글자 대비(4.5:1)를 만족하는 톤까지 내렸다.
@@ -251,7 +249,6 @@
   --tag-rose: var(--palette-light-tag-rose);
   --tag-mauve: var(--palette-light-tag-mauve);
   --tag-violet: var(--palette-light-tag-violet);
-  --tag-gray: var(--palette-light-tag-gray);
 
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
@@ -306,7 +303,6 @@
   --tag-rose: var(--palette-dark-tag-rose);
   --tag-mauve: var(--palette-dark-tag-mauve);
   --tag-violet: var(--palette-dark-tag-violet);
-  --tag-gray: var(--palette-dark-tag-gray);
 
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
@@ -364,7 +360,6 @@
   --tag-rose: var(--palette-dark-tag-rose);
   --tag-mauve: var(--palette-dark-tag-mauve);
   --tag-violet: var(--palette-dark-tag-violet);
-  --tag-gray: var(--palette-dark-tag-gray);
 
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
@@ -419,7 +414,6 @@
   --tag-rose: var(--palette-light-tag-rose);
   --tag-mauve: var(--palette-light-tag-mauve);
   --tag-violet: var(--palette-light-tag-violet);
-  --tag-gray: var(--palette-light-tag-gray);
 
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
@@ -487,7 +481,6 @@
   --color-tag-rose: var(--tag-rose);
   --color-tag-mauve: var(--tag-mauve);
   --color-tag-violet: var(--tag-violet);
-  --color-tag-gray: var(--tag-gray);
 
   /* Border */
   --color-border-strong: var(--border-strong);

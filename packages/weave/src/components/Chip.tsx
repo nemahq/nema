@@ -17,8 +17,7 @@ type TagColor =
   | "terracotta"
   | "rose"
   | "mauve"
-  | "violet"
-  | "gray";
+  | "violet";
 
 const STATIC_TONE_CLASSNAME: Record<ChipVariant, string> = {
   neutral: NEUTRAL_TONE_CLASSNAME,
@@ -59,7 +58,6 @@ const TAG_COLOR_CLASSNAME: Record<TagColor, string> = {
   rose: "bg-tag-rose text-fg-primary",
   mauve: "bg-tag-mauve text-fg-primary",
   violet: "bg-tag-violet text-fg-primary",
-  gray: "bg-tag-gray text-fg-primary",
 };
 
 interface ChipRemove {
