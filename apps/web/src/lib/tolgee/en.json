@@ -216,6 +216,7 @@
     "effect_statement": "{count, plural, one {# sentence} other {# sentences}}",
     "label_create_new_after": "",
     "label_create_new_before": "Create ",
+    "label_edit_action": "Edit",
     "label_search_all_added": "You've added them all.",
     "label_search_empty": "No matches",
     "label_search_error": "Couldn't load. Try again.",

@@ -1,10 +1,25 @@
 import { Suspense, useState } from "react";
 
 import { DIGEST_TOPICS_MAX, type DigestTopicDraft } from "@nema-io/shared";
-import { Badge, Chip, cn, Separator, Skeleton, Text } from "@nema-io/weave";
+import {
+  Badge,
+  Button,
+  Chip,
+  cn,
+  LIST_ITEM_HOVER_CLASSNAME,
+  NESTED_HOVER_ICON_CLASSNAME,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Separator,
+  Skeleton,
+  Text,
+} from "@nema-io/weave";
+import { Ellipsis } from "@nema-io/weave/icons";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTopicListSuspenseQuery } from "@web/features/review/hooks/useTopicListQuery";
+import { useUpdateTopic } from "@web/features/review/hooks/useUpdateTopic";
 import { useCurrentSpaceId } from "@web/features/workspace";
 import { useTranslation } from "@web/lib/tolgee";
 import {
@@ -20,10 +35,15 @@ const SEARCH_SKELETON_WIDTHS = ["w-16", "w-24", "w-12"];
 interface TopicSearchListProps {
   spaceId: string;
   query: string;
-  excludedTopicIds: string[];
+  // 이 Digest에 이미 붙은 Topic도 목록에서 그대로 보여준다(더 이상 제외하지
+  // 않음) — 이름·설명 수정 진입점을 "붙은 것"과 "안 붙은 것" 둘로 안 쪼개고
+  // 이 목록 하나로 통일하기 위해서다. 대신 이미 붙은 행은 클릭해도 다시
+  // 붙지 않는다(neutral 톤으로 표시).
+  attachedTopicIds: Set<string>;
   existingLabels: string[];
   onSelectExisting: (topic: { id: string; name: string }) => void;
   onCreateNew: (name: string) => void;
+  onRenamed: (topic: { id: string; name: string }) => void;
 }
 
 // Notion처럼 이 팝오버 전체가 하나의 편집 표면이라, 별도 팝오버로 검색 결과를
@@ -32,20 +52,24 @@ interface TopicSearchListProps {
 function TopicSearchList({
   spaceId,
   query,
-  excludedTopicIds,
+  attachedTopicIds,
   existingLabels,
   onSelectExisting,
   onCreateNew,
+  onRenamed,
 }: TopicSearchListProps) {
   const { t } = useTranslation();
   const [topicList] = useTopicListSuspenseQuery(spaceId);
+  const updateTopic = useUpdateTopic();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
 
   const getLabel = (topic: { name: string }) => topic.name;
   const candidates = filterActiveLabelCandidates(
     topicList.topics,
     getLabel,
     query,
-    new Set(excludedTopicIds),
+    new Set(),
   );
   const trimmed = query.trim();
   const hasExactMatch = hasExactLabelMatch(candidates, getLabel, query);
@@ -54,30 +78,123 @@ function TopicSearchList({
     !hasExactMatch &&
     !isDuplicateLabelName(trimmed, existingLabels);
 
+  function startEditing(topic: { id: string; name: string }) {
+    setEditingId(topic.id);
+    setEditingName(topic.name);
+  }
+
+  // 버튼(저장/취소) 없이 메뉴처럼 — 오버레이가 어떻게 닫히든(바깥 클릭·Escape·
+  // Enter) 그 시점의 값을 그대로 적용한다. 바뀐 게 없거나 빈 값이면 조용히
+  // 원래 이름을 유지한다(빈 이름 저장은 애초에 막혀야 함).
+  function applyAndClose(topic: { id: string; name: string }) {
+    const name = editingName.trim();
+    if (name !== "" && name !== topic.name) {
+      updateTopic.mutate(
+        { id: topic.id, name },
+        { onSuccess: () => onRenamed({ id: topic.id, name }) },
+      );
+    }
+    setEditingId(null);
+  }
+
   return (
     <>
       <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
-        {candidates.map((topic) => (
-          <li key={topic.id}>
-            {/* 후보 이름을 위 칩 목록과 같은 톤의 Badge로 감싼다 — 선택하면 그대로
-                저 모양의 칩이 된다는 걸 고르기 전에 미리 보여준다. Chip이 아니라
-                Badge인 이유 — 이 자리는 순수 정적 미리보기라(행 자체가 이미
-                버튼) Chip을 쓰면 버튼 안에 버튼이 중첩된다. outline 톤은
-                Badge·Chip이 공유(OUTLINE_TONE_CLASSNAME)해서 둘이 갈라지지
-                않는다. 행 자체엔 좌우 패딩을 안 준다 — Badge가 이미 자기
-                padding(px-2)을 갖고 있어서, 행에 또 주면 팝오버 가장자리부터
-                텍스트까지 이중으로 밀려 과하게 벌어진다. */}
-            <button
-              type="button"
-              onClick={() => onSelectExisting(topic)}
-              className="flex w-full items-center rounded-sm py-1 text-left hover:bg-surface-raised-hover"
-            >
-              <Badge variant="outline" shape="rounded" truncated>
-                {topic.name}
-              </Badge>
-            </button>
-          </li>
-        ))}
+        {candidates.map((topic) => {
+          const attached = attachedTopicIds.has(topic.id);
+          const isEditing = editingId === topic.id;
+          return (
+            <li key={topic.id}>
+              <div
+                className={cn(
+                  "group flex w-full items-center",
+                  LIST_ITEM_HOVER_CLASSNAME,
+                  "rounded-sm",
+                  // 팝오버가 열려 있는 동안은 마우스가 팝오버 쪽으로 옮겨가
+                  // 행에서 벗어나도(:hover가 풀려도) 계속 활성 톤으로 보이게
+                  // 강제한다 — 안 그러면 편집 중인데 행이 비활성처럼 보인다.
+                  isEditing && "bg-surface-raised-hover/40",
+                )}
+              >
+                {/* 후보 이름을 위 칩 목록과 같은 Badge로 감싼다 — 선택하면
+                    그대로 저 모양의 칩이 된다는 걸 고르기 전에 미리
+                    보여준다. 이미 붙은 행은 neutral 톤(위쪽 칩과 다른 톤)
+                    으로 구분하고 클릭해도 다시 안 붙는다(disabled). */}
+                <button
+                  type="button"
+                  disabled={attached}
+                  onClick={() => onSelectExisting(topic)}
+                  className="flex min-w-0 flex-1 items-center py-1 text-left disabled:pointer-events-none"
+                >
+                  <Badge
+                    variant={attached ? "neutral" : "outline"}
+                    shape="rounded"
+                    truncated
+                  >
+                    {topic.name}
+                  </Badge>
+                </button>
+                {/* 수정은 이 행 안에서 펼쳐지는 대신, Notion의 프로퍼티 값
+                    수정 패널처럼 팝오버 옆(오른쪽)에 따로 뜬다 — 이 리스트가
+                    좁아서 안에서 펼치면 다른 행들을 밀어내거나 잘린다.
+                    open을 editingId로 직접 몰아서, 트리거 클릭뿐 아니라
+                    바깥 클릭·Escape로 닫힐 때도 startEditing/applyAndClose가
+                    항상 같이 실행되게 한다 — 버튼이 없어 이 경로가 유일한
+                    저장 시점이다. */}
+                <Popover
+                  open={isEditing}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      startEditing(topic);
+                    } else {
+                      applyAndClose(topic);
+                    }
+                  }}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon-xs"
+                      variant="ghost"
+                      aria-label={t("review.label_edit_action")}
+                      className={cn(
+                        NESTED_HOVER_ICON_CLASSNAME,
+                        "shrink-0 text-fg-tertiary opacity-0 transition-none focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100",
+                      )}
+                    >
+                      <Ellipsis className="size-3" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    side="bottom"
+                    align="start"
+                    sideOffset={4}
+                    className="w-64 p-2"
+                  >
+                    {/* weave Input 대신 raw — h-9 고정 높이가 이 좁은
+                        패널엔 과하다(다른 인라인 편집 입력들과 동일 사정).
+                        테두리는 살려서 "이건 입력 필드다"가 보이게 한다 —
+                        메뉴처럼 라벨·버튼은 없앴지만, 값 자체는 팝오버
+                        배경과 구분돼야 한다. Enter는 즉시 적용·닫기 —
+                        버튼이 없어 바깥 클릭 말고 키보드로도 끝낼 방법이
+                        있어야 한다. */}
+                    <input
+                      autoFocus
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          applyAndClose(topic);
+                        }
+                      }}
+                      className="w-full min-w-0 rounded-md border border-border bg-transparent px-2 py-1 text-sm text-fg-primary outline-none focus-visible:border-brand dark:focus-visible:border-fg-tertiary/70"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </li>
+          );
+        })}
         {/* "일치하는 항목이 없어요"는 검색이 실패했다는 뜻이라, 검색어 없이도
             뜨는 이 상태(Space에 주제가 있지만 이미 다 골라서 후보가 0개)엔 안
             맞는다 — "이미 모두 추가했어요"로 원인을 구분해서 보여준다. */}
@@ -155,6 +272,17 @@ export function TopicEditPanel({
   function handleCreateNew(name: string) {
     onChange([...topics, { id: null, name }]);
     setQuery("");
+  }
+
+  // 이름 수정은 검색 리스트(다른 컴포넌트)에서 일어나지만, 그 결과를 이
+  // Digest가 이미 붙여둔 topics 배열에도 바로 반영해야 위쪽 칩·바깥 트리거가
+  // 새로고침 없이 새 이름을 보여준다.
+  function handleRenamed(renamed: { id: string; name: string }) {
+    onChange(
+      topics.map((topic) =>
+        topic.id === renamed.id ? { ...topic, name: renamed.name } : topic,
+      ),
+    );
   }
 
   return (
@@ -239,12 +367,17 @@ export function TopicEditPanel({
                 <TopicSearchList
                   spaceId={spaceId}
                   query={query}
-                  excludedTopicIds={topics
-                    .map((topic) => topic.id)
-                    .filter((id): id is string => id !== null)}
+                  attachedTopicIds={
+                    new Set(
+                      topics
+                        .map((topic) => topic.id)
+                        .filter((id): id is string => id !== null),
+                    )
+                  }
                   existingLabels={topics.map((topic) => topic.name)}
                   onSelectExisting={handleSelectExisting}
                   onCreateNew={handleCreateNew}
+                  onRenamed={handleRenamed}
                 />
               </Suspense>
             </ErrorBoundary>

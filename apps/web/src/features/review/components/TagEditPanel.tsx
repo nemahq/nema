@@ -5,16 +5,19 @@ import {
   Badge,
   Button,
   cn,
+  LIST_ITEM_HOVER_CLASSNAME,
+  NESTED_HOVER_ICON_CLASSNAME,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Separator,
   Skeleton,
   Text,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from "@nema-io/weave";
-import { XIcon } from "@nema-io/weave/icons";
+import { Ellipsis, XIcon } from "@nema-io/weave/icons";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { useUpdateTag } from "@web/features/review/hooks/useUpdateTag";
 import { useTagListSuspenseQuery } from "@web/hooks/useTagListQuery";
 import { useTranslation } from "@web/lib/tolgee";
 import {
@@ -29,7 +32,11 @@ const SEARCH_SKELETON_WIDTHS = ["w-16", "w-24", "w-12"];
 
 interface TagSearchListProps {
   query: string;
-  excludedTagIds: string[];
+  // 이 Digest에 이미 붙은 Tag도 목록에서 그대로 보여준다(더 이상 제외하지
+  // 않음) — TopicSearchList와 같은 이유로, 수정 진입점을 "붙은 것"·"안 붙은 것"
+  // 둘로 안 쪼개고 이 목록 하나로 통일한다. 이미 붙은 행은 클릭해도 다시
+  // 안 붙는다(neutral 톤으로 표시).
+  attachedTagIds: Set<string>;
   existingLabels: string[];
   onSelectExisting: (tag: {
     id: string;
@@ -37,6 +44,7 @@ interface TagSearchListProps {
     description: string;
   }) => void;
   onStartCreate: (title: string) => void;
+  onRenamed: (tag: { id: string; title: string; description: string }) => void;
 }
 
 // 목록 행은 raw button — 전체 폭 hover 행이라 weave Button의 고정 패딩·
@@ -44,20 +52,25 @@ interface TagSearchListProps {
 // 같은 이유, TopicSearchList와 동일).
 function TagSearchList({
   query,
-  excludedTagIds,
+  attachedTagIds,
   existingLabels,
   onSelectExisting,
   onStartCreate,
+  onRenamed,
 }: TagSearchListProps) {
   const { t } = useTranslation();
   const [tagList] = useTagListSuspenseQuery();
+  const updateTag = useUpdateTag();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [editingDescription, setEditingDescription] = useState("");
 
   const getLabel = (tag: { title: string }) => tag.title;
   const candidates = filterActiveLabelCandidates(
     tagList.tags,
     getLabel,
     query,
-    new Set(excludedTagIds),
+    new Set(),
   );
   const trimmed = query.trim();
   const hasExactMatch = hasExactLabelMatch(candidates, getLabel, query);
@@ -66,40 +79,145 @@ function TagSearchList({
     !hasExactMatch &&
     !isDuplicateLabelName(trimmed, existingLabels);
 
+  function startEditing(tag: {
+    id: string;
+    title: string;
+    description: string;
+  }) {
+    setEditingId(tag.id);
+    setEditingTitle(tag.title);
+    setEditingDescription(tag.description);
+  }
+
+  // 버튼(저장/취소) 없이 메뉴처럼 — 오버레이가 어떻게 닫히든(바깥 클릭·Escape·
+  // Enter) 그 시점의 값을 그대로 적용한다. description은 필수라 빈 값이면
+  // 저장을 건너뛰고 원래 값을 유지한다.
+  function applyAndClose(tag: {
+    id: string;
+    title: string;
+    description: string;
+  }) {
+    const title = editingTitle.trim();
+    const description = editingDescription.trim();
+    const changed = title !== tag.title || description !== tag.description;
+    if (changed && title !== "" && description !== "") {
+      updateTag.mutate(
+        { id: tag.id, title, description },
+        { onSuccess: () => onRenamed({ id: tag.id, title, description }) },
+      );
+    }
+    setEditingId(null);
+  }
+
   return (
     <>
       <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
-        {candidates.map((tag) => (
-          <li key={tag.id}>
-            {/* description을 hover에 얹는다 — Tag는 이름만으로 재사용 여부를
-                판단 못 하는 라벨이라(07-modeling.md), 고르기 전에 그 판단
-                기준을 볼 방법이 없으면 description을 강제한 이유가 무색해진다. */}
-            <Tooltip>
-              <TooltipTrigger asChild>
+        {candidates.map((tag) => {
+          const attached = attachedTagIds.has(tag.id);
+          const isEditing = editingId === tag.id;
+          return (
+            <li key={tag.id}>
+              <div
+                className={cn(
+                  "group flex w-full items-center",
+                  LIST_ITEM_HOVER_CLASSNAME,
+                  "rounded-sm",
+                  // 팝오버가 열려 있는 동안은 마우스가 팝오버 쪽으로 옮겨가
+                  // 행에서 벗어나도(:hover가 풀려도) 계속 활성 톤으로 보이게
+                  // 강제한다 — 안 그러면 편집 중인데 행이 비활성처럼 보인다.
+                  isEditing && "bg-surface-raised-hover/40",
+                )}
+              >
+                {/* 이미 붙은 행도 hover는 계속 가능해야 해서(설명을 다시
+                        볼 수 있어야 함) 네이티브 disabled 대신 aria-disabled
+                        + 조건부 onClick으로 클릭만 막는다. */}
                 <button
                   type="button"
-                  onClick={() => onSelectExisting(tag)}
-                  className="flex w-full items-center rounded-sm py-1 text-left hover:bg-surface-raised-hover"
+                  aria-disabled={attached}
+                  onClick={attached ? undefined : () => onSelectExisting(tag)}
+                  className="flex min-w-0 flex-1 cursor-pointer items-center py-1 text-left aria-disabled:cursor-default"
                 >
-                  <Badge variant="outline" shape="rounded" truncated>
+                  <Badge
+                    variant={attached ? "neutral" : "outline"}
+                    shape="rounded"
+                    truncated
+                  >
                     {tag.title}
                   </Badge>
                 </button>
-              </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                align="start"
-                sideOffset={8}
-                // 기본 text-balance가 max-w보다 먼저 줄을 접어 여백을 남긴다 —
-                // 설명은 균형 잡힌 헤드라인이 아니라 그냥 문장이라 일반 줄바꿈이
-                // 맞다.
-                className="max-w-60 text-wrap"
-              >
-                {tag.description}
-              </TooltipContent>
-            </Tooltip>
-          </li>
-        ))}
+                {/* 수정은 행 안에서 펼치지 않고 Notion의 프로퍼티 값
+                        수정 패널처럼 팝오버 옆(오른쪽)에 따로 뜬다 —
+                        TopicEditPanel과 동일 구조. 버튼이 없어 바깥 클릭·
+                        Escape·Enter 등 오버레이가 닫히는 모든 경로가
+                        applyAndClose 하나로 모인다. */}
+                <Popover
+                  open={isEditing}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      startEditing(tag);
+                    } else {
+                      applyAndClose(tag);
+                    }
+                  }}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon-xs"
+                      variant="ghost"
+                      aria-label={t("review.label_edit_action")}
+                      className={cn(
+                        NESTED_HOVER_ICON_CLASSNAME,
+                        "shrink-0 text-fg-tertiary opacity-0 transition-none focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100",
+                      )}
+                    >
+                      <Ellipsis className="size-3" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    side="bottom"
+                    align="start"
+                    sideOffset={4}
+                    className="w-64 p-2"
+                  >
+                    <div className="flex flex-col gap-1.5">
+                      {/* Tag는 description이 필수(07-modeling.md)라 값이
+                          이미 있는 게 보장돼 있다 — Notion의 "값 없으면
+                          접어두고 버튼으로 펼침"이 여기선 안 맞아서 접이식을
+                          버리고 이름·설명 둘 다 상시 노출한다. weave Input
+                          대신 raw인 이유는 TopicEditPanel과 동일(h-9 고정이
+                          과함). */}
+                      <input
+                        autoFocus
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            applyAndClose(tag);
+                          }
+                        }}
+                        className="w-full min-w-0 rounded-md border border-border bg-transparent px-2 py-1 text-sm text-fg-primary outline-none focus-visible:border-brand dark:focus-visible:border-fg-tertiary/70"
+                      />
+                      {/* 한 줄로 — 다른 필드들과 같은 "메뉴형" 밀도를
+                          유지한다(TAG_DESCRIPTION_MAX_LENGTH=500이라 긴 값은
+                          인풋 안에서 가로 스크롤된다). */}
+                      <input
+                        value={editingDescription}
+                        onChange={(e) => setEditingDescription(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            applyAndClose(tag);
+                          }
+                        }}
+                        className="w-full min-w-0 rounded-md border border-border bg-transparent px-2 py-1 text-sm text-fg-primary outline-none focus-visible:border-brand dark:focus-visible:border-fg-tertiary/70"
+                      />
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </li>
+          );
+        })}
         {/* Topic과 같은 원인 분리 — "일치 항목 없음"과 "이미 다 붙어서 후보가
             0개"는 서로 다른 상태라 같은 문구를 쓰면 잘못된 신호가 된다. */}
         {candidates.length === 0 && trimmed === "" && (
@@ -117,7 +235,7 @@ function TagSearchList({
           type="button"
           disabled={!canCreateNew}
           onClick={() => onStartCreate(trimmed)}
-          className="flex w-full items-center gap-1 rounded-sm py-1 text-left hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quinary"
+          className="flex w-full items-center gap-1 rounded-sm px-2 py-1 text-left hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quinary"
         >
           {/* px-2를 안 두는 이유는 위 후보 행과 동일(TopicSearchList와 같은
               사정) — Badge가 이미 자기 패딩을 갖고 있어 행에 또 주면 이중으로
@@ -190,6 +308,23 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
     setDescription("");
   }
 
+  // 이름·설명 수정은 검색 리스트(다른 컴포넌트)에서 일어나지만, 그 결과를 이
+  // Digest가 이미 붙여둔 tags 배열에도 바로 반영해야 위쪽 칩·바깥 트리거가
+  // 새로고침 없이 새 값을 보여준다.
+  function handleRenamed(renamed: {
+    id: string;
+    title: string;
+    description: string;
+  }) {
+    onChange(
+      tags.map((tag) =>
+        tag.id === renamed.id
+          ? { ...tag, title: renamed.title, description: renamed.description }
+          : tag,
+      ),
+    );
+  }
+
   // atMax·검색·생성 3분기라 하나의 변수로 미리 갈라둔다(연속 삼항 대신).
   let panelBody: ReactNode;
   if (atMax) {
@@ -227,12 +362,17 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
           >
             <TagSearchList
               query={query}
-              excludedTagIds={tags
-                .map((tag) => tag.id)
-                .filter((id): id is string => id !== null)}
+              attachedTagIds={
+                new Set(
+                  tags
+                    .map((tag) => tag.id)
+                    .filter((id): id is string => id !== null),
+                )
+              }
               existingLabels={tags.map((tag) => tag.title)}
               onSelectExisting={handleSelectExisting}
               onStartCreate={setCreatingTitle}
+              onRenamed={handleRenamed}
             />
           </Suspense>
         </ErrorBoundary>
