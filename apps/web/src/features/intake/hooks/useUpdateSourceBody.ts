@@ -6,7 +6,5 @@ export function useUpdateSourceBody() {
 
   return useMutation(trpc.source.updateBody, {
     onSuccess: () => utils.source.listPending.invalidate(),
-    // DraftBodyEditor가 이미 인라인 Alert로 실패를 보여준다.
-    meta: { skipGlobalToast: true },
   });
 }

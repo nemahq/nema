@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { SOURCE_TITLE_MAX_LENGTH } from "@nema-io/shared";
-import { Alert } from "@nema-io/weave";
 
 import { useUpdateSourceTitle } from "@web/features/intake/hooks/useUpdateSourceTitle";
-import { getErrorMessage } from "@web/lib/getErrorMessage";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface DraftTitleInputProps {
@@ -50,27 +48,18 @@ export function DraftTitleInput({
   }
 
   return (
-    <>
-      <input
-        ref={inputRef}
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        placeholder={t("intake.draft_untitled")}
-        maxLength={SOURCE_TITLE_MAX_LENGTH}
-        aria-invalid={updateTitleMutation.isError}
-        readOnly={readOnly}
-        className="bg-transparent px-6 pt-4 text-xl font-bold text-fg-primary outline-none placeholder:text-fg-quaternary"
-      />
-      {updateTitleMutation.isError && (
-        <div className="px-6 pt-2">
-          <Alert variant="error">
-            {getErrorMessage(updateTitleMutation.error)}
-          </Alert>
-        </div>
-      )}
-    </>
+    <input
+      ref={inputRef}
+      type="text"
+      value={title}
+      onChange={(e) => setTitle(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      placeholder={t("intake.draft_untitled")}
+      maxLength={SOURCE_TITLE_MAX_LENGTH}
+      aria-invalid={updateTitleMutation.isError}
+      readOnly={readOnly}
+      className="bg-transparent px-6 pt-4 text-xl font-bold text-fg-primary outline-none placeholder:text-fg-quaternary"
+    />
   );
 }

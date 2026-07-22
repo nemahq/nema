@@ -5,6 +5,7 @@ interface DraftBodyViewProps {
   readOnly?: boolean;
   maxLength?: number;
   ariaInvalid?: boolean;
+  placeholder?: string;
 }
 
 // Idle(편집 가능)·Working(읽기 전용) 상세 패널이 공유하는 본문 표시 — 순수
@@ -17,6 +18,7 @@ export function DraftBodyView({
   readOnly = false,
   maxLength,
   ariaInvalid,
+  placeholder,
 }: DraftBodyViewProps) {
   return (
     <textarea
@@ -26,6 +28,7 @@ export function DraftBodyView({
       readOnly={readOnly}
       maxLength={maxLength}
       aria-invalid={ariaInvalid}
+      placeholder={placeholder}
       className="flex-1 resize-none text-sm leading-relaxed text-fg-primary outline-none"
     />
   );
