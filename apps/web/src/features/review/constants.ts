@@ -4,7 +4,7 @@ import {
   REFERENCE_TYPES,
   type ReferenceType,
 } from "@nema-io/shared";
-import type { BadgeVariant } from "@nema-io/weave";
+import type { BadgeColor, BadgeVariant } from "@nema-io/weave";
 import type { IconComponent } from "@nema-io/weave/icons";
 import { Check, Circle, X } from "@nema-io/weave/icons";
 
@@ -20,15 +20,15 @@ export const DIGEST_TYPE_LABEL_KEY: Record<DigestType, TranslationKey> = {
   assumption: "review.digest_type_assumption",
 };
 
-// weave는 "서로 구별되는 분류 색 5개"만 알고 그게 무엇인지는 모른다 — Digest 타입을
-// 어느 슬롯에 앉힐지는 이 표가 정한다. 타입이 늘거나 이름이 바뀌어도 여기만 고치면
-// 되고 디자인 시스템은 안 흔들린다.
-export const DIGEST_TYPE_BADGE_VARIANT: Record<DigestType, BadgeVariant> = {
-  decision: "category-1",
-  pending: "category-2",
-  learning: "category-3",
-  idea: "category-4",
-  assumption: "category-5",
+// weave는 색조만 알고 그게 무엇을 가리키는지는 모른다 — Digest 타입을 어느 색에
+// 앉힐지는 이 표가 정한다(apps/web/src/index.css의 mode-* 매핑과 같은 결). 색을
+// 바꾸는 것도 타입이 느는 것도 여기서 끝나고 디자인 시스템은 안 흔들린다.
+export const DIGEST_TYPE_BADGE_COLOR: Record<DigestType, BadgeColor> = {
+  decision: "indigo",
+  pending: "pink",
+  learning: "lime",
+  idea: "yellow",
+  assumption: "purple",
 };
 
 // organization은 행위주체(법인·팀), product는 그 주체가 만든 것 — 라벨만 봐선

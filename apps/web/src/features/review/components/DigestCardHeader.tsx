@@ -12,7 +12,7 @@ import {
 import { FileText } from "@nema-io/weave/icons";
 
 import {
-  DIGEST_TYPE_BADGE_VARIANT,
+  DIGEST_TYPE_BADGE_COLOR,
   DIGEST_TYPE_LABEL_KEY,
 } from "@web/features/review/constants";
 import type { ReviewDigest } from "@web/features/review/types";
@@ -63,7 +63,7 @@ export function DigestCardHeader({
             건 가변폭 텍스트 뒤에 붙으면 지터가 생기기 때문. */}
         {viewed && (
           <Badge
-            variant={DIGEST_TYPE_BADGE_VARIANT[type]}
+            color={DIGEST_TYPE_BADGE_COLOR[type]}
             shape="rounded"
             className="shrink-0"
           >

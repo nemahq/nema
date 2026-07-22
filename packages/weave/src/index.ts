@@ -2,6 +2,7 @@ export { Alert, type AlertVariant } from "./components/Alert";
 export { Avatar, type AvatarShape } from "./components/Avatar";
 export {
   Badge,
+  type BadgeColor,
   type BadgeShape,
   type BadgeSize,
   type BadgeVariant,

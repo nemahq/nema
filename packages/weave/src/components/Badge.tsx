@@ -2,6 +2,8 @@ import * as React from "react";
 
 import { cn } from "../utils";
 
+// variant는 "이게 무슨 뜻인가"를 고르는 축이다 — 색은 weave가 정하므로, 성공 색이
+// 바뀌어도 소비처는 그대로다.
 type BadgeVariant =
   | "brand"
   | "success"
@@ -10,21 +12,18 @@ type BadgeVariant =
   | "info"
   | "neutral"
   | "outline"
-  | "outline-value"
-  | "category-1"
-  | "category-2"
-  | "category-3"
-  | "category-4"
-  | "category-5";
+  | "outline-value";
+
+// color는 반대로 "무슨 색인가"를 직접 고르는 축 — weave가 뜻을 모르는 분류(앱마다
+// 다른 5종 타입 같은 것)를 서로 구별해야 할 때만 쓴다. 의미가 있는 자리에 이걸 쓰면
+// (에러를 color="pink"로) 시맨틱 층을 우회하게 되므로 variant와 배타적으로 둔다.
+type BadgeColor = "indigo" | "pink" | "lime" | "yellow" | "purple";
 
 // Chip과 공유 — surface-raised는 다크 모드에서 surface-card와 완전히 같은 값이
 // 돼(tokens/index.css) 카드 배경 위에서 안 보이므로, surface 토큰 대신 배경에
 // 상대적으로 대비가 생기는 fg 알파 틴트를 쓴다.
 export const NEUTRAL_TONE_CLASSNAME = "bg-fg-primary/10 text-fg-secondary";
 
-// category-* 5종은 좋다/나쁘다 축이 없는 분류용 — 서로 구별되는 것만이 목적이라
-// status 톤과 이름을 분리한다(status를 빌려 쓰면 없는 의미가 생긴다,
-// design-reference-log.md ⑪ 참고). 무엇을 가리키는지는 소비처가 정한다.
 const variantClasses: Record<BadgeVariant, string> = {
   brand: "bg-brand-tint text-brand-accent",
   success: "bg-status-success-tint text-status-success",
@@ -38,11 +37,14 @@ const variantClasses: Record<BadgeVariant, string> = {
   // 덮어쓰게 된다(weave-usage.md 원칙).
   outline: "border border-border text-fg-tertiary",
   "outline-value": "border border-border text-fg-primary",
-  "category-1": "bg-category-1-tint text-category-1",
-  "category-2": "bg-category-2-tint text-category-2",
-  "category-3": "bg-category-3-tint text-category-3",
-  "category-4": "bg-category-4-tint text-category-4",
-  "category-5": "bg-category-5-tint text-category-5",
+};
+
+const colorClasses: Record<BadgeColor, string> = {
+  indigo: "bg-indigo-tint text-indigo",
+  pink: "bg-pink-tint text-pink",
+  lime: "bg-lime-tint text-lime",
+  yellow: "bg-yellow-tint text-yellow",
+  purple: "bg-purple-tint text-purple",
 };
 
 // 원형(pill)은 카운트·이름표처럼 통째로 하나의 값을 담는 자리, 각진 모서리(rounded)는
@@ -64,20 +66,33 @@ const SIZE_CLASSNAME: Record<BadgeSize, string> = {
   sm: "px-1.5 text-[10px]",
 };
 
+// 둘 중 하나만 받는다 — 같이 넘길 수 있으면 "의미도 있고 색도 직접 고른다"는
+// 모순된 상태가 표현돼버린다.
+type BadgeToneProps =
+  | { variant?: BadgeVariant; color?: never }
+  | { variant?: never; color: BadgeColor };
+
+type BadgeProps = Omit<React.ComponentProps<"span">, "color"> &
+  BadgeToneProps & {
+    shape?: BadgeShape;
+    size?: BadgeSize;
+    // min-w-0 없이 truncate만 있으면 flex 안에서 조용히 안 먹으므로 항상 같이 묶는다.
+    truncated?: boolean;
+  };
+
 function Badge({
-  variant = "brand",
+  variant,
+  color,
   shape = "rounded",
   size = "default",
   truncated = false,
   className,
   ...props
-}: React.ComponentProps<"span"> & {
-  variant?: BadgeVariant;
-  shape?: BadgeShape;
-  size?: BadgeSize;
-  // min-w-0 없이 truncate만 있으면 flex 안에서 조용히 안 먹으므로 항상 같이 묶는다.
-  truncated?: boolean;
-}) {
+}: BadgeProps) {
+  const tone = color
+    ? colorClasses[color]
+    : variantClasses[variant ?? "brand"];
+
   return (
     <span
       data-slot="badge"
@@ -85,7 +100,7 @@ function Badge({
         "inline-block py-0.5 font-medium leading-[1.4]",
         SIZE_CLASSNAME[size],
         SHAPE_CLASSNAME[shape],
-        variantClasses[variant],
+        tone,
         truncated && "min-w-0 truncate",
         className,
       )}
@@ -94,4 +109,10 @@ function Badge({
   );
 }
 
-export { Badge, type BadgeShape, type BadgeSize, type BadgeVariant };
+export {
+  Badge,
+  type BadgeColor,
+  type BadgeShape,
+  type BadgeSize,
+  type BadgeVariant,
+};
