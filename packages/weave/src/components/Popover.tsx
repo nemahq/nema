@@ -4,7 +4,8 @@ import { Popover as PopoverPrimitive } from "radix-ui";
 import * as React from "react";
 
 import { useEscapeAwareCloseFocus } from "../hooks/useEscapeAwareCloseFocus";
-import { cn, POPOVER_SURFACE_CLASSNAME } from "../utils";
+import { usePopoverScrollLock } from "../hooks/usePopoverScrollLock";
+import { cn, mergeRefs, POPOVER_SURFACE_CLASSNAME } from "../utils";
 
 function Popover({
   ...props
@@ -30,15 +31,19 @@ function PopoverContent({
   sideOffset = 4,
   onEscapeKeyDown,
   onCloseAutoFocus,
+  ref: forwardedRef,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
   const escapeAwareCloseFocus = useEscapeAwareCloseFocus(
     onEscapeKeyDown,
     onCloseAutoFocus,
   );
+  const scrollLockRef =
+    usePopoverScrollLock<React.ComponentRef<typeof PopoverPrimitive.Content>>();
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
+        ref={mergeRefs(scrollLockRef, forwardedRef)}
         data-slot="popover-content"
         align={align}
         sideOffset={sideOffset}
