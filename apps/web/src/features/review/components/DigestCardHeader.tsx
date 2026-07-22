@@ -115,7 +115,7 @@ export function DigestCardHeader({
           size="xs"
           color={viewed ? "primary" : "tertiary"}
           className={cn(
-            "flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 py-1",
+            "flex cursor-pointer items-center gap-1.5 rounded-md border border-border-strong px-2 py-1",
             viewed && "bg-fg-primary/10",
           )}
         >
