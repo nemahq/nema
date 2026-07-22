@@ -178,10 +178,12 @@ interface PendingSourceItem {
   title: string | null;
   createdAt: string;
   digestionOutcome: DigestionOutcome;
-  // 지금 처리중인 시도가 실제로 언제 시작됐는지 — createdAt은 원본이 처음
-  // 만들어진 시점이라, 재시도·재생성처럼 뒤늦게 다시 돌기 시작한 시도의
-  // 경과 시간을 재는 기준으론 안 맞는다(아직 한 번도 안 붙잡혔으면 null).
   lastDigestionAttempt: string | null;
+  // 사용자가 "기억하기"를 누른 시점 — lastDigestionAttempt는 워커가 집어들거나
+  // 재시도할 때마다 now()로 갱신되므로(hasInputChangedSinceDigestion이 그 성질에
+  // 기댄다) 화면의 "정리중.." 경과 시간엔 못 쓴다. 재시도 없이 start_source_digestion
+  // 에서만 찍히는 값을 따로 내려준다(아직 한 번도 정리를 시작 안 했으면 null).
+  digestionStartedAt: string | null;
   // 마지막 정리 이후 정리 입력(본문·Space)이 바뀌었는지 — "원본을 안 고치고 다시
   // 정리해봐야 같은 결과"라는 판정에 쓴다. 두 시각을 소비처가 각자 비교하면 그 규칙이
   // 화면마다 흩어지므로 digestionOutcome과 같은 이유로 서버가 조합해 내려준다.
@@ -205,7 +207,7 @@ export async function listPendingSources(args: {
   const { data: sources, error } = await supabase
     .from("sources")
     .select(
-      "id, space_id, body, title, created_at, digestion_status, last_digestion_attempt, digestion_input_updated_at, error_message",
+      "id, space_id, body, title, created_at, digestion_status, last_digestion_attempt, digestion_started_at, digestion_input_updated_at, error_message",
     )
     .eq("status", "pending")
     .order("created_at", { ascending: false })
@@ -267,6 +269,7 @@ export async function listPendingSources(args: {
           hasDiscardedReview: discardedSourceIds.has(source.id),
         }),
         lastDigestionAttempt: source.last_digestion_attempt,
+        digestionStartedAt: source.digestion_started_at,
         inputChangedSinceDigestion: hasInputChangedSinceDigestion({
           digestionInputUpdatedAt: source.digestion_input_updated_at,
           lastDigestionAttempt: source.last_digestion_attempt,

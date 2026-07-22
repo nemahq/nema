@@ -21,7 +21,7 @@ interface WorkingDraftDetailPanelProps {
   title: string | null;
   body: string;
   createdAt: string;
-  lastDigestionAttempt: string | null;
+  digestionStartedAt: string | null;
   onClose: () => void;
 }
 
@@ -37,15 +37,15 @@ export function WorkingDraftDetailPanel({
   title,
   body,
   createdAt,
-  lastDigestionAttempt,
+  digestionStartedAt,
   onClose,
 }: WorkingDraftDetailPanelProps) {
   const { t } = useTranslation();
   const cancelMutation = useCancelSource();
-  // 재시도·정리 재실행처럼 뒤늦게 다시 붙잡힌 시도는 lastDigestionAttempt가
-  // 실제 시작 시점 — 아직 한 번도 안 붙잡혔으면(막 생성돼 큐에 갓 들어간 경우)
-  // null이라 createdAt으로 대체한다.
-  const organizingSince = lastDigestionAttempt ?? createdAt;
+  // digestionStartedAt은 "기억하기"를 누른 시점에만 찍힌다 — 아직 한 번도
+  // 안 눌렸을 리 없는 processing 상태에서 이론상 null(마이그레이션 백필 누락 등
+  // 예상 밖 데이터)이면 createdAt으로 대체한다.
+  const organizingSince = digestionStartedAt ?? createdAt;
 
   function handleCancel() {
     cancelMutation.mutate({ sourceId });
