@@ -1,10 +1,11 @@
-import { type CSSProperties, useState } from "react";
+import type { CSSProperties } from "react";
 
 import { SOURCE_BODY_MAX_LENGTH } from "@nema-io/shared";
 import { Button, cn } from "@nema-io/weave";
 
 import { ACTION_BUTTON_BASE, ChatInput } from "@web/components/ui/ChatInput";
 import { useCreateSource } from "@web/features/intake/hooks/useCreateSource";
+import { useSourceComposerBody } from "@web/features/intake/hooks/useSourceComposerBody";
 import { useTranslation } from "@web/lib/tolgee";
 
 const PROGRESS_CLIMB_DURATION_MS = 2_500;
@@ -23,7 +24,7 @@ const progressClimbStyle: CSSProperties & {
 
 export function SourceComposer({ spaceId }: SourceComposerProps) {
   const { t } = useTranslation();
-  const [body, setBody] = useState("");
+  const [body, setBody] = useSourceComposerBody(spaceId);
   const createSource = useCreateSource();
   const disabled = !spaceId || createSource.isPending;
 
