@@ -162,12 +162,10 @@ export function TopicEditPanel({
             variant="outline"
             shape="rounded"
             disabled={disabled}
-            remove={{
-              onClick: () => removeAt(index),
-              ariaLabel: t("review.topic_remove_action", {
-                label: topic.name,
-              }),
-            }}
+            onRemove={() => removeAt(index)}
+            removeAriaLabel={t("review.topic_remove_action", {
+              label: topic.name,
+            })}
           >
             {topic.name}
           </Chip>

@@ -60,16 +60,19 @@ const TAG_COLOR_CLASSNAME: Record<TagColor, string> = {
   violet: "bg-tag-violet text-fg-primary",
 };
 
-interface ChipRemove {
-  onClick: () => void;
-  ariaLabel: string;
-}
-
 // variant(neutral/outline)와 color(TagColor)는 배타적으로 받는다 — Badge의
 // variant/color 구분(의미 있는 톤 vs weave가 뜻을 모르는 분류)과 같은 이유.
 type ChipToneProps =
   | { variant?: ChipVariant; color?: never }
   | { variant?: never; color: TagColor };
+
+// onRemove·removeAriaLabel을 객체 하나로 묶지 않고 평평한 두 prop으로 둔다 —
+// conventions.md "컴포넌트 데이터 prop은 원시값이어야 한다(콜백·children
+// 예외)"라 객체 리터럴은 매 렌더 새 identity를 만든다. 둘을 여전히 같이
+// 받게 강제하려고(제거 버튼엔 접근성 라벨이 필수) 유니언으로 묶는다.
+type ChipRemoveProps =
+  | { onRemove?: undefined; removeAriaLabel?: undefined }
+  | { onRemove: () => void; removeAriaLabel: string };
 
 // Badge(정적 라벨)와 짝을 이루는 인터랙티브 버전. remove가 없으면 항상 <button> —
 // DropdownMenuTrigger asChild처럼 onClick이 아니라 onPointerDown 등 임의의
@@ -87,17 +90,18 @@ function Chip({
   className,
   type = "button",
   truncated = false,
-  remove,
+  onRemove,
+  removeAriaLabel,
   onClick,
   disabled,
   children,
   ...props
 }: Omit<React.ComponentPropsWithRef<"button">, "color"> &
-  ChipToneProps & {
+  ChipToneProps &
+  ChipRemoveProps & {
     shape?: ChipShape;
     // min-w-0 없이 truncate만 있으면 flex 안에서 조용히 안 먹으므로 항상 같이 묶는다.
     truncated?: boolean;
-    remove?: ChipRemove;
   }) {
   const toneClassName = cn(
     SHAPE_CLASSNAME[shape],
@@ -110,7 +114,7 @@ function Chip({
     : HOVER_CLASSNAME[variant ?? "neutral"];
   const labelClassName = cn(truncated && "min-w-0 truncate");
 
-  if (remove) {
+  if (onRemove) {
     return (
       <span
         data-slot="chip"
@@ -139,8 +143,8 @@ function Chip({
         <button
           type="button"
           disabled={disabled}
-          aria-label={remove.ariaLabel}
-          onClick={remove.onClick}
+          aria-label={removeAriaLabel}
+          onClick={onRemove}
           className="rounded-full p-0.5 text-current/70 hover:bg-fg-primary/15 disabled:pointer-events-none"
         >
           <XIcon className="size-3" />

@@ -20,8 +20,12 @@ type TextareaVariant = "default" | "borderless";
 const VARIANT_CLASSNAME: Record<TextareaVariant, string> = {
   default:
     "rounded-md border border-border bg-transparent px-3 py-1.5 placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none aria-invalid:border-status-error disabled:text-fg-quinary disabled:placeholder:text-fg-quinary dark:focus-visible:border-fg-tertiary/70",
+  // outline 관련 클래스를 일부러 안 둔다 — 전역 *:focus-visible 링(tokens/index.css)이
+  // 이미 모든 포커스 가능 엘리먼트를 커버해서, 여기서 focus:outline-none을 얹으면
+  // 그 전역 링을 죽이기만 하고 대체 표시가 없다(conventions.md "MUST NOT remove
+  // focus styles").
   borderless:
-    "border-none bg-transparent p-0 placeholder:text-fg-quaternary focus:outline-none disabled:text-fg-quinary disabled:placeholder:text-fg-quinary",
+    "border-none bg-transparent p-0 placeholder:text-fg-quaternary disabled:text-fg-quinary disabled:placeholder:text-fg-quinary",
 };
 
 interface AutoSizeOptions {
@@ -65,40 +69,46 @@ function useAutoSize(
   value: unknown,
   autoSize: boolean | AutoSizeOptions | undefined,
 ) {
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!autoSize || !el) {
-      return;
-    }
-    const maxRows = typeof autoSize === "object" ? autoSize.maxRows : undefined;
-
-    function resize() {
-      if (!el) {
+  React.useEffect(
+    function resizeToContent() {
+      const el = ref.current;
+      if (!autoSize || !el) {
         return;
       }
-      el.style.height = "auto";
-      let next = el.scrollHeight;
-      if (maxRows) {
-        const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
-        if (!Number.isNaN(lineHeight)) {
-          next = Math.min(next, lineHeight * maxRows);
+      const maxRows =
+        typeof autoSize === "object" ? autoSize.maxRows : undefined;
+
+      function resize() {
+        if (!el) {
+          return;
         }
+        el.style.height = "auto";
+        let next = el.scrollHeight;
+        if (maxRows) {
+          const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
+          if (!Number.isNaN(lineHeight)) {
+            next = Math.min(next, lineHeight * maxRows);
+          }
+        }
+        el.style.height = `${next}px`;
       }
-      el.style.height = `${next}px`;
-    }
 
-    resize();
-    let lastWidth = el.offsetWidth;
-    const observer = new ResizeObserver(() => {
-      if (!el || el.offsetWidth === lastWidth) {
-        return;
-      }
-      lastWidth = el.offsetWidth;
       resize();
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [ref, value, autoSize]);
+      let lastWidth = el.offsetWidth;
+      const observer = new ResizeObserver(function onResize() {
+        if (!el || el.offsetWidth === lastWidth) {
+          return;
+        }
+        lastWidth = el.offsetWidth;
+        resize();
+      });
+      observer.observe(el);
+      return function cleanup() {
+        observer.disconnect();
+      };
+    },
+    [ref, value, autoSize],
+  );
 }
 
 // weave에 멀티라인 입력이 없어서(Input은 <input>이라 h-9 고정) 앱 곳곳이

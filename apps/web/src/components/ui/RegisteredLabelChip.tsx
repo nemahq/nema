@@ -22,7 +22,8 @@ export function RegisteredLabelChip({
       variant={variant}
       shape="rounded"
       disabled={disabled}
-      remove={{ onClick: onRemove, ariaLabel: removeAriaLabel }}
+      onRemove={onRemove}
+      removeAriaLabel={removeAriaLabel}
     >
       {label}
     </Chip>
