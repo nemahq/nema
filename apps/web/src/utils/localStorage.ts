@@ -18,6 +18,7 @@ type StorageMap = {
   sidebarCollapsed: BooleanString;
   chatDrafts: JsonRecord;
   chatMode: ChatMode;
+  sourceComposerBody: JsonRecord;
   openRetrievalTabs: JsonRecord;
   splitLayout: JsonRecord;
   // OAuth 공급자 왕복에서 URL 쿼리가 깎여도 복구하도록 authorization_id를 잠시 보관.
@@ -36,6 +37,7 @@ const isValid: {
   sidebarCollapsed: isBooleanString,
   chatDrafts: isJsonRecord,
   chatMode: isChatMode,
+  sourceComposerBody: isJsonRecord,
   openRetrievalTabs: isJsonRecord,
   splitLayout: isJsonRecord,
   oauthAuthorizationId: (v): v is string => v.length > 0,
