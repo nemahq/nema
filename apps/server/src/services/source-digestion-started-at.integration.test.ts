@@ -49,7 +49,7 @@ afterEach(async () => {
   }
 });
 
-async function createFixtureSource(): Promise<string> {
+async function createFixtureSpace(): Promise<string> {
   const { rows: workspace } = await client.query<{ id: string }>(
     "INSERT INTO workspaces (name) VALUES ($1) RETURNING id",
     [`integration-test-${randomUUID()}`],
@@ -59,13 +59,35 @@ async function createFixtureSource(): Promise<string> {
     "INSERT INTO spaces (workspace_id, name, public_id) VALUES ($1, $2, $3) RETURNING id",
     [workspace[0].id, "space-a", publicId],
   );
+  return space[0].id;
+}
+
+async function createFixtureSource(): Promise<string> {
+  const spaceId = await createFixtureSpace();
   // start_source_digestion은 idle(completed/failed/cancelled)에서만 정리를 새로
   // 시작할 수 있다 — pending(추출 중) 원본에 걸면 가드가 막는다.
   const { rows: source } = await client.query<{ id: string }>(
     "INSERT INTO sources (space_id, body, status, digestion_status) VALUES ($1, $2, 'pending', 'completed') RETURNING id",
-    [space[0].id, "원문"],
+    [spaceId, "원문"],
   );
   return source[0].id;
+}
+
+// create_source는 is_space_member로 실제 멤버십을 요구해 다른 RPC들의
+// "auth.uid() IS NULL이면 통과" 우회가 없다 — 슈퍼유저 직결로는 못 뚫고
+// request.jwt.claim.sub으로 로그인 유저를 흉내내야 한다(changeset-service
+// 통합 테스트의 동일 패턴).
+async function createFixtureLoggedInMember(spaceId: string): Promise<void> {
+  const { rows: user } = await client.query<{ id: string }>(
+    "INSERT INTO auth.users (id) VALUES (gen_random_uuid()) RETURNING id",
+  );
+  await client.query(
+    "INSERT INTO space_members (space_id, user_id, role) VALUES ($1, $2, 'owner')",
+    [spaceId, user[0].id],
+  );
+  await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+    user[0].id,
+  ]);
 }
 
 interface DigestionTimestamps {
@@ -93,6 +115,16 @@ describe("digestion_started_at (integration)", () => {
     const afterStart = await readTimestamps(sourceId);
     expect(afterStart.digestion_started_at).not.toBeNull();
     expect(afterStart.last_digestion_attempt).toBeNull();
+
+    // fetch_pending_digestion_sources()는 ORDER BY 없이 전역에서 LIMIT 10을
+    // 집어간다 — 로컬 DB에 정리 대기 중인 다른 원본이 10건 이상 있으면 이
+    // 픽스처가 안 뽑혀 아래 단언이 어긋난다. 트랜잭션 안에서만(테스트 끝에
+    // 롤백되어 사라짐) 다른 원본들의 리스를 미리 채워 이번 클레임 대상에서
+    // 제외한다.
+    await client.query(
+      "UPDATE sources SET last_digestion_attempt = now() WHERE digestion_status = 'pending' AND status = 'pending' AND id != $1",
+      [sourceId],
+    );
 
     await client.query("SELECT fetch_pending_digestion_sources()");
     const afterClaim = await readTimestamps(sourceId);
@@ -124,5 +156,23 @@ describe("digestion_started_at (integration)", () => {
 
     const afterCancel = await readTimestamps(sourceId);
     expect(afterCancel.digestion_started_at).toBeNull();
+  });
+
+  it("새 초안은 digestion_status 기본값('pending')으로 바로 정리에 들어가므로 create_source가 직접 찍는다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const spaceId = await createFixtureSpace();
+    await createFixtureLoggedInMember(spaceId);
+
+    const { rows } = await client.query<{ create_source: string }>(
+      "SELECT create_source($1, $2)",
+      [spaceId, "새 초안"],
+    );
+    const sourceId = rows[0].create_source;
+
+    const afterCreate = await readTimestamps(sourceId);
+    expect(afterCreate.digestion_started_at).not.toBeNull();
   });
 });

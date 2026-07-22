@@ -178,6 +178,9 @@ interface PendingSourceItem {
   title: string | null;
   createdAt: string;
   digestionOutcome: DigestionOutcome;
+  // web은 이제 이 값을 안 쓴다(정리중 경과 시간은 digestionStartedAt) — 그래도
+  // MCP(list_pending_sources)를 포함해 워커가 마지막으로 언제 집어갔는지 원시값을
+  // 보고 싶은 소비처를 위해 계약에 남겨둔다.
   lastDigestionAttempt: string | null;
   // 사용자가 "기억하기"를 누른 시점 — lastDigestionAttempt는 워커가 집어들거나
   // 재시도할 때마다 now()로 갱신되므로(hasInputChangedSinceDigestion이 그 성질에

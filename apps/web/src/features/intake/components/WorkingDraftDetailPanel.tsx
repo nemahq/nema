@@ -42,9 +42,9 @@ export function WorkingDraftDetailPanel({
 }: WorkingDraftDetailPanelProps) {
   const { t } = useTranslation();
   const cancelMutation = useCancelSource();
-  // digestionStartedAt은 "기억하기"를 누른 시점에만 찍힌다 — 아직 한 번도
-  // 안 눌렸을 리 없는 processing 상태에서 이론상 null(마이그레이션 백필 누락 등
-  // 예상 밖 데이터)이면 createdAt으로 대체한다.
+  // digestionStartedAt은 create_source·start_source_digestion 양쪽 다 찍으므로
+  // processing 상태면 항상 있다 — 그래도 없으면(레거시 데이터 등 예상 밖 상황)
+  // createdAt으로 대체한다.
   const organizingSince = digestionStartedAt ?? createdAt;
 
   function handleCancel() {

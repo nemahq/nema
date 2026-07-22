@@ -14,11 +14,49 @@
 ALTER TABLE sources ADD COLUMN digestion_started_at timestamptz;
 
 -- 백필: 지금 처리 중인 원본은 기존 last_digestion_attempt(아직 안 붙잡혔으면
--- created_at)를 최선의 근사치로 채운다. 이후로는 start_source_digestion만
+-- created_at)를 최선의 근사치로 채운다. 이후로는 create_source·start_source_digestion만
 -- 이 값을 채운다.
 UPDATE sources
 SET digestion_started_at = COALESCE(last_digestion_attempt, created_at)
 WHERE digestion_status = 'pending' AND status = 'pending';
+
+-- create_source: 새 원본은 digestion_status 기본값('pending')을 그대로 받아
+-- start_source_digestion을 거치지 않고 곧바로 정리 큐에 들어간다 — 여기서도
+-- digestion_started_at을 찍어야 "정리 중이면 이 값이 항상 있다"는 성질이
+-- 재시작 경로와 일치한다.
+CREATE OR REPLACE FUNCTION create_source(
+  p_space_id        uuid,
+  p_body            text,
+  p_session_id      uuid DEFAULT NULL,
+  p_author_timezone text DEFAULT NULL
+)
+RETURNS uuid AS $$
+DECLARE
+  v_source_id uuid;
+BEGIN
+  IF NOT is_space_member(p_space_id) THEN
+    RAISE EXCEPTION 'caller is not a member of space %', p_space_id;
+  END IF;
+
+  IF p_body IS NULL OR btrim(p_body) = '' THEN
+    RAISE EXCEPTION 'p_body must be a non-empty text';
+  END IF;
+
+  INSERT INTO sources (
+    space_id, author_id, session_id, body, author_timezone, status,
+    digestion_started_at
+  )
+  VALUES (
+    p_space_id, auth.uid(), p_session_id, p_body, p_author_timezone, 'pending',
+    now()
+  )
+  RETURNING id INTO v_source_id;
+
+  PERFORM pgmq.send('statement_sync', jsonb_build_object('type', 'notify'));
+
+  RETURN v_source_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 
 CREATE OR REPLACE FUNCTION start_source_digestion(p_source_id uuid)
 RETURNS void AS $$
