@@ -40,10 +40,17 @@ function PopoverContent({
   );
   const scrollLockRef =
     usePopoverScrollLock<React.ComponentRef<typeof PopoverPrimitive.Content>>();
+  // mergeRefs(...)를 인라인으로 새로 만들면 매 렌더 identity가 바뀌어 React가
+  // 콜백 ref를 매번 null→재부착으로 재실행한다 — scrollLockRef가 그때마다
+  // 리스너를 떼었다 다는 낭비를 하지 않도록 고정한다.
+  const mergedContentRef = React.useMemo(
+    () => mergeRefs(scrollLockRef, forwardedRef),
+    [scrollLockRef, forwardedRef],
+  );
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
-        ref={mergeRefs(scrollLockRef, forwardedRef)}
+        ref={mergedContentRef}
         data-slot="popover-content"
         align={align}
         sideOffset={sideOffset}

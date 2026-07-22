@@ -37,21 +37,15 @@ export function ReferenceMergeDiffDisclosure({
         onClick={() => setExpanded((current) => !current)}
         aria-expanded={expanded}
         aria-controls={contentId}
-        className="group flex w-fit items-center gap-1.5"
+        className="flex w-fit items-center gap-1.5"
       >
         <Triangle
           className={cn(
-            "size-1.5 shrink-0 fill-current text-fg-tertiary/50 transition-transform duration-fast group-hover:text-fg-primary",
+            "size-1.5 shrink-0 fill-current text-fg-tertiary/50 transition-transform duration-fast",
             expanded ? "rotate-180" : "rotate-90",
           )}
         />
-        <Text
-          as="span"
-          size="sm"
-          weight="medium"
-          color="tertiary"
-          className="group-hover:text-fg-primary"
-        >
+        <Text as="span" size="sm" weight="medium" color="tertiary">
           {t("review.reference_merge_diff_toggle_label")}
         </Text>
       </button>
