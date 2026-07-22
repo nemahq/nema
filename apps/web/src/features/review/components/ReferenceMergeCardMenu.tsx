@@ -14,6 +14,10 @@ import { useTranslation } from "@web/lib/tolgee";
 
 interface ReferenceMergeCardMenuProps {
   disabled: boolean;
+  // "원래대로"만의 조건(이미 원본과 같음)이라 트리거 자체를 막지 않는다 —
+  // DigestCardMenu·ReferenceCardMenu처럼 이 메뉴도 나중에 액션이 늘 걸 감안해
+  // 만들어졌는데, 트리거를 막으면 그때 늘어날 다른 액션까지 같이 가려진다.
+  restoreDisabled: boolean;
   onRestore: () => void;
 }
 
@@ -23,6 +27,7 @@ interface ReferenceMergeCardMenuProps {
 // 대신 메뉴 뒤로 옮겼다.
 export function ReferenceMergeCardMenu({
   disabled,
+  restoreDisabled,
   onRestore,
 }: ReferenceMergeCardMenuProps) {
   const { t } = useTranslation();
@@ -50,7 +55,7 @@ export function ReferenceMergeCardMenu({
         </TooltipContent>
       </Tooltip>
       <DropdownMenuContent side="bottom" align="end" className="min-w-44">
-        <DropdownMenuItem onClick={onRestore} disabled={disabled}>
+        <DropdownMenuItem onClick={onRestore} disabled={restoreDisabled}>
           <Undo2 />
           {t("review.reference_merge_restore_action")}
         </DropdownMenuItem>

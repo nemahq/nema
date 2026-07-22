@@ -7,9 +7,6 @@ import { useTranslation } from "@web/lib/tolgee";
 interface LabelSearchListProps {
   trimmedQuery: string;
   hasCandidates: boolean;
-  // 후보가 0개인 원인을 가른다 — "일치 항목 없음"과 "이미 다 붙어서 남은 게
-  // 없음"은 서로 다른 상태라 같은 문구를 쓰면 잘못된 신호가 된다.
-  hasAnyLabel: boolean;
   hasExactMatch: boolean;
   canCreate: boolean;
   onStartCreate: (name: string) => void;
@@ -23,7 +20,6 @@ interface LabelSearchListProps {
 export function LabelSearchList({
   trimmedQuery,
   hasCandidates,
-  hasAnyLabel,
   hasExactMatch,
   canCreate,
   onStartCreate,
@@ -35,13 +31,12 @@ export function LabelSearchList({
     <>
       <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
         {children}
+        {/* 이미 붙은 후보도 목록에서 안 빠지므로(LabelSearchRow) "이미 모두
+            추가했어요"는 도달할 일이 없다 — 후보가 0개면 워크스페이스에 활성
+            라벨 자체가 없다는 뜻뿐이라 문구를 하나로 통일한다. */}
         {!hasCandidates && trimmedQuery === "" && (
           <Text as="li" size="sm" color="tertiary" className="px-2 py-1">
-            {t(
-              hasAnyLabel
-                ? "review.label_search_all_added"
-                : "review.label_search_empty",
-            )}
+            {t("review.label_search_empty")}
           </Text>
         )}
       </ul>

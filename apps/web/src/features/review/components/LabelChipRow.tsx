@@ -6,6 +6,9 @@ interface LabelChipRowProps {
   // 개수 제한에 걸리면 입력 자체를 감춘다 — 더 고를 수 없는데 검색창만 남으면
   // 고장난 것처럼 보인다(사유는 아래 LabelLimitNotice가 대신 말해준다).
   searchable: boolean;
+  maxLength?: number;
+  // placeholder를 안 두는 대신(아래 이유) 스크린리더용 이름은 필수로 받는다.
+  "aria-label": string;
   onQueryChange: (query: string) => void;
   children: ReactNode;
 }
@@ -18,6 +21,8 @@ export function LabelChipRow({
   query,
   disabled,
   searchable,
+  maxLength,
+  "aria-label": ariaLabel,
   onQueryChange,
   children,
 }: LabelChipRowProps) {
@@ -32,6 +37,8 @@ export function LabelChipRow({
         <input
           value={query}
           disabled={disabled}
+          maxLength={maxLength}
+          aria-label={ariaLabel}
           onChange={(e) => onQueryChange(e.target.value)}
           className="min-w-[4rem] flex-1 border-none bg-transparent text-sm outline-none disabled:pointer-events-none"
         />

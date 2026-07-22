@@ -8,6 +8,7 @@ import {
 } from "@nema-io/weave";
 import { Tag as TagIcon } from "@nema-io/weave/icons";
 
+import { applyTagRenames } from "@web/features/review/reviewEditingState";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { useEditing } from "./EditingProvider";
@@ -45,8 +46,11 @@ export function DigestTagPicker({
 }: DigestTagPickerProps) {
   const { t } = useTranslation();
   const dispatch = useEditing((state) => state.dispatch);
-  const tags = useEditing(
-    (state) => state.overrides.tagsOverrides.get(digestIndex) ?? baseTags,
+  const tags = useEditing((state) =>
+    applyTagRenames(
+      state.overrides.tagsOverrides.get(digestIndex) ?? baseTags,
+      state.overrides.tagRenames,
+    ),
   );
 
   return (

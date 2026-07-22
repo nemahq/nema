@@ -46,7 +46,8 @@ export function ReferenceMergeCardHeader({
           onToggleViewed={onToggleViewed}
         />
         <ReferenceMergeCardMenu
-          disabled={disabled || !restorable}
+          disabled={disabled}
+          restoreDisabled={disabled || !restorable}
           onRestore={onRestore}
         />
       </div>

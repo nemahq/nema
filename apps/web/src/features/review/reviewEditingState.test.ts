@@ -63,6 +63,8 @@ const EMPTY_OVERRIDES: ReviewOverrides = {
   bodyOverrides: new Map(),
   topicsOverrides: new Map(),
   tagsOverrides: new Map(),
+  tagRenames: new Map(),
+  topicRenames: new Map(),
   removedReferenceKeys: new Set(),
   referenceOverrides: new Map(),
   mergeNoteOverrides: new Map(),
@@ -89,6 +91,25 @@ describe("computeReviewEditingState — dirty", () => {
     });
     expect(result.dirty).toBe(true);
   });
+
+  // dirty=false면 confirm 흐름이 updateReview(digestRows를 서버로 보내는 RPC)를
+  // 건너뛴다 — tagRenames만 있고 dirty가 안 켜지면 이름이 바뀐 태그가 confirm
+  // 페이로드에 아예 안 실린다.
+  it("태그 rename만 있어도 dirty=true", () => {
+    const result = computeReviewEditingState(review(), {
+      ...EMPTY_OVERRIDES,
+      tagRenames: new Map([["tag-1", { title: "새 이름", description: "d" }]]),
+    });
+    expect(result.dirty).toBe(true);
+  });
+
+  it("주제 rename만 있어도 dirty=true", () => {
+    const result = computeReviewEditingState(review(), {
+      ...EMPTY_OVERRIDES,
+      topicRenames: new Map([["topic-1", "새 주제"]]),
+    });
+    expect(result.dirty).toBe(true);
+  });
 });
 
 describe("computeReviewEditingState — digestRows", () => {
@@ -107,6 +128,85 @@ describe("computeReviewEditingState — digestRows", () => {
       titleOverrides: new Map([[0, "수정된 제목"]]),
     });
     expect(result.digestRows[0].title).toBe("수정된 제목");
+  });
+});
+
+// 태그·주제 이름 수정은 그 id를 쓰는 모든 Digest에 적용돼야 한다 — index 기반
+// tagsOverrides/topicsOverrides로는 트리거한 카드만 갱신되고 나머지는 옛 이름을
+// 든 채로 confirm 페이로드에 실려, 서버가 이름으로 find-or-create할 때 옛 이름의
+// 태그가 부활한다(PR #478 리뷰에서 지적된 데이터 오염 버그).
+describe("computeReviewEditingState — tagRenames/topicRenames", () => {
+  const SHARED_TAG = { id: "tag-1", title: "옛 이름", description: "설명" };
+  const SHARED_TOPIC = { id: "topic-1", name: "옛 주제" };
+  const DIGEST_WITH_SHARED_TAG: ReviewDigest = {
+    ...DIGEST,
+    topics: [SHARED_TOPIC],
+    tags: [SHARED_TAG],
+  };
+
+  it("tagsOverrides가 없는 Digest도 tagRenames를 적용받는다", () => {
+    const result = computeReviewEditingState(
+      review({ digests: [DIGEST_WITH_SHARED_TAG, DIGEST_WITH_SHARED_TAG] }),
+      {
+        ...EMPTY_OVERRIDES,
+        tagRenames: new Map([
+          ["tag-1", { title: "새 이름", description: "새 설명" }],
+        ]),
+      },
+    );
+    expect(result.digestRows[0].tags).toEqual([
+      { id: "tag-1", title: "새 이름", description: "새 설명" },
+    ]);
+    expect(result.digestRows[1].tags).toEqual([
+      { id: "tag-1", title: "새 이름", description: "새 설명" },
+    ]);
+  });
+
+  it("topicsOverrides가 없는 Digest도 topicRenames를 적용받는다", () => {
+    const result = computeReviewEditingState(
+      review({ digests: [DIGEST_WITH_SHARED_TAG, DIGEST_WITH_SHARED_TAG] }),
+      {
+        ...EMPTY_OVERRIDES,
+        topicRenames: new Map([["topic-1", "새 주제"]]),
+      },
+    );
+    expect(result.digestRows[0].topics).toEqual([
+      { id: "topic-1", name: "새 주제" },
+    ]);
+    expect(result.digestRows[1].topics).toEqual([
+      { id: "topic-1", name: "새 주제" },
+    ]);
+  });
+
+  it("tagsOverrides가 있는 Digest는 override 위에 rename을 얹는다", () => {
+    const result = computeReviewEditingState(
+      review({ digests: [DIGEST_WITH_SHARED_TAG] }),
+      {
+        ...EMPTY_OVERRIDES,
+        tagsOverrides: new Map([
+          [0, [SHARED_TAG, { id: null, title: "초안 태그", description: "d" }]],
+        ]),
+        tagRenames: new Map([
+          ["tag-1", { title: "새 이름", description: "새 설명" }],
+        ]),
+      },
+    );
+    expect(result.digestRows[0].tags).toEqual([
+      { id: "tag-1", title: "새 이름", description: "새 설명" },
+      { id: null, title: "초안 태그", description: "d" },
+    ]);
+  });
+
+  it("id가 null인 초안 태그·주제는 rename의 영향을 받지 않는다", () => {
+    const result = computeReviewEditingState(review(), {
+      ...EMPTY_OVERRIDES,
+      tagRenames: new Map([
+        ["tag-1", { title: "새 이름", description: "새 설명" }],
+      ]),
+      topicRenames: new Map([["topic-1", "새 주제"]]),
+    });
+    expect(result.digestRows[0].tags).toBe(DIGEST.tags);
+    expect(result.digestRows[0].topics).toBe(DIGEST.topics);
   });
 });
 

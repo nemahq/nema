@@ -1,8 +1,14 @@
 import { useCallback, useRef } from "react";
 
-// body 대신 "이 팝오버 콘텐츠 안에서 난 스크롤인가"만 본다 — 실제 스크롤 컨테이너가
+// body 대신 "팝오버 콘텐츠 안에서 난 스크롤인가"만 본다 — 실제 스크롤 컨테이너가
 // body가 아닌 경우가 흔하고(portal로 뜨는 팝오버 입장에선 그게 뭔지 알 방법이 없다),
 // 팝오버 자신의 내부 스크롤(검색 결과 목록 등)은 항상 허용해야 한다.
+//
+// "이 인스턴스 자신의" 콘텐츠가 아니라 [data-slot="popover-content"] 전체를 본다
+// — Popover는 전부 Portal로 body 직속이라, 팝오버 A 안에 중첩된 팝오버 B는 DOM상
+// A의 자손이 아니다. 각자 자기 노드만 검사하면 B가 열려 있는 동안 A 자신의 목록도
+// (B 입장에서는 "바깥"이라) 스크롤이 막힌다 — 어느 팝오버 콘텐츠에 속하든 전부
+// 허용하고, 배경 페이지만 막는다.
 //
 // useEffect가 아니라 콜백 ref로 여닫는다 — 이 훅을 쓰는 PopoverContent 자신은
 // 팝오버가 닫혀 있어도 부모가 렌더될 때마다 항상 마운트된다(실제로 열릴 때만
@@ -18,11 +24,12 @@ export function usePopoverScrollLock<T extends HTMLElement>() {
     if (!node) {
       return;
     }
-    // 널 체크 좁히기는 중첩 함수 클로저까지 안 이어지므로 별도 상수로 고정한다.
-    const content = node;
 
     function blockOutsideScroll(event: WheelEvent | TouchEvent) {
-      if (event.target instanceof Node && content.contains(event.target)) {
+      if (
+        event.target instanceof Element &&
+        event.target.closest('[data-slot="popover-content"]')
+      ) {
         return;
       }
       event.preventDefault();

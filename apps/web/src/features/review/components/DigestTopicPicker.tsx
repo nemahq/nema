@@ -9,6 +9,7 @@ import {
 } from "@nema-io/weave";
 import { Circle, Plus } from "@nema-io/weave/icons";
 
+import { applyTopicRenames } from "@web/features/review/reviewEditingState";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { useEditing } from "./EditingProvider";
@@ -45,8 +46,11 @@ export function DigestTopicPicker({
 }: DigestTopicPickerProps) {
   const { t } = useTranslation();
   const dispatch = useEditing((state) => state.dispatch);
-  const topics = useEditing(
-    (state) => state.overrides.topicsOverrides.get(digestIndex) ?? baseTopics,
+  const topics = useEditing((state) =>
+    applyTopicRenames(
+      state.overrides.topicsOverrides.get(digestIndex) ?? baseTopics,
+      state.overrides.topicRenames,
+    ),
   );
 
   return (

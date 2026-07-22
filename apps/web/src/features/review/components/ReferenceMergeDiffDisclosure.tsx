@@ -1,3 +1,4 @@
+import { diffWords } from "diff";
 import { useId, useState } from "react";
 
 import { cn, Text } from "@nema-io/weave";
@@ -13,8 +14,11 @@ interface ReferenceMergeDiffDisclosureProps {
 }
 
 // 기본 접힘 — 대부분은 편집 필드의 현재 값만 보면 되고, "엔진이 원래 뭘 제안했나"는
-// 의심이 들 때만 펼쳐 보는 대조용이다. 제안이 없으면(원본과 같으면) 펼칠 것도
-// 없으므로 트리거 자체를 안 낸다.
+// 의심이 들 때만 펼쳐 보는 대조용이다. 제안이 없으면 펼칠 것도 없으므로 트리거
+// 자체를 안 낸다 — 문자열 단순 비교(!==) 대신 diffWords 결과에 실제 추가·삭제
+// 구간이 있는지로 판단한다. diffWords의 토큰 비교는 공백을 trim해 같다고 보므로,
+// 공백만 다른 두 문자열은 !==는 참이어도 하이라이트할 게 없다 — 그 경우 문자열
+// 비교만 믿으면 토글은 뜨는데 눌러도 아무 것도 강조되지 않는다.
 export function ReferenceMergeDiffDisclosure({
   original,
   revised,
@@ -22,8 +26,12 @@ export function ReferenceMergeDiffDisclosure({
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const contentId = useId();
+  const segments = diffWords(original, revised);
+  const hasChanges = segments.some(
+    (segment) => segment.added || segment.removed,
+  );
 
-  if (original === revised) {
+  if (!hasChanges) {
     return null;
   }
 
@@ -51,7 +59,7 @@ export function ReferenceMergeDiffDisclosure({
       </button>
       {expanded && (
         <div id={contentId}>
-          <ReferenceMergeDiff original={original} revised={revised} />
+          <ReferenceMergeDiff segments={segments} />
         </div>
       )}
     </div>

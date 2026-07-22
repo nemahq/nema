@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-import { DIGEST_TAGS_MAX, type DigestTagDraft } from "@nema-io/shared";
+import {
+  DIGEST_TAGS_MAX,
+  type DigestTagDraft,
+  TAG_TITLE_MAX_LENGTH,
+} from "@nema-io/shared";
 import { Chip, Separator } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
@@ -43,23 +47,6 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
     setCreatingTitle(null);
   }
 
-  // 이름·설명 수정은 검색 리스트(다른 컴포넌트)에서 일어나지만, 그 결과를 이
-  // Digest가 이미 붙여둔 tags 배열에도 바로 반영해야 위쪽 칩·바깥 트리거가
-  // 새로고침 없이 새 값을 보여준다.
-  function handleRenamed(renamed: {
-    id: string;
-    title: string;
-    description: string;
-  }) {
-    onChange(
-      tags.map((tag) =>
-        tag.id === renamed.id
-          ? { ...tag, title: renamed.title, description: renamed.description }
-          : tag,
-      ),
-    );
-  }
-
   if (creatingTitle !== null) {
     return (
       <TagCreateForm
@@ -82,6 +69,8 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
         query={query}
         disabled={disabled}
         searchable={!atMax}
+        maxLength={TAG_TITLE_MAX_LENGTH}
+        aria-label={t("review.label_search_placeholder")}
         onQueryChange={setQuery}
       >
         {tags.map((tag, index) => (
@@ -108,7 +97,6 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
           tags={tags}
           onSelectExisting={handleSelectExisting}
           onStartCreate={setCreatingTitle}
-          onRenamed={handleRenamed}
         />
       )}
     </div>

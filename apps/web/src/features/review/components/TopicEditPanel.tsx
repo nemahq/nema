@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-import { DIGEST_TOPICS_MAX, type DigestTopicDraft } from "@nema-io/shared";
+import {
+  DIGEST_TOPICS_MAX,
+  type DigestTopicDraft,
+  TOPIC_NAME_MAX_LENGTH,
+} from "@nema-io/shared";
 import { Chip, Separator } from "@nema-io/weave";
 
 import { useCurrentSpaceId } from "@web/features/workspace";
@@ -39,23 +43,14 @@ export function TopicEditPanel({
     setQuery("");
   }
 
-  // 이름 수정은 검색 리스트(다른 컴포넌트)에서 일어나지만, 그 결과를 이 Digest가
-  // 이미 붙여둔 topics 배열에도 바로 반영해야 위쪽 칩·바깥 트리거가 새로고침 없이
-  // 새 이름을 보여준다.
-  function handleRenamed(renamed: { id: string; name: string }) {
-    onChange(
-      topics.map((topic) =>
-        topic.id === renamed.id ? { ...topic, name: renamed.name } : topic,
-      ),
-    );
-  }
-
   return (
     <div className="flex flex-col gap-2">
       <LabelChipRow
         query={query}
         disabled={disabled}
         searchable={!atMax}
+        maxLength={TOPIC_NAME_MAX_LENGTH}
+        aria-label={t("review.label_search_placeholder")}
         onQueryChange={setQuery}
       >
         {topics.map((topic, index) => (
@@ -85,7 +80,6 @@ export function TopicEditPanel({
           topics={topics}
           onSelectExisting={handleSelectExisting}
           onCreateNew={handleCreateNew}
-          onRenamed={handleRenamed}
         />
       )}
     </div>

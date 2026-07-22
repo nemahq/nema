@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 
+import { TAG_DESCRIPTION_MAX_LENGTH } from "@nema-io/shared";
 import { Badge, Button, Text, Textarea } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
@@ -59,6 +60,7 @@ export function TagCreateForm({
           id={descriptionFieldId}
           autoFocus
           value={description}
+          maxLength={TAG_DESCRIPTION_MAX_LENGTH}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
         />
