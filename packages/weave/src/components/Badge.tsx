@@ -111,7 +111,6 @@ function Badge({
 export {
   Badge,
   type BadgeColor,
-  colorClasses as badgeColorClasses,
   type BadgeShape,
   type BadgeSize,
   type BadgeVariant,
