@@ -1,5 +1,4 @@
 import {
-  DIGEST_TYPES,
   type DigestBody,
   type DigestType,
   REFERENCE_TYPES,
@@ -41,18 +40,19 @@ export const REFERENCE_TYPE_LABEL: Record<ReferenceType, string> = {
 
 // Select의 onValueChange·서버가 준 문자열을 유니언으로 좁힌다 — `as` 없이(가드 없는
 // 단언 금지, apps/web/docs/conventions.md) 값이 실제 판별자 집합에 드는지 확인한다.
-export function isDigestType(value: string): value is DigestType {
-  return DIGEST_TYPES.some((type) => type === value);
-}
-
 export function isReferenceType(value: string): value is ReferenceType {
   return REFERENCE_TYPES.some((type) => type === value);
 }
 
 // 07-modeling.md의 DigestBody 필드 정의 순서·한글 라벨을 그대로 따른다.
 // key를 타입별 본문 필드로 좁혀, 없는 필드나 오타가 컴파일 에러로 드러나게 한다.
+export type DigestBodyFieldKind = "text" | "list";
+
 interface DigestBodyFieldMeta<T extends DigestType> {
   key: Exclude<keyof Extract<DigestBody, { type: T }>, "type">;
+  // 스키마상 string인지 string[]인지를 정의가 직접 들고 있는다 — 렌더가 값을 보고
+  // 되짚으면 값이 비어있는 필드에서 어느 쪽인지 알 수 없다.
+  kind: DigestBodyFieldKind;
   labelKey: TranslationKey;
   // 라벨은 "무슨 필드인지"만 말해줘서, 빈 필드에 뭘 적어야 할지는 별도 질문형
   // placeholder가 안내한다(design-decisions-log.md 참고) — 포커스됐을 때만
@@ -66,26 +66,31 @@ export const DIGEST_BODY_FIELDS: {
   decision: [
     {
       key: "situation",
+      kind: "text",
       labelKey: "review.digest_field_situation",
       placeholderKey: "review.digest_field_situation_placeholder",
     },
     {
       key: "choice",
+      kind: "text",
       labelKey: "review.digest_field_choice",
       placeholderKey: "review.digest_field_choice_placeholder",
     },
     {
       key: "reason",
+      kind: "text",
       labelKey: "review.digest_field_reason",
       placeholderKey: "review.digest_field_reason_placeholder",
     },
     {
       key: "tradeoff",
+      kind: "list",
       labelKey: "review.digest_field_tradeoff",
       placeholderKey: "review.digest_field_tradeoff_placeholder",
     },
     {
       key: "alternatives",
+      kind: "list",
       labelKey: "review.digest_field_alternatives",
       placeholderKey: "review.digest_field_alternatives_placeholder",
     },
@@ -93,21 +98,25 @@ export const DIGEST_BODY_FIELDS: {
   pending: [
     {
       key: "question",
+      kind: "text",
       labelKey: "review.digest_field_question",
       placeholderKey: "review.digest_field_question_placeholder",
     },
     {
       key: "background",
+      kind: "text",
       labelKey: "review.digest_field_background",
       placeholderKey: "review.digest_field_background_placeholder",
     },
     {
       key: "branches",
+      kind: "list",
       labelKey: "review.digest_field_branches",
       placeholderKey: "review.digest_field_branches_placeholder",
     },
     {
       key: "resolutionCondition",
+      kind: "text",
       labelKey: "review.digest_field_resolution_condition",
       placeholderKey: "review.digest_field_resolution_condition_placeholder",
     },
@@ -115,11 +124,13 @@ export const DIGEST_BODY_FIELDS: {
   learning: [
     {
       key: "finding",
+      kind: "text",
       labelKey: "review.digest_field_finding",
       placeholderKey: "review.digest_field_finding_placeholder",
     },
     {
       key: "evidence",
+      kind: "text",
       labelKey: "review.digest_field_evidence",
       placeholderKey: "review.digest_field_evidence_placeholder",
     },
@@ -127,16 +138,19 @@ export const DIGEST_BODY_FIELDS: {
   idea: [
     {
       key: "concept",
+      kind: "text",
       labelKey: "review.digest_field_concept",
       placeholderKey: "review.digest_field_concept_placeholder",
     },
     {
       key: "background",
+      kind: "text",
       labelKey: "review.digest_field_background",
       placeholderKey: "review.digest_field_background_placeholder",
     },
     {
       key: "branches",
+      kind: "list",
       labelKey: "review.digest_field_branches",
       placeholderKey: "review.digest_field_branches_placeholder",
     },
@@ -144,21 +158,25 @@ export const DIGEST_BODY_FIELDS: {
   assumption: [
     {
       key: "assumption",
+      kind: "text",
       labelKey: "review.digest_field_assumption",
       placeholderKey: "review.digest_field_assumption_placeholder",
     },
     {
       key: "evidence",
+      kind: "text",
       labelKey: "review.digest_field_evidence",
       placeholderKey: "review.digest_field_evidence_placeholder",
     },
     {
       key: "impact",
+      kind: "text",
       labelKey: "review.digest_field_impact",
       placeholderKey: "review.digest_field_impact_placeholder",
     },
     {
       key: "verificationCondition",
+      kind: "text",
       labelKey: "review.digest_field_verification_condition",
       placeholderKey: "review.digest_field_verification_condition_placeholder",
     },

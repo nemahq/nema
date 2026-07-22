@@ -10,6 +10,16 @@ export type ReviewEditingAction =
   | { type: "digest/setTitle"; index: number; title: string }
   | { type: "digest/setDescription"; index: number; description: string }
   | { type: "digest/setBody"; index: number; body: ReviewDigest["body"] }
+  // 본문 필드 하나만 고치는 경로 — 필드가 자기 값만 구독하고 나머지 형제 필드를
+  // 안 읽어도 되게 한다. overrides는 서버 상태 위의 차분이라 아직 오버라이드가
+  // 없는 첫 수정엔 합칠 바탕이 필요해서, 호출부가 서버 body를 같이 넘긴다.
+  | {
+      type: "digest/setBodyField";
+      index: number;
+      baseBody: ReviewDigest["body"];
+      key: string;
+      value: string | string[];
+    }
   | { type: "digest/setTopics"; index: number; topics: ReviewDigest["topics"] }
   | { type: "digest/setTags"; index: number; tags: ReviewDigest["tags"] }
   | { type: "digest/remove"; index: number }
@@ -62,6 +72,17 @@ export function reviewEditingReducer(
           action.body,
         ),
       };
+    case "digest/setBodyField": {
+      const current = overrides.bodyOverrides.get(action.index) ?? action.baseBody;
+      const next: ReviewDigest["body"] = {
+        ...current,
+        [action.key]: action.value,
+      };
+      return {
+        ...overrides,
+        bodyOverrides: new Map(overrides.bodyOverrides).set(action.index, next),
+      };
+    }
     case "digest/setTopics":
       return {
         ...overrides,
