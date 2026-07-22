@@ -536,6 +536,6 @@
   /* danger 톤 규칙: 배너(Alert error)와 항상 같은 조합을 쓴다 — 위험 액션이
      화면마다 다른 빨강으로 보이면 위험도를 신뢰하기 어렵다. */
   .surface-danger {
-    @apply bg-status-error-tint text-status-error hover:bg-status-error/15;
+    @apply bg-status-error-tint text-status-error hover:bg-status-error/15 data-[state=open]:bg-status-error/15;
   }
 }
