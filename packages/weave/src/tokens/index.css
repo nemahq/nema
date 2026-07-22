@@ -133,6 +133,38 @@
   --palette-dark-purple-tint: rgba(168, 85, 247, 0.12);
   --palette-dark-orange: #fb923c; /* orange-400 */
 
+  /* Tag — 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 팔레트. 유저가
+     직접 색을 고르지 않고 태그 id 해시로 자동 배정한다(Notion 태그처럼) — 그래서
+     status·Hue처럼 "채움 배경 + 원색 텍스트"가 아니라 "옅은 파스텔 채움 + 고정
+     중립 텍스트"다(Notion 태그 배경 실측 참고). 라이트는 매우 밝게(L92%) 고정해
+     자기 테마의 fg-primary(어두운 텍스트)로 8색 전부 여유 있게 AA를 만족하고,
+     다크는 명도를 라이트만큼 올릴 여지가 없어(텍스트 대비가 이미 한계선이라
+     조금만 밝혀도 AA 미달) 대신 채도를 낮춰(25%) 같은 "옅음"을 낸다 — 카드
+     배경과는 구분되면서 자기 테마 fg-primary(밝은 텍스트)로 AA를 만족하는
+     선에서 색마다 명도도 다르게 맞췄다(hue별 지각 밝기가 달라 균일한 명도로는
+     안 맞음 — status·Hue 대비 보정 때와 같은 이유). status·Hue보다 훨씬
+     옅어서 "쨍함(Badge류) vs 은은함(Tag)"으로 한눈에 구분된다. */
+  --palette-light-tag-slate: #e0e9f5;
+  --palette-light-tag-cyan: #e0f0f5;
+  --palette-light-tag-sage: #e9f5e0;
+  --palette-light-tag-olive: #f5f3e0;
+  --palette-light-tag-terracotta: #f5e6e0;
+  --palette-light-tag-rose: #f5e0e4;
+  --palette-light-tag-mauve: #f5e0f5;
+  --palette-light-tag-violet: #e7e0f5;
+  --palette-light-tag-gray: #ebebeb;
+
+  /* Tag — dark */
+  --palette-dark-tag-slate: #506786;
+  --palette-dark-tag-cyan: #436470;
+  --palette-dark-tag-sage: #496039;
+  --palette-dark-tag-olive: #5c5937;
+  --palette-dark-tag-terracotta: #835b4e;
+  --palette-dark-tag-rose: #8f5660;
+  --palette-dark-tag-mauve: #895289;
+  --palette-dark-tag-violet: #69568f;
+  --palette-dark-tag-gray: #666666;
+
   /* Identity badge — 개인화 배지(현재 워크스페이스) 배경, 테마 무관 고정값.
      전부 흰 텍스트로 통일해 각 색이 흰 글자 대비(4.5:1)를 만족하는 톤까지 내렸다.
      rose는 너무 튀어서 제외. */
@@ -211,6 +243,15 @@
   --yellow-tint: var(--palette-light-yellow-tint);
   --purple: var(--palette-light-purple);
   --purple-tint: var(--palette-light-purple-tint);
+  --tag-slate: var(--palette-light-tag-slate);
+  --tag-cyan: var(--palette-light-tag-cyan);
+  --tag-sage: var(--palette-light-tag-sage);
+  --tag-olive: var(--palette-light-tag-olive);
+  --tag-terracotta: var(--palette-light-tag-terracotta);
+  --tag-rose: var(--palette-light-tag-rose);
+  --tag-mauve: var(--palette-light-tag-mauve);
+  --tag-violet: var(--palette-light-tag-violet);
+  --tag-gray: var(--palette-light-tag-gray);
 
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
@@ -257,6 +298,15 @@
   --yellow-tint: var(--palette-dark-yellow-tint);
   --purple: var(--palette-dark-purple);
   --purple-tint: var(--palette-dark-purple-tint);
+  --tag-slate: var(--palette-dark-tag-slate);
+  --tag-cyan: var(--palette-dark-tag-cyan);
+  --tag-sage: var(--palette-dark-tag-sage);
+  --tag-olive: var(--palette-dark-tag-olive);
+  --tag-terracotta: var(--palette-dark-tag-terracotta);
+  --tag-rose: var(--palette-dark-tag-rose);
+  --tag-mauve: var(--palette-dark-tag-mauve);
+  --tag-violet: var(--palette-dark-tag-violet);
+  --tag-gray: var(--palette-dark-tag-gray);
 
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
@@ -306,6 +356,15 @@
   --yellow-tint: var(--palette-dark-yellow-tint);
   --purple: var(--palette-dark-purple);
   --purple-tint: var(--palette-dark-purple-tint);
+  --tag-slate: var(--palette-dark-tag-slate);
+  --tag-cyan: var(--palette-dark-tag-cyan);
+  --tag-sage: var(--palette-dark-tag-sage);
+  --tag-olive: var(--palette-dark-tag-olive);
+  --tag-terracotta: var(--palette-dark-tag-terracotta);
+  --tag-rose: var(--palette-dark-tag-rose);
+  --tag-mauve: var(--palette-dark-tag-mauve);
+  --tag-violet: var(--palette-dark-tag-violet);
+  --tag-gray: var(--palette-dark-tag-gray);
 
   --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
@@ -352,6 +411,15 @@
   --yellow-tint: var(--palette-light-yellow-tint);
   --purple: var(--palette-light-purple);
   --purple-tint: var(--palette-light-purple-tint);
+  --tag-slate: var(--palette-light-tag-slate);
+  --tag-cyan: var(--palette-light-tag-cyan);
+  --tag-sage: var(--palette-light-tag-sage);
+  --tag-olive: var(--palette-light-tag-olive);
+  --tag-terracotta: var(--palette-light-tag-terracotta);
+  --tag-rose: var(--palette-light-tag-rose);
+  --tag-mauve: var(--palette-light-tag-mauve);
+  --tag-violet: var(--palette-light-tag-violet);
+  --tag-gray: var(--palette-light-tag-gray);
 
   --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
@@ -409,6 +477,17 @@
   --color-yellow-tint: var(--yellow-tint);
   --color-purple: var(--purple);
   --color-purple-tint: var(--purple-tint);
+
+  /* Tag */
+  --color-tag-slate: var(--tag-slate);
+  --color-tag-cyan: var(--tag-cyan);
+  --color-tag-sage: var(--tag-sage);
+  --color-tag-olive: var(--tag-olive);
+  --color-tag-terracotta: var(--tag-terracotta);
+  --color-tag-rose: var(--tag-rose);
+  --color-tag-mauve: var(--tag-mauve);
+  --color-tag-violet: var(--tag-violet);
+  --color-tag-gray: var(--tag-gray);
 
   /* Border */
   --color-border-strong: var(--border-strong);

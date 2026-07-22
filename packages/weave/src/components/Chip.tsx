@@ -7,6 +7,19 @@ import { NEUTRAL_TONE_CLASSNAME, OUTLINE_TONE_CLASSNAME } from "./Badge";
 type ChipVariant = "neutral" | "outline";
 type ChipShape = "rounded" | "pill";
 
+// 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 — 색을 직접 고르지
+// 않고 태그 id 해시로 자동 배정한다(tokens/index.css "Tag" 섹션 참고).
+type TagColor =
+  | "slate"
+  | "cyan"
+  | "sage"
+  | "olive"
+  | "terracotta"
+  | "rose"
+  | "mauve"
+  | "violet"
+  | "gray";
+
 const STATIC_TONE_CLASSNAME: Record<ChipVariant, string> = {
   neutral: NEUTRAL_TONE_CLASSNAME,
   outline: OUTLINE_TONE_CLASSNAME,
@@ -22,6 +35,11 @@ const HOVER_CLASSNAME: Record<ChipVariant, string> = {
   outline: "hover:bg-fg-primary/5 data-[state=open]:bg-fg-primary/5",
 };
 
+// Tag 배경이 거의 흰색에 가까운 파스텔이라, bg-*/15 알파 겹침(다른 variant와
+// 같은 방식)이면 hover가 안 보인다 — brightness를 낮춰(밝게 만드는 대신
+// 살짝 진하게) 신호를 만든다.
+const TAG_HOVER_CLASSNAME = "hover:brightness-95";
+
 // rounded는 태그·Topic처럼 여러 개를 나란히 늘어놓는 자리 — pill은 값 하나를
 // 통째로 담는 자리(DraftSpaceSelect 등). Badge의 shape 구분과 같은 결.
 const SHAPE_CLASSNAME: Record<ChipShape, string> = {
@@ -29,10 +47,31 @@ const SHAPE_CLASSNAME: Record<ChipShape, string> = {
   pill: "rounded-full",
 };
 
+// 텍스트는 새 토큰 없이 fg-primary를 그대로 쓴다 — 배경이 라이트에서 매우
+// 밝고 다크에서 카드보다 밝은 색이라, 각 테마의 기본 텍스트 색이 그대로
+// 여유 있게 AA를 만족한다(tokens/index.css "Tag" 섹션 계산 근거).
+const TAG_COLOR_CLASSNAME: Record<TagColor, string> = {
+  slate: "bg-tag-slate text-fg-primary",
+  cyan: "bg-tag-cyan text-fg-primary",
+  sage: "bg-tag-sage text-fg-primary",
+  olive: "bg-tag-olive text-fg-primary",
+  terracotta: "bg-tag-terracotta text-fg-primary",
+  rose: "bg-tag-rose text-fg-primary",
+  mauve: "bg-tag-mauve text-fg-primary",
+  violet: "bg-tag-violet text-fg-primary",
+  gray: "bg-tag-gray text-fg-primary",
+};
+
 interface ChipRemove {
   onClick: () => void;
   ariaLabel: string;
 }
+
+// variant(neutral/outline)와 color(TagColor)는 배타적으로 받는다 — Badge의
+// variant/color 구분(의미 있는 톤 vs weave가 뜻을 모르는 분류)과 같은 이유.
+type ChipToneProps =
+  | { variant?: ChipVariant; color?: never }
+  | { variant?: never; color: TagColor };
 
 // Badge(정적 라벨)와 짝을 이루는 인터랙티브 버전. remove가 없으면 항상 <button> —
 // DropdownMenuTrigger asChild처럼 onClick이 아니라 onPointerDown 등 임의의
@@ -44,7 +83,8 @@ interface ChipRemove {
 // 강제해 되돌리는 비용이 커서 안 쓴다(weave-usage.md "Button" 표 "칩·pill 안
 // 버튼" 제외 규칙 — 안의 라벨·제거 버튼도 같은 이유로 raw button).
 function Chip({
-  variant = "neutral",
+  variant,
+  color,
   shape = "pill",
   className,
   type = "button",
@@ -54,17 +94,22 @@ function Chip({
   disabled,
   children,
   ...props
-}: React.ComponentPropsWithRef<"button"> & {
-  variant?: ChipVariant;
-  shape?: ChipShape;
-  // min-w-0 없이 truncate만 있으면 flex 안에서 조용히 안 먹으므로 항상 같이 묶는다.
-  truncated?: boolean;
-  remove?: ChipRemove;
-}) {
+}: Omit<React.ComponentPropsWithRef<"button">, "color"> &
+  ChipToneProps & {
+    shape?: ChipShape;
+    // min-w-0 없이 truncate만 있으면 flex 안에서 조용히 안 먹으므로 항상 같이 묶는다.
+    truncated?: boolean;
+    remove?: ChipRemove;
+  }) {
   const toneClassName = cn(
     SHAPE_CLASSNAME[shape],
-    STATIC_TONE_CLASSNAME[variant],
+    color
+      ? TAG_COLOR_CLASSNAME[color]
+      : STATIC_TONE_CLASSNAME[variant ?? "neutral"],
   );
+  const hoverClassName = color
+    ? TAG_HOVER_CLASSNAME
+    : HOVER_CLASSNAME[variant ?? "neutral"];
   const labelClassName = cn(truncated && "min-w-0 truncate");
 
   if (remove) {
@@ -84,7 +129,7 @@ function Chip({
             onClick={onClick}
             className={cn(
               labelClassName,
-              HOVER_CLASSNAME[variant],
+              hoverClassName,
               "disabled:pointer-events-none",
             )}
           >
@@ -115,7 +160,7 @@ function Chip({
       className={cn(
         "inline-flex items-center px-2.5 py-1 text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
         toneClassName,
-        HOVER_CLASSNAME[variant],
+        hoverClassName,
         labelClassName,
         className,
       )}
@@ -126,4 +171,4 @@ function Chip({
   );
 }
 
-export { Chip, type ChipShape, type ChipVariant };
+export { Chip, type ChipShape, type ChipVariant, type TagColor };

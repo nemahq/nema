@@ -19,7 +19,12 @@ export {
   CardTitle,
 } from "./components/Card";
 export { Checkbox } from "./components/Checkbox";
-export { Chip, type ChipShape, type ChipVariant } from "./components/Chip";
+export {
+  Chip,
+  type ChipShape,
+  type ChipVariant,
+  type TagColor,
+} from "./components/Chip";
 export {
   Dialog,
   DialogClose,
