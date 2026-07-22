@@ -48,6 +48,12 @@ cn("dark:bg-brand", "bg-red-500")  →  "dark:bg-brand bg-red-500"
 
 **증상**: 오버라이드를 했는데 특정 모드/상태에서만 안 먹으면 이 함정을 의심할 것.
 
+## DropdownMenu/Popover/Select 트리거는 열려 있는 동안 눌린 것처럼 보여야 한다
+
+`Button`/`SelectTrigger`/`Chip`은 `data-[state=open]`을 hover와 같은 톤으로 이미 처리한다 — `DropdownMenuTrigger`/`PopoverTrigger`에 `asChild`로 얹거나 `Select`를 그대로 쓰면 별도 작업 없이 열려 있는 동안 자동으로 눌림 표시가 된다. 트리거가 이 셋이 아닌 raw 태그(`<button>` 등)라면 소비처가 `data-[state=open]:` 클래스를 직접 달아야 한다(`DigestTopicPicker` 참고).
+
+**함정 — Tooltip과 DropdownMenu(또는 Popover)를 같은 트리거에 이중으로 `asChild`로 겹치면 안 먹는다.** Radix가 두 프리미티브의 `data-state`를 같은 DOM 노드에 병합하는데, 바깥쪽(Tooltip)이 안쪽(DropdownMenu) 것을 덮어써서 메뉴가 열려 있어도 `data-state`가 "closed"로 찍힌다. 이 조합에선 `data-[state=open]:` 셀렉터 대신 `DropdownMenu`의 `open`/`onOpenChange`를 직접 들고 그 값으로 className을 분기한다 — `SpaceItemMenu`, `DigestCardMenu` 참고.
+
 ## 새 토큰을 추가할 때
 
 토큰은 정의만으로 끝나지 않는다. 아래 세 층을 다 거쳐야 실제로 쓸 수 있는 클래스가 생긴다 — 이번 작업에서 한 층이 빠져 죽은 코드가 두 번 나왔다(`border-strong`이 7곳에서 쓰였지만 어디에도 정의되지 않았던 것, `Select`의 placeholder 스타일이 `::placeholder` 의사요소를 겨냥했지만 Radix Select는 `data-placeholder` 속성이라 선택자가 애초에 안 맞았던 것).

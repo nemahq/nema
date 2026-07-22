@@ -50,7 +50,7 @@ export function DigestTopicPicker({
           <button
             type="button"
             disabled={disabled}
-            className="-mb-px flex cursor-pointer items-center gap-1 border-b border-transparent text-left text-fg-primary hover:border-current disabled:pointer-events-none disabled:opacity-50"
+            className="-mb-px flex cursor-pointer items-center gap-1 border-b border-transparent text-left text-fg-primary hover:border-current data-[state=open]:border-current disabled:pointer-events-none disabled:opacity-50"
           >
             {/* color를 제목·본문 값과 같은 primary로 맞춘다 — 굵기·크기는 그대로
                 둬서 위계는 유지하되, 눈에 덜 띄던 tertiary 대비 가독성만 올린다.
@@ -85,7 +85,7 @@ export function DigestTopicPicker({
             <span
               className={cn(
                 CHIP_OUTLINE_TONE_CLASSNAME,
-                "inline-flex size-5 items-center justify-center rounded-full border-dashed transition-colors group-hover:bg-fg-primary/5",
+                "inline-flex size-5 items-center justify-center rounded-full border-dashed transition-colors group-hover:bg-fg-primary/5 group-data-[state=open]:bg-fg-primary/5",
               )}
             >
               <Plus className="size-3" />

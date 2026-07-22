@@ -1,6 +1,9 @@
+import { useState } from "react";
+
 import { DIGEST_TYPES, type DigestType } from "@nema-io/shared";
 import {
   Button,
+  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -35,9 +38,15 @@ export function DigestCardMenu({
   onRemove,
 }: DigestCardMenuProps) {
   const { t } = useTranslation();
+  // Tooltip과 DropdownMenu 둘 다 트리거에 asChild로 겹쳐 있으면 Radix가 각자의
+  // data-state를 같은 DOM 노드에 병합하다가 바깥쪽(Tooltip) 것이 안쪽(DropdownMenu)
+  // 것을 덮어써서, 메뉴가 열려 있어도 트리거의 data-state가 "closed"로 찍히는
+  // 문제가 있다(SpaceItemMenu와 동일). data-[state=open]: 셀렉터 대신 실제
+  // 열림 여부를 직접 든다.
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
@@ -48,7 +57,11 @@ export function DigestCardMenu({
               shape="circle"
               disabled={disabled}
               aria-label={t("review.digest_menu_label")}
-              className="text-fg-tertiary"
+              className={cn(
+                "text-fg-tertiary",
+                menuOpen &&
+                  "bg-surface-raised-hover/75 dark:bg-surface-raised-hover",
+              )}
             >
               <Ellipsis className="size-4" />
             </Button>

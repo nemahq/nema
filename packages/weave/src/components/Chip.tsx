@@ -17,8 +17,14 @@ export const CHIP_OUTLINE_TONE_CLASSNAME =
   "border border-border-strong text-fg-tertiary";
 
 const VARIANT_CLASSNAME: Record<ChipVariant, string> = {
-  neutral: cn(NEUTRAL_TONE_CLASSNAME, "hover:bg-fg-primary/15"),
-  outline: cn(CHIP_OUTLINE_TONE_CLASSNAME, "hover:bg-fg-primary/5"),
+  neutral: cn(
+    NEUTRAL_TONE_CLASSNAME,
+    "hover:bg-fg-primary/15 data-[state=open]:bg-fg-primary/15",
+  ),
+  outline: cn(
+    CHIP_OUTLINE_TONE_CLASSNAME,
+    "hover:bg-fg-primary/5 data-[state=open]:bg-fg-primary/5",
+  ),
 };
 
 // Badge(정적 라벨)와 짝을 이루는 인터랙티브 버전 — 값 하나를 보여주다가 클릭하면
