@@ -121,8 +121,11 @@ function Chip({
         className={cn(
           "inline-flex items-center gap-1 py-0.5 pl-2 pr-1 text-[12px] font-medium leading-[1.4]",
           toneClassName,
+          truncated && "min-w-0",
+          disabled && "opacity-50",
           className,
         )}
+        {...props}
       >
         {onClick ? (
           <button

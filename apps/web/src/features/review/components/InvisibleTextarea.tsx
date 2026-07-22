@@ -18,6 +18,8 @@ interface InvisibleTextareaProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 }
 
+// 보기/편집 모드를 나누지 않는 게 이 카드의 핵심 판단이라(design-decisions-log.md)
+// 항상 textarea이되 평소엔 무입력 티가 없게 스타일링한다.
 export function InvisibleTextarea({
   value,
   disabled,
@@ -35,6 +37,8 @@ export function InvisibleTextarea({
       ref={ref}
       variant="borderless"
       size="base"
+      // maxRows를 안 주는 건 의도적 — 내용이 길어도 필드가 자기 스크롤을 갖지
+      // 않고 페이지 스크롤에 그대로 얹힌다.
       autoSize
       value={value}
       disabled={disabled}

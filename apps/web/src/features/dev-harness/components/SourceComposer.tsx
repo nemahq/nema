@@ -26,7 +26,11 @@ export function SourceComposer() {
         placeholder="무엇이든 붙여넣거나 적어보세요"
         rows={5}
         resize="vertical"
-        className="rounded-lg bg-surface-raised p-3 focus-visible:border-border-strong"
+        // Textarea 기본값의 dark:focus-visible:border-fg-tertiary/70가 특이도로
+        // 이겨서 일반 focus-visible: 오버라이드는 다크에서 안 먹는다(weave-usage.md
+        // "함정" 섹션) — 같은 변형(dark:focus-visible:)으로 맞춰야 twMerge가
+        // 제대로 교체한다.
+        className="rounded-lg bg-surface-raised p-3 focus-visible:border-border-strong dark:focus-visible:border-border-strong"
       />
       <Button
         size="xs"

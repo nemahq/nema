@@ -5,7 +5,9 @@ import { ArrowUp, Square } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
-// text-sm(14px/leading-[1.5]=21px) 기준 200px과 같은 값 — 10줄에서 상한.
+// 이전 값 MAX_TEXTAREA_HEIGHT_PX(200px, 근거 기록 없음)를 대체 — text-sm
+// (14px/leading-[1.5]=21px) 기준 21×10=210px로, 원래 값과 정확히 같지는
+// 않지만 근접한 "10줄 상한"으로 근사했다.
 const MAX_TEXTAREA_ROWS = 10;
 
 const CHAT_COMPOSER_DATA_ATTR = "data-chat-composer";
@@ -125,7 +127,8 @@ export function ChatInput({
     <div className="flex w-full flex-col gap-2 rounded-2xl border border-border bg-surface-card p-3 shadow-sm transition-shadow duration-normal focus-within:border-border-strong focus-within:shadow-md dark:bg-surface-raised-hover">
       <Textarea
         variant="borderless"
-        autoSize={{ maxRows: MAX_TEXTAREA_ROWS }}
+        autoSize
+        maxRows={MAX_TEXTAREA_ROWS}
         {...{ [CHAT_COMPOSER_DATA_ATTR]: true }}
         value={value}
         onChange={(e) => onChange(e.target.value)}

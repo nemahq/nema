@@ -28,18 +28,20 @@ const VARIANT_CLASSNAME: Record<TextareaVariant, string> = {
     "border-none bg-transparent p-0 placeholder:text-fg-quaternary disabled:text-fg-quinary disabled:placeholder:text-fg-quinary",
 };
 
-interface AutoSizeOptions {
-  // 최소 크기는 네이티브 rows prop이 이미 담당한다(브라우저가 알아서 처리해
-  // 깜빡임이 없다) — 여기선 JS 계산이 필요한 상한만 받는다.
-  maxRows?: number;
-}
+// Tailwind 유틸리티 이름 그대로("resize-y") 매핑 — resize prop 값(예: "vertical")을
+// 그대로 클래스명으로 썼다가 존재하지 않는 클래스("vertical")가 되는 버그가 있었다.
+const RESIZE_CLASSNAME: Record<"none" | "vertical", string> = {
+  none: "resize-none",
+  vertical: "resize-y",
+};
 
-// autoSize(JS로 내용에 맞춰 키움)와 resize(네이티브 드래그 핸들)는 동시에
-// 못 쓴다 — 둘 다 켜면 자동으로 자란 높이를 사용자가 드래그로 또 덮어써
-// 서로 싸운다(Badge/Chip의 variant·color 배타 처리와 같은 이유로 유니언).
+// autoSize·maxRows를 객체 하나로 묶지 않고 평평한 두 prop으로 둔다 — 인라인
+// 객체 리터럴(예: ChatInput의 autoSize={{maxRows: 10}})은 매 렌더 새 identity를
+// 만들어 아래 useAutoSize의 effect가 매 렌더(타이핑할 때마다) 재실행된다
+// (conventions.md 데이터 prop 원시값 규칙, Chip의 remove와 같은 이유).
 type TextareaSizing =
-  | { autoSize?: boolean | AutoSizeOptions; resize?: never }
-  | { autoSize?: never; resize?: "none" | "vertical" };
+  | { autoSize?: boolean; maxRows?: number; resize?: never }
+  | { autoSize?: never; maxRows?: never; resize?: "none" | "vertical" };
 
 function mergeRefs<T>(
   ...refs: Array<React.Ref<T> | undefined>
@@ -59,6 +61,9 @@ function mergeRefs<T>(
 // 하나로 뽑았다. maxRows는 줄 수가 아니라 실제 렌더된 line-height를 매
 // 렌더에서 측정해 px로 환산한다 — size prop마다 line-height가 달라서
 // (Text의 sizeClasses 참고) 고정 테이블을 따로 두면 두 값이 어긋날 수 있다.
+// 전역이 box-sizing: border-box라(tailwindcss preflight) style.height는
+// padding을 포함한 값을 기대하는데 lineHeight*maxRows는 content만이라,
+// padding을 더해줘야 실제로 요청한 줄 수만큼 보인다.
 // value뿐 아니라 폭이 바뀔 때도 다시 재야 한다 — 사이드패널이 열려 필드가
 // 좁아지면 같은 텍스트라도 줄 수가 늘어 더 큰 높이가 필요한데, value만 보면
 // 그 경우를 놓쳐 overflow-hidden에 마지막 줄이 잘린다(InvisibleTextarea가
@@ -67,7 +72,8 @@ function mergeRefs<T>(
 function useAutoSize(
   ref: React.RefObject<HTMLTextAreaElement | null>,
   value: unknown,
-  autoSize: boolean | AutoSizeOptions | undefined,
+  autoSize: boolean | undefined,
+  maxRows: number | undefined,
 ) {
   React.useEffect(
     function resizeToContent() {
@@ -75,8 +81,6 @@ function useAutoSize(
       if (!autoSize || !el) {
         return;
       }
-      const maxRows =
-        typeof autoSize === "object" ? autoSize.maxRows : undefined;
 
       function resize() {
         if (!el) {
@@ -85,9 +89,12 @@ function useAutoSize(
         el.style.height = "auto";
         let next = el.scrollHeight;
         if (maxRows) {
-          const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
+          const style = getComputedStyle(el);
+          const lineHeight = parseFloat(style.lineHeight);
+          const verticalPadding =
+            parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
           if (!Number.isNaN(lineHeight)) {
-            next = Math.min(next, lineHeight * maxRows);
+            next = Math.min(next, lineHeight * maxRows + verticalPadding);
           }
         }
         el.style.height = `${next}px`;
@@ -107,7 +114,7 @@ function useAutoSize(
         observer.disconnect();
       };
     },
-    [ref, value, autoSize],
+    [ref, value, autoSize, maxRows],
   );
 }
 
@@ -120,6 +127,7 @@ function Textarea({
   weight = "normal",
   color = "primary",
   autoSize,
+  maxRows,
   resize,
   className,
   value,
@@ -133,7 +141,7 @@ function Textarea({
     color?: TextColor;
   }) {
   const internalRef = React.useRef<HTMLTextAreaElement>(null);
-  useAutoSize(internalRef, value, autoSize);
+  useAutoSize(internalRef, value, autoSize, maxRows);
 
   return (
     <textarea
@@ -145,7 +153,9 @@ function Textarea({
         colorClasses[color],
         weightClasses[weight],
         VARIANT_CLASSNAME[variant],
-        autoSize ? "resize-none overflow-hidden" : (resize ?? "resize-none"),
+        autoSize
+          ? "resize-none overflow-hidden"
+          : RESIZE_CLASSNAME[resize ?? "none"],
         "w-full min-w-0 disabled:cursor-not-allowed",
         className,
       )}
