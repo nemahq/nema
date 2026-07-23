@@ -3,8 +3,10 @@ interface LabelTextInputProps {
   autoFocus?: boolean;
   maxLength?: number;
   // 이름·설명처럼 같은 모양의 필드가 한 팝오버 안에 여러 개 나란히 있을 수 있어
-  // 시각 라벨 없이도 스크린리더가 구분할 수 있어야 한다 — 필수로 받는다.
-  "aria-label": string;
+  // 시각 라벨 없이도 스크린리더가 구분할 수 있어야 한다 — 필수로 받는다. Chip의
+  // removeAriaLabel과 같은 이유로 카멜케이스 — 컴포넌트 prop 네이밍은 그대로 두고,
+  // 실제 DOM aria-label 매핑은 렌더 시점에서만 한다.
+  ariaLabel: string;
   onChange: (value: string) => void;
   // 버튼이 없어 바깥 클릭 말고 키보드로도 끝낼 방법이 있어야 한다.
   onSubmit: () => void;
@@ -17,7 +19,7 @@ export function LabelTextInput({
   value,
   autoFocus,
   maxLength,
-  "aria-label": ariaLabel,
+  ariaLabel,
   onChange,
   onSubmit,
 }: LabelTextInputProps) {

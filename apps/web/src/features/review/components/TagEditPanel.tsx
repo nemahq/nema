@@ -70,7 +70,7 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
         disabled={disabled}
         searchable={!atMax}
         maxLength={TAG_TITLE_MAX_LENGTH}
-        aria-label={t("review.label_search_placeholder")}
+        ariaLabel={t("review.label_search_placeholder")}
         onQueryChange={setQuery}
       >
         {tags.map((tag, index) => (

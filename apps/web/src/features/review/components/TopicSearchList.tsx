@@ -104,7 +104,7 @@ function TopicSearchListContent({
               autoFocus
               value={editingName}
               maxLength={TOPIC_NAME_MAX_LENGTH}
-              aria-label={t("review.topic_name_label")}
+              ariaLabel={t("review.topic_name_label")}
               onChange={setEditingName}
               onSubmit={() => applyAndClose(topic)}
             />

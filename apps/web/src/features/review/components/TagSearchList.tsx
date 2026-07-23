@@ -116,14 +116,14 @@ function TagSearchListContent({
               autoFocus
               value={editingTitle}
               maxLength={TAG_TITLE_MAX_LENGTH}
-              aria-label={t("review.tag_create_title_label")}
+              ariaLabel={t("review.tag_create_title_label")}
               onChange={setEditingTitle}
               onSubmit={() => applyAndClose(tag)}
             />
             <LabelTextInput
               value={editingDescription}
               maxLength={TAG_DESCRIPTION_MAX_LENGTH}
-              aria-label={t("review.tag_create_description_label")}
+              ariaLabel={t("review.tag_create_description_label")}
               onChange={setEditingDescription}
               onSubmit={() => applyAndClose(tag)}
             />

@@ -8,7 +8,7 @@ interface LabelChipRowProps {
   searchable: boolean;
   maxLength?: number;
   // placeholder를 안 두는 대신(아래 이유) 스크린리더용 이름은 필수로 받는다.
-  "aria-label": string;
+  ariaLabel: string;
   onQueryChange: (query: string) => void;
   children: ReactNode;
 }
@@ -22,7 +22,7 @@ export function LabelChipRow({
   disabled,
   searchable,
   maxLength,
-  "aria-label": ariaLabel,
+  ariaLabel,
   onQueryChange,
   children,
 }: LabelChipRowProps) {

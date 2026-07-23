@@ -50,7 +50,7 @@ export function TopicEditPanel({
         disabled={disabled}
         searchable={!atMax}
         maxLength={TOPIC_NAME_MAX_LENGTH}
-        aria-label={t("review.label_search_placeholder")}
+        ariaLabel={t("review.label_search_placeholder")}
         onQueryChange={setQuery}
       >
         {topics.map((topic, index) => (
