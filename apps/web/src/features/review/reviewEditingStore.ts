@@ -27,6 +27,10 @@ export type ReviewEditingAction =
   | { type: "digest/setTopics"; index: number; topics: ReviewDigest["topics"] }
   | { type: "digest/setTags"; index: number; tags: ReviewDigest["tags"] }
   | { type: "digest/remove"; index: number }
+  // 이 id를 쓰는 모든 Digest에 적용되는 전역 액션 — digest/setTags처럼 index를
+  // 받지 않는다(reviewEditingState.ts의 tagRenames/topicRenames 주석 참고).
+  | { type: "tag/renamed"; id: string; title: string; description: string }
+  | { type: "topic/renamed"; id: string; name: string }
   | { type: "reference/set"; key: string; reference: ReviewNewReference }
   | { type: "reference/remove"; key: string }
   | { type: "reference/setMergeNote"; referenceId: string; mergeNote: string };
@@ -39,6 +43,8 @@ function emptyOverrides(): ReviewOverrides {
     bodyOverrides: new Map(),
     topicsOverrides: new Map(),
     tagsOverrides: new Map(),
+    tagRenames: new Map(),
+    topicRenames: new Map(),
     removedReferenceKeys: new Set(),
     referenceOverrides: new Map(),
     mergeNoteOverrides: new Map(),
@@ -118,6 +124,22 @@ export function reviewEditingReducer(
         ...overrides,
         removedDigestIndexes: new Set(overrides.removedDigestIndexes).add(
           action.index,
+        ),
+      };
+    case "tag/renamed":
+      return {
+        ...overrides,
+        tagRenames: new Map(overrides.tagRenames).set(action.id, {
+          title: action.title,
+          description: action.description,
+        }),
+      };
+    case "topic/renamed":
+      return {
+        ...overrides,
+        topicRenames: new Map(overrides.topicRenames).set(
+          action.id,
+          action.name,
         ),
       };
     case "reference/set":

@@ -20,16 +20,27 @@ export function buildMergeRows(args: {
   mergeNoteOverrides: ReadonlyMap<string, string>;
 }): MergeRow[] {
   const { citedReferences, citedReferenceIds, mergeNoteOverrides } = args;
-  return citedReferences
-    .filter(
-      (reference) =>
-        reference.mergeNote !== null && citedReferenceIds.has(reference.id),
-    )
-    .map((reference) => ({
+  return selectMergeCandidates({ citedReferences, citedReferenceIds }).map(
+    (reference) => ({
       reference,
       mergeNote:
         mergeNoteOverrides.get(reference.id) ?? reference.mergeNote ?? "",
-    }));
+    }),
+  );
+}
+
+// 목록에 뜰 후보와 그 편집값을 나눠 둔다 — 어떤 후보가 남는지는 편집값과 무관해서,
+// 화면은 목록만 구독하고 값은 각 카드가 자기 것만 구독할 수 있다. 저장 페이로드는
+// 둘 다 필요하므로 buildMergeRows가 그대로 합쳐 쓴다.
+export function selectMergeCandidates(args: {
+  citedReferences: ReviewCitedReference[];
+  citedReferenceIds: Set<string>;
+}): ReviewCitedReference[] {
+  const { citedReferences, citedReferenceIds } = args;
+  return citedReferences.filter(
+    (reference) =>
+      reference.mergeNote !== null && citedReferenceIds.has(reference.id),
+  );
 }
 
 // 편집 여부와 무관하게 살아있는 병합 후보 전량을 저장 페이로드로 — 전체 교체 구조에서

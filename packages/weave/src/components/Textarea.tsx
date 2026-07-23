@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { cn } from "../utils";
+import { cn, mergeRefs } from "../utils";
 import {
   colorClasses,
   sizeClasses,
@@ -45,20 +45,6 @@ const RESIZE_CLASSNAME: Record<"none" | "vertical", string> = {
 type TextareaSizing =
   | { autoSize?: boolean; maxRows?: number; resize?: never }
   | { autoSize?: never; maxRows?: never; resize?: "none" | "vertical" };
-
-function mergeRefs<T>(
-  ...refs: Array<React.Ref<T> | undefined>
-): React.RefCallback<T> {
-  return (node) => {
-    for (const ref of refs) {
-      if (typeof ref === "function") {
-        ref(node);
-      } else if (ref) {
-        (ref as React.RefObject<T | null>).current = node;
-      }
-    }
-  };
-}
 
 // InvisibleTextarea·ChatInput이 각자 구현하던 scrollHeight 기반 리사이즈를
 // 하나로 뽑았다. maxRows는 줄 수가 아니라 실제 렌더된 line-height를 매

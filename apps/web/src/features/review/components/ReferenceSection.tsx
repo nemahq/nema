@@ -1,6 +1,6 @@
 import { Text } from "@nema-io/weave";
 
-import { buildMergeRows } from "@web/features/review/referenceMerge";
+import { selectMergeCandidates } from "@web/features/review/referenceMerge";
 import type {
   ReviewCitedReference,
   ReviewDigest,
@@ -19,12 +19,11 @@ interface ReferenceSectionProps {
   disabled: boolean;
 }
 
-// 병합 행은 살아남은 Digest가 무엇을 인용하는지에 달려 있어(referenceMerge.ts) Digest
-// 삭제까지 함께 구독한다 — 마지막으로 인용하던 후보가 빠지면 병합 행도 사라져야 한다.
-//
-// Digest 쪽과 달리 카드가 memo도 아니고 콜백도 여기서 만들어 넘긴다. Reference는 행
-// 파생이 Digest 삭제와 얽혀 있어 카드가 자기 몫만 구독하기 어렵고, 후보 수도 적어
-// 아직 값이 없다고 봤다. 후보가 늘거나 편집 필드가 붙으면 Digest 쪽 형태로 옮긴다.
+// 병합 후보는 살아남은 Digest가 무엇을 인용하는지에 달려 있어(referenceMerge.ts)
+// Digest 삭제까지 함께 구독한다 — 마지막으로 인용하던 후보가 빠지면 병합 후보도
+// 사라져야 한다. 반대로 각 카드의 편집값은 구독하지 않는다: 어떤 카드가 목록에
+// 남는지는 편집값과 무관해서, 여기서 들면 한 카드를 고칠 때마다 목록 전체가 다시
+// 그려지기만 한다(DigestCandidateList와 같은 분담).
 export function ReferenceSection({
   digests,
   newReferences,
@@ -32,34 +31,26 @@ export function ReferenceSection({
   disabled,
 }: ReferenceSectionProps) {
   const { t } = useTranslation();
-  const dispatch = useEditing((state) => state.dispatch);
   const removedDigestIndexes = useEditing(
     (state) => state.overrides.removedDigestIndexes,
   );
   const removedReferenceKeys = useEditing(
     (state) => state.overrides.removedReferenceKeys,
   );
-  const referenceOverrides = useEditing(
-    (state) => state.overrides.referenceOverrides,
-  );
-  const mergeNoteOverrides = useEditing(
-    (state) => state.overrides.mergeNoteOverrides,
-  );
 
-  const referenceRows = newReferences
-    .filter((reference) => !removedReferenceKeys.has(reference.key))
-    .map((reference) => referenceOverrides.get(reference.key) ?? reference);
-  const mergeRows = buildMergeRows({
+  const visibleReferences = newReferences.filter(
+    (reference) => !removedReferenceKeys.has(reference.key),
+  );
+  const mergeCandidates = selectMergeCandidates({
     citedReferences,
     citedReferenceIds: new Set(
       digests
         .filter((_, index) => !removedDigestIndexes.has(index))
         .flatMap((digest) => digest.referenceIds),
     ),
-    mergeNoteOverrides,
   });
 
-  if (referenceRows.length + mergeRows.length === 0) {
+  if (visibleReferences.length + mergeCandidates.length === 0) {
     return null;
   }
 
@@ -67,41 +58,28 @@ export function ReferenceSection({
     <div className="flex flex-col gap-3">
       <Text as="h2" size="sm" weight="semibold" color="secondary">
         {t("review.reference_section_title", {
-          count: referenceRows.length + mergeRows.length,
+          count: visibleReferences.length + mergeCandidates.length,
         })}
       </Text>
-      {referenceRows.map((reference) => (
-        <ReferenceCandidateCard
-          key={reference.key}
-          reference={reference}
-          disabled={disabled}
-          onChange={(next) =>
-            dispatch({
-              type: "reference/set",
-              key: reference.key,
-              reference: next,
-            })
-          }
-          onRemove={() =>
-            dispatch({ type: "reference/remove", key: reference.key })
-          }
-        />
-      ))}
-      {mergeRows.map(({ reference, mergeNote }) => (
-        <ReferenceMergeCard
-          key={reference.id}
-          reference={reference}
-          mergeNote={mergeNote}
-          disabled={disabled}
-          onMergeNoteChange={(next) =>
-            dispatch({
-              type: "reference/setMergeNote",
-              referenceId: reference.id,
-              mergeNote: next,
-            })
-          }
-        />
-      ))}
+      {/* DigestCandidateList와 같은 이유로 라벨과 별도 wrapper — 카드들을 gap 없는
+          안쪽 div로 묶어야 카드 간 간격이 부모 gap-3와 안 겹치고 각 카드 자신의
+          pb 하나로만 정해진다(겹치면 카드 사이만 이중으로 벌어짐, 실측 확인됨). */}
+      <div className="flex flex-col">
+        {visibleReferences.map((reference) => (
+          <ReferenceCandidateCard
+            key={reference.key}
+            baseReference={reference}
+            disabled={disabled}
+          />
+        ))}
+        {mergeCandidates.map((reference) => (
+          <ReferenceMergeCard
+            key={reference.id}
+            reference={reference}
+            disabled={disabled}
+          />
+        ))}
+      </div>
     </div>
   );
 }

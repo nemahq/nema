@@ -1,114 +1,83 @@
-import {
-  REFERENCE_BODY_MAX_LENGTH,
-  REFERENCE_TITLE_MAX_LENGTH,
-  REFERENCE_TYPES,
-} from "@nema-io/shared";
-import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Text,
-  Textarea,
-} from "@nema-io/weave";
-import { Trash2 } from "@nema-io/weave/icons";
+import { useState } from "react";
 
-import {
-  isReferenceType,
-  REFERENCE_TYPE_LABEL,
-} from "@web/features/review/constants";
+import { REFERENCE_TITLE_MAX_LENGTH } from "@nema-io/shared";
+
 import type { ReviewNewReference } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { CandidateCardFrame } from "./CandidateCardFrame";
+import { useEditing } from "./EditingProvider";
+import { InvisibleTextarea } from "./InvisibleTextarea";
+import { NewReferenceIndicator } from "./NewReferenceIndicator";
+import { ReferenceBodyField } from "./ReferenceBodyField";
+import { ReferenceCardHeader } from "./ReferenceCardHeader";
+
 interface ReferenceCandidateCardProps {
-  reference: ReviewNewReference;
+  baseReference: ReviewNewReference;
   disabled: boolean;
-  onChange: (next: ReviewNewReference) => void;
-  onRemove: () => void;
 }
 
+// 신규 후보만 다룬다 — diff(기존 설명·바뀔 설명) 케이스는 ReferenceMergeCard가
+// 맡는다. 외부 링크는 Digest 쪽도 아직 없어 이번 라운드는 같이 뺀다.
+// 편집값은 DigestCandidateCard와 같은 이유로 이 카드가 자기 key만 구독한다 —
+// 목록이 들면 한 카드에 타이핑할 때마다 형제 카드가 전부 다시 그려진다.
 export function ReferenceCandidateCard({
-  reference,
+  baseReference,
   disabled,
-  onChange,
-  onRemove,
 }: ReferenceCandidateCardProps) {
+  // Digest와 같은 이유로 화면 전용 상태 — 서버로도 부모로도 안 올린다.
+  const [viewed, setViewed] = useState(false);
   const { t } = useTranslation();
+  const dispatch = useEditing((state) => state.dispatch);
+  const reference = useEditing(
+    (state) =>
+      state.overrides.referenceOverrides.get(baseReference.key) ??
+      baseReference,
+  );
+
+  function update(patch: Partial<ReviewNewReference>) {
+    dispatch({
+      type: "reference/set",
+      key: reference.key,
+      reference: { ...reference, ...patch },
+    });
+  }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-surface-raised p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <Select
-            value={reference.type}
-            onValueChange={(type) => {
-              if (isReferenceType(type)) {
-                onChange({ ...reference, type });
-              }
-            }}
+    <CandidateCardFrame
+      viewed={viewed}
+      className="relative"
+      wash={
+        <>
+          <NewReferenceIndicator />
+          <ReferenceCardHeader
+            type={reference.type}
             disabled={disabled}
-          >
-            <SelectTrigger
-              aria-label={t("review.reference_type_label")}
-              className="h-8 w-28 text-xs"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {REFERENCE_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {REFERENCE_TYPE_LABEL[type]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
+            viewed={viewed}
+            onToggleViewed={() => setViewed((current) => !current)}
+            onChangeType={(type) => update({ type })}
+            onRemove={() =>
+              dispatch({ type: "reference/remove", key: reference.key })
+            }
+          />
+          <InvisibleTextarea
             value={reference.title}
-            onChange={(e) => onChange({ ...reference, title: e.target.value })}
             disabled={disabled}
             maxLength={REFERENCE_TITLE_MAX_LENGTH}
             placeholder={t("review.reference_title_placeholder")}
-            aria-invalid={reference.title.trim() === ""}
+            onChange={(title) => update({ title })}
+            className="text-[20px] font-semibold leading-[1.4]"
           />
-        </div>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
+        </>
+      }
+    >
+      <div className="mt-2 pl-2">
+        <ReferenceBodyField
+          body={reference.body}
           disabled={disabled}
-          aria-label={t("review.reference_remove_action")}
-          onClick={onRemove}
-        >
-          <Trash2 />
-        </Button>
+          onChange={(body) => update({ body })}
+        />
       </div>
-      <Textarea
-        value={reference.body}
-        onChange={(e) => onChange({ ...reference, body: e.target.value })}
-        disabled={disabled}
-        placeholder={t("review.reference_body_placeholder")}
-        rows={3}
-        maxLength={REFERENCE_BODY_MAX_LENGTH}
-        aria-invalid={reference.body.trim() === ""}
-      />
-      {reference.externalUrls.length > 0 && (
-        <ul className="flex flex-col gap-0.5">
-          {reference.externalUrls.map((url) => (
-            <Text
-              key={url}
-              as="li"
-              size="xs"
-              color="brand"
-              className="truncate"
-            >
-              {url}
-            </Text>
-          ))}
-        </ul>
-      )}
-    </div>
+    </CandidateCardFrame>
   );
 }

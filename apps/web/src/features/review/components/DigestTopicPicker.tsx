@@ -9,14 +9,16 @@ import {
 } from "@nema-io/weave";
 import { Circle, Plus } from "@nema-io/weave/icons";
 
+import { applyTopicRenames } from "@web/features/review/reviewEditingState";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { useEditing } from "./EditingProvider";
 import { TopicEditPanel } from "./TopicEditPanel";
 
 interface DigestTopicPickerProps {
-  topics: DigestTopicDraft[];
+  digestIndex: number;
+  baseTopics: DigestTopicDraft[];
   disabled: boolean;
-  onChange: (topics: DigestTopicDraft[]) => void;
 }
 
 // "+" 추가 버튼에만 relative + before:(inset-y-0 left-0 -right-10)로 여유
@@ -36,12 +38,20 @@ interface DigestTopicPickerProps {
 // weave Chip을 그대로 못 쓰는 이유는 Chip 자신이 곧 button이라, 넓은 히트박스용
 // 바깥 button 안에 중첩 button을 못 넣기 때문 — 시각만 같은 span으로 대체하고
 // hover는 group-hover로 옮긴다.
+// 주제 편집값도 태그와 같은 이유로 카드·헤더가 아니라 여기서 구독한다.
 export function DigestTopicPicker({
-  topics,
+  digestIndex,
+  baseTopics,
   disabled,
-  onChange,
 }: DigestTopicPickerProps) {
   const { t } = useTranslation();
+  const dispatch = useEditing((state) => state.dispatch);
+  const topics = useEditing((state) =>
+    applyTopicRenames(
+      state.overrides.topicsOverrides.get(digestIndex) ?? baseTopics,
+      state.overrides.topicRenames,
+    ),
+  );
 
   return (
     <Popover>
@@ -97,7 +107,13 @@ export function DigestTopicPicker({
         <TopicEditPanel
           topics={topics}
           disabled={disabled}
-          onChange={onChange}
+          onChange={(next) =>
+            dispatch({
+              type: "digest/setTopics",
+              index: digestIndex,
+              topics: next,
+            })
+          }
         />
       </PopoverContent>
     </Popover>

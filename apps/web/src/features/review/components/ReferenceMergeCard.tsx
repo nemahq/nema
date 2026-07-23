@@ -1,90 +1,78 @@
-import { REFERENCE_BODY_MAX_LENGTH } from "@nema-io/shared";
-import { Badge, Button, Text, Textarea } from "@nema-io/weave";
-import { Undo2 } from "@nema-io/weave/icons";
+import { useState } from "react";
 
-import {
-  isReferenceType,
-  REFERENCE_TYPE_LABEL,
-} from "@web/features/review/constants";
+import { Text } from "@nema-io/weave";
+
 import type { ReviewCitedReference } from "@web/features/review/types";
-import { useTranslation } from "@web/lib/tolgee";
+
+import { CandidateCardFrame } from "./CandidateCardFrame";
+import { useEditing } from "./EditingProvider";
+import { ReferenceBodyField } from "./ReferenceBodyField";
+import { ReferenceMergeCardHeader } from "./ReferenceMergeCardHeader";
+import { ReferenceMergeDiffDisclosure } from "./ReferenceMergeDiffDisclosure";
 
 interface ReferenceMergeCardProps {
   reference: ReviewCitedReference;
-  mergeNote: string;
   disabled: boolean;
-  onMergeNoteChange: (mergeNote: string) => void;
 }
 
-// 레지스트리에 매칭된 기존 Reference — 타입·이름은 읽기 전용(재분류는 이 리뷰 밖의
-// 무거운 조작), 엔진이 제안한 병합 설명("바뀔 설명")만 다듬는다. "원래대로"는 편집값을
-// 원본 body로 되돌려 병합을 거부하는 수단이다(RPC에서 before===after면 no-op).
+// "원래대로"는 RPC의 before===after no-op으로 병합을 거부하는 것이라 메뉴 뒤에 둔다.
+// diff는 엔진의 원래 제안(reference.mergeNote)과 body를 비교한다 — 편집 필드의
+// 실시간 값과 비교하면 사용자가 고칠 때마다 "뭐가 AI 제안이었는지"가 흔들린다.
 export function ReferenceMergeCard({
   reference,
-  mergeNote,
   disabled,
-  onMergeNoteChange,
 }: ReferenceMergeCardProps) {
-  const { t } = useTranslation();
-  const isOriginal = mergeNote === reference.body;
+  const [viewed, setViewed] = useState(false);
+  const dispatch = useEditing((state) => state.dispatch);
+  const aiProposedNote = reference.mergeNote ?? reference.body;
+  const mergeNote = useEditing(
+    (state) =>
+      state.overrides.mergeNoteOverrides.get(reference.id) ?? aiProposedNote,
+  );
+
+  function setMergeNote(next: string) {
+    dispatch({
+      type: "reference/setMergeNote",
+      referenceId: reference.id,
+      mergeNote: next,
+    });
+  }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-surface-raised p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <Badge variant="info">
-            {isReferenceType(reference.type)
-              ? REFERENCE_TYPE_LABEL[reference.type]
-              : reference.type}
-          </Badge>
+    <CandidateCardFrame
+      viewed={viewed}
+      wash={
+        <>
+          <ReferenceMergeCardHeader
+            type={reference.type}
+            disabled={disabled}
+            viewed={viewed}
+            restorable={mergeNote !== reference.body}
+            onToggleViewed={() => setViewed((current) => !current)}
+            onRestore={() => setMergeNote(reference.body)}
+          />
           <Text
-            as="span"
-            size="sm"
-            weight="medium"
+            size="xl"
+            weight="semibold"
+            title={reference.title}
             className="min-w-0 truncate"
           >
             {reference.title}
           </Text>
-        </div>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          disabled={disabled || isOriginal}
-          aria-label={t("review.reference_merge_restore_action")}
-          onClick={() => onMergeNoteChange(reference.body)}
-        >
-          <Undo2 />
-        </Button>
-      </div>
-      <div className="flex flex-col gap-1">
-        <Text as="span" size="xs" color="tertiary">
-          {t("review.reference_merge_original_label")}
-        </Text>
-        <Text
-          size="sm"
-          color="secondary"
-          className="rounded-md bg-surface-card px-3 py-1.5"
-        >
-          {reference.body}
-        </Text>
-      </div>
-      <Text
-        as="label"
-        size="xs"
-        color="tertiary"
-        className="flex flex-col gap-1"
-      >
-        {t("review.reference_merge_label")}
-        <Textarea
-          value={mergeNote}
-          onChange={(e) => onMergeNoteChange(e.target.value)}
+        </>
+      }
+    >
+      <div className="mt-2 flex flex-col gap-3 pl-2">
+        <ReferenceBodyField
+          body={mergeNote}
           disabled={disabled}
-          rows={3}
-          maxLength={REFERENCE_BODY_MAX_LENGTH}
-          aria-invalid={mergeNote.trim() === ""}
+          onChange={setMergeNote}
         />
-      </Text>
-    </div>
+        <ReferenceMergeDiffDisclosure
+          original={reference.body}
+          revised={aiProposedNote}
+        />
+      </div>
+    </CandidateCardFrame>
   );
 }

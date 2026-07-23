@@ -15,13 +15,15 @@ function emptyOverrides(): ReviewOverrides {
     bodyOverrides: new Map(),
     topicsOverrides: new Map(),
     tagsOverrides: new Map(),
+    tagRenames: new Map(),
+    topicRenames: new Map(),
     removedReferenceKeys: new Set(),
     referenceOverrides: new Map(),
     mergeNoteOverrides: new Map(),
   };
 }
 
-// 액션마다 "어느 슬롯에 써야 하는지"를 픽스처에 박아둔다 — 9개가 같은 모양이라
+// 액션마다 "어느 슬롯에 써야 하는지"를 픽스처에 박아둔다 — 11개가 같은 모양이라
 // topicsOverrides에 쓸 것을 tagsOverrides에 쓰는 복붙 실수가 가장 나기 쉽고,
 // 채워진 슬롯 개수만 세면 그 실수가 그대로 통과한다.
 const ACTIONS: { action: ReviewEditingAction; slot: keyof ReviewOverrides }[] =
@@ -61,6 +63,19 @@ const ACTIONS: { action: ReviewEditingAction; slot: keyof ReviewOverrides }[] =
     {
       action: { type: "digest/remove", index: 0 },
       slot: "removedDigestIndexes",
+    },
+    {
+      action: {
+        type: "tag/renamed",
+        id: "tag-1",
+        title: "새 이름",
+        description: "새 설명",
+      },
+      slot: "tagRenames",
+    },
+    {
+      action: { type: "topic/renamed", id: "topic-1", name: "새 주제" },
+      slot: "topicRenames",
     },
     {
       action: {

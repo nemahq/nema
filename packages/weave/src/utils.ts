@@ -1,8 +1,25 @@
 import { type ClassValue, clsx } from "clsx";
+import type * as React from "react";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+// 컴포넌트 내부에서 쓸 ref(측정·이벤트 바인딩 등)와 호출부가 넘긴 ref를 같은
+// DOM 노드에 함께 붙여야 할 때 쓴다 — 하나의 JSX 엘리먼트는 ref를 하나만 받는다.
+export function mergeRefs<T>(
+  ...refs: Array<React.Ref<T> | undefined>
+): React.RefCallback<T> {
+  return (node) => {
+    for (const ref of refs) {
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        (ref as React.RefObject<T | null>).current = node;
+      }
+    }
+  };
 }
 
 // DropdownMenu/Select처럼 서로 다른 Radix primitive(액션 메뉴 vs 폼 컨트롤)를 쓰지만
