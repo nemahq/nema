@@ -1112,3 +1112,25 @@ BE가 같은 워크트리에서 동시에 `reference.get`/`update`/`archive`/`ad
 - `ChangesetRecordScreen` 빈 콘텐츠 gap, 페이지 전체 레이아웃 — 이전 섹션 이후 재확인 안 함, 착수 전 재검증 필요.
 
 관련 커밋: `14a403b9`(읽음 상태·타입 색상 팔레트·인라인 에러→토스트), `3cc10cc8`·`fc66de34`(헤더 재구성·Topic 팝오버·타입 메뉴 이동 등, 커밋 메시지에 세부 내역).
+
+---
+
+### 2026-07-25 — Reference 후보 카드 재설계 완료, 병합 diff 뷰 신설 (PR #478, wt-3 `polish/digest-card-followups`)
+
+앞 섹션의 "전혀 착수 안 한 것 — 레퍼런스 카드 재설계"를 마무리한 라운드. Digest 카드에서 이미 확정된 언어(헤더 워시·타입 Chip·읽음 접힘)를 그대로 재사용하고, 레퍼런스 고유 문제(신규/기존 구분, 병합 제안의 전/후 비교)만 새로 풀었다. PR #477(weave Badge/Chip 정비)을 베이스로 리베이스해서 머지했다 — Chip `color` prop을 두 세션이 동시에 다른 목적으로 확장해 실제 충돌이 났다(아래 참고).
+
+**신규/기존 구분 — git 스타일 "+"**: 신규 레퍼런스 카드에만 `text-status-success` 색 `Plus` 아이콘을 헤더 워시 왼쪽 페이지 여백(px-6) 쪽에 절대배치로 얹는다. 기존 카드는 대칭 아이콘을 안 둔다 — "구분 신호는 실제로 섞여 있을 때만 정보값이 있다"는 원칙(Digest는 이 화면에서 항상 100% 신규라 표시 자체가 무의미해서 안 둠). 이 표시가 스크롤 시 사이드바/헤더 여백에 그대로 남아 보이는 문제가 있어 `ChangesetDetailHeader`를 `-mx-6 px-6` 풀블리드 배경(바깥)+원래 폭 보더(안쪽) 2단 구조로 고쳤다.
+
+**병합 카드 diff 뷰**: `diff`(jsdiff) 패키지의 `diffWords`로 단어 단위 비교. 색 결정 과정에서 실제 리서치를 거쳤다 — MediaWiki Codex Diffs(색만으로 구분 안 함, 노랑/파랑+굵기·취소선 병행), GitHub의 빨강/초록 diff가 색맹 접근성 문제로 결국 색맹 전용 테마를 따로 만든 사례, Ink & Switch의 Google Docs 파랑/빨강 조합이 "노이즈가 많다"는 지적, Word 추적 변경(모양이 add/delete를 구분, 색은 보조)을 근거로 **비대칭 단일색**으로 확정: 삭제는 `text-fg-quinary`+취소선(흐리게 약화), 추가는 `text-status-success`+밑줄(강조, 신규 레퍼런스 "+"와 같은 색이라 "새로 생기는 내용"이라는 의미가 통일됨). 빨강/초록 같은 경쟁하는 두 색을 안 써서 적록색맹 문제가 원천적으로 없다.
+diff는 기본 접힘("변경 내용 보기" 토글, `DraftSection`과 같은 접기/펼치기 트리거 패턴)이고, **엔진의 원래 제안(`reference.mergeNote`)과 body를 비교한다 — 편집 필드의 실시간 값과 비교하지 않는다**(사용자가 편집 필드를 더 고쳐도 diff가 안 흔들려야 "뭐가 AI 제안이었는지"가 유지됨). 편집 필드("설명" 라벨, `reference_body_label` 재사용)를 diff보다 먼저 배치했다 — 사용자가 최종적으로 읽어야 하는 건 결과물(편집 필드)이고 diff는 검증하고 싶을 때 보는 보조 정보라, 우선순위대로 순서를 맞춤.
+
+**"원래대로" 용어 확정**: 병합 제안을 거부하고 원본 body로 되돌리는 액션의 이름을 여러 차례 재검토했다. Changeset 레벨의 기존 용어 `되돌리기`(revert=이미 적용된 걸 되돌림)·`되살리기`(restore=버려진 걸 되살림) 둘 다 이 액션과 의미가 안 맞는다 — 이 액션은 아직 아무것도 적용되지 않은, 확정 전 로컬 편집을 취소하는 것이라 "실행취소"(review-flow.md의 전역 undo/redo, 아직 미구현) 카테고리에 더 가깝지만 그 이름은 미래의 전역 undo 기능에 예약해뒀다. "버리기"(기존 `discard_action` 키)도 검토했으나 changeset discard 결과 상태("버려짐")와 의미가 겹쳐 기각. 최종적으로 포멀한 액션명이 아니라 서술적 표현인 **"원래대로"/"Reset"**으로 확정 — 어느 기존 용어와도 안 겹친다.
+
+**PR #477과의 Chip `color` 충돌**: #477이 `Chip`에 `color?: TagColor`(사용자 태그 8색, 해시 자동배정 전용)를 추가했는데, 이 세션도 독립적으로 `color?: BadgeColor`(Digest 타입 5색)를 같은 prop 이름·같은 배타 유니언 패턴(`ChipToneProps`)으로 추가해뒀던 상태였다. #477 쪽 설계를 그대로 채택하기로 하고, `DigestTypePicker`가 쓰던 `DIGEST_TYPE_BADGE_COLOR`를 **`DIGEST_TYPE_TAG_COLOR: Record<DigestType, TagColor>`**로 바꿔 TagColor 팔레트에서 5개(violet/rose/sage/olive/mauve)를 고정 배정하는 쪽으로 재작성했다 — TagColor는 원래 "유저가 해시로 자동 배정"하는 용도지만, Chip이 받는 색 축이 이거 하나뿐이라 재사용. Badge/Chip outline 글자색 불일치(이전 섹션에서 다른 세션에 위임했던 항목)도 #477이 `OUTLINE_TONE_CLASSNAME` 공유로 이미 해결해뒀다.
+
+**아직 안 정한 것**
+- diff에서 안 바뀐 부분(`text-fg-primary`, `text-sm`)이 바로 아래 편집 필드(`text-fg-primary`, `text-base`)와 색이 같아 크기 2px 차이 말고는 구분이 잘 안 된다는 지적이 나왔다 — 안 바뀐 부분만 `text-fg-tertiary`로 낮추는 방향까지 제안했으나 적용은 다른 세션에 위임, 미구현.
+- 실제 유저 태그(`TagEditPanel`/`DigestTagPicker`)는 여전히 `variant="outline"`뿐이라 #477이 만든 `TagColor`(해시 자동배정) 인프라를 하나도 안 쓰고 있다 — 기술적으로는 가능해졌지만 옆 세션 소유 파일이라 이번 라운드에서 손 안 댐. `workspaceAvatarColor.ts`가 같은 해시→색 배정 패턴의 기존 전례.
+- 레퍼런스 후보 카드에는 여전히 태그 편집이 없다 — 이건 갭이 아니라 확정된 설계다: Reference 태그는 07-modeling.md 기준 "왜 계속 중요한가"를 나타내는 독립 축이라 생성 시점(리뷰)이 아니라 위키 브라우징 플로우에서 붙이는 것이고, 실제로 `NewReferenceDraftSchema`에 tags 필드 자체가 없다(위키의 태그 추가/제거는 `referenceId`가 이미 있어야 하는 즉시-저장 뮤테이션이라 아직 id 없는 후보엔 애초에 못 붙는다).
+
+관련 PR: #477(weave Badge/Chip 정비, 머지됨), #478(레퍼런스 카드 재설계, 머지됨).
