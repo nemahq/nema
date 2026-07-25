@@ -64,7 +64,7 @@ BEGIN
     );
   END LOOP;
 
-  -- 기존 Reference 병합 — 대상은 확정 전 다듬을 값이므로 지금 원문 body를 before로
+  -- 기존 Reference 병합 — 대상은 확정 전 다듬을 값이므로 지금 원본 body를 before로
   -- 잡아 {before, after}로 자기완결하게 남긴다. before/after 형태는 update_reference와
   -- 같지만 archive된 대상 처리 정책은 다르다: 여기(공통 헬퍼)는 non-active면 조용히
   -- 스킵한다 — 워커(create) 경로에서 생성~적재 사이 대상이 정리돼도 리뷰 생성 전체를
