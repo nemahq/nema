@@ -17,7 +17,8 @@ jobs:
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+      # 팀 슬러그는 민감 정보가 아니므로(Vercel URL에 그대로 노출) secret이 아닌 variable로 등록한다
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     steps:
       - uses: actions/checkout@v4
         with:
