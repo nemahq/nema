@@ -82,7 +82,6 @@ export {
   REVIEW_NEW_REFERENCES_MAX,
   REVIEW_REFERENCE_UPDATES_MAX,
 } from "./schemas/digest-review";
-export { type TrackEventInput, TrackEventInputSchema } from "./schemas/event";
 export { type NarrationInput, NarrationInputSchema } from "./schemas/narration";
 export {
   CONTENT_LANGUAGES,

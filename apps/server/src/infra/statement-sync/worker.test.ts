@@ -39,7 +39,6 @@ const PENDING_SOURCE: PendingSource = {
   id: SOURCE_ID,
   space_id: SPACE_ID,
   author_id: null,
-  session_id: null,
   body: "테스트 원문",
   created_at: "2026-06-11T00:00:00.000Z",
   author_timezone: "Asia/Seoul",

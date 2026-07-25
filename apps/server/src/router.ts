@@ -3,7 +3,6 @@ import { changesetRouter } from "./routers/changeset-router";
 import { devRouter } from "./routers/dev-router";
 import { digestReviewRouter } from "./routers/digest-review-router";
 import { digestRouter } from "./routers/digest-router";
-import { eventRouter } from "./routers/event-router";
 import { narrationRouter } from "./routers/narration-router";
 import { profileRouter } from "./routers/profile-router";
 import { referenceRouter } from "./routers/reference-router";
@@ -21,7 +20,6 @@ export const appRouter = router({
     return { status: "ok" };
   }),
   profile: profileRouter,
-  event: eventRouter,
   source: sourceRouter,
   space: spaceRouter,
   statement: statementRouter,

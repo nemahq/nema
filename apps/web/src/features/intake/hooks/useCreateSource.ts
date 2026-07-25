@@ -5,7 +5,6 @@ interface CreateSourceInput {
   body: string;
   spaceId: string;
   timeZone?: string;
-  sessionId?: string;
 }
 
 export function useCreateSource() {

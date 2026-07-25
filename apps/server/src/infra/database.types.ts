@@ -395,41 +395,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      events: {
-        Row: {
-          created_at: string;
-          id: string;
-          payload: Json;
-          session_id: string | null;
-          type: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          payload?: Json;
-          session_id?: string | null;
-          type: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          payload?: Json;
-          session_id?: string | null;
-          type?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "events_session_id_fkey";
-            columns: ["session_id"];
-            isOneToOne: false;
-            referencedRelation: "sessions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       profiles: {
         Row: {
           content_language: string;
@@ -567,74 +532,6 @@ export type Database = {
           },
         ];
       };
-      session_retrievals: {
-        Row: {
-          body: string;
-          created_at: string;
-          documents: Json;
-          id: string;
-          query: string;
-          session_id: string;
-          updated_at: string;
-        };
-        Insert: {
-          body: string;
-          created_at?: string;
-          documents?: Json;
-          id?: string;
-          query: string;
-          session_id: string;
-          updated_at?: string;
-        };
-        Update: {
-          body?: string;
-          created_at?: string;
-          documents?: Json;
-          id?: string;
-          query?: string;
-          session_id?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "session_retrievals_session_id_fkey";
-            columns: ["session_id"];
-            isOneToOne: false;
-            referencedRelation: "sessions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      sessions: {
-        Row: {
-          created_at: string;
-          draft: Json | null;
-          id: string;
-          messages: Json;
-          title: string | null;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          draft?: Json | null;
-          id?: string;
-          messages?: Json;
-          title?: string | null;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          draft?: Json | null;
-          id?: string;
-          messages?: Json;
-          title?: string | null;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
       source_digestion_state: {
         Row: {
           digestion_retry_count: number;
@@ -722,7 +619,6 @@ export type Database = {
           last_linking_attempt: string | null;
           linking_retry_count: number;
           linking_status: Database["public"]["Enums"]["ingestion_status"];
-          session_id: string | null;
           space_id: string;
           status: Database["public"]["Enums"]["source_status"];
           title: string | null;
@@ -747,7 +643,6 @@ export type Database = {
           last_linking_attempt?: string | null;
           linking_retry_count?: number;
           linking_status?: Database["public"]["Enums"]["ingestion_status"];
-          session_id?: string | null;
           space_id: string;
           status?: Database["public"]["Enums"]["source_status"];
           title?: string | null;
@@ -772,7 +667,6 @@ export type Database = {
           last_linking_attempt?: string | null;
           linking_retry_count?: number;
           linking_status?: Database["public"]["Enums"]["ingestion_status"];
-          session_id?: string | null;
           space_id?: string;
           status?: Database["public"]["Enums"]["source_status"];
           title?: string | null;
@@ -780,13 +674,6 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
-          {
-            foreignKeyName: "sources_session_id_fkey";
-            columns: ["session_id"];
-            isOneToOne: false;
-            referencedRelation: "sessions";
-            referencedColumns: ["id"];
-          },
           {
             foreignKeyName: "sources_space_id_fkey";
             columns: ["space_id"];
@@ -1198,10 +1085,6 @@ export type Database = {
         Args: { p_msg_id: number };
         Returns: undefined;
       };
-      append_message: {
-        Args: { p_message: Json; p_session_id: string };
-        Returns: undefined;
-      };
       apply_extraction_statements: {
         Args: {
           p_digest_ids: string[];
@@ -1260,7 +1143,6 @@ export type Database = {
         Args: {
           p_author_timezone?: string;
           p_body: string;
-          p_session_id?: string;
           p_space_id: string;
         };
         Returns: string;
@@ -1320,7 +1202,6 @@ export type Database = {
           body: string;
           created_at: string;
           id: string;
-          session_id: string;
           space_id: string;
         }[];
       };
@@ -1502,10 +1383,6 @@ export type Database = {
       trash_source: { Args: { p_source_id: string }; Returns: undefined };
       unlink_reference_tag: {
         Args: { p_reference_id: string; p_tag_id: string };
-        Returns: undefined;
-      };
-      update_message_payload: {
-        Args: { p_message_id: string; p_payload: Json; p_session_id: string };
         Returns: undefined;
       };
       update_pending_ingestion: {

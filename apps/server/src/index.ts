@@ -9,7 +9,6 @@ import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { getEnv, loadEnv } from "./env";
 import { resolveCorsOrigin } from "./infra/cors-origin";
 import { initI18n } from "./infra/i18n";
-import { shutdown as shutdownPostHog } from "./infra/posthog";
 import { createStatementSyncWorker } from "./infra/statement-sync";
 import { getSupabaseAdmin } from "./infra/supabase";
 import { createQdrantClient, createQdrantStore } from "./infra/vector";
@@ -129,7 +128,6 @@ async function bootstrap() {
         Sentry.captureException(err, { level: "warning" });
       }
       await server.close();
-      await shutdownPostHog();
       await Sentry.flush(SENTRY_FLUSH_TIMEOUT_MS);
       process.exit(0);
     });

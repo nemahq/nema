@@ -16,7 +16,6 @@ export const SOURCE_TITLE_MAX_LENGTH = DIGEST_TITLE_MAX_LENGTH;
 
 export const SourceCreateInputSchema = z.object({
   body: z.string().trim().min(1).max(SOURCE_BODY_MAX_LENGTH),
-  sessionId: z.string().uuid().optional(),
   // 미지정 시 서버가 1인 단계 기본 Space(가장 오래된 멤버십)로 대체한다.
   spaceId: z.string().uuid().optional(),
   // 작성자 존(IANA) — 내용 속 기한("금요일까지")을 이 존 기준으로 풀어 due_date를 채운다.
