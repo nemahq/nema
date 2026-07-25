@@ -7,7 +7,8 @@ import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useC
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
 import { changesetDisplayTitle } from "@web/features/review/utils";
-import { useCurrentSpaceId, useSpacePublicId } from "@web/features/workspace";
+import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
+import { useSpacePublicId } from "@web/hooks/useSpacePublicId";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetDetailHeader } from "./ChangesetDetailHeader";

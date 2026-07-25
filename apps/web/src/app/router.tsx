@@ -18,7 +18,6 @@ import { DraftsPage } from "@web/app/pages/DraftsPage";
 import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
 import { PrivacyPage } from "@web/app/pages/PrivacyPage";
 import { ReferenceListPage } from "@web/app/pages/ReferenceListPage";
-import { SessionPage } from "@web/app/pages/SessionPage";
 import { SignInPage } from "@web/app/pages/SignInPage";
 import { SpaceOverviewPage } from "@web/app/pages/SpaceOverviewPage";
 import { TermsPage } from "@web/app/pages/TermsPage";
@@ -27,12 +26,11 @@ import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback"
 import { requireAuth, requireGuest } from "@web/features/auth";
 import { HarnessPage } from "@web/features/dev-harness";
 import type { ChangesSubTab } from "@web/features/review";
-import { SessionSidebar } from "@web/features/session/components/SessionSidebar";
 import {
-  useSpaceList,
   useWorkspaceBootstrapQuery,
   WorkspaceSidebar,
 } from "@web/features/workspace";
+import { useSpaceList } from "@web/hooks/useSpaceList";
 import { getStorage, setStorage } from "@web/utils/localStorage";
 
 import { App } from "./App";
@@ -108,31 +106,6 @@ const authenticatedRoute = createRoute({
   beforeLoad: ({ location }) => requireAuth(location.href),
 });
 
-const sessionSidebarRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
-  id: "_sessionSidebar",
-  component: () => (
-    <>
-      <SessionSidebar />
-      <Suspense fallback={<ContentAreaFallback />}>
-        <Outlet />
-      </Suspense>
-    </>
-  ),
-});
-
-function SessionPageShell() {
-  const { sessionId } = sessionRoute.useParams();
-  return <SessionPage key={sessionId} />;
-}
-
-const sessionRoute = createRoute({
-  getParentRoute: () => sessionSidebarRoute,
-  path: "/session/$sessionId",
-  component: SessionPageShell,
-  errorComponent: RouteErrorFallback,
-});
-
 // bootstrap·space.list 실패는 LNB·Space 화면 전체가 뜰 수 없는 상태 — 반쪽 렌더(빈
 // 계정 메뉴·Space 0개 착시) 대신 셸 전체를 라우트 에러 폴백으로 올린다. LNB의 Space
 // 목록과 SpaceOverview 둘 다 space.list 하나에 의존하므로 이 레이아웃 한 곳에서 막으면
@@ -157,7 +130,7 @@ function WorkspaceSidebarLayout() {
   );
 }
 
-// 새 LNB(워크스페이스·Space 스코프 셸)를 두르는 레이아웃 — 세션 사이드바와 형제.
+// 새 LNB(워크스페이스·Space 스코프 셸)를 두르는 레이아웃.
 // MVP IA 재구축이 진행되면서 새 화면들이 이 아래로 얹힌다.
 const workspaceSidebarRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
@@ -326,7 +299,6 @@ const routeTree = rootRoute.addChildren([
   termsRoute,
   oauthConsentRoute,
   authenticatedRoute.addChildren([
-    sessionSidebarRoute.addChildren([sessionRoute]),
     workspaceSidebarRoute.addChildren([
       workspaceHomeRoute,
       spaceOverviewRoute,

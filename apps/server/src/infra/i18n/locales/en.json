@@ -1,7 +1,4 @@
 {
-  "chat": {
-    "retrieval_empty": "No relevant information found."
-  },
   "error": {
     "changeset_state_changed": "This change's state changed. Refresh and try again.",
     "db_not_found": "The requested item was not found.",

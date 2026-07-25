@@ -1,5 +1,3 @@
-import { CHAT_MODES, type ChatMode } from "@nema-io/shared";
-
 import type { Locale } from "@web/lib/tolgee/types";
 import { isLocale } from "@web/lib/tolgee/types";
 
@@ -8,19 +6,11 @@ import { isBooleanString, isJsonRecord } from "./serialization";
 import type { ThemePreference } from "./theme-preference";
 import { isThemePreference } from "./theme-preference";
 
-function isChatMode(v: string): v is ChatMode {
-  return (CHAT_MODES as readonly string[]).includes(v);
-}
-
 type StorageMap = {
   theme: ThemePreference;
   locale: Locale;
   sidebarCollapsed: BooleanString;
-  chatDrafts: JsonRecord;
-  chatMode: ChatMode;
   sourceComposerBody: JsonRecord;
-  openRetrievalTabs: JsonRecord;
-  splitLayout: JsonRecord;
   // OAuth 공급자 왕복에서 URL 쿼리가 깎여도 복구하도록 authorization_id를 잠시 보관.
   oauthAuthorizationId: string;
   // 스텔스 모드에서 Coming Soon 대신 실제 로그인을 보여줄지 여부. /signin?access=<key>로 심는 write-once 플래그라 "true"만 가능.
@@ -35,11 +25,7 @@ const isValid: {
   theme: isThemePreference,
   locale: isLocale,
   sidebarCollapsed: isBooleanString,
-  chatDrafts: isJsonRecord,
-  chatMode: isChatMode,
   sourceComposerBody: isJsonRecord,
-  openRetrievalTabs: isJsonRecord,
-  splitLayout: isJsonRecord,
   oauthAuthorizationId: (v): v is string => v.length > 0,
   previewAccess: (v): v is "true" => v === "true",
   notificationSoftAskSeen: (v): v is "true" => v === "true",

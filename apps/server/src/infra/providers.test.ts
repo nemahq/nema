@@ -80,11 +80,9 @@ describe("providers — override resolution wiring", () => {
     const { getProviders, setTaskModel, AnthropicProvider } = await loadFresh();
 
     const providers = getProviders();
-    setTaskModel({ task: "generateDraft", modelId: "claude-opus-4-8" });
+    setTaskModel({ task: "narrate", modelId: "claude-opus-4-8" });
 
-    expect(providers.llm.forTask("generateDraft")).toBeInstanceOf(
-      AnthropicProvider,
-    );
+    expect(providers.llm.forTask("narrate")).toBeInstanceOf(AnthropicProvider);
   });
 
   it("resolves a google catalog model to a GeminiProvider", async () => {
@@ -92,11 +90,9 @@ describe("providers — override resolution wiring", () => {
     const { getProviders, setTaskModel, GeminiProvider } = await loadFresh();
 
     const providers = getProviders();
-    setTaskModel({ task: "generateDraft", modelId: "gemini-3.1-pro-preview" });
+    setTaskModel({ task: "narrate", modelId: "gemini-3.1-pro-preview" });
 
-    expect(providers.llm.forTask("generateDraft")).toBeInstanceOf(
-      GeminiProvider,
-    );
+    expect(providers.llm.forTask("narrate")).toBeInstanceOf(GeminiProvider);
   });
 
   it("throws auth when ANTHROPIC_API_KEY is missing for an anthropic model", async () => {
@@ -106,8 +102,7 @@ describe("providers — override resolution wiring", () => {
 
     expect(
       causeCodeOf(
-        () =>
-          setTaskModel({ task: "generateDraft", modelId: "claude-opus-4-8" }),
+        () => setTaskModel({ task: "narrate", modelId: "claude-opus-4-8" }),
         LlmError,
       ),
     ).toBe("auth");
@@ -121,7 +116,7 @@ describe("providers — override resolution wiring", () => {
       causeCodeOf(
         () =>
           setTaskModel({
-            task: "generateDraft",
+            task: "narrate",
             modelId: "gemini-3.1-pro-preview",
           }),
         LlmError,
@@ -140,11 +135,16 @@ describe("forTask — override 키 부재 가드", () => {
     const providers = getProviders();
     // setTaskOverride는 setTaskModel과 달리 키를 검증하지 않는다 — 키 없는 override 상태를 만들어
     // forTask 가드가 이를 버리고 tier 기본으로 폴백하는지 본다(키 부재 환경 안전장치).
-    setTaskOverride({ task: "narrate", modelId: "gemini-3.1-flash-lite" });
-    expect(providers.llm.forTask("narrate")).not.toBeInstanceOf(GeminiProvider);
-    // 같은 폴백을 겪는 generateDraft(둘 다 override 없이 tier 기본)와 동일 인스턴스다.
-    expect(providers.llm.forTask("narrate")).toBe(
-      providers.llm.forTask("generateDraft"),
+    setTaskOverride({
+      task: "structureQuery",
+      modelId: "gemini-3.1-flash-lite",
+    });
+    expect(providers.llm.forTask("structureQuery")).not.toBeInstanceOf(
+      GeminiProvider,
+    );
+    // 같은 폴백을 겪는 selectScopeTopics(둘 다 override 없이 mini tier 기본)와 동일 인스턴스다.
+    expect(providers.llm.forTask("structureQuery")).toBe(
+      providers.llm.forTask("selectScopeTopics"),
     );
   });
 
@@ -155,9 +155,9 @@ describe("forTask — override 키 부재 가드", () => {
     });
     const { getProviders, setTaskModel, AnthropicProvider } = await loadFresh();
     const providers = getProviders();
-    setTaskModel({ task: "classifyDraftIntent", modelId: "claude-opus-4-8" });
-    // generateSessionTitle은 override 없음 → 다른 task의 override로 새지 않고 tier 기본을 탄다.
-    expect(providers.llm.forTask("generateSessionTitle")).not.toBeInstanceOf(
+    setTaskModel({ task: "structureQuery", modelId: "claude-opus-4-8" });
+    // generateSourceTitle은 override 없음 → 다른 task의 override로 새지 않고 tier 기본을 탄다.
+    expect(providers.llm.forTask("generateSourceTitle")).not.toBeInstanceOf(
       AnthropicProvider,
     );
   });
@@ -172,7 +172,7 @@ describe("tier 기본값 — 비프로덕션 프로바이더 무관화 (Layer 1)
     fakeEnv = baseEnv({ GEMINI_API_KEY: "gemini-key" });
     const { getProviders, GeminiProvider } = await loadFresh();
     // 시드·override·effort 없는 task → all-nano로 nano tier(Google 기본값)를 그대로 탄다.
-    expect(getProviders().llm.forTask("generateSessionTitle")).toBeInstanceOf(
+    expect(getProviders().llm.forTask("generateSourceTitle")).toBeInstanceOf(
       GeminiProvider,
     );
   });
@@ -180,7 +180,7 @@ describe("tier 기본값 — 비프로덕션 프로바이더 무관화 (Layer 1)
   it("falls back non-prod tier defaults to committed OpenAI when the Google key is absent", async () => {
     const { getProviders, GeminiProvider, OpenAiProvider } = await loadFresh();
     // Google 키 부재 → nano tier가 gpt-5-nano(OpenAI)로 폴백해 부팅이 그대로 뜬다.
-    const provider = getProviders().llm.forTask("generateSessionTitle");
+    const provider = getProviders().llm.forTask("generateSourceTitle");
     expect(provider).toBeInstanceOf(OpenAiProvider);
     expect(provider).not.toBeInstanceOf(GeminiProvider);
   });
@@ -211,9 +211,9 @@ describe("프로덕션 하드 lock — tier 프로바이더 스왑 무시", () =
       LLM_MODEL_NANO: "gemini-3.1-flash-lite",
     });
     const { getProviders, GeminiProvider, OpenAiProvider } = await loadFresh();
-    // classifyDraftIntent = mini tier·시드/override/effort 없음 → env가 Gemini를 가리켜도
+    // structureQuery = mini tier·시드/override/effort 없음 → env가 Gemini를 가리켜도
     // 커밋된 gpt-5-mini(OpenAI)로 강제된다.
-    const provider = getProviders().llm.forTask("classifyDraftIntent");
+    const provider = getProviders().llm.forTask("structureQuery");
     expect(provider).toBeInstanceOf(OpenAiProvider);
     expect(provider).not.toBeInstanceOf(GeminiProvider);
   });
@@ -225,7 +225,7 @@ describe("프로덕션 하드 lock — tier 프로바이더 스왑 무시", () =
     expect(() => setLlmPreset("all-nano")).toThrow();
     expect(() =>
       setTaskModel({
-        task: "classifyDraftIntent",
+        task: "structureQuery",
         modelId: "gemini-3.1-flash-lite",
       }),
     ).toThrow();
@@ -265,10 +265,10 @@ describe("forTask effort injection (bindEffort)", () => {
     expect(callArgs.reasoning).toEqual({ effort: "low" });
   });
 
-  it("injects no effort for a task without a bound effort (generateDraft)", async () => {
+  it("injects no effort for a task without a bound effort (narrate)", async () => {
     const { getProviders } = await loadFresh();
     await getProviders()
-      .llm.forTask("generateDraft")
+      .llm.forTask("narrate")
       .generateText({
         systemPrompt: "sys",
         messages: [{ role: "user", content: "q" }],

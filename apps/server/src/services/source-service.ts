@@ -27,11 +27,10 @@ export async function createSource(args: {
   supabase: TypedSupabaseClient;
   providers: Providers;
   body: string;
-  sessionId?: string;
   spaceId?: string;
   timeZone?: string;
 }): Promise<{ sourceId: string }> {
-  const { supabase, providers, body, sessionId, spaceId, timeZone } = args;
+  const { supabase, providers, body, spaceId, timeZone } = args;
 
   // spaceId 미지정 호출(MCP·dev-harness)만 이 경로를 탄다 — 1인 단계엔 가입
   // 트리거가 만든 개인 Space 1개뿐이라(RLS로 내 멤버십만 보임) 가장 오래된
@@ -51,7 +50,6 @@ export async function createSource(args: {
   const { data: sourceId, error } = await supabase.rpc("create_source", {
     p_space_id: targetSpaceId,
     p_body: body,
-    ...(sessionId !== undefined && { p_session_id: sessionId }),
     ...(timeZone !== undefined && { p_author_timezone: timeZone }),
   });
   throwIfSupabaseError(error);

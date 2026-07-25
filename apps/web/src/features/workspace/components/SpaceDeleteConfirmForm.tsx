@@ -20,9 +20,9 @@ import {
 } from "@nema-io/weave";
 
 import { useDeleteSpace } from "@web/features/workspace/hooks/useDeleteSpace";
-import { useSpaceListSuspenseQuery } from "@web/features/workspace/hooks/useSpaceList";
 import { useSpacePendingDraftCountSuspenseQuery } from "@web/features/workspace/hooks/useSpacePendingDraftCount";
 import { resolveSpaceDeletePayload } from "@web/features/workspace/resolveSpaceDeletePayload";
+import { useSpaceListSuspenseQuery } from "@web/hooks/useSpaceList";
 import { useTranslation } from "@web/lib/tolgee";
 
 // otherSpaces·targetSpaceId 파생을 한 곳에 둔다 — Field와 Footer가 각자

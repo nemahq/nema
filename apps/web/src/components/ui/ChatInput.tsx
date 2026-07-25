@@ -10,9 +10,6 @@ import { useTranslation } from "@web/lib/tolgee";
 // 않지만 근접한 "10줄 상한"으로 근사했다.
 const MAX_TEXTAREA_ROWS = 10;
 
-const CHAT_COMPOSER_DATA_ATTR = "data-chat-composer";
-export const CHAT_COMPOSER_SELECTOR = `[${CHAT_COMPOSER_DATA_ATTR}]`;
-
 export const ACTION_BUTTON_BASE =
   "self-end rounded-full transition-all duration-normal";
 
@@ -129,7 +126,6 @@ export function ChatInput({
         variant="borderless"
         autoSize
         maxRows={MAX_TEXTAREA_ROWS}
-        {...{ [CHAT_COMPOSER_DATA_ATTR]: true }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}

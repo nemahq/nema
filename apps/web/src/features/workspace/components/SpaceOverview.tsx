@@ -1,15 +1,15 @@
 import { Text } from "@nema-io/weave";
 
+import { SpaceBadge } from "@web/components/ui/SpaceBadge";
 import { SourceComposer } from "@web/features/intake";
 import type { ChangesSubTab } from "@web/features/review";
 import { useMainScrollRestoration } from "@web/features/workspace/hooks/useMainScrollRestoration";
 // 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
 // eslint-disable-next-line nema/require-suspense-boundary
-import { useSpaceListSuspenseQuery } from "@web/features/workspace/hooks/useSpaceList";
+import { useSpaceListSuspenseQuery } from "@web/hooks/useSpaceList";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetsTab } from "./ChangesetsTab";
-import { SpaceBadge } from "./SpaceBadge";
 import { SpaceNavigationBar } from "./SpaceNavigationBar";
 import { SpaceNotFound } from "./SpaceNotFound";
 import { SpaceTabs } from "./SpaceTabs";

@@ -6,10 +6,10 @@ import {
   DialogTitle,
 } from "@nema-io/weave";
 
-import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
 import { useSpaceNameField } from "@web/features/workspace/hooks/useSpaceNameField";
 import { useUpdateSpace } from "@web/features/workspace/hooks/useUpdateSpace";
 import { isSpaceNameTaken } from "@web/features/workspace/isSpaceNameTaken";
+import { useSpaceList } from "@web/hooks/useSpaceList";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SpaceNameField } from "./SpaceNameField";

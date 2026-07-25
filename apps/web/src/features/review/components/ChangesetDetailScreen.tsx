@@ -14,11 +14,9 @@ import { ChangesetNotFound } from "@web/features/review/components/ChangesetNotF
 import { ChangesetSidePanelProvider } from "@web/features/review/components/ChangesetSidePanelProvider";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
-import {
-  useCurrentSpaceId,
-  useSpaceListSuspenseQuery,
-  useSpacePublicId,
-} from "@web/features/workspace";
+import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
+import { useSpaceListSuspenseQuery } from "@web/hooks/useSpaceList";
+import { useSpacePublicId } from "@web/hooks/useSpacePublicId";
 import { trpc } from "@web/lib/trpc";
 
 // 라우트 파라미터 그대로 — 숫자 변환·검증 전이라 changesetNumber가 문자열이다.

@@ -2,9 +2,8 @@
 // SpaceNotFound를, changeset 상세는 ChangesetNotFound를 렌더하고 끝나 자식이 아예 안
 // 붙는다. 그래서 여기선 없는 경우가 도달 불가능하고, 옵셔널로 내려 소비처마다 방어하게
 // 두는 대신 계약으로 못박는다. 새 화면을 이 훅 위에 얹을 땐 그 게이트를 먼저 둬야 한다.
-import { useSpaceListSuspenseQuery } from "@web/features/workspace/hooks/useSpaceList";
-
-import { useSpacePublicId } from "./useSpacePublicId";
+import { useSpaceListSuspenseQuery } from "@web/hooks/useSpaceList";
+import { useSpacePublicId } from "@web/hooks/useSpacePublicId";
 
 export function useCurrentSpaceId(): string {
   const spacePublicId = useSpacePublicId();

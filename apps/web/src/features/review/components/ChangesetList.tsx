@@ -7,7 +7,7 @@ import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { useChangesetListInfiniteQuery } from "@web/features/review/hooks/useChangesetListQuery";
 import type { ChangesSubTab } from "@web/features/review/types";
-import { useCurrentSpaceId } from "@web/features/workspace";
+import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useIntersectionEffect } from "@web/hooks/useIntersectionEffect";
 import { useTranslation } from "@web/lib/tolgee";
 
