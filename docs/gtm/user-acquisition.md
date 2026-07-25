@@ -10,7 +10,7 @@
 
 이 기준은 직군 정의가 아닌 **판별 도구**다. 지인이든 낯선 사용자든 이 통증이 있는지를 기준으로 판별한다.
 
-관련 문서: [첫 제품 방향](../product/11-first-product-direction.md)
+관련 문서: [첫 제품 방향](../foundations/11-first-product-direction.md)
 
 ## 2. 사용자 확보 구조
 

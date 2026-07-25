@@ -11,9 +11,8 @@
 - [05-concept-meaning](05-concept-meaning.md) — 의미 (뜻을 읽어 진술을 다루는 일) ✅
 - [06-concept-relation](06-concept-relation.md) — 관계 (진술을 잇는 선) ✅
 - [07-modeling](07-modeling.md) — 모델링 (concept를 데이터 구조로) ✅ — 진술·원본·관계·변경셋
-- [09-mvp-scope](09-mvp-scope.md) — MVP 스코프 (첫 출시에 넣을 것/뺄 것) ✅
 - [10-concept-collaboration](10-concept-collaboration.md) — 협업 기반 개념 (소유 Space · 접근 Share/Group · 조직 층) ✅
-- [11-first-product-direction](11-first-product-direction.md) — 첫 제품 방향 (누구에게·무엇부터) ✅
+- [11-first-product-direction](11-first-product-direction.md) — 첫 제품 방향 (누구에게·무엇부터, MVP 스코프 포함) ✅
 - [12-engine-completion-criteria](12-engine-completion-criteria.md) — 엔진 완성 기준 (각 기능의 통과선) ✅
 - [13-drafting-criteria](13-drafting-criteria.md) — 초안 다듬기 기준 (좋은 다듬기 출력의 정의) ✅
 
@@ -25,10 +24,9 @@
 1. **concept 완성** — 관계·의미 엔진·사람 분업 ✅
 2. **모델링** — concept 전체(진술·관계·속성·동작)를 구체적 형태로 ✅ (핵심 4종)
 3. **기존 구현물과 대조** — 기존 nema 코드(memories/revisions/Neo4j 등)와 모델을 맞대봄 ✅ → [히스토리로 이동됨](../archive/implementation-vs-model.archive.md)(전환 완료, 결론은 07-modeling.md에 흡수됨)
-4. **MVP 스코프 확정** — 대조 결과가 곧 스코프 지도 (이미 구현됨 / 추가 / 재검토) ✅ → [09](09-mvp-scope.md)
-5. **첫 제품 방향** — 첫 사용자·표면 우선순위·완성 기준 ✅ → [11](11-first-product-direction.md)
-6. **엔진 완성 기준** — 표면 작업 전, 엔진이 완성됐는지 판정할 기준 ✅ → [12](12-engine-completion-criteria.md)
-7. **초안 다듬기 기준** — 넣는 입구에서 거친 글을 다듬는 기준(v1을 검증된 정의로 승격) ✅ → [13](13-drafting-criteria.md)
+4. **첫 제품 방향** — 첫 사용자·표면 우선순위·MVP 스코프·완성 기준 ✅ → [11](11-first-product-direction.md)
+5. **엔진 완성 기준** — 표면 작업 전, 엔진이 완성됐는지 판정할 기준 ✅ → [12](12-engine-completion-criteria.md)
+6. **초안 다듬기 기준** — 넣는 입구에서 거친 글을 다듬는 기준(v1을 검증된 정의로 승격) ✅ → [13](13-drafting-criteria.md)
 
 ## 컨셉 지도
 

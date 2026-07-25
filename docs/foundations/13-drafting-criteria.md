@@ -4,7 +4,7 @@
 
 ## 1. 이 문서가 정하는 것 / 정하지 않는 것
 
-[09(MVP 스코프)](09-mvp-scope.md)·[11(첫 제품 방향)](11-first-product-direction.md)이 다듬기를 "넣는 입구의 보조"로 두고, [12(엔진 완성 기준)](12-engine-completion-criteria.md) §3이 그 통과선을 "뜻 보존" 한 줄로만 남겼다. 이 문서가 그 한 줄을 검증된 정의로 채운다.
+[11(첫 제품 방향)](11-first-product-direction.md)이 다듬기를 "넣는 입구의 보조"로 두고, [12(엔진 완성 기준)](12-engine-completion-criteria.md) §3이 그 통과선을 "뜻 보존" 한 줄로만 남겼다. 이 문서가 그 한 줄을 검증된 정의로 채운다.
 
 ### 정하는 것
 
