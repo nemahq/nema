@@ -2,7 +2,7 @@
 //
 // 실행: apps/server에서  pnpm tsx src/eval/run-model-comparison.ts [옵션]
 //   --models a,b,c     비교 모델 (기본: 카탈로그 단가 박힌 전 모델)
-//   --functions x,y    비교 기능 (기본: extract,relate,narrate,draft)
+//   --functions x,y    비교 기능 (기본: extract,relate,narrate)
 //   --persist          결과를 staging eval_runs에 적재 (기본: JSON만 — 스모크 오염 방지)
 // 필요 키: 비교 대상 모델의 프로바이더 키 + ANTHROPIC_API_KEY(추출 채점관, Claude 고정).
 //
@@ -29,10 +29,6 @@ import {
 } from "@server/infra/llm/model-catalog";
 import { createLlmProviderFromEnv } from "@server/infra/llm/model-factory";
 import type { LlmTask } from "@server/infra/llm/task-routing";
-import {
-  buildFirstCallMessage,
-  DRAFTING_SYSTEM_PROMPT,
-} from "@server/prompts/drafting";
 import { NARRATION_SYSTEM_PROMPT } from "@server/prompts/narration";
 import { RELATION_JUDGMENT_SYSTEM_PROMPT } from "@server/prompts/relation-judgment";
 import { STATEMENT_EXTRACTION_SYSTEM_PROMPT } from "@server/prompts/statement-extraction";
@@ -51,7 +47,6 @@ import { NARRATION_FIXTURES } from "./narration-marker-seed";
 import { runScenarioOnce } from "./relation-engine/judgment-core";
 import { precisionRecall } from "./relation-engine/metrics";
 import { RELATION_SCENARIOS } from "./relation-engine/seed-data";
-import { PHASE1_SEEDS } from "./seed-data";
 import { extract, matchStatements } from "./statement-engine/extraction-core";
 import { createJudge, type Judge } from "./statement-engine/judge";
 import { scoreF1 } from "./statement-engine/metrics";
@@ -187,17 +182,6 @@ async function evaluateNarration(llm: LlmProvider): Promise<QualityResult> {
   return { qualityScore: null, signals: {} };
 }
 
-async function evaluateDrafting(llm: LlmProvider): Promise<QualityResult> {
-  for (const seed of PHASE1_SEEDS) {
-    await drainStream({
-      llm,
-      systemPrompt: DRAFTING_SYSTEM_PROMPT,
-      message: buildFirstCallMessage(seed.input),
-    });
-  }
-  return { qualityScore: null, signals: {} };
-}
-
 async function drainStream(params: {
   llm: LlmProvider;
   systemPrompt: string;
@@ -233,13 +217,6 @@ const FUNCTION_SPECS: FunctionSpec[] = [
     evalVersion: shortHash(NARRATION_FIXTURES),
     promptVersion: shortHash(NARRATION_SYSTEM_PROMPT),
     evaluate: (llm) => evaluateNarration(llm),
-  },
-  {
-    key: "draft",
-    task: "generateDraft",
-    evalVersion: shortHash(PHASE1_SEEDS),
-    promptVersion: shortHash(DRAFTING_SYSTEM_PROMPT),
-    evaluate: (llm) => evaluateDrafting(llm),
   },
 ];
 
