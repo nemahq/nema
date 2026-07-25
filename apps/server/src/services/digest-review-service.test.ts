@@ -481,7 +481,7 @@ describe("restoreReview", () => {
     });
   });
 
-  it("가드가 지면(discarded가 아니거나 원본이 trashed됨) ingestion_review_state_changed로 매핑된다", async () => {
+  it("가드가 지면(discarded가 아니거나 원문이 trashed됨) ingestion_review_state_changed로 매핑된다", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: null,
       error: {

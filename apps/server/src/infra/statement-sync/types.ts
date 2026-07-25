@@ -27,7 +27,7 @@ export type VectorPurgeMessage = z.infer<typeof VectorPurgeMessageSchema>;
 
 // --- fetch_pending_* RPC 반환 행 ---
 
-// ⓪ 생성(digestion) 대상 원본. workspace_id는 Tag·Reference 레지스트리(Workspace
+// ⓪ 생성(digestion) 대상 원문. workspace_id는 Tag·Reference 레지스트리(Workspace
 // 스코프)를 프롬프트에 실을 때 필요해 RPC가 함께 반환한다.
 export const PendingDigestionSourceSchema = z.object({
   id: z.string().uuid(),
@@ -55,7 +55,7 @@ export const PendingSourceSchema = z.object({
 
 export type PendingSource = z.infer<typeof PendingSourceSchema>;
 
-// 추출 입력 = 원본의 확정 Digest. 원문 body가 아니라 이 구조화 body에서 진술을 뽑는다.
+// 추출 입력 = 원문의 확정 Digest. 원문 body가 아니라 이 구조화 body에서 진술을 뽑는다.
 // body는 신뢰 경계 밖(DB CHECK는 판별자만 지킴)이라 판별 유니언으로 검증한다 — 어긋나면
 // 추출 프롬프트가 잘못된 구조를 받으니 조용히 넘기지 않고 검증 실패로 드러낸다.
 export const SourceDigestSchema = z.object({
@@ -89,7 +89,7 @@ export const PendingLinkingSourceSchema = z.object({
 
 export type PendingLinkingSource = z.infer<typeof PendingLinkingSourceSchema>;
 
-// 잇기 대상 원본의 새 진술(배치). ingestion_status로 ⓐ 앵커 가능 여부를 가린다
+// 잇기 대상 원문의 새 진술(배치). ingestion_status로 ⓐ 앵커 가능 여부를 가린다
 // (벡터 없는 failed 진술은 자기 이웃 검색의 앵커가 될 수 없다).
 export const LinkingBatchStatementSchema = z.object({
   id: z.string().uuid(),

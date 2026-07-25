@@ -167,7 +167,7 @@ describe("listPendingSources", () => {
     ]);
   });
 
-  it("pending+rejected가 같은 원본에 함께 있으면(재시도) pending을 리뷰로 쓰면서도 discarded는 유지", async () => {
+  it("pending+rejected가 같은 원문에 함께 있으면(재시도) pending을 리뷰로 쓰면서도 discarded는 유지", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({
         sources: [pendingSourceRow({ id: SOURCE_A })],
@@ -239,7 +239,7 @@ describe("listPendingSources", () => {
     );
   });
 
-  // v1 파이프라인 시절 원본은 digestion_status만 completed로 소급되고 시도 시각은
+  // v1 파이프라인 시절 원문은 digestion_status만 completed로 소급되고 시도 시각은
   // NULL로 남았다(20260707100000). 잠그는 쪽으로 판정하면 그 초안들이 영구히 묶여
   // 재정리가 불가능해지므로, 판정 불가는 여는 쪽으로 떨어져야 한다.
   it("정리 시도 시각이 없으면 열어준다 — 레거시 초안이 영구히 잠기지 않게", async () => {
@@ -635,29 +635,29 @@ describe("updateSourceTitle", () => {
   });
 });
 
-// --- 재추출 전에 원본 고치기 ---
+// --- 재추출 전에 원문 고치기 ---
 
 describe("updateSourceBody", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("update_source_body RPC로 원본을 반영한다", async () => {
+  it("update_source_body RPC로 원문을 반영한다", async () => {
     const { supabase, rpc } = mockRpcSupabase(null);
 
     await updateSourceBody({
       supabase,
       sourceId: CANCEL_SOURCE_ID,
-      body: "고친 원본",
+      body: "고친 원문",
     });
 
     expect(rpc).toHaveBeenCalledWith("update_source_body", {
       p_source_id: CANCEL_SOURCE_ID,
-      p_body: "고친 원본",
+      p_body: "고친 원문",
     });
   });
 
-  // 리뷰가 열린 채로 원본이 바뀌면 화면의 Digest 후보들이 더는 존재하지 않는 문장에서
+  // 리뷰가 열린 채로 원문이 바뀌면 화면의 Digest 후보들이 더는 존재하지 않는 문장에서
   // 나온 것이 된다 — 가드는 RPC 안에 있고, 서비스는 그 거부를 삼키지 않아야 한다.
   it("처리 중이거나 리뷰가 열려 가드가 지면 오류를 그대로 올린다", async () => {
     const { supabase } = mockRpcSupabase({
@@ -668,7 +668,7 @@ describe("updateSourceBody", () => {
       updateSourceBody({
         supabase,
         sourceId: CANCEL_SOURCE_ID,
-        body: "고친 원본",
+        body: "고친 원문",
       }),
     ).rejects.toThrow();
   });
@@ -700,8 +700,8 @@ describe("createSource — 제목 생성", () => {
   });
 
   // 제목은 없어도 그만인 값이다(화면은 body 미리보기로 그린다) — 제목 콜이 죽었다고
-  // 이미 커밋된 원본 저장이 오류로 되돌아오면 사용자는 글을 잃은 걸로 읽는다.
-  it("제목 콜이 실패해도 원본 저장은 성공으로 끝난다", async () => {
+  // 이미 커밋된 원문 저장이 오류로 되돌아오면 사용자는 글을 잃은 걸로 읽는다.
+  it("제목 콜이 실패해도 원문 저장은 성공으로 끝난다", async () => {
     const { supabase, rpc } = titleSupabase();
 
     const result = await createSource({

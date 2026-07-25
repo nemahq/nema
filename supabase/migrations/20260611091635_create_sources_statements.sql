@@ -1,8 +1,8 @@
 -- =============================================================
 -- save-engine-v2 3/6: 원자 층 — sources, statements, statement_sources
 -- 원자 = 진술(Statement). 합성 문서는 pull 시점 뷰로 강등.
--- 원본(sources)은 무손실 박제 + 추출 작업 상태(save_jobs 흡수).
--- 임베딩 대상은 진술뿐 — 원본은 의미로 다루지 않는다.
+-- 원문(sources)은 무손실 박제 + 추출 작업 상태(save_jobs 흡수).
+-- 임베딩 대상은 진술뿐 — 원문은 의미로 다루지 않는다.
 -- =============================================================
 
 CREATE TYPE source_status        AS ENUM ('active', 'archived');
@@ -12,7 +12,7 @@ CREATE TYPE statement_status     AS ENUM ('active', 'archived');
 -- 추출(sources.extraction_status)·임베딩(statements.ingestion_status)은
 -- 같은 3-상태(pending|completed|failed)라 기존 ingestion_status enum 공유
 
--- ----- 원본: 무손실 박제 + 추출 작업 상태 -----
+-- ----- 원문: 무손실 박제 + 추출 작업 상태 -----
 CREATE TABLE sources (
   id                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   space_id                 uuid NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
@@ -52,11 +52,11 @@ CREATE TABLE statements (
   )
 );
 
--- ----- SourceRef: 진술 → 원본 포인터 (다중) -----
+-- ----- SourceRef: 진술 → 원문 포인터 (다중) -----
 CREATE TABLE statement_sources (
   statement_id  uuid NOT NULL REFERENCES statements(id) ON DELETE CASCADE,
   source_id     uuid NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
-  locator       jsonb,  -- 원본 내 위치, 자리만(안 채움)
+  locator       jsonb,  -- 원문 내 위치, 자리만(안 채움)
   created_at    timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (statement_id, source_id)
 );
@@ -69,7 +69,7 @@ CREATE INDEX idx_sources_space_created    ON sources (space_id, created_at DESC)
 CREATE INDEX idx_sources_pending          ON sources (id) WHERE extraction_status = 'pending';  -- 추출 worker 폴링
 CREATE INDEX idx_statements_space_created ON statements (space_id, created_at DESC);
 CREATE INDEX idx_statements_pending       ON statements (id) WHERE ingestion_status = 'pending';  -- 임베딩 worker 폴링
-CREATE INDEX idx_statement_sources_source ON statement_sources (source_id);  -- 원본→진술 역방향(원본 빼기)
+CREATE INDEX idx_statement_sources_source ON statement_sources (source_id);  -- 원문→진술 역방향(원문 빼기)
 
 -- =============================================================
 -- Triggers

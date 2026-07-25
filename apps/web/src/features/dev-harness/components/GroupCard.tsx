@@ -21,7 +21,7 @@ export function GroupCard({
     <div className="rounded-lg border border-border/60 bg-surface-raised">
       <div className="flex items-center gap-2 px-3 py-2">
         <span className="text-xs font-semibold text-fg-secondary">
-          원본 · {formatDateTime(sourceCreatedAt)}
+          원문 · {formatDateTime(sourceCreatedAt)}
         </span>
         <span className="flex-1" />
         <span className="text-xs tabular-nums text-fg-tertiary">

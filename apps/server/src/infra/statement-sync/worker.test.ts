@@ -48,7 +48,7 @@ const PENDING_SOURCE: PendingSource = {
 const DIGEST_ID_1 = "f0000000-0000-4000-a000-000000000001";
 const DIGEST_ID_2 = "f0000000-0000-4000-a000-000000000002";
 
-// 추출 입력 = 원본의 확정 Digest. 대부분의 추출 테스트는 digest 1개로 충분하다.
+// 추출 입력 = 원문의 확정 Digest. 대부분의 추출 테스트는 digest 1개로 충분하다.
 const DIGEST: SourceDigest = {
   id: DIGEST_ID_1,
   title: "배포 도구 선정",
@@ -163,7 +163,7 @@ describe("createStatementSyncWorker", () => {
     vi.useRealTimers();
   });
 
-  it("추출 성공 — digest에서 뽑은 진술에 digest_id·원본 관통 index를 실어 apply_extraction_statements 호출", async () => {
+  it("추출 성공 — digest에서 뽑은 진술에 digest_id·원문 관통 index를 실어 apply_extraction_statements 호출", async () => {
     const { client, rpc } = mockSupabase(
       {
         read_sync_events: [[NOTIFY_ROW]],
@@ -441,7 +441,7 @@ describe("createStatementSyncWorker", () => {
     body: { type: "learning", finding: "캐시 불일치가 세 건 있었다" },
   };
 
-  it("여러 Digest — 각 digest 진술이 digest_id와 원본 관통 index로 한 apply에 모인다", async () => {
+  it("여러 Digest — 각 digest 진술이 digest_id와 원문 관통 index로 한 apply에 모인다", async () => {
     const { client, rpc } = mockSupabase(
       {
         read_sync_events: [[NOTIFY_ROW]],
@@ -451,7 +451,7 @@ describe("createStatementSyncWorker", () => {
     );
 
     // digest body 유형으로 어느 digest 콜인지 구분해 진술을 돌려준다 —
-    // digest_id 태깅·원본 관통 index가 digest 경계를 넘어 이어지는지 검증
+    // digest_id 태깅·원문 관통 index가 digest 경계를 넘어 이어지는지 검증
     const generateStructured = vi.fn(
       async (params: { messages: Array<{ content: string }> }) => {
         const content = params.messages[0]?.content ?? "";
@@ -553,7 +553,7 @@ describe("createStatementSyncWorker", () => {
     });
   });
 
-  it("중간 Digest가 진술 0개여도 원본 관통 index는 연속이다", async () => {
+  it("중간 Digest가 진술 0개여도 원문 관통 index는 연속이다", async () => {
     const IDEA_DIGEST: SourceDigest = {
       id: "f0000000-0000-4000-a000-000000000003",
       title: "아이디어",
@@ -1192,7 +1192,7 @@ describe("runVectorPurgePass", () => {
 
     expect(processed).toBe(0);
     expect(deleteStatements).toHaveBeenCalledWith([STMT_ID_1, STMT_ID_2]);
-    // ack 금지 — 안 그러면 실패한 벡터 삭제가 조용히 유실돼 죽은 원본 임베딩이 남는다.
+    // ack 금지 — 안 그러면 실패한 벡터 삭제가 조용히 유실돼 죽은 원문 임베딩이 남는다.
     expect(rpc).not.toHaveBeenCalledWith(
       "ack_vector_purge_event",
       expect.anything(),
@@ -1232,14 +1232,14 @@ describe("checkPurgeBacklog (purge 워치독)", () => {
   const hoursAgo = (h: number) =>
     new Date(Date.now() - h * 60 * 60 * 1000).toISOString();
 
-  it("잡이 최근 성공했으면 만료 원본이 남아도 경고하지 않는다", async () => {
+  it("잡이 최근 성공했으면 만료 원문이 남아도 경고하지 않는다", async () => {
     await checkPurgeBacklog(
       watchdogDeps({ lastSuccess: hoursAgo(1), overdueCount: 999 }),
     );
     expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
 
-  it("잡이 오래 안 돌았고 만료 원본이 있으면 경고한다", async () => {
+  it("잡이 오래 안 돌았고 만료 원문이 있으면 경고한다", async () => {
     await checkPurgeBacklog(
       watchdogDeps({ lastSuccess: hoursAgo(48), overdueCount: 5 }),
     );
@@ -1249,7 +1249,7 @@ describe("checkPurgeBacklog (purge 워치독)", () => {
     );
   });
 
-  it("잡이 오래 안 돌았어도 만료 원본이 없으면 조용하다(빈 DB·신규 배포)", async () => {
+  it("잡이 오래 안 돌았어도 만료 원문이 없으면 조용하다(빈 DB·신규 배포)", async () => {
     await checkPurgeBacklog(
       watchdogDeps({ lastSuccess: null, overdueCount: 0 }),
     );

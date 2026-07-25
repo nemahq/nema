@@ -278,7 +278,7 @@ BEGIN
   )
   RETURNING id INTO v_revert_id;
 
-  -- ingestion 예외: changes 밖의 원본(source_id)도 pending으로 되돌린다
+  -- ingestion 예외: changes 밖의 원문(source_id)도 pending으로 되돌린다
   -- ("글 통째로" — v2에선 archive가 아니라 pending 복귀, 07-modeling.md)
   IF v_type = 'ingestion' AND v_source_id IS NOT NULL THEN
     UPDATE sources SET status = 'pending'
@@ -417,7 +417,7 @@ BEGIN
     RAISE EXCEPTION 'digest % is not an active digest the caller can edit', p_digest_id;
   END IF;
 
-  -- 확정본 수정이라 원본이 active여야 한다(pending/trashed 원본의 digest는 수정 대상 아님).
+  -- 확정본 수정이라 원문이 active여야 한다(pending/trashed 원문의 digest는 수정 대상 아님).
   IF NOT EXISTS (SELECT 1 FROM sources WHERE id = v_source_id AND status = 'active') THEN
     RAISE EXCEPTION 'source % of digest % is not active', v_source_id, p_digest_id;
   END IF;
@@ -525,7 +525,7 @@ BEGIN
   END LOOP;
 
   -- 재트리거: 새 Digest 추출(pending) + 재연결. 새 진술이 기존 활성 진술과 다시 대조되게
-  -- linking도 pending으로 되돌린다(잇기 배치는 원본 단위라 전체 재판정).
+  -- linking도 pending으로 되돌린다(잇기 배치는 원문 단위라 전체 재판정).
   UPDATE sources SET extraction_status = 'pending', linking_status = 'pending'
   WHERE id = v_source_id;
   PERFORM pgmq.send('statement_sync', jsonb_build_object('type', 'notify'));

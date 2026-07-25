@@ -17,9 +17,9 @@ export function registerDigestion(
   controllers.set(sourceId, controller);
 }
 
-// 등록한 controller만 지운다. 같은 원본이 두 번 클레임될 수 있어서다: 리스는 150초인데
+// 등록한 controller만 지운다. 같은 원문이 두 번 클레임될 수 있어서다: 리스는 150초인데
 // 한 시도의 벽시계는 LLM 타임아웃(120초)만이 아니라 limitLlmCall의 큐 대기까지 더한
-// 값이라, 동시 콜이 몰리면 리스를 넘길 수 있다. 그러면 워커가 같은 원본을 다시 집고,
+// 값이라, 동시 콜이 몰리면 리스를 넘길 수 있다. 그러면 워커가 같은 원문을 다시 집고,
 // 옛 시도가 뒤늦게 정리하면서 새 시도의 controller를 지워버린다 — 그 시도는 취소가
 // 영영 닿지 않는 유령이 된다. 자기 것만 지우면 옛 시도의 정리는 무해한 no-op이 된다.
 export function unregisterDigestion(

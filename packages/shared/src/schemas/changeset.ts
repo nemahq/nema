@@ -119,7 +119,7 @@ export const ACTIVE_RELATION_LIST_LIMIT_DEFAULT = 100;
 export const ACTIVE_RELATION_LIST_LIMIT_MAX = 500;
 
 export const ListActiveRelationsInputSchema = z.object({
-  // 있으면 그 원본의 진술이 양끝 중 하나인 관계만 — 작업 탭 원본 상세용
+  // 있으면 그 원문의 진술이 양끝 중 하나인 관계만 — 작업 탭 원문 상세용
   sourceId: z.string().uuid().optional(),
   limit: z
     .number()

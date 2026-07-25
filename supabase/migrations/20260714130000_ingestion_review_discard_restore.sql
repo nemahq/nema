@@ -16,9 +16,9 @@
 -- 1) discard_ingestion_review — 버리기 (pending → rejected)
 --
 --   confirm_ingestion_review와 같은 가드(type='ingestion' AND status='pending').
---   changes를 하나도 적용하지 않는다 — Digest·Reference를 안 만든다. 원본은 리뷰
+--   changes를 하나도 적용하지 않는다 — Digest·Reference를 안 만든다. 원문은 리뷰
 --   내내 pending이라(create_ingestion_review 참고) 옮길 것도 없지만, 그 불변식이
---   깨진 경우(리뷰가 열린 채로 원본이 다른 경로로 trashed된 경우 등)는 UPDATE가
+--   깨진 경우(리뷰가 열린 채로 원문이 다른 경로로 trashed된 경우 등)는 UPDATE가
 --   0행을 건드리고 끝나는 대신 명시적으로 RAISE해 조용히 넘어가지 않는다.
 -- =============================================================
 
@@ -63,7 +63,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 --   새 changeset을 안 만들고 같은 changeset을 되돌린다 — revert_changeset의
 --   append-only 되돌리기(applied 대상)와는 다른 메커니즘이다(discard는 changes를
 --   하나도 안 만들어서 되돌릴 changes 자체가 없다, 07-modeling.md "버려짐 되살리기").
---   원본이 여전히 pending이어야만 가능 — "원본도 삭제하기"(trash_source)로 이미
+--   원문이 여전히 pending이어야만 가능 — "원문도 삭제하기"(trash_source)로 이미
 --   trashed가 됐으면 그 조건이 깨져 거절한다(휴지통 복원은 restore_trashed_source 몫).
 -- =============================================================
 

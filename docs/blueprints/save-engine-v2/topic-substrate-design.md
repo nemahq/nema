@@ -1,8 +1,8 @@
 # 주제 토대 설계 — 진술 엔진 (save-engine-v2)
 
-> 검색이 읽는 "주제"가 무엇인지 못박고, 그 주제를 만들고·재사용하고·정리하는 생애주기를 정하는 설계. [`auto-scoping-design.md`](auto-scoping-design.md)이 coarse 단계에서 주제를 골라 검색을 좁히는데, 그 주제의 품질이 곧 스코핑의 천장이라 같이 본다. 이미 있는 주제 레지스트리([`content-intake-design.md`](../first-product/content-intake-design.md)가 깐 `topics`·`source_topics` 스키마·확정 게이트) 위에 서고, 그 정전 위에 생애주기·품질을 더한다.
+> 검색이 읽는 "주제"가 무엇인지 못박고, 그 주제를 만들고·재사용하고·정리하는 생애주기를 정하는 설계. [`auto-scoping-design.md`](auto-scoping-design.md)이 coarse 단계에서 주제를 골라 검색을 좁히는데, 그 주제의 품질이 곧 스코핑의 천장이라 같이 본다. 이미 있는 주제 레지스트리([`content-intake-design.archive.md`](../../archive/content-intake-design.archive.md)가 깐 `topics`·`source_topics` 스키마·확정 게이트) 위에 서고, 그 정전 위에 생애주기·품질을 더한다. ⚠️ 이 문서는 v2 Digest 파이프라인으로 대체돼 히스토리로 옮겨졌다 — 여기 의존하는 스키마·게이트가 여전히 유효한지 재검토 필요.
 >
-> 짝 문서: [`content-intake-design.md`](../first-product/content-intake-design.md)(주제 레지스트리·확정 게이트의 정전), [`auto-scoping-design.md`](auto-scoping-design.md)(주제를 읽어 검색을 좁히는 쪽), [`ingestion-design.md`](ingestion-design.md)(주제가 글에 붙는 넣기 경로).
+> 짝 문서: [`content-intake-design.archive.md`](../../archive/content-intake-design.archive.md)(주제 레지스트리·확정 게이트의 정전, 히스토리로 옮겨짐), [`auto-scoping-design.md`](auto-scoping-design.md)(주제를 읽어 검색을 좁히는 쪽), [`ingestion-design.md`](ingestion-design.md)(주제가 글에 붙는 넣기 경로).
 
 ---
 
@@ -15,7 +15,7 @@
 
 ## 1. 무엇이다 — 주제는 원자적 멀티라벨 태그다
 
-주제는 **하나의 개념을 가리키는 평평한 라벨**이다('AI 마케팅', '결제', '온보딩'). 자라거나 갈라지는 클러스터가 아니다(정전에서 줄기(stem)는 "주제 한 행 + 그 주제를 가진 원본들"을 뜻하니, 여기서 줄기라는 말은 피한다). 문서가 넓으면 태그 **개수**가 늘 뿐, 태그 하나의 범위가 넓어지지 않는다.
+주제는 **하나의 개념을 가리키는 평평한 라벨**이다('AI 마케팅', '결제', '온보딩'). 자라거나 갈라지는 클러스터가 아니다(정전에서 줄기(stem)는 "주제 한 행 + 그 주제를 가진 원문들"을 뜻하니, 여기서 줄기라는 말은 피한다). 문서가 넓으면 태그 **개수**가 늘 뿐, 태그 하나의 범위가 넓어지지 않는다.
 
 이 정의를 못박는 이유: **이름이 설계를 오도했다.** "주제(topic)"라 부르니 "자라는 클러스터"로 상상해 군집·재배치·결정론을 한참 헤맸는데, 실제로 필요한 건 태그다. 코드는 당장 `topics`를 유지한다(재명명은 갈아엎을 게 넓고 측정 전이라 이르며, 용어는 `glossary.md`가 관할한다). 대신 **여기서 의미를 "원자 멀티라벨 태그"로 고정해 이름이 다시 오도하지 못하게 한다.** 사용자에게 "태그"로 보이는 건 제품 용어 매핑으로 코드 변경 없이 가능하다.
 
@@ -26,7 +26,7 @@
 새로 짓는 게 아니라 얹는 것이다. 지금 스키마가 이미 태그 모델이다:
 
 - `topics(space_id, name)` + `UNIQUE(space_id, name)`: 공간 단위 평평한 라벨.
-- `source_topics`: 원본 0..N 태그(멀티라벨, 무태그 허용).
+- `source_topics`: 원문 0..N 태그(멀티라벨, 무태그 허용).
 - `confirm_draft` RPC: 이름으로 find-or-create + 연결.
 - draft-assist: 레지스트리(`listTopicNames`)를 LLM에 줘 재사용 우선으로 제안.
 
@@ -55,7 +55,7 @@
 
 ## 5. 맥락 수정 시 갱신 — 더하기만 (#2)
 
-저장된 원본을 나중에 편집하면 태그를 어떻게 하나. **더하기만 한다:**
+저장된 원문을 나중에 편집하면 태그를 어떻게 하나. **더하기만 한다:**
 
 - **트리거**: 이미 도는 재추출에 얹는다(의미 있는 편집에만, 사소한 수정은 안 건드림).
 - **방향**: 새로 관련된 태그는 자동 부착(레지스트리 재사용), 자동 삭제는 안 함.
@@ -109,7 +109,7 @@
 - coarse가 태그(이름, 게이트되면 +설명)를 읽어 질의에 관련된 태그를 고른다.
 - fine이 그 태그의 진술 안에서 검색한다.
 - 여러 태그는 **합집합**이 기본(recall 우선, [auto-scoping](auto-scoping-design.md) #3). 교집합은 더 좁지만 recall 위험이라 기본 아님.
-- 무태그 원본은 항상 포함되는 미분류 버킷([auto-scoping](auto-scoping-design.md) #4).
+- 무태그 원문은 항상 포함되는 미분류 버킷([auto-scoping](auto-scoping-design.md) #4).
 
 ---
 

@@ -2,13 +2,13 @@
 
 > "저장 비종속"으로 정리한 모델(docs/foundations 01~10)을 실제 저장소(Postgres/Supabase·Qdrant·Neo4j)에 앉히는 설계. 이 문서를 보고 바로 마이그레이션을 뽑을 수 있는 수준을 목표로 한다.
 >
-> 이전 세대: [`save-engine-v1`](../save-engine-v1/) (합성 문서 기반). 08-implementation-vs-model이 정리했듯 v1(합성 문서) → v2(진술)는 같은 문제의 두 세대다.
+> 이전 세대: [`save-engine-v1`](../../archive/save-engine-v1/) (합성 문서 기반, 히스토리로 이동됨). `implementation-vs-model.archive.md`가 정리했듯 v1(합성 문서) → v2(진술)는 같은 문제의 두 세대다.
 
 ---
 
 ## 0. 이 문서가 정하는 것 / 정하지 않는 것
 
-- **정한다**: 진술·원본·관계·변경셋·소유(Space)를 담는 테이블 스키마, 제약, 인덱스, RLS, 트리거, 그리고 추출·임베딩 동기화의 DB 계약(큐·RPC·상태 컬럼·벡터 payload).
+- **정한다**: 진술·원문·관계·변경셋·소유(Space)를 담는 테이블 스키마, 제약, 인덱스, RLS, 트리거, 그리고 추출·임베딩 동기화의 DB 계약(큐·RPC·상태 컬럼·벡터 payload).
 - **정하지 않는다**: 검색/조회 API(tRPC 라우터·서비스), worker의 실제 구현 코드(LLM 추출 로직, Voyage 임베딩 호출, Qdrant 클라이언트), 관계 엔진(진술을 잇는 판단 로직), Neo4j 그래프 동기화. 이들은 후속 작업.
 
 ---
@@ -29,10 +29,10 @@
 1. **원자 = 진술(Statement).** 합성 문서는 pull 시점 뷰로 강등.
 2. **소유는 user 직접이 아니라 Space 한 겹 건너.** 오늘은 사람당 개인 Space 1개(Member 1명) 자동 생성, 모든 기록에 `space_id`.
 3. **유효성 = 존재 + 대체(replaces) 없음.** 별도 시각 필드(effectiveAt) 없음. 참·거짓 미판단.
-4. **`author_id`는 사람 산물에만** (원본·사람 주도 변경셋). 엔진 산물(진술·관계)엔 없음.
+4. **`author_id`는 사람 산물에만** (원문·사람 주도 변경셋). 엔진 산물(진술·관계)엔 없음.
 5. **관계·변경셋은 스키마에 자리만, 엔진은 미연결** (이 작업 스코프 기준).
 6. **진술 종류 claim/question/todo 다 받음.** 확신도는 claim에만.
-7. **원본은 불변** — "수정"은 폐기(archive)+재생성으로 표현. **진술의 `modify`는 모델 연산으로 존재하나(07이 "진술을 modify하면 관계 재평가"로 명시), 첫 출시엔 직접 수정 기능을 안 만들어 실제로 생성되지 않는다(09 미정).**
+7. **원문은 불변** — "수정"은 폐기(archive)+재생성으로 표현. **진술의 `modify`는 모델 연산으로 존재하나(07이 "진술을 modify하면 관계 재평가"로 명시), 첫 출시엔 직접 수정 기능을 안 만들어 실제로 생성되지 않는다(09 미정).**
 
 ---
 
@@ -44,7 +44,7 @@ auth.users ──(가입 트리거)──> spaces ──< space_members >── 
         ┌────────────────────────┼─────────────────────────┐
         │ (모든 기록은 space_id로 소유)                       │
    sources              statements              statement_relations
-   (원본·박제)           (진술·원자)              (관계, 자리만)
+   (원문·박제)           (진술·원자)              (관계, 자리만)
       │                  │   │                     │ from_id / to_id
       └──< statement_sources >──┘                  └──> statements
             (SourceRef, 다중)
@@ -93,7 +93,7 @@ CREATE TABLE space_members (
 ### 4.2 원자 층
 
 ```sql
--- 원본: 무손실 박제 + 추출 작업 상태
+-- 원문: 무손실 박제 + 추출 작업 상태
 CREATE TABLE sources (
   id                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   space_id                 uuid NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
@@ -132,20 +132,20 @@ CREATE TABLE statements (
   )
 );
 
--- SourceRef: 진술 → 원본 포인터 (다중)
+-- SourceRef: 진술 → 원문 포인터 (다중)
 CREATE TABLE statement_sources (
   statement_id  uuid NOT NULL REFERENCES statements(id) ON DELETE CASCADE,
   source_id     uuid NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
-  locator       jsonb,                    -- 원본 내 위치, 자리만(안 채움)
+  locator       jsonb,                    -- 원문 내 위치, 자리만(안 채움)
   created_at    timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (statement_id, source_id)
 );
 ```
 
 - `statements`엔 `author_id` 없음 — 엔진 산물. 출처는 `statement_sources → sources.author_id`로 파생.
-- `content` 수정(`modify`)은 모델 연산으로 존재하나(07: "진술을 `modify`하면 관계 재평가"), **첫 출시엔 직접 수정 기능을 안 만들어 미사용**(09 미정). `updated_at`은 `status`/동기화 같은 메타 변경 추적용. (원본과 달리 진술 modify를 막는 제약은 두지 않는다 — 07이 진술 modify를 허용하므로.)
+- `content` 수정(`modify`)은 모델 연산으로 존재하나(07: "진술을 `modify`하면 관계 재평가"), **첫 출시엔 직접 수정 기능을 안 만들어 미사용**(09 미정). `updated_at`은 `status`/동기화 같은 메타 변경 추적용. (원문과 달리 진술 modify를 막는 제약은 두지 않는다 — 07이 진술 modify를 허용하므로.)
 - **`statement_sources`는 양끝이 같은 Space여야 함**(추출 관계는 Space를 가로지르지 않음). `BEFORE INSERT` 트리거로 `statement.space_id = source.space_id` 강제 (의미상 확정적이라 지금 박는다).
-- `sources`는 임베딩하지 않음(원본은 의미로 다루지 않음). 임베딩 대상은 진술뿐.
+- `sources`는 임베딩하지 않음(원문은 의미로 다루지 않음). 임베딩 대상은 진술뿐.
 
 ### 4.3 변경 층
 
@@ -156,7 +156,7 @@ CREATE TABLE changesets (
   space_id    uuid NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
   type        changeset_type NOT NULL,    -- ingestion|conflict|merge|manual|revert
   status      changeset_status NOT NULL,  -- pending | applied (DEFAULT 없음 — 생성 RPC가 명시적으로 정함)
-  source_id   uuid REFERENCES sources(id)    ON DELETE CASCADE,   -- ingestion이면 어느 원본 (같은 Space라 동반 삭제)
+  source_id   uuid REFERENCES sources(id)    ON DELETE CASCADE,   -- ingestion이면 어느 원문 (같은 Space라 동반 삭제)
   reverts_id  uuid REFERENCES changesets(id) ON DELETE CASCADE,   -- revert면 되돌리는 대상
   author_id   uuid REFERENCES auth.users(id) ON DELETE SET NULL,  -- 변경을 일으킨 주체(사람). 엔진이면 NULL. 계정 삭제 시 NULL로 보존
   created_at  timestamptz NOT NULL DEFAULT now(),
@@ -185,13 +185,13 @@ CREATE TABLE changes (
     OR (action = 'archive' AND data IS NULL)
   ),
   CONSTRAINT chk_no_source_modify CHECK (
-    NOT (target_type = 'source' AND action = 'modify')   -- 원본은 불변
+    NOT (target_type = 'source' AND action = 'modify')   -- 원문은 불변
   )
 );
 ```
 
 - **첫 출시에 실제로 생성되는 type은 `ingestion`(저장)·`manual`(직접 빼기)·`revert`(되돌리기) 3개.** `conflict`·`merge`는 관계 엔진이 만들어 미연결(스키마는 받아둠).
-- **`changesets.author_id`는 "변경을 일으킨 주체"** — `ingestion`이면 원본을 제출한 *사람*이다(엔진이 진술을 추출해도 변경을 일으킨 주체는 제출자). 결정 #4의 "엔진 산물엔 author 없음"은 진술·관계 같은 *산출물*에 대한 것이라 축이 다르다. DB는 엔진 type(`conflict`/`merge`)의 `author IS NULL`만 강제하고, 사람 type의 author 필수는 생성 RPC가 보장한다.
+- **`changesets.author_id`는 "변경을 일으킨 주체"** — `ingestion`이면 원문을 제출한 *사람*이다(엔진이 진술을 추출해도 변경을 일으킨 주체는 제출자). 결정 #4의 "엔진 산물엔 author 없음"은 진술·관계 같은 *산출물*에 대한 것이라 축이 다르다. DB는 엔진 type(`conflict`/`merge`)의 `author IS NULL`만 강제하고, 사람 type의 author 필수는 생성 RPC가 보장한다.
 - **append-only 되돌리기**: `applied`를 되돌릴 때 status를 바꾸지 않고 `revert` 변경셋을 *추가*한다(07).
 - **`changes.target_id`는 FK 없는 polymorphic** — 대상이 3종(statement/source/relation)이라 단일 FK가 불가능한 게 1차 이유다. 더해서 이력 로그라, Space 삭제(4.5)로 대상이 사라져도 "무엇을 했는지"가 남아야 한다. 생성 시 대상 존재 보장은 RPC가 한다. (개별 기록은 hard-delete가 없어 평소엔 대상이 늘 존재한다.)
 - `data` 형식(modify의 before/after 보존 등)은 구현 단계로 열어둠.
@@ -230,7 +230,7 @@ CREATE TABLE statement_relations (
 |---|---|---|
 | 모든 `space_id` | `CASCADE` | Space가 소유의 뿌리 |
 | `author_id` (sources·changesets) | `SET NULL` | 계정 삭제 시 익명으로 기록 보존 |
-| `session_id` (sources) | `SET NULL` | 대화가 지워져도 원본 보존 |
+| `session_id` (sources) | `SET NULL` | 대화가 지워져도 원문 보존 |
 | `changesets.source_id`·`reverts_id` | `CASCADE` | 끝점은 같은 Space라 Space 삭제 시 동반 |
 | `statement_sources`·`statement_relations`의 끝점 | `CASCADE` | hard-delete는 Space 삭제 때만 일어나므로 동반 |
 | `changes.target_id` | (FK 없음) | polymorphic이라 단일 FK 불가 + 이력 보존(4.3) |
@@ -337,7 +337,7 @@ sources              (space_id, created_at DESC)
                      (id) WHERE extraction_status='pending'  -- 추출 worker 폴링
 statements           (space_id, created_at DESC)
                      (id) WHERE ingestion_status='pending'   -- 임베딩 worker 폴링
-statement_sources    (source_id)                             -- 원본→진술 역방향(원본 빼기)
+statement_sources    (source_id)                             -- 원문→진술 역방향(원문 빼기)
 changesets           (space_id, created_at DESC)
 changes              (changeset_id)
 statement_relations  (from_id), (to_id), (space_id)
@@ -364,7 +364,7 @@ statement_relations  (from_id), (to_id), (space_id)
 
 | 항목 | 이번(NEM-121) | 후속 |
 |---|---|---|
-| 진술·원본·관계·변경·Space 테이블 | ✅ | |
+| 진술·원문·관계·변경·Space 테이블 | ✅ | |
 | RLS·가입 트리거·same-space 트리거 | ✅ | |
 | 추출·임베딩 동기화 DB 계약(큐·RPC·상태·payload) | ✅ | worker 구현 코드 |
 | 관계 엔진(진술 잇기 판단) | 자리만 | ✅ |
@@ -380,7 +380,7 @@ statement_relations  (from_id), (to_id), (space_id)
   | 제품 용어 | 코드 용어 |
   |---|---|
   | 진술(Statement) | `statements` |
-  | 원본(Source) | `sources` |
+  | 원문(Source) | `sources` |
   | 관계(Relation) | `statement_relations` |
   | 변경셋(Changeset) | `changesets` / `changes` |
   | 스페이스(Space) | `spaces` / `space_members` |

@@ -17,7 +17,7 @@ CREATE TABLE changesets (
   space_id    uuid NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
   type        changeset_type NOT NULL,
   status      changeset_status NOT NULL,  -- DEFAULT 없음 — 생성 RPC가 명시적으로 정함
-  source_id   uuid REFERENCES sources(id)    ON DELETE CASCADE,   -- ingestion이면 어느 원본 (같은 Space라 동반 삭제)
+  source_id   uuid REFERENCES sources(id)    ON DELETE CASCADE,   -- ingestion이면 어느 원문 (같은 Space라 동반 삭제)
   reverts_id  uuid REFERENCES changesets(id) ON DELETE CASCADE,   -- revert면 되돌리는 대상
   author_id   uuid REFERENCES auth.users(id) ON DELETE SET NULL,  -- 변경을 일으킨 주체(사람). 엔진이면 NULL. 계정 삭제 시 NULL로 보존
   created_at  timestamptz NOT NULL DEFAULT now(),
@@ -49,7 +49,7 @@ CREATE TABLE changes (
     (action IN ('create', 'modify') AND data IS NOT NULL)
     OR (action = 'archive' AND data IS NULL)
   ),
-  -- 원본은 불변 — "수정"은 폐기(archive)+재생성으로 표현.
+  -- 원문은 불변 — "수정"은 폐기(archive)+재생성으로 표현.
   -- 진술 modify는 막지 않는다(모델이 허용, 첫 출시엔 미사용).
   CONSTRAINT chk_no_source_modify CHECK (
     NOT (target_type = 'source' AND action = 'modify')

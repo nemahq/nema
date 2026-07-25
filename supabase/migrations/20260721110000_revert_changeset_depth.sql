@@ -56,7 +56,7 @@ BEGIN
   )
   RETURNING id INTO v_revert_id;
 
-  -- ingestion 예외: changes 밖의 원본(source_id)도 pending으로 되돌린다
+  -- ingestion 예외: changes 밖의 원문(source_id)도 pending으로 되돌린다
   -- ("글 통째로" — v2에선 archive가 아니라 pending 복귀, 07-modeling.md)
   IF v_type = 'ingestion' AND v_source_id IS NOT NULL THEN
     UPDATE sources SET status = 'pending'

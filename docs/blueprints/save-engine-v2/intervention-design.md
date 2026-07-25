@@ -2,7 +2,7 @@
 
 > 엔진 산출(진술·관계) 위에 사람이 개입하는 세 가지 백엔드 동작의 설계 — **빼기(archive)·되돌리기(revert)·pending 관계 해소**. 셋 다 changeset(변경 묶음) 조작 가족이라 한 집에서 짓는다.
 >
-> 토대: [`schema-design.md`](schema-design.md)(진술·원본·관계·변경셋 표 구조), [`relation-design.md`](relation-design.md)(pending 관계 changeset 단위·연쇄 archive 트리거 — 이미 빌드됨), [`ingestion-design.md`](ingestion-design.md)(넣기 — 되돌리기의 대상이 되는 변경셋이 여기서 생긴다). 07 모델링의 동작 규칙(append-only revert·status archived)을 메커니즘으로 번역한다.
+> 토대: [`schema-design.md`](schema-design.md)(진술·원문·관계·변경셋 표 구조), [`relation-design.md`](relation-design.md)(pending 관계 changeset 단위·연쇄 archive 트리거 — 이미 빌드됨), [`ingestion-design.md`](ingestion-design.md)(넣기 — 되돌리기의 대상이 되는 변경셋이 여기서 생긴다). 07 모델링의 동작 규칙(append-only revert·status archived)을 메커니즘으로 번역한다.
 >
 > 범위 짝 문서: NEM-133(검토·되돌리기 **화면**)이 이 문서가 못박는 RPC/서비스 계약 위에 얇게 올라탄다. 이 문서는 **백엔드(조작·계약)만** 정한다.
 
@@ -20,7 +20,7 @@
 엔진은 글을 진술로 쪼개고(넣기) 진술 사이를 잇는다(관계). 그 산출이 틀리거나 애매할 때 사람이 개입하는 세 동작:
 
 ```
-빼기 (archive)        — 잘못 들어간 진술·원본 1개를 가린다           → manual 변경셋
+빼기 (archive)        — 잘못 들어간 진술·원문 1개를 가린다           → manual 변경셋
 되돌리기 (revert)     — 한 변경 동작(글 넣기, 자동 잇기 묶음)을 무른다  → revert 변경셋
 pending 관계 해소     — 엔진이 미뤄둔 관계 제안을 적용/거절한다         → 상태 전이(+관계 행)
 ```
@@ -35,7 +35,7 @@ pending 관계 해소     — 엔진이 미뤄둔 관계 제안을 적용/거절
 
 - **되돌리기는 append-only.** 물리 삭제·덮어쓰기 없음. revert 변경셋을 덧쌓고 "되돌려졌나"는 그 존재로 파생.
 - **빼기 = `status=archived`.** 원장엔 남는 무손실. 유효성은 "존재 + 미대체"로 파생되므로 archive면 자연히 유효 집합에서 빠진다.
-- **진술·원본 불변.** 내용 수정 안 함 — 수정이 필요하면 archive + 재생성.
+- **진술·원문 불변.** 내용 수정 안 함 — 수정이 필요하면 archive + 재생성.
 - **변경셋 단위**(relation-design §6 확정): 엔진 자동 적용 관계 = **글당 1개**. pending 관계 = **건당 1개**. 그대로 받는다.
 - **authorId**: 사람 산물(빼기·되돌리기 변경셋)엔 author. 엔진 산물(진술·관계, pending 제안)엔 없음.
 
@@ -43,7 +43,7 @@ pending 관계 해소     — 엔진이 미뤄둔 관계 제안을 적용/거절
 
 | Q | 결정 |
 |---|---|
-| **Q1 원본 빼기 연쇄** | **연쇄 없음**(07 유지). 원본 archive는 진술을 건드리지 않는다. "글 통째로 무르기"는 ingestion 되돌리기(§4.1)가 담당 — v1 헤드라인 원본 동작. "원본만 archive"는 계약에 자리만(§3.2). |
+| **Q1 원문 빼기 연쇄** | **연쇄 없음**(07 유지). 원문 archive는 진술을 건드리지 않는다. "글 통째로 무르기"는 ingestion 되돌리기(§4.1)가 담당 — v1 헤드라인 원문 동작. "원문만 archive"는 계약에 자리만(§3.2). |
 | **Q2 되돌리기 범위** | **변경셋 단위 polymorphic**(§4). 되돌리기 변경셋은 *실제 일으킨 전이만* 기록하고, 관계는 열거하지 않는다 — 끝점 연쇄 트리거가 불변식의 주인. |
 | **Q3 빼기 vs 되돌리기** | **둘 다 유지**. 빼기=객체 1개 archive(사물). 되돌리기=변경셋 무르기(사건). 다른 단위·표면. |
 | **Q4 pending 해소** | 적용(행 생성+applied) / 거절(`rejected` 신설, 영구) / 충돌은 적용·거절까지만, "승자 고르기→replaces"는 후속(§5.3). |
@@ -65,13 +65,13 @@ pending 관계 해소     — 엔진이 미뤄둔 관계 제안을 적용/거절
 
 **관계는 건드리지 않는다** — 끝점 진술이 archived되면 `trg_statements_cascade_archive_relations`(이미 빌드됨)가 걸린 active 관계를 자동 archive한다. RPC는 진술만 archive하고, 관계 연쇄는 트리거가 소유한다.
 
-### 3.2 원본 빼기 — 자리만
+### 3.2 원문 빼기 — 자리만
 
-Q1: 원본 archive는 진술을 **건드리지 않는다**(07). 사용자가 원본 수준에서 원하는 헤드라인 동작은 "글 통째로 무르기"(= ingestion 되돌리기, §4.1)이고, "원문만 가리고 진술은 남기기"는 v1에 강한 시나리오가 없다(기밀 원문은 soft-archive로 보호 안 되는 hard-delete 케이스라 07이 별도로 미룸).
+Q1: 원문 archive는 진술을 **건드리지 않는다**(07). 사용자가 원문 수준에서 원하는 헤드라인 동작은 "글 통째로 무르기"(= ingestion 되돌리기, §4.1)이고, "원문만 가리고 진술은 남기기"는 v1에 강한 시나리오가 없다(기밀 원문은 soft-archive로 보호 안 되는 hard-delete 케이스라 07이 별도로 미룸).
 
-`archive_source(p_source_id)` — `manual` 변경셋 + `{archive, source, id}`, 원본 `status='archived'`. 벡터 없음(원본은 임베딩 안 함), 연쇄 없음.
+`archive_source(p_source_id)` — `manual` 변경셋 + `{archive, source, id}`, 원문 `status='archived'`. 벡터 없음(원문은 임베딩 안 함), 연쇄 없음.
 
-**빌드 결정 (G):** RPC는 **이번에 만든다**(자리만 두지 않는다) — `archive_statement`와 3줄 차이고, ingestion 되돌리기(§4.1)가 어차피 원본 archive 경로를 쓰므로 같은 로직을 공유한다. 단 **v1 화면 헤드라인은 아니다**(NEM-133이 노출할지는 화면 몫). 즉 "백엔드 계약은 완비, UI 노출은 선택".
+**빌드 결정 (G):** RPC는 **이번에 만든다**(자리만 두지 않는다) — `archive_statement`와 3줄 차이고, ingestion 되돌리기(§4.1)가 어차피 원문 archive 경로를 쓰므로 같은 로직을 공유한다. 단 **v1 화면 헤드라인은 아니다**(NEM-133이 노출할지는 화면 몫). 즉 "백엔드 계약은 완비, UI 노출은 선택".
 
 ## 4. 되돌리기 (revert)
 
@@ -89,10 +89,10 @@ Q1: 원본 archive는 진술을 **건드리지 않는다**(07). 사용자가 원
 타겟 = `ingestion` 변경셋. "이 글 잘못 넣었다, 다 무르자."
 
 - 그 변경셋이 만든 진술(`changes` 중 `create/statement`) 가운데 **현재 active인 것만** archive + `ingestion_status='pending'`(벡터 축출).
-- 변경셋의 `source_id`가 가리키는 **원본도 함께** archive — "글 통째로"의 *글*은 원본이므로, 되돌리면 원본도 활성 목록에서 빠진다(빈 원본 잔여 방지). Q1의 "원본 빼기 → 진술 유지"와 축이 다르다 — 저쪽은 원본만 빼는 독립 동작, 이쪽은 글 넣기라는 *사건*을 통째로 무르는 것.
-  - **순수성 예외 (C, 명시):** revert는 원칙적으로 "타겟 변경셋의 `changes`를 뒤집는다". 그런데 원본은 ingestion 변경셋의 `changes`에 없고(넣기는 진술 create만 기록, 원본은 동기 박제) `source_id`로만 닿는다. 그래서 **ingestion 되돌리기만은** changes 밖의 `source_id`에서 원본을 *유도*해 archive한다 — 유일한 예외다. 단 그 archive는 revert 변경셋의 changes에 `{archive, source, source_id}`로 *기록*되므로, redo는 다시 자기 기술적이다(예외는 "무엇을 archive할지 아는 경로"에만 있고, 기록·redo는 일반 규칙 그대로).
+- 변경셋의 `source_id`가 가리키는 **원문도 함께** archive — "글 통째로"의 *글*은 원문이므로, 되돌리면 원문도 활성 목록에서 빠진다(빈 원문 잔여 방지). Q1의 "원문 빼기 → 진술 유지"와 축이 다르다 — 저쪽은 원문만 빼는 독립 동작, 이쪽은 글 넣기라는 *사건*을 통째로 무르는 것.
+  - **순수성 예외 (C, 명시):** revert는 원칙적으로 "타겟 변경셋의 `changes`를 뒤집는다". 그런데 원문은 ingestion 변경셋의 `changes`에 없고(넣기는 진술 create만 기록, 원문은 동기 박제) `source_id`로만 닿는다. 그래서 **ingestion 되돌리기만은** changes 밖의 `source_id`에서 원문을 *유도*해 archive한다 — 유일한 예외다. 단 그 archive는 revert 변경셋의 changes에 `{archive, source, source_id}`로 *기록*되므로, redo는 다시 자기 기술적이다(예외는 "무엇을 archive할지 아는 경로"에만 있고, 기록·redo는 일반 규칙 그대로).
 - `revert` 변경셋의 changes = `{archive, source, source_id}` + `{archive, statement, id}×(active N)`.
-- **관계는 열거 안 함** — 진술이 archived되며 트리거가 걸린 관계(그 글의 자동 잇기 100% + 다른 글이 이 진술을 가리킨 cross-source 관계까지)를 자동 archive(Q2). 잇기 후보는 새 진술의 벡터로 space 전체를 검색하므로 끝점이 여러 원본에 걸치지만, 모든 잇기 관계는 끝점 하나가 이 글의 진술이라 진술 archive만으로 빠짐없이 정리된다.
+- **관계는 열거 안 함** — 진술이 archived되며 트리거가 걸린 관계(그 글의 자동 잇기 100% + 다른 글이 이 진술을 가리킨 cross-source 관계까지)를 자동 archive(Q2). 잇기 후보는 새 진술의 벡터로 space 전체를 검색하므로 끝점이 여러 원문에 걸치지만, 모든 잇기 관계는 끝점 하나가 이 글의 진술이라 진술 archive만으로 빠짐없이 정리된다.
 - notify(벡터 축출).
 
 그 글이 촉발한 `relation` 변경셋(같은 `source_id`)은 건드리지 않는다 — 그 관계 행들은 이미 위 트리거로 archived고, 변경셋 status는 그대로 `applied`로 남는다(다른 변경셋의 status는 안 바꾼다, append-only). "자동 잇기만 따로 무르기"는 §4.2.
@@ -103,13 +103,13 @@ Q1: 원본 archive는 진술을 **건드리지 않는다**(07). 사용자가 원
 
 - 그 변경셋이 만든 관계 행(`changes` 중 `create/relation`) 가운데 **현재 active인 것만** archive.
 - `revert` 변경셋 changes = `{archive, relation, id}×(active M)`.
-- 진술·원본·벡터 무관. 끝점 진술은 그대로 active.
+- 진술·원문·벡터 무관. 끝점 진술은 그대로 active.
 
 ### 4.3 manual 되돌리기 — 빼기 무르기
 
-타겟 = `manual` 변경셋(진술/원본 빼기). "방금 뺀 거 되살린다."
+타겟 = `manual` 변경셋(진술/원문 빼기). "방금 뺀 거 되살린다."
 
-- 그 변경셋이 archive한 대상을 **restore**(active 복귀). 진술이면 `ingestion_status='pending'`(벡터 재적재) + notify. 원본이면 status만.
+- 그 변경셋이 archive한 대상을 **restore**(active 복귀). 진술이면 `ingestion_status='pending'`(벡터 재적재) + notify. 원문이면 status만.
 - `revert` 변경셋 changes = `{restore, statement|source, id}`.
 - 진술 restore 시 트리거가 **양끝이 다 active인** 관계만 복원(한쪽이 아직 가려져 있으면 관계도 가린 채). 이미 빌드된 트리거의 복귀 분기 그대로.
 
@@ -191,7 +191,7 @@ SELECT EXISTS(SELECT 1 FROM changesets r
 | RPC | 시그니처 | 하는 일 |
 |---|---|---|
 | `archive_statement` | `(p_statement_id uuid) → void` | 진술 빼기(§3.1). manual 변경셋 + archive + 벡터 축출 + notify |
-| `archive_source` | `(p_source_id uuid) → void` | 원본 빼기(§3.2, 자리). manual 변경셋 + archive |
+| `archive_source` | `(p_source_id uuid) → void` | 원문 빼기(§3.2, 자리). manual 변경셋 + archive |
 | `revert_changeset` | `(p_changeset_id uuid) → uuid` | 되돌리기/redo(§4). revert 변경셋 id 반환 |
 | `apply_pending_relation` | `(p_changeset_id uuid) → uuid` | pending 적용(§5.1). 생성된 관계 id 반환 |
 | `reject_pending_relation`| `(p_changeset_id uuid) → void` | pending 거절(§5.2) |
@@ -241,7 +241,7 @@ supabase 규칙: 변경당 1파일, `supabase migration new`.
 - **충돌 "승자 고르기 → replaces"** + `conflict` 변경셋 type 거취 — 검토함 설계(relation-design §11). 실제 충돌 데이터 관측 후.
 - **거절 후 되살리기** — 마음 바뀐 거절을 되돌리는 경로. 작은 후속, 요구되면.
 - **진술 직접 작성·수정** — 진술 불변·author 규칙과 부딪혀 별도 설계. 실제 UX 필요 입증 시.
-- **원본 수정 설탕** — revert-ingestion + create-source 조립. 원본 수정 마찰이 dogfooding에서 입증되면.
+- **원문 수정 설탕** — revert-ingestion + create-source 조립. 원문 수정 마찰이 dogfooding에서 입증되면.
 - **진술 modify 시 stale 관계 재평가(`recheck`)** — 07 기존 보류. 진술 modify가 실제로 생기는 날.
 - **resolver author 기록** — pending 적용/거절의 주체(원장이 엔진·사람 해소를 구분 못 하는 한계, §5.1). 협업(멀티 멤버) 단계에서.
 - **재제안 가드 인덱스/정규화** — rejected 누적으로 JSONB 스캔이 느려지면(§6 F). 해제 조건은 dogfooding 실측.

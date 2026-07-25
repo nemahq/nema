@@ -10,7 +10,7 @@
 -- 오히려 원치 않는 결과다 — 두 니즈 다 타당하므로 암묵적으로 강제하지 않고
 -- p_delete_pending_drafts로 명시적으로 고르게 한다.
 --
--- "삭제" 선택 시 trash_source(단일 원본 휴지통행 — 07-modeling §완전 삭제)를
+-- "삭제" 선택 시 trash_source(단일 원문 휴지통행 — 07-modeling §완전 삭제)를
 -- 거치는 30일 유예 경로를 타지 않는다. Space 삭제엔 애초에 Space 자신의
 -- trashed 상태가 없어(07-modeling: "삭제가 필요해지면 그 안의 Space들에 이미
 -- 있는 완전 삭제 캐스케이드를 부채꼴로 실행") active·리뷰 중인 초안도 이미

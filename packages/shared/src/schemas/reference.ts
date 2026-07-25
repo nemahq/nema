@@ -20,7 +20,7 @@ export const ReferenceStatusSchema = z.enum(REFERENCE_STATUSES);
 export type ReferenceStatus = z.infer<typeof ReferenceStatusSchema>;
 
 export const REFERENCE_TITLE_MAX_LENGTH = 200;
-// body는 "다듬어지며 유지되는 내용"이라 상한을 원본(10만 자)보다 훨씬 작게 —
+// body는 "다듬어지며 유지되는 내용"이라 상한을 원문(10만 자)보다 훨씬 작게 —
 // 레퍼런스는 정의·설명이지 문서 보관함이 아니다. 다만 프로필·스펙 붙여넣기 같은
 // 정상 사용을 물지 않도록 넉넉히 잡는다(입력 거부가 가장 나쁜 경험).
 export const REFERENCE_BODY_MAX_LENGTH = 20_000;

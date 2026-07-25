@@ -369,7 +369,7 @@ interface ChangesetHistoryEntry {
   type: ChangesetType;
   status: ChangesetStatus;
   sourceId: string | null;
-  // ingestion의 "되살리기" 활성 여부는 원본이 pending인지에 달려있다(restore_ingestion_review
+  // ingestion의 "되살리기" 활성 여부는 원문이 pending인지에 달려있다(restore_ingestion_review
   // 가드) — 목록 단계에서 미리 알아야 클릭 전에 버튼을 비활성화할 수 있다.
   sourceStatus: SourceStatus | null;
   // 생성 시점에 채워지는 표시용 제목(타입별 채움 규칙은 changeset_title 마이그레이션

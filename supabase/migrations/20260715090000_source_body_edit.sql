@@ -1,8 +1,8 @@
 -- =============================================================
--- Source 원본(body) 편집 + 제목 생성 분리
+-- Source 원문(body) 편집 + 제목 생성 분리
 --
--- 배경: "결과없음(empty)"에서 재추출을 눌러봐야 원본이 그대로면 같은 결과가 또
--- 나올 뿐이다. 재추출이 의미를 가지려면 그 전에 원본을 고칠 수 있어야 한다.
+-- 배경: "결과없음(empty)"에서 재추출을 눌러봐야 원문이 그대로면 같은 결과가 또
+-- 나올 뿐이다. 재추출이 의미를 가지려면 그 전에 원문을 고칠 수 있어야 한다.
 --
 -- 이 김에 제목 생성 방식도 갈아엎는다. 지금 title은 digestion.ts의 무거운 생성
 -- 콜(원문 전체 분석, standard 티어) 출력에 얹혀 나오는데, 제목은 Digest 추출
@@ -68,7 +68,7 @@ BEGIN
     RAISE EXCEPTION 'p_digests must not be empty — use complete_source_digestion for empty results';
   END IF;
 
-  -- author_id = 원본 제공자: ingestion은 사람 주도 변경셋(07-modeling authorId 규칙)
+  -- author_id = 원문 제공자: ingestion은 사람 주도 변경셋(07-modeling authorId 규칙)
   INSERT INTO changesets (space_id, type, status, source_id, author_id)
   VALUES (v_space_id, 'ingestion', 'pending', p_source_id, v_author_id)
   RETURNING id INTO v_changeset_id;
@@ -93,7 +93,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 --
 --    대가는 무음 no-op가 둘로 갈린다는 것이다: title이 이미 찬 경우(정상)와 호출자가
 --    Space 멤버가 아닌 경우(비정상)가 같은 "아무 일도 안 일어남"으로 끝난다. 후자는
---    지금 호출부 구조상 도달할 수 없다 — 이 함수는 방금 자기가 만든 원본에만 붙고,
+--    지금 호출부 구조상 도달할 수 없다 — 이 함수는 방금 자기가 만든 원문에만 붙고,
 --    create_source가 이미 같은 멤버십을 검증했다. 멤버십 검사는 호출부가 바뀌었을 때를
 --    위한 backstop이지 여기서 구분해 보고할 신호가 아니다.
 --
@@ -149,12 +149,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 ALTER TABLE sources DROP COLUMN title_edited;
 
 -- =============================================================
--- 4) update_source_body — 케이스 "재추출 전에 원본 고치기"
+-- 4) update_source_body — 케이스 "재추출 전에 원문 고치기"
 --
 --    update_source_title의 가드(pending + 처리 중 아님)에 "열린 리뷰 없음"을 하나
 --    더 얹는다. 제목과 달리 body는 리뷰 대기 중인 Digest들이 뽑혀 나온 출처라,
---    리뷰가 열린 채로 원본을 갈아치우면 화면의 후보들이 더는 존재하지 않는 문장에서
---    나온 것이 된다. 리뷰를 먼저 확정하거나 버려야 원본을 고칠 수 있다.
+--    리뷰가 열린 채로 원문을 갈아치우면 화면의 후보들이 더는 존재하지 않는 문장에서
+--    나온 것이 된다. 리뷰를 먼저 확정하거나 버려야 원문을 고칠 수 있다.
 --
 --    그래서 열리는 자리는 넷이다: cancelled·failed·empty(판단이 안 나와 리뷰가 아예
 --    안 열린 완료), 그리고 리뷰가 열렸다가 사람이 버린 경우(changeset이 pending에서

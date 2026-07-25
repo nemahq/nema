@@ -94,11 +94,11 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 --   트랜잭션 안에서 여러 change가 같은 now()를 가질 수 있음).
 --
 --   restore_digest는 되살아나는 Digest가 아직 extraction_status='pending'인
---   채로 archive됐다면(추출 완료 전에 아카이브된 경우), 그 사이 원본(source)의
+--   채로 archive됐다면(추출 완료 전에 아카이브된 경우), 그 사이 원문(source)의
 --   추출 배치가 이 Digest 없이 완료되며 sources.extraction_status를 이미
 --   completed로 닫았을 수 있다(워커의 fetchSourceDigests가 archived를 걸러내
 --   므로) — 그대로 두면 이 Digest는 영원히 "처리 중"(isProcessing)에 갇힌다.
---   원본을 extraction_status·linking_status 둘 다 다시 pending으로 돌려
+--   원문을 extraction_status·linking_status 둘 다 다시 pending으로 돌려
 --   워커가 이 Digest를 다시 집고 그 결과가 링킹 단계까지 흘러가게 한다
 --   (confirm_digest_edit·resolve_duplicate_relation과 같은 2컬럼 리셋 관용구).
 -- =============================================================
@@ -261,7 +261,7 @@ BEGIN
   )
   RETURNING id INTO v_revert_id;
 
-  -- ingestion 예외: changes 밖의 원본(source_id)도 pending으로 되돌린다
+  -- ingestion 예외: changes 밖의 원문(source_id)도 pending으로 되돌린다
   -- ("글 통째로" — v2에선 archive가 아니라 pending 복귀, 07-modeling.md)
   IF v_type = 'ingestion' AND v_source_id IS NOT NULL THEN
     UPDATE sources SET status = 'pending'

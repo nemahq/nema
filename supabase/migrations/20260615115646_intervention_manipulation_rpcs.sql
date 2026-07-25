@@ -79,10 +79,10 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 
 -- =============================================================
--- 2) archive_source — 원본 빼기 (§3.2)
+-- 2) archive_source — 원문 빼기 (§3.2)
 --
 --   manual 변경셋 + {archive, source}. 연쇄 없음(Q1 — 진술 유지), 벡터 없음
---   (원본은 임베딩 안 함), notify 없음(워커 작업 없음). 백엔드 계약은 완비하되
+--   (원문은 임베딩 안 함), notify 없음(워커 작업 없음). 백엔드 계약은 완비하되
 --   v1 화면 헤드라인은 아니다(NEM-133이 노출할지는 화면 몫).
 -- =============================================================
 
@@ -117,7 +117,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 --   타겟 변경셋의 changes를 역연산(create/restore→archive, archive→restore)으로
 --   적용하고, 그 역연산을 revert 변경셋의 changes로 그대로 기록(자기 기술적 — redo가
 --   이 기록만 보고 다시 뒤집는다). 예외 하나: ingestion 되돌리기는 changes 밖의
---   source_id 원본도 archive한다("글 통째로", §4.1 C). 그 archive도 revert 변경셋에
+--   source_id 원문도 archive한다("글 통째로", §4.1 C). 그 archive도 revert 변경셋에
 --   기록되므로 redo는 일반 규칙 그대로.
 --
 --   "그 시점 실제로 일으킨 전이만 기록"(§4.4) — UPDATE의 status 가드가 보장한다.
@@ -154,7 +154,7 @@ BEGIN
   VALUES (v_space_id, 'revert', 'applied', p_changeset_id, auth.uid())
   RETURNING id INTO v_revert_id;
 
-  -- ingestion 예외: changes 밖의 원본(source_id)도 archive ("글 통째로", §4.1)
+  -- ingestion 예외: changes 밖의 원문(source_id)도 archive ("글 통째로", §4.1)
   IF v_type = 'ingestion' AND v_source_id IS NOT NULL THEN
     UPDATE sources SET status = 'archived'
     WHERE id = v_source_id AND status = 'active';

@@ -36,8 +36,8 @@
 | **Backend** | Fastify + tRPC | 흐름 오케스트레이션, 외부 서비스 호출 순서 제어, 입력 검증, 유사 문서 백그라운드 검색 | 구조화 판단 (LLM 영역), 데이터 영속 (DB 영역) |
 | **LLM** | GPT-4o (교체 가능) | Intent 판단 + 검색 쿼리 생성 (Intent Router + Query Planner), 본문 정제 (Phase 1), title/tags/summary 생성 + create/update 판단 + 기존 문서와 통합 재구성 (Phase 2), 검색 결과 기반 답변 생성 (Pull-out) | 데이터 저장, 검색, 상태 유지 |
 | **Supabase** | PostgreSQL | 구조화된 문서 저장 — source of truth (본문 + 메타 필드 각각 독립 컬럼) | 의미 검색, 관계 탐색 |
-| **Qdrant** | Vector DB | 임베딩 벡터 저장, 의미 유사도 검색 | 원본 저장, 관계 탐색 |
-| **Neo4j** | Graph DB | 엔티티 간 관계 저장, 관계 탐색 (multi-hop) | 원본 저장, 의미 검색 |
+| **Qdrant** | Vector DB | 임베딩 벡터 저장, 의미 유사도 검색 | 원문 저장, 관계 탐색 |
+| **Neo4j** | Graph DB | 엔티티 간 관계 저장, 관계 탐색 (multi-hop) | 원문 저장, 의미 검색 |
 
 ### 통신 구조
 
@@ -65,8 +65,8 @@
 ### 데이터 저장 원칙
 
 - **단일 책임**: 각 저장소는 고유 역할만 수행. 관계 정보는 Neo4j에만, 벡터는 Qdrant에만
-- **Supabase가 source of truth**: 문서 원본 + 메타데이터. 나머지 저장소는 파생 데이터
-- **파생 데이터 재생성 가능**: Qdrant, Neo4j 데이터는 Supabase 원본으로부터 재생성 가능해야 함
+- **Supabase가 source of truth**: 문서 원문 + 메타데이터. 나머지 저장소는 파생 데이터
+- **파생 데이터 재생성 가능**: Qdrant, Neo4j 데이터는 Supabase 원문으로부터 재생성 가능해야 함
 
 ### 인제스천 전 문서 검색 (폴백)
 
@@ -74,8 +74,8 @@
 
 ### 향후 고려사항
 
-- **Source of truth 백업 전략**: Supabase가 유일한 원본 저장소이므로 단일 장애점(SPOF). 사용자가 쌓은 맥락이 제품의 핵심 가치인 만큼, 사용자 수 증가 시 백업 방안(Point-in-Time Recovery, 주기적 스냅샷 등) 필수
-- **벡터/그래프 DB 용량**: 문서 원본(Supabase)보다 Qdrant(Free 1GB), Neo4j(Free tier 노드 제한)가 먼저 한계에 도달. 사용자 수 증가 시 유료 전환 또는 셀프호스팅 검토 필요
+- **Source of truth 백업 전략**: Supabase가 유일한 원문 저장소이므로 단일 장애점(SPOF). 사용자가 쌓은 맥락이 제품의 핵심 가치인 만큼, 사용자 수 증가 시 백업 방안(Point-in-Time Recovery, 주기적 스냅샷 등) 필수
+- **벡터/그래프 DB 용량**: 문서 원문(Supabase)보다 Qdrant(Free 1GB), Neo4j(Free tier 노드 제한)가 먼저 한계에 도달. 사용자 수 증가 시 유료 전환 또는 셀프호스팅 검토 필요
 - **MCP / CLI 확장**: 모든 오케스트레이션 로직이 Backend(tRPC)에 집중되어 있으므로, 프레젠테이션 레이어 추가로 대응 가능. put-in/pull-out 두 tool 노출, 드래프트는 텍스트/tool response로 대체, `--sync` 모드(Phase 2 완료까지 대기) 옵션 등. 현재 flow 변경 불필요
 - **문서 관리 뷰**: tags 기반 필터링 + 정렬로 문서 목록 제공. 롤백(버전 히스토리 전제), 스페이스 구분, 개괄 보기 목적. AI 자동 정리 철학과 충돌하지 않음 — 입력 시점은 AI가 정리하되, 조회 시점에서는 사용자에게 구조를 투명하게 보여주는 것
 
@@ -254,7 +254,7 @@ MVP에서 Phase 2는 **사용자 관점에서 Non-blocking**이다. 저장 트�
 | Phase 1에서 확정된 body | 사용자의 의도 (create vs update 선호) |
 | 유사 문서 목록 (Backend가 검색해서 전달) | 임베딩/그래프 상태 |
 | 기존 태그 풀 | |
-| 기존 문서 원본 (update 판단 시) | |
+| 기존 문서 원문 (update 판단 시) | |
 
 Phase 2 LLM은 기존 지식 베이스 컨텍스트를 **Backend로부터 받아서** 판단한다. 직접 DB를 조회하지는 않는다.
 
@@ -445,7 +445,7 @@ Phase 2 저장 완료 → ingestion_status = pending
 | `id` | uuid | 세션 고유 식별자 |
 | `title` | string | Phase 1 첫 LLM 호출 시 `session_title`로 생성. 세션 목록에서 식별용 |
 | `messages` | jsonb | 메시지 배열 (사용자 입력 + LLM 응답, 순서 보존). 채팅 UI 대화 이력 표시 + 향후 분석(실패 쿼리 패턴 수집 등)에 활용 |
-| `draft` | jsonb \| null | 현재 작성 중인 드래프트. 저장/취소 시 null. 하위 필드: `body` (string, 정제된 본문), `similar_doc_ids` (uuid[], 유사 문서 ID 목록. Phase 2에서 최신 원본 조회용) |
+| `draft` | jsonb \| null | 현재 작성 중인 드래프트. 저장/취소 시 null. 하위 필드: `body` (string, 정제된 본문), `similar_doc_ids` (uuid[], 유사 문서 ID 목록. Phase 2에서 최신 원문 조회용) |
 | `document_ids` | uuid[] | 이 세션에서 저장된 문서 ID 목록. 세션 ↔ 문서 연결 |
 | `user_id` | uuid | 소유자 (Supabase Auth) |
 | `created_at` | timestamp | 세션 시작 시각 |

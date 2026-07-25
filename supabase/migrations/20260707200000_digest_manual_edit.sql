@@ -8,7 +8,7 @@
 -- 타 진술을 낳는다.
 --
 -- 1) chk_changeset_shape 완화 — manual이 source_id를 가질 수 있게(Digest 수정은
---    원본에 매인다). Reference 수정 manual은 여전히 source_id 없이 허용. revert는 그대로.
+--    원문에 매인다). Reference 수정 manual은 여전히 source_id 없이 허용. revert는 그대로.
 -- 2) digests.extraction_status — 어느 Digest가 추출 대기/완료인지 per-digest 게이트.
 --    source 단위 클레임/lease는 그대로(잇기 무영향), 이 컬럼은 "어느 digest를 뽑을지"만 가른다.
 -- 3) apply_extraction_statements 재작성 — 진술을 "그 digest를 만든 changeset"에 붙이고
@@ -38,9 +38,9 @@ ALTER TABLE changesets ADD CONSTRAINT chk_changeset_shape CHECK (
 ALTER TABLE digests
   ADD COLUMN extraction_status ingestion_status NOT NULL DEFAULT 'pending';
 
--- 백필: 원본의 추출이 이미 끝난(extraction_status='completed') digest는 그 추출 패스에서
+-- 백필: 원문의 추출이 이미 끝난(extraction_status='completed') digest는 그 추출 패스에서
 -- 이미 처리된 것이라 completed로 둔다 — 진술 0개짜리(뽑을 게 없던 digest)도 함께 닫혀
--- latent pending이 안 남는다. 원본이 아직 추출 대기인 digest만 pending으로 남아 다음
+-- latent pending이 안 남는다. 원문이 아직 추출 대기인 digest만 pending으로 남아 다음
 -- 사이클에 집힌다(J 직후 추출 대기 중이던 digest를 놓치지 않게).
 UPDATE digests d SET extraction_status = 'completed'
 FROM sources s
@@ -154,7 +154,7 @@ DROP FUNCTION IF EXISTS complete_source_extraction(uuid);
 --                  reference_ids[uuid], new_reference_keys[text], external_urls[text] }
 -- p_new_references 원소: { key, type, title, body }
 -- 한 트랜잭션: manual changeset 생성 → 신규 Reference·새 Digest create(+라벨·인용) →
---   옛 Digest archive → 옛 진술 archive(관계는 트리거 캐스케이드) → 원본 재추출·재연결 트리거.
+--   옛 Digest archive → 옛 진술 archive(관계는 트리거 캐스케이드) → 원문 재추출·재연결 트리거.
 -- =============================================================
 
 CREATE FUNCTION confirm_digest_edit(
@@ -193,7 +193,7 @@ BEGIN
     RAISE EXCEPTION 'digest % is not an active digest the caller can edit', p_digest_id;
   END IF;
 
-  -- 확정본 수정이라 원본이 active여야 한다(pending/trashed 원본의 digest는 수정 대상 아님).
+  -- 확정본 수정이라 원문이 active여야 한다(pending/trashed 원문의 digest는 수정 대상 아님).
   IF NOT EXISTS (SELECT 1 FROM sources WHERE id = v_source_id AND status = 'active') THEN
     RAISE EXCEPTION 'source % of digest % is not active', v_source_id, p_digest_id;
   END IF;
@@ -300,7 +300,7 @@ BEGIN
   END LOOP;
 
   -- 재트리거: 새 Digest 추출(pending) + 재연결. 새 진술이 기존 활성 진술과 다시 대조되게
-  -- linking도 pending으로 되돌린다(잇기 배치는 원본 단위라 전체 재판정 — 멱등·재제안 가드가 받는다).
+  -- linking도 pending으로 되돌린다(잇기 배치는 원문 단위라 전체 재판정 — 멱등·재제안 가드가 받는다).
   UPDATE sources SET extraction_status = 'pending', linking_status = 'pending'
   WHERE id = v_source_id;
   PERFORM pgmq.send('statement_sync', jsonb_build_object('type', 'notify'));

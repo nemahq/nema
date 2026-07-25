@@ -96,11 +96,11 @@ describe("assembleSourceGroups", () => {
     ]);
   });
 
-  it("totalStatementCount는 닿은 수가 아니라 원본의 전체 active 진술 수다", () => {
+  it("totalStatementCount는 닿은 수가 아니라 원문의 전체 active 진술 수다", () => {
     const groups = assembleSourceGroups({
       statements: [claim({ id: "hit", sourceId: "src", orderIndex: 0 })],
       scoreByStatementId: new Map([["hit", 0.8]]),
-      // 검색에 닿은 건 1개지만 원본엔 active 진술이 5개 — 화면의 "다른 진술 N개" 근거
+      // 검색에 닿은 건 1개지만 원문엔 active 진술이 5개 — 화면의 "다른 진술 N개" 근거
       activeCountBySourceId: new Map([["src", 5]]),
     });
 
@@ -108,7 +108,7 @@ describe("assembleSourceGroups", () => {
     expect(groups[0]?.statements).toHaveLength(1);
   });
 
-  it("여러 원본에 속한 진술은 각 원본 묶음에 모두 나타난다", () => {
+  it("여러 원문에 속한 진술은 각 원문 묶음에 모두 나타난다", () => {
     const shared = {
       ...claim({ id: "shared", sourceId: "src-a", orderIndex: 0 }),
       sources: [
@@ -143,7 +143,7 @@ describe("assembleSourceGroups", () => {
     }
   });
 
-  it("묶음 key에 kind와 원본 시점이 실린다", () => {
+  it("묶음 key에 kind와 원문 시점이 실린다", () => {
     const groups = assembleSourceGroups({
       statements: [
         claim({
@@ -365,7 +365,7 @@ describe("searchStatements", () => {
     ]);
   });
 
-  it("coarse가 고른 주제 + 무태그 원본으로 좁혀 검색에 한정한다", async () => {
+  it("coarse가 고른 주제 + 무태그 원문으로 좁혀 검색에 한정한다", async () => {
     const search = vi.fn().mockResolvedValue([]);
 
     await searchStatements({
@@ -426,7 +426,7 @@ describe("searchStatements", () => {
     expect(search).not.toHaveBeenCalled();
   });
 
-  it("다른 주제로만 태그된 원본은 scope에서 빠진다 — 안 고른 주제가 새지 않게", async () => {
+  it("다른 주제로만 태그된 원문은 scope에서 빠진다 — 안 고른 주제가 새지 않게", async () => {
     const search = vi.fn().mockResolvedValue([]);
     const statementSources = queryStub([{ statement_id: "s1" }]);
 
@@ -492,7 +492,7 @@ describe("collectTimeCandidateIds — scope-before-limit", () => {
     expect(q.calls).toContainEqual(["in", "id", ["s1", "s9"]]);
   });
 
-  it("created 경로: scope를 원본 집합으로 환산해 sources 쿼리에 in으로 건다", async () => {
+  it("created 경로: scope를 원문 집합으로 환산해 sources 쿼리에 in으로 건다", async () => {
     const scopeRefs = queryStub([{ source_id: "src1" }]);
     const sources = queryStub([{ id: "src1" }]);
     const bodyRefs = queryStub([{ statement_id: "s1" }]);

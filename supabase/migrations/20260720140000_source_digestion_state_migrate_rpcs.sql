@@ -90,7 +90,7 @@ BEGIN
     FROM sources s2
     JOIN source_digestion_state sd ON sd.source_id = s2.id
     WHERE s2.extraction_status = 'pending'
-      -- 리뷰 게이트: pending 원본은 Digest 확정 전 — 추출이 앞서가면 안 된다
+      -- 리뷰 게이트: pending 원문은 Digest 확정 전 — 추출이 앞서가면 안 된다
       AND s2.status = 'active'
       AND sd.extraction_retry_count < p_max_retries
       -- lease 150초: 120초 LLM 타임아웃을 덮는다(extraction_lease_covers_slow_provider)
@@ -239,7 +239,7 @@ BEGIN
   WHERE id = p_source_id AND digestion_status = 'pending'
   FOR UPDATE;
 
-  -- 원본은 NOT FOUND에서 예외를 던지지 않고 조용히 반환한다 — 그대로 유지.
+  -- 원문은 NOT FOUND에서 예외를 던지지 않고 조용히 반환한다 — 그대로 유지.
   IF NOT FOUND THEN
     RETURN;
   END IF;

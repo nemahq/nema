@@ -1,7 +1,7 @@
 -- =============================================================
 -- Track 0 초안(draft) 인테이크 제거 — 새 Digest 파이프라인이 대체
 --
--- v2 흐름은 원본을 곧바로 pending으로 박제하고(create_source), 워커가 Digest
+-- v2 흐름은 원문을 곧바로 pending으로 박제하고(create_source), 워커가 Digest
 -- 후보를 생성해 리뷰 게이트에 세운다. Source 앞단의 draft 스테이징 층은 더 이상
 -- 자리가 없다(07-modeling: 날글은 Source로 박제, 정리본은 Digest가 맡음).
 -- draft가 하던 topic 연결은 confirm_ingestion_review가 이미 수행한다.
