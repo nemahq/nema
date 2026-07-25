@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "dev:local": "APP_ENV=local tsx watch src/index.ts",
-    "build": "tsup && [ -n \"$SENTRY_AUTH_TOKEN\" ] && sentry-cli sourcemaps inject dist && sentry-cli sourcemaps upload --org $SENTRY_ORG --project nema-server dist || true",
+    "build": "tsup && ([ -n \"$SENTRY_AUTH_TOKEN\" ] && sentry-cli sourcemaps inject dist && sentry-cli sourcemaps upload --org $SENTRY_ORG --project nema-server dist || true)",
     "start": "node --import ./dist/instrument.js dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --cache --cache-strategy content src/",

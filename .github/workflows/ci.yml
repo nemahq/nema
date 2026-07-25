@@ -10,6 +10,19 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # PR은 ref(=PR 번호) 기준으로 묶어 같은 PR에 커밋을 연달아 push하면 이전 run을 취소한다.
+    # push(브랜치/태그)는 sha 기준으로 묶는다 — ref로 묶으면 GitHub Actions가
+    # cancel-in-progress 설정과 무관하게 "대기 중인 이전 run"은 무조건 취소해버려서,
+    # staging/main에 커밋이 연달아 push될 때 중간 커밋의 check(및 그 뒤 migration
+    # push·배포·번역 동기화 등 후속 job)가 통째로 스킵될 수 있다.
+    concurrency:
+      group: ci-check-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      # 팀 슬러그는 민감 정보가 아니므로(Vercel URL에 그대로 노출) secret이 아닌 variable로 등록한다.
+      # Turborepo remote cache는 Railway 배포와 무관한 별도 서비스 — 캐시 저장 용도로만 쓴다.
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,50 +39,16 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Check for migration changes
-        if: github.event_name == 'pull_request'
-        id: migrations
-        run: |
-          set -euo pipefail
-          CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- 'supabase/migrations/')
-          if [ -n "$CHANGED" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Setup Supabase CLI
-        if: steps.migrations.outputs.changed == 'true'
-        uses: supabase/setup-cli@v1
-        with:
-          version: 2.110.0-beta.10
-
-      - name: Verify database types are up to date
-        if: steps.migrations.outputs.changed == 'true'
-        run: |
-          set -euo pipefail
-          supabase start
-          supabase gen types --lang=typescript --local > apps/server/src/infra/database.types.ts
-          # CLI가 exit 0으로 빈 출력을 내면 아래 diff가 "재생성하라"는 엉뚱한 안내로 실패하므로 원인을 먼저 가린다
-          [ -s apps/server/src/infra/database.types.ts ] || { echo "::error::supabase gen types produced empty output"; exit 1; }
-          # supabase stop은 여기서 안 한다 — DB 통합 테스트(apps/server/src/services/
-          # *.integration.test.ts)가 Test 스텝에서 이 인스턴스를 그대로 쓴다.
-          # 커밋본은 pre-commit prettier가 재포맷하므로 raw 생성물도 같은 포맷으로 맞춰 비교
-          pnpm exec prettier --write apps/server/src/infra/database.types.ts
-          if ! git diff --exit-code apps/server/src/infra/database.types.ts; then
-            echo "::error::database.types.ts is out of date. Run 'pnpm supabase:gen-types' locally and commit."
-            exit 1
-          fi
-
-      - name: Build
-        run: pnpm build
-
-      - name: Typecheck
-        run: pnpm typecheck
+      # 실패 빈도가 높고 저렴한 정적 검사부터: Build/Test 같은 무거운 단계를
+      # 기다리지 않고 포맷·린트·타입 오류를 가장 먼저 잡는다.
+      - name: Format check
+        run: pnpm format:check
 
       - name: Lint
         run: pnpm lint
 
-      - name: Format check
-        run: pnpm format:check
+      - name: Typecheck
+        run: pnpm typecheck
 
       - name: Knip (unused code)
         run: pnpm knip
@@ -77,11 +56,91 @@ jobs:
       - name: Dependency cruiser (circular deps)
         run: pnpm depcruise
 
+      - name: Build
+        run: pnpm build
+
+      - name: Determine diff base
+        # PR은 base 브랜치, 브랜치 push는 직전 커밋, 태그 push는 직전 태그와 비교한다
+        # (deploy-staging/deploy-production이 각자 쓰는 diff 기준과 동일하게 맞춘다).
+        id: diffbase
+        env:
+          # ${{ }}를 셸 스크립트 본문에 직접 펼치지 않고 env로 받는다 — 브랜치·태그 이름이
+          # 스크립트로 해석될 여지를 없애기 위한 GitHub 권장 방식이다.
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "base=origin/$BASE_REF" >> "$GITHUB_OUTPUT"
+          elif [[ "$REF" == refs/tags/* ]]; then
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            echo "base=$PREV_TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=HEAD~1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for migration/server changes
+        # 통합 테스트(apps/server/src/services/*.integration.test.ts)가 검증하는 대상은
+        # migration 파일뿐 아니라 서버 로직·apps/server가 의존하는 packages/shared/src도
+        # 포함한다. DB 없이 돌면 테스트가 조용히 스킵되며 통과 처리되므로, 이 셋 중
+        # 하나라도 바뀌면 DB를 띄운다. migrations_changed는 db_needed와 같은 diff
+        # 결과에서 걸러내 — 두 출력이 서로 다른 git diff를 호출해 어긋나는 일이 없게 한다.
+        id: changes
+        env:
+          BASE: ${{ steps.diffbase.outputs.base }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BASE" ]; then
+            # 이전 태그가 없는 첫 배포 등 비교 기준이 없는 경우 안전하게 "변경됨"으로 취급
+            echo "db_needed=true" >> "$GITHUB_OUTPUT"
+            echo "migrations_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            ALL_CHANGED=$(git diff --name-only "$BASE"...HEAD -- 'apps/server/' 'packages/shared/src/' 'supabase/migrations/')
+            if [ -n "$ALL_CHANGED" ]; then
+              echo "db_needed=true" >> "$GITHUB_OUTPUT"
+            fi
+            if echo "$ALL_CHANGED" | grep -q '^supabase/migrations/'; then
+              echo "migrations_changed=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Setup Supabase CLI
+        if: steps.changes.outputs.db_needed == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.110.0-beta.10
+
+      - name: Start Supabase
+        # 여기서 띄운 인스턴스를 아래 Verify/Test 스텝이 그대로 재사용한다 —
+        # 정리는 job 마지막의 Stop Supabase에서 한 번만 한다.
+        if: steps.changes.outputs.db_needed == 'true'
+        run: supabase start
+
+      - name: Verify database types are up to date
+        if: steps.changes.outputs.migrations_changed == 'true'
+        run: |
+          set -euo pipefail
+          supabase gen types --lang=typescript --local > apps/server/src/infra/database.types.ts
+          # CLI가 exit 0으로 빈 출력을 내면 아래 diff가 "재생성하라"는 엉뚱한 안내로 실패하므로 원인을 먼저 가린다
+          [ -s apps/server/src/infra/database.types.ts ] || { echo "::error::supabase gen types produced empty output"; exit 1; }
+          # 커밋본은 pre-commit prettier가 재포맷하므로 raw 생성물도 같은 포맷으로 맞춰 비교
+          pnpm exec prettier --write apps/server/src/infra/database.types.ts
+          if ! git diff --exit-code apps/server/src/infra/database.types.ts; then
+            echo "::error::database.types.ts is out of date. Run 'pnpm supabase:gen-types' locally and commit."
+            exit 1
+          fi
+
       - name: Test
         run: pnpm test
+        env:
+          # db_needed인데 실제로 DB 연결이 안 되면(Start Supabase 실패 등) 통합 테스트가
+          # 조용히 통과하지 않고 시끄럽게 실패하도록 한다 — 경로 필터가 놓친 케이스까지
+          # 커버하진 못하지만, 여기서 표시한 대로 DB가 있어야 하는 상황에서의 안전망이다.
+          REQUIRE_LOCAL_DB: ${{ steps.changes.outputs.db_needed }}
 
       - name: Stop Supabase
-        if: always() && steps.migrations.outputs.changed == 'true'
+        if: always() && steps.changes.outputs.db_needed == 'true'
         run: supabase stop || true
 
   # Railway staging auto-deploy must be OFF — this job manages deployment sequencing.
