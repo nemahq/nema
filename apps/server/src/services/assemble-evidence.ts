@@ -12,7 +12,7 @@ import {
 type StatementType = Database["public"]["Enums"]["statement_type"];
 
 // 표식이 가리키는 상대 진술 — 검색엔 안 닿았지만 "왜 그렇게 됐는지"의 근거다 (narration-design 4장).
-// 본문이 없으면 LLM이 id만 보고 지어내므로, 산문이 풀어 읽을 수 있게 내용과 원본을 채워 둔다.
+// 본문이 없으면 LLM이 id만 보고 지어내므로, 산문이 풀어 읽을 수 있게 내용과 원문을 채워 둔다.
 export interface RelatedStatement {
   id: string;
   content: string;

@@ -99,7 +99,7 @@
         <line x1="200" y1="280" x2="200" y2="304" stroke="#9ca3af" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#aRef)"/>
         <text x="208" y="297" font-size="10.5" fill="#9ca3af">digestId</text>
         <rect x="66" y="306" width="268" height="68" rx="9" fill="#f8f9fa" stroke="#cdd5e0" stroke-width="1.5"/>
-        <text x="82" y="330" font-size="13" font-weight="700" fill="#495057">Source — 원본 (무손실 박제)</text>
+        <text x="82" y="330" font-size="13" font-weight="700" fill="#495057">Source — 원문 (무손실 박제)</text>
         <text x="82" y="352" font-size="12.5" fill="#6b7280">다이제스트를 거쳐 진술이 추출됨</text>
       </g>
 
@@ -282,8 +282,8 @@
 const STEPS = [
   {kicker:"재료 · 단위", title:"① Statement — 맥락 한 조각",
    desc:"가장 작은 단위. ‘왜’ 한 조각이야. 예: <b>“요즘 번아웃이라 속도가 안 난다”</b> = s1. 모든 건 이 조각에서 시작해."},
-  {kicker:"재료 · 뿌리", title:"② Source·Digest — 진술이 나온 원본",
-   desc:"진술은 원본(Source)이 사람이 읽기 좋게 정리된 <b>다이제스트(Digest)</b>를 거쳐 추출돼. 원본은 의미로 안 다루고 <b>무손실로 박제</b>되고, 진술은 <b>digestId</b>로 자신을 낳은 다이제스트를 가리켜 — 다이제스트가 다시 원본을 가리키며 출처를 추적해. 진술은 다이제스트의 ‘투영’."},
+  {kicker:"재료 · 뿌리", title:"② Source·Digest — 진술이 나온 원문",
+   desc:"진술은 원문(Source)이 사람이 읽기 좋게 정리된 <b>다이제스트(Digest)</b>를 거쳐 추출돼. 원문은 의미로 안 다루고 <b>무손실로 박제</b>되고, 진술은 <b>digestId</b>로 자신을 낳은 다이제스트를 가리켜 — 다이제스트가 다시 원문을 가리키며 출처를 추적해. 진술은 다이제스트의 ‘투영’."},
   {kicker:"속성", title:"③ Statement 속성 — 진술이 품는 것",
    desc:"진술 하나에 붙는 것들: <b>type</b>(claim·question), <b>confidence</b>(certain·guess, claim에만), <b>status</b>(active·archived — ‘빼기’는 archived). 참·거짓은 시스템이 판단 안 해."},
   {kicker:"재료가 쌓인다", title:"④ 진술이 더 들어온다",
@@ -293,7 +293,7 @@ const STEPS = [
   {kicker:"변경", title:"⑥ Changeset — 한 번의 변경 묶음",
    desc:"진술·관계의 생성·제거를 <b>한 묶음</b>으로 묶는 봉투(ingestion·relation·manual·revert). 리뷰·되돌리기·이력이 여기 붙어 — <b>GitHub의 커밋/PR과 같은 자리</b>야."},
   {kicker:"축 1 · 소유", title:"⑦ Space — 담는 칸 (누구 것인가)",
-   desc:"여기까지 만든 진술·원본·관계가 <b>‘누구 것인가’</b>. 그 소유 칸이 Space. s1·원본은 ‘철수의 개인 Space’에 담겼어."},
+   desc:"여기까지 만든 진술·원문·관계가 <b>‘누구 것인가’</b>. 그 소유 칸이 Space. s1·원문은 ‘철수의 개인 Space’에 담겼어."},
   {kicker:"축 1 · 소유", title:"⑧ Space는 여러 개 — 개인도 팀도 같은 단위",
    desc:"‘디자인팀 Space’는 철수·영희가 <b>함께 가진 공동 소유</b>(Member 2). 개인(1명)·팀(N명)은 <b>멤버 수만 다른 같은 것</b>. s2~s4·변경셋이 여기 담겨."},
   {kicker:"사람", title:"⑨ 외부 User — 아직 못 본다",

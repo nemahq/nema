@@ -60,7 +60,7 @@ CREATE TABLE digest_links (
 
 -- 메인 피드: Space별 최신순
 CREATE INDEX idx_digests_space_created ON digests (space_id, created_at DESC);
--- 원본 상세 → 파생 Digest 조회 (원본 빼기의 되돌림 범위 계산도 이 경로)
+-- 원문 상세 → 파생 Digest 조회 (원문 빼기의 되돌림 범위 계산도 이 경로)
 CREATE INDEX idx_digests_source ON digests (source_id);
 -- Reference 역참조("이 Reference를 언급하는 Digest들") — 정방향은 PK가 커버
 CREATE INDEX idx_digest_references_reference ON digest_references (reference_id);

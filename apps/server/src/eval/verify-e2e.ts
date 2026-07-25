@@ -302,7 +302,7 @@ async function runPipeline(args: {
     `③ 임베딩: ingestion 전부 completed=${embedded}, Qdrant points=${collectionInfo.points_count}`,
   );
 
-  // ── ④ 뜻 검색 → 원장 조회 → 원본 묶음 반환 ────────────────────────
+  // ── ④ 뜻 검색 → 원장 조회 → 원문 묶음 반환 ────────────────────────
   const searchResult = await searchStatements({
     supabase: userClient,
     providers,
@@ -311,7 +311,7 @@ async function runPipeline(args: {
   const hitContents = searchResult.groups.flatMap((g) =>
     g.statements.map((s) => s.content),
   );
-  results["④ 검색·원본 묶음 반환"] =
+  results["④ 검색·원문 묶음 반환"] =
     searchResult.groups.length > 0 &&
     searchResult.groups[0]?.key.kind === "source" &&
     hitContents.some((c) => c.includes("토스"));

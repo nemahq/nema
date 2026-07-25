@@ -42,7 +42,7 @@ export function DraftBodyEditor({
   // 그대로 두면 dirty만 true로 남아 바뀐 것 없이 정리가 다시 돈다.
   const hasSavableEdit = bodyDirty && savableBody.length > 0;
 
-  // 결과없음은 원본을 안 바꾸고 정리해봐야 또 결과없음이 나올 가능성이 높다 —
+  // 결과없음은 원문을 안 바꾸고 정리해봐야 또 결과없음이 나올 가능성이 높다 —
   // 원문이 실제로 바뀌기 전까진 정리를 막아 헛수고를 예방한다. failed/cancelled는
   // 내용 문제가 아닐 수 있어(일시적 시스템 오류 등) 이 제약을 안 둔다.
   //

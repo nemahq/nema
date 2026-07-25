@@ -9,7 +9,7 @@ export function registerGetSource(server: McpServer): void {
     {
       title: "Get source",
       description:
-        "진술이 가리키는 원본 전문을 sourceId로 펼쳐 조회한다. get_evidence가 띄운 충돌·대체 표식을 원본까지 거슬러 직접 확인할 때 부른다.",
+        "진술이 가리키는 원문 전문을 sourceId로 펼쳐 조회한다. get_evidence가 띄운 충돌·대체 표식을 원문까지 거슬러 직접 확인할 때 부른다.",
       inputSchema: SourceGetInputSchema.shape,
       annotations: {
         readOnlyHint: true,

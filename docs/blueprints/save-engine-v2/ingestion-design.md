@@ -70,7 +70,7 @@ source body를 넣으면 `[{content, type, confidence?}]`가 한 번에 나오�
 
 ### 출력 순서와 locator
 
-**추출 출력은 원문 등장 순서를 따른다.** 그 순번을 `statement_sources.locator`에 `{"index": n}`으로 기록한다(schema가 형식을 구현 단계로 열어둔 자리). 한 트랜잭션에서 생긴 진술들은 `created_at`이 전부 같아 순서가 안 나오므로, 원문 순서가 필요한 모든 화면(확인/수정, 원본 상세, 꺼내기의 묶음 안 정렬)이 이 값에 기댄다. 순서는 추출하는 순간에만 공짜다 — 나중에 되짚으려면 비싸고 부정확하다. 문자 범위 같은 정밀 locator가 필요해지면 같은 jsonb에 필드를 보탠다.
+**추출 출력은 원문 등장 순서를 따른다.** 그 순번을 `statement_sources.locator`에 `{"index": n}`으로 기록한다(schema가 형식을 구현 단계로 열어둔 자리). 한 트랜잭션에서 생긴 진술들은 `created_at`이 전부 같아 순서가 안 나오므로, 원문 순서가 필요한 모든 화면(확인/수정, 원문 상세, 꺼내기의 묶음 안 정렬)이 이 값에 기댄다. 순서는 추출하는 순간에만 공짜다 — 나중에 되짚으려면 비싸고 부정확하다. 문자 범위 같은 정밀 locator가 필요해지면 같은 jsonb에 필드를 보탠다.
 
 ### 노이즈 — 별도 필터 없음
 
@@ -93,7 +93,7 @@ apply_ingestion_changeset(p_source_id uuid, p_statements jsonb) → changeset_id
 -- p_statements: [{content, type, confidence?, index}]
 ```
 
-- **source는 changes에 넣지 않는다** — `changesets.source_id`가 이미 가리킨다. `target_type='source'`는 원본 빼기(manual)용.
+- **source는 changes에 넣지 않는다** — `changesets.source_id`가 이미 가리킨다. `target_type='source'`는 원문 빼기(manual)용.
 - **진술이 0개면**(노이즈뿐인 글) changeset을 만들지 않고 `complete_source_extraction`만 호출 — 빈 changeset을 남기지 않는다. schema의 RPC 골격에 두 RPC가 다 있는 이유.
 - schema-design 5.3의 RPC 설명("source+statements+… 원자 생성")에서 **source 생성은 빠진다** — 박제가 동기 단계로 먼저다(이 문서가 그 미결을 확정, schema 쪽 문구도 함께 수정).
 
@@ -114,7 +114,7 @@ apply_ingestion_changeset(p_source_id uuid, p_statements jsonb) → changeset_id
 
 ### 실패한 source의 거취 (schema가 넘긴 미결의 확정)
 
-- **지우지 않는다.** 원본은 무손실 박제가 존재 이유다. 추출이 영영 실패해도 source는 남고, 사용자의 글이 사라지는 경로는 만들지 않는다.
+- **지우지 않는다.** 원문은 무손실 박제가 존재 이유다. 추출이 영영 실패해도 source는 남고, 사용자의 글이 사라지는 경로는 만들지 않는다.
 - `failed`는 끝 상태가 아니라 **자동 재시도가 멈춘 상태**다. 수동 재개 RPC로 정리 경로를 둔다:
 
 ```
@@ -124,7 +124,7 @@ retry_statement_ingestion(p_statement_id uuid) -- 대칭
 
   첫 출시에선 운영자 도구. 사용자용 "다시 시도" 버튼은 화면 작업에서 같은 RPC를 쓴다.
 - 실패는 Sentry 알림(v1 동일) + `error_message`로 원인 보존.
-- **임베딩 실패한 진술의 의미**: Postgres엔 존재하므로 원본 기준 조회(형제 수, 원본 상세류)에는 보이되, 벡터가 없어 뜻 검색에는 잡히지 않는다 — 검색 결과 묶음의 진술로는 나타날 수 없다. "반쯤 들어온" 상태가 검색 누락으로만 나타나고 데이터 유실은 아니다.
+- **임베딩 실패한 진술의 의미**: Postgres엔 존재하므로 원문 기준 조회(형제 수, 원문 상세류)에는 보이되, 벡터가 없어 뜻 검색에는 잡히지 않는다 — 검색 결과 묶음의 진술로는 나타날 수 없다. "반쯤 들어온" 상태가 검색 누락으로만 나타나고 데이터 유실은 아니다.
 
 ## 6. 워커 — 한 큐, 한 워커, 추출 먼저 임베딩 다음
 

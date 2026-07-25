@@ -113,7 +113,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 --    한 버튼이 셋을 다 받는다: 사용자에겐 전부 "이 글을 (다시) 처리해라" 하나이고,
 --    출발 상태가 달라도 도착지는 같다(pending, 첫 시도).
 --
---    리뷰가 이미 열린 원본은 막는다 — 같은 Source에 pending ingestion changeset이 둘
+--    리뷰가 이미 열린 원문은 막는다 — 같은 Source에 pending ingestion changeset이 둘
 --    생기면 확정이 어느 쪽을 적용할지 갈린다(07-modeling "같은 Source에 리뷰가 동시에
 --    여러 개 생기는 걸 방지"). completed 중 리뷰가 열린 것은 애초에 초안이 아니라
 --    변경셋 대기라 이 버튼에 도달하지도 않지만, 서버가 스스로 막아야 계약이 닫힌다.
@@ -169,7 +169,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 CREATE OR REPLACE FUNCTION trash_source(p_source_id uuid)
 RETURNS void AS $$
 BEGIN
-  -- 삭제는 pending에서만 — active 원본은 되돌리기로 pending을 거쳐야 한다
+  -- 삭제는 pending에서만 — active 원문은 되돌리기로 pending을 거쳐야 한다
   UPDATE sources
   SET status = 'trashed', trashed_at = now()
   WHERE id = p_source_id

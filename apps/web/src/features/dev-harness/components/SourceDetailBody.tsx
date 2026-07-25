@@ -155,7 +155,7 @@ function SourceDetailBodyContent({ sourceId }: SourceDetailBodyProps) {
   );
 }
 
-// 원본 하나의 조회 실패가 조종석 전체를 날리지 않게 카드 단위로 막는다
+// 원문 하나의 조회 실패가 조종석 전체를 날리지 않게 카드 단위로 막는다
 export function SourceDetailBody({ sourceId }: SourceDetailBodyProps) {
   return (
     <ErrorBoundary

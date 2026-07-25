@@ -289,7 +289,7 @@ BEGIN
     RAISE EXCEPTION 'changeset % is not a pending ingestion review', p_changeset_id;
   END IF;
 
-  -- 원본이 리뷰 대기 상태여야 한다 — 휴지통으로 간 원본의 리뷰는 확정 불가
+  -- 원문이 리뷰 대기 상태여야 한다 — 휴지통으로 간 원문의 리뷰는 확정 불가
   SELECT s.author_id, sp.workspace_id INTO v_author_id, v_workspace_id
   FROM sources s JOIN spaces sp ON sp.id = s.space_id
   WHERE s.id = v_source_id AND s.status = 'pending'
@@ -370,7 +370,7 @@ BEGIN
 
   UPDATE changesets SET status = 'applied' WHERE id = p_changeset_id;
 
-  -- 리뷰 확정 = 원본 active 전이(07-modeling: active는 확정된 Digest가 있는 상태).
+  -- 리뷰 확정 = 원문 active 전이(07-modeling: active는 확정된 Digest가 있는 상태).
   -- extraction_status는 pending 그대로라 게이트가 열리는 순간 추출 대상이 된다.
   UPDATE sources SET status = 'active' WHERE id = v_source_id;
 

@@ -72,7 +72,7 @@ interface SourceSummary {
   statementCount: number;
 }
 
-// 내 Space의 원본 목록(작성자 무관) — 격리는 RLS(Space 멤버십)가 담당한다
+// 내 Space의 원문 목록(작성자 무관) — 격리는 RLS(Space 멤버십)가 담당한다
 export async function listSources(args: {
   supabase: TypedSupabaseClient;
 }): Promise<{ sources: SourceSummary[] }> {
@@ -123,7 +123,7 @@ export async function listSources(args: {
 
 const PENDING_SOURCE_LIST_LIMIT = 50;
 
-// digestion_status 원본 값 + "그 리뷰가 버려졌는가"를 서버가 미리 조합해 내려주는 단일
+// digestion_status 원문 값 + "그 리뷰가 버려졌는가"를 서버가 미리 조합해 내려주는 단일
 // 값 — 소비처(특히 타입 체커 없이 JSON을 그대로 읽는 MCP)가 두 신호를 각자 조합하다
 // 놓치는 사고를 구조적으로 막는다(경위는 design-decisions-log.md 2026-07-17 참고).
 type DigestionOutcome =
@@ -160,7 +160,7 @@ function hasInputChangedSinceDigestion(args: {
   // 비교할 시도 시각이 없으면 열어준다. 이 게이트는 사용자의 재정리를 막는
   // 방향이라 판정 불가는 막는 쪽이 아니라 푸는 쪽이어야 한다 — 잘못 열리면
   // 헛수고 한 번이지만 잘못 잠기면 영영 재정리할 수 없다. 실제로 v1 파이프라인
-  // 시절 원본은 digestion_status만 completed로 소급되고 시도 시각은 NULL로 남아
+  // 시절 원문은 digestion_status만 completed로 소급되고 시도 시각은 NULL로 남아
   // (20260707100000), 잠그면 그 초안들이 영구히 묶인다.
   if (args.lastDigestionAttempt === null) {
     return true;
@@ -187,7 +187,7 @@ interface PendingSourceItem {
   // 기댄다) 화면의 "정리중.." 경과 시간엔 못 쓴다. 재시도 없이 start_source_digestion
   // 에서만 찍히는 값을 따로 내려준다(아직 한 번도 정리를 시작 안 했으면 null).
   digestionStartedAt: string | null;
-  // 마지막 정리 이후 정리 입력(본문·Space)이 바뀌었는지 — "원본을 안 고치고 다시
+  // 마지막 정리 이후 정리 입력(본문·Space)이 바뀌었는지 — "원문을 안 고치고 다시
   // 정리해봐야 같은 결과"라는 판정에 쓴다. 두 시각을 소비처가 각자 비교하면 그 규칙이
   // 화면마다 흩어지므로 digestionOutcome과 같은 이유로 서버가 조합해 내려준다.
   inputChangedSinceDigestion: boolean;
@@ -200,7 +200,7 @@ interface PendingSourceItem {
   digestCount: number;
 }
 
-// pending 원본 목록 — 파생 없는 상태(갓 생성·생성 중·되돌려진 것). web(초안 목록)과
+// pending 원문 목록 — 파생 없는 상태(갓 생성·생성 중·되돌려진 것). web(초안 목록)과
 // MCP(list_pending_sources)가 함께 읽는다. RLS가 Space 격리.
 export async function listPendingSources(args: {
   supabase: TypedSupabaseClient;
@@ -234,7 +234,7 @@ export async function listPendingSources(args: {
     string,
     { changesetId: string; changesetNumber: number; digestCount: number }
   >();
-  // 존재 여부만 볼 뿐 시점은 안 따진다 — 버림 후 원본을 고쳐 재시도해도 그 원본은
+  // 존재 여부만 볼 뿐 시점은 안 따진다 — 버림 후 원문을 고쳐 재시도해도 그 원문은
   // 계속 discardedSourceIds에 남는다(design-decisions-log.md 2026-07-17 "정확도
   // 범위를 의도적으로 좁힘" 참고, 의도된 트레이드오프).
   const discardedSourceIds = new Set<string>();
@@ -297,7 +297,7 @@ export async function listPendingSources(args: {
 
 // 처리 중 취소 — 워커가 다시 안 집게 DB를 옮기고(RPC), 떠 있는 LLM 콜을 끊는다.
 // 순서가 중요하다: RPC 먼저라야 멤버십 검증을 통과한 취소만 콜을 끊는다. abort를 앞세우면
-// 남의 Space 원본 id를 아는 것만으로 그 처리를 방해할 수 있다(검증은 RPC 안에 있으므로).
+// 남의 Space 원문 id를 아는 것만으로 그 처리를 방해할 수 있다(검증은 RPC 안에 있으므로).
 export async function cancelSourceDigestion(args: {
   supabase: TypedSupabaseClient;
   sourceId: string;
@@ -411,7 +411,7 @@ export async function updateSourceTitle(args: {
   throwIfSupabaseError(error);
 }
 
-// 재추출 전에 원본 고치기 — "결과없음"에서 다시 돌려봐야 원본이 그대로면 결과도 같다.
+// 재추출 전에 원문 고치기 — "결과없음"에서 다시 돌려봐야 원문이 그대로면 결과도 같다.
 // 열린 리뷰가 있으면 RPC 가드가 막는다: 리뷰에 떠 있는 Digest들이 바로 이 body에서
 // 뽑힌 것들이라, 갈아치우면 화면의 후보들이 없는 문장에서 나온 것이 된다.
 export async function updateSourceBody(args: {
@@ -429,11 +429,11 @@ export async function updateSourceBody(args: {
 }
 
 // Source 제목 생성 — 생성 직후 딱 한 번, 응답을 안 붙잡고 뒤에서 돈다(trackEvent와 같은
-// 부수효과 호출 규약: 절대 안 던지고, 실패는 Sentry로만 샌다). 제목이 없다고 원본 저장이
-// 실패할 이유는 없고, 화면도 제목 없는 원본을 body 미리보기로 그린다.
+// 부수효과 호출 규약: 절대 안 던지고, 실패는 Sentry로만 샌다). 제목이 없다고 원문 저장이
+// 실패할 이유는 없고, 화면도 제목 없는 원문을 body 미리보기로 그린다.
 //
 // 재시도·큐가 없는 건 의도다. 제목은 평생 한 번만 시도하는 값이라(fill_source_title의 null
-// 가드가 그걸 구조로 못박는다) 이 콜이 죽으면 그 원본은 제목 없이 남고, 그 뒤론 사람이
+// 가드가 그걸 구조로 못박는다) 이 콜이 죽으면 그 원문은 제목 없이 남고, 그 뒤론 사람이
 // 직접 붙이는 것 외엔 아무도 안 건드린다.
 function fillSourceTitle(args: {
   supabase: TypedSupabaseClient;
@@ -453,7 +453,7 @@ function fillSourceTitle(args: {
         });
 
       // 공백뿐인 응답은 프로바이더의 빈 응답 가드(완전히 빈 문자열)를 통과해 여기까지 온다.
-      // 조용히 돌아서면 프로바이더가 통째로 망가져 전 원본의 제목이 안 붙어도 아무도 모른다.
+      // 조용히 돌아서면 프로바이더가 통째로 망가져 전 원문의 제목이 안 붙어도 아무도 모른다.
       const title = raw.trim().slice(0, SOURCE_TITLE_MAX_LENGTH);
       if (!title) {
         Sentry.captureMessage("[source-title] LLM returned a blank title", {

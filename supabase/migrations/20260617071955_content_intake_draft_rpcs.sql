@@ -73,7 +73,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ----- 확정 게이트 -----
 -- 엔진 트리거(create_source) 재사용 + 제목/주제 연결 + 초안 제거를 한 트랜잭션으로.
--- 원본 작성자(sources.author_id) = 확정자(auth.uid()) = 사람 주권. drafts.author_id는
+-- 원문 작성자(sources.author_id) = 확정자(auth.uid()) = 사람 주권. drafts.author_id는
 -- 출처 보존용이며 이 슬라이스에선 안 읽는다(멀티 유저 때 외부 작성자 추적에 쓸 자리).
 -- 주제는 0개 허용(무태그 = 미분류). 강제하지 않는다(확신 없을 때 틀린 라벨 방지).
 CREATE OR REPLACE FUNCTION confirm_draft(

@@ -8,7 +8,7 @@
 -- 1) sources에 digestion 작업 컬럼 — 추출·잇기와 같은 3-상태 + lease 클레임 패턴
 -- 2) digest_topics / digest_tags — 리뷰 확정 시 붙는 라벨 연결
 --    (create_digests 마이그레이션이 "인테이크 개편으로 미룸"이라 비워둔 자리)
--- 3) create_source — 원본을 status='pending'으로 박제 (v2 전이 사슬의 시작점)
+-- 3) create_source — 원문을 status='pending'으로 박제 (v2 전이 사슬의 시작점)
 -- 4) fetch_pending_sources — status='active' 게이트: 리뷰 확정 전엔 추출 금지
 --    + lease 150초 복원 (temporal_deadline_rpcs 재작성이 30초로 되돌린 회귀 —
 --    extraction_lease_covers_slow_provider가 정한 값: 120초 LLM 타임아웃을 덮어야 한다)
@@ -26,7 +26,7 @@ ALTER TABLE sources
   ADD COLUMN digestion_retry_count  int NOT NULL DEFAULT 0,
   ADD COLUMN last_digestion_attempt timestamptz;
 
--- 기존 원본은 전부 v1 파이프라인(추출 직행) 산물 — Digest 단계를 소급하지 않는다
+-- 기존 원문은 전부 v1 파이프라인(추출 직행) 산물 — Digest 단계를 소급하지 않는다
 UPDATE sources SET digestion_status = 'completed';
 
 CREATE INDEX idx_sources_digestion_pending ON sources (id)
@@ -176,7 +176,7 @@ BEGIN
     SELECT s2.id
     FROM sources s2
     WHERE s2.extraction_status = 'pending'
-      -- 리뷰 게이트: pending 원본은 Digest 확정 전 — 추출이 앞서가면 안 된다
+      -- 리뷰 게이트: pending 원문은 Digest 확정 전 — 추출이 앞서가면 안 된다
       AND s2.status = 'active'
       AND s2.extraction_retry_count < p_max_retries
       -- lease 150초: 120초 LLM 타임아웃을 덮는다(extraction_lease_covers_slow_provider).
@@ -214,7 +214,7 @@ BEGIN
     SELECT s2.id
     FROM sources s2
     WHERE s2.digestion_status = 'pending'
-      -- 생성은 리뷰 대기(pending) 원본만 — trashed는 배제, active는 이미 확정된 것
+      -- 생성은 리뷰 대기(pending) 원문만 — trashed는 배제, active는 이미 확정된 것
       AND s2.status = 'pending'
       AND s2.digestion_retry_count < p_max_retries
       AND (s2.last_digestion_attempt IS NULL
@@ -229,8 +229,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- 후보가 하나도 안 나온 원본(정리할 판단이 없는 글) — changeset 없이 완료만.
--- 원본은 pending에 남아 사용자가 휴지통으로 보내는 것으로 정리한다.
+-- 후보가 하나도 안 나온 원문(정리할 판단이 없는 글) — changeset 없이 완료만.
+-- 원문은 pending에 남아 사용자가 휴지통으로 보내는 것으로 정리한다.
 CREATE FUNCTION complete_source_digestion(p_source_id uuid)
 RETURNS void AS $$
 BEGIN
@@ -354,7 +354,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 워커가 생성한 Digest·Reference 후보를 pending ingestion changeset으로 적재.
 -- 완료 표시가 같은 트랜잭션이어야 하는 이유: 갈라지면 적재 성공 후 크래시 시
--- 워커가 같은 원본을 재생성해 리뷰 대기가 중복 생성된다(추출 RPC와 같은 계약).
+-- 워커가 같은 원문을 재생성해 리뷰 대기가 중복 생성된다(추출 RPC와 같은 계약).
 CREATE FUNCTION create_ingestion_review(
   p_source_id      uuid,
   p_digests        jsonb,
@@ -380,7 +380,7 @@ BEGIN
     RAISE EXCEPTION 'p_digests must not be empty — use complete_source_digestion for empty results';
   END IF;
 
-  -- author_id = 원본 제공자: ingestion은 사람 주도 변경셋(07-modeling authorId 규칙)
+  -- author_id = 원문 제공자: ingestion은 사람 주도 변경셋(07-modeling authorId 규칙)
   INSERT INTO changesets (space_id, type, status, source_id, author_id)
   VALUES (v_space_id, 'ingestion', 'pending', p_source_id, v_author_id)
   RETURNING id INTO v_changeset_id;
@@ -430,7 +430,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 확정 — 한 트랜잭션에서: 신규 Reference 생성 → Digest 생성 + 라벨·인용 연결 →
--- changeset applied → 원본 active(추출 게이트 열림) → 워커 notify.
+-- changeset applied → 원문 active(추출 게이트 열림) → 워커 notify.
 -- 행 id는 change의 예약 target_id를 그대로 쓴다(apply_pending_relation과 같은 관용구) —
 -- 이력의 target_id와 실제 행이 어긋나지 않는다.
 CREATE FUNCTION confirm_ingestion_review(p_changeset_id uuid)
@@ -463,7 +463,7 @@ BEGIN
     RAISE EXCEPTION 'changeset % is not a pending ingestion review', p_changeset_id;
   END IF;
 
-  -- 원본이 리뷰 대기 상태여야 한다 — 휴지통으로 간 원본의 리뷰는 확정 불가
+  -- 원문이 리뷰 대기 상태여야 한다 — 휴지통으로 간 원문의 리뷰는 확정 불가
   SELECT s.author_id, sp.workspace_id INTO v_author_id, v_workspace_id
   FROM sources s JOIN spaces sp ON sp.id = s.space_id
   WHERE s.id = v_source_id AND s.status = 'pending'
@@ -541,7 +541,7 @@ BEGIN
 
   UPDATE changesets SET status = 'applied' WHERE id = p_changeset_id;
 
-  -- 리뷰 확정 = 원본 active 전이(07-modeling: active는 확정된 Digest가 있는 상태).
+  -- 리뷰 확정 = 원문 active 전이(07-modeling: active는 확정된 Digest가 있는 상태).
   -- extraction_status는 pending 그대로라 게이트가 열리는 순간 추출 대상이 된다.
   UPDATE sources SET status = 'active' WHERE id = v_source_id;
 

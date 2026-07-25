@@ -1,7 +1,7 @@
 -- =============================================================
 -- content-intake 1/3: 주제 레지스트리 — topics, source_topics, sources.title
 -- 공간에 쌓이는 재사용 주제 목록 = 지도의 줄기 목록. 평평한 단일 라벨(계층/군집 없음).
--- 원본 0..N 주제(멀티 라벨, 무태그 허용). 진술의 주제는 join으로 파생 — 엔진 무손상.
+-- 원문 0..N 주제(멀티 라벨, 무태그 허용). 진술의 주제는 join으로 파생 — 엔진 무손상.
 -- =============================================================
 
 -- ----- 주제 레지스트리: 재사용 라벨. UNIQUE(space_id, name)로 중복 라벨 차단 -----
@@ -14,7 +14,7 @@ CREATE TABLE topics (
   UNIQUE (space_id, name)
 );
 
--- ----- 원본 ↔ 주제 (멀티 라벨). 진술의 주제는 statement_sources -> source_topics로 파생 -----
+-- ----- 원문 ↔ 주제 (멀티 라벨). 진술의 주제는 statement_sources -> source_topics로 파생 -----
 CREATE TABLE source_topics (
   source_id   uuid NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
   topic_id    uuid NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
@@ -22,7 +22,7 @@ CREATE TABLE source_topics (
   PRIMARY KEY (source_id, topic_id)
 );
 
--- ----- 원본 제목 (확정 시 초안 제목이 넘어옴). 추출 워커는 안 읽음 = 엔진 무영향 -----
+-- ----- 원문 제목 (확정 시 초안 제목이 넘어옴). 추출 워커는 안 읽음 = 엔진 무영향 -----
 ALTER TABLE sources ADD COLUMN title text;
 
 -- =============================================================
@@ -31,7 +31,7 @@ ALTER TABLE sources ADD COLUMN title text;
 
 -- 주제 목록 조회(공간별) + UNIQUE가 (space_id, name) 등치도 커버
 CREATE INDEX idx_topics_space ON topics (space_id);
--- 주제 -> 원본 역조회(줄기 펼치기). 원본 -> 주제는 PK(source_id, topic_id)가 커버
+-- 주제 -> 원문 역조회(줄기 펼치기). 원문 -> 주제는 PK(source_id, topic_id)가 커버
 CREATE INDEX idx_source_topics_topic ON source_topics (topic_id);
 
 -- =============================================================
@@ -42,7 +42,7 @@ CREATE TRIGGER trg_topics_updated_at
   BEFORE UPDATE ON topics
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
--- 원본 ↔ 주제는 Space를 가로지르지 않는다 — 양끝이 같은 Space여야 함
+-- 원문 ↔ 주제는 Space를 가로지르지 않는다 — 양끝이 같은 Space여야 함
 -- (statement_sources의 same-space 강제와 같은 결).
 CREATE OR REPLACE FUNCTION enforce_source_topic_same_space()
 RETURNS trigger AS $$

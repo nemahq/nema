@@ -335,7 +335,7 @@ function registryStub(onEq?: (args: unknown[]) => void) {
   return stub;
 }
 
-// fetch_pending_digestion_sources는 첫 호출만 원본 1개, 이후 빈 배열(패스 종료)
+// fetch_pending_digestion_sources는 첫 호출만 원문 1개, 이후 빈 배열(패스 종료)
 function mockDigestionSupabase() {
   let fetched = false;
   const rpc = vi.fn(async (name: string) => {

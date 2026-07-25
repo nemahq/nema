@@ -4,7 +4,7 @@ import { PendingSourceList } from "@web/features/dev-harness/components/PendingS
 import { SourceComposer } from "@web/features/dev-harness/components/SourceComposer";
 import { SourceHistoryList } from "@web/features/dev-harness/components/SourceHistoryList";
 
-// 넣기 입구 — 원문 던지기 → 초안(대기 원본)에서 Digest 리뷰 확정 → 던진 글(추출).
+// 넣기 입구 — 원문 던지기 → 초안(대기 원문)에서 Digest 리뷰 확정 → 던진 글(추출).
 export function IngestPanel() {
   const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null);
 

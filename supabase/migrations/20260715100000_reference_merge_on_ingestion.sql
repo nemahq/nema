@@ -64,7 +64,7 @@ BEGIN
     );
   END LOOP;
 
-  -- 기존 Reference 병합 — 대상은 확정 전 다듬을 값이므로 지금 원본 body를 before로
+  -- 기존 Reference 병합 — 대상은 확정 전 다듬을 값이므로 지금 원문 body를 before로
   -- 잡아 {before, after}로 자기완결하게 남긴다. before/after 형태는 update_reference와
   -- 같지만 archive된 대상 처리 정책은 다르다: 여기(공통 헬퍼)는 non-active면 조용히
   -- 스킵한다 — 워커(create) 경로에서 생성~적재 사이 대상이 정리돼도 리뷰 생성 전체를
@@ -236,7 +236,7 @@ BEGIN
     RAISE EXCEPTION 'changeset % is not a pending ingestion review', p_changeset_id;
   END IF;
 
-  -- 원본이 리뷰 대기 상태여야 한다 — 휴지통으로 간 원본의 리뷰는 확정 불가
+  -- 원문이 리뷰 대기 상태여야 한다 — 휴지통으로 간 원문의 리뷰는 확정 불가
   SELECT s.author_id, sp.workspace_id INTO v_author_id, v_workspace_id
   FROM sources s JOIN spaces sp ON sp.id = s.space_id
   WHERE s.id = v_source_id AND s.status = 'pending'
@@ -333,7 +333,7 @@ BEGIN
 
   UPDATE changesets SET status = 'applied' WHERE id = p_changeset_id;
 
-  -- 리뷰 확정 = 원본 active 전이(07-modeling: active는 확정된 Digest가 있는 상태).
+  -- 리뷰 확정 = 원문 active 전이(07-modeling: active는 확정된 Digest가 있는 상태).
   UPDATE sources SET status = 'active' WHERE id = v_source_id;
 
   PERFORM pgmq.send('statement_sync', jsonb_build_object('type', 'notify'));

@@ -20,14 +20,14 @@
 
 **읽기·되짚기**
 
-- `list_topics` (기존, `topic.list`) — Space 안에서 살아 있는 Topic 목록. 다시 켜기의 입구이자, 원본 제출 때 재사용할 Topic을 찾는 자리.
+- `list_topics` (기존, `topic.list`) — Space 안에서 살아 있는 Topic 목록. 다시 켜기의 입구이자, 원문 제출 때 재사용할 Topic을 찾는 자리.
 - `get_evidence` (`narration.evidence`) — Topic 범위 질의로 근거 진술 묶음(충돌·대체 표식 + 진술별 `sourceId`)을 조립해 돌려준다. 산문 합성은 호출한 LLM이 한다.
-- `get_source` (`source.get`) — 진술이 가리키는 원본 전문을 펼친다. 충돌·의심을 원본까지 거슬러 확인하는 되짚기.
+- `get_source` (`source.get`) — 진술이 가리키는 원문 전문을 펼친다. 충돌·의심을 원문까지 거슬러 확인하는 되짚기.
 
 **넣기·Digest 리뷰**
 
-- `submit_source` (`source.create`, origin=external) — 외부 결론을 새 원본으로 제출한다. 제출 즉시 Digest 추출이 시작되고, 그 원본은 초안(대기)에 진행 중 상태로 나타난다(`intake-flow.md`).
-- `list_pending_sources` (`source.listPending`) — 아직 확정되지 않은(초안 상태) 원본 목록. v1의 "대기 초안 목록"에 대응하되, 가리키는 대상이 진술 후보 자체가 아니라 그 원본이다.
+- `submit_source` (`source.create`, origin=external) — 외부 결론을 새 원문으로 제출한다. 제출 즉시 Digest 추출이 시작되고, 그 원문은 초안(대기)에 진행 중 상태로 나타난다(`intake-flow.md`).
+- `list_pending_sources` (`source.listPending`) — 아직 확정되지 않은(초안 상태) 원문 목록. v1의 "대기 초안 목록"에 대응하되, 가리키는 대상이 진술 후보 자체가 아니라 그 원문이다.
 - `get_digest_review` (`digestReview.get`) — 추출이 끝나 열린 Digest 리뷰(ingestion changeset)의 Digest·Reference 후보 전문을 펼친다.
 - `edit_digest_review` (`digestReview.update`) — 열린 Digest 리뷰의 후보 내용(제목·본문·Topic·Tag 등)을 확정 전에 고친다.
 
@@ -74,7 +74,7 @@
 
 **불변식의 진짜 의도는 "AI의 자율 확정 차단"이지 "도구 표면 금지"가 아니다.** 사람 주권의 본질은 도구가 MCP냐 버튼이냐가 아니라, 사람이 의도를 갖고 직접 명령했나에 있다. GitHub에서 화면을 안 보고 LLM에게 merge나 revert를 시키는 일은 흔하고, 그렇게 시킨 merge는 LLM이 멋대로 한 게 아니라 그 사람이 한 것이다. 행위가 사람에게 귀속된다. 사람이 Claude Code에서 직접 "확정해"라고 명령한 확정도 마찬가지로 사람의 확정이다.
 
-**봄을 도구로 강제하지 않는다.** §4의 확정·충돌 장면은 원본을 보고 판단하는 데 값이 있지만, 그 봄을 강제하는 것은 온정주의다. 사용자가 보고 결정하든 안 보고 시키든 그 사람의 몫이다. 게다가 충돌 확인에 필요한 봄은 이미 도구로 깔린다. `get_evidence`가 충돌 표식을 띄우고 `get_source`가 두 원본을 펼치니, 사람은 대화 안에서 보고 판단한 뒤 `archive_statement`나 `apply_pending_relation`을 부르면 된다. 봄이 CLI 안에서 닫힌다.
+**봄을 도구로 강제하지 않는다.** §4의 확정·충돌 장면은 원문을 보고 판단하는 데 값이 있지만, 그 봄을 강제하는 것은 온정주의다. 사용자가 보고 결정하든 안 보고 시키든 그 사람의 몫이다. 게다가 충돌 확인에 필요한 봄은 이미 도구로 깔린다. `get_evidence`가 충돌 표식을 띄우고 `get_source`가 두 원문을 펼치니, 사람은 대화 안에서 보고 판단한 뒤 `archive_statement`나 `apply_pending_relation`을 부르면 된다. 봄이 CLI 안에서 닫힌다.
 
 **막는 대신 받친다.** 확정을 여는 대가로 두 가지를 챙긴다. 하나, `confirm_digest_review`는 `submit_source`와 묶이지 않은 독립 도구다. 사람이 따로 "확정해"라고 명령해야 돈다. 도구 설명에 "사람 지시 없이 submit_source 뒤에 이어서 자동으로 부르지 않는다"를 명시해, AI 자율 확정을 누른다(도구로 사람 명령과 AI 자율을 완전히 구분할 수는 없으므로, 이건 차단이 아니라 억제다). 둘, `revert_changeset`이 받친다. GitHub에서 merge를 맘 편히 시키는 게 revert가 있어서이듯, 틀린 확정을 changeset 단위로 무를 수 있어야 부담 없이 부른다.
 
@@ -87,8 +87,8 @@
 "실제로 부를 것만" 기준으로 다음은 뺐다.
 
 - **narrate (해설 산문) — 재검토 필요.** 이 문서를 처음 쓸 때는 "MCP 소비자는 LLM이라 산문보다 원석(`get_evidence`)을 잘 소화한다"는 근거로 뺐다. 그런데 지금 `narration-router.ts`에는 `narrateText`(스트리밍 없이 산문까지 완성해 반환)가 이미 있고, 코드 주석에 "구독을 못 타는 입구(MCP tool)가 앱과 같은 해설을 받는 길"이라고 명시돼 있다 — 즉 MCP를 염두에 두고 이미 만들어진 프로시저다. 이 문서가 뺀 이유와 실제 백엔드가 준비된 이유가 정면으로 부딪히므로, `get_narration`(`narration.narrateText`)을 도구로 열지는 다시 판단해야 한다.
-- **delete_pending_source (초안 상태 원본 삭제)** — 확정 전 대기열 청소라 위험은 낮지만, 직접 앱에서 보고 지우는 게 안전하고 직관적이다. CLI에서 LLM에게 시킬 빈도가 낮다.
-- **archive_source (원본 빼기)** — 원본을 가려도 거기서 나온 진술·관계는 남는다. 그런데 사용자 멘탈 모델에선 "원본을 지운다"가 "아예 사라진다"로 기대되어 불일치가 생긴다. 잘못 올린 걸 무르는 평범한 경우는 `revert_changeset`이 덮는다. archive와 revert의 구분은 라벨·확인으로 푸는 앱 UI의 몫이다.
+- **delete_pending_source (초안 상태 원문 삭제)** — 확정 전 대기열 청소라 위험은 낮지만, 직접 앱에서 보고 지우는 게 안전하고 직관적이다. CLI에서 LLM에게 시킬 빈도가 낮다.
+- **archive_source (원문 빼기)** — 원문을 가려도 거기서 나온 진술·관계는 남는다. 그런데 사용자 멘탈 모델에선 "원문을 지운다"가 "아예 사라진다"로 기대되어 불일치가 생긴다. 잘못 올린 걸 무르는 평범한 경우는 `revert_changeset`이 덮는다. archive와 revert의 구분은 라벨·확인으로 푸는 앱 UI의 몫이다.
 - **close_todo (할 일 닫기)** — todo는 `done` 상태로 바뀌는 게 아니라, "끝냈다" 성격의 새 진술이 들어와 기존 todo와 resolves 관계로 엮여 해소된다. `Statement.status`에 완료 상태가 없고, 이를 더하는 건 진술 엔진에 새 상태를 도입하는 별도 작업이다. 이번 범위(이미 빌드된 서비스 감싸기) 밖이다.
 
 ---
@@ -115,4 +115,4 @@
 1. 다시 켜는 순간을 돕는가: `list_topics` → `get_evidence` → `get_source`로 줄기 맥락을 복원하는 길이 곧 히어로다. 그렇다.
 2. 신뢰를 올리는가: 몰래 지우지 않는다(`archive_statement`는 가리기). 되돌릴 수 있다(`revert_changeset`). 확정은 사람이 직접 명령해야 돌고 무를 수 있다. 그렇다.
 3. 넣기가 가벼운가: 외부 LLM이 도구 호출로 바로 닿고, 다시 다듬지 않는다. 그렇다.
-4. 큰 그림이 먼저인가: `get_evidence`가 근거 묶음(큰 그림)을 주고, 원본 전문은 `get_source`로 부를 때만 펼친다. 그렇다.
+4. 큰 그림이 먼저인가: `get_evidence`가 근거 묶음(큰 그림)을 주고, 원문 전문은 `get_source`로 부를 때만 펼친다. 그렇다.

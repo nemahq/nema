@@ -1151,8 +1151,8 @@ describe("restore_digest RPC — 되살리기 대상 changeset 범위 (integrati
   });
 });
 
-describe("restore_digest RPC — 원본 재추출 트리거 (integration)", () => {
-  it("추출 완료 전에 archive된 Digest를 되살리면 원본의 extraction_status·linking_status를 함께 pending으로 되돌린다", async () => {
+describe("restore_digest RPC — 원문 재추출 트리거 (integration)", () => {
+  it("추출 완료 전에 archive된 Digest를 되살리면 원문의 extraction_status·linking_status를 함께 pending으로 되돌린다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -1179,7 +1179,7 @@ describe("restore_digest RPC — 원본 재추출 트리거 (integration)", () =
 
     await client.query("SELECT archive_digest($1)", [digestId]);
 
-    // 이 Digest 없이 원본의 추출 배치가 완료된 상황을 재현한다(워커가 archived를 걸러냄).
+    // 이 Digest 없이 원문의 추출 배치가 완료된 상황을 재현한다(워커가 archived를 걸러냄).
     await client.query(
       "UPDATE sources SET extraction_status = 'completed', linking_status = 'completed' WHERE id = $1",
       [sourceId],

@@ -6,7 +6,7 @@
 // 실행: docker run -d -p 6333:6333 qdrant/qdrant 후
 //   pnpm tsx src/eval/statement-engine/run-retrieval-dense.ts [노트수=80]
 // 데이터: .local/tiro-samples (TIRO_DIR로 교체). 요약(summary.md)을 추출 입력으로 쓴다 —
-//   원본 전사가 아니라 이미 깎인 맥락이라 엔진 설계 입력에 가깝고 비용도 싸다.
+//   원문 전사가 아니라 이미 깎인 맥락이라 엔진 설계 입력에 가깝고 비용도 싸다.
 // recall은 골든 39개로만 채점한다 — distractor는 pointToGolden에 없어 자동으로 "오답 경쟁자".
 
 import { existsSync, readFileSync } from "node:fs";

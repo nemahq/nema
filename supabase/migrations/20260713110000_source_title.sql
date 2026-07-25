@@ -85,7 +85,7 @@ BEGIN
     RAISE EXCEPTION 'p_digests must not be empty — use complete_source_digestion for empty results';
   END IF;
 
-  -- author_id = 원본 제공자: ingestion은 사람 주도 변경셋(07-modeling authorId 규칙)
+  -- author_id = 원문 제공자: ingestion은 사람 주도 변경셋(07-modeling authorId 규칙)
   INSERT INTO changesets (space_id, type, status, source_id, author_id)
   VALUES (v_space_id, 'ingestion', 'pending', p_source_id, v_author_id)
   RETURNING id INTO v_changeset_id;

@@ -266,8 +266,8 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
 
 // 사이클: ⓪ 생성 → ① 추출 → ② 임베딩 → ③ 잇기, 넷 다 빌 때까지.
 // ⓪은 리뷰 대기(pending changeset)를 만들 뿐 ①의 입력을 직접 만들지 않는다 —
-// ①은 사람이 리뷰를 확정해 원본이 active가 된 뒤에야 집는다(confirm이 notify를 쏨).
-// ①이 pending 진술을, ②가 잇기 대상(임베딩 끝난 원본)을 만들어내므로 이 순서면
+// ①은 사람이 리뷰를 확정해 원문이 active가 된 뒤에야 집는다(confirm이 notify를 쏨).
+// ①이 pending 진술을, ②가 잇기 대상(임베딩 끝난 원문)을 만들어내므로 이 순서면
 // 한 번 깨어난 김에 추출·임베딩·잇기까지 끝난다 (relation-design §3).
 async function runCycle(deps: WorkerDeps): Promise<void> {
   while (true) {
@@ -378,12 +378,12 @@ async function ackVectorPurge(deps: WorkerDeps, msgId: number): Promise<void> {
 }
 
 // pg_cron purge가 조용히 멈춘 경우를 잡는 워치독 — 보관기간+유예가 지났는데 아직
-// trashed로 남은 원본이 있으면 잡이 안 도는 신호라 Sentry로 알린다("잡의 주인은 DB,
+// trashed로 남은 원문이 있으면 잡이 안 도는 신호라 Sentry로 알린다("잡의 주인은 DB,
 // 감시는 서버").
 // 타이머가 fire-and-forget로 부르므로 절대 reject하지 않는다(poll/sweep과 같은 계약).
 // pg_cron purge가 조용히 멈춘 경우를 잡는 워치독 — "밀린 개수"가 아니라 "잡이 최근에
 // 실제로 성공했나"를 본다. 대량 휴지통을 배치 한도 때문에 여러 날 나눠 비우는 정상 상황엔
-// backlog가 커도 헛경보하지 않고, 잡이 오래 안 돌았고(정지 의심) 실제로 만료된 원본이
+// backlog가 커도 헛경보하지 않고, 잡이 오래 안 돌았고(정지 의심) 실제로 만료된 원문이
 // 남아 있을 때만 경고한다(빈 DB·신규 배포는 조용). fire-and-forget 타이머가 부르므로
 // 절대 reject하지 않는다(poll/sweep과 같은 계약).
 export async function checkPurgeBacklog(deps: WorkerDeps): Promise<void> {
@@ -405,7 +405,7 @@ export async function checkPurgeBacklog(deps: WorkerDeps): Promise<void> {
       return;
     }
 
-    // 잡이 오래 안 돌았다 → 실제로 만료된 원본이 있을 때만 경고.
+    // 잡이 오래 안 돌았다 → 실제로 만료된 원문이 있을 때만 경고.
     const cutoff = new Date(
       Date.now() - PURGE_RETENTION_DAYS * MS_PER_DAY,
     ).toISOString();
@@ -520,7 +520,7 @@ export function deadlineContext(source: PendingSource): {
 }
 
 // 추출된 진술 — RPC(apply_extraction_statements) 계약 형태. digest_id는 추출 근거,
-// index는 원본 전체를 관통하는 등장 순서(digest 경계를 넘어 이어짐 — 잇기 정렬이 쓴다).
+// index는 원문 전체를 관통하는 등장 순서(digest 경계를 넘어 이어짐 — 잇기 정렬이 쓴다).
 // object literal 타입(interface 아님) — Json으로의 암묵적 index signature 할당을 얻어
 // RPC(p_statements: Json) 인자로 캐스트 없이 넘긴다.
 type ExtractionStatement = {
@@ -539,7 +539,7 @@ async function processSource(
   const { reference, timeZone, todayIsoDate } = deadlineContext(source);
   const digests = await fetchSourceDigests(deps.supabase, source.id);
 
-  // 추출 클레임된 원본은 pending digest가 ≥1 있어야 한다(첫 인제스천분 또는 수정으로 생긴
+  // 추출 클레임된 원문은 pending digest가 ≥1 있어야 한다(첫 인제스천분 또는 수정으로 생긴
   // 새 digest). 0개면 상태 전이 이상 신호라 브레드크럼을 남긴다 — 아래 빈 apply가 source를
   // completed로 닫아 재시도에 갇히지 않게 한다.
   if (digests.length === 0) {
@@ -551,7 +551,7 @@ async function processSource(
   }
 
   // Digest들을 병렬 추출 — 입력이 루프 시작 시 전부 확정돼 있어 앞 콜을 기다릴 이유가 없다.
-  // 순차로 돌리면 다digest 원본이 lease(150초)를 넘겨 완료 못 하고 재시도만 돌 수 있다.
+  // 순차로 돌리면 다digest 원문이 lease(150초)를 넘겨 완료 못 하고 재시도만 돌 수 있다.
   // 하나라도 실패하면 Promise.all의 첫 reject가 전파돼 source 전체가 재시도(부분 저장 없음) —
   // apply가 끝에 1회뿐이라 부분 적용이 없는 대가다(청크 원자성과 같은 결). 정합성 > 재실행 비용.
   const perDigest = await Promise.all(
@@ -564,7 +564,7 @@ async function processSource(
     })),
   );
 
-  // digest_id 태깅 + 원본 관통 index — Digest 인출 순서로 이어 붙여 잇기 정렬 계약을 지킨다.
+  // digest_id 태깅 + 원문 관통 index — Digest 인출 순서로 이어 붙여 잇기 정렬 계약을 지킨다.
   const statements: ExtractionStatement[] = [];
   for (const { digest, extracted } of perDigest) {
     for (const statement of normalizeStatements(extracted, {
@@ -657,7 +657,7 @@ async function callDigestExtractionWithRetry(
 }
 
 // DB 제약(claim만 confidence)과 맞도록 방어 정규화 — 과장 금지 원칙이라 빠진 확신도는 guess.
-// index·digest_id는 호출자가 원본 관통으로 부여한다(digest 경계를 넘어 이어지는 등장 순서).
+// index·digest_id는 호출자가 원문 관통으로 부여한다(digest 경계를 넘어 이어지는 등장 순서).
 function normalizeStatements(
   raw: ExtractedStatement[],
   context: { reference: Date; timeZone: string },
@@ -710,8 +710,8 @@ async function fetchPendingSources(
   return parsed.data;
 }
 
-// 추출 입력 = 원본의 확정 Digest들. 정렬은 (created_at, id) — 한 confirm에서 태어난
-// digest들은 created_at이 같아 id가 타이브레이커다. 순서는 원본 관통 index의 뼈대라
+// 추출 입력 = 원문의 확정 Digest들. 정렬은 (created_at, id) — 한 confirm에서 태어난
+// digest들은 created_at이 같아 id가 타이브레이커다. 순서는 원문 관통 index의 뼈대라
 // 결정적이면 충분하다(digest 사이 순서 자체는 판단 단위가 갈려 본질적으로 임의적).
 async function fetchSourceDigests(
   supabase: TypedSupabaseClient,
@@ -1249,7 +1249,7 @@ async function fetchPendingLinkingSources(
   return parsed.data;
 }
 
-// 원본의 active 진술(새 배치) — 같은 글 형제는 여기서 다 모인다.
+// 원문의 active 진술(새 배치) — 같은 글 형제는 여기서 다 모인다.
 async function fetchSourceStatements(
   supabase: TypedSupabaseClient,
   sourceId: string,

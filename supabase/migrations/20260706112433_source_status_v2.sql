@@ -6,13 +6,13 @@
 --   (복원: trashed → pending. 파생이 없는 상태라 pending 정의에 부합)
 --
 -- 기존 archived 행은 pending으로 — archived로 가는 경로가 되돌리기였고,
--- v2의 pending 정의("원본 빼기로 되돌려진 것")가 정확히 그 상태다.
+-- v2의 pending 정의("원문 빼기로 되돌려진 것")가 정확히 그 상태다.
 -- 신규 기본값은 당분간 active 유지 — pending→active 승격 게이트(Digest 확정)가
 -- 생기는 인테이크 개편에서 기본값을 pending으로 전환한다.
 --
--- "active에서 원본만 빼기"(파생 유지한 채 숨김)는 v2에 없는 동작이라
+-- "active에서 원문만 빼기"(파생 유지한 채 숨김)는 v2에 없는 동작이라
 -- archive_source RPC를 제거한다. trashed 진입은 pending에서만(trash_source).
--- 삭제·복원은 변경이력에 남기지 않는다 — pending 원본은 아직 그래프에 아무것도
+-- 삭제·복원은 변경이력에 남기지 않는다 — pending 원문은 아직 그래프에 아무것도
 -- 심지 않아 지킬 판단·관계가 없다(리뷰·되돌리기의 대상이 아님).
 -- =============================================================
 
@@ -48,7 +48,7 @@ ALTER TABLE sources ADD CONSTRAINT chk_trashed_at_iff_trashed CHECK (
 DROP FUNCTION archive_source(uuid);
 
 -- =============================================================
--- 4) revert_changeset — 원본 전이만 v2로 교체 (archived ↔ active → pending ↔ active)
+-- 4) revert_changeset — 원문 전이만 v2로 교체 (archived ↔ active → pending ↔ active)
 --    나머지 로직은 20260615115646과 동일.
 -- =============================================================
 
@@ -81,7 +81,7 @@ BEGIN
   VALUES (v_space_id, 'revert', 'applied', p_changeset_id, auth.uid())
   RETURNING id INTO v_revert_id;
 
-  -- ingestion 예외: changes 밖의 원본(source_id)도 pending으로 되돌린다
+  -- ingestion 예외: changes 밖의 원문(source_id)도 pending으로 되돌린다
   -- ("글 통째로" — v2에선 archive가 아니라 pending 복귀, 07-modeling.md)
   IF v_type = 'ingestion' AND v_source_id IS NOT NULL THEN
     UPDATE sources SET status = 'pending'
@@ -155,13 +155,13 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 
 -- =============================================================
 -- 5) 휴지통 넣기/꺼내기 — trashed 진입·복귀의 유일한 경로
---    변경셋 없음: pending 원본은 그래프 밖이라 이력의 대상이 아니다.
+--    변경셋 없음: pending 원문은 그래프 밖이라 이력의 대상이 아니다.
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION trash_source(p_source_id uuid)
 RETURNS void AS $$
 BEGIN
-  -- 삭제는 pending에서만 — active 원본은 되돌리기로 pending을 거쳐야 한다
+  -- 삭제는 pending에서만 — active 원문은 되돌리기로 pending을 거쳐야 한다
   UPDATE sources
   SET status = 'trashed', trashed_at = now()
   WHERE id = p_source_id AND status = 'pending'

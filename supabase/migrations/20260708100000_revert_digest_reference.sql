@@ -3,10 +3,10 @@
 --
 -- 20260706112433의 역연산 루프는 statement/relation/source 세 타입만 분기하고,
 -- 그 외(digest·reference)는 source의 ELSE 분기로 떨어져 target_id가 sources 테이블에
--- 없으니 IF NOT FOUND CONTINUE로 조용히 아무 일도 안 했다 — 확정 원본을 되돌려도
--- 그 원본이 만든 Digest·Reference가 active로 남는 고아 gap (#361 handoff에서 지적).
+-- 없으니 IF NOT FOUND CONTINUE로 조용히 아무 일도 안 했다 — 확정 원문을 되돌려도
+-- 그 원문이 만든 Digest·Reference가 active로 남는 고아 gap (#361 handoff에서 지적).
 --
--- Digest: 원본 1개 소유(source_id NOT NULL, 재사용 없음)라 create↔archive/restore를
+-- Digest: 원문 1개 소유(source_id NOT NULL, 재사용 없음)라 create↔archive/restore를
 --   대칭으로 안전하게 처리한다 — ingestion이 만든 Digest, confirm_digest_edit의 새
 --   Digest·archive된 옛 Digest 전부 이 규칙 하나로 닫힌다.
 -- Reference: Workspace 전체가 재사용하는 공유 자원 — 07-modeling §열어두는 것이 명시한
@@ -46,7 +46,7 @@ BEGIN
   VALUES (v_space_id, 'revert', 'applied', p_changeset_id, auth.uid())
   RETURNING id INTO v_revert_id;
 
-  -- ingestion 예외: changes 밖의 원본(source_id)도 pending으로 되돌린다
+  -- ingestion 예외: changes 밖의 원문(source_id)도 pending으로 되돌린다
   -- ("글 통째로" — v2에선 archive가 아니라 pending 복귀, 07-modeling.md)
   IF v_type = 'ingestion' AND v_source_id IS NOT NULL THEN
     UPDATE sources SET status = 'pending'

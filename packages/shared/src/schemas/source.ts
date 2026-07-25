@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { DIGEST_TITLE_MAX_LENGTH } from "./digest";
 
-// 원본 입구 상한 — 한 글이 비정상적으로 크면(책·덤프) 추출·임베딩·잇기를 한꺼번에
+// 원문 입구 상한 — 한 글이 비정상적으로 크면(책·덤프) 추출·임베딩·잇기를 한꺼번에
 // 폭주시키므로 박제 전에 거부한다(쪼개서 다시 넣게). 정확성이 아니라 비용/폭주
 // 브레이크라 정밀할 필요 없이 "확실히 비정상"만 잡으면 된다 — 정당한 장문(긴 회의록·
 // 보고서)은 통과시키려 높게 잡는다(거짓 거부가 콘텐츠를 잃으니 높은 쪽으로 기운다).
@@ -32,7 +32,7 @@ export const SourceGetInputSchema = z.object({
 
 export type SourceGetInput = z.infer<typeof SourceGetInputSchema>;
 
-// 초안 액션(취소·삭제·Digest 추출 실행) 공용 입력 — 셋 다 "이 원본에" 말고는 인자가 없다.
+// 초안 액션(취소·삭제·Digest 추출 실행) 공용 입력 — 셋 다 "이 원문에" 말고는 인자가 없다.
 // 어떤 상태에서 무엇이 허용되는지는 전부 서버 판정이라(RPC의 WHERE 가드) 클라이언트가
 // 상태를 실어 보낼 게 없다.
 export const SourceActionInputSchema = z.object({
@@ -73,7 +73,7 @@ export type SourceUpdateTitleInput = z.infer<
   typeof SourceUpdateTitleInputSchema
 >;
 
-// 재추출 전에 원본 고치기 — 상한은 생성과 같은 SOURCE_BODY_MAX_LENGTH(같은 글이
+// 재추출 전에 원문 고치기 — 상한은 생성과 같은 SOURCE_BODY_MAX_LENGTH(같은 글이
 // 입구를 통과하는 기준과 편집을 통과하는 기준이 다를 이유가 없다). 어떤 상태에서
 // 허용되는지는 RPC의 WHERE 가드가 판정한다(열린 리뷰가 있으면 잠긴다).
 export const SourceUpdateBodyInputSchema = z.object({

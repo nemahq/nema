@@ -6,7 +6,7 @@
 --    두 군데 적는 중복 축이 된다(문서 세션과 합의). conflict는 쓰는 코드가 없고,
 --    merge는 apply_relation_changesets의 중복 가리기가 만들고 있어 같은
 --    마이그레이션에서 type='relation' + source_id로 재지정한다(5) — dedup은 관계
---    엔진 판정의 산물이고 방아쇠가 그 원본의 저장이라 relation의 정의에 맞고,
+--    엔진 판정의 산물이고 방아쇠가 그 원문의 저장이라 relation의 정의에 맞고,
 --    source_id가 생기면서 완전 삭제 purge의 "source_id 그물"에도 걸리게 된다
 --    (기존 merge는 source_id가 없어 purge가 놓치는 구멍이었다).
 -- 2) change_target_type에 digest·reference 추가 — digests·references 테이블의
@@ -27,7 +27,7 @@
 -- 1) changeset_type 재구성 — conflict·merge 제거
 --
 -- 기존 merge 행 폐기: merge 행은 source_id가 없어 relation 모양으로 재지정할
--- 수 없다(방아쇠 원본을 소급 특정 불가 — 중복 진술은 여러 원본을 가질 수 있음).
+-- 수 없다(방아쇠 원문을 소급 특정 불가 — 중복 진술은 여러 원문을 가질 수 있음).
 -- 현재 데이터는 전부 테스트용이라 폐기로 합의(Kyle). 폐기 후에도 남은 값의
 -- 행이 있으면 USING 캐스팅이 실패하며 마이그레이션이 멈춘다 — 전제가 조용히
 -- 넘어가지 않게 하는 의도된 동작.

@@ -3,8 +3,8 @@
 --
 -- 기존엔 spaces 삭제 하나로 sources까지 FK cascade로 통째로 날아갔다. cascade
 -- 대상은 원래 두 갈래였다: (1) 이미 다이제스천 끝나 그래프(Digest·Statement)에
--- 심어진 active 원본, (2) 이미 Digest Review에 들어간(열린 ingestion changeset이
--- 있는) pending 원본 — 이 PR은 이 둘의 "Space 삭제 = 콘텐츠 영구 삭제" 취급은
+-- 심어진 active 원문, (2) 이미 Digest Review에 들어간(열린 ingestion changeset이
+-- 있는) pending 원문 — 이 PR은 이 둘의 "Space 삭제 = 콘텐츠 영구 삭제" 취급은
 -- 그대로 두고, 세 번째 갈래인 아직 리뷰에도 안 들어간 대기 중인 초안
 -- (status='pending', 열린 ingestion changeset 없음 — /drafts 화면에 뜨는 것과
 -- 정확히 같은 집합)만 골라 삭제 전에 다른 Space로 옮긴다. 이 초안은 그래프에

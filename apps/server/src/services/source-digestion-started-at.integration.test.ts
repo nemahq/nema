@@ -65,7 +65,7 @@ async function createFixtureSpace(): Promise<string> {
 async function createFixtureSource(): Promise<string> {
   const spaceId = await createFixtureSpace();
   // start_source_digestion은 idle(completed/failed/cancelled)에서만 정리를 새로
-  // 시작할 수 있다 — pending(추출 중) 원본에 걸면 가드가 막는다.
+  // 시작할 수 있다 — pending(추출 중) 원문에 걸면 가드가 막는다.
   const { rows: source } = await client.query<{ id: string }>(
     "INSERT INTO sources (space_id, body, status, digestion_status) VALUES ($1, $2, 'pending', 'completed') RETURNING id",
     [spaceId, "원문"],
@@ -117,9 +117,9 @@ describe("digestion_started_at (integration)", () => {
     expect(afterStart.last_digestion_attempt).toBeNull();
 
     // fetch_pending_digestion_sources()는 ORDER BY 없이 전역에서 LIMIT 10을
-    // 집어간다 — 로컬 DB에 정리 대기 중인 다른 원본이 10건 이상 있으면 이
+    // 집어간다 — 로컬 DB에 정리 대기 중인 다른 원문이 10건 이상 있으면 이
     // 픽스처가 안 뽑혀 아래 단언이 어긋난다. 트랜잭션 안에서만(테스트 끝에
-    // 롤백되어 사라짐) 다른 원본들의 리스를 미리 채워 이번 클레임 대상에서
+    // 롤백되어 사라짐) 다른 원문들의 리스를 미리 채워 이번 클레임 대상에서
     // 제외한다.
     await client.query(
       "UPDATE sources SET last_digestion_attempt = now() WHERE digestion_status = 'pending' AND status = 'pending' AND id != $1",

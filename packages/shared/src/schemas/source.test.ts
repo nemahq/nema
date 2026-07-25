@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { SOURCE_BODY_MAX_LENGTH, SourceCreateInputSchema } from "./source";
 
-// 원본 입구 상한 — 비정상 큰 글을 박제 전에 거부한다(추출·임베딩·잇기 폭주 차단).
+// 원문 입구 상한 — 비정상 큰 글을 박제 전에 거부한다(추출·임베딩·잇기 폭주 차단).
 describe("SourceCreateInputSchema", () => {
   it("상한 길이의 본문은 통과", () => {
     const body = "가".repeat(SOURCE_BODY_MAX_LENGTH);

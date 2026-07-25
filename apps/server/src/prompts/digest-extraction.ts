@@ -127,7 +127,7 @@ function renderBody(body: DigestBody): string {
   return lines.join("\n");
 }
 
-// todayIsoDate는 절대 날짜 연도 보정·기한 해석 기준 = 원본의 작성일(존 반영). 원문 추출과
+// todayIsoDate는 절대 날짜 연도 보정·기한 해석 기준 = 원문의 작성일(존 반영). 원문 추출과
 // 같은 계약이라 워커가 같은 값을 넘긴다.
 export function buildDigestExtractionMessage(
   digest: { title: string; description: string; body: DigestBody },

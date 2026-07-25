@@ -13,14 +13,14 @@
 
 ALTER TABLE sources ADD COLUMN digestion_started_at timestamptz;
 
--- 백필: 지금 처리 중인 원본은 기존 last_digestion_attempt(아직 안 붙잡혔으면
+-- 백필: 지금 처리 중인 원문은 기존 last_digestion_attempt(아직 안 붙잡혔으면
 -- created_at)를 최선의 근사치로 채운다. 이후로는 create_source·start_source_digestion만
 -- 이 값을 채운다.
 UPDATE sources
 SET digestion_started_at = COALESCE(last_digestion_attempt, created_at)
 WHERE digestion_status = 'pending' AND status = 'pending';
 
--- create_source: 새 원본은 digestion_status 기본값('pending')을 그대로 받아
+-- create_source: 새 원문은 digestion_status 기본값('pending')을 그대로 받아
 -- start_source_digestion을 거치지 않고 곧바로 정리 큐에 들어간다 — 여기서도
 -- digestion_started_at을 찍어야 "정리 중이면 이 값이 항상 있다"는 성질이
 -- 재시작 경로와 일치한다.

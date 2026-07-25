@@ -24,7 +24,7 @@ function statusLabel(item: PendingSourceItem): string {
   return DIGESTION_OUTCOME_LABEL[item.digestionOutcome];
 }
 
-// 대기 원본(초안) — 그래프에 아직 안 들어간 것들. 리뷰가 열린 원본만 펼쳐 확정할 수 있다.
+// 대기 원문(초안) — 그래프에 아직 안 들어간 것들. 리뷰가 열린 원문만 펼쳐 확정할 수 있다.
 export function PendingSourceList() {
   const pendingQuery = usePendingSourceListQuery();
   const [openChangesetId, setOpenChangesetId] = useState<string | null>(null);

@@ -54,7 +54,7 @@ interface DigestionDeps {
   forTask: (task: LlmTask) => LlmProvider;
 }
 
-// --- ⓪ 생성(digestion) — 원본을 Digest·Reference 후보로 정리해 리뷰 대기에 올린다 ---
+// --- ⓪ 생성(digestion) — 원문을 Digest·Reference 후보로 정리해 리뷰 대기에 올린다 ---
 
 export async function runDigestionPass(deps: DigestionDeps): Promise<number> {
   let processed = 0;
@@ -96,7 +96,7 @@ export async function runDigestionPass(deps: DigestionDeps): Promise<number> {
 //
 // 취소로 끊긴 콜은 실패가 아니다: Sentry에도 안 올리고 retry도 안 올린다(둘 다 했다간 사람이
 // 의도한 정지가 오류 알림과 재시도 예산 소모로 둔갑한다). abort가 콜을 끊은 시점부터 나오는
-// 예외는 종류를 안 가리고 전부 취소로 친다 — 진짜 오류가 그 찰나에 겹쳤더라도 원본은 이미
+// 예외는 종류를 안 가리고 전부 취소로 친다 — 진짜 오류가 그 찰나에 겹쳤더라도 원문은 이미
 // cancelled라 재시도할 대상이 아니라서 결론이 같다.
 //
 // 취소가 LLM 콜이 끝난 뒤·적재 RPC 전에 도착하는 경우: create_ingestion_review가
@@ -176,7 +176,7 @@ async function digestSource(params: {
     existingTags: registries.tags,
   });
 
-  // 판단이 없는 글(잡담뿐) — 리뷰 없이 완료만. 원본은 pending에 남아
+  // 판단이 없는 글(잡담뿐) — 리뷰 없이 완료만. 원문은 pending에 남아
   // 사용자가 휴지통으로 정리한다.
   if (normalized.digests.length === 0) {
     const { error } = await deps.supabase.rpc("complete_source_digestion", {
