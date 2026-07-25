@@ -23,6 +23,11 @@ beforeAll(async () => {
     await client.connect();
     localDbAvailable = true;
   } catch {
+    if (process.env.REQUIRE_LOCAL_DB === "true") {
+      throw new Error(
+        "[changeset-service.integration.test] local Postgres (127.0.0.1:54322) unreachable, but REQUIRE_LOCAL_DB=true — CI expected a live DB for this run.",
+      );
+    }
     console.warn(
       "[changeset-service.integration.test] local Postgres (127.0.0.1:54322) unreachable — skipping. Run `supabase start` first.",
     );

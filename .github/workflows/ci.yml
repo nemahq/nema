@@ -10,14 +10,18 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # 같은 PR에 커밋을 연달아 push하면 이전 run은 취소하고 최신 커밋만 검증한다.
-    # push(브랜치/태그)는 배포 job이 뒤따르므로 취소하지 않는다.
+    # PR은 ref(=PR 번호) 기준으로 묶어 같은 PR에 커밋을 연달아 push하면 이전 run을 취소한다.
+    # push(브랜치/태그)는 sha 기준으로 묶는다 — ref로 묶으면 GitHub Actions가
+    # cancel-in-progress 설정과 무관하게 "대기 중인 이전 run"은 무조건 취소해버려서,
+    # staging/main에 커밋이 연달아 push될 때 중간 커밋의 check(및 그 뒤 migration
+    # push·배포·번역 동기화 등 후속 job)가 통째로 스킵될 수 있다.
     concurrency:
-      group: ci-check-${{ github.ref }}
+      group: ci-check-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      # 팀 슬러그는 민감 정보가 아니므로(Vercel URL에 그대로 노출) secret이 아닌 variable로 등록한다
+      # 팀 슬러그는 민감 정보가 아니므로(Vercel URL에 그대로 노출) secret이 아닌 variable로 등록한다.
+      # Turborepo remote cache는 Railway 배포와 무관한 별도 서비스 — 캐시 저장 용도로만 쓴다.
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     steps:
       - uses: actions/checkout@v4
@@ -55,41 +59,57 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Check for migration changes
-        if: github.event_name == 'pull_request'
-        id: migrations
+      - name: Determine diff base
+        # PR은 base 브랜치, 브랜치 push는 직전 커밋, 태그 push는 직전 태그와 비교한다
+        # (deploy-staging/deploy-production이 각자 쓰는 diff 기준과 동일하게 맞춘다).
+        id: diffbase
         run: |
           set -euo pipefail
-          CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- 'supabase/migrations/')
-          if [ -n "$CHANGED" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base=origin/${{ github.base_ref }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            echo "base=$PREV_TAG" >> $GITHUB_OUTPUT
+          else
+            echo "base=HEAD~1" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check if integration tests need a live DB
+      - name: Check for migration/server changes
         # 통합 테스트(apps/server/src/services/*.integration.test.ts)가 검증하는 대상은
-        # migration 파일이 아니라 서버 로직이다. migration 미변경 PR이라도 서버 코드가
-        # 바뀌면 DB를 띄워야 한다 — DB가 없으면 테스트가 조용히 스킵되며 통과 처리된다.
-        if: github.event_name == 'pull_request'
-        id: db
+        # migration 파일뿐 아니라 서버 로직·apps/server가 의존하는 packages/shared/src도
+        # 포함한다. DB 없이 돌면 테스트가 조용히 스킵되며 통과 처리되므로, 이 셋 중
+        # 하나라도 바뀌면 DB를 띄운다. migrations_changed는 db_needed와 같은 diff
+        # 결과에서 걸러내 — 두 출력이 서로 다른 git diff를 호출해 어긋나는 일이 없게 한다.
+        id: changes
         run: |
           set -euo pipefail
-          CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- 'apps/server/src/' 'supabase/migrations/')
-          if [ -n "$CHANGED" ]; then
-            echo "needed=true" >> $GITHUB_OUTPUT
+          BASE="${{ steps.diffbase.outputs.base }}"
+          if [ -z "$BASE" ]; then
+            # 이전 태그가 없는 첫 배포 등 비교 기준이 없는 경우 안전하게 "변경됨"으로 취급
+            echo "db_needed=true" >> $GITHUB_OUTPUT
+            echo "migrations_changed=true" >> $GITHUB_OUTPUT
+          else
+            ALL_CHANGED=$(git diff --name-only "$BASE"...HEAD -- 'apps/server/' 'packages/shared/src/' 'supabase/migrations/')
+            if [ -n "$ALL_CHANGED" ]; then
+              echo "db_needed=true" >> $GITHUB_OUTPUT
+            fi
+            if echo "$ALL_CHANGED" | grep -q '^supabase/migrations/'; then
+              echo "migrations_changed=true" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Setup Supabase CLI
-        if: steps.db.outputs.needed == 'true'
+        if: steps.changes.outputs.db_needed == 'true'
         uses: supabase/setup-cli@v1
         with:
           version: 2.110.0-beta.10
 
       - name: Start Supabase
-        if: steps.db.outputs.needed == 'true'
+        if: steps.changes.outputs.db_needed == 'true'
         run: supabase start
 
       - name: Verify database types are up to date
-        if: steps.migrations.outputs.changed == 'true'
+        if: steps.changes.outputs.migrations_changed == 'true'
         run: |
           set -euo pipefail
           supabase gen types --lang=typescript --local > apps/server/src/infra/database.types.ts
@@ -104,9 +124,16 @@ jobs:
 
       - name: Test
         run: pnpm test
+        env:
+          # db_needed인데 실제로 DB 연결이 안 되면(Start Supabase 실패 등) 통합 테스트가
+          # 조용히 통과하지 않고 시끄럽게 실패하도록 한다 — 경로 필터가 놓친 케이스까지
+          # 커버하진 못하지만, 여기서 표시한 대로 DB가 있어야 하는 상황에서의 안전망이다.
+          REQUIRE_LOCAL_DB: ${{ steps.changes.outputs.db_needed }}
 
       - name: Stop Supabase
-        if: always() && steps.db.outputs.needed == 'true'
+        # Start Supabase 이후로 stop하지 않는다 — 위 Test 스텝의 통합 테스트가
+        # 같은 인스턴스를 그대로 재사용하기 때문에, 여기 job 끝에서만 정리한다.
+        if: always() && steps.changes.outputs.db_needed == 'true'
         run: supabase stop || true
 
   # Railway staging auto-deploy must be OFF — this job manages deployment sequencing.

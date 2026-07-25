@@ -24,6 +24,9 @@
     "test": {
       "dependsOn": [],
       "outputs": []
+    },
+    "@nema-io/server#test": {
+      "cache": false
     }
   }
 }
