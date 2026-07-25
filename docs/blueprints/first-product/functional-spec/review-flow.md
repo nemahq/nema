@@ -32,9 +32,9 @@
 - [x] Digest 리뷰 버리기
 - [x] 적용된 리뷰 되돌리기
 - [ ] Changeset 제목 자동 생성 (revert)
-- [ ] 원본도 삭제하기
+- [ ] 원문도 삭제하기
 - [ ] 버려진 리뷰 되살리기
-- [ ] 원본 삭제 후 되살리기 비활성화
+- [ ] 원문 삭제 후 되살리기 비활성화
 - [ ] 신규 Reference 후보 편집
 - [ ] 기존 Reference 후보 병합 편집
 - [ ] 타입 변경 시 필드 초기화
@@ -156,7 +156,7 @@
 
 - **Given**: Digest 추출이 완료되어 하나 이상의 Digest 후보가 나왔다.
 - **When**: ingestion changeset이 생성된다.
-- **Then**: 그 changeset의 제목은 원본 Source의 제목을 그대로 사용한다. Source 제목이 별도의 nano LLM 콜(`fill_source_title`)로 아직 안 채워졌으면 changeset 제목도 null로 시작했다가, 나중에 채워지면 트리거로 갱신된다.
+- **Then**: 그 changeset의 제목은 Source의 제목을 그대로 사용한다. Source 제목이 별도의 nano LLM 콜(`fill_source_title`)로 아직 안 채워졌으면 changeset 제목도 null로 시작했다가, 나중에 채워지면 트리거로 갱신된다.
 - **관여 화면**: Digest 리뷰 화면
 - **범위 참고 (PR #435)**: `create_ingestion_review`가 그 시점 Source 제목을 복사, `sources.title` 변경 시 연결된 ingestion changeset title로 전파하는 트리거로 갱신 유지.
 
@@ -188,7 +188,7 @@
 - **Then**:
   1. 이 changeset이 closed+discarded 상태로 전환된다.
   2. Digest·Reference가 아무것도 생성되지 않는다.
-  3. 원본 Source는 초안(pending)으로 돌아간다.
+  3. Source는 초안(pending)으로 돌아간다.
   4. 리뷰 화면(open 전용)은 유효하지 않게 되므로, 처리 결과의 정본 위치인 변경사항 상세로 곧바로 이동한다.
 - **관여 화면**: Digest 리뷰 화면, Changeset 상세
 - **범위 참고 (2026-07-14, PR #412)**: 신설된 `discard_ingestion_review` RPC(가드: `type='ingestion' AND status='pending'`, changes 미생성)와 `useDiscardReview`로 Then #1~#3 구현.
@@ -201,7 +201,7 @@
 - **Then**:
   1. 컨펌 다이얼로그 없이 즉시 실행된다.
   2. 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
-  3. 이 changeset이 만든 Digest들이 archive되고, 원본 Source는 초안(pending)으로 돌아간다.
+  3. 이 changeset이 만든 Digest들이 archive되고, Source는 초안(pending)으로 돌아간다.
   4. 성공 시 새로 생성된 revert changeset의 상세로 자동 이동한다.
 - **관여 화면**: Changeset 상세
 - **범위 참고 (2026-07-14, PR #412; 갱신 PR #438)**: `useRevertChangeset`이 `revert_changeset` RPC를 호출, 응답의 `revertChangesetNumber`로 `ClosedReviewScreen.tsx`가 즉시 navigate.
@@ -214,13 +214,13 @@
 - **관여 화면**: Changeset 상세, 변경셋
 - **범위 참고**: 저장은 원본 제목+되돌려진 횟수(depth)로, 표시는 클라이언트가 UI 언어별 자연스러운 문구(Tolgee ICU 복수형 키)로 조합해야 함. 현재 구현(`revert_changeset` RPC)은 SQL에서 `title || ' 되돌림'`으로 한국어 문자열을 직접 이어붙여 저장 — 영어 UI에서 한/영 혼재되는 버그, 수정 필요.
 
-#### 원본도 삭제하기
+#### 원문도 삭제하기
 
 - **Given**: 유저가 Changeset 상세에서 버려지거나 되돌려진 changeset을 보고 있다(Digest 리뷰 화면은 open 전용이라 여기 해당 없음).
-- **When**: 원본도 삭제하기 액션을 실행한다.
+- **When**: 원문도 삭제하기 액션을 실행한다.
 - **Then**:
-  1. 그 원본(Source)이 즉시 trashed 상태로 전환된다.
-  2. 원본도 삭제하기 액션이 사라진다.
+  1. 그 원문이 즉시 trashed 상태로 전환된다.
+  2. 원문도 삭제하기 액션이 사라진다.
 - **관여 화면**: Changeset 상세
 - **범위 참고 (2026-07-14, PR #412)**: `useTrashReviewSource`(기존 `trash_source` RPC 재사용)로 구현 — 확인 다이얼로그 → 즉시 trashed 전환 → 액션 비활성화.
 
@@ -235,13 +235,13 @@
 - **관여 화면**: Digest 리뷰 화면, 변경셋
 - **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다(위 두 케이스와 같은 이유) — 되살리기 액션은 Changeset 상세에만 뒀다(`useRestoreReview` + 신설 `restore_ingestion_review` RPC). Then #1·#3은 구현. Then #2("버리기 직전의 편집 상태가 복원된다")는 구조적으로 불가능 — `discard_ingestion_review`가 changes를 아예 안 만드는 방식이라(변경이력 없음, 마이그레이션 주석 참고) 서버에 복원할 "편집 중이던 상태" 자체가 없다. `restore_ingestion_review`는 changeset.status만 되돌릴 뿐, 후보 삭제·제목 수정 같은 로컬 편집 내용은 애초에 저장된 적이 없어 복원 대상이 아니다 — 되살리면 원래(추출 직후) 상태의 Digest 리뷰 화면으로 돌아간다. 이 케이스의 Then #2는 스펙과 실제 구현이 근본적으로 다른 지점이라 PM 확인 필요(design-decisions-log.md 참고). 그래서 미체크로 남김.
 
-#### 원본 삭제 후 되살리기 비활성화
+#### 원문 삭제 후 되살리기 비활성화
 
-- **Given**: 유저가 Digest 리뷰 화면에서 버려진 changeset의 원본도 삭제하기를 실행해, 그 원본이 trashed 상태가 되었다.
+- **Given**: 유저가 Digest 리뷰 화면에서 버려진 changeset의 원문도 삭제하기를 실행해, 그 원문이 trashed 상태가 되었다.
 - **When**: Digest 리뷰 화면에 진입한다.
-- **Then**: 되살리기 액션이 비활성화된 채로 남아 있고, 원본이 삭제되어 되살릴 수 없다는 이유가 함께 표시된다.
+- **Then**: 되살리기 액션이 비활성화된 채로 남아 있고, 원문이 삭제되어 되살릴 수 없다는 이유가 함께 표시된다.
 - **관여 화면**: Digest 리뷰 화면
-- **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다(위 세 케이스와 같은 이유) — 비활성화·이유 표시는 Changeset 상세에서 구현됨(`restoreBlocked`). 리뷰에서 발견된 두 번째 케이스(원본이 trashed가 아니라 그 사이 다른 경로로 재인제스천되어 active가 된 경우)도 별도 이유 문구로 함께 처리하도록 리뷰 반영 후 보강함. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+- **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다(위 세 케이스와 같은 이유) — 비활성화·이유 표시는 Changeset 상세에서 구현됨(`restoreBlocked`). 리뷰에서 발견된 두 번째 케이스(원문이 trashed가 아니라 그 사이 다른 경로로 재인제스천되어 active가 된 경우)도 별도 이유 문구로 함께 처리하도록 리뷰 반영 후 보강함. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
 
 #### 신규 Reference 후보 편집
 
@@ -402,7 +402,7 @@
 - [ ] 충돌 판정 되돌리기
 - [ ] 중복 판정 되돌리기
 - [ ] 확신 관계 자동 적용 되돌리기
-- [ ] Changeset 상세 — 삭제된 원본의 스냅샷 콘텐츠 치환
+- [ ] Changeset 상세 — 삭제된 원문의 스냅샷 콘텐츠 치환
 
 ### 케이스 상세
 
@@ -470,7 +470,7 @@
 
 - **Given**: open 상태인 relation changeset(충돌 또는 중복)이 있다.
 - **When**: 변경셋 탭에서 그 항목을 클릭하거나, Digest 상세의 리뷰 대기 이동 버튼을 클릭한다.
-- **Then**: Digest 상세가 판정 모드로 열리고, 근거가 된 두 진술 각각과 그 두 원본 각각의 하이라이트를 확인할 수 있다.
+- **Then**: Digest 상세가 판정 모드로 열리고, 근거가 된 두 진술 각각과 그 두 원문 각각의 하이라이트를 확인할 수 있다.
 - **관여 화면**: 변경셋, Digest 상세
 
 #### 충돌 판정 — 승자 선택
@@ -540,9 +540,9 @@
   2. 관계 타입이 replaces·resolves처럼 상대 진술을 archive시켰다면 그 진술이 active로 복원되고, supports처럼 아무것도 archive하지 않았다면 연결만 제거된다.
 - **관여 화면**: Changeset 상세
 
-#### Changeset 상세 — 삭제된 원본의 스냅샷 콘텐츠 치환
+#### Changeset 상세 — 삭제된 원문의 스냅샷 콘텐츠 치환
 
-- **Given**: 삭제된 원본의 Digest·진술이 다른(살아있는) 원본 소속 relation changeset에 스냅샷으로 남아 있다.
+- **Given**: 삭제된 원문의 Digest·진술이 다른(살아있는) 원문 소속 relation changeset에 스냅샷으로 남아 있다.
 - **When**: 배치 purge가 실행된다.
 - **Then**: 그 changeset 자체(배지·시각·판정 결과)는 남지만, 그 안의 삭제된 콘텐츠 필드만 삭제 표시로 치환된다.
 - **관여 화면**: Changeset 상세
