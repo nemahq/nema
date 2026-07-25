@@ -215,6 +215,7 @@ Topic·Tag는 `targetType`에 없다 — 판단·사실 콘텐츠가 아니라 �
 | `id` | `uuid` | 식별자 |
 | `title` | `string` | 라벨 이름 |
 | `description` | `string` | 정의 — 재사용 시 이 태그가 맞는지 판단하는 기준 |
+| `color?` | `string` | 사용자가 의도적으로 고르는 표시 색상(예: "위험" 계열 태그를 빨강으로) — Workspace 아바타 색처럼 id 해시로 자동 배정하지 않는다, 의미를 담아 직접 고르는 값이라서. 구체적 타입(고정 팔레트 enum vs 자유 hex)·스키마 반영은 미정(구현 단계) — 아직 미구현. Topic엔 없음(가벼운 화제 라벨이라 구분 색이 굳이 필요하지 않다고 판단) |
 | `workspaceId` | `uuid` | 재사용 스코프 — Space를 가로질러 Workspace 안에서 재사용됨 |
 | `createdAt` | `Date` | 만들어진 때 |
 | `status` | `enum: active / archived` | 존재 상태 |
@@ -317,5 +318,6 @@ Nema 쪽에서 붙이는 유일한 확장은 `profiles`(`user_id` → `auth.user
 - 전사·OCR 주체 — 누가 텍스트로 변환하나 (입력 경계)
 - Topic·Tag·Reference의 `archived` 복구 화면 — 원칙상 되살릴 수 있어야 하는데, Topic·Tag는 전용 목록 화면 자체가 표면인벤토리에 없어 복구할 자리가 없다(Topic·Tag는 Digest 상세에서 칩으로 직접 추가·삭제만 가능). Reference는 "Reference 목록"이 있어 필터만 추가하면 되지만 명시된 건 아니다.
 - 노이즈 필터 — 종류에 묶을지/별도 기준을 둘지 포함해, 기능 구현 단계에서
+- Tag 색상(`color?`, 위 Tag 필드 참고)의 구체적 타입(고정 팔레트 enum vs 자유 hex)과 실제 스키마·화면 반영 — 방향은 확정, 구현 단계에서
 - Digest·Reference 완전 삭제 트리거·확인 UI, changeset 콘텐츠 치환 구현 — 모델 레벨 설계는 이번에 정리했다(Digest 단독 완전 삭제는 지원 안 함 — Digest 안 민감정보는 원본에도 있어 원본째 purge해야 실효가 있음. Reference는 독립적인 `trashed`→30일→배치 purge, 확인 무게는 인용 중인 Digest 수로 갈림. 위 "완전 삭제" 참고). 다만 실제로 구현된 건 없다: ① 컴플라이언스 삭제 요청은 지금 있는 "trashed→30일→배치 purge" 셀프서비스 플로우로 충분한지, 즉시 처리(관리자 개입) 경로가 따로 필요한지는 아직 안 물어봄. ② 다른 원본 소속 `relation` changeset·Reference 생성 `ingestion` changeset의 `Change.data` 콘텐츠 치환은 설계만 됐고 실제 쿼리·트랜잭션은 안 짬. ③ Reference 완전 삭제 트리거 UI(미트볼 메뉴 등)와 인용 카운트 기반 확인 무게 분기는 와이어프레임에 아직 없음.
 - Digest·Reference "특정 버전으로 복원"(Notion Version history의 Restore 같은 기능) — MVP는 안 다룬다. 넣게 되면 새 메커니즘이 아니라 기존 "편집"(archive 현재+create 새 버전)에 옛 버전 필드값을 미리 채워 넣는 진입점 정도로 모델링하면 될 것 같다 — 그러면 지금 수정에 이미 붙어있는 캐스케이드(`relatedDigestIds` 치환, 새 Statement 추출→2단계 재판정)를 그대로 물려받아 새 changeset 타입이 필요 없다. 사이드 이펙트(복원 후 새로 감지될 충돌·중복)는 커밋 전에 완전히 예측할 방법이 없다 — 관계 엔진의 판정 자체가 원래 비동기·확률적이라 신규 ingestion·일반 수정도 똑같이 가진 한계다. 커밋 전에 보여줄 수 있는 최대치는 콘텐츠 레벨 diff뿐(변경 이력 모달이 이미 이 역할)이고, 캐스케이드는 커밋 후 평소처럼 "리뷰 대기"로 뜨는 걸로 충분하다고 봄 — Notion처럼 원클릭으로 안 두고 지금 편집과 같은 무게의 확인 모달을 거치게 해야 한다(Notion 페이지엔 이런 캐스케이드가 없어 원클릭이 가능한 것).
