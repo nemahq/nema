@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
 import { useSidebar } from "@web/components/layout/Sidebar";
-import { useSpaceListSuspenseQuery } from "@web/features/workspace/hooks/useSpaceList";
+import { useSpaceListSuspenseQuery } from "@web/hooks/useSpaceList";
 
 import { SpaceListItem } from "./SpaceListItem";
 import { SpaceListSkeleton } from "./SpaceListSkeleton";

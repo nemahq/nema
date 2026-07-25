@@ -1,8 +1,7 @@
 import { linkOptions } from "@tanstack/react-router";
 
 import { NavigationBar } from "@web/components/layout/NavigationBar";
-
-import { SpaceBadge } from "./SpaceBadge";
+import { SpaceBadge } from "@web/components/ui/SpaceBadge";
 
 interface SpaceNavigationBarProps {
   spacePublicId: string;

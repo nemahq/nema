@@ -26,7 +26,7 @@ import {
   changesetDisplayTitle,
   summarizeChangesetEffect,
 } from "@web/features/review/utils";
-import { useSpacePublicId } from "@web/features/workspace";
+import { useSpacePublicId } from "@web/hooks/useSpacePublicId";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface ChangesetListRowProps {

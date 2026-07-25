@@ -2,7 +2,6 @@ import { Suspense, useMemo, useState } from "react";
 
 import { Alert, Text } from "@nema-io/weave";
 
-import { useNotificationSoftAsk } from "@web/features/notifications";
 import {
   confirmDisabledReason as computeConfirmDisabledReason,
   runConfirmReview,
@@ -13,7 +12,8 @@ import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDige
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
 import { computeReviewEditingState } from "@web/features/review/reviewEditingState";
-import { useCurrentSpaceId } from "@web/features/workspace";
+import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
+import { useNotificationSoftAsk } from "@web/hooks/useNotificationSoftAsk";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetDetailHeader } from "./ChangesetDetailHeader";

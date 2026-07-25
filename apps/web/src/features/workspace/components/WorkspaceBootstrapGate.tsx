@@ -2,8 +2,8 @@ import { type ReactNode, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
 import { getFirstEntryRedirectSpaceId } from "@web/features/workspace/getFirstEntryRedirectSpaceId";
-import { useSpaceList } from "@web/features/workspace/hooks/useSpaceList";
 import { useWorkspaceBootstrapQuery } from "@web/features/workspace/hooks/useWorkspaceBootstrapQuery";
+import { useSpaceList } from "@web/hooks/useSpaceList";
 
 interface WorkspaceBootstrapGateProps {
   children: ReactNode;

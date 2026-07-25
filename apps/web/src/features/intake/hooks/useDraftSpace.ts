@@ -1,6 +1,6 @@
 import { keepPreviousData } from "@tanstack/react-query";
 
-import { useSpaceList } from "@web/features/workspace";
+import { useSpaceList } from "@web/hooks/useSpaceList";
 
 // Space 삭제로 draft가 다른 Space로 재배정되면 space.list가 무효화된다 — Suspense
 // 쿼리는 그때마다 pill을 다시 매달아 깜빡이므로, 이전 목록을 보여준 채 조용히

@@ -2,11 +2,9 @@ import { Suspense } from "react";
 import { linkOptions } from "@tanstack/react-router";
 
 import { NavigationBar } from "@web/components/layout/NavigationBar";
-import {
-  SpaceBadge,
-  useSpaceListSuspenseQuery,
-  useSpacePublicId,
-} from "@web/features/workspace";
+import { SpaceBadge } from "@web/components/ui/SpaceBadge";
+import { useSpaceListSuspenseQuery } from "@web/hooks/useSpaceList";
+import { useSpacePublicId } from "@web/hooks/useSpacePublicId";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface ChangesetDetailNavigationBarProps {

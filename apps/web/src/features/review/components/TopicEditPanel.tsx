@@ -7,7 +7,7 @@ import {
 } from "@nema-io/shared";
 import { Chip, Separator } from "@nema-io/weave";
 
-import { useCurrentSpaceId } from "@web/features/workspace";
+import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { LabelChipRow } from "./LabelChipRow";

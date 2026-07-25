@@ -27,10 +27,10 @@ import { requireAuth, requireGuest } from "@web/features/auth";
 import { HarnessPage } from "@web/features/dev-harness";
 import type { ChangesSubTab } from "@web/features/review";
 import {
-  useSpaceList,
   useWorkspaceBootstrapQuery,
   WorkspaceSidebar,
 } from "@web/features/workspace";
+import { useSpaceList } from "@web/hooks/useSpaceList";
 import { getStorage, setStorage } from "@web/utils/localStorage";
 
 import { App } from "./App";
