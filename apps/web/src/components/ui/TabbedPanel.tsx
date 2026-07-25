@@ -15,7 +15,7 @@ type TabBase = {
   onClose?: () => void;
 };
 
-export type TabbedPanelTab = TabBase &
+type TabbedPanelTab = TabBase &
   ({ labelKey: TranslationKey } | { label: string });
 
 interface TabbedPanelProps {
