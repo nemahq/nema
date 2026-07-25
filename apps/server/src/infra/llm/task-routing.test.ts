@@ -63,9 +63,6 @@ describe("기본 override 배치", () => {
   // prod가 조용히 그 모델로 새므로, "전부 null"을 통째로 못박아 오편집을 시끄러운 실패로 바꾼다.
   it("leaves every task on the tier default with no committed override", () => {
     expect(getAllTaskOverrides()).toEqual({
-      generateDraft: null,
-      classifyDraftIntent: null,
-      generateSessionTitle: null,
       generateSourceTitle: null,
       extractStatements: null,
       generateDigests: null,
@@ -83,9 +80,6 @@ describe("TASK_DEFAULTS", () => {
   // 이 표를 통째로 못박아 조용한 오편집을 시끄러운 테스트 실패로 바꾼다.
   it("matches the locked tier/effort mapping exactly", () => {
     expect(TASK_DEFAULTS).toEqual({
-      generateDraft: { tier: "standard" },
-      classifyDraftIntent: { tier: "mini" },
-      generateSessionTitle: { tier: "nano" },
       generateSourceTitle: { tier: "nano" },
       extractStatements: { tier: "standard", effort: "low" },
       generateDigests: { tier: "standard", effort: "low" },
