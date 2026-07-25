@@ -49,4 +49,12 @@
 
 ## 10. 히스토리: 더 이상 참고하지 않는 이전 세대 문서
 
-`docs/archive/`에 모여 있다.
+- [intake-surface-design](docs/archive/intake-surface-design.archive.md): 넣기 표면 v1 설계
+- [put-in-and-pull-out-flow-design-v1](docs/archive/put-in-and-pull-out-flow-design-v1.archive.md): 넣기·꺼내기 흐름 v1 설계
+- [save-engine-v1/prd](docs/archive/save-engine-v1/prd.archive.md): 저장 파이프라인 v1(현재는 save-engine-v2로 대체)
+- [save-engine-v1/diagram](docs/archive/save-engine-v1/diagram.archive.html): 위 문서의 시각화 자료
+- [content-intake-design](docs/archive/content-intake-design.archive.md): 넣기 구현 청사진 v1(v2 Digest 파이프라인으로 대체). mcp-design.md·topic-substrate-design.md가 아직 이 문서를 참조하고 있어, 그 의존이 유효한지 확인할 때
+- [memory-page](docs/archive/memory-page.archive.html): 기억 페이지 이전 와이어프레임
+- [implementation-vs-model](docs/archive/implementation-vs-model.archive.md): 기존 구현체(v1)와 새 모델(진술) 대조. 결론은 04-concept-context에 흡수됨
+- [drafting-criteria](docs/archive/drafting-criteria.archive.md): 초안 다듬기 기준 v1. Digest 생성 프롬프트에 신호·노이즈 판정 원칙을 반영할 때
+- [engine-completion-criteria-v1](docs/archive/engine-completion-criteria-v1.archive.md): 엔진 완성 기준 v1(Digest 도입 전 v1 추출 경로 측정)
