@@ -14,7 +14,6 @@
 - [10-concept-collaboration](10-concept-collaboration.md) — 협업 기반 개념 (소유 Space · 접근 Share/Group · 조직 층) ✅
 - [11-first-product-direction](11-first-product-direction.md) — 첫 제품 방향 (누구에게·무엇부터, MVP 스코프 포함) ✅
 - [12-engine-completion-criteria](12-engine-completion-criteria.md) — 엔진 완성 기준 (각 기능의 통과선) ✅
-- [13-drafting-criteria](13-drafting-criteria.md) — 초안 다듬기 기준 (좋은 다듬기 출력의 정의) ✅
 
 참고:
 - [faq](faq.md) — 예상 반론과 답 (계속 누적)
@@ -26,7 +25,6 @@
 3. **기존 구현물과 대조** — 기존 nema 코드(memories/revisions/Neo4j 등)와 모델을 맞대봄 ✅ → [히스토리로 이동됨](../archive/implementation-vs-model.archive.md)(전환 완료, 결론은 07-modeling.md에 흡수됨)
 4. **첫 제품 방향** — 첫 사용자·표면 우선순위·MVP 스코프·완성 기준 ✅ → [11](11-first-product-direction.md)
 5. **엔진 완성 기준** — 표면 작업 전, 엔진이 완성됐는지 판정할 기준 ✅ → [12](12-engine-completion-criteria.md)
-6. **초안 다듬기 기준** — 넣는 입구에서 거친 글을 다듬는 기준(v1을 검증된 정의로 승격) ✅ → [13](13-drafting-criteria.md)
 
 ## 컨셉 지도
 
