@@ -58,3 +58,4 @@
 - [implementation-vs-model](docs/archive/implementation-vs-model.archive.md): 기존 구현체(v1)와 새 모델(진술) 대조. 결론은 04-concept-context에 흡수됨
 - [drafting-criteria](docs/archive/drafting-criteria.archive.md): 초안 다듬기 기준 v1. Digest 생성 프롬프트에 신호·노이즈 판정 원칙을 반영할 때
 - [engine-completion-criteria-v1](docs/archive/engine-completion-criteria-v1.archive.md): 엔진 완성 기준 v1(Digest 도입 전 v1 추출 경로 측정)
+- [removed-code-inventory](docs/archive/save-engine-v1/removed-code-inventory.archive.md): v1 채팅 세션 삭제 파일 99개 인벤토리(PR #484). v1에 있던 기능이 다시 필요해졌을 때
