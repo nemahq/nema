@@ -6,8 +6,11 @@ import type { RelationType } from "@nema-io/shared";
 
 import type { Json } from "@server/infra/database.types";
 import type { EmbeddingProvider } from "@server/infra/embedding";
-import { createLimiter } from "@server/infra/llm/limiter";
-import { LlmError } from "@server/infra/llm/llm-error";
+import {
+  LlmError,
+  resolveMaxRetries,
+  RETRYABLE_LLM_CODES,
+} from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
 import type { LlmTask } from "@server/infra/llm/task-routing";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
@@ -17,8 +20,11 @@ import type {
   StatementUpsertItem,
   VectorStore,
 } from "@server/infra/vector";
+import {
+  buildDigestExtractionMessage,
+  DIGEST_EXTRACTION_SYSTEM_PROMPT,
+} from "@server/prompts/digest-extraction";
 import type {
-  DuplicateProposal,
   LabeledStatement,
   RelationProposal,
 } from "@server/prompts/relation-judgment";
@@ -28,21 +34,18 @@ import {
   RelationJudgmentSchema,
 } from "@server/prompts/relation-judgment";
 import type { ExtractedStatement } from "@server/prompts/statement-extraction";
-import {
-  buildStatementExtractionMessage,
-  STATEMENT_EXTRACTION_SYSTEM_PROMPT,
-  StatementExtractionSchema,
-} from "@server/prompts/statement-extraction";
+import { StatementExtractionSchema } from "@server/prompts/statement-extraction";
 import { resolveDeadlineToDueDate } from "@server/temporal/deadline";
 
-import type { ExtractionChunk } from "./chunking";
-import { chunkForExtraction } from "./chunking";
+import { runDigestionPass } from "./digestion";
+import { limitLlmCall } from "./llm-limiter";
 import type {
   LinkingBatchStatement,
   LinkingCandidateStatement,
   PendingLinkingSource,
   PendingSource,
   PendingStatement,
+  SourceDigest,
 } from "./types";
 import {
   LinkingBatchStatementSchema,
@@ -50,7 +53,9 @@ import {
   PendingLinkingSourceSchema,
   PendingSourceSchema,
   PendingStatementSchema,
+  SourceDigestSchema,
   TriggerMessageSchema,
+  VectorPurgeMessageSchema,
 } from "./types";
 
 const MAX_RETRIES = 5;
@@ -102,6 +107,19 @@ const NEIGHBOR_SEARCH_RETRY_DELAY_MS = 2_000;
 // 이라 보수적으로 작게: "한입에 판정할 만한" 수십 개. 진짜 무릎은 dogfooding이 측정(§11).
 const MAX_STATEMENTS_PER_LINKING_CALL = 30;
 
+// --- 벡터 정리 (purge 뒷정리) ---
+const VECTOR_PURGE_BATCH_SIZE = 10;
+const VECTOR_PURGE_VISIBILITY_TIMEOUT_SEC = 60;
+
+// --- purge 워치독 (pg_cron이 조용히 멈춘 경우 감지) ---
+const MS_PER_DAY = 86_400_000;
+// 보관기간은 마이그레이션 purge_expired_sources의 기본값과 맞춘다 — 둘이 어긋나면
+// 워치독이 헛경보하거나 지연을 놓친다.
+const PURGE_RETENTION_DAYS = 30;
+// 잡은 매일(03:00) 도므로 26시간 넘게 성공 기록이 없으면 한 사이클을 걸렀다는 신호.
+const PURGE_JOB_STALE_HOURS = 26;
+const PURGE_WATCHDOG_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
 type Phase = "extraction" | "embedding" | "linking";
 
 interface WorkerDeps {
@@ -116,6 +134,7 @@ interface WorkerDeps {
 export function createStatementSyncWorker(deps: WorkerDeps) {
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let sweepTimer: ReturnType<typeof setInterval> | null = null;
+  let watchdogTimer: ReturnType<typeof setInterval> | null = null;
   let processing = false;
   let current: Promise<void> | null = null;
 
@@ -214,8 +233,13 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
           current = sweep();
         }
       }, SWEEP_INTERVAL_MS);
+      // 워치독은 읽기 전용 count라 processing 게이트와 무관하게 자기 주기로 돈다.
+      watchdogTimer = setInterval(() => {
+        void checkPurgeBacklog(deps);
+      }, PURGE_WATCHDOG_INTERVAL_MS);
       // 재기동 직후 1회 — 죽기 전에 ack까지 끝낸 notify의 잔여 pending을 줍는다
       current = sweep();
+      void checkPurgeBacklog(deps);
     },
 
     async stop() {
@@ -227,6 +251,10 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
         clearInterval(sweepTimer);
         sweepTimer = null;
       }
+      if (watchdogTimer) {
+        clearInterval(watchdogTimer);
+        watchdogTimer = null;
+      }
       if (current) {
         await current;
       }
@@ -236,17 +264,178 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
   };
 }
 
-// 사이클: ① 추출 → ② 임베딩 → ③ 잇기, 셋 다 빌 때까지.
-// ①이 pending 진술을, ②가 잇기 대상(임베딩 끝난 원본)을 만들어내므로 이 순서면
+// 사이클: ⓪ 생성 → ① 추출 → ② 임베딩 → ③ 잇기, 넷 다 빌 때까지.
+// ⓪은 리뷰 대기(pending changeset)를 만들 뿐 ①의 입력을 직접 만들지 않는다 —
+// ①은 사람이 리뷰를 확정해 원문이 active가 된 뒤에야 집는다(confirm이 notify를 쏨).
+// ①이 pending 진술을, ②가 잇기 대상(임베딩 끝난 원문)을 만들어내므로 이 순서면
 // 한 번 깨어난 김에 추출·임베딩·잇기까지 끝난다 (relation-design §3).
 async function runCycle(deps: WorkerDeps): Promise<void> {
   while (true) {
+    const digested = await runDigestionPass(deps);
     const extracted = await runExtractionPass(deps);
     const embedded = await runEmbeddingPass(deps);
     const linked = await runLinkingPass(deps);
-    if (extracted === 0 && embedded === 0 && linked === 0) {
+    const purged = await runVectorPurgePass(deps);
+    if (
+      digested === 0 &&
+      extracted === 0 &&
+      embedded === 0 &&
+      linked === 0 &&
+      purged === 0
+    ) {
       break;
     }
+  }
+}
+
+// --- 벡터 정리: purge가 hard delete한 진술의 Qdrant 벡터를 지운다 ---
+// purge RPC(pg_cron)가 vector_purge 큐에 넣은 진술 id를 드레인해 Qdrant에서 지운다.
+// 임베딩 패스는 archived '행'을 읽어 벡터를 지우지만 purge는 행을 없애 그 경로가
+// 못 보므로, hard delete된 벡터의 유일한 정리 경로다. delete-by-id라 행이 없어도 되고
+// 멱등. 삭제 실패 시 ack하지 않아 visibility timeout 뒤 재전달로 재시도된다.
+export async function runVectorPurgePass(deps: WorkerDeps): Promise<number> {
+  let processed = 0;
+
+  while (true) {
+    const { data, error } = await deps.supabase.rpc(
+      "read_vector_purge_events",
+      {
+        p_batch_size: VECTOR_PURGE_BATCH_SIZE,
+        p_visibility_timeout: VECTOR_PURGE_VISIBILITY_TIMEOUT_SEC,
+      },
+    );
+    if (error) {
+      Sentry.captureMessage(
+        `[statement-sync] vector_purge read error: ${error.message}`,
+        {
+          level: "error",
+          tags: { component: "statement-sync", phase: "vector-purge" },
+        },
+      );
+      break;
+    }
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      break;
+    }
+
+    for (const row of data) {
+      const parsed = VectorPurgeMessageSchema.safeParse(row);
+      if (!parsed.success) {
+        // 발신자를 우리가 통제하므로 malformed는 사실상 버그 — ack해 영구 재전달만 막는다.
+        Sentry.captureMessage(
+          "[statement-sync] vector_purge message validation failed",
+          {
+            level: "error",
+            tags: { component: "statement-sync", phase: "vector-purge" },
+            extra: { validationError: parsed.error },
+          },
+        );
+        const msgId = (row as { msg_id?: unknown })?.msg_id;
+        if (typeof msgId === "number") {
+          await ackVectorPurge(deps, msgId);
+        }
+        continue;
+      }
+
+      try {
+        await deps.vectorStore.deleteStatements(
+          parsed.data.message.statement_ids,
+        );
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: "statement-sync", phase: "vector-purge" },
+          extra: { statementIds: parsed.data.message.statement_ids },
+        });
+        continue; // ack 생략 → 재전달로 재시도
+      }
+
+      await ackVectorPurge(deps, parsed.data.msg_id);
+      processed += 1;
+    }
+
+    if (data.length < VECTOR_PURGE_BATCH_SIZE) {
+      break;
+    }
+  }
+
+  return processed;
+}
+
+async function ackVectorPurge(deps: WorkerDeps, msgId: number): Promise<void> {
+  const { error } = await deps.supabase.rpc("ack_vector_purge_event", {
+    p_msg_id: msgId,
+  });
+  if (error) {
+    Sentry.captureMessage(
+      `[statement-sync] vector_purge ack failed: ${error.message}`,
+      {
+        level: "error",
+        tags: { component: "statement-sync", phase: "vector-purge" },
+        extra: { msgId },
+      },
+    );
+  }
+}
+
+// pg_cron purge가 조용히 멈춘 경우를 잡는 워치독 — 보관기간+유예가 지났는데 아직
+// trashed로 남은 원문이 있으면 잡이 안 도는 신호라 Sentry로 알린다("잡의 주인은 DB,
+// 감시는 서버").
+// 타이머가 fire-and-forget로 부르므로 절대 reject하지 않는다(poll/sweep과 같은 계약).
+// pg_cron purge가 조용히 멈춘 경우를 잡는 워치독 — "밀린 개수"가 아니라 "잡이 최근에
+// 실제로 성공했나"를 본다. 대량 휴지통을 배치 한도 때문에 여러 날 나눠 비우는 정상 상황엔
+// backlog가 커도 헛경보하지 않고, 잡이 오래 안 돌았고(정지 의심) 실제로 만료된 원문이
+// 남아 있을 때만 경고한다(빈 DB·신규 배포는 조용). fire-and-forget 타이머가 부르므로
+// 절대 reject하지 않는다(poll/sweep과 같은 계약).
+export async function checkPurgeBacklog(deps: WorkerDeps): Promise<void> {
+  try {
+    const { data: lastSuccess, error } = await deps.supabase.rpc(
+      "purge_job_last_success",
+    );
+    if (error) {
+      Sentry.captureException(
+        new Error(`purge job health check failed: ${error.message}`),
+        { tags: { component: "statement-sync", phase: "purge-watchdog" } },
+      );
+      return;
+    }
+
+    // 최근에 성공했으면 backlog 크기와 무관하게 정상 — 조용히 끝낸다.
+    const staleMs = PURGE_JOB_STALE_HOURS * 60 * 60 * 1000;
+    if (lastSuccess && Date.now() - Date.parse(lastSuccess) < staleMs) {
+      return;
+    }
+
+    // 잡이 오래 안 돌았다 → 실제로 만료된 원문이 있을 때만 경고.
+    const cutoff = new Date(
+      Date.now() - PURGE_RETENTION_DAYS * MS_PER_DAY,
+    ).toISOString();
+    const { count, error: countError } = await deps.supabase
+      .from("sources")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "trashed")
+      .lt("trashed_at", cutoff);
+    if (countError) {
+      Sentry.captureException(
+        new Error(`purge backlog count failed: ${countError.message}`),
+        { tags: { component: "statement-sync", phase: "purge-watchdog" } },
+      );
+      return;
+    }
+
+    if (count && count > 0) {
+      Sentry.captureMessage(
+        `[statement-sync] purge stalled: pg_cron 'purge-expired-sources' last succeeded ${lastSuccess ? lastSuccess : "never"}, ${count} expired source(s) still trashed`,
+        {
+          level: "warning",
+          tags: { component: "statement-sync", phase: "purge-watchdog" },
+          extra: { count, lastSuccess },
+        },
+      );
+    }
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { component: "statement-sync", phase: "purge-watchdog" },
+    });
   }
 }
 
@@ -277,6 +466,7 @@ async function runExtractionPass(deps: WorkerDeps): Promise<number> {
               phase: "extraction",
               id: source.id,
               errorMessage: err instanceof Error ? err.message : String(err),
+              maxRetries: resolveMaxRetries(err, MAX_RETRIES),
             });
           }
         }),
@@ -329,111 +519,112 @@ export function deadlineContext(source: PendingSource): {
   return { reference, timeZone, todayIsoDate };
 }
 
+// 추출된 진술 — RPC(apply_extraction_statements) 계약 형태. digest_id는 추출 근거,
+// index는 원문 전체를 관통하는 등장 순서(digest 경계를 넘어 이어짐 — 잇기 정렬이 쓴다).
+// object literal 타입(interface 아님) — Json으로의 암묵적 index signature 할당을 얻어
+// RPC(p_statements: Json) 인자로 캐스트 없이 넘긴다.
+type ExtractionStatement = {
+  content: string;
+  type: ExtractedStatement["type"];
+  confidence: ExtractedStatement["confidence"];
+  due_date: string | null;
+  digest_id: string;
+  index: number;
+};
+
 async function processSource(
   source: PendingSource,
   deps: WorkerDeps,
 ): Promise<void> {
   const { reference, timeZone, todayIsoDate } = deadlineContext(source);
-  const extracted = await extractSourceStatements(
-    deps.forTask("extractStatements"),
-    {
-      body: source.body,
-      todayIsoDate,
-    },
-  );
-  const statements = normalizeStatements(extracted, { reference, timeZone });
+  const digests = await fetchSourceDigests(deps.supabase, source.id);
 
-  // 진술 0개(노이즈뿐인 글)면 빈 changeset을 남기지 않는다
-  if (statements.length === 0) {
-    const { error } = await deps.supabase.rpc("complete_source_extraction", {
-      p_source_id: source.id,
+  // 추출 클레임된 원문은 pending digest가 ≥1 있어야 한다(첫 인제스천분 또는 수정으로 생긴
+  // 새 digest). 0개면 상태 전이 이상 신호라 브레드크럼을 남긴다 — 아래 빈 apply가 source를
+  // completed로 닫아 재시도에 갇히지 않게 한다.
+  if (digests.length === 0) {
+    Sentry.captureMessage("source pending extraction has no pending digests", {
+      level: "warning",
+      tags: { component: "statement-sync", phase: "extraction" },
+      extra: { sourceId: source.id },
     });
-    if (error) {
-      throw new Error(
-        `complete_source_extraction failed for ${source.id}: ${error.message}`,
-      );
-    }
-    return;
   }
 
-  const { error } = await deps.supabase.rpc("apply_ingestion_changeset", {
+  // Digest들을 병렬 추출 — 입력이 루프 시작 시 전부 확정돼 있어 앞 콜을 기다릴 이유가 없다.
+  // 순차로 돌리면 다digest 원문이 lease(150초)를 넘겨 완료 못 하고 재시도만 돌 수 있다.
+  // 하나라도 실패하면 Promise.all의 첫 reject가 전파돼 source 전체가 재시도(부분 저장 없음) —
+  // apply가 끝에 1회뿐이라 부분 적용이 없는 대가다(청크 원자성과 같은 결). 정합성 > 재실행 비용.
+  const perDigest = await Promise.all(
+    digests.map(async (digest) => ({
+      digest,
+      extracted: await extractDigestStatements(
+        deps.forTask("extractStatements"),
+        { digest, todayIsoDate },
+      ),
+    })),
+  );
+
+  // digest_id 태깅 + 원문 관통 index — Digest 인출 순서로 이어 붙여 잇기 정렬 계약을 지킨다.
+  const statements: ExtractionStatement[] = [];
+  for (const { digest, extracted } of perDigest) {
+    for (const statement of normalizeStatements(extracted, {
+      reference,
+      timeZone,
+    })) {
+      statements.push({
+        ...statement,
+        digest_id: digest.id,
+        index: statements.length,
+      });
+    }
+  }
+
+  // 진술이 0개여도 apply를 부른다 — 처리한 digest(진술 0개짜리 포함)를 completed로 닫고
+  // source 클레임을 완료 표시한다(빈 statements면 진술·changeset append는 일어나지 않음).
+  const { error } = await deps.supabase.rpc("apply_extraction_statements", {
     p_source_id: source.id,
+    p_digest_ids: digests.map((digest) => digest.id),
     p_statements: statements,
   });
   if (error) {
     throw new Error(
-      `apply_ingestion_changeset failed for ${source.id}: ${error.message}`,
+      `apply_extraction_statements failed for ${source.id}: ${error.message}`,
     );
   }
 }
 
-// --- 추출 — 임계선 이하 1콜, 초과 시 청크 병렬 (long-input-chunking 설계) ---
+// --- 추출 — Digest 1개당 LLM 1콜 (구조화 body는 짧아 청킹 불필요) ---
 
-// 동시 LLM 콜 상한은 이 한 군데서 관리한다 — source 병렬(EXTRACTION_CONCURRENCY)과
-// 청크 병렬이 곱으로 불어나지 않게, 모든 추출 콜이 같은 제한기를 지난다.
-// 동시 4 초과 시 제공자 타임아웃이 관찰된 전례(measurement-log #3)로 3.
-const LLM_CALL_CONCURRENCY = 3;
-// 청크 콜 한정 재시도 — 단일 콜 실패는 DB lease 재시도가 받지만, 분할 경로는
-// 청크 하나의 일시 실패가 성공한 나머지 전부를 버리게 하므로 콜 레벨 방어가 먼저다.
-const CHUNK_CALL_MAX_ATTEMPTS = 3;
+// 콜 한정 재시도 — digest 하나의 일시 실패가 성공한 다른 digest 콜을 버리게 하지 않도록
+// 콜 레벨에서 먼저 막는다(source 단위 lease 재시도는 그 위 안전망). 잇기 판정 콜과 공유.
+const LLM_CALL_MAX_ATTEMPTS = 3;
 // rate_limit 직후 즉시 재시도는 또 걸린다 — 시도 횟수 비례 지연
-const CHUNK_CALL_RETRY_DELAY_MS = 2_000;
-// 결정적 실패(스키마·인증·콘텐츠 필터)는 재시도해도 같다 — 일시 오류만 재시도.
-// unknown은 provider가 분류 못 한 오류로, 일시 장애와 결정적 실패를 함께 묶는다 —
-// 후자면 3회를 헛쓰지만 숨지 않고 결국 Sentry+DB로 전파되므로 보수적으로 포함한다.
-// 청크 콜이 결정적 실패로 죽으면 source 전체가 lease 사이클로 MAX_RETRIES회 통째
-// 재추출되며 매번 같은 자리서 실패한다(원자성 대가의 비용 증폭, 동작은 의도대로).
-const RETRYABLE_LLM_CODES: ReadonlySet<string> = new Set([
-  "timeout",
-  "rate_limit",
-  "unknown",
-]);
+const LLM_CALL_RETRY_DELAY_MS = 2_000;
+// source 단위 lease 재시도(incrementRetry)와 기준을 공유한다 — llm-error.ts 참고.
 
-const limitLlmCall = createLimiter(LLM_CALL_CONCURRENCY);
-
-async function extractSourceStatements(
+async function extractDigestStatements(
   llm: LlmProvider,
-  input: { body: string; todayIsoDate: string },
+  input: { digest: SourceDigest; todayIsoDate: string },
 ): Promise<ExtractedStatement[]> {
-  const chunks = chunkForExtraction(input.body);
-  const { todayIsoDate } = input;
-
-  // 임계선 이하(1청크, 문맥 없음) — 기존 1콜 경로 그대로
-  const single = chunks.length === 1 ? chunks[0] : undefined;
-  if (single) {
-    const output = await limitLlmCall(() =>
-      callExtraction(llm, { chunk: single, todayIsoDate }),
-    );
-    return output.statements;
-  }
-
-  // 청크 병렬 — 입력(본문+문맥)이 분할 시점에 전부 확정돼 있어 앞 콜 결과를
-  // 기다릴 필요가 없다. 하나라도 실패하면 source 전체 실패(부분 저장 없음) —
-  // Promise.all의 첫 reject가 그대로 전파돼 호출자의 재시도 경로를 탄다.
-  const outputs = await Promise.all(
-    chunks.map((chunk) =>
-      limitLlmCall(() => callExtractionWithRetry(llm, { chunk, todayIsoDate })),
-    ),
+  const output = await limitLlmCall(() =>
+    callDigestExtractionWithRetry(llm, input),
   );
-  // 청크 순서대로 연결 = 원문 등장 순서 — index는 normalizeStatements가 재부여
-  return outputs.flatMap((output) => output.statements);
+  return output.statements;
 }
 
-function callExtraction(
+function callDigestExtraction(
   llm: LlmProvider,
-  args: { chunk: ExtractionChunk; todayIsoDate: string },
+  input: { digest: SourceDigest; todayIsoDate: string },
 ) {
   return llm.generateStructured({
     schema: StatementExtractionSchema,
     schemaName: "statement_extraction",
-    systemPrompt: STATEMENT_EXTRACTION_SYSTEM_PROMPT,
+    systemPrompt: DIGEST_EXTRACTION_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",
-        content: buildStatementExtractionMessage(args.chunk.body, {
-          todayIsoDate: args.todayIsoDate,
-          before: args.chunk.contextBefore,
-          after: args.chunk.contextAfter,
+        content: buildDigestExtractionMessage(input.digest, {
+          todayIsoDate: input.todayIsoDate,
         }),
       },
     ],
@@ -442,31 +633,31 @@ function callExtraction(
   });
 }
 
-async function callExtractionWithRetry(
+async function callDigestExtractionWithRetry(
   llm: LlmProvider,
-  args: { chunk: ExtractionChunk; todayIsoDate: string },
+  input: { digest: SourceDigest; todayIsoDate: string },
 ) {
   let lastError: unknown;
-  for (let attempt = 1; attempt <= CHUNK_CALL_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= LLM_CALL_MAX_ATTEMPTS; attempt++) {
     try {
-      return await callExtraction(llm, args);
+      return await callDigestExtraction(llm, input);
     } catch (err) {
       lastError = err;
       const retryable =
         err instanceof LlmError && RETRYABLE_LLM_CODES.has(err.code);
-      if (!retryable || attempt === CHUNK_CALL_MAX_ATTEMPTS) {
+      if (!retryable || attempt === LLM_CALL_MAX_ATTEMPTS) {
         throw err;
       }
       await new Promise((resolve) =>
-        setTimeout(resolve, attempt * CHUNK_CALL_RETRY_DELAY_MS),
+        setTimeout(resolve, attempt * LLM_CALL_RETRY_DELAY_MS),
       );
     }
   }
   throw lastError;
 }
 
-// 출력 순서 = 원문 순서 계약이므로 index는 배열 위치에서 파생.
 // DB 제약(claim만 confidence)과 맞도록 방어 정규화 — 과장 금지 원칙이라 빠진 확신도는 guess.
+// index·digest_id는 호출자가 원문 관통으로 부여한다(digest 경계를 넘어 이어지는 등장 순서).
 function normalizeStatements(
   raw: ExtractedStatement[],
   context: { reference: Date; timeZone: string },
@@ -474,10 +665,9 @@ function normalizeStatements(
   content: string;
   type: ExtractedStatement["type"];
   confidence: ExtractedStatement["confidence"];
-  index: number;
   due_date: string | null;
 }> {
-  return raw.map((statement, index) => {
+  return raw.map((statement) => {
     // 기한 토큰을 작성 시점·존 기준 절대 날짜로. 기한 없거나 불량 토큰이면 null.
     const due_date = statement.deadline
       ? resolveDeadlineToDueDate(statement.deadline, context)
@@ -496,7 +686,6 @@ function normalizeStatements(
       type: statement.type,
       confidence:
         statement.type === "claim" ? (statement.confidence ?? "guess") : null,
-      index,
       due_date,
     };
   });
@@ -517,6 +706,36 @@ async function fetchPendingSources(
     throw new Error(
       `pending source validation failed: ${parsed.error.message}`,
     );
+  }
+  return parsed.data;
+}
+
+// 추출 입력 = 원문의 확정 Digest들. 정렬은 (created_at, id) — 한 confirm에서 태어난
+// digest들은 created_at이 같아 id가 타이브레이커다. 순서는 원문 관통 index의 뼈대라
+// 결정적이면 충분하다(digest 사이 순서 자체는 판단 단위가 갈려 본질적으로 임의적).
+async function fetchSourceDigests(
+  supabase: TypedSupabaseClient,
+  sourceId: string,
+): Promise<SourceDigest[]> {
+  const { data, error } = await supabase
+    .from("digests")
+    .select("id, title, description, body")
+    .eq("source_id", sourceId)
+    .eq("status", "active")
+    // 아직 추출 안 된 digest만 — 이미 뽑은 형제(초기 인제스천분)나 다른 수정본은
+    // extraction_status='completed'라 재추출 대상이 아니다(Digest 수정 시 새 digest만 pending).
+    .eq("extraction_status", "pending")
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) {
+    throw new Error(
+      `fetch source digests failed for ${sourceId}: ${error.message}`,
+    );
+  }
+
+  const parsed = z.array(SourceDigestSchema).safeParse(data ?? []);
+  if (!parsed.success) {
+    throw new Error(`source digest validation failed: ${parsed.error.message}`);
   }
   return parsed.data;
 }
@@ -580,6 +799,7 @@ async function syncBatch(params: {
           phase: "embedding",
           id: statement.id,
           errorMessage: err instanceof Error ? err.message : String(err),
+          maxRetries: MAX_RETRIES,
         }),
       ),
     );
@@ -663,6 +883,7 @@ async function runLinkingPass(deps: WorkerDeps): Promise<number> {
               phase: "linking",
               id: source.id,
               errorMessage: err instanceof Error ? err.message : String(err),
+              maxRetries: resolveMaxRetries(err, MAX_RETRIES),
             });
           }
         }),
@@ -689,7 +910,6 @@ async function processLinking(
   const subBatches = chunkStatements(batch, MAX_STATEMENTS_PER_LINKING_CALL);
   const applied: RelationChange[] = [];
   const pending: RelationChange[] = [];
-  const duplicatesByArchive = new Map<string, DuplicateChange>();
   for (const subBatch of subBatches) {
     const result = await linkSubBatch({
       subBatch,
@@ -698,12 +918,6 @@ async function processLinking(
     });
     applied.push(...result.applied);
     pending.push(...result.pending);
-    // 가릴 진술당 한 번만 — sub-batch 사이 같은 진술이 또 와도 첫 쌍만.
-    for (const pair of result.duplicates) {
-      if (!duplicatesByArchive.has(pair.duplicate)) {
-        duplicatesByArchive.set(pair.duplicate, pair);
-      }
-    }
   }
 
   // K개 sub-batch 결과를 모아 source당 1번 적용 — 되돌리기 단위는 글이라 applied 변경셋도
@@ -717,7 +931,6 @@ async function processLinking(
     sourceId: source.id,
     applied: finalApplied,
     pending: finalPending,
-    duplicates: [...duplicatesByArchive.values()],
   });
 }
 
@@ -730,7 +943,6 @@ async function linkSubBatch(params: {
 }): Promise<{
   applied: RelationChange[];
   pending: RelationChange[];
-  duplicates: DuplicateChange[];
 }> {
   const { subBatch, spaceId, deps } = params;
   // ⓐ 뜻의 이웃 — 벡터 있는(임베딩 completed) 새 진술마다 최근접.
@@ -757,7 +969,7 @@ async function linkSubBatch(params: {
 
   // 비교 대상이 둘 미만(새 1개 + 후보 0개)이면 관계가 생길 수 없다 — LLM 생략
   if (!canFormRelations(subBatch.length, candidates.length)) {
-    return { applied: [], pending: [], duplicates: [] };
+    return { applied: [], pending: [] };
   }
 
   // 라벨 부여 + id 매핑 — LLM엔 라벨(N0/E1…)만 보여 uuid 환각을 막는다
@@ -790,17 +1002,11 @@ async function linkSubBatch(params: {
     callJudgmentWithRetry(deps.forTask("judgeRelations"), message),
   );
 
-  const gated = gateProposals({
+  return gateProposals({
     proposals: output.relations,
     labelToId,
     batchIds: subBatchIds,
   });
-  const duplicates = selectDuplicatePairs({
-    duplicates: output.duplicates,
-    labelToId,
-    batchIds: subBatchIds,
-  });
-  return { ...gated, duplicates };
 }
 
 // 새 진술을 원문 순서 보존하며 size개씩 끊는다 (장문 source의 잇기 콜 분할).
@@ -888,48 +1094,6 @@ export function selectCandidateIds(
   return [...ids];
 }
 
-// 가릴 진술 → 남길 진술 쌍 (NEM-162) — 가릴 쪽(duplicate 라벨)이 이번 배치의 새 진술일 때만.
-// 기존 진술은 새 글 투입으로 가리지 않는다(오래된 기록이 조용히 사라지는 놀람 방지 —
-// 프롬프트도 "duplicate=새 진술 우선"로 유도). 모르는 라벨은 버리고, 가릴 진술당 한 번만.
-//
-// 남길 쪽(keeper)이 살아남는 것까지 보장한다: keeper가 실재하고, keeper 자신이 가려질
-// 대상이 아닐 때만 가린다. 대칭쌍([{dup:A,of:B},{dup:B,of:A}])이나 of 환각이면 둘 다
-// 가려져 흡수할 원본이 사라지므로(무소음 데이터 손실) 그런 쌍은 통째로 버린다.
-// keeper는 archive하며 statements.duplicate_of에 박혀 합쳐진 출처 집계의 뿌리가 된다.
-export function selectDuplicatePairs(params: {
-  duplicates: DuplicateProposal[];
-  labelToId: Map<string, string>;
-  batchIds: Set<string>;
-}): DuplicateChange[] {
-  const { duplicates, labelToId, batchIds } = params;
-  // 1차: 가릴 후보(새 진술)를 모은다 — keeper 생존 검사의 기준 집합.
-  const archiveCandidates = new Set<string>();
-  for (const duplicate of duplicates) {
-    const archiveId = labelToId.get(duplicate.duplicate);
-    if (archiveId && batchIds.has(archiveId)) {
-      archiveCandidates.add(archiveId);
-    }
-  }
-  // 2차: keeper가 실재하고 가려지지 않을 때만 확정. 가릴 진술당 첫 keeper 하나.
-  const byArchive = new Map<string, string>();
-  for (const duplicate of duplicates) {
-    const archiveId = labelToId.get(duplicate.duplicate);
-    const keeperId = labelToId.get(duplicate.of);
-    if (!archiveId || !batchIds.has(archiveId) || byArchive.has(archiveId)) {
-      continue;
-    }
-    if (
-      !keeperId ||
-      keeperId === archiveId ||
-      archiveCandidates.has(keeperId)
-    ) {
-      continue; // keeper가 없거나·자기 자신이거나·함께 가려질 거면 가리지 않는다
-    }
-    byArchive.set(archiveId, keeperId);
-  }
-  return [...byArchive].map(([duplicate, keeper]) => ({ duplicate, keeper }));
-}
-
 // 비교 대상이 둘 미만(새 1개 + 후보 0개)이면 관계가 생길 수 없다 — LLM 콜을 생략한다.
 export function canFormRelations(
   batchLength: number,
@@ -944,22 +1108,20 @@ interface RelationChange {
   type: RelationType;
 }
 
-// 가릴 중복 → 남길 진술. RPC가 가릴 진술을 archive하며 duplicate_of=keeper를 박는다(NEM-162).
-interface DuplicateChange {
-  duplicate: string;
-  keeper: string;
-}
-
-// 관계의 정체성 키 — 중복 판정의 단일 규칙. conflicts는 대칭이라 양끝을 정렬해
-// 역방향(B→A)까지 같은 키로 collapse. gateProposals·dedupeChanges·교차 dedup이 공유한다.
+// 관계의 정체성 키 — 중복 판정의 단일 규칙. conflicts·duplicates는 양끝을 정렬해
+// 역방향(B→A)까지 같은 키로 collapse — conflicts는 대칭이라, duplicates는 같은 쌍의
+// 방향만 뒤집힌 경쟁 제안(N0→N1, N1→N0)이 각각 별도 pending으로 올라와 둘째 승인이
+// 끝점 검사에 걸려 날 에러를 뱉는 걸 막으려 한 쌍으로 접는다(저장 방향은 첫 제안대로).
+// gateProposals·dedupeChanges·교차 dedup이 공유한다.
 function changeKey(change: RelationChange): string {
-  return change.type === "conflicts"
-    ? `conflicts:${[change.from_id, change.to_id].sort().join(":")}`
+  return change.type === "conflicts" || change.type === "duplicates"
+    ? `${change.type}:${[change.from_id, change.to_id].sort().join(":")}`
     : `${change.type}:${change.from_id}:${change.to_id}`;
 }
 
-// 게이트 (relation-design §5): 확신·비충돌만 조용히 applied. 충돌은 확신해도
-// pending, 애매는 종류 무관 pending. 라벨을 id로 되돌리며 부적격 제안을 거른다.
+// 게이트 (relation-design §5): 확신·비충돌·비중복만 조용히 applied. 충돌·같음은 확신해도
+// pending(진술을 잘못 엮거나 잘못 가리면 되돌리기 전엔 안 드러나 항상 사람 확인), 애매는
+// 종류 무관 pending. 라벨을 id로 되돌리며 부적격 제안을 거른다.
 export function gateProposals(params: {
   proposals: RelationProposal[];
   labelToId: Map<string, string>;
@@ -980,6 +1142,11 @@ export function gateProposals(params: {
     if (!batchIds.has(fromId) && !batchIds.has(toId)) {
       continue;
     }
+    // 같음: 가릴 쪽(to)은 반드시 새 진술이어야 한다(하드 가드) — 새 글 투입으로 기존
+    // 기록을 조용히 가리지 않는다. 방향이 뒤집혀 왔으면(to=기존) 통째로 버린다.
+    if (proposal.type === "duplicates" && !batchIds.has(toId)) {
+      continue;
+    }
 
     const change: RelationChange = {
       from_id: fromId,
@@ -994,7 +1161,11 @@ export function gateProposals(params: {
     }
     seen.add(key);
 
-    if (proposal.confident && proposal.type !== "conflicts") {
+    if (
+      proposal.confident &&
+      proposal.type !== "conflicts" &&
+      proposal.type !== "duplicates"
+    ) {
       applied.push(change);
     } else {
       pending.push(change);
@@ -1019,18 +1190,18 @@ function callJudgment(llm: LlmProvider, message: string) {
 // 시도 횟수 비례 지연. 결정적 실패는 source 단위 lease 사이클이 받는다.
 async function callJudgmentWithRetry(llm: LlmProvider, message: string) {
   let lastError: unknown;
-  for (let attempt = 1; attempt <= CHUNK_CALL_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= LLM_CALL_MAX_ATTEMPTS; attempt++) {
     try {
       return await callJudgment(llm, message);
     } catch (err) {
       lastError = err;
       const retryable =
         err instanceof LlmError && RETRYABLE_LLM_CODES.has(err.code);
-      if (!retryable || attempt === CHUNK_CALL_MAX_ATTEMPTS) {
+      if (!retryable || attempt === LLM_CALL_MAX_ATTEMPTS) {
         throw err;
       }
       await new Promise((resolve) =>
-        setTimeout(resolve, attempt * CHUNK_CALL_RETRY_DELAY_MS),
+        setTimeout(resolve, attempt * LLM_CALL_RETRY_DELAY_MS),
       );
     }
   }
@@ -1042,18 +1213,15 @@ async function applyRelationChangesets(params: {
   sourceId: string;
   applied: RelationChange[];
   pending: RelationChange[];
-  duplicates: DuplicateChange[];
 }): Promise<void> {
-  const { supabase, sourceId, applied, pending, duplicates } = params;
+  const { supabase, sourceId, applied, pending } = params;
   const { error } = await supabase.rpc("apply_relation_changesets", {
     p_source_id: sourceId,
     // RPC가 jsonb 배열로 받는다 — 구조체 배열을 Json으로 넘긴다. 여기서 TS의 필드명
-    // 검증이 끊기고, 계약 상대는 apply_relation_changesets가 읽는 키다(applied/pending은
-    // from_id/to_id/type, duplicates는 duplicate/keeper) — 키를 바꾸면 RPC도 함께 고친다.
+    // 검증이 끊기고, 계약 상대는 apply_relation_changesets가 읽는 키(from_id/to_id/type)다
+    // — 키를 바꾸면 RPC도 함께 고친다. 같음(duplicates)도 pending 관계로 여기 섞여 온다.
     p_applied: applied as unknown as Json,
     p_pending: pending as unknown as Json,
-    // 가릴 중복 → 남길 진술 쌍 — RPC가 archive + duplicate_of 세팅 (NEM-162)
-    p_duplicates: duplicates as unknown as Json,
   });
   if (error) {
     throw new Error(
@@ -1081,7 +1249,7 @@ async function fetchPendingLinkingSources(
   return parsed.data;
 }
 
-// 원본의 active 진술(새 배치) — 같은 글 형제는 여기서 다 모인다.
+// 원문의 active 진술(새 배치) — 같은 글 형제는 여기서 다 모인다.
 async function fetchSourceStatements(
   supabase: TypedSupabaseClient,
   sourceId: string,
@@ -1118,7 +1286,7 @@ export function orderBySourceAppearance<
 
 // statement_sources의 locator {"index": n}에서 원문 순서를 뽑는다. !inner 필터로
 // 이 source의 행만 임베드돼 첫 원소를 본다.
-// ingestion 경로(apply_ingestion_changeset)는 진술마다 locator를 반드시 채우므로
+// 추출 경로(apply_extraction_statements)는 진술마다 locator를 반드시 채우므로
 // 정상 데이터는 여기 안 걸린다 — MAX_SAFE_INTEGER로 떨어지면(맨 뒤) 상류 불변식
 // 위반 신호다. zod 밖이라 무신호로 정렬만 흐트러지니 의미를 코멘트로 남긴다.
 function sourceOrderIndex(row: {
@@ -1160,15 +1328,21 @@ async function fetchCandidateStatements(
 
 async function incrementRetry(
   supabase: TypedSupabaseClient,
-  params: { phase: Phase; id: string; errorMessage: string },
+  params: {
+    phase: Phase;
+    id: string;
+    errorMessage: string;
+    maxRetries: number;
+  },
 ): Promise<void> {
-  const { phase, id, errorMessage } = params;
+  const { phase, id, errorMessage, maxRetries } = params;
 
   const { error } = await runIncrementRpc({
     supabase,
     phase,
     id,
     errorMessage,
+    maxRetries,
   });
 
   if (error) {
@@ -1184,25 +1358,26 @@ function runIncrementRpc(params: {
   phase: Phase;
   id: string;
   errorMessage: string;
+  maxRetries: number;
 }) {
-  const { supabase, phase, id, errorMessage } = params;
+  const { supabase, phase, id, errorMessage, maxRetries } = params;
   switch (phase) {
     case "extraction":
       return supabase.rpc("increment_source_extraction_retry", {
         p_source_id: id,
-        p_max_retries: MAX_RETRIES,
+        p_max_retries: maxRetries,
         p_error_message: errorMessage,
       });
     case "linking":
       return supabase.rpc("increment_source_linking_retry", {
         p_source_id: id,
-        p_max_retries: MAX_RETRIES,
+        p_max_retries: maxRetries,
         p_error_message: errorMessage,
       });
     case "embedding":
       return supabase.rpc("increment_statement_ingestion_retry", {
         p_statement_id: id,
-        p_max_retries: MAX_RETRIES,
+        p_max_retries: maxRetries,
         p_error_message: errorMessage,
       });
   }

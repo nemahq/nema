@@ -1,6 +1,6 @@
 import { type ReactNode, useRef, useState } from "react";
 
-import { cn } from "@nema-io/weave";
+import { Button, cn } from "@nema-io/weave";
 import { X } from "@nema-io/weave/icons";
 
 import type { TranslationKey } from "@web/lib/tolgee";
@@ -15,7 +15,7 @@ type TabBase = {
   onClose?: () => void;
 };
 
-export type TabbedPanelTab = TabBase &
+type TabbedPanelTab = TabBase &
   ({ labelKey: TranslationKey } | { label: string });
 
 interface TabbedPanelProps {
@@ -130,8 +130,10 @@ function DraggableTab({
               !isFirst && "border-l border-l-border",
             )
           : "border border-transparent border-r-border/30",
-        dropSide === "left" && "border-l-2 border-l-brand",
-        dropSide === "right" && "border-r-2 border-r-brand",
+        dropSide === "left" &&
+          "border-l-2 border-l-brand dark:border-l-fg-primary",
+        dropSide === "right" &&
+          "border-r-2 border-r-brand dark:border-r-fg-primary",
       )}
       draggable={draggable}
       onDragStart={(e) => onTabDragStart?.(tab.id, e)}
@@ -147,24 +149,30 @@ function DraggableTab({
         aria-selected={isActive}
         aria-controls={`panel-${tab.id}`}
         onClick={() => onActiveTabChange(tab.id)}
+        title={label}
         className={cn(
-          "flex items-center gap-1 py-2 pl-3",
+          "flex min-w-0 items-center gap-1 py-2 pl-3",
           tab.onClose ? "pr-1" : "pr-3",
           "text-sm font-medium",
           tabTextStyle(isActive, focused),
         )}
       >
-        {label}
+        {/* 탭이 여러 개면 폭을 나눠 가지므로 라벨이 길면 잘라야 한다 — 원문·
+            Digest·Reference 등 모든 탭 소비처가 공유하는 컴포넌트라 여기 한
+            군데서 처리하면 소비처마다 따로 안 챙겨도 된다. title로 전체
+            텍스트를 hover 시 확인 가능하게 유지. */}
+        <span className="max-w-32 truncate">{label}</span>
       </button>
       {tab.onClose && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon-xs"
           onClick={(e) => onTabClose(e, tab)}
-          className="mr-1 rounded p-0.5 text-fg-tertiary transition-colors hover:bg-surface-raised-hover hover:text-fg-primary"
+          className="mr-1 text-fg-tertiary hover:text-fg-primary"
           aria-label={closeLabel}
         >
           <X className="size-3" />
-        </button>
+        </Button>
       )}
     </div>
   );

@@ -14,6 +14,7 @@ import { initTheme } from "@web/utils/theme";
 
 import { ErrorBoundary } from "./app/error/ErrorBoundary";
 import { ErrorFallback } from "./app/error/ErrorFallback";
+import { isExpectedAuthTransitionError } from "./app/error/RouteErrorFallback";
 import { AppProviders } from "./app/providers";
 import { router } from "./app/router";
 
@@ -60,6 +61,9 @@ if (!root) {
 }
 
 function reportRenderError(error: unknown, errorInfo: React.ErrorInfo): void {
+  if (isExpectedAuthTransitionError(error)) {
+    return;
+  }
   Sentry.captureException(error, {
     extra: { componentStack: errorInfo.componentStack },
   });

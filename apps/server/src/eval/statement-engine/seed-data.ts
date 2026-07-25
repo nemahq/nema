@@ -1,5 +1,5 @@
 // 진술 엔진(save-engine-v2) 평가용 씨앗 데이터
-// 설계: docs/flows/save-engine-v2/eval-design.md
+// 설계: docs/blueprints/save-engine-v2/eval-design.md
 //
 // 골든 진술은 고정 정답이 아니라 씨앗이다 — 절단 기준의 주인은 사람이므로,
 // 경계가 애매한 항목은 needsHumanReview로 표시했고 사람 확정 전까지는 후보다.
@@ -83,7 +83,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
   {
     id: "meeting-memo-1",
     description:
-      "회의 직후 뭉친 메모. docs/product/04의 토스 예시 그대로 — 제품 문서가 이미 절단을 보증한 유일한 골든",
+      "회의 직후 뭉친 메모. docs/foundations/04의 토스 예시 그대로 — 제품 문서가 이미 절단을 보증한 유일한 골든",
     axes: ["decision-reason-split", "confidence-mix", "noise-drop"],
     input:
       "오늘 김 대리랑 회의했는데, 결제 모듈을 PG사 직접 연동 대신 토스페이먼츠 쓰기로 했어. 김 대리는 출시가 급하다고 계속 그러고, 직접 연동은 한 달은 걸린다니까. 근데 수수료가 좀 걸리긴 해.",

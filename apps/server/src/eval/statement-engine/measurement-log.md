@@ -1,14 +1,14 @@
 # 진술 엔진 측정 일지
 
 > 평가 러너의 라운드별 기록 — 무엇을 바꿨고, 숫자가 어떻게 움직였고, 무엇을 발견했나.
-> 평가 방식은 [eval-design](../../../../../docs/flows/save-engine-v2/eval-design.md), raw 결과(실패 사례 전수)는 같은 폴더의 `results-*.json`(gitignore, 재실행으로 재생성 가능).
+> 평가 방식은 [eval-design](../../../../../docs/blueprints/save-engine-v2/eval-design.md), raw 결과(실패 사례 전수)는 같은 폴더의 `results-*.json`(gitignore, 재실행으로 재생성 가능).
 > 측정 대상 = 제품과 동일한 추출 1콜(`prompts/statement-extraction.ts`)·동일한 검색 경로. 측정 모델은 기본 gpt-5 standard지만 `EVAL_LLM_MODEL`로 교체 가능 — 회차별로 명시한다(#7~).
 
 ---
 
 ## 측정 #20 — 2026-06-25 · eval B 1차 — scope vs 전역 recall, 빽빽한 코퍼스 (NEM-168 ④ 성과)
 
-**바꾼 것**: 신규 러너 `run-retrieval-scoped.ts` + `retrieval-scoped-seed.ts`(질의 6). auto-scoping의 제품 주장("코퍼스가 커지면 전역 top-k가 깨지고 scope가 지킨다")을 처음 끝단으로 잰다([auto-scoping-design](../../../../../docs/flows/save-engine-v2/auto-scoping-design.md) §6 B). 코퍼스 = tiro threaded 81글(18주제 라벨) + standalone 80글(무태그) = **15,462 진술**. 같은 질의를 (가) 전역 전체 검색, (나) coarse가 고른 주제 + 무태그로 좁힌 검색으로 돌려 top-5 안 정답-주제 비율(density)·hit를 비교한다. 모델 gemini-3.5-flash, voyage 임베딩.
+**바꾼 것**: 신규 러너 `run-retrieval-scoped.ts` + `retrieval-scoped-seed.ts`(질의 6). auto-scoping의 제품 주장("코퍼스가 커지면 전역 top-k가 깨지고 scope가 지킨다")을 처음 끝단으로 잰다([auto-scoping-design](../../../../../docs/blueprints/save-engine-v2/auto-scoping-design.md) §6 B). 코퍼스 = tiro threaded 81글(18주제 라벨) + standalone 80글(무태그) = **15,462 진술**. 같은 질의를 (가) 전역 전체 검색, (나) coarse가 고른 주제 + 무태그로 좁힌 검색으로 돌려 top-5 안 정답-주제 비율(density)·hit를 비교한다. 모델 gemini-3.5-flash, voyage 임베딩.
 
 | 질의 | 정답 주제(진술수) | coarse | 전역 d@5 / hit | scope d@5 / hit |
 |---|---|---|---|---|
@@ -58,7 +58,7 @@
 
 ## 측정 #18 — 2026-06-24 · 드래프팅 프롬프트 doc 13 정렬 후 일관성 재측정 (초안 다듬기 기준 문서화)
 
-**바꾼 것**: 엔진(추출) 불변, 드래프팅 프롬프트를 새 기준 문서([doc 13 초안 다듬기 기준](../../../../../docs/product/13-drafting-criteria.md))에 정렬했다 — 감정 규칙을 재방문 테스트로 교정(분출만 깎고 이유는 보존), body 규칙을 단일 출처(`prompts/drafting-rules.ts`)로 묶어 drafting·draft-assist 사본 통합, 정도·markdown 준수 명시. 그 위에서 측정 #13(태스크 7) 추출 일관성을 새 프롬프트로 다시 잰다.
+**바꾼 것**: 엔진(추출) 불변, 드래프팅 프롬프트를 새 기준 문서([doc 13 초안 다듬기 기준](../../../../../docs/foundations/13-drafting-criteria.md))에 정렬했다 — 감정 규칙을 재방문 테스트로 교정(분출만 깎고 이유는 보존), body 규칙을 단일 출처(`prompts/drafting-rules.ts`)로 묶어 drafting·draft-assist 사본 통합, 정도·markdown 준수 명시. 그 위에서 측정 #13(태스크 7) 추출 일관성을 새 프롬프트로 다시 잰다.
 
 **추출 일관성 (flash, tiro 노트, draft → 추출 5회 쌍대 F1)**:
 
@@ -84,7 +84,7 @@
 
 ## 측정 #17 — 2026-06-25 · coarse scoping 첫 측정 — 질의→주제 라우팅 recall (NEM-168 ④ 자동 scoping)
 
-**바꾼 것**: 신규 eval. `run-coarse-scoping.ts` + `coarse-scoping-seed.ts`로 auto-scoping 설계의 핵심 가정("LLM이 질의를 맞는 주제로 보내나")을 격리 측정한다([auto-scoping-design](../../../../../docs/flows/save-engine-v2/auto-scoping-design.md) §6 A). 정답 주제는 tiro `curation.json`의 사람이 묶은 thread 18개를 써 자기채점을 피한다. 질문 28개·난도 4단(테마형·묻힌 사실·인접 구분·강등). 이름만 vs 이름+설명 두 변형으로 설명(§8 #4)의 라우팅 값어치를 가른다. 측정 모델 gemini-3.5-flash(Vertex).
+**바꾼 것**: 신규 eval. `run-coarse-scoping.ts` + `coarse-scoping-seed.ts`로 auto-scoping 설계의 핵심 가정("LLM이 질의를 맞는 주제로 보내나")을 격리 측정한다([auto-scoping-design](../../../../../docs/blueprints/save-engine-v2/auto-scoping-design.md) §6 A). 정답 주제는 tiro `curation.json`의 사람이 묶은 thread 18개를 써 자기채점을 피한다. 질문 28개·난도 4단(테마형·묻힌 사실·인접 구분·강등). 이름만 vs 이름+설명 두 변형으로 설명(§8 #4)의 라우팅 값어치를 가른다. 측정 모델 gemini-3.5-flash(Vertex).
 
 | 난도 | 이름만 recall / 고른 수 | 이름+설명 recall / 고른 수 |
 |---|---|---|
@@ -223,7 +223,7 @@
 
 ## 측정 #11 — 2026-06-24 · temporal 의미검색 채점서 제외 — 시간 질의 재배치 1탄 (③ eval A)
 
-**바꾼 것**: 엔진·골든 불변, 채점 대상만. temporal 축(q12·q13)을 의미검색 채점(`SEED_QUERIES`)에서 뺐다. 시간은 날짜 산술이라 임베딩 소관이 아니다 — 측정 #9에서 temporal recall이 0.834 → 0.167로 무너질 때 다른 축은 0.8~1.0을 지켰다. 두 질의는 `RELOCATED_TEMPORAL_QUERIES`로 옮겨 시간 경로 eval(설계 8장 B, ④와 골든 공유)의 재료로 보존했다. 설계: [temporal-query-design](../../../../../docs/flows/save-engine-v2/temporal-query-design.md).
+**바꾼 것**: 엔진·골든 불변, 채점 대상만. temporal 축(q12·q13)을 의미검색 채점(`SEED_QUERIES`)에서 뺐다. 시간은 날짜 산술이라 임베딩 소관이 아니다 — 측정 #9에서 temporal recall이 0.834 → 0.167로 무너질 때 다른 축은 0.8~1.0을 지켰다. 두 질의는 `RELOCATED_TEMPORAL_QUERIES`로 옮겨 시간 경로 eval(설계 8장 B, ④와 골든 공유)의 재료로 보존했다. 설계: [temporal-query-design](../../../../../docs/blueprints/save-engine-v2/temporal-query-design.md).
 
 **숫자 없음, 재측정 대기**: VOYAGE 키가 없어 이 세션에선 검색 러너를 못 돌렸다. 부분 실패하던 q12·q13이 빠졌으니 sparse·dense recall은 다시 재면 올라간다. `SPARSE_RECALL_BASELINE`(0.978)은 제외 전 값이라 갱신 대상으로 표시해 뒀다.
 
@@ -253,7 +253,7 @@
 
 ## 측정 #9 — 2026-06-23 · 검색 난도 ↑ — tiro 실데이터 distractor 주입 (NEM-168 ⑤ 첫 실측)
 
-**바꾼 것**: 엔진 그대로. 새 러너 `run-retrieval-dense.ts` — tiro 실데이터(`.local/tiro-samples`)의 요약(`summary.md`)을 추출해 진술 distractor를 만들고, 골든 40개 코퍼스에 부어 빽빽한 검색을 시험한다. 기존 검색 eval(골든 40개만)은 경쟁자가 적어 recall 0.978이 "쉬운 시험"이었다 — 실density에서 버티나 본다. 요약을 쓰는 건 원본 전사가 아니라 이미 깎인 맥락이라 엔진 설계 입력에 가깝고, distractor 용도라 라벨도 불필요(recall은 골든으로만 채점).
+**바꾼 것**: 엔진 그대로. 새 러너 `run-retrieval-dense.ts` — tiro 실데이터(`.local/tiro-samples`)의 요약(`summary.md`)을 추출해 진술 distractor를 만들고, 골든 40개 코퍼스에 부어 빽빽한 검색을 시험한다. 기존 검색 eval(골든 40개만)은 경쟁자가 적어 recall 0.978이 "쉬운 시험"이었다 — 실density에서 버티나 본다. 요약을 쓰는 건 원문 전사가 아니라 이미 깎인 맥락이라 엔진 설계 입력에 가깝고, distractor 용도라 라벨도 불필요(recall은 골든으로만 채점).
 
 | 지표 | sparse (40) | dense (1,076 · 10글) | dense (6,521 · 60글) |
 |---|---|---|---|
@@ -280,7 +280,7 @@
 
 ## 측정 #8 — 2026-06-23 · NEM-168 baseline 재확정 + 모델 박제 + 누락 전수 (엔진 변경 없음)
 
-**바꾼 것**: 엔진·프롬프트·골든 그대로. [엔진 완성 기준](../../../../../docs/product/12-engine-completion-criteria.md) §3을 채우려는 baseline 한 컷이다. 도구만 손봄 — 결과 JSON에 측정 모델 id를 박았다(`run-extraction`·`run-judgment`의 `model` 필드, 결과 파일만 봐도 어느 모델로 잰 것인지 자기증명). 추출=flash, 관계=처음으로 Vertex `gemini-3.1-pro-preview`, judge=Claude·임베딩 Voyage 고정.
+**바꾼 것**: 엔진·프롬프트·골든 그대로. [엔진 완성 기준](../../../../../docs/foundations/12-engine-completion-criteria.md) §3을 채우려는 baseline 한 컷이다. 도구만 손봄 — 결과 JSON에 측정 모델 id를 박았다(`run-extraction`·`run-judgment`의 `model` 필드, 결과 파일만 봐도 어느 모델로 잰 것인지 자기증명). 추출=flash, 관계=처음으로 Vertex `gemini-3.1-pro-preview`, judge=Claude·임베딩 Voyage 고정.
 
 | 칸 | 지표 | #8 | 직전 | 합격선(잠정) |
 |---|---|---|---|---|
@@ -325,7 +325,7 @@
 
 ## 측정 #6 — 2026-06-13 · 분할 구현 검증 — A/B·경계 포괄성·회귀·E2E (4층 전부 통과)
 
-**바꾼 것**: 초장문 분할 구현([`long-input-chunking`](../../../../../docs/flows/save-engine-v2/long-input-chunking.md) 설계대로) — 분할기(`chunking.ts`)·양방향 읽기 전용 문맥(프롬프트 Surrounding context 절)·워커 청크 병렬. 측정 도구: 곡선 러너에 `--split` A/B 모드(일관성·품질·경계 창 요소 포괄성), verify-e2e ⑤ 장문 케이스.
+**바꾼 것**: 초장문 분할 구현([`long-input-chunking`](../../../../../docs/blueprints/save-engine-v2/long-input-chunking.md) 설계대로) — 분할기(`chunking.ts`)·양방향 읽기 전용 문맥(프롬프트 Surrounding context 절)·워커 청크 병렬. 측정 도구: 곡선 러너에 `--split` A/B 모드(일관성·품질·경계 창 요소 포괄성), verify-e2e ⑤ 장문 케이스.
 
 **① 분할 전후 A/B** (임계선 초과 2급간 × 1콜/분할 × 3회):
 
@@ -378,7 +378,7 @@
 - **제공자 속도는 통제 변수가 아니다**: 같은 입력·같은 설정·재시도 0인데 두 스냅샷의 지연이 1.5~2.3배 차이. 진술 수는 비슷하므로 모델 출력이 아니라 제공자 처리 속도의 시간대 변동이다. 최소 급간(676토큰)도 느린 시간대엔 60초를 스쳤다 — **분할로는 타임아웃 안쪽을 보장할 수 없다.**
 - #4의 "타임아웃 0건"도 빠른 시간대 스냅샷이었다는 뜻 — 단발 측정으로 타임아웃을 보정하면 안 된다.
 
-**결정** (상세 근거는 [`long-input-chunking.md`](../../../../../docs/flows/save-engine-v2/long-input-chunking.md)):
+**결정** (상세 근거는 [`long-input-chunking.md`](../../../../../docs/blueprints/save-engine-v2/long-input-chunking.md)):
 
 - **역할 분담**: 분할(임계선 1,500토큰)은 출력량 — 평균 지연·일관성 — 을 묶고, **타임아웃은 제공자 출렁임을 흡수**한다.
 - **추출 타임아웃 60→120초** + lease 90→150초(`extraction_lease_covers_slow_provider`): 60초는 느린 시간대의 정상 호출(1,278토큰 74~89초)을 죽은 호출로 오판해 끊는다. 비동기 파이프에서 타임아웃을 높게 잡는 오차(복구 몇 분 지연)는 낮게 잡는 오차(정상 작업 폐기)보다 싸다.
@@ -398,7 +398,7 @@
 | 일관성 | 0.877 | 0.832 | 실제 글은 전부 0.91~1.0 — smalltalk의 0/1 깜빡임(노이즈 경계 케이스)이 평균을 끌어내림 |
 | **추출 타임아웃 재시도** | 매 실행 7건+ | **0건** | 보정의 직접 목표 |
 
-**E2E 실주행 (verify-e2e.ts, 이번에 신설)**: create_source → 워커 추출·저장 → 임베딩·Qdrant → 뜻 검색·원본 묶음, 4단계 전부 ✅ — 제품 설정 그대로(우회 없음). 보정 전에는 ②에서 30초 타임아웃으로 영구 실패했다.
+**E2E 실주행 (verify-e2e.ts, 이번에 신설)**: create_source → 워커 추출·저장 → 임베딩·Qdrant → 뜻 검색·원문 묶음, 4단계 전부 ✅ — 제품 설정 그대로(우회 없음). 보정 전에는 ②에서 30초 타임아웃으로 영구 실패했다.
 
 **결론**: 절단은 규칙 적용에 가까워 깊은 추론이 불필요하다는 가설이 확인됨 — effort를 낮춰도 품질이 유지(상승)되고 지연 변동이 사라진다. 남은 것: 초장문 입력 분할(별도 설계 논의 예정).
 

@@ -20,7 +20,7 @@ import { round, scoreF1 } from "./metrics";
 export type StatementType = ExtractedStatement["type"];
 export type Confidence = "certain" | "guess" | null;
 
-export interface NormalizedStatement {
+interface NormalizedStatement {
   content: string;
   type: StatementType;
   confidence: Confidence;

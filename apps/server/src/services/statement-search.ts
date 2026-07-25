@@ -250,7 +250,7 @@ export async function searchStatements(args: {
     return { groups: [] };
   }
 
-  // 형제는 수만 — 이 원본의 전체 active 진술 수 (펼치기는 별도 조회, 화면 몫)
+  // 형제는 수만 — 이 원문의 전체 active 진술 수 (펼치기는 별도 조회, 화면 몫)
   const { data: siblingRows, error: siblingError } = await supabase
     .from("statement_sources")
     .select("source_id, statements!inner(id)")
@@ -296,7 +296,7 @@ interface GroupableStatement {
   }>;
 }
 
-// 원본(source) 묶음 — 자리 채움 구현. 관계 묶음이 와도 출처 축으로 영구히 쓰인다
+// 원문(source) 묶음 — 자리 채움 구현. 관계 묶음이 와도 출처 축으로 영구히 쓰인다
 export function assembleSourceGroups(args: {
   statements: GroupableStatement[];
   scoreByStatementId: Map<string, number>;
@@ -363,7 +363,7 @@ export function assembleSourceGroups(args: {
       maxScore: Math.max(...members.map((m) => m.statement.score)),
       group: {
         key: group.key,
-        // 묶음이 있는 원본에 0은 구조상 불가능 — 집계가 비면 닿은 수가 하한
+        // 묶음이 있는 원문에 0은 구조상 불가능 — 집계가 비면 닿은 수가 하한
         totalStatementCount:
           activeCountBySourceId.get(group.key.sourceId) ?? members.length,
         statements: members.map((m) => m.statement),
@@ -558,7 +558,7 @@ export async function collectTimeCandidateIds(
     throwIfSupabaseError(error);
     ids = (data ?? []).map((row) => row.id);
   } else {
-    // created는 원본 시간으로 자르므로 scope(진술 집합)를 원본 집합으로 환산해 limit 전에 건다.
+    // created는 원문 시간으로 자르므로 scope(진술 집합)를 원문 집합으로 환산해 limit 전에 건다.
     let scopeSourceIds: string[] | null = null;
     if (scopedStatementIds !== undefined) {
       const { data: scopeRefs, error: scopeError } = await supabase
@@ -604,7 +604,7 @@ export async function collectTimeCandidateIds(
     return ids;
   }
   // scope는 위에서 DB 쿼리에 limit 전에 걸었다 — limit 밖 in-scope 진술이 새지 않게.
-  // 이 교집합은 created 경로에서 한 원본이 scope·비scope 진술을 함께 가질 때를 마저 거른다.
+  // 이 교집합은 created 경로에서 한 원문이 scope·비scope 진술을 함께 가질 때를 마저 거른다.
   const scoped = new Set(scopedStatementIds);
   return ids.filter((id) => scoped.has(id));
 }

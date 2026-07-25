@@ -100,7 +100,7 @@ async function main() {
     throw new Error("other space missing");
   }
 
-  // 2. 원본 2 + 무관 원본 1 + 남의 원본 1
+  // 2. 원문 2 + 무관 원문 1 + 남의 원문 1
   async function createSource(ownerSpaceId: string, body: string) {
     const { data, error } = await admin
       .from("sources")
@@ -124,7 +124,32 @@ async function main() {
   const sourceC = await createSource(spaceId, "점심 메뉴 잡담");
   const sourceOther = await createSource(otherSpaceId, "남의 토스 글");
 
-  // 3. 진술 — [원본, 내용, score(쿼리와의 통제된 유사도), 원문순서, status]
+  // v2는 진술이 digest에서 나온다(digest_id NOT NULL) — 원문마다 seed용 digest 하나.
+  async function createDigest(sourceId: string, ownerSpaceId: string) {
+    const { data, error } = await admin
+      .from("digests")
+      .insert({
+        source_id: sourceId,
+        space_id: ownerSpaceId,
+        title: "eval seed digest",
+        description: "search eval fixture",
+        body: { type: "decision" },
+      })
+      .select("id")
+      .single();
+    if (error) {
+      throw error;
+    }
+    return data.id;
+  }
+  const digestBySource = new Map<string, string>([
+    [sourceA.id, await createDigest(sourceA.id, spaceId)],
+    [sourceB.id, await createDigest(sourceB.id, spaceId)],
+    [sourceC.id, await createDigest(sourceC.id, spaceId)],
+    [sourceOther.id, await createDigest(sourceOther.id, otherSpaceId)],
+  ]);
+
+  // 3. 진술 — [원문, 내용, score(쿼리와의 통제된 유사도), 원문순서, status]
   type Seed = {
     source: { id: string };
     content: string;
@@ -135,7 +160,7 @@ async function main() {
     embed?: boolean;
   };
   const seeds: Seed[] = [
-    // 원본 A: 최고점 0.95. 원문 순서는 점수 역순으로 깔아 정렬 분리를 검증
+    // 원문 A: 최고점 0.95. 원문 순서는 점수 역순으로 깔아 정렬 분리를 검증
     {
       source: sourceA,
       content: "결제는 토스를 쓰기로 결정했다",
@@ -171,7 +196,7 @@ async function main() {
       status: "archived",
       embed: false,
     },
-    // 원본 B: 최고점 0.9 — A보다 아래
+    // 원문 B: 최고점 0.9 — A보다 아래
     {
       source: sourceB,
       content: "토스 수수료는 2.9%였다",
@@ -184,7 +209,7 @@ async function main() {
       score: 0.65,
       index: 1,
     },
-    // 원본 C: threshold(0.6) 미달 — 잘림
+    // 원문 C: threshold(0.6) 미달 — 잘림
     { source: sourceC, content: "점심은 국밥", score: 0.2, index: 0 },
     // archived인데 벡터가 남은 틈새 상황: 원장 거름으로 빠져야 함
     {
@@ -213,6 +238,10 @@ async function main() {
 
   for (const seed of seeds) {
     const ownerSpaceId = seed.spaceId ?? spaceId;
+    const digestId = digestBySource.get(seed.source.id);
+    if (!digestId) {
+      throw new Error(`no digest fixture for source ${seed.source.id}`);
+    }
     const { data: statement, error: statementError } = await admin
       .from("statements")
       .insert({
@@ -222,6 +251,7 @@ async function main() {
         confidence: "certain",
         status: seed.status ?? "active",
         ingestion_status: "completed",
+        digest_id: digestId,
       })
       .select("id, created_at")
       .single();
@@ -311,7 +341,7 @@ async function main() {
 
   const groupIds = result.groups.map((g) => g.key.sourceId);
   if (groupIds.length === 2) {
-    ok("묶음 2개 (무관 원본 C·남의 원본은 없음)");
+    ok("묶음 2개 (무관 원문 C·남의 원문은 없음)");
   } else {
     fail(`묶음 수 ${groupIds.length} (기대 2)`);
   }
@@ -357,7 +387,7 @@ async function main() {
   }
 
   if (groupA?.key.sourceCreatedAt === sourceA.created_at) {
-    ok("묶음 key에 원본 시점(sourceCreatedAt)");
+    ok("묶음 key에 원문 시점(sourceCreatedAt)");
   } else {
     fail("sourceCreatedAt 불일치");
   }

@@ -12,7 +12,7 @@ export function registerListTopics(server: McpServer): void {
     {
       title: "List topics",
       description:
-        "사용자의 기존 주제 목록을 조회한다. 초안을 올리기 전에 기존 주제를 재사용하려고 먼저 읽는다.",
+        "사용자의 기존 주제 목록을 조회한다. Digest 리뷰에서 기존 주제를 재사용하려고 먼저 읽는다.",
       inputSchema: {},
       outputSchema: { topics: z.array(TopicSchema) },
       annotations: {

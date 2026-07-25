@@ -1,21 +1,25 @@
 import {
-  ApplyPendingRelationInputSchema,
-  ArchiveSourceInputSchema,
   ArchiveStatementInputSchema,
+  GetChangesetByNumberInputSchema,
   ListActiveRelationsInputSchema,
   ListChangesetsInputSchema,
+  ManualChangeHistoryInputSchema,
   RejectPendingRelationInputSchema,
+  ResolveConflictRelationInputSchema,
+  ResolveDuplicateRelationInputSchema,
   RevertChangesetInputSchema,
 } from "@nema-io/shared";
 
+import { getChangesetByNumber } from "@server/services/changeset-detail-service";
 import {
-  applyPendingRelation,
-  archiveSource,
   archiveStatement,
   listActiveRelations,
   listChangesets,
+  listManualChangeHistory,
   listPendingRelations,
   rejectPendingRelation,
+  resolveConflictRelation,
+  resolveDuplicateRelation,
   revertChangeset,
 } from "@server/services/changeset-service";
 import { protectedProcedure, router } from "@server/trpc";
@@ -30,12 +34,6 @@ export const changesetRouter = router({
       }),
     ),
 
-  archiveSource: protectedProcedure
-    .input(ArchiveSourceInputSchema)
-    .mutation(({ ctx, input }) =>
-      archiveSource({ supabase: ctx.supabase, sourceId: input.sourceId }),
-    ),
-
   revert: protectedProcedure
     .input(RevertChangesetInputSchema)
     .mutation(({ ctx, input }) =>
@@ -45,12 +43,24 @@ export const changesetRouter = router({
       }),
     ),
 
-  applyPendingRelation: protectedProcedure
-    .input(ApplyPendingRelationInputSchema)
+  resolveConflictRelation: protectedProcedure
+    .input(ResolveConflictRelationInputSchema)
     .mutation(({ ctx, input }) =>
-      applyPendingRelation({
+      resolveConflictRelation({
         supabase: ctx.supabase,
         changesetId: input.changesetId,
+        winnerStatementId: input.winnerStatementId,
+      }),
+    ),
+
+  resolveDuplicateRelation: protectedProcedure
+    .input(ResolveDuplicateRelationInputSchema)
+    .mutation(({ ctx, input }) =>
+      resolveDuplicateRelation({
+        supabase: ctx.supabase,
+        changesetId: input.changesetId,
+        mergedDigest: input.mergedDigest,
+        newReferences: input.newReferences,
       }),
     ),
 
@@ -70,7 +80,13 @@ export const changesetRouter = router({
   listChangesets: protectedProcedure
     .input(ListChangesetsInputSchema)
     .query(({ ctx, input }) =>
-      listChangesets({ supabase: ctx.supabase, limit: input.limit }),
+      listChangesets({
+        supabase: ctx.supabase,
+        spaceId: input.spaceId,
+        limit: input.limit,
+        open: input.open,
+        cursor: input.cursor,
+      }),
     ),
 
   listActiveRelations: protectedProcedure
@@ -80,6 +96,26 @@ export const changesetRouter = router({
         supabase: ctx.supabase,
         sourceId: input.sourceId,
         limit: input.limit,
+      }),
+    ),
+
+  getByNumber: protectedProcedure
+    .input(GetChangesetByNumberInputSchema)
+    .query(({ ctx, input }) =>
+      getChangesetByNumber({
+        supabase: ctx.supabase,
+        spaceId: input.spaceId,
+        number: input.number,
+      }),
+    ),
+
+  manualHistory: protectedProcedure
+    .input(ManualChangeHistoryInputSchema)
+    .query(({ ctx, input }) =>
+      listManualChangeHistory({
+        supabase: ctx.supabase,
+        targetType: input.targetType,
+        targetId: input.targetId,
       }),
     ),
 });

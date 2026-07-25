@@ -3,8 +3,11 @@ import { useState } from "react";
 import { cn } from "@nema-io/weave";
 
 import { HistoryPanel } from "@web/features/dev-harness/components/HistoryPanel";
+import { ModelSettingsPanel } from "@web/features/dev-harness/components/ModelSettingsPanel";
+import { ReferencesPanel } from "@web/features/dev-harness/components/ReferencesPanel";
 import { RelationsPanel } from "@web/features/dev-harness/components/RelationsPanel";
 import { ReviewPanel } from "@web/features/dev-harness/components/ReviewPanel";
+import { TopicsPanel } from "@web/features/dev-harness/components/TopicsPanel";
 import { WorkTab } from "@web/features/dev-harness/components/WorkTab";
 
 const TABS = [
@@ -12,6 +15,9 @@ const TABS = [
   { id: "relations", label: "관계" },
   { id: "review", label: "검토함" },
   { id: "history", label: "이력" },
+  { id: "models", label: "모델" },
+  { id: "topics", label: "주제" },
+  { id: "references", label: "레퍼런스" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -46,6 +52,9 @@ export function HarnessPage() {
         {tab === "relations" && <RelationsPanel />}
         {tab === "review" && <ReviewPanel />}
         {tab === "history" && <HistoryPanel />}
+        {tab === "models" && <ModelSettingsPanel />}
+        {tab === "topics" && <TopicsPanel />}
+        {tab === "references" && <ReferencesPanel />}
       </div>
     </main>
   );

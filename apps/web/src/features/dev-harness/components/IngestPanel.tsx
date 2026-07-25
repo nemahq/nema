@@ -1,10 +1,10 @@
 import { useState } from "react";
 
-import { DraftComposer } from "@web/features/dev-harness/components/DraftComposer";
-import { DraftInbox } from "@web/features/dev-harness/components/DraftInbox";
+import { PendingSourceList } from "@web/features/dev-harness/components/PendingSourceList";
+import { SourceComposer } from "@web/features/dev-harness/components/SourceComposer";
 import { SourceHistoryList } from "@web/features/dev-harness/components/SourceHistoryList";
 
-// 넣기 입구 — 초안(직접/assist) → 인박스에서 확정 → 던진 글(추출). 우회 직추출은 없다.
+// 넣기 입구 — 원문 던지기 → 초안(대기 원문)에서 Digest 리뷰 확정 → 던진 글(추출).
 export function IngestPanel() {
   const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null);
 
@@ -16,8 +16,8 @@ export function IngestPanel() {
     <section className="flex min-h-0 flex-1 flex-col gap-3 p-4">
       <h2 className="text-sm font-semibold text-fg-primary">넣기</h2>
 
-      <DraftComposer />
-      <DraftInbox />
+      <SourceComposer />
+      <PendingSourceList />
 
       <SourceHistoryList
         expandedSourceId={expandedSourceId}

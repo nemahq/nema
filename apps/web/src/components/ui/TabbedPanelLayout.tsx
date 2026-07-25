@@ -16,7 +16,7 @@ export function TabbedPanelLayout({
       <div
         role="tablist"
         tabIndex={-1}
-        className="relative flex items-end border-b border-border/50 bg-surface-base"
+        className="relative flex items-end border-b border-border bg-surface-base"
         onDragOver={(e) => {
           e.stopPropagation();
           onHeaderDragOver?.(e);
@@ -25,7 +25,7 @@ export function TabbedPanelLayout({
       >
         {header}
       </div>
-      <div className="relative flex flex-1 flex-col overflow-y-auto p-5 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent]">
+      <div className="relative flex flex-1 flex-col overflow-y-auto p-5">
         {children}
       </div>
     </main>

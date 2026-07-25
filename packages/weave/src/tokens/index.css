@@ -16,7 +16,7 @@
  *   3. Tailwind theme: maps semantic tokens to utility classes
  *
  * Naming: --{group}-{role}-{state}
- * Groups: brand, surface, fg, status, border
+ * Groups: brand, surface, fg, status, border, avatar
  * Non-color: duration, ease
  */
 
@@ -45,6 +45,7 @@
   --palette-light-surface-raised-hover: #e7e5e4; /* stone-200 */
   --palette-light-surface-card: #ffffff;
   --palette-light-surface-tooltip: #ffffff;
+  --palette-light-surface-overlay: #ffffff;
   --palette-light-shadow: rgba(0, 0, 0, 0.06);
 
   /* Surface — dark */
@@ -53,27 +54,44 @@
   --palette-dark-surface-raised-hover: #44403c; /* stone-700 */
   --palette-dark-surface-card: #292524; /* stone-800 */
   --palette-dark-surface-tooltip: #0c0a09; /* stone-950 */
+  /* LNB(base=stone-900)·메인/사이드뷰(card=stone-800)보다 밝고, raised-hover(stone-700)
+     보다는 어두운 중간값 — 드롭다운/모달 안 아이템이 raised-hover로 호버될 때 이
+     배경보다 밝아져서 항상 구분되게 하려고 일부러 raised-hover와 다른 값을 새로 판다. */
+  --palette-dark-surface-overlay: #363230;
   --palette-dark-shadow: rgba(0, 0, 0, 0.3);
 
   /* Foreground — light */
-  --palette-light-fg-primary: #1c1917; /* stone-900 */
+  /* stone-900 대신 한 단계 낮춘 stone-800 — 배경(stone-50/white)과의 대비가 최대치에
+     가까워 굵은 글씨·큰 텍스트에서 번져 보이는(glare) 느낌이 있어 한 단계 완화. */
+  --palette-light-fg-primary: #292524; /* stone-800 */
   --palette-light-fg-secondary: #57534e; /* stone-600 */
   --palette-light-fg-tertiary: #78716c; /* stone-500 */
 
   /* Foreground — dark */
-  --palette-dark-fg-primary: #f5f5f4; /* stone-100 */
+  /* stone-100 대신 한 단계 낮춘 stone-200 — 어두운 배경 위 거의 순백에 가까운 텍스트가
+     halation(빛 번짐)을 일으켜 라이트보다 더 도드라지는 문제라 같은 이유로 완화. */
+  --palette-dark-fg-primary: #e7e5e4; /* stone-200 */
   --palette-dark-fg-secondary: #a8a29e; /* stone-400 */
   --palette-dark-fg-tertiary: #a8a29e; /* stone-400 */
 
-  /* Status — light */
-  --palette-light-status-success: #10b981; /* green-500 */
-  --palette-light-status-success-tint: rgba(16, 185, 129, 0.08);
-  --palette-light-status-warning: #f59e0b; /* amber-500 */
-  --palette-light-status-warning-tint: rgba(245, 158, 11, 0.08);
-  --palette-light-status-error: #ef4444; /* red-500 */
-  --palette-light-status-error-tint: rgba(239, 68, 68, 0.08);
-  --palette-light-status-info: #3b82f6; /* blue-500 */
-  --palette-light-status-info-tint: rgba(59, 130, 246, 0.08);
+  /* Status — light. 대비는 순백이 아니라 실제 렌더 배경(이 텍스트와 짝지어
+     쓰이는 bg-status-*-tint, 즉 이 hex를 8%로 알파 합성한 색) 기준으로 잰다 —
+     처음엔 순백 기준으로만 재서 통과한 걸로 봤지만, warning·error가 tint
+     합성 배경에서는 여전히 미달이었다(순백 대비 5.02·4.83이 tint 위에선
+     4.50·4.28로 떨어짐). 둘 다 tint 합성 기준 AA를 만족하는 단계까지 다시
+     내렸다(success·info는 이미 여유 있어 안 건드림). warning은 그 김에
+     hue도 23°→40°로 옮겼다 — Tailwind amber 스웨치를 그대로 따라가다 보니
+     error(H=0°)와 23°까지 좁혀져 있었다(아래 hue의 yellow와도 9°로 이미
+     가까웠음). tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로
+     미러링한다(아래 hue와 같은 패턴). */
+  --palette-light-status-success: #047857; /* green-700, was #10b981(500) */
+  --palette-light-status-success-tint: rgba(4, 120, 87, 0.08);
+  --palette-light-status-warning: #916308; /* custom, was #92400e(amber-800) */
+  --palette-light-status-warning-tint: rgba(145, 99, 8, 0.08);
+  --palette-light-status-error: #b91c1c; /* red-700, was #dc2626(600) */
+  --palette-light-status-error-tint: rgba(185, 28, 28, 0.08);
+  --palette-light-status-info: #2563eb; /* blue-600, was #3b82f6(500) */
+  --palette-light-status-info-tint: rgba(37, 99, 235, 0.08);
 
   /* Status — dark */
   --palette-dark-status-success: #34d399; /* green-400 */
@@ -85,17 +103,93 @@
   --palette-dark-status-info: #60a5fa; /* blue-400 */
   --palette-dark-status-info-tint: rgba(59, 130, 246, 0.12);
 
-  /* Indigo */
-  --palette-light-indigo: #6366f1; /* indigo-500 */
-  --palette-dark-indigo: #818cf8; /* indigo-400 */
-
-  /* Orange */
+  /* Hue — 도메인 의미가 없는 색조 팔레트. 무엇을 가리키는지는 이 레이어가 모르고,
+     소비하는 앱이 자기 분류를 색조에 매핑한다(apps/web/src/index.css의 mode-* 참고).
+     status(brand·success·warning·error·info)와 색상 축을 겹치지 않게 골랐다 —
+     겹치면 "AI 작업중 블루"처럼 이미 다른 뜻이 붙은 색을 빌려오게 된다
+     (design-reference-log.md ⑪ 참고). 다크는 400을 쓰되, 라이트는 실제 렌더
+     배경(이 hex를 8%로 합성한 tint) 기준 대비를 만족하는 단계까지 진하게
+     내린다 — indigo·purple은 600, pink는 700, lime은 800까지(순백 기준으로만
+     재면 다 통과하는 것처럼 보이지만, 실제 tint 배경 위에선 여전히 미달이라
+     한 단계씩 더 내렸다). yellow는 hue(32°)는 그대로 두고 채도만 81%→50%로
+     크게 낮췄다 — status-warning과 hue가 9°밖에 안 떨어져 있는데 채도까지
+     거의 같아서(82% vs 81%) 구분이 안 됐다. ⑪이 원래 의도했던 "hue는 status
+     보다 낮은 채도로 둬서 색상이 겹쳐도 채도로 구분된다"는 원칙이 실제로는
+     구현된 적이 없었던 것 — yellow에 한해 지금 적용한다(나머지 4색은 그대로).
+     tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로 미러링한다. */
+  --palette-light-indigo: #4f46e5; /* indigo-600, was #6366f1(500) */
+  --palette-light-indigo-tint: rgba(79, 70, 229, 0.08);
+  --palette-light-pink: #be185d; /* pink-700, was #db2777(600) */
+  --palette-light-pink-tint: rgba(190, 24, 93, 0.08);
+  --palette-light-lime: #365314; /* lime-800, was #4d7c0f(700) */
+  --palette-light-lime-tint: rgba(54, 83, 20, 0.08);
+  --palette-light-yellow: #916430; /* custom(저채도), was #854d0e(yellow-800) */
+  --palette-light-yellow-tint: rgba(145, 100, 48, 0.08);
+  --palette-light-purple: #9333ea; /* purple-600, was #a855f7(500) */
+  --palette-light-purple-tint: rgba(147, 51, 234, 0.08);
   --palette-light-orange: #ea580c; /* orange-600 */
+
+  /* Hue — dark */
+  --palette-dark-indigo: #818cf8; /* indigo-400 */
+  --palette-dark-indigo-tint: rgba(99, 102, 241, 0.12);
+  --palette-dark-pink: #f472b6; /* pink-400 */
+  --palette-dark-pink-tint: rgba(236, 72, 153, 0.12);
+  --palette-dark-lime: #a3e635; /* lime-400 */
+  --palette-dark-lime-tint: rgba(101, 163, 13, 0.12);
+  --palette-dark-yellow: #facc15; /* yellow-400 */
+  --palette-dark-yellow-tint: rgba(202, 138, 4, 0.12);
+  --palette-dark-purple: #c084fc; /* purple-400 */
+  --palette-dark-purple-tint: rgba(168, 85, 247, 0.12);
   --palette-dark-orange: #fb923c; /* orange-400 */
 
-  /* Border */
+  /* Tag — 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 팔레트. 유저가
+     직접 색을 고르지 않고 태그 id 해시로 자동 배정한다(Notion 태그처럼) — 그래서
+     status·Hue처럼 "채움 배경 + 원색 텍스트"가 아니라 "옅은 파스텔 채움 + 고정
+     중립 텍스트"다(Notion 태그 배경 실측 참고). 라이트는 매우 밝게(L92%) 고정해
+     자기 테마의 fg-primary(어두운 텍스트)로 8색 전부 여유 있게 AA를 만족하고,
+     다크는 명도를 라이트만큼 올릴 여지가 없어(텍스트 대비가 이미 한계선이라
+     조금만 밝혀도 AA 미달) 대신 채도를 낮춰(25%) 같은 "옅음"을 낸다 — 카드
+     배경과는 구분되면서 자기 테마 fg-primary(밝은 텍스트)로 AA를 만족하는
+     선에서 색마다 명도도 다르게 맞췄다(hue별 지각 밝기가 달라 균일한 명도로는
+     안 맞음 — status·Hue 대비 보정 때와 같은 이유). status·Hue보다 훨씬
+     옅어서 "쨍함(Badge류) vs 은은함(Tag)"으로 한눈에 구분된다. */
+  --palette-light-tag-slate: #e0e9f5;
+  --palette-light-tag-cyan: #e0f0f5;
+  --palette-light-tag-sage: #e9f5e0;
+  --palette-light-tag-olive: #f5f3e0;
+  --palette-light-tag-terracotta: #f5e6e0;
+  --palette-light-tag-rose: #f5e0e4;
+  --palette-light-tag-mauve: #f5e0f5;
+  --palette-light-tag-violet: #e7e0f5;
+
+  /* Tag — dark */
+  --palette-dark-tag-slate: #506786;
+  --palette-dark-tag-cyan: #436470;
+  --palette-dark-tag-sage: #496039;
+  --palette-dark-tag-olive: #5c5937;
+  --palette-dark-tag-terracotta: #835b4e;
+  --palette-dark-tag-rose: #8f5660;
+  --palette-dark-tag-mauve: #895289;
+  --palette-dark-tag-violet: #69568f;
+
+  /* Identity badge — 개인화 배지(현재 워크스페이스) 배경, 테마 무관 고정값.
+     전부 흰 텍스트로 통일해 각 색이 흰 글자 대비(4.5:1)를 만족하는 톤까지 내렸다.
+     rose는 너무 튀어서 제외. */
+  --palette-identity-violet: #6d28d9; /* violet-700 */
+  --palette-identity-fuchsia: #86198f; /* fuchsia-800 */
+  --palette-identity-cyan: #0e7490; /* cyan-700 */
+  --palette-identity-lime: #4d7c0f; /* lime-700 */
+  --palette-identity-yellow: #a16207; /* yellow-700 */
+
+  /* Border — 선의 무게는 길이·대비·반복 횟수의 곱이라, 한 값으로는 구조 경계와
+     반복되는 목록 구분선을 같이 감당할 수 없다. strong(짧고 닫힌 윤곽·포커스) /
+     기본(화면을 가르는 영역 경계) / subtle(여러 번 반복되는 구분선) 3단. */
+  --palette-light-border-strong: #a8a29e; /* stone-400 */
+  --palette-dark-border-strong: #78716c; /* stone-500 */
   --palette-light-border: #d6d3d1; /* stone-300 */
   --palette-dark-border: #57534e; /* stone-600 */
+  --palette-light-border-subtle: #e7e5e4; /* stone-200 */
+  --palette-dark-border-subtle: #44403c; /* stone-700 */
 }
 
 /* ── Semantic Tokens ─────────────────────── */
@@ -113,12 +207,29 @@
   --surface-raised-hover: var(--palette-light-surface-raised-hover);
   --surface-card: var(--palette-light-surface-card);
   --surface-tooltip: var(--palette-light-surface-tooltip);
+  --surface-overlay: var(--palette-light-surface-overlay);
   --surface-context: var(--surface-base);
   --shadow: var(--palette-light-shadow);
 
   --fg-primary: var(--palette-light-fg-primary);
   --fg-secondary: var(--palette-light-fg-secondary);
   --fg-tertiary: var(--palette-light-fg-tertiary);
+  /* tertiary 아래로 두 단계 더 — 둘 다 fg-tertiary의 알파 파생값이다. color-mix로
+     fg-tertiary를 참조해서 계산하므로, 이 한 선언만으로 .dark/.theme-inverted에서
+     fg-tertiary가 바뀌면 자동으로 따라간다(커스텀 프로퍼티는 참조 시점의 값으로
+     재계산됨 — 테마별 블록에 중복 선언 불필요).
+
+     quaternary(placeholder): 활성 필드의 안내문이라 읽혀야 한다. 대비 계산 기준은
+     surface-card(라이트 순백) — surface-raised는 라이트에서 이보다 살짝 어둡고
+     (stone-100), 다크에서는 surface-card와 완전히 같은 값이라 이 수치가 그대로
+     적용된다. tertiary가 이미 4.80:1이라 AA(4.5:1)를 지키면서 더 연하게 만들
+     여지가 없어서, WCAG가 큰 텍스트·UI 요소에 쓰는 최소선 3:1을 바닥으로 잡고
+     80%까지만 내렸다(surface-card 기준 라이트 3.26:1 / 다크 4.39:1).
+
+     quinary(disabled): 비활성 UI 요소는 대비 요건에서 면제된다 — 흐릿한 것 자체가
+     신호라 placeholder보다 한 단계 더 물러난다. */
+  --fg-quaternary: color-mix(in srgb, var(--fg-tertiary) 80%, transparent);
+  --fg-quinary: color-mix(in srgb, var(--fg-tertiary) 60%, transparent);
 
   --status-success: var(--palette-light-status-success);
   --status-success-tint: var(--palette-light-status-success-tint);
@@ -129,7 +240,31 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
+  --indigo: var(--palette-light-indigo);
+  --indigo-tint: var(--palette-light-indigo-tint);
+  --pink: var(--palette-light-pink);
+  --pink-tint: var(--palette-light-pink-tint);
+  --lime: var(--palette-light-lime);
+  --lime-tint: var(--palette-light-lime-tint);
+  --yellow: var(--palette-light-yellow);
+  --yellow-tint: var(--palette-light-yellow-tint);
+  --purple: var(--palette-light-purple);
+  --purple-tint: var(--palette-light-purple-tint);
+  --tag-slate: var(--palette-light-tag-slate);
+  --tag-cyan: var(--palette-light-tag-cyan);
+  --tag-sage: var(--palette-light-tag-sage);
+  --tag-olive: var(--palette-light-tag-olive);
+  --tag-terracotta: var(--palette-light-tag-terracotta);
+  --tag-rose: var(--palette-light-tag-rose);
+  --tag-mauve: var(--palette-light-tag-mauve);
+  --tag-violet: var(--palette-light-tag-violet);
+
+  --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
+  --border-subtle: var(--palette-light-border-subtle);
+
+  --avatar-fallback: var(--brand);
+  --avatar-fallback-fg: var(--brand-fg);
 }
 
 .dark {
@@ -143,6 +278,7 @@
   --surface-raised-hover: var(--palette-dark-surface-raised-hover);
   --surface-card: var(--palette-dark-surface-card);
   --surface-tooltip: var(--palette-dark-surface-tooltip);
+  --surface-overlay: var(--palette-dark-surface-overlay);
   --shadow: var(--palette-dark-shadow);
 
   --fg-primary: var(--palette-dark-fg-primary);
@@ -158,7 +294,31 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
+  --indigo: var(--palette-dark-indigo);
+  --indigo-tint: var(--palette-dark-indigo-tint);
+  --pink: var(--palette-dark-pink);
+  --pink-tint: var(--palette-dark-pink-tint);
+  --lime: var(--palette-dark-lime);
+  --lime-tint: var(--palette-dark-lime-tint);
+  --yellow: var(--palette-dark-yellow);
+  --yellow-tint: var(--palette-dark-yellow-tint);
+  --purple: var(--palette-dark-purple);
+  --purple-tint: var(--palette-dark-purple-tint);
+  --tag-slate: var(--palette-dark-tag-slate);
+  --tag-cyan: var(--palette-dark-tag-cyan);
+  --tag-sage: var(--palette-dark-tag-sage);
+  --tag-olive: var(--palette-dark-tag-olive);
+  --tag-terracotta: var(--palette-dark-tag-terracotta);
+  --tag-rose: var(--palette-dark-tag-rose);
+  --tag-mauve: var(--palette-dark-tag-mauve);
+  --tag-violet: var(--palette-dark-tag-violet);
+
+  --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
+  --border-subtle: var(--palette-dark-border-subtle);
+
+  --avatar-fallback: var(--fg-primary);
+  --avatar-fallback-fg: var(--surface-base);
 }
 
 /* ── Theme Inversion ─────────────────────── */
@@ -175,6 +335,7 @@
   --surface-raised-hover: var(--palette-dark-surface-raised-hover);
   --surface-card: var(--palette-dark-surface-card);
   --surface-tooltip: var(--palette-dark-surface-tooltip);
+  --surface-overlay: var(--palette-dark-surface-overlay);
   --shadow: var(--palette-dark-shadow);
 
   --fg-primary: var(--palette-dark-fg-primary);
@@ -190,7 +351,31 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
+  --indigo: var(--palette-dark-indigo);
+  --indigo-tint: var(--palette-dark-indigo-tint);
+  --pink: var(--palette-dark-pink);
+  --pink-tint: var(--palette-dark-pink-tint);
+  --lime: var(--palette-dark-lime);
+  --lime-tint: var(--palette-dark-lime-tint);
+  --yellow: var(--palette-dark-yellow);
+  --yellow-tint: var(--palette-dark-yellow-tint);
+  --purple: var(--palette-dark-purple);
+  --purple-tint: var(--palette-dark-purple-tint);
+  --tag-slate: var(--palette-dark-tag-slate);
+  --tag-cyan: var(--palette-dark-tag-cyan);
+  --tag-sage: var(--palette-dark-tag-sage);
+  --tag-olive: var(--palette-dark-tag-olive);
+  --tag-terracotta: var(--palette-dark-tag-terracotta);
+  --tag-rose: var(--palette-dark-tag-rose);
+  --tag-mauve: var(--palette-dark-tag-mauve);
+  --tag-violet: var(--palette-dark-tag-violet);
+
+  --border-strong: var(--palette-dark-border-strong);
   --border: var(--palette-dark-border);
+  --border-subtle: var(--palette-dark-border-subtle);
+
+  --avatar-fallback: var(--fg-primary);
+  --avatar-fallback-fg: var(--surface-base);
 }
 
 .dark .theme-inverted {
@@ -204,6 +389,7 @@
   --surface-raised-hover: var(--palette-light-surface-raised-hover);
   --surface-card: var(--palette-light-surface-card);
   --surface-tooltip: var(--palette-light-surface-tooltip);
+  --surface-overlay: var(--palette-light-surface-overlay);
   --shadow: var(--palette-light-shadow);
 
   --fg-primary: var(--palette-light-fg-primary);
@@ -219,7 +405,31 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
+  --indigo: var(--palette-light-indigo);
+  --indigo-tint: var(--palette-light-indigo-tint);
+  --pink: var(--palette-light-pink);
+  --pink-tint: var(--palette-light-pink-tint);
+  --lime: var(--palette-light-lime);
+  --lime-tint: var(--palette-light-lime-tint);
+  --yellow: var(--palette-light-yellow);
+  --yellow-tint: var(--palette-light-yellow-tint);
+  --purple: var(--palette-light-purple);
+  --purple-tint: var(--palette-light-purple-tint);
+  --tag-slate: var(--palette-light-tag-slate);
+  --tag-cyan: var(--palette-light-tag-cyan);
+  --tag-sage: var(--palette-light-tag-sage);
+  --tag-olive: var(--palette-light-tag-olive);
+  --tag-terracotta: var(--palette-light-tag-terracotta);
+  --tag-rose: var(--palette-light-tag-rose);
+  --tag-mauve: var(--palette-light-tag-mauve);
+  --tag-violet: var(--palette-light-tag-violet);
+
+  --border-strong: var(--palette-light-border-strong);
   --border: var(--palette-light-border);
+  --border-subtle: var(--palette-light-border-subtle);
+
+  --avatar-fallback: var(--brand);
+  --avatar-fallback-fg: var(--brand-fg);
 }
 
 /* ── Tailwind Theme (semantic tokens only) ── */
@@ -239,12 +449,15 @@
   --color-surface-raised-hover: var(--surface-raised-hover);
   --color-surface-card: var(--surface-card);
   --color-surface-tooltip: var(--surface-tooltip);
+  --color-surface-overlay: var(--surface-overlay);
   --color-surface-context: var(--surface-context);
 
   /* Foreground */
   --color-fg-primary: var(--fg-primary);
   --color-fg-secondary: var(--fg-secondary);
   --color-fg-tertiary: var(--fg-tertiary);
+  --color-fg-quaternary: var(--fg-quaternary);
+  --color-fg-quinary: var(--fg-quinary);
 
   /* Status */
   --color-status-success: var(--status-success);
@@ -256,8 +469,38 @@
   --color-status-info: var(--status-info);
   --color-status-info-tint: var(--status-info-tint);
 
+  /* Hue */
+  --color-indigo: var(--indigo);
+  --color-indigo-tint: var(--indigo-tint);
+  --color-pink: var(--pink);
+  --color-pink-tint: var(--pink-tint);
+  --color-lime: var(--lime);
+  --color-lime-tint: var(--lime-tint);
+  --color-yellow: var(--yellow);
+  --color-yellow-tint: var(--yellow-tint);
+  --color-purple: var(--purple);
+  --color-purple-tint: var(--purple-tint);
+
+  /* Tag */
+  --color-tag-slate: var(--tag-slate);
+  --color-tag-cyan: var(--tag-cyan);
+  --color-tag-sage: var(--tag-sage);
+  --color-tag-olive: var(--tag-olive);
+  --color-tag-terracotta: var(--tag-terracotta);
+  --color-tag-rose: var(--tag-rose);
+  --color-tag-mauve: var(--tag-mauve);
+  --color-tag-violet: var(--tag-violet);
+
   /* Border */
+  --color-border-strong: var(--border-strong);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+
+  /* Avatar — 이미지 없는 아바타의 이니셜 배경. 라이트/다크 분기를 dark: 변형이
+     아니라 토큰으로 두는 이유: 소비처가 className으로 다른 배경(워크스페이스
+     identity 색 등)을 줄 때, dark:bg-*는 특이도가 높아 소비처를 이겨버린다. */
+  --color-avatar-fallback: var(--avatar-fallback);
+  --color-avatar-fallback-fg: var(--avatar-fallback-fg);
 
   /* Shadow */
   --color-shadow: var(--shadow);
@@ -280,16 +523,106 @@
   }
 }
 
+/* 실제 진행률을 알 수 없는 작업을 "그럴듯하게" 보여주는 감속 진행 바 — 초반엔 빠르게
+   차오르다 끝에 가까워질수록 느려지며 한 값에 멈춘다(끝나지 않고 계속 도는 부정형
+   스피너보다, 진행되고 있다는 인상을 준다는 게 이 트릭의 요점). 완료 시 100%를
+   채우지 않고 그 자리에서 바로 사라지는 쪽으로 소비처가 결정했다. */
+@keyframes progress-climb {
+  0% {
+    width: 0%;
+  }
+  15% {
+    width: 30%;
+  }
+  40% {
+    width: 55%;
+  }
+  70% {
+    width: 72%;
+  }
+  100% {
+    width: 85%;
+  }
+}
+
+/* 없던 요소가 위에서 아래로 펼쳐지듯 나타나는 한 번짜리 트랜지션. grid-template-rows를
+   0fr→1fr로 움직여 높이를 "auto"처럼 부드럽게 키운다(고정 높이를 몰라도 됨) — 이 값을
+   먹으려면 소비처가 바깥에 display:grid, 안쪽 콘텐츠에 overflow:hidden 래퍼를 둬야 한다. */
+@keyframes expand-down {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+/* expand-down의 역순 — 있던 요소가 아래에서 위로 접히듯 사라진다. */
+@keyframes collapse-up {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+/* to를 일부러 안 둔다 — 100%가 없으면 소비처의 실제 opacity 유틸리티 값(예:
+   0.06)까지 자동 보간되어, 1을 거쳤다가 툭 떨어지는 튐 없이 그 값에서 끝난다. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @layer base {
   * {
-    @apply border-border outline-brand/50;
+    @apply border-border;
+  }
+  /* Tailwind의 transition/transition-colors 기본값이 outline-color를 포함해서,
+     컴포넌트가 어떤 transition-* 클래스를 쓰든 포커스 링 색이 서서히 번지듯
+     보인다. transition: none !important로 전부 죽이면 같은 순간의 다른
+     의도된 트랜지션(예: Button의 active:scale)까지 같이 끊기므로, outline-color만
+     0초로 override하고 나머지는 all로 그대로 살린다 — 같은 프로퍼티가 리스트에
+     두 번 걸리면 나중 항목의 duration이 이긴다(표준 동작). !important는 여전히
+     필요(유틸리티 레이어가 base 레이어보다 우선하므로 이렇게 안 하면 컴포넌트
+     쪽이 이긴다). */
+  /* offset을 음수(inset)로 줘서 링이 박스 바깥이 아니라 안쪽으로 파고들게 한다 —
+     양수 offset은 촘촘한 리스트(LNB 등)에서 바로 옆 형제 요소가 그 삐져나온
+     부분을 덮어버리는 문제가 반복됐다(z-index로 개별 대응해왔음). 링이 애초에
+     박스를 못 벗어나면 옆 요소가 덮을 자리 자체가 없어진다. */
+  *:focus-visible {
+    @apply outline outline-2 outline-brand;
+    outline-offset: -2px;
+    transition:
+      all var(--duration-fast),
+      outline-color 0s !important;
   }
   body {
-    @apply bg-surface-base text-fg-primary;
+    @apply bg-surface-card text-fg-primary;
     font-family: "Satoshi", "Wanted Sans Variable", "Wanted Sans", sans-serif;
+  }
+  /* scrollbar-width/color는 상속 속성이라 html 한 곳에만 선언하면 앱 전역
+     스크롤 영역에 다 적용된다 — 화면마다 개별 유틸리티 클래스를 반복할 필요가
+     없다. */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
   }
   button,
   [role="button"] {
     @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  /* danger 톤 규칙: 배너(Alert error)와 항상 같은 조합을 쓴다 — 위험 액션이
+     화면마다 다른 빨강으로 보이면 위험도를 신뢰하기 어렵다. */
+  .surface-danger {
+    @apply bg-status-error-tint text-status-error hover:bg-status-error/15 data-[state=open]:bg-status-error/15;
   }
 }

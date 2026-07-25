@@ -64,8 +64,10 @@ export default defineConfig({
     }),
     tailwindcss(),
     VitePWA({
-      // TODO: 캐시 전략 도입 시 'prompt'로 전환 검토
-      registerType: "autoUpdate",
+      // autoUpdate는 새 SW를 조용히 activate만 하고 열린 탭은 새로고침 전까지
+      // 옛 번들 그대로다 — prompt로 바꿔 ServiceWorkerUpdatePrompt가 사용자에게
+      // 직접 새로고침을 유도하게 한다.
+      registerType: "prompt",
       workbox: {
         maximumFileSizeToCacheInBytes: MAX_CACHE_FILE_SIZE_BYTES,
       },

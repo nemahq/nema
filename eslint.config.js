@@ -12,8 +12,10 @@ import js from "@eslint/js";
 import noDirectTrpcHooks from "./eslint-rules/no-direct-trpc-hooks.js";
 import noForbiddenBreakpoints from "./eslint-rules/no-forbidden-breakpoints.js";
 import noGenericVariableNames from "./eslint-rules/no-generic-variable-names.js";
+import noRawColorValue from "./eslint-rules/no-raw-color-value.js";
 import requireNamedPropsInterface from "./eslint-rules/require-named-props-interface.js";
 import requireObjectParams from "./eslint-rules/require-object-params.js";
+import requireStateFgToken from "./eslint-rules/require-state-fg-token.js";
 import requireSuspenseBoundary from "./eslint-rules/require-suspense-boundary.js";
 
 const nemaPlugin = {
@@ -21,8 +23,10 @@ const nemaPlugin = {
     "no-direct-trpc-hooks": noDirectTrpcHooks,
     "no-forbidden-breakpoints": noForbiddenBreakpoints,
     "no-generic-variable-names": noGenericVariableNames,
+    "no-raw-color-value": noRawColorValue,
     "require-named-props-interface": requireNamedPropsInterface,
     "require-object-params": requireObjectParams,
+    "require-state-fg-token": requireStateFgToken,
     "require-suspense-boundary": requireSuspenseBoundary,
   },
 };
@@ -53,6 +57,18 @@ export default tseslint.config(
         },
       ],
       "nema/no-generic-variable-names": "error",
+    },
+  },
+  {
+    // Tailwind className 문자열을 겨냥한 룰 — 서버·설정 파일 등 JSX/스타일링과
+    // 무관한 영역까지 스캔하면 우연히 매칭되는 문자열에 오탐할 수 있어 범위를
+    // 좁힌다. .ts도 포함하는 이유: className 상수(SPACE_PILL_CLASSNAME 등)가
+    // .tsx가 아닌 .ts 파일에도 있다.
+    files: ["apps/web/**/*.{ts,tsx}", "packages/weave/**/*.{ts,tsx}"],
+    plugins: { nema: nemaPlugin },
+    rules: {
+      "nema/require-state-fg-token": "error",
+      "nema/no-raw-color-value": "error",
     },
   },
   {

@@ -5,20 +5,24 @@ import * as React from "react";
 import { cn } from "../utils";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md text-[13px] font-semibold whitespace-nowrap transition-all duration-fast outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface-context disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-status-error/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md text-[13px] font-semibold whitespace-nowrap transition-all duration-fast disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-status-error/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
+      // data-[state=open]은 hover와 같은 톤을 쓴다 — DropdownMenu/Popover
+      // 트리거로 asChild 얹혔을 때, 떠 있는 동안은 "눌려 있는" 것처럼 보여야
+      // 하기 때문(Radix가 트리거 엘리먼트에 data-state를 직접 찍어준다).
       variant: {
         primary:
-          "bg-brand text-brand-fg hover:bg-brand-hover active:scale-[0.98] dark:bg-fg-primary dark:text-surface-base dark:hover:bg-fg-primary/90",
+          "bg-brand text-brand-fg hover:bg-brand-hover data-[state=open]:bg-brand-hover active:scale-[0.98] dark:bg-fg-primary dark:text-surface-base dark:hover:bg-fg-primary/90 dark:data-[state=open]:bg-fg-primary/90",
         secondary:
-          "border border-brand-accent text-brand-accent hover:bg-brand-tint hover:border-brand-hover active:scale-[0.98] dark:border-fg-tertiary dark:text-fg-primary dark:hover:bg-surface-raised-hover dark:hover:border-fg-secondary",
+          "border border-brand-accent text-brand-accent hover:bg-brand-tint hover:border-brand-hover data-[state=open]:bg-brand-tint data-[state=open]:border-brand-hover active:scale-[0.98] dark:border-fg-tertiary dark:text-fg-primary dark:hover:bg-surface-raised-hover dark:hover:border-fg-secondary dark:data-[state=open]:bg-surface-raised-hover dark:data-[state=open]:border-fg-secondary",
         neutral:
-          "border border-border bg-surface-raised text-fg-primary hover:bg-surface-raised-hover active:scale-[0.98]",
-        ghost: "hover:bg-surface-raised-hover active:scale-[0.98]",
+          "border border-border bg-surface-card text-fg-primary hover:bg-surface-raised/75 data-[state=open]:bg-surface-raised/75 active:scale-[0.98] dark:bg-surface-raised dark:hover:bg-surface-raised-hover dark:data-[state=open]:bg-surface-raised-hover",
+        ghost:
+          "hover:bg-surface-raised-hover/75 data-[state=open]:bg-surface-raised-hover/75 active:scale-[0.98] dark:hover:bg-surface-raised-hover dark:data-[state=open]:bg-surface-raised-hover",
         danger:
-          "bg-status-error text-white hover:bg-status-error/90 focus-visible:ring-status-error active:scale-[0.98] dark:bg-status-error/15 dark:text-status-error dark:hover:bg-status-error/25",
-        link: "text-brand-accent underline underline-offset-2 hover:text-brand-hover dark:text-fg-secondary dark:hover:text-fg-primary",
+          "surface-danger focus-visible:outline-status-error active:scale-[0.98]",
+        link: "text-brand-accent underline underline-offset-2 hover:text-brand-hover data-[state=open]:text-brand-hover dark:text-fg-secondary dark:hover:text-fg-primary dark:data-[state=open]:text-fg-primary",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -30,10 +34,18 @@ const buttonVariants = cva(
         "icon-sm": "size-8",
         "icon-lg": "size-10",
       },
+      // size(치수)와 직교하는 축 — Badge의 shape(rounded/pill), Avatar의
+      // shape(circle/square)와 같은 이유로 분리한다. circle은 rounded-full만
+      // 담당하고 치수는 그대로 size가 정한다.
+      shape: {
+        default: "",
+        circle: "rounded-full",
+      },
     },
     defaultVariants: {
       variant: "primary",
       size: "default",
+      shape: "default",
     },
   },
 );
@@ -42,6 +54,7 @@ function Button({
   className,
   variant = "primary",
   size = "default",
+  shape = "default",
   asChild = false,
   ...props
 }: React.ComponentProps<"button"> &
@@ -55,7 +68,7 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, shape, className }))}
       {...props}
     />
   );

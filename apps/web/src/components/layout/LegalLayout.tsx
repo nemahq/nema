@@ -4,6 +4,14 @@ import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 
 import type { Locale } from "@nema-io/shared";
+import { isLocale } from "@nema-io/shared";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@nema-io/weave";
 
 import NemaLogo from "@web/assets/nema-logo.svg";
 
@@ -33,17 +41,25 @@ export function LegalLayout({
             className="h-5 brightness-0 dark:invert"
           />
         </Link>
-        <select
+        <Select
           value={locale}
-          onChange={(e) => onLocaleChange(e.target.value as Locale)}
-          className="rounded border border-neutral-300 bg-transparent px-2 py-1 text-sm dark:border-neutral-700"
+          onValueChange={(value) => {
+            if (isLocale(value)) {
+              onLocaleChange(value);
+            }
+          }}
         >
-          {Object.entries(LOCALE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-28 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            {Object.entries(LOCALE_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <article className="prose-legal max-w-none">{children}</article>
     </div>

@@ -5,6 +5,8 @@ vi.mock("@sentry/node", () => ({
   captureMessage: vi.fn(),
 }));
 
+import * as Sentry from "@sentry/node";
+
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
@@ -12,9 +14,10 @@ import type { TypedSupabaseClient } from "@server/infra/supabase";
 import type { VectorStore } from "@server/infra/vector";
 import type { RelationProposal } from "@server/prompts/relation-judgment";
 
-import type { PendingSource, PendingStatement } from "./types";
+import type { PendingSource, PendingStatement, SourceDigest } from "./types";
 import {
   canFormRelations,
+  checkPurgeBacklog,
   chunkStatements,
   createStatementSyncWorker,
   deadlineContext,
@@ -23,8 +26,8 @@ import {
   orderBySourceAppearance,
   POLL_INTERVAL_MS,
   reconcileChanges,
+  runVectorPurgePass,
   selectCandidateIds,
-  selectDuplicatePairs,
 } from "./worker";
 
 const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
@@ -36,10 +39,20 @@ const PENDING_SOURCE: PendingSource = {
   id: SOURCE_ID,
   space_id: SPACE_ID,
   author_id: null,
-  session_id: null,
   body: "테스트 원문",
   created_at: "2026-06-11T00:00:00.000Z",
   author_timezone: "Asia/Seoul",
+};
+
+const DIGEST_ID_1 = "f0000000-0000-4000-a000-000000000001";
+const DIGEST_ID_2 = "f0000000-0000-4000-a000-000000000002";
+
+// 추출 입력 = 원문의 확정 Digest. 대부분의 추출 테스트는 digest 1개로 충분하다.
+const DIGEST: SourceDigest = {
+  id: DIGEST_ID_1,
+  title: "배포 도구 선정",
+  description: "배포 도구를 A로 정함",
+  body: { type: "decision", choice: "배포 도구는 A로 정함" },
 };
 
 function pendingStatement(
@@ -60,7 +73,7 @@ function pendingStatement(
 // 테이블 직접 조회(.from) 체인 stub — select/eq/in/order 무시하고 canned rows로 resolve
 function fromStub(rows: unknown[]) {
   const stub: Record<string, unknown> = {};
-  for (const method of ["select", "eq", "in", "order"]) {
+  for (const method of ["select", "eq", "in", "lt", "order"]) {
     stub[method] = () => stub;
   }
   stub["then"] = (resolve: (value: { data: unknown; error: null }) => void) =>
@@ -149,11 +162,14 @@ describe("createStatementSyncWorker", () => {
     vi.useRealTimers();
   });
 
-  it("추출 성공 — index 파생·claim 무확신 guess 보정 후 apply_ingestion_changeset 호출", async () => {
-    const { client, rpc } = mockSupabase({
-      read_sync_events: [[NOTIFY_ROW]],
-      fetch_pending_sources: [[PENDING_SOURCE]],
-    });
+  it("추출 성공 — digest에서 뽑은 진술에 digest_id·원문 관통 index를 실어 apply_extraction_statements 호출", async () => {
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+      },
+      { digests: [DIGEST] },
+    );
     const llm = mockLlm([
       { content: "확정 결정.", type: "claim", confidence: "certain" },
       { content: "확신도 빠진 추정.", type: "claim", confidence: null },
@@ -167,31 +183,35 @@ describe("createStatementSyncWorker", () => {
       vectorStore: mockVectorStore(),
     });
 
-    const applies = rpcCalls(rpc, "apply_ingestion_changeset");
+    const applies = rpcCalls(rpc, "apply_extraction_statements");
     expect(applies).toHaveLength(1);
     expect(applies[0][1]).toEqual({
       p_source_id: SOURCE_ID,
+      p_digest_ids: [DIGEST_ID_1],
       p_statements: [
         {
           content: "확정 결정.",
           type: "claim",
           confidence: "certain",
-          index: 0,
           due_date: null,
+          digest_id: DIGEST_ID_1,
+          index: 0,
         },
         {
           content: "확신도 빠진 추정.",
           type: "claim",
           confidence: "guess",
-          index: 1,
           due_date: null,
+          digest_id: DIGEST_ID_1,
+          index: 1,
         },
         {
           content: "할 일.",
           type: "todo",
           confidence: null,
-          index: 2,
           due_date: null,
+          digest_id: DIGEST_ID_1,
+          index: 2,
         },
       ],
     });
@@ -201,10 +221,13 @@ describe("createStatementSyncWorker", () => {
 
   it("내용 속 기한을 작성 시점·존 기준 due_date로 풀어 apply에 싣는다", async () => {
     // PENDING_SOURCE = 서울, created_at 2026-06-11(목). 이번 주 금요일 = 06-12.
-    const { client, rpc } = mockSupabase({
-      read_sync_events: [[NOTIFY_ROW]],
-      fetch_pending_sources: [[PENDING_SOURCE]],
-    });
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+      },
+      { digests: [DIGEST] },
+    );
     const llm = mockLlm([
       {
         content: "금요일까지 보고서 끝내기",
@@ -229,15 +252,18 @@ describe("createStatementSyncWorker", () => {
       vectorStore: mockVectorStore(),
     });
 
-    const applies = rpcCalls(rpc, "apply_ingestion_changeset");
+    const applies = rpcCalls(rpc, "apply_extraction_statements");
     expect(applies[0][1].p_statements[0].due_date).toBe("2026-06-12");
   });
 
-  it("진술 0개(노이즈뿐) — changeset 없이 complete_source_extraction만 호출", async () => {
-    const { client, rpc } = mockSupabase({
-      read_sync_events: [[NOTIFY_ROW]],
-      fetch_pending_sources: [[PENDING_SOURCE]],
-    });
+  it("진술 0개(판단 안 나온 Digest) — 빈 apply로 digest·source만 완료 표시", async () => {
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+      },
+      { digests: [DIGEST] },
+    );
 
     await runOnePoll({
       supabase: client,
@@ -246,17 +272,24 @@ describe("createStatementSyncWorker", () => {
       vectorStore: mockVectorStore(),
     });
 
-    expect(rpcCalls(rpc, "apply_ingestion_changeset")).toHaveLength(0);
-    const completes = rpcCalls(rpc, "complete_source_extraction");
-    expect(completes).toHaveLength(1);
-    expect(completes[0][1]).toEqual({ p_source_id: SOURCE_ID });
+    // 진술은 없어도 처리한 digest를 완료 표시해야 재추출 루프에 안 갇힌다
+    const applies = rpcCalls(rpc, "apply_extraction_statements");
+    expect(applies).toHaveLength(1);
+    expect(applies[0][1]).toEqual({
+      p_source_id: SOURCE_ID,
+      p_digest_ids: [DIGEST_ID_1],
+      p_statements: [],
+    });
   });
 
   it("추출 LLM 실패 — increment_source_extraction_retry에 에러 메시지 기록", async () => {
-    const { client, rpc } = mockSupabase({
-      read_sync_events: [[NOTIFY_ROW]],
-      fetch_pending_sources: [[PENDING_SOURCE]],
-    });
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+      },
+      { digests: [DIGEST] },
+    );
     const llm: LlmProvider = {
       generateStructured: vi.fn().mockRejectedValue(new Error("llm boom")),
       async *generateStream() {
@@ -278,7 +311,7 @@ describe("createStatementSyncWorker", () => {
       p_source_id: SOURCE_ID,
       p_error_message: "llm boom",
     });
-    expect(rpcCalls(rpc, "apply_ingestion_changeset")).toHaveLength(0);
+    expect(rpcCalls(rpc, "apply_extraction_statements")).toHaveLength(0);
   });
 
   it("임베딩 선언적 동기화 — active는 upsert, archived는 delete 후 각각 complete", async () => {
@@ -365,11 +398,14 @@ describe("createStatementSyncWorker", () => {
 
   it("한 사이클에서 추출이 만든 진술을 이어서 임베딩한다 (추출 먼저, 임베딩 다음)", async () => {
     // 1차 임베딩 인출은 비고, 추출 후 2차 사이클 인출에서 진술이 나오는 시나리오
-    const { client, rpc } = mockSupabase({
-      read_sync_events: [[NOTIFY_ROW]],
-      fetch_pending_sources: [[PENDING_SOURCE]],
-      fetch_pending_statements: [[], [pendingStatement({})]],
-    });
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+        fetch_pending_statements: [[], [pendingStatement({})]],
+      },
+      { digests: [DIGEST] },
+    );
     const vectorStore = mockVectorStore();
 
     await runOnePoll({
@@ -381,13 +417,13 @@ describe("createStatementSyncWorker", () => {
       vectorStore,
     });
 
-    expect(rpcCalls(rpc, "apply_ingestion_changeset")).toHaveLength(1);
+    expect(rpcCalls(rpc, "apply_extraction_statements")).toHaveLength(1);
     expect(vectorStore.upsertStatements).toHaveBeenCalledTimes(1);
 
     // 순서: apply가 upsert보다 먼저
     const applyOrder =
       rpc.mock.invocationCallOrder[
-        rpc.mock.calls.findIndex(([n]) => n === "apply_ingestion_changeset")
+        rpc.mock.calls.findIndex(([n]) => n === "apply_extraction_statements")
       ];
     const upsertOrder = (
       vectorStore.upsertStatements as ReturnType<typeof vi.fn>
@@ -395,37 +431,34 @@ describe("createStatementSyncWorker", () => {
     expect(applyOrder).toBeLessThan(upsertOrder);
   });
 
-  // --- 분할 경로 (long-input-chunking 설계 5장) ---
+  // --- 여러 Digest 순회 (Digest 1개당 LLM 1콜) ---
 
-  // 임계선(1,500토큰) 초과 합성 장문 — 문단마다 고유 번호로 순서 검증 가능
-  function longBody(): string {
-    const paragraphs: string[] = [];
-    for (let p = 0; p < 60; p++) {
-      paragraphs.push(
-        `${p}번째 안건으로 배포 파이프라인의 캐시 무효화 정책을 검토했고 결론은 위키에 정리하기로 했다. ` +
-          `근거는 지난 분기 장애 회고에서 나온 캐시 불일치 사례 세 건이다.`,
-      );
-    }
-    return paragraphs.join("\n\n");
-  }
+  const LEARNING_DIGEST: SourceDigest = {
+    id: DIGEST_ID_2,
+    title: "캐시 불일치 회고",
+    description: "캐시 무효화 정책 학습",
+    body: { type: "learning", finding: "캐시 불일치가 세 건 있었다" },
+  };
 
-  it("장문 분할 — 청크 병렬 추출 결과가 원문 순서로 연결돼 apply 1회에 담긴다", async () => {
-    const { client, rpc } = mockSupabase({
-      read_sync_events: [[NOTIFY_ROW]],
-      fetch_pending_sources: [[{ ...PENDING_SOURCE, body: longBody() }]],
-    });
+  it("여러 Digest — 각 digest 진술이 digest_id와 원문 관통 index로 한 apply에 모인다", async () => {
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+      },
+      { digests: [DIGEST, LEARNING_DIGEST] },
+    );
 
-    // 청크마다 그 청크 본문의 첫 안건 번호를 진술로 돌려준다 — 연결 순서가
-    // 호출 완료 순서가 아니라 청크(원문) 순서임을 내용으로 검증
+    // digest body 유형으로 어느 digest 콜인지 구분해 진술을 돌려준다 —
+    // digest_id 태깅·원문 관통 index가 digest 경계를 넘어 이어지는지 검증
     const generateStructured = vi.fn(
       async (params: { messages: Array<{ content: string }> }) => {
         const content = params.messages[0]?.content ?? "";
-        const note = /<note>([\s\S]*?)<\/note>/.exec(content)?.[1] ?? "";
-        const marker = /(\d+)번째 안건/.exec(note)?.[1] ?? "?";
+        const isLearning = content.includes("type: learning");
         return {
           statements: [
             {
-              content: `${marker}번째 청크 진술`,
+              content: isLearning ? "학습 진술" : "결정 진술",
               type: "claim",
               confidence: "certain",
             },
@@ -448,36 +481,39 @@ describe("createStatementSyncWorker", () => {
       vectorStore: mockVectorStore(),
     });
 
-    // 여러 콜로 갈렸고
-    expect(generateStructured.mock.calls.length).toBeGreaterThan(1);
-    // 청크 콜에는 읽기 전용 문맥이 동봉된다 (첫 청크 제외)
-    const messages = generateStructured.mock.calls.map(
-      (call) => call[0]?.messages[0]?.content ?? "",
-    );
-    expect(messages.some((m) => m.includes("<context_before>"))).toBe(true);
-    expect(messages.some((m) => m.includes("<context_after>"))).toBe(true);
+    // Digest당 1콜
+    expect(generateStructured).toHaveBeenCalledTimes(2);
 
-    // apply는 1회, 진술은 원문(청크) 순서 + 전역 index
-    const applies = rpcCalls(rpc, "apply_ingestion_changeset");
+    const applies = rpcCalls(rpc, "apply_extraction_statements");
     expect(applies).toHaveLength(1);
-    const statements = (
-      applies[0]?.[1] as {
-        p_statements: Array<{ content: string; index: number }>;
-      }
-    ).p_statements;
-    expect(statements.length).toBe(generateStructured.mock.calls.length);
-    const markers = statements.map((s) =>
-      Number(/(\d+)번째/.exec(s.content)?.[1]),
-    );
-    expect(markers).toEqual([...markers].sort((a, b) => a - b));
-    expect(statements.map((s) => s.index)).toEqual(statements.map((_, i) => i));
+    expect(applies[0][1].p_statements).toEqual([
+      {
+        content: "결정 진술",
+        type: "claim",
+        confidence: "certain",
+        due_date: null,
+        digest_id: DIGEST_ID_1,
+        index: 0,
+      },
+      {
+        content: "학습 진술",
+        type: "claim",
+        confidence: "certain",
+        due_date: null,
+        digest_id: DIGEST_ID_2,
+        index: 1,
+      },
+    ]);
   });
 
-  it("장문 분할 — 청크 하나가 실패하면 부분 저장 없이 source 전체가 재시도 경로를 탄다", async () => {
-    const { client, rpc } = mockSupabase({
-      read_sync_events: [[NOTIFY_ROW]],
-      fetch_pending_sources: [[{ ...PENDING_SOURCE, body: longBody() }]],
-    });
+  it("digest 콜 하나가 실패하면 부분 저장 없이 source 전체가 재시도 경로를 탄다", async () => {
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+      },
+      { digests: [DIGEST, LEARNING_DIGEST] },
+    );
 
     let callCount = 0;
     const generateStructured = vi.fn(async () => {
@@ -505,13 +541,109 @@ describe("createStatementSyncWorker", () => {
       vectorStore: mockVectorStore(),
     });
 
-    expect(rpcCalls(rpc, "apply_ingestion_changeset")).toHaveLength(0);
+    expect(rpcCalls(rpc, "apply_extraction_statements")).toHaveLength(0);
     const retries = rpcCalls(rpc, "increment_source_extraction_retry");
     expect(retries).toHaveLength(1);
     expect(retries[0]?.[1]).toMatchObject({
       p_source_id: SOURCE_ID,
       p_error_message: expect.stringContaining("schema mismatch"),
+      // 결정적 실패라 나머지 재시도 예산을 안 태우고 1회 만에 failed로 종결한다.
+      p_max_retries: 1,
     });
+  });
+
+  it("중간 Digest가 진술 0개여도 원문 관통 index는 연속이다", async () => {
+    const IDEA_DIGEST: SourceDigest = {
+      id: "f0000000-0000-4000-a000-000000000003",
+      title: "아이디어",
+      description: "d",
+      body: { type: "idea", concept: "c" },
+    };
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+      },
+      { digests: [DIGEST, LEARNING_DIGEST, IDEA_DIGEST] },
+    );
+
+    // 첫째(decision)·셋째(idea)는 1개, 둘째(learning)는 0개
+    const generateStructured = vi.fn(
+      async (params: { messages: Array<{ content: string }> }) => {
+        const content = params.messages[0]?.content ?? "";
+        if (content.includes("type: learning")) {
+          return { statements: [] };
+        }
+        const isIdea = content.includes("type: idea");
+        return {
+          statements: [
+            {
+              content: isIdea ? "아이디어 진술" : "결정 진술",
+              type: "claim",
+              confidence: "certain",
+            },
+          ],
+        };
+      },
+    );
+    const llm = {
+      generateStructured,
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    } as unknown as LlmProvider;
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const statements = rpcCalls(rpc, "apply_extraction_statements")[0][1]
+      .p_statements as Array<{ digest_id: string; index: number }>;
+    // 둘째 digest가 비어도 index는 digest 위치가 아니라 누적 진술 수 기준으로 연속
+    expect(statements.map((s) => s.index)).toEqual([0, 1]);
+    expect(statements.map((s) => s.digest_id)).toEqual([
+      DIGEST_ID_1,
+      IDEA_DIGEST.id,
+    ]);
+  });
+
+  it("active Digest 0개 — LLM 콜 없이 완료 + 이상 신호 브레드크럼", async () => {
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+      },
+      { digests: [] },
+    );
+    const llm = mockLlm([
+      { content: "안 불림", type: "claim", confidence: "certain" },
+    ]);
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    expect(llm.generateStructured).not.toHaveBeenCalled();
+    // digest가 0개여도 빈 apply로 source 클레임을 완료 표시해 재시도에 안 갇히게 한다
+    const applies = rpcCalls(rpc, "apply_extraction_statements");
+    expect(applies).toHaveLength(1);
+    expect(applies[0][1]).toEqual({
+      p_source_id: SOURCE_ID,
+      p_digest_ids: [],
+      p_statements: [],
+    });
+    // pending 추출인데 pending digest가 0개인 건 상류 이상 — 무신호로 넘기지 않는다
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "source pending extraction has no pending digests",
+      expect.objectContaining({ level: "warning" }),
+    );
   });
 });
 
@@ -528,10 +660,13 @@ describe("createStatementSyncWorker — forTask task names", () => {
   });
 
   it('추출 경로는 forTask를 정확히 "extractStatements"로 부른다', async () => {
-    const { client } = mockSupabase({
-      read_sync_events: [[NOTIFY_ROW]],
-      fetch_pending_sources: [[PENDING_SOURCE]],
-    });
+    const { client } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_sources: [[PENDING_SOURCE]],
+      },
+      { digests: [DIGEST] },
+    );
     const llm = mockLlm([
       { content: "한 문장.", type: "claim", confidence: "certain" },
     ]);
@@ -664,6 +799,41 @@ describe("gateProposals", () => {
     ]);
     expect(pending).toHaveLength(1);
   });
+
+  it("같음은 확신해도 pending — from=keeper/to=duplicate 방향 유지", () => {
+    const { applied, pending } = gate([
+      { from: "E0", to: "N0", type: "duplicates", confident: true },
+    ]);
+    expect(applied).toHaveLength(0);
+    expect(pending).toEqual([
+      { from_id: OLD_0, to_id: NEW_0, type: "duplicates" },
+    ]);
+  });
+
+  it("같음은 가릴 쪽(to)이 기존이면 버린다 — 새 글 투입으로 옛 기록을 안 지운다", () => {
+    const { applied, pending } = gate([
+      { from: "N0", to: "E0", type: "duplicates", confident: true },
+    ]);
+    expect(applied).toHaveLength(0);
+    expect(pending).toHaveLength(0);
+  });
+
+  it("같음은 둘 다 새 진술이면 가릴 쪽(to)이 새 진술이라 pending으로 남는다", () => {
+    const { pending } = gate([
+      { from: "N1", to: "N0", type: "duplicates", confident: false },
+    ]);
+    expect(pending).toEqual([
+      { from_id: NEW_1, to_id: NEW_0, type: "duplicates" },
+    ]);
+  });
+
+  it("같음도 역방향 중복을 collapse한다 — 대칭쌍이 한 pending으로", () => {
+    const { pending } = gate([
+      { from: "N0", to: "N1", type: "duplicates", confident: true },
+      { from: "N1", to: "N0", type: "duplicates", confident: false },
+    ]);
+    expect(pending).toHaveLength(1);
+  });
 });
 
 // 후보 좁히기 — 형제 제외/skip 경계가 틀리면 LLM 판정 대상을 조용히 망친다.
@@ -686,108 +856,6 @@ describe("selectCandidateIds", () => {
 
   it("이웃이 없으면 빈 배열", () => {
     expect(selectCandidateIds([[], []], new Set(["x"]))).toEqual([]);
-  });
-});
-
-describe("selectDuplicatePairs", () => {
-  const labelToId = new Map([
-    ["N0", "new-1"],
-    ["E0", "existing-1"],
-  ]);
-  const batchIds = new Set(["new-1"]);
-
-  it("가릴 쪽이 새 진술이면 {가릴, 남길} 쌍을 낸다", () => {
-    const pairs = selectDuplicatePairs({
-      duplicates: [{ duplicate: "N0", of: "E0" }],
-      labelToId,
-      batchIds,
-    });
-    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "existing-1" }]);
-  });
-
-  it("가릴 쪽이 기존 진술이면 안 가린다 — 새 글 투입으로 옛 기록을 안 지운다", () => {
-    const pairs = selectDuplicatePairs({
-      duplicates: [{ duplicate: "E0", of: "N0" }],
-      labelToId,
-      batchIds,
-    });
-    expect(pairs).toEqual([]);
-  });
-
-  it("모르는 가릴-라벨은 버린다", () => {
-    const pairs = selectDuplicatePairs({
-      duplicates: [{ duplicate: "N9", of: "E0" }],
-      labelToId,
-      batchIds,
-    });
-    expect(pairs).toEqual([]);
-  });
-
-  it("한 진술에 keeper가 여러 번이면 첫 keeper만 채택", () => {
-    const twoExisting = new Map([
-      ["N0", "new-1"],
-      ["E0", "existing-1"],
-      ["E1", "existing-2"],
-    ]);
-    const pairs = selectDuplicatePairs({
-      duplicates: [
-        { duplicate: "N0", of: "E0" },
-        { duplicate: "N0", of: "E1" },
-      ],
-      labelToId: twoExisting,
-      batchIds,
-    });
-    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "existing-1" }]);
-  });
-
-  it("무효 keeper가 먼저 와도 뒤의 유효 keeper로 가린다 — 첫 무효가 막지 않음", () => {
-    const pairs = selectDuplicatePairs({
-      duplicates: [
-        { duplicate: "N0", of: "N9" },
-        { duplicate: "N0", of: "E0" },
-      ],
-      labelToId,
-      batchIds,
-    });
-    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "existing-1" }]);
-  });
-
-  it("같은 글 안 비대칭(둘 다 새 진술)은 가린다 — 과거부 안 됨", () => {
-    const twoNew = new Map([
-      ["N0", "new-1"],
-      ["N1", "new-2"],
-    ]);
-    const pairs = selectDuplicatePairs({
-      duplicates: [{ duplicate: "N0", of: "N1" }],
-      labelToId: twoNew,
-      batchIds: new Set(["new-1", "new-2"]),
-    });
-    expect(pairs).toEqual([{ duplicate: "new-1", keeper: "new-2" }]);
-  });
-
-  it("대칭쌍은 둘 다 안 가린다 — 흡수할 원본이 사라지는 무소음 손실 방지", () => {
-    const twoNew = new Map([
-      ["N0", "new-1"],
-      ["N1", "new-2"],
-    ]);
-    const pairs = selectDuplicatePairs({
-      duplicates: [
-        { duplicate: "N0", of: "N1" },
-        { duplicate: "N1", of: "N0" },
-      ],
-      labelToId: twoNew,
-      batchIds: new Set(["new-1", "new-2"]),
-    });
-    expect(pairs).toEqual([]);
-  });
-
-  it("남길 쪽(keeper)이 환각 라벨이면 안 가린다", () => {
-    const pairs = selectDuplicatePairs({
-      duplicates: [{ duplicate: "N0", of: "N9" }],
-      labelToId,
-      batchIds,
-    });
-    expect(pairs).toEqual([]);
   });
 });
 
@@ -858,9 +926,7 @@ describe("dedupeChanges", () => {
 
 function mockRelationLlm(): LlmProvider {
   return {
-    generateStructured: vi
-      .fn()
-      .mockResolvedValue({ relations: [], duplicates: [] }),
+    generateStructured: vi.fn().mockResolvedValue({ relations: [] }),
     async *generateStream() {
       yield "";
     },
@@ -917,7 +983,7 @@ describe("잇기 분할 통합 — 장문 source", () => {
     expect(rpcCalls(rpc, "apply_relation_changesets")).toHaveLength(1);
   });
 
-  it("판정의 duplicates가 apply의 p_duplicates 쌍으로 흘러간다 — {가릴, 남길}", async () => {
+  it("판정의 duplicates가 apply의 p_pending으로 흘러간다 — from=keeper/to=duplicate 관계", async () => {
     const keeper = {
       id: "c0000000-0000-4000-a000-000000000000",
       content: "N잡으로 확정",
@@ -952,11 +1018,13 @@ describe("잇기 분할 통합 — 장문 source", () => {
       },
       { statements },
     );
-    // 두 번째 진술(N1)이 첫 진술(N0)의 재진술 — 가려야
+    // 두 번째 진술(N1)이 첫 진술(N0)의 재진술 — from=keeper(N0)/to=duplicate(N1).
+    // 확신해도 항상 pending으로 흘러 사람 검토를 거친다.
     const llm: LlmProvider = {
       generateStructured: vi.fn().mockResolvedValue({
-        relations: [],
-        duplicates: [{ duplicate: "N1", of: "N0" }],
+        relations: [
+          { from: "N0", to: "N1", type: "duplicates", confident: true },
+        ],
       }),
       async *generateStream() {
         yield "";
@@ -974,10 +1042,12 @@ describe("잇기 분할 통합 — 장문 source", () => {
     const calls = rpcCalls(rpc, "apply_relation_changesets");
     expect(calls).toHaveLength(1);
     const args = calls[0]?.[1] as {
-      p_duplicates: { duplicate: string; keeper: string }[];
+      p_applied: { from_id: string; to_id: string; type: string }[];
+      p_pending: { from_id: string; to_id: string; type: string }[];
     };
-    expect(args.p_duplicates).toEqual([
-      { duplicate: dup.id, keeper: keeper.id },
+    expect(args.p_applied).toEqual([]);
+    expect(args.p_pending).toEqual([
+      { from_id: keeper.id, to_id: dup.id, type: "duplicates" },
     ]);
   });
 });
@@ -1063,5 +1133,125 @@ describe("deadlineContext", () => {
   it("존이 없으면(옛 글·미전달) UTC로 강등", () => {
     const ctx = deadlineContext({ ...PENDING_SOURCE, author_timezone: null });
     expect(ctx.timeZone).toBe("UTC");
+  });
+});
+
+describe("runVectorPurgePass", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  type PurgeDeps = Parameters<typeof runVectorPurgePass>[0];
+
+  // read는 배치 크기 미만(1건)만 돌려줘 한 번 읽고 드레인을 끝낸다.
+  function makeDeps(deleteImpl: () => Promise<void>): {
+    deps: PurgeDeps;
+    rpc: ReturnType<typeof vi.fn>;
+    deleteStatements: ReturnType<typeof vi.fn>;
+  } {
+    const deleteStatements = vi.fn(deleteImpl);
+    const rpc = vi.fn((name: string) =>
+      name === "read_vector_purge_events"
+        ? Promise.resolve({
+            data: [
+              {
+                msg_id: 42,
+                message: { statement_ids: [STMT_ID_1, STMT_ID_2] },
+              },
+            ],
+            error: null,
+          })
+        : Promise.resolve({ error: null }),
+    );
+    const deps = {
+      supabase: { rpc },
+      vectorStore: { deleteStatements },
+    } as unknown as PurgeDeps;
+    return { deps, rpc, deleteStatements };
+  }
+
+  it("성공하면 벡터를 지우고 메시지를 ack한다", async () => {
+    const { deps, rpc, deleteStatements } = makeDeps(() => Promise.resolve());
+
+    const processed = await runVectorPurgePass(deps);
+
+    expect(processed).toBe(1);
+    expect(deleteStatements).toHaveBeenCalledWith([STMT_ID_1, STMT_ID_2]);
+    expect(rpc).toHaveBeenCalledWith("ack_vector_purge_event", {
+      p_msg_id: 42,
+    });
+  });
+
+  it("Qdrant 삭제가 실패하면 ack하지 않아 재전달로 재시도된다", async () => {
+    const { deps, rpc, deleteStatements } = makeDeps(() =>
+      Promise.reject(new Error("qdrant down")),
+    );
+
+    const processed = await runVectorPurgePass(deps);
+
+    expect(processed).toBe(0);
+    expect(deleteStatements).toHaveBeenCalledWith([STMT_ID_1, STMT_ID_2]);
+    // ack 금지 — 안 그러면 실패한 벡터 삭제가 조용히 유실돼 죽은 원문 임베딩이 남는다.
+    expect(rpc).not.toHaveBeenCalledWith(
+      "ack_vector_purge_event",
+      expect.anything(),
+    );
+    expect(Sentry.captureException).toHaveBeenCalled();
+  });
+});
+
+describe("checkPurgeBacklog (purge 워치독)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  type WatchdogDeps = Parameters<typeof checkPurgeBacklog>[0];
+
+  // rpc(purge_job_last_success) → lastSuccess, from(sources) count 조회 → overdueCount
+  function watchdogDeps(params: {
+    lastSuccess: string | null;
+    overdueCount: number;
+  }): WatchdogDeps {
+    const rpc = vi.fn((name: string) =>
+      name === "purge_job_last_success"
+        ? Promise.resolve({ data: params.lastSuccess, error: null })
+        : Promise.resolve({ data: null, error: null }),
+    );
+    const chain: Record<string, unknown> = {};
+    for (const method of ["select", "eq", "lt"]) {
+      chain[method] = () => chain;
+    }
+    chain["then"] = (
+      resolve: (value: { count: number; error: null }) => void,
+    ) => resolve({ count: params.overdueCount, error: null });
+    const from = vi.fn(() => chain);
+    return { supabase: { rpc, from } } as unknown as WatchdogDeps;
+  }
+
+  const hoursAgo = (h: number) =>
+    new Date(Date.now() - h * 60 * 60 * 1000).toISOString();
+
+  it("잡이 최근 성공했으면 만료 원문이 남아도 경고하지 않는다", async () => {
+    await checkPurgeBacklog(
+      watchdogDeps({ lastSuccess: hoursAgo(1), overdueCount: 999 }),
+    );
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+  });
+
+  it("잡이 오래 안 돌았고 만료 원문이 있으면 경고한다", async () => {
+    await checkPurgeBacklog(
+      watchdogDeps({ lastSuccess: hoursAgo(48), overdueCount: 5 }),
+    );
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      expect.stringContaining("purge stalled"),
+      expect.objectContaining({ level: "warning" }),
+    );
+  });
+
+  it("잡이 오래 안 돌았어도 만료 원문이 없으면 조용하다(빈 DB·신규 배포)", async () => {
+    await checkPurgeBacklog(
+      watchdogDeps({ lastSuccess: null, overdueCount: 0 }),
+    );
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
 });

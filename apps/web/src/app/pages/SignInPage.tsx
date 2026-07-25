@@ -5,7 +5,7 @@ import { Button, Input, Separator } from "@nema-io/weave";
 import { LoaderCircle, Mail } from "@nema-io/weave/icons";
 
 import { GoogleIcon } from "@web/features/auth";
-import { useAuth } from "@web/lib/auth";
+import { consumeMagicLinkExpiredError, useAuth } from "@web/lib/auth";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -34,7 +34,9 @@ export function SignInPage() {
   );
 
   const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() =>
+    consumeMagicLinkExpiredError() ? t("auth.magic_link_invalid") : null,
+  );
   const [googleLoading, setGoogleLoading] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
@@ -125,9 +127,9 @@ export function SignInPage() {
               </Button>
 
               <div className="flex items-center gap-3">
-                <Separator className="flex-1" />
+                <Separator className="flex-1 bg-border" />
                 <span className="text-sm text-fg-tertiary">{t("auth.or")}</span>
-                <Separator className="flex-1" />
+                <Separator className="flex-1 bg-border" />
               </div>
 
               <form

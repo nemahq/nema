@@ -77,10 +77,14 @@ export type Database = {
           author_id: string | null;
           created_at: string;
           id: string;
+          invalidated_by_id: string | null;
+          number: number | null;
+          revert_depth: number;
           reverts_id: string | null;
           source_id: string | null;
-          space_id: string;
+          space_id: string | null;
           status: Database["public"]["Enums"]["changeset_status"];
+          title: string | null;
           type: Database["public"]["Enums"]["changeset_type"];
           updated_at: string;
         };
@@ -88,10 +92,14 @@ export type Database = {
           author_id?: string | null;
           created_at?: string;
           id?: string;
+          invalidated_by_id?: string | null;
+          number?: number | null;
+          revert_depth?: number;
           reverts_id?: string | null;
           source_id?: string | null;
-          space_id: string;
+          space_id?: string | null;
           status: Database["public"]["Enums"]["changeset_status"];
+          title?: string | null;
           type: Database["public"]["Enums"]["changeset_type"];
           updated_at?: string;
         };
@@ -99,14 +107,25 @@ export type Database = {
           author_id?: string | null;
           created_at?: string;
           id?: string;
+          invalidated_by_id?: string | null;
+          number?: number | null;
+          revert_depth?: number;
           reverts_id?: string | null;
           source_id?: string | null;
-          space_id?: string;
+          space_id?: string | null;
           status?: Database["public"]["Enums"]["changeset_status"];
+          title?: string | null;
           type?: Database["public"]["Enums"]["changeset_type"];
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "changesets_invalidated_by_id_fkey";
+            columns: ["invalidated_by_id"];
+            isOneToOne: false;
+            referencedRelation: "changesets";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "changesets_reverts_id_fkey";
             columns: ["reverts_id"];
@@ -130,43 +149,197 @@ export type Database = {
           },
         ];
       };
-      drafts: {
+      digest_links: {
+        Row: {
+          created_at: string;
+          digest_a_id: string;
+          digest_b_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          digest_a_id: string;
+          digest_b_id: string;
+        };
+        Update: {
+          created_at?: string;
+          digest_a_id?: string;
+          digest_b_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digest_links_digest_a_id_fkey";
+            columns: ["digest_a_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_links_digest_b_id_fkey";
+            columns: ["digest_b_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      digest_references: {
+        Row: {
+          created_at: string;
+          digest_id: string;
+          reference_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          digest_id: string;
+          reference_id: string;
+        };
+        Update: {
+          created_at?: string;
+          digest_id?: string;
+          reference_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digest_references_digest_id_fkey";
+            columns: ["digest_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_references_reference_id_fkey";
+            columns: ["reference_id"];
+            isOneToOne: false;
+            referencedRelation: "references";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      digest_tags: {
+        Row: {
+          created_at: string;
+          digest_id: string;
+          tag_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          digest_id: string;
+          tag_id: string;
+        };
+        Update: {
+          created_at?: string;
+          digest_id?: string;
+          tag_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digest_tags_digest_id_fkey";
+            columns: ["digest_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_tags_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: false;
+            referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      digest_topics: {
+        Row: {
+          created_at: string;
+          digest_id: string;
+          topic_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          digest_id: string;
+          topic_id: string;
+        };
+        Update: {
+          created_at?: string;
+          digest_id?: string;
+          topic_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digest_topics_digest_id_fkey";
+            columns: ["digest_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_topics_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      digests: {
         Row: {
           author_id: string | null;
-          body: string;
+          body: Json;
           created_at: string;
+          description: string;
+          external_urls: string[] | null;
+          extraction_status: Database["public"]["Enums"]["ingestion_status"];
           id: string;
-          origin: Database["public"]["Enums"]["draft_origin"];
-          proposed_topics: string[];
+          locator: Json | null;
+          public_id: string;
+          source_id: string;
           space_id: string;
-          title: string | null;
+          status: Database["public"]["Enums"]["digest_status"];
+          title: string;
           updated_at: string;
         };
         Insert: {
           author_id?: string | null;
-          body?: string;
+          body: Json;
           created_at?: string;
+          description: string;
+          external_urls?: string[] | null;
+          extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
-          origin: Database["public"]["Enums"]["draft_origin"];
-          proposed_topics?: string[];
+          locator?: Json | null;
+          public_id?: string;
+          source_id: string;
           space_id: string;
-          title?: string | null;
+          status?: Database["public"]["Enums"]["digest_status"];
+          title: string;
           updated_at?: string;
         };
         Update: {
           author_id?: string | null;
-          body?: string;
+          body?: Json;
           created_at?: string;
+          description?: string;
+          external_urls?: string[] | null;
+          extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
-          origin?: Database["public"]["Enums"]["draft_origin"];
-          proposed_topics?: string[];
+          locator?: Json | null;
+          public_id?: string;
+          source_id?: string;
           space_id?: string;
-          title?: string | null;
+          status?: Database["public"]["Enums"]["digest_status"];
+          title?: string;
           updated_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "drafts_space_id_fkey";
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digests_space_id_fkey";
             columns: ["space_id"];
             isOneToOne: false;
             referencedRelation: "spaces";
@@ -222,129 +395,177 @@ export type Database = {
         };
         Relationships: [];
       };
-      events: {
-        Row: {
-          created_at: string;
-          id: string;
-          payload: Json;
-          session_id: string | null;
-          type: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          payload?: Json;
-          session_id?: string | null;
-          type: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          payload?: Json;
-          session_id?: string | null;
-          type?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "events_session_id_fkey";
-            columns: ["session_id"];
-            isOneToOne: false;
-            referencedRelation: "sessions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       profiles: {
         Row: {
           content_language: string;
           created_at: string;
+          first_entered_at: string | null;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           content_language?: string;
           created_at?: string;
+          first_entered_at?: string | null;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           content_language?: string;
           created_at?: string;
+          first_entered_at?: string | null;
           updated_at?: string;
           user_id?: string;
         };
         Relationships: [];
       };
-      session_retrievals: {
+      reference_links: {
         Row: {
-          body: string;
           created_at: string;
-          documents: Json;
-          id: string;
-          query: string;
-          session_id: string;
-          updated_at: string;
+          reference_a_id: string;
+          reference_b_id: string;
         };
         Insert: {
-          body: string;
           created_at?: string;
-          documents?: Json;
-          id?: string;
-          query: string;
-          session_id: string;
-          updated_at?: string;
+          reference_a_id: string;
+          reference_b_id: string;
         };
         Update: {
-          body?: string;
           created_at?: string;
-          documents?: Json;
-          id?: string;
-          query?: string;
-          session_id?: string;
-          updated_at?: string;
+          reference_a_id?: string;
+          reference_b_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "session_retrievals_session_id_fkey";
-            columns: ["session_id"];
+            foreignKeyName: "reference_links_reference_a_id_fkey";
+            columns: ["reference_a_id"];
             isOneToOne: false;
-            referencedRelation: "sessions";
+            referencedRelation: "references";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reference_links_reference_b_id_fkey";
+            columns: ["reference_b_id"];
+            isOneToOne: false;
+            referencedRelation: "references";
             referencedColumns: ["id"];
           },
         ];
       };
-      sessions: {
+      reference_tags: {
         Row: {
           created_at: string;
-          draft: Json | null;
-          id: string;
-          messages: Json;
-          title: string | null;
-          updated_at: string;
-          user_id: string;
+          reference_id: string;
+          tag_id: string;
         };
         Insert: {
           created_at?: string;
-          draft?: Json | null;
-          id?: string;
-          messages?: Json;
-          title?: string | null;
-          updated_at?: string;
-          user_id: string;
+          reference_id: string;
+          tag_id: string;
         };
         Update: {
           created_at?: string;
-          draft?: Json | null;
-          id?: string;
-          messages?: Json;
-          title?: string | null;
-          updated_at?: string;
-          user_id?: string;
+          reference_id?: string;
+          tag_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "reference_tags_reference_id_fkey";
+            columns: ["reference_id"];
+            isOneToOne: false;
+            referencedRelation: "references";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reference_tags_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: false;
+            referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      references: {
+        Row: {
+          body: string;
+          created_at: string;
+          external_urls: string[] | null;
+          id: string;
+          status: Database["public"]["Enums"]["reference_status"];
+          title: string;
+          trashed_at: string | null;
+          type: Database["public"]["Enums"]["reference_type"];
+          updated_at: string;
+          workspace_id: string;
+        };
+        Insert: {
+          body: string;
+          created_at?: string;
+          external_urls?: string[] | null;
+          id?: string;
+          status?: Database["public"]["Enums"]["reference_status"];
+          title: string;
+          trashed_at?: string | null;
+          type: Database["public"]["Enums"]["reference_type"];
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          body?: string;
+          created_at?: string;
+          external_urls?: string[] | null;
+          id?: string;
+          status?: Database["public"]["Enums"]["reference_status"];
+          title?: string;
+          trashed_at?: string | null;
+          type?: Database["public"]["Enums"]["reference_type"];
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "references_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      source_digestion_state: {
+        Row: {
+          digestion_retry_count: number;
+          extraction_retry_count: number;
+          last_extraction_attempt: string | null;
+          last_linking_attempt: string | null;
+          linking_retry_count: number;
+          source_id: string;
+        };
+        Insert: {
+          digestion_retry_count?: number;
+          extraction_retry_count?: number;
+          last_extraction_attempt?: string | null;
+          last_linking_attempt?: string | null;
+          linking_retry_count?: number;
+          source_id: string;
+        };
+        Update: {
+          digestion_retry_count?: number;
+          extraction_retry_count?: number;
+          last_extraction_attempt?: string | null;
+          last_linking_attempt?: string | null;
+          linking_retry_count?: number;
+          source_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "source_digestion_state_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: true;
+            referencedRelation: "sources";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       source_topics: {
         Row: {
@@ -385,18 +606,23 @@ export type Database = {
           author_timezone: string | null;
           body: string;
           created_at: string;
+          digestion_input_updated_at: string;
+          digestion_retry_count: number;
+          digestion_started_at: string | null;
+          digestion_status: Database["public"]["Enums"]["digestion_status"];
           error_message: string | null;
           extraction_retry_count: number;
           extraction_status: Database["public"]["Enums"]["ingestion_status"];
           id: string;
+          last_digestion_attempt: string | null;
           last_extraction_attempt: string | null;
           last_linking_attempt: string | null;
           linking_retry_count: number;
           linking_status: Database["public"]["Enums"]["ingestion_status"];
-          session_id: string | null;
           space_id: string;
           status: Database["public"]["Enums"]["source_status"];
           title: string | null;
+          trashed_at: string | null;
           updated_at: string;
         };
         Insert: {
@@ -404,18 +630,23 @@ export type Database = {
           author_timezone?: string | null;
           body: string;
           created_at?: string;
+          digestion_input_updated_at?: string;
+          digestion_retry_count?: number;
+          digestion_started_at?: string | null;
+          digestion_status?: Database["public"]["Enums"]["digestion_status"];
           error_message?: string | null;
           extraction_retry_count?: number;
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
+          last_digestion_attempt?: string | null;
           last_extraction_attempt?: string | null;
           last_linking_attempt?: string | null;
           linking_retry_count?: number;
           linking_status?: Database["public"]["Enums"]["ingestion_status"];
-          session_id?: string | null;
           space_id: string;
           status?: Database["public"]["Enums"]["source_status"];
           title?: string | null;
+          trashed_at?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -423,28 +654,26 @@ export type Database = {
           author_timezone?: string | null;
           body?: string;
           created_at?: string;
+          digestion_input_updated_at?: string;
+          digestion_retry_count?: number;
+          digestion_started_at?: string | null;
+          digestion_status?: Database["public"]["Enums"]["digestion_status"];
           error_message?: string | null;
           extraction_retry_count?: number;
           extraction_status?: Database["public"]["Enums"]["ingestion_status"];
           id?: string;
+          last_digestion_attempt?: string | null;
           last_extraction_attempt?: string | null;
           last_linking_attempt?: string | null;
           linking_retry_count?: number;
           linking_status?: Database["public"]["Enums"]["ingestion_status"];
-          session_id?: string | null;
           space_id?: string;
           status?: Database["public"]["Enums"]["source_status"];
           title?: string | null;
+          trashed_at?: string | null;
           updated_at?: string;
         };
         Relationships: [
-          {
-            foreignKeyName: "sources_session_id_fkey";
-            columns: ["session_id"];
-            isOneToOne: false;
-            referencedRelation: "sessions";
-            referencedColumns: ["id"];
-          },
           {
             foreignKeyName: "sources_space_id_fkey";
             columns: ["space_id"];
@@ -490,22 +719,72 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
-          name: string | null;
+          name: string;
+          next_changeset_number: number;
+          public_id: string;
           updated_at: string;
+          workspace_id: string;
         };
         Insert: {
           created_at?: string;
           id?: string;
-          name?: string | null;
+          name: string;
+          next_changeset_number?: number;
+          public_id: string;
           updated_at?: string;
+          workspace_id: string;
         };
         Update: {
           created_at?: string;
           id?: string;
-          name?: string | null;
+          name?: string;
+          next_changeset_number?: number;
+          public_id?: string;
           updated_at?: string;
+          workspace_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "spaces_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      statement_references: {
+        Row: {
+          created_at: string;
+          reference_id: string;
+          statement_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          reference_id: string;
+          statement_id: string;
+        };
+        Update: {
+          created_at?: string;
+          reference_id?: string;
+          statement_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "statement_references_reference_id_fkey";
+            columns: ["reference_id"];
+            isOneToOne: false;
+            referencedRelation: "references";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "statement_references_statement_id_fkey";
+            columns: ["statement_id"];
+            isOneToOne: false;
+            referencedRelation: "statements";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       statement_relations: {
         Row: {
@@ -605,8 +884,8 @@ export type Database = {
             | null;
           content: string;
           created_at: string;
+          digest_id: string;
           due_date: string | null;
-          duplicate_of: string | null;
           error_message: string | null;
           id: string;
           ingestion_retry_count: number;
@@ -623,8 +902,8 @@ export type Database = {
             | null;
           content: string;
           created_at?: string;
+          digest_id: string;
           due_date?: string | null;
-          duplicate_of?: string | null;
           error_message?: string | null;
           id?: string;
           ingestion_retry_count?: number;
@@ -641,8 +920,8 @@ export type Database = {
             | null;
           content?: string;
           created_at?: string;
+          digest_id?: string;
           due_date?: string | null;
-          duplicate_of?: string | null;
           error_message?: string | null;
           id?: string;
           ingestion_retry_count?: number;
@@ -655,10 +934,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "statements_duplicate_of_fkey";
-            columns: ["duplicate_of"];
+            foreignKeyName: "statements_digest_id_fkey";
+            columns: ["digest_id"];
             isOneToOne: false;
-            referencedRelation: "statements";
+            referencedRelation: "digests";
             referencedColumns: ["id"];
           },
           {
@@ -670,12 +949,51 @@ export type Database = {
           },
         ];
       };
+      tags: {
+        Row: {
+          created_at: string;
+          description: string;
+          id: string;
+          status: Database["public"]["Enums"]["tag_status"];
+          title: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          description: string;
+          id?: string;
+          status?: Database["public"]["Enums"]["tag_status"];
+          title: string;
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string;
+          id?: string;
+          status?: Database["public"]["Enums"]["tag_status"];
+          title?: string;
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tags_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       topics: {
         Row: {
           created_at: string;
           id: string;
           name: string;
           space_id: string;
+          status: Database["public"]["Enums"]["topic_status"];
           updated_at: string;
         };
         Insert: {
@@ -683,6 +1001,7 @@ export type Database = {
           id?: string;
           name: string;
           space_id: string;
+          status?: Database["public"]["Enums"]["topic_status"];
           updated_at?: string;
         };
         Update: {
@@ -690,6 +1009,7 @@ export type Database = {
           id?: string;
           name?: string;
           space_id?: string;
+          status?: Database["public"]["Enums"]["topic_status"];
           updated_at?: string;
         };
         Relationships: [
@@ -702,39 +1022,94 @@ export type Database = {
           },
         ];
       };
+      workspace_members: {
+        Row: {
+          created_at: string;
+          role: Database["public"]["Enums"]["workspace_role"];
+          updated_at: string;
+          user_id: string;
+          workspace_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          role: Database["public"]["Enums"]["workspace_role"];
+          updated_at?: string;
+          user_id: string;
+          workspace_id: string;
+        };
+        Update: {
+          created_at?: string;
+          role?: Database["public"]["Enums"]["workspace_role"];
+          updated_at?: string;
+          user_id?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      workspaces: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
       ack_sync_event: { Args: { p_msg_id: number }; Returns: undefined };
-      append_message: {
-        Args: { p_message: Json; p_session_id: string };
+      ack_vector_purge_event: {
+        Args: { p_msg_id: number };
         Returns: undefined;
       };
-      apply_ingestion_changeset: {
-        Args: { p_source_id: string; p_statements: Json };
-        Returns: string;
-      };
-      apply_pending_relation: {
-        Args: { p_changeset_id: string };
-        Returns: string;
-      };
-      apply_relation_changesets: {
+      apply_extraction_statements: {
         Args: {
-          p_applied?: Json;
-          p_duplicates?: Json;
-          p_pending?: Json;
+          p_digest_ids: string[];
           p_source_id: string;
+          p_statements: Json;
         };
         Returns: undefined;
       };
-      archive_source: { Args: { p_source_id: string }; Returns: undefined };
+      apply_relation_changesets: {
+        Args: { p_applied?: Json; p_pending?: Json; p_source_id: string };
+        Returns: undefined;
+      };
+      archive_digest: { Args: { p_digest_id: string }; Returns: string };
+      archive_reference: { Args: { p_reference_id: string }; Returns: string };
       archive_statement: {
         Args: { p_statement_id: string };
         Returns: undefined;
       };
-      complete_source_extraction: {
+      archive_tag: { Args: { p_tag_id: string }; Returns: undefined };
+      archive_topic: { Args: { p_topic_id: string }; Returns: undefined };
+      cancel_source_digestion: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
+      complete_source_digestion: {
         Args: { p_source_id: string };
         Returns: undefined;
       };
@@ -742,30 +1117,75 @@ export type Database = {
         Args: { p_statement_id: string };
         Returns: undefined;
       };
-      confirm_draft: {
-        Args: { p_draft_id: string; p_title: string; p_topics: string[] };
+      confirm_digest_edit: {
+        Args: { p_digest: Json; p_digest_id: string; p_new_references?: Json };
         Returns: string;
       };
-      create_draft: {
+      confirm_ingestion_review: {
+        Args: { p_changeset_id: string };
+        Returns: string;
+      };
+      count_pending_drafts: { Args: { p_space_id: string }; Returns: number };
+      create_ingestion_review: {
         Args: {
-          p_body: string;
-          p_origin: Database["public"]["Enums"]["draft_origin"];
-          p_proposed_topics?: string[];
-          p_space_id: string;
-          p_title?: string;
+          p_digests: Json;
+          p_new_references?: Json;
+          p_reference_updates?: Json;
+          p_source_id: string;
         };
         Returns: string;
+      };
+      create_reference_link: {
+        Args: { p_a: string; p_b: string };
+        Returns: undefined;
       };
       create_source: {
         Args: {
           p_author_timezone?: string;
           p_body: string;
-          p_session_id?: string;
           p_space_id: string;
         };
         Returns: string;
       };
-      delete_draft: { Args: { p_draft_id: string }; Returns: undefined };
+      create_space: {
+        Args: { p_name: string; p_public_id: string; p_workspace_id: string };
+        Returns: string;
+      };
+      create_tag: {
+        Args: {
+          p_description: string;
+          p_title: string;
+          p_workspace_id: string;
+        };
+        Returns: string;
+      };
+      delete_space: {
+        Args: {
+          p_delete_pending_drafts?: boolean;
+          p_space_id: string;
+          p_target_space_id?: string;
+        };
+        Returns: undefined;
+      };
+      delete_workspace: {
+        Args: { p_workspace_id: string };
+        Returns: undefined;
+      };
+      discard_ingestion_review: {
+        Args: { p_changeset_id: string };
+        Returns: undefined;
+      };
+      fetch_pending_digestion_sources: {
+        Args: { p_max_retries?: number };
+        Returns: {
+          author_id: string;
+          body: string;
+          created_at: string;
+          id: string;
+          space_id: string;
+          workspace_id: string;
+        }[];
+      };
       fetch_pending_linking_sources: {
         Args: { p_max_retries?: number };
         Returns: {
@@ -782,7 +1202,6 @@ export type Database = {
           body: string;
           created_at: string;
           id: string;
-          session_id: string;
           space_id: string;
         }[];
       };
@@ -797,6 +1216,27 @@ export type Database = {
           status: Database["public"]["Enums"]["statement_status"];
           type: Database["public"]["Enums"]["statement_type"];
         }[];
+      };
+      fill_source_title: {
+        Args: { p_source_id: string; p_title: string };
+        Returns: undefined;
+      };
+      generate_digest_public_id: { Args: never; Returns: string };
+      generate_space_public_id: { Args: never; Returns: string };
+      get_reference_citing_digests: {
+        Args: { p_reference_id: string };
+        Returns: {
+          digest_id: string;
+          digest_title: string;
+        }[];
+      };
+      increment_source_digestion_retry: {
+        Args: {
+          p_error_message?: string;
+          p_max_retries?: number;
+          p_source_id: string;
+        };
+        Returns: undefined;
       };
       increment_source_extraction_retry: {
         Args: {
@@ -822,11 +1262,53 @@ export type Database = {
         };
         Returns: undefined;
       };
+      invalidate_stale_relation_proposals: {
+        Args: { p_invalidated_by: string; p_statement_id: string };
+        Returns: undefined;
+      };
       is_changeset_reverted: {
         Args: { p_changeset_id: string };
         Returns: boolean;
       };
       is_space_member: { Args: { p_space_id: string }; Returns: boolean };
+      is_workspace_member: {
+        Args: { p_workspace_id: string };
+        Returns: boolean;
+      };
+      leave_workspace: { Args: { p_workspace_id: string }; Returns: undefined };
+      link_reference_tag: {
+        Args: { p_reference_id: string; p_tag_id: string };
+        Returns: undefined;
+      };
+      list_manual_changes_for_target: {
+        Args: {
+          p_target_id: string;
+          p_target_type: Database["public"]["Enums"]["change_target_type"];
+        };
+        Returns: {
+          action: Database["public"]["Enums"]["change_action"];
+          author_id: string;
+          changeset_id: string;
+          changeset_number: number;
+          created_at: string;
+          data: Json;
+          id: string;
+        }[];
+      };
+      mark_first_entry: { Args: never; Returns: boolean };
+      pending_draft_source_ids: {
+        Args: { p_space_id: string };
+        Returns: string[];
+      };
+      purge_expired_references: {
+        Args: { p_batch_limit?: number; p_retention_days?: number };
+        Returns: number;
+      };
+      purge_expired_sources: {
+        Args: { p_batch_limit?: number; p_retention_days?: number };
+        Returns: number;
+      };
+      purge_job_last_success: { Args: never; Returns: string };
       read_sync_events: {
         Args: { p_batch_size?: number; p_visibility_timeout?: number };
         Returns: {
@@ -835,8 +1317,47 @@ export type Database = {
           read_ct: number;
         }[];
       };
+      read_vector_purge_events: {
+        Args: { p_batch_size?: number; p_visibility_timeout?: number };
+        Returns: {
+          message: Json;
+          msg_id: number;
+        }[];
+      };
+      reassign_source_space: {
+        Args: { p_source_id: string; p_space_id: string };
+        Returns: undefined;
+      };
       reject_pending_relation: {
         Args: { p_changeset_id: string };
+        Returns: undefined;
+      };
+      rename_space: {
+        Args: { p_name: string; p_space_id: string };
+        Returns: undefined;
+      };
+      resolve_conflict_relation: {
+        Args: { p_changeset_id: string; p_winner_statement_id: string };
+        Returns: string;
+      };
+      resolve_duplicate_relation: {
+        Args: {
+          p_changeset_id: string;
+          p_merged_digest: Json;
+          p_new_references?: Json;
+        };
+        Returns: string;
+      };
+      restore_digest: { Args: { p_digest_id: string }; Returns: string };
+      restore_ingestion_review: {
+        Args: { p_changeset_id: string };
+        Returns: undefined;
+      };
+      restore_reference: { Args: { p_reference_id: string }; Returns: string };
+      restore_tag: { Args: { p_tag_id: string }; Returns: undefined };
+      restore_topic: { Args: { p_topic_id: string }; Returns: undefined };
+      restore_trashed_source: {
+        Args: { p_source_id: string };
         Returns: undefined;
       };
       retry_source_extraction: {
@@ -854,40 +1375,104 @@ export type Database = {
       revert_changeset: { Args: { p_changeset_id: string }; Returns: string };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
-      update_draft: {
+      start_source_digestion: {
+        Args: { p_source_id: string };
+        Returns: undefined;
+      };
+      trash_reference: { Args: { p_reference_id: string }; Returns: undefined };
+      trash_source: { Args: { p_source_id: string }; Returns: undefined };
+      unlink_reference_tag: {
+        Args: { p_reference_id: string; p_tag_id: string };
+        Returns: undefined;
+      };
+      update_pending_ingestion: {
         Args: {
-          p_body?: string;
-          p_draft_id: string;
-          p_proposed_topics?: string[];
-          p_title?: string;
+          p_changeset_id: string;
+          p_digests: Json;
+          p_new_references?: Json;
+          p_reference_updates?: Json;
         };
         Returns: undefined;
       };
-      update_message_payload: {
-        Args: { p_message_id: string; p_payload: Json; p_session_id: string };
+      update_reference: {
+        Args: {
+          p_body: string;
+          p_external_urls: string[];
+          p_reference_id: string;
+          p_title: string;
+          p_type: Database["public"]["Enums"]["reference_type"];
+        };
+        Returns: string;
+      };
+      update_source_body: {
+        Args: { p_body: string; p_source_id: string };
+        Returns: undefined;
+      };
+      update_source_title: {
+        Args: { p_source_id: string; p_title: string };
+        Returns: undefined;
+      };
+      update_tag: {
+        Args: { p_description: string; p_tag_id: string; p_title: string };
+        Returns: undefined;
+      };
+      update_topic: {
+        Args: { p_name: string; p_topic_id: string };
+        Returns: undefined;
+      };
+      update_workspace_member_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["workspace_role"];
+          p_user_id: string;
+          p_workspace_id: string;
+        };
+        Returns: undefined;
+      };
+      write_ingestion_review_changes: {
+        Args: {
+          p_changeset_id: string;
+          p_digests: Json;
+          p_new_references: Json;
+          p_reference_updates?: Json;
+        };
         Returns: undefined;
       };
     };
     Enums: {
       change_action: "create" | "archive" | "modify" | "restore";
-      change_target_type: "statement" | "relation" | "source";
+      change_target_type:
+        | "statement"
+        | "relation"
+        | "source"
+        | "digest"
+        | "reference";
       changeset_status: "pending" | "applied" | "rejected";
-      changeset_type:
-        | "ingestion"
-        | "conflict"
-        | "merge"
-        | "manual"
-        | "revert"
-        | "relation";
-      draft_origin: "in_app" | "external";
+      changeset_type: "ingestion" | "relation" | "manual" | "revert";
+      digest_status: "active" | "archived";
+      digestion_status: "pending" | "completed" | "failed" | "cancelled";
       ingestion_status: "pending" | "completed" | "failed";
+      reference_status: "active" | "archived" | "trashed";
+      reference_type:
+        | "person"
+        | "organization"
+        | "project"
+        | "product"
+        | "term";
       relation_status: "active" | "archived";
-      relation_type: "supports" | "conflicts" | "replaces" | "resolves";
-      source_status: "active" | "archived";
+      relation_type:
+        | "supports"
+        | "conflicts"
+        | "replaces"
+        | "resolves"
+        | "duplicates";
+      source_status: "pending" | "active" | "trashed";
       space_role: "owner" | "member";
       statement_confidence: "certain" | "guess";
       statement_status: "active" | "archived";
       statement_type: "claim" | "question" | "todo";
+      tag_status: "active" | "archived";
+      topic_status: "active" | "archived";
+      workspace_role: "owner" | "member";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1022,25 +1607,36 @@ export const Constants = {
   public: {
     Enums: {
       change_action: ["create", "archive", "modify", "restore"],
-      change_target_type: ["statement", "relation", "source"],
-      changeset_status: ["pending", "applied", "rejected"],
-      changeset_type: [
-        "ingestion",
-        "conflict",
-        "merge",
-        "manual",
-        "revert",
+      change_target_type: [
+        "statement",
         "relation",
+        "source",
+        "digest",
+        "reference",
       ],
-      draft_origin: ["in_app", "external"],
+      changeset_status: ["pending", "applied", "rejected"],
+      changeset_type: ["ingestion", "relation", "manual", "revert"],
+      digest_status: ["active", "archived"],
+      digestion_status: ["pending", "completed", "failed", "cancelled"],
       ingestion_status: ["pending", "completed", "failed"],
+      reference_status: ["active", "archived", "trashed"],
+      reference_type: ["person", "organization", "project", "product", "term"],
       relation_status: ["active", "archived"],
-      relation_type: ["supports", "conflicts", "replaces", "resolves"],
-      source_status: ["active", "archived"],
+      relation_type: [
+        "supports",
+        "conflicts",
+        "replaces",
+        "resolves",
+        "duplicates",
+      ],
+      source_status: ["pending", "active", "trashed"],
       space_role: ["owner", "member"],
       statement_confidence: ["certain", "guess"],
       statement_status: ["active", "archived"],
       statement_type: ["claim", "question", "todo"],
+      tag_status: ["active", "archived"],
+      topic_status: ["active", "archived"],
+      workspace_role: ["owner", "member"],
     },
   },
 } as const;

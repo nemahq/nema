@@ -28,11 +28,18 @@ src/
 ## State Management
 
 - Server state: TanStack Query (tRPC integration deferred to feature implementation)
-- UI state: React built-ins (useState, useContext)
+- UI state: React built-ins (useState, useContext) by default.
+- zustand ONLY when a shared slice meets BOTH: (1) it cannot be colocated in one component because siblings mutate each other, AND (2) consumers need to subscribe to disjoint parts — the case Context cannot express, since any change re-renders every consumer.
+- zustand stores MUST be per-screen instances (`createStore` + Context injection), never module-level singletons — the store dies with the screen, so there is no manual reset/cleanup.
+- Store state MUST be derived by pure functions kept in their own file; the store only holds state and dispatches. Keep the engine's original snapshot separate from user edits rather than merging them.
 
 ## Conventions
 
 - MUST follow rules in `docs/conventions.md`.
+
+## UI Components
+
+- Check `@nema-io/weave` for an existing component before writing raw DOM. Decision guide: `docs/guides/weave-usage.md`.
 
 ## I18n
 

@@ -1,6 +1,13 @@
 export { Alert, type AlertVariant } from "./components/Alert";
-export { Avatar } from "./components/Avatar";
-export { Badge, type BadgeVariant } from "./components/Badge";
+export { Avatar, type AvatarShape } from "./components/Avatar";
+export {
+  Badge,
+  type BadgeColor,
+  type BadgeShape,
+  type BadgeSize,
+  type BadgeVariant,
+  OUTLINE_TONE_CLASSNAME,
+} from "./components/Badge";
 export { Button, buttonVariants } from "./components/Button";
 export {
   Card,
@@ -12,6 +19,12 @@ export {
   CardTitle,
 } from "./components/Card";
 export { Checkbox } from "./components/Checkbox";
+export {
+  Chip,
+  type ChipShape,
+  type ChipVariant,
+  type TagColor,
+} from "./components/Chip";
 export {
   Dialog,
   DialogClose,
@@ -50,7 +63,12 @@ export {
 export { Input } from "./components/Input";
 export { Kbd } from "./components/Kbd";
 export { Label } from "./components/Label";
-export { ScrollArea, ScrollBar } from "./components/ScrollArea";
+export {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
+} from "./components/Popover";
 export {
   Select,
   SelectContent,
@@ -70,7 +88,10 @@ export {
   type TextColor,
   type TextProps,
   type TextSize,
+  type TextWeight,
 } from "./components/Text";
+export { Textarea, type TextareaVariant } from "./components/Textarea";
+export { TextSkeleton } from "./components/TextSkeleton";
 export { Toast, toast, type ToasterProps } from "./components/Toast";
 export {
   Tooltip,
@@ -78,4 +99,14 @@ export {
   TooltipProvider,
   TooltipTrigger,
 } from "./components/Tooltip";
-export { cn } from "./utils";
+export {
+  cn,
+  LIST_ITEM_HOVER_CLASSNAME,
+  NESTED_HOVER_ICON_CLASSNAME,
+  pinSelectedToTop,
+  POPOVER_SURFACE_CLASSNAME,
+} from "./utils";
+// asChild 패턴(Button 등)과 동일한 근거로 소비처가 자체 asChild 컴포넌트를
+// 만들 때 재사용하도록 재노출 — radix-ui를 apps/web의 직접 의존성으로 새로
+// 추가하지 않기 위함.
+export { Slot } from "radix-ui";

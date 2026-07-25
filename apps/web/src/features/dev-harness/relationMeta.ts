@@ -12,5 +12,6 @@ export const RELATION_META: Record<
   supports: { label: "뒷받침", variant: "info" },
   conflicts: { label: "충돌", variant: "error" },
   replaces: { label: "대체", variant: "warning" },
+  duplicates: { label: "같음", variant: "neutral" },
   resolves: { label: "해소", variant: "success" },
 };

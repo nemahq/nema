@@ -2,6 +2,8 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
+import { cn, POPOVER_SURFACE_CLASSNAME } from "@nema-io/weave";
+
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTheme } from "@web/app/providers/ThemeProvider";
 import { useAuth } from "@web/lib/auth";
@@ -36,7 +38,7 @@ function formatModelMap(models: {
 function toggleClass(active: boolean) {
   return `cursor-pointer rounded px-2 py-0.5 transition-colors duration-fast ${
     active
-      ? "bg-brand text-brand-fg"
+      ? "bg-brand text-brand-fg dark:bg-fg-primary dark:text-surface-base"
       : "text-fg-secondary hover:bg-surface-raised-hover"
   }`;
 }
@@ -94,7 +96,12 @@ export function DevToolbar() {
     <>
       <div className="fixed bottom-3 right-3 z-50 flex flex-col items-end">
         {open && (
-          <div className="mb-2 flex w-56 flex-col gap-3 rounded-lg border border-border bg-surface-raised p-3 text-xs shadow-lg">
+          <div
+            className={cn(
+              POPOVER_SURFACE_CLASSNAME,
+              "mb-2 flex w-56 flex-col gap-3 p-3 text-xs",
+            )}
+          >
             <div className="flex flex-col gap-1.5">
               <span className="font-semibold text-fg-tertiary">Theme</span>
               <div className="flex items-center gap-1">
@@ -179,7 +186,7 @@ export function DevToolbar() {
         <button
           type="button"
           onClick={() => setOpen((prev) => !prev)}
-          className="cursor-pointer rounded-md bg-surface-raised px-2.5 py-1 text-xs font-semibold text-fg-secondary shadow-md border border-border transition-colors duration-fast hover:bg-surface-raised-hover"
+          className="cursor-pointer rounded-md bg-surface-overlay px-2.5 py-1 text-xs font-semibold text-fg-secondary shadow-md border border-border transition-colors duration-fast hover:bg-surface-raised-hover"
         >
           Dev
         </button>

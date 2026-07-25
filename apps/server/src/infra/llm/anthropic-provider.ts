@@ -138,15 +138,24 @@ export class AnthropicProvider implements LlmProvider {
 
   // SDK가 명시적 undefined timeout/maxRetries를 거부할 수 있어 정의된 옵션만 담아 전달.
   // 운영 호출부(초안/세션)는 timeoutMs를 안 넘기므로 빈 옵션이 정상 경로다.
+  // signal을 SDK 요청 옵션으로 내려야 비스트리밍 호출(generateStructured)의 HTTP 요청이
+  // 실제로 끊긴다 — 스트리밍 루프의 aborted 가드엔 그런 힘이 없다(openai-provider와 동일).
   private requestOptions(
-    params: Pick<GenerateTextParams, "timeoutMs" | "maxRetries">,
-  ): { timeout?: number; maxRetries?: number } {
-    const options: { timeout?: number; maxRetries?: number } = {};
+    params: Pick<GenerateTextParams, "timeoutMs" | "maxRetries" | "signal">,
+  ): { timeout?: number; maxRetries?: number; signal?: AbortSignal } {
+    const options: {
+      timeout?: number;
+      maxRetries?: number;
+      signal?: AbortSignal;
+    } = {};
     if (params.timeoutMs !== undefined) {
       options.timeout = params.timeoutMs;
     }
     if (params.maxRetries !== undefined) {
       options.maxRetries = params.maxRetries;
+    }
+    if (params.signal !== undefined) {
+      options.signal = params.signal;
     }
     return options;
   }
@@ -249,7 +258,7 @@ export class AnthropicProvider implements LlmProvider {
       if (params.signal?.aborted) {
         return;
       }
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -327,7 +336,7 @@ export class AnthropicProvider implements LlmProvider {
         yield* this.streamPlain(params);
         return;
       }
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -345,7 +354,7 @@ export class AnthropicProvider implements LlmProvider {
       if (error instanceof BadRequestError && isNativeUnsupportedError(error)) {
         return this.generateStructuredViaToolUse(params);
       }
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -450,7 +459,7 @@ export class AnthropicProvider implements LlmProvider {
       this.reportUsage(params.onUsage, message.usage);
       return this.parseWithSchema(params.schema, toolUse.input);
     } catch (error) {
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -497,7 +506,7 @@ export class AnthropicProvider implements LlmProvider {
       this.reportUsage(params.onUsage, message.usage);
       return text;
     } catch (error) {
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -546,7 +555,7 @@ export class AnthropicProvider implements LlmProvider {
       ) {
         return this.generateTextPlain(params);
       }
-      throw this.mapError(error);
+      throw this.mapError(error, params.signal);
     }
   }
 
@@ -579,9 +588,18 @@ export class AnthropicProvider implements LlmProvider {
     return result.data;
   }
 
-  private mapError(error: unknown): LlmError {
+  // abort 판정이 맨 앞 — 취소를 실패로 안 보는 책임을 호출부가 아니라 provider가 진다
+  // (openai-provider와 같은 계약: 취소가 "unknown"으로 새면 워커가 재시도해버린다).
+  private mapError(error: unknown, signal?: AbortSignal): LlmError {
     if (error instanceof LlmError) {
       return error;
+    }
+    if (signal?.aborted) {
+      return new LlmError(
+        "aborted",
+        "LLM call was aborted by the caller",
+        error,
+      );
     }
     if (error instanceof APIConnectionTimeoutError) {
       return new LlmError("timeout", "LLM request timed out", error);

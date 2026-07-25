@@ -16,8 +16,10 @@ export type RelationMarkers = Pick<
   "supersededBy" | "conflictsWith" | "resolvedBy"
 >;
 
-export type DraftSummary = RouterOutputs["draft"]["list"]["drafts"][number];
-export type TopicSummary = RouterOutputs["topic"]["list"]["topics"][number];
+export type PendingSourceItem =
+  RouterOutputs["source"]["listPending"]["items"][number];
+export type DigestReviewDetail = RouterOutputs["digestReview"]["get"];
+export type ReviewDigest = DigestReviewDetail["digests"][number];
 export type NarrationEvidence = RouterOutputs["narration"]["evidence"];
 
 export type PendingRelation =
@@ -27,3 +29,12 @@ export type ChangesetHistoryEntry =
 export type ActiveRelation =
   RouterOutputs["changeset"]["listActiveRelations"]["relations"][number];
 export type RelationType = ActiveRelation["type"];
+
+export type ReferenceSummary =
+  RouterOutputs["reference"]["list"]["references"][number];
+
+type ModelPresetInfo = RouterOutputs["dev"]["getModelPreset"];
+export type ModelPresetName = ModelPresetInfo["preset"];
+type TaskModels = RouterOutputs["dev"]["getTaskModels"];
+export type ModelCatalogEntry = TaskModels["catalog"][number];
+export type LlmTaskName = keyof TaskModels["overrides"];

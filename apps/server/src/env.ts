@@ -4,7 +4,9 @@ import { resolve } from "node:path";
 import { config } from "dotenv";
 import { z } from "zod";
 
-const appEnvValues = ["staging", "production"] as const;
+const appEnvValues = ["local", "staging", "production"] as const;
+
+export type AppEnv = (typeof appEnvValues)[number];
 
 const envSchema = z
   .object({
@@ -25,6 +27,8 @@ const envSchema = z
     // 설정 시 Gemini를 Vertex(ADC 인증·GCP 크레딧) 경로로 — 없으면 GEMINI_API_KEY(AI Studio).
     GEMINI_VERTEX_PROJECT: z.string().min(1).optional(),
     GEMINI_VERTEX_LOCATION: z.string().min(1).optional(),
+    // 헤드리스 배포엔 사람 로그인 ADC가 없어 서비스 계정 키로 명시 인증한다.
+    GEMINI_VERTEX_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
     VOYAGE_API_KEY: z.string().min(1).optional(),
 
     QDRANT_URL: z.string().url().optional(),

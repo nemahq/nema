@@ -30,12 +30,7 @@ describe("appRouter", () => {
     });
 
     await expect(
-      authedCaller.message.confirmDraftIntent({
-        sessionId: "00000000-0000-0000-0000-000000000000",
-        actionMessageId: "00000000-0000-0000-0000-000000000001",
-        intent: "replace",
-        draftContext: "context",
-      }),
+      authedCaller.narration.narrateText({ query: "test query" }),
     ).rejects.toThrow(expect.objectContaining({ code: "PRECONDITION_FAILED" }));
   });
 });

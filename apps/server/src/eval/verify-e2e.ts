@@ -189,9 +189,16 @@ async function runPipeline(args: {
   const vectorStore = createQdrantStore(createQdrantClient());
   await vectorStore.ensureCollection();
 
+  const providers = {
+    llm: { forTask: () => llm },
+    embedding,
+    vectorStore,
+  };
+
   // ── ① create_source 박제 ──────────────────────────────────────────
   const { sourceId } = await createSource({
     supabase: userClient,
+    providers,
     body: SOURCE_BODY,
   });
   const { data: source, error: sourceError } = await admin
@@ -295,21 +302,16 @@ async function runPipeline(args: {
     `③ 임베딩: ingestion 전부 completed=${embedded}, Qdrant points=${collectionInfo.points_count}`,
   );
 
-  // ── ④ 뜻 검색 → 원장 조회 → 원본 묶음 반환 ────────────────────────
+  // ── ④ 뜻 검색 → 원장 조회 → 원문 묶음 반환 ────────────────────────
   const searchResult = await searchStatements({
     supabase: userClient,
-    // 검색은 vectorStore·embedding만 쓴다 — llm은 타입 충족용.
-    providers: {
-      llm: { forTask: () => llm },
-      embedding,
-      vectorStore,
-    },
+    providers,
     query: SEARCH_QUERY,
   });
   const hitContents = searchResult.groups.flatMap((g) =>
     g.statements.map((s) => s.content),
   );
-  results["④ 검색·원본 묶음 반환"] =
+  results["④ 검색·원문 묶음 반환"] =
     searchResult.groups.length > 0 &&
     searchResult.groups[0]?.key.kind === "source" &&
     hitContents.some((c) => c.includes("토스"));
@@ -335,6 +337,7 @@ async function runPipeline(args: {
   );
   const { sourceId: longSourceId } = await createSource({
     supabase: userClient,
+    providers,
     body: longBody,
   });
 
