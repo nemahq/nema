@@ -21,7 +21,7 @@
 
 ## 함께 보는 문서
 
-- 콘텐츠 입구(`docs/blueprints/first-product/content-intake-design.md`): Track 0가 깐 계약(draft·topic 라우터, 확정 게이트 백엔드)을 정한 문서. 이 문서는 그 계약 위에 앱 표면을 얹는다.
+- 콘텐츠 입구(`docs/archive/content-intake-design.archive.md`): Track 0가 깐 계약(draft·topic 라우터, 확정 게이트 백엔드)을 정한 문서. 이 문서는 그 계약 위에 앱 표면을 얹는다.
 - 해설(`docs/blueprints/first-product/narration-design.md`): 다시켜기의 묻기 표면. 이 문서는 해설을 배경으로만 다루고, 넣기가 그 옆에 어떻게 앉는지까지만 본다.
 - MCP(`docs/blueprints/first-product/mcp-design.md`): 외부에서 올리기 입구. 이번 라운드는 읽기 전용이고, 넣기와 초안·확정 게이트를 공유한다.
 - 첫 제품 방향(`docs/foundations/11-first-product-direction.md`, 이하 방향 문서): 누구에게 무엇부터 만드는지 정한 문서. 아래에서 "방향 문서 §4"처럼 가리킨다.
