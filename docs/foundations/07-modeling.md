@@ -8,10 +8,10 @@
 |---|---|---|
 | `id` | `uuid` | 식별자 |
 | `spaceId` | `uuid` | 어느 Space에 제출됐나 |
-| `title?` | `string` | 원본을 식별하는 짧은 이름. 외부 연동(Gmail Subject, Tiro 회의 제목 등)은 그 시스템이 이미 준 값을 그대로 매핑한다. 직접 타이핑·붙여넣기처럼 자연히 제목이 없는 입력은, 제출 즉시(1단계 Digest 추출보다 먼저) 엔진이 원문을 보고 빠르게 채운다 — 넣기 자체는 SNS 포스팅처럼 제목 필드 없이 가볍게 유지(가벼운 캡처 원칙)하면서도, 원문 탭·초안 목록 등에서 스니펫 대신 보여줄 이름을 확보한다. `open` 상태인 ingestion changeset이 아직 없는 동안(= 초안에 머무는 동안)만 사람이 직접 고칠 수 있고, 리뷰가 시작되면(open ingestion changeset 발생) 잠긴다 — Changeset.title이 그 시점부터 화면의 주된 편집 가능한 제목 역할을 대신하므로, 동시에 편집 가능한 제목이 두 개가 되는 걸 피한다 |
+| `title?` | `string` | 원본을 식별하는 짧은 이름. 외부 연동(Gmail Subject, Tiro 회의 제목 등)은 그 시스템이 이미 준 값을 그대로 매핑한다. 직접 타이핑·붙여넣기처럼 자연히 제목이 없는 입력은, 제출 즉시(1단계 Digest 추출보다 먼저) 엔진이 원문을 보고 빠르게 채운다 — 넣기 자체는 SNS 포스팅처럼 제목 필드 없이 가볍게 유지(가벼운 캡처 원칙)하면서도, 원문 탭·초안 목록 등에서 스니펫 대신 보여줄 이름을 확보한다. 원본이 대기 중인 초안 상태일 때만 사람이 직접 고칠 수 있고, 인제스천이 시작되면 잠긴다 — Changeset.title이 그 시점부터 화면의 주된 편집 가능한 제목 역할을 대신하므로, 동시에 편집 가능한 제목이 두 개가 되는 걸 피한다 |
 | `body` | `string` | 원문 텍스트 (타이핑·붙여넣기·전사·추출 텍스트) |
 | `createdAt` | `Date` | 원본이 시스템에 들어온 때 |
-| `status` | `enum: pending / active / trashed` | 존재 상태. `pending`은 파생된 게 없는 상태(갓 생성됐거나, ingestion 되돌리기로 되돌려진 것 — "처리 중인 Source 작업 목록"에 노출). `active`는 확정된 Digest·Statement 등이 있는 상태. `trashed`는 사용자가 명시적으로 삭제를 선택한 상태 — `trashedAt` 이후 보관 기간(30일)이 지나면 배치로 완전 삭제됨. 전이는 한 방향 사슬 `active →(ingestion 되돌리기)→ pending →(삭제)→ trashed`이고 복원은 `trashed → pending`(파생 없는 상태라 pending 정의 그대로) — active에서 파생을 유지한 채 원본만 치우는 동작은 없다. 삭제·복원(pending↔trashed)은 변경이력에 남기지 않는다 — pending 원본은 그래프에 아무것도 심지 않아 리뷰·되돌리기의 대상이 아니다 |
+| `status` | `enum: pending / active / trashed` | 존재 상태. `pending`은 확정된 파생물이 없는 상태(갓 생성됐거나, ingestion 되돌리기로 되돌려졌거나, 리뷰를 버려서 되돌아온 것 — "처리 중인 Source 작업 목록"에 노출). `active`는 확정된 Digest·Statement 등이 있는 상태. `trashed`는 사용자가 명시적으로 삭제를 선택한 상태 — `trashedAt` 이후 보관 기간(30일)이 지나면 배치로 완전 삭제됨. 전이는 한 방향 사슬 `active →(ingestion 되돌리기)→ pending →(삭제)→ trashed`이고 복원은 `trashed → pending`(파생 없는 상태라 pending 정의 그대로) — active에서 파생을 유지한 채 원본만 치우는 동작은 없다. 삭제·복원(pending↔trashed)은 변경이력에 남기지 않는다 — pending 원본은 그래프에 아무것도 심지 않아 리뷰·되돌리기의 대상이 아니다 |
 | `trashedAt?` | `Date` | `trashed`가 된 시각 — 완전 삭제 배치가 보관 기간 경과 여부를 판단하는 기준 |
 | `authorId?` | `uuid` | 누가 넣었나 (사용자 id) — User 삭제 시 `ON DELETE SET NULL`이라 nullable |
 
@@ -93,8 +93,9 @@ Source를 사람이 읽기 좋게 정리한 것. 여기서 Statement가 추출�
 | `id` | `uuid` | 식별자 |
 | `content` | `string` | 진술 내용, 그 '왜' 자체 |
 | `confidence?` | `enum: certain / guess` | 사실인가 추측인가 — `claim`에서만 (확장 가능) |
-| `type` | `enum: claim / question / todo` | 진술의 종류 — 결정·미정 단언도 `claim` |
+| `type` | `enum: claim / question` | 진술의 종류 — 결정·미정 단언도 `claim` |
 | `digestId` | `uuid` | 어느 Digest에서 추출됐나. Source가 아니라 Digest를 직접 참조 — 확정 후 안 바뀌는 Digest라 locator가 안정적이고, Digest는 이미 사람이 확정한 것이라 판정의 진짜 근거가 됨 |
+| `spaceId` | `uuid` | 소속 Space. `digestId`로 유추 가능하지만, RLS(행 단위 접근 제어)가 매 조회마다 조인 없이 바로 판정할 수 있도록 따로 둠(Digest.spaceId와 같은 이유) |
 | `referenceIds?` | `uuid[]` | 이 Statement가 실제로 언급하는 Reference들. `Digest.referenceIds`가 리뷰 단계의 후보군이라면, 이건 Statement 생성(2단계) 때 문장 단위로 정밀하게 매핑된 결과 — Reference 상세 화면의 역참조·해설 근거 인용이 이 정밀도를 요구한다 |
 | `createdAt` | `Date` | 진술이 시스템에 들어온 때 |
 | `status` | `enum: active / archived` | 존재 상태 — `replaces`·`duplicates`로 대체되거나, 소속 Digest·Source가 되돌려지면 연쇄로 `archived` |
@@ -109,6 +110,7 @@ Source를 사람이 읽기 좋게 정리한 것. 여기서 Statement가 추출�
 | `type` | `enum: supports / conflicts / replaces / duplicates / resolves` | 관계 종류 (인과·시간순·연관은 동작 갈리면 추가) |
 | `fromId` | `uuid` | 출발 진술 (A) |
 | `toId` | `uuid` | 도착 진술 (B) |
+| `spaceId` | `uuid` | 이 관계를 만든 쪽의 Space. 관계는 Space를 가로지를 수 있어(다른 사람 진술에 반박·근거를 닮, `10-concept-collaboration.md`) 끝점만으론 어느 Space 소속인지 모호해지므로 명시적으로 저장 — RLS 판정에도 씀 |
 | `createdAt` | `Date` | 관계가 생긴 때 |
 | `status` | `enum: active / archived` | 존재 상태 — 끝점 진술이 `archived`되면 연쇄로 `archived` |
 
@@ -153,6 +155,7 @@ Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력
 | `sourceId?` | `uuid` | `ingestion`·`relation`이면 어느 원본이 방아쇠였나 |
 | `spaceId?` | `uuid` | 소속 Space — Space 콘텐츠(Source·Digest·Statement·Relation)에서 트리거된 경우만 채워짐. Reference 직접 수정처럼 Workspace 스코프 콘텐츠가 대상이면 비움 |
 | `revertsId?` | `uuid` | 되돌리는 대상 변경셋 (`revert`에서만) |
+| `invalidatedById?` | `uuid` | 이 changeset을 무효화한 다른 changeset. 한 Digest가 여러 곳과 동시에 중복 감지됐는데 그중 하나가 먼저 병합 확정되면, 대상이 사라진 나머지 제안은 `rejected`로 자동 닫히며 이 필드가 그 원인이 된 changeset을 가리킨다 — 사람이 "중복 아님"이라 판단해 거절한 것과 구분하기 위함(아래 "한 Digest가 여러 곳과 동시에 중복될 수 있다" 참고) |
 | `createdAt` | `Date` | 만들어진 때 |
 | `authorId?` | `uuid` | 사람이 일으킨 변경의 주체 (엔진이면 없음) |
 
@@ -294,7 +297,7 @@ Nema 쪽에서 붙이는 유일한 확장은 `profiles`(`user_id` → `auth.user
 
   **컴플라이언스 관점에서는 이 cascade만으론 부족하다** — `relation`(충돌·중복) changeset은 그 판정 시점 콘텐츠를 `Change.data`에 스냅샷으로 얼려서 보관하는데(git이 옛 커밋을 그대로 보여주는 것과 같은 원리), 그 changeset의 `sourceId`는 판정을 촉발한 **새** 원본이지 지워지는 원본이 아닐 수 있다 — 지워지는 원본 X의 진술이 나중에 들어온 원본 Y의 진술과 충돌·중복 판정이 붙었다면, 그 changeset은 Y 소속이라 X를 purge해도 안 지워지고, X 진술의 전체 내용이 그 안에 스냅샷으로 그대로 남는다. 이건 백업처럼 죽은 데이터가 아니라 **Changeset 상세 화면을 열면 실제로 보이는, 살아있는 제품 표면**이라 방치할 수 없다. 그렇다고 cascade 범위를 "이 콘텐츠를 참조하는 모든 곳"으로 넓히면 파급이 얼마나 커질지 모르는 위험한 연쇄가 되므로, 범위를 넓히지 않고 다음처럼 좁게 처리한다: purge 대상 Digest·진술 ID 목록은 이미 정확히 알고 있는 유한한 집합이므로, 이 ID들을 스냅샷으로 담고 있는 **다른 원본 소속** `relation` changeset을 그 ID 기준으로만 찾아 changeset 구조(배지·시각·판정 결과라는 사실 자체)는 남기고 **콘텐츠 필드만 삭제 표시로 치환**한다 — 그래프를 훑는 새로운 연쇄가 아니라, 이미 사람이 무거운 확인을 거쳐 확정한 삭제 행위의 후속 처리다. Reference는 이 처리에 포함하지 않는다 — Reference는 `relation`(충돌·중복) 대상이 아니라서(Statement 전용) 이 문제 자체가 안 생긴다. Reference 자신의 완전 삭제는 아래 별도 규칙을 따른다.
 
-- **Reference 완전 삭제 — Source처럼 독립적인 `trashed`→30일→배치 purge, 확인 무게는 인용 여부로 갈린다** — Reference는 Digest와 달리 기댈 부모(Source)가 없다(여러 Source·ingestion에 걸쳐 계속 재사용되는 Workspace 공유 자원이라서). 그래서 완전 삭제도 다른 무언가에 얹혀가는 게 아니라 그 자체로 독립된 플로우다. **확인 UI 무게는 인용 중인 Digest 수(N)로 갈린다** — Reference 상세에 이미 있는 "인용하는 Digest (N)" 카운트를 그대로 재사용: N=0이면 가벼운 버튼 확인, N>0이면 Space·Workspace급의 "이름 타이핑" 확인(그 아래 인용 중인 Digest 목록도 같이 보여줌 — "조용히 덮지 않는다"). **인용하는 Digest를 미리 정리하라고 막지는 않는다** — 컴플라이언스처럼 지체 없이 처리해야 하는 요청을 인용 정리(각 Digest를 archive+create로 무겁게 고쳐야 함)에 막아두면 안 된다는 판단. 삭제 확정 후 그 Digest들 본문의 멘션은 죽은 링크 표시로 남는다.
+- **Reference 완전 삭제 — Source처럼 독립적인 `trashed`→30일→배치 purge, 확인 무게는 인용 여부로 갈린다** — Reference는 Digest와 달리 기댈 부모(Source)가 없다(여러 Source·ingestion에 걸쳐 계속 재사용되는 Workspace 공유 자원이라서). 그래서 완전 삭제도 다른 무언가에 얹혀가는 게 아니라 그 자체로 독립된 플로우다. 이건 **Source 단위** purge 얘기다 — 다른 Source가 아직 그 Reference를 쓰고 있을 수 있어서 제외되는 것. **Workspace 전체**가 삭제되는 경우(계정 삭제로 유일 멤버 Workspace가 통째로 사라질 때 등)는 다르다 — `references.workspace_id`가 `ON DELETE CASCADE`라 그 안의 Reference도 Workspace와 함께 자동으로 삭제된다(`delete_workspace` RPC). **확인 UI 무게는 인용 중인 Digest 수(N)로 갈린다** — Reference 상세에 이미 있는 "인용하는 Digest (N)" 카운트를 그대로 재사용: N=0이면 가벼운 버튼 확인, N>0이면 Space·Workspace급의 "이름 타이핑" 확인(그 아래 인용 중인 Digest 목록도 같이 보여줌 — "조용히 덮지 않는다"). **인용하는 Digest를 미리 정리하라고 막지는 않는다** — 컴플라이언스처럼 지체 없이 처리해야 하는 요청을 인용 정리(각 Digest를 archive+create로 무겁게 고쳐야 함)에 막아두면 안 된다는 판단. 삭제 확정 후 그 Digest들 본문의 멘션은 죽은 링크 표시로 남는다.
 
   **확인 무게와 유예 기간은 서로 다른 문제를 막는 장치라 하나가 다른 하나를 대체하지 않는다** — 타이핑 확인은 "실수로 눌렀다"(오클릭)를 막고, 유예 기간은 "의도적으로 눌렀지만 틀렸다"(후회·성급함·악의)를 막는다. 그래서 확인이 무거워도 유예 기간은 그대로 준다 — Source·Space·Workspace와 똑같이 `trashed` 30일 뒤 배치 purge(사실 Space·Workspace 완전 삭제도 "삭제 메커니즘 자체는 Source의 완전 삭제를 부채꼴로 재사용"이라 이미 이 패턴을 쓰고 있다). 확인 즉시 `trashed`로 전환되며 검색·멘션 매칭 등 모든 표면에서 즉시 빠진다(archived보다 강하게 숨음) — 컴플라이언스가 요구하는 "즉시 노출 중단"은 이 시점에 이미 만족되고, 지연되는 건 물리적 삭제뿐이다.
 
