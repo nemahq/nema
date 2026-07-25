@@ -67,6 +67,15 @@ export interface ExtractionChunk {
   contextAfter: string | null;
 }
 
+/**
+ * @lintignore
+ * 프로덕션 호출부 없음 — 테스트·eval(run-length-curve)만 참조. Digest 도입 이전
+ * 설계(원문 body 직접 청킹)라 지금 파이프라인(Digest 생성 1콜, 추출은 Digest
+ * 기반)엔 안 붙어 있다. 삭제하지 않고 보존: Digest 생성 단계에 긴 원문 청킹이
+ * 필요해지면(현재 SOURCE_BODY_MAX_LENGTH 10만 자가 실제로 문제되는지 실측 후)
+ * 재사용 검토. infra/는 컨벤션상 외부 서비스 클라이언트 전용이라 이 파일은
+ * 원래 위치도 안 맞는데, 재설계 시점에 위치도 같이 정리한다.
+ */
 export function countTokens(text: string): number {
   return encodeBounded(text).length;
 }
@@ -74,6 +83,8 @@ export function countTokens(text: string): number {
 /**
  * 임계선 이하면 [원문 1청크, 문맥 null] — 호출자는 현행 1콜 경로 그대로.
  * 초과하면 균등 패킹된 청크 목록 — 본문을 전부 이으면 원문과 동일(무손실).
+ *
+ * @lintignore 위 countTokens와 같은 사유로 보존.
  */
 export function chunkForExtraction(body: string): ExtractionChunk[] {
   const totalTokens = countTokens(body);
