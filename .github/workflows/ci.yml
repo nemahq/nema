@@ -63,15 +63,21 @@ jobs:
         # PR은 base 브랜치, 브랜치 push는 직전 커밋, 태그 push는 직전 태그와 비교한다
         # (deploy-staging/deploy-production이 각자 쓰는 diff 기준과 동일하게 맞춘다).
         id: diffbase
+        env:
+          # ${{ }}를 셸 스크립트 본문에 직접 펼치지 않고 env로 받는다 — 브랜치·태그 이름이
+          # 스크립트로 해석될 여지를 없애기 위한 GitHub 권장 방식이다.
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          REF: ${{ github.ref }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "base=origin/${{ github.base_ref }}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "base=origin/$BASE_REF" >> "$GITHUB_OUTPUT"
+          elif [[ "$REF" == refs/tags/* ]]; then
             PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-            echo "base=$PREV_TAG" >> $GITHUB_OUTPUT
+            echo "base=$PREV_TAG" >> "$GITHUB_OUTPUT"
           else
-            echo "base=HEAD~1" >> $GITHUB_OUTPUT
+            echo "base=HEAD~1" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Check for migration/server changes
@@ -81,20 +87,21 @@ jobs:
         # 하나라도 바뀌면 DB를 띄운다. migrations_changed는 db_needed와 같은 diff
         # 결과에서 걸러내 — 두 출력이 서로 다른 git diff를 호출해 어긋나는 일이 없게 한다.
         id: changes
+        env:
+          BASE: ${{ steps.diffbase.outputs.base }}
         run: |
           set -euo pipefail
-          BASE="${{ steps.diffbase.outputs.base }}"
           if [ -z "$BASE" ]; then
             # 이전 태그가 없는 첫 배포 등 비교 기준이 없는 경우 안전하게 "변경됨"으로 취급
-            echo "db_needed=true" >> $GITHUB_OUTPUT
-            echo "migrations_changed=true" >> $GITHUB_OUTPUT
+            echo "db_needed=true" >> "$GITHUB_OUTPUT"
+            echo "migrations_changed=true" >> "$GITHUB_OUTPUT"
           else
             ALL_CHANGED=$(git diff --name-only "$BASE"...HEAD -- 'apps/server/' 'packages/shared/src/' 'supabase/migrations/')
             if [ -n "$ALL_CHANGED" ]; then
-              echo "db_needed=true" >> $GITHUB_OUTPUT
+              echo "db_needed=true" >> "$GITHUB_OUTPUT"
             fi
             if echo "$ALL_CHANGED" | grep -q '^supabase/migrations/'; then
-              echo "migrations_changed=true" >> $GITHUB_OUTPUT
+              echo "migrations_changed=true" >> "$GITHUB_OUTPUT"
             fi
           fi
 
@@ -105,6 +112,8 @@ jobs:
           version: 2.110.0-beta.10
 
       - name: Start Supabase
+        # 여기서 띄운 인스턴스를 아래 Verify/Test 스텝이 그대로 재사용한다 —
+        # 정리는 job 마지막의 Stop Supabase에서 한 번만 한다.
         if: steps.changes.outputs.db_needed == 'true'
         run: supabase start
 
@@ -131,8 +140,6 @@ jobs:
           REQUIRE_LOCAL_DB: ${{ steps.changes.outputs.db_needed }}
 
       - name: Stop Supabase
-        # Start Supabase 이후로 stop하지 않는다 — 위 Test 스텝의 통합 테스트가
-        # 같은 인스턴스를 그대로 재사용하기 때문에, 여기 job 끝에서만 정리한다.
         if: always() && steps.changes.outputs.db_needed == 'true'
         run: supabase stop || true
 
