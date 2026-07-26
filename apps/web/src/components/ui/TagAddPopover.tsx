@@ -67,9 +67,11 @@ function TagSearchResults({
           <li key={tag.id}>
             <ComboboxItem
               onClick={() => onSelectExisting(tag)}
-              className="truncate px-2 py-1.5 text-sm"
+              className="truncate px-2 py-1.5"
             >
-              {tag.title}
+              <Text as="span" size="sm">
+                {tag.title}
+              </Text>
             </ComboboxItem>
           </li>
         ))}
@@ -83,11 +85,13 @@ function TagSearchResults({
         <ComboboxItem
           disabled={!canStartCreateNew}
           onClick={() => onStartCreate(trimmed)}
-          className="px-2 py-1.5 text-sm"
+          className="px-2 py-1.5"
         >
-          {t("review.label_create_new_before")}
-          {trimmed}
-          {t("review.label_create_new_after")}
+          <Text as="span" size="sm">
+            {t("review.label_create_new_before")}
+            {trimmed}
+            {t("review.label_create_new_after")}
+          </Text>
         </ComboboxItem>
       )}
     </>
