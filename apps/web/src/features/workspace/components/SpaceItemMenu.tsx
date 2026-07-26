@@ -6,13 +6,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  HoverIcon,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@nema-io/weave";
 import { Ellipsis, Settings, Trash2 } from "@nema-io/weave/icons";
 
-import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface SpaceItemMenuProps {
@@ -37,7 +37,7 @@ export function SpaceItemMenu({
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <LnbHoverIcon
+            <HoverIcon
               aria-label={t("space.menu")}
               className={cn(
                 "absolute right-3.5 cursor-pointer group-hover:opacity-100",
@@ -46,7 +46,7 @@ export function SpaceItemMenu({
               onClick={(e) => e.preventDefault()}
             >
               <Ellipsis className="size-4 text-fg-tertiary" />
-            </LnbHoverIcon>
+            </HoverIcon>
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent side="bottom">{t("space.menu")}</TooltipContent>

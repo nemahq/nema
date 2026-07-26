@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/react";
 
 import {
   Button,
+  ComboboxItem,
   Input,
   Popover,
   PopoverContent,
@@ -64,13 +65,12 @@ function TagSearchResults({
       <ul className={SEARCH_LIST_CLASSNAME}>
         {candidates.map((tag) => (
           <li key={tag.id}>
-            <button
-              type="button"
+            <ComboboxItem
               onClick={() => onSelectExisting(tag)}
-              className="w-full truncate rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-raised-hover"
+              className="truncate px-2 py-1.5 text-sm"
             >
               {tag.title}
-            </button>
+            </ComboboxItem>
           </li>
         ))}
         {candidates.length === 0 && trimmed === "" && (
@@ -80,16 +80,15 @@ function TagSearchResults({
         )}
       </ul>
       {trimmed !== "" && !hasExactMatch && (
-        <button
-          type="button"
+        <ComboboxItem
           disabled={!canStartCreateNew}
           onClick={() => onStartCreate(trimmed)}
-          className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quinary"
+          className="px-2 py-1.5 text-sm"
         >
           {t("review.label_create_new_before")}
           {trimmed}
           {t("review.label_create_new_after")}
-        </button>
+        </ComboboxItem>
       )}
     </>
   );
