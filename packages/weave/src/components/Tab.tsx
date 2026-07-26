@@ -5,14 +5,14 @@ import { cn } from "../utils";
 export type TabIndicatorSide = "top" | "bottom";
 export type TabSize = "default";
 
-// 활성 탭임을 나타내는 amber 밑줄 색 — 보더가 버튼 밖 wrapper(닫기 버튼까지
-// 포함한 영역)에 걸쳐야 하는 소비처(TabbedPanel)는 아래 Tab 컴포넌트 대신
-// 이 토큰들을 자기 wrapper에 직접 입힌다.
-export const TAB_INDICATOR_SIDE_CLASSNAME: Record<TabIndicatorSide, string> = {
+const TAB_INDICATOR_SIDE_CLASSNAME: Record<TabIndicatorSide, string> = {
   top: "border-t-2 -mt-px",
   bottom: "border-b-2 -mb-px",
 };
 
+// 활성 탭임을 나타내는 amber 밑줄 색 — 보더가 버튼 밖 wrapper(닫기 버튼까지
+// 포함한 영역)에 걸쳐야 하는 소비처(TabbedPanel)는 Tab 컴포넌트 대신
+// 이 토큰들을 자기 wrapper에 직접 입힌다.
 export const TAB_ACTIVE_INDICATOR_CLASSNAME: Record<TabIndicatorSide, string> =
   {
     top: "border-t-amber-600 dark:border-t-amber-500",
