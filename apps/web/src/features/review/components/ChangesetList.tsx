@@ -52,6 +52,7 @@ function ChangesetListContent({ subTab }: ChangesetListProps) {
           changesetNumber={entry.number}
           title={entry.title}
           type={entry.type}
+          revertDepth={entry.revertDepth}
           status={entry.status}
           createdAt={entry.createdAt}
           effectDigest={entry.effect.digest}

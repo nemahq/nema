@@ -59,7 +59,7 @@ describe("pointIdOf", () => {
 });
 
 describe("classificationMetrics", () => {
-  const TYPES = ["claim", "question", "todo"] as const;
+  const TYPES = ["claim", "question"] as const;
 
   // 이 지표의 존재 이유 — accuracy가 다수 클래스에 가려 못 보는 소수 클래스 실패를
   // macro-F1이 드러내는지가 핵심. 이게 틀리면 분류 약점을 놓친다.
@@ -86,19 +86,25 @@ describe("classificationMetrics", () => {
   });
 
   it("골든도 예측도 없는 클래스는 제외 — macro를 0으로 끌어내리지 않는다", () => {
+    // classificationMetrics는 어떤 클래스 집합에도 동작하는 범용 함수라, 실제 진술
+    // 타입과 무관한 3번째 클래스("unseen")로 "등장 안 한 클래스" 상황을 재현한다.
+    const classesWithUnseen = ["claim", "question", "unseen"] as const;
     const pairs = [
       { expected: "claim" as const, actual: "claim" as const },
       { expected: "question" as const, actual: "question" as const },
     ];
-    const { perClass, macroF1 } = classificationMetrics(TYPES, pairs);
+    const { perClass, macroF1 } = classificationMetrics(
+      classesWithUnseen,
+      pairs,
+    );
 
-    expect(perClass.todo).toEqual({
+    expect(perClass.unseen).toEqual({
       precision: null,
       recall: null,
       f1: null,
       support: 0,
     });
-    // 등장한 두 클래스 모두 완벽 → todo(미등장)를 빼고 macro = 1
+    // 등장한 두 클래스 모두 완벽 → unseen(미등장)을 빼고 macro = 1
     expect(macroF1).toBe(1);
   });
 });

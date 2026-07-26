@@ -70,7 +70,7 @@ export const PendingStatementSchema = z.object({
   id: z.string().uuid(),
   space_id: z.string().uuid(),
   content: z.string().min(1),
-  type: z.enum(["claim", "question", "todo"]),
+  type: z.enum(["claim", "question"]),
   confidence: z.enum(["certain", "guess"]).nullable(),
   status: z.enum(["active", "archived"]),
   created_at: z.string().datetime({ offset: true }),
@@ -93,7 +93,7 @@ export type PendingLinkingSource = z.infer<typeof PendingLinkingSourceSchema>;
 export const LinkingBatchStatementSchema = z.object({
   id: z.string().uuid(),
   content: z.string().min(1),
-  type: z.enum(["claim", "question", "todo"]),
+  type: z.enum(["claim", "question"]),
   confidence: z.enum(["certain", "guess"]).nullable(),
   ingestion_status: z.enum(["pending", "completed", "failed"]),
 });
@@ -104,7 +104,7 @@ export type LinkingBatchStatement = z.infer<typeof LinkingBatchStatementSchema>;
 export const LinkingCandidateStatementSchema = z.object({
   id: z.string().uuid(),
   content: z.string().min(1),
-  type: z.enum(["claim", "question", "todo"]),
+  type: z.enum(["claim", "question"]),
   confidence: z.enum(["certain", "guess"]).nullable(),
 });
 

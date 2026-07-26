@@ -441,6 +441,11 @@ export async function listChangesets(args: {
       "id, number, type, status, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, author_name, created_at, updated_at, changes(target_type), sources(status)",
     )
     .eq("space_id", targetSpaceId)
+    // manual은 review-flow.md상 이 목록의 대상이 아니다(대상 콘텐츠의 "변경 이력"
+    // 모달에서만 조회). Reference manual(space_id NULL)은 위 eq로 이미 안 걸리지만,
+    // Digest manual(confirm_digest_edit·archive_digest)은 space_id가 있어 그
+    // 필터를 안 타므로 여기서 명시적으로 뺀다.
+    .neq("type", "manual")
     .order("number", { ascending: false })
     // 다음 페이지 존재 여부를 별도 count 쿼리 없이 알려고 하나 더 얹어 받는다.
     .limit(limit + 1);

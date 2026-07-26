@@ -31,7 +31,7 @@
 3. **유효성 = 존재 + 대체(replaces) 없음.** 별도 시각 필드(effectiveAt) 없음. 참·거짓 미판단.
 4. **`author_id`는 사람 산물에만** (원문·사람 주도 변경셋). 엔진 산물(진술·관계)엔 없음.
 5. **관계·변경셋은 스키마에 자리만, 엔진은 미연결** (이 작업 스코프 기준).
-6. **진술 종류 claim/question/todo 다 받음.** 확신도는 claim에만.
+6. **진술 종류 claim/question 다 받음.** 확신도는 claim에만.
 7. **원문은 불변** — "수정"은 폐기(archive)+재생성으로 표현. **진술의 `modify`는 모델 연산으로 존재하나(07이 "진술을 modify하면 관계 재평가"로 명시), 첫 출시엔 직접 수정 기능을 안 만들어 실제로 생성되지 않는다(09 미정).**
 
 ---
@@ -115,7 +115,7 @@ CREATE TABLE statements (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   space_id    uuid NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
   content     text NOT NULL,                              -- 그 '왜' 자체
-  type        statement_type NOT NULL,                    -- claim | question | todo
+  type        statement_type NOT NULL,                    -- claim | question
   confidence  statement_confidence,                       -- certain | guess, claim에서만
   status      statement_status NOT NULL DEFAULT 'active', -- active | archived
   -- 임베딩 동기화 (1진술 = 1벡터)
@@ -319,7 +319,7 @@ CREATE TRIGGER on_auth_user_created
 -- enum (status 계열은 의미별 독립 진화 위해 분리)
 CREATE TYPE space_role            AS ENUM ('owner','member');
 CREATE TYPE source_status         AS ENUM ('active','archived');
-CREATE TYPE statement_type        AS ENUM ('claim','question','todo');
+CREATE TYPE statement_type        AS ENUM ('claim','question');
 CREATE TYPE statement_confidence  AS ENUM ('certain','guess');
 CREATE TYPE statement_status      AS ENUM ('active','archived');
 -- ingestion_status (pending|completed|failed)는 기존 것 재사용 — 추출(sources.extraction_status)·임베딩(statements.ingestion_status)이 같은 3-상태라 enum 공유

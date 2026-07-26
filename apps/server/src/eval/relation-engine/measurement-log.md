@@ -221,3 +221,7 @@
 - **구조적 해는 다른 데 있다.** 근접중복의 뿌리는 합치기(NEM-162)다. 단 측정 #4가 확인했듯 progression(guess→certain)은 같음으로 **안** 합쳐지므로(옳게), dedup이 이 케이스를 자동으로 안 잡는다 — 즉 흡수가 현 단계의 합리적 선택.
 
 **재오픈 조건**: ① 도그푸딩에서 "지난 것" 표식이 실제 혼란/탐색 누락을 부르거나 ② 난도↑ 시험지에서 applied FP율이 오르면. 그땐 `confident` 임계 또는 replaces 정의를 좁히는 시도를 통제 A/B로.
+
+---
+
+**후기 (2026-07-26)**: Statement.type에서 todo가 빠지면서(review-flow 갭 정리) 위 측정 #1·#2가 참조하는 시나리오 이름이 바뀌었다 — `change-todo-not-conflict` → `change-intent-not-conflict`, `invented-supports-todo-unrelated-dogfood` → `invented-supports-question-unrelated-dogfood`(끝점을 todo 대신 question으로 재현). 관계 판정 프롬프트(relation-judgment.ts)도 todo/task를 별도 타입으로 전제하던 부분을 걷어내고 같은 구분(의도-미래 vs 현재-사실)을 문맥만으로 판단하도록 다시 썼다. 이 문서의 측정 서술 자체(FP 원인, recall 수치)는 그 시점 기록이라 고치지 않는다.

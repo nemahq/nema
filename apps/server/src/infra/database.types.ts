@@ -1483,7 +1483,7 @@ export type Database = {
       space_role: "owner" | "member";
       statement_confidence: "certain" | "guess";
       statement_status: "active" | "archived";
-      statement_type: "claim" | "question" | "todo";
+      statement_type: "claim" | "question";
       tag_status: "active" | "archived";
       topic_status: "active" | "archived";
       workspace_role: "owner" | "member";
@@ -1647,7 +1647,7 @@ export const Constants = {
       space_role: ["owner", "member"],
       statement_confidence: ["certain", "guess"],
       statement_status: ["active", "archived"],
-      statement_type: ["claim", "question", "todo"],
+      statement_type: ["claim", "question"],
       tag_status: ["active", "archived"],
       topic_status: ["active", "archived"],
       workspace_role: ["owner", "member"],

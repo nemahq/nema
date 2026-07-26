@@ -173,7 +173,7 @@ describe("createStatementSyncWorker", () => {
     const llm = mockLlm([
       { content: "확정 결정.", type: "claim", confidence: "certain" },
       { content: "확신도 빠진 추정.", type: "claim", confidence: null },
-      { content: "할 일.", type: "todo", confidence: null },
+      { content: "열린 질문.", type: "question", confidence: null },
     ]);
 
     await runOnePoll({
@@ -206,8 +206,8 @@ describe("createStatementSyncWorker", () => {
           index: 1,
         },
         {
-          content: "할 일.",
-          type: "todo",
+          content: "열린 질문.",
+          type: "question",
           confidence: null,
           due_date: null,
           digest_id: DIGEST_ID_1,
@@ -231,8 +231,8 @@ describe("createStatementSyncWorker", () => {
     const llm = mockLlm([
       {
         content: "금요일까지 보고서 끝내기",
-        type: "todo",
-        confidence: null,
+        type: "claim",
+        confidence: "certain",
         deadline: {
           boundary: "by",
           anchorKind: "weekday",
@@ -319,8 +319,6 @@ describe("createStatementSyncWorker", () => {
     const archived = pendingStatement({
       id: STMT_ID_2,
       status: "archived",
-      type: "todo",
-      confidence: null,
     });
     const { client, rpc } = mockSupabase({
       read_sync_events: [[NOTIFY_ROW]],
