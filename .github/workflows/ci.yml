@@ -93,6 +93,9 @@ jobs:
         if: steps.diffbase.outputs.base != ''
         env:
           BASE: ${{ steps.diffbase.outputs.base }}
+          # supabase migration new가 붙이는 타임스탬프 prefix 길이(YYYYMMDDHHMMSS) — 이 길이가
+          # 바뀌면 두 슬라이싱이 같이 갱신되도록 한 곳에만 둔다.
+          TS_LEN: "14"
         run: |
           set -euo pipefail
           NEW_MIGRATIONS=$(git diff --name-only --diff-filter=A "$BASE"...HEAD -- 'supabase/migrations/' | sort)
@@ -104,12 +107,12 @@ jobs:
           if [ -z "$EXISTING_MAX" ]; then
             exit 0
           fi
-          EXISTING_MAX_TS=${EXISTING_MAX:0:14}
+          EXISTING_MAX_TS=${EXISTING_MAX:0:$TS_LEN}
 
           FAILED=false
           while IFS= read -r f; do
             NAME=$(basename "$f")
-            TS=${NAME:0:14}
+            TS=${NAME:0:$TS_LEN}
             if [[ ! "$TS" > "$EXISTING_MAX_TS" ]]; then
               echo "::error file=$f::migration timestamp ($TS) does not sort after the latest migration already on the base branch ($EXISTING_MAX). Another branch already merged a later-timestamped migration. Rebase onto the latest base and recreate this file (e.g. 'supabase migration new <name>') so its timestamp sorts after $EXISTING_MAX_TS — otherwise 'supabase db push' will refuse it as out-of-order when this merges."
               FAILED=true
