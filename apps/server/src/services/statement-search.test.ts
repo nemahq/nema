@@ -371,7 +371,7 @@ describe("searchStatements", () => {
     await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
-        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+        topics: [queryStub([{ id: "topic-1", title: "결제" }])],
         sources: [queryStub([{ id: "src-1" }, { id: "src-2" }])],
         // src-1은 고른 주제, src-2는 무태그 — 둘 다 scope에 든다
         source_topics: [
@@ -397,7 +397,7 @@ describe("searchStatements", () => {
     await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
-        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+        topics: [queryStub([{ id: "topic-1", title: "결제" }])],
       }),
       providers: providersStub(search),
       query: "그때 그거",
@@ -415,7 +415,7 @@ describe("searchStatements", () => {
     const result = await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
-        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+        topics: [queryStub([{ id: "topic-1", title: "결제" }])],
         sources: [queryStub([])],
       }),
       providers: providersStub(search, { topicIds: ["topic-1"] }),
@@ -433,7 +433,7 @@ describe("searchStatements", () => {
     await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
-        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+        topics: [queryStub([{ id: "topic-1", title: "결제" }])],
         sources: [queryStub([{ id: "src-1" }, { id: "src-3" }])],
         // src-1=고른 주제, src-3=안 고른 다른 주제로만 태그 → src-3 제외(무태그도 아님)
         source_topics: [
@@ -462,7 +462,7 @@ describe("searchStatements", () => {
     await searchStatements({
       supabase: supabaseStub({
         space_members: [queryStub([{ space_id: "space-1" }])],
-        topics: [queryStub([{ id: "topic-1", name: "결제" }])],
+        topics: [queryStub([{ id: "topic-1", title: "결제" }])],
       }),
       providers: providersStub(search, { coarseThrows: true }),
       query: "결제",

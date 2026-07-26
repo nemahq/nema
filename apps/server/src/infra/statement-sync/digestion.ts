@@ -12,7 +12,7 @@ import {
   REFERENCE_EXTERNAL_URLS_MAX,
   TAG_DESCRIPTION_MAX_LENGTH,
   TAG_TITLE_MAX_LENGTH,
-  TOPIC_NAME_MAX_LENGTH,
+  TOPIC_TITLE_MAX_LENGTH,
 } from "@nema-io/shared";
 
 import type { Json } from "@server/infra/database.types";
@@ -222,7 +222,7 @@ async function fetchRegistries(
   const [topicsResult, tagsResult, referencesResult] = await Promise.all([
     supabase
       .from("topics")
-      .select("name")
+      .select("title")
       .eq("space_id", scope.spaceId)
       .eq("status", "active")
       .order("updated_at", { ascending: false })
@@ -256,7 +256,7 @@ async function fetchRegistries(
   }
 
   return {
-    topics: (topicsResult.data ?? []).map((row) => row.name),
+    topics: (topicsResult.data ?? []).map((row) => row.title),
     tags: tagsResult.data ?? [],
     references: referencesResult.data ?? [],
   };
@@ -485,7 +485,7 @@ export function normalizeGeneratedDigests(
       body: buildDigestBody(digest),
       topics: sanitizeLabels({
         labels: digest.topics,
-        maxLength: TOPIC_NAME_MAX_LENGTH,
+        maxLength: TOPIC_TITLE_MAX_LENGTH,
         maxCount: DIGEST_TOPICS_MAX,
       }),
       tags,

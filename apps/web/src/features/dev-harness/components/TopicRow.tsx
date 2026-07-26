@@ -14,13 +14,13 @@ const INPUT_CLASS =
 
 interface TopicRowProps {
   id: string;
-  name: string;
+  title: string;
   status: TopicStatus;
 }
 
-export function TopicRow({ id, name, status }: TopicRowProps) {
+export function TopicRow({ id, title, status }: TopicRowProps) {
   const [renaming, setRenaming] = useState(false);
-  const [draftName, setDraftName] = useState(name);
+  const [draftName, setDraftName] = useState(title);
   const updateTopic = useUpdateTopic();
   const archiveTopic = useArchiveTopic();
   const restoreTopic = useRestoreTopic();
@@ -31,7 +31,7 @@ export function TopicRow({ id, name, status }: TopicRowProps) {
 
   function handleSaveRename() {
     updateTopic.mutate(
-      { id, name: draftName },
+      { id, title: draftName },
       { onSuccess: () => setRenaming(false) },
     );
   }
@@ -57,7 +57,7 @@ export function TopicRow({ id, name, status }: TopicRowProps) {
             className={INPUT_CLASS}
           />
         ) : (
-          <span className="flex-1 text-sm text-fg-primary">{name}</span>
+          <span className="flex-1 text-sm text-fg-primary">{title}</span>
         )}
       </div>
 
@@ -75,7 +75,7 @@ export function TopicRow({ id, name, status }: TopicRowProps) {
               size="xs"
               variant="ghost"
               onClick={() => {
-                setDraftName(name);
+                setDraftName(title);
                 setRenaming(false);
               }}
             >

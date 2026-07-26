@@ -111,7 +111,7 @@ export async function searchStatements(args: {
     coarseSafely({
       providers,
       query,
-      topics: topics.map((t) => ({ id: t.id, label: t.name })),
+      topics: topics.map((t) => ({ id: t.id, label: t.title })),
     }),
   ]);
 

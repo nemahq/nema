@@ -30,7 +30,7 @@ export type ReviewEditingAction =
   // 이 id를 쓰는 모든 Digest에 적용되는 전역 액션 — digest/setTags처럼 index를
   // 받지 않는다(reviewEditingState.ts의 tagRenames/topicRenames 주석 참고).
   | { type: "tag/renamed"; id: string; title: string; description: string }
-  | { type: "topic/renamed"; id: string; name: string }
+  | { type: "topic/renamed"; id: string; title: string }
   | { type: "reference/set"; key: string; reference: ReviewNewReference }
   | { type: "reference/remove"; key: string }
   | { type: "reference/setMergeNote"; referenceId: string; mergeNote: string };
@@ -139,7 +139,7 @@ export function reviewEditingReducer(
         ...overrides,
         topicRenames: new Map(overrides.topicRenames).set(
           action.id,
-          action.name,
+          action.title,
         ),
       };
     case "reference/set":

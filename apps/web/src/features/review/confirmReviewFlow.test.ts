@@ -89,7 +89,7 @@ describe("runConfirmReview", () => {
     // 타입 변경 초기화 결과 — 원본 DIGEST.body(decision)와 다른 빈 body가 실려야 한다.
     const overriddenBody: ReviewDigest["body"] = { type: "learning" };
     const overriddenTopics: ReviewDigest["topics"] = [
-      { id: null, name: "새 주제" },
+      { id: null, title: "새 주제" },
     ];
     const overriddenTags: ReviewDigest["tags"] = [
       { id: null, title: "새 태그", description: "설명" },

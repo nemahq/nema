@@ -18,11 +18,12 @@ interface DigestSnapshot {
   title: string;
   description: string;
   body: DigestBody;
-  topics: { id: string; name: string }[];
+  topics: { id: string; title: string }[];
   tags: { id: string; title: string; description: string }[];
   referenceIds: string[];
   externalUrls: string[];
   authorId: string | null;
+  authorName: string | null;
   status: DigestStatus;
   createdAt: string;
 }
@@ -64,6 +65,7 @@ interface ChangesetDetail {
   status: ChangesetStatus;
   title: string | null;
   authorId: string | null;
+  authorName: string | null;
   sourceId: string | null;
   revertsId: string | null;
   revertsNumber: number | null;
@@ -98,7 +100,7 @@ async function fetchDigestSnapshots(args: {
   const { data: rows, error } = await supabase
     .from("digests")
     .select(
-      "id, title, description, body, external_urls, author_id, status, created_at, digest_topics(topic:topics(id, name)), digest_tags(tag:tags(id, title, description)), digest_references(reference_id)",
+      "id, title, description, body, external_urls, author_id, author_name, status, created_at, digest_topics(topic:topics(id, title)), digest_tags(tag:tags(id, title, description)), digest_references(reference_id)",
     )
     .in("id", digestIds);
   throwIfSupabaseError(error);
@@ -113,7 +115,7 @@ async function fetchDigestSnapshots(args: {
         body: DigestBodySchema.parse(row.body),
         topics: row.digest_topics.map((dt) => ({
           id: dt.topic.id,
-          name: dt.topic.name,
+          title: dt.topic.title,
         })),
         tags: row.digest_tags.map((dt) => ({
           id: dt.tag.id,
@@ -123,6 +125,7 @@ async function fetchDigestSnapshots(args: {
         referenceIds: row.digest_references.map((dr) => dr.reference_id),
         externalUrls: row.external_urls ?? [],
         authorId: row.author_id,
+        authorName: row.author_name,
         status: row.status,
         createdAt: row.created_at,
       },
@@ -274,7 +277,7 @@ export async function getChangesetByNumber(args: {
   const { data: row, error } = await supabase
     .from("changesets")
     .select(
-      "id, number, type, status, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, created_at, updated_at, changes(action, target_type, target_id, data)",
+      "id, number, type, status, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, author_name, created_at, updated_at, changes(action, target_type, target_id, data)",
     )
     .eq("space_id", spaceId)
     .eq("number", number)
@@ -323,6 +326,7 @@ export async function getChangesetByNumber(args: {
     status: row.status,
     title: row.title,
     authorId: row.author_id,
+    authorName: row.author_name,
     sourceId: row.source_id,
     revertsId: row.reverts_id,
     revertsNumber,

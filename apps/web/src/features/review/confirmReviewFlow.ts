@@ -86,7 +86,7 @@ export async function runConfirmReview(
           body,
           topics: topics.map((topic) => ({
             ...topic,
-            name: topic.name.trim(),
+            title: topic.title.trim(),
           })),
           tags: tags.map((tag) => ({ ...tag, title: tag.title.trim() })),
         }),

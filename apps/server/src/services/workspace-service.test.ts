@@ -73,7 +73,7 @@ const SOME_ERROR = { code: "XXXXX", message: "boom" };
 // 호출 순서를 그대로 재현한다).
 function mockSupabase(args: {
   isFirstEntry?: boolean;
-  workspace?: { id: string; name: string | null };
+  workspace?: { id: string; name: string };
   membershipRows?: Array<{ workspace_id: string; workspaces: unknown }>;
   membershipError?: typeof SOME_ERROR;
   firstEntryError?: typeof SOME_ERROR;
@@ -109,13 +109,13 @@ function mockSupabase(args: {
 }
 
 describe("bootstrapWorkspace", () => {
-  it("이름 없는 Workspace(가입 트리거 산출물)는 유저 표시 이름으로 채워 내려간다", async () => {
+  it("workspaces.name을 read-time 가공 없이 그대로 내려보낸다(생성 시점에 이미 채워짐)", async () => {
     const result = await bootstrapWorkspace({
       supabase: mockSupabase({
         isFirstEntry: true,
-        workspace: { id: "ws-1", name: null },
+        workspace: { id: "ws-1", name: "카일" },
       }),
-      user: makeUser({ user_metadata: { given_name: "카일" } }),
+      user: makeUser({ user_metadata: { given_name: "다른 이름" } }),
     });
 
     expect(result.workspace.name).toBe("카일");
