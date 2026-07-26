@@ -7,7 +7,7 @@ export const TOPIC_STATUSES = ["active", "archived"] as const;
 export const TopicStatusSchema = z.enum(TOPIC_STATUSES);
 export type TopicStatus = z.infer<typeof TopicStatusSchema>;
 
-// 주제 레지스트리 항목 = 지도의 줄기 하나.
+// 주제 레지스트리 항목 = 지도의 스레드 하나.
 export const TopicSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
