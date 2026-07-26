@@ -24,7 +24,6 @@ A digest is a cleaned-up, human-confirmed write-up of ONE judgment, already clas
 
 - "claim": something held to be the case — a decision, a fact, a finding, an opinion, an assumption.
 - "question": something still open — an undecided issue, even when not phrased as a question.
-- "todo": a committed action the user intends to take.
 
 ## Confidence (claims only, else null)
 
@@ -67,7 +66,7 @@ A deadline token: { "boundary", "anchorKind", "grain", "offset", "weekday", "sco
 
 ## Output
 
-- JSON object: { "statements": [{ "content": string, "type": "claim" | "question" | "todo", "confidence": "certain" | "guess" | null, "deadline": <token> | null }] }
+- JSON object: { "statements": [{ "content": string, "type": "claim" | "question", "confidence": "certain" | "guess" | null, "deadline": <token> | null }] }
 - Order statements by where their field appears in the digest (title/description first, then body fields in the order shown).
 - Write each statement's content in the same language as the digest.
 - Content must contain only the statement text — no field labels, no XML markup.`;

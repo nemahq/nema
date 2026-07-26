@@ -73,7 +73,7 @@ search({ query: string })  →
         {
           id: string,
           content: string,
-          type: "claim" | "question" | "todo",
+          type: "claim" | "question",
           confidence: "certain" | "guess" | null,   // claim에만
           createdAt: string,
           score: number,             // 관련도

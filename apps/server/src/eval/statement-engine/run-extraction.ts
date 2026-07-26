@@ -172,7 +172,7 @@ async function evaluateDocument(params: {
 function buildConfusionMatrix(
   pairs: Array<{ expected: StatementType; actual: StatementType }>,
 ): Record<StatementType, Record<StatementType, number>> {
-  const types: StatementType[] = ["claim", "question", "todo"];
+  const types: StatementType[] = ["claim", "question"];
   const matrix = Object.fromEntries(
     types.map((expected) => [
       expected,
@@ -338,7 +338,7 @@ async function main() {
     },
     classification: {
       typeAccuracy: typeAccuracy === null ? null : round(typeAccuracy),
-      ...classificationMetrics(["claim", "question", "todo"], allTypePairs),
+      ...classificationMetrics(["claim", "question"], allTypePairs),
       typeConfusion: buildConfusionMatrix(allTypePairs),
       confidenceAccuracy:
         confidenceAccuracy === null ? null : round(confidenceAccuracy),

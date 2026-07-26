@@ -113,7 +113,7 @@ async function createFixtureStatement(
   digestId: string,
 ): Promise<string> {
   const { rows } = await client.query<{ id: string }>(
-    "INSERT INTO statements (space_id, digest_id, content, type) VALUES ($1, $2, 'fixture statement', 'todo') RETURNING id",
+    "INSERT INTO statements (space_id, digest_id, content, type) VALUES ($1, $2, 'fixture statement', 'question') RETURNING id",
     [spaceId, digestId],
   );
   return rows[0]?.id ?? "";

@@ -236,6 +236,7 @@
     "reference_type_product": "Product",
     "reference_type_project": "Project",
     "reference_type_term": "Term",
+    "revert_title": "{depth, plural, =1 {{title} (Reverted)} other {{title} (Reverted ×#)}}",
     "status_applied": "Applied",
     "status_discarded": "Declined",
     "status_pending": "Needs review",

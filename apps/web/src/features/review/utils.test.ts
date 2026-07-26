@@ -8,12 +8,12 @@ import { changesetDisplayTitle, summarizeChangesetEffect } from "./utils";
 const fakeT = (
   key: TranslationKey,
   options?: CombinedOptions<DefaultParamType>,
-) => (options ? `${key}(${options.count ?? options.number})` : key);
+) => (options ? `${key}(${Object.values(options).join(",")})` : key);
 
 describe("changesetDisplayTitle", () => {
   it("title이 있으면 그 값을 그대로 쓴다", () => {
     const title = changesetDisplayTitle(
-      { title: "회의록 요약", number: 12 },
+      { title: "회의록 요약", number: 12, type: "ingestion", revertDepth: 0 },
       fakeT,
     );
 
@@ -21,9 +21,21 @@ describe("changesetDisplayTitle", () => {
   });
 
   it("title이 없으면 번호 기반 자리표시자로 대체한다", () => {
-    const title = changesetDisplayTitle({ title: null, number: 12 }, fakeT);
+    const title = changesetDisplayTitle(
+      { title: null, number: 12, type: "ingestion", revertDepth: 0 },
+      fakeT,
+    );
 
     expect(title).toBe("review.changeset_fallback_title(12)");
+  });
+
+  it("revert 타입이면 원본 title에 revertDepth를 실어 ICU 키로 넘긴다", () => {
+    const title = changesetDisplayTitle(
+      { title: "회의록 요약", number: 12, type: "revert", revertDepth: 1 },
+      fakeT,
+    );
+
+    expect(title).toBe("review.revert_title(회의록 요약,1)");
   });
 });
 

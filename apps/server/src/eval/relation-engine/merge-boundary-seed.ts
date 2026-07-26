@@ -8,7 +8,7 @@
 
 export interface BoundaryStatement {
   content: string;
-  type: "claim" | "question" | "todo";
+  type: "claim" | "question";
   confidence: "certain" | "guess" | null;
 }
 

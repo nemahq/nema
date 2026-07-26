@@ -15,7 +15,7 @@
 
 import type { RelationType } from "@nema-io/shared";
 
-type StatementType = "claim" | "question" | "todo";
+type StatementType = "claim" | "question";
 type StatementConfidence = "certain" | "guess";
 
 /** 시나리오 안에서만 유효한 진술 id (골든 관계가 참조) */
@@ -237,7 +237,8 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
       {
         id: "s2",
         role: "new",
-        type: "todo",
+        type: "claim",
+        confidence: "certain",
         content: "랜딩 페이지에 가격표를 넣어야 한다",
       },
     ],
@@ -249,43 +250,7 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
         note: "가격 확정(12,000원)이 열린 가격 질문을 닫는다",
       },
     ],
-    note: "s2는 '가격' 키워드만 겹치는 할 일 — 질문을 닫지 않음",
-  },
-  {
-    id: "resolves-todo",
-    description: "완료 진술이 열린 할 일을 닫나(resolves) + 토픽 형제는 무관계",
-    traps: ["mere-neighbor"],
-    statements: [
-      {
-        id: "e1",
-        role: "existing",
-        type: "todo",
-        content: "온보딩 문서 초안을 작성해야 한다",
-      },
-      {
-        id: "s1",
-        role: "new",
-        type: "claim",
-        confidence: "certain",
-        content: "온보딩 문서 초안을 완성했다",
-      },
-      {
-        id: "e2",
-        role: "existing",
-        type: "claim",
-        confidence: "certain",
-        content: "온보딩 이메일은 3통으로 구성한다",
-      },
-    ],
-    golden: [
-      {
-        from: "s1",
-        to: "e1",
-        type: "resolves",
-        note: "초안 완성이 '초안 작성' 할 일을 닫는다",
-      },
-    ],
-    note: "e2는 '온보딩' 키워드만 겹침 — 무관계",
+    note: "s2는 '가격' 키워드만 겹치는 무관 진술 — 질문을 닫지 않음",
   },
   {
     id: "silence-no-relation",
@@ -455,7 +420,8 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
       {
         id: "s3",
         role: "new",
-        type: "todo",
+        type: "claim",
+        confidence: "certain",
         content: "포트원 연동 PoC를 다음 주까지 끝낸다",
       },
       {
@@ -480,7 +446,7 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
         note: "본문이 명시한 전환 근거(정산 리포트 우위)가 결정을 받친다",
       },
     ],
-    note: "e2는 '정산 리포트' 키워드만 s2와 겹치는 무관 사실 — supports로 잇는 게 함정. s3은 무관 할 일",
+    note: "e2는 '정산 리포트' 키워드만 s2와 겹치는 무관 사실 — supports로 잇는 게 함정. s3은 무관 진술",
   },
   {
     id: "caveat-not-conflict",
@@ -535,7 +501,8 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
       {
         id: "s2",
         role: "new",
-        type: "todo",
+        type: "claim",
+        confidence: "certain",
         content: "결제 환불 정책 문서를 작성한다",
       },
     ],
@@ -547,37 +514,7 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
         note: "이미 내린 결정(토스)이 재유입된 PG 질문을 닫는다 — 답=결정, 대상=질문",
       },
     ],
-    note: "s1은 질문 — 결정을 부정·경합하지 않으니 충돌로 뜨면 안 됨. s2는 '결제' 토픽 형제 할 일 — 무관계",
-  },
-  {
-    id: "change-todo-not-conflict",
-    description:
-      "기존 결정을 바꾸려는 할 일을 충돌로 띄우나 — 할 일은 의도(미래)지 현재 주장이 아님 (측정 #2 발견)",
-    traps: ["false-conflict", "mere-neighbor"],
-    statements: [
-      {
-        id: "e1",
-        role: "existing",
-        type: "claim",
-        confidence: "certain",
-        content: "파일 업로드 용량 제한은 10MB로 한다",
-      },
-      {
-        id: "s1",
-        role: "new",
-        type: "todo",
-        content: "업로드 용량 제한을 50MB로 올리는 작업을 한다",
-      },
-      {
-        id: "s2",
-        role: "new",
-        type: "claim",
-        confidence: "certain",
-        content: "업로드 진행률 표시를 추가했다",
-      },
-    ],
-    golden: [],
-    note: "s1은 '바꿀 계획'인 할 일 — 지금은 10MB 결정과 둘 다 참(아직 안 바꿈). 현재 충돌 아님(기껏해야 미래 replaces 씨앗). 충돌로 띄우면 FP. s2는 '업로드' 토픽 형제 — 무관계. 측정 #2 v1에서 모델이 8/8 충돌을 안 냄 — claim↔todo 양성 골든이 과한 주장이라 음성 함정으로 보정",
+    note: "s1은 질문 — 결정을 부정·경합하지 않으니 충돌로 뜨면 안 됨. s2는 '결제' 토픽 형제 진술 — 무관계",
   },
   {
     id: "conflicts-fact-clash-dogfood",
@@ -622,43 +559,6 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
       },
     ],
     note: "핵심은 conflicts 재현(recall): 후보로 함께 주어지면 판정은 s1↔e1 충돌을 잡는다(미검출은 retrieval 단계 문제). s1→s2는 '그래서' 인과가 박힌 진짜 supports라 골든에 포함",
-  },
-  {
-    id: "invented-supports-todo-unrelated-dogfood",
-    description:
-      "도그푸딩 supports 과잉 재현: 할 일을 supports의 to로 잇거나(to는 claim이어야), 토픽만 겹치는 무관 사실을 근거로 지어내나",
-    traps: ["invented-supports", "mere-neighbor"],
-    statements: [
-      {
-        id: "s1",
-        role: "new",
-        type: "claim",
-        confidence: "certain",
-        content: "N잡은 공백이 분명해 검증 난이도가 낮다",
-      },
-      {
-        id: "e1",
-        role: "existing",
-        type: "todo",
-        content: "N잡과 건강 중 무엇을 먼저 검증할지 정해야 한다",
-      },
-      {
-        id: "s2",
-        role: "new",
-        type: "claim",
-        confidence: "certain",
-        content: "N잡은 정산 데이터를 매달 보내는 행동이 습관으로 자리잡는다",
-      },
-      {
-        id: "e2",
-        role: "existing",
-        type: "claim",
-        confidence: "certain",
-        content: "플랫폼마다 정산 주기와 세금 기준이 달라 수입 파악이 번거롭다",
-      },
-    ],
-    golden: [],
-    note: "s1→e1을 supports로 잇는 게 1순위 FP — e1은 todo라 supports의 to가 될 수 없다(닫으려면 resolves인데 s1은 답이 아님). s2→e2는 '정산' 토픽만 겹치는 무관 쌍(습관 vs 번거로움) — 근거 아님. 둘 다 침묵해야",
   },
   // --- near-duplicate 함정 (NEM-162) — 거의 같은 두 진술. 같음은 이제 정식 duplicates
   // 관계지만 4종 golden엔 안 싣고 expectedDuplicates 채널로 따로 채점한다(golden은 비움).

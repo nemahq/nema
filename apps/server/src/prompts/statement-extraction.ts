@@ -12,19 +12,18 @@ import { ExtractedDeadlineSchema } from "@server/temporal/deadline";
 
 export const STATEMENT_EXTRACTION_SYSTEM_PROMPT = `You break a user's raw note into statements — the atomic units of their thinking.
 
-A statement is a single unit of meaning: one decision, one belief, one question, or one task. Statements are stored and searched individually, so each must stand on its own.
+A statement is a single unit of meaning: one decision, one belief, or one question. Statements are stored and searched individually, so each must stand on its own.
 
 ## Statement types
 
-- "claim": something the user holds to be the case — a fact, decision, opinion, or observation.
-- "question": something the user is asking or wondering about — including open issues awaiting a decision, even when not phrased as a question ("need to think more about whether to adopt X" → "should we adopt X?"). An open issue is a question; only a committed action is a todo.
-- "todo": something the user intends to do.
+- "claim": something the user holds to be the case — a fact, decision, opinion, observation, or intended action.
+- "question": something the user is asking or wondering about — including open issues awaiting a decision, even when not phrased as a question ("need to think more about whether to adopt X" → "should we adopt X?").
 
 ## Confidence (claims only)
 
 - "certain": stated as settled — a decision made, a fact asserted, definitive wording.
 - "guess": hedged or tentative — the user signals they are not fully sure. Beyond explicit hedges ("maybe", "I think", "it seems", "아마", "~인 것 같다"), this includes softer markers of possibility or leaning rather than settled fact: "~해 보인다"/"~인 듯하다" (it seems), "가능성이 있다"/"여지가 있다" (there is a chance / room to), "~고 본다"/"~로 보인다" (a view taken, not yet verified). When the wording reports a possibility, impression, or opinion rather than a made decision or an asserted fact, mark it guess — do not harden it to certain.
-- Set confidence ONLY on claims. For questions and todos it must be null.
+- Set confidence ONLY on claims. For questions it must be null.
 
 ## Cutting rules
 
@@ -33,7 +32,7 @@ A statement is a single unit of meaning: one decision, one belief, one question,
    - The reason form ("the reason for X is Y") is for decisions the note explains — at most one linked reason statement per decision. Other facts that merely sit near the decision stay plain fact statements; do not recast every nearby fact as another reason.
    - When you split, carry the full subject into every piece ("the cause of the API refactoring delay is...", never "the cause of the delay is...") — each piece must still read on its own.
    - Never drop a reason. If the note says why something was decided or believed, that "why" must survive as its own statement.
-   - Do NOT split a task from its deadline or owner — "finish the draft by Wednesday" is ONE todo. The deadline qualifies the task; it is not separate information.
+   - Do NOT split a task from its deadline or owner — "finish the draft by Wednesday" is ONE claim. The deadline qualifies the task; it is not separate information.
 2. Self-contained. Resolve pronouns and omissions using the note's context so each statement reads on its own. Never leave "it", "that idea", "him" unresolved if the note tells you what they refer to. A finding tied to a specific person or item — a customer's overall reaction, or a named/positional subject's preference or position ("the third customer is satisfied", "김 대리 wants a fast launch") — is itself a statement worth keeping: resolve the subject and extract it, do not discard it as a passing impression.
 3. No summarizing, no inventing. Do not add anything that is not in the note, and do not exaggerate how certain the user is. Polish the wording, but add nothing.
 4. Same input, same shape. Cut consistently — similar notes should produce similarly shaped statements.
@@ -57,7 +56,7 @@ Statements:
 1. "배포 도구는 A로 정했다" — claim, certain
 2. "배포 도구를 A로 정한 이유는 팀이 이미 익숙해서다" — claim, certain (the decision's linked reason, as its own statement)
 3. "B 배포 도구는 학습 비용이 크다는 평이 많다" — claim, certain (a nearby fact stays a plain fact — not recast as another reason)
-4. "다음 주 화요일까지 마이그레이션 계획을 짜야 한다" — todo (deadline stays with the task; deadline = next Tuesday → { boundary: "by", anchorKind: "weekday", weekday: "tue", scope: "next", grain/offset/date: null })
+4. "다음 주 화요일까지 마이그레이션 계획을 짜야 한다" — claim, certain (deadline stays with the task; deadline = next Tuesday → { boundary: "by", anchorKind: "weekday", weekday: "tue", scope: "next", grain/offset/date: null })
 5. "모니터링 대시보드 연동이 필요하다" — claim, certain (conjunction split…)
 6. "알림 연동이 필요하다" — claim, certain (…into parallel statements)
 7. "배포 롤백 정책은 어떻게 할 것인가?" — question (an open issue, recast as the question it is)
@@ -85,7 +84,7 @@ A long note may be processed in consecutive segments. When the message includes 
 
 ## Output
 
-- JSON object: { "statements": [{ "content": string, "type": "claim" | "question" | "todo", "confidence": "certain" | "guess" | null, "deadline": <token> | null }] }
+- JSON object: { "statements": [{ "content": string, "type": "claim" | "question", "confidence": "certain" | "guess" | null, "deadline": <token> | null }] }
 - Order statements by where they appear in the note (first appearance wins).
 - Write each statement's content in the same language as the note.
 - Content must contain only the statement text — no surrounding XML markup.`;
@@ -93,7 +92,7 @@ A long note may be processed in consecutive segments. When the message includes 
 const ExtractedStatementSchema = z.object({
   // trim — 공백뿐인 진술이 DB·임베딩까지 흘러가지 않게 (source body 검증과 정합)
   content: z.string().trim().min(1),
-  type: z.enum(["claim", "question", "todo"]),
+  type: z.enum(["claim", "question"]),
   confidence: z.enum(["certain", "guess"]).nullable(),
   // 내용 속 기한("금요일까지")을 구조화 토큰으로. 워커가 작성 시점·존 기준으로 풀어
   // due_date를 채운다 (temporal-query-design 7장). 기한 없으면 null.
