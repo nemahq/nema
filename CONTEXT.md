@@ -40,7 +40,7 @@
 ## 4. 엔진 구현 설계: 실제 저장소와 백엔드로 어떻게 앉히는가
 
 - [schema-design](docs/blueprints/save-engine-v2/schema-design.md): 테이블 스키마, RLS, 트리거, 큐/RPC 계약. 마이그레이션 작성 전 확인
-- [ingestion-design](docs/blueprints/save-engine-v2/ingestion-design.md): 넣기(Source→Statement) 파이프 흐름
+- [ingestion-design](docs/blueprints/save-engine-v2/ingestion-design.md): 넣기(원문→진술) 파이프 흐름
 - [relation-design](docs/blueprints/save-engine-v2/relation-design.md): 관계 엔진 골격, 관계 종류별 동작 규칙
 - [retrieval-design](docs/blueprints/save-engine-v2/retrieval-design.md): 꺼내기 흐름, 뜻 단위 검색
 - [auto-scoping-design](docs/blueprints/save-engine-v2/auto-scoping-design.md): 검색 2단계 스코핑(coarse→fine)
