@@ -1,3 +1,5 @@
+const SHORT_SHA_LENGTH = 7;
+
 interface BuildErrorReportInput {
   error: Error;
   eventId?: string;
@@ -35,5 +37,5 @@ function getAppVersion(): string {
   if (typeof __COMMIT_SHA__ === "undefined" || __COMMIT_SHA__ === "dev") {
     return "dev";
   }
-  return __COMMIT_SHA__.slice(0, 7);
+  return __COMMIT_SHA__.slice(0, SHORT_SHA_LENGTH);
 }
