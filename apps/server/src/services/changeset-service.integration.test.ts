@@ -122,7 +122,7 @@ async function createFixtureStatement(
 // apply_relation_changesets가 만드는 pending relation changeset을 직접 재현한다 —
 // resolve_conflict_relation/resolve_duplicate_relation은 이 모양(changeset + change
 // row{type, from_id, to_id})만 전제로 하므로 엔진 배치 전체를 안 돌려도 된다.
-async function createFixturePendingRelation(args: {
+async function createFixtureOpenRelation(args: {
   spaceId: string;
   sourceId: string;
   relationType: "conflicts" | "duplicates";
@@ -419,7 +419,7 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
     const fromId = await createFixtureStatement(spaceId, digestA);
     const toId = await createFixtureStatement(spaceId, digestB);
 
-    const firstChangeset = await createFixturePendingRelation({
+    const firstChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -469,14 +469,14 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
     const fromId = await createFixtureStatement(spaceId, digestA);
     const toId = await createFixtureStatement(spaceId, digestB);
 
-    const firstChangeset = await createFixturePendingRelation({
+    const firstChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
       fromId,
       toId,
     });
-    const otherChangesetId = await createFixturePendingRelation({
+    const otherChangesetId = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -643,7 +643,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
     });
     const winnerId = await createFixtureStatement(spaceId, digestA);
     const loserId = await createFixtureStatement(spaceId, digestB);
-    const changesetId = await createFixturePendingRelation({
+    const changesetId = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -713,7 +713,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
     });
     const winnerId = await createFixtureStatement(spaceId, digestA);
     const loserId = await createFixtureStatement(spaceId, digestB);
-    const changesetId = await createFixturePendingRelation({
+    const changesetId = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -766,7 +766,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
     const loserId = await createFixtureStatement(spaceId, digestB);
     const otherId = await createFixtureStatement(spaceId, digestC);
 
-    const conflictChangeset = await createFixturePendingRelation({
+    const conflictChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -774,7 +774,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
       toId: loserId,
     });
     // 패자(loserId)가 또 다른 진술(otherId)과도 별도 중복 제안으로 대기 중인 상태.
-    const otherChangeset = await createFixturePendingRelation({
+    const otherChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "duplicates",
@@ -823,7 +823,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
     const winnerId = await createFixtureStatement(spaceId, digestA);
     const loserId = await createFixtureStatement(spaceId, digestB);
 
-    const firstChangeset = await createFixturePendingRelation({
+    const firstChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -845,7 +845,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
     expect(afterRevert.rows[0]?.status).toBe("archived");
 
     // 엔진이 같은 쌍을 다시 충돌로 제안 → 같은 승자로 재판정.
-    const secondChangeset = await createFixturePendingRelation({
+    const secondChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -899,7 +899,7 @@ describe("resolve_duplicate_relation RPC (integration)", () => {
     });
     const keeperId = await createFixtureStatement(spaceId, digestA);
     const duplicateId = await createFixtureStatement(spaceId, digestB);
-    const changesetId = await createFixturePendingRelation({
+    const changesetId = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "duplicates",
@@ -997,14 +997,14 @@ describe("resolve_duplicate_relation RPC (integration)", () => {
     const bStatementId = await createFixtureStatement(spaceId, digestB);
 
     // (A1,B)·(A2,B) 각각 별도 pending — B가 두 곳과 동시에 중복 감지된 경우.
-    const changesetA1B = await createFixturePendingRelation({
+    const changesetA1B = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "duplicates",
       fromId: a1StatementId,
       toId: bStatementId,
     });
-    const changesetA2B = await createFixturePendingRelation({
+    const changesetA2B = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "duplicates",

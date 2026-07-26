@@ -3,7 +3,7 @@ import { Badge, type BadgeVariant } from "@nema-io/weave";
 import { ConfirmButton } from "@web/features/dev-harness/components/ConfirmButton";
 import type { ChangesetHistoryEntry } from "@web/features/dev-harness/types";
 import { formatDateTime } from "@web/features/dev-harness/utils";
-import type { ChangesetDisplayState } from "@web/features/review/constants";
+import type { ChangesetDisplayState } from "@web/features/review";
 
 const TYPE_LABEL: Record<ChangesetHistoryEntry["type"], string> = {
   ingestion: "넣기",
@@ -64,12 +64,12 @@ export function ChangesetRow({
   disabled,
   onRevert,
 }: ChangesetRowProps) {
-  const statusMeta = STATE_META[state];
+  const stateMeta = STATE_META[state];
 
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface-raised px-3 py-2">
-      <Badge variant={statusMeta.variant} className="shrink-0">
-        {statusMeta.label}
+      <Badge variant={stateMeta.variant} className="shrink-0">
+        {stateMeta.label}
       </Badge>
       <span className="shrink-0 text-xs font-semibold text-fg-secondary">
         {TYPE_LABEL[changesetType]}

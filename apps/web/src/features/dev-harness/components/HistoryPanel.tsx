@@ -5,7 +5,7 @@ import { ChangesetRow } from "@web/features/dev-harness/components/ChangesetRow"
 import { useChangesetListSuspenseQuery } from "@web/features/dev-harness/hooks/useChangesetListQuery";
 import { useInterventionInvalidation } from "@web/features/dev-harness/hooks/useInterventionInvalidation";
 import { useRevertChangeset } from "@web/features/dev-harness/hooks/useRevertChangeset";
-import { changesetDisplayState } from "@web/features/review/constants";
+import { changesetDisplayState } from "@web/features/review";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
 function HistoryPanelContent() {

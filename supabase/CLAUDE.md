@@ -15,7 +15,7 @@ PostgreSQL database + Auth, managed via Supabase CLI.
 
 - One shared stack across all worktrees — `project_id` and ports are fixed in `config.toml`, so `supabase db reset` in any worktree wipes everyone's local data and swaps the schema. Confirm before resetting.
 - To isolate a worktree: temporarily change `project_id` AND all six `port` values in `config.toml` (containers are namespaced by `project_id` — changing ports alone collides), then `git checkout supabase/config.toml` when done. Both accept `"env(VAR)"` (quotes required), so this can be scripted.
-- Integration tests hardcode `127.0.0.1:54322` — an isolated stack needs the same edit in those four files.
+- `*.integration.test.ts` hardcode the DB URL as `127.0.0.1:54322` — an isolated stack needs the same port edit there.
 
 ## Local Auth (Magic Link)
 

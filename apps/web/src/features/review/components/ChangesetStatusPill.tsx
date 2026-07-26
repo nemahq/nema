@@ -2,9 +2,9 @@ import { cn, Text } from "@nema-io/weave";
 
 import {
   type ChangesetDisplayState,
+  type ChangesetStateIcon,
   changesetStateIcon,
   changesetStateMeta,
-  type ChangesetStatusIcon,
 } from "@web/features/review/constants";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -18,7 +18,7 @@ interface PillVisual {
   label: string | undefined;
 }
 
-function pillVisual(icon: ChangesetStatusIcon): PillVisual {
+function pillVisual(icon: ChangesetStateIcon): PillVisual {
   if (icon.kind === "filled") {
     return { container: cn(icon.bg, icon.iconTone), label: undefined };
   }

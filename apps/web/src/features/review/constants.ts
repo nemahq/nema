@@ -285,30 +285,31 @@ export function changesetStateMeta(state: ChangesetDisplayState): {
 // open은 아직 진행 중이라 배경 없이 브랜드색 테두리(원 아이콘 자체)만 — applied·
 // discarded는 결론이 난 것이라 배경을 채운 칩으로 더 무겁게 낸다. applied는 무채색
 // 톤(Button primary 다크 배색)이라 open의 브랜드 teal과 안 겹친다.
-export type ChangesetStatusIcon =
+export type ChangesetStateIcon =
   | { kind: "outline"; Icon: IconComponent; tone: string }
   | { kind: "filled"; Icon: IconComponent; bg: string; iconTone: string };
 
-export function changesetStateIcon(
-  state: ChangesetDisplayState,
-): ChangesetStatusIcon {
-  if (state === "open") {
-    return { kind: "outline", Icon: Circle, tone: "text-brand" };
-  }
-  if (state === "applied") {
-    return {
+const CHANGESET_STATE_ICON: Record<ChangesetDisplayState, ChangesetStateIcon> =
+  {
+    open: { kind: "outline", Icon: Circle, tone: "text-brand" },
+    applied: {
       kind: "filled",
       Icon: Check,
       bg: "bg-fg-primary",
       iconTone: "text-surface-base",
-    };
-  }
-  // fg-tertiary가 다크에서 더 밝아져(팔레트 stone-400) 흰 아이콘 대비가 떨어지므로
-  // 다크에서만 아이콘을 어둡게(surface-base) 뒤집는다.
-  return {
-    kind: "filled",
-    Icon: X,
-    bg: "bg-fg-tertiary",
-    iconTone: "text-white dark:text-surface-base",
+    },
+    discarded: {
+      kind: "filled",
+      Icon: X,
+      bg: "bg-fg-tertiary",
+      // fg-tertiary가 다크에서 더 밝아져(팔레트 stone-400) 흰 아이콘 대비가 떨어지므로
+      // 다크에서만 아이콘을 어둡게(surface-base) 뒤집는다.
+      iconTone: "text-white dark:text-surface-base",
+    },
   };
+
+export function changesetStateIcon(
+  state: ChangesetDisplayState,
+): ChangesetStateIcon {
+  return CHANGESET_STATE_ICON[state];
 }
