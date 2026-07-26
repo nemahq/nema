@@ -80,7 +80,6 @@
 
 ## 7. 프로젝트 운영: 지금 뭘 왜 하고 있는가
 
-- q3-2026 OKR: 분기 OKR. 2026-07-26 brain(`business/nema/nema-q3-2026-okr.md`)으로 이관, 리포에서 삭제 — BE/FE/QA 빌드에 안 쓰이는 파운더 레벨 계획이라 project-shared 필요 없음
 - [user-acquisition](docs/gtm/user-acquisition.md): 초기 사용자 10명 확보 실행 설계
 
 ## 8. PM 오케스트레이션: 슬라이스를 어떻게 굴리는가
