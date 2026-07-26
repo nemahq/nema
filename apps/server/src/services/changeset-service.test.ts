@@ -25,7 +25,7 @@ describe("resolveDuplicateRelation", () => {
         title: "병합된 다이제스트",
         description: "설명",
         body: { type: "decision" },
-        topics: [{ id: null, name: "새 주제" }],
+        topics: [{ id: null, title: "새 주제" }],
         tags: [{ id: null, title: "새 태그", description: "정의" }],
         referenceIds: ["ref-1"],
         newReferenceKeys: ["new-ref-key"],

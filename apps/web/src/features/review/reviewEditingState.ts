@@ -65,7 +65,7 @@ export function applyTopicRenames(
       return topic;
     }
     changed = true;
-    return { ...topic, name: renamed };
+    return { ...topic, title: renamed };
   });
   return changed ? next : topics;
 }
@@ -142,7 +142,7 @@ export function computeReviewEditingState(
   );
   const hasEmptyLabel = digestRows.some(
     (row) =>
-      row.topics.some((topic) => topic.name.trim() === "") ||
+      row.topics.some((topic) => topic.title.trim() === "") ||
       row.tags.some((tag) => tag.title.trim() === ""),
   );
   // 신규 Reference 이름·설명, 기존 Reference 병합 설명 모두 필수(zod min(1)) — 비우면

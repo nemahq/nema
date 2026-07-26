@@ -33,13 +33,13 @@ export function TopicEditPanel({
   const [query, setQuery] = useState("");
   const atMax = topics.length >= DIGEST_TOPICS_MAX;
 
-  function handleSelectExisting(topic: { id: string; name: string }) {
+  function handleSelectExisting(topic: { id: string; title: string }) {
     onChange([...topics, topic]);
     setQuery("");
   }
 
   function handleCreateNew(name: string) {
-    onChange([...topics, { id: null, name }]);
+    onChange([...topics, { id: null, title: name }]);
     setQuery("");
   }
 
@@ -61,10 +61,10 @@ export function TopicEditPanel({
             disabled={disabled}
             onRemove={() => onChange(topics.filter((_, i) => i !== index))}
             removeAriaLabel={t("review.topic_remove_action", {
-              label: topic.name,
+              label: topic.title,
             })}
           >
-            {topic.name}
+            {topic.title}
           </Chip>
         ))}
       </LabelChipRow>

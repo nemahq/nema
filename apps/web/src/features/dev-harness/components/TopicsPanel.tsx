@@ -24,7 +24,7 @@ function TopicsPanelContent() {
           <TopicRow
             key={topic.id}
             id={topic.id}
-            name={topic.name}
+            title={topic.title}
             status={topic.status}
           />
         ))}

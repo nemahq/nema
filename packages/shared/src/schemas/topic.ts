@@ -10,7 +10,7 @@ export type TopicStatus = z.infer<typeof TopicStatusSchema>;
 // 주제 레지스트리 항목 = 지도의 줄기 하나.
 export const TopicSchema = z.object({
   id: z.string().uuid(),
-  name: z.string(),
+  title: z.string(),
   status: TopicStatusSchema,
 });
 export type Topic = z.infer<typeof TopicSchema>;
@@ -25,7 +25,7 @@ export type TopicListInput = z.infer<typeof TopicListInputSchema>;
 
 export const TopicUpdateInputSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().trim().min(1).max(TOPIC_NAME_MAX_LENGTH),
+  title: z.string().trim().min(1).max(TOPIC_NAME_MAX_LENGTH),
 });
 export type TopicUpdateInput = z.infer<typeof TopicUpdateInputSchema>;
 

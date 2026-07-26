@@ -26,7 +26,7 @@ function digestRow(id: string, overrides: Record<string, unknown> = {}) {
     author_id: null,
     status: "active",
     created_at: "2026-07-01T00:00:00Z",
-    digest_topics: [{ topic: { id: TOPIC_ID, name: "토픽" } }],
+    digest_topics: [{ topic: { id: TOPIC_ID, title: "토픽" } }],
     digest_tags: [
       { tag: { id: TAG_ID, title: "태그", description: "태그 설명" } },
     ],
@@ -129,7 +129,7 @@ describe("getChangesetByNumber", () => {
     expect(result.body.digests).toHaveLength(1);
     expect(result.body.digests[0]).toMatchObject({
       id: DIGEST_ID,
-      topics: [{ id: TOPIC_ID, name: "토픽" }],
+      topics: [{ id: TOPIC_ID, title: "토픽" }],
       tags: [{ id: TAG_ID, title: "태그", description: "태그 설명" }],
       referenceIds: [REFERENCE_ID],
     });

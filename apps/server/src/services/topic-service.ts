@@ -15,8 +15,8 @@ export async function listTopics(args: {
 }): Promise<{ topics: Topic[] }> {
   let query = args.supabase
     .from("topics")
-    .select("id, name, status")
-    .order("name", { ascending: true });
+    .select("id, title, status")
+    .order("title", { ascending: true });
 
   if (args.spaceId !== undefined) {
     query = query.eq("space_id", args.spaceId);
@@ -28,7 +28,7 @@ export async function listTopics(args: {
   return {
     topics: (data ?? []).map((row) => ({
       id: row.id,
-      name: row.name,
+      title: row.title,
       status: row.status,
     })),
   };
@@ -37,11 +37,11 @@ export async function listTopics(args: {
 export async function updateTopic(args: {
   supabase: TypedSupabaseClient;
   id: string;
-  name: string;
+  title: string;
 }): Promise<void> {
   const { error } = await args.supabase.rpc("update_topic", {
     p_topic_id: args.id,
-    p_name: args.name,
+    p_name: args.title,
   });
   throwIfSupabaseError(error);
 }

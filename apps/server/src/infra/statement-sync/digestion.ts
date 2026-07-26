@@ -222,7 +222,7 @@ async function fetchRegistries(
   const [topicsResult, tagsResult, referencesResult] = await Promise.all([
     supabase
       .from("topics")
-      .select("name")
+      .select("title")
       .eq("space_id", scope.spaceId)
       .eq("status", "active")
       .order("updated_at", { ascending: false })
@@ -256,7 +256,7 @@ async function fetchRegistries(
   }
 
   return {
-    topics: (topicsResult.data ?? []).map((row) => row.name),
+    topics: (topicsResult.data ?? []).map((row) => row.title),
     tags: tagsResult.data ?? [],
     references: referencesResult.data ?? [],
   };

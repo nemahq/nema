@@ -55,7 +55,7 @@ export type ReferenceMergeUpdate = z.infer<typeof ReferenceMergeUpdateSchema>;
 // 이름으로 다시 find-or-create되어 무시된다(digest-review-service.ts updateReview 참고).
 export const DigestTopicDraftSchema = z.object({
   id: z.string().uuid().nullable(),
-  name: z.string().trim().min(1).max(TOPIC_NAME_MAX_LENGTH),
+  title: z.string().trim().min(1).max(TOPIC_NAME_MAX_LENGTH),
 });
 export type DigestTopicDraft = z.infer<typeof DigestTopicDraftSchema>;
 

@@ -41,7 +41,7 @@ const DigestListRowSchema = z.object({
   extraction_status: z.string(),
   created_at: z.string(),
   digest_topics: z.array(
-    z.object({ topic: z.object({ id: z.string(), name: z.string() }) }),
+    z.object({ topic: z.object({ id: z.string(), title: z.string() }) }),
   ),
   sources: z.object({ linking_status: z.string() }).nullable(),
 });
@@ -172,7 +172,7 @@ export async function listDigests(args: {
   let query = supabase
     .from("digests")
     .select(
-      "id, public_id, title, description, body, status, extraction_status, created_at, digest_topics(topic:topics(id, name)), sources(linking_status)",
+      "id, public_id, title, description, body, status, extraction_status, created_at, digest_topics(topic:topics(id, title)), sources(linking_status)",
     )
     .eq("space_id", spaceId)
     // (created_at, id) 튜플 정렬 — DigestListCursorSchema 주석 참고(created_at 동률 타이브레이커).
@@ -251,7 +251,7 @@ export async function listDigests(args: {
       status: row.status,
       topics: row.digest_topics.map((dt) => ({
         id: dt.topic.id,
-        name: dt.topic.name,
+        title: dt.topic.title,
       })),
       createdAt: row.created_at,
       isProcessing: signal.isProcessing,
