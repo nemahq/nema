@@ -16,15 +16,24 @@
 
 - [x] Digest 추출 완료 → ingestion changeset 자동 생성
 - [x] 검토 대기 배지 실시간 갱신 (LNB·Space 오버뷰)
-- [x] Digest 리뷰 화면 진입
+- [x] Digest 리뷰 화면 진입 — Digest 후보 나열
+- [x] Digest 리뷰 화면 진입 — Reference 후보 나열
 - [x] 원문에 없는 필드는 비워둠
 - [x] Digest 타입 제안
-- [x] 신규 Topic·Tag 제안
-- [ ] 기존 Topic·Tag 재사용 제안
-- [ ] 기존 Topic·Tag는 이름 수정 불가
-- [x] 신규 Topic·Tag 이름 수정 가능
-- [ ] Digest 리뷰 화면에서 Topic·Tag 추가 — 기존 선택
-- [x] Digest 리뷰 화면에서 Topic·Tag 추가 — 신규 생성
+- [ ] 신규 Topic 제안
+- [ ] 신규 Tag 제안
+- [ ] 기존 Topic 재사용 제안
+- [ ] 기존 Tag 재사용 제안
+- [ ] 기존 Topic은 이름 수정 불가
+- [ ] 기존 Tag는 이름 수정 불가
+- [ ] 기존 Tag는 색상 수정 불가
+- [ ] 신규 Topic 이름 수정 가능
+- [ ] 신규 Tag 이름 수정 가능
+- [ ] Digest 리뷰 화면에서 Topic 추가 — 기존 선택
+- [ ] Digest 리뷰 화면에서 Tag 추가 — 기존 선택
+- [ ] Digest 리뷰 화면에서 Topic 추가 — 신규 생성
+- [ ] Digest 리뷰 화면에서 Tag 추가 — 신규 생성
+- [ ] Tag 색상 지정 — 신규 생성 시
 - [ ] Reference 후보 자동 제안 및 매칭
 - [x] Changeset 제목 자동 생성 (ingestion)
 - [x] Digest 후보 삭제
@@ -54,12 +63,12 @@
 #### Digest 추출 완료 → ingestion changeset 자동 생성
 
 - **Given**: 유저가 제출한 Source의 Digest 추출이 진행 중이다.
-- **When**: 추출이 완료되어 하나 이상의 Digest 후보와 Reference 후보가 나온다.
+- **When**: 추출이 완료되어, Digest·Reference·Topic·Tag 후보를 모두 담은 하나의 변경(changeset)이 만들어진다.
 - **Then**:
   1. ingestion changeset이 open 상태로 자동 생성된다.
   2. 그 changeset은 변경셋 탭의 Open 목록과 Digest 리뷰 화면에서 확인할 수 있게 된다.
 - **관여 화면**: 변경셋, Digest 리뷰 화면
-- **확정 (2026-07-20, Kyle 실동작 확인)**: `digestSource`가 추출 완료 후 `create_ingestion_review` RPC를 호출해 changeset을 `status='open'`으로 생성한다(`apps/server/src/infra/statement-sync/digestion.ts`). 변경셋 탭(Open)과 Digest 리뷰 화면(`digestReview.get`) 모두 같은 `status='open'` 가드로 조회하므로 Then #1·#2가 구조적으로 보장됨. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
+- **확정 (2026-07-20, Kyle 실동작 확인)**: `digestSource`가 추출 완료 후 `create_ingestion_review` RPC를 호출해 changeset을 `status='pending'`(제품 용어 open)으로 생성한다(`apps/server/src/infra/statement-sync/digestion.ts`). 변경셋 탭(Open)과 Digest 리뷰 화면(`digestReview.get`) 모두 같은 `status='pending'` 가드로 조회하므로 Then #1·#2가 구조적으로 보장됨. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
 
 #### 검토 대기 배지 실시간 갱신 (LNB·Space 오버뷰)
 
@@ -67,15 +76,23 @@
 - **When**: ingestion changeset이 새로 열린다.
 - **Then**: 새로고침 없이 LNB의 Space 목록 배지와 Space 오버뷰의 변경사항 탭 배지가 실시간으로 갱신된다.
 - **관여 화면**: LNB, Space 오버뷰, 변경셋
-- **범위 참고**: 두 배지 모두 `space.openChangesetCount` 하나를 공유(`SpaceListItem.tsx`/`SpaceTabButton.tsx`). Supabase Realtime 도입(PR #419)으로 실시간 갱신.
+- **범위 참고**: 두 배지 모두 `space.openChangesetCount` 하나를 공유(`SpaceListItem.tsx`/`SpaceTabs.tsx`). Supabase Realtime 도입(PR #419)으로 실시간 갱신.
 
-#### Digest 리뷰 화면 진입
+#### Digest 리뷰 화면 진입 — Digest 후보 나열
 
 - **Given**: 유저가 변경사항 리스트(Open)에서 ingestion changeset 행을 본다.
 - **When**: 그 행을 클릭해 Digest 리뷰 화면에 진입한다.
-- **Then**: 추출된 Digest 후보와 Reference 후보가 문서형 편집 카드로 나열된다.
+- **Then**: 추출된 Digest 후보가 문서형 편집 카드로 나열된다.
 - **관여 화면**: 변경셋, Digest 리뷰 화면
 - **범위 참고**: 원문 위치 하이라이트 동기화는 별도 케이스 "원문 대조 포커스 전환"으로 이관 — 여기선 중복 검증하지 않는다.
+
+#### Digest 리뷰 화면 진입 — Reference 후보 나열
+
+- **Given**: 유저가 변경사항 리스트(Open)에서 ingestion changeset 행을 본다.
+- **When**: 그 행을 클릭해 Digest 리뷰 화면에 진입한다.
+- **Then**: 추출된 Reference 후보가 문서형 편집 카드로 나열된다.
+- **관여 화면**: 변경셋, Digest 리뷰 화면
+- **범위 참고**: Reference는 여러 Source·Digest에 걸쳐 재사용되는 공유 자원이라 원문 위치가 하나로 안 좁혀진다 — Reference 상세 화면이 "원문 보기"를 두지 않고 "인용하는 Digest" 목록으로 대체한 것과 같은 이유(surface-inventory.md). 후보 카드도 같은 원칙 — 원문 하이라이트 대신 이 후보를 인용하는 Digest 후보로 맥락을 보여준다.
 
 #### 원문에 없는 필드는 비워둠
 
@@ -93,56 +110,123 @@
 - **관여 화면**: Digest 리뷰 화면
 - **확정 (2026-07-20, Kyle 실동작 확인)**: `DIGEST_TYPES`(결정·미결·학습·아이디어·가정 5종, `packages/shared/src/schemas/digest.ts`)와 타입별 프롬프트 지시, `buildDigestBody`의 판별 유니언 조립(타입 밖 필드 폐기)으로 타입에 맞는 필드 구조가 구조적으로 보장됨. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
 
-#### 신규 Topic·Tag 제안
+#### 신규 Topic 제안
 
-- **Given**: Digest 추출이 진행 중이고, 원문 내용이 이 Space/Workspace에 아직 없는 주제·태그에 해당한다.
+- **Given**: Digest 추출이 진행 중이고, 원문 내용이 이 Space에 아직 없는 주제에 해당한다.
 - **When**: Digest 후보가 생성된다.
-- **Then**: 엔진이 새로 만든 Topic·Tag가 그 후보에 미리 채워진 채로 나타난다. 같은 후보 안에 기존 재사용 라벨과 함께 섞여 나올 수 있다(배타적이지 않음).
+- **Then**: 엔진이 새로 만든 Topic이 그 후보에 미리 채워진 채로 나타난다. 같은 후보 안에 기존 재사용 Topic과 함께 섞여 나올 수 있다(배타적이지 않음).
 - **관여 화면**: Digest 리뷰 화면
-- **확정 (2026-07-20, Kyle 실동작 확인)**: `digest-review-service.ts`의 `getReview`가 레지스트리에 매칭 안 되는 Topic·Tag를 `id: null`(신규)로 후보에 미리 채우고, 확정 시 `confirm_ingestion_review`가 find-or-create(`ON CONFLICT ... DO UPDATE`)로 실제 행을 만든다. 같은 후보 안에서 기존/신규 라벨이 배타적이지 않게 섞일 수 있는 구조. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
+- **범위 참고**: `digest-review-service.ts`의 `getReview`가 레지스트리에 매칭 안 되는 Topic을 `id: null`(신규)로 후보에 미리 채우고, 확정 시 `confirm_ingestion_review`가 find-or-create(`ON CONFLICT ... DO UPDATE`)로 실제 행을 만든다. 같은 후보 안에서 기존/신규 Topic이 배타적이지 않게 섞일 수 있는 구조. Topic·Tag 분리 이전에 결합 케이스로 확인됐던 것이라, 이 단위로는 재확인 필요.
 
-#### 기존 Topic·Tag 재사용 제안
+#### 신규 Tag 제안
 
-- **Given**: Digest 추출이 진행 중이고, 원문 내용이 이미 존재하는 Topic·Tag와 일치한다.
+- **Given**: Digest 추출이 진행 중이고, 원문 내용이 이 Workspace에 아직 없는 태그에 해당한다.
 - **When**: Digest 후보가 생성된다.
-- **Then**: 새로 만들지 않고 기존 Topic·Tag가 재사용되어 그 후보에 미리 채워진 채로 나타난다. 같은 후보 안에 신규 라벨과 함께 섞여 나올 수 있다(배타적이지 않음).
+- **Then**: 엔진이 새로 만든 Tag가 그 후보에 미리 채워진 채로 나타난다. 같은 후보 안에 기존 재사용 Tag와 함께 섞여 나올 수 있다(배타적이지 않음).
 - **관여 화면**: Digest 리뷰 화면
-- **범위 참고 (2026-07-20, QA 세션)**: 이름이 일치하는 `status='active'` Topic·Tag는 `id`가 채워져 재사용되고, archived 항목은 재사용 후보에서 제외된다(`digest-review-service.ts`). 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+- **범위 참고**: `digest-review-service.ts`의 `getReview`가 레지스트리에 매칭 안 되는 Tag를 `id: null`(신규)로 후보에 미리 채우고, 확정 시 `confirm_ingestion_review`가 find-or-create(`ON CONFLICT ... DO UPDATE`)로 실제 행을 만든다. 같은 후보 안에서 기존/신규 Tag가 배타적이지 않게 섞일 수 있는 구조. Topic·Tag 분리 이전에 결합 케이스로 확인됐던 것이라, 이 단위로는 재확인 필요.
 
-#### 기존 Topic·Tag는 이름 수정 불가
+#### 기존 Topic 재사용 제안
 
-- **Given**: 유저가 Digest 리뷰 화면에서 기존 Topic·Tag가 재사용 제안된 후보를 보고 있다.
+- **Given**: Digest 추출이 진행 중이고, 원문 내용이 이미 존재하는 Topic과 일치한다.
+- **When**: Digest 후보가 생성된다.
+- **Then**: 새로 만들지 않고 기존 Topic이 재사용되어 그 후보에 미리 채워진 채로 나타난다. 같은 후보 안에 신규 Topic과 함께 섞여 나올 수 있다(배타적이지 않음).
+- **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-20, QA 세션)**: 이름이 일치하는 `status='active'` Topic은 `id`가 채워져 재사용되고, archived 항목은 재사용 후보에서 제외된다(`digest-review-service.ts`). 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+
+#### 기존 Tag 재사용 제안
+
+- **Given**: Digest 추출이 진행 중이고, 원문 내용이 이미 존재하는 Tag와 일치한다.
+- **When**: Digest 후보가 생성된다.
+- **Then**: 새로 만들지 않고 기존 Tag가 재사용되어 그 후보에 미리 채워진 채로 나타난다. 같은 후보 안에 신규 Tag와 함께 섞여 나올 수 있다(배타적이지 않음).
+- **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-20, QA 세션)**: 이름이 일치하는 `status='active'` Tag는 `id`가 채워져 재사용되고, archived 항목은 재사용 후보에서 제외된다(`digest-review-service.ts`). 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+
+#### 기존 Topic은 이름 수정 불가
+
+- **Given**: 유저가 Digest 리뷰 화면에서 기존 Topic이 재사용 제안된 후보를 보고 있다.
 - **When**: 그 라벨의 이름을 수정하려 시도한다.
 - **Then**: 이름은 읽기 전용이라 수정할 수 없다. 그 Digest에서 제거하는 것은 계속 가능하다.
 - **관여 화면**: Digest 리뷰 화면
 
 - **범위 참고 (2026-07-15, PR #414)**: `EditableLabelChip`이 `id !== null`(레지스트리 매치)일 때 `readOnly`로 렌더링 — 스펙 그대로 구현·멀티 에이전트 코드 리뷰 + 서버/FE 테스트로 검증됨. 실동작 확인 아직 안 됨.
 
-#### 신규 Topic·Tag 이름 수정 가능
+#### 기존 Tag는 이름 수정 불가
 
-- **Given**: 유저가 Digest 리뷰 화면에서 신규로 제안된 Topic·Tag가 있는 후보를 보고 있다.
+- **Given**: 유저가 Digest 리뷰 화면에서 기존 Tag가 재사용 제안된 후보를 보고 있다.
+- **When**: 그 라벨의 이름을 수정하려 시도한다.
+- **Then**: 이름은 읽기 전용이라 수정할 수 없다. 그 Digest에서 제거하는 것은 계속 가능하다.
+- **관여 화면**: Digest 리뷰 화면
+
+- **범위 참고 (2026-07-15, PR #414)**: `EditableLabelChip`이 `id !== null`(레지스트리 매치)일 때 `readOnly`로 렌더링 — 스펙 그대로 구현·멀티 에이전트 코드 리뷰 + 서버/FE 테스트로 검증됨. 실동작 확인 아직 안 됨.
+
+#### 기존 Tag는 색상 수정 불가
+
+- **Given**: 유저가 Digest 리뷰 화면에서 기존 Tag가 재사용 제안된 후보를 보고 있다.
+- **When**: 그 라벨의 색상을 수정하려 시도한다.
+- **Then**: 색상도 이름과 마찬가지로 수정할 수 없다. 그 Digest에서 제거하는 것은 계속 가능하다.
+- **관여 화면**: Digest 리뷰 화면
+- **범위 참고**: 리뷰 화면의 일관된 원칙 — 신규는 이 화면 안에서 자유롭게 편집(이름·색상 포함), 기존 재사용은 사용(첨부/제거)만 가능하고 편집 불가. 색상도 이름과 같은 재사용 공유 자원 논리를 따름(여기서 고치면 이 Tag를 쓰는 다른 모든 Digest의 표시도 같이 바뀜). 미구현 — Tag 색상 필드 자체가 아직 없음(위 "Tag 색상 지정 — 신규 생성 시" 참고).
+
+#### 신규 Topic 이름 수정 가능
+
+- **Given**: 유저가 Digest 리뷰 화면에서 신규로 제안된 Topic이 있는 후보를 보고 있다.
 - **When**: 그 라벨의 이름을 수정한다.
 - **Then**: 아직 서버에 존재하지 않는 임시 상태이므로, 수정한 이름이 이 changeset의 편집 중인 내용에 즉시 반영된다.
 - **관여 화면**: Digest 리뷰 화면
 
-- **확정 (2026-07-20, Kyle 실동작 확인)**: `id === null`일 때 인라인 `<input>`으로 편집 가능, `DigestReviewScreen`의 `topicsOverrides`/`tagsOverrides`(기존 `titleOverrides`와 동일 패턴)로 즉시 반영. 빈 값으로 지운 채 확정을 시도하면(리뷰에서 발견된 회귀) 확정 버튼이 비활성화되도록 수정 완료.
+- **범위 참고**: `id === null`일 때 인라인 `<input>`으로 편집 가능, `DigestReviewScreen`의 `topicsOverrides`(기존 `titleOverrides`와 동일 패턴)로 즉시 반영. 빈 값으로 지운 채 확정을 시도하면(리뷰에서 발견된 회귀) 확정 버튼이 비활성화되도록 수정됨. Topic·Tag 분리 이전에 결합 케이스로 확인됐던 것이라, 이 단위로는 재확인 필요.
 
-#### Digest 리뷰 화면에서 Topic·Tag 추가 — 기존 선택
+#### 신규 Tag 이름 수정 가능
 
-- **Given**: 유저가 Digest 리뷰 화면에서 Digest 후보를 보고 있다.
-- **When**: Topic·Tag 추가 액션을 실행해 검색하고, 일치하는 기존 라벨을 선택한다.
-- **Then**: 그 기존 라벨이 이 changeset의 편집 중인 내용에 즉시 추가된다. 새 라벨은 생성되지 않는다.
+- **Given**: 유저가 Digest 리뷰 화면에서 신규로 제안된 Tag가 있는 후보를 보고 있다.
+- **When**: 그 라벨의 이름을 수정한다.
+- **Then**: 아직 서버에 존재하지 않는 임시 상태이므로, 수정한 이름이 이 changeset의 편집 중인 내용에 즉시 반영된다.
 - **관여 화면**: Digest 리뷰 화면
 
-- **범위 참고 (2026-07-15, PR #414)**: `TopicAddPopover`/`TagAddPopover`의 검색·선택 구현됨. 리뷰에서 `topic.list`가 Space 스코프 없이 다른 Space의 동명 Topic까지 "기존"으로 노출하던 크로스-Space 버그를 발견해 `spaceId` 파라미터 추가로 수정 — Tag는 원래 Workspace 스코프라 해당 없음. 실동작 확인 아직 안 됨.
+- **범위 참고**: `id === null`일 때 인라인 `<input>`으로 편집 가능, `DigestReviewScreen`의 `tagsOverrides`(기존 `titleOverrides`와 동일 패턴)로 즉시 반영. 빈 값으로 지운 채 확정을 시도하면(리뷰에서 발견된 회귀) 확정 버튼이 비활성화되도록 수정됨. Topic·Tag 분리 이전에 결합 케이스로 확인됐던 것이라, 이 단위로는 재확인 필요.
 
-#### Digest 리뷰 화면에서 Topic·Tag 추가 — 신규 생성
+#### Digest 리뷰 화면에서 Topic 추가 — 기존 선택
 
 - **Given**: 유저가 Digest 리뷰 화면에서 Digest 후보를 보고 있다.
-- **When**: Topic·Tag 추가 액션을 실행해 검색했지만 일치하는 라벨이 없어, 새로 만들기를 선택한다.
-- **Then**: Topic은 검색어를 이름으로 하는 새 라벨이 즉시 추가된다. Tag는 이름(검색어 프리필)+설명 2필드 미니 폼을 거쳐야 추가된다(`description`이 필수 필드라서).
+- **When**: Topic 추가 액션을 실행해 검색하고, 일치하는 기존 Topic을 선택한다.
+- **Then**: 그 기존 Topic이 이 changeset의 편집 중인 내용에 즉시 추가된다. 새 라벨은 생성되지 않는다.
 - **관여 화면**: Digest 리뷰 화면
-- **확정 (2026-07-20, Kyle 실동작 확인)**: Tag가 Topic과 다르게 description 필수라 미니 폼을 거치는 것까지 확인(`design-decisions-log.md` 2026-07-15 항목 참고).
+
+- **범위 참고 (2026-07-15, PR #414)**: `TopicAddPopover`의 검색·선택 구현됨. 리뷰에서 `topic.list`가 Space 스코프 없이 다른 Space의 동명 Topic까지 "기존"으로 노출하던 크로스-Space 버그를 발견해 `spaceId` 파라미터 추가로 수정. 실동작 확인 아직 안 됨.
+
+#### Digest 리뷰 화면에서 Tag 추가 — 기존 선택
+
+- **Given**: 유저가 Digest 리뷰 화면에서 Digest 후보를 보고 있다.
+- **When**: Tag 추가 액션을 실행해 검색하고, 일치하는 기존 Tag를 선택한다.
+- **Then**: 그 기존 Tag가 이 changeset의 편집 중인 내용에 즉시 추가된다. 새 라벨은 생성되지 않는다.
+- **관여 화면**: Digest 리뷰 화면
+
+- **범위 참고 (2026-07-15, PR #414)**: `TagAddPopover`의 검색·선택 구현됨. Tag는 원래 Workspace 스코프라 Topic이 겪은 크로스-Space 버그는 해당 없음. 실동작 확인 아직 안 됨.
+
+#### Digest 리뷰 화면에서 Topic 추가 — 신규 생성
+
+- **Given**: 유저가 Digest 리뷰 화면에서 Digest 후보를 보고 있다.
+- **When**: Topic 추가 액션을 실행해 검색했지만 일치하는 라벨이 없어, 새로 만들기를 선택한다.
+- **Then**: 검색어를 이름으로 하는 새 Topic이 즉시 추가된다.
+- **관여 화면**: Digest 리뷰 화면
+- **범위 참고**: Topic은 Tag와 다르게 별도 필드 없이 이름만으로 즉시 생성됨(design-decisions-log.md 2026-07-15 항목 참고). Topic·Tag 분리 이전에 결합 케이스로 확인됐던 것이라, 이 단위로는 재확인 필요.
+
+#### Digest 리뷰 화면에서 Tag 추가 — 신규 생성
+
+- **Given**: 유저가 Digest 리뷰 화면에서 Digest 후보를 보고 있다.
+- **When**: Tag 추가 액션을 실행해 검색했지만 일치하는 라벨이 없어, 새로 만들기를 선택한다.
+- **Then**: 이름(검색어 프리필)+설명 2필드 미니 폼을 거쳐야 추가된다(`description`이 필수 필드라서).
+- **관여 화면**: Digest 리뷰 화면
+- **범위 참고**: Tag가 Topic과 다르게 description 필수라 미니 폼을 거치는 구조(`design-decisions-log.md` 2026-07-15 항목 참고). Topic·Tag 분리 이전에 결합 케이스로 확인됐던 것이라, 이 단위로는 재확인 필요.
+
+#### Tag 색상 지정 — 신규 생성 시
+
+- **Given**: 유저가 Digest 리뷰 화면에서 신규로 생성 중인(아직 확정 전) Tag를 보고 있다.
+- **When**: 그 Tag에 색상을 지정한다(예: "위험" 계열 태그를 빨강으로).
+- **Then**: 아직 서버에 존재하지 않는 임시 상태이므로, 지정한 색상이 이 changeset의 편집 중인 내용에 즉시 반영되고, 확정 전까지는 이름과 마찬가지로 몇 번이든 다시 바꿀 수 있다. 확정 시 Tag 모델에 저장되어 이후 화면 전반에서 같은 색으로 표시된다. Topic은 색상을 갖지 않는다.
+- **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (07-modeling.md "열어두는 것")**: 방향만 확정(Tag는 색상 O·Topic은 색상 X, Workspace 아바타처럼 해시 자동 배정이 아니라 사용자가 고르는 값이라 실제 필드로 저장). 스키마(`color` 필드)·마이그레이션·색상 선택 UI 전부 미구현 — 실제로 필요해지는 시점에 착수.
 
 #### Reference 후보 자동 제안 및 매칭
 
@@ -191,12 +275,12 @@
   3. Source는 초안(pending)으로 돌아간다.
   4. 리뷰 화면(open 전용)은 유효하지 않게 되므로, 처리 결과의 정본 위치인 변경사항 상세로 곧바로 이동한다.
 - **관여 화면**: Digest 리뷰 화면, Changeset 상세
-- **범위 참고 (2026-07-14, PR #412)**: 신설된 `discard_ingestion_review` RPC(가드: `type='ingestion' AND status='open'`, changes 미생성)와 `useDiscardReview`로 Then #1~#3 구현.
+- **범위 참고 (2026-07-14, PR #412)**: 신설된 `discard_ingestion_review` RPC(가드: `type='ingestion' AND status='pending'`, changes 미생성)와 `useDiscardReview`로 Then #1~#3 구현.
 - **갱신 (2026-07-18)**: Then #4를 확정과 같은 이유로 뒤집어 자동 이동으로 바꿨다(위 "Digest 리뷰 확정" 갱신·design-decisions-log.md 2026-07-18 항목 참고). `useDiscardReview`의 `onSuccess` 콜백에서 `goToClosedReview()` 호출로 구현.
 
 #### 적용된 리뷰 되돌리기
 
-- **Given**: 유저가 Changeset 상세에서 적용된 상태인 changeset을 보고 있다(Digest 리뷰 화면은 open 전용이라 여기 해당 없음 — `digestReview.get` RPC 가드가 `status='open'`만 허용).
+- **Given**: 유저가 Changeset 상세에서 적용된 상태인 changeset을 보고 있다(Digest 리뷰 화면은 open 전용이라 여기 해당 없음 — `digestReview.get` RPC 가드가 `status='pending'`만 허용).
 - **When**: 되돌리기 액션을 실행한다.
 - **Then**:
   1. 컨펌 다이얼로그 없이 즉시 실행된다.
