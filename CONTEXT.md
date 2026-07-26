@@ -78,19 +78,15 @@
 - [design-qa-checklist](docs/guides/design-qa-checklist.md): 디자인 폴리싱 라운드 측정 기준
 - [harness-scenarios](docs/harness/harness-scenarios.md): /dev 하니스 엔진 검증 시나리오
 
-## 7. 프로젝트 운영: 지금 뭘 왜 하고 있는가
-
-- [user-acquisition](docs/gtm/user-acquisition.md): 초기 사용자 10명 확보 실행 설계
-
-## 8. PM 오케스트레이션: 슬라이스를 어떻게 굴리는가
+## 7. PM 오케스트레이션: 슬라이스를 어떻게 굴리는가
 
 - `nema-slice-implementation-workflow`(저장소 밖, `nema-doc/`): 슬라이스 진행 방식, 역할 분담, 결정 로그
 
-## 9. POC/시각자료: 참고용 시각 자료
+## 8. POC/시각자료: 참고용 시각 자료
 
 - [mvp-wireframe](docs/poc/mvp-wireframe.html): 화면별 동작 근거가 담긴 단일 HTML 와이어프레임
 
-## 10. 히스토리: 더 이상 참고하지 않는 이전 세대 문서
+## 9. 히스토리: 더 이상 참고하지 않는 이전 세대 문서
 
 - [intake-surface-design](docs/archive/intake-surface-design.archive.md): 넣기 표면 v1 설계
 - [put-in-and-pull-out-flow-design-v1](docs/archive/put-in-and-pull-out-flow-design-v1.archive.md): 넣기·꺼내기 흐름 v1 설계
