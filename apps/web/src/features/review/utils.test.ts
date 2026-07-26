@@ -29,13 +29,24 @@ describe("changesetDisplayTitle", () => {
     expect(title).toBe("review.changeset_fallback_title(12)");
   });
 
-  it("revert 타입이면 원본 title에 revertDepth를 실어 ICU 키로 넘긴다", () => {
+  it("revert depth=1이면 marker를 한 번만 실어 revert_title로 넘긴다", () => {
     const title = changesetDisplayTitle(
       { title: "회의록 요약", number: 12, type: "revert", revertDepth: 1 },
       fakeT,
     );
 
-    expect(title).toBe("review.revert_title(회의록 요약,1)");
+    expect(title).toBe("review.revert_title(회의록 요약,review.revert_marker)");
+  });
+
+  it("revert depth=2(되돌리기의 되돌리기)면 marker를 두 번 겹쳐 싣는다", () => {
+    const title = changesetDisplayTitle(
+      { title: "회의록 요약", number: 12, type: "revert", revertDepth: 2 },
+      fakeT,
+    );
+
+    expect(title).toBe(
+      "review.revert_title(회의록 요약,review.revert_marker review.revert_marker)",
+    );
   });
 });
 

@@ -27,7 +27,10 @@ export function summarizeChangesetEffect(
 // title은 생성 시점에 채워져 거의 항상 있다(changeset_title 마이그레이션) — null인
 // 극히 드문 경우(예: 아직 채워지지 않은 대상)에만 번호 기반 자리표시자로 대체한다.
 // revert는 저장된 title이 원본 그대로라(접미사 없음, revert_changeset_depth
-// 마이그레이션), revertDepth를 얹어 ICU 복수형 키로 언어별 문구를 조합한다.
+// 마이그레이션), revertDepth만큼 revert_marker를 반복해 조립한다. ICU 복수형은
+// =1/other 두 갈래뿐이라 임의 depth 반복을 표현 못 해 JS에서 직접 겹친다 — 다만
+// 반복 자체(언어 무관)만 코드가 맡고, 어순(한글은 제목 뒤에 붙고 영문은 git revert
+// 컨벤션처럼 앞에 붙음)은 revert_title 템플릿이 언어별로 이미 쥐고 있다.
 export function changesetDisplayTitle(
   entry: Pick<ChangesetListEntry, "title" | "number" | "type" | "revertDepth">,
   t: (
@@ -39,10 +42,12 @@ export function changesetDisplayTitle(
     return t("review.changeset_fallback_title", { number: entry.number });
   }
   if (entry.type === "revert") {
-    return t("review.revert_title", {
-      title: entry.title,
-      depth: entry.revertDepth,
-    });
+    const marker = t("review.revert_marker");
+    const markers = Array.from(
+      { length: entry.revertDepth },
+      () => marker,
+    ).join(" ");
+    return t("review.revert_title", { title: entry.title, markers });
   }
   return entry.title;
 }
