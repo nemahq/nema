@@ -277,15 +277,15 @@ describe("getReview", () => {
           },
         ],
       },
-      topics: [{ id: EXISTING_TOPIC_ID, name: "기존 주제" }],
+      topics: [{ id: EXISTING_TOPIC_ID, title: "기존 주제" }],
       tags: [{ id: EXISTING_TAG_ID, title: "기존 태그" }],
     });
 
     const review = await getReview({ supabase, spaceId: SPACE_ID, number: 12 });
 
     expect(review.digests[0]?.topics).toEqual([
-      { id: EXISTING_TOPIC_ID, name: "기존 주제" },
-      { id: null, name: "새 주제" },
+      { id: EXISTING_TOPIC_ID, title: "기존 주제" },
+      { id: null, title: "새 주제" },
     ]);
     expect(review.digests[0]?.tags).toEqual([
       { id: EXISTING_TAG_ID, title: "기존 태그", description: "기존 정의" },
@@ -402,8 +402,8 @@ describe("updateReview", () => {
           description: "요약",
           body: { type: "learning", finding: "발견" },
           topics: [
-            { id: EXISTING_TOPIC_ID, name: "기존 주제" },
-            { id: null, name: "새 주제" },
+            { id: EXISTING_TOPIC_ID, title: "기존 주제" },
+            { id: null, title: "새 주제" },
           ],
           tags: [
             {

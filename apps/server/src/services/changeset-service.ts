@@ -118,7 +118,7 @@ export async function resolveDuplicateRelation(args: {
       title: mergedDigest.title,
       description: mergedDigest.description,
       body: mergedDigest.body,
-      topics: mergedDigest.topics.map((topic) => topic.name),
+      topics: mergedDigest.topics.map((topic) => topic.title),
       tags: mergedDigest.tags.map((tag) => ({
         title: tag.title,
         description: tag.description,
@@ -390,6 +390,9 @@ interface ChangesetHistoryEntry {
   // 사람이 이 changeset의 내용 자체를 만든 경우에만 있음(07-modeling.md §authorId
   // 규칙) — ingestion·relation은 엔진 산물이라 항상 null, revert만 있음.
   authorId: string | null;
+  // author_id와 함께 생성 시점에 저장되는 이름 스냅샷(ghost 패턴) — 계정이 삭제돼
+  // authorId가 NULL로 끊긴 뒤에도 그 순간의 이름을 그대로 보여줄 수 있다.
+  authorName: string | null;
   // 되돌림 여부 — is_changeset_reverted(SQL)와 같은 재귀를 revert 간선으로 계산(§4.4).
   reverted: boolean;
   // 효과 요약 — 대상 종류별 변경 수("이 글 → 진술 N + 관계 M").
@@ -439,7 +442,7 @@ export async function listChangesets(args: {
   let query = supabase
     .from("changesets")
     .select(
-      "id, number, type, status, outcome, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, created_at, updated_at, changes(target_type), sources(status)",
+      "id, number, type, status, outcome, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, author_name, created_at, updated_at, changes(target_type), sources(status)",
     )
     .eq("space_id", targetSpaceId)
     .order("number", { ascending: false })
@@ -511,6 +514,7 @@ export async function listChangesets(args: {
         revertDepth: row.revert_depth,
         invalidatedById: row.invalidated_by_id,
         authorId: row.author_id,
+        authorName: row.author_name,
         reverted: isReverted(row.id),
         effect,
         createdAt: row.created_at,
@@ -527,6 +531,7 @@ interface ManualChangeHistoryEntry {
   // number도 없다(DB CHECK: space_id IS NULL ⟺ number IS NULL) — Digest 대상만 있음.
   changesetNumber: number | null;
   authorId: string | null;
+  authorName: string | null;
   createdAt: string;
   action: ChangeAction;
   data: unknown;
@@ -555,6 +560,7 @@ export async function listManualChangeHistory(args: {
       changesetId: row.changeset_id,
       changesetNumber: row.changeset_number,
       authorId: row.author_id,
+      authorName: row.author_name,
       createdAt: row.created_at,
       action: row.action,
       data: row.data,

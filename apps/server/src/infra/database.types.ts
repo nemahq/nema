@@ -75,6 +75,7 @@ export type Database = {
       changesets: {
         Row: {
           author_id: string | null;
+          author_name: string | null;
           created_at: string;
           id: string;
           invalidated_by_id: string | null;
@@ -91,6 +92,7 @@ export type Database = {
         };
         Insert: {
           author_id?: string | null;
+          author_name?: string | null;
           created_at?: string;
           id?: string;
           invalidated_by_id?: string | null;
@@ -107,6 +109,7 @@ export type Database = {
         };
         Update: {
           author_id?: string | null;
+          author_name?: string | null;
           created_at?: string;
           id?: string;
           invalidated_by_id?: string | null;
@@ -287,6 +290,7 @@ export type Database = {
       digests: {
         Row: {
           author_id: string | null;
+          author_name: string | null;
           body: Json;
           created_at: string;
           description: string;
@@ -303,6 +307,7 @@ export type Database = {
         };
         Insert: {
           author_id?: string | null;
+          author_name?: string | null;
           body: Json;
           created_at?: string;
           description: string;
@@ -319,6 +324,7 @@ export type Database = {
         };
         Update: {
           author_id?: string | null;
+          author_name?: string | null;
           body?: Json;
           created_at?: string;
           description?: string;
@@ -606,6 +612,7 @@ export type Database = {
       sources: {
         Row: {
           author_id: string | null;
+          author_name: string | null;
           author_timezone: string | null;
           body: string;
           created_at: string;
@@ -630,6 +637,7 @@ export type Database = {
         };
         Insert: {
           author_id?: string | null;
+          author_name?: string | null;
           author_timezone?: string | null;
           body: string;
           created_at?: string;
@@ -654,6 +662,7 @@ export type Database = {
         };
         Update: {
           author_id?: string | null;
+          author_name?: string | null;
           author_timezone?: string | null;
           body?: string;
           created_at?: string;
@@ -994,25 +1003,25 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
-          name: string;
           space_id: string;
           status: Database["public"]["Enums"]["topic_status"];
+          title: string;
           updated_at: string;
         };
         Insert: {
           created_at?: string;
           id?: string;
-          name: string;
           space_id: string;
           status?: Database["public"]["Enums"]["topic_status"];
+          title: string;
           updated_at?: string;
         };
         Update: {
           created_at?: string;
           id?: string;
-          name?: string;
           space_id?: string;
           status?: Database["public"]["Enums"]["topic_status"];
+          title?: string;
           updated_at?: string;
         };
         Relationships: [
@@ -1061,19 +1070,19 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
-          name: string | null;
+          name: string;
           updated_at: string;
         };
         Insert: {
           created_at?: string;
           id?: string;
-          name?: string | null;
+          name: string;
           updated_at?: string;
         };
         Update: {
           created_at?: string;
           id?: string;
-          name?: string | null;
+          name?: string;
           updated_at?: string;
         };
         Relationships: [];
@@ -1291,6 +1300,7 @@ export type Database = {
         Returns: {
           action: Database["public"]["Enums"]["change_action"];
           author_id: string;
+          author_name: string;
           changeset_id: string;
           changeset_number: number;
           created_at: string;
@@ -1349,6 +1359,10 @@ export type Database = {
           p_merged_digest: Json;
           p_new_references?: Json;
         };
+        Returns: string;
+      };
+      resolve_user_display_name: {
+        Args: { p_user_id: string };
         Returns: string;
       };
       restore_digest: { Args: { p_digest_id: string }; Returns: string };

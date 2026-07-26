@@ -48,7 +48,7 @@ const ACTIONS: { action: ReviewEditingAction; slot: keyof ReviewOverrides }[] =
       action: {
         type: "digest/setTopics",
         index: 0,
-        topics: [{ id: null, name: "주제" }],
+        topics: [{ id: null, title: "주제" }],
       },
       slot: "topicsOverrides",
     },
@@ -74,7 +74,7 @@ const ACTIONS: { action: ReviewEditingAction; slot: keyof ReviewOverrides }[] =
       slot: "tagRenames",
     },
     {
-      action: { type: "topic/renamed", id: "topic-1", name: "새 주제" },
+      action: { type: "topic/renamed", id: "topic-1", title: "새 주제" },
       slot: "topicRenames",
     },
     {

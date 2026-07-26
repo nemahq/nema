@@ -153,17 +153,17 @@ export async function getReview(args: {
     ...new Set(rawDigests.flatMap((d) => d.tags.map((tag) => tag.title))),
   ];
 
-  const topicIdByName = new Map<string, string>();
+  const topicIdByTitle = new Map<string, string>();
   if (topicNames.length > 0) {
     const { data: topicRows, error: topicError } = await supabase
       .from("topics")
-      .select("id, name")
+      .select("id, title")
       .eq("space_id", changeset.space_id)
       .eq("status", "active")
-      .in("name", topicNames);
+      .in("title", topicNames);
     throwIfSupabaseError(topicError);
     for (const row of topicRows ?? []) {
-      topicIdByName.set(row.name, row.id);
+      topicIdByTitle.set(row.title, row.id);
     }
   }
 
@@ -186,8 +186,8 @@ export async function getReview(args: {
     description: digestData.description,
     body: digestData.body,
     topics: digestData.topics.map((name) => ({
-      id: topicIdByName.get(name) ?? null,
-      name,
+      id: topicIdByTitle.get(name) ?? null,
+      title: name,
     })),
     tags: digestData.tags.map((tag) => ({
       id: tagIdByTitle.get(tag.title) ?? null,
@@ -263,7 +263,7 @@ export async function updateReview(args: {
       title: digest.title,
       description: digest.description,
       body: digest.body,
-      topics: digest.topics.map((topic) => topic.name),
+      topics: digest.topics.map((topic) => topic.title),
       tags: digest.tags.map((tag) => ({
         title: tag.title,
         description: tag.description,
@@ -351,7 +351,7 @@ export async function confirmDigestEdit(args: {
         title: digest.title,
         description: digest.description,
         body: digest.body,
-        topics: digest.topics.map((topic) => topic.name),
+        topics: digest.topics.map((topic) => topic.title),
         tags: digest.tags.map((tag) => ({
           title: tag.title,
           description: tag.description,

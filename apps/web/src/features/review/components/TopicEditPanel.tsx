@@ -3,7 +3,7 @@ import { useState } from "react";
 import {
   DIGEST_TOPICS_MAX,
   type DigestTopicDraft,
-  TOPIC_NAME_MAX_LENGTH,
+  TOPIC_TITLE_MAX_LENGTH,
 } from "@nema-io/shared";
 import { Chip, Separator } from "@nema-io/weave";
 
@@ -33,13 +33,13 @@ export function TopicEditPanel({
   const [query, setQuery] = useState("");
   const atMax = topics.length >= DIGEST_TOPICS_MAX;
 
-  function handleSelectExisting(topic: { id: string; name: string }) {
+  function handleSelectExisting(topic: { id: string; title: string }) {
     onChange([...topics, topic]);
     setQuery("");
   }
 
   function handleCreateNew(name: string) {
-    onChange([...topics, { id: null, name }]);
+    onChange([...topics, { id: null, title: name }]);
     setQuery("");
   }
 
@@ -49,7 +49,7 @@ export function TopicEditPanel({
         query={query}
         disabled={disabled}
         searchable={!atMax}
-        maxLength={TOPIC_NAME_MAX_LENGTH}
+        maxLength={TOPIC_TITLE_MAX_LENGTH}
         ariaLabel={t("review.label_search_placeholder")}
         onQueryChange={setQuery}
       >
@@ -61,10 +61,10 @@ export function TopicEditPanel({
             disabled={disabled}
             onRemove={() => onChange(topics.filter((_, i) => i !== index))}
             removeAriaLabel={t("review.topic_remove_action", {
-              label: topic.name,
+              label: topic.title,
             })}
           >
-            {topic.name}
+            {topic.title}
           </Chip>
         ))}
       </LabelChipRow>

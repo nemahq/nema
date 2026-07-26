@@ -9,20 +9,20 @@ import {
 interface Topic {
   id: string;
   status: string;
-  name: string;
+  title: string;
 }
 
 const TOPICS: Topic[] = [
-  { id: "t1", status: "active", name: "결제" },
-  { id: "t2", status: "active", name: "결제 실패" },
-  { id: "t3", status: "archived", name: "결제 재시도" },
+  { id: "t1", status: "active", title: "결제" },
+  { id: "t2", status: "active", title: "결제 실패" },
+  { id: "t3", status: "archived", title: "결제 재시도" },
 ];
 
 describe("filterActiveLabelCandidates", () => {
   it("archived 상태는 후보에서 제외한다", () => {
     const result = filterActiveLabelCandidates(
       TOPICS,
-      (t) => t.name,
+      (t) => t.title,
       "결제",
       new Set(),
     );
@@ -32,7 +32,7 @@ describe("filterActiveLabelCandidates", () => {
   it("이미 붙은 항목(excludedIds)은 제외한다", () => {
     const result = filterActiveLabelCandidates(
       TOPICS,
-      (t) => t.name,
+      (t) => t.title,
       "결제",
       new Set(["t1"]),
     );
@@ -42,7 +42,7 @@ describe("filterActiveLabelCandidates", () => {
   it("검색어는 대소문자 무시 부분일치로 필터링한다", () => {
     const result = filterActiveLabelCandidates(
       TOPICS,
-      (t) => t.name,
+      (t) => t.title,
       "실패",
       new Set(),
     );
@@ -52,7 +52,7 @@ describe("filterActiveLabelCandidates", () => {
   it("검색어가 비어 있으면 active 전체를 반환한다", () => {
     const result = filterActiveLabelCandidates(
       TOPICS,
-      (t) => t.name,
+      (t) => t.title,
       "",
       new Set(),
     );
@@ -62,11 +62,11 @@ describe("filterActiveLabelCandidates", () => {
 
 describe("hasExactLabelMatch", () => {
   it("대소문자 무시 완전일치면 true", () => {
-    expect(hasExactLabelMatch(TOPICS, (t) => t.name, "결제")).toBe(true);
+    expect(hasExactLabelMatch(TOPICS, (t) => t.title, "결제")).toBe(true);
   });
 
   it("부분일치만으로는 false", () => {
-    expect(hasExactLabelMatch(TOPICS, (t) => t.name, "결제 실")).toBe(false);
+    expect(hasExactLabelMatch(TOPICS, (t) => t.title, "결제 실")).toBe(false);
   });
 });
 

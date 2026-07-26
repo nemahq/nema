@@ -191,8 +191,8 @@ export {
 } from "./schemas/tag";
 export {
   type Topic,
-  TOPIC_NAME_MAX_LENGTH,
   TOPIC_STATUSES,
+  TOPIC_TITLE_MAX_LENGTH,
   type TopicIdInput,
   TopicIdInputSchema,
   type TopicListInput,

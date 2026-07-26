@@ -125,7 +125,7 @@ export const DigestListItemSchema = z.object({
   title: z.string(),
   description: z.string(),
   status: DigestStatusSchema,
-  topics: z.array(z.object({ id: z.string().uuid(), name: z.string() })),
+  topics: z.array(z.object({ id: z.string().uuid(), title: z.string() })),
   createdAt: z.string().datetime({ offset: true }),
   // 셋은 배타적으로 화면에 뜨는 배지지만(더 급한 신호가 우선, surface-inventory.md
   // "스레드 탭"), 계약은 독립된 신호 셋으로 내려준다 — 우선순위 판단은 화면 몫.

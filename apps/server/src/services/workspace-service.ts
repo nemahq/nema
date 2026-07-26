@@ -94,9 +94,7 @@ export async function bootstrapWorkspace(args: {
     user: bootstrapUser,
     workspace: {
       id: membership.workspaces.id,
-      // 이름을 아직 안 지은 워크스페이스는 유저 이름을 값 그대로 쓴다("~의 워크스페이스"
-      // 같은 조합 없이) — 이름 정책 자체는 여전히 미정(07-modeling.md "열어두는 것").
-      name: membership.workspaces.name ?? bootstrapUser.name,
+      name: membership.workspaces.name,
     },
     isFirstEntry: Boolean(isFirstEntry),
   };

@@ -15,7 +15,7 @@ const DIGEST: ReviewDigest = {
   title: "제목",
   description: "요약",
   body: { type: "decision" },
-  topics: [{ id: null, name: "주제" }],
+  topics: [{ id: null, title: "주제" }],
   tags: [{ id: null, title: "태그", description: "설명" }],
   referenceIds: [],
   newReferenceKeys: [],
@@ -137,7 +137,7 @@ describe("computeReviewEditingState — digestRows", () => {
 // 태그가 부활한다(PR #478 리뷰에서 지적된 데이터 오염 버그).
 describe("computeReviewEditingState — tagRenames/topicRenames", () => {
   const SHARED_TAG = { id: "tag-1", title: "옛 이름", description: "설명" };
-  const SHARED_TOPIC = { id: "topic-1", name: "옛 주제" };
+  const SHARED_TOPIC = { id: "topic-1", title: "옛 주제" };
   const DIGEST_WITH_SHARED_TAG: ReviewDigest = {
     ...DIGEST,
     topics: [SHARED_TOPIC],
@@ -171,10 +171,10 @@ describe("computeReviewEditingState — tagRenames/topicRenames", () => {
       },
     );
     expect(result.digestRows[0].topics).toEqual([
-      { id: "topic-1", name: "새 주제" },
+      { id: "topic-1", title: "새 주제" },
     ]);
     expect(result.digestRows[1].topics).toEqual([
-      { id: "topic-1", name: "새 주제" },
+      { id: "topic-1", title: "새 주제" },
     ]);
   });
 
@@ -270,7 +270,7 @@ describe("computeReviewEditingState — hasEmptyLabel", () => {
   it("Topic 이름을 빈 문자열로 override하면 true", () => {
     const result = computeReviewEditingState(review(), {
       ...EMPTY_OVERRIDES,
-      topicsOverrides: new Map([[0, [{ id: null, name: "" }]]]),
+      topicsOverrides: new Map([[0, [{ id: null, title: "" }]]]),
     });
     expect(result.hasEmptyLabel).toBe(true);
   });
