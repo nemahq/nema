@@ -6,11 +6,15 @@ export function SectionErrorFallback({
   error,
   reset,
   hasRetried,
+  eventId,
+  componentStack,
 }: ErrorFallbackProps) {
   const { t } = useTranslation();
   return (
     <ErrorFallback
-      detail={error.message}
+      error={error}
+      eventId={eventId}
+      componentStack={componentStack}
       onRetry={hasRetried ? undefined : reset}
       onRefresh={hasRetried ? () => window.location.reload() : undefined}
       labels={{ pageError: t("error.section_load_failed") }}

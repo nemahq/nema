@@ -76,9 +76,17 @@ createRoot(root, {
   <StrictMode>
     <ErrorBoundary
       boundaryName="root"
-      fallbackRender={({ error, reset, hasRetried }) => (
+      fallbackRender={({
+        error,
+        reset,
+        hasRetried,
+        eventId,
+        componentStack,
+      }) => (
         <ErrorFallback
-          detail={error?.message}
+          error={error}
+          eventId={eventId}
+          componentStack={componentStack}
           onRetry={hasRetried ? undefined : reset}
           onRefresh={hasRetried ? () => window.location.reload() : undefined}
           size="page"

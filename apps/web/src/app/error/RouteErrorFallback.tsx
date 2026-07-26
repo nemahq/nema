@@ -14,7 +14,11 @@ export function isExpectedAuthTransitionError(error: unknown): boolean {
   return isUnauthorizedError(error) || error instanceof NotAuthenticatedError;
 }
 
-export function RouteErrorFallback({ error, reset }: ErrorComponentProps) {
+export function RouteErrorFallback({
+  error,
+  info,
+  reset,
+}: ErrorComponentProps) {
   const router = useRouter();
   const hasRetried = lastRetriedError === error.message;
 
@@ -30,7 +34,8 @@ export function RouteErrorFallback({ error, reset }: ErrorComponentProps) {
 
   return (
     <ErrorFallback
-      detail={error?.message}
+      error={error}
+      componentStack={info?.componentStack}
       onRetry={hasRetried ? undefined : handleRetry}
       onRefresh={hasRetried ? () => window.location.reload() : undefined}
       size="page"

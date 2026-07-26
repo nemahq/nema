@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@nema-io/weave";
 import { Check, Copy, RefreshCw, RotateCcw } from "@nema-io/weave/icons";
 
+import { buildErrorReport } from "@web/app/error/errorReport";
 import { NemaMarkIcon } from "@web/components/ui/NemaMarkIcon";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -18,7 +19,9 @@ export interface ErrorFallbackLabels {
 type ErrorFallbackSize = "page" | "section";
 
 interface ErrorFallbackProps {
-  detail?: string;
+  error?: Error;
+  eventId?: string;
+  componentStack?: string;
   onRetry?: () => void;
   onRefresh?: () => void;
   showBranding?: boolean;
@@ -30,7 +33,9 @@ interface ErrorFallbackProps {
 // 배경색을 일부러 안 준다 — 어디 쓰이든 그 컨테이너의 평소 배경을 그대로 물려받아,
 // 에러가 떠도 주변과 색이 안 튀게 한다(모든 위치를 하나의 색으로 통일하는 대신).
 export function ErrorFallback({
-  detail,
+  error,
+  eventId,
+  componentStack,
   onRetry,
   onRefresh,
   showBranding = true,
@@ -42,13 +47,15 @@ export function ErrorFallback({
   const isPage = size === "page";
 
   function handleCopy() {
-    if (!detail) {
+    if (!error) {
       return;
     }
-    void navigator.clipboard.writeText(detail).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
-    });
+    void navigator.clipboard
+      .writeText(buildErrorReport({ error, eventId, componentStack }))
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
+      });
   }
 
   return (
@@ -85,7 +92,7 @@ export function ErrorFallback({
           {labels?.refresh ?? <TranslatedRefresh />}
         </Button>
       )}
-      {detail && (
+      {error && (
         <button
           type="button"
           onClick={handleCopy}

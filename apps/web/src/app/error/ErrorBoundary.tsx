@@ -6,6 +6,8 @@ export interface ErrorFallbackProps {
   error: Error;
   reset: () => void;
   hasRetried: boolean;
+  eventId?: string;
+  componentStack?: string;
 }
 
 interface ErrorBoundaryProps {
@@ -23,6 +25,8 @@ interface State {
   error: Error | null;
   hasError: boolean;
   hasRetried: boolean;
+  eventId?: string;
+  componentStack?: string;
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
@@ -36,16 +40,27 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    if (this.props.shouldReport?.(error) ?? true) {
-      Sentry.captureException(error, {
-        tags: { boundary: this.props.boundaryName ?? "unknown" },
-        extra: { componentStack: errorInfo.componentStack },
-      });
-    }
+    const eventId =
+      (this.props.shouldReport?.(error) ?? true)
+        ? Sentry.captureException(error, {
+            tags: { boundary: this.props.boundaryName ?? "unknown" },
+            extra: { componentStack: errorInfo.componentStack },
+          })
+        : undefined;
+    this.setState({
+      eventId,
+      componentStack: errorInfo.componentStack ?? undefined,
+    });
   }
 
   private readonly reset = () => {
-    this.setState({ error: null, hasError: false, hasRetried: true });
+    this.setState({
+      error: null,
+      hasError: false,
+      hasRetried: true,
+      eventId: undefined,
+      componentStack: undefined,
+    });
   };
 
   override render() {
@@ -55,6 +70,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
           error: this.state.error,
           reset: this.reset,
           hasRetried: this.state.hasRetried,
+          eventId: this.state.eventId,
+          componentStack: this.state.componentStack,
         });
       }
       return this.props.fallback ?? null;
