@@ -73,20 +73,19 @@ async function computeDigestSignals(args: {
     allStatementIds.push(statement.id);
   }
 
-  // 판정 대기 — 이 Space의 pending relation changeset들이 건드리는 진술 id 집합
+  // 판정 대기 — 이 Space의 열린 relation changeset들이 건드리는 진술 id 집합
   // (surface-inventory.md "스레드 탭": "Statement 하나를 주면 걸린 대기 중
   // 변경셋을 돌려주는 조회 하나로 판단" — listPendingRelations와 같은 원재료).
-  const { data: pendingRelationChangesets, error: pendingError } =
-    await supabase
-      .from("changesets")
-      .select("changes(target_type, data)")
-      .eq("space_id", spaceId)
-      .eq("type", "relation")
-      .eq("status", "pending");
+  const { data: openRelationChangesets, error: pendingError } = await supabase
+    .from("changesets")
+    .select("changes(target_type, data)")
+    .eq("space_id", spaceId)
+    .eq("type", "relation")
+    .eq("status", "open");
   throwIfSupabaseError(pendingError);
 
   const pendingReviewStatementIds = new Set<string>();
-  for (const changeset of pendingRelationChangesets ?? []) {
+  for (const changeset of openRelationChangesets ?? []) {
     const relationChange = changeset.changes.find(
       (change) => change.target_type === "relation",
     );

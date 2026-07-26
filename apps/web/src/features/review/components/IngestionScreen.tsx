@@ -174,7 +174,7 @@ function IngestionContent() {
       <ChangesetDetailHeader
         title={reviewTitle}
         changesetNumber={review.changesetNumber}
-        status="pending"
+        state="open"
         time={review.sourceCreatedAt}
         actions={
           <IngestionActions

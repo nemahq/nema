@@ -222,9 +222,12 @@ export async function listPendingSources(args: {
 
   const { data: changesets, error: changesetError } = await supabase
     .from("changesets")
-    .select("id, number, source_id, status, changes(target_type)")
+    .select("id, number, source_id, status, outcome, changes(target_type)")
     .eq("type", "ingestion")
-    .in("status", ["pending", "rejected"])
+    // 열린 리뷰(status='open')와 버려진 리뷰(outcome='discarded') 둘 다 필요하다.
+    // 두 컬럼에 걸친 OR라 .in()으로는 못 짜서 .or()를 쓴다 — discarded는 closed일
+    // 때만 붙는 값이라(DB chk_changeset_outcome) status 조건을 겹칠 필요가 없다.
+    .or("status.eq.open,outcome.eq.discarded")
     .in("source_id", sourceIds);
   throwIfSupabaseError(changesetError);
 
@@ -240,10 +243,10 @@ export async function listPendingSources(args: {
     if (changeset.source_id === null) {
       continue;
     }
-    // number가 null인 pending changeset은 트리거가 아직 번호를 못 붙인 것이라
+    // number가 null인 열린 changeset은 트리거가 아직 번호를 못 붙인 것이라
     // changesetId/changesetNumber를 함께 요구하는 이 계약상 아직 "리뷰 준비됨"으로
     // 볼 수 없다 — 리뷰 없음과 동일하게 취급한다.
-    if (changeset.status === "pending" && changeset.number !== null) {
+    if (changeset.status === "open" && changeset.number !== null) {
       reviewBySource.set(changeset.source_id, {
         changesetId: changeset.id,
         changesetNumber: changeset.number,
@@ -251,7 +254,7 @@ export async function listPendingSources(args: {
           (change) => change.target_type === "digest",
         ).length,
       });
-    } else if (changeset.status === "rejected") {
+    } else if (changeset.outcome === "discarded") {
       discardedSourceIds.add(changeset.source_id);
     }
   }

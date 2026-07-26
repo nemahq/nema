@@ -1,15 +1,15 @@
 import { cn, Text } from "@nema-io/weave";
 
 import {
+  type ChangesetDisplayState,
+  changesetStateIcon,
+  changesetStateMeta,
   type ChangesetStatusIcon,
-  changesetStatusIcon,
-  changesetStatusMeta,
 } from "@web/features/review/constants";
-import type { ChangesetStatus } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface ChangesetStatusPillProps {
-  status: ChangesetStatus;
+  state: ChangesetDisplayState;
   className?: string;
 }
 
@@ -33,12 +33,12 @@ function pillVisual(icon: ChangesetStatusIcon): PillVisual {
 // 여러 행을 훑는 맥락이라 아이콘만으로 스캔, 상세는 지금 보는 이 하나를 바로 읽는
 // 맥락이라서 다르게 낸다.
 export function ChangesetStatusPill({
-  status,
+  state,
   className,
 }: ChangesetStatusPillProps) {
   const { t } = useTranslation();
-  const icon = changesetStatusIcon(status);
-  const { labelKey } = changesetStatusMeta(status);
+  const icon = changesetStateIcon(state);
+  const { labelKey } = changesetStateMeta(state);
   const visual = pillVisual(icon);
 
   return (

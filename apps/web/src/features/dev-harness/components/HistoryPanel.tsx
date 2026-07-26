@@ -5,6 +5,7 @@ import { ChangesetRow } from "@web/features/dev-harness/components/ChangesetRow"
 import { useChangesetListSuspenseQuery } from "@web/features/dev-harness/hooks/useChangesetListQuery";
 import { useInterventionInvalidation } from "@web/features/dev-harness/hooks/useInterventionInvalidation";
 import { useRevertChangeset } from "@web/features/dev-harness/hooks/useRevertChangeset";
+import { changesetDisplayState } from "@web/features/review/constants";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
 function HistoryPanelContent() {
@@ -32,13 +33,13 @@ function HistoryPanelContent() {
           <ChangesetRow
             key={changeset.id}
             changesetType={changeset.type}
-            status={changeset.status}
+            state={changesetDisplayState(changeset.status, changeset.outcome)}
             statementCount={changeset.effect.statement}
             relationCount={changeset.effect.relation}
             sourceCount={changeset.effect.source}
             reverted={changeset.reverted}
             createdAt={changeset.createdAt}
-            canRevert={changeset.status === "applied" && !changeset.reverted}
+            canRevert={changeset.outcome === "applied" && !changeset.reverted}
             disabled={revertChangeset.isPending}
             onRevert={() => handleRevert(changeset.id)}
           />

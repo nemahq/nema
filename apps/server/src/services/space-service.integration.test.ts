@@ -96,7 +96,7 @@ async function createFixtureSource(args: {
 
 async function openReviewFor(spaceId: string, sourceId: string) {
   await client.query(
-    "INSERT INTO changesets (space_id, type, status, source_id, number) VALUES ($1, 'ingestion', 'pending', $2, 1)",
+    "INSERT INTO changesets (space_id, type, status, source_id, number) VALUES ($1, 'ingestion', 'open', $2, 1)",
     [spaceId, sourceId],
   );
 }

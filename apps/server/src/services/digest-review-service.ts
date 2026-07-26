@@ -100,7 +100,7 @@ export async function getReview(args: {
 
   if (
     changeset.type !== "ingestion" ||
-    changeset.status !== "pending" ||
+    changeset.status !== "open" ||
     changeset.source_id === null ||
     changeset.sources === null ||
     changeset.number === null ||
@@ -113,7 +113,7 @@ export async function getReview(args: {
     // 메시지가 그대로 클라이언트에 새지 않도록 SupabaseError로 던진다(session-service.ts 패턴).
     throw new SupabaseError(
       "not_found",
-      `changeset #${number} in space ${spaceId} is not a pending ingestion review`,
+      `changeset #${number} in space ${spaceId} is not an open ingestion review`,
     );
   }
 

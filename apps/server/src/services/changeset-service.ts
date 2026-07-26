@@ -14,6 +14,7 @@ import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
 type ChangesetType = Database["public"]["Enums"]["changeset_type"];
 type ChangesetStatus = Database["public"]["Enums"]["changeset_status"];
+type ChangesetOutcome = Database["public"]["Enums"]["changeset_outcome"];
 type ChangeTargetType = Database["public"]["Enums"]["change_target_type"];
 type ChangeAction = Database["public"]["Enums"]["change_action"];
 type SourceStatus = Database["public"]["Enums"]["source_status"];
@@ -209,7 +210,7 @@ export async function listPendingRelations(args: {
     .from("changesets")
     .select("id, created_at, changes(target_type, data)")
     .eq("type", "relation")
-    .eq("status", "pending")
+    .eq("status", "open")
     .order("created_at", { ascending: false });
   throwIfSupabaseError(error);
 
@@ -368,6 +369,9 @@ interface ChangesetHistoryEntry {
   number: number;
   type: ChangesetType;
   status: ChangesetStatus;
+  // status='closed'일 때만 값이 있다(DB chk_changeset_outcome) — 타입만으론 안
+  // 드러나는 불변식이라, closed인데 null이면 데이터 정합성이 깨진 것이다.
+  outcome: ChangesetOutcome | null;
   sourceId: string | null;
   // ingestion의 "되살리기" 활성 여부는 원문이 pending인지에 달려있다(restore_ingestion_review
   // 가드) — 목록 단계에서 미리 알아야 클릭 전에 버튼을 비활성화할 수 있다.
@@ -379,8 +383,8 @@ interface ChangesetHistoryEntry {
   // revert 체인에서 몇 단계째 되돌리기/되살리기(redo)인지 — origin=0, 1차 revert=1,
   // 그 redo=2, ... FE가 문구를 조합할 재료(revert_changeset_depth 마이그레이션 참고).
   revertDepth: number;
-  // 다른 병합(중복 판정)이 이 pending 제안의 끝점을 먼저 archive해 자동으로
-  // rejected 처리됐으면 그 원인 changeset id — 사람이 거절한 일반 rejected와
+  // 다른 병합(중복 판정)이 이 열린 제안의 끝점을 먼저 archive해 자동으로
+  // discarded 처리됐으면 그 원인 changeset id — 사람이 거절한 일반 discarded와
   // 구분하는 신호(07-modeling.md "한 Digest가 여러 곳과 동시에 중복될 수 있다").
   invalidatedById: string | null;
   // 사람이 이 changeset의 내용 자체를 만든 경우에만 있음(07-modeling.md §authorId
@@ -391,7 +395,7 @@ interface ChangesetHistoryEntry {
   // 효과 요약 — 대상 종류별 변경 수("이 글 → 진술 N + 관계 M").
   effect: Record<ChangeTargetType, number>;
   createdAt: string;
-  // closed(applied/rejected) 전환 시점(의도). trg_changesets_updated_at은 status
+  // closed 전환 시점(의도). trg_changesets_updated_at은 status
   // 변경뿐 아니라 이 행에 대한 모든 UPDATE에 반응하므로, revert_changeset처럼 원본을
   // UPDATE하지 않는 경로(§4.4)에서만 "판단이 내려진 시각"이 보장된다 — 컬럼만 고치는
   // UPDATE(예: 백필)를 추가하면 이 값도 함께 갱신되니 주의.
@@ -435,16 +439,14 @@ export async function listChangesets(args: {
   let query = supabase
     .from("changesets")
     .select(
-      "id, number, type, status, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, created_at, updated_at, changes(target_type), sources(status)",
+      "id, number, type, status, outcome, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, created_at, updated_at, changes(target_type), sources(status)",
     )
     .eq("space_id", targetSpaceId)
     .order("number", { ascending: false })
     // 다음 페이지 존재 여부를 별도 count 쿼리 없이 알려고 하나 더 얹어 받는다.
     .limit(limit + 1);
   if (open !== undefined) {
-    query = open
-      ? query.eq("status", "pending")
-      : query.in("status", ["applied", "rejected"]);
+    query = query.eq("status", open ? "open" : "closed");
   }
   if (cursor != null) {
     query = query.lt("number", cursor);
@@ -501,6 +503,7 @@ export async function listChangesets(args: {
         number: row.number,
         type: row.type,
         status: row.status,
+        outcome: row.outcome,
         sourceId: row.source_id,
         sourceStatus: row.sources?.status ?? null,
         title: row.title,

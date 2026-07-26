@@ -8,6 +8,7 @@ export type ChangesetListEntry =
   RouterOutputs["changeset"]["listChangesets"]["changesets"][number];
 export type ChangesetType = ChangesetListEntry["type"];
 export type ChangesetStatus = ChangesetListEntry["status"];
+export type ChangesetOutcome = ChangesetListEntry["outcome"];
 
 export type ChangesSubTab = "open" | "closed";
 

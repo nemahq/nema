@@ -3,14 +3,14 @@ import type { ReactNode } from "react";
 import { Text } from "@nema-io/weave";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
-import type { ChangesetStatus } from "@web/features/review/types";
+import type { ChangesetDisplayState } from "@web/features/review/constants";
 
 import { ChangesetStatusPill } from "./ChangesetStatusPill";
 
 interface ChangesetDetailHeaderProps {
   title: string;
   changesetNumber: number;
-  status: ChangesetStatus;
+  state: ChangesetDisplayState;
   time: string;
   actions?: ReactNode;
 }
@@ -20,7 +20,7 @@ interface ChangesetDetailHeaderProps {
 export function ChangesetDetailHeader({
   title,
   changesetNumber,
-  status,
+  state,
   time,
   actions,
 }: ChangesetDetailHeaderProps) {
@@ -49,7 +49,7 @@ export function ChangesetDetailHeader({
           {actions}
         </div>
         <div className="flex items-center gap-2">
-          <ChangesetStatusPill status={status} />
+          <ChangesetStatusPill state={state} />
           <RelativeTime dateTime={time} className="text-sm leading-none" />
         </div>
       </div>

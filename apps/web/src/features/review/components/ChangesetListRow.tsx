@@ -15,13 +15,11 @@ import {
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import {
   CHANGESET_ROW_TYPE_SLOTS,
-  changesetStatusIcon,
-  changesetStatusMeta,
+  type ChangesetDisplayState,
+  changesetStateIcon,
+  changesetStateMeta,
 } from "@web/features/review/constants";
-import type {
-  ChangesetStatus,
-  ChangesetType,
-} from "@web/features/review/types";
+import type { ChangesetType } from "@web/features/review/types";
 import {
   changesetDisplayTitle,
   summarizeChangesetEffect,
@@ -33,7 +31,7 @@ interface ChangesetListRowProps {
   changesetNumber: number;
   title: string | null;
   type: ChangesetType;
-  status: ChangesetStatus;
+  state: ChangesetDisplayState;
   createdAt: string;
   effectDigest: number;
   effectReference: number;
@@ -49,7 +47,7 @@ export const ChangesetListRow = memo(function ChangesetListRow({
   changesetNumber,
   title,
   type,
-  status,
+  state,
   createdAt,
   effectDigest,
   effectReference,
@@ -66,8 +64,8 @@ export const ChangesetListRow = memo(function ChangesetListRow({
         t,
       )
     : null;
-  const statusIcon = changesetStatusIcon(status);
-  const statusLabelKey = changesetStatusMeta(status).labelKey;
+  const statusIcon = changesetStateIcon(state);
+  const statusLabelKey = changesetStateMeta(state).labelKey;
   const statusIconEl =
     statusIcon.kind === "filled" ? (
       <span

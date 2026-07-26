@@ -11,6 +11,12 @@ PostgreSQL database + Auth, managed via Supabase CLI.
 - Use `timestamptz` (not `timestamp`) for all time columns.
 - `CREATE OR REPLACE FUNCTION` cannot remove existing parameter defaults — use `DROP FUNCTION` first.
 
+## Local Stack
+
+- One shared stack across all worktrees — `project_id` and ports are fixed in `config.toml`, so `supabase db reset` in any worktree wipes everyone's local data and swaps the schema. Confirm before resetting.
+- To isolate a worktree: temporarily change `project_id` AND all six `port` values in `config.toml` (containers are namespaced by `project_id` — changing ports alone collides), then `git checkout supabase/config.toml` when done. Both accept `"env(VAR)"` (quotes required), so this can be scripted.
+- Integration tests hardcode `127.0.0.1:54322` — an isolated stack needs the same edit in those four files.
+
 ## Local Auth (Magic Link)
 
 - `pnpm dev:local` points Auth at local Supabase (`supabase start -x vector,imgproxy,edge-runtime,logflare,studio` — the excluded services aren't needed for Auth/DB and `edge-runtime` fails to start under Colima). Signup emails are not sent — they land in Mailpit (http://127.0.0.1:54324, web UI + REST API).

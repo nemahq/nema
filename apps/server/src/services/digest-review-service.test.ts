@@ -68,7 +68,7 @@ describe("getReview", () => {
         id: CHANGESET_ID,
         number: 12,
         type: "ingestion",
-        status: "pending",
+        status: "open",
         source_id: SOURCE_ID,
         sources: {
           title: "원문 제목",
@@ -168,7 +168,7 @@ describe("getReview", () => {
         id: CHANGESET_ID,
         number: 12,
         type: "ingestion",
-        status: "pending",
+        status: "open",
         source_id: SOURCE_ID,
         space_id: SPACE_ID,
         spaces: { workspace_id: WORKSPACE_ID },
@@ -247,7 +247,7 @@ describe("getReview", () => {
         id: CHANGESET_ID,
         number: 12,
         type: "ingestion",
-        status: "pending",
+        status: "open",
         source_id: SOURCE_ID,
         space_id: SPACE_ID,
         spaces: { workspace_id: WORKSPACE_ID },
@@ -295,12 +295,13 @@ describe("getReview", () => {
     expect(supabase.eqCallsByTable.tags).toContainEqual(["status", "active"]);
   });
 
-  it("pending ingestion이 아니면 리뷰로 취급하지 않는다", async () => {
+  it("열린 ingestion이 아니면 리뷰로 취급하지 않는다", async () => {
     const supabase = mockSupabase({
       changesets: {
         id: CHANGESET_ID,
         type: "ingestion",
-        status: "applied",
+        status: "closed",
+        outcome: "applied",
         source_id: SOURCE_ID,
         sources: {
           title: "원문 제목",
@@ -315,7 +316,7 @@ describe("getReview", () => {
       getReview({ supabase, spaceId: SPACE_ID, number: 12 }),
     ).rejects.toMatchObject({
       code: "not_found",
-      message: expect.stringContaining("not a pending ingestion review"),
+      message: expect.stringContaining("not an open ingestion review"),
     });
   });
 });
@@ -452,13 +453,13 @@ describe("discardReview", () => {
 
   // NM008(ingestion_review_state_changed)이 빠지면 error-mapper가 예상 밖 장애로
   // 오분류해 매 클릭마다 스퓨리어스 Sentry 캡처 + "Something went wrong"만 뜬다.
-  it("가드가 지면(이미 pending이 아님) ingestion_review_state_changed로 매핑된다", async () => {
+  it("가드가 지면(이미 열려 있지 않음) ingestion_review_state_changed로 매핑된다", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: null,
       error: {
         code: "NM008",
         message:
-          "changeset ... is not a pending ingestion review the caller can discard",
+          "changeset ... is not an open ingestion review the caller can discard",
       },
     });
     const supabase = { rpc } as unknown as TypedSupabaseClient;

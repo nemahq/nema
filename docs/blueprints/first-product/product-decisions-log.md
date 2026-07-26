@@ -155,3 +155,13 @@
 - **적용 범위는 이 화면 하나뿐**: 기존 Context 7개 중 리렌더가 실제로 문제인 건 `ChatLifecycleContext`(LLM 토큰마다 13필드 값 객체가 재생성돼 소비자 11개가 전부 리렌더)였는데, 세션 채팅은 v1(URL로만 접근 가능) 표면이라 삭제 예정이다. 나머지(`Sidebar` 2필드, `auth` 세션 객체, `ThemeProvider`)는 갱신이 드물어 Context가 맞다 — "store를 들였으니 다 옮긴다"가 되지 않도록 `apps/web/CLAUDE.md`에 두 조건(콜로케이션 불가 + 구독 분리 필요)을 동시에 만족할 때만 쓰도록 못 박았다.
 - 위치는 `features/review/` 안(`src/stores/` 신설 기각) — 소비자가 이 feature 하나뿐이라 기존 co-location 규칙("used in one feature only, keep it inside that feature")에 그대로 맞고, ESLint `boundaries/elements`가 `src/` 루트 폴더만 분류하므로 새 루트 폴더는 element 타입 추가 없이는 import 전부가 lint 에러가 된다. feature 내부에 두면 `boundaries/entry-point`가 다른 feature의 접근까지 자동으로 막아준다.
 - override Map 구조는 그대로 유지 — 원본(엔진 제안)과 편집값을 분리해 들고 있어야 "엔진 제안 대비 교정 신호 기록"을 확정 시점에 뽑을 수 있다. 편집값을 원본에 머지하면 그 기능이 구조적으로 불가능해진다.
+
+## #20 Changeset 상태 축 — status(open/closed) + outcome(applied/discarded) 2필드로 실제 전환 (확정)
+
+**결정: 07-modeling.md가 규정한 2필드 모델을 스키마로 옮긴다. 옛 `changeset_status`(pending/applied/rejected)는 과도기 없이 이 마이그레이션 안에서 완전히 제거한다.**
+
+- 걸리는 곳: 변경셋 탭 Open/Closed 필터, Changeset 상세(적용됨/버려짐 분기), 초안 액션 잠금(열린 리뷰 있으면 재정리·본문 편집·Space 재지정 금지), 관계 재제안 가드, 상태 배지.
+- 근거: 한 필드가 "끝났나"와 "어떻게 끝났나" 두 질문을 겸하고 있어, 값이 늘 때마다 두 축이 곱해졌다. 실제로 ingestion "버리기"는 뜻이 다른데도 모양이 같다는 이유로 relation의 `rejected`를 빌려 썼고(20260714130000), 그 결과 소비처는 매번 type+status를 함께 봐야 의미가 정해졌다. 축을 나누면 "열려 있나"만 묻는 곳은 `status` 하나만 보면 되고, 결과가 필요한 곳만 `outcome`을 본다.
+- 매핑: `pending`→`open`/NULL, `applied`→`closed`/`applied`, `rejected`→`closed`/`discarded`. 캐스케이드 무효화(`invalidated_by_id`가 있는 건)도 `closed`+`discarded`로 들어가되, "사람이 거절함"과의 구분은 기존대로 `invalidated_by_id` 유무가 진다.
+- 두 필드가 어긋나는 조합은 DB CHECK(`chk_changeset_outcome`: open⟺outcome NULL)로 막는다 — 한 필드를 쪼갠 대가로 생기는 유일한 새 위험이 정확히 그 어긋남이라, 나누면서 같이 심어야 나눈 값이 유지된다.
+- 과도기(두 컬럼 병존)를 안 남긴 이유: 이 부채는 "뭔가 깨져서"가 아니라 SSOT와 스키마가 갈라져서 생긴 것이라, 갈라진 상태를 하나 더 만들면 정리하려던 문제를 그대로 재생산한다. 소비처가 21개 RPC + 서비스 6개로 유한하고 전부 한 번에 셀 수 있는 규모였다.

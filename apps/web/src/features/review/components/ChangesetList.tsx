@@ -5,6 +5,7 @@ import { Text } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
+import { changesetDisplayState } from "@web/features/review/constants";
 import { useChangesetListInfiniteQuery } from "@web/features/review/hooks/useChangesetListQuery";
 import type { ChangesSubTab } from "@web/features/review/types";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
@@ -52,7 +53,7 @@ function ChangesetListContent({ subTab }: ChangesetListProps) {
           changesetNumber={entry.number}
           title={entry.title}
           type={entry.type}
-          status={entry.status}
+          state={changesetDisplayState(entry.status, entry.outcome)}
           createdAt={entry.createdAt}
           effectDigest={entry.effect.digest}
           effectReference={entry.effect.reference}

@@ -130,7 +130,7 @@ async function createFixturePendingRelation(args: {
   toId: string;
 }): Promise<string> {
   const { rows } = await client.query<{ id: string }>(
-    "INSERT INTO changesets (space_id, type, status, source_id) VALUES ($1, 'relation', 'pending', $2) RETURNING id",
+    "INSERT INTO changesets (space_id, type, status, source_id) VALUES ($1, 'relation', 'open', $2) RETURNING id",
     [args.spaceId, args.sourceId],
   );
   const changesetId = rows[0].id;
@@ -327,9 +327,9 @@ describe("sources.title 전파 트리거 (integration)", () => {
     );
     const changesetId = rows[0].create_ingestion_review;
 
-    // pending → applied로 닫는다(review 확정과 동등한 최소 재현 — status만 직접 전이)
+    // open → closed+applied로 닫는다(review 확정과 동등한 최소 재현 — 상태만 직접 전이)
     await client.query(
-      "UPDATE changesets SET status = 'applied' WHERE id = $1",
+      "UPDATE changesets SET status = 'closed', outcome = 'applied' WHERE id = $1",
       [changesetId],
     );
 
@@ -387,7 +387,7 @@ describe("apply_relation_changesets RPC — pending 제안 title (integration)",
     const { rows } = await client.query<{ title: string | null }>(
       `SELECT c.title FROM changesets c
        JOIN changes ch ON ch.changeset_id = c.id
-       WHERE c.type = 'relation' AND c.status = 'pending'
+       WHERE c.type = 'relation' AND c.status = 'open'
          AND ch.data->>'from_id' = $1 AND ch.data->>'to_id' = $2`,
       [fromStatementId, toStatementId],
     );
@@ -486,7 +486,7 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
     // 실제 캐스케이드(resolve_conflict_relation 등)를 다시 거치지 않고, 그 결과
     // 상태만 재현한다 — 이 테스트의 대상은 가드 조건이지 캐스케이드 발생 경로가 아니다.
     await client.query(
-      "UPDATE changesets SET status = 'rejected', invalidated_by_id = $2 WHERE id = $1",
+      "UPDATE changesets SET status = 'closed', outcome = 'discarded', invalidated_by_id = $2 WHERE id = $1",
       [firstChangeset, otherChangesetId],
     );
 
@@ -500,15 +500,21 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
       [sourceId, JSON.stringify(pending)],
     );
 
-    const { rows } = await client.query<{ status: string }>(
-      `SELECT c.status FROM changesets c
+    const { rows } = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>(
+      `SELECT c.status, c.outcome FROM changesets c
        JOIN changes ch ON ch.changeset_id = c.id
        WHERE c.type = 'relation' AND ch.data->>'from_id' = $1 AND ch.data->>'to_id' = $2
        ORDER BY c.created_at DESC`,
       [fromId, toId],
     );
-    // 무효화된 첫 changeset(rejected) + 방금 새로 만들어진 pending — 총 2건이어야 한다.
-    expect(rows.map((r) => r.status).sort()).toEqual(["pending", "rejected"]);
+    // 무효화된 첫 changeset(closed+discarded) + 방금 새로 만들어진 open — 총 2건이어야 한다.
+    expect(rows.map((r) => `${r.status}/${r.outcome ?? "-"}`).sort()).toEqual([
+      "closed/discarded",
+      "open/-",
+    ]);
   });
 });
 
@@ -678,14 +684,15 @@ describe("resolve_conflict_relation RPC (integration)", () => {
       status: "active",
     });
 
-    const { rows: changesetRows } = await client.query<{ status: string }>(
-      "SELECT status FROM changesets WHERE id = $1",
-      [changesetId],
-    );
-    expect(changesetRows[0]?.status).toBe("applied");
+    const { rows: changesetRows } = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>("SELECT status, outcome FROM changesets WHERE id = $1", [changesetId]);
+    expect(changesetRows[0]?.status).toBe("closed");
+    expect(changesetRows[0]?.outcome).toBe("applied");
   });
 
-  it("판정 완료 후에도 원래 conflicts 제안 change row는 그대로 남는다(changeset-detail-service가 applied 이후에도 읽음)", async () => {
+  it("판정 완료 후에도 원래 conflicts 제안 change row는 그대로 남는다(changeset-detail-service가 닫힌 뒤에도 읽음)", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -782,12 +789,15 @@ describe("resolve_conflict_relation RPC (integration)", () => {
 
     const { rows } = await client.query<{
       status: string;
+      outcome: string | null;
       invalidated_by_id: string | null;
-    }>("SELECT status, invalidated_by_id FROM changesets WHERE id = $1", [
-      otherChangeset,
-    ]);
+    }>(
+      "SELECT status, outcome, invalidated_by_id FROM changesets WHERE id = $1",
+      [otherChangeset],
+    );
 
-    expect(rows[0]?.status).toBe("rejected");
+    expect(rows[0]?.status).toBe("closed");
+    expect(rows[0]?.outcome).toBe("discarded");
     expect(rows[0]?.invalidated_by_id).toBe(conflictChangeset);
   });
 
@@ -946,10 +956,14 @@ describe("resolve_duplicate_relation RPC (integration)", () => {
 
     const { rows: changesetRows } = await client.query<{
       status: string;
+      outcome: string | null;
       title: string;
-    }>("SELECT status, title FROM changesets WHERE id = $1", [changesetId]);
+    }>("SELECT status, outcome, title FROM changesets WHERE id = $1", [
+      changesetId,
+    ]);
     expect(changesetRows[0]).toMatchObject({
-      status: "applied",
+      status: "closed",
+      outcome: "applied",
       title: "병합된 다이제스트",
     });
   });
@@ -1017,12 +1031,15 @@ describe("resolve_duplicate_relation RPC (integration)", () => {
 
     const { rows } = await client.query<{
       status: string;
+      outcome: string | null;
       invalidated_by_id: string | null;
-    }>("SELECT status, invalidated_by_id FROM changesets WHERE id = $1", [
-      changesetA2B,
-    ]);
+    }>(
+      "SELECT status, outcome, invalidated_by_id FROM changesets WHERE id = $1",
+      [changesetA2B],
+    );
 
-    expect(rows[0]?.status).toBe("rejected");
+    expect(rows[0]?.status).toBe("closed");
+    expect(rows[0]?.outcome).toBe("discarded");
     expect(rows[0]?.invalidated_by_id).toBe(changesetA1B);
   });
 });
@@ -1107,7 +1124,7 @@ describe("restore_digest RPC — 되살리기 대상 changeset 범위 (integrati
     // resolve_duplicate_relation이 만드는 모양을 직접 재현한다 — 하나의 relation
     // changeset 안에 create/digest(C) + archive/digest(A) + archive/digest(B).
     const { rows: mergeRows } = await client.query<{ id: string }>(
-      "INSERT INTO changesets (space_id, type, status, source_id) VALUES ($1, 'relation', 'applied', $2) RETURNING id",
+      "INSERT INTO changesets (space_id, type, status, outcome, source_id) VALUES ($1, 'relation', 'closed', 'applied', $2) RETURNING id",
       [spaceId, sourceId],
     );
     const mergeChangesetId = mergeRows[0].id;

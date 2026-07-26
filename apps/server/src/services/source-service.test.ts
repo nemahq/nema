@@ -28,12 +28,12 @@ import {
   updateSourceTitle,
 } from "./source-service";
 
-// 테이블별 canned rows를 돌려주는 .from 체인 stub — select/eq/in 무시하고 then으로 resolve.
+// 테이블별 canned rows를 돌려주는 .from 체인 stub — select/eq/in/or 무시하고 then으로 resolve.
 // fetchMergedSourceIds는 statement_relations·statement_sources 두 테이블을 각각 조회한다.
 function mockSupabase(byTable: Record<string, unknown[]>): TypedSupabaseClient {
   const from = (table: string) => {
     const stub: Record<string, unknown> = {};
-    for (const method of ["select", "eq", "in", "order", "limit"]) {
+    for (const method of ["select", "eq", "in", "or", "order", "limit"]) {
       stub[method] = () => stub;
     }
     stub["then"] = (resolve: (value: { data: unknown; error: null }) => void) =>
@@ -142,15 +142,16 @@ function pendingSourceRow(args: {
 }
 
 describe("listPendingSources", () => {
-  it("rejected changeset만 있으면 digestionOutcome=discarded, review는 null", async () => {
+  it("discarded changeset만 있으면 digestionOutcome=discarded, review는 null", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({
         sources: [pendingSourceRow({ id: SOURCE_A })],
         changesets: [
           {
-            id: "cs-rejected",
+            id: "cs-discarded",
             source_id: SOURCE_A,
-            status: "rejected",
+            status: "closed",
+            outcome: "discarded",
             changes: [],
           },
         ],
@@ -167,22 +168,23 @@ describe("listPendingSources", () => {
     ]);
   });
 
-  it("pending+rejected가 같은 원문에 함께 있으면(재시도) pending을 리뷰로 쓰면서도 discarded는 유지", async () => {
+  it("open+discarded가 같은 원문에 함께 있으면(재시도) open을 리뷰로 쓰면서도 discarded는 유지", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({
         sources: [pendingSourceRow({ id: SOURCE_A })],
         changesets: [
           {
-            id: "cs-rejected-old",
+            id: "cs-discarded-old",
             source_id: SOURCE_A,
-            status: "rejected",
+            status: "closed",
+            outcome: "discarded",
             changes: [],
           },
           {
-            id: "cs-pending-new",
+            id: "cs-open-new",
             number: 7,
             source_id: SOURCE_A,
-            status: "pending",
+            status: "open",
             changes: [{ target_type: "digest" }, { target_type: "reference" }],
           },
         ],
@@ -192,7 +194,7 @@ describe("listPendingSources", () => {
     expect(items).toEqual([
       expect.objectContaining({
         sourceId: SOURCE_A,
-        review: { changesetId: "cs-pending-new", changesetNumber: 7 },
+        review: { changesetId: "cs-open-new", changesetNumber: 7 },
         digestCount: 1,
         digestionOutcome: "discarded",
       }),
@@ -287,16 +289,17 @@ describe("listPendingSources", () => {
     ["failed", "failed"],
     ["cancelled", "cancelled"],
   ] as const)(
-    "digestion_status=%s → digestionOutcome=%s (rejected 이력과 무관)",
+    "digestion_status=%s → digestionOutcome=%s (discarded 이력과 무관)",
     async (digestionStatus, outcome) => {
       const { items } = await listPendingSources({
         supabase: mockSupabase({
           sources: [pendingSourceRow({ id: SOURCE_A, digestionStatus })],
           changesets: [
             {
-              id: "cs-rejected",
+              id: "cs-discarded",
               source_id: SOURCE_A,
-              status: "rejected",
+              status: "closed",
+              outcome: "discarded",
               changes: [],
             },
           ],

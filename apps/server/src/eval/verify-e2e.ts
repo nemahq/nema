@@ -248,7 +248,7 @@ async function runPipeline(args: {
   expectNoError("진술 조회", statementsError);
   const { data: changeset, error: changesetError } = await admin
     .from("changesets")
-    .select("id, type, status")
+    .select("id, type, status, outcome")
     .eq("source_id", sourceId)
     .maybeSingle();
   expectNoError("changeset 조회", changesetError);
@@ -262,10 +262,10 @@ async function runPipeline(args: {
     extracted &&
     (statements?.length ?? 0) > 0 &&
     changeset?.type === "ingestion" &&
-    changeset.status === "applied" &&
+    changeset.outcome === "applied" &&
     (sourceRefCount ?? 0) === (statements?.length ?? 0);
   console.log(
-    `② 추출: 진술 ${statements?.length ?? 0}개, changeset=${changeset?.type}/${changeset?.status}, statement_sources=${sourceRefCount}`,
+    `② 추출: 진술 ${statements?.length ?? 0}개, changeset=${changeset?.type}/${changeset?.outcome}, statement_sources=${sourceRefCount}`,
   );
   for (const s of statements ?? []) {
     console.log(
@@ -364,7 +364,7 @@ async function runPipeline(args: {
   expectNoError("장문 statement_sources 조회", longRefsError);
   const { data: longChangesets, error: longChangesetError } = await admin
     .from("changesets")
-    .select("id, status")
+    .select("id, status, outcome")
     .eq("source_id", longSourceId);
   expectNoError("장문 changeset 조회", longChangesetError);
 
@@ -386,11 +386,11 @@ async function runPipeline(args: {
     longExtracted &&
     expectedChunkCount >= 2 &&
     (longChangesets?.length ?? 0) === 1 &&
-    longChangesets?.[0]?.status === "applied" &&
+    longChangesets?.[0]?.outcome === "applied" &&
     indices.length >= LONG_MIN_STATEMENTS &&
     indicesContiguous;
   console.log(
-    `⑤ 장문 분할: 추출=${longExtracted}, ${expectedChunkCount}청크→changeset ${longChangesets?.length}개(${longChangesets?.[0]?.status}), ` +
+    `⑤ 장문 분할: 추출=${longExtracted}, ${expectedChunkCount}청크→changeset ${longChangesets?.length}개(${longChangesets?.[0]?.outcome}), ` +
       `진술 ${indices.length}개, index 연속=${indicesContiguous}`,
   );
 }

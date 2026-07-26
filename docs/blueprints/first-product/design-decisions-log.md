@@ -1159,3 +1159,13 @@ diff는 기본 접힘("변경 내용 보기" 토글, `DraftSection`과 같은 �
 - 레퍼런스 후보 카드에는 여전히 태그 편집이 없다 — 이건 갭이 아니라 확정된 설계다: Reference 태그는 07-modeling.md 기준 "왜 계속 중요한가"를 나타내는 독립 축이라 생성 시점(리뷰)이 아니라 위키 브라우징 플로우에서 붙이는 것이고, 실제로 `NewReferenceDraftSchema`에 tags 필드 자체가 없다(위키의 태그 추가/제거는 `referenceId`가 이미 있어야 하는 즉시-저장 뮤테이션이라 아직 id 없는 후보엔 애초에 못 붙는다).
 
 관련 PR: #477(weave Badge/Chip 정비, 머지됨), #478(레퍼런스 카드 재설계, 머지됨).
+
+---
+
+### 2026-07-26 — 상태 배지는 status+outcome에서 파생 (wt-4 `feat/changeset-status-outcome-model`)
+
+**앞 항목 "status 배지는 `changeset_status` 3값 그대로 노출, `outcome` 필드 흉내 안 냄"은 이 라운드로 무효**가 됐다. 스키마가 실제로 2필드(`status` open/closed + `outcome` applied/discarded)로 바뀌었으므로(product-decisions-log #20), 배지·아이콘이 쓰던 3값은 이제 두 필드에서 파생한다.
+
+**파생은 `constants.ts` 한 곳에서만**: `changesetDisplayState(status, outcome)` → `"open" | "applied" | "discarded"`. 배지·아이콘·pill이 실제로 구분하는 건 여전히 셋뿐이라 컴포넌트 prop을 둘로 늘리지 않았다 — 늘리면 "closed인데 outcome이 뭐였더라"를 컴포넌트 수만큼 반복하게 된다. 반대로 `changesetDetailRegistry`는 파생값이 아니라 `status`를 그대로 인덱싱한다(open/closed가 곧 화면 갈림이라 중간 매핑 표가 통째로 사라졌다).
+
+`closed`인데 `outcome`이 없으면 던진다 — DB CHECK가 보장하는 조합이라 실제로 오면 데이터 정합성이 깨진 것이고, 한쪽으로 조용히 넘기면 화면에 틀린 배지가 뜬 채 묻힌다(`ImpossibleOpenChangeset`과 같은 처리).

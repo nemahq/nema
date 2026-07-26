@@ -10,6 +10,7 @@ import { parseRelationProposal } from "@server/services/changeset-service";
 
 type ChangesetType = Database["public"]["Enums"]["changeset_type"];
 type ChangesetStatus = Database["public"]["Enums"]["changeset_status"];
+type ChangesetOutcome = Database["public"]["Enums"]["changeset_outcome"];
 type DigestStatus = Database["public"]["Enums"]["digest_status"];
 type StatementStatus = Database["public"]["Enums"]["statement_status"];
 
@@ -37,22 +38,22 @@ interface RelationEndpointSnapshot {
 // 이번 라운드가 채운 7케이스(ingestion 2 + relation 4 + revert 스텁) 밖은 전부
 // "unsupported"로 묶는다 — manual(changeset 목록에 애초에 안 뜸), 확신 관계 자동 적용
 // (supports/replaces/resolves 타입, 승자·패자 판정 UI 자체가 아직 백엔드에 없음),
-// pending(이 화면은 closed 전용, open은 별도 리뷰 화면이 담당) 등.
+// open(이 화면은 closed 전용, open은 별도 리뷰 화면이 담당) 등.
 type ChangesetDetailBody =
   | { kind: "ingestion_applied"; digests: DigestSnapshot[] }
-  | { kind: "ingestion_rejected" }
+  | { kind: "ingestion_discarded" }
   | {
       kind: "relation_conflict_applied";
       from: RelationEndpointSnapshot;
       to: RelationEndpointSnapshot;
     }
-  | { kind: "relation_conflict_rejected" }
+  | { kind: "relation_conflict_discarded" }
   | {
       kind: "relation_duplicate_applied";
       keeper: RelationEndpointSnapshot;
       duplicate: RelationEndpointSnapshot;
     }
-  | { kind: "relation_duplicate_rejected" }
+  | { kind: "relation_duplicate_discarded" }
   | { kind: "revert" }
   | { kind: "unsupported" };
 
@@ -62,6 +63,8 @@ interface ChangesetDetail {
   spaceId: string;
   type: ChangesetType;
   status: ChangesetStatus;
+  // status='closed'일 때만 값이 있다(DB chk_changeset_outcome).
+  outcome: ChangesetOutcome | null;
   title: string | null;
   authorId: string | null;
   sourceId: string | null;
@@ -171,16 +174,16 @@ async function fetchRelationEndpoint(args: {
 async function resolveBody(args: {
   supabase: TypedSupabaseClient;
   type: ChangesetType;
-  status: ChangesetStatus;
+  outcome: ChangesetOutcome | null;
   changes: ChangeRow[];
 }): Promise<ChangesetDetailBody> {
-  const { supabase, type, status, changes } = args;
+  const { supabase, type, outcome, changes } = args;
 
   if (type === "ingestion") {
-    if (status === "rejected") {
-      return { kind: "ingestion_rejected" };
+    if (outcome === "discarded") {
+      return { kind: "ingestion_discarded" };
     }
-    if (status === "applied") {
+    if (outcome === "applied") {
       const digestIds = changes
         .filter((c) => c.target_type === "digest" && c.action === "create")
         .map((c) => c.target_id);
@@ -201,9 +204,9 @@ async function resolveBody(args: {
   }
 
   if (type === "relation") {
-    // pending 제안의 {type, from_id, to_id}는 승인(applied)·거절(rejected) 후에도
-    // changes 행에 그대로 남는다(apply_pending_relation/reject_pending_relation 둘 다
-    // 이 change row를 안 건드림) — 결과와 무관하게 항상 이걸로 관계 종류를 가른다.
+    // 열린 제안의 {type, from_id, to_id}는 닫힌 뒤에도 changes 행에 그대로 남는다
+    // (resolve_*_relation/reject_pending_relation 전부 이 change row를 안 건드림)
+    // — outcome과 무관하게 항상 이걸로 관계 종류를 가른다.
     // relation 행 자체가 없거나 파싱이 실패하는 건 "아직 안 다루는 타입"과 달리
     // 불변식 위반(진짜 버그)이라 unsupported로 뭉개지 않고 던진다.
     const relationChange = changes.find((c) => c.target_type === "relation");
@@ -222,10 +225,10 @@ async function resolveBody(args: {
     }
 
     if (proposal.type === "conflicts") {
-      if (status === "rejected") {
-        return { kind: "relation_conflict_rejected" };
+      if (outcome === "discarded") {
+        return { kind: "relation_conflict_discarded" };
       }
-      if (status === "applied") {
+      if (outcome === "applied") {
         const [from, to] = await Promise.all([
           fetchRelationEndpoint({ supabase, statementId: proposal.fromId }),
           fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
@@ -236,11 +239,11 @@ async function resolveBody(args: {
     }
 
     if (proposal.type === "duplicates") {
-      if (status === "rejected") {
-        return { kind: "relation_duplicate_rejected" };
+      if (outcome === "discarded") {
+        return { kind: "relation_duplicate_discarded" };
       }
-      if (status === "applied") {
-        // 방향 규약(apply_pending_relation 주석): from=keeper(남는 쪽), to=duplicate(가려진 쪽).
+      if (outcome === "applied") {
+        // 방향 규약(resolve_duplicate_relation 주석): from=keeper(남는 쪽), to=duplicate(가려진 쪽).
         const [keeper, duplicate] = await Promise.all([
           fetchRelationEndpoint({ supabase, statementId: proposal.fromId }),
           fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
@@ -274,7 +277,7 @@ export async function getChangesetByNumber(args: {
   const { data: row, error } = await supabase
     .from("changesets")
     .select(
-      "id, number, type, status, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, created_at, updated_at, changes(action, target_type, target_id, data)",
+      "id, number, type, status, outcome, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, created_at, updated_at, changes(action, target_type, target_id, data)",
     )
     .eq("space_id", spaceId)
     .eq("number", number)
@@ -311,7 +314,7 @@ export async function getChangesetByNumber(args: {
   const body = await resolveBody({
     supabase,
     type: row.type,
-    status: row.status,
+    outcome: row.outcome,
     changes: row.changes,
   });
 
@@ -321,6 +324,7 @@ export async function getChangesetByNumber(args: {
     spaceId,
     type: row.type,
     status: row.status,
+    outcome: row.outcome,
     title: row.title,
     authorId: row.author_id,
     sourceId: row.source_id,
