@@ -10,15 +10,6 @@ import { ChangesetNotFound } from "./ChangesetNotFound";
 import { ChangesetRecordScreen } from "./ChangesetRecordScreen";
 import { IngestionScreen } from "./IngestionScreen";
 
-type ChangesetDetailKind = "open" | "closed";
-
-// status에 값이 추가되면 컴파일 에러로 드러나야, 조용히 closed로 잘못 분류되는 걸 막는다.
-const CHANGESET_DETAIL_KIND: Record<ChangesetStatus, ChangesetDetailKind> = {
-  pending: "open",
-  applied: "closed",
-  rejected: "closed",
-};
-
 // 컴포넌트가 아니라 렌더 함수를 담는다. 표에서 컴포넌트를 꺼내 반환하면 호출부가
 // <Screen />으로 그리게 되는데, 함수가 반환한 값을 컴포넌트로 쓰면 React 컴파일러가
 // "Cannot create components during render"로 막는다(모듈 상수를 직접 인덱싱할 때는
@@ -28,10 +19,10 @@ type RenderChangesetDetailScreen = () => ReactNode;
 
 // 컴포넌트로 두는 이유는 번호를 훅으로 읽기 위해서다 — 표의 렌더 함수 안에서는 훅을
 // 부를 수 없다. 던지면 상세 게이트의 ErrorBoundary가 잡아 Sentry까지 올린다.
-function ImpossiblePendingChangeset(): ReactNode {
+function ImpossibleOpenChangeset(): ReactNode {
   const changesetNumber = useChangesetNumber();
   throw new Error(
-    `changeset #${changesetNumber} is pending but its type never has a pending state`,
+    `changeset #${changesetNumber} is open but its type never has an open state`,
   );
 }
 
@@ -44,24 +35,24 @@ function ImpossiblePendingChangeset(): ReactNode {
 // 것으로 끝나도록 빈칸 없이 채운다(빠뜨리면 컴파일 에러).
 const CHANGESET_DETAIL_SCREEN: Record<
   ChangesetType,
-  Record<ChangesetDetailKind, RenderChangesetDetailScreen>
+  Record<ChangesetStatus, RenderChangesetDetailScreen>
 > = {
   ingestion: {
     open: () => <IngestionScreen />,
     closed: () => <ChangesetRecordScreen />,
   },
-  // relation의 pending은 실제로 생성되지만 판정 모드가 아직 없다 — Digest 상세가
+  // relation의 open은 실제로 생성되지만 판정 모드가 아직 없다 — Digest 상세가
   // 맡을 예정이라(review-flow.md) 계획된 공백이고, 그래서 조용히 빈 화면을 낸다.
   relation: {
     open: () => <ChangesetNotFound />,
     closed: () => <ChangesetRecordScreen />,
   },
-  // manual·revert는 생성 즉시 applied라 pending이 존재할 수 없다. 그런데 이 불변식을
-  // 지키는 건 RPC 관례뿐이고 chk_changeset_shape는 status를 제약하지 않아, 백필이나
-  // MCP 쓰기가 뚫으면 행이 실제로 생긴다. 그건 데이터 정합성이 깨졌다는 신호라
-  // "찾을 수 없음"으로 덮지 않고 던져서 Sentry까지 올린다.
+  // manual·revert는 생성 즉시 closed+applied라 open이 존재할 수 없다. 그런데 이
+  // 불변식을 지키는 건 RPC 관례뿐이고 chk_changeset_shape는 status를 제약하지 않아,
+  // 백필이나 MCP 쓰기가 뚫으면 행이 실제로 생긴다. 그건 데이터 정합성이 깨졌다는
+  // 신호라 "찾을 수 없음"으로 덮지 않고 던져서 Sentry까지 올린다.
   manual: {
-    open: () => <ImpossiblePendingChangeset />,
+    open: () => <ImpossibleOpenChangeset />,
     // manual은 변경셋 목록에도 안 뜨고(listChangesets가 type != manual로 걸러냄),
     // "변경 이력" 모달(review-flow.md "수정 이력 항목 클릭 시 상세 확인")도 아직
     // 안 만들어져 이 화면으로 정상적으로 도달하는 경로가 없다 — URL을 직접 찍어도
@@ -70,7 +61,7 @@ const CHANGESET_DETAIL_SCREEN: Record<
     closed: () => <ChangesetNotFound />,
   },
   revert: {
-    open: () => <ImpossiblePendingChangeset />,
+    open: () => <ImpossibleOpenChangeset />,
     // TODO: revert도 무엇을 되돌렸는지 보여줘야 한다(review-flow.md "충돌 판정 되돌리기"
     // 등이 만드는 changeset이다). manual과 같은 임시 매핑이다.
     closed: () => <ChangesetRecordScreen />,
@@ -81,5 +72,5 @@ export function renderChangesetDetailScreen(
   type: ChangesetType,
   status: ChangesetStatus,
 ): ReactNode {
-  return CHANGESET_DETAIL_SCREEN[type][CHANGESET_DETAIL_KIND[status]]();
+  return CHANGESET_DETAIL_SCREEN[type][status]();
 }

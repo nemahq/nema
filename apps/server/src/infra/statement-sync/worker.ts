@@ -265,7 +265,7 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
 }
 
 // 사이클: ⓪ 생성 → ① 추출 → ② 임베딩 → ③ 잇기, 넷 다 빌 때까지.
-// ⓪은 리뷰 대기(pending changeset)를 만들 뿐 ①의 입력을 직접 만들지 않는다 —
+// ⓪은 리뷰 대기(open changeset)를 만들 뿐 ①의 입력을 직접 만들지 않는다 —
 // ①은 사람이 리뷰를 확정해 원문이 active가 된 뒤에야 집는다(confirm이 notify를 쏨).
 // ①이 pending 진술을, ②가 잇기 대상(임베딩 끝난 원문)을 만들어내므로 이 순서면
 // 한 번 깨어난 김에 추출·임베딩·잇기까지 끝난다 (relation-design §3).

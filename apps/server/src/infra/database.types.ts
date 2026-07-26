@@ -80,6 +80,7 @@ export type Database = {
           id: string;
           invalidated_by_id: string | null;
           number: number | null;
+          outcome: Database["public"]["Enums"]["changeset_outcome"] | null;
           revert_depth: number;
           reverts_id: string | null;
           source_id: string | null;
@@ -96,6 +97,7 @@ export type Database = {
           id?: string;
           invalidated_by_id?: string | null;
           number?: number | null;
+          outcome?: Database["public"]["Enums"]["changeset_outcome"] | null;
           revert_depth?: number;
           reverts_id?: string | null;
           source_id?: string | null;
@@ -112,6 +114,7 @@ export type Database = {
           id?: string;
           invalidated_by_id?: string | null;
           number?: number | null;
+          outcome?: Database["public"]["Enums"]["changeset_outcome"] | null;
           revert_depth?: number;
           reverts_id?: string | null;
           source_id?: string | null;
@@ -1460,7 +1463,8 @@ export type Database = {
         | "source"
         | "digest"
         | "reference";
-      changeset_status: "pending" | "applied" | "rejected";
+      changeset_outcome: "applied" | "discarded";
+      changeset_status: "open" | "closed";
       changeset_type: "ingestion" | "relation" | "manual" | "revert";
       digest_status: "active" | "archived";
       digestion_status: "pending" | "completed" | "failed" | "cancelled";
@@ -1628,7 +1632,8 @@ export const Constants = {
         "digest",
         "reference",
       ],
-      changeset_status: ["pending", "applied", "rejected"],
+      changeset_outcome: ["applied", "discarded"],
+      changeset_status: ["open", "closed"],
       changeset_type: ["ingestion", "relation", "manual", "revert"],
       digest_status: ["active", "archived"],
       digestion_status: ["pending", "completed", "failed", "cancelled"],

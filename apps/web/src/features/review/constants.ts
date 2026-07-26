@@ -10,7 +10,7 @@ import { Check, Circle, X } from "@nema-io/weave/icons";
 
 import type { TranslationKey } from "@web/lib/tolgee";
 
-import type { ChangesetStatus, ChangesetType } from "./types";
+import type { ChangesetOutcome, ChangesetStatus, ChangesetType } from "./types";
 
 export const DIGEST_TYPE_LABEL_KEY: Record<DigestType, TranslationKey> = {
   decision: "review.digest_type_decision",
@@ -194,7 +194,7 @@ export const DIGEST_BODY_FIELDS: {
   ],
 };
 
-// manual은 이 목록에 절대 안 나온다 — 확정 즉시 applied로 끝나 Space 오버뷰의
+// manual은 이 목록에 절대 안 나온다 — 확정 즉시 closed+applied로 끝나 Space 오버뷰의
 // Changes 탭 대신 각 Digest·Reference의 "변경 이력"에서만 노출된다(surface-inventory.md).
 // 라벨은 이 changeset을 만든 AI 활동을 가리킨다(결과물 개념어가 아님) — ingestion=정리,
 // relation=발견. "연결"(glossary.md의 Relation 개념어)은 사용자가 먼저 겪는 접점이
@@ -236,62 +236,85 @@ export const CHANGESET_ROW_TYPE_SLOTS: Record<
   manual: { badgeLabelKey: null, showsEffectSummary: false },
 };
 
-// changeset_status는 아직 pending/applied/rejected 셋뿐이다(status+outcome 2필드
-// 모델은 07-modeling.md가 그리는 목표 스키마일 뿐 미구현) — "적용 안 하고 닫힘"을
-// relation 도메인이 먼저 쓰던 rejected를 ingestion도 그대로 재사용한다
-// (supabase/migrations/20260714130000_ingestion_review_discard_restore.sql 참고).
-// relation의 거절도 지금은 되살리기가 없지만 후속으로 ingestion과 동일하게 열 예정이라
-// (intervention-design.md §10 백로그), type별로 라벨을 나누지 않고 "반려됨"으로 통일한다.
-const CHANGESET_STATUS_VARIANT: Record<ChangesetStatus, BadgeVariant> = {
-  pending: "warning",
+// 배지·아이콘이 구분하는 건 셋뿐이다 — 열려 있음 / 적용됨 / 버려짐. status와
+// outcome을 화면마다 따로 들고 다니며 조합하면 "closed인데 outcome이 뭐였더라"를
+// 컴포넌트 수만큼 반복하게 되므로, 여기서 한 번만 접어 이 값으로 넘긴다.
+export type ChangesetDisplayState = "open" | "applied" | "discarded";
+
+export function changesetDisplayState(
+  status: ChangesetStatus,
+  outcome: ChangesetOutcome,
+  // Sentry 캡처에서 어떤 changeset이 정합성을 어겼는지 짚을 수 있게, 호출부가 쥔
+  // 식별자(number·id 등)를 그대로 실어 보낸다.
+  identifier?: string | number,
+): ChangesetDisplayState {
+  if (status === "open") {
+    return "open";
+  }
+  if (outcome === null) {
+    // closed면 outcome이 반드시 있다(DB chk_changeset_outcome) — 없다는 건 데이터
+    // 정합성이 깨졌다는 뜻이라 한쪽으로 조용히 넘기지 않고 던져서 Sentry까지 올린다.
+    throw new Error(
+      `changeset ${identifier ?? "(no identifier)"} is closed but has no outcome`,
+    );
+  }
+  return outcome;
+}
+
+// discarded는 "적용 안 하고 닫혔다"는 한 상태를 ingestion(사람이 리뷰를 버림)과
+// relation(사람이 제안을 거절함)이 공유한다(07-modeling.md Changeset.outcome) —
+// 이유는 달라도 사용자가 보는 결과는 같아서 type별로 라벨을 나누지 않는다.
+const CHANGESET_STATE_VARIANT: Record<ChangesetDisplayState, BadgeVariant> = {
+  open: "warning",
   applied: "success",
-  rejected: "neutral",
+  discarded: "neutral",
 };
 
-const CHANGESET_STATUS_LABEL_KEY: Record<ChangesetStatus, TranslationKey> = {
-  pending: "review.status_pending",
-  applied: "review.status_applied",
-  rejected: "review.status_discarded",
-};
+const CHANGESET_STATE_LABEL_KEY: Record<ChangesetDisplayState, TranslationKey> =
+  {
+    open: "review.status_pending",
+    applied: "review.status_applied",
+    discarded: "review.status_discarded",
+  };
 
-export function changesetStatusMeta(status: ChangesetStatus): {
+export function changesetStateMeta(state: ChangesetDisplayState): {
   labelKey: TranslationKey;
   variant: BadgeVariant;
 } {
   return {
-    labelKey: CHANGESET_STATUS_LABEL_KEY[status],
-    variant: CHANGESET_STATUS_VARIANT[status],
+    labelKey: CHANGESET_STATE_LABEL_KEY[state],
+    variant: CHANGESET_STATE_VARIANT[state],
   };
 }
 
-// pending은 아직 진행 중이라 배경 없이 브랜드색 테두리(원 아이콘 자체)만 — applied·
-// rejected는 결론이 난 것이라 배경을 채운 칩으로 더 무겁게 낸다. applied는 무채색
-// 톤(Button primary 다크 배색)이라 pending의 브랜드 teal과 안 겹친다. rejected는
-// ingestion·relation 둘 다 "반려됨"으로 같은 아이콘·라벨.
-export type ChangesetStatusIcon =
+// open은 아직 진행 중이라 배경 없이 브랜드색 테두리(원 아이콘 자체)만 — applied·
+// discarded는 결론이 난 것이라 배경을 채운 칩으로 더 무겁게 낸다. applied는 무채색
+// 톤(Button primary 다크 배색)이라 open의 브랜드 teal과 안 겹친다.
+export type ChangesetStateIcon =
   | { kind: "outline"; Icon: IconComponent; tone: string }
   | { kind: "filled"; Icon: IconComponent; bg: string; iconTone: string };
 
-export function changesetStatusIcon(
-  status: ChangesetStatus,
-): ChangesetStatusIcon {
-  if (status === "pending") {
-    return { kind: "outline", Icon: Circle, tone: "text-brand" };
-  }
-  if (status === "applied") {
-    return {
+const CHANGESET_STATE_ICON: Record<ChangesetDisplayState, ChangesetStateIcon> =
+  {
+    open: { kind: "outline", Icon: Circle, tone: "text-brand" },
+    applied: {
       kind: "filled",
       Icon: Check,
       bg: "bg-fg-primary",
       iconTone: "text-surface-base",
-    };
-  }
-  // fg-tertiary가 다크에서 더 밝아져(팔레트 stone-400) 흰 아이콘 대비가 떨어지므로
-  // 다크에서만 아이콘을 어둡게(surface-base) 뒤집는다.
-  return {
-    kind: "filled",
-    Icon: X,
-    bg: "bg-fg-tertiary",
-    iconTone: "text-white dark:text-surface-base",
+    },
+    discarded: {
+      kind: "filled",
+      Icon: X,
+      bg: "bg-fg-tertiary",
+      // fg-tertiary가 다크에서 더 밝아져(팔레트 stone-400) 흰 아이콘 대비가 떨어지므로
+      // 다크에서만 아이콘을 어둡게(surface-base) 뒤집는다.
+      iconTone: "text-white dark:text-surface-base",
+    },
   };
+
+export function changesetStateIcon(
+  state: ChangesetDisplayState,
+): ChangesetStateIcon {
+  return CHANGESET_STATE_ICON[state];
 }

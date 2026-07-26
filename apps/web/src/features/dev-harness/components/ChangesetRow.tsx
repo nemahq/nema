@@ -3,6 +3,7 @@ import { Badge, type BadgeVariant } from "@nema-io/weave";
 import { ConfirmButton } from "@web/features/dev-harness/components/ConfirmButton";
 import type { ChangesetHistoryEntry } from "@web/features/dev-harness/types";
 import { formatDateTime } from "@web/features/dev-harness/utils";
+import type { ChangesetDisplayState } from "@web/features/review";
 
 const TYPE_LABEL: Record<ChangesetHistoryEntry["type"], string> = {
   ingestion: "넣기",
@@ -11,13 +12,13 @@ const TYPE_LABEL: Record<ChangesetHistoryEntry["type"], string> = {
   relation: "관계",
 };
 
-const STATUS_META: Record<
-  ChangesetHistoryEntry["status"],
+const STATE_META: Record<
+  ChangesetDisplayState,
   { label: string; variant: BadgeVariant }
 > = {
-  pending: { label: "대기", variant: "warning" },
+  open: { label: "대기", variant: "warning" },
   applied: { label: "적용", variant: "success" },
-  rejected: { label: "거절", variant: "neutral" },
+  discarded: { label: "거절", variant: "neutral" },
 };
 
 function effectLabel(
@@ -40,7 +41,7 @@ function effectLabel(
 
 interface ChangesetRowProps {
   changesetType: ChangesetHistoryEntry["type"];
-  status: ChangesetHistoryEntry["status"];
+  state: ChangesetDisplayState;
   statementCount: number;
   relationCount: number;
   sourceCount: number;
@@ -53,7 +54,7 @@ interface ChangesetRowProps {
 
 export function ChangesetRow({
   changesetType,
-  status,
+  state,
   statementCount,
   relationCount,
   sourceCount,
@@ -63,12 +64,12 @@ export function ChangesetRow({
   disabled,
   onRevert,
 }: ChangesetRowProps) {
-  const statusMeta = STATUS_META[status];
+  const stateMeta = STATE_META[state];
 
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface-raised px-3 py-2">
-      <Badge variant={statusMeta.variant} className="shrink-0">
-        {statusMeta.label}
+      <Badge variant={stateMeta.variant} className="shrink-0">
+        {stateMeta.label}
       </Badge>
       <span className="shrink-0 text-xs font-semibold text-fg-secondary">
         {TYPE_LABEL[changesetType]}

@@ -22,7 +22,7 @@ const generateSpacePublicIdSuffix = customAlphabet(
 export async function listSpaces(args: {
   supabase: TypedSupabaseClient;
 }): Promise<{ spaces: Space[] }> {
-  const [{ data, error }, { data: pendingChangesets, error: changesetError }] =
+  const [{ data, error }, { data: openChangesets, error: changesetError }] =
     await Promise.all([
       args.supabase
         .from("spaces")
@@ -30,17 +30,14 @@ export async function listSpaces(args: {
         .order("created_at", { ascending: true }),
       // LNB 넛지용 — space_id만 받아서 개수는 JS에서 센다. GROUP BY 집계는
       // PostgREST 쿼리 빌더로 못 만들어서, RLS로 이미 걸러지는 이 얇은 목록을
-      // 대신 쓴다(Space 개수·pending changeset 개수 둘 다 소규모라 무리 없음).
-      args.supabase
-        .from("changesets")
-        .select("space_id")
-        .eq("status", "pending"),
+      // 대신 쓴다(Space 개수·열린 changeset 개수 둘 다 소규모라 무리 없음).
+      args.supabase.from("changesets").select("space_id").eq("status", "open"),
     ]);
   throwIfSupabaseError(error);
   throwIfSupabaseError(changesetError);
 
   const openChangesetCountBySpaceId = new Map<string, number>();
-  for (const row of pendingChangesets ?? []) {
+  for (const row of openChangesets ?? []) {
     if (!row.space_id) {
       continue;
     }

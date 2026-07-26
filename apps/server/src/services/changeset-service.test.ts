@@ -138,7 +138,8 @@ function makeChangesetRow(number: number) {
     id: `cs-${number}`,
     number,
     type: "ingestion" as const,
-    status: "pending" as const,
+    status: "open" as const,
+    outcome: null,
     source_id: null,
     reverts_id: null,
     created_at: "2026-01-01T00:00:00Z",
@@ -238,7 +239,7 @@ describe("listChangesets", () => {
     expect(chains[0].lt).not.toHaveBeenCalled();
   });
 
-  it("open=true면 status=pending만 조회", async () => {
+  it("open=true면 status=open만 조회", async () => {
     const { client, chains } = mockSupabaseSequence([
       { data: [] },
       { data: [] },
@@ -251,11 +252,10 @@ describe("listChangesets", () => {
       open: true,
     });
 
-    expect(chains[0].eq).toHaveBeenCalledWith("status", "pending");
-    expect(chains[0].in).not.toHaveBeenCalled();
+    expect(chains[0].eq).toHaveBeenCalledWith("status", "open");
   });
 
-  it("open=false면 applied·rejected만 조회", async () => {
+  it("open=false면 status=closed만 조회", async () => {
     const { client, chains } = mockSupabaseSequence([
       { data: [] },
       { data: [] },
@@ -268,10 +268,7 @@ describe("listChangesets", () => {
       open: false,
     });
 
-    expect(chains[0].in).toHaveBeenCalledWith("status", [
-      "applied",
-      "rejected",
-    ]);
+    expect(chains[0].eq).toHaveBeenCalledWith("status", "closed");
   });
 
   it("open 미지정이면 status 필터 없이 전체를 조회", async () => {

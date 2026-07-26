@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@nema-io/weave";
 
+import { changesetDisplayState } from "@web/features/review/constants";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
@@ -51,10 +52,14 @@ function ChangesetRecordContent() {
       <ChangesetDetailHeader
         title={title}
         changesetNumber={changesetDetail.number}
-        status={changesetDetail.status}
+        state={changesetDisplayState(
+          changesetDetail.status,
+          changesetDetail.outcome,
+          changesetDetail.number,
+        )}
         time={changesetDetail.updatedAt}
         actions={
-          changesetDetail.status === "applied" && (
+          changesetDetail.outcome === "applied" && (
             <Button
               variant="neutral"
               className="shrink-0"

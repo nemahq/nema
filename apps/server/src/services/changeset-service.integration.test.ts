@@ -129,10 +129,10 @@ async function createFixtureStatement(
   return rows[0]?.id ?? "";
 }
 
-// apply_relation_changesets가 만드는 pending relation changeset을 직접 재현한다 —
+// apply_relation_changesets가 만드는 open relation changeset을 직접 재현한다 —
 // resolve_conflict_relation/resolve_duplicate_relation은 이 모양(changeset + change
 // row{type, from_id, to_id})만 전제로 하므로 엔진 배치 전체를 안 돌려도 된다.
-async function createFixturePendingRelation(args: {
+async function createFixtureOpenRelation(args: {
   spaceId: string;
   sourceId: string;
   relationType: "conflicts" | "duplicates";
@@ -140,7 +140,7 @@ async function createFixturePendingRelation(args: {
   toId: string;
 }): Promise<string> {
   const { rows } = await client.query<{ id: string }>(
-    "INSERT INTO changesets (space_id, type, status, source_id) VALUES ($1, 'relation', 'pending', $2) RETURNING id",
+    "INSERT INTO changesets (space_id, type, status, source_id) VALUES ($1, 'relation', 'open', $2) RETURNING id",
     [args.spaceId, args.sourceId],
   );
   const changesetId = rows[0].id;
@@ -262,6 +262,120 @@ describe("create_ingestion_review RPC (integration)", () => {
   });
 });
 
+describe("discard_ingestion_review / restore_ingestion_review RPC — 상태 가드 (integration)", () => {
+  it("open → discard(closed+discarded) → restore(open+outcome null) 왕복", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+
+    const digest = {
+      type: "decision",
+      title: "픽스처 다이제스트",
+      description: "설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+    };
+
+    const { rows } = await client.query<{ create_ingestion_review: string }>(
+      "SELECT create_ingestion_review($1, $2::jsonb)",
+      [sourceId, JSON.stringify([digest])],
+    );
+    const changesetId = rows[0].create_ingestion_review;
+
+    await client.query("SELECT discard_ingestion_review($1)", [changesetId]);
+    const afterDiscard = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>("SELECT status, outcome FROM changesets WHERE id = $1", [changesetId]);
+    expect(afterDiscard.rows[0]).toEqual({
+      status: "closed",
+      outcome: "discarded",
+    });
+
+    await client.query("SELECT restore_ingestion_review($1)", [changesetId]);
+    const afterRestore = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>("SELECT status, outcome FROM changesets WHERE id = $1", [changesetId]);
+    expect(afterRestore.rows[0]).toEqual({ status: "open", outcome: null });
+  });
+
+  it("아직 open인 changeset은 restore할 수 없다(outcome이 discarded가 아님)", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+
+    const digest = {
+      type: "decision",
+      title: "픽스처 다이제스트",
+      description: "설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+    };
+
+    const { rows } = await client.query<{ create_ingestion_review: string }>(
+      "SELECT create_ingestion_review($1, $2::jsonb)",
+      [sourceId, JSON.stringify([digest])],
+    );
+    const changesetId = rows[0].create_ingestion_review;
+
+    await expect(
+      client.query("SELECT restore_ingestion_review($1)", [changesetId]),
+    ).rejects.toThrow(/not a discarded ingestion review/);
+  });
+
+  it("확정(closed+applied)된 changeset은 restore할 수 없다 — Digest 재생성 방지", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+
+    const digest = {
+      type: "decision",
+      title: "픽스처 다이제스트",
+      description: "설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+    };
+
+    const { rows } = await client.query<{ create_ingestion_review: string }>(
+      "SELECT create_ingestion_review($1, $2::jsonb)",
+      [sourceId, JSON.stringify([digest])],
+    );
+    const changesetId = rows[0].create_ingestion_review;
+
+    // 확정 = open→closed+applied 전이(review 확정과 동등한 최소 재현, 위 title 테스트와 같은 패턴).
+    await client.query(
+      "UPDATE changesets SET status = 'closed', outcome = 'applied' WHERE id = $1",
+      [changesetId],
+    );
+
+    await expect(
+      client.query("SELECT restore_ingestion_review($1)", [changesetId]),
+    ).rejects.toThrow(/not a discarded ingestion review/);
+  });
+});
+
 describe("author_name 스냅샷 (integration)", () => {
   // createFixtureSource는 raw INSERT라 author_name 컬럼을 안 채운다 — 이 테스트는
   // 일부러 그 픽스처를 안 쓰고 create_source RPC를 직접 거쳐 실제 스냅샷 계산까지
@@ -300,6 +414,7 @@ describe("author_name 스냅샷 (integration)", () => {
       tags: [],
       reference_ids: [],
     };
+
     const { rows: createRows } = await client.query<{
       create_ingestion_review: string;
     }>("SELECT create_ingestion_review($1, $2::jsonb)", [
@@ -360,7 +475,7 @@ describe("author_name 스냅샷 (integration)", () => {
 });
 
 describe("sources.title 전파 트리거 (integration)", () => {
-  it("pending 상태인 ingestion changeset의 title은 Source 제목 변경을 따라간다", async () => {
+  it("open 상태인 ingestion changeset의 title은 Source 제목 변경을 따라간다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -405,7 +520,7 @@ describe("sources.title 전파 트리거 (integration)", () => {
     expect(after.rows[0]?.title).toBe("뒤늦게 채워진 제목");
   });
 
-  it("리뷰가 이미 닫힌(pending이 아닌) ingestion changeset의 title은 소급 갱신하지 않는다", async () => {
+  it("리뷰가 이미 닫힌(open이 아닌) ingestion changeset의 title은 소급 갱신하지 않는다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -434,9 +549,9 @@ describe("sources.title 전파 트리거 (integration)", () => {
     );
     const changesetId = rows[0].create_ingestion_review;
 
-    // pending → applied로 닫는다(review 확정과 동등한 최소 재현 — status만 직접 전이)
+    // open → closed+applied로 닫는다(review 확정과 동등한 최소 재현 — 상태만 직접 전이)
     await client.query(
-      "UPDATE changesets SET status = 'applied' WHERE id = $1",
+      "UPDATE changesets SET status = 'closed', outcome = 'applied' WHERE id = $1",
       [changesetId],
     );
 
@@ -455,7 +570,7 @@ describe("sources.title 전파 트리거 (integration)", () => {
   });
 });
 
-describe("apply_relation_changesets RPC — pending 제안 title (integration)", () => {
+describe("apply_relation_changesets RPC — open 제안 title (integration)", () => {
   it("끝점 두 Statement가 속한 Digest 제목을 'A vs B'로 합쳐 채운다", async () => {
     if (!localDbAvailable) {
       return;
@@ -494,7 +609,7 @@ describe("apply_relation_changesets RPC — pending 제안 title (integration)",
     const { rows } = await client.query<{ title: string | null }>(
       `SELECT c.title FROM changesets c
        JOIN changes ch ON ch.changeset_id = c.id
-       WHERE c.type = 'relation' AND c.status = 'pending'
+       WHERE c.type = 'relation' AND c.status = 'open'
          AND ch.data->>'from_id' = $1 AND ch.data->>'to_id' = $2`,
       [fromStatementId, toStatementId],
     );
@@ -504,7 +619,7 @@ describe("apply_relation_changesets RPC — pending 제안 title (integration)",
 });
 
 describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () => {
-  it("사람이 실제로 거절한(invalidated_by_id 없는) rejected 쌍은 재제안을 계속 막는다", async () => {
+  it("사람이 실제로 거절한(invalidated_by_id 없는) discarded 쌍은 재제안을 계속 막는다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -526,7 +641,7 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
     const fromId = await createFixtureStatement(spaceId, digestA);
     const toId = await createFixtureStatement(spaceId, digestB);
 
-    const firstChangeset = await createFixturePendingRelation({
+    const firstChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -554,7 +669,7 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
     expect(rows[0]?.count).toBe("1"); // 거절된 첫 changeset 하나뿐 — 새로 안 생김.
   });
 
-  it("캐스케이드로 무효화된(invalidated_by_id 있는) rejected 쌍은 재제안을 막지 않는다", async () => {
+  it("캐스케이드로 무효화된(invalidated_by_id 있는) discarded 쌍은 재제안을 막지 않는다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -576,14 +691,14 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
     const fromId = await createFixtureStatement(spaceId, digestA);
     const toId = await createFixtureStatement(spaceId, digestB);
 
-    const firstChangeset = await createFixturePendingRelation({
+    const firstChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
       fromId,
       toId,
     });
-    const otherChangesetId = await createFixturePendingRelation({
+    const otherChangesetId = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -593,7 +708,7 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
     // 실제 캐스케이드(resolve_conflict_relation 등)를 다시 거치지 않고, 그 결과
     // 상태만 재현한다 — 이 테스트의 대상은 가드 조건이지 캐스케이드 발생 경로가 아니다.
     await client.query(
-      "UPDATE changesets SET status = 'rejected', invalidated_by_id = $2 WHERE id = $1",
+      "UPDATE changesets SET status = 'closed', outcome = 'discarded', invalidated_by_id = $2 WHERE id = $1",
       [firstChangeset, otherChangesetId],
     );
 
@@ -607,15 +722,21 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
       [sourceId, JSON.stringify(pending)],
     );
 
-    const { rows } = await client.query<{ status: string }>(
-      `SELECT c.status FROM changesets c
+    const { rows } = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>(
+      `SELECT c.status, c.outcome FROM changesets c
        JOIN changes ch ON ch.changeset_id = c.id
        WHERE c.type = 'relation' AND ch.data->>'from_id' = $1 AND ch.data->>'to_id' = $2
        ORDER BY c.created_at DESC`,
       [fromId, toId],
     );
-    // 무효화된 첫 changeset(rejected) + 방금 새로 만들어진 pending — 총 2건이어야 한다.
-    expect(rows.map((r) => r.status).sort()).toEqual(["pending", "rejected"]);
+    // 무효화된 첫 changeset(closed+discarded) + 방금 새로 만들어진 open — 총 2건이어야 한다.
+    expect(rows.map((r) => `${r.status}/${r.outcome ?? "-"}`).sort()).toEqual([
+      "closed/discarded",
+      "open/-",
+    ]);
   });
 });
 
@@ -791,7 +912,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
     });
     const winnerId = await createFixtureStatement(spaceId, digestA);
     const loserId = await createFixtureStatement(spaceId, digestB);
-    const changesetId = await createFixturePendingRelation({
+    const changesetId = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -832,14 +953,15 @@ describe("resolve_conflict_relation RPC (integration)", () => {
       status: "active",
     });
 
-    const { rows: changesetRows } = await client.query<{ status: string }>(
-      "SELECT status FROM changesets WHERE id = $1",
-      [changesetId],
-    );
-    expect(changesetRows[0]?.status).toBe("applied");
+    const { rows: changesetRows } = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>("SELECT status, outcome FROM changesets WHERE id = $1", [changesetId]);
+    expect(changesetRows[0]?.status).toBe("closed");
+    expect(changesetRows[0]?.outcome).toBe("applied");
   });
 
-  it("판정 완료 후에도 원래 conflicts 제안 change row는 그대로 남는다(changeset-detail-service가 applied 이후에도 읽음)", async () => {
+  it("판정 완료 후에도 원래 conflicts 제안 change row는 그대로 남는다(changeset-detail-service가 닫힌 뒤에도 읽음)", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -860,7 +982,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
     });
     const winnerId = await createFixtureStatement(spaceId, digestA);
     const loserId = await createFixtureStatement(spaceId, digestB);
-    const changesetId = await createFixturePendingRelation({
+    const changesetId = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -913,7 +1035,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
     const loserId = await createFixtureStatement(spaceId, digestB);
     const otherId = await createFixtureStatement(spaceId, digestC);
 
-    const conflictChangeset = await createFixturePendingRelation({
+    const conflictChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -921,7 +1043,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
       toId: loserId,
     });
     // 패자(loserId)가 또 다른 진술(otherId)과도 별도 중복 제안으로 대기 중인 상태.
-    const otherChangeset = await createFixturePendingRelation({
+    const otherChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "duplicates",
@@ -936,12 +1058,15 @@ describe("resolve_conflict_relation RPC (integration)", () => {
 
     const { rows } = await client.query<{
       status: string;
+      outcome: string | null;
       invalidated_by_id: string | null;
-    }>("SELECT status, invalidated_by_id FROM changesets WHERE id = $1", [
-      otherChangeset,
-    ]);
+    }>(
+      "SELECT status, outcome, invalidated_by_id FROM changesets WHERE id = $1",
+      [otherChangeset],
+    );
 
-    expect(rows[0]?.status).toBe("rejected");
+    expect(rows[0]?.status).toBe("closed");
+    expect(rows[0]?.outcome).toBe("discarded");
     expect(rows[0]?.invalidated_by_id).toBe(conflictChangeset);
   });
 
@@ -967,7 +1092,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
     const winnerId = await createFixtureStatement(spaceId, digestA);
     const loserId = await createFixtureStatement(spaceId, digestB);
 
-    const firstChangeset = await createFixturePendingRelation({
+    const firstChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -989,7 +1114,7 @@ describe("resolve_conflict_relation RPC (integration)", () => {
     expect(afterRevert.rows[0]?.status).toBe("archived");
 
     // 엔진이 같은 쌍을 다시 충돌로 제안 → 같은 승자로 재판정.
-    const secondChangeset = await createFixturePendingRelation({
+    const secondChangeset = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "conflicts",
@@ -1043,7 +1168,7 @@ describe("resolve_duplicate_relation RPC (integration)", () => {
     });
     const keeperId = await createFixtureStatement(spaceId, digestA);
     const duplicateId = await createFixtureStatement(spaceId, digestB);
-    const changesetId = await createFixturePendingRelation({
+    const changesetId = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "duplicates",
@@ -1100,10 +1225,14 @@ describe("resolve_duplicate_relation RPC (integration)", () => {
 
     const { rows: changesetRows } = await client.query<{
       status: string;
+      outcome: string | null;
       title: string;
-    }>("SELECT status, title FROM changesets WHERE id = $1", [changesetId]);
+    }>("SELECT status, outcome, title FROM changesets WHERE id = $1", [
+      changesetId,
+    ]);
     expect(changesetRows[0]).toMatchObject({
-      status: "applied",
+      status: "closed",
+      outcome: "applied",
       title: "병합된 다이제스트",
     });
   });
@@ -1137,14 +1266,14 @@ describe("resolve_duplicate_relation RPC (integration)", () => {
     const bStatementId = await createFixtureStatement(spaceId, digestB);
 
     // (A1,B)·(A2,B) 각각 별도 pending — B가 두 곳과 동시에 중복 감지된 경우.
-    const changesetA1B = await createFixturePendingRelation({
+    const changesetA1B = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "duplicates",
       fromId: a1StatementId,
       toId: bStatementId,
     });
-    const changesetA2B = await createFixturePendingRelation({
+    const changesetA2B = await createFixtureOpenRelation({
       spaceId,
       sourceId,
       relationType: "duplicates",
@@ -1171,12 +1300,15 @@ describe("resolve_duplicate_relation RPC (integration)", () => {
 
     const { rows } = await client.query<{
       status: string;
+      outcome: string | null;
       invalidated_by_id: string | null;
-    }>("SELECT status, invalidated_by_id FROM changesets WHERE id = $1", [
-      changesetA2B,
-    ]);
+    }>(
+      "SELECT status, outcome, invalidated_by_id FROM changesets WHERE id = $1",
+      [changesetA2B],
+    );
 
-    expect(rows[0]?.status).toBe("rejected");
+    expect(rows[0]?.status).toBe("closed");
+    expect(rows[0]?.outcome).toBe("discarded");
     expect(rows[0]?.invalidated_by_id).toBe(changesetA1B);
   });
 });
@@ -1261,7 +1393,7 @@ describe("restore_digest RPC — 되살리기 대상 changeset 범위 (integrati
     // resolve_duplicate_relation이 만드는 모양을 직접 재현한다 — 하나의 relation
     // changeset 안에 create/digest(C) + archive/digest(A) + archive/digest(B).
     const { rows: mergeRows } = await client.query<{ id: string }>(
-      "INSERT INTO changesets (space_id, type, status, source_id) VALUES ($1, 'relation', 'applied', $2) RETURNING id",
+      "INSERT INTO changesets (space_id, type, status, outcome, source_id) VALUES ($1, 'relation', 'closed', 'applied', $2) RETURNING id",
       [spaceId, sourceId],
     );
     const mergeChangesetId = mergeRows[0].id;

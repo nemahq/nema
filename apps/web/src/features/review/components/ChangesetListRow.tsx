@@ -15,13 +15,11 @@ import {
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import {
   CHANGESET_ROW_TYPE_SLOTS,
-  changesetStatusIcon,
-  changesetStatusMeta,
+  type ChangesetDisplayState,
+  changesetStateIcon,
+  changesetStateMeta,
 } from "@web/features/review/constants";
-import type {
-  ChangesetStatus,
-  ChangesetType,
-} from "@web/features/review/types";
+import type { ChangesetType } from "@web/features/review/types";
 import {
   changesetDisplayTitle,
   summarizeChangesetEffect,
@@ -33,8 +31,8 @@ interface ChangesetListRowProps {
   changesetNumber: number;
   title: string | null;
   type: ChangesetType;
+  state: ChangesetDisplayState;
   revertDepth: number;
-  status: ChangesetStatus;
   createdAt: string;
   effectDigest: number;
   effectReference: number;
@@ -50,8 +48,8 @@ export const ChangesetListRow = memo(function ChangesetListRow({
   changesetNumber,
   title,
   type,
+  state,
   revertDepth,
-  status,
   createdAt,
   effectDigest,
   effectReference,
@@ -68,22 +66,22 @@ export const ChangesetListRow = memo(function ChangesetListRow({
         t,
       )
     : null;
-  const statusIcon = changesetStatusIcon(status);
-  const statusLabelKey = changesetStatusMeta(status).labelKey;
-  const statusIconEl =
-    statusIcon.kind === "filled" ? (
+  const stateIcon = changesetStateIcon(state);
+  const stateLabelKey = changesetStateMeta(state).labelKey;
+  const stateIconEl =
+    stateIcon.kind === "filled" ? (
       <span
         className={cn(
           "inline-flex size-4 shrink-0 items-center justify-center rounded-full",
-          statusIcon.bg,
-          statusIcon.iconTone,
+          stateIcon.bg,
+          stateIcon.iconTone,
         )}
       >
-        <statusIcon.Icon className="size-2.5" strokeWidth={3} />
+        <stateIcon.Icon className="size-2.5" strokeWidth={3} />
       </span>
     ) : (
-      <span className={cn("inline-flex shrink-0", statusIcon.tone)}>
-        <statusIcon.Icon className="size-4" strokeWidth={2.5} />
+      <span className={cn("inline-flex shrink-0", stateIcon.tone)}>
+        <stateIcon.Icon className="size-4" strokeWidth={2.5} />
       </span>
     );
 
@@ -110,8 +108,8 @@ export const ChangesetListRow = memo(function ChangesetListRow({
       >
         <div className="flex items-center gap-2.5">
           <Tooltip>
-            <TooltipTrigger asChild>{statusIconEl}</TooltipTrigger>
-            <TooltipContent side="bottom">{t(statusLabelKey)}</TooltipContent>
+            <TooltipTrigger asChild>{stateIconEl}</TooltipTrigger>
+            <TooltipContent side="bottom">{t(stateLabelKey)}</TooltipContent>
           </Tooltip>
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
             <Text

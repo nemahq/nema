@@ -5,8 +5,9 @@ import { toast } from "@web/utils/toast";
 
 // changeset.getByNumber만 반환(await)해서 화면 전환을 만드는 이 재조회가 끝날 때까지
 // mutation을 pending 상태로 붙든다 — 모든 상태가 URL을 공유해서(changesetDetailRegistry),
-// 이 쿼리가 새 status(applied)로 다시 읽혀야 같은 URL이 ChangesetRecordScreen으로
-// 넘어간다. 나머지 invalidate는 이 화면 전환과 무관해 fire-and-forget으로 둔다.
+// 이 쿼리가 새 status(closed)+outcome(applied)로 다시 읽혀야 같은 URL이
+// ChangesetRecordScreen으로 넘어간다. 나머지 invalidate는 이 화면 전환과 무관해
+// fire-and-forget으로 둔다.
 // getByNumber 자체가 실패하면(네트워크 등) 확정은 이미 성공했는데 화면만 편집 상태에
 // 멈춰 있게 되므로, 그 경우만 별도로 알린다.
 export function useConfirmReview(spaceId: string, changesetNumber: number) {

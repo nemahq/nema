@@ -96,7 +96,8 @@ describe("getChangesetByNumber", () => {
           space_id: SPACE_ID,
           number: 1,
           type: "ingestion",
-          status: "applied",
+          status: "closed",
+          outcome: "applied",
           title: "제목",
           source_id: "src-1",
           reverts_id: null,
@@ -143,7 +144,8 @@ describe("getChangesetByNumber", () => {
           space_id: SPACE_ID,
           number: 2,
           type: "ingestion",
-          status: "rejected",
+          status: "closed",
+          outcome: "discarded",
           title: null,
           source_id: "src-2",
           reverts_id: null,
@@ -161,7 +163,7 @@ describe("getChangesetByNumber", () => {
       number: 2,
     });
 
-    expect(result.body).toEqual({ kind: "ingestion_rejected" });
+    expect(result.body).toEqual({ kind: "ingestion_discarded" });
     expect(result.sourceId).toBe("src-2");
   });
 
@@ -173,7 +175,8 @@ describe("getChangesetByNumber", () => {
           space_id: SPACE_ID,
           number: 3,
           type: "relation",
-          status: "applied",
+          status: "closed",
+          outcome: "applied",
           title: "A vs B",
           source_id: null,
           reverts_id: null,
@@ -235,7 +238,8 @@ describe("getChangesetByNumber", () => {
           space_id: SPACE_ID,
           number: 4,
           type: "relation",
-          status: "rejected",
+          status: "closed",
+          outcome: "discarded",
           title: "A vs B",
           source_id: null,
           reverts_id: null,
@@ -267,7 +271,7 @@ describe("getChangesetByNumber", () => {
       number: 4,
     });
 
-    expect(result.body).toEqual({ kind: "relation_conflict_rejected" });
+    expect(result.body).toEqual({ kind: "relation_conflict_discarded" });
   });
 
   it("relation(중복) 적용됨 — keeper/duplicate 각각의 실제 status를 그대로 반영한다", async () => {
@@ -278,7 +282,8 @@ describe("getChangesetByNumber", () => {
           space_id: SPACE_ID,
           number: 5,
           type: "relation",
-          status: "applied",
+          status: "closed",
+          outcome: "applied",
           title: "병합 제목",
           source_id: null,
           reverts_id: null,
@@ -340,7 +345,8 @@ describe("getChangesetByNumber", () => {
           space_id: SPACE_ID,
           number: 6,
           type: "relation",
-          status: "rejected",
+          status: "closed",
+          outcome: "discarded",
           title: "제목",
           source_id: null,
           reverts_id: null,
@@ -369,7 +375,7 @@ describe("getChangesetByNumber", () => {
       number: 6,
     });
 
-    expect(result.body).toEqual({ kind: "relation_duplicate_rejected" });
+    expect(result.body).toEqual({ kind: "relation_duplicate_discarded" });
   });
 
   it("revert — 스텁 본문 + 되돌려진 원본 changeset의 number를 함께 돌려준다", async () => {
@@ -380,7 +386,8 @@ describe("getChangesetByNumber", () => {
           space_id: SPACE_ID,
           number: 7,
           type: "revert",
-          status: "applied",
+          status: "closed",
+          outcome: "applied",
           title: "원본 제목 되돌림",
           source_id: null,
           reverts_id: ORIGINAL_ID,
@@ -412,7 +419,8 @@ describe("getChangesetByNumber", () => {
           space_id: SPACE_ID,
           number: 8,
           type: "relation",
-          status: "applied",
+          status: "closed",
+          outcome: "applied",
           title: "제목",
           source_id: null,
           reverts_id: null,
@@ -461,7 +469,8 @@ describe("getChangesetByNumber", () => {
           space_id: OTHER_SPACE_ID,
           number: 1,
           type: "ingestion",
-          status: "applied",
+          status: "closed",
+          outcome: "applied",
           title: "다른 Space의 changeset",
           source_id: null,
           reverts_id: null,
@@ -486,7 +495,8 @@ describe("getChangesetByNumber", () => {
           space_id: SPACE_ID,
           number: 9,
           type: "ingestion",
-          status: "applied",
+          status: "closed",
+          outcome: "applied",
           title: "제목",
           source_id: null,
           reverts_id: null,
@@ -520,7 +530,8 @@ describe("getChangesetByNumber", () => {
           space_id: SPACE_ID,
           number: 10,
           type: "relation",
-          status: "applied",
+          status: "closed",
+          outcome: "applied",
           title: "제목",
           source_id: null,
           reverts_id: null,
