@@ -29,7 +29,6 @@
 - [retrieval-flow](docs/blueprints/first-product/functional-spec/retrieval-flow.md): 꺼내기(묻기·해설) 흐름
 - [surface-inventory](docs/blueprints/first-product/surface-inventory.md): MVP 화면 전체 목록과 각 역할. 특정 화면이 뭘 하는지 찾을 때
 - [surface-design](docs/blueprints/first-product/surface-design.md): 화면 설계 방법론·원칙·백엔드 빈칸·미룬 것. 새 화면 설계 판단의 근거가 필요할 때
-- [design-reference-log](docs/blueprints/first-product/design-reference-log.md): 디자인 레퍼런스 판단 로그
 - [narration-design](docs/blueprints/first-product/narration-design.md): 해설(Narration) 기능 설계
 - [mcp-design](docs/blueprints/first-product/mcp-design.md): MCP 레일 설계
 - [mcp-tools-design](docs/blueprints/first-product/mcp-tools-design.md): MCP 도구 세트 설계
