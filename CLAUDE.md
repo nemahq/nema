@@ -4,7 +4,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 
 ## Workflow
 
-- `staging` = default branch (feature branch → PR → CI → staging merge → Railway staging auto-deploy). `main` = production-ready code (`v*` tag push → prod DB migration + Railway deploy). Merge method: regular branch → `staging` is squash; feature branch → `staging` and `staging` → `main` are merge commit.
+- `staging` = default branch (feature branch → PR → CI → staging merge → Railway staging auto-deploy). `main` = production-ready code (`v*` tag push → prod DB migration + Railway deploy). Merge method: a normal branch (single slice of work, even with multiple commits from review fixes) → `staging` is squash. A shared feature branch that already has multiple squash-merged sub-PRs stacked on it → `staging` is merge commit (preserves per-PR history). `staging` → `main` is always merge commit.
 - Tag format: CalVer `vYYYY.MM.DD` (`.N` suffix for same-day redeploys). Every prod deploy MUST be tagged — migration diff is computed against the previous tag.
 - MUST verify CI locally before creating PR.
 - PR title: Korean. Assignee: author. Labels: `enhancement`/`bug`/`refactoring`/`documentation`.
