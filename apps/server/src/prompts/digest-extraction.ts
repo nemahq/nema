@@ -22,7 +22,7 @@ A digest is a cleaned-up, human-confirmed write-up of ONE judgment, already clas
 
 ## Statement types
 
-- "claim": something held to be the case — a decision, a fact, a finding, an opinion, an assumption.
+- "claim": something held to be the case — a decision, a fact, a finding, an opinion, an assumption, or an intended action.
 - "question": something still open — an undecided issue, even when not phrased as a question.
 
 ## Confidence (claims only, else null)

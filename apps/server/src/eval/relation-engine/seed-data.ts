@@ -517,6 +517,37 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
     note: "s1은 질문 — 결정을 부정·경합하지 않으니 충돌로 뜨면 안 됨. s2는 '결제' 토픽 형제 진술 — 무관계",
   },
   {
+    id: "change-intent-not-conflict",
+    description:
+      "기존 결정을 바꾸려는 의도 진술을 충돌로 띄우나 — 의도는 미래지 현재 주장이 아님 (측정 #2 발견, todo 타입 제거 후 claim 문맥으로 재현)",
+    traps: ["false-conflict", "mere-neighbor"],
+    statements: [
+      {
+        id: "e1",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "파일 업로드 용량 제한은 10MB로 한다",
+      },
+      {
+        id: "s1",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "업로드 용량 제한을 50MB로 올리는 작업을 한다",
+      },
+      {
+        id: "s2",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "업로드 진행률 표시를 추가했다",
+      },
+    ],
+    golden: [],
+    note: "s1은 '바꿀 계획'인 의도 진술 — 지금은 10MB 결정과 둘 다 참(아직 안 바꿈). 현재 충돌 아님(기껏해야 미래 replaces 씨앗). 충돌로 띄우면 FP. s2는 '업로드' 토픽 형제 — 무관계. 측정 #2 v1에서 모델이 8/8 충돌을 안 냄 — 원래는 type='todo'로 이 구분을 신호했으나(제거됨), 이제는 라벨 없이 문맥만으로 같은 판단을 해야 하는 회귀 가드",
+  },
+  {
     id: "conflicts-fact-clash-dogfood",
     description:
       "도그푸딩 충돌 미검출 재현: 같은 사실(시장에 강자가 있나)에 어긋난 두 주장을 conflicts로 잡나 — 부정어 없는 사실 모순",
@@ -559,6 +590,43 @@ export const RELATION_SCENARIOS: RelationScenario[] = [
       },
     ],
     note: "핵심은 conflicts 재현(recall): 후보로 함께 주어지면 판정은 s1↔e1 충돌을 잡는다(미검출은 retrieval 단계 문제). s1→s2는 '그래서' 인과가 박힌 진짜 supports라 골든에 포함",
+  },
+  {
+    id: "invented-supports-question-unrelated-dogfood",
+    description:
+      "도그푸딩 supports 과잉 재현: 질문을 supports의 to로 잇거나(to는 claim이어야), 토픽만 겹치는 무관 사실을 근거로 지어내나",
+    traps: ["invented-supports", "mere-neighbor"],
+    statements: [
+      {
+        id: "s1",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "N잡은 공백이 분명해 검증 난이도가 낮다",
+      },
+      {
+        id: "e1",
+        role: "existing",
+        type: "question",
+        content: "N잡과 건강 중 무엇을 먼저 검증할지 정해야 한다",
+      },
+      {
+        id: "s2",
+        role: "new",
+        type: "claim",
+        confidence: "certain",
+        content: "N잡은 정산 데이터를 매달 보내는 행동이 습관으로 자리잡는다",
+      },
+      {
+        id: "e2",
+        role: "existing",
+        type: "claim",
+        confidence: "certain",
+        content: "플랫폼마다 정산 주기와 세금 기준이 달라 수입 파악이 번거롭다",
+      },
+    ],
+    golden: [],
+    note: "s1→e1을 supports로 잇는 게 1순위 FP — e1은 question이라 supports의 to가 될 수 없다(닫으려면 resolves인데 s1은 답이 아님). s2→e2는 '정산' 토픽만 겹치는 무관 쌍(습관 vs 번거로움) — 근거 아님. 둘 다 침묵해야. harness-scenarios.md B7과 같은 진술을 question으로 재현(원래 type='todo'였음)",
   },
   // --- near-duplicate 함정 (NEM-162) — 거의 같은 두 진술. 같음은 이제 정식 duplicates
   // 관계지만 4종 golden엔 안 싣고 expectedDuplicates 채널로 따로 채점한다(golden은 비움).

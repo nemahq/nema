@@ -299,12 +299,19 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
         needsHumanReview: false,
         dueDate: "2026-06-25",
       },
+      {
+        id: "weekly-1-s8",
+        content: "다음달 OKR 리뷰 일정을 잡아야 한다",
+        type: "claim",
+        confidence: "certain",
+        axes: [],
+        needsHumanReview: false,
+      },
     ],
   },
   {
     id: "braindump-1",
-    description:
-      "할 일·미결 질문 위주의 머리비우기 메모. question 분류와 확신도 혼재",
+    description: "질문 위주의 머리비우기 메모. question 분류와 확신도 혼재",
     axes: ["question-label", "confidence-mix", "numeric-fidelity"],
     input:
       "출시 전에 정리할 것들. 랜딩 페이지 문구 최종본 금요일까지 마케팅에 넘겨야 함. 가격 정책은 아직도 결론이 안 났는데 월 9900원이 맞나? 경쟁사는 다 만원 밑이긴 한데 우리가 기능이 더 많아서 만원 넘겨도 될 것 같기도 하고. 온보딩 이메일 시퀀스는 내가 초안 쓰기로 했음. 아 그리고 베타 피드백 설문 마감이 수요일이라 목요일에 정리해서 공유하기. 근데 결제 실패율 모니터링은 누가 맡지?",

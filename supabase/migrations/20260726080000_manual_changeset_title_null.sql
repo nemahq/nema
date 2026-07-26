@@ -9,11 +9,21 @@
 -- 데도 안 쓰이는 불필요한 작업이다.
 --
 -- update_reference·archive_reference는 20260721090000(NM007 errcode 부여
--- 리팩터)에서 title 인자를 이미 뺐다 — 새 CREATE OR REPLACE가 이전 정의를
--- 덮으며 의도치 않게 함께 고쳐졌다. 남은 건 confirm_digest_edit(Digest
--- manual 수정) 하나뿐 — archive_digest(20260721110001)는 신설 당시부터 이미
--- title을 안 채웠다(그 파일 주석이 이 버그를 이미 인지하고 새 함수까지
--- 따라가지 않게 명시).
+-- 리팩터)에서 changeset INSERT의 title 컬럼 채움을 이미 뺐다(RPC 시그니처의
+-- p_title 인자는 그대로 — 바뀐 건 changeset.title을 채우던 부분뿐이다) — 새
+-- CREATE OR REPLACE가 이전 정의를 덮으며 의도치 않게 함께 고쳐졌다. 남은 건
+-- confirm_digest_edit(Digest manual 수정) 하나뿐 — archive_digest(20260721110001)
+-- 는 신설 당시부터 이미 title을 안 채웠다(그 파일 주석이 이 버그를 이미
+-- 인지하고 새 함수까지 따라가지 않게 명시).
+--
+-- 참고: manual changeset은 space_id가 있는지(Digest 대상) 없는지(Reference
+-- 대상, Workspace 스코프)에 따라 갈린다. space_id가 있는 쪽은
+-- trg_changesets_assign_number가 number를 부여하고 listChangesets(space_id로만
+-- 필터, type 필터 없음)·changesetDetailRegistry(manual.closed → ChangesetRecordScreen)
+-- 양쪽 다 이미 이 타입을 렌더링 경로에 올려두고 있다 — "manual은 목록·상세
+-- 어디에도 안 뜬다"는 review-flow.md 서술은 Reference manual(space_id NULL)에만
+-- 정확하고, Digest manual은 실제로는 뜬다. 이 PR은 title을 null로 맞추는 것까지만
+-- 다루고, "Digest manual을 목록에서 뺄지"는 별도 결정이 필요해 손대지 않았다.
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION confirm_digest_edit(
