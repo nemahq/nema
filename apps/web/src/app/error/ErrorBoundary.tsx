@@ -2,12 +2,16 @@ import type { ErrorInfo, ReactNode } from "react";
 import { Component } from "react";
 import * as Sentry from "@sentry/react";
 
+import { SENTRY_ENABLED } from "@web/lib/sentry";
+
 export interface ErrorFallbackProps {
   error: Error;
   reset: () => void;
   hasRetried: boolean;
   eventId?: string;
   componentStack?: string;
+  route?: string;
+  timestamp?: string;
 }
 
 interface ErrorBoundaryProps {
@@ -27,6 +31,8 @@ interface State {
   hasRetried: boolean;
   eventId?: string;
   componentStack?: string;
+  route?: string;
+  timestamp?: string;
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
@@ -40,8 +46,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    const shouldReport = this.props.shouldReport?.(error) ?? true;
+    // captureException은 SENTRY_ENABLED가 false여도 uuid를 반환한다 — 실제로
+    // 전송되지 않은 이벤트를 있는 척 리포트에 담지 않도록 여기서 한 번 더 거른다.
     const eventId =
-      (this.props.shouldReport?.(error) ?? true)
+      shouldReport && SENTRY_ENABLED
         ? Sentry.captureException(error, {
             tags: { boundary: this.props.boundaryName ?? "unknown" },
             extra: { componentStack: errorInfo.componentStack },
@@ -50,6 +59,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
     this.setState({
       eventId,
       componentStack: errorInfo.componentStack ?? undefined,
+      route: window.location.pathname,
+      timestamp: new Date().toISOString(),
     });
   }
 
@@ -60,6 +71,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
       hasRetried: true,
       eventId: undefined,
       componentStack: undefined,
+      route: undefined,
+      timestamp: undefined,
     });
   };
 
@@ -72,6 +85,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
           hasRetried: this.state.hasRetried,
           eventId: this.state.eventId,
           componentStack: this.state.componentStack,
+          route: this.state.route,
+          timestamp: this.state.timestamp,
         });
       }
       return this.props.fallback ?? null;

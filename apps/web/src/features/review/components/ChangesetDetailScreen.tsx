@@ -53,6 +53,8 @@ function ChangesetDetailErrorFallback({
   hasRetried,
   eventId,
   componentStack,
+  route,
+  timestamp,
   spaceId,
   changesetNumber,
 }: ChangesetDetailErrorFallbackProps) {
@@ -83,6 +85,8 @@ function ChangesetDetailErrorFallback({
       hasRetried={hasRetried}
       eventId={eventId}
       componentStack={componentStack}
+      route={route}
+      timestamp={timestamp}
     />
   );
 }

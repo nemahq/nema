@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Button } from "@nema-io/weave";
+import { Button, Textarea } from "@nema-io/weave";
 import { Check, Copy, RefreshCw, RotateCcw } from "@nema-io/weave/icons";
 
 import { buildErrorReport } from "@web/app/error/errorReport";
@@ -22,6 +22,8 @@ interface ErrorFallbackProps {
   error?: Error;
   eventId?: string;
   componentStack?: string;
+  route?: string;
+  timestamp?: string;
   onRetry?: () => void;
   onRefresh?: () => void;
   showBranding?: boolean;
@@ -36,6 +38,8 @@ export function ErrorFallback({
   error,
   eventId,
   componentStack,
+  route,
+  timestamp,
   onRetry,
   onRefresh,
   showBranding = true,
@@ -44,18 +48,36 @@ export function ErrorFallback({
   size = "section",
 }: ErrorFallbackProps) {
   const [copied, setCopied] = useState(false);
+  const [copyFailedText, setCopyFailedText] = useState<string | null>(null);
   const isPage = size === "page";
 
   function handleCopy() {
     if (!error) {
       return;
     }
-    void navigator.clipboard
-      .writeText(buildErrorReport({ error, eventId, componentStack }))
-      .then(() => {
+    const report = buildErrorReport({
+      error,
+      eventId,
+      componentStack,
+      route: route ?? window.location.pathname,
+      timestamp: timestamp ?? new Date().toISOString(),
+    });
+    // 클립보드가 유일한 배출구다 — writeText가 던지거나(비보안 컨텍스트) 거부되면
+    // (권한 거부 등) 대신 텍스트를 펼쳐 수동 선택으로라도 복사할 수 있게 한다.
+    if (!navigator.clipboard) {
+      setCopyFailedText(report);
+      return;
+    }
+    navigator.clipboard.writeText(report).then(
+      () => {
+        setCopyFailedText(null);
         setCopied(true);
         setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
-      });
+      },
+      () => {
+        setCopyFailedText(report);
+      },
+    );
   }
 
   return (
@@ -102,6 +124,20 @@ export function ErrorFallback({
           {labels?.copyError ?? <TranslatedCopyError />}
         </button>
       )}
+      {copyFailedText && (
+        <div className="flex w-full max-w-md flex-col gap-1">
+          <p className="text-xs text-status-error">
+            <TranslatedCopyFailed />
+          </p>
+          <Textarea
+            readOnly
+            value={copyFailedText}
+            rows={6}
+            className="font-mono text-xs"
+            onClick={(e) => e.currentTarget.select()}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -124,4 +160,9 @@ function TranslatedRefresh() {
 function TranslatedCopyError() {
   const { t } = useTranslation();
   return <>{t("error.copy_error")}</>;
+}
+
+function TranslatedCopyFailed() {
+  const { t } = useTranslation();
+  return <>{t("error.copy_error_failed")}</>;
 }

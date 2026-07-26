@@ -58,6 +58,7 @@
   },
   "error": {
     "copy_error": "Copy error info",
+    "copy_error_failed": "Copy failed. Select the text below to copy it manually.",
     "go_home": "Go to home",
     "network": "Check your network connection.",
     "not_found": "This page isn't here.",
