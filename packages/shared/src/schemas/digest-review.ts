@@ -12,7 +12,7 @@ import {
   ReferenceTypeSchema,
 } from "./reference";
 import { TagDraftSchema } from "./tag";
-import { TOPIC_NAME_MAX_LENGTH } from "./topic";
+import { TOPIC_TITLE_MAX_LENGTH } from "./topic";
 
 // 멀티 라벨 보수적 상한 — 평소 1개, 명확히 다주제일 때만 여러 개. 군집화 방지.
 export const DIGEST_TOPICS_MAX = 5;
@@ -55,7 +55,7 @@ export type ReferenceMergeUpdate = z.infer<typeof ReferenceMergeUpdateSchema>;
 // 이름으로 다시 find-or-create되어 무시된다(digest-review-service.ts updateReview 참고).
 export const DigestTopicDraftSchema = z.object({
   id: z.string().uuid().nullable(),
-  title: z.string().trim().min(1).max(TOPIC_NAME_MAX_LENGTH),
+  title: z.string().trim().min(1).max(TOPIC_TITLE_MAX_LENGTH),
 });
 export type DigestTopicDraft = z.infer<typeof DigestTopicDraftSchema>;
 

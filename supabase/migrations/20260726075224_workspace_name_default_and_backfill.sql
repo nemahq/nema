@@ -9,7 +9,8 @@
 -- 문구 조합("~의 워크스페이스") 없이, 지금 폴백이 보여주던 값과 동일하게
 -- 계정 표시 이름을 생성 시점에 그대로 저장한다(저장 시점만 앞당김).
 -- 표시 이름 우선순위는 apps/server/src/services/workspace-service.ts의
--- toBootstrapUser()(given_name → full_name → email)와 동일하게 SQL로 재구현한다.
+-- toBootstrapUser()와 동일하게 SQL로 재구현한다(given_name → full_name →
+-- email → 그래도 없으면 user id, 총 4단계 — TS 쪽도 마지막엔 id로 대체한다).
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION handle_new_user()
@@ -22,9 +23,9 @@ DECLARE
   v_display_name text;
 BEGIN
   v_display_name := COALESCE(
-    NULLIF(NEW.raw_user_meta_data->>'given_name', ''),
-    NULLIF(NEW.raw_user_meta_data->>'full_name', ''),
-    NULLIF(NEW.email, ''),
+    NULLIF(btrim(NEW.raw_user_meta_data->>'given_name'), ''),
+    NULLIF(btrim(NEW.raw_user_meta_data->>'full_name'), ''),
+    NULLIF(btrim(NEW.email), ''),
     NEW.id::text
   );
 
@@ -46,21 +47,35 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 기존 NULL row 백필 — 각 워크스페이스에서 가장 먼저 합류한(=최고참) 멤버의
 -- 표시 이름으로 채운다. 새 가입은 위 트리거가 처리하므로 지금 NULL인 row만 대상.
+--
+-- 멤버가 0명인 워크스페이스(정상 케이스 아님)는 서브쿼리가 NULL을 반환해
+-- 아래 SET NOT NULL을 실패시킬 수 있다 — enforce_workspace_owner_exists가
+-- "계정 삭제(auth.users 행 소멸)의 캐스케이드"를 명시적으로 통과시켜서
+-- (20260706102555:124-129) 앱의 deleteAccount를 거치지 않고 계정만 지우면
+-- (관리자 삭제, e2e 유저 정리 등) 소유권 이전 없이 멤버가 전부 사라질 수
+-- 있다. 그런 워크스페이스는 실제로 콘텐츠·소유자가 없는 고아 상태라 이름을
+-- 못 구해도 이상하지 않으므로, 배포를 막는 대신 플레이스홀더로 채운다.
 UPDATE workspaces w
-SET name = (
-  SELECT COALESCE(
-    NULLIF(u.raw_user_meta_data->>'given_name', ''),
-    NULLIF(u.raw_user_meta_data->>'full_name', ''),
-    NULLIF(u.email, ''),
-    u.id::text
-  )
-  FROM workspace_members wm
-  JOIN auth.users u ON u.id = wm.user_id
-  WHERE wm.workspace_id = w.id
-  ORDER BY wm.created_at ASC
-  LIMIT 1
+SET name = COALESCE(
+  (
+    SELECT COALESCE(
+      NULLIF(btrim(u.raw_user_meta_data->>'given_name'), ''),
+      NULLIF(btrim(u.raw_user_meta_data->>'full_name'), ''),
+      NULLIF(btrim(u.email), ''),
+      u.id::text
+    )
+    FROM workspace_members wm
+    JOIN auth.users u ON u.id = wm.user_id
+    WHERE wm.workspace_id = w.id
+    ORDER BY wm.created_at ASC
+    LIMIT 1
+  ),
+  'Workspace'
 )
 WHERE w.name IS NULL;
 
--- 생성 시점에 항상 채워지므로 이제부터는 필수 필드다.
+-- 생성 시점에 항상 채워지므로 이제부터는 필수 필드다. spaces_name_not_blank와
+-- 같은 이유로 공백뿐인 이름도 막는다(위 백필·트리거는 항상 비어있지 않은 값을
+-- 만들지만, 앞으로 이 컬럼을 직접 건드릴 다른 경로가 생겨도 방어선이 있게).
 ALTER TABLE workspaces ALTER COLUMN name SET NOT NULL;
+ALTER TABLE workspaces ADD CONSTRAINT workspaces_name_not_blank CHECK (btrim(name) <> '');

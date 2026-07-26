@@ -12,7 +12,7 @@ import {
   REFERENCE_EXTERNAL_URLS_MAX,
   TAG_DESCRIPTION_MAX_LENGTH,
   TAG_TITLE_MAX_LENGTH,
-  TOPIC_NAME_MAX_LENGTH,
+  TOPIC_TITLE_MAX_LENGTH,
 } from "@nema-io/shared";
 
 import type { Json } from "@server/infra/database.types";
@@ -485,7 +485,7 @@ export function normalizeGeneratedDigests(
       body: buildDigestBody(digest),
       topics: sanitizeLabels({
         labels: digest.topics,
-        maxLength: TOPIC_NAME_MAX_LENGTH,
+        maxLength: TOPIC_TITLE_MAX_LENGTH,
         maxCount: DIGEST_TOPICS_MAX,
       }),
       tags,

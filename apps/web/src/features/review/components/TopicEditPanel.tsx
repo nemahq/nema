@@ -3,7 +3,7 @@ import { useState } from "react";
 import {
   DIGEST_TOPICS_MAX,
   type DigestTopicDraft,
-  TOPIC_NAME_MAX_LENGTH,
+  TOPIC_TITLE_MAX_LENGTH,
 } from "@nema-io/shared";
 import { Chip, Separator } from "@nema-io/weave";
 
@@ -49,7 +49,7 @@ export function TopicEditPanel({
         query={query}
         disabled={disabled}
         searchable={!atMax}
-        maxLength={TOPIC_NAME_MAX_LENGTH}
+        maxLength={TOPIC_TITLE_MAX_LENGTH}
         ariaLabel={t("review.label_search_placeholder")}
         onQueryChange={setQuery}
       >

@@ -14,6 +14,7 @@
 | `status` | `enum: pending / active / trashed` | 존재 상태. `pending`·`active`·`trashed`의 정의와 전이 규칙은 아래 동작 규칙 "Source.status는 한 방향으로만 전이한다" 참고 |
 | `trashedAt?` | `Date` | `trashed`가 된 시각. 완전 삭제 배치가 보관 기간 경과 여부를 판단하는 기준 |
 | `authorId?` | `uuid` | 누가 넣었나(사용자 id). User 삭제 시 `ON DELETE SET NULL`이라 nullable |
+| `authorName?` | `string` | `authorId`가 채워질 때 생성 시점의 표시 이름을 함께 스냅샷한다. `authorId`가 계정 삭제로 NULL이 돼도 이 값은 남아 "누가 만들었는지" 표시가 유지된다(아래 동작 규칙 "authorId는 사람 삭제와 무관하게 콘텐츠를 보존한다" 참고). 계정이 살아있어도 이후 이름을 바꾸면 과거 값엔 반영되지 않는 생성 시점 고정값이다 |
 
 ## Digest
 
@@ -34,6 +35,7 @@ Source를 사람이 읽기 좋게 정리한 것. 여기서 Statement가 추출�
 | `externalUrls?` | `string[]` | 정리 과정에서 원문에서 뽑아낸 외부 링크들(Slack 메시지, Notion 페이지 등) |
 | `mcpVisible` | `boolean` | 기본값 true. MCP로 연결된 외부 AI 클라이언트의 조회 결과에 이 Digest(와 파생된 진술·관계)를 포함할지 정한다. false면 존재 힌트 없이 완전히 제외된다. Nema 웹앱 자체의 열람·검색에는 영향을 주지 않는다(외부 접근 경로만 통제하는 값이다) |
 | `authorId?` | `uuid` | 작성자(User). User 삭제 시 `ON DELETE SET NULL`이라 nullable |
+| `authorName?` | `string` | 생성 시점 표시 이름 스냅샷. `Source.authorName`과 같은 성격(위 참고) — Digest는 확정 시점에 다시 계산하지 않고 자신이 나온 Source의 스냅샷을 그대로 승계한다 |
 | `createdAt` | `Date` | 만들어진 때 |
 | `status` | `enum: active / archived` | 존재 상태 |
 
@@ -160,6 +162,7 @@ Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력
 | `invalidatedById?` | `uuid` | 이 changeset을 무효화한 다른 changeset. 사람이 "중복 아님"이라고 판단해 거절한 것과 구분하기 위한 값이다. 시나리오는 아래 동작 규칙 "한 Digest가 여러 곳과 동시에 중복될 수 있다" 참고 |
 | `createdAt` | `Date` | 만들어진 때 |
 | `authorId?` | `uuid` | 사람이 일으킨 변경의 주체(엔진이면 없음) |
+| `authorName?` | `string` | 생성 시점 표시 이름 스냅샷. `authorId`가 있을 때만 있고, 엔진 산물(`ingestion`·`relation`)은 `authorId`처럼 항상 없다 |
 
 ### Change
 
@@ -274,7 +277,7 @@ Nema 쪽에서 붙이는 유일한 확장은 `profiles`(`user_id` → `auth.user
 - **Digest·Reference 직접 편집은 변경셋 목록에 안 뜬다.** `manual`은 모델(테이블·되돌리기 메커니즘)엔 `ingestion`·`relation`·`revert`와 똑같이 있지만, **화면만 다르다**. `ingestion`·`relation`·`revert` 셋은 전부 "엔진이 감지·제안했거나 사람이 이미 확정된 걸 되돌리는" **판정 대상**이라 `open`(대기)이라는 상태가 실제로 의미 있어 변경셋 목록에 뜨는 게 맞다. 반면 `manual`은 애초에 `open` 단계 자체가 없다. 만드는 사람과 확정하는 사람이 항상 같고, 만들어지는 순간 이미 끝나 있다(`Changeset.outcome` 참고). 그래서 변경셋 목록(변경셋 탭)은 `manual`을 걸러낸다. 대신 **Digest·Reference 자신의 상세 화면이 자신을 대상으로 한 `manual` changeset들을 조회해서 "버전 이력"으로 보여준다**(GitHub 위키 문서를 그 자리에서 편집·이력 보기 하는 것과 같은 결). "이 콘텐츠가 어떻게 여기까지 왔는지"를 알고 싶으면 변경셋 목록을 뒤지는 대신 그 콘텐츠 자체를 보면 된다. 아카이브 직후의 "다시 활성화"(surface-inventory.md 참고)도 새로운 메커니즘이 아니다. **그 자리에서 바로 그 `manual` changeset을 되돌리는(revert) 것**이다. 다른 모든 타입과 같은 되돌리기 메커니즘을 재사용하되, 진입 위치만 Changeset 상세가 아니라 그 콘텐츠의 상세 화면이다.
 - **Topic·Tag와 Digest의 일부 필드, `referenceIds`는 changeset 없이 CRUD된다.** Topic·Tag는 `Change.targetType`에 없다. 판단·사실 콘텐츠가 아니라 찾기용 라벨이라 잘못 바뀌어도 판단을 오염시키지 않으므로, Changeset 리뷰·불변성 없이 가볍게 직접 CRUD한다(soft delete만 유지). 같은 이유로 `Digest`의 `topicIds`·`tagIds`·`relatedDigestIds`·`externalUrls` 필드도 changeset 없이 Digest 상세에서 직접 추가·삭제한다. Digest 본체(제목·본문·타입)는 확정 후 `create`·`archive`만 가능해도, 이 필드들은 Statement가 근거로 삼는 판단 내용이 아니라 찾기·참고용 메타라 예외로 둔다. `relatedDigestIds`는 특히 이 화면(Digest 상세)에서 사람이 직접 심는 게 아니다. 확정된 Digest의 2단계(Statement·Relation 생성)가 끝나면, 그 결과로 드러난 연결을 엔진이 자동으로 채워 넣는다. Thread(Topic 파생)와 달리 필드로 저장은 되지만, 사람이 판정하는 게 아니라 저장된 뒤에도 자유롭게 더하거나 뺄 수 있는 가벼운 참고 링크라 자동 채움이 원칙에 어긋나지 않는다. `referenceIds`는 이 예외에 없다. 본문 안 `@` 멘션이 유일한 인용 경로라서다(본문에 없는 걸 레퍼런스로 걸 수 없다. "지어내지 않는다"의 연장이다). 본문 문자열 자체가 바뀌는 것과 같은 조작이라, 본문 편집(archive+create)에 딸려서만 바뀐다. 별도의 레퍼런스 CRUD 화면·섹션은 없다. 본문 멘션 클릭이 곧 그 Reference로 이동하는 유일한 진입점이다.
 - **Owner 0명 금지, 계정 삭제 시 소유권 이전 강제.** Space·Workspace는 항상 `owner` role인 Member가 최소 1명 있어야 한다(Slack·Notion 공통 원칙). User가 계정을 삭제하려는데 자신이 owner이고 다른 멤버가 있으면, 먼저 소유권을 다른 멤버에게 넘겨야 삭제가 진행된다(자동 승계 없음). 정말로 유일한 멤버라면 그 Space·Workspace 전체가 완전 삭제 캐스케이드를 탄다. 다른 멤버가 있는 곳에서 그냥 나가는(비-owner) 경우는 그 Member 행만 제거한다.
-- **authorId는 사람 삭제와 무관하게 콘텐츠를 보존한다.** `Source`·`Digest`·`Changeset`의 `authorId`는 소유가 아니라 귀속(누가 만들었나) 정보일 뿐이다. User가 삭제돼도 `ON DELETE SET NULL`로 콘텐츠는 남고 귀속만 사라진다(공유 Space에서 다른 사람이 그 위에 쌓은 관계·판단을 보존하기 위함). `profiles`는 `ON DELETE CASCADE`다(이미 구현됨).
+- **authorId는 사람 삭제와 무관하게 콘텐츠를 보존한다.** `Source`·`Digest`·`Changeset`의 `authorId`는 소유가 아니라 귀속(누가 만들었나) 정보일 뿐이다. User가 삭제돼도 `ON DELETE SET NULL`로 콘텐츠는 남고 귀속만 사라진다(공유 Space에서 다른 사람이 그 위에 쌓은 관계·판단을 보존하기 위함). `profiles`는 `ON DELETE CASCADE`다(이미 구현됨). `authorId`만 끊기면 "누가 만들었는지" 표시할 값 자체가 사라지므로, `authorId`를 채우는 시점에 그때의 표시 이름을 `authorName`에 함께 스냅샷해둔다 — `authorId`가 나중에 NULL로 끊겨도 `authorName`은 남아 화면에 계속 보여줄 수 있다. 계정이 살아있는 동안 이름을 바꿔도 과거 스냅샷엔 반영되지 않는다(라이브 조회가 아니라 생성 시점 고정값). `authorId`가 NULL이면(엔진 산물, 또는 계정 삭제로 끊긴 경우) `authorName`도 항상 짝을 맞춰 없거나 남는다 — `authorId`가 있는데 `authorName`만 없는 상태는 무효(DB CHECK로 강제).
 - **ingestion 되돌리기는 파생 효과를 되돌린다(Reference 제외).** 확정 원문을 다시 `pending`으로 되돌리는 건 그 원문이 만든 ingestion Changeset을 되돌리는 것과 같다("원문 빼기"라는 말은 안 쓴다. `archive_source`가 이미 그 이름을 쓰고 있어 혼동된다 — 원문만 가리고 진술·관계는 안 건드리는 훨씬 좁은 동작이다. `mcp-tools-design.md`·`intervention-design.md` 참고). 그 Changeset이 만든 Digest·진술·관계는 함께 되돌아간다(archived, 끝점 archived의 관계 연쇄 포함). **Reference는 예외다.** Workspace 전체가 재사용하는 공유 자원이라, 이 changeset이 "만들었다"는 이유만으로 archive하면 다른 Digest가 그 뒤로도 계속 인용 중인 Reference를 감출 위험이 있다. 그래서 create→archive 방향은 건너뛴다(완전 삭제 purge가 Reference를 cascade 대상에서 뺀 것과 같은 판단, #366). 반대로 그 changeset이 Reference를 archive했던 경우(예: 사람이 직접 정리)는 archive→restore로 되살아난다. 공유 여부와 무관하게 안전한 방향이라서다. 재개하면 그 옛 산출물을 되살리는 게 아니라 처음부터 새로 인제스천한다. 단순 soft-archive가 아니라 파생 효과를 되돌리는 동작이다.
 - **끝점이 archived되면 관계도 연쇄로 archived된다.** 끝점 진술이 `archived`되면 걸린 관계도 함께 `archived`된다(연쇄 soft-archive). 끝점을 되살리면 관계도 돌아온다.
 - **`mcpVisible`은 Digest에만 저장되고, 진술·관계는 조회 시점에 동적으로 상속한다.** Statement는 복사 저장 없이 매 조회 시 부모 Digest의 `mcpVisible`을 join해서 확인한다(값이 나중에 바뀌어도 즉시 반영되게 하기 위함). Relation은 양쪽 끝 Statement 중 하나라도 `mcpVisible=false`면 관계 자체도 `mcpVisible=false`로 취급한다. 두 진술이 각각 무해해도 그 둘을 잇는 선이 민감할 수 있다는 원칙이다. `10-concept-collaboration.md`가 접근(공유) 축에 이미 두고 있는 "관계는 끝점에 종속" 원칙을 그대로 재사용한다. **Reference는 이 상속 대상이 아니다.** Workspace 전체가 공유하는 사전이라, 그걸 언급한 Digest 하나가 `mcpVisible=false`라고 해서 그 개체 자체(이름·설명)까지 가릴 이유가 없다(가려야 하는 건 그 개체에 대해 뭐라고 썼는지이지, 그 개체가 존재한다는 사실이 아니다). 이 필터는 Statement를 실제로 반환하는 단일 조회 경로(choke point)에서 강제돼야 한다. 검색·관계 순회·Reference 경유·Space를 가로지르는 질의 등 모든 MCP 조회 경로가 이 경로 하나를 거치게 만들어, 경로별로 각각 필터를 구현할 필요가 없게 한다.

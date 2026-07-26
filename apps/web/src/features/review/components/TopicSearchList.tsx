@@ -1,6 +1,6 @@
 import { Suspense, useState } from "react";
 
-import { type DigestTopicDraft, TOPIC_NAME_MAX_LENGTH } from "@nema-io/shared";
+import { type DigestTopicDraft, TOPIC_TITLE_MAX_LENGTH } from "@nema-io/shared";
 
 import { useEditing } from "@web/features/review/components/EditingProvider";
 import { useTopicListSuspenseQuery } from "@web/features/review/hooks/useTopicListQuery";
@@ -103,7 +103,7 @@ function TopicSearchListContent({
             <LabelTextInput
               autoFocus
               value={editingName}
-              maxLength={TOPIC_NAME_MAX_LENGTH}
+              maxLength={TOPIC_TITLE_MAX_LENGTH}
               ariaLabel={t("review.topic_name_label")}
               onChange={setEditingName}
               onSubmit={() => applyAndClose(topic)}

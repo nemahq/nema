@@ -1,5 +1,5 @@
 -- =============================================================
--- author_name 스냅샷 — GitHub ghost 패턴
+-- author_name 스냅샷 — 계정 삭제 후에도 귀속 표시를 보존
 --
 -- 지금까지 sources·digests·changesets의 author_id는 계정 삭제 시
 -- ON DELETE SET NULL로 콘텐츠는 남기고 귀속만 끊었다(07-modeling.md
@@ -7,33 +7,43 @@
 -- 남겨두지 않아, author_id가 NULL이 되는 순간 "누가 만들었는지"를 나타낼 값
 -- 자체가 통째로 사라진다는 점이다.
 --
--- GitHub이 삭제된 계정을 "ghost"로 표시하듯, 생성 시점의 표시 이름을
--- author_name에 스냅샷으로 저장해둔다. author_id는 계정 삭제 시 그대로
--- NULL로 끊기지만(라이브 프로필 연결은 끊어져도 됨), author_name은 그
--- 순간의 이름을 그대로 들고 있어 화면에 계속 보여줄 수 있다.
+-- "GitHub ghost 패턴"이라 불렀지만 동작은 GitHub과 다르다. GitHub은 계정이
+-- 살아있는 동안은 항상 최신 이름을 보여주고 삭제된 계정만 ghost로 대체하는데,
+-- 여기서는 생성 시점 이름을 스냅샷으로 얼려서 계정이 살아있어도 이후 이름을
+-- 바꾸면 과거 항목엔 반영되지 않는다. profiles에 표시 이름 컬럼이 없고
+-- auth.users를 클라이언트가 직접 못 읽어 라이브 조회가 불가능한 지금 구조의
+-- 불가피한 절충이다(라이브 조회가 가능해지면 재검토 대상).
 --
 -- 표시 이름 우선순위(given_name → full_name → email → user id)는
 -- apps/server/src/services/workspace-service.ts의 toBootstrapUser()와
--- 동일하며, resolve_user_display_name() 헬퍼로 SQL에서 재사용한다
--- (20260726075224_workspace_name_default_and_backfill.sql이 handle_new_user()에
--- 도입한 것과 같은 로직).
+-- 동일하며, resolve_user_display_name() 헬퍼로 SQL에서 재사용한다. 이 헬퍼가
+-- 정의된 뒤 handle_new_user()도 이걸 쓰도록 재정의해(맨 아래) 우선순위
+-- 로직을 SQL 쪽에서 한 곳(이 헬퍼)에만 두고, TS 쪽 toBootstrapUser와
+-- 합쳐 총 두 곳으로 좁힌다(20260726075224가 도입한 handle_new_user 인라인
+-- COALESCE는 이 파일에서 대체된다).
 --
--- 주의: 이 마이그레이션 이전에 이미 author_id가 NULL로 끊긴 row는 스냅샷이
--- 없다 — 그 시점 이름은 이미 복구 불가능하게 유실됐다. 이 마이그레이션
--- 이후 새로 생성되는 row부터 스냅샷이 채워진다.
+-- 기존 row 백필: author_id가 이미 NULL로 끊긴 row는 그 시점 이름이 이미
+-- 복구 불가능하게 유실됐다(스냅샷할 값 자체가 없음). 반면 author_id가 아직
+-- 살아있는 기존 row는 지금 이 헬퍼로 채울 수 있어 아래에서 백필한다 — 이걸
+-- 안 하면 이미 제출됐지만 아직 확정 전인 Source가 배포 후 리뷰 확정될 때
+-- confirm_ingestion_review가 NULL author_name을 그대로 승계해버린다.
 -- =============================================================
 
 ALTER TABLE sources    ADD COLUMN author_name text;
 ALTER TABLE digests    ADD COLUMN author_name text;
 ALTER TABLE changesets ADD COLUMN author_name text;
 
--- ----- 표시 이름 우선순위 헬퍼 — 내부 전용, RPC로 직접 노출하지 않는다 -----
+-- ----- 표시 이름 우선순위 헬퍼 — 내부 전용, RPC로 직접 노출하지 않는다.
+-- TS 쪽 toBootstrapUser()는 이름 후보 3개가 전부 없을 때 Sentry로 신호를
+-- 남기는데(raw UUID가 조용히 새 나가지 않게), SQL 함수는 Sentry를 호출할 수
+-- 없어 그 신호가 없다 — id 폴백이 실제로 얼마나 발생하는지는 여기선 안 보인다.
+-- 지금은 감수한다(로그인 방식상 실제로는 거의 안 걸리는 경로). -----
 CREATE FUNCTION resolve_user_display_name(p_user_id uuid)
 RETURNS text AS $$
   SELECT COALESCE(
-    NULLIF(u.raw_user_meta_data->>'given_name', ''),
-    NULLIF(u.raw_user_meta_data->>'full_name', ''),
-    NULLIF(u.email, ''),
+    NULLIF(btrim(u.raw_user_meta_data->>'given_name'), ''),
+    NULLIF(btrim(u.raw_user_meta_data->>'full_name'), ''),
+    NULLIF(btrim(u.email), ''),
     u.id::text
   )
   FROM auth.users u
@@ -41,6 +51,18 @@ RETURNS text AS $$
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
 
 REVOKE ALL ON FUNCTION resolve_user_display_name(uuid) FROM public, anon, authenticated, service_role;
+
+-- ----- 기존 row 백필 — author_id가 살아있는 행만 대상(위 주석 참고) -----
+UPDATE sources    SET author_name = resolve_user_display_name(author_id) WHERE author_id IS NOT NULL AND author_name IS NULL;
+UPDATE digests    SET author_name = resolve_user_display_name(author_id) WHERE author_id IS NOT NULL AND author_name IS NULL;
+UPDATE changesets SET author_name = resolve_user_display_name(author_id) WHERE author_id IS NOT NULL AND author_name IS NULL;
+
+-- ----- 짝 불변식 — author_id가 있으면 author_name도 반드시 있어야 한다.
+-- 위 백필 이후에 걸어야 기존 row에서 즉시 실패하지 않는다. 앞으로 추가되는
+-- write path가 author_id만 채우고 author_name을 빠뜨리면 여기서 바로 막힌다. -----
+ALTER TABLE sources    ADD CONSTRAINT chk_sources_author_name_with_id    CHECK (author_id IS NULL OR author_name IS NOT NULL);
+ALTER TABLE digests    ADD CONSTRAINT chk_digests_author_name_with_id    CHECK (author_id IS NULL OR author_name IS NOT NULL);
+ALTER TABLE changesets ADD CONSTRAINT chk_changesets_author_name_with_id CHECK (author_id IS NULL OR author_name IS NOT NULL);
 
 -- =============================================================
 -- create_source — 원문 제출자 이름 스냅샷
@@ -175,7 +197,7 @@ BEGIN
       v_author_id, v_author_name
     );
 
-    -- 주제 레지스트리 find-or-create + 연결 (confirm_draft의 관용구 계승)
+    -- 주제 레지스트리 find-or-create + 연결 (find-or-create 관용구)
     FOR v_name IN
       SELECT value #>> '{}' FROM jsonb_array_elements(coalesce(ch.data->'topics', '[]'::jsonb))
     LOOP
@@ -598,6 +620,43 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 
 -- =============================================================
+-- archive_statement — 진술 단독 아카이브("가리기")를 누른 사람이 changeset의
+-- author. archive_digest·update_reference 등과 같은 manual changeset 패턴인데
+-- 최초 도입(20260615115646) 이후 한 번도 재정의된 적이 없어 이번 라운드
+-- author_name 반영에서 누락될 뻔했다 — 이 함수도 함께 갱신한다.
+-- =============================================================
+
+CREATE OR REPLACE FUNCTION archive_statement(p_statement_id uuid)
+RETURNS void AS $$
+DECLARE
+  v_space_id     uuid;
+  v_author_id    uuid;
+  v_changeset_id uuid;
+BEGIN
+  UPDATE statements
+  SET status = 'archived', ingestion_status = 'pending'
+  WHERE id = p_statement_id AND status = 'active'
+    AND (auth.uid() IS NULL OR is_space_member(space_id))
+  RETURNING space_id INTO v_space_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'statement % is not an active statement the caller can archive', p_statement_id;
+  END IF;
+
+  v_author_id := auth.uid();
+
+  INSERT INTO changesets (space_id, type, status, author_id, author_name)
+  VALUES (v_space_id, 'manual', 'applied', v_author_id, resolve_user_display_name(v_author_id))
+  RETURNING id INTO v_changeset_id;
+
+  INSERT INTO changes (changeset_id, action, target_type, target_id)
+  VALUES (v_changeset_id, 'archive', 'statement', p_statement_id);
+
+  PERFORM pgmq.send('statement_sync', jsonb_build_object('type', 'notify'));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
+
+-- =============================================================
 -- archive_digest — 아카이브를 누른 사람이 changeset의 author
 -- =============================================================
 
@@ -958,3 +1017,44 @@ $$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
 
 REVOKE ALL ON FUNCTION list_manual_changes_for_target(change_target_type, uuid) FROM public, anon;
 GRANT EXECUTE ON FUNCTION list_manual_changes_for_target(change_target_type, uuid) TO authenticated, service_role;
+
+-- =============================================================
+-- handle_new_user — 이제 막 정의한 resolve_user_display_name()을 쓰도록 재정의.
+-- 20260726075224가 넣은 인라인 COALESCE와 완전히 같은 값을 계산하지만(같은
+-- 우선순위, NEW.id 시점에 이미 auth.users에 그 행이 있는 AFTER INSERT 트리거라
+-- 헬퍼로 다시 조회해도 동일 결과), 로직을 한 곳(이 헬퍼)에만 두기 위해서다.
+-- 트리거 등록(on_auth_user_created)은 20260611091632에서 이미 마쳤고 여기서
+-- 다시 CREATE TRIGGER하지 않는다 — 함수 본문만 교체.
+--
+-- 이 함수는 과거 CREATE OR REPLACE 복붙 과정에서 public_id 생성 로직을 통째로
+-- 잃어버려 전체 가입을 막은 회귀(20260715110000 → 20260715120000)를 낸 전례가
+-- 있다. 아래는 20260726075224의 최신 본문을 그대로 가져와 v_display_name
+-- 계산부만 바꾼 것 — 그 외 어떤 줄도 건드리지 않았다.
+-- =============================================================
+
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS trigger AS $$
+DECLARE
+  v_workspace_id uuid;
+  v_space_id     uuid;
+  v_public_id    text;
+  v_attempt      int;
+  v_display_name text;
+BEGIN
+  v_display_name := resolve_user_display_name(NEW.id);
+
+  INSERT INTO workspaces (name) VALUES (v_display_name) RETURNING id INTO v_workspace_id;
+  INSERT INTO workspace_members (workspace_id, user_id, role) VALUES (v_workspace_id, NEW.id, 'owner');
+
+  FOR v_attempt IN 1..5 LOOP
+    v_public_id := generate_space_public_id();
+    EXIT WHEN NOT EXISTS (SELECT 1 FROM spaces WHERE public_id = v_public_id);
+  END LOOP;
+
+  INSERT INTO spaces (name, workspace_id, public_id)
+  VALUES ('My space', v_workspace_id, v_public_id)
+  RETURNING id INTO v_space_id;
+  INSERT INTO space_members (space_id, user_id, role) VALUES (v_space_id, NEW.id, 'owner');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

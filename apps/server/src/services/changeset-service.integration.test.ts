@@ -52,9 +52,13 @@ afterEach(async () => {
   }
 });
 
-async function createFixtureUser(): Promise<string> {
+// displayName을 주면 resolve_user_display_name()이 그 값을 그대로 골라내도록
+// raw_user_meta_data.given_name에 심는다(author_name 스냅샷 테스트용) — 안 주면
+// given_name/full_name/email 전부 없어 헬퍼가 user id로 폴백한다.
+async function createFixtureUser(displayName?: string): Promise<string> {
   const { rows } = await client.query<{ id: string }>(
-    "INSERT INTO auth.users (id) VALUES (gen_random_uuid()) RETURNING id",
+    "INSERT INTO auth.users (id, raw_user_meta_data) VALUES (gen_random_uuid(), $1::jsonb) RETURNING id",
+    [displayName ? JSON.stringify({ given_name: displayName }) : "{}"],
   );
   return rows[0].id;
 }
@@ -88,8 +92,14 @@ async function createFixtureSource(args: {
   title?: string | null;
 }): Promise<string> {
   const { rows } = await client.query<{ id: string }>(
-    "INSERT INTO sources (space_id, author_id, body, title, status, digestion_status) VALUES ($1, $2, $3, $4, 'pending', 'pending') RETURNING id",
-    [args.spaceId, args.authorId, "fixture body", args.title ?? null],
+    "INSERT INTO sources (space_id, author_id, author_name, body, title, status, digestion_status) VALUES ($1, $2, $3, $4, $5, 'pending', 'pending') RETURNING id",
+    [
+      args.spaceId,
+      args.authorId,
+      "픽스처 작성자",
+      "fixture body",
+      args.title ?? null,
+    ],
   );
   return rows[0].id;
 }
@@ -249,6 +259,103 @@ describe("create_ingestion_review RPC (integration)", () => {
     }>("SELECT title FROM changesets WHERE id = $1", [changesetId]);
 
     expect(changesetRows[0]?.title).toBe("미리 채워진 제목");
+  });
+});
+
+describe("author_name 스냅샷 (integration)", () => {
+  // createFixtureSource는 raw INSERT라 author_name 컬럼을 안 채운다 — 이 테스트는
+  // 일부러 그 픽스처를 안 쓰고 create_source RPC를 직접 거쳐 실제 스냅샷 계산까지
+  // 태운다. 그래야 confirm_ingestion_review의 승계 로직이 통째로 사라져도
+  // NULL=NULL로 조용히 통과하는 일이 없다.
+  it("confirm_ingestion_review는 Digest에 Source의 author_name 스냅샷을 그대로 승계한다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser("카일");
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, userId);
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      userId,
+    ]);
+
+    const { rows: sourceRows } = await client.query<{
+      create_source: string;
+    }>("SELECT create_source($1, $2)", [spaceId, "fixture body"]);
+    const sourceId = sourceRows[0].create_source;
+
+    const { rows: sourceAuthorRows } = await client.query<{
+      author_name: string | null;
+    }>("SELECT author_name FROM sources WHERE id = $1", [sourceId]);
+    expect(sourceAuthorRows[0]?.author_name).toBe("카일");
+
+    const digest = {
+      type: "decision",
+      title: "픽스처 다이제스트",
+      description: "설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+    };
+    const { rows: createRows } = await client.query<{
+      create_ingestion_review: string;
+    }>("SELECT create_ingestion_review($1, $2::jsonb)", [
+      sourceId,
+      JSON.stringify([digest]),
+    ]);
+    const changesetId = createRows[0].create_ingestion_review;
+
+    await client.query("SELECT confirm_ingestion_review($1)", [changesetId]);
+
+    const { rows: digestRows } = await client.query<{
+      author_id: string | null;
+      author_name: string | null;
+    }>("SELECT author_id, author_name FROM digests WHERE source_id = $1", [
+      sourceId,
+    ]);
+
+    expect(digestRows[0]?.author_id).toBe(userId);
+    expect(digestRows[0]?.author_name).toBe("카일");
+  });
+
+  it("archive_statement가 만드는 manual changeset은 author_id·author_name을 함께 채운다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser("우진");
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, userId);
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestId = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "픽스처 다이제스트",
+    });
+    const statementId = await createFixtureStatement(spaceId, digestId);
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      userId,
+    ]);
+
+    await client.query("SELECT archive_statement($1)", [statementId]);
+
+    const { rows: changesetRows } = await client.query<{
+      author_id: string | null;
+      author_name: string | null;
+    }>(
+      `SELECT c.author_id, c.author_name FROM changesets c
+       JOIN changes ch ON ch.changeset_id = c.id
+       WHERE ch.target_type = 'statement' AND ch.target_id = $1 AND ch.action = 'archive'`,
+      [statementId],
+    );
+
+    expect(changesetRows[0]?.author_id).toBe(userId);
+    expect(changesetRows[0]?.author_name).toBe("우진");
   });
 });
 

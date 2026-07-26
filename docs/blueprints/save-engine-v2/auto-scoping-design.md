@@ -32,7 +32,7 @@
 ### 데이터 모델 — 주제는 진술이 아니라 원문에 붙는다
 
 ```
-topics (space_id, name)         평평한 단일 라벨, 공간 단위. UNIQUE(space_id, name). 임베딩·설명 없음 — 이름이 전부.
+topics (space_id, title)        평평한 단일 라벨, 공간 단위. UNIQUE(space_id, title). 임베딩·설명 없음 — 이름이 전부.
    ↑ source_topics (멀티라벨, 무태그 허용)
 sources
    ↑ statement_sources

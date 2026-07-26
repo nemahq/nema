@@ -16,6 +16,10 @@ ALTER TABLE topics RENAME CONSTRAINT topics_space_id_name_key TO topics_space_id
 -- update_topic — 이름 수정 (title 컬럼 반영, 제약명만 갱신)
 -- =============================================================
 
+-- 시그니처(p_name)는 그대로 둔다 — 바꾸면 DROP FUNCTION부터 해야 기존 GRANT가
+-- 안 깨지는데(supabase/CLAUDE.md), 이 함수 자체는 CREATE OR REPLACE로 충분해
+-- 굳이 그 비용을 들일 이유가 없다. 컬럼만 title로 바뀌었을 뿐 인자명은 리네임
+-- 범위 밖(내부 구현 디테일).
 CREATE OR REPLACE FUNCTION update_topic(
   p_topic_id uuid,
   p_name     text
@@ -137,7 +141,7 @@ BEGIN
       v_author_id, v_author_name
     );
 
-    -- 주제 레지스트리 find-or-create + 연결 (confirm_draft의 관용구 계승)
+    -- 주제 레지스트리 find-or-create + 연결 (find-or-create 관용구)
     FOR v_name IN
       SELECT value #>> '{}' FROM jsonb_array_elements(coalesce(ch.data->'topics', '[]'::jsonb))
     LOOP
