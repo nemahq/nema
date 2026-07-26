@@ -59,7 +59,7 @@
   1. ingestion changeset이 open 상태로 자동 생성된다.
   2. 그 changeset은 변경셋 탭의 Open 목록과 Digest 리뷰 화면에서 확인할 수 있게 된다.
 - **관여 화면**: 변경셋, Digest 리뷰 화면
-- **확정 (2026-07-20, Kyle 실동작 확인)**: `digestSource`가 추출 완료 후 `create_ingestion_review` RPC를 호출해 changeset을 `status='pending'`(제품 용어 open)으로 생성한다(`apps/server/src/infra/statement-sync/digestion.ts`). 변경셋 탭(Open)과 Digest 리뷰 화면(`digestReview.get`) 모두 같은 `status='pending'` 가드로 조회하므로 Then #1·#2가 구조적으로 보장됨. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
+- **확정 (2026-07-20, Kyle 실동작 확인)**: `digestSource`가 추출 완료 후 `create_ingestion_review` RPC를 호출해 changeset을 `status='open'`으로 생성한다(`apps/server/src/infra/statement-sync/digestion.ts`). 변경셋 탭(Open)과 Digest 리뷰 화면(`digestReview.get`) 모두 같은 `status='open'` 가드로 조회하므로 Then #1·#2가 구조적으로 보장됨. 코드 레벨 확인 후 Kyle이 실사용으로 확인해 체크.
 
 #### 검토 대기 배지 실시간 갱신 (LNB·Space 오버뷰)
 
@@ -191,12 +191,12 @@
   3. Source는 초안(pending)으로 돌아간다.
   4. 리뷰 화면(open 전용)은 유효하지 않게 되므로, 처리 결과의 정본 위치인 변경사항 상세로 곧바로 이동한다.
 - **관여 화면**: Digest 리뷰 화면, Changeset 상세
-- **범위 참고 (2026-07-14, PR #412)**: 신설된 `discard_ingestion_review` RPC(가드: `type='ingestion' AND status='pending'`, changes 미생성)와 `useDiscardReview`로 Then #1~#3 구현.
+- **범위 참고 (2026-07-14, PR #412)**: 신설된 `discard_ingestion_review` RPC(가드: `type='ingestion' AND status='open'`, changes 미생성)와 `useDiscardReview`로 Then #1~#3 구현.
 - **갱신 (2026-07-18)**: Then #4를 확정과 같은 이유로 뒤집어 자동 이동으로 바꿨다(위 "Digest 리뷰 확정" 갱신·design-decisions-log.md 2026-07-18 항목 참고). `useDiscardReview`의 `onSuccess` 콜백에서 `goToClosedReview()` 호출로 구현.
 
 #### 적용된 리뷰 되돌리기
 
-- **Given**: 유저가 Changeset 상세에서 적용된 상태인 changeset을 보고 있다(Digest 리뷰 화면은 open 전용이라 여기 해당 없음 — `digestReview.get` RPC 가드가 `status='pending'`만 허용).
+- **Given**: 유저가 Changeset 상세에서 적용된 상태인 changeset을 보고 있다(Digest 리뷰 화면은 open 전용이라 여기 해당 없음 — `digestReview.get` RPC 가드가 `status='open'`만 허용).
 - **When**: 되돌리기 액션을 실행한다.
 - **Then**:
   1. 컨펌 다이얼로그 없이 즉시 실행된다.

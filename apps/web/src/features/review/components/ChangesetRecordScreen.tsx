@@ -55,6 +55,7 @@ function ChangesetRecordContent() {
         state={changesetDisplayState(
           changesetDetail.status,
           changesetDetail.outcome,
+          changesetDetail.number,
         )}
         time={changesetDetail.updatedAt}
         actions={

@@ -119,7 +119,7 @@ async function createFixtureStatement(
   return rows[0]?.id ?? "";
 }
 
-// apply_relation_changesets가 만드는 pending relation changeset을 직접 재현한다 —
+// apply_relation_changesets가 만드는 open relation changeset을 직접 재현한다 —
 // resolve_conflict_relation/resolve_duplicate_relation은 이 모양(changeset + change
 // row{type, from_id, to_id})만 전제로 하므로 엔진 배치 전체를 안 돌려도 된다.
 async function createFixtureOpenRelation(args: {
@@ -252,8 +252,122 @@ describe("create_ingestion_review RPC (integration)", () => {
   });
 });
 
+describe("discard_ingestion_review / restore_ingestion_review RPC — 상태 가드 (integration)", () => {
+  it("open → discard(closed+discarded) → restore(open+outcome null) 왕복", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+
+    const digest = {
+      type: "decision",
+      title: "픽스처 다이제스트",
+      description: "설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+    };
+
+    const { rows } = await client.query<{ create_ingestion_review: string }>(
+      "SELECT create_ingestion_review($1, $2::jsonb)",
+      [sourceId, JSON.stringify([digest])],
+    );
+    const changesetId = rows[0].create_ingestion_review;
+
+    await client.query("SELECT discard_ingestion_review($1)", [changesetId]);
+    const afterDiscard = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>("SELECT status, outcome FROM changesets WHERE id = $1", [changesetId]);
+    expect(afterDiscard.rows[0]).toEqual({
+      status: "closed",
+      outcome: "discarded",
+    });
+
+    await client.query("SELECT restore_ingestion_review($1)", [changesetId]);
+    const afterRestore = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>("SELECT status, outcome FROM changesets WHERE id = $1", [changesetId]);
+    expect(afterRestore.rows[0]).toEqual({ status: "open", outcome: null });
+  });
+
+  it("아직 open인 changeset은 restore할 수 없다(outcome이 discarded가 아님)", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+
+    const digest = {
+      type: "decision",
+      title: "픽스처 다이제스트",
+      description: "설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+    };
+
+    const { rows } = await client.query<{ create_ingestion_review: string }>(
+      "SELECT create_ingestion_review($1, $2::jsonb)",
+      [sourceId, JSON.stringify([digest])],
+    );
+    const changesetId = rows[0].create_ingestion_review;
+
+    await expect(
+      client.query("SELECT restore_ingestion_review($1)", [changesetId]),
+    ).rejects.toThrow(/not a discarded ingestion review/);
+  });
+
+  it("확정(closed+applied)된 changeset은 restore할 수 없다 — Digest 재생성 방지", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+
+    const digest = {
+      type: "decision",
+      title: "픽스처 다이제스트",
+      description: "설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+    };
+
+    const { rows } = await client.query<{ create_ingestion_review: string }>(
+      "SELECT create_ingestion_review($1, $2::jsonb)",
+      [sourceId, JSON.stringify([digest])],
+    );
+    const changesetId = rows[0].create_ingestion_review;
+
+    // 확정 = pending→applied 전이(review 확정과 동등한 최소 재현, 위 title 테스트와 같은 패턴).
+    await client.query(
+      "UPDATE changesets SET status = 'closed', outcome = 'applied' WHERE id = $1",
+      [changesetId],
+    );
+
+    await expect(
+      client.query("SELECT restore_ingestion_review($1)", [changesetId]),
+    ).rejects.toThrow(/not a discarded ingestion review/);
+  });
+});
+
 describe("sources.title 전파 트리거 (integration)", () => {
-  it("pending 상태인 ingestion changeset의 title은 Source 제목 변경을 따라간다", async () => {
+  it("open 상태인 ingestion changeset의 title은 Source 제목 변경을 따라간다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -298,7 +412,7 @@ describe("sources.title 전파 트리거 (integration)", () => {
     expect(after.rows[0]?.title).toBe("뒤늦게 채워진 제목");
   });
 
-  it("리뷰가 이미 닫힌(pending이 아닌) ingestion changeset의 title은 소급 갱신하지 않는다", async () => {
+  it("리뷰가 이미 닫힌(open이 아닌) ingestion changeset의 title은 소급 갱신하지 않는다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -348,7 +462,7 @@ describe("sources.title 전파 트리거 (integration)", () => {
   });
 });
 
-describe("apply_relation_changesets RPC — pending 제안 title (integration)", () => {
+describe("apply_relation_changesets RPC — open 제안 title (integration)", () => {
   it("끝점 두 Statement가 속한 Digest 제목을 'A vs B'로 합쳐 채운다", async () => {
     if (!localDbAvailable) {
       return;
@@ -397,7 +511,7 @@ describe("apply_relation_changesets RPC — pending 제안 title (integration)",
 });
 
 describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () => {
-  it("사람이 실제로 거절한(invalidated_by_id 없는) rejected 쌍은 재제안을 계속 막는다", async () => {
+  it("사람이 실제로 거절한(invalidated_by_id 없는) discarded 쌍은 재제안을 계속 막는다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -447,7 +561,7 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
     expect(rows[0]?.count).toBe("1"); // 거절된 첫 changeset 하나뿐 — 새로 안 생김.
   });
 
-  it("캐스케이드로 무효화된(invalidated_by_id 있는) rejected 쌍은 재제안을 막지 않는다", async () => {
+  it("캐스케이드로 무효화된(invalidated_by_id 있는) discarded 쌍은 재제안을 막지 않는다", async () => {
     if (!localDbAvailable) {
       return;
     }

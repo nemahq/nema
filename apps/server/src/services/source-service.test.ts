@@ -28,14 +28,23 @@ import {
   updateSourceTitle,
 } from "./source-service";
 
-// 테이블별 canned rows를 돌려주는 .from 체인 stub — select/eq/in/or 무시하고 then으로 resolve.
-// fetchMergedSourceIds는 statement_relations·statement_sources 두 테이블을 각각 조회한다.
-function mockSupabase(byTable: Record<string, unknown[]>): TypedSupabaseClient {
+// 테이블별 canned rows를 돌려주는 .from 체인 stub — select/eq/in/order/limit은 인자를
+// 무시하고 then으로 resolve. fetchMergedSourceIds는 statement_relations·statement_sources
+// 두 테이블을 각각 조회한다. orSpy는 listPendingSources의 changesets 조회가 쓰는
+// .or() 인자를 검증하고 싶을 때만 넘긴다(그 외 소비처는 무시해도 무해).
+function mockSupabase(
+  byTable: Record<string, unknown[]>,
+  orSpy?: (arg: string) => void,
+): TypedSupabaseClient {
   const from = (table: string) => {
     const stub: Record<string, unknown> = {};
-    for (const method of ["select", "eq", "in", "or", "order", "limit"]) {
+    for (const method of ["select", "eq", "in", "order", "limit"]) {
       stub[method] = () => stub;
     }
+    stub["or"] = (arg: string) => {
+      orSpy?.(arg);
+      return stub;
+    };
     stub["then"] = (resolve: (value: { data: unknown; error: null }) => void) =>
       resolve({ data: byTable[table] ?? [], error: null });
     return stub;
@@ -142,6 +151,22 @@ function pendingSourceRow(args: {
 }
 
 describe("listPendingSources", () => {
+  it("changesets 조회에 status=open 또는 outcome=discarded 조건을 건다", async () => {
+    const orCalls: string[] = [];
+
+    await listPendingSources({
+      supabase: mockSupabase(
+        {
+          sources: [pendingSourceRow({ id: SOURCE_A })],
+          changesets: [],
+        },
+        (arg) => orCalls.push(arg),
+      ),
+    });
+
+    expect(orCalls).toEqual(["status.eq.open,outcome.eq.discarded"]);
+  });
+
   it("discarded changeset만 있으면 digestionOutcome=discarded, review는 null", async () => {
     const { items } = await listPendingSources({
       supabase: mockSupabase({

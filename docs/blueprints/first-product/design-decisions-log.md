@@ -1169,3 +1169,5 @@ diff는 기본 접힘("변경 내용 보기" 토글, `DraftSection`과 같은 �
 **파생은 `constants.ts` 한 곳에서만**: `changesetDisplayState(status, outcome)` → `"open" | "applied" | "discarded"`. 배지·아이콘·pill이 실제로 구분하는 건 여전히 셋뿐이라 컴포넌트 prop을 둘로 늘리지 않았다 — 늘리면 "closed인데 outcome이 뭐였더라"를 컴포넌트 수만큼 반복하게 된다. 반대로 `changesetDetailRegistry`는 파생값이 아니라 `status`를 그대로 인덱싱한다(open/closed가 곧 화면 갈림이라 중간 매핑 표가 통째로 사라졌다).
 
 `closed`인데 `outcome`이 없으면 던진다 — DB CHECK가 보장하는 조합이라 실제로 오면 데이터 정합성이 깨진 것이고, 한쪽으로 조용히 넘기면 화면에 틀린 배지가 뜬 채 묻힌다(`ImpossibleOpenChangeset`과 같은 처리).
+
+**같은 이유로 무효가 된 이전 항목 둘 더**: "discard/restore 뒤에는 `digestReview.get`을 invalidate하지 않는다"(RPC 가드 근거를 `status='pending'`으로 서술)와 "확정·버리기 후 자동 이동으로 전환"(전이를 `pending→closed`로 서술) — 둘 다 가드·전이의 실제 동작은 그대로고(`status='open'`만 open, 전이는 `open→closed`), 서술에 쓰인 옛 값 이름만 무효다.

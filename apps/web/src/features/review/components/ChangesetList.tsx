@@ -53,7 +53,11 @@ function ChangesetListContent({ subTab }: ChangesetListProps) {
           changesetNumber={entry.number}
           title={entry.title}
           type={entry.type}
-          state={changesetDisplayState(entry.status, entry.outcome)}
+          state={changesetDisplayState(
+            entry.status,
+            entry.outcome,
+            entry.number,
+          )}
           createdAt={entry.createdAt}
           effectDigest={entry.effect.digest}
           effectReference={entry.effect.reference}

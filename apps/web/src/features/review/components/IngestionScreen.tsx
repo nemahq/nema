@@ -33,7 +33,7 @@ const CONFIRM_DISABLED_REASON_KEY = {
   empty_reference: "review.confirm_disabled_empty_reference",
 } as const;
 
-// pending 상태인 ingestion changeset의 편집 화면 — 모든 상태가 URL을 공유하므로
+// open 상태인 ingestion changeset의 편집 화면 — 모든 상태가 URL을 공유하므로
 // (changesetDetailRegistry), 확정·버리기 성공 시 별도 이동 없이 getByNumber를
 // 무효화하기만 하면 같은 URL이 자연히 ChangesetRecordScreen으로 넘어간다.
 //

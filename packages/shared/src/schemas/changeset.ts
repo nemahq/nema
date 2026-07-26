@@ -81,7 +81,7 @@ export const ListChangesetsInputSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      "true: only pending (not yet reviewed). false: only applied or rejected. omit: all statuses.",
+      "true: only open (not yet reviewed). false: only closed (applied or discarded). omit: all statuses.",
     ),
   // changesets.number(Space 안 순차 증가값) 기준 커서.
   cursor: z.number().int().nullish(),

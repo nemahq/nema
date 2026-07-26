@@ -262,10 +262,11 @@ async function runPipeline(args: {
     extracted &&
     (statements?.length ?? 0) > 0 &&
     changeset?.type === "ingestion" &&
+    changeset.status === "closed" &&
     changeset.outcome === "applied" &&
     (sourceRefCount ?? 0) === (statements?.length ?? 0);
   console.log(
-    `② 추출: 진술 ${statements?.length ?? 0}개, changeset=${changeset?.type}/${changeset?.outcome}, statement_sources=${sourceRefCount}`,
+    `② 추출: 진술 ${statements?.length ?? 0}개, changeset=${changeset?.type}/${changeset?.status}/${changeset?.outcome}, statement_sources=${sourceRefCount}`,
   );
   for (const s of statements ?? []) {
     console.log(
@@ -386,11 +387,12 @@ async function runPipeline(args: {
     longExtracted &&
     expectedChunkCount >= 2 &&
     (longChangesets?.length ?? 0) === 1 &&
+    longChangesets?.[0]?.status === "closed" &&
     longChangesets?.[0]?.outcome === "applied" &&
     indices.length >= LONG_MIN_STATEMENTS &&
     indicesContiguous;
   console.log(
-    `⑤ 장문 분할: 추출=${longExtracted}, ${expectedChunkCount}청크→changeset ${longChangesets?.length}개(${longChangesets?.[0]?.outcome}), ` +
+    `⑤ 장문 분할: 추출=${longExtracted}, ${expectedChunkCount}청크→changeset ${longChangesets?.length}개(${longChangesets?.[0]?.status}/${longChangesets?.[0]?.outcome}), ` +
       `진술 ${indices.length}개, index 연속=${indicesContiguous}`,
   );
 }

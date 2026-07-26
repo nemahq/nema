@@ -82,8 +82,12 @@ CREATE INDEX idx_changesets_source_type_status
 --
 --   본문은 각 함수의 직전 정의를 그대로 옮기고 상태 처리만 바꿨다. 위에서
 --   changeset_status를 같은 이름의 새 타입으로 바꿔치웠으므로, v_status를
---   선언하는 함수는 재정의하지 않으면 옛 값과 비교하는 죽은 분기가 된다 —
---   그래서 "읽기만 하는" 가드까지 빠짐없이 여기 포함한다.
+--   선언하는 함수를 재정의하지 않으면 "죽은 분기"로 조용히 남는 게 아니라
+--   호출 시점에 깨진다 — plpgsql은 함수 본문을 첫 호출(세션당)에 재파싱하므로,
+--   `v_status <> 'pending'` 비교가 'pending'을 새 changeset_status로 캐스팅을
+--   시도해 `invalid input value for enum`으로 즉시 터진다. 그래서 "읽기만 하는"
+--   가드까지 빠짐없이 여기 포함한다(트리거 disable 관용구는 20260721110000
+--   revert_changeset_depth 참고 — 같은 오염을 이번 백필에도 그대로 적용).
 -- =============================================================
 -- ----- create_ingestion_review -----
 CREATE OR REPLACE FUNCTION create_ingestion_review(
@@ -368,7 +372,7 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'changeset % not found or not accessible', p_changeset_id;
   END IF;
-  IF v_type <> 'ingestion' OR v_status <> 'closed' OR v_outcome <> 'discarded' THEN
+  IF v_type <> 'ingestion' OR v_status <> 'closed' OR v_outcome IS DISTINCT FROM 'discarded' THEN
     RAISE EXCEPTION 'changeset % is not a discarded ingestion review the caller can restore', p_changeset_id
       USING ERRCODE = 'NM008';
   END IF;
@@ -929,7 +933,7 @@ BEGIN
   LIMIT 1;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'pending relation changeset % has no relation change', p_changeset_id;
+    RAISE EXCEPTION 'open relation changeset % has no relation change', p_changeset_id;
   END IF;
   IF v_rel_type <> 'conflicts' THEN
     RAISE EXCEPTION 'changeset % is not a conflicts proposal (use resolve_duplicate_relation)', p_changeset_id;
@@ -1054,7 +1058,7 @@ BEGIN
   LIMIT 1;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'pending relation changeset % has no relation change', p_changeset_id;
+    RAISE EXCEPTION 'open relation changeset % has no relation change', p_changeset_id;
   END IF;
   IF v_rel_type <> 'duplicates' THEN
     RAISE EXCEPTION 'changeset % is not a duplicates proposal (use resolve_conflict_relation)', p_changeset_id;
@@ -1290,7 +1294,7 @@ BEGIN
       WHERE c.space_id = v_space_id
         AND (
           c.status = 'open'
-          OR (c.outcome = 'discarded' AND c.invalidated_by_id IS NULL)
+          OR (c.status = 'closed' AND c.outcome = 'discarded' AND c.invalidated_by_id IS NULL)
         )
         AND ch.target_type = 'relation'
         AND ch.data->>'from_id' = v_item->>'from_id'

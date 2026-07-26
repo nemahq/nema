@@ -244,6 +244,9 @@ export type ChangesetDisplayState = "open" | "applied" | "discarded";
 export function changesetDisplayState(
   status: ChangesetStatus,
   outcome: ChangesetOutcome,
+  // Sentry 캡처에서 어떤 changeset이 정합성을 어겼는지 짚을 수 있게, 호출부가 쥔
+  // 식별자(number·id 등)를 그대로 실어 보낸다.
+  identifier?: string | number,
 ): ChangesetDisplayState {
   if (status === "open") {
     return "open";
@@ -251,7 +254,9 @@ export function changesetDisplayState(
   if (outcome === null) {
     // closed면 outcome이 반드시 있다(DB chk_changeset_outcome) — 없다는 건 데이터
     // 정합성이 깨졌다는 뜻이라 한쪽으로 조용히 넘기지 않고 던져서 Sentry까지 올린다.
-    throw new Error("closed changeset has no outcome");
+    throw new Error(
+      `changeset ${identifier ?? "(no identifier)"} is closed but has no outcome`,
+    );
   }
   return outcome;
 }

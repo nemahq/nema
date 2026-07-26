@@ -33,7 +33,11 @@ function HistoryPanelContent() {
           <ChangesetRow
             key={changeset.id}
             changesetType={changeset.type}
-            state={changesetDisplayState(changeset.status, changeset.outcome)}
+            state={changesetDisplayState(
+              changeset.status,
+              changeset.outcome,
+              changeset.id,
+            )}
             statementCount={changeset.effect.statement}
             relationCount={changeset.effect.relation}
             sourceCount={changeset.effect.source}
