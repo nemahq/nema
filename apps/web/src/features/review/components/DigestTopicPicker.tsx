@@ -80,7 +80,7 @@ export function DigestTopicPicker({
                   <Circle className="size-1 shrink-0 fill-current" />
                 )}
                 <Text as="span" size="xs" color="primary">
-                  {topic.name}
+                  {topic.title}
                 </Text>
               </span>
             ))}

@@ -1,6 +1,6 @@
 import { Suspense, useState } from "react";
 
-import { type DigestTopicDraft, TOPIC_NAME_MAX_LENGTH } from "@nema-io/shared";
+import { type DigestTopicDraft, TOPIC_TITLE_MAX_LENGTH } from "@nema-io/shared";
 
 import { useEditing } from "@web/features/review/components/EditingProvider";
 import { useTopicListSuspenseQuery } from "@web/features/review/hooks/useTopicListQuery";
@@ -17,7 +17,7 @@ import { LabelTextInput } from "./LabelTextInput";
 
 interface ReviewTopic {
   id: string;
-  name: string;
+  title: string;
 }
 
 interface TopicSearchListProps {
@@ -30,7 +30,7 @@ interface TopicSearchListProps {
   onCreateNew: (name: string) => void;
 }
 
-const getTopicLabel = (topic: { name: string }) => topic.name;
+const getTopicLabel = (topic: { title: string }) => topic.title;
 
 function TopicSearchListContent({
   spaceId,
@@ -51,7 +51,7 @@ function TopicSearchListContent({
       items: topicList.topics,
       getLabel: getTopicLabel,
       query,
-      existingLabels: topics.map((topic) => topic.name),
+      existingLabels: topics.map((topic) => topic.title),
     });
   const attachedIds = new Set(topics.map((topic) => topic.id));
 
@@ -64,9 +64,9 @@ function TopicSearchListContent({
   // 수 있다.
   function applyAndClose(topic: ReviewTopic) {
     const name = editingName.trim();
-    if (name !== "" && name !== topic.name) {
-      dispatch({ type: "topic/renamed", id: topic.id, name });
-      updateTopic.mutate({ id: topic.id, name });
+    if (name !== "" && name !== topic.title) {
+      dispatch({ type: "topic/renamed", id: topic.id, title: name });
+      updateTopic.mutate({ id: topic.id, title: name });
     }
     setEditingId(null);
   }
@@ -74,7 +74,7 @@ function TopicSearchListContent({
   function handleEditOpenChange(topic: ReviewTopic, open: boolean) {
     if (open) {
       setEditingId(topic.id);
-      setEditingName(topic.name);
+      setEditingName(topic.title);
       return;
     }
     applyAndClose(topic);
@@ -91,7 +91,7 @@ function TopicSearchListContent({
       {candidates.map((topic) => (
         <LabelSearchRow
           key={topic.id}
-          label={topic.name}
+          label={topic.title}
           attached={attachedIds.has(topic.id)}
           editing={editingId === topic.id}
           onSelect={() => onSelectExisting(topic)}
@@ -103,7 +103,7 @@ function TopicSearchListContent({
             <LabelTextInput
               autoFocus
               value={editingName}
-              maxLength={TOPIC_NAME_MAX_LENGTH}
+              maxLength={TOPIC_TITLE_MAX_LENGTH}
               ariaLabel={t("review.topic_name_label")}
               onChange={setEditingName}
               onSubmit={() => applyAndClose(topic)}

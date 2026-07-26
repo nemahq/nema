@@ -22,7 +22,7 @@ export const topicRouter = router({
   update: protectedProcedure
     .input(TopicUpdateInputSchema)
     .mutation(({ ctx, input }) =>
-      updateTopic({ supabase: ctx.supabase, id: input.id, name: input.name }),
+      updateTopic({ supabase: ctx.supabase, id: input.id, title: input.title }),
     ),
 
   archive: protectedProcedure
