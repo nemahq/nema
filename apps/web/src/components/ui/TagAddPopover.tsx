@@ -67,7 +67,7 @@ function TagSearchResults({
           <li key={tag.id}>
             <ComboboxItem
               onClick={() => onSelectExisting(tag)}
-              className="truncate px-2 py-1.5"
+              className="px-2 py-1.5"
             >
               <Text as="span" size="sm">
                 {tag.title}

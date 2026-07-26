@@ -46,7 +46,7 @@ export function ComboboxItem({
         tabIndex={ariaDisabled ? -1 : undefined}
         onClick={ariaDisabled ? undefined : onClick}
         className={cn(
-          "flex min-w-0 flex-1 items-center text-left",
+          "flex min-w-0 flex-1 items-center truncate text-left",
           "disabled:pointer-events-none disabled:text-fg-quinary",
           ariaDisabled && "cursor-default",
           className,
