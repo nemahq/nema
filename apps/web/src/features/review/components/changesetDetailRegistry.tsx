@@ -62,10 +62,12 @@ const CHANGESET_DETAIL_SCREEN: Record<
   // "찾을 수 없음"으로 덮지 않고 던져서 Sentry까지 올린다.
   manual: {
     open: () => <ImpossiblePendingChangeset />,
-    // TODO: manual은 변경 전/후 내용을 보여줘야 한다(review-flow.md "수정 이력 항목
-    // 클릭 시 상세 확인"). 메타데이터만 있는 기록 화면으로 보내는 건 그때까지의
-    // 임시 매핑이지 확정된 배치가 아니다.
-    closed: () => <ChangesetRecordScreen />,
+    // manual은 변경셋 목록에도 안 뜨고(listChangesets가 type != manual로 걸러냄),
+    // "변경 이력" 모달(review-flow.md "수정 이력 항목 클릭 시 상세 확인")도 아직
+    // 안 만들어져 이 화면으로 정상적으로 도달하는 경로가 없다 — URL을 직접 찍어도
+    // 찾을 수 없음으로 막는다. 모달이 생기면 그 안에서 보여줄 몫이지 이 범용
+    // Changeset 상세가 담당할 몫이 아니다.
+    closed: () => <ChangesetNotFound />,
   },
   revert: {
     open: () => <ImpossiblePendingChangeset />,

@@ -157,6 +157,7 @@ function mockSupabaseSequence(
     const chain: Record<string, ReturnType<typeof vi.fn>> = {};
     chain.select = vi.fn().mockReturnValue(chain);
     chain.eq = vi.fn().mockReturnValue(chain);
+    chain.neq = vi.fn().mockReturnValue(chain);
     chain.in = vi.fn().mockReturnValue(chain);
     chain.not = vi.fn().mockReturnValue(chain);
     chain.order = vi.fn().mockReturnValue(chain);
@@ -283,6 +284,17 @@ describe("listChangesets", () => {
 
     expect(chains[0].eq).not.toHaveBeenCalledWith("status", expect.anything());
     expect(chains[0].in).not.toHaveBeenCalled();
+  });
+
+  it("manual은 open·closed 어느 쪽을 조회하든 항상 제외한다", async () => {
+    const { client, chains } = mockSupabaseSequence([
+      { data: [] },
+      { data: [] },
+    ]);
+
+    await listChangesets({ supabase: client, spaceId: "space-1", limit: 10 });
+
+    expect(chains[0].neq).toHaveBeenCalledWith("type", "manual");
   });
 });
 
