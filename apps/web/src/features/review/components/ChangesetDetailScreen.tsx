@@ -51,6 +51,10 @@ function ChangesetDetailErrorFallback({
   error,
   reset,
   hasRetried,
+  eventId,
+  componentStack,
+  route,
+  timestamp,
   spaceId,
   changesetNumber,
 }: ChangesetDetailErrorFallbackProps) {
@@ -75,7 +79,15 @@ function ChangesetDetailErrorFallback({
     return <ChangesetNotFound />;
   }
   return (
-    <SectionErrorFallback error={error} reset={reset} hasRetried={hasRetried} />
+    <SectionErrorFallback
+      error={error}
+      reset={reset}
+      hasRetried={hasRetried}
+      eventId={eventId}
+      componentStack={componentStack}
+      route={route}
+      timestamp={timestamp}
+    />
   );
 }
 

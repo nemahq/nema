@@ -2,10 +2,16 @@ import type { ErrorInfo, ReactNode } from "react";
 import { Component } from "react";
 import * as Sentry from "@sentry/react";
 
+import { SENTRY_ENABLED } from "@web/lib/sentry";
+
 export interface ErrorFallbackProps {
   error: Error;
   reset: () => void;
   hasRetried: boolean;
+  eventId?: string;
+  componentStack?: string;
+  route?: string;
+  timestamp?: string;
 }
 
 interface ErrorBoundaryProps {
@@ -23,6 +29,10 @@ interface State {
   error: Error | null;
   hasError: boolean;
   hasRetried: boolean;
+  eventId?: string;
+  componentStack?: string;
+  route?: string;
+  timestamp?: string;
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
@@ -36,16 +46,34 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    if (this.props.shouldReport?.(error) ?? true) {
-      Sentry.captureException(error, {
-        tags: { boundary: this.props.boundaryName ?? "unknown" },
-        extra: { componentStack: errorInfo.componentStack },
-      });
-    }
+    const shouldReport = this.props.shouldReport?.(error) ?? true;
+    // captureException은 SENTRY_ENABLED가 false여도 uuid를 반환한다 — 실제로
+    // 전송되지 않은 이벤트를 있는 척 리포트에 담지 않도록 여기서 한 번 더 거른다.
+    const eventId =
+      shouldReport && SENTRY_ENABLED
+        ? Sentry.captureException(error, {
+            tags: { boundary: this.props.boundaryName ?? "unknown" },
+            extra: { componentStack: errorInfo.componentStack },
+          })
+        : undefined;
+    this.setState({
+      eventId,
+      componentStack: errorInfo.componentStack ?? undefined,
+      route: window.location.pathname,
+      timestamp: new Date().toISOString(),
+    });
   }
 
   private readonly reset = () => {
-    this.setState({ error: null, hasError: false, hasRetried: true });
+    this.setState({
+      error: null,
+      hasError: false,
+      hasRetried: true,
+      eventId: undefined,
+      componentStack: undefined,
+      route: undefined,
+      timestamp: undefined,
+    });
   };
 
   override render() {
@@ -55,6 +83,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
           error: this.state.error,
           reset: this.reset,
           hasRetried: this.state.hasRetried,
+          eventId: this.state.eventId,
+          componentStack: this.state.componentStack,
+          route: this.state.route,
+          timestamp: this.state.timestamp,
         });
       }
       return this.props.fallback ?? null;
