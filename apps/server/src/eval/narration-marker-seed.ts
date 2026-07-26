@@ -1,9 +1,9 @@
 // 해설 마커 누락률 시드 — 답변가능한 진술 묶음만(근거 있음). 모양은 "마커 흘림 유발형"을
 // 고른다: 진술이 많거나(태그할 문장이 많아 흘리기 쉽다), 관계 마커가 걸려 있거나(본문+참조를
-// 둘 다 가리켜야 한다), 타입이 섞여(주장·질문·할 일) 산문이 길어지는 입력. 짧고 뻔한 묶음은
+// 둘 다 가리켜야 한다), 타입이 섞여(주장·질문) 산문이 길어지는 입력. 짧고 뻔한 묶음은
 // 모델이 마커를 안 흘려 항상 0%로 나와 가짜 안심을 준다 — 조기경보가 작동하려면 압박을 준다.
 
-type NarrationStatementType = "claim" | "question" | "todo";
+type NarrationStatementType = "claim" | "question";
 
 export interface NarrationFixtureStatement {
   id: string;
@@ -114,19 +114,21 @@ export const NARRATION_FIXTURES: NarrationFixture[] = [
     ],
   },
   {
-    // 타입 혼합 — 할 일·질문·주장이 섞여 산문이 종류마다 다른 문장을 만든다
+    // 타입 혼합 — 질문·주장이 섞여 산문이 종류마다 다른 문장을 만든다
     name: "sprint-mixed-types",
     query: "이번 스프린트 뭐 하기로 했지?",
     statements: [
       {
         id: "sp1",
         content: "로그인 버그를 이번 스프린트에 고친다",
-        type: "todo",
+        type: "claim",
+        confidence: "certain",
       },
       {
         id: "sp2",
         content: "결제 모듈 리팩토링을 한다",
-        type: "todo",
+        type: "claim",
+        confidence: "certain",
       },
       {
         id: "sp3",

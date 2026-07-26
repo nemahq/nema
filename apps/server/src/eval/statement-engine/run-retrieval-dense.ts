@@ -59,7 +59,7 @@ const SPARSE_RECALL_BASELINE = 0.978;
 interface Distractor {
   id: string;
   content: string;
-  type: "claim" | "question" | "todo";
+  type: "claim" | "question";
   confidence: "certain" | "guess" | null;
 }
 

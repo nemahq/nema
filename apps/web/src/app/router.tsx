@@ -252,7 +252,7 @@ function ReferencesShell() {
 
 const referencesRoute = createRoute({
   getParentRoute: () => workspaceSidebarRoute,
-  path: "/references",
+  path: "/wiki",
   component: ReferencesShell,
   errorComponent: RouteErrorFallback,
   validateSearch: z.object({

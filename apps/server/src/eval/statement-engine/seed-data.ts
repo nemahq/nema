@@ -8,7 +8,7 @@
 // 주의: SEED_QUERIES의 expectedStatementIds는 골든 진술 id를 참조한다 —
 // 골든 검토로 진술을 합치거나 빼면 그 id를 기대하는 질의도 함께 갱신할 것.
 
-type StatementType = "claim" | "question" | "todo";
+type StatementType = "claim" | "question";
 type StatementConfidence = "certain" | "guess";
 
 /** 이 진술이 시험하는 절단·분류의 축 (실패의 축별 집계용) */
@@ -18,7 +18,6 @@ export type EvalAxis =
   | "merge-elaboration" // 한 '왜'의 부연 여러 문장을 하나로 합치나
   | "pronoun-resolution" // 대명사·생략을 해소해 단독으로 읽히게 하나
   | "confidence-mix" // 확정·추측이 섞인 글에서 guess를 가르나
-  | "todo-boundary" // claim과 todo의 경계 ("~하기로 했다")
   | "question-label" // 질문·미결을 question으로 가르나
   | "numeric-fidelity" // 수치·고유명사를 다듬다 깨뜨리지 않나
   | "noise-drop" // '왜' 없는 텍스트(필러·감정)가 자연히 빠지나
@@ -229,7 +228,7 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
     id: "weekly-1",
     description:
       "여러 주제가 섞인 팀 위클리 메모. 주제 경계에서 절단·일관성이 흔들리는지",
-    axes: ["compound-split", "decision-reason-split", "todo-boundary"],
+    axes: ["compound-split", "decision-reason-split"],
     input:
       "오늘 팀 위클리 했음. 프론트 쪽은 대시보드 리디자인 거의 끝났고 다음주 QA 들어감. 백엔드는 API 리팩토링 진행 중인데 예상보다 좀 늦어지고 있음. 원인은 레거시 코드 의존성이 복잡해서. 디자인팀은 모바일 앱 와이어프레임 1차 완료했고 피드백 반영 중. 아 그리고 채용 건은 백엔드 시니어 한 명 최종 면접까지 왔는데 다음주에 결과 나옴. 마지막으로 다음달 OKR 리뷰 일정 잡아야 함.",
     goldenStatements: [
@@ -303,30 +302,26 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
       {
         id: "weekly-1-s8",
         content: "다음달 OKR 리뷰 일정을 잡아야 한다",
-        type: "todo",
-        axes: ["todo-boundary"],
+        type: "claim",
+        confidence: "certain",
+        axes: [],
         needsHumanReview: false,
       },
     ],
   },
   {
     id: "braindump-1",
-    description:
-      "할 일·미결 질문 위주의 머리비우기 메모. question·todo 분류와 확신도 혼재",
-    axes: [
-      "question-label",
-      "todo-boundary",
-      "confidence-mix",
-      "numeric-fidelity",
-    ],
+    description: "질문 위주의 머리비우기 메모. question 분류와 확신도 혼재",
+    axes: ["question-label", "confidence-mix", "numeric-fidelity"],
     input:
       "출시 전에 정리할 것들. 랜딩 페이지 문구 최종본 금요일까지 마케팅에 넘겨야 함. 가격 정책은 아직도 결론이 안 났는데 월 9900원이 맞나? 경쟁사는 다 만원 밑이긴 한데 우리가 기능이 더 많아서 만원 넘겨도 될 것 같기도 하고. 온보딩 이메일 시퀀스는 내가 초안 쓰기로 했음. 아 그리고 베타 피드백 설문 마감이 수요일이라 목요일에 정리해서 공유하기. 근데 결제 실패율 모니터링은 누가 맡지?",
     goldenStatements: [
       {
         id: "braindump-1-s1",
         content: "랜딩 페이지 문구 최종본을 금요일까지 마케팅에 넘겨야 한다",
-        type: "todo",
-        axes: ["todo-boundary"],
+        type: "claim",
+        confidence: "certain",
+        axes: [],
         needsHumanReview: false,
         dueDate: "2026-06-19",
       },
@@ -372,8 +367,9 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
       {
         id: "braindump-1-s6",
         content: "온보딩 이메일 시퀀스 초안은 내가 쓰기로 했다",
-        type: "todo",
-        axes: ["todo-boundary"],
+        type: "claim",
+        confidence: "certain",
+        axes: [],
         needsHumanReview: false,
       },
       {
@@ -388,8 +384,9 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
       {
         id: "braindump-1-s8",
         content: "목요일에 베타 피드백 설문 결과를 정리해 공유한다",
-        type: "todo",
-        axes: ["compound-split", "todo-boundary"],
+        type: "claim",
+        confidence: "certain",
+        axes: ["compound-split"],
         needsHumanReview: false,
         dueDate: "2026-06-18",
       },
@@ -412,8 +409,9 @@ export const SEED_DOCUMENTS: SeedDocument[] = [
       {
         id: "short-1-s1",
         content: "다음주 수요일까지 온보딩 문서 초안을 완성하기로 했다",
-        type: "todo",
-        axes: ["over-extraction-guard", "todo-boundary"],
+        type: "claim",
+        confidence: "certain",
+        axes: ["over-extraction-guard"],
         needsHumanReview: false,
         dueDate: "2026-06-24",
       },

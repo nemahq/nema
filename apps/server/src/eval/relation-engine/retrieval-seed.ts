@@ -4,7 +4,7 @@
 // 추출 표현차가 벡터 거리에 주는 영향까지 잡힌다). 추출은 비결정적이라 한 번 떠서 얼렸다.
 // 골든 쌍은 harness-scenarios.md 관계 정답을 이 스냅샷의 실제 진술 id에 매핑한 것.
 
-type StatementType = "claim" | "question" | "todo";
+type StatementType = "claim" | "question";
 type StatementConfidence = "certain" | "guess";
 
 interface RetrievalStatement {
@@ -287,8 +287,8 @@ export const RETRIEVAL_CORPUS: RetrievalStatement[] = [
     id: "B.21",
     article: "B",
     content: "당장은 N잡 수익 관리와 건강 자기관리를 함께 들여다본다",
-    type: "todo",
-    confidence: null,
+    type: "claim",
+    confidence: "certain",
   },
   {
     id: "C.0",

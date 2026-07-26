@@ -14,7 +14,7 @@ import { RelationTypeSchema } from "@nema-io/shared";
 
 export const RELATION_JUDGMENT_SYSTEM_PROMPT = `You decide how a person's new statements relate to their earlier statements.
 
-Each statement is one atomic unit of their thinking — a claim, a question, or a task. You are given a batch of NEW statements and a set of EXISTING candidate statements that are semantically near them. Find the genuine relations among them.
+Each statement is one atomic unit of their thinking — a claim (which may itself describe an intended future action, not just a settled decision or fact) or a question. You are given a batch of NEW statements and a set of EXISTING candidate statements that are semantically near them. Find the genuine relations among them.
 
 ## The five relation types — and the direction of each
 
@@ -22,7 +22,7 @@ A relation is directional: \`from\` and \`to\` are NOT interchangeable. The dire
 
 - "supports": \`from\` justifies, is evidence for, or backs \`to\`. (A reason supports the decision it explains: from = the reason, to = the decision.)
 - "replaces": \`from\` supersedes \`to\` — \`from\` is the successor, \`to\` becomes the retired/past version. (from = the new direction, to = what is dropped.)
-- "resolves": \`from\` answers or closes \`to\`, where \`to\` is a question or an open task. (from = the answer/closing statement, to = the question or task it closes.)
+- "resolves": \`from\` answers or closes \`to\`, where \`to\` is a question. (from = the answer, to = the question it closes.)
 - "conflicts": \`from\` and \`to\` both assert something that cannot both hold right now, and neither retires the other. This one is symmetric — direction does not matter, pick either order.
 - "duplicates": \`from\` and \`to\` are the SAME claim recorded twice, so \`to\` is folded away and \`from\` absorbs it. (from = the copy that stays, to = the redundant copy that is retired.) Unlike the other four, a duplicate is not two statements in a relationship — it is one claim written twice. See the dedicated section below; it is the strictest call here.
 
@@ -31,10 +31,10 @@ A relation is directional: \`from\` and \`to\` are NOT interchangeable. The dire
 \`supports\` is the easiest relation to over-apply, and a wrong one is the costliest mistake here: it fabricates a "why" the person never wrote. The bar is whether \`from\` is genuinely a reason or evidence for \`to\` — not whether the two are about the same thing.
 
 - Emit \`supports\` only when \`from\`, taken as true, is a ground that argues for \`to\` — a merit, finding, or rationale the author would cite to justify \`to\`. This may be marked ("because", "그래서", "이유는") or just be the plain relationship between a reason and the decision it backs; the reason and its decision can sit in separate statements with no connecting word.
-- Do NOT infer support from topical proximity, shared keywords, or two statements merely appearing together. Sharing a subject is not evidence. A decision and a task about the same thing, two parallel facts, or a restatement are not supports.
+- Do NOT infer support from topical proximity, shared keywords, or two statements merely appearing together. Sharing a subject is not evidence. Two claims about the same thing that merely sit near each other, two parallel facts, or a restatement are not supports.
 - Shared surface form is not a reason. Two statements built from the same template or list-counting phrasing — "이유는 세 가지다" next to another "이유는 세 가지다", or two parallel "첫째 …" items — echo each other's shape, not each other's grounds. Emit nothing.
 - A list-opening statement does not support its own items. "후보는 네 가지다" or "이유는 세 가지다" merely announces what follows; it is not evidence for "첫째는 N잡이다". A heading and the items it introduces have no support relation in either direction.
-- \`to\` must be a claim the author holds (a decision, belief, or finding) — evidence backs a claim. A task or a question is never *supported*; it is closed by \`resolves\`. So never emit \`supports\` whose \`to\` is a task or a question.
+- \`to\` must be a claim the author holds (a decision, belief, finding, or intended action) — evidence backs a claim. A question is never *supported*; it is closed by \`resolves\`. So never emit \`supports\` whose \`to\` is a question.
 - Test before emitting: if \`from\` were removed, would \`to\` lose a reason it leans on? If \`from\` is only *related* to \`to\` rather than a ground *for* it, emit nothing.
 
 ## Replacement vs conflict — alternation vs contention
@@ -52,7 +52,7 @@ The job here is to separate a genuine contradiction from a mere caveat — NOT t
 - A genuine conflict is two assertions that both purport to hold *now* and cannot both be true: "auth goes with our own implementation" vs "auth uses Supabase Auth". Surface it as \`conflicts\`. Do NOT downgrade such a pair to \`replaces\` or drop it just because the contradiction is uncomfortable — when neither side declares it supersedes the other, it is a conflict (this is the "when torn, choose conflicts" rule above).
 - A drawback is not a contradiction. "PortOne's fee is 0.3%p higher" and "we're switching to PortOne" are both true together — the higher fee is a *cost* of the move, not a denial of it. Before emitting, ask: could a reasonable person hold both at once? If yes, it is a caveat, concern, cost, or trade-off — not a conflict. Emit nothing.
 - This is about meaning, not wording. A conflict need not contain "not", "cancel", or any negation word: "QA finishes the day before release" and "QA runs the morning of release" cannot both hold, so they conflict even though neither negates the other. Judge whether the contents are mutually exclusive, not whether a contradiction is spelled out.
-- Endpoints. A conflict is between two assertions of a present state. A question asserts nothing, so it is never a conflict endpoint — a question re-raised on an already-settled topic is closed by \`resolves\` or is simply unrelated. A task states an intent to act, not a present fact: a task that merely plans to change an existing decision does not conflict with it (at most it foreshadows a future replacement) — treat a task as a conflict endpoint only when its content already asserts a present state incompatible with the other.
+- Endpoints. A conflict is between two assertions of a present state. A question asserts nothing, so it is never a conflict endpoint — a question re-raised on an already-settled topic is closed by \`resolves\` or is simply unrelated. A claim that states an intent to act in the future ("we plan to switch to Y", "we should raise the limit to 50MB") is not yet a present fact — it does not conflict with an existing decision it would change (at most it foreshadows a future replacement, once it actually happens). Judge this from the content's own tense/commitment, not from any label: treat a statement as a conflict endpoint only when its content already asserts a present state incompatible with the other (e.g. "we already switched to Y", not "we plan to switch to Y").
 
 ## Duplicates — the same claim, not a related one
 
@@ -92,12 +92,12 @@ NEW statements:
 EXISTING statements:
 [E0] (claim, certain) 결제 연동은 토스로 한다.
 [E1] (claim, certain) 포트원은 정산 리포트가 약하다는 평이 있다.
-[E2] (todo) 결제 연동 PoC를 끝낸다.
+[E2] (claim, certain) 결제 연동 PoC를 끝낸다.
 
 Relations:
 - { from: "N0", to: "E0", type: "replaces", confident: true } — N0 explicitly drops Toss for PortOne; E0 is the retired version. Alternation is declared. (Note: N0 *replaces* E0 — it changes the decision. Had N0 merely restated E0 with no change, it would be \`duplicates\` with from = E0, to = N0, retiring the fresh copy.)
 
-No relation is emitted for E1, N1, or E2 — being near in topic is not a relation. E1 (PortOne's reporting is weak) is a *caveat* about the move to PortOne, not a contradiction of it: both hold at once, so it is not a conflict. And do NOT emit \`supports\` from E2 (the PoC task) to N0 just because both concern payments: the note never says the task justifies the decision. A shared topic is neither a reason nor a clash.
+No relation is emitted for E1, N1, or E2 — being near in topic is not a relation. E1 (PortOne's reporting is weak) is a *caveat* about the move to PortOne, not a contradiction of it: both hold at once, so it is not a conflict. And do NOT emit \`supports\` from E2 (a claim stating an intent to finish the PoC) to N0 just because both concern payments: the note never says that intent justifies the decision. A shared topic is neither a reason nor a clash.
 
 ## Output
 

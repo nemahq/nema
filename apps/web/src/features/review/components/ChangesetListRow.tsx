@@ -32,6 +32,7 @@ interface ChangesetListRowProps {
   title: string | null;
   type: ChangesetType;
   state: ChangesetDisplayState;
+  revertDepth: number;
   createdAt: string;
   effectDigest: number;
   effectReference: number;
@@ -48,6 +49,7 @@ export const ChangesetListRow = memo(function ChangesetListRow({
   title,
   type,
   state,
+  revertDepth,
   createdAt,
   effectDigest,
   effectReference,
@@ -116,7 +118,10 @@ export const ChangesetListRow = memo(function ChangesetListRow({
               weight="medium"
               className="min-w-0 truncate"
             >
-              {changesetDisplayTitle({ title, number: changesetNumber }, t)}
+              {changesetDisplayTitle(
+                { title, number: changesetNumber, type, revertDepth },
+                t,
+              )}
             </Text>
             {badgeLabelKey && (
               <Badge

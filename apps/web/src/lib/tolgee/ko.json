@@ -236,6 +236,8 @@
     "reference_type_product": "제품",
     "reference_type_project": "프로젝트",
     "reference_type_term": "개념",
+    "revert_marker": "되돌림",
+    "revert_title": "\"{title}\" {markers}",
     "status_applied": "적용됨",
     "status_discarded": "반려됨",
     "status_pending": "리뷰 대기",

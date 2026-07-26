@@ -10,7 +10,6 @@ const TYPE_BADGE: Record<
 > = {
   claim: { label: "주장", variant: "info" },
   question: { label: "질문", variant: "warning" },
-  todo: { label: "할 일", variant: "success" },
 };
 
 const CONFIDENCE_LABEL: Record<

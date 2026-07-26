@@ -22,6 +22,14 @@
 -- handle_new_user 등)는 changesets.status를 안 읽어 이 재적용 대상이 아니다.
 -- list_manual_changes_for_target도 author_id/author_name만 SELECT할 뿐 status
 -- 리터럴을 안 써서 마찬가지로 대상 밖이다.
+--
+-- 같은 종류의 문제가 하나 더 있었다: 20260726080000_manual_changeset_title_null이
+-- confirm_digest_edit의 title 채움을 뺐는데(이 changeset은 title이 읽힐 화면 자리가
+-- 없다는 이유), 파일명이 그 사이에 낀 20260726080057_topic_title_rename이 자기
+-- 기준(그 title-null 수정 이전) 본문으로 confirm_digest_edit을 다시 재정의하며
+-- 그 수정을 조용히 되돌렸다 — 이건 이 branch가 만든 문제가 아니라 origin/staging
+-- 자체에 이미 있던 같은 종류의 순서 충돌인데, 아래에서 confirm_digest_edit을
+-- 어차피 다시 써야 해서 여기서 함께 바로잡는다(title 컬럼을 다시 뺀다).
 -- =============================================================
 -- ----- confirm_ingestion_review -----
 CREATE OR REPLACE FUNCTION confirm_ingestion_review(p_changeset_id uuid)
@@ -207,10 +215,12 @@ BEGIN
   v_author_id := auth.uid();
   v_author_name := resolve_user_display_name(v_author_id);
 
-  -- manual changeset — source_id 유지(Y). 사람 주도라 author_id 채움.
-  -- title = 새 Digest의 제목(수정 결과를 대표).
-  INSERT INTO changesets (space_id, type, status, outcome, source_id, author_id, author_name, title)
-  VALUES (v_space_id, 'manual', 'closed', 'applied', v_source_id, v_author_id, v_author_name, p_digest->>'title')
+  -- manual changeset — source_id 유지(Y). 사람 주도라 author_id 채움. title은 안
+  -- 채운다(20260726080000_manual_changeset_title_null — 이 changeset은 변경셋
+  -- 목록·상세 어디에도 안 뜨고 "변경 이력" 모달에서만 조회되는데 그 모달 행은
+  -- 제목이 아니라 시각·수정자로 라벨링돼 title이 읽힐 자리가 없다).
+  INSERT INTO changesets (space_id, type, status, outcome, source_id, author_id, author_name)
+  VALUES (v_space_id, 'manual', 'closed', 'applied', v_source_id, v_author_id, v_author_name)
   RETURNING id INTO v_changeset_id;
 
   -- 신규 Reference 생성 + key→예약 id 매핑. external_urls를 INSERT·Change data 양쪽에

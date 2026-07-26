@@ -123,7 +123,7 @@ async function createFixtureStatement(
   digestId: string,
 ): Promise<string> {
   const { rows } = await client.query<{ id: string }>(
-    "INSERT INTO statements (space_id, digest_id, content, type) VALUES ($1, $2, 'fixture statement', 'todo') RETURNING id",
+    "INSERT INTO statements (space_id, digest_id, content, type) VALUES ($1, $2, 'fixture statement', 'question') RETURNING id",
     [spaceId, digestId],
   );
   return rows[0]?.id ?? "";
@@ -737,6 +737,53 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
       "closed/discarded",
       "open/-",
     ]);
+  });
+});
+
+describe("confirm_digest_edit RPC — manual changeset title (integration)", () => {
+  it("Digest 수정으로 생기는 manual changeset의 title은 항상 null이다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    // 확정본 수정 대상이라 원문이 active여야 한다(RPC 가드).
+    await client.query("UPDATE sources SET status = 'active' WHERE id = $1", [
+      sourceId,
+    ]);
+    const digestId = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "원본 제목",
+    });
+
+    const editedDigest = {
+      title: "수정된 제목",
+      description: "수정된 설명",
+      body: { type: "decision", choice: "바뀐 선택" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+      new_reference_keys: [],
+      external_urls: [],
+    };
+
+    await client.query(
+      "SELECT confirm_digest_edit($1, $2::jsonb, '[]'::jsonb)",
+      [digestId, JSON.stringify(editedDigest)],
+    );
+
+    const { rows } = await client.query<{ title: string | null }>(
+      `SELECT c.title FROM changesets c
+       JOIN changes ch ON ch.changeset_id = c.id
+       WHERE ch.target_type = 'digest' AND ch.target_id = $1 AND ch.action = 'archive'`,
+      [digestId],
+    );
+
+    expect(rows[0]?.title).toBeNull();
   });
 });
 

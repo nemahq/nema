@@ -58,7 +58,7 @@ export function WorkspaceSidebar() {
           <NavItem
             icon={<BookOpenText strokeWidth={2} className={NAV_ICON_CLASS} />}
             label={t("workspace.references")}
-            to="/references"
+            to="/wiki"
           />
         </LnbSection>
 

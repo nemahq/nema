@@ -53,7 +53,7 @@ interface Thread {
   members: string[];
 }
 
-type StmtType = "claim" | "question" | "todo";
+type StmtType = "claim" | "question";
 type Confidence = "certain" | "guess" | null;
 
 interface NoteStatement {
