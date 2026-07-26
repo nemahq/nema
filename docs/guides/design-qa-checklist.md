@@ -12,8 +12,7 @@
 |---|---|
 | 레이아웃·컴포넌트 구성 | `docs/poc/mvp-wireframe.html` (SSOT) |
 | 색상·모션 | weave 토큰(`--fg-*`/`--surface-*`/`duration-*`) |
-| 스페이싱·타이포 | Tailwind 기본 스케일(스페이싱 전용 토큰 안 만들기로 기결정 — `design-decisions-log.md` 참고) |
-| 과거 판단 | `design-decisions-log.md` 누적 기록 |
+| 스페이싱·타이포 | Tailwind 기본 스케일(스페이싱 전용 토큰 안 만들기로 기결정) |
 | 대비 | WCAG AA — 일반 텍스트 4.5:1, 큰 텍스트(18pt+, 또는 14pt+bold) 3:1 |
 | 접근성 룰 | `apps/web/docs/conventions.md` Accessibility 섹션 + 루트 CLAUDE.md |
 
@@ -82,7 +81,7 @@ const cs = getComputedStyle(el);
 |---|---|---|
 | **막힘** | 기능이 깨지거나 완전히 못 읽음 | 즉시 수정, 라운드 진행 전에 처리 |
 | **이번 라운드 반영** | 객관적 근거(WCAG 수치, CLAUDE.md 룰 위반, 관례 이탈) 있고 스코프가 작음(관련 없는 파일 안 건드림) | 라운드 끝에 일괄 반영([[feedback_batch_fixes]]) |
-| **백로그** | 근거는 있으나 스코프가 이 기능 밖(다른 기존 컴포넌트까지 손대야 함)이거나 판단에 이견 여지 있음 | `design-decisions-log.md`에 근거와 함께 기록, 별도 슬라이스로 |
+| **백로그** | 근거는 있으나 스코프가 이 기능 밖(다른 기존 컴포넌트까지 손대야 함)이거나 판단에 이견 여지 있음 | 근거와 함께 기록, 별도 슬라이스로 |
 
 ## 프로세스
 
@@ -92,4 +91,3 @@ const cs = getComputedStyle(el);
 4. "이번 라운드 반영" 항목만 일괄 수정
 5. 수정마다 **재스크린샷이 아니라 재측정**으로 확인(대비 수치, computed style, 실제 키보드 Tab)
 6. `pnpm typecheck && pnpm lint`로 정적 검증
-7. `design-decisions-log.md`에 이번 라운드 판단 기록(백로그 항목 포함)

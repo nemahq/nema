@@ -29,9 +29,6 @@
 - [retrieval-flow](docs/blueprints/first-product/functional-spec/retrieval-flow.md): 꺼내기(묻기·해설) 흐름
 - [surface-inventory](docs/blueprints/first-product/surface-inventory.md): MVP 화면 전체 목록과 각 역할. 특정 화면이 뭘 하는지 찾을 때
 - [surface-design](docs/blueprints/first-product/surface-design.md): 화면 설계 방법론·원칙·백엔드 빈칸·미룬 것. 새 화면 설계 판단의 근거가 필요할 때
-- [product-decisions-log](docs/blueprints/first-product/product-decisions-log.md): 제품 결정 로그
-- [design-decisions-log](docs/blueprints/first-product/design-decisions-log.md): 디자인 결정 로그
-- [design-reference-log](docs/blueprints/first-product/design-reference-log.md): 디자인 레퍼런스 판단 로그
 - [narration-design](docs/blueprints/first-product/narration-design.md): 해설(Narration) 기능 설계
 - [mcp-design](docs/blueprints/first-product/mcp-design.md): MCP 레일 설계
 - [mcp-tools-design](docs/blueprints/first-product/mcp-tools-design.md): MCP 도구 세트 설계
@@ -78,20 +75,15 @@
 - [design-qa-checklist](docs/guides/design-qa-checklist.md): 디자인 폴리싱 라운드 측정 기준
 - [harness-scenarios](docs/harness/harness-scenarios.md): /dev 하니스 엔진 검증 시나리오
 
-## 7. 프로젝트 운영: 지금 뭘 왜 하고 있는가
-
-- [q3-2026 OKR](docs/okr/q3-2026.md): 분기 OKR
-- [user-acquisition](docs/gtm/user-acquisition.md): 초기 사용자 10명 확보 실행 설계
-
-## 8. PM 오케스트레이션: 슬라이스를 어떻게 굴리는가
+## 7. PM 오케스트레이션: 슬라이스를 어떻게 굴리는가
 
 - `nema-slice-implementation-workflow`(저장소 밖, `nema-doc/`): 슬라이스 진행 방식, 역할 분담, 결정 로그
 
-## 9. POC/시각자료: 참고용 시각 자료
+## 8. POC/시각자료: 참고용 시각 자료
 
 - [mvp-wireframe](docs/poc/mvp-wireframe.html): 화면별 동작 근거가 담긴 단일 HTML 와이어프레임
 
-## 10. 히스토리: 더 이상 참고하지 않는 이전 세대 문서
+## 9. 히스토리: 더 이상 참고하지 않는 이전 세대 문서
 
 - [intake-surface-design](docs/archive/intake-surface-design.archive.md): 넣기 표면 v1 설계
 - [put-in-and-pull-out-flow-design-v1](docs/archive/put-in-and-pull-out-flow-design-v1.archive.md): 넣기·꺼내기 흐름 v1 설계
