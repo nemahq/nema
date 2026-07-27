@@ -11,6 +11,7 @@ import { Circle, Plus } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
+import { NewLabelIndicator } from "./NewLabelIndicator";
 import { useReviewDraftContext } from "./ReviewDraftProvider";
 import { TopicEditPanel } from "./TopicEditPanel";
 
@@ -71,9 +72,16 @@ export function DigestTopicPicker({
                 {index > 0 && (
                   <Circle className="size-1 shrink-0 fill-current" />
                 )}
-                <Text as="span" size="xs" color="primary">
-                  {topic.title}
-                </Text>
+                {/* 신규(draft, id === null) 표식은 개체 왼쪽 — NewReferenceIndicator가
+                    쓰는 배치를 따른다. Circle 구분자와의 간격(gap-1)보다 라벨과의
+                    간격(gap-0.5)을 더 좁혀, "+"가 별개 액션이 아니라 이 Topic
+                    라벨에 묶여 있는 것처럼 보이게 한다. */}
+                <span className="flex items-center gap-0.5">
+                  {topic.id === null && <NewLabelIndicator />}
+                  <Text as="span" size="xs" color="primary">
+                    {topic.title}
+                  </Text>
+                </span>
               </span>
             ))}
           </button>

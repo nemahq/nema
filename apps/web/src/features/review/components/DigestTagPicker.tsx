@@ -10,6 +10,7 @@ import { Tag as TagIcon } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
+import { NewLabelIndicator } from "./NewLabelIndicator";
 import { useReviewDraftContext } from "./ReviewDraftProvider";
 import { TagEditPanel } from "./TagEditPanel";
 
@@ -54,14 +55,19 @@ export function DigestTagPicker({
         >
           {tags.length > 0 ? (
             tags.map((tag, index) => (
-              <Badge
+              // 신규(draft) 표식은 Badge 왼쪽에 별개 형제로 둔다 — Badge 안에
+              // prefix로 넣으면 Badge 자신의 좌우 패딩이 "+"와 텍스트 사이에도
+              // 그대로 적용돼 간격이 벌어진다. gap-0.5(이 Badge와의 간격)를
+              // 형제 Badge 사이 gap-1보다 좁혀 같은 그룹으로 보이게 한다.
+              <span
                 key={tag.id ?? `draft-${index}`}
-                variant="neutral"
-                shape="rounded"
-                truncated
+                className="flex items-center gap-0.5"
               >
-                {tag.title}
-              </Badge>
+                {tag.id === null && <NewLabelIndicator />}
+                <Badge variant="neutral" shape="rounded" truncated>
+                  {tag.title}
+                </Badge>
+              </span>
             ))
           ) : (
             <span className="flex items-center gap-1 text-fg-tertiary">
