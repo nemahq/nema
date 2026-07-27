@@ -242,7 +242,7 @@
     "save_status_conflict": "Refresh needed",
     "save_status_error": "Save failed",
     "save_status_saved": "Saved",
-    "save_status_saved_description": "Your edits are saved automatically.",
+    "save_status_saved_description": "We save your edits automatically.",
     "status_applied": "Applied",
     "status_discarded": "Declined",
     "status_pending": "Needs review",

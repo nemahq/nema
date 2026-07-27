@@ -20,7 +20,7 @@ const STATUS_LABEL_KEY = {
 // 흐려진다 — clean 상태는 항상 같은 정적 문구를 보여주고, 실패했을 때만 눈에 띄게
 // 바뀐다. 클릭하면 상태 설명이 펼쳐지지만 diff·복원 같은 실제 조작은 이번 스코프
 // 밖이라 지금은 같은 문구를 다시 보여주는 스텁이다.
-export function ReviewSaveStatusIndicator() {
+export function SaveStatusIndicator() {
   const { t } = useTranslation();
   const { saveStatus } = useReviewSaveStatusContext();
   const isFailure = saveStatus.kind !== "clean";

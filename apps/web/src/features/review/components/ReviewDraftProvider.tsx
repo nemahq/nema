@@ -10,7 +10,11 @@ import {
 } from "react";
 
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
-import { useReviewDraftDispatch } from "@web/features/review/hooks/useDigestReviewQuery";
+import {
+  useReviewDraftDispatch,
+  useReviewDraftReader,
+  useReviewDraftWriter,
+} from "@web/features/review/hooks/useDigestReviewQuery";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
 import type {
   ReviewDraft,
@@ -22,7 +26,6 @@ import {
   type ReviewSaveStatus,
 } from "@web/features/review/reviewSaveStatus";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
-import { trpc } from "@web/lib/trpc";
 
 // 자동 저장 디바운스 — 필드 버퍼(useBufferedValue의 COMMIT_DELAY_MS=400ms, 타이핑
 // 멈춤→초안 반영)와는 별개 축이다. 초안이 바뀔 때마다(필드 커밋 하나하나 포함) 그
@@ -113,27 +116,13 @@ interface ReviewDraftProviderProps {
 export function ReviewDraftProvider({ children }: ReviewDraftProviderProps) {
   const spaceId = useCurrentSpaceId();
   const changesetNumber = useChangesetNumber();
-  const utils = trpc.useUtils();
   const dispatchToDraft = useReviewDraftDispatch(spaceId, changesetNumber);
   const updateReview = useUpdateReview(spaceId, changesetNumber);
+  const readDraft = useReviewDraftReader(spaceId, changesetNumber);
+  const writeDraft = useReviewDraftWriter(spaceId, changesetNumber);
   // 이 리뷰(changeset) 하나에 묶인 자동 저장 상태 — Map에서 매 렌더 다시 조회해도
   // 같은 key인 동안은 항상 같은 객체를 돌려받는다(리마운트돼도 마찬가지).
   const autosaveEntry = getAutosaveEntry(`${spaceId}:${changesetNumber}`);
-
-  const readDraft = useCallback(
-    (): ReviewDraft | undefined =>
-      utils.digestReview.get.getData({ spaceId, number: changesetNumber }),
-    [utils, spaceId, changesetNumber],
-  );
-  const writeDraft = useCallback(
-    (next: ReviewDraft) => {
-      utils.digestReview.get.setData(
-        { spaceId, number: changesetNumber },
-        next,
-      );
-    },
-    [utils, spaceId, changesetNumber],
-  );
 
   // updateReview(useMutation 반환값)는 isPending이 바뀔 때마다 새 객체라, 이걸 그대로
   // useCallback 의존성에 넣으면 저장 한 번마다 안정적이어야 할 콜백들(dispatch 등)의

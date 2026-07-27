@@ -32,8 +32,8 @@ import {
   useReviewDraftContext,
   useReviewSaveStatusContext,
 } from "./ReviewDraftProvider";
-import { ReviewSaveStatusIndicator } from "./ReviewSaveStatusIndicator";
-import { ReviewUndoRedoShortcuts } from "./ReviewUndoRedoShortcuts";
+import { SaveStatusIndicator } from "./SaveStatusIndicator";
+import { UndoRedoShortcuts } from "./UndoRedoShortcuts";
 
 const CONFIRM_DISABLED_REASON_KEY = {
   no_candidates: "review.confirm_disabled_no_candidates",
@@ -188,9 +188,9 @@ function IngestionContent() {
   return (
     <ChangesetDetailLayout
       title={reviewTitle}
-      navBarRightContent={<ReviewSaveStatusIndicator />}
+      navBarRightContent={<SaveStatusIndicator />}
     >
-      <ReviewUndoRedoShortcuts />
+      <UndoRedoShortcuts />
       <ChangesetDetailHeader
         title={reviewTitle}
         changesetNumber={draft.changesetNumber}

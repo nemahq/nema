@@ -262,7 +262,7 @@
     "type_ingestion": "정리",
     "type_relation": "발견",
     "type_revert": "되돌림",
-    "undo_action": "실행취소",
+    "undo_action": "실행 취소",
     "viewed_action": "읽음"
   },
   "session": {

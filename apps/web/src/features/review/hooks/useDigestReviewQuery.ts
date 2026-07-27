@@ -63,3 +63,19 @@ export function useReviewDraftReader(spaceId: string, changesetNumber: number) {
     [utils, spaceId, changesetNumber],
   );
 }
+
+// 실행취소/다시 실행처럼 액션을 거치지 않고 캐시를 스냅샷으로 통째로 되돌리는
+// 경로 전용 — reviewDraftReducer를 거치는 일반 편집은 useReviewDraftDispatch를 쓴다.
+export function useReviewDraftWriter(spaceId: string, changesetNumber: number) {
+  const utils = trpc.useUtils();
+
+  return useCallback(
+    (next: ReviewDraft) => {
+      utils.digestReview.get.setData(
+        { spaceId, number: changesetNumber },
+        next,
+      );
+    },
+    [utils, spaceId, changesetNumber],
+  );
+}
