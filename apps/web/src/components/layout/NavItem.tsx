@@ -107,8 +107,11 @@ export function NavItem({
   if (disabled) {
     hoverClassName = "cursor-default text-fg-quinary";
   } else if (rightContent) {
+    // group-has-[data-active]: rightContent 안의 HoverIcon(예: 메뉴 트리거)이
+    // active 상태면 마우스가 행을 벗어나도(:hover가 풀려도) 계속 같은 톤을
+    // 유지한다 — 안 그러면 트리거만 켜진 채 행 배경은 꺼져 버린다.
     hoverClassName =
-      "text-fg-secondary group-hover:bg-surface-raised-hover/75 group-hover:text-fg-primary";
+      "text-fg-secondary group-hover:bg-surface-raised-hover/75 group-hover:text-fg-primary group-has-[[data-active=true]]:bg-surface-raised-hover/75 group-has-[[data-active=true]]:text-fg-primary";
   }
 
   // pl-3: 하이라이트 박스 위치(LnbRowBox 공유 px-2.5)는 안 건드리고, 아이콘·

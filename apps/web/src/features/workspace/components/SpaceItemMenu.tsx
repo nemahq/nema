@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 import {
-  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -39,10 +38,8 @@ export function SpaceItemMenu({
           <DropdownMenuTrigger asChild>
             <HoverIcon
               aria-label={t("space.menu")}
-              className={cn(
-                "absolute right-3.5 cursor-pointer group-hover:opacity-100",
-                menuOpen && "bg-surface-raised-hover opacity-100",
-              )}
+              active={menuOpen}
+              className="absolute right-3.5 cursor-pointer group-hover:opacity-100"
               onClick={(e) => e.preventDefault()}
             >
               <Ellipsis className="size-4 text-fg-tertiary" />

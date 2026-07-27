@@ -21,7 +21,7 @@ const BADGE_CLASS =
 // Badge(variant="success", 기본 크기)를 재사용해 같은 신호는 같은 컴포넌트·같은
 // 크기로 표현한다.
 const PENDING_BADGE_CLASS =
-  "absolute right-3.5 flex items-center justify-center group-hover:opacity-0";
+  "absolute right-3.5 flex items-center justify-center group-hover:opacity-0 group-has-[[data-active=true]]:opacity-0";
 
 interface SpaceListItemProps {
   spaceId: string;
