@@ -1,6 +1,7 @@
 import type { ReferenceType } from "@nema-io/shared";
 
 import { CardViewedToggle } from "./CardViewedToggle";
+import { NewReferenceIndicator } from "./NewReferenceIndicator";
 import { ReferenceCardMenu } from "./ReferenceCardMenu";
 import { ReferenceTypePicker } from "./ReferenceTypePicker";
 
@@ -24,7 +25,21 @@ export function ReferenceCardHeader({
   onRemove,
 }: ReferenceCardHeaderProps) {
   return (
-    <div className="flex items-center justify-between gap-2">
+    // relative — NewReferenceIndicator를 카드 전체가 아니라 이 행 하나에만 top-1/2로
+    // 세로 중앙정렬시키기 위한 기준점. 예전엔 카드 워시 전체를 기준으로 한 고정
+    // top 값(padding+타입 Chip 높이 계산)을 썼는데, 실측과 어긋나 타입 Chip과
+    // 눈에 띄게 안 맞았다 — 이 행 자신의 높이(=타입 Chip 높이)에 50%로 걸면
+    // Chip 높이가 나중에 바뀌어도 항상 정확히 맞는다.
+    <div className="relative flex items-center justify-between gap-2">
+      {/* absolute inset-0 래퍼 필수 — NewReferenceIndicator 안의 스크린리더 텍스트
+          span은(이중 스크롤 버그 수정으로) position:static이라, 이 행에 그냥
+          형제로 넣으면 실제 flex item으로 잡혀 justify-between이 원래 2개(타입
+          배지/읽음+메뉴)였던 항목을 3개로 잘못 세고 가운데 배지를 중앙으로 밀어
+          버린다. pointer-events-none은 이 래퍼가 행 전체를 덮으면서 아래 배지·
+          버튼 클릭을 가로채지 않게 한다. */}
+      <span className="pointer-events-none absolute inset-0">
+        <NewReferenceIndicator />
+      </span>
       <ReferenceTypePicker
         type={type}
         disabled={disabled}

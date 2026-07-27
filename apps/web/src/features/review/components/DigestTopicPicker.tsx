@@ -73,10 +73,10 @@ export function DigestTopicPicker({
                   <Circle className="size-1 shrink-0 fill-current" />
                 )}
                 {/* 신규(draft, id === null) 표식은 개체 왼쪽 — NewReferenceIndicator가
-                    쓰는 배치를 따른다. Circle 구분자와의 간격(gap-1)보다 라벨과의
-                    간격(gap-0.5)을 더 좁혀, "+"가 별개 액션이 아니라 이 Topic
-                    라벨에 묶여 있는 것처럼 보이게 한다. */}
-                <span className="flex items-center gap-0.5">
+                    쓰는 배치를 따른다. 간격을 아예 안 둬(gap-0) "+"가 라벨 글자에
+                    바로 붙은 prefix처럼 보이게 한다 — Circle 구분자와의 간격(gap-1)과
+                    대비되는 지점이라 여기만 0이어야 구분이 산다. */}
+                <span className="flex items-center gap-0">
                   {topic.id === null && <NewLabelIndicator />}
                   <Text as="span" size="xs" color="primary">
                     {topic.title}

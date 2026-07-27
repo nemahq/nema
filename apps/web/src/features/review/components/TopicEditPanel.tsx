@@ -61,21 +61,23 @@ export function TopicEditPanel({
         onQueryChange={setQuery}
       >
         {topics.map((topic, index) => (
-          <Chip
+          <span
             key={topic.id ?? `draft-${index}`}
-            variant="outline"
-            shape="rounded"
-            disabled={disabled}
-            onRemove={() => onChange(topics.filter((_, i) => i !== index))}
-            removeAriaLabel={t("review.topic_remove_action", {
-              label: topic.title,
-            })}
+            className="inline-flex min-w-0 items-center gap-0"
           >
-            <span className="inline-flex min-w-0 items-center gap-0.5">
-              {topic.id === null && <NewLabelIndicator />}
+            {topic.id === null && <NewLabelIndicator />}
+            <Chip
+              variant="outline"
+              shape="rounded"
+              disabled={disabled}
+              onRemove={() => onChange(topics.filter((_, i) => i !== index))}
+              removeAriaLabel={t("review.topic_remove_action", {
+                label: topic.title,
+              })}
+            >
               <span className="truncate">{topic.title}</span>
-            </span>
-          </Chip>
+            </Chip>
+          </span>
         ))}
       </LabelChipRow>
       <Separator />

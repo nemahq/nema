@@ -30,7 +30,15 @@ export function NewLabelIndicator({
         aria-hidden="true"
         className={cn("size-3 text-brand-accent", className)}
       />
-      <span className="sr-only">
+      {/* weave sr-only(position:absolute)를 안 쓰는 이유 — 이 표식은 스크롤되는 긴
+          목록(Digest 카드마다) 안에서 반복 렌더된다. absolute + 오프셋 미지정은
+          "정적 위치"를 문서 좌표계로 계산하는데, 가까운 위치 조상이 없으면(Reference의
+          카드 헤더처럼 relative를 둬도 마찬가지로 재현됨) 그 값이 그대로 <html>의
+          scrollHeight에 잡혀 리뷰 화면 전체에 이중 스크롤이 생긴다(실측 확인:
+          해당 span들을 지우면 documentElement.scrollHeight가 그만큼 정확히 줄어듦).
+          position을 그대로 두고 1px 크기+overflow:hidden만으로 같은 시각적 결과를
+          낸다. */}
+      <span className="inline-block size-px overflow-hidden whitespace-nowrap">
         {label ?? t("review.label_new_indicator")}
       </span>
     </>

@@ -8,7 +8,6 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { CandidateCardFrame } from "./CandidateCardFrame";
 import { InvisibleTextarea } from "./InvisibleTextarea";
-import { NewReferenceIndicator } from "./NewReferenceIndicator";
 import { ReferenceBodyField } from "./ReferenceBodyField";
 import { ReferenceCardHeader } from "./ReferenceCardHeader";
 import { useReviewDraftContext } from "./ReviewDraftProvider";
@@ -41,7 +40,6 @@ export function ReferenceCandidateCard({
       className="relative"
       wash={
         <>
-          <NewReferenceIndicator />
           <ReferenceCardHeader
             type={reference.type}
             disabled={disabled}

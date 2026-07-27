@@ -93,27 +93,32 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
         onQueryChange={setQuery}
       >
         {tags.map((tag, index) => (
-          <Tooltip key={tag.id ?? `draft-${index}`}>
-            <TooltipTrigger asChild>
-              <span className="inline-flex">
-                <Chip
-                  variant="outline"
-                  shape="rounded"
-                  disabled={disabled}
-                  onRemove={() => onChange(tags.filter((_, i) => i !== index))}
-                  removeAriaLabel={t("review.tag_remove_action")}
-                >
-                  <span className="inline-flex min-w-0 items-center gap-0.5">
-                    {tag.id === null && <NewLabelIndicator />}
+          <span
+            key={tag.id ?? `draft-${index}`}
+            className="inline-flex min-w-0 items-center gap-0"
+          >
+            {tag.id === null && <NewLabelIndicator />}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex min-w-0">
+                  <Chip
+                    variant="outline"
+                    shape="rounded"
+                    disabled={disabled}
+                    onRemove={() =>
+                      onChange(tags.filter((_, i) => i !== index))
+                    }
+                    removeAriaLabel={t("review.tag_remove_action")}
+                  >
                     <span className="truncate">{tag.title}</span>
-                  </span>
-                </Chip>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-64">
-              {tag.description}
-            </TooltipContent>
-          </Tooltip>
+                  </Chip>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-64">
+                {tag.description}
+              </TooltipContent>
+            </Tooltip>
+          </span>
         ))}
       </LabelChipRow>
       <Separator />
