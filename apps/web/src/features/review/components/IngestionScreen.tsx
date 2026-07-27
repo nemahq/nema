@@ -8,7 +8,10 @@ import {
 } from "@web/features/review/confirmReviewFlow";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
-import { useDigestReviewSuspenseQuery } from "@web/features/review/hooks/useDigestReviewQuery";
+import {
+  useDigestReviewSuspenseQuery,
+  useReviewDraftReader,
+} from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
 import { computeReviewEditingState } from "@web/features/review/reviewEditingState";
@@ -21,9 +24,12 @@ import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
 import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
 import { useChangesetSidePanel } from "./ChangesetSidePanelProvider";
 import { DigestCandidateList } from "./DigestCandidateList";
-import { EditingProvider, useEditing } from "./EditingProvider";
 import { IngestionActions } from "./IngestionActions";
 import { ReferenceSection } from "./ReferenceSection";
+import {
+  ReviewDraftProvider,
+  useReviewDraftContext,
+} from "./ReviewDraftProvider";
 
 const CONFIRM_DISABLED_REASON_KEY = {
   no_candidates: "review.confirm_disabled_no_candidates",
@@ -37,38 +43,28 @@ const CONFIRM_DISABLED_REASON_KEY = {
 // (changesetDetailRegistry), 확정·버리기 성공 시 별도 이동 없이 getByNumber를
 // 무효화하기만 하면 같은 URL이 자연히 ChangesetRecordScreen으로 넘어간다.
 //
-// 확정 페이로드와 차단 조건은 후보 전체를 봐야 나오는 값이라 편집 상태를 여기서
-// 통째로 구독한다. 대신 카드에는 그 파생값을 prop으로 일절 내리지 않는다 — 타이핑으로
-// 이 함수가 다시 돌아도 카드 트리는 props가 그대로라 건너뛰고, 실제 값은 각 필드가
-// 자기 selector로 가져간다.
+// 편집 중인 초안 전체를 여기서 구독한다 — 확정 페이로드도 차단 조건도 후보 전체를
+// 봐야 나오는 값이라 어차피 화면 하나가 통째로 들고 있어야 한다. 대신 각 카드가 자기
+// 항목만 prop으로 받아, 손대지 않은 항목은 초안이 갱신돼도 같은 객체를 그대로 받는다.
 function IngestionContent() {
   const { t } = useTranslation();
   const spaceId = useCurrentSpaceId();
   const changesetNumber = useChangesetNumber();
-  const [review] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
+  const [draft] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
+  const { flushPendingCommits } = useReviewDraftContext();
+  const readReviewDraft = useReviewDraftReader(spaceId, changesetNumber);
   const { openTab, closeTab, activeTabId } = useChangesetSidePanel();
   // 모든 다이제스트가 같은 Source 하나를 공유해 탭 id도 하나뿐이라, activeTabId만으론
   // 어느 카드에서 열었는지 구분되지 않는다 — 가장 최근에 누른 카드를 따로 들고 있어야
   // "이 카드의 트리거가 활성"을 정확히 판정할 수 있다.
-  const [activeSourceDigestIndex, setActiveSourceDigestIndex] = useState<
-    number | null
+  const [activeSourceDigestId, setActiveSourceDigestId] = useState<
+    string | null
   >(null);
-  const overrides = useEditing((state) => state.overrides);
-  const {
-    digestRows,
-    referenceRows,
-    dirty,
-    hasCandidates,
-    hasEmptyTitle,
-    hasEmptyDescription,
-    hasEmptyLabel,
-    hasEmptyReference,
-    referenceUpdates,
-  } = useMemo(
-    () => computeReviewEditingState(review, overrides),
-    [review, overrides],
+  const reviewEditingState = useMemo(
+    () => computeReviewEditingState(draft),
+    [draft],
   );
-  const reviewTitle = review.sourceTitle ?? t("review.digest_review_title");
+  const reviewTitle = draft.sourceTitle ?? t("review.digest_review_title");
 
   const updateReview = useUpdateReview(spaceId, changesetNumber);
   const confirmReview = useConfirmReview(spaceId, changesetNumber);
@@ -79,39 +75,33 @@ function IngestionContent() {
     updateReview.isPending ||
     confirmReview.isPending ||
     discardReview.isPendingAfterDelay;
-  const confirmDisabled =
-    locked ||
-    !hasCandidates ||
-    hasEmptyTitle ||
-    hasEmptyDescription ||
-    hasEmptyLabel ||
-    hasEmptyReference;
-
-  const confirmDisabledReasonCode = computeConfirmDisabledReason(
-    hasCandidates,
-    hasEmptyTitle,
-    hasEmptyDescription,
-    hasEmptyLabel,
-    hasEmptyReference,
-  );
+  const confirmDisabledReasonCode =
+    computeConfirmDisabledReason(reviewEditingState);
+  const confirmDisabled = locked || confirmDisabledReasonCode !== null;
   const confirmDisabledReasonText =
     confirmDisabledReasonCode &&
     t(CONFIRM_DISABLED_REASON_KEY[confirmDisabledReasonCode]);
 
+  // 버튼 클릭이 현재 포커스 필드를 항상 blur시키는 건 아니다(예: 일부 브라우저는
+  // 마우스 클릭으로 button에 포커스를 옮기지 않는다) — 그래서 열려있는 필드의 로컬
+  // 버퍼가 아직 초안에 안 넘어갔을 수 있다. flush 후 캐시를 직접 다시 읽고, 그
+  // 시점의 초안으로 차단 조건까지 다시 계산해야 방금 들어온 편집을 놓치지 않는다.
   async function handleConfirm() {
     if (confirmDisabled) {
+      return;
+    }
+    flushPendingCommits();
+    const latestDraft = readReviewDraft() ?? draft;
+    const latestState = computeReviewEditingState(latestDraft);
+    if (computeConfirmDisabledReason(latestState) !== null) {
       return;
     }
     updateReview.reset();
     confirmReview.reset();
     try {
       await runConfirmReview({
-        changesetId: review.changesetId,
-        dirty,
-        expectedVersion: review.draftVersion,
-        digestRows,
-        newReferences: referenceRows,
-        referenceUpdates,
+        draft: latestDraft,
+        referenceUpdates: latestState.referenceUpdates,
         updateReview: updateReview.mutateAsync,
         confirmReview: confirmReview.mutateAsync,
       });
@@ -130,7 +120,7 @@ function IngestionContent() {
       return;
     }
     discardReview.mutate(
-      { changesetId: review.changesetId },
+      { changesetId: draft.changesetId },
       { onSuccess: () => showNotificationSoftAsk() },
     );
   }
@@ -139,14 +129,14 @@ function IngestionContent() {
   // 어느 카드에서 눌러도 같은 탭을 열거나 그 탭으로 포커스만 옮긴다. 이미 활성인
   // 카드에서 다시 누르면 닫는다(토글) — 여러 카드가 같은 탭을 가리켜서 "열기"만
   // 있으면 카드 쪽엔 탭을 닫을 방법이 없다.
-  function handleViewSource(index: number) {
-    if (activeTabId === review.sourceId && activeSourceDigestIndex === index) {
-      closeTab(review.sourceId);
+  function handleViewSource(digestId: string) {
+    if (activeTabId === draft.sourceId && activeSourceDigestId === digestId) {
+      closeTab(draft.sourceId);
       return;
     }
-    setActiveSourceDigestIndex(index);
+    setActiveSourceDigestId(digestId);
     openTab({
-      id: review.sourceId,
+      id: draft.sourceId,
       label: reviewTitle,
       content: (
         <div className="flex flex-col gap-3 p-4">
@@ -159,22 +149,22 @@ function IngestionContent() {
             color="secondary"
             className="whitespace-pre-wrap"
           >
-            {review.sourceBody}
+            {draft.sourceBody}
           </Text>
         </div>
       ),
     });
   }
 
-  const sourceTabOpen = activeTabId === review.sourceId;
+  const sourceTabOpen = activeTabId === draft.sourceId;
 
   return (
     <ChangesetDetailLayout title={reviewTitle}>
       <ChangesetDetailHeader
         title={reviewTitle}
-        changesetNumber={review.changesetNumber}
+        changesetNumber={draft.changesetNumber}
         state="open"
-        time={review.sourceCreatedAt}
+        time={draft.sourceCreatedAt}
         actions={
           <IngestionActions
             onDiscard={handleDiscard}
@@ -192,16 +182,16 @@ function IngestionContent() {
       )}
 
       <DigestCandidateList
-        digests={review.digests}
+        digests={draft.digests}
         disabled={locked}
-        activeSourceIndex={sourceTabOpen ? activeSourceDigestIndex : null}
+        activeSourceDigestId={sourceTabOpen ? activeSourceDigestId : null}
         onViewSource={handleViewSource}
       />
 
       <ReferenceSection
-        digests={review.digests}
-        newReferences={review.newReferences}
-        citedReferences={review.citedReferences}
+        digests={draft.digests}
+        newReferences={draft.newReferences}
+        citedReferences={draft.citedReferences}
         disabled={locked}
       />
     </ChangesetDetailLayout>
@@ -214,9 +204,9 @@ function IngestionContent() {
 export function IngestionScreen() {
   return (
     <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
-      <EditingProvider>
+      <ReviewDraftProvider>
         <IngestionContent />
-      </EditingProvider>
+      </ReviewDraftProvider>
     </Suspense>
   );
 }

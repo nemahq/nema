@@ -1,13 +1,14 @@
 import { DIGEST_DESCRIPTION_MAX_LENGTH } from "@nema-io/shared";
 
+import { useDraftField } from "@web/features/review/hooks/useDraftField";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { useEditing } from "./EditingProvider";
 import { InvisibleTextarea } from "./InvisibleTextarea";
+import { useReviewDraftContext } from "./ReviewDraftProvider";
 
 interface DigestDescriptionFieldProps {
   digestId: string;
-  baseDescription: string;
+  description: string;
   disabled: boolean;
 }
 
@@ -16,29 +17,27 @@ interface DigestDescriptionFieldProps {
 // 아니라 명사형 — 제목 바로 아래 줄이라 훑을 때 읽을 텍스트를 늘리지 않는 게 낫다.
 export function DigestDescriptionField({
   digestId,
-  baseDescription,
+  description,
   disabled,
 }: DigestDescriptionFieldProps) {
   const { t } = useTranslation();
-  const dispatch = useEditing((state) => state.dispatch);
-  const description = useEditing(
-    (state) =>
-      state.overrides.descriptionOverrides.get(digestId) ?? baseDescription,
+  const { dispatch } = useReviewDraftContext();
+  const field = useDraftField(description, (next) =>
+    dispatch({
+      type: "digest/setDescription",
+      id: digestId,
+      description: next,
+    }),
   );
 
   return (
     <InvisibleTextarea
-      value={description}
+      value={field.value}
       disabled={disabled}
       maxLength={DIGEST_DESCRIPTION_MAX_LENGTH}
       placeholder={t("review.digest_description_placeholder")}
-      onChange={(next) =>
-        dispatch({
-          type: "digest/setDescription",
-          id: digestId,
-          description: next,
-        })
-      }
+      onChange={field.setValue}
+      onBlur={field.commitNow}
       className="-mt-1 text-[14px] leading-[1.5] text-fg-tertiary"
     />
   );

@@ -11,12 +11,12 @@ import { Circle, Plus } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
-import { useEditing } from "./EditingProvider";
+import { useReviewDraftContext } from "./ReviewDraftProvider";
 import { TopicEditPanel } from "./TopicEditPanel";
 
 interface DigestTopicPickerProps {
   digestId: string;
-  baseTopics: DigestTopicDraft[];
+  topics: DigestTopicDraft[];
   disabled: boolean;
 }
 
@@ -37,17 +37,13 @@ interface DigestTopicPickerProps {
 // weave Chip을 그대로 못 쓰는 이유는 Chip 자신이 곧 button이라, 넓은 히트박스용
 // 바깥 button 안에 중첩 button을 못 넣기 때문 — 시각만 같은 span으로 대체하고
 // hover는 group-hover로 옮긴다.
-// 주제 편집값도 태그와 같은 이유로 카드·헤더가 아니라 여기서 구독한다.
 export function DigestTopicPicker({
   digestId,
-  baseTopics,
+  topics,
   disabled,
 }: DigestTopicPickerProps) {
   const { t } = useTranslation();
-  const dispatch = useEditing((state) => state.dispatch);
-  const topics = useEditing(
-    (state) => state.overrides.topicsOverrides.get(digestId) ?? baseTopics,
-  );
+  const { dispatch } = useReviewDraftContext();
 
   return (
     <Popover>

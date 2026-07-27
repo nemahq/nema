@@ -8,7 +8,6 @@ import type {
 } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { useEditing } from "./EditingProvider";
 import { ReferenceCandidateCard } from "./ReferenceCandidateCard";
 import { ReferenceMergeCard } from "./ReferenceMergeCard";
 
@@ -20,10 +19,8 @@ interface ReferenceSectionProps {
 }
 
 // 병합 후보는 살아남은 Digest가 무엇을 인용하는지에 달려 있어(referenceMerge.ts)
-// Digest 삭제까지 함께 구독한다 — 마지막으로 인용하던 후보가 빠지면 병합 후보도
-// 사라져야 한다. 반대로 각 카드의 편집값은 구독하지 않는다: 어떤 카드가 목록에
-// 남는지는 편집값과 무관해서, 여기서 들면 한 카드를 고칠 때마다 목록 전체가 다시
-// 그려지기만 한다(DigestCandidateList와 같은 분담).
+// Digest 목록도 같이 받는다 — 마지막으로 인용하던 후보가 빠지면 병합 후보도
+// 사라져야 한다.
 export function ReferenceSection({
   digests,
   newReferences,
@@ -31,26 +28,15 @@ export function ReferenceSection({
   disabled,
 }: ReferenceSectionProps) {
   const { t } = useTranslation();
-  const removedDigestIds = useEditing(
-    (state) => state.overrides.removedDigestIds,
-  );
-  const removedReferenceIds = useEditing(
-    (state) => state.overrides.removedReferenceIds,
-  );
 
-  const visibleReferences = newReferences.filter(
-    (reference) => !removedReferenceIds.has(reference.id),
-  );
   const mergeCandidates = selectMergeCandidates({
     citedReferences,
     citedReferenceIds: new Set(
-      digests
-        .filter((digest) => !removedDigestIds.has(digest.id))
-        .flatMap((digest) => digest.referenceIds),
+      digests.flatMap((digest) => digest.referenceIds),
     ),
   });
 
-  if (visibleReferences.length + mergeCandidates.length === 0) {
+  if (newReferences.length + mergeCandidates.length === 0) {
     return null;
   }
 
@@ -58,17 +44,17 @@ export function ReferenceSection({
     <div className="flex flex-col gap-3">
       <Text as="h2" size="sm" weight="semibold" color="secondary">
         {t("review.reference_section_title", {
-          count: visibleReferences.length + mergeCandidates.length,
+          count: newReferences.length + mergeCandidates.length,
         })}
       </Text>
       {/* DigestCandidateList와 같은 이유로 라벨과 별도 wrapper — 카드들을 gap 없는
           안쪽 div로 묶어야 카드 간 간격이 부모 gap-3와 안 겹치고 각 카드 자신의
           pb 하나로만 정해진다(겹치면 카드 사이만 이중으로 벌어짐, 실측 확인됨). */}
       <div className="flex flex-col">
-        {visibleReferences.map((reference) => (
+        {newReferences.map((reference) => (
           <ReferenceCandidateCard
             key={reference.id}
-            baseReference={reference}
+            reference={reference}
             disabled={disabled}
           />
         ))}

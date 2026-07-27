@@ -9,6 +9,7 @@ interface ReferenceBodyFieldProps {
   body: string;
   disabled: boolean;
   onChange: (body: string) => void;
+  onBlur: () => void;
 }
 
 // 신규 후보와 병합 후보가 공유하는 유일한 편집 필드 — 신규는 "새로 만들 설명",
@@ -18,6 +19,7 @@ export function ReferenceBodyField({
   body,
   disabled,
   onChange,
+  onBlur,
 }: ReferenceBodyFieldProps) {
   const { t } = useTranslation();
 
@@ -32,6 +34,7 @@ export function ReferenceBodyField({
         maxLength={REFERENCE_BODY_MAX_LENGTH}
         placeholder={t("review.reference_body_placeholder")}
         onChange={onChange}
+        onBlur={onBlur}
       />
     </div>
   );

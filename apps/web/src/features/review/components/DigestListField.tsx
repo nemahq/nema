@@ -14,6 +14,9 @@ interface DigestListFieldProps {
   disabled: boolean;
   placeholder: string;
   onChange: (next: string[]) => void;
+  // 항목 사이를 오갈 때도 매번 불리지만, 소비처가 "넘길 게 없으면 아무 일도 안 함"
+  // 으로 받으므로 항목 단위 blur를 그대로 흘려보낸다.
+  onBlur?: () => void;
 }
 
 interface PendingFocus {
@@ -29,6 +32,7 @@ export function DigestListField({
   disabled,
   placeholder,
   onChange,
+  onBlur,
 }: DigestListFieldProps) {
   const itemRefs = useRef<Array<HTMLTextAreaElement | null>>([]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -113,11 +117,12 @@ export function DigestListField({
             }
             onKeyDown={(e) => handleKeyDown(itemIndex, e)}
             onFocus={() => setFocusedIndex(itemIndex)}
-            onBlur={() =>
+            onBlur={() => {
               setFocusedIndex((current) =>
                 current === itemIndex ? null : current,
-              )
-            }
+              );
+              onBlur?.();
+            }}
           />
         </div>
       ))}

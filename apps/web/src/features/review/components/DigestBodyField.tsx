@@ -4,12 +4,14 @@ import type {
   DigestBodyFieldKey,
   DigestBodyFieldKind,
 } from "@web/features/review/constants";
+import { resolveCommittedValue } from "@web/features/review/digestBodyFieldValue";
+import { useDraftField } from "@web/features/review/hooks/useDraftField";
 import type { ReviewDigest } from "@web/features/review/types";
 import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
 
 import { DigestListField } from "./DigestListField";
 import { DigestTextField } from "./DigestTextField";
-import { useEditing } from "./EditingProvider";
+import { useReviewDraftContext } from "./ReviewDraftProvider";
 
 // DIGEST_BODY_FIELDS의 key는 body.type과의 상관관계가 렌더 시점에 끊겨 string으로
 // 넓어진다 — 단언 대신 실제 값 모양을 확인해 좁힌다.
@@ -36,18 +38,20 @@ function isBlank(value: string | string[]): boolean {
   return value.every((item) => item.trim() === "");
 }
 
-// 빈 string[] 필드는 []로는 타이핑을 시작할 줄 자체가 없어 [""] 하나를 깔아준다.
-// 실제로 치기 전까진 dispatch되지 않아 서버로 나가는 값은 그대로 비어 있다.
-const EMPTY_VALUE: Record<DigestBodyFieldKind, string | string[]> = {
-  text: "",
-  list: [""],
-};
+// 리스트 값은 매 편집마다 새 배열이라 참조 비교로는 늘 "바뀌었다"가 된다.
+function isSameFieldValue(a: string | string[], b: string | string[]): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, index) => item === b[index]);
+  }
+  return Object.is(a, b);
+}
 
 interface FieldRendererArgs {
   value: string | string[];
   disabled: boolean;
   placeholder: string;
   onChange: (next: string | string[]) => void;
+  onBlur: () => void;
 }
 
 // kind별 어댑터 — 값 모양(string vs string[])을 각자 자기 자리에서 좁혀서,
@@ -66,9 +70,9 @@ const FIELD_RENDERER: Record<
 
 interface DigestBodyFieldProps {
   digestId: string;
-  // 오버라이드가 아직 없을 때의 바탕 — 쿼리 결과라 참조가 안정적이어서, 이 prop이
-  // 바뀌지 않는 한 형제 필드를 고쳐도 이 필드는 다시 그려지지 않는다.
-  baseBody: ReviewDigest["body"];
+  // 초안의 body 전체를 받는다 — 자기 필드만 읽지만, 타입이 바뀌어 이 필드가 사라진
+  // 경우까지 같은 경로로 알아채야 화면이 초기화를 따라간다.
+  body: ReviewDigest["body"];
   fieldKey: DigestBodyFieldKey;
   kind: DigestBodyFieldKind;
   labelKey: TranslationKey;
@@ -81,7 +85,7 @@ interface DigestBodyFieldProps {
 
 export function DigestBodyField({
   digestId,
-  baseBody,
+  body,
   fieldKey,
   kind,
   labelKey,
@@ -90,28 +94,22 @@ export function DigestBodyField({
   cardFocused,
 }: DigestBodyFieldProps) {
   const { t } = useTranslation();
-  const dispatch = useEditing((state) => state.dispatch);
-  const stored = useEditing((state) =>
-    readFieldValue(
-      state.overrides.bodyOverrides.get(digestId) ?? baseBody,
-      fieldKey,
-    ),
+  const { dispatch } = useReviewDraftContext();
+  const stored = readFieldValue(body, fieldKey);
+  const field = useDraftField(
+    resolveCommittedValue(stored, kind),
+    (next) =>
+      dispatch({
+        type: "digest/setBodyField",
+        id: digestId,
+        key: fieldKey,
+        value: next,
+      }),
+    isSameFieldValue,
   );
 
-  const fieldValue: string | string[] =
-    stored === undefined || isBlank(stored) ? EMPTY_VALUE[kind] : stored;
-  const blank = isBlank(fieldValue);
+  const blank = isBlank(field.value);
   const placeholder = t(placeholderKey);
-
-  function setFieldValue(next: string | string[]) {
-    dispatch({
-      type: "digest/setBodyField",
-      id: digestId,
-      baseBody,
-      key: fieldKey,
-      value: next,
-    });
-  }
 
   return (
     <div
@@ -128,10 +126,11 @@ export function DigestBodyField({
             {t(labelKey)}
           </Text>
           {FIELD_RENDERER[kind]({
-            value: fieldValue,
+            value: field.value,
             disabled,
             placeholder,
-            onChange: setFieldValue,
+            onChange: field.setValue,
+            onBlur: field.commitNow,
           })}
         </div>
       </div>
