@@ -11,7 +11,7 @@ import { DigestTypePicker } from "./DigestTypePicker";
 interface DigestCardHeaderProps {
   digestId: string;
   type: DigestType;
-  baseTopics: ReviewDigest["topics"];
+  topics: ReviewDigest["topics"];
   disabled: boolean;
   viewed: boolean;
   sourceActive: boolean;
@@ -21,12 +21,11 @@ interface DigestCardHeaderProps {
   onRemove: () => void;
 }
 
-// 좌: 상시 노출 타입·Topic, 우: 원문 보기·읽음·메뉴. 이 헤더 자신은 편집값을
-// 구독하지 않는다 — Topic이 바뀌어도 리렌더는 DigestTopicPicker 안에서 끝나야 한다.
+// 좌: 상시 노출 타입·Topic, 우: 원문 보기·읽음·메뉴.
 export function DigestCardHeader({
   digestId,
   type,
-  baseTopics,
+  topics,
   disabled,
   viewed,
   sourceActive,
@@ -47,7 +46,7 @@ export function DigestCardHeader({
         />
         <DigestTopicPicker
           digestId={digestId}
-          baseTopics={baseTopics}
+          topics={topics}
           disabled={disabled}
         />
       </div>

@@ -10,12 +10,12 @@ import { Tag as TagIcon } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
-import { useEditing } from "./EditingProvider";
+import { useReviewDraftContext } from "./ReviewDraftProvider";
 import { TagEditPanel } from "./TagEditPanel";
 
 interface DigestTagPickerProps {
   digestId: string;
-  baseTags: DigestTagDraft[];
+  tags: DigestTagDraft[];
   disabled: boolean;
 }
 
@@ -36,18 +36,13 @@ interface DigestTagPickerProps {
 // 그 둘이 겹쳐 빈 상태만 왼쪽 패딩이 두 배로 쌓이는 비대칭이 났다 — 트리거를
 // 감싸는 컨테이너 하나에 고정 패딩만 주고 안쪽(Badge·아이콘)엔 더 손대지 않는
 // 지금 방식이 상태와 무관하게 항상 같다.
-// 태그 편집값을 카드가 아니라 여기서 구독한다 — 카드가 들면 태그 하나 추가할
-// 때마다 본문 필드 전체가 같이 다시 그려진다.
 export function DigestTagPicker({
   digestId,
-  baseTags,
+  tags,
   disabled,
 }: DigestTagPickerProps) {
   const { t } = useTranslation();
-  const dispatch = useEditing((state) => state.dispatch);
-  const tags = useEditing(
-    (state) => state.overrides.tagsOverrides.get(digestId) ?? baseTags,
-  );
+  const { dispatch } = useReviewDraftContext();
 
   return (
     <Popover>

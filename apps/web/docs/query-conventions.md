@@ -2,7 +2,13 @@
 
 Rules for tRPC query and mutation hooks in `features/*/hooks/`.
 
-Server state lives here, in the TanStack Query cache — never copied into a zustand store, not even as an "immutable snapshot" to diff local edits against. A copy silently stops tracking refetches (`staleTime` expiry, window focus, post-mutation invalidation), so the screen keeps rendering the payload it started with. A store holds only the user's own edits; read the baseline from the query and combine the two where it is consumed.
+Server state lives here, in the TanStack Query cache — never copied into a store, not even as an "immutable snapshot" to diff local edits against. A copy silently stops tracking refetches (`staleTime` expiry, window focus, post-mutation invalidation), so the screen keeps rendering the payload it started with.
+
+### Editable server state (drafts)
+
+When the user edits a server payload before saving it, edit the cache entry itself with `setQueryData` — do not layer a separate edit state over it. One value answers "what does it look like now", which is what saving (send it whole) and undo (restore a previous one) both need; a baseline + per-field overrides answers it only by recombining them at every read.
+
+Such a query MUST opt out of every automatic refetch axis (`staleTime`, window focus, reconnect, mount) and be refetched only by explicit invalidation after a save. Any refetch that lands mid-edit overwrites the user's work with the server's copy, and the loss is silent. Check that no other mutation's `invalidate` range covers this query key.
 
 ## Query Hooks
 

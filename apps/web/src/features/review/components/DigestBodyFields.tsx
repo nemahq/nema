@@ -1,5 +1,3 @@
-import type { DigestType } from "@nema-io/shared";
-
 import { DIGEST_BODY_FIELDS } from "@web/features/review/constants";
 import type { ReviewDigest } from "@web/features/review/types";
 
@@ -7,8 +5,7 @@ import { DigestBodyField } from "./DigestBodyField";
 
 interface DigestBodyFieldsProps {
   digestId: string;
-  type: DigestType;
-  baseBody: ReviewDigest["body"];
+  body: ReviewDigest["body"];
   disabled: boolean;
   cardFocused: boolean;
 }
@@ -18,18 +15,17 @@ interface DigestBodyFieldsProps {
 // 생긴다(design-decisions-log.md).
 export function DigestBodyFields({
   digestId,
-  type,
-  baseBody,
+  body,
   disabled,
   cardFocused,
 }: DigestBodyFieldsProps) {
   return (
     <div className="mt-2 flex flex-col gap-3 pl-2">
-      {DIGEST_BODY_FIELDS[type].map((field) => (
+      {DIGEST_BODY_FIELDS[body.type].map((field) => (
         <DigestBodyField
           key={field.key}
           digestId={digestId}
-          baseBody={baseBody}
+          body={body}
           fieldKey={field.key}
           kind={field.kind}
           labelKey={field.labelKey}

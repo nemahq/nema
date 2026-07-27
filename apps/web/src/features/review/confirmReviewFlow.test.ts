@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { confirmDisabledReason, runConfirmReview } from "./confirmReviewFlow";
+import type { ReviewDraft } from "./reviewDraft";
 import type { ReviewDigest, ReviewNewReference } from "./types";
 
 const DIGEST: ReviewDigest = {
@@ -15,6 +16,23 @@ const DIGEST: ReviewDigest = {
   newReferenceKeys: [],
   externalUrls: [],
 };
+
+function draft(overrides: Partial<ReviewDraft> = {}): ReviewDraft {
+  return {
+    changesetId: "cs-1",
+    changesetNumber: 1,
+    spaceId: "space-1",
+    sourceId: "source-1",
+    sourceTitle: "원문 제목",
+    sourceBody: "원문 본문",
+    sourceCreatedAt: "2026-07-18T00:00:00.000Z",
+    draftVersion: 1,
+    digests: [DIGEST],
+    newReferences: [],
+    citedReferences: [],
+    ...overrides,
+  };
+}
 
 describe("confirmDisabledReason", () => {
   it("후보가 하나도 없으면 no_candidates", () => {
@@ -77,7 +95,7 @@ describe("confirmDisabledReason", () => {
 });
 
 describe("runConfirmReview", () => {
-  it("dirty하면 편집(제목·타입 body·라벨)을 저장한 뒤 confirmReview를 부른다", async () => {
+  it("dirty하면 초안을 저장한 뒤 confirmReview를 부른다", async () => {
     const calls: string[] = [];
     const updateReview = vi.fn().mockImplementation(async () => {
       calls.push("update");
@@ -87,30 +105,18 @@ describe("runConfirmReview", () => {
     });
 
     // 타입 변경 초기화 결과 — 원본 DIGEST.body(decision)와 다른 빈 body가 실려야 한다.
-    const overriddenBody: ReviewDigest["body"] = { type: "learning" };
-    const overriddenTopics: ReviewDigest["topics"] = [
-      { id: null, title: "새 주제" },
-    ];
-    const overriddenTags: ReviewDigest["tags"] = [
-      { id: null, title: "새 태그", description: "설명" },
-    ];
+    const editedDigest: ReviewDigest = {
+      ...DIGEST,
+      title: "  새 제목  ",
+      description: "  새 설명  ",
+      body: { type: "learning" },
+      topics: [{ id: null, title: " 새 주제 " }],
+      tags: [{ id: null, title: " 새 태그 ", description: "설명" }],
+    };
 
     await runConfirmReview({
-      changesetId: "cs-1",
+      draft: draft({ digests: [editedDigest], draftVersion: 3 }),
       dirty: true,
-      expectedVersion: 1,
-      digestRows: [
-        {
-          digest: DIGEST,
-          title: "  새 제목  ",
-          description: "  새 설명  ",
-          body: overriddenBody,
-          topics: overriddenTopics,
-          tags: overriddenTags,
-          newReferenceKeys: DIGEST.newReferenceKeys,
-        },
-      ],
-      newReferences: [],
       referenceUpdates: [],
       updateReview,
       confirmReview,
@@ -119,16 +125,14 @@ describe("runConfirmReview", () => {
     expect(calls).toEqual(["update", "confirm"]);
     expect(updateReview).toHaveBeenCalledWith({
       changesetId: "cs-1",
-      expectedVersion: 1,
+      expectedVersion: 3,
       digests: [
         {
-          ...DIGEST,
+          ...editedDigest,
           title: "새 제목",
           description: "새 설명",
-          body: overriddenBody,
-          topics: overriddenTopics,
-          tags: overriddenTags,
-          newReferenceKeys: DIGEST.newReferenceKeys,
+          topics: [{ id: null, title: "새 주제" }],
+          tags: [{ id: null, title: "새 태그", description: "설명" }],
         },
       ],
       newReferences: [],
@@ -151,21 +155,8 @@ describe("runConfirmReview", () => {
     };
 
     await runConfirmReview({
-      changesetId: "cs-1",
+      draft: draft({ newReferences: [editedReference] }),
       dirty: true,
-      expectedVersion: 1,
-      digestRows: [
-        {
-          digest: DIGEST,
-          title: DIGEST.title,
-          description: DIGEST.description,
-          body: DIGEST.body,
-          topics: [],
-          tags: [],
-          newReferenceKeys: DIGEST.newReferenceKeys,
-        },
-      ],
-      newReferences: [editedReference],
       referenceUpdates: [],
       updateReview,
       confirmReview,
@@ -185,21 +176,8 @@ describe("runConfirmReview", () => {
     const confirmReview = vi.fn().mockResolvedValue(undefined);
 
     await runConfirmReview({
-      changesetId: "cs-1",
+      draft: draft(),
       dirty: true,
-      expectedVersion: 1,
-      digestRows: [
-        {
-          digest: DIGEST,
-          title: DIGEST.title,
-          description: DIGEST.description,
-          body: DIGEST.body,
-          topics: [],
-          tags: [],
-          newReferenceKeys: DIGEST.newReferenceKeys,
-        },
-      ],
-      newReferences: [],
       referenceUpdates: [
         {
           referenceId: "11111111-1111-1111-1111-111111111111",
@@ -235,21 +213,8 @@ describe("runConfirmReview", () => {
     const confirmReview = vi.fn().mockResolvedValue(undefined);
 
     await runConfirmReview({
-      changesetId: "cs-1",
+      draft: draft(),
       dirty: false,
-      expectedVersion: 1,
-      digestRows: [
-        {
-          digest: DIGEST,
-          title: DIGEST.title,
-          description: DIGEST.description,
-          body: DIGEST.body,
-          topics: [],
-          tags: [],
-          newReferenceKeys: DIGEST.newReferenceKeys,
-        },
-      ],
-      newReferences: [],
       referenceUpdates: [],
       updateReview,
       confirmReview,
@@ -265,21 +230,8 @@ describe("runConfirmReview", () => {
 
     await expect(
       runConfirmReview({
-        changesetId: "cs-1",
+        draft: draft(),
         dirty: true,
-        expectedVersion: 1,
-        digestRows: [
-          {
-            digest: DIGEST,
-            title: DIGEST.title,
-            description: DIGEST.description,
-            body: DIGEST.body,
-            topics: [],
-            tags: [],
-            newReferenceKeys: DIGEST.newReferenceKeys,
-          },
-        ],
-        newReferences: [],
         referenceUpdates: [],
         updateReview,
         confirmReview,

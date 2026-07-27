@@ -8,20 +8,16 @@ import { DigestCardHeader } from "./DigestCardHeader";
 import { DigestDescriptionField } from "./DigestDescriptionField";
 import { DigestTagPicker } from "./DigestTagPicker";
 import { DigestTitleField } from "./DigestTitleField";
-import { useEditing } from "./EditingProvider";
+import { useReviewDraftContext } from "./ReviewDraftProvider";
 
 interface DigestCandidateCardProps {
-  digestId: string;
   digest: ReviewDigest;
   disabled: boolean;
   sourceActive: boolean;
   onViewSource: () => void;
 }
 
-// 타입만 이 카드가 구독한다 — 본문 필드 구성이 타입에 따라 갈려서 카드 자신이
-// 알아야 하는 유일한 편집값이다. Topic·태그는 각 Picker가 자기 몫만 구독한다.
 export function DigestCandidateCard({
-  digestId,
   digest,
   disabled,
   sourceActive,
@@ -31,11 +27,7 @@ export function DigestCandidateCard({
   // 올리지 않는다 — 부모가 들면 카드 하나를 접을 때마다 목록 전체가 다시 그려진다.
   const [viewed, setViewed] = useState(false);
   const [focused, setFocused] = useState(false);
-  const dispatch = useEditing((state) => state.dispatch);
-  const type = useEditing(
-    (state) =>
-      (state.overrides.bodyOverrides.get(digestId) ?? digest.body).type,
-  );
+  const { dispatch } = useReviewDraftContext();
 
   // 실제 편집 필드에 포커스가 들어올 때만 펼친다. ⋯ 메뉴처럼 Portal로 렌더되는
   // 요소도 합성 이벤트는 여기까지 버블링되는데, data-nav-field가 안 붙어 있어
@@ -65,9 +57,9 @@ export function DigestCandidateCard({
            더 안정적인 기준이라고 봤다(design-decisions-log.md). */
         <>
           <DigestCardHeader
-            digestId={digestId}
-            type={type}
-            baseTopics={digest.topics}
+            digestId={digest.id}
+            type={digest.body.type}
+            topics={digest.topics}
             disabled={disabled}
             viewed={viewed}
             sourceActive={sourceActive}
@@ -76,29 +68,28 @@ export function DigestCandidateCard({
             onChangeType={(next) =>
               dispatch({
                 type: "digest/setBody",
-                id: digestId,
+                id: digest.id,
                 body: { type: next },
               })
             }
-            onRemove={() => dispatch({ type: "digest/remove", id: digestId })}
+            onRemove={() => dispatch({ type: "digest/remove", id: digest.id })}
           />
           <DigestTitleField
-            digestId={digestId}
-            baseTitle={digest.title}
+            digestId={digest.id}
+            title={digest.title}
             disabled={disabled}
           />
           <DigestDescriptionField
-            digestId={digestId}
-            baseDescription={digest.description}
+            digestId={digest.id}
+            description={digest.description}
             disabled={disabled}
           />
         </>
       }
     >
       <DigestBodyFields
-        digestId={digestId}
-        type={type}
-        baseBody={digest.body}
+        digestId={digest.id}
+        body={digest.body}
         disabled={disabled}
         cardFocused={focused}
       />
@@ -109,8 +100,8 @@ export function DigestCandidateCard({
           둬서 필드 사이 간격(gap-3)과 같은 무게로 리듬만 유지한다. */}
       <div className="mt-3">
         <DigestTagPicker
-          digestId={digestId}
-          baseTags={digest.tags}
+          digestId={digest.id}
+          tags={digest.tags}
           disabled={disabled}
         />
       </div>

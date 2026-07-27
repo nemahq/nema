@@ -1,13 +1,14 @@
 import { DIGEST_TITLE_MAX_LENGTH } from "@nema-io/shared";
 
+import { useDraftField } from "@web/features/review/hooks/useDraftField";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { useEditing } from "./EditingProvider";
 import { InvisibleTextarea } from "./InvisibleTextarea";
+import { useReviewDraftContext } from "./ReviewDraftProvider";
 
 interface DigestTitleFieldProps {
   digestId: string;
-  baseTitle: string;
+  title: string;
   disabled: boolean;
 }
 
@@ -16,24 +17,23 @@ interface DigestTitleFieldProps {
 // 필요하다.
 export function DigestTitleField({
   digestId,
-  baseTitle,
+  title,
   disabled,
 }: DigestTitleFieldProps) {
   const { t } = useTranslation();
-  const dispatch = useEditing((state) => state.dispatch);
-  const title = useEditing(
-    (state) => state.overrides.titleOverrides.get(digestId) ?? baseTitle,
+  const { dispatch } = useReviewDraftContext();
+  const field = useDraftField(title, (next) =>
+    dispatch({ type: "digest/setTitle", id: digestId, title: next }),
   );
 
   return (
     <InvisibleTextarea
-      value={title}
+      value={field.value}
       disabled={disabled}
       maxLength={DIGEST_TITLE_MAX_LENGTH}
       placeholder={t("intake.draft_untitled")}
-      onChange={(next) =>
-        dispatch({ type: "digest/setTitle", id: digestId, title: next })
-      }
+      onChange={field.setValue}
+      onBlur={field.commitNow}
       className="text-[20px] font-semibold leading-[1.4]"
     />
   );
