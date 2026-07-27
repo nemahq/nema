@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildDraftRenameExistingLabels,
   filterActiveLabelCandidates,
+  filterDraftLabelCandidates,
   hasExactLabelMatch,
   isDuplicateLabelName,
 } from "./labelSearch";
@@ -81,5 +83,56 @@ describe("isDuplicateLabelName", () => {
 
   it("앞뒤 공백을 무시하고 비교한다", () => {
     expect(isDuplicateLabelName("  결제  ", ["결제"])).toBe(true);
+  });
+});
+
+interface DraftTopic {
+  id: string | null;
+  title: string;
+}
+
+const DRAFT_TOPICS: DraftTopic[] = [
+  { id: "t1", title: "결제" },
+  { id: null, title: "결제 재시도" },
+  { id: null, title: "환불" },
+];
+
+describe("filterDraftLabelCandidates", () => {
+  it("id가 null인 draft만 후보로 남긴다", () => {
+    const result = filterDraftLabelCandidates(DRAFT_TOPICS, "");
+    expect(result.map(({ item }) => item.title)).toEqual([
+      "결제 재시도",
+      "환불",
+    ]);
+  });
+
+  it("원래 배열의 index를 그대로 들고 있다", () => {
+    const result = filterDraftLabelCandidates(DRAFT_TOPICS, "");
+    expect(result.map(({ index }) => index)).toEqual([1, 2]);
+  });
+
+  it("검색어로 draft도 다른 후보와 같이 필터링된다", () => {
+    const result = filterDraftLabelCandidates(DRAFT_TOPICS, "재시도");
+    expect(result).toEqual([{ item: DRAFT_TOPICS[1], index: 1 }]);
+  });
+});
+
+describe("buildDraftRenameExistingLabels", () => {
+  it("레지스트리 이름과 다른 라벨 이름을 합친다", () => {
+    const result = buildDraftRenameExistingLabels(
+      ["결제"],
+      ["결제 재시도", "환불"],
+      -1,
+    );
+    expect(result).toEqual(["결제", "결제 재시도", "환불"]);
+  });
+
+  it("excludeAt에 해당하는 자기 자신은 뺀다", () => {
+    const result = buildDraftRenameExistingLabels(
+      ["결제"],
+      ["결제 재시도", "환불"],
+      0,
+    );
+    expect(result).toEqual(["결제", "환불"]);
   });
 });

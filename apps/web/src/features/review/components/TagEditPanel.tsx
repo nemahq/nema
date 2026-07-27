@@ -5,13 +5,20 @@ import {
   type DigestTagDraft,
   TAG_TITLE_MAX_LENGTH,
 } from "@nema-io/shared";
-import { Chip, Separator } from "@nema-io/weave";
+import {
+  Chip,
+  Separator,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 import { isDuplicateLabelName } from "@web/utils/labelSearch";
 
 import { LabelChipRow } from "./LabelChipRow";
 import { LabelLimitNotice } from "./LabelLimitNotice";
+import { NewLabelIndicator } from "./NewLabelIndicator";
 import { TagCreateForm } from "./TagCreateForm";
 import { TagSearchList } from "./TagSearchList";
 
@@ -47,6 +54,18 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
     setCreatingTitle(null);
   }
 
+  function handleRenameDraft(
+    index: number,
+    title: string,
+    description: string,
+  ) {
+    onChange(
+      tags.map((tag, i) =>
+        i === index ? { id: null, title, description } : tag,
+      ),
+    );
+  }
+
   if (creatingTitle !== null) {
     return (
       <TagCreateForm
@@ -74,16 +93,27 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
         onQueryChange={setQuery}
       >
         {tags.map((tag, index) => (
-          <Chip
-            key={tag.id ?? `draft-${index}`}
-            variant="outline"
-            shape="rounded"
-            disabled={disabled}
-            onRemove={() => onChange(tags.filter((_, i) => i !== index))}
-            removeAriaLabel={t("review.tag_remove_action")}
-          >
-            {tag.title}
-          </Chip>
+          <Tooltip key={tag.id ?? `draft-${index}`}>
+            <TooltipTrigger asChild>
+              <span className="inline-flex">
+                <Chip
+                  variant="outline"
+                  shape="rounded"
+                  disabled={disabled}
+                  onRemove={() => onChange(tags.filter((_, i) => i !== index))}
+                  removeAriaLabel={t("review.tag_remove_action")}
+                >
+                  <span className="inline-flex min-w-0 items-center gap-0.5">
+                    {tag.id === null && <NewLabelIndicator />}
+                    <span className="truncate">{tag.title}</span>
+                  </span>
+                </Chip>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-64">
+              {tag.description}
+            </TooltipContent>
+          </Tooltip>
         ))}
       </LabelChipRow>
       <Separator />
@@ -97,6 +127,7 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
           tags={tags}
           onSelectExisting={handleSelectExisting}
           onStartCreate={setCreatingTitle}
+          onRenameDraft={handleRenameDraft}
         />
       )}
     </div>

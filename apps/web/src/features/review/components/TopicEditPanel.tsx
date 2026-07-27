@@ -12,6 +12,7 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { LabelChipRow } from "./LabelChipRow";
 import { LabelLimitNotice } from "./LabelLimitNotice";
+import { NewLabelIndicator } from "./NewLabelIndicator";
 import { TopicSearchList } from "./TopicSearchList";
 
 interface TopicEditPanelProps {
@@ -43,6 +44,12 @@ export function TopicEditPanel({
     setQuery("");
   }
 
+  function handleRenameDraft(index: number, title: string) {
+    onChange(
+      topics.map((topic, i) => (i === index ? { id: null, title } : topic)),
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <LabelChipRow
@@ -64,7 +71,10 @@ export function TopicEditPanel({
               label: topic.title,
             })}
           >
-            {topic.title}
+            <span className="inline-flex min-w-0 items-center gap-0.5">
+              {topic.id === null && <NewLabelIndicator />}
+              <span className="truncate">{topic.title}</span>
+            </span>
           </Chip>
         ))}
       </LabelChipRow>
@@ -80,6 +90,7 @@ export function TopicEditPanel({
           topics={topics}
           onSelectExisting={handleSelectExisting}
           onCreateNew={handleCreateNew}
+          onRenameDraft={handleRenameDraft}
         />
       )}
     </div>

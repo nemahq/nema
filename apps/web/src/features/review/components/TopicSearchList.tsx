@@ -1,14 +1,20 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 
 import type { DigestTopicDraft } from "@nema-io/shared";
 
 import { useTopicListSuspenseQuery } from "@web/features/review/hooks/useTopicListQuery";
-import { buildLabelSearchState } from "@web/utils/labelSearch";
+import {
+  buildDraftRenameExistingLabels,
+  buildLabelSearchState,
+  filterDraftLabelCandidates,
+} from "@web/utils/labelSearch";
 
+import { LabelDraftEditPopover } from "./LabelDraftEditPopover";
 import { LabelSearchList } from "./LabelSearchList";
 import { LabelSearchRow } from "./LabelSearchRow";
 import { LabelSearchSection } from "./LabelSearchSection";
 import { LabelSearchSkeleton } from "./LabelSearchSkeleton";
+import { TopicDraftRenameForm } from "./TopicDraftRenameForm";
 
 interface ReviewTopic {
   id: string;
@@ -23,6 +29,7 @@ interface TopicSearchListProps {
   topics: DigestTopicDraft[];
   onSelectExisting: (topic: ReviewTopic) => void;
   onCreateNew: (name: string) => void;
+  onRenameDraft: (index: number, title: string) => void;
 }
 
 const getTopicLabel = (topic: { title: string }) => topic.title;
@@ -33,8 +40,12 @@ function TopicSearchListContent({
   topics,
   onSelectExisting,
   onCreateNew,
+  onRenameDraft,
 }: TopicSearchListProps) {
   const [topicList] = useTopicListSuspenseQuery(spaceId);
+  // 한 번에 하나만 편집 — 이미 열린 걸 그대로 두면 두 편집이 같은 topics 배열을
+  // 동시에 patch하려다 서로의 변경을 덮어쓸 수 있다.
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const { candidates, trimmedQuery, hasExactMatch, canCreate } =
     buildLabelSearchState({
@@ -44,15 +55,45 @@ function TopicSearchListContent({
       existingLabels: topics.map((topic) => topic.title),
     });
   const attachedIds = new Set(topics.map((topic) => topic.id));
+  const draftMatches = filterDraftLabelCandidates(topics, query);
+  const activeRegistryTitles = topicList.topics
+    .filter((topic) => topic.status === "active")
+    .map(getTopicLabel);
 
   return (
     <LabelSearchList
       trimmedQuery={trimmedQuery}
-      hasCandidates={candidates.length > 0}
+      hasCandidates={candidates.length > 0 || draftMatches.length > 0}
       hasExactMatch={hasExactMatch}
       canCreate={canCreate}
       onStartCreate={onCreateNew}
     >
+      {draftMatches.map(({ item, index }) => (
+        <LabelSearchRow
+          key={`draft-${index}`}
+          label={item.title}
+          attached
+          actions={
+            <LabelDraftEditPopover
+              open={editingIndex === index}
+              onOpenChange={(open) => setEditingIndex(open ? index : null)}
+            >
+              <TopicDraftRenameForm
+                title={item.title}
+                existingLabels={buildDraftRenameExistingLabels(
+                  activeRegistryTitles,
+                  topics.map((topic) => topic.title),
+                  index,
+                )}
+                onSubmit={(title) => {
+                  onRenameDraft(index, title);
+                  setEditingIndex(null);
+                }}
+              />
+            </LabelDraftEditPopover>
+          }
+        />
+      ))}
       {candidates.map((topic) => (
         <LabelSearchRow
           key={topic.id}
