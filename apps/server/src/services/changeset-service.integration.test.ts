@@ -136,7 +136,7 @@ async function createFixtureStatement(args: {
 async function createFixtureOpenRelation(args: {
   spaceId: string;
   sourceId: string;
-  relationType: "conflicts" | "duplicates";
+  relationType: "conflicts" | "duplicates" | "supports";
   fromId: string;
   toId: string;
 }): Promise<string> {
@@ -802,17 +802,87 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
         [sourceId, JSON.stringify(pending)],
       );
 
-      const { rows } = await client.query<{ count: string }>(
-        `SELECT count(*)::text FROM changesets c
+      const { rows } = await client.query<{
+        status: string;
+        outcome: string | null;
+      }>(
+        `SELECT c.status, c.outcome FROM changesets c
        JOIN changes ch ON ch.changeset_id = c.id
        WHERE c.type = 'relation' AND ch.data->>'type' = $1
          AND ((ch.data->>'from_id' = $2 AND ch.data->>'to_id' = $3)
-           OR (ch.data->>'from_id' = $3 AND ch.data->>'to_id' = $2))`,
+           OR (ch.data->>'from_id' = $3 AND ch.data->>'to_id' = $2))
+       ORDER BY c.created_at DESC`,
         [relationType, fromId, toId],
       );
-      expect(rows[0]?.count).toBe("1"); // 거절된 첫 changeset 하나뿐 — 방향 뒤집혀도 새로 안 생김.
+      // 거절된 첫 changeset(closed+discarded) 하나뿐이어야 한다 — 방향 뒤집혀도
+      // 새 open이 안 생김. count만 세면 "지우고 새로 만듦"도 통과해버리므로
+      // status/outcome까지 확인한다.
+      expect(rows.map((r) => `${r.status}/${r.outcome ?? "-"}`)).toEqual([
+        "closed/discarded",
+      ]);
     },
   );
+
+  it("거절한 supports 쌍은 방향이 뒤집히면 다시 제안된다 — 방향 의미가 있는 타입은 collapse하지 않는다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const firstChangeset = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "supports",
+      fromId,
+      toId,
+    });
+    await client.query("SELECT reject_pending_relation($1)", [firstChangeset]);
+
+    await client.query(
+      "UPDATE sources SET linking_status = 'pending' WHERE id = $1",
+      [sourceId],
+    );
+    const pending = [{ type: "supports", from_id: toId, to_id: fromId }];
+    await client.query(
+      "SELECT apply_relation_changesets($1, '[]'::jsonb, $2::jsonb)",
+      [sourceId, JSON.stringify(pending)],
+    );
+
+    const { rows } = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>(
+      `SELECT c.status, c.outcome FROM changesets c
+       JOIN changes ch ON ch.changeset_id = c.id
+       WHERE c.type = 'relation' AND ch.data->>'type' = 'supports'
+         AND ((ch.data->>'from_id' = $1 AND ch.data->>'to_id' = $2)
+           OR (ch.data->>'from_id' = $2 AND ch.data->>'to_id' = $1))
+       ORDER BY c.created_at DESC`,
+      [fromId, toId],
+    );
+    // 방향 의미가 있는 타입은 가드가 collapse하지 않으므로, 거절된 A→B와
+    // 별개로 B→A open이 새로 생겨야 한다(conflicts·duplicates와 대조).
+    expect(rows.map((r) => `${r.status}/${r.outcome ?? "-"}`).sort()).toEqual([
+      "closed/discarded",
+      "open/-",
+    ]);
+  });
 });
 
 describe("confirm_digest_edit RPC — manual changeset title (integration)", () => {
