@@ -22,7 +22,6 @@ interface ComboboxItemProps extends Omit<
   // 행 안쪽 버튼과 별개로 오른쪽에 뜨는 액션 — 클릭 영역이 이미 button이라
   // 그 안에 중첩 button을 못 넣어서 형제로 둔다.
   actions?: ReactNode;
-  rowClassName?: string;
   buttonClassName?: string;
 }
 
@@ -30,7 +29,6 @@ export function ComboboxItem({
   disabled = false,
   alreadySelected = false,
   actions,
-  rowClassName,
   buttonClassName,
   onClick,
   children,
@@ -42,7 +40,6 @@ export function ComboboxItem({
         "group flex w-full items-center",
         LIST_ITEM_HOVER_CLASSNAME,
         disabled && "pointer-events-none",
-        rowClassName,
       )}
     >
       <button
