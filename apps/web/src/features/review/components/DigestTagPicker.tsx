@@ -11,6 +11,7 @@ import { Tag as TagIcon } from "@nema-io/weave/icons";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { useEditing } from "./EditingProvider";
+import { NewLabelMark } from "./NewLabelMark";
 import { TagEditPanel } from "./TagEditPanel";
 
 interface DigestTagPickerProps {
@@ -65,7 +66,14 @@ export function DigestTagPicker({
                 shape="rounded"
                 truncated
               >
-                {tag.title}
+                {tag.id === null ? (
+                  <span className="inline-flex items-center gap-1">
+                    <NewLabelMark />
+                    <span className="truncate">{tag.title}</span>
+                  </span>
+                ) : (
+                  tag.title
+                )}
               </Badge>
             ))
           ) : (

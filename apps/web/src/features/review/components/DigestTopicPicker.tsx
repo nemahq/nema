@@ -12,6 +12,7 @@ import { Circle, Plus } from "@nema-io/weave/icons";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { useEditing } from "./EditingProvider";
+import { NewLabelMark } from "./NewLabelMark";
 import { TopicEditPanel } from "./TopicEditPanel";
 
 interface DigestTopicPickerProps {
@@ -75,6 +76,7 @@ export function DigestTopicPicker({
                 {index > 0 && (
                   <Circle className="size-1 shrink-0 fill-current" />
                 )}
+                {topic.id === null && <NewLabelMark />}
                 <Text as="span" size="xs" color="primary">
                   {topic.title}
                 </Text>

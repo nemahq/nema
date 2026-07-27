@@ -11,13 +11,15 @@ import { useTranslation } from "@web/lib/tolgee";
 // 26px) 중앙에 맞춘 값(8+13-size-3.5 절반7=14px) — Chip의 border만큼을 빠뜨리면
 // 1px대 오차로 "+"가 살짝 위로 떠 보인다. left는 페이지 좌우 여백
 // (ChangesetDetailLayout의 px-6) 안으로 들어가는 값.
+// 색은 success가 아니라 brand — Topic·Tag의 NewLabelMark와 같은 신규 표식
+// 언어로 통일한다(success는 "완료"로 읽혀 확정 전 상태와 충돌).
 export function NewReferenceIndicator() {
   const { t } = useTranslation();
 
   return (
     <>
       <Plus
-        className="absolute top-3.5 left-[-20px] size-3.5 text-status-success"
+        className="absolute top-3.5 left-[-20px] size-3.5 text-brand-accent"
         aria-hidden="true"
       />
       <span className="sr-only">{t("review.reference_new_indicator")}</span>

@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import { cn, LIST_ITEM_HOVER_CLASSNAME } from "../utils";
 
@@ -12,18 +12,25 @@ interface ComboboxItemProps extends Omit<
   "className"
 > {
   // 고를 수도 없고 더 볼 것도 없는 행이면 true — 네이티브 disabled로 통째로
-  // 죽인다. alreadySelected와 동시에 켜지 않는다.
+  // 죽인다. alreadySelected와 동시에 켜지 않는다 — 네이티브 disabled가 wrapper의
+  // pointer-events까지 끊어서, 옆에 계속 눌려야 하는 actions까지 죽는다.
   disabled?: boolean;
-  // 이미 붙은 라벨처럼 다시 고를 수는 없지만 hover·포커스는 계속 가능해야 하는
-  // 행이면 true — aria-disabled로만 막는다(네이티브 disabled는 hover까지 죽여서
-  // 못 쓴다).
+  // 이미 붙은 라벨처럼 다시 고를 수는 없지만, 설명은 다시 읽어야 하고 오른쪽
+  // 액션(편집·삭제 등)은 계속 눌러야 하는 행이면 true — aria-disabled로만
+  // 막아 hover·형제 actions는 살려둔다(네이티브 disabled는 그걸 못 해서 못 쓴다).
   alreadySelected?: boolean;
+  // 행 안쪽 버튼과 별개로 오른쪽에 뜨는 액션 — 클릭 영역이 이미 button이라
+  // 그 안에 중첩 button을 못 넣어서 형제로 둔다.
+  actions?: ReactNode;
+  rowClassName?: string;
   buttonClassName?: string;
 }
 
 export function ComboboxItem({
   disabled = false,
   alreadySelected = false,
+  actions,
+  rowClassName,
   buttonClassName,
   onClick,
   children,
@@ -35,6 +42,7 @@ export function ComboboxItem({
         "group flex w-full items-center",
         LIST_ITEM_HOVER_CLASSNAME,
         disabled && "pointer-events-none",
+        rowClassName,
       )}
     >
       <button
@@ -53,6 +61,7 @@ export function ComboboxItem({
       >
         {children}
       </button>
+      {actions}
     </div>
   );
 }
