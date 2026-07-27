@@ -4,7 +4,7 @@ Verify changed code against project conventions. Fix violations in place.
 
 ## Step 1 — Collect changes
 
-1. Determine the base branch (`main`) and run `git diff main...HEAD` to get all changes on the current branch.
+1. Determine the base branch (`staging`) and run `git diff staging...HEAD` to get all changes on the current branch.
    - Also include uncommitted changes: `git diff HEAD` (unstaged + staged).
    - Combine both to get the full picture of current work.
    - No changes in either → report "No changes to check" and stop.
