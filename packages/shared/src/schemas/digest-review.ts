@@ -102,11 +102,17 @@ export type DigestDraft = z.infer<typeof DigestDraftSchema>;
 export const ReviewDigestDraftSchema = DigestDraftSchema.extend({
   id: z.string().uuid(),
   position: z.number().int().min(0),
+  // 이 화면에서 가리킬 수 있는 신규 레퍼런스 후보는 항상 ReviewNewReferenceDraft.id
+  // (실제 target_id) — 베이스 DigestDraftSchema의 임의 문자열 타입보다 좁힌다.
+  newReferenceKeys: z.array(z.string().uuid()),
 });
 export type ReviewDigestDraft = z.infer<typeof ReviewDigestDraftSchema>;
 
 // newReferenceKeys가 실제 신규 레퍼런스 목록을 가리키는지 — 끊긴 키는 확정 시
-// 존재하지 않는 인용을 만들므로 경계에서 막는다.
+// 존재하지 않는 인용을 만들므로 경계에서 막는다. id는 이제 서버 생성이 아니라
+// 클라이언트가 왕복시키는 값이라, 중복 id도 여기서 같이 막는다 — DB upsert가
+// 같은 id를 두 번 받으면 두 번째가 첫 번째를 조용히 덮어써 후보 2개가 에러
+// 없이 1개로 합쳐진다.
 function refineReviewPayload(
   value: {
     digests: ReviewDigestDraft[];
@@ -114,7 +120,25 @@ function refineReviewPayload(
   },
   ctx: z.RefinementCtx,
 ): void {
-  const ids = new Set(value.newReferences.map((reference) => reference.id));
+  const referenceIds = value.newReferences.map((reference) => reference.id);
+  if (new Set(referenceIds).size !== referenceIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["newReferences"],
+      message: "duplicate id in newReferences",
+    });
+  }
+
+  const digestIds = value.digests.map((digest) => digest.id);
+  if (new Set(digestIds).size !== digestIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["digests"],
+      message: "duplicate id in digests",
+    });
+  }
+
+  const ids = new Set(referenceIds);
   value.digests.forEach((digest, index) => {
     for (const key of digest.newReferenceKeys) {
       if (!ids.has(key)) {
@@ -132,7 +156,7 @@ export const DigestReviewUpdateInputSchema = z
   .object({
     changesetId: z.string().uuid(),
     // 두 탭 동시 편집 가드 — get이 내려준 draftVersion을 그대로 되돌려보낸다.
-    // 어긋나면 서버가 이 저장을 거절한다(review-flow.md "두 탭 대응").
+    // 어긋나면 서버가 이 저장을 거절한다(update_pending_ingestion의 NM012).
     expectedVersion: z.number().int().min(1),
     digests: z.array(ReviewDigestDraftSchema).min(1).max(REVIEW_DIGESTS_MAX),
     newReferences: z
