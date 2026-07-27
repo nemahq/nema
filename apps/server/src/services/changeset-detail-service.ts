@@ -33,6 +33,10 @@ interface RelationEndpointSnapshot {
   statementId: string;
   statementContent: string;
   statementStatus: StatementStatus;
+  // 이 진술이 Digest의 어느 칸에서 나왔나 — 관계 판정 화면이 텍스트 매칭 없이
+  // 카드 안 해당 칸을 바로 하이라이트하는 데 쓴다(statement-extraction.ts sourceField).
+  sourceField: string | null;
+  sourceFieldIndex: number | null;
   digest: DigestSnapshot;
 }
 
@@ -147,7 +151,7 @@ async function fetchRelationEndpoint(args: {
 
   const { data: statement, error } = await supabase
     .from("statements")
-    .select("id, content, status, digest_id")
+    .select("id, content, status, digest_id, source_field, source_field_index")
     .eq("id", statementId)
     .single();
   throwIfSupabaseError(error);
@@ -170,6 +174,8 @@ async function fetchRelationEndpoint(args: {
     statementId: statement.id,
     statementContent: statement.content,
     statementStatus: statement.status,
+    sourceField: statement.source_field,
+    sourceFieldIndex: statement.source_field_index,
     digest,
   };
 }

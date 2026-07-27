@@ -44,6 +44,8 @@ Let the digest's type steer confidence:
 - **idea** — concept → a claim ("guess"). Each branch → its own claim only if it is a distinct derived possibility.
 - **assumption** — assumption → a claim ("guess"). evidence → its own claim. impact → a claim about what changes if it is wrong. verificationCondition → a claim about what would prove it right or wrong.
 
+Every statement above is drawn from exactly one field — use that field's name (as listed here: situation/choice/reason/tradeoff/alternatives, question/background/branches/resolutionCondition, finding/evidence, concept/background/branches, assumption/evidence/impact/verificationCondition) as "sourceField". For tradeoff/alternatives/branches, also set "sourceFieldIndex" to which entry (0-based) the statement came from; for every other field, leave it null.
+
 ## Cutting rules
 
 1. One statement = one "why". If a single field carries two judgments, split it ("chose A and dropped B" → "chose A" + "B was dropped"). If several fields elaborate one point, they still become their own statements when each could be searched — or become outdated — on its own. A decision and its reason are already separate fields; keep them separate.
@@ -66,10 +68,11 @@ A deadline token: { "boundary", "anchorKind", "grain", "offset", "weekday", "sco
 
 ## Output
 
-- JSON object: { "statements": [{ "content": string, "type": "claim" | "question", "confidence": "certain" | "guess" | null, "deadline": <token> | null }] }
+- JSON object: { "statements": [{ "content": string, "type": "claim" | "question", "confidence": "certain" | "guess" | null, "deadline": <token> | null, "sourceField": string | null, "sourceFieldIndex": number | null }] }
 - Order statements by where their field appears in the digest (title/description first, then body fields in the order shown).
 - Write each statement's content in the same language as the digest.
-- Content must contain only the statement text — no field labels, no XML markup.`;
+- Content must contain only the statement text — no field labels, no XML markup.
+- "sourceField" must match the field label exactly as it appears in the digest below (e.g. "reason", not "the reason").`;
 
 // --- DigestBody를 유형·칸 라벨을 살려 텍스트로 렌더 ---
 // 빈 칸(undefined)은 지운다 — 프롬프트가 "빈 칸은 없는 것"으로 읽게. 라벨은 프롬프트의

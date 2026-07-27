@@ -97,6 +97,15 @@ const ExtractedStatementSchema = z.object({
   // 내용 속 기한("금요일까지")을 구조화 토큰으로. 워커가 작성 시점·존 기준으로 풀어
   // due_date를 채운다 (temporal-query-design 7장). 기한 없으면 null.
   deadline: ExtractedDeadlineSchema.nullable(),
+  // Digest의 어느 칸에서 나왔나(situation/choice/reason/tradeoff… — FE
+  // review/constants.ts의 DIGEST_BODY_FIELDS key와 정확히 같은 문자열). 이 스키마는
+  // 원문 직접 추출(이 파일의 프롬프트, 현재 eval 전용 죽은 경로)과도 공유되는데, 그
+  // 경로엔 애초에 "칸" 개념이 없어 항상 null로 나온다 — 두 경로가 같은 출력 계약을
+  // 쓴다는 상단 주석의 관례를 그대로 따른다.
+  sourceField: z.string().nullable(),
+  // tradeoff/alternatives/branches처럼 배열 칸일 때만 채운다(0-based, 몇 번째
+  // 항목인지). situation/choice/reason 같은 단일 칸이면 null.
+  sourceFieldIndex: z.number().int().nullable(),
 });
 
 export type ExtractedStatement = z.infer<typeof ExtractedStatementSchema>;

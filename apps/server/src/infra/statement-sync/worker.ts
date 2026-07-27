@@ -530,6 +530,8 @@ type ExtractionStatement = {
   due_date: string | null;
   digest_id: string;
   index: number;
+  source_field: ExtractedStatement["sourceField"];
+  source_field_index: ExtractedStatement["sourceFieldIndex"];
 };
 
 async function processSource(
@@ -666,6 +668,8 @@ function normalizeStatements(
   type: ExtractedStatement["type"];
   confidence: ExtractedStatement["confidence"];
   due_date: string | null;
+  source_field: ExtractedStatement["sourceField"];
+  source_field_index: ExtractedStatement["sourceFieldIndex"];
 }> {
   return raw.map((statement) => {
     // 기한 토큰을 작성 시점·존 기준 절대 날짜로. 기한 없거나 불량 토큰이면 null.
@@ -687,6 +691,8 @@ function normalizeStatements(
       confidence:
         statement.type === "claim" ? (statement.confidence ?? "guess") : null,
       due_date,
+      source_field: statement.sourceField,
+      source_field_index: statement.sourceFieldIndex,
     };
   });
 }
