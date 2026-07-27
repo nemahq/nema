@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 
 import {
-  Button,
-  cn,
-  NESTED_HOVER_ICON_CLASSNAME,
+  HoverIcon,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -37,18 +35,13 @@ export function LabelDraftEditPopover({
   return (
     <Popover open={open} onOpenChange={onOpenChange} modal>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          size="icon-xs"
-          variant="ghost"
+        <HoverIcon
+          active={open}
           aria-label={t("review.label_edit_action")}
-          className={cn(
-            NESTED_HOVER_ICON_CLASSNAME,
-            "shrink-0 text-fg-tertiary opacity-0 transition-none focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100",
-          )}
+          className="group-hover:opacity-100"
         >
           <Ellipsis className="size-3" />
-        </Button>
+        </HoverIcon>
       </PopoverTrigger>
       <PopoverContent
         side="bottom"

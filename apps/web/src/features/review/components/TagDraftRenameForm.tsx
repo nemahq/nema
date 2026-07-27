@@ -7,12 +7,13 @@ import {
 import { Button, Input, Textarea } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
-import { isDuplicateLabelName } from "@web/utils/labelSearch";
 
 interface TagDraftRenameFormProps {
   title: string;
   description: string;
-  existingLabels: string[];
+  // TopicDraftRenameForm과 같은 이유로 배열 대신 콜백 — 입력값이 바뀔 때마다
+  // 이 폼 안에서 다시 판정해야 해서 부모가 boolean 하나로 미리 계산해 둘 수 없다.
+  isDuplicateTitle: (title: string) => boolean;
   onSubmit: (title: string, description: string) => void;
 }
 
@@ -21,7 +22,7 @@ interface TagDraftRenameFormProps {
 export function TagDraftRenameForm({
   title,
   description,
-  existingLabels,
+  isDuplicateTitle,
   onSubmit,
 }: TagDraftRenameFormProps) {
   const { t } = useTranslation();
@@ -29,7 +30,7 @@ export function TagDraftRenameForm({
   const [descriptionValue, setDescriptionValue] = useState(description);
   const trimmedTitle = titleValue.trim();
   const trimmedDescription = descriptionValue.trim();
-  const duplicateTitle = isDuplicateLabelName(trimmedTitle, existingLabels);
+  const duplicateTitle = isDuplicateTitle(trimmedTitle);
   const titleInvalid = trimmedTitle === "" || duplicateTitle;
   const descriptionInvalid = trimmedDescription === "";
   const submittable = !titleInvalid && !descriptionInvalid;

@@ -7,6 +7,7 @@ import {
   buildDraftRenameExistingLabels,
   buildLabelSearchState,
   filterDraftLabelCandidates,
+  isDuplicateLabelName,
 } from "@web/utils/labelSearch";
 
 import { LabelDraftEditPopover } from "./LabelDraftEditPopover";
@@ -80,11 +81,16 @@ function TopicSearchListContent({
             >
               <TopicDraftRenameForm
                 title={item.title}
-                existingLabels={buildDraftRenameExistingLabels(
-                  activeRegistryTitles,
-                  topics.map((topic) => topic.title),
-                  index,
-                )}
+                isDuplicateTitle={(candidate) =>
+                  isDuplicateLabelName(
+                    candidate,
+                    buildDraftRenameExistingLabels(
+                      activeRegistryTitles,
+                      topics.map((topic) => topic.title),
+                      index,
+                    ),
+                  )
+                }
                 onSubmit={(title) => {
                   onRenameDraft(index, title);
                   setEditingIndex(null);
