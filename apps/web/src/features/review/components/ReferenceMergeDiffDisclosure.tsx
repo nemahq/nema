@@ -1,7 +1,7 @@
 import { diffWords } from "diff";
 import { useId, useState } from "react";
 
-import { cn, Text } from "@nema-io/weave";
+import { Button, cn, Text } from "@nema-io/weave";
 import { Triangle } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
@@ -37,26 +37,25 @@ export function ReferenceMergeDiffDisclosure({
 
   return (
     <div className="flex flex-col gap-1">
-      {/* weave Button 대신 raw — DraftSection의 접기/펼치기 트리거와 같은 이유:
-          아이콘+Text 조합이 주변 타이포를 그대로 상속해야 해서 Button의 강제
-          text-[13px] font-semibold와 안 맞는다. */}
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="xs"
         onClick={() => setExpanded((current) => !current)}
         aria-expanded={expanded}
         aria-controls={contentId}
-        className="flex w-fit items-center gap-1.5"
+        className="group w-fit"
       >
         <Triangle
           className={cn(
-            "size-1.5 shrink-0 fill-current text-fg-tertiary/50 transition-transform duration-fast",
+            "size-1.5 shrink-0 fill-current text-fg-tertiary/50 transition-transform duration-fast group-hover:text-fg-primary",
             expanded ? "rotate-180" : "rotate-90",
           )}
         />
         <Text as="span" size="sm" weight="medium" color="tertiary">
           {t("review.reference_merge_diff_toggle_label")}
         </Text>
-      </button>
+      </Button>
       {expanded && (
         <div id={contentId}>
           <ReferenceMergeDiff segments={segments} />

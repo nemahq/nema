@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Badge, Text } from "@nema-io/weave";
+import { Badge, cn, ComboboxItem, Text } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -14,9 +14,7 @@ interface LabelSearchListProps {
 }
 
 // Notion처럼 팝오버 전체가 하나의 편집 표면이라, 별도 팝오버로 검색 결과를 또
-// 띄우지 않고 같은 화면에 바로 이어 붙인다. "새로 만들기" 행은 raw button —
-// 전체 폭 hover 행이라 weave Button의 고정 패딩·타이포가 안 맞는다
-// (weave-usage.md Button 표 "칩·pill 안 버튼" 제외 규칙과 같은 이유).
+// 띄우지 않고 같은 화면에 바로 이어 붙인다.
 export function LabelSearchList({
   trimmedQuery,
   hasCandidates,
@@ -41,11 +39,10 @@ export function LabelSearchList({
         )}
       </ul>
       {trimmedQuery !== "" && !hasExactMatch && (
-        <button
-          type="button"
+        <ComboboxItem
           disabled={!canCreate}
           onClick={() => onStartCreate(trimmedQuery)}
-          className="flex w-full items-center gap-1 rounded-sm py-1 text-left hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quinary"
+          buttonClassName="gap-1 py-1"
         >
           {/* px-2를 안 두는 이유는 후보 행과 동일 — Badge가 이미 자기 패딩을 갖고
               있어 행에 또 주면 이중으로 밀린다. 국문은 label_create_new_before가
@@ -53,16 +50,24 @@ export function LabelSearchList({
               여백이 생긴다). Badge를 문장 안에 끼우기 위해 앞/뒤 문구를 분리한다 —
               tolgee의 t()는 문자열 파라미터만 받아 컴포넌트를 끼워 넣을 수 없다
               (어순이 언어마다 달라 국문은 뒤쪽, 영문은 앞쪽에 문구가 붙는다). */}
-          <Text as="span" size="sm">
+          <Text
+            as="span"
+            size="sm"
+            className={cn(!canCreate && "text-fg-quinary")}
+          >
             {t("review.label_create_new_before")}
           </Text>
           <Badge variant="outline" shape="rounded" truncated>
             {trimmedQuery}
           </Badge>
-          <Text as="span" size="sm">
+          <Text
+            as="span"
+            size="sm"
+            className={cn(!canCreate && "text-fg-quinary")}
+          >
             {t("review.label_create_new_after")}
           </Text>
-        </button>
+        </ComboboxItem>
       )}
     </>
   );

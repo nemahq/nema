@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Button, Textarea } from "@nema-io/weave";
+import { Button, Text, Textarea } from "@nema-io/weave";
 import { Check, Copy, RefreshCw, RotateCcw } from "@nema-io/weave/icons";
 
 import { buildErrorReport } from "@web/app/error/errorReport";
@@ -115,14 +115,22 @@ export function ErrorFallback({
         </Button>
       )}
       {error && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="xs"
           onClick={handleCopy}
-          className={`-mt-1 flex items-center gap-1 text-fg-tertiary transition-colors hover:text-fg-secondary ${isPage ? "text-xs" : "text-[11px]"}`}
+          className="-mt-1"
         >
-          {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-          {labels?.copyError ?? <TranslatedCopyError />}
-        </button>
+          {copied ? (
+            <Check className="size-3 text-fg-tertiary" />
+          ) : (
+            <Copy className="size-3 text-fg-tertiary" />
+          )}
+          <Text as="span" size="xs" color="tertiary">
+            {labels?.copyError ?? <TranslatedCopyError />}
+          </Text>
+        </Button>
       )}
       {copyFailedText && (
         <div className="flex w-full max-w-md flex-col gap-1">

@@ -82,12 +82,22 @@
      내렸다(success·info는 이미 여유 있어 안 건드림). warning은 그 김에
      hue도 23°→40°로 옮겼다 — Tailwind amber 스웨치를 그대로 따라가다 보니
      error(H=0°)와 23°까지 좁혀져 있었다(아래 hue의 yellow와도 9°로 이미
-     가까웠음). tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로
-     미러링한다(아래 hue와 같은 패턴). */
+     가까웠음). success·error·info의 tint는 텍스트와 별개로, 진하게 맞춘
+     hex를 그대로 8%로 미러링한다(아래 hue와 같은 패턴) — warning만 예외다.
+     노랑은 빨강·초록·파랑과 달리 명도를 낮추면 채도를 유지해도 갈색/카키로
+     지각된다(색상 정체성이 명도에 강하게 의존). 텍스트용 저명도 hex를 그대로
+     미러링하면 tint가 탁해 보이는 게 그래서라, warning tint만 밝은 원색
+     소스(amber-400, #fbbf24)를 따로 10%로 합성한다 — 텍스트(#916308)는
+     그대로라 대비는 오히려 개선된다(tint 위 4.71:1 → 5.00:1). */
   --palette-light-status-success: #047857; /* green-700, was #10b981(500) */
   --palette-light-status-success-tint: rgba(4, 120, 87, 0.08);
   --palette-light-status-warning: #916308; /* custom, was #92400e(amber-800) */
-  --palette-light-status-warning-tint: rgba(145, 99, 8, 0.08);
+  --palette-light-status-warning-tint: rgba(
+    251,
+    191,
+    36,
+    0.1
+  ); /* amber-400 소스, 텍스트 hex와 분리 */
   --palette-light-status-error: #b91c1c; /* red-700, was #dc2626(600) */
   --palette-light-status-error-tint: rgba(185, 28, 28, 0.08);
   --palette-light-status-info: #2563eb; /* blue-600, was #3b82f6(500) */

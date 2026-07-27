@@ -25,6 +25,7 @@ export {
   type ChipVariant,
   type TagColor,
 } from "./components/Chip";
+export { ComboboxItem } from "./components/ComboboxItem";
 export {
   Dialog,
   DialogClose,
@@ -60,6 +61,7 @@ export {
   FormMessage,
   type FormMessageVariant,
 } from "./components/Form";
+export { HoverIcon } from "./components/HoverIcon";
 export { Input } from "./components/Input";
 export { Kbd } from "./components/Kbd";
 export { Label } from "./components/Label";
@@ -84,6 +86,11 @@ export {
 export { Separator } from "./components/Separator";
 export { Skeleton } from "./components/Skeleton";
 export {
+  Tab,
+  TAB_ACTIVE_INDICATOR_CLASSNAME,
+  TAB_DIMMED_ACTIVE_INDICATOR_CLASSNAME,
+} from "./components/Tab";
+export {
   Text,
   type TextColor,
   type TextProps,
@@ -102,6 +109,7 @@ export {
 export {
   cn,
   LIST_ITEM_HOVER_CLASSNAME,
+  NESTED_ACTIVE_ICON_CLASSNAME,
   NESTED_HOVER_ICON_CLASSNAME,
   pinSelectedToTop,
   POPOVER_SURFACE_CLASSNAME,

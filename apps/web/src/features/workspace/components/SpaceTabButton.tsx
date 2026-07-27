@@ -1,4 +1,4 @@
-import { Badge, cn } from "@nema-io/weave";
+import { Badge, Tab } from "@nema-io/weave";
 
 interface SpaceTabButtonProps {
   active: boolean;
@@ -16,22 +16,13 @@ export function SpaceTabButton({
   count,
 }: SpaceTabButtonProps) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors duration-fast",
-        active
-          ? "border-amber-600 font-bold text-fg-primary dark:border-amber-500"
-          : "border-transparent text-fg-tertiary hover:text-fg-secondary",
-      )}
-    >
+    <Tab active={active} onClick={onClick}>
       {children}
       {!!count && (
         <Badge variant="success" shape="pill">
           {count}
         </Badge>
       )}
-    </button>
+    </Tab>
   );
 }

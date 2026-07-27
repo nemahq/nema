@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  HoverIcon,
   Text,
   Tooltip,
   TooltipContent,
@@ -16,7 +17,6 @@ import {
 } from "@nema-io/weave";
 import { ChevronDown, LogOut, PanelLeft, Settings } from "@nema-io/weave/icons";
 
-import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
 import { useSidebar } from "@web/components/layout/Sidebar";
 import { SettingsModal } from "@web/features/settings";
 import { getWorkspaceAvatarColorClass } from "@web/features/workspace/workspaceAvatarColor";
@@ -162,13 +162,13 @@ export function WorkspaceMenu({
           </DropdownMenu>
           <Tooltip>
             <TooltipTrigger asChild>
-              <LnbHoverIcon
+              <HoverIcon
                 onClick={handleToggleSidebar}
                 aria-label={t("layout.collapse_sidebar")}
                 className="absolute right-2.5 group-hover/switcher:opacity-100"
               >
                 <PanelLeft strokeWidth={1.5} className="size-4" />
-              </LnbHoverIcon>
+              </HoverIcon>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               {t("layout.collapse_sidebar")}

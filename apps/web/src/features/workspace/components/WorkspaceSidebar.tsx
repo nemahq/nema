@@ -1,6 +1,11 @@
 import { useState } from "react";
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@nema-io/weave";
+import {
+  HoverIcon,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@nema-io/weave";
 import {
   BookOpenText,
   Home,
@@ -8,7 +13,6 @@ import {
   Plus,
 } from "@nema-io/weave/icons";
 
-import { LnbHoverIcon } from "@web/components/layout/LnbHoverIcon";
 import { LnbSection } from "@web/components/layout/LnbSection";
 import { NavItem } from "@web/components/layout/NavItem";
 import { Sidebar } from "@web/components/layout/Sidebar";
@@ -67,13 +71,13 @@ export function WorkspaceSidebar() {
           trailingAction={
             <Tooltip>
               <TooltipTrigger asChild>
-                <LnbHoverIcon
+                <HoverIcon
                   onClick={() => setCreateSpaceOpen(true)}
                   aria-label={t("space.create_title")}
-                  className="absolute right-3.5 text-fg-tertiary hover:text-fg-primary group-hover/section:opacity-100"
+                  className="absolute right-3.5 group-hover/section:opacity-100"
                 >
                   <Plus className="size-4" />
-                </LnbHoverIcon>
+                </HoverIcon>
               </TooltipTrigger>
               <TooltipContent side="bottom">
                 {t("space.create_title")}

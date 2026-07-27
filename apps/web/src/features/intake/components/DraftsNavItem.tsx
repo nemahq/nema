@@ -139,7 +139,7 @@ export function DraftsNavItem() {
           rightContent={
             // 0개(에러 포함)일 땐 무의미한 "0" 노출을 피한다.
             renderState !== "exiting" && draftCount > 0 ? (
-              // "+"(LnbHoverIcon)가 size-5 박스 안에서 중앙정렬돼 실제 획이 안쪽에서
+              // "+"(HoverIcon)가 size-5 박스 안에서 중앙정렬돼 실제 획이 안쪽에서
               // 끝난다 — 숫자도 같은 박스로 감싸야 시각적 우측 끝이 맞는다.
               <Text
                 as="span"

@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/react";
 
 import {
   Button,
+  ComboboxItem,
   Input,
   Popover,
   PopoverContent,
@@ -22,6 +23,7 @@ import {
 } from "@web/utils/labelSearch";
 
 const SEARCH_LIST_CLASSNAME = "flex max-h-48 flex-col gap-0.5 overflow-y-auto";
+const SEARCH_ROW_CLASSNAME = "px-2 py-1.5";
 
 interface TagSearchResultsProps {
   query: string;
@@ -64,32 +66,43 @@ function TagSearchResults({
       <ul className={SEARCH_LIST_CLASSNAME}>
         {candidates.map((tag) => (
           <li key={tag.id}>
-            <button
-              type="button"
+            <ComboboxItem
               onClick={() => onSelectExisting(tag)}
-              className="w-full truncate rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-raised-hover"
+              buttonClassName={SEARCH_ROW_CLASSNAME}
             >
-              {tag.title}
-            </button>
+              <Text as="span" size="sm">
+                {tag.title}
+              </Text>
+            </ComboboxItem>
           </li>
         ))}
         {candidates.length === 0 && trimmed === "" && (
-          <Text as="li" size="sm" color="tertiary" className="px-2 py-1.5">
+          <Text
+            as="li"
+            size="sm"
+            color="tertiary"
+            className={SEARCH_ROW_CLASSNAME}
+          >
             {t("review.label_search_empty")}
           </Text>
         )}
       </ul>
       {trimmed !== "" && !hasExactMatch && (
-        <button
-          type="button"
+        <ComboboxItem
           disabled={!canStartCreateNew}
           onClick={() => onStartCreate(trimmed)}
-          className="rounded-sm px-2 py-1.5 text-left text-sm text-brand-accent hover:bg-surface-raised-hover disabled:pointer-events-none disabled:text-fg-quinary"
+          buttonClassName={SEARCH_ROW_CLASSNAME}
         >
-          {t("review.label_create_new_before")}
-          {trimmed}
-          {t("review.label_create_new_after")}
-        </button>
+          <Text
+            as="span"
+            size="sm"
+            className={!canStartCreateNew ? "text-fg-quinary" : undefined}
+          >
+            {t("review.label_create_new_before")}
+            {trimmed}
+            {t("review.label_create_new_after")}
+          </Text>
+        </ComboboxItem>
       )}
     </>
   );
@@ -201,7 +214,12 @@ export function TagAddPopover({
               boundaryName="tag-search"
               fallbackRender={() => (
                 <ul className={SEARCH_LIST_CLASSNAME}>
-                  <Text as="li" size="sm" color="error" className="px-2 py-1.5">
+                  <Text
+                    as="li"
+                    size="sm"
+                    color="error"
+                    className={SEARCH_ROW_CLASSNAME}
+                  >
                     {t("review.label_search_error")}
                   </Text>
                 </ul>
@@ -214,7 +232,7 @@ export function TagAddPopover({
                       as="li"
                       size="sm"
                       color="tertiary"
-                      className="px-2 py-1.5"
+                      className={SEARCH_ROW_CLASSNAME}
                     >
                       {t("review.label_search_loading")}
                     </Text>
