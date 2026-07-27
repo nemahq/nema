@@ -4,9 +4,10 @@ import type { ReviewDraft } from "@web/features/review/reviewDraft";
 import { computeReviewEditingState } from "@web/features/review/reviewEditingState";
 import type { ReviewDigest } from "@web/features/review/types";
 
-// 초안을 그대로 실어 보내되 앞뒤 공백만 다듬는다 — 타이핑 중에 trim하면 띄어쓰기
-// 자체를 칠 수 없어 초안에는 사람이 친 그대로 남기고, 서버로 나가는 이 순간에만
-// 정규화한다.
+// 제목·설명·라벨(topics·tags)만 trim한다 — 타이핑 중에 trim하면 띄어쓰기 자체를
+// 칠 수 없어 초안에는 사람이 친 그대로 남기고, 서버로 나가는 이 순간에만 정규화한다.
+// body는 필드마다 optional이라 공백도 유효한 값으로 보고 trim하지 않는다(서버
+// DigestBodySchema도 trim·min(1) 없이 동일하게 취급).
 function trimDigests(digests: ReviewDigest[]): ReviewDigest[] {
   return digests.map((digest) => ({
     ...digest,

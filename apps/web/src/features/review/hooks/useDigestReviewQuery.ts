@@ -12,7 +12,9 @@ import { trpc } from "@web/lib/trpc";
 // mount는 재조회를, gcTime은 관찰자가 없는 동안(화면을 나간 사이) 캐시에서 아예
 // 쫓겨나는 걸 막는다 — gcTime을 안 늘리면 기본 5분 뒤엔 재조회 축을 다 꺼놔도
 // 캐시가 비어 있어 재진입 시 서버 원본으로 다시 채워지며 편집분이 소멸한다.
-// 재조회는 저장 성공 후 명시적 invalidate(useUpdateReview)로만 일어나게 한다.
+// 재조회는 이제 창 포커스 복귀 시 펜딩 편집이 없을 때만 명시적으로 일어난다
+// (useRefetchReviewOnFocus) — 저장 성공 후 invalidate(useUpdateReview)는
+// refetchType: "none"이라 캐시를 stale로 표시만 하고 실제 재요청은 걸지 않는다.
 const REVIEW_DRAFT_QUERY_OPTIONS = {
   staleTime: Infinity,
   gcTime: Infinity,

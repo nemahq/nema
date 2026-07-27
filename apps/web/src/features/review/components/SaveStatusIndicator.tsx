@@ -18,8 +18,9 @@ const STATUS_LABEL_KEY = {
 
 // 저장마다 문구가 바뀌면(예: "저장 중…") 디바운스로 조용히 도는 자동 저장의 취지가
 // 흐려진다 — clean 상태는 항상 같은 정적 문구를 보여주고, 실패했을 때만 눈에 띄게
-// 바뀐다. 클릭하면 상태 설명이 펼쳐지지만 diff·복원 같은 실제 조작은 이번 스코프
-// 밖이라 지금은 같은 문구를 다시 보여주는 스텁이다.
+// 바뀐다. 클릭하면 상태에 맞는 설명(정상일 땐 안내 문구, 실패·충돌일 땐 서버가 알려준
+// 원인)이 펼쳐진다 — diff 비교·복원 같은 실제 조작은 이번 스코프 밖이라 지금은 그
+// 설명까지만 보여주는 스텁이다.
 export function SaveStatusIndicator() {
   const { t } = useTranslation();
   const { saveStatus } = useReviewSaveStatusContext();
@@ -30,8 +31,11 @@ export function SaveStatusIndicator() {
       <PopoverTrigger asChild>
         {/* Badge는 클릭 트리거를 못 감당하고 Button은 자체 타이포(font-semibold
             13px)를 강제해 상태 pill 톤을 되돌리는 비용이 더 크다 — weave-usage.md
-            "Button 안 쓴다" 사례와 같은 결이라 raw button을 쓴다. Popover/DropdownMenu
-            트리거가 아닌 raw 태그라 열림 표시(data-[state=open])도 직접 단다. */}
+            "Button 안 쓴다" 사례와 같은 결이라 raw button을 쓴다. Chip도 검토했지만
+            NEUTRAL_TONE_CLASSNAME/OUTLINE_TONE_CLASSNAME만 노출해 실패 톤
+            (bg-status-error-tint text-status-error, Badge에는 있는 error 톤)을
+            표현할 수 없다. Popover/DropdownMenu 트리거가 아닌 raw 태그라 열림
+            표시(data-[state=open])도 직접 단다. */}
         <button
           type="button"
           className={cn(

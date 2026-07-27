@@ -77,7 +77,7 @@ export function useRegisterAction(
     {
       enabled,
       enableOnFormTags:
-        hasModifier || def.shortcut === "escape"
+        (hasModifier || def.shortcut === "escape") && def.enableOnFormTags
           ? ["INPUT", "TEXTAREA", "SELECT"]
           : false,
       // Radix Dialog가 Esc를 캡처 단계에서 처리해 자기 자신을 닫는데, 우리

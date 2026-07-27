@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
@@ -30,13 +31,25 @@ import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 // 자동 저장 디바운스 — 필드 버퍼(useBufferedValue의 COMMIT_DELAY_MS=400ms, 타이핑
 // 멈춤→초안 반영)와는 별개 축이다. 초안이 바뀔 때마다(필드 커밋 하나하나 포함) 그
 // 위에 한 번 더 디바운스를 얹어 "초안 반영→서버 저장"을 한 번의 요청으로 묶는다.
-// 두 디바운스가 겹쳐 보이는 지연이 나지 않도록 필드 쪽보다 넉넉히 길게 둔다.
+// 필드 커밋들이 서로 조금씩 시차를 두고 도착해도 그때마다 이 타이머가 다시 걸리며
+// 한 번의 요청으로 뭉치도록, 필드 쪽 디바운스보다 충분히 길게 둔다.
 const AUTOSAVE_DEBOUNCE_MS = 1000;
+
+// 편집 하나(필드 커밋 하나)마다 실행취소 스냅샷이 하나 쌓이고 gcTime: Infinity라
+// 세션 내내 회수되지 않는다 — 상한 없이 두면 긴 편집 세션에서 무한히 자란다. 되돌릴
+// 일이 실제로 거의 없는 오래된 스냅샷부터 버린다.
+const MAX_UNDO_STACK_SIZE = 50;
 
 interface ReviewAutosaveEntry {
   dirty: boolean;
   timer: ReturnType<typeof setTimeout> | null;
   savingPromise: Promise<void> | null;
+  // 리마운트를 오가며 공유되는 값이라 saveStatus를 컴포넌트 useState로 두면 안 된다 —
+  // 저장이 실패한 채로 화면을 나갔다 돌아오면 새 인스턴스는 이 상태를 모른 채 "방금
+  // 저장됨"으로 초기화돼, 실제로는 안 끝난 확정 차단 가드가 조용히 풀린다. 이 값도
+  // entry에 실어 리마운트에도 살아남게 한다.
+  status: ReviewSaveStatus;
+  statusListeners: Set<() => void>;
 }
 
 // changesetNumber로 라우트 shell 전체가 key를 걸어(router.tsx) 다른 changeset을
@@ -53,18 +66,39 @@ const autosaveEntries = new Map<string, ReviewAutosaveEntry>();
 function getAutosaveEntry(key: string): ReviewAutosaveEntry {
   let entry = autosaveEntries.get(key);
   if (!entry) {
-    entry = { dirty: false, timer: null, savingPromise: null };
+    entry = {
+      dirty: false,
+      timer: null,
+      savingPromise: null,
+      status: { kind: "clean" },
+      statusListeners: new Set(),
+    };
     autosaveEntries.set(key, entry);
   }
   return entry;
 }
 
+function setEntryStatus(entry: ReviewAutosaveEntry, status: ReviewSaveStatus) {
+  entry.status = status;
+  for (const listener of entry.statusListeners) {
+    listener();
+  }
+}
+
 // 확정·버리기로 리뷰 자체가 끝나면(다른 changeset을 잠깐 거쳐가는 것과 달리 이
 // key로는 다시 편집이 들어올 일이 없다) 엔트리를 지운다 — 안 지우면 이 Map이 세션
-// 내내 changeset 수만큼 무한히 쌓인다. 방금 저장·확정이 성공한 직후에만 부르므로
-// dirty·진행 중인 저장이 남아있을 수 없다.
+// 내내 changeset 수만큼 무한히 쌓인다. 타이머를 직접 취소하는 건, 호출부가 먼저
+// flush를 했는지에 기대지 않고 이 함수 자체가 "더 이상 예약된 저장이 없다"를
+// 보장하기 위함이다(버리기처럼 flush 없이 곧장 부르는 경로가 있다 — 안 지우면
+// 이미 버려진 changeset에 뒤늦게 저장 요청이 나가는 유령 저장이 된다). 단, 이미
+// 네트워크로 나간 요청까지 취소하진 못한다.
 export function clearAutosaveEntry(spaceId: string, changesetNumber: number) {
-  autosaveEntries.delete(`${spaceId}:${changesetNumber}`);
+  const key = `${spaceId}:${changesetNumber}`;
+  const entry = autosaveEntries.get(key);
+  if (entry?.timer) {
+    clearTimeout(entry.timer);
+  }
+  autosaveEntries.delete(key);
 }
 
 interface ReviewDraftContextValue {
@@ -170,9 +204,22 @@ export function ReviewDraftProvider({ children }: ReviewDraftProviderProps) {
   }, []);
 
   // ---- 자동 저장 ----
-  const [saveStatus, setSaveStatus] = useState<ReviewSaveStatus>({
-    kind: "clean",
-  });
+  // saveStatus는 entry(모듈 Map)에 실린 값을 구독하는 외부 스토어다 — 리마운트
+  // 전 인스턴스가 띄운 저장의 성공·실패도, 그 결과가 도착한 시점에 마운트돼 있는
+  // 인스턴스가 그대로 받아 보게 한다.
+  const subscribeToSaveStatus = useCallback(
+    (onStoreChange: () => void) => {
+      autosaveEntry.statusListeners.add(onStoreChange);
+      return () => {
+        autosaveEntry.statusListeners.delete(onStoreChange);
+      };
+    },
+    [autosaveEntry],
+  );
+  const saveStatus = useSyncExternalStore(
+    subscribeToSaveStatus,
+    () => autosaveEntry.status,
+  );
 
   // autosaveEntry.dirty가 참인 동안 반복한다 — 전송 중에 또 편집이 들어오면(다시
   // 참이 됨) 그 편집은 이번 요청에 안 실렸으니 한 라운드 더 돈다. expectedVersion은
@@ -180,21 +227,24 @@ export function ReviewDraftProvider({ children }: ReviewDraftProviderProps) {
   // 갱신된 뒤라면 다음 라운드는 그 새 버전으로 자연히 이어진다.
   const runSaveLoop = useCallback(async () => {
     while (autosaveEntry.dirty) {
-      autosaveEntry.dirty = false;
       const draft = readDraft();
+      // 캐시에서 이 changeset의 초안 자체가 사라진 예외 상황(예: 로그아웃으로 쿼리
+      // 캐시 전체가 비워짐) — dirty를 그대로 남겨둔다. 여기서 false로 지우면 "저장
+      // 안 된 편집이 있었다"는 사실 자체가 흔적 없이 사라진다.
       if (!draft) {
         return;
       }
+      autosaveEntry.dirty = false;
       try {
         await updateReviewRef.current.mutateAsync(
           buildUpdateReviewPayload(draft),
         );
-        setSaveStatus({ kind: "clean" });
+        setEntryStatus(autosaveEntry, { kind: "clean" });
       } catch (error) {
         // 실패한 변경은 여전히 미저장 상태로 남겨, 다음 편집이나 flushPendingSave가
         // 다시 시도하게 한다 — 조용히 유실시키지 않는다.
         autosaveEntry.dirty = true;
-        setSaveStatus(classifyReviewSaveError(error));
+        setEntryStatus(autosaveEntry, classifyReviewSaveError(error));
         throw error;
       }
     }
@@ -244,7 +294,11 @@ export function ReviewDraftProvider({ children }: ReviewDraftProviderProps) {
       dirtyFieldsRef.current.size > 0 ||
       autosaveEntry.dirty ||
       autosaveEntry.timer !== null ||
-      updateReviewRef.current.isPending,
+      // updateReviewRef.current.isPending 대신 entry의 savingPromise로 판정한다 —
+      // ref는 렌더 이펙트로 한 박자 늦게 갱신돼, beforeunload처럼 flush를 부른 바로
+      // 그 동기 실행 구간 안에서 "방금 띄운 요청"을 놓칠 수 있다. savingPromise는
+      // ensureSaved가 요청을 띄우는 그 자리에서 동기적으로 세팅된다.
+      autosaveEntry.savingPromise !== null,
     [autosaveEntry],
   );
 
@@ -260,7 +314,7 @@ export function ReviewDraftProvider({ children }: ReviewDraftProviderProps) {
       flushPendingCommits();
       const before = readDraft();
       if (before) {
-        setUndoStack((stack) => [...stack, before]);
+        setUndoStack((stack) => [...stack, before].slice(-MAX_UNDO_STACK_SIZE));
         setRedoStack([]); // 새 편집이 일어나면 다시 실행 기록은 의미를 잃는다(표준 관례).
       }
       scheduleAutosave();
@@ -277,44 +331,56 @@ export function ReviewDraftProvider({ children }: ReviewDraftProviderProps) {
     if (undoStack.length === 0) {
       return;
     }
-    const previous = undoStack[undoStack.length - 1];
     const current = readDraft();
-    writeDraft(previous);
+    if (!current) {
+      return;
+    }
+    const previous = undoStack[undoStack.length - 1];
+    // draftVersion은 편집 내용이 아니라 저장 프로토콜이 매기는 값이다 — 스냅샷의
+    // 버전을 그대로 되살리면, 그 사이 자동 저장이 한 번이라도 성공해 서버 버전이
+    // 앞서간 경우 다음 저장이 낡은 expectedVersion을 보내 결정적으로 CONFLICT가
+    // 난다. 복원은 편집 내용만 되돌리고 버전은 지금 캐시가 아는 최신 값을 유지한다.
+    writeDraft({ ...previous, draftVersion: current.draftVersion });
     scheduleAutosave();
     setUndoStack((stack) => stack.slice(0, -1));
-    if (current) {
-      setRedoStack((stack) => [...stack, current]);
-    }
+    setRedoStack((stack) => [...stack, current].slice(-MAX_UNDO_STACK_SIZE));
   }, [undoStack, readDraft, writeDraft, scheduleAutosave]);
 
   const redo = useCallback(() => {
     if (redoStack.length === 0) {
       return;
     }
-    const next = redoStack[redoStack.length - 1];
     const current = readDraft();
-    writeDraft(next);
+    if (!current) {
+      return;
+    }
+    const next = redoStack[redoStack.length - 1];
+    writeDraft({ ...next, draftVersion: current.draftVersion });
     scheduleAutosave();
     setRedoStack((stack) => stack.slice(0, -1));
-    if (current) {
-      setUndoStack((stack) => [...stack, current]);
-    }
+    setUndoStack((stack) => [...stack, current].slice(-MAX_UNDO_STACK_SIZE));
   }, [redoStack, readDraft, writeDraft, scheduleAutosave]);
 
   useEffect(
     function flushDraftOnUnload() {
-      function handleBeforeUnload() {
+      function handleBeforeUnload(event: BeforeUnloadEvent) {
         flushPendingCommits();
         // 페이지를 떠나는 순간엔 디바운스를 기다릴 여유가 없다 — 완료를 보장할 수는
         // 없지만(unload 중 네트워크 요청은 브라우저가 취소할 수 있다) 최소한 시도는 한다.
         flushPendingSave().catch(() => {});
+        // 방금 띄운 저장이 실제로 끝났는지는 알 길이 없다 — 저장할 게 남아있었다면
+        // 브라우저 기본 이탈 확인창을 띄워, 응답을 기다릴지는 사용자가 고르게 한다.
+        if (hasPendingEdits()) {
+          event.preventDefault();
+          event.returnValue = "";
+        }
       }
       window.addEventListener("beforeunload", handleBeforeUnload);
       return () => {
         window.removeEventListener("beforeunload", handleBeforeUnload);
       };
     },
-    [flushPendingCommits, flushPendingSave],
+    [flushPendingCommits, flushPendingSave, hasPendingEdits],
   );
 
   useEffect(
