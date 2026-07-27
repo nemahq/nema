@@ -6,7 +6,7 @@ import { useEditing } from "./EditingProvider";
 import { InvisibleTextarea } from "./InvisibleTextarea";
 
 interface DigestTitleFieldProps {
-  digestIndex: number;
+  digestId: string;
   baseTitle: string;
   disabled: boolean;
 }
@@ -15,14 +15,14 @@ interface DigestTitleFieldProps {
 // 카드당 한 번뿐이라 반복해 읽힐 일이 없고, 훑을 때도 "비어 있다"는 신호 자체가
 // 필요하다.
 export function DigestTitleField({
-  digestIndex,
+  digestId,
   baseTitle,
   disabled,
 }: DigestTitleFieldProps) {
   const { t } = useTranslation();
   const dispatch = useEditing((state) => state.dispatch);
   const title = useEditing(
-    (state) => state.overrides.titleOverrides.get(digestIndex) ?? baseTitle,
+    (state) => state.overrides.titleOverrides.get(digestId) ?? baseTitle,
   );
 
   return (
@@ -32,7 +32,7 @@ export function DigestTitleField({
       maxLength={DIGEST_TITLE_MAX_LENGTH}
       placeholder={t("intake.draft_untitled")}
       onChange={(next) =>
-        dispatch({ type: "digest/setTitle", index: digestIndex, title: next })
+        dispatch({ type: "digest/setTitle", id: digestId, title: next })
       }
       className="text-[20px] font-semibold leading-[1.4]"
     />

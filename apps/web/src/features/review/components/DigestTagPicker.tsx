@@ -15,7 +15,7 @@ import { useEditing } from "./EditingProvider";
 import { TagEditPanel } from "./TagEditPanel";
 
 interface DigestTagPickerProps {
-  digestIndex: number;
+  digestId: string;
   baseTags: DigestTagDraft[];
   disabled: boolean;
 }
@@ -40,7 +40,7 @@ interface DigestTagPickerProps {
 // 태그 편집값을 카드가 아니라 여기서 구독한다 — 카드가 들면 태그 하나 추가할
 // 때마다 본문 필드 전체가 같이 다시 그려진다.
 export function DigestTagPicker({
-  digestIndex,
+  digestId,
   baseTags,
   disabled,
 }: DigestTagPickerProps) {
@@ -48,7 +48,7 @@ export function DigestTagPicker({
   const dispatch = useEditing((state) => state.dispatch);
   const tags = useEditing((state) =>
     applyTagRenames(
-      state.overrides.tagsOverrides.get(digestIndex) ?? baseTags,
+      state.overrides.tagsOverrides.get(digestId) ?? baseTags,
       state.overrides.tagRenames,
     ),
   );
@@ -87,7 +87,7 @@ export function DigestTagPicker({
           tags={tags}
           disabled={disabled}
           onChange={(next) =>
-            dispatch({ type: "digest/setTags", index: digestIndex, tags: next })
+            dispatch({ type: "digest/setTags", id: digestId, tags: next })
           }
         />
       </PopoverContent>

@@ -31,21 +31,21 @@ export function ReferenceSection({
   disabled,
 }: ReferenceSectionProps) {
   const { t } = useTranslation();
-  const removedDigestIndexes = useEditing(
-    (state) => state.overrides.removedDigestIndexes,
+  const removedDigestIds = useEditing(
+    (state) => state.overrides.removedDigestIds,
   );
-  const removedReferenceKeys = useEditing(
-    (state) => state.overrides.removedReferenceKeys,
+  const removedReferenceIds = useEditing(
+    (state) => state.overrides.removedReferenceIds,
   );
 
   const visibleReferences = newReferences.filter(
-    (reference) => !removedReferenceKeys.has(reference.key),
+    (reference) => !removedReferenceIds.has(reference.id),
   );
   const mergeCandidates = selectMergeCandidates({
     citedReferences,
     citedReferenceIds: new Set(
       digests
-        .filter((_, index) => !removedDigestIndexes.has(index))
+        .filter((digest) => !removedDigestIds.has(digest.id))
         .flatMap((digest) => digest.referenceIds),
     ),
   });
@@ -67,7 +67,7 @@ export function ReferenceSection({
       <div className="flex flex-col">
         {visibleReferences.map((reference) => (
           <ReferenceCandidateCard
-            key={reference.key}
+            key={reference.id}
             baseReference={reference}
             disabled={disabled}
           />

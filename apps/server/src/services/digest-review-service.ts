@@ -4,6 +4,8 @@ import type {
   DigestDraft,
   NewReferenceDraft,
   ReferenceMergeUpdate,
+  ReviewDigestDraft,
+  ReviewNewReferenceDraft,
 } from "@nema-io/shared";
 import { DigestBodySchema, ReferenceTypeSchema } from "@nema-io/shared";
 
@@ -43,6 +45,19 @@ const StoredReferenceMergeDataSchema = z.object({
   after: z.object({ body: z.string() }),
 });
 
+// changes.position은 digest/reference 외 target_type도 공유하는 컬럼이라 테이블
+// 레벨에선 nullable이다 — 리뷰 후보(create) 행은 마이그레이션 백필 이후 항상 채워져
+// 있어야 하므로, 비어 있으면 스키마·데이터가 갈라진 것으로 보고 조용히 넘기지 않는다.
+function requirePosition(position: number | null, changeId: string): number {
+  if (position === null) {
+    throw new SupabaseError(
+      "query_failed",
+      `change ${changeId} is a review candidate but has no position`,
+    );
+  }
+  return position;
+}
+
 interface CitedReference {
   id: string;
   type: string;
@@ -63,9 +78,10 @@ interface DigestReviewDetail {
   sourceTitle: string | null;
   sourceBody: string;
   sourceCreatedAt: string;
-  digests: DigestDraft[];
-  // key = 이 리뷰가 예약한 행 id — 편집 왕복에서만 쓰는 불투명 값
-  newReferences: NewReferenceDraft[];
+  // 두 탭 동시 편집 가드 — update가 이 값을 expectedVersion으로 그대로 되돌려보낸다.
+  draftVersion: number;
+  digests: ReviewDigestDraft[];
+  newReferences: ReviewNewReferenceDraft[];
   // 기존 레퍼런스 인용의 표시용 메타(id → 이름·유형)
   citedReferences: CitedReference[];
 }
@@ -80,20 +96,13 @@ export async function getReview(args: {
   const { data: changeset, error } = await supabase
     .from("changesets")
     .select(
-      "id, number, type, status, source_id, space_id, changes(id, action, target_type, target_id, data), sources(title, body, created_at), spaces(workspace_id)",
+      "id, number, type, status, source_id, space_id, draft_version, changes(id, action, target_type, target_id, data, position), sources(title, body, created_at), spaces(workspace_id)",
     )
     .eq("space_id", spaceId)
     .eq("number", number)
-    // 프론트의 편집 상태(제목 override·후보 삭제)가 digests 배열의 인덱스를 키로 쓴다.
-    // ORDER BY가 없으면 Postgres가 행 순서를 보장하지 않아, 같은 행을 다시 읽을 때마다
-    // 순서가 달라질 수 있고 그러면 편집 내용이 다른 후보에 붙는다.
-    //
-    // 다만 이 정렬이 고정하는 건 "같은 행 집합을 다시 읽을 때"뿐이다. created_at은
-    // now()(트랜잭션 타임스탬프)라 한 RPC가 쓴 행이 전부 같은 값이고, 실제 순서는
-    // 랜덤 uuid인 id가 정한다 — 엔진이 만든 순서와는 무관하다. 저장(update_pending_
-    // ingestion)은 changes를 전량 재삽입하므로 그때마다 순서가 다시 섞이는데, 그쪽은
-    // 프론트가 저장 성공 시 편집 상태를 버리는 것으로 막는다(confirmReviewFlow.onSaved).
-    .order("created_at", { referencedTable: "changes" })
+    // 명시적 position(update_pending_ingestion이 저장 때마다 그대로 보존)으로 정렬한다.
+    // id는 동순위일 때만 쓰는 결정적 tiebreak.
+    .order("position", { referencedTable: "changes" })
     .order("id", { referencedTable: "changes" })
     .single();
   throwIfSupabaseError(error);
@@ -105,7 +114,8 @@ export async function getReview(args: {
     changeset.sources === null ||
     changeset.number === null ||
     changeset.space_id === null ||
-    changeset.spaces === null
+    changeset.spaces === null ||
+    changeset.draft_version === null
   ) {
     // 존재하지 않는 changeset(위 .single()이 이미 잡음)과 달리 이건 "있긴 한데
     // 지금 이 화면 자격이 아니다"(이미 닫힘·타입이 다름 등) — 그래도 FE 입장에선
@@ -125,24 +135,28 @@ export async function getReview(args: {
     referenceChanges.map((change) => change.target_id),
   );
 
-  const newReferences: NewReferenceDraft[] = referenceChanges.map((change) => {
-    const referenceData = StoredReferenceDataSchema.parse(change.data);
-    return {
-      // 저장 시 예약된 행 id를 편집 왕복의 key로 재사용한다 — update가 새 id를
-      // 다시 예약하므로 값 자체는 불투명하면 충분하다
-      key: change.target_id,
-      type: referenceData.type,
-      title: referenceData.title,
-      body: referenceData.body,
-      externalUrls: referenceData.external_urls,
-    };
-  });
+  const newReferences: ReviewNewReferenceDraft[] = referenceChanges.map(
+    (change) => {
+      const referenceData = StoredReferenceDataSchema.parse(change.data);
+      return {
+        id: change.target_id,
+        position: requirePosition(change.position, change.id),
+        type: referenceData.type,
+        title: referenceData.title,
+        body: referenceData.body,
+        externalUrls: referenceData.external_urls,
+      };
+    },
+  );
 
-  const rawDigests = changeset.changes
-    .filter(
-      (change) => change.target_type === "digest" && change.action === "create",
-    )
-    .map((change) => StoredDigestDataSchema.parse(change.data));
+  const digestChanges = changeset.changes.filter(
+    (change) => change.target_type === "digest" && change.action === "create",
+  );
+  const rawDigests = digestChanges.map((change) => ({
+    id: change.target_id,
+    position: requirePosition(change.position, change.id),
+    ...StoredDigestDataSchema.parse(change.data),
+  }));
 
   // 기존/신규 판정 — 이름이 Space(topics)·Workspace(tags) 레지스트리와 매치하면 기존
   // (id 포함, 읽기 전용), 매치하지 않으면 신규(id 없음, 이름 편집 가능). archived 항목은
@@ -181,7 +195,9 @@ export async function getReview(args: {
     }
   }
 
-  const digests: DigestDraft[] = rawDigests.map((digestData) => ({
+  const digests: ReviewDigestDraft[] = rawDigests.map((digestData) => ({
+    id: digestData.id,
+    position: digestData.position,
     title: digestData.title,
     description: digestData.description,
     body: digestData.body,
@@ -217,9 +233,15 @@ export async function getReview(args: {
   ];
   let citedReferences: CitedReference[] = [];
   if (citedIds.length > 0) {
+    // archived/trashed Reference를 인용 목록에 그대로 올리면, 그중 병합 제안(mergeNote)이
+    // 있던 것은 이후 모든 저장이 update_pending_ingestion의 NM008 가드(활성 상태만
+    // 병합 허용)에 영구히 막힌다 — 이 저장에서 그 Reference를 안 건드려도 toReferenceUpdates가
+    // 살아있는 병합 후보 전량을 매번 다시 실어 보내기 때문. 애초에 편집 대상으로
+    // 올리지 않아야 그 저장 불가 상태 자체가 생기지 않는다.
     const { data: references, error: referenceError } = await supabase
       .from("references")
       .select("id, type, title, body")
+      .eq("status", "active")
       .in("id", citedIds);
     throwIfSupabaseError(referenceError);
     citedReferences = (references ?? []).map((reference) => ({
@@ -236,6 +258,7 @@ export async function getReview(args: {
     sourceTitle: changeset.sources.title,
     sourceBody: changeset.sources.body,
     sourceCreatedAt: changeset.sources.created_at,
+    draftVersion: changeset.draft_version,
     digests,
     newReferences,
     citedReferences,
@@ -247,45 +270,62 @@ export async function getReview(args: {
 export async function updateReview(args: {
   supabase: TypedSupabaseClient;
   changesetId: string;
-  digests: DigestDraft[];
-  newReferences: NewReferenceDraft[];
+  expectedVersion: number;
+  digests: ReviewDigestDraft[];
+  newReferences: ReviewNewReferenceDraft[];
   referenceUpdates: ReferenceMergeUpdate[];
-}): Promise<void> {
-  const { supabase, changesetId, digests, newReferences, referenceUpdates } =
-    args;
+}): Promise<{ draftVersion: number }> {
+  const {
+    supabase,
+    changesetId,
+    expectedVersion,
+    digests,
+    newReferences,
+    referenceUpdates,
+  } = args;
 
-  const { error } = await supabase.rpc("update_pending_ingestion", {
-    p_changeset_id: changesetId,
-    // RPC 계약 키는 write_ingestion_review_changes가 읽는 snake_case다.
-    // topics/tags의 id는 getReview가 붙인 표시용 힌트라 저장 형태(name/{title,description})엔
-    // 없다 — confirm 시 이름으로 다시 find-or-create되므로 id 없이도 기존 항목이 재사용된다.
-    p_digests: digests.map((digest) => ({
-      title: digest.title,
-      description: digest.description,
-      body: digest.body,
-      topics: digest.topics.map((topic) => topic.title),
-      tags: digest.tags.map((tag) => ({
-        title: tag.title,
-        description: tag.description,
-      })),
-      reference_ids: digest.referenceIds,
-      new_reference_keys: digest.newReferenceKeys,
-      external_urls: digest.externalUrls,
-    })) as unknown as Json,
-    p_new_references: newReferences.map((reference) => ({
-      key: reference.key,
-      type: reference.type,
-      title: reference.title,
-      body: reference.body,
-      external_urls: reference.externalUrls,
-    })) as unknown as Json,
-    // 병합 편집 → RPC 계약 키(snake_case): mergeNote가 references.body를 대체할 body가 된다
-    p_reference_updates: referenceUpdates.map((update) => ({
-      reference_id: update.referenceId,
-      body: update.mergeNote,
-    })) as unknown as Json,
-  });
+  const { data: draftVersion, error } = await supabase.rpc(
+    "update_pending_ingestion",
+    {
+      p_changeset_id: changesetId,
+      p_expected_version: expectedVersion,
+      // RPC 계약 키는 update_pending_ingestion이 읽는 snake_case다. id·position은
+      // 그대로 실어 보낸다(RPC가 id로 upsert·position으로 순서를 잡는다). topics/tags의
+      // id는 getReview가 붙인 표시용 힌트라 저장 형태(name/{title,description})엔 없다
+      // — confirm 시 이름으로 다시 find-or-create되므로 id 없이도 기존 항목이 재사용된다.
+      p_digests: digests.map((digest) => ({
+        id: digest.id,
+        position: digest.position,
+        title: digest.title,
+        description: digest.description,
+        body: digest.body,
+        topics: digest.topics.map((topic) => topic.title),
+        tags: digest.tags.map((tag) => ({
+          title: tag.title,
+          description: tag.description,
+        })),
+        reference_ids: digest.referenceIds,
+        new_reference_keys: digest.newReferenceKeys,
+        external_urls: digest.externalUrls,
+      })) as unknown as Json,
+      p_new_references: newReferences.map((reference) => ({
+        id: reference.id,
+        position: reference.position,
+        type: reference.type,
+        title: reference.title,
+        body: reference.body,
+        external_urls: reference.externalUrls,
+      })) as unknown as Json,
+      // 병합 편집 → RPC 계약 키(snake_case): mergeNote가 references.body를 대체할 body가 된다
+      p_reference_updates: referenceUpdates.map((update) => ({
+        reference_id: update.referenceId,
+        body: update.mergeNote,
+      })) as unknown as Json,
+    },
+  );
   throwIfSupabaseError(error);
+
+  return { draftVersion };
 }
 
 export async function confirmReview(args: {

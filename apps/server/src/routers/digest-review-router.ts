@@ -32,6 +32,7 @@ export const digestReviewRouter = router({
       updateReview({
         supabase: ctx.supabase,
         changesetId: input.changesetId,
+        expectedVersion: input.expectedVersion,
         digests: input.digests,
         newReferences: input.newReferences,
         referenceUpdates: input.referenceUpdates,

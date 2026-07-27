@@ -12,6 +12,7 @@ export type SupabaseErrorCode =
   | "space_delete_target_required"
   | "digest_state_changed"
   | "changeset_state_changed"
+  | "ingestion_review_version_conflict"
   | "query_failed";
 
 const PG_NOT_FOUND = "P0002";
@@ -55,6 +56,10 @@ const NEMA_DIGEST_STATE_CHANGED = "NM010";
 // 하나로 묶는다. digest/reference 전용 코드(NM007/NM010)와 달리 changeset은
 // 특정 엔티티가 아니라 되돌리기 그 자체의 상태라 별도 코드를 쓴다.
 const NEMA_CHANGESET_STATE_CHANGED = "NM011";
+// ingestion 리뷰 초안 버전 가드 실패(update_pending_ingestion) — NM008과 달리
+// changeset 자체는 여전히 open이다. 이 저장이 참조한 draftVersion보다 최신 저장이
+// 먼저 성공했다는 뜻(두 탭 동시 편집) — "상태가 바뀜"과는 별개 사실이라 코드를 나눈다.
+const NEMA_INGESTION_REVIEW_VERSION_CONFLICT = "NM012";
 
 export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
   switch (pgCode) {
@@ -85,6 +90,8 @@ export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
       return "digest_state_changed";
     case NEMA_CHANGESET_STATE_CHANGED:
       return "changeset_state_changed";
+    case NEMA_INGESTION_REVIEW_VERSION_CONFLICT:
+      return "ingestion_review_version_conflict";
     default:
       return "query_failed";
   }

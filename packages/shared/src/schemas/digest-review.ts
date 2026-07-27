@@ -38,6 +38,24 @@ export const NewReferenceDraftSchema = z.object({
 });
 export type NewReferenceDraft = z.infer<typeof NewReferenceDraftSchema>;
 
+// Digest 리뷰 화면 전용 — 신규 Reference 후보 한 항목. NewReferenceDraftSchema(1회성
+// confirm_digest_edit 전용)와 달리 이 화면은 초안을 여러 번 저장·재조회하므로 id가
+// 저장을 거쳐도 유지돼야 한다(위 key와 달리 표시용 힌트가 아니라 실제 target_id
+// 왕복 값 — update_pending_ingestion이 id 기준 upsert로 이 값을 그대로 보존한다).
+// position은 명시적 순서(update_pending_ingestion이 DELETE+INSERT로 순서를 흩던
+// 문제의 해결책) — 클라가 배열 인덱스를 그대로 실어 보낸다.
+export const ReviewNewReferenceDraftSchema = z.object({
+  id: z.string().uuid(),
+  type: ReferenceTypeSchema,
+  title: z.string().trim().min(1).max(REFERENCE_TITLE_MAX_LENGTH),
+  body: z.string().trim().min(1).max(REFERENCE_BODY_MAX_LENGTH),
+  externalUrls: z.array(z.string().url()).max(REFERENCE_EXTERNAL_URLS_MAX),
+  position: z.number().int().min(0),
+});
+export type ReviewNewReferenceDraft = z.infer<
+  typeof ReviewNewReferenceDraftSchema
+>;
+
 // 기존 Reference 병합 편집 — 매칭된 기존 Reference(id, 읽기 전용 type/title)의 설명을
 // 새 정보를 녹인 완성본으로 다듬는다. mergeNote는 references.body를 통째로 대체하는
 // 값이라 신규 body와 같은 상한을 쓴다(review-flow.md "기존 Reference 후보 병합 편집").
@@ -78,16 +96,52 @@ export const DigestDraftSchema = z.object({
 });
 export type DigestDraft = z.infer<typeof DigestDraftSchema>;
 
+// Digest 리뷰 화면 전용 digest 항목 — DigestDraftSchema에 안정 id·명시적 순서를
+// 얹는다. get이 내려준 id를 update가 그대로 되돌려보내 update_pending_ingestion이
+// 같은 항목으로 매칭한다(DELETE+INSERT로 매 저장마다 id·순서가 흩어지던 문제의 해결책).
+export const ReviewDigestDraftSchema = DigestDraftSchema.extend({
+  id: z.string().uuid(),
+  position: z.number().int().min(0),
+  // 이 화면에서 가리킬 수 있는 신규 레퍼런스 후보는 항상 ReviewNewReferenceDraft.id
+  // (실제 target_id) — 베이스 DigestDraftSchema의 임의 문자열 타입보다 좁힌다.
+  newReferenceKeys: z.array(z.string().uuid()),
+});
+export type ReviewDigestDraft = z.infer<typeof ReviewDigestDraftSchema>;
+
 // newReferenceKeys가 실제 신규 레퍼런스 목록을 가리키는지 — 끊긴 키는 확정 시
-// 존재하지 않는 인용을 만들므로 경계에서 막는다.
+// 존재하지 않는 인용을 만들므로 경계에서 막는다. id는 이제 서버 생성이 아니라
+// 클라이언트가 왕복시키는 값이라, 중복 id도 여기서 같이 막는다 — DB upsert가
+// 같은 id를 두 번 받으면 두 번째가 첫 번째를 조용히 덮어써 후보 2개가 에러
+// 없이 1개로 합쳐진다.
 function refineReviewPayload(
-  value: { digests: DigestDraft[]; newReferences: NewReferenceDraft[] },
+  value: {
+    digests: ReviewDigestDraft[];
+    newReferences: ReviewNewReferenceDraft[];
+  },
   ctx: z.RefinementCtx,
 ): void {
-  const keys = new Set(value.newReferences.map((reference) => reference.key));
+  const referenceIds = value.newReferences.map((reference) => reference.id);
+  if (new Set(referenceIds).size !== referenceIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["newReferences"],
+      message: "duplicate id in newReferences",
+    });
+  }
+
+  const digestIds = value.digests.map((digest) => digest.id);
+  if (new Set(digestIds).size !== digestIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["digests"],
+      message: "duplicate id in digests",
+    });
+  }
+
+  const ids = new Set(referenceIds);
   value.digests.forEach((digest, index) => {
     for (const key of digest.newReferenceKeys) {
-      if (!keys.has(key)) {
+      if (!ids.has(key)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["digests", index, "newReferenceKeys"],
@@ -101,9 +155,12 @@ function refineReviewPayload(
 export const DigestReviewUpdateInputSchema = z
   .object({
     changesetId: z.string().uuid(),
-    digests: z.array(DigestDraftSchema).min(1).max(REVIEW_DIGESTS_MAX),
+    // 두 탭 동시 편집 가드 — get이 내려준 draftVersion을 그대로 되돌려보낸다.
+    // 어긋나면 서버가 이 저장을 거절한다(update_pending_ingestion의 NM012).
+    expectedVersion: z.number().int().min(1),
+    digests: z.array(ReviewDigestDraftSchema).min(1).max(REVIEW_DIGESTS_MAX),
     newReferences: z
-      .array(NewReferenceDraftSchema)
+      .array(ReviewNewReferenceDraftSchema)
       .max(REVIEW_NEW_REFERENCES_MAX),
     // 병합 편집 없이 저장하는 왕복(제목만 고침 등)도 흔하므로 생략 시 빈 목록으로 —
     // 어느 기존 Reference도 다듬지 않았다는 뜻.

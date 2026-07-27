@@ -54,7 +54,6 @@ function IngestionContent() {
     number | null
   >(null);
   const overrides = useEditing((state) => state.overrides);
-  const resetEditing = useEditing((state) => state.reset);
   const {
     digestRows,
     referenceRows,
@@ -109,12 +108,12 @@ function IngestionContent() {
       await runConfirmReview({
         changesetId: review.changesetId,
         dirty,
+        expectedVersion: review.draftVersion,
         digestRows,
         newReferences: referenceRows,
         referenceUpdates,
         updateReview: updateReview.mutateAsync,
         confirmReview: confirmReview.mutateAsync,
-        onSaved: resetEditing,
       });
     } catch {
       // 전역 토스트(mutationCache.onError)가 이미 띄운다.

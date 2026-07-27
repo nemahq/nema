@@ -6,6 +6,7 @@
     "digest_state_changed": "This digest's state changed. Reload the list and try again.",
     "forbidden": "You don't have permission to do this.",
     "ingestion_review_state_changed": "This review's state changed. Reload the list and try again.",
+    "ingestion_review_version_conflict": "This review was saved elsewhere in the meantime. Refresh to see the latest version.",
     "llm_aborted": "The request was cancelled.",
     "llm_bad_request": "We couldn't process your request. Please try again.",
     "llm_content_filter": "We couldn't process your input. Please try different wording.",

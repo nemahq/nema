@@ -6,7 +6,7 @@ import type { ReviewDigest } from "@web/features/review/types";
 import { DigestBodyField } from "./DigestBodyField";
 
 interface DigestBodyFieldsProps {
-  digestIndex: number;
+  digestId: string;
   type: DigestType;
   baseBody: ReviewDigest["body"];
   disabled: boolean;
@@ -17,7 +17,7 @@ interface DigestBodyFieldsProps {
 // 클릭하면 바로 채울 수 있어야 "AI가 놓친 걸 사람이 채운다"는 교정 경로가
 // 생긴다(design-decisions-log.md).
 export function DigestBodyFields({
-  digestIndex,
+  digestId,
   type,
   baseBody,
   disabled,
@@ -28,7 +28,7 @@ export function DigestBodyFields({
       {DIGEST_BODY_FIELDS[type].map((field) => (
         <DigestBodyField
           key={field.key}
-          digestIndex={digestIndex}
+          digestId={digestId}
           baseBody={baseBody}
           fieldKey={field.key}
           kind={field.kind}

@@ -16,7 +16,7 @@ import { useEditing } from "./EditingProvider";
 import { TopicEditPanel } from "./TopicEditPanel";
 
 interface DigestTopicPickerProps {
-  digestIndex: number;
+  digestId: string;
   baseTopics: DigestTopicDraft[];
   disabled: boolean;
 }
@@ -40,7 +40,7 @@ interface DigestTopicPickerProps {
 // hover는 group-hover로 옮긴다.
 // 주제 편집값도 태그와 같은 이유로 카드·헤더가 아니라 여기서 구독한다.
 export function DigestTopicPicker({
-  digestIndex,
+  digestId,
   baseTopics,
   disabled,
 }: DigestTopicPickerProps) {
@@ -48,7 +48,7 @@ export function DigestTopicPicker({
   const dispatch = useEditing((state) => state.dispatch);
   const topics = useEditing((state) =>
     applyTopicRenames(
-      state.overrides.topicsOverrides.get(digestIndex) ?? baseTopics,
+      state.overrides.topicsOverrides.get(digestId) ?? baseTopics,
       state.overrides.topicRenames,
     ),
   );
@@ -110,7 +110,7 @@ export function DigestTopicPicker({
           onChange={(next) =>
             dispatch({
               type: "digest/setTopics",
-              index: digestIndex,
+              id: digestId,
               topics: next,
             })
           }
