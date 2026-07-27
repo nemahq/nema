@@ -21,19 +21,16 @@ function TopicsPanelContent() {
           </p>
         )}
         {topics.map((topic) => (
-          <TopicRow
-            key={topic.id}
-            id={topic.id}
-            title={topic.title}
-            status={topic.status}
-          />
+          <TopicRow key={topic.id} title={topic.title} status={topic.status} />
         ))}
       </div>
     </section>
   );
 }
 
-// 내부 테스트 조종석 전용 — Topic 이름변경/아카이브/되살리기 백엔드 확인용 최소 UI.
+// 내부 테스트 조종석 전용 — 인제스천 확정으로 어떤 Topic이 만들어졌는지 보는
+// 읽기 전용 목록. 이름변경/아카이브/되살리기는 엔진 동작이 아닌 평범한 CRUD라
+// 하니스 스코프 밖(review-flow.md 참고).
 export function TopicsPanel() {
   return (
     <ErrorBoundary
