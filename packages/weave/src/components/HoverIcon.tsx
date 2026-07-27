@@ -26,10 +26,13 @@ export const HoverIcon = forwardRef<HTMLButtonElement, HoverIconProps>(
         type={type}
         data-active={active || undefined}
         className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-md opacity-0 transition-colors duration-fast focus-visible:opacity-100",
+          // text-fg-tertiary/hover:text-fg-primary: 아이콘 자체(lucide)는
+          // stroke가 기본 currentColor라 자기 색을 안 정하면 여기서 상속받는다
+          // — 소비처마다 색을 따로 안 챙겨도 hover 톤이 항상 통일된다.
+          "flex size-5 shrink-0 items-center justify-center rounded-md text-fg-tertiary opacity-0 transition-colors duration-fast hover:text-fg-primary focus-visible:opacity-100",
           NESTED_HOVER_ICON_CLASSNAME,
           active &&
-            "bg-surface-raised-hover opacity-100 brightness-95 dark:brightness-125",
+            "bg-surface-raised-hover text-fg-primary opacity-100 brightness-95 dark:brightness-125",
           className,
         )}
         {...props}

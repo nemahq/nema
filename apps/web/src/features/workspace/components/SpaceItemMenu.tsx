@@ -42,7 +42,7 @@ export function SpaceItemMenu({
               className="absolute right-3.5 cursor-pointer group-hover:opacity-100"
               onClick={(e) => e.preventDefault()}
             >
-              <Ellipsis className="size-4 text-fg-tertiary" />
+              <Ellipsis className="size-4" />
             </HoverIcon>
           </DropdownMenuTrigger>
         </TooltipTrigger>

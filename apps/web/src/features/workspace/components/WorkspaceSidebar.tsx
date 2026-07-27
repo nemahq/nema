@@ -74,7 +74,7 @@ export function WorkspaceSidebar() {
                 <HoverIcon
                   onClick={() => setCreateSpaceOpen(true)}
                   aria-label={t("space.create_title")}
-                  className="absolute right-3.5 text-fg-tertiary hover:text-fg-primary group-hover/section:opacity-100"
+                  className="absolute right-3.5 group-hover/section:opacity-100"
                 >
                   <Plus className="size-4" />
                 </HoverIcon>
