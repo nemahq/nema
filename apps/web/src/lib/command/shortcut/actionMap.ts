@@ -7,8 +7,9 @@ function def(
   shortcut: string,
   scope: ActionScope,
   priority = 0,
+  enableOnFormTags = true,
 ): ActionDef {
-  return { labelKey, shortcut, scope, priority };
+  return { labelKey, shortcut, scope, priority, enableOnFormTags };
 }
 
 // priority: 같은 단축키에 여러 액션이 등록되면 높은 값이 우선 실행된다 (z-index 방식).
@@ -22,6 +23,13 @@ const actionMap = {
   },
   sidebar: {
     toggle: def("layout.toggle_sidebar", "mod+b", "global"),
+  },
+  review: {
+    // mod+z/mod+shift+z는 텍스트 필드 안에서는 브라우저 네이티브 실행취소에 양보한다
+    // (enableOnFormTags: false) — 제목·설명은 <textarea>라 그 안에서 오타를 지우려는
+    // 시도가 초안 전체 롤백으로 가로채이면 안 된다.
+    undo: def("review.undo_action", "mod+z", "global", 0, false),
+    redo: def("review.redo_action", "mod+shift+z", "global", 0, false),
   },
 } satisfies Record<string, Record<string, ActionDef>>;
 

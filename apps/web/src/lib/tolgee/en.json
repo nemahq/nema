@@ -220,6 +220,7 @@
     "label_search_error": "Couldn't load. Try again.",
     "label_search_loading": "Loading...",
     "label_search_placeholder": "Search or create new",
+    "redo_action": "Redo",
     "reference_body_label": "Description",
     "reference_body_placeholder": "What does this reference point to?",
     "reference_menu_label": "Reference menu",
@@ -238,6 +239,10 @@
     "reference_type_term": "Term",
     "revert_marker": "Revert",
     "revert_title": "{markers} \"{title}\"",
+    "save_status_conflict": "Refresh needed",
+    "save_status_error": "Save failed",
+    "save_status_saved": "Saved",
+    "save_status_saved_description": "We save your edits automatically.",
     "status_applied": "Applied",
     "status_discarded": "Declined",
     "status_pending": "Needs review",
@@ -257,6 +262,7 @@
     "type_ingestion": "Organize",
     "type_relation": "Discovery",
     "type_revert": "Revert",
+    "undo_action": "Undo",
     "viewed_action": "Read"
   },
   "session": {

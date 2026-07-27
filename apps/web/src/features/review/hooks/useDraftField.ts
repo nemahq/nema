@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { useReviewDraftContext } from "@web/features/review/components/ReviewDraftProvider";
 import {
@@ -14,9 +14,13 @@ export function useDraftField<T>(
   commit: (next: T) => void,
   isEqual?: (a: T, b: T) => boolean,
 ): BufferedValue<T> {
-  const { registerPendingCommit } = useReviewDraftContext();
+  const { registerPendingCommit, reportFieldDirty } = useReviewDraftContext();
   const field = useBufferedValue(committed, commit, isEqual);
-  const { commitNow } = field;
+  const { commitNow, dirty } = field;
+  // registerPendingCommit은 마운트 내내 등록돼 있어(flush 대상 자체는 항상 존재) 이
+  // dirty 여부와는 별개다 — 포커스 재조회가 "지금 실제로 안 넘어간 값이 있는지"를
+  // 물을 땐 이 토큰으로 집계된 dirty 필드 수를 쓴다.
+  const tokenRef = useRef({});
 
   useEffect(
     function joinPendingCommits() {
@@ -29,6 +33,15 @@ export function useDraftField<T>(
       };
     },
     [registerPendingCommit, commitNow],
+  );
+
+  useEffect(
+    function reportDirtyState() {
+      const token = tokenRef.current;
+      reportFieldDirty(token, dirty);
+      return () => reportFieldDirty(token, false);
+    },
+    [reportFieldDirty, dirty],
   );
 
   return field;

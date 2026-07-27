@@ -13,7 +13,7 @@ import {
   useReviewDraftReader,
 } from "@web/features/review/hooks/useDigestReviewQuery";
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
-import { useUpdateReview } from "@web/features/review/hooks/useUpdateReview";
+import { useRefetchReviewOnFocus } from "@web/features/review/hooks/useRefetchReviewOnFocus";
 import { computeReviewEditingState } from "@web/features/review/reviewEditingState";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useNotificationSoftAsk } from "@web/hooks/useNotificationSoftAsk";
@@ -27,9 +27,13 @@ import { DigestCandidateList } from "./DigestCandidateList";
 import { IngestionActions } from "./IngestionActions";
 import { ReferenceSection } from "./ReferenceSection";
 import {
+  clearAutosaveEntry,
   ReviewDraftProvider,
   useReviewDraftContext,
+  useReviewSaveStatusContext,
 } from "./ReviewDraftProvider";
+import { SaveStatusIndicator } from "./SaveStatusIndicator";
+import { UndoRedoShortcuts } from "./UndoRedoShortcuts";
 
 const CONFIRM_DISABLED_REASON_KEY = {
   no_candidates: "review.confirm_disabled_no_candidates",
@@ -50,9 +54,15 @@ function IngestionContent() {
   const { t } = useTranslation();
   const spaceId = useCurrentSpaceId();
   const changesetNumber = useChangesetNumber();
-  const [draft] = useDigestReviewSuspenseQuery(spaceId, changesetNumber);
-  const { flushPendingCommits } = useReviewDraftContext();
+  const [draft, digestReviewQuery] = useDigestReviewSuspenseQuery(
+    spaceId,
+    changesetNumber,
+  );
+  const { flushPendingCommits, flushPendingSave, hasPendingEdits } =
+    useReviewDraftContext();
   const readReviewDraft = useReviewDraftReader(spaceId, changesetNumber);
+  const { saveStatus } = useReviewSaveStatusContext();
+  useRefetchReviewOnFocus(digestReviewQuery.refetch, hasPendingEdits);
   const { openTab, closeTab, activeTabId } = useChangesetSidePanel();
   // 모든 다이제스트가 같은 Source 하나를 공유해 탭 id도 하나뿐이라, activeTabId만으론
   // 어느 카드에서 열었는지 구분되지 않는다 — 가장 최근에 누른 카드를 따로 들고 있어야
@@ -60,24 +70,28 @@ function IngestionContent() {
   const [activeSourceDigestId, setActiveSourceDigestId] = useState<
     string | null
   >(null);
+  // confirm의 전체 소요 시간(펜딩 저장 flush + confirm 자체)을 감싸는 자리 — flush
+  // 구간은 개별 mutation의 isPending에 안 잡혀서, 이 로컬 상태가 그 구간까지 포함해
+  // "확정 시도 중"을 표현한다.
+  const [confirming, setConfirming] = useState(false);
   const reviewEditingState = useMemo(
     () => computeReviewEditingState(draft),
     [draft],
   );
   const reviewTitle = draft.sourceTitle ?? t("review.digest_review_title");
 
-  const updateReview = useUpdateReview(spaceId, changesetNumber);
   const confirmReview = useConfirmReview(spaceId, changesetNumber);
   const discardReview = useDiscardReview(spaceId, changesetNumber);
   const showNotificationSoftAsk = useNotificationSoftAsk();
 
   const locked =
-    updateReview.isPending ||
-    confirmReview.isPending ||
-    discardReview.isPendingAfterDelay;
+    confirming || confirmReview.isPending || discardReview.isPendingAfterDelay;
   const confirmDisabledReasonCode =
     computeConfirmDisabledReason(reviewEditingState);
-  const confirmDisabled = locked || confirmDisabledReasonCode !== null;
+  // 저장 실패(일반 실패·버전 충돌 모두)는 확정을 막는다 — 실패한 편집을 그대로
+  // 확정해버리면 조용한 데이터 유실이 된다.
+  const confirmDisabled =
+    locked || saveStatus.kind !== "clean" || confirmDisabledReasonCode !== null;
   const confirmDisabledReasonText =
     confirmDisabledReasonCode &&
     t(CONFIRM_DISABLED_REASON_KEY[confirmDisabledReasonCode]);
@@ -92,23 +106,31 @@ function IngestionContent() {
     }
     flushPendingCommits();
     const latestDraft = readReviewDraft() ?? draft;
-    const latestState = computeReviewEditingState(latestDraft);
-    if (computeConfirmDisabledReason(latestState) !== null) {
+    if (
+      computeConfirmDisabledReason(computeReviewEditingState(latestDraft)) !==
+      null
+    ) {
       return;
     }
-    updateReview.reset();
     confirmReview.reset();
+    setConfirming(true);
     try {
       await runConfirmReview({
-        draft: latestDraft,
-        referenceUpdates: latestState.referenceUpdates,
-        updateReview: updateReview.mutateAsync,
+        changesetId: latestDraft.changesetId,
+        flushPendingSave,
         confirmReview: confirmReview.mutateAsync,
       });
     } catch {
-      // 전역 토스트(mutationCache.onError)가 이미 띄운다.
+      // 펜딩 저장 실패는 저장 상태 표시(navbar)가 이미 알린다. confirmReview 자체의
+      // 실패는 전역 토스트(mutationCache.onError)가 띄운다. 어느 쪽이든 여기서
+      // 추가로 할 일은 없다.
       return;
+    } finally {
+      setConfirming(false);
     }
+    // 이 changeset은 이제 확정된 상태로 넘어가 이 key로 다시 편집이 들어올 일이
+    // 없다 — 자동 저장 레지스트리 엔트리를 여기서 정리한다.
+    clearAutosaveEntry(spaceId, changesetNumber);
     // try 밖에 둔다 — 여기서 던지면(예: localStorage 접근 실패) 위 catch가
     // "mutation 실패는 전역 토스트가 이미 처리한다"는 전제로 조용히 삼켜버린다.
     // 밖에 두면 앱 전역 unhandled rejection 리포트로 정상 노출된다.
@@ -121,7 +143,12 @@ function IngestionContent() {
     }
     discardReview.mutate(
       { changesetId: draft.changesetId },
-      { onSuccess: () => showNotificationSoftAsk() },
+      {
+        onSuccess: () => {
+          clearAutosaveEntry(spaceId, changesetNumber);
+          showNotificationSoftAsk();
+        },
+      },
     );
   }
 
@@ -159,7 +186,11 @@ function IngestionContent() {
   const sourceTabOpen = activeTabId === draft.sourceId;
 
   return (
-    <ChangesetDetailLayout title={reviewTitle}>
+    <ChangesetDetailLayout
+      title={reviewTitle}
+      navBarRightContent={<SaveStatusIndicator />}
+    >
+      <UndoRedoShortcuts />
       <ChangesetDetailHeader
         title={reviewTitle}
         changesetNumber={draft.changesetNumber}
