@@ -52,6 +52,12 @@ cn("dark:bg-brand", "bg-red-500")  →  "dark:bg-brand bg-red-500"
 
 **증상**: 오버라이드를 했는데 특정 모드/상태에서만 안 먹으면 이 함정을 의심할 것.
 
+## Button 안의 아이콘은 직계 자식으로 둔다
+
+Button의 base 클래스가 자식 `svg`를 자동으로 처리한다 — 크기(`[&_svg:not([class*='size-'])]:size-4`), 패딩 보정(`has-[>svg]:px-*`), 라벨과의 간격(`gap-*`). 이 중 패딩 보정은 **direct child(`>`) 셀렉터**라, 라벨에 색·크기를 주려고 아이콘까지 같이 다른 엘리먼트(`Text` 등)로 감싸면 그 보정만 조용히 빠진다 — 크기·간격은 descendant 셀렉터라 여전히 맞기 때문에 눈에 잘 안 띈다.
+
+**증상**: 아이콘 있는 버튼인데 좌우 여백이 아주 살짝 넓어 보이면 이 함정을 의심할 것. (`ErrorFallback` 복사 버튼에서 실제로 발생했던 사례 — PR #503)
+
 ## DropdownMenu/Popover/Select 트리거는 열려 있는 동안 눌린 것처럼 보여야 한다
 
 `Button`/`SelectTrigger`/`Chip`은 `data-[state=open]`을 hover와 같은 톤으로 이미 처리한다 — `DropdownMenuTrigger`/`PopoverTrigger`에 `asChild`로 얹거나 `Select`를 그대로 쓰면 별도 작업 없이 열려 있는 동안 자동으로 눌림 표시가 된다. 트리거가 이 셋이 아닌 raw 태그(`<button>` 등)라면 소비처가 `data-[state=open]:` 클래스를 직접 달아야 한다(`DigestTopicPicker` 참고).
