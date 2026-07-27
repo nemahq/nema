@@ -130,8 +130,8 @@ function DraggableTab({
           ? cn(
               "border-r border-t-2 border-r-border bg-surface-card",
               focused === false
-                ? TAB_DIMMED_ACTIVE_INDICATOR_CLASSNAME.top
-                : TAB_ACTIVE_INDICATOR_CLASSNAME.top,
+                ? TAB_DIMMED_ACTIVE_INDICATOR_CLASSNAME
+                : TAB_ACTIVE_INDICATOR_CLASSNAME,
               !isFirst && "border-l border-l-border",
             )
           : "border border-transparent border-r-border/30",

@@ -25,15 +25,14 @@ export function LabelSearchRow({
   return (
     <li>
       <ComboboxItem
-        disabled={attached}
-        keepHoverWhenDisabled
+        alreadySelected={attached}
         onClick={onSelect}
         actions={children}
         // 편집 팝오버가 열려 있는 동안은 마우스가 팝오버 쪽으로 옮겨가 행에서
         // 벗어나도(:hover가 풀려도) 계속 활성 톤으로 보이게 강제한다 — 안 그러면
         // 편집 중인데 행이 비활성처럼 보인다.
         rowClassName={editing ? "bg-surface-raised-hover/40" : undefined}
-        className="cursor-pointer py-1"
+        buttonClassName="py-1"
       >
         <Badge
           variant={attached ? "neutral" : "outline"}

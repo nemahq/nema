@@ -23,6 +23,7 @@ import {
 } from "@web/utils/labelSearch";
 
 const SEARCH_LIST_CLASSNAME = "flex max-h-48 flex-col gap-0.5 overflow-y-auto";
+const SEARCH_ROW_CLASSNAME = "px-2 py-1.5";
 
 interface TagSearchResultsProps {
   query: string;
@@ -67,7 +68,7 @@ function TagSearchResults({
           <li key={tag.id}>
             <ComboboxItem
               onClick={() => onSelectExisting(tag)}
-              className="px-2 py-1.5"
+              buttonClassName={SEARCH_ROW_CLASSNAME}
             >
               <Text as="span" size="sm">
                 {tag.title}
@@ -76,7 +77,12 @@ function TagSearchResults({
           </li>
         ))}
         {candidates.length === 0 && trimmed === "" && (
-          <Text as="li" size="sm" color="tertiary" className="px-2 py-1.5">
+          <Text
+            as="li"
+            size="sm"
+            color="tertiary"
+            className={SEARCH_ROW_CLASSNAME}
+          >
             {t("review.label_search_empty")}
           </Text>
         )}
@@ -85,9 +91,13 @@ function TagSearchResults({
         <ComboboxItem
           disabled={!canStartCreateNew}
           onClick={() => onStartCreate(trimmed)}
-          className="px-2 py-1.5"
+          buttonClassName={SEARCH_ROW_CLASSNAME}
         >
-          <Text as="span" size="sm">
+          <Text
+            as="span"
+            size="sm"
+            className={!canStartCreateNew ? "text-fg-quinary" : undefined}
+          >
             {t("review.label_create_new_before")}
             {trimmed}
             {t("review.label_create_new_after")}
@@ -204,7 +214,12 @@ export function TagAddPopover({
               boundaryName="tag-search"
               fallbackRender={() => (
                 <ul className={SEARCH_LIST_CLASSNAME}>
-                  <Text as="li" size="sm" color="error" className="px-2 py-1.5">
+                  <Text
+                    as="li"
+                    size="sm"
+                    color="error"
+                    className={SEARCH_ROW_CLASSNAME}
+                  >
                     {t("review.label_search_error")}
                   </Text>
                 </ul>
@@ -217,7 +232,7 @@ export function TagAddPopover({
                       as="li"
                       size="sm"
                       color="tertiary"
-                      className="px-2 py-1.5"
+                      className={SEARCH_ROW_CLASSNAME}
                     >
                       {t("review.label_search_loading")}
                     </Text>

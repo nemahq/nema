@@ -1,6 +1,10 @@
 import { type ComponentProps, forwardRef } from "react";
 
-import { cn, NESTED_HOVER_ICON_CLASSNAME } from "../utils";
+import {
+  cn,
+  NESTED_ACTIVE_ICON_CLASSNAME,
+  NESTED_HOVER_ICON_CLASSNAME,
+} from "../utils";
 
 interface HoverIconProps extends ComponentProps<"button"> {
   // 이 아이콘이 트리거하는 게 열려 있는 등, hover를 안 하고 있어도 hover와
@@ -31,8 +35,7 @@ export const HoverIcon = forwardRef<HTMLButtonElement, HoverIconProps>(
           // NESTED_HOVER_ICON_CLASSNAME)만으로 표현하고 색은 그대로 둔다.
           "flex size-5 shrink-0 items-center justify-center rounded-md text-fg-tertiary opacity-0 transition-colors duration-fast focus-visible:opacity-100",
           NESTED_HOVER_ICON_CLASSNAME,
-          active &&
-            "bg-surface-raised-hover opacity-100 brightness-95 dark:brightness-125",
+          active && cn("opacity-100", NESTED_ACTIVE_ICON_CLASSNAME),
           className,
         )}
         {...props}

@@ -89,8 +89,6 @@ export {
   Tab,
   TAB_ACTIVE_INDICATOR_CLASSNAME,
   TAB_DIMMED_ACTIVE_INDICATOR_CLASSNAME,
-  type TabIndicatorSide,
-  type TabSize,
 } from "./components/Tab";
 export {
   Text,
@@ -111,6 +109,7 @@ export {
 export {
   cn,
   LIST_ITEM_HOVER_CLASSNAME,
+  NESTED_ACTIVE_ICON_CLASSNAME,
   NESTED_HOVER_ICON_CLASSNAME,
   pinSelectedToTop,
   POPOVER_SURFACE_CLASSNAME,

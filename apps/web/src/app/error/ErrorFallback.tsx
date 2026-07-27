@@ -122,17 +122,12 @@ export function ErrorFallback({
           onClick={handleCopy}
           className="-mt-1"
         >
-          <Text
-            as="span"
-            size="xs"
-            color="tertiary"
-            className="flex items-center gap-1"
-          >
-            {copied ? (
-              <Check className="size-3" />
-            ) : (
-              <Copy className="size-3" />
-            )}
+          {copied ? (
+            <Check className="size-3 text-fg-tertiary" />
+          ) : (
+            <Copy className="size-3 text-fg-tertiary" />
+          )}
+          <Text as="span" size="xs" color="tertiary">
             {labels?.copyError ?? <TranslatedCopyError />}
           </Text>
         </Button>
