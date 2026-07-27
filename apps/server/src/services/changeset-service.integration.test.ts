@@ -118,13 +118,14 @@ async function createFixtureDigest(args: {
   return rows[0].id;
 }
 
-async function createFixtureStatement(
-  spaceId: string,
-  digestId: string,
-): Promise<string> {
+async function createFixtureStatement(args: {
+  spaceId: string;
+  digestId: string;
+  content?: string;
+}): Promise<string> {
   const { rows } = await client.query<{ id: string }>(
-    "INSERT INTO statements (space_id, digest_id, content, type) VALUES ($1, $2, 'fixture statement', 'question') RETURNING id",
-    [spaceId, digestId],
+    "INSERT INTO statements (space_id, digest_id, content, type) VALUES ($1, $2, $3, 'question') RETURNING id",
+    [args.spaceId, args.digestId, args.content ?? "fixture statement"],
   );
   return rows[0]?.id ?? "";
 }
@@ -135,7 +136,7 @@ async function createFixtureStatement(
 async function createFixtureOpenRelation(args: {
   spaceId: string;
   sourceId: string;
-  relationType: "conflicts" | "duplicates";
+  relationType: "conflicts" | "duplicates" | "supports";
   fromId: string;
   toId: string;
 }): Promise<string> {
@@ -451,7 +452,7 @@ describe("author_name 스냅샷 (integration)", () => {
       spaceId,
       title: "픽스처 다이제스트",
     });
-    const statementId = await createFixtureStatement(spaceId, digestId);
+    const statementId = await createFixtureStatement({ spaceId, digestId });
 
     await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
       userId,
@@ -571,7 +572,7 @@ describe("sources.title 전파 트리거 (integration)", () => {
 });
 
 describe("apply_relation_changesets RPC — open 제안 title (integration)", () => {
-  it("끝점 두 Statement가 속한 Digest 제목을 'A vs B'로 합쳐 채운다", async () => {
+  it("끝점 두 Statement의 content를 'A vs B'로 합쳐 채운다(Digest 제목이 아니다)", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -585,6 +586,8 @@ describe("apply_relation_changesets RPC — open 제안 title (integration)", ()
       [sourceId],
     );
 
+    // Digest 제목을 Statement content와 다르게 둬서, title이 digests.title이
+    // 아니라 statements.content에서 나온다는 걸 구분해서 검증한다.
     const digestA = await createFixtureDigest({
       sourceId,
       spaceId,
@@ -595,8 +598,16 @@ describe("apply_relation_changesets RPC — open 제안 title (integration)", ()
       spaceId,
       title: "다이제스트 B",
     });
-    const fromStatementId = await createFixtureStatement(spaceId, digestA);
-    const toStatementId = await createFixtureStatement(spaceId, digestB);
+    const fromStatementId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA,
+      content: "진술 A 내용",
+    });
+    const toStatementId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+      content: "진술 B 내용",
+    });
 
     const pending = [
       { type: "conflicts", from_id: fromStatementId, to_id: toStatementId },
@@ -614,7 +625,7 @@ describe("apply_relation_changesets RPC — open 제안 title (integration)", ()
       [fromStatementId, toStatementId],
     );
 
-    expect(rows[0]?.title).toBe("다이제스트 A vs 다이제스트 B");
+    expect(rows[0]?.title).toBe("진술 A 내용 vs 진술 B 내용");
   });
 });
 
@@ -638,8 +649,8 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
       spaceId,
       title: "다이제스트 B",
     });
-    const fromId = await createFixtureStatement(spaceId, digestA);
-    const toId = await createFixtureStatement(spaceId, digestB);
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
 
     const firstChangeset = await createFixtureOpenRelation({
       spaceId,
@@ -688,8 +699,8 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
       spaceId,
       title: "다이제스트 B",
     });
-    const fromId = await createFixtureStatement(spaceId, digestA);
-    const toId = await createFixtureStatement(spaceId, digestB);
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
 
     const firstChangeset = await createFixtureOpenRelation({
       spaceId,
@@ -733,6 +744,140 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
       [fromId, toId],
     );
     // 무효화된 첫 changeset(closed+discarded) + 방금 새로 만들어진 open — 총 2건이어야 한다.
+    expect(rows.map((r) => `${r.status}/${r.outcome ?? "-"}`).sort()).toEqual([
+      "closed/discarded",
+      "open/-",
+    ]);
+  });
+
+  it.each(["conflicts", "duplicates"] as const)(
+    "사람이 거절한 %s 쌍은 방향이 뒤집힌(B→A) 재제안도 계속 막는다",
+    async (relationType) => {
+      if (!localDbAvailable) {
+        return;
+      }
+
+      const userId = await createFixtureUser();
+      const workspaceId = await createFixtureWorkspace();
+      const spaceId = await createFixtureSpace(workspaceId, "Space A");
+      const sourceId = await createFixtureSource({
+        spaceId,
+        authorId: userId,
+      });
+      const digestA = await createFixtureDigest({
+        sourceId,
+        spaceId,
+        title: "다이제스트 A",
+      });
+      const digestB = await createFixtureDigest({
+        sourceId,
+        spaceId,
+        title: "다이제스트 B",
+      });
+      const fromId = await createFixtureStatement({
+        spaceId,
+        digestId: digestA,
+      });
+      const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+      const firstChangeset = await createFixtureOpenRelation({
+        spaceId,
+        sourceId,
+        relationType,
+        fromId,
+        toId,
+      });
+      await client.query("SELECT reject_pending_relation($1)", [
+        firstChangeset,
+      ]);
+
+      await client.query(
+        "UPDATE sources SET linking_status = 'pending' WHERE id = $1",
+        [sourceId],
+      );
+      // B→A로 방향만 뒤집어 재제안한다.
+      const pending = [{ type: relationType, from_id: toId, to_id: fromId }];
+      await client.query(
+        "SELECT apply_relation_changesets($1, '[]'::jsonb, $2::jsonb)",
+        [sourceId, JSON.stringify(pending)],
+      );
+
+      const { rows } = await client.query<{
+        status: string;
+        outcome: string | null;
+      }>(
+        `SELECT c.status, c.outcome FROM changesets c
+       JOIN changes ch ON ch.changeset_id = c.id
+       WHERE c.type = 'relation' AND ch.data->>'type' = $1
+         AND ((ch.data->>'from_id' = $2 AND ch.data->>'to_id' = $3)
+           OR (ch.data->>'from_id' = $3 AND ch.data->>'to_id' = $2))
+       ORDER BY c.created_at DESC`,
+        [relationType, fromId, toId],
+      );
+      // 거절된 첫 changeset(closed+discarded) 하나뿐이어야 한다 — 방향 뒤집혀도
+      // 새 open이 안 생김. count만 세면 "지우고 새로 만듦"도 통과해버리므로
+      // status/outcome까지 확인한다.
+      expect(rows.map((r) => `${r.status}/${r.outcome ?? "-"}`)).toEqual([
+        "closed/discarded",
+      ]);
+    },
+  );
+
+  it("거절한 supports 쌍은 방향이 뒤집히면 다시 제안된다 — 방향 의미가 있는 타입은 collapse하지 않는다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const firstChangeset = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "supports",
+      fromId,
+      toId,
+    });
+    await client.query("SELECT reject_pending_relation($1)", [firstChangeset]);
+
+    await client.query(
+      "UPDATE sources SET linking_status = 'pending' WHERE id = $1",
+      [sourceId],
+    );
+    const pending = [{ type: "supports", from_id: toId, to_id: fromId }];
+    await client.query(
+      "SELECT apply_relation_changesets($1, '[]'::jsonb, $2::jsonb)",
+      [sourceId, JSON.stringify(pending)],
+    );
+
+    const { rows } = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>(
+      `SELECT c.status, c.outcome FROM changesets c
+       JOIN changes ch ON ch.changeset_id = c.id
+       WHERE c.type = 'relation' AND ch.data->>'type' = 'supports'
+         AND ((ch.data->>'from_id' = $1 AND ch.data->>'to_id' = $2)
+           OR (ch.data->>'from_id' = $2 AND ch.data->>'to_id' = $1))
+       ORDER BY c.created_at DESC`,
+      [fromId, toId],
+    );
+    // 방향 의미가 있는 타입은 가드가 collapse하지 않으므로, 거절된 A→B와
+    // 별개로 B→A open이 새로 생겨야 한다(conflicts·duplicates와 대조).
     expect(rows.map((r) => `${r.status}/${r.outcome ?? "-"}`).sort()).toEqual([
       "closed/discarded",
       "open/-",
@@ -910,8 +1055,14 @@ describe("resolve_conflict_relation RPC (integration)", () => {
       spaceId,
       title: "다이제스트 B",
     });
-    const winnerId = await createFixtureStatement(spaceId, digestA);
-    const loserId = await createFixtureStatement(spaceId, digestB);
+    const winnerId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA,
+    });
+    const loserId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+    });
     const changesetId = await createFixtureOpenRelation({
       spaceId,
       sourceId,
@@ -980,8 +1131,14 @@ describe("resolve_conflict_relation RPC (integration)", () => {
       spaceId,
       title: "다이제스트 B",
     });
-    const winnerId = await createFixtureStatement(spaceId, digestA);
-    const loserId = await createFixtureStatement(spaceId, digestB);
+    const winnerId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA,
+    });
+    const loserId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+    });
     const changesetId = await createFixtureOpenRelation({
       spaceId,
       sourceId,
@@ -1031,9 +1188,18 @@ describe("resolve_conflict_relation RPC (integration)", () => {
       spaceId,
       title: "다이제스트 C",
     });
-    const winnerId = await createFixtureStatement(spaceId, digestA);
-    const loserId = await createFixtureStatement(spaceId, digestB);
-    const otherId = await createFixtureStatement(spaceId, digestC);
+    const winnerId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA,
+    });
+    const loserId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+    });
+    const otherId = await createFixtureStatement({
+      spaceId,
+      digestId: digestC,
+    });
 
     const conflictChangeset = await createFixtureOpenRelation({
       spaceId,
@@ -1089,8 +1255,14 @@ describe("resolve_conflict_relation RPC (integration)", () => {
       spaceId,
       title: "다이제스트 B",
     });
-    const winnerId = await createFixtureStatement(spaceId, digestA);
-    const loserId = await createFixtureStatement(spaceId, digestB);
+    const winnerId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA,
+    });
+    const loserId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+    });
 
     const firstChangeset = await createFixtureOpenRelation({
       spaceId,
@@ -1166,8 +1338,14 @@ describe("resolve_duplicate_relation RPC (integration)", () => {
       spaceId,
       title: "다이제스트 B",
     });
-    const keeperId = await createFixtureStatement(spaceId, digestA);
-    const duplicateId = await createFixtureStatement(spaceId, digestB);
+    const keeperId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA,
+    });
+    const duplicateId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+    });
     const changesetId = await createFixtureOpenRelation({
       spaceId,
       sourceId,
@@ -1261,9 +1439,18 @@ describe("resolve_duplicate_relation RPC (integration)", () => {
       spaceId,
       title: "다이제스트 B",
     });
-    const a1StatementId = await createFixtureStatement(spaceId, digestA1);
-    const a2StatementId = await createFixtureStatement(spaceId, digestA2);
-    const bStatementId = await createFixtureStatement(spaceId, digestB);
+    const a1StatementId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA1,
+    });
+    const a2StatementId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA2,
+    });
+    const bStatementId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+    });
 
     // (A1,B)·(A2,B) 각각 별도 pending — B가 두 곳과 동시에 중복 감지된 경우.
     const changesetA1B = await createFixtureOpenRelation({
