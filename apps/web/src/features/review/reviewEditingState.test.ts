@@ -135,6 +135,27 @@ describe("computeReviewEditingState — digestRows", () => {
     });
     expect(result.digestRows[0].title).toBe("수정된 제목");
   });
+
+  // 이 슬라이스가 index 키를 id 키로 바꾼 이유 그 자체 — 서버가 돌려준 배열
+  // 순서가 저장 전과 달라져도(재조회·재정렬 등) override는 array position이
+  // 아니라 digest.id를 따라가야 다른 후보에 잘못 붙지 않는다.
+  it("배열 순서가 바뀌어도 override는 digest.id를 따라간다", () => {
+    const result = computeReviewEditingState(
+      review({ digests: [DIGEST_2, DIGEST] }),
+      {
+        ...EMPTY_OVERRIDES,
+        titleOverrides: new Map([["digest-2", "수정된 제목"]]),
+      },
+    );
+    const digest2Row = result.digestRows.find(
+      (row) => row.digest.id === "digest-2",
+    );
+    const digest1Row = result.digestRows.find(
+      (row) => row.digest.id === "digest-1",
+    );
+    expect(digest2Row?.title).toBe("수정된 제목");
+    expect(digest1Row?.title).toBe(DIGEST.title);
+  });
 });
 
 // 태그·주제 이름 수정은 그 id를 쓰는 모든 Digest에 적용돼야 한다 — index 기반
