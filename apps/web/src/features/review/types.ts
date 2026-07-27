@@ -19,3 +19,14 @@ export type ReviewDigest = DigestReviewDetail["digests"][number];
 export type ReviewNewReference = DigestReviewDetail["newReferences"][number];
 export type ReviewCitedReference =
   DigestReviewDetail["citedReferences"][number];
+
+export type ChangesetDetail = RouterOutputs["changeset"]["getByNumber"];
+export type ChangesetDetailBody = ChangesetDetail["body"];
+export type DigestDetailSnapshot = Extract<
+  ChangesetDetailBody,
+  { kind: "ingestion_applied" }
+>["digests"][number];
+export type RelationEndpointDetailSnapshot = Extract<
+  ChangesetDetailBody,
+  { kind: "relation_conflict_applied" }
+>["from"];

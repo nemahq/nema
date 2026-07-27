@@ -1,4 +1,8 @@
-import { type DigestBody, DigestBodySchema } from "@nema-io/shared";
+import {
+  type DigestBody,
+  DigestBodySchema,
+  type RelationType,
+} from "@nema-io/shared";
 
 import type { Database } from "@server/infra/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
@@ -36,9 +40,8 @@ interface RelationEndpointSnapshot {
   digest: DigestSnapshot;
 }
 
-// 이번 라운드가 채운 7케이스(ingestion 2 + relation 4 + revert 스텁) 밖은 전부
-// "unsupported"로 묶는다 — manual(changeset 목록에 애초에 안 뜸), 확신 관계 자동 적용
-// (supports/replaces/resolves 타입, 승자·패자 판정 UI 자체가 아직 백엔드에 없음),
+// 이번 라운드가 채운 8케이스(ingestion 2 + relation 6 + revert 스텁) 밖은 전부
+// "unsupported"로 묶는다 — manual(changeset 목록에 애초에 안 뜸),
 // open(이 화면은 closed 전용, open은 별도 리뷰 화면이 담당) 등.
 type ChangesetDetailBody =
   | { kind: "ingestion_applied"; digests: DigestSnapshot[] }
@@ -55,6 +58,12 @@ type ChangesetDetailBody =
       duplicate: RelationEndpointSnapshot;
     }
   | { kind: "relation_duplicate_discarded" }
+  | {
+      kind: "relation_confident_applied";
+      relationType: Extract<RelationType, "supports" | "replaces" | "resolves">;
+      from: RelationEndpointSnapshot;
+      to: RelationEndpointSnapshot;
+    }
   | { kind: "revert" }
   | { kind: "unsupported" };
 
@@ -256,8 +265,22 @@ async function resolveBody(args: {
       return { kind: "unsupported" };
     }
 
-    // supports/replaces/resolves — 확신 관계 자동 적용. 승자·패자를 사람이 판정하는
-    // 화면 자체가 아직 없어(관계 판정 화면 미구현) 이번 라운드 스코프 밖.
+    // supports/replaces/resolves — 확신 관계 자동 적용(사람 판정 없이 엔진이 바로
+    // 적용). replaces는 to 쪽을 archive시키지만(RelationEndpointSnapshot의
+    // statementStatus로 이미 드러남), resolves는 to를 archive하지 않고(해소된
+    // 것일 뿐 틀린 게 아니라서, 07-modeling.md) supports처럼 둘 다 active로 남는다.
+    if (outcome === "applied") {
+      const [from, to] = await Promise.all([
+        fetchRelationEndpoint({ supabase, statementId: proposal.fromId }),
+        fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
+      ]);
+      return {
+        kind: "relation_confident_applied",
+        relationType: proposal.type,
+        from,
+        to,
+      };
+    }
     return { kind: "unsupported" };
   }
 

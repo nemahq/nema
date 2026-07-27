@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveCommittedValue } from "./digestBodyFieldValue";
+import {
+  isDigestBodyFieldBlank,
+  readDigestBodyFieldValue,
+  resolveCommittedValue,
+} from "./digestBodyFieldValue";
 
 describe("resolveCommittedValue", () => {
   it("undefined면 text 자리를 깐다", () => {
@@ -29,5 +33,36 @@ describe("resolveCommittedValue", () => {
   it("실제 내용이 있으면 그대로 돌려준다", () => {
     expect(resolveCommittedValue("내용", "text")).toBe("내용");
     expect(resolveCommittedValue(["a", "b"], "list")).toEqual(["a", "b"]);
+  });
+});
+
+describe("readDigestBodyFieldValue", () => {
+  it("body.type과 맞는 필드는 그 값을 그대로 돌려준다", () => {
+    const body = {
+      type: "decision" as const,
+      situation: "상황",
+      tradeoff: ["a"],
+    };
+    expect(readDigestBodyFieldValue(body, "situation")).toBe("상황");
+    expect(readDigestBodyFieldValue(body, "tradeoff")).toEqual(["a"]);
+  });
+
+  it("body에 없는 필드(다른 타입 전용)는 undefined다", () => {
+    const body = { type: "decision" as const, situation: "상황" };
+    expect(readDigestBodyFieldValue(body, "finding")).toBeUndefined();
+  });
+});
+
+describe("isDigestBodyFieldBlank", () => {
+  it("빈 문자열·공백만 있는 문자열은 blank다", () => {
+    expect(isDigestBodyFieldBlank("")).toBe(true);
+    expect(isDigestBodyFieldBlank("   ")).toBe(true);
+    expect(isDigestBodyFieldBlank("내용")).toBe(false);
+  });
+
+  it("항목이 전부 공백인 리스트는 blank다 — length만 보면 오판한다", () => {
+    expect(isDigestBodyFieldBlank([""])).toBe(true);
+    expect(isDigestBodyFieldBlank(["", ""])).toBe(true);
+    expect(isDigestBodyFieldBlank(["a"])).toBe(false);
   });
 });

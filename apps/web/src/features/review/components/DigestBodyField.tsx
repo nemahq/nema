@@ -4,7 +4,11 @@ import type {
   DigestBodyFieldKey,
   DigestBodyFieldKind,
 } from "@web/features/review/constants";
-import { resolveCommittedValue } from "@web/features/review/digestBodyFieldValue";
+import {
+  isDigestBodyFieldBlank,
+  readDigestBodyFieldValue,
+  resolveCommittedValue,
+} from "@web/features/review/digestBodyFieldValue";
 import { useDraftField } from "@web/features/review/hooks/useDraftField";
 import type { ReviewDigest } from "@web/features/review/types";
 import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
@@ -12,31 +16,6 @@ import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
 import { DigestListField } from "./DigestListField";
 import { DigestTextField } from "./DigestTextField";
 import { useReviewDraftContext } from "./ReviewDraftProvider";
-
-// DIGEST_BODY_FIELDS의 key는 body.type과의 상관관계가 렌더 시점에 끊겨 string으로
-// 넓어진다 — 단언 대신 실제 값 모양을 확인해 좁힌다.
-function readFieldValue(
-  body: ReviewDigest["body"],
-  key: DigestBodyFieldKey,
-): string | string[] | undefined {
-  const raw: unknown = Object.getOwnPropertyDescriptor(body, key)?.value;
-  if (typeof raw === "string") {
-    return raw;
-  }
-  if (Array.isArray(raw) && raw.every((item) => typeof item === "string")) {
-    return raw;
-  }
-  return undefined;
-}
-
-// 리스트 필드는 한 번 타이핑했다 다 지우면 [""](빈 항목 1개)로 남는다 — length만
-// 보면 이 상태를 "값 있음"으로 오판해 카드에서 포커스가 빠져도 계속 펼쳐진다.
-function isBlank(value: string | string[]): boolean {
-  if (typeof value === "string") {
-    return value.trim() === "";
-  }
-  return value.every((item) => item.trim() === "");
-}
 
 // 리스트 값은 매 편집마다 새 배열이라 참조 비교로는 늘 "바뀌었다"가 된다.
 function isSameFieldValue(a: string | string[], b: string | string[]): boolean {
@@ -95,7 +74,7 @@ export function DigestBodyField({
 }: DigestBodyFieldProps) {
   const { t } = useTranslation();
   const { dispatch } = useReviewDraftContext();
-  const stored = readFieldValue(body, fieldKey);
+  const stored = readDigestBodyFieldValue(body, fieldKey);
   const field = useDraftField(
     resolveCommittedValue(stored, kind),
     (next) =>
@@ -108,7 +87,7 @@ export function DigestBodyField({
     isSameFieldValue,
   );
 
-  const blank = isBlank(field.value);
+  const blank = isDigestBodyFieldBlank(field.value);
   const placeholder = t(placeholderKey);
 
   return (

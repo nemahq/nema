@@ -411,7 +411,7 @@ describe("getChangesetByNumber", () => {
     expect(result.revertsNumber).toBe(2);
   });
 
-  it("확신 관계 자동 적용(conflicts/duplicates가 아닌 relation) — 크래시 없이 unsupported로 폴백", async () => {
+  it("확신 관계 자동 적용(supports) — 둘 다 active인 채로 from/to 스냅샷을 돌려준다", async () => {
     const supabase = mockSupabase({
       changesets: [
         {
@@ -441,6 +441,21 @@ describe("getChangesetByNumber", () => {
           ],
         },
       ],
+      statements: [
+        {
+          id: STATEMENT_A_ID,
+          content: "A가 B를 뒷받침",
+          status: "active",
+          digest_id: DIGEST_A_ID,
+        },
+        {
+          id: STATEMENT_B_ID,
+          content: "B",
+          status: "active",
+          digest_id: DIGEST_B_ID,
+        },
+      ],
+      digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
     });
 
     const result = await getChangesetByNumber({
@@ -449,7 +464,75 @@ describe("getChangesetByNumber", () => {
       number: 8,
     });
 
-    expect(result.body).toEqual({ kind: "unsupported" });
+    expect(result.body.kind).toBe("relation_confident_applied");
+    if (result.body.kind !== "relation_confident_applied") {
+      throw new Error("unreachable");
+    }
+    expect(result.body.relationType).toBe("supports");
+    expect(result.body.from.statementStatus).toBe("active");
+    expect(result.body.to.statementStatus).toBe("active");
+  });
+
+  it("확신 관계 자동 적용(replaces) — 대체된 to 쪽이 archived로 반영된다", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-11",
+          space_id: SPACE_ID,
+          number: 11,
+          type: "relation",
+          status: "closed",
+          outcome: "applied",
+          title: "제목",
+          source_id: null,
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              action: "create",
+              target_type: "relation",
+              target_id: "rel-6",
+              data: {
+                type: "replaces",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
+              },
+            },
+          ],
+        },
+      ],
+      statements: [
+        {
+          id: STATEMENT_A_ID,
+          content: "새 진술",
+          status: "active",
+          digest_id: DIGEST_A_ID,
+        },
+        {
+          id: STATEMENT_B_ID,
+          content: "지난 진술",
+          status: "archived",
+          digest_id: DIGEST_B_ID,
+        },
+      ],
+      digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
+    });
+
+    const result = await getChangesetByNumber({
+      supabase,
+      spaceId: SPACE_ID,
+      number: 11,
+    });
+
+    expect(result.body.kind).toBe("relation_confident_applied");
+    if (result.body.kind !== "relation_confident_applied") {
+      throw new Error("unreachable");
+    }
+    expect(result.body.relationType).toBe("replaces");
+    expect(result.body.from.statementStatus).toBe("active");
+    expect(result.body.to.statementStatus).toBe("archived");
   });
 
   it("존재하지 않는 번호 — SupabaseError(not_found)를 던진다(원문 메시지가 그대로 새지 않게)", async () => {
