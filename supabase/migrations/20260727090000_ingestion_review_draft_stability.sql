@@ -247,10 +247,16 @@ BEGIN
   FOR UPDATE;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'changeset % not found or not accessible', p_changeset_id;
+    RAISE EXCEPTION 'changeset % not found or not accessible', p_changeset_id
+      USING ERRCODE = 'P0002';
   END IF;
+  -- ERRCODE 없이 두면 query_failed(500)로 떨어져, 이 PR이 정확히 대응하려는
+  -- 두 탭 동시 편집(다른 탭이 먼저 확정·버려서 open이 아니게 됨)이 스퓨리어스
+  -- 500/Sentry로 샌다 — discard_ingestion_review/restore_ingestion_review와
+  -- 같은 상황이라 같은 코드(NM008)를 재사용한다(20260721110001의 선례와 같은 이유).
   IF v_type <> 'ingestion' OR v_status <> 'open' THEN
-    RAISE EXCEPTION 'changeset % is not an open ingestion review', p_changeset_id;
+    RAISE EXCEPTION 'changeset % is not an open ingestion review', p_changeset_id
+      USING ERRCODE = 'NM008';
   END IF;
   IF jsonb_array_length(coalesce(p_digests, '[]'::jsonb)) = 0 THEN
     RAISE EXCEPTION 'p_digests must not be empty — trash the source instead';

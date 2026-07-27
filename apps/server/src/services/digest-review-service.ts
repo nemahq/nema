@@ -233,9 +233,15 @@ export async function getReview(args: {
   ];
   let citedReferences: CitedReference[] = [];
   if (citedIds.length > 0) {
+    // archived/trashed Reference를 인용 목록에 그대로 올리면, 그중 병합 제안(mergeNote)이
+    // 있던 것은 이후 모든 저장이 update_pending_ingestion의 NM008 가드(활성 상태만
+    // 병합 허용)에 영구히 막힌다 — 이 저장에서 그 Reference를 안 건드려도 toReferenceUpdates가
+    // 살아있는 병합 후보 전량을 매번 다시 실어 보내기 때문. 애초에 편집 대상으로
+    // 올리지 않아야 그 저장 불가 상태 자체가 생기지 않는다.
     const { data: references, error: referenceError } = await supabase
       .from("references")
       .select("id, type, title, body")
+      .eq("status", "active")
       .in("id", citedIds);
     throwIfSupabaseError(referenceError);
     citedReferences = (references ?? []).map((reference) => ({

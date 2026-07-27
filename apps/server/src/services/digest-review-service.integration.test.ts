@@ -221,6 +221,48 @@ describe("update_pending_ingestion RPC (integration)", () => {
     expect(row.data.title).toBe("첫 저장");
   });
 
+  // ERRCODE 없이 두면 query_failed(500)로 떨어져, 이 함수가 정확히 대응하려는
+  // 두 탭 동시 편집(다른 탭이 먼저 확정·버림)이 스퓨리어스 500/Sentry로 샌다.
+  it("이미 버려진(open이 아닌) changeset에 저장하면 NM008로 거절된다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId);
+    const sourceId = await createFixtureSource(spaceId);
+    const changesetId = await createReview({
+      sourceId,
+      digests: [fixtureDigest({ title: "d1" })],
+    });
+    const [{ target_id: digestId }] = await getChanges(changesetId, "digest");
+    await client.query("SELECT discard_ingestion_review($1)", [changesetId]);
+
+    await expect(
+      client.query("SELECT update_pending_ingestion($1, $2, $3::jsonb)", [
+        changesetId,
+        1,
+        JSON.stringify([
+          { ...fixtureDigest({ title: "재수정" }), id: digestId, position: 0 },
+        ]),
+      ]),
+    ).rejects.toMatchObject({ code: "NM008" });
+  });
+
+  it("존재하지 않는 changeset id로 저장하면 not_found(P0002)로 거절된다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    await expect(
+      client.query("SELECT update_pending_ingestion($1, $2, $3::jsonb)", [
+        randomUUID(),
+        1,
+        JSON.stringify([fixtureDigest({ title: "d1" })]),
+      ]),
+    ).rejects.toMatchObject({ code: "P0002" });
+  });
+
   it("digest가 신규 Reference 인용을 끊고 저장하면 그 Reference create-change가 삭제된다(고아 방지)", async () => {
     if (!localDbAvailable) {
       return;

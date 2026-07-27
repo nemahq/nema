@@ -43,6 +43,7 @@ interface ConfirmReviewFlowArgs {
     body: ReviewDigest["body"];
     topics: ReviewDigest["topics"];
     tags: ReviewDigest["tags"];
+    newReferenceKeys: ReviewDigest["newReferenceKeys"];
   }[];
   newReferences: ReviewNewReference[];
   referenceUpdates: ReferenceMergeUpdate[];
@@ -78,7 +79,15 @@ export async function runConfirmReview(
       changesetId,
       expectedVersion,
       digests: digestRows.map(
-        ({ digest, title, description, body, topics, tags }) => ({
+        ({
+          digest,
+          title,
+          description,
+          body,
+          topics,
+          tags,
+          newReferenceKeys,
+        }) => ({
           ...digest,
           title: title.trim(),
           description: description.trim(),
@@ -88,6 +97,7 @@ export async function runConfirmReview(
             title: topic.title.trim(),
           })),
           tags: tags.map((tag) => ({ ...tag, title: tag.title.trim() })),
+          newReferenceKeys,
         }),
       ),
       newReferences: newReferences.map((reference) => ({

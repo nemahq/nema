@@ -105,6 +105,13 @@ export function computeReviewEditingState(
         tagsOverrides.get(digest.id) ?? digest.tags,
         tagRenames,
       ),
+      // 이 화면엔 digest 본문에서 인용 하나만 콕 집어 떼는 UI가 없다(엔진이 추출
+      // 시점에 붙인 것이라 사람이 만든 게 아님) — 그래서 신규 Reference 후보를
+      // 지우는 것 자체를 "이 인용도 없던 걸로"라는 의도로 본다. 안 지우면
+      // 저장 시 서버가 존재하지 않는 인용이라며 원문 zod 에러로 거절한다.
+      newReferenceKeys: digest.newReferenceKeys.filter(
+        (key) => !removedReferenceIds.has(key),
+      ),
     }))
     .filter((row) => !removedDigestIds.has(row.digest.id));
   const referenceRows = review.newReferences

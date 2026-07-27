@@ -289,6 +289,14 @@ describe("getReview", () => {
         mergeNote: null,
       },
     ]);
+    // archived Reference를 인용 목록에 올리면, 병합 제안이 있던 것은 이 저장에서
+    // 손대지 않아도 매 저장마다 다시 실려 update_pending_ingestion의 NM008
+    // 가드(활성만 병합 허용)에 영구히 막힌다 — 이 필터가 빠지면 그 상태로
+    // 되돌아간다.
+    expect(supabase.eqCallsByTable.references).toContainEqual([
+      "status",
+      "active",
+    ]);
   });
 
   it("topic·tag를 이름으로 Space/Workspace 레지스트리와 매칭해 기존(id)/신규(null)를 가른다", async () => {

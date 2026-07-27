@@ -156,6 +156,21 @@ describe("computeReviewEditingState — digestRows", () => {
     expect(digest2Row?.title).toBe("수정된 제목");
     expect(digest1Row?.title).toBe(DIGEST.title);
   });
+
+  // 이 화면엔 digest 본문에서 인용 하나만 콕 집어 떼는 UI가 없어, 신규 Reference
+  // 후보를 지우는 것 자체를 그 인용도 없던 걸로 하겠다는 뜻으로 본다. 안 지우면
+  // 저장 시 서버가 끊긴 인용이라며 원문 zod 에러(refineReviewPayload)로 거절한다.
+  it("신규 Reference 후보를 지우면 그걸 인용하던 digest의 newReferenceKeys에서도 빠진다", () => {
+    const digestCitingRef: ReviewDigest = {
+      ...DIGEST,
+      newReferenceKeys: ["ref-1", "ref-2"],
+    };
+    const result = computeReviewEditingState(
+      review({ digests: [digestCitingRef] }),
+      { ...EMPTY_OVERRIDES, removedReferenceIds: new Set(["ref-1"]) },
+    );
+    expect(result.digestRows[0].newReferenceKeys).toEqual(["ref-2"]);
+  });
 });
 
 // 태그·주제 이름 수정은 그 id를 쓰는 모든 Digest에 적용돼야 한다 — index 기반
