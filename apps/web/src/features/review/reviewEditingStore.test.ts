@@ -15,8 +15,6 @@ function emptyOverrides(): ReviewOverrides {
     bodyOverrides: new Map(),
     topicsOverrides: new Map(),
     tagsOverrides: new Map(),
-    tagRenames: new Map(),
-    topicRenames: new Map(),
     removedReferenceIds: new Set(),
     referenceOverrides: new Map(),
     mergeNoteOverrides: new Map(),
@@ -67,19 +65,6 @@ const ACTIONS: { action: ReviewEditingAction; slot: keyof ReviewOverrides }[] =
     {
       action: { type: "digest/remove", id: "digest-1" },
       slot: "removedDigestIds",
-    },
-    {
-      action: {
-        type: "tag/renamed",
-        id: "tag-1",
-        title: "새 이름",
-        description: "새 설명",
-      },
-      slot: "tagRenames",
-    },
-    {
-      action: { type: "topic/renamed", id: "topic-1", title: "새 주제" },
-      slot: "topicRenames",
     },
     {
       action: {

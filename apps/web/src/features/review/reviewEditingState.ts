@@ -15,60 +15,9 @@ export interface ReviewOverrides {
   bodyOverrides: ReadonlyMap<string, ReviewDigest["body"]>;
   topicsOverrides: ReadonlyMap<string, ReviewDigest["topics"]>;
   tagsOverrides: ReadonlyMap<string, ReviewDigest["tags"]>;
-  // 태그·주제 이름 수정은 카드 하나가 아니라 그 id를 쓰는 모든 Digest에 영향을
-  // 준다 — digest id로 키를 잡는 위 overrides로는 표현이 안 돼(트리거한 카드만
-  // 갱신되고 나머지는 옛 이름인 채로 confirm 페이로드에 실린다: 서버가 이름으로
-  // find-or-create하므로 옛 이름의 태그가 조용히 부활한다) 태그·주제 자신의 id로
-  // 따로 키를 잡는다.
-  tagRenames: ReadonlyMap<string, { title: string; description: string }>;
-  topicRenames: ReadonlyMap<string, string>;
   removedReferenceIds: ReadonlySet<string>;
   referenceOverrides: ReadonlyMap<string, ReviewNewReference>;
   mergeNoteOverrides: ReadonlyMap<string, string>;
-}
-
-// tagsOverrides/topicsOverrides(카드별) 위에 tagRenames/topicRenames(전역, id
-// 기준)를 한 번 더 얹는다 — 어느 digest가 편집으로 override를 갖고 있든 아니든
-// 상관없이, 이름이 바뀐 태그·주제는 그 id를 쓰는 모든 곳에서 똑같이 보여야 한다.
-// 이 태그를 안 쓰는 Digest는 원래 배열 참조를 그대로 돌려준다 — renames에 아무거나
-// 하나만 들어있어도 매번 새 배열을 만들면, 그 태그와 무관한 Digest까지 리렌더된다
-// (store 구독 셀렉터라 참조가 바뀌면 리렌더로 이어진다).
-export function applyTagRenames(
-  tags: ReviewDigest["tags"],
-  renames: ReadonlyMap<string, { title: string; description: string }>,
-): ReviewDigest["tags"] {
-  if (renames.size === 0) {
-    return tags;
-  }
-  let changed = false;
-  const next = tags.map((tag) => {
-    const renamed = tag.id === null ? undefined : renames.get(tag.id);
-    if (!renamed) {
-      return tag;
-    }
-    changed = true;
-    return { ...tag, ...renamed };
-  });
-  return changed ? next : tags;
-}
-
-export function applyTopicRenames(
-  topics: ReviewDigest["topics"],
-  renames: ReadonlyMap<string, string>,
-): ReviewDigest["topics"] {
-  if (renames.size === 0) {
-    return topics;
-  }
-  let changed = false;
-  const next = topics.map((topic) => {
-    const renamed = topic.id === null ? undefined : renames.get(topic.id);
-    if (!renamed) {
-      return topic;
-    }
-    changed = true;
-    return { ...topic, title: renamed };
-  });
-  return changed ? next : topics;
 }
 
 // reviewEditingStore의 파생 로직 — React를 몰라도 되는 순수 계산이라 store에서 떼어
@@ -84,8 +33,6 @@ export function computeReviewEditingState(
     bodyOverrides,
     topicsOverrides,
     tagsOverrides,
-    tagRenames,
-    topicRenames,
     removedReferenceIds,
     referenceOverrides,
     mergeNoteOverrides,
@@ -97,14 +44,8 @@ export function computeReviewEditingState(
       title: titleOverrides.get(digest.id) ?? digest.title,
       description: descriptionOverrides.get(digest.id) ?? digest.description,
       body: bodyOverrides.get(digest.id) ?? digest.body,
-      topics: applyTopicRenames(
-        topicsOverrides.get(digest.id) ?? digest.topics,
-        topicRenames,
-      ),
-      tags: applyTagRenames(
-        tagsOverrides.get(digest.id) ?? digest.tags,
-        tagRenames,
-      ),
+      topics: topicsOverrides.get(digest.id) ?? digest.topics,
+      tags: tagsOverrides.get(digest.id) ?? digest.tags,
       // 이 화면엔 digest 본문에서 인용 하나만 콕 집어 떼는 UI가 없다(엔진이 추출
       // 시점에 붙인 것이라 사람이 만든 게 아님) — 그래서 신규 Reference 후보를
       // 지우는 것 자체를 "이 인용도 없던 걸로"라는 의도로 본다. 안 지우면
@@ -125,11 +66,6 @@ export function computeReviewEditingState(
     mergeNoteOverrides,
   });
 
-  // tagRenames/topicRenames도 포함해야 한다 — 태그 이름만 바꾸고 다른 편집이
-  // 없으면 dirty=false로 confirm 흐름이 updateReview를 건너뛰는데, 그러면
-  // digestRows(rename이 반영된)가 서버로 아예 안 나가 tagRenames를 저장에 넣은
-  // 의미가 없어진다(tags.update RPC로 태그 자체는 바뀌어도, confirm의
-  // find-or-create가 여전히 pending_ingestion에 저장된 옛 이름을 본다).
   const dirty =
     removedDigestIds.size > 0 ||
     titleOverrides.size > 0 ||
@@ -137,8 +73,6 @@ export function computeReviewEditingState(
     bodyOverrides.size > 0 ||
     topicsOverrides.size > 0 ||
     tagsOverrides.size > 0 ||
-    tagRenames.size > 0 ||
-    topicRenames.size > 0 ||
     removedReferenceIds.size > 0 ||
     referenceOverrides.size > 0 ||
     mergeNoteOverrides.size > 0;
