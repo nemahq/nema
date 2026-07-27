@@ -4,6 +4,7 @@ import type {
   DigestBodyFieldKey,
   DigestBodyFieldKind,
 } from "@web/features/review/constants";
+import { resolveCommittedValue } from "@web/features/review/digestBodyFieldValue";
 import { useDraftField } from "@web/features/review/hooks/useDraftField";
 import type { ReviewDigest } from "@web/features/review/types";
 import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
@@ -36,13 +37,6 @@ function isBlank(value: string | string[]): boolean {
   }
   return value.every((item) => item.trim() === "");
 }
-
-// 빈 string[] 필드는 []로는 타이핑을 시작할 줄 자체가 없어 [""] 하나를 깔아준다.
-// 실제로 치기 전까진 초안에 넘기지 않아 서버로 나가는 값은 그대로 비어 있다.
-const EMPTY_VALUE: Record<DigestBodyFieldKind, string | string[]> = {
-  text: "",
-  list: [""],
-};
 
 // 리스트 값은 매 편집마다 새 배열이라 참조 비교로는 늘 "바뀌었다"가 된다.
 function isSameFieldValue(a: string | string[], b: string | string[]): boolean {
@@ -103,7 +97,7 @@ export function DigestBodyField({
   const { dispatch } = useReviewDraftContext();
   const stored = readFieldValue(body, fieldKey);
   const field = useDraftField(
-    stored === undefined || isBlank(stored) ? EMPTY_VALUE[kind] : stored,
+    resolveCommittedValue(stored, kind),
     (next) =>
       dispatch({
         type: "digest/setBodyField",

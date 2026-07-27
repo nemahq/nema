@@ -3,10 +3,8 @@ import {
   type ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
@@ -16,13 +14,13 @@ import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 
 interface ReviewDraftContextValue {
   dispatch: (action: ReviewDraftAction) => void;
-  // 손댄 적이 있으면 확정 시 저장을 한 번 태운다. 되돌려 친 편집까지 되돌아왔다고
-  // 보지는 않는다 — 초안이 서버 원본과 같아졌는지는 값 비교로만 알 수 있고, 그
-  // 비교를 하려고 원본 사본을 따로 들면 이번 구조가 없앤 이중 상태가 되살아난다.
-  dirty: boolean;
   // 타이핑 중인 필드가 "아직 초안에 안 넘긴 값이 있다"고 알려두는 자리 — 초안을
   // 바꾸는 다른 조작이 끼어들기 직전에 여기 모인 값들을 먼저 넘긴다.
   registerPendingCommit: (commit: () => void) => () => void;
+  // dispatch를 거치지 않고 밀린 커밋만 넘긴다 — 확정처럼 "지금 이 순간 초안이
+  // 뭔 모습인가"를 다시 읽어야 하는 지점에서, 포커스 이탈 없이도(예: 버튼 클릭이
+  // blur를 안 일으키는 브라우저) 최신 값을 캐시에 반영해두기 위해 쓴다.
+  flushPendingCommits: () => void;
 }
 
 const ReviewDraftContext = createContext<ReviewDraftContextValue | null>(null);
@@ -35,7 +33,6 @@ export function ReviewDraftProvider({ children }: ReviewDraftProviderProps) {
   const spaceId = useCurrentSpaceId();
   const changesetNumber = useChangesetNumber();
   const dispatchToDraft = useReviewDraftDispatch(spaceId, changesetNumber);
-  const [dirty, setDirty] = useState(false);
   const pendingCommitsRef = useRef(new Set<() => void>());
   const flushingRef = useRef(false);
 
@@ -69,25 +66,14 @@ export function ReviewDraftProvider({ children }: ReviewDraftProviderProps) {
   const dispatch = useCallback(
     (action: ReviewDraftAction) => {
       flushPendingCommits();
-      setDirty(true);
       dispatchToDraft(action);
     },
     [flushPendingCommits, dispatchToDraft],
   );
 
-  useEffect(
-    function flushPendingCommitsOnUnload() {
-      window.addEventListener("beforeunload", flushPendingCommits);
-      return () => {
-        window.removeEventListener("beforeunload", flushPendingCommits);
-      };
-    },
-    [flushPendingCommits],
-  );
-
   const draftContext = useMemo(
-    () => ({ dispatch, dirty, registerPendingCommit }),
-    [dispatch, dirty, registerPendingCommit],
+    () => ({ dispatch, registerPendingCommit, flushPendingCommits }),
+    [dispatch, registerPendingCommit, flushPendingCommits],
   );
 
   return (

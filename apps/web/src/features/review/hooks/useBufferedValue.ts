@@ -46,7 +46,9 @@ export function useBufferedValue<T>(
   }
 
   // 바깥이 이미 알고 있는(또는 곧 알게 될) 값 — 로컬 값이 이것과 같으면 넘길 게 없다.
-  const settled = sync.handedOver?.value ?? committed;
+  // handedOver.value가 T의 정당한 값으로 falsy(null 등)일 수 있어 ??가 아니라
+  // handedOver 자체의 존재 여부로 분기한다.
+  const settled = sync.handedOver !== null ? sync.handedOver.value : committed;
   const latestRef = useRef({ value, settled, commit, isEqual });
 
   useEffect(function syncLatest() {

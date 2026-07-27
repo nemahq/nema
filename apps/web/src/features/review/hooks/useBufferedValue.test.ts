@@ -93,4 +93,43 @@ describe("useBufferedValue", () => {
     act(() => vi.advanceTimersByTime(COMMIT_DELAY_MS));
     expect(commit).not.toHaveBeenCalled();
   });
+
+  // 리스트 값은 커밋마다 새 배열이라 참조 비교로는 항상 "바뀌었다"가 된다 — 커스텀
+  // isEqual 없이는 매 echo가 외부 변경으로 오인돼 그 사이 타이핑이 사라진다
+  // (DigestBodyField의 리스트 필드가 실제로 겪은 경로).
+  it("커스텀 isEqual로 배열의 참조가 바뀌어도 내용이 같으면 echo로 인식한다", () => {
+    const commit = vi.fn();
+    const arrayIsEqual = (a: string[], b: string[]) =>
+      a.length === b.length && a.every((item, index) => item === b[index]);
+    const { result, rerender } = renderHook(
+      ({ committed }: { committed: string[] }) =>
+        useBufferedValue(committed, commit, arrayIsEqual),
+      { initialProps: { committed: ["a", "b"] } },
+    );
+
+    act(() => result.current.setValue(["a", "c"]));
+    act(() => result.current.commitNow());
+    act(() => result.current.setValue(["a", "c", "d"]));
+    // 캐시를 거쳐 돌아온 committed는 커밋한 값과 내용은 같지만 참조가 다른 새 배열이다.
+    rerender({ committed: ["a", "c"] });
+
+    expect(result.current.value).toEqual(["a", "c", "d"]);
+  });
+
+  // settled 계산이 ??로 handedOver.value를 다뤘다면, null도 정당한 T 값인 필드에서
+  // null을 커밋한 뒤 원래 값으로 되돌리는 재커밋을 "이미 그 값"이라며 건너뛴다.
+  it("null도 유효한 값인 필드에서 커밋 후 원래 값으로 되돌리면 다시 커밋한다", () => {
+    const commit = vi.fn();
+    const { result } = renderHook(() =>
+      useBufferedValue<string | null>("A", commit),
+    );
+
+    act(() => result.current.setValue(null));
+    act(() => result.current.commitNow());
+    act(() => result.current.setValue("A"));
+    act(() => result.current.commitNow());
+
+    expect(commit).toHaveBeenNthCalledWith(1, null);
+    expect(commit).toHaveBeenNthCalledWith(2, "A");
+  });
 });

@@ -30,7 +30,7 @@ src/
 - Server state: TanStack Query (tRPC integration deferred to feature implementation)
 - UI state: React built-ins (useState, useContext) by default.
 - Server state the user edits before saving (a draft) is edited in its own query cache entry, never copied into a store — see `docs/query-conventions.md` → Editable server state.
-- Typing MUST stay local to the field and reach that shared value only at boundaries (focus loss, input pause, structural action, unload). Per-keystroke writes re-render every subscriber of the shared value.
+- Typing MUST stay local to the field and reach that shared value only at boundaries (focus loss, input pause, structural action, unmount). Per-keystroke writes re-render every subscriber of the shared value. `beforeunload` is not a real boundary unless the destination survives the page unload (e.g. `localStorage`) — flushing into an in-memory cache right before the page dies commits nothing.
 - zustand ONLY when a shared slice meets BOTH: (1) it cannot be colocated in one component because siblings mutate each other, AND (2) consumers need to subscribe to disjoint parts — the case Context cannot express, since any change re-renders every consumer.
 - zustand stores MUST be per-screen instances (`createStore` + Context injection), never module-level singletons — the store dies with the screen, so there is no manual reset/cleanup.
 - Store state MUST be derived by pure functions kept in their own file; the store only holds state and dispatches.

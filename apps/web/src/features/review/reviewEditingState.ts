@@ -32,10 +32,7 @@ export function computeReviewEditingState(draft: ReviewDraft) {
     draft.newReferences.some(
       (reference) =>
         reference.title.trim() === "" || reference.body.trim() === "",
-    ) ||
-    mergeCandidates.some(
-      (reference) => (reference.mergeNote ?? "").trim() === "",
-    );
+    ) || mergeCandidates.some((reference) => reference.mergeNote.trim() === "");
 
   return {
     hasCandidates,

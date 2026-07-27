@@ -2,6 +2,11 @@ import type { ReferenceMergeUpdate } from "@nema-io/shared";
 
 import type { ReviewCitedReference } from "./types";
 
+// mergeNote가 null이 아님을 타입으로 좁힌다 — 술어가 아닌 평범한 필터로는 이 보장이
+// 런타임에만 성립하고 반환 타입엔 안 남아, 이후 소비처마다 mergeNote를 다시 string |
+// null로 다뤄야 한다.
+type MergeCandidate = ReviewCitedReference & { mergeNote: string };
+
 // 병합 편집 대상 후보를 고른다 — 엔진 병합 제안이 있고(mergeNote != null, 단순 인용은
 // 편집할 게 없다), 살아있는 Digest가 아직 그 Reference를 인용하는 것만(인용하던 후보를
 // 다 지우면 병합도 의미를 잃는다). 제안 거부는 별도로 빼지 않는다 — "원래대로"가
@@ -11,10 +16,10 @@ import type { ReviewCitedReference } from "./types";
 export function selectMergeCandidates(args: {
   citedReferences: ReviewCitedReference[];
   citedReferenceIds: Set<string>;
-}): ReviewCitedReference[] {
+}): MergeCandidate[] {
   const { citedReferences, citedReferenceIds } = args;
   return citedReferences.filter(
-    (reference) =>
+    (reference): reference is MergeCandidate =>
       reference.mergeNote !== null && citedReferenceIds.has(reference.id),
   );
 }
@@ -23,10 +28,10 @@ export function selectMergeCandidates(args: {
 // changes를 통째로 교체하므로, 여기서 빠진 제안은 확정 시 유실된다(trim은 확정 흐름이
 // 최종적으로 한 번 더 한다).
 export function toReferenceUpdates(
-  references: ReviewCitedReference[],
+  references: MergeCandidate[],
 ): ReferenceMergeUpdate[] {
   return references.map((reference) => ({
     referenceId: reference.id,
-    mergeNote: reference.mergeNote ?? "",
+    mergeNote: reference.mergeNote,
   }));
 }

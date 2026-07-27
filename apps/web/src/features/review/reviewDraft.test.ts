@@ -215,19 +215,47 @@ describe("reviewDraftReducer — 후보 삭제", () => {
   });
 });
 
-describe("reviewDraftReducer — Reference 수정", () => {
-  it("reference/setTitle은 대상 신규 Reference의 이름만 바꾼다", () => {
-    const next = reviewDraftReducer(draft(), {
-      type: "reference/setTitle",
+// title·body·type이 모두 string(혹은 string 리터럴 유니언)이라, 리듀서의 switch
+// 안에서 어느 필드에 쓸지가 실수로 뒤바뀌어도 타입 체크로는 안 잡힌다.
+const REFERENCE_FIELD_ACTIONS: {
+  action: ReviewDraftAction;
+  field: keyof ReviewNewReference;
+  expected: unknown;
+}[] = [
+  {
+    action: { type: "reference/setTitle", id: "ref-1", title: "새 이름" },
+    field: "title",
+    expected: "새 이름",
+  },
+  {
+    action: { type: "reference/setBody", id: "ref-1", body: "새 설명" },
+    field: "body",
+    expected: "새 설명",
+  },
+  {
+    action: {
+      type: "reference/setType",
       id: "ref-1",
-      title: "새 이름",
-    });
+      referenceType: "organization",
+    },
+    field: "type",
+    expected: "organization",
+  },
+];
 
-    expect(next.newReferences[0]).toEqual({
-      ...NEW_REFERENCE,
-      title: "새 이름",
-    });
-  });
+describe("reviewDraftReducer — Reference 수정", () => {
+  it.each(REFERENCE_FIELD_ACTIONS)(
+    "$action.type은 대상 신규 Reference의 $field만 바꾼다",
+    ({ action, field, expected }) => {
+      const next = reviewDraftReducer(draft(), action);
+
+      const target = next.newReferences[0];
+      expect(target[field]).toEqual(expected);
+      expect({ ...target, [field]: NEW_REFERENCE[field] }).toEqual(
+        NEW_REFERENCE,
+      );
+    },
+  );
 
   it("citedReference/setMergeNote는 대상 기존 Reference의 병합 설명만 바꾼다", () => {
     const next = reviewDraftReducer(draft(), {
