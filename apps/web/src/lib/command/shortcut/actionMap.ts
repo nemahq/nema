@@ -23,6 +23,10 @@ const actionMap = {
   sidebar: {
     toggle: def("layout.toggle_sidebar", "mod+b", "global"),
   },
+  review: {
+    undo: def("review.undo_action", "mod+z", "global"),
+    redo: def("review.redo_action", "mod+shift+z", "global"),
+  },
 } satisfies Record<string, Record<string, ActionDef>>;
 
 export type ActionId = {

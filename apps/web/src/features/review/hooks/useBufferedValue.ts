@@ -9,6 +9,9 @@ export interface BufferedValue<T> {
   setValue: (next: T) => void;
   // 포커스가 필드를 벗어나는 등 경계에서 부른다 — 넘길 게 없으면 아무 일도 안 한다.
   commitNow: () => void;
+  // 로컬 값이 아직 바깥(settled)과 다르다 — commitNow가 실제로 넘길 게 있는지와
+  // 같은 판정을 호출부에 노출한다(포커스 재조회의 "펜딩" 판정 등에서 재사용).
+  dirty: boolean;
 }
 
 interface SyncState<T> {
@@ -76,5 +79,5 @@ export function useBufferedValue<T>(
     [value, settled, commitNow, isEqual],
   );
 
-  return { value, setValue, commitNow };
+  return { value, setValue, commitNow, dirty: !isEqual(value, settled) };
 }

@@ -75,6 +75,23 @@ describe("useBufferedValue", () => {
     expect(result.current.value).toBe("고침 더");
   });
 
+  // hasPendingEdits(포커스 재조회 펜딩 판정)가 이 값으로 "아직 안 넘어간 입력이
+  // 있는지"를 판정한다 — commitNow와 어긋나면 재조회가 편집 중인 내용을 덮어쓴다.
+  it("dirty는 아직 안 넘긴 값이 있는 동안만 참이고, 커밋되면 거짓으로 돌아간다", () => {
+    const commit = vi.fn();
+    const { result } = renderHook(() =>
+      useBufferedValue<string>("원본", commit),
+    );
+
+    expect(result.current.dirty).toBe(false);
+
+    act(() => result.current.setValue("고침"));
+    expect(result.current.dirty).toBe(true);
+
+    act(() => result.current.commitNow());
+    expect(result.current.dirty).toBe(false);
+  });
+
   // 타입 변경으로 body가 초기화되는 경로 — 초안이 밖에서 갈아끼워지면 화면도 따라가야
   // 한다. 안 따라가면 지워진 필드에 옛 텍스트가 그대로 남는다.
   it("바깥에서 값이 바뀌면 로컬 입력을 버리고 따라간다", () => {

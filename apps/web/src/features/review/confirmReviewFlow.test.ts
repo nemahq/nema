@@ -1,38 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { confirmDisabledReason, runConfirmReview } from "./confirmReviewFlow";
-import type { ReviewDraft } from "./reviewDraft";
-import type { ReviewDigest, ReviewNewReference } from "./types";
-
-const DIGEST: ReviewDigest = {
-  id: "digest-1",
-  position: 0,
-  title: "제목",
-  description: "요약",
-  body: { type: "decision" },
-  topics: [],
-  tags: [],
-  referenceIds: [],
-  newReferenceKeys: [],
-  externalUrls: [],
-};
-
-function draft(overrides: Partial<ReviewDraft> = {}): ReviewDraft {
-  return {
-    changesetId: "cs-1",
-    changesetNumber: 1,
-    spaceId: "space-1",
-    sourceId: "source-1",
-    sourceTitle: "원문 제목",
-    sourceBody: "원문 본문",
-    sourceCreatedAt: "2026-07-18T00:00:00.000Z",
-    draftVersion: 1,
-    digests: [DIGEST],
-    newReferences: [],
-    citedReferences: [],
-    ...overrides,
-  };
-}
 
 const ALL_FILLED = {
   hasCandidates: true,
@@ -127,143 +95,49 @@ describe("confirmDisabledReason", () => {
 });
 
 describe("runConfirmReview", () => {
-  it("초안을 저장한 뒤 confirmReview를 부른다", async () => {
+  it("펜딩 저장을 먼저 끝낸 뒤 confirmReview를 부른다", async () => {
     const calls: string[] = [];
-    const updateReview = vi.fn().mockImplementation(async () => {
-      calls.push("update");
+    const flushPendingSave = vi.fn().mockImplementation(async () => {
+      calls.push("flush");
     });
     const confirmReview = vi.fn().mockImplementation(async () => {
       calls.push("confirm");
     });
 
-    // 타입 변경 초기화 결과 — 원본 DIGEST.body(decision)와 다른 빈 body가 실려야 한다.
-    const editedDigest: ReviewDigest = {
-      ...DIGEST,
-      title: "  새 제목  ",
-      description: "  새 설명  ",
-      body: { type: "learning" },
-      topics: [{ id: null, title: " 새 주제 " }],
-      tags: [{ id: null, title: " 새 태그 ", description: "설명" }],
-    };
-
     await runConfirmReview({
-      draft: draft({ digests: [editedDigest], draftVersion: 3 }),
-      referenceUpdates: [],
-      updateReview,
-      confirmReview,
-    });
-
-    expect(calls).toEqual(["update", "confirm"]);
-    expect(updateReview).toHaveBeenCalledWith({
       changesetId: "cs-1",
-      expectedVersion: 3,
-      digests: [
-        {
-          ...editedDigest,
-          title: "새 제목",
-          description: "새 설명",
-          topics: [{ id: null, title: "새 주제" }],
-          tags: [{ id: null, title: "새 태그", description: "설명" }],
-        },
-      ],
-      newReferences: [],
-      referenceUpdates: [],
+      flushPendingSave,
+      confirmReview,
     });
+
+    expect(calls).toEqual(["flush", "confirm"]);
     expect(confirmReview).toHaveBeenCalledWith({ changesetId: "cs-1" });
   });
 
-  // 화면을 나갔다 편집분이 남은 채로 돌아와 곧바로 확정하는 경로 — "편집 여부"를
-  // 추적하는 값이 초안보다 수명이 짧으면 이 경로에서 저장이 조용히 스킵된다.
-  // 항상 저장하면 이 경로 자체가 사라진다.
-  it("겉보기 편집 이력과 무관하게 항상 updateReview를 먼저 부른다", async () => {
-    const updateReview = vi.fn().mockResolvedValue(undefined);
+  it("펜딩 저장이 없어도(no-op) confirmReview는 그대로 불린다", async () => {
+    const flushPendingSave = vi.fn().mockResolvedValue(undefined);
     const confirmReview = vi.fn().mockResolvedValue(undefined);
 
     await runConfirmReview({
-      draft: draft(),
-      referenceUpdates: [],
-      updateReview,
+      changesetId: "cs-1",
+      flushPendingSave,
       confirmReview,
     });
 
-    expect(updateReview).toHaveBeenCalledTimes(1);
+    expect(flushPendingSave).toHaveBeenCalledOnce();
     expect(confirmReview).toHaveBeenCalledWith({ changesetId: "cs-1" });
   });
 
-  it("신규 Reference의 이름·설명 앞뒤 공백을 다듬어 저장한다", async () => {
-    const updateReview = vi.fn().mockResolvedValue(undefined);
-    const confirmReview = vi.fn().mockResolvedValue(undefined);
-
-    const editedReference: ReviewNewReference = {
-      id: "ref-1",
-      position: 0,
-      type: "person",
-      title: "  홍길동  ",
-      body: "  조선의 의적  ",
-      externalUrls: [],
-    };
-
-    await runConfirmReview({
-      draft: draft({ newReferences: [editedReference] }),
-      referenceUpdates: [],
-      updateReview,
-      confirmReview,
-    });
-
-    expect(updateReview).toHaveBeenCalledWith(
-      expect.objectContaining({
-        newReferences: [
-          { ...editedReference, title: "홍길동", body: "조선의 의적" },
-        ],
-      }),
-    );
-  });
-
-  it("기존 Reference 병합 제안을 다듬어 전부 실어 보낸다(편집 여부 무관)", async () => {
-    const updateReview = vi.fn().mockResolvedValue(undefined);
-    const confirmReview = vi.fn().mockResolvedValue(undefined);
-
-    await runConfirmReview({
-      draft: draft(),
-      referenceUpdates: [
-        {
-          referenceId: "11111111-1111-1111-1111-111111111111",
-          mergeNote: "  다듬은 설명  ",
-        },
-        {
-          referenceId: "22222222-2222-2222-2222-222222222222",
-          mergeNote: "그대로 둔 제안",
-        },
-      ],
-      updateReview,
-      confirmReview,
-    });
-
-    expect(updateReview).toHaveBeenCalledWith(
-      expect.objectContaining({
-        referenceUpdates: [
-          {
-            referenceId: "11111111-1111-1111-1111-111111111111",
-            mergeNote: "다듬은 설명",
-          },
-          {
-            referenceId: "22222222-2222-2222-2222-222222222222",
-            mergeNote: "그대로 둔 제안",
-          },
-        ],
-      }),
-    );
-  });
-
-  it("updateReview가 실패하면 confirmReview는 아예 호출되지 않는다", async () => {
-    const updateReview = vi.fn().mockRejectedValue(new Error("save failed"));
+  it("펜딩 저장이 실패하면 confirmReview는 아예 호출되지 않는다", async () => {
+    const flushPendingSave = vi
+      .fn()
+      .mockRejectedValue(new Error("save failed"));
     const confirmReview = vi.fn();
 
     await expect(
       runConfirmReview({
-        draft: draft(),
-        referenceUpdates: [],
-        updateReview,
+        changesetId: "cs-1",
+        flushPendingSave,
         confirmReview,
       }),
     ).rejects.toThrow("save failed");

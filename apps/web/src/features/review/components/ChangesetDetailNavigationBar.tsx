@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { type ReactNode, Suspense } from "react";
 import { linkOptions } from "@tanstack/react-router";
 
 import { NavigationBar } from "@web/components/layout/NavigationBar";
@@ -9,6 +9,7 @@ import { useTranslation } from "@web/lib/tolgee";
 
 interface ChangesetDetailNavigationBarProps {
   title: string;
+  rightContent?: ReactNode;
 }
 
 // Space 이름은 publicId에서 파생되는 값이라 호출부가 넘기지 않고 여기서 직접
@@ -16,6 +17,7 @@ interface ChangesetDetailNavigationBarProps {
 // 함께 두고, 이름이 아직 없는 짧은 구간은 브레드크럼 스켈레톤으로 대체한다.
 function ChangesetDetailNavigationBarContent({
   title,
+  rightContent,
 }: ChangesetDetailNavigationBarProps) {
   const { t } = useTranslation();
   const spacePublicId = useSpacePublicId();
@@ -45,6 +47,7 @@ function ChangesetDetailNavigationBarContent({
         },
         { label: title },
       ]}
+      rightContent={rightContent}
     />
   );
 }
