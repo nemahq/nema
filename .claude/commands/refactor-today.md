@@ -50,13 +50,14 @@ Same as `check-conventions.md` Step 5b.
 All violations found across every candidate PR (Step 5/5b) form one shared pool of "meaningful units" — units are not 1:1 with the original PRs. Process this pool as a loop that grows a single stacked PR chain for the day, not one isolated PR per candidate.
 
 1. **Find the chain's current tip**:
-   - `gh pr list --head "refactor/<today's date, YYYY-MM-DD>-*" --state open` — if any exist, the chain is already in progress. Resume from the highest-numbered unit's branch.
+   - `gh pr list --state open --json number,headRefName --jq '[.[] | select(.headRefName | startswith("refactor/<today's date>-"))]'` — `gh pr list --head` does NOT support wildcards (an exact-match filter only; a glob like `refactor/<date>-*` silently returns `[]` even when matching PRs exist), so filtering must happen client-side on the full open-PR list via `--jq`, not via `--head`.
+   - Any match → the chain is already in progress. Resume from the highest-numbered unit's branch.
    - None found → the chain starts fresh from the current `staging` tip.
 2. **Loop** until no meaningful unit remains in the pool:
    1. Pick ONE unit — sized to stay independently reviewable in one sitting (e.g., one responsibility-tier violation in one feature area), not a grab-bag of everything left.
       - No unit meets that bar anymore → stop the loop, go to Step 7.
-   2. `wt-pool status` → `grab` an idle worktree.
-   3. Branch `refactor/<today's date>-<NN>` (zero-padded sequence, e.g. `refactor/2026-07-27-01`) off the **chain's current tip** (the previous unit's branch, or `staging` if this is the first unit) — never off `staging` directly once the chain has started.
+   2. `wt-pool status` → `wt-pool grab refactor/<today's date>-<NN>` (zero-padded sequence, e.g. `refactor/2026-07-27-01`). This creates and checks out that branch — but **`wt-pool grab` always branches off the repo's detected default branch (`origin/HEAD`), not off any base you choose.**
+   3. Immediately correct the base: `git fetch origin <chain tip ref>` then `git reset --hard origin/<chain tip>` (chain tip = `staging` for the first unit, or the previous unit's already-pushed branch otherwise). This is now the **chain's current tip**. Skipping this step silently leaves the branch on whatever `wt-pool grab` defaulted to — every subsequent step (diff, CI, PR, and `chain-merge`'s commit-range math) would be wrong without ever failing loudly.
    4. Apply this unit's fix only.
    5. **Verify CI locally** (mirrors `.github/workflows/ci.yml`'s `check` job): `pnpm format:check && pnpm lint && pnpm typecheck && pnpm knip && pnpm depcruise && pnpm build`. If the diff touches `apps/server/`, `packages/shared/src/`, or `supabase/migrations/`, also run `supabase start` (local) before `pnpm test`, then `supabase stop`. Otherwise `pnpm test` without spinning up Supabase.
    6. `gh pr create` with **base = the previous branch in the chain** (or `staging` for the first unit) — this is what makes each PR show only its own incremental diff. Follow `.github/pull_request_template.md`. Title in Korean. Assignee: `@me`. Label `refactoring`. Reviewer: the relevant original PR's author. Why: name which of today's PRs this unit cleans up after. What: key design decisions only.
