@@ -65,7 +65,7 @@ const FIELD_RENDERER: Record<
 };
 
 interface DigestBodyFieldProps {
-  digestIndex: number;
+  digestId: string;
   // 오버라이드가 아직 없을 때의 바탕 — 쿼리 결과라 참조가 안정적이어서, 이 prop이
   // 바뀌지 않는 한 형제 필드를 고쳐도 이 필드는 다시 그려지지 않는다.
   baseBody: ReviewDigest["body"];
@@ -80,7 +80,7 @@ interface DigestBodyFieldProps {
 }
 
 export function DigestBodyField({
-  digestIndex,
+  digestId,
   baseBody,
   fieldKey,
   kind,
@@ -93,7 +93,7 @@ export function DigestBodyField({
   const dispatch = useEditing((state) => state.dispatch);
   const stored = useEditing((state) =>
     readFieldValue(
-      state.overrides.bodyOverrides.get(digestIndex) ?? baseBody,
+      state.overrides.bodyOverrides.get(digestId) ?? baseBody,
       fieldKey,
     ),
   );
@@ -106,7 +106,7 @@ export function DigestBodyField({
   function setFieldValue(next: string | string[]) {
     dispatch({
       type: "digest/setBodyField",
-      index: digestIndex,
+      id: digestId,
       baseBody,
       key: fieldKey,
       value: next,

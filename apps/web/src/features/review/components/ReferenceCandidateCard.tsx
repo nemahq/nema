@@ -31,14 +31,13 @@ export function ReferenceCandidateCard({
   const dispatch = useEditing((state) => state.dispatch);
   const reference = useEditing(
     (state) =>
-      state.overrides.referenceOverrides.get(baseReference.key) ??
-      baseReference,
+      state.overrides.referenceOverrides.get(baseReference.id) ?? baseReference,
   );
 
   function update(patch: Partial<ReviewNewReference>) {
     dispatch({
       type: "reference/set",
-      key: reference.key,
+      id: reference.id,
       reference: { ...reference, ...patch },
     });
   }
@@ -57,7 +56,7 @@ export function ReferenceCandidateCard({
             onToggleViewed={() => setViewed((current) => !current)}
             onChangeType={(type) => update({ type })}
             onRemove={() =>
-              dispatch({ type: "reference/remove", key: reference.key })
+              dispatch({ type: "reference/remove", id: reference.id })
             }
           />
           <InvisibleTextarea

@@ -86,6 +86,7 @@ export function DigestReviewCard({ spaceId, number }: DigestReviewCardProps) {
     updateReview.mutate(
       {
         changesetId: review.changesetId,
+        expectedVersion: review.draftVersion,
         digests: buildDigests(),
         newReferences: review.newReferences,
       },
@@ -106,6 +107,7 @@ export function DigestReviewCard({ spaceId, number }: DigestReviewCardProps) {
       if (editedDigests) {
         await updateReview.mutateAsync({
           changesetId: review.changesetId,
+          expectedVersion: review.draftVersion,
           digests: editedDigests,
           newReferences: review.newReferences,
         });

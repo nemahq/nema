@@ -41,6 +41,7 @@ export type Database = {
           created_at: string;
           data: Json | null;
           id: string;
+          position: number | null;
           target_id: string;
           target_type: Database["public"]["Enums"]["change_target_type"];
         };
@@ -50,6 +51,7 @@ export type Database = {
           created_at?: string;
           data?: Json | null;
           id?: string;
+          position?: number | null;
           target_id: string;
           target_type: Database["public"]["Enums"]["change_target_type"];
         };
@@ -59,6 +61,7 @@ export type Database = {
           created_at?: string;
           data?: Json | null;
           id?: string;
+          position?: number | null;
           target_id?: string;
           target_type?: Database["public"]["Enums"]["change_target_type"];
         };
@@ -77,6 +80,8 @@ export type Database = {
           author_id: string | null;
           author_name: string | null;
           created_at: string;
+          draft_snapshot: Json | null;
+          draft_version: number | null;
           id: string;
           invalidated_by_id: string | null;
           number: number | null;
@@ -94,6 +99,8 @@ export type Database = {
           author_id?: string | null;
           author_name?: string | null;
           created_at?: string;
+          draft_snapshot?: Json | null;
+          draft_version?: number | null;
           id?: string;
           invalidated_by_id?: string | null;
           number?: number | null;
@@ -111,6 +118,8 @@ export type Database = {
           author_id?: string | null;
           author_name?: string | null;
           created_at?: string;
+          draft_snapshot?: Json | null;
+          draft_version?: number | null;
           id?: string;
           invalidated_by_id?: string | null;
           number?: number | null;
@@ -1406,10 +1415,11 @@ export type Database = {
         Args: {
           p_changeset_id: string;
           p_digests: Json;
+          p_expected_version: number;
           p_new_references?: Json;
           p_reference_updates?: Json;
         };
-        Returns: undefined;
+        Returns: number;
       };
       update_reference: {
         Args: {

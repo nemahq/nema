@@ -9,7 +9,7 @@ import {
 
 function emptyOverrides(): ReviewOverrides {
   return {
-    removedDigestIndexes: new Set(),
+    removedDigestIds: new Set(),
     titleOverrides: new Map(),
     descriptionOverrides: new Map(),
     bodyOverrides: new Map(),
@@ -17,7 +17,7 @@ function emptyOverrides(): ReviewOverrides {
     tagsOverrides: new Map(),
     tagRenames: new Map(),
     topicRenames: new Map(),
-    removedReferenceKeys: new Set(),
+    removedReferenceIds: new Set(),
     referenceOverrides: new Map(),
     mergeNoteOverrides: new Map(),
   };
@@ -29,25 +29,29 @@ function emptyOverrides(): ReviewOverrides {
 const ACTIONS: { action: ReviewEditingAction; slot: keyof ReviewOverrides }[] =
   [
     {
-      action: { type: "digest/setTitle", index: 0, title: "제목" },
+      action: { type: "digest/setTitle", id: "digest-1", title: "제목" },
       slot: "titleOverrides",
     },
     {
       action: {
         type: "digest/setDescription",
-        index: 0,
+        id: "digest-1",
         description: "설명",
       },
       slot: "descriptionOverrides",
     },
     {
-      action: { type: "digest/setBody", index: 0, body: { type: "decision" } },
+      action: {
+        type: "digest/setBody",
+        id: "digest-1",
+        body: { type: "decision" },
+      },
       slot: "bodyOverrides",
     },
     {
       action: {
         type: "digest/setTopics",
-        index: 0,
+        id: "digest-1",
         topics: [{ id: null, title: "주제" }],
       },
       slot: "topicsOverrides",
@@ -55,14 +59,14 @@ const ACTIONS: { action: ReviewEditingAction; slot: keyof ReviewOverrides }[] =
     {
       action: {
         type: "digest/setTags",
-        index: 0,
+        id: "digest-1",
         tags: [{ id: null, title: "태그", description: "설명" }],
       },
       slot: "tagsOverrides",
     },
     {
-      action: { type: "digest/remove", index: 0 },
-      slot: "removedDigestIndexes",
+      action: { type: "digest/remove", id: "digest-1" },
+      slot: "removedDigestIds",
     },
     {
       action: {
@@ -80,9 +84,10 @@ const ACTIONS: { action: ReviewEditingAction; slot: keyof ReviewOverrides }[] =
     {
       action: {
         type: "reference/set",
-        key: "ref-key",
+        id: "ref-1",
         reference: {
-          key: "ref-key",
+          id: "ref-1",
+          position: 0,
           type: "person",
           title: "이름",
           body: "설명",
@@ -92,8 +97,8 @@ const ACTIONS: { action: ReviewEditingAction; slot: keyof ReviewOverrides }[] =
       slot: "referenceOverrides",
     },
     {
-      action: { type: "reference/remove", key: "ref-key" },
-      slot: "removedReferenceKeys",
+      action: { type: "reference/remove", id: "ref-1" },
+      slot: "removedReferenceIds",
     },
     {
       action: {
@@ -141,13 +146,13 @@ describe("digest/setBodyField", () => {
   it("오버라이드가 없으면 서버 body 위에 얹는다", () => {
     const next = reviewEditingReducer(emptyOverrides(), {
       type: "digest/setBodyField",
-      index: 0,
+      id: "digest-1",
       baseBody: BASE_BODY,
       key: "choice",
       value: "고친 선택",
     });
 
-    expect(next.bodyOverrides.get(0)).toEqual({
+    expect(next.bodyOverrides.get("digest-1")).toEqual({
       ...BASE_BODY,
       choice: "고친 선택",
     });
@@ -156,20 +161,20 @@ describe("digest/setBodyField", () => {
   it("다른 필드를 이어서 고쳐도 앞선 수정이 남는다", () => {
     const first = reviewEditingReducer(emptyOverrides(), {
       type: "digest/setBodyField",
-      index: 0,
+      id: "digest-1",
       baseBody: BASE_BODY,
       key: "choice",
       value: "고친 선택",
     });
     const second = reviewEditingReducer(first, {
       type: "digest/setBodyField",
-      index: 0,
+      id: "digest-1",
       baseBody: BASE_BODY,
       key: "situation",
       value: "고친 상황",
     });
 
-    expect(second.bodyOverrides.get(0)).toEqual({
+    expect(second.bodyOverrides.get("digest-1")).toEqual({
       type: "decision",
       situation: "고친 상황",
       choice: "고친 선택",
@@ -180,13 +185,13 @@ describe("digest/setBodyField", () => {
     const overrides = reviewEditingReducer(emptyOverrides(), {
       // "tradeoff"는 decision 전용 — learning 타입 body에 잘못 합쳐지는 걸 막는다.
       type: "digest/setBodyField",
-      index: 0,
+      id: "digest-1",
       baseBody: { type: "learning", finding: "발견" },
       key: "tradeoff",
       value: ["a"],
     });
 
-    expect(overrides.bodyOverrides.has(0)).toBe(false);
+    expect(overrides.bodyOverrides.has("digest-1")).toBe(false);
   });
 });
 
@@ -196,9 +201,11 @@ describe("createReviewEditingStore", () => {
 
     store
       .getState()
-      .dispatch({ type: "digest/setTitle", index: 0, title: "제목" });
+      .dispatch({ type: "digest/setTitle", id: "digest-1", title: "제목" });
 
-    expect(store.getState().overrides.titleOverrides.get(0)).toBe("제목");
+    expect(store.getState().overrides.titleOverrides.get("digest-1")).toBe(
+      "제목",
+    );
   });
 
   it("인스턴스끼리 편집 상태를 공유하지 않는다", () => {
@@ -207,7 +214,7 @@ describe("createReviewEditingStore", () => {
 
     store
       .getState()
-      .dispatch({ type: "digest/setTitle", index: 0, title: "제목" });
+      .dispatch({ type: "digest/setTitle", id: "digest-1", title: "제목" });
 
     expect(other.getState().overrides.titleOverrides.size).toBe(0);
   });

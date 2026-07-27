@@ -19,7 +19,7 @@ export function EditingProvider({ children }: EditingProviderProps) {
   return <EditingContext value={store}>{children}</EditingContext>;
 }
 
-// selector를 필수로 받는다. 카드가 자기 index의 편집값만 구독할 수 있는 게 이 형태
+// selector를 필수로 받는다. 카드가 자기 id의 편집값만 구독할 수 있는 게 이 형태
 // 덕이고, 그래서 다른 카드를 고쳐도 리렌더가 번지지 않는다.
 export function useEditing<T>(
   selector: (state: ReviewEditingStoreState) => T,

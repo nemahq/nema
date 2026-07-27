@@ -12,6 +12,8 @@ import type {
 } from "./types";
 
 const DIGEST: ReviewDigest = {
+  id: "digest-1",
+  position: 0,
   title: "제목",
   description: "요약",
   body: { type: "decision" },
@@ -23,7 +25,8 @@ const DIGEST: ReviewDigest = {
 };
 
 const NEW_REFERENCE: ReviewNewReference = {
-  key: "ref-1",
+  id: "ref-1",
+  position: 0,
   type: "person",
   title: "인물",
   body: "설명",
@@ -49,6 +52,7 @@ function review(
     sourceTitle: "원문 제목",
     sourceBody: "원문 본문",
     sourceCreatedAt: "2026-07-18T00:00:00.000Z",
+    draftVersion: 1,
     digests: [DIGEST],
     newReferences: [],
     citedReferences: [],
@@ -57,7 +61,7 @@ function review(
 }
 
 const EMPTY_OVERRIDES: ReviewOverrides = {
-  removedDigestIndexes: new Set(),
+  removedDigestIds: new Set(),
   titleOverrides: new Map(),
   descriptionOverrides: new Map(),
   bodyOverrides: new Map(),
@@ -65,7 +69,7 @@ const EMPTY_OVERRIDES: ReviewOverrides = {
   tagsOverrides: new Map(),
   tagRenames: new Map(),
   topicRenames: new Map(),
-  removedReferenceKeys: new Set(),
+  removedReferenceIds: new Set(),
   referenceOverrides: new Map(),
   mergeNoteOverrides: new Map(),
 };
@@ -79,7 +83,7 @@ describe("computeReviewEditingState — dirty", () => {
   it("Digest 삭제만 있어도 dirty=true", () => {
     const result = computeReviewEditingState(review(), {
       ...EMPTY_OVERRIDES,
-      removedDigestIndexes: new Set([0]),
+      removedDigestIds: new Set(["digest-1"]),
     });
     expect(result.dirty).toBe(true);
   });
@@ -112,20 +116,22 @@ describe("computeReviewEditingState — dirty", () => {
   });
 });
 
+const DIGEST_2: ReviewDigest = { ...DIGEST, id: "digest-2", position: 1 };
+
 describe("computeReviewEditingState — digestRows", () => {
-  it("removedDigestIndexes에 속한 행은 목록에서 빠진다", () => {
+  it("removedDigestIds에 속한 행은 목록에서 빠진다", () => {
     const result = computeReviewEditingState(
-      review({ digests: [DIGEST, DIGEST] }),
-      { ...EMPTY_OVERRIDES, removedDigestIndexes: new Set([0]) },
+      review({ digests: [DIGEST, DIGEST_2] }),
+      { ...EMPTY_OVERRIDES, removedDigestIds: new Set(["digest-1"]) },
     );
     expect(result.digestRows).toHaveLength(1);
-    expect(result.digestRows[0].index).toBe(1);
+    expect(result.digestRows[0].digest.id).toBe("digest-2");
   });
 
   it("title override가 있으면 원본 대신 override 값을 쓴다", () => {
     const result = computeReviewEditingState(review(), {
       ...EMPTY_OVERRIDES,
-      titleOverrides: new Map([[0, "수정된 제목"]]),
+      titleOverrides: new Map([["digest-1", "수정된 제목"]]),
     });
     expect(result.digestRows[0].title).toBe("수정된 제목");
   });
@@ -184,7 +190,10 @@ describe("computeReviewEditingState — tagRenames/topicRenames", () => {
       {
         ...EMPTY_OVERRIDES,
         tagsOverrides: new Map([
-          [0, [SHARED_TAG, { id: null, title: "초안 태그", description: "d" }]],
+          [
+            "digest-1",
+            [SHARED_TAG, { id: null, title: "초안 태그", description: "d" }],
+          ],
         ]),
         tagRenames: new Map([
           ["tag-1", { title: "새 이름", description: "새 설명" }],
@@ -222,7 +231,7 @@ describe("computeReviewEditingState — hasCandidates", () => {
   it("마지막 남은 Digest 하나를 삭제하면 false로 바뀐다", () => {
     const result = computeReviewEditingState(review(), {
       ...EMPTY_OVERRIDES,
-      removedDigestIndexes: new Set([0]),
+      removedDigestIds: new Set(["digest-1"]),
     });
     expect(result.hasCandidates).toBe(false);
   });
@@ -245,7 +254,7 @@ describe("computeReviewEditingState — hasEmptyTitle", () => {
   it("제목을 빈 문자열로 override하면 true", () => {
     const result = computeReviewEditingState(review(), {
       ...EMPTY_OVERRIDES,
-      titleOverrides: new Map([[0, "   "]]),
+      titleOverrides: new Map([["digest-1", "   "]]),
     });
     expect(result.hasEmptyTitle).toBe(true);
   });
@@ -260,7 +269,7 @@ describe("computeReviewEditingState — hasEmptyDescription", () => {
   it("설명을 빈 문자열로 override하면 true", () => {
     const result = computeReviewEditingState(review(), {
       ...EMPTY_OVERRIDES,
-      descriptionOverrides: new Map([[0, "   "]]),
+      descriptionOverrides: new Map([["digest-1", "   "]]),
     });
     expect(result.hasEmptyDescription).toBe(true);
   });
@@ -270,7 +279,7 @@ describe("computeReviewEditingState — hasEmptyLabel", () => {
   it("Topic 이름을 빈 문자열로 override하면 true", () => {
     const result = computeReviewEditingState(review(), {
       ...EMPTY_OVERRIDES,
-      topicsOverrides: new Map([[0, [{ id: null, title: "" }]]]),
+      topicsOverrides: new Map([["digest-1", [{ id: null, title: "" }]]]),
     });
     expect(result.hasEmptyLabel).toBe(true);
   });
@@ -279,7 +288,7 @@ describe("computeReviewEditingState — hasEmptyLabel", () => {
     const result = computeReviewEditingState(review(), {
       ...EMPTY_OVERRIDES,
       tagsOverrides: new Map([
-        [0, [{ id: null, title: "", description: "설명" }]],
+        ["digest-1", [{ id: null, title: "", description: "설명" }]],
       ]),
     });
     expect(result.hasEmptyLabel).toBe(true);
@@ -344,7 +353,7 @@ describe("computeReviewEditingState — mergeRows/referenceUpdates", () => {
         digests: [{ ...DIGEST, referenceIds: ["cited-1"] }],
         citedReferences: [CITED_REFERENCE_WITH_MERGE],
       }),
-      { ...EMPTY_OVERRIDES, removedDigestIndexes: new Set([0]) },
+      { ...EMPTY_OVERRIDES, removedDigestIds: new Set(["digest-1"]) },
     );
     expect(result.mergeRows).toHaveLength(0);
     expect(result.referenceUpdates).toHaveLength(0);

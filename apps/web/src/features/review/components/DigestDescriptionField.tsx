@@ -6,7 +6,7 @@ import { useEditing } from "./EditingProvider";
 import { InvisibleTextarea } from "./InvisibleTextarea";
 
 interface DigestDescriptionFieldProps {
-  digestIndex: number;
+  digestId: string;
   baseDescription: string;
   disabled: boolean;
 }
@@ -15,7 +15,7 @@ interface DigestDescriptionFieldProps {
 // fg-primary)보다 한 단계 낮은 티어를 유지한다. placeholder는 본문 필드의 질문형이
 // 아니라 명사형 — 제목 바로 아래 줄이라 훑을 때 읽을 텍스트를 늘리지 않는 게 낫다.
 export function DigestDescriptionField({
-  digestIndex,
+  digestId,
   baseDescription,
   disabled,
 }: DigestDescriptionFieldProps) {
@@ -23,7 +23,7 @@ export function DigestDescriptionField({
   const dispatch = useEditing((state) => state.dispatch);
   const description = useEditing(
     (state) =>
-      state.overrides.descriptionOverrides.get(digestIndex) ?? baseDescription,
+      state.overrides.descriptionOverrides.get(digestId) ?? baseDescription,
   );
 
   return (
@@ -35,7 +35,7 @@ export function DigestDescriptionField({
       onChange={(next) =>
         dispatch({
           type: "digest/setDescription",
-          index: digestIndex,
+          id: digestId,
           description: next,
         })
       }

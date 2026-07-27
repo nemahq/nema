@@ -11,7 +11,7 @@ import { DigestTitleField } from "./DigestTitleField";
 import { useEditing } from "./EditingProvider";
 
 interface DigestCandidateCardProps {
-  digestIndex: number;
+  digestId: string;
   digest: ReviewDigest;
   disabled: boolean;
   sourceActive: boolean;
@@ -21,7 +21,7 @@ interface DigestCandidateCardProps {
 // 타입만 이 카드가 구독한다 — 본문 필드 구성이 타입에 따라 갈려서 카드 자신이
 // 알아야 하는 유일한 편집값이다. Topic·태그는 각 Picker가 자기 몫만 구독한다.
 export function DigestCandidateCard({
-  digestIndex,
+  digestId,
   digest,
   disabled,
   sourceActive,
@@ -34,7 +34,7 @@ export function DigestCandidateCard({
   const dispatch = useEditing((state) => state.dispatch);
   const type = useEditing(
     (state) =>
-      (state.overrides.bodyOverrides.get(digestIndex) ?? digest.body).type,
+      (state.overrides.bodyOverrides.get(digestId) ?? digest.body).type,
   );
 
   // 실제 편집 필드에 포커스가 들어올 때만 펼친다. ⋯ 메뉴처럼 Portal로 렌더되는
@@ -65,7 +65,7 @@ export function DigestCandidateCard({
            더 안정적인 기준이라고 봤다(design-decisions-log.md). */
         <>
           <DigestCardHeader
-            digestIndex={digestIndex}
+            digestId={digestId}
             type={type}
             baseTopics={digest.topics}
             disabled={disabled}
@@ -76,21 +76,19 @@ export function DigestCandidateCard({
             onChangeType={(next) =>
               dispatch({
                 type: "digest/setBody",
-                index: digestIndex,
+                id: digestId,
                 body: { type: next },
               })
             }
-            onRemove={() =>
-              dispatch({ type: "digest/remove", index: digestIndex })
-            }
+            onRemove={() => dispatch({ type: "digest/remove", id: digestId })}
           />
           <DigestTitleField
-            digestIndex={digestIndex}
+            digestId={digestId}
             baseTitle={digest.title}
             disabled={disabled}
           />
           <DigestDescriptionField
-            digestIndex={digestIndex}
+            digestId={digestId}
             baseDescription={digest.description}
             disabled={disabled}
           />
@@ -98,7 +96,7 @@ export function DigestCandidateCard({
       }
     >
       <DigestBodyFields
-        digestIndex={digestIndex}
+        digestId={digestId}
         type={type}
         baseBody={digest.body}
         disabled={disabled}
@@ -111,7 +109,7 @@ export function DigestCandidateCard({
           둬서 필드 사이 간격(gap-3)과 같은 무게로 리듬만 유지한다. */}
       <div className="mt-3">
         <DigestTagPicker
-          digestIndex={digestIndex}
+          digestId={digestId}
           baseTags={digest.tags}
           disabled={disabled}
         />

@@ -81,6 +81,10 @@ export {
   REVIEW_DIGESTS_MAX,
   REVIEW_NEW_REFERENCES_MAX,
   REVIEW_REFERENCE_UPDATES_MAX,
+  type ReviewDigestDraft,
+  ReviewDigestDraftSchema,
+  type ReviewNewReferenceDraft,
+  ReviewNewReferenceDraftSchema,
 } from "./schemas/digest-review";
 export { type NarrationInput, NarrationInputSchema } from "./schemas/narration";
 export {

@@ -9,19 +9,20 @@ import type {
 } from "@web/features/review/types";
 
 export interface ReviewOverrides {
-  removedDigestIndexes: ReadonlySet<number>;
-  titleOverrides: ReadonlyMap<number, string>;
-  descriptionOverrides: ReadonlyMap<number, string>;
-  bodyOverrides: ReadonlyMap<number, ReviewDigest["body"]>;
-  topicsOverrides: ReadonlyMap<number, ReviewDigest["topics"]>;
-  tagsOverrides: ReadonlyMap<number, ReviewDigest["tags"]>;
+  removedDigestIds: ReadonlySet<string>;
+  titleOverrides: ReadonlyMap<string, string>;
+  descriptionOverrides: ReadonlyMap<string, string>;
+  bodyOverrides: ReadonlyMap<string, ReviewDigest["body"]>;
+  topicsOverrides: ReadonlyMap<string, ReviewDigest["topics"]>;
+  tagsOverrides: ReadonlyMap<string, ReviewDigest["tags"]>;
   // 태그·주제 이름 수정은 카드 하나가 아니라 그 id를 쓰는 모든 Digest에 영향을
-  // 준다 — index로 키를 잡는 위 overrides로는 표현이 안 돼(트리거한 카드만
+  // 준다 — digest id로 키를 잡는 위 overrides로는 표현이 안 돼(트리거한 카드만
   // 갱신되고 나머지는 옛 이름인 채로 confirm 페이로드에 실린다: 서버가 이름으로
-  // find-or-create하므로 옛 이름의 태그가 조용히 부활한다) id로 따로 키를 잡는다.
+  // find-or-create하므로 옛 이름의 태그가 조용히 부활한다) 태그·주제 자신의 id로
+  // 따로 키를 잡는다.
   tagRenames: ReadonlyMap<string, { title: string; description: string }>;
   topicRenames: ReadonlyMap<string, string>;
-  removedReferenceKeys: ReadonlySet<string>;
+  removedReferenceIds: ReadonlySet<string>;
   referenceOverrides: ReadonlyMap<string, ReviewNewReference>;
   mergeNoteOverrides: ReadonlyMap<string, string>;
 }
@@ -77,7 +78,7 @@ export function computeReviewEditingState(
   overrides: ReviewOverrides,
 ) {
   const {
-    removedDigestIndexes,
+    removedDigestIds,
     titleOverrides,
     descriptionOverrides,
     bodyOverrides,
@@ -85,31 +86,30 @@ export function computeReviewEditingState(
     tagsOverrides,
     tagRenames,
     topicRenames,
-    removedReferenceKeys,
+    removedReferenceIds,
     referenceOverrides,
     mergeNoteOverrides,
   } = overrides;
 
   const digestRows = review.digests
-    .map((digest, index) => ({
+    .map((digest) => ({
       digest,
-      index,
-      title: titleOverrides.get(index) ?? digest.title,
-      description: descriptionOverrides.get(index) ?? digest.description,
-      body: bodyOverrides.get(index) ?? digest.body,
+      title: titleOverrides.get(digest.id) ?? digest.title,
+      description: descriptionOverrides.get(digest.id) ?? digest.description,
+      body: bodyOverrides.get(digest.id) ?? digest.body,
       topics: applyTopicRenames(
-        topicsOverrides.get(index) ?? digest.topics,
+        topicsOverrides.get(digest.id) ?? digest.topics,
         topicRenames,
       ),
       tags: applyTagRenames(
-        tagsOverrides.get(index) ?? digest.tags,
+        tagsOverrides.get(digest.id) ?? digest.tags,
         tagRenames,
       ),
     }))
-    .filter((row) => !removedDigestIndexes.has(row.index));
+    .filter((row) => !removedDigestIds.has(row.digest.id));
   const referenceRows = review.newReferences
-    .filter((reference) => !removedReferenceKeys.has(reference.key))
-    .map((reference) => referenceOverrides.get(reference.key) ?? reference);
+    .filter((reference) => !removedReferenceIds.has(reference.id))
+    .map((reference) => referenceOverrides.get(reference.id) ?? reference);
   const mergeRows = buildMergeRows({
     citedReferences: review.citedReferences,
     citedReferenceIds: new Set(
@@ -124,7 +124,7 @@ export function computeReviewEditingState(
   // 의미가 없어진다(tags.update RPC로 태그 자체는 바뀌어도, confirm의
   // find-or-create가 여전히 pending_ingestion에 저장된 옛 이름을 본다).
   const dirty =
-    removedDigestIndexes.size > 0 ||
+    removedDigestIds.size > 0 ||
     titleOverrides.size > 0 ||
     descriptionOverrides.size > 0 ||
     bodyOverrides.size > 0 ||
@@ -132,7 +132,7 @@ export function computeReviewEditingState(
     tagsOverrides.size > 0 ||
     tagRenames.size > 0 ||
     topicRenames.size > 0 ||
-    removedReferenceKeys.size > 0 ||
+    removedReferenceIds.size > 0 ||
     referenceOverrides.size > 0 ||
     mergeNoteOverrides.size > 0;
   const hasCandidates = digestRows.length + referenceRows.length > 0;

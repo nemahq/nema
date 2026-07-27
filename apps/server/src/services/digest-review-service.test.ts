@@ -62,7 +62,8 @@ function mockSupabase(
 }
 
 describe("getReview", () => {
-  it("digest의 인용을 기존 레퍼런스(id)와 이 리뷰의 신규 제안(key)으로 정확히 가른다", async () => {
+  it("digest의 인용을 기존 레퍼런스(id)와 이 리뷰의 신규 제안(id)으로 정확히 가른다", async () => {
+    const DIGEST_ID = "33333333-3333-4333-8333-333333333333";
     const supabase = mockSupabase({
       changesets: {
         id: CHANGESET_ID,
@@ -70,6 +71,7 @@ describe("getReview", () => {
         type: "ingestion",
         status: "open",
         source_id: SOURCE_ID,
+        draft_version: 3,
         sources: {
           title: "원문 제목",
           body: "원문",
@@ -81,6 +83,7 @@ describe("getReview", () => {
             action: "create",
             target_type: "reference",
             target_id: NEW_REFERENCE_ID,
+            position: 0,
             data: {
               type: "product",
               title: "신규 제품",
@@ -92,7 +95,8 @@ describe("getReview", () => {
             id: "22222222-2222-4222-8222-222222222222",
             action: "create",
             target_type: "digest",
-            target_id: "33333333-3333-4333-8333-333333333333",
+            target_id: DIGEST_ID,
+            position: 0,
             data: {
               title: "제목",
               description: "요약",
@@ -119,27 +123,31 @@ describe("getReview", () => {
 
     expect(review.changesetNumber).toBe(12);
     expect(review.sourceTitle).toBe("원문 제목");
+    expect(review.draftVersion).toBe(3);
     expect(supabase.eqCallsByTable.changesets).toContainEqual([
       "space_id",
       SPACE_ID,
     ]);
     expect(supabase.eqCallsByTable.changesets).toContainEqual(["number", 12]);
-    // 정렬이 빠지면 Postgres가 changes 행 순서를 보장하지 않는다. 프론트 편집 상태가
-    // digests 배열의 인덱스를 키로 쓰므로, refetch 때 순서가 달라지면 제목 수정이나
-    // 후보 삭제가 다른 후보에 붙는다 — 어느 층도 에러를 내지 않는 회귀라 여기서 막는다.
+    // 정렬이 빠지면 Postgres가 changes 행 순서를 보장하지 않는다. position이 명시적
+    // 순서를 고정하고, id는 동순위일 때만 쓰는 tiebreak — 어느 층도 에러를 내지 않는
+    // 회귀라 여기서 막는다.
     expect(supabase.orderCallsByTable.changesets).toContainEqual([
-      "created_at",
+      "position",
       { referencedTable: "changes" },
     ]);
     expect(supabase.orderCallsByTable.changesets).toContainEqual([
       "id",
       { referencedTable: "changes" },
     ]);
+    expect(review.digests[0]?.id).toBe(DIGEST_ID);
+    expect(review.digests[0]?.position).toBe(0);
     expect(review.digests[0]?.referenceIds).toEqual([EXISTING_REFERENCE_ID]);
     expect(review.digests[0]?.newReferenceKeys).toEqual([NEW_REFERENCE_ID]);
     expect(review.newReferences).toEqual([
       {
-        key: NEW_REFERENCE_ID,
+        id: NEW_REFERENCE_ID,
+        position: 0,
         type: "product",
         title: "신규 제품",
         body: "설명",
@@ -157,6 +165,46 @@ describe("getReview", () => {
     ]);
   });
 
+  it("리뷰 후보(create) 행에 position이 없으면(스키마·데이터 불일치) 조용히 넘기지 않는다", async () => {
+    const supabase = mockSupabase({
+      changesets: {
+        id: CHANGESET_ID,
+        number: 12,
+        type: "ingestion",
+        status: "open",
+        source_id: SOURCE_ID,
+        draft_version: 1,
+        sources: {
+          title: "원문 제목",
+          body: "원문",
+          created_at: "2026-07-07T00:00:00Z",
+        },
+        changes: [
+          {
+            id: "22222222-2222-4222-8222-222222222222",
+            action: "create",
+            target_type: "digest",
+            target_id: "33333333-3333-4333-8333-333333333333",
+            position: null,
+            data: {
+              title: "제목",
+              description: "요약",
+              body: { type: "learning", finding: "발견" },
+              topics: [],
+              tags: [],
+              reference_ids: [],
+              external_urls: [],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(
+      getReview({ supabase, spaceId: SPACE_ID, number: 12 }),
+    ).rejects.toMatchObject({ code: "query_failed" });
+  });
+
   // 한 changeset에 인용된 기존 Reference가 여럿이고 그중 일부만 병합 제안이 있는 실제
   // 상황 — 제안 있는 것만 mergeNote가 붙고 나머지는 null이어야 한다. "제안 하나라도
   // 있으면 전부에 적용" 같은 mergeNoteById 회귀를 이 혼합 케이스로 고정한다.
@@ -171,6 +219,7 @@ describe("getReview", () => {
         status: "open",
         source_id: SOURCE_ID,
         space_id: SPACE_ID,
+        draft_version: 1,
         spaces: { workspace_id: WORKSPACE_ID },
         sources: {
           title: "원문 제목",
@@ -183,6 +232,7 @@ describe("getReview", () => {
             action: "create",
             target_type: "digest",
             target_id: "33333333-3333-4333-8333-333333333333",
+            position: 0,
             data: {
               title: "제목",
               description: "요약",
@@ -250,6 +300,7 @@ describe("getReview", () => {
         status: "open",
         source_id: SOURCE_ID,
         space_id: SPACE_ID,
+        draft_version: 1,
         spaces: { workspace_id: WORKSPACE_ID },
         sources: {
           title: "원문 제목",
@@ -262,6 +313,7 @@ describe("getReview", () => {
             action: "create",
             target_type: "digest",
             target_id: "33333333-3333-4333-8333-333333333333",
+            position: 0,
             data: {
               title: "제목",
               description: "요약",
@@ -324,17 +376,19 @@ describe("getReview", () => {
 describe("updateReview", () => {
   // p_new_references는 as unknown as Json으로 나가는 객체 리터럴이라 키 오타를
   // 타입체크가 못 잡는다 — RPC 계약 키(snake_case external_urls)를 고정한다.
-  it("신규 레퍼런스의 externalUrls를 RPC 계약 키(external_urls)로 실어 보낸다", async () => {
-    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+  it("신규 레퍼런스의 id·position·externalUrls를 RPC 계약 키로 실어 보내고 draftVersion을 반환한다", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: 4, error: null });
     const supabase = { rpc } as unknown as TypedSupabaseClient;
 
-    await updateReview({
+    const result = await updateReview({
       supabase,
       changesetId: CHANGESET_ID,
+      expectedVersion: 3,
       digests: [],
       newReferences: [
         {
-          key: NEW_REFERENCE_ID,
+          id: NEW_REFERENCE_ID,
+          position: 0,
           type: "product",
           title: "토스",
           body: "송금 앱",
@@ -347,9 +401,12 @@ describe("updateReview", () => {
     expect(rpc).toHaveBeenCalledWith(
       "update_pending_ingestion",
       expect.objectContaining({
+        p_changeset_id: CHANGESET_ID,
+        p_expected_version: 3,
         p_new_references: [
           {
-            key: NEW_REFERENCE_ID,
+            id: NEW_REFERENCE_ID,
+            position: 0,
             type: "product",
             title: "토스",
             body: "송금 앱",
@@ -358,6 +415,7 @@ describe("updateReview", () => {
         ],
       }),
     );
+    expect(result).toEqual({ draftVersion: 4 });
   });
 
   // 병합 편집(mergeNote)은 RPC 계약 키(reference_id/body)로 실어 보낸다 — 계약 키가
@@ -369,6 +427,7 @@ describe("updateReview", () => {
     await updateReview({
       supabase,
       changesetId: CHANGESET_ID,
+      expectedVersion: 1,
       digests: [],
       newReferences: [],
       referenceUpdates: [
@@ -393,11 +452,15 @@ describe("updateReview", () => {
     const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
     const supabase = { rpc } as unknown as TypedSupabaseClient;
 
+    const DIGEST_ID = "33333333-3333-4333-8333-333333333333";
     await updateReview({
       supabase,
       changesetId: CHANGESET_ID,
+      expectedVersion: 1,
       digests: [
         {
+          id: DIGEST_ID,
+          position: 0,
           title: "제목",
           description: "요약",
           body: { type: "learning", finding: "발견" },
@@ -427,6 +490,8 @@ describe("updateReview", () => {
       expect.objectContaining({
         p_digests: [
           expect.objectContaining({
+            id: DIGEST_ID,
+            position: 0,
             topics: ["기존 주제", "새 주제"],
             tags: [
               { title: "기존 태그", description: "기존 정의" },
@@ -436,6 +501,30 @@ describe("updateReview", () => {
         ],
       }),
     );
+  });
+
+  // NM012(ingestion_review_version_conflict)이 NM008과 뒤섞이면 두 탭 동시 편집
+  // 거절이 "상태가 바뀜" 문구로 새 나가 원인이 다른 두 상황이 같은 안내로 뭉개진다.
+  it("draftVersion이 어긋나면(NM012) ingestion_review_version_conflict로 매핑된다", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: {
+        code: "NM012",
+        message: "ingestion review ... draft version mismatch",
+      },
+    });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    await expect(
+      updateReview({
+        supabase,
+        changesetId: CHANGESET_ID,
+        expectedVersion: 1,
+        digests: [],
+        newReferences: [],
+        referenceUpdates: [],
+      }),
+    ).rejects.toMatchObject({ code: "ingestion_review_version_conflict" });
   });
 });
 

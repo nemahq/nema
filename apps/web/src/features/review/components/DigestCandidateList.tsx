@@ -25,14 +25,13 @@ export function DigestCandidateList({
   onViewSource,
 }: DigestCandidateListProps) {
   const { t } = useTranslation();
-  const removedIndexes = useEditing(
-    (state) => state.overrides.removedDigestIndexes,
-  );
+  const removedIds = useEditing((state) => state.overrides.removedDigestIds);
   // 삭제는 서버로 바로 안 나가고 확정 시 반영되는 오버라이드라, 화면에서 빼는 건
-  // 이 목록의 몫이다. index는 오버라이드의 키라서 걸러낸 뒤에도 원래 값을 유지한다.
+  // 이 목록의 몫이다. digest.id로 걸러내고, index는 원문 하이라이트 탭 식별용으로
+  // 원래 배열 위치를 그대로 유지한다.
   const visible = digests
     .map((digest, index) => ({ digest, index }))
-    .filter(({ index }) => !removedIndexes.has(index));
+    .filter(({ digest }) => !removedIds.has(digest.id));
 
   if (visible.length === 0) {
     return null;
@@ -46,8 +45,8 @@ export function DigestCandidateList({
       <div className="flex flex-col">
         {visible.map(({ digest, index }) => (
           <DigestCandidateCard
-            key={index}
-            digestIndex={index}
+            key={digest.id}
+            digestId={digest.id}
             digest={digest}
             disabled={disabled}
             sourceActive={activeSourceIndex === index}
