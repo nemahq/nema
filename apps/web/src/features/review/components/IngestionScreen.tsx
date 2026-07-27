@@ -27,6 +27,7 @@ import { DigestCandidateList } from "./DigestCandidateList";
 import { IngestionActions } from "./IngestionActions";
 import { ReferenceSection } from "./ReferenceSection";
 import {
+  clearAutosaveEntry,
   ReviewDraftProvider,
   useReviewDraftContext,
   useReviewSaveStatusContext,
@@ -127,6 +128,9 @@ function IngestionContent() {
     } finally {
       setConfirming(false);
     }
+    // 이 changeset은 이제 확정된 상태로 넘어가 이 key로 다시 편집이 들어올 일이
+    // 없다 — 자동 저장 레지스트리 엔트리를 여기서 정리한다.
+    clearAutosaveEntry(spaceId, changesetNumber);
     // try 밖에 둔다 — 여기서 던지면(예: localStorage 접근 실패) 위 catch가
     // "mutation 실패는 전역 토스트가 이미 처리한다"는 전제로 조용히 삼켜버린다.
     // 밖에 두면 앱 전역 unhandled rejection 리포트로 정상 노출된다.
@@ -139,7 +143,12 @@ function IngestionContent() {
     }
     discardReview.mutate(
       { changesetId: draft.changesetId },
-      { onSuccess: () => showNotificationSoftAsk() },
+      {
+        onSuccess: () => {
+          clearAutosaveEntry(spaceId, changesetNumber);
+          showNotificationSoftAsk();
+        },
+      },
     );
   }
 

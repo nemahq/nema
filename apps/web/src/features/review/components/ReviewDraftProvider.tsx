@@ -56,6 +56,14 @@ function getAutosaveEntry(key: string): ReviewAutosaveEntry {
   return entry;
 }
 
+// 확정·버리기로 리뷰 자체가 끝나면(다른 changeset을 잠깐 거쳐가는 것과 달리 이
+// key로는 다시 편집이 들어올 일이 없다) 엔트리를 지운다 — 안 지우면 이 Map이 세션
+// 내내 changeset 수만큼 무한히 쌓인다. 방금 저장·확정이 성공한 직후에만 부르므로
+// dirty·진행 중인 저장이 남아있을 수 없다.
+export function clearAutosaveEntry(spaceId: string, changesetNumber: number) {
+  autosaveEntries.delete(`${spaceId}:${changesetNumber}`);
+}
+
 interface ReviewDraftContextValue {
   dispatch: (action: ReviewDraftAction) => void;
   // 타이핑 중인 필드가 "아직 초안에 안 넘긴 값이 있다"고 알려두는 자리 — 초안을
