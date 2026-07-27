@@ -4,7 +4,7 @@ import type { ChangesetDetail } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetRevertSummary } from "./ChangesetRevertSummary";
-import { DigestReadonlyCard } from "./DigestReadonlyCard";
+import { DigestReadonlyCardList } from "./DigestReadonlyCardList";
 import { RelationEndpointStack } from "./RelationEndpointStack";
 
 interface ChangesetRecordBodyProps {
@@ -25,13 +25,7 @@ export function ChangesetRecordBody({
 
   switch (body.kind) {
     case "ingestion_applied":
-      return (
-        <div className="flex flex-col gap-4">
-          {body.digests.map((digest) => (
-            <DigestReadonlyCard key={digest.id} digest={digest} />
-          ))}
-        </div>
-      );
+      return <DigestReadonlyCardList digests={body.digests} />;
     // discarded 셋 다 되돌릴 대상 자체가 없었다는 뜻이라, 헤더의 상태 배지("버려짐")
     // 자체가 이미 완결된 설명이다 — 본문에 안내문을 반복하지 않는다.
     case "ingestion_discarded":

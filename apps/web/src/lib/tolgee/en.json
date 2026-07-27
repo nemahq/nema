@@ -194,7 +194,7 @@
     "digest_field_verification_condition": "Verification condition",
     "digest_field_verification_condition_placeholder": "What would confirm or disprove this?",
     "digest_menu_label": "Digest menu",
-    "digest_readonly_archived_badge": "Archived",
+    "digest_readonly_archived_badge": "Superseded",
     "digest_remove_action": "Remove this digest candidate",
     "digest_review_title": "Digest review",
     "digest_section_title": "{count, plural, one {Digest (#)} other {Digests (#)}}",
