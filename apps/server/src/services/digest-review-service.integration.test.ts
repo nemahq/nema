@@ -410,7 +410,7 @@ describe("Tag color 배정 (write_ingestion_review_changes/confirm_ingestion_rev
   });
 
   // 정의(description)와 같은 원칙 — 재사용 판단·표시 기준인 color는 리뷰 확정
-  // 한 번이 조용히 바꾸면 안 된다(20260728021441 마이그레이션 주석 참고).
+  // 한 번이 조용히 바꾸면 안 된다(20260728110000 마이그레이션 주석 참고).
   it("확정 시 신규 Tag는 draft가 보여준 color를 레지스트리에 이어받고, 기존 Tag의 color는 덮지 않는다", async () => {
     if (!localDbAvailable) {
       return;

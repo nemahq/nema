@@ -34,7 +34,7 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
   const atMax = tags.length >= DIGEST_TAGS_MAX;
 
   // 항목 id 생성 시점은 TopicEditPanel과 같은 이유로 여기다(그 주석 참고).
-  // 색도 id와 같은 자리에서 함께 배정한다(#515와 같은 원칙 — 20260728021441).
+  // 색도 id와 같은 자리에서 함께 배정한다(#515와 같은 원칙 — 20260728110000).
   function handleSelectExisting(tag: {
     id: string;
     title: string;
