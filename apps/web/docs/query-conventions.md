@@ -108,3 +108,7 @@ onSettled: () => {
 ```
 
 Skipping `cancel` risks an in-flight refetch overwriting the optimistic update. Skipping `onSettled` risks stale cache after error rollback.
+
+### Realtime-covered queries
+
+Some queries (currently `source.listPending`, `space.list`, `changeset.listChangesets`) are also invalidated by `useRealtimeInvalidation` in reaction to raw Postgres row changes — including changes a mutation in this same tab just caused, since Realtime doesn't distinguish origin. Mutations MUST still follow the standard `onSettled` invalidate pattern above regardless — do NOT omit it to avoid "double" invalidation. `useRealtimeInvalidation` itself skips its own invalidate when the query was already refreshed within the last few seconds (`invalidateUnlessFresh`), so the dedup lives in one place and every mutation stays uniform.

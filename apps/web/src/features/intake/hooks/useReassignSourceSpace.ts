@@ -33,6 +33,11 @@ export function useReassignSourceSpace() {
       // 옵션으로 남는다 — 실패 시 목록을 무효화해 다음 시도부턴 정확한 옵션만 보이게 한다.
       utils.space.list.invalidate();
     },
-    onSettled: () => utils.source.listPending.invalidate(),
+    // invalidate()의 promise를 리턴하지 않는다 — 리턴하면 mutation이 그 재조회가
+    // 끝날 때까지 isPending을 true로 들고 있어(Chip의 disabled가 그만큼 늦게
+    // 풀림) 낙관적 업데이트로 이미 맞는 값을 보여주는 의미가 옅어진다.
+    onSettled: () => {
+      void utils.source.listPending.invalidate();
+    },
   });
 }

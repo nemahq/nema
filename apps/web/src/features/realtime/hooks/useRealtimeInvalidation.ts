@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
 import * as Sentry from "@sentry/react";
 import type { RealtimePostgresInsertPayload } from "@supabase/supabase-js";
+import { getQueryKey } from "@trpc/react-query";
 
 import type { ChangesetInsertRow } from "@web/features/notifications";
 import { useChangesetReadyNotifier } from "@web/features/notifications";
 import { supabase } from "@web/lib/supabase";
+import { queryClient } from "@web/lib/tanstack-query";
 import { trpc } from "@web/lib/trpc";
 
 const CHANNEL_NAME = "realtime-invalidation";
@@ -13,7 +15,37 @@ const CHANNEL_NAME = "realtime-invalidation";
 // 짧은 간격으로 연달아 오는 이벤트를 마지막 것 기준 한 번으로 묶는다.
 const PENDING_SOURCES_INVALIDATE_DEBOUNCE_MS = 500;
 
-type TrpcUtils = ReturnType<typeof trpc.useUtils>;
+// 이 값들을 바꾸는 mutation은 자기 onSettled로 이미 재조회를 걸어둔 경우가 많다
+// (query-conventions.md 참고) — 그 응답이 막 도착한 직후(이 창 안)라면 같은 걸
+// realtime이 또 부르지 않는다. 창을 넘겨도 못 잡으면 그냥 한 번 더 부르는 것뿐이라
+// (디바운스가 이미 걸려있음) 넉넉하게 잡는다.
+const SKIP_INVALIDATE_IF_FRESHER_THAN_MS = 2_000;
+
+function invalidateUnlessFresh(queryKey: readonly unknown[]) {
+  const state = queryClient.getQueryState(queryKey);
+  if (
+    state &&
+    Date.now() - state.dataUpdatedAt < SKIP_INVALIDATE_IF_FRESHER_THAN_MS
+  ) {
+    return;
+  }
+  void queryClient.invalidateQueries({ queryKey });
+}
+
+// trpc는 모듈 스코프에서 안정적인 참조라(Provider 없이도 _def 경로 메타데이터만
+// 읽음) 렌더 밖에서 한 번만 계산해도 된다.
+const PENDING_SOURCES_QUERY_KEY = getQueryKey(
+  trpc.source.listPending,
+  undefined,
+  "query",
+);
+const SPACE_LIST_QUERY_KEY = getQueryKey(trpc.space.list, undefined, "query");
+const CHANGESET_LIST_QUERY_KEY = getQueryKey(
+  trpc.changeset.listChangesets,
+  undefined,
+  "query",
+);
+
 type NotifyChangesetReady = ReturnType<typeof useChangesetReadyNotifier>;
 
 // Supabase Realtime(Postgres CDC)로 비동기 작업 완료를 폴링 없이 반영한다.
@@ -22,21 +54,8 @@ type NotifyChangesetReady = ReturnType<typeof useChangesetReadyNotifier>;
 // 로직을 그대로 재사용한다. RLS가 브로드캐스트를 구독자 Space로 스코프하지만, 설령
 // 범위 밖 이벤트가 새더라도 invalidate는 자기 데이터를 다시 읽을 뿐이라 유출이 없다.
 export function useRealtimeInvalidation() {
-  // 채널은 앱 세션당 하나면 충분하다(마운트 1회). utils의 참조 안정성은 문서화 안 된
-  // trpc 내부 memo에 달려 있어 deps로 삼으면 버전업 시 조용히 채널이 churn할 수 있다 —
-  // 대신 최신 utils를 ref로 넘겨 구독은 마운트 시 한 번만 건다.
-  const utils = trpc.useUtils();
-  const utilsRef = useRef<TrpcUtils>(utils);
-  useEffect(
-    function syncUtilsRef() {
-      utilsRef.current = utils;
-    },
-    [utils],
-  );
-
-  // notifyChangesetReady도 같은 이유(구독은 마운트 시 한 번만)로 ref에 담아 최신
-  // 참조만 넘긴다 — 다만 이쪽은 utils뿐 아니라 navigate·t도 의존하는 만큼 식별자가
-  // utils보다 훨씬 자주 바뀔 수 있어, deps로 삼지 않는 실익이 utilsRef보다 크다.
+  // 채널은 앱 세션당 하나면 충분하다(마운트 1회). notifyChangesetReady는
+  // navigate·t에 의존해 자주 바뀌므로 deps로 삼지 않고 ref로 최신 참조만 넘긴다.
   const notifyChangesetReady = useChangesetReadyNotifier();
   const notifyChangesetReadyRef =
     useRef<NotifyChangesetReady>(notifyChangesetReady);
@@ -53,14 +72,14 @@ export function useRealtimeInvalidation() {
       clearTimeout(pendingSourcesTimer);
       pendingSourcesTimer = setTimeout(
         function flushPendingSourcesInvalidate() {
-          void utilsRef.current.source.listPending.invalidate();
+          invalidateUnlessFresh(PENDING_SOURCES_QUERY_KEY);
         },
         PENDING_SOURCES_INVALIDATE_DEBOUNCE_MS,
       );
     }
     function invalidateChangesetBadges() {
-      void utilsRef.current.space.list.invalidate();
-      void utilsRef.current.changeset.listChangesets.invalidate();
+      invalidateUnlessFresh(SPACE_LIST_QUERY_KEY);
+      invalidateUnlessFresh(CHANGESET_LIST_QUERY_KEY);
     }
     function handleChangesetInsert(
       payload: RealtimePostgresInsertPayload<ChangesetInsertRow>,
