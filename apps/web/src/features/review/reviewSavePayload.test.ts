@@ -51,8 +51,15 @@ describe("buildUpdateReviewPayload", () => {
       ...DIGEST,
       title: "  새 제목  ",
       description: "  새 설명  ",
-      topics: [{ id: null, title: " 새 주제 " }],
-      tags: [{ id: null, title: " 새 태그 ", description: "설명" }],
+      topics: [{ id: "topic-draft-1", registryId: null, title: " 새 주제 " }],
+      tags: [
+        {
+          id: "tag-draft-1",
+          registryId: null,
+          title: " 새 태그 ",
+          description: "설명",
+        },
+      ],
     };
 
     const payload = buildUpdateReviewPayload(
@@ -64,8 +71,15 @@ describe("buildUpdateReviewPayload", () => {
         ...editedDigest,
         title: "새 제목",
         description: "새 설명",
-        topics: [{ id: null, title: "새 주제" }],
-        tags: [{ id: null, title: "새 태그", description: "설명" }],
+        topics: [{ id: "topic-draft-1", registryId: null, title: "새 주제" }],
+        tags: [
+          {
+            id: "tag-draft-1",
+            registryId: null,
+            title: "새 태그",
+            description: "설명",
+          },
+        ],
       },
     ]);
   });

@@ -1,4 +1,4 @@
-import type { DigestTagDraft } from "@nema-io/shared";
+import type { ReviewTagDraft } from "@nema-io/shared";
 import {
   Badge,
   Popover,
@@ -15,7 +15,7 @@ import { TagEditPanel } from "./TagEditPanel";
 
 interface DigestTagPickerProps {
   digestId: string;
-  tags: DigestTagDraft[];
+  tags: ReviewTagDraft[];
   disabled: boolean;
 }
 
@@ -53,13 +53,8 @@ export function DigestTagPicker({
           className="flex min-h-6 cursor-pointer flex-wrap items-center gap-1 rounded-md px-2 py-1 text-left hover:bg-surface-raised-hover/75 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-surface-raised-hover"
         >
           {tags.length > 0 ? (
-            tags.map((tag, index) => (
-              <Badge
-                key={tag.id ?? `draft-${index}`}
-                variant="neutral"
-                shape="rounded"
-                truncated
-              >
+            tags.map((tag) => (
+              <Badge key={tag.id} variant="neutral" shape="rounded" truncated>
                 {tag.title}
               </Badge>
             ))

@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import {
   DIGEST_TAGS_MAX,
-  type DigestTagDraft,
+  type ReviewTagDraft,
   TAG_TITLE_MAX_LENGTH,
 } from "@nema-io/shared";
 import { Chip, Separator } from "@nema-io/weave";
@@ -16,9 +16,9 @@ import { TagCreateForm } from "./TagCreateForm";
 import { TagSearchList } from "./TagSearchList";
 
 interface TagEditPanelProps {
-  tags: DigestTagDraft[];
+  tags: ReviewTagDraft[];
   disabled: boolean;
-  onChange: (tags: DigestTagDraft[]) => void;
+  onChange: (tags: ReviewTagDraft[]) => void;
 }
 
 // TopicEditPanel과 같은 구조(칩 목록 → 구분선 → 검색)를 따르되, 차이는 하나 —
@@ -32,17 +32,29 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
   const [creatingTitle, setCreatingTitle] = useState<string | null>(null);
   const atMax = tags.length >= DIGEST_TAGS_MAX;
 
+  // 항목 id 생성 시점은 TopicEditPanel과 같은 이유로 여기다(그 주석 참고).
   function handleSelectExisting(tag: {
     id: string;
     title: string;
     description: string;
   }) {
-    onChange([...tags, tag]);
+    onChange([
+      ...tags,
+      {
+        id: crypto.randomUUID(),
+        registryId: tag.id,
+        title: tag.title,
+        description: tag.description,
+      },
+    ]);
     setQuery("");
   }
 
   function handleSubmitNew(title: string, description: string) {
-    onChange([...tags, { id: null, title, description }]);
+    onChange([
+      ...tags,
+      { id: crypto.randomUUID(), registryId: null, title, description },
+    ]);
     setQuery("");
     setCreatingTitle(null);
   }
@@ -75,7 +87,7 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
       >
         {tags.map((tag, index) => (
           <Chip
-            key={tag.id ?? `draft-${index}`}
+            key={tag.id}
             variant="outline"
             shape="rounded"
             disabled={disabled}

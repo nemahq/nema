@@ -24,8 +24,16 @@ const StoredDigestDataSchema = z.object({
   title: z.string(),
   description: z.string(),
   body: DigestBodySchema,
-  topics: z.array(z.string()),
-  tags: z.array(z.object({ title: z.string(), description: z.string() })),
+  // 저장된 topics/tags 원소의 id는 이 초안 항목의 정체성일 뿐 레지스트리 행과 무관하다
+  // (registryId는 아래에서 이름으로 찾아 얹는다) — ReviewTopicDraftSchema 주석 참고.
+  topics: z.array(z.object({ id: z.string().uuid(), title: z.string() })),
+  tags: z.array(
+    z.object({
+      id: z.string().uuid(),
+      title: z.string(),
+      description: z.string(),
+    }),
+  ),
   reference_ids: z.array(z.string().uuid()),
   external_urls: z.array(z.string()),
 });
@@ -159,10 +167,12 @@ export async function getReview(args: {
   }));
 
   // 기존/신규 판정 — 이름이 Space(topics)·Workspace(tags) 레지스트리와 매치하면 기존
-  // (id 포함, 읽기 전용), 매치하지 않으면 신규(id 없음, 이름 편집 가능). archived 항목은
+  // (registryId 포함, 읽기 전용), 매치 없으면 신규(registryId null). archived 항목은
   // 재사용 후보에서 제외한다(update_topic 마이그레이션 주석과 같은 결 — restore 없이
   // 조용히 재사용되면 안 된다).
-  const topicNames = [...new Set(rawDigests.flatMap((d) => d.topics))];
+  const topicNames = [
+    ...new Set(rawDigests.flatMap((d) => d.topics.map((topic) => topic.title))),
+  ];
   const tagTitles = [
     ...new Set(rawDigests.flatMap((d) => d.tags.map((tag) => tag.title))),
   ];
@@ -201,12 +211,14 @@ export async function getReview(args: {
     title: digestData.title,
     description: digestData.description,
     body: digestData.body,
-    topics: digestData.topics.map((name) => ({
-      id: topicIdByTitle.get(name) ?? null,
-      title: name,
+    topics: digestData.topics.map((topic) => ({
+      id: topic.id,
+      registryId: topicIdByTitle.get(topic.title) ?? null,
+      title: topic.title,
     })),
     tags: digestData.tags.map((tag) => ({
-      id: tagIdByTitle.get(tag.title) ?? null,
+      id: tag.id,
+      registryId: tagIdByTitle.get(tag.title) ?? null,
       title: tag.title,
       description: tag.description,
     })),
@@ -291,16 +303,20 @@ export async function updateReview(args: {
       p_expected_version: expectedVersion,
       // RPC 계약 키는 update_pending_ingestion이 읽는 snake_case다. id·position은
       // 그대로 실어 보낸다(RPC가 id로 upsert·position으로 순서를 잡는다). topics/tags의
-      // id는 getReview가 붙인 표시용 힌트라 저장 형태(name/{title,description})엔 없다
-      // — confirm 시 이름으로 다시 find-or-create되므로 id 없이도 기존 항목이 재사용된다.
+      // registryId는 조회 때 이름으로 계산한 파생값이라 저장 형태엔 없다 — confirm이
+      // 이름으로 다시 find-or-create하므로 없이도 기존 항목이 재사용된다.
       p_digests: digests.map((digest) => ({
         id: digest.id,
         position: digest.position,
         title: digest.title,
         description: digest.description,
         body: digest.body,
-        topics: digest.topics.map((topic) => topic.title),
+        topics: digest.topics.map((topic) => ({
+          id: topic.id,
+          title: topic.title,
+        })),
         tags: digest.tags.map((tag) => ({
+          id: tag.id,
           title: tag.title,
           description: tag.description,
         })),
@@ -385,8 +401,8 @@ export async function confirmDigestEdit(args: {
     "confirm_digest_edit",
     {
       p_digest_id: digestId,
-      // RPC 계약 키는 confirm_digest_edit이 읽는 snake_case (update_pending_ingestion과 동일,
-      // topics/tags의 id를 저장 형태에서 벗겨내는 것도 동일)
+      // RPC 계약 키는 confirm_digest_edit이 읽는 snake_case. 초안을 저장·재조회하는 단계가
+      // 없어(확정 때 한 번만 온다) 항목 id도 없다 — 이름만 넘기고 registryId는 버린다.
       p_digest: {
         title: digest.title,
         description: digest.description,

@@ -71,7 +71,8 @@ export function DigestReviewCard({ spaceId, number }: DigestReviewCardProps) {
       title: current[index].title.trim(),
       description: current[index].description.trim(),
       topics: parseTopics(current[index].topicsText).map((name) => ({
-        id: null,
+        id: crypto.randomUUID(),
+        registryId: null,
         title: name,
       })),
     }));

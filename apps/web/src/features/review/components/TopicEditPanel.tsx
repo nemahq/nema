@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import {
   DIGEST_TOPICS_MAX,
-  type DigestTopicDraft,
+  type ReviewTopicDraft,
   TOPIC_TITLE_MAX_LENGTH,
 } from "@nema-io/shared";
 import { Chip, Separator } from "@nema-io/weave";
@@ -15,9 +15,9 @@ import { LabelLimitNotice } from "./LabelLimitNotice";
 import { TopicSearchList } from "./TopicSearchList";
 
 interface TopicEditPanelProps {
-  topics: DigestTopicDraft[];
+  topics: ReviewTopicDraft[];
   disabled: boolean;
-  onChange: (topics: DigestTopicDraft[]) => void;
+  onChange: (topics: ReviewTopicDraft[]) => void;
 }
 
 // 색은 안 쓴다 — Topic은 조용하게 두고 테두리로만 구분한다(이번 라운드 원칙).
@@ -33,13 +33,21 @@ export function TopicEditPanel({
   const [query, setQuery] = useState("");
   const atMax = topics.length >= DIGEST_TOPICS_MAX;
 
+  // 항목 id는 여기서 만든다 — 저장 응답을 기다렸다 붙이면 그사이 편집(삭제·정렬)이
+  // 가리킬 값이 없어, 이 id가 없애려는 인덱스 기반 식별로 되돌아간다.
   function handleSelectExisting(topic: { id: string; title: string }) {
-    onChange([...topics, topic]);
+    onChange([
+      ...topics,
+      { id: crypto.randomUUID(), registryId: topic.id, title: topic.title },
+    ]);
     setQuery("");
   }
 
   function handleCreateNew(name: string) {
-    onChange([...topics, { id: null, title: name }]);
+    onChange([
+      ...topics,
+      { id: crypto.randomUUID(), registryId: null, title: name },
+    ]);
     setQuery("");
   }
 
@@ -55,7 +63,7 @@ export function TopicEditPanel({
       >
         {topics.map((topic, index) => (
           <Chip
-            key={topic.id ?? `draft-${index}`}
+            key={topic.id}
             variant="outline"
             shape="rounded"
             disabled={disabled}

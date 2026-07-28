@@ -43,7 +43,7 @@ function TopicSearchListContent({
       query,
       existingLabels: topics.map((topic) => topic.title),
     });
-  const attachedIds = new Set(topics.map((topic) => topic.id));
+  const attachedIds = new Set(topics.map((topic) => topic.registryId));
 
   return (
     <LabelSearchList
