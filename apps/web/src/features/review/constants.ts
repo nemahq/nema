@@ -3,6 +3,7 @@ import {
   type DigestType,
   REFERENCE_TYPES,
   type ReferenceType,
+  type RelationType,
 } from "@nema-io/shared";
 import type { BadgeVariant, TagColor } from "@nema-io/weave";
 import type { IconComponent } from "@nema-io/weave/icons";
@@ -18,6 +19,17 @@ export const DIGEST_TYPE_LABEL_KEY: Record<DigestType, TranslationKey> = {
   learning: "review.digest_type_learning",
   idea: "review.digest_type_idea",
   assumption: "review.digest_type_assumption",
+};
+
+// relation_confident_applied는 사람 판정(conflict/duplicate)과 카드 모양이 같아
+// 구분이 안 되므로, 어떤 관계로 자동 연결됐는지 최소한의 캡션으로 드러낸다.
+export const CONFIDENT_RELATION_TYPE_LABEL_KEY: Record<
+  Extract<RelationType, "supports" | "replaces" | "resolves">,
+  TranslationKey
+> = {
+  supports: "review.relation_type_supports",
+  replaces: "review.relation_type_replaces",
+  resolves: "review.relation_type_resolves",
 };
 
 // weave는 색조만 알고 그게 무엇을 가리키는지는 모른다 — Digest 타입을 어느 색에

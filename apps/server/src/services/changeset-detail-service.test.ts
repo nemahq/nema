@@ -406,12 +406,12 @@ describe("getChangesetByNumber", () => {
       number: 7,
     });
 
-    expect(result.body).toEqual({ kind: "revert" });
+    expect(result.body).toEqual({ kind: "revert", revertsNumber: 2 });
     expect(result.revertsId).toBe(ORIGINAL_ID);
     expect(result.revertsNumber).toBe(2);
   });
 
-  it("확신 관계 자동 적용(conflicts/duplicates가 아닌 relation) — 크래시 없이 unsupported로 폴백", async () => {
+  it("확신 관계 자동 적용(supports 1건) — relations 배열에 담아 돌려준다", async () => {
     const supabase = mockSupabase({
       changesets: [
         {
@@ -441,6 +441,21 @@ describe("getChangesetByNumber", () => {
           ],
         },
       ],
+      statements: [
+        {
+          id: STATEMENT_A_ID,
+          content: "A가 B를 뒷받침",
+          status: "active",
+          digest_id: DIGEST_A_ID,
+        },
+        {
+          id: STATEMENT_B_ID,
+          content: "B",
+          status: "active",
+          digest_id: DIGEST_B_ID,
+        },
+      ],
+      digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
     });
 
     const result = await getChangesetByNumber({
@@ -449,7 +464,226 @@ describe("getChangesetByNumber", () => {
       number: 8,
     });
 
-    expect(result.body).toEqual({ kind: "unsupported" });
+    expect(result.body.kind).toBe("relation_confident_applied");
+    if (result.body.kind !== "relation_confident_applied") {
+      throw new Error("unreachable");
+    }
+    expect(result.body.relations).toHaveLength(1);
+    expect(result.body.relations[0].relationType).toBe("supports");
+    expect(result.body.relations[0].from.statementStatus).toBe("active");
+    expect(result.body.relations[0].to.statementStatus).toBe("active");
+  });
+
+  it("확신 관계 자동 적용(배치 N건) — apply_relation_changesets가 한 changeset에 성공한 관계마다 change 행을 쌓으므로 전부 relations에 담아야 한다(누락 회귀 가드)", async () => {
+    const STATEMENT_C_ID = "88888888-8888-4888-8888-888888888888";
+    const STATEMENT_D_ID = "99999999-9999-4999-8999-999999999999";
+    const DIGEST_C_ID = "aaaaaaaa-1111-4111-8111-111111111111";
+    const DIGEST_D_ID = "bbbbbbbb-2222-4222-8222-222222222222";
+
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-12",
+          space_id: SPACE_ID,
+          number: 12,
+          type: "relation",
+          status: "closed",
+          outcome: "applied",
+          title: "제목",
+          source_id: null,
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              action: "create",
+              target_type: "relation",
+              target_id: "rel-7",
+              data: {
+                type: "supports",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
+              },
+            },
+            {
+              action: "create",
+              target_type: "relation",
+              target_id: "rel-8",
+              data: {
+                type: "replaces",
+                from_id: STATEMENT_C_ID,
+                to_id: STATEMENT_D_ID,
+              },
+            },
+          ],
+        },
+      ],
+      statements: [
+        {
+          id: STATEMENT_A_ID,
+          content: "A가 B를 뒷받침",
+          status: "active",
+          digest_id: DIGEST_A_ID,
+        },
+        {
+          id: STATEMENT_B_ID,
+          content: "B",
+          status: "active",
+          digest_id: DIGEST_B_ID,
+        },
+        {
+          id: STATEMENT_C_ID,
+          content: "새 진술",
+          status: "active",
+          digest_id: DIGEST_C_ID,
+        },
+        {
+          id: STATEMENT_D_ID,
+          content: "지난 진술",
+          status: "archived",
+          digest_id: DIGEST_D_ID,
+        },
+      ],
+      digests: [
+        digestRow(DIGEST_A_ID),
+        digestRow(DIGEST_B_ID),
+        digestRow(DIGEST_C_ID),
+        digestRow(DIGEST_D_ID),
+      ],
+    });
+
+    const result = await getChangesetByNumber({
+      supabase,
+      spaceId: SPACE_ID,
+      number: 12,
+    });
+
+    expect(result.body.kind).toBe("relation_confident_applied");
+    if (result.body.kind !== "relation_confident_applied") {
+      throw new Error("unreachable");
+    }
+    expect(result.body.relations).toHaveLength(2);
+    expect(result.body.relations.map((r) => r.relationType).sort()).toEqual([
+      "replaces",
+      "supports",
+    ]);
+    const replacesRelation = result.body.relations.find(
+      (r) => r.relationType === "replaces",
+    );
+    expect(replacesRelation?.to.statementStatus).toBe("archived");
+  });
+
+  it("확신 관계 거절됨(낮은 확신도가 open으로 갔다가 reject됨) — unsupported가 아니라 discarded로 뭉갠다", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-13",
+          space_id: SPACE_ID,
+          number: 13,
+          type: "relation",
+          status: "closed",
+          outcome: "discarded",
+          title: "제목",
+          source_id: null,
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              action: "create",
+              target_type: "relation",
+              target_id: "rel-9",
+              data: {
+                type: "supports",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
+              },
+            },
+          ],
+        },
+      ],
+      // 거절 시엔 내용을 조회하지 않는다 — 픽스처 부재가 회귀 가드(위 conflict 거절 테스트와 같은 원칙).
+    });
+
+    const result = await getChangesetByNumber({
+      supabase,
+      spaceId: SPACE_ID,
+      number: 13,
+    });
+
+    expect(result.body).toEqual({ kind: "relation_confident_discarded" });
+  });
+
+  it("충돌 판정 완료 — 원래 conflicts 제안 행 뒤에 판정 결과 replaces 행이 추가돼도(행 순서 무관) 여전히 relation_conflict_applied로 렌더된다", async () => {
+    // resolve_conflict_relation은 원래 conflicts 제안 change 행을 그대로 둔 채
+    // 판정 결과 replaces change 행을 새로 추가한다 — 한 changeset에 relation
+    // 행이 2개가 되고, PostgREST embed 순서는 보장되지 않는다. replaces 행을
+    // 먼저 두어(order 의존 시 실패하도록) 순서 무관 동작을 검증한다.
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-14",
+          space_id: SPACE_ID,
+          number: 14,
+          type: "relation",
+          status: "closed",
+          outcome: "applied",
+          title: "A vs B",
+          source_id: null,
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              action: "create",
+              target_type: "relation",
+              target_id: "rel-10",
+              data: {
+                type: "replaces",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
+              },
+            },
+            {
+              action: "create",
+              target_type: "relation",
+              target_id: "rel-11",
+              data: {
+                type: "conflicts",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
+              },
+            },
+          ],
+        },
+      ],
+      statements: [
+        {
+          id: STATEMENT_A_ID,
+          content: "이긴 진술",
+          status: "active",
+          digest_id: DIGEST_A_ID,
+        },
+        {
+          id: STATEMENT_B_ID,
+          content: "진 진술",
+          status: "archived",
+          digest_id: DIGEST_B_ID,
+        },
+      ],
+      digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
+    });
+
+    const result = await getChangesetByNumber({
+      supabase,
+      spaceId: SPACE_ID,
+      number: 14,
+    });
+
+    expect(result.body.kind).toBe("relation_conflict_applied");
   });
 
   it("존재하지 않는 번호 — SupabaseError(not_found)를 던진다(원문 메시지가 그대로 새지 않게)", async () => {

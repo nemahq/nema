@@ -15,6 +15,7 @@ import { useTranslation } from "@web/lib/tolgee";
 import { ChangesetDetailHeader } from "./ChangesetDetailHeader";
 import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
 import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
+import { ChangesetRecordBody } from "./ChangesetRecordBody";
 
 function ChangesetRecordContent() {
   const { t } = useTranslation();
@@ -71,6 +72,7 @@ function ChangesetRecordContent() {
           )
         }
       />
+      <ChangesetRecordBody changesetDetail={changesetDetail} />
     </ChangesetDetailLayout>
   );
 }
