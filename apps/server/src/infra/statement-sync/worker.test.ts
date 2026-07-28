@@ -196,6 +196,8 @@ describe("createStatementSyncWorker", () => {
           due_date: null,
           digest_id: DIGEST_ID_1,
           index: 0,
+          source_field: null,
+          source_field_index: null,
         },
         {
           content: "확신도 빠진 추정.",
@@ -204,6 +206,8 @@ describe("createStatementSyncWorker", () => {
           due_date: null,
           digest_id: DIGEST_ID_1,
           index: 1,
+          source_field: null,
+          source_field_index: null,
         },
         {
           content: "열린 질문.",
@@ -212,6 +216,8 @@ describe("createStatementSyncWorker", () => {
           due_date: null,
           digest_id: DIGEST_ID_1,
           index: 2,
+          source_field: null,
+          source_field_index: null,
         },
       ],
     });
@@ -492,6 +498,8 @@ describe("createStatementSyncWorker", () => {
         due_date: null,
         digest_id: DIGEST_ID_1,
         index: 0,
+        source_field: null,
+        source_field_index: null,
       },
       {
         content: "학습 진술",
@@ -500,6 +508,8 @@ describe("createStatementSyncWorker", () => {
         due_date: null,
         digest_id: DIGEST_ID_2,
         index: 1,
+        source_field: null,
+        source_field_index: null,
       },
     ]);
   });

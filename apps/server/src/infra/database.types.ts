@@ -912,6 +912,8 @@ export type Database = {
           ingestion_retry_count: number;
           ingestion_status: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt: string | null;
+          source_field: string | null;
+          source_field_index: number | null;
           space_id: string;
           status: Database["public"]["Enums"]["statement_status"];
           type: Database["public"]["Enums"]["statement_type"];
@@ -930,6 +932,8 @@ export type Database = {
           ingestion_retry_count?: number;
           ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt?: string | null;
+          source_field?: string | null;
+          source_field_index?: number | null;
           space_id: string;
           status?: Database["public"]["Enums"]["statement_status"];
           type: Database["public"]["Enums"]["statement_type"];
@@ -948,6 +952,8 @@ export type Database = {
           ingestion_retry_count?: number;
           ingestion_status?: Database["public"]["Enums"]["ingestion_status"];
           last_ingestion_attempt?: string | null;
+          source_field?: string | null;
+          source_field_index?: number | null;
           space_id?: string;
           status?: Database["public"]["Enums"]["statement_status"];
           type?: Database["public"]["Enums"]["statement_type"];
