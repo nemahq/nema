@@ -11,7 +11,7 @@ import {
   REFERENCE_TITLE_MAX_LENGTH,
   ReferenceTypeSchema,
 } from "./reference";
-import { TagDraftSchema } from "./tag";
+import { TagColorSchema, TagDraftSchema } from "./tag";
 import { TOPIC_TITLE_MAX_LENGTH } from "./topic";
 
 // 멀티 라벨 보수적 상한 — 평소 1개, 명확히 다주제일 때만 여러 개. 군집화 방지.
@@ -95,8 +95,13 @@ export const ReviewTopicDraftSchema = DigestTopicDraftSchema.extend({
 });
 export type ReviewTopicDraft = z.infer<typeof ReviewTopicDraftSchema>;
 
+// color는 id와 같은 자리에서 함께 배정된다(write_ingestion_review_changes,
+// TagEditPanel handleSubmitNew) — 신규든 재사용이든 화면에 보일 색을 항상
+// 들고 다닌다(title/description이 registryId 유무와 무관하게 항상 채워지는
+// 것과 같은 이유).
 export const ReviewTagDraftSchema = DigestTagDraftSchema.extend({
   id: z.string().uuid(),
+  color: TagColorSchema,
 });
 export type ReviewTagDraft = z.infer<typeof ReviewTagDraftSchema>;
 

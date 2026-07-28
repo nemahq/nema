@@ -183,10 +183,13 @@ export {
 } from "./schemas/statement-search";
 export {
   type Tag,
+  TAG_COLORS,
   TAG_DESCRIPTION_MAX_LENGTH,
   TAG_LIST_SCOPES,
   TAG_STATUSES,
   TAG_TITLE_MAX_LENGTH,
+  type TagColor,
+  TagColorSchema,
   type TagDraft,
   TagDraftSchema,
   type TagIdInput,

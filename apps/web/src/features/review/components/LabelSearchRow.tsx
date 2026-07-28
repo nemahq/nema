@@ -46,7 +46,7 @@ export function LabelSearchRow({
 
   const row = (
     <ComboboxItem
-      alreadySelected={attached}
+      readOnly={attached}
       onClick={onSelect}
       actions={actions}
       buttonClassName="py-1"

@@ -16,10 +16,26 @@ export const TAG_STATUSES = ["active", "archived"] as const;
 export const TagStatusSchema = z.enum(TAG_STATUSES);
 export type TagStatus = z.infer<typeof TagStatusSchema>;
 
+// DB enum tag_color의 SSOT — weave TagColor(Chip.tsx)와 값이 같아야 한다(AA 대비
+// 검증된 8종을 그대로 재사용, 새 팔레트를 따로 만들지 않는다).
+export const TAG_COLORS = [
+  "slate",
+  "cyan",
+  "sage",
+  "olive",
+  "terracotta",
+  "rose",
+  "mauve",
+  "violet",
+] as const;
+export const TagColorSchema = z.enum(TAG_COLORS);
+export type TagColor = z.infer<typeof TagColorSchema>;
+
 export const TagSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
   description: z.string(),
+  color: TagColorSchema,
   status: TagStatusSchema,
   // Postgres timestamptz는 +00:00 offset을 달고 오므로 offset 허용이 필수.
   createdAt: z.string().datetime({ offset: true }),

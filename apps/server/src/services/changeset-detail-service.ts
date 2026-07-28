@@ -2,6 +2,7 @@ import {
   type DigestBody,
   DigestBodySchema,
   type RelationType,
+  type TagColor,
 } from "@nema-io/shared";
 
 import type { Database } from "@server/infra/database.types";
@@ -24,7 +25,7 @@ interface DigestSnapshot {
   description: string;
   body: DigestBody;
   topics: { id: string; title: string }[];
-  tags: { id: string; title: string; description: string }[];
+  tags: { id: string; title: string; description: string; color: TagColor }[];
   referenceIds: string[];
   externalUrls: string[];
   authorId: string | null;
@@ -125,7 +126,7 @@ async function fetchDigestSnapshots(args: {
   const { data: rows, error } = await supabase
     .from("digests")
     .select(
-      "id, title, description, body, external_urls, author_id, author_name, status, created_at, source_id, digest_topics(topic:topics(id, title)), digest_tags(tag:tags(id, title, description)), digest_references(reference_id)",
+      "id, title, description, body, external_urls, author_id, author_name, status, created_at, source_id, digest_topics(topic:topics(id, title)), digest_tags(tag:tags(id, title, description, color)), digest_references(reference_id)",
     )
     .in("id", digestIds);
   throwIfSupabaseError(error);
@@ -146,6 +147,7 @@ async function fetchDigestSnapshots(args: {
           id: dt.tag.id,
           title: dt.tag.title,
           description: dt.tag.description,
+          color: dt.tag.color,
         })),
         referenceIds: row.digest_references.map((dr) => dr.reference_id),
         externalUrls: row.external_urls ?? [],

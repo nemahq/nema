@@ -978,6 +978,7 @@ export type Database = {
       };
       tags: {
         Row: {
+          color: Database["public"]["Enums"]["tag_color"];
           created_at: string;
           description: string;
           id: string;
@@ -987,6 +988,7 @@ export type Database = {
           workspace_id: string;
         };
         Insert: {
+          color?: Database["public"]["Enums"]["tag_color"];
           created_at?: string;
           description: string;
           id?: string;
@@ -996,6 +998,7 @@ export type Database = {
           workspace_id: string;
         };
         Update: {
+          color?: Database["public"]["Enums"]["tag_color"];
           created_at?: string;
           description?: string;
           id?: string;
@@ -1337,6 +1340,10 @@ export type Database = {
         Returns: number;
       };
       purge_job_last_success: { Args: never; Returns: string };
+      random_tag_color: {
+        Args: never;
+        Returns: Database["public"]["Enums"]["tag_color"];
+      };
       read_sync_events: {
         Args: { p_batch_size?: number; p_visibility_timeout?: number };
         Returns: {
@@ -1508,6 +1515,15 @@ export type Database = {
       statement_confidence: "certain" | "guess";
       statement_status: "active" | "archived";
       statement_type: "claim" | "question";
+      tag_color:
+        | "slate"
+        | "cyan"
+        | "sage"
+        | "olive"
+        | "terracotta"
+        | "rose"
+        | "mauve"
+        | "violet";
       tag_status: "active" | "archived";
       topic_status: "active" | "archived";
       workspace_role: "owner" | "member";
@@ -1673,6 +1689,16 @@ export const Constants = {
       statement_confidence: ["certain", "guess"],
       statement_status: ["active", "archived"],
       statement_type: ["claim", "question"],
+      tag_color: [
+        "slate",
+        "cyan",
+        "sage",
+        "olive",
+        "terracotta",
+        "rose",
+        "mauve",
+        "violet",
+      ],
       tag_status: ["active", "archived"],
       topic_status: ["active", "archived"],
       workspace_role: ["owner", "member"],

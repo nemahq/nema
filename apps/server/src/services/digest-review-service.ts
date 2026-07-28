@@ -6,8 +6,13 @@ import type {
   ReferenceMergeUpdate,
   ReviewDigestDraft,
   ReviewNewReferenceDraft,
+  TagColor,
 } from "@nema-io/shared";
-import { DigestBodySchema, ReferenceTypeSchema } from "@nema-io/shared";
+import {
+  DigestBodySchema,
+  ReferenceTypeSchema,
+  TagColorSchema,
+} from "@nema-io/shared";
 
 import type { Json } from "@server/infra/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
@@ -33,6 +38,7 @@ const StoredIngestionDigestDataSchema = z.object({
       id: z.string().uuid(),
       title: z.string(),
       description: z.string(),
+      color: TagColorSchema,
     }),
   ),
   reference_ids: z.array(z.string().uuid()),
@@ -192,17 +198,17 @@ export async function getReview(args: {
     }
   }
 
-  const tagIdByTitle = new Map<string, string>();
+  const tagRegistryByTitle = new Map<string, { id: string; color: TagColor }>();
   if (tagTitles.length > 0) {
     const { data: tagRows, error: tagError } = await supabase
       .from("tags")
-      .select("id, title")
+      .select("id, title, color")
       .eq("workspace_id", changeset.spaces.workspace_id)
       .eq("status", "active")
       .in("title", tagTitles);
     throwIfSupabaseError(tagError);
     for (const row of tagRows ?? []) {
-      tagIdByTitle.set(row.title, row.id);
+      tagRegistryByTitle.set(row.title, { id: row.id, color: row.color });
     }
   }
 
@@ -217,12 +223,20 @@ export async function getReview(args: {
       registryId: topicIdByTitle.get(topic.title) ?? null,
       title: topic.title,
     })),
-    tags: digestData.tags.map((tag) => ({
-      id: tag.id,
-      registryId: tagIdByTitle.get(tag.title) ?? null,
-      title: tag.title,
-      description: tag.description,
-    })),
+    tags: digestData.tags.map((tag) => {
+      const registryTag = tagRegistryByTitle.get(tag.title);
+      return {
+        id: tag.id,
+        registryId: registryTag?.id ?? null,
+        title: tag.title,
+        description: tag.description,
+        // 기존 태그를 엔진이 재제안하면 draft 색은 write_ingestion_review_changes가
+        // 뽑은 랜덤값일 뿐이다 — confirm_ingestion_review는 기존 태그의 색을 안
+        // 덮으므로, 리뷰 화면도 draft 색이 아니라 레지스트리의 실제 색을 보여줘야
+        // 리뷰에서 본 색과 확정 후 저장된 색이 어긋나지 않는다.
+        color: registryTag?.color ?? tag.color,
+      };
+    }),
     referenceIds: digestData.reference_ids.filter(
       (id) => !newReferenceIds.has(id),
     ),
@@ -320,6 +334,7 @@ export async function updateReview(args: {
           id: tag.id,
           title: tag.title,
           description: tag.description,
+          color: tag.color,
         })),
         reference_ids: digest.referenceIds,
         new_reference_keys: digest.newReferenceKeys,

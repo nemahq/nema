@@ -303,7 +303,7 @@ describe("getReview", () => {
     ]);
   });
 
-  it("topic·tag를 이름으로 Space/Workspace 레지스트리와 매칭해 기존(registryId)/신규(null)를 가르고, 저장된 항목 id는 그대로 왕복한다", async () => {
+  it("topic·tag를 이름으로 Space/Workspace 레지스트리와 매칭해 기존(registryId)/신규(null)를 가르고, 저장된 항목 id는 그대로 왕복하며, 기존 태그는 draft 색 대신 레지스트리 색을 쓴다", async () => {
     const supabase = mockSupabase({
       changesets: {
         id: CHANGESET_ID,
@@ -339,11 +339,13 @@ describe("getReview", () => {
                   id: TAG_DRAFT_ID_1,
                   title: "기존 태그",
                   description: "기존 정의",
+                  color: "cyan",
                 },
                 {
                   id: TAG_DRAFT_ID_2,
                   title: "새 태그",
                   description: "새 정의",
+                  color: "olive",
                 },
               ],
               reference_ids: [],
@@ -353,7 +355,11 @@ describe("getReview", () => {
         ],
       },
       topics: [{ id: EXISTING_TOPIC_REGISTRY_ID, title: "기존 주제" }],
-      tags: [{ id: EXISTING_TAG_REGISTRY_ID, title: "기존 태그" }],
+      // 레지스트리 색(violet)을 draft 색(cyan)과 다르게 둬서, 기존 태그가
+      // registryId로 매칭되면 draft 색이 아니라 레지스트리 색을 쓰는지 검증한다.
+      tags: [
+        { id: EXISTING_TAG_REGISTRY_ID, title: "기존 태그", color: "violet" },
+      ],
     });
 
     const review = await getReview({ supabase, spaceId: SPACE_ID, number: 12 });
@@ -372,12 +378,14 @@ describe("getReview", () => {
         registryId: EXISTING_TAG_REGISTRY_ID,
         title: "기존 태그",
         description: "기존 정의",
+        color: "violet",
       },
       {
         id: TAG_DRAFT_ID_2,
         registryId: null,
         title: "새 태그",
         description: "새 정의",
+        color: "olive",
       },
     ]);
     expect(supabase.eqCallsByTable.topics).toContainEqual(["status", "active"]);
@@ -515,12 +523,14 @@ describe("updateReview", () => {
               registryId: EXISTING_TAG_REGISTRY_ID,
               title: "기존 태그",
               description: "기존 정의",
+              color: "cyan",
             },
             {
               id: TAG_DRAFT_ID_2,
               registryId: null,
               title: "새 태그",
               description: "새 정의",
+              color: "olive",
             },
           ],
           referenceIds: [],
@@ -548,8 +558,14 @@ describe("updateReview", () => {
                 id: TAG_DRAFT_ID_1,
                 title: "기존 태그",
                 description: "기존 정의",
+                color: "cyan",
               },
-              { id: TAG_DRAFT_ID_2, title: "새 태그", description: "새 정의" },
+              {
+                id: TAG_DRAFT_ID_2,
+                title: "새 태그",
+                description: "새 정의",
+                color: "olive",
+              },
             ],
           }),
         ],

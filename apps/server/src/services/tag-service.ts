@@ -10,7 +10,7 @@ export async function listTags(args: {
 }): Promise<{ tags: Tag[] }> {
   let query = args.supabase
     .from("tags")
-    .select("id, title, description, status, created_at")
+    .select("id, title, description, color, status, created_at")
     .order("title", { ascending: true });
 
   if (args.scope !== "all") {
@@ -25,6 +25,7 @@ export async function listTags(args: {
       id: row.id,
       title: row.title,
       description: row.description,
+      color: row.color,
       status: row.status,
       createdAt: row.created_at,
     })),

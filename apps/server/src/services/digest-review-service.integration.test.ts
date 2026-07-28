@@ -11,6 +11,8 @@ import {
   it,
 } from "vitest";
 
+import { TAG_COLORS } from "@nema-io/shared";
+
 // changeset-service.integration.test.ts와 같은 이유로 로컬 Postgres에 슈퍼유저로 직접 붙는다.
 const LOCAL_DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
@@ -375,5 +377,90 @@ describe("update_pending_ingestion RPC (integration)", () => {
        ) AS can_execute`,
     );
     expect(rows[0].can_execute).toBe(false);
+  });
+});
+
+describe("Tag color 배정 (write_ingestion_review_changes/confirm_ingestion_review, integration)", () => {
+  it("엔진이 제안한 신규 Tag draft에 8개 팔레트 중 하나의 color가 채워진다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId);
+    const sourceId = await createFixtureSource(spaceId);
+    const changesetId = await createReview({
+      sourceId,
+      digests: [
+        fixtureDigest({
+          title: "d1",
+          tags: [{ title: "신규 태그", description: "정의" }],
+        }),
+      ],
+    });
+
+    const changes = await getChanges(changesetId, "digest");
+    const tags = requireChangeByTitle(changes, "d1").data.tags as Array<{
+      id: string;
+      color: string;
+    }>;
+    expect(tags).toHaveLength(1);
+    expect(tags[0].id).toBeTruthy();
+    expect(TAG_COLORS).toContain(tags[0].color);
+  });
+
+  // 정의(description)와 같은 원칙 — 재사용 판단·표시 기준인 color는 리뷰 확정
+  // 한 번이 조용히 바꾸면 안 된다(20260728110000 마이그레이션 주석 참고).
+  it("확정 시 신규 Tag는 draft가 보여준 color를 레지스트리에 이어받고, 기존 Tag의 color는 덮지 않는다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId);
+    const sourceId = await createFixtureSource(spaceId);
+
+    const { rows: existingTagRows } = await client.query<{ id: string }>(
+      "INSERT INTO tags (workspace_id, title, description, color) VALUES ($1, $2, $3, 'violet') RETURNING id",
+      [workspaceId, "기존 태그", "기존 정의"],
+    );
+    const existingTagId = existingTagRows[0].id;
+
+    const changesetId = await createReview({
+      sourceId,
+      digests: [
+        fixtureDigest({
+          title: "d1",
+          tags: [
+            { title: "기존 태그", description: "기존 정의" },
+            { title: "신규 태그", description: "새 정의" },
+          ],
+        }),
+      ],
+    });
+
+    const draftTags = requireChangeByTitle(
+      await getChanges(changesetId, "digest"),
+      "d1",
+    ).data.tags as Array<{ title: string; color: string }>;
+    const draftNewTagColor = draftTags.find(
+      (tag) => tag.title === "신규 태그",
+    )?.color;
+
+    await client.query("SELECT confirm_ingestion_review($1)", [changesetId]);
+
+    const { rows: tagRows } = await client.query<{
+      id: string;
+      title: string;
+      color: string;
+    }>("SELECT id, title, color FROM tags WHERE workspace_id = $1", [
+      workspaceId,
+    ]);
+
+    const existing = tagRows.find((row) => row.id === existingTagId);
+    expect(existing?.color).toBe("violet");
+
+    const created = tagRows.find((row) => row.title === "신규 태그");
+    expect(created?.color).toBe(draftNewTagColor);
   });
 });
