@@ -1,6 +1,9 @@
 import { useState } from "react";
 
+import { Alert } from "@nema-io/weave";
+
 import type { IdleDraftStatus } from "@web/features/intake/utils";
+import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftBodyEditor } from "./DraftBodyEditor";
 import { DraftDeleteAction } from "./DraftDeleteAction";
@@ -29,7 +32,10 @@ export function IdleDraftDetailPanel({
   inputChangedSinceDigestion,
   onClose,
 }: IdleDraftDetailPanelProps) {
+  const { t } = useTranslation();
   const [isStartingDigestion, setIsStartingDigestion] = useState(false);
+  // IdleDraftCard의 STATUS_ICON 표시 조건과 같은 라이프사이클을 공유한다.
+  const showNoResultBanner = status === "empty" && !inputChangedSinceDigestion;
 
   return (
     <div className="flex h-full flex-col">
@@ -50,6 +56,11 @@ export function IdleDraftDetailPanel({
           />
         }
       />
+      {showNoResultBanner && (
+        <div className="px-6 pt-3">
+          <Alert variant="warning">{t("intake.draft_no_result")}</Alert>
+        </div>
+      )}
       <DraftTitleInput
         sourceId={sourceId}
         initialTitle={title}

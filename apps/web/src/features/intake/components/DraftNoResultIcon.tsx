@@ -15,7 +15,7 @@ export function DraftNoResultIcon() {
         <SearchX className="pointer-events-auto size-4 shrink-0 text-fg-tertiary" />
       </TooltipTrigger>
       <TooltipContent side="bottom">
-        {t("intake.draft_no_result_tooltip")}
+        {t("intake.draft_no_result")}
       </TooltipContent>
     </Tooltip>
   );

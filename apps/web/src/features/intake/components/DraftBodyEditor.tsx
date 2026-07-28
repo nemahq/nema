@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { SOURCE_BODY_MAX_LENGTH } from "@nema-io/shared";
 import { Button } from "@nema-io/weave";
@@ -33,6 +33,10 @@ export function DraftBodyEditor({
   const [body, setBody] = useState(initialBody);
   const updateBodyMutation = useUpdateSourceBody();
   const startDigestionMutation = useStartSourceDigestion();
+  // blur가 이미 저장을 쏜 상태로 곧바로 정리 버튼을 누르면 handleRegenerate가
+  // 같은 내용으로 또 저장을 쏴 mutation 인스턴스를 두 요청이 공유하게 된다 —
+  // 새로 쏘는 대신 이 promise를 기다리게 해 중복 호출 자체를 없앤다.
+  const pendingSaveRef = useRef<Promise<unknown> | null>(null);
   // 서버가 btrim해서 저장하므로(update_source_body) 앞뒤 공백만 다른 편집은 저장해도
   // 아무것도 안 바뀐다 — 원시 비교로 두면 그 편집이 영영 dirty로 남아 게이트가 계속
   // 열린 채 굳는다. 서버 정규화와 같은 기준으로 비교한다.
@@ -48,26 +52,43 @@ export function DraftBodyEditor({
   //
   // 저장된 변경(서버 판정)과 아직 저장 안 된 편집을 모두 인정한다 — 후자를 빼면
   // 고치자마자 누르려는데 버튼이 잠겨 blur부터 시켜야 하고, 전자를 빼면 blur로
-  // 저장되는 순간 버튼이 도로 잠긴다. 저장 전에 눌러도 handleRegenerate가 먼저
-  // 저장하므로 결과는 같다.
+  // 저장되는 순간 버튼이 도로 잠긴다.
   const canRegenerate =
     status !== "empty" || inputChangedSinceDigestion || hasSavableEdit;
   const regenerateDisabled = !canRegenerate || isStartingDigestion;
 
-  // blur 시점에 저장해 편집 중 이탈(다른 초안 클릭 등)로 잃는 걸 막는다 — 다만
-  // Organize는 이 시점에 기대지 않고 클릭 시점에 한 번 더 직접 저장한다(아래).
+  function saveBody() {
+    const promise = updateBodyMutation.mutateAsync({
+      sourceId,
+      body: savableBody,
+    });
+    pendingSaveRef.current = promise;
+    void promise.finally(() => {
+      if (pendingSaveRef.current === promise) {
+        pendingSaveRef.current = null;
+      }
+    });
+    return promise;
+  }
+
+  // blur 시점에 저장해 편집 중 이탈(다른 초안 클릭 등)로 잃는 걸 막는다. 실패는
+  // 전역 토스트(mutationCache.onError)가 이미 알리므로, 여기선 그 결과를 안 쓰고
+  // unhandled rejection만 막는다 — pendingSaveRef엔 원본 promise를 그대로 둬서
+  // handleRegenerate가 실패를 스스로 다시 확인할 수 있게 한다.
   function handleBlur() {
     if (!hasSavableEdit) {
       return;
     }
-    updateBodyMutation.mutate({ sourceId, body: savableBody });
+    void saveBody().catch(() => {});
   }
 
   async function handleRegenerate() {
     onStartingDigestionChange(true);
     try {
-      if (hasSavableEdit) {
-        await updateBodyMutation.mutateAsync({ sourceId, body: savableBody });
+      if (pendingSaveRef.current) {
+        await pendingSaveRef.current;
+      } else if (hasSavableEdit) {
+        await saveBody();
       }
       await startDigestionMutation.mutateAsync({ sourceId });
     } catch {
