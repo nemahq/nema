@@ -51,13 +51,11 @@ function RelationJudgmentContent() {
   const title = changesetDisplayTitle(changesetDetail, t);
   const { from, to } = pendingRelation.body;
 
-  function toggleSelect(statementId: string) {
+  function handleSelect(statementId: string) {
     if (locked) {
       return;
     }
-    setSelectedStatementId((prev) =>
-      prev === statementId ? null : statementId,
-    );
+    setSelectedStatementId(statementId);
   }
 
   function handleConfirm() {
@@ -126,7 +124,7 @@ function RelationJudgmentContent() {
           highlightedFieldKey={toHighlightedFieldKey(from.sourceField)}
           highlightedFieldIndex={from.sourceFieldIndex ?? undefined}
           selected={selectedStatementId === from.statementId}
-          onSelect={() => toggleSelect(from.statementId)}
+          onSelect={() => handleSelect(from.statementId)}
           sourceActive={activeTabId === SOURCE_TAB_A_ID}
           onViewSource={() => handleViewSource(SOURCE_TAB_A_ID, from)}
           disabled={locked}
@@ -136,7 +134,7 @@ function RelationJudgmentContent() {
           highlightedFieldKey={toHighlightedFieldKey(to.sourceField)}
           highlightedFieldIndex={to.sourceFieldIndex ?? undefined}
           selected={selectedStatementId === to.statementId}
-          onSelect={() => toggleSelect(to.statementId)}
+          onSelect={() => handleSelect(to.statementId)}
           sourceActive={activeTabId === SOURCE_TAB_B_ID}
           onViewSource={() => handleViewSource(SOURCE_TAB_B_ID, to)}
           disabled={locked}
