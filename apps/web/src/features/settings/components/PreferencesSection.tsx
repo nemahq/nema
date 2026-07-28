@@ -6,7 +6,6 @@ import {
   ContentLanguageSchema,
 } from "@nema-io/shared";
 import {
-  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -15,6 +14,7 @@ import {
   Text,
 } from "@nema-io/weave";
 
+import { Select } from "@web/components/ui/Select";
 import {
   LANGUAGE_LABELS,
   useProfileSuspenseQuery,

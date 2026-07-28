@@ -3,7 +3,6 @@ import { useState } from "react";
 import {
   Button,
   cn,
-  DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -13,6 +12,7 @@ import {
 } from "@nema-io/weave";
 import { Ellipsis, Trash2 } from "@nema-io/weave/icons";
 
+import { DropdownMenu } from "@web/components/ui/DropdownMenu";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface DigestCardMenuProps {

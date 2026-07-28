@@ -1,5 +1,4 @@
 import {
-  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -7,6 +6,7 @@ import {
 } from "@nema-io/weave";
 
 import { useTheme } from "@web/app/providers/ThemeProvider";
+import { Select } from "@web/components/ui/Select";
 import { useTranslation } from "@web/lib/tolgee";
 import type { ThemePreference } from "@web/utils/theme-preference";
 

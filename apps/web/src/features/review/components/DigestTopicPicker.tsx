@@ -2,13 +2,13 @@ import type { ReviewTopicDraft } from "@nema-io/shared";
 import {
   cn,
   OUTLINE_TONE_CLASSNAME,
-  Popover,
   PopoverContent,
   PopoverTrigger,
   Text,
 } from "@nema-io/weave";
 import { Circle, Plus } from "@nema-io/weave/icons";
 
+import { Popover } from "@web/components/ui/Popover";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { NewLabelIndicator } from "./NewLabelIndicator";

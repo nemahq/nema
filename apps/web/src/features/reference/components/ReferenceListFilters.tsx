@@ -1,6 +1,5 @@
 import {
   Input,
-  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -8,6 +7,7 @@ import {
 } from "@nema-io/weave";
 import { Search } from "@nema-io/weave/icons";
 
+import { Select } from "@web/components/ui/Select";
 import {
   isReferenceStatusFilter,
   isReferenceTypeFilter,

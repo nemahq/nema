@@ -9,7 +9,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -17,6 +16,7 @@ import {
 import { Check } from "@nema-io/weave/icons";
 
 import { Dialog } from "@web/components/ui/Dialog";
+import { DropdownMenu } from "@web/components/ui/DropdownMenu";
 import {
   DIGEST_TYPE_LABEL_KEY,
   DIGEST_TYPE_TAG_COLOR,

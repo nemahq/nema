@@ -6,7 +6,6 @@ import { Link } from "@tanstack/react-router";
 import type { Locale } from "@nema-io/shared";
 import { isLocale } from "@nema-io/shared";
 import {
-  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -14,6 +13,7 @@ import {
 } from "@nema-io/weave";
 
 import NemaLogo from "@web/assets/nema-logo.svg";
+import { Select } from "@web/components/ui/Select";
 
 const LOCALE_LABELS: Record<Locale, string> = {
   ko: "한국어",

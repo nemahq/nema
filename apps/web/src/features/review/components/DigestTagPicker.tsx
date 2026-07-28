@@ -1,7 +1,6 @@
 import type { ReviewTagDraft } from "@nema-io/shared";
 import {
   Badge,
-  Popover,
   PopoverContent,
   PopoverTrigger,
   TAG_COLOR_CLASSNAME,
@@ -9,6 +8,7 @@ import {
 } from "@nema-io/weave";
 import { Tag as TagIcon } from "@nema-io/weave/icons";
 
+import { Popover } from "@web/components/ui/Popover";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { NewLabelIndicator } from "./NewLabelIndicator";

@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import {
   Button,
-  Dialog,
   DialogContent,
   DialogFooter,
   DialogTitle,
@@ -11,6 +10,7 @@ import {
   Textarea,
 } from "@nema-io/weave";
 
+import { Dialog } from "@web/components/ui/Dialog";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { useUpdateReference } from "@web/features/reference/hooks/useUpdateReference";
 import type { ReferenceDetail } from "@web/features/reference/types";

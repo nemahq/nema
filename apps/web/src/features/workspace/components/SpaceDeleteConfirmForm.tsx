@@ -10,7 +10,6 @@ import {
   DialogTitle,
   Input,
   pinSelectedToTop,
-  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -19,6 +18,7 @@ import {
   Text,
 } from "@nema-io/weave";
 
+import { Select } from "@web/components/ui/Select";
 import { useDeleteSpace } from "@web/features/workspace/hooks/useDeleteSpace";
 import { useSpacePendingDraftCountSuspenseQuery } from "@web/features/workspace/hooks/useSpacePendingDraftCount";
 import { resolveSpaceDeletePayload } from "@web/features/workspace/resolveSpaceDeletePayload";

@@ -4,7 +4,6 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   Avatar,
   cn,
-  DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -18,6 +17,7 @@ import {
 import { ChevronDown, LogOut, PanelLeft, Settings } from "@nema-io/weave/icons";
 
 import { useSidebar } from "@web/components/layout/Sidebar";
+import { DropdownMenu } from "@web/components/ui/DropdownMenu";
 import { SettingsModal } from "@web/features/settings";
 import { getWorkspaceAvatarColorClass } from "@web/features/workspace/workspaceAvatarColor";
 import { useUser } from "@web/lib/auth";

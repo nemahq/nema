@@ -1,6 +1,5 @@
 import {
   Badge,
-  Select,
   SelectContent,
   SelectGroup,
   SelectItem,
@@ -9,6 +8,7 @@ import {
   SelectValue,
 } from "@nema-io/weave";
 
+import { Select } from "@web/components/ui/Select";
 import { useClearTaskModel } from "@web/features/dev-harness/hooks/useClearTaskModel";
 import { useSetTaskModel } from "@web/features/dev-harness/hooks/useSetTaskModel";
 import { useTaskModelsQuery } from "@web/features/dev-harness/hooks/useTaskModelsQuery";

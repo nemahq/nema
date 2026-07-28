@@ -1,13 +1,13 @@
 import { REFERENCE_TYPES, type ReferenceType } from "@nema-io/shared";
 import {
   Chip,
-  DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@nema-io/weave";
 import { Check } from "@nema-io/weave/icons";
 
+import { DropdownMenu } from "@web/components/ui/DropdownMenu";
 import { REFERENCE_TYPE_LABEL_KEY } from "@web/features/review/constants";
 import { useTranslation } from "@web/lib/tolgee";
 
