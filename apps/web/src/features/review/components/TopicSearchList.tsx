@@ -4,10 +4,10 @@ import type { DigestTopicDraft } from "@nema-io/shared";
 
 import { useTopicListSuspenseQuery } from "@web/features/review/hooks/useTopicListQuery";
 import {
-  buildDraftRenameExistingLabels,
+  buildDraftRenameDuplicateCheck,
   buildLabelSearchState,
   filterDraftLabelCandidates,
-  isDuplicateLabelName,
+  getActiveLabelTitles,
 } from "@web/utils/labelSearch";
 
 import { LabelDraftEditPopover } from "./LabelDraftEditPopover";
@@ -57,9 +57,10 @@ function TopicSearchListContent({
     });
   const attachedIds = new Set(topics.map((topic) => topic.id));
   const draftMatches = filterDraftLabelCandidates(topics, query);
-  const activeRegistryTitles = topicList.topics
-    .filter((topic) => topic.status === "active")
-    .map(getTopicLabel);
+  const activeRegistryTitles = getActiveLabelTitles(
+    topicList.topics,
+    getTopicLabel,
+  );
 
   return (
     <LabelSearchList
@@ -69,10 +70,10 @@ function TopicSearchListContent({
       canCreate={canCreate}
       onStartCreate={onCreateNew}
     >
-      {draftMatches.map(({ item, index }) => (
+      {draftMatches.map(({ draft, index }) => (
         <LabelSearchRow
           key={`draft-${index}`}
-          label={item.title}
+          label={draft.title}
           attached
           isNew
           actions={
@@ -81,17 +82,12 @@ function TopicSearchListContent({
               onOpenChange={(open) => setEditingIndex(open ? index : null)}
             >
               <TopicDraftRenameForm
-                title={item.title}
-                isDuplicateTitle={(candidate) =>
-                  isDuplicateLabelName(
-                    candidate,
-                    buildDraftRenameExistingLabels(
-                      activeRegistryTitles,
-                      topics.map((topic) => topic.title),
-                      index,
-                    ),
-                  )
-                }
+                title={draft.title}
+                isDuplicateTitle={buildDraftRenameDuplicateCheck({
+                  registryLabels: activeRegistryTitles,
+                  digestLabels: topics.map((topic) => topic.title),
+                  excludeAt: index,
+                })}
                 onSubmit={(title) => {
                   onRenameDraft(index, title);
                   setEditingIndex(null);

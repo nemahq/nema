@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildDraftRenameExistingLabels,
+  buildDraftRenameDuplicateCheck,
   filterActiveLabelCandidates,
   filterDraftLabelCandidates,
   hasExactLabelMatch,
@@ -100,7 +100,7 @@ const DRAFT_TOPICS: DraftTopic[] = [
 describe("filterDraftLabelCandidates", () => {
   it("id가 null인 draft만 후보로 남긴다", () => {
     const result = filterDraftLabelCandidates(DRAFT_TOPICS, "");
-    expect(result.map(({ item }) => item.title)).toEqual([
+    expect(result.map(({ draft }) => draft.title)).toEqual([
       "결제 재시도",
       "환불",
     ]);
@@ -113,26 +113,30 @@ describe("filterDraftLabelCandidates", () => {
 
   it("검색어로 draft도 다른 후보와 같이 필터링된다", () => {
     const result = filterDraftLabelCandidates(DRAFT_TOPICS, "재시도");
-    expect(result).toEqual([{ item: DRAFT_TOPICS[1], index: 1 }]);
+    expect(result).toEqual([{ draft: DRAFT_TOPICS[1], index: 1 }]);
   });
 });
 
-describe("buildDraftRenameExistingLabels", () => {
-  it("레지스트리 이름과 다른 라벨 이름을 합친다", () => {
-    const result = buildDraftRenameExistingLabels(
-      ["결제"],
-      ["결제 재시도", "환불"],
-      -1,
-    );
-    expect(result).toEqual(["결제", "결제 재시도", "환불"]);
+describe("buildDraftRenameDuplicateCheck", () => {
+  const isDuplicate = buildDraftRenameDuplicateCheck({
+    registryLabels: ["결제"],
+    digestLabels: ["결제 재시도", "환불"],
+    excludeAt: 0,
   });
 
-  it("excludeAt에 해당하는 자기 자신은 뺀다", () => {
-    const result = buildDraftRenameExistingLabels(
-      ["결제"],
-      ["결제 재시도", "환불"],
-      0,
-    );
-    expect(result).toEqual(["결제", "환불"]);
+  it("레지스트리 기존 이름과 같으면 중복이다", () => {
+    expect(isDuplicate("결제")).toBe(true);
+  });
+
+  it("같은 Digest의 다른 라벨 이름과 같으면 중복이다", () => {
+    expect(isDuplicate("환불")).toBe(true);
+  });
+
+  it("excludeAt에 해당하는 자기 자신과 같은 이름은 중복이 아니다", () => {
+    expect(isDuplicate("결제 재시도")).toBe(false);
+  });
+
+  it("어느 쪽과도 겹치지 않으면 false", () => {
+    expect(isDuplicate("배송")).toBe(false);
   });
 });

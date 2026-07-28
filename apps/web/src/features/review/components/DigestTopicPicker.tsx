@@ -64,9 +64,8 @@ export function DigestTopicPicker({
                 거는 border로 바꿔 Circle 사이 여백까지 하나로 이어지게 한다. -mb-px는
                 그 border가 늘린 박스 높이 1px을 상쇄해, Type Chip·미트볼과 나란히
                 items-center로 놓였을 때 이 버튼만 미세하게 떠 보이지 않게 한다. */}
-            {/* 인접한 신규(draft) Topic끼리는 구분자를 안 찍는다 — 신규 항목들이
-                뭉쳐 있을 때 "+"·"•"가 번갈아 반복되면 시각적으로 뭉개져 보인다.
-                기존 항목으로 넘어가거나 기존끼리일 때만 찍는다. */}
+            {/* 인접한 신규(draft) Topic끼리만 구분자를 안 찍는다 — 신규 항목들이
+                뭉쳐 있을 때 "+"·"•"가 번갈아 반복되면 시각적으로 뭉개져 보인다. */}
             {topics.map((topic, index) => {
               const prevTopic = topics[index - 1];
               const showSeparator =

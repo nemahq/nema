@@ -90,11 +90,12 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
             key={tag.id ?? `draft-${index}`}
             variant="outline"
             shape="rounded"
+            truncated
             disabled={disabled}
             onRemove={() => onChange(tags.filter((_, i) => i !== index))}
             removeAriaLabel={t("review.tag_remove_action")}
           >
-            <span className="truncate">{tag.title}</span>
+            {tag.title}
           </Chip>
         ))}
       </LabelChipRow>

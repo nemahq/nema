@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useId } from "react";
 
 import {
   Badge,
@@ -41,12 +42,19 @@ export function LabelSearchRow({
   actions,
   onSelect,
 }: LabelSearchRowProps) {
+  const descriptionId = useId();
+
   const row = (
     <ComboboxItem
       alreadySelected={attached}
       onClick={onSelect}
       actions={actions}
       buttonClassName="py-1"
+      // aria-label로 이름을 label에 고정한다 — 안 하면 버튼 접근성 이름이
+      // 아래 숨김 설명 span의 텍스트까지 이어붙여 계산돼(hidden이어도 aria-
+      // hidden이 아니라 이름 계산에서 안 빠짐) 라벨 이름이 장황해진다.
+      aria-label={label}
+      aria-describedby={description ? descriptionId : undefined}
     >
       <span className="inline-flex min-w-0 items-center gap-0">
         {isNew && <NewLabelIndicator />}
@@ -58,6 +66,14 @@ export function LabelSearchRow({
           {label}
         </Badge>
       </span>
+      {description && (
+        <span
+          id={descriptionId}
+          className="inline-block size-px overflow-hidden whitespace-nowrap"
+        >
+          {description}
+        </span>
+      )}
     </ComboboxItem>
   );
 
@@ -71,9 +87,11 @@ export function LabelSearchRow({
         {/* asChild를 ComboboxItem에 바로 걸면 안 된다 — ComboboxItem은 자기 props를
             전체 폭 바깥 div가 아니라 안쪽 flex-1 버튼에만 전달해서, actions(미트볼)
             유무에 따라 그 버튼 폭이 달라져 툴팁 기준점이 행마다 어긋난다. 여기서
-            직접 만든 w-full span을 기준점으로 고정한다. */}
+            직접 만든 w-full div를 기준점으로 고정한다(span이 아니라 div인 이유 —
+            ComboboxItem의 루트가 div라 span 안에 div를 넣으면 잘못된 HTML 중첩이
+            된다). */}
         <TooltipTrigger asChild>
-          <span className="block w-full">{row}</span>
+          <div className="block w-full">{row}</div>
         </TooltipTrigger>
         <TooltipContent side="right" className="max-w-64">
           {description}

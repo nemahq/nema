@@ -7,10 +7,9 @@ import { useTranslation } from "@web/lib/tolgee";
 
 interface TopicDraftRenameFormProps {
   title: string;
-  // 배열이 아니라 콜백으로 받는 이유 — 비교 대상 목록은 렌더마다 새로 만들어지는
-  // 배열(conventions.md: 원시값 prop 규칙)이라, 매 렌더 새 identity를 만들지
-  // 않는 콜백에 그 비교를 감싸 넘긴다. 입력값이 바뀔 때마다(키 입력마다) 이
-  // 폼 안에서만 다시 판정해야 해서 부모가 boolean 하나로 미리 계산해 둘 수도
+  // 배열이 아니라 콜백으로 받는 이유 — 비교 대상 목록은 conventions.md 원시값
+  // prop 규칙상 배열로 못 받는다(콜백은 예외). 입력값이 바뀔 때마다(키 입력마다)
+  // 이 폼 안에서만 다시 판정해야 해서 부모가 boolean 하나로 미리 계산해 둘 수도
   // 없다(TagCreateForm의 정적 title과 다름).
   isDuplicateTitle: (title: string) => boolean;
   onSubmit: (title: string) => void;

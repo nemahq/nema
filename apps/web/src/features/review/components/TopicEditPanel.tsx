@@ -64,13 +64,14 @@ export function TopicEditPanel({
             key={topic.id ?? `draft-${index}`}
             variant="outline"
             shape="rounded"
+            truncated
             disabled={disabled}
             onRemove={() => onChange(topics.filter((_, i) => i !== index))}
             removeAriaLabel={t("review.topic_remove_action", {
               label: topic.title,
             })}
           >
-            <span className="truncate">{topic.title}</span>
+            {topic.title}
           </Chip>
         ))}
       </LabelChipRow>

@@ -38,8 +38,7 @@ export function ComboboxItem({
     <div
       className={cn(
         "group flex w-full items-center",
-        LIST_ITEM_HOVER_CLASSNAME,
-        disabled && "pointer-events-none",
+        !disabled && LIST_ITEM_HOVER_CLASSNAME,
       )}
     >
       <button

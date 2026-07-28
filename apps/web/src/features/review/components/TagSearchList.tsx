@@ -4,10 +4,10 @@ import type { DigestTagDraft } from "@nema-io/shared";
 
 import { useTagListSuspenseQuery } from "@web/hooks/useTagListQuery";
 import {
-  buildDraftRenameExistingLabels,
+  buildDraftRenameDuplicateCheck,
   buildLabelSearchState,
   filterDraftLabelCandidates,
-  isDuplicateLabelName,
+  getActiveLabelTitles,
 } from "@web/utils/labelSearch";
 
 import { LabelDraftEditPopover } from "./LabelDraftEditPopover";
@@ -42,6 +42,8 @@ function TagSearchListContent({
   onRenameDraft,
 }: TagSearchListProps) {
   const [tagList] = useTagListSuspenseQuery();
+  // 한 번에 하나만 편집 — 이미 열린 걸 그대로 두면 두 편집이 같은 tags 배열을
+  // 동시에 patch하려다 서로의 변경을 덮어쓸 수 있다.
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const { candidates, trimmedQuery, hasExactMatch, canCreate } =
@@ -53,9 +55,7 @@ function TagSearchListContent({
     });
   const attachedIds = new Set(tags.map((tag) => tag.id));
   const draftMatches = filterDraftLabelCandidates(tags, query);
-  const activeRegistryTitles = tagList.tags
-    .filter((tag) => tag.status === "active")
-    .map(getTagLabel);
+  const activeRegistryTitles = getActiveLabelTitles(tagList.tags, getTagLabel);
 
   return (
     <LabelSearchList
@@ -65,11 +65,11 @@ function TagSearchListContent({
       canCreate={canCreate}
       onStartCreate={onStartCreate}
     >
-      {draftMatches.map(({ item, index }) => (
+      {draftMatches.map(({ draft, index }) => (
         <LabelSearchRow
           key={`draft-${index}`}
-          label={item.title}
-          description={item.description}
+          label={draft.title}
+          description={draft.description}
           attached
           isNew
           actions={
@@ -78,18 +78,13 @@ function TagSearchListContent({
               onOpenChange={(open) => setEditingIndex(open ? index : null)}
             >
               <TagDraftRenameForm
-                title={item.title}
-                description={item.description}
-                isDuplicateTitle={(candidate) =>
-                  isDuplicateLabelName(
-                    candidate,
-                    buildDraftRenameExistingLabels(
-                      activeRegistryTitles,
-                      tags.map((tag) => tag.title),
-                      index,
-                    ),
-                  )
-                }
+                title={draft.title}
+                description={draft.description}
+                isDuplicateTitle={buildDraftRenameDuplicateCheck({
+                  registryLabels: activeRegistryTitles,
+                  digestLabels: tags.map((tag) => tag.title),
+                  excludeAt: index,
+                })}
                 onSubmit={(title, description) => {
                   onRenameDraft(index, title, description);
                   setEditingIndex(null);
