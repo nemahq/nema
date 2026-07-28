@@ -80,7 +80,8 @@ export function useRegisterAction(
         (hasModifier || def.shortcut === "escape") && def.enableOnFormTags
           ? ["INPUT", "TEXTAREA", "SELECT"]
           : false,
-      // Radix Dialog가 Esc를 캡처 단계에서 처리해 자기 자신을 닫는데, 우리
+      // Radix Dialog/DropdownMenu/Popover/Select가 공통으로 Esc를 캡처 단계에서
+      // 처리해 자기 자신을 닫는데, 우리
       // 쪽이 버블 단계면 Radix의 캡처 핸들러가 먼저 실행되고, 그게 onOpenChange
       // → 이펙트 클린업(popOverlay)을 스케줄해버리면 우리 버블 핸들러가 실행될
       // 즈음엔 isOverlayOpen()이 이미 false일 수 있는 문제가 있었다(지연 트릭으로도

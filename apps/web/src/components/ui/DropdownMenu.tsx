@@ -4,19 +4,24 @@ import { DropdownMenu as WeaveDropdownMenu } from "@nema-io/weave";
 
 import { useOverlayOpenGuard } from "@web/lib/command/shortcut/useOverlayOpenGuard";
 
-// Dialog.tsx와 달리 open을 prop으로 받지 않고 onOpenChange를 가로채 자체
-// state로 추적한다 — 대부분의 호출부가 uncontrolled로 쓰기 때문.
+// 가드는 항상 실제 open 값(controlled면 prop, uncontrolled면 자체 state)을
+// 봐야 한다 — onOpenChange만 보면 controlled 호출부가 Radix를 거치지 않고
+// open prop을 직접 바꿨을 때 그 이벤트가 안 잡혀 가드가 영구히 열림으로
+// 고정된다(Popover.tsx의 TagAddPopover 사례 참고).
 export function DropdownMenu({
+  open,
   onOpenChange,
   ...props
 }: ComponentProps<typeof WeaveDropdownMenu>) {
-  const [open, setOpen] = useState(false);
-  useOverlayOpenGuard(open);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  useOverlayOpenGuard(open ?? uncontrolledOpen);
 
   function handleOpenChange(next: boolean) {
-    setOpen(next);
+    setUncontrolledOpen(next);
     onOpenChange?.(next);
   }
 
-  return <WeaveDropdownMenu onOpenChange={handleOpenChange} {...props} />;
+  return (
+    <WeaveDropdownMenu open={open} onOpenChange={handleOpenChange} {...props} />
+  );
 }
