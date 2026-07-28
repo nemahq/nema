@@ -16,7 +16,13 @@ const DIGEST: ReviewDigest = {
   body: { type: "decision" },
   topics: [{ id: "topic-draft-1", registryId: null, title: "주제" }],
   tags: [
-    { id: "tag-draft-1", registryId: null, title: "태그", description: "설명" },
+    {
+      id: "tag-draft-1",
+      registryId: null,
+      title: "태그",
+      description: "설명",
+      color: "slate",
+    },
   ],
   referenceIds: [],
   newReferenceKeys: [],
@@ -123,6 +129,7 @@ describe("computeReviewEditingState — 확정 차단 조건", () => {
                 registryId: null,
                 title: "",
                 description: "설명",
+                color: "cyan",
               },
             ],
           },

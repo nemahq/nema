@@ -23,6 +23,9 @@ export {
   Chip,
   type ChipShape,
   type ChipVariant,
+  getRandomTagColor,
+  TAG_COLOR_CLASSNAME,
+  TAG_COLORS,
   type TagColor,
 } from "./components/Chip";
 export { ComboboxItem } from "./components/ComboboxItem";
@@ -90,6 +93,10 @@ export {
   TAB_ACTIVE_INDICATOR_CLASSNAME,
   TAB_DIMMED_ACTIVE_INDICATOR_CLASSNAME,
 } from "./components/Tab";
+export {
+  TagColorGridPicker,
+  TagColorListPicker,
+} from "./components/TagColorPicker";
 export {
   Text,
   type TextColor,

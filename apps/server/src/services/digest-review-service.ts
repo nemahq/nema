@@ -7,7 +7,11 @@ import type {
   ReviewDigestDraft,
   ReviewNewReferenceDraft,
 } from "@nema-io/shared";
-import { DigestBodySchema, ReferenceTypeSchema } from "@nema-io/shared";
+import {
+  DigestBodySchema,
+  ReferenceTypeSchema,
+  TagColorSchema,
+} from "@nema-io/shared";
 
 import type { Json } from "@server/infra/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
@@ -33,6 +37,7 @@ const StoredIngestionDigestDataSchema = z.object({
       id: z.string().uuid(),
       title: z.string(),
       description: z.string(),
+      color: TagColorSchema,
     }),
   ),
   reference_ids: z.array(z.string().uuid()),
@@ -222,6 +227,7 @@ export async function getReview(args: {
       registryId: tagIdByTitle.get(tag.title) ?? null,
       title: tag.title,
       description: tag.description,
+      color: tag.color,
     })),
     referenceIds: digestData.reference_ids.filter(
       (id) => !newReferenceIds.has(id),
@@ -320,6 +326,7 @@ export async function updateReview(args: {
           id: tag.id,
           title: tag.title,
           description: tag.description,
+          color: tag.color,
         })),
         reference_ids: digest.referenceIds,
         new_reference_keys: digest.newReferenceKeys,

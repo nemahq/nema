@@ -4,6 +4,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  TAG_COLOR_CLASSNAME,
   Text,
 } from "@nema-io/weave";
 import { Tag as TagIcon } from "@nema-io/weave/icons";
@@ -65,7 +66,15 @@ export function DigestTagPicker({
                 className="inline-flex min-w-0 items-center gap-0"
               >
                 {tag.registryId === null && <NewLabelIndicator />}
-                <Badge variant="neutral" shape="rounded" truncated>
+                {/* variant/color 대신 className — Badge의 BadgeColor(5색, 뜻
+                    모르는 분류용)는 Tag의 TagColor(8색 파스텔 팔레트)와 다른
+                    축이라 안 맞는다. Chip은 nested <button>이 되어 이 트리거
+                    자신의 <button> 안에 못 들어가 못 쓴다. */}
+                <Badge
+                  shape="rounded"
+                  truncated
+                  className={TAG_COLOR_CLASSNAME[tag.color]}
+                >
                   {tag.title}
                 </Badge>
               </span>

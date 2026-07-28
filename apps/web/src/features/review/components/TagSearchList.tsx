@@ -1,6 +1,6 @@
 import { Suspense, useState } from "react";
 
-import type { ReviewTagDraft } from "@nema-io/shared";
+import type { ReviewTagDraft, TagColor } from "@nema-io/shared";
 
 import { useTagListSuspenseQuery } from "@web/hooks/useTagListQuery";
 import {
@@ -21,6 +21,7 @@ interface ReviewTag {
   id: string;
   title: string;
   description: string;
+  color: TagColor;
 }
 
 interface TagSearchListProps {
@@ -29,7 +30,12 @@ interface TagSearchListProps {
   tags: ReviewTagDraft[];
   onSelectExisting: (tag: ReviewTag) => void;
   onStartCreate: (title: string) => void;
-  onRenameDraft: (id: string, title: string, description: string) => void;
+  onRenameDraft: (
+    id: string,
+    title: string,
+    description: string,
+    color: TagColor,
+  ) => void;
 }
 
 const getTagLabel = (tag: { title: string }) => tag.title;
@@ -80,13 +86,14 @@ function TagSearchListContent({
               <TagDraftRenameForm
                 title={draft.title}
                 description={draft.description}
+                color={draft.color}
                 isDuplicateTitle={buildDraftRenameDuplicateCheck({
                   registryLabels: activeRegistryTitles,
                   digestLabels: tags,
                   excludeId: draft.id,
                 })}
-                onSubmit={(title, description) => {
-                  onRenameDraft(draft.id, title, description);
+                onSubmit={(title, description, color) => {
+                  onRenameDraft(draft.id, title, description, color);
                   setEditingId(null);
                 }}
               />

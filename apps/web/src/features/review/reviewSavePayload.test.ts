@@ -58,6 +58,7 @@ describe("buildUpdateReviewPayload", () => {
           registryId: null,
           title: " 새 태그 ",
           description: "설명",
+          color: "slate",
         },
       ],
     };
@@ -78,6 +79,7 @@ describe("buildUpdateReviewPayload", () => {
             registryId: null,
             title: "새 태그",
             description: "설명",
+            color: "slate",
           },
         ],
       },

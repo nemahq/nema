@@ -7,8 +7,9 @@ import { NEUTRAL_TONE_CLASSNAME, OUTLINE_TONE_CLASSNAME } from "./Badge";
 type ChipVariant = "neutral" | "outline";
 type ChipShape = "rounded" | "pill";
 
-// 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 — 색을 직접 고르지
-// 않고 태그 id 해시로 자동 배정한다(tokens/index.css "Tag" 섹션 참고).
+// 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 팔레트(tokens/index.css
+// "Tag" 섹션 참고) — 생성 시 랜덤/엔진이 초기값을 채우지만 최종 결정권은 항상
+// 사용자에게 있어 생성 폼·편집 팝오버 어디서든 8개 중 자유롭게 바꿀 수 있다.
 type TagColor =
   | "slate"
   | "cyan"
@@ -18,6 +19,22 @@ type TagColor =
   | "rose"
   | "mauve"
   | "violet";
+
+// 그리드·리스트 색상 피커가 순회하는 순서 — 위 유니언과 같은 순서를 유지한다.
+const TAG_COLORS: TagColor[] = [
+  "slate",
+  "cyan",
+  "sage",
+  "olive",
+  "terracotta",
+  "rose",
+  "mauve",
+  "violet",
+];
+
+function getRandomTagColor(): TagColor {
+  return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
+}
 
 const STATIC_TONE_CLASSNAME: Record<ChipVariant, string> = {
   neutral: NEUTRAL_TONE_CLASSNAME,
@@ -176,4 +193,12 @@ function Chip({
   );
 }
 
-export { Chip, type ChipShape, type ChipVariant, type TagColor };
+export {
+  Chip,
+  type ChipShape,
+  type ChipVariant,
+  getRandomTagColor,
+  TAG_COLOR_CLASSNAME,
+  TAG_COLORS,
+  type TagColor,
+};

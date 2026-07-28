@@ -1,15 +1,23 @@
 import { useId, useState } from "react";
 
-import { TAG_DESCRIPTION_MAX_LENGTH } from "@nema-io/shared";
-import { Badge, Button, Text, Textarea } from "@nema-io/weave";
+import { TAG_DESCRIPTION_MAX_LENGTH, type TagColor } from "@nema-io/shared";
+import {
+  Badge,
+  Button,
+  getRandomTagColor,
+  TagColorGridPicker,
+  Text,
+  Textarea,
+} from "@nema-io/weave";
 
+import { TAG_COLOR_LABEL_KEY } from "@web/features/review/constants";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface TagCreateFormProps {
   title: string;
   duplicateTitle: boolean;
   onBack: () => void;
-  onSubmit: (description: string) => void;
+  onSubmit: (description: string, color: TagColor) => void;
 }
 
 // 이름은 검색행에서 이미 확정한 값이라 다시 편집하게 두지 않고 정적 Badge로만
@@ -29,6 +37,9 @@ export function TagCreateForm({
   // 건드리기 전까지는 에러를 안 띄운다 — 안 그러면 열자마자(아직 아무것도
   // 안 쳤는데) 빈 값 에러가 뜬다(SpaceNameField.tsx의 touched 패턴과 동일).
   const [descriptionTouched, setDescriptionTouched] = useState(false);
+  // 초깃값만 랜덤 — 이후엔 그리드에서 고른 값을 그대로 들고 간다(엔진·랜덤이
+  // 채운 값은 초깃값일 뿐, 최종 결정은 항상 사용자 몫이라는 07-modeling.md 원칙).
+  const [color, setColor] = useState<TagColor>(() => getRandomTagColor());
   const descriptionInvalid = description.trim() === "";
   const submittable =
     title.trim() !== "" && !descriptionInvalid && !duplicateTitle;
@@ -83,6 +94,16 @@ export function TagCreateForm({
           {descriptionError ?? " "}
         </p>
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Text size="sm" weight="medium" color="primary">
+          {t("review.tag_color_label")}
+        </Text>
+        <TagColorGridPicker
+          value={color}
+          onChange={setColor}
+          getColorLabel={(c) => t(TAG_COLOR_LABEL_KEY[c])}
+        />
+      </div>
       <div className="flex justify-end gap-2">
         {/* 취소(common.cancel)가 아니라 뒤로(common.back) — 팝오버를 닫는 게
             아니라 검색 화면으로만 돌아간다. */}
@@ -93,7 +114,7 @@ export function TagCreateForm({
           type="button"
           size="xs"
           disabled={!submittable}
-          onClick={() => onSubmit(description.trim())}
+          onClick={() => onSubmit(description.trim(), color)}
         >
           {t("common.create")}
         </Button>

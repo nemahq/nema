@@ -4,6 +4,7 @@ import {
   DIGEST_TAGS_MAX,
   type ReviewTagDraft,
   TAG_TITLE_MAX_LENGTH,
+  type TagColor,
 } from "@nema-io/shared";
 import { Chip, Separator } from "@nema-io/weave";
 
@@ -33,10 +34,12 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
   const atMax = tags.length >= DIGEST_TAGS_MAX;
 
   // 항목 id 생성 시점은 TopicEditPanel과 같은 이유로 여기다(그 주석 참고).
+  // 색도 id와 같은 자리에서 함께 배정한다(#515와 같은 원칙 — 20260728021441).
   function handleSelectExisting(tag: {
     id: string;
     title: string;
     description: string;
+    color: TagColor;
   }) {
     onChange([
       ...tags,
@@ -45,23 +48,35 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
         registryId: tag.id,
         title: tag.title,
         description: tag.description,
+        color: tag.color,
       },
     ]);
     setQuery("");
   }
 
-  function handleSubmitNew(title: string, description: string) {
+  function handleSubmitNew(
+    title: string,
+    description: string,
+    color: TagColor,
+  ) {
     onChange([
       ...tags,
-      { id: crypto.randomUUID(), registryId: null, title, description },
+      { id: crypto.randomUUID(), registryId: null, title, description, color },
     ]);
     setQuery("");
     setCreatingTitle(null);
   }
 
-  function handleRenameDraft(id: string, title: string, description: string) {
+  function handleRenameDraft(
+    id: string,
+    title: string,
+    description: string,
+    color: TagColor,
+  ) {
     onChange(
-      tags.map((tag) => (tag.id === id ? { ...tag, title, description } : tag)),
+      tags.map((tag) =>
+        tag.id === id ? { ...tag, title, description, color } : tag,
+      ),
     );
   }
 
@@ -79,8 +94,8 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
           tags.map((tag) => tag.title),
         )}
         onBack={() => setCreatingTitle(null)}
-        onSubmit={(description) =>
-          handleSubmitNew(creatingTitle.trim(), description)
+        onSubmit={(description, color) =>
+          handleSubmitNew(creatingTitle.trim(), description, color)
         }
       />
     );
@@ -99,7 +114,7 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
         {sortedTags.map((tag) => (
           <Chip
             key={tag.id}
-            variant="outline"
+            color={tag.color}
             shape="rounded"
             truncated
             disabled={disabled}
