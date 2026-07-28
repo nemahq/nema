@@ -9,37 +9,18 @@ import { supabase } from "@web/lib/supabase";
 import { queryClient } from "@web/lib/tanstack-query";
 import { trpc } from "@web/lib/trpc";
 
+import { invalidateUnlessFresh } from "./invalidateUnlessFresh";
+
 const CHANNEL_NAME = "realtime-invalidation";
 
 // digestion 파이프라인이 소스 하나를 처리하며 sources row를 여러 번 UPDATE하므로,
 // 짧은 간격으로 연달아 오는 이벤트를 마지막 것 기준 한 번으로 묶는다.
 const PENDING_SOURCES_INVALIDATE_DEBOUNCE_MS = 500;
 
-// 이 값들을 바꾸는 mutation은 자기 onSettled로 이미 재조회를 걸어둔 경우가 많다
-// (query-conventions.md 참고) — 그 응답이 막 도착한 직후(이 창 안)라면 같은 걸
-// realtime이 또 부르지 않는다. 창을 넘겨도 못 잡으면 그냥 한 번 더 부르는 것뿐이라
-// (디바운스가 이미 걸려있음) 넉넉하게 잡는다.
-const SKIP_INVALIDATE_IF_FRESHER_THAN_MS = 2_000;
-
-// getQueryState는 정확히 일치하는 키만 찾는다 — changeset.listChangesets는
-// useSuspenseInfiniteQuery라 실제 캐시 키에 { spaceId, open, limit } input과
-// type: "infinite"가 들어가 있어 prefix 키로는 절대 못 찾는다(findAll처럼
-// partial match를 쓰는 쪽으로 통일해야 이 쿼리도 같이 맞는다). 인스턴스가 여럿일
-// 수 있는 쿼리(예: open/closed 탭별로 따로 캐시됨)라, 그중 하나라도 최근 걸 못
-// 찾으면(=하나라도 없거나 오래됐으면) 건너뛰지 않는다.
-function invalidateUnlessFresh(queryKey: readonly unknown[]) {
-  const queries = queryClient.getQueryCache().findAll({ queryKey });
-  const allFresh =
-    queries.length > 0 &&
-    queries.every(
-      (query) =>
-        Date.now() - query.state.dataUpdatedAt <
-        SKIP_INVALIDATE_IF_FRESHER_THAN_MS,
-    );
-  if (allFresh) {
-    return Promise.resolve();
-  }
-  return queryClient.invalidateQueries({ queryKey });
+// row 모양이 뭐든(sources·changesets 둘 다 재사용) commit_timestamp 하나만
+// 있으면 되므로, Supabase가 주는 제네릭 payload 타입 대신 이 최소 타입을 쓴다.
+interface RealtimeCommit {
+  commit_timestamp: string;
 }
 
 // trpc는 모듈 스코프에서 안정적인 참조라(Provider 없이도 _def 경로 메타데이터만
@@ -73,19 +54,27 @@ export function useRealtimeInvalidation() {
 
   useEffect(function subscribeRealtimeInvalidation() {
     let pendingSourcesTimer: ReturnType<typeof setTimeout> | undefined;
-    function invalidatePendingSources() {
+    function invalidatePendingSources(payload: RealtimeCommit) {
       clearTimeout(pendingSourcesTimer);
+      // 디바운스 도중 이 UPDATE보다 늦게 커밋된 이벤트가 또 오면 타이머가 다시
+      // 걸리면서 changedAt도 그 최신 이벤트 것으로 자연히 갱신된다.
+      const changedAt = payload.commit_timestamp;
       pendingSourcesTimer = setTimeout(
         function flushPendingSourcesInvalidate() {
-          invalidateUnlessFresh(PENDING_SOURCES_QUERY_KEY);
+          invalidateUnlessFresh(
+            queryClient,
+            PENDING_SOURCES_QUERY_KEY,
+            changedAt,
+          );
         },
         PENDING_SOURCES_INVALIDATE_DEBOUNCE_MS,
       );
     }
-    function invalidateChangesetBadges() {
+    function invalidateChangesetBadges(payload: RealtimeCommit) {
+      const changedAt = payload.commit_timestamp;
       return Promise.all([
-        invalidateUnlessFresh(SPACE_LIST_QUERY_KEY),
-        invalidateUnlessFresh(CHANGESET_LIST_QUERY_KEY),
+        invalidateUnlessFresh(queryClient, SPACE_LIST_QUERY_KEY, changedAt),
+        invalidateUnlessFresh(queryClient, CHANGESET_LIST_QUERY_KEY, changedAt),
       ]);
     }
     async function handleChangesetInsert(
@@ -93,7 +82,7 @@ export function useRealtimeInvalidation() {
     ) {
       // 배지·목록이 실제로 새로고침을 마친 뒤에 알림을 띄운다 — 먼저 띄우면
       // 탭으로 돌아왔을 때 알림은 이미 떴는데 화면은 아직 못 따라온 것처럼 보인다.
-      await invalidateChangesetBadges();
+      await invalidateChangesetBadges(payload);
       notifyChangesetReadyRef.current(payload.new);
     }
 
