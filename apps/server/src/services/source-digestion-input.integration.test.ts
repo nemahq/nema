@@ -89,7 +89,7 @@ async function readInputUpdatedAt(sourceId: string): Promise<Date> {
 }
 
 describe("digestion_input_updated_at 트리거 (integration)", () => {
-  it("정리 결과를 바꿀 수 있는 컬럼(body·space_id)만 시각을 올린다", async () => {
+  it("정리 결과 추출 여부를 바꿀 수 있는 컬럼(body)만 시각을 올린다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -128,7 +128,8 @@ describe("digestion_input_updated_at 트리거 (integration)", () => {
       baseline.getTime(),
     );
 
-    // Space를 옮기면 LLM이 보는 토픽 레지스트리가 달라진다(space 범위 조회).
+    // Space 이동은 Topic 라벨링에만 영향을 줄 뿐 추출 판정 자체는 그대로다
+    // (digest-generation.ts의 existing_topics는 라벨링에만 쓰임) — 시각을 안 올린다.
     await client.query(
       "UPDATE sources SET digestion_input_updated_at = $1 WHERE id = $2",
       [BASELINE, sourceId],
@@ -137,8 +138,6 @@ describe("digestion_input_updated_at 트리거 (integration)", () => {
       otherSpaceId,
       sourceId,
     ]);
-    expect((await readInputUpdatedAt(sourceId)).getTime()).toBeGreaterThan(
-      baseline.getTime(),
-    );
+    expect(await readInputUpdatedAt(sourceId)).toEqual(baseline);
   });
 });
