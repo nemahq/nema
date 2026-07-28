@@ -49,6 +49,11 @@ CREATE FUNCTION random_tag_color() RETURNS tag_color AS $$
   SELECT v FROM unnest(enum_range(NULL::tag_color)) AS v ORDER BY random() LIMIT 1;
 $$ LANGUAGE sql;
 
+-- 외부에서 직접 부르라고 만든 게 아니라 REVOKE로 막아둔다(호출부는 컬럼
+-- DEFAULT와 SECURITY DEFINER 함수 안이라 계속 호출 가능) — pending_draft_source_ids와
+-- 같은 패턴(20260715130000_delete_space_move_pending_drafts.sql).
+REVOKE ALL ON FUNCTION random_tag_color() FROM public, anon, authenticated;
+
 -- ----- 1) tags 테이블에 color 컬럼 추가 + 기존 행 백필 -----
 ALTER TABLE tags ADD COLUMN color tag_color;
 UPDATE tags SET color = random_tag_color() WHERE color IS NULL;
