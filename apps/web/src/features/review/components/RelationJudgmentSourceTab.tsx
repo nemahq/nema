@@ -1,10 +1,17 @@
 import { Suspense } from "react";
+import { TRPCClientError } from "@trpc/client";
 
 import { Skeleton, Text } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useSourceContentSuspenseQuery } from "@web/features/review/hooks/useSourceContentQuery";
 import { useTranslation } from "@web/lib/tolgee";
+
+// source.get은 status='active'만 조회한다 — A·B가 서로 다른 Source일 수 있어,
+// 이 화면이 열려 있는 동안 그중 하나가 archive되는 건 정상 경로다(장애가 아니다).
+function isSourceNotFound(error: unknown): boolean {
+  return error instanceof TRPCClientError && error.data?.code === "NOT_FOUND";
+}
 
 interface RelationJudgmentSourceTabContentProps {
   sourceId: string;
@@ -44,9 +51,12 @@ export function RelationJudgmentSourceTab({
   return (
     <ErrorBoundary
       boundaryName="relation-judgment-source-tab"
+      shouldReport={(error) => !isSourceNotFound(error)}
       fallbackRender={() => (
         <div className="p-4">
-          <Text color="tertiary">{t("review.detail_refresh_failed")}</Text>
+          <Text color="tertiary">
+            {t("review.relation_judgment_source_unavailable")}
+          </Text>
         </div>
       )}
     >

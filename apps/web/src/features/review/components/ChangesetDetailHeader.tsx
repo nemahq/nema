@@ -59,7 +59,7 @@ export function ChangesetDetailHeader({
           {badge}
           <Text as="div" size="sm" color="tertiary">
             {reviewerName && `${reviewerName} · `}
-            <RelativeTime dateTime={time} />
+            <RelativeTime dateTime={time} className="text-sm leading-none" />
           </Text>
         </div>
       </div>

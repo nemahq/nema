@@ -12,6 +12,10 @@ import {
 } from "@web/features/review/digestBodyFieldValue";
 import { useTranslation } from "@web/lib/tolgee";
 
+function countListEntries(fieldValue: string | string[]): number {
+  return Array.isArray(fieldValue) ? fieldValue.length : 1;
+}
+
 interface DigestReadonlyBodyFieldsProps {
   body: DigestBody;
   highlightedFieldKey?: DigestBodyFieldKey;
@@ -36,8 +40,20 @@ export function DigestReadonlyBodyFields({
         }
 
         const isFieldHighlighted = highlightedFieldKey === field.key;
+        const listEntryCount =
+          field.kind === "list" ? countListEntries(fieldValue) : 0;
+        // index가 text 필드를 가리키거나 list 길이를 벗어나면(source_field_index는
+        // DB CHECK 제약 없는 LLM 자유 출력이라 항상 맞는다는 보장이 없다) 항목
+        // 강조를 포기하고 필드 전체 강조로 물러난다 — 강조가 조용히 통째로
+        // 사라지는 것보다 낫다.
+        const indexHighlightsListItem =
+          isFieldHighlighted &&
+          field.kind === "list" &&
+          highlightedFieldIndex !== undefined &&
+          highlightedFieldIndex >= 0 &&
+          highlightedFieldIndex < listEntryCount;
         const highlightWholeField =
-          isFieldHighlighted && highlightedFieldIndex === undefined;
+          isFieldHighlighted && !indexHighlightsListItem;
 
         return (
           <div
@@ -63,7 +79,7 @@ export function DigestReadonlyBodyFields({
                       key={entryIndex}
                       className={cn(
                         "flex items-start gap-2",
-                        isFieldHighlighted &&
+                        indexHighlightsListItem &&
                           highlightedFieldIndex === entryIndex &&
                           "-mx-2 rounded-sm bg-status-warning-tint px-2 py-1",
                       )}

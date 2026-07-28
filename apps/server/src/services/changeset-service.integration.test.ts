@@ -1199,6 +1199,97 @@ describe("restore_pending_relation RPC — 상태 가드 (integration)", () => {
     ]);
     expect(rows[0]).toEqual({ status: "open", outcome: null });
   });
+
+  // 위의 다른 테스트들은 슈퍼유저로 직접 쿼리해 auth.uid()가 NULL인 채로 돌아
+  // is_space_member 분기를 안 탄다(OR 왼쪽에서 단락) — revert_changeset 멤버십
+  // 테스트와 같은 이유로 request.jwt.claim.sub을 세팅해 실제 로그인 유저를 흉내 낸다.
+  it("실제 로그인 유저가 Space 멤버면 되살릴 수 있다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    await addFixtureWorkspaceMember(workspaceId, userId);
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, userId);
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+    await client.query("SELECT reject_pending_relation($1)", [changesetId]);
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      userId,
+    ]);
+
+    await client.query("SELECT restore_pending_relation($1)", [changesetId]);
+    const { rows } = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>("SELECT status, outcome FROM changesets WHERE id = $1", [changesetId]);
+    expect(rows[0]).toEqual({ status: "open", outcome: null });
+  });
+
+  it("Space 멤버가 아닌 로그인 유저는 되살릴 수 없다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const ownerId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    await addFixtureWorkspaceMember(workspaceId, ownerId);
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, ownerId);
+    const sourceId = await createFixtureSource({ spaceId, authorId: ownerId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+    await client.query("SELECT reject_pending_relation($1)", [changesetId]);
+
+    const outsiderId = await createFixtureUser();
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      outsiderId,
+    ]);
+
+    await expect(
+      client.query("SELECT restore_pending_relation($1)", [changesetId]),
+    ).rejects.toThrow(/not found or not accessible/);
+  });
 });
 
 describe("confirm_digest_edit RPC — manual changeset title (integration)", () => {

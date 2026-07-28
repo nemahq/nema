@@ -13,11 +13,11 @@ import { changesetDisplayTitle } from "@web/features/review/utils";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { ChangesetConfirmDiscardActions } from "./ChangesetConfirmDiscardActions";
 import { ChangesetDetailHeader } from "./ChangesetDetailHeader";
 import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
 import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
 import { useChangesetSidePanel } from "./ChangesetSidePanelProvider";
-import { RelationJudgmentActions } from "./RelationJudgmentActions";
 import { RelationJudgmentCard } from "./RelationJudgmentCard";
 import { RelationJudgmentSourceTab } from "./RelationJudgmentSourceTab";
 
@@ -46,7 +46,10 @@ function RelationJudgmentContent() {
 
   const resolveConflict = useResolveConflictRelation(spaceId, changesetNumber);
   const rejectPending = useRejectPendingRelation(spaceId, changesetNumber);
-  const locked = resolveConflict.isPending || rejectPending.isPendingAfterDelay;
+  // isPendingAfterDelay가 아니라 isPending — 그 250ms 지연 동안은 잠기지 않아,
+  // 같은 버튼을 두 번 눌러 이미 닫힌 changeset에 재호출하는 경합이 생긴다.
+  // 지연은 아래 discardPending(라벨 표시)에만 쓴다.
+  const locked = resolveConflict.isPending || rejectPending.isPending;
 
   const title = changesetDisplayTitle(changesetDetail, t);
   const { from, to } = pendingRelation.body;
@@ -109,7 +112,7 @@ function RelationJudgmentContent() {
         reviewerName={pendingRelation.reviewerName}
         time={pendingRelation.createdAt}
         actions={
-          <RelationJudgmentActions
+          <ChangesetConfirmDiscardActions
             onDiscard={handleDiscard}
             onConfirm={handleConfirm}
             discardPending={rejectPending.isPendingAfterDelay}

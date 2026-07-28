@@ -1,9 +1,10 @@
 -- =============================================================
 -- restore_pending_relation — 버려진 relation changeset 되살리기 (in-place)
 --
--- restore_ingestion_review(20260727090000)와 같은 패턴: 새 changeset을 안 만들고
--- 같은 행의 status만 closed→open으로 되돌린다(07-modeling.md "버려짐을 되살릴 땐
--- in-place로 처리한다"). 이 RPC는 conflicts/duplicates/확신 관계 discarded 전부를
+-- restore_ingestion_review(현행 정의 20260726075454:356, 최초 20260714130000:70)와
+-- 같은 패턴: 새 changeset을 안 만들고 같은 행의 status만 closed→open으로
+-- 되돌린다(07-modeling.md "버려짐을 되살릴 땐 in-place로 처리한다"). 이 RPC는
+-- conflicts/duplicates/확신 관계 discarded 전부를
 -- 대상으로 한다(type='relation'이면 하위 종류를 안 가림) — Changeset 상세 화면
 -- (ChangesetRecordScreen)이 outcome='discarded'인 relation changeset을 보여줄 때
 -- 트리거된다.
@@ -24,7 +25,7 @@ DECLARE
   v_outcome            changeset_outcome;
   v_type               changeset_type;
   v_invalidated_by_id  uuid;
-  v_relation_type      text;
+  v_relation_type      relation_type;
   v_from_id            uuid;
   v_to_id              uuid;
 BEGIN
@@ -36,7 +37,11 @@ BEGIN
   FOR UPDATE;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'changeset % not found or not accessible', p_changeset_id;
+    -- ERRCODE 없이 두면 query_failed(500)로 떨어져, Space 멤버십을 잃었거나
+    -- changeset이 사라진 정상적 거부가 스퓨리어스 500/Sentry로 샌다
+    -- (20260727090000의 같은 RAISE에 붙은 선례와 같은 이유로 P0002를 쓴다).
+    RAISE EXCEPTION 'changeset % not found or not accessible', p_changeset_id
+      USING ERRCODE = 'P0002';
   END IF;
   -- invalidated_by_id가 있으면 사람이 거절한 게 아니라 다른 판정(중복 병합 등)이
   -- 이 제안의 끝점을 먼저 archive해 자동으로 닫힌 것이다(07-modeling.md "한 Digest가
@@ -51,13 +56,18 @@ BEGIN
       USING ERRCODE = 'NM011';
   END IF;
 
-  SELECT ch.data->>'type', (ch.data->>'from_id')::uuid, (ch.data->>'to_id')::uuid
+  -- ->>'type'을 relation_type으로 캐스트해 enum 밖 값(데이터 손상)도 여기서
+  -- 바로 걸러지게 한다(캐스트 실패 시 22P02로 던져지고 query_failed(500)로
+  -- 떨어진다 — 정상 경로에선 안 생기는 진짜 장애라 그대로 둔다).
+  SELECT (ch.data->>'type')::relation_type,
+         (ch.data->>'from_id')::uuid,
+         (ch.data->>'to_id')::uuid
     INTO v_relation_type, v_from_id, v_to_id
   FROM changes ch
   WHERE ch.changeset_id = p_changeset_id AND ch.target_type = 'relation'
   LIMIT 1;
 
-  IF v_relation_type IS NULL THEN
+  IF v_relation_type IS NULL OR v_from_id IS NULL OR v_to_id IS NULL THEN
     RAISE EXCEPTION 'changeset % has no parseable relation change row', p_changeset_id;
   END IF;
 
@@ -68,7 +78,7 @@ BEGIN
     WHERE c.space_id = v_space_id
       AND c.status = 'open'
       AND ch.target_type = 'relation'
-      AND ch.data->>'type' = v_relation_type
+      AND (ch.data->>'type')::relation_type = v_relation_type
       AND (
         (ch.data->>'from_id' = v_from_id::text AND ch.data->>'to_id' = v_to_id::text)
         OR (
@@ -78,8 +88,11 @@ BEGIN
         )
       )
   ) THEN
+    -- NM011이 아니라 NM013 — "changeset 상태가 바뀜"이 아니라 "같은 쌍에 이미
+    -- open인 판정이 있다"는 다른 사실이라 새로고침으로는 안 풀린다(그 open
+    -- changeset을 먼저 처리해야 함).
     RAISE EXCEPTION 'a relation changeset for the same statement pair is already open'
-      USING ERRCODE = 'NM011';
+      USING ERRCODE = 'NM013';
   END IF;
 
   UPDATE changesets SET status = 'open', outcome = NULL WHERE id = p_changeset_id;

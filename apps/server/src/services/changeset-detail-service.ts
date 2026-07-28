@@ -485,7 +485,17 @@ export async function getPendingRelationByNumber(args: {
 
   const relationChange = row.changes.find((c) => c.target_type === "relation");
   const proposal = parseRelationProposal(relationChange?.data);
-  if (!proposal || proposal.type !== "conflicts") {
+  // relation 행이 하나도 없거나 파싱 실패하는 건(resolveBody의 같은 분기 주석
+  // 참고) status='open' relation이면 정상 경로에선 절대 안 생기는 불변식
+  // 위반(진짜 버그)이다 — duplicates/확신 관계처럼 "정상적으로 이 쿼리의
+  // 대상이 아님"과는 다른 사실이라 뭉개지 않고 던진다.
+  if (!proposal) {
+    throw new SupabaseError(
+      "query_failed",
+      `pending relation changeset ${row.id} has no parseable relation change row`,
+    );
+  }
+  if (proposal.type !== "conflicts") {
     throw new SupabaseError(
       "not_found",
       `pending relation changeset #${number} not found in space ${spaceId}`,

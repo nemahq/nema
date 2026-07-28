@@ -2,7 +2,7 @@ import { Button } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 
-interface RelationJudgmentActionsProps {
+interface ChangesetConfirmDiscardActionsProps {
   onDiscard: () => void;
   onConfirm: () => void;
   discardPending: boolean;
@@ -10,13 +10,16 @@ interface RelationJudgmentActionsProps {
   confirmDisabled: boolean;
 }
 
-export function RelationJudgmentActions({
+// IngestionScreen·RelationJudgmentScreen이 공유하는 [버리기][확정] 액션 쌍 —
+// 둘 다 "판정 대기 changeset을 처리한다"는 같은 헤더 액션 모양이라 화면마다
+// 따로 둘 이유가 없다.
+export function ChangesetConfirmDiscardActions({
   onDiscard,
   onConfirm,
   discardPending,
   discardDisabled,
   confirmDisabled,
-}: RelationJudgmentActionsProps) {
+}: ChangesetConfirmDiscardActionsProps) {
   const { t } = useTranslation();
   return (
     <div className="flex shrink-0 items-center gap-2">
