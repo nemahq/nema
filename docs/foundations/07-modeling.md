@@ -97,6 +97,8 @@ Source를 사람이 읽기 좋게 정리한 것. 여기서 Statement가 추출�
 | `confidence?` | `enum: certain / guess` | 사실인가 추측인가. `claim`에서만 쓴다(확장 가능) |
 | `type` | `enum: claim / question` | 진술의 종류. 결정·미정 단언도 `claim` |
 | `digestId` | `uuid` | 어느 Digest에서 추출됐나. Source가 아니라 Digest를 직접 참조한다. 확정 후 안 바뀌는 Digest라 locator가 안정적이고, Digest는 이미 사람이 확정한 것이라 판정의 진짜 근거가 되기 때문이다 |
+| `sourceField?` | `string` | Digest의 어느 칸(`situation`/`choice`/`reason`/`tradeoff` 등, `DigestBody` 필드 key와 동일한 문자열)에서 나왔나. 추출 시점에 LLM이 채운다. Statement 내용은 Digest 원문을 그대로 복사한 게 아니라 재작성된 문장이라 텍스트 매칭이 불안정한데, 이 값이 있으면 매칭 없이 관계 판정 화면이 카드에서 해당 칸을 바로 하이라이트할 수 있다 |
+| `sourceFieldIndex?` | `number` | `tradeoff`/`alternatives`/`branches`처럼 `sourceField`가 배열 칸일 때만 채워지는 0-based 위치. 단일 칸이면 null |
 | `spaceId` | `uuid` | 소속 Space. `digestId`로 유추 가능하지만, RLS(행 단위 접근 제어)가 매 조회마다 조인 없이 바로 판정할 수 있도록 따로 둔다(`Digest.spaceId`와 같은 이유) |
 | `referenceIds?` | `uuid[]` | 이 Statement가 실제로 언급하는 Reference들. `Digest.referenceIds`가 리뷰 단계의 후보군이라면, 이건 Statement 생성(2단계) 때 문장 단위로 정밀하게 매핑된 결과다. Reference 상세 화면의 역참조·해설 근거 인용이 이 정밀도를 요구한다 |
 | `createdAt` | `Date` | 진술이 시스템에 들어온 때 |

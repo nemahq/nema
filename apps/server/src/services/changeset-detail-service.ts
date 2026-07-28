@@ -33,6 +33,9 @@ interface RelationEndpointSnapshot {
   statementId: string;
   statementContent: string;
   statementStatus: StatementStatus;
+  // fetchRelationEndpoint 주석 참고 — 이 진술이 Digest의 어느 칸에서 나왔는지 짚는 값.
+  sourceField: string | null;
+  sourceFieldIndex: number | null;
   digest: DigestSnapshot;
 }
 
@@ -138,7 +141,8 @@ async function fetchDigestSnapshots(args: {
 
 // relation(충돌·중복) 카드는 진술이 아니라 그 진술이 속한 Digest를 통째로 보여준다
 // (관계 판정 화면의 .rj-digest-card 재사용 전제, surface-inventory.md "Changeset 상세"
-// 참고) — 그 안에서 이 진술이 어느 문장인지는 statementId/statementContent로 짚는다.
+// 참고) — 그 안에서 이 진술이 어느 문장인지는 sourceField로 칸을 바로 짚고, sourceField가
+// 없으면(이 마이그레이션 이전에 추출된 진술 등) statementId/statementContent로 대신 짚는다.
 async function fetchRelationEndpoint(args: {
   supabase: TypedSupabaseClient;
   statementId: string;
@@ -147,7 +151,7 @@ async function fetchRelationEndpoint(args: {
 
   const { data: statement, error } = await supabase
     .from("statements")
-    .select("id, content, status, digest_id")
+    .select("id, content, status, digest_id, source_field, source_field_index")
     .eq("id", statementId)
     .single();
   throwIfSupabaseError(error);
@@ -170,6 +174,8 @@ async function fetchRelationEndpoint(args: {
     statementId: statement.id,
     statementContent: statement.content,
     statementStatus: statement.status,
+    sourceField: statement.source_field,
+    sourceFieldIndex: statement.source_field_index,
     digest,
   };
 }
