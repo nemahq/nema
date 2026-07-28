@@ -27,7 +27,7 @@ export function ReferenceTableHeader({
     >
       <span>{t("reference.column_type")}</span>
       <SortableHeaderCell
-        label={t("reference.column_title")}
+        label={t("common.name_label")}
         active={sortKey === "title"}
         direction={sortDirection}
         onClick={() => onSortChange("title")}

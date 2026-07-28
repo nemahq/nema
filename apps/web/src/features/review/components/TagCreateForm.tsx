@@ -30,14 +30,14 @@ export function TagCreateForm({
   const submittable =
     title.trim() !== "" && !descriptionInvalid && !duplicateTitle;
   const descriptionError = descriptionInvalid
-    ? t("review.tag_create_description_required")
+    ? t("common.description_required")
     : null;
 
   return (
     <div className="flex flex-col gap-3 px-2 pt-2 pb-2">
       <div className="flex flex-col gap-1.5">
         <Text size="sm" weight="medium" color="primary">
-          {t("review.tag_create_title_label")}
+          {t("common.name_label")}
         </Text>
         <Badge
           variant="outline"

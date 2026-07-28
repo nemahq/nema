@@ -55,7 +55,7 @@ export function TopicDraftRenameForm({
           autoFocus
           value={titleValue}
           maxLength={TOPIC_TITLE_MAX_LENGTH}
-          aria-label={t("review.topic_name_label")}
+          aria-label={t("common.name_label")}
           aria-invalid={!submittable}
           onChange={(e) => setTitleValue(e.target.value)}
           onKeyDown={(e) => {

@@ -60,7 +60,7 @@ export function ReferenceCandidateCard({
             value={titleField.value}
             disabled={disabled}
             maxLength={REFERENCE_TITLE_MAX_LENGTH}
-            placeholder={t("review.reference_title_placeholder")}
+            placeholder={t("common.name_label")}
             onChange={titleField.setValue}
             onBlur={titleField.commitNow}
             className="text-[20px] font-semibold leading-[1.4]"

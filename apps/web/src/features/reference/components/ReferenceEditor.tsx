@@ -77,7 +77,7 @@ export function ReferenceEditor({ reference, readOnly }: ReferenceEditorProps) {
           </Text>
           {!readOnly && (
             <Button type="button" variant="ghost" size="xs" onClick={startEdit}>
-              {t("reference.edit_action")}
+              {t("common.edit_action")}
             </Button>
           )}
         </div>
@@ -118,7 +118,7 @@ export function ReferenceEditor({ reference, readOnly }: ReferenceEditorProps) {
         <ReferenceTypeBadge type={reference.type} />
         <Input
           autoFocus
-          aria-label={t("reference.title_input_label")}
+          aria-label={t("common.name_label")}
           value={titleDraft}
           onChange={(e) => setTitleDraft(e.target.value)}
           disabled={readOnly}

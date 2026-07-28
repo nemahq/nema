@@ -46,7 +46,7 @@ export function TagDraftRenameForm({
   }
   const titleError = getTitleError();
   const descriptionError = descriptionInvalid
-    ? t("review.tag_create_description_required")
+    ? t("common.description_required")
     : null;
 
   function submit() {
@@ -62,7 +62,7 @@ export function TagDraftRenameForm({
           autoFocus
           value={titleValue}
           maxLength={TAG_TITLE_MAX_LENGTH}
-          aria-label={t("review.tag_create_title_label")}
+          aria-label={t("common.name_label")}
           aria-invalid={titleInvalid}
           onChange={(e) => setTitleValue(e.target.value)}
         />
