@@ -1,4 +1,4 @@
-import type { DigestTopicDraft } from "@nema-io/shared";
+import type { ReviewTopicDraft } from "@nema-io/shared";
 import {
   cn,
   OUTLINE_TONE_CLASSNAME,
@@ -16,7 +16,7 @@ import { TopicEditPanel } from "./TopicEditPanel";
 
 interface DigestTopicPickerProps {
   digestId: string;
-  topics: DigestTopicDraft[];
+  topics: ReviewTopicDraft[];
   disabled: boolean;
 }
 
@@ -64,10 +64,7 @@ export function DigestTopicPicker({
                 그 border가 늘린 박스 높이 1px을 상쇄해, Type Chip·미트볼과 나란히
                 items-center로 놓였을 때 이 버튼만 미세하게 떠 보이지 않게 한다. */}
             {topics.map((topic, index) => (
-              <span
-                key={topic.id ?? `draft-${index}`}
-                className="flex items-center gap-1"
-              >
+              <span key={topic.id} className="flex items-center gap-1">
                 {index > 0 && (
                   <Circle className="size-1 shrink-0 fill-current" />
                 )}

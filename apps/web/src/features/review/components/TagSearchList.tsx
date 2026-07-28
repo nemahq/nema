@@ -41,7 +41,7 @@ function TagSearchListContent({
       query,
       existingLabels: tags.map((tag) => tag.title),
     });
-  const attachedIds = new Set(tags.map((tag) => tag.id));
+  const attachedIds = new Set(tags.map((tag) => tag.registryId));
 
   return (
     <LabelSearchList

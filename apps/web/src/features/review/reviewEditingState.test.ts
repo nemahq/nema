@@ -14,8 +14,10 @@ const DIGEST: ReviewDigest = {
   title: "제목",
   description: "요약",
   body: { type: "decision" },
-  topics: [{ id: null, title: "주제" }],
-  tags: [{ id: null, title: "태그", description: "설명" }],
+  topics: [{ id: "topic-draft-1", registryId: null, title: "주제" }],
+  tags: [
+    { id: "tag-draft-1", registryId: null, title: "태그", description: "설명" },
+  ],
   referenceIds: [],
   newReferenceKeys: [],
   externalUrls: [],
@@ -97,7 +99,14 @@ describe("computeReviewEditingState — 확정 차단 조건", () => {
 
   it("Topic 이름이 비면 hasEmptyLabel", () => {
     const result = computeReviewEditingState(
-      draft({ digests: [{ ...DIGEST, topics: [{ id: null, title: "" }] }] }),
+      draft({
+        digests: [
+          {
+            ...DIGEST,
+            topics: [{ id: "topic-draft-2", registryId: null, title: "" }],
+          },
+        ],
+      }),
     );
     expect(result.hasEmptyLabel).toBe(true);
   });
@@ -108,7 +117,14 @@ describe("computeReviewEditingState — 확정 차단 조건", () => {
         digests: [
           {
             ...DIGEST,
-            tags: [{ id: null, title: "", description: "설명" }],
+            tags: [
+              {
+                id: "tag-draft-2",
+                registryId: null,
+                title: "",
+                description: "설명",
+              },
+            ],
           },
         ],
       }),

@@ -85,6 +85,10 @@ export {
   ReviewDigestDraftSchema,
   type ReviewNewReferenceDraft,
   ReviewNewReferenceDraftSchema,
+  type ReviewTagDraft,
+  ReviewTagDraftSchema,
+  type ReviewTopicDraft,
+  ReviewTopicDraftSchema,
 } from "./schemas/digest-review";
 export { type NarrationInput, NarrationInputSchema } from "./schemas/narration";
 export {

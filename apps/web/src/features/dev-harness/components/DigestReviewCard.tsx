@@ -65,13 +65,19 @@ export function DigestReviewCard({ spaceId, number }: DigestReviewCardProps) {
     );
   }
 
+  // topicsText는 자유 텍스트라 저장마다 파싱해 배열을 다시 짓는다 — 그래서 topic
+  // id는 이 하니스에서 편집 여부와 무관하게 매 저장마다 새로 생긴다(제품 화면의
+  // TopicEditPanel처럼 항목 단위로 추가·삭제하는 게 아니라서 이전 id를 재사용할
+  // 자리가 없음). tags는 이 하니스에 편집 UI가 없어 ...digest로 그대로 통과하므로
+  // id 안정성은 tags 쪽에서만 관찰된다.
   function buildDigests() {
     return review.digests.map((digest, index) => ({
       ...digest,
       title: current[index].title.trim(),
       description: current[index].description.trim(),
       topics: parseTopics(current[index].topicsText).map((name) => ({
-        id: null,
+        id: crypto.randomUUID(),
+        registryId: null,
         title: name,
       })),
     }));
