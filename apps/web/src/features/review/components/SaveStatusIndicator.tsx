@@ -1,11 +1,6 @@
-import {
-  cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Text,
-} from "@nema-io/weave";
+import { cn, PopoverContent, PopoverTrigger, Text } from "@nema-io/weave";
 
+import { Popover } from "@web/components/ui/Popover";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { useReviewSaveStatusContext } from "./ReviewDraftProvider";

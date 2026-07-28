@@ -5,7 +5,6 @@ import {
   Button,
   ComboboxItem,
   Input,
-  Popover,
   PopoverContent,
   PopoverTrigger,
   Text,
@@ -14,6 +13,7 @@ import {
 import { Plus } from "@nema-io/weave/icons";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
+import { Popover } from "@web/components/ui/Popover";
 import { useTagListSuspenseQuery } from "@web/hooks/useTagListQuery";
 import { useTranslation } from "@web/lib/tolgee";
 import {

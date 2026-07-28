@@ -1,6 +1,5 @@
 import {
   Chip,
-  DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -9,6 +8,7 @@ import {
 } from "@nema-io/weave";
 import { Check } from "@nema-io/weave/icons";
 
+import { DropdownMenu } from "@web/components/ui/DropdownMenu";
 import { useDraftSpace } from "@web/features/intake/hooks/useDraftSpace";
 import { useReassignSourceSpace } from "@web/features/intake/hooks/useReassignSourceSpace";
 import { useTranslation } from "@web/lib/tolgee";

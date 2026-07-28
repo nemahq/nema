@@ -1,13 +1,9 @@
 import type { ReactNode } from "react";
 
-import {
-  HoverIcon,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@nema-io/weave";
+import { HoverIcon, PopoverContent, PopoverTrigger } from "@nema-io/weave";
 import { Ellipsis } from "@nema-io/weave/icons";
 
+import { Popover } from "@web/components/ui/Popover";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface LabelDraftEditPopoverProps {

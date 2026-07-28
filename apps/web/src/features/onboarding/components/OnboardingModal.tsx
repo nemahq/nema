@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -20,6 +19,7 @@ import {
 } from "@nema-io/weave";
 
 import { Dialog } from "@web/components/ui/Dialog";
+import { Select } from "@web/components/ui/Select";
 import { LANGUAGE_LABELS, useUpdateProfile } from "@web/features/profile";
 import { useTranslation } from "@web/lib/tolgee";
 

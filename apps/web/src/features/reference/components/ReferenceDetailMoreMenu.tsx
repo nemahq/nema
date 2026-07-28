@@ -2,11 +2,9 @@ import { useState } from "react";
 
 import {
   Button,
-  Dialog,
   DialogContent,
   DialogFooter,
   DialogTitle,
-  DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -14,6 +12,8 @@ import {
 } from "@nema-io/weave";
 import { MoreHorizontal } from "@nema-io/weave/icons";
 
+import { Dialog } from "@web/components/ui/Dialog";
+import { DropdownMenu } from "@web/components/ui/DropdownMenu";
 import { useArchiveReference } from "@web/features/reference/hooks/useArchiveReference";
 import { useTranslation } from "@web/lib/tolgee";
 

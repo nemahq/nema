@@ -28,9 +28,9 @@ interface ActionRegistryContextValue {
   unregister: (id: ActionId) => void;
   getAll: () => RegisteredAction[];
   isShortcutOverridden: (id: ActionId) => boolean;
-  pushModal: () => void;
-  popModal: () => void;
-  isModalOpen: () => boolean;
+  pushOverlay: () => void;
+  popOverlay: () => void;
+  isOverlayOpen: () => boolean;
   registryVersion: number;
 }
 
@@ -47,9 +47,9 @@ export function ActionRegistryProvider({
 }: ActionRegistryProviderProps) {
   const actionsRef = useRef(new Map<ActionId, RegisteredAction>());
   const [registryVersion, setRegistryVersion] = useState(0);
-  // 렌더와 무관한 카운터라 ref로 충분 — 모달이 열려있는지는 useHotkeys 콜백(렌더
+  // 렌더와 무관한 카운터라 ref로 충분 — 오버레이가 열려있는지는 useHotkeys 콜백(렌더
   // 바깥) 안에서 그때그때 읽으면 되고, 값이 바뀔 때마다 리렌더를 유발할 이유가 없다.
-  const openModalCountRef = useRef(0);
+  const openOverlayCountRef = useRef(0);
 
   const register = useCallback(function register(action: RegisteredAction) {
     const isNew = !actionsRef.current.has(action.id);
@@ -89,16 +89,16 @@ export function ActionRegistryProvider({
     return false;
   }, []);
 
-  const pushModal = useCallback(function pushModal() {
-    openModalCountRef.current += 1;
+  const pushOverlay = useCallback(function pushOverlay() {
+    openOverlayCountRef.current += 1;
   }, []);
 
-  const popModal = useCallback(function popModal() {
-    openModalCountRef.current = Math.max(0, openModalCountRef.current - 1);
+  const popOverlay = useCallback(function popOverlay() {
+    openOverlayCountRef.current = Math.max(0, openOverlayCountRef.current - 1);
   }, []);
 
-  const isModalOpen = useCallback(function isModalOpen() {
-    return openModalCountRef.current > 0;
+  const isOverlayOpen = useCallback(function isOverlayOpen() {
+    return openOverlayCountRef.current > 0;
   }, []);
 
   const contextValue = useMemo(
@@ -107,9 +107,9 @@ export function ActionRegistryProvider({
       unregister,
       getAll,
       isShortcutOverridden,
-      pushModal,
-      popModal,
-      isModalOpen,
+      pushOverlay,
+      popOverlay,
+      isOverlayOpen,
       registryVersion,
     }),
     [
@@ -117,9 +117,9 @@ export function ActionRegistryProvider({
       unregister,
       getAll,
       isShortcutOverridden,
-      pushModal,
-      popModal,
-      isModalOpen,
+      pushOverlay,
+      popOverlay,
+      isOverlayOpen,
       registryVersion,
     ],
   );
