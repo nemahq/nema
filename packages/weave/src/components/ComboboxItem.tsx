@@ -44,13 +44,17 @@ export function ComboboxItem({
       className={cn(
         "group flex w-full items-center",
         !disabled && LIST_ITEM_HOVER_CLASSNAME,
-        active && "bg-surface-raised-hover/40",
+        // LIST_ITEM_HOVER_CLASSNAME과 다른 색 축(surface-raised-hover가 아니라
+        // fg-primary 틴트)을 써야 한다 — 같은 값을 쓰면 다른 행에 마우스를
+        // 올렸을 때와 실제 active 행을 구분할 수 없다.
+        active && "bg-fg-primary/10",
       )}
     >
       <button
         type="button"
         disabled={disabled}
         aria-disabled={readOnly || undefined}
+        aria-pressed={active || undefined}
         tabIndex={readOnly ? -1 : undefined}
         onClick={readOnly ? undefined : onClick}
         className={cn(

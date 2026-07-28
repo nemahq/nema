@@ -10,18 +10,10 @@ type ChipShape = "rounded" | "pill";
 // 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 팔레트(tokens/index.css
 // "Tag" 섹션 참고) — 생성 시 랜덤/엔진이 초기값을 채우지만 최종 결정권은 항상
 // 사용자에게 있어 생성 폼·편집 팝오버 어디서든 8개 중 자유롭게 바꿀 수 있다.
-type TagColor =
-  | "slate"
-  | "cyan"
-  | "sage"
-  | "olive"
-  | "terracotta"
-  | "rose"
-  | "mauve"
-  | "violet";
-
-// 그리드·리스트 색상 피커가 순회하는 순서 — 위 유니언과 같은 순서를 유지한다.
-const TAG_COLORS: TagColor[] = [
+// TagColor를 이 배열에서 유도해 그리드·리스트 색상 피커의 순회 순서와 타입이
+// 서로 다른 목록으로 어긋날 수 없게 한다(packages/shared의 TagColorSchema는
+// DB enum과 맞춰야 하는 별도 계층이라 이 배열과 독립적으로 유지된다).
+const TAG_COLORS = [
   "slate",
   "cyan",
   "sage",
@@ -30,7 +22,8 @@ const TAG_COLORS: TagColor[] = [
   "rose",
   "mauve",
   "violet",
-];
+] as const;
+type TagColor = (typeof TAG_COLORS)[number];
 
 function getRandomTagColor(): TagColor {
   return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];

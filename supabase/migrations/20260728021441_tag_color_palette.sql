@@ -83,6 +83,21 @@ WHERE cs.id = c.changeset_id
   AND c.target_type = 'digest'
   AND c.action = 'create';
 
+-- 배포 순서 안전장치 — 20260727120000과 같은 사정(그 파일 주석 참고). 이 배포
+-- 창에서 구 서버는 StoredIngestionDigestDataSchema에 color가 없어도 통과되던
+-- 시절의 코드라, tags를 색 없이 그대로 저장(자동저장)해 위 백필을 되돌릴 수
+-- 있다 — 신 서버는 color를 필수로 파싱하므로 그 changeset은 조회·저장·확정
+-- 전부 막힌다. draft_version을 올려 배포 창에 이미 열려 있던 구 클라이언트의
+-- 저장을 NM012(새로고침 필요)로 거절되게 한다.
+UPDATE changesets
+SET draft_version = draft_version + 1
+WHERE type = 'ingestion'
+  AND status = 'open'
+  AND id IN (
+    SELECT DISTINCT changeset_id FROM changes
+    WHERE target_type = 'digest' AND action = 'create'
+  );
+
 -- ----- 3) write_ingestion_review_changes — 엔진 산물의 Tag draft에 색 배정 -----
 -- 본문은 20260727120000과 동일, v_tags 조립에 color만 추가한다.
 CREATE OR REPLACE FUNCTION write_ingestion_review_changes(
