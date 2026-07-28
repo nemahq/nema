@@ -14,9 +14,10 @@ import { DigestReadonlyBodyFields } from "./DigestReadonlyBodyFields";
 
 interface DigestReadonlyCardProps {
   digest: DigestDetailSnapshot;
-  // 관계(충돌·중복·확신) 판정에서 진 쪽 — 취소선 대신 카드 전체를 낮춰(대체됨
-  // 배지+반투명) 표시한다. 어느 body-field가 이겼는지까지는 표시하지 않는다
-  // (아래 highlightedField가 그 몫이고, 이번 슬라이스엔 값이 없다).
+  // 관계(충돌·중복·확신) 판정에서 archived된 쪽 — 제목 취소선+카드 전체를 낮춤
+  // (opacity)+"대체됨" 배지 세 가지를 함께 얹어 표시한다. 어느 body-field가
+  // 관련 문장인지까지는 표시하지 않는다(아래 highlightedField가 그 몫이고,
+  // 이번 슬라이스엔 값이 없다).
   archived?: boolean;
   highlightedField?: DigestBodyFieldKey;
   className?: string;

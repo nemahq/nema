@@ -48,20 +48,22 @@ export function DigestReadonlyBodyFields({
             <Text as="span" size="sm" weight="medium" color="tertiary">
               {t(field.labelKey)}
             </Text>
-            {typeof fieldValue === "string" ? (
+            {field.kind === "text" ? (
               <Text as="p" size="base">
-                {fieldValue}
+                {typeof fieldValue === "string" ? fieldValue : ""}
               </Text>
             ) : (
               <ul className="flex flex-col gap-1">
-                {fieldValue.map((listEntry, entryIndex) => (
-                  <li key={entryIndex} className="flex items-start gap-2">
-                    <Circle className="mt-2.5 size-1.5 shrink-0 fill-current text-fg-primary" />
-                    <Text as="span" size="base" className="flex-1">
-                      {listEntry}
-                    </Text>
-                  </li>
-                ))}
+                {(Array.isArray(fieldValue) ? fieldValue : [fieldValue]).map(
+                  (listEntry, entryIndex) => (
+                    <li key={entryIndex} className="flex items-start gap-2">
+                      <Circle className="mt-2.5 size-1.5 shrink-0 fill-current text-fg-primary" />
+                      <Text as="span" size="base" className="flex-1">
+                        {listEntry}
+                      </Text>
+                    </li>
+                  ),
+                )}
               </ul>
             )}
           </div>

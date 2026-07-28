@@ -40,7 +40,7 @@ interface RelationEndpointSnapshot {
   digest: DigestSnapshot;
 }
 
-// 이번 라운드가 채운 8케이스(ingestion 2 + relation 6 + revert 스텁) 밖은 전부
+// 이번 라운드가 채운 9케이스(ingestion 2 + relation 6 + revert 1) 밖은 전부
 // "unsupported"로 묶는다 — manual(changeset 목록에 애초에 안 뜸),
 // open(이 화면은 closed 전용, open은 별도 리뷰 화면이 담당) 등.
 type ChangesetDetailBody =
@@ -59,12 +59,21 @@ type ChangesetDetailBody =
     }
   | { kind: "relation_duplicate_discarded" }
   | {
+      // 한 changeset이 확신 관계를 N개 담을 수 있다(apply_relation_changesets의
+      // 자동 적용 루프가 배치당 changeset 1개에 성공한 관계마다 change 행 하나씩
+      // 쌓는다) — conflicts/duplicates(항상 쌍 하나=changeset 하나)와 다르다.
       kind: "relation_confident_applied";
-      relationType: Extract<RelationType, "supports" | "replaces" | "resolves">;
-      from: RelationEndpointSnapshot;
-      to: RelationEndpointSnapshot;
+      relations: {
+        relationType: Extract<
+          RelationType,
+          "supports" | "replaces" | "resolves"
+        >;
+        from: RelationEndpointSnapshot;
+        to: RelationEndpointSnapshot;
+      }[];
     }
-  | { kind: "revert" }
+  | { kind: "relation_confident_discarded" }
+  | { kind: "revert"; revertsNumber: number }
   | { kind: "unsupported" };
 
 interface ChangesetDetail {
@@ -154,12 +163,22 @@ async function fetchRelationEndpoint(args: {
 }): Promise<RelationEndpointSnapshot> {
   const { supabase, statementId } = args;
 
+  // maybeSingle — single()이 PGRST116(행 없음)을 not_found로 매핑해, source_purge로
+  // 하드 삭제된 진술을 가리키는 change 행(참조 무결성 위반, 진짜 장애)이 "이 changeset을
+  // 찾을 수 없음"으로 조용히 위장되고 Sentry도 스킵되는 문제가 있었다(EXPECTED_DOMAIN_CODES).
+  // 아래 digest 조회와 같은 패턴으로 query_failed를 직접 던져 새지 않게 한다.
   const { data: statement, error } = await supabase
     .from("statements")
     .select("id, content, status, digest_id")
     .eq("id", statementId)
-    .single();
+    .maybeSingle();
   throwIfSupabaseError(error);
+  if (!statement) {
+    throw new SupabaseError(
+      "query_failed",
+      `statement ${statementId} referenced by a relation change not found`,
+    );
+  }
 
   const digests = await fetchDigestSnapshots({
     supabase,
@@ -188,8 +207,9 @@ async function resolveBody(args: {
   type: ChangesetType;
   outcome: ChangesetOutcome | null;
   changes: ChangeRow[];
+  revertsNumber: number | null;
 }): Promise<ChangesetDetailBody> {
-  const { supabase, type, outcome, changes } = args;
+  const { supabase, type, outcome, changes, revertsNumber } = args;
 
   if (type === "ingestion") {
     if (outcome === "discarded") {
@@ -219,73 +239,112 @@ async function resolveBody(args: {
     // 열린 제안의 {type, from_id, to_id}는 닫힌 뒤에도 changes 행에 그대로 남는다
     // (resolve_*_relation/reject_pending_relation 전부 이 change row를 안 건드림)
     // — outcome과 무관하게 항상 이걸로 관계 종류를 가른다.
-    // relation 행 자체가 없거나 파싱이 실패하는 건 "아직 안 다루는 타입"과 달리
+    // relation 행이 하나도 없거나 전부 파싱 실패하는 건 "아직 안 다루는 타입"과 달리
     // 불변식 위반(진짜 버그)이라 unsupported로 뭉개지 않고 던진다.
-    const relationChange = changes.find((c) => c.target_type === "relation");
-    if (!relationChange) {
+    const relationChanges = changes.filter((c) => c.target_type === "relation");
+    const proposals = relationChanges
+      .map((c) => parseRelationProposal(c.data))
+      .filter((p): p is NonNullable<typeof p> => p !== null);
+    if (proposals.length === 0) {
       throw new SupabaseError(
         "query_failed",
-        "relation changeset has no relation change row",
-      );
-    }
-    const proposal = parseRelationProposal(relationChange.data);
-    if (!proposal) {
-      throw new SupabaseError(
-        "query_failed",
-        "relation change data does not match the expected proposal shape",
+        "relation changeset has no parseable relation change row",
       );
     }
 
-    if (proposal.type === "conflicts") {
+    // conflicts/duplicates는 건당 changeset 1개(사람 판정 대상)라 relation 행이
+    // 하나뿐이어야 정상이지만, resolve_conflict_relation은 판정 결과로 원래
+    // conflicts 제안 행을 남긴 채 새 replaces 행을 changes에 추가한다(같은
+    // changeset에 relation 행이 2개가 됨) — data->>'type'으로 원래 제안을 우선
+    // 찾아야지, 행 순서(embed 순서 비보장)에 기대면 안 된다.
+    const pendingProposal = proposals.find(
+      (p) => p.type === "conflicts" || p.type === "duplicates",
+    );
+
+    if (pendingProposal?.type === "conflicts") {
       if (outcome === "discarded") {
         return { kind: "relation_conflict_discarded" };
       }
       if (outcome === "applied") {
         const [from, to] = await Promise.all([
-          fetchRelationEndpoint({ supabase, statementId: proposal.fromId }),
-          fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
+          fetchRelationEndpoint({
+            supabase,
+            statementId: pendingProposal.fromId,
+          }),
+          fetchRelationEndpoint({
+            supabase,
+            statementId: pendingProposal.toId,
+          }),
         ]);
         return { kind: "relation_conflict_applied", from, to };
       }
       return { kind: "unsupported" };
     }
 
-    if (proposal.type === "duplicates") {
+    if (pendingProposal?.type === "duplicates") {
       if (outcome === "discarded") {
         return { kind: "relation_duplicate_discarded" };
       }
       if (outcome === "applied") {
         // 방향 규약(resolve_duplicate_relation 주석): from=keeper(남는 쪽), to=duplicate(가려진 쪽).
         const [keeper, duplicate] = await Promise.all([
-          fetchRelationEndpoint({ supabase, statementId: proposal.fromId }),
-          fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
+          fetchRelationEndpoint({
+            supabase,
+            statementId: pendingProposal.fromId,
+          }),
+          fetchRelationEndpoint({
+            supabase,
+            statementId: pendingProposal.toId,
+          }),
         ]);
         return { kind: "relation_duplicate_applied", keeper, duplicate };
       }
       return { kind: "unsupported" };
     }
 
-    // supports/replaces/resolves — 확신 관계 자동 적용(사람 판정 없이 엔진이 바로
-    // 적용). replaces는 to 쪽을 archive시키지만(RelationEndpointSnapshot의
-    // statementStatus로 이미 드러남), resolves는 to를 archive하지 않고(해소된
-    // 것일 뿐 틀린 게 아니라서, 07-modeling.md) supports처럼 둘 다 active로 남는다.
+    // supports/replaces/resolves — 확신 관계. 낮은 확신도는 conflicts/duplicates와
+    // 똑같이 open 제안으로 갔다가 reject_pending_relation으로 discarded될 수 있다
+    // (apply_relation_changesets p_pending 분기, worker.ts의 confident 게이트).
+    // 확신 적용은 apply_relation_changesets의 자동 루프가 배치당 changeset 1개에
+    // 성공한 관계마다 change 행을 쌓으므로(사람 판정 1쌍=1changeset과 다름) 전부 모은다.
+    if (outcome === "discarded") {
+      return { kind: "relation_confident_discarded" };
+    }
     if (outcome === "applied") {
-      const [from, to] = await Promise.all([
-        fetchRelationEndpoint({ supabase, statementId: proposal.fromId }),
-        fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
-      ]);
-      return {
-        kind: "relation_confident_applied",
-        relationType: proposal.type,
-        from,
-        to,
-      };
+      const relations = await Promise.all(
+        proposals.map(async (proposal) => {
+          const [from, to] = await Promise.all([
+            fetchRelationEndpoint({ supabase, statementId: proposal.fromId }),
+            fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
+          ]);
+          return {
+            // pendingProposal이 없는 이 분기에서 proposals는 전부 conflicts/duplicates가
+            // 아님이 이미 보장된다(위에서 걸러짐) — 타입 좁히기.
+            relationType: proposal.type as Extract<
+              RelationType,
+              "supports" | "replaces" | "resolves"
+            >,
+            from,
+            to,
+          };
+        }),
+      );
+      return { kind: "relation_confident_applied", relations };
     }
     return { kind: "unsupported" };
   }
 
   if (type === "revert") {
-    return { kind: "revert" };
+    // revert 타입은 chk_changeset_shape가 reverts_id NOT NULL을 강제하므로
+    // revertsNumber도 항상 있다 — 타입에 실어 FE가 null 가드 없이 쓰게 한다
+    // (기존 outer ChangesetDetail.revertsNumber는 다른 소비처 안전을 위해 유지).
+    if (revertsNumber === null) {
+      throw new SupabaseError(
+        "query_failed",
+        "revert changeset has no revertsNumber despite reverts_id being NOT NULL",
+      );
+    }
+    return { kind: "revert", revertsNumber };
   }
 
   // manual — changeset 목록에 애초에 안 뜨는 타입이라(07-modeling.md) 이 경로를 탈 일이
@@ -342,6 +401,7 @@ export async function getChangesetByNumber(args: {
     type: row.type,
     outcome: row.outcome,
     changes: row.changes,
+    revertsNumber,
   });
 
   return {
