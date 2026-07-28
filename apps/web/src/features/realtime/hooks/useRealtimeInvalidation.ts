@@ -21,30 +21,35 @@ const PENDING_SOURCES_INVALIDATE_DEBOUNCE_MS = 500;
 // (디바운스가 이미 걸려있음) 넉넉하게 잡는다.
 const SKIP_INVALIDATE_IF_FRESHER_THAN_MS = 2_000;
 
+// getQueryState는 정확히 일치하는 키만 찾는다 — changeset.listChangesets는
+// useSuspenseInfiniteQuery라 실제 캐시 키에 { spaceId, open, limit } input과
+// type: "infinite"가 들어가 있어 prefix 키로는 절대 못 찾는다(findAll처럼
+// partial match를 쓰는 쪽으로 통일해야 이 쿼리도 같이 맞는다). 인스턴스가 여럿일
+// 수 있는 쿼리(예: open/closed 탭별로 따로 캐시됨)라, 그중 하나라도 최근 걸 못
+// 찾으면(=하나라도 없거나 오래됐으면) 건너뛰지 않는다.
 function invalidateUnlessFresh(queryKey: readonly unknown[]) {
-  const state = queryClient.getQueryState(queryKey);
-  if (
-    state &&
-    Date.now() - state.dataUpdatedAt < SKIP_INVALIDATE_IF_FRESHER_THAN_MS
-  ) {
+  const queries = queryClient.getQueryCache().findAll({ queryKey });
+  const allFresh =
+    queries.length > 0 &&
+    queries.every(
+      (query) =>
+        Date.now() - query.state.dataUpdatedAt <
+        SKIP_INVALIDATE_IF_FRESHER_THAN_MS,
+    );
+  if (allFresh) {
     return Promise.resolve();
   }
   return queryClient.invalidateQueries({ queryKey });
 }
 
 // trpc는 모듈 스코프에서 안정적인 참조라(Provider 없이도 _def 경로 메타데이터만
-// 읽음) 렌더 밖에서 한 번만 계산해도 된다.
-const PENDING_SOURCES_QUERY_KEY = getQueryKey(
-  trpc.source.listPending,
-  undefined,
-  "query",
-);
-const SPACE_LIST_QUERY_KEY = getQueryKey(trpc.space.list, undefined, "query");
-const CHANGESET_LIST_QUERY_KEY = getQueryKey(
-  trpc.changeset.listChangesets,
-  undefined,
-  "query",
-);
+// 읽음) 렌더 밖에서 한 번만 계산해도 된다. type·input을 안 주면 prefix 키가
+// 나와 findAll의 partial match와 함께 실제 input이 뭐든(예: changeset 탭별
+// 필터) 다 잡는다 — type을 박아넣으면 그 쿼리가 실제로 쓰는 type(예: infinite)과
+// 달라 매칭이 아예 안 될 위험이 있다.
+const PENDING_SOURCES_QUERY_KEY = getQueryKey(trpc.source.listPending);
+const SPACE_LIST_QUERY_KEY = getQueryKey(trpc.space.list);
+const CHANGESET_LIST_QUERY_KEY = getQueryKey(trpc.changeset.listChangesets);
 
 type NotifyChangesetReady = ReturnType<typeof useChangesetReadyNotifier>;
 

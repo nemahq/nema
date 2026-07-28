@@ -76,7 +76,7 @@
     "draft_delete_confirm_title": "Delete this draft?",
     "draft_failed": "We couldn't process this.",
     "draft_locked_reason": "You can't edit this while it's processing.",
-    "draft_no_result": "Nothing to organize",
+    "draft_no_result": "There's nothing to organize here.",
     "draft_open": "Open draft",
     "draft_organizing": "Organizing...",
     "draft_organizing_elapsed_minutes": "{minutes}m {seconds}s",

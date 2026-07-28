@@ -41,7 +41,7 @@ export const IdleDraftCard = memo(function IdleDraftCard({
   inputChangedSinceDigestion,
   onSelect,
 }: IdleDraftCardProps) {
-  // 결과없음 아이콘의 근거는 "정리해봤자 같은 결과"라, 원문·Space가 실제로 바뀌어
+  // 결과없음 아이콘의 근거는 "정리해봤자 같은 결과"라, 원문(본문)이 실제로 바뀌어
   // 다른 결과가 나올 여지가 생기면 뗀다.
   //
   // 상세의 재정리 버튼과 조건이 완전히 같지는 않다 — 버튼은 아직 저장 안 된 편집도

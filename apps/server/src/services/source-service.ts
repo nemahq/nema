@@ -185,7 +185,7 @@ interface PendingSourceItem {
   // 기댄다) 화면의 "정리중.." 경과 시간엔 못 쓴다. 재시도 없이 start_source_digestion
   // 에서만 찍히는 값을 따로 내려준다(아직 한 번도 정리를 시작 안 했으면 null).
   digestionStartedAt: string | null;
-  // 마지막 정리 이후 정리 입력(본문·Space)이 바뀌었는지 — "원문을 안 고치고 다시
+  // 마지막 정리 이후 정리 입력(본문)이 바뀌었는지 — "원문을 안 고치고 다시
   // 정리해봐야 같은 결과"라는 판정에 쓴다. 두 시각을 소비처가 각자 비교하면 그 규칙이
   // 화면마다 흩어지므로 digestionOutcome과 같은 이유로 서버가 조합해 내려준다.
   inputChangedSinceDigestion: boolean;

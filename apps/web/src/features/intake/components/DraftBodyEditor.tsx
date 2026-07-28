@@ -71,12 +71,15 @@ export function DraftBodyEditor({
     return promise;
   }
 
-  // blur 시점에 저장해 편집 중 이탈(다른 초안 클릭 등)로 잃는 걸 막는다.
+  // blur 시점에 저장해 편집 중 이탈(다른 초안 클릭 등)로 잃는 걸 막는다. 실패는
+  // 전역 토스트(mutationCache.onError)가 이미 알리므로, 여기선 그 결과를 안 쓰고
+  // unhandled rejection만 막는다 — pendingSaveRef엔 원본 promise를 그대로 둬서
+  // handleRegenerate가 실패를 스스로 다시 확인할 수 있게 한다.
   function handleBlur() {
     if (!hasSavableEdit) {
       return;
     }
-    saveBody();
+    void saveBody().catch(() => {});
   }
 
   async function handleRegenerate() {

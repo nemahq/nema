@@ -33,6 +33,11 @@ export function useUpdateSourceBody() {
         utils.source.listPending.setData(undefined, context.prevData);
       }
     },
-    onSettled: () => utils.source.listPending.invalidate(),
+    // invalidate()의 promise를 리턴하지 않는다 — 리턴하면 mutation이 그 재조회가
+    // 끝날 때까지 isPending을 true로 들고 있어(handleRegenerate가 await하는
+    // saveBody()도 그만큼 늦어짐) 낙관적 업데이트로 이미 없앤 왕복이 다시 낀다.
+    onSettled: () => {
+      void utils.source.listPending.invalidate();
+    },
   });
 }
