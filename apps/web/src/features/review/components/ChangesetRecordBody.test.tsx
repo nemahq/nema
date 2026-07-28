@@ -60,6 +60,8 @@ function relationEndpoint(
     statementId: "statement-1",
     statementContent: "문장",
     statementStatus: "active",
+    sourceField: null,
+    sourceFieldIndex: null,
     digest: digestSnapshot(),
     ...overrides,
   };
