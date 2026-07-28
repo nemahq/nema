@@ -26,8 +26,12 @@ export function TagCreateForm({
   const { t } = useTranslation();
   const descriptionFieldId = useId();
   const [description, setDescription] = useState("");
+  const descriptionInvalid = description.trim() === "";
   const submittable =
-    title.trim() !== "" && description.trim() !== "" && !duplicateTitle;
+    title.trim() !== "" && !descriptionInvalid && !duplicateTitle;
+  const descriptionError = descriptionInvalid
+    ? t("review.tag_create_description_required")
+    : null;
 
   return (
     <div className="flex flex-col gap-3 px-2 pt-2 pb-2">
@@ -61,9 +65,16 @@ export function TagCreateForm({
           autoFocus
           value={description}
           maxLength={TAG_DESCRIPTION_MAX_LENGTH}
+          aria-invalid={descriptionInvalid}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
         />
+        <p
+          role="alert"
+          className={`text-xs ${descriptionError ? "text-status-error" : "text-transparent"}`}
+        >
+          {descriptionError ?? " "}
+        </p>
       </div>
       <div className="flex justify-end gap-2">
         {/* 취소(common.cancel)가 아니라 뒤로(common.back) — 팝오버를 닫는 게

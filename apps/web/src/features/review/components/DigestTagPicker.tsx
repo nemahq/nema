@@ -75,7 +75,7 @@ export function DigestTagPicker({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={-24} className="p-0">
+      <PopoverContent align="start" sideOffset={-34} className="p-0">
         <TagEditPanel
           tags={tags}
           disabled={disabled}

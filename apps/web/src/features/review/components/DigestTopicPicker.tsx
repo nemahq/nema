@@ -64,26 +64,34 @@ export function DigestTopicPicker({
                 거는 border로 바꿔 Circle 사이 여백까지 하나로 이어지게 한다. -mb-px는
                 그 border가 늘린 박스 높이 1px을 상쇄해, Type Chip·미트볼과 나란히
                 items-center로 놓였을 때 이 버튼만 미세하게 떠 보이지 않게 한다. */}
-            {topics.map((topic, index) => (
-              <span
-                key={topic.id ?? `draft-${index}`}
-                className="flex items-center gap-1"
-              >
-                {index > 0 && (
-                  <Circle className="size-1 shrink-0 fill-current" />
-                )}
-                {/* 신규(draft, id === null) 표식은 개체 왼쪽 — NewReferenceIndicator가
-                    쓰는 배치를 따른다. 간격을 아예 안 둬(gap-0) "+"가 라벨 글자에
-                    바로 붙은 prefix처럼 보이게 한다 — Circle 구분자와의 간격(gap-1)과
-                    대비되는 지점이라 여기만 0이어야 구분이 산다. */}
-                <span className="flex items-center gap-0">
-                  {topic.id === null && <NewLabelIndicator />}
-                  <Text as="span" size="xs" color="primary">
-                    {topic.title}
-                  </Text>
+            {/* 인접한 신규(draft) Topic끼리는 구분자를 안 찍는다 — 신규 항목들이
+                뭉쳐 있을 때 "+"·"•"가 번갈아 반복되면 시각적으로 뭉개져 보인다.
+                기존 항목으로 넘어가거나 기존끼리일 때만 찍는다. */}
+            {topics.map((topic, index) => {
+              const prevTopic = topics[index - 1];
+              const showSeparator =
+                index > 0 && !(prevTopic.id === null && topic.id === null);
+              return (
+                <span
+                  key={topic.id ?? `draft-${index}`}
+                  className="flex items-center gap-1"
+                >
+                  {showSeparator && (
+                    <Circle className="size-1 shrink-0 fill-current" />
+                  )}
+                  {/* 신규(draft, id === null) 표식은 개체 왼쪽 — NewReferenceIndicator가
+                      쓰는 배치를 따른다. 간격을 아예 안 둬(gap-0) "+"가 라벨 글자에
+                      바로 붙은 prefix처럼 보이게 한다 — Circle 구분자와의 간격(gap-1)과
+                      대비되는 지점이라 여기만 0이어야 구분이 산다. */}
+                  <span className="flex items-center gap-0">
+                    {topic.id === null && <NewLabelIndicator />}
+                    <Text as="span" size="xs" color="primary">
+                      {topic.title}
+                    </Text>
+                  </span>
                 </span>
-              </span>
-            ))}
+              );
+            })}
           </button>
         ) : (
           <button

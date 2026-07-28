@@ -254,6 +254,7 @@
     "tag_add_action": "Add tag",
     "tag_create_description_label": "Description",
     "tag_create_description_placeholder": "What does this tag mean?",
+    "tag_create_description_required": "Description required",
     "tag_create_submit_action": "Add",
     "tag_create_title_label": "Name",
     "tag_max_reached": "You can add up to {max} tags.",

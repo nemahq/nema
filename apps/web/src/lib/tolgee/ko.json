@@ -254,6 +254,7 @@
     "tag_add_action": "태그 추가",
     "tag_create_description_label": "설명",
     "tag_create_description_placeholder": "이 태그가 뭘 의미하나요?",
+    "tag_create_description_required": "설명을 입력해주세요.",
     "tag_create_submit_action": "추가",
     "tag_create_title_label": "이름",
     "tag_max_reached": "태그는 최대 {max}개까지 담을 수 있어요.",

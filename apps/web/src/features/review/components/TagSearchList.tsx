@@ -71,6 +71,7 @@ function TagSearchListContent({
           label={item.title}
           description={item.description}
           attached
+          isNew
           actions={
             <LabelDraftEditPopover
               open={editingIndex === index}

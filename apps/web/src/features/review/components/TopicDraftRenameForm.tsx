@@ -31,6 +31,17 @@ export function TopicDraftRenameForm({
   const duplicate = isDuplicateTitle(trimmedTitle);
   const submittable = trimmedTitle !== "" && !duplicate;
 
+  function getTitleError() {
+    if (trimmedTitle === "") {
+      return t("common.name_required");
+    }
+    if (duplicate) {
+      return t("common.name_taken");
+    }
+    return null;
+  }
+  const titleError = getTitleError();
+
   function submit() {
     if (submittable) {
       onSubmit(trimmedTitle);
@@ -39,19 +50,27 @@ export function TopicDraftRenameForm({
 
   return (
     <div className="flex flex-col gap-2">
-      <Input
-        autoFocus
-        value={titleValue}
-        maxLength={TOPIC_TITLE_MAX_LENGTH}
-        aria-label={t("review.topic_name_label")}
-        aria-invalid={!submittable}
-        onChange={(e) => setTitleValue(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            submit();
-          }
-        }}
-      />
+      <div className="flex flex-col gap-1">
+        <Input
+          autoFocus
+          value={titleValue}
+          maxLength={TOPIC_TITLE_MAX_LENGTH}
+          aria-label={t("review.topic_name_label")}
+          aria-invalid={!submittable}
+          onChange={(e) => setTitleValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              submit();
+            }
+          }}
+        />
+        <p
+          role="alert"
+          className={`text-xs ${titleError ? "text-status-error" : "text-transparent"}`}
+        >
+          {titleError ?? " "}
+        </p>
+      </div>
       <div className="flex justify-end">
         <Button
           type="button"

@@ -1,16 +1,27 @@
 import type { ReactNode } from "react";
 
-import { Badge, ComboboxItem, Text } from "@nema-io/weave";
+import {
+  Badge,
+  ComboboxItem,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@nema-io/weave";
+
+import { NewLabelIndicator } from "./NewLabelIndicator";
 
 interface LabelSearchRowProps {
   label: string;
-  // Tag 전용 — 재사용 판단 기준이 되는 정의(07-modeling.md). 있으면 이름 아래에
-  // 인라인으로 보여준다. Topic은 이 개념 자체가 없어 안 넘긴다.
+  // Tag 전용 — 재사용 판단 기준이 되는 정의(07-modeling.md). 있으면 호버 시
+  // 우측 툴팁으로 보여준다. Topic은 이 개념 자체가 없어 안 넘긴다.
   description?: string;
   // 이 Digest에 이미 붙은 라벨도 목록에서 그대로 보여준다 — "붙은 것"과 "안
   // 붙은 것"을 둘로 쪼개지 않고 이 목록 하나로 통일하기 위해서다. 대신 이미
   // 붙은 행은 클릭해도 다시 안 붙는다.
   attached: boolean;
+  // 신규(draft) 라벨 행에만 true — 상단 칩 목록이 아니라 여기(검색 리스트)에서
+  // "+" 표식을 보여주기로 했다.
+  isNew?: boolean;
   // 신규(draft) 라벨 행에만 실리는 미트볼 편집 진입점 — 레지스트리 기존 라벨
   // 행에는 절대 안 실린다(PR #506 컨센서스: 기존 라벨은 검색·첨부·해제만).
   actions?: ReactNode;
@@ -26,17 +37,19 @@ export function LabelSearchRow({
   label,
   description,
   attached,
+  isNew,
   actions,
   onSelect,
 }: LabelSearchRowProps) {
-  return (
-    <li>
-      <ComboboxItem
-        alreadySelected={attached}
-        onClick={onSelect}
-        actions={actions}
-        buttonClassName="flex-col items-start gap-0.5 py-1"
-      >
+  const row = (
+    <ComboboxItem
+      alreadySelected={attached}
+      onClick={onSelect}
+      actions={actions}
+      buttonClassName="py-1"
+    >
+      <span className="inline-flex min-w-0 items-center gap-0">
+        {isNew && <NewLabelIndicator />}
         <Badge
           variant={attached ? "neutral" : "outline"}
           shape="rounded"
@@ -44,19 +57,28 @@ export function LabelSearchRow({
         >
           {label}
         </Badge>
-        {description && (
-          // whitespace-normal을 직접 준다 — 부모 button이 ComboboxItem 기본
-          // truncate(white-space:nowrap 포함)를 물려주고 있어, 안 주면 2줄
-          // line-clamp가 줄바꿈 자체를 못 해 첫 줄만 어색하게 잘린다.
-          <Text
-            size="xs"
-            color="tertiary"
-            className="line-clamp-2 whitespace-normal"
-          >
-            {description}
-          </Text>
-        )}
-      </ComboboxItem>
+      </span>
+    </ComboboxItem>
+  );
+
+  if (!description) {
+    return <li>{row}</li>;
+  }
+
+  return (
+    <li>
+      <Tooltip>
+        {/* asChild를 ComboboxItem에 바로 걸면 안 된다 — ComboboxItem은 자기 props를
+            전체 폭 바깥 div가 아니라 안쪽 flex-1 버튼에만 전달해서, actions(미트볼)
+            유무에 따라 그 버튼 폭이 달라져 툴팁 기준점이 행마다 어긋난다. 여기서
+            직접 만든 w-full span을 기준점으로 고정한다. */}
+        <TooltipTrigger asChild>
+          <span className="block w-full">{row}</span>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="max-w-64">
+          {description}
+        </TooltipContent>
+      </Tooltip>
     </li>
   );
 }

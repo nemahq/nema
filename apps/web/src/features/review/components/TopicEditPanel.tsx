@@ -12,7 +12,6 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { LabelChipRow } from "./LabelChipRow";
 import { LabelLimitNotice } from "./LabelLimitNotice";
-import { NewLabelIndicator } from "./NewLabelIndicator";
 import { TopicSearchList } from "./TopicSearchList";
 
 interface TopicEditPanelProps {
@@ -61,23 +60,18 @@ export function TopicEditPanel({
         onQueryChange={setQuery}
       >
         {topics.map((topic, index) => (
-          <span
+          <Chip
             key={topic.id ?? `draft-${index}`}
-            className="inline-flex min-w-0 items-center gap-0"
+            variant="outline"
+            shape="rounded"
+            disabled={disabled}
+            onRemove={() => onChange(topics.filter((_, i) => i !== index))}
+            removeAriaLabel={t("review.topic_remove_action", {
+              label: topic.title,
+            })}
           >
-            {topic.id === null && <NewLabelIndicator />}
-            <Chip
-              variant="outline"
-              shape="rounded"
-              disabled={disabled}
-              onRemove={() => onChange(topics.filter((_, i) => i !== index))}
-              removeAriaLabel={t("review.topic_remove_action", {
-                label: topic.title,
-              })}
-            >
-              <span className="truncate">{topic.title}</span>
-            </Chip>
-          </span>
+            <span className="truncate">{topic.title}</span>
+          </Chip>
         ))}
       </LabelChipRow>
       <Separator />

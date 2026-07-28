@@ -35,6 +35,20 @@ export function TagDraftRenameForm({
   const descriptionInvalid = trimmedDescription === "";
   const submittable = !titleInvalid && !descriptionInvalid;
 
+  function getTitleError() {
+    if (trimmedTitle === "") {
+      return t("common.name_required");
+    }
+    if (duplicateTitle) {
+      return t("common.name_taken");
+    }
+    return null;
+  }
+  const titleError = getTitleError();
+  const descriptionError = descriptionInvalid
+    ? t("review.tag_create_description_required")
+    : null;
+
   function submit() {
     if (submittable) {
       onSubmit(trimmedTitle, trimmedDescription);
@@ -43,22 +57,38 @@ export function TagDraftRenameForm({
 
   return (
     <div className="flex flex-col gap-2">
-      <Input
-        autoFocus
-        value={titleValue}
-        maxLength={TAG_TITLE_MAX_LENGTH}
-        aria-label={t("review.tag_create_title_label")}
-        aria-invalid={titleInvalid}
-        onChange={(e) => setTitleValue(e.target.value)}
-      />
-      <Textarea
-        value={descriptionValue}
-        maxLength={TAG_DESCRIPTION_MAX_LENGTH}
-        aria-label={t("review.tag_create_description_label")}
-        aria-invalid={descriptionInvalid}
-        onChange={(e) => setDescriptionValue(e.target.value)}
-        rows={3}
-      />
+      <div className="flex flex-col gap-1">
+        <Input
+          autoFocus
+          value={titleValue}
+          maxLength={TAG_TITLE_MAX_LENGTH}
+          aria-label={t("review.tag_create_title_label")}
+          aria-invalid={titleInvalid}
+          onChange={(e) => setTitleValue(e.target.value)}
+        />
+        <p
+          role="alert"
+          className={`text-xs ${titleError ? "text-status-error" : "text-transparent"}`}
+        >
+          {titleError ?? " "}
+        </p>
+      </div>
+      <div className="flex flex-col gap-1">
+        <Textarea
+          value={descriptionValue}
+          maxLength={TAG_DESCRIPTION_MAX_LENGTH}
+          aria-label={t("review.tag_create_description_label")}
+          aria-invalid={descriptionInvalid}
+          onChange={(e) => setDescriptionValue(e.target.value)}
+          rows={3}
+        />
+        <p
+          role="alert"
+          className={`text-xs ${descriptionError ? "text-status-error" : "text-transparent"}`}
+        >
+          {descriptionError ?? " "}
+        </p>
+      </div>
       <div className="flex justify-end">
         <Button
           type="button"

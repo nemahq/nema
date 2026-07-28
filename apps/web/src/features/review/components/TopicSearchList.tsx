@@ -74,6 +74,7 @@ function TopicSearchListContent({
           key={`draft-${index}`}
           label={item.title}
           attached
+          isNew
           actions={
             <LabelDraftEditPopover
               open={editingIndex === index}

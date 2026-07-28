@@ -5,20 +5,13 @@ import {
   type DigestTagDraft,
   TAG_TITLE_MAX_LENGTH,
 } from "@nema-io/shared";
-import {
-  Chip,
-  Separator,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@nema-io/weave";
+import { Chip, Separator } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 import { isDuplicateLabelName } from "@web/utils/labelSearch";
 
 import { LabelChipRow } from "./LabelChipRow";
 import { LabelLimitNotice } from "./LabelLimitNotice";
-import { NewLabelIndicator } from "./NewLabelIndicator";
 import { TagCreateForm } from "./TagCreateForm";
 import { TagSearchList } from "./TagSearchList";
 
@@ -93,32 +86,16 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
         onQueryChange={setQuery}
       >
         {tags.map((tag, index) => (
-          <span
+          <Chip
             key={tag.id ?? `draft-${index}`}
-            className="inline-flex min-w-0 items-center gap-0"
+            variant="outline"
+            shape="rounded"
+            disabled={disabled}
+            onRemove={() => onChange(tags.filter((_, i) => i !== index))}
+            removeAriaLabel={t("review.tag_remove_action")}
           >
-            {tag.id === null && <NewLabelIndicator />}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex min-w-0">
-                  <Chip
-                    variant="outline"
-                    shape="rounded"
-                    disabled={disabled}
-                    onRemove={() =>
-                      onChange(tags.filter((_, i) => i !== index))
-                    }
-                    removeAriaLabel={t("review.tag_remove_action")}
-                  >
-                    <span className="truncate">{tag.title}</span>
-                  </Chip>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-64">
-                {tag.description}
-              </TooltipContent>
-            </Tooltip>
-          </span>
+            <span className="truncate">{tag.title}</span>
+          </Chip>
         ))}
       </LabelChipRow>
       <Separator />
