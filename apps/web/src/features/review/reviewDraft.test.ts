@@ -17,8 +17,10 @@ const DIGEST: ReviewDigest = {
   title: "제목",
   description: "요약",
   body: { type: "decision", situation: "원래 상황", choice: "원래 선택" },
-  topics: [{ id: null, title: "주제" }],
-  tags: [{ id: null, title: "태그", description: "설명" }],
+  topics: [{ id: "topic-draft-1", registryId: null, title: "주제" }],
+  tags: [
+    { id: "tag-draft-1", registryId: null, title: "태그", description: "설명" },
+  ],
   referenceIds: [],
   newReferenceKeys: [],
   externalUrls: [],
@@ -95,19 +97,33 @@ const DIGEST_FIELD_ACTIONS: {
     action: {
       type: "digest/setTopics",
       id: "digest-1",
-      topics: [{ id: null, title: "새 주제" }],
+      topics: [{ id: "topic-draft-2", registryId: null, title: "새 주제" }],
     },
     field: "topics",
-    expected: [{ id: null, title: "새 주제" }],
+    expected: [{ id: "topic-draft-2", registryId: null, title: "새 주제" }],
   },
   {
     action: {
       type: "digest/setTags",
       id: "digest-1",
-      tags: [{ id: null, title: "새 태그", description: "설명" }],
+      tags: [
+        {
+          id: "tag-draft-2",
+          registryId: null,
+          title: "새 태그",
+          description: "설명",
+        },
+      ],
     },
     field: "tags",
-    expected: [{ id: null, title: "새 태그", description: "설명" }],
+    expected: [
+      {
+        id: "tag-draft-2",
+        registryId: null,
+        title: "새 태그",
+        description: "설명",
+      },
+    ],
   },
 ];
 

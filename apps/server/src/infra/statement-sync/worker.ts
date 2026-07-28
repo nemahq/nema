@@ -23,6 +23,7 @@ import type {
 import {
   buildDigestExtractionMessage,
   DIGEST_EXTRACTION_SYSTEM_PROMPT,
+  DIGEST_SOURCE_FIELD_KEYS,
 } from "@server/prompts/digest-extraction";
 import type {
   LabeledStatement,
@@ -530,6 +531,8 @@ type ExtractionStatement = {
   due_date: string | null;
   digest_id: string;
   index: number;
+  source_field: ExtractedStatement["sourceField"];
+  source_field_index: ExtractedStatement["sourceFieldIndex"];
 };
 
 async function processSource(
@@ -666,6 +669,8 @@ function normalizeStatements(
   type: ExtractedStatement["type"];
   confidence: ExtractedStatement["confidence"];
   due_date: string | null;
+  source_field: ExtractedStatement["sourceField"];
+  source_field_index: ExtractedStatement["sourceFieldIndex"];
 }> {
   return raw.map((statement) => {
     // 기한 토큰을 작성 시점·존 기준 절대 날짜로. 기한 없거나 불량 토큰이면 null.
@@ -681,12 +686,28 @@ function normalizeStatements(
         extra: { deadline: statement.deadline },
       });
     }
+    // sourceField는 LLM 자유 문자열이라 알려진 칸 이름과 다른 값(환각·오기)을 낼 수
+    // 있다 — 그대로 저장하면 FE 하이라이트가 조용히 안 켜지는 것 말고는 아무 흔적도
+    // 안 남는다. deadline과 같은 패턴으로 흔적을 남기고 null로 떨군다.
+    let source_field = statement.sourceField ?? null;
+    let source_field_index = statement.sourceFieldIndex ?? null;
+    if (source_field !== null && !DIGEST_SOURCE_FIELD_KEYS.has(source_field)) {
+      Sentry.captureMessage("sourceField did not match a known digest field", {
+        level: "warning",
+        tags: { component: "statement-sync" },
+        extra: { sourceField: source_field },
+      });
+      source_field = null;
+      source_field_index = null;
+    }
     return {
       content: statement.content,
       type: statement.type,
       confidence:
         statement.type === "claim" ? (statement.confidence ?? "guess") : null,
       due_date,
+      source_field,
+      source_field_index,
     };
   });
 }

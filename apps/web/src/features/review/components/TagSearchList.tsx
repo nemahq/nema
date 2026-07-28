@@ -1,6 +1,6 @@
 import { Suspense, useState } from "react";
 
-import type { DigestTagDraft } from "@nema-io/shared";
+import type { ReviewTagDraft } from "@nema-io/shared";
 
 import { useTagListSuspenseQuery } from "@web/hooks/useTagListQuery";
 import {
@@ -26,10 +26,10 @@ interface ReviewTag {
 interface TagSearchListProps {
   query: string;
   // TopicSearchList와 같은 이유로 파생값(Set·이름 배열) 대신 원본 배열을 받는다.
-  tags: DigestTagDraft[];
+  tags: ReviewTagDraft[];
   onSelectExisting: (tag: ReviewTag) => void;
   onStartCreate: (title: string) => void;
-  onRenameDraft: (index: number, title: string, description: string) => void;
+  onRenameDraft: (id: string, title: string, description: string) => void;
 }
 
 const getTagLabel = (tag: { title: string }) => tag.title;
@@ -44,7 +44,7 @@ function TagSearchListContent({
   const [tagList] = useTagListSuspenseQuery();
   // 한 번에 하나만 편집 — 이미 열린 걸 그대로 두면 두 편집이 같은 tags 배열을
   // 동시에 patch하려다 서로의 변경을 덮어쓸 수 있다.
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const { candidates, trimmedQuery, hasExactMatch, canCreate } =
     buildLabelSearchState({
@@ -53,7 +53,7 @@ function TagSearchListContent({
       query,
       existingLabels: tags.map((tag) => tag.title),
     });
-  const attachedIds = new Set(tags.map((tag) => tag.id));
+  const attachedIds = new Set(tags.map((tag) => tag.registryId));
   const draftMatches = filterDraftLabelCandidates(tags, query);
   const activeRegistryTitles = getActiveLabelTitles(tagList.tags, getTagLabel);
 
@@ -65,29 +65,29 @@ function TagSearchListContent({
       canCreate={canCreate}
       onStartCreate={onStartCreate}
     >
-      {draftMatches.map(({ draft, index }) => (
+      {draftMatches.map((draft) => (
         <LabelSearchRow
-          key={`draft-${index}`}
+          key={draft.id}
           label={draft.title}
           description={draft.description}
           attached
           isNew
           actions={
             <LabelDraftEditPopover
-              open={editingIndex === index}
-              onOpenChange={(open) => setEditingIndex(open ? index : null)}
+              open={editingId === draft.id}
+              onOpenChange={(open) => setEditingId(open ? draft.id : null)}
             >
               <TagDraftRenameForm
                 title={draft.title}
                 description={draft.description}
                 isDuplicateTitle={buildDraftRenameDuplicateCheck({
                   registryLabels: activeRegistryTitles,
-                  digestLabels: tags.map((tag) => tag.title),
-                  excludeAt: index,
+                  digestLabels: tags,
+                  excludeId: draft.id,
                 })}
                 onSubmit={(title, description) => {
-                  onRenameDraft(index, title, description);
-                  setEditingIndex(null);
+                  onRenameDraft(draft.id, title, description);
+                  setEditingId(null);
                 }}
               />
             </LabelDraftEditPopover>

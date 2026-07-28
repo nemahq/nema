@@ -41,8 +41,8 @@ const CHANGESET_DETAIL_SCREEN: Record<
     open: () => <IngestionScreen />,
     closed: () => <ChangesetRecordScreen />,
   },
-  // relation의 open은 실제로 생성되지만 판정 모드가 아직 없다 — Digest 상세가
-  // 맡을 예정이라(review-flow.md) 계획된 공백이고, 그래서 조용히 빈 화면을 낸다.
+  // relation의 open은 실제로 생성되지만 판정 모드(관계 판정 화면)가 아직 없다 —
+  // 계획된 공백이고, 그래서 조용히 빈 화면을 낸다.
   relation: {
     open: () => <ChangesetNotFound />,
     closed: () => <ChangesetRecordScreen />,
@@ -62,8 +62,6 @@ const CHANGESET_DETAIL_SCREEN: Record<
   },
   revert: {
     open: () => <ImpossibleOpenChangeset />,
-    // TODO: revert도 무엇을 되돌렸는지 보여줘야 한다(review-flow.md "충돌 판정 되돌리기"
-    // 등이 만드는 changeset이다). manual과 같은 임시 매핑이다.
     closed: () => <ChangesetRecordScreen />,
   },
 };

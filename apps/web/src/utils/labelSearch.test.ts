@@ -87,41 +87,39 @@ describe("isDuplicateLabelName", () => {
 });
 
 interface DraftTopic {
-  id: string | null;
+  id: string;
+  registryId: string | null;
   title: string;
 }
 
 const DRAFT_TOPICS: DraftTopic[] = [
-  { id: "t1", title: "결제" },
-  { id: null, title: "결제 재시도" },
-  { id: null, title: "환불" },
+  { id: "d1", registryId: "t1", title: "결제" },
+  { id: "d2", registryId: null, title: "결제 재시도" },
+  { id: "d3", registryId: null, title: "환불" },
 ];
 
 describe("filterDraftLabelCandidates", () => {
-  it("id가 null인 draft만 후보로 남긴다", () => {
+  it("registryId가 null인 draft만 후보로 남긴다", () => {
     const result = filterDraftLabelCandidates(DRAFT_TOPICS, "");
-    expect(result.map(({ draft }) => draft.title)).toEqual([
-      "결제 재시도",
-      "환불",
-    ]);
-  });
-
-  it("원래 배열의 index를 그대로 들고 있다", () => {
-    const result = filterDraftLabelCandidates(DRAFT_TOPICS, "");
-    expect(result.map(({ index }) => index)).toEqual([1, 2]);
+    expect(result.map((draft) => draft.title)).toEqual(["결제 재시도", "환불"]);
   });
 
   it("검색어로 draft도 다른 후보와 같이 필터링된다", () => {
     const result = filterDraftLabelCandidates(DRAFT_TOPICS, "재시도");
-    expect(result).toEqual([{ draft: DRAFT_TOPICS[1], index: 1 }]);
+    expect(result).toEqual([DRAFT_TOPICS[1]]);
   });
 });
 
 describe("buildDraftRenameDuplicateCheck", () => {
+  const digestLabels = [
+    { id: "d1", title: "결제" },
+    { id: "d2", title: "결제 재시도" },
+    { id: "d3", title: "환불" },
+  ];
   const isDuplicate = buildDraftRenameDuplicateCheck({
     registryLabels: ["결제"],
-    digestLabels: ["결제 재시도", "환불"],
-    excludeAt: 0,
+    digestLabels,
+    excludeId: "d2",
   });
 
   it("레지스트리 기존 이름과 같으면 중복이다", () => {
@@ -132,7 +130,7 @@ describe("buildDraftRenameDuplicateCheck", () => {
     expect(isDuplicate("환불")).toBe(true);
   });
 
-  it("excludeAt에 해당하는 자기 자신과 같은 이름은 중복이 아니다", () => {
+  it("excludeId에 해당하는 자기 자신과 같은 이름은 중복이 아니다", () => {
     expect(isDuplicate("결제 재시도")).toBe(false);
   });
 

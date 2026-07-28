@@ -65,22 +65,40 @@ export const ReferenceMergeUpdateSchema = z.object({
 });
 export type ReferenceMergeUpdate = z.infer<typeof ReferenceMergeUpdateSchema>;
 
-// 리뷰 draft의 Topic/Tag 한 항목 — 레지스트리(topics/tags) 이름 매칭 결과를 얹는다.
-// id가 있으면 기존 항목(재사용, 이름 읽기 전용) / null이면 신규 항목(이름 편집 가능) —
-// review-flow.md "기존 Topic·Tag는 이름 수정 불가"/"신규 Topic·Tag 이름 수정 가능".
-// 이 id는 표시·판정 전용 힌트일 뿐 쓰기 계약엔 없다 — 저장 시 이름만 남고, id는
-// TagUpdateInputSchema의 id(신뢰되는 PK, 그 레코드를 직접 수정)와 달리 확정 시
-// 이름으로 다시 find-or-create되어 무시된다(digest-review-service.ts updateReview 참고).
+// 초안의 Topic/Tag 한 항목 — 레지스트리(topics/tags) 이름 매칭 결과를 얹는다.
+// registryId가 있으면 기존 항목(재사용, 이름 읽기 전용) / null이면 신규 항목(이름 편집
+// 가능) — review-flow.md "기존 Topic·Tag는 이름 수정 불가"/"신규 Topic·Tag 이름 수정 가능".
+// 이름이 붙는 이유: 이 값은 이 항목의 정체성이 아니라 "이 이름과 일치하는 레지스트리
+// 행"의 id다. 조회 시점에 이름으로 찾아 얹는 파생값이라 표시·판정 전용이고, 쓰기 계약엔
+// 없다 — 확정은 TagUpdateInputSchema의 id(신뢰되는 PK, 그 레코드를 직접 수정)와 달리
+// 이름으로 다시 find-or-create한다(digest-review-service.ts updateReview 참고).
 export const DigestTopicDraftSchema = z.object({
-  id: z.string().uuid().nullable(),
+  registryId: z.string().uuid().nullable(),
   title: z.string().trim().min(1).max(TOPIC_TITLE_MAX_LENGTH),
 });
 export type DigestTopicDraft = z.infer<typeof DigestTopicDraftSchema>;
 
 export const DigestTagDraftSchema = TagDraftSchema.extend({
-  id: z.string().uuid().nullable(),
+  registryId: z.string().uuid().nullable(),
 });
 export type DigestTagDraft = z.infer<typeof DigestTagDraftSchema>;
+
+// Digest 리뷰 화면 전용 Topic/Tag 항목 — 1회성 확정 페이로드와 달리 이 화면은 초안을
+// 여러 번 저장·재조회하므로 항목의 정체성이 저장을 거쳐도 유지돼야 한다(신규 Reference의
+// ReviewNewReferenceDraft.id와 같은 사정). 지금 삭제(TopicEditPanel/TagEditPanel의
+// onRemove)는 이 id로 항목을 가리킨다 — 배열 인덱스로 가리키면 화면 순서와 배열 순서가
+// 갈라질 때(정렬 도입 시) 엉뚱한 항목이 지워진다. 정렬 자체는 이 슬라이스 밖이라 아직
+// 없지만, 이 id는 그 작업이 인덱스로 되돌아가지 않게 하려고 지금 놓는 것이다. 초안이
+// 살아있는 동안만 뜻이 있는 값이라, 확정 시 만들어지는 topics/tags 행의 PK와는 무관하다.
+export const ReviewTopicDraftSchema = DigestTopicDraftSchema.extend({
+  id: z.string().uuid(),
+});
+export type ReviewTopicDraft = z.infer<typeof ReviewTopicDraftSchema>;
+
+export const ReviewTagDraftSchema = DigestTagDraftSchema.extend({
+  id: z.string().uuid(),
+});
+export type ReviewTagDraft = z.infer<typeof ReviewTagDraftSchema>;
 
 export const DigestDraftSchema = z.object({
   title: z.string().trim().min(1).max(DIGEST_TITLE_MAX_LENGTH),
@@ -102,6 +120,8 @@ export type DigestDraft = z.infer<typeof DigestDraftSchema>;
 export const ReviewDigestDraftSchema = DigestDraftSchema.extend({
   id: z.string().uuid(),
   position: z.number().int().min(0),
+  topics: z.array(ReviewTopicDraftSchema).max(DIGEST_TOPICS_MAX),
+  tags: z.array(ReviewTagDraftSchema).max(DIGEST_TAGS_MAX),
   // 이 화면에서 가리킬 수 있는 신규 레퍼런스 후보는 항상 ReviewNewReferenceDraft.id
   // (실제 target_id) — 베이스 DigestDraftSchema의 임의 문자열 타입보다 좁힌다.
   newReferenceKeys: z.array(z.string().uuid()),
@@ -148,6 +168,27 @@ function refineReviewPayload(
           message: `unknown new reference key: ${key}`,
         });
       }
+    }
+
+    // Topic/Tag의 id도 위와 같은 이유로 중복을 막는다 — React key 충돌뿐 아니라, 이
+    // id가 화면에서 항목을 가리키는 유일한 손잡이라 중복되면 삭제·이름수정이 둘 중
+    // 하나만 골라 지목할 수 없다.
+    const topicIds = digest.topics.map((topic) => topic.id);
+    if (new Set(topicIds).size !== topicIds.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["digests", index, "topics"],
+        message: "duplicate id in topics",
+      });
+    }
+
+    const tagIds = digest.tags.map((tag) => tag.id);
+    if (new Set(tagIds).size !== tagIds.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["digests", index, "tags"],
+        message: "duplicate id in tags",
+      });
     }
   });
 }

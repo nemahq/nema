@@ -91,43 +91,46 @@ export function isDuplicateLabelName(
 }
 
 interface DraftLabelItem {
-  id: string | null;
+  registryId: string | null;
   title: string;
 }
 
-// 검색 리스트에 자기 자신을 노출해야 하는 신규(draft, id === null) 항목만
+// 검색 리스트에 자기 자신을 노출해야 하는 신규(draft, registryId === null) 항목만
 // 골라낸다 — draft도 다른 후보와 같은 규칙(텍스트 매칭)으로 나타나고 사라진다.
-// 원래 배열의 index를 그대로 들고 있어야 이름을 고칠 때 어느 항목인지 가리킬 수
-// 있고, 중복 검사에서 자기 자신을 빼는 데도 같은 index를 쓸 수 있다.
+// 항목 식별은 이제 안정적인 id(#515)로 하므로 원본 배열 위치를 따로 안 들고 다닌다.
 export function filterDraftLabelCandidates<T extends DraftLabelItem>(
   items: T[],
   query: string,
-): Array<{ draft: T; index: number }> {
+): T[] {
   const normalizedQuery = query.trim().toLowerCase();
-  return items
-    .map((draft, index) => ({ draft, index }))
-    .filter(
-      ({ draft }) =>
-        draft.id === null &&
-        draft.title.toLowerCase().includes(normalizedQuery),
-    );
+  return items.filter(
+    (item) =>
+      item.registryId === null &&
+      item.title.toLowerCase().includes(normalizedQuery),
+  );
+}
+
+interface DigestLabelItem {
+  id: string;
+  title: string;
 }
 
 // 신규 라벨 자신의 이름을 고칠 때 쓰는 중복 판정 함수를 만든다 — 레지스트리
 // 활성 이름 전체(검색어로 좁히지 않는다 — 검색창을 비워도 방금 만든 동명
 // 라벨은 여전히 막아야 한다) + 같은 Digest에 이미 붙은 다른 라벨 이름, 둘
-// 다와 비교한다. excludeAt은 수정 중인 항목 자신의 index — 안 빼면 "이름
-// 그대로 저장"도 중복으로 막힌다. 같은 타입(string[]) 인자 두 개를 위치로
-// 받으면 순서를 바꿔도 타입 에러 없이 조용히 틀리므로 객체로 받는다.
+// 다와 비교한다. excludeId는 수정 중인 항목 자신의 id — 안 빼면 "이름
+// 그대로 저장"도 중복으로 막힌다.
 export function buildDraftRenameDuplicateCheck(args: {
   registryLabels: string[];
-  digestLabels: string[];
-  excludeAt: number;
+  digestLabels: DigestLabelItem[];
+  excludeId: string;
 }): (title: string) => boolean {
-  const { registryLabels, digestLabels, excludeAt } = args;
+  const { registryLabels, digestLabels, excludeId } = args;
   const existingLabels = [
     ...registryLabels,
-    ...digestLabels.filter((_, index) => index !== excludeAt),
+    ...digestLabels
+      .filter((label) => label.id !== excludeId)
+      .map((label) => label.title),
   ];
   return (title: string) => isDuplicateLabelName(title, existingLabels);
 }

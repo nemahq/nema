@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import {
   DIGEST_TOPICS_MAX,
-  type DigestTopicDraft,
+  type ReviewTopicDraft,
   TOPIC_TITLE_MAX_LENGTH,
 } from "@nema-io/shared";
 import { Chip, Separator } from "@nema-io/weave";
@@ -15,9 +15,9 @@ import { LabelLimitNotice } from "./LabelLimitNotice";
 import { TopicSearchList } from "./TopicSearchList";
 
 interface TopicEditPanelProps {
-  topics: DigestTopicDraft[];
+  topics: ReviewTopicDraft[];
   disabled: boolean;
-  onChange: (topics: DigestTopicDraft[]) => void;
+  onChange: (topics: ReviewTopicDraft[]) => void;
 }
 
 // 색은 안 쓴다 — Topic은 조용하게 두고 테두리로만 구분한다(이번 라운드 원칙).
@@ -33,21 +33,34 @@ export function TopicEditPanel({
   const [query, setQuery] = useState("");
   const atMax = topics.length >= DIGEST_TOPICS_MAX;
 
+  // 항목 id는 여기서 만든다 — 저장 응답을 기다렸다 붙이면 그사이 편집(삭제·정렬)이
+  // 가리킬 값이 없어, 이 id가 없애려는 인덱스 기반 식별로 되돌아간다.
   function handleSelectExisting(topic: { id: string; title: string }) {
-    onChange([...topics, topic]);
+    onChange([
+      ...topics,
+      { id: crypto.randomUUID(), registryId: topic.id, title: topic.title },
+    ]);
     setQuery("");
   }
 
   function handleCreateNew(name: string) {
-    onChange([...topics, { id: null, title: name }]);
+    onChange([
+      ...topics,
+      { id: crypto.randomUUID(), registryId: null, title: name },
+    ]);
     setQuery("");
   }
 
-  function handleRenameDraft(index: number, title: string) {
+  function handleRenameDraft(id: string, title: string) {
     onChange(
-      topics.map((topic, i) => (i === index ? { id: null, title } : topic)),
+      topics.map((topic) => (topic.id === id ? { ...topic, title } : topic)),
     );
   }
+
+  // DigestTopicPicker와 같은 이유 — 신규 먼저, 그룹 내부는 원래 순서 유지.
+  const sortedTopics = [...topics].sort(
+    (a, b) => (a.registryId === null ? 0 : 1) - (b.registryId === null ? 0 : 1),
+  );
 
   return (
     <div className="flex flex-col gap-2">
@@ -59,14 +72,14 @@ export function TopicEditPanel({
         ariaLabel={t("review.label_search_placeholder")}
         onQueryChange={setQuery}
       >
-        {topics.map((topic, index) => (
+        {sortedTopics.map((topic) => (
           <Chip
-            key={topic.id ?? `draft-${index}`}
+            key={topic.id}
             variant="outline"
             shape="rounded"
             truncated
             disabled={disabled}
-            onRemove={() => onChange(topics.filter((_, i) => i !== index))}
+            onRemove={() => onChange(topics.filter((t) => t.id !== topic.id))}
             removeAriaLabel={t("review.topic_remove_action", {
               label: topic.title,
             })}

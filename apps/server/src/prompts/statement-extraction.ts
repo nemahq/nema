@@ -97,6 +97,19 @@ const ExtractedStatementSchema = z.object({
   // 내용 속 기한("금요일까지")을 구조화 토큰으로. 워커가 작성 시점·존 기준으로 풀어
   // due_date를 채운다 (temporal-query-design 7장). 기한 없으면 null.
   deadline: ExtractedDeadlineSchema.nullable(),
+  // Digest의 어느 칸에서 나왔나 — digest-extraction.ts의 renderBody가 내보내는 라벨과
+  // 정확히 같은 문자열이어야 한다(DIGEST_SOURCE_FIELD_KEYS 참고, worker.ts가 이 집합과
+  // 대조해 환각값을 걸러낸다). 이 스키마는 원문 직접 추출(이 파일의 프롬프트 —
+  // 제품 경로 아님, eval 전용이지만 지금도 eval 스크립트들이 호출한다)과도 공유된다.
+  // 그 프롬프트는 "칸" 개념이 없어 sourceField를 채우라는 지시가 없지만, nullable이지
+  // optional이 아니라서(네이티브 구조화 출력 제약) 스키마가 null을 강제하진 않는다 —
+  // 실제로 이 값이 버려지는 지점은 eval/statement-engine/extraction-core.ts의
+  // normalize()가 content/type/confidence만 골라 쓰는 것이다. "출력 계약은 원문
+  // 추출과 동일"이라는 관례는 digest-extraction.ts:15 주석을 따른 것.
+  sourceField: z.string().nullable(),
+  // tradeoff/alternatives/branches처럼 배열 칸일 때만 채운다(0-based, 몇 번째
+  // 항목인지). situation/choice/reason 같은 단일 칸이면 null.
+  sourceFieldIndex: z.number().int().nonnegative().nullable(),
 });
 
 export type ExtractedStatement = z.infer<typeof ExtractedStatementSchema>;
