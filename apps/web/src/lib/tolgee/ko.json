@@ -239,6 +239,8 @@
     "reference_type_product": "제품",
     "reference_type_project": "프로젝트",
     "reference_type_term": "개념",
+    "relation_judgment_conflict_badge": "충돌",
+    "relation_judgment_select_card": "{title} 선택",
     "relation_type_replaces": "대체",
     "relation_type_resolves": "해소",
     "relation_type_supports": "지지",

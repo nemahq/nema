@@ -9,6 +9,7 @@ import type {
 import { ChangesetNotFound } from "./ChangesetNotFound";
 import { ChangesetRecordScreen } from "./ChangesetRecordScreen";
 import { IngestionScreen } from "./IngestionScreen";
+import { RelationJudgmentScreen } from "./RelationJudgmentScreen";
 
 // 컴포넌트가 아니라 렌더 함수를 담는다. 표에서 컴포넌트를 꺼내 반환하면 호출부가
 // <Screen />으로 그리게 되는데, 함수가 반환한 값을 컴포넌트로 쓰면 React 컴파일러가
@@ -41,10 +42,8 @@ const CHANGESET_DETAIL_SCREEN: Record<
     open: () => <IngestionScreen />,
     closed: () => <ChangesetRecordScreen />,
   },
-  // relation의 open은 실제로 생성되지만 판정 모드(관계 판정 화면)가 아직 없다 —
-  // 계획된 공백이고, 그래서 조용히 빈 화면을 낸다.
   relation: {
-    open: () => <ChangesetNotFound />,
+    open: () => <RelationJudgmentScreen />,
     closed: () => <ChangesetRecordScreen />,
   },
   // manual·revert는 생성 즉시 closed+applied라 open이 존재할 수 없다. 그런데 이

@@ -90,12 +90,9 @@ export const ChangesetListRow = memo(function ChangesetListRow({
     // 휘어 보여서, 별도 줄로 분리하고 rounded-lg와 같은 반경(2=8px)만큼
     // 인셋해 호버 박스가 평평해지는 지점과 끝을 맞춘다.
     <div>
-      {/* cmd/middle click으로 새 탭에서 열 수 있어야 해서 button+onClick이
-          아니라 진짜 <a href>를 내는 Link로 렌더한다. relation+open의 진짜 목적지는
-          [관계 판정 화면](product-decisions-log.md #18, 미구현)이어야 하지만, 화면이
-          없어 지금은 다른 타입과 같은 Changeset 상세로 보낸다 — changesetDetailRegistry가
-          relation+open을 ChangesetNotFound로 받아 깨지지 않으니, 이 자리가 그 화면이
-          생겼을 때 목적지를 갈라야 할 지점이다. */}
+      {/* cmd/middle click으로 새 탭에서 열 수 있어야 해서 button+onClick이 아니라
+          진짜 <a href>를 내는 Link로 렌더한다. relation+open은 changesetDetailRegistry가
+          관계 판정 화면으로 갈라 보낸다. */}
       <Link
         {...linkOptions({
           to: "/space/$spacePublicId/changesets/$changesetNumber",

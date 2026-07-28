@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { toHighlightedFieldKey } from "@web/features/review/digestBodyFieldValue";
 import type { RelationEndpointDetailSnapshot } from "@web/features/review/types";
 
 import { DigestReadonlyCard } from "./DigestReadonlyCard";
@@ -34,10 +35,14 @@ export function RelationEndpointStack({
         <DigestReadonlyCard
           digest={first.digest}
           archived={first.statementStatus === "archived"}
+          highlightedFieldKey={toHighlightedFieldKey(first.sourceField)}
+          highlightedFieldIndex={first.sourceFieldIndex ?? undefined}
         />
         <DigestReadonlyCard
           digest={second.digest}
           archived={second.statementStatus === "archived"}
+          highlightedFieldKey={toHighlightedFieldKey(second.sourceField)}
+          highlightedFieldIndex={second.sourceFieldIndex ?? undefined}
         />
       </div>
     </div>

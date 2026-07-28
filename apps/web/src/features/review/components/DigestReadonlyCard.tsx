@@ -16,10 +16,10 @@ interface DigestReadonlyCardProps {
   digest: DigestDetailSnapshot;
   // 관계(충돌·중복·확신) 판정에서 archived된 쪽 — 제목 취소선+카드 전체를 낮춤
   // (opacity)+"대체됨" 배지 세 가지를 함께 얹어 표시한다. 어느 body-field가
-  // 관련 문장인지까지는 표시하지 않는다(아래 highlightedField가 그 몫이고,
-  // 이번 슬라이스엔 값이 없다).
+  // 관련 문장인지는 아래 highlightedField가 별도로 짚는다.
   archived?: boolean;
-  highlightedField?: DigestBodyFieldKey;
+  highlightedFieldKey?: DigestBodyFieldKey;
+  highlightedFieldIndex?: number;
   className?: string;
 }
 
@@ -30,7 +30,8 @@ interface DigestReadonlyCardProps {
 export function DigestReadonlyCard({
   digest,
   archived = false,
-  highlightedField,
+  highlightedFieldKey,
+  highlightedFieldIndex,
   className,
 }: DigestReadonlyCardProps) {
   const { t } = useTranslation();
@@ -75,7 +76,8 @@ export function DigestReadonlyCard({
     >
       <DigestReadonlyBodyFields
         body={digest.body}
-        highlightedField={highlightedField}
+        highlightedFieldKey={highlightedFieldKey}
+        highlightedFieldIndex={highlightedFieldIndex}
       />
     </CandidateCardFrame>
   );

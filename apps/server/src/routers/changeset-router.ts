@@ -1,16 +1,21 @@
 import {
   ArchiveStatementInputSchema,
   GetChangesetByNumberInputSchema,
+  GetPendingRelationByNumberInputSchema,
   ListActiveRelationsInputSchema,
   ListChangesetsInputSchema,
   ManualChangeHistoryInputSchema,
   RejectPendingRelationInputSchema,
   ResolveConflictRelationInputSchema,
   ResolveDuplicateRelationInputSchema,
+  RestorePendingRelationInputSchema,
   RevertChangesetInputSchema,
 } from "@nema-io/shared";
 
-import { getChangesetByNumber } from "@server/services/changeset-detail-service";
+import {
+  getChangesetByNumber,
+  getPendingRelationByNumber,
+} from "@server/services/changeset-detail-service";
 import {
   archiveStatement,
   listActiveRelations,
@@ -20,6 +25,7 @@ import {
   rejectPendingRelation,
   resolveConflictRelation,
   resolveDuplicateRelation,
+  restorePendingRelation,
   revertChangeset,
 } from "@server/services/changeset-service";
 import { protectedProcedure, router } from "@server/trpc";
@@ -73,6 +79,15 @@ export const changesetRouter = router({
       }),
     ),
 
+  restorePendingRelation: protectedProcedure
+    .input(RestorePendingRelationInputSchema)
+    .mutation(({ ctx, input }) =>
+      restorePendingRelation({
+        supabase: ctx.supabase,
+        changesetId: input.changesetId,
+      }),
+    ),
+
   listPendingRelations: protectedProcedure.query(({ ctx }) =>
     listPendingRelations({ supabase: ctx.supabase }),
   ),
@@ -103,6 +118,16 @@ export const changesetRouter = router({
     .input(GetChangesetByNumberInputSchema)
     .query(({ ctx, input }) =>
       getChangesetByNumber({
+        supabase: ctx.supabase,
+        spaceId: input.spaceId,
+        number: input.number,
+      }),
+    ),
+
+  getPendingRelationByNumber: protectedProcedure
+    .input(GetPendingRelationByNumberInputSchema)
+    .query(({ ctx, input }) =>
+      getPendingRelationByNumber({
         supabase: ctx.supabase,
         spaceId: input.spaceId,
         number: input.number,

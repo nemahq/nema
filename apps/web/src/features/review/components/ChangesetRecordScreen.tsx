@@ -6,6 +6,7 @@ import { Button } from "@nema-io/weave";
 import { changesetDisplayState } from "@web/features/review/constants";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
+import { useRestorePendingRelation } from "@web/features/review/hooks/useRestorePendingRelation";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
 import { changesetDisplayTitle } from "@web/features/review/utils";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
@@ -28,6 +29,10 @@ function ChangesetRecordContent() {
     changesetNumber,
   );
   const revertChangeset = useRevertChangeset();
+  const restorePendingRelation = useRestorePendingRelation(
+    spaceId,
+    changesetNumber,
+  );
 
   function handleRevert() {
     revertChangeset.mutate(
@@ -46,6 +51,41 @@ function ChangesetRecordContent() {
     );
   }
 
+  function handleRestore() {
+    restorePendingRelation.mutate({ changesetId: changesetDetail.id });
+  }
+
+  function renderHeaderActions() {
+    if (changesetDetail.outcome === "applied") {
+      return (
+        <Button
+          variant="neutral"
+          className="shrink-0"
+          onClick={handleRevert}
+          disabled={revertChangeset.isPending}
+        >
+          {t("review.detail_revert_action")}
+        </Button>
+      );
+    }
+    if (
+      changesetDetail.type === "relation" &&
+      changesetDetail.outcome === "discarded"
+    ) {
+      return (
+        <Button
+          variant="neutral"
+          className="shrink-0"
+          onClick={handleRestore}
+          disabled={restorePendingRelation.isPending}
+        >
+          {t("review.detail_restore_action")}
+        </Button>
+      );
+    }
+    return null;
+  }
+
   const title = changesetDisplayTitle(changesetDetail, t);
 
   return (
@@ -59,18 +99,7 @@ function ChangesetRecordContent() {
           changesetDetail.number,
         )}
         time={changesetDetail.updatedAt}
-        actions={
-          changesetDetail.outcome === "applied" && (
-            <Button
-              variant="neutral"
-              className="shrink-0"
-              onClick={handleRevert}
-              disabled={revertChangeset.isPending}
-            >
-              {t("review.detail_revert_action")}
-            </Button>
-          )
-        }
+        actions={renderHeaderActions()}
       />
       <ChangesetRecordBody changesetDetail={changesetDetail} />
     </ChangesetDetailLayout>

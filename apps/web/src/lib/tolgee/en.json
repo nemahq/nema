@@ -239,6 +239,8 @@
     "reference_type_product": "Product",
     "reference_type_project": "Project",
     "reference_type_term": "Term",
+    "relation_judgment_conflict_badge": "Conflict",
+    "relation_judgment_select_card": "Select {title}",
     "relation_type_replaces": "Replaces",
     "relation_type_resolves": "Resolves",
     "relation_type_supports": "Supports",
