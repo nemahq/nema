@@ -1392,6 +1392,10 @@ export type Database = {
         Args: { p_changeset_id: string };
         Returns: undefined;
       };
+      restore_pending_relation: {
+        Args: { p_changeset_id: string };
+        Returns: undefined;
+      };
       restore_reference: { Args: { p_reference_id: string }; Returns: string };
       restore_tag: { Args: { p_tag_id: string }; Returns: undefined };
       restore_topic: { Args: { p_topic_id: string }; Returns: undefined };

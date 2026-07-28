@@ -1,8 +1,9 @@
 import type { DigestBody } from "@nema-io/shared";
 
-import type {
-  DigestBodyFieldKey,
-  DigestBodyFieldKind,
+import {
+  type DigestBodyFieldKey,
+  type DigestBodyFieldKind,
+  isDigestBodyFieldKey,
 } from "@web/features/review/constants";
 
 // DIGEST_BODY_FIELDS의 key는 body.type과의 상관관계가 렌더 시점에 끊겨 string으로
@@ -53,4 +54,15 @@ export function resolveCommittedValue(
     return EMPTY_VALUE[kind];
   }
   return stored;
+}
+
+// statements.source_field는 DB 컬럼이라 string | null로만 좁혀 온다 — 실제
+// DigestBodyFieldKey 값 집합에 드는지 확인해 좁힌다(가드 없는 단언 금지).
+export function toHighlightedFieldKey(
+  sourceField: string | null,
+): DigestBodyFieldKey | undefined {
+  if (sourceField === null || !isDigestBodyFieldKey(sourceField)) {
+    return undefined;
+  }
+  return sourceField;
 }

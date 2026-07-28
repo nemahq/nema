@@ -11,6 +11,10 @@ interface ChangesetDetailHeaderProps {
   title: string;
   changesetNumber: number;
   state: ChangesetDisplayState;
+  // 상태 pill 옆에 붙는 자리 — 관계 판정 화면의 충돌/중복 타입 배지가 여기 들어간다.
+  badge?: ReactNode;
+  // 시각 앞에 "이름 · " 형태로 붙는다(DigestReadonlyCard의 authorName 표시와 같은 결).
+  reviewerName?: string | null;
   time: string;
   actions?: ReactNode;
 }
@@ -21,6 +25,8 @@ export function ChangesetDetailHeader({
   title,
   changesetNumber,
   state,
+  badge,
+  reviewerName,
   time,
   actions,
 }: ChangesetDetailHeaderProps) {
@@ -50,7 +56,11 @@ export function ChangesetDetailHeader({
         </div>
         <div className="flex items-center gap-2">
           <ChangesetStatusPill state={state} />
-          <RelativeTime dateTime={time} className="text-sm leading-none" />
+          {badge}
+          <Text as="div" size="sm" color="tertiary">
+            {reviewerName && `${reviewerName} · `}
+            <RelativeTime dateTime={time} className="text-sm leading-none" />
+          </Text>
         </div>
       </div>
     </header>

@@ -13,6 +13,7 @@ export type SupabaseErrorCode =
   | "digest_state_changed"
   | "changeset_state_changed"
   | "ingestion_review_version_conflict"
+  | "relation_pending_conflict"
   | "query_failed";
 
 const PG_NOT_FOUND = "P0002";
@@ -60,6 +61,10 @@ const NEMA_CHANGESET_STATE_CHANGED = "NM011";
 // changeset 자체는 여전히 open이다. 이 저장이 참조한 draftVersion보다 최신 저장이
 // 먼저 성공했다는 뜻(두 탭 동시 편집) — "상태가 바뀜"과는 별개 사실이라 코드를 나눈다.
 const NEMA_INGESTION_REVIEW_VERSION_CONFLICT = "NM012";
+// 되살리려는 진술 쌍에 이미 open인 relation changeset이 있음(restore_pending_relation) —
+// NM011("changeset 상태가 바뀜")과 사실 자체가 달라 "새로고침하면 된다"는 그 메시지가
+// 이 경우엔 안 맞는다. 새로고침해도 여전히 막힌다 — 그 open 판정을 먼저 처리해야 한다.
+const NEMA_RELATION_PENDING_CONFLICT = "NM013";
 
 export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
   switch (pgCode) {
@@ -92,6 +97,8 @@ export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
       return "changeset_state_changed";
     case NEMA_INGESTION_REVIEW_VERSION_CONFLICT:
       return "ingestion_review_version_conflict";
+    case NEMA_RELATION_PENDING_CONFLICT:
+      return "relation_pending_conflict";
     default:
       return "query_failed";
   }

@@ -219,6 +219,18 @@ export const DIGEST_BODY_FIELDS: {
   ],
 };
 
+const ALL_DIGEST_BODY_FIELD_KEYS = new Set<string>(
+  Object.values(DIGEST_BODY_FIELDS).flatMap((fields) =>
+    fields.map((field) => field.key),
+  ),
+);
+
+export function isDigestBodyFieldKey(
+  value: string,
+): value is DigestBodyFieldKey {
+  return ALL_DIGEST_BODY_FIELD_KEYS.has(value);
+}
+
 // manual은 이 목록에 절대 안 나온다 — 확정 즉시 closed+applied로 끝나 Space 오버뷰의
 // Changes 탭 대신 각 Digest·Reference의 "변경 이력"에서만 노출된다(surface-inventory.md).
 // 라벨은 이 changeset을 만든 AI 활동을 가리킨다(결과물 개념어가 아님) — ingestion=정리,

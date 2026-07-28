@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
-import { getChangesetByNumber } from "./changeset-detail-service";
+import {
+  getChangesetByNumber,
+  getPendingRelationByNumber,
+} from "./changeset-detail-service";
 
 const SPACE_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const DIGEST_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -780,5 +783,135 @@ describe("getChangesetByNumber", () => {
     await expect(
       getChangesetByNumber({ supabase, spaceId: SPACE_ID, number: 10 }),
     ).rejects.toMatchObject({ code: "query_failed" });
+  });
+});
+
+describe("getPendingRelationByNumber", () => {
+  it("conflicts open — A·B 스냅샷·리뷰어·sourceField/sourceFieldIndex를 돌려준다", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-p1",
+          space_id: SPACE_ID,
+          number: 20,
+          type: "relation",
+          status: "open",
+          source_id: "src-p1",
+          created_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              target_type: "relation",
+              data: {
+                type: "conflicts",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
+              },
+            },
+          ],
+        },
+      ],
+      sources: [{ id: "src-p1", author_id: "user-1", author_name: "제출자" }],
+      statements: [
+        {
+          id: STATEMENT_A_ID,
+          content: "진술 A",
+          status: "active",
+          digest_id: DIGEST_A_ID,
+          source_field: "reason",
+          source_field_index: null,
+        },
+        {
+          id: STATEMENT_B_ID,
+          content: "진술 B",
+          status: "active",
+          digest_id: DIGEST_B_ID,
+          source_field: "tradeoff",
+          source_field_index: 1,
+        },
+      ],
+      digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
+    });
+
+    const result = await getPendingRelationByNumber({
+      supabase,
+      spaceId: SPACE_ID,
+      number: 20,
+    });
+
+    expect(result.changesetId).toBe("cs-p1");
+    expect(result.changesetNumber).toBe(20);
+    expect(result.reviewerId).toBe("user-1");
+    expect(result.reviewerName).toBe("제출자");
+    expect(result.body.kind).toBe("conflict_pending");
+    expect(result.body.from).toMatchObject({
+      statementId: STATEMENT_A_ID,
+      sourceField: "reason",
+      sourceFieldIndex: null,
+    });
+    expect(result.body.to).toMatchObject({
+      statementId: STATEMENT_B_ID,
+      sourceField: "tradeoff",
+      sourceFieldIndex: 1,
+    });
+  });
+
+  it("duplicates open — 이 화면은 conflicts 전용이라 NOT_FOUND", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-p2",
+          space_id: SPACE_ID,
+          number: 21,
+          type: "relation",
+          status: "open",
+          source_id: "src-p2",
+          created_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              target_type: "relation",
+              data: {
+                type: "duplicates",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    await expect(
+      getPendingRelationByNumber({ supabase, spaceId: SPACE_ID, number: 21 }),
+    ).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("closed(이미 판정됨) — NOT_FOUND", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-p3",
+          space_id: SPACE_ID,
+          number: 22,
+          type: "relation",
+          status: "closed",
+          source_id: "src-p3",
+          created_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              target_type: "relation",
+              data: {
+                type: "conflicts",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    await expect(
+      getPendingRelationByNumber({ supabase, spaceId: SPACE_ID, number: 22 }),
+    ).rejects.toMatchObject({ code: "not_found" });
   });
 });

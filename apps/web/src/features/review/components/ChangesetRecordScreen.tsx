@@ -6,6 +6,7 @@ import { Button } from "@nema-io/weave";
 import { changesetDisplayState } from "@web/features/review/constants";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
+import { useRestorePendingRelation } from "@web/features/review/hooks/useRestorePendingRelation";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
 import { changesetDisplayTitle } from "@web/features/review/utils";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
@@ -28,6 +29,10 @@ function ChangesetRecordContent() {
     changesetNumber,
   );
   const revertChangeset = useRevertChangeset();
+  const restorePendingRelation = useRestorePendingRelation(
+    spaceId,
+    changesetNumber,
+  );
 
   function handleRevert() {
     revertChangeset.mutate(
@@ -46,6 +51,46 @@ function ChangesetRecordContent() {
     );
   }
 
+  function handleRestore() {
+    restorePendingRelation.mutate({ changesetId: changesetDetail.id });
+  }
+
+  function renderHeaderActions() {
+    if (changesetDetail.outcome === "applied") {
+      return (
+        <Button
+          variant="neutral"
+          className="shrink-0"
+          onClick={handleRevert}
+          disabled={revertChangeset.isPending}
+        >
+          {t("review.detail_revert_action")}
+        </Button>
+      );
+    }
+    // 되살리기 RPC는 conflicts뿐 아니라 type='relation' discarded 전부를 대상으로
+    // 하지만, duplicates·확신 관계는 판정 화면이 없어 되살려도 열 곳이 없다(open이
+    // 되는 순간 관계 판정 화면이 NOT_FOUND로 막혀버림) — 그래서 conflicts로 좁힌다.
+    // invalidatedById가 있으면(캐스케이드로 자동 닫힘) RPC가 애초에 거절하므로,
+    // 버튼도 같은 조건으로 맞춰 "눌러도 절대 성공 못 하는" 버튼을 안 보여준다.
+    if (
+      changesetDetail.body.kind === "relation_conflict_discarded" &&
+      changesetDetail.invalidatedById === null
+    ) {
+      return (
+        <Button
+          variant="neutral"
+          className="shrink-0"
+          onClick={handleRestore}
+          disabled={restorePendingRelation.isPending}
+        >
+          {t("review.detail_restore_action")}
+        </Button>
+      );
+    }
+    return null;
+  }
+
   const title = changesetDisplayTitle(changesetDetail, t);
 
   return (
@@ -59,18 +104,7 @@ function ChangesetRecordContent() {
           changesetDetail.number,
         )}
         time={changesetDetail.updatedAt}
-        actions={
-          changesetDetail.outcome === "applied" && (
-            <Button
-              variant="neutral"
-              className="shrink-0"
-              onClick={handleRevert}
-              disabled={revertChangeset.isPending}
-            >
-              {t("review.detail_revert_action")}
-            </Button>
-          )
-        }
+        actions={renderHeaderActions()}
       />
       <ChangesetRecordBody changesetDetail={changesetDetail} />
     </ChangesetDetailLayout>
