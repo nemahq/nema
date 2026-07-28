@@ -14,40 +14,40 @@
 
 ### 케이스 목록
 
-- [ ] Digest 추출 완료 → ingestion changeset 자동 생성
-- [ ] 검토 대기 배지 실시간 갱신 (LNB·Space 오버뷰)
-- [ ] Digest 리뷰 화면 진입 — Digest 후보 나열
-- [ ] Digest 리뷰 화면 진입 — Reference 후보 나열
-- [ ] 원문에 없는 필드는 비워둠
-- [ ] Digest 타입 제안
-- [ ] 신규 Topic 제안
-- [ ] 신규 Tag 제안
-- [ ] 기존 Topic 재사용 제안
-- [ ] 기존 Tag 재사용 제안
-- [ ] 기존 Topic은 이름 수정 불가
-- [ ] 기존 Tag는 이름 수정 불가
-- [ ] 기존 Tag는 색상 수정 불가
-- [ ] 신규 Topic 이름 수정 가능
-- [ ] 신규 Tag 이름 수정 가능
-- [ ] Digest 리뷰 화면에서 Topic 추가 — 기존 선택
-- [ ] Digest 리뷰 화면에서 Tag 추가 — 기존 선택
-- [ ] Digest 리뷰 화면에서 Topic 추가 — 신규 생성
-- [ ] Digest 리뷰 화면에서 Tag 추가 — 신규 생성
-- [ ] Tag 색상 지정 — 신규 생성 시
-- [ ] 라벨 정렬 — 신규 먼저
+- [x] Digest 추출 완료 → ingestion changeset 자동 생성
+- [x] 검토 대기 배지 실시간 갱신 (LNB·Space 오버뷰)
+- [x] Digest 리뷰 화면 진입 — Digest 후보 나열
+- [x] Digest 리뷰 화면 진입 — Reference 후보 나열
+- [x] 원문에 없는 필드는 비워둠
+- [x] Digest 타입 제안
+- [x] 신규 Topic 제안
+- [x] 신규 Tag 제안
+- [x] 기존 Topic 재사용 제안
+- [x] 기존 Tag 재사용 제안
+- [x] 기존 Topic은 이름 수정 불가
+- [x] 기존 Tag는 이름 수정 불가
+- [x] 기존 Tag는 색상 수정 불가
+- [x] 신규 Topic 이름 수정 가능
+- [x] 신규 Tag 이름 수정 가능
+- [x] Digest 리뷰 화면에서 Topic 추가 — 기존 선택
+- [x] Digest 리뷰 화면에서 Tag 추가 — 기존 선택
+- [x] Digest 리뷰 화면에서 Topic 추가 — 신규 생성
+- [x] Digest 리뷰 화면에서 Tag 추가 — 신규 생성
+- [x] Tag 색상 지정 — 신규 생성 시
+- [x] 라벨 정렬 — 신규 먼저
 - [ ] Reference 후보 자동 제안 및 매칭
-- [ ] Changeset 제목 자동 생성 (ingestion)
-- [ ] Digest 후보 삭제
-- [ ] Digest 리뷰 확정
+- [x] Changeset 제목 자동 생성 (ingestion)
+- [x] Digest 후보 삭제
+- [x] Digest 리뷰 확정
 - [ ] Digest 리뷰 버리기
 - [ ] 적용된 리뷰 되돌리기
 - [ ] Changeset 제목 자동 생성 (revert)
 - [ ] 원문도 삭제하기
 - [ ] 버려진 리뷰 되살리기
 - [ ] 원문 삭제 후 되살리기 비활성화
-- [ ] 신규 Reference 후보 편집
-- [ ] 기존 Reference 후보 병합 편집
-- [ ] 타입 변경 시 필드 초기화
+- [x] 신규 Reference 후보 편집
+- [x] 기존 Reference 후보 병합 편집
+- [x] 타입 변경 시 필드 초기화
 - [ ] 원문 대조 포커스 전환
 - [ ] Digest 리뷰 화면에서 외부 링크 추가
 - [ ] Digest 리뷰 화면에서 외부 링크 수정
@@ -56,8 +56,8 @@
 - [ ] Digest 리뷰 화면에서 @ 멘션 — 새 Reference 생성
 - [ ] 엔진 제안 대비 교정 신호 기록
 - [ ] Digest 후보 외부 AI 도구 공개 여부 설정
-- [ ] 모든 후보 삭제 시 확정 비활성화
-- [ ] 제목 없이 확정 비활성화
+- [x] 모든 후보 삭제 시 확정 비활성화
+- [x] 제목 없이 확정 비활성화
 
 ### 케이스 상세
 
@@ -450,9 +450,9 @@
 
 ### 케이스 목록
 
-- [ ] 실행취소
-- [ ] 다시 실행
-- [ ] 새로고침 후 최신 저장 상태 유지
+- [x] 실행취소
+- [x] 다시 실행
+- [x] 새로고침 후 최신 저장 상태 유지
 
 ### 케이스 상세
 
