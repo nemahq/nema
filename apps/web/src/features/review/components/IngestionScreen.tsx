@@ -19,12 +19,12 @@ import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useNotificationSoftAsk } from "@web/hooks/useNotificationSoftAsk";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { ChangesetConfirmDiscardActions } from "./ChangesetConfirmDiscardActions";
 import { ChangesetDetailHeader } from "./ChangesetDetailHeader";
 import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
 import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
 import { useChangesetSidePanel } from "./ChangesetSidePanelProvider";
 import { DigestCandidateList } from "./DigestCandidateList";
-import { IngestionActions } from "./IngestionActions";
 import { ReferenceSection } from "./ReferenceSection";
 import {
   clearAutosaveEntry,
@@ -197,7 +197,7 @@ function IngestionContent() {
         state="open"
         time={draft.sourceCreatedAt}
         actions={
-          <IngestionActions
+          <ChangesetConfirmDiscardActions
             onDiscard={handleDiscard}
             onConfirm={handleConfirm}
             discardPending={discardReview.isPendingAfterDelay}

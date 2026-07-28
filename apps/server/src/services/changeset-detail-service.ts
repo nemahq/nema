@@ -31,6 +31,7 @@ interface DigestSnapshot {
   authorName: string | null;
   status: DigestStatus;
   createdAt: string;
+  sourceId: string;
 }
 
 interface RelationEndpointSnapshot {
@@ -124,7 +125,7 @@ async function fetchDigestSnapshots(args: {
   const { data: rows, error } = await supabase
     .from("digests")
     .select(
-      "id, title, description, body, external_urls, author_id, author_name, status, created_at, digest_topics(topic:topics(id, title)), digest_tags(tag:tags(id, title, description)), digest_references(reference_id)",
+      "id, title, description, body, external_urls, author_id, author_name, status, created_at, source_id, digest_topics(topic:topics(id, title)), digest_tags(tag:tags(id, title, description)), digest_references(reference_id)",
     )
     .in("id", digestIds);
   throwIfSupabaseError(error);
@@ -152,6 +153,7 @@ async function fetchDigestSnapshots(args: {
         authorName: row.author_name,
         status: row.status,
         createdAt: row.created_at,
+        sourceId: row.source_id,
       },
     ]),
   );
@@ -428,5 +430,111 @@ export async function getChangesetByNumber(args: {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     body,
+  };
+}
+
+// 판정 대기 relation changeset(지금은 conflicts만) — 나중에 duplicates가 붙을 자리를
+// kind 유니언에 남겨두되 지금은 구현하지 않는다(이 슬라이스 스코프 밖).
+type PendingRelationBody = {
+  kind: "conflict_pending";
+  from: RelationEndpointSnapshot;
+  to: RelationEndpointSnapshot;
+};
+
+interface PendingRelationChangeset {
+  changesetId: string;
+  changesetNumber: number;
+  createdAt: string;
+  // 이 relation changeset을 촉발한 새 Source의 제출자(ingestion과 같은 단수 규칙 —
+  // "두 Source의 제출자 두 명"이 아니다) — changesets.source_id가 가리키는 Source 하나뿐.
+  reviewerId: string | null;
+  reviewerName: string | null;
+  body: PendingRelationBody;
+}
+
+export async function getPendingRelationByNumber(args: {
+  supabase: TypedSupabaseClient;
+  spaceId: string;
+  number: number;
+}): Promise<PendingRelationChangeset> {
+  const { supabase, spaceId, number } = args;
+
+  const { data: row, error } = await supabase
+    .from("changesets")
+    .select(
+      "id, number, type, status, source_id, created_at, changes(target_type, data)",
+    )
+    .eq("space_id", spaceId)
+    .eq("number", number)
+    .maybeSingle();
+  throwIfSupabaseError(error);
+
+  // getByNumber와 같은 NOT_FOUND 관례 — 이미 판정됐거나(closed), relation이 아니거나,
+  // (아래에서) duplicates 제안이면 전부 "아직 판정 대기인 conflicts가 아니다"로 뭉뚱그린다.
+  if (!row || row.type !== "relation" || row.status !== "open") {
+    throw new SupabaseError(
+      "not_found",
+      `pending relation changeset #${number} not found in space ${spaceId}`,
+    );
+  }
+  if (row.number === null) {
+    throw new Error(
+      `changeset ${row.id} has no number despite being scoped to space ${spaceId}`,
+    );
+  }
+
+  const relationChange = row.changes.find((c) => c.target_type === "relation");
+  const proposal = parseRelationProposal(relationChange?.data);
+  // relation 행이 하나도 없거나 파싱 실패하는 건(resolveBody의 같은 분기 주석
+  // 참고) status='open' relation이면 정상 경로에선 절대 안 생기는 불변식
+  // 위반(진짜 버그)이다 — duplicates/확신 관계처럼 "정상적으로 이 쿼리의
+  // 대상이 아님"과는 다른 사실이라 뭉개지 않고 던진다.
+  if (!proposal) {
+    throw new SupabaseError(
+      "query_failed",
+      `pending relation changeset ${row.id} has no parseable relation change row`,
+    );
+  }
+  if (proposal.type !== "conflicts") {
+    throw new SupabaseError(
+      "not_found",
+      `pending relation changeset #${number} not found in space ${spaceId}`,
+    );
+  }
+
+  // apply_relation_changesets가 항상 p_source_id로 이 changeset을 만든다(status='open'
+  // relation은 예외 없이 그 경로 산물) — source_id 없거나 그 Source가 안 찾아지면 정상
+  // 경로에선 절대 안 생기는 참조 무결성 위반(진짜 장애)이라 query_failed로 던진다.
+  if (!row.source_id) {
+    throw new SupabaseError(
+      "query_failed",
+      `pending relation changeset ${row.id} has no source_id`,
+    );
+  }
+  const { data: source, error: sourceError } = await supabase
+    .from("sources")
+    .select("author_id, author_name")
+    .eq("id", row.source_id)
+    .maybeSingle();
+  throwIfSupabaseError(sourceError);
+  if (!source) {
+    throw new SupabaseError(
+      "query_failed",
+      `source ${row.source_id} not found for changeset ${row.id}`,
+    );
+  }
+
+  const [from, to] = await Promise.all([
+    fetchRelationEndpoint({ supabase, statementId: proposal.fromId }),
+    fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
+  ]);
+
+  return {
+    changesetId: row.id,
+    changesetNumber: row.number,
+    createdAt: row.created_at,
+    reviewerId: source.author_id,
+    reviewerName: source.author_name,
+    body: { kind: "conflict_pending", from, to },
   };
 }

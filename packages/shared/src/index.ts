@@ -8,6 +8,8 @@ export {
   CHANGESET_LIST_LIMIT_MAX,
   type GetChangesetByNumberInput,
   GetChangesetByNumberInputSchema,
+  type GetPendingRelationByNumberInput,
+  GetPendingRelationByNumberInputSchema,
   type ListActiveRelationsInput,
   ListActiveRelationsInputSchema,
   type ListChangesetsInput,
@@ -22,6 +24,8 @@ export {
   ResolveConflictRelationInputSchema,
   type ResolveDuplicateRelationInput,
   ResolveDuplicateRelationInputSchema,
+  type RestorePendingRelationInput,
+  RestorePendingRelationInputSchema,
   type RevertChangesetInput,
   RevertChangesetInputSchema,
 } from "./schemas/changeset";

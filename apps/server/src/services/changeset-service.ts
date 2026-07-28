@@ -149,6 +149,20 @@ export async function rejectPendingRelation(args: {
   throwIfSupabaseError(error);
 }
 
+// 버려진 relation changeset 되살리기 — restore_ingestion_review와 같은 in-place
+// 패턴(새 changeset을 안 만들고 같은 행의 status만 되돌림). Changeset 상세
+// (ChangesetRecordScreen)에서 트리거된다 — 이 changeset이 conflicts/duplicates
+// 판정 대기였던 화면(관계 판정 화면) 자신은 버리기만 하고 되살리기는 안 한다.
+export async function restorePendingRelation(args: {
+  supabase: TypedSupabaseClient;
+  changesetId: string;
+}): Promise<void> {
+  const { error } = await args.supabase.rpc("restore_pending_relation", {
+    p_changeset_id: args.changesetId,
+  });
+  throwIfSupabaseError(error);
+}
+
 // 중복(duplicates) 제안 하니스 판정의 병합 기본값 재료 — 병합 제안 편집 UI가 아직
 // 없는 소비처(/dev 하니스)가 keeper(from) Digest 내용을 그대로 기본 병합안으로 쓸 수
 // 있게, 끝점 진술이 속한 Digest 스냅샷을 함께 실어둔다.

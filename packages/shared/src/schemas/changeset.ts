@@ -96,6 +96,21 @@ export type GetChangesetByNumberInput = z.infer<
   typeof GetChangesetByNumberInputSchema
 >;
 
+export const GetPendingRelationByNumberInputSchema = z.object({
+  spaceId: z.string().uuid(),
+  number: z.number().int().min(1),
+});
+export type GetPendingRelationByNumberInput = z.infer<
+  typeof GetPendingRelationByNumberInputSchema
+>;
+
+export const RestorePendingRelationInputSchema = z.object({
+  changesetId: z.string().uuid(),
+});
+export type RestorePendingRelationInput = z.infer<
+  typeof RestorePendingRelationInputSchema
+>;
+
 // 변경 이력 모달(Digest 상세·Reference 상세 공용, surface-inventory.md "변경 이력")
 // — 대상을 향한 manual changeset만. digest/reference 외 target_type은 이 모달의
 // 대상이 아니다(manual은 애초에 그 둘만 만든다, 07-modeling.md).

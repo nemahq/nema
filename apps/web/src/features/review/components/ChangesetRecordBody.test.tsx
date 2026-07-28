@@ -49,6 +49,7 @@ function digestSnapshot(
     authorName: null,
     status: "active",
     createdAt: "2026-07-01T00:00:00Z",
+    sourceId: "source-1",
     ...overrides,
   };
 }

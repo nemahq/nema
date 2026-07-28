@@ -948,6 +948,413 @@ describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () 
   });
 });
 
+describe("restore_pending_relation RPC — 상태 가드 (integration)", () => {
+  it("discarded(closed+discarded) → restore(open+outcome null) 왕복, in-place", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+    await client.query("SELECT reject_pending_relation($1)", [changesetId]);
+
+    await client.query("SELECT restore_pending_relation($1)", [changesetId]);
+    const { rows } = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>("SELECT status, outcome FROM changesets WHERE id = $1", [changesetId]);
+    expect(rows[0]).toEqual({ status: "open", outcome: null });
+  });
+
+  it("아직 open인 changeset은 restore할 수 없다(discarded가 아님)", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+
+    await expect(
+      client.query("SELECT restore_pending_relation($1)", [changesetId]),
+    ).rejects.toThrow(/not a discarded pending relation changeset/);
+  });
+
+  it("확정(closed+applied)된 changeset은 restore할 수 없다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+    await client.query(
+      "UPDATE changesets SET status = 'closed', outcome = 'applied' WHERE id = $1",
+      [changesetId],
+    );
+
+    await expect(
+      client.query("SELECT restore_pending_relation($1)", [changesetId]),
+    ).rejects.toThrow(/not a discarded pending relation changeset/);
+  });
+
+  it("캐스케이드로 무효화된(invalidated_by_id 있는) discarded changeset은 restore할 수 없다 — 사람의 판단이 아니었으므로", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+    const otherChangesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+    await client.query(
+      "UPDATE changesets SET status = 'closed', outcome = 'discarded', invalidated_by_id = $2 WHERE id = $1",
+      [changesetId, otherChangesetId],
+    );
+
+    await expect(
+      client.query("SELECT restore_pending_relation($1)", [changesetId]),
+    ).rejects.toThrow(/not a discarded pending relation changeset/);
+  });
+
+  it("같은 진술 쌍에 지금 open인 relation changeset이 있으면 restore할 수 없다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const discardedChangesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+    await client.query("SELECT reject_pending_relation($1)", [
+      discardedChangesetId,
+    ]);
+    // 엔진이 재제안한 새 open — 되살리면 같은 쌍에 판정 대기가 두 개가 된다.
+    await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+
+    await expect(
+      client.query("SELECT restore_pending_relation($1)", [
+        discardedChangesetId,
+      ]),
+    ).rejects.toThrow(/already open/);
+  });
+
+  it.each(["conflicts", "duplicates"] as const)(
+    "%s는 방향이 뒤집힌(B→A) open이 있어도 restore를 막는다 — 방향 무관 비교",
+    async (relationType) => {
+      if (!localDbAvailable) {
+        return;
+      }
+
+      const userId = await createFixtureUser();
+      const workspaceId = await createFixtureWorkspace();
+      const spaceId = await createFixtureSpace(workspaceId, "Space A");
+      const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+      const digestA = await createFixtureDigest({
+        sourceId,
+        spaceId,
+        title: "다이제스트 A",
+      });
+      const digestB = await createFixtureDigest({
+        sourceId,
+        spaceId,
+        title: "다이제스트 B",
+      });
+      const fromId = await createFixtureStatement({
+        spaceId,
+        digestId: digestA,
+      });
+      const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+      const discardedChangesetId = await createFixtureOpenRelation({
+        spaceId,
+        sourceId,
+        relationType,
+        fromId,
+        toId,
+      });
+      await client.query("SELECT reject_pending_relation($1)", [
+        discardedChangesetId,
+      ]);
+      // 방향만 뒤집혀(B→A) 다시 열린 open — LEAST/GREATEST 아닌 OR 패턴으로
+      // 이것도 "같은 쌍"으로 잡아야 한다(#512와 같은 실수를 반복하지 않기 위한 테스트).
+      await createFixtureOpenRelation({
+        spaceId,
+        sourceId,
+        relationType,
+        fromId: toId,
+        toId: fromId,
+      });
+
+      await expect(
+        client.query("SELECT restore_pending_relation($1)", [
+          discardedChangesetId,
+        ]),
+      ).rejects.toThrow(/already open/);
+    },
+  );
+
+  it("supports는 방향이 뒤집힌 open이 있어도 막지 않는다 — 방향 의미가 있는 타입은 collapse하지 않는다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const discardedChangesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "supports",
+      fromId,
+      toId,
+    });
+    await client.query("SELECT reject_pending_relation($1)", [
+      discardedChangesetId,
+    ]);
+    await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "supports",
+      fromId: toId,
+      toId: fromId,
+    });
+
+    await client.query("SELECT restore_pending_relation($1)", [
+      discardedChangesetId,
+    ]);
+    const { rows } = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>("SELECT status, outcome FROM changesets WHERE id = $1", [
+      discardedChangesetId,
+    ]);
+    expect(rows[0]).toEqual({ status: "open", outcome: null });
+  });
+
+  // 위의 다른 테스트들은 슈퍼유저로 직접 쿼리해 auth.uid()가 NULL인 채로 돌아
+  // is_space_member 분기를 안 탄다(OR 왼쪽에서 단락) — revert_changeset 멤버십
+  // 테스트와 같은 이유로 request.jwt.claim.sub을 세팅해 실제 로그인 유저를 흉내 낸다.
+  it("실제 로그인 유저가 Space 멤버면 되살릴 수 있다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    await addFixtureWorkspaceMember(workspaceId, userId);
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, userId);
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+    await client.query("SELECT reject_pending_relation($1)", [changesetId]);
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      userId,
+    ]);
+
+    await client.query("SELECT restore_pending_relation($1)", [changesetId]);
+    const { rows } = await client.query<{
+      status: string;
+      outcome: string | null;
+    }>("SELECT status, outcome FROM changesets WHERE id = $1", [changesetId]);
+    expect(rows[0]).toEqual({ status: "open", outcome: null });
+  });
+
+  it("Space 멤버가 아닌 로그인 유저는 되살릴 수 없다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const ownerId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    await addFixtureWorkspaceMember(workspaceId, ownerId);
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, ownerId);
+    const sourceId = await createFixtureSource({ spaceId, authorId: ownerId });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+    await client.query("SELECT reject_pending_relation($1)", [changesetId]);
+
+    const outsiderId = await createFixtureUser();
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      outsiderId,
+    ]);
+
+    await expect(
+      client.query("SELECT restore_pending_relation($1)", [changesetId]),
+    ).rejects.toThrow(/not found or not accessible/);
+  });
+});
+
 describe("confirm_digest_edit RPC — manual changeset title (integration)", () => {
   it("Digest 수정으로 생기는 manual changeset의 title은 항상 null이다", async () => {
     if (!localDbAvailable) {

@@ -498,6 +498,7 @@ interface SourceStatement {
 
 interface SourceDetail {
   id: string;
+  title: string | null;
   body: string;
   extractionStatus: ExtractionStatus;
   errorMessage: string | null;
@@ -515,7 +516,7 @@ export async function getSource(args: {
   const { data: row, error } = await supabase
     .from("sources")
     .select(
-      "id, body, extraction_status, error_message, created_at, statement_sources(locator, statements(id, content, type, confidence, status, ingestion_status, created_at))",
+      "id, title, body, extraction_status, error_message, created_at, statement_sources(locator, statements(id, content, type, confidence, status, ingestion_status, created_at))",
     )
     .eq("id", sourceId)
     .eq("status", "active")
@@ -557,6 +558,7 @@ export async function getSource(args: {
 
   return {
     id: row.id,
+    title: row.title,
     body: row.body,
     extractionStatus: row.extraction_status,
     errorMessage: row.error_message,
