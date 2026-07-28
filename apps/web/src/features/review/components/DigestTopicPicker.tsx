@@ -11,6 +11,7 @@ import { Circle, Plus } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
+import { NewLabelIndicator } from "./NewLabelIndicator";
 import { useReviewDraftContext } from "./ReviewDraftProvider";
 import { TopicEditPanel } from "./TopicEditPanel";
 
@@ -44,6 +45,13 @@ export function DigestTopicPicker({
 }: DigestTopicPickerProps) {
   const { t } = useTranslation();
   const { dispatch } = useReviewDraftContext();
+  // 신규(registryId === null)를 앞으로 — "+" 표식의 의도(아직 확정 전이니
+  // 먼저 보고 판단하라)와 맞춘다. 그룹 내부는 원래 순서 유지(stable sort).
+  // 항목 식별이 이제 id 기반(#515)이라 정렬해도 삭제·수정이 엉뚱한 항목을
+  // 안 건드린다.
+  const sortedTopics = [...topics].sort(
+    (a, b) => (a.registryId === null ? 0 : 1) - (b.registryId === null ? 0 : 1),
+  );
 
   return (
     <Popover>
@@ -63,16 +71,31 @@ export function DigestTopicPicker({
                 거는 border로 바꿔 Circle 사이 여백까지 하나로 이어지게 한다. -mb-px는
                 그 border가 늘린 박스 높이 1px을 상쇄해, Type Chip·미트볼과 나란히
                 items-center로 놓였을 때 이 버튼만 미세하게 떠 보이지 않게 한다. */}
-            {topics.map((topic, index) => (
-              <span key={topic.id} className="flex items-center gap-1">
-                {index > 0 && (
-                  <Circle className="size-1 shrink-0 fill-current" />
-                )}
-                <Text as="span" size="xs" color="primary">
-                  {topic.title}
-                </Text>
-              </span>
-            ))}
+            {/* 인접한 신규(draft) Topic끼리만 구분자를 안 찍는다 — 신규 항목들이
+                뭉쳐 있을 때 "+"·"•"가 번갈아 반복되면 시각적으로 뭉개져 보인다. */}
+            {sortedTopics.map((topic, index) => {
+              const prevTopic = sortedTopics[index - 1];
+              const showSeparator =
+                index > 0 &&
+                !(prevTopic.registryId === null && topic.registryId === null);
+              return (
+                <span key={topic.id} className="flex items-center gap-1">
+                  {showSeparator && (
+                    <Circle className="size-1 shrink-0 fill-current" />
+                  )}
+                  {/* 신규(draft) 표식은 개체 왼쪽 — NewReferenceIndicator가 쓰는
+                      배치를 따른다. 간격을 아예 안 둬(gap-0) "+"가 라벨 글자에
+                      바로 붙은 prefix처럼 보이게 한다 — Circle 구분자와의
+                      간격(gap-1)과 대비되는 지점이라 여기만 0이어야 구분이 산다. */}
+                  <span className="flex items-center gap-0">
+                    {topic.registryId === null && <NewLabelIndicator />}
+                    <Text as="span" size="xs" color="primary">
+                      {topic.title}
+                    </Text>
+                  </span>
+                </span>
+              );
+            })}
           </button>
         ) : (
           <button

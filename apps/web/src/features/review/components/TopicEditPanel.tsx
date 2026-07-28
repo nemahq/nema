@@ -51,6 +51,17 @@ export function TopicEditPanel({
     setQuery("");
   }
 
+  function handleRenameDraft(id: string, title: string) {
+    onChange(
+      topics.map((topic) => (topic.id === id ? { ...topic, title } : topic)),
+    );
+  }
+
+  // DigestTopicPicker와 같은 이유 — 신규 먼저, 그룹 내부는 원래 순서 유지.
+  const sortedTopics = [...topics].sort(
+    (a, b) => (a.registryId === null ? 0 : 1) - (b.registryId === null ? 0 : 1),
+  );
+
   return (
     <div className="flex flex-col gap-2">
       <LabelChipRow
@@ -61,11 +72,12 @@ export function TopicEditPanel({
         ariaLabel={t("review.label_search_placeholder")}
         onQueryChange={setQuery}
       >
-        {topics.map((topic) => (
+        {sortedTopics.map((topic) => (
           <Chip
             key={topic.id}
             variant="outline"
             shape="rounded"
+            truncated
             disabled={disabled}
             onRemove={() => onChange(topics.filter((t) => t.id !== topic.id))}
             removeAriaLabel={t("review.topic_remove_action", {
@@ -88,6 +100,7 @@ export function TopicEditPanel({
           topics={topics}
           onSelectExisting={handleSelectExisting}
           onCreateNew={handleCreateNew}
+          onRenameDraft={handleRenameDraft}
         />
       )}
     </div>

@@ -26,14 +26,22 @@ export function TagCreateForm({
   const { t } = useTranslation();
   const descriptionFieldId = useId();
   const [description, setDescription] = useState("");
+  // 건드리기 전까지는 에러를 안 띄운다 — 안 그러면 열자마자(아직 아무것도
+  // 안 쳤는데) 빈 값 에러가 뜬다(SpaceNameField.tsx의 touched 패턴과 동일).
+  const [descriptionTouched, setDescriptionTouched] = useState(false);
+  const descriptionInvalid = description.trim() === "";
   const submittable =
-    title.trim() !== "" && description.trim() !== "" && !duplicateTitle;
+    title.trim() !== "" && !descriptionInvalid && !duplicateTitle;
+  const descriptionError =
+    descriptionTouched && descriptionInvalid
+      ? t("common.description_required")
+      : null;
 
   return (
     <div className="flex flex-col gap-3 px-2 pt-2 pb-2">
       <div className="flex flex-col gap-1.5">
         <Text size="sm" weight="medium" color="primary">
-          {t("review.tag_create_title_label")}
+          {t("common.name_label")}
         </Text>
         <Badge
           variant="outline"
@@ -61,9 +69,19 @@ export function TagCreateForm({
           autoFocus
           value={description}
           maxLength={TAG_DESCRIPTION_MAX_LENGTH}
-          onChange={(e) => setDescription(e.target.value)}
+          aria-invalid={descriptionTouched && descriptionInvalid}
+          onChange={(e) => {
+            setDescription(e.target.value);
+            setDescriptionTouched(true);
+          }}
           rows={3}
         />
+        <p
+          role="alert"
+          className={`text-xs ${descriptionError ? "text-status-error" : "text-transparent"}`}
+        >
+          {descriptionError ?? " "}
+        </p>
       </div>
       <div className="flex justify-end gap-2">
         {/* 취소(common.cancel)가 아니라 뒤로(common.back) — 팝오버를 닫는 게

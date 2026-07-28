@@ -10,6 +10,7 @@ import { Tag as TagIcon } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
+import { NewLabelIndicator } from "./NewLabelIndicator";
 import { useReviewDraftContext } from "./ReviewDraftProvider";
 import { TagEditPanel } from "./TagEditPanel";
 
@@ -43,6 +44,11 @@ export function DigestTagPicker({
 }: DigestTagPickerProps) {
   const { t } = useTranslation();
   const { dispatch } = useReviewDraftContext();
+  // DigestTopicPicker와 같은 이유(그 파일 주석 참고) — 신규 먼저, 그룹 내부는
+  // 원래 순서 유지.
+  const sortedTags = [...tags].sort(
+    (a, b) => (a.registryId === null ? 0 : 1) - (b.registryId === null ? 0 : 1),
+  );
 
   return (
     <Popover>
@@ -53,10 +59,16 @@ export function DigestTagPicker({
           className="flex min-h-6 cursor-pointer flex-wrap items-center gap-1 rounded-md px-2 py-1 text-left hover:bg-surface-raised-hover/75 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-surface-raised-hover"
         >
           {tags.length > 0 ? (
-            tags.map((tag) => (
-              <Badge key={tag.id} variant="neutral" shape="rounded" truncated>
-                {tag.title}
-              </Badge>
+            sortedTags.map((tag) => (
+              <span
+                key={tag.id}
+                className="inline-flex min-w-0 items-center gap-0"
+              >
+                {tag.registryId === null && <NewLabelIndicator />}
+                <Badge variant="neutral" shape="rounded" truncated>
+                  {tag.title}
+                </Badge>
+              </span>
             ))
           ) : (
             <span className="flex items-center gap-1 text-fg-tertiary">
@@ -68,7 +80,7 @@ export function DigestTagPicker({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={-24} className="p-0">
+      <PopoverContent align="start" sideOffset={-34} className="p-0">
         <TagEditPanel
           tags={tags}
           disabled={disabled}

@@ -257,7 +257,7 @@ export function TagAddPopover({
               color="tertiary"
               className="flex flex-col gap-1"
             >
-              {t("review.tag_create_title_label")}
+              {t("common.name_label")}
               <Input
                 autoFocus
                 value={creatingTitle}

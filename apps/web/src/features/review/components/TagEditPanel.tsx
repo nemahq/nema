@@ -59,6 +59,17 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
     setCreatingTitle(null);
   }
 
+  function handleRenameDraft(id: string, title: string, description: string) {
+    onChange(
+      tags.map((tag) => (tag.id === id ? { ...tag, title, description } : tag)),
+    );
+  }
+
+  // DigestTopicPicker와 같은 이유 — 신규 먼저, 그룹 내부는 원래 순서 유지.
+  const sortedTags = [...tags].sort(
+    (a, b) => (a.registryId === null ? 0 : 1) - (b.registryId === null ? 0 : 1),
+  );
+
   if (creatingTitle !== null) {
     return (
       <TagCreateForm
@@ -85,11 +96,12 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
         ariaLabel={t("review.label_search_placeholder")}
         onQueryChange={setQuery}
       >
-        {tags.map((tag) => (
+        {sortedTags.map((tag) => (
           <Chip
             key={tag.id}
             variant="outline"
             shape="rounded"
+            truncated
             disabled={disabled}
             onRemove={() => onChange(tags.filter((t) => t.id !== tag.id))}
             removeAriaLabel={t("review.tag_remove_action")}
@@ -109,6 +121,7 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
           tags={tags}
           onSelectExisting={handleSelectExisting}
           onStartCreate={setCreatingTitle}
+          onRenameDraft={handleRenameDraft}
         />
       )}
     </div>
