@@ -14,12 +14,12 @@
 
 ### 케이스 목록
 
-- [x] Digest 추출 완료 → ingestion changeset 자동 생성
-- [x] 검토 대기 배지 실시간 갱신 (LNB·Space 오버뷰)
-- [x] Digest 리뷰 화면 진입 — Digest 후보 나열
-- [x] Digest 리뷰 화면 진입 — Reference 후보 나열
-- [x] 원문에 없는 필드는 비워둠
-- [x] Digest 타입 제안
+- [ ] Digest 추출 완료 → ingestion changeset 자동 생성
+- [ ] 검토 대기 배지 실시간 갱신 (LNB·Space 오버뷰)
+- [ ] Digest 리뷰 화면 진입 — Digest 후보 나열
+- [ ] Digest 리뷰 화면 진입 — Reference 후보 나열
+- [ ] 원문에 없는 필드는 비워둠
+- [ ] Digest 타입 제안
 - [ ] 신규 Topic 제안
 - [ ] 신규 Tag 제안
 - [ ] 기존 Topic 재사용 제안
@@ -36,11 +36,11 @@
 - [ ] Tag 색상 지정 — 신규 생성 시
 - [ ] 라벨 정렬 — 신규 먼저
 - [ ] Reference 후보 자동 제안 및 매칭
-- [x] Changeset 제목 자동 생성 (ingestion)
-- [x] Digest 후보 삭제
-- [x] Digest 리뷰 확정
-- [x] Digest 리뷰 버리기
-- [x] 적용된 리뷰 되돌리기
+- [ ] Changeset 제목 자동 생성 (ingestion)
+- [ ] Digest 후보 삭제
+- [ ] Digest 리뷰 확정
+- [ ] Digest 리뷰 버리기
+- [ ] 적용된 리뷰 되돌리기
 - [ ] Changeset 제목 자동 생성 (revert)
 - [ ] 원문도 삭제하기
 - [ ] 버려진 리뷰 되살리기
@@ -307,7 +307,7 @@
 - **When**: 되돌리기(revert) changeset이 생성된다.
 - **Then**: 제목이 원본 제목 + "되돌려짐" 여부를 UI 언어에 맞는 자연스러운 표현으로 보여준다(반복 접미사를 그대로 이어붙이지 않음). 원본 제목이 없으면(번호 자리표시자 폴백 중) 이 되돌리기도 같은 폴백을 물려받는다.
 - **관여 화면**: Changeset 상세, 변경셋
-- **범위 참고**: 저장은 원본 제목+되돌려진 횟수(depth)로, 표시는 클라이언트가 UI 언어별 자연스러운 문구(Tolgee ICU 복수형 키)로 조합해야 함. 현재 구현(`revert_changeset` RPC)은 SQL에서 `title || ' 되돌림'`으로 한국어 문자열을 직접 이어붙여 저장 — 영어 UI에서 한/영 혼재되는 버그, 수정 필요.
+- **범위 참고 (갱신 2026-07-21, migration 20260721110000)**: 저장은 원본 제목 그대로 유지하고, 몇 단계 되돌려졌는지는 별도 `revert_depth` 정수 컬럼으로 관리한다. 문구 조합(ICU 복수형 등 언어별 렌더링)은 FE가 title+revertDepth로 처리한다(`features/review/utils.ts`) — 한국어 접미사를 SQL에서 직접 이어붙이던 이전 구현(영어 UI 한/영 혼재 버그)은 해소됨. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### 원문도 삭제하기
 
@@ -328,7 +328,7 @@
   2. 버리기 직전의 편집 상태(삭제했던 후보 등)가 그대로 복원된다.
   3. 변경셋 탭에서도 이 changeset이 Closed에서 Open으로 옮겨간다.
 - **관여 화면**: Digest 리뷰 화면, 변경셋
-- **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다(위 두 케이스와 같은 이유) — 되살리기 액션은 Changeset 상세에만 뒀다(`useRestoreReview` + 신설 `restore_ingestion_review` RPC). Then #1·#3은 구현. Then #2("버리기 직전의 편집 상태가 복원된다")는 구조적으로 불가능 — `discard_ingestion_review`가 changes를 아예 안 만드는 방식이라(변경이력 없음, 마이그레이션 주석 참고) 서버에 복원할 "편집 중이던 상태" 자체가 없다. `restore_ingestion_review`는 changeset.status만 되돌릴 뿐, 후보 삭제·제목 수정 같은 로컬 편집 내용은 애초에 저장된 적이 없어 복원 대상이 아니다 — 되살리면 원래(추출 직후) 상태의 Digest 리뷰 화면으로 돌아간다. 이 케이스의 Then #2는 스펙과 실제 구현이 근본적으로 다른 지점이라 PM 확인 필요(design-decisions-log.md 참고). 그래서 미체크로 남김.
+- **범위 참고 (2026-07-14, PR #412; 갱신 2026-07-27, 리뷰 draft 서버 영속화 재설계 이후)**: 화면 배치가 이 케이스의 Given과 다르다(위 두 케이스와 같은 이유) — 되살리기 액션은 Changeset 상세에만 뒀다(`useRestoreReview` + `restore_ingestion_review` RPC). Then #1·#3은 구현. Then #2("버리기 직전의 편집 상태가 복원된다")는 도입 당시엔 구조적으로 불가능했다 — 그때의 `discard_ingestion_review`는 changes를 아예 안 만드는 방식이라 서버에 복원할 "편집 중이던 상태" 자체가 없었다. 그런데 리뷰 draft가 클라이언트 오버라이드 방식에서 서버 영속 autosave 방식으로 재설계되면서(product-decisions-review-flow.md #21) 전제가 바뀌었다 — 현재 `discard_ingestion_review`(migration 20260726075454)는 changes를 건드리지 않고 changeset status·outcome만 바꾸므로, 되살리면 discard 직전까지 autosave된 편집 상태(후보 삭제 포함)가 그대로 남아있을 것으로 보인다. 구조적으로는 해소된 것으로 추정되나, 실동작 확인 전이라 미체크로 남김.
 
 #### 원문 삭제 후 되살리기 비활성화
 
@@ -675,7 +675,7 @@
 - **When**: manual changeset이 생성된다.
 - **Then**: changeset 제목을 채우지 않는다(항상 null). manual changeset은 변경셋 목록·Changeset 상세 어디에도 뜨지 않고, 오직 그 대상(Digest·Reference)의 "변경 이력" 모달에서만 조회되며 그 모달의 행 라벨은 제목이 아니라 수정 시각+수정한 사람이라, changeset 제목 자체가 읽힐 자리가 없다.
 - **관여 화면**: (해당 없음 — 변경셋 목록·Changeset 상세에 안 뜨는 것 자체가 이 케이스의 요점)
-- **범위 참고 (surface-inventory.md 74·246행)**: "manual은 변경셋 탭엔 아예 안 뜬다"·"번호는 이 화면 밖(변경셋 목록)에서만 의미 있는 앵커" — 같은 원칙이 제목에도 적용됨. 현재 구현(`confirm_digest_edit` 등, PR #435)은 대상 콘텐츠 제목을 changeset 제목에 채우고 있는데, 이건 아무 데도 안 쓰이는 불필요한 작업이라 제거 대상(코드 수정 필요).
+- **범위 참고 (surface-inventory.md 74·246행; 갱신 2026-07-26, migration 20260726080000)**: "manual은 변경셋 탭엔 아예 안 뜬다"·"번호는 이 화면 밖(변경셋 목록)에서만 의미 있는 앵커" — 같은 원칙이 제목에도 적용됨. 이전 구현(`confirm_digest_edit` 등, PR #435)은 대상 콘텐츠 제목을 changeset 제목에 채우고 있었으나, 아무 데도 안 쓰이는 불필요한 작업이라 판단돼 제거됐다(`confirm_digest_edit`·`update_reference`·`archive_reference`·`archive_digest` 전부 title을 안 채우도록 수정). 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### 편집 changeset 되돌리기
 
