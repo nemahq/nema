@@ -85,8 +85,10 @@ export type DigestTagDraft = z.infer<typeof DigestTagDraftSchema>;
 
 // Digest 리뷰 화면 전용 Topic/Tag 항목 — 1회성 확정 페이로드와 달리 이 화면은 초안을
 // 여러 번 저장·재조회하므로 항목의 정체성이 저장을 거쳐도 유지돼야 한다(신규 Reference의
-// ReviewNewReferenceDraft.id와 같은 사정). 삭제·이름수정·정렬이 배열 인덱스 대신 이 id를
-// 쓴다 — 화면 순서와 배열 순서가 갈라지면 인덱스는 엉뚱한 항목을 가리킨다. 초안이
+// ReviewNewReferenceDraft.id와 같은 사정). 지금 삭제(TopicEditPanel/TagEditPanel의
+// onRemove)는 이 id로 항목을 가리킨다 — 배열 인덱스로 가리키면 화면 순서와 배열 순서가
+// 갈라질 때(정렬 도입 시) 엉뚱한 항목이 지워진다. 정렬 자체는 이 슬라이스 밖이라 아직
+// 없지만, 이 id는 그 작업이 인덱스로 되돌아가지 않게 하려고 지금 놓는 것이다. 초안이
 // 살아있는 동안만 뜻이 있는 값이라, 확정 시 만들어지는 topics/tags 행의 PK와는 무관하다.
 export const ReviewTopicDraftSchema = DigestTopicDraftSchema.extend({
   id: z.string().uuid(),
@@ -166,6 +168,27 @@ function refineReviewPayload(
           message: `unknown new reference key: ${key}`,
         });
       }
+    }
+
+    // Topic/Tag의 id도 위와 같은 이유로 중복을 막는다 — React key 충돌뿐 아니라, 이
+    // id가 화면에서 항목을 가리키는 유일한 손잡이라 중복되면 삭제·이름수정이 둘 중
+    // 하나만 골라 지목할 수 없다.
+    const topicIds = digest.topics.map((topic) => topic.id);
+    if (new Set(topicIds).size !== topicIds.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["digests", index, "topics"],
+        message: "duplicate id in topics",
+      });
+    }
+
+    const tagIds = digest.tags.map((tag) => tag.id);
+    if (new Set(tagIds).size !== tagIds.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["digests", index, "tags"],
+        message: "duplicate id in tags",
+      });
     }
   });
 }

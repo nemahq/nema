@@ -18,9 +18,10 @@ import {
 
 // --- 리뷰 상세 — Digest 리뷰 화면의 초안 상태 ---
 
-// changes.data는 우리 RPC(write_ingestion_review_changes)만 쓴다 — 형태가 어긋나면
-// 마이그레이션과 서비스가 갈라진 것이므로 조용히 넘기지 않고 검증 실패로 드러낸다.
-const StoredDigestDataSchema = z.object({
+// ingestion changeset의 digest create-Change 저장 형태 — write_ingestion_review_changes
+// (엔진 최초 적재)와 update_pending_ingestion(사용자 저장) 둘 다 이 형태로 쓴다. 형태가
+// 어긋나면 마이그레이션과 서비스가 갈라진 것이므로 조용히 넘기지 않고 검증 실패로 드러낸다.
+const StoredIngestionDigestDataSchema = z.object({
   title: z.string(),
   description: z.string(),
   body: DigestBodySchema,
@@ -163,7 +164,7 @@ export async function getReview(args: {
   const rawDigests = digestChanges.map((change) => ({
     id: change.target_id,
     position: requirePosition(change.position, change.id),
-    ...StoredDigestDataSchema.parse(change.data),
+    ...StoredIngestionDigestDataSchema.parse(change.data),
   }));
 
   // 기존/신규 판정 — 이름이 Space(topics)·Workspace(tags) 레지스트리와 매치하면 기존

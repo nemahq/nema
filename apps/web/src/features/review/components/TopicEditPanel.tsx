@@ -61,13 +61,13 @@ export function TopicEditPanel({
         ariaLabel={t("review.label_search_placeholder")}
         onQueryChange={setQuery}
       >
-        {topics.map((topic, index) => (
+        {topics.map((topic) => (
           <Chip
             key={topic.id}
             variant="outline"
             shape="rounded"
             disabled={disabled}
-            onRemove={() => onChange(topics.filter((_, i) => i !== index))}
+            onRemove={() => onChange(topics.filter((t) => t.id !== topic.id))}
             removeAriaLabel={t("review.topic_remove_action", {
               label: topic.title,
             })}

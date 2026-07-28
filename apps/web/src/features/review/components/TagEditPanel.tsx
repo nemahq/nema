@@ -85,13 +85,13 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
         ariaLabel={t("review.label_search_placeholder")}
         onQueryChange={setQuery}
       >
-        {tags.map((tag, index) => (
+        {tags.map((tag) => (
           <Chip
             key={tag.id}
             variant="outline"
             shape="rounded"
             disabled={disabled}
-            onRemove={() => onChange(tags.filter((_, i) => i !== index))}
+            onRemove={() => onChange(tags.filter((t) => t.id !== tag.id))}
             removeAriaLabel={t("review.tag_remove_action")}
           >
             {tag.title}

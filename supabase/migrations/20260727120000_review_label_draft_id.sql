@@ -19,8 +19,10 @@
 -- 이 형태는 ingestion 리뷰의 digest create-Change에만 적용된다. manual(confirm_digest_edit)·
 -- relation(resolve_duplicate_relation) changeset의 digest create-Change는 이미 확정된
 -- 결과의 기록이라 저장·재조회되는 초안 단계 자체가 없다 — 거기에 항목 id를 넣으면 아무도
--- 안 쓰는 값이 되므로 문자열 그대로 둔다. 그래서 changes.data->'topics'를 읽는 코드는
--- changeset type을 먼저 봐야 한다.
+-- 안 쓰는 값이 되므로 문자열 그대로 둔다. 지금 changes.data->'topics'의 실제 reader는
+-- confirm_ingestion_review·getReview 둘뿐이고 둘 다 이미 ingestion으로 좁혀져 있어
+-- 당장 분기가 필요하진 않다 — 다만 이후 이 컬럼을 읽는 코드가 새로 생기면 changeset
+-- type부터 봐야 한다는 걸 유의할 것.
 --
 -- 주의(20260726093453과 같은 사정): 아래 confirm_ingestion_review는 파일 타임스탬프가
 -- 머지 순서보다 우선하므로, 같은 함수를 건드리는 다른 브랜치가 있으면 머지 시점에
@@ -30,8 +32,11 @@
 -- ----- 1) 기존 초안 백필 -----
 --
 -- 이미 열려 있는 리뷰의 changes.data를 새 형태로 옮긴다. 닫힌 ingestion changeset도
--- 함께 옮겨 같은 type 안에서 형태가 갈라지지 않게 한다(이력 조회가 분기 없이 읽히도록).
--- 원소가 이미 새 형태면 그대로 둬 재실행해도 id가 바뀌지 않는다.
+-- 함께 옮겨 같은 type 안에서 형태가 갈라지지 않게 한다 — 지금은 대응하는 reader가 없지만
+-- (changeset-detail-service.ts는 확정 후 라이브 topics/tags 테이블을 조인해 읽지
+-- changes.data를 안 본다), 두 형태가 섞인 채로 남겨두면 나중에 이 컬럼을 읽는 코드가
+-- 생길 때마다 분기가 필요해진다. 원소가 이미 새 형태면 그대로 둬 재실행해도 id가
+-- 바뀌지 않는다.
 UPDATE changes c
 SET data = c.data || jsonb_build_object(
   'topics', (
@@ -61,12 +66,31 @@ WHERE cs.id = c.changeset_id
   AND c.target_type = 'digest'
   AND c.action = 'create';
 
+-- 배포 순서 안전장치 — CI는 마이그레이션을 동기로 먼저 적용하고 서버 배포는 비동기로
+-- 뒤따르므로(.github/workflows/ci.yml), 위 백필이 반영된 후에도 몇 분간 구 서버 코드가
+-- 계속 요청을 받는다. 그 창에서 구 서버는 topics를 string[]로 저장하는데(자동저장),
+-- update_pending_ingestion은 topics/tags 형태를 검증하지 않고 그대로 받아 저장하므로
+-- 백필을 되돌릴 수 있다 — 그 changeset은 새 서버 배포 후 조회·확정·저장 전부 막힌다
+-- (실제로 되돌아가지 않아도, 안전하게 한 번 더 거절하는 쪽이 유일한 실패 모드다).
+-- draft_version을 올려, 백필 시점에 이미 리뷰 화면을 열어두고 있던(캐시된 expectedVersion이
+-- 이 값을 못 따라옴) 구 클라이언트의 저장을 NM012(새로고침 필요)로 거절되게 한다 —
+-- open 리뷰만 대상이다(닫힌 changeset은 update_pending_ingestion 자체가 막는다).
+UPDATE changesets
+SET draft_version = draft_version + 1
+WHERE type = 'ingestion'
+  AND status = 'open'
+  AND id IN (
+    SELECT DISTINCT changeset_id FROM changes
+    WHERE target_type = 'digest' AND action = 'create'
+  );
+
 -- ----- 2) write_ingestion_review_changes — 엔진 산물의 라벨에 id 부여 -----
 --
 -- 엔진 계약(topics: string[], tags: [{title, description}])은 그대로 둔다 — 엔진엔
 -- "초안 항목의 정체성"이라는 개념이 없다. 저장 형태를 소유한 이 RPC가 적재 시점에
--- 채운다. 사용자 경로(update_pending_ingestion)는 화면이 만들어 보낸 id를 그대로
--- 저장하므로(신규 Reference와 같은 왕복) 손댈 것이 없다.
+-- 항상 새 id를 채운다(호출자가 id를 실어 보내도 무시 — 아래 v_tags 병합 방향 참고).
+-- 사용자 경로(update_pending_ingestion)는 화면이 만들어 보낸 id를 그대로 저장하므로
+-- (신규 Reference와 같은 왕복) 손댈 것이 없다.
 CREATE OR REPLACE FUNCTION write_ingestion_review_changes(
   p_changeset_id      uuid,
   p_digests           jsonb,
@@ -168,8 +192,12 @@ BEGIN
     ), '[]'::jsonb) INTO v_topics
     FROM jsonb_array_elements(coalesce(v_item->'topics', '[]'::jsonb)) WITH ORDINALITY AS t(value, ord);
 
+    -- (t.value - 'id') || jsonb_build_object(...) — 오른쪽 피연산자가 이기는 jsonb ||
+    -- 병합 순서상, 호출자가 실수로 tags[].id를 실어 보내도 여기서 새로 만든 id로
+    -- 덮는다(엔진 경로는 지금 id를 안 보내 도달하지 않지만, 이 함수가 "항상 새로
+    -- 채운다"는 선언을 코드로도 지킨다).
     SELECT coalesce(jsonb_agg(
-      jsonb_build_object('id', gen_random_uuid()) || t.value ORDER BY t.ord
+      (t.value - 'id') || jsonb_build_object('id', gen_random_uuid()) ORDER BY t.ord
     ), '[]'::jsonb) INTO v_tags
     FROM jsonb_array_elements(coalesce(v_item->'tags', '[]'::jsonb)) WITH ORDINALITY AS t(value, ord);
 
@@ -279,11 +307,14 @@ BEGIN
       v_author_id, v_author_name
     );
 
-    -- 주제 레지스트리 find-or-create + 연결 (find-or-create 관용구)
+    -- 주제 레지스트리 find-or-create + 연결 (find-or-create 관용구). value->>'title'은
+    -- value가 옛 형태(순수 문자열)면 NULL을 낸다 — btrim(v_name) = ''는 NULL에서 NULL이라
+    -- CONTINUE를 못 뚫고 그대로 topics.title에 NULL을 넣어 NOT NULL 위반(23502)으로
+    -- 죽는다. 태그 루프(바로 아래, coalesce(v_tag->>'title', ''))와 같은 결로 맞춘다.
     FOR v_name IN
       SELECT value->>'title' FROM jsonb_array_elements(coalesce(ch.data->'topics', '[]'::jsonb))
     LOOP
-      CONTINUE WHEN btrim(v_name) = '';
+      CONTINUE WHEN btrim(coalesce(v_name, '')) = '';
       INSERT INTO topics (space_id, title)
       VALUES (v_space_id, btrim(v_name))
       ON CONFLICT (space_id, title) DO UPDATE SET title = EXCLUDED.title

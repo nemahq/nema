@@ -260,6 +260,69 @@ describe("create_ingestion_review RPC (integration)", () => {
 
     expect(changesetRows[0]?.title).toBe("미리 채워진 제목");
   });
+
+  // 다른 create_ingestion_review 테스트는 전부 topics: []/tags: []라 write_ingestion_review_changes의
+  // id 부여 블록과 confirm_ingestion_review의 value->>'title' 읽기(20260727120000)를 어느 테스트도
+  // 실행하지 않았다 — 회귀가 조용하다(#>> '{}'로 되돌아가면 "{\"id\":..,\"title\":..}"라는 이름의
+  // Topic이 예외 없이 만들어진다).
+  it("digest의 topics/tags 원소마다 uuid id가 붙고, confirm이 title로 레지스트리를 find-or-create한다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+
+    const digest = {
+      type: "decision",
+      title: "픽스처 다이제스트",
+      description: "설명",
+      body: { type: "decision" },
+      topics: ["주제 A"],
+      tags: [{ title: "태그 A", description: "정의" }],
+      reference_ids: [],
+    };
+
+    const { rows } = await client.query<{ create_ingestion_review: string }>(
+      "SELECT create_ingestion_review($1, $2::jsonb)",
+      [sourceId, JSON.stringify([digest])],
+    );
+    const changesetId = rows[0].create_ingestion_review;
+
+    const { rows: changeRows } = await client.query<{
+      data: { topics: { id: string; title: string }[]; tags: unknown[] };
+    }>(
+      "SELECT data FROM changes WHERE changeset_id = $1 AND target_type = 'digest' AND action = 'create'",
+      [changesetId],
+    );
+    const storedTopics = changeRows[0]?.data.topics;
+    expect(storedTopics).toHaveLength(1);
+    expect(storedTopics?.[0]?.title).toBe("주제 A");
+    expect(storedTopics?.[0]?.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+    expect(changeRows[0]?.data.tags).toEqual([
+      expect.objectContaining({ title: "태그 A", description: "정의" }),
+    ]);
+
+    await client.query("SELECT confirm_ingestion_review($1)", [changesetId]);
+
+    const { rows: topicRows } = await client.query<{ title: string }>(
+      "SELECT title FROM topics WHERE space_id = $1 AND title = '주제 A'",
+      [spaceId],
+    );
+    expect(topicRows).toHaveLength(1);
+
+    const { rows: tagRows } = await client.query<{
+      title: string;
+      description: string;
+    }>("SELECT title, description FROM tags WHERE workspace_id = $1", [
+      workspaceId,
+    ]);
+    expect(tagRows).toEqual([{ title: "태그 A", description: "정의" }]);
+  });
 });
 
 describe("discard_ingestion_review / restore_ingestion_review RPC — 상태 가드 (integration)", () => {
