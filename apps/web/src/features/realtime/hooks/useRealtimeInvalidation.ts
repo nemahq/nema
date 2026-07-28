@@ -27,9 +27,9 @@ function invalidateUnlessFresh(queryKey: readonly unknown[]) {
     state &&
     Date.now() - state.dataUpdatedAt < SKIP_INVALIDATE_IF_FRESHER_THAN_MS
   ) {
-    return;
+    return Promise.resolve();
   }
-  void queryClient.invalidateQueries({ queryKey });
+  return queryClient.invalidateQueries({ queryKey });
 }
 
 // trpc는 모듈 스코프에서 안정적인 참조라(Provider 없이도 _def 경로 메타데이터만
@@ -78,13 +78,17 @@ export function useRealtimeInvalidation() {
       );
     }
     function invalidateChangesetBadges() {
-      invalidateUnlessFresh(SPACE_LIST_QUERY_KEY);
-      invalidateUnlessFresh(CHANGESET_LIST_QUERY_KEY);
+      return Promise.all([
+        invalidateUnlessFresh(SPACE_LIST_QUERY_KEY),
+        invalidateUnlessFresh(CHANGESET_LIST_QUERY_KEY),
+      ]);
     }
-    function handleChangesetInsert(
+    async function handleChangesetInsert(
       payload: RealtimePostgresInsertPayload<ChangesetInsertRow>,
     ) {
-      invalidateChangesetBadges();
+      // 배지·목록이 실제로 새로고침을 마친 뒤에 알림을 띄운다 — 먼저 띄우면
+      // 탭으로 돌아왔을 때 알림은 이미 떴는데 화면은 아직 못 따라온 것처럼 보인다.
+      await invalidateChangesetBadges();
       notifyChangesetReadyRef.current(payload.new);
     }
 

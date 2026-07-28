@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 import {
   type ChangesetInsertRow,
-  isIngestionChangeset,
+  needsReviewNotification,
   resolveSpacePublicId,
 } from "@web/features/notifications/changesetNotification";
 import { isNotificationSupported } from "@web/features/notifications/utils";
@@ -24,7 +24,7 @@ export function useChangesetReadyNotifier() {
         !isNotificationSupported() ||
         Notification.permission !== "granted" ||
         !document.hidden ||
-        !isIngestionChangeset(row)
+        !needsReviewNotification(row)
       ) {
         return;
       }

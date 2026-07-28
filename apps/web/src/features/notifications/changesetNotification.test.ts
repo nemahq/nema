@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   type ChangesetInsertRow,
-  isIngestionChangeset,
+  needsReviewNotification,
   resolveSpacePublicId,
 } from "./changesetNotification";
 
@@ -12,29 +12,40 @@ function buildRow(overrides: Partial<ChangesetInsertRow>): ChangesetInsertRow {
     space_id: "space-1",
     number: 1,
     type: "ingestion",
+    status: "open",
     ...overrides,
   };
 }
 
-describe("isIngestionChangeset", () => {
-  it("ingestion type + space_id 있음 — 통과", () => {
-    expect(isIngestionChangeset(buildRow({}))).toBe(true);
+describe("needsReviewNotification", () => {
+  it("ingestion + open + space_id 있음 — 통과", () => {
+    expect(needsReviewNotification(buildRow({}))).toBe(true);
   });
 
-  it("relation type — 리뷰 화면이 거절하므로 알림도 거른다", () => {
-    expect(isIngestionChangeset(buildRow({ type: "relation" }))).toBe(false);
+  it("relation + open(판정 대기) — 통과", () => {
+    expect(
+      needsReviewNotification(buildRow({ type: "relation", status: "open" })),
+    ).toBe(true);
   });
 
-  it("manual type — 거른다", () => {
-    expect(isIngestionChangeset(buildRow({ type: "manual" }))).toBe(false);
+  it("relation + closed(확신 매칭 자동 적용) — 거른다", () => {
+    expect(
+      needsReviewNotification(buildRow({ type: "relation", status: "closed" })),
+    ).toBe(false);
+  });
+
+  it("manual — 항상 closed라 거른다", () => {
+    expect(
+      needsReviewNotification(buildRow({ type: "manual", status: "closed" })),
+    ).toBe(false);
   });
 
   it("space_id가 null — 딥링크할 space가 없어 거른다", () => {
-    expect(isIngestionChangeset(buildRow({ space_id: null }))).toBe(false);
+    expect(needsReviewNotification(buildRow({ space_id: null }))).toBe(false);
   });
 
   it("number가 null — 딥링크할 번호가 없어 거른다", () => {
-    expect(isIngestionChangeset(buildRow({ number: null }))).toBe(false);
+    expect(needsReviewNotification(buildRow({ number: null }))).toBe(false);
   });
 });
 
