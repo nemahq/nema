@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { DIGEST_TYPES, type DigestBody } from "@nema-io/shared";
 
+import { renderBody } from "@server/prompts/digest-extraction";
+
 // =============================================================
 // 중복 병합 초안 생성 — 관계 엔진이 duplicates 쌍을 발견한 그 순간(2단계), 병합된
 // Digest 한 장을 미리 써 pending relation changeset에 담아둔다 (eager 생성,
@@ -78,50 +80,19 @@ export interface MergeDraftDigestInput {
   body: DigestBody;
 }
 
-const BODY_FIELD_KEYS = [
-  "situation",
-  "choice",
-  "reason",
-  "tradeoff",
-  "alternatives",
-  "question",
-  "background",
-  "branches",
-  "resolutionCondition",
-  "finding",
-  "evidence",
-  "concept",
-  "assumption",
-  "impact",
-  "verificationCondition",
-] as const;
-
-// DigestBody(판별 유니언)를 프롬프트용 평문 줄로 — 값 있는 필드만, null/undefined는 생략.
-function formatDigestBody(body: DigestBody): string {
-  const lines: string[] = [`type: ${body.type}`];
-  for (const key of BODY_FIELD_KEYS) {
-    const fieldValue = (body as Record<string, unknown>)[key];
-    if (fieldValue === undefined || fieldValue === null) {
-      continue;
-    }
-    const text = Array.isArray(fieldValue)
-      ? fieldValue.join("; ")
-      : String(fieldValue);
-    if (text.trim() === "") {
-      continue;
-    }
-    lines.push(`${key}: ${text}`);
-  }
-  return lines.join("\n");
-}
-
+// digest-extraction.ts의 renderBody를 그대로 재사용 — 그쪽 switch(body.type)에 default가
+// 없어 DigestBody에 타입·필드가 늘면 컴파일 에러로 강제된다. 여기서 같은 렌더링을
+// 따로 다시 구현하면 그 안전장치를 우회하게 되어(새 필드가 조용히 누락될 수 있음),
+// "정보를 하나도 빠뜨리지 않는다"는 이 프롬프트의 약속과 어긋난다.
 function formatDigest(label: string, digest: MergeDraftDigestInput): string {
-  return [
+  const bodyText = renderBody(digest.body);
+  const header = [
     `[${label}]`,
+    `type: ${digest.body.type}`,
     `title: ${digest.title}`,
     `description: ${digest.description}`,
-    formatDigestBody(digest.body),
   ].join("\n");
+  return bodyText ? `${header}\n\n${bodyText}` : header;
 }
 
 export function buildRelationMergeDraftMessage(

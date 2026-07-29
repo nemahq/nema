@@ -622,12 +622,35 @@ const LLM_CALL_MAX_ATTEMPTS = 3;
 const LLM_CALL_RETRY_DELAY_MS = 2_000;
 // source 단위 lease 재시도(incrementRetry)와 기준을 공유한다 — llm-error.ts 참고.
 
+// 일시 오류(timeout/rate_limit/unknown)만 시도 횟수 비례 지연으로 재시도하는 공용 정책 —
+// 추출·관계 판정·병합 초안 등 모든 구조화 LLM 콜이 이 하나로 공유한다. 결정적 실패는
+// 전파해 source 단위 lease 사이클이 받는다.
+async function withLlmRetry<T>(call: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= LLM_CALL_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await call();
+    } catch (err) {
+      lastError = err;
+      const retryable =
+        err instanceof LlmError && RETRYABLE_LLM_CODES.has(err.code);
+      if (!retryable || attempt === LLM_CALL_MAX_ATTEMPTS) {
+        throw err;
+      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, attempt * LLM_CALL_RETRY_DELAY_MS),
+      );
+    }
+  }
+  throw lastError;
+}
+
 async function extractDigestStatements(
   llm: LlmProvider,
   input: { digest: SourceDigest; todayIsoDate: string },
 ): Promise<ExtractedStatement[]> {
   const output = await limitLlmCall(() =>
-    callDigestExtractionWithRetry(llm, input),
+    withLlmRetry(() => callDigestExtraction(llm, input)),
   );
   return output.statements;
 }
@@ -651,29 +674,6 @@ function callDigestExtraction(
     timeoutMs: EXTRACTION_TIMEOUT_MS,
     maxRetries: 0,
   });
-}
-
-async function callDigestExtractionWithRetry(
-  llm: LlmProvider,
-  input: { digest: SourceDigest; todayIsoDate: string },
-) {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= LLM_CALL_MAX_ATTEMPTS; attempt++) {
-    try {
-      return await callDigestExtraction(llm, input);
-    } catch (err) {
-      lastError = err;
-      const retryable =
-        err instanceof LlmError && RETRYABLE_LLM_CODES.has(err.code);
-      if (!retryable || attempt === LLM_CALL_MAX_ATTEMPTS) {
-        throw err;
-      }
-      await new Promise((resolve) =>
-        setTimeout(resolve, attempt * LLM_CALL_RETRY_DELAY_MS),
-      );
-    }
-  }
-  throw lastError;
 }
 
 // DB 제약(claim만 confidence)과 맞도록 방어 정규화 — 과장 금지 원칙이라 빠진 확신도는 guess.
@@ -964,7 +964,11 @@ async function processLinking(
     applied,
     pending,
   );
-  const pendingWithDrafts = await attachMergeDrafts(finalPending, deps);
+  const pendingWithDrafts = await attachMergeDrafts({
+    pending: finalPending,
+    sourceId: source.id,
+    deps,
+  });
   await applyRelationChangesets({
     supabase: deps.supabase,
     sourceId: source.id,
@@ -975,14 +979,18 @@ async function processLinking(
 
 // duplicates pending 쌍마다 병합 제안 Digest 초안을 즉시(eager) 만들어 붙인다
 // (surface-inventory.md "관계 판정 화면(중복/병합)" — 판정 화면을 여는 순간 LLM을 부르면
-// 이 파이프라인에서 유일한 로딩 상태가 생겨 일관성이 깨진다). 한 쌍이 실패해도 나머지
-// 쌍·나머지 pending 변경은 그대로 진행한다(§conventions "개별 항목 오류는 전체를
-// 막지 않는다") — draft 없이 저장되면 apply_relation_changesets가 기존 "A vs B" 임시
-// 제목으로 조용히 낮춘다.
-async function attachMergeDrafts(
-  pending: RelationChange[],
-  deps: WorkerDeps,
-): Promise<RelationChange[]> {
+// 이 파이프라인에서 유일한 로딩 상태가 생겨 일관성이 깨진다). 초안은 부가 기능이라
+// 이것 때문에 원래 판정(확신 관계 적용 포함)까지 막히면 안 된다 — 스냅샷 조회 자체가
+// 실패하면(손상된 digests.body 등) 초안 없이 기존 파이프라인을 그대로 흘려보내고,
+// 개별 쌍의 LLM 호출만 실패하면 그 쌍만 draft 없이 남는다(둘 다 §conventions "개별
+// 항목 오류는 전체를 막지 않는다"). draft 없는 pending은 apply_relation_changesets가
+// 기존 "A vs B" 임시 제목으로 조용히 낮춘다.
+async function attachMergeDrafts(params: {
+  pending: RelationChange[];
+  sourceId: string;
+  deps: WorkerDeps;
+}): Promise<RelationChange[]> {
+  const { pending, sourceId, deps } = params;
   const duplicatePairs = pending.filter(
     (change) => change.type === "duplicates",
   );
@@ -990,40 +998,63 @@ async function attachMergeDrafts(
     return pending;
   }
 
-  const statementIds = [
-    ...new Set(
-      duplicatePairs.flatMap((change) => [change.from_id, change.to_id]),
-    ),
-  ];
-  const digestIdByStatement = await fetchDigestIdsForStatements(
-    deps.supabase,
-    statementIds,
-  );
-  const digestIds = [...new Set(digestIdByStatement.values())];
-  const snapshotByDigest = await fetchMergeDraftSnapshots(
-    deps.supabase,
-    digestIds,
-  );
+  let digestIdByStatement: Map<string, string>;
+  let snapshotByDigest: Map<string, MergeDraftDigestSnapshot>;
+  try {
+    const statementIds = [
+      ...new Set(
+        duplicatePairs.flatMap((change) => [change.from_id, change.to_id]),
+      ),
+    ];
+    digestIdByStatement = await fetchDigestIdsForStatements(
+      deps.supabase,
+      statementIds,
+    );
+    const digestIds = [...new Set(digestIdByStatement.values())];
+    snapshotByDigest = await fetchMergeDraftSnapshots(deps.supabase, digestIds);
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: {
+        component: "statement-sync",
+        phase: "linking",
+        step: "merge-draft-snapshot",
+      },
+      extra: { sourceId },
+    });
+    return pending;
+  }
 
-  // 같은 Digest 쌍이 duplicates 진술 쌍 여러 개로 걸릴 수 있다 — LLM은 한 번만 부른다.
+  // 같은 Digest 쌍이 duplicates 진술 쌍 여러 개로 걸릴 수 있다 — 고유 쌍을 await 이전에
+  // 동기적으로 먼저 추려야 LLM이 쌍당 정확히 한 번만 불린다. Promise.all(...map(async ...))
+  // 콜백은 첫 await까지 동기 실행되므로, 이 dedupe를 async 콜백 안(첫 await 뒤)에 두면
+  // 같은 쌍이 duplicate 진술 여러 개로 걸릴 때 전부 아직-없음을 보고 각자 LLM을 부른다.
+  interface UniqueDigestPair {
+    pairKey: string;
+    keeper: MergeDraftDigestSnapshot;
+    duplicate: MergeDraftDigestSnapshot;
+  }
+  const uniquePairs = new Map<string, UniqueDigestPair>();
+  for (const change of duplicatePairs) {
+    const keeperDigestId = digestIdByStatement.get(change.from_id);
+    const duplicateDigestId = digestIdByStatement.get(change.to_id);
+    const keeper = keeperDigestId
+      ? snapshotByDigest.get(keeperDigestId)
+      : undefined;
+    const duplicate = duplicateDigestId
+      ? snapshotByDigest.get(duplicateDigestId)
+      : undefined;
+    if (!keeper || !duplicate || keeper.id === duplicate.id) {
+      continue;
+    }
+    const pairKey = [keeper.id, duplicate.id].sort().join(":");
+    if (!uniquePairs.has(pairKey)) {
+      uniquePairs.set(pairKey, { pairKey, keeper, duplicate });
+    }
+  }
+
   const draftByDigestPair = new Map<string, DigestDraft>();
   await Promise.all(
-    duplicatePairs.map(async (change) => {
-      const keeperDigestId = digestIdByStatement.get(change.from_id);
-      const duplicateDigestId = digestIdByStatement.get(change.to_id);
-      const keeper = keeperDigestId
-        ? snapshotByDigest.get(keeperDigestId)
-        : undefined;
-      const duplicate = duplicateDigestId
-        ? snapshotByDigest.get(duplicateDigestId)
-        : undefined;
-      if (!keeper || !duplicate || keeper.id === duplicate.id) {
-        return;
-      }
-      const pairKey = [keeper.id, duplicate.id].sort().join(":");
-      if (draftByDigestPair.has(pairKey)) {
-        return;
-      }
+    [...uniquePairs.values()].map(async ({ pairKey, keeper, duplicate }) => {
       try {
         const draft = await generateMergeDraft({
           keeper,
@@ -1038,7 +1069,11 @@ async function attachMergeDrafts(
             phase: "linking",
             step: "merge-draft",
           },
-          extra: { fromId: change.from_id, toId: change.to_id },
+          extra: {
+            sourceId,
+            keeperDigestId: keeper.id,
+            duplicateDigestId: duplicate.id,
+          },
         });
       }
     }),
@@ -1064,7 +1099,6 @@ async function attachMergeDrafts(
   });
 }
 
-// duplicates 쌍의 끝점 진술 → 소속 Digest id.
 async function fetchDigestIdsForStatements(
   supabase: TypedSupabaseClient,
   statementIds: string[],
@@ -1090,9 +1124,9 @@ interface MergeDraftDigestSnapshot extends MergeDraftDigestInput {
   referenceIds: string[];
 }
 
-// changeset-detail-service.ts의 fetchDigestSnapshots와 같은 조인이지만, 워커(infra)는
-// 서비스 계층을 가로질러 import하지 않는 기존 레이어 경계(conventions.md "Infra clients는
-// 서비스 위 계층을 모른다")를 지키기 위해 별도로 둔다.
+// changeset-detail-service.ts의 fetchDigestSnapshots와 같은 조인이지만, 서비스 계층
+// 함수를 워커(infra)가 직접 import하면 지금 레이어 구조(infra 위에 services, conventions.md
+// "Infra clients isolate external dependencies")가 거꾸로 뒤집히므로 여기 따로 둔다.
 async function fetchMergeDraftSnapshots(
   supabase: TypedSupabaseClient,
   digestIds: string[],
@@ -1109,28 +1143,42 @@ async function fetchMergeDraftSnapshots(
   if (error) {
     throw new Error(`fetch merge draft snapshots failed: ${error.message}`);
   }
-  return new Map(
-    (data ?? []).map((row) => [
-      row.id,
-      {
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        body: DigestBodySchema.parse(row.body),
-        externalUrls: row.external_urls ?? [],
-        topics: row.digest_topics.map((dt) => ({
-          id: dt.topic.id,
-          title: dt.topic.title,
-        })),
-        tags: row.digest_tags.map((dt) => ({
-          id: dt.tag.id,
-          title: dt.tag.title,
-          description: dt.tag.description,
-        })),
-        referenceIds: row.digest_references.map((dr) => dr.reference_id),
-      },
-    ]),
-  );
+
+  const snapshots = new Map<string, MergeDraftDigestSnapshot>();
+  for (const row of data ?? []) {
+    const parsedBody = DigestBodySchema.safeParse(row.body);
+    if (!parsedBody.success) {
+      // 이 행 하나가 손상돼도 나머지 유효한 Digest들의 병합 초안까지 막으면 안 된다 —
+      // 이 행만 스킵한다(attachMergeDrafts의 전체 실패 격리와 같은 원칙, 더 좁은 단위).
+      Sentry.captureException(parsedBody.error, {
+        tags: {
+          component: "statement-sync",
+          phase: "linking",
+          step: "merge-draft-snapshot",
+        },
+        extra: { digestId: row.id },
+      });
+      continue;
+    }
+    snapshots.set(row.id, {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      body: parsedBody.data,
+      externalUrls: row.external_urls ?? [],
+      topics: row.digest_topics.map((dt) => ({
+        id: dt.topic.id,
+        title: dt.topic.title,
+      })),
+      tags: row.digest_tags.map((dt) => ({
+        id: dt.tag.id,
+        title: dt.tag.title,
+        description: dt.tag.description,
+      })),
+      referenceIds: row.digest_references.map((dr) => dr.reference_id),
+    });
+  }
+  return snapshots;
 }
 
 async function generateMergeDraft(params: {
@@ -1141,7 +1189,7 @@ async function generateMergeDraft(params: {
   const { keeper, duplicate, llm } = params;
   const message = buildRelationMergeDraftMessage(keeper, duplicate);
   const { merged } = await limitLlmCall(() =>
-    callMergeDraftWithRetry(llm, message),
+    withLlmRetry(() => callMergeDraft(llm, message)),
   );
 
   return {
@@ -1211,28 +1259,6 @@ function callMergeDraft(llm: LlmProvider, message: string) {
   });
 }
 
-// judgeRelations 콜과 같은 재시도 정책(callJudgmentWithRetry 참고) — 일시 오류만,
-// 시도 횟수 비례 지연.
-async function callMergeDraftWithRetry(llm: LlmProvider, message: string) {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= LLM_CALL_MAX_ATTEMPTS; attempt++) {
-    try {
-      return await callMergeDraft(llm, message);
-    } catch (err) {
-      lastError = err;
-      const retryable =
-        err instanceof LlmError && RETRYABLE_LLM_CODES.has(err.code);
-      if (!retryable || attempt === LLM_CALL_MAX_ATTEMPTS) {
-        throw err;
-      }
-      await new Promise((resolve) =>
-        setTimeout(resolve, attempt * LLM_CALL_RETRY_DELAY_MS),
-      );
-    }
-  }
-  throw lastError;
-}
-
 // 한 sub-batch 잇기 — 후보 좁히기 → LLM 판정 → 게이트. 후보 제외는 이 sub-batch의 id만
 // (다른 sub-batch의 형제는 후보로 끌려와야 분할로 끊긴 형제 관계가 ⓐ로 복원된다).
 async function linkSubBatch(params: {
@@ -1298,7 +1324,7 @@ async function linkSubBatch(params: {
 
   const message = buildRelationJudgmentMessage(newLabeled, existingLabeled);
   const output = await limitLlmCall(() =>
-    callJudgmentWithRetry(deps.forTask("judgeRelations"), message),
+    withLlmRetry(() => callJudgment(deps.forTask("judgeRelations"), message)),
   );
 
   return gateProposals({
@@ -1491,26 +1517,6 @@ function callJudgment(llm: LlmProvider, message: string) {
 
 // 추출 청크 콜과 같은 재시도 정책 — 일시 오류(timeout/rate_limit/unknown)만,
 // 시도 횟수 비례 지연. 결정적 실패는 source 단위 lease 사이클이 받는다.
-async function callJudgmentWithRetry(llm: LlmProvider, message: string) {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= LLM_CALL_MAX_ATTEMPTS; attempt++) {
-    try {
-      return await callJudgment(llm, message);
-    } catch (err) {
-      lastError = err;
-      const retryable =
-        err instanceof LlmError && RETRYABLE_LLM_CODES.has(err.code);
-      if (!retryable || attempt === LLM_CALL_MAX_ATTEMPTS) {
-        throw err;
-      }
-      await new Promise((resolve) =>
-        setTimeout(resolve, attempt * LLM_CALL_RETRY_DELAY_MS),
-      );
-    }
-  }
-  throw lastError;
-}
-
 async function applyRelationChangesets(params: {
   supabase: TypedSupabaseClient;
   sourceId: string;

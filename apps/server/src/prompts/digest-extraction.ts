@@ -99,7 +99,7 @@ export const DIGEST_SOURCE_FIELD_KEYS = new Set([
 // 빈 칸(undefined)은 지운다 — 프롬프트가 "빈 칸은 없는 것"으로 읽게. 라벨은 프롬프트의
 // 유형별 가이드와 같은 어휘(situation/choice…)를 써 모델이 칸과 규칙을 맞물리게 한다.
 
-function renderBody(body: DigestBody): string {
+export function renderBody(body: DigestBody): string {
   const lines: string[] = [];
   const text = (label: string, value: string | undefined): void => {
     if (value && value.trim()) {
