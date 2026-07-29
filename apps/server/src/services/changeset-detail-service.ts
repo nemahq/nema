@@ -107,7 +107,6 @@ interface ChangesetDetail {
   sourceId: string | null;
   revertsId: string | null;
   revertsNumber: number | null;
-  revertDepth: number;
   invalidatedById: string | null;
   createdAt: string;
   updatedAt: string;
@@ -384,7 +383,7 @@ export async function getChangesetByNumber(args: {
   const { data: row, error } = await supabase
     .from("changesets")
     .select(
-      "id, number, type, status, outcome, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, author_name, closed_by_id, closed_by_name, created_at, updated_at, changes(action, target_type, target_id, data)",
+      "id, number, type, status, outcome, title, source_id, reverts_id, invalidated_by_id, author_id, author_name, closed_by_id, closed_by_name, created_at, updated_at, changes(action, target_type, target_id, data)",
     )
     .eq("space_id", spaceId)
     .eq("number", number)
@@ -441,7 +440,6 @@ export async function getChangesetByNumber(args: {
     sourceId: row.source_id,
     revertsId: row.reverts_id,
     revertsNumber,
-    revertDepth: row.revert_depth,
     invalidatedById: row.invalidated_by_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -488,10 +486,16 @@ export async function getPendingRelationByNumber(args: {
     .maybeSingle();
   throwIfSupabaseError(error);
 
-  // getByNumber와 같은 NOT_FOUND 관례 — 이미 판정됐거나(closed), relation이 아니거나,
-  // (아래에서) conflicts/duplicates가 아닌 제안(확신 관계)이면 전부 "아직 판정 대기인
-  // conflicts/duplicates가 아니다"로 뭉뚱그린다.
-  if (!row || row.type !== "relation" || row.status !== "open") {
+  // getByNumber와 같은 NOT_FOUND 관례 — 이미 판정됐거나(closed), relation/revert가
+  // 아니거나, (아래에서) conflicts/duplicates가 아닌 제안(확신 관계)이면 전부
+  // "아직 판정 대기인 conflicts/duplicates가 아니다"로 뭉뚱그린다. type='revert'도
+  // 대상이다 — ingestion/relation(충돌·중복) 되돌리기가 여는 재판정 초안은
+  // type='revert'인 채로 이 화면(관계 판정 화면)을 그대로 쓴다.
+  if (
+    !row ||
+    (row.type !== "relation" && row.type !== "revert") ||
+    row.status !== "open"
+  ) {
     throw new SupabaseError(
       "not_found",
       `pending relation changeset #${number} not found in space ${spaceId}`,
@@ -503,13 +507,25 @@ export async function getPendingRelationByNumber(args: {
     );
   }
 
-  const relationChange = row.changes.find((c) => c.target_type === "relation");
-  const proposal = parseRelationProposal(relationChange?.data);
-  // relation 행이 하나도 없거나 파싱 실패하는 건(resolveBody의 같은 분기 주석
-  // 참고) status='open' relation이면 정상 경로에선 절대 안 생기는 불변식
-  // 위반(진짜 버그)이다 — duplicates/확신 관계처럼 "정상적으로 이 쿼리의
-  // 대상이 아님"과는 다른 사실이라 뭉개지 않고 던진다.
+  // type='revert'인 재판정 초안은 원본 되돌리기가 남긴 archive/restore relation
+  // change(data 없음)와 복제된 원래 제안(conflicts/duplicates)이 함께 있을 수
+  // 있다(resolveBody의 같은 주석 참고) — data->>'type'으로 원래 제안만 골라야지,
+  // 행 순서(embed 순서 비보장)에 기대면 안 된다.
+  const proposal = row.changes
+    .filter((c) => c.target_type === "relation")
+    .map((c) => parseRelationProposal(c.data))
+    .find((p): p is NonNullable<typeof p> => p !== null);
+  // relation 행이 하나도 없거나 파싱 실패하는 건 type='relation'이면(resolveBody의
+  // 같은 분기 주석 참고) status='open'인 정상 경로에선 절대 안 생기는 불변식
+  // 위반(진짜 버그)이라 뭉개지 않고 던진다. type='revert'는 다른 화면(Digest
+  // 리뷰)용 재판정 초안일 수 있어(정상) 그냥 not_found로 넘긴다.
   if (!proposal) {
+    if (row.type === "revert") {
+      throw new SupabaseError(
+        "not_found",
+        `pending relation changeset #${number} not found in space ${spaceId}`,
+      );
+    }
     throw new SupabaseError(
       "query_failed",
       `pending relation changeset ${row.id} has no parseable relation change row`,

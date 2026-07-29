@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import {
+  type Locale,
   type ReferenceListSortDirection,
   type ReferenceListSortKey,
   ReferenceListSortKeySchema,
@@ -10,7 +11,11 @@ import {
 
 import type { Database } from "@server/infra/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
-import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import {
+  SupabaseError,
+  throwIfSupabaseError,
+} from "@server/infra/supabase-error";
+import { composeRevertTitle } from "@server/services/changeset-service";
 
 type ReferenceType = Database["public"]["Enums"]["reference_type"];
 type ReferenceStatus = Database["public"]["Enums"]["reference_status"];
@@ -269,9 +274,33 @@ export async function archiveReference(args: {
 export async function restoreReference(args: {
   supabase: TypedSupabaseClient;
   referenceId: string;
+  lng: Locale;
 }): Promise<void> {
-  const { error } = await args.supabase.rpc("restore_reference", {
-    p_reference_id: args.referenceId,
+  const { supabase, referenceId, lng } = args;
+
+  const { data: target, error: lookupError } = await supabase
+    .rpc("find_manual_archive_changeset", {
+      p_target_type: "reference",
+      p_target_id: referenceId,
+    })
+    .maybeSingle();
+  throwIfSupabaseError(lookupError);
+  if (!target) {
+    throw new SupabaseError(
+      "reference_state_changed",
+      `reference ${referenceId} has no archiving changeset to restore`,
+    );
+  }
+
+  const title = composeRevertTitle({
+    originalTitle: target.title,
+    originalNumber: target.number,
+    lng,
+  });
+
+  const { error } = await supabase.rpc("restore_reference", {
+    p_reference_id: referenceId,
+    p_title: title,
   });
   throwIfSupabaseError(error);
 }

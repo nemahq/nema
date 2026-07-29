@@ -16,6 +16,16 @@ export const RevertChangesetInputSchema = z.object({
 });
 export type RevertChangesetInput = z.infer<typeof RevertChangesetInputSchema>;
 
+// changeset 제목 직접 편집 — status='open'이면 타입 무관하게 가능(정책 규칙 6,
+// 기존 "ingestion만 편집 가능" 규칙 폐기).
+export const UpdateChangesetTitleInputSchema = z.object({
+  changesetId: z.string().uuid(),
+  title: z.string().trim().min(1),
+});
+export type UpdateChangesetTitleInput = z.infer<
+  typeof UpdateChangesetTitleInputSchema
+>;
+
 // 충돌 판정 — 승자 선택. 패자는 서버가 제안의 다른 끝점으로 유도한다(review-flow.md
 // "충돌 판정 — 승자 선택").
 export const ResolveConflictRelationInputSchema = z.object({

@@ -22,5 +22,10 @@
     "topic_name_conflict": "이미 사용 중인 주제 이름이에요. 다른 이름을 입력해주세요.",
     "topic_state_changed": "주제 상태가 바뀌었어요. 목록을 새로 불러온 뒤 다시 시도해주세요.",
     "workspace_last_owner": "먼저 다른 멤버에게 소유권을 넘겨야 해요."
+  },
+  "review": {
+    "changeset_fallback_title": "변경사항 #{number}",
+    "changeset_untitled": "이름 없는 변경사항",
+    "revert_title": "\"{title}\" 되돌림"
   }
 }

@@ -77,6 +77,7 @@ export const referenceRouter = router({
       restoreReference({
         supabase: ctx.supabase,
         referenceId: input.referenceId,
+        lng: ctx.lng,
       }),
     ),
 

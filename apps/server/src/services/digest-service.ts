@@ -7,12 +7,19 @@ import {
   type DigestListItem,
   DigestStatusSchema,
   type DigestType,
+  type Locale,
   PENDING_STALE_DAYS,
 } from "@nema-io/shared";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
-import { throwIfSupabaseError } from "@server/infra/supabase-error";
-import { parseRelationProposal } from "@server/services/changeset-service";
+import {
+  SupabaseError,
+  throwIfSupabaseError,
+} from "@server/infra/supabase-error";
+import {
+  composeRevertTitle,
+  parseRelationProposal,
+} from "@server/services/changeset-service";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -277,13 +284,39 @@ export async function archiveDigest(args: {
 }
 
 // 아카이브 되살리기 — 이 Digest를 마지막으로 archive한 changeset을
-// revert_changeset으로 되돌린다(review-flow.md "아카이브 되살리기").
+// revert_changeset으로 되돌린다(review-flow.md "아카이브 되살리기"). 제목은
+// restore_digest RPC 안이 아니라 여기서 조합해 넘긴다(revertChangeset과 같은
+// 이유 — UI 언어를 아는 계층이 여기다).
 export async function restoreDigest(args: {
   supabase: TypedSupabaseClient;
   digestId: string;
+  lng: Locale;
 }): Promise<{ revertChangesetId: string }> {
-  const { data, error } = await args.supabase.rpc("restore_digest", {
-    p_digest_id: args.digestId,
+  const { supabase, digestId, lng } = args;
+
+  const { data: target, error: lookupError } = await supabase
+    .rpc("find_manual_archive_changeset", {
+      p_target_type: "digest",
+      p_target_id: digestId,
+    })
+    .maybeSingle();
+  throwIfSupabaseError(lookupError);
+  if (!target) {
+    throw new SupabaseError(
+      "digest_state_changed",
+      `digest ${digestId} has no archiving changeset to restore`,
+    );
+  }
+
+  const title = composeRevertTitle({
+    originalTitle: target.title,
+    originalNumber: target.number,
+    lng,
+  });
+
+  const { data, error } = await supabase.rpc("restore_digest", {
+    p_digest_id: digestId,
+    p_title: title,
   });
   throwIfSupabaseError(error);
   return { revertChangesetId: data };

@@ -295,19 +295,19 @@
 - **When**: 되돌리기 액션을 실행한다.
 - **Then**:
   1. 컨펌 다이얼로그 없이 즉시 실행된다.
-  2. 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
-  3. 이 changeset이 만든 Digest들이 archive되고, Source는 초안(pending)으로 돌아간다.
-  4. 성공 시 새로 생성된 revert changeset의 상세로 자동 이동한다.
-- **관여 화면**: Changeset 상세
-- **범위 참고 (2026-07-14, PR #412; 갱신 PR #438)**: `useRevertChangeset`이 `revert_changeset` RPC를 호출, 응답의 `revertChangesetNumber`로 `ClosedReviewScreen.tsx`가 즉시 navigate.
+  2. 이 changeset이 만든 Digest들이 즉시 archive되고, Source는 초안(pending)으로 돌아간다.
+  3. 새로운 revert changeset이 `open` 상태로 생성된다 — 확정됐던 Digest 콘텐츠가 changeset 자신의 기록에서 그대로 복원된 draft를 담고 있다(LLM 재호출 없음). 이 행 자체가 재판정 화면이다.
+  4. 성공 시 새로 생성된 revert changeset의 상세(재판정 화면)로 자동 이동한다.
+- **관여 화면**: Changeset 상세, Digest 리뷰 화면(재판정)
+- **범위 참고 (2026-07-14, PR #412; 갱신 PR #438; 재설계 2026-07-29)**: `revertChangeset`(changeset-service.ts)이 `revert_changeset` RPC(`p_title` — 완성된 제목 문자열을 미리 조합해 넘김)를 호출, 응답의 `revertChangesetNumber`로 이동. RPC는 원본 changeset의 `changes`(target_type='digest', action='create')를 새 target_id로 복제해 revert changeset에 붙이고 `status='open'`으로 생성한다(`changeset_is_ingestion_shaped`로 판정). 이 revert changeset은 `digestReview.get`/`updateReview`/`confirmReview`/`discardReview`/`restoreReview` 등 기존 Digest 리뷰 화면 RPC 전부를 `type IN ('ingestion','revert')` 가드로 그대로 받아들인다. 다만 이 슬라이스는 백엔드(스키마·RPC)까지만이라, 재판정 화면 자체의 진입 라우팅(`changesetDetailRegistry`가 이 open revert changeset을 Digest 리뷰 화면으로 보내는 것)은 다음 FE 슬라이스 몫이다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### Changeset 제목 자동 생성 (revert)
 
 - **Given**: 유저가 적용된 changeset을 되돌린다(이미 되돌려진 changeset을 다시 되돌리는 체이닝 포함).
 - **When**: 되돌리기(revert) changeset이 생성된다.
-- **Then**: 제목이 원본 제목 + "되돌려짐" 여부를 UI 언어에 맞는 자연스러운 표현으로 보여준다(반복 접미사를 그대로 이어붙이지 않음). 원본 제목이 없으면(번호 자리표시자 폴백 중) 이 되돌리기도 같은 폴백을 물려받는다.
+- **Then**: 제목이 원본 제목을 따옴표로 감싸고 "되돌림"(UI 언어에 맞는 자연스러운 표현)을 붙인 형태로 저장된다. 이미 되돌려진 changeset을 다시 되돌리면 깊이를 계산해 접미사를 늘리지 않고, 그 문자열을 그대로 한 번 더 감싼다(`"OO" 되돌림` → `""OO" 되돌림" 되돌림`). 원본 제목이 없으면(번호 자리표시자 폴백 중) 이 되돌리기도 같은 폴백을 물려받아 감싼다.
 - **관여 화면**: Changeset 상세, 변경셋
-- **범위 참고 (갱신 2026-07-21, migration 20260721110000)**: 저장은 원본 제목 그대로 유지하고, 몇 단계 되돌려졌는지는 별도 `revert_depth` 정수 컬럼으로 관리한다. 문구 조합(ICU 복수형 등 언어별 렌더링)은 FE가 title+revertDepth로 처리한다(`features/review/utils.ts`) — 한국어 접미사를 SQL에서 직접 이어붙이던 이전 구현(영어 UI 한/영 혼재 버그)은 해소됨. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
+- **범위 참고 (재설계 2026-07-29, migration 20260729140505)**: `revert_depth` 정수 컬럼과 FE(`features/review/utils.ts`)의 title+revertDepth 조합 로직을 폐기했다. UI 언어를 아는 서버 계층(`changeset-service.ts`의 `composeRevertTitle`)이 `revert_changeset` RPC를 호출하기 전에 완성된 제목 문자열을 조합해 `p_title`로 넘기고, RPC는 그 값을 그대로 저장한다 — SQL 문자열 concat이던 이전 구현(따옴표 중첩 버그, 영어 UI 한/영 혼재 버그)을 대체한다. `아카이브 되살리기`/`편집 changeset 되돌리기`(manual 대상 revert) 경로도 같은 방식으로 제목을 조합하도록 맞췄다(`digest-service.ts`/`reference-service.ts`, `find_manual_archive_changeset` RPC로 원본 title/number를 먼저 조회). 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### 원문도 삭제하기
 
@@ -625,30 +625,30 @@
 - **When**: 되살리기 액션을 실행한다.
 - **Then**: 이 changeset의 상태가 open으로 되돌아가 다시 판정할 수 있다.
 - **관여 화면**: Changeset 상세
-- **범위 참고 (2026-07-28, PR #516)**: `restore_pending_relation` RPC 신설(`in-place`, `restore_ingestion_review`와 같은 패턴 — 새 changeset 안 만들고 같은 행의 status만 되돌림). 가드는 "같은 진술 쌍에 지금 open인 relation changeset이 없을 때"만 허용 — `apply_relation_changesets`(위 "재제안 가드" 참고)와 같은 방향 무관 비교를 재사용. 캐스케이드로 무효화된(사람이 거절한 게 아닌) discarded는 대상에서 제외. 되살리기 버튼은 Changeset 상세에만 있고 관계 판정 화면 자신에는 없다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
+- **범위 참고 (2026-07-28, PR #516; 갱신 2026-07-29)**: `restore_pending_relation` RPC(`in-place`, `restore_ingestion_review`와 같은 패턴 — 새 changeset 안 만들고 같은 행의 status만 되돌림). 가드는 "같은 진술 쌍에 지금 open인 relation changeset이 없을 때"만 허용 — `apply_relation_changesets`(위 "재제안 가드" 참고)와 같은 방향 무관 비교를 재사용. 캐스케이드로 무효화된(사람이 거절한 게 아닌) discarded는 대상에서 제외. `type='relation'`뿐 아니라 `type='revert'`(충돌·중복 판정 되돌리기가 연 재판정 초안이 버려진 경우)도 같은 경로로 되살릴 수 있게 가드를 넓혔다. 되살리기 버튼은 Changeset 상세에만 있고 관계 판정 화면 자신에는 없다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### 충돌 판정 되돌리기
 
 - **Given**: 유저가 Changeset 상세에서 충돌 판정으로 closed+applied된 relation changeset을 보고 있다.
 - **When**: 되돌리기 액션을 실행한다.
 - **Then**:
-  1. 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
-  2. archived됐던(패배한) 진술이 active 상태로 복원된다.
-  3. 같은 진술 쌍에 대해 새로운 open 상태의 relation changeset이 생성되어 다시 판정할 수 있게 된다.
+  1. archived됐던(패배한) 진술이 즉시 active 상태로 복원된다.
+  2. 새로운 revert changeset이 `open` 상태로 생성된다 — 엔진의 원래 제안(`conflicts`, 같은 진술 쌍)이 changeset 자신의 기록에서 그대로 복원된 draft를 담고 있다. 이 행 자체가 관계 판정 화면(재판정)이다.
+  3. 성공 시 새로 생성된 revert changeset의 상세(관계 판정 화면)로 자동 이동한다.
 - **관여 화면**: Changeset 상세, 관계 판정 화면
-- **범위 참고 — 3번 조건 미구현 (2026-07-28)**: 되돌리기 버튼 자체(범용 `revert_changeset` RPC)는 이미 동작해서 1·2번은 실제로 된다 — 패자 archive를 되돌려 active로 복원. 그런데 3번(같은 쌍이 새 open changeset으로 다시 뜨는 것)은 아무 코드도 하지 않는다 — 패자를 되돌릴 때 `ingestion_status='pending'`만 세팅(벡터 정리용)이고 관계 엔진 재비교 트리거(`sources.linking_status`)는 안 건드린다. 되돌려도 그 쌍은 조용히 "관계 없음"으로 남고 다시 판정할 방법이 없다. 해결 방향 두 가지를 검토했으나(revert changeset 자체를 open 가능하게 만들기 vs 되돌리기가 별도의 새 open changeset을 같이 만들기) 둘 다 채택 안 하고 이번엔 보류 — brain business/nema/product-decisions "Relation judgment" #24 참고. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김(1·2번만 해당, 3번은 애초에 검증 대상이 없음).
+- **범위 참고 (재설계 2026-07-29, migration 20260729140505)**: 이전엔 되돌리기가 즉시 closed+applied로 끝나 같은 쌍을 다시 판정할 방법이 없었다(brain business/nema/product-decisions "Relation judgment" #24 참고, 두 해결 방향 중 "revert changeset 자체를 open 가능하게 만들기"를 채택). `revert_changeset` RPC가 원본의 `changes`(target_type='relation', action='create', data->>'type'='conflicts')를 새 target_id로 복제해 revert changeset에 붙이고 `status='open'`으로 생성한다(`changeset_is_relation_judgment_shaped`로 판정). 이 revert changeset은 `resolveConflictRelation`/`rejectPendingRelation`/`restorePendingRelation` 등 기존 관계 판정 화면 RPC 전부를 `type IN ('relation','revert')` 가드로 그대로 받아들인다. 확신 관계 자동 적용(supports/replaces/resolves)을 되돌리는 경우는 재판정 화면이 없어(케이스 "확신 관계 자동 적용 되돌리기" 참고) 그대로 즉시 closed+applied다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### 중복 판정 되돌리기
 
 - **Given**: 유저가 Changeset 상세에서 중복 판정(병합)으로 closed+applied된 relation changeset을 보고 있다.
 - **When**: 되돌리기 액션을 실행한다.
 - **Then**:
-  1. 병합 이후 다른 Digest가 병합된 Digest의 진술과 새로 관계를 맺었다면, 되돌릴 때 그 관계도 함께 archive된다는 안내가 컨펌 모달로 먼저 표시된다.
-  2. 확인하면 새로운 revert changeset이 즉시 closed+applied 상태로 생성된다.
-  3. 병합으로 생성됐던 새 Digest와 그 진술, 그 진술이 걸린 다른 관계들이 모두 연쇄로 archive된다.
-  4. 원래 있던 두 Digest와 그 원래 진술이 active 상태로 복원된다.
-  5. 같은 진술 쌍에 대해 새로운 open 상태의 relation changeset이 생성되어 다시 판정할 수 있게 된다.
+  1. 병합으로 생성됐던 새 Digest와 그 진술, 그 진술이 걸린 다른 관계들이 모두 즉시 연쇄로 archive된다.
+  2. 원래 있던 두 Digest와 그 원래 진술이 즉시 active 상태로 복원된다.
+  3. 새로운 revert changeset이 `open` 상태로 생성된다 — 엔진의 원래 제안(`duplicates`, 병합 초안 포함)이 changeset 자신의 기록에서 그대로 복원된 draft를 담고 있다. 이 행 자체가 관계 판정 화면(중복/병합, 재판정)이다.
+  4. 성공 시 새로 생성된 revert changeset의 상세(관계 판정 화면)로 자동 이동한다.
 - **관여 화면**: Changeset 상세, 관계 판정 화면(중복/병합)
+- **범위 참고 (신설 2026-07-29, migration 20260729140505)**: 충돌 판정 되돌리기와 같은 메커니즘 — 원본의 `changes`(data->>'type'='duplicates', `merge_draft` 포함)를 그대로 복제해 재판정 초안을 연다. 원래 있던 컨펌 모달(병합 이후 다른 Digest가 새로 맺은 관계도 함께 archive된다는 안내)은 다음 FE 슬라이스 몫 — 이 슬라이스는 백엔드(스키마·RPC)까지만이다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### 확신 관계 자동 적용 되돌리기
 

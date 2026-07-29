@@ -46,6 +46,10 @@ export const digestRouter = router({
   restore: protectedProcedure
     .input(DigestActionInputSchema)
     .mutation(({ ctx, input }) =>
-      restoreDigest({ supabase: ctx.supabase, digestId: input.digestId }),
+      restoreDigest({
+        supabase: ctx.supabase,
+        digestId: input.digestId,
+        lng: ctx.lng,
+      }),
     ),
 });

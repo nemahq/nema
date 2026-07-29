@@ -223,13 +223,13 @@ export function mapDomainError(error: unknown, lng: Locale): TRPCError {
     const { trpcCode, i18nKey } = ERROR_MAP[domainCode];
     return new TRPCError({
       code: trpcCode,
-      message: t(i18nKey, lng),
+      message: t(i18nKey, { lng }),
       cause: error,
     });
   }
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
-    message: t("error.default", lng),
+    message: t("error.default", { lng }),
     cause: error,
   });
 }

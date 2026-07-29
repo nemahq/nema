@@ -29,35 +29,17 @@ export function summarizeChangesetEffect(
 // null이라 이 경로가 일상적으로 걸린다(Digest manual은 목록·상세에 실제로 노출되므로
 // — manual_changeset_title_null 마이그레이션 주석 참고 — 자리표시자가 정상 경로다).
 //
-// revert는 type 분기를 title==null 체크보다 먼저 본다. revert_changeset은 원본
-// title을 그대로 상속하는데(접미사 없음, revert_changeset_depth 마이그레이션),
-// 원본이 manual(예: archive_digest로 아카이브된 Digest를 restore_digest로 되살리는
-// 경우)이면 title이 null로 상속된다 — 이때도 revertDepth만큼 revert_marker를 반복해
-// "되돌림/Revert" 표식만은 남긴다(번호 자리표시자를 감싸는 형태로). type 체크를 뒤에
-// 두면 이 경로가 통째로 무표식 자리표시자로 떨어져, 이 PR이 고치려던 "되돌리기
-// 여부를 알 수 없음" 문제가 그대로 재현된다.
-//
-// ICU 복수형은 =1/other 두 갈래뿐이라 임의 depth 반복을 표현 못 해 JS에서 직접
-// 겹친다 — 반복 자체(언어 무관)만 코드가 맡고, 어순(한글은 제목 뒤에 붙고 영문은
-// git revert 컨벤션처럼 앞에 붙음)은 revert_title 템플릿이 언어별로 이미 쥐고 있다.
+// revert는 더 이상 별도 분기가 없다 — "OO 되돌림" 조합(따옴표 감싸기 포함)은
+// revert_changeset RPC 호출 전에 서버(changeset-service.ts composeRevertTitle)가
+// UI 언어로 미리 완성해 저장하므로, revert 타입의 title도 다른 타입과 똑같이
+// 이미 완성된 값이다(never null).
 export function changesetDisplayTitle(
-  entry: Pick<ChangesetListEntry, "title" | "number" | "type" | "revertDepth">,
+  entry: Pick<ChangesetListEntry, "title" | "number">,
   t: (
     key: TranslationKey,
     options?: CombinedOptions<DefaultParamType>,
   ) => string,
 ): string {
-  if (entry.type === "revert") {
-    const originalTitle =
-      entry.title ??
-      t("review.changeset_fallback_title", { number: entry.number });
-    const marker = t("review.revert_marker");
-    const markers = Array.from(
-      { length: entry.revertDepth },
-      () => marker,
-    ).join(" ");
-    return t("review.revert_title", { title: originalTitle, markers });
-  }
   if (entry.title == null) {
     return t("review.changeset_fallback_title", { number: entry.number });
   }

@@ -28,6 +28,8 @@ export {
   RestorePendingRelationInputSchema,
   type RevertChangesetInput,
   RevertChangesetInputSchema,
+  type UpdateChangesetTitleInput,
+  UpdateChangesetTitleInputSchema,
 } from "./schemas/changeset";
 export {
   ASSUMPTION_STALE_DAYS,

@@ -91,7 +91,7 @@ const t = initTRPC.context<Context>().create({
     if (isZodInputError(error.cause)) {
       return {
         ...shape,
-        message: translate("error.default", lng),
+        message: translate("error.default", { lng }),
         data: { ...shape.data, domainCode: undefined },
       };
     }

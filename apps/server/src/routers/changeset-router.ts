@@ -10,6 +10,7 @@ import {
   ResolveDuplicateRelationInputSchema,
   RestorePendingRelationInputSchema,
   RevertChangesetInputSchema,
+  UpdateChangesetTitleInputSchema,
 } from "@nema-io/shared";
 
 import {
@@ -27,6 +28,7 @@ import {
   resolveDuplicateRelation,
   restorePendingRelation,
   revertChangeset,
+  updateChangesetTitle,
 } from "@server/services/changeset-service";
 import { protectedProcedure, router } from "@server/trpc";
 
@@ -46,6 +48,17 @@ export const changesetRouter = router({
       revertChangeset({
         supabase: ctx.supabase,
         changesetId: input.changesetId,
+        lng: ctx.lng,
+      }),
+    ),
+
+  updateTitle: protectedProcedure
+    .input(UpdateChangesetTitleInputSchema)
+    .mutation(({ ctx, input }) =>
+      updateChangesetTitle({
+        supabase: ctx.supabase,
+        changesetId: input.changesetId,
+        title: input.title,
       }),
     ),
 

@@ -123,14 +123,20 @@ export async function getReview(args: {
   throwIfSupabaseError(error);
 
   if (
-    changeset.type !== "ingestion" ||
+    (changeset.type !== "ingestion" && changeset.type !== "revert") ||
     changeset.status !== "open" ||
     changeset.source_id === null ||
     changeset.sources === null ||
     changeset.number === null ||
     changeset.space_id === null ||
     changeset.spaces === null ||
-    changeset.draft_version === null
+    changeset.draft_version === null ||
+    // type='revert'는 relation(충돌·중복) 되돌리기가 여는 재판정 초안일 수도
+    // 있다(source_id 없음) — 이 화면은 ingestion-shaped 초안 전용이라 digest
+    // create-Change가 하나도 없으면 대상이 아니다.
+    !changeset.changes.some(
+      (change) => change.target_type === "digest" && change.action === "create",
+    )
   ) {
     // 존재하지 않는 changeset(위 .single()이 이미 잡음)과 달리 이건 "있긴 한데
     // 지금 이 화면 자격이 아니다"(이미 닫힘·타입이 다름 등) — 그래도 FE 입장에선

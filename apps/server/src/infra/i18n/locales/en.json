@@ -22,5 +22,10 @@
     "topic_name_conflict": "That topic name is already in use. Try a different name.",
     "topic_state_changed": "This topic's state changed. Reload the list and try again.",
     "workspace_last_owner": "Transfer ownership to another member first."
+  },
+  "review": {
+    "changeset_fallback_title": "Change #{number}",
+    "changeset_untitled": "Untitled change",
+    "revert_title": "\"{title}\" reverted"
   }
 }

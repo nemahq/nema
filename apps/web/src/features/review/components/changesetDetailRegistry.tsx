@@ -8,6 +8,7 @@ import type {
 
 import { ChangesetNotFound } from "./ChangesetNotFound";
 import { ChangesetRecordScreen } from "./ChangesetRecordScreen";
+import { ChangesetReopenPending } from "./ChangesetReopenPending";
 import { IngestionScreen } from "./IngestionScreen";
 import { RelationJudgmentScreen } from "./RelationJudgmentScreen";
 
@@ -46,10 +47,11 @@ const CHANGESET_DETAIL_SCREEN: Record<
     open: () => <RelationJudgmentScreen />,
     closed: () => <ChangesetRecordScreen />,
   },
-  // manual·revert는 생성 즉시 closed+applied라 open이 존재할 수 없다. 그런데 이
-  // 불변식을 지키는 건 RPC 관례뿐이고 chk_changeset_shape는 status를 제약하지 않아,
-  // 백필이나 MCP 쓰기가 뚫으면 행이 실제로 생긴다. 그건 데이터 정합성이 깨졌다는
-  // 신호라 "찾을 수 없음"으로 덮지 않고 던져서 Sentry까지 올린다.
+  // manual은 생성 즉시 closed+applied라 open이 존재할 수 없다. 그런데 이 불변식을
+  // 지키는 건 RPC 관례뿐이고 chk_changeset_shape는 status를 제약하지 않아, 백필이나
+  // MCP 쓰기가 뚫으면 행이 실제로 생긴다. 그건 데이터 정합성이 깨졌다는 신호라
+  // "찾을 수 없음"으로 덮지 않고 던져서 Sentry까지 올린다(revert와 달리 manual의
+  // open은 여전히 그 자체로 불변식 위반이다).
   manual: {
     open: () => <ImpossibleOpenChangeset />,
     // manual은 변경셋 목록에도 안 뜨고(listChangesets가 type != manual로 걸러냄),
@@ -59,8 +61,14 @@ const CHANGESET_DETAIL_SCREEN: Record<
     // Changeset 상세가 담당할 몫이 아니다.
     closed: () => <ChangesetNotFound />,
   },
+  // revert의 open은 더 이상 불가능한 상태가 아니다 — ingestion/relation(충돌·중복
+  // 판정) 되돌리기가 재판정 초안으로 여는, 정상적으로 도달 가능한 상태다(백엔드
+  // revert_changeset 재설계 참고). 그 재판정 화면(Digest 리뷰·관계 판정 재사용)
+  // 자체는 다음 슬라이스 몫이라 그때까지는 안내 화면으로 대신한다 — manual과
+  // 달리 여기서 throw하면 되돌리기 버튼을 누른 모든 사용자가 그 자리에서
+  // 크래시를 본다.
   revert: {
-    open: () => <ImpossibleOpenChangeset />,
+    open: () => <ChangesetReopenPending />,
     closed: () => <ChangesetRecordScreen />,
   },
 };
