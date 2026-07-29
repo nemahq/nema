@@ -136,19 +136,30 @@ BEGIN
             AND is_workspace_member(r.workspace_id)
         )
       )
-    );
+    )
+  -- 동시에 같은 changeset을 되돌리는 두 요청이 경합하면(더블클릭 등), 잠금 없이는
+  -- 둘 다 is_changeset_reverted 통과 후 각자 독립된 open 재판정 초안을 만들어버릴
+  -- 수 있다 — 그중 하나가 확정되면 나머지 하나는 존재 자체가 유령이 된다. 이
+  -- 함수의 나머지 흐름이 전부 이 행 하나에 대한 배타적 판단(이미 되돌려졌는지,
+  -- 어떤 초안을 열지)이므로 잠가서 두 번째 요청이 첫 번째가 끝난 뒤의 최신
+  -- 상태(대개 "이미 되돌려짐")를 보게 한다.
+  FOR UPDATE;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'changeset % not found or not accessible', p_changeset_id
       USING ERRCODE = 'P0002';
   END IF;
 
-  -- 되돌리기 버튼은 "지금 그래프에 살아있는 걸 만든 행"에만 붙는다(정책 규칙 4) —
-  -- open(아직 확정 전 초안)이나 discarded(적용된 적 없음)는 되돌릴 게 없다.
-  -- 이 가드가 없으면, 예를 들어 ingestion 되돌리기가 연 open 재판정 초안을
-  -- 확정 전에 또 되돌리려 할 때 "재판정 초안의 source archive" 역연산(=원문을
-  -- 다시 active로)만 조용히 실행되고 나머지(아직 실체 없는 digest 등)는
-  -- 전부 no-op으로 스킵돼 어중간한 상태가 된다.
+  IF p_title IS NULL OR btrim(p_title) = '' THEN
+    RAISE EXCEPTION 'p_title must not be empty';
+  END IF;
+
+  -- 되돌리기 버튼은 "지금 그래프에 살아있는 걸 만든 행"에만 붙는다 — open(아직
+  -- 확정 전 초안)이나 discarded(적용된 적 없음)는 되돌릴 게 없다. 이 가드가
+  -- 없으면, 예를 들어 ingestion 되돌리기가 연 open 재판정 초안을 확정 전에 또
+  -- 되돌리려 할 때 "재판정 초안의 source archive" 역연산(=원문을 다시
+  -- active로)만 조용히 실행되고 나머지(아직 실체 없는 digest 등)는 전부
+  -- no-op으로 스킵돼 어중간한 상태가 된다.
   IF v_status <> 'closed' OR v_outcome IS DISTINCT FROM 'applied' THEN
     RAISE EXCEPTION 'changeset % is not closed+applied — nothing to revert', p_changeset_id
       USING ERRCODE = 'NM011';
@@ -160,13 +171,19 @@ BEGIN
   END IF;
 
   -- 재판정 대상 판별 — type='revert'도 그 안의 changes 모양으로 같은 자격을
-  -- 얻는다(되돌린 뒤 확정된 재판정을 다시 되돌리는 체이닝, 위 §2 참고).
-  IF v_type = 'ingestion'
+  -- 얻는다(되돌린 뒤 확정된 재판정을 다시 되돌리는 체이닝도 이 판정 하나로
+  -- 처리된다). relation-shaped 판정을 먼저 본다 — 확정된 duplicates 재판정
+  -- (type='revert')은 resolve_duplicate_relation이 병합 Digest의 create/digest
+  -- 행을 얹어놓아 changeset_is_ingestion_shaped도 true가 되므로, ingestion을
+  -- 먼저 보면 duplicates 재판정 되돌리기가 ingestion으로 잘못 분류된다. 반대
+  -- 방향은 안전하다 — 순수 ingestion changeset은 애초에 conflicts/duplicates
+  -- 제안(create/relation)을 만들지 않는다.
+  IF (v_type = 'relation' OR v_type = 'revert')
+     AND changeset_is_relation_judgment_shaped(p_changeset_id) THEN
+    v_reopen_kind := 'relation';
+  ELSIF v_type = 'ingestion'
      OR (v_type = 'revert' AND changeset_is_ingestion_shaped(p_changeset_id)) THEN
     v_reopen_kind := 'ingestion';
-  ELSIF (v_type = 'relation' OR v_type = 'revert')
-        AND changeset_is_relation_judgment_shaped(p_changeset_id) THEN
-    v_reopen_kind := 'relation';
   ELSE
     v_reopen_kind := NULL;  -- manual, 확신 관계(supports/replaces/resolves) 등
   END IF;
@@ -189,8 +206,13 @@ BEGIN
 
   -- ingestion 예외: changes 밖의 원문(source_id)도 pending으로 되돌린다
   -- ("글 통째로" — v2에선 archive가 아니라 pending 복귀, 07-modeling.md). 재판정
-  -- 초안이 열리는 경우도 즉시 적용되는 효과다(정책 규칙 2 — 확인 모달 없음).
-  IF v_type = 'ingestion' AND v_source_id IS NOT NULL THEN
+  -- 초안이 열리는 경우도 확인 모달 없이 즉시 적용되는 효과다. v_reopen_kind로
+  -- 판정한다(v_type이 아니다) — type='revert'인 확정된 재판정(예: 한 번 되돌린
+  -- ingestion을 확정한 뒤 그 changeset을 또 되돌리는 체이닝)도 이 예외 대상이다.
+  -- v_type만 보면 이 경우를 놓쳐 원문이 active인 채로 방치되고, 그 원문에 대해
+  -- 열린 리뷰가 없다는 가드가 있는 restore_ingestion_review·재추출 양쪽 모두
+  -- 이 상태를 다시 되돌릴 방법을 못 찾아 changeset이 영구히 고립된다.
+  IF v_reopen_kind = 'ingestion' AND v_source_id IS NOT NULL THEN
     UPDATE sources SET status = 'pending'
     WHERE id = v_source_id AND status = 'active';
     IF FOUND THEN
@@ -232,12 +254,10 @@ BEGIN
         UPDATE digests SET status = 'archived'
         WHERE id = v_ch.target_id AND status = 'active';
         IF NOT FOUND THEN CONTINUE; END IF;
-      ELSIF v_ch.target_type = 'source' THEN  -- v2에서 "빼기"의 도착지는 pending
-        UPDATE sources SET status = 'pending'
-        WHERE id = v_ch.target_id AND status = 'active';
-        IF NOT FOUND THEN CONTINUE; END IF;
       ELSE
-        CONTINUE;  -- reference는 위에서 이미 걸러짐; 알 수 없는 타입 방어
+        -- source는 여기서 재연산하지 않는다 — 아래 참고. reference는 위에서
+        -- 이미 걸러짐; 그 외는 알 수 없는 타입 방어.
+        CONTINUE;
       END IF;
     ELSE  -- restore
       IF v_ch.target_type = 'statement' THEN
@@ -256,10 +276,16 @@ BEGIN
         UPDATE "references" SET status = 'active'
         WHERE id = v_ch.target_id AND status = 'archived';
         IF NOT FOUND THEN CONTINUE; END IF;
-      ELSE  -- source: pending에서만 복귀 (trashed는 복원 RPC의 몫)
-        UPDATE sources SET status = 'active'
-        WHERE id = v_ch.target_id AND status = 'pending';
-        IF NOT FOUND THEN CONTINUE; END IF;
+      ELSE
+        -- source는 여기서 재연산하지 않는다. target_type='source' change 행은
+        -- 오직 이 함수의 "ingestion 예외" 블록만 만들고(그 changeset 자신이
+        -- source를 pending으로 되돌렸다는 기록), 이 changeset을 다시 되돌릴 땐
+        -- 그 예외 블록이 v_reopen_kind 기준으로 다시 정확히 판단한다(그때는
+        -- confirm_ingestion_review가 source를 active로 되돌린 뒤이므로). 만약
+        -- 여기서도 이 행을 재연산하면 "ingestion 예외" 블록이 방금 pending으로
+        -- 되돌린 걸 이 루프가 다시 active로 되돌리는 이중 처리가 된다(체이닝된
+        -- ingestion 되돌리기 회귀 테스트가 잡던 버그).
+        CONTINUE;
       END IF;
     END IF;
 
@@ -302,6 +328,36 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
 
 REVOKE ALL ON FUNCTION revert_changeset(uuid, text) FROM public, anon;
 GRANT EXECUTE ON FUNCTION revert_changeset(uuid, text) TO authenticated, service_role;
+
+-- revertChangeset(TS)이 제목을 조합하려면 되돌릴 대상의 title/number를 RPC 호출
+-- 전에 먼저 읽어야 하는데, 일반 SELECT는 RLS(is_space_member)만 통과한다 —
+-- revert_changeset 자신의 접근 가드(위 §4)는 space_id가 NULL인 Reference manual
+-- changeset도 그 Reference의 workspace 멤버십으로 통과시키는 더 넓은 규칙이라,
+-- 이 사전 조회만 RLS로 좁게 읽으면 그 케이스에서 조회가 먼저 막혀버린다(RPC는
+-- 통과할 텐데도). 같은 가드를 그대로 복제해 이 조회도 RPC로 넓힌다.
+CREATE OR REPLACE FUNCTION get_changeset_title_and_number(p_changeset_id uuid)
+RETURNS TABLE(title text, number int) AS $$
+  SELECT cs.title, cs.number
+  FROM changesets cs
+  WHERE cs.id = p_changeset_id
+    AND (
+      auth.uid() IS NULL
+      OR is_space_member(cs.space_id)
+      OR (
+        cs.space_id IS NULL
+        AND EXISTS (
+          SELECT 1 FROM changes ch
+          JOIN "references" r ON r.id = ch.target_id
+          WHERE ch.changeset_id = cs.id
+            AND ch.target_type = 'reference'
+            AND is_workspace_member(r.workspace_id)
+        )
+      )
+    );
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE ALL ON FUNCTION get_changeset_title_and_number FROM public, anon;
+GRANT EXECUTE ON FUNCTION get_changeset_title_and_number TO authenticated, service_role;
 
 -- ----- 5) ingestion 계열 RPC — type='revert'인 재판정 초안(§4)도 같은 화면·
 -- 확정/버리기/되살리기 경로를 그대로 탄다. type IN ('ingestion','revert')로
@@ -1081,6 +1137,27 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 -- 깨진다. p_title을 받아 그대로 넘겨준다 — 제목 조합은 TS 쪽(digest-service.ts
 -- /reference-service.ts)이 find_manual_archive_changeset으로 대상 changeset의
 -- title/number를 먼저 읽어 UI 언어로 조합한다(revertChangeset과 같은 패턴).
+-- 재판정형 revert changeset(ingestion 또는 relation 판정을 되돌려 연 open/confirmed
+-- 초안)은 "이 digest/reference를 archive한 changeset"으로 잡혀도 안 된다 — 그걸
+-- revert_changeset으로 되돌리면 이 digest/reference를 복원하는 게 아니라 전혀 다른
+-- 대상(재판정 초안 자신의 draft 콘텐츠)을 archive하고 또 다른 open 초안을 열어버린다
+-- (resolve_duplicate_relation의 병합 Digest confirm처럼, 원래 관계없는 create/digest
+-- 행이 만들의 changeset에 같이 실릴 수 있어 "이 changeset이 digest를 만든 적 있는가"
+-- 만으로는 못 가른다). type='manual'인 confirm_digest_edit도 옛 Digest
+-- archive+새 Digest create를 같은 changeset에 담지만, 그건 type이 애초에 'revert'가
+-- 아니라 이 판정 대상이 아니다 — manual의 되돌리기(플립형)는 그대로 유효한 복원
+-- 경로로 남아야 한다.
+CREATE OR REPLACE FUNCTION is_reopen_shaped_revert(p_changeset_id uuid)
+RETURNS boolean AS $$
+  SELECT cs.type = 'revert'
+    AND (changeset_is_ingestion_shaped(cs.id) OR changeset_is_relation_judgment_shaped(cs.id))
+  FROM changesets cs
+  WHERE cs.id = p_changeset_id;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE ALL ON FUNCTION is_reopen_shaped_revert FROM public, anon;
+GRANT EXECUTE ON FUNCTION is_reopen_shaped_revert TO authenticated, service_role;
+
 CREATE OR REPLACE FUNCTION find_manual_archive_changeset(
   p_target_type change_target_type,
   p_target_id   uuid
@@ -1091,6 +1168,16 @@ RETURNS TABLE(changeset_id uuid, title text, number int) AS $$
   JOIN changesets cs ON cs.id = ch.changeset_id
   WHERE ch.target_type = p_target_type AND ch.target_id = p_target_id AND ch.action = 'archive'
     AND cs.type IN ('manual', 'revert')
+    AND NOT is_reopen_shaped_revert(cs.id)
+    AND (
+      auth.uid() IS NULL
+      OR (p_target_type = 'digest' AND EXISTS (
+        SELECT 1 FROM digests d WHERE d.id = p_target_id AND is_space_member(d.space_id)
+      ))
+      OR (p_target_type = 'reference' AND EXISTS (
+        SELECT 1 FROM "references" r WHERE r.id = p_target_id AND is_workspace_member(r.workspace_id)
+      ))
+    )
   ORDER BY ch.created_at DESC, ch.id DESC
   LIMIT 1;
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
@@ -1123,6 +1210,7 @@ BEGIN
   JOIN changesets cs ON cs.id = ch.changeset_id
   WHERE ch.target_type = 'digest' AND ch.target_id = p_digest_id AND ch.action = 'archive'
     AND cs.type IN ('manual', 'revert')
+    AND NOT is_reopen_shaped_revert(cs.id)
   ORDER BY ch.created_at DESC, ch.id DESC
   LIMIT 1;
 
@@ -1167,6 +1255,7 @@ BEGIN
   JOIN changesets cs ON cs.id = ch.changeset_id
   WHERE ch.target_type = 'reference' AND ch.target_id = p_reference_id AND ch.action = 'archive'
     AND cs.type IN ('manual', 'revert')
+    AND NOT is_reopen_shaped_revert(cs.id)
   ORDER BY ch.created_at DESC, ch.id DESC
   LIMIT 1;
 
@@ -1182,8 +1271,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 REVOKE ALL ON FUNCTION restore_reference(uuid, text) FROM public, anon;
 GRANT EXECUTE ON FUNCTION restore_reference(uuid, text) TO authenticated, service_role;
 
--- ----- 8) update_changeset_title — 정책 규칙 6: 제목 편집 가능 여부는 이제
--- 타입이 아니라 status(open/closed)로만 갈린다. ingestion은 지금처럼
+-- ----- 8) update_changeset_title — 제목 편집 가능 여부는 이제 타입이 아니라
+-- status(open/closed)로만 갈린다. ingestion은 지금처럼
 -- update_source_title + propagate_source_title_to_changeset 트리거로 계속
 -- 편집한다(그 경로가 이미 "open일 때만" 반영되므로 이 규칙과 안 부딪힌다).
 -- relation(판정 대기)과 revert(재판정 초안)는 이 경로가 없었으므로(전에는

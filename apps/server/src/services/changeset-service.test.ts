@@ -4,6 +4,7 @@ import { initI18n } from "@server/infra/i18n";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   buildRevertedPredicate,
+  composeRevertTitle,
   listChangesets,
   resolveDuplicateRelation,
   revertChangeset,
@@ -319,20 +320,24 @@ describe("listChangesets", () => {
 // 내비게이션에 쓴다 — 이 값이 틀리면 되돌린 직후 엉뚱한 changeset으로 이동한다.
 describe("revertChangeset", () => {
   // revertChangeset은 이제 두 번 읽는다 — RPC 호출 전(제목 조합용 title/number)과
-  // 호출 후(navigate용 revertChangesetNumber). 이 테스트는 두 읽기가 같은 값을
-  // 돌려줘도 문제없다는 걸 이용해 하나의 mock으로 both를 감당한다.
+  // 호출 후(navigate용 revertChangesetNumber). 둘 다 get_changeset_title_and_number
+  // RPC를 쓴다(RLS가 아니라 revert_changeset과 같은 접근 가드를 타야 space_id
+  // NULL인 Reference manual changeset도 읽히므로). 이 테스트는 두 호출이 같은
+  // 값을 돌려줘도 문제없다는 걸 이용해 하나의 mock으로 both를 감당한다.
   function mockRevertRpc(
     rpcData: string,
     numberRow: { title: string | null; number: number | null },
   ) {
-    return {
-      rpc: vi.fn(() => Promise.resolve({ data: rpcData, error: null })),
-      from: vi.fn(() => ({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn(() => Promise.resolve({ data: numberRow, error: null })),
-      })),
-    } as unknown as TypedSupabaseClient;
+    const rpc = vi.fn((fn: string) => {
+      if (fn === "get_changeset_title_and_number") {
+        return Promise.resolve({ data: [numberRow], error: null });
+      }
+      if (fn === "revert_changeset") {
+        return Promise.resolve({ data: rpcData, error: null });
+      }
+      throw new Error(`mockRevertRpc: unexpected rpc call ${fn}`);
+    });
+    return { rpc } as unknown as TypedSupabaseClient;
   }
 
   it("RPC가 만든 revert changeset의 id와 number를 함께 돌려준다", async () => {
@@ -362,5 +367,69 @@ describe("revertChangeset", () => {
     await expect(
       revertChangeset({ supabase, changesetId: "original-cs-2", lng: "ko" }),
     ).rejects.toThrow(/has no number/);
+  });
+
+  it("대상 changeset을 찾거나 접근할 수 없으면 not_found로 던진다", async () => {
+    const rpc = vi.fn((fn: string) => {
+      if (fn === "get_changeset_title_and_number") {
+        return Promise.resolve({ data: [], error: null });
+      }
+      throw new Error(`unexpected rpc call ${fn}`);
+    });
+    const supabase = { rpc } as unknown as TypedSupabaseClient;
+
+    await expect(
+      revertChangeset({ supabase, changesetId: "missing-cs", lng: "ko" }),
+    ).rejects.toThrow(/not found or not accessible/);
+  });
+});
+
+// composeRevertTitle은 revert_changeset RPC를 부르기 전에 완성된 제목 문자열을
+// 만드는 유일한 자리다 — 여기가 틀리면 저장되는 title 자체가 틀린다(FE는 그
+// 값을 그대로 렌더링할 뿐 더 이상 보정하지 않는다).
+describe("composeRevertTitle", () => {
+  it("원본 제목이 있으면 따옴표로 감싸고 되돌림을 붙인다", () => {
+    const title = composeRevertTitle({
+      originalTitle: "회의록 요약",
+      originalNumber: 12,
+      lng: "ko",
+    });
+    expect(title).toBe('"회의록 요약" 되돌림');
+  });
+
+  it("이미 되돌려진 제목을 또 되돌리면 깊이 계산 없이 그 문자열을 그대로 한 번 더 감싼다", () => {
+    const title = composeRevertTitle({
+      originalTitle: '"회의록 요약" 되돌림',
+      originalNumber: 12,
+      lng: "ko",
+    });
+    expect(title).toBe('""회의록 요약" 되돌림" 되돌림');
+  });
+
+  it("원본 제목이 없으면(번호 폴백) 폴백 문자열을 감싼다", () => {
+    const title = composeRevertTitle({
+      originalTitle: null,
+      originalNumber: 12,
+      lng: "ko",
+    });
+    expect(title).toBe('"변경사항 #12" 되돌림');
+  });
+
+  it("원본 제목도 번호도 없으면(manual 원본) 제목 없음 폴백을 감싼다", () => {
+    const title = composeRevertTitle({
+      originalTitle: null,
+      originalNumber: null,
+      lng: "ko",
+    });
+    expect(title).toBe('"이름 없는 변경사항" 되돌림');
+  });
+
+  it("영문 로케일에서는 영문 템플릿으로 조합한다", () => {
+    const title = composeRevertTitle({
+      originalTitle: "Weekly sync summary",
+      originalNumber: 12,
+      lng: "en",
+    });
+    expect(title).toBe('"Weekly sync summary" reverted');
   });
 });

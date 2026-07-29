@@ -13,7 +13,10 @@ import {
 import type { Database, Json } from "@server/infra/database.types";
 import { t } from "@server/infra/i18n";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
-import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import {
+  SupabaseError,
+  throwIfSupabaseError,
+} from "@server/infra/supabase-error";
 
 type ChangesetType = Database["public"]["Enums"]["changeset_type"];
 type ChangesetStatus = Database["public"]["Enums"]["changeset_status"];
@@ -125,12 +128,22 @@ export async function revertChangeset(args: {
 }): Promise<{ revertChangesetId: string; revertChangesetNumber: number }> {
   const { supabase, changesetId, lng } = args;
 
-  const { data: target, error: targetError } = await supabase
-    .from("changesets")
-    .select("title, number")
-    .eq("id", changesetId)
-    .single();
+  // 일반 SELECT(RLS)가 아니라 이 RPC로 조회한다 — revert_changeset 자신의 접근
+  // 가드(space_id NULL인 Reference manual changeset도 그 Reference의 workspace
+  // 멤버십으로 통과)를 그대로 복제하고 있어, RLS만으로는 통과 못 하는 케이스도
+  // 여기선 읽힌다(get_changeset_title_and_number 정의 주석 참고).
+  const { data: targetRows, error: targetError } = await supabase.rpc(
+    "get_changeset_title_and_number",
+    { p_changeset_id: changesetId },
+  );
   throwIfSupabaseError(targetError);
+  const target = targetRows?.[0];
+  if (!target) {
+    throw new SupabaseError(
+      "not_found",
+      `changeset ${changesetId} not found or not accessible`,
+    );
+  }
 
   const title = composeRevertTitle({
     originalTitle: target.title,
@@ -144,13 +157,13 @@ export async function revertChangeset(args: {
   });
   throwIfSupabaseError(error);
 
-  const { data: revertRow, error: numberError } = await supabase
-    .from("changesets")
-    .select("number")
-    .eq("id", data)
-    .single();
+  const { data: revertRows, error: numberError } = await supabase.rpc(
+    "get_changeset_title_and_number",
+    { p_changeset_id: data },
+  );
   throwIfSupabaseError(numberError);
-  if (revertRow.number === null) {
+  const revertRow = revertRows?.[0];
+  if (!revertRow || revertRow.number === null) {
     throw new Error(`revert changeset ${data} has no number`);
   }
 

@@ -1275,6 +1275,13 @@ export type Database = {
       };
       generate_digest_public_id: { Args: never; Returns: string };
       generate_space_public_id: { Args: never; Returns: string };
+      get_changeset_title_and_number: {
+        Args: { p_changeset_id: string };
+        Returns: {
+          number: number;
+          title: string;
+        }[];
+      };
       get_reference_citing_digests: {
         Args: { p_reference_id: string };
         Returns: {
@@ -1319,6 +1326,10 @@ export type Database = {
         Returns: undefined;
       };
       is_changeset_reverted: {
+        Args: { p_changeset_id: string };
+        Returns: boolean;
+      };
+      is_reopen_shaped_revert: {
         Args: { p_changeset_id: string };
         Returns: boolean;
       };
