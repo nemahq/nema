@@ -1,6 +1,7 @@
 import {
   type DigestBody,
   DigestBodySchema,
+  type DigestDraft,
   type RelationType,
   type TagColor,
 } from "@nema-io/shared";
@@ -435,13 +436,22 @@ export async function getChangesetByNumber(args: {
   };
 }
 
-// 판정 대기 relation changeset(지금은 conflicts만) — 나중에 duplicates가 붙을 자리를
-// kind 유니언에 남겨두되 지금은 구현하지 않는다(이 슬라이스 스코프 밖).
-type PendingRelationBody = {
-  kind: "conflict_pending";
-  from: RelationEndpointSnapshot;
-  to: RelationEndpointSnapshot;
-};
+type PendingRelationBody =
+  | {
+      kind: "conflict_pending";
+      from: RelationEndpointSnapshot;
+      to: RelationEndpointSnapshot;
+    }
+  | {
+      // 07-modeling.md "duplicates A→B: A가 남고 B가 지난 것" 방향 규약대로
+      // keeper=fromId, duplicate=toId(resolve_duplicate_relation과 동일).
+      kind: "duplicate_pending";
+      keeper: RelationEndpointSnapshot;
+      duplicate: RelationEndpointSnapshot;
+      // Slice A(#523)의 LLM eager 생성이 실패했으면 null — 화면(다음 슬라이스)이 null을
+      // 어떻게 보여줄지는 이 서비스 책임이 아니다.
+      mergeDraft: DigestDraft | null;
+    };
 
 interface PendingRelationChangeset {
   changesetId: string;
@@ -472,7 +482,8 @@ export async function getPendingRelationByNumber(args: {
   throwIfSupabaseError(error);
 
   // getByNumber와 같은 NOT_FOUND 관례 — 이미 판정됐거나(closed), relation이 아니거나,
-  // (아래에서) duplicates 제안이면 전부 "아직 판정 대기인 conflicts가 아니다"로 뭉뚱그린다.
+  // (아래에서) conflicts/duplicates가 아닌 제안(확신 관계)이면 전부 "아직 판정 대기인
+  // conflicts/duplicates가 아니다"로 뭉뚱그린다.
   if (!row || row.type !== "relation" || row.status !== "open") {
     throw new SupabaseError(
       "not_found",
@@ -497,7 +508,7 @@ export async function getPendingRelationByNumber(args: {
       `pending relation changeset ${row.id} has no parseable relation change row`,
     );
   }
-  if (proposal.type !== "conflicts") {
+  if (proposal.type !== "conflicts" && proposal.type !== "duplicates") {
     throw new SupabaseError(
       "not_found",
       `pending relation changeset #${number} not found in space ${spaceId}`,
@@ -531,12 +542,22 @@ export async function getPendingRelationByNumber(args: {
     fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
   ]);
 
+  const body: PendingRelationBody =
+    proposal.type === "conflicts"
+      ? { kind: "conflict_pending", from, to }
+      : {
+          kind: "duplicate_pending",
+          keeper: from,
+          duplicate: to,
+          mergeDraft: proposal.mergeDraft,
+        };
+
   return {
     changesetId: row.id,
     changesetNumber: row.number,
     createdAt: row.created_at,
     reviewerId: source.author_id,
     reviewerName: source.author_name,
-    body: { kind: "conflict_pending", from, to },
+    body,
   };
 }
