@@ -248,7 +248,7 @@
     "revert_title": "{markers} \"{title}\"",
     "save_status_conflict": "Refresh needed",
     "save_status_error": "Save failed",
-    "save_status_saved_ago": "Saved {time} ago",
+    "save_status_saved_ago": "Saved {time}",
     "save_status_saved_description": "We save your edits automatically.",
     "save_status_saved_now": "Saved just now",
     "status_applied": "Applied",

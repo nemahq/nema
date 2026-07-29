@@ -40,7 +40,10 @@ export function LabelChipRow({
           maxLength={maxLength}
           aria-label={ariaLabel}
           onChange={(e) => onQueryChange(e.target.value)}
-          className="min-w-[4rem] flex-1 border-none bg-transparent text-sm outline-none disabled:pointer-events-none"
+          // leading-6(24px) — 옆 Chip(패딩+보더 포함 약 22.8px)보다 확실히 커야
+          // 이 인풋이 항상 행 높이를 주도한다. 칩이 없을 때(인풋만)와 있을 때
+          // (칩+인풋) 사이에서 행 높이가 칩 유무에 따라 갈리지 않게 하기 위함.
+          className="min-w-[4rem] flex-1 border-none bg-transparent text-sm leading-6 outline-none disabled:pointer-events-none"
         />
       )}
     </div>
