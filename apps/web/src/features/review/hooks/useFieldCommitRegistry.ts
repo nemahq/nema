@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react";
 
-export interface FieldCommitRegistry {
+interface FieldCommitRegistry {
   registerPendingCommit: (commit: () => void) => () => void;
   flushPendingCommits: () => void;
 }

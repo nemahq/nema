@@ -1,6 +1,6 @@
 import type { DigestDraft } from "@nema-io/shared";
 
-export type MergeDraftConfirmDisabledReason =
+type MergeDraftConfirmDisabledReason =
   | "no_draft"
   | "missing_title"
   | "missing_description"
