@@ -1,5 +1,6 @@
 import { DIGEST_TITLE_MAX_LENGTH } from "@nema-io/shared";
 
+import { DIGEST_TITLE_FIELD_CLASS } from "@web/features/review/digestFieldTypography";
 import { useDraftField } from "@web/features/review/hooks/useDraftField";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -34,7 +35,7 @@ export function DigestTitleField({
       placeholder={t("intake.draft_untitled")}
       onChange={field.setValue}
       onBlur={field.commitNow}
-      className="text-[20px] font-semibold leading-[1.4]"
+      className={DIGEST_TITLE_FIELD_CLASS}
     />
   );
 }
