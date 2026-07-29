@@ -92,10 +92,7 @@ function TopicSearchListContent({
                   digestLabels: topics,
                   excludeId: draft.id,
                 })}
-                onSubmit={(title) => {
-                  onRenameDraft(draft.id, title);
-                  setEditingId(null);
-                }}
+                onCommitText={(title) => onRenameDraft(draft.id, title)}
               />
             </LabelDraftEditPopover>
           }

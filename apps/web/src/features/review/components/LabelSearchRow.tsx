@@ -106,7 +106,7 @@ export function LabelSearchRow({
         <TooltipTrigger asChild>
           <div className="block w-full">{row}</div>
         </TooltipTrigger>
-        <TooltipContent side="right" className="max-w-64">
+        <TooltipContent side="right" sideOffset={12} className="max-w-64">
           {description}
         </TooltipContent>
       </Tooltip>

@@ -97,10 +97,12 @@ function TagSearchListContent({
                   digestLabels: tags,
                   excludeId: draft.id,
                 })}
-                onSubmit={(title, description, color) => {
-                  onRenameDraft(draft.id, title, description, color);
-                  setEditingId(null);
-                }}
+                onCommitText={(title, description) =>
+                  onRenameDraft(draft.id, title, description, draft.color)
+                }
+                onColorChange={(color) =>
+                  onRenameDraft(draft.id, draft.title, draft.description, color)
+                }
               />
             </LabelDraftEditPopover>
           }
