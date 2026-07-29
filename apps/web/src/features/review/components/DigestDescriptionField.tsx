@@ -1,5 +1,7 @@
 import { DIGEST_DESCRIPTION_MAX_LENGTH } from "@nema-io/shared";
+import { cn } from "@nema-io/weave";
 
+import { DIGEST_DESCRIPTION_FIELD_CLASS } from "@web/features/review/digestFieldTypography";
 import { useDraftField } from "@web/features/review/hooks/useDraftField";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -38,7 +40,7 @@ export function DigestDescriptionField({
       placeholder={t("review.digest_description_placeholder")}
       onChange={field.setValue}
       onBlur={field.commitNow}
-      className="-mt-1 text-[14px] leading-[1.5] text-fg-tertiary"
+      className={cn("-mt-1", DIGEST_DESCRIPTION_FIELD_CLASS)}
     />
   );
 }

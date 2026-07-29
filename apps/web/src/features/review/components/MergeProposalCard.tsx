@@ -3,25 +3,34 @@ import {
   DIGEST_DESCRIPTION_MAX_LENGTH,
   DIGEST_TITLE_MAX_LENGTH,
 } from "@nema-io/shared";
-import { Text } from "@nema-io/weave";
+import { cn, Text } from "@nema-io/weave";
 
-import { DIGEST_BODY_FIELDS } from "@web/features/review/constants";
+import {
+  DIGEST_BODY_FIELDS,
+  type DigestBodyFieldKey,
+} from "@web/features/review/constants";
 import {
   readDigestBodyFieldValue,
   resolveCommittedValue,
 } from "@web/features/review/digestBodyFieldValue";
+import {
+  DIGEST_DESCRIPTION_FIELD_CLASS,
+  DIGEST_TITLE_FIELD_CLASS,
+} from "@web/features/review/digestFieldTypography";
+import { useRegisteredBufferedField } from "@web/features/review/hooks/useRegisteredBufferedField";
+import { resetDigestBodyForType } from "@web/features/review/resetDigestBodyForType";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { CandidateCardFrame } from "./CandidateCardFrame";
-import { DigestListField } from "./DigestListField";
-import { DigestTextField } from "./DigestTextField";
 import { DigestTypePicker } from "./DigestTypePicker";
 import { InvisibleTextarea } from "./InvisibleTextarea";
+import { MergeDraftBodyField } from "./MergeDraftBodyField";
 
 interface MergeProposalCardProps {
   draft: DigestDraft;
   disabled: boolean;
   onChange: (next: DigestDraft) => void;
+  registerPendingCommit: (commit: () => void) => () => void;
 }
 
 // 관계 판정 화면(중복/병합)의 병합 제안 카드 — DigestCandidateCard와 같은 시각
@@ -35,18 +44,27 @@ export function MergeProposalCard({
   draft,
   disabled,
   onChange,
+  registerPendingCommit,
 }: MergeProposalCardProps) {
   const { t } = useTranslation();
 
+  const titleField = useRegisteredBufferedField(
+    draft.title,
+    (next) => onChange({ ...draft, title: next }),
+    registerPendingCommit,
+  );
+  const descriptionField = useRegisteredBufferedField(
+    draft.description,
+    (next) => onChange({ ...draft, description: next }),
+    registerPendingCommit,
+  );
+
   function handleChangeType(next: DigestType) {
-    // DigestTypePicker(설명 참고)와 같은 규칙 — 타입이 바뀌면 이전 타입 전용
-    // 본문 필드는 전부 비운다.
-    const body: DigestBody = { type: next };
-    onChange({ ...draft, body });
+    onChange({ ...draft, body: resetDigestBodyForType(next) });
   }
 
   function handleChangeBodyField(
-    key: string,
+    key: DigestBodyFieldKey,
     fieldValue: string | string[],
   ): void {
     const body: DigestBody = { ...draft.body, [key]: fieldValue };
@@ -56,6 +74,7 @@ export function MergeProposalCard({
   return (
     <CandidateCardFrame
       viewed={false}
+      className="rounded-lg border border-border p-2"
       wash={
         <>
           <div className="flex items-center gap-2">
@@ -65,21 +84,23 @@ export function MergeProposalCard({
               onChangeType={handleChangeType}
             />
             <InvisibleTextarea
-              value={draft.title}
+              value={titleField.value}
               disabled={disabled}
               maxLength={DIGEST_TITLE_MAX_LENGTH}
               placeholder={t("intake.draft_untitled")}
-              onChange={(next) => onChange({ ...draft, title: next })}
-              className="min-w-0 flex-1 text-[20px] font-semibold leading-[1.4]"
+              onChange={titleField.setValue}
+              onBlur={titleField.commitNow}
+              className={cn("min-w-0 flex-1", DIGEST_TITLE_FIELD_CLASS)}
             />
           </div>
           <InvisibleTextarea
-            value={draft.description}
+            value={descriptionField.value}
             disabled={disabled}
             maxLength={DIGEST_DESCRIPTION_MAX_LENGTH}
             placeholder={t("review.digest_description_placeholder")}
-            onChange={(next) => onChange({ ...draft, description: next })}
-            className="-mt-1 text-[14px] leading-[1.5] text-fg-tertiary"
+            onChange={descriptionField.setValue}
+            onBlur={descriptionField.commitNow}
+            className={cn("-mt-1", DIGEST_DESCRIPTION_FIELD_CLASS)}
           />
         </>
       }
@@ -88,28 +109,20 @@ export function MergeProposalCard({
         {DIGEST_BODY_FIELDS[draft.body.type].map((field) => {
           const stored = readDigestBodyFieldValue(draft.body, field.key);
           const fieldValue = resolveCommittedValue(stored, field.kind);
-          const placeholder = t(field.placeholderKey);
 
           return (
             <div key={field.key} className="flex flex-col gap-1">
               <Text as="span" size="sm" weight="medium" color="tertiary">
                 {t(field.labelKey)}
               </Text>
-              {field.kind === "text" ? (
-                <DigestTextField
-                  text={typeof fieldValue === "string" ? fieldValue : ""}
-                  disabled={disabled}
-                  placeholder={placeholder}
-                  onChange={(next) => handleChangeBodyField(field.key, next)}
-                />
-              ) : (
-                <DigestListField
-                  items={Array.isArray(fieldValue) ? fieldValue : [fieldValue]}
-                  disabled={disabled}
-                  placeholder={placeholder}
-                  onChange={(next) => handleChangeBodyField(field.key, next)}
-                />
-              )}
+              <MergeDraftBodyField
+                kind={field.kind}
+                value={fieldValue}
+                disabled={disabled}
+                placeholder={t(field.placeholderKey)}
+                registerPendingCommit={registerPendingCommit}
+                onCommit={(next) => handleChangeBodyField(field.key, next)}
+              />
             </div>
           );
         })}

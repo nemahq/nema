@@ -241,6 +241,8 @@
     "relation_judgment_conflict_badge": "충돌",
     "relation_judgment_select_card": "{title} 선택",
     "relation_judgment_source_unavailable": "원문을 불러오지 못했어요.",
+    "relation_merge_confirm_disabled_missing_description": "병합 제안의 설명을 입력해주세요.",
+    "relation_merge_confirm_disabled_missing_title": "병합 제안의 제목을 입력해주세요.",
     "relation_merge_draft_unavailable_description": "확정할 편집 대상이 없어요. 버리기만 가능해요.",
     "relation_merge_draft_unavailable_title": "병합 초안을 만들지 못했어요.",
     "relation_merge_duplicate_badge": "중복",
