@@ -690,6 +690,121 @@ describe("apply_relation_changesets RPC — open 제안 title (integration)", ()
 
     expect(rows[0]?.title).toBe("진술 A 내용 vs 진술 B 내용");
   });
+
+  it("conflict_title이 실려 있으면 'A vs B' 대신 그 값을 title로 쓴다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    await client.query(
+      "UPDATE sources SET linking_status = 'pending' WHERE id = $1",
+      [sourceId],
+    );
+
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromStatementId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA,
+      content: "회의는 매주 화요일 오전 10시에 진행한다",
+    });
+    const toStatementId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+      content: "회의는 매주 목요일 오후 2시로 변경한다",
+    });
+
+    const pending = [
+      {
+        type: "conflicts",
+        from_id: fromStatementId,
+        to_id: toStatementId,
+        conflict_title: "정기 회의 일정 충돌",
+      },
+    ];
+    await client.query(
+      "SELECT apply_relation_changesets($1, '[]'::jsonb, $2::jsonb)",
+      [sourceId, JSON.stringify(pending)],
+    );
+
+    const { rows } = await client.query<{ title: string | null }>(
+      `SELECT c.title FROM changesets c
+       JOIN changes ch ON ch.changeset_id = c.id
+       WHERE c.type = 'relation' AND c.status = 'open'
+         AND ch.data->>'from_id' = $1 AND ch.data->>'to_id' = $2`,
+      [fromStatementId, toStatementId],
+    );
+
+    expect(rows[0]?.title).toBe("정기 회의 일정 충돌");
+  });
+});
+
+describe("apply_relation_changesets RPC — 확신 자동 적용 배치 title (integration)", () => {
+  it("배치를 촉발한 원문(Source)의 제목을 그대로 차용한다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({
+      spaceId,
+      authorId: userId,
+      title: "원문 제목",
+    });
+    await client.query(
+      "UPDATE sources SET linking_status = 'pending' WHERE id = $1",
+      [sourceId],
+    );
+
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromStatementId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA,
+    });
+    const toStatementId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+    });
+
+    const applied = [
+      { type: "supports", from_id: fromStatementId, to_id: toStatementId },
+    ];
+    await client.query(
+      "SELECT apply_relation_changesets($1, $2::jsonb, '[]'::jsonb)",
+      [sourceId, JSON.stringify(applied)],
+    );
+
+    const { rows } = await client.query<{ title: string | null }>(
+      `SELECT title FROM changesets
+       WHERE type = 'relation' AND status = 'closed' AND source_id = $1`,
+      [sourceId],
+    );
+
+    expect(rows[0]?.title).toBe("원문 제목");
+  });
 });
 
 describe("apply_relation_changesets RPC — 재제안 가드 (integration)", () => {

@@ -512,8 +512,9 @@
 
 - **Given**: 새 진술이 기존 진술들과 대조되었고, 관계 판정 결과 확신도가 높고 충돌·중복이 아니다.
 - **When**: 관계 엔진이 그 배치를 처리한다.
-- **Then**: relation changeset이 즉시 closed+applied 상태로 생성되어 조용히 적용된다. 사람의 판정 없이 변경셋 탭의 Closed 목록에서만 확인할 수 있다.
+- **Then**: relation changeset이 즉시 closed+applied 상태로 생성되어 조용히 적용된다. 사람의 판정 없이 변경셋 탭의 Closed 목록에서만 확인할 수 있다. 제목은 이 배치를 촉발한 원문(Source)의 제목을 그대로 차용한다 — 이 changeset은 그 원문 하나에서 나온 확신 연결들만 모은 것(1:1)이라 겹칠 일이 없고, closed로 태어나 title도 곧바로 얼어붙으므로 생성 시점 스냅샷 한 번이면 충분하다.
 - **관여 화면**: 변경셋
+- **범위 참고 (2026-07-29, 관계 판정 changeset 제목 생성 확장 슬라이스)**: 지금까지 title이 null이었던 걸 채웠다 — `apply_relation_changesets`(마이그레이션 `20260729150000_relation_conflict_title_and_batch_title.sql`)가 배치 changeset 생성 시점에 `sources.title`을 읽어 그대로 저장한다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 - **범위 참고 (2026-07-28, PR #514)**: `changeset-detail-service.ts`가 supports/replaces/resolves 셋을 전부 `unsupported`로 뭉개던 걸 `relation_confident_applied`로 분리해, Changeset 상세를 열면 관계 종류 캡션+끝점 Digest 카드가 실제로 보인다. 한 changeset에 확신 관계가 여러 건 담길 수 있어(배치당 changeset 1개, 성공한 관계마다 change 행 하나) 본문이 `relations` 배열이다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### 관련 Digest 자동 채움
@@ -558,8 +559,9 @@
 
 - **Given**: 판정 대기 relation changeset이 충돌(conflicts) 제안으로 생성된다.
 - **When**: changeset이 생성된다.
-- **Then**: 제목이 "A(끝점1 Statement 내용 요약) vs B(끝점2 Statement 내용 요약)" 형태로 채워진다. Digest 제목이 아니라 실제로 부딪히는 Statement 내용 요약이다 — Digest 제목은 더 넓은 주제를 담을 수 있어서 그대로 쓰면 정작 뭐가 부딪히는지 안 보일 수 있다.
+- **Then**: 제목이 "뭐가 부딪히는지"를 요약한 짧은 제목으로 채워진다(예: "정기 회의 일정 충돌", "인증 방식 충돌 (세션 vs JWT)"). 끝점 Statement 원문을 그대로 이어붙이면 진술이 길 때 목록에서 구분자조차 안 보여 스캔이 안 되던 문제를 해소한 것 — 관계 판정 LLM 콜이 이미 두 진술을 입력으로 받고 있어, 이 콜의 출력에 요약 제목 필드 하나를 얹었을 뿐 추가 LLM 콜은 없다. 요약이 비어 있으면(LLM 실패 등) "A(끝점1 Statement 내용) vs B(끝점2 Statement 내용)" 원문 이어붙이기로 폴백한다.
 - **관여 화면**: Changeset 상세, 관계 판정 화면
+- **범위 참고 (2026-07-29, 관계 판정 changeset 제목 생성 확장 슬라이스)**: 관계 엔진 2단계 판정 콜(`worker.ts` `callJudgment`, `RelationJudgmentSchema`)이 conflicts 판정일 때 `conflictTitle`도 함께 뽑도록 확장되고, `apply_relation_changesets`(마이그레이션 `20260729150000_relation_conflict_title_and_batch_title.sql`)가 있으면 그 값을 title로, 없으면 기존 "A vs B"로 낮아진다 — duplicates의 `merge_draft.title` 폴백 패턴과 동일. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 - **범위 참고 (surface-inventory.md 256행, mvp-wireframe.html; 갱신 2026-07-28, PR #512)**: 07-modeling.md `Changeset.title` 규칙. 실제 코드가 이 규칙을 안 지키고 있었다 — `digests.title`을 join해 "Digest 제목 A vs Digest 제목 B"로 채우고 있었음(스펙 위반). `statements.content`를 직접 쓰도록 고치고, 이미 만들어진 open relation changeset도 같은 기준으로 백필했다. 재제안 가드 방향 버그(아래 "재제안 가드" 참고)도 같은 PR에서 같이 고쳤다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### Changeset 제목 자동 생성 (relation - 중복)

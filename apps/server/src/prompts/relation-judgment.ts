@@ -50,6 +50,7 @@ This is the hardest and most important call among the four linking relations.
 The job here is to separate a genuine contradiction from a mere caveat — NOT to grow suspicious of conflicts in general. An incompatible pair must still surface; only the false ones get cut. The one test is whether the two statements can both be true at the same time.
 
 - A genuine conflict is two assertions that both purport to hold *now* and cannot both be true: "auth goes with our own implementation" vs "auth uses Supabase Auth". Surface it as \`conflicts\`. Do NOT downgrade such a pair to \`replaces\` or drop it just because the contradiction is uncomfortable — when neither side declares it supersedes the other, it is a conflict (this is the "when torn, choose conflicts" rule above).
+- When emitting \`conflicts\`, also fill \`conflictTitle\`: a short phrase naming what the two statements clash over ("정기 회의 일정 충돌", "인증 방식 충돌 (세션 vs JWT)") — not the statements' content itself, quoted or summarized. Write it in the statements' own language. Set \`conflictTitle\` to null for every other relation type.
 - A drawback is not a contradiction. "PortOne's fee is 0.3%p higher" and "we're switching to PortOne" are both true together — the higher fee is a *cost* of the move, not a denial of it. Before emitting, ask: could a reasonable person hold both at once? If yes, it is a caveat, concern, cost, or trade-off — not a conflict. Emit nothing.
 - This is about meaning, not wording. A conflict need not contain "not", "cancel", or any negation word: "QA finishes the day before release" and "QA runs the morning of release" cannot both hold, so they conflict even though neither negates the other. Judge whether the contents are mutually exclusive, not whether a contradiction is spelled out.
 - Endpoints. A conflict is between two assertions of a present state. A question asserts nothing, so it is never a conflict endpoint — a question re-raised on an already-settled topic is closed by \`resolves\` or is simply unrelated. A claim that states an intent to act in the future ("we plan to switch to Y", "we should raise the limit to 50MB") is not yet a present fact — it does not conflict with an existing decision it would change (at most it foreshadows a future replacement, once it actually happens). Judge this from the content's own tense/commitment, not from any label: treat a statement as a conflict endpoint only when its content already asserts a present state incompatible with the other (e.g. "we already switched to Y", not "we plan to switch to Y").
@@ -101,9 +102,10 @@ No relation is emitted for E1, N1, or E2 — being near in topic is not a relati
 
 ## Output
 
-- JSON object: { "relations": [{ "from": label, "to": label, "type": "supports" | "conflicts" | "replaces" | "resolves" | "duplicates", "confident": boolean }] }.
+- JSON object: { "relations": [{ "from": label, "to": label, "type": "supports" | "conflicts" | "replaces" | "resolves" | "duplicates", "confident": boolean, "conflictTitle": string | null }] }.
 - \`from\`, \`to\` are the bracketed labels exactly as given (e.g., "N0", "E2").
 - For \`duplicates\`, \`from\` is the copy that stays and \`to\` is the redundant copy retired (prefer the new statement as \`to\`).
+- \`conflictTitle\` is required on every relation: fill it for \`conflicts\` (see "Conflicts" section above), set it to null for every other type.
 - Output an empty array when no relation applies — that is the most common result.`;
 
 const RelationProposalSchema = z.object({
@@ -113,6 +115,11 @@ const RelationProposalSchema = z.object({
   // duplicates 포함 5종 — 워커가 type별로 게이트(duplicates·conflicts는 항상 pending).
   type: RelationTypeSchema,
   confident: z.boolean(),
+  // conflicts 전용 — 부딪히는 내용을 요약한 짧은 제목. OpenAI strict 구조화 출력은 모든
+  // 속성이 required라 optional이 아니라 nullable이어야 한다(다른 프롬프트 전부 이 관례).
+  // null(다른 타입, 또는 LLM 미채움)이면 apply_relation_changesets가 기존 "A vs B" 원문
+  // 이어붙이기로 폴백한다(review-flow.md "Changeset 제목 자동 생성 (relation - 충돌)").
+  conflictTitle: z.string().trim().min(1).nullable(),
 });
 
 export type RelationProposal = z.infer<typeof RelationProposalSchema>;

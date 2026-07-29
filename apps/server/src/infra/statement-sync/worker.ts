@@ -1431,6 +1431,10 @@ interface RelationChange {
   from_id: string;
   to_id: string;
   type: RelationType;
+  // conflicts 전용 — LLM 판정 콜(RelationProposal.conflictTitle)에서 그대로 옮겨온다.
+  // apply_relation_changesets가 있으면 changeset.title로 쓰고, 없으면 "A vs B"로 폴백
+  // (review-flow.md "Changeset 제목 자동 생성 (relation - 충돌)").
+  conflict_title?: string;
   // duplicates 전용 — apply_relation_changesets RPC로 그대로 전달돼 changes.data에
   // 스냅샷되고, 있으면 changeset.title도 "A vs B" 대신 이 값의 title을 쓴다
   // (review-flow.md "Changeset 제목 자동 생성 (relation - 중복)").
@@ -1481,6 +1485,9 @@ export function gateProposals(params: {
       from_id: fromId,
       to_id: toId,
       type: proposal.type,
+      ...(proposal.type === "conflicts" && proposal.conflictTitle
+        ? { conflict_title: proposal.conflictTitle }
+        : {}),
     };
 
     // 중복 제거 — 한 콜 안에서 같은 쌍은 첫 판정만 채택(applied XOR pending).
@@ -1528,9 +1535,9 @@ async function applyRelationChangesets(params: {
     p_source_id: sourceId,
     // RPC가 jsonb 배열로 받는다 — 구조체 배열을 Json으로 넘긴다. 여기서 TS의 필드명
     // 검증이 끊기고, 계약 상대는 apply_relation_changesets가 읽는 키(from_id/to_id/type,
-    // duplicates면 merge_draft도)다 — 키를 바꾸면 RPC도 함께 고친다. merge_draft는
-    // RPC가 title 추출 외엔 그대로 changes.data에 얹기만 해 내부 키 casing(camelCase,
-    // DigestDraftSchema와 동일)은 SQL과 무관하다.
+    // conflicts면 conflict_title, duplicates면 merge_draft도)다 — 키를 바꾸면 RPC도 함께
+    // 고친다. merge_draft는 RPC가 title 추출 외엔 그대로 changes.data에 얹기만 해 내부 키
+    // casing(camelCase, DigestDraftSchema와 동일)은 SQL과 무관하다.
     p_applied: applied as unknown as Json,
     p_pending: pending as unknown as Json,
   });
