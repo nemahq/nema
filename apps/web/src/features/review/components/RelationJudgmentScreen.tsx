@@ -30,8 +30,6 @@ function RelationJudgmentContent() {
     const { from, to } = pendingRelation.body;
     return (
       <ConflictRelationJudgment
-        spaceId={spaceId}
-        changesetNumber={pendingRelation.changesetNumber}
         title={title}
         reviewerName={pendingRelation.reviewerName}
         createdAt={pendingRelation.createdAt}
@@ -45,8 +43,6 @@ function RelationJudgmentContent() {
   const { keeper, duplicate, mergeDraft } = pendingRelation.body;
   return (
     <DuplicateMergeJudgment
-      spaceId={spaceId}
-      changesetNumber={pendingRelation.changesetNumber}
       title={title}
       reviewerName={pendingRelation.reviewerName}
       createdAt={pendingRelation.createdAt}

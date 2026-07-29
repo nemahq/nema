@@ -3,9 +3,11 @@ import { useState } from "react";
 import { Badge } from "@nema-io/weave";
 
 import { toHighlightedFieldKey } from "@web/features/review/digestBodyFieldValue";
+import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useRejectPendingRelation } from "@web/features/review/hooks/useRejectPendingRelation";
 import { useResolveConflictRelation } from "@web/features/review/hooks/useResolveConflictRelation";
 import type { RelationEndpointDetailSnapshot } from "@web/features/review/types";
+import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetConfirmDiscardActions } from "./ChangesetConfirmDiscardActions";
@@ -21,8 +23,6 @@ const SOURCE_TAB_A_ID = "tab-source-a";
 const SOURCE_TAB_B_ID = "tab-source-b";
 
 interface ConflictRelationJudgmentProps {
-  spaceId: string;
-  changesetNumber: number;
   title: string;
   reviewerName: string | null;
   createdAt: string;
@@ -32,8 +32,6 @@ interface ConflictRelationJudgmentProps {
 }
 
 export function ConflictRelationJudgment({
-  spaceId,
-  changesetNumber,
   title,
   reviewerName,
   createdAt,
@@ -42,6 +40,8 @@ export function ConflictRelationJudgment({
   to,
 }: ConflictRelationJudgmentProps) {
   const { t } = useTranslation();
+  const spaceId = useCurrentSpaceId();
+  const changesetNumber = useChangesetNumber();
   const { openTab, closeTab, activeTabId } = useChangesetSidePanel();
 
   const [selectedStatementId, setSelectedStatementId] = useState<string | null>(

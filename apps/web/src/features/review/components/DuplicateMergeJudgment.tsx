@@ -4,9 +4,11 @@ import type { DigestDraft } from "@nema-io/shared";
 import { Badge, Text } from "@nema-io/weave";
 
 import { toHighlightedFieldKey } from "@web/features/review/digestBodyFieldValue";
+import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useRejectPendingRelation } from "@web/features/review/hooks/useRejectPendingRelation";
 import { useResolveDuplicateRelation } from "@web/features/review/hooks/useResolveDuplicateRelation";
 import type { RelationEndpointDetailSnapshot } from "@web/features/review/types";
+import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetConfirmDiscardActions } from "./ChangesetConfirmDiscardActions";
@@ -16,8 +18,6 @@ import { DigestReadonlyCard } from "./DigestReadonlyCard";
 import { MergeProposalCard } from "./MergeProposalCard";
 
 interface DuplicateMergeJudgmentProps {
-  changesetNumber: number;
-  spaceId: string;
   title: string;
   reviewerName: string | null;
   createdAt: string;
@@ -31,8 +31,6 @@ interface DuplicateMergeJudgmentProps {
 // conflicts 판정(ConflictRelationJudgment, 읽기 전용 카드 중 하나를 고름)과 트리거는
 // 같지만 결과가 근본적으로 달라(고르기가 아니라 병합) 별도 컴포넌트로 분리했다.
 export function DuplicateMergeJudgment({
-  changesetNumber,
-  spaceId,
   title,
   reviewerName,
   createdAt,
@@ -42,6 +40,8 @@ export function DuplicateMergeJudgment({
   mergeDraft,
 }: DuplicateMergeJudgmentProps) {
   const { t } = useTranslation();
+  const spaceId = useCurrentSpaceId();
+  const changesetNumber = useChangesetNumber();
 
   // 병합 제안 제목이 헤더 제목을 그대로 따라간다(surface-inventory.md "헤더 제목은
   // 읽기 전용 — 실제 편집은 병합 제안 카드의 제목 입력 하나뿐") — 이 로컬 상태를
