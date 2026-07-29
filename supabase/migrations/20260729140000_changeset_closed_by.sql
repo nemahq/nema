@@ -10,9 +10,12 @@
 -- 대신한다.
 --
 -- author_id/author_name과 같은 스냅샷 페어 패턴(짝 불변식 CHECK, 계정 삭제 시 SET NULL +
--- 이름은 생성 시점 값으로 보존) — NULL이면 "AI(엔진)가 닫았다"는 뜻이다. manual·revert
--- changeset은 단일 액션이라 author_id만으로 "누가 만들었고 닫았는지"가 이미 충분해 이 컬럼을
--- 쓰지 않는다(항상 NULL로 남는다 — 짝 불변식과 무관하게 유효).
+-- 이름은 생성 시점 값으로 보존). "AI(엔진)가 닫았다"는 closed_by_id가 아니라 closed_by_name의
+-- NULL 여부로 판단해야 한다 — closed_by_id는 FK라 사람이 닫은 뒤 그 계정이 삭제되면 SET NULL로
+-- 지워지지만 closed_by_name은 텍스트 스냅샷이라 그대로 남기 때문이다(closed_by_id만 보면
+-- "탈퇴한 사람이 닫음"이 "AI가 닫음"으로 오판정된다). manual·revert changeset은 단일
+-- 액션이라 author_id만으로 "누가 만들었고 닫았는지"가 이미 충분해 이 컬럼을 쓰지 않는다
+-- (항상 NULL로 남는다 — 짝 불변식과 무관하게 유효).
 --
 -- 알려진 갭: 이 마이그레이션 이전에 이미 closed된 changeset은 "누가 닫았는지" 자체를 애초에
 -- 기록한 적이 없어 되돌려 채울 값이 없다 — author_name 백필(20260726075509)과 달리 여기는
@@ -33,6 +36,13 @@ ALTER TABLE changesets
 ALTER TABLE changesets
   ADD CONSTRAINT chk_changesets_closed_by_name_with_id
   CHECK (closed_by_id IS NULL OR closed_by_name IS NOT NULL);
+
+-- status='open'인 changeset엔 closed_by가 있으면 안 된다는 불변식을 chk_changeset_outcome과
+-- 같은 결로 DB에도 심어둔다 — RPC가 이미 지키고 있지만(모든 닫는/되살리는 RPC가 짝으로
+-- 처리), 나중에 새 RPC나 수정이 이 짝을 깜빡해도 여기서 바로 막힌다.
+ALTER TABLE changesets
+  ADD CONSTRAINT chk_changesets_closed_by_requires_closed
+  CHECK (status = 'closed' OR (closed_by_id IS NULL AND closed_by_name IS NULL));
 
 -- ----- confirm_ingestion_review — 사람이 리뷰를 확정(applied)하면 closed_by를 채운다 -----
 CREATE OR REPLACE FUNCTION confirm_ingestion_review(p_changeset_id uuid)

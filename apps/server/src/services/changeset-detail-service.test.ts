@@ -789,10 +789,10 @@ describe("getChangesetByNumber", () => {
   });
 
   // author_*(내용을 만든 사람)와 closed_by_*(닫은 사람)에 서로 다른 값을 넣어, 반환 객체가
-  // 그 둘을 엇갈려 매핑하지 않는지를 검증한다 — 실제 DB에서는 ingestion/relation 타입이
-  // author_id를 항상 NULL로 강제하지만(chk_changeset_shape), 이 테스트는 DB 제약이 아니라
-  // 서비스 계층의 컬럼→필드 매핑 로직만 겨냥한다(예: 리팩터 중 authorId: row.closed_by_id로
-  // 잘못 쓰는 실수가 나면 여기서 바로 잡힌다).
+  // 그 둘을 엇갈려 매핑하지 않는지를 검증한다 — 실제 DB에서는 relation 타입이 author_id를
+  // NULL로 강제하지만(chk_changeset_shape, ingestion은 이 제약 대상이 아니다), 이 테스트는
+  // DB 제약이 아니라 서비스 계층의 컬럼→필드 매핑 로직만 겨냥한다(예: 리팩터 중
+  // authorId: row.closed_by_id로 잘못 쓰는 실수가 나면 여기서 바로 잡힌다).
   it("authorId/authorName과 closedById/closedByName이 서로 다른 값으로 정확히 매핑된다", async () => {
     const supabase = mockSupabase({
       changesets: [

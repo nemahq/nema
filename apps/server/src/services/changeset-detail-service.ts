@@ -97,7 +97,11 @@ interface ChangesetDetail {
   authorName: string | null;
   // 이 changeset을 닫은(판정한) 사람 — author*와 다른 축이다(author는 "내용을 만든
   // 사람", closedBy는 "닫기 버튼을 누른 사람"). status='closed'일 때만 값이 있을 수
-  // 있고, 그마저도 NULL이면 AI(엔진)가 닫았다는 뜻이다(확신 관계 자동 적용 등).
+  // 있다. "AI(엔진)가 닫았는가"는 closedById가 아니라 closedByName의 NULL 여부로
+  // 판단해야 한다 — closedById는 FK라 계정 삭제 시 SET NULL로 지워지지만
+  // closedByName은 텍스트 스냅샷이라 그대로 남기 때문에, 사람이 닫은 뒤 계정이
+  // 삭제되면 closedById만 NULL이 되고 closedByName은 남는다(author_id/author_name과
+  // 같은 비대칭).
   closedById: string | null;
   closedByName: string | null;
   sourceId: string | null;
