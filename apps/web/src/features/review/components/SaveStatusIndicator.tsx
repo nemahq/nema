@@ -4,13 +4,11 @@ import { PopoverContent, PopoverTrigger, Text } from "@nema-io/weave";
 
 import { Popover } from "@web/components/ui/Popover";
 import {
-  getMinuteTickSnapshot,
-  subscribeToMinuteTick,
-} from "@web/components/ui/RelativeTime";
-import {
   formatCompactDistance,
+  getMinuteTickSnapshot,
   isWithinLastMinute,
   type Lang,
+  subscribeToMinuteTick,
 } from "@web/components/ui/relativeTimeFormat";
 import { useTranslation } from "@web/lib/tolgee";
 import { tolgee } from "@web/lib/tolgee/client";
@@ -37,11 +35,14 @@ export function SaveStatusIndicator() {
   const lang: Lang = tolgee.getLanguage() === "ko" ? "ko" : "en";
 
   if (saveStatus.kind === "clean") {
-    const cleanLabel = isWithinLastMinute(saveStatus.savedAt)
-      ? t("review.save_status_saved_now")
-      : t("review.save_status_saved_ago", {
-          time: formatCompactDistance(saveStatus.savedAt, lang),
-        });
+    // savedAt이 null이면 이번 세션에서 아직 저장한 적이 없다는 뜻 — 지어낼
+    // 경과 시간이 없으니 "방금 저장됨" 문구로 둔다.
+    const cleanLabel =
+      saveStatus.savedAt === null || isWithinLastMinute(saveStatus.savedAt)
+        ? t("review.save_status_saved_now")
+        : t("review.save_status_saved_ago", {
+            time: formatCompactDistance(saveStatus.savedAt, lang),
+          });
     return (
       <Text
         as="span"

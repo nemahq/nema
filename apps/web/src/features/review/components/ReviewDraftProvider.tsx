@@ -71,7 +71,7 @@ function getAutosaveEntry(key: string): ReviewAutosaveEntry {
       dirty: false,
       timer: null,
       savingPromise: null,
-      status: { kind: "clean", savedAt: new Date().toISOString() },
+      status: { kind: "clean", savedAt: null },
       statusListeners: new Set(),
     };
     autosaveEntries.set(key, entry);

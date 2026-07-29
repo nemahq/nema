@@ -3,7 +3,10 @@ import { TRPCClientError } from "@trpc/client";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
 export type ReviewSaveStatus =
-  | { kind: "clean"; savedAt: string }
+  // savedAt은 실제 저장 성공 시각만 담는다 — null은 "이번 세션에서 아직 한
+  // 번도 저장한 적 없다"는 뜻이라, 편집 없이 리뷰만 열어둔 채 시간이 지나도
+  // 있지도 않은 저장 이벤트를 "N분 전 저장됨"으로 지어내지 않는다.
+  | { kind: "clean"; savedAt: string | null }
   | { kind: "error"; message: string }
   | { kind: "conflict"; message: string };
 

@@ -48,7 +48,7 @@ export function DigestReadonlyCard({
                   이 읽기 전용 카드에서도 hover·클릭 가능한 것처럼 보였다
                   (Chip.tsx 주석 "정적 미리보기가 필요한 자리는 Badge를 쓴다").
                   variant/color 대신 className — DigestTagPicker와 같은 이유로
-                  Badge의 BadgeColor(5색, 뜻 있는 분류)는 TagColor(8색 파스텔
+                  Badge의 BadgeColor(5색, 뜻 모르는 분류)는 TagColor(8색 파스텔
                   팔레트)를 못 받는다. */}
               <Badge
                 shape="pill"

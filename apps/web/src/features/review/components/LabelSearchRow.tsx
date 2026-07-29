@@ -19,8 +19,8 @@ interface LabelSearchRowProps {
   // 우측 툴팁으로 보여준다. Topic은 이 개념 자체가 없어 안 넘긴다.
   description?: string;
   // Tag 전용 — 이미 붙은 행은 attached 스타일을 그대로 유지하고, 아직 안 붙은
-  // 후보 행에만 이 색을 입힌다(DigestTagPicker·TagEditPanel과 같은 규칙).
-  // Topic은 색 개념이 없어 안 넘긴다.
+  // 후보 행에만 이 색을 입힌다(DigestTagPicker가 트리거 칩에 색을 입히는 것과
+  // 같은 규칙). Topic은 색 개념이 없어 안 넘긴다.
   color?: TagColor;
   // 이 Digest에 이미 붙은 라벨도 목록에서 그대로 보여준다 — "붙은 것"과 "안
   // 붙은 것"을 둘로 쪼개지 않고 이 목록 하나로 통일하기 위해서다. 대신 이미

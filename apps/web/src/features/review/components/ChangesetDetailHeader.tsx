@@ -57,18 +57,26 @@ export function ChangesetDetailHeader({
         <div className="flex items-center gap-2">
           <ChangesetStatusPill state={state} />
           {badge}
-          {/* min-w-0 + truncate — reviewerName이 길면 줄바꿈돼 이 행만 키가 커진다.
-              이 changeset이 open(reviewerName 있음)에서 closed(reviewerName 없음)로
-              전환될 때 그 키 차이가 레이아웃 시프트로 보였다. */}
-          <Text
-            as="div"
-            size="sm"
-            color="tertiary"
-            className="min-w-0 truncate"
-          >
-            {reviewerName && `${reviewerName} · `}
-            <RelativeTime dateTime={time} className="text-sm leading-none" />
-          </Text>
+          {/* reviewerName만 truncate, 시각은 shrink-0 — 줄바꿈 방지 자체는
+              둘을 하나로 묶어도 되지만, 그러면 이름이 길 때 시각까지 말줄임
+              안으로 잘려 아예 안 보일 수 있다. 이름만 줄고 시각은 항상 남아야
+              한다. */}
+          <div className="flex min-w-0 items-center gap-1">
+            {reviewerName && (
+              <Text
+                as="span"
+                size="sm"
+                color="tertiary"
+                className="min-w-0 truncate"
+              >
+                {reviewerName} ·
+              </Text>
+            )}
+            <RelativeTime
+              dateTime={time}
+              className="shrink-0 text-sm leading-none"
+            />
+          </div>
         </div>
       </div>
     </header>

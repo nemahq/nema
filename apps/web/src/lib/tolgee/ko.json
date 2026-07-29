@@ -249,7 +249,6 @@
     "save_status_conflict": "새로고침 필요",
     "save_status_error": "저장 실패",
     "save_status_saved_ago": "{time} 전 저장됨",
-    "save_status_saved_description": "편집 내용이 자동으로 저장됐어요.",
     "save_status_saved_now": "방금 저장됨",
     "status_applied": "적용됨",
     "status_discarded": "반려됨",
