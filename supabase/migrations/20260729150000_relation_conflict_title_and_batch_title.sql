@@ -133,10 +133,16 @@ BEGIN
       ELSE NULL
     END;
 
-    v_conflict_title := CASE
-      WHEN v_item->>'type' = 'conflicts' THEN v_item->>'conflict_title'
-      ELSE NULL
-    END;
+    -- NULLIF: 빈 문자열은 미채움과 동일하게 취급해 "A vs B" 폴백을 그대로 타게 한다 —
+    -- 지금 유일한 호출부(worker.ts)는 zod .min(1)로 빈 문자열을 걸러내 도달 못 하지만,
+    -- 이 RPC를 직접 부르는 다른 경로(백필, 관리자 도구 등)가 생기면 방어선이 된다.
+    v_conflict_title := NULLIF(
+      CASE
+        WHEN v_item->>'type' = 'conflicts' THEN v_item->>'conflict_title'
+        ELSE NULL
+      END,
+      ''
+    );
 
     INSERT INTO changesets (space_id, type, status, source_id, title)
     VALUES (
@@ -150,6 +156,9 @@ BEGIN
     )
     RETURNING id INTO v_changeset_id;
 
+    -- conflict_title은 changes.data에 안 싣는다 — merge_draft는 병합 제안 화면이 나중에
+    -- 다시 읽어 편집해야 해서 스냅샷이 필요하지만, conflict_title은 title 컬럼에 쓰고 나면
+    -- 끝인 값이라(관계 판정 화면이 따로 편집하지 않음) 더 저장할 이유가 없다.
     INSERT INTO changes (changeset_id, action, target_type, target_id, data)
     VALUES (
       v_changeset_id, 'create', 'relation', gen_random_uuid(),

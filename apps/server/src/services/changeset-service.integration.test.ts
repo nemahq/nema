@@ -749,6 +749,67 @@ describe("apply_relation_changesets RPC — open 제안 title (integration)", ()
 
     expect(rows[0]?.title).toBe("정기 회의 일정 충돌");
   });
+
+  it("conflict_title이 빈 문자열이면 미채움과 동일하게 'A vs B'로 폴백한다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    await client.query(
+      "UPDATE sources SET linking_status = 'pending' WHERE id = $1",
+      [sourceId],
+    );
+
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromStatementId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA,
+      content: "진술 A 내용",
+    });
+    const toStatementId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+      content: "진술 B 내용",
+    });
+
+    // 지금 유일한 호출부(worker.ts)는 zod .min(1)로 빈 문자열을 걸러내 이 입력이 실제로
+    // 안 올라오지만, RPC 자체의 방어선을 검증한다(다른 호출부가 생겨도 안전해야 함).
+    const pending = [
+      {
+        type: "conflicts",
+        from_id: fromStatementId,
+        to_id: toStatementId,
+        conflict_title: "",
+      },
+    ];
+    await client.query(
+      "SELECT apply_relation_changesets($1, '[]'::jsonb, $2::jsonb)",
+      [sourceId, JSON.stringify(pending)],
+    );
+
+    const { rows } = await client.query<{ title: string | null }>(
+      `SELECT c.title FROM changesets c
+       JOIN changes ch ON ch.changeset_id = c.id
+       WHERE c.type = 'relation' AND c.status = 'open'
+         AND ch.data->>'from_id' = $1 AND ch.data->>'to_id' = $2`,
+      [fromStatementId, toStatementId],
+    );
+
+    expect(rows[0]?.title).toBe("진술 A 내용 vs 진술 B 내용");
+  });
 });
 
 describe("apply_relation_changesets RPC — 확신 자동 적용 배치 title (integration)", () => {

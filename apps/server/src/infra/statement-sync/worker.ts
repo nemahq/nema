@@ -1432,8 +1432,8 @@ interface RelationChange {
   to_id: string;
   type: RelationType;
   // conflicts 전용 — LLM 판정 콜(RelationProposal.conflictTitle)에서 그대로 옮겨온다.
-  // apply_relation_changesets가 있으면 changeset.title로 쓰고, 없으면 "A vs B"로 폴백
-  // (review-flow.md "Changeset 제목 자동 생성 (relation - 충돌)").
+  // 값이 있으면 apply_relation_changesets가 changeset.title로 쓰고, 없으면 "A vs B"로
+  // 폴백한다(review-flow.md "Changeset 제목 자동 생성 (relation - 충돌)").
   conflict_title?: string;
   // duplicates 전용 — apply_relation_changesets RPC로 그대로 전달돼 changes.data에
   // 스냅샷되고, 있으면 changeset.title도 "A vs B" 대신 이 값의 title을 쓴다

@@ -89,14 +89,17 @@ For each relation output \`confident\`: true or false.
 NEW statements:
 [N0] (claim, certain) 결제 연동은 포트원으로 간다. 토스는 접는다.
 [N1] (question) 정산 주기는 주간으로 할지 월간으로 할지 정해야 한다.
+[N2] (claim, certain) 인증은 우리가 직접 구현한 세션 기반 방식으로 간다.
 
 EXISTING statements:
 [E0] (claim, certain) 결제 연동은 토스로 한다.
 [E1] (claim, certain) 포트원은 정산 리포트가 약하다는 평이 있다.
 [E2] (claim, certain) 결제 연동 PoC를 끝낸다.
+[E3] (claim, certain) 인증은 Supabase Auth를 쓴다.
 
 Relations:
-- { from: "N0", to: "E0", type: "replaces", confident: true } — N0 explicitly drops Toss for PortOne; E0 is the retired version. Alternation is declared. (Note: N0 *replaces* E0 — it changes the decision. Had N0 merely restated E0 with no change, it would be \`duplicates\` with from = E0, to = N0, retiring the fresh copy.)
+- { from: "N0", to: "E0", type: "replaces", confident: true, conflictTitle: null } — N0 explicitly drops Toss for PortOne; E0 is the retired version. Alternation is declared. (Note: N0 *replaces* E0 — it changes the decision. Had N0 merely restated E0 with no change, it would be \`duplicates\` with from = E0, to = N0, retiring the fresh copy.)
+- { from: "N2", to: "E3", type: "conflicts", confident: true, conflictTitle: "인증 방식 충돌 (자체 구현 vs Supabase Auth)" } — both assert a present auth approach and cannot both hold, and neither declares itself the successor, so this is \`conflicts\`, not \`replaces\`. \`conflictTitle\` names what clashes, not either statement's content verbatim.
 
 No relation is emitted for E1, N1, or E2 — being near in topic is not a relation. E1 (PortOne's reporting is weak) is a *caveat* about the move to PortOne, not a contradiction of it: both hold at once, so it is not a conflict. And do NOT emit \`supports\` from E2 (a claim stating an intent to finish the PoC) to N0 just because both concern payments: the note never says that intent justifies the decision. A shared topic is neither a reason nor a clash.
 
