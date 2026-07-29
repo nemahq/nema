@@ -6,6 +6,7 @@ import type {
 } from "@web/features/review/constants";
 import {
   isDigestBodyFieldBlank,
+  isSameFieldValue,
   readDigestBodyFieldValue,
   resolveCommittedValue,
 } from "@web/features/review/digestBodyFieldValue";
@@ -16,14 +17,6 @@ import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
 import { DigestListField } from "./DigestListField";
 import { DigestTextField } from "./DigestTextField";
 import { useReviewDraftContext } from "./ReviewDraftProvider";
-
-// 리스트 값은 매 편집마다 새 배열이라 참조 비교로는 늘 "바뀌었다"가 된다.
-function isSameFieldValue(a: string | string[], b: string | string[]): boolean {
-  if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && a.every((item, index) => item === b[index]);
-  }
-  return Object.is(a, b);
-}
 
 interface FieldRendererArgs {
   value: string | string[];

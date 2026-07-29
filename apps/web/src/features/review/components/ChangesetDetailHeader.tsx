@@ -13,8 +13,6 @@ interface ChangesetDetailHeaderProps {
   state: ChangesetDisplayState;
   // 상태 pill 옆에 붙는 자리 — 관계 판정 화면의 충돌/중복 타입 배지가 여기 들어간다.
   badge?: ReactNode;
-  // 시각 앞에 "이름 · " 형태로 붙는다(DigestReadonlyCard의 authorName 표시와 같은 결).
-  reviewerName?: string | null;
   time: string;
   actions?: ReactNode;
 }
@@ -26,7 +24,6 @@ export function ChangesetDetailHeader({
   changesetNumber,
   state,
   badge,
-  reviewerName,
   time,
   actions,
 }: ChangesetDetailHeaderProps) {
@@ -57,26 +54,9 @@ export function ChangesetDetailHeader({
         <div className="flex items-center gap-2">
           <ChangesetStatusPill state={state} />
           {badge}
-          {/* reviewerName만 truncate, 시각은 shrink-0 — 줄바꿈 방지 자체는
-              둘을 하나로 묶어도 되지만, 그러면 이름이 길 때 시각까지 말줄임
-              안으로 잘려 아예 안 보일 수 있다. 이름만 줄고 시각은 항상 남아야
-              한다. */}
-          <div className="flex min-w-0 items-center gap-1">
-            {reviewerName && (
-              <Text
-                as="span"
-                size="sm"
-                color="tertiary"
-                className="min-w-0 truncate"
-              >
-                {reviewerName} ·
-              </Text>
-            )}
-            <RelativeTime
-              dateTime={time}
-              className="shrink-0 text-sm leading-none"
-            />
-          </div>
+          <Text as="div" size="sm" color="tertiary">
+            <RelativeTime dateTime={time} className="text-sm leading-none" />
+          </Text>
         </div>
       </div>
     </header>

@@ -56,6 +56,19 @@ export function resolveCommittedValue(
   return stored;
 }
 
+// 리스트 값은 매 편집마다 새 배열이라 참조 비교로는 늘 "바뀌었다"가 된다 — 버퍼링
+// 훅(useDraftField·useRegisteredBufferedField)이 "바깥에서 진짜로 바뀌었나"를
+// 판정할 때 공유하는 값 비교 기준.
+export function isSameFieldValue(
+  a: string | string[],
+  b: string | string[],
+): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, index) => item === b[index]);
+  }
+  return Object.is(a, b);
+}
+
 // statements.source_field는 DB 컬럼이라 string | null로만 좁혀 온다 — 실제
 // DigestBodyFieldKey 값 집합에 드는지 확인해 좁힌다(가드 없는 단언 금지).
 export function toHighlightedFieldKey(

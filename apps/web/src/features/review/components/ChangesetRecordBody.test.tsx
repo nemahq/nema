@@ -93,6 +93,8 @@ function changesetDetail(
     title: "제목",
     authorId: null,
     authorName: null,
+    closedById: null,
+    closedByName: null,
     sourceId: null,
     revertsId: null,
     revertsNumber: null,
