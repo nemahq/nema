@@ -57,11 +57,12 @@ export function TopicDraftRenameForm({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 px-2">
         <Input
           autoFocus
           value={titleValue}
           maxLength={TOPIC_TITLE_MAX_LENGTH}
+          placeholder={t("common.name_placeholder")}
           aria-label={t("common.name_label")}
           aria-invalid={!submittable}
           onChange={(e) => setTitleValue(e.target.value)}

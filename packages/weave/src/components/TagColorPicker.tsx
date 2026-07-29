@@ -69,7 +69,7 @@ function TagColorListPicker({
         <li key={color}>
           <ComboboxItem
             onClick={() => onChange(color)}
-            buttonClassName="gap-2 py-1.5"
+            buttonClassName="gap-2"
             aria-pressed={value === color}
             actions={
               value === color && (

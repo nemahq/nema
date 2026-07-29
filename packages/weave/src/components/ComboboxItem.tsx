@@ -42,8 +42,15 @@ export function ComboboxItem({
   return (
     <div
       className={cn(
-        "group flex w-full items-center",
+        "group flex w-full items-center px-2",
         !disabled && LIST_ITEM_HOVER_CLASSNAME,
+        // actions 안의 HoverIcon(미트볼 등)이 active(data-active)면 마우스가
+        // 행을 벗어나도 행 배경을 계속 hover와 같은 톤으로 유지한다. group-has-
+        // 가 아니라 has-를 쓴다 — group-has-는 "그룹의 자손"에게 입혀야 컴파일된
+        // 셀렉터(`:has(...) *`)가 성립하는데, 이 div 자신이 곧 그 group이라 자기
+        // 자신에게 group-has-를 걸면 절대 매칭될 수 없다(NavItem은 group div와
+        // 스타일 대상 div가 서로 다른 요소라 group-has-가 맞다 — 그쪽과 다른 구조).
+        !disabled && "has-[[data-active=true]]:bg-surface-raised-hover/40",
         // LIST_ITEM_HOVER_CLASSNAME과 다른 색 축(surface-raised-hover가 아니라
         // fg-primary 틴트)을 써야 한다 — 같은 값을 쓰면 다른 행에 마우스를
         // 올렸을 때와 실제 active 행을 구분할 수 없다.
@@ -58,7 +65,7 @@ export function ComboboxItem({
         tabIndex={readOnly ? -1 : undefined}
         onClick={readOnly ? undefined : onClick}
         className={cn(
-          "flex min-w-0 flex-1 items-center truncate text-left",
+          "flex min-w-0 flex-1 items-center truncate py-1 text-left",
           "disabled:text-fg-quinary",
           "aria-disabled:cursor-default",
           buttonClassName,

@@ -43,7 +43,13 @@ export function LabelDraftEditPopover({
         side="bottom"
         align="start"
         sideOffset={4}
-        className="w-64 p-2"
+        // weave PopoverContent 기본값에 p-2(사방)가 이미 있다 — py-2만 얹으면
+        // 세로만 새로 지정될 뿐 p-2의 좌우(px)는 안 지워진다(tailwind-merge가
+        // shorthand와 축 단위 유틸을 서로 다른 클래스로 남겨두고, CSS 쪽에서
+        // 나중에 생성되는 축 단위 규칙이 겹치는 축만 덮어쓰는 구조라 px-0을
+        // 명시해야 실제로 사라진다). 좌우 패딩은 아래 children(Input·색상
+        // 리스트) 쪽이 각자 갖는다.
+        className="w-56 px-0 py-2"
       >
         <div className="flex flex-col gap-1.5">{children}</div>
       </PopoverContent>

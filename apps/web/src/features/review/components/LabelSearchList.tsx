@@ -1,14 +1,17 @@
 import type { ReactNode } from "react";
 
-import { Badge, cn, ComboboxItem, Text } from "@nema-io/weave";
+import type { TagColor } from "@nema-io/shared";
+import { Badge, ComboboxItem, TAG_COLOR_CLASSNAME, Text } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 
 interface LabelSearchListProps {
   trimmedQuery: string;
   hasCandidates: boolean;
-  hasExactMatch: boolean;
   canCreate: boolean;
+  // Tag 전용 — "만들기" 미리보기 Badge에 색을 입힌다. Topic은 색 개념이 없어
+  // 안 넘긴다(LabelSearchRow의 color prop과 같은 이유).
+  createPreviewColor?: TagColor;
   onStartCreate: (name: string) => void;
   children: ReactNode;
 }
@@ -18,8 +21,8 @@ interface LabelSearchListProps {
 export function LabelSearchList({
   trimmedQuery,
   hasCandidates,
-  hasExactMatch,
   canCreate,
+  createPreviewColor,
   onStartCreate,
   children,
 }: LabelSearchListProps) {
@@ -38,33 +41,34 @@ export function LabelSearchList({
           </Text>
         )}
       </ul>
-      {trimmedQuery !== "" && !hasExactMatch && (
+      {/* canCreate가 이미 !hasExactMatch를 포함한다 — 레지스트리 기존 태그와
+          겹칠 때(hasExactMatch)뿐 아니라, 이 Digest에 이미 붙은 draft(신규)
+          태그와 이름이 겹칠 때도 disabled로 반쯤 보여주는 대신 아예 안
+          뜨게 해서 두 "겹침" 케이스를 같은 방식으로 다룬다. */}
+      {trimmedQuery !== "" && canCreate && (
         <ComboboxItem
-          disabled={!canCreate}
           onClick={() => onStartCreate(trimmedQuery)}
-          buttonClassName="gap-1 py-1"
+          buttonClassName="gap-1"
         >
-          {/* px-2를 안 두는 이유는 후보 행과 동일 — Badge가 이미 자기 패딩을 갖고
-              있어 행에 또 주면 이중으로 밀린다. 국문은 label_create_new_before가
-              빈 문자열이라 이 값이 특히 중요하다(아니면 Badge 앞에 눈에 띄는
-              여백이 생긴다). Badge를 문장 안에 끼우기 위해 앞/뒤 문구를 분리한다 —
+          {/* Badge를 문장 안에 끼우기 위해 앞/뒤 문구를 분리한다 —
               tolgee의 t()는 문자열 파라미터만 받아 컴포넌트를 끼워 넣을 수 없다
               (어순이 언어마다 달라 국문은 뒤쪽, 영문은 앞쪽에 문구가 붙는다). */}
-          <Text
-            as="span"
-            size="sm"
-            className={cn(!canCreate && "text-fg-quinary")}
-          >
+          <Text as="span" size="sm">
             {t("review.label_create_new_before")}
           </Text>
-          <Badge variant="outline" shape="rounded" truncated>
+          <Badge
+            variant={createPreviewColor ? undefined : "outline"}
+            shape="rounded"
+            truncated
+            className={
+              createPreviewColor
+                ? TAG_COLOR_CLASSNAME[createPreviewColor]
+                : undefined
+            }
+          >
             {trimmedQuery}
           </Badge>
-          <Text
-            as="span"
-            size="sm"
-            className={cn(!canCreate && "text-fg-quinary")}
-          >
+          <Text as="span" size="sm">
             {t("review.label_create_new_after")}
           </Text>
         </ComboboxItem>

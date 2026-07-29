@@ -23,6 +23,8 @@ import {
 } from "@web/utils/labelSearch";
 
 const SEARCH_LIST_CLASSNAME = "flex max-h-48 flex-col gap-0.5 overflow-y-auto";
+// ComboboxItem 자신이 이제 좌우·세로 패딩을 다 갖는다 — 이 값은 ComboboxItem을
+// 아예 안 거치는 로딩·에러·빈 상태용 Text 자리 전용(그 행들만 자체 패딩이 필요).
 const SEARCH_ROW_CLASSNAME = "px-2 py-1.5";
 
 interface TagSearchResultsProps {
@@ -66,10 +68,7 @@ function TagSearchResults({
       <ul className={SEARCH_LIST_CLASSNAME}>
         {candidates.map((tag) => (
           <li key={tag.id}>
-            <ComboboxItem
-              onClick={() => onSelectExisting(tag)}
-              buttonClassName={SEARCH_ROW_CLASSNAME}
-            >
+            <ComboboxItem onClick={() => onSelectExisting(tag)}>
               <Text as="span" size="sm">
                 {tag.title}
               </Text>
@@ -91,7 +90,6 @@ function TagSearchResults({
         <ComboboxItem
           disabled={!canStartCreateNew}
           onClick={() => onStartCreate(trimmed)}
-          buttonClassName={SEARCH_ROW_CLASSNAME}
         >
           <Text
             as="span"

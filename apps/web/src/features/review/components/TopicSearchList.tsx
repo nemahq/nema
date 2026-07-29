@@ -48,13 +48,12 @@ function TopicSearchListContent({
   // 동시에 patch하려다 서로의 변경을 덮어쓸 수 있다.
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const { candidates, trimmedQuery, hasExactMatch, canCreate } =
-    buildLabelSearchState({
-      items: topicList.topics,
-      getLabel: getTopicLabel,
-      query,
-      existingLabels: topics.map((topic) => topic.title),
-    });
+  const { candidates, trimmedQuery, canCreate } = buildLabelSearchState({
+    items: topicList.topics,
+    getLabel: getTopicLabel,
+    query,
+    existingLabels: topics.map((topic) => topic.title),
+  });
   const attachedIds = new Set(topics.map((topic) => topic.registryId));
   const draftMatches = filterDraftLabelCandidates(topics, query);
   const activeRegistryTitles = getActiveLabelTitles(
@@ -70,7 +69,6 @@ function TopicSearchListContent({
     <LabelSearchList
       trimmedQuery={trimmedQuery}
       hasCandidates={candidates.length > 0 || draftMatches.length > 0}
-      hasExactMatch={hasExactMatch}
       canCreate={canCreate}
       onStartCreate={onCreateNew}
     >

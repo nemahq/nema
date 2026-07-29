@@ -61,7 +61,6 @@ export function LabelSearchRow({
       readOnly={attached}
       onClick={onSelect}
       actions={actions}
-      buttonClassName="py-1"
       // aria-label로 이름을 label에 고정한다 — 안 하면 버튼 접근성 이름이
       // 아래 숨김 설명 span의 텍스트까지 이어붙여 계산돼(hidden이어도 aria-
       // hidden이 아니라 이름 계산에서 안 빠짐) 라벨 이름이 장황해진다.
@@ -106,7 +105,15 @@ export function LabelSearchRow({
         <TooltipTrigger asChild>
           <div className="block w-full">{row}</div>
         </TooltipTrigger>
-        <TooltipContent side="right" sideOffset={12} className="max-w-64">
+        {/* text-wrap으로 기본 text-balance를 되돌린다 — balance는 한글처럼
+            공백 없는 구간이 섞인 텍스트의 줄 길이를 부정확하게 계산해 짧은
+            줄만 남기고 오른쪽에 여백을 만든다. break-keep은 그 공백 없는
+            구간(예: "다듬을지") 중간을 끊지 않고 실제 공백에서만 줄바꿈한다. */}
+        <TooltipContent
+          side="right"
+          sideOffset={12}
+          className="max-w-56 text-wrap break-keep"
+        >
           {description}
         </TooltipContent>
       </Tooltip>

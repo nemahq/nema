@@ -5,7 +5,7 @@ import {
   TAG_TITLE_MAX_LENGTH,
   type TagColor,
 } from "@nema-io/shared";
-import { Input, TagColorListPicker, Textarea } from "@nema-io/weave";
+import { Input, TagColorListPicker, Text } from "@nema-io/weave";
 
 import { TAG_COLOR_LABEL_KEY } from "@web/features/review/constants";
 import { useTranslation } from "@web/lib/tolgee";
@@ -88,45 +88,64 @@ export function TagDraftRenameForm({
     : null;
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-1">
-        <Input
-          autoFocus
-          value={titleValue}
-          maxLength={TAG_TITLE_MAX_LENGTH}
-          aria-label={t("common.name_label")}
-          aria-invalid={titleInvalid}
-          onChange={(e) => setTitleValue(e.target.value)}
-        />
-        <p
-          role="alert"
-          className={`text-xs ${titleError ? "text-status-error" : "text-transparent"}`}
-        >
-          {titleError ?? " "}
-        </p>
+    <div className="flex flex-col gap-3">
+      {/* 이름·설명을 한 그룹(gap-2)으로 좁게 묶고, 색상 리스트는 별개
+          관심사라 바깥 gap-3로 한 단 떼어 놓는다(TagCreateForm.tsx와 같은
+          이유). */}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1 px-2">
+          <Input
+            autoFocus
+            value={titleValue}
+            maxLength={TAG_TITLE_MAX_LENGTH}
+            placeholder={t("common.name_placeholder")}
+            aria-label={t("common.name_label")}
+            aria-invalid={titleInvalid}
+            onChange={(e) => setTitleValue(e.target.value)}
+          />
+          <p
+            role="alert"
+            className={`text-xs ${titleError ? "text-status-error" : "text-transparent"}`}
+          >
+            {titleError ?? " "}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1 px-2">
+          <Input
+            value={descriptionValue}
+            maxLength={TAG_DESCRIPTION_MAX_LENGTH}
+            placeholder={t("common.description_placeholder")}
+            aria-label={t("review.tag_create_description_label")}
+            aria-invalid={descriptionInvalid}
+            onChange={(e) => setDescriptionValue(e.target.value)}
+          />
+          <p
+            role="alert"
+            className={`text-xs ${descriptionError ? "text-status-error" : "text-transparent"}`}
+          >
+            {descriptionError ?? " "}
+          </p>
+        </div>
       </div>
-      <div className="flex flex-col gap-1">
-        <Textarea
-          value={descriptionValue}
-          maxLength={TAG_DESCRIPTION_MAX_LENGTH}
-          aria-label={t("review.tag_create_description_label")}
-          aria-invalid={descriptionInvalid}
-          onChange={(e) => setDescriptionValue(e.target.value)}
-          rows={3}
-        />
-        <p
-          role="alert"
-          className={`text-xs ${descriptionError ? "text-status-error" : "text-transparent"}`}
+      <div className="flex flex-col gap-1.5">
+        {/* px-2 — 위 이름·설명 Input과 좌측을 맞춘다(TagCreateForm.tsx의
+            Colors 라벨과 같은 스타일도 통일). 색상 리스트 쪽은 ComboboxItem
+            자신이 이미 px-2를 갖고 있어 래퍼까지 px-2를 또 두면 이중으로
+            밀리므로 px-1만 준다 — 라벨과 리스트가 서로 다른 값을 쓰는 이유. */}
+        <Text size="sm" color="tertiary" className="px-2">
+          {t("review.tag_color_label")}
+        </Text>
+        <div
+          role="group"
+          aria-label={t("review.tag_color_label")}
+          className="px-1"
         >
-          {descriptionError ?? " "}
-        </p>
-      </div>
-      <div role="group" aria-label={t("review.tag_color_label")}>
-        <TagColorListPicker
-          value={color}
-          onChange={onColorChange}
-          getColorLabel={(c) => t(TAG_COLOR_LABEL_KEY[c])}
-        />
+          <TagColorListPicker
+            value={color}
+            onChange={onColorChange}
+            getColorLabel={(c) => t(TAG_COLOR_LABEL_KEY[c])}
+          />
+        </div>
       </div>
     </div>
   );
