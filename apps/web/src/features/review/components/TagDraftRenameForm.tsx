@@ -73,7 +73,7 @@ export function TagDraftRenameForm({
         />
         <p
           role="alert"
-          className={`px-3 text-xs ${titleError ? "text-status-error" : "text-transparent"}`}
+          className={`text-xs ${titleError ? "text-status-error" : "text-transparent"}`}
         >
           {titleError ?? " "}
         </p>
@@ -89,7 +89,7 @@ export function TagDraftRenameForm({
         />
         <p
           role="alert"
-          className={`px-3 text-xs ${descriptionError ? "text-status-error" : "text-transparent"}`}
+          className={`text-xs ${descriptionError ? "text-status-error" : "text-transparent"}`}
         >
           {descriptionError ?? " "}
         </p>
