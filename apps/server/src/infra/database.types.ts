@@ -79,6 +79,8 @@ export type Database = {
         Row: {
           author_id: string | null;
           author_name: string | null;
+          closed_by_id: string | null;
+          closed_by_name: string | null;
           created_at: string;
           draft_snapshot: Json | null;
           draft_version: number | null;
@@ -98,6 +100,8 @@ export type Database = {
         Insert: {
           author_id?: string | null;
           author_name?: string | null;
+          closed_by_id?: string | null;
+          closed_by_name?: string | null;
           created_at?: string;
           draft_snapshot?: Json | null;
           draft_version?: number | null;
@@ -117,6 +121,8 @@ export type Database = {
         Update: {
           author_id?: string | null;
           author_name?: string | null;
+          closed_by_id?: string | null;
+          closed_by_name?: string | null;
           created_at?: string;
           draft_snapshot?: Json | null;
           draft_version?: number | null;

@@ -118,7 +118,6 @@ function RelationJudgmentContent() {
             {t("review.relation_judgment_conflict_badge")}
           </Badge>
         }
-        reviewerName={pendingRelation.reviewerName}
         time={pendingRelation.createdAt}
         actions={
           <ChangesetConfirmDiscardActions

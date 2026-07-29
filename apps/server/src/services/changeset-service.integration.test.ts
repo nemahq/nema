@@ -2145,3 +2145,466 @@ describe("restore_digest RPC — 원문 재추출 트리거 (integration)", () =
     expect(rows[0]?.linking_status).toBe("pending");
   });
 });
+
+// 5개 RPC(confirm/discard_ingestion_review, resolve_conflict/duplicate_relation,
+// reject_pending_relation) 전부 "닫은 사람 = auth.uid()"를 closed_by_id/closed_by_name에
+// 채운다 — reviewerId/reviewerName이 실제로는 판정자가 아니라 그 changeset을 촉발한
+// Source의 제출자였던 버그(changeset-detail-service.getPendingRelationByNumber)를 대체하는
+// 필드라, 제출자(author)와 판정자(closer)가 다른 사람인 케이스로 검증한다.
+describe("changesets.closed_by_id/closed_by_name (integration)", () => {
+  it("confirm_ingestion_review — 확정한 사람이 원문 제출자와 달라도 closed_by는 확정한 사람이다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const authorId = await createFixtureUser("작성자");
+    const reviewerId = await createFixtureUser("리뷰어");
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, reviewerId);
+    const sourceId = await createFixtureSource({ spaceId, authorId });
+
+    const digest = {
+      type: "decision",
+      title: "픽스처 다이제스트",
+      description: "설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+    };
+    const { rows: createRows } = await client.query<{
+      create_ingestion_review: string;
+    }>("SELECT create_ingestion_review($1, $2::jsonb)", [
+      sourceId,
+      JSON.stringify([digest]),
+    ]);
+    const changesetId = createRows[0].create_ingestion_review;
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      reviewerId,
+    ]);
+    await client.query("SELECT confirm_ingestion_review($1)", [changesetId]);
+
+    const { rows } = await client.query<{
+      closed_by_id: string | null;
+      closed_by_name: string | null;
+    }>("SELECT closed_by_id, closed_by_name FROM changesets WHERE id = $1", [
+      changesetId,
+    ]);
+
+    expect(rows[0]).toEqual({
+      closed_by_id: reviewerId,
+      closed_by_name: "리뷰어",
+    });
+  });
+
+  it("discard_ingestion_review — 버린 사람이 closed_by로 채워진다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const authorId = await createFixtureUser("작성자");
+    const reviewerId = await createFixtureUser("리뷰어");
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, reviewerId);
+    const sourceId = await createFixtureSource({ spaceId, authorId });
+
+    const digest = {
+      type: "decision",
+      title: "픽스처 다이제스트",
+      description: "설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+    };
+    const { rows: createRows } = await client.query<{
+      create_ingestion_review: string;
+    }>("SELECT create_ingestion_review($1, $2::jsonb)", [
+      sourceId,
+      JSON.stringify([digest]),
+    ]);
+    const changesetId = createRows[0].create_ingestion_review;
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      reviewerId,
+    ]);
+    await client.query("SELECT discard_ingestion_review($1)", [changesetId]);
+
+    const { rows } = await client.query<{
+      closed_by_id: string | null;
+      closed_by_name: string | null;
+    }>("SELECT closed_by_id, closed_by_name FROM changesets WHERE id = $1", [
+      changesetId,
+    ]);
+
+    expect(rows[0]).toEqual({
+      closed_by_id: reviewerId,
+      closed_by_name: "리뷰어",
+    });
+  });
+
+  it("resolve_conflict_relation — 판정한 사람이 closed_by로 채워진다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const reviewerId = await createFixtureUser("리뷰어");
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, reviewerId);
+    const sourceId = await createFixtureSource({
+      spaceId,
+      authorId: reviewerId,
+    });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const winnerId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA,
+    });
+    const loserId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+    });
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId: winnerId,
+      toId: loserId,
+    });
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      reviewerId,
+    ]);
+    await client.query("SELECT resolve_conflict_relation($1, $2)", [
+      changesetId,
+      winnerId,
+    ]);
+
+    const { rows } = await client.query<{
+      closed_by_id: string | null;
+      closed_by_name: string | null;
+    }>("SELECT closed_by_id, closed_by_name FROM changesets WHERE id = $1", [
+      changesetId,
+    ]);
+
+    expect(rows[0]).toEqual({
+      closed_by_id: reviewerId,
+      closed_by_name: "리뷰어",
+    });
+  });
+
+  it("resolve_duplicate_relation — 병합을 확정한 사람이 closed_by로 채워진다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const reviewerId = await createFixtureUser("리뷰어");
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, reviewerId);
+    const sourceId = await createFixtureSource({
+      spaceId,
+      authorId: reviewerId,
+    });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const keeperId = await createFixtureStatement({
+      spaceId,
+      digestId: digestA,
+    });
+    const duplicateId = await createFixtureStatement({
+      spaceId,
+      digestId: digestB,
+    });
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "duplicates",
+      fromId: keeperId,
+      toId: duplicateId,
+    });
+
+    const mergedDigest = {
+      title: "병합된 다이제스트",
+      description: "병합 설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+      new_reference_keys: [],
+      external_urls: [],
+    };
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      reviewerId,
+    ]);
+    await client.query(
+      "SELECT resolve_duplicate_relation($1, $2::jsonb, '[]'::jsonb)",
+      [changesetId, JSON.stringify(mergedDigest)],
+    );
+
+    const { rows } = await client.query<{
+      closed_by_id: string | null;
+      closed_by_name: string | null;
+    }>("SELECT closed_by_id, closed_by_name FROM changesets WHERE id = $1", [
+      changesetId,
+    ]);
+
+    expect(rows[0]).toEqual({
+      closed_by_id: reviewerId,
+      closed_by_name: "리뷰어",
+    });
+  });
+
+  it("reject_pending_relation — 거절한 사람이 closed_by로 채워진다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const reviewerId = await createFixtureUser("리뷰어");
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, reviewerId);
+    const sourceId = await createFixtureSource({
+      spaceId,
+      authorId: reviewerId,
+    });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      reviewerId,
+    ]);
+    await client.query("SELECT reject_pending_relation($1)", [changesetId]);
+
+    const { rows } = await client.query<{
+      closed_by_id: string | null;
+      closed_by_name: string | null;
+    }>("SELECT closed_by_id, closed_by_name FROM changesets WHERE id = $1", [
+      changesetId,
+    ]);
+
+    expect(rows[0]).toEqual({
+      closed_by_id: reviewerId,
+      closed_by_name: "리뷰어",
+    });
+  });
+
+  // 되살리면(reopen) status='open'으로 되돌아가는데 closed_by가 그대로 남으면 "아직 아무도
+  // 안 닫은 changeset인데 예전에 버린 사람이 판정자로 보이는" 오표시가 재발한다 — 이번
+  // 슬라이스가 고치려던 reviewerId 버그와 같은 종류라 되살리기 경로도 반드시 지워야 한다.
+  it("restore_ingestion_review — 되살리면 closed_by_id/closed_by_name이 지워진다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const authorId = await createFixtureUser("작성자");
+    const reviewerId = await createFixtureUser("리뷰어");
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, reviewerId);
+    const sourceId = await createFixtureSource({ spaceId, authorId });
+
+    const digest = {
+      type: "decision",
+      title: "픽스처 다이제스트",
+      description: "설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      reference_ids: [],
+    };
+    const { rows: createRows } = await client.query<{
+      create_ingestion_review: string;
+    }>("SELECT create_ingestion_review($1, $2::jsonb)", [
+      sourceId,
+      JSON.stringify([digest]),
+    ]);
+    const changesetId = createRows[0].create_ingestion_review;
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      reviewerId,
+    ]);
+    await client.query("SELECT discard_ingestion_review($1)", [changesetId]);
+
+    const beforeRestore = await client.query<{
+      closed_by_id: string | null;
+    }>("SELECT closed_by_id FROM changesets WHERE id = $1", [changesetId]);
+    expect(beforeRestore.rows[0]?.closed_by_id).toBe(reviewerId);
+
+    await client.query("SELECT restore_ingestion_review($1)", [changesetId]);
+
+    const { rows } = await client.query<{
+      status: string;
+      outcome: string | null;
+      closed_by_id: string | null;
+      closed_by_name: string | null;
+    }>(
+      "SELECT status, outcome, closed_by_id, closed_by_name FROM changesets WHERE id = $1",
+      [changesetId],
+    );
+
+    expect(rows[0]).toEqual({
+      status: "open",
+      outcome: null,
+      closed_by_id: null,
+      closed_by_name: null,
+    });
+  });
+
+  it("restore_pending_relation — 되살리면 closed_by_id/closed_by_name이 지워진다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const reviewerId = await createFixtureUser("리뷰어");
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    await addFixtureSpaceMember(spaceId, reviewerId);
+    const sourceId = await createFixtureSource({
+      spaceId,
+      authorId: reviewerId,
+    });
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+    const changesetId = await createFixtureOpenRelation({
+      spaceId,
+      sourceId,
+      relationType: "conflicts",
+      fromId,
+      toId,
+    });
+
+    await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [
+      reviewerId,
+    ]);
+    await client.query("SELECT reject_pending_relation($1)", [changesetId]);
+
+    const beforeRestore = await client.query<{
+      closed_by_id: string | null;
+    }>("SELECT closed_by_id FROM changesets WHERE id = $1", [changesetId]);
+    expect(beforeRestore.rows[0]?.closed_by_id).toBe(reviewerId);
+
+    await client.query("SELECT restore_pending_relation($1)", [changesetId]);
+
+    const { rows } = await client.query<{
+      status: string;
+      outcome: string | null;
+      closed_by_id: string | null;
+      closed_by_name: string | null;
+    }>(
+      "SELECT status, outcome, closed_by_id, closed_by_name FROM changesets WHERE id = $1",
+      [changesetId],
+    );
+
+    expect(rows[0]).toEqual({
+      status: "open",
+      outcome: null,
+      closed_by_id: null,
+      closed_by_name: null,
+    });
+  });
+
+  // apply_relation_changesets는 확신 관계를 배치당 changeset 1개로 즉시 closed+applied로
+  // 만드는 자동 적용 경로다(사람이 버튼을 누르는 판정 RPC들과 달리 auth.uid() 없이 서비스
+  // 롤로 도는 워커가 호출) — closed_by가 여기서 채워지면 "AI가 닫음" 신호 자체가 깨진다.
+  it("apply_relation_changesets(확신 관계 자동 적용) — closed_by_id/closed_by_name이 채워지지 않는다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const userId = await createFixtureUser();
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId, "Space A");
+    const sourceId = await createFixtureSource({ spaceId, authorId: userId });
+    await client.query(
+      "UPDATE sources SET linking_status = 'pending' WHERE id = $1",
+      [sourceId],
+    );
+    const digestA = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 A",
+    });
+    const digestB = await createFixtureDigest({
+      sourceId,
+      spaceId,
+      title: "다이제스트 B",
+    });
+    const fromId = await createFixtureStatement({ spaceId, digestId: digestA });
+    const toId = await createFixtureStatement({ spaceId, digestId: digestB });
+
+    const applied = [{ type: "supports", from_id: fromId, to_id: toId }];
+    await client.query(
+      "SELECT apply_relation_changesets($1, $2::jsonb, '[]'::jsonb)",
+      [sourceId, JSON.stringify(applied)],
+    );
+
+    const { rows } = await client.query<{
+      closed_by_id: string | null;
+      closed_by_name: string | null;
+      status: string;
+      outcome: string | null;
+    }>(
+      `SELECT c.closed_by_id, c.closed_by_name, c.status, c.outcome FROM changesets c
+       JOIN changes ch ON ch.changeset_id = c.id
+       WHERE c.type = 'relation' AND ch.data->>'from_id' = $1 AND ch.data->>'to_id' = $2`,
+      [fromId, toId],
+    );
+
+    expect(rows[0]).toEqual({
+      closed_by_id: null,
+      closed_by_name: null,
+      status: "closed",
+      outcome: "applied",
+    });
+  });
+});

@@ -165,6 +165,8 @@ Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력
 | `createdAt` | `Date` | 만들어진 때 |
 | `authorId?` | `uuid` | 사람이 일으킨 변경의 주체(엔진이면 없음) |
 | `authorName?` | `string` | 생성 시점 표시 이름 스냅샷. `authorId`가 있을 때만 있고, 엔진 산물(`ingestion`·`relation`)은 `authorId`처럼 항상 없다 |
+| `closedById?` | `uuid` | 이 changeset을 닫은(판정한) 사람 — `authorId`(내용을 만든 사람)와 다른 축이다. `status`가 `closed`일 때만 값이 있을 수 있고, 그마저도 없으면 AI(엔진)가 닫았다는 뜻이다(확신 관계 자동 적용 등). 되살리면(`open`으로 복귀) 이 값도 함께 지워진다 — 아직 아무도 안 닫은 changeset에 예전에 버린 사람이 남아있으면 안 되기 때문이다. `manual`·`revert`는 단일 액션이라 `authorId`만으로 "누가 만들었고 닫았는지"가 충분해 이 필드를 안 쓴다(항상 없음) |
+| `closedByName?` | `string` | 닫힌 시점 표시 이름 스냅샷. `closedById`가 있을 때만 있다(`authorName`과 같은 짝 규칙) |
 
 ### Change
 
