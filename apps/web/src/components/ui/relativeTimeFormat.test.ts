@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formatCompactDistance } from "./relativeTimeFormat";
+import {
+  formatCompactDistance,
+  isWithinLastMinute,
+} from "./relativeTimeFormat";
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -43,5 +46,24 @@ describe("formatCompactDistance", () => {
 
   it("초 단위 나머지는 반올림하지 않고 버린다 — 90초는 2분이 아니라 1분", () => {
     expect(formatCompactDistance(dateTimeAgo(90_000), "en")).toBe("1m");
+  });
+});
+
+describe("isWithinLastMinute", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    [MINUTE_MS - 1, true],
+    [MINUTE_MS, false],
+    [MINUTE_MS + 1, false],
+  ])("%ims 경과 -> %s", (elapsedMs, expected) => {
+    expect(isWithinLastMinute(dateTimeAgo(elapsedMs))).toBe(expected);
   });
 });

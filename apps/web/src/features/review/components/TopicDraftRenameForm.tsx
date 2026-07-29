@@ -65,7 +65,7 @@ export function TopicDraftRenameForm({
         />
         <p
           role="alert"
-          className={`text-xs ${titleError ? "text-status-error" : "text-transparent"}`}
+          className={`px-3 text-xs ${titleError ? "text-status-error" : "text-transparent"}`}
         >
           {titleError ?? " "}
         </p>

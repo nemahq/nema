@@ -62,6 +62,11 @@ function TagSearchListContent({
   const attachedIds = new Set(tags.map((tag) => tag.registryId));
   const draftMatches = filterDraftLabelCandidates(tags, query);
   const activeRegistryTitles = getActiveLabelTitles(tagList.tags, getTagLabel);
+  // 이미 붙은 기존 Tag를 후보 목록 맨 앞으로 — DigestTagPicker가 신규를 앞세우는
+  // 것과 같은 stable sort 규칙, 여기선 attached 여부가 그 기준이다.
+  const sortedCandidates = [...candidates].sort(
+    (a, b) => (attachedIds.has(a.id) ? 0 : 1) - (attachedIds.has(b.id) ? 0 : 1),
+  );
 
   return (
     <LabelSearchList
@@ -101,11 +106,12 @@ function TagSearchListContent({
           }
         />
       ))}
-      {candidates.map((tag) => (
+      {sortedCandidates.map((tag) => (
         <LabelSearchRow
           key={tag.id}
           label={tag.title}
           description={tag.description}
+          color={tag.color}
           attached={attachedIds.has(tag.id)}
           onSelect={() => onSelectExisting(tag)}
         />

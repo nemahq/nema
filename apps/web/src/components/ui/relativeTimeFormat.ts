@@ -32,6 +32,10 @@ const BUCKETS: Array<{
   { maxMs: YEAR_MS, divisorMs: MONTH_MS, unitKey: "month" },
 ];
 
+export function isWithinLastMinute(dateTime: string): boolean {
+  return Date.now() - new Date(dateTime).getTime() < MINUTE_MS;
+}
+
 export function formatCompactDistance(dateTime: string, lang: Lang): string {
   const elapsedMs = Date.now() - new Date(dateTime).getTime();
   const suffix = UNIT_SUFFIX[lang];

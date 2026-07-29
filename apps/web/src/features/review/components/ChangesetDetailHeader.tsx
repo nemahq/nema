@@ -57,7 +57,15 @@ export function ChangesetDetailHeader({
         <div className="flex items-center gap-2">
           <ChangesetStatusPill state={state} />
           {badge}
-          <Text as="div" size="sm" color="tertiary">
+          {/* min-w-0 + truncate — reviewerName이 길면 줄바꿈돼 이 행만 키가 커진다.
+              이 changeset이 open(reviewerName 있음)에서 closed(reviewerName 없음)로
+              전환될 때 그 키 차이가 레이아웃 시프트로 보였다. */}
+          <Text
+            as="div"
+            size="sm"
+            color="tertiary"
+            className="min-w-0 truncate"
+          >
             {reviewerName && `${reviewerName} · `}
             <RelativeTime dateTime={time} className="text-sm leading-none" />
           </Text>

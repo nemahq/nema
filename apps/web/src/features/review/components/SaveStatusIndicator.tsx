@@ -1,25 +1,48 @@
+import { useSyncExternalStore } from "react";
+
 import { cn, PopoverContent, PopoverTrigger, Text } from "@nema-io/weave";
 
 import { Popover } from "@web/components/ui/Popover";
+import {
+  getMinuteTickSnapshot,
+  subscribeToMinuteTick,
+} from "@web/components/ui/RelativeTime";
+import {
+  formatCompactDistance,
+  isWithinLastMinute,
+  type Lang,
+} from "@web/components/ui/relativeTimeFormat";
 import { useTranslation } from "@web/lib/tolgee";
+import { tolgee } from "@web/lib/tolgee/client";
 
 import { useReviewSaveStatusContext } from "./ReviewDraftProvider";
 
 const STATUS_LABEL_KEY = {
-  clean: "review.save_status_saved",
   error: "review.save_status_error",
   conflict: "review.save_status_conflict",
 } as const;
 
 // 저장마다 문구가 바뀌면(예: "저장 중…") 디바운스로 조용히 도는 자동 저장의 취지가
-// 흐려진다 — clean 상태는 항상 같은 정적 문구를 보여주고, 실패했을 때만 눈에 띄게
-// 바뀐다. 클릭하면 상태에 맞는 설명(정상일 땐 안내 문구, 실패·충돌일 땐 서버가 알려준
-// 원인)이 펼쳐진다 — diff 비교·복원 같은 실제 조작은 이번 스코프 밖이라 지금은 그
-// 설명까지만 보여주는 스텁이다.
+// 흐려진다 — clean 상태는 마지막 저장 시각을 압축 상대시각("3분 전")으로만 조용히
+// 갱신하고, 실패했을 때만 눈에 띄게 바뀐다. 클릭하면 상태에 맞는 설명(정상일 땐 안내
+// 문구, 실패·충돌일 땐 서버가 알려준 원인)이 펼쳐진다 — diff 비교·복원 같은 실제
+// 조작은 이번 스코프 밖이라 지금은 그 설명까지만 보여주는 스텁이다.
 export function SaveStatusIndicator() {
   const { t } = useTranslation();
   const { saveStatus } = useReviewSaveStatusContext();
+  // 분마다 다시 그려야 "3분 전" 같은 상대시각이 계속 최신으로 보인다.
+  useSyncExternalStore(subscribeToMinuteTick, getMinuteTickSnapshot);
   const isFailure = saveStatus.kind !== "clean";
+
+  const lang: Lang = tolgee.getLanguage() === "ko" ? "ko" : "en";
+  let cleanLabel: string | null = null;
+  if (saveStatus.kind === "clean") {
+    cleanLabel = isWithinLastMinute(saveStatus.savedAt)
+      ? t("review.save_status_saved_now")
+      : t("review.save_status_saved_ago", {
+          time: formatCompactDistance(saveStatus.savedAt, lang),
+        });
+  }
 
   return (
     <Popover>
@@ -40,7 +63,9 @@ export function SaveStatusIndicator() {
               : "text-fg-tertiary hover:bg-fg-primary/5",
           )}
         >
-          {t(STATUS_LABEL_KEY[saveStatus.kind])}
+          {saveStatus.kind === "clean"
+            ? cleanLabel
+            : t(STATUS_LABEL_KEY[saveStatus.kind])}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64">

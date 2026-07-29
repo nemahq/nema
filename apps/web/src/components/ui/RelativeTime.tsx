@@ -13,7 +13,9 @@ let globalTick = 0;
 const listeners = new Set<() => void>();
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
-function subscribe(cb: () => void): () => void {
+// 다른 화면의 상대시각 표시(예: SaveStatusIndicator)도 분마다 다시 그려지려면
+// 각자 setInterval을 새로 만들지 않고 이 전역 틱 하나를 구독하면 된다.
+export function subscribeToMinuteTick(cb: () => void): () => void {
   listeners.add(cb);
   if (!intervalId) {
     intervalId = setInterval(() => {
@@ -32,7 +34,7 @@ function subscribe(cb: () => void): () => void {
   };
 }
 
-function getSnapshot(): number {
+export function getMinuteTickSnapshot(): number {
   return globalTick;
 }
 
@@ -44,7 +46,7 @@ interface RelativeTimeProps {
 export function RelativeTime({ dateTime, className }: RelativeTimeProps) {
   // useTranslation 구독 → 언어 변경 시 리렌더링 보장
   useTranslation();
-  useSyncExternalStore(subscribe, getSnapshot);
+  useSyncExternalStore(subscribeToMinuteTick, getMinuteTickSnapshot);
 
   const lang: Lang = tolgee.getLanguage() === "ko" ? "ko" : "en";
   const label = formatCompactDistance(dateTime, lang);

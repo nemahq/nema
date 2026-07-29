@@ -42,7 +42,7 @@ export function SpaceNameField({
       />
       <p
         role="alert"
-        className={`text-xs ${error ? "text-status-error" : "text-transparent"}`}
+        className={`px-3 text-xs ${error ? "text-status-error" : "text-transparent"}`}
       >
         {error ?? " "}
       </p>

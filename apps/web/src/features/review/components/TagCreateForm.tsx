@@ -89,7 +89,7 @@ export function TagCreateForm({
         />
         <p
           role="alert"
-          className={`text-xs ${descriptionError ? "text-status-error" : "text-transparent"}`}
+          className={`px-3 text-xs ${descriptionError ? "text-status-error" : "text-transparent"}`}
         >
           {descriptionError ?? " "}
         </p>

@@ -70,7 +70,7 @@ function getAutosaveEntry(key: string): ReviewAutosaveEntry {
       dirty: false,
       timer: null,
       savingPromise: null,
-      status: { kind: "clean" },
+      status: { kind: "clean", savedAt: new Date().toISOString() },
       statusListeners: new Set(),
     };
     autosaveEntries.set(key, entry);
@@ -239,7 +239,10 @@ export function ReviewDraftProvider({ children }: ReviewDraftProviderProps) {
         await updateReviewRef.current.mutateAsync(
           buildUpdateReviewPayload(draft),
         );
-        setEntryStatus(autosaveEntry, { kind: "clean" });
+        setEntryStatus(autosaveEntry, {
+          kind: "clean",
+          savedAt: new Date().toISOString(),
+        });
       } catch (error) {
         // 실패한 변경은 여전히 미저장 상태로 남겨, 다음 편집이나 flushPendingSave가
         // 다시 시도하게 한다 — 조용히 유실시키지 않는다.

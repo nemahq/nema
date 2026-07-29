@@ -3,7 +3,7 @@ import { TRPCClientError } from "@trpc/client";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
 export type ReviewSaveStatus =
-  | { kind: "clean" }
+  | { kind: "clean"; savedAt: string }
   | { kind: "error"; message: string }
   | { kind: "conflict"; message: string };
 

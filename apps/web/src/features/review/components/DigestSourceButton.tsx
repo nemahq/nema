@@ -36,8 +36,11 @@ export function DigestSourceButton({
           disabled={disabled}
           aria-label={t("review.digest_view_source_action")}
           onClick={onClick}
+          // shadow가 아니라 border — 바로 옆 CardViewedToggle(읽음 체크박스)이
+          // 같은 border-border-strong 박스라, 이 버튼도 shadow가 아니라 그
+          // 테두리와 짝을 맞춰야 두 액션이 같은 시각적 무게로 읽힌다.
           className={cn(
-            "text-fg-tertiary",
+            "border border-border-strong text-fg-tertiary",
             active && "bg-fg-primary/10 text-fg-primary",
           )}
         >

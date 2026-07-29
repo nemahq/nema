@@ -28,6 +28,7 @@ export function CardViewedToggle({
       as="label"
       htmlFor={fieldId}
       size="xs"
+      weight="medium"
       color={viewed ? "primary" : "tertiary"}
       className={cn(
         "flex cursor-pointer items-center gap-1.5 rounded-md border border-border-strong px-2 py-1",
