@@ -8,7 +8,15 @@ import { trpc } from "@web/lib/trpc";
 export function useDeleteWaitingDrafts() {
   const utils = trpc.useUtils();
   const mutation = useMutation(trpc.source.deleteMany, {
-    onSuccess: () => utils.source.listPending.invalidate(),
+    // listPending만 무효화하면, 삭제 직전 정리가 끝나 changeset이 막 열린
+    // 소스가 섞여 있던 경우(동시성 충돌로 개별 삭제는 건너뜀) 확인 대기 뱃지가
+    // 갱신 안 된 채 남는다 — space.list(뱃지 카운트)·changeset.listChangesets도
+    // 함께 무효화해 실제 상태와 맞춘다.
+    onSuccess: () => {
+      utils.source.listPending.invalidate();
+      utils.space.list.invalidate();
+      utils.changeset.listChangesets.invalidate();
+    },
   });
 
   return {
