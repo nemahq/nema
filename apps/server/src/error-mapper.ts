@@ -35,6 +35,7 @@ type DomainErrorCode =
   | "DB_CHANGESET_STATE_CHANGED"
   | "DB_INGESTION_REVIEW_VERSION_CONFLICT"
   | "DB_RELATION_PENDING_CONFLICT"
+  | "DB_SOURCE_HAS_OPEN_REVIEW"
   | "DB_QUERY_FAILED";
 
 const ERROR_MAP: Record<
@@ -134,6 +135,10 @@ const ERROR_MAP: Record<
     trpcCode: "CONFLICT",
     i18nKey: "error.relation_pending_conflict",
   },
+  DB_SOURCE_HAS_OPEN_REVIEW: {
+    trpcCode: "CONFLICT",
+    i18nKey: "error.source_has_open_review",
+  },
   DB_QUERY_FAILED: {
     trpcCode: "INTERNAL_SERVER_ERROR",
     i18nKey: "error.default",
@@ -158,6 +163,7 @@ const EXPECTED_DOMAIN_CODES = new Set<DomainErrorCode>([
   "DB_CHANGESET_STATE_CHANGED",
   "DB_INGESTION_REVIEW_VERSION_CONFLICT",
   "DB_RELATION_PENDING_CONFLICT",
+  "DB_SOURCE_HAS_OPEN_REVIEW",
   "LLM_ABORTED",
 ]);
 
@@ -182,6 +188,7 @@ const SUPABASE_CODE_MAP: Record<SupabaseErrorCode, DomainErrorCode> = {
   changeset_state_changed: "DB_CHANGESET_STATE_CHANGED",
   ingestion_review_version_conflict: "DB_INGESTION_REVIEW_VERSION_CONFLICT",
   relation_pending_conflict: "DB_RELATION_PENDING_CONFLICT",
+  source_has_open_review: "DB_SOURCE_HAS_OPEN_REVIEW",
   query_failed: "DB_QUERY_FAILED",
 };
 

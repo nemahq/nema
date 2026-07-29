@@ -14,6 +14,7 @@
     "llm_timeout": "Response timed out. Please try again.",
     "reference_state_changed": "This reference's state changed. Reload the list and try again.",
     "relation_pending_conflict": "A judgment for this same pair is already in progress. Resolve that one first.",
+    "source_has_open_review": "This draft already has a review awaiting confirmation. Resolve that review first.",
     "source_state_changed": "This draft's state changed. Reload the list and try again.",
     "space_delete_target_required": "This space now has waiting drafts. Refresh and try again.",
     "space_min_one": "Your Workspace needs at least one Space. Create another Space first.",
