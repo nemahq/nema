@@ -28,7 +28,7 @@ export function DraftSpaceSelect({
 }: DraftSpaceSelectProps) {
   const { t } = useTranslation();
   const { spaces, spaceName, isLoading } = useDraftSpace(spaceId);
-  const reassignMutation = useReassignSourceSpace();
+  const reassignMutation = useReassignSourceSpace(sourceId);
 
   function handleReassign(nextSpaceId: string) {
     if (nextSpaceId === spaceId) {
@@ -54,7 +54,7 @@ export function DraftSpaceSelect({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Chip
-          disabled={disabled || reassignMutation.isPending}
+          disabled={disabled}
           aria-label={t("intake.draft_change_space")}
           title={spaceName}
           truncated
