@@ -787,6 +787,55 @@ describe("getChangesetByNumber", () => {
       getChangesetByNumber({ supabase, spaceId: SPACE_ID, number: 10 }),
     ).rejects.toMatchObject({ code: "query_failed" });
   });
+
+  // author_*(내용을 만든 사람)와 closed_by_*(닫은 사람)에 서로 다른 값을 넣어, 반환 객체가
+  // 그 둘을 엇갈려 매핑하지 않는지를 검증한다 — 실제 DB에서는 relation 타입이 author_id를
+  // NULL로 강제하지만(chk_changeset_shape, ingestion은 이 제약 대상이 아니다), 이 테스트는
+  // DB 제약이 아니라 서비스 계층의 컬럼→필드 매핑 로직만 겨냥한다(예: 리팩터 중
+  // authorId: row.closed_by_id로 잘못 쓰는 실수가 나면 여기서 바로 잡힌다).
+  it("authorId/authorName과 closedById/closedByName이 서로 다른 값으로 정확히 매핑된다", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-11",
+          space_id: SPACE_ID,
+          number: 11,
+          type: "ingestion",
+          status: "closed",
+          outcome: "applied",
+          title: "제목",
+          source_id: "src-11",
+          reverts_id: null,
+          author_id: "author-1",
+          author_name: "작성자",
+          closed_by_id: "reviewer-1",
+          closed_by_name: "리뷰어",
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              action: "create",
+              target_type: "digest",
+              target_id: DIGEST_ID,
+              data: null,
+            },
+          ],
+        },
+      ],
+      digests: [digestRow(DIGEST_ID)],
+    });
+
+    const result = await getChangesetByNumber({
+      supabase,
+      spaceId: SPACE_ID,
+      number: 11,
+    });
+
+    expect(result.authorId).toBe("author-1");
+    expect(result.authorName).toBe("작성자");
+    expect(result.closedById).toBe("reviewer-1");
+    expect(result.closedByName).toBe("리뷰어");
+  });
 });
 
 describe("getPendingRelationByNumber", () => {
@@ -794,7 +843,7 @@ describe("getPendingRelationByNumber", () => {
     vi.mocked(Sentry.captureException).mockClear();
   });
 
-  it("conflicts open — A·B 스냅샷·리뷰어·sourceField/sourceFieldIndex를 돌려준다", async () => {
+  it("conflicts open — A·B 스냅샷·sourceField/sourceFieldIndex를 돌려준다", async () => {
     const supabase = mockSupabase({
       changesets: [
         {
@@ -817,7 +866,6 @@ describe("getPendingRelationByNumber", () => {
           ],
         },
       ],
-      sources: [{ id: "src-p1", author_id: "user-1", author_name: "제출자" }],
       statements: [
         {
           id: STATEMENT_A_ID,
@@ -847,8 +895,6 @@ describe("getPendingRelationByNumber", () => {
 
     expect(result.changesetId).toBe("cs-p1");
     expect(result.changesetNumber).toBe(20);
-    expect(result.reviewerId).toBe("user-1");
-    expect(result.reviewerName).toBe("제출자");
     expect(result.body.kind).toBe("conflict_pending");
     if (result.body.kind !== "conflict_pending") {
       throw new Error("unreachable");
@@ -865,7 +911,7 @@ describe("getPendingRelationByNumber", () => {
     });
   });
 
-  it("duplicates open — keeper/duplicate 스냅샷·리뷰어와 함께 병합 초안을 돌려준다", async () => {
+  it("duplicates open — keeper/duplicate 스냅샷과 함께 병합 초안을 돌려준다", async () => {
     const mergeDraft = {
       title: "병합 제목",
       description: "병합 설명",
@@ -899,7 +945,6 @@ describe("getPendingRelationByNumber", () => {
           ],
         },
       ],
-      sources: [{ id: "src-p2", author_id: "user-2", author_name: "제출자2" }],
       statements: [
         {
           id: STATEMENT_A_ID,
@@ -927,8 +972,6 @@ describe("getPendingRelationByNumber", () => {
       number: 21,
     });
 
-    expect(result.reviewerId).toBe("user-2");
-    expect(result.reviewerName).toBe("제출자2");
     expect(result.body.kind).toBe("duplicate_pending");
     if (result.body.kind !== "duplicate_pending") {
       throw new Error("unreachable");
@@ -962,7 +1005,6 @@ describe("getPendingRelationByNumber", () => {
           ],
         },
       ],
-      sources: [{ id: "src-p2b", author_id: "user-2", author_name: "제출자2" }],
       statements: [
         {
           id: STATEMENT_A_ID,
@@ -1020,7 +1062,6 @@ describe("getPendingRelationByNumber", () => {
           ],
         },
       ],
-      sources: [{ id: "src-p2c", author_id: "user-2", author_name: "제출자2" }],
       statements: [
         {
           id: STATEMENT_A_ID,

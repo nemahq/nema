@@ -95,6 +95,15 @@ interface ChangesetDetail {
   title: string | null;
   authorId: string | null;
   authorName: string | null;
+  // 이 changeset을 닫은(판정한) 사람 — author*와 다른 축이다(author는 "내용을 만든
+  // 사람", closedBy는 "닫기 버튼을 누른 사람"). status='closed'일 때만 값이 있을 수
+  // 있다. "AI(엔진)가 닫았는가"는 closedById가 아니라 closedByName의 NULL 여부로
+  // 판단해야 한다 — closedById는 FK라 계정 삭제 시 SET NULL로 지워지지만
+  // closedByName은 텍스트 스냅샷이라 그대로 남기 때문에, 사람이 닫은 뒤 계정이
+  // 삭제되면 closedById만 NULL이 되고 closedByName은 남는다(author_id/author_name과
+  // 같은 비대칭).
+  closedById: string | null;
+  closedByName: string | null;
   sourceId: string | null;
   revertsId: string | null;
   revertsNumber: number | null;
@@ -375,7 +384,7 @@ export async function getChangesetByNumber(args: {
   const { data: row, error } = await supabase
     .from("changesets")
     .select(
-      "id, number, type, status, outcome, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, author_name, created_at, updated_at, changes(action, target_type, target_id, data)",
+      "id, number, type, status, outcome, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, author_name, closed_by_id, closed_by_name, created_at, updated_at, changes(action, target_type, target_id, data)",
     )
     .eq("space_id", spaceId)
     .eq("number", number)
@@ -427,6 +436,8 @@ export async function getChangesetByNumber(args: {
     title: row.title,
     authorId: row.author_id,
     authorName: row.author_name,
+    closedById: row.closed_by_id,
+    closedByName: row.closed_by_name,
     sourceId: row.source_id,
     revertsId: row.reverts_id,
     revertsNumber,
@@ -459,10 +470,6 @@ interface PendingRelationChangeset {
   changesetId: string;
   changesetNumber: number;
   createdAt: string;
-  // 이 relation changeset을 촉발한 새 Source의 제출자(ingestion과 같은 단수 규칙 —
-  // "두 Source의 제출자 두 명"이 아니다) — changesets.source_id가 가리키는 Source 하나뿐.
-  reviewerId: string | null;
-  reviewerName: string | null;
   body: PendingRelationBody;
 }
 
@@ -475,9 +482,7 @@ export async function getPendingRelationByNumber(args: {
 
   const { data: row, error } = await supabase
     .from("changesets")
-    .select(
-      "id, number, type, status, source_id, created_at, changes(target_type, data)",
-    )
+    .select("id, number, type, status, created_at, changes(target_type, data)")
     .eq("space_id", spaceId)
     .eq("number", number)
     .maybeSingle();
@@ -532,28 +537,6 @@ export async function getPendingRelationByNumber(args: {
     );
   }
 
-  // apply_relation_changesets가 항상 p_source_id로 이 changeset을 만든다(status='open'
-  // relation은 예외 없이 그 경로 산물) — source_id 없거나 그 Source가 안 찾아지면 정상
-  // 경로에선 절대 안 생기는 참조 무결성 위반(진짜 장애)이라 query_failed로 던진다.
-  if (!row.source_id) {
-    throw new SupabaseError(
-      "query_failed",
-      `pending relation changeset ${row.id} has no source_id`,
-    );
-  }
-  const { data: source, error: sourceError } = await supabase
-    .from("sources")
-    .select("author_id, author_name")
-    .eq("id", row.source_id)
-    .maybeSingle();
-  throwIfSupabaseError(sourceError);
-  if (!source) {
-    throw new SupabaseError(
-      "query_failed",
-      `source ${row.source_id} not found for changeset ${row.id}`,
-    );
-  }
-
   const [from, to] = await Promise.all([
     fetchRelationEndpoint({ supabase, statementId: proposal.fromId }),
     fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
@@ -573,8 +556,6 @@ export async function getPendingRelationByNumber(args: {
     changesetId: row.id,
     changesetNumber: row.number,
     createdAt: row.created_at,
-    reviewerId: source.author_id,
-    reviewerName: source.author_name,
     body,
   };
 }

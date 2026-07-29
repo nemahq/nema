@@ -27,7 +27,6 @@ const CONFIRM_DISABLED_REASON_KEY = {
 
 interface DuplicateMergeJudgmentProps {
   title: string;
-  reviewerName: string | null;
   createdAt: string;
   changesetId: string;
   keeper: RelationEndpointDetailSnapshot;
@@ -40,7 +39,6 @@ interface DuplicateMergeJudgmentProps {
 // 같지만 결과가 근본적으로 달라(고르기가 아니라 병합) 별도 컴포넌트로 분리했다.
 export function DuplicateMergeJudgment({
   title,
-  reviewerName,
   createdAt,
   changesetId,
   keeper,
@@ -119,7 +117,6 @@ export function DuplicateMergeJudgment({
             {t("review.relation_merge_duplicate_badge")}
           </Badge>
         }
-        reviewerName={reviewerName}
         time={createdAt}
         actions={
           <ChangesetConfirmDiscardActions

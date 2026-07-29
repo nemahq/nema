@@ -24,7 +24,6 @@ const SOURCE_TAB_B_ID = "tab-source-b";
 
 interface ConflictRelationJudgmentProps {
   title: string;
-  reviewerName: string | null;
   createdAt: string;
   changesetId: string;
   from: RelationEndpointDetailSnapshot;
@@ -33,7 +32,6 @@ interface ConflictRelationJudgmentProps {
 
 export function ConflictRelationJudgment({
   title,
-  reviewerName,
   createdAt,
   changesetId,
   from,
@@ -110,7 +108,6 @@ export function ConflictRelationJudgment({
             {t("review.relation_judgment_conflict_badge")}
           </Badge>
         }
-        reviewerName={reviewerName}
         time={createdAt}
         actions={
           <ChangesetConfirmDiscardActions

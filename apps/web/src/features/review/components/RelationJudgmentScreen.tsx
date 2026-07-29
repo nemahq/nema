@@ -31,7 +31,6 @@ function RelationJudgmentContent() {
     return (
       <ConflictRelationJudgment
         title={title}
-        reviewerName={pendingRelation.reviewerName}
         createdAt={pendingRelation.createdAt}
         changesetId={pendingRelation.changesetId}
         from={from}
@@ -44,7 +43,6 @@ function RelationJudgmentContent() {
   return (
     <DuplicateMergeJudgment
       title={title}
-      reviewerName={pendingRelation.reviewerName}
       createdAt={pendingRelation.createdAt}
       changesetId={pendingRelation.changesetId}
       keeper={keeper}
