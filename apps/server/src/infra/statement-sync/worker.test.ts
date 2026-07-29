@@ -28,6 +28,9 @@ import {
   reconcileChanges,
   runVectorPurgePass,
   selectCandidateIds,
+  unionStrings,
+  unionTags,
+  unionTopics,
 } from "./worker";
 
 const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
@@ -932,6 +935,49 @@ describe("dedupeChanges", () => {
   });
 });
 
+describe("unionTopics/unionTags/unionStrings — 병합 초안의 순수 합집합 필드", () => {
+  const TOPIC_A = { id: "d0000000-0000-4000-a000-000000000001", title: "배포" };
+  const TOPIC_B = { id: "d0000000-0000-4000-a000-000000000002", title: "결제" };
+
+  it("unionTopics — 같은 id는 한 번만, registryId로 매핑", () => {
+    const out = unionTopics([TOPIC_A], [TOPIC_A, TOPIC_B]);
+    expect(out).toEqual([
+      { registryId: TOPIC_A.id, title: TOPIC_A.title },
+      { registryId: TOPIC_B.id, title: TOPIC_B.title },
+    ]);
+  });
+
+  it("unionTags — 같은 id는 한 번만, registryId로 매핑", () => {
+    const tagA = {
+      id: "e0000000-0000-4000-a000-000000000001",
+      title: "경쟁전략",
+      description: "설명 A",
+    };
+    const tagB = {
+      id: "e0000000-0000-4000-a000-000000000002",
+      title: "기술결정",
+      description: "설명 B",
+    };
+    const out = unionTags([tagA], [tagA, tagB]);
+    expect(out).toEqual([
+      { registryId: tagA.id, title: tagA.title, description: tagA.description },
+      { registryId: tagB.id, title: tagB.title, description: tagB.description },
+    ]);
+  });
+
+  it("unionStrings — 중복 제거하고 순서 보존, max 지정 시 상한", () => {
+    expect(unionStrings({ a: ["x", "y"], b: ["y", "z"] })).toEqual([
+      "x",
+      "y",
+      "z",
+    ]);
+    expect(unionStrings({ a: ["x", "y"], b: ["z"], max: 2 })).toEqual([
+      "x",
+      "y",
+    ]);
+  });
+});
+
 function mockRelationLlm(): LlmProvider {
   return {
     generateStructured: vi.fn().mockResolvedValue({ relations: [] }),
@@ -1057,6 +1103,194 @@ describe("잇기 분할 통합 — 장문 source", () => {
     expect(args.p_pending).toEqual([
       { from_id: keeper.id, to_id: dup.id, type: "duplicates" },
     ]);
+  });
+
+  function duplicatePairFixture() {
+    const keeperDigestId = "f1000000-0000-4000-a000-000000000001";
+    const dupDigestId = "f1000000-0000-4000-a000-000000000002";
+    const keeper = {
+      id: "c0000000-0000-4000-a000-000000000000",
+      digest_id: keeperDigestId,
+      content: "N잡으로 확정",
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [{ source_id: SOURCE_ID, locator: { index: 0 } }],
+    };
+    const dup = {
+      id: "c0000000-0000-4000-a000-000000000001",
+      digest_id: dupDigestId,
+      content: "N잡으로 정함",
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [{ source_id: SOURCE_ID, locator: { index: 1 } }],
+    };
+    const digestRow = (id: string, title: string) => ({
+      id,
+      title,
+      description: `${title} 설명`,
+      body: { type: "decision", choice: title },
+      external_urls: [],
+      digest_topics: [{ topic: { id: "topic-1", title: "N잡" } }],
+      digest_tags: [],
+      digest_references: [],
+    });
+    const digests = [
+      digestRow(keeperDigestId, "N잡으로 확정"),
+      digestRow(dupDigestId, "N잡으로 정함"),
+    ];
+    return { keeper, dup, digests };
+  }
+
+  const MERGED_DRAFT_OUTPUT = {
+    merged: {
+      type: "decision",
+      title: "N잡으로 확정 (병합)",
+      description: "병합된 설명",
+      situation: null,
+      choice: "N잡으로 확정",
+      reason: null,
+      tradeoff: null,
+      alternatives: null,
+      question: null,
+      background: null,
+      branches: null,
+      resolutionCondition: null,
+      finding: null,
+      evidence: null,
+      concept: null,
+      assumption: null,
+      impact: null,
+      verificationCondition: null,
+    },
+  };
+
+  it("duplicates 쌍은 병합 초안(merge_draft)이 붙어 p_pending으로 전달된다", async () => {
+    const { keeper, dup, digests } = duplicatePairFixture();
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_linking_sources: [
+          [
+            {
+              id: SOURCE_ID,
+              space_id: SPACE_ID,
+              created_at: "2026-06-11T00:00:00.000Z",
+            },
+          ],
+        ],
+      },
+      { statements: [keeper, dup], digests },
+    );
+
+    const llm: LlmProvider = {
+      generateStructured: vi
+        .fn()
+        .mockImplementation(async (params: { schemaName: string }) => {
+          if (params.schemaName === "relation_merge_draft") {
+            return MERGED_DRAFT_OUTPUT;
+          }
+          return {
+            relations: [
+              { from: "N0", to: "N1", type: "duplicates", confident: true },
+            ],
+          };
+        }),
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    };
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const calls = rpcCalls(rpc, "apply_relation_changesets");
+    const args = calls[0]?.[1] as {
+      p_pending: Array<{
+        from_id: string;
+        to_id: string;
+        type: string;
+        merge_draft?: {
+          title: string;
+          topics: unknown[];
+          referenceIds: unknown[];
+          newReferenceKeys: unknown[];
+        };
+      }>;
+    };
+    expect(args.p_pending).toHaveLength(1);
+    expect(args.p_pending[0]?.merge_draft).toMatchObject({
+      title: "N잡으로 확정 (병합)",
+      topics: [{ registryId: "topic-1", title: "N잡" }],
+      referenceIds: [],
+      newReferenceKeys: [],
+    });
+  });
+
+  it("병합 초안 LLM 콜이 실패해도 pending은 초안 없이 그대로 진행된다(개별 항목 오류 격리)", async () => {
+    const { keeper, dup, digests } = duplicatePairFixture();
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_linking_sources: [
+          [
+            {
+              id: SOURCE_ID,
+              space_id: SPACE_ID,
+              created_at: "2026-06-11T00:00:00.000Z",
+            },
+          ],
+        ],
+      },
+      { statements: [keeper, dup], digests },
+    );
+
+    const llm: LlmProvider = {
+      generateStructured: vi
+        .fn()
+        .mockImplementation(async (params: { schemaName: string }) => {
+          if (params.schemaName === "relation_merge_draft") {
+            throw new Error("merge draft llm boom");
+          }
+          return {
+            relations: [
+              { from: "N0", to: "N1", type: "duplicates", confident: true },
+            ],
+          };
+        }),
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    };
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const calls = rpcCalls(rpc, "apply_relation_changesets");
+    const args = calls[0]?.[1] as {
+      p_pending: Array<{
+        from_id: string;
+        to_id: string;
+        merge_draft?: unknown;
+      }>;
+    };
+    expect(args.p_pending).toEqual([
+      { from_id: keeper.id, to_id: dup.id, type: "duplicates" },
+    ]);
+    expect(Sentry.captureException).toHaveBeenCalled();
   });
 });
 

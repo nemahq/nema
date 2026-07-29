@@ -568,7 +568,7 @@
 - **When**: changeset이 생성된다.
 - **Then**: "A vs B" 대립 프레임이 아니라, 이 changeset의 결과물인 병합 제안 Digest 자신의 제목을 changeset 제목으로 그대로 쓴다. 헤더 제목은 읽기 전용이고, 실제 편집은 병합 제안 카드의 제목 입력 하나뿐이며 헤더는 그 값을 따라간다.
 - **관여 화면**: Changeset 상세, 관계 판정 화면(중복/병합)
-- **범위 참고 (surface-inventory.md 294행; 갱신 2026-07-28, PR #512)**: 병합 제안 Digest 자체가 백엔드에 아직 없어(판정 모드 미구현) 검증 불가 — 현재 코드는 충돌과 동일하게 "A vs B"를 채우는 임시(stopgap) 상태다. stopgap이 채우는 값 자체는 정확해졌다 — 이전엔 `digests.title`이었는데 이제 `statements.content`를 쓴다(충돌 쪽 수정과 같은 커밋). 다만 "A vs B" 프레임 자체는 여전히 임시다 — 병합 제안 Digest가 생기면(관계 판정 화면(중복/병합) 슬라이스) 그 제목으로 바꿔야 한다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
+- **범위 참고 (surface-inventory.md 294행; 갱신 2026-07-29, 중복 병합 초안 슬라이스)**: "A vs B" stopgap을 이번에 해소했다 — 관계 엔진 2단계가 duplicates 쌍을 pending으로 올릴 때 병합 제안 Digest 초안(제목·본문·topics·tags·referenceIds)을 LLM으로 eager 생성해 `changes.data`에 스냅샷하고, `apply_relation_changesets`가 그 초안의 title로 changeset 제목을 채운다(`worker.ts` `attachMergeDrafts`, 마이그레이션 `20260729100000_relation_merge_draft.sql`). 다만 이 슬라이스는 내부 파이프라인·DB 스키마까지만이라, 초안을 실제로 보여주고 편집·확정하는 관계 판정 화면(중복/병합) 자체는 여전히 미구현이다(다음 슬라이스 몫) — 그래서 제목이 실제로 이 값을 쓰는지는 그 화면이 붙어야 실동작 확인이 되고, 지금은 코드 레벨 확인까지만이라 미체크로 남긴다. LLM 초안 생성이 실패한 pending(드묾)은 기존 "A vs B" 폴백으로 조용히 낮아진다.
 
 #### 재제안 가드
 
