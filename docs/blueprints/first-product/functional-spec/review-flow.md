@@ -20,34 +20,34 @@
 - [x] Digest 리뷰 화면 진입 — Reference 후보 나열
 - [x] 원문에 없는 필드는 비워둠
 - [x] Digest 타입 제안
-- [ ] 신규 Topic 제안
-- [ ] 신규 Tag 제안
-- [ ] 기존 Topic 재사용 제안
-- [ ] 기존 Tag 재사용 제안
-- [ ] 기존 Topic은 이름 수정 불가
-- [ ] 기존 Tag는 이름 수정 불가
-- [ ] 기존 Tag는 색상 수정 불가
-- [ ] 신규 Topic 이름 수정 가능
-- [ ] 신규 Tag 이름 수정 가능
-- [ ] Digest 리뷰 화면에서 Topic 추가 — 기존 선택
-- [ ] Digest 리뷰 화면에서 Tag 추가 — 기존 선택
-- [ ] Digest 리뷰 화면에서 Topic 추가 — 신규 생성
-- [ ] Digest 리뷰 화면에서 Tag 추가 — 신규 생성
-- [ ] Tag 색상 지정 — 신규 생성 시
-- [ ] 라벨 정렬 — 신규 먼저
+- [x] 신규 Topic 제안
+- [x] 신규 Tag 제안
+- [x] 기존 Topic 재사용 제안
+- [x] 기존 Tag 재사용 제안
+- [x] 기존 Topic은 이름 수정 불가
+- [x] 기존 Tag는 이름 수정 불가
+- [x] 기존 Tag는 색상 수정 불가
+- [x] 신규 Topic 이름 수정 가능
+- [x] 신규 Tag 이름 수정 가능
+- [x] Digest 리뷰 화면에서 Topic 추가 — 기존 선택
+- [x] Digest 리뷰 화면에서 Tag 추가 — 기존 선택
+- [x] Digest 리뷰 화면에서 Topic 추가 — 신규 생성
+- [x] Digest 리뷰 화면에서 Tag 추가 — 신규 생성
+- [x] Tag 색상 지정 — 신규 생성 시
+- [x] 라벨 정렬 — 신규 먼저
 - [ ] Reference 후보 자동 제안 및 매칭
 - [x] Changeset 제목 자동 생성 (ingestion)
 - [x] Digest 후보 삭제
 - [x] Digest 리뷰 확정
 - [x] Digest 리뷰 버리기
-- [x] 적용된 리뷰 되돌리기
+- [ ] 적용된 리뷰 되돌리기
 - [ ] Changeset 제목 자동 생성 (revert)
 - [ ] 원문도 삭제하기
 - [ ] 버려진 리뷰 되살리기
 - [ ] 원문 삭제 후 되살리기 비활성화
-- [ ] 신규 Reference 후보 편집
-- [ ] 기존 Reference 후보 병합 편집
-- [ ] 타입 변경 시 필드 초기화
+- [x] 신규 Reference 후보 편집
+- [x] 기존 Reference 후보 병합 편집
+- [x] 타입 변경 시 필드 초기화
 - [ ] 원문 대조 포커스 전환
 - [ ] Digest 리뷰 화면에서 외부 링크 추가
 - [ ] Digest 리뷰 화면에서 외부 링크 수정
@@ -56,8 +56,8 @@
 - [ ] Digest 리뷰 화면에서 @ 멘션 — 새 Reference 생성
 - [ ] 엔진 제안 대비 교정 신호 기록
 - [ ] Digest 후보 외부 AI 도구 공개 여부 설정
-- [ ] 모든 후보 삭제 시 확정 비활성화
-- [ ] 제목 없이 확정 비활성화
+- [x] 모든 후보 삭제 시 확정 비활성화
+- [x] 제목 없이 확정 비활성화
 
 ### 케이스 상세
 
@@ -307,7 +307,7 @@
 - **When**: 되돌리기(revert) changeset이 생성된다.
 - **Then**: 제목이 원본 제목 + "되돌려짐" 여부를 UI 언어에 맞는 자연스러운 표현으로 보여준다(반복 접미사를 그대로 이어붙이지 않음). 원본 제목이 없으면(번호 자리표시자 폴백 중) 이 되돌리기도 같은 폴백을 물려받는다.
 - **관여 화면**: Changeset 상세, 변경셋
-- **범위 참고**: 저장은 원본 제목+되돌려진 횟수(depth)로, 표시는 클라이언트가 UI 언어별 자연스러운 문구(Tolgee ICU 복수형 키)로 조합해야 함. 현재 구현(`revert_changeset` RPC)은 SQL에서 `title || ' 되돌림'`으로 한국어 문자열을 직접 이어붙여 저장 — 영어 UI에서 한/영 혼재되는 버그, 수정 필요.
+- **범위 참고 (갱신 2026-07-21, migration 20260721110000)**: 저장은 원본 제목 그대로 유지하고, 몇 단계 되돌려졌는지는 별도 `revert_depth` 정수 컬럼으로 관리한다. 문구 조합(ICU 복수형 등 언어별 렌더링)은 FE가 title+revertDepth로 처리한다(`features/review/utils.ts`) — 한국어 접미사를 SQL에서 직접 이어붙이던 이전 구현(영어 UI 한/영 혼재 버그)은 해소됨. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### 원문도 삭제하기
 
@@ -328,7 +328,7 @@
   2. 버리기 직전의 편집 상태(삭제했던 후보 등)가 그대로 복원된다.
   3. 변경셋 탭에서도 이 changeset이 Closed에서 Open으로 옮겨간다.
 - **관여 화면**: Digest 리뷰 화면, 변경셋
-- **범위 참고 (2026-07-14, PR #412)**: 화면 배치가 이 케이스의 Given과 다르다(위 두 케이스와 같은 이유) — 되살리기 액션은 Changeset 상세에만 뒀다(`useRestoreReview` + 신설 `restore_ingestion_review` RPC). Then #1·#3은 구현. Then #2("버리기 직전의 편집 상태가 복원된다")는 구조적으로 불가능 — `discard_ingestion_review`가 changes를 아예 안 만드는 방식이라(변경이력 없음, 마이그레이션 주석 참고) 서버에 복원할 "편집 중이던 상태" 자체가 없다. `restore_ingestion_review`는 changeset.status만 되돌릴 뿐, 후보 삭제·제목 수정 같은 로컬 편집 내용은 애초에 저장된 적이 없어 복원 대상이 아니다 — 되살리면 원래(추출 직후) 상태의 Digest 리뷰 화면으로 돌아간다. 이 케이스의 Then #2는 스펙과 실제 구현이 근본적으로 다른 지점이라 PM 확인 필요(design-decisions-log.md 참고). 그래서 미체크로 남김.
+- **범위 참고 (2026-07-14, PR #412; 갱신 2026-07-27, 리뷰 draft 서버 영속화 재설계 이후)**: 화면 배치가 이 케이스의 Given과 다르다(위 두 케이스와 같은 이유) — 되살리기 액션은 Changeset 상세에만 뒀다(`useRestoreReview` + `restore_ingestion_review` RPC). Then #1·#3은 구현. Then #2("버리기 직전의 편집 상태가 복원된다")는 도입 당시엔 구조적으로 불가능했다 — 그때의 `discard_ingestion_review`는 changes를 아예 안 만드는 방식이라 서버에 복원할 "편집 중이던 상태" 자체가 없었다. 그런데 리뷰 draft가 클라이언트 오버라이드 방식에서 서버 영속 autosave 방식으로 재설계되면서(product-decisions-review-flow.md #21) 전제가 바뀌었다 — 현재 `discard_ingestion_review`(migration 20260726075454)는 changes를 건드리지 않고 changeset status·outcome만 바꾸므로, 되살리면 discard 직전까지 autosave된 편집 상태(후보 삭제 포함)가 그대로 남아있을 것으로 보인다. 구조적으로는 해소된 것으로 추정되나, 실동작 확인 전이라 미체크로 남김.
 
 #### 원문 삭제 후 되살리기 비활성화
 
@@ -450,9 +450,9 @@
 
 ### 케이스 목록
 
-- [ ] 실행취소
-- [ ] 다시 실행
-- [ ] 새로고침 후 최신 저장 상태 유지
+- [x] 실행취소
+- [x] 다시 실행
+- [x] 새로고침 후 최신 저장 상태 유지
 
 ### 케이스 상세
 
@@ -487,11 +487,12 @@
 
 ### 케이스 목록
 
-- [ ] 확신 관계 자동 적용
+- [x] 확신 관계 자동 적용
 - [ ] 관련 Digest 자동 채움
 - [ ] 관계 archive 시 관련 Digest 목록 표시 규칙
 - [ ] 관련 Reference 자동 제안
-- [ ] 판정 대기 relation changeset 생성
+- [ ] 판정 대기 relation changeset 생성 (충돌)
+- [ ] 판정 대기 relation changeset 생성 (중복)
 - [ ] Changeset 제목 자동 생성 (relation - 충돌)
 - [ ] Changeset 제목 자동 생성 (relation - 중복)
 - [ ] 재제안 가드
@@ -538,12 +539,20 @@
 - **Then**: 그 Reference들이 서로 관련 Reference로 제안되어 채워진다. 사람은 이후 확인·제거만 가능하고, 직접 새로 추가할 수는 없다.
 - **관여 화면**: Reference 상세
 
-#### 판정 대기 relation changeset 생성
+#### 판정 대기 relation changeset 생성 (충돌)
 
-- **Given**: 새 진술이 기존 진술과 대조되었고, 관계가 애매하거나 충돌(conflicts) 또는 중복(duplicates)으로 판단된다.
+- **Given**: 새 진술이 기존 진술과 대조되었고, 충돌(conflicts)로 판단된다.
 - **When**: 관계 엔진이 그 쌍을 처리한다.
 - **Then**: 그 쌍마다 별도의 relation changeset이 open 상태로 생성되어 변경셋 탭의 Open 목록에서 판정을 기다린다.
 - **관여 화면**: 변경셋
+
+#### 판정 대기 relation changeset 생성 (중복)
+
+- **Given**: 새 진술이 기존 진술과 대조되었고, 중복(duplicates)으로 판단된다.
+- **When**: 관계 엔진이 그 쌍을 처리한다.
+- **Then**: 그 쌍마다 별도의 relation changeset이 open 상태로 생성되어 변경셋 탭의 Open 목록에서 판정을 기다린다.
+- **관여 화면**: 변경셋
+- **범위 참고 (2026-07-28, Kyle 결정)**: 원래 "애매하거나 충돌 또는 중복" 하나의 케이스였는데 충돌·중복으로 분리했다. 저확신도(애매한, 충돌·중복이 아닌) 관계 처리 방침은 별도 미결정 이슈(D7, Desktop/리뷰-플로우-중간점검.md)로 뺌 — 결정 전까지 이 케이스 목록엔 안 올림.
 
 #### Changeset 제목 자동 생성 (relation - 충돌)
 
@@ -675,7 +684,7 @@
 - **When**: manual changeset이 생성된다.
 - **Then**: changeset 제목을 채우지 않는다(항상 null). manual changeset은 변경셋 목록·Changeset 상세 어디에도 뜨지 않고, 오직 그 대상(Digest·Reference)의 "변경 이력" 모달에서만 조회되며 그 모달의 행 라벨은 제목이 아니라 수정 시각+수정한 사람이라, changeset 제목 자체가 읽힐 자리가 없다.
 - **관여 화면**: (해당 없음 — 변경셋 목록·Changeset 상세에 안 뜨는 것 자체가 이 케이스의 요점)
-- **범위 참고 (surface-inventory.md 74·246행)**: "manual은 변경셋 탭엔 아예 안 뜬다"·"번호는 이 화면 밖(변경셋 목록)에서만 의미 있는 앵커" — 같은 원칙이 제목에도 적용됨. 현재 구현(`confirm_digest_edit` 등, PR #435)은 대상 콘텐츠 제목을 changeset 제목에 채우고 있는데, 이건 아무 데도 안 쓰이는 불필요한 작업이라 제거 대상(코드 수정 필요).
+- **범위 참고 (surface-inventory.md 74·246행; 갱신 2026-07-26, migration 20260726080000)**: "manual은 변경셋 탭엔 아예 안 뜬다"·"번호는 이 화면 밖(변경셋 목록)에서만 의미 있는 앵커" — 같은 원칙이 제목에도 적용됨. 이전 구현(`confirm_digest_edit` 등, PR #435)은 대상 콘텐츠 제목을 changeset 제목에 채우고 있었으나, 아무 데도 안 쓰이는 불필요한 작업이라 판단돼 제거됐다(`confirm_digest_edit`·`update_reference`·`archive_reference`·`archive_digest` 전부 title을 안 채우도록 수정). 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### 편집 changeset 되돌리기
 
