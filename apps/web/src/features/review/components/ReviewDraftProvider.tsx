@@ -27,6 +27,7 @@ import {
   type ReviewSaveStatus,
 } from "@web/features/review/reviewSaveStatus";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
+import { toast } from "@web/utils/toast";
 
 // 자동 저장 디바운스 — 필드 버퍼(useBufferedValue의 COMMIT_DELAY_MS=400ms, 타이핑
 // 멈춤→초안 반영)와는 별개 축이다. 초안이 바뀔 때마다(필드 커밋 하나하나 포함) 그
@@ -70,7 +71,7 @@ function getAutosaveEntry(key: string): ReviewAutosaveEntry {
       dirty: false,
       timer: null,
       savingPromise: null,
-      status: { kind: "clean" },
+      status: { kind: "clean", savedAt: null },
       statusListeners: new Set(),
     };
     autosaveEntries.set(key, entry);
@@ -239,12 +240,24 @@ export function ReviewDraftProvider({ children }: ReviewDraftProviderProps) {
         await updateReviewRef.current.mutateAsync(
           buildUpdateReviewPayload(draft),
         );
-        setEntryStatus(autosaveEntry, { kind: "clean" });
+        setEntryStatus(autosaveEntry, {
+          kind: "clean",
+          savedAt: new Date().toISOString(),
+        });
       } catch (error) {
         // 실패한 변경은 여전히 미저장 상태로 남겨, 다음 편집이나 flushPendingSave가
         // 다시 시도하게 한다 — 조용히 유실시키지 않는다.
         autosaveEntry.dirty = true;
-        setEntryStatus(autosaveEntry, classifyReviewSaveError(error));
+        const status = classifyReviewSaveError(error);
+        // clean → 실패로 처음 넘어가는 순간에만 토스트를 띄운다 — 이 mutation은
+        // skipGlobalToast라 전역 토스트가 안 뜨는데, 배지만으론 유저가 눈치
+        // 못 채고 계속 편집하다 그 사이 작성분을 잃을 수 있다. 재시도가 반복
+        // 실패해도(네트워크 단절 등) 이미 실패 상태면 또 안 띄워 토스트가
+        // 안 쌓인다 — 배지(SaveStatusIndicator)가 계속 남아 그 사이 상태를 본다.
+        if (autosaveEntry.status.kind === "clean") {
+          toast.error(status.message);
+        }
+        setEntryStatus(autosaveEntry, status);
         throw error;
       }
     }

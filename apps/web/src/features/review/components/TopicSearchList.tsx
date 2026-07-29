@@ -61,6 +61,10 @@ function TopicSearchListContent({
     topicList.topics,
     getTopicLabel,
   );
+  // TagSearchList와 같은 이유 — 이미 붙은 기존 Topic을 후보 목록 맨 앞으로.
+  const sortedCandidates = [...candidates].sort(
+    (a, b) => (attachedIds.has(a.id) ? 0 : 1) - (attachedIds.has(b.id) ? 0 : 1),
+  );
 
   return (
     <LabelSearchList
@@ -97,7 +101,7 @@ function TopicSearchListContent({
           }
         />
       ))}
-      {candidates.map((topic) => (
+      {sortedCandidates.map((topic) => (
         <LabelSearchRow
           key={topic.id}
           label={topic.title}

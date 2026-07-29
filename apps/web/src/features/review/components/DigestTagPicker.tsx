@@ -57,13 +57,17 @@ export function DigestTagPicker({
         <button
           type="button"
           disabled={disabled}
-          className="flex min-h-6 cursor-pointer flex-wrap items-center gap-1 rounded-md px-2 py-1 text-left hover:bg-surface-raised-hover/75 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-surface-raised-hover"
+          className="flex min-h-7 cursor-pointer flex-wrap items-center gap-1 rounded-md px-2 py-1 text-left hover:bg-surface-raised-hover/75 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-surface-raised-hover"
         >
           {tags.length > 0 ? (
             sortedTags.map((tag) => (
+              // h-5 고정 — leading-[1.4] 같은 소수점 line-height는 중첩 레벨마다
+              // (Badge inline-block vs 이 span flex) 브라우저가 서브픽셀을 다르게
+              // 반올림해 빈 상태와 정확히 안 맞을 수 있다. 정수 픽셀 높이로
+              // 고정해야 아래 빈 상태 span과 흔들림 없이 완전히 같아진다.
               <span
                 key={tag.id}
-                className="inline-flex min-w-0 items-center gap-0"
+                className="inline-flex h-5 min-w-0 items-center gap-0"
               >
                 {tag.registryId === null && <NewLabelIndicator />}
                 {/* variant/color 대신 className — Badge의 BadgeColor(5색, 뜻
@@ -80,7 +84,7 @@ export function DigestTagPicker({
               </span>
             ))
           ) : (
-            <span className="flex items-center gap-1 text-fg-tertiary">
+            <span className="flex h-5 items-center gap-1 text-fg-tertiary">
               <TagIcon className="size-3" />
               <Text as="span" size="xs" color="tertiary">
                 {t("review.tag_add_action")}

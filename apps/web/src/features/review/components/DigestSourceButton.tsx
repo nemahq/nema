@@ -30,14 +30,19 @@ export function DigestSourceButton({
       <TooltipTrigger asChild>
         <Button
           type="button"
-          size="icon-xs"
+          size="xs"
           variant="ghost"
-          shape="circle"
           disabled={disabled}
           aria-label={t("review.digest_view_source_action")}
           onClick={onClick}
+          // shadow가 아니라 border, shape도 circle이 아니라 기본(rounded-md) —
+          // 바로 옆 CardViewedToggle(읽음 체크박스)이 같은 rounded-md +
+          // border-border-strong 박스라, 이 버튼도 그 모양 그대로 맞춰야 두
+          // 액션이 같은 시각적 무게로 읽힌다. size="xs"의 고정 h-6은 border를
+          // 안쪽으로 먹어 CardViewedToggle(패딩 위에 테두리를 더하는 auto
+          // height)보다 살짝 낮아지므로, h-auto+py-1로 같은 계산식을 맞춘다.
           className={cn(
-            "text-fg-tertiary",
+            "h-auto border border-border-strong py-1 text-fg-tertiary",
             active && "bg-fg-primary/10 text-fg-primary",
           )}
         >

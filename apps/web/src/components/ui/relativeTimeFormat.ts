@@ -1,4 +1,34 @@
 const MINUTE_MS = 60_000;
+const TICK_INTERVAL_MS = MINUTE_MS;
+
+let globalTick = 0;
+const listeners = new Set<() => void>();
+let intervalId: ReturnType<typeof setInterval> | null = null;
+
+// RelativeTime·SaveStatusIndicator처럼 분 단위 상대시각을 쓰는 화면 여러 곳이
+// 각자 setInterval을 새로 만들지 않고 이 전역 틱 하나를 구독하면 된다.
+export function subscribeToMinuteTick(cb: () => void): () => void {
+  listeners.add(cb);
+  if (!intervalId) {
+    intervalId = setInterval(() => {
+      globalTick++;
+      for (const fn of listeners) {
+        fn();
+      }
+    }, TICK_INTERVAL_MS);
+  }
+  return () => {
+    listeners.delete(cb);
+    if (listeners.size === 0 && intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  };
+}
+
+export function getMinuteTickSnapshot(): number {
+  return globalTick;
+}
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 const MONTH_MS = 30 * DAY_MS;
@@ -31,6 +61,10 @@ const BUCKETS: Array<{
   { maxMs: MONTH_MS, divisorMs: DAY_MS, unitKey: "day" },
   { maxMs: YEAR_MS, divisorMs: MONTH_MS, unitKey: "month" },
 ];
+
+export function isWithinLastMinute(dateTime: string): boolean {
+  return Date.now() - new Date(dateTime).getTime() < MINUTE_MS;
+}
 
 export function formatCompactDistance(dateTime: string, lang: Lang): string {
   const elapsedMs = Date.now() - new Date(dateTime).getTime();

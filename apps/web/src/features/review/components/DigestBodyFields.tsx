@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 import { DIGEST_BODY_FIELDS } from "@web/features/review/constants";
 import type { ReviewDigest } from "@web/features/review/types";
 
@@ -19,8 +21,29 @@ export function DigestBodyFields({
   disabled,
   cardFocused,
 }: DigestBodyFieldsProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  // "이전 실행은 건너뛴다"는 소비형 플래그 대신 이전 타입 값을 들고 비교한다 —
+  // 소비형 플래그(한 번 쓰면 꺼짐)는 StrictMode가 마운트 시 effect를 두 번
+  // 돌리면 두 번째 호출에서 이미 꺼진 채로 남아 페이지 진입만 해도 포커스가
+  // 뺏기는 문제가 있었다. 값 비교는 몇 번을 다시 불러도 매번 같은 결과라
+  // 안전하다.
+  const prevTypeRef = useRef(body.type);
+
+  useEffect(
+    function focusFirstFieldOnTypeChange() {
+      if (prevTypeRef.current === body.type) {
+        return;
+      }
+      prevTypeRef.current = body.type;
+      containerRef.current
+        ?.querySelector<HTMLTextAreaElement>("[data-nav-field]")
+        ?.focus();
+    },
+    [body.type],
+  );
+
   return (
-    <div className="mt-2 flex flex-col gap-3 pl-2">
+    <div ref={containerRef} className="mt-2 flex flex-col gap-3 pl-2">
       {DIGEST_BODY_FIELDS[body.type].map((field) => (
         <DigestBodyField
           key={field.key}

@@ -28,9 +28,16 @@ export function CardViewedToggle({
       as="label"
       htmlFor={fieldId}
       size="xs"
+      weight="medium"
       color={viewed ? "primary" : "tertiary"}
       className={cn(
-        "flex cursor-pointer items-center gap-1.5 rounded-md border border-border-strong px-2 py-1",
+        // gap-1·transition-colors·hover 톤은 weave Button의 ghost variant
+        // 레시피 그대로 — DigestSourceButton과 나란히 있는 자리라 값을
+        // 새로 정하지 않고 그 컴포넌트가 이미 쓰는 값을 그대로 옮겨온다.
+        // leading-4(16px)는 Text의 기본 xs 행간(1.4=16.8px) 대신 Button의
+        // text-xs 행간과 맞춘 값 — 안 그러면 이 라벨(텍스트 포함)과
+        // DigestSourceButton(아이콘만)의 행 높이가 미세하게 어긋난다.
+        "flex cursor-pointer items-center gap-1 rounded-md border border-border-strong px-2 py-1 leading-4 transition-colors hover:bg-surface-raised-hover/75 dark:hover:bg-surface-raised-hover",
         viewed && "bg-fg-primary/10",
       )}
     >
