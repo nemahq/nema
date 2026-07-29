@@ -20,7 +20,7 @@ const fakeT = (
 describe("changesetDisplayTitle", () => {
   it("title이 있으면 그 값을 그대로 쓴다", () => {
     const title = changesetDisplayTitle(
-      { title: "회의록 요약", number: 12, type: "ingestion", revertDepth: 0 },
+      { title: "회의록 요약", number: 12 },
       fakeT,
     );
 
@@ -28,45 +28,21 @@ describe("changesetDisplayTitle", () => {
   });
 
   it("title이 없으면 번호 기반 자리표시자로 대체한다", () => {
-    const title = changesetDisplayTitle(
-      { title: null, number: 12, type: "ingestion", revertDepth: 0 },
-      fakeT,
-    );
+    const title = changesetDisplayTitle({ title: null, number: 12 }, fakeT);
 
     expect(title).toBe("review.changeset_fallback_title(number=12)");
   });
 
-  it("revert depth=1이면 marker를 한 번만 실어 revert_title로 넘긴다", () => {
+  // revert도 다른 타입과 동일하게 취급한다 — "OO 되돌림" 조합(따옴표 감싸기·
+  // 중첩 포함)은 revert_changeset RPC 호출 전에 서버(changeset-service.ts
+  // composeRevertTitle)가 이미 완성해 저장하므로, FE는 title==null 여부만 본다.
+  it("revert 타입도 title이 이미 완성된 값이라 그대로 쓴다", () => {
     const title = changesetDisplayTitle(
-      { title: "회의록 요약", number: 12, type: "revert", revertDepth: 1 },
+      { title: '"회의록 요약" 되돌림', number: 12 },
       fakeT,
     );
 
-    expect(title).toBe(
-      "review.revert_title(title=회의록 요약,markers=review.revert_marker)",
-    );
-  });
-
-  it("revert depth=2(되돌리기의 되돌리기)면 marker를 두 번 겹쳐 싣는다", () => {
-    const title = changesetDisplayTitle(
-      { title: "회의록 요약", number: 12, type: "revert", revertDepth: 2 },
-      fakeT,
-    );
-
-    expect(title).toBe(
-      "review.revert_title(title=회의록 요약,markers=review.revert_marker review.revert_marker)",
-    );
-  });
-
-  it("revert인데 title이 null이면(manual origin 복원) 번호 자리표시자를 감싸서라도 되돌림 표식을 남긴다", () => {
-    const title = changesetDisplayTitle(
-      { title: null, number: 12, type: "revert", revertDepth: 1 },
-      fakeT,
-    );
-
-    expect(title).toBe(
-      "review.revert_title(title=review.changeset_fallback_title(number=12),markers=review.revert_marker)",
-    );
+    expect(title).toBe('"회의록 요약" 되돌림');
   });
 });
 

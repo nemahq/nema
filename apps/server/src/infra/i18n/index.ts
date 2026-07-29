@@ -42,9 +42,12 @@ export function resolveLanguage(acceptLanguageHeader?: string): Locale {
   return DEFAULT_LANGUAGE;
 }
 
-export function t(key: TranslationKey, lng: Locale): string {
+export function t(
+  key: TranslationKey,
+  options: { lng: Locale; params?: Record<string, string | number> },
+): string {
   if (!tolgee) {
     throw new Error("i18n not initialized — call initI18n() first");
   }
-  return tolgee.t(key, undefined, { language: lng });
+  return tolgee.t(key, { ...options.params, language: options.lng });
 }

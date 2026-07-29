@@ -3,6 +3,7 @@ import {
   DigestBodySchema,
   type DigestDraft,
   DigestDraftSchema,
+  type Locale,
   type ManualChangeHistoryTargetType,
   type NewReferenceDraft,
   type RelationType,
@@ -10,6 +11,7 @@ import {
 } from "@nema-io/shared";
 
 import type { Database, Json } from "@server/infra/database.types";
+import { t } from "@server/infra/i18n";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
@@ -20,17 +22,24 @@ type ChangeTargetType = Database["public"]["Enums"]["change_target_type"];
 type ChangeAction = Database["public"]["Enums"]["change_action"];
 type SourceStatus = Database["public"]["Enums"]["source_status"];
 
-// 되돌림 여부 술어 — is_changeset_reverted(SQL §4.4)의 TS 쌍.
-// X가 되돌려짐 ⟺ X를 가리키는 revert 중 *그 자신이 안 되돌려진* 것이 있다(재귀).
-// redo가 revert를 또 가리키고 분기(redo 후 같은 대상을 다시 revert)도 나므로
-// 단순 카운트가 아니라 이 재귀라야 맞다. revert 간선만으로 닫힌다.
+// 되돌림 여부 술어 — is_changeset_reverted(SQL)의 TS 쌍. manual·확신 관계처럼
+// archive/restore를 그대로 뒤집는 flip형 자녀는 기존처럼 재귀 패리티로 판정한다
+// (redo가 revert를 또 가리키고 분기 가능 — 단순 존재만으론 안 된다). 반면
+// ingestion·relation(충돌·중복) 재판정형 자녀(reopenShaped)는 매번 새 Digest·
+// 관계를 만들 뿐 원본을 문자 그대로 되살리지 않으므로, 존재 자체가 원본을
+// 영구히 되돌려짐으로 확정한다 — 그 자녀가 이후 어떻게 되든(열려있든·버려지든·
+// 확정되든) 원본은 되돌려진 상태다. 둘은 같은 정의라 SQL을 고치면 이쪽도
+// 함께 고쳐야 한다.
 export function buildRevertedPredicate(
-  edges: { id: string; revertsId: string }[],
+  edges: { id: string; revertsId: string; reopenShaped: boolean }[],
 ): (id: string) => boolean {
-  const childrenByTarget = new Map<string, string[]>();
+  const childrenByTarget = new Map<
+    string,
+    { id: string; reopenShaped: boolean }[]
+  >();
   for (const e of edges) {
     const list = childrenByTarget.get(e.revertsId) ?? [];
-    list.push(e.id);
+    list.push({ id: e.id, reopenShaped: e.reopenShaped });
     childrenByTarget.set(e.revertsId, list);
   }
   const cache = new Map<string, boolean>();
@@ -41,12 +50,55 @@ export function buildRevertedPredicate(
     }
     // 순환 없음(revert는 늘 기존 변경셋만 가리킴) — 재귀 안전.
     const reverted = (childrenByTarget.get(id) ?? []).some(
-      (child) => !isReverted(child),
+      (child) => child.reopenShaped || !isReverted(child.id),
     );
     cache.set(id, reverted);
     return reverted;
   };
   return isReverted;
+}
+
+// changes 행의 모양으로 "이 changeset이 재판정 가능한 초안(ingestion 또는
+// relation 충돌·중복 판정)을 담고 있는가"를 판정한다 — changeset_is_ingestion_shaped
+// /changeset_is_relation_judgment_shaped(SQL)의 TS 쌍. type이 아니라 모양으로
+// 판정하는 이유는 그 함수들 주석 참고(되돌린 뒤 확정된 재판정을 다시 되돌리는
+// 체이닝도 이 판정 하나로 자연히 처리된다).
+function isReopenShapedChangeset(
+  changes: { targetType: ChangeTargetType; action: ChangeAction; data: Json }[],
+): boolean {
+  return changes.some(
+    (c) =>
+      (c.targetType === "digest" && c.action === "create") ||
+      (c.targetType === "relation" &&
+        c.action === "create" &&
+        typeof c.data === "object" &&
+        c.data !== null &&
+        !Array.isArray(c.data) &&
+        (c.data.type === "conflicts" || c.data.type === "duplicates")),
+  );
+}
+
+// revert changeset 제목 조합 — SQL 문자열 concat(따옴표 중첩 버그가 있던 옛
+// revert_depth 방식)을 대체한다. UI 언어를 아는 이 계층에서 완성 문자열을
+// 만들어 저장하므로, FE는 더 이상 revert 여부에 따라 접미사를 조합할 필요가
+// 없다(모든 타입이 changesets.title을 그대로 렌더링). "OO 되돌림"을 또
+// 되돌리면 "\"OO 되돌림\" 되돌림"처럼 그대로 겹쳐 감싼다 — 깊이 로직 없음(정책
+// 규칙 7).
+export function composeRevertTitle(args: {
+  originalTitle: string | null;
+  originalNumber: number | null;
+  lng: Locale;
+}): string {
+  const { originalTitle, originalNumber, lng } = args;
+  const baseTitle =
+    originalTitle ??
+    (originalNumber !== null
+      ? t("review.changeset_fallback_title", {
+          lng,
+          params: { number: originalNumber },
+        })
+      : t("review.changeset_untitled", { lng }));
+  return t("review.revert_title", { lng, params: { title: baseTitle } });
 }
 
 // 걸린 관계는 연쇄 트리거가, 벡터 축출은 워커가 처리(§3.1).
@@ -60,18 +112,35 @@ export async function archiveStatement(args: {
   throwIfSupabaseError(error);
 }
 
-// 되돌리기·redo 공용 — 타겟 타입별 역연산은 RPC가 한다(§4).
+// 되돌리기·redo 공용 — 타겟 타입별 역연산은 RPC가 한다(§4). 제목은 SQL이 아니라
+// 여기서 조합해 RPC에 완성 문자열로 넘긴다(composeRevertTitle) — UI 언어(lng)를
+// 아는 계층이 여기이기 때문이다.
 // number까지 함께 돌려주는 이유: Changeset 상세 URL이 UUID가 아니라 number 기준이라,
 // 되돌리기 성공 후 새로 생긴 revert changeset으로 바로 이동하려면 number가 필요하다
 // (RevertChangesetInputSchema 등 기존 UUID 입력 계약은 그대로 — 응답만 확장).
 export async function revertChangeset(args: {
   supabase: TypedSupabaseClient;
   changesetId: string;
+  lng: Locale;
 }): Promise<{ revertChangesetId: string; revertChangesetNumber: number }> {
-  const { supabase, changesetId } = args;
+  const { supabase, changesetId, lng } = args;
+
+  const { data: target, error: targetError } = await supabase
+    .from("changesets")
+    .select("title, number")
+    .eq("id", changesetId)
+    .single();
+  throwIfSupabaseError(targetError);
+
+  const title = composeRevertTitle({
+    originalTitle: target.title,
+    originalNumber: target.number,
+    lng,
+  });
 
   const { data, error } = await supabase.rpc("revert_changeset", {
     p_changeset_id: changesetId,
+    p_title: title,
   });
   throwIfSupabaseError(error);
 
@@ -86,6 +155,19 @@ export async function revertChangeset(args: {
   }
 
   return { revertChangesetId: data, revertChangesetNumber: revertRow.number };
+}
+
+// changeset 제목 직접 편집 — status='open'이면 타입 무관하게 가능(정책 규칙 6).
+export async function updateChangesetTitle(args: {
+  supabase: TypedSupabaseClient;
+  changesetId: string;
+  title: string;
+}): Promise<void> {
+  const { error } = await args.supabase.rpc("update_changeset_title", {
+    p_changeset_id: args.changesetId,
+    p_title: args.title,
+  });
+  throwIfSupabaseError(error);
 }
 
 // 충돌 판정 — 승자 선택. 패자는 archive되고 승자→패자 replaces 관계가 세워진다
@@ -413,9 +495,6 @@ interface ChangesetHistoryEntry {
   // 참고). null이면 FE가 효과 요약으로 대체한다.
   title: string | null;
   revertsId: string | null;
-  // revert 체인에서 몇 단계째 되돌리기/되살리기(redo)인지 — origin=0, 1차 revert=1,
-  // 그 redo=2, ... FE가 문구를 조합할 재료(revert_changeset_depth 마이그레이션 참고).
-  revertDepth: number;
   // 다른 병합(중복 판정)이 이 열린 제안의 끝점을 먼저 archive해 자동으로
   // discarded 처리됐으면 그 원인 changeset id — 사람이 거절한 일반 discarded와
   // 구분하는 신호(07-modeling.md "한 Digest가 여러 곳과 동시에 중복될 수 있다").
@@ -475,7 +554,7 @@ export async function listChangesets(args: {
   let query = supabase
     .from("changesets")
     .select(
-      "id, number, type, status, outcome, title, source_id, reverts_id, revert_depth, invalidated_by_id, author_id, author_name, created_at, updated_at, changes(target_type), sources(status)",
+      "id, number, type, status, outcome, title, source_id, reverts_id, invalidated_by_id, author_id, author_name, created_at, updated_at, changes(target_type), sources(status)",
     )
     .eq("space_id", targetSpaceId)
     // manual은 review-flow.md상 이 목록의 대상이 아니다(대상 콘텐츠의 "변경 이력"
@@ -510,14 +589,28 @@ export async function listChangesets(args: {
   // 캐싱하거나 뷰/구체화 테이블로 옮기는 걸 고려할 것.
   const { data: edges, error: edgeError } = await supabase
     .from("changesets")
-    .select("id, reverts_id")
+    .select("id, reverts_id, changes(target_type, action, data)")
     .eq("space_id", targetSpaceId)
     .not("reverts_id", "is", null);
   throwIfSupabaseError(edgeError);
 
   const isReverted = buildRevertedPredicate(
     (edges ?? []).flatMap((e) =>
-      e.reverts_id ? [{ id: e.id, revertsId: e.reverts_id }] : [],
+      e.reverts_id
+        ? [
+            {
+              id: e.id,
+              revertsId: e.reverts_id,
+              reopenShaped: isReopenShapedChangeset(
+                e.changes.map((c) => ({
+                  targetType: c.target_type,
+                  action: c.action,
+                  data: c.data,
+                })),
+              ),
+            },
+          ]
+        : [],
     ),
   );
 
@@ -549,7 +642,6 @@ export async function listChangesets(args: {
         sourceStatus: row.sources?.status ?? null,
         title: row.title,
         revertsId: row.reverts_id,
-        revertDepth: row.revert_depth,
         invalidatedById: row.invalidated_by_id,
         authorId: row.author_id,
         authorName: row.author_name,

@@ -88,7 +88,6 @@ export type Database = {
           invalidated_by_id: string | null;
           number: number | null;
           outcome: Database["public"]["Enums"]["changeset_outcome"] | null;
-          revert_depth: number;
           reverts_id: string | null;
           source_id: string | null;
           space_id: string | null;
@@ -109,7 +108,6 @@ export type Database = {
           invalidated_by_id?: string | null;
           number?: number | null;
           outcome?: Database["public"]["Enums"]["changeset_outcome"] | null;
-          revert_depth?: number;
           reverts_id?: string | null;
           source_id?: string | null;
           space_id?: string | null;
@@ -130,7 +128,6 @@ export type Database = {
           invalidated_by_id?: string | null;
           number?: number | null;
           outcome?: Database["public"]["Enums"]["changeset_outcome"] | null;
-          revert_depth?: number;
           reverts_id?: string | null;
           source_id?: string | null;
           space_id?: string | null;
@@ -1145,6 +1142,14 @@ export type Database = {
         Args: { p_source_id: string };
         Returns: undefined;
       };
+      changeset_is_ingestion_shaped: {
+        Args: { p_changeset_id: string };
+        Returns: boolean;
+      };
+      changeset_is_relation_judgment_shaped: {
+        Args: { p_changeset_id: string };
+        Returns: boolean;
+      };
       complete_source_digestion: {
         Args: { p_source_id: string };
         Returns: undefined;
@@ -1256,6 +1261,17 @@ export type Database = {
       fill_source_title: {
         Args: { p_source_id: string; p_title: string };
         Returns: undefined;
+      };
+      find_manual_archive_changeset: {
+        Args: {
+          p_target_id: string;
+          p_target_type: Database["public"]["Enums"]["change_target_type"];
+        };
+        Returns: {
+          changeset_id: string;
+          number: number;
+          title: string;
+        }[];
       };
       generate_digest_public_id: { Args: never; Returns: string };
       generate_space_public_id: { Args: never; Returns: string };
@@ -1393,7 +1409,10 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: string;
       };
-      restore_digest: { Args: { p_digest_id: string }; Returns: string };
+      restore_digest: {
+        Args: { p_digest_id: string; p_title: string };
+        Returns: string;
+      };
       restore_ingestion_review: {
         Args: { p_changeset_id: string };
         Returns: undefined;
@@ -1402,7 +1421,10 @@ export type Database = {
         Args: { p_changeset_id: string };
         Returns: undefined;
       };
-      restore_reference: { Args: { p_reference_id: string }; Returns: string };
+      restore_reference: {
+        Args: { p_reference_id: string; p_title: string };
+        Returns: string;
+      };
       restore_tag: { Args: { p_tag_id: string }; Returns: undefined };
       restore_topic: { Args: { p_topic_id: string }; Returns: undefined };
       restore_trashed_source: {
@@ -1421,7 +1443,10 @@ export type Database = {
         Args: { p_statement_id: string };
         Returns: undefined;
       };
-      revert_changeset: { Args: { p_changeset_id: string }; Returns: string };
+      revert_changeset: {
+        Args: { p_changeset_id: string; p_title: string };
+        Returns: string;
+      };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
       start_source_digestion: {
@@ -1432,6 +1457,10 @@ export type Database = {
       trash_source: { Args: { p_source_id: string }; Returns: undefined };
       unlink_reference_tag: {
         Args: { p_reference_id: string; p_tag_id: string };
+        Returns: undefined;
+      };
+      update_changeset_title: {
+        Args: { p_changeset_id: string; p_title: string };
         Returns: undefined;
       };
       update_pending_ingestion: {

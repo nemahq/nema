@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
+import { initI18n } from "@server/infra/i18n";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   buildRevertedPredicate,
@@ -7,6 +8,12 @@ import {
   resolveDuplicateRelation,
   revertChangeset,
 } from "@server/services/changeset-service";
+
+// composeRevertTitle(revertChangeset이 내부에서 씀)이 t()를 호출한다 — 서버
+// 부팅(src/index.ts)과 달리 테스트는 initI18n을 아무도 안 불러줘서 직접 해준다.
+beforeAll(async () => {
+  await initI18n();
+});
 
 // resolveDuplicateRelation은 as unknown as Json으로 나가는 객체 리터럴이라 키
 // 오타를 타입체크가 못 잡는다(digest-review-service.test.ts의 같은 목적 테스트와
@@ -78,7 +85,9 @@ describe("buildRevertedPredicate", () => {
 
   it("revert가 가리키면 대상은 reverted, revert 자신은 아님", () => {
     // C ← R1
-    const isReverted = buildRevertedPredicate([{ id: "R1", revertsId: "C" }]);
+    const isReverted = buildRevertedPredicate([
+      { id: "R1", revertsId: "C", reopenShaped: false },
+    ]);
     expect(isReverted("C")).toBe(true);
     expect(isReverted("R1")).toBe(false);
   });
@@ -86,8 +95,8 @@ describe("buildRevertedPredicate", () => {
   it("redo(revert의 revert)면 원 대상이 다시 in-effect", () => {
     // C ← R1 ← R2  (R2 = redo)
     const isReverted = buildRevertedPredicate([
-      { id: "R1", revertsId: "C" },
-      { id: "R2", revertsId: "R1" },
+      { id: "R1", revertsId: "C", reopenShaped: false },
+      { id: "R2", revertsId: "R1", reopenShaped: false },
     ]);
     expect(isReverted("C")).toBe(false); // R1이 되돌려져 C의 유효 revert가 없음
     expect(isReverted("R1")).toBe(true);
@@ -97,9 +106,9 @@ describe("buildRevertedPredicate", () => {
   it("redo 후 같은 대상을 다시 revert하면 분기 — 유효 revert가 있으니 reverted", () => {
     // C ← R1 (R1 ← R2),  C ← R3   → C는 R3(유효)로 다시 되돌려짐
     const isReverted = buildRevertedPredicate([
-      { id: "R1", revertsId: "C" },
-      { id: "R2", revertsId: "R1" },
-      { id: "R3", revertsId: "C" },
+      { id: "R1", revertsId: "C", reopenShaped: false },
+      { id: "R2", revertsId: "R1", reopenShaped: false },
+      { id: "R3", revertsId: "C", reopenShaped: false },
     ]);
     expect(isReverted("C")).toBe(true); // R1은 무효지만 R3가 유효
     expect(isReverted("R1")).toBe(true);
@@ -110,10 +119,10 @@ describe("buildRevertedPredicate", () => {
     // C ← R1(R1←R2), C ← R3(R3←R4)  → R1·R3 모두 무효 → C의 유효 revert 없음 → false.
     // some/every 혼동이나 단축평가 극성이 뒤집히면 여기서만 깨진다.
     const isReverted = buildRevertedPredicate([
-      { id: "R1", revertsId: "C" },
-      { id: "R2", revertsId: "R1" },
-      { id: "R3", revertsId: "C" },
-      { id: "R4", revertsId: "R3" },
+      { id: "R1", revertsId: "C", reopenShaped: false },
+      { id: "R2", revertsId: "R1", reopenShaped: false },
+      { id: "R3", revertsId: "C", reopenShaped: false },
+      { id: "R4", revertsId: "R3", reopenShaped: false },
     ]);
     expect(isReverted("C")).toBe(false);
     expect(isReverted("R1")).toBe(true);
@@ -123,13 +132,24 @@ describe("buildRevertedPredicate", () => {
   it("두 단계 redo는 다시 reverted로 토글", () => {
     // C ← R1 ← R2 ← R3  → R1 다시 유효 → C reverted
     const isReverted = buildRevertedPredicate([
-      { id: "R1", revertsId: "C" },
-      { id: "R2", revertsId: "R1" },
-      { id: "R3", revertsId: "R2" },
+      { id: "R1", revertsId: "C", reopenShaped: false },
+      { id: "R2", revertsId: "R1", reopenShaped: false },
+      { id: "R3", revertsId: "R2", reopenShaped: false },
     ]);
     expect(isReverted("C")).toBe(true);
     expect(isReverted("R1")).toBe(false);
     expect(isReverted("R2")).toBe(true);
+  });
+
+  it("reopenShaped 자녀는 존재만으로 부모를 영구히 되돌림 확정(redo에도 안 풀림)", () => {
+    // C ← R1(reopenShaped) ← R2 — 플립형이라면 R2 존재로 C가 다시 in-effect여야
+    // 하지만, R1이 재판정형(ingestion/relation 판정 되돌리기)이면 R1은 매번 새
+    // 콘텐츠를 만들 뿐 C를 문자 그대로 되살리지 않으므로 C는 영구히 reverted다.
+    const isReverted = buildRevertedPredicate([
+      { id: "R1", revertsId: "C", reopenShaped: true },
+      { id: "R2", revertsId: "R1", reopenShaped: false },
+    ]);
+    expect(isReverted("C")).toBe(true);
   });
 });
 
@@ -298,9 +318,12 @@ describe("listChangesets", () => {
 // Changeset 상세 URL이 number 기준이라, 되돌리기 응답에 실린 number를 FE가 그대로
 // 내비게이션에 쓴다 — 이 값이 틀리면 되돌린 직후 엉뚱한 changeset으로 이동한다.
 describe("revertChangeset", () => {
+  // revertChangeset은 이제 두 번 읽는다 — RPC 호출 전(제목 조합용 title/number)과
+  // 호출 후(navigate용 revertChangesetNumber). 이 테스트는 두 읽기가 같은 값을
+  // 돌려줘도 문제없다는 걸 이용해 하나의 mock으로 both를 감당한다.
   function mockRevertRpc(
     rpcData: string,
-    numberRow: { number: number | null },
+    numberRow: { title: string | null; number: number | null },
   ) {
     return {
       rpc: vi.fn(() => Promise.resolve({ data: rpcData, error: null })),
@@ -313,11 +336,15 @@ describe("revertChangeset", () => {
   }
 
   it("RPC가 만든 revert changeset의 id와 number를 함께 돌려준다", async () => {
-    const supabase = mockRevertRpc("revert-cs-1", { number: 13 });
+    const supabase = mockRevertRpc("revert-cs-1", {
+      title: "회의록 요약",
+      number: 13,
+    });
 
     const result = await revertChangeset({
       supabase,
       changesetId: "original-cs-1",
+      lng: "ko",
     });
 
     expect(result).toEqual({
@@ -327,10 +354,13 @@ describe("revertChangeset", () => {
   });
 
   it("revert changeset에 number가 없으면(불변식 위반) 던진다", async () => {
-    const supabase = mockRevertRpc("revert-cs-2", { number: null });
+    const supabase = mockRevertRpc("revert-cs-2", {
+      title: "회의록 요약",
+      number: null,
+    });
 
     await expect(
-      revertChangeset({ supabase, changesetId: "original-cs-2" }),
+      revertChangeset({ supabase, changesetId: "original-cs-2", lng: "ko" }),
     ).rejects.toThrow(/has no number/);
   });
 });
