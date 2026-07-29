@@ -586,6 +586,20 @@ describe("deleteSources", () => {
     expect(result).toEqual({ failedCount: 1 });
     expect(Sentry.captureException).toHaveBeenCalledTimes(1);
   });
+
+  it("열린 리뷰(NM014)로 막힌 소스는 failedCount엔 세지만 Sentry로는 안 올린다 — 리뷰를 확인하기 전엔 절대 수렴하지 않는 별개 사실이라 조용히 넘기면 안 되지만, 장애도 아니다", async () => {
+    const { supabase } = mockPerSourceRpc({
+      [ID_A]: {
+        code: "NM014",
+        message: "source ... already has a review awaiting confirmation",
+      },
+    });
+
+    const result = await deleteSources({ supabase, sourceIds: [ID_A, ID_B] });
+
+    expect(result).toEqual({ failedCount: 1 });
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
 });
 
 // --- 초안에서 Space 재지정 (intake-flow "초안에서 Space 재지정") ---

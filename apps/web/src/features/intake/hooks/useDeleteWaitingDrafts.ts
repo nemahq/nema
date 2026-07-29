@@ -8,7 +8,15 @@ import { trpc } from "@web/lib/trpc";
 export function useDeleteWaitingDrafts() {
   const utils = trpc.useUtils();
   const mutation = useMutation(trpc.source.deleteMany, {
-    onSuccess: () => utils.source.listPending.invalidate(),
+    // 열린 리뷰 가드로 일부만 삭제된 경우를 대비해 space.list·changeset.listChangesets도
+    // 함께 무효화한다. listPending만 return하는 이유는 useReassignSourceSpace 등과 동일
+    // (다이얼로그가 그 재조회 완료까지 열려 있어야 함) — 나머지 둘은 다이얼로그 타이밍과
+    // 무관한 화면 뱃지라 fire-and-forget으로 둔다.
+    onSuccess: () => {
+      utils.space.list.invalidate();
+      utils.changeset.listChangesets.invalidate();
+      return utils.source.listPending.invalidate();
+    },
   });
 
   return {

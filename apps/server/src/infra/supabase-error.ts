@@ -14,6 +14,7 @@ export type SupabaseErrorCode =
   | "changeset_state_changed"
   | "ingestion_review_version_conflict"
   | "relation_pending_conflict"
+  | "source_has_open_review"
   | "query_failed";
 
 const PG_NOT_FOUND = "P0002";
@@ -65,6 +66,10 @@ const NEMA_INGESTION_REVIEW_VERSION_CONFLICT = "NM012";
 // NM011("changeset 상태가 바뀜")과 사실 자체가 달라 "새로고침하면 된다"는 그 메시지가
 // 이 경우엔 안 맞는다. 새로고침해도 여전히 막힌다 — 그 open 판정을 먼저 처리해야 한다.
 const NEMA_RELATION_PENDING_CONFLICT = "NM013";
+// 삭제하려는 소스에 이미 open인 ingestion changeset이 있음(trash_source) — NM013과
+// 같은 결: NM004("상태가 바뀜, 새로고침하면 됨")로 묶으면 리뷰를 먼저 확인해야만
+// 풀리는 상태를 "재시도하면 되는 일시적 충돌"로 잘못 안내한다.
+const NEMA_SOURCE_HAS_OPEN_REVIEW = "NM014";
 
 export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
   switch (pgCode) {
@@ -99,6 +104,8 @@ export function toSupabaseErrorCode(pgCode: string): SupabaseErrorCode {
       return "ingestion_review_version_conflict";
     case NEMA_RELATION_PENDING_CONFLICT:
       return "relation_pending_conflict";
+    case NEMA_SOURCE_HAS_OPEN_REVIEW:
+      return "source_has_open_review";
     default:
       return "query_failed";
   }

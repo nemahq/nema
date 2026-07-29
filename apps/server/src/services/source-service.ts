@@ -336,10 +336,11 @@ const limitDelete = createLimiter(SOURCE_DELETE_CONCURRENCY);
 // 초안 벌크 삭제 — sourceId 개수만큼 source.delete를 개별 tRPC 호출로 배치하면(구
 // useDeleteWaitingDrafts) URL이 프로시저명을 반복 이어붙여 Fastify maxParamLength를
 // 넘겨 전체 실패하던 문제(#432)의 근본 수정. 프로시저 호출 자체를 하나로 묶어 배치
-// 링크를 안 태우고, 개별 trash_source 실패는 이전 클라이언트 구현과 동일하게 "동시성
-// 충돌(source_state_changed)이면 무시, 그 외 예상 밖 실패만 Sentry로 올림 + 카운트"로
-// 취급한다 — 이미 trashed거나 아직 처리 중이면 원하는 최종 상태에 수렴하는 정상 동시성
-// 결과지 장애가 아니다.
+// 링크를 안 태우고, 개별 trash_source 실패는 두 갈래로 나눠 취급한다 — "동시성 충돌
+// (source_state_changed)"은 이미 trashed거나 아직 처리 중이라 원하는 최종 상태에
+// 수렴하는 정상 결과라 무시하지만, "열린 리뷰 있음(source_has_open_review)"은 사용자가
+// 그 리뷰를 확인하기 전엔 절대 수렴하지 않는 별개 사실이라 Sentry로는 안 올리되
+// failedCount에는 세어 다이얼로그가 조용히 "전부 성공"으로 닫히지 않게 한다.
 export async function deleteSources(args: {
   supabase: TypedSupabaseClient;
   sourceIds: string[];
@@ -351,19 +352,34 @@ export async function deleteSources(args: {
       limitDelete(() => deleteSource({ supabase, sourceId })),
     ),
   );
-  const unexpectedFailures = results.filter(
-    (result): result is PromiseRejectedResult =>
-      result.status === "rejected" && !isSourceStateConflict(result.reason),
+  const failures = results.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
+  );
+  const blockedByOpenReview = failures.filter((failure) =>
+    isSourceHasOpenReview(failure.reason),
+  );
+  const unexpectedFailures = failures.filter(
+    (failure) =>
+      !isSourceStateConflict(failure.reason) &&
+      !isSourceHasOpenReview(failure.reason),
   );
   for (const failure of unexpectedFailures) {
     Sentry.captureException(failure.reason);
   }
-  return { failedCount: unexpectedFailures.length };
+  return {
+    failedCount: unexpectedFailures.length + blockedByOpenReview.length,
+  };
 }
 
 function isSourceStateConflict(error: unknown): boolean {
   return (
     error instanceof SupabaseError && error.code === "source_state_changed"
+  );
+}
+
+function isSourceHasOpenReview(error: unknown): boolean {
+  return (
+    error instanceof SupabaseError && error.code === "source_has_open_review"
   );
 }
 
