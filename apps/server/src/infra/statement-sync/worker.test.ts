@@ -776,8 +776,20 @@ describe("gateProposals", () => {
   ]);
   const batchIds = new Set<string>([NEW_0, NEW_1]);
 
-  const gate = (proposals: RelationProposal[]) =>
-    gateProposals({ proposals, labelToId, batchIds });
+  // conflictTitle 생략 시 null로 채운다 — 이 테스트 대부분이 검증하는 conflicts 이외의
+  // 게이트 로직과 무관해, 매번 명시하면 테스트 의도가 흐려진다.
+  const gate = (
+    proposals: Array<
+      Omit<RelationProposal, "conflictTitle"> & {
+        conflictTitle?: string | null;
+      }
+    >,
+  ) =>
+    gateProposals({
+      proposals: proposals.map((p) => ({ conflictTitle: null, ...p })),
+      labelToId,
+      batchIds,
+    });
 
   it("확신·비충돌은 applied — supports·replaces·resolves", () => {
     const { applied, pending } = gate([
@@ -801,6 +813,48 @@ describe("gateProposals", () => {
     expect(applied).toHaveLength(0);
     expect(pending).toEqual([
       { from_id: NEW_0, to_id: OLD_0, type: "conflicts" },
+    ]);
+  });
+
+  it("conflicts의 conflictTitle은 그대로 conflict_title로 옮겨진다", () => {
+    const { pending } = gate([
+      {
+        from: "N0",
+        to: "E0",
+        type: "conflicts",
+        confident: true,
+        conflictTitle: "정기 회의 일정 충돌",
+      },
+    ]);
+    expect(pending).toEqual([
+      {
+        from_id: NEW_0,
+        to_id: OLD_0,
+        type: "conflicts",
+        conflict_title: "정기 회의 일정 충돌",
+      },
+    ]);
+  });
+
+  it("conflictTitle이 없으면 conflict_title 키 자체가 안 실린다", () => {
+    const { pending } = gate([
+      { from: "N0", to: "E0", type: "conflicts", confident: true },
+    ]);
+    expect(pending[0]).not.toHaveProperty("conflict_title");
+  });
+
+  it("conflicts 이외 타입의 conflictTitle은 무시된다", () => {
+    const { applied } = gate([
+      {
+        from: "N0",
+        to: "E0",
+        type: "replaces",
+        confident: true,
+        conflictTitle: "무시되어야 함",
+      },
+    ]);
+    expect(applied).toEqual([
+      { from_id: NEW_0, to_id: OLD_0, type: "replaces" },
     ]);
   });
 
