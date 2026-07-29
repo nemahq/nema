@@ -288,9 +288,32 @@ interface RpcReferenceUpdate {
   body: string;
 }
 
+// buildDigestBody가 실제로 읽는 필드만 — GeneratedDigest 전체가 아니라 이 부분집합만
+// 있으면 어느 생성 경로(원문 추출·중복 병합)든 재사용할 수 있다(relation-merge-draft
+// 프롬프트의 출력도 이 모양이라 그대로 넘긴다).
+export type DigestBodyDraftFields = Pick<
+  GeneratedDigest,
+  | "type"
+  | "situation"
+  | "choice"
+  | "reason"
+  | "tradeoff"
+  | "alternatives"
+  | "question"
+  | "background"
+  | "branches"
+  | "resolutionCondition"
+  | "finding"
+  | "evidence"
+  | "concept"
+  | "assumption"
+  | "impact"
+  | "verificationCondition"
+>;
+
 // 평평한 LLM 출력을 타입별 판별 유니언으로 조립한다 — 타입 밖 필드는 버린다
 // (프롬프트가 null을 지시하지만 LLM이 어겨도 DB에 새지 않게 코드로 강제).
-export function buildDigestBody(digest: GeneratedDigest): DigestBody {
+export function buildDigestBody(digest: DigestBodyDraftFields): DigestBody {
   const text = (value: string | null): string | undefined => {
     const trimmed = value?.trim();
     return trimmed ? trimmed : undefined;

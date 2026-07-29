@@ -7,6 +7,11 @@ vi.mock("@sentry/node", () => ({
 
 import * as Sentry from "@sentry/node";
 
+import {
+  DIGEST_DESCRIPTION_MAX_LENGTH,
+  DIGEST_TITLE_MAX_LENGTH,
+} from "@nema-io/shared";
+
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import { LlmError } from "@server/infra/llm/llm-error";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
@@ -28,6 +33,9 @@ import {
   reconcileChanges,
   runVectorPurgePass,
   selectCandidateIds,
+  unionStrings,
+  unionTags,
+  unionTopics,
 } from "./worker";
 
 const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
@@ -70,21 +78,31 @@ function pendingStatement(
   };
 }
 
-// 테이블 직접 조회(.from) 체인 stub — select/eq/in/order 무시하고 canned rows로 resolve
-function fromStub(rows: unknown[]) {
+// 테이블 직접 조회(.from) 체인 stub — select/eq/in/order 무시하고 canned rows로 resolve.
+// error가 있으면 rows 대신 그 에러를 던진다(스냅샷 조회 실패 시뮬레이션용).
+function fromStub(rows: unknown[], error: { message: string } | null = null) {
   const stub: Record<string, unknown> = {};
   for (const method of ["select", "eq", "in", "lt", "order"]) {
     stub[method] = () => stub;
   }
-  stub["then"] = (resolve: (value: { data: unknown; error: null }) => void) =>
-    resolve({ data: rows, error: null });
+  stub["then"] = (
+    resolve: (value: {
+      data: unknown;
+      error: { message: string } | null;
+    }) => void,
+  ) => resolve(error ? { data: null, error } : { data: rows, error: null });
   return stub;
 }
+
+// 테이블 하나가 전부 에러로 실패하는 경우도 tables 맵 안에서 표현한다(mockSupabase를
+// 3번째 위치 인자로 늘리지 않기 위해) — 배열이면 정상 rows, { error }면 그 테이블 전체가
+// 그 에러로 실패.
+type TableFixture = unknown[] | { error: { message: string } };
 
 // rpc 이름별 응답 큐 — shift해서 반환하고, 비면 fallback. tables는 .from 직접 조회용.
 function mockSupabase(
   queues: Record<string, unknown[]>,
-  tables: Record<string, unknown[]> = {},
+  tables: Record<string, TableFixture> = {},
 ) {
   const fallback: Record<string, unknown> = {
     read_sync_events: [],
@@ -99,7 +117,12 @@ function mockSupabase(
     }
     return { data: fallback[name] ?? null, error: null };
   });
-  const from = vi.fn((table: string) => fromStub(tables[table] ?? []));
+  const from = vi.fn((table: string) => {
+    const fixture = tables[table];
+    return Array.isArray(fixture)
+      ? fromStub(fixture)
+      : fromStub([], (fixture?.error ?? null) as { message: string } | null);
+  });
   return { client: { rpc, from } as unknown as TypedSupabaseClient, rpc };
 }
 
@@ -932,6 +955,68 @@ describe("dedupeChanges", () => {
   });
 });
 
+describe("unionTopics/unionTags/unionStrings — 병합 초안의 순수 합집합 필드", () => {
+  const TOPIC_A = { id: "d0000000-0000-4000-a000-000000000001", title: "배포" };
+  const TOPIC_B = { id: "d0000000-0000-4000-a000-000000000002", title: "결제" };
+
+  it("unionTopics — 같은 id는 한 번만, registryId로 매핑", () => {
+    const out = unionTopics([TOPIC_A], [TOPIC_A, TOPIC_B]);
+    expect(out).toEqual([
+      { registryId: TOPIC_A.id, title: TOPIC_A.title },
+      { registryId: TOPIC_B.id, title: TOPIC_B.title },
+    ]);
+  });
+
+  it("unionTags — 같은 id는 한 번만, registryId로 매핑", () => {
+    const tagA = {
+      id: "e0000000-0000-4000-a000-000000000001",
+      title: "경쟁전략",
+      description: "설명 A",
+    };
+    const tagB = {
+      id: "e0000000-0000-4000-a000-000000000002",
+      title: "기술결정",
+      description: "설명 B",
+    };
+    const out = unionTags([tagA], [tagA, tagB]);
+    expect(out).toEqual([
+      { registryId: tagA.id, title: tagA.title, description: tagA.description },
+      { registryId: tagB.id, title: tagB.title, description: tagB.description },
+    ]);
+  });
+
+  it("unionStrings — 중복 제거하고 순서 보존, max 지정 시 상한", () => {
+    expect(unionStrings({ a: ["x", "y"], b: ["y", "z"] })).toEqual([
+      "x",
+      "y",
+      "z",
+    ]);
+    expect(unionStrings({ a: ["x", "y"], b: ["z"], max: 2 })).toEqual([
+      "x",
+      "y",
+    ]);
+  });
+
+  it("unionTopics — DIGEST_TOPICS_MAX(5)를 넘으면 잘린다", () => {
+    const topics = Array.from({ length: 7 }, (_, i) => ({
+      id: `d1000000-0000-4000-a000-00000000000${i}`,
+      title: `topic-${i}`,
+    }));
+    const out = unionTopics(topics.slice(0, 4), topics.slice(4));
+    expect(out).toHaveLength(5);
+  });
+
+  it("unionTags — DIGEST_TAGS_MAX(5)를 넘으면 잘린다", () => {
+    const tags = Array.from({ length: 7 }, (_, i) => ({
+      id: `e1000000-0000-4000-a000-00000000000${i}`,
+      title: `tag-${i}`,
+      description: `설명 ${i}`,
+    }));
+    const out = unionTags(tags.slice(0, 4), tags.slice(4));
+    expect(out).toHaveLength(5);
+  });
+});
+
 function mockRelationLlm(): LlmProvider {
   return {
     generateStructured: vi.fn().mockResolvedValue({ relations: [] }),
@@ -1057,6 +1142,523 @@ describe("잇기 분할 통합 — 장문 source", () => {
     expect(args.p_pending).toEqual([
       { from_id: keeper.id, to_id: dup.id, type: "duplicates" },
     ]);
+  });
+
+  function duplicatePairFixture() {
+    const keeperDigestId = "f1000000-0000-4000-a000-000000000001";
+    const dupDigestId = "f1000000-0000-4000-a000-000000000002";
+    const keeper = {
+      id: "c0000000-0000-4000-a000-000000000000",
+      digest_id: keeperDigestId,
+      content: "N잡으로 확정",
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [{ source_id: SOURCE_ID, locator: { index: 0 } }],
+    };
+    const dup = {
+      id: "c0000000-0000-4000-a000-000000000001",
+      digest_id: dupDigestId,
+      content: "N잡으로 정함",
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [{ source_id: SOURCE_ID, locator: { index: 1 } }],
+    };
+    const digestRow = (id: string, title: string) => ({
+      id,
+      title,
+      description: `${title} 설명`,
+      body: { type: "decision", choice: title },
+      external_urls: [],
+      digest_topics: [{ topic: { id: "topic-1", title: "N잡" } }],
+      digest_tags: [],
+      digest_references: [],
+    });
+    const digests = [
+      digestRow(keeperDigestId, "N잡으로 확정"),
+      digestRow(dupDigestId, "N잡으로 정함"),
+    ];
+    return { keeper, dup, digests };
+  }
+
+  const MERGED_DRAFT_OUTPUT = {
+    merged: {
+      type: "decision",
+      title: "N잡으로 확정 (병합)",
+      description: "병합된 설명",
+      situation: null,
+      choice: "N잡으로 확정",
+      reason: null,
+      tradeoff: null,
+      alternatives: null,
+      question: null,
+      background: null,
+      branches: null,
+      resolutionCondition: null,
+      finding: null,
+      evidence: null,
+      concept: null,
+      assumption: null,
+      impact: null,
+      verificationCondition: null,
+    },
+  };
+
+  it("duplicates 쌍은 병합 초안(merge_draft)이 붙어 p_pending으로 전달된다", async () => {
+    const { keeper, dup, digests } = duplicatePairFixture();
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_linking_sources: [
+          [
+            {
+              id: SOURCE_ID,
+              space_id: SPACE_ID,
+              created_at: "2026-06-11T00:00:00.000Z",
+            },
+          ],
+        ],
+      },
+      { statements: [keeper, dup], digests },
+    );
+
+    const llm: LlmProvider = {
+      generateStructured: vi
+        .fn()
+        .mockImplementation(async (params: { schemaName: string }) => {
+          if (params.schemaName === "relation_merge_draft") {
+            return MERGED_DRAFT_OUTPUT;
+          }
+          return {
+            relations: [
+              { from: "N0", to: "N1", type: "duplicates", confident: true },
+            ],
+          };
+        }),
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    };
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const calls = rpcCalls(rpc, "apply_relation_changesets");
+    const args = calls[0]?.[1] as {
+      p_pending: Array<{
+        from_id: string;
+        to_id: string;
+        type: string;
+        merge_draft?: {
+          title: string;
+          topics: unknown[];
+          referenceIds: unknown[];
+          newReferenceKeys: unknown[];
+        };
+      }>;
+    };
+    expect(args.p_pending).toHaveLength(1);
+    expect(args.p_pending[0]?.merge_draft).toMatchObject({
+      title: "N잡으로 확정 (병합)",
+      topics: [{ registryId: "topic-1", title: "N잡" }],
+      referenceIds: [],
+      newReferenceKeys: [],
+    });
+  });
+
+  it("LLM이 낸 title/description이 상한을 넘으면 잘려서 저장된다", async () => {
+    const { keeper, dup, digests } = duplicatePairFixture();
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_linking_sources: [
+          [
+            {
+              id: SOURCE_ID,
+              space_id: SPACE_ID,
+              created_at: "2026-06-11T00:00:00.000Z",
+            },
+          ],
+        ],
+      },
+      { statements: [keeper, dup], digests },
+    );
+
+    const overlongOutput = {
+      merged: {
+        ...MERGED_DRAFT_OUTPUT.merged,
+        title: "가".repeat(DIGEST_TITLE_MAX_LENGTH + 20),
+        description: "나".repeat(DIGEST_DESCRIPTION_MAX_LENGTH + 20),
+      },
+    };
+    const llm: LlmProvider = {
+      generateStructured: vi
+        .fn()
+        .mockImplementation(async (params: { schemaName: string }) => {
+          if (params.schemaName === "relation_merge_draft") {
+            return overlongOutput;
+          }
+          return {
+            relations: [
+              { from: "N0", to: "N1", type: "duplicates", confident: true },
+            ],
+          };
+        }),
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    };
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const calls = rpcCalls(rpc, "apply_relation_changesets");
+    const args = calls[0]?.[1] as {
+      p_pending: Array<{
+        merge_draft?: { title: string; description: string };
+      }>;
+    };
+    expect(args.p_pending[0]?.merge_draft?.title).toHaveLength(
+      DIGEST_TITLE_MAX_LENGTH,
+    );
+    expect(args.p_pending[0]?.merge_draft?.description).toHaveLength(
+      DIGEST_DESCRIPTION_MAX_LENGTH,
+    );
+  });
+
+  it("병합 초안 LLM 콜이 실패해도 pending은 초안 없이 그대로 진행된다(개별 항목 오류 격리)", async () => {
+    const { keeper, dup, digests } = duplicatePairFixture();
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_linking_sources: [
+          [
+            {
+              id: SOURCE_ID,
+              space_id: SPACE_ID,
+              created_at: "2026-06-11T00:00:00.000Z",
+            },
+          ],
+        ],
+      },
+      { statements: [keeper, dup], digests },
+    );
+
+    const llm: LlmProvider = {
+      generateStructured: vi
+        .fn()
+        .mockImplementation(async (params: { schemaName: string }) => {
+          if (params.schemaName === "relation_merge_draft") {
+            throw new Error("merge draft llm boom");
+          }
+          return {
+            relations: [
+              { from: "N0", to: "N1", type: "duplicates", confident: true },
+            ],
+          };
+        }),
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    };
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const calls = rpcCalls(rpc, "apply_relation_changesets");
+    const args = calls[0]?.[1] as {
+      p_pending: Array<{
+        from_id: string;
+        to_id: string;
+        merge_draft?: unknown;
+      }>;
+    };
+    expect(args.p_pending).toEqual([
+      { from_id: keeper.id, to_id: dup.id, type: "duplicates" },
+    ]);
+    expect(Sentry.captureException).toHaveBeenCalled();
+  });
+
+  it("같은 Digest 쌍을 가리키는 duplicate 진술 쌍이 여러 개여도 병합 초안 LLM은 한 번만 호출된다", async () => {
+    const keeperDigestId = "f3000000-0000-4000-a000-000000000001";
+    const dupDigestId = "f3000000-0000-4000-a000-000000000002";
+    const statement = (args: {
+      id: string;
+      digestId: string;
+      index: number;
+    }) => ({
+      id: args.id,
+      digest_id: args.digestId,
+      content: `진술 ${args.index}`,
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [
+        { source_id: SOURCE_ID, locator: { index: args.index } },
+      ],
+    });
+    const k1 = statement({
+      id: "c2000000-0000-4000-a000-000000000001",
+      digestId: keeperDigestId,
+      index: 0,
+    });
+    const k2 = statement({
+      id: "c2000000-0000-4000-a000-000000000002",
+      digestId: keeperDigestId,
+      index: 1,
+    });
+    const d1 = statement({
+      id: "c2000000-0000-4000-a000-000000000003",
+      digestId: dupDigestId,
+      index: 2,
+    });
+    const d2 = statement({
+      id: "c2000000-0000-4000-a000-000000000004",
+      digestId: dupDigestId,
+      index: 3,
+    });
+    const digestRow = (id: string, title: string) => ({
+      id,
+      title,
+      description: `${title} 설명`,
+      body: { type: "decision", choice: title },
+      external_urls: [],
+      digest_topics: [],
+      digest_tags: [],
+      digest_references: [],
+    });
+    const digests = [
+      digestRow(keeperDigestId, "N잡으로 확정"),
+      digestRow(dupDigestId, "N잡으로 정함"),
+    ];
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_linking_sources: [
+          [
+            {
+              id: SOURCE_ID,
+              space_id: SPACE_ID,
+              created_at: "2026-06-11T00:00:00.000Z",
+            },
+          ],
+        ],
+      },
+      { statements: [k1, k2, d1, d2], digests },
+    );
+
+    let mergeDraftCalls = 0;
+    const llm: LlmProvider = {
+      generateStructured: vi
+        .fn()
+        .mockImplementation(async (params: { schemaName: string }) => {
+          if (params.schemaName === "relation_merge_draft") {
+            mergeDraftCalls += 1;
+            return MERGED_DRAFT_OUTPUT;
+          }
+          // 두 duplicate 진술 쌍(K1↔D1, K2↔D2) 모두 같은 Digest 쌍(keeper/dup)을 가리킨다.
+          return {
+            relations: [
+              { from: "N0", to: "N2", type: "duplicates", confident: true },
+              { from: "N1", to: "N3", type: "duplicates", confident: true },
+            ],
+          };
+        }),
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    };
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    expect(mergeDraftCalls).toBe(1);
+    const calls = rpcCalls(rpc, "apply_relation_changesets");
+    const args = calls[0]?.[1] as {
+      p_pending: Array<{ merge_draft?: { title: string } }>;
+    };
+    expect(args.p_pending).toHaveLength(2);
+    for (const pendingChange of args.p_pending) {
+      expect(pendingChange.merge_draft?.title).toBe(
+        MERGED_DRAFT_OUTPUT.merged.title,
+      );
+    }
+  });
+
+  it("병합 초안용 Digest 스냅샷 조회가 실패해도(예: DB 오류) 판정 파이프라인 전체는 그대로 진행된다", async () => {
+    const { keeper, dup } = duplicatePairFixture();
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_linking_sources: [
+          [
+            {
+              id: SOURCE_ID,
+              space_id: SPACE_ID,
+              created_at: "2026-06-11T00:00:00.000Z",
+            },
+          ],
+        ],
+      },
+      {
+        statements: [keeper, dup],
+        digests: { error: { message: "digests table unreachable" } },
+      },
+    );
+
+    const llm: LlmProvider = {
+      generateStructured: vi.fn().mockResolvedValue({
+        relations: [
+          { from: "N0", to: "N1", type: "duplicates", confident: true },
+        ],
+      }),
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    };
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const calls = rpcCalls(rpc, "apply_relation_changesets");
+    expect(calls).toHaveLength(1);
+    const args = calls[0]?.[1] as {
+      p_pending: Array<{
+        from_id: string;
+        to_id: string;
+        merge_draft?: unknown;
+      }>;
+    };
+    expect(args.p_pending).toEqual([
+      { from_id: keeper.id, to_id: dup.id, type: "duplicates" },
+    ]);
+    expect(Sentry.captureException).toHaveBeenCalled();
+  });
+
+  it("digest.body 하나가 손상돼도 그 Digest만 스킵되고 나머지는 정상 처리된다", async () => {
+    const keeperDigestId = "f4000000-0000-4000-a000-000000000001";
+    const dupDigestId = "f4000000-0000-4000-a000-000000000002";
+    const keeper = {
+      id: "c3000000-0000-4000-a000-000000000001",
+      digest_id: keeperDigestId,
+      content: "N잡으로 확정",
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [{ source_id: SOURCE_ID, locator: { index: 0 } }],
+    };
+    const dup = {
+      id: "c3000000-0000-4000-a000-000000000002",
+      digest_id: dupDigestId,
+      content: "N잡으로 정함",
+      type: "claim",
+      confidence: "certain",
+      ingestion_status: "completed",
+      status: "active",
+      statement_sources: [{ source_id: SOURCE_ID, locator: { index: 1 } }],
+    };
+    const digests = [
+      {
+        id: keeperDigestId,
+        title: "N잡으로 확정",
+        description: "설명",
+        // body.type이 스키마 밖 값 — DigestBodySchema.safeParse 실패를 유도.
+        body: { type: "not-a-real-type" },
+        external_urls: [],
+        digest_topics: [],
+        digest_tags: [],
+        digest_references: [],
+      },
+      {
+        id: dupDigestId,
+        title: "N잡으로 정함",
+        description: "설명",
+        body: { type: "decision", choice: "N잡으로 정함" },
+        external_urls: [],
+        digest_topics: [],
+        digest_tags: [],
+        digest_references: [],
+      },
+    ];
+    const { client, rpc } = mockSupabase(
+      {
+        read_sync_events: [[NOTIFY_ROW]],
+        fetch_pending_linking_sources: [
+          [
+            {
+              id: SOURCE_ID,
+              space_id: SPACE_ID,
+              created_at: "2026-06-11T00:00:00.000Z",
+            },
+          ],
+        ],
+      },
+      { statements: [keeper, dup], digests },
+    );
+
+    const llm: LlmProvider = {
+      generateStructured: vi.fn().mockResolvedValue({
+        relations: [
+          { from: "N0", to: "N1", type: "duplicates", confident: true },
+        ],
+      }),
+      async *generateStream() {
+        yield "";
+      },
+      generateText: vi.fn().mockResolvedValue(""),
+    };
+
+    await runOnePoll({
+      supabase: client,
+      llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    // keeper의 body가 깨져 있어 이 쌍은 초안을 못 만들지만(스킵), 파이프라인은 죽지 않고
+    // "A vs B" 폴백으로 pending이 그대로 전달된다.
+    const calls = rpcCalls(rpc, "apply_relation_changesets");
+    const args = calls[0]?.[1] as {
+      p_pending: Array<{
+        from_id: string;
+        to_id: string;
+        merge_draft?: unknown;
+      }>;
+    };
+    expect(args.p_pending).toEqual([
+      { from_id: keeper.id, to_id: dup.id, type: "duplicates" },
+    ]);
+    expect(Sentry.captureException).toHaveBeenCalled();
   });
 });
 
