@@ -19,8 +19,14 @@ interface PillVisual {
 }
 
 function pillVisual(icon: ChangesetStateIcon): PillVisual {
+  // border를 두 variant 다 항상 넣는다(filled는 투명) — open→closed 전환처럼
+  // 같은 자리에서 outline↔filled를 오갈 때, border 유무로 pill 자체 높이가
+  // 2px(위아래 1px씩) 갈려 헤더 2번째 행이 흔들리는 걸 막기 위해서다.
   if (icon.kind === "filled") {
-    return { container: cn(icon.bg, icon.iconTone), label: undefined };
+    return {
+      container: cn("border border-transparent", icon.bg, icon.iconTone),
+      label: undefined,
+    };
   }
   return {
     container: cn("border border-current", icon.tone),

@@ -22,16 +22,19 @@ export function DigestBodyFields({
   cardFocused,
 }: DigestBodyFieldsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  // 마운트 시점의 첫 실행은 건너뛴다 — 타입이 바뀐 게 아니라 카드가 막 나타난
-  // 것뿐이라 그때까지 포커스를 뺏으면 안 된다.
-  const skipNextRef = useRef(true);
+  // "이전 실행은 건너뛴다"는 소비형 플래그 대신 이전 타입 값을 들고 비교한다 —
+  // 소비형 플래그(한 번 쓰면 꺼짐)는 StrictMode가 마운트 시 effect를 두 번
+  // 돌리면 두 번째 호출에서 이미 꺼진 채로 남아 페이지 진입만 해도 포커스가
+  // 뺏기는 문제가 있었다. 값 비교는 몇 번을 다시 불러도 매번 같은 결과라
+  // 안전하다.
+  const prevTypeRef = useRef(body.type);
 
   useEffect(
     function focusFirstFieldOnTypeChange() {
-      if (skipNextRef.current) {
-        skipNextRef.current = false;
+      if (prevTypeRef.current === body.type) {
         return;
       }
+      prevTypeRef.current = body.type;
       containerRef.current
         ?.querySelector<HTMLTextAreaElement>("[data-nav-field]")
         ?.focus();
