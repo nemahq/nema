@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/node";
+
 import {
   type DigestBody,
   DigestBodySchema,
@@ -443,13 +445,13 @@ type PendingRelationBody =
       to: RelationEndpointSnapshot;
     }
   | {
-      // 07-modeling.md "duplicates A→B: A가 남고 B가 지난 것" 방향 규약대로
-      // keeper=fromId, duplicate=toId(resolve_duplicate_relation과 동일).
+      // 07-modeling.md "duplicates A→B: A와 B가 같은 뜻이라 A만 남고 B가 지난 것이
+      // 된다" 방향 규약대로 keeper=fromId, duplicate=toId(resolve_duplicate_relation과 동일).
       kind: "duplicate_pending";
       keeper: RelationEndpointSnapshot;
       duplicate: RelationEndpointSnapshot;
-      // Slice A(#523)의 LLM eager 생성이 실패했으면 null — 화면(다음 슬라이스)이 null을
-      // 어떻게 보여줄지는 이 서비스 책임이 아니다.
+      // #523의 LLM eager 생성이 실패했으면 null — 화면(다음 슬라이스)이 null을 어떻게
+      // 보여줄지는 이 서비스 책임이 아니다.
       mergeDraft: DigestDraft | null;
     };
 
@@ -512,6 +514,21 @@ export async function getPendingRelationByNumber(args: {
     throw new SupabaseError(
       "not_found",
       `pending relation changeset #${number} not found in space ${spaceId}`,
+    );
+  }
+  // merge_draft 키 자체가 없는 것(정상, 초안 생성 실패 등)과 달리 키는 있는데
+  // DigestDraftSchema 검증에 실패한 건 쓰기 쪽(worker.ts attachMergeDrafts)과 스키마가
+  // 드리프트했다는 뜻이라 conventions.md의 "예상 밖 에러는 report" 원칙대로 보고한다 —
+  // mergeDraft는 이미 null로 대체돼 있어 화면은 그대로 정상 동작한다(격리 원칙).
+  if (proposal.type === "duplicates" && proposal.mergeDraftInvalid) {
+    Sentry.captureException(
+      new Error(
+        `pending relation changeset ${row.id} has an invalid merge_draft shape`,
+      ),
+      {
+        tags: { component: "changeset-detail-service", step: "merge-draft" },
+        extra: { changesetId: row.id },
+      },
     );
   }
 

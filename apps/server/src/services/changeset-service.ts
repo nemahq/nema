@@ -195,13 +195,17 @@ interface PendingRelationProposal {
 // changes.data는 jsonb(런타임 미보장)라 as 단언 대신 가드로 모양을 검증한다.
 // changeset-detail-service도 재사용(승인·거절 후에도 이 change row는 그대로 남음).
 // mergeDraft는 duplicates 제안에만 실릴 수 있다(relation_merge_draft 마이그레이션,
-// apply_relation_changesets) — 없거나(conflicts 등) DigestDraftSchema 형식이 깨졌으면
-// (LLM 초안 생성 실패로 애초에 안 실렸을 수 있음) null로 내려보낸다.
+// apply_relation_changesets). null이 되는 경로는 둘로 갈린다 — (1) 애초에 키가 없음
+// (conflicts 등, 또는 LLM 초안 생성이 실패해 안 실림): 정상. (2) 키는 있는데
+// DigestDraftSchema 검증 실패: 쓰기 쪽(worker.ts attachMergeDrafts)과 이 스키마가
+// 드리프트했다는 뜻이라 비정상 — mergeDraftInvalid로 구분해 호출부(mergeDraft를 실제로
+// 쓰는 getPendingRelationByNumber)가 후자만 보고할 수 있게 한다.
 export function parseRelationProposal(data: unknown): {
   type: RelationType;
   fromId: string;
   toId: string;
   mergeDraft: DigestDraft | null;
+  mergeDraftInvalid: boolean;
 } | null {
   if (typeof data !== "object" || data === null) {
     return null;
@@ -223,6 +227,8 @@ export function parseRelationProposal(data: unknown): {
     fromId,
     toId,
     mergeDraft: mergeDraftResult.success ? mergeDraftResult.data : null,
+    mergeDraftInvalid:
+      record.merge_draft !== undefined && !mergeDraftResult.success,
   };
 }
 
