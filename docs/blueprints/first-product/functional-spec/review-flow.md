@@ -39,7 +39,7 @@
 - [x] Changeset 제목 자동 생성 (ingestion)
 - [x] Digest 후보 삭제
 - [x] Digest 리뷰 확정
-- [ ] Digest 리뷰 버리기
+- [x] Digest 리뷰 버리기
 - [ ] 적용된 리뷰 되돌리기
 - [ ] Changeset 제목 자동 생성 (revert)
 - [ ] 원문도 삭제하기
@@ -487,11 +487,12 @@
 
 ### 케이스 목록
 
-- [ ] 확신 관계 자동 적용
+- [x] 확신 관계 자동 적용
 - [ ] 관련 Digest 자동 채움
 - [ ] 관계 archive 시 관련 Digest 목록 표시 규칙
 - [ ] 관련 Reference 자동 제안
-- [ ] 판정 대기 relation changeset 생성
+- [ ] 판정 대기 relation changeset 생성 (충돌)
+- [ ] 판정 대기 relation changeset 생성 (중복)
 - [ ] Changeset 제목 자동 생성 (relation - 충돌)
 - [ ] Changeset 제목 자동 생성 (relation - 중복)
 - [ ] 재제안 가드
@@ -538,12 +539,20 @@
 - **Then**: 그 Reference들이 서로 관련 Reference로 제안되어 채워진다. 사람은 이후 확인·제거만 가능하고, 직접 새로 추가할 수는 없다.
 - **관여 화면**: Reference 상세
 
-#### 판정 대기 relation changeset 생성
+#### 판정 대기 relation changeset 생성 (충돌)
 
-- **Given**: 새 진술이 기존 진술과 대조되었고, 관계가 애매하거나 충돌(conflicts) 또는 중복(duplicates)으로 판단된다.
+- **Given**: 새 진술이 기존 진술과 대조되었고, 충돌(conflicts)로 판단된다.
 - **When**: 관계 엔진이 그 쌍을 처리한다.
 - **Then**: 그 쌍마다 별도의 relation changeset이 open 상태로 생성되어 변경셋 탭의 Open 목록에서 판정을 기다린다.
 - **관여 화면**: 변경셋
+
+#### 판정 대기 relation changeset 생성 (중복)
+
+- **Given**: 새 진술이 기존 진술과 대조되었고, 중복(duplicates)으로 판단된다.
+- **When**: 관계 엔진이 그 쌍을 처리한다.
+- **Then**: 그 쌍마다 별도의 relation changeset이 open 상태로 생성되어 변경셋 탭의 Open 목록에서 판정을 기다린다.
+- **관여 화면**: 변경셋
+- **범위 참고 (2026-07-28, Kyle 결정)**: 원래 "애매하거나 충돌 또는 중복" 하나의 케이스였는데 충돌·중복으로 분리했다. 저확신도(애매한, 충돌·중복이 아닌) 관계 처리 방침은 별도 미결정 이슈(D7, Desktop/리뷰-플로우-중간점검.md)로 뺌 — 결정 전까지 이 케이스 목록엔 안 올림.
 
 #### Changeset 제목 자동 생성 (relation - 충돌)
 
