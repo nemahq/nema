@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
-import type { TagColor } from "@nema-io/shared";
-
 // 이 폼의 유일한 계약은 "저장 버튼 없이, 팝오버가 닫힐 때(언마운트)만 이름·설명이
 // 커밋되고 색은 고른 즉시 반영된다"는 것 — 타이핑 중이나 빈 값으로 닫았을 때 조용히
 // 커밋돼버리면 D5 스펙 위반이라 여기서 그 경계만 검증한다.
@@ -23,7 +21,7 @@ function renderForm() {
     <TagDraftRenameForm
       title="기존 이름"
       description="기존 설명"
-      color={"slate" as TagColor}
+      color="slate"
       isDuplicateTitle={() => false}
       onCommitText={onCommitText}
       onColorChange={onColorChange}
