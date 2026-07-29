@@ -17,6 +17,7 @@ import { ChangesetConfirmDiscardActions } from "./ChangesetConfirmDiscardActions
 import { ChangesetDetailHeader } from "./ChangesetDetailHeader";
 import { ChangesetDetailLayout } from "./ChangesetDetailLayout";
 import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
+import { ChangesetNotFound } from "./ChangesetNotFound";
 import { useChangesetSidePanel } from "./ChangesetSidePanelProvider";
 import { RelationJudgmentCard } from "./RelationJudgmentCard";
 import { RelationJudgmentSourceTab } from "./RelationJudgmentSourceTab";
@@ -52,6 +53,14 @@ function RelationJudgmentContent() {
   const locked = resolveConflict.isPending || rejectPending.isPending;
 
   const title = changesetDisplayTitle(changesetDetail, t);
+
+  // duplicates 판정 화면(중복/병합)은 다음 슬라이스 몫이라 이 화면은 여전히 conflicts
+  // 전용이다 — getPendingRelationByNumber가 duplicates도 body를 내려주게 됐지만
+  // (관계 판정 — 중복 조회 확장), 그걸 그릴 화면이 아직 없으니 이전과 같은
+  // "찾을 수 없음"으로 낮춘다.
+  if (pendingRelation.body.kind !== "conflict_pending") {
+    return <ChangesetNotFound />;
+  }
   const { from, to } = pendingRelation.body;
 
   function handleSelect(statementId: string) {

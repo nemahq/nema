@@ -1,6 +1,9 @@
+import * as Sentry from "@sentry/node";
+
 import {
   type DigestBody,
   DigestBodySchema,
+  type DigestDraft,
   type RelationType,
   type TagColor,
 } from "@nema-io/shared";
@@ -435,13 +438,22 @@ export async function getChangesetByNumber(args: {
   };
 }
 
-// 판정 대기 relation changeset(지금은 conflicts만) — 나중에 duplicates가 붙을 자리를
-// kind 유니언에 남겨두되 지금은 구현하지 않는다(이 슬라이스 스코프 밖).
-type PendingRelationBody = {
-  kind: "conflict_pending";
-  from: RelationEndpointSnapshot;
-  to: RelationEndpointSnapshot;
-};
+type PendingRelationBody =
+  | {
+      kind: "conflict_pending";
+      from: RelationEndpointSnapshot;
+      to: RelationEndpointSnapshot;
+    }
+  | {
+      // 07-modeling.md "duplicates A→B: A와 B가 같은 뜻이라 A만 남고 B가 지난 것이
+      // 된다" 방향 규약대로 keeper=fromId, duplicate=toId(resolve_duplicate_relation과 동일).
+      kind: "duplicate_pending";
+      keeper: RelationEndpointSnapshot;
+      duplicate: RelationEndpointSnapshot;
+      // #523의 LLM eager 생성이 실패했으면 null — 화면(다음 슬라이스)이 null을 어떻게
+      // 보여줄지는 이 서비스 책임이 아니다.
+      mergeDraft: DigestDraft | null;
+    };
 
 interface PendingRelationChangeset {
   changesetId: string;
@@ -472,7 +484,8 @@ export async function getPendingRelationByNumber(args: {
   throwIfSupabaseError(error);
 
   // getByNumber와 같은 NOT_FOUND 관례 — 이미 판정됐거나(closed), relation이 아니거나,
-  // (아래에서) duplicates 제안이면 전부 "아직 판정 대기인 conflicts가 아니다"로 뭉뚱그린다.
+  // (아래에서) conflicts/duplicates가 아닌 제안(확신 관계)이면 전부 "아직 판정 대기인
+  // conflicts/duplicates가 아니다"로 뭉뚱그린다.
   if (!row || row.type !== "relation" || row.status !== "open") {
     throw new SupabaseError(
       "not_found",
@@ -497,10 +510,25 @@ export async function getPendingRelationByNumber(args: {
       `pending relation changeset ${row.id} has no parseable relation change row`,
     );
   }
-  if (proposal.type !== "conflicts") {
+  if (proposal.type !== "conflicts" && proposal.type !== "duplicates") {
     throw new SupabaseError(
       "not_found",
       `pending relation changeset #${number} not found in space ${spaceId}`,
+    );
+  }
+  // merge_draft 키 자체가 없는 것(정상, 초안 생성 실패 등)과 달리 키는 있는데
+  // DigestDraftSchema 검증에 실패한 건 쓰기 쪽(worker.ts attachMergeDrafts)과 스키마가
+  // 드리프트했다는 뜻이라 conventions.md의 "예상 밖 에러는 report" 원칙대로 보고한다 —
+  // mergeDraft는 이미 null로 대체돼 있어 화면은 그대로 정상 동작한다(격리 원칙).
+  if (proposal.type === "duplicates" && proposal.mergeDraftInvalid) {
+    Sentry.captureException(
+      new Error(
+        `pending relation changeset ${row.id} has an invalid merge_draft shape`,
+      ),
+      {
+        tags: { component: "changeset-detail-service", step: "merge-draft" },
+        extra: { changesetId: row.id },
+      },
     );
   }
 
@@ -531,12 +559,22 @@ export async function getPendingRelationByNumber(args: {
     fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
   ]);
 
+  const body: PendingRelationBody =
+    proposal.type === "conflicts"
+      ? { kind: "conflict_pending", from, to }
+      : {
+          kind: "duplicate_pending",
+          keeper: from,
+          duplicate: to,
+          mergeDraft: proposal.mergeDraft,
+        };
+
   return {
     changesetId: row.id,
     changesetNumber: row.number,
     createdAt: row.created_at,
     reviewerId: source.author_id,
     reviewerName: source.author_name,
-    body: { kind: "conflict_pending", from, to },
+    body,
   };
 }

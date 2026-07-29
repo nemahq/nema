@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as Sentry from "@sentry/node";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
@@ -6,6 +7,8 @@ import {
   getChangesetByNumber,
   getPendingRelationByNumber,
 } from "./changeset-detail-service";
+
+vi.mock("@sentry/node", () => ({ captureException: vi.fn() }));
 
 const SPACE_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const DIGEST_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -787,6 +790,10 @@ describe("getChangesetByNumber", () => {
 });
 
 describe("getPendingRelationByNumber", () => {
+  beforeEach(() => {
+    vi.mocked(Sentry.captureException).mockClear();
+  });
+
   it("conflicts open — A·B 스냅샷·리뷰어·sourceField/sourceFieldIndex를 돌려준다", async () => {
     const supabase = mockSupabase({
       changesets: [
@@ -843,6 +850,9 @@ describe("getPendingRelationByNumber", () => {
     expect(result.reviewerId).toBe("user-1");
     expect(result.reviewerName).toBe("제출자");
     expect(result.body.kind).toBe("conflict_pending");
+    if (result.body.kind !== "conflict_pending") {
+      throw new Error("unreachable");
+    }
     expect(result.body.from).toMatchObject({
       statementId: STATEMENT_A_ID,
       sourceField: "reason",
@@ -855,7 +865,17 @@ describe("getPendingRelationByNumber", () => {
     });
   });
 
-  it("duplicates open — 이 화면은 conflicts 전용이라 NOT_FOUND", async () => {
+  it("duplicates open — keeper/duplicate 스냅샷·리뷰어와 함께 병합 초안을 돌려준다", async () => {
+    const mergeDraft = {
+      title: "병합 제목",
+      description: "병합 설명",
+      body: { type: "decision" },
+      topics: [],
+      tags: [],
+      referenceIds: [],
+      newReferenceKeys: [],
+      externalUrls: [],
+    };
     const supabase = mockSupabase({
       changesets: [
         {
@@ -873,6 +893,183 @@ describe("getPendingRelationByNumber", () => {
                 type: "duplicates",
                 from_id: STATEMENT_A_ID,
                 to_id: STATEMENT_B_ID,
+                merge_draft: mergeDraft,
+              },
+            },
+          ],
+        },
+      ],
+      sources: [{ id: "src-p2", author_id: "user-2", author_name: "제출자2" }],
+      statements: [
+        {
+          id: STATEMENT_A_ID,
+          content: "진술 A",
+          status: "active",
+          digest_id: DIGEST_A_ID,
+          source_field: "reason",
+          source_field_index: null,
+        },
+        {
+          id: STATEMENT_B_ID,
+          content: "진술 B",
+          status: "active",
+          digest_id: DIGEST_B_ID,
+          source_field: "tradeoff",
+          source_field_index: 1,
+        },
+      ],
+      digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
+    });
+
+    const result = await getPendingRelationByNumber({
+      supabase,
+      spaceId: SPACE_ID,
+      number: 21,
+    });
+
+    expect(result.reviewerId).toBe("user-2");
+    expect(result.reviewerName).toBe("제출자2");
+    expect(result.body.kind).toBe("duplicate_pending");
+    if (result.body.kind !== "duplicate_pending") {
+      throw new Error("unreachable");
+    }
+    // 방향 규약: from=keeper, to=duplicate.
+    expect(result.body.keeper.statementId).toBe(STATEMENT_A_ID);
+    expect(result.body.duplicate.statementId).toBe(STATEMENT_B_ID);
+    expect(result.body.mergeDraft).toEqual(mergeDraft);
+  });
+
+  it("duplicates open — 병합 초안 생성 실패(merge_draft 없음) — mergeDraft: null로 내려간다", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-p2b",
+          space_id: SPACE_ID,
+          number: 23,
+          type: "relation",
+          status: "open",
+          source_id: "src-p2b",
+          created_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              target_type: "relation",
+              data: {
+                type: "duplicates",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
+              },
+            },
+          ],
+        },
+      ],
+      sources: [{ id: "src-p2b", author_id: "user-2", author_name: "제출자2" }],
+      statements: [
+        {
+          id: STATEMENT_A_ID,
+          content: "진술 A",
+          status: "active",
+          digest_id: DIGEST_A_ID,
+        },
+        {
+          id: STATEMENT_B_ID,
+          content: "진술 B",
+          status: "active",
+          digest_id: DIGEST_B_ID,
+        },
+      ],
+      digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
+    });
+
+    const result = await getPendingRelationByNumber({
+      supabase,
+      spaceId: SPACE_ID,
+      number: 23,
+    });
+
+    expect(result.body.kind).toBe("duplicate_pending");
+    if (result.body.kind !== "duplicate_pending") {
+      throw new Error("unreachable");
+    }
+    expect(result.body.mergeDraft).toBeNull();
+    // 키 자체가 없는(정상) 경우까지 보고하면 노이즈다 — 아래 "형식이 깨짐" 케이스만 보고돼야 한다.
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("duplicates open — merge_draft 키는 있는데 DigestDraftSchema 검증 실패(쓰기 쪽과 스키마 드리프트) — mergeDraft: null + Sentry 보고", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-p2c",
+          space_id: SPACE_ID,
+          number: 25,
+          type: "relation",
+          status: "open",
+          source_id: "src-p2c",
+          created_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              target_type: "relation",
+              data: {
+                type: "duplicates",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
+                // title 누락 — DigestDraftSchema.min(1) 위반으로 안전하게 형식 깨짐을 재현.
+                merge_draft: { description: "설명만 있음" },
+              },
+            },
+          ],
+        },
+      ],
+      sources: [{ id: "src-p2c", author_id: "user-2", author_name: "제출자2" }],
+      statements: [
+        {
+          id: STATEMENT_A_ID,
+          content: "진술 A",
+          status: "active",
+          digest_id: DIGEST_A_ID,
+        },
+        {
+          id: STATEMENT_B_ID,
+          content: "진술 B",
+          status: "active",
+          digest_id: DIGEST_B_ID,
+        },
+      ],
+      digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
+    });
+
+    const result = await getPendingRelationByNumber({
+      supabase,
+      spaceId: SPACE_ID,
+      number: 25,
+    });
+
+    expect(result.body.kind).toBe("duplicate_pending");
+    if (result.body.kind !== "duplicate_pending") {
+      throw new Error("unreachable");
+    }
+    expect(result.body.mergeDraft).toBeNull();
+    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+  });
+
+  it("supports open(낮은 확신도 확신 관계) — conflicts/duplicates 전용 화면이라 NOT_FOUND", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-p4",
+          space_id: SPACE_ID,
+          number: 24,
+          type: "relation",
+          status: "open",
+          source_id: "src-p4",
+          created_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              target_type: "relation",
+              data: {
+                type: "supports",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
               },
             },
           ],
@@ -881,7 +1078,7 @@ describe("getPendingRelationByNumber", () => {
     });
 
     await expect(
-      getPendingRelationByNumber({ supabase, spaceId: SPACE_ID, number: 21 }),
+      getPendingRelationByNumber({ supabase, spaceId: SPACE_ID, number: 24 }),
     ).rejects.toMatchObject({ code: "not_found" });
   });
 
