@@ -31,7 +31,11 @@ export function LabelDraftEditPopover({
   return (
     <Popover open={open} onOpenChange={onOpenChange} modal>
       <PopoverTrigger asChild>
-        <HoverIcon active={open} aria-label={t("common.edit_action")}>
+        <HoverIcon
+          active={open}
+          aria-label={t("common.edit_action")}
+          className="group-hover:opacity-100"
+        >
           <Ellipsis className="size-3" />
         </HoverIcon>
       </PopoverTrigger>
