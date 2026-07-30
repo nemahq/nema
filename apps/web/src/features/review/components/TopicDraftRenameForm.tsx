@@ -30,19 +30,25 @@ export function TopicDraftRenameForm({
   const duplicate = isDuplicateTitle(trimmedTitle);
   const submittable = trimmedTitle !== "" && !duplicate;
 
-  // TagDraftRenameForm과 같은 언마운트-커밋 패턴 — 상세 이유는 그쪽 주석 참고.
+  // TagDraftRenameForm과 같은 언마운트-커밋 패턴 — 상세 이유(초깃값과 비교해 실제
+  // 변경 시에만 커밋하는 이유 포함)는 그쪽 주석 참고.
+  const [initialTitle] = useState(title);
   const latestRef = useRef({ trimmedTitle, submittable, onCommitText });
   useEffect(function syncLatest() {
     latestRef.current = { trimmedTitle, submittable, onCommitText };
   });
-  useEffect(function commitOnClose() {
-    return () => {
-      const latest = latestRef.current;
-      if (latest.submittable) {
-        latest.onCommitText(latest.trimmedTitle);
-      }
-    };
-  }, []);
+  useEffect(
+    function commitOnClose() {
+      return () => {
+        const latest = latestRef.current;
+        const changed = latest.trimmedTitle !== initialTitle;
+        if (latest.submittable && changed) {
+          latest.onCommitText(latest.trimmedTitle);
+        }
+      };
+    },
+    [initialTitle],
+  );
 
   function getTitleError() {
     if (trimmedTitle === "") {

@@ -55,9 +55,8 @@ function TagColorGridPicker({
 
 // 편집 팝오버용 — 세로 리스트라 이름 텍스트를 바로 나란히 보여줄 수 있어 Tooltip이
 // 필요 없다. 현재 값은 배경색 채움이 아니라 우측 체크 표시로만 강조한다 — 배경
-// 강조는 ComboboxItem의 active가 이미 hover와 같은 축(fg-primary 틴트)이라 옅은
-// 파스텔 배경 위에서 둘이 구분되지 않는다. readOnly는 켜지 않아 값을 계속 다시
-// 골라 바꿀 수 있다.
+// 채움(hover와 같은 fg-primary 틴트 축)은 옅은 파스텔 스와치 위에서 hover 상태와
+// 구분되지 않아 포기했다. readOnly는 켜지 않아 값을 계속 다시 골라 바꿀 수 있다.
 function TagColorListPicker({
   value,
   onChange,

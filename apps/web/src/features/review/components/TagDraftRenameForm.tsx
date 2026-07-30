@@ -50,6 +50,14 @@ export function TagDraftRenameForm({
   // 이 effect가 다시 돌지 않게 한다 — 그래야 cleanup이 "진짜 언마운트" 한 번에만
   // 실행된다. 유효하지 않은 값(빈 이름·중복 등)으로 닫히면 조용히 버려진다 —
   // 리뷰 화면의 다른 곳과 같이, 잘못된 값을 저장하느니 아무것도 안 하는 쪽을 택한다.
+  // 초깃값도 같이 기억해 둔다 — 아무것도 안 고치고 닫아도 무조건 커밋해버리면
+  // (StrictMode의 mount→cleanup→mount 포함) redo 스택이 매번 비워지고 불필요한
+  // 자동저장까지 걸린다. 실제로 바뀐 값일 때만 커밋한다.
+  // ref가 아니라 useState — 마운트 시점 값 딱 한 번만 필요하고 이후 갱신은
+  // 없으니, setter는 그냥 안 쓴다(다시 대입할 일이 없어 useRef를 쓰면 그
+  // eslint-plugin-react-hooks가 cleanup에서 읽는 걸 DOM ref로 오인해 경고한다).
+  const [initialTitle] = useState(title);
+  const [initialDescription] = useState(description);
   const latestRef = useRef({
     trimmedTitle,
     trimmedDescription,
@@ -64,14 +72,23 @@ export function TagDraftRenameForm({
       onCommitText,
     };
   });
-  useEffect(function commitOnClose() {
-    return () => {
-      const latest = latestRef.current;
-      if (latest.submittable) {
-        latest.onCommitText(latest.trimmedTitle, latest.trimmedDescription);
-      }
-    };
-  }, []);
+  useEffect(
+    function commitOnClose() {
+      return () => {
+        const latest = latestRef.current;
+        const changed =
+          latest.trimmedTitle !== initialTitle ||
+          latest.trimmedDescription !== initialDescription;
+        if (latest.submittable && changed) {
+          latest.onCommitText(latest.trimmedTitle, latest.trimmedDescription);
+        }
+      };
+      // initialTitle/initialDescription은 마운트 이후로 절대 안 바뀌니(setter 미사용)
+      // 여기 들어와도 이 effect가 다시 도는 일은 없다 — cleanup은 여전히 진짜
+      // 언마운트 한 번에만 실행된다.
+    },
+    [initialTitle, initialDescription],
+  );
 
   function getTitleError() {
     if (trimmedTitle === "") {
