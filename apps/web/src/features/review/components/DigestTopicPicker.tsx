@@ -68,10 +68,12 @@ export function DigestTopicPicker({
             topics.length === 0 ? t("review.topic_add_action") : undefined
           }
           className={cn(
-            // min-h-6 — DigestTagPicker와 같은 이유: 신규(size-5=20px "+" 배지)와
-            // 채워진 상태(텍스트 줄 높이 ~16.8px)의 내용물 자체 높이가 달라서,
-            // border-b를 공통으로 맞춘 것만으로는 이 차이가 안 없어진다.
-            "group relative -mb-px flex min-h-6 cursor-pointer items-center gap-1 border-b border-transparent text-left disabled:pointer-events-none disabled:opacity-50",
+            // min-h-5 — 신규(size-5=20px "+" 배지)와 채워진 상태(텍스트 줄 높이
+            // ~16.8px)의 내용물 자체 높이가 달라서, border-b를 공통으로 맞춘 것만으론
+            // 이 차이가 안 없어진다. size-5 배지와 정확히 같은 20px로 맞춰 밑줄이
+            // 텍스트에 더 붙게 하면서도(min-h-6 대비 위아래 여백 축소) 배지가 눌리진
+            // 않는 최소값.
+            "group relative -mb-px flex min-h-5 cursor-pointer items-center gap-1 border-b border-transparent text-left disabled:pointer-events-none disabled:opacity-50",
             topics.length > 0
               ? "text-fg-primary hover:border-current data-[state=open]:border-current"
               : "before:absolute before:inset-y-0 before:left-0 before:-right-10 before:content-['']",

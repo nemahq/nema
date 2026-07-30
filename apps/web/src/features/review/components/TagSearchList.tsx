@@ -28,6 +28,9 @@ interface TagSearchListProps {
   query: string;
   // TopicSearchList와 같은 이유로 파생값(Set·이름 배열) 대신 원본 배열을 받는다.
   tags: ReviewTagDraft[];
+  // "만들기" 미리보기 Badge에 씌울 색 — TagEditPanel이 TagCreateForm과 공유하는
+  // 값을 그대로 받아 넘긴다(TagCreateForm.tsx의 initialColor 주석 참고).
+  createPreviewColor: TagColor;
   onSelectExisting: (tag: ReviewTag) => void;
   onStartCreate: (title: string) => void;
   onRenameDraft: (
@@ -43,6 +46,7 @@ const getTagLabel = (tag: { title: string }) => tag.title;
 function TagSearchListContent({
   query,
   tags,
+  createPreviewColor,
   onSelectExisting,
   onStartCreate,
   onRenameDraft,
@@ -52,13 +56,12 @@ function TagSearchListContent({
   // 동시에 patch하려다 서로의 변경을 덮어쓸 수 있다.
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const { candidates, trimmedQuery, hasExactMatch, canCreate } =
-    buildLabelSearchState({
-      items: tagList.tags,
-      getLabel: getTagLabel,
-      query,
-      existingLabels: tags.map((tag) => tag.title),
-    });
+  const { candidates, trimmedQuery, canCreate } = buildLabelSearchState({
+    items: tagList.tags,
+    getLabel: getTagLabel,
+    query,
+    existingLabels: tags.map((tag) => tag.title),
+  });
   const attachedIds = new Set(tags.map((tag) => tag.registryId));
   const draftMatches = filterDraftLabelCandidates(tags, query);
   const activeRegistryTitles = getActiveLabelTitles(tagList.tags, getTagLabel);
@@ -72,8 +75,8 @@ function TagSearchListContent({
     <LabelSearchList
       trimmedQuery={trimmedQuery}
       hasCandidates={candidates.length > 0 || draftMatches.length > 0}
-      hasExactMatch={hasExactMatch}
       canCreate={canCreate}
+      createPreviewColor={createPreviewColor}
       onStartCreate={onStartCreate}
     >
       {draftMatches.map((draft) => (
@@ -97,10 +100,12 @@ function TagSearchListContent({
                   digestLabels: tags,
                   excludeId: draft.id,
                 })}
-                onSubmit={(title, description, color) => {
-                  onRenameDraft(draft.id, title, description, color);
-                  setEditingId(null);
-                }}
+                onCommitText={(title, description) =>
+                  onRenameDraft(draft.id, title, description, draft.color)
+                }
+                onColorChange={(color) =>
+                  onRenameDraft(draft.id, draft.title, draft.description, color)
+                }
               />
             </LabelDraftEditPopover>
           }

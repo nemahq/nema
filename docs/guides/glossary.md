@@ -25,6 +25,21 @@
 | 스레드 | Thread | Thread | `topics` (주제 1개 = 스레드 1개) | 같은 Topic이 붙은 것들이 모여 이루는 하나의 흐름. 별도로 저장되지 않고, 필요할 때 계산되어 나타난다 |
 | 해설 | Narration | Narration | Narration | Context를 근거로 질문에 답하는 산문. 근거에 없는 내용은 지어내지 않는다 |
 
+## Tag 색상 — 코드 키와 표시 이름
+
+Tag의 `color`(`TagColor`) 값은 DB enum·CSS 토큰(`--tag-slate` 등)·Tailwind 클래스까지 물려 있어 코드 용어를 그대로 유지하고, 화면에 보이는 이름만 `TAG_COLOR_LABEL_KEY`(`apps/web/src/features/review/constants.ts`)를 거쳐 tolgee 문구로 바꾼다 — 위 표들의 "코드 용어 vs 제품 용어" 원칙을 색상에도 그대로 적용한 것. `color: "cyan"`인데 화면엔 "파랑"/"Blue"가 뜨는 게 정상이니, 코드에서 값을 보고 화면 이름과 다르다고 버그로 오인하지 않는다.
+
+| 코드 용어 (`TagColor`) | 제품 용어 (한) | 제품 용어 (영) |
+| --- | --- | --- |
+| `slate` | 회색 | Gray |
+| `cyan` | 파랑 | Blue |
+| `sage` | 초록 | Green |
+| `olive` | 노랑 | Yellow |
+| `terracotta` | 주황 | Orange |
+| `rose` | 분홍 | Pink |
+| `mauve` | 마젠타 | Magenta |
+| `violet` | 보라 | Purple |
+
 ## 소유·사람 — 누구의 것인가
 
 | 제품 용어 (한) | 제품 용어 (영) | 개념 용어 | 코드 용어 | 역할 |

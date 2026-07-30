@@ -249,12 +249,16 @@ export function ReviewDraftProvider({ children }: ReviewDraftProviderProps) {
         // 다시 시도하게 한다 — 조용히 유실시키지 않는다.
         autosaveEntry.dirty = true;
         const status = classifyReviewSaveError(error);
-        // clean → 실패로 처음 넘어가는 순간에만 토스트를 띄운다 — 이 mutation은
-        // skipGlobalToast라 전역 토스트가 안 뜨는데, 배지만으론 유저가 눈치
-        // 못 채고 계속 편집하다 그 사이 작성분을 잃을 수 있다. 재시도가 반복
-        // 실패해도(네트워크 단절 등) 이미 실패 상태면 또 안 띄워 토스트가
-        // 안 쌓인다 — 배지(SaveStatusIndicator)가 계속 남아 그 사이 상태를 본다.
-        if (autosaveEntry.status.kind === "clean") {
+        const previousStatus = autosaveEntry.status;
+        // clean → 실패로 처음 넘어가는 순간, 또는 실패 원인 자체가 바뀌는 순간에만
+        // 토스트를 띄운다 — 이 mutation은 skipGlobalToast라 전역 토스트가 안 뜨는데,
+        // 배지(SaveStatusIndicator)는 error/conflict 같은 대분류만 보여주고
+        // status.message(구체적 원인)는 어디에도 노출하지 않는다. 같은 원인으로
+        // 반복 실패해도(네트워크 단절 등) 또 안 띄워 토스트가 안 쌓인다.
+        const isNewFailureReason =
+          previousStatus.kind === "clean" ||
+          previousStatus.message !== status.message;
+        if (isNewFailureReason) {
           toast.error(status.message);
         }
         setEntryStatus(autosaveEntry, status);

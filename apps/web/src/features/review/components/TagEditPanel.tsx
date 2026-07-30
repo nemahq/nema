@@ -6,7 +6,7 @@ import {
   TAG_TITLE_MAX_LENGTH,
   type TagColor,
 } from "@nema-io/shared";
-import { Chip, Separator } from "@nema-io/weave";
+import { Chip, getRandomTagColor, Separator } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 import { isDuplicateLabelName } from "@web/utils/labelSearch";
@@ -31,6 +31,14 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [creatingTitle, setCreatingTitle] = useState<string | null>(null);
+  // 검색 목록의 "만들기" 미리보기 Badge와 생성 폼의 이름 Badge가 같은 색을
+  // 보여줘야 해서, 랜덤 배정을 TagCreateForm 안이 아니라 여기서 한다(그 폼이
+  // 실제로 마운트되기 전인 미리보기 단계에도 색이 필요하기 때문). 생성 폼을
+  // 나갈 때(제출·뒤로 둘 다) 다시 뽑아, 같은 팝오버 세션에서 연달아 만들어도
+  // 매번 새로 랜덤 배정한다(같은 색이 다시 뽑힐 수도 있다 — 이전 값 제외 없음).
+  const [previewColor, setPreviewColor] = useState<TagColor>(() =>
+    getRandomTagColor(),
+  );
   const atMax = tags.length >= DIGEST_TAGS_MAX;
 
   // 항목 id 생성 시점은 TopicEditPanel과 같은 이유로 여기다(그 주석 참고).
@@ -54,6 +62,13 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
     setQuery("");
   }
 
+  // 생성 폼을 나가는 두 경로(제출·뒤로) 공통 — 다음 미리보기가 이번과 다른
+  // 색을 보여주도록 여기서 같이 재배정한다.
+  function closeCreateForm() {
+    setCreatingTitle(null);
+    setPreviewColor(getRandomTagColor());
+  }
+
   function handleSubmitNew(
     title: string,
     description: string,
@@ -64,7 +79,7 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
       { id: crypto.randomUUID(), registryId: null, title, description, color },
     ]);
     setQuery("");
-    setCreatingTitle(null);
+    closeCreateForm();
   }
 
   function handleRenameDraft(
@@ -89,11 +104,12 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
     return (
       <TagCreateForm
         title={creatingTitle}
+        initialColor={previewColor}
         duplicateTitle={isDuplicateLabelName(
           creatingTitle,
           tags.map((tag) => tag.title),
         )}
-        onBack={() => setCreatingTitle(null)}
+        onBack={closeCreateForm}
         onSubmit={(description, color) =>
           handleSubmitNew(creatingTitle.trim(), description, color)
         }
@@ -134,6 +150,7 @@ export function TagEditPanel({ tags, disabled, onChange }: TagEditPanelProps) {
         <TagSearchList
           query={query}
           tags={tags}
+          createPreviewColor={previewColor}
           onSelectExisting={handleSelectExisting}
           onStartCreate={setCreatingTitle}
           onRenameDraft={handleRenameDraft}
