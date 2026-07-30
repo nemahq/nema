@@ -816,6 +816,16 @@ describe("gateProposals", () => {
     ]);
   });
 
+  it("충돌은 애매해도(단독 제안) pending — 버려지지 않는다", () => {
+    const { applied, pending } = gate([
+      { from: "N0", to: "E0", type: "conflicts", confident: false },
+    ]);
+    expect(applied).toHaveLength(0);
+    expect(pending).toEqual([
+      { from_id: NEW_0, to_id: OLD_0, type: "conflicts" },
+    ]);
+  });
+
   it("conflicts의 conflictTitle은 그대로 conflict_title로 옮겨진다", () => {
     const { pending } = gate([
       {
@@ -858,13 +868,24 @@ describe("gateProposals", () => {
     ]);
   });
 
-  it("애매는 종류 무관 pending", () => {
+  it("애매한 supports·replaces·resolves는 버린다 — applied도 pending도 아님", () => {
     const { applied, pending } = gate([
       { from: "N0", to: "E0", type: "replaces", confident: false },
       { from: "E1", to: "N1", type: "supports", confident: false },
+      { from: "N0", to: "E1", type: "resolves", confident: false },
     ]);
     expect(applied).toHaveLength(0);
-    expect(pending).toHaveLength(2);
+    expect(pending).toHaveLength(0);
+  });
+
+  it("애매해서 버려진 제안이 seen을 선점해 뒤이은 같은 쌍의 확신 제안까지 삼키지 않는다", () => {
+    const { applied } = gate([
+      { from: "N0", to: "E0", type: "replaces", confident: false },
+      { from: "N0", to: "E0", type: "replaces", confident: true },
+    ]);
+    expect(applied).toEqual([
+      { from_id: NEW_0, to_id: OLD_0, type: "replaces" },
+    ]);
   });
 
   it("모르는 라벨·자기 관계·기존↔기존은 버린다", () => {
@@ -1717,13 +1738,17 @@ describe("잇기 분할 통합 — 장문 source", () => {
 });
 
 // 교차 dedup — sub-batch로 갈려 같은 쌍이 applied·pending 양쪽에 살아남는 걸 막는다
-// (gateProposals의 XOR 불변식이 콜 단위라 깨지는 지점, applied 우선).
+// (gateProposals의 XOR 불변식이 콜 단위라 깨지는 지점, applied 우선). 지금 게이트에서는
+// applied·pending의 타입이 겹치지 않아(supports/replaces/resolves vs conflicts/duplicates)
+// 실제 gateProposals 결과로는 이 교차가 재현되지 않는다 — 아래 케이스는 입력을 손으로
+// 만들어 필터 자체(defense-in-depth)를 검증하는 것이지, 지금 도달 가능한 프로덕션
+// 시나리오를 재현하는 게 아니다.
 describe("reconcileChanges", () => {
   const A = "a0000000-0000-4000-a000-000000000001";
   const B = "a0000000-0000-4000-a000-000000000002";
   const C = "a0000000-0000-4000-a000-000000000003";
 
-  it("같은 쌍이 applied·pending 양쪽이면 pending에서 빼고 applied만 남긴다", () => {
+  it("같은 쌍이 applied·pending 양쪽이면 pending에서 빼고 applied만 남긴다(입력은 수동 구성 — 방어선 검증)", () => {
     const out = reconcileChanges(
       [{ from_id: A, to_id: B, type: "supports" }],
       [{ from_id: A, to_id: B, type: "supports" }],

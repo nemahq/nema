@@ -323,9 +323,13 @@ async function resolveBody(args: {
       return { kind: "unsupported" };
     }
 
-    // supports/replaces/resolves — 확신 관계. 낮은 확신도는 conflicts/duplicates와
-    // 똑같이 open 제안으로 갔다가 reject_pending_relation으로 discarded될 수 있다
-    // (apply_relation_changesets p_pending 분기, worker.ts의 confident 게이트).
+    // supports/replaces/resolves — 확신 관계. 이 슬라이스부터 낮은 확신도는
+    // worker.ts의 gateProposals가 open 제안조차 만들지 않고 곧바로 버린다 — 그래서
+    // 지금 새로 생기는 이 타입 changeset은 전부 confident applied뿐이다. 아래
+    // discarded 분기는 그 이전(gateProposals가 conflicts/duplicates와 동일하게
+    // 애매한 supports/replaces/resolves도 open pending으로 올리던 시절)에 만들어진
+    // 레거시 행을 읽기 위해서만 남아 있다 — closed+discarded로 이미 닫힌 그 옛 행들이
+    // 여전히 존재하므로 조회 시 여기서 처리한다.
     // 확신 적용은 apply_relation_changesets의 자동 루프가 배치당 changeset 1개에
     // 성공한 관계마다 change 행을 쌓으므로(사람 판정 1쌍=1changeset과 다름) 전부 모은다.
     if (outcome === "discarded") {

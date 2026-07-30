@@ -142,7 +142,7 @@ SELECT EXISTS(SELECT 1 FROM changesets r
 
 ## 5. pending 관계 해소
 
-엔진이 애매·충돌이라 미뤄둔 관계 제안. pending 동안 **관계 행은 없고**, 제안은 `relation`·`pending` 변경셋의 `changes.data`(예약된 `target_id` + `{type, from_id, to_id}`)에만 산다(relation-design §6).
+엔진이 충돌·중복이라 미뤄둔 관계 제안(확신 여부와 무관 — 애매한 supports·replaces·resolves는 이 상태에 이르기 전에 이미 버려진다). pending 동안 **관계 행은 없고**, 제안은 `relation`·`pending` 변경셋의 `changes.data`(예약된 `target_id` + `{type, from_id, to_id}`)에만 산다(relation-design §6).
 
 ### 5.1 적용 — pending→applied, 행 생성
 
