@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, linkOptions, useNavigate } from "@tanstack/react-router";
 
-import { Button } from "@nema-io/weave";
+import { Badge, Button } from "@nema-io/weave";
 
 import { changesetDisplayState } from "@web/features/review/constants";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
@@ -57,6 +57,30 @@ function ChangesetRecordContent() {
 
   function renderHeaderActions() {
     if (changesetDetail.outcome === "applied") {
+      // 되돌리기 버튼은 "지금 그래프에 살아있는 걸 만든 행"에만 붙는다(review-flow.md
+      // #26 규칙 4) — 이미 되돌려졌으면(reverted) 버튼 대신 그 재판정 초안으로 가는
+      // 링크를 보여준다. 그 초안이 이미 확정·버려져 openRevertNumber가 없으면(정책상
+      // "그 리뷰가 확정되면 버튼이 그쪽으로 옮겨간다") 여기선 더 보여줄 게 없다.
+      if (changesetDetail.reverted) {
+        if (changesetDetail.openRevertNumber === null) {
+          return null;
+        }
+        return (
+          <Button variant="neutral" className="shrink-0" asChild>
+            <Link
+              {...linkOptions({
+                to: "/space/$spacePublicId/changesets/$changesetNumber",
+                params: {
+                  spacePublicId,
+                  changesetNumber: String(changesetDetail.openRevertNumber),
+                },
+              })}
+            >
+              {t("review.detail_view_reopened_review_action")}
+            </Link>
+          </Button>
+        );
+      }
       return (
         <Button
           variant="neutral"
@@ -92,6 +116,12 @@ function ChangesetRecordContent() {
   }
 
   const title = changesetDisplayTitle(changesetDetail, t);
+  // 확신 자동 적용 배치는 목록 행과 같은 "연결 {count}" 총합을 헤더에 재사용한다
+  // (카드별 breakdown이나 개수 제한은 만들지 않는다 — review-flow.md 관련 슬라이스).
+  const confidentRelationCount =
+    changesetDetail.body.kind === "relation_confident_applied"
+      ? changesetDetail.body.relations.length
+      : null;
 
   return (
     <ChangesetDetailLayout title={title}>
@@ -103,6 +133,13 @@ function ChangesetRecordContent() {
           changesetDetail.outcome,
           changesetDetail.number,
         )}
+        badge={
+          confidentRelationCount !== null ? (
+            <Badge variant="outline" shape="pill" size="sm">
+              {t("review.effect_relation", { count: confidentRelationCount })}
+            </Badge>
+          ) : undefined
+        }
         time={changesetDetail.updatedAt}
         actions={renderHeaderActions()}
       />

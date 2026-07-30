@@ -4,6 +4,7 @@ import { initI18n } from "@server/infra/i18n";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   buildRevertedPredicate,
+  classifyReopenShape,
   composeRevertTitle,
   listChangesets,
   resolveDuplicateRelation,
@@ -151,6 +152,63 @@ describe("buildRevertedPredicate", () => {
       { id: "R2", revertsId: "R1", reopenShaped: false },
     ]);
     expect(isReverted("C")).toBe(true);
+  });
+});
+
+// listChangesets(relationJudgment 판정)와 getChangesetByNumber(revert.open의
+// reopenShape 판정, changesetDetailRegistry의 화면 라우팅)가 공유하는 판정 로직 —
+// 둘 중 하나만 테스트하면 나머지가 조용히 드리프트할 수 있어 여기서 직접 고정한다.
+describe("classifyReopenShape", () => {
+  it("digest create 행이 있으면 ingestion", () => {
+    const shape = classifyReopenShape([
+      { targetType: "digest", action: "create", data: null },
+    ]);
+    expect(shape).toBe("ingestion");
+  });
+
+  it("conflicts 제안 relation 행이 있으면 relation_judgment", () => {
+    const shape = classifyReopenShape([
+      {
+        targetType: "relation",
+        action: "create",
+        data: { type: "conflicts" },
+      },
+    ]);
+    expect(shape).toBe("relation_judgment");
+  });
+
+  it("duplicates 제안 relation 행이 있으면 relation_judgment", () => {
+    const shape = classifyReopenShape([
+      {
+        targetType: "relation",
+        action: "create",
+        data: { type: "duplicates" },
+      },
+    ]);
+    expect(shape).toBe("relation_judgment");
+  });
+
+  it("확신 관계(supports 등) relation 행만 있으면 둘 다 아니다(null)", () => {
+    const shape = classifyReopenShape([
+      { targetType: "relation", action: "create", data: { type: "supports" } },
+    ]);
+    expect(shape).toBeNull();
+  });
+
+  it("digest create와 duplicates 제안이 함께 있으면 ingestion 우선(SQL revert_changeset과 같은 우선순위)", () => {
+    const shape = classifyReopenShape([
+      { targetType: "digest", action: "create", data: null },
+      {
+        targetType: "relation",
+        action: "create",
+        data: { type: "duplicates" },
+      },
+    ]);
+    expect(shape).toBe("ingestion");
+  });
+
+  it("아무 것도 없으면 null", () => {
+    expect(classifyReopenShape([])).toBeNull();
   });
 });
 
@@ -313,6 +371,88 @@ describe("listChangesets", () => {
     await listChangesets({ supabase: client, spaceId: "space-1", limit: 10 });
 
     expect(chains[0].neq).toHaveBeenCalledWith("type", "manual");
+  });
+
+  it("closed_by_id/closed_by_name을 closedById/closedByName으로 그대로 옮긴다", async () => {
+    const row = {
+      ...makeChangesetRow(1),
+      closed_by_id: "user-1",
+      closed_by_name: "Kyle",
+    };
+    const { client } = mockSupabaseSequence([{ data: [row] }, { data: [] }]);
+
+    const page = await listChangesets({
+      supabase: client,
+      spaceId: "space-1",
+      limit: 10,
+    });
+
+    expect(page.changesets[0]).toMatchObject({
+      closedById: "user-1",
+      closedByName: "Kyle",
+    });
+  });
+
+  it("relation 타입이 충돌·중복 판정 제안 행을 가지면 relationJudgment=true", async () => {
+    const row = {
+      ...makeChangesetRow(1),
+      type: "relation" as const,
+      changes: [
+        {
+          target_type: "relation",
+          action: "create",
+          data: { type: "conflicts" },
+        },
+      ],
+    };
+    const { client } = mockSupabaseSequence([{ data: [row] }, { data: [] }]);
+
+    const page = await listChangesets({
+      supabase: client,
+      spaceId: "space-1",
+      limit: 10,
+    });
+
+    expect(page.changesets[0].relationJudgment).toBe(true);
+  });
+
+  it("relation 타입이 확신 관계 행만 가지면 relationJudgment=false(확신 자동 적용 배치)", async () => {
+    const row = {
+      ...makeChangesetRow(1),
+      type: "relation" as const,
+      changes: [
+        {
+          target_type: "relation",
+          action: "create",
+          data: { type: "supports" },
+        },
+      ],
+    };
+    const { client } = mockSupabaseSequence([{ data: [row] }, { data: [] }]);
+
+    const page = await listChangesets({
+      supabase: client,
+      spaceId: "space-1",
+      limit: 10,
+    });
+
+    expect(page.changesets[0].relationJudgment).toBe(false);
+  });
+
+  it("ingestion 타입은 digest create 행이 있어도 relationJudgment=false(relation 타입 전용 판정)", async () => {
+    const row = {
+      ...makeChangesetRow(1),
+      changes: [{ target_type: "digest", action: "create", data: null }],
+    };
+    const { client } = mockSupabaseSequence([{ data: [row] }, { data: [] }]);
+
+    const page = await listChangesets({
+      supabase: client,
+      spaceId: "space-1",
+      limit: 10,
+    });
+
+    expect(page.changesets[0].relationJudgment).toBe(false);
   });
 });
 

@@ -1,14 +1,17 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 
+import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import type {
   ChangesetStatus,
   ChangesetType,
 } from "@web/features/review/types";
+import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 
+import { ChangesetDetailLayoutSkeleton } from "./ChangesetDetailLayoutSkeleton";
 import { ChangesetNotFound } from "./ChangesetNotFound";
 import { ChangesetRecordScreen } from "./ChangesetRecordScreen";
-import { ChangesetReopenPending } from "./ChangesetReopenPending";
 import { IngestionScreen } from "./IngestionScreen";
 import { RelationJudgmentScreen } from "./RelationJudgmentScreen";
 
@@ -25,6 +28,51 @@ function ImpossibleOpenChangeset(): ReactNode {
   const changesetNumber = useChangesetNumber();
   throw new Error(
     `changeset #${changesetNumber} is open but its type never has an open state`,
+  );
+}
+
+// revert.open은 되돌린 대상이 ingestion이었는지 relation 판정(충돌·중복)이었는지에
+// 따라 재판정 화면이 갈린다 — 그 판정(reopenShape)은 getChangesetByNumber가 changes의
+// 실제 모양으로 이미 계산해 내려준다(classifyReopenShape, 서버와 같은 판정 로직).
+// IngestionScreen/RelationJudgmentScreen 둘 다 spaceId+number만으로 자기 데이터를
+// 새로 구독해(digestReview.get/getPendingRelationByNumber, 둘 다 type IN
+// ('ingestion'|'relation', 'revert') 가드) 그대로 재사용된다 — 이 화면 전용 로직은
+// 필요 없다. revert_changeset RPC가 status='open'을 reopenShape가 있을 때만 만들므로
+// (v_reopen_kind IS NOT NULL) null은 구조적으로 불가능한 상태다.
+function RevertReopenContent(): ReactNode {
+  const spaceId = useCurrentSpaceId();
+  const changesetNumber = useChangesetNumber();
+  const [changesetDetail] = useChangesetDetailSuspenseQuery(
+    spaceId,
+    changesetNumber,
+  );
+  if (changesetDetail.body.kind !== "revert") {
+    throw new Error(
+      `changeset #${changesetNumber} is type='revert' but its detail body isn't`,
+    );
+  }
+  const { reopenShape } = changesetDetail.body;
+  if (reopenShape === "ingestion") {
+    return <IngestionScreen />;
+  }
+  if (reopenShape === "relation_judgment") {
+    return <RelationJudgmentScreen />;
+  }
+  throw new Error(
+    `changeset #${changesetNumber} is an open revert changeset with no reopen shape`,
+  );
+}
+
+// useChangesetDetailSuspenseQuery는 사실 여기서 다시 suspend하지 않는다 —
+// ChangesetDetailRouter(부모, ChangesetDetailScreen.tsx)가 같은 쿼리 키로 이미 fetch를
+// 마친 뒤에만 이 화면이 그려지므로 캐시 히트다. 그래도 이 파일 안에서 훅을 직접 호출하는
+// 이상 진짜 로딩 경로(첫 mount 경합 등)에 대한 방어로 Suspense를 co-locate한다
+// (nema/require-suspense-boundary).
+function RevertReopenScreen(): ReactNode {
+  return (
+    <Suspense fallback={<ChangesetDetailLayoutSkeleton />}>
+      <RevertReopenContent />
+    </Suspense>
   );
 }
 
@@ -61,14 +109,11 @@ const CHANGESET_DETAIL_SCREEN: Record<
     // Changeset 상세가 담당할 몫이 아니다.
     closed: () => <ChangesetNotFound />,
   },
-  // revert의 open은 더 이상 불가능한 상태가 아니다 — ingestion/relation(충돌·중복
-  // 판정) 되돌리기가 재판정 초안으로 여는, 정상적으로 도달 가능한 상태다(백엔드
-  // revert_changeset 재설계 참고). 그 재판정 화면(Digest 리뷰·관계 판정 재사용)
-  // 자체는 다음 슬라이스 몫이라 그때까지는 안내 화면으로 대신한다 — manual과
-  // 달리 여기서 throw하면 되돌리기 버튼을 누른 모든 사용자가 그 자리에서
-  // 크래시를 본다.
+  // revert의 open은 ingestion/relation(충돌·중복 판정) 되돌리기가 재판정 초안으로
+  // 여는, 정상적으로 도달 가능한 상태다(백엔드 revert_changeset 재설계 참고) — 어느
+  // 재판정 화면인지는 RevertReopenScreen이 changes의 실제 모양으로 갈라 보낸다.
   revert: {
-    open: () => <ChangesetReopenPending />,
+    open: () => <RevertReopenScreen />,
     closed: () => <ChangesetRecordScreen />,
   },
 };

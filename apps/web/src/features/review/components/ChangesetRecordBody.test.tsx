@@ -99,6 +99,8 @@ function changesetDetail(
     revertsId: null,
     revertsNumber: null,
     invalidatedById: null,
+    reverted: false,
+    openRevertNumber: null,
     createdAt: "2026-07-01T00:00:00Z",
     updatedAt: "2026-07-01T00:00:00Z",
     body,
@@ -266,7 +268,11 @@ describe("ChangesetRecordBody", () => {
   });
 
   it("revert — revertsNumber로 가는 링크를 보여준다", () => {
-    const detail = changesetDetail({ kind: "revert", revertsNumber: 12 });
+    const detail = changesetDetail({
+      kind: "revert",
+      revertsNumber: 12,
+      reopenShape: null,
+    });
     const { getByText } = render(
       <ChangesetRecordBody changesetDetail={detail} />,
     );

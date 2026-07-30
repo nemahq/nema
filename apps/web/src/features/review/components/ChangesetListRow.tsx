@@ -14,14 +14,16 @@ import {
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import {
-  CHANGESET_ROW_TYPE_SLOTS,
+  changesetBadgeLabelKey,
   type ChangesetDisplayState,
+  changesetShowsEffectSummary,
   changesetStateIcon,
   changesetStateMeta,
 } from "@web/features/review/constants";
 import type { ChangesetType } from "@web/features/review/types";
 import {
   changesetDisplayTitle,
+  changesetRowAuthorLabel,
   summarizeChangesetEffect,
 } from "@web/features/review/utils";
 import { useSpacePublicId } from "@web/hooks/useSpacePublicId";
@@ -35,6 +37,10 @@ interface ChangesetListRowProps {
   createdAt: string;
   effectDigest: number;
   effectReference: number;
+  effectRelation: number;
+  relationJudgment: boolean;
+  authorName: string | null;
+  closedByName: string | null;
   hideDivider?: boolean;
 }
 
@@ -51,19 +57,38 @@ export const ChangesetListRow = memo(function ChangesetListRow({
   createdAt,
   effectDigest,
   effectReference,
+  effectRelation,
+  relationJudgment,
+  authorName,
+  closedByName,
   hideDivider,
 }: ChangesetListRowProps) {
   const { t } = useTranslation();
   // 라우트에서 직접 읽는다 — 목록을 거쳐 내려받으면 행마다 같은 값을 나르는 셈이고,
   // 이 값이 바뀔 땐 어차피 Space가 바뀌어 목록이 통째로 다시 그려진다.
   const spacePublicId = useSpacePublicId();
-  const { badgeLabelKey, showsEffectSummary } = CHANGESET_ROW_TYPE_SLOTS[type];
+  const badgeLabelKey = changesetBadgeLabelKey(type, state);
+  const showsEffectSummary = changesetShowsEffectSummary(
+    type,
+    relationJudgment,
+  );
   const effectSummary = showsEffectSummary
     ? summarizeChangesetEffect(
-        { digest: effectDigest, reference: effectReference },
+        {
+          digest: effectDigest,
+          reference: effectReference,
+          relation: effectRelation,
+        },
         t,
       )
     : null;
+  const authorLabel = changesetRowAuthorLabel({
+    type,
+    state,
+    authorName,
+    closedByName,
+    t,
+  });
   const stateIcon = changesetStateIcon(state);
   const stateLabelKey = changesetStateMeta(state).labelKey;
   const stateIconEl =
@@ -134,6 +159,7 @@ export const ChangesetListRow = memo(function ChangesetListRow({
           <Text as="div" size="xs" color="tertiary">
             #{changesetNumber} · <RelativeTime dateTime={createdAt} />
             {effectSummary && ` · ${effectSummary}`}
+            {` · ${authorLabel}`}
           </Text>
         </div>
       </Link>

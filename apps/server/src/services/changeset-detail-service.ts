@@ -14,7 +14,10 @@ import {
   SupabaseError,
   throwIfSupabaseError,
 } from "@server/infra/supabase-error";
-import { parseRelationProposal } from "@server/services/changeset-service";
+import {
+  classifyReopenShape,
+  parseRelationProposal,
+} from "@server/services/changeset-service";
 
 type ChangesetType = Database["public"]["Enums"]["changeset_type"];
 type ChangesetStatus = Database["public"]["Enums"]["changeset_status"];
@@ -81,7 +84,15 @@ type ChangesetDetailBody =
       }[];
     }
   | { kind: "relation_confident_discarded" }
-  | { kind: "revert"; revertsNumber: number }
+  | {
+      kind: "revert";
+      revertsNumber: number;
+      // status='open'인 재판정 초안일 때만 의미 있다 — changesetDetailRegistry가
+      // 이 값으로 IngestionScreen/RelationJudgmentScreen 중 어느 화면을 열지
+      // 정한다(classifyReopenShape와 같은 판정). 즉시 closed+applied로 끝나는
+      // flip형 되돌리기(manual·확신 관계 대상)는 재판정 화면 자체가 없어 null.
+      reopenShape: "ingestion" | "relation_judgment" | null;
+    }
   | { kind: "unsupported" };
 
 interface ChangesetDetail {
@@ -108,6 +119,14 @@ interface ChangesetDetail {
   revertsId: string | null;
   revertsNumber: number | null;
   invalidatedById: string | null;
+  // 되돌림 여부 — is_changeset_reverted(SQL) 그대로. status='closed'·outcome='applied'인
+  // changeset이 "지금 그래프에 살아있는 걸 만든 행"인지 판정하는 값(review-flow.md #26
+  // 규칙 4) — true면 되돌리기 버튼 대신 재판정 링크(openRevertNumber)를 보여준다.
+  reverted: boolean;
+  // reverted가 true이고, 그 원인이 된 revert changeset이 지금도 status='open'(아직
+  // 판정 중인 재판정 초안)이면 그 number. 이미 확정·버려졌으면 null — "그 리뷰가
+  // 확정되면 버튼이 그쪽으로 옮겨간다"는 정책상 여기선 더 보여줄 링크가 없다.
+  openRevertNumber: number | null;
   createdAt: string;
   updatedAt: string;
   body: ChangesetDetailBody;
@@ -369,7 +388,14 @@ async function resolveBody(args: {
         "revert changeset has no revertsNumber despite reverts_id being NOT NULL",
       );
     }
-    return { kind: "revert", revertsNumber };
+    const reopenShape = classifyReopenShape(
+      changes.map((c) => ({
+        targetType: c.target_type,
+        action: c.action,
+        data: c.data,
+      })),
+    );
+    return { kind: "revert", revertsNumber, reopenShape };
   }
 
   // manual — changeset 목록에 애초에 안 뜨는 타입이라(07-modeling.md) 이 경로를 탈 일이
@@ -429,6 +455,31 @@ export async function getChangesetByNumber(args: {
     revertsNumber,
   });
 
+  // 되돌리기 버튼 노출은 status='closed' AND outcome='applied'일 때만 의미가
+  // 있다(ChangesetRecordScreen) — 나머지 상태는 조회 자체를 생략해 매 상세 조회마다
+  // RPC·쿼리를 추가로 태우지 않는다(review-flow.md #26 규칙 4).
+  let reverted = false;
+  let openRevertNumber: number | null = null;
+  if (row.status === "closed" && row.outcome === "applied") {
+    const { data: revertedResult, error: revertedError } = await supabase.rpc(
+      "is_changeset_reverted",
+      { p_changeset_id: row.id },
+    );
+    throwIfSupabaseError(revertedError);
+    reverted = revertedResult ?? false;
+
+    if (reverted) {
+      const { data: openChild, error: openChildError } = await supabase
+        .from("changesets")
+        .select("number")
+        .eq("reverts_id", row.id)
+        .eq("status", "open")
+        .maybeSingle();
+      throwIfSupabaseError(openChildError);
+      openRevertNumber = openChild?.number ?? null;
+    }
+  }
+
   return {
     id: row.id,
     number: row.number,
@@ -445,6 +496,8 @@ export async function getChangesetByNumber(args: {
     revertsId: row.reverts_id,
     revertsNumber,
     invalidatedById: row.invalidated_by_id,
+    reverted,
+    openRevertNumber,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     body,

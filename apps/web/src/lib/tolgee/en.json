@@ -141,6 +141,7 @@
     "updated_at_label": "Last updated"
   },
   "review": {
+    "author_ai": "Nema",
     "changes_empty_closed": "No reviewed changes.",
     "changes_empty_open": "No changes need review.",
     "changeset_fallback_title": "Change #{number}",
@@ -155,8 +156,6 @@
     "detail_ingestion_discarded_body": "Declined — nothing was created. The source is back in Drafts.",
     "detail_not_found_description": "The link may be wrong, or this is an older item outside the recent list.",
     "detail_not_found_title": "We couldn't find this change",
-    "detail_pending_reopen_body": "The screen for this re-review isn't ready yet. Check back soon.",
-    "detail_pending_reopen_title": "Re-review started",
     "detail_refresh_failed": "Saved, but the screen couldn't refresh. Please refresh manually.",
     "detail_restore_action": "Restore",
     "detail_revert_action": "Revert",
@@ -166,6 +165,7 @@
     "detail_trash_source_dialog_description": "This permanently deletes the source behind this review. Once deleted, this review can't be restored.",
     "detail_trash_source_dialog_title": "Delete the source too?",
     "detail_trash_source_disabled_reason": "The source was already deleted, so this can't be restored.",
+    "detail_view_reopened_review_action": "View re-review",
     "digest_description_placeholder": "No description",
     "digest_field_alternatives": "Alternatives",
     "digest_field_alternatives_placeholder": "What other options were considered?",
@@ -286,6 +286,7 @@
     "topic_remove_action": "Remove {label} topic",
     "type_ingestion": "Organize",
     "type_relation": "Discovery",
+    "type_relation_closed": "Connection",
     "type_revert": "Revert",
     "undo_action": "Undo",
     "viewed_action": "Read"

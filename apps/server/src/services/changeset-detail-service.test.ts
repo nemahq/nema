@@ -56,10 +56,19 @@ function matchesFilters(
 // 테이블명 → 필터(eq/in 누적) 매칭만 지원하는 범용 mock — 이 서비스가 changesets를
 // 두 번(본문 조회 + reverts_id 번호 조회) 서로 다른 조건으로, digests/statements를
 // 조건별로 여러 번 호출하므로 호출 순서 고정 mock 대신 조건 매칭 mock이 맞다.
+// reverted 조회(is_changeset_reverted RPC)는 status='closed'+outcome='applied'인
+// changeset을 다룰 때만 탄다 — 기본값 false로 두면 그 케이스를 명시적으로 다루지
+// 않는 기존 테스트들이 새로 깨지지 않는다. reverted를 검증하는 테스트는 이 기본값을
+// override한다.
 function mockSupabase(
   perTable: Record<string, Record<string, unknown>[]>,
+  rpc: Record<string, unknown> = {},
 ): TypedSupabaseClient {
   return {
+    rpc: vi.fn(async (fn: string) => ({
+      data: fn in rpc ? rpc[fn] : false,
+      error: null,
+    })),
     from: vi.fn((table: string) => {
       const rows = perTable[table] ?? [];
       const filters: Record<string, unknown> = {};
@@ -412,7 +421,11 @@ describe("getChangesetByNumber", () => {
       number: 7,
     });
 
-    expect(result.body).toEqual({ kind: "revert", revertsNumber: 2 });
+    expect(result.body).toEqual({
+      kind: "revert",
+      revertsNumber: 2,
+      reopenShape: null,
+    });
     expect(result.revertsId).toBe(ORIGINAL_ID);
     expect(result.revertsNumber).toBe(2);
   });
@@ -835,6 +848,143 @@ describe("getChangesetByNumber", () => {
     expect(result.authorName).toBe("작성자");
     expect(result.closedById).toBe("reviewer-1");
     expect(result.closedByName).toBe("리뷰어");
+  });
+
+  // 되돌리기 버튼 노출 규칙(review-flow.md #26 규칙 4) — status='closed'+
+  // outcome='applied'일 때만 reverted/openRevertNumber를 계산한다.
+  describe("reverted/openRevertNumber", () => {
+    function closedAppliedRow(overrides: Record<string, unknown> = {}) {
+      return {
+        id: "cs-20",
+        space_id: SPACE_ID,
+        number: 20,
+        type: "ingestion",
+        status: "closed",
+        outcome: "applied",
+        title: "제목",
+        source_id: "src-20",
+        reverts_id: null,
+        author_id: null,
+        created_at: "2026-07-01T00:00:00Z",
+        updated_at: "2026-07-01T00:00:00Z",
+        changes: [
+          {
+            action: "create",
+            target_type: "digest",
+            target_id: DIGEST_ID,
+            data: null,
+          },
+        ],
+        ...overrides,
+      };
+    }
+
+    it("closed+applied면 is_changeset_reverted RPC 결과를 reverted로 그대로 쓴다", async () => {
+      const supabase = mockSupabase(
+        { changesets: [closedAppliedRow()], digests: [digestRow(DIGEST_ID)] },
+        { is_changeset_reverted: true },
+      );
+
+      const result = await getChangesetByNumber({
+        supabase,
+        spaceId: SPACE_ID,
+        number: 20,
+      });
+
+      expect(result.reverted).toBe(true);
+      expect(supabase.rpc).toHaveBeenCalledWith("is_changeset_reverted", {
+        p_changeset_id: "cs-20",
+      });
+    });
+
+    it("reverted=false면 openRevertNumber 조회 없이 null(자녀 찾을 이유가 없음)", async () => {
+      const supabase = mockSupabase(
+        { changesets: [closedAppliedRow()], digests: [digestRow(DIGEST_ID)] },
+        { is_changeset_reverted: false },
+      );
+
+      const result = await getChangesetByNumber({
+        supabase,
+        spaceId: SPACE_ID,
+        number: 20,
+      });
+
+      expect(result.reverted).toBe(false);
+      expect(result.openRevertNumber).toBeNull();
+    });
+
+    it("open 상태인 재판정 초안이 있으면 그 number를 openRevertNumber로 돌려준다", async () => {
+      const supabase = mockSupabase(
+        {
+          changesets: [
+            closedAppliedRow(),
+            {
+              id: "cs-revert-20",
+              reverts_id: "cs-20",
+              status: "open",
+              number: 21,
+            },
+          ],
+          digests: [digestRow(DIGEST_ID)],
+        },
+        { is_changeset_reverted: true },
+      );
+
+      const result = await getChangesetByNumber({
+        supabase,
+        spaceId: SPACE_ID,
+        number: 20,
+      });
+
+      expect(result.reverted).toBe(true);
+      expect(result.openRevertNumber).toBe(21);
+    });
+
+    it("되돌려졌지만 재판정 초안이 이미 확정·버려졌으면(open 자녀 없음) openRevertNumber=null", async () => {
+      const supabase = mockSupabase(
+        {
+          changesets: [
+            closedAppliedRow(),
+            {
+              id: "cs-revert-20",
+              reverts_id: "cs-20",
+              status: "closed",
+              number: 21,
+            },
+          ],
+          digests: [digestRow(DIGEST_ID)],
+        },
+        { is_changeset_reverted: true },
+      );
+
+      const result = await getChangesetByNumber({
+        supabase,
+        spaceId: SPACE_ID,
+        number: 20,
+      });
+
+      expect(result.reverted).toBe(true);
+      expect(result.openRevertNumber).toBeNull();
+    });
+
+    it("status='open'이면 되돌림 여부를 조회하지 않는다(버튼이 없는 화면)", async () => {
+      const supabase = mockSupabase(
+        {
+          changesets: [
+            {
+              ...closedAppliedRow(),
+              status: "open",
+              outcome: null,
+            },
+          ],
+        },
+        { is_changeset_reverted: true },
+      );
+
+      await getChangesetByNumber({ supabase, spaceId: SPACE_ID, number: 20 });
+
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
   });
 });
 
