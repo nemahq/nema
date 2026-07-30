@@ -5,7 +5,10 @@ import { SOURCE_TITLE_MAX_LENGTH } from "@nema-io/shared";
 import type { Database } from "@server/infra/database.types";
 import { createLimiter } from "@server/infra/llm/limiter";
 import type { Providers } from "@server/infra/providers";
-import { abortDigestion } from "@server/infra/statement-sync";
+import {
+  abortDigestion,
+  wakeStatementSync,
+} from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   SupabaseError,
@@ -53,6 +56,7 @@ export async function createSource(args: {
     ...(timeZone !== undefined && { p_author_timezone: timeZone }),
   });
   throwIfSupabaseError(error);
+  wakeStatementSync();
 
   fillSourceTitle({ supabase, providers, sourceId, body });
 
@@ -411,6 +415,7 @@ export async function startSourceDigestion(args: {
     p_source_id: sourceId,
   });
   throwIfSupabaseError(error);
+  wakeStatementSync();
 }
 
 // 초안에서 Source 제목 편집 — "평범한 대기 상태"에서만 허용(RPC의 WHERE 가드).

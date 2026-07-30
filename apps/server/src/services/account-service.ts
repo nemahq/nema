@@ -1,5 +1,6 @@
 import type { WorkspaceRole } from "@nema-io/shared";
 
+import { wakeStatementSync } from "@server/infra/statement-sync";
 import {
   getSupabaseAdmin,
   type TypedSupabaseClient,
@@ -123,6 +124,7 @@ export async function deleteAccount(args: {
       p_workspace_id: workspaceId,
     });
     throwIfSupabaseError(error);
+    wakeStatementSync();
   }
 
   const { error } = await admin.auth.admin.deleteUser(userId);

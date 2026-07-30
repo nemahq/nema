@@ -12,6 +12,7 @@ import {
 
 import type { Database, Json } from "@server/infra/database.types";
 import { t } from "@server/infra/i18n";
+import { wakeStatementSync } from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   SupabaseError,
@@ -113,6 +114,7 @@ export async function archiveStatement(args: {
     p_statement_id: args.statementId,
   });
   throwIfSupabaseError(error);
+  wakeStatementSync();
 }
 
 // 되돌리기·redo 공용 — 타겟 타입별 역연산은 RPC가 한다(§4). 제목은 SQL이 아니라
@@ -156,6 +158,7 @@ export async function revertChangeset(args: {
     p_title: title,
   });
   throwIfSupabaseError(error);
+  wakeStatementSync();
 
   const { data: revertRows, error: numberError } = await supabase.rpc(
     "get_changeset_title_and_number",
@@ -195,6 +198,7 @@ export async function resolveConflictRelation(args: {
     p_winner_statement_id: args.winnerStatementId,
   });
   throwIfSupabaseError(error);
+  wakeStatementSync();
   return { relationId: data };
 }
 
@@ -232,6 +236,7 @@ export async function resolveDuplicateRelation(args: {
     })) as unknown as Json,
   });
   throwIfSupabaseError(error);
+  wakeStatementSync();
   return { digestId: data };
 }
 

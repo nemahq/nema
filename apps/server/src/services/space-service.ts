@@ -7,6 +7,7 @@ import {
   SPACE_PUBLIC_ID_PREFIX,
 } from "@nema-io/shared";
 
+import { wakeStatementSync } from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase-error";
 
@@ -116,6 +117,7 @@ export async function deleteSpace(args: {
     p_delete_pending_drafts: args.deletePendingDrafts,
   });
   throwIfSupabaseError(error);
+  wakeStatementSync();
 }
 
 // source.listPending은 워크스페이스 전체를 최근 PENDING_SOURCE_LIST_LIMIT개로
