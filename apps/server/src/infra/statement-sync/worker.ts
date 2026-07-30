@@ -1365,6 +1365,9 @@ export function dedupeChanges(changes: RelationChange[]): RelationChange[] {
 // 콜 단위라, sub-batch로 갈리면 같은 쌍이 한 콜에선 applied·다른 콜에선 pending으로
 // 판정될 수 있다(컨텍스트가 달라 — 서로의 후보로 끌려옴). confident 판정을 우선해, 이미
 // 적용될 관계를 사람이 또 검토하는 무의미한 항목을 막는다.
+// 지금은 defense-in-depth다: 현재 게이트는 applied에 supports/replaces/resolves만,
+// pending엔 conflicts/duplicates만 넣어 changeKey(type 접두)가 애초에 안 겹치므로
+// 이 필터가 실제로 걸릴 경로가 없다 — 향후 게이트 회귀에 대비해 남겨둔다.
 export function reconcileChanges(
   applied: RelationChange[],
   pending: RelationChange[],
@@ -1452,9 +1455,11 @@ function changeKey(change: RelationChange): string {
     : `${change.type}:${change.from_id}:${change.to_id}`;
 }
 
-// 게이트 (relation-design §5): 확신·비충돌·비중복만 조용히 applied. 충돌·같음은 확신해도
-// pending(진술을 잘못 엮거나 잘못 가리면 되돌리기 전엔 안 드러나 항상 사람 확인), 애매는
-// 종류 무관 pending. 라벨을 id로 되돌리며 부적격 제안을 거른다.
+// 게이트 (relation-design §5): 충돌·같음은 확신 여부와 무관하게 항상 pending(진술을
+// 잘못 엮거나 잘못 가리면 되돌리기 전엔 안 드러나 — 항상 사람 확인). 그 외 타입은
+// 확신하면 조용히 applied, 애매하면 버린다 — 편의 엣지 하나가 안 생길 뿐 아무것도
+// 가려지거나 지워지지 않으니 사람이 볼 이유가 없다. 라벨을 id로 되돌리며 부적격
+// 제안을 거른다.
 export function gateProposals(params: {
   proposals: RelationProposal[];
   labelToId: Map<string, string>;
@@ -1497,15 +1502,12 @@ export function gateProposals(params: {
     }
     seen.add(key);
 
-    if (
-      proposal.confident &&
-      proposal.type !== "conflicts" &&
-      proposal.type !== "duplicates"
-    ) {
-      applied.push(change);
-    } else {
+    if (proposal.type === "conflicts" || proposal.type === "duplicates") {
       pending.push(change);
+    } else if (proposal.confident) {
+      applied.push(change);
     }
+    // else: 애매한 supports/replaces/resolves — 사람이 볼 문제가 아니라 버린다
   }
 
   return { applied, pending };

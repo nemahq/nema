@@ -225,3 +225,11 @@
 ---
 
 **후기 (2026-07-26)**: Statement.type에서 todo가 빠지면서(review-flow 갭 정리) 위 측정 #1·#2가 참조하는 시나리오 이름이 바뀌었다 — `change-todo-not-conflict` → `change-intent-not-conflict`, `invented-supports-todo-unrelated-dogfood` → `invented-supports-question-unrelated-dogfood`(끝점을 todo 대신 question으로 재현). 관계 판정 프롬프트(relation-judgment.ts)도 todo/task를 별도 타입으로 전제하던 부분을 걷어내고 같은 구분(의도-미래 vs 현재-사실)을 문맥만으로 판단하도록 다시 썼다. 이 문서의 측정 서술 자체(FP 원인, recall 수치)는 그 시점 기록이라 고치지 않는다.
+
+---
+
+**후기 (2026-07-31) — gateProposals 게이트 변경, supports/replaces/resolves precision/recall 비교 불가 구간 시작**: `worker.ts`의 `gateProposals`가 애매한(confident=false) supports/replaces/resolves를 더는 pending으로 올리지 않고 changeset 자체를 만들지 않는 채로 버리게 고쳤다(conflicts·duplicates는 그대로 확신 무관 pending, relation-design.md §5). 이 함수는 `judgment-core.ts`의 `runScenarioOnce`가 채점 직전 그대로 호출해(§ "워커와 같은 게이트를 그대로 통과시킨다") 판정 결과를 게이트에 통과시킨 뒤 채점한다.
+
+효과: 지금까지는 애매하지만 골든과 일치하는 supports/replaces/resolves 예측이 pending으로 게이트를 통과해 true positive로 잡혔다. 이 슬라이스 이후로는 그 예측이 게이트에서 버려져(gated 배열에 안 실림) `missedGolden`으로 채점된다 — 즉 이 세 타입의 recall은 프롬프트·모델 품질과 무관하게 구조적으로 떨어지고, precision은 애매한 오탐(false positive)도 같이 버려지는 만큼 구조적으로 오른다.
+
+**다음 측정 라운드부터 supports/replaces/resolves의 precision/recall을 이 문서의 이전 라운드(측정 #1~#8) 수치와 직접 비교하지 말 것.** 비교하려면 같은 게이트(변경 후)로 재측정한 baseline이 필요하다. conflicts·duplicates는 게이트가 그대로라 영향 없다.
