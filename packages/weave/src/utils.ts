@@ -37,15 +37,27 @@ export const POPOVER_SURFACE_CLASSNAME =
 const NESTED_HOVER_ICON_TONE =
   "bg-surface-raised-hover brightness-95 dark:brightness-125";
 
-export const NESTED_HOVER_ICON_CLASSNAME = NESTED_HOVER_ICON_TONE.split(" ")
-  .map((cls) =>
-    cls.startsWith("dark:") ? `dark:hover:${cls.slice(5)}` : `hover:${cls}`,
-  )
-  .join(" ");
+// 이 톤이 켜지는 selector는 항상 이 아이콘이 나타나는(opacity) selector와 같아야
+// 한다 — 아이콘 hit area(size-5)가 작아서, 조상(행)은 hover 중이라 opacity는
+// 켜졌지만 아이콘 자체엔 마우스가 정확히 안 올라간 순간이 흔한데, 이때 톤이
+// 자기 자신의 hover:로만 걸려 있으면 배경이 안 켜진 채(투명) 뒤에 비치는 조상의
+// 옅은 톤(보정 없음)이 그대로 비쳐 보인다. 다크모드는 브라이트니스 보정폭(25%)이
+// 라이트(5%)보다 훨씬 커서 이 어긋남이 두드러진다.
+//
+// 반드시 아래처럼 완성된 클래스명을 리터럴로 풀어 쓴다 — Tailwind는 빌드 시
+// 소스 텍스트를 정적으로 스캔해 클래스를 뽑아내므로, `${selector}:${cls}`처럼
+// 템플릿 리터럴로 접두사를 조합하면 완성된 클래스명이 소스 어디에도 리터럴로
+// 존재하지 않아 매칭되는 CSS 자체가 생성되지 않는다(실제로 이전 구현이 이
+// 함정에 빠져 hover 배경 CSS가 아예 없었다).
+export const NESTED_HOVER_ICON_CLASSNAME =
+  "group-hover:bg-surface-raised-hover group-hover:brightness-95 dark:group-hover:brightness-125";
+// 이름 붙은 조상 .group/switcher(예: WorkspaceMenu 접기 토글)에 반응하는 변형.
+export const NESTED_HOVER_ICON_SWITCHER_CLASSNAME =
+  "group-hover/switcher:bg-surface-raised-hover group-hover/switcher:brightness-95 dark:group-hover/switcher:brightness-125";
 
 // hover를 안 하고 있어도 같은 톤을 강제로 재현해야 하는 경우(HoverIcon의
-// active prop 등)를 위해, hover: 접두사 없는 원시값을 그대로 노출한다 —
-// 위 CLASSNAME과 같은 원본에서 파생되므로 값이 갈릴 일이 없다.
+// active prop 등)를 위해, selector 접두사 없는 원시값을 그대로 노출한다 —
+// 위 CLASSNAME들과 같은 원본에서 파생되므로 값이 갈릴 일이 없다.
 export const NESTED_ACTIVE_ICON_CLASSNAME = NESTED_HOVER_ICON_TONE;
 
 // 클릭 가능한 리스트 항목(초안 카드, 변경사항 행 등)이 공유하는 호버 반응 —

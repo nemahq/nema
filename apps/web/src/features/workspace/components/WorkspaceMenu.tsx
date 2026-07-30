@@ -165,7 +165,8 @@ export function WorkspaceMenu({
               <HoverIcon
                 onClick={handleToggleSidebar}
                 aria-label={t("layout.collapse_sidebar")}
-                className="absolute right-2.5 group-hover/switcher:opacity-100"
+                hoverGroup="switcher"
+                className="absolute right-2.5"
               >
                 <PanelLeft strokeWidth={1.5} className="size-4" />
               </HoverIcon>
