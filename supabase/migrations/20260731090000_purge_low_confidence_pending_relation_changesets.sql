@@ -19,12 +19,11 @@
 -- resolve_duplicate_relation)는 전부 그 직후 자기 자신을 곧바로 closed+applied로
 -- 닫는 changeset이 호출자다 — open인 이 행이 그 호출자가 될 일이 없다. ② reverts_id —
 -- changesets.reverts_id는 ON DELETE CASCADE라 참조가 있었다면 그 참조 행도 같이
--- 지워지지만, revert_changeset은 대상 changeset이 만든 changes(action='create'인
--- relation row)가 실제로 active여야 되돌릴 게 있어 성공한다 — pending 동안은
--- statement_relations에 그 행 자체가 아직 없어(intervention-design.md §5 "pending
--- 동안 관계 행은 없다") 시도해도 'nothing to revert'로 실패한다. 즉 open 상태에서
--- 되돌리기 대상이 될 수 없어 reverts_id로도
--- 가리켜지지 않는다 — 참조 무결성 걱정 없이 하드 삭제해도 된다.
+-- 지워지지만, revert_changeset은 대상 changeset의 status/outcome부터 검사해
+-- status<>'closed' 또는 outcome<>'applied'면 그 자리에서 즉시 거부한다(20260729153926_
+-- revert_policy_reopen_draft.sql revert_changeset 함수, "not closed+applied — nothing
+-- to revert"). open인 이 행은 이 첫 검사에서 항상 걸려 되돌리기 시도 자체가 성립하지
+-- 않으므로 reverts_id로 가리켜질 일이 없다 — 참조 무결성 걱정 없이 하드 삭제해도 된다.
 -- =============================================================
 
 DELETE FROM changesets

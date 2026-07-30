@@ -1495,17 +1495,19 @@ export function gateProposals(params: {
         : {}),
     };
 
-    // 중복 제거 — 한 콜 안에서 같은 쌍은 첫 판정만 채택(applied XOR pending).
+    // 중복 제거 — 한 콜 안에서 같은 쌍은 첫 판정만 채택(applied XOR pending). 버려지는
+    // 제안은 seen에 남기지 않는다 — 남기면 뒤이어 오는 같은 쌍의 확신 제안까지 막힌다.
     const key = changeKey(change);
     if (seen.has(key)) {
       continue;
     }
-    seen.add(key);
 
     if (proposal.type === "conflicts" || proposal.type === "duplicates") {
       pending.push(change);
+      seen.add(key);
     } else if (proposal.confident) {
       applied.push(change);
+      seen.add(key);
     }
     // else: 애매한 supports/replaces/resolves — 사람이 볼 문제가 아니라 버린다
   }

@@ -878,6 +878,16 @@ describe("gateProposals", () => {
     expect(pending).toHaveLength(0);
   });
 
+  it("애매해서 버려진 제안이 seen을 선점해 뒤이은 같은 쌍의 확신 제안까지 삼키지 않는다", () => {
+    const { applied } = gate([
+      { from: "N0", to: "E0", type: "replaces", confident: false },
+      { from: "N0", to: "E0", type: "replaces", confident: true },
+    ]);
+    expect(applied).toEqual([
+      { from_id: NEW_0, to_id: OLD_0, type: "replaces" },
+    ]);
+  });
+
   it("모르는 라벨·자기 관계·기존↔기존은 버린다", () => {
     const { applied, pending } = gate([
       { from: "N0", to: "E9", type: "supports", confident: true }, // 모르는 라벨

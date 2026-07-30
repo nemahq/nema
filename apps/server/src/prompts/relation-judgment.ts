@@ -5,7 +5,7 @@ import { RelationTypeSchema } from "@nema-io/shared";
 // =============================================================
 // 관계 판정 — 새 진술 배치 ↔ 후보(기존/형제) 사이 관계 5종 + 이진 확신 (LLM 1콜)
 //
-// relation-design §5(판단·게이트)·§8(표식 방향)이 뼈대. 게이트(applied/pending)는
+// relation-design §5(판단·게이트)·§8(표식 방향)이 뼈대. 게이트(applied/pending/버림)는
 // 워커가 type+confident로 가르고(엔진), 프롬프트는 관계 유무·종류·방향·확신만 낸다.
 // from/to 방향이 꺼내기 표식·병합 대상을 좌우하므로 방향 규칙을 단정적으로 못박는다.
 // duplicates도 relations 채널로 함께 나온다(정식 관계 종류) — 워커가 항상 pending으로
@@ -73,7 +73,7 @@ Sometimes a new statement is not *related* to an earlier one — it IS the same 
 For each relation output \`confident\`: true or false.
 
 - \`confident: true\` — the relation clearly holds AND its type and direction are unambiguous.
-- \`confident: false\` — a relation likely exists, but you are unsure of its type, its direction, or whether it truly holds. This sends it to the person for review.
+- \`confident: false\` — a relation likely exists, but you are unsure of its type, its direction, or whether it truly holds. For "conflicts"/"duplicates" this sends it to a person for review; for the other three types it is silently dropped (no relation is recorded at all) — so for those three, \`confident: false\` is not a safety net, it is the same as omitting the relation.
 - If there is NO relation between two statements, do not emit anything for that pair. Most candidate pairs are merely near in meaning and have no relation — be selective.
 - Bias toward caution: when in doubt about whether a relation holds, lean to \`confident: false\` or omit it. Never assert a relation you are guessing at.
 
