@@ -17,7 +17,7 @@ export function LoadingGuard({ active, className }: LoadingGuardProps) {
     <div
       aria-hidden="true"
       className={cn(
-        "pointer-events-none absolute inset-0 z-20 bg-surface-base/70 opacity-0 transition-opacity duration-normal",
+        "pointer-events-none absolute inset-0 z-20 bg-surface-base/35 opacity-0 transition-opacity duration-normal",
         active && "pointer-events-auto opacity-100",
         className,
       )}
