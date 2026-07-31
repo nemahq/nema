@@ -170,6 +170,144 @@ describe("getChangesetByNumber", () => {
       tags: [{ id: TAG_ID, title: "태그", description: "태그 설명" }],
       referenceIds: [REFERENCE_ID],
     });
+    expect(result.body.newReferences).toEqual([]);
+    expect(result.body.mergedReferences).toEqual([]);
+  });
+
+  it("ingestion 적용됨 — 신규 Reference는 create-Change 스냅샷을, 병합 Reference는 최종 병합 body를 돌려준다", async () => {
+    const NEW_REFERENCE_ID = "12121212-1212-4121-8121-121212121212";
+    const MERGED_REFERENCE_ID = "13131313-1313-4131-8131-131313131313";
+
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-16",
+          space_id: SPACE_ID,
+          number: 16,
+          type: "ingestion",
+          status: "closed",
+          outcome: "applied",
+          title: "제목",
+          source_id: "src-16",
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              action: "create",
+              target_type: "digest",
+              target_id: DIGEST_ID,
+              data: null,
+            },
+            {
+              action: "create",
+              target_type: "reference",
+              target_id: NEW_REFERENCE_ID,
+              data: {
+                type: "person",
+                title: "새 인물",
+                body: "새로 만들어진 레퍼런스",
+                external_urls: ["https://example.com/new"],
+              },
+            },
+            {
+              action: "modify",
+              target_type: "reference",
+              target_id: MERGED_REFERENCE_ID,
+              data: {
+                before: { body: "옛 설명" },
+                after: { body: "병합된 설명" },
+              },
+            },
+          ],
+        },
+      ],
+      digests: [digestRow(DIGEST_ID)],
+      references: [
+        {
+          id: MERGED_REFERENCE_ID,
+          type: "organization",
+          title: "기존 조직",
+          external_urls: ["https://example.com/existing"],
+        },
+      ],
+    });
+
+    const result = await getChangesetByNumber({
+      supabase,
+      spaceId: SPACE_ID,
+      number: 16,
+    });
+
+    expect(result.body.kind).toBe("ingestion_applied");
+    if (result.body.kind !== "ingestion_applied") {
+      throw new Error("unreachable");
+    }
+    expect(result.body.newReferences).toEqual([
+      {
+        id: NEW_REFERENCE_ID,
+        type: "person",
+        title: "새 인물",
+        body: "새로 만들어진 레퍼런스",
+        externalUrls: ["https://example.com/new"],
+      },
+    ]);
+    expect(result.body.mergedReferences).toEqual([
+      {
+        id: MERGED_REFERENCE_ID,
+        type: "organization",
+        title: "기존 조직",
+        body: "병합된 설명",
+        externalUrls: ["https://example.com/existing"],
+      },
+    ]);
+  });
+
+  it("ingestion 적용됨 — 병합 modify-Change가 가리키는 Reference가 하드 삭제로 없어졌으면 조용히 빠뜨리지 않고 던진다", async () => {
+    const MISSING_REFERENCE_ID = "14141414-1414-4141-8141-141414141414";
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-17",
+          space_id: SPACE_ID,
+          number: 17,
+          type: "ingestion",
+          status: "closed",
+          outcome: "applied",
+          title: "제목",
+          source_id: "src-17",
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              action: "create",
+              target_type: "digest",
+              target_id: DIGEST_ID,
+              data: null,
+            },
+            {
+              action: "modify",
+              target_type: "reference",
+              target_id: MISSING_REFERENCE_ID,
+              data: {
+                before: { body: "옛 설명" },
+                after: { body: "병합된 설명" },
+              },
+            },
+          ],
+        },
+      ],
+      digests: [digestRow(DIGEST_ID)],
+      // references 픽스처를 일부러 비워둔다 — 병합 대상 Reference가 이후 하드
+      // 삭제된 상황을 재현.
+    });
+
+    await expect(
+      getChangesetByNumber({ supabase, spaceId: SPACE_ID, number: 17 }),
+    ).rejects.toMatchObject({ code: "query_failed" });
   });
 
   it("ingestion 버려짐 — 아무것도 생성되지 않았다는 것만 표시한다", async () => {
@@ -310,7 +448,7 @@ describe("getChangesetByNumber", () => {
     expect(result.body).toEqual({ kind: "relation_conflict_discarded" });
   });
 
-  it("relation(중복) 적용됨 — keeper/duplicate 각각의 실제 status를 그대로 반영한다", async () => {
+  it("relation(중복) 적용됨 — keeper/duplicate 둘 다 이 changeset의 archive change 행 소속 여부로 판정한다(resolve_duplicate_relation이 옛 Digest 둘 다 archive)", async () => {
     const supabase = mockSupabase({
       changesets: [
         {
@@ -337,22 +475,24 @@ describe("getChangesetByNumber", () => {
                 to_id: STATEMENT_B_ID,
               },
             },
+            {
+              action: "archive",
+              target_type: "statement",
+              target_id: STATEMENT_A_ID,
+              data: null,
+            },
+            {
+              action: "archive",
+              target_type: "statement",
+              target_id: STATEMENT_B_ID,
+              data: null,
+            },
           ],
         },
       ],
       statements: [
-        {
-          id: STATEMENT_A_ID,
-          content: "keeper",
-          status: "active",
-          digest_id: DIGEST_A_ID,
-        },
-        {
-          id: STATEMENT_B_ID,
-          content: "duplicate",
-          status: "archived",
-          digest_id: DIGEST_B_ID,
-        },
+        { id: STATEMENT_A_ID, content: "keeper", digest_id: DIGEST_A_ID },
+        { id: STATEMENT_B_ID, content: "duplicate", digest_id: DIGEST_B_ID },
       ],
       digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
     });
@@ -368,9 +508,75 @@ describe("getChangesetByNumber", () => {
       throw new Error("unreachable");
     }
     expect(result.body.keeper.statementId).toBe(STATEMENT_A_ID);
-    expect(result.body.keeper.statementStatus).toBe("active");
+    expect(result.body.keeper.archivedByChangeset).toBe(true);
     expect(result.body.duplicate.statementId).toBe(STATEMENT_B_ID);
-    expect(result.body.duplicate.statementStatus).toBe("archived");
+    expect(result.body.duplicate.archivedByChangeset).toBe(true);
+  });
+
+  it("relation(중복) 적용됨 — 다른 changeset이 나중에 archive한 진술은 원인으로 잘못 표시되지 않는다(원인 오귀속 회귀 가드)", async () => {
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-5b",
+          space_id: SPACE_ID,
+          number: 15,
+          type: "relation",
+          status: "closed",
+          outcome: "applied",
+          title: "병합 제목",
+          source_id: null,
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          // 이 changeset 자신은 어느 쪽도 archive하지 않았다 — 아래 statements의
+          // 라이브 status가 이미 archived인 건 다른(가상의) changeset이 한 일이다.
+          changes: [
+            {
+              action: "create",
+              target_type: "relation",
+              target_id: "rel-3b",
+              data: {
+                type: "duplicates",
+                from_id: STATEMENT_A_ID,
+                to_id: STATEMENT_B_ID,
+              },
+            },
+          ],
+        },
+      ],
+      // 라이브 status를 명시적으로 archived로 채워야 진짜 회귀 가드가 된다 —
+      // status 컬럼 자체가 없으면 되돌린(라이브 status 기반) 코드도 undefined
+      // !== "archived"로 우연히 false를 반환해, 고쳐진 코드와 구분이 안 된다.
+      statements: [
+        {
+          id: STATEMENT_A_ID,
+          content: "keeper",
+          status: "archived",
+          digest_id: DIGEST_A_ID,
+        },
+        {
+          id: STATEMENT_B_ID,
+          content: "duplicate",
+          status: "archived",
+          digest_id: DIGEST_B_ID,
+        },
+      ],
+      digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
+    });
+
+    const result = await getChangesetByNumber({
+      supabase,
+      spaceId: SPACE_ID,
+      number: 15,
+    });
+
+    expect(result.body.kind).toBe("relation_duplicate_applied");
+    if (result.body.kind !== "relation_duplicate_applied") {
+      throw new Error("unreachable");
+    }
+    expect(result.body.keeper.archivedByChangeset).toBe(false);
+    expect(result.body.duplicate.archivedByChangeset).toBe(false);
   });
 
   it("relation(중복) 버려짐 — 둘 다 유지됐다는 안내만 돌려준다", async () => {
@@ -485,15 +691,9 @@ describe("getChangesetByNumber", () => {
         {
           id: STATEMENT_A_ID,
           content: "A가 B를 뒷받침",
-          status: "active",
           digest_id: DIGEST_A_ID,
         },
-        {
-          id: STATEMENT_B_ID,
-          content: "B",
-          status: "active",
-          digest_id: DIGEST_B_ID,
-        },
+        { id: STATEMENT_B_ID, content: "B", digest_id: DIGEST_B_ID },
       ],
       digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
     });
@@ -510,8 +710,8 @@ describe("getChangesetByNumber", () => {
     }
     expect(result.body.relations).toHaveLength(1);
     expect(result.body.relations[0].relationType).toBe("supports");
-    expect(result.body.relations[0].from.statementStatus).toBe("active");
-    expect(result.body.relations[0].to.statementStatus).toBe("active");
+    expect(result.body.relations[0].from.archivedByChangeset).toBe(false);
+    expect(result.body.relations[0].to.archivedByChangeset).toBe(false);
   });
 
   it("확신 관계 자동 적용(배치 N건) — apply_relation_changesets가 한 changeset에 성공한 관계마다 change 행을 쌓으므로 전부 relations에 담아야 한다(누락 회귀 가드)", async () => {
@@ -556,6 +756,12 @@ describe("getChangesetByNumber", () => {
                 to_id: STATEMENT_D_ID,
               },
             },
+            {
+              action: "archive",
+              target_type: "statement",
+              target_id: STATEMENT_D_ID,
+              data: null,
+            },
           ],
         },
       ],
@@ -563,27 +769,11 @@ describe("getChangesetByNumber", () => {
         {
           id: STATEMENT_A_ID,
           content: "A가 B를 뒷받침",
-          status: "active",
           digest_id: DIGEST_A_ID,
         },
-        {
-          id: STATEMENT_B_ID,
-          content: "B",
-          status: "active",
-          digest_id: DIGEST_B_ID,
-        },
-        {
-          id: STATEMENT_C_ID,
-          content: "새 진술",
-          status: "active",
-          digest_id: DIGEST_C_ID,
-        },
-        {
-          id: STATEMENT_D_ID,
-          content: "지난 진술",
-          status: "archived",
-          digest_id: DIGEST_D_ID,
-        },
+        { id: STATEMENT_B_ID, content: "B", digest_id: DIGEST_B_ID },
+        { id: STATEMENT_C_ID, content: "새 진술", digest_id: DIGEST_C_ID },
+        { id: STATEMENT_D_ID, content: "지난 진술", digest_id: DIGEST_D_ID },
       ],
       digests: [
         digestRow(DIGEST_A_ID),
@@ -611,7 +801,7 @@ describe("getChangesetByNumber", () => {
     const replacesRelation = result.body.relations.find(
       (r) => r.relationType === "replaces",
     );
-    expect(replacesRelation?.to.statementStatus).toBe("archived");
+    expect(replacesRelation?.to.archivedByChangeset).toBe(true);
   });
 
   it("확신 관계 거절됨(낮은 확신도가 open으로 갔다가 reject됨) — unsupported가 아니라 discarded로 뭉갠다", async () => {
@@ -724,6 +914,13 @@ describe("getChangesetByNumber", () => {
     });
 
     expect(result.body.kind).toBe("relation_conflict_applied");
+    if (result.body.kind !== "relation_conflict_applied") {
+      throw new Error("unreachable");
+    }
+    // 진 진술의 라이브 status는 archived지만, 이 changeset의 changes엔 archive
+    // 행이 없다(위 두 relation create 행뿐) — 라이브 status로 되돌아가면 이 값이
+    // true로 잘못 뒤집히는 회귀 가드.
+    expect(result.body.to.archivedByChangeset).toBe(false);
   });
 
   it("존재하지 않는 번호 — SupabaseError(not_found)를 던진다(원문 메시지가 그대로 새지 않게)", async () => {

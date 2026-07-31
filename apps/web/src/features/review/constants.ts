@@ -22,6 +22,34 @@ import type { TranslationKey } from "@web/lib/tolgee";
 
 import type { ChangesetOutcome, ChangesetStatus, ChangesetType } from "./types";
 
+// DigestReadonlyCard가 archived: boolean 대신 받는 원인 값 — 관계 판정의 결과가
+// 왜 이 카드를 밀어냈는지 배지 문구를 결정한다(07-modeling.md Relation 방향 의미).
+// "충돌·중복이 났다"는 사실 하나로 뭉뚱그리면 실제로 다른 세 가지 원인(대체/병합/해소)이
+// 전부 같은 "대체됨" 문구로 잘못 표시된다.
+export type ArchivedBadgeCause = "replaced" | "merged" | "resolved";
+
+export const ARCHIVED_BADGE_LABEL_KEY: Record<
+  ArchivedBadgeCause,
+  TranslationKey
+> = {
+  replaced: "review.digest_readonly_badge_replaced",
+  merged: "review.digest_readonly_badge_merged",
+  resolved: "review.digest_readonly_badge_resolved",
+};
+
+// relation_confident_applied 카드의 배지 원인 — supports는 폐기 개념이 없어 배지가
+// 없다(null). replaces/resolves도 지금은 apply_relation_changesets가 archive
+// change 행을 안 남겨 실질적으로 항상 배지가 안 뜨지만, 과거(사람 판정을 거치던
+// 시절) 레거시 행이나 향후 정책 변경에 대비해 매핑 자체는 완전하게 채워둔다.
+export const CONFIDENT_RELATION_ARCHIVED_BADGE_CAUSE: Record<
+  Extract<RelationType, "supports" | "replaces" | "resolves">,
+  ArchivedBadgeCause | null
+> = {
+  supports: null,
+  replaces: "replaced",
+  resolves: "resolved",
+};
+
 export const DIGEST_TYPE_LABEL_KEY: Record<DigestType, TranslationKey> = {
   decision: "review.digest_type_decision",
   pending: "review.digest_type_pending",

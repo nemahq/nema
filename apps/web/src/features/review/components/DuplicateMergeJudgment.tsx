@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 
 import type { DigestDraft } from "@nema-io/shared";
-import { Alert, Badge, Text } from "@nema-io/weave";
+import { Alert, Badge, LoadingGuard, Text } from "@nema-io/weave";
 
 import { toHighlightedFieldKey } from "@web/features/review/digestBodyFieldValue";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
@@ -73,6 +73,8 @@ export function DuplicateMergeJudgment({
   );
   const rejectPending = useRejectPendingRelation(spaceId, changesetNumber);
   const locked = resolveDuplicate.isPending || rejectPending.isPending;
+  const guardActive =
+    resolveDuplicate.isPendingAfterDelay || rejectPending.isPendingAfterDelay;
 
   const confirmDisabledReasonCode = mergeDraftConfirmDisabledReason(draft);
   const confirmDisabled = locked || confirmDisabledReasonCode !== null;
@@ -123,6 +125,7 @@ export function DuplicateMergeJudgment({
             onDiscard={handleDiscard}
             onConfirm={handleConfirm}
             discardPending={rejectPending.isPendingAfterDelay}
+            confirmPending={resolveDuplicate.isPendingAfterDelay}
             discardDisabled={locked}
             confirmDisabled={confirmDisabled}
           />
@@ -131,7 +134,7 @@ export function DuplicateMergeJudgment({
       {confirmDisabledReasonText && (
         <Alert variant="warning">{confirmDisabledReasonText}</Alert>
       )}
-      <div className="flex flex-col gap-4">
+      <div className="relative flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <Text as="p" size="sm" color="tertiary">
             {t("review.relation_merge_proposal_label")}
@@ -174,6 +177,7 @@ export function DuplicateMergeJudgment({
             />
           </div>
         </div>
+        <LoadingGuard active={guardActive} />
       </div>
     </ChangesetDetailLayout>
   );

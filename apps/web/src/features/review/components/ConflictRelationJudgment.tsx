@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Badge } from "@nema-io/weave";
+import { Badge, LoadingGuard } from "@nema-io/weave";
 
 import { toHighlightedFieldKey } from "@web/features/review/digestBodyFieldValue";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
@@ -50,8 +50,10 @@ export function ConflictRelationJudgment({
   const rejectPending = useRejectPendingRelation(spaceId, changesetNumber);
   // isPendingAfterDelay가 아니라 isPending — 그 250ms 지연 동안은 잠기지 않아,
   // 같은 버튼을 두 번 눌러 이미 닫힌 changeset에 재호출하는 경합이 생긴다.
-  // 지연은 아래 discardPending(라벨 표시)에만 쓴다.
+  // 지연은 아래 discardPending(라벨 표시)·guardActive(Guard 표시)에만 쓴다.
   const locked = resolveConflict.isPending || rejectPending.isPending;
+  const guardActive =
+    resolveConflict.isPendingAfterDelay || rejectPending.isPendingAfterDelay;
 
   function handleSelect(statementId: string) {
     if (locked) {
@@ -114,12 +116,13 @@ export function ConflictRelationJudgment({
             onDiscard={handleDiscard}
             onConfirm={handleConfirm}
             discardPending={rejectPending.isPendingAfterDelay}
+            confirmPending={resolveConflict.isPendingAfterDelay}
             discardDisabled={locked}
             confirmDisabled={locked || !selectedStatementId}
           />
         }
       />
-      <div className="flex flex-col gap-4">
+      <div className="relative flex flex-col gap-4">
         <RelationJudgmentCard
           digest={from.digest}
           highlightedFieldKey={toHighlightedFieldKey(from.sourceField)}
@@ -140,6 +143,7 @@ export function ConflictRelationJudgment({
           onViewSource={() => handleViewSource(SOURCE_TAB_B_ID, to)}
           disabled={locked}
         />
+        <LoadingGuard active={guardActive} />
       </div>
     </ChangesetDetailLayout>
   );

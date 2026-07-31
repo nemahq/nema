@@ -33,6 +33,8 @@ type BodyOfKind<K extends ChangesetDetailBody["kind"]> = Extract<
 
 export type DigestDetailSnapshot =
   BodyOfKind<"ingestion_applied">["digests"][number];
+export type ChangesetReferenceSnapshot =
+  BodyOfKind<"ingestion_applied">["newReferences"][number];
 export type RelationEndpointDetailSnapshot =
   BodyOfKind<"relation_conflict_applied">["from"];
 export type ChangesetConfidentRelationSnapshot =

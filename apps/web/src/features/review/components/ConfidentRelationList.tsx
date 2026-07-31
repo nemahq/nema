@@ -1,6 +1,9 @@
 import { Badge } from "@nema-io/weave";
 
-import { CONFIDENT_RELATION_TYPE_LABEL_KEY } from "@web/features/review/constants";
+import {
+  CONFIDENT_RELATION_ARCHIVED_BADGE_CAUSE,
+  CONFIDENT_RELATION_TYPE_LABEL_KEY,
+} from "@web/features/review/constants";
 import type { ChangesetConfidentRelationSnapshot } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -25,6 +28,9 @@ export function ConfidentRelationList({
           key={`${relation.from.statementId}-${relation.to.statementId}`}
           first={relation.from}
           second={relation.to}
+          archivedBadgeCause={
+            CONFIDENT_RELATION_ARCHIVED_BADGE_CAUSE[relation.relationType]
+          }
           caption={
             <Badge variant="outline" shape="pill" size="sm" className="w-fit">
               {t(CONFIDENT_RELATION_TYPE_LABEL_KEY[relation.relationType])}
