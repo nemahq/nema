@@ -310,6 +310,48 @@ describe("getChangesetByNumber", () => {
     ).rejects.toMatchObject({ code: "query_failed" });
   });
 
+  // ReferenceTypeSchema도 TagColorSchema와 같은 z.enum(...) 구조라 값 목록이
+  // 바뀌면 옛 저장 데이터가 같은 방식으로 깨질 수 있다 — parseStoredData 하드닝이
+  // digest-review-service.ts뿐 아니라 이 파일이 공유하는 지점에도 적용됐는지 고정한다.
+  it("신규 레퍼런스 create-Change의 type이 더 이상 유효하지 않으면(스키마 값 목록 변경) 조용히 넘기지 않는다", async () => {
+    const NEW_REFERENCE_ID = "18181818-1818-4181-8181-181818181818";
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-18",
+          space_id: SPACE_ID,
+          number: 18,
+          type: "ingestion",
+          status: "closed",
+          outcome: "applied",
+          title: "제목",
+          source_id: "src-18",
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              action: "create",
+              target_type: "reference",
+              target_id: NEW_REFERENCE_ID,
+              data: {
+                type: "legacy-type",
+                title: "새 인물",
+                body: "새로 만들어진 레퍼런스",
+                external_urls: [],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    await expect(
+      getChangesetByNumber({ supabase, spaceId: SPACE_ID, number: 18 }),
+    ).rejects.toMatchObject({ code: "query_failed" });
+  });
+
   it("ingestion 버려짐 — 아무것도 생성되지 않았다는 것만 표시한다", async () => {
     const supabase = mockSupabase({
       changesets: [

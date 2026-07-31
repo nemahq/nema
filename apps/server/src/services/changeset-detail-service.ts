@@ -20,6 +20,7 @@ import {
   parseRelationProposal,
 } from "@server/services/changeset-service";
 import {
+  parseStoredData,
   StoredReferenceDataSchema,
   StoredReferenceMergeDataSchema,
 } from "@server/services/digest-review-service";
@@ -236,7 +237,11 @@ async function fetchIngestionReferenceSnapshots(args: {
   const newReferences: ReferenceSnapshot[] = changes
     .filter((c) => c.target_type === "reference" && c.action === "create")
     .map((c) => {
-      const referenceData = StoredReferenceDataSchema.parse(c.data);
+      const referenceData = parseStoredData({
+        schema: StoredReferenceDataSchema,
+        data: c.data,
+        context: `reference change (target ${c.target_id}) has invalid stored data`,
+      });
       return {
         id: c.target_id,
         type: referenceData.type,
@@ -276,11 +281,16 @@ async function fetchIngestionReferenceSnapshots(args: {
         `reference ${c.target_id} merged by this changeset not found`,
       );
     }
+    const mergeData = parseStoredData({
+      schema: StoredReferenceMergeDataSchema,
+      data: c.data,
+      context: `reference merge change (target ${c.target_id}) has invalid stored data`,
+    });
     return {
       id: reference.id,
       type: reference.type,
       title: reference.title,
-      body: StoredReferenceMergeDataSchema.parse(c.data).after.body,
+      body: mergeData.after.body,
       externalUrls: reference.external_urls ?? [],
     };
   });
