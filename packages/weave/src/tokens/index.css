@@ -126,30 +126,41 @@
      거의 같아서(82% vs 81%) 구분이 안 됐다. ⑪이 원래 의도했던 "hue는 status
      보다 낮은 채도로 둬서 색상이 겹쳐도 채도로 구분된다"는 원칙이 실제로는
      구현된 적이 없었던 것 — yellow에 한해 지금 적용한다(나머지 4색은 그대로).
-     tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로 미러링한다. */
-  --palette-light-indigo: #4f46e5; /* indigo-600, was #6366f1(500) */
-  --palette-light-indigo-tint: rgba(79, 70, 229, 0.08);
-  --palette-light-pink: #be185d; /* pink-700, was #db2777(600) */
-  --palette-light-pink-tint: rgba(190, 24, 93, 0.08);
-  --palette-light-lime: #365314; /* lime-800, was #4d7c0f(700) */
-  --palette-light-lime-tint: rgba(54, 83, 20, 0.08);
-  --palette-light-yellow: #916430; /* custom(저채도), was #854d0e(yellow-800) */
+     tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로 미러링한다.
+
+     indigo·pink·lime·purple은 이후 라운드에서 hue를 재조정했다 — Tag 8색과
+     각각 5.5~16.6°밖에 안 떨어져 있어 디자인 의도(타입=진한 축, Tag=옅은 축)와
+     무관하게 hue 자체가 거의 같은 색으로 보였다. Tag·status·brand 전부를
+     배제 집합으로 놓고 남는 빈 구간의 중간점으로 옮겨 전부 20°+ 확보했다(계열은
+     최대한 유지 — indigo·purple·pink는 원래 hue에서 몇 도 안 벗어남, lime만
+     94.3°(sage)와 6.7°밖에 안 떨어져 있어서 129°(순수 초록)까지 크게 밀렸다 —
+     이 폭 때문에 "라임"이라는 이름과 실제 색이 조금 어긋난다). yellow는 Tag
+     terracotta·sienna·olive가 17~54° 구간을 이미 채워놔서 옮길 빈틈이 없어
+     그대로 둔다(제품 판단 — 다이제스트 타입-Tag 구분은 이번에 같이 넣은 배지
+     테두리가 대신 맡는다). */
+  --palette-light-indigo: #5c5af2; /* hue 241°(기존 243°에서 거의 그대로, info와의 간격만 확보) */
+  --palette-light-indigo-tint: rgba(92, 90, 242, 0.08);
+  --palette-light-pink: #d01183; /* hue 324°(기존 335°에서 mauve·rose 사이로) */
+  --palette-light-pink-tint: rgba(208, 17, 131, 0.08);
+  --palette-light-lime: #0a7f1c; /* hue 129°(기존 88°에서 sage와 겹치지 않게 순초록으로) */
+  --palette-light-lime-tint: rgba(10, 127, 28, 0.08);
+  --palette-light-yellow: #916430; /* custom(저채도), was #854d0e(yellow-800) — 의도적으로 안 옮김(Tag 쪽에 빈틈 없음) */
   --palette-light-yellow-tint: rgba(145, 100, 48, 0.08);
-  --palette-light-purple: #9333ea; /* purple-600, was #a855f7(500) */
-  --palette-light-purple-tint: rgba(147, 51, 234, 0.08);
+  --palette-light-purple: #a71ded; /* hue 280°(기존 272°에서 violet·mauve 사이로) */
+  --palette-light-purple-tint: rgba(167, 29, 237, 0.08);
   --palette-light-orange: #ea580c; /* orange-600 */
 
   /* Hue — dark */
-  --palette-dark-indigo: #818cf8; /* indigo-400 */
-  --palette-dark-indigo-tint: rgba(99, 102, 241, 0.12);
-  --palette-dark-pink: #f472b6; /* pink-400 */
-  --palette-dark-pink-tint: rgba(236, 72, 153, 0.12);
-  --palette-dark-lime: #a3e635; /* lime-400 */
-  --palette-dark-lime-tint: rgba(101, 163, 13, 0.12);
+  --palette-dark-indigo: #b7b6fb;
+  --palette-dark-indigo-tint: rgba(183, 182, 251, 0.12);
+  --palette-dark-pink: #f986cb;
+  --palette-dark-pink-tint: rgba(249, 134, 203, 0.12);
+  --palette-dark-lime: #86f997;
+  --palette-dark-lime-tint: rgba(134, 249, 151, 0.12);
   --palette-dark-yellow: #facc15; /* yellow-400 */
   --palette-dark-yellow-tint: rgba(202, 138, 4, 0.12);
-  --palette-dark-purple: #c084fc; /* purple-400 */
-  --palette-dark-purple-tint: rgba(168, 85, 247, 0.12);
+  --palette-dark-purple: #d286f9;
+  --palette-dark-purple-tint: rgba(210, 134, 249, 0.12);
   --palette-dark-orange: #fb923c; /* orange-400 */
 
   /* Tag — 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 팔레트. 생성 시
