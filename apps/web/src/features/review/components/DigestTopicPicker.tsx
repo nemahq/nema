@@ -12,12 +12,15 @@ import { Popover } from "@web/components/ui/Popover";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { NewLabelIndicator } from "./NewLabelIndicator";
-import { useReviewDraftContext } from "./ReviewDraftProvider";
 import { TopicEditPanel } from "./TopicEditPanel";
 
 interface DigestTopicPickerProps {
   digestId: string;
-  topics: ReviewTopicDraft[];
+  // 리뷰 레벨 팔레트(labelDraft.topics) 항목 id 배열(#28) — 부모(DigestCandidateCard)가
+  // 이미 로드된 draft에서 그대로 내려준다. Suspense 훅을 리프 컴포넌트마다 새로
+  // 부르지 않기 위한 구조다(nema/require-suspense-boundary).
+  topicIds: string[];
+  topicPalette: ReviewTopicDraft[];
   disabled: boolean;
 }
 
@@ -40,11 +43,15 @@ interface DigestTopicPickerProps {
 // hover는 group-hover로 옮긴다.
 export function DigestTopicPicker({
   digestId,
-  topics,
+  topicIds,
+  topicPalette,
   disabled,
 }: DigestTopicPickerProps) {
   const { t } = useTranslation();
-  const { dispatch } = useReviewDraftContext();
+  const topicById = new Map(topicPalette.map((topic) => [topic.id, topic]));
+  const topics = topicIds
+    .map((id) => topicById.get(id))
+    .filter((topic) => topic !== undefined);
   // 신규(registryId === null)를 앞으로 — "+" 표식의 의도(아직 확정 전이니
   // 먼저 보고 판단하라)와 맞춘다. 그룹 내부는 원래 순서 유지(stable sort).
   // 항목 식별이 이제 id 기반(#515)이라 정렬해도 삭제·수정이 엉뚱한 항목을
@@ -130,15 +137,10 @@ export function DigestTopicPicker({
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={-24} className="p-0">
         <TopicEditPanel
-          topics={topics}
+          digestId={digestId}
+          attachedTopics={topics}
+          topicPalette={topicPalette}
           disabled={disabled}
-          onChange={(next) =>
-            dispatch({
-              type: "digest/setTopics",
-              id: digestId,
-              topics: next,
-            })
-          }
         />
       </PopoverContent>
     </Popover>

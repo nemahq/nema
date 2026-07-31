@@ -5,7 +5,10 @@ import type {
   NewReferenceDraft,
   ReferenceMergeUpdate,
   ReviewDigestDraft,
+  ReviewLabelPalette,
   ReviewNewReferenceDraft,
+  ReviewTagDraft,
+  ReviewTopicDraft,
   TagColor,
 } from "@nema-io/shared";
 import {
@@ -31,8 +34,18 @@ const StoredIngestionDigestDataSchema = z.object({
   title: z.string(),
   description: z.string(),
   body: DigestBodySchema,
-  // 저장된 topics/tags 원소의 id는 이 초안 항목의 정체성일 뿐 레지스트리 행과 무관하다
-  // (registryId는 아래에서 이름으로 찾아 얹는다) — ReviewTopicDraftSchema 주석 참고.
+  // 리뷰 레벨 라벨 팔레트(changesets.label_draft) 항목을 가리키는 id 배열 —
+  // reference_ids의 신규 부분(newReferenceKeys)이 changeset의 신규 Reference를
+  // id로 가리키는 것과 같은 결이다(#28).
+  topics: z.array(z.string().uuid()),
+  tags: z.array(z.string().uuid()),
+  reference_ids: z.array(z.string().uuid()),
+  external_urls: z.array(z.string()),
+});
+
+// changesets.label_draft 저장 형태 — 항목의 id는 이 초안 안에서의 정체성일 뿐
+// 레지스트리 행과 무관하다(registryId는 아래에서 이름으로 찾아 얹는다).
+const StoredLabelDraftSchema = z.object({
   topics: z.array(z.object({ id: z.string().uuid(), title: z.string() })),
   tags: z.array(
     z.object({
@@ -42,8 +55,6 @@ const StoredIngestionDigestDataSchema = z.object({
       color: TagColorSchema,
     }),
   ),
-  reference_ids: z.array(z.string().uuid()),
-  external_urls: z.array(z.string()),
 });
 
 const StoredReferenceDataSchema = z.object({
@@ -97,6 +108,9 @@ interface DigestReviewDetail {
   // 두 탭 동시 편집 가드 — update가 이 값을 expectedVersion으로 그대로 되돌려보낸다.
   draftVersion: number;
   digests: ReviewDigestDraft[];
+  // 리뷰 레벨 Topic/Tag 공유 팔레트(#28) — 각 digest는 이 안의 항목을 id로만
+  // 가리킨다.
+  labelDraft: ReviewLabelPalette;
   newReferences: ReviewNewReferenceDraft[];
   // 기존 레퍼런스 인용의 표시용 메타(id → 이름·유형)
   citedReferences: CitedReference[];
@@ -112,7 +126,7 @@ export async function getReview(args: {
   const { data: changeset, error } = await supabase
     .from("changesets")
     .select(
-      "id, number, type, status, source_id, space_id, draft_version, changes(id, action, target_type, target_id, data, position), sources(title, body, created_at), spaces(workspace_id)",
+      "id, number, type, status, source_id, space_id, draft_version, label_draft, changes(id, action, target_type, target_id, data, position), sources(title, body, created_at), spaces(workspace_id)",
     )
     .eq("space_id", spaceId)
     .eq("number", number)
@@ -180,16 +194,17 @@ export async function getReview(args: {
     ...StoredIngestionDigestDataSchema.parse(change.data),
   }));
 
+  const labelDraftRaw = StoredLabelDraftSchema.parse(
+    changeset.label_draft ?? { topics: [], tags: [] },
+  );
+
   // 기존/신규 판정 — 이름이 Space(topics)·Workspace(tags) 레지스트리와 매치하면 기존
   // (registryId 포함, 읽기 전용), 매치 없으면 신규(registryId null). archived 항목은
   // 재사용 후보에서 제외한다(update_topic 마이그레이션 주석과 같은 결 — restore 없이
-  // 조용히 재사용되면 안 된다).
-  const topicNames = [
-    ...new Set(rawDigests.flatMap((d) => d.topics.map((topic) => topic.title))),
-  ];
-  const tagTitles = [
-    ...new Set(rawDigests.flatMap((d) => d.tags.map((tag) => tag.title))),
-  ];
+  // 조용히 재사용되면 안 된다). #28부터 팔레트가 리뷰 레벨 하나뿐이라 이 판정도
+  // digest마다가 아니라 팔레트 전체에 한 번만 한다.
+  const topicNames = [...new Set(labelDraftRaw.topics.map((t) => t.title))];
+  const tagTitles = [...new Set(labelDraftRaw.tags.map((t) => t.title))];
 
   const topicIdByTitle = new Map<string, string>();
   if (topicNames.length > 0) {
@@ -219,31 +234,40 @@ export async function getReview(args: {
     }
   }
 
+  const resolvedTopics: ReviewTopicDraft[] = labelDraftRaw.topics.map(
+    (topic) => ({
+      id: topic.id,
+      registryId: topicIdByTitle.get(topic.title) ?? null,
+      title: topic.title,
+    }),
+  );
+  const resolvedTags: ReviewTagDraft[] = labelDraftRaw.tags.map((tag) => {
+    const registryTag = tagRegistryByTitle.get(tag.title);
+    return {
+      id: tag.id,
+      registryId: registryTag?.id ?? null,
+      title: tag.title,
+      description: tag.description,
+      // 기존 태그를 엔진이 재제안하면 draft 색은 write_ingestion_review_changes가
+      // 뽑은 랜덤값일 뿐이다 — confirm_ingestion_review는 기존 태그의 색을 안
+      // 덮으므로, 리뷰 화면도 draft 색이 아니라 레지스트리의 실제 색을 보여줘야
+      // 리뷰에서 본 색과 확정 후 저장된 색이 어긋나지 않는다.
+      color: registryTag?.color ?? tag.color,
+    };
+  });
+  const labelDraft: ReviewLabelPalette = {
+    topics: resolvedTopics,
+    tags: resolvedTags,
+  };
+
   const digests: ReviewDigestDraft[] = rawDigests.map((digestData) => ({
     id: digestData.id,
     position: digestData.position,
     title: digestData.title,
     description: digestData.description,
     body: digestData.body,
-    topics: digestData.topics.map((topic) => ({
-      id: topic.id,
-      registryId: topicIdByTitle.get(topic.title) ?? null,
-      title: topic.title,
-    })),
-    tags: digestData.tags.map((tag) => {
-      const registryTag = tagRegistryByTitle.get(tag.title);
-      return {
-        id: tag.id,
-        registryId: registryTag?.id ?? null,
-        title: tag.title,
-        description: tag.description,
-        // 기존 태그를 엔진이 재제안하면 draft 색은 write_ingestion_review_changes가
-        // 뽑은 랜덤값일 뿐이다 — confirm_ingestion_review는 기존 태그의 색을 안
-        // 덮으므로, 리뷰 화면도 draft 색이 아니라 레지스트리의 실제 색을 보여줘야
-        // 리뷰에서 본 색과 확정 후 저장된 색이 어긋나지 않는다.
-        color: registryTag?.color ?? tag.color,
-      };
-    }),
+    topics: digestData.topics,
+    tags: digestData.tags,
     referenceIds: digestData.reference_ids.filter(
       (id) => !newReferenceIds.has(id),
     ),
@@ -294,6 +318,7 @@ export async function getReview(args: {
     sourceCreatedAt: changeset.sources.created_at,
     draftVersion: changeset.draft_version,
     digests,
+    labelDraft,
     newReferences,
     citedReferences,
   };
@@ -306,6 +331,7 @@ export async function updateReview(args: {
   changesetId: string;
   expectedVersion: number;
   digests: ReviewDigestDraft[];
+  labelDraft: ReviewLabelPalette;
   newReferences: ReviewNewReferenceDraft[];
   referenceUpdates: ReferenceMergeUpdate[];
 }): Promise<{ draftVersion: number }> {
@@ -314,6 +340,7 @@ export async function updateReview(args: {
     changesetId,
     expectedVersion,
     digests,
+    labelDraft,
     newReferences,
     referenceUpdates,
   } = args;
@@ -324,29 +351,33 @@ export async function updateReview(args: {
       p_changeset_id: changesetId,
       p_expected_version: expectedVersion,
       // RPC 계약 키는 update_pending_ingestion이 읽는 snake_case다. id·position은
-      // 그대로 실어 보낸다(RPC가 id로 upsert·position으로 순서를 잡는다). topics/tags의
-      // registryId는 조회 때 이름으로 계산한 파생값이라 저장 형태엔 없다 — confirm이
-      // 이름으로 다시 find-or-create하므로 없이도 기존 항목이 재사용된다.
+      // 그대로 실어 보낸다(RPC가 id로 upsert·position으로 순서를 잡는다). topics/tags는
+      // 팔레트 항목 id 배열 그대로 통과한다(#28) — registryId는 조회 때 이름으로
+      // 계산한 파생값이라 저장 형태엔 없다.
       p_digests: digests.map((digest) => ({
         id: digest.id,
         position: digest.position,
         title: digest.title,
         description: digest.description,
         body: digest.body,
-        topics: digest.topics.map((topic) => ({
+        topics: digest.topics,
+        tags: digest.tags,
+        reference_ids: digest.referenceIds,
+        new_reference_keys: digest.newReferenceKeys,
+        external_urls: digest.externalUrls,
+      })) as unknown as Json,
+      p_label_draft: {
+        topics: labelDraft.topics.map((topic) => ({
           id: topic.id,
           title: topic.title,
         })),
-        tags: digest.tags.map((tag) => ({
+        tags: labelDraft.tags.map((tag) => ({
           id: tag.id,
           title: tag.title,
           description: tag.description,
           color: tag.color,
         })),
-        reference_ids: digest.referenceIds,
-        new_reference_keys: digest.newReferenceKeys,
-        external_urls: digest.externalUrls,
-      })) as unknown as Json,
+      } as unknown as Json,
       p_new_references: newReferences.map((reference) => ({
         id: reference.id,
         position: reference.position,

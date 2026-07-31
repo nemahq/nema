@@ -86,6 +86,7 @@ export type Database = {
           draft_version: number | null;
           id: string;
           invalidated_by_id: string | null;
+          label_draft: Json | null;
           number: number | null;
           outcome: Database["public"]["Enums"]["changeset_outcome"] | null;
           reverts_id: string | null;
@@ -106,6 +107,7 @@ export type Database = {
           draft_version?: number | null;
           id?: string;
           invalidated_by_id?: string | null;
+          label_draft?: Json | null;
           number?: number | null;
           outcome?: Database["public"]["Enums"]["changeset_outcome"] | null;
           reverts_id?: string | null;
@@ -126,6 +128,7 @@ export type Database = {
           draft_version?: number | null;
           id?: string;
           invalidated_by_id?: string | null;
+          label_draft?: Json | null;
           number?: number | null;
           outcome?: Database["public"]["Enums"]["changeset_outcome"] | null;
           reverts_id?: string | null;
@@ -1479,6 +1482,7 @@ export type Database = {
           p_changeset_id: string;
           p_digests: Json;
           p_expected_version: number;
+          p_label_draft?: Json;
           p_new_references?: Json;
           p_reference_updates?: Json;
         };

@@ -1,4 +1,4 @@
-import type { DigestType } from "@nema-io/shared";
+import type { DigestType, ReviewTopicDraft } from "@nema-io/shared";
 
 import type { ReviewDigest } from "@web/features/review/types";
 
@@ -11,7 +11,8 @@ import { DigestTypePicker } from "./DigestTypePicker";
 interface DigestCardHeaderProps {
   digestId: string;
   type: DigestType;
-  topics: ReviewDigest["topics"];
+  topicIds: ReviewDigest["topics"];
+  topicPalette: ReviewTopicDraft[];
   disabled: boolean;
   viewed: boolean;
   sourceActive: boolean;
@@ -25,7 +26,8 @@ interface DigestCardHeaderProps {
 export function DigestCardHeader({
   digestId,
   type,
-  topics,
+  topicIds,
+  topicPalette,
   disabled,
   viewed,
   sourceActive,
@@ -46,7 +48,8 @@ export function DigestCardHeader({
         />
         <DigestTopicPicker
           digestId={digestId}
-          topics={topics}
+          topicIds={topicIds}
+          topicPalette={topicPalette}
           disabled={disabled}
         />
       </div>

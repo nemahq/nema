@@ -21,6 +21,10 @@ export const DIGEST_TAGS_MAX = 5;
 // 정상 범위는 한 자릿수, 상한은 폭주 브레이크.
 export const REVIEW_DIGESTS_MAX = 20;
 export const REVIEW_NEW_REFERENCES_MAX = 20;
+// 리뷰 팔레트(#28) 전체 상한 — Digest마다 DIGEST_TOPICS_MAX개까지 붙일 수 있으니
+// 팔레트 자체는 그보다 넉넉해야 한다. 실제로는 같은 이름이 dedupe되어 훨씬 작다.
+export const REVIEW_TOPICS_MAX = REVIEW_DIGESTS_MAX * DIGEST_TOPICS_MAX;
+export const REVIEW_TAGS_MAX = REVIEW_DIGESTS_MAX * DIGEST_TAGS_MAX;
 // 한 리뷰에서 병합 편집되는 기존 Reference 수 — 인용된 기존 Reference의 부분집합이라
 // 신규 상한과 같은 결의 폭주 브레이크.
 export const REVIEW_REFERENCE_UPDATES_MAX = 20;
@@ -105,6 +109,17 @@ export const ReviewTagDraftSchema = DigestTagDraftSchema.extend({
 });
 export type ReviewTagDraft = z.infer<typeof ReviewTagDraftSchema>;
 
+// 리뷰 레벨 공유 Topic/Tag 팔레트(#28) — 모든 Digest 후보가 여기 담긴 항목을
+// id로만 참조한다(ReviewDigestDraftSchema.topics/tags 참고). 새 Reference가
+// 리뷰 레벨에서 만들어져 각 Digest가 key로 인용하는 것과 같은 결이다. 어디에도
+// 안 붙은 항목도 여기 그대로 남는다 — 확정 시 그런 항목만 레지스트리에 안 쓴다
+// (confirm_ingestion_review의 attachment gate).
+export const ReviewLabelPaletteSchema = z.object({
+  topics: z.array(ReviewTopicDraftSchema).max(REVIEW_TOPICS_MAX),
+  tags: z.array(ReviewTagDraftSchema).max(REVIEW_TAGS_MAX),
+});
+export type ReviewLabelPalette = z.infer<typeof ReviewLabelPaletteSchema>;
+
 export const DigestDraftSchema = z.object({
   title: z.string().trim().min(1).max(DIGEST_TITLE_MAX_LENGTH),
   description: z.string().trim().min(1).max(DIGEST_DESCRIPTION_MAX_LENGTH),
@@ -122,26 +137,29 @@ export type DigestDraft = z.infer<typeof DigestDraftSchema>;
 // Digest 리뷰 화면 전용 digest 항목 — DigestDraftSchema에 안정 id·명시적 순서를
 // 얹는다. get이 내려준 id를 update가 그대로 되돌려보내 update_pending_ingestion이
 // 같은 항목으로 매칭한다(DELETE+INSERT로 매 저장마다 id·순서가 흩어지던 문제의 해결책).
+// topics/tags는 이제 리뷰 레벨 팔레트(ReviewLabelPalette)의 항목 id 배열이다(#28) —
+// newReferenceKeys가 리뷰 레벨 newReferences를 id로 가리키는 것과 같은 결.
 export const ReviewDigestDraftSchema = DigestDraftSchema.extend({
   id: z.string().uuid(),
   position: z.number().int().min(0),
-  topics: z.array(ReviewTopicDraftSchema).max(DIGEST_TOPICS_MAX),
-  tags: z.array(ReviewTagDraftSchema).max(DIGEST_TAGS_MAX),
+  topics: z.array(z.string().uuid()).max(DIGEST_TOPICS_MAX),
+  tags: z.array(z.string().uuid()).max(DIGEST_TAGS_MAX),
   // 이 화면에서 가리킬 수 있는 신규 레퍼런스 후보는 항상 ReviewNewReferenceDraft.id
   // (실제 target_id) — 베이스 DigestDraftSchema의 임의 문자열 타입보다 좁힌다.
   newReferenceKeys: z.array(z.string().uuid()),
 });
 export type ReviewDigestDraft = z.infer<typeof ReviewDigestDraftSchema>;
 
-// newReferenceKeys가 실제 신규 레퍼런스 목록을 가리키는지 — 끊긴 키는 확정 시
-// 존재하지 않는 인용을 만들므로 경계에서 막는다. id는 이제 서버 생성이 아니라
-// 클라이언트가 왕복시키는 값이라, 중복 id도 여기서 같이 막는다 — DB upsert가
-// 같은 id를 두 번 받으면 두 번째가 첫 번째를 조용히 덮어써 후보 2개가 에러
-// 없이 1개로 합쳐진다.
+// newReferenceKeys·topics·tags가 각각 실제 리뷰 레벨 목록(newReferences·labelDraft)을
+// 가리키는지 — 끊긴 id는 확정 시 존재하지 않는 인용/라벨을 만들므로 경계에서 막는다.
+// 모든 id는 서버 생성이 아니라 클라이언트가 왕복시키는 값이라, 중복 id도 여기서
+// 같이 막는다 — DB upsert가 같은 id를 두 번 받으면 두 번째가 첫 번째를 조용히
+// 덮어써 후보 2개가 에러 없이 1개로 합쳐진다.
 function refineReviewPayload(
   value: {
     digests: ReviewDigestDraft[];
     newReferences: ReviewNewReferenceDraft[];
+    labelDraft: ReviewLabelPalette;
   },
   ctx: z.RefinementCtx,
 ): void {
@@ -163,7 +181,27 @@ function refineReviewPayload(
     });
   }
 
+  const paletteTopicIds = value.labelDraft.topics.map((topic) => topic.id);
+  if (new Set(paletteTopicIds).size !== paletteTopicIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["labelDraft", "topics"],
+      message: "duplicate id in labelDraft.topics",
+    });
+  }
+
+  const paletteTagIds = value.labelDraft.tags.map((tag) => tag.id);
+  if (new Set(paletteTagIds).size !== paletteTagIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["labelDraft", "tags"],
+      message: "duplicate id in labelDraft.tags",
+    });
+  }
+
   const ids = new Set(referenceIds);
+  const topicIds = new Set(paletteTopicIds);
+  const tagIds = new Set(paletteTagIds);
   value.digests.forEach((digest, index) => {
     for (const key of digest.newReferenceKeys) {
       if (!ids.has(key)) {
@@ -175,25 +213,24 @@ function refineReviewPayload(
       }
     }
 
-    // Topic/Tag의 id도 위와 같은 이유로 중복을 막는다 — React key 충돌뿐 아니라, 이
-    // id가 화면에서 항목을 가리키는 유일한 손잡이라 중복되면 삭제·이름수정이 둘 중
-    // 하나만 골라 지목할 수 없다.
-    const topicIds = digest.topics.map((topic) => topic.id);
-    if (new Set(topicIds).size !== topicIds.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["digests", index, "topics"],
-        message: "duplicate id in topics",
-      });
+    for (const topicId of digest.topics) {
+      if (!topicIds.has(topicId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["digests", index, "topics"],
+          message: `unknown label palette topic id: ${topicId}`,
+        });
+      }
     }
 
-    const tagIds = digest.tags.map((tag) => tag.id);
-    if (new Set(tagIds).size !== tagIds.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["digests", index, "tags"],
-        message: "duplicate id in tags",
-      });
+    for (const tagId of digest.tags) {
+      if (!tagIds.has(tagId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["digests", index, "tags"],
+          message: `unknown label palette tag id: ${tagId}`,
+        });
+      }
     }
   });
 }
@@ -205,6 +242,7 @@ export const DigestReviewUpdateInputSchema = z
     // 어긋나면 서버가 이 저장을 거절한다(update_pending_ingestion의 NM012).
     expectedVersion: z.number().int().min(1),
     digests: z.array(ReviewDigestDraftSchema).min(1).max(REVIEW_DIGESTS_MAX),
+    labelDraft: ReviewLabelPaletteSchema,
     newReferences: z
       .array(ReviewNewReferenceDraftSchema)
       .max(REVIEW_NEW_REFERENCES_MAX),

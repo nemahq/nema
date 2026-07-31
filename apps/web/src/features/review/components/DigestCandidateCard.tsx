@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import type { ReviewDraft } from "@web/features/review/reviewDraft";
 import type { ReviewDigest } from "@web/features/review/types";
 
 import { CandidateCardFrame } from "./CandidateCardFrame";
@@ -12,6 +13,7 @@ import { useReviewDraftContext } from "./ReviewDraftProvider";
 
 interface DigestCandidateCardProps {
   digest: ReviewDigest;
+  labelDraft: ReviewDraft["labelDraft"];
   disabled: boolean;
   sourceActive: boolean;
   onViewSource: () => void;
@@ -19,6 +21,7 @@ interface DigestCandidateCardProps {
 
 export function DigestCandidateCard({
   digest,
+  labelDraft,
   disabled,
   sourceActive,
   onViewSource,
@@ -59,7 +62,8 @@ export function DigestCandidateCard({
           <DigestCardHeader
             digestId={digest.id}
             type={digest.body.type}
-            topics={digest.topics}
+            topicIds={digest.topics}
+            topicPalette={labelDraft.topics}
             disabled={disabled}
             viewed={viewed}
             sourceActive={sourceActive}
@@ -101,7 +105,8 @@ export function DigestCandidateCard({
       <div className="mt-3">
         <DigestTagPicker
           digestId={digest.id}
-          tags={digest.tags}
+          tagIds={digest.tags}
+          tagPalette={labelDraft.tags}
           disabled={disabled}
         />
       </div>

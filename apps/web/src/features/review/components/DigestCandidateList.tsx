@@ -1,5 +1,6 @@
 import { Text } from "@nema-io/weave";
 
+import type { ReviewDraft } from "@web/features/review/reviewDraft";
 import type { ReviewDigest } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -7,6 +8,7 @@ import { DigestCandidateCard } from "./DigestCandidateCard";
 
 interface DigestCandidateListProps {
   digests: ReviewDigest[];
+  labelDraft: ReviewDraft["labelDraft"];
   disabled: boolean;
   activeSourceDigestId: string | null;
   onViewSource: (digestId: string) => void;
@@ -19,6 +21,7 @@ interface DigestCandidateListProps {
 // "없으면 생략" 가드를 둔다.
 export function DigestCandidateList({
   digests,
+  labelDraft,
   disabled,
   activeSourceDigestId,
   onViewSource,
@@ -39,6 +42,7 @@ export function DigestCandidateList({
           <DigestCandidateCard
             key={digest.id}
             digest={digest}
+            labelDraft={labelDraft}
             disabled={disabled}
             sourceActive={activeSourceDigestId === digest.id}
             onViewSource={() => onViewSource(digest.id)}

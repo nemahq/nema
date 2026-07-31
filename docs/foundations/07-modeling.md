@@ -11,7 +11,7 @@
 | `title?` | `string` | 원문을 식별하는 짧은 이름. 외부 연동(Gmail Subject, Tiro 회의 제목 등)은 그 시스템이 준 값을 그대로 쓴다. 제목이 자연히 없는 입력(직접 타이핑·붙여넣기)은 제출 즉시 엔진이 원문을 보고 채운다. 편집 가능 범위는 아래 동작 규칙 "Source.title은 초안 상태에서만 편집 가능하다" 참고 |
 | `body` | `string` | 원문 텍스트(타이핑·붙여넣기·전사·추출 텍스트) |
 | `createdAt` | `Date` | 원문이 시스템에 들어온 때 |
-| `status` | `enum: pending / active / trashed` | 존재 상태. `pending`·`active`·`trashed`의 정의와 전이 규칙은 아래 동작 규칙 "Source.status는 한 방향으로만 전이한다" 참고 |
+| `status` | `enum: pending / active / trashed` | 존재 상태. `active`는 "확정된 Digest가 있음"이 아니라 "사람이 이 원문의 리뷰를 확정함"이다 — Reference만 남긴 리뷰도 확정하면 active다(#27). `pending`·`active`·`trashed`의 정의와 전이 규칙은 아래 동작 규칙 "Source.status는 한 방향으로만 전이한다" 참고 |
 | `trashedAt?` | `Date` | `trashed`가 된 시각. 완전 삭제 배치가 보관 기간 경과 여부를 판단하는 기준 |
 | `authorId?` | `uuid` | 누가 넣었나(사용자 id). User 삭제 시 `ON DELETE SET NULL`이라 nullable |
 | `authorName?` | `string` | `authorId`가 채워질 때 생성 시점의 표시 이름을 함께 스냅샷한다. `authorId`가 계정 삭제로 NULL이 돼도 이 값은 남아 "누가 만들었는지" 표시가 유지된다(아래 동작 규칙 "authorId는 사람 삭제와 무관하게 콘텐츠를 보존한다" 참고). 계정이 살아있어도 이후 이름을 바꾸면 과거 값엔 반영되지 않는 생성 시점 고정값이다 |

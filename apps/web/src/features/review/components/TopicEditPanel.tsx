@@ -12,53 +12,71 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { LabelChipRow } from "./LabelChipRow";
 import { LabelLimitNotice } from "./LabelLimitNotice";
+import { useReviewDraftContext } from "./ReviewDraftProvider";
 import { TopicSearchList } from "./TopicSearchList";
 
 interface TopicEditPanelProps {
-  topics: ReviewTopicDraft[];
+  digestId: string;
+  // 지금 이 Digest에 붙은 Topic(이미 리뷰 팔레트에서 해석된 값).
+  attachedTopics: ReviewTopicDraft[];
+  topicPalette: ReviewTopicDraft[];
   disabled: boolean;
-  onChange: (topics: ReviewTopicDraft[]) => void;
 }
 
 // 색은 안 쓴다 — Topic은 조용하게 두고 테두리로만 구분한다(이번 라운드 원칙).
 // shape="rounded"를 명시하는 이유 — Chip 기본값은 pill인데, 여러 개를 나란히
 // 늘어놓는 이 자리엔 pill이 아니라 각진 모양이 맞다.
+//
+// Topic 자체는 이 Digest 소유가 아니라 리뷰 레벨 공유 팔레트(labelDraft.topics)
+// 항목이다(#28) — TagEditPanel과 같은 구조로 "팔레트에 새로 만들기/이름
+// 고치기"(label/renameTopic)와 "이 Digest에 붙이기/떼기"(digest/attachTopic·
+// detachTopic)를 조합한다.
 export function TopicEditPanel({
-  topics,
+  digestId,
+  attachedTopics,
+  topicPalette,
   disabled,
-  onChange,
 }: TopicEditPanelProps) {
   const { t } = useTranslation();
+  const { dispatch } = useReviewDraftContext();
   const spaceId = useCurrentSpaceId();
   const [query, setQuery] = useState("");
-  const atMax = topics.length >= DIGEST_TOPICS_MAX;
+  const atMax = attachedTopics.length >= DIGEST_TOPICS_MAX;
 
-  // 항목 id는 여기서 만든다 — 저장 응답을 기다렸다 붙이면 그사이 편집(삭제·정렬)이
-  // 가리킬 값이 없어, 이 id가 없애려는 인덱스 기반 식별로 되돌아간다.
+  // TagEditPanel.handleSelectExisting과 같은 이유 — 팔레트에 이미 있는 항목(다른
+  // Digest의 draft 포함)은 그대로 재사용하고, 순수 레지스트리 검색 결과만 그
+  // 레지스트리 행 id를 팔레트 id로 삼아 새로 올린다.
   function handleSelectExisting(topic: { id: string; title: string }) {
-    onChange([
-      ...topics,
-      { id: crypto.randomUUID(), registryId: topic.id, title: topic.title },
-    ]);
+    const existing = topicPalette.find(
+      (candidate) => candidate.id === topic.id,
+    );
+    dispatch({
+      type: "digest/attachTopic",
+      digestId,
+      topic: existing ?? {
+        id: topic.id,
+        registryId: topic.id,
+        title: topic.title,
+      },
+    });
     setQuery("");
   }
 
   function handleCreateNew(name: string) {
-    onChange([
-      ...topics,
-      { id: crypto.randomUUID(), registryId: null, title: name },
-    ]);
+    dispatch({
+      type: "digest/attachTopic",
+      digestId,
+      topic: { id: crypto.randomUUID(), registryId: null, title: name },
+    });
     setQuery("");
   }
 
   function handleRenameDraft(id: string, title: string) {
-    onChange(
-      topics.map((topic) => (topic.id === id ? { ...topic, title } : topic)),
-    );
+    dispatch({ type: "label/renameTopic", id, title });
   }
 
   // DigestTopicPicker와 같은 이유 — 신규 먼저, 그룹 내부는 원래 순서 유지.
-  const sortedTopics = [...topics].sort(
+  const sortedTopics = [...attachedTopics].sort(
     (a, b) => (a.registryId === null ? 0 : 1) - (b.registryId === null ? 0 : 1),
   );
 
@@ -79,7 +97,13 @@ export function TopicEditPanel({
             shape="rounded"
             truncated
             disabled={disabled}
-            onRemove={() => onChange(topics.filter((t) => t.id !== topic.id))}
+            onRemove={() =>
+              dispatch({
+                type: "digest/detachTopic",
+                digestId,
+                topicId: topic.id,
+              })
+            }
             removeAriaLabel={t("review.topic_remove_action", {
               label: topic.title,
             })}
@@ -97,7 +121,8 @@ export function TopicEditPanel({
         <TopicSearchList
           spaceId={spaceId}
           query={query}
-          topics={topics}
+          attachedTopics={attachedTopics}
+          paletteTopics={topicPalette}
           onSelectExisting={handleSelectExisting}
           onCreateNew={handleCreateNew}
           onRenameDraft={handleRenameDraft}

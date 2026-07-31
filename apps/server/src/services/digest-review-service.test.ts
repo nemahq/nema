@@ -303,7 +303,7 @@ describe("getReview", () => {
     ]);
   });
 
-  it("topic·tag를 이름으로 Space/Workspace 레지스트리와 매칭해 기존(registryId)/신규(null)를 가르고, 저장된 항목 id는 그대로 왕복하며, 기존 태그는 draft 색 대신 레지스트리 색을 쓴다", async () => {
+  it("리뷰 레벨 팔레트(label_draft)의 topic·tag를 이름으로 Space/Workspace 레지스트리와 매칭해 기존(registryId)/신규(null)를 가르고, 팔레트 항목 id는 그대로 왕복하며, 기존 태그는 draft 색 대신 레지스트리 색을 쓴다", async () => {
     const supabase = mockSupabase({
       changesets: {
         id: CHANGESET_ID,
@@ -319,6 +319,26 @@ describe("getReview", () => {
           body: "원문",
           created_at: "2026-07-07T00:00:00Z",
         },
+        label_draft: {
+          topics: [
+            { id: TOPIC_DRAFT_ID_1, title: "기존 주제" },
+            { id: TOPIC_DRAFT_ID_2, title: "새 주제" },
+          ],
+          tags: [
+            {
+              id: TAG_DRAFT_ID_1,
+              title: "기존 태그",
+              description: "기존 정의",
+              color: "cyan",
+            },
+            {
+              id: TAG_DRAFT_ID_2,
+              title: "새 태그",
+              description: "새 정의",
+              color: "olive",
+            },
+          ],
+        },
         changes: [
           {
             id: "22222222-2222-4222-8222-222222222222",
@@ -330,24 +350,8 @@ describe("getReview", () => {
               title: "제목",
               description: "요약",
               body: { type: "learning", finding: "발견" },
-              topics: [
-                { id: TOPIC_DRAFT_ID_1, title: "기존 주제" },
-                { id: TOPIC_DRAFT_ID_2, title: "새 주제" },
-              ],
-              tags: [
-                {
-                  id: TAG_DRAFT_ID_1,
-                  title: "기존 태그",
-                  description: "기존 정의",
-                  color: "cyan",
-                },
-                {
-                  id: TAG_DRAFT_ID_2,
-                  title: "새 태그",
-                  description: "새 정의",
-                  color: "olive",
-                },
-              ],
+              topics: [TOPIC_DRAFT_ID_1, TOPIC_DRAFT_ID_2],
+              tags: [TAG_DRAFT_ID_1, TAG_DRAFT_ID_2],
               reference_ids: [],
               external_urls: [],
             },
@@ -365,6 +369,11 @@ describe("getReview", () => {
     const review = await getReview({ supabase, spaceId: SPACE_ID, number: 12 });
 
     expect(review.digests[0]?.topics).toEqual([
+      TOPIC_DRAFT_ID_1,
+      TOPIC_DRAFT_ID_2,
+    ]);
+    expect(review.digests[0]?.tags).toEqual([TAG_DRAFT_ID_1, TAG_DRAFT_ID_2]);
+    expect(review.labelDraft.topics).toEqual([
       {
         id: TOPIC_DRAFT_ID_1,
         registryId: EXISTING_TOPIC_REGISTRY_ID,
@@ -372,7 +381,7 @@ describe("getReview", () => {
       },
       { id: TOPIC_DRAFT_ID_2, registryId: null, title: "새 주제" },
     ]);
-    expect(review.digests[0]?.tags).toEqual([
+    expect(review.labelDraft.tags).toEqual([
       {
         id: TAG_DRAFT_ID_1,
         registryId: EXISTING_TAG_REGISTRY_ID,
@@ -430,6 +439,7 @@ describe("updateReview", () => {
       changesetId: CHANGESET_ID,
       expectedVersion: 3,
       digests: [],
+      labelDraft: { topics: [], tags: [] },
       newReferences: [
         {
           id: NEW_REFERENCE_ID,
@@ -474,6 +484,7 @@ describe("updateReview", () => {
       changesetId: CHANGESET_ID,
       expectedVersion: 1,
       digests: [],
+      labelDraft: { topics: [], tags: [] },
       newReferences: [],
       referenceUpdates: [
         { referenceId: EXISTING_REFERENCE_ID, mergeNote: "다듬은 설명" },
@@ -490,10 +501,10 @@ describe("updateReview", () => {
     );
   });
 
-  // getReview가 표시용으로 붙인 topic/tag의 registryId는 저장 형태에 없는 키다 —
-  // 그대로 실어 보내면 형태가 어긋나므로 벗겨내고, 항목 자체의 정체성(id)은 그대로
-  // 왕복시키는지 고정한다.
-  it("topic/tag의 registryId를 저장 계약({id, title[, description]})으로 벗겨 보낸다", async () => {
+  // 팔레트(labelDraft)의 topic/tag는 getReview가 표시용으로 붙인 registryId를
+  // 저장 형태에 없는 키라 벗겨내고, 항목 자체의 정체성(id)은 그대로 왕복시키는지
+  // 고정한다. Digest 쪽 topics/tags는 이미 팔레트 id 배열이라 그대로 통과해야 한다.
+  it("digest의 topics/tags는 id 배열 그대로, labelDraft는 registryId를 벗겨 저장 계약으로 보낸다", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
     const supabase = { rpc } as unknown as TypedSupabaseClient;
 
@@ -509,35 +520,39 @@ describe("updateReview", () => {
           title: "제목",
           description: "요약",
           body: { type: "learning", finding: "발견" },
-          topics: [
-            {
-              id: TOPIC_DRAFT_ID_1,
-              registryId: EXISTING_TOPIC_REGISTRY_ID,
-              title: "기존 주제",
-            },
-            { id: TOPIC_DRAFT_ID_2, registryId: null, title: "새 주제" },
-          ],
-          tags: [
-            {
-              id: TAG_DRAFT_ID_1,
-              registryId: EXISTING_TAG_REGISTRY_ID,
-              title: "기존 태그",
-              description: "기존 정의",
-              color: "cyan",
-            },
-            {
-              id: TAG_DRAFT_ID_2,
-              registryId: null,
-              title: "새 태그",
-              description: "새 정의",
-              color: "olive",
-            },
-          ],
+          topics: [TOPIC_DRAFT_ID_1, TOPIC_DRAFT_ID_2],
+          tags: [TAG_DRAFT_ID_1, TAG_DRAFT_ID_2],
           referenceIds: [],
           newReferenceKeys: [],
           externalUrls: [],
         },
       ],
+      labelDraft: {
+        topics: [
+          {
+            id: TOPIC_DRAFT_ID_1,
+            registryId: EXISTING_TOPIC_REGISTRY_ID,
+            title: "기존 주제",
+          },
+          { id: TOPIC_DRAFT_ID_2, registryId: null, title: "새 주제" },
+        ],
+        tags: [
+          {
+            id: TAG_DRAFT_ID_1,
+            registryId: EXISTING_TAG_REGISTRY_ID,
+            title: "기존 태그",
+            description: "기존 정의",
+            color: "cyan",
+          },
+          {
+            id: TAG_DRAFT_ID_2,
+            registryId: null,
+            title: "새 태그",
+            description: "새 정의",
+            color: "olive",
+          },
+        ],
+      },
       newReferences: [],
       referenceUpdates: [],
     });
@@ -549,26 +564,30 @@ describe("updateReview", () => {
           expect.objectContaining({
             id: DIGEST_ID,
             position: 0,
-            topics: [
-              { id: TOPIC_DRAFT_ID_1, title: "기존 주제" },
-              { id: TOPIC_DRAFT_ID_2, title: "새 주제" },
-            ],
-            tags: [
-              {
-                id: TAG_DRAFT_ID_1,
-                title: "기존 태그",
-                description: "기존 정의",
-                color: "cyan",
-              },
-              {
-                id: TAG_DRAFT_ID_2,
-                title: "새 태그",
-                description: "새 정의",
-                color: "olive",
-              },
-            ],
+            topics: [TOPIC_DRAFT_ID_1, TOPIC_DRAFT_ID_2],
+            tags: [TAG_DRAFT_ID_1, TAG_DRAFT_ID_2],
           }),
         ],
+        p_label_draft: {
+          topics: [
+            { id: TOPIC_DRAFT_ID_1, title: "기존 주제" },
+            { id: TOPIC_DRAFT_ID_2, title: "새 주제" },
+          ],
+          tags: [
+            {
+              id: TAG_DRAFT_ID_1,
+              title: "기존 태그",
+              description: "기존 정의",
+              color: "cyan",
+            },
+            {
+              id: TAG_DRAFT_ID_2,
+              title: "새 태그",
+              description: "새 정의",
+              color: "olive",
+            },
+          ],
+        },
       }),
     );
   });
@@ -591,6 +610,7 @@ describe("updateReview", () => {
         changesetId: CHANGESET_ID,
         expectedVersion: 1,
         digests: [],
+        labelDraft: { topics: [], tags: [] },
         newReferences: [],
         referenceUpdates: [],
       }),

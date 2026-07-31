@@ -372,7 +372,7 @@ describe("update_pending_ingestion RPC (integration)", () => {
     const { rows } = await client.query<{ can_execute: boolean }>(
       `SELECT has_function_privilege(
          'anon',
-         'update_pending_ingestion(uuid, integer, jsonb, jsonb, jsonb)',
+         'update_pending_ingestion(uuid, integer, jsonb, jsonb, jsonb, jsonb)',
          'EXECUTE'
        ) AS can_execute`,
     );
@@ -380,8 +380,26 @@ describe("update_pending_ingestion RPC (integration)", () => {
   });
 });
 
+async function getLabelDraft(changesetId: string): Promise<{
+  topics: { id: string; title: string }[];
+  tags: { id: string; title: string; description: string; color: string }[];
+}> {
+  const { rows } = await client.query<{
+    label_draft: {
+      topics: { id: string; title: string }[];
+      tags: {
+        id: string;
+        title: string;
+        description: string;
+        color: string;
+      }[];
+    };
+  }>("SELECT label_draft FROM changesets WHERE id = $1", [changesetId]);
+  return rows[0].label_draft;
+}
+
 describe("Tag color 배정 (write_ingestion_review_changes/confirm_ingestion_review, integration)", () => {
-  it("엔진이 제안한 신규 Tag draft에 8개 팔레트 중 하나의 color가 채워진다", async () => {
+  it("엔진이 제안한 신규 Tag가 리뷰 팔레트(label_draft)에 8개 중 하나의 color로 올라간다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -399,14 +417,16 @@ describe("Tag color 배정 (write_ingestion_review_changes/confirm_ingestion_rev
       ],
     });
 
-    const changes = await getChanges(changesetId, "digest");
-    const tags = requireChangeByTitle(changes, "d1").data.tags as Array<{
-      id: string;
-      color: string;
-    }>;
-    expect(tags).toHaveLength(1);
-    expect(tags[0].id).toBeTruthy();
-    expect(TAG_COLORS).toContain(tags[0].color);
+    const digestTagIds = requireChangeByTitle(
+      await getChanges(changesetId, "digest"),
+      "d1",
+    ).data.tags as string[];
+    expect(digestTagIds).toHaveLength(1);
+
+    const labelDraft = await getLabelDraft(changesetId);
+    const tag = labelDraft.tags.find((row) => row.id === digestTagIds[0]);
+    expect(tag?.title).toBe("신규 태그");
+    expect(TAG_COLORS).toContain(tag?.color);
   });
 
   // 정의(description)와 같은 원칙 — 재사용 판단·표시 기준인 color는 리뷰 확정
@@ -439,11 +459,8 @@ describe("Tag color 배정 (write_ingestion_review_changes/confirm_ingestion_rev
       ],
     });
 
-    const draftTags = requireChangeByTitle(
-      await getChanges(changesetId, "digest"),
-      "d1",
-    ).data.tags as Array<{ title: string; color: string }>;
-    const draftNewTagColor = draftTags.find(
+    const labelDraftBeforeConfirm = await getLabelDraft(changesetId);
+    const draftNewTagColor = labelDraftBeforeConfirm.tags.find(
       (tag) => tag.title === "신규 태그",
     )?.color;
 
