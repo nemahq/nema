@@ -209,6 +209,61 @@ describe("getReview", () => {
     ).rejects.toMatchObject({ code: "query_failed" });
   });
 
+  // 태그 색상 팔레트 개편(TAG_COLORS에서 값 제거·교체)이 있으면 그 이전에 저장된
+  // label_draft에는 더 이상 유효하지 않은 옛 색상값이 남을 수 있다 — ZodError를
+  // 그대로 흘려보내면 trpc.ts의 isZodInputError가 오인해 원인 추적이 막히므로
+  // query_failed로 명시하는지 고정한다.
+  it("label_draft의 태그 색상이 더 이상 유효하지 않으면(팔레트 값 목록 변경) 조용히 넘기지 않는다", async () => {
+    const supabase = mockSupabase({
+      changesets: {
+        id: CHANGESET_ID,
+        number: 12,
+        type: "ingestion",
+        status: "open",
+        source_id: SOURCE_ID,
+        draft_version: 1,
+        label_draft: {
+          topics: [],
+          tags: [
+            {
+              id: EXISTING_TAG_REGISTRY_ID,
+              title: "태그",
+              description: "설명",
+              color: "slate",
+            },
+          ],
+        },
+        sources: {
+          title: "원문 제목",
+          body: "원문",
+          created_at: "2026-07-07T00:00:00Z",
+        },
+        changes: [
+          {
+            id: "22222222-2222-4222-8222-222222222222",
+            action: "create",
+            target_type: "digest",
+            target_id: "33333333-3333-4333-8333-333333333333",
+            position: 0,
+            data: {
+              title: "제목",
+              description: "요약",
+              body: { type: "learning", finding: "발견" },
+              topics: [],
+              tags: [EXISTING_TAG_REGISTRY_ID],
+              reference_ids: [],
+              external_urls: [],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(
+      getReview({ supabase, spaceId: SPACE_ID, number: 12 }),
+    ).rejects.toMatchObject({ code: "query_failed" });
+  });
+
   // 한 changeset에 인용된 기존 Reference가 여럿이고 그중 일부만 병합 제안이 있는 실제
   // 상황 — 제안 있는 것만 mergeNote가 붙고 나머지는 null이어야 한다. "제안 하나라도
   // 있으면 전부에 적용" 같은 mergeNoteById 회귀를 이 혼합 케이스로 고정한다.

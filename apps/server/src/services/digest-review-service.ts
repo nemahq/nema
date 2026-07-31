@@ -87,6 +87,27 @@ function requirePosition(position: number | null, changeId: string): number {
   return position;
 }
 
+// changes.data/changesets.label_draft(JSONB) 스냅샷은 스키마가 나중에 바뀌면(예:
+// TagColor 값 목록 변경) 더 이상 파싱되지 않을 수 있다 — 원본 ZodError를 그대로
+// 던지면 trpc.ts의 isZodInputError가 "입력 검증 실패"로 오인해 원인 추적이 막힌다.
+// requirePosition과 같은 결로 query_failed로 명시한다.
+function parseStoredData<T>(args: {
+  schema: z.ZodType<T>;
+  data: unknown;
+  context: string;
+}): T {
+  const { schema, data, context } = args;
+  const result = schema.safeParse(data);
+  if (!result.success) {
+    throw new SupabaseError(
+      "query_failed",
+      `${context}: ${result.error.message}`,
+      result.error,
+    );
+  }
+  return result.data;
+}
+
 interface CitedReference {
   id: string;
   type: string;
@@ -175,7 +196,11 @@ export async function getReview(args: {
 
   const newReferences: ReviewNewReferenceDraft[] = referenceChanges.map(
     (change) => {
-      const referenceData = StoredReferenceDataSchema.parse(change.data);
+      const referenceData = parseStoredData({
+        schema: StoredReferenceDataSchema,
+        data: change.data,
+        context: `reference change ${change.id} has invalid stored data`,
+      });
       return {
         id: change.target_id,
         position: requirePosition(change.position, change.id),
@@ -193,12 +218,18 @@ export async function getReview(args: {
   const rawDigests = digestChanges.map((change) => ({
     id: change.target_id,
     position: requirePosition(change.position, change.id),
-    ...StoredIngestionDigestDataSchema.parse(change.data),
+    ...parseStoredData({
+      schema: StoredIngestionDigestDataSchema,
+      data: change.data,
+      context: `digest change ${change.id} has invalid stored data`,
+    }),
   }));
 
-  const labelDraftRaw = StoredLabelDraftSchema.parse(
-    changeset.label_draft ?? { topics: [], tags: [] },
-  );
+  const labelDraftRaw = parseStoredData({
+    schema: StoredLabelDraftSchema,
+    data: changeset.label_draft ?? { topics: [], tags: [] },
+    context: `changeset ${changeset.id} has invalid label_draft`,
+  });
 
   // 기존/신규 판정 — 이름이 Space(topics)·Workspace(tags) 레지스트리와 매치하면 기존
   // (registryId 포함, 읽기 전용), 매치 없으면 신규(registryId null). archived 항목은
@@ -283,7 +314,11 @@ export async function getReview(args: {
   const mergeNoteById = new Map<string, string>();
   for (const change of changeset.changes) {
     if (change.target_type === "reference" && change.action === "modify") {
-      const mergeData = StoredReferenceMergeDataSchema.parse(change.data);
+      const mergeData = parseStoredData({
+        schema: StoredReferenceMergeDataSchema,
+        data: change.data,
+        context: `reference merge change ${change.id} has invalid stored data`,
+      });
       mergeNoteById.set(change.target_id, mergeData.after.body);
     }
   }
