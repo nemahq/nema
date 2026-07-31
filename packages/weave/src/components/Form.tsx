@@ -100,7 +100,7 @@ function FormMessage({
       data-slot="form-message"
       role={variant === "error" ? "alert" : undefined}
       className={cn(
-        "text-xs",
+        "pl-1 text-xs",
         hasContent
           ? formMessageVariantClasses[variant]
           : reserveSpace && "text-transparent",

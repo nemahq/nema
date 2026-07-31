@@ -19,7 +19,7 @@ type TextareaVariant = "default" | "borderless";
 // 선택자라 무해하다.
 const VARIANT_CLASSNAME: Record<TextareaVariant, string> = {
   default:
-    "rounded-md border border-border bg-transparent px-3 py-1.5 placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none aria-invalid:border-status-error disabled:text-fg-quinary disabled:placeholder:text-fg-quinary dark:focus-visible:border-fg-tertiary/70",
+    "rounded-md border border-border bg-transparent px-3 py-1.5 placeholder:text-fg-quaternary focus-visible:border-brand focus-visible:outline-none aria-invalid:border-status-error aria-invalid:focus-visible:border-status-error disabled:text-fg-quinary disabled:placeholder:text-fg-quinary dark:focus-visible:border-fg-tertiary/70 dark:aria-invalid:focus-visible:border-status-error",
   // focus:outline-none을 다시 둔다 — 텍스트 입력은 버튼과 달리 포커스되면
   // 깜빡이는 caret이 항상 같이 뜨는데, 이게 이미 네이티브 포커스 표시라
   // conventions.md "MUST NOT remove focus styles"가 겨냥한 상황(대체 표시가

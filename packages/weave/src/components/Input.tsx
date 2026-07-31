@@ -13,7 +13,9 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         // 활성/비활성이 화면상 전혀 구분되지 않는다(테두리·배경은 그대로라서).
         "placeholder:text-fg-quaternary disabled:cursor-not-allowed disabled:text-fg-quinary disabled:placeholder:text-fg-quinary",
         "focus-visible:border-brand focus-visible:outline-none dark:focus-visible:border-fg-tertiary/70",
-        "aria-invalid:border-status-error aria-invalid:ring-status-error/20",
+        // focus-visible:border-*와 specificity가 같아 순서 싸움이 나던 걸,
+        // aria-invalid와 겹쳐 확실히 이기도록 만든다(weave-usage.md 함정 참고).
+        "aria-invalid:border-status-error aria-invalid:ring-status-error/20 aria-invalid:focus-visible:border-status-error dark:aria-invalid:focus-visible:border-status-error",
         className,
       )}
       {...props}
