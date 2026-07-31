@@ -3,6 +3,7 @@ import * as React from "react";
 
 import { cn } from "../utils";
 import { Label } from "./Label";
+import { sizeClasses } from "./Text";
 
 type FormMessageVariant = "error" | "success";
 
@@ -46,14 +47,18 @@ function FormField({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function FormLabel(props: React.ComponentProps<typeof Label>) {
+function FormLabel(props: Omit<React.ComponentProps<typeof Label>, "htmlFor">) {
   const { fieldId } = useFormFieldContext("FormLabel");
   return <Label htmlFor={fieldId} {...props} />;
 }
 
 // 라디오형 피커처럼 단일 포커스 컨트롤이 아니라 그룹인 필드는 FormControl
 // 없이 FormField 안에서 role="group" 등으로 직접 조립한다.
-function FormControl({ children }: { children: React.ReactElement }) {
+function FormControl({
+  children,
+}: {
+  children: React.ReactElement<{ id?: string; "aria-describedby"?: string }>;
+}) {
   const { fieldId, messageId } = useFormFieldContext("FormControl");
   return (
     <Slot.Root id={fieldId} aria-describedby={messageId}>
@@ -78,7 +83,7 @@ function FormMessage({
   errorPrefix?: string;
 }) {
   const { messageId } = useFormFieldContext("FormMessage");
-  const hasContent = children != null && children !== "";
+  const hasContent = children != null && children !== "" && children !== false;
 
   let content: React.ReactNode = null;
   if (hasContent) {
@@ -100,7 +105,8 @@ function FormMessage({
       data-slot="form-message"
       role={variant === "error" ? "alert" : undefined}
       className={cn(
-        "pl-1 text-xs",
+        "pl-1",
+        sizeClasses.xs,
         hasContent
           ? formMessageVariantClasses[variant]
           : reserveSpace && "text-transparent",

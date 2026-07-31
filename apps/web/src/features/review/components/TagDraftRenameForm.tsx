@@ -157,7 +157,11 @@ export function TagDraftRenameForm({
         <Text size="sm" color="tertiary" className="px-2">
           {t("review.tag_color_label")}
         </Text>
-        <div
+        {/* FormLabel/FormControl/FormMessage 없이 FormField만 레이아웃
+            wrapper로 쓴다 — 색상 리스트는 단일 포커스 컨트롤이 아니라
+            role="group"으로 직접 접근성을 표시하는 자리(weave-usage.md
+            Form 항목의 group 필드 탈출구). */}
+        <FormField
           role="group"
           aria-label={t("review.tag_color_label")}
           className="px-1"
@@ -167,7 +171,7 @@ export function TagDraftRenameForm({
             onChange={onColorChange}
             getColorLabel={(c) => t(TAG_COLOR_LABEL_KEY[c])}
           />
-        </div>
+        </FormField>
       </div>
     </div>
   );

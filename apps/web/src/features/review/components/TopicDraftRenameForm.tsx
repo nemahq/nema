@@ -62,23 +62,21 @@ export function TopicDraftRenameForm({
   const titleError = getTitleError();
 
   return (
-    <div className="flex flex-col gap-2 px-2">
-      <FormField>
-        <FormControl>
-          <Input
-            autoFocus
-            value={titleValue}
-            maxLength={TOPIC_TITLE_MAX_LENGTH}
-            placeholder={t("common.name_placeholder")}
-            aria-label={t("common.name_label")}
-            aria-invalid={!submittable}
-            onChange={(e) => setTitleValue(e.target.value)}
-          />
-        </FormControl>
-        <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
-          {titleError}
-        </FormMessage>
-      </FormField>
-    </div>
+    <FormField className="px-2">
+      <FormControl>
+        <Input
+          autoFocus
+          value={titleValue}
+          maxLength={TOPIC_TITLE_MAX_LENGTH}
+          placeholder={t("common.name_placeholder")}
+          aria-label={t("common.name_label")}
+          aria-invalid={!submittable}
+          onChange={(e) => setTitleValue(e.target.value)}
+        />
+      </FormControl>
+      <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
+        {titleError}
+      </FormMessage>
+    </FormField>
   );
 }

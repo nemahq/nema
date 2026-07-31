@@ -4,8 +4,6 @@ import * as Sentry from "@sentry/react";
 import {
   Button,
   ComboboxItem,
-  FormControl,
-  FormField,
   Input,
   PopoverContent,
   PopoverTrigger,
@@ -251,28 +249,20 @@ export function TagAddPopover({
           </>
         ) : (
           <>
-            <FormField>
-              <FormControl>
-                <Input
-                  autoFocus
-                  value={creatingTitle}
-                  placeholder={t("common.name_placeholder")}
-                  aria-label={t("common.name_label")}
-                  onChange={(e) => setCreatingTitle(e.target.value)}
-                />
-              </FormControl>
-            </FormField>
-            <FormField>
-              <FormControl>
-                <Textarea
-                  value={description}
-                  aria-label={t("review.tag_create_description_label")}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t("review.tag_create_description_placeholder")}
-                  rows={3}
-                />
-              </FormControl>
-            </FormField>
+            <Input
+              autoFocus
+              value={creatingTitle}
+              placeholder={t("common.name_placeholder")}
+              aria-label={t("common.name_label")}
+              onChange={(e) => setCreatingTitle(e.target.value)}
+            />
+            <Textarea
+              value={description}
+              aria-label={t("review.tag_create_description_label")}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t("review.tag_create_description_placeholder")}
+              rows={3}
+            />
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
