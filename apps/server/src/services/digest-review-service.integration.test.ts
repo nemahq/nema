@@ -265,7 +265,65 @@ describe("update_pending_ingestion RPC (integration)", () => {
     ).rejects.toMatchObject({ code: "P0002" });
   });
 
-  it("digest가 신규 Reference 인용을 끊고 저장하면 그 Reference create-change가 삭제된다(고아 방지)", async () => {
+  // #27 — Reference의 존재는 인용이 아니라 등록에서 나온다. digest가 인용을
+  // 끊어도(new_reference_keys를 비워도) 후보 자체가 p_new_references에 그대로
+  // 실려 오면 그 change는 지워지지 않아야 한다. 예전 가드(v_cited_keys)는 정확히
+  // 이 케이스를 인용 없음으로 보고 조용히 지웠다 — 그 회귀를 여기서 고정한다.
+  it("digest가 신규 Reference 인용을 끊어도 후보가 페이로드에 남아있으면 존재를 유지한다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId);
+    const sourceId = await createFixtureSource(spaceId);
+    const changesetId = await createReview({
+      sourceId,
+      digests: [fixtureDigest({ title: "d1", new_reference_keys: ["r1"] })],
+      newReferences: [
+        {
+          key: "r1",
+          type: "product",
+          title: "신규 제품",
+          body: "설명",
+          external_urls: [],
+        },
+      ],
+    });
+
+    const [{ target_id: digestId }] = await getChanges(changesetId, "digest");
+    const [{ target_id: referenceId }] = await getChanges(
+      changesetId,
+      "reference",
+    );
+
+    await client.query(
+      "SELECT update_pending_ingestion($1, $2, $3::jsonb, $4::jsonb)",
+      [
+        changesetId,
+        1,
+        JSON.stringify([
+          { ...fixtureDigest({ title: "d1" }), id: digestId, position: 0 },
+        ]),
+        JSON.stringify([
+          {
+            id: referenceId,
+            position: 0,
+            type: "product",
+            title: "신규 제품",
+            body: "설명",
+            external_urls: [],
+          },
+        ]),
+      ],
+    );
+
+    const referencesAfter = await getChanges(changesetId, "reference");
+    expect(referencesAfter).toHaveLength(1);
+    expect(referencesAfter[0].target_id).toBe(referenceId);
+  });
+
+  it("신규 Reference 후보를 페이로드에서 직접 빼면(사람이 삭제) 그 create-change가 지워진다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -479,5 +537,256 @@ describe("Tag color 배정 (write_ingestion_review_changes/confirm_ingestion_rev
 
     const created = tagRows.find((row) => row.title === "신규 태그");
     expect(created?.color).toBe(draftNewTagColor);
+  });
+});
+
+// 엔진이 이미 레지스트리에 있는 이름을 재제안할 때, 팔레트 항목 id가 그 레지스트리
+// 행의 id와 같아야 한다 — 안 맞으면 사람이 리뷰 화면에서 같은 레지스트리 항목을
+// 검색해 다시 선택할 때(TagEditPanel.handleSelectExisting이 레지스트리 행 id를
+// 그대로 팔레트 id로 쓰는 경로) 서로 다른 id로 갈라져 같은 태그가 한 Digest에
+// 두 번 붙는다.
+describe("create_ingestion_review — 레지스트리 매치 팔레트 id", () => {
+  it("엔진이 재제안한 기존 Topic/Tag는 팔레트 id가 레지스트리 행 id와 같다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId);
+    const sourceId = await createFixtureSource(spaceId);
+
+    const { rows: topicRows } = await client.query<{ id: string }>(
+      "INSERT INTO topics (space_id, title) VALUES ($1, $2) RETURNING id",
+      [spaceId, "기존 주제"],
+    );
+    const existingTopicId = topicRows[0].id;
+
+    const { rows: tagRows } = await client.query<{ id: string }>(
+      "INSERT INTO tags (workspace_id, title, description, color) VALUES ($1, $2, $3, 'violet') RETURNING id",
+      [workspaceId, "기존 태그", "기존 정의"],
+    );
+    const existingTagId = tagRows[0].id;
+
+    const changesetId = await createReview({
+      sourceId,
+      digests: [
+        fixtureDigest({
+          title: "d1",
+          topics: ["기존 주제"],
+          tags: [{ title: "기존 태그", description: "기존 정의" }],
+        }),
+      ],
+    });
+
+    const labelDraft = await getLabelDraft(changesetId);
+    expect(labelDraft.topics).toEqual([
+      { id: existingTopicId, title: "기존 주제" },
+    ]);
+    expect(labelDraft.tags[0]?.id).toBe(existingTagId);
+
+    // 이 digest의 topics/tags 참조도 같은 id를 가리켜야 확정 시 정확히 그
+    // 레지스트리 행에 연결된다.
+    const digestChange = requireChangeByTitle(
+      await getChanges(changesetId, "digest"),
+      "d1",
+    );
+    expect(digestChange.data.topics).toEqual([existingTopicId]);
+    expect(digestChange.data.tags).toEqual([existingTagId]);
+  });
+
+  it("trashed/archived 상태인 동명 Topic/Tag는 매치하지 않고 새 팔레트 항목을 만든다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId);
+    const sourceId = await createFixtureSource(spaceId);
+
+    await client.query(
+      "INSERT INTO topics (space_id, title, status) VALUES ($1, $2, 'archived')",
+      [spaceId, "지난 주제"],
+    );
+
+    const changesetId = await createReview({
+      sourceId,
+      digests: [fixtureDigest({ title: "d1", topics: ["지난 주제"] })],
+    });
+
+    const labelDraft = await getLabelDraft(changesetId);
+    const { rows: archivedRows } = await client.query<{ id: string }>(
+      "SELECT id FROM topics WHERE space_id = $1 AND title = '지난 주제'",
+      [spaceId],
+    );
+    expect(labelDraft.topics[0]?.id).not.toBe(archivedRows[0].id);
+  });
+});
+
+// #30 — draft_snapshot이 채워지는 시점엔 아직 최종 id가 없어(id 부여가 스냅샷
+// 저장보다 늦었음) 스냅샷 항목과 최종 초안 항목을 이을 키가 없었다. id 부여
+// 순서를 스냅샷 저장 앞으로 당긴 뒤에도 실제로 같은 id로 이어지는지 고정한다.
+describe("create_ingestion_review — draft_snapshot id 얼리기(#30)", () => {
+  it("draft_snapshot의 digest·신규 Reference·라벨 id가 최종 changes/label_draft의 id와 각각 일치한다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId);
+    const sourceId = await createFixtureSource(spaceId);
+
+    const changesetId = await createReview({
+      sourceId,
+      digests: [
+        fixtureDigest({
+          title: "d1",
+          topics: ["주제"],
+          tags: [{ title: "태그", description: "정의" }],
+          new_reference_keys: ["r1"],
+        }),
+      ],
+      newReferences: [
+        {
+          key: "r1",
+          type: "product",
+          title: "신규 제품",
+          body: "설명",
+          external_urls: [],
+        },
+      ],
+    });
+
+    const { rows: snapshotRows } = await client.query<{
+      draft_snapshot: {
+        digests: { id: string; topics: string[]; tags: string[] }[];
+        new_references: { id: string; key: string }[];
+      };
+    }>("SELECT draft_snapshot FROM changesets WHERE id = $1", [changesetId]);
+    const snapshot = snapshotRows[0].draft_snapshot;
+
+    const digestChange = requireChangeByTitle(
+      await getChanges(changesetId, "digest"),
+      "d1",
+    );
+    const [referenceChange] = await getChanges(changesetId, "reference");
+    const labelDraft = await getLabelDraft(changesetId);
+
+    expect(snapshot.digests[0]?.id).toBe(digestChange.target_id);
+    expect(snapshot.digests[0]?.topics).toEqual(digestChange.data.topics);
+    expect(snapshot.digests[0]?.tags).toEqual(digestChange.data.tags);
+    expect(snapshot.new_references[0]?.id).toBe(referenceChange.target_id);
+    // 스냅샷의 topics/tags id는 label_draft 팔레트 id와 같은 값을 가리켜야
+    // 스냅샷만으로 "엔진이 원래 뭘 제안했는지"를 팔레트 항목 제목까지 복원할 수 있다.
+    expect(
+      labelDraft.topics.some(
+        (topic) => topic.id === snapshot.digests[0]?.topics[0],
+      ),
+    ).toBe(true);
+    expect(
+      labelDraft.tags.some((tag) => tag.id === snapshot.digests[0]?.tags[0]),
+    ).toBe(true);
+  });
+});
+
+describe("revert_changeset — label_draft 승계(integration)", () => {
+  it("확정된 리뷰를 되돌리면 재판정 초안이 원본 label_draft를 그대로 물려받는다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId);
+    const sourceId = await createFixtureSource(spaceId);
+    const changesetId = await createReview({
+      sourceId,
+      digests: [
+        fixtureDigest({
+          title: "d1",
+          tags: [{ title: "태그", description: "정의" }],
+        }),
+      ],
+    });
+
+    const originalLabelDraft = await getLabelDraft(changesetId);
+    await client.query("SELECT confirm_ingestion_review($1)", [changesetId]);
+
+    const { rows: revertRows } = await client.query<{
+      revert_changeset: string;
+    }>("SELECT revert_changeset($1, $2)", [changesetId, "되돌리기"]);
+    const revertId = revertRows[0].revert_changeset;
+
+    const reopenedLabelDraft = await getLabelDraft(revertId);
+    expect(reopenedLabelDraft).toEqual(originalLabelDraft);
+
+    // 재판정 초안의 digest도 그 팔레트 id를 그대로 가리켜야 getReview가 정상
+    // 해석된다(zod 파싱 실패 없음).
+    const reopenedDigest = requireChangeByTitle(
+      await getChanges(revertId, "digest"),
+      "d1",
+    );
+    expect(reopenedDigest.data.tags).toEqual([reopenedLabelDraft.tags[0]?.id]);
+  });
+});
+
+describe("confirm_ingestion_review — 미부착 팔레트 항목(ambient, #28)", () => {
+  it("어디에도 안 붙은 팔레트 항목은 경고 없이 레지스트리에 안 쓴다", async () => {
+    if (!localDbAvailable) {
+      return;
+    }
+
+    const workspaceId = await createFixtureWorkspace();
+    const spaceId = await createFixtureSpace(workspaceId);
+    const sourceId = await createFixtureSource(spaceId);
+    const changesetId = await createReview({
+      sourceId,
+      digests: [fixtureDigest({ title: "d1" })],
+    });
+
+    const labelDraft = await getLabelDraft(changesetId);
+    const unattachedTopicId = randomUUID();
+    const unattachedTagId = randomUUID();
+    const nextLabelDraft = {
+      topics: [
+        ...labelDraft.topics,
+        { id: unattachedTopicId, title: "안 붙은 주제" },
+      ],
+      tags: [
+        ...labelDraft.tags,
+        {
+          id: unattachedTagId,
+          title: "안 붙은 태그",
+          description: "정의",
+          color: "violet",
+        },
+      ],
+    };
+    const [{ target_id: digestId }] = await getChanges(changesetId, "digest");
+
+    await client.query(
+      "SELECT update_pending_ingestion($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb)",
+      [
+        changesetId,
+        1,
+        JSON.stringify([
+          { ...fixtureDigest({ title: "d1" }), id: digestId, position: 0 },
+        ]),
+        JSON.stringify([]),
+        JSON.stringify([]),
+        JSON.stringify(nextLabelDraft),
+      ],
+    );
+
+    await client.query("SELECT confirm_ingestion_review($1)", [changesetId]);
+
+    const { rows: topicRows } = await client.query(
+      "SELECT 1 FROM topics WHERE space_id = $1 AND title = '안 붙은 주제'",
+      [spaceId],
+    );
+    const { rows: tagRows } = await client.query(
+      "SELECT 1 FROM tags WHERE workspace_id = $1 AND title = '안 붙은 태그'",
+      [workspaceId],
+    );
+    expect(topicRows).toHaveLength(0);
+    expect(tagRows).toHaveLength(0);
   });
 });

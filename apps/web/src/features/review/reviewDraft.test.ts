@@ -258,6 +258,32 @@ describe("reviewDraftReducer — 리뷰 라벨 팔레트(#28)", () => {
       color: "olive",
     });
   });
+
+  it("label/removeTopic은 팔레트에서 완전히 지우고, 붙어있던 모든 digest에서도 뗀다", () => {
+    const before = draft();
+
+    const next = reviewDraftReducer(before, {
+      type: "label/removeTopic",
+      id: "topic-draft-1",
+    });
+
+    expect(next.labelDraft.topics).toEqual([]);
+    expect(next.digests[0].topics).toEqual([]);
+    expect(next.digests[1].topics).toEqual([]);
+  });
+
+  it("label/removeTag은 팔레트에서 완전히 지우고, 붙어있던 모든 digest에서도 뗀다", () => {
+    const before = draft();
+
+    const next = reviewDraftReducer(before, {
+      type: "label/removeTag",
+      id: "tag-draft-1",
+    });
+
+    expect(next.labelDraft.tags).toEqual([]);
+    expect(next.digests[0].tags).toEqual([]);
+    expect(next.digests[1].tags).toEqual([]);
+  });
 });
 
 describe("reviewDraftReducer — digest/setBodyField", () => {

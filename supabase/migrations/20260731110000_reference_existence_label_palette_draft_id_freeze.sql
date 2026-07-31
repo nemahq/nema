@@ -30,7 +30,7 @@ ALTER TABLE changesets ADD COLUMN label_draft jsonb;
 COMMENT ON COLUMN changesets.label_draft IS
   '리뷰 초안의 Topic/Tag 공유 팔레트 — {"topics":[{"id","title"}],"tags":[{"id","title","description","color"}]}. 모든 Digest 후보가 이 팔레트 항목을 id로 참조한다(#28). status=open인 ingestion/revert changeset에서만 의미 있다.';
 
--- ----- 2) 기존 열린 리뷰 백필 -----
+-- ----- 2) 기존 리뷰 백필 -----
 --
 -- 각 digest가 따로 들고 있던 {id,title}/{id,title,description,color} 복사본들을
 -- changeset 하나당 팔레트 하나로 합친다(제목 기준 dedupe — 같은 제목이 여러
@@ -39,6 +39,12 @@ COMMENT ON COLUMN changesets.label_draft IS
 -- 정리하는 것이지 그 문제 자체를 없애는 건 아니다 — 실사용 중인 필드가
 -- 적었던 시점의 자료라 실질 영향은 제한적으로 본다). 각 digest의 topics/tags는
 -- 팔레트 id 배열로 치환한다.
+--
+-- status 제한 없이(open은 물론 closed도) 전부 돌린다 — 20260727120000과 같은
+-- 이유다. 이미 확정(closed)된 ingestion changeset도 revert_changeset이 나중에
+-- 그 changes.data를 그대로 복사해 새 open changeset을 연다(재판정 초안). 여기서
+-- open만 백필하면, 그 되돌리기가 옛 형태 digest data + label_draft=NULL인 open
+-- changeset을 만들어 getReview의 스키마 파싱이 그 자리에서 터진다.
 DO $$
 DECLARE
   cs                  RECORD;
@@ -55,7 +61,7 @@ DECLARE
   v_tag_ids           jsonb;
 BEGIN
   FOR cs IN
-    SELECT id FROM changesets WHERE type IN ('ingestion', 'revert') AND status = 'open'
+    SELECT id FROM changesets WHERE type IN ('ingestion', 'revert')
   LOOP
     v_topic_id_by_title := '{}'::jsonb;
     v_tag_id_by_title := '{}'::jsonb;
@@ -229,6 +235,7 @@ CREATE OR REPLACE FUNCTION create_ingestion_review(
 RETURNS uuid AS $$
 DECLARE
   v_space_id          uuid;
+  v_workspace_id      uuid;
   v_source_title      text;
   v_changeset_id      uuid;
   v_item              jsonb;
@@ -259,6 +266,8 @@ BEGIN
     RAISE EXCEPTION 'p_digests must not be empty — use complete_source_digestion for empty results';
   END IF;
 
+  SELECT workspace_id INTO v_workspace_id FROM spaces WHERE id = v_space_id;
+
   -- 신규 Reference id 선부여(#30)
   FOR v_item IN SELECT value FROM jsonb_array_elements(coalesce(p_new_references, '[]'::jsonb))
   LOOP
@@ -271,13 +280,24 @@ BEGIN
   -- 같은 이름의 새 tag를 다른 설명으로 내면 먼저 나온 설명이 팔레트에 남는다
   -- (사람이 팔레트를 한 번만 보고 확정하므로, 예전처럼 조용히 사라지는 게
   -- 아니라 애초에 하나뿐이다).
+  --
+  -- 활성 레지스트리에 이미 같은 이름이 있으면 새 id를 뽑지 않고 그 행의 id를
+  -- 그대로 팔레트 id로 쓴다 — TagEditPanel.handleSelectExisting이 사용자가
+  -- 검색으로 레지스트리 항목을 고를 때 하는 것과 대칭이다. 안 맞추면, 엔진이
+  -- 이미 존재하는 태그를 재제안한 채 임의 uuid를 발급하고, 사람이 리뷰 화면에서
+  -- 그 같은 레지스트리 항목을 검색해 다시 선택하면 서로 다른 id로 갈라져 한
+  -- Digest에 같은 태그 칩이 두 개 붙는다.
   FOR v_item IN SELECT value FROM jsonb_array_elements(coalesce(p_digests, '[]'::jsonb))
   LOOP
     FOR v_topic_item IN SELECT value FROM jsonb_array_elements(coalesce(v_item->'topics', '[]'::jsonb))
     LOOP
       CONTINUE WHEN btrim(coalesce(v_topic_item #>> '{}', '')) = '';
       CONTINUE WHEN v_topic_id_by_title ? (v_topic_item #>> '{}');
-      v_topic_id := gen_random_uuid();
+      SELECT id INTO v_topic_id FROM topics
+      WHERE space_id = v_space_id AND status = 'active' AND title = btrim(v_topic_item #>> '{}');
+      IF NOT FOUND THEN
+        v_topic_id := gen_random_uuid();
+      END IF;
       v_topic_id_by_title := v_topic_id_by_title || jsonb_build_object(v_topic_item #>> '{}', v_topic_id::text);
       v_topic_palette := v_topic_palette || jsonb_build_array(
         jsonb_build_object('id', v_topic_id, 'title', v_topic_item #>> '{}')
@@ -288,7 +308,11 @@ BEGIN
     LOOP
       CONTINUE WHEN btrim(coalesce(v_tag_item->>'title', '')) = '';
       CONTINUE WHEN v_tag_id_by_title ? (v_tag_item->>'title');
-      v_tag_id := gen_random_uuid();
+      SELECT id INTO v_tag_id FROM tags
+      WHERE workspace_id = v_workspace_id AND status = 'active' AND title = btrim(v_tag_item->>'title');
+      IF NOT FOUND THEN
+        v_tag_id := gen_random_uuid();
+      END IF;
       v_tag_id_by_title := v_tag_id_by_title || jsonb_build_object(v_tag_item->>'title', v_tag_id::text);
       v_tag_palette := v_tag_palette || jsonb_build_array(
         jsonb_build_object(

@@ -222,6 +222,13 @@ function refineReviewPayload(
         });
       }
     }
+    if (new Set(digest.topics).size !== digest.topics.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["digests", index, "topics"],
+        message: "duplicate topic id in digest.topics",
+      });
+    }
 
     for (const tagId of digest.tags) {
       if (!tagIds.has(tagId)) {
@@ -231,6 +238,13 @@ function refineReviewPayload(
           message: `unknown label palette tag id: ${tagId}`,
         });
       }
+    }
+    if (new Set(digest.tags).size !== digest.tags.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["digests", index, "tags"],
+        message: "duplicate tag id in digest.tags",
+      });
     }
   });
 }
