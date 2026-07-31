@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@server/infra/statement-sync", () => ({
   abortDigestion: vi.fn(),
+  wakeStatementSync: vi.fn(),
 }));
 
 vi.mock("@sentry/node", () => ({
@@ -12,7 +13,10 @@ vi.mock("@sentry/node", () => ({
 import * as Sentry from "@sentry/node";
 
 import type { Providers } from "@server/infra/providers";
-import { abortDigestion } from "@server/infra/statement-sync";
+import {
+  abortDigestion,
+  wakeStatementSync,
+} from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 
 import {
@@ -364,6 +368,10 @@ function titleProviders(generateText: () => Promise<string>): Providers {
 const NO_TITLE_CALL = titleProviders(() => new Promise<string>(() => {}));
 
 describe("createSource", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("spaceId가 주어지면 그대로 RPC에 쓰고 space_members는 조회하지 않는다", async () => {
     const rpcCalls: unknown[] = [];
     const supabase = {
@@ -390,6 +398,8 @@ describe("createSource", () => {
         params: { p_space_id: EXPLICIT_SPACE, p_body: "hello" },
       },
     ]);
+    // create_source 성공 직후 워커를 깨워 2초 폴링 없이도 즉시 처리를 시작하게 한다
+    expect(wakeStatementSync).toHaveBeenCalled();
   });
 
   it("spaceId가 없으면 가장 오래된 space_members 행을 조회해 그걸 쓴다", async () => {
@@ -423,6 +433,7 @@ describe("createSource", () => {
         params: { p_space_id: OLDEST_SPACE, p_body: "hello" },
       },
     ]);
+    expect(wakeStatementSync).toHaveBeenCalled();
   });
 });
 
@@ -479,6 +490,7 @@ describe("startSourceDigestion", () => {
       p_source_id: CANCEL_SOURCE_ID,
     });
     expect(abortDigestion).not.toHaveBeenCalled();
+    expect(wakeStatementSync).toHaveBeenCalled();
   });
 
   it("가드가 지면(리뷰가 이미 열림 등) 오류를 그대로 올린다", async () => {

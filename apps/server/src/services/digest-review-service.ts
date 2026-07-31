@@ -15,6 +15,7 @@ import {
 } from "@nema-io/shared";
 
 import type { Json } from "@server/infra/database.types";
+import { wakeStatementSync } from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   SupabaseError,
@@ -377,6 +378,7 @@ export async function confirmReview(args: {
     { p_changeset_id: changesetId },
   );
   throwIfSupabaseError(error);
+  wakeStatementSync();
 
   return { sourceId };
 }
@@ -449,6 +451,7 @@ export async function confirmDigestEdit(args: {
     },
   );
   throwIfSupabaseError(error);
+  wakeStatementSync();
 
   return { digestId: newDigestId };
 }

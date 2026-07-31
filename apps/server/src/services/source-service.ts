@@ -5,7 +5,10 @@ import { SOURCE_TITLE_MAX_LENGTH } from "@nema-io/shared";
 import type { Database } from "@server/infra/database.types";
 import { createLimiter } from "@server/infra/llm/limiter";
 import type { Providers } from "@server/infra/providers";
-import { abortDigestion } from "@server/infra/statement-sync";
+import {
+  abortDigestion,
+  wakeStatementSync,
+} from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   SupabaseError,
@@ -53,6 +56,7 @@ export async function createSource(args: {
     ...(timeZone !== undefined && { p_author_timezone: timeZone }),
   });
   throwIfSupabaseError(error);
+  wakeStatementSync();
 
   fillSourceTitle({ supabase, providers, sourceId, body });
 
@@ -293,8 +297,9 @@ export async function listPendingSources(args: {
 
 // --- 초안 액션 (intake-flow "초안 관리") ---
 // 셋 다 상태 판정을 RPC의 WHERE 가드에 맡긴다 — 서비스가 먼저 조회해 상태를 확인하고
-// 분기하면 그 사이 워커가 상태를 바꿔(2초 폴링) 판정이 낡는다. 가드를 UPDATE와 한
-// 트랜잭션에 두는 게 유일하게 안 어긋나는 방법이다.
+// 분기하면 그 사이 워커가 상태를 바꿔 판정이 낡는다(wake로 워커가 즉시 반응하니
+// 이 창은 더 좁아졌을 뿐 여전히 있다). 가드를 UPDATE와 한 트랜잭션에 두는 게
+// 유일하게 안 어긋나는 방법이다.
 
 // 처리 중 취소 — 워커가 다시 안 집게 DB를 옮기고(RPC), 떠 있는 LLM 콜을 끊는다.
 // 순서가 중요하다: RPC 먼저라야 멤버십 검증을 통과한 취소만 콜을 끊는다. abort를 앞세우면
@@ -411,6 +416,7 @@ export async function startSourceDigestion(args: {
     p_source_id: sourceId,
   });
   throwIfSupabaseError(error);
+  wakeStatementSync();
 }
 
 // 초안에서 Source 제목 편집 — "평범한 대기 상태"에서만 허용(RPC의 WHERE 가드).

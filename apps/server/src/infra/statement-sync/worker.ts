@@ -77,7 +77,6 @@ import {
 } from "./types";
 
 const MAX_RETRIES = 5;
-export const POLL_INTERVAL_MS = 2_000;
 // 실패한 행의 lease((retry+1)×30초)가 풀린 뒤 재시도를 깨울 notify가 따로 없으므로,
 // 주기 사이클이 자동 재시도의 동력이다 (ingestion-design 5장의 재시도 계약).
 const SWEEP_INTERVAL_MS = 60_000;
@@ -149,66 +148,95 @@ interface WorkerDeps {
   vectorStore: VectorStore;
 }
 
+// 이 프로세스에서 지금 떠 있는 워커의 wake — Railway 단일 인스턴스라 워커도 항상
+// 프로세스 안에 하나뿐이라는 전제(digestion-cancellation.ts의 controllers Map과
+// 같은 근거). 서비스 레이어는 이 참조가 아니라 아래 wakeStatementSync()를 통해서만
+// 접근한다 — 워커 start() 전(테스트 등)엔 null이라 무해한 no-op.
+let activeWake: (() => void) | null = null;
+
+// enqueue RPC(pgmq.send('statement_sync', ...)) 호출이 성공한 직후 서비스 레이어가
+// fire-and-forget으로 부르는 "일이 생겼다" 신호 — 2초 폴링을 없앤 대가로 신호를
+// 호출부가 직접 준다. 이 신호가 유실돼도(워커 재기동 중 등) SWEEP_INTERVAL_MS
+// 사이클이 안전망으로 결국 주워간다.
+export function wakeStatementSync(): void {
+  activeWake?.();
+}
+
 export function createStatementSyncWorker(deps: WorkerDeps) {
-  let pollTimer: ReturnType<typeof setInterval> | null = null;
   let sweepTimer: ReturnType<typeof setInterval> | null = null;
   let watchdogTimer: ReturnType<typeof setInterval> | null = null;
   let processing = false;
   let current: Promise<void> | null = null;
+  // wake()·sweep() 둘 다 processing을 놓기 전에 이 플래그를 소비한다 — sweep 도중
+  // 온 wake 신호를 sweep이 무시하면 다음 SWEEP_INTERVAL_MS까지 밀린다.
+  let wakeRequested = false;
+  // stop()이 자신이 등록한 activeWake만 지우게 하는 소유권 토큰 — 단일 인스턴스
+  // 전제가 깨져 두 인스턴스가 겹치는 경우에도(테스트 등) 남의 등록을 지우지 않는다.
+  let ownActiveWake: (() => void) | null = null;
 
-  async function poll(): Promise<void> {
+  // poll()의 옛 본문 — 드레인(read_sync_events)+ack+runCycle. 메시지 내용은 안 보고
+  // 전부 "깨워라" 신호로 취급한다. wake()가 이 헬퍼를 감싸 coalescing을 더한다.
+  async function drainAndRunCycle(): Promise<void> {
+    const { data, error } = await deps.supabase.rpc("read_sync_events", {
+      p_batch_size: PGMQ_BATCH_SIZE,
+      p_visibility_timeout: VISIBILITY_TIMEOUT_SEC,
+    });
+
+    if (error) {
+      Sentry.captureMessage(`[statement-sync] read error: ${error.message}`, {
+        level: "error",
+        extra: { error },
+      });
+      return;
+    }
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return;
+    }
+
+    // malformed 메시지도 ack한다 — 안 하면 영구 재전달되며 매 사이클 알림을 도배한다.
+    const parsed = z.array(TriggerMessageSchema).safeParse(data);
+    if (!parsed.success) {
+      Sentry.captureMessage("[statement-sync] message validation failed", {
+        level: "error",
+        extra: { validationError: parsed.error },
+      });
+    }
+
+    const msgIds = parsed.success
+      ? parsed.data.map((row) => row.msg_id)
+      : data.flatMap((row: unknown) => {
+          const id = (row as { msg_id?: unknown })?.msg_id;
+          return typeof id === "number" ? [id] : [];
+        });
+
+    for (const msgId of msgIds) {
+      const { error: ackError } = await deps.supabase.rpc("ack_sync_event", {
+        p_msg_id: msgId,
+      });
+      if (ackError) {
+        Sentry.captureMessage(
+          `[statement-sync] ack failed: ${ackError.message}`,
+          { level: "error", extra: { msgId } },
+        );
+      }
+    }
+
+    await runCycle(deps);
+  }
+
+  // processing 중이면(sweep 포함) 신호만 세우고 흘리지 않는다 — 요청마다 사이클을
+  // 새로 띄우면 RPC 폭주 시 동시 사이클이 쌓인다.
+  async function wake(): Promise<void> {
     if (processing) {
+      wakeRequested = true;
       return;
     }
     processing = true;
-
     try {
-      const { data, error } = await deps.supabase.rpc("read_sync_events", {
-        p_batch_size: PGMQ_BATCH_SIZE,
-        p_visibility_timeout: VISIBILITY_TIMEOUT_SEC,
-      });
-
-      if (error) {
-        Sentry.captureMessage(`[statement-sync] read error: ${error.message}`, {
-          level: "error",
-          extra: { error },
-        });
-        return;
-      }
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        return;
-      }
-
-      // 메시지 내용은 안 본다 — 전부 "깨워라"로 취급하고 ack.
-      // malformed 메시지도 ack한다 — 안 하면 영구 재전달되며 매 사이클 알림을 도배한다.
-      const parsed = z.array(TriggerMessageSchema).safeParse(data);
-      if (!parsed.success) {
-        Sentry.captureMessage("[statement-sync] message validation failed", {
-          level: "error",
-          extra: { validationError: parsed.error },
-        });
-      }
-
-      const msgIds = parsed.success
-        ? parsed.data.map((row) => row.msg_id)
-        : data.flatMap((row: unknown) => {
-            const id = (row as { msg_id?: unknown })?.msg_id;
-            return typeof id === "number" ? [id] : [];
-          });
-
-      for (const msgId of msgIds) {
-        const { error: ackError } = await deps.supabase.rpc("ack_sync_event", {
-          p_msg_id: msgId,
-        });
-        if (ackError) {
-          Sentry.captureMessage(
-            `[statement-sync] ack failed: ${ackError.message}`,
-            { level: "error", extra: { msgId } },
-          );
-        }
-      }
-
-      await runCycle(deps);
+      do {
+        wakeRequested = false;
+        await drainAndRunCycle();
+      } while (wakeRequested);
     } catch (err) {
       Sentry.captureException(err, {
         tags: { component: "statement-sync" },
@@ -218,13 +246,18 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
     }
   }
 
+  // wake()와 같은 do/while로 wakeRequested를 소비한다 — 안 그러면 sweep 도중 온
+  // wake 신호가 사라지고 그 작업만 다음 SWEEP_INTERVAL_MS까지 밀린다.
   async function sweep(): Promise<void> {
     if (processing) {
       return;
     }
     processing = true;
     try {
-      await runCycle(deps);
+      do {
+        wakeRequested = false;
+        await runCycle(deps);
+      } while (wakeRequested);
     } catch (err) {
       Sentry.captureException(err, {
         tags: { component: "statement-sync", phase: "sweep" },
@@ -238,14 +271,9 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
     start() {
       // eslint-disable-next-line no-console -- lifecycle log, no logger in worker context
       console.log("[statement-sync] started");
-      // processing 중엔 current를 덮어쓰지 않는다 — poll/sweep은 진입 즉시(동기로)
+      // processing 중엔 current를 덮어쓰지 않는다 — sweep은 진입 즉시(동기로)
       // processing을 잡으므로, 이 가드면 current는 항상 실제 일을 시작한 promise를
       // 가리키고 stop()의 await current가 in-flight 사이클을 끝까지 기다린다.
-      pollTimer = setInterval(() => {
-        if (!processing) {
-          current = poll();
-        }
-      }, POLL_INTERVAL_MS);
       sweepTimer = setInterval(() => {
         if (!processing) {
           current = sweep();
@@ -258,13 +286,22 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
       // 재기동 직후 1회 — 죽기 전에 ack까지 끝낸 notify의 잔여 pending을 줍는다
       current = sweep();
       void checkPurgeBacklog(deps);
+      // wakeStatementSync()가 이 인스턴스를 깨우도록 등록한다. wake()가 processing=true를
+      // 보고 코얼레싱만 하고 끝나는 즉시-resolve 분기를 타면 그 promise로 current를
+      // 덮어쓰면 안 된다 — 이미 진행 중이던 사이클(sweep 등)의 promise 참조가 날아가
+      // stop()의 in-flight 대기 계약이 깨진다. wake() 호출 "이전"의 processing 값을
+      // 캡처해, 이번 호출이 실제로 새 사이클을 시작한 경우에만 current를 교체한다.
+      ownActiveWake = () => {
+        const wasProcessing = processing;
+        const result = wake();
+        if (!wasProcessing) {
+          current = result;
+        }
+      };
+      activeWake = ownActiveWake;
     },
 
     async stop() {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
       if (sweepTimer) {
         clearInterval(sweepTimer);
         sweepTimer = null;
@@ -273,12 +310,17 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
         clearInterval(watchdogTimer);
         watchdogTimer = null;
       }
+      if (activeWake === ownActiveWake) {
+        activeWake = null;
+      }
       if (current) {
         await current;
       }
       // eslint-disable-next-line no-console -- lifecycle log, no logger in worker context
       console.log("[statement-sync] stopped");
     },
+
+    wake,
   };
 }
 

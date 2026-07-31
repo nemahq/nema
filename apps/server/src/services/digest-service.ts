@@ -11,6 +11,7 @@ import {
   PENDING_STALE_DAYS,
 } from "@nema-io/shared";
 
+import { wakeStatementSync } from "@server/infra/statement-sync";
 import type { TypedSupabaseClient } from "@server/infra/supabase";
 import {
   SupabaseError,
@@ -280,6 +281,7 @@ export async function archiveDigest(args: {
     p_digest_id: args.digestId,
   });
   throwIfSupabaseError(error);
+  wakeStatementSync();
   return { changesetId: data };
 }
 
@@ -319,5 +321,6 @@ export async function restoreDigest(args: {
     p_title: title,
   });
   throwIfSupabaseError(error);
+  wakeStatementSync();
   return { revertChangesetId: data };
 }

@@ -29,13 +29,13 @@ import {
   dedupeChanges,
   gateProposals,
   orderBySourceAppearance,
-  POLL_INTERVAL_MS,
   reconcileChanges,
   runVectorPurgePass,
   selectCandidateIds,
   unionStrings,
   unionTags,
   unionTopics,
+  wakeStatementSync,
 } from "./worker";
 
 const SOURCE_ID = "a0000000-0000-4000-a000-000000000001";
@@ -161,7 +161,9 @@ function rpcCalls(rpc: ReturnType<typeof vi.fn>, name: string) {
   return rpc.mock.calls.filter(([n]) => n === name);
 }
 
-async function runOnePoll(deps: {
+// start()를 거치지 않고 wake() 하나만 직접 검증한다 — start()는 재기동 sweep까지
+// 함께 돌아 어느 경로(sweep vs wake)가 만든 부수효과인지 테스트에서 갈라 볼 수 없다.
+async function runOneWake(deps: {
   supabase: TypedSupabaseClient;
   llm: LlmProvider;
   embedding: EmbeddingProvider;
@@ -170,9 +172,7 @@ async function runOnePoll(deps: {
   // 워커는 task 라우터(forTask)를 받는다 — 테스트는 두 task 모두 같은 mock으로 해석.
   const { llm, ...rest } = deps;
   const worker = createStatementSyncWorker({ ...rest, forTask: () => llm });
-  worker.start(); // start가 즉시 sweep 1회 실행
-  await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS); // 첫 poll까지
-  await worker.stop();
+  await worker.wake();
 }
 
 describe("createStatementSyncWorker", () => {
@@ -199,7 +199,7 @@ describe("createStatementSyncWorker", () => {
       { content: "열린 질문.", type: "question", confidence: null },
     ]);
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -274,7 +274,7 @@ describe("createStatementSyncWorker", () => {
       },
     ]);
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -294,7 +294,7 @@ describe("createStatementSyncWorker", () => {
       { digests: [DIGEST] },
     );
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm: mockLlm([]),
       embedding: mockEmbedding(),
@@ -327,7 +327,7 @@ describe("createStatementSyncWorker", () => {
       generateText: vi.fn().mockResolvedValue(""),
     };
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -356,7 +356,7 @@ describe("createStatementSyncWorker", () => {
     const vectorStore = mockVectorStore();
     const embedding = mockEmbedding();
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm: mockLlm([]),
       embedding,
@@ -400,7 +400,7 @@ describe("createStatementSyncWorker", () => {
       .fn()
       .mockRejectedValue(new Error("qdrant down"));
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm: mockLlm([]),
       embedding: mockEmbedding(),
@@ -435,7 +435,7 @@ describe("createStatementSyncWorker", () => {
     );
     const vectorStore = mockVectorStore();
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm: mockLlm([
         { content: "결정.", type: "claim", confidence: "certain" },
@@ -501,7 +501,7 @@ describe("createStatementSyncWorker", () => {
       generateText: vi.fn().mockResolvedValue(""),
     } as unknown as LlmProvider;
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -565,7 +565,7 @@ describe("createStatementSyncWorker", () => {
       generateText: vi.fn().mockResolvedValue(""),
     } as unknown as LlmProvider;
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -625,7 +625,7 @@ describe("createStatementSyncWorker", () => {
       generateText: vi.fn().mockResolvedValue(""),
     } as unknown as LlmProvider;
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -654,7 +654,7 @@ describe("createStatementSyncWorker", () => {
       { content: "안 불림", type: "claim", confidence: "certain" },
     ]);
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -709,9 +709,7 @@ describe("createStatementSyncWorker — forTask task names", () => {
       embedding: mockEmbedding(),
       vectorStore: mockVectorStore(),
     });
-    worker.start();
-    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
-    await worker.stop();
+    await worker.wake();
 
     expect(forTask).toHaveBeenCalledWith("extractStatements");
     // 옛 이름("extraction")으로 드리프트하면 여기서 잡힌다.
@@ -752,11 +750,190 @@ describe("createStatementSyncWorker — forTask task names", () => {
       embedding: mockEmbedding(),
       vectorStore: mockVectorStore(),
     });
-    worker.start();
-    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
-    await worker.stop();
+    await worker.wake();
 
     expect(forTask).toHaveBeenCalledWith("judgeRelations");
+  });
+});
+
+// wake()가 처리를 전담하게 되면서 생긴 가장 위험한 회귀 — 서비스 레이어가
+// wakeStatementSync() 호출을 스킵하거나(배포 중 재기동 등으로) 신호가 아예 유실되면,
+// sweep()이라는 별도 안전망이 없다면 그 작업은 영영 처리되지 않는다. 이 테스트는
+// wake()를 한 번도 안 부른 채로 pending 작업을 흘려두고, SWEEP_INTERVAL_MS 경과 후
+// 주기 sweep이 그것을 그래도 주워가는지를 반증한다.
+describe("sweep 안전망 — wake 신호 유실", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // worker.ts의 SWEEP_INTERVAL_MS(60_000, export 안 됨 — 수정 금지 상수)와 동일한 값의
+  // 로컬 미러. 이 테스트는 그 상수의 실제 경과를 시뮬레이션해야 하므로 리터럴 대신
+  // 이름을 붙여 무슨 값인지 드러낸다.
+  const SWEEP_INTERVAL_MS_MIRROR = 60_000;
+
+  it("wake()를 전혀 안 불러도, pending 작업은 60초 뒤 sweep이 처리한다", async () => {
+    // rpc 큐는 객체 참조라 start() 이후에도 계속 손볼 수 있다 — "재기동 시점엔 없던
+    // pending 작업이 그 뒤 생겼다(예: create_source 성공, wake 신호는 유실)"를
+    // 흉내낸다.
+    const queues: Record<string, unknown[]> = {
+      read_sync_events: [], // notify 자체도 안 옴 — wake 경로가 전혀 안 탄다
+      fetch_pending_sources: [],
+    };
+    const { client, rpc } = mockSupabase(queues, { digests: [DIGEST] });
+    const llm = mockLlm([
+      { content: "sweep이 주워간 결정.", type: "claim", confidence: "certain" },
+    ]);
+
+    const worker = createStatementSyncWorker({
+      supabase: client,
+      forTask: () => llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    worker.start(); // 재기동 직후 sweep 1회 — 이 시점엔 pending 작업이 없다
+    await vi.advanceTimersByTimeAsync(0);
+    expect(rpcCalls(rpc, "apply_extraction_statements")).toHaveLength(0);
+
+    // pending 작업 발생 — wake()/wakeStatementSync()는 이 테스트 전체에서 한 번도
+    // 호출하지 않는다(유실 시뮬레이션의 핵심).
+    queues["fetch_pending_sources"] = [[PENDING_SOURCE]];
+
+    // 다음 주기 sweep(60초 뒤)까지는 아무 일도 안 일어난다
+    await vi.advanceTimersByTimeAsync(SWEEP_INTERVAL_MS_MIRROR - 1);
+    expect(rpcCalls(rpc, "apply_extraction_statements")).toHaveLength(0);
+
+    // 60초 경과 — 안전망 sweep이 이 pending 작업을 끝까지 처리한다
+    await vi.advanceTimersByTimeAsync(1);
+    await worker.stop();
+
+    const applies = rpcCalls(rpc, "apply_extraction_statements");
+    expect(applies).toHaveLength(1);
+    expect(applies[0]?.[1]).toMatchObject({ p_source_id: SOURCE_ID });
+    // ack는 read_sync_events로 온 메시지가 없었으니 여전히 0건 — sweep은 큐를 안 건드린다
+    expect(rpcCalls(rpc, "ack_sync_event")).toHaveLength(0);
+  });
+});
+
+// 코얼레싱(wakeRequested) — 진행 중인 사이클과 겹쳐 들어온 신호가 유실되지 않고
+// 그 사이클이 끝난 직후 한 번 더 도는지. read_vector_purge_events는 runCycle의
+// 마지막 패스라, 첫 호출에서 게이트를 걸면 "이번 이터레이션은 이미 pending 작업 없음을
+// 확인하고 끝나가는 중" 시점을 재현할 수 있다 — 그 틈에 큐를 채우고 신호를 보내야
+// "이미 확인한 스냅샷에 없던 작업이 그 직후 생긴" 상황이 된다.
+describe("wakeRequested 코얼레싱 — 진행 중 사이클과 겹치는 신호", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function gatedSupabase(queues: Record<string, unknown[]>) {
+    const { client: baseClient, rpc: baseRpc } = mockSupabase(queues, {
+      digests: [DIGEST],
+    });
+    let releaseGate: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseGate = resolve;
+    });
+    let gated = false;
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "read_vector_purge_events" && !gated) {
+        gated = true;
+        await gate;
+      }
+      return baseRpc(name);
+    });
+    const client = {
+      ...baseClient,
+      rpc,
+    } as unknown as TypedSupabaseClient;
+    return { client, rpc, releaseGate: releaseGate as unknown as () => void };
+  }
+
+  it("sweep이 도는 도중 도착한 wake 신호를 sweep 자신이 소비해, 다음 60초를 기다리지 않고 처리한다", async () => {
+    const queues: Record<string, unknown[]> = {
+      read_sync_events: [],
+      fetch_pending_sources: [],
+    };
+    const { client, rpc, releaseGate } = gatedSupabase(queues);
+    const llm = mockLlm([
+      {
+        content: "sweep과 겹친 wake가 즉시 처리한 결정.",
+        type: "claim",
+        confidence: "certain",
+      },
+    ]);
+    const worker = createStatementSyncWorker({
+      supabase: client,
+      forTask: () => llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    worker.start(); // 재기동 sweep이 첫 이터레이션 끝(purge pass)에서 게이트에 걸려 멈춘다
+    await vi.advanceTimersByTimeAsync(0);
+    expect(rpcCalls(rpc, "apply_extraction_statements")).toHaveLength(0);
+
+    // sweep이 이미 "이번엔 pending 없음"을 확인한 뒤 — 그 직후 생긴 작업 + wake 신호
+    queues["fetch_pending_sources"] = [[PENDING_SOURCE]];
+    wakeStatementSync();
+    await vi.advanceTimersByTimeAsync(0);
+    // wake는 processing=true(sweep 중)를 보고 신호만 남기고 끝났다 — 아직 미처리
+    expect(rpcCalls(rpc, "apply_extraction_statements")).toHaveLength(0);
+
+    releaseGate(); // sweep의 첫 이터레이션 종료 → wakeRequested를 보고 한 번 더 돈다
+    await vi.advanceTimersByTimeAsync(0);
+    await worker.stop();
+
+    const applies = rpcCalls(rpc, "apply_extraction_statements");
+    expect(applies).toHaveLength(1);
+    expect(applies[0]?.[1]).toMatchObject({ p_source_id: SOURCE_ID });
+  });
+
+  it("wake() 사이클이 도는 도중 온 또 다른 wake는 동시 사이클을 띄우지 않고, 끝난 직후 한 번만 더 돈다", async () => {
+    // wake()는 drainAndRunCycle을 거쳐 read_sync_events가 비어 있으면 runCycle 자체를
+    // 안 부른다 — 겹치는 두 wake는 실제로는 서로 다른 RPC가 각자 자기 notify를 이미
+    // 커밋해둔 상태라, 배치 2개(최초 사이클용 + 코얼레싱된 재실행용)를 준비해야 한다.
+    const queues: Record<string, unknown[]> = {
+      read_sync_events: [[NOTIFY_ROW], [NOTIFY_ROW]],
+      fetch_pending_sources: [],
+    };
+    const { client, rpc, releaseGate } = gatedSupabase(queues);
+    const llm = mockLlm([
+      {
+        content: "겹친 wake가 다음 사이클에 주워간 결정.",
+        type: "claim",
+        confidence: "certain",
+      },
+    ]);
+    const worker = createStatementSyncWorker({
+      supabase: client,
+      forTask: () => llm,
+      embedding: mockEmbedding(),
+      vectorStore: mockVectorStore(),
+    });
+
+    const first = worker.wake(); // 첫 사이클이 purge pass 게이트에서 멈춘다
+    await vi.advanceTimersByTimeAsync(0);
+
+    queues["fetch_pending_sources"] = [[PENDING_SOURCE]];
+    const second = worker.wake(); // processing 중 — 신호만 남기고 즉시 끝난다
+    await second;
+    // 동시에 뜬 두 번째 사이클은 없다 — 아직 게이트를 안 풀었으니 어떤 처리도 없다
+    expect(rpcCalls(rpc, "apply_extraction_statements")).toHaveLength(0);
+
+    releaseGate();
+    await first;
+
+    const applies = rpcCalls(rpc, "apply_extraction_statements");
+    expect(applies).toHaveLength(1);
+    expect(applies[0]?.[1]).toMatchObject({ p_source_id: SOURCE_ID });
   });
 });
 
@@ -1138,7 +1315,7 @@ describe("잇기 분할 통합 — 장문 source", () => {
     );
     const llm = mockRelationLlm();
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -1200,7 +1377,7 @@ describe("잇기 분할 통합 — 장문 source", () => {
       generateText: vi.fn().mockResolvedValue(""),
     };
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -1319,7 +1496,7 @@ describe("잇기 분할 통합 — 장문 source", () => {
       generateText: vi.fn().mockResolvedValue(""),
     };
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -1393,7 +1570,7 @@ describe("잇기 분할 통합 — 장문 source", () => {
       generateText: vi.fn().mockResolvedValue(""),
     };
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -1451,7 +1628,7 @@ describe("잇기 분할 통합 — 장문 source", () => {
       generateText: vi.fn().mockResolvedValue(""),
     };
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -1564,7 +1741,7 @@ describe("잇기 분할 통합 — 장문 source", () => {
       generateText: vi.fn().mockResolvedValue(""),
     };
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -1617,7 +1794,7 @@ describe("잇기 분할 통합 — 장문 source", () => {
       generateText: vi.fn().mockResolvedValue(""),
     };
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
@@ -1713,7 +1890,7 @@ describe("잇기 분할 통합 — 장문 source", () => {
       generateText: vi.fn().mockResolvedValue(""),
     };
 
-    await runOnePoll({
+    await runOneWake({
       supabase: client,
       llm,
       embedding: mockEmbedding(),
