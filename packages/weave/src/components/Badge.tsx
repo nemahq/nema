@@ -41,12 +41,15 @@ const variantClasses: Record<BadgeVariant, string> = {
 };
 
 // Chip과 공유 — 인터랙티브 버전(다이제스트 타입 피커 등)도 같은 톤을 써야 한다.
+// 테두리를 얹은 건 Tag(TAG_COLOR_CLASSNAME)와 배경 톤만으로는 구분이 잘 안 됐기
+// 때문 — Tag 칩엔 테두리가 아예 없어서, 색이 우연히 가까워도(예: violet 계열)
+// 테두리 유무로 먼저 갈린다.
 export const BADGE_COLOR_CLASSNAME: Record<BadgeColor, string> = {
-  indigo: "bg-indigo-tint text-indigo",
-  pink: "bg-pink-tint text-pink",
-  lime: "bg-lime-tint text-lime",
-  yellow: "bg-yellow-tint text-yellow",
-  purple: "bg-purple-tint text-purple",
+  indigo: "border border-indigo/50 bg-indigo-tint text-indigo",
+  pink: "border border-pink/50 bg-pink-tint text-pink",
+  lime: "border border-lime/50 bg-lime-tint text-lime",
+  yellow: "border border-yellow/50 bg-yellow-tint text-yellow",
+  purple: "border border-purple/50 bg-purple-tint text-purple",
 };
 
 // 원형(pill)은 카운트·이름표처럼 통째로 하나의 값을 담는 자리, 각진 모서리(rounded)는
