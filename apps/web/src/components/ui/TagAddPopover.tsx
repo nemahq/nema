@@ -6,7 +6,6 @@ import {
   ComboboxItem,
   FormControl,
   FormField,
-  FormLabel,
   Input,
   PopoverContent,
   PopoverTrigger,
@@ -253,24 +252,21 @@ export function TagAddPopover({
         ) : (
           <>
             <FormField>
-              <FormLabel size="xs" weight="normal" color="tertiary">
-                {t("common.name_label")}
-              </FormLabel>
               <FormControl>
                 <Input
                   autoFocus
                   value={creatingTitle}
+                  placeholder={t("common.name_placeholder")}
+                  aria-label={t("common.name_label")}
                   onChange={(e) => setCreatingTitle(e.target.value)}
                 />
               </FormControl>
             </FormField>
             <FormField>
-              <FormLabel size="xs" weight="normal" color="tertiary">
-                {t("review.tag_create_description_label")}
-              </FormLabel>
               <FormControl>
                 <Textarea
                   value={description}
+                  aria-label={t("review.tag_create_description_label")}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder={t("review.tag_create_description_placeholder")}
                   rows={3}
