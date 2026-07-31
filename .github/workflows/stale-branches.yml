@@ -1,0 +1,51 @@
+name: Stale Branch Notice
+
+on:
+  schedule:
+    - cron: "0 0 * * 1" # 매주 월요일 00:00 UTC
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Detect and comment on stale branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          STALE_DAYS=90
+          PROTECTED_BRANCHES="main staging"
+          CUTOFF=$(date -u -d "-${STALE_DAYS} days" +%s)
+          MARKER="<!-- stale-branch-notice -->"
+
+          open_pr_branches=$(gh pr list --repo "$REPO" --state open --json headRefName --jq '.[].headRefName')
+
+          gh api "repos/$REPO/branches" --paginate --jq '.[].name' | while read -r branch; do
+            skip=false
+            for p in $PROTECTED_BRANCHES; do
+              [ "$branch" = "$p" ] && skip=true
+            done
+            if echo "$open_pr_branches" | grep -qx "$branch"; then
+              skip=true
+            fi
+            [ "$skip" = true ] && continue
+
+            last_commit_date=$(gh api "repos/$REPO/branches/$branch" --jq '.commit.commit.committer.date')
+            last_commit_sha=$(gh api "repos/$REPO/branches/$branch" --jq '.commit.sha')
+            last_commit_epoch=$(date -u -d "$last_commit_date" +%s)
+
+            if [ "$last_commit_epoch" -lt "$CUTOFF" ]; then
+              existing=$(gh api "repos/$REPO/commits/$last_commit_sha/comments" --jq '.[].body' | grep -F "$MARKER" || true)
+              if [ -z "$existing" ]; then
+                days_idle=$(( ( $(date -u +%s) - last_commit_epoch ) / 86400 ))
+                comment="${MARKER}\n🕸️ 브랜치 \`${branch}\`가 ${days_idle}일간 커밋이 없어 stale 상태입니다. 더 이상 필요 없다면 삭제를 검토해 주세요."
+                gh api "repos/$REPO/commits/$last_commit_sha/comments" -f body="$(printf '%b' "$comment")" > /dev/null
+                echo "Commented on stale branch: $branch"
+              fi
+            fi
+          done
