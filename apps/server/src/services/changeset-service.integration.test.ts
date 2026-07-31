@@ -263,10 +263,9 @@ describe("create_ingestion_review RPC (integration)", () => {
   });
 
   // 다른 create_ingestion_review 테스트는 전부 topics: []/tags: []라 write_ingestion_review_changes의
-  // id 부여 블록과 confirm_ingestion_review의 value->>'title' 읽기(20260727120000)를 어느 테스트도
-  // 실행하지 않았다 — 회귀가 조용하다(#>> '{}'로 되돌아가면 "{\"id\":..,\"title\":..}"라는 이름의
-  // Topic이 예외 없이 만들어진다).
-  it("digest의 topics/tags 원소마다 uuid id가 붙고, confirm이 title로 레지스트리를 find-or-create한다", async () => {
+  // 팔레트 조립 블록과 confirm_ingestion_review의 label_draft 읽기(#28)를 어느 테스트도
+  // 실행하지 않았다 — 회귀가 조용하다.
+  it("digest의 topics/tags 원소마다 리뷰 팔레트(label_draft) id가 붙고, confirm이 title로 레지스트리를 find-or-create한다", async () => {
     if (!localDbAvailable) {
       return;
     }
@@ -293,20 +292,37 @@ describe("create_ingestion_review RPC (integration)", () => {
     const changesetId = rows[0].create_ingestion_review;
 
     const { rows: changeRows } = await client.query<{
-      data: { topics: { id: string; title: string }[]; tags: unknown[] };
+      data: { topics: string[]; tags: string[] };
     }>(
       "SELECT data FROM changes WHERE changeset_id = $1 AND target_type = 'digest' AND action = 'create'",
       [changesetId],
     );
-    const storedTopics = changeRows[0]?.data.topics;
-    expect(storedTopics).toHaveLength(1);
-    expect(storedTopics?.[0]?.title).toBe("주제 A");
-    expect(storedTopics?.[0]?.id).toMatch(
+    const { rows: changesetRows } = await client.query<{
+      label_draft: {
+        topics: { id: string; title: string }[];
+        tags: { id: string; title: string; description: string }[];
+      };
+    }>("SELECT label_draft FROM changesets WHERE id = $1", [changesetId]);
+    const labelDraft = changesetRows[0].label_draft;
+
+    const storedTopicIds = changeRows[0]?.data.topics;
+    expect(storedTopicIds).toHaveLength(1);
+    expect(storedTopicIds?.[0]).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     );
-    expect(changeRows[0]?.data.tags).toEqual([
+    const storedTopic = labelDraft.topics.find(
+      (topic) => topic.id === storedTopicIds?.[0],
+    );
+    expect(storedTopic?.title).toBe("주제 A");
+
+    const storedTagIds = changeRows[0]?.data.tags;
+    expect(storedTagIds).toHaveLength(1);
+    const storedTag = labelDraft.tags.find(
+      (tag) => tag.id === storedTagIds?.[0],
+    );
+    expect(storedTag).toEqual(
       expect.objectContaining({ title: "태그 A", description: "정의" }),
-    ]);
+    );
 
     await client.query("SELECT confirm_ingestion_review($1)", [changesetId]);
 

@@ -25,9 +25,11 @@ interface ReviewTopic {
 interface TopicSearchListProps {
   spaceId: string;
   query: string;
-  // 이미 붙은 것 판별과 중복 이름 검사에 둘 다 쓰인다 — Set·배열을 각각 만들어
-  // 넘기면 매 렌더 새 identity라, 스토어에서 그대로 온 이 배열 하나만 받는다.
-  topics: ReviewTopicDraft[];
+  // 지금 이 Digest에 붙은 Topic — "붙음" 표시 판정에만 쓴다.
+  attachedTopics: ReviewTopicDraft[];
+  // 리뷰 팔레트 전체(#28) — draft 후보와 중복 이름 판정 풀은 이제 이 Digest
+  // 하나가 아니라 리뷰 전체를 본다.
+  paletteTopics: ReviewTopicDraft[];
   onSelectExisting: (topic: ReviewTopic) => void;
   onCreateNew: (name: string) => void;
   onRenameDraft: (id: string, title: string) => void;
@@ -38,13 +40,14 @@ const getTopicLabel = (topic: { title: string }) => topic.title;
 function TopicSearchListContent({
   spaceId,
   query,
-  topics,
+  attachedTopics,
+  paletteTopics,
   onSelectExisting,
   onCreateNew,
   onRenameDraft,
 }: TopicSearchListProps) {
   const [topicList] = useTopicListSuspenseQuery(spaceId);
-  // 한 번에 하나만 편집 — 이미 열린 걸 그대로 두면 두 편집이 같은 topics 배열을
+  // 한 번에 하나만 편집 — 이미 열린 걸 그대로 두면 두 편집이 같은 팔레트를
   // 동시에 patch하려다 서로의 변경을 덮어쓸 수 있다.
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -52,10 +55,10 @@ function TopicSearchListContent({
     items: topicList.topics,
     getLabel: getTopicLabel,
     query,
-    existingLabels: topics.map((topic) => topic.title),
+    existingLabels: paletteTopics.map((topic) => topic.title),
   });
-  const attachedIds = new Set(topics.map((topic) => topic.registryId));
-  const draftMatches = filterDraftLabelCandidates(topics, query);
+  const attachedIds = new Set(attachedTopics.map((topic) => topic.id));
+  const draftMatches = filterDraftLabelCandidates(paletteTopics, query);
   const activeRegistryTitles = getActiveLabelTitles(
     topicList.topics,
     getTopicLabel,
@@ -76,8 +79,9 @@ function TopicSearchListContent({
         <LabelSearchRow
           key={draft.id}
           label={draft.title}
-          attached
+          attached={attachedIds.has(draft.id)}
           isNew
+          onSelect={() => onSelectExisting(draft)}
           actions={
             <LabelDraftEditPopover
               open={editingId === draft.id}
@@ -87,7 +91,7 @@ function TopicSearchListContent({
                 title={draft.title}
                 isDuplicateTitle={buildDraftRenameDuplicateCheck({
                   registryLabels: activeRegistryTitles,
-                  digestLabels: topics,
+                  digestLabels: paletteTopics,
                   excludeId: draft.id,
                 })}
                 onCommitText={(title) => onRenameDraft(draft.id, title)}

@@ -21,11 +21,9 @@ export function computeReviewEditingState(draft: ReviewDraft) {
   const hasEmptyDescription = draft.digests.some(
     (digest) => digest.description.trim() === "",
   );
-  const hasEmptyLabel = draft.digests.some(
-    (digest) =>
-      digest.topics.some((topic) => topic.title.trim() === "") ||
-      digest.tags.some((tag) => tag.title.trim() === ""),
-  );
+  const hasEmptyLabel =
+    draft.labelDraft.topics.some((topic) => topic.title.trim() === "") ||
+    draft.labelDraft.tags.some((tag) => tag.title.trim() === "");
   // 신규 Reference 이름·설명, 기존 Reference 병합 설명 모두 필수(zod min(1)) — 비우면
   // 확정 시 원문 에러가 새므로 라벨 공백과 같은 결로 사전 차단한다.
   const hasEmptyReference =

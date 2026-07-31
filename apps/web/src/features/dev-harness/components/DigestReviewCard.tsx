@@ -5,7 +5,10 @@ import { Button } from "@nema-io/weave";
 import { useConfirmReview } from "@web/features/dev-harness/hooks/useConfirmReview";
 import { useDigestReviewQuery } from "@web/features/dev-harness/hooks/useDigestReviewQuery";
 import { useUpdateReview } from "@web/features/dev-harness/hooks/useUpdateReview";
-import type { ReviewDigest } from "@web/features/dev-harness/types";
+import type {
+  DigestReviewDetail,
+  ReviewDigest,
+} from "@web/features/dev-harness/types";
 import { parseTopics } from "@web/features/dev-harness/utils";
 import { getErrorMessage } from "@web/lib/getErrorMessage";
 
@@ -20,11 +23,20 @@ interface DigestEdit {
   topicsText: string;
 }
 
-function toEdit(digest: ReviewDigest): DigestEdit {
+function toEdit(
+  digest: ReviewDigest,
+  labelDraft: DigestReviewDetail["labelDraft"],
+): DigestEdit {
+  const topicById = new Map(
+    labelDraft.topics.map((topic) => [topic.id, topic]),
+  );
   return {
     title: digest.title,
     description: digest.description,
-    topicsText: digest.topics.map((topic) => topic.title).join(", "),
+    topicsText: digest.topics
+      .map((id) => topicById.get(id)?.title)
+      .filter((title): title is string => title !== undefined)
+      .join(", "),
   };
 }
 
@@ -54,8 +66,10 @@ export function DigestReviewCard({ spaceId, number }: DigestReviewCardProps) {
   }
 
   const review = reviewQuery.data;
+  const tagById = new Map(review.labelDraft.tags.map((tag) => [tag.id, tag]));
   // 서버가 준 초안을 편집 기준선으로 삼는다 — 저장/재조회로 데이터가 바뀌면 다시 맞춘다.
-  const current = edits ?? review.digests.map(toEdit);
+  const current =
+    edits ?? review.digests.map((digest) => toEdit(digest, review.labelDraft));
 
   function patch(index: number, field: keyof DigestEdit, value: string) {
     setEdits(
@@ -65,22 +79,30 @@ export function DigestReviewCard({ spaceId, number }: DigestReviewCardProps) {
     );
   }
 
-  // topicsText는 자유 텍스트라 저장마다 파싱해 배열을 다시 짓는다 — 그래서 topic
-  // id는 이 하니스에서 편집 여부와 무관하게 매 저장마다 새로 생긴다(제품 화면의
-  // TopicEditPanel처럼 항목 단위로 추가·삭제하는 게 아니라서 이전 id를 재사용할
-  // 자리가 없음). tags는 이 하니스에 편집 UI가 없어 ...digest로 그대로 통과하므로
-  // id 안정성은 tags 쪽에서만 관찰된다.
-  function buildDigests() {
-    return review.digests.map((digest, index) => ({
-      ...digest,
-      title: current[index].title.trim(),
-      description: current[index].description.trim(),
-      topics: parseTopics(current[index].topicsText).map((name) => ({
-        id: crypto.randomUUID(),
-        registryId: null,
-        title: name,
-      })),
-    }));
+  // topicsText는 자유 텍스트라 저장마다 파싱해 팔레트 항목을 다시 짓는다 — 그래서
+  // topic id는 이 하니스에서 편집 여부와 무관하게 매 저장마다 새로 생긴다(제품
+  // 화면의 TopicEditPanel처럼 항목 단위로 추가·삭제하는 게 아니라서 이전 id를
+  // 재사용할 자리가 없음). tags는 이 하니스에 편집 UI가 없어 팔레트 그대로
+  // 통과시키므로 id 안정성은 tags 쪽에서만 관찰된다.
+  function buildDigestsAndLabelDraft() {
+    const newTopics: DigestReviewDetail["labelDraft"]["topics"] = [];
+    const digests = review.digests.map((digest, index) => {
+      const topicIds = parseTopics(current[index].topicsText).map((name) => {
+        const id = crypto.randomUUID();
+        newTopics.push({ id, registryId: null, title: name });
+        return id;
+      });
+      return {
+        ...digest,
+        title: current[index].title.trim(),
+        description: current[index].description.trim(),
+        topics: topicIds,
+      };
+    });
+    return {
+      digests,
+      labelDraft: { topics: newTopics, tags: review.labelDraft.tags },
+    };
   }
 
   function handleSave() {
@@ -89,11 +111,13 @@ export function DigestReviewCard({ spaceId, number }: DigestReviewCardProps) {
     }
     updateReview.reset();
     confirmReview.reset();
+    const { digests, labelDraft } = buildDigestsAndLabelDraft();
     updateReview.mutate(
       {
         changesetId: review.changesetId,
         expectedVersion: review.draftVersion,
-        digests: buildDigests(),
+        digests,
+        labelDraft,
         newReferences: review.newReferences,
       },
       { onSuccess: () => setEdits(null) },
@@ -107,14 +131,15 @@ export function DigestReviewCard({ spaceId, number }: DigestReviewCardProps) {
     updateReview.reset();
     confirmReview.reset();
     // 페이로드 조립은 try 밖에서 — 여기서 나는 동기 예외까지 삼키면 확정이 조용히 무반응이 된다.
-    const editedDigests = edits ? buildDigests() : null;
+    const edited = edits ? buildDigestsAndLabelDraft() : null;
     try {
       // 편집한 내용을 먼저 반영한 뒤 확정한다 — 확정은 저장된 초안을 박제한다.
-      if (editedDigests) {
+      if (edited) {
         await updateReview.mutateAsync({
           changesetId: review.changesetId,
           expectedVersion: review.draftVersion,
-          digests: editedDigests,
+          digests: edited.digests,
+          labelDraft: edited.labelDraft,
           newReferences: review.newReferences,
         });
         setEdits(null);
@@ -138,6 +163,9 @@ export function DigestReviewCard({ spaceId, number }: DigestReviewCardProps) {
 
       {review.digests.map((digest, index) => {
         const bodyRows = bodyFieldRows(digest.body);
+        const tagTitles = digest.tags
+          .map((id) => tagById.get(id)?.title)
+          .filter((title): title is string => title !== undefined);
         return (
           <div
             key={index}
@@ -175,9 +203,9 @@ export function DigestReviewCard({ spaceId, number }: DigestReviewCardProps) {
               placeholder="주제 (쉼표로 구분)"
               className={INPUT_CLASS}
             />
-            {digest.tags.length > 0 && (
+            {tagTitles.length > 0 && (
               <span className="text-xs text-fg-tertiary">
-                태그: {digest.tags.map((tag) => tag.title).join(", ")}
+                태그: {tagTitles.join(", ")}
               </span>
             )}
           </div>

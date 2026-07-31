@@ -1,3 +1,5 @@
+import type { ReviewTagDraft, ReviewTopicDraft } from "@nema-io/shared";
+
 import {
   DIGEST_BODY_FIELDS,
   type DigestBodyFieldKey,
@@ -28,9 +30,30 @@ export type ReviewDraftAction =
       key: DigestBodyFieldKey;
       value: string | string[];
     }
-  | { type: "digest/setTopics"; id: string; topics: ReviewDigest["topics"] }
-  | { type: "digest/setTags"; id: string; tags: ReviewDigest["tags"] }
   | { type: "digest/remove"; id: string }
+  // Topic/Tag는 리뷰 레벨 공유 팔레트(labelDraft) 항목이라(#28), Digest 쪽은
+  // "붙이기/떼기"만 다룬다 — 팔레트 항목 자체의 생성·이름수정은 label/* 액션.
+  | { type: "digest/attachTopic"; digestId: string; topic: ReviewTopicDraft }
+  | { type: "digest/detachTopic"; digestId: string; topicId: string }
+  | { type: "digest/attachTag"; digestId: string; tag: ReviewTagDraft }
+  | { type: "digest/detachTag"; digestId: string; tagId: string }
+  | {
+      type: "label/renameTopic";
+      id: string;
+      title: string;
+    }
+  | {
+      type: "label/renameTag";
+      id: string;
+      title: string;
+      description: string;
+      color: ReviewTagDraft["color"];
+    }
+  // 팔레트에서 완전히 지운다(어느 digest에 붙어 있어도 그대로 뗀다) — 어디에도
+  // 안 붙은 항목을 UnattachedLabelSection에서 명시적으로 삭제할 때만 쓴다.
+  // detachTopic/detachTag(한 digest에서만 떼기)와는 별개 동작이다.
+  | { type: "label/removeTopic"; id: string }
+  | { type: "label/removeTag"; id: string }
   // 액션 판별자가 type을 이미 쓰고 있어 Reference 유형은 다른 이름으로 받는다.
   | {
       type: "reference/setType";
@@ -103,14 +126,139 @@ export function reviewDraftReducer(
         body: { ...digest.body, [action.key]: action.value },
       });
     }
-    case "digest/setTopics":
-      return patchDigest(draft, action.id, { topics: action.topics });
-    case "digest/setTags":
-      return patchDigest(draft, action.id, { tags: action.tags });
     case "digest/remove":
       return {
         ...draft,
         digests: draft.digests.filter((digest) => digest.id !== action.id),
+      };
+    case "digest/attachTopic": {
+      const digest = draft.digests.find((d) => d.id === action.digestId);
+      if (!digest) {
+        return draft;
+      }
+      const alreadyExists = draft.labelDraft.topics.some(
+        (topic) => topic.id === action.topic.id,
+      );
+      const alreadyAttached = digest.topics.includes(action.topic.id);
+      return {
+        ...draft,
+        labelDraft: {
+          ...draft.labelDraft,
+          topics: alreadyExists
+            ? draft.labelDraft.topics.map((topic) =>
+                topic.id === action.topic.id ? action.topic : topic,
+              )
+            : [...draft.labelDraft.topics, action.topic],
+        },
+        digests: alreadyAttached
+          ? draft.digests
+          : draft.digests.map((d) =>
+              d.id === action.digestId
+                ? { ...d, topics: [...d.topics, action.topic.id] }
+                : d,
+            ),
+      };
+    }
+    case "digest/detachTopic":
+      return patchDigest(draft, action.digestId, {
+        topics: (
+          draft.digests.find((d) => d.id === action.digestId)?.topics ?? []
+        ).filter((id) => id !== action.topicId),
+      });
+    case "digest/attachTag": {
+      const digest = draft.digests.find((d) => d.id === action.digestId);
+      if (!digest) {
+        return draft;
+      }
+      const alreadyExists = draft.labelDraft.tags.some(
+        (tag) => tag.id === action.tag.id,
+      );
+      const alreadyAttached = digest.tags.includes(action.tag.id);
+      return {
+        ...draft,
+        labelDraft: {
+          ...draft.labelDraft,
+          tags: alreadyExists
+            ? draft.labelDraft.tags.map((tag) =>
+                tag.id === action.tag.id ? action.tag : tag,
+              )
+            : [...draft.labelDraft.tags, action.tag],
+        },
+        digests: alreadyAttached
+          ? draft.digests
+          : draft.digests.map((d) =>
+              d.id === action.digestId
+                ? { ...d, tags: [...d.tags, action.tag.id] }
+                : d,
+            ),
+      };
+    }
+    case "digest/detachTag":
+      return patchDigest(draft, action.digestId, {
+        tags: (
+          draft.digests.find((d) => d.id === action.digestId)?.tags ?? []
+        ).filter((id) => id !== action.tagId),
+      });
+    case "label/renameTopic":
+      return {
+        ...draft,
+        labelDraft: {
+          ...draft.labelDraft,
+          topics: draft.labelDraft.topics.map((topic) =>
+            topic.id === action.id ? { ...topic, title: action.title } : topic,
+          ),
+        },
+      };
+    case "label/renameTag":
+      return {
+        ...draft,
+        labelDraft: {
+          ...draft.labelDraft,
+          tags: draft.labelDraft.tags.map((tag) =>
+            tag.id === action.id
+              ? {
+                  ...tag,
+                  title: action.title,
+                  description: action.description,
+                  color: action.color,
+                }
+              : tag,
+          ),
+        },
+      };
+    case "label/removeTopic":
+      return {
+        ...draft,
+        labelDraft: {
+          ...draft.labelDraft,
+          topics: draft.labelDraft.topics.filter(
+            (topic) => topic.id !== action.id,
+          ),
+        },
+        digests: draft.digests.map((digest) =>
+          digest.topics.includes(action.id)
+            ? {
+                ...digest,
+                topics: digest.topics.filter((id) => id !== action.id),
+              }
+            : digest,
+        ),
+      };
+    case "label/removeTag":
+      return {
+        ...draft,
+        labelDraft: {
+          ...draft.labelDraft,
+          tags: draft.labelDraft.tags.filter((tag) => tag.id !== action.id),
+        },
+        digests: draft.digests.map((digest) =>
+          digest.tags.includes(action.id)
+            ? {
+                ...digest,
+                tags: digest.tags.filter((id) => id !== action.id),
+              }
+            : digest,
+        ),
       };
     case "reference/setType":
       return patchNewReference(draft, action.id, {

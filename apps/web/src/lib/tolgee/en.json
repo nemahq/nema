@@ -288,6 +288,7 @@
     "type_relation": "Discovered",
     "type_relation_closed": "Connected",
     "type_revert": "Reverted",
+    "unattached_label_section_title": "Unattached labels ({count})",
     "undo_action": "Undo",
     "viewed_action": "Read"
   },

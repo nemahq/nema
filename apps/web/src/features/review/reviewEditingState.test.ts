@@ -14,16 +14,8 @@ const DIGEST: ReviewDigest = {
   title: "제목",
   description: "요약",
   body: { type: "decision" },
-  topics: [{ id: "topic-draft-1", registryId: null, title: "주제" }],
-  tags: [
-    {
-      id: "tag-draft-1",
-      registryId: null,
-      title: "태그",
-      description: "설명",
-      color: "sienna",
-    },
-  ],
+  topics: ["topic-draft-1"],
+  tags: ["tag-draft-1"],
   referenceIds: [],
   newReferenceKeys: [],
   externalUrls: [],
@@ -57,6 +49,18 @@ function draft(overrides: Partial<ReviewDraft> = {}): ReviewDraft {
     sourceCreatedAt: "2026-07-18T00:00:00.000Z",
     draftVersion: 1,
     digests: [DIGEST],
+    labelDraft: {
+      topics: [{ id: "topic-draft-1", registryId: null, title: "주제" }],
+      tags: [
+        {
+          id: "tag-draft-1",
+          registryId: null,
+          title: "태그",
+          description: "설명",
+          color: "sienna",
+        },
+      ],
+    },
     newReferences: [],
     citedReferences: [],
     ...overrides,
@@ -103,37 +107,33 @@ describe("computeReviewEditingState — 확정 차단 조건", () => {
     expect(result.hasEmptyDescription).toBe(true);
   });
 
-  it("Topic 이름이 비면 hasEmptyLabel", () => {
+  it("팔레트 Topic 이름이 비면 hasEmptyLabel", () => {
     const result = computeReviewEditingState(
       draft({
-        digests: [
-          {
-            ...DIGEST,
-            topics: [{ id: "topic-draft-2", registryId: null, title: "" }],
-          },
-        ],
+        labelDraft: {
+          topics: [{ id: "topic-draft-1", registryId: null, title: "" }],
+          tags: [],
+        },
       }),
     );
     expect(result.hasEmptyLabel).toBe(true);
   });
 
-  it("Tag 이름이 비면 hasEmptyLabel", () => {
+  it("팔레트 Tag 이름이 비면 hasEmptyLabel", () => {
     const result = computeReviewEditingState(
       draft({
-        digests: [
-          {
-            ...DIGEST,
-            tags: [
-              {
-                id: "tag-draft-2",
-                registryId: null,
-                title: "",
-                description: "설명",
-                color: "cyan",
-              },
-            ],
-          },
-        ],
+        labelDraft: {
+          topics: [],
+          tags: [
+            {
+              id: "tag-draft-1",
+              registryId: null,
+              title: "",
+              description: "설명",
+              color: "cyan",
+            },
+          ],
+        },
       }),
     );
     expect(result.hasEmptyLabel).toBe(true);

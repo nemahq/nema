@@ -32,6 +32,7 @@ function draft(overrides: Partial<ReviewDraft> = {}): ReviewDraft {
     sourceCreatedAt: "2026-07-18T00:00:00.000Z",
     draftVersion: 1,
     digests: [DIGEST],
+    labelDraft: { topics: [], tags: [] },
     newReferences: [],
     citedReferences: [],
     ...overrides,
@@ -46,21 +47,12 @@ describe("buildUpdateReviewPayload", () => {
     expect(payload.expectedVersion).toBe(3);
   });
 
-  it("Digest 제목·설명·주제·태그 이름의 앞뒤 공백을 다듬어 싣는다", () => {
+  it("Digest 제목·설명의 앞뒤 공백을 다듬어 싣는다", () => {
     const editedDigest: ReviewDigest = {
       ...DIGEST,
       title: "  새 제목  ",
       description: "  새 설명  ",
-      topics: [{ id: "topic-draft-1", registryId: null, title: " 새 주제 " }],
-      tags: [
-        {
-          id: "tag-draft-1",
-          registryId: null,
-          title: " 새 태그 ",
-          description: "설명",
-          color: "sienna",
-        },
-      ],
+      topics: ["topic-draft-1"],
     };
 
     const payload = buildUpdateReviewPayload(
@@ -68,22 +60,42 @@ describe("buildUpdateReviewPayload", () => {
     );
 
     expect(payload.digests).toEqual([
-      {
-        ...editedDigest,
-        title: "새 제목",
-        description: "새 설명",
-        topics: [{ id: "topic-draft-1", registryId: null, title: "새 주제" }],
-        tags: [
-          {
-            id: "tag-draft-1",
-            registryId: null,
-            title: "새 태그",
-            description: "설명",
-            color: "sienna",
-          },
-        ],
-      },
+      { ...editedDigest, title: "새 제목", description: "새 설명" },
     ]);
+  });
+
+  it("팔레트 Topic·Tag 이름의 앞뒤 공백을 다듬어 싣는다", () => {
+    const payload = buildUpdateReviewPayload(
+      draft({
+        labelDraft: {
+          topics: [
+            { id: "topic-draft-1", registryId: null, title: " 새 주제 " },
+          ],
+          tags: [
+            {
+              id: "tag-draft-1",
+              registryId: null,
+              title: " 새 태그 ",
+              description: "설명",
+              color: "sienna",
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(payload.labelDraft).toEqual({
+      topics: [{ id: "topic-draft-1", registryId: null, title: "새 주제" }],
+      tags: [
+        {
+          id: "tag-draft-1",
+          registryId: null,
+          title: "새 태그",
+          description: "설명",
+          color: "sienna",
+        },
+      ],
+    });
   });
 
   it("신규 Reference의 이름·설명 앞뒤 공백을 다듬어 싣는다", () => {

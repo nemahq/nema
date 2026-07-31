@@ -17,16 +17,8 @@ const DIGEST: ReviewDigest = {
   title: "제목",
   description: "요약",
   body: { type: "decision", situation: "원래 상황", choice: "원래 선택" },
-  topics: [{ id: "topic-draft-1", registryId: null, title: "주제" }],
-  tags: [
-    {
-      id: "tag-draft-1",
-      registryId: null,
-      title: "태그",
-      description: "설명",
-      color: "sienna",
-    },
-  ],
+  topics: ["topic-draft-1"],
+  tags: ["tag-draft-1"],
   referenceIds: [],
   newReferenceKeys: [],
   externalUrls: [],
@@ -62,6 +54,18 @@ function draft(overrides: Partial<ReviewDraft> = {}): ReviewDraft {
     sourceCreatedAt: "2026-07-18T00:00:00.000Z",
     draftVersion: 1,
     digests: [DIGEST, DIGEST_2],
+    labelDraft: {
+      topics: [{ id: "topic-draft-1", registryId: null, title: "주제" }],
+      tags: [
+        {
+          id: "tag-draft-1",
+          registryId: null,
+          title: "태그",
+          description: "설명",
+          color: "sienna",
+        },
+      ],
+    },
     newReferences: [NEW_REFERENCE],
     citedReferences: [CITED_REFERENCE],
     ...overrides,
@@ -98,40 +102,6 @@ const DIGEST_FIELD_ACTIONS: {
     },
     field: "body",
     expected: { type: "learning" },
-  },
-  {
-    action: {
-      type: "digest/setTopics",
-      id: "digest-1",
-      topics: [{ id: "topic-draft-2", registryId: null, title: "새 주제" }],
-    },
-    field: "topics",
-    expected: [{ id: "topic-draft-2", registryId: null, title: "새 주제" }],
-  },
-  {
-    action: {
-      type: "digest/setTags",
-      id: "digest-1",
-      tags: [
-        {
-          id: "tag-draft-2",
-          registryId: null,
-          title: "새 태그",
-          description: "설명",
-          color: "cyan",
-        },
-      ],
-    },
-    field: "tags",
-    expected: [
-      {
-        id: "tag-draft-2",
-        registryId: null,
-        title: "새 태그",
-        description: "설명",
-        color: "cyan",
-      },
-    ],
   },
 ];
 
@@ -173,6 +143,147 @@ describe("reviewDraftReducer — Digest 필드 수정", () => {
       expect(before).toEqual(draft());
     },
   );
+});
+
+describe("reviewDraftReducer — 리뷰 라벨 팔레트(#28)", () => {
+  it("digest/attachTopic은 신규 팔레트 항목을 만들고 그 digest에 붙인다", () => {
+    const before = draft();
+
+    const next = reviewDraftReducer(before, {
+      type: "digest/attachTopic",
+      digestId: "digest-1",
+      topic: { id: "topic-draft-2", registryId: null, title: "새 주제" },
+    });
+
+    expect(next.labelDraft.topics).toContainEqual({
+      id: "topic-draft-2",
+      registryId: null,
+      title: "새 주제",
+    });
+    expect(next.digests[0].topics).toEqual(["topic-draft-1", "topic-draft-2"]);
+    expect(next.digests[1]).toBe(before.digests[1]);
+  });
+
+  it("digest/attachTopic으로 다른 digest가 이미 만든 팔레트 항목을 그대로 재사용할 수 있다", () => {
+    const before = draft();
+
+    const next = reviewDraftReducer(before, {
+      type: "digest/attachTopic",
+      digestId: "digest-2",
+      topic: before.labelDraft.topics[0],
+    });
+
+    expect(next.labelDraft.topics).toHaveLength(1);
+    expect(next.digests[1].topics).toEqual(["topic-draft-1"]);
+  });
+
+  it("digest/detachTopic은 그 digest에서만 떼고 팔레트에는 남긴다", () => {
+    const before = draft();
+
+    const next = reviewDraftReducer(before, {
+      type: "digest/detachTopic",
+      digestId: "digest-1",
+      topicId: "topic-draft-1",
+    });
+
+    expect(next.digests[0].topics).toEqual([]);
+    expect(next.digests[1].topics).toEqual(["topic-draft-1"]);
+    expect(next.labelDraft.topics).toEqual(before.labelDraft.topics);
+  });
+
+  it("digest/attachTag은 신규 팔레트 항목을 만들고 그 digest에 붙인다", () => {
+    const next = reviewDraftReducer(draft(), {
+      type: "digest/attachTag",
+      digestId: "digest-1",
+      tag: {
+        id: "tag-draft-2",
+        registryId: null,
+        title: "새 태그",
+        description: "설명",
+        color: "cyan",
+      },
+    });
+
+    expect(next.labelDraft.tags).toContainEqual({
+      id: "tag-draft-2",
+      registryId: null,
+      title: "새 태그",
+      description: "설명",
+      color: "cyan",
+    });
+    expect(next.digests[0].tags).toEqual(["tag-draft-1", "tag-draft-2"]);
+  });
+
+  it("digest/detachTag은 그 digest에서만 떼고 팔레트에는 남긴다", () => {
+    const before = draft();
+
+    const next = reviewDraftReducer(before, {
+      type: "digest/detachTag",
+      digestId: "digest-1",
+      tagId: "tag-draft-1",
+    });
+
+    expect(next.digests[0].tags).toEqual([]);
+    expect(next.labelDraft.tags).toEqual(before.labelDraft.tags);
+  });
+
+  it("label/renameTopic은 팔레트 항목 하나를 바꾸고, 그걸 참조하는 모든 digest에 그대로 반영된다", () => {
+    const next = reviewDraftReducer(draft(), {
+      type: "label/renameTopic",
+      id: "topic-draft-1",
+      title: "고친 주제",
+    });
+
+    expect(next.labelDraft.topics[0].title).toBe("고친 주제");
+    // digest는 id 참조만 들고 있어 손댈 필요가 없다 — 팔레트 갱신만으로 양쪽에
+    // 반영된다는 게 #28 공유 팔레트의 핵심이다.
+    expect(next.digests[0].topics).toEqual(["topic-draft-1"]);
+    expect(next.digests[1].topics).toEqual(["topic-draft-1"]);
+  });
+
+  it("label/renameTag은 팔레트 항목 하나를 바꾼다", () => {
+    const next = reviewDraftReducer(draft(), {
+      type: "label/renameTag",
+      id: "tag-draft-1",
+      title: "고친 태그",
+      description: "고친 설명",
+      color: "olive",
+    });
+
+    expect(next.labelDraft.tags[0]).toEqual({
+      id: "tag-draft-1",
+      registryId: null,
+      title: "고친 태그",
+      description: "고친 설명",
+      color: "olive",
+    });
+  });
+
+  it("label/removeTopic은 팔레트에서 완전히 지우고, 붙어있던 모든 digest에서도 뗀다", () => {
+    const before = draft();
+
+    const next = reviewDraftReducer(before, {
+      type: "label/removeTopic",
+      id: "topic-draft-1",
+    });
+
+    expect(next.labelDraft.topics).toEqual([]);
+    expect(next.digests[0].topics).toEqual([]);
+    expect(next.digests[1].topics).toEqual([]);
+  });
+
+  it("label/removeTag은 팔레트에서 완전히 지우고, 붙어있던 모든 digest에서도 뗀다", () => {
+    const before = draft();
+
+    const next = reviewDraftReducer(before, {
+      type: "label/removeTag",
+      id: "tag-draft-1",
+    });
+
+    expect(next.labelDraft.tags).toEqual([]);
+    expect(next.digests[0].tags).toEqual([]);
+    expect(next.digests[1].tags).toEqual([]);
+  });
 });
 
 describe("reviewDraftReducer — digest/setBodyField", () => {

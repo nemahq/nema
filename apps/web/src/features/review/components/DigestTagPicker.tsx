@@ -12,12 +12,15 @@ import { Popover } from "@web/components/ui/Popover";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { NewLabelIndicator } from "./NewLabelIndicator";
-import { useReviewDraftContext } from "./ReviewDraftProvider";
 import { TagEditPanel } from "./TagEditPanel";
 
 interface DigestTagPickerProps {
   digestId: string;
-  tags: ReviewTagDraft[];
+  // 리뷰 레벨 팔레트(labelDraft.tags) 항목 id 배열(#28) — 부모(DigestCandidateCard)가
+  // 이미 로드된 draft에서 그대로 내려준다(Suspense 훅을 리프마다 새로 부르지
+  // 않기 위한 구조, nema/require-suspense-boundary).
+  tagIds: string[];
+  tagPalette: ReviewTagDraft[];
   disabled: boolean;
 }
 
@@ -40,11 +43,15 @@ interface DigestTagPickerProps {
 // 지금 방식이 상태와 무관하게 항상 같다.
 export function DigestTagPicker({
   digestId,
-  tags,
+  tagIds,
+  tagPalette,
   disabled,
 }: DigestTagPickerProps) {
   const { t } = useTranslation();
-  const { dispatch } = useReviewDraftContext();
+  const tagById = new Map(tagPalette.map((tag) => [tag.id, tag]));
+  const tags = tagIds
+    .map((id) => tagById.get(id))
+    .filter((tag): tag is ReviewTagDraft => tag !== undefined);
   // DigestTopicPicker와 같은 이유(그 파일 주석 참고) — 신규 먼저, 그룹 내부는
   // 원래 순서 유지.
   const sortedTags = [...tags].sort(
@@ -95,11 +102,10 @@ export function DigestTagPicker({
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={-34} className="p-0">
         <TagEditPanel
-          tags={tags}
+          digestId={digestId}
+          attachedTags={tags}
+          tagPalette={tagPalette}
           disabled={disabled}
-          onChange={(next) =>
-            dispatch({ type: "digest/setTags", id: digestId, tags: next })
-          }
         />
       </PopoverContent>
     </Popover>

@@ -34,6 +34,7 @@ export const digestReviewRouter = router({
         changesetId: input.changesetId,
         expectedVersion: input.expectedVersion,
         digests: input.digests,
+        labelDraft: input.labelDraft,
         newReferences: input.newReferences,
         referenceUpdates: input.referenceUpdates,
       }),
