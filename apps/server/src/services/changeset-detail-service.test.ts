@@ -72,6 +72,22 @@ function mockSupabase(
     from: vi.fn((table: string) => {
       const rows = perTable[table] ?? [];
       const filters: Record<string, unknown> = {};
+      let orderBy: { col: string; ascending: boolean } | null = null;
+      let limitN: number | null = null;
+      function matched(): Record<string, unknown>[] {
+        let result = rows.filter((r) => matchesFilters(r, filters));
+        if (orderBy) {
+          const { col, ascending } = orderBy;
+          result = [...result].sort((a, b) => {
+            const cmp = String(a[col]).localeCompare(String(b[col]));
+            return ascending ? cmp : -cmp;
+          });
+        }
+        if (limitN !== null) {
+          result = result.slice(0, limitN);
+        }
+        return result;
+      }
       const chain: Record<string, unknown> = {
         select: vi.fn(() => chain),
         eq: vi.fn((col: string, val: unknown) => {
@@ -82,19 +98,24 @@ function mockSupabase(
           filters[col] = { $in: vals };
           return chain;
         }),
+        order: vi.fn((col: string, opts?: { ascending?: boolean }) => {
+          orderBy = { col, ascending: opts?.ascending ?? true };
+          return chain;
+        }),
+        limit: vi.fn((n: number) => {
+          limitN = n;
+          return chain;
+        }),
         maybeSingle: vi.fn(async () => ({
-          data: rows.find((r) => matchesFilters(r, filters)) ?? null,
+          data: matched()[0] ?? null,
           error: null,
         })),
         single: vi.fn(async () => ({
-          data: rows.find((r) => matchesFilters(r, filters)) ?? null,
+          data: matched()[0] ?? null,
           error: null,
         })),
         then: vi.fn((resolve: (result: unknown) => unknown) =>
-          resolve({
-            data: rows.filter((r) => matchesFilters(r, filters)),
-            error: null,
-          }),
+          resolve({ data: matched(), error: null }),
         ),
       };
       return chain;
@@ -851,8 +872,8 @@ describe("getChangesetByNumber", () => {
   });
 
   // 되돌리기 버튼 노출 규칙(review-flow.md #26 규칙 4) — status='closed'+
-  // outcome='applied'일 때만 reverted/openRevertNumber를 계산한다.
-  describe("reverted/openRevertNumber", () => {
+  // outcome='applied'일 때만 reverted/revertedByNumber를 계산한다.
+  describe("reverted/revertedByNumber", () => {
     function closedAppliedRow(overrides: Record<string, unknown> = {}) {
       return {
         id: "cs-20",
@@ -897,7 +918,7 @@ describe("getChangesetByNumber", () => {
       });
     });
 
-    it("reverted=false면 openRevertNumber 조회 없이 null(자녀 찾을 이유가 없음)", async () => {
+    it("reverted=false면 revertedByNumber 조회 없이 null(자녀 찾을 이유가 없음)", async () => {
       const supabase = mockSupabase(
         { changesets: [closedAppliedRow()], digests: [digestRow(DIGEST_ID)] },
         { is_changeset_reverted: false },
@@ -910,10 +931,10 @@ describe("getChangesetByNumber", () => {
       });
 
       expect(result.reverted).toBe(false);
-      expect(result.openRevertNumber).toBeNull();
+      expect(result.revertedByNumber).toBeNull();
     });
 
-    it("open 상태인 재판정 초안이 있으면 그 number를 openRevertNumber로 돌려준다", async () => {
+    it("재판정 초안이 아직 open이어도 그 number를 revertedByNumber로 돌려준다", async () => {
       const supabase = mockSupabase(
         {
           changesets: [
@@ -923,6 +944,7 @@ describe("getChangesetByNumber", () => {
               reverts_id: "cs-20",
               status: "open",
               number: 21,
+              created_at: "2026-07-02T00:00:00Z",
             },
           ],
           digests: [digestRow(DIGEST_ID)],
@@ -937,10 +959,10 @@ describe("getChangesetByNumber", () => {
       });
 
       expect(result.reverted).toBe(true);
-      expect(result.openRevertNumber).toBe(21);
+      expect(result.revertedByNumber).toBe(21);
     });
 
-    it("되돌려졌지만 재판정 초안이 이미 확정·버려졌으면(open 자녀 없음) openRevertNumber=null", async () => {
+    it("재판정이 이미 확정·버려졌어도(closed) revertedByNumber는 그대로 남는다 — 추적 링크는 상태 무관 영구", async () => {
       const supabase = mockSupabase(
         {
           changesets: [
@@ -950,6 +972,7 @@ describe("getChangesetByNumber", () => {
               reverts_id: "cs-20",
               status: "closed",
               number: 21,
+              created_at: "2026-07-02T00:00:00Z",
             },
           ],
           digests: [digestRow(DIGEST_ID)],
@@ -964,7 +987,41 @@ describe("getChangesetByNumber", () => {
       });
 
       expect(result.reverted).toBe(true);
-      expect(result.openRevertNumber).toBeNull();
+      expect(result.revertedByNumber).toBe(21);
+    });
+
+    it("같은 원본을 토글 체인으로 여러 번 되돌린 경우 가장 최근 자녀만 가리킨다", async () => {
+      const supabase = mockSupabase(
+        {
+          changesets: [
+            closedAppliedRow(),
+            {
+              id: "cs-revert-20-old",
+              reverts_id: "cs-20",
+              status: "closed",
+              number: 21,
+              created_at: "2026-07-02T00:00:00Z",
+            },
+            {
+              id: "cs-revert-20-new",
+              reverts_id: "cs-20",
+              status: "closed",
+              number: 25,
+              created_at: "2026-07-04T00:00:00Z",
+            },
+          ],
+          digests: [digestRow(DIGEST_ID)],
+        },
+        { is_changeset_reverted: true },
+      );
+
+      const result = await getChangesetByNumber({
+        supabase,
+        spaceId: SPACE_ID,
+        number: 20,
+      });
+
+      expect(result.revertedByNumber).toBe(25);
     });
 
     it("status='open'이면 되돌림 여부를 조회하지 않는다(버튼이 없는 화면)", async () => {

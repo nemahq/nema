@@ -121,12 +121,15 @@ interface ChangesetDetail {
   invalidatedById: string | null;
   // 되돌림 여부 — is_changeset_reverted(SQL) 그대로. status='closed'·outcome='applied'인
   // changeset이 "지금 그래프에 살아있는 걸 만든 행"인지 판정하는 값(review-flow.md #26
-  // 규칙 4) — true면 되돌리기 버튼 대신 재판정 링크(openRevertNumber)를 보여준다.
+  // 규칙 4) — true면 되돌리기 버튼 대신 "#nn에서 되돌림" 추적 링크(revertedByNumber)를
+  // 보여준다.
   reverted: boolean;
-  // reverted가 true이고, 그 원인이 된 revert changeset이 지금도 status='open'(아직
-  // 판정 중인 재판정 초안)이면 그 number. 이미 확정·버려졌으면 null — "그 리뷰가
-  // 확정되면 버튼이 그쪽으로 옮겨간다"는 정책상 여기선 더 보여줄 링크가 없다.
-  openRevertNumber: number | null;
+  // reverted가 true일 때, 그 원인이 된 direct revert changeset의 number. 재판정이
+  // 열려있든 확정됐든 항상 값이 있다 — "지금 그래프에 살아있는 걸 만든 게 아니다"라는
+  // 사실 자체는 영구적이라, 추적 링크도 상태 무관하게 계속 남아있어야 한다(재판정
+  // 상태는 그 링크를 눌러 들어가면 바로 보인다). 같은 원본을 여러 번 되돌린 토글
+  // 체인(revert의 revert)이면 가장 최근 것 하나만 가리킨다.
+  revertedByNumber: number | null;
   createdAt: string;
   updatedAt: string;
   body: ChangesetDetailBody;
@@ -459,7 +462,7 @@ export async function getChangesetByNumber(args: {
   // 있다(ChangesetRecordScreen) — 나머지 상태는 조회 자체를 생략해 매 상세 조회마다
   // RPC·쿼리를 추가로 태우지 않는다(review-flow.md #26 규칙 4).
   let reverted = false;
-  let openRevertNumber: number | null = null;
+  let revertedByNumber: number | null = null;
   if (row.status === "closed" && row.outcome === "applied") {
     const { data: revertedResult, error: revertedError } = await supabase.rpc(
       "is_changeset_reverted",
@@ -469,14 +472,14 @@ export async function getChangesetByNumber(args: {
     reverted = revertedResult ?? false;
 
     if (reverted) {
-      const { data: openChild, error: openChildError } = await supabase
+      const { data: revertChildren, error: revertChildError } = await supabase
         .from("changesets")
         .select("number")
         .eq("reverts_id", row.id)
-        .eq("status", "open")
-        .maybeSingle();
-      throwIfSupabaseError(openChildError);
-      openRevertNumber = openChild?.number ?? null;
+        .order("created_at", { ascending: false })
+        .limit(1);
+      throwIfSupabaseError(revertChildError);
+      revertedByNumber = revertChildren?.[0]?.number ?? null;
     }
   }
 
@@ -497,7 +500,7 @@ export async function getChangesetByNumber(args: {
     revertsNumber,
     invalidatedById: row.invalidated_by_id,
     reverted,
-    openRevertNumber,
+    revertedByNumber,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     body,

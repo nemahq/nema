@@ -58,13 +58,12 @@ function ChangesetRecordContent() {
   function renderHeaderActions() {
     if (changesetDetail.outcome === "applied") {
       // 되돌리기 버튼은 "지금 그래프에 살아있는 걸 만든 행"에만 붙는다(review-flow.md
-      // #26 규칙 4) — 이미 되돌려졌으면(reverted) 버튼 대신 그 재판정 초안으로 가는
-      // 링크를 보여준다. 그 초안이 이미 확정·버려져 openRevertNumber가 없으면(정책상
-      // "그 리뷰가 확정되면 버튼이 그쪽으로 옮겨간다") 여기선 더 보여줄 게 없다.
-      if (changesetDetail.reverted) {
-        if (changesetDetail.openRevertNumber === null) {
-          return null;
-        }
+      // #26 규칙 4) — 이미 되돌려졌으면(reverted) 버튼 대신 그 direct revert
+      // changeset(revertedByNumber)으로 가는 추적 링크를 상태 무관하게 계속 보여준다.
+      if (
+        changesetDetail.reverted &&
+        changesetDetail.revertedByNumber !== null
+      ) {
         return (
           <Button variant="neutral" className="shrink-0" asChild>
             <Link
@@ -72,11 +71,13 @@ function ChangesetRecordContent() {
                 to: "/space/$spacePublicId/changesets/$changesetNumber",
                 params: {
                   spacePublicId,
-                  changesetNumber: String(changesetDetail.openRevertNumber),
+                  changesetNumber: String(changesetDetail.revertedByNumber),
                 },
               })}
             >
-              {t("review.detail_view_reopened_review_action")}
+              {t("review.detail_reverted_by_action", {
+                number: changesetDetail.revertedByNumber,
+              })}
             </Link>
           </Button>
         );
