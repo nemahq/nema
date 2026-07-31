@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { cn, Text } from "@nema-io/weave";
+import { cn, Label, Text } from "@nema-io/weave";
 
 interface SettingsRowProps {
   label: string;
@@ -27,9 +27,7 @@ export function SettingsRow({
     >
       <div className="flex flex-col gap-0.5 pr-4">
         {htmlFor ? (
-          <Text as="label" htmlFor={htmlFor} size="sm" weight="medium">
-            {label}
-          </Text>
+          <Label htmlFor={htmlFor}>{label}</Label>
         ) : (
           <Text as="span" size="sm" weight="medium">
             {label}

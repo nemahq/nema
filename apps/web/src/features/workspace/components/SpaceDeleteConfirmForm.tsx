@@ -9,13 +9,13 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  Label,
   pinSelectedToTop,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
   Skeleton,
-  Text,
 } from "@nema-io/weave";
 
 import { Select } from "@web/components/ui/Select";
@@ -80,13 +80,13 @@ function SpaceDeleteMoveDraftsField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <Text
-        as="label"
+      <Label
         size="xs"
+        weight="normal"
         color={deleteTogether ? "quaternary" : "tertiary"}
       >
         {t("space.delete_pending_drafts_label", { count: draftCount })}
-      </Text>
+      </Label>
       <Select
         value={targetSpaceId}
         onValueChange={onManualTargetSpaceIdChange}
@@ -103,10 +103,9 @@ function SpaceDeleteMoveDraftsField({
           ))}
         </SelectContent>
       </Select>
-      <Text
-        as="label"
+      <Label
         htmlFor={checkboxId}
-        size="sm"
+        weight="normal"
         color="secondary"
         className="flex cursor-pointer items-center gap-2"
       >
@@ -118,7 +117,7 @@ function SpaceDeleteMoveDraftsField({
           }
         />
         {t("space.delete_together_option")}
-      </Text>
+      </Label>
     </div>
   );
 }
@@ -242,15 +241,9 @@ export function SpaceDeleteConfirmForm({
       </Suspense>
 
       <div className="flex flex-col gap-1.5">
-        <Text
-          as="label"
-          htmlFor={confirmInputId}
-          size="sm"
-          weight="medium"
-          color="primary"
-        >
+        <Label htmlFor={confirmInputId}>
           {t("common.delete_confirm_instruction", { value: spaceName })}
-        </Text>
+        </Label>
         <Input
           id={confirmInputId}
           autoFocus

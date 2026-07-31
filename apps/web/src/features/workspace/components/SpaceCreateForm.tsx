@@ -14,8 +14,6 @@ import { useTranslation } from "@web/lib/tolgee";
 
 import { SpaceNameField } from "./SpaceNameField";
 
-const NAME_INPUT_ID = "space-create-name";
-
 interface SpaceCreateFormProps {
   onOpenChange: (open: boolean) => void;
 }
@@ -64,7 +62,6 @@ export function SpaceCreateForm({ onOpenChange }: SpaceCreateFormProps) {
       </DialogHeader>
 
       <SpaceNameField
-        id={NAME_INPUT_ID}
         value={field.name}
         onChange={field.handleChange}
         onEnter={handleSubmit}

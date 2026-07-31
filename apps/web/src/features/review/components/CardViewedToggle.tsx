@@ -1,6 +1,6 @@
 import { useId } from "react";
 
-import { Checkbox, cn, Text } from "@nema-io/weave";
+import { Checkbox, cn, Label } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -24,11 +24,9 @@ export function CardViewedToggle({
   const fieldId = useId();
 
   return (
-    <Text
-      as="label"
+    <Label
       htmlFor={fieldId}
       size="xs"
-      weight="medium"
       color={viewed ? "primary" : "tertiary"}
       className={cn(
         // gap-1·transition-colors·hover 톤은 weave Button의 ghost variant
@@ -48,6 +46,6 @@ export function CardViewedToggle({
         onCheckedChange={onToggleViewed}
       />
       {t("review.viewed_action")}
-    </Text>
+    </Label>
   );
 }

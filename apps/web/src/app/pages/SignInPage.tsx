@@ -161,6 +161,10 @@ export function SignInPage() {
                 </Button>
               </form>
 
+              {/* weave FormMessage는 FormField 하나에 딸린 필드 에러용이다 —
+                  이 에러는 Google과 이메일, 두 독립된 액션 중 어느 쪽에서
+                  나든 같은 자리에 뜨는 페이지 레벨 상태라 특정 필드에
+                  묶이지 않는다. */}
               <p
                 role="alert"
                 className={`text-center text-xs ${error ? "text-status-error" : "text-transparent"}`}

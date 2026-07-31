@@ -45,6 +45,7 @@
     "description_placeholder": "Add description",
     "description_required": "Description required",
     "edit_action": "Edit",
+    "error_prefix": "Error: ",
     "home": "Home",
     "list_end": "You're all caught up.",
     "name_invalid_chars": "Contains characters that can't be used. Try a different character.",

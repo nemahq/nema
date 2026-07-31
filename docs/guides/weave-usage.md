@@ -24,7 +24,8 @@ UI를 추가·수정할 때 `@nema-io/weave`(디자인 시스템)를 먼저 검�
 | **ComboboxItem** | 검색 팝오버 등에서 전체 폭이 hover 반응하는 목록 행(태그/토픽 검색 결과, "새로 만들기" 행, 색상 피커 리스트). `disabled`(완전 비활성)·`active`(시각 강조만, 클릭은 안 막음 — 색 피커의 "현재 값이지만 재선택 가능"용)·`readOnly`(클릭은 막되 hover·형제 액션은 유지 — 이미 붙은 항목처럼 다시 고를 순 없지만 설명·액션은 계속 봐야 하는 행용) 셋을 구분 | 패딩·타이포·색까지 관리해주길 기대하는 자리(컴포넌트는 구조만 담당, 나머지는 `className`/`Text`에 위임) |
 | **TagColorGridPicker / TagColorListPicker** | `Chip`의 `TagColor` 8색을 사용자가 직접 고르는 자리. 생성 폼처럼 한눈에 훑는 가로 배치는 `TagColorGridPicker`(스와치 + 호버 Tooltip), 편집 팝오버처럼 세로로 늘어놓고 이름을 바로 보여줘야 하면 `TagColorListPicker`(`ComboboxItem` `active` 활용). 색 이름 문구는 weave가 tolgee를 몰라 `getColorLabel` 콜백으로 소비처가 번역해 넘긴다 | 색이 아닌 임의 팔레트가 필요한 자리(8색 고정 팔레트 전용) |
 | **Separator** | 화면 요소 사이를 시각적으로 나누는 독립된 선 | 요소 자신의 테두리로 표현되는 경계(`border-b`로 이미 충분한 카드·행). 별도 형제 요소로 만들 이유가 없다 |
-| **Label** | 폼 컨트롤에 붙는 라벨 | — (Text/Label 세부 규칙은 별도 작업 중, `PR #460` 참고) |
+| **Label** | 폼 컨트롤에 붙는 라벨을 `FormLabel` 없이 단독으로 쓸 때(예: 체크박스 행처럼 라벨이 곧 클릭 영역인 자리). `size`/`weight`/`color`는 `Text`와 스케일 공유(기본값 sm/medium/primary) | 라벨-입력-에러가 한 세트인 자리(→ `Form`) |
+| **Form**(`FormField`/`FormLabel`/`FormControl`/`FormMessage`) | 라벨-입력-에러가 짝을 이루는 자리. `FormField`가 `id`를 만들어 context로 내려주고, `FormLabel`(`htmlFor`)·`FormControl`(Radix `Slot`으로 자식에 `id`+`aria-describedby` 주입 — 자식이 `Input`이든 `Textarea`든 컨트롤 종류를 몰라도 동작)·`FormMessage`(`reserveSpace`로 에러 유무와 무관하게 높이 고정, `errorPrefix`를 넘기면 `variant="error"`일 때 스크린리더용 접두어가 붙는다 — weave는 tolgee를 몰라 소비처가 `t()`로 넘겨야 함)가 자동으로 연결된다 | 라디오형 피커처럼 단일 포커스 컨트롤이 아니라 그룹인 필드(`FormControl` 없이 `FormField` 안에서 `role="group"`으로 직접 조립), 시각 라벨 없이 `aria-label`만으로 충분한 자리(정적 값이 이미 라벨을 대신하는 등) |
 | **Text** | 타이포그래피가 필요한 모든 텍스트 | — (별도 작업 중, `PR #460` 참고) |
 
 ## 구분선 3단 위계

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { TOPIC_TITLE_MAX_LENGTH } from "@nema-io/shared";
-import { Input } from "@nema-io/weave";
+import { FormControl, FormField, FormMessage, Input } from "@nema-io/weave";
 
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -62,8 +62,8 @@ export function TopicDraftRenameForm({
   const titleError = getTitleError();
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-1 px-2">
+    <FormField className="px-2">
+      <FormControl>
         <Input
           autoFocus
           value={titleValue}
@@ -73,13 +73,10 @@ export function TopicDraftRenameForm({
           aria-invalid={!submittable}
           onChange={(e) => setTitleValue(e.target.value)}
         />
-        <p
-          role="alert"
-          className={`text-xs ${titleError ? "text-status-error" : "text-transparent"}`}
-        >
-          {titleError ?? " "}
-        </p>
-      </div>
-    </div>
+      </FormControl>
+      <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
+        {titleError}
+      </FormMessage>
+    </FormField>
   );
 }

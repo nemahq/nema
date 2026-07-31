@@ -5,7 +5,14 @@ import {
   TAG_TITLE_MAX_LENGTH,
   type TagColor,
 } from "@nema-io/shared";
-import { Input, TagColorListPicker, Text } from "@nema-io/weave";
+import {
+  FormControl,
+  FormField,
+  FormMessage,
+  Input,
+  TagColorListPicker,
+  Text,
+} from "@nema-io/weave";
 
 import { TAG_COLOR_LABEL_KEY } from "@web/features/review/constants";
 import { useTranslation } from "@web/lib/tolgee";
@@ -110,39 +117,37 @@ export function TagDraftRenameForm({
           관심사라 바깥 gap-3로 한 단 떼어 놓는다(TagCreateForm.tsx와 같은
           이유). */}
       <div className="flex flex-col gap-2">
-        <div className="flex flex-col gap-1 px-2">
-          <Input
-            autoFocus
-            value={titleValue}
-            maxLength={TAG_TITLE_MAX_LENGTH}
-            placeholder={t("common.name_placeholder")}
-            aria-label={t("common.name_label")}
-            aria-invalid={titleInvalid}
-            onChange={(e) => setTitleValue(e.target.value)}
-          />
-          <p
-            role="alert"
-            className={`text-xs ${titleError ? "text-status-error" : "text-transparent"}`}
-          >
-            {titleError ?? " "}
-          </p>
-        </div>
-        <div className="flex flex-col gap-1 px-2">
-          <Input
-            value={descriptionValue}
-            maxLength={TAG_DESCRIPTION_MAX_LENGTH}
-            placeholder={t("common.description_placeholder")}
-            aria-label={t("review.tag_create_description_label")}
-            aria-invalid={descriptionInvalid}
-            onChange={(e) => setDescriptionValue(e.target.value)}
-          />
-          <p
-            role="alert"
-            className={`text-xs ${descriptionError ? "text-status-error" : "text-transparent"}`}
-          >
-            {descriptionError ?? " "}
-          </p>
-        </div>
+        <FormField className="px-2">
+          <FormControl>
+            <Input
+              autoFocus
+              value={titleValue}
+              maxLength={TAG_TITLE_MAX_LENGTH}
+              placeholder={t("common.name_placeholder")}
+              aria-label={t("common.name_label")}
+              aria-invalid={titleInvalid}
+              onChange={(e) => setTitleValue(e.target.value)}
+            />
+          </FormControl>
+          <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
+            {titleError}
+          </FormMessage>
+        </FormField>
+        <FormField className="px-2">
+          <FormControl>
+            <Input
+              value={descriptionValue}
+              maxLength={TAG_DESCRIPTION_MAX_LENGTH}
+              placeholder={t("common.description_placeholder")}
+              aria-label={t("review.tag_create_description_label")}
+              aria-invalid={descriptionInvalid}
+              onChange={(e) => setDescriptionValue(e.target.value)}
+            />
+          </FormControl>
+          <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
+            {descriptionError}
+          </FormMessage>
+        </FormField>
       </div>
       <div className="flex flex-col gap-1.5">
         {/* px-2 — 위 이름·설명 Input과 좌측을 맞춘다(TagCreateForm.tsx의
@@ -152,7 +157,11 @@ export function TagDraftRenameForm({
         <Text size="sm" color="tertiary" className="px-2">
           {t("review.tag_color_label")}
         </Text>
-        <div
+        {/* FormLabel/FormControl/FormMessage 없이 FormField만 레이아웃
+            wrapper로 쓴다 — 색상 리스트는 단일 포커스 컨트롤이 아니라
+            role="group"으로 직접 접근성을 표시하는 자리(weave-usage.md
+            Form 항목의 group 필드 탈출구). */}
+        <FormField
           role="group"
           aria-label={t("review.tag_color_label")}
           className="px-1"
@@ -162,7 +171,7 @@ export function TagDraftRenameForm({
             onChange={onColorChange}
             getColorLabel={(c) => t(TAG_COLOR_LABEL_KEY[c])}
           />
-        </div>
+        </FormField>
       </div>
     </div>
   );
