@@ -54,8 +54,9 @@ export const DIGEST_TYPE_BADGE_COLOR: Record<DigestType, BadgeColor> = {
 };
 
 // 색만으로는 5종을 못 가르는 색맹 사용자를 위한 보조 신호 — 뜻이 통하는 아이콘을
-// 골라 색 없이도 타입을 알아볼 수 있게 한다. Check(드롭다운 선택 표시)와
-// HelpCircle류(안내 툴팁)는 이미 다른 뜻으로 쓰이고 있어 제외했다.
+// 골라 색 없이도 타입을 알아볼 수 있게 한다. Check는 드롭다운 선택 표시로 이미
+// 쓰이고 있어 제외했고, HelpCircle류(물음표)는 이 코드베이스에 실사용처는 없지만
+// 일반적으로 안내·도움말 아이콘으로 통용돼 헷갈릴 여지가 있어 pending에는 안 썼다.
 export const DIGEST_TYPE_ICON: Record<DigestType, IconComponent> = {
   decision: Flag,
   pending: Hourglass,

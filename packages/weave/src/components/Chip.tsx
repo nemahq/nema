@@ -75,7 +75,13 @@ const TAG_COLOR_CLASSNAME: Record<TagColor, string> = {
   violet: "bg-tag-violet text-fg-primary",
 };
 
-// TagColor·BadgeColor는 값 집합이 겹치지 않아 하나의 lookup으로 합쳐도 안전하다.
+// TagColor·BadgeColor는 값 집합이 겹치지 않아 하나의 lookup으로 합쳐도 안전하다
+// — 이 전제가 깨지면(둘 중 한쪽에 같은 이름 색이 추가되면) 아래 스프레드가 조용히
+// 서로를 덮어쓰므로, 겹치는 순간 컴파일 에러가 나게 강제해둔다.
+type AssertNever<T extends never> = T;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- 타입 체크만을 위한 선언
+type _TagBadgeColorNoOverlap = AssertNever<Extract<TagColor, BadgeColor>>;
+
 const COLOR_TONE_CLASSNAME: Record<TagColor | BadgeColor, string> = {
   ...TAG_COLOR_CLASSNAME,
   ...BADGE_COLOR_CLASSNAME,

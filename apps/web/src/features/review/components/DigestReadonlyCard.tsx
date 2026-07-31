@@ -54,7 +54,7 @@ export function DigestReadonlyCard({
                 color={DIGEST_TYPE_BADGE_COLOR[digest.body.type]}
               >
                 <span className="inline-flex items-center gap-1">
-                  <TypeIcon className="size-3" />
+                  <TypeIcon className="size-3.5" />
                   {t(DIGEST_TYPE_LABEL_KEY[digest.body.type])}
                 </span>
               </Badge>
