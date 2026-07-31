@@ -295,7 +295,7 @@ jobs:
           # -v와 -q를 한 grep 호출에 같이 주면 구현에 따라(예: ugrep) 판정이 뒤집히는
           # 경우가 로컬 검증 중 실제로 발견됐다 — 두 단계로 분리해 이식성 문제를 피한다.
           if grep -vE '^\s*(--.*)?$' /tmp/staging-schema-drift.sql | grep -q .; then
-            echo "::error::staging의 public 스키마가 커밋된 마이그레이션 재생 결과와 다르다(드리프트) — 아래 diff 참고. 이미 리뷰된 올바른 정의를 새 마이그레이션(최신 타임스탬프)으로 재적용할 것 (#521 사례 참고)."
+            echo "::error::staging's public schema has drifted from the replayed migration history — see diff below. Re-apply the already-reviewed correct definition via a new migration (latest timestamp); see #521 for a prior occurrence."
             cat /tmp/staging-schema-drift.sql
             {
               echo '### ⚠️ staging schema drift detected'
@@ -306,7 +306,7 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-          echo "::notice::staging 스키마가 마이그레이션 재생 결과와 일치 — 드리프트 없음"
+          echo "::notice::staging schema matches replayed migration history — no drift"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD_STAGING }}
