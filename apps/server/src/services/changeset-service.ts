@@ -96,12 +96,15 @@ export function classifyReopenShape(
   return null;
 }
 
+function isRecord(data: unknown): data is Record<string, unknown> {
+  return typeof data === "object" && data !== null && !Array.isArray(data);
+}
+
 function isConflictsOrDuplicatesData(data: unknown): boolean {
-  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+  if (!isRecord(data)) {
     return false;
   }
-  const type = (data as Record<string, unknown>).type;
-  return type === "conflicts" || type === "duplicates";
+  return data.type === "conflicts" || data.type === "duplicates";
 }
 
 function isReopenShapedChangeset(
