@@ -163,7 +163,7 @@
      선에서 색마다 명도도 다르게 맞췄다(hue별 지각 밝기가 달라 균일한 명도로는
      안 맞음 — status·Hue 대비 보정 때와 같은 이유). status·Hue보다 훨씬
      옅어서 "쨍함(Badge류) vs 은은함(Tag)"으로 한눈에 구분된다. */
-  --palette-light-tag-slate: #e0e9f5;
+  --palette-light-tag-sienna: #e8d4c4;
   --palette-light-tag-cyan: #e0f0f5;
   --palette-light-tag-sage: #e9f5e0;
   --palette-light-tag-olive: #f5f3e0;
@@ -173,7 +173,7 @@
   --palette-light-tag-violet: #e7e0f5;
 
   /* Tag — dark */
-  --palette-dark-tag-slate: #506786;
+  --palette-dark-tag-sienna: #705440;
   --palette-dark-tag-cyan: #436470;
   --palette-dark-tag-sage: #496039;
   --palette-dark-tag-olive: #5c5937;
@@ -260,7 +260,7 @@
   --yellow-tint: var(--palette-light-yellow-tint);
   --purple: var(--palette-light-purple);
   --purple-tint: var(--palette-light-purple-tint);
-  --tag-slate: var(--palette-light-tag-slate);
+  --tag-sienna: var(--palette-light-tag-sienna);
   --tag-cyan: var(--palette-light-tag-cyan);
   --tag-sage: var(--palette-light-tag-sage);
   --tag-olive: var(--palette-light-tag-olive);
@@ -314,7 +314,7 @@
   --yellow-tint: var(--palette-dark-yellow-tint);
   --purple: var(--palette-dark-purple);
   --purple-tint: var(--palette-dark-purple-tint);
-  --tag-slate: var(--palette-dark-tag-slate);
+  --tag-sienna: var(--palette-dark-tag-sienna);
   --tag-cyan: var(--palette-dark-tag-cyan);
   --tag-sage: var(--palette-dark-tag-sage);
   --tag-olive: var(--palette-dark-tag-olive);
@@ -371,7 +371,7 @@
   --yellow-tint: var(--palette-dark-yellow-tint);
   --purple: var(--palette-dark-purple);
   --purple-tint: var(--palette-dark-purple-tint);
-  --tag-slate: var(--palette-dark-tag-slate);
+  --tag-sienna: var(--palette-dark-tag-sienna);
   --tag-cyan: var(--palette-dark-tag-cyan);
   --tag-sage: var(--palette-dark-tag-sage);
   --tag-olive: var(--palette-dark-tag-olive);
@@ -425,7 +425,7 @@
   --yellow-tint: var(--palette-light-yellow-tint);
   --purple: var(--palette-light-purple);
   --purple-tint: var(--palette-light-purple-tint);
-  --tag-slate: var(--palette-light-tag-slate);
+  --tag-sienna: var(--palette-light-tag-sienna);
   --tag-cyan: var(--palette-light-tag-cyan);
   --tag-sage: var(--palette-light-tag-sage);
   --tag-olive: var(--palette-light-tag-olive);
@@ -492,7 +492,7 @@
   --color-purple-tint: var(--purple-tint);
 
   /* Tag */
-  --color-tag-slate: var(--tag-slate);
+  --color-tag-sienna: var(--tag-sienna);
   --color-tag-cyan: var(--tag-cyan);
   --color-tag-sage: var(--tag-sage);
   --color-tag-olive: var(--tag-olive);

@@ -27,11 +27,11 @@
 
 ## Tag 색상 — 코드 키와 표시 이름
 
-Tag의 `color`(`TagColor`) 값은 DB enum·CSS 토큰(`--tag-slate` 등)·Tailwind 클래스까지 물려 있어 코드 용어를 그대로 유지하고, 화면에 보이는 이름만 `TAG_COLOR_LABEL_KEY`(`apps/web/src/features/review/constants.ts`)를 거쳐 tolgee 문구로 바꾼다 — 위 표들의 "코드 용어 vs 제품 용어" 원칙을 색상에도 그대로 적용한 것. `color: "cyan"`인데 화면엔 "파랑"/"Blue"가 뜨는 게 정상이니, 코드에서 값을 보고 화면 이름과 다르다고 버그로 오인하지 않는다.
+Tag의 `color`(`TagColor`) 값은 DB enum·CSS 토큰(`--tag-sienna` 등)·Tailwind 클래스까지 물려 있어 코드 용어를 그대로 유지하고, 화면에 보이는 이름만 `TAG_COLOR_LABEL_KEY`(`apps/web/src/features/review/constants.ts`)를 거쳐 tolgee 문구로 바꾼다 — 위 표들의 "코드 용어 vs 제품 용어" 원칙을 색상에도 그대로 적용한 것. `color: "cyan"`인데 화면엔 "파랑"/"Blue"가 뜨는 게 정상이니, 코드에서 값을 보고 화면 이름과 다르다고 버그로 오인하지 않는다.
 
 | 코드 용어 (`TagColor`) | 제품 용어 (한) | 제품 용어 (영) |
 | --- | --- | --- |
-| `slate` | 회색 | Gray |
+| `sienna` | 갈색 | Brown |
 | `cyan` | 파랑 | Blue |
 | `sage` | 초록 | Green |
 | `olive` | 노랑 | Yellow |

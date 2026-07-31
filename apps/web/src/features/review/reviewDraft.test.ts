@@ -24,7 +24,7 @@ const DIGEST: ReviewDigest = {
       registryId: null,
       title: "태그",
       description: "설명",
-      color: "slate",
+      color: "sienna",
     },
   ],
   referenceIds: [],

@@ -40,7 +40,8 @@ const variantClasses: Record<BadgeVariant, string> = {
   outline: OUTLINE_TONE_CLASSNAME,
 };
 
-const colorClasses: Record<BadgeColor, string> = {
+// Chip과 공유 — 인터랙티브 버전(다이제스트 타입 피커 등)도 같은 톤을 써야 한다.
+export const BADGE_COLOR_CLASSNAME: Record<BadgeColor, string> = {
   indigo: "bg-indigo-tint text-indigo",
   pink: "bg-pink-tint text-pink",
   lime: "bg-lime-tint text-lime",
@@ -90,7 +91,9 @@ function Badge({
   className,
   ...props
 }: BadgeProps) {
-  const tone = color ? colorClasses[color] : variantClasses[variant ?? "brand"];
+  const tone = color
+    ? BADGE_COLOR_CLASSNAME[color]
+    : variantClasses[variant ?? "brand"];
 
   return (
     <span

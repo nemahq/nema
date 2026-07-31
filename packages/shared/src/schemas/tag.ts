@@ -16,10 +16,9 @@ export const TAG_STATUSES = ["active", "archived"] as const;
 export const TagStatusSchema = z.enum(TAG_STATUSES);
 export type TagStatus = z.infer<typeof TagStatusSchema>;
 
-// DB enum tag_color의 SSOT — weave TagColor(Chip.tsx)와 값이 같아야 한다(AA 대비
-// 검증된 8종을 그대로 재사용, 새 팔레트를 따로 만들지 않는다).
+// DB enum tag_color의 SSOT(마이그레이션으로 수동 동기화 유지) — weave가 재사용한다.
 export const TAG_COLORS = [
-  "slate",
+  "sienna",
   "cyan",
   "sage",
   "olive",

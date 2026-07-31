@@ -1,9 +1,9 @@
-import { Badge, cn, TAG_COLOR_CLASSNAME, Text } from "@nema-io/weave";
+import { Badge, cn, Text } from "@nema-io/weave";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import {
+  DIGEST_TYPE_BADGE_COLOR,
   DIGEST_TYPE_LABEL_KEY,
-  DIGEST_TYPE_TAG_COLOR,
   type DigestBodyFieldKey,
 } from "@web/features/review/constants";
 import type { DigestDetailSnapshot } from "@web/features/review/types";
@@ -46,15 +46,10 @@ export function DigestReadonlyCard({
             <div className="flex min-w-0 items-center gap-1.5">
               {/* Chip이 아니라 Badge — Chip은 onClick 없이도 항상 <button>이라
                   이 읽기 전용 카드에서도 hover·클릭 가능한 것처럼 보였다
-                  (Chip.tsx 주석 "정적 미리보기가 필요한 자리는 Badge를 쓴다").
-                  variant/color 대신 className — DigestTagPicker와 같은 이유로
-                  Badge의 BadgeColor(5색, 뜻 모르는 분류)는 TagColor(8색 파스텔
-                  팔레트)를 못 받는다. */}
+                  (Chip.tsx 주석 "정적 미리보기가 필요한 자리는 Badge를 쓴다"). */}
               <Badge
                 shape="pill"
-                className={
-                  TAG_COLOR_CLASSNAME[DIGEST_TYPE_TAG_COLOR[digest.body.type]]
-                }
+                color={DIGEST_TYPE_BADGE_COLOR[digest.body.type]}
               >
                 {t(DIGEST_TYPE_LABEL_KEY[digest.body.type])}
               </Badge>

@@ -5,7 +5,7 @@ import {
   type ReferenceType,
   type RelationType,
 } from "@nema-io/shared";
-import type { BadgeVariant, TagColor } from "@nema-io/weave";
+import type { BadgeColor, BadgeVariant, TagColor } from "@nema-io/weave";
 import type { IconComponent } from "@nema-io/weave/icons";
 import { Check, Circle, X } from "@nema-io/weave/icons";
 
@@ -33,22 +33,21 @@ export const CONFIDENT_RELATION_TYPE_LABEL_KEY: Record<
 };
 
 // weave는 색조만 알고 그게 무엇을 가리키는지는 모른다 — Digest 타입을 어느 색에
-// 앉힐지는 이 표가 정한다(apps/web/src/index.css의 mode-* 매핑과 같은 결). 색을
-// 바꾸는 것도 타입이 느는 것도 여기서 끝나고 디자인 시스템은 안 흔들린다. TagColor는
-// 원래 사용자 태그용(생성·편집 시 사용자가 직접 고르는 값)이지만, Chip이 받는 색
-// 축이 이거 하나뿐이라 타입마다 하나씩 고정 배정해 재사용한다.
-export const DIGEST_TYPE_TAG_COLOR: Record<DigestType, TagColor> = {
-  decision: "violet",
-  pending: "rose",
-  learning: "sage",
-  idea: "olive",
-  assumption: "mauve",
+// 앉힐지는 이 표가 정한다(apps/web/src/index.css의 mode-* 매핑과 같은 결). BadgeColor
+// (Hue 5색, 진한 톤)를 쓴다 — TagColor(사용자 태그, 파스텔)를 빌려 쓰던 이전 방식은
+// 같은 카드에 실제 Tag 칩이 나란히 뜰 때 타입 배지인지 태그인지 헷갈리는 문제가 있었다.
+export const DIGEST_TYPE_BADGE_COLOR: Record<DigestType, BadgeColor> = {
+  decision: "purple",
+  pending: "pink",
+  learning: "lime",
+  idea: "yellow",
+  assumption: "indigo",
 };
 
 // TagColorGridPicker/TagColorListPicker(weave)는 tolgee를 몰라 getColorLabel
 // 콜백으로 이름을 받는다 — 그 콜백이 참조하는 실제 번역 키 표.
 export const TAG_COLOR_LABEL_KEY: Record<TagColor, TranslationKey> = {
-  slate: "review.tag_color_slate",
+  sienna: "review.tag_color_sienna",
   cyan: "review.tag_color_cyan",
   sage: "review.tag_color_sage",
   olive: "review.tag_color_olive",

@@ -1562,7 +1562,7 @@ export type Database = {
       statement_status: "active" | "archived";
       statement_type: "claim" | "question";
       tag_color:
-        | "slate"
+        | "sienna"
         | "cyan"
         | "sage"
         | "olive"
@@ -1736,7 +1736,7 @@ export const Constants = {
       statement_status: ["active", "archived"],
       statement_type: ["claim", "question"],
       tag_color: [
-        "slate",
+        "sienna",
         "cyan",
         "sage",
         "olive",
