@@ -35,13 +35,13 @@ function ChangesetRecordContent() {
     changesetNumber,
   );
   const restoreReview = useRestoreReview(spaceId, changesetNumber);
-  // revert·restorePendingRelation·restoreReview는 outcome/kind에 따라 셋 중 하나만
-  // 렌더되므로 동시 진행은 없다 — 그래도 Guard는 어느 쪽이 진행 중이든 본문을 같은
-  // 방식으로 덮어야 한다.
-  const locked =
-    revertChangeset.isPending ||
-    restorePendingRelation.isPending ||
-    restoreReview.isPending;
+  // 세 버튼은 outcome/kind에 따라 하나만 렌더되니 각자 자기 isPending만으로
+  // disabled를 잠근다. Guard는 어느 쪽이든 250ms 지연 후 뜨게 해 빠른 액션에서
+  // 안 깜빡이게 한다(ChangesetConfirmDiscardActions와 같은 원칙).
+  const guardActive =
+    revertChangeset.isPendingAfterDelay ||
+    restorePendingRelation.isPendingAfterDelay ||
+    restoreReview.isPendingAfterDelay;
 
   function handleRevert() {
     revertChangeset.mutate(
@@ -183,7 +183,7 @@ function ChangesetRecordContent() {
       />
       <div className="relative flex flex-1 flex-col gap-4">
         <ChangesetRecordBody changesetDetail={changesetDetail} />
-        <LoadingGuard active={locked} />
+        <LoadingGuard active={guardActive} />
       </div>
     </ChangesetDetailLayout>
   );

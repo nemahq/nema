@@ -73,6 +73,8 @@ export function DuplicateMergeJudgment({
   );
   const rejectPending = useRejectPendingRelation(spaceId, changesetNumber);
   const locked = resolveDuplicate.isPending || rejectPending.isPending;
+  const guardActive =
+    resolveDuplicate.isPendingAfterDelay || rejectPending.isPendingAfterDelay;
 
   const confirmDisabledReasonCode = mergeDraftConfirmDisabledReason(draft);
   const confirmDisabled = locked || confirmDisabledReasonCode !== null;
@@ -175,7 +177,7 @@ export function DuplicateMergeJudgment({
             />
           </div>
         </div>
-        <LoadingGuard active={locked} />
+        <LoadingGuard active={guardActive} />
       </div>
     </ChangesetDetailLayout>
   );
