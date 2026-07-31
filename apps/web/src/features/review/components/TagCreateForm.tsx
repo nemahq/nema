@@ -5,6 +5,9 @@ import {
   Badge,
   Button,
   cn,
+  FormControl,
+  FormField,
+  FormMessage,
   Input,
   TAG_COLOR_CLASSNAME,
   TagColorGridPicker,
@@ -66,30 +69,29 @@ export function TagCreateForm({
         >
           {title}
         </Badge>
-        <div className="flex flex-col gap-1.5">
-          {/* 라벨을 안 보이게 하는 대신, 입력 자체엔 aria-label로 접근성 이름을
-              유지한다(common.name_label 자리의 정적 Badge는 그 자체가 값을
-              보여줘 라벨이 굳이 필요 없지만, 이 Input은 실제 폼 컨트롤이라
-              시각 라벨이 없어도 스크린리더용 이름은 있어야 한다). */}
-          <Input
-            autoFocus
-            value={description}
-            maxLength={TAG_DESCRIPTION_MAX_LENGTH}
-            placeholder={t("common.description_placeholder")}
-            aria-label={t("review.tag_create_description_label")}
-            aria-invalid={descriptionTouched && descriptionInvalid}
-            onChange={(e) => {
-              setDescription(e.target.value);
-              setDescriptionTouched(true);
-            }}
-          />
-          <p
-            role="alert"
-            className={`text-xs ${descriptionError ? "text-status-error" : "text-transparent"}`}
-          >
-            {descriptionError ?? " "}
-          </p>
-        </div>
+        {/* 라벨을 안 보이게 하는 대신, 입력 자체엔 aria-label로 접근성 이름을
+            유지한다(common.name_label 자리의 정적 Badge는 그 자체가 값을
+            보여줘 라벨이 굳이 필요 없지만, 이 Input은 실제 폼 컨트롤이라
+            시각 라벨이 없어도 스크린리더용 이름은 있어야 한다). */}
+        <FormField>
+          <FormControl>
+            <Input
+              autoFocus
+              value={description}
+              maxLength={TAG_DESCRIPTION_MAX_LENGTH}
+              placeholder={t("common.description_placeholder")}
+              aria-label={t("review.tag_create_description_label")}
+              aria-invalid={descriptionTouched && descriptionInvalid}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setDescriptionTouched(true);
+              }}
+            />
+          </FormControl>
+          <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
+            {descriptionError}
+          </FormMessage>
+        </FormField>
       </div>
       <div className="flex flex-col gap-1.5">
         <Text size="sm" color="tertiary">

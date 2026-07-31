@@ -45,6 +45,7 @@
     "description_placeholder": "설명",
     "description_required": "설명을 입력해주세요.",
     "edit_action": "수정",
+    "error_prefix": "오류: ",
     "home": "홈",
     "list_end": "모두 확인했어요.",
     "name_invalid_chars": "이름에 사용할 수 없는 문자가 있어요. 다른 문자로 바꿔주세요.",

@@ -9,15 +9,6 @@ export {
   OUTLINE_TONE_CLASSNAME,
 } from "./components/Badge";
 export { Button, buttonVariants } from "./components/Button";
-export {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "./components/Card";
 export { Checkbox } from "./components/Checkbox";
 export {
   Chip,
@@ -60,7 +51,9 @@ export {
   DropdownMenuTrigger,
 } from "./components/DropdownMenu";
 export {
+  FormControl,
   FormField,
+  FormLabel,
   FormMessage,
   type FormMessageVariant,
 } from "./components/Form";

@@ -4,6 +4,9 @@ import * as Sentry from "@sentry/react";
 import {
   Button,
   ComboboxItem,
+  FormControl,
+  FormField,
+  FormLabel,
   Input,
   PopoverContent,
   PopoverTrigger,
@@ -249,33 +252,31 @@ export function TagAddPopover({
           </>
         ) : (
           <>
-            <Text
-              as="label"
-              size="xs"
-              color="tertiary"
-              className="flex flex-col gap-1"
-            >
-              {t("common.name_label")}
-              <Input
-                autoFocus
-                value={creatingTitle}
-                onChange={(e) => setCreatingTitle(e.target.value)}
-              />
-            </Text>
-            <Text
-              as="label"
-              size="xs"
-              color="tertiary"
-              className="flex flex-col gap-1"
-            >
-              {t("review.tag_create_description_label")}
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={t("review.tag_create_description_placeholder")}
-                rows={3}
-              />
-            </Text>
+            <FormField>
+              <FormLabel size="xs" weight="normal" color="tertiary">
+                {t("common.name_label")}
+              </FormLabel>
+              <FormControl>
+                <Input
+                  autoFocus
+                  value={creatingTitle}
+                  onChange={(e) => setCreatingTitle(e.target.value)}
+                />
+              </FormControl>
+            </FormField>
+            <FormField>
+              <FormLabel size="xs" weight="normal" color="tertiary">
+                {t("review.tag_create_description_label")}
+              </FormLabel>
+              <FormControl>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder={t("review.tag_create_description_placeholder")}
+                  rows={3}
+                />
+              </FormControl>
+            </FormField>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
