@@ -19,6 +19,7 @@ import { Dialog } from "@web/components/ui/Dialog";
 import { DropdownMenu } from "@web/components/ui/DropdownMenu";
 import {
   DIGEST_TYPE_BADGE_COLOR,
+  DIGEST_TYPE_ICON,
   DIGEST_TYPE_LABEL_KEY,
 } from "@web/features/review/constants";
 import { useTranslation } from "@web/lib/tolgee";
@@ -41,6 +42,7 @@ export function DigestTypePicker({
 }: DigestTypePickerProps) {
   const { t } = useTranslation();
   const [pendingType, setPendingType] = useState<DigestType | null>(null);
+  const TriggerIcon = DIGEST_TYPE_ICON[type];
 
   return (
     <>
@@ -49,30 +51,36 @@ export function DigestTypePicker({
           <Chip
             color={DIGEST_TYPE_BADGE_COLOR[type]}
             disabled={disabled}
+            className="gap-1.5"
             aria-label={t("review.digest_type_change_action")}
           >
+            <TriggerIcon className="size-3.5" />
             {t(DIGEST_TYPE_LABEL_KEY[type])}
           </Chip>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="bottom" align="start" width={160}>
-          {DIGEST_TYPES.map((candidate) => (
-            <DropdownMenuItem
-              key={candidate}
-              className="pr-8"
-              onClick={() => {
-                if (candidate !== type) {
-                  setPendingType(candidate);
-                }
-              }}
-            >
-              {t(DIGEST_TYPE_LABEL_KEY[candidate])}
-              {candidate === type && (
-                <span className="absolute right-2 flex size-3.5 items-center justify-center">
-                  <Check className="size-4" />
-                </span>
-              )}
-            </DropdownMenuItem>
-          ))}
+          {DIGEST_TYPES.map((candidate) => {
+            const CandidateIcon = DIGEST_TYPE_ICON[candidate];
+            return (
+              <DropdownMenuItem
+                key={candidate}
+                className="pr-8"
+                onClick={() => {
+                  if (candidate !== type) {
+                    setPendingType(candidate);
+                  }
+                }}
+              >
+                <CandidateIcon className="size-3.5" />
+                {t(DIGEST_TYPE_LABEL_KEY[candidate])}
+                {candidate === type && (
+                  <span className="absolute right-2 flex size-3.5 items-center justify-center">
+                    <Check className="size-4" />
+                  </span>
+                )}
+              </DropdownMenuItem>
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
       <Dialog

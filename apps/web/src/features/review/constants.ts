@@ -7,7 +7,16 @@ import {
 } from "@nema-io/shared";
 import type { BadgeColor, BadgeVariant, TagColor } from "@nema-io/weave";
 import type { IconComponent } from "@nema-io/weave/icons";
-import { Check, Circle, X } from "@nema-io/weave/icons";
+import {
+  Check,
+  Circle,
+  Flag,
+  FlaskConical,
+  Hourglass,
+  Lightbulb,
+  Telescope,
+  X,
+} from "@nema-io/weave/icons";
 
 import type { TranslationKey } from "@web/lib/tolgee";
 
@@ -42,6 +51,17 @@ export const DIGEST_TYPE_BADGE_COLOR: Record<DigestType, BadgeColor> = {
   learning: "lime",
   idea: "yellow",
   assumption: "indigo",
+};
+
+// 색만으로는 5종을 못 가르는 색맹 사용자를 위한 보조 신호 — 뜻이 통하는 아이콘을
+// 골라 색 없이도 타입을 알아볼 수 있게 한다. Check(드롭다운 선택 표시)와
+// HelpCircle류(안내 툴팁)는 이미 다른 뜻으로 쓰이고 있어 제외했다.
+export const DIGEST_TYPE_ICON: Record<DigestType, IconComponent> = {
+  decision: Flag,
+  pending: Hourglass,
+  learning: Telescope,
+  idea: Lightbulb,
+  assumption: FlaskConical,
 };
 
 // TagColorGridPicker/TagColorListPicker(weave)는 tolgee를 몰라 getColorLabel

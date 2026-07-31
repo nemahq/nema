@@ -3,6 +3,7 @@ import { Badge, cn, Text } from "@nema-io/weave";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import {
   DIGEST_TYPE_BADGE_COLOR,
+  DIGEST_TYPE_ICON,
   DIGEST_TYPE_LABEL_KEY,
   type DigestBodyFieldKey,
 } from "@web/features/review/constants";
@@ -35,6 +36,7 @@ export function DigestReadonlyCard({
   className,
 }: DigestReadonlyCardProps) {
   const { t } = useTranslation();
+  const TypeIcon = DIGEST_TYPE_ICON[digest.body.type];
 
   return (
     <CandidateCardFrame
@@ -51,7 +53,10 @@ export function DigestReadonlyCard({
                 shape="pill"
                 color={DIGEST_TYPE_BADGE_COLOR[digest.body.type]}
               >
-                {t(DIGEST_TYPE_LABEL_KEY[digest.body.type])}
+                <span className="inline-flex items-center gap-1">
+                  <TypeIcon className="size-3" />
+                  {t(DIGEST_TYPE_LABEL_KEY[digest.body.type])}
+                </span>
               </Badge>
               <Text
                 as="span"
