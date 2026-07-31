@@ -61,6 +61,10 @@ function ChangesetListContent({ subTab }: ChangesetListProps) {
           createdAt={entry.createdAt}
           effectDigest={entry.effect.digest}
           effectReference={entry.effect.reference}
+          effectRelation={entry.effect.relation}
+          relationJudgment={entry.relationJudgment}
+          authorName={entry.authorName}
+          closedByName={entry.closedByName}
           hideDivider={index === entries.length - 1 && !query.hasNextPage}
         />
       ))}

@@ -63,23 +63,56 @@ export function buildRevertedPredicate(
 }
 
 // changes 행의 모양으로 "이 changeset이 재판정 가능한 초안(ingestion 또는
-// relation 충돌·중복 판정)을 담고 있는가"를 판정한다 — changeset_is_ingestion_shaped
-// /changeset_is_relation_judgment_shaped(SQL)의 TS 쌍. type이 아니라 모양으로
-// 판정하는 이유는 그 함수들 주석 참고(되돌린 뒤 확정된 재판정을 다시 되돌리는
-// 체이닝도 이 판정 하나로 자연히 처리된다).
+// relation 충돌·중복 판정)을 담고 있는가, 담고 있다면 어느 쪽인가"를 판정한다 —
+// changeset_is_ingestion_shaped/changeset_is_relation_judgment_shaped(SQL)의 TS
+// 쌍. type이 아니라 모양으로 판정하는 이유는 그 함수들 주석 참고(되돌린 뒤 확정된
+// 재판정을 다시 되돌리는 체이닝도 이 판정 하나로 자연히 처리된다). relation-shaped
+// 판정을 먼저 본다 — 확정된 duplicates 재판정(type='revert')은 resolve_duplicate_relation이
+// 병합 Digest의 create/digest 행을 얹어놓아 ingestion 판정도 true가 되므로,
+// ingestion을 먼저 보면 duplicates 재판정 되돌리기가 ingestion으로 잘못 분류된다
+// (SQL revert_changeset의 순서·이유와 동일). 반대 방향은 안전하다 — 순수
+// ingestion changeset은 애초에 conflicts/duplicates 제안(create/relation)을
+// 만들지 않는다. data는 unknown으로 받는다(Json으로 좁히면 changeset-detail-service.ts의
+// ChangeRow가 이미 unknown으로 선언한 changes.data를 그대로 못 넘긴다) — 아래에서
+// 런타임 가드로 좁힌다.
+export function classifyReopenShape(
+  changes: {
+    targetType: ChangeTargetType;
+    action: ChangeAction;
+    data: unknown;
+  }[],
+): "ingestion" | "relation_judgment" | null {
+  if (
+    changes.some(
+      (c) =>
+        c.targetType === "relation" &&
+        c.action === "create" &&
+        isConflictsOrDuplicatesData(c.data),
+    )
+  ) {
+    return "relation_judgment";
+  }
+  if (changes.some((c) => c.targetType === "digest" && c.action === "create")) {
+    return "ingestion";
+  }
+  return null;
+}
+
+function isRecord(data: unknown): data is Record<string, unknown> {
+  return typeof data === "object" && data !== null && !Array.isArray(data);
+}
+
+function isConflictsOrDuplicatesData(data: unknown): boolean {
+  if (!isRecord(data)) {
+    return false;
+  }
+  return data.type === "conflicts" || data.type === "duplicates";
+}
+
 function isReopenShapedChangeset(
   changes: { targetType: ChangeTargetType; action: ChangeAction; data: Json }[],
 ): boolean {
-  return changes.some(
-    (c) =>
-      (c.targetType === "digest" && c.action === "create") ||
-      (c.targetType === "relation" &&
-        c.action === "create" &&
-        typeof c.data === "object" &&
-        c.data !== null &&
-        !Array.isArray(c.data) &&
-        (c.data.type === "conflicts" || c.data.type === "duplicates")),
-  );
+  return classifyReopenShape(changes) !== null;
 }
 
 // revert changeset 제목 조합 — SQL 문자열 concat(따옴표 중첩 버그가 있던 옛
@@ -523,8 +556,19 @@ interface ChangesetHistoryEntry {
   // author_id와 함께 생성 시점에 저장되는 이름 스냅샷(ghost 패턴) — 계정이 삭제돼
   // authorId가 NULL로 끊긴 뒤에도 그 순간의 이름을 그대로 보여줄 수 있다.
   authorName: string | null;
+  // 이 changeset을 닫은(판정한) 사람 — closed_by_id/closed_by_name(changeset_closed_by
+  // 마이그레이션)과 같은 비대칭(FK vs 텍스트 스냅샷)을 그대로 물려받는다. closedByName이
+  // null인데 status='closed'면 AI가 닫은 것(closedById만 보면 계정 삭제와 헷갈린다).
+  closedById: string | null;
+  closedByName: string | null;
   // 되돌림 여부 — is_changeset_reverted(SQL)와 같은 재귀를 revert 간선으로 계산(§4.4).
   reverted: boolean;
+  // type='relation'일 때만 의미 있음 — 충돌·중복 판정(대기 또는 판정 완료)인지
+  // 여부. classifyReopenShape(changes)가 'relation_judgment'인 행만 true다.
+  // 확신 관계 자동 적용 배치는 판정 대상 제안 행이 없어 항상 false — 목록 행이
+  // "연결 {count}" 효과 요약을 낼지 가르는 신호(판정류는 제목 자체가 이미 고유해
+  // 요약이 불필요, 확신 배치만 count가 의미 있다).
+  relationJudgment: boolean;
   // 효과 요약 — 대상 종류별 변경 수("이 글 → 진술 N + 관계 M").
   effect: Record<ChangeTargetType, number>;
   createdAt: string;
@@ -572,7 +616,7 @@ export async function listChangesets(args: {
   let query = supabase
     .from("changesets")
     .select(
-      "id, number, type, status, outcome, title, source_id, reverts_id, invalidated_by_id, author_id, author_name, created_at, updated_at, changes(target_type), sources(status)",
+      "id, number, type, status, outcome, title, source_id, reverts_id, invalidated_by_id, author_id, author_name, closed_by_id, closed_by_name, created_at, updated_at, changes(target_type, action, data), sources(status)",
     )
     .eq("space_id", targetSpaceId)
     // manual은 review-flow.md상 이 목록의 대상이 아니다(대상 콘텐츠의 "변경 이력"
@@ -663,7 +707,18 @@ export async function listChangesets(args: {
         invalidatedById: row.invalidated_by_id,
         authorId: row.author_id,
         authorName: row.author_name,
+        closedById: row.closed_by_id,
+        closedByName: row.closed_by_name,
         reverted: isReverted(row.id),
+        relationJudgment:
+          row.type === "relation" &&
+          classifyReopenShape(
+            row.changes.map((c) => ({
+              targetType: c.target_type,
+              action: c.action,
+              data: c.data,
+            })),
+          ) === "relation_judgment",
         effect,
         createdAt: row.created_at,
         updatedAt: row.updated_at,

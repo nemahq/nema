@@ -266,32 +266,62 @@ const CHANGESET_TYPE_LABEL: Record<
   revert: "review.type_revert",
 };
 
-interface ChangesetRowTypeSlots {
-  // revert는 배지를 안 낸다 — 제목 자체가 "{원본 제목} 되돌림"으로 이미 되돌리기임을
-  // 말해줘서, 배지까지 얹으면 같은 정보의 중복 신호가 된다.
-  badgeLabelKey: TranslationKey | null;
-  // ingestion만 digest·reference 카운트가 의미 있는 effect를 갖는다
-  // (summarizeChangesetEffect 주석 참고) — 나머지 타입은 요약을 안 낸다.
-  showsEffectSummary: boolean;
-}
-
-// manual은 이 목록에 구조적으로 안 뜨지만(위 CHANGESET_TYPE_LABEL 주석), 타입이
-// 늘 때 이 표를 안 채우면 컴파일 에러로 드러나야 해서 방어적으로 원소를 채워 넣는다.
-export const CHANGESET_ROW_TYPE_SLOTS: Record<
+// relation만 상태에 따라 배지가 갈린다 — open(판정 대기)은 "발견"(AI가 스스로
+// 알아챈 제안), closed(판정 완료 또는 확신 자동 적용)는 "연결"(실제로 이어진
+// 결과, glossary.md Relation 개념어). 나머지 타입은 상태 무관 고정값이다. revert는
+// 배지를 안 낸다 — 제목 자체가 "{원본 제목} 되돌림"으로 이미 되돌리기임을 말해줘서,
+// 배지까지 얹으면 같은 정보의 중복 신호가 된다. manual은 이 목록에 구조적으로 안
+// 뜨지만(위 CHANGESET_TYPE_LABEL 주석) 방어적으로 채워 넣는다.
+const CHANGESET_ROW_BADGE_LABEL_KEY: Record<
   ChangesetType,
-  ChangesetRowTypeSlots
+  Record<ChangesetDisplayState, TranslationKey | null>
 > = {
   ingestion: {
-    badgeLabelKey: CHANGESET_TYPE_LABEL.ingestion,
-    showsEffectSummary: true,
+    open: CHANGESET_TYPE_LABEL.ingestion,
+    applied: CHANGESET_TYPE_LABEL.ingestion,
+    discarded: CHANGESET_TYPE_LABEL.ingestion,
   },
   relation: {
-    badgeLabelKey: CHANGESET_TYPE_LABEL.relation,
-    showsEffectSummary: false,
+    open: CHANGESET_TYPE_LABEL.relation,
+    applied: "review.type_relation_closed",
+    discarded: "review.type_relation_closed",
   },
-  revert: { badgeLabelKey: null, showsEffectSummary: false },
-  manual: { badgeLabelKey: null, showsEffectSummary: false },
+  revert: { open: null, applied: null, discarded: null },
+  manual: { open: null, applied: null, discarded: null },
 };
+
+export function changesetBadgeLabelKey(
+  type: ChangesetType,
+  state: ChangesetDisplayState,
+): TranslationKey | null {
+  return CHANGESET_ROW_BADGE_LABEL_KEY[type][state];
+}
+
+// 효과 요약에 아예 참여하는 타입인지 — Record로 둬서 ChangesetType이 늘어나면
+// (badgeLabelKey의 CHANGESET_ROW_BADGE_LABEL_KEY와 마찬가지로) 여기 항목을 안
+// 채우는 순간 컴파일 에러로 드러난다. relation은 이 표에서 true여도 확신 자동
+// 적용 배치(relationJudgment)일 때만 최종적으로 노출된다 — 아래 함수 참고.
+const CHANGESET_ROW_EFFECT_SUMMARY_ELIGIBLE: Record<ChangesetType, boolean> = {
+  ingestion: true,
+  relation: true,
+  revert: false,
+  manual: false,
+};
+
+// ingestion은 항상 digest·reference 효과가 있어 늘 요약을 낸다. relation은
+// 확신 자동 적용 배치(여러 쌍이 묶여 count가 의미 있음)일 때만 "연결 {count}"를
+// 낸다 — 충돌·중복 판정(대기·완료 불문)은 changeset 자체가 진술 쌍 하나만
+// 다뤄 요약할 게 없고, 이미 고유 제목이 그 쌍을 설명한다(relationJudgment로
+// 판정, listChangesets 주석 참고). revert·manual은 요약을 안 낸다.
+export function changesetShowsEffectSummary(
+  type: ChangesetType,
+  relationJudgment: boolean,
+): boolean {
+  if (!CHANGESET_ROW_EFFECT_SUMMARY_ELIGIBLE[type]) {
+    return false;
+  }
+  return type === "ingestion" || !relationJudgment;
+}
 
 // 배지·아이콘이 구분하는 건 셋뿐이다 — 열려 있음 / 적용됨 / 버려짐. status와
 // outcome을 화면마다 따로 들고 다니며 조합하면 "closed인데 outcome이 뭐였더라"를
