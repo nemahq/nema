@@ -277,6 +277,17 @@ export function changesetBadgeLabelKey(
   return CHANGESET_ROW_BADGE_LABEL_KEY[type][state];
 }
 
+// 효과 요약에 아예 참여하는 타입인지 — Record로 둬서 ChangesetType이 늘어나면
+// (badgeLabelKey의 CHANGESET_ROW_BADGE_LABEL_KEY와 마찬가지로) 여기 항목을 안
+// 채우는 순간 컴파일 에러로 드러난다. relation은 이 표에서 true여도 확신 자동
+// 적용 배치(relationJudgment)일 때만 최종적으로 노출된다 — 아래 함수 참고.
+const CHANGESET_ROW_EFFECT_SUMMARY_ELIGIBLE: Record<ChangesetType, boolean> = {
+  ingestion: true,
+  relation: true,
+  revert: false,
+  manual: false,
+};
+
 // ingestion은 항상 digest·reference 효과가 있어 늘 요약을 낸다. relation은
 // 확신 자동 적용 배치(여러 쌍이 묶여 count가 의미 있음)일 때만 "연결 {count}"를
 // 낸다 — 충돌·중복 판정(대기·완료 불문)은 changeset 자체가 진술 쌍 하나만
@@ -286,7 +297,10 @@ export function changesetShowsEffectSummary(
   type: ChangesetType,
   relationJudgment: boolean,
 ): boolean {
-  return type === "ingestion" || (type === "relation" && !relationJudgment);
+  if (!CHANGESET_ROW_EFFECT_SUMMARY_ELIGIBLE[type]) {
+    return false;
+  }
+  return type === "ingestion" || !relationJudgment;
 }
 
 // 배지·아이콘이 구분하는 건 셋뿐이다 — 열려 있음 / 적용됨 / 버려짐. status와

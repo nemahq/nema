@@ -120,8 +120,9 @@ interface ChangesetDetail {
   revertsNumber: number | null;
   invalidatedById: string | null;
   // 되돌림 여부 — is_changeset_reverted(SQL) 그대로. status='closed'·outcome='applied'인
-  // changeset이 "지금 그래프에 살아있는 걸 만든 행"인지 판정하는 값(review-flow.md #26
-  // 규칙 4) — true면 되돌리기 버튼 대신 "#nn에서 되돌림" 추적 링크(revertedByNumber)를
+  // changeset이 "지금 그래프에 살아있는 걸 만든 행"인지 판정하는 값(정책 결정 #26
+  // 규칙 4, 브레인 product-decisions/cross-cutting) — true면 되돌리기 버튼 대신
+  // "#nn에서 되돌림" 추적 링크(revertedByNumber)를
   // 보여준다.
   reverted: boolean;
   // reverted가 true일 때, 그 원인이 된 direct revert changeset의 number. 재판정이
@@ -460,7 +461,7 @@ export async function getChangesetByNumber(args: {
 
   // 되돌리기 버튼 노출은 status='closed' AND outcome='applied'일 때만 의미가
   // 있다(ChangesetRecordScreen) — 나머지 상태는 조회 자체를 생략해 매 상세 조회마다
-  // RPC·쿼리를 추가로 태우지 않는다(review-flow.md #26 규칙 4).
+  // RPC·쿼리를 추가로 태우지 않는다(정책 결정 #26 규칙 4, 브레인 product-decisions/cross-cutting).
   let reverted = false;
   let revertedByNumber: number | null = null;
   if (row.status === "closed" && row.outcome === "applied") {

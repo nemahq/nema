@@ -3,11 +3,12 @@
 -- 누락을 고친다. changeset_closed_by 마이그레이션(20260729140000)이
 -- confirm_ingestion_review/resolve_conflict_relation/resolve_duplicate_relation/
 -- reject_pending_relation 전부에 이 컬럼을 채웠지만, 그 뒤 revert_changeset을
--- DROP+CREATE로 전면 재설계한 20260729153926이 이 INSERT를 그대로 옮기며
--- closed_by 컬럼을 빠뜨렸다 — closed_by_name이 NULL이면 "AI가 닫음"으로 읽히는
--- 컬럼 정의(위 마이그레이션 주석)상, 사람이 되돌리기 버튼을 눌러 즉시 확정되는
--- flip형 되돌리기가 전부 "AI가 닫음"으로 잘못 보이던 버그다. reopen 초안(open)은
--- 아직 아무도 안 닫았으므로 그대로 NULL 유지.
+-- DROP+CREATE로 전면 재설계한 20260730100000_revert_policy_reopen_draft.sql이 이
+-- INSERT를 그대로 옮기며 closed_by 컬럼을 빠뜨렸다 — closed_by_name이 NULL이면
+-- "AI가 닫음"으로 읽히는 컬럼 정의(위 마이그레이션 주석)상, 사람이 되돌리기 버튼을
+-- 눌러 즉시 확정되는 flip형 되돌리기가 전부 "AI가 닫음"으로 잘못 보이던 버그다.
+-- reopen 초안(open)은 아직 아무도 안 닫았으므로 그대로 NULL 유지. 아래는 함수
+-- 수정 + 기존 데이터 백필(이미 있는 author_id/author_name을 그대로 복사) 두 파트다.
 CREATE OR REPLACE FUNCTION revert_changeset(p_changeset_id uuid, p_title text)
 RETURNS uuid AS $$
 DECLARE
@@ -186,3 +187,18 @@ BEGIN
   RETURN v_revert_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pgmq;
+
+-- 백필 — 위 버그가 살아있던 동안 만들어진 즉시-닫힘 되돌리기는 author_id/author_name이
+-- 이미 그 사람을 가리키고 있으므로(버그 있는 INSERT도 author_id/author_name 자체는
+-- 채웠다) 그대로 복사해 채운다. reopen형(open으로 태어난) revert가 나중에 확정되며
+-- 닫힐 때는 confirm_ingestion_review 등 다른 함수(#527)가 closed_by를 이미 정상적으로
+-- 채워왔으므로 이 WHERE 조건에 걸리지 않는다 — status='closed' 시점에 closed_by가
+-- 비어있을 수 있는 경로는 이 버그가 있던 flip형 즉시-닫힘뿐이다.
+UPDATE changesets
+SET closed_by_id = author_id, closed_by_name = author_name
+WHERE type = 'revert'
+  AND status = 'closed'
+  AND outcome = 'applied'
+  AND closed_by_id IS NULL
+  AND closed_by_name IS NULL
+  AND author_id IS NOT NULL;

@@ -57,8 +57,8 @@ function ChangesetRecordContent() {
 
   function renderHeaderActions() {
     if (changesetDetail.outcome === "applied") {
-      // 되돌리기 버튼은 "지금 그래프에 살아있는 걸 만든 행"에만 붙는다(review-flow.md
-      // #26 규칙 4) — 이미 되돌려졌으면(reverted) 버튼 대신 그 direct revert
+      // 되돌리기 버튼은 "지금 그래프에 살아있는 걸 만든 행"에만 붙는다(정책 결정
+      // #26 규칙 4, 브레인 product-decisions/cross-cutting) — 이미 되돌려졌으면(reverted) 버튼 대신 그 direct revert
       // changeset(revertedByNumber)으로 가는 추적 링크를 상태 무관하게 계속 보여준다.
       if (
         changesetDetail.reverted &&

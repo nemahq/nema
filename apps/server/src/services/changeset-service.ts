@@ -66,13 +66,15 @@ export function buildRevertedPredicate(
 // relation 충돌·중복 판정)을 담고 있는가, 담고 있다면 어느 쪽인가"를 판정한다 —
 // changeset_is_ingestion_shaped/changeset_is_relation_judgment_shaped(SQL)의 TS
 // 쌍. type이 아니라 모양으로 판정하는 이유는 그 함수들 주석 참고(되돌린 뒤 확정된
-// 재판정을 다시 되돌리는 체이닝도 이 판정 하나로 자연히 처리된다). ingestion을
-// 먼저 본다 — 확정된 duplicates 재판정(type='revert')은 resolve_duplicate_relation이
-// 병합 Digest의 create/digest 행도 함께 남겨 relation-judgment이면서 동시에
-// ingestion-shaped가 되므로, SQL(revert_changeset)과 같은 우선순위를 맞춘다.
-// data는 unknown으로 받는다(Json으로 좁히면 changeset-detail-service.ts의 ChangeRow가
-// 이미 unknown으로 선언한 changes.data를 그대로 못 넘긴다) — 아래에서 런타임 가드로
-// 좁힌다.
+// 재판정을 다시 되돌리는 체이닝도 이 판정 하나로 자연히 처리된다). relation-shaped
+// 판정을 먼저 본다 — 확정된 duplicates 재판정(type='revert')은 resolve_duplicate_relation이
+// 병합 Digest의 create/digest 행을 얹어놓아 ingestion 판정도 true가 되므로,
+// ingestion을 먼저 보면 duplicates 재판정 되돌리기가 ingestion으로 잘못 분류된다
+// (SQL revert_changeset의 순서·이유와 동일). 반대 방향은 안전하다 — 순수
+// ingestion changeset은 애초에 conflicts/duplicates 제안(create/relation)을
+// 만들지 않는다. data는 unknown으로 받는다(Json으로 좁히면 changeset-detail-service.ts의
+// ChangeRow가 이미 unknown으로 선언한 changes.data를 그대로 못 넘긴다) — 아래에서
+// 런타임 가드로 좁힌다.
 export function classifyReopenShape(
   changes: {
     targetType: ChangeTargetType;
@@ -80,9 +82,6 @@ export function classifyReopenShape(
     data: unknown;
   }[],
 ): "ingestion" | "relation_judgment" | null {
-  if (changes.some((c) => c.targetType === "digest" && c.action === "create")) {
-    return "ingestion";
-  }
   if (
     changes.some(
       (c) =>
@@ -92,6 +91,9 @@ export function classifyReopenShape(
     )
   ) {
     return "relation_judgment";
+  }
+  if (changes.some((c) => c.targetType === "digest" && c.action === "create")) {
+    return "ingestion";
   }
   return null;
 }

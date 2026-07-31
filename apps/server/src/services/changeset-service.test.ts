@@ -195,7 +195,7 @@ describe("classifyReopenShape", () => {
     expect(shape).toBeNull();
   });
 
-  it("digest create와 duplicates 제안이 함께 있으면 ingestion 우선(SQL revert_changeset과 같은 우선순위)", () => {
+  it("digest create와 duplicates 제안이 함께 있으면 relation_judgment 우선(SQL revert_changeset과 같은 우선순위)", () => {
     const shape = classifyReopenShape([
       { targetType: "digest", action: "create", data: null },
       {
@@ -204,7 +204,7 @@ describe("classifyReopenShape", () => {
         data: { type: "duplicates" },
       },
     ]);
-    expect(shape).toBe("ingestion");
+    expect(shape).toBe("relation_judgment");
   });
 
   it("아무 것도 없으면 null", () => {

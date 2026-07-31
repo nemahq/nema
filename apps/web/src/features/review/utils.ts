@@ -36,10 +36,12 @@ export function summarizeChangesetEffect(
 
 // 행에 붙는 "연/닫은 주체" 한 조각 — open이면 이 changeset을 연 주체, closed면
 // 판정을 내려 닫은 주체(review-flow.md 관련 슬라이스). ingestion·relation은
-// 엔진 산물이라 open일 때 항상 AI, revert는 사람이 되돌리기 버튼을 눌러 열므로
-// authorName이 항상 있다(authorId/authorName 07-modeling.md 규칙). closed면
-// closedByName이 있으면 그 이름, 없으면 AI가 판정을 낸 것이다(closedById만
-// 보면 계정 삭제와 헷갈린다 — closedByName의 NULL 여부로만 판단).
+// 엔진 산물이라 open일 때 항상 AI. revert는 보통 사람이 되돌리기 버튼을 눌러
+// 열지만, revert_changeset SQL은 auth.uid() IS NULL(시스템/서비스 트리거)도
+// 허용하므로 그 경로에서는 authorName이 NULL일 수 있다 — 그래서 아래 ?? aiLabel
+// 폴백이 존재한다. closed면 closedByName이 있으면 그 이름, 없으면 AI가 판정을
+// 낸 것이다(closedById만 보면 계정 삭제와 헷갈린다 — closedByName의 NULL 여부로만
+// 판단).
 export function changesetRowAuthorLabel(args: {
   type: ChangesetType;
   state: ChangesetDisplayState;

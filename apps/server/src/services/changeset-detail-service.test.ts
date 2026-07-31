@@ -871,7 +871,7 @@ describe("getChangesetByNumber", () => {
     expect(result.closedByName).toBe("리뷰어");
   });
 
-  // 되돌리기 버튼 노출 규칙(review-flow.md #26 규칙 4) — status='closed'+
+  // 되돌리기 버튼 노출 규칙(정책 결정 #26 규칙 4, 브레인 product-decisions/cross-cutting) — status='closed'+
   // outcome='applied'일 때만 reverted/revertedByNumber를 계산한다.
   describe("reverted/revertedByNumber", () => {
     function closedAppliedRow(overrides: Record<string, unknown> = {}) {
