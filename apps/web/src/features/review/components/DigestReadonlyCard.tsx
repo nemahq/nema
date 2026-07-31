@@ -1,4 +1,5 @@
-import { Badge, cn, Text } from "@nema-io/weave";
+import { Badge, cn, TAG_COLOR_CLASSNAME, Text } from "@nema-io/weave";
+import { Circle } from "@nema-io/weave/icons";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import {
@@ -9,6 +10,7 @@ import {
   DIGEST_TYPE_LABEL_KEY,
   type DigestBodyFieldKey,
 } from "@web/features/review/constants";
+import { DIGEST_DESCRIPTION_FIELD_CLASS } from "@web/features/review/digestFieldTypography";
 import type { DigestDetailSnapshot } from "@web/features/review/types";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -84,6 +86,25 @@ export function DigestReadonlyCard({
               </Badge>
             )}
           </div>
+          {digest.topics.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1">
+              {digest.topics.map((topic, index) => (
+                <span key={topic.id} className="flex items-center gap-1">
+                  {index > 0 && (
+                    <Circle className="size-1 shrink-0 fill-current text-fg-tertiary" />
+                  )}
+                  <Text as="span" size="xs" color="primary">
+                    {topic.title}
+                  </Text>
+                </span>
+              ))}
+            </div>
+          )}
+          {digest.description && (
+            <p className={DIGEST_DESCRIPTION_FIELD_CLASS}>
+              {digest.description}
+            </p>
+          )}
           <Text as="div" size="sm" color="tertiary">
             {digest.authorName && `${digest.authorName} · `}
             <RelativeTime dateTime={digest.createdAt} />
@@ -96,6 +117,20 @@ export function DigestReadonlyCard({
         highlightedFieldKey={highlightedFieldKey}
         highlightedFieldIndex={highlightedFieldIndex}
       />
+      {digest.tags.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1 pl-2">
+          {digest.tags.map((tag) => (
+            <Badge
+              key={tag.id}
+              shape="rounded"
+              truncated
+              className={TAG_COLOR_CLASSNAME[tag.color]}
+            >
+              {tag.title}
+            </Badge>
+          ))}
+        </div>
+      )}
     </CandidateCardFrame>
   );
 }
