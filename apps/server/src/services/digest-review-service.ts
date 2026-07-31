@@ -89,9 +89,13 @@ function requirePosition(position: number | null, changeId: string): number {
 
 // changes.data/changesets.label_draft(JSONB) 스냅샷은 스키마가 나중에 바뀌면(예:
 // TagColor 값 목록 변경) 더 이상 파싱되지 않을 수 있다 — 원본 ZodError를 그대로
-// 던지면 trpc.ts의 isZodInputError가 "입력 검증 실패"로 오인해 원인 추적이 막힌다.
-// requirePosition과 같은 결로 query_failed로 명시한다.
-function parseStoredData<T>(args: {
+// 던지면 trpc.ts의 isZodInputError가 이걸 진짜 입력 검증 실패와 구분 못 해
+// domainCode를 지우고 Sentry 태그도 "UNKNOWN"으로 뭉갠다(onTRPCError는 여전히
+// 캡처하지만 어느 스키마가 왜 깨졌는지는 태그·메시지 어디에도 안 남는다).
+// requirePosition과 같은 결로 query_failed(DB_QUERY_FAILED)로 명시해 원인이
+// 태그·메시지에 남게 한다. changeset-detail-service.ts도 같은 changes.data
+// 계약을 읽으므로 이 헬퍼를 그대로 가져다 쓴다(export 이유).
+export function parseStoredData<T>(args: {
   schema: z.ZodType<T>;
   data: unknown;
   context: string;

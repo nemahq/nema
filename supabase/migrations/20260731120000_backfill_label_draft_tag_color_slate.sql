@@ -8,6 +8,12 @@
 -- 데이터 쪽 원인 — 여기서 남은 값을 백필해 근본 해결한다. status·changeset type
 -- 무관하게 label_draft가 있는 모든 행을 대상으로 한다(이미 닫힌 기록도 되돌리기
 -- 재판정 화면이 다시 읽을 수 있으므로).
+--
+-- trg_changesets_updated_at은 컬럼 무관 모든 UPDATE에 반응하는 범용 트리거라(20260718090000·
+-- 20260721110000과 같은 사정), 끄지 않고 이 백필을 돌리면 판정 시각(closedByName과
+-- 함께 화면에 노출되는 updated_at)이 전부 이 배포 시각으로 리셋된다.
+ALTER TABLE changesets DISABLE TRIGGER trg_changesets_updated_at;
+
 UPDATE changesets
 SET label_draft = label_draft || jsonb_build_object(
   'tags', (
@@ -26,3 +32,5 @@ WHERE label_draft IS NOT NULL
     SELECT 1 FROM jsonb_array_elements(coalesce(label_draft->'tags', '[]'::jsonb)) AS tag
     WHERE tag->>'color' = 'slate'
   );
+
+ALTER TABLE changesets ENABLE TRIGGER trg_changesets_updated_at;

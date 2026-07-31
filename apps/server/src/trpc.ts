@@ -121,11 +121,23 @@ export const router = t.router;
 // procedure() 최상위(구독은 SSE formatError 경유)에서 실제로 호출되는 훅이다.
 // 배치 요청(httpBatchStreamLink)은 실패한 호출마다 한 번씩이라 "요청당 한 번"은
 // 아니다 — "각 프로시저 호출이 끝나는 지점마다"가 정확한 설명.
-export function onTRPCError({ error }: { error: TRPCError }): void {
+//
+// req.log.error를 Sentry.captureException과 나란히 부른다 — Sentry는
+// enabled: appEnv === "production"(instrument.ts)이라 staging에선 항상 꺼져
+// 있다. 이 로그가 없으면 staging에서 터진 실패는 Sentry에도, 콘솔에도 흔적이
+// 안 남아 railway logs로도 원인을 못 좇는다.
+export function onTRPCError({
+  error,
+  req,
+}: {
+  error: TRPCError;
+  req?: { log: { error: (obj: Record<string, unknown>, msg: string) => void } };
+}): void {
   const domainCode = getDomainCode(error.cause);
   if (domainCode) {
     // 정상적인 거부(권한·전제·대상 없음)는 장애가 아니라 캡처하지 않는다 — 노이즈 방지
     if (!isExpectedDomainError(error.cause)) {
+      req?.log.error({ err: error.cause, domainCode }, "trpc domain error");
       Sentry.captureException(error.cause, { tags: { domainCode } });
     }
     return;
@@ -142,6 +154,7 @@ export function onTRPCError({ error }: { error: TRPCError }): void {
   if (error.code !== "INTERNAL_SERVER_ERROR") {
     return;
   }
+  req?.log.error({ err: error.cause ?? error }, "trpc internal error");
   Sentry.captureException(error.cause ?? error, {
     tags: { domainCode: "UNKNOWN" },
   });
