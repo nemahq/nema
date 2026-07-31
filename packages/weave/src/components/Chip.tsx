@@ -1,7 +1,5 @@
 import * as React from "react";
 
-import { TAG_COLORS, type TagColor } from "@nema-io/shared";
-
 import { XIcon } from "../icons";
 import { cn } from "../utils";
 import {
@@ -14,19 +12,26 @@ import {
 type ChipVariant = "neutral" | "outline";
 type ChipShape = "rounded" | "pill";
 
+// 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 팔레트(tokens/index.css
+// "Tag" 섹션 참고) — 생성 시 랜덤/엔진이 초기값을 채우지만 최종 결정권은 항상
+// 사용자에게 있어 생성 폼·편집 팝오버 어디서든 8개 중 자유롭게 바꿀 수 있다.
+// TagColor를 이 배열에서 유도해 그리드·리스트 색상 피커의 순회 순서와 타입이
+// 서로 다른 목록으로 어긋날 수 없게 한다(packages/shared의 TagColorSchema는
+// DB enum과 맞춰야 하는 별도 계층이라 이 배열과 독립적으로 유지된다).
+const TAG_COLORS = [
+  "sienna",
+  "cyan",
+  "sage",
+  "olive",
+  "terracotta",
+  "rose",
+  "mauve",
+  "violet",
+] as const;
+type TagColor = (typeof TAG_COLORS)[number];
+
 function getRandomTagColor(): TagColor {
   return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
-}
-
-function isTagColor(value: TagColor | BadgeColor): value is TagColor {
-  return (TAG_COLORS as readonly string[]).includes(value);
-}
-
-function getColorToneClassName(color: TagColor | BadgeColor): string {
-  if (isTagColor(color)) {
-    return TAG_COLOR_CLASSNAME[color];
-  }
-  return BADGE_COLOR_CLASSNAME[color];
 }
 
 const STATIC_TONE_CLASSNAME: Record<ChipVariant, string> = {
@@ -68,6 +73,12 @@ const TAG_COLOR_CLASSNAME: Record<TagColor, string> = {
   rose: "bg-tag-rose text-fg-primary",
   mauve: "bg-tag-mauve text-fg-primary",
   violet: "bg-tag-violet text-fg-primary",
+};
+
+// TagColor·BadgeColor는 값 집합이 겹치지 않아 하나의 lookup으로 합쳐도 안전하다.
+const COLOR_TONE_CLASSNAME: Record<TagColor | BadgeColor, string> = {
+  ...TAG_COLOR_CLASSNAME,
+  ...BADGE_COLOR_CLASSNAME,
 };
 
 // variant(neutral/outline)와 color는 배타적으로 받는다 — Badge의 variant/color
@@ -118,7 +129,7 @@ function Chip({
   const toneClassName = cn(
     SHAPE_CLASSNAME[shape],
     color
-      ? getColorToneClassName(color)
+      ? COLOR_TONE_CLASSNAME[color]
       : STATIC_TONE_CLASSNAME[variant ?? "neutral"],
   );
   const hoverClassName = color
