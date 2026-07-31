@@ -253,34 +253,35 @@ async function fetchIngestionReferenceSnapshots(args: {
     return { newReferences, mergedReferences: [] };
   }
 
-  const mergedBodyById = new Map(
-    mergeChanges.map((c) => [
-      c.target_id,
-      StoredReferenceMergeDataSchema.parse(c.data).after.body,
-    ]),
-  );
   const { data: rows, error } = await supabase
     .from("references")
     .select("id, type, title, external_urls")
-    .in("id", [...mergedBodyById.keys()]);
+    .in(
+      "id",
+      mergeChanges.map((c) => c.target_id),
+    );
   throwIfSupabaseError(error);
 
-  const mergedReferences: ReferenceSnapshot[] = (rows ?? []).map((row) => {
-    const body = mergedBodyById.get(row.id);
-    if (body === undefined) {
-      // in()으로 넘긴 id 집합 밖의 행은 나올 수 없다 — 나오면 mock/쿼리 자체가
-      // 깨진 것이므로 조용히 넘기지 않고 던진다.
+  // fetchDigestSnapshots와 같은 방향(요청 id 기준으로 순회) — rows를 그대로 map하면
+  // .in()이 하드 삭제 등으로 일부 id를 못 찾았을 때 그 병합 Reference가 에러 없이
+  // 조용히 목록에서 빠진다. mergeChanges 기준으로 순회해야 빠진 행이 여기서 잡히고,
+  // 반환 순서도 changes의 원래 순서를 따라 결정적이 된다(rows는 Postgres 스캔
+  // 순서라 비결정적).
+  const referenceById = new Map((rows ?? []).map((row) => [row.id, row]));
+  const mergedReferences: ReferenceSnapshot[] = mergeChanges.map((c) => {
+    const reference = referenceById.get(c.target_id);
+    if (!reference) {
       throw new SupabaseError(
         "query_failed",
-        `merged reference ${row.id} has no matching modify-Change`,
+        `reference ${c.target_id} merged by this changeset not found`,
       );
     }
     return {
-      id: row.id,
-      type: row.type,
-      title: row.title,
-      body,
-      externalUrls: row.external_urls ?? [],
+      id: reference.id,
+      type: reference.type,
+      title: reference.title,
+      body: StoredReferenceMergeDataSchema.parse(c.data).after.body,
+      externalUrls: reference.external_urls ?? [],
     };
   });
 

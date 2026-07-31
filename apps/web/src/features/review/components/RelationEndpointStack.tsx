@@ -4,7 +4,9 @@ import type { ArchivedBadgeCause } from "@web/features/review/constants";
 import { toHighlightedFieldKey } from "@web/features/review/digestBodyFieldValue";
 import type { RelationEndpointDetailSnapshot } from "@web/features/review/types";
 
+import { useChangesetSidePanel } from "./ChangesetSidePanelProvider";
 import { DigestReadonlyCardWithSource } from "./DigestReadonlyCardWithSource";
+import { RelationJudgmentSourceTab } from "./RelationJudgmentSourceTab";
 
 interface RelationEndpointStackProps {
   // 위/아래 스택 순서일 뿐 승패를 뜻하지 않는다 — conflict의 from/to는 관계 엔진이
@@ -28,35 +30,62 @@ interface RelationEndpointStackProps {
 // 위아래로 스택한다(surface-inventory.md "관계 판정 화면" 본문 레이아웃).
 // relation_conflict_applied·relation_duplicate_applied·relation_confident_applied
 // 셋이 전부 이 컴포넌트를 공유한다.
+// archivedByChangeset일 때만 archivedBadgeCause를 실어 보낸다 — null(예: confident
+// supports)이면 archivedByChangeset이 true여도 배지를 안 띄운다.
+function archivedBadgeFor(
+  endpoint: RelationEndpointDetailSnapshot,
+  cause: ArchivedBadgeCause | null,
+) {
+  return endpoint.archivedByChangeset ? (cause ?? undefined) : undefined;
+}
+
 export function RelationEndpointStack({
   first,
   second,
   caption,
   archivedBadgeCause,
 }: RelationEndpointStackProps) {
+  const { openTab, closeTab, activeTabId } = useChangesetSidePanel();
+  const firstTabId = `tab-source-${first.statementId}`;
+  const secondTabId = `tab-source-${second.statementId}`;
+
+  function handleViewSource(
+    endpoint: RelationEndpointDetailSnapshot,
+    tabId: string,
+  ) {
+    if (activeTabId === tabId) {
+      closeTab(tabId);
+      return;
+    }
+    openTab({
+      id: tabId,
+      label: endpoint.digest.title,
+      content: (
+        <RelationJudgmentSourceTab
+          sourceId={endpoint.digest.sourceId}
+          fallbackTitle={endpoint.digest.title}
+        />
+      ),
+    });
+  }
+
   return (
     <div className="flex flex-col gap-2">
       {caption}
       <div className="flex flex-col gap-4">
         <DigestReadonlyCardWithSource
           digest={first.digest}
-          tabId={`tab-source-${first.statementId}`}
-          archivedBadge={
-            first.archivedByChangeset
-              ? (archivedBadgeCause ?? undefined)
-              : undefined
-          }
+          sourceActive={activeTabId === firstTabId}
+          onViewSource={() => handleViewSource(first, firstTabId)}
+          archivedBadge={archivedBadgeFor(first, archivedBadgeCause)}
           highlightedFieldKey={toHighlightedFieldKey(first.sourceField)}
           highlightedFieldIndex={first.sourceFieldIndex ?? undefined}
         />
         <DigestReadonlyCardWithSource
           digest={second.digest}
-          tabId={`tab-source-${second.statementId}`}
-          archivedBadge={
-            second.archivedByChangeset
-              ? (archivedBadgeCause ?? undefined)
-              : undefined
-          }
+          sourceActive={activeTabId === secondTabId}
+          onViewSource={() => handleViewSource(second, secondTabId)}
+          archivedBadge={archivedBadgeFor(second, archivedBadgeCause)}
           highlightedFieldKey={toHighlightedFieldKey(second.sourceField)}
           highlightedFieldIndex={second.sourceFieldIndex ?? undefined}
         />

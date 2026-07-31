@@ -264,6 +264,52 @@ describe("getChangesetByNumber", () => {
     ]);
   });
 
+  it("ingestion 적용됨 — 병합 modify-Change가 가리키는 Reference가 하드 삭제로 없어졌으면 조용히 빠뜨리지 않고 던진다", async () => {
+    const MISSING_REFERENCE_ID = "14141414-1414-4141-8141-141414141414";
+    const supabase = mockSupabase({
+      changesets: [
+        {
+          id: "cs-17",
+          space_id: SPACE_ID,
+          number: 17,
+          type: "ingestion",
+          status: "closed",
+          outcome: "applied",
+          title: "제목",
+          source_id: "src-17",
+          reverts_id: null,
+          author_id: null,
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          changes: [
+            {
+              action: "create",
+              target_type: "digest",
+              target_id: DIGEST_ID,
+              data: null,
+            },
+            {
+              action: "modify",
+              target_type: "reference",
+              target_id: MISSING_REFERENCE_ID,
+              data: {
+                before: { body: "옛 설명" },
+                after: { body: "병합된 설명" },
+              },
+            },
+          ],
+        },
+      ],
+      digests: [digestRow(DIGEST_ID)],
+      // references 픽스처를 일부러 비워둔다 — 병합 대상 Reference가 이후 하드
+      // 삭제된 상황을 재현.
+    });
+
+    await expect(
+      getChangesetByNumber({ supabase, spaceId: SPACE_ID, number: 17 }),
+    ).rejects.toMatchObject({ code: "query_failed" });
+  });
+
   it("ingestion 버려짐 — 아무것도 생성되지 않았다는 것만 표시한다", async () => {
     const supabase = mockSupabase({
       changesets: [
@@ -483,9 +529,8 @@ describe("getChangesetByNumber", () => {
           author_id: null,
           created_at: "2026-07-01T00:00:00Z",
           updated_at: "2026-07-01T00:00:00Z",
-          // 이 changeset 자신은 어느 쪽도 archive하지 않았다 — 라이브 status가
-          // 나중에 archived로 바뀌어도(다른 changeset의 소행) 아래 statements
-          // 픽스처에 status 컬럼 자체가 없다는 게 이미 "그 값을 안 본다"는 가드다.
+          // 이 changeset 자신은 어느 쪽도 archive하지 않았다 — 아래 statements의
+          // 라이브 status가 이미 archived인 건 다른(가상의) changeset이 한 일이다.
           changes: [
             {
               action: "create",
@@ -500,9 +545,22 @@ describe("getChangesetByNumber", () => {
           ],
         },
       ],
+      // 라이브 status를 명시적으로 archived로 채워야 진짜 회귀 가드가 된다 —
+      // status 컬럼 자체가 없으면 되돌린(라이브 status 기반) 코드도 undefined
+      // !== "archived"로 우연히 false를 반환해, 고쳐진 코드와 구분이 안 된다.
       statements: [
-        { id: STATEMENT_A_ID, content: "keeper", digest_id: DIGEST_A_ID },
-        { id: STATEMENT_B_ID, content: "duplicate", digest_id: DIGEST_B_ID },
+        {
+          id: STATEMENT_A_ID,
+          content: "keeper",
+          status: "archived",
+          digest_id: DIGEST_A_ID,
+        },
+        {
+          id: STATEMENT_B_ID,
+          content: "duplicate",
+          status: "archived",
+          digest_id: DIGEST_B_ID,
+        },
       ],
       digests: [digestRow(DIGEST_A_ID), digestRow(DIGEST_B_ID)],
     });
@@ -856,6 +914,13 @@ describe("getChangesetByNumber", () => {
     });
 
     expect(result.body.kind).toBe("relation_conflict_applied");
+    if (result.body.kind !== "relation_conflict_applied") {
+      throw new Error("unreachable");
+    }
+    // 진 진술의 라이브 status는 archived지만, 이 changeset의 changes엔 archive
+    // 행이 없다(위 두 relation create 행뿐) — 라이브 status로 되돌아가면 이 값이
+    // true로 잘못 뒤집히는 회귀 가드.
+    expect(result.body.to.archivedByChangeset).toBe(false);
   });
 
   it("존재하지 않는 번호 — SupabaseError(not_found)를 던진다(원문 메시지가 그대로 새지 않게)", async () => {

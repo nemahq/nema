@@ -4,17 +4,17 @@ import type {
 } from "@web/features/review/constants";
 import type { DigestDetailSnapshot } from "@web/features/review/types";
 
-import { useChangesetSidePanel } from "./ChangesetSidePanelProvider";
 import { DigestReadonlyCard } from "./DigestReadonlyCard";
 import { DigestSourceButton } from "./DigestSourceButton";
-import { RelationJudgmentSourceTab } from "./RelationJudgmentSourceTab";
 
 interface DigestReadonlyCardWithSourceProps {
   digest: DigestDetailSnapshot;
-  // ingestion_applied는 여러 카드가 한 Source를 공유해 sourceId를 그대로 넘겨
-  // 탭 하나를 같이 쓰지만, relation 비교 카드는 A·B가 서로 다른 Source일 수
-  // 있어 statementId로 각자 독립된 탭을 연다(ConflictRelationJudgment와 같은 결).
-  tabId: string;
+  // 탭 열기·닫기·활성 판정은 호출부가 갖는다(controlled) — DigestReadonlyCardList처럼
+  // 여러 카드가 같은 Source(탭 하나)를 공유하는 소비처는 activeTabId 하나만으론
+  // "어느 카드가 그 탭을 열었는지" 구분이 안 돼, 그 판정 자체를 부모가 해야 한다.
+  // RelationJudgmentCard·DigestCandidateCard와 같은 결의 controlled 패턴.
+  sourceActive: boolean;
+  onViewSource: () => void;
   archivedBadge?: ArchivedBadgeCause;
   highlightedFieldKey?: DigestBodyFieldKey;
   highlightedFieldIndex?: number;
@@ -26,30 +26,12 @@ interface DigestReadonlyCardWithSourceProps {
 // 뜰 수 있어 겹친다. 그래서 오버레이 대신 카드 옆 별도 컬럼에 나란히 둔다.
 export function DigestReadonlyCardWithSource({
   digest,
-  tabId,
+  sourceActive,
+  onViewSource,
   archivedBadge,
   highlightedFieldKey,
   highlightedFieldIndex,
 }: DigestReadonlyCardWithSourceProps) {
-  const { openTab, closeTab, activeTabId } = useChangesetSidePanel();
-
-  function handleViewSource() {
-    if (activeTabId === tabId) {
-      closeTab(tabId);
-      return;
-    }
-    openTab({
-      id: tabId,
-      label: digest.title,
-      content: (
-        <RelationJudgmentSourceTab
-          sourceId={digest.sourceId}
-          fallbackTitle={digest.title}
-        />
-      ),
-    });
-  }
-
   return (
     <div className="flex items-start gap-2">
       <DigestReadonlyCard
@@ -60,9 +42,9 @@ export function DigestReadonlyCardWithSource({
         className="min-w-0 flex-1"
       />
       <DigestSourceButton
-        active={activeTabId === tabId}
+        active={sourceActive}
         disabled={false}
-        onClick={handleViewSource}
+        onClick={onViewSource}
       />
     </div>
   );
