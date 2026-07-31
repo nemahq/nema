@@ -4,6 +4,7 @@ import {
   type DigestBody,
   DigestBodySchema,
   type DigestDraft,
+  type ReferenceType,
   type RelationType,
   type TagColor,
 } from "@nema-io/shared";
@@ -18,12 +19,15 @@ import {
   classifyReopenShape,
   parseRelationProposal,
 } from "@server/services/changeset-service";
+import {
+  StoredReferenceDataSchema,
+  StoredReferenceMergeDataSchema,
+} from "@server/services/digest-review-service";
 
 type ChangesetType = Database["public"]["Enums"]["changeset_type"];
 type ChangesetStatus = Database["public"]["Enums"]["changeset_status"];
 type ChangesetOutcome = Database["public"]["Enums"]["changeset_outcome"];
 type DigestStatus = Database["public"]["Enums"]["digest_status"];
-type StatementStatus = Database["public"]["Enums"]["statement_status"];
 
 interface DigestSnapshot {
   id: string;
@@ -44,18 +48,38 @@ interface DigestSnapshot {
 interface RelationEndpointSnapshot {
   statementId: string;
   statementContent: string;
-  statementStatus: StatementStatus;
+  // 이 진술이 "지금 archived인지"(라이브 상태)가 아니라 "이 changeset이 실제로
+  // archive했는지"를 담는다 — fetchRelationEndpoint 주석 참고. 다른 changeset이
+  // 나중에 archive해도 여긴 false로 남아야 원인 오귀속(잘못된 배지)이 안 생긴다.
+  archivedByChangeset: boolean;
   // fetchRelationEndpoint 주석 참고 — 이 진술이 Digest의 어느 칸에서 나왔는지 짚는 값.
   sourceField: string | null;
   sourceFieldIndex: number | null;
   digest: DigestSnapshot;
 }
 
+interface ReferenceSnapshot {
+  id: string;
+  type: ReferenceType;
+  title: string;
+  // 신규는 생성 시점 스냅샷(create-Change.data), 병합은 병합 결과 스냅샷
+  // (modify-Change.data.after.body) — 둘 다 DigestSnapshot과 같은 "얼려진 기록"
+  // 원칙이다. title/type은 이 changeset이 정한 값이 아니라(병합은 body만 바꿈)
+  // fetchIngestionReferenceSnapshots가 references 테이블에서 최신값으로 채운다.
+  body: string;
+  externalUrls: string[];
+}
+
 // 이번 라운드가 채운 9케이스(ingestion 2 + relation 6 + revert 1) 밖은 전부
 // "unsupported"로 묶는다 — manual(changeset 목록에 애초에 안 뜸),
 // open(이 화면은 closed 전용, open은 별도 리뷰 화면이 담당) 등.
 type ChangesetDetailBody =
-  | { kind: "ingestion_applied"; digests: DigestSnapshot[] }
+  | {
+      kind: "ingestion_applied";
+      digests: DigestSnapshot[];
+      newReferences: ReferenceSnapshot[];
+      mergedReferences: ReferenceSnapshot[];
+    }
   | { kind: "ingestion_discarded" }
   | {
       kind: "relation_conflict_applied";
@@ -195,6 +219,74 @@ async function fetchDigestSnapshots(args: {
   );
 }
 
+// ingestion_applied 스냅샷의 Reference 카드 — 이 changeset이 만든(create) 신규
+// Reference와 병합한(modify) 기존 Reference를 나눠 돌려준다(ReferenceSection과
+// 같은 신규/병합 구분). 신규는 create-Change.data 그대로가 얼려진 전체 스냅샷이라
+// 테이블 조회가 필요 없지만, 병합은 modify-Change.data에 after.body만 있어(title/type은
+// 이 changeset이 안 건드림) references 테이블에서 최신 title/type을 마저 채운다.
+async function fetchIngestionReferenceSnapshots(args: {
+  supabase: TypedSupabaseClient;
+  changes: ChangeRow[];
+}): Promise<{
+  newReferences: ReferenceSnapshot[];
+  mergedReferences: ReferenceSnapshot[];
+}> {
+  const { supabase, changes } = args;
+
+  const newReferences: ReferenceSnapshot[] = changes
+    .filter((c) => c.target_type === "reference" && c.action === "create")
+    .map((c) => {
+      const referenceData = StoredReferenceDataSchema.parse(c.data);
+      return {
+        id: c.target_id,
+        type: referenceData.type,
+        title: referenceData.title,
+        body: referenceData.body,
+        externalUrls: referenceData.external_urls,
+      };
+    });
+
+  const mergeChanges = changes.filter(
+    (c) => c.target_type === "reference" && c.action === "modify",
+  );
+  if (mergeChanges.length === 0) {
+    return { newReferences, mergedReferences: [] };
+  }
+
+  const mergedBodyById = new Map(
+    mergeChanges.map((c) => [
+      c.target_id,
+      StoredReferenceMergeDataSchema.parse(c.data).after.body,
+    ]),
+  );
+  const { data: rows, error } = await supabase
+    .from("references")
+    .select("id, type, title, external_urls")
+    .in("id", [...mergedBodyById.keys()]);
+  throwIfSupabaseError(error);
+
+  const mergedReferences: ReferenceSnapshot[] = (rows ?? []).map((row) => {
+    const body = mergedBodyById.get(row.id);
+    if (body === undefined) {
+      // in()으로 넘긴 id 집합 밖의 행은 나올 수 없다 — 나오면 mock/쿼리 자체가
+      // 깨진 것이므로 조용히 넘기지 않고 던진다.
+      throw new SupabaseError(
+        "query_failed",
+        `merged reference ${row.id} has no matching modify-Change`,
+      );
+    }
+    return {
+      id: row.id,
+      type: row.type,
+      title: row.title,
+      body,
+      externalUrls: row.external_urls ?? [],
+    };
+  });
+
+  return { newReferences, mergedReferences };
+}
+
 // relation(충돌·중복) 카드는 진술이 아니라 그 진술이 속한 Digest를 통째로 보여준다
 // (관계 판정 화면의 .rj-digest-card 재사용 전제, surface-inventory.md "Changeset 상세"
 // 참고) — 그 안에서 이 진술이 어느 문장인지는 sourceField로 칸을 바로 짚고, sourceField가
@@ -202,8 +294,13 @@ async function fetchDigestSnapshots(args: {
 async function fetchRelationEndpoint(args: {
   supabase: TypedSupabaseClient;
   statementId: string;
+  // 지금 보고 있는 changeset이 실제로 archive한 statement id 집합(resolveBody가
+  // changes에서 한 번 뽑아 넘긴다) — 라이브 status 대신 이 집합 소속 여부로
+  // archivedByChangeset을 판정해야, 이 진술이 나중에 다른 changeset이 archive해도
+  // 여기서는 그 원인으로 잘못 표시되지 않는다.
+  archivedStatementIds: Set<string>;
 }): Promise<RelationEndpointSnapshot> {
-  const { supabase, statementId } = args;
+  const { supabase, statementId, archivedStatementIds } = args;
 
   // maybeSingle — single()이 PGRST116(행 없음)을 not_found로 매핑해, source_purge로
   // 하드 삭제된 진술을 가리키는 change 행(참조 무결성 위반, 진짜 장애)이 "이 changeset을
@@ -211,7 +308,7 @@ async function fetchRelationEndpoint(args: {
   // 아래 digest 조회와 같은 패턴으로 query_failed를 직접 던져 새지 않게 한다.
   const { data: statement, error } = await supabase
     .from("statements")
-    .select("id, content, status, digest_id, source_field, source_field_index")
+    .select("id, content, digest_id, source_field, source_field_index")
     .eq("id", statementId)
     .maybeSingle();
   throwIfSupabaseError(error);
@@ -239,7 +336,7 @@ async function fetchRelationEndpoint(args: {
   return {
     statementId: statement.id,
     statementContent: statement.content,
-    statementStatus: statement.status,
+    archivedByChangeset: archivedStatementIds.has(statement.id),
     sourceField: statement.source_field,
     sourceFieldIndex: statement.source_field_index,
     digest,
@@ -255,6 +352,14 @@ async function resolveBody(args: {
 }): Promise<ChangesetDetailBody> {
   const { supabase, type, outcome, changes, revertsNumber } = args;
 
+  // 이 changeset이 실제로 archive한 statement id 집합 — fetchRelationEndpoint가
+  // 라이브 status 대신 이걸로 archivedByChangeset을 판정한다(원인 오귀속 버그 수정).
+  const archivedStatementIds = new Set(
+    changes
+      .filter((c) => c.action === "archive" && c.target_type === "statement")
+      .map((c) => c.target_id),
+  );
+
   if (type === "ingestion") {
     if (outcome === "discarded") {
       return { kind: "ingestion_discarded" };
@@ -263,7 +368,11 @@ async function resolveBody(args: {
       const digestIds = changes
         .filter((c) => c.target_type === "digest" && c.action === "create")
         .map((c) => c.target_id);
-      const snapshots = await fetchDigestSnapshots({ supabase, digestIds });
+      const [snapshots, { newReferences, mergedReferences }] =
+        await Promise.all([
+          fetchDigestSnapshots({ supabase, digestIds }),
+          fetchIngestionReferenceSnapshots({ supabase, changes }),
+        ]);
       const digests = digestIds.map((id) => {
         const snapshot = snapshots.get(id);
         if (!snapshot) {
@@ -274,7 +383,12 @@ async function resolveBody(args: {
         }
         return snapshot;
       });
-      return { kind: "ingestion_applied", digests };
+      return {
+        kind: "ingestion_applied",
+        digests,
+        newReferences,
+        mergedReferences,
+      };
     }
     return { kind: "unsupported" };
   }
@@ -314,10 +428,12 @@ async function resolveBody(args: {
           fetchRelationEndpoint({
             supabase,
             statementId: pendingProposal.fromId,
+            archivedStatementIds,
           }),
           fetchRelationEndpoint({
             supabase,
             statementId: pendingProposal.toId,
+            archivedStatementIds,
           }),
         ]);
         return { kind: "relation_conflict_applied", from, to };
@@ -335,10 +451,12 @@ async function resolveBody(args: {
           fetchRelationEndpoint({
             supabase,
             statementId: pendingProposal.fromId,
+            archivedStatementIds,
           }),
           fetchRelationEndpoint({
             supabase,
             statementId: pendingProposal.toId,
+            archivedStatementIds,
           }),
         ]);
         return { kind: "relation_duplicate_applied", keeper, duplicate };
@@ -362,8 +480,16 @@ async function resolveBody(args: {
       const relations = await Promise.all(
         proposals.map(async (proposal) => {
           const [from, to] = await Promise.all([
-            fetchRelationEndpoint({ supabase, statementId: proposal.fromId }),
-            fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
+            fetchRelationEndpoint({
+              supabase,
+              statementId: proposal.fromId,
+              archivedStatementIds,
+            }),
+            fetchRelationEndpoint({
+              supabase,
+              statementId: proposal.toId,
+              archivedStatementIds,
+            }),
           ]);
           return {
             // pendingProposal이 없는 이 분기에서 proposals는 전부 conflicts/duplicates가
@@ -614,9 +740,20 @@ export async function getPendingRelationByNumber(args: {
     );
   }
 
+  // 판정 대기(open) 화면은 archived 배지를 그리지 않아 이 changeset은 아직 아무것도
+  // archive하지 않았다 — 빈 집합으로 충분하다(1b 버그는 closed 스냅샷 전용).
+  const noArchivedStatements = new Set<string>();
   const [from, to] = await Promise.all([
-    fetchRelationEndpoint({ supabase, statementId: proposal.fromId }),
-    fetchRelationEndpoint({ supabase, statementId: proposal.toId }),
+    fetchRelationEndpoint({
+      supabase,
+      statementId: proposal.fromId,
+      archivedStatementIds: noArchivedStatements,
+    }),
+    fetchRelationEndpoint({
+      supabase,
+      statementId: proposal.toId,
+      archivedStatementIds: noArchivedStatements,
+    }),
   ]);
 
   const body: PendingRelationBody =

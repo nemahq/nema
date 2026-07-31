@@ -6,6 +6,7 @@ interface ChangesetConfirmDiscardActionsProps {
   onDiscard: () => void;
   onConfirm: () => void;
   discardPending: boolean;
+  confirmPending: boolean;
   discardDisabled: boolean;
   confirmDisabled: boolean;
 }
@@ -17,6 +18,7 @@ export function ChangesetConfirmDiscardActions({
   onDiscard,
   onConfirm,
   discardPending,
+  confirmPending,
   discardDisabled,
   confirmDisabled,
 }: ChangesetConfirmDiscardActionsProps) {
@@ -24,10 +26,14 @@ export function ChangesetConfirmDiscardActions({
   return (
     <div className="flex shrink-0 items-center gap-2">
       <Button variant="neutral" onClick={onDiscard} disabled={discardDisabled}>
-        {discardPending ? t("common.saving") : t("review.discard_action")}
+        {discardPending
+          ? t("review.discard_action_pending")
+          : t("review.discard_action")}
       </Button>
       <Button onClick={onConfirm} disabled={confirmDisabled}>
-        {t("review.confirm_action")}
+        {confirmPending
+          ? t("review.confirm_action_pending")
+          : t("review.confirm_action")}
       </Button>
     </div>
   );

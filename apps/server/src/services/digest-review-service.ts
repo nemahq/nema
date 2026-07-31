@@ -57,7 +57,9 @@ const StoredLabelDraftSchema = z.object({
   ),
 });
 
-const StoredReferenceDataSchema = z.object({
+// changeset-detail-service.ts(ingestion_applied 스냅샷)와 공유하는 changes.data
+// 파싱 계약 — 두 서비스 다 같은 change 행을 읽으므로 스키마가 갈라지면 안 된다.
+export const StoredReferenceDataSchema = z.object({
   type: ReferenceTypeSchema,
   title: z.string(),
   body: z.string(),
@@ -68,7 +70,7 @@ const StoredReferenceDataSchema = z.object({
 
 // 기존 Reference 병합 modify-Change의 편집 대상은 after.body뿐(type/title 읽기 전용) —
 // update_reference와 같은 {before, after} 형태에서 다듬을 값만 읽는다.
-const StoredReferenceMergeDataSchema = z.object({
+export const StoredReferenceMergeDataSchema = z.object({
   after: z.object({ body: z.string() }),
 });
 

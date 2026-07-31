@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { Link, linkOptions, useNavigate } from "@tanstack/react-router";
 
-import { Badge, Button } from "@nema-io/weave";
+import { Badge, Button, LoadingGuard } from "@nema-io/weave";
 
 import { changesetDisplayState } from "@web/features/review/constants";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
@@ -33,6 +33,9 @@ function ChangesetRecordContent() {
     spaceId,
     changesetNumber,
   );
+  // revert·restore는 outcome에 따라 둘 중 하나만 렌더되므로 동시 진행은 없다 —
+  // 그래도 Guard는 어느 쪽이 진행 중이든 본문을 같은 방식으로 덮어야 한다.
+  const locked = revertChangeset.isPending || restorePendingRelation.isPending;
 
   function handleRevert() {
     revertChangeset.mutate(
@@ -89,12 +92,14 @@ function ChangesetRecordContent() {
           onClick={handleRevert}
           disabled={revertChangeset.isPending}
         >
-          {t("review.detail_revert_action")}
+          {revertChangeset.isPendingAfterDelay
+            ? t("review.detail_revert_action_pending")
+            : t("review.detail_revert_action")}
         </Button>
       );
     }
-    // 되살리기 RPC는 conflicts뿐 아니라 type='relation' discarded 전부를 대상으로
-    // 하지만, duplicates·확신 관계는 판정 화면이 없어 되살려도 열 곳이 없다(open이
+    // 다시 열기 RPC는 conflicts뿐 아니라 type='relation' discarded 전부를 대상으로
+    // 하지만, duplicates·확신 관계는 판정 화면이 없어 다시 열어도 열 곳이 없다(open이
     // 되는 순간 관계 판정 화면이 NOT_FOUND로 막혀버림) — 그래서 conflicts로 좁힌다.
     // invalidatedById가 있으면(캐스케이드로 자동 닫힘) RPC가 애초에 거절하므로,
     // 버튼도 같은 조건으로 맞춰 "눌러도 절대 성공 못 하는" 버튼을 안 보여준다.
@@ -109,7 +114,9 @@ function ChangesetRecordContent() {
           onClick={handleRestore}
           disabled={restorePendingRelation.isPending}
         >
-          {t("review.detail_restore_action")}
+          {restorePendingRelation.isPendingAfterDelay
+            ? t("review.detail_restore_action_pending")
+            : t("review.detail_restore_action")}
         </Button>
       );
     }
@@ -141,10 +148,14 @@ function ChangesetRecordContent() {
             </Badge>
           ) : undefined
         }
+        closedByName={changesetDetail.closedByName}
         time={changesetDetail.updatedAt}
         actions={renderHeaderActions()}
       />
-      <ChangesetRecordBody changesetDetail={changesetDetail} />
+      <div className="relative flex flex-1 flex-col gap-4">
+        <ChangesetRecordBody changesetDetail={changesetDetail} />
+        <LoadingGuard active={locked} />
+      </div>
     </ChangesetDetailLayout>
   );
 }

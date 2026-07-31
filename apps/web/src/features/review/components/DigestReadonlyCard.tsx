@@ -2,6 +2,8 @@ import { Badge, cn, Text } from "@nema-io/weave";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import {
+  ARCHIVED_BADGE_LABEL_KEY,
+  type ArchivedBadgeCause,
   DIGEST_TYPE_BADGE_COLOR,
   DIGEST_TYPE_ICON,
   DIGEST_TYPE_LABEL_KEY,
@@ -15,10 +17,11 @@ import { DigestReadonlyBodyFields } from "./DigestReadonlyBodyFields";
 
 interface DigestReadonlyCardProps {
   digest: DigestDetailSnapshot;
-  // 관계(충돌·중복·확신) 판정에서 archived된 쪽 — 제목 취소선+카드 전체를 낮춤
-  // (opacity)+"대체됨" 배지 세 가지를 함께 얹어 표시한다. 어느 body-field가
-  // 관련 문장인지는 아래 highlightedField가 별도로 짚는다.
-  archived?: boolean;
+  // 관계(충돌·중복·확신) 판정에서 밀려난 쪽 — 제목 취소선+카드 전체를 낮춤(opacity)
+  // +원인별 배지(대체됨/병합됨/해소됨) 세 가지를 함께 얹어 표시한다. undefined면
+  // 밀려나지 않은 쪽이라 셋 다 없다. 어느 body-field가 관련 문장인지는 아래
+  // highlightedField가 별도로 짚는다.
+  archivedBadge?: ArchivedBadgeCause;
   highlightedFieldKey?: DigestBodyFieldKey;
   highlightedFieldIndex?: number;
   className?: string;
@@ -30,7 +33,7 @@ interface DigestReadonlyCardProps {
 // 확정된 값은 다시 만질 수 없어야 한다는 원칙(surface-inventory.md) 그대로다.
 export function DigestReadonlyCard({
   digest,
-  archived = false,
+  archivedBadge,
   highlightedFieldKey,
   highlightedFieldIndex,
   className,
@@ -41,7 +44,7 @@ export function DigestReadonlyCard({
   return (
     <CandidateCardFrame
       viewed={false}
-      className={cn(archived && "opacity-60", className)}
+      className={cn(archivedBadge && "opacity-60", className)}
       wash={
         <>
           <div className="flex items-center gap-2">
@@ -62,19 +65,22 @@ export function DigestReadonlyCard({
                 as="span"
                 size="xl"
                 weight="semibold"
-                className={cn("min-w-0 truncate", archived && "line-through")}
+                className={cn(
+                  "min-w-0 truncate",
+                  archivedBadge && "line-through",
+                )}
               >
                 {digest.title}
               </Text>
             </div>
-            {archived && (
+            {archivedBadge && (
               <Badge
                 variant="neutral"
                 shape="pill"
                 size="sm"
                 className="shrink-0"
               >
-                {t("review.digest_readonly_archived_badge")}
+                {t(ARCHIVED_BADGE_LABEL_KEY[archivedBadge])}
               </Badge>
             )}
           </div>

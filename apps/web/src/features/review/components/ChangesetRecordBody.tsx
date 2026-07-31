@@ -8,6 +8,7 @@ import { useTranslation } from "@web/lib/tolgee";
 import { ChangesetRevertSummary } from "./ChangesetRevertSummary";
 import { ConfidentRelationList } from "./ConfidentRelationList";
 import { DigestReadonlyCardList } from "./DigestReadonlyCardList";
+import { ReferenceReadonlySection } from "./ReferenceReadonlySection";
 import { RelationEndpointStack } from "./RelationEndpointStack";
 
 interface ChangesetRecordBodyProps {
@@ -22,7 +23,15 @@ export function ChangesetRecordBody({
 
   switch (body.kind) {
     case "ingestion_applied":
-      return <DigestReadonlyCardList digests={body.digests} />;
+      return (
+        <>
+          <DigestReadonlyCardList digests={body.digests} />
+          <ReferenceReadonlySection
+            newReferences={body.newReferences}
+            mergedReferences={body.mergedReferences}
+          />
+        </>
+      );
     // discarded 넷 다 되돌릴 대상 자체가 없었다는 뜻이라, 헤더의 상태 배지("버려짐")
     // 자체가 이미 완결된 설명이다 — 본문에 안내문을 반복하지 않는다.
     case "ingestion_discarded":
@@ -31,10 +40,20 @@ export function ChangesetRecordBody({
     case "relation_confident_discarded":
       return null;
     case "relation_conflict_applied":
-      return <RelationEndpointStack first={body.from} second={body.to} />;
+      return (
+        <RelationEndpointStack
+          first={body.from}
+          second={body.to}
+          archivedBadgeCause="replaced"
+        />
+      );
     case "relation_duplicate_applied":
       return (
-        <RelationEndpointStack first={body.keeper} second={body.duplicate} />
+        <RelationEndpointStack
+          first={body.keeper}
+          second={body.duplicate}
+          archivedBadgeCause="merged"
+        />
       );
     case "relation_confident_applied":
       return <ConfidentRelationList relations={body.relations} />;

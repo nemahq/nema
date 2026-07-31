@@ -1,6 +1,6 @@
 import { Suspense, useMemo, useState } from "react";
 
-import { Alert, Text } from "@nema-io/weave";
+import { Alert, LoadingGuard, Text } from "@nema-io/weave";
 
 import {
   confirmDisabledReason as computeConfirmDisabledReason,
@@ -17,6 +17,7 @@ import { useRefetchReviewOnFocus } from "@web/features/review/hooks/useRefetchRe
 import { computeReviewEditingState } from "@web/features/review/reviewEditingState";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useNotificationSoftAsk } from "@web/hooks/useNotificationSoftAsk";
+import { usePendingAfterDelay } from "@web/hooks/usePendingAfterDelay";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { ChangesetConfirmDiscardActions } from "./ChangesetConfirmDiscardActions";
@@ -85,8 +86,14 @@ function IngestionContent() {
   const discardReview = useDiscardReview(spaceId, changesetNumber);
   const showNotificationSoftAsk = useNotificationSoftAsk();
 
+  // 지연 없는 raw isPending — discard/confirm 어느 쪽이 진행 중이든 즉시 나머지를
+  // 잠가야 250ms 지연 구간 동안의 이중 클릭(레이스)을 막는다. 로딩 텍스트 표시에만
+  // 아래 usePendingAfterDelay를 따로 쓴다(ConflictRelationJudgment와 같은 원칙).
   const locked =
-    confirming || confirmReview.isPending || discardReview.isPendingAfterDelay;
+    confirming || confirmReview.isPending || discardReview.isPending;
+  const confirmPendingAfterDelay = usePendingAfterDelay(
+    confirming || confirmReview.isPending,
+  );
   const confirmDisabledReasonCode =
     computeConfirmDisabledReason(reviewEditingState);
   // 저장 실패(일반 실패·버전 충돌 모두)는 확정을 막는다 — 실패한 편집을 그대로
@@ -202,37 +209,41 @@ function IngestionContent() {
             onDiscard={handleDiscard}
             onConfirm={handleConfirm}
             discardPending={discardReview.isPendingAfterDelay}
+            confirmPending={confirmPendingAfterDelay}
             discardDisabled={locked}
             confirmDisabled={confirmDisabled}
           />
         }
       />
-      {/* 조용한 텍스트 한 줄로는 확정이 막혀 있다는 게 눈에 안 들어와서 Alert로
-          올렸다. */}
-      {confirmDisabledReasonText && (
-        <Alert variant="warning">{confirmDisabledReasonText}</Alert>
-      )}
+      <div className="relative flex flex-col gap-4">
+        {/* 조용한 텍스트 한 줄로는 확정이 막혀 있다는 게 눈에 안 들어와서 Alert로
+            올렸다. */}
+        {confirmDisabledReasonText && (
+          <Alert variant="warning">{confirmDisabledReasonText}</Alert>
+        )}
 
-      <DigestCandidateList
-        digests={draft.digests}
-        labelDraft={draft.labelDraft}
-        disabled={locked}
-        activeSourceDigestId={sourceTabOpen ? activeSourceDigestId : null}
-        onViewSource={handleViewSource}
-      />
+        <DigestCandidateList
+          digests={draft.digests}
+          labelDraft={draft.labelDraft}
+          disabled={locked}
+          activeSourceDigestId={sourceTabOpen ? activeSourceDigestId : null}
+          onViewSource={handleViewSource}
+        />
 
-      <UnattachedLabelSection
-        digests={draft.digests}
-        labelDraft={draft.labelDraft}
-        disabled={locked}
-      />
+        <UnattachedLabelSection
+          digests={draft.digests}
+          labelDraft={draft.labelDraft}
+          disabled={locked}
+        />
 
-      <ReferenceSection
-        digests={draft.digests}
-        newReferences={draft.newReferences}
-        citedReferences={draft.citedReferences}
-        disabled={locked}
-      />
+        <ReferenceSection
+          digests={draft.digests}
+          newReferences={draft.newReferences}
+          citedReferences={draft.citedReferences}
+          disabled={locked}
+        />
+        <LoadingGuard active={locked} />
+      </div>
     </ChangesetDetailLayout>
   );
 }
