@@ -100,9 +100,7 @@ function FormMessage({
       data-slot="form-message"
       role={variant === "error" ? "alert" : undefined}
       className={cn(
-        // px-3 — Input/Textarea 자체 좌우 패딩과 맞춰 인풋 텍스트 시작
-        // 위치에 정렬한다(PR #525에서 이 리팩터링으로 넘긴 값).
-        "px-3 text-xs",
+        "pl-1 text-xs",
         hasContent
           ? formMessageVariantClasses[variant]
           : reserveSpace && "text-transparent",
