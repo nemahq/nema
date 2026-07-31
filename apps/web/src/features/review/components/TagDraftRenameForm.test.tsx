@@ -21,7 +21,7 @@ function renderForm() {
     <TagDraftRenameForm
       title="기존 이름"
       description="기존 설명"
-      color="slate"
+      color="sienna"
       isDuplicateTitle={() => false}
       onCommitText={onCommitText}
       onColorChange={onColorChange}

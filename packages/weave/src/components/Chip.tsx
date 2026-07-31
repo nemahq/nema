@@ -2,7 +2,12 @@ import * as React from "react";
 
 import { XIcon } from "../icons";
 import { cn } from "../utils";
-import { NEUTRAL_TONE_CLASSNAME, OUTLINE_TONE_CLASSNAME } from "./Badge";
+import {
+  BADGE_COLOR_CLASSNAME,
+  type BadgeColor,
+  NEUTRAL_TONE_CLASSNAME,
+  OUTLINE_TONE_CLASSNAME,
+} from "./Badge";
 
 type ChipVariant = "neutral" | "outline";
 type ChipShape = "rounded" | "pill";
@@ -14,7 +19,7 @@ type ChipShape = "rounded" | "pill";
 // 서로 다른 목록으로 어긋날 수 없게 한다(packages/shared의 TagColorSchema는
 // DB enum과 맞춰야 하는 별도 계층이라 이 배열과 독립적으로 유지된다).
 const TAG_COLORS = [
-  "slate",
+  "sienna",
   "cyan",
   "sage",
   "olive",
@@ -44,10 +49,10 @@ const HOVER_CLASSNAME: Record<ChipVariant, string> = {
   outline: "hover:bg-fg-primary/5 data-[state=open]:bg-fg-primary/5",
 };
 
-// Tag 배경이 거의 흰색에 가까운 파스텔이라, bg-*/15 알파 겹침(다른 variant와
-// 같은 방식)이면 hover가 안 보인다 — brightness를 낮춰(밝게 만드는 대신
-// 살짝 진하게) 신호를 만든다.
-const TAG_HOVER_CLASSNAME = "hover:brightness-95";
+// Tag 파스텔·Hue tint 배경 둘 다 옅은 알파 채움이라, bg-*/15 알파 겹침(다른
+// variant와 같은 방식)이면 hover가 안 보인다 — brightness를 낮춰(밝게 만드는
+// 대신 살짝 진하게) 신호를 만든다.
+const TINT_HOVER_CLASSNAME = "hover:brightness-95";
 
 // rounded는 태그·Topic처럼 여러 개를 나란히 늘어놓는 자리 — pill은 값 하나를
 // 통째로 담는 자리(DraftSpaceSelect 등). Badge의 shape 구분과 같은 결.
@@ -60,7 +65,7 @@ const SHAPE_CLASSNAME: Record<ChipShape, string> = {
 // 밝고 다크에서 카드보다 밝은 색이라, 각 테마의 기본 텍스트 색이 그대로
 // 여유 있게 AA를 만족한다(tokens/index.css "Tag" 섹션 계산 근거).
 const TAG_COLOR_CLASSNAME: Record<TagColor, string> = {
-  slate: "bg-tag-slate text-fg-primary",
+  sienna: "bg-tag-sienna text-fg-primary",
   cyan: "bg-tag-cyan text-fg-primary",
   sage: "bg-tag-sage text-fg-primary",
   olive: "bg-tag-olive text-fg-primary",
@@ -70,11 +75,25 @@ const TAG_COLOR_CLASSNAME: Record<TagColor, string> = {
   violet: "bg-tag-violet text-fg-primary",
 };
 
-// variant(neutral/outline)와 color(TagColor)는 배타적으로 받는다 — Badge의
-// variant/color 구분(의미 있는 톤 vs weave가 뜻을 모르는 분류)과 같은 이유.
+// TagColor·BadgeColor는 값 집합이 겹치지 않아 하나의 lookup으로 합쳐도 안전하다
+// — 이 전제가 깨지면(둘 중 한쪽에 같은 이름 색이 추가되면) 아래 스프레드가 조용히
+// 서로를 덮어쓰므로, 겹치는 순간 컴파일 에러가 나게 강제해둔다.
+type AssertNever<T extends never> = T;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- 타입 체크만을 위한 선언
+type _TagBadgeColorNoOverlap = AssertNever<Extract<TagColor, BadgeColor>>;
+
+const COLOR_TONE_CLASSNAME: Record<TagColor | BadgeColor, string> = {
+  ...TAG_COLOR_CLASSNAME,
+  ...BADGE_COLOR_CLASSNAME,
+};
+
+// variant(neutral/outline)와 color는 배타적으로 받는다 — Badge의 variant/color
+// 구분(의미 있는 톤 vs weave가 뜻을 모르는 분류)과 같은 이유. color는 TagColor
+// (사용자 태그, 파스텔)와 BadgeColor(고정 5종 분류 배지, Hue) 둘 다 받는다 —
+// DigestTypePicker처럼 Badge의 색 축을 그대로 쓰되 인터랙티브해야 하는 자리가 있다.
 type ChipToneProps =
   | { variant?: ChipVariant; color?: never }
-  | { variant?: never; color: TagColor };
+  | { variant?: never; color: TagColor | BadgeColor };
 
 // onRemove·removeAriaLabel을 객체 하나로 묶지 않고 평평한 두 prop으로 둔다 —
 // conventions.md "컴포넌트 데이터 prop은 원시값이어야 한다(콜백·children
@@ -116,11 +135,11 @@ function Chip({
   const toneClassName = cn(
     SHAPE_CLASSNAME[shape],
     color
-      ? TAG_COLOR_CLASSNAME[color]
+      ? COLOR_TONE_CLASSNAME[color]
       : STATIC_TONE_CLASSNAME[variant ?? "neutral"],
   );
   const hoverClassName = color
-    ? TAG_HOVER_CLASSNAME
+    ? TINT_HOVER_CLASSNAME
     : HOVER_CLASSNAME[variant ?? "neutral"];
   const labelClassName = cn(truncated && "min-w-0 truncate");
 
