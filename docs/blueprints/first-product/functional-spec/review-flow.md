@@ -35,15 +35,14 @@
 - [x] Digest 리뷰 화면에서 Tag 추가 — 신규 생성
 - [x] Tag 색상 지정 — 신규 생성 시
 - [x] 라벨 정렬 — 신규 먼저
-- [ ] Reference 후보 자동 제안 및 매칭
+- [x] Reference 후보 자동 제안 및 매칭
 - [x] Changeset 제목 자동 생성 (ingestion)
 - [x] Digest 후보 삭제
 - [x] Digest 리뷰 확정
 - [x] Digest 리뷰 버리기
-- [ ] 적용된 리뷰 되돌리기
-- [ ] Changeset 제목 자동 생성 (revert)
-- [ ] 원문도 삭제하기
-- [ ] 버려진 리뷰 되살리기
+- [x] 적용된 리뷰 되돌리기
+- [x] Changeset 제목 자동 생성 (revert)
+- [x] 버려진 리뷰 되살리기
 - [ ] 원문 삭제 후 되살리기 비활성화
 - [x] 신규 Reference 후보 편집
 - [x] 기존 Reference 후보 병합 편집
@@ -245,7 +244,8 @@
 - **When**: Digest 후보가 생성된다.
 - **Then**: 그 대상이 레지스트리에 이미 있으면 기존 Reference 후보로, 없으면 신규 Reference 후보로 분류되어 함께 제안된다.
 - **관여 화면**: Digest 리뷰 화면
-- **범위 참고 (2026-07-20, QA 세션)**: `digest-generation.ts` 프롬프트가 사람·조직·프로젝트·제품·개념(person/organization/project/product/term) 분류와 레지스트리 매칭 여부에 따른 기존/신규 분기를 명시적으로 지시한다. 코드 레벨로만 확인, 실동작 브라우저 확인은 아직 없어 미체크로 남김.
+- **범위 참고 (2026-07-20, QA 세션)**: `digest-generation.ts` 프롬프트가 사람·조직·프로젝트·제품·개념(person/organization/project/product/term) 분류와 레지스트리 매칭 여부에 따른 기존/신규 분기를 명시적으로 지시한다.
+- **확정 (2026-07-31, staging, Kyle 실동작 확인)**
 
 #### Changeset 제목 자동 생성 (ingestion)
 
@@ -299,7 +299,8 @@
   3. 새로운 revert changeset이 `open` 상태로 생성된다 — 확정됐던 Digest 콘텐츠가 changeset 자신의 기록에서 그대로 복원된 draft를 담고 있다(LLM 재호출 없음). 이 행 자체가 재판정 화면이다.
   4. 성공 시 새로 생성된 revert changeset의 상세(재판정 화면)로 자동 이동한다.
 - **관여 화면**: Changeset 상세, Digest 리뷰 화면(재판정)
-- **범위 참고 (2026-07-14, PR #412; 갱신 PR #438; 재설계 2026-07-29)**: `revertChangeset`(changeset-service.ts)이 `revert_changeset` RPC(`p_title` — 완성된 제목 문자열을 미리 조합해 넘김)를 호출, 응답의 `revertChangesetNumber`로 이동. RPC는 원본 changeset의 `changes`(target_type='digest', action='create')를 새 target_id로 복제해 revert changeset에 붙이고 `status='open'`으로 생성한다(`changeset_is_ingestion_shaped`로 판정). 이 revert changeset은 `digestReview.get`/`updateReview`/`confirmReview`/`discardReview`/`restoreReview` 등 기존 Digest 리뷰 화면 RPC 전부를 `type IN ('ingestion','revert')` 가드로 그대로 받아들인다. 다만 이 슬라이스는 백엔드(스키마·RPC)까지만이라, 재판정 화면 자체의 진입 라우팅(`changesetDetailRegistry`가 이 open revert changeset을 Digest 리뷰 화면으로 보내는 것)은 다음 FE 슬라이스 몫이다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
+- **범위 참고 (2026-07-14, PR #412; 갱신 PR #438; 재설계 2026-07-29)**: `revertChangeset`(changeset-service.ts)이 `revert_changeset` RPC(`p_title` — 완성된 제목 문자열을 미리 조합해 넘김)를 호출, 응답의 `revertChangesetNumber`로 이동. RPC는 원본 changeset의 `changes`(target_type='digest', action='create')를 새 target_id로 복제해 revert changeset에 붙이고 `status='open'`으로 생성한다(`changeset_is_ingestion_shaped`로 판정). 이 revert changeset은 `digestReview.get`/`updateReview`/`confirmReview`/`discardReview`/`restoreReview` 등 기존 Digest 리뷰 화면 RPC 전부를 `type IN ('ingestion','revert')` 가드로 그대로 받아들인다.
+- **확정 (2026-07-31, staging, Kyle 실동작 확인)**
 
 #### Changeset 제목 자동 생성 (revert)
 
@@ -307,17 +308,8 @@
 - **When**: 되돌리기(revert) changeset이 생성된다.
 - **Then**: 제목이 원본 제목을 따옴표로 감싸고 "되돌림"(UI 언어에 맞는 자연스러운 표현)을 붙인 형태로 저장된다. 이미 되돌려진 changeset을 다시 되돌리면 깊이를 계산해 접미사를 늘리지 않고, 그 문자열을 그대로 한 번 더 감싼다(`"OO" 되돌림` → `""OO" 되돌림" 되돌림`). 원본 제목이 없으면(번호 자리표시자 폴백 중) 이 되돌리기도 같은 폴백을 물려받아 감싼다.
 - **관여 화면**: Changeset 상세, 변경셋
-- **범위 참고 (재설계 2026-07-29, migration 20260729140505)**: `revert_depth` 정수 컬럼과 FE(`features/review/utils.ts`)의 title+revertDepth 조합 로직을 폐기했다. UI 언어를 아는 서버 계층(`changeset-service.ts`의 `composeRevertTitle`)이 `revert_changeset` RPC를 호출하기 전에 완성된 제목 문자열을 조합해 `p_title`로 넘기고, RPC는 그 값을 그대로 저장한다 — SQL 문자열 concat이던 이전 구현(따옴표 중첩 버그, 영어 UI 한/영 혼재 버그)을 대체한다. `아카이브 되살리기`/`편집 changeset 되돌리기`(manual 대상 revert) 경로도 같은 방식으로 제목을 조합하도록 맞췄다(`digest-service.ts`/`reference-service.ts`, `find_manual_archive_changeset` RPC로 원본 title/number를 먼저 조회). 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
-
-#### 원문도 삭제하기
-
-- **Given**: 유저가 Changeset 상세에서 버려지거나 되돌려진 changeset을 보고 있다(Digest 리뷰 화면은 open 전용이라 여기 해당 없음).
-- **When**: 원문도 삭제하기 액션을 실행한다.
-- **Then**:
-  1. 그 원문이 즉시 trashed 상태로 전환된다.
-  2. 원문도 삭제하기 액션이 사라진다.
-- **관여 화면**: Changeset 상세
-- **범위 참고 (2026-07-14, PR #412)**: `useTrashReviewSource`(기존 `trash_source` RPC 재사용)로 구현 — 확인 다이얼로그 → 즉시 trashed 전환 → 액션 비활성화.
+- **범위 참고 (재설계 2026-07-29, migration 20260729140505)**: `revert_depth` 정수 컬럼과 FE(`features/review/utils.ts`)의 title+revertDepth 조합 로직을 폐기했다. UI 언어를 아는 서버 계층(`changeset-service.ts`의 `composeRevertTitle`)이 `revert_changeset` RPC를 호출하기 전에 완성된 제목 문자열을 조합해 `p_title`로 넘기고, RPC는 그 값을 그대로 저장한다 — SQL 문자열 concat이던 이전 구현(따옴표 중첩 버그, 영어 UI 한/영 혼재 버그)을 대체한다. `아카이브 되살리기`/`편집 changeset 되돌리기`(manual 대상 revert) 경로도 같은 방식으로 제목을 조합하도록 맞췄다(`digest-service.ts`/`reference-service.ts`, `find_manual_archive_changeset` RPC로 원본 title/number를 먼저 조회).
+- **확정 (2026-07-31, staging, Kyle 실동작 확인)**
 
 #### 버려진 리뷰 되살리기
 
@@ -328,7 +320,8 @@
   2. 버리기 직전의 편집 상태(삭제했던 후보 등)가 그대로 복원된다.
   3. 변경셋 탭에서도 이 changeset이 Closed에서 Open으로 옮겨간다.
 - **관여 화면**: Digest 리뷰 화면, 변경셋
-- **범위 참고 (2026-07-14, PR #412; 갱신 2026-07-27, 리뷰 draft 서버 영속화 재설계 이후)**: 화면 배치가 이 케이스의 Given과 다르다(위 두 케이스와 같은 이유) — 되살리기 액션은 Changeset 상세에만 뒀다(`useRestoreReview` + `restore_ingestion_review` RPC). Then #1·#3은 구현. Then #2("버리기 직전의 편집 상태가 복원된다")는 도입 당시엔 구조적으로 불가능했다 — 그때의 `discard_ingestion_review`는 changes를 아예 안 만드는 방식이라 서버에 복원할 "편집 중이던 상태" 자체가 없었다. 그런데 리뷰 draft가 클라이언트 오버라이드 방식에서 서버 영속 autosave 방식으로 재설계되면서(product-decisions-review-flow.md #21) 전제가 바뀌었다 — 현재 `discard_ingestion_review`(migration 20260726075454)는 changes를 건드리지 않고 changeset status·outcome만 바꾸므로, 되살리면 discard 직전까지 autosave된 편집 상태(후보 삭제 포함)가 그대로 남아있을 것으로 보인다. 구조적으로는 해소된 것으로 추정되나, 실동작 확인 전이라 미체크로 남김.
+- **범위 참고 (2026-07-14, PR #412; 갱신 2026-07-27, 리뷰 draft 서버 영속화 재설계 이후)**: 화면 배치가 이 케이스의 Given과 다르다(위 두 케이스와 같은 이유) — 되살리기 액션은 Changeset 상세에만 뒀다(`useRestoreReview` + `restore_ingestion_review` RPC). Then #1·#3은 구현. Then #2("버리기 직전의 편집 상태가 복원된다")는 도입 당시엔 구조적으로 불가능했다 — 그때의 `discard_ingestion_review`는 changes를 아예 안 만드는 방식이라 서버에 복원할 "편집 중이던 상태" 자체가 없었다. 그런데 리뷰 draft가 클라이언트 오버라이드 방식에서 서버 영속 autosave 방식으로 재설계되면서(product-decisions-review-flow.md #21) 전제가 바뀌었다 — 현재 `discard_ingestion_review`(migration 20260726075454)는 changes를 건드리지 않고 changeset status·outcome만 바꾸므로, 되살리면 discard 직전까지 autosave된 편집 상태(후보 삭제 포함)가 그대로 남아있을 것으로 보인다.
+- **확정 (2026-07-31, staging, Kyle 실동작 확인)**
 
 #### 원문 삭제 후 되살리기 비활성화
 
@@ -429,6 +422,7 @@
   2. 확정되면 이 Digest에서 파생되는 진술도 같은 설정을 상속한다. 이 진술이 다른 진술과 맺는 관계는 양쪽 중 하나라도 외부 AI 도구 공개가 꺼져 있으면 마찬가지로 꺼진 것으로 취급된다.
   3. 이 설정은 Nema 웹앱 자체의 열람·검색에는 영향을 주지 않는다. 외부 AI 도구 공개가 꺼진 콘텐츠는 MCP로 연결된 외부 AI 클라이언트의 조회 결과에만 전혀 포함되지 않는다(존재 힌트 없이 완전 제외).
 - **관여 화면**: Digest 리뷰 화면
+- **범위 참고 (2026-07-31)**: Kyle 판단으로 이번 구현 배치에서 펜딩 — 착수 보류.
 
 #### 모든 후보 삭제 시 확정 비활성화
 
@@ -491,14 +485,14 @@
 - [ ] 관련 Digest 자동 채움
 - [ ] 관계 archive 시 관련 Digest 목록 표시 규칙
 - [ ] 관련 Reference 자동 제안
-- [ ] 판정 대기 relation changeset 생성 (충돌)
+- [x] 판정 대기 relation changeset 생성 (충돌)
 - [ ] 판정 대기 relation changeset 생성 (중복)
-- [ ] Changeset 제목 자동 생성 (relation - 충돌)
-- [ ] Changeset 제목 자동 생성 (relation - 중복)
+- [x] Changeset 제목 자동 생성 (relation - 충돌)
+- [x] Changeset 제목 자동 생성 (relation - 중복)
 - [ ] 재제안 가드
-- [ ] 판정 모드 진입
-- [ ] 충돌 판정 — 승자 선택
-- [ ] 중복 판정 — 병합
+- [x] 판정 모드 진입
+- [x] 충돌 판정 — 승자 선택
+- [x] 중복 판정 — 병합
 - [ ] 판정 대기 relation changeset 버리기
 - [ ] 버려진 relation changeset 되살리기
 - [ ] 충돌 판정 되돌리기
@@ -546,6 +540,7 @@
 - **When**: 관계 엔진이 그 쌍을 처리한다.
 - **Then**: 그 쌍마다 별도의 relation changeset이 open 상태로 생성되어 변경셋 탭의 Open 목록에서 판정을 기다린다.
 - **관여 화면**: 변경셋
+- **확정 (2026-07-31, staging, Kyle 실동작 확인)**
 
 #### 판정 대기 relation changeset 생성 (중복)
 
@@ -562,7 +557,8 @@
 - **Then**: 제목이 "뭐가 부딪히는지"를 요약한 짧은 제목으로 채워진다(예: "정기 회의 일정 충돌", "인증 방식 충돌 (세션 vs JWT)"). 끝점 진술 원문을 그대로 이어붙이면 진술이 길 때 목록에서 구분자조차 안 보여 스캔이 안 되던 문제를 해소한 것 — 관계 판정 LLM 콜이 이미 두 진술을 입력으로 받고 있어, 이 콜의 출력에 요약 제목 필드 하나를 얹었을 뿐 추가 LLM 콜은 없다. 요약이 비어 있으면(LLM 실패 등) "A(끝점1 진술 내용) vs B(끝점2 진술 내용)" 원문 이어붙이기로 폴백한다.
 - **관여 화면**: Changeset 상세, 관계 판정 화면
 - **범위 참고 (2026-07-29, 관계 판정 changeset 제목 생성 확장 슬라이스)**: 관계 엔진 2단계 판정 콜(`worker.ts` `callJudgment`, `RelationJudgmentSchema`)이 conflicts 판정일 때 `conflictTitle`도 함께 뽑도록 확장되고, 그 값이 있으면 `apply_relation_changesets`(마이그레이션 `20260729150000_relation_conflict_title_and_batch_title.sql`)가 title로 쓴다. 없으면 기존 "A vs B"로 낮아진다 — duplicates의 `merge_draft.title` 폴백 패턴과 동일. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
-- **범위 참고 (surface-inventory.md 256행, mvp-wireframe.html; 갱신 2026-07-28, PR #512)**: 07-modeling.md `Changeset.title` 규칙. 실제 코드가 이 규칙을 안 지키고 있었다 — `digests.title`을 join해 "Digest 제목 A vs Digest 제목 B"로 채우고 있었음(스펙 위반). `statements.content`를 직접 쓰도록 고치고, 이미 만들어진 open relation changeset도 같은 기준으로 백필했다. 재제안 가드 방향 버그(아래 "재제안 가드" 참고)도 같은 PR에서 같이 고쳤다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
+- **범위 참고 (surface-inventory.md 256행, mvp-wireframe.html; 갱신 2026-07-28, PR #512)**: 07-modeling.md `Changeset.title` 규칙. 실제 코드가 이 규칙을 안 지키고 있었다 — `digests.title`을 join해 "Digest 제목 A vs Digest 제목 B"로 채우고 있었음(스펙 위반). `statements.content`를 직접 쓰도록 고치고, 이미 만들어진 open relation changeset도 같은 기준으로 백필했다. 재제안 가드 방향 버그(아래 "재제안 가드" 참고)도 같은 PR에서 같이 고쳤다.
+- **확정 (2026-07-31, staging, Kyle 실동작 확인)**
 
 #### Changeset 제목 자동 생성 (relation - 중복)
 
@@ -570,7 +566,8 @@
 - **When**: changeset이 생성된다.
 - **Then**: "A vs B" 대립 프레임이 아니라, 이 changeset의 결과물인 병합 제안 Digest 자신의 제목을 changeset 제목으로 그대로 쓴다. 헤더 제목은 읽기 전용이고, 실제 편집은 병합 제안 카드의 제목 입력 하나뿐이며 헤더는 그 값을 따라간다.
 - **관여 화면**: Changeset 상세, 관계 판정 화면(중복/병합)
-- **범위 참고 (surface-inventory.md 294행; 갱신 2026-07-29, 중복 병합 초안 슬라이스)**: "A vs B" stopgap을 이번에 해소했다 — 관계 엔진 2단계가 duplicates 쌍을 pending으로 올릴 때 병합 제안 Digest 초안(제목·본문·topics·tags·referenceIds)을 LLM으로 eager 생성해 `changes.data`에 스냅샷하고, `apply_relation_changesets`가 그 초안의 title로 changeset 제목을 채운다(`worker.ts` `attachMergeDrafts`, 마이그레이션 `20260729100000_relation_merge_draft.sql`). 다만 이 슬라이스는 내부 파이프라인·DB 스키마까지만이라, 초안을 실제로 보여주고 편집·확정하는 관계 판정 화면(중복/병합) 자체는 여전히 미구현이다(다음 슬라이스 몫) — 그래서 제목이 실제로 이 값을 쓰는지는 그 화면이 붙어야 실동작 확인이 되고, 지금은 코드 레벨 확인까지만이라 미체크로 남긴다. LLM 초안 생성이 실패한 pending(드묾)은 기존 "A vs B" 폴백으로 조용히 낮아진다.
+- **범위 참고 (surface-inventory.md 294행; 갱신 2026-07-29, 중복 병합 초안 슬라이스)**: "A vs B" stopgap을 이번에 해소했다 — 관계 엔진 2단계가 duplicates 쌍을 pending으로 올릴 때 병합 제안 Digest 초안(제목·본문·topics·tags·referenceIds)을 LLM으로 eager 생성해 `changes.data`에 스냅샷하고, `apply_relation_changesets`가 그 초안의 title로 changeset 제목을 채운다(`worker.ts` `attachMergeDrafts`, 마이그레이션 `20260729100000_relation_merge_draft.sql`). LLM 초안 생성이 실패한 pending(드묾)은 기존 "A vs B" 폴백으로 조용히 낮아진다.
+- **확정 (2026-07-31, staging, Kyle 실동작 확인)**: 충돌·중복 모두 제목 생성은 LLM 콜로 진행됨을 확인.
 
 #### 재제안 가드
 
@@ -586,7 +583,8 @@
 - **When**: 변경셋 탭에서 그 항목을 클릭한다.
 - **Then**: 관계 판정 화면(충돌이면 관계 판정 화면, 중복이면 관계 판정 화면(중복/병합))이 열리고, 근거가 된 두 진술 각각과 그 두 원문 각각의 하이라이트를 확인할 수 있다.
 - **관여 화면**: 변경셋, 관계 판정 화면
-- **범위 참고 (2026-07-28, PR #516)**: "Digest 상세가 판정 모드로 열린다"는 옛 서술은 surface-inventory.md 재검토(두 Statement가 서로 다른 Digest·Source에서 올 수 있어 Digest 상세에 욱여넣기 어렵다는 이유로 별도 화면으로 분리) 이후로 이미 stale했다 — 이번에 위 문구로 정정. 충돌 쪽만 실제로 구현됐다(`changesetDetailRegistry.tsx`의 `relation.open`이 `RelationJudgmentScreen`으로 교체됨, 새 라우트 없이 같은 URL을 그대로 씀). 중복 쪽은 여전히 미구현 — 클릭하면 "찾을 수 없음"이 뜬다. 원문 하이라이트는 진술의 Digest 내 출처 칸(`sourceField`/`sourceFieldIndex`, PR #513)을 이용해 해당 필드(배열이면 특정 항목까지)를 강조한다(텍스트 매칭 아님). 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
+- **범위 참고 (2026-07-28, PR #516)**: "Digest 상세가 판정 모드로 열린다"는 옛 서술은 surface-inventory.md 재검토(두 Statement가 서로 다른 Digest·Source에서 올 수 있어 Digest 상세에 욱여넣기 어렵다는 이유로 별도 화면으로 분리) 이후로 이미 stale했다 — 이번에 위 문구로 정정. 원문 하이라이트는 진술의 Digest 내 출처 칸(`sourceField`/`sourceFieldIndex`, PR #513)을 이용해 해당 필드(배열이면 특정 항목까지)를 강조한다(텍스트 매칭 아님).
+- **확정 (2026-07-31, staging, Kyle 실동작 확인)**: "중복 쪽은 미구현 — 클릭하면 찾을 수 없음"이라던 위 기록은 stale — 충돌·중복 둘 다 판정 모드 진입 자체는 됨. 관계 판정 화면(충돌·중복 모두) UI는 추후 다시 기획하지만, 기능 자체는 동작하므로 체크.
 
 #### 충돌 판정 — 승자 선택
 
@@ -597,7 +595,8 @@
   2. 선택되지 않은 진술은 삭제되지 않고 archived되어 가려진다(보존·되살리기 가능).
   3. relation changeset이 closed+applied 상태로 전환된다.
 - **관여 화면**: 관계 판정 화면
-- **범위 참고 (2026-07-28, PR #516)**: 기존 `resolveConflictRelation` mutation을 그대로 재사용(신규 아님). 카드 선택은 배타적(라디오형)이나, **surface-inventory.md·이 케이스가 원래 전제하던 "이미 선택된 카드를 다시 클릭하면 미선택으로 돌아간다"는 재클릭 해제는 Kyle 지시로 이번에 의도적으로 빼고 만들었다** — 실수로 미선택 상태를 못 보고 확정을 누르는 사고를 막기 위함. 문서(이 케이스, surface-inventory.md 둘 다)는 아직 이 동작 변경을 반영 못 했다 — 이 결정을 지속한다면 두 문서 다 손봐야 한다. 확정 후 같은 URL이 자연히 Changeset 상세(적용됨)로 전환된다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
+- **범위 참고 (2026-07-28, PR #516)**: 기존 `resolveConflictRelation` mutation을 그대로 재사용(신규 아님). 카드 선택은 배타적(라디오형)이나, **surface-inventory.md·이 케이스가 원래 전제하던 "이미 선택된 카드를 다시 클릭하면 미선택으로 돌아간다"는 재클릭 해제는 Kyle 지시로 이번에 의도적으로 빼고 만들었다** — 실수로 미선택 상태를 못 보고 확정을 누르는 사고를 막기 위함. 문서(이 케이스, surface-inventory.md 둘 다)는 아직 이 동작 변경을 반영 못 했다 — 이 결정을 지속한다면 두 문서 다 손봐야 한다. 확정 후 같은 URL이 자연히 Changeset 상세(적용됨)로 전환된다.
+- **확정 (2026-07-31, staging, Kyle 실동작 확인)**: 판정 화면 UI는 추후 재기획하지만, 기능 자체는 동작하므로 체크.
 
 #### 중복 판정 — 병합
 
@@ -607,6 +606,7 @@
   1. 기존 두 Digest는 archive되고, 병합된 새 Digest가 생성되어 그 내용을 바탕으로 진술·관계 생성이 새로 시작된다.
   2. relation changeset이 closed+applied 상태로 전환된다.
 - **관여 화면**: 관계 판정 화면(중복/병합)
+- **확정 (2026-07-31, staging, Kyle 실동작 확인)**: 판정 화면 UI는 추후 재기획하지만, 기능 자체는 동작하므로 체크.
 
 #### 판정 대기 relation changeset 버리기
 
