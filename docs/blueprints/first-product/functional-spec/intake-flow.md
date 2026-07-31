@@ -50,7 +50,6 @@
 - [x] 처리 중 상태에서 액션 잠금 (2026-07-14, Kyle 실동작 확인 완료)
 - [x] 초안에서 Source 제목 편집 (2026-07-14, Kyle 실동작 확인 완료 — 재추출 후 편집값 유지 회귀 확인 포함)
 - [x] 초안에서 Source 원문 편집
-- [ ] 초안에서 이전 리뷰 보기 (의도적 보류 — review 1차의 Digest 리뷰 화면 랜딩 후 착수)
 - [x] Digest 추출 실패
 - [x] Digest 추출 결과 없음
 - [x] 결과없음 상태 정리 버튼 비활성화 (원문 수정 전까지)
@@ -132,13 +131,6 @@
 - **관여 화면**: 초안
 - **범위 참고**: "평범한 대기 상태"가 실제로 편집 가능한 자리는 cancelled·failed·empty, 그리고 리뷰가 열렸다가 사람이 버린(discarded) 경우까지 넷이다 — 열린 pending 리뷰가 있으면 거부된다(`NM004`, 리뷰에 뜬 Digest 후보가 편집 전 원문에서 뽑힌 것이라 원문을 바꾸면 후보가 무효화되기 때문). 리뷰를 확정하거나 버려야 원문을 고칠 수 있다. 처리 중(digestion_status='pending')인 Source도 같은 이유로 거부된다.
 - **확정 (2026-07-20, Kyle 실동작 확인)**: FE가 그 사이 착지했다 — `IdleDraftDetailPanel`의 body 인라인 textarea(blur 시 `useUpdateSourceBody` 저장)로 구현. cancelled·failed·empty·discarded 4개 상태 전부에서 편집 가능, 열린 pending 리뷰가 있으면 `NM004`로 거부되는 서버 가드 그대로 유지, 제목은 별도 뮤테이션이라 그대로 보존. 원문 편집 저장 + 재추출 시 수정된 원문 기준으로 동작하는 것을 Kyle이 실사용으로 확인해 체크.
-
-#### 초안에서 이전 리뷰 보기
-
-- **Given**: 유저가 초안에서 평범한 대기 상태인 Source를 보고 있고, 그 Source에 버려진(discarded) changeset 또는 되돌려진(revert) changeset이 있다.
-- **When**: 이전 리뷰 보기 액션을 실행한다.
-- **Then**: discarded 유래면 그 changeset의 상세로 이동해 되살릴 수 있고, revert 유래면 최신 revert changeset의 상세로 이동해 되돌리기(재적용)를 할 수 있다(구체적 동작은 review-flow.md 몫).
-- **관여 화면**: 초안
 
 #### Digest 추출 실패
 
