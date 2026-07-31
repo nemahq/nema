@@ -167,9 +167,12 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
   let watchdogTimer: ReturnType<typeof setInterval> | null = null;
   let processing = false;
   let current: Promise<void> | null = null;
-  // wake()가 도는 도중 들어온 요청을 유실하지 않고 그 사이클이 끝난 직후 한 번 더
-  // 돌게 하는 코얼레싱 플래그 — wake() 자신만 세우고 소비한다.
+  // wake()·sweep() 둘 다 processing을 놓기 전에 이 플래그를 소비한다 — sweep 도중
+  // 온 wake 신호를 sweep이 무시하면 다음 SWEEP_INTERVAL_MS까지 밀린다.
   let wakeRequested = false;
+  // stop()이 자신이 등록한 activeWake만 지우게 하는 소유권 토큰 — 단일 인스턴스
+  // 전제가 깨져 두 인스턴스가 겹치는 경우에도(테스트 등) 남의 등록을 지우지 않는다.
+  let ownActiveWake: (() => void) | null = null;
 
   // poll()의 옛 본문 — 드레인(read_sync_events)+ack+runCycle. 메시지 내용은 안 보고
   // 전부 "깨워라" 신호로 취급한다. wake()가 이 헬퍼를 감싸 coalescing을 더한다.
@@ -221,11 +224,8 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
     await runCycle(deps);
   }
 
-  // 서비스 레이어의 enqueue 직후 fire-and-forget 호출을 받는 진입점 — start()가
-  // activeWake로 등록해 wakeStatementSync()가 이 인스턴스를 깨우게 한다.
-  // processing 중이면 이번 요청은 흘리지 않고 wakeRequested만 세워 진행 중 사이클이
-  // 끝난 직후 한 번 더 돌게 한다(레이스 없는 코얼레싱) — 요청마다 별도 사이클을
-  // 띄우면 RPC 폭주 시 동시 사이클이 쌓인다.
+  // processing 중이면(sweep 포함) 신호만 세우고 흘리지 않는다 — 요청마다 사이클을
+  // 새로 띄우면 RPC 폭주 시 동시 사이클이 쌓인다.
   async function wake(): Promise<void> {
     if (processing) {
       wakeRequested = true;
@@ -246,13 +246,18 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
     }
   }
 
+  // wake()와 같은 do/while로 wakeRequested를 소비한다 — 안 그러면 sweep 도중 온
+  // wake 신호가 사라지고 그 작업만 다음 SWEEP_INTERVAL_MS까지 밀린다.
   async function sweep(): Promise<void> {
     if (processing) {
       return;
     }
     processing = true;
     try {
-      await runCycle(deps);
+      do {
+        wakeRequested = false;
+        await runCycle(deps);
+      } while (wakeRequested);
     } catch (err) {
       Sentry.captureException(err, {
         tags: { component: "statement-sync", phase: "sweep" },
@@ -286,13 +291,14 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
       // 덮어쓰면 안 된다 — 이미 진행 중이던 사이클(sweep 등)의 promise 참조가 날아가
       // stop()의 in-flight 대기 계약이 깨진다. wake() 호출 "이전"의 processing 값을
       // 캡처해, 이번 호출이 실제로 새 사이클을 시작한 경우에만 current를 교체한다.
-      activeWake = () => {
+      ownActiveWake = () => {
         const wasProcessing = processing;
         const result = wake();
         if (!wasProcessing) {
           current = result;
         }
       };
+      activeWake = ownActiveWake;
     },
 
     async stop() {
@@ -304,7 +310,9 @@ export function createStatementSyncWorker(deps: WorkerDeps) {
         clearInterval(watchdogTimer);
         watchdogTimer = null;
       }
-      activeWake = null;
+      if (activeWake === ownActiveWake) {
+        activeWake = null;
+      }
       if (current) {
         await current;
       }

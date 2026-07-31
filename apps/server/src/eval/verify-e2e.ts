@@ -66,8 +66,8 @@ const SOURCE_BODY =
 const SEARCH_QUERY = "결제는 어떤 업체로 정했지?";
 
 const WAIT_POLL_INTERVAL_MS = 2_000;
-// 워커 폴링(2초)+LLM 추출 지연을 덮는 여유 — 추출 호출 상한(120초)보다 넉넉히.
-// 임베딩은 LLM이 없어 더 짧다.
+// LLM 추출 지연을 덮는 여유 — 추출 호출 상한(120초)보다 넉넉히. 임베딩은 LLM이
+// 없어 더 짧다.
 const EXTRACTION_WAIT_TIMEOUT_MS = 150_000;
 // 장문(다청크)은 청크 웨이브(⌈청크÷동시성3⌉) × 호출 상한 — 7청크면 3웨이브
 const LONG_EXTRACTION_WAIT_TIMEOUT_MS = 480_000;
@@ -213,8 +213,9 @@ async function runPipeline(args: {
     `① 박제: source=${source?.id?.slice(0, 8)} status=${source?.status} extraction=${source?.extraction_status}`,
   );
 
-  // 워커 — service_role deps. poll(notify 깨우기)·sweep(잔여 pending 줍기) 둘 다
-  // 추출→임베딩 전체 사이클을 돈다.
+  // 워커 — service_role deps. 위 createSource()의 wake 신호는 아직 워커가 안 떠
+  // 있어 유실되고(activeWake === null), 실제로 이 소스를 줍는 건 start() 직후
+  // 1회 도는 sweep이다. 이후 재요청·판정 등은 각자의 wake로 즉시 처리된다.
   const worker = createStatementSyncWorker({
     supabase: admin,
     // E2E는 제품 경로를 미러한다 — 추출·관계 판정 둘 다 같은 모델(EVAL_LLM_MODEL, 미설정 시 gpt-5).
