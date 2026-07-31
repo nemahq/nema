@@ -157,9 +157,9 @@ export const ChangesetListRow = memo(function ChangesetListRow({
               자리맞춤용 — 상태 아이콘과 같은 폭(size-4)만 차지하고 안 보인다. */}
           <span aria-hidden="true" className="inline-flex size-4 shrink-0" />
           <Text as="div" size="xs" color="tertiary">
-            #{changesetNumber} · <RelativeTime dateTime={createdAt} />
+            #{changesetNumber} · {authorLabel} ·{" "}
+            <RelativeTime dateTime={createdAt} />
             {effectSummary && ` · ${effectSummary}`}
-            {` · ${authorLabel}`}
           </Text>
         </div>
       </Link>
