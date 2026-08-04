@@ -8,8 +8,8 @@
 |--------|----------|----------|
 | Railway | staging 환경 별도 | 환경 분리 |
 | Supabase | staging 프로젝트 별도 (Free Plan) | 프로젝트 분리 |
-| Qdrant | 같은 클러스터, 컬렉션 분리 (`documents` / `documents-staging`) | 클러스터 공유 |
-| Neo4j Aura | 같은 인스턴스 공유 (user_id 기반 격리) | 인스턴스 공유 |
+| Qdrant | 같은 클러스터, 컬렉션 분리 (`statements` / `statements-staging`) | 클러스터 공유 |
+| Neo4j Aura | 계정만 존재, 코드 미연결 (미사용) | 해당 없음 |
 | OpenAI / Voyage | 같은 API 키 | 공유 |
 | Sentry / PostHog | 같은 프로젝트, production만 활성화 | 공유 |
 
@@ -43,12 +43,14 @@
 2. Railway staging 환경 변수 변경:
    - `QDRANT_URL` → 새 클러스터 URL
    - `QDRANT_API_KEY` → 새 클러스터 키
-   - `QDRANT_COLLECTION=documents` (staging suffix 제거)
+   - `QDRANT_COLLECTION=statements` (staging suffix 제거)
 3. 새 클러스터에서 document-sync 워커가 자동으로 컬렉션 생성 + 데이터 재인덱싱.
-4. 기존 클러스터의 `documents-staging` 컬렉션은 수동 삭제.
+4. 기존 클러스터의 `statements-staging` 컬렉션은 수동 삭제.
 5. 코드 수정 없음.
 
 ### Neo4j Aura
+
+계정만 있고 코드(`apps/server`, `apps/mcp`)에는 연결되어 있지 않다 — `neo4j` 참조가 없고 Railway staging/production에도 `NEO4J_*` 변수가 없다. 아래 전환 가이드는 실제로 연동될 경우를 대비한 참고용이며, 지금은 적용 대상이 아니다.
 
 **전환 시점:** Free Tier 한도 도달 시 (200K 노드, 400K 관계), 또는 staging/production 완전 격리가 필요할 때.
 
