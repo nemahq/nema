@@ -20,15 +20,12 @@ class StubResizeObserver {
 }
 globalThis.ResizeObserver ??= StubResizeObserver;
 
-// DropdownMenu가 열려 있는 동안 sibling Popover(비-modal)의 바깥-클릭 판정을
-// 막지 않는지를 검증한다 — Radix DropdownMenu 기본값(modal: true)은 열리는
-// 즉시 document.body.style.pointerEvents를 "none"으로 바꿔 다른 비-modal
-// 레이어의 outside-click 판정을 억제한다. 이 억제가, 이미 열려 있던 다른
-// 비-modal 팝오버를 트리거 클릭 한 번으로 여는 바로 그 클릭에 걸리면(같은
-// 클릭이 "새로 열리는 모달" 등록과 "예전 레이어의 outside 판정"을 함께
-// 처리) 예전 레이어가 안 닫히는 실제 버그로 이어진다(리뷰 화면 Digest
-// 카드에서 재현, staging에서 확인). weave DropdownMenu는 이 클래스의
-// 레이스를 구조적으로 없애기 위해 기본값을 non-modal로 뒤집는다.
+// #554의 회귀 가드 — DropdownMenu의 modal 기본값이 false로 유지되는지(그리고
+// modal prop을 명시하면 여전히 우선하는지)만 확인한다. #554가 고친 실제 레이스
+// (다른 non-modal 오버레이가 안 닫히는 문제, weave/DropdownMenu.tsx의 주석
+// 참고)는 sibling 오버레이·실제 브라우저 이벤트 타이밍을 요구해 jsdom으로는
+// 재현되지 않는다 — 이 테스트는 그 레이스 자체가 아니라 "modal 하드코딩 실수"
+// 같은 회귀만 잡아낸다.
 describe("DropdownMenu", () => {
   it("기본값(modal 미지정)으로 열려도 body pointer-events를 잠그지 않는다", async () => {
     render(
