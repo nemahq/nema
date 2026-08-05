@@ -113,16 +113,9 @@
   --palette-dark-status-info: #60a5fa; /* blue-400 */
   --palette-dark-status-info-tint: rgba(59, 130, 246, 0.12);
 
-  /* Indigo — 원래 Digest 타입 배지의 5색 Hue 팔레트(indigo/pink/lime/yellow/purple)
-     중 하나였으나, 타입 배지가 무채색으로 바뀌며 팔레트 전체가 무용해졌다.
-     indigo 원색(비-tint) 두 값만 apps/web의 --color-mode-remember(Draft 처리
-     모드 표시, Hue 팔레트와는 무관한 별도 용도)가 계속 참조해 남겨둔다 —
-     tint와 나머지 4색은 참조하는 곳이 없어 삭제했다. */
-  --palette-light-indigo: #4e4cf0;
   --palette-light-orange: #ea580c; /* orange-600 */
 
-  /* Indigo — dark */
-  --palette-dark-indigo: #b7b6fb;
+  /* Orange — dark */
   --palette-dark-orange: #fb923c; /* orange-400 */
 
   /* Tag — 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 팔레트. 생성 시

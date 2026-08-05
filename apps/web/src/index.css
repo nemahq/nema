@@ -10,7 +10,6 @@
 /* 앱 수준 모드 색상 — weave 팔레트를 앱 도메인 이름으로 매핑 */
 
 @theme inline {
-  --color-mode-remember: var(--palette-light-indigo);
   --color-mode-ask: var(--palette-light-orange);
 
   /* Identity 배지 — 테마 무관 고정값 */
@@ -22,7 +21,6 @@
 }
 
 .dark {
-  --color-mode-remember: var(--palette-dark-indigo);
   --color-mode-ask: var(--palette-dark-orange);
 }
 
