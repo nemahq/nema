@@ -55,6 +55,10 @@ export function TagEditPanel({
     getRandomTagColor(),
   );
   const atMax = attachedTags.length >= DIGEST_TAGS_MAX;
+  // TopicEditPanel과 같은 이유(그쪽 주석 참고) — 상한이어도 붙은 신규 라벨이
+  // 있을 때만 검색 리스트를 계속 마운트한다.
+  const showSearchList =
+    !atMax || attachedTags.some((tag) => tag.registryId === null);
 
   // 레지스트리 기존 태그를 고르든, 다른 Digest가 이미 이 리뷰에 만들어 둔 draft
   // 태그를 고르든 — 팔레트에 그 id가 이미 있으면 그 객체를 그대로 재사용해
@@ -177,17 +181,19 @@ export function TagEditPanel({
           message={t("review.tag_max_reached", { max: DIGEST_TAGS_MAX })}
         />
       )}
-      <TagSearchList
-        query={query}
-        attachedTags={attachedTags}
-        paletteTags={tagPalette}
-        createPreviewColor={previewColor}
-        atMax={atMax}
-        onSelectExisting={handleSelectExisting}
-        onStartCreate={setCreatingTitle}
-        onRenameDraft={handleRenameDraft}
-        onDeleteDraft={handleDeleteDraft}
-      />
+      {showSearchList && (
+        <TagSearchList
+          query={query}
+          attachedTags={attachedTags}
+          paletteTags={tagPalette}
+          createPreviewColor={previewColor}
+          atMax={atMax}
+          onSelectExisting={handleSelectExisting}
+          onStartCreate={setCreatingTitle}
+          onRenameDraft={handleRenameDraft}
+          onDeleteDraft={handleDeleteDraft}
+        />
+      )}
     </div>
   );
 }
