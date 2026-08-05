@@ -60,6 +60,7 @@ export function LabelSearchList({
             variant={createPreviewColor ? undefined : "outline"}
             shape="rounded"
             truncated
+            outline={false}
             className={
               createPreviewColor
                 ? TAG_COLOR_CLASSNAME[createPreviewColor]

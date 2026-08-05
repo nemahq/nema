@@ -9,14 +9,13 @@ import { NewLabelIndicator } from "./NewLabelIndicator";
 // (기존 Digest를 여기서 고치는 경로 자체가 없음) 같은 표시가 정보량이 없어 안 둔다.
 // top-1/2 -translate-y-1/2는 ReferenceCardHeader의 타입 Chip 행(relative) 기준
 // 세로 중앙 — 렌더링 부모는 ReferenceCardHeader.tsx에서 정한다. left는 페이지
-// 좌우 여백(ChangesetDetailLayout의 px-6) 안으로 들어가는 값. size-3.5는 이 카드
-// 레이아웃에 맞춘 값 — Topic·Tag 공용 기본값(size-3)과 다르다.
+// 좌우 여백(ChangesetDetailLayout의 px-6) 안으로 들어가는 값.
 export function NewReferenceIndicator() {
   const { t } = useTranslation();
 
   return (
     <NewLabelIndicator
-      className="absolute top-1/2 left-[-24px] size-3.5 -translate-y-1/2"
+      className="absolute top-1/2 left-[-24px] -translate-y-1/2"
       label={t("review.reference_new_indicator")}
     />
   );

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import { Text } from "@nema-io/weave";
+import { Badge, Text } from "@nema-io/weave";
 
 import {
   formatCompactDistance,
@@ -54,14 +54,8 @@ export function SaveStatusIndicator() {
   }
 
   return (
-    <Text
-      as="span"
-      size="xs"
-      weight="medium"
-      color="error"
-      className="shrink-0 rounded-full bg-status-error-tint px-2.5 py-1"
-    >
+    <Badge variant="error" shape="pill" className="shrink-0">
       {t(STATUS_LABEL_KEY[saveStatus.kind])}
-    </Text>
+    </Badge>
   );
 }

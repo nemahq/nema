@@ -19,17 +19,19 @@ interface PillVisual {
 }
 
 function pillVisual(icon: ChangesetStateIcon): PillVisual {
-  // border를 두 variant 다 항상 넣는다(filled는 투명) — open→closed 전환처럼
-  // 같은 자리에서 outline↔filled를 오갈 때, border 유무로 pill 자체 높이가
-  // 2px(위아래 1px씩) 갈려 헤더 2번째 행이 흔들리는 걸 막기 위해서다.
+  // outline 쪽은 border 대신 ring-inset — auto-width 요소에서 border는 박스
+  // 바깥으로 두께만큼 더해져 filled variant보다 실제로 더 커 보인다(Badge.tsx
+  // OUTLINE_TONE_CLASSNAME과 같은 이유). ring은 box-shadow라 레이아웃에 안
+  // 잡혀서, open→closed 전환처럼 같은 자리에서 outline↔filled를 오갈 때도
+  // filled 쪽에 자리를 맞출 투명 테두리가 따로 필요 없다.
   if (icon.kind === "filled") {
     return {
-      container: cn("border border-transparent", icon.bg, icon.iconTone),
+      container: cn(icon.bg, icon.iconTone),
       label: undefined,
     };
   }
   return {
-    container: cn("border border-current", icon.tone),
+    container: cn("ring-1 ring-inset ring-current", icon.tone),
     label: "text-fg-primary",
   };
 }

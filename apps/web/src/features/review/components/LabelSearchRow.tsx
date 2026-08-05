@@ -55,16 +55,6 @@ export function LabelSearchRow({
   if (!showColor) {
     badgeVariant = attached ? "neutral" : "outline";
   }
-  // Topic(색 없음)은 attached 여부로 neutral↔outline을 오간다. weave Badge는
-  // outline variant에만 border(1px)를 두고 다른 variant엔 그 자리를 안 남겨둬서,
-  // neutral 쪽이 사방 1px씩 작게 보인다 — 이 자리(Topic 전용, showColor가 있는
-  // Tag는 원래도 border가 없어 해당 없음)에서만 투명 테두리로 같은 자리를
-  // 예약해 크기를 맞춘다(Badge 공용 컴포넌트를 바꾸면 다른 화면의 outline 아닌
-  // variant 전부가 커진다).
-  const sizeMatchClassName =
-    badgeVariant === "neutral" && color === undefined
-      ? "border border-transparent"
-      : undefined;
 
   const row = (
     <ComboboxItem
@@ -83,9 +73,8 @@ export function LabelSearchRow({
           variant={badgeVariant}
           shape="rounded"
           truncated
-          className={
-            showColor ? TAG_COLOR_CLASSNAME[color] : sizeMatchClassName
-          }
+          outline={false}
+          className={showColor ? TAG_COLOR_CLASSNAME[color] : undefined}
         >
           {label}
         </Badge>

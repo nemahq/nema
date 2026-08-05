@@ -84,6 +84,7 @@ export function DigestTagPicker({
                 <Badge
                   shape="rounded"
                   truncated
+                  outline={false}
                   className={TAG_COLOR_CLASSNAME[tag.color]}
                 >
                   {tag.title}

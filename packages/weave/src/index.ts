@@ -19,6 +19,7 @@ export {
   type TagColor,
 } from "./components/Chip";
 export { ComboboxItem } from "./components/ComboboxItem";
+export { CountBadge, type CountBadgeProps } from "./components/CountBadge";
 export {
   Dialog,
   DialogClose,

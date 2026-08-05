@@ -65,6 +65,7 @@ export function TagCreateForm({
         <Badge
           shape="rounded"
           truncated
+          outline={false}
           className={cn("self-start", TAG_COLOR_CLASSNAME[color])}
         >
           {title}
