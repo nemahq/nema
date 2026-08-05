@@ -34,7 +34,6 @@ import {
   useReviewSaveStatusContext,
 } from "./ReviewDraftProvider";
 import { SaveStatusIndicator } from "./SaveStatusIndicator";
-import { UnattachedLabelSection } from "./UnattachedLabelSection";
 import { UndoRedoShortcuts } from "./UndoRedoShortcuts";
 
 const CONFIRM_DISABLED_REASON_KEY = {
@@ -231,12 +230,6 @@ function IngestionContent() {
           disabled={locked}
           activeSourceDigestId={sourceTabOpen ? activeSourceDigestId : null}
           onViewSource={handleViewSource}
-        />
-
-        <UnattachedLabelSection
-          digests={draft.digests}
-          labelDraft={draft.labelDraft}
-          disabled={locked}
         />
 
         <ReferenceSection

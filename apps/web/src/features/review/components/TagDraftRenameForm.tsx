@@ -6,6 +6,7 @@ import {
   type TagColor,
 } from "@nema-io/shared";
 import {
+  ComboboxItem,
   FormControl,
   FormField,
   FormMessage,
@@ -13,6 +14,7 @@ import {
   TagColorListPicker,
   Text,
 } from "@nema-io/weave";
+import { Trash2 } from "@nema-io/weave/icons";
 
 import { TAG_COLOR_LABEL_KEY } from "@web/features/review/constants";
 import { useTranslation } from "@web/lib/tolgee";
@@ -29,6 +31,9 @@ interface TagDraftRenameFormProps {
   // 커밋된다. 색은 별도로 onColorChange가 고른 즉시 반영한다.
   onCommitText: (title: string, description: string) => void;
   onColorChange: (color: TagColor) => void;
+  // 신규 라벨 자신을 팔레트에서 완전히 지운다(label/removeTag) — 레지스트리
+  // 기존 Tag엔 이 진입점 자체가 없다(PR #506 컨센서스).
+  onDelete: () => void;
 }
 
 // TopicDraftRenameForm과 같은 스코프(신규 Tag 자신만) — Tag는 description도
@@ -40,6 +45,7 @@ export function TagDraftRenameForm({
   isDuplicateTitle,
   onCommitText,
   onColorChange,
+  onDelete,
 }: TagDraftRenameFormProps) {
   const { t } = useTranslation();
   const [titleValue, setTitleValue] = useState(title);
@@ -79,9 +85,15 @@ export function TagDraftRenameForm({
       onCommitText,
     };
   });
+  // TopicDraftRenameForm과 같은 이유(그쪽 deletingRef 주석 참고) — 삭제로
+  // 닫힐 때는 이미 지워진 id로 label/renameTag가 다시 나가지 않게 막는다.
+  const deletingRef = useRef(false);
   useEffect(
     function commitOnClose() {
       return () => {
+        if (deletingRef.current) {
+          return;
+        }
         const latest = latestRef.current;
         const changed =
           latest.trimmedTitle !== initialTitle ||
@@ -96,6 +108,11 @@ export function TagDraftRenameForm({
     },
     [initialTitle, initialDescription],
   );
+
+  function handleDelete() {
+    deletingRef.current = true;
+    onDelete();
+  }
 
   function getTitleError() {
     if (trimmedTitle === "") {
@@ -113,41 +130,58 @@ export function TagDraftRenameForm({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 이름·설명을 한 그룹(gap-2)으로 좁게 묶고, 색상 리스트는 별개
-          관심사라 바깥 gap-3로 한 단 떼어 놓는다(TagCreateForm.tsx와 같은
-          이유). */}
-      <div className="flex flex-col gap-2">
-        <FormField className="px-2">
-          <FormControl>
-            <Input
-              autoFocus
-              value={titleValue}
-              maxLength={TAG_TITLE_MAX_LENGTH}
-              placeholder={t("common.name_placeholder")}
-              aria-label={t("common.name_label")}
-              aria-invalid={titleInvalid}
-              onChange={(e) => setTitleValue(e.target.value)}
-            />
-          </FormControl>
-          <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
-            {titleError}
-          </FormMessage>
-        </FormField>
-        <FormField className="px-2">
-          <FormControl>
-            <Input
-              value={descriptionValue}
-              maxLength={TAG_DESCRIPTION_MAX_LENGTH}
-              placeholder={t("common.description_placeholder")}
-              aria-label={t("review.tag_create_description_label")}
-              aria-invalid={descriptionInvalid}
-              onChange={(e) => setDescriptionValue(e.target.value)}
-            />
-          </FormControl>
-          <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
-            {descriptionError}
-          </FormMessage>
-        </FormField>
+      {/* 이름·설명·삭제를 한 그룹(gap-1)으로 묶는다 — 삭제가 이름을 지우는
+          동작이라 색상 등 다른 섹션과 나열되기보다 이름 입력과 한 덩어리로
+          보여야 한다. 색상 리스트는 별개 관심사라 바깥 gap-3로 한 단 떼어
+          놓는다(TagCreateForm.tsx와 같은 이유). */}
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-2">
+          <FormField className="px-2">
+            <FormControl>
+              <Input
+                autoFocus
+                value={titleValue}
+                maxLength={TAG_TITLE_MAX_LENGTH}
+                placeholder={t("common.name_placeholder")}
+                aria-label={t("common.name_label")}
+                aria-invalid={titleInvalid}
+                onChange={(e) => setTitleValue(e.target.value)}
+              />
+            </FormControl>
+            <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
+              {titleError}
+            </FormMessage>
+          </FormField>
+          <FormField className="px-2">
+            <FormControl>
+              <Input
+                value={descriptionValue}
+                maxLength={TAG_DESCRIPTION_MAX_LENGTH}
+                placeholder={t("common.description_placeholder")}
+                aria-label={t("review.tag_create_description_label")}
+                aria-invalid={descriptionInvalid}
+                onChange={(e) => setDescriptionValue(e.target.value)}
+              />
+            </FormControl>
+            <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
+              {descriptionError}
+            </FormMessage>
+          </FormField>
+        </div>
+        {/* px-1 — ComboboxItem 자신이 이미 px-2를 갖고 있어 래퍼까지 px-2를
+            또 두면 이중으로 밀린다(아래 색상 리스트 wrapper와 같은 이유,
+            둘의 ComboboxItem 행이 같은 호버 폭을 갖는다). */}
+        <div className="px-1">
+          <ComboboxItem
+            onClick={handleDelete}
+            buttonClassName="gap-2 [&_svg]:text-status-error"
+          >
+            <Trash2 className="size-4" />
+            <Text as="span" size="sm" color="error">
+              {t("common.delete")}
+            </Text>
+          </ComboboxItem>
+        </div>
       </div>
       <div className="flex flex-col gap-1.5">
         {/* px-2 — 위 이름·설명 Input과 좌측을 맞춘다(TagCreateForm.tsx의

@@ -18,15 +18,18 @@ type ChipShape = "rounded" | "pill";
 // TagColor를 이 배열에서 유도해 그리드·리스트 색상 피커의 순회 순서와 타입이
 // 서로 다른 목록으로 어긋날 수 없게 한다(packages/shared의 TagColorSchema는
 // DB enum과 맞춰야 하는 별도 계층이라 이 배열과 독립적으로 유지된다).
+// 색상환 기준 순서(주황 15°→갈색 25°→노랑 55°→초록 95°→파랑 196°→보라 260°→
+// 마젠타 300°→분홍 350°) — 4×2 그리드(TagColorGridPicker)가 이 배열을 그대로
+// 순회해 윗줄은 따뜻한 색, 아랫줄은 차가운 색이 되도록 배치한다.
 const TAG_COLORS = [
-  "sienna",
-  "cyan",
-  "sage",
-  "olive",
   "terracotta",
-  "rose",
-  "mauve",
+  "sienna",
+  "olive",
+  "sage",
+  "cyan",
   "violet",
+  "mauve",
+  "rose",
 ] as const;
 type TagColor = (typeof TAG_COLORS)[number];
 
@@ -65,14 +68,14 @@ const SHAPE_CLASSNAME: Record<ChipShape, string> = {
 // 밝고 다크에서 카드보다 밝은 색이라, 각 테마의 기본 텍스트 색이 그대로
 // 여유 있게 AA를 만족한다(tokens/index.css "Tag" 섹션 계산 근거).
 const TAG_COLOR_CLASSNAME: Record<TagColor, string> = {
-  sienna: "bg-tag-sienna text-fg-primary",
-  cyan: "bg-tag-cyan text-fg-primary",
-  sage: "bg-tag-sage text-fg-primary",
-  olive: "bg-tag-olive text-fg-primary",
   terracotta: "bg-tag-terracotta text-fg-primary",
-  rose: "bg-tag-rose text-fg-primary",
-  mauve: "bg-tag-mauve text-fg-primary",
+  sienna: "bg-tag-sienna text-fg-primary",
+  olive: "bg-tag-olive text-fg-primary",
+  sage: "bg-tag-sage text-fg-primary",
+  cyan: "bg-tag-cyan text-fg-primary",
   violet: "bg-tag-violet text-fg-primary",
+  mauve: "bg-tag-mauve text-fg-primary",
+  rose: "bg-tag-rose text-fg-primary",
 };
 
 // TagColor·BadgeColor는 값 집합이 겹치지 않아 하나의 lookup으로 합쳐도 안전하다

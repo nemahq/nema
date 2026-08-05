@@ -274,7 +274,7 @@
     "tab_open": "리뷰 대기",
     "tag_add_action": "태그 추가",
     "tag_color_cyan": "파랑",
-    "tag_color_label": "색상",
+    "tag_color_label": "색",
     "tag_color_mauve": "마젠타",
     "tag_color_olive": "노랑",
     "tag_color_rose": "분홍",
@@ -294,7 +294,6 @@
     "type_relation": "발견",
     "type_relation_closed": "연결",
     "type_revert": "되돌림",
-    "unattached_label_section_title": "미부착 라벨 ({count})",
     "undo_action": "실행 취소",
     "viewed_action": "읽음"
   },

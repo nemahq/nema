@@ -15,14 +15,16 @@ afterEach(() => {
 
 function renderForm() {
   const onCommitText = vi.fn();
+  const onDelete = vi.fn();
   const { unmount } = render(
     <TopicDraftRenameForm
       title="기존 이름"
       isDuplicateTitle={() => false}
       onCommitText={onCommitText}
+      onDelete={onDelete}
     />,
   );
-  return { onCommitText, unmount };
+  return { onCommitText, onDelete, unmount };
 }
 
 describe("TopicDraftRenameForm", () => {
@@ -64,6 +66,7 @@ describe("TopicDraftRenameForm", () => {
         title="기존 이름"
         isDuplicateTitle={(title) => title === "중복 이름"}
         onCommitText={onCommitText}
+        onDelete={vi.fn()}
       />,
     );
 
@@ -72,6 +75,19 @@ describe("TopicDraftRenameForm", () => {
     });
     unmount();
 
+    expect(onCommitText).not.toHaveBeenCalled();
+  });
+
+  it("삭제를 누르면 onDelete가 호출되고, 이름을 고친 상태였어도 언마운트 커밋은 일어나지 않는다", () => {
+    const { onCommitText, onDelete, unmount } = renderForm();
+
+    fireEvent.change(screen.getByLabelText("common.name_label"), {
+      target: { value: "새 이름" },
+    });
+    fireEvent.click(screen.getByText("common.delete"));
+    expect(onDelete).toHaveBeenCalledOnce();
+
+    unmount();
     expect(onCommitText).not.toHaveBeenCalled();
   });
 });

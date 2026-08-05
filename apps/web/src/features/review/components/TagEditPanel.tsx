@@ -55,6 +55,10 @@ export function TagEditPanel({
     getRandomTagColor(),
   );
   const atMax = attachedTags.length >= DIGEST_TAGS_MAX;
+  // TopicEditPanel과 같은 이유(그쪽 주석 참고) — 상한이어도 붙은 신규 라벨이
+  // 있을 때만 검색 리스트를 계속 마운트한다.
+  const showSearchList =
+    !atMax || attachedTags.some((tag) => tag.registryId === null);
 
   // 레지스트리 기존 태그를 고르든, 다른 Digest가 이미 이 리뷰에 만들어 둔 draft
   // 태그를 고르든 — 팔레트에 그 id가 이미 있으면 그 객체를 그대로 재사용해
@@ -119,6 +123,10 @@ export function TagEditPanel({
     dispatch({ type: "label/renameTag", id, title, description, color });
   }
 
+  function handleDeleteDraft(id: string) {
+    dispatch({ type: "label/removeTag", id });
+  }
+
   // DigestTopicPicker와 같은 이유 — 신규 먼저, 그룹 내부는 원래 순서 유지.
   const sortedTags = [...attachedTags].sort(
     (a, b) => (a.registryId === null ? 0 : 1) - (b.registryId === null ? 0 : 1),
@@ -168,19 +176,22 @@ export function TagEditPanel({
         ))}
       </LabelChipRow>
       <Separator />
-      {atMax ? (
+      {atMax && (
         <LabelLimitNotice
           message={t("review.tag_max_reached", { max: DIGEST_TAGS_MAX })}
         />
-      ) : (
+      )}
+      {showSearchList && (
         <TagSearchList
           query={query}
           attachedTags={attachedTags}
           paletteTags={tagPalette}
           createPreviewColor={previewColor}
+          atMax={atMax}
           onSelectExisting={handleSelectExisting}
           onStartCreate={setCreatingTitle}
           onRenameDraft={handleRenameDraft}
+          onDeleteDraft={handleDeleteDraft}
         />
       )}
     </div>

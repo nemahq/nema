@@ -42,6 +42,13 @@ export function TopicEditPanel({
   const spaceId = useCurrentSpaceId();
   const [query, setQuery] = useState("");
   const atMax = attachedTopics.length >= DIGEST_TOPICS_MAX;
+  // 상한 상태에서 검색 리스트를 계속 그리는 건 이미 붙은 신규 라벨의 미트볼
+  // (삭제)에 계속 닿게 하려는 목적뿐이다 — 붙은 라벨이 전부 레지스트리
+  // 기존이면 그 목적 자체가 없다. 이때도 계속 마운트하면 (a) 안 쓸 레지스트리
+  // 목록을 또 fetch하고 (b) sortedRows가 빈 배열이 돼 "최대 5개까지..." 안내
+  // 바로 아래 모순되는 "일치하는 항목이 없어요"가 뜬다.
+  const showSearchList =
+    !atMax || attachedTopics.some((topic) => topic.registryId === null);
 
   // TagEditPanel.handleSelectExisting과 같은 이유 — 팔레트에 이미 있는 항목(다른
   // Digest의 draft 포함)은 그대로 재사용하고, 순수 레지스트리 검색 결과만 그
@@ -73,6 +80,10 @@ export function TopicEditPanel({
 
   function handleRenameDraft(id: string, title: string) {
     dispatch({ type: "label/renameTopic", id, title });
+  }
+
+  function handleDeleteDraft(id: string) {
+    dispatch({ type: "label/removeTopic", id });
   }
 
   // DigestTopicPicker와 같은 이유 — 신규 먼저, 그룹 내부는 원래 순서 유지.
@@ -113,19 +124,22 @@ export function TopicEditPanel({
         ))}
       </LabelChipRow>
       <Separator />
-      {atMax ? (
+      {atMax && (
         <LabelLimitNotice
           message={t("review.topic_max_reached", { max: DIGEST_TOPICS_MAX })}
         />
-      ) : (
+      )}
+      {showSearchList && (
         <TopicSearchList
           spaceId={spaceId}
           query={query}
           attachedTopics={attachedTopics}
           paletteTopics={topicPalette}
+          atMax={atMax}
           onSelectExisting={handleSelectExisting}
           onCreateNew={handleCreateNew}
           onRenameDraft={handleRenameDraft}
+          onDeleteDraft={handleDeleteDraft}
         />
       )}
     </div>
