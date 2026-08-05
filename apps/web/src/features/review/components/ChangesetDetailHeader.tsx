@@ -53,7 +53,7 @@ export function ChangesetDetailHeader({
             weight="semibold"
             className="flex min-w-0 flex-wrap items-baseline gap-2"
           >
-            <span className="min-w-0">{title}</span>
+            <span className="min-w-0 break-words">{title}</span>
             <Text as="span" size="lg" color="tertiary" className="shrink-0">
               #{changesetNumber}
             </Text>

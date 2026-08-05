@@ -221,7 +221,7 @@ function IngestionContent() {
         changesetNumber={draft.changesetNumber}
         state="open"
         authorLabel={authorLabel}
-        time={draft.sourceCreatedAt}
+        time={changesetDetail.createdAt}
         actions={
           <ChangesetConfirmDiscardActions
             onDiscard={handleDiscard}
