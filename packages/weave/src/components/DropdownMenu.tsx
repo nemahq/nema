@@ -6,10 +6,28 @@ import { useIsOverflowing } from "../hooks/useIsOverflowing";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "../icons";
 import { cn, POPOVER_SURFACE_CLASSNAME } from "../utils";
 
+// Radix 기본값(modal: true)을 Popover와 같은 값(false)으로 뒤집는다 — modal
+// 레이어는 뜨는 순간 DismissableLayer 전역 등록 스택에 자신을 올리는데,
+// staging에서 실측(등록 시점 vs pointerDownOutside 이벤트 시점 타임스탬프 비교,
+// #554)한 결과 이 등록이 같은 클릭의 document pointerdown 버블(그래서 이미 열려
+// 있던 다른 non-modal 레이어의 바깥-클릭 판정)보다 먼저 처리되는 순서가 확인됐다
+// — 그 레이어가 "방금 뜬 모달 레이어 아래에 있다"고 오판해 자기 자신을 안
+// 닫는다, 그 모달이 바로 이 클릭으로 새로 열리는 드롭다운 자신인데도. jsdom에서는
+// 이 순서가 재현되지 않았다(정적 분석만으론 확정 불가한 실제 브라우저 타이밍).
+// modal이 실제로 필요한 자리는 호출부가 `modal` prop을 직접 올려서 쓴다 — 이
+// 기본값 전환이 남기는 동작 차이(스크롤 잠금·바깥 클릭 통과·aria-hidden)는
+// docs/guides/weave-usage.md 참고.
 function DropdownMenu({
+  modal = false,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
+  return (
+    <DropdownMenuPrimitive.Root
+      data-slot="dropdown-menu"
+      modal={modal}
+      {...props}
+    />
+  );
 }
 
 function DropdownMenuPortal({
