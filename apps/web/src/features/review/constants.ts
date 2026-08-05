@@ -5,7 +5,7 @@ import {
   type ReferenceType,
   type RelationType,
 } from "@nema-io/shared";
-import type { BadgeColor, BadgeVariant, TagColor } from "@nema-io/weave";
+import type { BadgeVariant, TagColor } from "@nema-io/weave";
 import type { IconComponent } from "@nema-io/weave/icons";
 import {
   Check,
@@ -69,22 +69,11 @@ export const CONFIDENT_RELATION_TYPE_LABEL_KEY: Record<
   resolves: "review.relation_type_resolves",
 };
 
-// weave는 색조만 알고 그게 무엇을 가리키는지는 모른다 — Digest 타입을 어느 색에
-// 앉힐지는 이 표가 정한다(apps/web/src/index.css의 mode-* 매핑과 같은 결). BadgeColor
-// (Hue 5색, 진한 톤)를 쓴다 — TagColor(사용자 태그, 파스텔)를 빌려 쓰던 이전 방식은
-// 같은 카드에 실제 Tag 칩이 나란히 뜰 때 타입 배지인지 태그인지 헷갈리는 문제가 있었다.
-export const DIGEST_TYPE_BADGE_COLOR: Record<DigestType, BadgeColor> = {
-  decision: "purple",
-  pending: "pink",
-  learning: "lime",
-  idea: "yellow",
-  assumption: "indigo",
-};
-
-// 색만으로는 5종을 못 가르는 색맹 사용자를 위한 보조 신호 — 뜻이 통하는 아이콘을
-// 골라 색 없이도 타입을 알아볼 수 있게 한다. Check는 드롭다운 선택 표시로 이미
-// 쓰이고 있어 제외했고, HelpCircle류(물음표)는 이 코드베이스에 실사용처는 없지만
-// 일반적으로 안내·도움말 아이콘으로 통용돼 헷갈릴 여지가 있어 pending에는 안 썼다.
+// Reference와 마찬가지로 색 없이 outline + 아이콘으로만 구분한다(이전엔 BadgeColor
+// 5색을 썼으나, 같은 카드에 실제 Tag 칩이 나란히 뜰 때 타입 배지인지 태그인지
+// 헷갈리는 문제가 있었다). Check는 드롭다운 선택 표시로 이미 쓰이고 있어 제외했고,
+// HelpCircle류(물음표)는 안내·도움말 아이콘으로 통용돼 헷갈릴 여지가 있어 pending에는
+// 안 썼다.
 export const DIGEST_TYPE_ICON: Record<DigestType, IconComponent> = {
   decision: Flag,
   pending: Hourglass,

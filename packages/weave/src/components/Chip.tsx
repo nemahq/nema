@@ -2,12 +2,7 @@ import * as React from "react";
 
 import { XIcon } from "../icons";
 import { cn } from "../utils";
-import {
-  BADGE_COLOR_CLASSNAME,
-  type BadgeColor,
-  NEUTRAL_TONE_CLASSNAME,
-  OUTLINE_TONE_CLASSNAME,
-} from "./Badge";
+import { NEUTRAL_TONE_CLASSNAME, OUTLINE_TONE_CLASSNAME } from "./Badge";
 
 type ChipVariant = "neutral" | "outline";
 type ChipShape = "rounded" | "pill";
@@ -78,25 +73,12 @@ const TAG_COLOR_CLASSNAME: Record<TagColor, string> = {
   rose: "bg-tag-rose text-fg-primary",
 };
 
-// TagColor·BadgeColor는 값 집합이 겹치지 않아 하나의 lookup으로 합쳐도 안전하다
-// — 이 전제가 깨지면(둘 중 한쪽에 같은 이름 색이 추가되면) 아래 스프레드가 조용히
-// 서로를 덮어쓰므로, 겹치는 순간 컴파일 에러가 나게 강제해둔다.
-type AssertNever<T extends never> = T;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- 타입 체크만을 위한 선언
-type _TagBadgeColorNoOverlap = AssertNever<Extract<TagColor, BadgeColor>>;
-
-const COLOR_TONE_CLASSNAME: Record<TagColor | BadgeColor, string> = {
-  ...TAG_COLOR_CLASSNAME,
-  ...BADGE_COLOR_CLASSNAME,
-};
-
 // variant(neutral/outline)와 color는 배타적으로 받는다 — Badge의 variant/color
 // 구분(의미 있는 톤 vs weave가 뜻을 모르는 분류)과 같은 이유. color는 TagColor
-// (사용자 태그, 파스텔)와 BadgeColor(고정 5종 분류 배지, Hue) 둘 다 받는다 —
-// DigestTypePicker처럼 Badge의 색 축을 그대로 쓰되 인터랙티브해야 하는 자리가 있다.
+// (사용자 태그, 파스텔) 전용이다.
 type ChipToneProps =
   | { variant?: ChipVariant; color?: never }
-  | { variant?: never; color: TagColor | BadgeColor };
+  | { variant?: never; color: TagColor };
 
 // onRemove·removeAriaLabel을 객체 하나로 묶지 않고 평평한 두 prop으로 둔다 —
 // conventions.md "컴포넌트 데이터 prop은 원시값이어야 한다(콜백·children
@@ -138,7 +120,7 @@ function Chip({
   const toneClassName = cn(
     SHAPE_CLASSNAME[shape],
     color
-      ? COLOR_TONE_CLASSNAME[color]
+      ? TAG_COLOR_CLASSNAME[color]
       : STATIC_TONE_CLASSNAME[variant ?? "neutral"],
   );
   const hoverClassName = color

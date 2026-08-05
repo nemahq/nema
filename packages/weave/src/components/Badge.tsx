@@ -13,11 +13,6 @@ type BadgeVariant =
   | "neutral"
   | "outline";
 
-// color는 반대로 "무슨 색인가"를 직접 고르는 축 — weave가 뜻을 모르는 분류(앱마다
-// 다른 5종 타입 같은 것)를 서로 구별해야 할 때만 쓴다. 의미가 있는 자리에 이걸 쓰면
-// (에러를 color="pink"로) 시맨틱 층을 우회하게 되므로 variant와 배타적으로 둔다.
-type BadgeColor = "indigo" | "pink" | "lime" | "yellow" | "purple";
-
 // Chip과 공유 — surface-raised는 다크 모드에서 surface-card와 완전히 같은 값이
 // 돼(tokens/index.css) 카드 배경 위에서 안 보이므로, surface 토큰 대신 배경에
 // 상대적으로 대비가 생기는 fg 알파 틴트를 쓴다.
@@ -40,18 +35,6 @@ const variantClasses: Record<BadgeVariant, string> = {
   outline: OUTLINE_TONE_CLASSNAME,
 };
 
-// Chip과 공유 — 인터랙티브 버전(다이제스트 타입 피커 등)도 같은 톤을 써야 한다.
-// 테두리를 얹은 건 Tag(TAG_COLOR_CLASSNAME)와 배경 톤만으로는 구분이 잘 안 됐기
-// 때문 — Tag 칩엔 테두리가 아예 없어서, 색이 우연히 가까워도(예: violet 계열)
-// 테두리 유무로 먼저 갈린다.
-export const BADGE_COLOR_CLASSNAME: Record<BadgeColor, string> = {
-  indigo: "border border-indigo/50 bg-indigo-tint text-indigo",
-  pink: "border border-pink/50 bg-pink-tint text-pink",
-  lime: "border border-lime/50 bg-lime-tint text-lime",
-  yellow: "border border-yellow/50 bg-yellow-tint text-yellow",
-  purple: "border border-purple/50 bg-purple-tint text-purple",
-};
-
 // 원형(pill)은 카운트·이름표처럼 통째로 하나의 값을 담는 자리, 각진 모서리(rounded)는
 // 태그·상태처럼 다른 배지와 나란히 여러 개 늘어놓는 자리 — Avatar의 shape 구분과
 // 같은 결로, 늘어놓았을 때의 리듬을 shape 하나로 신호한다.
@@ -71,32 +54,23 @@ const SIZE_CLASSNAME: Record<BadgeSize, string> = {
   sm: "px-1.5 text-[10px]",
 };
 
-// 둘 중 하나만 받는다 — 같이 넘길 수 있으면 "의미도 있고 색도 직접 고른다"는
-// 모순된 상태가 표현돼버린다.
-type BadgeToneProps =
-  | { variant?: BadgeVariant; color?: never }
-  | { variant?: never; color: BadgeColor };
-
-type BadgeProps = Omit<React.ComponentProps<"span">, "color"> &
-  BadgeToneProps & {
-    shape?: BadgeShape;
-    size?: BadgeSize;
-    // min-w-0 없이 truncate만 있으면 flex 안에서 조용히 안 먹으므로 항상 같이 묶는다.
-    truncated?: boolean;
-  };
+type BadgeProps = React.ComponentProps<"span"> & {
+  variant?: BadgeVariant;
+  shape?: BadgeShape;
+  size?: BadgeSize;
+  // min-w-0 없이 truncate만 있으면 flex 안에서 조용히 안 먹으므로 항상 같이 묶는다.
+  truncated?: boolean;
+};
 
 function Badge({
   variant,
-  color,
   shape = "rounded",
   size = "default",
   truncated = false,
   className,
   ...props
 }: BadgeProps) {
-  const tone = color
-    ? BADGE_COLOR_CLASSNAME[color]
-    : variantClasses[variant ?? "brand"];
+  const tone = variantClasses[variant ?? "brand"];
 
   return (
     <span
@@ -114,10 +88,4 @@ function Badge({
   );
 }
 
-export {
-  Badge,
-  type BadgeColor,
-  type BadgeShape,
-  type BadgeSize,
-  type BadgeVariant,
-};
+export { Badge, type BadgeShape, type BadgeSize, type BadgeVariant };
