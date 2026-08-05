@@ -66,16 +66,6 @@ Button의 base 클래스가 자식 `svg`를 자동으로 처리한다 — 크기
 
 **함정 — Tooltip과 DropdownMenu(또는 Popover)를 같은 트리거에 이중으로 `asChild`로 겹치면 안 먹는다.** Radix가 두 프리미티브의 `data-state`를 같은 DOM 노드에 병합하는데, 바깥쪽(Tooltip)이 안쪽(DropdownMenu) 것을 덮어써서 메뉴가 열려 있어도 `data-state`가 "closed"로 찍힌다. 이 조합에선 `data-[state=open]:` 셀렉터 대신 `DropdownMenu`의 `open`/`onOpenChange`를 직접 들고 그 값으로 className을 분기한다 — `SpaceItemMenu`, `DigestCardMenu` 참고.
 
-## DropdownMenu는 기본적으로 modal이 아니다 (Radix 기본값과 다름)
-
-Radix `DropdownMenu.Root`는 원래 `modal: true`가 기본값이지만(반면 `Popover`는 `false`), weave `DropdownMenu`는 이를 `false`로 뒤집어 둔다(PR #554) — 열리는 순간 다른 non-modal 오버레이의 바깥-클릭 판정을 억제하는 레이스가 있었다. `modal` prop을 명시하면 그 값이 항상 우선한다.
-
-이 기본값 변경 때문에 non-modal `Popover`와 완전히 같은 동작은 아니다:
-
-- **배경 스크롤 잠금 없음.** `Popover`는 non-modal이어도 `usePopoverScrollLock`으로 배경 스크롤을 따로 막지만, `DropdownMenuContent`엔 같은 처리가 없다 — 메뉴가 열려 있는 동안 페이지가 스크롤되면 트리거 위치와 어긋날 수 있다. 필요해지면 `usePopoverScrollLock`을 `DropdownMenuContent`까지 확장하는 게 맞는 방향이다(아직 미착수).
-- **바깥 클릭이 메뉴만 안 닫고, 클릭 대상도 같이 활성화된다.** modal이 아니므로 `pointer-events: none`으로 바깥 클릭을 막지 않는다 — 메뉴가 열린 채로 다른 클릭 가능한 요소(다른 사이드바 항목, 다른 카드 필드 등)를 클릭하면 메뉴가 닫히는 동시에 그 클릭도 그대로 처리된다(예전엔 첫 클릭이 메뉴만 닫고 대상 클릭은 씹혔다).
-- **`aria-hidden`으로 배경을 격리하지 않는다.** modal 다이얼로그와 달리 스크린리더가 메뉴가 열린 동안에도 배경 콘텐츠에 접근할 수 있다 — 진짜 차단이 필요한 자리(포커스 트랩·바깥 상호작용 완전 차단)는 호출부가 `modal` prop을 직접 켜서 쓴다.
-
 ## 새 토큰을 추가할 때
 
 토큰은 정의만으로 끝나지 않는다. 아래 세 층을 다 거쳐야 실제로 쓸 수 있는 클래스가 생긴다 — 이번 작업에서 한 층이 빠져 죽은 코드가 두 번 나왔다(`border-strong`이 7곳에서 쓰였지만 어디에도 정의되지 않았던 것, `Select`의 placeholder 스타일이 `::placeholder` 의사요소를 겨냥했지만 Radix Select는 `data-placeholder` 속성이라 선택자가 애초에 안 맞았던 것).
