@@ -294,7 +294,6 @@
     "type_relation": "발견",
     "type_relation_closed": "연결",
     "type_revert": "되돌림",
-    "unattached_label_section_title": "미부착 라벨 ({count})",
     "undo_action": "실행 취소",
     "viewed_action": "읽음"
   },

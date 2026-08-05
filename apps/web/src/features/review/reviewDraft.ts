@@ -49,9 +49,10 @@ export type ReviewDraftAction =
       description: string;
       color: ReviewTagDraft["color"];
     }
-  // 팔레트에서 완전히 지운다(어느 digest에 붙어 있어도 그대로 뗀다) — 어디에도
-  // 안 붙은 항목을 UnattachedLabelSection에서 명시적으로 삭제할 때만 쓴다.
-  // detachTopic/detachTag(한 digest에서만 떼기)와는 별개 동작이다.
+  // 팔레트에서 완전히 지운다(어느 digest에 붙어 있어도 그대로 뗀다) — 신규
+  // (registryId === null) 라벨만 대상이고, 검색 리스트 행의 미트볼이 여는
+  // TopicDraftRenameForm/TagDraftRenameForm의 삭제에서만 쓴다. detachTopic/
+  // detachTag(한 digest에서만 떼기)와는 별개 동작이다.
   | { type: "label/removeTopic"; id: string }
   | { type: "label/removeTag"; id: string }
   // 액션 판별자가 type을 이미 쓰고 있어 Reference 유형은 다른 이름으로 받는다.

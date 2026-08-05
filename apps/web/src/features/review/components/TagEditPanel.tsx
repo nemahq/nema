@@ -119,6 +119,10 @@ export function TagEditPanel({
     dispatch({ type: "label/renameTag", id, title, description, color });
   }
 
+  function handleDeleteDraft(id: string) {
+    dispatch({ type: "label/removeTag", id });
+  }
+
   // DigestTopicPicker와 같은 이유 — 신규 먼저, 그룹 내부는 원래 순서 유지.
   const sortedTags = [...attachedTags].sort(
     (a, b) => (a.registryId === null ? 0 : 1) - (b.registryId === null ? 0 : 1),
@@ -168,21 +172,22 @@ export function TagEditPanel({
         ))}
       </LabelChipRow>
       <Separator />
-      {atMax ? (
+      {atMax && (
         <LabelLimitNotice
           message={t("review.tag_max_reached", { max: DIGEST_TAGS_MAX })}
         />
-      ) : (
-        <TagSearchList
-          query={query}
-          attachedTags={attachedTags}
-          paletteTags={tagPalette}
-          createPreviewColor={previewColor}
-          onSelectExisting={handleSelectExisting}
-          onStartCreate={setCreatingTitle}
-          onRenameDraft={handleRenameDraft}
-        />
       )}
+      <TagSearchList
+        query={query}
+        attachedTags={attachedTags}
+        paletteTags={tagPalette}
+        createPreviewColor={previewColor}
+        atMax={atMax}
+        onSelectExisting={handleSelectExisting}
+        onStartCreate={setCreatingTitle}
+        onRenameDraft={handleRenameDraft}
+        onDeleteDraft={handleDeleteDraft}
+      />
     </div>
   );
 }

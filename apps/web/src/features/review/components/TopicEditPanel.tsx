@@ -75,6 +75,10 @@ export function TopicEditPanel({
     dispatch({ type: "label/renameTopic", id, title });
   }
 
+  function handleDeleteDraft(id: string) {
+    dispatch({ type: "label/removeTopic", id });
+  }
+
   // DigestTopicPicker와 같은 이유 — 신규 먼저, 그룹 내부는 원래 순서 유지.
   const sortedTopics = [...attachedTopics].sort(
     (a, b) => (a.registryId === null ? 0 : 1) - (b.registryId === null ? 0 : 1),
@@ -113,21 +117,22 @@ export function TopicEditPanel({
         ))}
       </LabelChipRow>
       <Separator />
-      {atMax ? (
+      {atMax && (
         <LabelLimitNotice
           message={t("review.topic_max_reached", { max: DIGEST_TOPICS_MAX })}
         />
-      ) : (
-        <TopicSearchList
-          spaceId={spaceId}
-          query={query}
-          attachedTopics={attachedTopics}
-          paletteTopics={topicPalette}
-          onSelectExisting={handleSelectExisting}
-          onCreateNew={handleCreateNew}
-          onRenameDraft={handleRenameDraft}
-        />
       )}
+      <TopicSearchList
+        spaceId={spaceId}
+        query={query}
+        attachedTopics={attachedTopics}
+        paletteTopics={topicPalette}
+        atMax={atMax}
+        onSelectExisting={handleSelectExisting}
+        onCreateNew={handleCreateNew}
+        onRenameDraft={handleRenameDraft}
+        onDeleteDraft={handleDeleteDraft}
+      />
     </div>
   );
 }

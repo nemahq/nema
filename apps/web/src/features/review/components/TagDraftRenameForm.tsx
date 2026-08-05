@@ -6,13 +6,16 @@ import {
   type TagColor,
 } from "@nema-io/shared";
 import {
+  ComboboxItem,
   FormControl,
   FormField,
   FormMessage,
   Input,
+  Separator,
   TagColorListPicker,
   Text,
 } from "@nema-io/weave";
+import { Trash2 } from "@nema-io/weave/icons";
 
 import { TAG_COLOR_LABEL_KEY } from "@web/features/review/constants";
 import { useTranslation } from "@web/lib/tolgee";
@@ -29,6 +32,9 @@ interface TagDraftRenameFormProps {
   // 커밋된다. 색은 별도로 onColorChange가 고른 즉시 반영한다.
   onCommitText: (title: string, description: string) => void;
   onColorChange: (color: TagColor) => void;
+  // 신규 라벨 자신을 팔레트에서 완전히 지운다(label/removeTag) — 레지스트리
+  // 기존 Tag엔 이 진입점 자체가 없다(PR #506 컨센서스).
+  onDelete: () => void;
 }
 
 // TopicDraftRenameForm과 같은 스코프(신규 Tag 자신만) — Tag는 description도
@@ -40,6 +46,7 @@ export function TagDraftRenameForm({
   isDuplicateTitle,
   onCommitText,
   onColorChange,
+  onDelete,
 }: TagDraftRenameFormProps) {
   const { t } = useTranslation();
   const [titleValue, setTitleValue] = useState(title);
@@ -79,9 +86,15 @@ export function TagDraftRenameForm({
       onCommitText,
     };
   });
+  // TopicDraftRenameForm과 같은 이유(그쪽 deletingRef 주석 참고) — 삭제로
+  // 닫힐 때는 이미 지워진 id로 label/renameTag가 다시 나가지 않게 막는다.
+  const deletingRef = useRef(false);
   useEffect(
     function commitOnClose() {
       return () => {
+        if (deletingRef.current) {
+          return;
+        }
         const latest = latestRef.current;
         const changed =
           latest.trimmedTitle !== initialTitle ||
@@ -96,6 +109,11 @@ export function TagDraftRenameForm({
     },
     [initialTitle, initialDescription],
   );
+
+  function handleDelete() {
+    deletingRef.current = true;
+    onDelete();
+  }
 
   function getTitleError() {
     if (trimmedTitle === "") {
@@ -173,6 +191,14 @@ export function TagDraftRenameForm({
           />
         </FormField>
       </div>
+      <Separator />
+      <ComboboxItem
+        onClick={handleDelete}
+        buttonClassName="gap-2 text-status-error [&_svg]:text-status-error"
+      >
+        <Trash2 className="size-4" />
+        {t("common.delete")}
+      </ComboboxItem>
     </div>
   );
 }

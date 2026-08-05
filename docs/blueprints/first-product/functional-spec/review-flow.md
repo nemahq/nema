@@ -228,7 +228,7 @@
   3. 확정 시 리뷰에서 마지막으로 보여준 색이 그대로 Tag 모델에 저장된다(레지스트리 삽입 시 별도로 다시 랜덤 배정하지 않는다) — 확정 후 화면 전반에서 같은 색으로 표시된다.
   4. Topic은 색상을 갖지 않는다.
 - **관여 화면**: Digest 리뷰 화면
-- **범위 참고 (2026-07-28, PR #517)**: 새 팔레트를 만들지 않고 weave의 기존 `TagColor` 8종(slate·cyan·sage·olive·terracotta·rose·mauve·violet)을 재사용한다. 색은 콘텐츠 이해와 무관한 순수 표시값이라 LLM 프롬프트엔 안 넣고, id를 배정하는 바로 그 자리(엔진 제안은 `write_ingestion_review_changes`, 사용자 생성은 리뷰 화면의 생성 폼)에서 순수 랜덤 함수로 배정한다. 생성 폼은 가로 4×2 스와치 그리드(`TagColorGridPicker`), 편집 팝오버는 세로 리스트(스와치+색 이름, `TagColorListPicker`) — 둘 다 신규 weave 컴포넌트(`TagColorPicker.tsx`). 기존(레지스트리) Tag도 이 PR의 마이그레이션이 전부 백필해 색 없는 Tag가 없다. Digest 타입 배지가 이미 같은 8색 팔레트 중 5개를 고정 배정해 쓰고 있어(`DIGEST_TYPE_TAG_COLOR`) 카드 안에서 우연히 같은 색이 나란히 보일 수 있는데, 실제 화면에서 보고 판단하기로 하고 이번 스코프에서 막지 않았다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
+- **범위 참고 (2026-07-28, PR #517)**: 새 팔레트를 만들지 않고 weave의 기존 `TagColor` 8종(sienna·cyan·sage·olive·terracotta·rose·mauve·violet)을 재사용한다. 색은 콘텐츠 이해와 무관한 순수 표시값이라 LLM 프롬프트엔 안 넣고, id를 배정하는 바로 그 자리(엔진 제안은 `write_ingestion_review_changes`, 사용자 생성은 리뷰 화면의 생성 폼)에서 순수 랜덤 함수로 배정한다. 생성 폼은 가로 4×2 스와치 그리드(`TagColorGridPicker`), 편집 팝오버는 세로 리스트(스와치+색 이름, `TagColorListPicker`) — 둘 다 신규 weave 컴포넌트(`TagColorPicker.tsx`). 기존(레지스트리) Tag도 이 PR의 마이그레이션이 전부 백필해 색 없는 Tag가 없다. Digest 타입 배지가 이미 같은 8색 팔레트 중 5개를 고정 배정해 쓰고 있어(`DIGEST_TYPE_TAG_COLOR`) 카드 안에서 우연히 같은 색이 나란히 보일 수 있는데, 실제 화면에서 보고 판단하기로 하고 이번 스코프에서 막지 않았다. 코드 레벨 확인, 실동작 확인 전이라 미체크로 남김.
 
 #### 라벨 정렬 — 신규 먼저
 
