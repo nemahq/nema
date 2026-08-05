@@ -7,7 +7,7 @@ import {
   FormField,
   FormMessage,
   Input,
-  Separator,
+  Text,
 } from "@nema-io/weave";
 import { Trash2 } from "@nema-io/weave/icons";
 
@@ -89,7 +89,10 @@ export function TopicDraftRenameForm({
   const titleError = getTitleError();
 
   return (
-    <>
+    // 래퍼 px-1 — TagDraftRenameForm의 색상 리스트와 같은 이유(ComboboxItem
+    // 자신이 이미 px-2를 가져 래퍼까지 px-2를 얹으면 이중으로 밀림). 두 폼의
+    // ComboboxItem 행이 같은 호버 폭을 갖는다.
+    <div className="flex flex-col gap-1">
       <FormField className="px-2">
         <FormControl>
           <Input
@@ -106,14 +109,17 @@ export function TopicDraftRenameForm({
           {titleError}
         </FormMessage>
       </FormField>
-      <Separator />
-      <ComboboxItem
-        onClick={handleDelete}
-        buttonClassName="gap-2 text-status-error [&_svg]:text-status-error"
-      >
-        <Trash2 className="size-4" />
-        {t("common.delete")}
-      </ComboboxItem>
-    </>
+      <div className="px-1">
+        <ComboboxItem
+          onClick={handleDelete}
+          buttonClassName="gap-2 [&_svg]:text-status-error"
+        >
+          <Trash2 className="size-4" />
+          <Text as="span" size="sm" color="error">
+            {t("common.delete")}
+          </Text>
+        </ComboboxItem>
+      </div>
+    </div>
   );
 }
