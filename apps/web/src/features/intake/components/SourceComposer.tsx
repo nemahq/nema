@@ -6,6 +6,7 @@ import { Button, cn } from "@nema-io/weave";
 import { ACTION_BUTTON_BASE, ChatInput } from "@web/components/ui/ChatInput";
 import { useCreateSource } from "@web/features/intake/hooks/useCreateSource";
 import { useSourceComposerBody } from "@web/features/intake/hooks/useSourceComposerBody";
+import { usePendingAfterDelay } from "@web/hooks/usePendingAfterDelay";
 import { useTranslation } from "@web/lib/tolgee";
 
 const PROGRESS_CLIMB_DURATION_MS = 2_500;
@@ -24,27 +25,28 @@ const progressClimbStyle: CSSProperties & {
 
 export function SourceComposer({ spaceId }: SourceComposerProps) {
   const { t } = useTranslation();
-  const [body, setBody] = useSourceComposerBody(spaceId);
+  const { body, setBody, isSubmitting } = useSourceComposerBody(spaceId);
   const createSource = useCreateSource();
-  const disabled = !spaceId || createSource.isPending;
+  const disabled = !spaceId || isSubmitting;
+  // 로컬 mutation.isPending이 아니라 전역 기준(isSubmitting)으로 재는 이유는
+  // useSourceComposerBody 참고 — 서브탭 이동으로 컴포저가 재마운트돼도 진행 표시가
+  // 다시 붙어야 한다.
+  const isPendingAfterDelay = usePendingAfterDelay(isSubmitting);
 
   function handleSubmit(content: string) {
-    if (!spaceId || createSource.isPending) {
+    if (!spaceId || isSubmitting) {
       return;
     }
-    createSource.mutate(
-      {
-        body: content,
-        spaceId,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      },
-      { onSuccess: () => setBody("") },
-    );
+    createSource.mutate({
+      body: content,
+      spaceId,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
   }
 
   return (
     <div className="relative">
-      {createSource.isPendingAfterDelay && (
+      {isPendingAfterDelay && (
         <div className="absolute inset-x-4 top-0 z-10 h-0.5 overflow-hidden rounded-full">
           <div
             className="h-full w-0 rounded-full bg-fg-secondary [animation:progress-climb_var(--progress-climb-duration)_ease-out_forwards] dark:bg-fg-primary"

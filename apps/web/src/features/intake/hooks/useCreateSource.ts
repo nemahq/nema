@@ -1,3 +1,7 @@
+import {
+  clearComposerBody,
+  persistComposerBody,
+} from "@web/features/intake/hooks/useSourceComposerBody";
 import { useMutation } from "@web/lib/tanstack-query";
 import { trpc } from "@web/lib/trpc";
 
@@ -10,7 +14,32 @@ interface CreateSourceInput {
 export function useCreateSource() {
   const utils = trpc.useUtils();
   const mutation = useMutation(trpc.source.create, {
-    onSuccess: () => utils.source.listPending.invalidate(),
+    // 컴포저가 언마운트된 상태로 요청이 시작·종료돼도(서브탭 이동 등) 반드시
+    // 실행돼야 해서 mutate() 콜백이 아니라 훅 옵션 레벨에 둔다 — 옵션 레벨 콜백은
+    // 구독자(마운트된 컴포넌트) 없이도 호출된다. 제출 시점에 낙관적으로 지우고
+    // (onMutate) 실패하면 되돌린다(onError) — 그래야 제출 직후 새로고침의
+    // beforeunload flush가 이미 서버로 보낸 원문을 저장소에 되살리지 않는다.
+    onMutate: (variables) => {
+      if (variables.spaceId) {
+        clearComposerBody(variables.spaceId);
+      }
+    },
+    // 실패를 여기서 따로 사용자에게 알리지 않는 이유: 전역 MutationCache.onError가
+    // 모든 뮤테이션 실패에 토스트를 띄운다 — meta.skipGlobalToast를 붙이면 이 훅도
+    // 조용히 실패하게 되니 주의.
+    onError: (_error, variables) => {
+      if (variables.spaceId) {
+        persistComposerBody(variables.spaceId, variables.body);
+      }
+    },
+    onSuccess: (_data, variables) => {
+      if (variables.spaceId) {
+        clearComposerBody(variables.spaceId);
+      }
+      // 반환해야 invalidate가 끝날 때까지 mutation이 pending으로 남는다 — 안 그러면
+      // 원문은 이미 지워졌는데 대기 목록엔 아직 안 뜬 채로 진행 표시가 먼저 풀린다.
+      return utils.source.listPending.invalidate();
+    },
   });
 
   // 서버 스키마는 spaceId를 optional로 둔다(MCP·dev-harness는 안 보내고 서버가 대신
