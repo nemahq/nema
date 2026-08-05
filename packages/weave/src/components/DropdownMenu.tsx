@@ -6,10 +6,24 @@ import { useIsOverflowing } from "../hooks/useIsOverflowing";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "../icons";
 import { cn, POPOVER_SURFACE_CLASSNAME } from "../utils";
 
+// Radix 기본값(modal: true)을 Popover와 같은 non-modal로 뒤집는다 — modal 레이어는
+// 뜨는 순간 자신을 DismissableLayer 전역 layersWithOutsidePointerEventsDisabled
+// 스택에 등록하는데, 이 등록이 같은 클릭의 document pointerdown 버블(그래서 이미
+// 열려 있던 다른 non-modal 레이어의 바깥-클릭 판정)보다 먼저 처리되면서, 그 레이어가
+// "방금 뜬 모달 레이어 아래에 있다"고 오판해 자기 자신을 안 닫는다 — 그 모달이
+// 바로 이 클릭 자체로 새로 열리는 드롭다운인데도. modal이 실제로 필요한 자리는
+// 호출부가 `modal` prop으로 직접 올려서 쓴다.
 function DropdownMenu({
+  modal = false,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
+  return (
+    <DropdownMenuPrimitive.Root
+      data-slot="dropdown-menu"
+      modal={modal}
+      {...props}
+    />
+  );
 }
 
 function DropdownMenuPortal({
