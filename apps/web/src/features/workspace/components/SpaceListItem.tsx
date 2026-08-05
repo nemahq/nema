@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 
-import { Badge, cn, Text } from "@nema-io/weave";
+import { cn, CountBadge, Text } from "@nema-io/weave";
 
 import { NavItem } from "@web/components/layout/NavItem";
 import { useSidebar } from "@web/components/layout/Sidebar";
@@ -18,8 +18,7 @@ const BADGE_CLASS =
 
 // 검토 대기 카운트 — 메뉴(...)와 같은 자리(size-5, right-3.5)에 겹쳐 앉아있다가,
 // 호버 시엔 메뉴에게 자리를 양보하고 사라진다. SpaceTabButton과 같은
-// Badge(variant="success", 기본 크기)를 재사용해 같은 신호는 같은 컴포넌트·같은
-// 크기로 표현한다.
+// CountBadge(기본 크기)를 재사용해 같은 신호는 같은 컴포넌트·같은 크기로 표현한다.
 const PENDING_BADGE_CLASS =
   "absolute right-3.5 flex items-center justify-center group-hover:opacity-0 group-has-[[data-active=true]]:opacity-0";
 
@@ -68,19 +67,26 @@ export function SpaceListItem({
         label={spaceName}
         to="/space/$spacePublicId"
         params={{ spacePublicId }}
+        // 펼침 모드는 rightContent(오른쪽 pill)로 이미 보이므로 중복을 피해 접힘
+        // 모드에서만 채운다. DraftsNavItem의 생성중·에러 인디케이터와 같은
+        // labelSuffix 코너 슬롯을 재사용. default 크기 유지 — sm(10px)은 정확한
+        // 숫자를 읽기엔 작아서, 존재 신호가 아니라 실제 카운트를 보여주는
+        // 자리라 default로 둔다.
+        labelSuffix={
+          collapsed && hasPendingChangesets ? (
+            <CountBadge count={openChangesetCount} />
+          ) : null
+        }
         // 대기 중 배지가 있으면 메뉴 호버 여부와 무관하게 항상 자리를 비워둔다 —
         // 없으면 기존처럼 메뉴 호버 시에만(group-hover:pr-8).
         rightContentAlwaysVisible={hasPendingChangesets}
         rightContent={
           <>
             {hasPendingChangesets && (
-              <Badge
-                variant="success"
-                shape="pill"
+              <CountBadge
+                count={openChangesetCount}
                 className={PENDING_BADGE_CLASS}
-              >
-                {openChangesetCount}
-              </Badge>
+              />
             )}
             <SpaceItemMenu
               onOpenSettings={() => setSettingsOpen(true)}
