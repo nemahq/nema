@@ -4,10 +4,10 @@ import { getMutationKey } from "@trpc/react-query";
 import { queryClient } from "@web/lib/tanstack-query";
 import { trpc } from "@web/lib/trpc";
 
-const CREATE_SOURCE_MUTATION_KEY = getMutationKey(trpc.source.create);
-
 // trpc는 모듈 스코프에서 안정적인 참조라 렌더 밖에서 한 번만 계산해도 된다
 // (useRealtimeInvalidation.ts와 같은 패턴).
+const CREATE_SOURCE_MUTATION_KEY = getMutationKey(trpc.source.create);
+
 function matchesSpace(spaceId: string | undefined) {
   return (mutation: { state: { variables: unknown } }) => {
     if (spaceId === undefined) {

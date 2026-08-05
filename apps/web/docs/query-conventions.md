@@ -80,6 +80,8 @@ Cache manipulation functions (`presetCache`, `addOptimistic`, `clearCache`) stay
 
 UI side-effects MUST NOT live inside the mutation hook.
 
+**Exception — state the mutation owns end-to-end**: `mutate(data, { onSuccess })` callbacks are skipped entirely if the calling component has already unmounted before the mutation settles. When a side effect must run regardless (e.g. clearing a component-local draft that mirrors this exact mutation's lifecycle, so it can't resurrect after the caller unmounts), put it in `useMutation({ onMutate/onError/onSuccess })` instead. This is narrow: it applies only to state the mutation itself fully owns (see `useCreateSource.ts`'s composer-draft clear/restore), not general UI reactions like navigation or closing a dialog — those still belong at the call site.
+
 **Error toast**: The global `MutationCache.onError` shows a toast for all mutation errors by default. Individual toast handling is unnecessary. To suppress the global toast (e.g., when showing a custom error UI), set `meta: { skipGlobalToast: true }` on the mutation.
 
 ### Optimistic updates

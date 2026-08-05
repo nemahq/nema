@@ -71,8 +71,8 @@ describe("useIsCreatingSource / isCreatingSourceNow", () => {
       mutationResult.current.mutate({ spaceId: "space-1", body: "hi" });
     });
 
-    // 뮤테이션 캐시 알림은 마이크로태스크로 스케줄되므로(useMutationState.js의
-    // notifyManager.schedule) act() 콜백이 동기여도 바로 반영되지 않을 수 있다.
+    // 뮤테이션 캐시 알림은 setTimeout(0) 매크로태스크로 스케줄되므로(query-core
+    // notifyManager.js의 defaultScheduler) act() 콜백이 동기여도 바로 반영되지 않을 수 있다.
     await waitFor(() => expect(result.current).toBe(true));
   });
 

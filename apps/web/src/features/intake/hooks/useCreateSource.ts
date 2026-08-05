@@ -24,6 +24,9 @@ export function useCreateSource() {
         clearComposerBody(variables.spaceId);
       }
     },
+    // 실패를 여기서 따로 사용자에게 알리지 않는 이유: 전역 MutationCache.onError가
+    // 모든 뮤테이션 실패에 토스트를 띄운다 — meta.skipGlobalToast를 붙이면 이 훅도
+    // 조용히 실패하게 되니 주의.
     onError: (_error, variables) => {
       if (variables.spaceId) {
         persistComposerBody(variables.spaceId, variables.body);
@@ -33,7 +36,9 @@ export function useCreateSource() {
       if (variables.spaceId) {
         clearComposerBody(variables.spaceId);
       }
-      utils.source.listPending.invalidate();
+      // 반환해야 invalidate가 끝날 때까지 mutation이 pending으로 남는다 — 안 그러면
+      // 원문은 이미 지워졌는데 대기 목록엔 아직 안 뜬 채로 진행 표시가 먼저 풀린다.
+      return utils.source.listPending.invalidate();
     },
   });
 

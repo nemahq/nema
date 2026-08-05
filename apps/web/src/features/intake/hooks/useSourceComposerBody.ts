@@ -21,13 +21,13 @@ const SAVE_DELAY_MS = 500;
 // setTimeout 콜백 안에서 부른다.
 const RESYNC_DELAY_MS = 0;
 
-// useCreateSource의 뮤테이션 옵션 콜백(onMutate/onError/onSuccess)과 같은 키를
-// 공유하는 저장소 접근 — 두 파일이 "제출 시 지우고 실패 시 되돌린다"는 같은
-// 계약을 어긋남 없이 따르도록 여기 한 곳에 모은다.
 function readComposerBody(spaceId: string): string {
   return getRecordEntry("sourceComposerBody", spaceId) ?? "";
 }
 
+// useCreateSource의 뮤테이션 옵션 콜백(onMutate/onError/onSuccess)이 그대로 가져다
+// 쓰는 저장소 접근 — 두 파일이 "제출 시 지우고 실패 시 되돌린다"는 같은 계약을
+// 어긋남 없이 따르도록 여기 한 곳에 모은다.
 export function persistComposerBody(spaceId: string, body: string): void {
   if (body !== "") {
     setRecordEntry("sourceComposerBody", spaceId, body);
@@ -91,6 +91,9 @@ export function useSourceComposerBody(
         return;
       }
       const nextBody = readComposerBody(spaceId);
+      // setState는 타이머까지 기다리지만, 그 전에 unmount·beforeunload가 끼어들면
+      // flush가 bodyRef를 읽는다 — 타이머와 무관하게 지금 바로 맞춰둔다.
+      bodyRef.current = nextBody;
       const timer = setTimeout(() => setBodyState(nextBody), RESYNC_DELAY_MS);
       return () => clearTimeout(timer);
     },

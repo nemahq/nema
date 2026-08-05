@@ -141,6 +141,31 @@ describe("useSourceComposerBody", () => {
     expect(result.current.body).toBe("");
   });
 
+  it("성공 직후, resync 타이머가 돌기 전 beforeunload가 끼어들어도 유령 텍스트를 되살리지 않는다 (종료 시점 레이스 픽스)", () => {
+    mockIsSubmitting = true;
+    const { result, rerender } = renderHook(() =>
+      useSourceComposerBody(SPACE_ID),
+    );
+
+    act(() => {
+      result.current.setBody("제출된 원문");
+    });
+    // useCreateSource의 onSuccess가 저장소를 지운 상태를 흉내낸다. isCreatingSourceNow도
+    // 즉시 false로 바뀐다 — 뮤테이션 캐시 동기 조회라 리렌더를 기다리지 않는다.
+    deleteRecordEntry("sourceComposerBody", SPACE_ID);
+    mockIsSubmitting = false;
+    mockIsCreatingSourceNow = false;
+    rerender();
+    // 이 시점에서 resyncAfterSubmit의 setTimeout(0)은 아직 안 돌았다 — 화면 body는
+    // 여전히 "제출된 원문"이다. vi.advanceTimersByTime을 부르지 않고 바로 beforeunload를
+    // 보낸다.
+    act(() => {
+      window.dispatchEvent(new Event("beforeunload"));
+    });
+
+    expect(getRecordEntry("sourceComposerBody", SPACE_ID)).toBeNull();
+  });
+
   it("제출이 실패로 끝나면(저장소가 복원된 뒤) 화면 본문이 그대로 보존된다 (실패는 사용자 잘못이 아니다)", () => {
     mockIsSubmitting = true;
     const { result, rerender } = renderHook(() =>
