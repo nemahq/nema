@@ -81,9 +81,10 @@
      4.50·4.28로 떨어짐). 둘 다 tint 합성 기준 AA를 만족하는 단계까지 다시
      내렸다(success·info는 이미 여유 있어 안 건드림). warning은 그 김에
      hue도 23°→40°로 옮겼다 — Tailwind amber 스웨치를 그대로 따라가다 보니
-     error(H=0°)와 23°까지 좁혀져 있었다(아래 hue의 yellow와도 9°로 이미
-     가까웠음). success·error·info의 tint는 텍스트와 별개로, 진하게 맞춘
-     hex를 그대로 8%로 미러링한다(아래 hue와 같은 패턴) — warning만 예외다.
+     error(H=0°)와 23°까지 좁혀져 있었다(당시엔 이제는 삭제된 Digest 타입
+     Hue 팔레트의 yellow와도 9°로 이미 가까웠음). success·error·info의
+     tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로 미러링한다
+     (다른 status 색상들과 같은 패턴) — warning만 예외다.
      노랑은 빨강·초록·파랑과 달리 명도를 낮추면 채도를 유지해도 갈색/카키로
      지각된다(색상 정체성이 명도에 강하게 의존). 텍스트용 저명도 hex를 그대로
      미러링하면 tint가 탁해 보이는 게 그래서라, warning tint만 밝은 원색
