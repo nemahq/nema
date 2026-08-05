@@ -120,6 +120,7 @@ export function DigestReadonlyCard({
               key={tag.id}
               shape="rounded"
               truncated
+              outline={false}
               className={TAG_COLOR_CLASSNAME[tag.color]}
             >
               {tag.title}

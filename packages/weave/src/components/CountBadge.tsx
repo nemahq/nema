@@ -17,14 +17,12 @@ type CountBadgeProps = Omit<
 
 // 값 하나를 담는 카운트 전용 Badge — 한 자리는 정원(circle), 두 자리 이상은
 // pill로 모양이 자동 전환된다. LNB Space 뱃지·탭 카운트처럼 반복되던
-// "자리수 보고 shape 고르기"를 한곳에 모은다. outline 기본값이 Badge와
-// 반대로 true인 이유 — 카운트 뱃지는 아이콘·아바타 위에 겹쳐 놓이는
-// 경우가 잦아 경계 구분이 항상 필요하다.
+// "자리수 보고 shape 고르기"를 한곳에 모은다. outline은 Badge 기본값(true)을
+// 그대로 물려받는다 — 지정 안 해도 ...props로 전달됨.
 function CountBadge({
   count,
   variant = "success",
   size,
-  outline = true,
   ...props
 }: CountBadgeProps) {
   return (
@@ -32,7 +30,6 @@ function CountBadge({
       variant={variant}
       shape={count > CIRCLE_MAX_COUNT ? "pill" : "circle"}
       size={size}
-      outline={outline}
       {...props}
     >
       {count}

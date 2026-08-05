@@ -130,7 +130,7 @@ export function DigestTopicPicker({
                 "inline-flex size-5 items-center justify-center rounded-full border-dashed transition-colors group-hover:bg-fg-primary/5 group-data-[state=open]:bg-fg-primary/5",
               )}
             >
-              <Plus className="size-3" />
+              <Plus strokeWidth={2} className="size-3.5" />
             </span>
           )}
         </button>

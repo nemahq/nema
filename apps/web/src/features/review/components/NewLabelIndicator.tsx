@@ -15,9 +15,8 @@ interface NewLabelIndicatorProps {
 // 쓴다(원+아이콘 조합은 "누르면 추가되는 버튼"으로 오인될 위험이 있어 기각). 색은
 // text-status-success(초록)를 피한다 — 초록은 "확정·완료"로 읽혀 "아직 확정 전이니
 // 주의해서 보라"는 의도와 반대로 읽히고, 나중에 "저장 성공"에 초록을 쓸 자리를
-// 남겨둬야 한다. 기본 크기는 칩 제거(×) 아이콘(size-3)과 맞춰 그 이상 강조하지
-// 않는다 — 소비처가 자기 레이아웃에 맞춰 className으로만 덮어쓴다(twMerge라 마지막
-// 값이 이긴다).
+// 남겨둬야 한다. 소비처가 자기 레이아웃에 맞춰 className으로만 덮어쓴다(twMerge라
+// 마지막 값이 이긴다).
 //
 // 스크린리더 문구는 별도 sr-only span이 아니라 아이콘 자신의 role="img" +
 // aria-label로 준다 — 이 표식은 스크롤되는 긴 목록(Digest 카드마다) 안에서
@@ -34,7 +33,8 @@ export function NewLabelIndicator({
     <Plus
       role="img"
       aria-label={label ?? t("review.label_new_indicator")}
-      className={cn("size-3 text-brand-accent", className)}
+      strokeWidth={2}
+      className={cn("size-3.5 text-brand-accent", className)}
     />
   );
 }

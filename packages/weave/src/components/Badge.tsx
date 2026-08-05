@@ -37,9 +37,10 @@ const variantClasses: Record<BadgeVariant, string> = {
   outline: OUTLINE_TONE_CLASSNAME,
 };
 
-// `outline` prop(기본 false)으로 켜는 각 variant 자기 색의 인셋 아웃라인 —
-// 배경이 opacity 없는 불투명 색이라(tokens/index.css) 경계가 뭉툭해 보이는
-// 자리(카운트 뱃지처럼 다른 요소 위에 겹치는 경우)에서만 선택적으로 쓴다.
+// `outline` prop(기본 true)으로 각 variant 자기 색의 인셋 아웃라인을 얹는다 —
+// 배경이 opacity 없는 불투명 색이라(tokens/index.css) 기본으로 켜서 경계를
+// 분명히 한다. className으로 배경을 완전히 덮어쓰는 자리(Tag 파스텔 칩 등)는
+// variant 색 기준 ring이 안 어울리니 소비처에서 명시적으로 false를 준다.
 // "outline" variant(별도 톤, 항상 테두리만 있음)와는 별개 축이라 그쪽엔
 // 안 얹는다 — 이미 자기 테두리가 있어 중복이라서. border 대신 ring을 쓰는
 // 이유는 위 OUTLINE_TONE_CLASSNAME 주석 참고.
@@ -99,7 +100,7 @@ function Badge({
   shape = "rounded",
   size = "default",
   truncated = false,
-  outline = false,
+  outline = true,
   className,
   ...props
 }: BadgeProps) {
