@@ -3,7 +3,10 @@ import { Suspense } from "react";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { usePendingRelationSuspenseQuery } from "@web/features/review/hooks/usePendingRelationQuery";
-import { changesetDisplayTitle } from "@web/features/review/utils";
+import {
+  changesetDisplayTitle,
+  changesetRowAuthorLabel,
+} from "@web/features/review/utils";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -25,12 +28,20 @@ function RelationJudgmentContent() {
   );
 
   const title = changesetDisplayTitle(changesetDetail, t);
+  const authorLabel = changesetRowAuthorLabel({
+    type: changesetDetail.type,
+    state: "open",
+    authorName: changesetDetail.authorName,
+    closedByName: changesetDetail.closedByName,
+    t,
+  });
 
   if (pendingRelation.body.kind === "conflict_pending") {
     const { from, to } = pendingRelation.body;
     return (
       <ConflictRelationJudgment
         title={title}
+        authorLabel={authorLabel}
         createdAt={pendingRelation.createdAt}
         changesetId={pendingRelation.changesetId}
         from={from}
@@ -43,6 +54,7 @@ function RelationJudgmentContent() {
   return (
     <DuplicateMergeJudgment
       title={title}
+      authorLabel={authorLabel}
       createdAt={pendingRelation.createdAt}
       changesetId={pendingRelation.changesetId}
       keeper={keeper}

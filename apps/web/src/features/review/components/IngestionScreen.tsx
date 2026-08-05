@@ -6,6 +6,7 @@ import {
   confirmDisabledReason as computeConfirmDisabledReason,
   runConfirmReview,
 } from "@web/features/review/confirmReviewFlow";
+import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import {
@@ -15,6 +16,7 @@ import {
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useRefetchReviewOnFocus } from "@web/features/review/hooks/useRefetchReviewOnFocus";
 import { computeReviewEditingState } from "@web/features/review/reviewEditingState";
+import { changesetRowAuthorLabel } from "@web/features/review/utils";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useNotificationSoftAsk } from "@web/hooks/useNotificationSoftAsk";
 import { usePendingAfterDelay } from "@web/hooks/usePendingAfterDelay";
@@ -57,6 +59,13 @@ function IngestionContent() {
   const spaceId = useCurrentSpaceId();
   const changesetNumber = useChangesetNumber();
   const [draft, digestReviewQuery] = useDigestReviewSuspenseQuery(
+    spaceId,
+    changesetNumber,
+  );
+  // digestReview.get엔 type/authorName이 없다 — changeset.getByNumber는
+  // ChangesetDetailRouter가 같은 키로 이미 채워둔 캐시라 여기서 다시 불러도
+  // 네트워크가 안 나간다(RevertReopenContent와 같은 캐시 히트 패턴).
+  const [changesetDetail] = useChangesetDetailSuspenseQuery(
     spaceId,
     changesetNumber,
   );
@@ -195,6 +204,13 @@ function IngestionContent() {
   }
 
   const sourceTabOpen = activeTabId === draft.sourceId;
+  const authorLabel = changesetRowAuthorLabel({
+    type: changesetDetail.type,
+    state: "open",
+    authorName: changesetDetail.authorName,
+    closedByName: changesetDetail.closedByName,
+    t,
+  });
 
   return (
     <ChangesetDetailLayout
@@ -206,6 +222,7 @@ function IngestionContent() {
         title={reviewTitle}
         changesetNumber={draft.changesetNumber}
         state="open"
+        authorLabel={authorLabel}
         time={draft.sourceCreatedAt}
         actions={
           <ChangesetConfirmDiscardActions
