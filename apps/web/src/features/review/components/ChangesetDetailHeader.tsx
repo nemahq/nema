@@ -13,9 +13,11 @@ interface ChangesetDetailHeaderProps {
   state: ChangesetDisplayState;
   // 상태 pill 옆에 붙는 자리 — 관계 판정 화면의 충돌/중복 타입 배지가 여기 들어간다.
   badge?: ReactNode;
-  // closed일 때만 있는 값(Changeset.closedByName) — 이 changeset을 닫은(판정한)
-  // 사람. open 화면(리뷰 대기)은 아직 아무도 안 닫았으니 항상 undefined다.
-  closedByName?: string | null;
+  // 한 자리에 현재 살아있는 축 하나만: open이면 연 주체, closed면 닫은 주체
+  // (엔진이면 "Nema"). 판정 로직은 여기 두지 않는다 — 호출부가
+  // changesetRowAuthorLabel(review/utils.ts, 목록 행과 공유)로 미리 계산해
+  // 넘긴다(review-flow.md 관련 슬라이스).
+  authorLabel: string;
   time: string;
   actions?: ReactNode;
 }
@@ -27,7 +29,7 @@ export function ChangesetDetailHeader({
   changesetNumber,
   state,
   badge,
-  closedByName,
+  authorLabel,
   time,
   actions,
 }: ChangesetDetailHeaderProps) {
@@ -41,14 +43,17 @@ export function ChangesetDetailHeader({
       className="sticky top-0 z-10 -mx-6 -mt-6 bg-surface-card px-6"
     >
       <div className="flex flex-col gap-2 border-b border-border pt-6 pb-4">
-        <div className="flex items-center justify-between gap-4">
+        {/* items-start(기존 items-center)가 아니면 제목이 여러 줄로 접힐 때
+            actions가 세로 중앙으로 밀려 첫 줄과 어긋난다 — 말줄임 제거(review-flow.md
+            관련 슬라이스)로 여러 줄이 실제로 발생하게 되면서 필요해졌다. */}
+        <div className="flex items-start justify-between gap-4">
           <Text
             as="h1"
             size="2xl"
             weight="semibold"
-            className="flex min-w-0 items-baseline gap-2"
+            className="flex min-w-0 flex-wrap items-baseline gap-2"
           >
-            <span className="min-w-0 truncate">{title}</span>
+            <span className="min-w-0 break-words">{title}</span>
             <Text as="span" size="lg" color="tertiary" className="shrink-0">
               #{changesetNumber}
             </Text>
@@ -59,7 +64,7 @@ export function ChangesetDetailHeader({
           <ChangesetStatusPill state={state} />
           {badge}
           <Text as="div" size="sm" color="tertiary">
-            {closedByName && `${closedByName} · `}
+            {authorLabel} ·{" "}
             <RelativeTime dateTime={time} className="text-sm leading-none" />
           </Text>
         </div>

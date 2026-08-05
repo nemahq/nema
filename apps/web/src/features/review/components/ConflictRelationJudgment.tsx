@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Badge, LoadingGuard } from "@nema-io/weave";
+import { Badge } from "@nema-io/weave";
 
 import { toHighlightedFieldKey } from "@web/features/review/digestBodyFieldValue";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
@@ -24,6 +24,7 @@ const SOURCE_TAB_B_ID = "tab-source-b";
 
 interface ConflictRelationJudgmentProps {
   title: string;
+  authorLabel: string;
   createdAt: string;
   changesetId: string;
   from: RelationEndpointDetailSnapshot;
@@ -32,6 +33,7 @@ interface ConflictRelationJudgmentProps {
 
 export function ConflictRelationJudgment({
   title,
+  authorLabel,
   createdAt,
   changesetId,
   from,
@@ -50,10 +52,9 @@ export function ConflictRelationJudgment({
   const rejectPending = useRejectPendingRelation(spaceId, changesetNumber);
   // isPendingAfterDelay가 아니라 isPending — 그 250ms 지연 동안은 잠기지 않아,
   // 같은 버튼을 두 번 눌러 이미 닫힌 changeset에 재호출하는 경합이 생긴다.
-  // 지연은 아래 discardPending(라벨 표시)·guardActive(Guard 표시)에만 쓴다.
+  // Guard도 같은 locked를 써서 개별 필드 disabled와 항상 같은 시점에 뜬다 —
+  // 지연은 아래 discardPending(라벨 표시)에만 쓴다.
   const locked = resolveConflict.isPending || rejectPending.isPending;
-  const guardActive =
-    resolveConflict.isPendingAfterDelay || rejectPending.isPendingAfterDelay;
 
   function handleSelect(statementId: string) {
     if (locked) {
@@ -110,6 +111,7 @@ export function ConflictRelationJudgment({
             {t("review.relation_judgment_conflict_badge")}
           </Badge>
         }
+        authorLabel={authorLabel}
         time={createdAt}
         actions={
           <ChangesetConfirmDiscardActions
@@ -122,7 +124,7 @@ export function ConflictRelationJudgment({
           />
         }
       />
-      <div className="relative flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <RelationJudgmentCard
           digest={from.digest}
           highlightedFieldKey={toHighlightedFieldKey(from.sourceField)}
@@ -143,7 +145,6 @@ export function ConflictRelationJudgment({
           onViewSource={() => handleViewSource(SOURCE_TAB_B_ID, to)}
           disabled={locked}
         />
-        <LoadingGuard active={guardActive} />
       </div>
     </ChangesetDetailLayout>
   );

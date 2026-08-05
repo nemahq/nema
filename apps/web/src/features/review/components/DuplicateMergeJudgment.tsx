@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 
 import type { DigestDraft } from "@nema-io/shared";
-import { Alert, Badge, LoadingGuard, Text } from "@nema-io/weave";
+import { Alert, Badge, Text } from "@nema-io/weave";
 
 import { toHighlightedFieldKey } from "@web/features/review/digestBodyFieldValue";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
@@ -27,6 +27,7 @@ const CONFIRM_DISABLED_REASON_KEY = {
 
 interface DuplicateMergeJudgmentProps {
   title: string;
+  authorLabel: string;
   createdAt: string;
   changesetId: string;
   keeper: RelationEndpointDetailSnapshot;
@@ -39,6 +40,7 @@ interface DuplicateMergeJudgmentProps {
 // 같지만 결과가 근본적으로 달라(고르기가 아니라 병합) 별도 컴포넌트로 분리했다.
 export function DuplicateMergeJudgment({
   title,
+  authorLabel,
   createdAt,
   changesetId,
   keeper,
@@ -73,8 +75,6 @@ export function DuplicateMergeJudgment({
   );
   const rejectPending = useRejectPendingRelation(spaceId, changesetNumber);
   const locked = resolveDuplicate.isPending || rejectPending.isPending;
-  const guardActive =
-    resolveDuplicate.isPendingAfterDelay || rejectPending.isPendingAfterDelay;
 
   const confirmDisabledReasonCode = mergeDraftConfirmDisabledReason(draft);
   const confirmDisabled = locked || confirmDisabledReasonCode !== null;
@@ -119,6 +119,7 @@ export function DuplicateMergeJudgment({
             {t("review.relation_merge_duplicate_badge")}
           </Badge>
         }
+        authorLabel={authorLabel}
         time={createdAt}
         actions={
           <ChangesetConfirmDiscardActions
@@ -134,7 +135,7 @@ export function DuplicateMergeJudgment({
       {confirmDisabledReasonText && (
         <Alert variant="warning">{confirmDisabledReasonText}</Alert>
       )}
-      <div className="relative flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <Text as="p" size="sm" color="tertiary">
             {t("review.relation_merge_proposal_label")}
@@ -177,7 +178,6 @@ export function DuplicateMergeJudgment({
             />
           </div>
         </div>
-        <LoadingGuard active={guardActive} />
       </div>
     </ChangesetDetailLayout>
   );

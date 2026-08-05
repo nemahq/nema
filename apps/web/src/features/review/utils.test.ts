@@ -117,6 +117,18 @@ describe("changesetRowAuthorLabel", () => {
     expect(label).toBe("Kyle");
   });
 
+  it("revert가 open인데 authorName이 없으면(시스템 트리거) AI다", () => {
+    const label = changesetRowAuthorLabel({
+      type: "revert",
+      state: "open",
+      authorName: null,
+      closedByName: null,
+      t: fakeT,
+    });
+
+    expect(label).toBe("review.author_ai");
+  });
+
   it("closed면 closedByName이 있으면 그 이름을 쓴다", () => {
     const label = changesetRowAuthorLabel({
       type: "relation",

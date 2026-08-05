@@ -1,11 +1,12 @@
 import { Suspense, useMemo, useState } from "react";
 
-import { Alert, LoadingGuard, Text } from "@nema-io/weave";
+import { Alert, Text } from "@nema-io/weave";
 
 import {
   confirmDisabledReason as computeConfirmDisabledReason,
   runConfirmReview,
 } from "@web/features/review/confirmReviewFlow";
+import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
 import { useConfirmReview } from "@web/features/review/hooks/useConfirmReview";
 import {
@@ -15,6 +16,7 @@ import {
 import { useDiscardReview } from "@web/features/review/hooks/useDiscardReview";
 import { useRefetchReviewOnFocus } from "@web/features/review/hooks/useRefetchReviewOnFocus";
 import { computeReviewEditingState } from "@web/features/review/reviewEditingState";
+import { changesetRowAuthorLabel } from "@web/features/review/utils";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useNotificationSoftAsk } from "@web/hooks/useNotificationSoftAsk";
 import { usePendingAfterDelay } from "@web/hooks/usePendingAfterDelay";
@@ -59,6 +61,13 @@ function IngestionContent() {
     spaceId,
     changesetNumber,
   );
+  // digestReview.get엔 type/authorName이 없다 — changeset.getByNumber는
+  // ChangesetDetailRouter가 같은 키로 이미 채워둔 캐시라 여기서 다시 불러도
+  // 네트워크가 안 나간다(RevertReopenContent와 같은 캐시 히트 패턴).
+  const [changesetDetail] = useChangesetDetailSuspenseQuery(
+    spaceId,
+    changesetNumber,
+  );
   const { flushPendingCommits, flushPendingSave, hasPendingEdits } =
     useReviewDraftContext();
   const readReviewDraft = useReviewDraftReader(spaceId, changesetNumber);
@@ -86,16 +95,14 @@ function IngestionContent() {
   const showNotificationSoftAsk = useNotificationSoftAsk();
 
   // 지연 없는 raw isPending — discard/confirm 어느 쪽이 진행 중이든 즉시 나머지를
-  // 잠가야 250ms 지연 구간 동안의 이중 클릭(레이스)을 막는다. 로딩 텍스트·Guard
-  // 표시에만 아래 usePendingAfterDelay를 따로 쓴다(ConflictRelationJudgment와
-  // 같은 원칙) — 빠르게 끝나는 액션에서 텍스트도 본문 dim도 안 깜빡이게 한다.
+  // 잠가야 250ms 지연 구간 동안의 이중 클릭(레이스)을 막는다. Guard도 같은 locked를
+  // 그대로 써서 개별 필드 disabled와 항상 같은 시점에 뜬다 — 로딩 텍스트에만 아래
+  // usePendingAfterDelay를 따로 써서 빠르게 끝나는 액션에서 텍스트만 안 깜빡이게 한다.
   const locked =
     confirming || confirmReview.isPending || discardReview.isPending;
   const confirmPendingAfterDelay = usePendingAfterDelay(
     confirming || confirmReview.isPending,
   );
-  const guardActive =
-    discardReview.isPendingAfterDelay || confirmPendingAfterDelay;
   const confirmDisabledReasonCode =
     computeConfirmDisabledReason(reviewEditingState);
   // 저장 실패(일반 실패·버전 충돌 모두)는 확정을 막는다 — 실패한 편집을 그대로
@@ -194,6 +201,13 @@ function IngestionContent() {
   }
 
   const sourceTabOpen = activeTabId === draft.sourceId;
+  const authorLabel = changesetRowAuthorLabel({
+    type: changesetDetail.type,
+    state: "open",
+    authorName: changesetDetail.authorName,
+    closedByName: changesetDetail.closedByName,
+    t,
+  });
 
   return (
     <ChangesetDetailLayout
@@ -205,7 +219,8 @@ function IngestionContent() {
         title={reviewTitle}
         changesetNumber={draft.changesetNumber}
         state="open"
-        time={draft.sourceCreatedAt}
+        authorLabel={authorLabel}
+        time={changesetDetail.createdAt}
         actions={
           <ChangesetConfirmDiscardActions
             onDiscard={handleDiscard}
@@ -217,7 +232,7 @@ function IngestionContent() {
           />
         }
       />
-      <div className="relative flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         {/* 조용한 텍스트 한 줄로는 확정이 막혀 있다는 게 눈에 안 들어와서 Alert로
             올렸다. */}
         {confirmDisabledReasonText && (
@@ -238,7 +253,6 @@ function IngestionContent() {
           citedReferences={draft.citedReferences}
           disabled={locked}
         />
-        <LoadingGuard active={guardActive} />
       </div>
     </ChangesetDetailLayout>
   );

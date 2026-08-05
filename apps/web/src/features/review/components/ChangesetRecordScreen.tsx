@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { Link, linkOptions, useNavigate } from "@tanstack/react-router";
 
-import { Badge, Button, LoadingGuard } from "@nema-io/weave";
+import { Badge, Button } from "@nema-io/weave";
 
 import { changesetDisplayState } from "@web/features/review/constants";
 import { useChangesetDetailSuspenseQuery } from "@web/features/review/hooks/useChangesetDetailQuery";
@@ -9,7 +9,10 @@ import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumbe
 import { useRestorePendingRelation } from "@web/features/review/hooks/useRestorePendingRelation";
 import { useRestoreReview } from "@web/features/review/hooks/useRestoreReview";
 import { useRevertChangeset } from "@web/features/review/hooks/useRevertChangeset";
-import { changesetDisplayTitle } from "@web/features/review/utils";
+import {
+  changesetDisplayTitle,
+  changesetRowAuthorLabel,
+} from "@web/features/review/utils";
 import { useCurrentSpaceId } from "@web/hooks/useCurrentSpaceId";
 import { useSpacePublicId } from "@web/hooks/useSpacePublicId";
 import { useTranslation } from "@web/lib/tolgee";
@@ -36,12 +39,9 @@ function ChangesetRecordContent() {
   );
   const restoreReview = useRestoreReview(spaceId, changesetNumber);
   // 세 버튼은 outcome/kind에 따라 하나만 렌더되니 각자 자기 isPending만으로
-  // disabled를 잠근다. Guard는 어느 쪽이든 250ms 지연 후 뜨게 해 빠른 액션에서
-  // 안 깜빡이게 한다(ChangesetConfirmDiscardActions와 같은 원칙).
-  const guardActive =
-    revertChangeset.isPendingAfterDelay ||
-    restorePendingRelation.isPendingAfterDelay ||
-    restoreReview.isPendingAfterDelay;
+  // disabled를 잠근다(ChangesetConfirmDiscardActions와 같은 원칙). 이 화면은
+  // 읽기 전용 뷰라 본문을 가리는 로딩 가드는 없다(review-flow.md 관련 슬라이스) —
+  // 버튼 자신의 disabled·로딩 텍스트만으로 충분하다.
 
   function handleRevert() {
     revertChangeset.mutate(
@@ -153,6 +153,18 @@ function ChangesetRecordContent() {
   }
 
   const title = changesetDisplayTitle(changesetDetail, t);
+  const state = changesetDisplayState(
+    changesetDetail.status,
+    changesetDetail.outcome,
+    changesetDetail.number,
+  );
+  const authorLabel = changesetRowAuthorLabel({
+    type: changesetDetail.type,
+    state,
+    authorName: changesetDetail.authorName,
+    closedByName: changesetDetail.closedByName,
+    t,
+  });
   // 확신 자동 적용 배치는 목록 행과 같은 "연결 {count}" 총합을 헤더에 재사용한다
   // (카드별 breakdown이나 개수 제한은 만들지 않는다 — review-flow.md 관련 슬라이스).
   const confidentRelationCount =
@@ -165,11 +177,7 @@ function ChangesetRecordContent() {
       <ChangesetDetailHeader
         title={title}
         changesetNumber={changesetDetail.number}
-        state={changesetDisplayState(
-          changesetDetail.status,
-          changesetDetail.outcome,
-          changesetDetail.number,
-        )}
+        state={state}
         badge={
           confidentRelationCount !== null ? (
             <Badge variant="outline" shape="pill" size="sm">
@@ -177,13 +185,12 @@ function ChangesetRecordContent() {
             </Badge>
           ) : undefined
         }
-        closedByName={changesetDetail.closedByName}
+        authorLabel={authorLabel}
         time={changesetDetail.updatedAt}
         actions={renderHeaderActions()}
       />
-      <div className="relative flex flex-1 flex-col gap-4">
+      <div className="flex flex-1 flex-col gap-4">
         <ChangesetRecordBody changesetDetail={changesetDetail} />
-        <LoadingGuard active={guardActive} />
       </div>
     </ChangesetDetailLayout>
   );

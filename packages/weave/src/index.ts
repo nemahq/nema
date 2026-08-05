@@ -61,7 +61,6 @@ export { HoverIcon } from "./components/HoverIcon";
 export { Input } from "./components/Input";
 export { Kbd } from "./components/Kbd";
 export { Label } from "./components/Label";
-export { LoadingGuard } from "./components/LoadingGuard";
 export {
   Popover,
   PopoverAnchor,
