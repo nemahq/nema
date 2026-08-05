@@ -7,21 +7,15 @@
    안 하면 여기 정의된 유틸리티가 전혀 생성되지 않는다. */
 @source "../../../packages/weave/src/**/*.{ts,tsx}";
 
-/* 앱 수준 모드 색상 — weave 팔레트를 앱 도메인 이름으로 매핑 */
+/* 앱 수준 Identity 배지 색상 — weave 팔레트를 앱 도메인 이름으로 매핑,
+   테마 무관 고정값이라 .dark 분기가 없다 */
 
 @theme inline {
-  --color-mode-ask: var(--palette-light-orange);
-
-  /* Identity 배지 — 테마 무관 고정값 */
   --color-identity-violet: var(--palette-identity-violet);
   --color-identity-fuchsia: var(--palette-identity-fuchsia);
   --color-identity-cyan: var(--palette-identity-cyan);
   --color-identity-lime: var(--palette-identity-lime);
   --color-identity-yellow: var(--palette-identity-yellow);
-}
-
-.dark {
-  --color-mode-ask: var(--palette-dark-orange);
 }
 
 @utility nema-logo {

@@ -113,11 +113,6 @@
   --palette-dark-status-info: #60a5fa; /* blue-400 */
   --palette-dark-status-info-tint: rgba(59, 130, 246, 0.12);
 
-  --palette-light-orange: #ea580c; /* orange-600 */
-
-  /* Orange — dark */
-  --palette-dark-orange: #fb923c; /* orange-400 */
-
   /* Tag — 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 팔레트. 생성 시
      랜덤/엔진이 초기값을 채우고 사용자가 항상 바꿀 수 있다 — 그래서
      status·Hue처럼 "채움 배경 + 원색 텍스트"가 아니라 "옅은 파스텔 채움 + 고정
