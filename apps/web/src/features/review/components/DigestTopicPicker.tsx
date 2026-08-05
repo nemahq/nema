@@ -1,11 +1,5 @@
 import type { ReviewTopicDraft } from "@nema-io/shared";
-import {
-  cn,
-  OUTLINE_TONE_CLASSNAME,
-  PopoverContent,
-  PopoverTrigger,
-  Text,
-} from "@nema-io/weave";
+import { cn, PopoverContent, PopoverTrigger, Text } from "@nema-io/weave";
 import { Circle, Plus } from "@nema-io/weave/icons";
 
 import { Popover } from "@web/components/ui/Popover";
@@ -126,8 +120,11 @@ export function DigestTopicPicker({
           ) : (
             <span
               className={cn(
-                OUTLINE_TONE_CLASSNAME,
-                "inline-flex size-5 items-center justify-center rounded-full border-dashed transition-colors group-hover:bg-fg-primary/5 group-data-[state=open]:bg-fg-primary/5",
+                // OUTLINE_TONE_CLASSNAME(weave)은 outline variant를 auto-width
+                // 요소에 맞춰 ring-inset을 쓰는데, ring은 box-shadow라 dashed
+                // 스타일이 안 먹는다. 여기는 size-5로 크기가 고정돼 있어(border도
+                // border-box라 밖으로 안 늘어남) 실제 border를 그대로 쓴다.
+                "inline-flex size-5 items-center justify-center rounded-full border border-dashed border-border-strong text-fg-primary transition-colors group-hover:bg-fg-primary/5 group-data-[state=open]:bg-fg-primary/5",
               )}
             >
               <Plus strokeWidth={2} className="size-3.5" />
