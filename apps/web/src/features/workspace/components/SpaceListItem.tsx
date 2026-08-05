@@ -68,6 +68,16 @@ export function SpaceListItem({
         label={spaceName}
         to="/space/$spacePublicId"
         params={{ spacePublicId }}
+        // 펼침 모드는 rightContent(오른쪽 pill)로 이미 보이므로 중복을 피해 접힘
+        // 모드에서만 채운다. DraftsNavItem의 생성중·에러 인디케이터와 같은
+        // labelSuffix 코너 슬롯을 재사용.
+        labelSuffix={
+          collapsed && hasPendingChangesets ? (
+            <Badge variant="success" shape="pill" size="sm">
+              {openChangesetCount}
+            </Badge>
+          ) : null
+        }
         // 대기 중 배지가 있으면 메뉴 호버 여부와 무관하게 항상 자리를 비워둔다 —
         // 없으면 기존처럼 메뉴 호버 시에만(group-hover:pr-8).
         rightContentAlwaysVisible={hasPendingChangesets}
