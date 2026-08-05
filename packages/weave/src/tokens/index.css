@@ -113,58 +113,16 @@
   --palette-dark-status-info: #60a5fa; /* blue-400 */
   --palette-dark-status-info-tint: rgba(59, 130, 246, 0.12);
 
-  /* Hue — 도메인 의미가 없는 색조 팔레트. 무엇을 가리키는지는 이 레이어가 모르고,
-     소비하는 앱이 자기 분류를 색조에 매핑한다(apps/web/src/index.css의 mode-* 참고).
-     status(brand·success·warning·error·info)와 색상 축을 겹치지 않게 골랐다 —
-     겹치면 "AI 작업중 블루"처럼 이미 다른 뜻이 붙은 색을 빌려오게 된다
-     (design-reference-log.md ⑪ 참고). 다크는 400을 쓰되, 라이트는 실제 렌더
-     배경 기준 대비를 만족하는 단계까지 진하게 내린다 — 최초 라운드는 indigo·
-     purple을 600, pink를 700, lime을 800까지 내렸었지만(이후 라운드에서 hue
-     자체가 바뀌어 더 이상 Tailwind 단계값이 아니다), 그 기준점이 순백
-     (surface-card)이었던 게 문제였다. 이 배지가 실제로 렌더링되는 카드
-     wash 영역은 surface-raised(라이트 #f5f5f4)라서, 순백 기준으로 통과해
-     보이던 값도 거기선 전부 미달이었다(예: 순백 4.5 vs raised 4.15) — 아래
-     hex는 전부 surface-raised 8% 합성 기준으로 다시 낮춘 값이다. yellow는
-     hue(32°)는 그대로 두고 채도만 81%→50%로
-     크게 낮췄다 — status-warning과 hue가 9°밖에 안 떨어져 있는데 채도까지
-     거의 같아서(82% vs 81%) 구분이 안 됐다. ⑪이 원래 의도했던 "hue는 status
-     보다 낮은 채도로 둬서 색상이 겹쳐도 채도로 구분된다"는 원칙이 실제로는
-     구현된 적이 없었던 것 — yellow에 한해 지금 적용한다(나머지 4색은 그대로).
-     tint는 텍스트와 별개로, 진하게 맞춘 hex를 그대로 8%로 미러링한다.
-
-     indigo·pink·lime·purple은 이후 라운드에서 hue를 재조정했다 — Tag 8색과
-     각각 6.7~16.6°밖에 안 떨어져 있어 디자인 의도(타입=진한 축, Tag=옅은 축)와
-     무관하게 hue 자체가 거의 같은 색으로 보였다. Tag·status·brand 전부를
-     배제 집합으로 놓고 남는 빈 구간의 중간점으로 옮겨 19~34° 확보했다(계열은
-     최대한 유지 — indigo·purple·pink는 원래 hue에서 몇 도 안 벗어남, lime만
-     94.3°(sage)와 6.7°밖에 안 떨어져 있어서 129°(순수 초록)까지 크게 밀렸다 —
-     이 폭 때문에 "라임"이라는 이름과 실제 색이 조금 어긋난다). yellow는 Tag
-     terracotta·sienna·olive가 17~54° 구간을 이미 채워놔서 옮길 빈틈이 없어
-     그대로 둔다(제품 판단 — 다이제스트 타입-Tag 구분은 이번에 같이 넣은 배지
-     테두리가 대신 맡는다). */
-  --palette-light-indigo: #4e4cf0; /* hue 241°(기존 243°에서 거의 그대로, info와의 간격만 확보) */
-  --palette-light-indigo-tint: rgba(78, 76, 240, 0.08);
-  --palette-light-pink: #c1107a; /* hue 324°(기존 335°에서 mauve·rose 사이로) */
-  --palette-light-pink-tint: rgba(193, 16, 122, 0.08);
-  --palette-light-lime: #0a761a; /* hue 129°(기존 88°에서 sage와 겹치지 않게 순초록으로) */
-  --palette-light-lime-tint: rgba(10, 118, 26, 0.08);
-  --palette-light-yellow: #865d2c; /* hue(32°)는 유지, surface-raised 기준 재대비로 명도만 더 내림(was #916430) */
-  --palette-light-yellow-tint: rgba(134, 93, 44, 0.08);
-  --palette-light-purple: #9d12e2; /* hue 280°(기존 272°에서 violet·mauve 사이로) */
-  --palette-light-purple-tint: rgba(157, 18, 226, 0.08);
+  /* Indigo — 원래 Digest 타입 배지의 5색 Hue 팔레트(indigo/pink/lime/yellow/purple)
+     중 하나였으나, 타입 배지가 무채색으로 바뀌며 팔레트 전체가 무용해졌다.
+     indigo 원색(비-tint) 두 값만 apps/web의 --color-mode-remember(Draft 처리
+     모드 표시, Hue 팔레트와는 무관한 별도 용도)가 계속 참조해 남겨둔다 —
+     tint와 나머지 4색은 참조하는 곳이 없어 삭제했다. */
+  --palette-light-indigo: #4e4cf0;
   --palette-light-orange: #ea580c; /* orange-600 */
 
-  /* Hue — dark */
+  /* Indigo — dark */
   --palette-dark-indigo: #b7b6fb;
-  --palette-dark-indigo-tint: rgba(183, 182, 251, 0.12);
-  --palette-dark-pink: #f986cb;
-  --palette-dark-pink-tint: rgba(249, 134, 203, 0.12);
-  --palette-dark-lime: #86f997;
-  --palette-dark-lime-tint: rgba(134, 249, 151, 0.12);
-  --palette-dark-yellow: #facc15; /* yellow-400 */
-  --palette-dark-yellow-tint: rgba(202, 138, 4, 0.12);
-  --palette-dark-purple: #d286f9;
-  --palette-dark-purple-tint: rgba(210, 134, 249, 0.12);
   --palette-dark-orange: #fb923c; /* orange-400 */
 
   /* Tag — 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 팔레트. 생성 시
@@ -268,16 +226,6 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
-  --indigo: var(--palette-light-indigo);
-  --indigo-tint: var(--palette-light-indigo-tint);
-  --pink: var(--palette-light-pink);
-  --pink-tint: var(--palette-light-pink-tint);
-  --lime: var(--palette-light-lime);
-  --lime-tint: var(--palette-light-lime-tint);
-  --yellow: var(--palette-light-yellow);
-  --yellow-tint: var(--palette-light-yellow-tint);
-  --purple: var(--palette-light-purple);
-  --purple-tint: var(--palette-light-purple-tint);
   --tag-sienna: var(--palette-light-tag-sienna);
   --tag-cyan: var(--palette-light-tag-cyan);
   --tag-sage: var(--palette-light-tag-sage);
@@ -322,16 +270,6 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
-  --indigo: var(--palette-dark-indigo);
-  --indigo-tint: var(--palette-dark-indigo-tint);
-  --pink: var(--palette-dark-pink);
-  --pink-tint: var(--palette-dark-pink-tint);
-  --lime: var(--palette-dark-lime);
-  --lime-tint: var(--palette-dark-lime-tint);
-  --yellow: var(--palette-dark-yellow);
-  --yellow-tint: var(--palette-dark-yellow-tint);
-  --purple: var(--palette-dark-purple);
-  --purple-tint: var(--palette-dark-purple-tint);
   --tag-sienna: var(--palette-dark-tag-sienna);
   --tag-cyan: var(--palette-dark-tag-cyan);
   --tag-sage: var(--palette-dark-tag-sage);
@@ -379,16 +317,6 @@
   --status-info: var(--palette-dark-status-info);
   --status-info-tint: var(--palette-dark-status-info-tint);
 
-  --indigo: var(--palette-dark-indigo);
-  --indigo-tint: var(--palette-dark-indigo-tint);
-  --pink: var(--palette-dark-pink);
-  --pink-tint: var(--palette-dark-pink-tint);
-  --lime: var(--palette-dark-lime);
-  --lime-tint: var(--palette-dark-lime-tint);
-  --yellow: var(--palette-dark-yellow);
-  --yellow-tint: var(--palette-dark-yellow-tint);
-  --purple: var(--palette-dark-purple);
-  --purple-tint: var(--palette-dark-purple-tint);
   --tag-sienna: var(--palette-dark-tag-sienna);
   --tag-cyan: var(--palette-dark-tag-cyan);
   --tag-sage: var(--palette-dark-tag-sage);
@@ -433,16 +361,6 @@
   --status-info: var(--palette-light-status-info);
   --status-info-tint: var(--palette-light-status-info-tint);
 
-  --indigo: var(--palette-light-indigo);
-  --indigo-tint: var(--palette-light-indigo-tint);
-  --pink: var(--palette-light-pink);
-  --pink-tint: var(--palette-light-pink-tint);
-  --lime: var(--palette-light-lime);
-  --lime-tint: var(--palette-light-lime-tint);
-  --yellow: var(--palette-light-yellow);
-  --yellow-tint: var(--palette-light-yellow-tint);
-  --purple: var(--palette-light-purple);
-  --purple-tint: var(--palette-light-purple-tint);
   --tag-sienna: var(--palette-light-tag-sienna);
   --tag-cyan: var(--palette-light-tag-cyan);
   --tag-sage: var(--palette-light-tag-sage);
@@ -496,18 +414,6 @@
   --color-status-error-tint: var(--status-error-tint);
   --color-status-info: var(--status-info);
   --color-status-info-tint: var(--status-info-tint);
-
-  /* Hue */
-  --color-indigo: var(--indigo);
-  --color-indigo-tint: var(--indigo-tint);
-  --color-pink: var(--pink);
-  --color-pink-tint: var(--pink-tint);
-  --color-lime: var(--lime);
-  --color-lime-tint: var(--lime-tint);
-  --color-yellow: var(--yellow);
-  --color-yellow-tint: var(--yellow-tint);
-  --color-purple: var(--purple);
-  --color-purple-tint: var(--purple-tint);
 
   /* Tag */
   --color-tag-sienna: var(--tag-sienna);

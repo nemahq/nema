@@ -14,9 +14,11 @@ type BadgeVariant =
   | "outline";
 
 // color는 반대로 "무슨 색인가"를 직접 고르는 축 — weave가 뜻을 모르는 분류(앱마다
-// 다른 5종 타입 같은 것)를 서로 구별해야 할 때만 쓴다. 의미가 있는 자리에 이걸 쓰면
-// (에러를 color="pink"로) 시맨틱 층을 우회하게 되므로 variant와 배타적으로 둔다.
-type BadgeColor = "indigo" | "pink" | "lime" | "yellow" | "purple";
+// 다른 고정 N종 타입 같은 것)를 서로 구별해야 할 때만 쓴다. 지금은 실사용처가
+// 없어 neutral 하나만 있다 — 실제 분류가 생기면 그때 조건(당시 Tag/status
+// 팔레트와 안 겹치는 hue)으로 값을 추가한다(design-reference-log.md ⑪ 참고,
+// 예전엔 indigo/pink/lime/yellow/purple 5색이었다).
+type BadgeColor = "neutral";
 
 // Chip과 공유 — surface-raised는 다크 모드에서 surface-card와 완전히 같은 값이
 // 돼(tokens/index.css) 카드 배경 위에서 안 보이므로, surface 토큰 대신 배경에
@@ -40,16 +42,11 @@ const variantClasses: Record<BadgeVariant, string> = {
   outline: OUTLINE_TONE_CLASSNAME,
 };
 
-// Chip과 공유 — 인터랙티브 버전(다이제스트 타입 피커 등)도 같은 톤을 써야 한다.
-// 테두리를 얹은 건 Tag(TAG_COLOR_CLASSNAME)와 배경 톤만으로는 구분이 잘 안 됐기
-// 때문 — Tag 칩엔 테두리가 아예 없어서, 색이 우연히 가까워도(예: violet 계열)
-// 테두리 유무로 먼저 갈린다.
+// Chip과 공유 — 인터랙티브 버전도 같은 톤을 써야 한다. neutral 하나뿐이지만
+// variant="neutral"과 같은 클래스를 그대로 재사용한다 — 새 토큰 없이 "아직
+// 색이 안 정해진 분류"를 표현할 수 있는 값이라 값 자체는 남겨둔다.
 export const BADGE_COLOR_CLASSNAME: Record<BadgeColor, string> = {
-  indigo: "border border-indigo/50 bg-indigo-tint text-indigo",
-  pink: "border border-pink/50 bg-pink-tint text-pink",
-  lime: "border border-lime/50 bg-lime-tint text-lime",
-  yellow: "border border-yellow/50 bg-yellow-tint text-yellow",
-  purple: "border border-purple/50 bg-purple-tint text-purple",
+  neutral: NEUTRAL_TONE_CLASSNAME,
 };
 
 // 원형(pill)은 카운트·이름표처럼 통째로 하나의 값을 담는 자리, 각진 모서리(rounded)는

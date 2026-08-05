@@ -18,7 +18,6 @@ import { Check } from "@nema-io/weave/icons";
 import { Dialog } from "@web/components/ui/Dialog";
 import { DropdownMenu } from "@web/components/ui/DropdownMenu";
 import {
-  DIGEST_TYPE_BADGE_COLOR,
   DIGEST_TYPE_ICON,
   DIGEST_TYPE_LABEL_KEY,
 } from "@web/features/review/constants";
@@ -49,7 +48,7 @@ export function DigestTypePicker({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Chip
-            color={DIGEST_TYPE_BADGE_COLOR[type]}
+            variant="outline"
             disabled={disabled}
             className="gap-1.5"
             aria-label={t("review.digest_type_change_action")}

@@ -92,7 +92,7 @@ const COLOR_TONE_CLASSNAME: Record<TagColor | BadgeColor, string> = {
 
 // variant(neutral/outline)와 color는 배타적으로 받는다 — Badge의 variant/color
 // 구분(의미 있는 톤 vs weave가 뜻을 모르는 분류)과 같은 이유. color는 TagColor
-// (사용자 태그, 파스텔)와 BadgeColor(고정 5종 분류 배지, Hue) 둘 다 받는다 —
+// (사용자 태그, 파스텔)와 BadgeColor(고정 분류 배지) 둘 다 받는다 —
 // DigestTypePicker처럼 Badge의 색 축을 그대로 쓰되 인터랙티브해야 하는 자리가 있다.
 type ChipToneProps =
   | { variant?: ChipVariant; color?: never }

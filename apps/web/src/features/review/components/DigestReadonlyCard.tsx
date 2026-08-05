@@ -5,7 +5,6 @@ import { RelativeTime } from "@web/components/ui/RelativeTime";
 import {
   ARCHIVED_BADGE_LABEL_KEY,
   type ArchivedBadgeCause,
-  DIGEST_TYPE_BADGE_COLOR,
   DIGEST_TYPE_ICON,
   DIGEST_TYPE_LABEL_KEY,
   type DigestBodyFieldKey,
@@ -54,10 +53,7 @@ export function DigestReadonlyCard({
               {/* Chip이 아니라 Badge — Chip은 onClick 없이도 항상 <button>이라
                   이 읽기 전용 카드에서도 hover·클릭 가능한 것처럼 보였다
                   (Chip.tsx 주석 "정적 미리보기가 필요한 자리는 Badge를 쓴다"). */}
-              <Badge
-                shape="pill"
-                color={DIGEST_TYPE_BADGE_COLOR[digest.body.type]}
-              >
+              <Badge shape="pill" variant="outline">
                 <span className="inline-flex items-center gap-1">
                   <TypeIcon className="size-3.5" />
                   {t(DIGEST_TYPE_LABEL_KEY[digest.body.type])}

@@ -77,10 +77,10 @@ export function DigestTagPicker({
                 className="inline-flex h-5 min-w-0 items-center gap-0"
               >
                 {tag.registryId === null && <NewLabelIndicator />}
-                {/* variant/color 대신 className — Badge의 BadgeColor(5색, 뜻
-                    모르는 분류용)는 Tag의 TagColor(8색 파스텔 팔레트)와 다른
-                    축이라 안 맞는다. Chip은 nested <button>이 되어 이 트리거
-                    자신의 <button> 안에 못 들어가 못 쓴다. */}
+                {/* variant 대신 className — Badge는 TagColor(8색 파스텔
+                    팔레트)를 모르는 축이라 색은 className으로 직접 준다.
+                    Chip은 nested <button>이 되어 이 트리거 자신의 <button>
+                    안에 못 들어가 못 쓴다. */}
                 <Badge
                   shape="rounded"
                   truncated
