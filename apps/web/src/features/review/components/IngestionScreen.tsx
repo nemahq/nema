@@ -1,6 +1,6 @@
 import { Suspense, useMemo, useState } from "react";
 
-import { Alert, LoadingGuard, Text } from "@nema-io/weave";
+import { Alert, Text } from "@nema-io/weave";
 
 import {
   confirmDisabledReason as computeConfirmDisabledReason,
@@ -233,7 +233,7 @@ function IngestionContent() {
           />
         }
       />
-      <div className="relative flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         {/* 조용한 텍스트 한 줄로는 확정이 막혀 있다는 게 눈에 안 들어와서 Alert로
             올렸다. */}
         {confirmDisabledReasonText && (
@@ -260,7 +260,6 @@ function IngestionContent() {
           citedReferences={draft.citedReferences}
           disabled={locked}
         />
-        <LoadingGuard active={locked} />
       </div>
     </ChangesetDetailLayout>
   );

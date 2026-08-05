@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Badge, LoadingGuard } from "@nema-io/weave";
+import { Badge } from "@nema-io/weave";
 
 import { toHighlightedFieldKey } from "@web/features/review/digestBodyFieldValue";
 import { useChangesetNumber } from "@web/features/review/hooks/useChangesetNumber";
@@ -124,7 +124,7 @@ export function ConflictRelationJudgment({
           />
         }
       />
-      <div className="relative flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <RelationJudgmentCard
           digest={from.digest}
           highlightedFieldKey={toHighlightedFieldKey(from.sourceField)}
@@ -145,7 +145,6 @@ export function ConflictRelationJudgment({
           onViewSource={() => handleViewSource(SOURCE_TAB_B_ID, to)}
           disabled={locked}
         />
-        <LoadingGuard active={locked} />
       </div>
     </ChangesetDetailLayout>
   );
