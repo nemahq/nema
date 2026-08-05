@@ -52,10 +52,9 @@ export function ConflictRelationJudgment({
   const rejectPending = useRejectPendingRelation(spaceId, changesetNumber);
   // isPendingAfterDelay가 아니라 isPending — 그 250ms 지연 동안은 잠기지 않아,
   // 같은 버튼을 두 번 눌러 이미 닫힌 changeset에 재호출하는 경합이 생긴다.
-  // 지연은 아래 discardPending(라벨 표시)·guardActive(Guard 표시)에만 쓴다.
+  // Guard도 같은 locked를 써서 개별 필드 disabled와 항상 같은 시점에 뜬다 —
+  // 지연은 아래 discardPending(라벨 표시)에만 쓴다.
   const locked = resolveConflict.isPending || rejectPending.isPending;
-  const guardActive =
-    resolveConflict.isPendingAfterDelay || rejectPending.isPendingAfterDelay;
 
   function handleSelect(statementId: string) {
     if (locked) {
@@ -146,7 +145,7 @@ export function ConflictRelationJudgment({
           onViewSource={() => handleViewSource(SOURCE_TAB_B_ID, to)}
           disabled={locked}
         />
-        <LoadingGuard active={guardActive} />
+        <LoadingGuard active={locked} />
       </div>
     </ChangesetDetailLayout>
   );

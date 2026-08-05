@@ -96,16 +96,14 @@ function IngestionContent() {
   const showNotificationSoftAsk = useNotificationSoftAsk();
 
   // 지연 없는 raw isPending — discard/confirm 어느 쪽이 진행 중이든 즉시 나머지를
-  // 잠가야 250ms 지연 구간 동안의 이중 클릭(레이스)을 막는다. 로딩 텍스트·Guard
-  // 표시에만 아래 usePendingAfterDelay를 따로 쓴다(ConflictRelationJudgment와
-  // 같은 원칙) — 빠르게 끝나는 액션에서 텍스트도 본문 dim도 안 깜빡이게 한다.
+  // 잠가야 250ms 지연 구간 동안의 이중 클릭(레이스)을 막는다. Guard도 같은 locked를
+  // 그대로 써서 개별 필드 disabled와 항상 같은 시점에 뜬다 — 로딩 텍스트에만 아래
+  // usePendingAfterDelay를 따로 써서 빠르게 끝나는 액션에서 텍스트만 안 깜빡이게 한다.
   const locked =
     confirming || confirmReview.isPending || discardReview.isPending;
   const confirmPendingAfterDelay = usePendingAfterDelay(
     confirming || confirmReview.isPending,
   );
-  const guardActive =
-    discardReview.isPendingAfterDelay || confirmPendingAfterDelay;
   const confirmDisabledReasonCode =
     computeConfirmDisabledReason(reviewEditingState);
   // 저장 실패(일반 실패·버전 충돌 모두)는 확정을 막는다 — 실패한 편집을 그대로
@@ -262,7 +260,7 @@ function IngestionContent() {
           citedReferences={draft.citedReferences}
           disabled={locked}
         />
-        <LoadingGuard active={guardActive} />
+        <LoadingGuard active={locked} />
       </div>
     </ChangesetDetailLayout>
   );
