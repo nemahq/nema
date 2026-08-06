@@ -518,6 +518,7 @@
 - [x] 확신 관계 자동 적용
 - [ ] 관련 Digest 자동 채움
 - [ ] 관계 archive 시 관련 Digest 목록 표시 규칙
+- [ ] 관련 Reference 자동 제안 — 이번 범위 밖
 - [x] 판정 대기 relation changeset 생성 (충돌)
 - [ ] 판정 대기 relation changeset 생성 (중복)
 - [x] Changeset 제목 자동 생성 (relation - 충돌)
@@ -531,6 +532,7 @@
 - [ ] 충돌 판정 되돌리기
 - [ ] 중복 판정 되돌리기
 - [ ] 확신 관계 자동 적용 되돌리기
+- [ ] Changeset 상세 — 삭제된 원문의 스냅샷 콘텐츠 치환 — 이번 범위 밖
 
 ### 케이스 상세
 
