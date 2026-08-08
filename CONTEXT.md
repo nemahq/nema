@@ -39,8 +39,7 @@
 - [engine/README](docs/blueprints/first-product/engine/README.md): MVP 엔진 동작 규칙의 지도. 07-modeling과 달라지는 대목과 아직 안 정한 것도 여기
 - [engine/organizing](docs/blueprints/first-product/engine/organizing.md): 원문이 들어와 다이제스트가 되기까지
 - [engine/linking](docs/blueprints/first-product/engine/linking.md): 다이제스트가 이미 쌓인 것과 이어지기까지. 관계 유형별 규칙
-- [engine/lifecycle](docs/blueprints/first-product/engine/lifecycle.md): 저장된 뒤에 바뀌는 것
-- [engine/surface-values](docs/blueprints/first-product/engine/surface-values.md): 화면에 나가는 값
+- [engine/lifecycle](docs/blueprints/first-product/engine/lifecycle.md): 쌓인 것이 그 뒤로 바뀌고 사라지기까지
 - [schema-design](docs/blueprints/save-engine-v2/schema-design.md): 테이블 스키마, RLS, 트리거, 큐/RPC 계약. 마이그레이션 작성 전 확인
 - [ingestion-design](docs/blueprints/save-engine-v2/ingestion-design.md): 넣기(원문→진술) 파이프 흐름
 - [relation-design](docs/blueprints/save-engine-v2/relation-design.md): 관계 엔진 골격, 관계 종류별 동작 규칙
