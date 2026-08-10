@@ -20,9 +20,8 @@ module.exports = {
       exportsFields: ["exports"],
       conditionNames: ["import", "require", "node", "default"],
     },
-    // apps/web/tsconfig.json이 @web/*·@server/* 둘 다 매핑해 server도 이걸로 풀린다.
     tsConfig: {
-      fileName: path.join(__dirname, "apps/web/tsconfig.json"),
+      fileName: path.join(__dirname, "apps/server/tsconfig.json"),
     },
   },
 };

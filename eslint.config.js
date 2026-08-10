@@ -32,7 +32,7 @@ const nemaPlugin = {
 };
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", "**/.turbo/**"] },
+  { ignores: ["**/dist/**", "**/.turbo/**", "legacy/**"] },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {

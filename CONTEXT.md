@@ -32,7 +32,6 @@
 - [narration-design](docs/blueprints/first-product/narration-design.md): 해설(Narration) 기능 설계
 - [mcp-design](docs/blueprints/first-product/mcp-design.md): MCP 레일 설계
 - [mcp-tools-design](docs/blueprints/first-product/mcp-tools-design.md): MCP 도구 세트 설계
-- [apps/mcp/README](apps/mcp/README.md): MCP 앱 소개
 
 ## 4. 엔진 설계: 무엇을 어떤 규칙으로 결정하고, 저장소와 백엔드로 어떻게 앉히는가
 
@@ -49,23 +48,16 @@
 - [topic-substrate-design](docs/blueprints/save-engine-v2/topic-substrate-design.md): 주제(Topic) 정의와 생애주기
 - [temporal-query-design](docs/blueprints/save-engine-v2/temporal-query-design.md): 시간 질의 처리
 - [long-input-chunking](docs/blueprints/save-engine-v2/long-input-chunking.md): 초장문 청크 분할
-- [eval-design](docs/blueprints/save-engine-v2/eval-design.md): 엔진 품질 측정 방식, 평가셋
-- [eval/model-comparison-log](apps/server/src/eval/model-comparison-log.md): 모델 가성비 비교 측정 일지
-- [eval/narration-measurement-log](apps/server/src/eval/narration-measurement-log.md): 해설 엔진 측정 라운드별 기록
-- [eval/relation-engine/measurement-log](apps/server/src/eval/relation-engine/measurement-log.md): 관계 엔진 측정 라운드별 기록
+- [eval-design](docs/blueprints/save-engine-v2/eval-design.md): 엔진 품질 측정 방식, 평가셋 (측정 일지는 legacy/apps/server/src/eval 안에 있다)
 
 ## 5. 작업 방식/컨벤션: 코드를 어떻게 짜고 협업하는가
 
 - [README](README.md): 프로젝트 소개
 - [CLAUDE.md](CLAUDE.md): 루트 전역 규칙, 워크플로우
-- [apps/server/CLAUDE.md](apps/server/CLAUDE.md): 서버 패키지 규칙
-- [apps/web/CLAUDE.md](apps/web/CLAUDE.md): 웹 패키지 규칙
 - [supabase/CLAUDE.md](supabase/CLAUDE.md): 슈퍼베이스 패키지 규칙
+- [legacy/README](legacy/README.md): 이전 세대 구현 지도. 새 구현 전에 대응하는 옛 구현이 있는지 확인할 때
 - [pull_request_template](.github/pull_request_template.md): PR 본문 양식
 - [conventions](docs/guides/conventions.md): 전역 코드 컨벤션
-- [apps/server/docs/conventions](apps/server/docs/conventions.md): 서버 코드 컨벤션
-- [apps/web/docs/conventions](apps/web/docs/conventions.md): 웹 코드 컨벤션
-- [apps/web/docs/query-conventions](apps/web/docs/query-conventions.md): tRPC query/mutation 훅 컨벤션
 - [glossary](docs/guides/glossary.md): 제품 용어·개념 용어·코드 용어 매핑. 용어 선택이 헷갈릴 때
 - [weave-usage](docs/guides/weave-usage.md): 디자인 시스템 사용 가이드
 - [doc-writing](docs/guides/doc-writing.md): 내부 문서 글쓰기 기준

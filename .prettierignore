@@ -8,3 +8,4 @@ docs/**/*.html
 poc/
 apps/server/src/eval/**/results-*.json
 supabase/.temp/
+legacy/
