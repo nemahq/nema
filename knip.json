@@ -10,6 +10,12 @@
     "apps/server": {
       "project": ["src/**/*.ts"]
     },
+    "apps/web": {
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "apps/mcp": {
+      "project": ["src/**/*.ts"]
+    },
     "packages/weave": {
       "project": ["src/**/*.{ts,tsx}"]
     }

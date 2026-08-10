@@ -4,8 +4,5 @@ import { router } from "./trpc";
 // 빈 루트 라우터로 tRPC 배선만 검증한다.
 export const appRouter = router({});
 
-/**
- * @lintignore 프론트엔드 end-to-end 타입 연결용 — apps/web이 legacy로 옮겨가 있는 동안은
- * 참조하는 곳이 없다.
- */
+// apps/web·apps/mcp가 tRPC 클라이언트 타입 연결에 이 타입을 가져다 쓴다.
 export type AppRouter = typeof appRouter;

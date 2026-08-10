@@ -209,6 +209,22 @@ export default tseslint.config(
     },
   },
   {
+    files: ["apps/mcp/**/*.{ts,tsx}"],
+    plugins: {
+      "no-relative-import-paths": noRelativeImportPaths,
+    },
+    rules: {
+      "no-relative-import-paths/no-relative-import-paths": [
+        "error",
+        {
+          allowSameFolder: true,
+          rootDir: "src",
+          prefix: "@mcp",
+        },
+      ],
+    },
+  },
+  {
     ...jsxA11y.flatConfigs.recommended,
     files: ["apps/web/**/*.{ts,tsx}"],
     rules: {

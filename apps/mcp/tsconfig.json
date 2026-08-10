@@ -1,0 +1,12 @@
+{
+  "extends": "@nema-io/tsconfig/node.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "dist",
+    "rootDir": "src",
+    "paths": {
+      "@mcp/*": ["src/*"]
+    }
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,5 @@
+@import "@nema-io/weave/styles";
+
+/* pnpm 워크스페이스 심볼릭 링크 너머 패키지라 Tailwind 기본 자동 스캔이 못
+   따라간다 — 명시 안 하면 weave 컴포넌트가 쓰는 유틸리티가 생성되지 않는다. */
+@source "../../../packages/weave/src/**/*.{ts,tsx}";
