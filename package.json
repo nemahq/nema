@@ -9,8 +9,6 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:local": "turbo run dev:local",
-    "dev:web": "VITE_DEV_API_TARGET=https://api-staging.getnema.app pnpm --filter web dev",
-    "dev:web:prod": "VITE_DEV_API_TARGET=https://api.getnema.app pnpm --filter web dev:prod",
     "dev:server": "pnpm --filter server dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
@@ -30,15 +28,7 @@
       "eslint --cache --cache-strategy content",
       "prettier --write"
     ],
-    "*.{json,css,md,mdx}": "prettier --write",
-    "apps/web/src/lib/tolgee/*.json": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "apps/server/src/infra/i18n/locales/*.json": [
-      "eslint --fix",
-      "prettier --write"
-    ]
+    "*.{json,css,md,mdx}": "prettier --write"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
