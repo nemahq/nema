@@ -1,7 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "ignoreDependencies": ["estree", "vitest"],
-  "ignore": [".claude/**", "legacy/**"],
+  "ignore": [
+    ".claude/**",
+    "legacy/**",
+    "apps/server/src/infra/database.types.ts"
+  ],
   "tags": ["-lintignore"],
   "workspaces": {
     ".": {

@@ -16,6 +16,17 @@ const envSchema = z
     APP_ENV: z.enum(appEnvValues).optional(),
     PORT: z.coerce.number().int().min(1).max(65535).default(3001),
     CORS_ORIGIN: z.string().default("http://localhost:5173"),
+
+    SUPABASE_URL: z.string().url(),
+    SUPABASE_ANON_KEY: z.string().min(1),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+
+    // 설정 시 Gemini를 Vertex(ADC 인증·GCP 크레딧) 경로로 — 없으면 GEMINI_API_KEY(AI Studio).
+    GEMINI_VERTEX_PROJECT: z.string().min(1).optional(),
+    GEMINI_VERTEX_LOCATION: z.string().min(1).optional(),
+    // 헤드리스 배포엔 사람 로그인 ADC가 없어 서비스 계정 키로 명시 인증한다.
+    GEMINI_VERTEX_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
+    GEMINI_API_KEY: z.string().min(1).optional(),
   })
   .transform((data) => ({
     ...data,
