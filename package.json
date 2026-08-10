@@ -17,7 +17,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "knip": "knip --no-progress",
-    "depcruise": "depcruise apps/server/src --config .dependency-cruiser.cjs",
+    "depcruise": "depcruise apps/web/src apps/server/src --config .dependency-cruiser.cjs",
     "quality": "turbo run lint && pnpm knip && pnpm depcruise",
     "prepare": "husky",
     "tolgee:push": "tolgee push",

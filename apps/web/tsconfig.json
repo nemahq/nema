@@ -3,7 +3,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@web/*": ["src/*"]
+      "@web/*": ["src/*"],
+      "@server/*": ["../server/src/*"]
     }
   },
   "include": ["src"]
