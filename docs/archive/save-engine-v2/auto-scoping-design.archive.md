@@ -1,5 +1,7 @@
 # 자동 scoping 설계 — 진술 엔진 (save-engine-v2)
 
+> ⚠️ **대체 문서 없음.** `engine/`에 꺼내기를 다루는 문서가 아직 없다.
+
 > 전역 의미검색이 코퍼스가 커지면 못 버티는 문제를, "질의에서 주제를 먼저 골라(coarse) 그 안에서만 검색(fine)"하는 2단계로 푸는 설계. [`retrieval-design.md`](retrieval-design.md)이 깐 꺼내기 흐름과 이미 있는 scoped 검색 위에 서고, [`temporal-query-design.md`](temporal-query-design.md)가 깐 **구조화 레이어**가 비워 둔 `topic` 자리를 채운다. NEM-168 1차 측정(검색 난도↑, 측정 #9)이 드러낸 "코퍼스가 자라면 recall이 0.978→0.72로 무너진다"의 치료.
 >
 > 짝 문서: [`temporal-query-design.md`](temporal-query-design.md)(같은 구조화 레이어 공유: 시간과 주제가 한 입구로 갈라져 나온다), [`retrieval-design.md`](retrieval-design.md)(꺼내기: scope가 걸리는 곳).

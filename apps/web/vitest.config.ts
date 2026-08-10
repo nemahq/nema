@@ -13,7 +13,4 @@ export default mergeConfig(baseConfig, {
       "@web": resolve(__dirname, "src"),
     },
   },
-  test: {
-    environment: "jsdom",
-  },
 });

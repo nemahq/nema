@@ -1,5 +1,7 @@
 # 평가 설계 — 진술 엔진 (save-engine-v2)
 
+> ⚠️ **대체 문서 없음.**
+
 > 진술 엔진의 세 동작 — 쪼개기·분류·검색 — 이 잘 도는지 **숫자로** 재는 방식과 평가셋 씨앗, 실행 계획. [`ingestion-design`](ingestion-design.md)의 절단 원칙과 [`retrieval-design`](retrieval-design.md)의 검색 계약을 재는 짝 문서다. 두 설계가 "하니스에서 보정"으로 미룬 값들(절단 기준 세부·limit·threshold)을 보정할 측정 도구가 이것이다.
 >
 > 테스트 하니스 화면(NEM-125)이 돌릴 *내용물*을 정한다 — 화면 자체는 범위 밖.

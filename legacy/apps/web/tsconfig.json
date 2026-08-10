@@ -1,0 +1,11 @@
+{
+  "extends": "@nema-io/tsconfig/react.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@web/*": ["src/*"],
+      "@server/*": ["../server/src/*"]
+    }
+  },
+  "include": ["src"]
+}

@@ -30,6 +30,7 @@ Product terms vs code terms are mapped in `docs/guides/glossary.md`. Code (varia
 - Supabase (PostgreSQL + Auth). Schema migrations: `supabase/migrations/`, managed via Supabase CLI.
 - Magic numbers MUST be extracted into named constants (e.g., `TICK_INTERVAL_MS = 60_000`). Numeric literals allowed only for 0, 1, and universally obvious values.
 - `VITE_` prefix for frontend env vars (e.g., `VITE_API_URL`).
+- `legacy/` is a read-only archive of the previous generation's code, outside the workspace (no build/CI). Before starting new work, check whether a prior implementation exists there, and if you port anything, note what and why in the PR.
 
 ## Dev Scripts
 
@@ -37,8 +38,6 @@ Product terms vs code terms are mapped in `docs/guides/glossary.md`. Code (varia
 | ------------------- | ----------------------------------- |
 | `pnpm dev`          | local full-stack (default)          |
 | `pnpm dev:local`    | local full-stack (local Supabase)   |
-| `pnpm dev:web`      | frontend only (staging API)         |
-| `pnpm dev:web:prod` | frontend only (prod API)            |
 | `pnpm dev:server`   | server only                         |
 
 Local server secrets live in `~/.config/nema/.env.secret` (auto-loaded, git-ignored).

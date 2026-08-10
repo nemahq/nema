@@ -1,5 +1,7 @@
 # 꺼내기 설계 — 진술 엔진 (save-engine-v2)
 
+> ⚠️ **대체 문서 없음.** `engine/`에 꺼내기를 다루는 문서가 아직 없다.
+
 > 저장된 진술을 뜻으로 찾아, 흩어진 목록이 아니라 묶음으로 돌려주는 흐름 설계. [`schema-design.md`](schema-design.md)의 스키마·Qdrant payload 계약 위에 선다. 이 문서를 보고 바로 꺼내기 빌드 세션을 띄울 수 있는 수준을 목표로 한다.
 >
 > 짝 문서: [`ingestion-design.md`](ingestion-design.md) (넣기). 넣기와 꺼내기는 한 고리라 한 세션에서 같이 설계했다.

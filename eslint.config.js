@@ -32,7 +32,7 @@ const nemaPlugin = {
 };
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", "**/.turbo/**"] },
+  { ignores: ["**/dist/**", "**/.turbo/**", "legacy/**"] },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {
@@ -204,6 +204,22 @@ export default tseslint.config(
               message: "Import from the directory directly without /index.",
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["apps/mcp/**/*.{ts,tsx}"],
+    plugins: {
+      "no-relative-import-paths": noRelativeImportPaths,
+    },
+    rules: {
+      "no-relative-import-paths/no-relative-import-paths": [
+        "error",
+        {
+          allowSameFolder: true,
+          rootDir: "src",
+          prefix: "@mcp",
         },
       ],
     },

@@ -1,5 +1,7 @@
 # 저장 구조 설계 — 진술 엔진 (save-engine-v2)
 
+> ⚠️ **대체 문서 없음.** 마이그레이션이 `supabase/migrations`에서 새 줄로 다시 시작하면서 이 문서가 못박은 스키마·RLS·트리거 계약 자체가 무효가 됐다. 새 스키마는 마이그레이션 파일이 SSOT다.
+
 > "저장 비종속"으로 정리한 모델(docs/foundations 01~10)을 실제 저장소(Postgres/Supabase·Qdrant·Neo4j)에 앉히는 설계. 이 문서를 보고 바로 마이그레이션을 뽑을 수 있는 수준을 목표로 한다.
 >
 > 이전 세대: [`save-engine-v1`](../../archive/save-engine-v1/) (합성 문서 기반, 히스토리로 이동됨). `implementation-vs-model.archive.md`가 정리했듯 v1(합성 문서) → v2(진술)는 같은 문제의 두 세대다.

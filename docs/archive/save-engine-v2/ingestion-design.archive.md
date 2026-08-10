@@ -1,5 +1,7 @@
 # 넣기 설계 — 진술 엔진 (save-engine-v2)
 
+> ⚠️ **대체됨.** [`engine/organizing.md`](../../blueprints/first-product/engine/organizing.md)가 원문 → 다이제스트 파이프라인으로 대체했다.
+
 > 글(source)을 진술로 쪼개 저장하는 파이프의 흐름 설계. [`schema-design.md`](schema-design.md)가 정한 스키마·RPC 계약 위에서, 그 문서가 후속으로 넘긴 흐름(박제 시점, 실패 정리 경로)을 확정한다. 이 문서를 보고 바로 넣기 빌드 세션을 띄울 수 있는 수준을 목표로 한다.
 >
 > 짝 문서: [`retrieval-design.md`](retrieval-design.md) (꺼내기). 넣기와 꺼내기는 한 고리라 한 세션에서 같이 설계했다.

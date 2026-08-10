@@ -1,5 +1,7 @@
 # 사람 개입 설계 — 진술 엔진 (save-engine-v2)
 
+> ⚠️ **대체 예정, 아직 안 쓰임.** [`engine/lifecycle.md`](../../blueprints/first-product/engine/lifecycle.md)가 대체할 자리지만 지금은 골격만 있다. 그 문서가 채워지기 전까지는 빼기·되돌리기의 세부를 확인할 곳이 없다.
+
 > 엔진 산출(진술·관계) 위에 사람이 개입하는 세 가지 백엔드 동작의 설계 — **빼기(archive)·되돌리기(revert)·pending 관계 해소**. 셋 다 changeset(변경 묶음) 조작 가족이라 한 집에서 짓는다.
 >
 > 토대: [`schema-design.md`](schema-design.md)(진술·원문·관계·변경셋 표 구조), [`relation-design.md`](relation-design.md)(pending 관계 changeset 단위·연쇄 archive 트리거 — 이미 빌드됨), [`ingestion-design.md`](ingestion-design.md)(넣기 — 되돌리기의 대상이 되는 변경셋이 여기서 생긴다). 07 모델링의 동작 규칙(append-only revert·status archived)을 메커니즘으로 번역한다.

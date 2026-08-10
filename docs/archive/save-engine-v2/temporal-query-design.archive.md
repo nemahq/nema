@@ -1,5 +1,7 @@
 # 시간 질의 설계 — 진술 엔진 (save-engine-v2)
 
+> ⚠️ **대체 문서 없음.** `engine/`에 꺼내기를 다루는 문서가 아직 없다.
+
 > 시간 질의("이번 주 마감", "지난주에 뭐 했지")를 의미검색에서 떼어내 구조화된 시간 경로로 재배치하는 설계. [`retrieval-design.md`](retrieval-design.md)이 깐 꺼내기 흐름 위에 서고, [`schema-design.md`](schema-design.md)의 `statements` 위에 기한 필드를 더한다. NEM-168 1차 측정(검색 난도↑, 측정 #9)이 드러낸 "임베딩에 잘못 태운 시간 질의"의 치료.
 >
 > 짝 문서: [`retrieval-design.md`](retrieval-design.md)(꺼내기 — 시간 경로가 갈라져 나오는 곳), [`ingestion-design.md`](ingestion-design.md)(넣기 — 기한 추출이 끼는 곳).

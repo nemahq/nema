@@ -1,43 +1,28 @@
-import { registerArchiveStatement } from "@mcp/tools/archive-statement";
-import { registerConfirmIngestionReview } from "@mcp/tools/confirm-ingestion-review";
-import { registerCreateSource } from "@mcp/tools/create-source";
-import { registerGetEvidence } from "@mcp/tools/get-evidence";
-import { registerGetIngestionReview } from "@mcp/tools/get-ingestion-review";
-import { registerGetSource } from "@mcp/tools/get-source";
-import { registerListChangesets } from "@mcp/tools/list-changesets";
-import { registerListPendingRelations } from "@mcp/tools/list-pending-relations";
-import { registerListPendingSources } from "@mcp/tools/list-pending-sources";
-import { registerListTopics } from "@mcp/tools/list-topics";
-import { registerNarrate } from "@mcp/tools/narrate";
-import { registerRejectPendingRelation } from "@mcp/tools/reject-pending-relation";
-import { registerResolveConflictRelation } from "@mcp/tools/resolve-conflict-relation";
-import { registerResolveDuplicateRelation } from "@mcp/tools/resolve-duplicate-relation";
-import { registerRevertChangeset } from "@mcp/tools/revert-changeset";
-import { registerUpdateIngestionReview } from "@mcp/tools/update-ingestion-review";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { createTRPCClient, httpLink } from "@trpc/client";
 
+import type { AppRouter } from "@nema-io/server/src/router";
+
+import { getEnv } from "./env";
+
+/**
+ * 사용자 토큰을 그대로 실어 보낸다. 사용자/공간 해소와 검증은 apps/server의
+ * protectedProcedure가 담당한다(MCP는 인증 로직을 새로 짜지 않는다).
+ *
+ * @lintignore 아직 이 클라이언트를 쓰는 도구가 없다 — 첫 도구가 서면 여기서 가져다 쓴다.
+ */
+export function createNemaClient(accessToken: string) {
+  return createTRPCClient<AppRouter>({
+    links: [
+      httpLink({
+        url: `${getEnv().NEMA_API_URL}/trpc`,
+        headers: () => ({ Authorization: `Bearer ${accessToken}` }),
+      }),
+    ],
+  });
+}
+
+// 도구는 아직 없다 — 새 도구 정의가 서기 전까지는 빈 MCP 서버로 전송 배선만 검증한다.
 export function createMcpServer(): McpServer {
-  const server = new McpServer({ name: "nema-mcp", version: "0.0.0" });
-
-  registerListTopics(server);
-  registerGetEvidence(server);
-  registerNarrate(server);
-  registerGetSource(server);
-
-  // 넣기: 원문 박제 → Digest 리뷰(확인·수정·확정). 확정은 revert로 무를 수 있어 MCP도 뚫는다.
-  registerCreateSource(server);
-  registerListPendingSources(server);
-  registerGetIngestionReview(server);
-  registerUpdateIngestionReview(server);
-  registerConfirmIngestionReview(server);
-
-  registerListChangesets(server);
-  registerRevertChangeset(server);
-  registerArchiveStatement(server);
-  registerListPendingRelations(server);
-  registerResolveConflictRelation(server);
-  registerResolveDuplicateRelation(server);
-  registerRejectPendingRelation(server);
-
-  return server;
+  return new McpServer({ name: "nema-mcp", version: "0.0.0" });
 }

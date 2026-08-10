@@ -5,8 +5,7 @@
     "outDir": "dist",
     "rootDir": "src",
     "paths": {
-      "@mcp/*": ["src/*"],
-      "@server/*": ["../server/src/*"]
+      "@mcp/*": ["src/*"]
     }
   },
   "include": ["src"]
