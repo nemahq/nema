@@ -16,8 +16,7 @@
 - [06-concept-relation](docs/foundations/06-concept-relation.md): 관계 종류와 그걸 정한 근거
 - [07-modeling](docs/foundations/07-modeling.md): 전체 엔티티 모델(SSOT). 필드·타입·동작 규칙은 여기서 확인
 - [10-concept-collaboration](docs/foundations/10-concept-collaboration.md): 협업 기반 개념(Space·Share·Group·Workspace). 다중 사용자 기능 설계할 때
-- [11-first-product-direction](docs/foundations/11-first-product-direction.md): 첫 제품이 누구를 위한 무엇인지, 화면 우선순위·MVP 스코프
-- [12-engine-completion-criteria](docs/foundations/12-engine-completion-criteria.md): 엔진 완성 판정 기준과 측정 방법
+- [11-first-product-direction](docs/foundations/11-first-product-direction.md): 첫 제품이 누구를 위한 무엇인지, 화면 우선순위·MVP 스코프·완성 판정 기준
 
 ## 3. 제품 설계: 지금 스코프에서 어떤 화면과 흐름이 되는가
 
@@ -39,16 +38,6 @@
 - [engine/organizing](docs/blueprints/first-product/engine/organizing.md): 원문이 들어와 다이제스트가 되기까지
 - [engine/linking](docs/blueprints/first-product/engine/linking.md): 다이제스트가 이미 쌓인 것과 이어지기까지. 관계 유형별 규칙
 - [engine/lifecycle](docs/blueprints/first-product/engine/lifecycle.md): 쌓인 것이 그 뒤로 바뀌고 사라지기까지
-- [schema-design](docs/blueprints/save-engine-v2/schema-design.md): 테이블 스키마, RLS, 트리거, 큐/RPC 계약. 마이그레이션 작성 전 확인
-- [ingestion-design](docs/blueprints/save-engine-v2/ingestion-design.md): 넣기(원문→진술) 파이프 흐름
-- [relation-design](docs/blueprints/save-engine-v2/relation-design.md): 관계 엔진 골격, 관계 종류별 동작 규칙
-- [retrieval-design](docs/blueprints/save-engine-v2/retrieval-design.md): 꺼내기 흐름, 뜻 단위 검색
-- [auto-scoping-design](docs/blueprints/save-engine-v2/auto-scoping-design.md): 검색 2단계 스코핑(coarse→fine)
-- [intervention-design](docs/blueprints/save-engine-v2/intervention-design.md): 사람 개입 3동작(archive·revert·관계 해소)
-- [topic-substrate-design](docs/blueprints/save-engine-v2/topic-substrate-design.md): 주제(Topic) 정의와 생애주기
-- [temporal-query-design](docs/blueprints/save-engine-v2/temporal-query-design.md): 시간 질의 처리
-- [long-input-chunking](docs/blueprints/save-engine-v2/long-input-chunking.md): 초장문 청크 분할
-- [eval-design](docs/blueprints/save-engine-v2/eval-design.md): 엔진 품질 측정 방식, 평가셋 (측정 일지는 legacy/apps/server/src/eval 안에 있다)
 
 ## 5. 작업 방식/컨벤션: 코드를 어떻게 짜고 협업하는가
 
@@ -79,7 +68,7 @@
 
 - [intake-surface-design](docs/archive/intake-surface-design.archive.md): 넣기 표면 v1 설계
 - [put-in-and-pull-out-flow-design-v1](docs/archive/put-in-and-pull-out-flow-design-v1.archive.md): 넣기·꺼내기 흐름 v1 설계
-- [save-engine-v1/prd](docs/archive/save-engine-v1/prd.archive.md): 저장 파이프라인 v1(현재는 save-engine-v2로 대체)
+- [save-engine-v1/prd](docs/archive/save-engine-v1/prd.archive.md): 저장 파이프라인 v1(v2를 거쳐 지금은 engine/organizing·engine/linking으로 대체)
 - [save-engine-v1/diagram](docs/archive/save-engine-v1/diagram.archive.html): 위 문서의 시각화 자료
 - [content-intake-design](docs/archive/content-intake-design.archive.md): 넣기 구현 청사진 v1(v2 Digest 파이프라인으로 대체). mcp-design.md·topic-substrate-design.md가 아직 이 문서를 참조하고 있어, 그 의존이 유효한지 확인할 때
 - [memory-page](docs/archive/memory-page.archive.html): 기억 페이지 이전 와이어프레임
@@ -87,3 +76,14 @@
 - [drafting-criteria](docs/archive/drafting-criteria.archive.md): 초안 다듬기 기준 v1. Digest 생성 프롬프트에 신호·노이즈 판정 원칙을 반영할 때
 - [engine-completion-criteria-v1](docs/archive/engine-completion-criteria-v1.archive.md): 엔진 완성 기준 v1(Digest 도입 전 v1 추출 경로 측정)
 - [removed-code-inventory](docs/archive/save-engine-v1/removed-code-inventory.archive.md): v1 채팅 세션 삭제 파일 99개 인벤토리(PR #484). v1에 있던 기능이 다시 필요해졌을 때
+- [save-engine-v2/ingestion-design](docs/archive/save-engine-v2/ingestion-design.archive.md): 넣기 설계 v2(engine/organizing으로 대체). engine/organizing이 놓친 세부가 있는지 대조할 때
+- [save-engine-v2/relation-design](docs/archive/save-engine-v2/relation-design.archive.md): 관계 설계 v2(engine/linking으로 대체). engine/linking이 놓친 세부가 있는지 대조할 때
+- [save-engine-v2/schema-design](docs/archive/save-engine-v2/schema-design.archive.md): 저장 구조 설계 v2(마이그레이션이 새 줄로 시작하며 계약 무효). 옛 스키마가 실제로 어떻게 짜여 있었는지 마이그레이션 히스토리만으로 안 풀릴 때
+- [save-engine-v2/intervention-design](docs/archive/save-engine-v2/intervention-design.archive.md): 사람 개입 설계 v2(engine/lifecycle이 대체할 예정, 아직 골격만). engine/lifecycle을 채울 때 초안으로
+- [save-engine-v2/retrieval-design](docs/archive/save-engine-v2/retrieval-design.archive.md): 꺼내기 설계 v2(대응 문서 없음). 꺼내기 엔진 설계를 다시 시작할 때
+- [save-engine-v2/auto-scoping-design](docs/archive/save-engine-v2/auto-scoping-design.archive.md): 검색 2단계 스코핑 설계 v2(대응 문서 없음). 검색 스코핑 설계를 다시 시작할 때
+- [save-engine-v2/temporal-query-design](docs/archive/save-engine-v2/temporal-query-design.archive.md): 시간 질의 설계 v2(대응 문서 없음). 시간 질의 처리를 다시 설계할 때
+- [save-engine-v2/topic-substrate-design](docs/archive/save-engine-v2/topic-substrate-design.archive.md): 주제(Topic) 생애주기 설계 v2(대응 문서 없음). 주제 생애주기를 다시 설계할 때
+- [save-engine-v2/long-input-chunking](docs/archive/save-engine-v2/long-input-chunking.archive.md): 초장문 분할 설계 v2(대응 문서 없음). 초장문 분할을 다시 붙일 때
+- [save-engine-v2/eval-design](docs/archive/save-engine-v2/eval-design.archive.md): 엔진 품질 측정 설계 v2(대응 문서 없음). 엔진 품질 측정 체계를 다시 세울 때
+- [12-engine-completion-criteria](docs/archive/12-engine-completion-criteria.archive.md): 엔진 완성 기준 v2(판정 기준은 11-first-product-direction §7로 흡수, 측정 방법은 여기 남음). v2 시절 수치 측정 경로의 원문이 필요할 때

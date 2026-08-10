@@ -1,5 +1,7 @@
 # 관계 설계 — 진술 엔진 (save-engine-v2)
 
+> ⚠️ **대체됨.** [`engine/linking.md`](../../blueprints/first-product/engine/linking.md)가 대체했다.
+
 > 진술과 진술을 잇는 관계 엔진의 1차 골격. [06(관계)](../../product/06-concept-relation.md)·[07(모델링)](../../product/07-modeling.md)이 정한 관계 4종과 동작 규칙을, [`schema-design.md`](schema-design.md)이 자리만 잡아둔 `statement_relations` 위에서 도는 메커니즘으로 번역한다. **메커니즘(데이터 무관)까지만 정하고, 실제 진술 데이터를 봐야 정할 수 있는 것은 전부 "보류"로 명시한다**(11장).
 >
 > 짝 문서: [`ingestion-design.md`](ingestion-design.md)(넣기 — 이 엔진의 방아쇠), [`retrieval-design.md`](retrieval-design.md)(꺼내기 — 이 엔진의 결과가 비치는 곳).

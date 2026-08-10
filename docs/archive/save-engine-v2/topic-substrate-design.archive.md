@@ -1,5 +1,7 @@
 # 주제 토대 설계 — 진술 엔진 (save-engine-v2)
 
+> ⚠️ **대체 문서 없음.**
+
 > 검색이 읽는 "주제"가 무엇인지 못박고, 그 주제를 만들고·재사용하고·정리하는 생애주기를 정하는 설계. [`auto-scoping-design.md`](auto-scoping-design.md)이 coarse 단계에서 주제를 골라 검색을 좁히는데, 그 주제의 품질이 곧 스코핑의 천장이라 같이 본다. 이미 있는 주제 레지스트리([`content-intake-design.archive.md`](../../archive/content-intake-design.archive.md)가 깐 `topics`·`source_topics` 스키마·확정 게이트) 위에 서고, 그 정전 위에 생애주기·품질을 더한다. ⚠️ 이 문서는 v2 Digest 파이프라인으로 대체돼 히스토리로 옮겨졌다 — 여기 의존하는 스키마·게이트가 여전히 유효한지 재검토 필요.
 >
 > 짝 문서: [`content-intake-design.archive.md`](../../archive/content-intake-design.archive.md)(주제 레지스트리·확정 게이트의 정전, 히스토리로 옮겨짐), [`auto-scoping-design.md`](auto-scoping-design.md)(주제를 읽어 검색을 좁히는 쪽), [`ingestion-design.md`](ingestion-design.md)(주제가 글에 붙는 넣기 경로).
