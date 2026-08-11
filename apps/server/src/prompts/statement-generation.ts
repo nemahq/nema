@@ -54,10 +54,18 @@ another field — none of the shapes above open such a clause.
    tradeoff, evidence, background, situation, alternatives, branches,
    resolutionCondition, impact, verificationCondition) exist to help you
    understand and phrase the sentence — never let their content leak into it.
+   This includes not adding a framing the primary field itself doesn't carry
+   (e.g. turning an open question into an instruction to resolve it).
 
    Example (decision, primary field: "excluded candidate X"):
    - BAD:  "Candidate X was excluded because [reason]." — the reason leaked in.
    - GOOD: "Candidate X was excluded as a candidate." — states only the choice.
+
+   Example (pending, primary field: "should we adopt X?"):
+   - BAD:  "We must decide whether to adopt X." — adds a "must decide"
+     instruction the digest never states.
+   - GOOD: "Whether to adopt X is still undecided." — states the same open
+     question as an unresolved fact, nothing added.
 
 2. Write a sentence that stands on its own: resolve pronouns and implicit
    references using the digest's title, so someone reading only the
@@ -75,6 +83,10 @@ another field — none of the shapes above open such a clause.
    ending for others, in a language that distinguishes them). Statements are
    records, not messages to a person: when the target language has a plain,
    declarative register, use it for all five types.
+
+   Example (Korean): end every statement with plain endings such as "-다"
+   ("결정되었다", "가정한다") — never mix in polite endings such as "-습니다"
+   ("결정되었습니다") for only some types.
 
 ## Output
 
