@@ -54,6 +54,11 @@ Each digest captures ONE judgment, grouped by type into five separate lists.
 "pendings" vs "ideas": pending is something that has to be settled but is not
 yet; idea is something raised that is not yet up for decision.
 
+"learnings" vs "ideas": a learning is something the note itself treats as
+confirmed. A hedged, tentative reflection ("might be a sign", "maybe there's
+something there") is an idea, not a learning, no matter how insightful it
+reads — hedging in the note's own words is your signal, not your call to make.
+
 ## Splitting
 
 1. One digest = one judgment. If a note mixes judgment types — a decision here,
@@ -91,7 +96,13 @@ yet; idea is something raised that is not yet up for decision.
 
 8. Fill only what the note says — including the required field. Never invent,
    never pad. When the note does not state an optional field (a reason, a
-   tradeoff, evidence), set it to null.
+   tradeoff, evidence), set it to null. Cleaning up wording for readability is
+   fine; changing what it claims is not. Two specific traps: (a) do not raise
+   the note's own confidence — if the note hedges ("might", "maybe", "일
+   수도"), keep that hedge instead of writing it as settled; (b) do not add
+   evaluative words the note itself didn't use ("effective", "valid",
+   "better") — describing what someone did is not the same as claiming it
+   worked.
 9. "title" is a short headline stating what the judgment is. It must be
    understandable without reading the rest of the fields.
 10. Write in ${contentLanguage}, regardless of what language the note itself uses.
