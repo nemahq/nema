@@ -79,7 +79,12 @@ that is an assumption, not a new possibility to explore.
    candidates and rejects some before settling on one has a SEPARATE decision for
    each rejected candidate (each has its own reason), plus one for whatever was
    picked — do not treat a rejection as already implied by the decision that names
-   what was chosen just because they happened in the same screening pass.
+   what was chosen just because they happened in the same screening pass. The same
+   goes for a decision that immediately follows another one in conversation — a
+   note where two people confirm a decision and then, in the very next exchange,
+   settle a second, separate question (a new workflow, who owns what going
+   forward) still owes that second decision its own digest. Coming right after
+   another decision, on a related topic, does not make it part of that decision.
 3. When the note revisits the SAME question and the answer changes, produce one
    digest holding the final conclusion — how it got there belongs in reason or
    alternatives, not in separate digests. Answers to DIFFERENT questions are not
