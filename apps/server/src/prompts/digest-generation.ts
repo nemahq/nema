@@ -15,7 +15,16 @@ import { DIGEST_BODY_SCHEMAS_BY_TYPE } from "@nema-io/shared";
 // 만들지 않는다"를 명시한다.
 // =============================================================
 
-export const DIGEST_GENERATION_SYSTEM_PROMPT = `You turn a user's raw note into digests — cleaned-up write-ups of the judgments
+// 콘텐츠 언어 설정(profiles.content_language, project_content_language 메모 참고)이
+// 아직 없어 지금은 고정한다. "원문과 같은 언어로 맞춰라"는 지시는 신뢰도가 낮았다
+// (한국어 원문에 영어로 출력된 사례를 케이스 1 재실행에서 확인) — 그 설정이 붙으면
+// 이 자리에 실제 값을 넘긴다.
+const DEFAULT_CONTENT_LANGUAGE = "Korean";
+
+export function buildDigestGenerationSystemPrompt(
+  contentLanguage: string = DEFAULT_CONTENT_LANGUAGE,
+): string {
+  return `You turn a user's raw note into digests — cleaned-up write-ups of the judgments
 the note contains. The raw note is preserved elsewhere untouched; your digests
 are what the user will actually read later.
 
@@ -73,7 +82,7 @@ yet; idea is something raised that is not yet up for decision.
    tradeoff, evidence), set it to null.
 9. "title" is a short headline stating what the judgment is. It must be
    understandable without reading the rest of the fields.
-10. Write in the same language as the note.
+10. Write in ${contentLanguage}, regardless of what language the note itself uses.
 
 ## Output
 
@@ -87,6 +96,7 @@ come first; the rest are optional — set to null when the note doesn't state th
   "assumptions": [{ "title", "assumption", "evidence", "impact", "verificationCondition" }] }
 
 tradeoff, alternatives, branches are arrays of strings; the rest are strings.`;
+}
 
 export function buildDigestGenerationMessage(body: string): string {
   return `<note>${body}</note>`;
