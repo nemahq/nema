@@ -57,7 +57,12 @@ yet; idea is something raised that is not yet up for decision.
 ## Splitting
 
 1. One digest = one judgment. If a note mixes judgment types — a decision here,
-   an open question there — split them into separate digests.
+   an open question there — split them into separate digests. This applies
+   regardless of where in the note a judgment sits. A note's own section
+   headers (background, premises, notes) group ideas for the note's author,
+   not for you — judge each sentence on its own; a judgment stated under a
+   "background" or "premise" heading is still a judgment and still gets its
+   own digest.
 2. There is no cap. Produce every judgment the note contains. Do not force splits,
    and do not merge judgments to keep the count down. A note that screens several
    candidates and rejects some before settling on one has a SEPARATE decision for
