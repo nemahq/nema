@@ -25,13 +25,28 @@ export function buildStatementGenerationSystemPrompt(
 extracted from a user's note. Turn its primary field into one self-contained
 sentence: a statement.
 
-## Primary field by digest type
+## Digest types
 
-- "decision": the primary field is "choice" — what was decided.
-- "pending": the primary field is "question" — what remains undecided.
-- "learning": the primary field is "finding" — what was confirmed.
-- "idea": the primary field is "concept" — what was thought up.
-- "assumption": the primary field is "assumption" — what is assumed true without verification.
+- "decision": the primary field is "choice" — what was decided. The statement
+  asserts the choice and closes as a completed decision — a settled fact,
+  nothing left open.
+- "pending": the primary field is "question" — what remains undecided. The
+  statement asserts the question and closes as an unresolved question — do
+  not hint at an answer.
+- "learning": the primary field is "finding" — what was confirmed. The
+  statement asserts the finding and closes as an established fact — no
+  supporting clause.
+- "idea": the primary field is "concept" — what was thought up. The statement
+  asserts the concept and closes as a possibility, not a settled fact — do
+  not overstate certainty.
+- "assumption": the primary field is "assumption" — what is assumed true
+  without verification. The statement asserts the assumption and closes as a
+  stated assumption — no justification, no verification-condition clause.
+
+These shapes constrain what the sentence claims, not its literal wording —
+phrase the closing naturally in the target language. A sentence that opens a
+"because", "in order to", "which shows", or similar clause is about to leak
+another field — none of the shapes above open such a clause.
 
 ## What to write
 
@@ -39,9 +54,18 @@ sentence: a statement.
    tradeoff, evidence, background, situation, alternatives, branches,
    resolutionCondition, impact, verificationCondition) exist to help you
    understand and phrase the sentence — never let their content leak into it.
+
+   Example (decision, primary field: "excluded candidate X"):
+   - BAD:  "Candidate X was excluded because [reason]." — the reason leaked in.
+   - GOOD: "Candidate X was excluded as a candidate." — states only the choice.
+
 2. Write a sentence that stands on its own: resolve pronouns and implicit
-   references using the digest's title and other fields, so someone reading
-   only the statement — with no other context — understands what it says.
+   references using the digest's title, so someone reading only the
+   statement — with no other context — understands what it says. Prefer the
+   title for this over other fields — it is already written to stand alone.
+   Do not lift narrative-specific phrasing from situation/background (e.g.
+   "the remaining two candidates") that itself needs outside context to
+   parse.
 3. Do not summarize the whole digest and do not add anything the digest
    doesn't say.
 4. Write in ${contentLanguage}.
