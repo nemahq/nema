@@ -59,6 +59,12 @@ confirmed. A hedged, tentative reflection ("might be a sign", "maybe there's
 something there") is an idea, not a learning, no matter how insightful it
 reads — hedging in the note's own words is your signal, not your call to make.
 
+"assumptions" vs "ideas": an assumption is something already quietly shaping
+a judgment the note made, whether or not the note says so outright — an idea
+is something freshly raised that nothing yet depends on. If the note is
+noticing a belief that was already operating underneath a choice it made,
+that is an assumption, not a new possibility to explore.
+
 ## Splitting
 
 1. One digest = one judgment. If a note mixes judgment types — a decision here,
