@@ -39,28 +39,26 @@ function fakeSupabase(): {
   client: TypedSupabaseClient;
   insert: ReturnType<typeof vi.fn>;
 } {
-  const insert = vi
-    .fn()
-    .mockImplementation(
-      (
-        rows: Array<{
-          digest_id: string;
-          digest_field: string;
-          content: string;
-        }>,
-      ) => ({
-        select: vi.fn().mockResolvedValue({
-          data: rows.map((row, i) => ({
-            id: STATEMENT_IDS[i],
-            digest_id: row.digest_id,
-            digest_field: row.digest_field,
-            content: row.content,
-            created_at: "2026-08-11T00:00:01.000Z",
-          })),
-          error: null,
-        }),
+  const insert = vi.fn().mockImplementation(
+    (
+      rows: Array<{
+        digest_id: string;
+        digest_field: string;
+        content: string;
+      }>,
+    ) => ({
+      select: vi.fn().mockResolvedValue({
+        data: rows.map((row, i) => ({
+          id: STATEMENT_IDS[i],
+          digest_id: row.digest_id,
+          digest_field: row.digest_field,
+          content: row.content,
+          created_at: "2026-08-11T00:00:01.000Z",
+        })),
+        error: null,
       }),
-    );
+    }),
+  );
   const from = vi.fn().mockReturnValue({ insert });
   return { client: { from } as unknown as TypedSupabaseClient, insert };
 }
