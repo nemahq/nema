@@ -14,6 +14,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@server/infra/supabase/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 import type { GeneratedDigests } from "@server/prompts/digest-generation";
+import type { GeneratedStatement } from "@server/prompts/statement-generation";
 import {
   deleteSource,
   ingestSource,
@@ -25,6 +26,9 @@ import {
 // 없다(모든 걸 다 허용해버리므로). 로컬 Supabase가 있어야 도는 이유.
 vi.mock("@server/infra/llm/provider", () => ({
   getDigestGenerationProvider: () => ({ generateStructured: mockGenerate }),
+  getStatementGenerationProvider: () => ({
+    generateStructured: mockGenerateStatement,
+  }),
 }));
 
 function noDigests(): GeneratedDigests {
@@ -44,6 +48,17 @@ function mockGenerate(): Promise<GeneratedDigests> {
     return Promise.reject(mockError);
   }
   return Promise.resolve(mockGenerated);
+}
+
+// 기본값은 항상 성공 — statement 생성을 다루지 않는 기존 테스트가 실패 로그로
+// 얼룩지지 않게 한다. 실패를 보는 테스트만 mockStatementError를 채운다.
+let mockStatementContent = "fixture statement";
+let mockStatementError: Error | null = null;
+function mockGenerateStatement(): Promise<GeneratedStatement> {
+  if (mockStatementError) {
+    return Promise.reject(mockStatementError);
+  }
+  return Promise.resolve({ statement: mockStatementContent });
 }
 
 function oneDecision(title: string): GeneratedDigests {
@@ -145,6 +160,8 @@ afterAll(async () => {
 
 afterEach(() => {
   mockError = null;
+  mockStatementContent = "fixture statement";
+  mockStatementError = null;
 });
 
 describe("source-service (RLS)", () => {
@@ -374,6 +391,186 @@ describe("source-service (RLS)", () => {
         .eq("source_id", sourceId);
       expect(remaining).toHaveLength(1);
       expect(remaining?.[0]?.id).toBe(original[0]?.id);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "다이제스트마다 진술이 함께 생성돼 저장된다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("진술 테스트 결정");
+      mockStatementContent = "진술 테스트 결정을 내렸다";
+
+      const { digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "진술 테스트 원문",
+      });
+
+      expect(digests[0]?.statement).toEqual({
+        id: expect.any(String),
+        digestId: digests[0]?.id,
+        digestField: "choice",
+        content: "진술 테스트 결정을 내렸다",
+        createdAt: expect.any(String),
+      });
+
+      const { data: row } = await userA.supabase
+        .from("statements")
+        .select("digest_id, digest_field, content")
+        .eq("digest_id", digests[0]?.id ?? "")
+        .single();
+      expect(row).toEqual({
+        digest_id: digests[0]?.id,
+        digest_field: "choice",
+        content: "진술 테스트 결정을 내렸다",
+      });
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "진술 생성이 실패해도 다이제스트는 살고 statement는 null이다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("진술 실패 테스트 결정");
+      mockStatementError = new Error("statement LLM unavailable");
+
+      const { digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "진술 실패 테스트 원문",
+      });
+
+      expect(digests).toHaveLength(1);
+      expect(digests[0]?.title).toBe("진술 실패 테스트 결정");
+      expect(digests[0]?.statement).toBeNull();
+
+      const { data: rows } = await userA.supabase
+        .from("statements")
+        .select("id")
+        .eq("digest_id", digests[0]?.id ?? "");
+      expect(rows).toHaveLength(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "원문을 삭제하면 진술도 함께 사라진다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("진술 삭제 테스트 결정");
+      const { sourceId, digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "진술 삭제 테스트 원문",
+      });
+      expect(digests[0]?.statement).not.toBeNull();
+
+      await deleteSource({ supabase: userA.supabase, sourceId });
+
+      const { data: remainingStatements } = await admin
+        .from("statements")
+        .select("id")
+        .eq("digest_id", digests[0]?.id ?? "");
+      expect(remainingStatements).toHaveLength(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "넣은 원문의 진술은 소유자만 볼 수 있다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("진술 RLS 테스트 결정");
+      const { digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "진술 RLS 테스트 원문",
+      });
+      const digestId = digests[0]?.id ?? "";
+
+      const { data: asOwner } = await userA.supabase
+        .from("statements")
+        .select("id")
+        .eq("digest_id", digestId)
+        .maybeSingle();
+      expect(asOwner?.id).toBeTruthy();
+
+      const { data: asOther } = await userB.supabase
+        .from("statements")
+        .select("id")
+        .eq("digest_id", digestId)
+        .maybeSingle();
+      expect(asOther).toBeNull();
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "재추출하면 이전 진술은 CASCADE로 사라지고 새 진술이 새 다이제스트에 붙는다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("재추출 진술 테스트 - 기존");
+      mockStatementContent = "기존 진술";
+      const { sourceId, digests: original } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "재추출 진술 테스트 원문",
+      });
+      const originalDigestId = original[0]?.id ?? "";
+      expect(original[0]?.statement?.content).toBe("기존 진술");
+
+      mockGenerated = oneDecision("재추출 진술 테스트 - 새것");
+      mockStatementContent = "재추출된 진술";
+      const { digests: reExtracted } = await reExtractSource({
+        supabase: userA.supabase,
+        sourceId,
+      });
+
+      expect(reExtracted[0]?.statement?.content).toBe("재추출된 진술");
+      expect(reExtracted[0]?.id).not.toBe(originalDigestId);
+
+      const { data: staleStatement } = await admin
+        .from("statements")
+        .select("id")
+        .eq("digest_id", originalDigestId);
+      expect(staleStatement).toHaveLength(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "같은 다이제스트에 진술을 두 번 넣을 수 없다(digest_id UNIQUE)",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("UNIQUE 제약 테스트 결정");
+      const { digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "UNIQUE 제약 테스트 원문",
+      });
+      expect(digests[0]?.statement).not.toBeNull();
+
+      const { error } = await admin.from("statements").insert({
+        digest_id: digests[0]?.id ?? "",
+        digest_field: "choice",
+        content: "중복 삽입 시도",
+      });
+      expect(error?.code).toBe("23505");
     },
     TEST_TIMEOUT_MS,
   );

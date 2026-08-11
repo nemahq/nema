@@ -1,4 +1,4 @@
-type LlmErrorCode =
+export type LlmErrorCode =
   | "timeout"
   | "rate_limit"
   | "auth"
