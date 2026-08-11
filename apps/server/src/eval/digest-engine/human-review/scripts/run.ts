@@ -1,5 +1,6 @@
 // samples/*.md를 staging source.ingest에 넣고, 응답을 사람이 읽기 좋은 구조화
-// 텍스트로 human-review/에 남긴다. 값은 옮겨 적을 뿐 고치지 않는다 — 순수 실행+포맷.
+// 텍스트로 human-review/results/에 남긴다. 값은 옮겨 적을 뿐 고치지 않는다 —
+// 순수 실행+포맷.
 //
 // usage: STAGING_PASSWORD=... npx tsx run.ts [파일명...]
 //   인자 없으면 samples/ 전체를 돈다.
@@ -16,8 +17,8 @@ import {
 } from "@server/eval/digest-engine/format";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SAMPLES_DIR = join(__dirname, "..", "samples");
-const RESULTS_DIR = __dirname;
+const SAMPLES_DIR = join(__dirname, "..", "..", "samples");
+const RESULTS_DIR = join(__dirname, "..", "results");
 
 // 배포가 죽어있을 때 로컬에서 staging DB/LLM에 붙여 확인할 수 있게 오버라이드를 둔다.
 const STAGING_URL = process.env["API_URL"] ?? "https://api-staging.getnema.app";

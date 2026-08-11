@@ -1,6 +1,6 @@
-// samples/*.md를 LLM에 직접 넣어(DB 저장 없이) 다이제스트 + 판단 이유를 뽑는다.
-// run.ts와 달리 API를 안 거친다 — reasoning 스키마는 eval 전용이라 프로덕션
-// source.ingest가 반환하는 모양이 아니다.
+// samples/*.md를 LLM에 직접 넣어(DB 저장 없이) 다이제스트 + 판단 이유를 뽑아
+// human-review/results/에 남긴다. run.ts와 달리 API를 안 거친다 — reasoning
+// 스키마는 eval 전용이라 프로덕션 source.ingest가 반환하는 모양이 아니다.
 //
 // usage: npx tsx run-with-reasoning.ts [파일명...]
 //   인자 없으면 samples/ 전체를 돈다.
@@ -26,9 +26,9 @@ import { getDigestGenerationProvider } from "@server/infra/llm/provider";
 import { buildDigestGenerationMessage } from "@server/prompts/digest-generation";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SAMPLES_DIR = join(__dirname, "..", "samples");
-const RESULTS_DIR = __dirname;
-const SERVER_ROOT = join(__dirname, "..", "..", "..", "..");
+const SAMPLES_DIR = join(__dirname, "..", "..", "samples");
+const RESULTS_DIR = join(__dirname, "..", "results");
+const SERVER_ROOT = join(__dirname, "..", "..", "..", "..", "..");
 
 const ARRAY_TYPE = {
   decisions: "decision",
