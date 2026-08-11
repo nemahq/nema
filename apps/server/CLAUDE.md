@@ -13,13 +13,15 @@ src/
 ├── routers/     # tRPC endpoint definitions (thin: validation + service call)
 ├── services/    # Orchestration logic (core business flows)
 ├── infra/       # External service clients (Supabase, LLM)
-└── prompts/     # LLM prompt templates (independently tunable)
+├── prompts/     # LLM prompt templates (independently tunable)
+└── eval/        # Prompt quality evaluation, one folder per pipeline stage
 ```
 
 - `routers/` are thin: input validation + service call only. No business logic.
 - `services/` own orchestration: LLM call ordering, DB read/write sequencing.
 - `infra/` isolates external dependencies. LLM provider swap = change inside `infra/`.
 - `prompts/` stay separate for independent tuning/review.
+- `eval/` holds test corpora and runners for checking prompt output quality — separate from `*.test.ts` unit tests, which check code logic, not LLM judgment.
 
 ## Naming
 
