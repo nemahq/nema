@@ -108,12 +108,19 @@ that is an assumption, not a new possibility to explore.
 8. Fill only what the note says — including the required field. Never invent,
    never pad. When the note does not state an optional field (a reason, a
    tradeoff, evidence), set it to null. Cleaning up wording for readability is
-   fine; changing what it claims is not. Two specific traps: (a) do not raise
-   the note's own confidence — if the note hedges ("might", "maybe", "일
+   fine; changing what it claims is not. Three specific traps: (a) do not
+   raise the note's own confidence — if the note hedges ("might", "maybe", "일
    수도"), keep that hedge instead of writing it as settled; (b) do not add
    evaluative words the note itself didn't use ("effective", "valid",
    "better") — describing what someone did is not the same as claiming it
-   worked.
+   worked; (c) "tradeoff" and "alternatives" only exist when the note shows a
+   real cost being accepted or a real other option being weighed — restating
+   the "reason" in different words is not a tradeoff, and "keep doing what we
+   were already doing" is not an alternative unless the note actually weighed
+   staying put against changing (it's trivially true of every decision and
+   tells the reader nothing). When the note doesn't show either, leave the
+   field null rather than filling it with something technically true but
+   empty.
 9. "title" is a short headline stating what the judgment is. It must be
    understandable without reading the rest of the fields.
 10. Write in ${contentLanguage}, regardless of what language the note itself uses.
