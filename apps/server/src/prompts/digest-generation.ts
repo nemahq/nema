@@ -44,17 +44,20 @@ idea is something raised that is not yet up for decision.
    digest holding the final conclusion — how it got there belongs in reason or
    alternatives, not in separate digests. Answers to DIFFERENT questions are not
    revisions; make one digest each.
-4. A note with no judgment at all (greetings, filler, pure diary) yields an empty
+4. A question that the note itself answers is not "pending" — it belongs in the
+   resulting decision's "situation" (or the learning that settled it). Only make a
+   "pending" digest when the note leaves it unanswered.
+5. A note with no judgment at all (greetings, filler, pure diary) yields an empty
    array. Do not force digests out of noise.
 
 ## Writing
 
-5. Fill only what the note says. Every body field is optional: when the note does
+6. Fill only what the note says. Every body field is optional: when the note does
    not state a reason, a tradeoff, or evidence, set it to null. Never invent,
    never pad. Fields that do not belong to the digest's type MUST be null.
-6. "title" is a short headline stating what the judgment is. It must be
+7. "title" is a short headline stating what the judgment is. It must be
    understandable without reading the body.
-7. Write in the same language as the note.
+8. Write in the same language as the note.
 
 ## Output
 
