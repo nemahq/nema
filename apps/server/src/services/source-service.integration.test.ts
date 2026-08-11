@@ -13,7 +13,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import type { Database } from "@server/infra/supabase/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
-import type { GeneratedDigest } from "@server/prompts/digest-generation";
+import type { GeneratedDigests } from "@server/prompts/digest-generation";
 import {
   deleteSource,
   ingestSource,
@@ -27,34 +27,38 @@ vi.mock("@server/infra/llm/provider", () => ({
   getDigestGenerationProvider: () => ({ generateStructured: mockGenerate }),
 }));
 
-let mockDigests: GeneratedDigest[] = [];
+function noDigests(): GeneratedDigests {
+  return {
+    decisions: [],
+    pendings: [],
+    learnings: [],
+    ideas: [],
+    assumptions: [],
+  };
+}
+
+let mockGenerated: GeneratedDigests = noDigests();
 let mockError: Error | null = null;
-function mockGenerate(): Promise<{ digests: GeneratedDigest[] }> {
+function mockGenerate(): Promise<GeneratedDigests> {
   if (mockError) {
     return Promise.reject(mockError);
   }
-  return Promise.resolve({ digests: mockDigests });
+  return Promise.resolve(mockGenerated);
 }
 
-function fixtureDigest(title: string): GeneratedDigest {
+function oneDecision(title: string): GeneratedDigests {
   return {
-    type: "decision",
-    title,
-    situation: "fixture situation",
-    choice: "fixture choice",
-    reason: null,
-    tradeoff: null,
-    alternatives: null,
-    question: null,
-    background: null,
-    branches: null,
-    resolutionCondition: null,
-    finding: null,
-    evidence: null,
-    concept: null,
-    assumption: null,
-    impact: null,
-    verificationCondition: null,
+    ...noDigests(),
+    decisions: [
+      {
+        title,
+        choice: "fixture choice",
+        situation: "fixture situation",
+        reason: null,
+        tradeoff: null,
+        alternatives: null,
+      },
+    ],
   };
 }
 
@@ -150,7 +154,7 @@ describe("source-service (RLS)", () => {
       if (!localDbAvailable) {
         return;
       }
-      mockDigests = [fixtureDigest("A의 결정")];
+      mockGenerated = oneDecision("A의 결정");
 
       const { sourceId, digests } = await ingestSource({
         supabase: userA.supabase,
@@ -183,7 +187,7 @@ describe("source-service (RLS)", () => {
       if (!localDbAvailable) {
         return;
       }
-      mockDigests = [fixtureDigest("A의 결정 2")];
+      mockGenerated = oneDecision("A의 결정 2");
       const { sourceId } = await ingestSource({
         supabase: userA.supabase,
         userId: userA.id,
@@ -206,14 +210,14 @@ describe("source-service (RLS)", () => {
       if (!localDbAvailable) {
         return;
       }
-      mockDigests = [fixtureDigest("첫 추출")];
+      mockGenerated = oneDecision("첫 추출");
       const { sourceId, digests: first } = await ingestSource({
         supabase: userA.supabase,
         userId: userA.id,
         body: "재추출 대상 원문",
       });
 
-      mockDigests = [fixtureDigest("재추출된 결과")];
+      mockGenerated = oneDecision("재추출된 결과");
       const { digests: second } = await reExtractSource({
         supabase: userA.supabase,
         sourceId,
@@ -238,7 +242,7 @@ describe("source-service (RLS)", () => {
       if (!localDbAvailable) {
         return;
       }
-      mockDigests = [fixtureDigest("삭제될 결정")];
+      mockGenerated = oneDecision("삭제될 결정");
       const { sourceId } = await ingestSource({
         supabase: userA.supabase,
         userId: userA.id,
@@ -272,7 +276,7 @@ describe("source-service (RLS)", () => {
       if (!localDbAvailable) {
         return;
       }
-      mockDigests = [fixtureDigest("B가 못 지울 결정")];
+      mockGenerated = oneDecision("B가 못 지울 결정");
       const { sourceId } = await ingestSource({
         supabase: userA.supabase,
         userId: userA.id,
@@ -301,7 +305,7 @@ describe("source-service (RLS)", () => {
       if (!localDbAvailable) {
         return;
       }
-      mockDigests = [];
+      mockGenerated = noDigests();
       const { sourceId, digests } = await ingestSource({
         supabase: userA.supabase,
         userId: userA.id,
@@ -351,7 +355,7 @@ describe("source-service (RLS)", () => {
       if (!localDbAvailable) {
         return;
       }
-      mockDigests = [fixtureDigest("재추출 실패 테스트 - 기존")];
+      mockGenerated = oneDecision("재추출 실패 테스트 - 기존");
       const { sourceId, digests: original } = await ingestSource({
         supabase: userA.supabase,
         userId: userA.id,

@@ -13,7 +13,7 @@ import {
   buildDigestGenerationMessage,
   DIGEST_GENERATION_SYSTEM_PROMPT,
   DigestGenerationSchema,
-  normalizeDigest,
+  flattenGeneratedDigests,
 } from "@server/prompts/digest-generation";
 
 export async function ingestSource(args: {
@@ -103,7 +103,7 @@ async function generateDigests(
     messages: [{ role: "user", content: buildDigestGenerationMessage(body) }],
     schema: DigestGenerationSchema,
   });
-  return generated.digests.map(normalizeDigest);
+  return flattenGeneratedDigests(generated);
 }
 
 async function saveDigestsAndMarkCompleted(args: {
