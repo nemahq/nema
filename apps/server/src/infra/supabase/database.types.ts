@@ -96,6 +96,38 @@ export type Database = {
         };
         Relationships: [];
       };
+      statements: {
+        Row: {
+          content: string;
+          created_at: string;
+          digest_field: Database["public"]["Enums"]["digest_field"];
+          digest_id: string;
+          id: string;
+        };
+        Insert: {
+          content: string;
+          created_at?: string;
+          digest_field: Database["public"]["Enums"]["digest_field"];
+          digest_id: string;
+          id?: string;
+        };
+        Update: {
+          content?: string;
+          created_at?: string;
+          digest_field?: Database["public"]["Enums"]["digest_field"];
+          digest_id?: string;
+          id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "statements_digest_id_fkey";
+            columns: ["digest_id"];
+            isOneToOne: true;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -104,6 +136,12 @@ export type Database = {
       [_ in never]: never;
     };
     Enums: {
+      digest_field:
+        | "choice"
+        | "question"
+        | "finding"
+        | "concept"
+        | "assumption";
       digest_type: "decision" | "pending" | "learning" | "idea" | "assumption";
       digestion_status: "pending" | "completed";
     };
@@ -239,6 +277,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      digest_field: ["choice", "question", "finding", "concept", "assumption"],
       digest_type: ["decision", "pending", "learning", "idea", "assumption"],
       digestion_status: ["pending", "completed"],
     },

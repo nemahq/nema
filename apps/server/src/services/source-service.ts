@@ -2,6 +2,7 @@ import type {
   Digest,
   SourceDeleteResult,
   SourceIngestResult,
+  Statement,
 } from "@nema-io/shared";
 import { DigestSchema } from "@nema-io/shared";
 
@@ -15,6 +16,7 @@ import {
   DigestGenerationSchema,
   flattenGeneratedDigests,
 } from "@server/prompts/digest-generation";
+import { generateAndSaveStatements } from "@server/services/statement-service";
 
 export async function ingestSource(args: {
   supabase: TypedSupabaseClient;
@@ -110,7 +112,7 @@ async function saveDigestsAndMarkCompleted(args: {
   supabase: TypedSupabaseClient;
   sourceId: string;
   normalized: Array<Pick<Digest, "type" | "title" | "body">>;
-}): Promise<Digest[]> {
+}): Promise<Array<Digest & { statement: Statement | null }>> {
   const { supabase, sourceId, normalized } = args;
 
   const digests =
@@ -124,7 +126,17 @@ async function saveDigestsAndMarkCompleted(args: {
     .eq("id", sourceId);
   throwIfSupabaseError(statusError);
 
-  return digests;
+  // 이 응답 모양은 이번 라운드 도그푸딩용이다. 진술은 화면에 안 드러나는 내부
+  // 단위이고, 넣기는 원래 큐에 올리고 즉시 응답하는 설계다. 화면이 붙을 때
+  // 이 자리는 조회 라우터로 옮긴다.
+  const statementsByDigestId = await generateAndSaveStatements({
+    supabase,
+    digests,
+  });
+  return digests.map((digest) => ({
+    ...digest,
+    statement: statementsByDigestId.get(digest.id) ?? null,
+  }));
 }
 
 async function saveDigests(args: {
