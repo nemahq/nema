@@ -12,7 +12,7 @@
       "entry": ["vitest.config.base.ts"]
     },
     "apps/server": {
-      "entry": ["src/eval/**/run.ts"],
+      "entry": ["src/eval/**/run*.ts"],
       "project": ["src/**/*.ts"]
     },
     "apps/web": {

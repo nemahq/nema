@@ -102,7 +102,10 @@ export function buildDigestGenerationMessage(body: string): string {
   return `<note>${body}</note>`;
 }
 
-const DecisionSchema = z.object({
+// eval의 reasoning 변형(apps/server/src/eval/digest-engine/reasoning-schema.ts)이
+// .extend()로 이어 쓸 수 있게 export한다 — 그쪽 스키마를 여기서 손으로 복제하면
+// 이 파일이 바뀔 때마다 조용히 어긋난다.
+export const DecisionSchema = z.object({
   title: z.string().trim().min(1),
   choice: z.string().min(1),
   situation: z.string().nullable(),
@@ -111,7 +114,7 @@ const DecisionSchema = z.object({
   alternatives: z.array(z.string()).nullable(),
 });
 
-const PendingSchema = z.object({
+export const PendingSchema = z.object({
   title: z.string().trim().min(1),
   question: z.string().min(1),
   background: z.string().nullable(),
@@ -119,20 +122,20 @@ const PendingSchema = z.object({
   resolutionCondition: z.string().nullable(),
 });
 
-const LearningSchema = z.object({
+export const LearningSchema = z.object({
   title: z.string().trim().min(1),
   finding: z.string().min(1),
   evidence: z.string().nullable(),
 });
 
-const IdeaSchema = z.object({
+export const IdeaSchema = z.object({
   title: z.string().trim().min(1),
   concept: z.string().min(1),
   background: z.string().nullable(),
   branches: z.array(z.string()).nullable(),
 });
 
-const AssumptionSchema = z.object({
+export const AssumptionSchema = z.object({
   title: z.string().trim().min(1),
   assumption: z.string().min(1),
   evidence: z.string().nullable(),
