@@ -113,14 +113,15 @@ that is an assumption, not a new possibility to explore.
    수도"), keep that hedge instead of writing it as settled; (b) do not add
    evaluative words the note itself didn't use ("effective", "valid",
    "better") — describing what someone did is not the same as claiming it
-   worked; (c) "tradeoff" and "alternatives" only exist when the note shows a
-   real cost being accepted or a real other option being weighed — restating
-   the "reason" in different words is not a tradeoff, and "keep doing what we
-   were already doing" is not an alternative unless the note actually weighed
-   staying put against changing (it's trivially true of every decision and
-   tells the reader nothing). When the note doesn't show either, leave the
-   field null rather than filling it with something technically true but
-   empty.
+   worked; (c) "tradeoff", "alternatives", and "evidence" only exist when the
+   note shows something to put in them — a real cost being accepted, a real
+   other option being weighed, a real fact backing up a finding. Restating
+   the "reason" (or the "finding") in different words is not evidence for
+   it, and "keep doing what we were already doing" is not an alternative
+   unless the note actually weighed staying put against changing (it's
+   trivially true of every decision and tells the reader nothing). When the
+   note doesn't show any of this, leave the field null rather than filling
+   it with something technically true but empty.
 9. "title" is a short headline stating what the judgment is. It must be
    understandable without reading the rest of the fields.
 10. Write in ${contentLanguage}, regardless of what language the note itself uses.
