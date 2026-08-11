@@ -1,6 +1,7 @@
 import type { Digest, Statement } from "@nema-io/shared";
 import { DIGEST_FIELD_BY_TYPE, StatementSchema } from "@nema-io/shared";
 
+import type { LlmErrorCode } from "@server/infra/llm/llm-error";
 import { LlmError } from "@server/infra/llm/llm-error";
 import { getStatementGenerationProvider } from "@server/infra/llm/provider";
 import type { Database } from "@server/infra/supabase/database.types";
@@ -17,16 +18,25 @@ import {
 // 원문부터 다시 돌리게 하는 건 얻는 것보다 잃는 게 크다.
 const MAX_GENERATION_ATTEMPTS = 3;
 
-// 재시도해도 결과가 같을 실패는 한 번만 시도하고 접는다 — 사유 없이 그냥 다시
-// 부르면 콘텐츠 필터·인증 오류에 매번 상한까지 헛되이 도는 셈이다.
-const NON_RETRYABLE_LLM_ERROR_CODES = new Set<LlmError["code"]>([
-  "content_filter",
-  "auth",
-  "bad_request",
-]);
+// 재시도 사이의 대기 — 특히 rate_limit은 같은 쿼터 창 안에서 즉시 재시도하면
+// 매번 그대로 다시 걸려 재시도가 사실상 무의미해진다.
+const RETRY_BACKOFF_MS = 500;
+
+// Record — 새 LlmErrorCode가 추가되면 여기 값을 안 정한 채로는 컴파일이 안 된다
+// (docs/guides/conventions.md "같은 판별자는 Record 맵 우선"). Set 멤버십 체크였다면
+// 새 코드가 조용히 "재시도함"으로 새 뒤졌을 것 — DIGEST_FIELD_BY_TYPE의
+// satisfies Record<DigestType, ...>와 같은 이유로 여기도 강제한다.
+const RETRYABLE_LLM_ERROR_CODES = {
+  timeout: true,
+  rate_limit: true,
+  unknown: true,
+  auth: false,
+  bad_request: false,
+  content_filter: false,
+} as const satisfies Record<LlmErrorCode, boolean>;
 
 // 다이제스트마다 독립으로 생성·저장한다(다이제스트끼리 참조하지 않아 병렬로 돌린다,
-// linking.md 2.2). 하나가 실패해도 나머지는 살아야 해서 함수 경계 밖으로 던지지
+// linking.md 2.1·2.2). 하나가 실패해도 나머지는 살아야 해서 함수 경계 밖으로 던지지
 // 않는다 — 실패하면 로그 한 줄만 남기고 그 다이제스트는 statement 없이 넘어간다.
 export async function generateAndSaveStatements(args: {
   supabase: TypedSupabaseClient;
@@ -48,8 +58,14 @@ async function generateAndSaveStatement(args: {
   digest: Digest;
 }): Promise<Statement | null> {
   const { supabase, digest } = args;
+  // 로그에 실패 단계를 남긴다 — LLM 생성 실패(의도된 침묵)와 insert/검증 실패
+  // (RLS 정책 버그 등, 원래 안 나야 할 실패)를 같은 로그 한 줄로 뭉개면 후자가
+  // 관측 인프라 없이 무기한 숨을 수 있다.
+  let stage: "generation" | "insert" | "validation" = "generation";
   try {
     const content = await generateStatementSentence(digest);
+
+    stage = "insert";
     const { data, error } = await supabase
       .from("statements")
       .insert({
@@ -60,10 +76,12 @@ async function generateAndSaveStatement(args: {
       .select("id, digest_id, digest_field, content, created_at")
       .single();
     throwIfSupabaseError(error);
+
+    stage = "validation";
     return toStatement(data);
   } catch (error) {
     console.warn(
-      `[statement-generation] digest ${digest.id} (${digest.type}) — no statement saved:`,
+      `[statement-generation:${stage}] digest ${digest.id} (${digest.type}) — no statement saved:`,
       error,
     );
     return null;
@@ -84,9 +102,10 @@ async function generateStatementSentence(digest: Digest): Promise<string> {
       return result.statement;
     } catch (error) {
       lastError = error;
-      if (!isRetryable(error)) {
+      if (!isRetryable(error) || attempt === MAX_GENERATION_ATTEMPTS) {
         break;
       }
+      await delay(RETRY_BACKOFF_MS);
     }
   }
   throw lastError;
@@ -94,9 +113,13 @@ async function generateStatementSentence(digest: Digest): Promise<string> {
 
 function isRetryable(error: unknown): boolean {
   if (error instanceof LlmError) {
-    return !NON_RETRYABLE_LLM_ERROR_CODES.has(error.code);
+    return RETRYABLE_LLM_ERROR_CODES[error.code];
   }
   return true;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 type StatementRow = Pick<

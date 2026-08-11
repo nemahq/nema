@@ -12,9 +12,10 @@ import type { Digest } from "@nema-io/shared";
 // 판정("선택이 같은가")을 못 묻는다. 원문은 안 싣는다 — 다이제스트만 넘긴다.
 // =============================================================
 
-// 콘텐츠 언어 설정(profiles.content_language, project_content_language 메모 참고)이
-// 아직 없어 지금은 고정한다. digest-generation.ts와 같은 자리·같은 값 — 다이제스트가
-// 이미 이 언어로 쓰여 있으므로 진술도 같은 언어여야 서로 어긋나지 않는다.
+// 콘텐츠 언어 설정(profiles.content_language — 설계 의도는
+// docs/blueprints/first-product/surface-inventory.md 참고)이 아직 없어 지금은
+// 고정한다. digest-generation.ts와 같은 자리·같은 값 — 다이제스트가 이미 이
+// 언어로 쓰여 있으므로 진술도 같은 언어여야 서로 어긋나지 않는다.
 const DEFAULT_CONTENT_LANGUAGE = "Korean";
 
 export function buildStatementGenerationSystemPrompt(

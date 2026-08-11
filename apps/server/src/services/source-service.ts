@@ -33,7 +33,7 @@ export async function ingestSource(args: {
   throwIfSupabaseError(error);
 
   const normalized = await generateDigests(body);
-  const digests = await saveDigestsAndMarkCompleted({
+  const digests = await saveDigestsAndStatements({
     supabase,
     sourceId: source.id,
     normalized,
@@ -73,7 +73,7 @@ export async function reExtractSource(args: {
     .eq("source_id", sourceId);
   throwIfSupabaseError(deleteError);
 
-  const digests = await saveDigestsAndMarkCompleted({
+  const digests = await saveDigestsAndStatements({
     supabase,
     sourceId: source.id,
     normalized,
@@ -108,7 +108,7 @@ async function generateDigests(
   return flattenGeneratedDigests(generated);
 }
 
-async function saveDigestsAndMarkCompleted(args: {
+async function saveDigestsAndStatements(args: {
   supabase: TypedSupabaseClient;
   sourceId: string;
   normalized: Array<Pick<Digest, "type" | "title" | "body">>;
@@ -127,8 +127,8 @@ async function saveDigestsAndMarkCompleted(args: {
   throwIfSupabaseError(statusError);
 
   // 이 응답 모양은 이번 라운드 도그푸딩용이다. 진술은 화면에 안 드러나는 내부
-  // 단위이고, 넣기는 원래 큐에 올리고 즉시 응답하는 설계다. 화면이 붙을 때
-  // 이 자리는 조회 라우터로 옮긴다.
+  // 단위이라 조회 화면이 없는 지금은 이 응답이 보는 유일한 창구다 — 화면이
+  // 붙을 때 이 자리는 조회 라우터로 옮긴다.
   const statementsByDigestId = await generateAndSaveStatements({
     supabase,
     digests,

@@ -30,7 +30,7 @@ export const StatementSchema = z.object({
   id: z.string().uuid(),
   digestId: z.string().uuid(),
   digestField: DigestFieldSchema,
-  content: z.string(),
+  content: z.string().min(1),
   createdAt: z.string().datetime({ offset: true }),
 });
 export type Statement = z.infer<typeof StatementSchema>;

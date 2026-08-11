@@ -515,4 +515,63 @@ describe("source-service (RLS)", () => {
     },
     TEST_TIMEOUT_MS,
   );
+
+  it(
+    "재추출하면 이전 진술은 CASCADE로 사라지고 새 진술이 새 다이제스트에 붙는다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("재추출 진술 테스트 - 기존");
+      mockStatementContent = "기존 진술";
+      const { sourceId, digests: original } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "재추출 진술 테스트 원문",
+      });
+      const originalDigestId = original[0]?.id ?? "";
+      expect(original[0]?.statement?.content).toBe("기존 진술");
+
+      mockGenerated = oneDecision("재추출 진술 테스트 - 새것");
+      mockStatementContent = "재추출된 진술";
+      const { digests: reExtracted } = await reExtractSource({
+        supabase: userA.supabase,
+        sourceId,
+      });
+
+      expect(reExtracted[0]?.statement?.content).toBe("재추출된 진술");
+      expect(reExtracted[0]?.id).not.toBe(originalDigestId);
+
+      const { data: staleStatement } = await admin
+        .from("statements")
+        .select("id")
+        .eq("digest_id", originalDigestId);
+      expect(staleStatement).toHaveLength(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "같은 다이제스트에 진술을 두 번 넣을 수 없다(digest_id UNIQUE)",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("UNIQUE 제약 테스트 결정");
+      const { digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "UNIQUE 제약 테스트 원문",
+      });
+      expect(digests[0]?.statement).not.toBeNull();
+
+      const { error } = await admin.from("statements").insert({
+        digest_id: digests[0]?.id ?? "",
+        digest_field: "choice",
+        content: "중복 삽입 시도",
+      });
+      expect(error?.code).toBe("23505");
+    },
+    TEST_TIMEOUT_MS,
+  );
 });

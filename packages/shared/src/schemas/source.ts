@@ -19,8 +19,8 @@ export const SourceActionInputSchema = z.object({
 export type SourceActionInput = z.infer<typeof SourceActionInputSchema>;
 
 // Digest에 그 진술을 얹은 모양 — 화면이 없어 조회 라우터가 서기 전까지 넣기·재추출
-// 응답이 진술을 보는 유일한 창구다. 진술은 화면에 안 드러나는 내부 단위이고 넣기는
-// 원래 큐에 올리고 즉시 응답하는 설계라, 화면이 붙으면 이 자리는 조회 라우터로 옮긴다.
+// 응답이 진술을 보는 유일한 창구다. 진술은 화면에 안 드러나는 내부 단위이라, 화면이
+// 붙으면 이 자리는 조회 라우터로 옮긴다.
 const DigestWithStatementSchema = z.intersection(
   DigestSchema,
   z.object({ statement: StatementSchema.nullable() }),
