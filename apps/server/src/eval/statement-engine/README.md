@@ -36,13 +36,12 @@
 
 ## 평가 환경
 
-**1차 리뷰는 로컬**로 한다. `digest-engine`은 staging을 쓰지만(도그푸딩 계정, `db reset`에도
-안 날아가는 영속성), 이 슬라이스가 만든 `statements` 테이블은 아직 `staging` 브랜치에
-머지되기 전이라 staging DB에 없다 — 지금 staging에 대고 돌리면 진술 생성 자체는 되지만
-저장이 매번 실패해서 결과에 진술이 하나도 안 보인다. `human-review/run.ts`가 로컬
-Supabase(`supabase start`)에 로컬 서버(`APP_ENV=local`)로 붙는다. **이 스택이 `staging`에
-머지된 뒤에는 `digest-engine`과 같은 방식(staging + 도그푸딩 계정)으로 옮긴다** — 결과가
-worktree `db reset`에 안 날아가고, 실사용에 더 가까운 환경에서 재보게 된다.
+DB가 필요 없다. `human-review/run.ts`는 `digest-engine`이 커밋해둔 다이제스트 결과
+(`digest-engine/human-review/results/*.reasoning.md`)를 파싱해 다이제스트를 mock으로
+복원하고, 진술 생성 프롬프트를 LLM에 직접 호출한다(`source.ingest`도, Supabase도 안
+거친다) — 그래서 staging이든 로컬이든 DB 상태와 무관하게 그 자리에서 돈다. Gemini
+자격증명만 있으면 되므로 `loadEnv`가 `.env.staging`+`~/.config/nema/.env.secret`을
+그대로 읽는다.
 
 ## 다시 여는 조건
 
