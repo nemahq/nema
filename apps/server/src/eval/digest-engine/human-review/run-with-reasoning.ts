@@ -9,7 +9,14 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { DigestType } from "@nema-io/shared";
+
 import { loadEnv } from "@server/env";
+import {
+  DIGEST_BODY_FIELD_ORDER,
+  DIGEST_TYPE_LABEL,
+  REASONING_FIELD_LABEL,
+} from "@server/eval/digest-engine/format";
 import type { ReasoningGeneratedDigests } from "@server/eval/digest-engine/reasoning-schema";
 import {
   buildReasoningSystemPrompt,
@@ -23,7 +30,7 @@ const SAMPLES_DIR = join(__dirname, "..", "samples");
 const RESULTS_DIR = __dirname;
 const SERVER_ROOT = join(__dirname, "..", "..", "..", "..");
 
-const ARRAY_LABELS = {
+const ARRAY_TYPE = {
   decisions: "decision",
   pendings: "pending",
   learnings: "learning",
@@ -31,25 +38,42 @@ const ARRAY_LABELS = {
   assumptions: "assumption",
 } as const satisfies Record<
   Exclude<keyof ReasoningGeneratedDigests, "omitted">,
-  string
+  DigestType
 >;
 
+// production 경로(digest-generation.ts의 isEmpty)와 같은 기준 — reasoning
+// 실행기는 flattenGeneratedDigests를 안 거치고 원본 LLM 응답을 그대로 찍어서,
+// 빈 문자열/빈 배열을 직접 걸러야 한다.
+function isBlank(value: unknown): boolean {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  if (typeof value === "string") {
+    return value.trim().length === 0;
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+  return false;
+}
+
 function formatItem(
-  digestType: string,
+  digestType: DigestType,
   digestItem: Record<string, unknown>,
 ): string {
   const { title, reasoning, ...rest } = digestItem;
-  const lines = [`## [${digestType}] ${String(title)}`, ""];
-  for (const [key, value] of Object.entries(rest)) {
-    if (value === null) {
+  const lines = [`## [${DIGEST_TYPE_LABEL[digestType]}] ${String(title)}`, ""];
+  for (const { key, label } of DIGEST_BODY_FIELD_ORDER[digestType]) {
+    const fieldValue = rest[key];
+    if (isBlank(fieldValue)) {
       continue;
     }
-    const formatted = Array.isArray(value)
-      ? `\n${value.map((entry) => `  - ${entry}`).join("\n")}`
-      : String(value);
-    lines.push(`- **${key}**: ${formatted}`);
+    const formatted = Array.isArray(fieldValue)
+      ? `\n${fieldValue.map((entry) => `  - ${entry}`).join("\n")}`
+      : String(fieldValue);
+    lines.push(`- **${label}**: ${formatted}`);
   }
-  lines.push(`- **reasoning**: ${String(reasoning)}`);
+  lines.push(`- **${REASONING_FIELD_LABEL}**: ${String(reasoning)}`);
   return lines.join("\n");
 }
 
@@ -60,8 +84,8 @@ function formatResponse(
   const sections: string[] = [];
   let count = 0;
 
-  const entries = Object.entries(ARRAY_LABELS) as Array<
-    [keyof typeof ARRAY_LABELS, string]
+  const entries = Object.entries(ARRAY_TYPE) as Array<
+    [keyof typeof ARRAY_TYPE, DigestType]
   >;
   for (const [arrayKey, digestType] of entries) {
     for (const digestItem of generated[arrayKey]) {
@@ -71,7 +95,7 @@ function formatResponse(
   }
 
   const omittedSection = [
-    `## Omitted (${generated.omitted.length})`,
+    `## 제외된 판단 (${generated.omitted.length}개)`,
     "",
     ...generated.omitted.map((entry) => `- "${entry.note}" — ${entry.reason}`),
   ].join("\n");
@@ -105,9 +129,9 @@ async function main() {
     const outPath = join(RESULTS_DIR, `${stem}.reasoning.md`);
     writeFileSync(outPath, formatResponse(stem, generated));
 
-    const count = Object.entries(ARRAY_LABELS).reduce(
+    const count = Object.entries(ARRAY_TYPE).reduce(
       (sum, [arrayKey]) =>
-        sum + generated[arrayKey as keyof typeof ARRAY_LABELS].length,
+        sum + generated[arrayKey as keyof typeof ARRAY_TYPE].length,
       0,
     );
     console.log(

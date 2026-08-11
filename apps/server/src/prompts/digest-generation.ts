@@ -59,14 +59,21 @@ yet; idea is something raised that is not yet up for decision.
 1. One digest = one judgment. If a note mixes judgment types — a decision here,
    an open question there — split them into separate digests.
 2. There is no cap. Produce every judgment the note contains. Do not force splits,
-   and do not merge judgments to keep the count down.
+   and do not merge judgments to keep the count down. A note that screens several
+   candidates and rejects some before settling on one has a SEPARATE decision for
+   each rejected candidate (each has its own reason), plus one for whatever was
+   picked — do not treat a rejection as already implied by the decision that names
+   what was chosen just because they happened in the same screening pass.
 3. When the note revisits the SAME question and the answer changes, produce one
    digest holding the final conclusion — how it got there belongs in reason or
    alternatives, not in separate digests. Answers to DIFFERENT questions are not
    revisions; make one digest each.
 4. A question that the note itself answers is not "pending" — it belongs in the
    resulting decision's "situation" (or the learning that settled it). Only make a
-   "pending" digest when the note leaves it unanswered.
+   "pending" digest when the note leaves it unanswered. This rule only blocks
+   fabricating a "pending" for something already settled — it does not mean the
+   settled judgment itself goes unrecorded; a note that reaches a conclusion still
+   owes that conclusion its own "decision" digest per rules 1-3.
 5. Each type's required field is what makes it that type. If the note doesn't
    give you that field, do not produce a digest of that type — never invent
    content to force one into existence.

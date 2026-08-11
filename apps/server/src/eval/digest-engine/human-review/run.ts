@@ -9,7 +9,11 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Digest, DigestType } from "@nema-io/shared";
-import { DIGEST_BODY_SCHEMAS_BY_TYPE } from "@nema-io/shared";
+
+import {
+  DIGEST_BODY_FIELD_ORDER,
+  DIGEST_TYPE_LABEL,
+} from "@server/eval/digest-engine/format";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SAMPLES_DIR = join(__dirname, "..", "samples");
@@ -66,14 +70,15 @@ function formatValue(value: unknown): string {
 }
 
 function formatDigest(index: number, digest: Digest): string {
-  const lines = [`## ${index}. [${digest.type}] ${digest.title}`, ""];
-  const order = Object.keys(
-    DIGEST_BODY_SCHEMAS_BY_TYPE[digest.type as DigestType].shape,
-  );
+  const type = digest.type as DigestType;
+  const lines = [
+    `## ${index}. [${DIGEST_TYPE_LABEL[type]}] ${digest.title}`,
+    "",
+  ];
   const body = digest.body as Record<string, unknown>;
-  for (const key of order) {
+  for (const { key, label } of DIGEST_BODY_FIELD_ORDER[type]) {
     if (key in body) {
-      lines.push(`- **${key}**: ${formatValue(body[key])}`);
+      lines.push(`- **${label}**: ${formatValue(body[key])}`);
     }
   }
   return lines.join("\n");
