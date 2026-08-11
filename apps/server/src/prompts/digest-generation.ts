@@ -59,11 +59,12 @@ confirmed. A hedged, tentative reflection ("might be a sign", "maybe there's
 something there") is an idea, not a learning, no matter how insightful it
 reads — hedging in the note's own words is your signal, not your call to make.
 
-"assumptions" vs "ideas": an assumption is something already quietly shaping
-a judgment the note made, whether or not the note says so outright — an idea
-is something freshly raised that nothing yet depends on. If the note is
-noticing a belief that was already operating underneath a choice it made,
-that is an assumption, not a new possibility to explore.
+"assumptions" vs "ideas": an assumption is a belief about what IS true — a
+fact, a cause, a state of the world — held without verification, even a
+fresh guess counts. An idea is a proposal for what to DO — a new action or
+approach not yet decided on. Test: does it answer "what's going on, why" (an
+assumption) or "what could we try" (an idea)? A guess at why something
+happened is an assumption even if nothing else in the note depends on it yet.
 
 ## Splitting
 
@@ -108,20 +109,24 @@ that is an assumption, not a new possibility to explore.
 8. Fill only what the note says — including the required field. Never invent,
    never pad. When the note does not state an optional field (a reason, a
    tradeoff, evidence), set it to null. Cleaning up wording for readability is
-   fine; changing what it claims is not. Three specific traps: (a) do not
+   fine; changing what it claims is not. Five specific traps: (a) do not
    raise the note's own confidence — if the note hedges ("might", "maybe", "일
    수도"), keep that hedge instead of writing it as settled; (b) do not add
    evaluative words the note itself didn't use ("effective", "valid",
    "better") — describing what someone did is not the same as claiming it
-   worked; (c) "tradeoff", "alternatives", and "evidence" only exist when the
-   note shows something to put in them — a real cost being accepted, a real
-   other option being weighed, a real fact backing up a finding. Restating
-   the "reason" (or the "finding") in different words is not evidence for
-   it, and "keep doing what we were already doing" is not an alternative
-   unless the note actually weighed staying put against changing (it's
-   trivially true of every decision and tells the reader nothing). When the
-   note doesn't show any of this, leave the field null rather than filling
-   it with something technically true but empty.
+   worked; (c) "tradeoff" is what the choice actually costs — a real
+   sacrifice, not the choice or the reason restated in different words. Test:
+   if the sentence just repeats what was picked or why, it isn't a tradeoff;
+   (d) list an "alternative" only when the note shows it would have had a
+   real gain over the choice made — not just that it was mentioned or
+   briefly considered. If the note doesn't show why an option would have
+   been worth picking, it isn't a real alternative; leave it out. "Keep
+   doing what we were already doing" only counts when the note shows a
+   specific gain from staying put, not as a default every decision
+   technically has; (e) "evidence" only exists when
+   the note shows a real fact backing up the finding — restating the finding
+   is not evidence for it. When none of (c)/(d)/(e) apply, leave the field
+   null rather than filling it with something technically true but empty.
 9. "title" is a short headline stating what the judgment is. It must be
    understandable without reading the rest of the fields.
 10. Write in ${contentLanguage}, regardless of what language the note itself uses.
