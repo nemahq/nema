@@ -4,7 +4,7 @@ import {
   isNotFoundError,
   SupabaseError,
   throwIfSupabaseError,
-} from "@server/infra/supabase-error";
+} from "@server/infra/supabase/supabase-error";
 
 describe("throwIfSupabaseError", () => {
   it("does nothing for null", () => {

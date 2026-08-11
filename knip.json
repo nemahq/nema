@@ -4,7 +4,7 @@
   "ignore": [
     ".claude/**",
     "legacy/**",
-    "apps/server/src/infra/database.types.ts"
+    "apps/server/src/infra/supabase/database.types.ts"
   ],
   "tags": ["-lintignore"],
   "workspaces": {

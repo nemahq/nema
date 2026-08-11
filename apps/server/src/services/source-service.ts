@@ -1,9 +1,9 @@
 import type { Digest, DigestType } from "@nema-io/shared";
 
-import type { Database } from "@server/infra/database.types";
 import { getDigestGenerationProvider } from "@server/infra/llm/provider";
-import type { TypedSupabaseClient } from "@server/infra/supabase";
-import { throwIfSupabaseError } from "@server/infra/supabase-error";
+import type { Database } from "@server/infra/supabase/database.types";
+import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
+import { throwIfSupabaseError } from "@server/infra/supabase/supabase-error";
 import {
   buildDigestGenerationMessage,
   DIGEST_GENERATION_SYSTEM_PROMPT,

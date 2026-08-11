@@ -195,7 +195,7 @@ export default tseslint.config(
               name: "@supabase/supabase-js",
               importNames: ["SupabaseClient"],
               message:
-                "Use TypedSupabaseClient from @server/infra/supabase for type-safe DB access.",
+                "Use TypedSupabaseClient from @server/infra/supabase/supabase for type-safe DB access.",
             },
           ],
           patterns: [
@@ -295,7 +295,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/server/src/infra/supabase.ts"],
+    files: ["apps/server/src/infra/supabase/supabase.ts"],
     rules: {
       "no-restricted-imports": [
         "error",

@@ -5,7 +5,7 @@ import {
   SourceIngestInputSchema,
 } from "@nema-io/shared";
 
-import { isNotFoundError } from "@server/infra/supabase-error";
+import { isNotFoundError } from "@server/infra/supabase/supabase-error";
 import {
   deleteSource,
   ingestSource,

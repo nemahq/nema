@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 
-import type { Database } from "@server/infra/database.types";
-import type { TypedSupabaseClient } from "@server/infra/supabase";
+import type { Database } from "@server/infra/supabase/database.types";
+import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 import type { GeneratedDigest } from "@server/prompts/digest-generation";
 import {
   deleteSource,
