@@ -69,6 +69,12 @@ another field — none of the shapes above open such a clause.
 3. Do not summarize the whole digest and do not add anything the digest
    doesn't say.
 4. Write in ${contentLanguage}.
+5. Keep the grammatical register consistent across every statement, no matter
+   the digest type — do not let formality or sentence-final form vary by
+   type (e.g. a polite/formal ending for some types and a plain/declarative
+   ending for others, in a language that distinguishes them). Statements are
+   records, not messages to a person: when the target language has a plain,
+   declarative register, use it for all five types.
 
 ## Output
 
