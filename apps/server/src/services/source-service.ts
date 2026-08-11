@@ -16,7 +16,7 @@ import {
   DigestGenerationSchema,
   flattenGeneratedDigests,
 } from "@server/prompts/digest-generation";
-import { generateAndSaveStatements } from "@server/services/statement-service";
+import { saveStatements } from "@server/services/statement-service";
 
 export async function ingestSource(args: {
   supabase: TypedSupabaseClient;
@@ -129,7 +129,7 @@ async function saveDigestsAndStatements(args: {
   // 이 응답 모양은 이번 라운드 도그푸딩용이다. 진술은 화면에 안 드러나는 내부
   // 단위이라 조회 화면이 없는 지금은 이 응답이 보는 유일한 창구다 — 화면이
   // 붙을 때 이 자리는 조회 라우터로 옮긴다.
-  const statementsByDigestId = await generateAndSaveStatements({
+  const statementsByDigestId = await saveStatements({
     supabase,
     digests,
   });
