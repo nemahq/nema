@@ -1,4 +1,9 @@
-import type { Digest, DigestType } from "@nema-io/shared";
+import type {
+  Digest,
+  SourceDeleteResult,
+  SourceIngestResult,
+} from "@nema-io/shared";
+import { DigestSchema } from "@nema-io/shared";
 
 import { getDigestGenerationProvider } from "@server/infra/llm/provider";
 import type { Database } from "@server/infra/supabase/database.types";
@@ -10,11 +15,6 @@ import {
   DigestGenerationSchema,
   normalizeDigest,
 } from "@server/prompts/digest-generation";
-
-interface SourceIngestResult {
-  sourceId: string;
-  digests: Digest[];
-}
 
 export async function ingestSource(args: {
   supabase: TypedSupabaseClient;
@@ -30,7 +30,13 @@ export async function ingestSource(args: {
     .single();
   throwIfSupabaseError(error);
 
-  return generateAndSaveDigests({ supabase, sourceId: source.id, body });
+  const normalized = await generateDigests(body);
+  const digests = await saveDigestsAndMarkCompleted({
+    supabase,
+    sourceId: source.id,
+    normalized,
+  });
+  return { sourceId: source.id, digests };
 }
 
 export async function reExtractSource(args: {
@@ -47,11 +53,11 @@ export async function reExtractSource(args: {
     .single();
   throwIfSupabaseError(fetchError);
 
-  const { error: deleteError } = await supabase
-    .from("digests")
-    .delete()
-    .eq("source_id", sourceId);
-  throwIfSupabaseError(deleteError);
+  // LLM 호출을 기존 다이제스트 삭제보다 먼저 한다 — 여기서 실패하면(rate limit,
+  // content filter, 스키마 검증 실패 등) 원문도 이전 다이제스트도 안 건드린 채
+  // 그대로 남아 다시 부르면 된다. 순서를 반대로 하면 실패할 때마다 다이제스트가
+  // 0개인 상태가 영구화될 위험이 있다.
+  const normalized = await generateDigests(source.body);
 
   const { error: statusError } = await supabase
     .from("sources")
@@ -59,17 +65,24 @@ export async function reExtractSource(args: {
     .eq("id", sourceId);
   throwIfSupabaseError(statusError);
 
-  return generateAndSaveDigests({
+  const { error: deleteError } = await supabase
+    .from("digests")
+    .delete()
+    .eq("source_id", sourceId);
+  throwIfSupabaseError(deleteError);
+
+  const digests = await saveDigestsAndMarkCompleted({
     supabase,
     sourceId: source.id,
-    body: source.body,
+    normalized,
   });
+  return { sourceId: source.id, digests };
 }
 
 export async function deleteSource(args: {
   supabase: TypedSupabaseClient;
   sourceId: string;
-}): Promise<{ success: boolean }> {
+}): Promise<SourceDeleteResult> {
   const { supabase, sourceId } = args;
 
   const { data, error } = await supabase
@@ -82,21 +95,23 @@ export async function deleteSource(args: {
   return { success: (data ?? []).length > 0 };
 }
 
-// 원문 저장과 다이제스트 저장을 별개 커밋으로 가른다 — LLM 호출이 실패해도 원문은
-// 남아 재추출로 회복할 수 있다(킥오프 "흐름 — 동기").
-async function generateAndSaveDigests(args: {
-  supabase: TypedSupabaseClient;
-  sourceId: string;
-  body: string;
-}): Promise<SourceIngestResult> {
-  const { supabase, sourceId, body } = args;
-
+async function generateDigests(
+  body: string,
+): Promise<Array<Pick<Digest, "type" | "title" | "body">>> {
   const generated = await getDigestGenerationProvider().generateStructured({
     systemPrompt: DIGEST_GENERATION_SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildDigestGenerationMessage(body) }],
     schema: DigestGenerationSchema,
   });
-  const normalized = generated.digests.map(normalizeDigest);
+  return generated.digests.map(normalizeDigest);
+}
+
+async function saveDigestsAndMarkCompleted(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+  normalized: Array<Pick<Digest, "type" | "title" | "body">>;
+}): Promise<Digest[]> {
+  const { supabase, sourceId, normalized } = args;
 
   const digests =
     normalized.length === 0
@@ -109,7 +124,7 @@ async function generateAndSaveDigests(args: {
     .eq("id", sourceId);
   throwIfSupabaseError(statusError);
 
-  return { sourceId, digests };
+  return digests;
 }
 
 async function saveDigests(args: {
@@ -140,13 +155,16 @@ type DigestRow = Pick<
   "id" | "type" | "title" | "body" | "created_at"
 >;
 
+// DB round-trip 결과를 판별 유니언으로 단언하지 않고 실제로 검증한다 — 오늘은
+// saveDigests(정규화된 값만 넣음)가 유일한 쓰기 경로라 안전하지만, 이 변환기가
+// 나중에 조회 라우터에서 재사용되면 라우터에 .output() 스키마가 없는 한 이 자리가
+// DB→API 응답 경계의 유일한 방어선이 된다.
 function toDigest(row: DigestRow): Digest {
-  const digest = {
+  return DigestSchema.parse({
     id: row.id,
-    type: row.type as DigestType,
+    type: row.type,
     title: row.title,
     body: row.body,
     createdAt: row.created_at,
-  };
-  return digest as Digest;
+  });
 }

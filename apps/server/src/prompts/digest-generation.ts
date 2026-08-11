@@ -105,17 +105,31 @@ export const DigestGenerationSchema = z.object({
   digests: z.array(GeneratedDigestSchema),
 });
 
-// 유형별 칸만 골라 body로 접는다. null인 칸은 뺀다(값이 없는 것과 "빈 문자열"을
-// 구분하고, 저장되는 jsonb를 그 유형이 실제로 채운 칸만큼만 가볍게 유지한다).
+// 유형별 칸만 골라 body로 접는다. 비어 있는 칸은 뺀다 — 규칙 6("빈 값은 null")을
+// LLM이 어기고 ""나 []를 돌려줘도(구조화 출력에서 실제로 관찰되는 이탈) 걸러야
+// "칸만 있고 내용은 없는" 다이제스트가 안 생긴다.
 export function normalizeDigest(
   generated: GeneratedDigest,
 ): Pick<Digest, "type" | "title" | "body"> {
   const type: DigestType = generated.type;
   const bodySchema = DIGEST_BODY_SCHEMAS_BY_TYPE[type];
   const candidate = Object.fromEntries(
-    Object.entries(generated).filter(([, value]) => value !== null),
+    Object.entries(generated).filter(([, value]) => !isEmpty(value)),
   );
   const body = bodySchema.parse(candidate);
   const normalized = { type, title: generated.title, body };
   return normalized as Pick<Digest, "type" | "title" | "body">;
+}
+
+function isEmpty(value: unknown): boolean {
+  if (value === null) {
+    return true;
+  }
+  if (typeof value === "string") {
+    return value.trim().length === 0;
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+  return false;
 }

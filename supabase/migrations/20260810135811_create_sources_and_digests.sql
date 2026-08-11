@@ -11,13 +11,14 @@ CREATE TYPE digestion_status AS ENUM ('pending', 'completed');
 CREATE TYPE digest_type AS ENUM ('decision', 'pending', 'learning', 'idea', 'assumption');
 
 -- 이후 신설되는 모든 mutable 테이블이 공유할 updated_at 자동 갱신 함수.
+-- search_path를 고정해 검색 경로 하이재킹을 막는다(Supabase DB linter 권고).
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS trigger AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 CREATE TABLE sources (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -58,38 +59,42 @@ CREATE INDEX idx_digests_source ON digests (source_id);
 ALTER TABLE sources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE digests ENABLE ROW LEVEL SECURITY;
 
+-- TO authenticated + (select auth.uid())는 Supabase 성능 어드바이저 권고 —
+-- auth.uid()를 그대로 쓰면 행마다 재평가되고, anon 요청도 정책 평가 대상에 낀다.
 CREATE POLICY "sources_owner_select" ON sources
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT TO authenticated USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "sources_owner_insert" ON sources
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT TO authenticated WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "sources_owner_update" ON sources
-  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  FOR UPDATE TO authenticated
+  USING ((select auth.uid()) = user_id)
+  WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "sources_owner_delete" ON sources
-  FOR DELETE USING (auth.uid() = user_id);
+  FOR DELETE TO authenticated USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "digests_owner_select" ON digests
-  FOR SELECT USING (
+  FOR SELECT TO authenticated USING (
     EXISTS (
       SELECT 1 FROM sources
-      WHERE sources.id = digests.source_id AND sources.user_id = auth.uid()
+      WHERE sources.id = digests.source_id AND sources.user_id = (select auth.uid())
     )
   );
 
 CREATE POLICY "digests_owner_insert" ON digests
-  FOR INSERT WITH CHECK (
+  FOR INSERT TO authenticated WITH CHECK (
     EXISTS (
       SELECT 1 FROM sources
-      WHERE sources.id = digests.source_id AND sources.user_id = auth.uid()
+      WHERE sources.id = digests.source_id AND sources.user_id = (select auth.uid())
     )
   );
 
 CREATE POLICY "digests_owner_delete" ON digests
-  FOR DELETE USING (
+  FOR DELETE TO authenticated USING (
     EXISTS (
       SELECT 1 FROM sources
-      WHERE sources.id = digests.source_id AND sources.user_id = auth.uid()
+      WHERE sources.id = digests.source_id AND sources.user_id = (select auth.uid())
     )
   );

@@ -11,9 +11,9 @@ import type {
 
 // HTTP 상태코드 → LlmError 매핑 기준값. 테스트도 이 값을 가져다 쓴다(mapError 검증 시
 // 상태코드를 다시 하드코딩하지 않도록).
-const HTTP_BAD_REQUEST = 400;
+export const HTTP_BAD_REQUEST = 400;
 export const HTTP_UNAUTHORIZED = 401;
-const HTTP_FORBIDDEN = 403;
+export const HTTP_FORBIDDEN = 403;
 export const HTTP_TOO_MANY_REQUESTS = 429;
 
 const FINISH_REASON_MAX_TOKENS = "MAX_TOKENS";

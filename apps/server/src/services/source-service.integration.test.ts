@@ -1,6 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { createClient } from "@supabase/supabase-js";
 
 import type { Database } from "@server/infra/supabase/database.types";
@@ -20,7 +28,11 @@ vi.mock("@server/infra/llm/provider", () => ({
 }));
 
 let mockDigests: GeneratedDigest[] = [];
+let mockError: Error | null = null;
 function mockGenerate(): Promise<{ digests: GeneratedDigest[] }> {
+  if (mockError) {
+    return Promise.reject(mockError);
+  }
   return Promise.resolve({ digests: mockDigests });
 }
 
@@ -51,7 +63,8 @@ const SETUP_TIMEOUT_MS = 30_000;
 const TEST_TIMEOUT_MS = 20_000;
 
 const LOCAL_URL = "http://127.0.0.1:54321";
-// 모든 로컬 Supabase 스택이 공유하는 고정 데모 키(supabase/CLAUDE.md) — 비밀이 아니다.
+// Supabase CLI가 기본 config.toml로 띄우는 모든 로컬 스택에 공통인 고정 데모 키
+// (JWT_SECRET이 "super-secret-jwt-token-..."로 고정돼 있어 동일하다) — 비밀이 아니다.
 const LOCAL_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 const LOCAL_SERVICE_ROLE_KEY =
@@ -124,6 +137,10 @@ afterAll(async () => {
   }
   await admin.auth.admin.deleteUser(userA.id);
   await admin.auth.admin.deleteUser(userB.id);
+});
+
+afterEach(() => {
+  mockError = null;
 });
 
 describe("source-service (RLS)", () => {
@@ -245,6 +262,114 @@ describe("source-service (RLS)", () => {
         sourceId,
       });
       expect(repeat.success).toBe(false);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "다른 사용자의 원문은 삭제되지 않는다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockDigests = [fixtureDigest("B가 못 지울 결정")];
+      const { sourceId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "B가 못 지울 원문",
+      });
+
+      const result = await deleteSource({
+        supabase: userB.supabase,
+        sourceId,
+      });
+      expect(result.success).toBe(false);
+
+      const { data: stillThere } = await admin
+        .from("sources")
+        .select("id")
+        .eq("id", sourceId)
+        .maybeSingle();
+      expect(stillThere?.id).toBe(sourceId);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "판단이 없는 원문은 다이제스트 0개로 completed된다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockDigests = [];
+      const { sourceId, digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "안녕하세요",
+      });
+      expect(digests).toHaveLength(0);
+
+      const { data: source } = await userA.supabase
+        .from("sources")
+        .select("digestion_status")
+        .eq("id", sourceId)
+        .single();
+      expect(source?.digestion_status).toBe("completed");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "넣기 중 LLM 호출이 실패해도 원문은 남는다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const body = `넣기 실패 테스트 원문 ${randomUUID()}`;
+      mockError = new Error("LLM unavailable");
+
+      await expect(
+        ingestSource({ supabase: userA.supabase, userId: userA.id, body }),
+      ).rejects.toThrow("LLM unavailable");
+
+      const { data: sources } = await userA.supabase
+        .from("sources")
+        .select("id, digestion_status")
+        .eq("body", body);
+      expect(sources).toHaveLength(1);
+      expect(sources?.[0]?.digestion_status).toBe("pending");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // 이 테스트가 지키는 계약: 재추출은 delete보다 LLM 호출을 먼저 한다. 순서가
+  // 반대면 이 테스트가 실패한다 — LLM이 실패할 때마다 기존 다이제스트가 사라지고
+  // 다시 안 채워지는 상태가 영구화되기 때문이다.
+  it(
+    "재추출 중 LLM 호출이 실패해도 기존 다이제스트가 그대로 남는다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockDigests = [fixtureDigest("재추출 실패 테스트 - 기존")];
+      const { sourceId, digests: original } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "재추출 실패 테스트 원문",
+      });
+      expect(original).toHaveLength(1);
+
+      mockError = new Error("LLM unavailable");
+      await expect(
+        reExtractSource({ supabase: userA.supabase, sourceId }),
+      ).rejects.toThrow("LLM unavailable");
+
+      const { data: remaining } = await userA.supabase
+        .from("digests")
+        .select("id")
+        .eq("source_id", sourceId);
+      expect(remaining).toHaveLength(1);
+      expect(remaining?.[0]?.id).toBe(original[0]?.id);
     },
     TEST_TIMEOUT_MS,
   );

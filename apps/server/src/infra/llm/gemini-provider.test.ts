@@ -4,6 +4,8 @@ import type { GoogleGenAI } from "@google/genai";
 
 import {
   GeminiProvider,
+  HTTP_BAD_REQUEST,
+  HTTP_FORBIDDEN,
   HTTP_TOO_MANY_REQUESTS,
   HTTP_UNAUTHORIZED,
 } from "@server/infra/llm/gemini-provider";
@@ -93,7 +95,7 @@ describe("GeminiProvider.generateStructured", () => {
     });
   });
 
-  it("maps HTTP 401/403 to auth", async () => {
+  it("maps HTTP 401 to auth", async () => {
     const { provider, generateContent } = createProvider();
     generateContent.mockRejectedValue(
       apiError(HTTP_UNAUTHORIZED, "Unauthorized"),
@@ -101,6 +103,26 @@ describe("GeminiProvider.generateStructured", () => {
 
     await expect(callGenerateStructured(provider)).rejects.toMatchObject({
       code: "auth",
+    });
+  });
+
+  it("maps HTTP 403 to auth", async () => {
+    const { provider, generateContent } = createProvider();
+    generateContent.mockRejectedValue(apiError(HTTP_FORBIDDEN, "Forbidden"));
+
+    await expect(callGenerateStructured(provider)).rejects.toMatchObject({
+      code: "auth",
+    });
+  });
+
+  it("maps HTTP 400 to bad_request", async () => {
+    const { provider, generateContent } = createProvider();
+    generateContent.mockRejectedValue(
+      apiError(HTTP_BAD_REQUEST, "Bad request"),
+    );
+
+    await expect(callGenerateStructured(provider)).rejects.toMatchObject({
+      code: "bad_request",
     });
   });
 });
