@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { Digest, DigestType } from "@nema-io/shared";
+import type { DigestType } from "@nema-io/shared";
 import { DIGEST_BODY_SCHEMAS_BY_TYPE } from "@nema-io/shared";
 
 // =============================================================
@@ -129,6 +129,7 @@ that is an assumption, not a new possibility to explore.
 
 JSON object with five arrays, one per type. Each item's title and required field
 come first; the rest are optional — set to null when the note doesn't state them.
+Within each array, order items by where their judgment first appears in the note.
 
 { "decisions":   [{ "title", "choice", "situation", "reason", "tradeoff", "alternatives" }],
   "pendings":    [{ "title", "question", "background", "branches", "resolutionCondition" }],
@@ -148,40 +149,40 @@ export function buildDigestGenerationMessage(body: string): string {
 // 이 파일이 바뀔 때마다 조용히 어긋난다.
 export const DecisionSchema = z.object({
   title: z.string().trim().min(1),
-  choice: z.string().min(1),
-  situation: z.string().nullable(),
-  reason: z.string().nullable(),
+  choice: z.string().trim().min(1),
+  situation: z.string().trim().nullable(),
+  reason: z.string().trim().nullable(),
   tradeoff: z.array(z.string()).nullable(),
   alternatives: z.array(z.string()).nullable(),
 });
 
 export const PendingSchema = z.object({
   title: z.string().trim().min(1),
-  question: z.string().min(1),
-  background: z.string().nullable(),
+  question: z.string().trim().min(1),
+  background: z.string().trim().nullable(),
   branches: z.array(z.string()).nullable(),
-  resolutionCondition: z.string().nullable(),
+  resolutionCondition: z.string().trim().nullable(),
 });
 
 export const LearningSchema = z.object({
   title: z.string().trim().min(1),
-  finding: z.string().min(1),
-  evidence: z.string().nullable(),
+  finding: z.string().trim().min(1),
+  evidence: z.string().trim().nullable(),
 });
 
 export const IdeaSchema = z.object({
   title: z.string().trim().min(1),
-  concept: z.string().min(1),
-  background: z.string().nullable(),
+  concept: z.string().trim().min(1),
+  background: z.string().trim().nullable(),
   branches: z.array(z.string()).nullable(),
 });
 
 export const AssumptionSchema = z.object({
   title: z.string().trim().min(1),
-  assumption: z.string().min(1),
-  evidence: z.string().nullable(),
-  impact: z.string().nullable(),
-  verificationCondition: z.string().nullable(),
+  assumption: z.string().trim().min(1),
+  evidence: z.string().trim().nullable(),
+  impact: z.string().trim().nullable(),
+  verificationCondition: z.string().trim().nullable(),
 });
 
 // 빈 배열 허용 — 판단이 없는 글(인사말·잡담)은 다이제스트가 안 나오는 게 정의.
@@ -205,13 +206,25 @@ const DIGEST_TYPE_BY_ARRAY_KEY = {
   assumptions: "assumption",
 } as const satisfies Record<keyof GeneratedDigests, DigestType>;
 
+// type과 body가 같은 유형끼리 짝지어지도록 판별 유니언으로 둔다. Pick<Digest, ...>는
+// discriminated union을 인덱스로 접근하면 body가 다섯 유형 전부의 합집합으로
+// 뭉개져서 type과 무관해진다 — DIGEST_BODY_SCHEMAS_BY_TYPE[type]을 다른 유형으로
+// 바꿔치기해도 tsc가 못 잡는 사례를 실측으로 확인했다.
+type GeneratedDigestItem = {
+  [T in DigestType]: {
+    type: T;
+    title: string;
+    body: z.infer<(typeof DIGEST_BODY_SCHEMAS_BY_TYPE)[T]>;
+  };
+}[DigestType];
+
 // 5개 배열을 저장용 {type, title, body} 목록 하나로 편다. 비어 있는(=null이거나
 // LLM이 규칙 8을 어기고 낸 빈 문자열/배열) 보조 칸은 뺀다. 필수 칸은 스키마가
 // 이미 비지 않음을 보장하므로 별도 처리가 필요 없다.
 export function flattenGeneratedDigests(
   generated: GeneratedDigests,
-): Array<Pick<Digest, "type" | "title" | "body">> {
-  const result: Array<Pick<Digest, "type" | "title" | "body">> = [];
+): GeneratedDigestItem[] {
+  const result: GeneratedDigestItem[] = [];
 
   const entries = Object.entries(DIGEST_TYPE_BY_ARRAY_KEY) as Array<
     [keyof GeneratedDigests, DigestType]
@@ -222,13 +235,55 @@ export function flattenGeneratedDigests(
       const candidate = Object.fromEntries(
         Object.entries(rest).filter(([, value]) => !isEmpty(value)),
       );
-      const body = DIGEST_BODY_SCHEMAS_BY_TYPE[type].parse(candidate);
-      const digest = { type, title, body };
-      result.push(digest as Pick<Digest, "type" | "title" | "body">);
+      result.push(toGeneratedDigestItem({ type, title, candidate }));
     }
   }
 
   return result;
+}
+
+// switch로 분기해야 각 분기 안에서 type이 리터럴로 좁혀지고, 그에 따라
+// DIGEST_BODY_SCHEMAS_BY_TYPE[해당 유형]의 반환 타입도 같이 좁혀진다 — 제네릭
+// 인덱싱(구버전처럼 DIGEST_BODY_SCHEMAS_BY_TYPE[type] 하나로 처리)으로는 이
+// 상관관계가 안 생겨서 캐스팅 없이는 통과 못 한다.
+function toGeneratedDigestItem(args: {
+  type: DigestType;
+  title: string;
+  candidate: Record<string, unknown>;
+}): GeneratedDigestItem {
+  const { type, title, candidate } = args;
+  switch (type) {
+    case "decision":
+      return {
+        type,
+        title,
+        body: DIGEST_BODY_SCHEMAS_BY_TYPE.decision.parse(candidate),
+      };
+    case "pending":
+      return {
+        type,
+        title,
+        body: DIGEST_BODY_SCHEMAS_BY_TYPE.pending.parse(candidate),
+      };
+    case "learning":
+      return {
+        type,
+        title,
+        body: DIGEST_BODY_SCHEMAS_BY_TYPE.learning.parse(candidate),
+      };
+    case "idea":
+      return {
+        type,
+        title,
+        body: DIGEST_BODY_SCHEMAS_BY_TYPE.idea.parse(candidate),
+      };
+    case "assumption":
+      return {
+        type,
+        title,
+        body: DIGEST_BODY_SCHEMAS_BY_TYPE.assumption.parse(candidate),
+      };
+  }
 }
 
 function isEmpty(value: unknown): boolean {

@@ -93,7 +93,7 @@ describe("flattenGeneratedDigests", () => {
     });
   });
 
-  it("flattens every type's array into one list", () => {
+  it("flattens every type's array into one list, matched to the right type", () => {
     const result = flattenGeneratedDigests({
       decisions: [
         {
@@ -114,12 +114,32 @@ describe("flattenGeneratedDigests", () => {
           resolutionCondition: null,
         },
       ],
-      learnings: [],
-      ideas: [],
-      assumptions: [],
+      learnings: [{ title: "학습", finding: "F", evidence: null }],
+      ideas: [
+        { title: "아이디어", concept: "C", background: null, branches: null },
+      ],
+      assumptions: [
+        {
+          title: "가정",
+          assumption: "A",
+          evidence: null,
+          impact: null,
+          verificationCondition: null,
+        },
+      ],
     });
 
-    expect(result.map((d) => d.type)).toEqual(["decision", "pending"]);
+    // 유형별 배열 키(decisions 등)와 저장용 type 값(decision 등)의 매핑이
+    // 뒤바뀌면(예: ideas가 "learning"으로 잘못 매핑) 여기서 잡힌다 — 다섯
+    // 유형 전부에 항목을 하나씩 채워야, 매핑이 어긋나도 우연히 body 모양이
+    // 같아서 통과하는 경우가 없다.
+    expect(result.map((d) => d.type)).toEqual([
+      "decision",
+      "pending",
+      "learning",
+      "idea",
+      "assumption",
+    ]);
   });
 
   it("produces an empty list when nothing was generated", () => {
