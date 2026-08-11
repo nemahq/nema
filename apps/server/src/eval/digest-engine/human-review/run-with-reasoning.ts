@@ -73,7 +73,9 @@ function formatItem(
       : String(fieldValue);
     lines.push(`- **${label}**: ${formatted}`);
   }
-  lines.push(`- **${REASONING_FIELD_LABEL}**: ${String(reasoning)}`);
+  // blockquote로 뺀다 — 다이제스트 필드(`- **라벨**:`)와 섞이면 실제로 저장될
+  // 내용처럼 보인다. reasoning은 eval에서만 보는 부가 정보라 구분돼야 한다.
+  lines.push("", `> **${REASONING_FIELD_LABEL}**: ${String(reasoning)}`);
   return lines.join("\n");
 }
 
