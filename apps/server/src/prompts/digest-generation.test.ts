@@ -1,72 +1,69 @@
 import { describe, expect, it } from "vitest";
 
-import type { GeneratedDigest } from "@server/prompts/digest-generation";
-import { normalizeDigest } from "@server/prompts/digest-generation";
+import type { GeneratedDigests } from "@server/prompts/digest-generation";
+import { flattenGeneratedDigests } from "@server/prompts/digest-generation";
 
-function blankGenerated(overrides: Partial<GeneratedDigest>): GeneratedDigest {
+function empty(): GeneratedDigests {
   return {
-    type: "decision",
-    title: "제목",
-    situation: null,
-    choice: null,
-    reason: null,
-    tradeoff: null,
-    alternatives: null,
-    question: null,
-    background: null,
-    branches: null,
-    resolutionCondition: null,
-    finding: null,
-    evidence: null,
-    concept: null,
-    assumption: null,
-    impact: null,
-    verificationCondition: null,
-    ...overrides,
+    decisions: [],
+    pendings: [],
+    learnings: [],
+    ideas: [],
+    assumptions: [],
   };
 }
 
-describe("normalizeDigest", () => {
-  it("drops null fields and keeps only the filled ones", () => {
-    const result = normalizeDigest(
-      blankGenerated({ type: "decision", situation: "상황", choice: "선택" }),
-    );
+describe("flattenGeneratedDigests", () => {
+  it("drops null optional fields and keeps the required + filled ones", () => {
+    const result = flattenGeneratedDigests({
+      ...empty(),
+      decisions: [
+        {
+          title: "제목",
+          choice: "선택",
+          situation: "상황",
+          reason: null,
+          tradeoff: null,
+          alternatives: null,
+        },
+      ],
+    });
 
-    expect(result.body).toEqual({ situation: "상황", choice: "선택" });
+    expect(result).toEqual([
+      {
+        type: "decision",
+        title: "제목",
+        body: { choice: "선택", situation: "상황" },
+      },
+    ]);
   });
 
-  it("produces an empty body when the note stated nothing for this judgment", () => {
-    const result = normalizeDigest(blankGenerated({ type: "learning" }));
+  it("produces a body with only the required field when nothing else was stated", () => {
+    const result = flattenGeneratedDigests({
+      ...empty(),
+      learnings: [{ title: "제목", finding: "발견", evidence: null }],
+    });
 
-    expect(result.body).toEqual({});
-  });
-
-  // 프롬프트 규칙 6("Fields that do not belong to the digest's type MUST be
-  // null")를 LLM이 어겨도 저장되는 jsonb에 다른 유형 칸이 섞여 들어가면 안 된다 —
-  // 유형별 zod 스키마의 기본 strip이 이 방어선이다.
-  it("strips fields that don't belong to the digest's type even if the LLM filled them", () => {
-    const result = normalizeDigest(
-      blankGenerated({
-        type: "idea",
-        concept: "아이디어",
-        // "idea"가 아니라 "pending"에 속하는 칸 — 실수로 채워진 경우를 가정한다.
-        resolutionCondition: "이렇게 되면 확정",
-      }),
-    );
-
-    expect(result.body).toEqual({ concept: "아이디어" });
+    expect(result[0]?.body).toEqual({ finding: "발견" });
   });
 
   it("keeps array fields as-is when filled", () => {
-    const result = normalizeDigest(
-      blankGenerated({
-        type: "decision",
-        tradeoff: ["속도"],
-        alternatives: ["대안 A", "대안 B"],
-      }),
-    );
+    const result = flattenGeneratedDigests({
+      ...empty(),
+      decisions: [
+        {
+          title: "제목",
+          choice: "선택",
+          situation: null,
+          reason: null,
+          tradeoff: ["속도"],
+          alternatives: ["대안 A", "대안 B"],
+        },
+      ],
+    });
 
-    expect(result.body).toEqual({
+    expect(result[0]?.body).toEqual({
+      choice: "선택",
       tradeoff: ["속도"],
       alternatives: ["대안 A", "대안 B"],
     });
@@ -74,20 +71,78 @@ describe("normalizeDigest", () => {
 
   // 프롬프트가 "빈 값은 null"을 지시해도 구조화 출력에서 ""나 []가 새어 나오는
   // 경우가 실제로 있다 — null만 걸러내면 이런 값이 "채워진 칸"으로 그대로 저장된다.
-  it("treats empty strings and empty arrays as unfilled, same as null", () => {
-    const result = normalizeDigest(
-      blankGenerated({
-        type: "decision",
-        situation: "상황",
-        choice: "",
-        tradeoff: [],
-        alternatives: ["대안 A"],
-      }),
-    );
+  it("treats empty strings and empty arrays in optional fields as unfilled", () => {
+    const result = flattenGeneratedDigests({
+      ...empty(),
+      decisions: [
+        {
+          title: "제목",
+          choice: "선택",
+          situation: "상황",
+          reason: "",
+          tradeoff: [],
+          alternatives: ["대안 A"],
+        },
+      ],
+    });
 
-    expect(result.body).toEqual({
+    expect(result[0]?.body).toEqual({
+      choice: "선택",
       situation: "상황",
       alternatives: ["대안 A"],
     });
+  });
+
+  it("flattens every type's array into one list, matched to the right type", () => {
+    const result = flattenGeneratedDigests({
+      decisions: [
+        {
+          title: "결정",
+          choice: "A",
+          situation: null,
+          reason: null,
+          tradeoff: null,
+          alternatives: null,
+        },
+      ],
+      pendings: [
+        {
+          title: "미결",
+          question: "Q",
+          background: null,
+          branches: null,
+          resolutionCondition: null,
+        },
+      ],
+      learnings: [{ title: "학습", finding: "F", evidence: null }],
+      ideas: [
+        { title: "아이디어", concept: "C", background: null, branches: null },
+      ],
+      assumptions: [
+        {
+          title: "가정",
+          assumption: "A",
+          evidence: null,
+          impact: null,
+          verificationCondition: null,
+        },
+      ],
+    });
+
+    // 유형별 배열 키(decisions 등)와 저장용 type 값(decision 등)의 매핑이
+    // 뒤바뀌면(예: ideas가 "learning"으로 잘못 매핑) 여기서 잡힌다 — 다섯
+    // 유형 전부에 항목을 하나씩 채워야, 매핑이 어긋나도 우연히 body 모양이
+    // 같아서 통과하는 경우가 없다.
+    expect(result.map((d) => d.type)).toEqual([
+      "decision",
+      "pending",
+      "learning",
+      "idea",
+      "assumption",
+    ]);
+  });
+
+  it("produces an empty list when nothing was generated", () => {
+    expect(flattenGeneratedDigests(empty())).toEqual([]);
   });
 });

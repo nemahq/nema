@@ -11,9 +11,9 @@ import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase/supabase-error";
 import {
   buildDigestGenerationMessage,
-  DIGEST_GENERATION_SYSTEM_PROMPT,
+  buildDigestGenerationSystemPrompt,
   DigestGenerationSchema,
-  normalizeDigest,
+  flattenGeneratedDigests,
 } from "@server/prompts/digest-generation";
 
 export async function ingestSource(args: {
@@ -99,11 +99,11 @@ async function generateDigests(
   body: string,
 ): Promise<Array<Pick<Digest, "type" | "title" | "body">>> {
   const generated = await getDigestGenerationProvider().generateStructured({
-    systemPrompt: DIGEST_GENERATION_SYSTEM_PROMPT,
+    systemPrompt: buildDigestGenerationSystemPrompt(),
     messages: [{ role: "user", content: buildDigestGenerationMessage(body) }],
     schema: DigestGenerationSchema,
   });
-  return generated.digests.map(normalizeDigest);
+  return flattenGeneratedDigests(generated);
 }
 
 async function saveDigestsAndMarkCompleted(args: {

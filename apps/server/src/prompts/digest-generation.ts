@@ -1,124 +1,289 @@
 import { z } from "zod";
 
-import type { Digest, DigestType } from "@nema-io/shared";
-import { DIGEST_BODY_SCHEMAS_BY_TYPE, DIGEST_TYPES } from "@nema-io/shared";
+import type { DigestType } from "@nema-io/shared";
+import { DIGEST_BODY_SCHEMAS_BY_TYPE } from "@nema-io/shared";
 
 // =============================================================
 // Digest 생성 — 원문을 사람이 읽기 좋은 정리본 후보로 (LLM 1콜, 동기).
 // docs/blueprints/first-product/engine/organizing.md 1.5의 스코프를 좁힌 버전
 // (킥오프 문서 "LLM 프롬프트" 절 초안 그대로) — 주제·레퍼런스·태그는 다음 순서.
+//
+// 구조화 출력 스키마는 유형별 배열 5개다(판별 유니언 아님, PM 지침). 배열 이름이
+// 곧 유형이라 유형 오분류가 스키마 자체에서 구조적으로 막히고, 주된 칸을 required로
+// 걸어 "그 유형인데 그 유형의 근거가 없는" 다이제스트를 막는다. 대신 required가
+// 결함을 옮기지 않도록(빈 칸→지어낸 칸) Splitting 규칙 5·6이 "채울 수 없으면
+// 만들지 않는다"를 명시한다.
 // =============================================================
 
-export const DIGEST_GENERATION_SYSTEM_PROMPT = `You turn a user's raw note into digests — cleaned-up write-ups of the judgments
+// 콘텐츠 언어 설정(profiles.content_language, project_content_language 메모 참고)이
+// 아직 없어 지금은 고정한다. "원문과 같은 언어로 맞춰라"는 지시는 신뢰도가 낮았다
+// (한국어 원문에 영어로 출력된 사례를 케이스 1 재실행에서 확인) — 그 설정이 붙으면
+// 이 자리에 실제 값을 넘긴다.
+const DEFAULT_CONTENT_LANGUAGE = "Korean";
+
+export function buildDigestGenerationSystemPrompt(
+  contentLanguage: string = DEFAULT_CONTENT_LANGUAGE,
+): string {
+  return `You turn a user's raw note into digests — cleaned-up write-ups of the judgments
 the note contains. The raw note is preserved elsewhere untouched; your digests
 are what the user will actually read later.
 
 ## Digest types
 
-Each digest captures ONE judgment.
+Each digest captures ONE judgment, grouped by type into five separate lists.
 
-- "decision": something was decided.
-  situation (what had to be decided), choice (what was decided), reason (why),
-  tradeoff (what was accepted as a cost), alternatives (considered but rejected)
-- "pending": something is not yet decided.
-  question (what remains undecided), background (why this question arose),
-  branches (candidate directions), resolutionCondition (what would settle it)
-- "learning": something was found out.
-  finding (what was confirmed), evidence (what supports it)
-- "idea": something was thought up.
-  concept (the idea itself), background (why it came up), branches (derived possibilities)
-- "assumption": something is treated as true without verification.
-  assumption (what is assumed), evidence (why it is believed, may be weak),
-  impact (what changes if it turns out false), verificationCondition (what would settle it)
+- "decisions": something was decided.
+  choice (what was decided) is required.
+  situation (what had to be decided), reason (why), tradeoff (what was accepted
+  as a cost), alternatives (considered but rejected) are optional.
+- "pendings": something is not yet decided.
+  question (what remains undecided) is required.
+  background (why this question arose), branches (candidate directions),
+  resolutionCondition (what would settle it) are optional.
+- "learnings": something was found out.
+  finding (what was confirmed) is required.
+  evidence (what supports it) is optional.
+- "ideas": something was thought up.
+  concept (the idea itself) is required.
+  background (why it came up), branches (derived possibilities) are optional.
+- "assumptions": something is treated as true without verification.
+  assumption (what is assumed) is required.
+  evidence (why it is believed, may be weak), impact (what changes if it turns
+  out false), verificationCondition (what would settle it) are optional.
 
-"pending" vs "idea": pending is something that has to be settled but is not yet;
-idea is something raised that is not yet up for decision.
+"pendings" vs "ideas": pending is something that has to be settled but is not
+yet; idea is something raised that is not yet up for decision.
+
+"learnings" vs "ideas": a learning is something the note itself treats as
+confirmed. A hedged, tentative reflection ("might be a sign", "maybe there's
+something there") is an idea, not a learning, no matter how insightful it
+reads — hedging in the note's own words is your signal, not your call to make.
+
+"assumptions" vs "ideas": an assumption is something already quietly shaping
+a judgment the note made, whether or not the note says so outright — an idea
+is something freshly raised that nothing yet depends on. If the note is
+noticing a belief that was already operating underneath a choice it made,
+that is an assumption, not a new possibility to explore.
 
 ## Splitting
 
 1. One digest = one judgment. If a note mixes judgment types — a decision here,
-   an open question there — split them into separate digests.
+   an open question there — split them into separate digests. This applies
+   regardless of where in the note a judgment sits. A note's own section
+   headers (background, premises, notes) group ideas for the note's author,
+   not for you — judge each sentence on its own; a judgment stated under a
+   "background" or "premise" heading is still a judgment and still gets its
+   own digest.
 2. There is no cap. Produce every judgment the note contains. Do not force splits,
-   and do not merge judgments to keep the count down.
+   and do not merge judgments to keep the count down. A note that screens several
+   candidates and rejects some before settling on one has a SEPARATE decision for
+   each rejected candidate (each has its own reason), plus one for whatever was
+   picked — do not treat a rejection as already implied by the decision that names
+   what was chosen just because they happened in the same screening pass. The same
+   goes for a decision that immediately follows another one in conversation — a
+   note where two people confirm a decision and then, in the very next exchange,
+   settle a second, separate question (a new workflow, who owns what going
+   forward) still owes that second decision its own digest. Coming right after
+   another decision, on a related topic, does not make it part of that decision.
 3. When the note revisits the SAME question and the answer changes, produce one
    digest holding the final conclusion — how it got there belongs in reason or
    alternatives, not in separate digests. Answers to DIFFERENT questions are not
    revisions; make one digest each.
 4. A question that the note itself answers is not "pending" — it belongs in the
    resulting decision's "situation" (or the learning that settled it). Only make a
-   "pending" digest when the note leaves it unanswered.
-5. A note with no judgment at all (greetings, filler, pure diary) yields an empty
-   array. Do not force digests out of noise.
+   "pending" digest when the note leaves it unanswered. This rule only blocks
+   fabricating a "pending" for something already settled — it does not mean the
+   settled judgment itself goes unrecorded; a note that reaches a conclusion still
+   owes that conclusion its own "decision" digest per rules 1-3.
+5. Each type's required field is what makes it that type. If the note doesn't
+   give you that field, do not produce a digest of that type — never invent
+   content to force one into existence.
+6. When a judgment's type is ambiguous, do not produce a digest for it. A wrong
+   type is worse than a missing one.
+7. A note with no judgment at all (greetings, filler, pure diary) yields empty
+   arrays. Do not force digests out of noise.
 
 ## Writing
 
-6. Fill only what the note says. Every body field is optional: when the note does
-   not state a reason, a tradeoff, or evidence, set it to null. Never invent,
-   never pad. Fields that do not belong to the digest's type MUST be null.
-7. "title" is a short headline stating what the judgment is. It must be
-   understandable without reading the body.
-8. Write in the same language as the note.
+8. Fill only what the note says — including the required field. Never invent,
+   never pad. When the note does not state an optional field (a reason, a
+   tradeoff, evidence), set it to null. Cleaning up wording for readability is
+   fine; changing what it claims is not. Three specific traps: (a) do not
+   raise the note's own confidence — if the note hedges ("might", "maybe", "일
+   수도"), keep that hedge instead of writing it as settled; (b) do not add
+   evaluative words the note itself didn't use ("effective", "valid",
+   "better") — describing what someone did is not the same as claiming it
+   worked; (c) "tradeoff" and "alternatives" only exist when the note shows a
+   real cost being accepted or a real other option being weighed — restating
+   the "reason" in different words is not a tradeoff, and "keep doing what we
+   were already doing" is not an alternative unless the note actually weighed
+   staying put against changing (it's trivially true of every decision and
+   tells the reader nothing). When the note doesn't show either, leave the
+   field null rather than filling it with something technically true but
+   empty.
+9. "title" is a short headline stating what the judgment is. It must be
+   understandable without reading the rest of the fields.
+10. Write in ${contentLanguage}, regardless of what language the note itself uses.
 
 ## Output
 
-JSON object:
-{ "digests": [{ "type", "title",
-    "situation", "choice", "reason", "tradeoff", "alternatives",
-    "question", "background", "branches", "resolutionCondition",
-    "finding", "evidence", "concept",
-    "assumption", "impact", "verificationCondition" }] }
+JSON object with five arrays, one per type. Each item's title and required field
+come first; the rest are optional — set to null when the note doesn't state them.
+Within each array, order items by where their judgment first appears in the note.
 
-tradeoff, alternatives, branches are arrays of strings; the rest are strings.
-Order digests by where their judgment first appears in the note.`;
+{ "decisions":   [{ "title", "choice", "situation", "reason", "tradeoff", "alternatives" }],
+  "pendings":    [{ "title", "question", "background", "branches", "resolutionCondition" }],
+  "learnings":   [{ "title", "finding", "evidence" }],
+  "ideas":       [{ "title", "concept", "background", "branches" }],
+  "assumptions": [{ "title", "assumption", "evidence", "impact", "verificationCondition" }] }
+
+tradeoff, alternatives, branches are arrays of strings; the rest are strings.`;
+}
 
 export function buildDigestGenerationMessage(body: string): string {
   return `<note>${body}</note>`;
 }
 
-// 구조화 출력이 판별 유니언을 잘 못 다뤄 평평하게 받는다(전 필드 nullable) — 저장 시
-// normalizeDigest가 유형에 맞는 칸만 골라 접는다(legacy/apps/server/src/prompts/
-// digest-generation.ts 끝 주석과 같은 근거).
-const GeneratedDigestSchema = z.object({
-  type: z.enum(DIGEST_TYPES),
+// eval의 reasoning 변형(apps/server/src/eval/digest-engine/reasoning-schema.ts)이
+// .extend()로 이어 쓸 수 있게 export한다 — 그쪽 스키마를 여기서 손으로 복제하면
+// 이 파일이 바뀔 때마다 조용히 어긋난다.
+export const DecisionSchema = z.object({
   title: z.string().trim().min(1),
-  situation: z.string().nullable(),
-  choice: z.string().nullable(),
-  reason: z.string().nullable(),
+  choice: z.string().trim().min(1),
+  situation: z.string().trim().nullable(),
+  reason: z.string().trim().nullable(),
   tradeoff: z.array(z.string()).nullable(),
   alternatives: z.array(z.string()).nullable(),
-  question: z.string().nullable(),
-  background: z.string().nullable(),
+});
+
+export const PendingSchema = z.object({
+  title: z.string().trim().min(1),
+  question: z.string().trim().min(1),
+  background: z.string().trim().nullable(),
   branches: z.array(z.string()).nullable(),
-  resolutionCondition: z.string().nullable(),
-  finding: z.string().nullable(),
-  evidence: z.string().nullable(),
-  concept: z.string().nullable(),
-  assumption: z.string().nullable(),
-  impact: z.string().nullable(),
-  verificationCondition: z.string().nullable(),
+  resolutionCondition: z.string().trim().nullable(),
 });
 
-export type GeneratedDigest = z.infer<typeof GeneratedDigestSchema>;
+export const LearningSchema = z.object({
+  title: z.string().trim().min(1),
+  finding: z.string().trim().min(1),
+  evidence: z.string().trim().nullable(),
+});
 
-// 빈 배열 허용 — 판단이 없는 글(인사말·잡담)은 Digest가 안 나오는 게 정의.
+export const IdeaSchema = z.object({
+  title: z.string().trim().min(1),
+  concept: z.string().trim().min(1),
+  background: z.string().trim().nullable(),
+  branches: z.array(z.string()).nullable(),
+});
+
+export const AssumptionSchema = z.object({
+  title: z.string().trim().min(1),
+  assumption: z.string().trim().min(1),
+  evidence: z.string().trim().nullable(),
+  impact: z.string().trim().nullable(),
+  verificationCondition: z.string().trim().nullable(),
+});
+
+// 빈 배열 허용 — 판단이 없는 글(인사말·잡담)은 다이제스트가 안 나오는 게 정의.
 export const DigestGenerationSchema = z.object({
-  digests: z.array(GeneratedDigestSchema),
+  decisions: z.array(DecisionSchema),
+  pendings: z.array(PendingSchema),
+  learnings: z.array(LearningSchema),
+  ideas: z.array(IdeaSchema),
+  assumptions: z.array(AssumptionSchema),
 });
 
-// 유형별 칸만 골라 body로 접는다. 비어 있는 칸은 뺀다 — 규칙 6("빈 값은 null")을
-// LLM이 어기고 ""나 []를 돌려줘도(구조화 출력에서 실제로 관찰되는 이탈) 걸러야
-// "칸만 있고 내용은 없는" 다이제스트가 안 생긴다.
-export function normalizeDigest(
-  generated: GeneratedDigest,
-): Pick<Digest, "type" | "title" | "body"> {
-  const type: DigestType = generated.type;
-  const bodySchema = DIGEST_BODY_SCHEMAS_BY_TYPE[type];
-  const candidate = Object.fromEntries(
-    Object.entries(generated).filter(([, value]) => !isEmpty(value)),
-  );
-  const body = bodySchema.parse(candidate);
-  const normalized = { type, title: generated.title, body };
-  return normalized as Pick<Digest, "type" | "title" | "body">;
+export type GeneratedDigests = z.infer<typeof DigestGenerationSchema>;
+
+// 배열 키 → DB 저장 type 값. 배열 이름 자체가 유형이라, 평평한 스키마 시절
+// normalizeDigest가 하던 "이 칸들 중 어디까지가 이 유형 것인가" 판단이 필요 없다.
+const DIGEST_TYPE_BY_ARRAY_KEY = {
+  decisions: "decision",
+  pendings: "pending",
+  learnings: "learning",
+  ideas: "idea",
+  assumptions: "assumption",
+} as const satisfies Record<keyof GeneratedDigests, DigestType>;
+
+// type과 body가 같은 유형끼리 짝지어지도록 판별 유니언으로 둔다. Pick<Digest, ...>는
+// discriminated union을 인덱스로 접근하면 body가 다섯 유형 전부의 합집합으로
+// 뭉개져서 type과 무관해진다 — DIGEST_BODY_SCHEMAS_BY_TYPE[type]을 다른 유형으로
+// 바꿔치기해도 tsc가 못 잡는 사례를 실측으로 확인했다.
+type GeneratedDigestItem = {
+  [T in DigestType]: {
+    type: T;
+    title: string;
+    body: z.infer<(typeof DIGEST_BODY_SCHEMAS_BY_TYPE)[T]>;
+  };
+}[DigestType];
+
+// 5개 배열을 저장용 {type, title, body} 목록 하나로 편다. 비어 있는(=null이거나
+// LLM이 규칙 8을 어기고 낸 빈 문자열/배열) 보조 칸은 뺀다. 필수 칸은 스키마가
+// 이미 비지 않음을 보장하므로 별도 처리가 필요 없다.
+export function flattenGeneratedDigests(
+  generated: GeneratedDigests,
+): GeneratedDigestItem[] {
+  const result: GeneratedDigestItem[] = [];
+
+  const entries = Object.entries(DIGEST_TYPE_BY_ARRAY_KEY) as Array<
+    [keyof GeneratedDigests, DigestType]
+  >;
+  for (const [arrayKey, type] of entries) {
+    for (const generatedItem of generated[arrayKey]) {
+      const { title, ...rest } = generatedItem;
+      const candidate = Object.fromEntries(
+        Object.entries(rest).filter(([, value]) => !isEmpty(value)),
+      );
+      result.push(toGeneratedDigestItem({ type, title, candidate }));
+    }
+  }
+
+  return result;
+}
+
+// switch로 분기해야 각 분기 안에서 type이 리터럴로 좁혀지고, 그에 따라
+// DIGEST_BODY_SCHEMAS_BY_TYPE[해당 유형]의 반환 타입도 같이 좁혀진다 — 제네릭
+// 인덱싱(구버전처럼 DIGEST_BODY_SCHEMAS_BY_TYPE[type] 하나로 처리)으로는 이
+// 상관관계가 안 생겨서 캐스팅 없이는 통과 못 한다.
+function toGeneratedDigestItem(args: {
+  type: DigestType;
+  title: string;
+  candidate: Record<string, unknown>;
+}): GeneratedDigestItem {
+  const { type, title, candidate } = args;
+  switch (type) {
+    case "decision":
+      return {
+        type,
+        title,
+        body: DIGEST_BODY_SCHEMAS_BY_TYPE.decision.parse(candidate),
+      };
+    case "pending":
+      return {
+        type,
+        title,
+        body: DIGEST_BODY_SCHEMAS_BY_TYPE.pending.parse(candidate),
+      };
+    case "learning":
+      return {
+        type,
+        title,
+        body: DIGEST_BODY_SCHEMAS_BY_TYPE.learning.parse(candidate),
+      };
+    case "idea":
+      return {
+        type,
+        title,
+        body: DIGEST_BODY_SCHEMAS_BY_TYPE.idea.parse(candidate),
+      };
+    case "assumption":
+      return {
+        type,
+        title,
+        body: DIGEST_BODY_SCHEMAS_BY_TYPE.assumption.parse(candidate),
+      };
+  }
 }
 
 function isEmpty(value: unknown): boolean {
