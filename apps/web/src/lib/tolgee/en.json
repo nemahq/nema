@@ -1,0 +1,86 @@
+{
+  "account": {
+    "delete_button": "Delete account",
+    "delete_cleanup_failed": "Your account was deleted, but we couldn't sign you out automatically. Please sign in again to continue.",
+    "delete_confirm_button": "Yes, delete my account",
+    "delete_confirm_description": "This permanently deletes your account and can't be undone. Everything you've saved will be deleted too.",
+    "delete_confirm_title": "Delete your account?",
+    "delete_deleting": "Deleting your account...",
+    "delete_description": "Permanently delete your account and remove your data from Nema",
+    "delete_go_to_signin": "Go to sign in",
+    "delete_title": "Delete account",
+    "profile_title": "Profile",
+    "support_label": "Support"
+  },
+  "auth": {
+    "back_to_login": "Go back",
+    "continue_with_email": "Continue with email",
+    "continue_with_google": "Continue with Google",
+    "email_placeholder": "Email",
+    "magic_link_invalid": "This login link has expired. Please request a new one.",
+    "magic_link_sent": "Check your email for the login link.",
+    "or": "OR"
+  },
+  "coming_soon": {
+    "subtitle": "See you soon!"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete_confirm_instruction": "Type \"{value}\" to confirm",
+    "refresh_failed": "Saved, but the screen couldn't refresh. Please refresh manually.",
+    "retry": "Retry",
+    "unknown_error": "An unknown error occurred."
+  },
+  "digest": {
+    "detail_not_found": "Digest not found.",
+    "list_empty": "No digests yet.",
+    "nav_label": "Digests",
+    "type_assumption": "Assumption",
+    "type_decision": "Decision",
+    "type_idea": "Idea",
+    "type_learning": "Learning",
+    "type_pending": "Pending"
+  },
+  "error": {
+    "copy_error": "Copy error info",
+    "copy_error_failed": "Copy failed. Select the text below to copy it manually.",
+    "go_home": "Go to home",
+    "network": "Check your network connection.",
+    "not_found": "This page isn't here.",
+    "page_error": "Hold on, let's try that again.",
+    "refresh": "Refresh",
+    "section_load_failed": "Let's reload this section."
+  },
+  "layout": {
+    "collapse_sidebar": "Collapse sidebar",
+    "expand_sidebar": "Expand sidebar"
+  },
+  "oauth": {
+    "approve": "Allow",
+    "consent_request": "Allow {client} to access your nema account?",
+    "deny": "Deny"
+  },
+  "session": {
+    "draft_tab_close": "Close {label} tab"
+  },
+  "settings": {
+    "account_section": "Account",
+    "account_subtitle": "Manage your profile and account",
+    "app_language": "App language",
+    "app_language_description": "Language used for menus, buttons, and interface",
+    "appearance_section": "Appearance",
+    "content_language": "Content language",
+    "content_language_description": "Used to organize what you save",
+    "language_section": "Language",
+    "nav_preferences": "Preferences",
+    "preferences_subtitle": "Customize how Nema looks and behaves",
+    "settings": "Settings",
+    "sign_out": "Sign out",
+    "theme": "Theme",
+    "theme_dark": "Dark",
+    "theme_description": "Choose how Nema looks on this device",
+    "theme_light": "Light",
+    "theme_system": "System"
+  }
+}

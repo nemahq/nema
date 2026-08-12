@@ -1,0 +1,86 @@
+{
+  "account": {
+    "delete_button": "계정 삭제",
+    "delete_cleanup_failed": "계정은 삭제됐지만, 자동으로 로그아웃 처리하지 못했어요. 이어서 진행하려면 다시 로그인해주세요.",
+    "delete_confirm_button": "네, 계정을 삭제할게요",
+    "delete_confirm_description": "이 작업은 계정을 영구적으로 삭제하며 되돌릴 수 없어요. 저장한 내용이 모두 삭제돼요.",
+    "delete_confirm_title": "계정을 삭제할까요?",
+    "delete_deleting": "계정 삭제 중...",
+    "delete_description": "네마에서 계정과 데이터를 영구적으로 삭제해요",
+    "delete_go_to_signin": "로그인으로 이동",
+    "delete_title": "계정 삭제",
+    "profile_title": "프로필",
+    "support_label": "고객 지원"
+  },
+  "auth": {
+    "back_to_login": "돌아가기",
+    "continue_with_email": "이메일로 계속하기",
+    "continue_with_google": "Google로 계속하기",
+    "email_placeholder": "이메일",
+    "magic_link_invalid": "로그인 링크가 만료됐어요. 새 링크를 요청해주세요.",
+    "magic_link_sent": "이메일에서 로그인 링크를 확인해주세요.",
+    "or": "또는"
+  },
+  "coming_soon": {
+    "subtitle": "곧 만나요!"
+  },
+  "common": {
+    "cancel": "취소",
+    "close": "닫기",
+    "delete_confirm_instruction": "확인하려면 \"{value}\"라고 입력하세요.",
+    "refresh_failed": "저장은 됐지만 화면을 새로고침하지 못했어요. 새로고침 해주세요.",
+    "retry": "다시 시도",
+    "unknown_error": "알 수 없는 오류가 발생했어요."
+  },
+  "digest": {
+    "detail_not_found": "다이제스트를 찾을 수 없어요.",
+    "list_empty": "아직 다이제스트가 없어요.",
+    "nav_label": "다이제스트",
+    "type_assumption": "가정",
+    "type_decision": "결정",
+    "type_idea": "아이디어",
+    "type_learning": "배움",
+    "type_pending": "미해결"
+  },
+  "error": {
+    "copy_error": "에러 정보 복사",
+    "copy_error_failed": "복사에 실패했어요. 아래 텍스트를 직접 선택해 복사해주세요.",
+    "go_home": "홈으로 돌아가기",
+    "network": "네트워크 연결을 확인해주세요.",
+    "not_found": "이 페이지는 여기에 없어요.",
+    "page_error": "잠깐, 다시 불러올게요.",
+    "refresh": "새로고침",
+    "section_load_failed": "이 부분을 다시 불러올게요."
+  },
+  "layout": {
+    "collapse_sidebar": "사이드바 접기",
+    "expand_sidebar": "사이드바 펼치기"
+  },
+  "oauth": {
+    "approve": "허용",
+    "consent_request": "{client}에 nema 계정 접근을 허용하시겠어요?",
+    "deny": "거부"
+  },
+  "session": {
+    "draft_tab_close": "{label} 탭 닫기"
+  },
+  "settings": {
+    "account_section": "계정",
+    "account_subtitle": "프로필과 계정 관리",
+    "app_language": "앱 언어",
+    "app_language_description": "메뉴와 버튼 등 화면에 표시되는 언어",
+    "appearance_section": "화면",
+    "content_language": "콘텐츠 언어",
+    "content_language_description": "저장한 내용을 정리하는 기준이 되는 언어",
+    "language_section": "언어",
+    "nav_preferences": "환경설정",
+    "preferences_subtitle": "네마의 화면과 동작 방식을 원하는 대로 바꿔보세요",
+    "settings": "설정",
+    "sign_out": "로그아웃",
+    "theme": "테마",
+    "theme_dark": "다크",
+    "theme_description": "이 기기에서 네마가 보이는 방식을 선택해요",
+    "theme_light": "라이트",
+    "theme_system": "시스템"
+  }
+}
