@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isForbiddenError,
   isNotFoundError,
   SupabaseError,
   throwIfSupabaseError,
@@ -31,5 +32,21 @@ describe("isNotFoundError", () => {
 
   it("is false for non-SupabaseError values", () => {
     expect(isNotFoundError(new Error("PGRST116"))).toBe(false);
+  });
+});
+
+describe("isForbiddenError", () => {
+  it("is true for Postgres's RLS-violation code", () => {
+    const error = new SupabaseError("row-level security violation", "42501");
+    expect(isForbiddenError(error)).toBe(true);
+  });
+
+  it("is false for other Postgres/PostgREST codes", () => {
+    const error = new SupabaseError("no rows", "PGRST116");
+    expect(isForbiddenError(error)).toBe(false);
+  });
+
+  it("is false for non-SupabaseError values", () => {
+    expect(isForbiddenError(new Error("42501"))).toBe(false);
   });
 });

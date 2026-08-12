@@ -10,6 +10,8 @@
     "dev": "turbo run dev",
     "dev:local": "turbo run dev:local",
     "dev:server": "pnpm --filter server dev",
+    "dev:web": "VITE_DEV_API_TARGET=https://api-staging.getnema.app pnpm --filter web dev",
+    "dev:web:prod": "VITE_DEV_API_TARGET=https://api.getnema.app pnpm --filter web dev:prod",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",

@@ -3,7 +3,69 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="description" content="Forget freely. Nema remembers" />
+    <meta property="og:title" content="Nema" />
+    <meta property="og:description" content="Forget freely. Nema remembers" />
+    <meta property="og:image" content="https://getnema.app/og-image.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Nema",
+        "url": "https://getnema.app",
+        "logo": "https://getnema.app/logo.png",
+        "description": "Forget freely. Nema remembers",
+        "applicationCategory": "ProductivityApplication",
+        "operatingSystem": "Web"
+      }
+    </script>
     <title>Nema</title>
+    <!-- og:title, og:description은 크롤러 전용이라 JS로 갱신 불필요 -->
+    <script>
+      (function () {
+        try {
+          if (navigator.language.startsWith("ko")) {
+            document.addEventListener("DOMContentLoaded", function () {
+              document.title = "네마";
+              var meta = document.querySelector('meta[name="description"]');
+              if (meta) meta.content = "잊어도 돼요, 네마가 기억할게요";
+            });
+          }
+        } catch (_) {
+          /* locale override is non-critical; keep English defaults */
+        }
+      })();
+    </script>
+    <!-- surface-card: weave/src/tokens/index.css 의 palette-{light,dark}-surface-card 와 동기화 -->
+    <style>
+      body {
+        background-color: #ffffff;
+      }
+      .dark body {
+        background-color: #292524;
+      }
+    </style>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("theme");
+          if (
+            t === "dark" ||
+            (t === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches)
+          ) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (_) {
+          document.documentElement.classList.add("light");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,7 +1,11 @@
+import { accountRouter } from "@server/routers/account-router";
+import { profileRouter } from "@server/routers/profile-router";
 import { sourceRouter } from "@server/routers/source-router";
 import { router } from "@server/trpc";
 
 export const appRouter = router({
+  account: accountRouter,
+  profile: profileRouter,
   source: sourceRouter,
 });
 
