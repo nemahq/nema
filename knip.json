@@ -6,13 +6,19 @@
     "legacy/**",
     "apps/server/src/infra/supabase/database.types.ts",
     "apps/web/src/app/error/notFound.ts",
+    "apps/web/src/components/layout/LnbRowBox.tsx",
     "apps/web/src/components/layout/LnbSection.tsx",
+    "apps/web/src/components/layout/NavItem.tsx",
+    "apps/web/src/components/layout/NavigationBar.tsx",
+    "apps/web/src/components/ui/RelativeTime.tsx",
+    "apps/web/src/components/ui/relativeTimeFormat.ts",
     "apps/web/src/components/ui/SidePanel.tsx",
     "apps/web/src/components/ui/TabbedPanel.tsx",
     "apps/web/src/components/ui/TabbedPanelLayout.tsx",
     "apps/web/src/hooks/useDebouncedValue.ts",
     "apps/web/src/hooks/useIntersectionEffect.ts",
-    "apps/web/src/hooks/useTypewriter.ts"
+    "apps/web/src/hooks/useTypewriter.ts",
+    "apps/web/src/lib/link.ts"
   ],
   "tags": ["-lintignore"],
   "workspaces": {

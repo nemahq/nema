@@ -1,12 +1,10 @@
 import { accountRouter } from "@server/routers/account-router";
-import { digestRouter } from "@server/routers/digest-router";
 import { profileRouter } from "@server/routers/profile-router";
 import { sourceRouter } from "@server/routers/source-router";
 import { router } from "@server/trpc";
 
 export const appRouter = router({
   account: accountRouter,
-  digest: digestRouter,
   profile: profileRouter,
   source: sourceRouter,
 });

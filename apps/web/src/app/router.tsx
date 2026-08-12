@@ -10,8 +10,7 @@ import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { ComingSoonPage } from "@web/app/pages/ComingSoonPage";
-import { DigestDetailPage } from "@web/app/pages/DigestDetailPage";
-import { DigestListPage } from "@web/app/pages/DigestListPage";
+import { HomePage } from "@web/app/pages/HomePage";
 import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
 import { SignInPage } from "@web/app/pages/SignInPage";
 import { requireAuth, requireGuest } from "@web/features/auth";
@@ -79,29 +78,17 @@ const authenticatedRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
-const digestListRoute = createRoute({
+const homeRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/",
-  component: DigestListPage,
-  errorComponent: RouteErrorFallback,
-});
-
-function DigestDetailShell() {
-  const { digestId } = digestDetailRoute.useParams();
-  return <DigestDetailPage key={digestId} digestId={digestId} />;
-}
-
-const digestDetailRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
-  path: "/digest/$digestId",
-  component: DigestDetailShell,
+  component: HomePage,
   errorComponent: RouteErrorFallback,
 });
 
 const routeTree = rootRoute.addChildren([
   signinRoute,
   oauthConsentRoute,
-  authenticatedRoute.addChildren([digestListRoute, digestDetailRoute]),
+  authenticatedRoute.addChildren([homeRoute]),
 ]);
 
 export const router = createRouter({

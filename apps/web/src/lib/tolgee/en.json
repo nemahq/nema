@@ -33,16 +33,6 @@
     "retry": "Retry",
     "unknown_error": "An unknown error occurred."
   },
-  "digest": {
-    "detail_not_found": "Digest not found.",
-    "list_empty": "No digests yet. Save something through MCP and it'll show up here.",
-    "nav_label": "Digests",
-    "type_assumption": "Assumption",
-    "type_decision": "Decision",
-    "type_idea": "Idea",
-    "type_learning": "Learning",
-    "type_pending": "Pending"
-  },
   "error": {
     "copy_error": "Copy error info",
     "copy_error_failed": "Copy failed. Select the text below to copy it manually.",
