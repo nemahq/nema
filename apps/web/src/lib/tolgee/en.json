@@ -12,6 +12,10 @@
     "profile_title": "Profile",
     "support_label": "Support"
   },
+  "app": {
+    "update_available_action": "Refresh",
+    "update_available_message": "A new version is available."
+  },
   "auth": {
     "back_to_login": "Go back",
     "continue_with_email": "Continue with email",

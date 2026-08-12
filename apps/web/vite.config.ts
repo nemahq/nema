@@ -2,8 +2,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { defineConfig } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+
+const MAX_CACHE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{7,40}$/i;
 
@@ -55,6 +58,33 @@ export default defineConfig({
       },
     }),
     tailwindcss(),
+    VitePWA({
+      // autoUpdate는 새 SW를 조용히 activate만 하고 열린 탭은 새로고침 전까지
+      // 옛 번들 그대로다 — prompt로 바꿔 ServiceWorkerUpdatePrompt가 사용자에게
+      // 직접 새로고침을 유도하게 한다.
+      registerType: "prompt",
+      workbox: {
+        maximumFileSizeToCacheInBytes: MAX_CACHE_FILE_SIZE_BYTES,
+      },
+      manifest: {
+        name: "Nema",
+        short_name: "Nema",
+        description: "Forget freely. Nema remembers",
+        start_url: "/",
+        display: "standalone",
+        theme_color: "#0D9488",
+        background_color: "#1c1917",
+        icons: [
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          {
+            src: "/icon-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any",
+          },
+        ],
+      },
+    }),
   ],
   resolve: {
     alias: {
