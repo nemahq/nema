@@ -2,15 +2,22 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import express from "express";
+import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
+import { createSupabaseTokenVerifier, protectedResourceMetadata } from "./auth";
 import { getEnv, loadEnv } from "./env";
 import { createMcpServer } from "./server";
+
+const PRM_PATH = "/.well-known/oauth-protected-resource";
 
 loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 
 function main(): void {
   const env = getEnv();
+  const resourceMetadataUrl = new URL(`${PRM_PATH}/mcp`, env.MCP_PUBLIC_URL)
+    .href;
+
   const app = express();
   app.use(express.json());
 
@@ -18,8 +25,20 @@ function main(): void {
     res.json({ status: "ok" });
   });
 
+  const metadata = protectedResourceMetadata();
+  for (const path of [PRM_PATH, `${PRM_PATH}/mcp`]) {
+    app.get(path, (_req, res) => {
+      res.json(metadata);
+    });
+  }
+
+  const bearerAuth = requireBearerAuth({
+    verifier: createSupabaseTokenVerifier(),
+    resourceMetadataUrl,
+  });
+
   // stateless: 요청마다 새 transport/server를 연결해 요청 ID 충돌을 막는다.
-  app.post("/mcp", async (req, res) => {
+  app.post("/mcp", bearerAuth, async (req, res) => {
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
