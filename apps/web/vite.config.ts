@@ -73,7 +73,10 @@ export default defineConfig({
         start_url: "/",
         display: "standalone",
         theme_color: "#0D9488",
-        background_color: "#1c1917",
+        // weave dark surface-card(packages/weave/src/tokens/index.css의
+        // --palette-dark-surface-card)와 동기화 — index.html의 FOUC 방지
+        // 배경색과 같은 값이다.
+        background_color: "#292524",
         icons: [
           { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
           {
