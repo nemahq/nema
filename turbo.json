@@ -14,15 +14,15 @@
       "cache": false
     },
     "lint": {
-      "dependsOn": [],
+      "dependsOn": ["^lint"],
       "outputs": []
     },
     "typecheck": {
-      "dependsOn": [],
+      "dependsOn": ["^typecheck"],
       "outputs": []
     },
     "test": {
-      "dependsOn": [],
+      "dependsOn": ["^test"],
       "outputs": []
     },
     "@nema-io/server#test": {
