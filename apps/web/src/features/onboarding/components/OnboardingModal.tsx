@@ -1,11 +1,6 @@
 import { useState } from "react";
 
-import {
-  CONTENT_LANGUAGES,
-  type ContentLanguage,
-  ContentLanguageSchema,
-  type Locale,
-} from "@nema-io/shared";
+import { type ContentLanguage, type Locale } from "@nema-io/shared";
 import {
   Button,
   DialogContent,
@@ -13,15 +8,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from "@nema-io/weave";
 
 import { Dialog } from "@web/components/ui/Dialog";
-import { Select } from "@web/components/ui/Select";
-import { LANGUAGE_LABELS, useUpdateProfile } from "@web/features/profile";
+import { ContentLanguageSelect, useUpdateProfile } from "@web/features/profile";
 import { useTranslation } from "@web/lib/tolgee";
 import { detectLanguage } from "@web/utils/locale";
 
@@ -46,32 +36,11 @@ export function OnboardingModal() {
     <Dialog open>
       <DialogContent showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>{t("settings.onboarding_title")}</DialogTitle>
-          <DialogDescription>
-            {t("settings.onboarding_description")}
-          </DialogDescription>
+          <DialogTitle>{t("onboarding.title")}</DialogTitle>
+          <DialogDescription>{t("onboarding.description")}</DialogDescription>
         </DialogHeader>
 
-        <Select
-          value={selected}
-          onValueChange={(v) => {
-            const parsed = ContentLanguageSchema.safeParse(v);
-            if (parsed.success) {
-              setSelected(parsed.data);
-            }
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CONTENT_LANGUAGES.map((lang) => (
-              <SelectItem key={lang} value={lang}>
-                {LANGUAGE_LABELS[lang]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ContentLanguageSelect value={selected} onValueChange={setSelected} />
 
         <DialogFooter>
           <Button
@@ -79,8 +48,8 @@ export function OnboardingModal() {
             disabled={updateMutation.isPending}
           >
             {updateMutation.isPendingAfterDelay
-              ? t("settings.start_pending")
-              : t("settings.start")}
+              ? t("onboarding.start_pending")
+              : t("onboarding.start")}
           </Button>
         </DialogFooter>
       </DialogContent>

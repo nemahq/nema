@@ -112,6 +112,14 @@ async function resolveContentLanguage(args: {
   userId: string;
 }): Promise<ContentLanguage> {
   const profile = await getProfile(args);
+  if (!profile) {
+    // 이 틈이 실제로 좁은지는 "온보딩 모달이 유일한 진입 경로"라는 전제에
+    // 달려 있다 — 그 전제가 깨지면(레이스, 온보딩을 안 거치는 새 진입점 등)
+    // 조용히 en으로만 떨어지지 않고 신호가 남게 한다.
+    console.warn(
+      `[content-language] 프로필 행 없음, 기본값(${FALLBACK_CONTENT_LANGUAGE})으로 대체 — userId: ${args.userId}`,
+    );
+  }
   return profile?.contentLanguage ?? FALLBACK_CONTENT_LANGUAGE;
 }
 

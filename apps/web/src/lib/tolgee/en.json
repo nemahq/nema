@@ -56,6 +56,12 @@
     "consent_request": "Allow {client} to access your Nema account?",
     "deny": "Deny"
   },
+  "onboarding": {
+    "description": "We'll organize what you write based on this language.",
+    "start": "Get started",
+    "start_pending": "Getting started...",
+    "title": "What language do you write in?"
+  },
   "settings": {
     "account_section": "Account",
     "account_subtitle": "Manage your profile and account",
@@ -66,13 +72,9 @@
     "content_language_description": "Used to organize what you save",
     "language_section": "Language",
     "nav_preferences": "Preferences",
-    "onboarding_description": "We'll organize what you write based on this language.",
-    "onboarding_title": "What language do you write in?",
     "preferences_subtitle": "Customize how Nema looks and behaves",
     "settings": "Settings",
     "sign_out": "Sign out",
-    "start": "Get started",
-    "start_pending": "Getting started...",
     "theme": "Theme",
     "theme_dark": "Dark",
     "theme_description": "Choose how Nema looks on this device",
