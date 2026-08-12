@@ -1,8 +1,9 @@
-import { getEnv, getOAuthIssuer } from "@mcp/env";
 import { InvalidTokenError } from "@modelcontextprotocol/sdk/server/auth/errors.js";
 import type { OAuthTokenVerifier } from "@modelcontextprotocol/sdk/server/auth/provider.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { createClient } from "@supabase/supabase-js";
+
+import { getEnv, getOAuthIssuer } from "./env";
 
 const MCP_CLIENT_ID = "nema-mcp";
 

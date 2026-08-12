@@ -7,17 +7,30 @@ import { NEUTRAL_TONE_CLASSNAME, OUTLINE_TONE_CLASSNAME } from "./Badge";
 type ChipVariant = "neutral" | "outline";
 type ChipShape = "rounded" | "pill";
 
-// 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 — 색을 직접 고르지
-// 않고 태그 id 해시로 자동 배정한다(tokens/index.css "Tag" 섹션 참고).
-type TagColor =
-  | "slate"
-  | "cyan"
-  | "sage"
-  | "olive"
-  | "terracotta"
-  | "rose"
-  | "mauve"
-  | "violet";
+// 사용자가 만드는 개방형 태그(Reference·Digest 공용) 전용 팔레트(tokens/index.css
+// "Tag" 섹션 참고) — 생성 시 랜덤/엔진이 초기값을 채우지만 최종 결정권은 항상
+// 사용자에게 있어 생성 폼·편집 팝오버 어디서든 8개 중 자유롭게 바꿀 수 있다.
+// TagColor를 이 배열에서 유도해 그리드·리스트 색상 피커의 순회 순서와 타입이
+// 서로 다른 목록으로 어긋날 수 없게 한다(packages/shared의 TagColorSchema는
+// DB enum과 맞춰야 하는 별도 계층이라 이 배열과 독립적으로 유지된다).
+// 색상환 기준 순서(주황 15°→갈색 25°→노랑 55°→초록 95°→파랑 196°→보라 260°→
+// 마젠타 300°→분홍 350°) — 4×2 그리드(TagColorGridPicker)가 이 배열을 그대로
+// 순회해 윗줄은 따뜻한 색, 아랫줄은 차가운 색이 되도록 배치한다.
+const TAG_COLORS = [
+  "terracotta",
+  "sienna",
+  "olive",
+  "sage",
+  "cyan",
+  "violet",
+  "mauve",
+  "rose",
+] as const;
+type TagColor = (typeof TAG_COLORS)[number];
+
+function getRandomTagColor(): TagColor {
+  return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
+}
 
 const STATIC_TONE_CLASSNAME: Record<ChipVariant, string> = {
   neutral: NEUTRAL_TONE_CLASSNAME,
@@ -34,10 +47,10 @@ const HOVER_CLASSNAME: Record<ChipVariant, string> = {
   outline: "hover:bg-fg-primary/5 data-[state=open]:bg-fg-primary/5",
 };
 
-// Tag 배경이 거의 흰색에 가까운 파스텔이라, bg-*/15 알파 겹침(다른 variant와
-// 같은 방식)이면 hover가 안 보인다 — brightness를 낮춰(밝게 만드는 대신
-// 살짝 진하게) 신호를 만든다.
-const TAG_HOVER_CLASSNAME = "hover:brightness-95";
+// Tag 파스텔·Hue tint 배경 둘 다 옅은 알파 채움이라, bg-*/15 알파 겹침(다른
+// variant와 같은 방식)이면 hover가 안 보인다 — brightness를 낮춰(밝게 만드는
+// 대신 살짝 진하게) 신호를 만든다.
+const TINT_HOVER_CLASSNAME = "hover:brightness-95";
 
 // rounded는 태그·Topic처럼 여러 개를 나란히 늘어놓는 자리 — pill은 값 하나를
 // 통째로 담는 자리(DraftSpaceSelect 등). Badge의 shape 구분과 같은 결.
@@ -50,18 +63,19 @@ const SHAPE_CLASSNAME: Record<ChipShape, string> = {
 // 밝고 다크에서 카드보다 밝은 색이라, 각 테마의 기본 텍스트 색이 그대로
 // 여유 있게 AA를 만족한다(tokens/index.css "Tag" 섹션 계산 근거).
 const TAG_COLOR_CLASSNAME: Record<TagColor, string> = {
-  slate: "bg-tag-slate text-fg-primary",
-  cyan: "bg-tag-cyan text-fg-primary",
-  sage: "bg-tag-sage text-fg-primary",
-  olive: "bg-tag-olive text-fg-primary",
   terracotta: "bg-tag-terracotta text-fg-primary",
-  rose: "bg-tag-rose text-fg-primary",
-  mauve: "bg-tag-mauve text-fg-primary",
+  sienna: "bg-tag-sienna text-fg-primary",
+  olive: "bg-tag-olive text-fg-primary",
+  sage: "bg-tag-sage text-fg-primary",
+  cyan: "bg-tag-cyan text-fg-primary",
   violet: "bg-tag-violet text-fg-primary",
+  mauve: "bg-tag-mauve text-fg-primary",
+  rose: "bg-tag-rose text-fg-primary",
 };
 
-// variant(neutral/outline)와 color(TagColor)는 배타적으로 받는다 — Badge의
-// variant/color 구분(의미 있는 톤 vs weave가 뜻을 모르는 분류)과 같은 이유.
+// variant(neutral/outline)와 color는 배타적으로 받는다 — Badge의 variant/color
+// 구분(의미 있는 톤 vs weave가 뜻을 모르는 분류)과 같은 이유. color는 TagColor
+// (사용자 태그, 파스텔) 전용이다.
 type ChipToneProps =
   | { variant?: ChipVariant; color?: never }
   | { variant?: never; color: TagColor };
@@ -110,7 +124,7 @@ function Chip({
       : STATIC_TONE_CLASSNAME[variant ?? "neutral"],
   );
   const hoverClassName = color
-    ? TAG_HOVER_CLASSNAME
+    ? TINT_HOVER_CLASSNAME
     : HOVER_CLASSNAME[variant ?? "neutral"];
   const labelClassName = cn(truncated && "min-w-0 truncate");
 
@@ -176,4 +190,12 @@ function Chip({
   );
 }
 
-export { Chip, type ChipShape, type ChipVariant, type TagColor };
+export {
+  Chip,
+  type ChipShape,
+  type ChipVariant,
+  getRandomTagColor,
+  TAG_COLOR_CLASSNAME,
+  TAG_COLORS,
+  type TagColor,
+};

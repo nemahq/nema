@@ -15,12 +15,17 @@ UI를 추가·수정할 때 `@nema-io/weave`(디자인 시스템)를 먼저 검�
 | 컴포넌트 | 쓴다 | 안 쓴다 |
 |---|---|---|
 | **Button** | 독립적으로 서 있는 액션(다이얼로그 액션, 폼 제출, 사이드패널 닫기 등). 원형 아이콘 버튼(hover-reveal 삭제·⋯ 메뉴 트리거 등)은 `shape="circle"` — `size`(치수)와 직교하는 축이라 함께 조합한다 | 주변에서 타이포·색을 상속해야 하는 자리(칩·pill 안 버튼), 자체 타이포·활성 표현이 있는 자리(탭, 내비게이션). base가 `text-[13px] font-semibold`를 강제하므로 되돌리는 비용이 얻는 것보다 클 때가 많다 |
-| **Badge** | 상태·개수 같은 짧은 메타데이터(태그, 참조 라벨, 개수 배지). `shape="pill"`은 카운트·이름표처럼 통째로 하나의 값을 담는 자리, 기본값(각진)은 여러 개를 나란히 늘어놓는 태그·상태 자리. `variant="outline"`은 배경 없이 테두리(`border-strong`)로만 구분하는 표현 — 틴트 배경이 없는 만큼 테두리·글자(`fg-primary`) 둘 다 강하게 존재감을 유지한다(`Chip`과 공유하는 톤, `OUTLINE_TONE_CLASSNAME`). `color`(색조)는 weave가 뜻을 모르는 분류를 서로 구별해야 할 때만 — 의미가 있는 자리엔 `variant`를 쓴다. `size="sm"`은 제목·라벨 옆에 곁들이는 보조 표시용. 이름을 담아 줄여야 하는 pill은 `truncated`로 감당한다(`min-w-0`+`truncate`를 함께 묶어줌) | 클릭해서 값을 바꾸는 자리(→ `Chip`), 아이콘 포함 + 상태별 분기가 있는 것(상태 표시) |
-| **Chip** | `Badge`의 인터랙티브 짝. `remove`(`onRemove`+`removeAriaLabel`, 항상 같이 받아야 해서 판별 유니언) 없이 값 하나를 보여주다 클릭하면 `DropdownMenu` 등으로 바꾸는 pill(Space 재지정 등), `remove`가 있으면 제거 가능한 라벨 칩(Reference 태그·Digest Topic) — 이때만 루트가 `<button>`에서 `<span>`으로 바뀐다(안에 실제 제거용 `<button>`이 들어가 중첩을 피해야 해서). `variant`(neutral/outline)는 `Badge`와 톤 공유, `color`(`TagColor` 8색)는 사용자가 만드는 개방형 태그의 id 해시 자동 배정 전용 — `Badge`의 variant/color 구분과 같은 이유로 배타적이다. `shape`(rounded/pill)로 나란히 늘어놓는 자리와 값 하나 담는 자리를 구분, 이름을 줄여야 하면 `truncated` | 값을 보여주기만 하는 자리(→ `Badge`), 독립적으로 서 있는 액션(→ `Button`) |
+| **Badge** | 상태·개수 같은 짧은 메타데이터(태그, 참조 라벨, 개수 배지). `shape="pill"`은 카운트·이름표처럼 통째로 하나의 값을 담는 자리, 기본값(각진)은 여러 개를 나란히 늘어놓는 태그·상태 자리. `variant="outline"`은 배경 없이 테두리(`border-strong`)로만 구분하는 표현 — 틴트 배경이 없는 만큼 테두리·글자(`fg-primary`) 둘 다 강하게 존재감을 유지한다(`Chip`과 공유하는 톤, `OUTLINE_TONE_CLASSNAME`). `size="sm"`은 제목·라벨 옆에 곁들이는 보조 표시용. 이름을 담아 줄여야 하는 pill은 `truncated`로 감당한다(`min-w-0`+`truncate`를 함께 묶어줌) | 클릭해서 값을 바꾸는 자리(→ `Chip`), 아이콘 포함 + 상태별 분기가 있는 것(상태 표시) |
+| **Chip** | `Badge`의 인터랙티브 짝. `remove`(`onRemove`+`removeAriaLabel`, 항상 같이 받아야 해서 판별 유니언) 없이 값 하나를 보여주다 클릭하면 `DropdownMenu` 등으로 바꾸는 pill(Space 재지정 등), `remove`가 있으면 제거 가능한 라벨 칩(Reference 태그·Digest Topic) — 이때만 루트가 `<button>`에서 `<span>`으로 바뀐다(안에 실제 제거용 `<button>`이 들어가 중첩을 피해야 해서). `variant`(neutral/outline)는 `Badge`와 톤 공유, `color`는 `TagColor`(8색, 사용자가 만드는 개방형 태그 전용) 전용이다 — `variant`와는 `Badge`의 variant/color 구분과 같은 이유로 배타적이다. 생성 시 랜덤/엔진이 초기값을 채우지만 최종 선택은 항상 사용자 몫이라 `TagColorGridPicker`/`TagColorListPicker`로 계속 바꿀 수 있다. `shape`(rounded/pill)로 나란히 늘어놓는 자리와 값 하나 담는 자리를 구분, 이름을 줄여야 하면 `truncated` | 값을 보여주기만 하는 자리(→ `Badge`), 독립적으로 서 있는 액션(→ `Button`) |
 | **Textarea** | 멀티라인 텍스트 입력(`Input`은 `<input>`이라 `h-9` 고정, 여러 줄 불가). `variant`(default/borderless)로 테두리 유무, `autoSize`(boolean, `maxRows`로 상한)로 내용에 맞춰 자동 성장, `resize`(none/vertical)로 네이티브 드래그 리사이즈 — 자동 성장과 수동 리사이즈가 서로 충돌해 `autoSize`/`resize`는 배타적 유니언. `size`/`weight`/`color`는 `Text`와 공유 | 한 줄짜리 입력(→ `Input`) |
 | **Avatar** | 사람·워크스페이스·Space 등 정체성을 나타내는 이니셜/이미지 | — (없음. `shape="circle"`은 사람, `shape="square"`는 공간을 가리킨다는 규칙을 따른다) |
+| **HoverIcon** | 이미 자체적으로 hover 반응하는 표면(카드·행·LNB 아이템) 위에 겹쳐 뜨는 작은 액션 아이콘. `active` prop으로 hover를 안 하고 있어도 hover와 같은 톤을 강제 재현(트리거가 열려 있는 상태 등) | 독립적으로 서 있는 아이콘 버튼(→ `Button` `shape="circle"`), 조상 hover에 안 얹히는 자리 |
+| **Tab** | 고정 개수의 뷰를 전환하는 밑줄 탭(segmented control에 가까운 자리, 예: Space 개요의 topic/changesets). `role="tab"`은 일부러 안 줌 — 소비처가 `role="tablist"` 부모까지 갖춘 완전한 탭 패턴을 구현할 때 직접 얹는다 | 열고 닫고 드래그로 재정렬하는 문서 탭(TabbedPanel처럼 DOM 구조 자체가 다른 자리) — 이땐 `TAB_ACTIVE_INDICATOR_CLASSNAME` 색 토큰만 가져다 쓴다 |
+| **ComboboxItem** | 검색 팝오버 등에서 전체 폭이 hover 반응하는 목록 행(태그/토픽 검색 결과, "새로 만들기" 행, 색상 피커 리스트). `disabled`(완전 비활성)·`active`(시각 강조만, 클릭은 안 막음 — 색 피커의 "현재 값이지만 재선택 가능"용)·`readOnly`(클릭은 막되 hover·형제 액션은 유지 — 이미 붙은 항목처럼 다시 고를 순 없지만 설명·액션은 계속 봐야 하는 행용) 셋을 구분 | 패딩·타이포·색까지 관리해주길 기대하는 자리(컴포넌트는 구조만 담당, 나머지는 `className`/`Text`에 위임) |
+| **TagColorGridPicker / TagColorListPicker** | `Chip`의 `TagColor` 8색을 사용자가 직접 고르는 자리. 생성 폼처럼 한눈에 훑는 가로 배치는 `TagColorGridPicker`(스와치 + 호버 Tooltip), 편집 팝오버처럼 세로로 늘어놓고 이름을 바로 보여줘야 하면 `TagColorListPicker`(`ComboboxItem` `active` 활용). 색 이름 문구는 weave가 tolgee를 몰라 `getColorLabel` 콜백으로 소비처가 번역해 넘긴다 | 색이 아닌 임의 팔레트가 필요한 자리(8색 고정 팔레트 전용) |
 | **Separator** | 화면 요소 사이를 시각적으로 나누는 독립된 선 | 요소 자신의 테두리로 표현되는 경계(`border-b`로 이미 충분한 카드·행). 별도 형제 요소로 만들 이유가 없다 |
-| **Label** | 폼 컨트롤에 붙는 라벨 | — (Text/Label 세부 규칙은 별도 작업 중, `PR #460` 참고) |
+| **Label** | 폼 컨트롤에 붙는 라벨을 `FormLabel` 없이 단독으로 쓸 때(예: 체크박스 행처럼 라벨이 곧 클릭 영역인 자리). `size`/`weight`/`color`는 `Text`와 스케일 공유(기본값 sm/medium/primary) | 라벨-입력-에러가 한 세트인 자리(→ `Form`) |
+| **Form**(`FormField`/`FormLabel`/`FormControl`/`FormMessage`) | 라벨-입력-에러가 짝을 이루는 자리. `FormField`가 `id`를 만들어 context로 내려주고, `FormLabel`(`htmlFor`)·`FormControl`(Radix `Slot`으로 자식에 `id`+`aria-describedby` 주입 — 자식이 `Input`이든 `Textarea`든 컨트롤 종류를 몰라도 동작)·`FormMessage`(`reserveSpace`로 에러 유무와 무관하게 높이 고정, `errorPrefix`를 넘기면 `variant="error"`일 때 스크린리더용 접두어가 붙는다 — weave는 tolgee를 몰라 소비처가 `t()`로 넘겨야 함)가 자동으로 연결된다 | 라디오형 피커처럼 단일 포커스 컨트롤이 아니라 그룹인 필드(`FormControl` 없이 `FormField` 안에서 `role="group"`으로 직접 조립), 시각 라벨 없이 `aria-label`만으로 충분한 자리(정적 값이 이미 라벨을 대신하는 등) |
 | **Text** | 타이포그래피가 필요한 모든 텍스트 | — (별도 작업 중, `PR #460` 참고) |
 
 ## 구분선 3단 위계
@@ -48,6 +53,12 @@ cn("dark:bg-brand", "bg-red-500")  →  "dark:bg-brand bg-red-500"
 **판단 기준**: 소비처가 바꿀 일이 없는 내부 상태 표현(focus, checked 등)에는 접두사 클래스를 둬도 된다. 소비처가 바꾸고 싶어할 속성(배경·글자색·모양·크기)에는 두지 않는다 — JS 분기(`orientation === "horizontal" ? ... : ...`)나 토큰으로 옮긴다.
 
 **증상**: 오버라이드를 했는데 특정 모드/상태에서만 안 먹으면 이 함정을 의심할 것.
+
+## Button 안의 아이콘은 직계 자식으로 둔다
+
+Button의 base 클래스가 자식 `svg`를 자동으로 처리한다 — 크기(`[&_svg:not([class*='size-'])]:size-4`), 패딩 보정(`has-[>svg]:px-*`), 라벨과의 간격(`gap-*`). 이 중 패딩 보정은 **direct child(`>`) 셀렉터**라, 라벨에 색·크기를 주려고 아이콘까지 같이 다른 엘리먼트(`Text` 등)로 감싸면 그 보정만 조용히 빠진다 — 크기·간격은 descendant 셀렉터라 여전히 맞기 때문에 눈에 잘 안 띈다.
+
+**증상**: 아이콘 있는 버튼인데 좌우 여백이 아주 살짝 넓어 보이면 이 함정을 의심할 것. (`ErrorFallback` 복사 버튼에서 실제로 발생했던 사례 — PR #503)
 
 ## DropdownMenu/Popover/Select 트리거는 열려 있는 동안 눌린 것처럼 보여야 한다
 

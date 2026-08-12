@@ -2,14 +2,12 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import express from "express";
-import {
-  createSupabaseTokenVerifier,
-  protectedResourceMetadata,
-} from "@mcp/auth";
-import { getEnv, loadEnv } from "@mcp/env";
-import { createMcpServer } from "@mcp/server";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+
+import { createSupabaseTokenVerifier, protectedResourceMetadata } from "./auth";
+import { getEnv, loadEnv } from "./env";
+import { createMcpServer } from "./server";
 
 const PRM_PATH = "/.well-known/oauth-protected-resource";
 

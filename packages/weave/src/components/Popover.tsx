@@ -7,10 +7,16 @@ import { useEscapeAwareCloseFocus } from "../hooks/useEscapeAwareCloseFocus";
 import { usePopoverScrollLock } from "../hooks/usePopoverScrollLock";
 import { cn, mergeRefs, POPOVER_SURFACE_CLASSNAME } from "../utils";
 
+// Radix 자체 기본값(false)이 아니라 true로 강제한다 — 이 팝오버가 열려 있는
+// 동안은 body pointer-events:none이 걸려, 옆의 dropdown 트리거를 눌러도 그
+// 클릭이 dropdown에 아예 안 닿는다. "새 레이어가 뜨며 이 팝오버의 바깥 클릭
+// 판정과 경합"하는 상황 자체가 생기지 않는다(경합에서 이기는 게 아니라 경합할
+// 조건을 없앤다). staging 실측 확인(2026-08-05).
 function Popover({
+  modal = true,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
-  return <PopoverPrimitive.Root data-slot="popover" {...props} />;
+  return <PopoverPrimitive.Root data-slot="popover" modal={modal} {...props} />;
 }
 
 function PopoverTrigger({

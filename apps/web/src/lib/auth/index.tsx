@@ -6,10 +6,8 @@ import {
   useMemo,
   useState,
 } from "react";
-import * as Sentry from "@sentry/react";
 import type { Session, User } from "@supabase/supabase-js";
 
-import { posthog } from "@web/lib/posthog";
 import { supabase } from "@web/lib/supabase";
 import { queryClient } from "@web/lib/tanstack-query";
 
@@ -54,7 +52,7 @@ function captureAuthRedirectErrorFromHash(): void {
 }
 captureAuthRedirectErrorFromHash();
 
-// access_denied 외의 예기치 않은 코드는 진짜 기술적 실패일 수 있어 Sentry로 보낸다.
+// access_denied 외의 예기치 않은 코드는 진짜 기술적 실패일 수 있어 콘솔에 남긴다.
 export function consumeMagicLinkExpiredError(): boolean {
   const error = capturedAuthRedirectError;
   capturedAuthRedirectError = null;
@@ -65,9 +63,8 @@ export function consumeMagicLinkExpiredError(): boolean {
     return true;
   }
   if (error.code !== OAUTH_USER_DENIED_ERROR_CODE) {
-    Sentry.captureMessage("Unhandled auth redirect error", {
-      extra: { code: error.code, description: error.description },
-    });
+    // eslint-disable-next-line no-console -- Sentry 없이 남은 유일한 신호
+    console.warn("Unhandled auth redirect error", error);
   }
   return false;
 }
@@ -121,12 +118,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setSession(newSession);
       setLoading(false);
 
-      if (newSession?.user) {
-        posthog.identify(newSession.user.id, {
-          email: newSession.user.email,
-        });
-      } else if (event === "SIGNED_OUT") {
-        posthog.reset();
+      if (event === "SIGNED_OUT") {
         // 쿼리 키가 유저 스코프가 아니라, 같은 탭에서 계정을 전환하면 이전
         // 계정의 캐시(예: space.list)가 그대로 재사용될 수 있다.
         queryClient.clear();
@@ -155,7 +147,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error("useAuth는 AuthProvider 내부에서만 사용할 수 있습니다.");
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return ctx;
 }

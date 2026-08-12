@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react";
 import { createClient } from "@supabase/supabase-js";
 
 import { getEnv } from "@web/app/env";
@@ -17,9 +16,8 @@ supabase.auth.onAuthStateChange((event, session) => {
   cachedAccessToken = session?.access_token ?? null;
 
   if (hadToken && !cachedAccessToken && event !== "SIGNED_OUT") {
-    Sentry.captureMessage("Auth token lost unexpectedly", {
-      extra: { event, hadPreviousToken: hadToken },
-    });
+    // eslint-disable-next-line no-console -- Sentry 없이 남은 유일한 신호
+    console.warn("Auth token lost unexpectedly", { event, hadToken });
   }
 });
 

@@ -7,21 +7,19 @@ function def(
   shortcut: string,
   scope: ActionScope,
   priority = 0,
+  enableOnFormTags = true,
 ): ActionDef {
-  return { labelKey, shortcut, scope, priority };
+  return { labelKey, shortcut, scope, priority, enableOnFormTags };
 }
 
 // priority: 같은 단축키에 여러 액션이 등록되면 높은 값이 우선 실행된다 (z-index 방식).
 // 기본값 0 = 최저 우선순위. 새 액션은 별도 지정 없이 양보한다.
 const actionMap = {
-  draft: {
-    regenerate: def("intake.remember", "mod+enter", "global"),
-  },
   sidePanel: {
     close: def("common.close", "escape", "global"),
   },
   sidebar: {
-    toggle: def("layout.toggle_sidebar", "mod+b", "global"),
+    toggle: def("layout.collapse_sidebar", "mod+b", "global"),
   },
 } satisfies Record<string, Record<string, ActionDef>>;
 

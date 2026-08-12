@@ -5,13 +5,14 @@ import { protectedProcedure, router } from "@server/trpc";
 
 export const profileRouter = router({
   get: protectedProcedure.query(({ ctx }) =>
-    getProfile(ctx.supabase, { userId: ctx.user.id }),
+    getProfile({ supabase: ctx.supabase, userId: ctx.user.id }),
   ),
 
   update: protectedProcedure
     .input(ProfileUpdateInputSchema)
     .mutation(({ ctx, input }) =>
-      upsertProfile(ctx.supabase, {
+      upsertProfile({
+        supabase: ctx.supabase,
         userId: ctx.user.id,
         contentLanguage: input.contentLanguage,
       }),

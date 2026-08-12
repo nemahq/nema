@@ -4,7 +4,7 @@ Fastify 5 + tRPC 11 backend.
 
 ## Do NOT
 
-- Expose API keys (LLM, embedding, DB) to client. All external calls server-side only.
+- Expose API keys (LLM, DB) to client. All external calls server-side only.
 
 ## Directory Structure
 
@@ -12,41 +12,30 @@ Fastify 5 + tRPC 11 backend.
 src/
 ├── routers/     # tRPC endpoint definitions (thin: validation + service call)
 ├── services/    # Orchestration logic (core business flows)
-├── infra/       # External service clients (Supabase, Qdrant, LLM, Embedding)
+├── infra/       # External service clients (Supabase, LLM)
 ├── prompts/     # LLM prompt templates (independently tunable)
-└── eval/        # Prompt quality evaluation: seed data, runners, results
+└── eval/        # Prompt quality evaluation, one folder per pipeline stage
 ```
 
 - `routers/` are thin: input validation + service call only. No business logic.
-- `services/` own orchestration: LLM call ordering, similar doc search, create/update judgment.
+- `services/` own orchestration: LLM call ordering, DB read/write sequencing.
 - `infra/` isolates external dependencies. LLM provider swap = change inside `infra/`.
 - `prompts/` stay separate for independent tuning/review.
+- `eval/` holds test corpora and runners for checking prompt output quality — separate from `*.test.ts` unit tests, which check code logic, not LLM judgment.
 
 ## Naming
 
 | Scope         | Pattern    | Example              |
-| ------------- | ---------- | -------------------- |
-| Non-component | kebab-case | `openai-provider.ts` |
+| -------------- | ---------- | --------------------- |
+| Non-component  | kebab-case | `source-router.ts`   |
 
 ## Rules
 
 - `GET /health` MUST always exist (Railway health check).
 - MUST use Zod schemas from `@nema-io/shared` for input validation.
-- Use `publicProcedure` for unauthenticated endpoints, `protectedProcedure` for auth-only, `providerProcedure` for AI provider-dependent endpoints.
-
-## Conventions
-
-- MUST follow rules in `docs/conventions.md`.
-
-## I18n
-
-- MUST follow UX writing rules in `docs/guides/ux-writing.md` when adding or modifying translation keys (especially error messages).
-- Tolgee (`@tolgee/core`). Locale JSON in `infra/i18n/locales/`. `ko.json` is source of truth.
-- Key naming: first segment = domain (e.g. `error.llm_timeout`).
-- Locale resolved per-request: `Accept-Language` header (queries/mutations), `connectionParams.lang` (subscriptions). Default: `ko`.
-- Uses staticData at build time. Local JSON is SSOT; CI pushes to Tolgee on main merge.
+- Use `publicProcedure` for unauthenticated endpoints, `protectedProcedure` for auth-required ones.
 
 ## Dev
 
 - `pnpm dev` — tsx watch mode (auto-restart on change).
-- `pnpm test` — Vitest. Test files co-located as `*.test.ts`.
+- `pnpm test` — Vitest. Test files co-located as `*.test.ts`; `*.integration.test.ts` files need a local Supabase (`supabase start`) and are skipped gracefully otherwise.

@@ -32,7 +32,7 @@ const nemaPlugin = {
 };
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", "**/.turbo/**"] },
+  { ignores: ["**/dist/**", "**/.turbo/**", "legacy/**"] },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {
@@ -130,6 +130,12 @@ export default tseslint.config(
               message:
                 "Do not import LucideIcon directly. Define a project-level alias if an icon type is needed.",
             },
+            {
+              name: "@nema-io/weave",
+              importNames: ["Dialog", "DropdownMenu", "Popover", "Select"],
+              message:
+                "Esc로 닫히는 오버레이는 @web/components/ui의 래퍼를 사용하세요 (전역 단축키 레지스트리 연동).",
+            },
           ],
           patterns: [
             {
@@ -189,7 +195,7 @@ export default tseslint.config(
               name: "@supabase/supabase-js",
               importNames: ["SupabaseClient"],
               message:
-                "Use TypedSupabaseClient from @server/infra/supabase for type-safe DB access.",
+                "Use TypedSupabaseClient from @server/infra/supabase/supabase for type-safe DB access.",
             },
           ],
           patterns: [
@@ -198,6 +204,22 @@ export default tseslint.config(
               message: "Import from the directory directly without /index.",
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["apps/mcp/**/*.{ts,tsx}"],
+    plugins: {
+      "no-relative-import-paths": noRelativeImportPaths,
+    },
+    rules: {
+      "no-relative-import-paths/no-relative-import-paths": [
+        "error",
+        {
+          allowSameFolder: true,
+          rootDir: "src",
+          prefix: "@mcp",
         },
       ],
     },
@@ -273,7 +295,27 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/server/src/infra/supabase.ts"],
+    files: ["apps/server/src/infra/supabase/supabase.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["*/index"],
+              message: "Import from the directory directly without /index.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Dialog/DropdownMenu/Popover/Select 래퍼 자신은 위에서 금지한 weave 프리미티브를
+    // 직접 import해야 하므로 제외한다.
+    files: [
+      "apps/web/src/components/ui/{Dialog,DropdownMenu,Popover,Select}.tsx",
+    ],
     rules: {
       "no-restricted-imports": [
         "error",

@@ -2,7 +2,13 @@
 
 Rules for tRPC query and mutation hooks in `features/*/hooks/`.
 
-Server state lives here, in the TanStack Query cache — never copied into a zustand store, not even as an "immutable snapshot" to diff local edits against. A copy silently stops tracking refetches (`staleTime` expiry, window focus, post-mutation invalidation), so the screen keeps rendering the payload it started with. A store holds only the user's own edits; read the baseline from the query and combine the two where it is consumed.
+Server state lives here, in the TanStack Query cache — never copied into a store, not even as an "immutable snapshot" to diff local edits against. A copy silently stops tracking refetches (`staleTime` expiry, window focus, post-mutation invalidation), so the screen keeps rendering the payload it started with.
+
+### Editable server state (drafts)
+
+When the user edits a server payload before saving it, edit the cache entry itself with `setQueryData` — do not layer a separate edit state over it. One value answers "what does it look like now", which is what saving (send it whole) and undo (restore a previous one) both need; a baseline + per-field overrides answers it only by recombining them at every read.
+
+Such a query MUST opt out of every automatic refetch axis (`staleTime`, window focus, reconnect, mount) AND every automatic eviction axis (`gcTime`) — a query with no observers (screen navigated away from) still falls out of the cache on the default `gcTime` even with refetching fully disabled, so the edit is gone by the time the user comes back. Refetch only by explicit invalidation after a save. Check that no other mutation's `invalidate` range covers this query key.
 
 ## Query Hooks
 
@@ -11,20 +17,20 @@ Server state lives here, in the TanStack Query cache — never copied into a zus
 Wrap at the **endpoint** level, not per property. Consumers extract what they need.
 
 ```ts
-// O — one hook for session.get
-export function useSessionSuspenseQuery(
-  input: { sessionId: string },
-  options?: Omit<Parameters<typeof trpc.session.get.useSuspenseQuery>[1], "queryKey">,
+// O — one hook for digest.get
+export function useDigestSuspenseQuery(
+  input: { digestId: string },
+  options?: Omit<Parameters<typeof trpc.digest.get.useSuspenseQuery>[1], "queryKey">,
 ) {
-  return trpc.session.get.useSuspenseQuery(input, {
-    staleTime: SESSION_STALE_TIME_MS,
+  return trpc.digest.get.useSuspenseQuery(input, {
+    staleTime: DIGEST_STALE_TIME_MS,
     ...options,
   });
 }
 
 // X — separate hooks per property
-export function useSessionDraft({ sessionId }) { ... }
-export function useSessionRetrieval({ sessionId }) { ... }
+export function useDigestTitle({ digestId }) { ... }
+export function useDigestStatements({ digestId }) { ... }
 ```
 
 ### Return the original tuple
@@ -33,11 +39,11 @@ Return `useSuspenseQuery` / `useQuery` result as-is. Do not extract or transform
 
 ```ts
 // O
-return trpc.session.get.useSuspenseQuery(input, { ... });
+return trpc.digest.get.useSuspenseQuery(input, { ... });
 
 // X
-const [session] = trpc.session.get.useSuspenseQuery(input, { ... });
-return session.draft;
+const [digest] = trpc.digest.get.useSuspenseQuery(input, { ... });
+return digest.statements;
 ```
 
 ### Options override
@@ -69,10 +75,12 @@ Cache manipulation functions (`presetCache`, `addOptimistic`, `clearCache`) stay
 
 | Location | Responsibility |
 | --- | --- |
-| `useMutation({ onSuccess })` | Cache invalidation, cache update, analytics — **server state logic** |
+| `useMutation({ onSuccess })` | Cache invalidation, cache update — **server state logic** |
 | `mutate(data, { onSuccess })` | Navigate, close dialog — **UI side-effects** |
 
 UI side-effects MUST NOT live inside the mutation hook.
+
+**Exception — state the mutation owns end-to-end**: `mutate(data, { onSuccess })` callbacks are skipped entirely if the calling component has already unmounted before the mutation settles. When a side effect must run regardless (e.g. clearing a component-local draft that mirrors this exact mutation's lifecycle, so it can't resurrect after the caller unmounts), put it in `useMutation({ onMutate/onError/onSuccess })` instead. This is narrow: it applies only to state the mutation itself fully owns, not general UI reactions like navigation or closing a dialog — those still belong at the call site.
 
 **Error toast**: The global `MutationCache.onError` shows a toast for all mutation errors by default. Individual toast handling is unnecessary. To suppress the global toast (e.g., when showing a custom error UI), set `meta: { skipGlobalToast: true }` on the mutation.
 
@@ -86,18 +94,18 @@ Three required steps in every optimistic mutation:
 
 ```ts
 onMutate: async () => {
-  await utils.session.get.cancel({ sessionId });
-  const prev = utils.session.get.getData({ sessionId });
-  utils.session.get.setData({ sessionId }, (old) => /* optimistic */);
+  await utils.digest.get.cancel({ digestId });
+  const prev = utils.digest.get.getData({ digestId });
+  utils.digest.get.setData({ digestId }, (old) => /* optimistic */);
   return { prev };
 },
 onError: (_err, _vars, context) => {
   if (context?.prev) {
-    utils.session.get.setData({ sessionId }, context.prev);
+    utils.digest.get.setData({ digestId }, context.prev);
   }
 },
 onSettled: () => {
-  utils.session.get.invalidate({ sessionId });
+  utils.digest.get.invalidate({ digestId });
 },
 ```
 

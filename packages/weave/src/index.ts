@@ -2,29 +2,24 @@ export { Alert, type AlertVariant } from "./components/Alert";
 export { Avatar, type AvatarShape } from "./components/Avatar";
 export {
   Badge,
-  type BadgeColor,
   type BadgeShape,
   type BadgeSize,
   type BadgeVariant,
   OUTLINE_TONE_CLASSNAME,
 } from "./components/Badge";
 export { Button, buttonVariants } from "./components/Button";
-export {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "./components/Card";
 export { Checkbox } from "./components/Checkbox";
 export {
   Chip,
   type ChipShape,
   type ChipVariant,
+  getRandomTagColor,
+  TAG_COLOR_CLASSNAME,
+  TAG_COLORS,
   type TagColor,
 } from "./components/Chip";
+export { ComboboxItem } from "./components/ComboboxItem";
+export { CountBadge, type CountBadgeProps } from "./components/CountBadge";
 export {
   Dialog,
   DialogClose,
@@ -56,10 +51,13 @@ export {
   DropdownMenuTrigger,
 } from "./components/DropdownMenu";
 export {
+  FormControl,
   FormField,
+  FormLabel,
   FormMessage,
   type FormMessageVariant,
 } from "./components/Form";
+export { HoverIcon } from "./components/HoverIcon";
 export { Input } from "./components/Input";
 export { Kbd } from "./components/Kbd";
 export { Label } from "./components/Label";
@@ -84,6 +82,15 @@ export {
 export { Separator } from "./components/Separator";
 export { Skeleton } from "./components/Skeleton";
 export {
+  Tab,
+  TAB_ACTIVE_INDICATOR_CLASSNAME,
+  TAB_DIMMED_ACTIVE_INDICATOR_CLASSNAME,
+} from "./components/Tab";
+export {
+  TagColorGridPicker,
+  TagColorListPicker,
+} from "./components/TagColorPicker";
+export {
   Text,
   type TextColor,
   type TextProps,
@@ -102,6 +109,7 @@ export {
 export {
   cn,
   LIST_ITEM_HOVER_CLASSNAME,
+  NESTED_ACTIVE_ICON_CLASSNAME,
   NESTED_HOVER_ICON_CLASSNAME,
   pinSelectedToTop,
   POPOVER_SURFACE_CLASSNAME,

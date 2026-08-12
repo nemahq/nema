@@ -1,6 +1,11 @@
 import { type ReactNode, useRef, useState } from "react";
 
-import { Button, cn } from "@nema-io/weave";
+import {
+  Button,
+  cn,
+  TAB_ACTIVE_INDICATOR_CLASSNAME,
+  TAB_DIMMED_ACTIVE_INDICATOR_CLASSNAME,
+} from "@nema-io/weave";
 import { X } from "@nema-io/weave/icons";
 
 import type { TranslationKey } from "@web/lib/tolgee";
@@ -125,8 +130,8 @@ function DraggableTab({
           ? cn(
               "border-r border-t-2 border-r-border bg-surface-card",
               focused === false
-                ? "border-t-border"
-                : "border-t-amber-600 dark:border-t-amber-500",
+                ? TAB_DIMMED_ACTIVE_INDICATOR_CLASSNAME
+                : TAB_ACTIVE_INDICATOR_CLASSNAME,
               !isFirst && "border-l border-l-border",
             )
           : "border border-transparent border-r-border/30",
@@ -143,6 +148,9 @@ function DraggableTab({
       onDrop={handleDrop}
       onDragEnd={handleDragEnd}
     >
+      {/* weave Tab 대신 raw — 활성 인디케이터가 이 버튼이 아니라 옆 닫기 버튼까지
+          포함한 위 wrapper div에 걸려야 해서, 색 토큰(TAB_ACTIVE_INDICATOR_CLASSNAME)만
+          가져다 쓰고 보더·텍스트 상태는 직접 관리한다. */}
       <button
         type="button"
         role="tab"
@@ -214,7 +222,7 @@ export function TabbedPanel({
                 onTabDragStart={onTabDragStart}
                 onTabDrop={onTabDrop}
                 onTabClose={handleTabClose}
-                closeLabel={t("session.draft_tab_close", {
+                closeLabel={t("common.draft_tab_close", {
                   label: resolveLabel(tab, t),
                 })}
               />

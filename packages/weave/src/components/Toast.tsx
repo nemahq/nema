@@ -27,15 +27,15 @@ const ICONS = {
 // 그룹을 본문에서 떼어놓는 margin-left:auto도 이제 시각적으로 먼저 오는
 // actionButton으로 옮겨야 한다(안 옮기면 action·cancel 사이가 벌어짐).
 // action 없이 cancel(dismiss)만 있는 토스트(toast.error 등)에선 actionButton
-// 자체가 안 그려져 위 margin-left:auto가 안 실린다 — cancelButton에도
-// only:!ml-auto를 얹어 "혼자일 때만" 오른쪽 끝으로 민다(action이 있을 땐
-// :only-child가 안 걸려 기존 순서·간격 그대로).
+// 자체가 안 그려져 위 margin-left:auto가 안 실린다 — cancelButton에
+// only-of-type:!ml-auto로 보완한다. icon·content가 항상 형제로 있어 :only-child는
+// 절대 안 걸리므로, button 태그 기준으로 세는 :only-of-type을 써야 한다.
 const TOAST_CLASS_NAMES = {
   toast:
     "!bg-(--palette-dark-surface-raised-hover) !text-(--palette-dark-fg-primary) !border-transparent !shadow-[0_4px_16px_rgba(0,0,0,0.12)] dark:!shadow-[0_4px_16px_rgba(0,0,0,0.5)]",
   actionButton: "order-1 !ml-auto",
   cancelButton:
-    "!bg-transparent !text-(--palette-dark-fg-tertiary) hover:!text-(--palette-dark-fg-primary) !border-0 !p-0 !ring-0 !ml-2 !text-xs order-2 only:!ml-auto",
+    "!bg-transparent !text-(--palette-dark-fg-tertiary) hover:!text-(--palette-dark-fg-primary) !border-0 !p-0 !ring-0 !ml-2 !text-xs order-2 only-of-type:!ml-auto",
 };
 
 const TOASTER_STYLE = {

@@ -9,9 +9,9 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:local": "turbo run dev:local",
+    "dev:server": "pnpm --filter server dev",
     "dev:web": "VITE_DEV_API_TARGET=https://api-staging.getnema.app pnpm --filter web dev",
     "dev:web:prod": "VITE_DEV_API_TARGET=https://api.getnema.app pnpm --filter web dev:prod",
-    "dev:server": "pnpm --filter server dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
@@ -23,22 +23,14 @@
     "quality": "turbo run lint && pnpm knip && pnpm depcruise",
     "prepare": "husky",
     "tolgee:push": "tolgee push",
-    "supabase:gen-types": "npx -y supabase@2.110.0-beta.10 gen types --lang=typescript --local > apps/server/src/infra/database.types.ts && prettier --write apps/server/src/infra/database.types.ts"
+    "supabase:gen-types": "npx -y supabase@2.110.0-beta.10 gen types --lang=typescript --local > apps/server/src/infra/supabase/database.types.ts && prettier --write apps/server/src/infra/supabase/database.types.ts"
   },
   "lint-staged": {
     "*.{js,ts,tsx}": [
       "eslint --cache --cache-strategy content",
       "prettier --write"
     ],
-    "*.{json,css,md,mdx}": "prettier --write",
-    "apps/web/src/lib/tolgee/*.json": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "apps/server/src/infra/i18n/locales/*.json": [
-      "eslint --fix",
-      "prettier --write"
-    ]
+    "*.{json,css,md,mdx}": "prettier --write"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

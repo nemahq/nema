@@ -1,5 +1,4 @@
-/* eslint-disable react-compiler/react-compiler -- dev-only 컴포넌트 */
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { cn, POPOVER_SURFACE_CLASSNAME } from "@nema-io/weave";
@@ -9,7 +8,6 @@ import { useTheme } from "@web/app/providers/ThemeProvider";
 import { useAuth } from "@web/lib/auth";
 import { supabase } from "@web/lib/supabase";
 import { changeLocale, type Locale, useCurrentLocale } from "@web/lib/tolgee";
-import { trpc } from "@web/lib/trpc";
 import type { ThemePreference } from "@web/utils/theme-preference";
 
 const ReactQueryDevtools = lazy(() =>
@@ -20,20 +18,6 @@ const ReactQueryDevtools = lazy(() =>
 
 const THEMES: ThemePreference[] = ["light", "dark", "system"];
 const LOCALES: Locale[] = ["ko", "en"];
-const LLM_PRESETS = ["all-nano", "real-tiers"] as const;
-
-function formatModelMap(models: {
-  standard: string;
-  mini: string;
-  nano: string;
-}): string {
-  const allSame =
-    models.standard === models.mini && models.mini === models.nano;
-  if (allSame) {
-    return `all: ${models.standard}`;
-  }
-  return `S: ${models.standard} · M: ${models.mini} · N: ${models.nano}`;
-}
 
 function toggleClass(active: boolean) {
   return `cursor-pointer rounded px-2 py-0.5 transition-colors duration-fast ${
@@ -41,47 +25,6 @@ function toggleClass(active: boolean) {
       ? "bg-brand text-brand-fg dark:bg-fg-primary dark:text-surface-base"
       : "text-fg-secondary hover:bg-surface-raised-hover"
   }`;
-}
-
-function LlmPresetSection() {
-  const [presetData] = trpc.dev.getModelPreset.useSuspenseQuery(undefined, {
-    staleTime: Infinity,
-  });
-  const utils = trpc.useUtils();
-  const presetMutation = trpc.dev.setModelPreset.useMutation({
-    onSuccess: (data) => {
-      utils.dev.getModelPreset.setData(undefined, data);
-    },
-  });
-
-  useEffect(function resetPresetOnMount() {
-    if (presetData.preset !== "all-nano") {
-      presetMutation.mutate({ preset: "all-nano" });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 1회만
-  }, []);
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="font-semibold text-fg-tertiary">LLM</span>
-      <div className="flex items-center gap-1">
-        {LLM_PRESETS.map((p) => (
-          <button
-            key={p}
-            type="button"
-            disabled={presetMutation.isPending}
-            onClick={() => presetMutation.mutate({ preset: p })}
-            className={toggleClass(presetData.preset === p)}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
-      <div className="text-[10px] text-fg-tertiary">
-        {formatModelMap(presetData.models)}
-      </div>
-    </div>
-  );
 }
 
 export function DevToolbar() {
@@ -95,6 +38,8 @@ export function DevToolbar() {
   return (
     <>
       <div className="fixed bottom-3 right-3 z-50 flex flex-col items-end">
+        {/* dev 전용 오버레이라 weave Button/Tab 대신 최소 스타일의 raw button을 쓴다 —
+            프로덕션 UI가 아니라 디자인 시스템 일관성보다 가벼움을 우선한다. */}
         {open && (
           <div
             className={cn(
@@ -157,18 +102,6 @@ export function DevToolbar() {
                 ))}
               </div>
             </div>
-
-            <ErrorBoundary
-              fallback={
-                <span className="text-[10px] text-status-error">
-                  LLM preset unavailable
-                </span>
-              }
-            >
-              <Suspense>
-                <LlmPresetSection />
-              </Suspense>
-            </ErrorBoundary>
 
             <div className="flex flex-col gap-1.5">
               <span className="font-semibold text-fg-tertiary">Query</span>

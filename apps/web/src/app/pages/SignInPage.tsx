@@ -4,6 +4,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button, Input, Separator } from "@nema-io/weave";
 import { LoaderCircle, Mail } from "@nema-io/weave/icons";
 
+import { NemaWordmark } from "@web/components/ui/NemaWordmark";
 import { GoogleIcon } from "@web/features/auth";
 import { consumeMagicLinkExpiredError, useAuth } from "@web/lib/auth";
 import { supabase } from "@web/lib/supabase";
@@ -92,9 +93,7 @@ export function SignInPage() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface p-4">
       <div className="flex w-full max-w-sm flex-col items-center gap-5">
-        <span className="text-[40px] font-bold leading-none tracking-tight text-teal-500 dark:text-fg-primary">
-          Nema
-        </span>
+        <NemaWordmark />
 
         <div className="flex min-h-[260px] w-full flex-col items-center justify-center rounded-xl border border-border p-6">
           {magicLinkSent ? (
@@ -161,6 +160,10 @@ export function SignInPage() {
                 </Button>
               </form>
 
+              {/* weave FormMessage는 FormField 하나에 딸린 필드 에러용이다 —
+                  이 에러는 Google과 이메일, 두 독립된 액션 중 어느 쪽에서
+                  나든 같은 자리에 뜨는 페이지 레벨 상태라 특정 필드에
+                  묶이지 않는다. */}
               <p
                 role="alert"
                 className={`text-center text-xs ${error ? "text-status-error" : "text-transparent"}`}

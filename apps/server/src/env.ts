@@ -21,36 +21,13 @@ const envSchema = z
     SUPABASE_ANON_KEY: z.string().min(1),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
-    OPENAI_API_KEY: z.string().min(1).optional(),
-    ANTHROPIC_API_KEY: z.string().min(1).optional(),
-    GEMINI_API_KEY: z.string().min(1).optional(),
     // 설정 시 Gemini를 Vertex(ADC 인증·GCP 크레딧) 경로로 — 없으면 GEMINI_API_KEY(AI Studio).
     GEMINI_VERTEX_PROJECT: z.string().min(1).optional(),
     GEMINI_VERTEX_LOCATION: z.string().min(1).optional(),
     // 헤드리스 배포엔 사람 로그인 ADC가 없어 서비스 계정 키로 명시 인증한다.
     GEMINI_VERTEX_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
-    VOYAGE_API_KEY: z.string().min(1).optional(),
-
-    QDRANT_URL: z.string().url().optional(),
-    QDRANT_API_KEY: z.string().min(1).optional(),
-    QDRANT_COLLECTION: z.string().min(1).default("statements"),
-
-    LLM_MODEL_STANDARD: z.string().min(1).optional(),
-    LLM_MODEL_MINI: z.string().min(1).optional(),
-    LLM_MODEL_NANO: z.string().min(1).optional(),
-
-    POSTHOG_API_KEY: z.string().min(1).optional(),
-    POSTHOG_HOST: z.string().url().optional(),
+    GEMINI_API_KEY: z.string().min(1).optional(),
   })
-  .refine(
-    (data) =>
-      (data.QDRANT_URL && data.QDRANT_API_KEY) ||
-      (!data.QDRANT_URL && !data.QDRANT_API_KEY),
-    {
-      message:
-        "QDRANT_URL and QDRANT_API_KEY must both be set or both be omitted",
-    },
-  )
   .transform((data) => ({
     ...data,
     APP_ENV:

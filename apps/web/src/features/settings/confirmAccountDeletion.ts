@@ -1,4 +1,4 @@
-export type AccountDeleteError = "precondition" | "other" | null;
+export type AccountDeleteError = "other" | null;
 
 // 이메일 없는 계정(전화번호 인증 등)에서 확인 자체가 영원히 불가능해지는 것을 막는다.
 export function resolveConfirmationTarget(

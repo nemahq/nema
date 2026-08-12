@@ -55,8 +55,6 @@ Classify every measured finding using the severity table in `design-qa-checklist
 | ...     | ...          |
 ```
 
-Append a session entry to `docs/blueprints/first-product/design-decisions-log.md` summarizing what was checked, fixed, and deferred (including ruled-out suspicions that measurement disproved — future rounds skip re-litigating them).
-
 ## Constraints
 
 - Never flag a finding from a screenshot alone if `design-qa-checklist.md` specifies a measurement technique for that category — run it first.

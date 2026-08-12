@@ -1,23 +1,12 @@
 {
   "error": {
-    "changeset_state_changed": "This change's state changed. Refresh and try again.",
-    "db_not_found": "The requested item was not found.",
+    "db_not_found": "The requested item was not found. It may have been deleted — try refreshing.",
     "default": "Something went wrong. Please try again.",
-    "digest_state_changed": "This digest's state changed. Reload the list and try again.",
-    "forbidden": "You don't have permission to do this.",
-    "ingestion_review_state_changed": "This review's state changed. Reload the list and try again.",
+    "forbidden": "You don't have permission to do this. If you think this is a mistake, contact support.",
     "llm_aborted": "The request was cancelled.",
     "llm_bad_request": "We couldn't process your request. Please try again.",
     "llm_content_filter": "We couldn't process your input. Please try different wording.",
     "llm_rate_limit": "Too many requests. Please try again shortly.",
-    "llm_timeout": "Response timed out. Please try again.",
-    "reference_state_changed": "This reference's state changed. Reload the list and try again.",
-    "source_state_changed": "This draft's state changed. Reload the list and try again.",
-    "space_delete_target_required": "This space now has waiting drafts. Refresh and try again.",
-    "space_min_one": "Your Workspace needs at least one Space. Create another Space first.",
-    "space_name_conflict": "That name is already in use. Try a different name.",
-    "topic_name_conflict": "That topic name is already in use. Try a different name.",
-    "topic_state_changed": "This topic's state changed. Reload the list and try again.",
-    "workspace_last_owner": "Transfer ownership to another member first."
+    "llm_timeout": "Response timed out. Please try again."
   }
 }

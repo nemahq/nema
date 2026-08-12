@@ -1,18 +1,16 @@
+import { Suspense } from "react";
 import { Outlet } from "@tanstack/react-router";
 
-import { OnboardingGate } from "@web/features/onboarding";
-import { RealtimeSync } from "@web/features/realtime";
-import { WorkspaceBootstrapGate } from "@web/features/workspace";
+import { AppSidebar } from "@web/components/layout/AppSidebar";
+import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
 
 export function AppLayout() {
   return (
-    <OnboardingGate>
-      <WorkspaceBootstrapGate>
-        <RealtimeSync />
-        <div className="flex h-dvh overflow-hidden">
-          <Outlet />
-        </div>
-      </WorkspaceBootstrapGate>
-    </OnboardingGate>
+    <div className="flex h-dvh overflow-hidden">
+      <AppSidebar />
+      <Suspense fallback={<ContentAreaFallback />}>
+        <Outlet />
+      </Suspense>
+    </div>
   );
 }

@@ -1,11 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import remarkGfm from "remark-gfm";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
-import mdx from "@mdx-js/rollup";
-import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 
@@ -55,9 +52,7 @@ export default defineConfig({
     },
   },
   plugins: [
-    { enforce: "pre", ...mdx({ remarkPlugins: [remarkGfm] }) },
     react({
-      include: /\.(jsx|tsx|mdx)$/,
       babel: {
         plugins: [["babel-plugin-react-compiler"]],
       },
@@ -78,7 +73,10 @@ export default defineConfig({
         start_url: "/",
         display: "standalone",
         theme_color: "#0D9488",
-        background_color: "#1c1917",
+        // weave dark surface-card(packages/weave/src/tokens/index.css의
+        // --palette-dark-surface-card)와 동기화 — index.html의 FOUC 방지
+        // 배경색과 같은 값이다.
+        background_color: "#292524",
         icons: [
           { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
           {
@@ -89,12 +87,6 @@ export default defineConfig({
           },
         ],
       },
-    }),
-    sentryVitePlugin({
-      org: "nema-o7",
-      project: "nema-web",
-      authToken: process.env.SENTRY_AUTH_TOKEN,
-      disable: !process.env.SENTRY_AUTH_TOKEN,
     }),
   ],
   resolve: {

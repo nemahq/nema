@@ -4,7 +4,7 @@ AI-powered context management web app. Turborepo + pnpm monorepo.
 
 ## Workflow
 
-- `staging` = default branch (feature branch → PR → CI → staging merge → Railway staging auto-deploy). `main` = production-ready code (`v*` tag push → prod DB migration + Railway deploy). Merge method: regular branch → `staging` is squash; feature branch → `staging` and `staging` → `main` are merge commit.
+- `staging` = default branch (feature branch → PR → CI → staging merge → Railway staging auto-deploy). `main` = production-ready code (`v*` tag push → prod DB migration + Railway deploy). Merge method: a normal branch (single slice of work, even with multiple commits from review fixes) → `staging` is squash. A shared feature branch that already has multiple squash-merged sub-PRs stacked on it → `staging` is merge commit (preserves per-PR history). `staging` → `main` is always merge commit.
 - Tag format: CalVer `vYYYY.MM.DD` (`.N` suffix for same-day redeploys). Every prod deploy MUST be tagged — migration diff is computed against the previous tag.
 - MUST verify CI locally before creating PR.
 - PR title: Korean. Assignee: author. Labels: `enhancement`/`bug`/`refactoring`/`documentation`.
@@ -30,6 +30,7 @@ Product terms vs code terms are mapped in `docs/guides/glossary.md`. Code (varia
 - Supabase (PostgreSQL + Auth). Schema migrations: `supabase/migrations/`, managed via Supabase CLI.
 - Magic numbers MUST be extracted into named constants (e.g., `TICK_INTERVAL_MS = 60_000`). Numeric literals allowed only for 0, 1, and universally obvious values.
 - `VITE_` prefix for frontend env vars (e.g., `VITE_API_URL`).
+- `legacy/` is a read-only archive of the previous generation's code, outside the workspace (no build/CI). Before starting new work, check whether a prior implementation exists there, and if you port anything, note what and why in the PR.
 
 ## Dev Scripts
 
@@ -37,8 +38,6 @@ Product terms vs code terms are mapped in `docs/guides/glossary.md`. Code (varia
 | ------------------- | ----------------------------------- |
 | `pnpm dev`          | local full-stack (default)          |
 | `pnpm dev:local`    | local full-stack (local Supabase)   |
-| `pnpm dev:web`      | frontend only (staging API)         |
-| `pnpm dev:web:prod` | frontend only (prod API)            |
 | `pnpm dev:server`   | server only                         |
 
 Local server secrets live in `~/.config/nema/.env.secret` (auto-loaded, git-ignored).

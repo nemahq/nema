@@ -22,9 +22,8 @@
 
 - Reusable UI components (layout shells, input controls, tabbed containers) MUST be props-driven with no domain logic or context dependencies.
 - Domain-specific behavior MUST be encapsulated in a wrapper component that composes the generic UI component internally.
-  - `SidePanel` (generic resize shell) ← `ChatPanel` (chat domain wrapper)
-  - `ChatInput` (generic input UI) ← `ChatComposer` (session chat domain wrapper)
-  - `TabbedPanel` (generic tab UI) ← `ContentPanel` (session content domain wrapper)
+  - `SidePanel` (generic resize shell) ← a domain wrapper that composes it internally
+  - `TabbedPanel` (generic tab UI) ← a domain wrapper that composes it internally
 - The wrapper owns hooks, context access, and derived state. The generic component receives only props.
 - Parent components MUST only compose and lay out children — they MUST NOT fetch data or compute state on a child's behalf.
 - Single responsibility check: if a component's hooks/state variables form 2+ independent groups (no shared variables, excluding shared utilities like `useTranslation`), extract each group into its own component.
@@ -34,11 +33,6 @@
 - Cache manipulation functions belong in the hook that owns the query.
 - Mutation hooks MUST NOT embed side effects (navigate, etc.). Callers inject them at `mutate(variables, { onSuccess })` call site.
 - Hooks MAY return objects containing `ReactNode` fields when the return type is a named interface. Hooks MUST NOT return raw JSX — if the primary purpose is rendering, use a component.
-
-## Analytics (PostHog)
-
-- Server action result → track in mutation hook's `onSuccess` (only after confirmed success).
-- Client-only interaction (navigation, copy, UI toggle) → track in the component handler.
 
 ## Functions
 
@@ -55,10 +49,10 @@
 | Env var          | `VITE_` prefix | `VITE_API_URL`    |
 
 - Hook name = caller perspective. Name by what the caller does, not by API endpoint or DB table.
-- Hook return variable: drop `use` prefix → camelCase. `useSessionList()` → `sessionList`. Array return → plural entity (`messages`).
-- Component name MUST NOT repeat the parent folder name. `session/components/MessageList` — O, `session/components/SessionMessageList` — X.
-- An entity prefix among sibling components means "bound to that entity's shape". `DigestTypeSelect` reads the Digest discriminated union directly and cannot serve another entity; `TopicChipRow` next to it takes a plain label array and can. Sibling names differing only in that prefix is a signal, not an inconsistency — but state which side a component is on when it is not obvious from its props.
-- Generic names like `value`, `data`, `item` MUST NOT be used for variables. Use domain-specific names that convey intent (e.g., `inputValue` → `messageInput`, `data` → `sessionDetail`).
+- Hook return variable: drop `use` prefix → camelCase. `useDigestList()` → `digestList`. Array return → plural entity (`digests`).
+- Component name MUST NOT repeat the parent folder name. `digest/components/DigestList` — O, `digest/components/DigestDigestList` — X.
+- An entity prefix among sibling components means "bound to that entity's shape". State which side a component is on when it is not obvious from its props.
+- Generic names like `value`, `data`, `item` MUST NOT be used for variables. Use domain-specific names that convey intent (e.g., `inputValue` → `emailInput`, `data` → `digestDetail`).
 
 ## Data Fetching
 
@@ -67,22 +61,24 @@
 ### tRPC
 
 - One query or mutation per hook. Do not bundle multiple queries/mutations into a single hook.
-- Query hook: `use{Entity}{Qualifier}` (e.g., `useSessionList`, `useSessionDetail`)
-- Mutation hook: `use{Action}{Entity}` (e.g., `useCreateSession`, `useDeleteSession`)
+- Query hook: `use{Entity}{Qualifier}` (e.g., `useDigestList`, `useDigestDetail`)
+- Mutation hook: `use{Action}{Entity}` (e.g., `useDeleteAccount`, `useUpdateProfile`)
 
 ### Loading
 
-- **Default is Suspense.** Use `useSuspenseQuery` / `useSuspenseInfiniteQuery` and let the component suspend. The main content area (`<Outlet>`) already has a shared Suspense boundary whose fallback (`ContentAreaFallback`, a watermark) is the default page-loading UI — a page that suspends into it needs **no** local `isLoading` branch and **no** local boundary.
-- **A Skeleton does not justify a manual `isLoading` branch.** Extract the loading-dependent region into a child that calls `useSuspenseQuery`, and wrap that child in `<Suspense fallback={<Skeleton/>}>`. A local boundary earns its place only by keeping always-visible siblings rendered while the data-dependent region falls back — sibling chrome (headers, tabs, inputs) stays put. (`TagAddPopover` keeps the search input, suspends only the results.)
-- **Whole screen waits → suspend into the shared watermark, no local boundary.** If nothing renders before the data (header included), a screen-level boundary would be functionally identical to the shared one — skip it (`DraftsScreen`, `SpaceOverview`). Add a local boundary only to override the watermark with a tailored skeleton (`DigestReviewScreen`).
-- **Conditional / dependent queries still suspend — gate by mounting, not `enabled`.** `useSuspenseQuery` has no `enabled: false`, so mount the suspending child only once its precondition holds: `{open && <Suspense>…}` (popover open) or `{spaceId && <Suspense>…}` (dependent on a prior query). (`TagAddPopover`, `TopicAddPopover`.)
-- **Inline error UI → pair the local Suspense with a local ErrorBoundary** whose fallback renders the error, instead of letting a `useSuspenseQuery` error escalate to the route `errorComponent`. (`TagAddPopover`, `TopicAddPopover`.)
-- **Needs `keepPreviousData` on a background invalidation → drop that one read to `useQuery` + `placeholderData: keepPreviousData`.** `useSuspenseQuery` doesn't accept `placeholderData`, so a Suspense-bound read always re-suspends (and visibly flickers) when something elsewhere invalidates its query — even if the UI's intent is "keep showing the stale value until the refetch lands." This is the one case where Suspense structurally cannot express the desired behavior, not a convenience shortcut. Scope the plain `useQuery` to just the affected read, keep everything else on `useSuspenseQuery`, and comment why. (`DraftDetailHeader`'s Space pill re-suspended on `space.list` invalidation whenever a Space delete reassigned the open draft.)
-- **Manual `isLoading` / `!data` is the last resort — the one case Suspense cannot express: the loading flag drives imperative logic, not a render fork** (e.g. an `isLoading` `useEffect` dependency for enter/exit animation). Keep it manual and comment the reason. (`DraftsNavItem`.)
+- **Default is Suspense.** Use `useSuspenseQuery` / `useSuspenseInfiniteQuery` and let the component suspend. The main content area (`<Outlet>`) already has a shared Suspense boundary whose fallback is the default page-loading UI — a page that suspends into it needs **no** local `isLoading` branch and **no** local boundary.
+- **A Skeleton does not justify a manual `isLoading` branch.** Extract the loading-dependent region into a child that calls `useSuspenseQuery`, and wrap that child in `<Suspense fallback={<Skeleton/>}>`. A local boundary earns its place only by keeping always-visible siblings rendered while the data-dependent region falls back — sibling chrome (headers, tabs, inputs) stays put.
+- **Whole screen waits → suspend into the shared watermark, no local boundary.** If nothing renders before the data (header included), a screen-level boundary would be functionally identical to the shared one — skip it. Add a local boundary only to override the watermark with a tailored skeleton.
+- **Conditional / dependent queries still suspend — gate by mounting, not `enabled`.** `useSuspenseQuery` has no `enabled: false`, so mount the suspending child only once its precondition holds: `{open && <Suspense>…}` (popover open) or similar (dependent on a prior query).
+- **Inline error UI → pair the local Suspense with a local ErrorBoundary** whose fallback renders the error, instead of letting a `useSuspenseQuery` error escalate to the route `errorComponent`.
+- **Needs `keepPreviousData` on a background invalidation → drop that one read to `useQuery` + `placeholderData: keepPreviousData`.** `useSuspenseQuery` doesn't accept `placeholderData`, so a Suspense-bound read always re-suspends (and visibly flickers) when something elsewhere invalidates its query — even if the UI's intent is "keep showing the stale value until the refetch lands." This is the one case where Suspense structurally cannot express the desired behavior, not a convenience shortcut. Scope the plain `useQuery` to just the affected read, keep everything else on `useSuspenseQuery`, and comment why.
+- **Manual `isLoading` / `!data` is the last resort — the one case Suspense cannot express: the loading flag drives imperative logic, not a render fork** (e.g. an `isLoading` `useEffect` dependency for enter/exit animation). Keep it manual and comment the reason.
 
 ### Error
 
-- All errors are globally reported to Sentry (unhandled rejections + MutationCache + ErrorBoundary). Do NOT add per-component `Sentry.captureException` unless additional context is needed.
+<!-- Sentry was removed in the legacy→apps/web port (2026-08); there is currently no global error
+     reporting service. The route/toast structure below still applies regardless. -->
+
 - Mutation errors: global toast (QueryProvider). Use `onError` only when individual handling is needed.
 - Query errors: handled by route `errorComponent`.
 - ErrorBoundary at route level by default. Component-level only when a failure must not propagate to the entire page.
@@ -155,7 +151,7 @@
 - MUST NOT use `as` type assertions to silence the compiler. Allowed only for narrowing from `unknown` after a runtime guard.
 - Component data props MUST be primitive values (string, number, boolean). Do NOT pass objects — primitive props enable effective `memo` shallow comparison and minimize re-renders. Callbacks (`on*`), render functions, and `children` are exempt.
   - The rule targets values **built during render** — object/array literals, `.map()` results, spreads, inline arrow callbacks. Those get a new identity every render, so `memo` can never hit.
-  - A reference **passed through unchanged** from a query cache or a module constant is exempt: its identity is already stable, which is exactly what the shallow comparison needs. `DigestCandidateCard` takes `digest` and `citedReferences` straight off the `digestReview.get` cache for this reason.
+  - A reference **passed through unchanged** from a query cache or a module constant is exempt: its identity is already stable, which is exactly what the shallow comparison needs.
   - Lint cannot tell the two apart, so the burden is on the author: if a component takes an object prop, its identity must be traceable to a stable source.
 
 ## Design System

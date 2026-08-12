@@ -1,0 +1,66 @@
+import { createContext, useContext, useEffect, useState } from "react";
+
+import { getStorage } from "@web/utils/localStorage";
+import {
+  MEDIA_DARK,
+  resolveTheme,
+  setTheme as setThemePref,
+  type Theme,
+} from "@web/utils/theme";
+import type { ThemePreference } from "@web/utils/theme-preference";
+
+type ThemeProviderState = {
+  theme: ThemePreference;
+  resolvedTheme: Theme;
+  setTheme: (theme: ThemePreference) => void;
+};
+
+const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
+  undefined,
+);
+
+interface ThemeProviderProps {
+  children: React.ReactNode;
+}
+
+export function ThemeProvider({ children }: ThemeProviderProps) {
+  const [theme, setThemeState] = useState<ThemePreference>(
+    () => getStorage("theme") ?? "system",
+  );
+  const [resolvedTheme, setResolvedTheme] = useState<Theme>(() =>
+    resolveTheme(getStorage("theme") ?? "system"),
+  );
+
+  useEffect(
+    function syncSystemTheme() {
+      if (theme !== "system") {
+        return;
+      }
+      const media = window.matchMedia(MEDIA_DARK);
+      const onChange = () => setResolvedTheme(resolveTheme("system"));
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    },
+    [theme],
+  );
+
+  const setTheme = (next: ThemePreference) => {
+    setThemePref(next);
+    setThemeState(next);
+    setResolvedTheme(resolveTheme(next));
+  };
+
+  return (
+    <ThemeProviderContext.Provider value={{ theme, resolvedTheme, setTheme }}>
+      {children}
+    </ThemeProviderContext.Provider>
+  );
+}
+
+export function useTheme() {
+  const context = useContext(ThemeProviderContext);
+  if (!context) {
+    throw new Error("useTheme must be used within ThemeProvider");
+  }
+  return context;
+}

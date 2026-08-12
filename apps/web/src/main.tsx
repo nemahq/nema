@@ -1,14 +1,14 @@
 import "./index.css";
-import "@web/lib/sentry";
 
 import type React from "react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import * as Sentry from "@sentry/react";
 import { RouterProvider } from "@tanstack/react-router";
 
 import { getEnv } from "@web/app/env";
 import type { ErrorFallbackLabels } from "@web/app/error/ErrorFallback";
+import { getAppVersion } from "@web/app/error/errorReport";
+import { recordRouteErrorReport } from "@web/app/error/routeErrorReports";
 import { detectLanguage } from "@web/utils/locale";
 import { initTheme } from "@web/utils/theme";
 
@@ -39,20 +39,10 @@ const rootLabels = ROOT_FALLBACK_LABELS[detectLanguage()];
 
 if (typeof __COMMIT_SHA__ !== "undefined") {
   const appEnv = getEnv().APP_ENV;
-  // 풀 SHA는 Sentry 릴리스 태그·소스맵 연결용(lib/sentry)이고 콘솔 표시만 축약한다.
-  const version = __COMMIT_SHA__ === "dev" ? "dev" : __COMMIT_SHA__.slice(0, 7);
+  const version = getAppVersion();
   const builtAt = new Date(__BUILD_TIMESTAMP__).toLocaleString();
-  // eslint-disable-next-line no-console -- build metadata, not capturable by Sentry
+  // eslint-disable-next-line no-console -- build metadata
   console.log(`[nema] ${appEnv} · ${version} (built ${builtAt})`);
-
-  // 스탬프가 빌드에 안 실리면 조용히 dev로 회귀해 Sentry 릴리스 태그까지 오염시킨다.
-  // 빌드 시점엔 감지할 신호가 없어(서버 index.ts와 동일) 배포 런타임에서 잡는다.
-  if (appEnv !== "local" && __COMMIT_SHA__ === "dev") {
-    Sentry.captureMessage(
-      '[bootstrap] Deployed web build has no commit SHA stamp — console and Sentry release report "dev". CI must write .commit-sha before railway up.',
-      { level: "error" },
-    );
-  }
 }
 
 const root = document.getElementById("root");
@@ -60,12 +50,16 @@ if (!root) {
   throw new Error("Root element not found");
 }
 
+// TanStack Router의 errorComponent는 자체 에러 보고가 없다 — 라우트 에러는
+// React 19 root의 이 콜백을 거쳐서만 잡힌다. 결과(componentStack)를 던져진
+// 에러 객체 자체에 연결해두면 RouteErrorFallback이 같은 참조로 조회해
+// 복사 리포트에 반영한다.
 function reportRenderError(error: unknown, errorInfo: React.ErrorInfo): void {
   if (isExpectedAuthTransitionError(error)) {
     return;
   }
-  Sentry.captureException(error, {
-    extra: { componentStack: errorInfo.componentStack },
+  recordRouteErrorReport(error, {
+    componentStack: errorInfo.componentStack ?? undefined,
   });
 }
 
@@ -76,9 +70,21 @@ createRoot(root, {
   <StrictMode>
     <ErrorBoundary
       boundaryName="root"
-      fallbackRender={({ error, reset, hasRetried }) => (
+      fallbackRender={({
+        error,
+        reset,
+        hasRetried,
+        eventId,
+        componentStack,
+        route,
+        timestamp,
+      }) => (
         <ErrorFallback
-          detail={error?.message}
+          error={error}
+          eventId={eventId}
+          componentStack={componentStack}
+          route={route}
+          timestamp={timestamp}
           onRetry={hasRetried ? undefined : reset}
           onRefresh={hasRetried ? () => window.location.reload() : undefined}
           size="page"

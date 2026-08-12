@@ -1,120 +1,51 @@
+import { TRPCError } from "@trpc/server";
+
 import {
   SourceActionInputSchema,
-  SourceCreateInputSchema,
-  SourceDeleteManyInputSchema,
-  SourceGetInputSchema,
-  SourceReassignSpaceInputSchema,
-  SourceUpdateBodyInputSchema,
-  SourceUpdateTitleInputSchema,
+  SourceIngestInputSchema,
 } from "@nema-io/shared";
 
-import { getProviders } from "@server/infra/providers";
+import { isNotFoundError } from "@server/infra/supabase/supabase-error";
 import {
-  cancelSourceDigestion,
-  createSource,
   deleteSource,
-  deleteSources,
-  getSource,
-  listPendingSources,
-  listSources,
-  reassignSourceSpace,
-  startSourceDigestion,
-  updateSourceBody,
-  updateSourceTitle,
+  ingestSource,
+  reExtractSource,
 } from "@server/services/source-service";
 import { protectedProcedure, router } from "@server/trpc";
 
 export const sourceRouter = router({
-  create: protectedProcedure
-    .input(SourceCreateInputSchema)
+  ingest: protectedProcedure
+    .input(SourceIngestInputSchema)
     .mutation(({ ctx, input }) =>
-      createSource({
+      ingestSource({
         supabase: ctx.supabase,
-        providers: getProviders(),
+        userId: ctx.user.id,
         body: input.body,
-        spaceId: input.spaceId,
-        timeZone: input.timeZone,
       }),
     ),
 
-  list: protectedProcedure.query(({ ctx }) =>
-    listSources({ supabase: ctx.supabase }),
-  ),
-
-  listPending: protectedProcedure.query(({ ctx }) =>
-    listPendingSources({ supabase: ctx.supabase }),
-  ),
-
-  get: protectedProcedure.input(SourceGetInputSchema).query(({ ctx, input }) =>
-    getSource({
-      supabase: ctx.supabase,
-      sourceId: input.sourceId,
+  reExtract: protectedProcedure
+    .input(SourceActionInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await reExtractSource({
+          supabase: ctx.supabase,
+          sourceId: input.sourceId,
+        });
+      } catch (error) {
+        if (isNotFoundError(error)) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Source not found.",
+          });
+        }
+        throw error;
+      }
     }),
-  ),
-
-  cancelDigestion: protectedProcedure
-    .input(SourceActionInputSchema)
-    .mutation(({ ctx, input }) =>
-      cancelSourceDigestion({
-        supabase: ctx.supabase,
-        sourceId: input.sourceId,
-      }),
-    ),
-
-  startDigestion: protectedProcedure
-    .input(SourceActionInputSchema)
-    .mutation(({ ctx, input }) =>
-      startSourceDigestion({
-        supabase: ctx.supabase,
-        sourceId: input.sourceId,
-      }),
-    ),
 
   delete: protectedProcedure
     .input(SourceActionInputSchema)
     .mutation(({ ctx, input }) =>
-      deleteSource({
-        supabase: ctx.supabase,
-        sourceId: input.sourceId,
-      }),
-    ),
-
-  deleteMany: protectedProcedure
-    .input(SourceDeleteManyInputSchema)
-    .mutation(({ ctx, input }) =>
-      deleteSources({
-        supabase: ctx.supabase,
-        sourceIds: input.sourceIds,
-      }),
-    ),
-
-  reassignSpace: protectedProcedure
-    .input(SourceReassignSpaceInputSchema)
-    .mutation(({ ctx, input }) =>
-      reassignSourceSpace({
-        supabase: ctx.supabase,
-        sourceId: input.sourceId,
-        spaceId: input.spaceId,
-      }),
-    ),
-
-  updateTitle: protectedProcedure
-    .input(SourceUpdateTitleInputSchema)
-    .mutation(({ ctx, input }) =>
-      updateSourceTitle({
-        supabase: ctx.supabase,
-        sourceId: input.sourceId,
-        title: input.title,
-      }),
-    ),
-
-  updateBody: protectedProcedure
-    .input(SourceUpdateBodyInputSchema)
-    .mutation(({ ctx, input }) =>
-      updateSourceBody({
-        supabase: ctx.supabase,
-        sourceId: input.sourceId,
-        body: input.body,
-      }),
+      deleteSource({ supabase: ctx.supabase, sourceId: input.sourceId }),
     ),
 });

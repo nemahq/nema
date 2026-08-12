@@ -1,0 +1,212 @@
+import { useEffect, useRef, useState } from "react";
+
+import {
+  TAG_DESCRIPTION_MAX_LENGTH,
+  TAG_TITLE_MAX_LENGTH,
+  type TagColor,
+} from "@nema-io/shared";
+import {
+  ComboboxItem,
+  FormControl,
+  FormField,
+  FormMessage,
+  Input,
+  TagColorListPicker,
+  Text,
+} from "@nema-io/weave";
+import { Trash2 } from "@nema-io/weave/icons";
+
+import { TAG_COLOR_LABEL_KEY } from "@web/features/review/constants";
+import { useTranslation } from "@web/lib/tolgee";
+
+interface TagDraftRenameFormProps {
+  title: string;
+  description: string;
+  color: TagColor;
+  // TopicDraftRenameForm과 같은 이유로 배열 대신 콜백 — 입력값이 바뀔 때마다
+  // 이 폼 안에서 다시 판정해야 해서 부모가 boolean 하나로 미리 계산해 둘 수 없다.
+  isDuplicateTitle: (title: string) => boolean;
+  // 이름·설명은 저장 버튼이 없다 — 이 팝오버가 닫힐 때(바깥 클릭·Escape 등
+  // LabelDraftEditPopover의 onOpenChange가 false를 받는 모든 경로) 유효한 값만
+  // 커밋된다. 색은 별도로 onColorChange가 고른 즉시 반영한다.
+  onCommitText: (title: string, description: string) => void;
+  onColorChange: (color: TagColor) => void;
+  // 신규 라벨 자신을 팔레트에서 완전히 지운다(label/removeTag) — 레지스트리
+  // 기존 Tag엔 이 진입점 자체가 없다(PR #506 컨센서스).
+  onDelete: () => void;
+}
+
+// TopicDraftRenameForm과 같은 스코프(신규 Tag 자신만) — Tag는 description도
+// 재사용 판단 기준(07-modeling.md)이라 이름과 같이 고칠 수 있어야 한다.
+export function TagDraftRenameForm({
+  title,
+  description,
+  color,
+  isDuplicateTitle,
+  onCommitText,
+  onColorChange,
+  onDelete,
+}: TagDraftRenameFormProps) {
+  const { t } = useTranslation();
+  const [titleValue, setTitleValue] = useState(title);
+  const [descriptionValue, setDescriptionValue] = useState(description);
+  const trimmedTitle = titleValue.trim();
+  const trimmedDescription = descriptionValue.trim();
+  const duplicateTitle = isDuplicateTitle(trimmedTitle);
+  const titleInvalid = trimmedTitle === "" || duplicateTitle;
+  const descriptionInvalid = trimmedDescription === "";
+  const submittable = !titleInvalid && !descriptionInvalid;
+
+  // 언마운트(=팝오버가 닫힘) 시점에 그때의 최신 입력값으로 커밋한다 —
+  // useSourceComposerBody의 flushOnUnmount와 같은 패턴(ref로 최신값을 따라가다
+  // cleanup에서 한 번만 읽는다). 의존성 배열을 비워 마운트~언마운트 사이 재렌더로는
+  // 이 effect가 다시 돌지 않게 한다 — 그래야 cleanup이 "진짜 언마운트" 한 번에만
+  // 실행된다. 유효하지 않은 값(빈 이름·중복 등)으로 닫히면 조용히 버려진다 —
+  // 리뷰 화면의 다른 곳과 같이, 잘못된 값을 저장하느니 아무것도 안 하는 쪽을 택한다.
+  // 초깃값도 같이 기억해 둔다 — 아무것도 안 고치고 닫아도 무조건 커밋해버리면
+  // (StrictMode의 mount→cleanup→mount 포함) redo 스택이 매번 비워지고 불필요한
+  // 자동저장까지 걸린다. 실제로 바뀐 값일 때만 커밋한다.
+  // ref가 아니라 useState — 마운트 시점 값 딱 한 번만 필요하고 이후 갱신은
+  // 없으니, setter는 그냥 안 쓴다(다시 대입할 일이 없어 useRef를 쓰면 그
+  // eslint-plugin-react-hooks가 cleanup에서 읽는 걸 DOM ref로 오인해 경고한다).
+  const [initialTitle] = useState(title);
+  const [initialDescription] = useState(description);
+  const latestRef = useRef({
+    trimmedTitle,
+    trimmedDescription,
+    submittable,
+    onCommitText,
+  });
+  useEffect(function syncLatest() {
+    latestRef.current = {
+      trimmedTitle,
+      trimmedDescription,
+      submittable,
+      onCommitText,
+    };
+  });
+  // TopicDraftRenameForm과 같은 이유(그쪽 deletingRef 주석 참고) — 삭제로
+  // 닫힐 때는 이미 지워진 id로 label/renameTag가 다시 나가지 않게 막는다.
+  const deletingRef = useRef(false);
+  useEffect(
+    function commitOnClose() {
+      return () => {
+        if (deletingRef.current) {
+          return;
+        }
+        const latest = latestRef.current;
+        const changed =
+          latest.trimmedTitle !== initialTitle ||
+          latest.trimmedDescription !== initialDescription;
+        if (latest.submittable && changed) {
+          latest.onCommitText(latest.trimmedTitle, latest.trimmedDescription);
+        }
+      };
+      // initialTitle/initialDescription은 마운트 이후로 절대 안 바뀌니(setter 미사용)
+      // 여기 들어와도 이 effect가 다시 도는 일은 없다 — cleanup은 여전히 진짜
+      // 언마운트 한 번에만 실행된다.
+    },
+    [initialTitle, initialDescription],
+  );
+
+  function handleDelete() {
+    deletingRef.current = true;
+    onDelete();
+  }
+
+  function getTitleError() {
+    if (trimmedTitle === "") {
+      return t("common.name_required");
+    }
+    if (duplicateTitle) {
+      return t("common.name_taken");
+    }
+    return null;
+  }
+  const titleError = getTitleError();
+  const descriptionError = descriptionInvalid
+    ? t("common.description_required")
+    : null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* 이름·설명·삭제를 한 그룹(gap-1)으로 묶는다 — 삭제가 이름을 지우는
+          동작이라 색상 등 다른 섹션과 나열되기보다 이름 입력과 한 덩어리로
+          보여야 한다. 색상 리스트는 별개 관심사라 바깥 gap-3로 한 단 떼어
+          놓는다(TagCreateForm.tsx와 같은 이유). */}
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-2">
+          <FormField className="px-2">
+            <FormControl>
+              <Input
+                autoFocus
+                value={titleValue}
+                maxLength={TAG_TITLE_MAX_LENGTH}
+                placeholder={t("common.name_placeholder")}
+                aria-label={t("common.name_label")}
+                aria-invalid={titleInvalid}
+                onChange={(e) => setTitleValue(e.target.value)}
+              />
+            </FormControl>
+            <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
+              {titleError}
+            </FormMessage>
+          </FormField>
+          <FormField className="px-2">
+            <FormControl>
+              <Input
+                value={descriptionValue}
+                maxLength={TAG_DESCRIPTION_MAX_LENGTH}
+                placeholder={t("common.description_placeholder")}
+                aria-label={t("review.tag_create_description_label")}
+                aria-invalid={descriptionInvalid}
+                onChange={(e) => setDescriptionValue(e.target.value)}
+              />
+            </FormControl>
+            <FormMessage reserveSpace errorPrefix={t("common.error_prefix")}>
+              {descriptionError}
+            </FormMessage>
+          </FormField>
+        </div>
+        {/* px-1 — ComboboxItem 자신이 이미 px-2를 갖고 있어 래퍼까지 px-2를
+            또 두면 이중으로 밀린다(아래 색상 리스트 wrapper와 같은 이유,
+            둘의 ComboboxItem 행이 같은 호버 폭을 갖는다). */}
+        <div className="px-1">
+          <ComboboxItem
+            onClick={handleDelete}
+            buttonClassName="gap-2 [&_svg]:text-status-error"
+          >
+            <Trash2 className="size-4" />
+            <Text as="span" size="sm" color="error">
+              {t("common.delete")}
+            </Text>
+          </ComboboxItem>
+        </div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {/* px-2 — 위 이름·설명 Input과 좌측을 맞춘다(TagCreateForm.tsx의
+            Colors 라벨과 같은 스타일도 통일). 색상 리스트 쪽은 ComboboxItem
+            자신이 이미 px-2를 갖고 있어 래퍼까지 px-2를 또 두면 이중으로
+            밀리므로 px-1만 준다 — 라벨과 리스트가 서로 다른 값을 쓰는 이유. */}
+        <Text size="sm" color="tertiary" className="px-2">
+          {t("review.tag_color_label")}
+        </Text>
+        {/* FormLabel/FormControl/FormMessage 없이 FormField만 레이아웃
+            wrapper로 쓴다 — 색상 리스트는 단일 포커스 컨트롤이 아니라
+            role="group"으로 직접 접근성을 표시하는 자리(weave-usage.md
+            Form 항목의 group 필드 탈출구). */}
+        <FormField
+          role="group"
+          aria-label={t("review.tag_color_label")}
+          className="px-1"
+        >
+          <TagColorListPicker
+            value={color}
+            onChange={onColorChange}
+            getColorLabel={(c) => t(TAG_COLOR_LABEL_KEY[c])}
+          />
+        </FormField>
+      </div>
+    </div>
+  );
+}

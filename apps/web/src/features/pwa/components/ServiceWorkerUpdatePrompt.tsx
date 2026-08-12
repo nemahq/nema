@@ -1,5 +1,4 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
-import * as Sentry from "@sentry/react";
 
 import { useTranslation } from "@web/lib/tolgee";
 import { toast } from "@web/utils/toast";
@@ -21,7 +20,7 @@ export function ServiceWorkerUpdatePrompt() {
   const { t } = useTranslation();
 
   const { updateServiceWorker } = useRegisterSW({
-    onRegisteredSW(_swUrl, registration) {
+    onRegisteredSW: function scheduleUpdateChecks(_swUrl, registration) {
       if (!registration) {
         return;
       }
@@ -36,7 +35,7 @@ export function ServiceWorkerUpdatePrompt() {
         cancel: { label: "✕", onClick: () => {} },
         action: {
           label: t("app.update_available_action"),
-          onClick: (event) => {
+          onClick: function handleUpdateClick(event) {
             event.preventDefault();
             setTimeout(
               () => window.location.reload(),
@@ -47,11 +46,9 @@ export function ServiceWorkerUpdatePrompt() {
         },
       });
     },
-    onRegisterError(error) {
-      Sentry.captureException(error, {
-        tags: { area: "service-worker-register" },
-      });
-    },
+    // Sentry 없이는 보고할 곳이 없다 — 등록 실패 자체는 사용자에게 보이지 않고
+    // 조용히 다음 방문까지 미등록 상태로 남는다(치명적이지 않음).
+    onRegisterError() {},
   });
 
   return null;

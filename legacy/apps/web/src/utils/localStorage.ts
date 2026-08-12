@@ -1,0 +1,106 @@
+import type { Locale } from "@web/lib/tolgee/types";
+import { isLocale } from "@web/lib/tolgee/types";
+
+import type { BooleanString, JsonRecord } from "./serialization";
+import { isBooleanString, isJsonRecord } from "./serialization";
+import type { ThemePreference } from "./theme-preference";
+import { isThemePreference } from "./theme-preference";
+
+type StorageMap = {
+  theme: ThemePreference;
+  locale: Locale;
+  sidebarCollapsed: BooleanString;
+  sourceComposerBody: JsonRecord;
+  // OAuth 공급자 왕복에서 URL 쿼리가 깎여도 복구하도록 authorization_id를 잠시 보관.
+  oauthAuthorizationId: string;
+  // 스텔스 모드에서 Coming Soon 대신 실제 로그인을 보여줄지 여부. /signin?access=<key>로 심는 write-once 플래그라 "true"만 가능.
+  previewAccess: "true";
+  // 브라우저 알림 soft-ask 배너를 "첫 성공 순간"에 한 번만 물어보기 위한 write-once 플래그.
+  notificationSoftAskSeen: "true";
+};
+
+const isValid: {
+  [K in keyof StorageMap]: (v: string) => v is StorageMap[K];
+} = {
+  theme: isThemePreference,
+  locale: isLocale,
+  sidebarCollapsed: isBooleanString,
+  sourceComposerBody: isJsonRecord,
+  oauthAuthorizationId: (v): v is string => v.length > 0,
+  previewAccess: (v): v is "true" => v === "true",
+  notificationSoftAskSeen: (v): v is "true" => v === "true",
+};
+
+export function getStorage<K extends keyof StorageMap>(
+  key: K,
+): StorageMap[K] | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw !== null && isValid[key](raw)) {
+      return raw as StorageMap[K];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStorage<K extends keyof StorageMap>(
+  key: K,
+  value: StorageMap[K],
+): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // 의도적 무시
+  }
+}
+
+export function removeStorage<K extends keyof StorageMap>(key: K): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // 의도적 무시
+  }
+}
+
+type JsonRecordKey = {
+  [K in keyof StorageMap]: StorageMap[K] extends JsonRecord ? K : never;
+}[keyof StorageMap];
+
+function readRecord(key: JsonRecordKey): Record<string, string> {
+  const raw = getStorage(key);
+  if (!raw) {
+    return {};
+  }
+  return JSON.parse(raw) as Record<string, string>;
+}
+
+function writeRecord(key: JsonRecordKey, record: Record<string, string>): void {
+  setStorage(key, JSON.stringify(record) as JsonRecord);
+}
+
+export function getRecordEntry(
+  key: JsonRecordKey,
+  entryKey: string,
+): string | null {
+  return readRecord(key)[entryKey] ?? null;
+}
+
+export function setRecordEntry(
+  key: JsonRecordKey,
+  entryKey: string,
+  entryValue: string,
+): void {
+  const record = readRecord(key);
+  record[entryKey] = entryValue;
+  writeRecord(key, record);
+}
+
+export function deleteRecordEntry(key: JsonRecordKey, entryKey: string): void {
+  const record = readRecord(key);
+  const rest = Object.fromEntries(
+    Object.entries(record).filter(([k]) => k !== entryKey),
+  );
+  writeRecord(key, rest);
+}

@@ -2,38 +2,27 @@ import { TRPCError } from "@trpc/server";
 
 import type { Locale } from "@nema-io/shared";
 
-import { EmbeddingError } from "./infra/embedding/embedding-provider";
-import { t, type TranslationKey } from "./infra/i18n";
-import { LlmError } from "./infra/llm/llm-error";
-import { SupabaseError, type SupabaseErrorCode } from "./infra/supabase-error";
-import { VectorStoreError } from "./infra/vector/vector-store";
+import { t, type TranslationKey } from "@server/infra/i18n";
+import { LlmError } from "@server/infra/llm/llm-error";
+import {
+  isForbiddenError,
+  isNotFoundError,
+  SupabaseError,
+} from "@server/infra/supabase/supabase-error";
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]["code"];
 
+// legacy(error-mapper.ts)의 도메인 코드 중 이번 세대 스키마에 대응물이 남은 것만
+// 옮긴다 — Space·Topic·Reference·Changeset·IngestionReview는 없어진 도메인이라
+// 뺀다. EmbeddingError·VectorStoreError도 대응 infra가 없어 뺀다.
 type DomainErrorCode =
   | "LLM_RATE_LIMIT"
   | "LLM_TIMEOUT"
-  | "LLM_AUTH"
   | "LLM_BAD_REQUEST"
   | "LLM_CONTENT_FILTER"
   | "LLM_ABORTED"
-  | "LLM_ERROR"
-  | "EMBEDDING_ERROR"
-  | "VECTOR_STORE_ERROR"
   | "DB_NOT_FOUND"
-  | "DB_FORBIDDEN"
-  | "DB_PRECONDITION"
-  | "DB_SPACE_MIN_ONE"
-  | "DB_SPACE_NAME_CONFLICT"
-  | "DB_SOURCE_STATE_CHANGED"
-  | "DB_TOPIC_STATE_CHANGED"
-  | "DB_TOPIC_NAME_CONFLICT"
-  | "DB_REFERENCE_STATE_CHANGED"
-  | "DB_INGESTION_REVIEW_STATE_CHANGED"
-  | "DB_SPACE_DELETE_TARGET_REQUIRED"
-  | "DB_DIGEST_STATE_CHANGED"
-  | "DB_CHANGESET_STATE_CHANGED"
-  | "DB_QUERY_FAILED";
+  | "DB_FORBIDDEN";
 
 const ERROR_MAP: Record<
   DomainErrorCode,
@@ -44,7 +33,6 @@ const ERROR_MAP: Record<
     i18nKey: "error.llm_rate_limit",
   },
   LLM_TIMEOUT: { trpcCode: "TIMEOUT", i18nKey: "error.llm_timeout" },
-  LLM_AUTH: { trpcCode: "INTERNAL_SERVER_ERROR", i18nKey: "error.default" },
   LLM_BAD_REQUEST: {
     trpcCode: "BAD_REQUEST",
     i18nKey: "error.llm_bad_request",
@@ -53,24 +41,12 @@ const ERROR_MAP: Record<
     trpcCode: "BAD_REQUEST",
     i18nKey: "error.llm_content_filter",
   },
-  // 호출자가 스스로 끊은 것 — 장애가 아니다. 이 매핑이 없으면 LLM_ERROR로 떨어져
-  // INTERNAL_SERVER_ERROR + Sentry가 되고, "취소는 실패가 아니다"라는 계약이 provider·
-  // 워커 층에서만 지켜지고 API 경계에서 깨진다.
+  // 호출자가 스스로 끊은 것 — 장애가 아니다. llm-error.ts의 LlmErrorCode에 아직
+  // "aborted"가 없어 지금은 절대 만들어지지 않지만, 취소 지원이 붙을 때 매핑을
+  // 새로 짜지 않도록 자리를 남겨둔다(아래 LLM_CODE_MAP 주석 참고).
   LLM_ABORTED: {
     trpcCode: "CLIENT_CLOSED_REQUEST",
     i18nKey: "error.llm_aborted",
-  },
-  LLM_ERROR: {
-    trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.default",
-  },
-  EMBEDDING_ERROR: {
-    trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.default",
-  },
-  VECTOR_STORE_ERROR: {
-    trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.default",
   },
   DB_NOT_FOUND: {
     trpcCode: "NOT_FOUND",
@@ -80,72 +56,13 @@ const ERROR_MAP: Record<
     trpcCode: "FORBIDDEN",
     i18nKey: "error.forbidden",
   },
-  DB_PRECONDITION: {
-    trpcCode: "PRECONDITION_FAILED",
-    i18nKey: "error.workspace_last_owner",
-  },
-  DB_SPACE_MIN_ONE: {
-    trpcCode: "PRECONDITION_FAILED",
-    i18nKey: "error.space_min_one",
-  },
-  DB_SPACE_NAME_CONFLICT: {
-    trpcCode: "CONFLICT",
-    i18nKey: "error.space_name_conflict",
-  },
-  DB_SOURCE_STATE_CHANGED: {
-    trpcCode: "CONFLICT",
-    i18nKey: "error.source_state_changed",
-  },
-  DB_TOPIC_STATE_CHANGED: {
-    trpcCode: "CONFLICT",
-    i18nKey: "error.topic_state_changed",
-  },
-  DB_TOPIC_NAME_CONFLICT: {
-    trpcCode: "CONFLICT",
-    i18nKey: "error.topic_name_conflict",
-  },
-  DB_REFERENCE_STATE_CHANGED: {
-    trpcCode: "CONFLICT",
-    i18nKey: "error.reference_state_changed",
-  },
-  DB_INGESTION_REVIEW_STATE_CHANGED: {
-    trpcCode: "CONFLICT",
-    i18nKey: "error.ingestion_review_state_changed",
-  },
-  DB_SPACE_DELETE_TARGET_REQUIRED: {
-    trpcCode: "PRECONDITION_FAILED",
-    i18nKey: "error.space_delete_target_required",
-  },
-  DB_DIGEST_STATE_CHANGED: {
-    trpcCode: "CONFLICT",
-    i18nKey: "error.digest_state_changed",
-  },
-  DB_CHANGESET_STATE_CHANGED: {
-    trpcCode: "CONFLICT",
-    i18nKey: "error.changeset_state_changed",
-  },
-  DB_QUERY_FAILED: {
-    trpcCode: "INTERNAL_SERVER_ERROR",
-    i18nKey: "error.default",
-  },
 };
 
-// 사용자에게 도달하는 정상적인 거부(권한·전제·대상 없음)는 시스템 장애가 아니라
-// Sentry로 캡처하면 진짜 장애를 묻는다. 미들웨어가 이 판정으로 캡처를 건너뛴다.
+// 사용자에게 도달하는 정상적인 거부(권한·대상 없음)는 시스템 장애가 아니다 — 이
+// 판정으로 진짜 장애만 서버 로그에 남긴다(onTRPCError, trpc.ts).
 const EXPECTED_DOMAIN_CODES = new Set<DomainErrorCode>([
   "DB_NOT_FOUND",
   "DB_FORBIDDEN",
-  "DB_PRECONDITION",
-  "DB_SPACE_MIN_ONE",
-  "DB_SPACE_NAME_CONFLICT",
-  "DB_SOURCE_STATE_CHANGED",
-  "DB_TOPIC_STATE_CHANGED",
-  "DB_TOPIC_NAME_CONFLICT",
-  "DB_REFERENCE_STATE_CHANGED",
-  "DB_INGESTION_REVIEW_STATE_CHANGED",
-  "DB_SPACE_DELETE_TARGET_REQUIRED",
-  "DB_DIGEST_STATE_CHANGED",
-  "DB_CHANGESET_STATE_CHANGED",
   "LLM_ABORTED",
 ]);
 
@@ -154,27 +71,11 @@ export function isExpectedDomainError(cause: unknown): boolean {
   return domainCode !== undefined && EXPECTED_DOMAIN_CODES.has(domainCode);
 }
 
-const SUPABASE_CODE_MAP: Record<SupabaseErrorCode, DomainErrorCode> = {
-  not_found: "DB_NOT_FOUND",
-  forbidden: "DB_FORBIDDEN",
-  precondition: "DB_PRECONDITION",
-  space_min_one: "DB_SPACE_MIN_ONE",
-  space_name_conflict: "DB_SPACE_NAME_CONFLICT",
-  source_state_changed: "DB_SOURCE_STATE_CHANGED",
-  topic_state_changed: "DB_TOPIC_STATE_CHANGED",
-  topic_name_conflict: "DB_TOPIC_NAME_CONFLICT",
-  reference_state_changed: "DB_REFERENCE_STATE_CHANGED",
-  ingestion_review_state_changed: "DB_INGESTION_REVIEW_STATE_CHANGED",
-  space_delete_target_required: "DB_SPACE_DELETE_TARGET_REQUIRED",
-  digest_state_changed: "DB_DIGEST_STATE_CHANGED",
-  changeset_state_changed: "DB_CHANGESET_STATE_CHANGED",
-  query_failed: "DB_QUERY_FAILED",
-};
-
+// LlmError.code를 느슨하게(Record<string, ...>) 매핑한다 — "aborted"처럼 아직 LlmError가
+// 안 내는 코드를 미리 적어둬도 타입 에러가 안 나, 코드가 늘 때 이 표만 넓히면 된다.
 const LLM_CODE_MAP: Record<string, DomainErrorCode> = {
   rate_limit: "LLM_RATE_LIMIT",
   timeout: "LLM_TIMEOUT",
-  auth: "LLM_AUTH",
   bad_request: "LLM_BAD_REQUEST",
   content_filter: "LLM_CONTENT_FILTER",
   aborted: "LLM_ABORTED",
@@ -182,16 +83,16 @@ const LLM_CODE_MAP: Record<string, DomainErrorCode> = {
 
 export function getDomainCode(cause: unknown): DomainErrorCode | undefined {
   if (cause instanceof LlmError) {
-    return LLM_CODE_MAP[cause.code] ?? "LLM_ERROR";
-  }
-  if (cause instanceof EmbeddingError) {
-    return "EMBEDDING_ERROR";
-  }
-  if (cause instanceof VectorStoreError) {
-    return "VECTOR_STORE_ERROR";
+    return LLM_CODE_MAP[cause.code];
   }
   if (cause instanceof SupabaseError) {
-    return SUPABASE_CODE_MAP[cause.code];
+    if (isNotFoundError(cause)) {
+      return "DB_NOT_FOUND";
+    }
+    if (isForbiddenError(cause)) {
+      return "DB_FORBIDDEN";
+    }
+    return undefined;
   }
   return undefined;
 }
@@ -202,13 +103,13 @@ export function mapDomainError(error: unknown, lng: Locale): TRPCError {
     const { trpcCode, i18nKey } = ERROR_MAP[domainCode];
     return new TRPCError({
       code: trpcCode,
-      message: t(i18nKey, lng),
+      message: t(i18nKey, { lng }),
       cause: error,
     });
   }
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
-    message: t("error.default", lng),
+    message: t("error.default", { lng }),
     cause: error,
   });
 }

@@ -14,6 +14,10 @@ interface LnbSectionProps {
   trailingAction?: ReactNode;
 }
 
+/**
+ * @lintignore 지금 LNB는 다이제스트 단일 항목뿐이라 쓰는 곳이 없다 — 섹션이
+ * 여러 개로 늘어나면(위키 등) 다시 쓴다.
+ */
 export function LnbSection({
   label,
   children,

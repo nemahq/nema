@@ -1,0 +1,66 @@
+import { type ReactNode, Suspense } from "react";
+import { linkOptions } from "@tanstack/react-router";
+
+import { NavigationBar } from "@web/components/layout/NavigationBar";
+import { SpaceBadge } from "@web/components/ui/SpaceBadge";
+import { useSpaceListSuspenseQuery } from "@web/hooks/useSpaceList";
+import { useSpacePublicId } from "@web/hooks/useSpacePublicId";
+import { useTranslation } from "@web/lib/tolgee";
+
+interface ChangesetDetailNavigationBarProps {
+  title: string;
+  rightContent?: ReactNode;
+}
+
+// Space 이름은 publicId에서 파생되는 값이라 호출부가 넘기지 않고 여기서 직접
+// 해석한다(사이드바가 이미 캐시). suspense 쿼리를 쓰므로 Suspense 경계를 이 파일에
+// 함께 두고, 이름이 아직 없는 짧은 구간은 브레드크럼 스켈레톤으로 대체한다.
+function ChangesetDetailNavigationBarContent({
+  title,
+  rightContent,
+}: ChangesetDetailNavigationBarProps) {
+  const { t } = useTranslation();
+  const spacePublicId = useSpacePublicId();
+  const [spaceList] = useSpaceListSuspenseQuery();
+  const spaceName =
+    spaceList.spaces.find((space) => space.publicId === spacePublicId)?.name ??
+    "";
+
+  return (
+    <NavigationBar
+      items={[
+        {
+          label: spaceName,
+          icon: <SpaceBadge name={spaceName} size="sm" />,
+          ...linkOptions({
+            to: "/space/$spacePublicId",
+            params: { spacePublicId },
+          }),
+        },
+        {
+          label: t("space.tab_changesets"),
+          ...linkOptions({
+            to: "/space/$spacePublicId/changesets",
+            params: { spacePublicId },
+            search: { subTab: "open" },
+          }),
+        },
+        { label: title },
+      ]}
+      rightContent={rightContent}
+    />
+  );
+}
+
+// 상세 화면들이 공유하는 브레드크럼(`[Space] › 변경사항 › 제목`) — 타입·상태와 무관해
+// 모두 같은 chrome을 낸다. 가운데 항목은 어느 경우든 변경사항 탭의 기본 진입
+// (open 서브탭)으로 보낸다.
+export function ChangesetDetailNavigationBar(
+  props: ChangesetDetailNavigationBarProps,
+) {
+  return (
+    <Suspense fallback={<NavigationBar />}>
+      <ChangesetDetailNavigationBarContent {...props} />
+    </Suspense>
+  );
+}

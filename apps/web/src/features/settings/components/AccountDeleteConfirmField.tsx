@@ -1,6 +1,10 @@
-import { useId } from "react";
-
-import { Alert, Input, Label } from "@nema-io/weave";
+import {
+  Alert,
+  FormControl,
+  FormField,
+  FormLabel,
+  Input,
+} from "@nema-io/weave";
 
 import {
   type AccountDeleteError,
@@ -25,7 +29,6 @@ export function AccountDeleteConfirmField({
   errorMessage,
 }: AccountDeleteConfirmFieldProps) {
   const { t } = useTranslation();
-  const confirmFieldId = useId();
   const user = useUser();
   const hasEmail = user.email.trim().length > 0;
   const confirmationTarget = resolveConfirmationTarget(
@@ -35,31 +38,28 @@ export function AccountDeleteConfirmField({
 
   return (
     <>
-      <div className="flex flex-col gap-1.5">
-        <Label
-          htmlFor={confirmFieldId}
+      <FormField>
+        <FormLabel
           color={disabled ? "quaternary" : "primary"}
           className="leading-normal"
         >
           {t("common.delete_confirm_instruction", {
             value: hasEmail ? user.email : user.displayName,
           })}
-        </Label>
-        <Input
-          id={confirmFieldId}
-          value={confirmationInput}
-          onChange={(e) => onConfirmationInputChange(e.target.value)}
-          placeholder={confirmationTarget}
-          autoComplete="off"
-          disabled={disabled}
-        />
-      </div>
+        </FormLabel>
+        <FormControl>
+          <Input
+            value={confirmationInput}
+            onChange={(e) => onConfirmationInputChange(e.target.value)}
+            placeholder={confirmationTarget}
+            autoComplete="off"
+            disabled={disabled}
+          />
+        </FormControl>
+      </FormField>
 
-      {error === "precondition" && (
-        <Alert variant="warning">
-          {t("account.delete_error_precondition")}
-        </Alert>
-      )}
+      {/* 계정 삭제 API 실패는 이 입력값이 유효한지와 무관한 페이지 레벨 실패라
+          FormMessage(필드 힌트)가 아니라 Alert(눈에 띄는 배너)로 남긴다. */}
       {error === "other" && errorMessage && (
         <Alert variant="error">{errorMessage}</Alert>
       )}
