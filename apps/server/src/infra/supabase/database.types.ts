@@ -69,6 +69,27 @@ export type Database = {
           },
         ];
       };
+      profiles: {
+        Row: {
+          content_language: Database["public"]["Enums"]["content_language"];
+          created_at: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          content_language?: Database["public"]["Enums"]["content_language"];
+          created_at?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          content_language?: Database["public"]["Enums"]["content_language"];
+          created_at?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       sources: {
         Row: {
           body: string;
@@ -136,6 +157,7 @@ export type Database = {
       [_ in never]: never;
     };
     Enums: {
+      content_language: "en" | "ko";
       digest_field:
         | "choice"
         | "question"
@@ -277,6 +299,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      content_language: ["en", "ko"],
       digest_field: ["choice", "question", "finding", "concept", "assumption"],
       digest_type: ["decision", "pending", "learning", "idea", "assumption"],
       digestion_status: ["pending", "completed"],

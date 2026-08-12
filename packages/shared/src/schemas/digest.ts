@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { StatementSchema } from "./statement";
+
 // DB enum digest_type의 SSOT. 다섯 유형이 각각 어떤 판단을 담는지는
 // docs/blueprints/first-product/engine/organizing.md 1.5 참고.
 export const DIGEST_TYPES = [
@@ -98,3 +100,26 @@ export const DigestSchema = z.discriminatedUnion("type", [
 ]);
 
 export type Digest = z.infer<typeof DigestSchema>;
+
+// digest.list·digest.get 전용 응답 항목 — source.ts의 SourceIngestResultSchema(ingest
+// 도그푸딩용, sourceId가 최상위에 하나뿐)와 달리 다이제스트가 여러 원문에 걸쳐 섞여
+// 나오므로 항목마다 sourceId를 싣는다. 관계(statement_relations)는 아직 테이블이
+// 없어 필드 자체를 넣지 않는다 — 자리를 만들어두지 않는다.
+export const DigestListEntrySchema = z.intersection(
+  DigestSchema,
+  z.object({
+    sourceId: z.string().uuid(),
+    statement: StatementSchema.nullable(),
+  }),
+);
+export type DigestListEntry = z.infer<typeof DigestListEntrySchema>;
+
+export const DigestListResultSchema = z.object({
+  digests: z.array(DigestListEntrySchema),
+});
+export type DigestListResult = z.infer<typeof DigestListResultSchema>;
+
+export const DigestGetInputSchema = z.object({
+  digestId: z.string().uuid(),
+});
+export type DigestGetInput = z.infer<typeof DigestGetInputSchema>;
