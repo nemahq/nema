@@ -56,6 +56,12 @@
     "consent_request": "Allow {client} to access your Nema account?",
     "deny": "Deny"
   },
+  "onboarding": {
+    "description": "We'll organize what you write based on this language.",
+    "start": "Get started",
+    "start_pending": "Getting started...",
+    "title": "What language do you write in?"
+  },
   "settings": {
     "account_section": "Account",
     "account_subtitle": "Manage your profile and account",

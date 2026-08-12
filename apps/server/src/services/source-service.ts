@@ -1,4 +1,5 @@
 import type {
+  ContentLanguage,
   Digest,
   SourceDeleteResult,
   SourceIngestResult,
@@ -16,7 +17,13 @@ import {
   DigestGenerationSchema,
   flattenGeneratedDigests,
 } from "@server/prompts/digest-generation";
+import { getProfile } from "@server/services/profile-service";
 import { saveStatements } from "@server/services/statement-service";
+
+// DB 컬럼 기본값(profiles.content_language)과 같은 값으로 떨어뜨린다. 행이 없는
+// 상태는 로그인은 했지만 온보딩 모달을 아직 못 끝낸 아주 좁은 틈뿐이라(모달이
+// 강제라 넘어갈 수 없다), 그 순간을 위해 별도 오류 경로를 만들지 않는다.
+const FALLBACK_CONTENT_LANGUAGE: ContentLanguage = "en";
 
 export async function ingestSource(args: {
   supabase: TypedSupabaseClient;
@@ -32,7 +39,8 @@ export async function ingestSource(args: {
     .single();
   throwIfSupabaseError(error);
 
-  const normalized = await generateDigests(body);
+  const contentLanguage = await resolveContentLanguage({ supabase, userId });
+  const normalized = await generateDigests(body, contentLanguage);
   const digests = await saveDigestsAndStatements({
     supabase,
     sourceId: source.id,
@@ -43,9 +51,10 @@ export async function ingestSource(args: {
 
 export async function reExtractSource(args: {
   supabase: TypedSupabaseClient;
+  userId: string;
   sourceId: string;
 }): Promise<SourceIngestResult> {
-  const { supabase, sourceId } = args;
+  const { supabase, userId, sourceId } = args;
 
   // RLS(owner-only)라 남의/없는 sourceId는 여기서 not-found로 걸린다.
   const { data: source, error: fetchError } = await supabase
@@ -55,11 +64,12 @@ export async function reExtractSource(args: {
     .single();
   throwIfSupabaseError(fetchError);
 
+  const contentLanguage = await resolveContentLanguage({ supabase, userId });
   // LLM 호출을 기존 다이제스트 삭제보다 먼저 한다 — 여기서 실패하면(rate limit,
   // content filter, 스키마 검증 실패 등) 원문도 이전 다이제스트도 안 건드린 채
   // 그대로 남아 다시 부르면 된다. 순서를 반대로 하면 실패할 때마다 다이제스트가
   // 0개인 상태가 영구화될 위험이 있다.
-  const normalized = await generateDigests(source.body);
+  const normalized = await generateDigests(source.body, contentLanguage);
 
   const { error: statusError } = await supabase
     .from("sources")
@@ -97,11 +107,28 @@ export async function deleteSource(args: {
   return { success: (data ?? []).length > 0 };
 }
 
+async function resolveContentLanguage(args: {
+  supabase: TypedSupabaseClient;
+  userId: string;
+}): Promise<ContentLanguage> {
+  const profile = await getProfile(args);
+  if (!profile) {
+    // 이 틈이 실제로 좁은지는 "온보딩 모달이 유일한 진입 경로"라는 전제에
+    // 달려 있다 — 그 전제가 깨지면(레이스, 온보딩을 안 거치는 새 진입점 등)
+    // 조용히 en으로만 떨어지지 않고 신호가 남게 한다.
+    console.warn(
+      `[content-language] 프로필 행 없음, 기본값(${FALLBACK_CONTENT_LANGUAGE})으로 대체 — userId: ${args.userId}`,
+    );
+  }
+  return profile?.contentLanguage ?? FALLBACK_CONTENT_LANGUAGE;
+}
+
 async function generateDigests(
   body: string,
+  contentLanguage: ContentLanguage,
 ): Promise<Array<Pick<Digest, "type" | "title" | "body">>> {
   const generated = await getDigestGenerationProvider().generateStructured({
-    systemPrompt: buildDigestGenerationSystemPrompt(),
+    systemPrompt: buildDigestGenerationSystemPrompt(contentLanguage),
     messages: [{ role: "user", content: buildDigestGenerationMessage(body) }],
     schema: DigestGenerationSchema,
   });

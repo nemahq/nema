@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { ContentLanguage } from "@nema-io/shared";
+
 import {
   AssumptionSchema,
   buildDigestGenerationSystemPrompt,
@@ -66,7 +68,11 @@ merged into another digest, type was too ambiguous, judged too minor, or
 whatever the real reason was). This list exists only to check your splitting
 decisions; it does not affect what gets saved.`;
 
-export function buildReasoningSystemPrompt(contentLanguage?: string): string {
+// 실사용자 프로필과 무관한 eval 스크립트라 고정값을 쓴다 — samples/가 한국어
+// 원문이라 "ko"가 프로덕션 구 기본값("Korean")과 같은 결과를 낸다.
+export function buildReasoningSystemPrompt(
+  contentLanguage: ContentLanguage = "ko",
+): string {
   return (
     buildDigestGenerationSystemPrompt(contentLanguage) + REASONING_INSTRUCTION
   );

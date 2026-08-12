@@ -30,6 +30,7 @@ export const sourceRouter = router({
       try {
         return await reExtractSource({
           supabase: ctx.supabase,
+          userId: ctx.user.id,
           sourceId: input.sourceId,
         });
       } catch (error) {

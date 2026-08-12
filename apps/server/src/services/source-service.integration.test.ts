@@ -40,8 +40,12 @@ function noDigests(): GeneratedDigests {
 let mockGenerated: GeneratedDigests = noDigests();
 let mockError: Error | null = null;
 let mockGenerateCallCount = 0;
-function mockGenerate(): Promise<GeneratedDigests> {
+let mockGenerateLastSystemPrompt: string | undefined;
+function mockGenerate(args: {
+  systemPrompt: string;
+}): Promise<GeneratedDigests> {
   mockGenerateCallCount += 1;
+  mockGenerateLastSystemPrompt = args.systemPrompt;
   if (mockError) {
     return Promise.reject(mockError);
   }
@@ -136,11 +140,15 @@ async function createTestUser(): Promise<TestUser> {
 
 let userA: TestUser;
 let userB: TestUser;
+// content_language 플로우 전용 — userA/userB의 profiles 행 유무는 다른 테스트가
+// 전제로 깔고 있어(userA=행 없음) 건드리지 않는다.
+let userC: TestUser;
 
 beforeAll(async () => {
   try {
     userA = await createTestUser();
     userB = await createTestUser();
+    userC = await createTestUser();
     localDbAvailable = true;
   } catch (err) {
     if (process.env.REQUIRE_LOCAL_DB === "true") {
@@ -160,11 +168,13 @@ afterAll(async () => {
   }
   await admin.auth.admin.deleteUser(userA.id);
   await admin.auth.admin.deleteUser(userB.id);
+  await admin.auth.admin.deleteUser(userC.id);
 });
 
 afterEach(() => {
   mockError = null;
   mockGenerateCallCount = 0;
+  mockGenerateLastSystemPrompt = undefined;
 });
 
 describe("source-service (RLS)", () => {
@@ -217,6 +227,7 @@ describe("source-service (RLS)", () => {
       await expect(
         reExtractSource({
           supabase: userB.supabase,
+          userId: userB.id,
           sourceId,
         }),
       ).rejects.toMatchObject({ code: "PGRST116" });
@@ -240,6 +251,7 @@ describe("source-service (RLS)", () => {
       mockGenerated = oneDecision("재추출된 결과");
       const { digests: second } = await reExtractSource({
         supabase: userA.supabase,
+        userId: userA.id,
         sourceId,
       });
 
@@ -385,7 +397,11 @@ describe("source-service (RLS)", () => {
 
       mockError = new Error("LLM unavailable");
       await expect(
-        reExtractSource({ supabase: userA.supabase, sourceId }),
+        reExtractSource({
+          supabase: userA.supabase,
+          userId: userA.id,
+          sourceId,
+        }),
       ).rejects.toThrow("LLM unavailable");
 
       const { data: remaining } = await userA.supabase
@@ -531,6 +547,7 @@ describe("source-service (RLS)", () => {
       mockGenerated = oneDecision("재추출 진술 테스트 - 새것", "재추출된 진술");
       const { digests: reExtracted } = await reExtractSource({
         supabase: userA.supabase,
+        userId: userA.id,
         sourceId,
       });
 
@@ -566,6 +583,47 @@ describe("source-service (RLS)", () => {
         content: "중복 삽입 시도",
       });
       expect(error?.code).toBe("23505");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "profiles.content_language 설정이 정리 프롬프트에 반영된다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { error } = await admin
+        .from("profiles")
+        .insert({ user_id: userC.id, content_language: "ko" });
+      expect(error).toBeNull();
+
+      mockGenerated = noDigests();
+      await ingestSource({
+        supabase: userC.supabase,
+        userId: userC.id,
+        body: "언어 설정 반영 테스트 원문",
+      });
+
+      expect(mockGenerateLastSystemPrompt).toContain("Write in Korean");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "profiles 행이 없으면 콘텐츠 언어가 기본값(English)으로 떨어진다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = noDigests();
+      await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "프로필 없음 기본값 테스트 원문",
+      });
+
+      expect(mockGenerateLastSystemPrompt).toContain("Write in English");
     },
     TEST_TIMEOUT_MS,
   );
