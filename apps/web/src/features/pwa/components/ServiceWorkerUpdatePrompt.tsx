@@ -20,7 +20,7 @@ export function ServiceWorkerUpdatePrompt() {
   const { t } = useTranslation();
 
   const { updateServiceWorker } = useRegisterSW({
-    onRegisteredSW(_swUrl, registration) {
+    onRegisteredSW: function scheduleUpdateChecks(_swUrl, registration) {
       if (!registration) {
         return;
       }
@@ -35,7 +35,7 @@ export function ServiceWorkerUpdatePrompt() {
         cancel: { label: "✕", onClick: () => {} },
         action: {
           label: t("app.update_available_action"),
-          onClick: (event) => {
+          onClick: function handleUpdateClick(event) {
             event.preventDefault();
             setTimeout(
               () => window.location.reload(),
