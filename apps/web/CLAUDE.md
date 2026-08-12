@@ -63,5 +63,6 @@ src/
 
 ## Dev
 
-- `pnpm dev` — Vite dev server at :5173 (HMR).
+- `pnpm dev` — Vite dev server at :5173 (HMR). tRPC calls proxy to `localhost:3001` by default (needs a local server running) — set `VITE_DEV_API_TARGET` to point elsewhere instead.
+- `pnpm dev:web` / `pnpm dev:web:prod` (repo root) — web only, proxied to the real staging/production API via `VITE_DEV_API_TARGET`. No local server needed.
 - `pnpm test` — Vitest. Test files co-located as `*.test.tsx`.
