@@ -217,6 +217,7 @@ describe("source-service (RLS)", () => {
       await expect(
         reExtractSource({
           supabase: userB.supabase,
+          userId: userB.id,
           sourceId,
         }),
       ).rejects.toMatchObject({ code: "PGRST116" });
@@ -240,6 +241,7 @@ describe("source-service (RLS)", () => {
       mockGenerated = oneDecision("재추출된 결과");
       const { digests: second } = await reExtractSource({
         supabase: userA.supabase,
+        userId: userA.id,
         sourceId,
       });
 
@@ -385,7 +387,11 @@ describe("source-service (RLS)", () => {
 
       mockError = new Error("LLM unavailable");
       await expect(
-        reExtractSource({ supabase: userA.supabase, sourceId }),
+        reExtractSource({
+          supabase: userA.supabase,
+          userId: userA.id,
+          sourceId,
+        }),
       ).rejects.toThrow("LLM unavailable");
 
       const { data: remaining } = await userA.supabase
@@ -531,6 +537,7 @@ describe("source-service (RLS)", () => {
       mockGenerated = oneDecision("재추출 진술 테스트 - 새것", "재추출된 진술");
       const { digests: reExtracted } = await reExtractSource({
         supabase: userA.supabase,
+        userId: userA.id,
         sourceId,
       });
 
