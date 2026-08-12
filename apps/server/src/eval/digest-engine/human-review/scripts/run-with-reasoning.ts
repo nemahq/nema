@@ -5,7 +5,7 @@
 // usage: npx tsx run-with-reasoning.ts [파일명...]
 //   인자 없으면 samples/ 전체를 돈다.
 
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,11 +23,13 @@ import {
   ReasoningDigestGenerationSchema,
 } from "@server/eval/digest-engine/reasoning-schema";
 import { getDigestGenerationProvider } from "@server/infra/llm/provider";
+import { resolveModelId } from "@server/infra/llm/task-routing";
 import { buildDigestGenerationMessage } from "@server/prompts/digest-generation";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SAMPLES_DIR = join(__dirname, "..", "..", "samples");
-const RESULTS_DIR = join(__dirname, "..", "results");
+// 모델별로 나눠 담지 않으면 다음 모델 실행이 직전 결과를 덮어써 대조가 불가능해진다.
+const RESULTS_ROOT = join(__dirname, "..", "results");
 const SERVER_ROOT = join(__dirname, "..", "..", "..", "..", "..");
 
 const ARRAY_TYPE = {
@@ -118,6 +120,8 @@ async function main() {
   const files = requested.length > 0 ? requested : allFiles;
 
   const provider = getDigestGenerationProvider();
+  const resultsDir = join(RESULTS_ROOT, resolveModelId("generateDigests"));
+  mkdirSync(resultsDir, { recursive: true });
 
   for (const file of files) {
     const body = readFileSync(join(SAMPLES_DIR, file), "utf-8");
@@ -128,7 +132,7 @@ async function main() {
     });
 
     const stem = basename(file, ".md");
-    const outPath = join(RESULTS_DIR, `${stem}.reasoning.md`);
+    const outPath = join(resultsDir, `${stem}.reasoning.md`);
     writeFileSync(outPath, formatResponse(stem, generated));
 
     const count = Object.entries(ARRAY_TYPE).reduce(
