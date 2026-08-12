@@ -52,7 +52,7 @@ function captureAuthRedirectErrorFromHash(): void {
 }
 captureAuthRedirectErrorFromHash();
 
-// access_denied 외의 예기치 않은 코드는 진짜 기술적 실패일 수 있어 Sentry로 보낸다.
+// access_denied 외의 예기치 않은 코드는 진짜 기술적 실패일 수 있어 콘솔에 남긴다.
 export function consumeMagicLinkExpiredError(): boolean {
   const error = capturedAuthRedirectError;
   capturedAuthRedirectError = null;
