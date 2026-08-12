@@ -4,6 +4,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button, Input, Separator } from "@nema-io/weave";
 import { LoaderCircle, Mail } from "@nema-io/weave/icons";
 
+import { NemaWordmark } from "@web/components/ui/NemaWordmark";
 import { GoogleIcon } from "@web/features/auth";
 import { consumeMagicLinkExpiredError, useAuth } from "@web/lib/auth";
 import { supabase } from "@web/lib/supabase";
@@ -92,9 +93,7 @@ export function SignInPage() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface p-4">
       <div className="flex w-full max-w-sm flex-col items-center gap-5">
-        <span className="text-[40px] font-bold leading-none tracking-tight text-teal-500 dark:text-fg-primary">
-          Nema
-        </span>
+        <NemaWordmark />
 
         <div className="flex min-h-[260px] w-full flex-col items-center justify-center rounded-xl border border-border p-6">
           {magicLinkSent ? (

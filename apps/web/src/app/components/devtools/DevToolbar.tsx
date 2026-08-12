@@ -38,6 +38,8 @@ export function DevToolbar() {
   return (
     <>
       <div className="fixed bottom-3 right-3 z-50 flex flex-col items-end">
+        {/* dev 전용 오버레이라 weave Button/Tab 대신 최소 스타일의 raw button을 쓴다 —
+            프로덕션 UI가 아니라 디자인 시스템 일관성보다 가벼움을 우선한다. */}
         {open && (
           <div
             className={cn(

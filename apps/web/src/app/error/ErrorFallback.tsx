@@ -91,9 +91,9 @@ export function ErrorFallback({
           className="mb-4 fill-teal-500 dark:fill-fg-primary"
         />
       )}
-      <p className={`text-fg-tertiary ${isPage ? "text-base" : "text-sm"}`}>
+      <Text as="p" size={isPage ? "base" : "sm"} color="tertiary">
         {labels?.pageError ?? <TranslatedPageError />}
-      </p>
+      </Text>
       {onRetry && (
         <Button
           variant="neutral"
@@ -134,9 +134,9 @@ export function ErrorFallback({
       )}
       {copyFailedText && (
         <div className="flex w-full max-w-md flex-col gap-1">
-          <p className="text-xs text-status-error">
+          <Text as="p" size="xs" color="error">
             <TranslatedCopyFailed />
-          </p>
+          </Text>
           <Textarea
             readOnly
             value={copyFailedText}

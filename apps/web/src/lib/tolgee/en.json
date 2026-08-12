@@ -1,9 +1,9 @@
 {
   "account": {
     "delete_button": "Delete account",
-    "delete_cleanup_failed": "Your account was deleted, but we couldn't sign you out automatically. Please sign in again to continue.",
+    "delete_cleanup_failed": "We deleted your account, but couldn't sign you out automatically. Please sign in again to continue.",
     "delete_confirm_button": "Yes, delete my account",
-    "delete_confirm_description": "This permanently deletes your account and can't be undone. Everything you've saved will be deleted too.",
+    "delete_confirm_description": "This permanently deletes your account and can't be undone. We'll delete everything you've saved too.",
     "delete_confirm_title": "Delete your account?",
     "delete_deleting": "Deleting your account...",
     "delete_description": "Permanently delete your account and remove your data from Nema",
@@ -19,7 +19,7 @@
     "email_placeholder": "Email",
     "magic_link_invalid": "This login link has expired. Please request a new one.",
     "magic_link_sent": "Check your email for the login link.",
-    "or": "OR"
+    "or": "Or"
   },
   "coming_soon": {
     "subtitle": "See you soon!"
@@ -27,14 +27,15 @@
   "common": {
     "cancel": "Cancel",
     "close": "Close",
-    "delete_confirm_instruction": "Type \"{value}\" to confirm",
+    "delete_confirm_instruction": "Type \"{value}\" to confirm.",
+    "draft_tab_close": "Close {label} tab",
     "refresh_failed": "Saved, but the screen couldn't refresh. Please refresh manually.",
     "retry": "Retry",
     "unknown_error": "An unknown error occurred."
   },
   "digest": {
     "detail_not_found": "Digest not found.",
-    "list_empty": "No digests yet.",
+    "list_empty": "No digests yet. Save something through MCP and it'll show up here.",
     "nav_label": "Digests",
     "type_assumption": "Assumption",
     "type_decision": "Decision",
@@ -58,11 +59,8 @@
   },
   "oauth": {
     "approve": "Allow",
-    "consent_request": "Allow {client} to access your nema account?",
+    "consent_request": "Allow {client} to access your Nema account?",
     "deny": "Deny"
-  },
-  "session": {
-    "draft_tab_close": "Close {label} tab"
   },
   "settings": {
     "account_section": "Account",

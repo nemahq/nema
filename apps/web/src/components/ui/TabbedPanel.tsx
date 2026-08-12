@@ -222,7 +222,7 @@ export function TabbedPanel({
                 onTabDragStart={onTabDragStart}
                 onTabDrop={onTabDrop}
                 onTabClose={handleTabClose}
-                closeLabel={t("session.draft_tab_close", {
+                closeLabel={t("common.draft_tab_close", {
                   label: resolveLabel(tab, t),
                 })}
               />

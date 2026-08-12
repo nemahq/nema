@@ -147,7 +147,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error("useAuth는 AuthProvider 내부에서만 사용할 수 있습니다.");
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return ctx;
 }

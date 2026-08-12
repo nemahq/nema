@@ -1,4 +1,4 @@
-import { Skeleton, Text } from "@nema-io/weave";
+import { Skeleton, Text, TextSkeleton } from "@nema-io/weave";
 
 import { NavigationBar } from "@web/components/layout/NavigationBar";
 import { DigestTypeBadge } from "@web/features/digest/components/DigestTypeBadge";
@@ -26,9 +26,9 @@ export function DigestDetailPage({ digestId }: DigestDetailPageProps) {
           {isPending && (
             <div className="flex flex-col gap-3">
               <Skeleton className="h-4 w-16 rounded-full" />
-              <Skeleton className="h-6 w-2/3" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
+              <TextSkeleton size="xl" className="w-2/3" />
+              <TextSkeleton size="base" className="w-full" />
+              <TextSkeleton size="base" className="w-full" />
             </div>
           )}
           {isError && (
