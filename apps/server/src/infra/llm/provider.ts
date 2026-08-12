@@ -1,34 +1,46 @@
 import { getEnv } from "@server/env";
-import { GeminiProvider } from "@server/infra/llm/gemini-provider";
 import type { LlmProvider } from "@server/infra/llm/llm-provider";
+import { createProviderForModel } from "@server/infra/llm/model-factory";
+import { DIGEST_GENERATION_MODEL_GEMINI } from "@server/infra/llm/models";
+import { getOpenAiClient } from "@server/infra/llm/openai-client";
 import {
-  DIGEST_GENERATION_MODEL_GEMINI,
-  DIGEST_GENERATION_MODEL_OPENAI,
-  DIGEST_GENERATION_SCHEMA_NAME,
-} from "@server/infra/llm/models";
-import { OpenAiProvider } from "@server/infra/llm/openai-provider";
+  type LlmTask,
+  resolveModelId,
+  setTaskOverride,
+  TASK_DEFAULTS,
+} from "@server/infra/llm/task-routing";
 import { getGeminiClient } from "@server/infra/llm/vertex-client";
 
-let cached: LlmProvider | undefined;
+const cache = new Map<LlmTask, LlmProvider>();
 
-export function getDigestGenerationProvider(): LlmProvider {
-  if (!cached) {
-    cached = createDigestGenerationProvider();
+// DIGEST_GENERATION_LLM_PROVIDER=vertex를 task-routing의 런타임 override로 옮겨
+// 심는다 — 최초 호출 한 번만, 캐시가 채워지기 전에.
+let overrideSeeded = false;
+
+function seedDigestGenerationOverride(): void {
+  if (overrideSeeded) {
+    return;
   }
-  return cached;
+  overrideSeeded = true;
+  if (getEnv().DIGEST_GENERATION_LLM_PROVIDER === "vertex") {
+    setTaskOverride("generateDigests", DIGEST_GENERATION_MODEL_GEMINI);
+  }
 }
 
-function createDigestGenerationProvider(): LlmProvider {
-  const env = getEnv();
-  if (env.DIGEST_GENERATION_LLM_PROVIDER === "vertex") {
-    return new GeminiProvider(
-      getGeminiClient(),
-      DIGEST_GENERATION_MODEL_GEMINI,
-    );
+export function getDigestGenerationProvider(): LlmProvider {
+  return getProviderForTask("generateDigests");
+}
+
+function getProviderForTask(task: LlmTask): LlmProvider {
+  seedDigestGenerationOverride();
+  let provider = cache.get(task);
+  if (!provider) {
+    provider = createProviderForModel({
+      modelId: resolveModelId(task),
+      schemaName: TASK_DEFAULTS[task].schemaName,
+      clients: { getOpenAiClient, getGeminiClient },
+    });
+    cache.set(task, provider);
   }
-  return new OpenAiProvider({
-    apiKey: env.OPENAI_API_KEY ?? "",
-    model: DIGEST_GENERATION_MODEL_OPENAI,
-    schemaName: DIGEST_GENERATION_SCHEMA_NAME,
-  });
+  return provider;
 }

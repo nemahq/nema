@@ -1,6 +1,4 @@
-// task가 다이제스트 생성 하나뿐인 지금은 멀티 프로바이더 카탈로그·task별 라우팅을
-// 통째로 들이지 않는다(legacy/apps/server/src/infra/llm/model-catalog.ts 참고) —
-// task가 늘면 그 legacy 패턴으로 확장한다.
+// task별 모델 id 단일 출처. model-catalog.ts·task-routing.ts가 이 상수를 등록·참조한다.
 
 // 잠정값 — eval 세션이 11개 케이스(빠짐/지어냄/유형 오분류)로 재는 중이다. 결과는
 // 별도로 반영된다.
