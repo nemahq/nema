@@ -68,6 +68,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.30.0(zod@4.3.6)
+      '@supabase/supabase-js':
+        specifier: ^2.98.0
+        version: 2.112.2
       '@trpc/client':
         specifier: ^11.18.0
         version: 11.18.0(@trpc/server@11.18.0(typescript@5.9.3))(typescript@5.9.3)
