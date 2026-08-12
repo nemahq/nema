@@ -14,7 +14,6 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@server/infra/supabase/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 import type { GeneratedDigests } from "@server/prompts/digest-generation";
-import type { GeneratedStatement } from "@server/prompts/statement-generation";
 import {
   deleteSource,
   ingestSource,
@@ -26,9 +25,6 @@ import {
 // 없다(모든 걸 다 허용해버리므로). 로컬 Supabase가 있어야 도는 이유.
 vi.mock("@server/infra/llm/provider", () => ({
   getDigestGenerationProvider: () => ({ generateStructured: mockGenerate }),
-  getStatementGenerationProvider: () => ({
-    generateStructured: mockGenerateStatement,
-  }),
 }));
 
 function noDigests(): GeneratedDigests {
@@ -43,37 +39,45 @@ function noDigests(): GeneratedDigests {
 
 let mockGenerated: GeneratedDigests = noDigests();
 let mockError: Error | null = null;
+let mockGenerateCallCount = 0;
 function mockGenerate(): Promise<GeneratedDigests> {
+  mockGenerateCallCount += 1;
   if (mockError) {
     return Promise.reject(mockError);
   }
   return Promise.resolve(mockGenerated);
 }
 
-// 기본값은 항상 성공 — statement 생성을 다루지 않는 기존 테스트가 실패 로그로
-// 얼룩지지 않게 한다. 실패를 보는 테스트만 mockStatementError를 채운다.
-let mockStatementContent = "fixture statement";
-let mockStatementError: Error | null = null;
-function mockGenerateStatement(): Promise<GeneratedStatement> {
-  if (mockStatementError) {
-    return Promise.reject(mockStatementError);
-  }
-  return Promise.resolve({ statement: mockStatementContent });
-}
-
-function oneDecision(title: string): GeneratedDigests {
+function oneDecision(
+  title: string,
+  choice = "fixture choice",
+): GeneratedDigests {
   return {
     ...noDigests(),
     decisions: [
       {
         title,
-        choice: "fixture choice",
+        choice,
         situation: "fixture situation",
         reason: null,
         tradeoff: null,
         alternatives: null,
       },
     ],
+  };
+}
+
+function twoDecisions(titles: [string, string]): GeneratedDigests {
+  return {
+    ...noDigests(),
+    decisions: titles.map((title) => ({
+      title,
+      choice: `${title}의 선택`,
+      situation: null,
+      reason: null,
+      tradeoff: null,
+      alternatives: null,
+    })),
   };
 }
 
@@ -160,8 +164,7 @@ afterAll(async () => {
 
 afterEach(() => {
   mockError = null;
-  mockStatementContent = "fixture statement";
-  mockStatementError = null;
+  mockGenerateCallCount = 0;
 });
 
 describe("source-service (RLS)", () => {
@@ -396,13 +399,12 @@ describe("source-service (RLS)", () => {
   );
 
   it(
-    "다이제스트마다 진술이 함께 생성돼 저장된다",
+    "다이제스트마다 진술이 주된 칸 값 그대로 저장된다",
     async () => {
       if (!localDbAvailable) {
         return;
       }
-      mockGenerated = oneDecision("진술 테스트 결정");
-      mockStatementContent = "진술 테스트 결정을 내렸다";
+      mockGenerated = oneDecision("진술 테스트 결정", "진술 테스트 선택");
 
       const { digests } = await ingestSource({
         supabase: userA.supabase,
@@ -414,7 +416,7 @@ describe("source-service (RLS)", () => {
         id: expect.any(String),
         digestId: digests[0]?.id,
         digestField: "choice",
-        content: "진술 테스트 결정을 내렸다",
+        content: "진술 테스트 선택",
         createdAt: expect.any(String),
       });
 
@@ -426,36 +428,31 @@ describe("source-service (RLS)", () => {
       expect(row).toEqual({
         digest_id: digests[0]?.id,
         digest_field: "choice",
-        content: "진술 테스트 결정을 내렸다",
+        content: "진술 테스트 선택",
       });
     },
     TEST_TIMEOUT_MS,
   );
 
+  // 이 테스트가 지키는 계약: 원문 하나에 다이제스트가 몇 개든 LLM 호출은 다이제스트
+  // 생성 1번뿐이다. 진술마다 LLM을 다시 부르는 코드가 재도입되면 이 assertion이
+  // 실패한다.
   it(
-    "진술 생성이 실패해도 다이제스트는 살고 statement는 null이다",
+    "다이제스트가 여럿이어도 LLM 호출은 한 번만 나간다",
     async () => {
       if (!localDbAvailable) {
         return;
       }
-      mockGenerated = oneDecision("진술 실패 테스트 결정");
-      mockStatementError = new Error("statement LLM unavailable");
+      mockGenerated = twoDecisions(["LLM 호출 테스트 A", "LLM 호출 테스트 B"]);
 
       const { digests } = await ingestSource({
         supabase: userA.supabase,
         userId: userA.id,
-        body: "진술 실패 테스트 원문",
+        body: "LLM 호출 횟수 테스트 원문",
       });
 
-      expect(digests).toHaveLength(1);
-      expect(digests[0]?.title).toBe("진술 실패 테스트 결정");
-      expect(digests[0]?.statement).toBeNull();
-
-      const { data: rows } = await userA.supabase
-        .from("statements")
-        .select("id")
-        .eq("digest_id", digests[0]?.id ?? "");
-      expect(rows).toHaveLength(0);
+      expect(digests).toHaveLength(2);
+      expect(mockGenerateCallCount).toBe(1);
     },
     TEST_TIMEOUT_MS,
   );
@@ -522,8 +519,7 @@ describe("source-service (RLS)", () => {
       if (!localDbAvailable) {
         return;
       }
-      mockGenerated = oneDecision("재추출 진술 테스트 - 기존");
-      mockStatementContent = "기존 진술";
+      mockGenerated = oneDecision("재추출 진술 테스트 - 기존", "기존 진술");
       const { sourceId, digests: original } = await ingestSource({
         supabase: userA.supabase,
         userId: userA.id,
@@ -532,8 +528,7 @@ describe("source-service (RLS)", () => {
       const originalDigestId = original[0]?.id ?? "";
       expect(original[0]?.statement?.content).toBe("기존 진술");
 
-      mockGenerated = oneDecision("재추출 진술 테스트 - 새것");
-      mockStatementContent = "재추출된 진술";
+      mockGenerated = oneDecision("재추출 진술 테스트 - 새것", "재추출된 진술");
       const { digests: reExtracted } = await reExtractSource({
         supabase: userA.supabase,
         sourceId,

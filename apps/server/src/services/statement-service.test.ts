@@ -2,125 +2,138 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { Digest } from "@nema-io/shared";
 
-import { LlmError } from "@server/infra/llm/llm-error";
 import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
-import { generateAndSaveStatements } from "@server/services/statement-service";
+import { saveStatements } from "@server/services/statement-service";
 
-let mockGenerateStructured: ReturnType<typeof vi.fn>;
-vi.mock("@server/infra/llm/provider", () => ({
-  getStatementGenerationProvider: () => ({
-    generateStructured: mockGenerateStructured,
-  }),
-}));
+const FIELD_BY_TYPE: Record<Digest["type"], string> = {
+  decision: "choice",
+  pending: "question",
+  learning: "finding",
+  idea: "concept",
+  assumption: "assumption",
+};
 
-function decisionDigest(id: string, choice = "선택"): Digest {
+function digestOf(args: {
+  id: string;
+  type: Digest["type"];
+  primaryValue: string;
+}): Digest {
+  const { id, type, primaryValue } = args;
   return {
     id,
-    type: "decision",
+    type,
     title: "제목",
-    body: { choice },
+    body: { [FIELD_BY_TYPE[type]]: primaryValue },
     createdAt: "2026-08-11T00:00:00.000Z",
-  };
+  } as Digest;
 }
 
-// insert가 불린 그대로(digest_id·content)를 담은 행을 돌려준다 — 여러 다이제스트가
-// 섞여 들어와도 결과가 뒤섞이지 않는지 보려면 실제 인자를 반영해야 한다.
-function fakeSupabase(): TypedSupabaseClient {
-  const from = vi.fn().mockImplementation(() => ({
-    insert: vi
-      .fn()
-      .mockImplementation((row: { digest_id: string; content: string }) => ({
-        select: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: {
-              id: "22222222-2222-4222-8222-222222222222",
-              digest_id: row.digest_id,
-              digest_field: "choice",
-              content: row.content,
-              created_at: "2026-08-11T00:00:01.000Z",
-            },
-            error: null,
-          }),
-        }),
-      })),
-  }));
+const STATEMENT_IDS = [
+  "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+];
+
+// insert에 넘긴 행을 그대로 반환한다 — 여러 다이제스트가 한 번에 들어와도 결과가
+// 뒤섞이지 않는지 보려면 실제 인자를 반영해야 한다.
+function fakeSupabase(): {
+  client: TypedSupabaseClient;
+  insert: ReturnType<typeof vi.fn>;
+} {
+  const insert = vi.fn().mockImplementation(
+    (
+      rows: Array<{
+        digest_id: string;
+        digest_field: string;
+        content: string;
+      }>,
+    ) => ({
+      select: vi.fn().mockResolvedValue({
+        data: rows.map((row, i) => ({
+          id: STATEMENT_IDS[i],
+          digest_id: row.digest_id,
+          digest_field: row.digest_field,
+          content: row.content,
+          created_at: "2026-08-11T00:00:01.000Z",
+        })),
+        error: null,
+      }),
+    }),
+  );
+  const from = vi.fn().mockReturnValue({ insert });
+  return { client: { from } as unknown as TypedSupabaseClient, insert };
+}
+
+function fakeSupabaseWithInsertError(): TypedSupabaseClient {
+  const from = vi.fn().mockReturnValue({
+    insert: vi.fn().mockReturnValue({
+      select: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: "42501", message: "permission denied" },
+      }),
+    }),
+  });
   return { from } as unknown as TypedSupabaseClient;
 }
 
-const DIGEST_ID_A = "11111111-1111-4111-8111-111111111111";
-const DIGEST_ID_B = "33333333-3333-4333-8333-333333333333";
+describe("saveStatements", () => {
+  it.each([
+    ["decision", "choice", "선택 내용"],
+    ["pending", "question", "질문 내용"],
+    ["learning", "finding", "발견 내용"],
+    ["idea", "concept", "발상 내용"],
+    ["assumption", "assumption", "가설 내용"],
+  ] as const)(
+    "%s의 진술 content는 주된 칸(%s) 값과 정확히 같다",
+    async (type, field, primaryValue) => {
+      const digest = digestOf({ id: STATEMENT_IDS[0], type, primaryValue });
+      const { client } = fakeSupabase();
 
-describe("generateAndSaveStatements retry", () => {
-  it("재시도해도 결과가 같은 오류(auth)는 한 번만 시도하고 포기한다", async () => {
-    mockGenerateStructured = vi
-      .fn()
-      .mockRejectedValue(new LlmError("auth", "no access"));
+      const result = await saveStatements({
+        supabase: client,
+        digests: [digest],
+      });
 
-    const result = await generateAndSaveStatements({
-      supabase: fakeSupabase(),
-      digests: [decisionDigest(DIGEST_ID_A)],
-    });
+      const statement = result.get(digest.id);
+      expect(statement?.content).toBe(primaryValue);
+      expect(statement?.digestField).toBe(field);
+    },
+  );
 
-    expect(mockGenerateStructured).toHaveBeenCalledTimes(1);
-    expect(result.size).toBe(0);
+  it("다이제스트 여러 개를 한 번의 insert로 저장한다", async () => {
+    const digests = [
+      digestOf({ id: STATEMENT_IDS[0], type: "decision", primaryValue: "A" }),
+      digestOf({ id: STATEMENT_IDS[1], type: "learning", primaryValue: "B" }),
+    ];
+    const { client, insert } = fakeSupabase();
+
+    const result = await saveStatements({ supabase: client, digests });
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert.mock.calls[0][0]).toHaveLength(2);
+    expect(result.size).toBe(2);
   });
 
-  it("일시적 오류(rate_limit)는 상한까지 다시 시도한다", async () => {
-    mockGenerateStructured = vi
-      .fn()
-      .mockRejectedValue(new LlmError("rate_limit", "too many requests"));
-
-    const result = await generateAndSaveStatements({
-      supabase: fakeSupabase(),
-      digests: [decisionDigest(DIGEST_ID_A)],
+  it("저장이 실패해도 던지지 않고 빈 Map을 반환한다", async () => {
+    const digest = digestOf({
+      id: STATEMENT_IDS[0],
+      type: "decision",
+      primaryValue: "선택",
     });
 
-    expect(mockGenerateStructured).toHaveBeenCalledTimes(3);
-    expect(result.size).toBe(0);
-  });
-
-  it("재시도 끝에 성공하면 그 결과를 저장한다", async () => {
-    mockGenerateStructured = vi
-      .fn()
-      .mockRejectedValueOnce(new LlmError("rate_limit", "too many requests"))
-      .mockResolvedValueOnce({ statement: "생성된 문장" });
-
-    const digest = decisionDigest(DIGEST_ID_A);
-    const result = await generateAndSaveStatements({
-      supabase: fakeSupabase(),
+    const result = await saveStatements({
+      supabase: fakeSupabaseWithInsertError(),
       digests: [digest],
     });
 
-    expect(mockGenerateStructured).toHaveBeenCalledTimes(2);
-    expect(result.get(digest.id)?.content).toBe("생성된 문장");
+    expect(result.size).toBe(0);
   });
-});
 
-describe("generateAndSaveStatements 병렬 격리", () => {
-  // 이 PR의 핵심 주장 — "다이제스트끼리 참조하지 않으므로 병렬로 돌리고, 하나가
-  // 실패해도 나머지는 산다"(linking.md 2.2) — 를 실제로 검증한다. Promise.all을
-  // Promise.allSettled로 바꾸거나 결과 배열의 인덱스 매칭이 깨지는 회귀를 잡는다.
-  it("A가 실패하고 B가 성공하면 B의 진술만 올바른 키로 저장된다", async () => {
-    mockGenerateStructured = vi
-      .fn()
-      .mockImplementation((params: { messages: [{ content: string }] }) => {
-        const isDigestA = params.messages[0].content.includes("A의 선택");
-        return isDigestA
-          ? Promise.reject(new LlmError("auth", "no access"))
-          : Promise.resolve({ statement: "B의 문장" });
-      });
+  it("다이제스트가 없으면 insert를 호출하지 않는다", async () => {
+    const { client, insert } = fakeSupabase();
 
-    const result = await generateAndSaveStatements({
-      supabase: fakeSupabase(),
-      digests: [
-        decisionDigest(DIGEST_ID_A, "A의 선택"),
-        decisionDigest(DIGEST_ID_B, "B의 선택"),
-      ],
-    });
+    const result = await saveStatements({ supabase: client, digests: [] });
 
-    expect(result.size).toBe(1);
-    expect(result.has(DIGEST_ID_A)).toBe(false);
-    expect(result.get(DIGEST_ID_B)?.content).toBe("B의 문장");
-    expect(result.get(DIGEST_ID_B)?.digestId).toBe(DIGEST_ID_B);
+    expect(insert).not.toHaveBeenCalled();
+    expect(result.size).toBe(0);
   });
 });
