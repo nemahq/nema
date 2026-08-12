@@ -1,7 +1,14 @@
+import { ZodError } from "zod";
 import type { User } from "@supabase/supabase-js";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
 
+import {
+  getDomainCode,
+  isExpectedDomainError,
+  mapDomainError,
+} from "@server/error-mapper";
+import { resolveLanguage, t as translate } from "@server/infra/i18n";
 import {
   createSupabaseUser,
   getSupabaseAdmin,
@@ -25,14 +32,70 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
     }
   }
 
-  return { req, res, log: req.log, user, supabase };
+  const lng = resolveLanguage(req.headers["accept-language"]);
+
+  return { req, res, log: req.log, user, lng, supabase };
 }
 
 type Context = Awaited<ReturnType<typeof createContext>>;
 
-const t = initTRPC.context<Context>().create();
+// tRPC 입력 파서가 ZodError를 그대로 TRPCError.message에 실어보낸다 — errorFormatter가
+// 개입하기 전이라 도메인 에러 매핑망을 안 탄다. 여기서 안 막으면 화면에 원문 zod
+// issue 배열(영문 JSON)이 그대로 노출된다.
+function isZodInputError(cause: unknown): boolean {
+  return cause instanceof ZodError;
+}
+
+const t = initTRPC.context<Context>().create({
+  errorFormatter({ shape, error, ctx }) {
+    const lng = ctx?.lng ?? "ko";
+    if (isZodInputError(error.cause)) {
+      return {
+        ...shape,
+        message: translate("error.default", { lng }),
+        data: { ...shape.data, domainCode: undefined },
+      };
+    }
+
+    const domainCode = getDomainCode(error.cause);
+    if (!domainCode) {
+      return { ...shape, data: { ...shape.data, domainCode } };
+    }
+
+    const mapped = mapDomainError(error.cause, lng);
+    return {
+      ...shape,
+      message: mapped.message,
+      data: { ...shape.data, code: mapped.code, domainCode },
+    };
+  },
+});
 
 export const router = t.router;
+
+// fastifyTRPCPlugin의 trpcOptions.onError로 등록한다(index.ts) — 응답 shape 확정
+// (errorFormatter, 위)과 별개로, 요청이 끝나는 지점마다 부수효과(로깅)를 맡는다.
+// 정상적인 거부(권한·대상 없음)는 장애가 아니라 로그에 안 남긴다 — 노이즈 방지.
+export function onTRPCError({
+  error,
+  req,
+}: {
+  error: TRPCError;
+  req?: { log: { error: (obj: Record<string, unknown>, msg: string) => void } };
+}): void {
+  const domainCode = getDomainCode(error.cause);
+  if (domainCode) {
+    if (!isExpectedDomainError(error.cause)) {
+      req?.log.error({ err: error.cause, domainCode }, "trpc domain error");
+    }
+    return;
+  }
+
+  if (error.code !== "INTERNAL_SERVER_ERROR") {
+    return;
+  }
+  req?.log.error({ err: error.cause ?? error }, "trpc internal error");
+}
 
 /**
  * @lintignore 아직 이걸 쓰는 라우터가 없다 — 새 도메인 라우터가 서면 여기서 가져다 쓴다.

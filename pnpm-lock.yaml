@@ -120,6 +120,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.98.0
         version: 2.112.2
+      '@tolgee/core':
+        specifier: ^6.4.0
+        version: 6.6.0
       '@trpc/server':
         specifier: ^11.18.0
         version: 11.18.0(typescript@5.9.3)
@@ -2108,6 +2111,9 @@ packages:
     peerDependenciesMeta:
       jiti:
         optional: true
+
+  '@tolgee/core@6.6.0':
+    resolution: {integrity: sha512-jN1RfHqTx6vLbyGz0A1qvu7gf/FFhsgEFJvLTx837vz2Z1MrRMsslJ39g3wVM90W7UmIM25yFmnXm6okvt+13g==}
 
   '@trpc/client@11.18.0':
     resolution: {integrity: sha512-wOqeg3Fvl25V1ZisQhUD3K8G60ZJDlSGJNSyeXrLH24xAo5w6GSR2Kzb1cSNY9Y+IQ2YZvYGZstBU+V/ulo/ow==}
@@ -6692,6 +6698,8 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
+
+  '@tolgee/core@6.6.0': {}
 
   '@trpc/client@11.18.0(@trpc/server@11.18.0(typescript@5.9.3))(typescript@5.9.3)':
     dependencies:

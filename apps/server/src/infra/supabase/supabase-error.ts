@@ -2,6 +2,9 @@
 // RLS(owner-only)로 남의 행을 걸러낸 결과도 이 코드로 온다 — 존재하지 않는 것과
 // 소유가 아닌 것을 API 밖으로 구분해 노출하지 않는다(존재 자체를 숨긴다).
 const PGRST_NOT_FOUND = "PGRST116";
+// RLS WITH CHECK 위반(권한 없는 행에 쓰기 시도) 시 Postgres가 내는 코드 — PostgREST가
+// 그대로 전달한다.
+const PG_INSUFFICIENT_PRIVILEGE = "42501";
 
 export class SupabaseError extends Error {
   constructor(
@@ -23,4 +26,10 @@ export function throwIfSupabaseError(
 
 export function isNotFoundError(error: unknown): boolean {
   return error instanceof SupabaseError && error.code === PGRST_NOT_FOUND;
+}
+
+export function isForbiddenError(error: unknown): boolean {
+  return (
+    error instanceof SupabaseError && error.code === PG_INSUFFICIENT_PRIVILEGE
+  );
 }

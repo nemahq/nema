@@ -7,8 +7,9 @@ import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 
 import { getEnv, loadEnv } from "./env";
 import { resolveCorsOrigin } from "./infra/cors-origin";
+import { initI18n } from "./infra/i18n";
 import { appRouter } from "./router";
-import { createContext } from "./trpc";
+import { createContext, onTRPCError } from "./trpc";
 
 // find-my-way(Fastify 라우터)의 기본 maxParamLength(100)에 걸려, tRPC 배치 링크가
 // 같은 프로시저를 여러 번 이어붙인 경로가 100자를 넘으면 라우트 자체가 안 잡혀 404가
@@ -18,6 +19,8 @@ const FASTIFY_MAX_PARAM_LENGTH = 5000;
 loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 
 async function bootstrap() {
+  await initI18n();
+
   const server = Fastify({
     logger: true,
     routerOptions: { maxParamLength: FASTIFY_MAX_PARAM_LENGTH },
@@ -30,7 +33,7 @@ async function bootstrap() {
 
   await server.register(fastifyTRPCPlugin, {
     prefix: "/trpc",
-    trpcOptions: { router: appRouter, createContext },
+    trpcOptions: { router: appRouter, createContext, onError: onTRPCError },
   });
 
   server.get("/health", async () => ({ status: "ok", env: env.APP_ENV }));
