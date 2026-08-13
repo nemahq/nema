@@ -152,7 +152,7 @@ export async function getSource(args: {
   // RLS(owner-only)라 남의/없는 sourceId는 여기서 not-found로 걸린다.
   const { data, error } = await supabase
     .from("sources")
-    .select("id, body, created_at")
+    .select("id, name, body, created_at")
     .eq("id", sourceId)
     .single();
   throwIfSupabaseError(error);
@@ -166,22 +166,10 @@ export async function getSource(args: {
 
   return SourceGetResultSchema.parse({
     sourceId: data.id,
+    name: data.name,
     body: data.body,
     createdAt: data.created_at,
   });
-}
-
-// 원문 이름 — 제목 칸이 아직 없어 본문 앞부분을 대신 쓴다(제목·요약 추출은 별도
-// 작업이 만든다). listSourcesWithDigests·listDraftSources가 함께 쓴다 — 제목 칸이
-// 생기면 갈아끼울 자리가 여기 하나여야 한다.
-const SOURCE_NAME_PREVIEW_LENGTH = 60;
-
-function buildSourceName(body: string): string {
-  const trimmed = body.trim();
-  if (trimmed.length <= SOURCE_NAME_PREVIEW_LENGTH) {
-    return trimmed;
-  }
-  return `${trimmed.slice(0, SOURCE_NAME_PREVIEW_LENGTH).trimEnd()}…`;
 }
 
 // 두 목록 모두 아직 진짜 페이지네이션이 없다 — 지금은 이 값 하나로 폭주만
@@ -204,7 +192,7 @@ export async function listSourcesWithDigests(args: {
   const { data, error } = await supabase
     .from("sources")
     .select(
-      "id, body, created_at, digests!inner(id, type, title, extraction_order, hidden_at)",
+      "id, name, created_at, digests!inner(id, type, title, extraction_order, hidden_at)",
     )
     .eq("digestion_status", "completed")
     .order("created_at", { ascending: false })
@@ -223,29 +211,22 @@ export async function listDraftSources(args: {
 }): Promise<SourceDraft[]> {
   const { supabase } = args;
 
+  // 필터(pending 또는 digests 0건)는 v_draft_sources 뷰가 DB에서 미리 건다 —
+  // 여기서 JS로 걸렀다면 상한(limit)이 거르기 전에 먼저 잘라, 원문이 많을 때
+  // 실제로 있는 초안이 빈 목록으로 보일 수 있었다(에러 없이 조용히 틀림).
   const { data, error } = await supabase
-    .from("sources")
-    .select("id, body, created_at, digestion_status, digests(id)")
+    .from("v_draft_sources")
+    .select("id, name, created_at, digestion_status")
     .order("created_at", { ascending: false })
     .limit(SOURCE_LIST_SAFETY_LIMIT);
   throwIfSupabaseError(error);
 
-  // pending은 처리 중이거나 끝내 완료되지 못한 원문(LLM 호출 실패 등)이고,
-  // completed인데 digests가 0인 건 완료는 됐지만 정리 결과가 하나도 안 나온
-  // 경우다 — 둘 다 "초안"이라 함께 묶는다.
-  return (data ?? [])
-    .filter(
-      (source) =>
-        source.digestion_status === "pending" ||
-        (source.digestion_status === "completed" &&
-          source.digests.length === 0),
-    )
-    .map(toSourceDraft);
+  return (data ?? []).map(toSourceDraft);
 }
 
 type SourceWithDigestsRow = Pick<
   Database["public"]["Tables"]["sources"]["Row"],
-  "id" | "body" | "created_at"
+  "id" | "name" | "created_at"
 > & {
   digests: Array<
     Pick<
@@ -258,7 +239,7 @@ type SourceWithDigestsRow = Pick<
 function toSourceWithDigests(row: SourceWithDigestsRow): SourceWithDigests {
   return SourceWithDigestsSchema.parse({
     sourceId: row.id,
-    name: buildSourceName(row.body),
+    name: row.name,
     createdAt: row.created_at,
     digests: row.digests
       .filter((digest) => digest.hidden_at === null)
@@ -270,17 +251,19 @@ function toSourceWithDigests(row: SourceWithDigestsRow): SourceWithDigests {
   });
 }
 
+// 뷰(v_draft_sources)의 생성 타입은 컬럼을 전부 nullable로 잡는다 — 밑 테이블
+// (sources)에는 전부 NOT NULL 컬럼이라 실제로 null이 나올 일은 없다. 그래도
+// round-trip을 실제로 검증하는 SourceDraftSchema.parse가 이 전제를 지킨다:
+// 어긋나면(예: 뷰 정의가 조인으로 바뀌어 실제로 null이 새면) 여기서 곧바로 던진다.
 type SourceDraftRow = Pick<
-  Database["public"]["Tables"]["sources"]["Row"],
-  "id" | "body" | "created_at" | "digestion_status"
-> & {
-  digests: Array<Pick<Database["public"]["Tables"]["digests"]["Row"], "id">>;
-};
+  Database["public"]["Views"]["v_draft_sources"]["Row"],
+  "id" | "name" | "created_at" | "digestion_status"
+>;
 
 function toSourceDraft(row: SourceDraftRow): SourceDraft {
   return SourceDraftSchema.parse({
     sourceId: row.id,
-    name: buildSourceName(row.body),
+    name: row.name,
     createdAt: row.created_at,
     status: row.digestion_status,
   });

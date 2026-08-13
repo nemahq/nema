@@ -76,6 +76,13 @@ export type Database = {
             referencedRelation: "sources";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "v_draft_sources";
+            referencedColumns: ["id"];
+          },
         ];
       };
       mcp_tool_calls: {
@@ -129,6 +136,7 @@ export type Database = {
           created_at: string;
           digestion_status: Database["public"]["Enums"]["digestion_status"];
           id: string;
+          name: string;
           updated_at: string;
           user_id: string;
         };
@@ -137,6 +145,7 @@ export type Database = {
           created_at?: string;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           id?: string;
+          name?: string;
           updated_at?: string;
           user_id: string;
         };
@@ -145,6 +154,7 @@ export type Database = {
           created_at?: string;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           id?: string;
+          name?: string;
           updated_at?: string;
           user_id?: string;
         };
@@ -152,6 +162,33 @@ export type Database = {
       };
     };
     Views: {
+      v_draft_sources: {
+        Row: {
+          created_at: string | null;
+          digestion_status:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id: string | null;
+          name: string | null;
+        };
+        Insert: {
+          created_at?: string | null;
+          digestion_status?:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id?: string | null;
+          name?: string | null;
+        };
+        Update: {
+          created_at?: string | null;
+          digestion_status?:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id?: string | null;
+          name?: string | null;
+        };
+        Relationships: [];
+      };
       v_metrics_summary: {
         Row: {
           description: string | null;

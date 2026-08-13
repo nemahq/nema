@@ -958,33 +958,33 @@ describe("listDraftSources (RLS)", () => {
   );
 
   it(
-    "원문 이름은 60자까지는 그대로, 넘으면 60자로 자르고 말줄임표를 붙인다",
+    "원문 이름은 200자까지는 그대로, 넘으면 200자로 자르고 말줄임표 없이 끝난다",
     async () => {
       if (!localDbAvailable) {
         return;
       }
       mockGenerated = noDigests();
-      const exactly60 = "x".repeat(60);
-      const over60 = "x".repeat(61);
+      const exactly200 = "x".repeat(200);
+      const over200 = `${"x".repeat(200)}y`;
 
       const { sourceId: exactId } = await ingestSource({
         supabase: userA.supabase,
         userId: userA.id,
-        body: exactly60,
+        body: exactly200,
       });
       const { sourceId: overId } = await ingestSource({
         supabase: userA.supabase,
         userId: userA.id,
-        body: over60,
+        body: over200,
       });
 
       const drafts = await listDraftSources({ supabase: userA.supabase });
 
       expect(drafts.find((draft) => draft.sourceId === exactId)?.name).toBe(
-        exactly60,
+        exactly200,
       );
       expect(drafts.find((draft) => draft.sourceId === overId)?.name).toBe(
-        `${"x".repeat(60)}…`,
+        exactly200,
       );
     },
     TEST_TIMEOUT_MS,
