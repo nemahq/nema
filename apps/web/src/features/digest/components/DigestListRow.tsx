@@ -7,26 +7,17 @@ interface DigestListRowProps {
   digest: DigestListItem;
 }
 
-// 클릭하면 상세 사이드뷰가 열려야 하지만 그 사이드뷰는 T3이 짓는다(킥오프 "다이제스트
-// 행 클릭" 참고) — 자리만 남기고 여기서는 아무 일도 하지 않는다.
-function handleDigestClick() {
-  // TODO(T3): 다이제스트 상세 사이드뷰를 연다.
-}
-
-// weave Button은 자체 타이포(text-[13px] font-semibold)를 강제해 라벨 텍스트가
-// Text 컴포넌트의 크기 스케일을 못 따른다(weave-usage.md Button "안 쓴다" 행) —
-// 이 행은 배지·제목 타이포를 그대로 노출해야 해서 raw button을 쓴다.
+// TODO(T3): 클릭하면 다이제스트 상세 사이드뷰를 연다(킥오프 "다이제스트 행 클릭" 참고).
+// 아직 갈 곳이 없어 지금은 비인터랙티브로 둔다 — 진짜 <button>에 no-op 핸들러를
+// 달면 포커스·스크린리더 낭독·Enter/Space 반응까지 약속해놓고 아무 반응이 없는
+// "고장난 버튼"으로 인지된다. T3이 실제 클릭 동작을 넣을 때 button으로 바꾼다.
 export function DigestListRow({ digest }: DigestListRowProps) {
   return (
-    <button
-      type="button"
-      onClick={handleDigestClick}
-      className="flex w-full min-w-0 items-center gap-2 py-1 text-left"
-    >
+    <div className="flex min-w-0 items-center gap-2 py-1">
       <DigestTypeBadge type={digest.type} />
       <Text as="span" size="sm" className="min-w-0 truncate">
         {digest.title}
       </Text>
-    </button>
+    </div>
   );
 }

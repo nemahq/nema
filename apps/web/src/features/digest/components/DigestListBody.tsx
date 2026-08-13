@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 
 import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
+import { useMainScrollRestoration } from "@web/features/digest/hooks/useMainScrollRestoration";
 import { useSourceListWithDigestsSuspenseQuery } from "@web/features/digest/hooks/useSourceListWithDigestsQuery";
-import { useMainScrollRestoration } from "@web/hooks/useMainScrollRestoration";
 
 import { DigestListEmptyState } from "./DigestListEmptyState";
 import { SourceDigestGroup } from "./SourceDigestGroup";
@@ -16,8 +16,7 @@ function DigestListBodyContent() {
   return (
     <div
       ref={scrollContainerRef}
-      data-main-scroll-area
-      className="flex-1 overflow-y-auto"
+      className="flex flex-1 flex-col overflow-y-auto"
     >
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6">
         {sources.length === 0 ? (

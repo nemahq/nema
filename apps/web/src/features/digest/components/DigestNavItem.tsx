@@ -12,6 +12,9 @@ export function DigestNavItem() {
       icon={<LayoutList strokeWidth={1.5} className={NAV_ICON_CLASS} />}
       label={t("digest.nav_label")}
       to="/"
+      // "/"는 모든 경로의 접두사라 exact 없이는 다른 라우트에서도 계속 active로
+      // 잡힌다(TanStack Router의 prefix 매칭 — activeOptions.exact 기본값 false).
+      activeOptions={{ exact: true }}
     />
   );
 }

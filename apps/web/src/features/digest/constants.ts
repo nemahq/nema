@@ -11,7 +11,9 @@ import {
 import type { TranslationKey } from "@web/lib/tolgee";
 
 // legacy/apps/web/src/features/review/constants.ts DIGEST_TYPE_ICON과 동일 매핑 —
-// 다이제스트 유형은 화면에 상관없이 같은 시각 언어를 쓴다.
+// 다이제스트 유형은 화면에 상관없이 같은 시각 언어를 쓴다. Check는 드롭다운
+// 선택 표시로 이미 쓰이고 있어 제외했고, HelpCircle류(물음표)는 안내·도움말
+// 아이콘으로 통용돼 헷갈릴 여지가 있어 pending에는 안 썼다.
 export const DIGEST_TYPE_ICON: Record<DigestType, IconComponent> = {
   decision: Flag,
   pending: Hourglass,
