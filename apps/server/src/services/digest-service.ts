@@ -22,7 +22,8 @@ export async function searchDigests(args: {
     limit,
   });
   if (hits.length === 0) {
-    await logSearch({ supabase, userId, detail: { query, results: [] } });
+    // 로그 저장은 응답을 기다리게 하지 않는다 — 실패 격리뿐 아니라 지연도 격리한다.
+    void logSearch({ userId, detail: { query, results: [] } });
     return [];
   }
 
@@ -42,9 +43,9 @@ export async function searchDigests(args: {
     .sort((a, b) => b.score - a.score);
 
   // 로그는 벡터 hits가 아니라 실제로 반환되는 results를 적는다 — .in() 필터로
-  // digests 쪽에서 걸러진 것과 벡터 검색이 찾은 것이 갈릴 수 있어서다.
-  await logSearch({
-    supabase,
+  // digests 쪽에서 걸러진 것과 벡터 검색이 찾은 것이 갈릴 수 있어서다. 응답을
+  // 기다리게 하지 않도록 여기서도 await하지 않는다.
+  void logSearch({
     userId,
     detail: {
       query,

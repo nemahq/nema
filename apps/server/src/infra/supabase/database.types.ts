@@ -145,45 +145,45 @@ export type Database = {
     Views: {
       v_metrics_summary: {
         Row: {
+          description: string | null;
+          direction: string | null;
           metric: string | null;
           value: number | null;
-          높아지면: string | null;
-          "무엇을 뜻하나": string | null;
         };
         Relationships: [];
       };
       v_search_log: {
         Row: {
-          결과수: number | null;
-          시각: string | null;
-          최고점: number | null;
-          최저점: number | null;
-          쿼리: string | null;
+          lowest_score: number | null;
+          occurred_at: string | null;
+          query: string | null;
+          result_count: number | null;
+          top_score: number | null;
         };
         Insert: {
-          결과수?: never;
-          시각?: string | null;
-          최고점?: never;
-          최저점?: never;
-          쿼리?: never;
+          lowest_score?: never;
+          occurred_at?: string | null;
+          query?: never;
+          result_count?: never;
+          top_score?: never;
         };
         Update: {
-          결과수?: never;
-          시각?: string | null;
-          최고점?: never;
-          최저점?: never;
-          쿼리?: never;
+          lowest_score?: never;
+          occurred_at?: string | null;
+          query?: never;
+          result_count?: never;
+          top_score?: never;
         };
         Relationships: [];
       };
       v_search_results: {
         Row: {
-          "다이제스트 유형": Database["public"]["Enums"]["digest_type"] | null;
-          "다이제스트 제목": string | null;
-          순위: number | null;
-          시각: string | null;
-          점수: number | null;
-          쿼리: string | null;
+          digest_title: string | null;
+          digest_type: Database["public"]["Enums"]["digest_type"] | null;
+          occurred_at: string | null;
+          query: string | null;
+          rank: number | null;
+          score: number | null;
         };
         Relationships: [];
       };
@@ -195,7 +195,7 @@ export type Database = {
       content_language: "en" | "ko";
       digest_type: "decision" | "pending" | "learning" | "idea" | "assumption";
       digestion_status: "pending" | "completed";
-      mcp_tool: "search" | "get_source";
+      mcp_tool: "search_digests" | "get_source";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -332,7 +332,7 @@ export const Constants = {
       content_language: ["en", "ko"],
       digest_type: ["decision", "pending", "learning", "idea", "assumption"],
       digestion_status: ["pending", "completed"],
-      mcp_tool: ["search", "get_source"],
+      mcp_tool: ["search_digests", "get_source"],
     },
   },
 } as const;

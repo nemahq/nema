@@ -148,7 +148,8 @@ export async function getSource(args: {
     .single();
   throwIfSupabaseError(error);
 
-  await logGetSource({ supabase, userId, detail: { sourceId } });
+  // 로그 저장은 응답을 기다리게 하지 않는다 — 실패 격리뿐 아니라 지연도 격리한다.
+  void logGetSource({ userId, detail: { sourceId } });
 
   return SourceGetResultSchema.parse({
     sourceId: data.id,

@@ -48,7 +48,6 @@ describe("searchDigests", () => {
     expect(result).toEqual([]);
     expect(supabase.from).not.toHaveBeenCalled();
     expect(mockLogSearch).toHaveBeenCalledWith({
-      supabase,
       userId: "user-1",
       detail: { query: "질의", results: [] },
     });
@@ -91,7 +90,6 @@ describe("searchDigests", () => {
     expect(result.map((r) => r.id)).toEqual([digestHighId, digestLowId]);
     expect(result[0]?.score).toBe(0.9);
     expect(mockLogSearch).toHaveBeenCalledWith({
-      supabase,
       userId: "user-1",
       detail: {
         query: "질의",
@@ -99,6 +97,50 @@ describe("searchDigests", () => {
           { digestId: digestHighId, score: 0.9 },
           { digestId: digestLowId, score: 0.5 },
         ],
+      },
+    });
+  });
+
+  // digest-service.ts의 로그 호출은 hits가 아니라 results(= DB round-trip 뒤
+  // 살아남은 것)를 적는다는 주장을 코드로 검증한다 — .in()으로 걸러진 digest와
+  // 벡터 hits가 갈리는 경우(예: 검색 이후 digest가 지워짐)를 재현해, 누군가 나중에
+  // hits.map()으로 "단순화"해도 이 테스트가 회귀를 잡는다.
+  it("벡터 hits가 DB에 없는 digest를 가리켜도, 로그와 반환값 둘 다 실제로 남아있는 것만 담는다", async () => {
+    const digestAliveId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const digestGoneId1 = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const digestGoneId2 = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+    const sourceId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+    mockSearch.mockResolvedValue([
+      { digestId: digestAliveId, score: 0.6 },
+      { digestId: digestGoneId1, score: 0.9 },
+      { digestId: digestGoneId2, score: 0.8 },
+    ]);
+    // .in()이 3개 중 살아있는 digest 1개만 돌려준다 — 나머지 둘은 검색 이후 지워진
+    // 것으로 취급.
+    const supabase = fakeSupabase([
+      {
+        id: digestAliveId,
+        source_id: sourceId,
+        type: "decision",
+        title: "살아있는 다이제스트",
+        body: { choice: "A" },
+        created_at: "2026-08-13T00:00:00.000Z",
+      },
+    ]);
+
+    const result = await searchDigests({
+      supabase,
+      userId: "user-1",
+      query: "질의",
+      limit: 10,
+    });
+
+    expect(result.map((r) => r.id)).toEqual([digestAliveId]);
+    expect(mockLogSearch).toHaveBeenCalledWith({
+      userId: "user-1",
+      detail: {
+        query: "질의",
+        results: [{ digestId: digestAliveId, score: 0.6 }],
       },
     });
   });
