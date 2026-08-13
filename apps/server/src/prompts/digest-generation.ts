@@ -128,6 +128,19 @@ happened is an assumption even if nothing else in the note depends on it yet.
    This holds whether or not the answer moved along the way; when the note
    revisits the same question and lands somewhere else, the digest holds the
    final conclusion, and how it got there belongs in reason or alternatives.
+   Merging is not listing. When the note's answer to one question bundles more
+   than one move together ("do X now, leave Y for later"; "keep A, drop B"),
+   the choice is not that sentence restated — it is the single point of
+   decision between them, written the way any other choice is written: what
+   was picked, not what happened. Compress it into one statement ("X over Y",
+   "X instead of Y") only as far as the note itself relates the pieces; if the
+   note just states both in the same breath without saying one was chosen
+   over the other, do not invent that relation to force a single sentence —
+   leave the digest's choice as the note gives it. Whichever piece the choice
+   doesn't cover is not lost: it becomes a tradeoff (rule 8c) if it was given
+   up, or an alternative (rule 8d) if it was a path raised and passed over. A
+   choice that is secretly two choices is not something reason can be checked
+   against — this is what makes rule 9 possible.
 4. A question that the note itself answers is not "pending" — it belongs in the
    resulting decision's "situation" (or the learning that settled it). Only make a
    "pending" digest when the note leaves it unanswered. This rule only blocks
