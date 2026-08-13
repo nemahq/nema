@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { createTRPCClient, httpLink } from "@trpc/client";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { createTRPCClient, httpLink, isTRPCClientError } from "@trpc/client";
 
 import type { AppRouter } from "@nema-io/server/src/router";
 import {
@@ -25,6 +26,33 @@ function createNemaClient(accessToken: string) {
   });
 }
 
+function toolResult(data: unknown): CallToolResult {
+  return { content: [{ type: "text", text: JSON.stringify(data) }] };
+}
+
+// SDK가 콜백에서 던진 값을 잡아 isError 결과로 바꿔주긴 하지만 message만 쓴다
+// (mcp.js executeToolHandler). tRPC 에러의 code(예: NOT_FOUND, UNAUTHORIZED)는
+// message에 안 실리므로, 여기서 직접 앞에 붙여야 Claude가 재시도 가능 여부를
+// 문장 해석 없이 code만 보고 판단할 수 있다.
+function toolError(error: unknown): CallToolResult {
+  if (isTRPCClientError(error)) {
+    const code = error.data?.code ?? "UNKNOWN";
+    return {
+      content: [{ type: "text", text: `[${code}] ${error.message}` }],
+      isError: true,
+    };
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: error instanceof Error ? error.message : String(error),
+      },
+    ],
+    isError: true,
+  };
+}
+
 // 도구 셋: 던지기(source.ingest)·꺼내기(digest.search)·원문 보기(source.get).
 // 요청마다 새 서버를 연결하는 stateless 구조(index.ts)라 accessToken을 그때그때
 // 받아 그 요청 전용 tRPC 클라이언트를 만든다.
@@ -41,8 +69,11 @@ export function createMcpServer(accessToken: string): McpServer {
       inputSchema: SourceIngestInputSchema.shape,
     },
     async ({ body }) => {
-      const result = await client.source.ingest.mutate({ body });
-      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      try {
+        return toolResult(await client.source.ingest.mutate({ body }));
+      } catch (error) {
+        return toolError(error);
+      }
     },
   );
 
@@ -52,11 +83,16 @@ export function createMcpServer(accessToken: string): McpServer {
       title: "다이제스트 꺼내기",
       description:
         "질의와 뜻이 가까운 다이제스트를 찾아 그대로 돌려준다. 다이제스트를 해석하거나 요약하지 않는다 — 그건 이 도구를 부르는 쪽의 몫이다.",
-      inputSchema: DigestSearchInputSchema.shape,
+      // limit은 tRPC 스키마엔 있지만(하니스·디버깅용) 도구에는 안 연다 — 호출마다
+      // 개수가 달라지면 "결과 몇 개가 쓸모 있었나"를 호출끼리 비교할 근거가 없어진다.
+      inputSchema: { query: DigestSearchInputSchema.shape.query },
     },
-    async ({ query, limit }) => {
-      const result = await client.digest.search.query({ query, limit });
-      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    async ({ query }) => {
+      try {
+        return toolResult(await client.digest.search.query({ query }));
+      } catch (error) {
+        return toolError(error);
+      }
     },
   );
 
@@ -69,8 +105,11 @@ export function createMcpServer(accessToken: string): McpServer {
       inputSchema: SourceActionInputSchema.shape,
     },
     async ({ sourceId }) => {
-      const result = await client.source.get.query({ sourceId });
-      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      try {
+        return toolResult(await client.source.get.query({ sourceId }));
+      } catch (error) {
+        return toolError(error);
+      }
     },
   );
 

@@ -28,6 +28,7 @@ export const sourceRouter = router({
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Source not found.",
+            cause: error,
           });
         }
         throw error;
@@ -58,6 +59,7 @@ export const sourceRouter = router({
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Source not found.",
+            cause: error,
           });
         }
         throw error;
