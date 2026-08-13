@@ -39,6 +39,14 @@ function main(): void {
 
   // stateless: 요청마다 새 transport/server를 연결해 요청 ID 충돌을 막는다.
   app.post("/mcp", bearerAuth, async (req, res) => {
+    // bearerAuth를 통과했으면 req.auth.token은 항상 있다 — 없으면 미들웨어가
+    // 먼저 401로 끊었을 것이다.
+    const accessToken = req.auth?.token;
+    if (!accessToken) {
+      res.status(401).json({ error: "Missing access token" });
+      return;
+    }
+
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
@@ -46,7 +54,7 @@ function main(): void {
     res.on("close", () => {
       void transport.close();
     });
-    await createMcpServer().connect(transport);
+    await createMcpServer(accessToken).connect(transport);
     await transport.handleRequest(req, res, req.body);
   });
 

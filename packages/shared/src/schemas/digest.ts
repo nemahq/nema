@@ -98,3 +98,21 @@ export const DigestSchema = z.discriminatedUnion("type", [
 ]);
 
 export type Digest = z.infer<typeof DigestSchema>;
+
+// 꺼내기 입력 — 뜻으로 찾는 질의 하나와 반환 개수 상한.
+export const DIGEST_SEARCH_DEFAULT_LIMIT = 10;
+export const DIGEST_SEARCH_MAX_LIMIT = 50;
+
+export const DigestSearchInputSchema = z.object({
+  query: z.string().trim().min(1),
+  limit: z.number().int().positive().max(DIGEST_SEARCH_MAX_LIMIT).optional(),
+});
+export type DigestSearchInput = z.infer<typeof DigestSearchInputSchema>;
+
+// Digest에 소속 원문 id와 벡터 유사도 점수를 얹은 모양 — 꺼내기 응답 하나당 항목.
+// 원문은 안 싣는다. 필요하면 sourceId로 source.get을 따로 부른다.
+export const DigestSearchResultSchema = z.intersection(
+  DigestSchema,
+  z.object({ sourceId: z.string().uuid(), score: z.number() }),
+);
+export type DigestSearchResult = z.infer<typeof DigestSearchResultSchema>;
