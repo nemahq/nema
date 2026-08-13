@@ -41,6 +41,23 @@
     "unknown_error": "An unknown error occurred."
   },
   "digest": {
+    "delete_confirm_description": "It disappears from the list and search, and cannot be restored from the app.",
+    "delete_confirm_title": "Delete this digest?",
+    "field_alternatives": "Alternatives",
+    "field_assumption": "Hypothesis",
+    "field_background": "Background",
+    "field_branches": "Options",
+    "field_choice": "Choice",
+    "field_concept": "Concept",
+    "field_evidence": "Evidence",
+    "field_finding": "Finding",
+    "field_impact": "Impact",
+    "field_question": "Question",
+    "field_reason": "Reason",
+    "field_resolution_condition": "Confirmation condition",
+    "field_situation": "Situation",
+    "field_tradeoff": "Trade-offs",
+    "field_verification_condition": "Verification condition",
     "list_empty": "Digests appear here once you save something.",
     "nav_label": "Digests",
     "type_assumption": "Assumption",
@@ -104,6 +121,7 @@
   "source": {
     "delete_confirm_description": "Deleting this source also removes any digests made from it, and can't be undone.",
     "delete_confirm_title": "Delete this source?",
+    "open_detail_label": "View source",
     "summary_empty": "No summary yet."
   },
   "workspace": {
