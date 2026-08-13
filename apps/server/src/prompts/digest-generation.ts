@@ -65,10 +65,12 @@ Each digest captures ONE judgment, grouped by type into five separate lists.
 - "decisions": something was decided.
   choice (what was decided) is required.
   situation (what had to be decided), reason (why), tradeoff (what was accepted
-  as a cost), alternatives (considered but rejected) are optional.
+  as a cost), alternatives (considered but rejected, each optionally carrying the
+  rejectionReason the note gives for passing it over) are optional.
 - "pendings": something is not yet decided.
   question (what remains undecided) is required.
-  background (why this question arose), branches (candidate directions),
+  background (why this question arose), branches (candidate directions, each
+  optionally carrying the argument the note makes for or against that direction),
   resolutionCondition (what would settle it) are optional.
 - "learnings": something was found out.
   finding (what was confirmed) is required.
@@ -146,8 +148,12 @@ happened is an assumption even if nothing else in the note depends on it yet.
 
 8. Fill only what the note says — including the required field. Never invent,
    never pad. When the note does not state an optional field (a reason, a
-   tradeoff, evidence), set it to null. Cleaning up wording for readability is
-   fine; changing what it claims is not. Five specific traps: (a) do not
+   tradeoff, evidence), set it to null. This reaches inside list items too: an
+   option being on the page is not itself a reason to produce something to sit
+   beside it, so when the note raises an option and says nothing about it, the
+   field next to that option is null and the option stands on its own. Cleaning
+   up wording for readability is fine; changing what it claims is not. Five
+   specific traps: (a) do not
    raise the note's own confidence — if the note hedges ("might", "maybe", "일
    수도"), keep that hedge instead of writing it as settled; (b) do not add
    evaluative words the note itself didn't use ("effective", "valid",
@@ -163,7 +169,9 @@ happened is an assumption even if nothing else in the note depends on it yet.
    so a counter-argument someone made and lost is an alternative, not a
    discard. What is not an alternative: an option you inferred rather than
    one the note raises — including "keep doing what we were already doing",
-   unless the note itself puts staying put on the table; (e) "evidence"
+   unless the note itself puts staying put on the table. Its
+   "rejectionReason" is the ground the note itself gives for passing that
+   option over, never your own account of why it lost; (e) "evidence"
    only exists when the note shows a real fact backing up the finding —
    restating the finding is not evidence for it. When none of (c)/(d)/(e)
    apply, leave the field null rather than filling it with something
@@ -195,7 +203,14 @@ Within each array, order items by where their judgment first appears in the note
   "ideas":       [{ "title", "concept", "background", "branches" }],
   "assumptions": [{ "title", "assumption", "evidence", "impact", "verificationCondition" }] }
 
-tradeoff, alternatives, branches are arrays of strings; the rest are strings.`;
+tradeoff and the ideas' branches are arrays of strings; the rest are strings,
+except these two, which are arrays of objects:
+
+  decisions' alternatives  [{ "option", "rejectionReason" }]
+  pendings' branches       [{ "option", "argument" }]
+
+"option" is the name of the path as the note puts it, and is always present.
+The field beside it is null when the note doesn't state it.`;
 }
 
 export function buildDigestGenerationMessage(body: string): string {
@@ -211,14 +226,28 @@ export const DecisionSchema = z.object({
   situation: z.string().trim().nullable(),
   reason: z.string().trim().nullable(),
   tradeoff: z.array(z.string()).nullable(),
-  alternatives: z.array(z.string()).nullable(),
+  alternatives: z
+    .array(
+      z.object({
+        option: z.string().trim().min(1),
+        rejectionReason: z.string().trim().nullable(),
+      }),
+    )
+    .nullable(),
 });
 
 export const PendingSchema = z.object({
   title: z.string().trim().min(1),
   question: z.string().trim().min(1),
   background: z.string().trim().nullable(),
-  branches: z.array(z.string()).nullable(),
+  branches: z
+    .array(
+      z.object({
+        option: z.string().trim().min(1),
+        argument: z.string().trim().nullable(),
+      }),
+    )
+    .nullable(),
   resolutionCondition: z.string().trim().nullable(),
 });
 
@@ -291,7 +320,9 @@ export function flattenGeneratedDigests(
     for (const generatedItem of generated[arrayKey]) {
       const { title, ...rest } = generatedItem;
       const candidate = Object.fromEntries(
-        Object.entries(rest).filter(([, value]) => !isEmpty(value)),
+        Object.entries(rest)
+          .filter(([, value]) => !isEmpty(value))
+          .map(([key, value]) => [key, compactArrayEntries(value)]),
       );
       result.push(toGeneratedDigestItem({ type, title, candidate }));
     }
@@ -342,6 +373,21 @@ function toGeneratedDigestItem(args: {
         body: DIGEST_BODY_SCHEMAS_BY_TYPE.assumption.parse(candidate),
       };
   }
+}
+
+// 갈래·대안은 배열 안이 객체다 — 바깥 칸만 걸러내면 안쪽 null이 그대로 남아
+// body 스키마(빈 칸은 통째로 뺀다)의 parse에서 터진다.
+function compactArrayEntries(value: unknown): unknown {
+  if (!Array.isArray(value)) {
+    return value;
+  }
+  return value.map((entry) =>
+    entry !== null && typeof entry === "object"
+      ? Object.fromEntries(
+          Object.entries(entry).filter(([, inner]) => !isEmpty(inner)),
+        )
+      : entry,
+  );
 }
 
 function isEmpty(value: unknown): boolean {
