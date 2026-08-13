@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 
 import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
-import { useMainScrollRestoration } from "@web/features/digest/hooks/useMainScrollRestoration";
 import { useSourceListWithDigestsSuspenseQuery } from "@web/features/digest/hooks/useSourceListWithDigestsQuery";
+import { useMainScrollRestoration } from "@web/hooks/useMainScrollRestoration";
 
 import { DigestListEmptyState } from "./DigestListEmptyState";
 import { SourceDigestGroup } from "./SourceDigestGroup";
