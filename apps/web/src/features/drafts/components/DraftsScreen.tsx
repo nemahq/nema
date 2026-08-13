@@ -1,5 +1,5 @@
-import { SourceDetailPanel } from "@web/components/source/SourceDetailPanel";
 import { SidePanel } from "@web/components/ui/SidePanel";
+import { SourceDetailPanel } from "@web/features/source";
 
 import { DraftList } from "./DraftList";
 import { DraftsNavigationBar } from "./DraftsNavigationBar";

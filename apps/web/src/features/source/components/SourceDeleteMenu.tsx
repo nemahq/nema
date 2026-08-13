@@ -15,9 +15,8 @@ import { MoreHorizontal } from "@nema-io/weave/icons";
 
 import { Dialog } from "@web/components/ui/Dialog";
 import { DropdownMenu } from "@web/components/ui/DropdownMenu";
+import { useDeleteSource } from "@web/features/source/hooks/useDeleteSource";
 import { useTranslation } from "@web/lib/tolgee";
-
-import { useDeleteSource } from "./hooks/useDeleteSource";
 
 interface SourceDeleteMenuProps {
   sourceId: string;

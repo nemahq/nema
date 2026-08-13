@@ -11,12 +11,12 @@ import { X } from "@nema-io/weave/icons";
 
 import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
+import { useSourceSuspenseQuery } from "@web/features/source/hooks/useSourceQuery";
+import { sourceNamePreview } from "@web/features/source/sourceNamePreview";
 import { useTranslation } from "@web/lib/tolgee";
 
-import { useSourceSuspenseQuery } from "./hooks/useSourceQuery";
 import { SourceBodyView } from "./SourceBodyView";
 import { SourceDeleteMenu } from "./SourceDeleteMenu";
-import { sourceNamePreview } from "./sourceNamePreview";
 
 interface SourceDetailPanelProps {
   sourceId: string;
@@ -25,16 +25,6 @@ interface SourceDetailPanelProps {
   // (예: 초안 화면에 나중에 필요해질 표시). 기본은 비어 있다 — 이 컴포넌트 안에는
   // 특정 소비처 전용 로직을 두지 않는다.
   headerActions?: ReactNode;
-}
-
-// 원문 상세 — SidePanel 안에 얹는 공용 콘텐츠. 초안 화면과, 후속으로 붙는 다이제스트
-// 목록 화면이 같은 컴포넌트로 원문 상세를 연다.
-export function SourceDetailPanel(props: SourceDetailPanelProps) {
-  return (
-    <Suspense fallback={<LoadingWatermark />}>
-      <SourceDetailPanelContent {...props} />
-    </Suspense>
-  );
 }
 
 function SourceDetailPanelContent({
@@ -87,7 +77,17 @@ function SourceDetailPanelContent({
         </Text>
       </div>
 
-      <SourceBodyView value={source.body} />
+      <SourceBodyView body={source.body} />
     </div>
+  );
+}
+
+// 원문 상세 — SidePanel 안에 얹는 공용 콘텐츠. 초안 화면과, 후속으로 붙는 다이제스트
+// 목록 화면이 같은 컴포넌트로 원문 상세를 연다.
+export function SourceDetailPanel(props: SourceDetailPanelProps) {
+  return (
+    <Suspense fallback={<LoadingWatermark />}>
+      <SourceDetailPanelContent {...props} />
+    </Suspense>
   );
 }
