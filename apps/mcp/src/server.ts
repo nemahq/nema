@@ -108,9 +108,9 @@ export function createMcpServer(accessToken: string): McpServer {
   server.registerTool(
     "get_relations",
     {
-      title: "관계 따라가기",
+      title: "연결 따라가기",
       description:
-        "이 다이제스트가 무엇을 지지하거나 약화하는지, 또 무엇에게 지지받거나 약화되는지 가져온다. 사용자가 어떤 판단의 근거나 그 판단이 흔들리는 이유를 물을 때 쓴다. 상대 다이제스트는 제목까지만 온다 — 내용이 필요하면 get_digest로 간다.",
+        "이 다이제스트가 무엇을 지지하거나 약화하는지, 또 무엇에게 지지받거나 약화되는지 연결을 가져온다. 사용자가 어떤 판단의 근거나 그 판단이 흔들리는 이유를 물을 때 쓴다. 상대 다이제스트는 제목까지만 온다 — 내용이 필요하면 get_digest로 간다.",
       inputSchema: DigestActionInputSchema.shape,
     },
     async ({ digestId }) => {
@@ -127,7 +127,7 @@ export function createMcpServer(accessToken: string): McpServer {
     {
       title: "다이제스트 보기",
       description:
-        "digestId로 다이제스트 하나를 전부 가져온다. 꺼내기나 관계에서 제목만 받은 것을 펼쳐 볼 때 쓴다.",
+        "digestId로 다이제스트 하나를 전부 가져온다. 꺼내기나 연결에서 제목만 받은 것을 펼쳐 볼 때 쓴다.",
       inputSchema: DigestActionInputSchema.shape,
     },
     async ({ digestId }) => {

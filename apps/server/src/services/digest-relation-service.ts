@@ -57,6 +57,10 @@ const CANDIDATE_MIN_SCORE = 0.2;
 // 그때 페이로드 필터로 옮긴다.
 const NEIGHBOR_FETCH_LIMIT = 30;
 
+// 이번 배치에 없는 같은 원문 다이제스트의 순서 — 던지기 이전부터 있던 것이라
+// 무엇보다 앞선다.
+const ORDER_BEFORE_BATCH = -1;
+
 interface RelationRow {
   from_digest_id: string;
   to_digest_id: string;
@@ -287,8 +291,7 @@ async function findCandidates(args: {
 
   // 같은 원문 안은 자기보다 앞선 것만 본다 — 배열 순서를 순서로 쓴다. 원문 등장
   // 순서와는 다르지만(유형별로 묶여 나온다) 같은 쌍을 두 번 판정하지 않기 위한
-  // 것이라 전순서이기만 하면 된다. 이 배열에 없는 같은 원문 다이제스트는 이번
-  // 던지기 이전부터 있던 것이라 앞선 것으로 본다.
+  // 것이라 전순서이기만 하면 된다.
   const orderInBatch = new Map(digests.map((row, order) => [row.id, order]));
   const includeSameSource = judgment.sameSourceScope === "earlierOnly";
 
@@ -297,7 +300,10 @@ async function findCandidates(args: {
       if (row.source_id !== sourceId) {
         return true;
       }
-      return includeSameSource && (orderInBatch.get(row.id) ?? -1) < index;
+      return (
+        includeSameSource &&
+        (orderInBatch.get(row.id) ?? ORDER_BEFORE_BATCH) < index
+      );
     })
     .map((row) => ({
       digest: toDigestDetail(row),
