@@ -12,7 +12,13 @@ import {
   logSearch,
 } from "@server/services/mcp-tool-call-log-service";
 
+// 이 스위트는 Voyage·Qdrant를 안 타지만 loadEnv()는 스키마 전체를 검증한다 — CI엔
+// 그 키들이 없어 더미로 채운다(로컬은 .env.secret의 실제 값이 먼저 있으면 dotenv가
+// 안 덮어써 그대로 쓰인다).
 process.env.APP_ENV ??= "local";
+process.env.VOYAGE_API_KEY ??= "test-placeholder";
+process.env.QDRANT_URL ??= "http://localhost:0";
+process.env.QDRANT_API_KEY ??= "test-placeholder";
 loadEnv(join(fileURLToPath(import.meta.url), "..", "..", ".."));
 
 const SETUP_TIMEOUT_MS = 30_000;

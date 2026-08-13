@@ -28,7 +28,14 @@ import {
 // 이 스위트도 서버 부트스트랩(index.ts)과 같은 초기화가 필요해졌다 — 안 하면
 // getEnv()가 던지고, mcp-tool-call-log-service가 그 실패를 삼켜 조용히 로그만
 // 안 남는 채로 테스트는 통과해버린다.
+// loadEnv()는 스키마 전체(임베딩·벡터 키 포함)를 검증하는데, 이 스위트는
+// digest-index-service를 통째로 mock해 Voyage·Qdrant를 실제로 안 타므로 그 값은
+// 채워지기만 하면 된다 — CI에는 이 키들이 없어 더미로 대신한다(로컬은 실제 값이
+// .env.secret에서 먼저 로드되므로 ??=가 덮어쓰지 않는다).
 process.env.APP_ENV ??= "local";
+process.env.VOYAGE_API_KEY ??= "test-placeholder";
+process.env.QDRANT_URL ??= "http://localhost:0";
+process.env.QDRANT_API_KEY ??= "test-placeholder";
 loadEnv(join(fileURLToPath(import.meta.url), "..", "..", ".."));
 
 // RLS(owner-only)는 실제 소유자 판정을 Postgres 정책 평가에 맡기는데, 그건 실제
