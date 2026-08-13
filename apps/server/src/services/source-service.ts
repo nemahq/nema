@@ -184,6 +184,11 @@ function buildSourceName(body: string): string {
   return `${trimmed.slice(0, SOURCE_NAME_PREVIEW_LENGTH).trimEnd()}…`;
 }
 
+// 두 목록 모두 아직 진짜 페이지네이션이 없다 — 지금은 이 값 하나로 폭주만
+// 막는다(legacy의 LIMIT 50과 같은 취지). 실사용 규모가 커지면 커서 기반
+// 페이지네이션으로 바꿔야 한다.
+const SOURCE_LIST_SAFETY_LIMIT = 500;
+
 export async function listSourcesWithDigests(args: {
   supabase: TypedSupabaseClient;
 }): Promise<SourceWithDigests[]> {
@@ -192,16 +197,22 @@ export async function listSourcesWithDigests(args: {
   // digests!inner로 다이제스트 행이 하나도 없는 원문을 걸러낸다 — 그건
   // listDraftSources(초안 화면) 몫이다. 가려진 행도 "행이 있다"에는 포함되므로
   // 다 가려도 원문 자체는 목록에 남는다(원문을 지울 진입점을 유지해야 해서).
+  // digestion_status='completed' 조건은 listDraftSources와 겹치지 않게 막는
+  // 안전장치다 — saveDigestsAndIndex가 digest 행을 커밋한 뒤 상태를 completed로
+  // 바꾸는 마지막 UPDATE만 실패하면(드물지만) pending인데 digest 행은 있는 원문이
+  // 생기고, 이 조건이 없으면 그 원문이 두 목록에 동시에 뜬다.
   const { data, error } = await supabase
     .from("sources")
     .select(
       "id, body, created_at, digests!inner(id, type, title, extraction_order, hidden_at)",
     )
+    .eq("digestion_status", "completed")
     .order("created_at", { ascending: false })
     .order("extraction_order", {
       referencedTable: "digests",
       ascending: true,
-    });
+    })
+    .limit(SOURCE_LIST_SAFETY_LIMIT);
   throwIfSupabaseError(error);
 
   return (data ?? []).map(toSourceWithDigests);
@@ -215,7 +226,8 @@ export async function listDraftSources(args: {
   const { data, error } = await supabase
     .from("sources")
     .select("id, body, created_at, digestion_status, digests(id)")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(SOURCE_LIST_SAFETY_LIMIT);
   throwIfSupabaseError(error);
 
   // pending은 처리 중이거나 끝내 완료되지 못한 원문(LLM 호출 실패 등)이고,

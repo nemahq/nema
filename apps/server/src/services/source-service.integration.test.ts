@@ -712,12 +712,12 @@ describe("listSourcesWithDigests (RLS)", () => {
   });
 
   it(
-    "다이제스트가 있는 원문만 담고, 원문 안은 추출 순서로 정렬한다",
+    "다이제스트가 있는 원문만 담는다",
     async () => {
       if (!localDbAvailable) {
         return;
       }
-      mockGenerated = twoDecisions(["목록 정렬 A-1", "목록 정렬 A-2"]);
+      mockGenerated = oneDecision("목록 필터 테스트 결정");
       const { sourceId: withDigests } = await ingestSource({
         supabase: userA.supabase,
         userId: userA.id,
@@ -734,15 +734,59 @@ describe("listSourcesWithDigests (RLS)", () => {
         supabase: userA.supabase,
       });
 
-      const entry = result.find((source) => source.sourceId === withDigests);
-      expect(entry?.digests.map((digest) => digest.title)).toEqual([
-        "목록 정렬 A-1",
-        "목록 정렬 A-2",
-      ]);
+      expect(result.some((source) => source.sourceId === withDigests)).toBe(
+        true,
+      );
       // 행이 아예 0인 원문은 이 목록의 대상이 아니다 — listDraftSources 몫이다.
       expect(result.some((source) => source.sourceId === withoutDigests)).toBe(
         false,
       );
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // 삽입 순서를 그대로 기대값으로 쓰면 order() 절이 통째로 빠져도(우연한 반환
+  // 순서가 삽입 순서와 같아) 테스트가 계속 통과한다 — extraction_order를 삽입
+  // 순서와 반대로 뒤집어서, 쿼리가 실제로 extraction_order를 보고 정렬하는지를
+  // 검증한다.
+  it(
+    "원문 안 다이제스트를 extraction_order 기준으로 정렬한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = twoDecisions(["목록 정렬 A-1", "목록 정렬 A-2"]);
+      const { sourceId, digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "목록 정렬 역전 테스트 원문",
+      });
+      const [first, second] = digests;
+
+      // 유니크 제약(source_id, extraction_order) 때문에 곧바로 맞바꿀 수 없어
+      // 임시값을 거쳐 순서를 뒤집는다: first(0)↔second(1) → second=0, first=1.
+      await admin
+        .from("digests")
+        .update({ extraction_order: -1 })
+        .eq("id", first?.id ?? "");
+      await admin
+        .from("digests")
+        .update({ extraction_order: 0 })
+        .eq("id", second?.id ?? "");
+      await admin
+        .from("digests")
+        .update({ extraction_order: 1 })
+        .eq("id", first?.id ?? "");
+
+      const result = await listSourcesWithDigests({
+        supabase: userA.supabase,
+      });
+
+      const entry = result.find((source) => source.sourceId === sourceId);
+      expect(entry?.digests.map((digest) => digest.title)).toEqual([
+        "목록 정렬 A-2",
+        "목록 정렬 A-1",
+      ]);
     },
     TEST_TIMEOUT_MS,
   );
@@ -795,6 +839,43 @@ describe("listSourcesWithDigests (RLS)", () => {
       expect(asOther.some((source) => source.sourceId === sourceId)).toBe(
         false,
       );
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // 이 테스트가 지키는 계약: saveDigestsAndIndex는 digest 행을 커밋한 뒤 맨
+  // 마지막에 digestion_status를 completed로 바꾼다 — 그 마지막 UPDATE만
+  // 실패하면(드물지만) pending인데 digest 행은 있는 원문이 생긴다. 정상 흐름으론
+  // 재현이 안 돼 admin으로 그 상태를 직접 만든다. digestion_status='completed'
+  // 조건이 없으면 이 원문이 두 목록에 동시에 뜬다.
+  it(
+    "digestion_status 갱신만 실패해 pending인데 digest 행이 있는 원문은 초안에만 뜬다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { data: source, error: sourceError } = await admin
+        .from("sources")
+        .insert({ user_id: userA.id, body: "상태 갱신 실패 재현 원문" })
+        .select("id")
+        .single();
+      expect(sourceError).toBeNull();
+      const { error: digestError } = await admin.from("digests").insert({
+        source_id: source?.id ?? "",
+        type: "decision",
+        title: "상태 갱신 실패 재현 결정",
+        body: { choice: "fixture" },
+        extraction_order: 0,
+      });
+      expect(digestError).toBeNull();
+
+      const withDigests = await listSourcesWithDigests({
+        supabase: userA.supabase,
+      });
+      const drafts = await listDraftSources({ supabase: userA.supabase });
+
+      expect(withDigests.some((s) => s.sourceId === source?.id)).toBe(false);
+      expect(drafts.some((d) => d.sourceId === source?.id)).toBe(true);
     },
     TEST_TIMEOUT_MS,
   );
@@ -872,6 +953,39 @@ describe("listDraftSources (RLS)", () => {
 
       const asOther = await listDraftSources({ supabase: userA.supabase });
       expect(asOther.some((draft) => draft.sourceId === sourceId)).toBe(false);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "원문 이름은 60자까지는 그대로, 넘으면 60자로 자르고 말줄임표를 붙인다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = noDigests();
+      const exactly60 = "x".repeat(60);
+      const over60 = "x".repeat(61);
+
+      const { sourceId: exactId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: exactly60,
+      });
+      const { sourceId: overId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: over60,
+      });
+
+      const drafts = await listDraftSources({ supabase: userA.supabase });
+
+      expect(drafts.find((draft) => draft.sourceId === exactId)?.name).toBe(
+        exactly60,
+      );
+      expect(drafts.find((draft) => draft.sourceId === overId)?.name).toBe(
+        `${"x".repeat(60)}…`,
+      );
     },
     TEST_TIMEOUT_MS,
   );

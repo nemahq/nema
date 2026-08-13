@@ -73,7 +73,9 @@ export async function deleteDigest(args: {
   // RLS(owner-only, source_id 조인)라 남의/없는 digestId는 0행으로 걸린다.
   // 이미 가려진 digestId를 다시 불러도 에러가 아니다(source.delete와 같은 관행) —
   // Postgres 행은 남기고 표시만 남긴다(가림), 몇 개를 걷어냈는지가 정리 품질
-  // 지표로 남아야 해서다.
+  // 지표로 남아야 해서다. 조건 없이 갱신하므로 재호출하면 hidden_at이 최초
+  // 가림 시각이 아니라 마지막 호출 시각으로 덮어써진다 — "언제 걷어냈나"는
+  // 지금 지표가 요구하지 않아 의도적으로 감수한다.
   const { data, error } = await supabase
     .from("digests")
     .update({ hidden_at: new Date().toISOString() })

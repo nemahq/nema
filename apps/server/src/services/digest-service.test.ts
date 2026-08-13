@@ -24,12 +24,13 @@ vi.mock("@server/services/mcp-tool-call-log-service", () => ({
 
 import { searchDigests } from "@server/services/digest-service";
 
+const mockIs = vi.fn();
+
 function fakeSupabase(rows: unknown[]): TypedSupabaseClient {
+  mockIs.mockReset().mockResolvedValue({ data: rows, error: null });
   const from = vi.fn().mockReturnValue({
     select: vi.fn().mockReturnValue({
-      in: vi.fn().mockReturnValue({
-        is: vi.fn().mockResolvedValue({ data: rows, error: null }),
-      }),
+      in: vi.fn().mockReturnValue({ is: mockIs }),
     }),
   });
   return { from } as unknown as TypedSupabaseClient;
@@ -101,6 +102,25 @@ describe("searchDigests", () => {
         ],
       },
     });
+  });
+
+  // 이 테스트가 지키는 계약: 가려진 다이제스트는 벡터가 실제 삭제되니 원래는 안
+  // 걸리지만, deleteDigestVectors가 실패해도 던지지 않고 경고만 남기는 구조라
+  // 고아 벡터가 남을 수 있다 — 그 벡터가 검색 결과로 돌아오지 않도록 Postgres
+  // 쪽에서도 반드시 걸러야 한다. .is()가 통째로 지워지거나 다른 컬럼/값으로
+  // 바뀌어도 이 단언이 잡는다(체인 모양만 우연히 맞는 것과 다르게, 호출 인자
+  // 자체를 검증한다).
+  it("가려진 다이제스트를 DB에서 뺄 때 hidden_at IS NULL 조건을 명시적으로 건다", async () => {
+    mockSearch.mockResolvedValue([{ digestId: "any-id", score: 0.5 }]);
+
+    await searchDigests({
+      supabase: fakeSupabase([]),
+      userId: "user-1",
+      query: "질의",
+      limit: 10,
+    });
+
+    expect(mockIs).toHaveBeenCalledWith("hidden_at", null);
   });
 
   // digest-service.ts의 로그 호출은 hits가 아니라 results(= DB round-trip 뒤
