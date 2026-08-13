@@ -38,26 +38,35 @@ export type Database = {
         Row: {
           body: Json;
           created_at: string;
+          extraction_order: number;
+          hidden_at: string | null;
           id: string;
           source_id: string;
           title: string;
           type: Database["public"]["Enums"]["digest_type"];
+          updated_at: string;
         };
         Insert: {
           body: Json;
           created_at?: string;
+          extraction_order: number;
+          hidden_at?: string | null;
           id?: string;
           source_id: string;
           title: string;
           type: Database["public"]["Enums"]["digest_type"];
+          updated_at?: string;
         };
         Update: {
           body?: Json;
           created_at?: string;
+          extraction_order?: number;
+          hidden_at?: string | null;
           id?: string;
           source_id?: string;
           title?: string;
           type?: Database["public"]["Enums"]["digest_type"];
+          updated_at?: string;
         };
         Relationships: [
           {

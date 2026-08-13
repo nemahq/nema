@@ -2,10 +2,17 @@ import type {
   ContentLanguage,
   Digest,
   SourceDeleteResult,
+  SourceDraft,
   SourceGetResult,
   SourceIngestResult,
+  SourceWithDigests,
 } from "@nema-io/shared";
-import { DigestSchema, SourceGetResultSchema } from "@nema-io/shared";
+import {
+  DigestSchema,
+  SourceDraftSchema,
+  SourceGetResultSchema,
+  SourceWithDigestsSchema,
+} from "@nema-io/shared";
 
 import { getDigestGenerationProvider } from "@server/infra/llm/provider";
 import type { Database } from "@server/infra/supabase/database.types";
@@ -23,6 +30,7 @@ import {
 } from "@server/services/digest-index-service";
 import { logGetSource } from "@server/services/mcp-tool-call-log-service";
 import { getProfile } from "@server/services/profile-service";
+import type { RequestOrigin } from "@server/trpc";
 
 // DB 컬럼 기본값(profiles.content_language)과 같은 값으로 떨어뜨린다. 행이 없는
 // 상태는 로그인은 했지만 온보딩 모달을 아직 못 끝낸 아주 좁은 틈뿐이라(모달이
@@ -137,8 +145,9 @@ export async function getSource(args: {
   supabase: TypedSupabaseClient;
   userId: string;
   sourceId: string;
+  origin: RequestOrigin;
 }): Promise<SourceGetResult> {
-  const { supabase, userId, sourceId } = args;
+  const { supabase, userId, sourceId, origin } = args;
 
   // RLS(owner-only)라 남의/없는 sourceId는 여기서 not-found로 걸린다.
   const { data, error } = await supabase
@@ -148,13 +157,120 @@ export async function getSource(args: {
     .single();
   throwIfSupabaseError(error);
 
+  // 이 로그는 "정리본으로 부족해 원문을 봤다"를 세는 MCP 전용 품질 지표다 —
+  // 원문 상세 화면에서 사람이 직접 열어본 것까지 섞이면 지표 의미가 깨진다.
   // 로그 저장은 응답을 기다리게 하지 않는다 — 실패 격리뿐 아니라 지연도 격리한다.
-  void logGetSource({ userId, detail: { sourceId } });
+  if (origin === "mcp") {
+    void logGetSource({ userId, detail: { sourceId } });
+  }
 
   return SourceGetResultSchema.parse({
     sourceId: data.id,
     body: data.body,
     createdAt: data.created_at,
+  });
+}
+
+// 원문 이름 — 제목 칸이 아직 없어 본문 앞부분을 대신 쓴다(제목·요약 추출은 별도
+// 작업이 만든다). listSourcesWithDigests·listDraftSources가 함께 쓴다 — 제목 칸이
+// 생기면 갈아끼울 자리가 여기 하나여야 한다.
+const SOURCE_NAME_PREVIEW_LENGTH = 60;
+
+function buildSourceName(body: string): string {
+  const trimmed = body.trim();
+  if (trimmed.length <= SOURCE_NAME_PREVIEW_LENGTH) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, SOURCE_NAME_PREVIEW_LENGTH).trimEnd()}…`;
+}
+
+export async function listSourcesWithDigests(args: {
+  supabase: TypedSupabaseClient;
+}): Promise<SourceWithDigests[]> {
+  const { supabase } = args;
+
+  // digests!inner로 다이제스트 행이 하나도 없는 원문을 걸러낸다 — 그건
+  // listDraftSources(초안 화면) 몫이다. 가려진 행도 "행이 있다"에는 포함되므로
+  // 다 가려도 원문 자체는 목록에 남는다(원문을 지울 진입점을 유지해야 해서).
+  const { data, error } = await supabase
+    .from("sources")
+    .select(
+      "id, body, created_at, digests!inner(id, type, title, extraction_order, hidden_at)",
+    )
+    .order("created_at", { ascending: false })
+    .order("extraction_order", {
+      referencedTable: "digests",
+      ascending: true,
+    });
+  throwIfSupabaseError(error);
+
+  return (data ?? []).map(toSourceWithDigests);
+}
+
+export async function listDraftSources(args: {
+  supabase: TypedSupabaseClient;
+}): Promise<SourceDraft[]> {
+  const { supabase } = args;
+
+  const { data, error } = await supabase
+    .from("sources")
+    .select("id, body, created_at, digestion_status, digests(id)")
+    .order("created_at", { ascending: false });
+  throwIfSupabaseError(error);
+
+  // pending은 처리 중이거나 끝내 완료되지 못한 원문(LLM 호출 실패 등)이고,
+  // completed인데 digests가 0인 건 완료는 됐지만 정리 결과가 하나도 안 나온
+  // 경우다 — 둘 다 "초안"이라 함께 묶는다.
+  return (data ?? [])
+    .filter(
+      (source) =>
+        source.digestion_status === "pending" ||
+        (source.digestion_status === "completed" &&
+          source.digests.length === 0),
+    )
+    .map(toSourceDraft);
+}
+
+type SourceWithDigestsRow = Pick<
+  Database["public"]["Tables"]["sources"]["Row"],
+  "id" | "body" | "created_at"
+> & {
+  digests: Array<
+    Pick<
+      Database["public"]["Tables"]["digests"]["Row"],
+      "id" | "type" | "title" | "hidden_at"
+    >
+  >;
+};
+
+function toSourceWithDigests(row: SourceWithDigestsRow): SourceWithDigests {
+  return SourceWithDigestsSchema.parse({
+    sourceId: row.id,
+    name: buildSourceName(row.body),
+    createdAt: row.created_at,
+    digests: row.digests
+      .filter((digest) => digest.hidden_at === null)
+      .map((digest) => ({
+        id: digest.id,
+        type: digest.type,
+        title: digest.title,
+      })),
+  });
+}
+
+type SourceDraftRow = Pick<
+  Database["public"]["Tables"]["sources"]["Row"],
+  "id" | "body" | "created_at" | "digestion_status"
+> & {
+  digests: Array<Pick<Database["public"]["Tables"]["digests"]["Row"], "id">>;
+};
+
+function toSourceDraft(row: SourceDraftRow): SourceDraft {
+  return SourceDraftSchema.parse({
+    sourceId: row.id,
+    name: buildSourceName(row.body),
+    createdAt: row.created_at,
+    status: row.digestion_status,
   });
 }
 
@@ -243,11 +359,14 @@ async function saveDigests(args: {
   const { data: rows, error } = await supabase
     .from("digests")
     .insert(
-      normalized.map((digest) => ({
+      // LLM 응답 배열의 순서가 곧 원문 안에서의 추출 순서다 — 배열 인덱스를
+      // 그대로 extraction_order에 넣는다.
+      normalized.map((digest, index) => ({
         source_id: sourceId,
         type: digest.type,
         title: digest.title,
         body: digest.body,
+        extraction_order: index,
       })),
     )
     .select("id, type, title, body, created_at");

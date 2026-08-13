@@ -27,7 +27,9 @@ import { searchDigests } from "@server/services/digest-service";
 function fakeSupabase(rows: unknown[]): TypedSupabaseClient {
   const from = vi.fn().mockReturnValue({
     select: vi.fn().mockReturnValue({
-      in: vi.fn().mockResolvedValue({ data: rows, error: null }),
+      in: vi.fn().mockReturnValue({
+        is: vi.fn().mockResolvedValue({ data: rows, error: null }),
+      }),
     }),
   });
   return { from } as unknown as TypedSupabaseClient;

@@ -1,4 +1,4 @@
-import type { DigestSearchResult } from "@nema-io/shared";
+import type { DigestDeleteResult, DigestSearchResult } from "@nema-io/shared";
 import { DigestSearchResultSchema } from "@nema-io/shared";
 
 import { getEmbeddingProvider } from "@server/infra/embedding";
@@ -6,6 +6,7 @@ import type { Database } from "@server/infra/supabase/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase/supabase-error";
 import { getVectorStore } from "@server/infra/vector";
+import { deleteDigestVectors } from "@server/services/digest-index-service";
 import { logSearch } from "@server/services/mcp-tool-call-log-service";
 
 export async function searchDigests(args: {
@@ -27,13 +28,18 @@ export async function searchDigests(args: {
     return [];
   }
 
+  // 벡터는 가림과 함께 실제로 지우니 원래는 안 걸리지만, 벡터 삭제
+  // (deleteDigestVectors)가 실패해도 던지지 않고 경고만 남기는 구조라 고아
+  // 벡터가 생길 수 있다 — 그 벡터가 여기서 걸리면 가려진 다이제스트가 검색
+  // 결과로 돌아간다. 조건을 걸어 막는다.
   const { data: rows, error } = await supabase
     .from("digests")
     .select("id, source_id, type, title, body, created_at")
     .in(
       "id",
       hits.map((hit) => hit.digestId),
-    );
+    )
+    .is("hidden_at", null);
   throwIfSupabaseError(error);
 
   // .in()은 Qdrant가 매긴 점수 순서를 보장하지 않는다 — 다시 정렬해서 되돌린다.
@@ -56,6 +62,31 @@ export async function searchDigests(args: {
     },
   });
   return results;
+}
+
+export async function deleteDigest(args: {
+  supabase: TypedSupabaseClient;
+  digestId: string;
+}): Promise<DigestDeleteResult> {
+  const { supabase, digestId } = args;
+
+  // RLS(owner-only, source_id 조인)라 남의/없는 digestId는 0행으로 걸린다.
+  // 이미 가려진 digestId를 다시 불러도 에러가 아니다(source.delete와 같은 관행) —
+  // Postgres 행은 남기고 표시만 남긴다(가림), 몇 개를 걷어냈는지가 정리 품질
+  // 지표로 남아야 해서다.
+  const { data, error } = await supabase
+    .from("digests")
+    .update({ hidden_at: new Date().toISOString() })
+    .eq("id", digestId)
+    .select("id");
+  throwIfSupabaseError(error);
+
+  const deleted = (data ?? []).length > 0;
+  if (deleted) {
+    await deleteDigestVectors([digestId]);
+  }
+
+  return { success: deleted };
 }
 
 type DigestSearchRow = Pick<
