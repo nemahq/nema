@@ -1,4 +1,4 @@
-import { VECTOR_SPACE_COLLECTION, type VectorSpace } from "./collections";
+import { collectionNameFor, type VectorSpace } from "./collections";
 import { createQdrantClient } from "./qdrant-client";
 import { createQdrantStore } from "./qdrant-store";
 import type { VectorStore } from "./vector-store";
@@ -14,7 +14,7 @@ export function getVectorStore(space: VectorSpace = "digest"): VectorStore {
   }
   let store = stores.get(space);
   if (!store) {
-    store = createQdrantStore(client, VECTOR_SPACE_COLLECTION[space]);
+    store = createQdrantStore(client, collectionNameFor(space));
     stores.set(space, store);
   }
   return store;
