@@ -43,7 +43,7 @@ export function DraftCard({
   }
 
   return (
-    <DraftCardShell onSelect={handleSelect}>
+    <DraftCardShell name={name} onSelect={handleSelect}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
           <Text

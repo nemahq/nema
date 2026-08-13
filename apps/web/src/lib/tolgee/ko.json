@@ -52,9 +52,10 @@
   "draft": {
     "card_open_label": "원문 상세 열기",
     "empty_state": "처리할 원문이 없어요.",
+    "load_error": "초안을 불러오지 못했어요",
     "retry_pending": "다시 시도하는 중...",
     "status_empty": "결과 없음",
-    "status_pending": "정리 안 됨"
+    "status_pending": "정리 전"
   },
   "error": {
     "copy_error": "에러 정보 복사",

@@ -45,6 +45,12 @@ export function isUnauthorizedError(
   );
 }
 
+export function isNotFoundError(
+  error: unknown,
+): error is TRPCClientError<AppRouter> {
+  return error instanceof TRPCClientError && error.data?.code === "NOT_FOUND";
+}
+
 function triggerSignOutRedirect() {
   // /signin에 이미 도착한 뒤 뒤늦게 도착한 요청이 UNAUTHORIZED를 내는
   // 경우, 여기서 또 리다이렉트를 걸면 이미 정상 진입한 로그인 화면 위에

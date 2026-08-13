@@ -52,9 +52,10 @@
   "draft": {
     "card_open_label": "Open source detail",
     "empty_state": "No sources to process.",
+    "load_error": "Couldn't load drafts",
     "retry_pending": "Retrying...",
     "status_empty": "No results",
-    "status_pending": "Not organized"
+    "status_pending": "Not organized yet"
   },
   "error": {
     "copy_error": "Copy error info",

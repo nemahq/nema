@@ -20,12 +20,12 @@ import { useTranslation } from "@web/lib/tolgee";
 
 interface SourceDeleteMenuProps {
   sourceId: string;
-  // 삭제 성공 시 상세 패널을 같이 닫기 위한 훅.
   onDeleted: () => void;
 }
 
 // 미트볼 → 드롭다운 → 확인 다이얼로그. 하드 삭제 + CASCADE라 되돌릴 수 없다 —
-// ReferenceDetailMoreMenu와 같은 모양(reference.archive_action 대신 원문 삭제).
+// legacy의 ReferenceDetailMoreMenu와 같은 모양(reference.archive_action 대신
+// 원문 삭제).
 export function SourceDeleteMenu({
   sourceId,
   onDeleted,

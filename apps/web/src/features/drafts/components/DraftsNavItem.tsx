@@ -8,23 +8,26 @@ import { NavItem } from "@web/components/layout/NavItem";
 import { useSourceDraftListQuery } from "@web/features/drafts/hooks/useSourceDraftListQuery";
 import { useTranslation } from "@web/lib/tolgee";
 
+import {
+  type DraftsNavItemRenderState,
+  nextDraftsNavItemRenderState,
+} from "./draftsNavItemRenderState";
+
 const NAV_ICON_CLASS = "size-4";
 // --duration-slow와 맞춰, 애니메이션이 끝난 뒤에 다음 단계로 넘어가게 한다.
 const TRANSITION_ANIMATION_MS = 300;
-
-type RenderState = "hidden" | "entering" | "visible" | "exiting";
 
 // 대기 중인 초안이 있을 때만 노출 — 다 처리되면 사라진다(Linear의 Drafts와 같은 동작).
 export function DraftsNavItem() {
   const { t } = useTranslation();
   const pathname = useLocation({ select: (location) => location.pathname });
   const draftsQuery = useSourceDraftListQuery();
-  const [renderState, setRenderState] = useState<RenderState>("hidden");
+  const [renderState, setRenderState] =
+    useState<DraftsNavItemRenderState>("hidden");
   // 직전 가시성 — 이펙트 안에서만 갱신(렌더 중 ref 접근 금지 규칙 회피).
   const wasVisibleRef = useRef(false);
-  // 쿼리가 처음 로딩을 끝낸 적 있는지. 이펙트 실행 횟수로 판단하면 안 된다 —
-  // 새로고침 시 응답이 늦게 와서 기존 초안이 뒤늦게 드러나는 걸 "방금 생김"으로
-  // 오인해 entering이 잘못 재생되는 문제가 있었다.
+  // 쿼리가 처음 로딩을 끝낸 적 있는지. 이펙트 실행 횟수로 판단하면 안 된다 — 이유는
+  // nextDraftsNavItemRenderState 참고.
   const hasLoadedOnceRef = useRef(false);
 
   const drafts = draftsQuery.data ?? [];
@@ -36,6 +39,18 @@ export function DraftsNavItem() {
   // 진입점이 눈앞에서 먼저 사라지면 어색하다. 다른 곳으로 이동한 뒤에야 접힌다.
   const isVisible = hasData || pathname === "/drafts";
 
+  function draftsTooltipLabel() {
+    // 조회 실패 상태도 draftCount는 0이라, 구분 없이 두면 정상 0개와 같은
+    // 문구로 보여 눌러볼 이유가 없어 보인다.
+    if (draftsQuery.isError) {
+      return t("draft.load_error");
+    }
+    if (draftCount > 0) {
+      return `${t("workspace.drafts")} · ${draftCount}`;
+    }
+    return t("workspace.drafts");
+  }
+
   useEffect(
     function syncVisibility() {
       const wasVisible = wasVisibleRef.current;
@@ -43,39 +58,27 @@ export function DraftsNavItem() {
       if (!draftsQuery.isLoading) {
         hasLoadedOnceRef.current = true;
       }
+      wasVisibleRef.current = isVisible;
+
+      const { state, animated, settledState } = nextDraftsNavItemRenderState({
+        isVisible,
+        wasVisible,
+        hadLoadedBefore,
+      });
 
       // setState를 이펙트에서 동기 호출하면 set-state-in-effect 린트에 걸려 setTimeout으로 미룬다.
-      if (isVisible) {
-        wasVisibleRef.current = true;
-        if (!hadLoadedBefore || wasVisible) {
-          const timer = setTimeout(() => setRenderState("visible"), 0);
-          return () => clearTimeout(timer);
-        }
-        const enterTimer = setTimeout(() => setRenderState("entering"), 0);
-        const settleTimer = setTimeout(
-          () => setRenderState("visible"),
-          TRANSITION_ANIMATION_MS,
-        );
-        return () => {
-          clearTimeout(enterTimer);
-          clearTimeout(settleTimer);
-        };
-      }
-
-      if (!wasVisible) {
-        // 처음부터 0개였다면(새로고침 등) 접을 것도 없이 바로 숨긴다.
-        const timer = setTimeout(() => setRenderState("hidden"), 0);
+      if (!animated) {
+        const timer = setTimeout(() => setRenderState(state), 0);
         return () => clearTimeout(timer);
       }
-      wasVisibleRef.current = false;
-      const exitTimer = setTimeout(() => setRenderState("exiting"), 0);
-      const hideTimer = setTimeout(
-        () => setRenderState("hidden"),
+      const startTimer = setTimeout(() => setRenderState(state), 0);
+      const settleTimer = setTimeout(
+        () => setRenderState(settledState),
         TRANSITION_ANIMATION_MS,
       );
       return () => {
-        clearTimeout(exitTimer);
-        clearTimeout(hideTimer);
+        clearTimeout(startTimer);
+        clearTimeout(settleTimer);
       };
     },
     [isVisible, draftsQuery.isLoading],
@@ -101,11 +104,7 @@ export function DraftsNavItem() {
           icon={<FileText strokeWidth={1.5} className={NAV_ICON_CLASS} />}
           label={t("workspace.drafts")}
           // 접힘 모드는 정확한 개수를 안 보여주니 툴팁에 붙여 hover로 확인하게 한다.
-          tooltipLabel={
-            draftCount > 0
-              ? `${t("workspace.drafts")} · ${draftCount}`
-              : t("workspace.drafts")
-          }
+          tooltipLabel={draftsTooltipLabel()}
           to="/drafts"
           rightContentAlwaysVisible
           rightContent={

@@ -5,6 +5,7 @@ import { cn, LIST_ITEM_HOVER_CLASSNAME } from "@nema-io/weave";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface DraftCardShellProps {
+  name: string;
   onSelect: () => void;
   children: ReactNode;
 }
@@ -15,7 +16,11 @@ interface DraftCardShellProps {
 // pointer-events-none으로 클릭이 그 아래 이 버튼까지 그대로 통과하게 한다.
 // 액션 버튼(재시도)만 pointer-events-auto로 되돌려 각자 히트테스트 대상을
 // 되찾는다 — legacy DraftCardShell과 동일한 트릭.
-export function DraftCardShell({ onSelect, children }: DraftCardShellProps) {
+export function DraftCardShell({
+  name,
+  onSelect,
+  children,
+}: DraftCardShellProps) {
   const { t } = useTranslation();
 
   return (
@@ -29,7 +34,9 @@ export function DraftCardShell({ onSelect, children }: DraftCardShellProps) {
           Button의 시각 스타일(패딩·배경·타이포)이 전부 불필요하다. */}
       <button
         type="button"
-        aria-label={t("draft.card_open_label")}
+        // 카드마다 같은 라벨이면 스크린리더로는 어느 카드인지 구분이 안 된다 —
+        // 원문 이름을 붙여 카드별로 다르게 읽히게 한다.
+        aria-label={`${t("draft.card_open_label")} — ${name}`}
         onClick={onSelect}
         className="absolute inset-0 rounded-lg"
       />

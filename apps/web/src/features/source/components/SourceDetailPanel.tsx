@@ -1,4 +1,4 @@
-import { type ReactNode, Suspense } from "react";
+import { Suspense, useEffect } from "react";
 
 import {
   Button,
@@ -9,10 +9,16 @@ import {
 } from "@nema-io/weave";
 import { X } from "@nema-io/weave/icons";
 
+import {
+  ErrorBoundary,
+  type ErrorFallbackProps,
+} from "@web/app/error/ErrorBoundary";
+import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { useSourceSuspenseQuery } from "@web/features/source/hooks/useSourceQuery";
 import { useTranslation } from "@web/lib/tolgee";
+import { isNotFoundError } from "@web/lib/trpc";
 
 import { SourceBodyView } from "./SourceBodyView";
 import { SourceDeleteMenu } from "./SourceDeleteMenu";
@@ -20,16 +26,35 @@ import { SourceDeleteMenu } from "./SourceDeleteMenu";
 interface SourceDetailPanelProps {
   sourceId: string;
   onClose: () => void;
-  // 헤더의 미트볼 메뉴 앞에 두는 컨텍스트별 슬롯 — 소비처 전용 상태·액션을 주입한다
-  // (예: 초안 화면에 나중에 필요해질 표시). 기본은 비어 있다 — 이 컴포넌트 안에는
-  // 특정 소비처 전용 로직을 두지 않는다.
-  headerActions?: ReactNode;
+}
+
+interface SourceDetailCloseButtonProps {
+  onClose: () => void;
+}
+
+function SourceDetailCloseButton({ onClose }: SourceDetailCloseButtonProps) {
+  const { t } = useTranslation();
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          aria-label={t("common.close")}
+          onClick={onClose}
+          className="size-7 text-fg-tertiary"
+        >
+          <X className="size-5" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{t("common.close")}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 function SourceDetailPanelContent({
   sourceId,
   onClose,
-  headerActions,
 }: SourceDetailPanelProps) {
   const { t } = useTranslation();
   const [source] = useSourceSuspenseQuery(sourceId);
@@ -49,22 +74,9 @@ function SourceDetailPanelContent({
           <RelativeTime dateTime={source.createdAt} />
         </div>
         <div className="-mr-1 flex shrink-0 items-center gap-1">
-          {headerActions}
+          {/* 삭제 성공 시 상세 패널을 같이 닫는다. */}
           <SourceDeleteMenu sourceId={sourceId} onDeleted={onClose} />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                aria-label={t("common.close")}
-                onClick={onClose}
-                className="size-7 text-fg-tertiary"
-              >
-                <X className="size-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">{t("common.close")}</TooltipContent>
-          </Tooltip>
+          <SourceDetailCloseButton onClose={onClose} />
         </div>
       </div>
 
@@ -81,12 +93,61 @@ function SourceDetailPanelContent({
   );
 }
 
+interface SourceDetailPanelErrorProps extends ErrorFallbackProps {
+  onClose: () => void;
+}
+
+function SourceDetailPanelError({
+  onClose,
+  ...fallbackProps
+}: SourceDetailPanelErrorProps) {
+  const missing = isNotFoundError(fallbackProps.error);
+
+  useEffect(
+    function closeOnMissingSource() {
+      // 삭제된 원문을 가리키는 죽은 ?source=<id> 링크는 재시도해도 같은 NOT_FOUND를
+      // 반복할 뿐이다 — legacy DraftDetailPanel의 clearMissingSource와 같은 이유로,
+      // 에러를 보여주는 대신 패널을 스스로 닫는다.
+      if (missing) {
+        onClose();
+      }
+    },
+    [missing, onClose],
+  );
+
+  if (missing) {
+    return null;
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex h-11 shrink-0 items-center justify-end px-6">
+        <SourceDetailCloseButton onClose={onClose} />
+      </div>
+      <SectionErrorFallback {...fallbackProps} />
+    </div>
+  );
+}
+
 // 원문 상세 — SidePanel 안에 얹는 공용 콘텐츠. 초안 화면과, 후속으로 붙는 다이제스트
 // 목록 화면이 같은 컴포넌트로 원문 상세를 연다.
-export function SourceDetailPanel(props: SourceDetailPanelProps) {
+export function SourceDetailPanel({
+  sourceId,
+  onClose,
+}: SourceDetailPanelProps) {
   return (
-    <Suspense fallback={<LoadingWatermark />}>
-      <SourceDetailPanelContent {...props} />
-    </Suspense>
+    <ErrorBoundary
+      boundaryName="source-detail"
+      // NOT_FOUND는 삭제된 원문을 가리키는 죽은 링크에서 자연히 발생하는 예상된
+      // 에러라 노이즈로 보고하지 않는다.
+      shouldReport={(error) => !isNotFoundError(error)}
+      fallbackRender={(fallbackProps) => (
+        <SourceDetailPanelError {...fallbackProps} onClose={onClose} />
+      )}
+    >
+      <Suspense fallback={<LoadingWatermark />}>
+        <SourceDetailPanelContent sourceId={sourceId} onClose={onClose} />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
