@@ -1,5 +1,5 @@
 import type { DigestionStatus } from "@nema-io/shared";
-import { Badge, type BadgeVariant, Button, Text } from "@nema-io/weave";
+import { Badge, Button, Text } from "@nema-io/weave";
 import { RotateCw } from "@nema-io/weave/icons";
 
 import { RelativeTime } from "@web/components/ui/RelativeTime";
@@ -8,11 +8,9 @@ import { type TranslationKey, useTranslation } from "@web/lib/tolgee";
 
 import { DraftCardShell } from "./DraftCardShell";
 
-const STATUS_BADGE_VARIANT: Record<DigestionStatus, BadgeVariant> = {
-  pending: "error",
-  completed: "neutral",
-};
-
+// pending은 처리 중과 진짜 실패를 웹에서 구분하지 못한다(서버가 상태를 더 안
+// 나눈다) — 둘 다 neutral 톤으로 낮춰, 아직 처리 중인 원문이 error로 보여 사용자가
+// 헛재시도를 누르는 일을 막는다.
 const STATUS_LABEL_KEY: Record<DigestionStatus, TranslationKey> = {
   pending: "draft.status_pending",
   completed: "draft.status_empty",
@@ -58,7 +56,7 @@ export function DraftCard({
           </Text>
           <RelativeTime dateTime={createdAt} />
         </div>
-        <Badge size="sm" variant={STATUS_BADGE_VARIANT[status]}>
+        <Badge size="sm" variant="neutral">
           {t(STATUS_LABEL_KEY[status])}
         </Badge>
       </div>

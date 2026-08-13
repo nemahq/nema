@@ -54,7 +54,7 @@
     "empty_state": "처리할 원문이 없어요.",
     "retry_pending": "다시 시도하는 중...",
     "status_empty": "결과 없음",
-    "status_pending": "정리 실패"
+    "status_pending": "정리 안 됨"
   },
   "error": {
     "copy_error": "에러 정보 복사",

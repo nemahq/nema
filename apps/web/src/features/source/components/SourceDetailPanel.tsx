@@ -12,7 +12,6 @@ import { X } from "@nema-io/weave/icons";
 import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { useSourceSuspenseQuery } from "@web/features/source/hooks/useSourceQuery";
-import { sourceNamePreview } from "@web/features/source/sourceNamePreview";
 import { useTranslation } from "@web/lib/tolgee";
 
 import { SourceBodyView } from "./SourceBodyView";
@@ -45,7 +44,7 @@ function SourceDetailPanelContent({
             color="primary"
             className="min-w-0 truncate"
           >
-            {sourceNamePreview(source.body)}
+            {source.name}
           </Text>
           <RelativeTime dateTime={source.createdAt} />
         </div>

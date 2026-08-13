@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "@tanstack/react-router";
 
 import { cn, Text } from "@nema-io/weave";
-import { FileText, TriangleAlert } from "@nema-io/weave/icons";
+import { FileText } from "@nema-io/weave/icons";
 
 import { NavItem } from "@web/components/layout/NavItem";
-import { useSidebar } from "@web/components/layout/Sidebar";
 import { useSourceDraftListQuery } from "@web/features/drafts/hooks/useSourceDraftListQuery";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -19,7 +18,6 @@ type RenderState = "hidden" | "entering" | "visible" | "exiting";
 export function DraftsNavItem() {
   const { t } = useTranslation();
   const pathname = useLocation({ select: (location) => location.pathname });
-  const { collapsed } = useSidebar();
   const draftsQuery = useSourceDraftListQuery();
   const [renderState, setRenderState] = useState<RenderState>("hidden");
   // 직전 가시성 — 이펙트 안에서만 갱신(렌더 중 ref 접근 금지 규칙 회피).
@@ -31,9 +29,6 @@ export function DraftsNavItem() {
 
   const drafts = draftsQuery.data ?? [];
   const draftCount = drafts.length;
-  // pending은 이번 세대에서 "정리 실패"만을 뜻한다 — 동기 처리라 처리중이라는
-  // 중간 상태가 없다.
-  const hasFailed = drafts.some((draft) => draft.status === "pending");
   // 조회 실패로 개수를 모르는 상태를 "0개"로 오인해 항목을 숨기지 않는다 — 실제 초안이
   // 있는데도 조용히 진입점이 사라지는 것보다는, 눌러서 /drafts의 에러 상태를 보는 편이 낫다.
   const hasData = draftCount > 0 || draftsQuery.isError;
@@ -90,17 +85,6 @@ export function DraftsNavItem() {
     return null;
   }
 
-  const statusIndicator = hasFailed ? (
-    <TriangleAlert
-      className={cn(
-        "size-3.5 shrink-0 text-status-error",
-        // 아이콘 도형이 뷰박스 안에서 오른쪽으로 치우쳐 있어 펼침 모드에서 카운트와
-        // 축이 안 맞는다 — 접힘 모드(코너 배지)는 이 보정이 필요 없다.
-        !collapsed && "-translate-x-1",
-      )}
-    />
-  ) : null;
-
   return (
     <div
       role="status"
@@ -122,8 +106,6 @@ export function DraftsNavItem() {
               ? `${t("workspace.drafts")} · ${draftCount}`
               : t("workspace.drafts")
           }
-          // exiting 중엔 이미 0개라 카운트·상태를 보여주면 오해를 준다.
-          labelSuffix={renderState !== "exiting" ? statusIndicator : null}
           to="/drafts"
           rightContentAlwaysVisible
           rightContent={

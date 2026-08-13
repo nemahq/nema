@@ -54,7 +54,7 @@
     "empty_state": "No sources to process.",
     "retry_pending": "Retrying...",
     "status_empty": "No results",
-    "status_pending": "Organize failed"
+    "status_pending": "Not organized"
   },
   "error": {
     "copy_error": "Copy error info",
