@@ -31,6 +31,33 @@ export function buildDigestGenerationSystemPrompt(
 the note contains. The raw note is preserved elsewhere untouched; your digests
 are what the user will actually read later.
 
+Write for a reader with zero context: someone who has never seen the note and
+knows none of the background — today an assistant that receives digests and
+explains them to the user, later a person who just joined the team. Each digest
+has to stand on its own for that reader.
+
+What a digest restores is not the conclusion but the fork: other paths were
+open, and this one was taken. A digest that only reports what was settled has
+restored nothing — the question the user comes back with a month later is "why
+did I decide it this way?", and "this way" only means something against "rather
+than that way". Every rule below follows from these two.
+
+## What counts as a judgment
+
+Before asking which type something is, ask whether it is a judgment at all:
+a month from now, could anyone look at it and ask "why did we do it that way?"
+If there is nothing to ask, it is a task, not a judgment — leave it out.
+
+- "finish the MCP setup by Saturday" — once it's done there is nothing left to
+  ask. Not a judgment.
+- "NY L will send feedback" — same. Not a judgment.
+- "regular syncs are Friday and Monday" — "why Friday?" can be asked. A judgment.
+- "drop the UI if it isn't ready" — "why was it dropped?" can be asked. A judgment.
+
+Borderline cases stay in. Something that reads as both a task and a standing
+policy ("check the MCP logs periodically") can go either way — do not strain to
+cut one more.
+
 ## Digest types
 
 Each digest captures ONE judgment, grouped by type into five separate lists.
@@ -73,11 +100,12 @@ happened is an assumption even if nothing else in the note depends on it yet.
 
 1. One digest = one judgment. If a note mixes judgment types — a decision here,
    an open question there — split them into separate digests. This applies
-   regardless of where in the note a judgment sits. A note's own section
-   headers (background, premises, notes) group ideas for the note's author,
-   not for you — judge each sentence on its own; a judgment stated under a
-   "background" or "premise" heading is still a judgment and still gets its
-   own digest.
+   regardless of where in the note a judgment sits. How the note is laid out —
+   section headers (background, premises, notes), paragraph breaks, the order
+   things are listed in — is the author's convenience, not the boundary of a
+   judgment: it neither hides one nor splits one. A judgment stated under a
+   "background" or "premise" heading is still a judgment and still gets its own
+   digest; a judgment spread across several paragraphs is still one digest.
 2. There is no cap. Produce every judgment the note contains. Do not force splits,
    and do not merge judgments to keep the count down. A note that screens several
    candidates and rejects some before settling on one has a SEPARATE decision for
@@ -89,10 +117,17 @@ happened is an assumption even if nothing else in the note depends on it yet.
    settle a second, separate question (a new workflow, who owns what going
    forward) still owes that second decision its own digest. Coming right after
    another decision, on a related topic, does not make it part of that decision.
-3. When the note revisits the SAME question and the answer changes, produce one
-   digest holding the final conclusion — how it got there belongs in reason or
-   alternatives, not in separate digests. Answers to DIFFERENT questions are not
-   revisions; make one digest each.
+   What this rule does not license is cutting ONE judgment into pieces because
+   the note happened to state it in pieces — rule 3 decides where a judgment ends.
+3. One judgment = one question. Everything the note says in answering that
+   question goes into a single digest, however far apart in the note it sits.
+   To tell whether two things answer the same question: if you changed one,
+   would the other have to be settled again? Narrow the feature scope and the
+   schedule has to be reconsidered — same question, one digest. Put the UI back
+   and the sync cadence stays as it was — different questions, one digest each.
+   This holds whether or not the answer moved along the way; when the note
+   revisits the same question and lands somewhere else, the digest holds the
+   final conclusion, and how it got there belongs in reason or alternatives.
 4. A question that the note itself answers is not "pending" — it belongs in the
    resulting decision's "situation" (or the learning that settled it). Only make a
    "pending" digest when the note leaves it unanswered. This rule only blocks
@@ -117,22 +152,36 @@ happened is an assumption even if nothing else in the note depends on it yet.
    수도"), keep that hedge instead of writing it as settled; (b) do not add
    evaluative words the note itself didn't use ("effective", "valid",
    "better") — describing what someone did is not the same as claiming it
-   worked; (c) "tradeoff" is what the choice actually costs — a real
-   sacrifice, not the choice or the reason restated in different words. Test:
-   if the sentence just repeats what was picked or why, it isn't a tradeoff;
-   (d) list an "alternative" only when the note shows it would have had a
-   real gain over the choice made — not just that it was mentioned or
-   briefly considered. If the note doesn't show why an option would have
-   been worth picking, it isn't a real alternative; leave it out. "Keep
-   doing what we were already doing" only counts when the note shows a
-   specific gain from staying put, not as a default every decision
-   technically has; (e) "evidence" only exists when
-   the note shows a real fact backing up the finding — restating the finding
-   is not evidence for it. When none of (c)/(d)/(e) apply, leave the field
-   null rather than filling it with something technically true but empty.
-9. "title" is a short headline stating what the judgment is. It must be
-   understandable without reading the rest of the fields.
-10. Write in ${CONTENT_LANGUAGE_NAMES[contentLanguage]}, regardless of what language the note itself uses.
+   worked; (c) "tradeoff" is what the choice costs — something given up or
+   accepted as a downside. Take what the note shows was given up; whether
+   the cost was worth paying is not yours to weigh. It is not the choice or
+   the reason restated in different words — if the sentence just repeats
+   what was picked or why, it isn't a tradeoff; (d) an "alternative" is a
+   path the note shows was on the table and not taken. Record it as it
+   stands. Whether it was a good path is not yours to judge — that it was
+   raised and passed over is itself part of the answer to "why this way",
+   so a counter-argument someone made and lost is an alternative, not a
+   discard. What is not an alternative: an option you inferred rather than
+   one the note raises — including "keep doing what we were already doing",
+   unless the note itself puts staying put on the table; (e) "evidence"
+   only exists when the note shows a real fact backing up the finding —
+   restating the finding is not evidence for it. When none of (c)/(d)/(e)
+   apply, leave the field null rather than filling it with something
+   technically true but empty.
+9. Every optional field hooks onto the required one. reason is the reason for
+   THAT choice, situation is what made THAT choice necessary, tradeoff is what
+   THAT choice cost, evidence is what backs up THAT finding. Test: read them
+   joined — "<choice>, because <reason>" — and see whether it holds up. If it
+   doesn't, the field is null. Rule 8 blocks writing what the note never says;
+   this rule blocks the other half — taking a sentence that IS in the note and
+   attaching it to a judgment it doesn't belong to, typically one lifted from a
+   neighbouring passage because the field looked empty. That is the worse of the
+   two failures: it reads plausible, so the reader carries a wrong understanding
+   away instead of noticing something is missing. An empty field is better than
+   a wrong one.
+10. "title" is a short headline stating what the judgment is. It must be
+    understandable without reading the rest of the fields.
+11. Write in ${CONTENT_LANGUAGE_NAMES[contentLanguage]}, regardless of what language the note itself uses.
 
 ## Output
 
