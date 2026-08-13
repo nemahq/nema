@@ -6,7 +6,6 @@ import {
 } from "@nema-io/shared";
 
 import { isNotFoundError } from "@server/infra/supabase/supabase-error";
-import { logGetSource } from "@server/services/mcp-tool-call-log-service";
 import {
   deleteSource,
   getSource,
@@ -20,16 +19,11 @@ export const sourceRouter = router({
     .input(SourceActionInputSchema)
     .query(async ({ ctx, input }) => {
       try {
-        const result = await getSource({
-          supabase: ctx.supabase,
-          sourceId: input.sourceId,
-        });
-        await logGetSource({
+        return await getSource({
           supabase: ctx.supabase,
           userId: ctx.user.id,
-          detail: { sourceId: input.sourceId },
+          sourceId: input.sourceId,
         });
-        return result;
       } catch (error) {
         if (isNotFoundError(error)) {
           throw new TRPCError({

@@ -5,12 +5,21 @@ import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 const mockSearch = vi.fn();
 const mockEmbeddingProvider = { providerId: "test" };
 const mockVectorStore = { search: mockSearch };
+// vi.mock은 파일 최상단으로 호이스트되므로 참조하는 mock은 vi.hoisted로 같이
+// 끌어올려야 한다(그냥 const는 TDZ에 걸림) — source-service.integration.test.ts와
+// 같은 이유.
+const { mockLogSearch } = vi.hoisted(() => ({
+  mockLogSearch: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("@server/infra/embedding", () => ({
   getEmbeddingProvider: () => mockEmbeddingProvider,
 }));
 vi.mock("@server/infra/vector", () => ({
   getVectorStore: () => mockVectorStore,
+}));
+vi.mock("@server/services/mcp-tool-call-log-service", () => ({
+  logSearch: mockLogSearch,
 }));
 
 import { searchDigests } from "@server/services/digest-service";
@@ -38,6 +47,11 @@ describe("searchDigests", () => {
 
     expect(result).toEqual([]);
     expect(supabase.from).not.toHaveBeenCalled();
+    expect(mockLogSearch).toHaveBeenCalledWith({
+      supabase,
+      userId: "user-1",
+      detail: { query: "질의", results: [] },
+    });
   });
 
   it("Qdrant 점수 순서를 DB round-trip 뒤에도 유지한다", async () => {
@@ -76,5 +90,16 @@ describe("searchDigests", () => {
 
     expect(result.map((r) => r.id)).toEqual([digestHighId, digestLowId]);
     expect(result[0]?.score).toBe(0.9);
+    expect(mockLogSearch).toHaveBeenCalledWith({
+      supabase,
+      userId: "user-1",
+      detail: {
+        query: "질의",
+        results: [
+          { digestId: digestHighId, score: 0.9 },
+          { digestId: digestLowId, score: 0.5 },
+        ],
+      },
+    });
   });
 });

@@ -242,12 +242,13 @@ describe("source-service (RLS)", () => {
 
       const asOwner = await getSource({
         supabase: userA.supabase,
+        userId: userA.id,
         sourceId,
       });
       expect(asOwner.body).toBe("getSource RLS 테스트 원문");
 
       await expect(
-        getSource({ supabase: userB.supabase, sourceId }),
+        getSource({ supabase: userB.supabase, userId: userB.id, sourceId }),
       ).rejects.toMatchObject({ code: "PGRST116" });
     },
     TEST_TIMEOUT_MS,
