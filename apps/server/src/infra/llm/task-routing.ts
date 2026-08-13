@@ -1,16 +1,16 @@
 // task별 모델 라우팅 (legacy/apps/server/src/infra/llm/task-routing.ts의 축소판) —
 // legacy와 같은 모양(task → 기본 모델, 카탈로그로 검증되는 런타임 override)이지만
-// 내용은 지금 실제로 쓰는 task 하나(generateDigests)만 채운다. tier·effort는 그걸
-// 쓰는 task/프로바이더 경로가 아직 없어 같이 안 가져왔다 — task가 늘면 legacy를
-// 다시 참고해 채운다.
+// 내용은 지금 실제로 쓰는 task만 채운다. tier·effort는 그걸 쓰는 task/프로바이더
+// 경로가 아직 없어 같이 안 가져왔다 — 필요해지면 legacy를 다시 참고해 채운다.
 import { LlmError } from "@server/infra/llm/llm-error";
 import { getModelSpec } from "@server/infra/llm/model-catalog";
 import {
   DIGEST_GENERATION_MODEL_OPENAI,
   DIGEST_GENERATION_SCHEMA_NAME,
+  RELATION_JUDGMENT_SCHEMA_NAME,
 } from "@server/infra/llm/models";
 
-export type LlmTask = "generateDigests";
+export type LlmTask = "generateDigests" | "judgeRelations";
 
 interface TaskDefault {
   modelId: string;
@@ -21,6 +21,10 @@ export const TASK_DEFAULTS = {
   generateDigests: {
     modelId: DIGEST_GENERATION_MODEL_OPENAI,
     schemaName: DIGEST_GENERATION_SCHEMA_NAME,
+  },
+  judgeRelations: {
+    modelId: DIGEST_GENERATION_MODEL_OPENAI,
+    schemaName: RELATION_JUDGMENT_SCHEMA_NAME,
   },
 } as const satisfies Record<LlmTask, TaskDefault>;
 

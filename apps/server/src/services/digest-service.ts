@@ -1,5 +1,9 @@
-import type { DigestDeleteResult, DigestSearchResult } from "@nema-io/shared";
-import { DigestSearchResultSchema } from "@nema-io/shared";
+import type {
+  DigestDeleteResult,
+  DigestDetail,
+  DigestSearchResult,
+} from "@nema-io/shared";
+import { DigestDetailSchema, DigestSearchResultSchema } from "@nema-io/shared";
 
 import { getEmbeddingProvider } from "@server/infra/embedding";
 import type { Database } from "@server/infra/supabase/database.types";
@@ -7,7 +11,10 @@ import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase/supabase-error";
 import { getVectorStore } from "@server/infra/vector";
 import { deleteDigestVectors } from "@server/services/digest-index-service";
-import { logSearch } from "@server/services/mcp-tool-call-log-service";
+import {
+  logGetDigest,
+  logSearch,
+} from "@server/services/mcp-tool-call-log-service";
 
 export async function searchDigests(args: {
   supabase: TypedSupabaseClient;
@@ -89,6 +96,34 @@ export async function deleteDigest(args: {
   }
 
   return { success: deleted };
+}
+
+export async function getDigest(args: {
+  supabase: TypedSupabaseClient;
+  userId: string;
+  digestId: string;
+}): Promise<DigestDetail> {
+  const { supabase, userId, digestId } = args;
+
+  // RLS(owner-only)라 남의/없는 digestId는 여기서 not-found로 걸린다.
+  const { data, error } = await supabase
+    .from("digests")
+    .select("id, source_id, type, title, body, created_at")
+    .eq("id", digestId)
+    .single();
+  throwIfSupabaseError(error);
+
+  // 로그 저장은 응답을 기다리게 하지 않는다 — 실패 격리뿐 아니라 지연도 격리한다.
+  void logGetDigest({ userId, detail: { digestId } });
+
+  return DigestDetailSchema.parse({
+    id: data.id,
+    sourceId: data.source_id,
+    type: data.type,
+    title: data.title,
+    body: data.body,
+    createdAt: data.created_at,
+  });
 }
 
 type DigestSearchRow = Pick<

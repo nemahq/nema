@@ -1,6 +1,6 @@
 // 모델 레지스트리 — task-routing이 override 모델 id를 검증하는 단일 출처
 // (legacy/apps/server/src/infra/llm/model-catalog.ts의 축소판).
-// task가 하나(generateDigests)뿐이라 그 task가 실제 쓰는 모델 둘만 등록한다.
+// task들이 실제로 쓰는 모델만 등록한다.
 // 단가(legacy의 ModelPricing)는 지금 값을 모르니 넣지 않는다 — 확정되면 그때 필드를 추가한다.
 import {
   DIGEST_GENERATION_MODEL_GEMINI,

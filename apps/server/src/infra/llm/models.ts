@@ -8,5 +8,10 @@ export const DIGEST_GENERATION_MODEL_OPENAI = "gpt-5.6-terra";
 // 오버라이드 경로에서만 쓴다(DIGEST_GENERATION_LLM_PROVIDER=vertex).
 export const DIGEST_GENERATION_MODEL_GEMINI = "gemini-3.1-flash-lite";
 
+// 관계 판정은 정리와 같은 모델로 시작한다(task-routing 참고) — 판정이 더 가벼운 건
+// 맞지만 어느 등급까지 내려도 되는지 잴 자료가 없다. 따로 재서 내릴 때 상수를 가르고
+// MODEL_CATALOG에 등록한다.
+
 // OpenAI Responses API의 구조화 출력(zodTextFormat)이 요구하는 스키마 이름.
 export const DIGEST_GENERATION_SCHEMA_NAME = "digest_generation";
+export const RELATION_JUDGMENT_SCHEMA_NAME = "relation_judgment";

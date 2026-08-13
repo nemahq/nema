@@ -34,6 +34,45 @@ export type Database = {
   };
   public: {
     Tables: {
+      digest_relations: {
+        Row: {
+          created_at: string;
+          from_digest_id: string;
+          id: string;
+          to_digest_id: string;
+          type: Database["public"]["Enums"]["digest_relation_type"];
+        };
+        Insert: {
+          created_at?: string;
+          from_digest_id: string;
+          id?: string;
+          to_digest_id: string;
+          type: Database["public"]["Enums"]["digest_relation_type"];
+        };
+        Update: {
+          created_at?: string;
+          from_digest_id?: string;
+          id?: string;
+          to_digest_id?: string;
+          type?: Database["public"]["Enums"]["digest_relation_type"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digest_relations_from_digest_id_fkey";
+            columns: ["from_digest_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_relations_to_digest_id_fkey";
+            columns: ["to_digest_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       digests: {
         Row: {
           body: Json;
@@ -130,6 +169,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      relation_judgments: {
+        Row: {
+          candidates: Json;
+          created_at: string;
+          digest_id: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          candidates: Json;
+          created_at?: string;
+          digest_id: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          candidates?: Json;
+          created_at?: string;
+          digest_id?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       sources: {
         Row: {
           body: string;
@@ -198,6 +261,19 @@ export type Database = {
         };
         Relationships: [];
       };
+      v_relation_candidates: {
+        Row: {
+          candidate_title: string | null;
+          candidate_type: Database["public"]["Enums"]["digest_type"] | null;
+          digest_title: string | null;
+          digest_type: Database["public"]["Enums"]["digest_type"] | null;
+          occurred_at: string | null;
+          rank: number | null;
+          score: number | null;
+          verdict: string | null;
+        };
+        Relationships: [];
+      };
       v_search_log: {
         Row: {
           lowest_score: number | null;
@@ -239,9 +315,14 @@ export type Database = {
     };
     Enums: {
       content_language: "en" | "ko";
+      digest_relation_type: "support" | "weaken";
       digest_type: "decision" | "pending" | "learning" | "idea" | "assumption";
       digestion_status: "pending" | "completed";
-      mcp_tool: "search_digests" | "get_source";
+      mcp_tool:
+        | "search_digests"
+        | "get_source"
+        | "get_relations"
+        | "get_digest";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -376,9 +457,10 @@ export const Constants = {
   public: {
     Enums: {
       content_language: ["en", "ko"],
+      digest_relation_type: ["support", "weaken"],
       digest_type: ["decision", "pending", "learning", "idea", "assumption"],
       digestion_status: ["pending", "completed"],
-      mcp_tool: ["search_digests", "get_source"],
+      mcp_tool: ["search_digests", "get_source", "get_relations", "get_digest"],
     },
   },
 } as const;

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { DigestListItemSchema, DigestSchema } from "./digest";
+import { DigestListItemSchema, DigestWithRelationsSchema } from "./digest";
 
 // DB enum digestion_status의 SSOT.
 export const DIGESTION_STATUSES = ["pending", "completed"] as const;
@@ -23,10 +23,12 @@ export const SourceActionInputSchema = z.object({
 export type SourceActionInput = z.infer<typeof SourceActionInputSchema>;
 
 // 넣기·재추출 공용 응답 — 화면이 없어 이 응답이 결과를 보는 유일한 창구라 다이제스트를
-// 전부 실어보낸다(킥오프 "흐름 — 동기" 참고).
+// 전부 실어보낸다(킥오프 "흐름 — 동기" 참고). 이번에 이어진 관계도 함께 싣는다 —
+// 방금 넣은 것이 쌓인 것과 어떻게 이어졌는지가 던지기 직후에 가장 궁금한 값이라,
+// 여기서만은 관계를 따로 물으러 가지 않게 한다.
 export const SourceIngestResultSchema = z.object({
   sourceId: z.string().uuid(),
-  digests: z.array(DigestSchema),
+  digests: z.array(DigestWithRelationsSchema),
 });
 export type SourceIngestResult = z.infer<typeof SourceIngestResultSchema>;
 

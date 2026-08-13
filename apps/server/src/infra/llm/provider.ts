@@ -50,6 +50,13 @@ export function getDigestGenerationProvider(): LlmProvider {
   return getProviderForTask("generateDigests");
 }
 
+// 관계 판정은 DIGEST_GENERATION_LLM_PROVIDER를 안 탄다 — 그 스위치는 이름 그대로
+// 정리 프롬프트를 Vertex로 돌려보려고 둔 자리고, eval도 정리만 잰다. 판정까지 같이
+// 끌려가면 "정리를 Gemini로 비교하는 중"에 관계 품질이 조용히 함께 흔들린다.
+export function getRelationJudgmentProvider(): LlmProvider {
+  return getProviderForTask("judgeRelations");
+}
+
 function getProviderForTask(task: LlmTask): LlmProvider {
   seedDigestGenerationOverride();
   let provider = cache.get(task);

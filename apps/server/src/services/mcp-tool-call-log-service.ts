@@ -11,7 +11,9 @@ type LogEntry =
         results: Array<{ digestId: string; score: number }>;
       };
     }
-  | { tool: "get_source"; detail: { sourceId: string } };
+  | { tool: "get_source"; detail: { sourceId: string } }
+  | { tool: "get_relations"; detail: { digestId: string } }
+  | { tool: "get_digest"; detail: { digestId: string } };
 
 // MCP 도구 사용 로그 — 부수적인 기록이지 사용자가 기다리는 결과가 아니다.
 // 유저 데이터가 아니라 서버가 스스로 남기는 텔레메트리라 admin 클라이언트로 쓴다 —
@@ -37,6 +39,28 @@ export async function logGetSource(args: {
   await insertLog({
     userId: args.userId,
     tool: "get_source",
+    detail: args.detail,
+  });
+}
+
+export async function logGetRelations(args: {
+  userId: string;
+  detail: Extract<LogEntry, { tool: "get_relations" }>["detail"];
+}): Promise<void> {
+  await insertLog({
+    userId: args.userId,
+    tool: "get_relations",
+    detail: args.detail,
+  });
+}
+
+export async function logGetDigest(args: {
+  userId: string;
+  detail: Extract<LogEntry, { tool: "get_digest" }>["detail"];
+}): Promise<void> {
+  await insertLog({
+    userId: args.userId,
+    tool: "get_digest",
     detail: args.detail,
   });
 }
