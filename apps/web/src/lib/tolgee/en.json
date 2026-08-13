@@ -37,6 +37,16 @@
     "retry": "Retry",
     "unknown_error": "An unknown error occurred."
   },
+  "digest": {
+    "list_empty_description": "Digests appear here once you save something.",
+    "list_empty_title": "No digests yet.",
+    "nav_label": "Digests",
+    "type_assumption": "Assumption",
+    "type_decision": "Decision",
+    "type_idea": "Idea",
+    "type_learning": "Learning",
+    "type_pending": "Unresolved"
+  },
   "error": {
     "copy_error": "Copy error info",
     "copy_error_failed": "Copy failed. Select the text below to copy it manually.",
