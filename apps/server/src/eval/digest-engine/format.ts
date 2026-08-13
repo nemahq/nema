@@ -50,3 +50,26 @@ export const DIGEST_BODY_FIELD_ORDER: Record<DigestType, DigestFieldSpec[]> = {
 
 // reasoning 변형(run-with-reasoning.ts) 전용 — 타입 스키마엔 없는 eval 전용 칸.
 export const REASONING_FIELD_LABEL = "판단 이유";
+
+// 갈래(pending.branches)와 대안(decision.alternatives)만 배열 안이 객체다 —
+// 그대로 찍으면 [object Object]가 된다. 칸 이름을 하드코딩하지 않고 option 옆에
+// 남는 값을 붙여서, 이름이 다른 두 모양(argument·rejectionReason)을 함께 받는다.
+function formatEntry(entry: unknown): string {
+  if (entry === null || typeof entry !== "object") {
+    return String(entry);
+  }
+  const { option, ...rest } = entry as Record<string, unknown>;
+  const detail = Object.values(rest).filter(
+    (value): value is string => typeof value === "string" && value.length > 0,
+  );
+  return detail.length > 0
+    ? `${String(option)} — ${detail.join(" / ")}`
+    : String(option);
+}
+
+export function formatDigestFieldValue(value: unknown): string {
+  if (!Array.isArray(value)) {
+    return String(value);
+  }
+  return `\n${value.map((entry) => `  - ${formatEntry(entry)}`).join("\n")}`;
+}

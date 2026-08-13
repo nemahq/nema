@@ -13,6 +13,18 @@ export const DIGEST_TYPES = [
 export const DigestTypeSchema = z.enum(DIGEST_TYPES);
 export type DigestType = z.infer<typeof DigestTypeSchema>;
 
+// 이름이 서로 다른 이유 — 미결의 갈래는 아직 어느 쪽도 이길 수 있어 찬반을 함께
+// 담는 argument가 맞고, 결정의 대안은 이미 진 길이라 rejectionReason이 맞다.
+const PendingBranchSchema = z.object({
+  option: z.string(),
+  argument: z.string().optional(),
+});
+
+const DecisionAlternativeSchema = z.object({
+  option: z.string(),
+  rejectionReason: z.string().optional(),
+});
+
 // 유형별 본문 칸 — 원문에 없으면 그 칸을 통째로 뺀다(값을 지어내지 않는다).
 // `type`은 DB에서 별도 컬럼이라 body 안에는 안 들어간다.
 const DecisionBodySchema = z.object({
@@ -20,13 +32,13 @@ const DecisionBodySchema = z.object({
   choice: z.string().optional(),
   reason: z.string().optional(),
   tradeoff: z.array(z.string()).optional(),
-  alternatives: z.array(z.string()).optional(),
+  alternatives: z.array(DecisionAlternativeSchema).optional(),
 });
 
 const PendingBodySchema = z.object({
   question: z.string().optional(),
   background: z.string().optional(),
-  branches: z.array(z.string()).optional(),
+  branches: z.array(PendingBranchSchema).optional(),
   resolutionCondition: z.string().optional(),
 });
 
@@ -38,6 +50,8 @@ const LearningBodySchema = z.object({
 const IdeaBodySchema = z.object({
   concept: z.string().optional(),
   background: z.string().optional(),
+  // pending의 같은 이름과 달리 문자열로 둔다 — 여기 branches는 갈림길이 아니라
+  // 파생 후보라 이름 옆에 찬반을 달 자리가 아니다.
   branches: z.array(z.string()).optional(),
 });
 

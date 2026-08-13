@@ -5,17 +5,25 @@ import { getEmbeddingProvider } from "@server/infra/embedding";
 import type { DigestUpsertItem } from "@server/infra/vector";
 import { getVectorStore } from "@server/infra/vector";
 
+// 갈래·대안은 배열 안이 { option, argument | rejectionReason } 객체다. option만
+// 넣으면 "왜"로는 검색이 안 걸리므로 값을 전부 이어 붙인다.
+function entryText(entry: string | Record<string, string>): string {
+  return typeof entry === "string" ? entry : Object.values(entry).join(" ");
+}
+
 // DigestBody가 유형별 판별 유니언이라 필드 키가 유형마다 다르다 — 있는 칸만
-// 문자열로 뽑는다. 모든 칸이 string | string[] | undefined이므로 캐스팅은
-// key가 실제로 그 유형의 body 스키마에서 나온 값인 한 안전하다.
+// 문자열로 뽑는다. 캐스팅은 key가 실제로 그 유형의 body 스키마에서 나온 값인 한
+// 안전하다.
+type BodyFieldValue = string | Array<string | Record<string, string>>;
+
 function fieldText(body: Digest["body"], key: string): string | undefined {
-  const fieldValue = (body as Record<string, string | string[] | undefined>)[
-    key
-  ];
+  const fieldValue = (body as Record<string, BodyFieldValue | undefined>)[key];
   if (fieldValue === undefined) {
     return undefined;
   }
-  const text = Array.isArray(fieldValue) ? fieldValue.join(", ") : fieldValue;
+  const text = Array.isArray(fieldValue)
+    ? fieldValue.map(entryText).join(", ")
+    : fieldValue;
   return text.length > 0 ? text : undefined;
 }
 
