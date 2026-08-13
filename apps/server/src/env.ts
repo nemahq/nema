@@ -32,6 +32,13 @@ const envSchema = z
     DIGEST_GENERATION_LLM_PROVIDER: z
       .enum(["openai", "vertex"])
       .default("openai"),
+
+    // 색인은 동기·필수다 — 넣기 흐름 안에서 돌고 실패하면 넣기 전체가 실패한다
+    // (킥오프 "색인은 동기다" 참고). 그래서 optional 폴백 없이 항상 요구한다.
+    VOYAGE_API_KEY: z.string().min(1),
+    QDRANT_URL: z.string().url(),
+    QDRANT_API_KEY: z.string().min(1),
+    QDRANT_COLLECTION: z.string().min(1).default("digests"),
   })
   .transform((data) => ({
     ...data,
