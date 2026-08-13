@@ -11,7 +11,7 @@ import { DIGEST_BODY_SCHEMAS_BY_TYPE } from "@nema-io/shared";
 // 구조화 출력 스키마는 유형별 배열 5개다(판별 유니언 아님, PM 지침). 배열 이름이
 // 곧 유형이라 유형 오분류가 스키마 자체에서 구조적으로 막히고, 주된 칸을 required로
 // 걸어 "그 유형인데 그 유형의 근거가 없는" 다이제스트를 막는다. 대신 required가
-// 결함을 옮기지 않도록(빈 칸→지어낸 칸) Splitting 규칙 5·6이 "채울 수 없으면
+// 결함을 옮기지 않도록(빈 칸→지어낸 칸) Splitting 규칙 6·7이 "채울 수 없으면
 // 만들지 않는다"를 명시한다.
 // =============================================================
 
@@ -136,17 +136,30 @@ happened is an assumption even if nothing else in the note depends on it yet.
    fabricating a "pending" for something already settled — it does not mean the
    settled judgment itself goes unrecorded; a note that reaches a conclusion still
    owes that conclusion its own "decision" digest per rules 1-3.
-5. Each type's required field is what makes it that type. If the note doesn't
+5. A judgment does not get its own digest if it already lives, essentially
+   unchanged, inside another digest's field. A decision's situation, a
+   pending's background, a finding's evidence, a branch's argument, an
+   alternative's rejectionReason — each of these can state a fact or belief
+   that supports the judgment it sits in, and that support does not need a
+   second, standalone digest saying the same thing. This blocks duplication,
+   not relation: two digests can sit on the same topic, even share a fact, as
+   long as each also says something the other doesn't. The test is content,
+   not topic — would removing the standalone digest lose information the
+   field doesn't already carry? If not, it's a copy, not a separate judgment.
+   The type doesn't matter: an assumption is a copy just as much when the
+   belief it states already sits in a decision's situation as when it sits in
+   a pending's background.
+6. Each type's required field is what makes it that type. If the note doesn't
    give you that field, do not produce a digest of that type — never invent
    content to force one into existence.
-6. When a judgment's type is ambiguous, do not produce a digest for it. A wrong
+7. When a judgment's type is ambiguous, do not produce a digest for it. A wrong
    type is worse than a missing one.
-7. A note with no judgment at all (greetings, filler, pure diary) yields empty
+8. A note with no judgment at all (greetings, filler, pure diary) yields empty
    arrays. Do not force digests out of noise.
 
 ## Writing
 
-8. Fill only what the note says — including the required field. Never invent,
+9. Fill only what the note says — including the required field. Never invent,
    never pad. When the note does not state an optional field (a reason, a
    tradeoff, evidence), set it to null. This reaches inside list items too: an
    option being on the page is not itself a reason to produce something to sit
@@ -176,20 +189,20 @@ happened is an assumption even if nothing else in the note depends on it yet.
    restating the finding is not evidence for it. When none of (c)/(d)/(e)
    apply, leave the field null rather than filling it with something
    technically true but empty.
-9. Every optional field hooks onto the required one. reason is the reason for
-   THAT choice, situation is what made THAT choice necessary, tradeoff is what
-   THAT choice cost, evidence is what backs up THAT finding. Test: read them
-   joined — "<choice>, because <reason>" — and see whether it holds up. If it
-   doesn't, the field is null. Rule 8 blocks writing what the note never says;
-   this rule blocks the other half — taking a sentence that IS in the note and
-   attaching it to a judgment it doesn't belong to, typically one lifted from a
-   neighbouring passage because the field looked empty. That is the worse of the
-   two failures: it reads plausible, so the reader carries a wrong understanding
-   away instead of noticing something is missing. An empty field is better than
-   a wrong one.
-10. "title" is a short headline stating what the judgment is. It must be
+10. Every optional field hooks onto the required one. reason is the reason for
+    THAT choice, situation is what made THAT choice necessary, tradeoff is what
+    THAT choice cost, evidence is what backs up THAT finding. Test: read them
+    joined — "<choice>, because <reason>" — and see whether it holds up. If it
+    doesn't, the field is null. Rule 9 blocks writing what the note never says;
+    this rule blocks the other half — taking a sentence that IS in the note and
+    attaching it to a judgment it doesn't belong to, typically one lifted from a
+    neighbouring passage because the field looked empty. That is the worse of the
+    two failures: it reads plausible, so the reader carries a wrong understanding
+    away instead of noticing something is missing. An empty field is better than
+    a wrong one.
+11. "title" is a short headline stating what the judgment is. It must be
     understandable without reading the rest of the fields.
-11. Write in ${CONTENT_LANGUAGE_NAMES[contentLanguage]}, regardless of what language the note itself uses.
+12. Write in ${CONTENT_LANGUAGE_NAMES[contentLanguage]}, regardless of what language the note itself uses.
 
 ## Output
 
@@ -306,7 +319,7 @@ type GeneratedDigestItem = {
 }[DigestType];
 
 // 5개 배열을 저장용 {type, title, body} 목록 하나로 편다. 비어 있는(=null이거나
-// LLM이 규칙 8을 어기고 낸 빈 문자열/배열) 보조 칸은 뺀다. 필수 칸은 스키마가
+// LLM이 규칙 9를 어기고 낸 빈 문자열/배열) 보조 칸은 뺀다. 필수 칸은 스키마가
 // 이미 비지 않음을 보장하므로 별도 처리가 필요 없다.
 export function flattenGeneratedDigests(
   generated: GeneratedDigests,
