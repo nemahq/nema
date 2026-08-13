@@ -16,6 +16,7 @@ import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 import type { GeneratedDigests } from "@server/prompts/digest-generation";
 import {
   deleteSource,
+  getSource,
   ingestSource,
   reExtractSource,
 } from "@server/services/source-service";
@@ -27,10 +28,17 @@ vi.mock("@server/infra/llm/provider", () => ({
   getDigestGenerationProvider: () => ({ generateStructured: mockGenerate }),
 }));
 
-// 색인은 Voyage·Qdrant 실제 호출이 필요해 이 스위트의 몫이 아니다(색인 자체는
-// digest-index-service의 단위 테스트 몫). RLS·저장 흐름만 본다.
+// 색인은 Voyage·Qdrant 실제 호출이 필요해 이 스위트의 몫이 아니다(색인 자체·삭제는
+// digest-index-service의 단위 테스트 몫). 이 스위트는 그 호출이 언제·무엇으로
+// 나가는지(RLS·롤백·정리 트리거)만 본다. vi.mock은 파일 최상단으로 호이스트되므로
+// 참조하는 mock은 vi.hoisted로 같이 끌어올려야 한다(그냥 const는 TDZ에 걸림).
+const { mockIndexDigests, mockDeleteDigestVectors } = vi.hoisted(() => ({
+  mockIndexDigests: vi.fn().mockResolvedValue(undefined),
+  mockDeleteDigestVectors: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@server/services/digest-index-service", () => ({
-  indexDigests: vi.fn().mockResolvedValue(undefined),
+  indexDigests: mockIndexDigests,
+  deleteDigestVectors: mockDeleteDigestVectors,
 }));
 
 function noDigests(): GeneratedDigests {
@@ -181,6 +189,8 @@ afterEach(() => {
   mockError = null;
   mockGenerateCallCount = 0;
   mockGenerateLastSystemPrompt = undefined;
+  mockIndexDigests.mockReset().mockResolvedValue(undefined);
+  mockDeleteDigestVectors.mockReset().mockResolvedValue(undefined);
 });
 
 describe("source-service (RLS)", () => {
@@ -213,6 +223,32 @@ describe("source-service (RLS)", () => {
         .eq("id", sourceId)
         .maybeSingle();
       expect(asOther).toBeNull();
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "넣은 원문은 소유자만 getSource로 볼 수 있다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = noDigests();
+      const { sourceId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "getSource RLS 테스트 원문",
+      });
+
+      const asOwner = await getSource({
+        supabase: userA.supabase,
+        sourceId,
+      });
+      expect(asOwner.body).toBe("getSource RLS 테스트 원문");
+
+      await expect(
+        getSource({ supabase: userB.supabase, sourceId }),
+      ).rejects.toMatchObject({ code: "PGRST116" });
     },
     TEST_TIMEOUT_MS,
   );
@@ -274,6 +310,34 @@ describe("source-service (RLS)", () => {
     TEST_TIMEOUT_MS,
   );
 
+  // 이 테스트가 지키는 계약: 재추출로 옛 digest_id를 잃어버린 뒤에도(새 UUID로
+  // 바뀌므로) 옛 벡터를 정리 대상으로 잡아낸다 — 못 잡으면 새 결과와 거의 같은
+  // 점수의 유령 벡터가 검색 결과에 영구히 섞인다.
+  it(
+    "재추출하면 옛 다이제스트의 벡터를 정리한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("재추출 벡터 테스트 - 기존");
+      const { sourceId, digests: original } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "재추출 벡터 테스트 원문",
+      });
+
+      mockGenerated = oneDecision("재추출 벡터 테스트 - 새것");
+      await reExtractSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        sourceId,
+      });
+
+      expect(mockDeleteDigestVectors).toHaveBeenCalledWith([original[0]?.id]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
   it(
     "원문을 삭제하면 다이제스트도 함께 사라진다",
     async () => {
@@ -304,6 +368,28 @@ describe("source-service (RLS)", () => {
         sourceId,
       });
       expect(repeat.success).toBe(false);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // 이 테스트가 지키는 계약: CASCADE가 Postgres 쪽 digests는 지워도 Qdrant 벡터는
+  // 안 건드린다 — deleteSource가 지워질 digest id로 벡터 정리를 직접 트리거해야 한다.
+  it(
+    "원문을 삭제하면 지워진 다이제스트의 벡터도 함께 정리한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("벡터 정리 테스트 결정");
+      const { sourceId, digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "벡터 정리 테스트 원문",
+      });
+
+      await deleteSource({ supabase: userA.supabase, sourceId });
+
+      expect(mockDeleteDigestVectors).toHaveBeenCalledWith([digests[0]?.id]);
     },
     TEST_TIMEOUT_MS,
   );
@@ -380,6 +466,39 @@ describe("source-service (RLS)", () => {
         .eq("body", body);
       expect(sources).toHaveLength(1);
       expect(sources?.[0]?.digestion_status).toBe("pending");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // 이 테스트가 지키는 계약: 색인 실패 시 방금 커밋한 digest 행을 되돌린다 — 안
+  // 그러면 Postgres엔 있지만 Qdrant엔 없어 영영 안 걸리는 다이제스트가 조용히
+  // 남는다. source 행은 pending으로 남아 재추출로 복구할 수 있다.
+  it(
+    "색인이 실패하면 방금 저장한 다이제스트를 되돌린다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const body = `색인 실패 테스트 원문 ${randomUUID()}`;
+      mockGenerated = oneDecision("색인 실패 테스트 결정");
+      mockIndexDigests.mockRejectedValueOnce(new Error("Qdrant unavailable"));
+
+      await expect(
+        ingestSource({ supabase: userA.supabase, userId: userA.id, body }),
+      ).rejects.toThrow("Qdrant unavailable");
+
+      const { data: sources } = await userA.supabase
+        .from("sources")
+        .select("id, digestion_status")
+        .eq("body", body)
+        .single();
+      expect(sources?.digestion_status).toBe("pending");
+
+      const { data: remainingDigests } = await admin
+        .from("digests")
+        .select("id")
+        .eq("source_id", sources?.id ?? "");
+      expect(remainingDigests).toHaveLength(0);
     },
     TEST_TIMEOUT_MS,
   );

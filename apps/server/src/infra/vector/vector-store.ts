@@ -13,12 +13,12 @@ export class VectorStoreError extends Error {
 
 // 1다이제스트 = 1 point. point id = digest_id — Postgres 원장이 본문의 원천이라
 // 페이로드엔 검색 격리·식별에 쓰는 값만 담는다(본문은 안 싣는다).
-export interface DigestPayload {
+export type DigestPayload = {
   digest_id: string;
   user_id: string;
   created_at: string;
   embedding_model: string;
-}
+};
 
 export interface DigestUpsertItem {
   digestId: string;
@@ -49,4 +49,7 @@ export interface VectorStore {
     provider: EmbeddingProvider,
     options: SearchOptions,
   ): Promise<DigestSearchHit[]>;
+  /** Postgres에서 지워진 digest의 벡터를 없앤다 — 안 부르면 고아 벡터가 검색 결과에
+   * 계속 섞인다(재추출·삭제 양쪽 다 해당). */
+  deleteDigests(digestIds: string[]): Promise<void>;
 }

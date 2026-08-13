@@ -18,9 +18,11 @@ export function createQdrantStore(
   collectionName: string,
 ): VectorStore {
   async function ensurePayloadIndexes(): Promise<void> {
-    // 검색 격리 필터는 user_id 하나 — 다이제스트가 자기 소유자만 볼 수 있어야
-    // 한다(Postgres RLS와 같은 경계, source-router.ts 참고). digest_id는 point id라
-    // 별도 인덱스 불요.
+    // 검색 격리 필터는 user_id 하나 — 다이제스트가 자기 소유자만 볼 수 있어야 한다
+    // (digests 테이블의 owner-only RLS와 같은 경계). digest_id는 point id라 별도
+    // 인덱스 불요. createPayloadIndex는 이미 있는 인덱스에 다시 걸어도 안전해서
+    // (idempotent, 확인됨) 컬렉션이 이미 있던 경우에도 매번 건다 — 콘솔에서
+    // 미리 만든 컬렉션은 이 앱이 인덱스를 건 적이 없을 수 있어서다.
     await client.createPayloadIndex(collectionName, {
       field_name: "user_id",
       field_schema: "keyword",
@@ -51,8 +53,8 @@ export function createQdrantStore(
               );
             }
           }
-          await ensurePayloadIndexes();
         }
+        await ensurePayloadIndexes();
       } catch (error) {
         if (error instanceof VectorStoreError) {
           throw error;
@@ -103,7 +105,7 @@ export function createQdrantStore(
           return {
             id: item.digestId,
             vector: result.embeddings[index],
-            payload: payload as unknown as Record<string, unknown>,
+            payload,
           };
         });
 
@@ -165,6 +167,24 @@ export function createQdrantStore(
         throw new VectorStoreError(
           `Search failed: ${error instanceof Error ? error.message : String(error)}`,
           "search",
+          error,
+        );
+      }
+    },
+
+    async deleteDigests(digestIds: string[]): Promise<void> {
+      if (digestIds.length === 0) {
+        return;
+      }
+      try {
+        await client.delete(collectionName, {
+          wait: true,
+          points: digestIds,
+        });
+      } catch (error) {
+        throw new VectorStoreError(
+          `Delete failed: ${error instanceof Error ? error.message : String(error)}`,
+          "deleteDigests",
           error,
         );
       }

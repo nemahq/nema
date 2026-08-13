@@ -17,7 +17,10 @@ import {
   DigestGenerationSchema,
   flattenGeneratedDigests,
 } from "@server/prompts/digest-generation";
-import { indexDigests } from "@server/services/digest-index-service";
+import {
+  deleteDigestVectors,
+  indexDigests,
+} from "@server/services/digest-index-service";
 import { getProfile } from "@server/services/profile-service";
 
 // DB 컬럼 기본값(profiles.content_language)과 같은 값으로 떨어뜨린다. 행이 없는
@@ -78,10 +81,14 @@ export async function reExtractSource(args: {
     .eq("id", sourceId);
   throwIfSupabaseError(statusError);
 
-  const { error: deleteError } = await supabase
+  // 지워지는 digest id를 같이 받아둔다 — 새 다이제스트를 색인한 뒤 이 id들의 옛
+  // 벡터를 지운다. 순서가 반대면(새로 색인하기 전에 지우면) 색인이 실패했을 때
+  // 검색 가능한 벡터가 하나도 안 남는 구간이 생긴다.
+  const { data: deletedDigests, error: deleteError } = await supabase
     .from("digests")
     .delete()
-    .eq("source_id", sourceId);
+    .eq("source_id", sourceId)
+    .select("id");
   throwIfSupabaseError(deleteError);
 
   const digests = await saveDigestsAndIndex({
@@ -90,6 +97,9 @@ export async function reExtractSource(args: {
     sourceId: source.id,
     normalized,
   });
+
+  await deleteDigestVectors((deletedDigests ?? []).map((row) => row.id));
+
   return { sourceId: source.id, digests };
 }
 
@@ -99,6 +109,14 @@ export async function deleteSource(args: {
 }): Promise<SourceDeleteResult> {
   const { supabase, sourceId } = args;
 
+  // CASCADE가 Postgres 쪽 digests는 정리하지만 Qdrant는 안 건드린다 — 지워질
+  // digest id를 미리 받아둬야 벡터도 같이 지울 수 있다. RLS라 남의 원문이면
+  // 이 조회도 빈 배열이라 안전하다.
+  const { data: existingDigests } = await supabase
+    .from("digests")
+    .select("id")
+    .eq("source_id", sourceId);
+
   const { data, error } = await supabase
     .from("sources")
     .delete()
@@ -106,7 +124,12 @@ export async function deleteSource(args: {
     .select("id");
   throwIfSupabaseError(error);
 
-  return { success: (data ?? []).length > 0 };
+  const deleted = (data ?? []).length > 0;
+  if (deleted) {
+    await deleteDigestVectors((existingDigests ?? []).map((row) => row.id));
+  }
+
+  return { success: deleted };
 }
 
 export async function getSource(args: {
@@ -171,9 +194,30 @@ async function saveDigestsAndIndex(args: {
       ? []
       : await saveDigests({ supabase, sourceId, normalized });
 
-  // 다이제스트 저장 직후, 같은 흐름 안에서 동기로 색인한다(킥오프 ③ 참고) — 실패하면
-  // 던지기 전체가 실패한다. 색인 안 된 다이제스트가 조용히 쌓이는 것보다 낫다.
-  await indexDigests({ userId, digests });
+  // 다이제스트 저장 직후, 같은 흐름 안에서 동기로 색인한다 — 실패하면 던지기
+  // 전체가 실패한다. 이미 커밋된 digest 행은 색인 실패와 함께 되돌린다 — 안 그러면
+  // Postgres엔 있지만 Qdrant엔 없어 영영 안 걸리는 다이제스트가 조용히 남는다.
+  // source 행은 digestion_status: pending으로 남아, 재추출로 복구할 수 있다.
+  try {
+    await indexDigests({ userId, digests });
+  } catch (indexError) {
+    if (digests.length > 0) {
+      const { error: rollbackError } = await supabase
+        .from("digests")
+        .delete()
+        .in(
+          "id",
+          digests.map((digest) => digest.id),
+        );
+      if (rollbackError) {
+        console.warn(
+          "[source-service] 색인 실패 후 digest 롤백도 실패 — 고아 행이 남을 수 있음:",
+          rollbackError,
+        );
+      }
+    }
+    throw indexError;
+  }
 
   const { error: statusError } = await supabase
     .from("sources")

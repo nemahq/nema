@@ -15,10 +15,12 @@ function mockClient() {
     createPayloadIndex: vi.fn(),
     upsert: vi.fn().mockResolvedValue(undefined),
     query: vi.fn().mockResolvedValue({ points: [] }),
+    delete: vi.fn().mockResolvedValue(undefined),
   } as unknown as QdrantClient & {
     collectionExists: ReturnType<typeof vi.fn>;
     upsert: ReturnType<typeof vi.fn>;
     query: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -110,6 +112,52 @@ describe("createQdrantStore", () => {
           ],
         },
       }),
+    );
+  });
+
+  // query() 마이그레이션(search() 폐기, 1.19)의 핵심 위험 지점 — point.id/point.score를
+  // digestId/score로 옮기는 매핑이 실제로 도는지, 빈 배열 mock 뒤에 숨지 않고 확인한다.
+  it("search — point.id/point.score를 digestId/score로 옮긴다", async () => {
+    const client = mockClient();
+    client.query.mockResolvedValue({
+      points: [
+        { id: DIGEST_ITEM.digestId, score: 0.87 },
+        { id: "c0000000-0000-4000-a000-000000000002", score: 0.5 },
+      ],
+    });
+    const store = createQdrantStore(client, "digests");
+    const embedding = mockEmbedding([[0.1, 0.2]]);
+
+    const hits = await store.search(embedding, {
+      userId: DIGEST_ITEM.userId,
+      query: "질문",
+      limit: 10,
+    });
+
+    expect(hits).toEqual([
+      { digestId: DIGEST_ITEM.digestId, score: 0.87 },
+      { digestId: "c0000000-0000-4000-a000-000000000002", score: 0.5 },
+    ]);
+  });
+
+  it("deleteDigests — 빈 배열이면 client.delete를 안 부른다", async () => {
+    const client = mockClient();
+    const store = createQdrantStore(client, "digests");
+
+    await store.deleteDigests([]);
+
+    expect(client.delete).not.toHaveBeenCalled();
+  });
+
+  it("deleteDigests — digest id 목록을 point id로 그대로 넘긴다", async () => {
+    const client = mockClient();
+    const store = createQdrantStore(client, "digests");
+
+    await store.deleteDigests([DIGEST_ITEM.digestId]);
+
+    expect(client.delete).toHaveBeenCalledWith(
+      "digests",
+      expect.objectContaining({ points: [DIGEST_ITEM.digestId] }),
     );
   });
 });
