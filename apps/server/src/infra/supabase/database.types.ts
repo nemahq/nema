@@ -69,6 +69,30 @@ export type Database = {
           },
         ];
       };
+      mcp_tool_calls: {
+        Row: {
+          created_at: string;
+          detail: Json;
+          id: string;
+          tool: Database["public"]["Enums"]["mcp_tool"];
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          detail: Json;
+          id?: string;
+          tool: Database["public"]["Enums"]["mcp_tool"];
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          detail?: Json;
+          id?: string;
+          tool?: Database["public"]["Enums"]["mcp_tool"];
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           content_language: Database["public"]["Enums"]["content_language"];
@@ -119,7 +143,50 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      v_metrics_summary: {
+        Row: {
+          description: string | null;
+          direction: string | null;
+          metric: string | null;
+          value: number | null;
+        };
+        Relationships: [];
+      };
+      v_search_log: {
+        Row: {
+          lowest_score: number | null;
+          occurred_at: string | null;
+          query: string | null;
+          result_count: number | null;
+          top_score: number | null;
+        };
+        Insert: {
+          lowest_score?: never;
+          occurred_at?: string | null;
+          query?: never;
+          result_count?: never;
+          top_score?: never;
+        };
+        Update: {
+          lowest_score?: never;
+          occurred_at?: string | null;
+          query?: never;
+          result_count?: never;
+          top_score?: never;
+        };
+        Relationships: [];
+      };
+      v_search_results: {
+        Row: {
+          digest_title: string | null;
+          digest_type: Database["public"]["Enums"]["digest_type"] | null;
+          occurred_at: string | null;
+          query: string | null;
+          rank: number | null;
+          score: number | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       [_ in never]: never;
@@ -128,6 +195,7 @@ export type Database = {
       content_language: "en" | "ko";
       digest_type: "decision" | "pending" | "learning" | "idea" | "assumption";
       digestion_status: "pending" | "completed";
+      mcp_tool: "search_digests" | "get_source";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -264,6 +332,7 @@ export const Constants = {
       content_language: ["en", "ko"],
       digest_type: ["decision", "pending", "learning", "idea", "assumption"],
       digestion_status: ["pending", "completed"],
+      mcp_tool: ["search_digests", "get_source"],
     },
   },
 } as const;

@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   afterAll,
@@ -11,6 +13,7 @@ import {
 } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 
+import { loadEnv } from "@server/env";
 import type { Database } from "@server/infra/supabase/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 import type { GeneratedDigests } from "@server/prompts/digest-generation";
@@ -20,6 +23,20 @@ import {
   ingestSource,
   reExtractSource,
 } from "@server/services/source-service";
+
+// getSource가 내부에서 getSupabaseAdmin()(→getEnv())을 타는 로그 경로를 갖게 되면서,
+// 이 스위트도 서버 부트스트랩(index.ts)과 같은 초기화가 필요해졌다 — 안 하면
+// getEnv()가 던지고, mcp-tool-call-log-service가 그 실패를 삼켜 조용히 로그만
+// 안 남는 채로 테스트는 통과해버린다.
+// loadEnv()는 스키마 전체(임베딩·벡터 키 포함)를 검증하는데, 이 스위트는
+// digest-index-service를 통째로 mock해 Voyage·Qdrant를 실제로 안 타므로 그 값은
+// 채워지기만 하면 된다 — CI에는 이 키들이 없어 더미로 대신한다(로컬은 실제 값이
+// .env.secret에서 먼저 로드되므로 ??=가 덮어쓰지 않는다).
+process.env.APP_ENV ??= "local";
+process.env.VOYAGE_API_KEY ??= "test-placeholder";
+process.env.QDRANT_URL ??= "http://localhost:0";
+process.env.QDRANT_API_KEY ??= "test-placeholder";
+loadEnv(join(fileURLToPath(import.meta.url), "..", "..", ".."));
 
 // RLS(owner-only)는 실제 소유자 판정을 Postgres 정책 평가에 맡기는데, 그건 실제
 // 서로 다른 유저 JWT로 PostgREST를 거쳐야만 확인된다 — mock supabase로는 통과시킬 수
@@ -242,12 +259,13 @@ describe("source-service (RLS)", () => {
 
       const asOwner = await getSource({
         supabase: userA.supabase,
+        userId: userA.id,
         sourceId,
       });
       expect(asOwner.body).toBe("getSource RLS 테스트 원문");
 
       await expect(
-        getSource({ supabase: userB.supabase, sourceId }),
+        getSource({ supabase: userB.supabase, userId: userB.id, sourceId }),
       ).rejects.toMatchObject({ code: "PGRST116" });
     },
     TEST_TIMEOUT_MS,

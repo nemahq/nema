@@ -21,6 +21,7 @@ import {
   deleteDigestVectors,
   indexDigests,
 } from "@server/services/digest-index-service";
+import { logGetSource } from "@server/services/mcp-tool-call-log-service";
 import { getProfile } from "@server/services/profile-service";
 
 // DB 컬럼 기본값(profiles.content_language)과 같은 값으로 떨어뜨린다. 행이 없는
@@ -134,9 +135,10 @@ export async function deleteSource(args: {
 
 export async function getSource(args: {
   supabase: TypedSupabaseClient;
+  userId: string;
   sourceId: string;
 }): Promise<SourceGetResult> {
-  const { supabase, sourceId } = args;
+  const { supabase, userId, sourceId } = args;
 
   // RLS(owner-only)라 남의/없는 sourceId는 여기서 not-found로 걸린다.
   const { data, error } = await supabase
@@ -145,6 +147,9 @@ export async function getSource(args: {
     .eq("id", sourceId)
     .single();
   throwIfSupabaseError(error);
+
+  // 로그 저장은 응답을 기다리게 하지 않는다 — 실패 격리뿐 아니라 지연도 격리한다.
+  void logGetSource({ userId, detail: { sourceId } });
 
   return SourceGetResultSchema.parse({
     sourceId: data.id,

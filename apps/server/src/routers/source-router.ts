@@ -21,6 +21,7 @@ export const sourceRouter = router({
       try {
         return await getSource({
           supabase: ctx.supabase,
+          userId: ctx.user.id,
           sourceId: input.sourceId,
         });
       } catch (error) {
