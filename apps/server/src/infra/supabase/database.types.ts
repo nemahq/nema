@@ -69,6 +69,30 @@ export type Database = {
           },
         ];
       };
+      mcp_tool_calls: {
+        Row: {
+          created_at: string;
+          detail: Json;
+          id: string;
+          tool: Database["public"]["Enums"]["mcp_tool"];
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          detail: Json;
+          id?: string;
+          tool: Database["public"]["Enums"]["mcp_tool"];
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          detail?: Json;
+          id?: string;
+          tool?: Database["public"]["Enums"]["mcp_tool"];
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           content_language: Database["public"]["Enums"]["content_language"];
@@ -119,7 +143,50 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      v_metrics_summary: {
+        Row: {
+          metric: string | null;
+          value: number | null;
+          높아지면: string | null;
+          "무엇을 뜻하나": string | null;
+        };
+        Relationships: [];
+      };
+      v_search_log: {
+        Row: {
+          결과수: number | null;
+          시각: string | null;
+          최고점: number | null;
+          최저점: number | null;
+          쿼리: string | null;
+        };
+        Insert: {
+          결과수?: never;
+          시각?: string | null;
+          최고점?: never;
+          최저점?: never;
+          쿼리?: never;
+        };
+        Update: {
+          결과수?: never;
+          시각?: string | null;
+          최고점?: never;
+          최저점?: never;
+          쿼리?: never;
+        };
+        Relationships: [];
+      };
+      v_search_results: {
+        Row: {
+          "다이제스트 유형": Database["public"]["Enums"]["digest_type"] | null;
+          "다이제스트 제목": string | null;
+          순위: number | null;
+          시각: string | null;
+          점수: number | null;
+          쿼리: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       [_ in never]: never;
@@ -128,6 +195,7 @@ export type Database = {
       content_language: "en" | "ko";
       digest_type: "decision" | "pending" | "learning" | "idea" | "assumption";
       digestion_status: "pending" | "completed";
+      mcp_tool: "search" | "get_source";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -264,6 +332,7 @@ export const Constants = {
       content_language: ["en", "ko"],
       digest_type: ["decision", "pending", "learning", "idea", "assumption"],
       digestion_status: ["pending", "completed"],
+      mcp_tool: ["search", "get_source"],
     },
   },
 } as const;
