@@ -10,6 +10,7 @@ import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { ComingSoonPage } from "@web/app/pages/ComingSoonPage";
+import { DraftsPage } from "@web/app/pages/DraftsPage";
 import { HomePage } from "@web/app/pages/HomePage";
 import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
 import { SignInPage } from "@web/app/pages/SignInPage";
@@ -85,10 +86,22 @@ const homeRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
+// 열려 있는 초안 상세를 URL에 둔다 — source 파라미터가 사라진 값을 가리켜도(삭제·
+// 정리 완료 등) catch로 조용히 비워, 죽은 링크가 라우팅 자체를 깨지 않게 한다.
+const draftsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/drafts",
+  component: DraftsPage,
+  errorComponent: RouteErrorFallback,
+  validateSearch: z.object({
+    source: z.string().optional().catch(undefined),
+  }),
+});
+
 const routeTree = rootRoute.addChildren([
   signinRoute,
   oauthConsentRoute,
-  authenticatedRoute.addChildren([homeRoute]),
+  authenticatedRoute.addChildren([homeRoute, draftsRoute]),
 ]);
 
 export const router = createRouter({
