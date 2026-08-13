@@ -2,10 +2,10 @@ import type {
   ContentLanguage,
   Digest,
   SourceDeleteResult,
+  SourceGetResult,
   SourceIngestResult,
-  Statement,
 } from "@nema-io/shared";
-import { DigestSchema } from "@nema-io/shared";
+import { DigestSchema, SourceGetResultSchema } from "@nema-io/shared";
 
 import { getDigestGenerationProvider } from "@server/infra/llm/provider";
 import type { Database } from "@server/infra/supabase/database.types";
@@ -17,8 +17,8 @@ import {
   DigestGenerationSchema,
   flattenGeneratedDigests,
 } from "@server/prompts/digest-generation";
+import { indexDigests } from "@server/services/digest-index-service";
 import { getProfile } from "@server/services/profile-service";
-import { saveStatements } from "@server/services/statement-service";
 
 // DB 컬럼 기본값(profiles.content_language)과 같은 값으로 떨어뜨린다. 행이 없는
 // 상태는 로그인은 했지만 온보딩 모달을 아직 못 끝낸 아주 좁은 틈뿐이라(모달이
@@ -41,8 +41,9 @@ export async function ingestSource(args: {
 
   const contentLanguage = await resolveContentLanguage({ supabase, userId });
   const normalized = await generateDigests(body, contentLanguage);
-  const digests = await saveDigestsAndStatements({
+  const digests = await saveDigestsAndIndex({
     supabase,
+    userId,
     sourceId: source.id,
     normalized,
   });
@@ -83,8 +84,9 @@ export async function reExtractSource(args: {
     .eq("source_id", sourceId);
   throwIfSupabaseError(deleteError);
 
-  const digests = await saveDigestsAndStatements({
+  const digests = await saveDigestsAndIndex({
     supabase,
+    userId,
     sourceId: source.id,
     normalized,
   });
@@ -105,6 +107,27 @@ export async function deleteSource(args: {
   throwIfSupabaseError(error);
 
   return { success: (data ?? []).length > 0 };
+}
+
+export async function getSource(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+}): Promise<SourceGetResult> {
+  const { supabase, sourceId } = args;
+
+  // RLS(owner-only)라 남의/없는 sourceId는 여기서 not-found로 걸린다.
+  const { data, error } = await supabase
+    .from("sources")
+    .select("id, body, created_at")
+    .eq("id", sourceId)
+    .single();
+  throwIfSupabaseError(error);
+
+  return SourceGetResultSchema.parse({
+    sourceId: data.id,
+    body: data.body,
+    createdAt: data.created_at,
+  });
 }
 
 async function resolveContentLanguage(args: {
@@ -135,17 +158,22 @@ async function generateDigests(
   return flattenGeneratedDigests(generated);
 }
 
-async function saveDigestsAndStatements(args: {
+async function saveDigestsAndIndex(args: {
   supabase: TypedSupabaseClient;
+  userId: string;
   sourceId: string;
   normalized: Array<Pick<Digest, "type" | "title" | "body">>;
-}): Promise<Array<Digest & { statement: Statement | null }>> {
-  const { supabase, sourceId, normalized } = args;
+}): Promise<Digest[]> {
+  const { supabase, userId, sourceId, normalized } = args;
 
   const digests =
     normalized.length === 0
       ? []
       : await saveDigests({ supabase, sourceId, normalized });
+
+  // 다이제스트 저장 직후, 같은 흐름 안에서 동기로 색인한다(킥오프 ③ 참고) — 실패하면
+  // 던지기 전체가 실패한다. 색인 안 된 다이제스트가 조용히 쌓이는 것보다 낫다.
+  await indexDigests({ userId, digests });
 
   const { error: statusError } = await supabase
     .from("sources")
@@ -153,17 +181,7 @@ async function saveDigestsAndStatements(args: {
     .eq("id", sourceId);
   throwIfSupabaseError(statusError);
 
-  // 이 응답 모양은 이번 라운드 도그푸딩용이다. 진술은 화면에 안 드러나는 내부
-  // 단위이라 조회 화면이 없는 지금은 이 응답이 보는 유일한 창구다 — 화면이
-  // 붙을 때 이 자리는 조회 라우터로 옮긴다.
-  const statementsByDigestId = await saveStatements({
-    supabase,
-    digests,
-  });
-  return digests.map((digest) => ({
-    ...digest,
-    statement: statementsByDigestId.get(digest.id) ?? null,
-  }));
+  return digests;
 }
 
 async function saveDigests(args: {

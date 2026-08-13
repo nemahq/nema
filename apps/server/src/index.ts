@@ -8,6 +8,7 @@ import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { getEnv, loadEnv } from "./env";
 import { resolveCorsOrigin } from "./infra/cors-origin";
 import { initI18n } from "./infra/i18n";
+import { getVectorStore } from "./infra/vector";
 import { appRouter } from "./router";
 import { createContext, onTRPCError } from "./trpc";
 
@@ -20,6 +21,7 @@ loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 
 async function bootstrap() {
   await initI18n();
+  await getVectorStore().ensureCollection();
 
   const server = Fastify({
     logger: true,
