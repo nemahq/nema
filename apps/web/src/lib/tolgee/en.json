@@ -41,7 +41,7 @@
     "unknown_error": "An unknown error occurred."
   },
   "digest": {
-    "delete_confirm_description": "It disappears from the list and search, and cannot be restored from the app.",
+    "delete_confirm_description": "Deleting this digest removes it from the list and search, and can't be undone.",
     "delete_confirm_title": "Delete this digest?",
     "field_alternatives": "Alternatives",
     "field_assumption": "Hypothesis",
@@ -54,7 +54,7 @@
     "field_impact": "Impact",
     "field_question": "Question",
     "field_reason": "Reason",
-    "field_resolution_condition": "Confirmation condition",
+    "field_resolution_condition": "Resolution condition",
     "field_situation": "Situation",
     "field_tradeoff": "Trade-offs",
     "field_verification_condition": "Verification condition",

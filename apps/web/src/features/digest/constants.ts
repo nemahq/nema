@@ -102,8 +102,8 @@ export function readDigestBodyField(
   if (typeof raw === "string") {
     return raw.trim() === "" ? undefined : raw;
   }
-  if (Array.isArray(raw) && raw.every((item) => typeof item === "string")) {
-    const filled = raw.filter((item) => item.trim() !== "");
+  if (Array.isArray(raw) && raw.every((entry) => typeof entry === "string")) {
+    const filled = raw.filter((entry) => entry.trim() !== "");
     return filled.length > 0 ? filled : undefined;
   }
   return undefined;
