@@ -1,4 +1,3 @@
-import { getEnv } from "@server/env";
 import {
   type EmbeddingProvider,
   VECTOR_DIMENSION,
@@ -14,14 +13,15 @@ import type {
 } from "./vector-store";
 import { VectorStoreError } from "./vector-store";
 
-export function createQdrantStore(client: QdrantClient): VectorStore {
-  const { QDRANT_COLLECTION } = getEnv();
-
+export function createQdrantStore(
+  client: QdrantClient,
+  collectionName: string,
+): VectorStore {
   async function ensurePayloadIndexes(): Promise<void> {
     // 검색 격리 필터는 user_id 하나 — 다이제스트가 자기 소유자만 볼 수 있어야
     // 한다(Postgres RLS와 같은 경계, source-router.ts 참고). digest_id는 point id라
     // 별도 인덱스 불요.
-    await client.createPayloadIndex(QDRANT_COLLECTION, {
+    await client.createPayloadIndex(collectionName, {
       field_name: "user_id",
       field_schema: "keyword",
     });
@@ -30,10 +30,10 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
   return {
     async ensureCollection(): Promise<void> {
       try {
-        const { exists } = await client.collectionExists(QDRANT_COLLECTION);
+        const { exists } = await client.collectionExists(collectionName);
         if (!exists) {
           try {
-            await client.createCollection(QDRANT_COLLECTION, {
+            await client.createCollection(collectionName, {
               vectors: { size: VECTOR_DIMENSION, distance: "Cosine" },
               quantization_config: {
                 scalar: { type: "int8", always_ram: true },
@@ -42,7 +42,7 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
           } catch (createError) {
             // 다른 인스턴스가 동시에 컬렉션을 생성했을 수 있으므로 재확인
             const { exists: recheck } =
-              await client.collectionExists(QDRANT_COLLECTION);
+              await client.collectionExists(collectionName);
             if (!recheck) {
               throw new VectorStoreError(
                 `Failed to create collection: ${createError instanceof Error ? createError.message : String(createError)}`,
@@ -107,7 +107,7 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
           };
         });
 
-        await client.upsert(QDRANT_COLLECTION, { wait: true, points });
+        await client.upsert(collectionName, { wait: true, points });
       } catch (error) {
         if (error instanceof VectorStoreError) {
           throw error;
@@ -146,7 +146,7 @@ export function createQdrantStore(client: QdrantClient): VectorStore {
 
         // 구 search() 엔드포인트가 폐기돼(js-client-rest 1.19) query()로 대체됐다 —
         // query에 벡터값을 그대로 넘기면 같은 최근접 검색으로 동작한다.
-        const queryResult = await client.query(QDRANT_COLLECTION, {
+        const queryResult = await client.query(collectionName, {
           query: vector,
           limit,
           filter: { must: [{ key: "user_id", match: { value: userId } }] },

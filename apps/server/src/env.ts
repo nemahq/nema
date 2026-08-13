@@ -38,7 +38,6 @@ const envSchema = z
     VOYAGE_API_KEY: z.string().min(1),
     QDRANT_URL: z.string().url(),
     QDRANT_API_KEY: z.string().min(1),
-    QDRANT_COLLECTION: z.string().min(1).default("digests"),
   })
   .transform((data) => ({
     ...data,

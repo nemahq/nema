@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@server/env", () => ({
-  getEnv: () => ({ QDRANT_COLLECTION: "digests" }),
-}));
-
 import type { EmbeddingProvider } from "@server/infra/embedding";
 import { VECTOR_DIMENSION } from "@server/infra/embedding";
 
@@ -53,7 +49,7 @@ describe("createQdrantStore", () => {
 
   it("upsertDigests — 임베딩 개수가 어긋나면 upsert 없이 거부한다", async () => {
     const client = mockClient();
-    const store = createQdrantStore(client);
+    const store = createQdrantStore(client, "digests");
     // 다이제스트 2개에 벡터 1개 — 어긋난 벡터가 엉뚱한 digest_id에 기록되는 손상 방지
     const embedding = mockEmbedding([[0.1, 0.2]]);
 
@@ -69,7 +65,7 @@ describe("createQdrantStore", () => {
 
   it("upsertDigests — point id는 digest_id, payload는 user_id로 필터링 가능한 값만 담는다", async () => {
     const client = mockClient();
-    const store = createQdrantStore(client);
+    const store = createQdrantStore(client, "digests");
     const embedding = mockEmbedding([[0.1, 0.2]]);
 
     await store.upsertDigests(embedding, [DIGEST_ITEM]);
@@ -93,7 +89,7 @@ describe("createQdrantStore", () => {
 
   it("search — user_id로 검색을 격리한다(자기 것만 후보)", async () => {
     const client = mockClient();
-    const store = createQdrantStore(client);
+    const store = createQdrantStore(client, "digests");
     const embedding = mockEmbedding([[0.1, 0.2]]);
 
     await store.search(embedding, {
