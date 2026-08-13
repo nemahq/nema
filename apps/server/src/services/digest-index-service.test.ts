@@ -35,7 +35,7 @@ describe("indexDigests", () => {
     expect(mockUpsertDigests).not.toHaveBeenCalled();
   });
 
-  it("있는 칸만 라벨과 함께 한 문자열로 조립해 배치 1회로 넘긴다", async () => {
+  it("있는 칸만 필드 키와 함께 한 문자열로 조립해 배치 1회로 넘긴다", async () => {
     const digests = [
       digestOf({
         id: "digest-1",
@@ -59,13 +59,13 @@ describe("indexDigests", () => {
       {
         digestId: "digest-1",
         userId: "user-1",
-        text: "제목: 결정 제목 / 상황: 상황 내용 / 선택: 선택 내용",
+        text: "title: 결정 제목 / situation: 상황 내용 / choice: 선택 내용",
         createdAt: "2026-08-13T00:00:00.000Z",
       },
       {
         digestId: "digest-2",
         userId: "user-1",
-        text: "제목: 학습 제목 / 발견: 발견 내용",
+        text: "title: 학습 제목 / finding: 발견 내용",
         createdAt: "2026-08-13T00:00:00.000Z",
       },
     ]);
@@ -88,7 +88,7 @@ describe("indexDigests", () => {
 
     const [, items] = mockUpsertDigests.mock.calls[0];
     expect(items[0].text).toBe(
-      "제목: 결정 제목 / 선택: 선택 / 트레이드오프: 트레이드오프 A, 트레이드오프 B",
+      "title: 결정 제목 / choice: 선택 / tradeoff: 트레이드오프 A, 트레이드오프 B",
     );
   });
 });
