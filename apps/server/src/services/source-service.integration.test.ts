@@ -72,12 +72,18 @@ vi.mock("@server/services/mcp-tool-call-log-service", () => ({
 // 관계 잇기도 같은 이유로 뺀다 — 후보 검색이 Qdrant를, 판정이 LLM을 실제로 탄다.
 // 관계 자체는 digest-relation-service의 단위 테스트가 본다. 안 막으면 이 스위트가
 // 던지기마다 외부 호출을 내고, 그 실패는 source-service가 삼켜서 조용히 느려지기만 한다.
+// getRelationCounts는 순수 DB 조회(Qdrant·LLM 없음)라 그대로 둔다 —
+// listSourcesWithDigests가 부르는 실제 구현으로 관계 개수를 검증해야 한다.
 const { mockLinkRelations } = vi.hoisted(() => ({
   mockLinkRelations: vi.fn().mockResolvedValue(new Map()),
 }));
-vi.mock("@server/services/digest-relation-service", () => ({
-  linkRelations: mockLinkRelations,
-}));
+vi.mock("@server/services/digest-relation-service", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@server/services/digest-relation-service")
+    >();
+  return { ...actual, linkRelations: mockLinkRelations };
+});
 
 function noDigests(): GeneratedDigests {
   return {
