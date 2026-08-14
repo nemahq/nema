@@ -5,6 +5,8 @@ import { createTRPCClient, httpLink, isTRPCClientError } from "@trpc/client";
 import type { AppRouter } from "@nema-io/server/src/router";
 import {
   DigestSearchInputSchema,
+  MCP_CLIENT_HEADER_NAME,
+  MCP_CLIENT_HEADER_VALUE,
   SourceActionInputSchema,
   SourceIngestInputSchema,
 } from "@nema-io/shared";
@@ -20,7 +22,10 @@ function createNemaClient(accessToken: string) {
     links: [
       httpLink({
         url: `${getEnv().NEMA_API_URL}/trpc`,
-        headers: () => ({ Authorization: `Bearer ${accessToken}` }),
+        headers: () => ({
+          Authorization: `Bearer ${accessToken}`,
+          [MCP_CLIENT_HEADER_NAME]: MCP_CLIENT_HEADER_VALUE,
+        }),
       }),
     ],
   });

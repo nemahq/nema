@@ -2,10 +2,17 @@ import type {
   ContentLanguage,
   Digest,
   SourceDeleteResult,
+  SourceDraft,
   SourceGetResult,
   SourceIngestResult,
+  SourceWithDigests,
 } from "@nema-io/shared";
-import { DigestSchema, SourceGetResultSchema } from "@nema-io/shared";
+import {
+  DigestSchema,
+  SourceDraftSchema,
+  SourceGetResultSchema,
+  SourceWithDigestsSchema,
+} from "@nema-io/shared";
 
 import { getDigestGenerationProvider } from "@server/infra/llm/provider";
 import type { Database } from "@server/infra/supabase/database.types";
@@ -23,6 +30,7 @@ import {
 } from "@server/services/digest-index-service";
 import { logGetSource } from "@server/services/mcp-tool-call-log-service";
 import { getProfile } from "@server/services/profile-service";
+import type { RequestOrigin } from "@server/trpc";
 
 // DB 컬럼 기본값(profiles.content_language)과 같은 값으로 떨어뜨린다. 행이 없는
 // 상태는 로그인은 했지만 온보딩 모달을 아직 못 끝낸 아주 좁은 틈뿐이라(모달이
@@ -137,24 +145,127 @@ export async function getSource(args: {
   supabase: TypedSupabaseClient;
   userId: string;
   sourceId: string;
+  origin: RequestOrigin;
 }): Promise<SourceGetResult> {
-  const { supabase, userId, sourceId } = args;
+  const { supabase, userId, sourceId, origin } = args;
 
   // RLS(owner-only)라 남의/없는 sourceId는 여기서 not-found로 걸린다.
   const { data, error } = await supabase
     .from("sources")
-    .select("id, body, created_at")
+    .select("id, name, body, created_at")
     .eq("id", sourceId)
     .single();
   throwIfSupabaseError(error);
 
+  // 이 로그는 "정리본으로 부족해 원문을 봤다"를 세는 MCP 전용 품질 지표다 —
+  // 원문 상세 화면에서 사람이 직접 열어본 것까지 섞이면 지표 의미가 깨진다.
   // 로그 저장은 응답을 기다리게 하지 않는다 — 실패 격리뿐 아니라 지연도 격리한다.
-  void logGetSource({ userId, detail: { sourceId } });
+  if (origin === "mcp") {
+    void logGetSource({ userId, detail: { sourceId } });
+  }
 
   return SourceGetResultSchema.parse({
     sourceId: data.id,
+    name: data.name,
     body: data.body,
     createdAt: data.created_at,
+  });
+}
+
+// 두 목록 모두 아직 진짜 페이지네이션이 없다 — 지금은 이 값 하나로 폭주만
+// 막는다(legacy의 LIMIT 50과 같은 취지). 실사용 규모가 커지면 커서 기반
+// 페이지네이션으로 바꿔야 한다.
+const SOURCE_LIST_SAFETY_LIMIT = 500;
+
+export async function listSourcesWithDigests(args: {
+  supabase: TypedSupabaseClient;
+}): Promise<SourceWithDigests[]> {
+  const { supabase } = args;
+
+  // digests!inner로 다이제스트 행이 하나도 없는 원문을 걸러낸다 — 그건
+  // listDraftSources(초안 화면) 몫이다. 가려진 행도 "행이 있다"에는 포함되므로
+  // 다 가려도 원문 자체는 목록에 남는다(원문을 지울 진입점을 유지해야 해서).
+  // digestion_status='completed' 조건은 listDraftSources와 겹치지 않게 막는
+  // 안전장치다 — saveDigestsAndIndex가 digest 행을 커밋한 뒤 상태를 completed로
+  // 바꾸는 마지막 UPDATE만 실패하면(드물지만) pending인데 digest 행은 있는 원문이
+  // 생기고, 이 조건이 없으면 그 원문이 두 목록에 동시에 뜬다.
+  const { data, error } = await supabase
+    .from("sources")
+    .select(
+      "id, name, created_at, digests!inner(id, type, title, extraction_order, hidden_at)",
+    )
+    .eq("digestion_status", "completed")
+    .order("created_at", { ascending: false })
+    .order("extraction_order", {
+      referencedTable: "digests",
+      ascending: true,
+    })
+    .limit(SOURCE_LIST_SAFETY_LIMIT);
+  throwIfSupabaseError(error);
+
+  return (data ?? []).map(toSourceWithDigests);
+}
+
+export async function listDraftSources(args: {
+  supabase: TypedSupabaseClient;
+}): Promise<SourceDraft[]> {
+  const { supabase } = args;
+
+  // 필터(pending 또는 digests 0건)는 v_draft_sources 뷰가 DB에서 미리 건다 —
+  // 여기서 JS로 걸렀다면 상한(limit)이 거르기 전에 먼저 잘라, 원문이 많을 때
+  // 실제로 있는 초안이 빈 목록으로 보일 수 있었다(에러 없이 조용히 틀림).
+  const { data, error } = await supabase
+    .from("v_draft_sources")
+    .select("id, name, created_at, digestion_status")
+    .order("created_at", { ascending: false })
+    .limit(SOURCE_LIST_SAFETY_LIMIT);
+  throwIfSupabaseError(error);
+
+  return (data ?? []).map(toSourceDraft);
+}
+
+type SourceWithDigestsRow = Pick<
+  Database["public"]["Tables"]["sources"]["Row"],
+  "id" | "name" | "created_at"
+> & {
+  digests: Array<
+    Pick<
+      Database["public"]["Tables"]["digests"]["Row"],
+      "id" | "type" | "title" | "hidden_at"
+    >
+  >;
+};
+
+function toSourceWithDigests(row: SourceWithDigestsRow): SourceWithDigests {
+  return SourceWithDigestsSchema.parse({
+    sourceId: row.id,
+    name: row.name,
+    createdAt: row.created_at,
+    digests: row.digests
+      .filter((digest) => digest.hidden_at === null)
+      .map((digest) => ({
+        id: digest.id,
+        type: digest.type,
+        title: digest.title,
+      })),
+  });
+}
+
+// 뷰(v_draft_sources)의 생성 타입은 컬럼을 전부 nullable로 잡는다 — 밑 테이블
+// (sources)에는 전부 NOT NULL 컬럼이라 실제로 null이 나올 일은 없다. 그래도
+// round-trip을 실제로 검증하는 SourceDraftSchema.parse가 이 전제를 지킨다:
+// 어긋나면(예: 뷰 정의가 조인으로 바뀌어 실제로 null이 새면) 여기서 곧바로 던진다.
+type SourceDraftRow = Pick<
+  Database["public"]["Views"]["v_draft_sources"]["Row"],
+  "id" | "name" | "created_at" | "digestion_status"
+>;
+
+function toSourceDraft(row: SourceDraftRow): SourceDraft {
+  return SourceDraftSchema.parse({
+    sourceId: row.id,
+    name: row.name,
+    createdAt: row.created_at,
+    status: row.digestion_status,
   });
 }
 
@@ -243,11 +354,14 @@ async function saveDigests(args: {
   const { data: rows, error } = await supabase
     .from("digests")
     .insert(
-      normalized.map((digest) => ({
+      // LLM 응답 배열의 순서가 곧 원문 안에서의 추출 순서다 — 배열 인덱스를
+      // 그대로 extraction_order에 넣는다.
+      normalized.map((digest, index) => ({
         source_id: sourceId,
         type: digest.type,
         title: digest.title,
         body: digest.body,
+        extraction_order: index,
       })),
     )
     .select("id, type, title, body, created_at");

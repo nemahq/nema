@@ -4,6 +4,11 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
 
 import {
+  MCP_CLIENT_HEADER_NAME,
+  MCP_CLIENT_HEADER_VALUE,
+} from "@nema-io/shared";
+
+import {
   getDomainCode,
   isExpectedDomainError,
   mapDomainError,
@@ -13,6 +18,15 @@ import {
   createSupabaseUser,
   getSupabaseAdmin,
 } from "@server/infra/supabase/supabase";
+
+// MCP와 웹이 같은 tRPC 프로시저를 공유해서 인증 정보만으로는 호출 출처를 못
+// 가른다 — MCP_CLIENT_HEADER_NAME(apps/mcp가 심는 헤더)로 구분한다. source.get의
+// MCP 전용 조회 로그(logGetSource)가 이 값을 쓴다.
+//
+// 헤더는 누구나 흉내 낼 수 있는 자기신고 값이다 — RLS처럼 서버가 독립적으로
+// 검증하는 값이 아니다. 로깅 지표를 어느 쪽에 남길지 가르는 용도로만 쓴다.
+// 인가(authorization) 판단에는 절대 재사용하지 않는다.
+export type RequestOrigin = "mcp" | "web";
 
 export async function createContext({ req, res }: CreateFastifyContextOptions) {
   const prefix = "Bearer ";
@@ -33,8 +47,12 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
   }
 
   const lng = resolveLanguage(req.headers["accept-language"]);
+  const origin: RequestOrigin =
+    req.headers[MCP_CLIENT_HEADER_NAME] === MCP_CLIENT_HEADER_VALUE
+      ? "mcp"
+      : "web";
 
-  return { req, res, log: req.log, user, lng, supabase };
+  return { req, res, log: req.log, user, lng, supabase, origin };
 }
 
 type Context = Awaited<ReturnType<typeof createContext>>;

@@ -1,9 +1,10 @@
 import {
   DIGEST_SEARCH_DEFAULT_LIMIT,
+  DigestActionInputSchema,
   DigestSearchInputSchema,
 } from "@nema-io/shared";
 
-import { searchDigests } from "@server/services/digest-service";
+import { deleteDigest, searchDigests } from "@server/services/digest-service";
 import { protectedProcedure, router } from "@server/trpc";
 
 export const digestRouter = router({
@@ -16,5 +17,11 @@ export const digestRouter = router({
         query: input.query,
         limit: input.limit ?? DIGEST_SEARCH_DEFAULT_LIMIT,
       }),
+    ),
+
+  delete: protectedProcedure
+    .input(DigestActionInputSchema)
+    .mutation(({ ctx, input }) =>
+      deleteDigest({ supabase: ctx.supabase, digestId: input.digestId }),
     ),
 });

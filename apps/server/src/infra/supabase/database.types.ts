@@ -38,26 +38,35 @@ export type Database = {
         Row: {
           body: Json;
           created_at: string;
+          extraction_order: number;
+          hidden_at: string | null;
           id: string;
           source_id: string;
           title: string;
           type: Database["public"]["Enums"]["digest_type"];
+          updated_at: string;
         };
         Insert: {
           body: Json;
           created_at?: string;
+          extraction_order: number;
+          hidden_at?: string | null;
           id?: string;
           source_id: string;
           title: string;
           type: Database["public"]["Enums"]["digest_type"];
+          updated_at?: string;
         };
         Update: {
           body?: Json;
           created_at?: string;
+          extraction_order?: number;
+          hidden_at?: string | null;
           id?: string;
           source_id?: string;
           title?: string;
           type?: Database["public"]["Enums"]["digest_type"];
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -65,6 +74,13 @@ export type Database = {
             columns: ["source_id"];
             isOneToOne: false;
             referencedRelation: "sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "v_draft_sources";
             referencedColumns: ["id"];
           },
         ];
@@ -120,6 +136,7 @@ export type Database = {
           created_at: string;
           digestion_status: Database["public"]["Enums"]["digestion_status"];
           id: string;
+          name: string;
           updated_at: string;
           user_id: string;
         };
@@ -128,6 +145,7 @@ export type Database = {
           created_at?: string;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           id?: string;
+          name?: string;
           updated_at?: string;
           user_id: string;
         };
@@ -136,6 +154,7 @@ export type Database = {
           created_at?: string;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           id?: string;
+          name?: string;
           updated_at?: string;
           user_id?: string;
         };
@@ -143,6 +162,33 @@ export type Database = {
       };
     };
     Views: {
+      v_draft_sources: {
+        Row: {
+          created_at: string | null;
+          digestion_status:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id: string | null;
+          name: string | null;
+        };
+        Insert: {
+          created_at?: string | null;
+          digestion_status?:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id?: string | null;
+          name?: string | null;
+        };
+        Update: {
+          created_at?: string | null;
+          digestion_status?:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id?: string | null;
+          name?: string | null;
+        };
+        Relationships: [];
+      };
       v_metrics_summary: {
         Row: {
           description: string | null;
