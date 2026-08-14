@@ -26,7 +26,6 @@ export function SourceDigestGroupSkeleton({
         <TextSkeleton size="sm" className="w-32" style={style} />
         <div className="min-w-6 flex-1" />
         <TextSkeleton size="xs" className="w-10" style={style} />
-        {/* 원문 보기 버튼(size-7)과 같은 크기의 빈 자리 — 아이콘은 안 그린다. */}
         <div className="size-7 shrink-0" />
       </div>
       <div className="flex flex-col">

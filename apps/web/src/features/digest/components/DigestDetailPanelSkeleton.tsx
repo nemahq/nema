@@ -14,9 +14,9 @@ export function DigestDetailPanelSkeleton() {
             TextSkeleton은 vertical-align: middle로 바를 앉히는데(베이스라인
             기준, 줄 상자 진짜 중앙이 아님), 실제 워시 행(배지+제목)은
             flex items-center라 지오메트릭 중앙이라서 TextSkeleton 혼자면
-            아래로 살짝 치우쳐 보인다(DigestTypeBadge 아이콘 정렬과 같은
-            원인). h-7·h-3.5는 Text sizeClasses.xl(20px, leading 1.4=28px)의
-            줄 높이·0.7em 바 높이와 같은 값. */}
+            아래로 살짝 치우쳐 보인다. h-7·h-3.5는 @nema-io/weave의
+            Text sizeClasses.xl(20px, leading 1.4=28px)에서 뽑은 줄 높이·0.7em
+            바 높이 값 — weave 쪽 값이 바뀌면 이 자리도 같이 맞춰야 한다. */}
         <div className="flex h-7 items-center">
           <Skeleton className="h-3.5 w-1/2 max-w-80 rounded-md" />
         </div>

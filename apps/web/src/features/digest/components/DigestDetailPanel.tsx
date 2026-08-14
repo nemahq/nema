@@ -91,20 +91,6 @@ function DigestDetailPanelContent({
   );
 }
 
-interface DigestDetailTimestampProps {
-  digestId: string;
-}
-
-// 헤더 자리로 옮긴 시각 — 워시 구역과 별개로 여기서 다시 구독한다(같은 쿼리라
-// 캐시를 나눠 쓸 뿐 추가 요청은 안 나간다). 헤더는 페칭과 무관하게 즉시
-// 눌러져야 해서, 이 조각만 따로 Suspense/ErrorBoundary로 감싸 실패해도
-// 조용히 안 보여줄 뿐 닫기·삭제는 막지 않는다 — 실제 에러 안내는 본문 쪽
-// 경계가 이미 하고 있어 여기서 또 보고하지 않는다(shouldReport false).
-function DigestDetailTimestamp({ digestId }: DigestDetailTimestampProps) {
-  const [digest] = useDigestSuspenseQuery(digestId);
-  return <RelativeTime dateTime={digest.createdAt} />;
-}
-
 interface DigestDetailPanelErrorProps extends ErrorFallbackProps {
   onClose: () => void;
 }
@@ -153,17 +139,13 @@ export function DigestDetailPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-11 shrink-0 items-center justify-end gap-3 px-6">
-        <ErrorBoundary
-          boundaryName="digest-detail-timestamp"
-          fallback={null}
-          shouldReport={() => false}
-        >
-          <Suspense fallback={null}>
-            {digestId !== undefined && (
-              <DigestDetailTimestamp digestId={digestId} />
-            )}
-          </Suspense>
-        </ErrorBoundary>
+        {/* fetchedDigest는 본문 쪽 useDigestSuspenseQuery(digestPublicId)와 같은
+            쿼리 키를 써 캐시를 공유한다 — 추가 요청 없이 헤더가 채워진다. 아직
+            없으면(로딩·에러) 그냥 안 보여준다 — 헤더는 페칭과 무관하게 즉시
+            눌러져야 해서 닫기·삭제를 막지 않는다. */}
+        {fetchedDigest !== undefined && (
+          <RelativeTime dateTime={fetchedDigest.createdAt} />
+        )}
         <div className="-mr-1 flex shrink-0 items-center gap-1">
           <DigestDeleteAction digestId={digestId} onDeleted={onClose} />
           <DigestDetailCloseButton onClose={onClose} />
