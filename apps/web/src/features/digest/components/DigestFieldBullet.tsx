@@ -10,7 +10,7 @@ interface DigestFieldBulletProps {
 export function DigestFieldBullet({ children }: DigestFieldBulletProps) {
   return (
     <li className="flex items-start gap-2">
-      <Circle className="mt-2 size-1 shrink-0 fill-current text-fg-tertiary" />
+      <Circle className="mt-2 size-1 shrink-0 fill-current text-fg-primary" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">{children}</div>
     </li>
   );

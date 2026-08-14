@@ -21,7 +21,7 @@ export function DigestTypeBadge({ type }: DigestTypeBadgeProps) {
   return (
     <Badge shape="pill" variant="outline" className="shrink-0">
       <span className="inline-flex items-center gap-1">
-        <TypeIcon className="size-3.5" />
+        <TypeIcon className="size-3" />
         {t(DIGEST_TYPE_LABEL_KEY[type])}
       </span>
     </Badge>
