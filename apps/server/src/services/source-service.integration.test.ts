@@ -876,6 +876,11 @@ describe("getSource 로그 출처 구분", () => {
   );
 });
 
+// 이 describe의 fixture 수는 항상 한 자리라 페이지네이션 경계에 안 걸리게
+// 넉넉히 잡는다 — 커서 자체는 별도 describe(listSourcesWithDigests 커서
+// 페이지네이션)가 검증한다.
+const LIST_WITH_DIGESTS_TEST_LIMIT = 50;
+
 describe("listSourcesWithDigests (RLS)", () => {
   afterEach(() => {
     mockError = null;
@@ -902,15 +907,17 @@ describe("listSourcesWithDigests (RLS)", () => {
 
       const result = await listSourcesWithDigests({
         supabase: userA.supabase,
+        cursor: null,
+        limit: LIST_WITH_DIGESTS_TEST_LIMIT,
       });
 
-      expect(result.some((source) => source.sourceId === withDigests)).toBe(
-        true,
-      );
+      expect(
+        result.items.some((source) => source.sourceId === withDigests),
+      ).toBe(true);
       // 행이 아예 0인 원문은 이 목록의 대상이 아니다 — listDraftSources 몫이다.
-      expect(result.some((source) => source.sourceId === withoutDigests)).toBe(
-        false,
-      );
+      expect(
+        result.items.some((source) => source.sourceId === withoutDigests),
+      ).toBe(false);
     },
     TEST_TIMEOUT_MS,
   );
@@ -950,9 +957,11 @@ describe("listSourcesWithDigests (RLS)", () => {
 
       const result = await listSourcesWithDigests({
         supabase: userA.supabase,
+        cursor: null,
+        limit: LIST_WITH_DIGESTS_TEST_LIMIT,
       });
 
-      const entry = result.find((source) => source.sourceId === sourceId);
+      const entry = result.items.find((source) => source.sourceId === sourceId);
       expect(entry?.digests.map((digest) => digest.title)).toEqual([
         "목록 정렬 A-2",
         "목록 정렬 A-1",
@@ -981,9 +990,11 @@ describe("listSourcesWithDigests (RLS)", () => {
 
       const result = await listSourcesWithDigests({
         supabase: userA.supabase,
+        cursor: null,
+        limit: LIST_WITH_DIGESTS_TEST_LIMIT,
       });
 
-      const entry = result.find((source) => source.sourceId === sourceId);
+      const entry = result.items.find((source) => source.sourceId === sourceId);
       expect(entry).toBeDefined();
       expect(entry?.digests).toHaveLength(0);
     },
@@ -1005,8 +1016,10 @@ describe("listSourcesWithDigests (RLS)", () => {
 
       const asOther = await listSourcesWithDigests({
         supabase: userA.supabase,
+        cursor: null,
+        limit: LIST_WITH_DIGESTS_TEST_LIMIT,
       });
-      expect(asOther.some((source) => source.sourceId === sourceId)).toBe(
+      expect(asOther.items.some((source) => source.sourceId === sourceId)).toBe(
         false,
       );
     },
@@ -1041,11 +1054,137 @@ describe("listSourcesWithDigests (RLS)", () => {
 
       const withDigests = await listSourcesWithDigests({
         supabase: userA.supabase,
+        cursor: null,
+        limit: LIST_WITH_DIGESTS_TEST_LIMIT,
       });
       const drafts = await listDraftSources({ supabase: userA.supabase });
 
-      expect(withDigests.some((s) => s.sourceId === source?.id)).toBe(false);
+      expect(withDigests.items.some((s) => s.sourceId === source?.id)).toBe(
+        false,
+      );
       expect(drafts.some((d) => d.sourceId === source?.id)).toBe(true);
+    },
+    TEST_TIMEOUT_MS,
+  );
+});
+
+describe("listSourcesWithDigests 커서 페이지네이션 (RLS)", () => {
+  afterEach(() => {
+    mockError = null;
+  });
+
+  // userA는 파일 전체가 공유해 앞선 describe들의 원문이 이미 쌓여 있다 —
+  // 페이지 경계를 정확히 세는 이 테스트들은 그 잔여 원문이 두 번째 페이지에
+  // 섞여 들어오면 개수가 안 맞는다. 테스트마다 격리된 유저를 새로 만들어 그
+  // 문제를 피한다.
+  it(
+    "limit+1 트릭으로 다음 페이지 존재 여부를 판정하고, 커서로 이어 받은 항목이 겹치거나 빠지지 않는다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const user = await createTestUser();
+      const sourceIds: string[] = [];
+      for (const label of ["A", "B", "C"]) {
+        mockGenerated = oneDecision(`커서 페이지네이션 ${label}`);
+        const { sourceId } = await ingestSource({
+          supabase: user.supabase,
+          userId: user.id,
+          body: `커서 페이지네이션 원문 ${label}`,
+        });
+        sourceIds.push(sourceId);
+      }
+      // 삽입 순서(A→B→C)와 반대로 created_at을 매겨, order() 절이 실제로
+      // created_at을 보고 정렬하는지 함께 검증한다.
+      const baseTime = Date.now();
+      await Promise.all(
+        sourceIds.map((id, index) =>
+          admin
+            .from("sources")
+            .update({
+              created_at: new Date(
+                baseTime + (sourceIds.length - index) * 1000,
+              ).toISOString(),
+            })
+            .eq("id", id),
+        ),
+      );
+
+      const firstPage = await listSourcesWithDigests({
+        supabase: user.supabase,
+        cursor: null,
+        limit: 2,
+      });
+      expect(firstPage.items.map((s) => s.sourceId)).toEqual([
+        sourceIds[0],
+        sourceIds[1],
+      ]);
+      expect(firstPage.nextCursor).not.toBeNull();
+
+      const secondPage = await listSourcesWithDigests({
+        supabase: user.supabase,
+        cursor: firstPage.nextCursor,
+        limit: 2,
+      });
+      expect(secondPage.items.map((s) => s.sourceId)).toEqual([sourceIds[2]]);
+      expect(secondPage.nextCursor).toBeNull();
+
+      await admin.auth.admin.deleteUser(user.id);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "created_at이 같은 원문도 id를 tie-breaker로 써서 페이지 경계에서 빠뜨리거나 중복하지 않는다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const user = await createTestUser();
+      const sourceIds: string[] = [];
+      for (const label of ["D", "E", "F"]) {
+        mockGenerated = oneDecision(`커서 동률 테스트 ${label}`);
+        const { sourceId } = await ingestSource({
+          supabase: user.supabase,
+          userId: user.id,
+          body: `커서 동률 테스트 원문 ${label}`,
+        });
+        sourceIds.push(sourceId);
+      }
+      // 셋의 created_at을 완전히 동률로 만든다 — id tie-breaker가 없으면
+      // (created_at, cursor.createdAt) 비교가 두 번째 페이지에서 전부 걸러져
+      // 세 번째 항목이 통째로 사라진다.
+      const sameCreatedAt = new Date().toISOString();
+      await Promise.all(
+        sourceIds.map((id) =>
+          admin
+            .from("sources")
+            .update({ created_at: sameCreatedAt })
+            .eq("id", id),
+        ),
+      );
+
+      const firstPage = await listSourcesWithDigests({
+        supabase: user.supabase,
+        cursor: null,
+        limit: 2,
+      });
+      expect(firstPage.items).toHaveLength(2);
+      expect(firstPage.nextCursor).not.toBeNull();
+
+      const secondPage = await listSourcesWithDigests({
+        supabase: user.supabase,
+        cursor: firstPage.nextCursor,
+        limit: 2,
+      });
+
+      const allIds = [...firstPage.items, ...secondPage.items].map(
+        (s) => s.sourceId,
+      );
+      expect(allIds).toHaveLength(sourceIds.length);
+      expect(new Set(allIds)).toEqual(new Set(sourceIds));
+
+      await admin.auth.admin.deleteUser(user.id);
     },
     TEST_TIMEOUT_MS,
   );

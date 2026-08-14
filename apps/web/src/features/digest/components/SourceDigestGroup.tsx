@@ -1,7 +1,7 @@
 import type { SourceWithDigests } from "@nema-io/shared";
 import {
   Button,
-  cn,
+  Separator,
   Text,
   Tooltip,
   TooltipContent,
@@ -16,37 +16,33 @@ import { DigestListRow } from "./DigestListRow";
 
 interface SourceDigestGroupProps {
   source: SourceWithDigests;
-  hideDivider?: boolean;
   selectedDigestId: string | null;
-  onSelectDigest: (digestId: string) => void;
   onOpenSource: (sourceId: string) => void;
 }
 
 export function SourceDigestGroup({
   source,
-  hideDivider,
   selectedDigestId,
-  onSelectDigest,
   onOpenSource,
 }: SourceDigestGroupProps) {
   const { t } = useTranslation();
 
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-1 py-3",
-        !hideDivider && "border-b border-border-subtle",
-      )}
-    >
+    <div className="flex flex-col gap-1 py-3">
+      {/* 구분선은 이름과 우측 액션 사이에만 둔다 — 헤더의 구분선 자체가
+          "여기서 새 원문이 시작한다"는 신호라, 행 사이·묶음 사이엔 따로 안 둔다. */}
       <div className="flex items-center gap-2">
         <Text
           as="span"
           size="sm"
           weight="medium"
-          className="min-w-0 flex-1 truncate"
+          className="min-w-0 max-w-80 shrink truncate"
         >
           {source.name}
         </Text>
+        <div className="min-w-6 flex-1">
+          <Separator />
+        </div>
         <RelativeTime dateTime={source.createdAt} />
         {/* FileText는 이 앱이 이미 "원문 보기"에 쓰는 아이콘이다
             (legacy DigestSourceButton.tsx — Search는 검색 쿼리로 이미 쓰여서 제외). */}
@@ -75,7 +71,6 @@ export function SourceDigestGroup({
             key={digest.id}
             digest={digest}
             selected={digest.id === selectedDigestId}
-            onSelect={onSelectDigest}
           />
         ))}
       </div>

@@ -7,6 +7,8 @@ import type {
   SourceDraft,
   SourceGetResult,
   SourceIngestResult,
+  SourceListWithDigestsCursor,
+  SourceListWithDigestsResult,
   SourceWithDigests,
 } from "@nema-io/shared";
 import {
@@ -215,15 +217,17 @@ export async function getSource(args: {
   });
 }
 
-// 두 목록 모두 아직 진짜 페이지네이션이 없다 — 지금은 이 값 하나로 폭주만
+// 초안 목록은 아직 진짜 페이지네이션이 없다 — 지금은 이 값 하나로 폭주만
 // 막는다(legacy의 LIMIT 50과 같은 취지). 실사용 규모가 커지면 커서 기반
-// 페이지네이션으로 바꿔야 한다.
+// 페이지네이션으로 바꿔야 한다(listSourcesWithDigests는 이미 옮겨갔다).
 const SOURCE_LIST_SAFETY_LIMIT = 500;
 
 export async function listSourcesWithDigests(args: {
   supabase: TypedSupabaseClient;
-}): Promise<SourceWithDigests[]> {
-  const { supabase } = args;
+  cursor: SourceListWithDigestsCursor | null;
+  limit: number;
+}): Promise<SourceListWithDigestsResult> {
+  const { supabase, cursor, limit } = args;
 
   // digests!inner로 다이제스트 행이 하나도 없는 원문을 걸러낸다 — 그건
   // listDraftSources(초안 화면) 몫이다. 가려진 행도 "행이 있다"에는 포함되므로
@@ -232,21 +236,45 @@ export async function listSourcesWithDigests(args: {
   // 안전장치다 — saveDigestsAndIndex가 digest 행을 커밋한 뒤 상태를 completed로
   // 바꾸는 마지막 UPDATE만 실패하면(드물지만) pending인데 digest 행은 있는 원문이
   // 생기고, 이 조건이 없으면 그 원문이 두 목록에 동시에 뜬다.
-  const { data, error } = await supabase
+  let query = supabase
     .from("sources")
     .select(
       "id, name, created_at, digests!inner(id, type, title, extraction_order, hidden_at)",
     )
     .eq("digestion_status", "completed")
     .order("created_at", { ascending: false })
+    // id를 tie-breaker로 — created_at이 같은 원문이 있을 수 있어 정렬·커서
+    // 비교 둘 다 (created_at, id) 튜플 기준이어야 경계가 안정적이다.
+    .order("id", { ascending: false })
     .order("extraction_order", {
       referencedTable: "digests",
       ascending: true,
     })
-    .limit(SOURCE_LIST_SAFETY_LIMIT);
+    // 다음 페이지 존재 여부를 별도 count 쿼리 없이 알려고 하나 더 얹어 받는다
+    // (legacy listChangesets와 같은 트릭).
+    .limit(limit + 1);
+  if (cursor) {
+    query = query.or(
+      `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
+    );
+  }
+
+  const { data, error } = await query;
   throwIfSupabaseError(error);
 
-  return (data ?? []).map(toSourceWithDigests);
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const pageRows = hasMore ? rows.slice(0, limit) : rows;
+  const lastRow = pageRows.at(-1);
+  const nextCursor =
+    hasMore && lastRow
+      ? { createdAt: lastRow.created_at, id: lastRow.id }
+      : null;
+
+  return {
+    items: pageRows.map(toSourceWithDigests),
+    nextCursor,
+  };
 }
 
 export async function listDraftSources(args: {

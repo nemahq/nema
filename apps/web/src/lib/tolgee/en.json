@@ -35,6 +35,7 @@
     "delete_confirm_instruction": "Type \"{value}\" to confirm.",
     "deleting": "Deleting...",
     "draft_tab_close": "Close {label} tab",
+    "list_end": "That's everything.",
     "refresh_failed": "Saved, but the screen couldn't refresh. Please refresh manually.",
     "retry": "Retry",
     "unknown_error": "An unknown error occurred."

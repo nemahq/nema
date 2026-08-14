@@ -35,7 +35,6 @@ export function DigestListScreen({
         <NavigationBar items={[{ label: t("digest.nav_label") }]} />
         <DigestListBody
           selectedDigestId={selectedDigestId}
-          onSelectDigest={onSelectDigest}
           onSelectSource={onSelectSource}
         />
       </div>

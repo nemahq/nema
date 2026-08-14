@@ -72,6 +72,47 @@ export const SourceWithDigestsSchema = z.object({
 });
 export type SourceWithDigests = z.infer<typeof SourceWithDigestsSchema>;
 
+// 다이제스트 목록 화면의 무한 스크롤 — 단위는 원문이다. 다이제스트 단위로 끊으면
+// 같은 원문이 두 페이지에 걸쳐 잘려, "이 원문에서 이만큼 나왔다"는 2층 구조의
+// 뜻이 깨진다. legacy(changesets.number, 단일 정수)와 달리 sources엔 순차 번호가
+// 없어 (created_at, id) 복합 커서를 쓴다 — created_at이 같은 원문이 있을 수
+// 있어 id가 tie-breaker로 필요하다.
+export const SourceListWithDigestsCursorSchema = z.object({
+  createdAt: z.string().datetime({ offset: true }),
+  id: z.string().uuid(),
+});
+export type SourceListWithDigestsCursor = z.infer<
+  typeof SourceListWithDigestsCursorSchema
+>;
+
+// legacy 변경셋(CHANGESET_LIST_LIMIT_DEFAULT 20/최대 100)보다 보수적인 이유는
+// 행 수 배율 — 변경셋은 1층 1행이지만 여기는 원문 1개가 다이제스트 5~7행을
+// 끌고 온다. 최대 30이 예전 SOURCE_LIST_SAFETY_LIMIT(500)이 하던 폭주 방지
+// 역할을 대신한다.
+export const SOURCE_LIST_WITH_DIGESTS_LIMIT_DEFAULT = 10;
+export const SOURCE_LIST_WITH_DIGESTS_LIMIT_MAX = 30;
+
+export const SourceListWithDigestsInputSchema = z.object({
+  cursor: SourceListWithDigestsCursorSchema.nullable().optional(),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(SOURCE_LIST_WITH_DIGESTS_LIMIT_MAX)
+    .optional(),
+});
+export type SourceListWithDigestsInput = z.infer<
+  typeof SourceListWithDigestsInputSchema
+>;
+
+export const SourceListWithDigestsResultSchema = z.object({
+  items: z.array(SourceWithDigestsSchema),
+  nextCursor: SourceListWithDigestsCursorSchema.nullable(),
+});
+export type SourceListWithDigestsResult = z.infer<
+  typeof SourceListWithDigestsResultSchema
+>;
+
 // 초안 화면 — 정리 결과가 없거나 처리에 실패한 원문. status는 화면이 "재시도 중"
 // 표시 등에 쓴다. name은 위 SourceGetResultSchema와 같은 정의. bodyPreview는
 // 카드 본문 4줄 미리보기 전용(400자, sources.body_preview 생성 컬럼) — name과
