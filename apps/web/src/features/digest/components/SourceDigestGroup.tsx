@@ -34,10 +34,15 @@ export function SourceDigestGroup({
           px-2는 DigestListRow(Link)의 호버 박스 여백과 같은 값 — 아래 다이제스트
           행과 좌우가 맞아떨어지게 맞춘다. */}
       <div className="flex items-center gap-2 px-2">
+        {/* color="tertiary" — 이 화면의 진짜 콘텐츠는 다이제스트 제목이고
+            원문 이름은 "어디서 나왔나"를 알려주는 라벨이다. weight="medium"은
+            유지해 스캔 리듬은 살리되, 색으로 다이제스트 제목(primary)보다
+            한 단계 낮춘다 — DigestReadonlyBodyFields의 필드 라벨과 같은 패턴. */}
         <Text
           as="span"
           size="sm"
           weight="medium"
+          color="tertiary"
           className="min-w-0 max-w-80 shrink truncate"
         >
           {source.name}
