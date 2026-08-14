@@ -16,7 +16,7 @@ import {
   SourceWithDigestsSchema,
 } from "@nema-io/shared";
 
-import { createLimiter } from "@server/infra/llm/limiter";
+import { createLimiter } from "@server/infra/limiter";
 import { getDigestGenerationProvider } from "@server/infra/llm/provider";
 import type { Database } from "@server/infra/supabase/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";

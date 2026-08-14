@@ -74,7 +74,7 @@
     "delete_waiting_partial_failure": "{failed} couldn't be deleted. Try again.",
     "empty_state": "No sources to process.",
     "load_error": "Couldn't load drafts",
-    "no_result_banner": "There is nothing to organize here.",
+    "no_result_banner": "You have nothing to organize here.",
     "section_needs_attention": "Needs attention"
   },
   "error": {

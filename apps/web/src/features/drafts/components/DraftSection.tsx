@@ -32,6 +32,10 @@ export function DraftSection({
           올리면 그 틈이 이 박스 바깥이 되어 버려서, 아래에서 스크롤되어 올라오는
           카드가 그 틈으로 비쳐 보인다. padding은 여전히 불투명 배경 안쪽이라 안 비친다. */}
       <div className="sticky top-0 z-10 bg-surface-card pt-1 will-change-transform">
+        {/* weave Button은 안 쓴다 — 이 행은 톤 배경 위에 아이콘+라벨+개수(Text 둘)를
+            나란히 두는 자체 타이포·색 표현이 있는 자리라, Button의 강제
+            text-[13px] font-semibold를 되돌리는 비용이 더 크다(weave-usage.md
+            "탭·내비게이션"과 같은 이유). */}
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
