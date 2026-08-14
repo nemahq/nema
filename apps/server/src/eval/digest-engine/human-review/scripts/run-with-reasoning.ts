@@ -15,6 +15,7 @@ import { loadEnv } from "@server/env";
 import {
   DIGEST_BODY_FIELD_ORDER,
   DIGEST_TYPE_LABEL,
+  formatDigestFieldValue,
   REASONING_FIELD_LABEL,
 } from "@server/eval/digest-engine/format";
 import type { ReasoningGeneratedDigests } from "@server/eval/digest-engine/reasoning-schema";
@@ -70,10 +71,7 @@ function formatItem(
     if (isBlank(fieldValue)) {
       continue;
     }
-    const formatted = Array.isArray(fieldValue)
-      ? `\n${fieldValue.map((entry) => `  - ${entry}`).join("\n")}`
-      : String(fieldValue);
-    lines.push(`- **${label}**: ${formatted}`);
+    lines.push(`- **${label}**: ${formatDigestFieldValue(fieldValue)}`);
   }
   // blockquote로 뺀다 — 다이제스트 필드(`- **라벨**:`)와 섞이면 실제로 저장될
   // 내용처럼 보인다. reasoning은 eval에서만 보는 부가 정보라 구분돼야 한다.

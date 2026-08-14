@@ -57,7 +57,10 @@ describe("flattenGeneratedDigests", () => {
           situation: null,
           reason: null,
           tradeoff: ["속도"],
-          alternatives: ["대안 A", "대안 B"],
+          alternatives: [
+            { option: "대안 A", rejectionReason: "비용" },
+            { option: "대안 B", rejectionReason: "일정" },
+          ],
         },
       ],
     });
@@ -65,7 +68,39 @@ describe("flattenGeneratedDigests", () => {
     expect(result[0]?.body).toEqual({
       choice: "선택",
       tradeoff: ["속도"],
-      alternatives: ["대안 A", "대안 B"],
+      alternatives: [
+        { option: "대안 A", rejectionReason: "비용" },
+        { option: "대안 B", rejectionReason: "일정" },
+      ],
+    });
+  });
+
+  // 바깥 칸만 걸러내면 { option, rejectionReason: null }이 그대로 남아 body 스키마
+  // parse에서 터진다 — 기각 이유를 원문이 말 안 한 대안이 흔하므로 상시 경로다.
+  it("drops null fields nested inside an option, keeping the option itself", () => {
+    const result = flattenGeneratedDigests({
+      ...empty(),
+      decisions: [
+        {
+          title: "제목",
+          choice: "선택",
+          situation: null,
+          reason: null,
+          tradeoff: null,
+          alternatives: [
+            { option: "대안 A", rejectionReason: null },
+            { option: "대안 B", rejectionReason: "비용" },
+          ],
+        },
+      ],
+    });
+
+    expect(result[0]?.body).toEqual({
+      choice: "선택",
+      alternatives: [
+        { option: "대안 A" },
+        { option: "대안 B", rejectionReason: "비용" },
+      ],
     });
   });
 
@@ -81,7 +116,7 @@ describe("flattenGeneratedDigests", () => {
           situation: "상황",
           reason: "",
           tradeoff: [],
-          alternatives: ["대안 A"],
+          alternatives: [{ option: "대안 A", rejectionReason: "" }],
         },
       ],
     });
@@ -89,7 +124,7 @@ describe("flattenGeneratedDigests", () => {
     expect(result[0]?.body).toEqual({
       choice: "선택",
       situation: "상황",
-      alternatives: ["대안 A"],
+      alternatives: [{ option: "대안 A" }],
     });
   });
 

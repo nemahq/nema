@@ -14,6 +14,7 @@ import type { Digest, DigestType } from "@nema-io/shared";
 import {
   DIGEST_BODY_FIELD_ORDER,
   DIGEST_TYPE_LABEL,
+  formatDigestFieldValue,
 } from "@server/eval/digest-engine/format";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -63,13 +64,6 @@ async function ingest(token: string, body: string): Promise<IngestResponse> {
   return (await res.json()) as IngestResponse;
 }
 
-function formatValue(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `\n${value.map((item) => `  - ${item}`).join("\n")}`;
-  }
-  return String(value);
-}
-
 function formatDigest(index: number, digest: Digest): string {
   const type = digest.type as DigestType;
   const lines = [
@@ -79,7 +73,7 @@ function formatDigest(index: number, digest: Digest): string {
   const body = digest.body as Record<string, unknown>;
   for (const { key, label } of DIGEST_BODY_FIELD_ORDER[type]) {
     if (key in body) {
-      lines.push(`- **${label}**: ${formatValue(body[key])}`);
+      lines.push(`- **${label}**: ${formatDigestFieldValue(body[key])}`);
     }
   }
   return lines.join("\n");
