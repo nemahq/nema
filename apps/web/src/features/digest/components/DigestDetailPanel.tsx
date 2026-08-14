@@ -74,18 +74,15 @@ function DigestDetailPanelContent({
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pt-3 pb-8">
       <CandidateCardFrame
         wash={
-          <>
-            <div className="flex min-w-0 items-center gap-2">
-              <DigestTypeBadge type={digest.type} />
-              {/* 목록에서는 한 줄로 잘리는 제목을 여기서는 통째로 보여준다 —
-                  상세까지 잘리면 이 패널을 열 이유가 없다. truncate 대신
-                  min-w-0만 둬서 넘치면 줄바꿈되게 한다. */}
-              <Text as="span" size="xl" weight="semibold" className="min-w-0">
-                {digest.title}
-              </Text>
-            </div>
-            <RelativeTime dateTime={digest.createdAt} />
-          </>
+          <div className="flex min-w-0 items-center gap-2">
+            <DigestTypeBadge type={digest.type} />
+            {/* 목록에서는 한 줄로 잘리는 제목을 여기서는 통째로 보여준다 —
+                상세까지 잘리면 이 패널을 열 이유가 없다. truncate 대신
+                min-w-0만 둬서 넘치면 줄바꿈되게 한다. */}
+            <Text as="span" size="xl" weight="semibold" className="min-w-0">
+              {digest.title}
+            </Text>
+          </div>
         }
       >
         <DigestReadonlyBodyFields digest={digest} />
@@ -125,8 +122,9 @@ function DigestDetailPanelError({
 
 // 다이제스트 상세 — SidePanel 안에 얹는 읽기 전용 콘텐츠. 편집은 없고, 결과가
 // 나쁘면 고치는 게 아니라 빼고 다시 돌린다. 사이드뷰 헤더는 액션 전용으로 비워
-// 두고, 유형·제목·시각은 CandidateCardFrame의 워시 구역으로 내린다(원문 상세
-// SourceDetailPanel과 같은 이유로 헤더는 페칭과 별개로 즉시 눌러진다).
+// 두고, 유형·제목은 CandidateCardFrame의 워시 구역으로 내린다(원문 상세
+// SourceDetailPanel과 같은 이유로 헤더는 페칭과 별개로 즉시 눌러진다). 시각은
+// 원문 상세와 자리를 맞추려고 휴지통 버튼 왼쪽에 둔다.
 export function DigestDetailPanel({
   digestPublicId,
   knownDigestId,
@@ -141,6 +139,13 @@ export function DigestDetailPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-11 shrink-0 items-center justify-end gap-3 px-6">
+        {/* fetchedDigest는 본문 쪽 useDigestSuspenseQuery(digestPublicId)와 같은
+            쿼리 키를 써 캐시를 공유한다 — 추가 요청 없이 헤더가 채워진다. 아직
+            없으면(로딩·에러) 그냥 안 보여준다 — 헤더는 페칭과 무관하게 즉시
+            눌러져야 해서 닫기·삭제를 막지 않는다. */}
+        {fetchedDigest !== undefined && (
+          <RelativeTime dateTime={fetchedDigest.createdAt} />
+        )}
         <div className="-mr-1 flex shrink-0 items-center gap-1">
           <DigestDeleteAction digestId={digestId} onDeleted={onClose} />
           <DigestDetailCloseButton onClose={onClose} />

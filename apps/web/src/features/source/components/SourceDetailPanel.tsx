@@ -14,6 +14,7 @@ import {
   type ErrorFallbackProps,
 } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
+import { RelativeTime } from "@web/components/ui/RelativeTime";
 import {
   useSourceQuery,
   useSourceSuspenseQuery,
@@ -134,6 +135,13 @@ export function SourceDetailPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-11 shrink-0 items-center justify-end gap-3 px-6">
+        {/* fetchedSource는 본문 쪽 useSourceSuspenseQuery(sourcePublicId)와 같은
+            쿼리 키를 써 캐시를 공유한다 — 추가 요청 없이 헤더가 채워진다. 아직
+            없으면(로딩·에러) 그냥 안 보여준다 — 헤더는 페칭과 무관하게 즉시
+            눌러져야 해서 닫기·삭제를 막지 않는다. */}
+        {fetchedSource !== undefined && (
+          <RelativeTime dateTime={fetchedSource.createdAt} />
+        )}
         <div className="-mr-1 flex shrink-0 items-center gap-1">
           {/* 삭제 성공 시 상세 패널을 같이 닫는다. */}
           <SourceDeleteAction sourceId={sourceId} onDeleted={onClose} />
