@@ -90,7 +90,11 @@ function DigestListBodyContent({
                     count={DIGEST_LIST_NEXT_PAGE_SKELETON_COUNT}
                   />
                 )}
-                {query.isFetchNextPageError && (
+                {/* isFetchingNextPage 가드 — 재시도 버튼을 눌러 새 요청이
+                    나가는 동안에도 이전 실패의 isFetchNextPageError가 요청이
+                    끝날 때까지 그대로라, 안 걸면 스켈레톤과 재시도 버튼이
+                    잠깐 같이 뜬다. */}
+                {query.isFetchNextPageError && !query.isFetchingNextPage && (
                   <DigestListNextPageError
                     onRetry={() => query.fetchNextPage()}
                   />

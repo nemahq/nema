@@ -53,8 +53,11 @@ export function DigestReadonlyBodyFields({
               {t(field.labelKey)}
             </Text>
 
+            {/* legacy 카드는 whitespace-pre-wrap이 없지만, 텍스트 칸에 개행이
+                섞여 있으면(예: 여러 문장을 줄바꿈으로 구분) 뭉개지지 않게
+                여기선 유지한다 — 한 줄짜리 값엔 영향이 없다. */}
             {text !== undefined && (
-              <Text as="p" size="base">
+              <Text as="p" size="base" className="whitespace-pre-wrap">
                 {text}
               </Text>
             )}

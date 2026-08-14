@@ -24,6 +24,7 @@ export const DigestListRow = memo(function DigestListRow({
   return (
     <Link
       {...linkOptions({ to: "/", search: { digest: digest.id } })}
+      aria-current={selected ? "true" : undefined}
       className={cn(
         "flex min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left",
         LIST_ITEM_HOVER_CLASSNAME,

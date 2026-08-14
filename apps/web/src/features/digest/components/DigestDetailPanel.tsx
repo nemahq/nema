@@ -69,13 +69,9 @@ function DigestDetailPanelContent({ digestId }: DigestDetailPanelContentProps) {
             <div className="flex min-w-0 items-center gap-2">
               <DigestTypeBadge type={digest.type} />
               {/* 목록에서는 한 줄로 잘리는 제목을 여기서는 통째로 보여준다 —
-                  상세까지 잘리면 이 패널을 열 이유가 없다. */}
-              <Text
-                as="span"
-                size="xl"
-                weight="semibold"
-                className="min-w-0 truncate"
-              >
+                  상세까지 잘리면 이 패널을 열 이유가 없다. truncate 대신
+                  min-w-0만 둬서 넘치면 줄바꿈되게 한다. */}
+              <Text as="span" size="xl" weight="semibold" className="min-w-0">
                 {digest.title}
               </Text>
             </div>

@@ -876,9 +876,10 @@ describe("getSource 로그 출처 구분", () => {
   );
 });
 
-// 이 describe의 fixture 수는 항상 한 자리라 페이지네이션 경계에 안 걸리게
-// 넉넉히 잡는다 — 커서 자체는 별도 describe(listSourcesWithDigests 커서
-// 페이지네이션)가 검증한다.
+// userA는 파일 전체(source-service (RLS) describe 포함)가 공유해 누적 원문
+// 수가 계속 늘어난다 — 지금(19건+)보다 훨씬 여유 있게 잡아 페이지네이션
+// 경계에 안 걸리게 한다. 커서 경계 자체는 격리된 유저를 쓰는 별도
+// describe(listSourcesWithDigests 커서 페이지네이션)가 검증한다.
 const LIST_WITH_DIGESTS_TEST_LIMIT = 50;
 // 픽스처 간 created_at 간격 — 밀리초 정밀도 비교가 실제로 통하는지 보되,
 // 클록 튐(NTP 등)에 흔들리지 않을 만큼 넉넉히 벌린다.
@@ -1087,53 +1088,122 @@ describe("listSourcesWithDigests 커서 페이지네이션 (RLS)", () => {
         return;
       }
       const user = await createTestUser();
-      const sourceIds: string[] = [];
-      for (const label of ["A", "B", "C"]) {
-        mockGenerated = oneDecision(`커서 페이지네이션 ${label}`);
-        const { sourceId } = await ingestSource({
+      try {
+        const sourceIds: string[] = [];
+        for (const label of ["A", "B", "C"]) {
+          mockGenerated = oneDecision(`커서 페이지네이션 ${label}`);
+          const { sourceId } = await ingestSource({
+            supabase: user.supabase,
+            userId: user.id,
+            body: `커서 페이지네이션 원문 ${label}`,
+          });
+          sourceIds.push(sourceId);
+        }
+        // 삽입 순서(A→B→C)와 반대로 created_at을 매겨, order() 절이 실제로
+        // created_at을 보고 정렬하는지 함께 검증한다.
+        const baseTime = Date.now();
+        const updateResults = await Promise.all(
+          sourceIds.map((id, index) =>
+            admin
+              .from("sources")
+              .update({
+                created_at: new Date(
+                  baseTime +
+                    (sourceIds.length - index) * CURSOR_TEST_CREATED_AT_GAP_MS,
+                ).toISOString(),
+              })
+              .eq("id", id),
+          ),
+        );
+        for (const { error } of updateResults) {
+          expect(error).toBeNull();
+        }
+
+        const firstPage = await listSourcesWithDigests({
           supabase: user.supabase,
-          userId: user.id,
-          body: `커서 페이지네이션 원문 ${label}`,
+          cursor: null,
+          limit: 2,
         });
-        sourceIds.push(sourceId);
+        expect(firstPage.items.map((s) => s.sourceId)).toEqual([
+          sourceIds[0],
+          sourceIds[1],
+        ]);
+        expect(firstPage.nextCursor).not.toBeNull();
+
+        const secondPage = await listSourcesWithDigests({
+          supabase: user.supabase,
+          cursor: firstPage.nextCursor,
+          limit: 2,
+        });
+        expect(secondPage.items.map((s) => s.sourceId)).toEqual([sourceIds[2]]);
+        expect(secondPage.nextCursor).toBeNull();
+      } finally {
+        await admin.auth.admin.deleteUser(user.id);
       }
-      // 삽입 순서(A→B→C)와 반대로 created_at을 매겨, order() 절이 실제로
-      // created_at을 보고 정렬하는지 함께 검증한다.
-      const baseTime = Date.now();
-      await Promise.all(
-        sourceIds.map((id, index) =>
-          admin
-            .from("sources")
-            .update({
-              created_at: new Date(
-                baseTime +
-                  (sourceIds.length - index) * CURSOR_TEST_CREATED_AT_GAP_MS,
-              ).toISOString(),
-            })
-            .eq("id", id),
-        ),
-      );
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-      const firstPage = await listSourcesWithDigests({
-        supabase: user.supabase,
-        cursor: null,
-        limit: 2,
-      });
-      expect(firstPage.items.map((s) => s.sourceId)).toEqual([
-        sourceIds[0],
-        sourceIds[1],
-      ]);
-      expect(firstPage.nextCursor).not.toBeNull();
+  // hasMore = rows.length > limit이 실수로 >=로 바뀌면 이 케이스에서만 드러난다
+  // — 남은 항목이 정확히 limit개일 때 (더 없어야 하는데) hasMore가 true로
+  // 잘못 뜬다. 위 테스트(남은 게 limit보다 적음)만으론 못 잡는다.
+  it(
+    "남은 항목이 정확히 limit개로 끝나면 다음 페이지가 없다고 판정한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const user = await createTestUser();
+      try {
+        const sourceIds: string[] = [];
+        for (const label of ["G", "H", "I", "J"]) {
+          mockGenerated = oneDecision(`커서 경계 테스트 ${label}`);
+          const { sourceId } = await ingestSource({
+            supabase: user.supabase,
+            userId: user.id,
+            body: `커서 경계 테스트 원문 ${label}`,
+          });
+          sourceIds.push(sourceId);
+        }
+        const baseTime = Date.now();
+        const updateResults = await Promise.all(
+          sourceIds.map((id, index) =>
+            admin
+              .from("sources")
+              .update({
+                created_at: new Date(
+                  baseTime +
+                    (sourceIds.length - index) * CURSOR_TEST_CREATED_AT_GAP_MS,
+                ).toISOString(),
+              })
+              .eq("id", id),
+          ),
+        );
+        for (const { error } of updateResults) {
+          expect(error).toBeNull();
+        }
 
-      const secondPage = await listSourcesWithDigests({
-        supabase: user.supabase,
-        cursor: firstPage.nextCursor,
-        limit: 2,
-      });
-      expect(secondPage.items.map((s) => s.sourceId)).toEqual([sourceIds[2]]);
-      expect(secondPage.nextCursor).toBeNull();
+        const firstPage = await listSourcesWithDigests({
+          supabase: user.supabase,
+          cursor: null,
+          limit: 2,
+        });
+        expect(firstPage.items).toHaveLength(2);
+        expect(firstPage.nextCursor).not.toBeNull();
 
-      await admin.auth.admin.deleteUser(user.id);
+        const secondPage = await listSourcesWithDigests({
+          supabase: user.supabase,
+          cursor: firstPage.nextCursor,
+          limit: 2,
+        });
+        expect(secondPage.items.map((s) => s.sourceId)).toEqual([
+          sourceIds[2],
+          sourceIds[3],
+        ]);
+        expect(secondPage.nextCursor).toBeNull();
+      } finally {
+        await admin.auth.admin.deleteUser(user.id);
+      }
     },
     TEST_TIMEOUT_MS,
   );
@@ -1145,50 +1215,55 @@ describe("listSourcesWithDigests 커서 페이지네이션 (RLS)", () => {
         return;
       }
       const user = await createTestUser();
-      const sourceIds: string[] = [];
-      for (const label of ["D", "E", "F"]) {
-        mockGenerated = oneDecision(`커서 동률 테스트 ${label}`);
-        const { sourceId } = await ingestSource({
+      try {
+        const sourceIds: string[] = [];
+        for (const label of ["D", "E", "F"]) {
+          mockGenerated = oneDecision(`커서 동률 테스트 ${label}`);
+          const { sourceId } = await ingestSource({
+            supabase: user.supabase,
+            userId: user.id,
+            body: `커서 동률 테스트 원문 ${label}`,
+          });
+          sourceIds.push(sourceId);
+        }
+        // 셋의 created_at을 완전히 동률로 만든다 — id tie-breaker가 없으면
+        // (created_at, cursor.createdAt) 비교가 두 번째 페이지에서 전부 걸러져
+        // 세 번째 항목이 통째로 사라진다.
+        const sameCreatedAt = new Date().toISOString();
+        const updateResults = await Promise.all(
+          sourceIds.map((id) =>
+            admin
+              .from("sources")
+              .update({ created_at: sameCreatedAt })
+              .eq("id", id),
+          ),
+        );
+        for (const { error } of updateResults) {
+          expect(error).toBeNull();
+        }
+
+        const firstPage = await listSourcesWithDigests({
           supabase: user.supabase,
-          userId: user.id,
-          body: `커서 동률 테스트 원문 ${label}`,
+          cursor: null,
+          limit: 2,
         });
-        sourceIds.push(sourceId);
+        expect(firstPage.items).toHaveLength(2);
+        expect(firstPage.nextCursor).not.toBeNull();
+
+        const secondPage = await listSourcesWithDigests({
+          supabase: user.supabase,
+          cursor: firstPage.nextCursor,
+          limit: 2,
+        });
+
+        const allIds = [...firstPage.items, ...secondPage.items].map(
+          (s) => s.sourceId,
+        );
+        expect(allIds).toHaveLength(sourceIds.length);
+        expect(new Set(allIds)).toEqual(new Set(sourceIds));
+      } finally {
+        await admin.auth.admin.deleteUser(user.id);
       }
-      // 셋의 created_at을 완전히 동률로 만든다 — id tie-breaker가 없으면
-      // (created_at, cursor.createdAt) 비교가 두 번째 페이지에서 전부 걸러져
-      // 세 번째 항목이 통째로 사라진다.
-      const sameCreatedAt = new Date().toISOString();
-      await Promise.all(
-        sourceIds.map((id) =>
-          admin
-            .from("sources")
-            .update({ created_at: sameCreatedAt })
-            .eq("id", id),
-        ),
-      );
-
-      const firstPage = await listSourcesWithDigests({
-        supabase: user.supabase,
-        cursor: null,
-        limit: 2,
-      });
-      expect(firstPage.items).toHaveLength(2);
-      expect(firstPage.nextCursor).not.toBeNull();
-
-      const secondPage = await listSourcesWithDigests({
-        supabase: user.supabase,
-        cursor: firstPage.nextCursor,
-        limit: 2,
-      });
-
-      const allIds = [...firstPage.items, ...secondPage.items].map(
-        (s) => s.sourceId,
-      );
-      expect(allIds).toHaveLength(sourceIds.length);
-      expect(new Set(allIds)).toEqual(new Set(sourceIds));
-
-      await admin.auth.admin.deleteUser(user.id);
     },
     TEST_TIMEOUT_MS,
   );

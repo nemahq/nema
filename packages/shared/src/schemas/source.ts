@@ -86,7 +86,7 @@ export type SourceListWithDigestsCursor = z.infer<
 >;
 
 // legacy 변경셋(CHANGESET_LIST_LIMIT_DEFAULT 20/최대 100)보다 보수적인 이유는
-// 행 수 배율 — 변경셋은 1층 1행이지만 여기는 원문 1개가 다이제스트 5~7행을
+// 행 수 배율 — 변경셋은 1층 1행이지만 여기는 원문 1개가 다이제스트를 여럿
 // 끌고 온다. 최대 30이 예전 SOURCE_LIST_SAFETY_LIMIT(500)이 하던 폭주 방지
 // 역할을 대신한다.
 export const SOURCE_LIST_WITH_DIGESTS_LIMIT_DEFAULT = 10;
@@ -99,7 +99,7 @@ export const SourceListWithDigestsInputSchema = z.object({
     .int()
     .positive()
     .max(SOURCE_LIST_WITH_DIGESTS_LIMIT_MAX)
-    .optional(),
+    .default(SOURCE_LIST_WITH_DIGESTS_LIMIT_DEFAULT),
 });
 export type SourceListWithDigestsInput = z.infer<
   typeof SourceListWithDigestsInputSchema

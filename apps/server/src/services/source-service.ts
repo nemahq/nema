@@ -15,6 +15,7 @@ import {
   DigestSchema,
   SourceDraftSchema,
   SourceGetResultSchema,
+  SourceListWithDigestsResultSchema,
   SourceWithDigestsSchema,
 } from "@nema-io/shared";
 
@@ -254,6 +255,9 @@ export async function listSourcesWithDigests(args: {
     // (legacy listChangesets와 같은 트릭).
     .limit(limit + 1);
   if (cursor) {
+    // cursor는 SourceListWithDigestsCursorSchema(createdAt: datetime, id: uuid)를
+    // 통과한 값만 여기 온다 — 콤마·괄호를 못 담는 포맷이라 아래 .or() 문자열
+    // 조립이 PostgREST 필터 구문 인젝션에 안전하다.
     query = query.or(
       `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
     );
@@ -271,10 +275,12 @@ export async function listSourcesWithDigests(args: {
       ? { createdAt: lastRow.created_at, id: lastRow.id }
       : null;
 
-  return {
+  // items뿐 아니라 nextCursor(DB row를 그대로 담음)까지 함께 검증한다 —
+  // 어긋나면 다음 스크롤이 원인 불명 에러를 내는 대신 여기서 바로 던진다.
+  return SourceListWithDigestsResultSchema.parse({
     items: pageRows.map(toSourceWithDigests),
     nextCursor,
-  };
+  });
 }
 
 export async function listDraftSources(args: {

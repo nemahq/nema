@@ -8,8 +8,10 @@ export function HomePage() {
   const { digest, source } = useSearch({ from: "/_authenticated/" });
   const navigate = useNavigate();
 
-  function handleSelectDigest(digestId: string | null) {
-    void navigate({ to: "/", search: digestId ? { digest: digestId } : {} });
+  // 다이제스트를 "여는" 경로는 DigestListRow의 Link가 URL을 직접 바꾸므로,
+  // 이 페이지가 다루는 건 닫기뿐이다.
+  function handleCloseDigest() {
+    void navigate({ to: "/", search: {} });
   }
 
   function handleSelectSource(sourceId: string | null) {
@@ -20,7 +22,7 @@ export function HomePage() {
     <DigestListScreen
       selectedDigestId={digest ?? null}
       selectedSourceId={source ?? null}
-      onSelectDigest={handleSelectDigest}
+      onCloseDigest={handleCloseDigest}
       onSelectSource={handleSelectSource}
     />
   );

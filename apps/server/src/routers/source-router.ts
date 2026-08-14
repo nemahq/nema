@@ -1,7 +1,6 @@
 import { TRPCError } from "@trpc/server";
 
 import {
-  SOURCE_LIST_WITH_DIGESTS_LIMIT_DEFAULT,
   SourceActionInputSchema,
   SourceDeleteManyInputSchema,
   SourceIngestInputSchema,
@@ -29,7 +28,7 @@ export const sourceRouter = router({
       listSourcesWithDigests({
         supabase: ctx.supabase,
         cursor: input.cursor ?? null,
-        limit: input.limit ?? SOURCE_LIST_WITH_DIGESTS_LIMIT_DEFAULT,
+        limit: input.limit,
       }),
     ),
 
