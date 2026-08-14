@@ -280,11 +280,20 @@ describe("source-service (RLS)", () => {
         userId: userA.id,
         body: "getSource RLS 테스트 원문",
       });
+      const { data: sourceRow } = await userA.supabase
+        .from("sources")
+        .select("public_id")
+        .eq("id", sourceId)
+        .single();
+      if (!sourceRow) {
+        throw new Error("source row not found");
+      }
+      const sourcePublicId = sourceRow.public_id;
 
       const asOwner = await getSource({
         supabase: userA.supabase,
         userId: userA.id,
-        sourceId,
+        sourcePublicId,
         origin: "web",
       });
       expect(asOwner.body).toBe("getSource RLS 테스트 원문");
@@ -293,10 +302,37 @@ describe("source-service (RLS)", () => {
         getSource({
           supabase: userB.supabase,
           userId: userB.id,
-          sourceId,
+          sourcePublicId,
           origin: "web",
         }),
       ).rejects.toMatchObject({ code: "PGRST116" });
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // get_source MCP 도구(apps/mcp/src/server.ts)는 search_digests가 돌려준 내부
+  // id를 그대로 이어 부른다 — SourceGetInputSchema 유니언의 이 갈래가 회귀하면
+  // CI가 못 잡고 MCP 클라이언트에서만 드러난다.
+  it(
+    "sourceId(내부 id, MCP 경로)로도 getSource를 부를 수 있다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = noDigests();
+      const { sourceId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "getSource MCP 경로 테스트 원문",
+      });
+
+      const result = await getSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        sourceId,
+        origin: "mcp",
+      });
+      expect(result.sourceId).toBe(sourceId);
     },
     TEST_TIMEOUT_MS,
   );
@@ -1038,11 +1074,20 @@ describe("getSource 로그 출처 구분", () => {
         userId: userA.id,
         body: "로그 출처 구분 테스트 원문",
       });
+      const { data: sourceRow } = await userA.supabase
+        .from("sources")
+        .select("public_id")
+        .eq("id", sourceId)
+        .single();
+      if (!sourceRow) {
+        throw new Error("source row not found");
+      }
+      const sourcePublicId = sourceRow.public_id;
 
       await getSource({
         supabase: userA.supabase,
         userId: userA.id,
-        sourceId,
+        sourcePublicId,
         origin: "web",
       });
       expect(mockLogGetSource).not.toHaveBeenCalled();
@@ -1050,7 +1095,7 @@ describe("getSource 로그 출처 구분", () => {
       await getSource({
         supabase: userA.supabase,
         userId: userA.id,
-        sourceId,
+        sourcePublicId,
         origin: "mcp",
       });
       expect(mockLogGetSource).toHaveBeenCalledWith({

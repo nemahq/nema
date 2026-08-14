@@ -163,25 +163,36 @@ export async function restoreDigest(args: {
   return { success: restored };
 }
 
-export async function getDigest(args: {
-  supabase: TypedSupabaseClient;
-  userId: string;
-  digestId: string;
-}): Promise<DigestDetail> {
-  const { supabase, userId, digestId } = args;
+export async function getDigest(
+  args: {
+    supabase: TypedSupabaseClient;
+    userId: string;
+    // 둘 다 받는 이유는 DigestGetInputSchema 참고.
+  } & ({ digestPublicId: string } | { digestId: string }),
+): Promise<DigestDetail> {
+  const { supabase, userId } = args;
 
-  // RLS(owner-only)라 남의/없는 digestId는 여기서 not-found로 걸린다. 가려진 것도
-  // 같은 자리에서 not-found가 된다(v_visible_digests) — 사용자에게는 지워진
-  // 것으로 보이므로 id를 들고 다시 물어도 돌아오면 안 된다.
-  const { data, error } = await supabase
+  // RLS(owner-only)라 남의/없는 값은 여기서 not-found로 걸린다. 가려진 것도 같은
+  // 자리에서 not-found가 된다(v_visible_digests) — 사용자에게는 지워진 것으로
+  // 보이므로 다시 물어도 돌아오면 안 된다.
+  // .returns<>()는 뷰의 생성 타입이 컬럼을 전부 nullable로 잡는 것을 되돌린다
+  // (뷰 공통 관례, DigestSearchRow 주석 참고) — data.id를 아래 로그에 그대로
+  // 쓰므로 여기서 null을 안고 넘어갈 수 없다.
+  const query = supabase
     .from("v_visible_digests")
-    .select("id, source_id, type, title, body, created_at")
-    .eq("id", digestId)
+    .select("id, source_id, type, title, body, created_at");
+  const { data, error } = await (
+    "digestPublicId" in args
+      ? query.eq("public_id", args.digestPublicId)
+      : query.eq("id", args.digestId)
+  )
+    .returns<DigestSearchRow[]>()
     .single();
   throwIfSupabaseError(error);
 
   // 로그 저장은 응답을 기다리게 하지 않는다 — 실패 격리뿐 아니라 지연도 격리한다.
-  void logGetDigest({ userId, detail: { digestId } });
+  // 로그에는 내부 id를 남긴다 — public_id는 조회 입력일 뿐 지표가 참조하는 식별자가 아니다.
+  void logGetDigest({ userId, detail: { digestId: data.id } });
 
   return DigestDetailSchema.parse({
     id: data.id,

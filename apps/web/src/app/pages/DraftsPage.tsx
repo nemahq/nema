@@ -8,16 +8,16 @@ export function DraftsPage() {
   const { source } = useSearch({ from: "/_authenticated/drafts" });
   const navigate = useNavigate();
 
-  function handleSelectSource(sourceId: string | null) {
+  function handleSelectSource(sourcePublicId: string | null) {
     void navigate({
       to: "/drafts",
-      search: sourceId ? { source: sourceId } : {},
+      search: sourcePublicId ? { source: sourcePublicId } : {},
     });
   }
 
   return (
     <DraftsScreen
-      selectedSourceId={source ?? null}
+      selectedSourcePublicId={source ?? null}
       onSelectSource={handleSelectSource}
     />
   );

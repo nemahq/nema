@@ -95,11 +95,13 @@ async function createTestUser(): Promise<TestUser> {
   return { id: data.user.id, supabase };
 }
 
-// deleteDigest는 LLM을 안 타므로 ingestSource 없이 admin 클라이언트로 원문·
-// 다이제스트를 바로 심는다(RLS 우회, 픽스처 전용).
-async function seedDigest(
-  ownerId: string,
-): Promise<{ sourceId: string; digestId: string }> {
+// deleteDigest·getDigest는 LLM을 안 타므로 ingestSource 없이 admin 클라이언트로
+// 원문·다이제스트를 바로 심는다(RLS 우회, 픽스처 전용).
+async function seedDigest(ownerId: string): Promise<{
+  sourceId: string;
+  digestId: string;
+  digestPublicId: string;
+}> {
   const { data: source, error: sourceError } = await admin
     .from("sources")
     .insert({ user_id: ownerId, body: "가림 테스트 원문" })
@@ -118,13 +120,17 @@ async function seedDigest(
       body: { choice: "fixture" },
       extraction_order: 0,
     })
-    .select("id")
+    .select("id, public_id")
     .single();
   if (digestError || !digest) {
     throw digestError ?? new Error("failed to seed digest");
   }
 
-  return { sourceId: source.id, digestId: digest.id };
+  return {
+    sourceId: source.id,
+    digestId: digest.id,
+    digestPublicId: digest.public_id,
+  };
 }
 
 let userA: TestUser;
@@ -182,22 +188,6 @@ describe("deleteDigest (RLS)", () => {
         .single();
       expect(row?.id).toBe(digestId);
       expect(row?.trashed_at).not.toBeNull();
-    },
-    TEST_TIMEOUT_MS,
-  );
-
-  it(
-    "가려진 다이제스트는 getDigest로 다시 물어도 not-found다",
-    async () => {
-      if (!localDbAvailable) {
-        return;
-      }
-      const { digestId } = await seedDigest(userA.id);
-      await deleteDigest({ supabase: userA.supabase, digestId });
-
-      await expect(
-        getDigest({ supabase: userA.supabase, userId: userA.id, digestId }),
-      ).rejects.toThrow();
     },
     TEST_TIMEOUT_MS,
   );
@@ -384,6 +374,75 @@ describe("restoreDigest (RLS)", () => {
         .eq("id", digestId)
         .single();
       expect(row?.trashed_at).not.toBeNull();
+    },
+    TEST_TIMEOUT_MS,
+  );
+});
+
+describe("getDigest (RLS)", () => {
+  it(
+    "소유자는 digestPublicId(주소가 싣는 값)로 조회할 수 있고, 남은 not-found로 걸린다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { digestPublicId } = await seedDigest(userA.id);
+
+      const asOwner = await getDigest({
+        supabase: userA.supabase,
+        userId: userA.id,
+        digestPublicId,
+      });
+      expect(asOwner.title).toBe("가림 테스트 결정");
+
+      await expect(
+        getDigest({
+          supabase: userB.supabase,
+          userId: userB.id,
+          digestPublicId,
+        }),
+      ).rejects.toMatchObject({ code: "PGRST116" });
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // get_digest MCP 도구(apps/mcp/src/server.ts)는 search_digests·get_relations가
+  // 돌려준 내부 id를 그대로 이어 부른다 — DigestGetInputSchema 유니언의 이 갈래가
+  // 회귀하면 CI가 못 잡고 MCP 클라이언트에서만 드러난다.
+  it(
+    "digestId(내부 id, MCP 경로)로도 조회할 수 있다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { digestId } = await seedDigest(userA.id);
+
+      const result = await getDigest({
+        supabase: userA.supabase,
+        userId: userA.id,
+        digestId,
+      });
+      expect(result.id).toBe(digestId);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "가려진 다이제스트는 소유자가 다시 물어도 not-found다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { digestId, digestPublicId } = await seedDigest(userA.id);
+      await deleteDigest({ supabase: userA.supabase, digestId });
+
+      await expect(
+        getDigest({
+          supabase: userA.supabase,
+          userId: userA.id,
+          digestPublicId,
+        }),
+      ).rejects.toMatchObject({ code: "PGRST116" });
     },
     TEST_TIMEOUT_MS,
   );

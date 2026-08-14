@@ -5,12 +5,12 @@ import { DraftList } from "./DraftList";
 import { DraftsNavigationBar } from "./DraftsNavigationBar";
 
 interface DraftsScreenProps {
-  selectedSourceId: string | null;
-  onSelectSource: (sourceId: string | null) => void;
+  selectedSourcePublicId: string | null;
+  onSelectSource: (sourcePublicId: string | null) => void;
 }
 
 export function DraftsScreen({
-  selectedSourceId,
+  selectedSourcePublicId,
   onSelectSource,
 }: DraftsScreenProps) {
   function handleClose() {
@@ -28,9 +28,12 @@ export function DraftsScreen({
         </div>
       </div>
 
-      {selectedSourceId && (
+      {selectedSourcePublicId && (
         <SidePanel boundaryName="draft-detail" onClose={handleClose}>
-          <DraftDetailPanel sourceId={selectedSourceId} onClose={handleClose} />
+          <DraftDetailPanel
+            sourcePublicId={selectedSourcePublicId}
+            onClose={handleClose}
+          />
         </SidePanel>
       )}
     </main>

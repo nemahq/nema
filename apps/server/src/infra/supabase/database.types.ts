@@ -273,6 +273,7 @@ export type Database = {
             | null;
           id: string | null;
           name: string | null;
+          public_id: string | null;
         };
         Insert: {
           body_preview?: string | null;
@@ -282,6 +283,7 @@ export type Database = {
             | null;
           id?: string | null;
           name?: string | null;
+          public_id?: string | null;
         };
         Update: {
           body_preview?: string | null;
@@ -291,6 +293,7 @@ export type Database = {
             | null;
           id?: string | null;
           name?: string | null;
+          public_id?: string | null;
         };
         Relationships: [];
       };

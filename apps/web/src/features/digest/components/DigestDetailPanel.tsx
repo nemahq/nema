@@ -15,7 +15,10 @@ import {
 } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
-import { useDigestSuspenseQuery } from "@web/features/digest/hooks/useDigestQuery";
+import {
+  useDigestQuery,
+  useDigestSuspenseQuery,
+} from "@web/features/digest/hooks/useDigestQuery";
 import { useTranslation } from "@web/lib/tolgee";
 import { isNotFoundError } from "@web/lib/trpc";
 
@@ -26,7 +29,11 @@ import { DigestReadonlyBodyFields } from "./DigestReadonlyBodyFields";
 import { DigestTypeBadge } from "./DigestTypeBadge";
 
 interface DigestDetailPanelProps {
-  digestId: string;
+  digestPublicId: string;
+  // 목록 클릭으로 열었다면 호출자가 이미 내부 id를 들고 있다(SourceDetailPanel의
+  // knownSourceId와 같은 이유) — 없으면(새로고침·딥링크) 아래 useDigestQuery
+  // (non-suspense)가 응답을 받아오는 대로 채운다.
+  knownDigestId?: string;
   onClose: () => void;
 }
 
@@ -55,28 +62,27 @@ function DigestDetailCloseButton({ onClose }: DigestDetailCloseButtonProps) {
 }
 
 interface DigestDetailPanelContentProps {
-  digestId: string;
+  digestPublicId: string;
 }
 
-function DigestDetailPanelContent({ digestId }: DigestDetailPanelContentProps) {
-  const [digest] = useDigestSuspenseQuery(digestId);
+function DigestDetailPanelContent({
+  digestPublicId,
+}: DigestDetailPanelContentProps) {
+  const [digest] = useDigestSuspenseQuery(digestPublicId);
 
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pt-3 pb-8">
       <CandidateCardFrame
         wash={
-          <>
-            <div className="flex min-w-0 items-center gap-2">
-              <DigestTypeBadge type={digest.type} />
-              {/* 목록에서는 한 줄로 잘리는 제목을 여기서는 통째로 보여준다 —
-                  상세까지 잘리면 이 패널을 열 이유가 없다. truncate 대신
-                  min-w-0만 둬서 넘치면 줄바꿈되게 한다. */}
-              <Text as="span" size="xl" weight="semibold" className="min-w-0">
-                {digest.title}
-              </Text>
-            </div>
-            <RelativeTime dateTime={digest.createdAt} />
-          </>
+          <div className="flex min-w-0 items-center gap-2">
+            <DigestTypeBadge type={digest.type} />
+            {/* 목록에서는 한 줄로 잘리는 제목을 여기서는 통째로 보여준다 —
+                상세까지 잘리면 이 패널을 열 이유가 없다. truncate 대신
+                min-w-0만 둬서 넘치면 줄바꿈되게 한다. */}
+            <Text as="span" size="xl" weight="semibold" className="min-w-0">
+              {digest.title}
+            </Text>
+          </div>
         }
       >
         <DigestReadonlyBodyFields digest={digest} />
@@ -116,15 +122,30 @@ function DigestDetailPanelError({
 
 // 다이제스트 상세 — SidePanel 안에 얹는 읽기 전용 콘텐츠. 편집은 없고, 결과가
 // 나쁘면 고치는 게 아니라 빼고 다시 돌린다. 사이드뷰 헤더는 액션 전용으로 비워
-// 두고, 유형·제목·시각은 CandidateCardFrame의 워시 구역으로 내린다(원문 상세
-// SourceDetailPanel과 같은 이유로 헤더는 페칭과 별개로 즉시 눌러진다).
+// 두고, 유형·제목은 CandidateCardFrame의 워시 구역으로 내린다(원문 상세
+// SourceDetailPanel과 같은 이유로 헤더는 페칭과 별개로 즉시 눌러진다). 시각은
+// 원문 상세와 자리를 맞추려고 휴지통 버튼 왼쪽에 둔다.
 export function DigestDetailPanel({
-  digestId,
+  digestPublicId,
+  knownDigestId,
   onClose,
 }: DigestDetailPanelProps) {
+  // 클릭 진입이면 knownDigestId가 이미 있다 — 그대로 쓴다. 새로고침·딥링크로
+  // 들어와 없으면 digest.get 응답(캐시 공유, 아래 DigestDetailPanelContent의
+  // useDigestSuspenseQuery와 같은 키)이 올 때까지 undefined다.
+  const { data: fetchedDigest } = useDigestQuery(digestPublicId);
+  const digestId = knownDigestId ?? fetchedDigest?.id;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-11 shrink-0 items-center justify-end gap-3 px-6">
+        {/* fetchedDigest는 본문 쪽 useDigestSuspenseQuery(digestPublicId)와 같은
+            쿼리 키를 써 캐시를 공유한다 — 추가 요청 없이 헤더가 채워진다. 아직
+            없으면(로딩·에러) 그냥 안 보여준다 — 헤더는 페칭과 무관하게 즉시
+            눌러져야 해서 닫기·삭제를 막지 않는다. */}
+        {fetchedDigest !== undefined && (
+          <RelativeTime dateTime={fetchedDigest.createdAt} />
+        )}
         <div className="-mr-1 flex shrink-0 items-center gap-1">
           <DigestDeleteAction digestId={digestId} onDeleted={onClose} />
           <DigestDetailCloseButton onClose={onClose} />
@@ -141,7 +162,7 @@ export function DigestDetailPanel({
         )}
       >
         <Suspense fallback={<DigestDetailPanelSkeleton />}>
-          <DigestDetailPanelContent digestId={digestId} />
+          <DigestDetailPanelContent digestPublicId={digestPublicId} />
         </Suspense>
       </ErrorBoundary>
     </div>

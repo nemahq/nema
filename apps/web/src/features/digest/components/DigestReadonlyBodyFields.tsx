@@ -10,6 +10,7 @@ import {
 } from "@web/features/digest/constants";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { DetailConnectorIcon } from "./DetailConnectorIcon";
 import { DigestFieldBullet } from "./DigestFieldBullet";
 
 interface DigestReadonlyBodyFieldsProps {
@@ -81,13 +82,16 @@ export function DigestReadonlyBodyFields({
               <ul className="flex flex-col gap-2">
                 {options.map((entry, index) => (
                   <DigestFieldBullet key={index}>
-                    <Text as="span" size="sm" color="primary">
+                    <Text as="span" size="base" color="primary">
                       {entry.option}
                     </Text>
                     {entry.detail !== undefined && (
-                      <Text as="span" size="sm" color="tertiary">
-                        {entry.detail}
-                      </Text>
+                      <div className="flex items-start gap-1">
+                        <DetailConnectorIcon className="mt-0.5 size-3 shrink-0 text-fg-tertiary" />
+                        <Text as="span" size="sm" color="tertiary">
+                          {entry.detail}
+                        </Text>
+                      </div>
                     )}
                   </DigestFieldBullet>
                 ))}

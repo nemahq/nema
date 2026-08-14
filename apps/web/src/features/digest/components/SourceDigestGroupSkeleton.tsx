@@ -12,9 +12,11 @@ interface SourceDigestGroupSkeletonProps {
 }
 
 // SourceDigestGroup의 2층 구조(원문 헤더 + 다이제스트 행)를 흉내내되, 원문 보기
-// 아이콘 버튼·다이제스트 유형 배지는 뺀다 — 로딩과 무관하게 항상 같은 모양인
-// 고정 액션/장식이라 스켈레톤화해도 예고할 정보가 없다(제목·시각처럼 매번
-// 달라지는 값만 흉내낸다).
+// 아이콘 버튼·다이제스트 유형 배지는 반짝이는 모양까지 그리지 않는다 — 로딩과
+// 무관하게 항상 같은 모양인 고정 액션/장식이라 예고할 정보가 없다(제목·시각처럼
+// 매번 달라지는 값만 흉내낸다). 원문 보기 버튼은 자리(size-7)를 남겨 옆의 시각
+// 스켈레톤이 실제 위치에 가깝게 두지만, 유형 배지는 라벨마다 폭이 들쭉날쭉해
+// 자리를 남겨도 어차피 안 맞으므로 그냥 뺀다.
 export function SourceDigestGroupSkeleton({
   style,
 }: SourceDigestGroupSkeletonProps) {
@@ -24,10 +26,11 @@ export function SourceDigestGroupSkeleton({
         <TextSkeleton size="sm" className="w-32" style={style} />
         <div className="min-w-6 flex-1" />
         <TextSkeleton size="xs" className="w-10" style={style} />
+        <div className="size-7 shrink-0" />
       </div>
       <div className="flex flex-col">
         {Array.from({ length: DIGEST_ROW_SKELETON_COUNT }).map((_, index) => (
-          <div key={index} className="flex items-center gap-2 px-2 py-1">
+          <div key={index} className="flex items-center gap-2 px-2 py-1.5">
             <TextSkeleton
               size="sm"
               className={
