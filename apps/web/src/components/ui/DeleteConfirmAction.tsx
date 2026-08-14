@@ -7,17 +7,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "@nema-io/weave";
-import { MoreHorizontal } from "@nema-io/weave/icons";
+import { Trash2 } from "@nema-io/weave/icons";
 
 import { Dialog } from "@web/components/ui/Dialog";
-import { DropdownMenu } from "@web/components/ui/DropdownMenu";
 import { useTranslation } from "@web/lib/tolgee";
 
-interface DeleteConfirmMenuProps {
+interface DeleteConfirmActionProps {
   confirmTitle: string;
   confirmDescription: string;
   isPending: boolean;
@@ -27,15 +26,15 @@ interface DeleteConfirmMenuProps {
   onConfirm: (closeDialog: () => void) => void;
 }
 
-// 미트볼(⋯) → 드롭다운 → 확인 다이얼로그. 원문·다이제스트가 같은 무게의 삭제를
-// 같은 모양으로 보여준다 — 자리마다 무게가 달라 보이면 사용자가 헷갈린다.
-export function DeleteConfirmMenu({
+// 휴지통 → 확인 다이얼로그. 원문·다이제스트가 같은 무게의 삭제를 같은 모양으로
+// 보여준다 — 자리마다 무게가 달라 보이면 사용자가 헷갈린다.
+export function DeleteConfirmAction({
   confirmTitle,
   confirmDescription,
   isPending,
   isPendingAfterDelay,
   onConfirm,
-}: DeleteConfirmMenuProps) {
+}: DeleteConfirmActionProps) {
   const { t } = useTranslation();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -45,23 +44,20 @@ export function DeleteConfirmMenu({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+      <Tooltip>
+        <TooltipTrigger asChild>
           <Button
-            type="button"
-            variant="ghost"
             size="icon-sm"
-            aria-label={t("common.more_actions")}
+            variant="ghost"
+            aria-label={t("common.delete")}
+            onClick={() => setConfirmOpen(true)}
+            className="size-7 text-fg-tertiary"
           >
-            <MoreHorizontal />
+            <Trash2 className="size-4" />
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setConfirmOpen(true)}>
-            {t("common.delete")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{t("common.delete")}</TooltipContent>
+      </Tooltip>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>

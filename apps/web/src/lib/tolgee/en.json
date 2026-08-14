@@ -35,7 +35,6 @@
     "delete_confirm_instruction": "Type \"{value}\" to confirm.",
     "deleting": "Deleting...",
     "draft_tab_close": "Close {label} tab",
-    "more_actions": "More actions",
     "refresh_failed": "Saved, but the screen couldn't refresh. Please refresh manually.",
     "retry": "Retry",
     "unknown_error": "An unknown error occurred."
@@ -68,11 +67,15 @@
   },
   "draft": {
     "card_open_label": "Open source detail",
+    "delete_confirm_description": "This can't be undone.",
+    "delete_confirm_title": "Delete this draft?",
+    "delete_waiting_action": "Delete drafts needing attention",
+    "delete_waiting_confirm_title": "Delete {count} drafts needing attention?",
+    "delete_waiting_partial_failure": "{failed} couldn't be deleted. Try again.",
     "empty_state": "No sources to process.",
     "load_error": "Couldn't load drafts",
-    "retry_pending": "Retrying...",
-    "status_empty": "No results",
-    "status_pending": "Not organized yet"
+    "no_result_banner": "You have nothing to organize here.",
+    "section_needs_attention": "Needs attention"
   },
   "error": {
     "copy_error": "Copy error info",
@@ -121,8 +124,7 @@
   "source": {
     "delete_confirm_description": "Deleting this source also removes any digests made from it, and can't be undone.",
     "delete_confirm_title": "Delete this source?",
-    "open_detail_label": "View source",
-    "summary_empty": "No summary yet."
+    "open_detail_label": "View source"
   },
   "workspace": {
     "drafts": "Drafts"

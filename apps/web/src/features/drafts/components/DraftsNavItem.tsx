@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "@tanstack/react-router";
 
 import { cn, Text } from "@nema-io/weave";
-import { FileText } from "@nema-io/weave/icons";
+import { FileText, TriangleAlert } from "@nema-io/weave/icons";
 
 import { NavItem } from "@web/components/layout/NavItem";
+import { useSidebar } from "@web/components/layout/Sidebar";
 import { useSourceDraftListQuery } from "@web/features/drafts/hooks/useSourceDraftListQuery";
 import { useTranslation } from "@web/lib/tolgee";
 
@@ -21,6 +22,7 @@ const TRANSITION_ANIMATION_MS = 300;
 export function DraftsNavItem() {
   const { t } = useTranslation();
   const pathname = useLocation({ select: (location) => location.pathname });
+  const { collapsed } = useSidebar();
   const draftsQuery = useSourceDraftListQuery();
   const [renderState, setRenderState] =
     useState<DraftsNavItemRenderState>("hidden");
@@ -32,6 +34,9 @@ export function DraftsNavItem() {
 
   const drafts = draftsQuery.data ?? [];
   const draftCount = drafts.length;
+  // "정리중" 구간이 서버에 없다(digestion_status는 pending/completed 둘뿐이고,
+  // pending은 사실상 죽은 상태다) — 확인이 필요한지 여부 하나만 본다.
+  const hasFailed = drafts.some((draft) => draft.status === "pending");
   // 조회 실패로 개수를 모르는 상태를 "0개"로 오인해 항목을 숨기지 않는다 — 실제 초안이
   // 있는데도 조용히 진입점이 사라지는 것보다는, 눌러서 /drafts의 에러 상태를 보는 편이 낫다.
   const hasData = draftCount > 0 || draftsQuery.isError;
@@ -88,6 +93,17 @@ export function DraftsNavItem() {
     return null;
   }
 
+  const statusIndicator = hasFailed ? (
+    <TriangleAlert
+      className={cn(
+        "size-3.5 shrink-0 text-status-error",
+        // 아이콘 도형이 뷰박스 안에서 오른쪽으로 치우쳐 있어 펼침 모드에서 카운트와
+        // 축이 안 맞는다 — 접힘 모드(코너 배지)는 이 보정이 필요 없다.
+        !collapsed && "-translate-x-1",
+      )}
+    />
+  ) : null;
+
   return (
     <div
       role="status"
@@ -105,6 +121,8 @@ export function DraftsNavItem() {
           label={t("workspace.drafts")}
           // 접힘 모드는 정확한 개수를 안 보여주니 툴팁에 붙여 hover로 확인하게 한다.
           tooltipLabel={draftsTooltipLabel()}
+          // exiting 중엔 이미 0개라 신호를 보여주면 오해를 준다.
+          labelSuffix={renderState !== "exiting" ? statusIndicator : null}
           to="/drafts"
           rightContentAlwaysVisible
           rightContent={

@@ -1,5 +1,5 @@
 import { Text } from "@nema-io/weave";
-import { CircleCheck } from "@nema-io/weave/icons";
+import { CircleCheck, Inbox } from "@nema-io/weave/icons";
 
 // 로딩은 공용 <Outlet> Suspense(ContentAreaFallback 워터마크)에 위임 — 로컬 경계 불필요.
 // eslint-disable-next-line nema/require-suspense-boundary
@@ -7,6 +7,11 @@ import { useSourceDraftListSuspenseQuery } from "@web/features/drafts/hooks/useS
 import { useTranslation } from "@web/lib/tolgee";
 
 import { DraftCard } from "./DraftCard";
+import { DraftSection } from "./DraftSection";
+
+const NEEDS_ATTENTION_ICON = (
+  <Inbox className="size-4 shrink-0 text-status-warning" />
+);
 
 interface DraftListProps {
   onSelectSource: (sourceId: string) => void;
@@ -28,17 +33,23 @@ export function DraftList({ onSelectSource }: DraftListProps) {
   }
 
   return (
-    <div className="flex flex-col">
+    <DraftSection
+      label={t("draft.section_needs_attention")}
+      count={drafts.length}
+      icon={NEEDS_ATTENTION_ICON}
+      tone="warning"
+    >
       {drafts.map((draft) => (
         <DraftCard
           key={draft.sourceId}
           sourceId={draft.sourceId}
           name={draft.name}
-          createdAt={draft.createdAt}
+          bodyPreview={draft.bodyPreview}
           status={draft.status}
+          createdAt={draft.createdAt}
           onSelect={onSelectSource}
         />
       ))}
-    </div>
+    </DraftSection>
   );
 }
