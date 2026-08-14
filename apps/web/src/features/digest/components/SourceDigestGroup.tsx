@@ -74,8 +74,9 @@ export function SourceDigestGroup({
         </Tooltip>
       </div>
       {/* 다이제스트를 전부 걷어내면 헤더만 남는다 — 원문으로 들어가는 문은
-          남아야 해서 서버가 그 원문 행을 계속 내려준다. */}
-      <div className="flex flex-col">
+          남아야 해서 서버가 그 원문 행을 계속 내려준다. gap-0.5(2px) — LNB
+          탭 간격(NavItem의 py-px가 위아래로 맞닿아 만드는 값)과 같다. */}
+      <div className="flex flex-col gap-0.5">
         {source.digests.map((digest) => (
           <DigestListRow
             key={digest.id}

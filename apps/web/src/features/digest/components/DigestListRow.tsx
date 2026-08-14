@@ -59,11 +59,15 @@ export const DigestListRow = memo(function DigestListRow({
       </Text>
       {/* outline variant — 배경 없이 테두리만 있어 왼쪽 유형 배지(색 채움)와
           시각적으로 경쟁하지 않는다. 관계 종류가 섞여 있어도 색은 안
-          바꾼다(중립) — 판정 화면이 없어 눌러도 할 게 없다. */}
+          바꾼다(중립) — 판정 화면이 없어 눌러도 할 게 없다. text-fg-tertiary로
+          outline 기본값(text-fg-primary)을 낮춘다 — 제목이 이 행의 주인공이고
+          개수는 곁다리 정보라서다. size="sm" — 제목 옆에 곁들이는 보조
+          표시(weave-usage.md Badge 표). */}
       {digest.relationCount > 0 && (
         <Badge
           shape="pill"
           variant="outline"
+          size="sm"
           className="shrink-0 text-fg-tertiary"
           aria-label={t("digest.relation_count_label", {
             count: digest.relationCount,

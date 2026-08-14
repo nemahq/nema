@@ -65,9 +65,7 @@ export function DraftIdleHeader({
             <Trash2 className="size-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" sideOffset={3}>
-          {t("common.delete")}
-        </TooltipContent>
+        <TooltipContent side="bottom">{t("common.delete")}</TooltipContent>
       </Tooltip>
 
       <DraftDeleteDialog

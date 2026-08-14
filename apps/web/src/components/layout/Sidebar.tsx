@@ -105,7 +105,7 @@ export function Sidebar({
                 </TooltipTrigger>
                 <TooltipContent
                   side={collapsed ? "right" : "bottom"}
-                  sideOffset={collapsed ? 12 : 3}
+                  sideOffset={collapsed ? 12 : undefined}
                 >
                   {t(
                     collapsed
