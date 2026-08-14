@@ -18,7 +18,8 @@
 
 ## Digest
 
-Source를 사람이 읽기 좋게 정리한 것. 여기서 Statement가 추출된다.
+Source를 사람이 읽기 좋게 정리한 것. 주된 칸(아래 참고)이 곧 Statement다 — 따로
+추출하지 않는다(아래 Statement 참고).
 
 | key | 타입 | 설명 |
 |---|---|---|
@@ -88,42 +89,40 @@ Source를 사람이 읽기 좋게 정리한 것. 여기서 Statement가 추출�
 
 ## Statement
 
-하나의 '왜'를 담은 문장 크기의 의미 한 조각. 맥락의 단위.
-
-| key | 타입 | 설명 |
-|---|---|---|
-| `id` | `uuid` | 식별자 |
-| `content` | `string` | 진술 내용, 그 '왜' 자체 |
-| `confidence?` | `enum: certain / guess` | 사실인가 추측인가. `claim`에서만 쓴다(확장 가능) |
-| `type` | `enum: claim / question` | 진술의 종류. 결정·미정 단언도 `claim` |
-| `digestId` | `uuid` | 어느 Digest에서 추출됐나. Source가 아니라 Digest를 직접 참조한다. 확정 후 안 바뀌는 Digest라 locator가 안정적이고, Digest는 이미 사람이 확정한 것이라 판정의 진짜 근거가 되기 때문이다 |
-| `sourceField?` | `string` | Digest의 어느 칸(`situation`/`choice`/`reason`/`tradeoff` 등, `DigestBody` 필드 key와 동일한 문자열)에서 나왔나. 추출 시점에 LLM이 채운다. Statement 내용은 Digest 원문을 그대로 복사한 게 아니라 재작성된 문장이라 텍스트 매칭이 불안정한데, 이 값이 있으면 매칭 없이 관계 판정 화면이 카드에서 해당 칸을 바로 하이라이트할 수 있다 |
-| `sourceFieldIndex?` | `number` | `tradeoff`/`alternatives`/`branches`처럼 `sourceField`가 배열 칸일 때만 채워지는 0-based 위치. 단일 칸이면 null |
-| `spaceId` | `uuid` | 소속 Space. `digestId`로 유추 가능하지만, RLS(행 단위 접근 제어)가 매 조회마다 조인 없이 바로 판정할 수 있도록 따로 둔다(`Digest.spaceId`와 같은 이유) |
-| `referenceIds?` | `uuid[]` | 이 Statement가 실제로 언급하는 Reference들. `Digest.referenceIds`가 리뷰 단계의 후보군이라면, 이건 Statement 생성(2단계) 때 문장 단위로 정밀하게 매핑된 결과다. Reference 상세 화면의 역참조·해설 근거 인용이 이 정밀도를 요구한다 |
-| `createdAt` | `Date` | 진술이 시스템에 들어온 때 |
-| `status` | `enum: active / archived` | 존재 상태. `replaces`·`duplicates`로 대체되거나, 소속 Digest·Source가 되돌려지면 연쇄로 `archived`된다 |
+하나의 '왜'를 담은 문장 크기의 의미 한 조각. 맥락의 단위. **독립된 테이블로는 없다** —
+Digest의 주된 칸(결정의 `choice`, 학습의 `finding` 등)이 곧 그 진술이다. 관계는 진술을
+따로 뽑지 않고 Digest 전체를 임베딩해 비교하고, Digest 단위로 잇는다(아래 Relation
+참고). 개념은 남고 행만 사라진 것이라, "Digest 하나에 진술 하나"라는 성질은 그대로다.
 
 ## Relation
 
-두 진술을 잇는 방향 있는 선. 진술과 동급의 단위이며, "무엇이 무엇을 지지·반박·대체하는지"의 그래프가 네마가 지키는 자산이다.
+두 Digest를 잇는 방향 있는 선. "무엇이 무엇을 지지·반박·대체하는지"의 그래프가 네마가
+지키는 자산이다.
 
 | key | 타입 | 설명 |
 |---|---|---|
 | `id` | `uuid` | 식별자 |
-| `type` | `enum: supports / conflicts / replaces / duplicates / resolves` | 관계 종류(인과·시간순·연관은 동작이 갈리면 추가) |
-| `fromId` | `uuid` | 출발 진술(A) |
-| `toId` | `uuid` | 도착 진술(B) |
-| `spaceId` | `uuid` | 이 관계를 만든 쪽의 Space. 관계는 Space를 가로지를 수 있다(다른 사람 진술에 반박·근거를 닮, `10-concept-collaboration.md`). 그래서 끝점만으론 어느 Space 소속인지 모호해져, 명시적으로 저장한다. RLS 판정에도 쓴다 |
+| `type` | `enum: support / weaken / duplicate / conflict / resolve` | 관계 종류. `resolve`는 짝이 되는 경로가 따로 필요하고 미결이 쌓여야 값이 생겨 아직 안 만들었다(미완성이 아니라 순서상 뒤에 있는 것) |
+| `fromId` | `uuid` | 출발 Digest(A) |
+| `toId` | `uuid` | 도착 Digest(B) |
+| `spaceId` | `uuid` | 이 관계를 만든 쪽의 Space. 관계는 Space를 가로지를 수 있다(다른 사람 Digest에 반박·근거를 닮, `10-concept-collaboration.md`). 그래서 끝점만으론 어느 Space 소속인지 모호해져, 명시적으로 저장한다. RLS 판정에도 쓴다 |
 | `createdAt` | `Date` | 관계가 생긴 때 |
 | `status` | `enum: active / archived` | 존재 상태. 끝점 archived 시 연쇄 규칙은 아래 동작 규칙 "끝점이 archived되면 관계도 연쇄로 archived된다" 참고 |
 
 **방향 의미**
-- `supports` A→B: A가 B를 뒷받침한다("B인 이유는 A").
-- `conflicts`: A와 B가 부딪힌다. 논리상 대칭이지만 저장은 방향 있게 두고, 동작에서 대칭으로 다룬다.
-- `replaces` A→B: A가 B를 밀어내 B가 지난 것이 된다. 진술의 폐기는 여기서 파생된다.
-- `duplicates` A→B: A와 B가 같은 뜻이라 A만 남고 B가 지난 것이 된다. `replaces`와 폐기 메커니즘은 같지만, 원인이 다르다(사실이 바뀐 게 아니라 같은 말이 중복된 것). 그래서 표식에서 다르게 설명된다. `conflicts`처럼 논리상 대칭이지만 저장은 방향 있게 둔다.
-- `resolves` A→B: A(답)가 B(질문, 또는 검증되지 않은 가정에서 나온 주장)를 닫는다. 폐기와 달리 B는 틀린 게 아니라 해소된 것이다.
+- `support` A→B: A가 B를 뒷받침한다("B인 이유는 A"). 받는 쪽(B)은 늘 결정이다.
+- `weaken` A→B: A가 B가 딛고 선 것을 무너뜨린다. `support`의 반대 방향. 받는 쪽(B)은 늘 결정이다.
+- `duplicate` A→B: A와 B가 같은 것을 말한다(같은 유형끼리만). 저장은 새 것(A)→기존 것(B) 방향이지만 논리적으로는 대칭이다.
+- `conflict` A→B: A와 B가 부딪힌다(같은 유형끼리만). `duplicate`와 같은 판정에서 갈리고, 저장 방향도 같다.
+- `resolve` A→B: A(답)가 B(질문, 또는 검증되지 않은 가정에서 나온 주장)를 닫는다. 아직 안 만들었다.
+
+**대체·병합은 관계 유형이 아니다.** "A가 B를 대체했다"는 지금의 사이가 아니라 그때
+일어난 일이라, Digest 수정이 그렇듯(아래 동작 규칙 참고) 관계가 아니라 변경 이력
+쪽에서 다룬다.
+
+이번 라운드는 지지·약화·중복·충돌 넷 다 아무것도 접지 않는다 — 확정하면 한쪽이
+접히는 사람의 리뷰·병합 초안·대체는 아직 안 만들었고, 만들지도 아직 결정 전이다
+(도그푸딩으로 필요성부터 본다). 넷 다 조용히 걸리기만 하고, 양 끝이 그대로 산다.
 
 ## Reference
 
