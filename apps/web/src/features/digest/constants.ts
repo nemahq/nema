@@ -159,6 +159,10 @@ export function readDigestBodyOptions(
   return entries.length > 0 ? entries : undefined;
 }
 
+// weave 토큰·BadgeVariant로 옮기지 않는다 — decision·pending·assumption은
+// Nema 도메인 용어인데 weave 색은 전부 UI 역할(brand·status·surface 등)
+// 기준이라, 도메인 개념을 넣으면 디자인 시스템이 이 제품에 묶인다.
+//
 // idea·assumption은 원안(#B8862B, #4F8A5B)이 흰 글자 대비 4.5:1(상세 배지
 // 라벨 기준 WCAG AA)에 못 미쳐(각각 3.24:1, 4.10:1) 그 색만 한 단계 낮췄다 —
 // 다른 세 색은 원안 그대로다.
