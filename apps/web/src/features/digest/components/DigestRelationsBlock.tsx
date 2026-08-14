@@ -1,17 +1,16 @@
 import { josa } from "es-hangul";
+import { Suspense } from "react";
 import { Link, linkOptions } from "@tanstack/react-router";
 
-import type {
-  DigestRelation,
-  DigestRelationPerspective,
-} from "@nema-io/shared";
+import type { DigestRelationPerspective } from "@nema-io/shared";
 import { Badge, Text } from "@nema-io/weave";
 
+import { useDigestRelationsSuspenseQuery } from "@web/features/digest/hooks/useDigestRelationsQuery";
 import type { TranslationKey } from "@web/lib/tolgee";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface DigestRelationsBlockProps {
-  relations: DigestRelation[];
+  digestId: string;
 }
 
 const RELATION_LABEL_KEY: Record<DigestRelationPerspective, TranslationKey> = {
@@ -37,18 +36,32 @@ const RELATION_JOSA: Record<DigestRelationPerspective, JosaOption> = {
 };
 
 // 다이제스트 상세 — CandidateCardFrame 아래 형제로 놓는 「관련 다이제스트」 블록.
-// 0개면 호출부가 아예 렌더하지 않는다("없어요"를 쓰지 않는다 — 관계는 있으면
-// 좋은 것이지 빈 자리가 문제인 곳이 아니다).
-export function DigestRelationsBlock({ relations }: DigestRelationsBlockProps) {
+// 유일한 소비처라 관계 조회를 직접 들고 있는다(page가 fetch해 prop-drill하지
+// 않는다). fallback을 null로 둔다 — 로딩 중에도, 0개일 때도 아무것도 안 보인다
+// ("없어요"를 쓰지 않는다 — 관계는 있으면 좋은 것이지 빈 자리가 문제인 곳이 아니다).
+export function DigestRelationsBlock({ digestId }: DigestRelationsBlockProps) {
+  return (
+    <Suspense fallback={null}>
+      <DigestRelationsBlockContent digestId={digestId} />
+    </Suspense>
+  );
+}
+
+function DigestRelationsBlockContent({ digestId }: DigestRelationsBlockProps) {
   const { t } = useTranslation();
+  const [digestRelations] = useDigestRelationsSuspenseQuery(digestId);
+
+  if (digestRelations.length === 0) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-2 px-2">
       <Text as="h3" size="sm" weight="medium" color="tertiary">
-        {t("digest.relations_heading", { count: relations.length })}
+        {t("digest.relations_heading", { count: digestRelations.length })}
       </Text>
       <ul className="flex flex-col gap-1.5">
-        {relations.map((relation) => (
+        {digestRelations.map((relation) => (
           <li
             key={relation.digestId}
             className="flex min-w-0 items-center gap-1"

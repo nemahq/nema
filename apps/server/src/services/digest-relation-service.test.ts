@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Digest } from "@nema-io/shared";
+import {
+  type Digest,
+  DIGEST_PUBLIC_ID_LENGTH,
+  DIGEST_PUBLIC_ID_PREFIX,
+} from "@nema-io/shared";
 
 import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 
@@ -62,7 +66,7 @@ interface DigestRow {
 // 실제 형식(dgt_ 접두사 + 12자)을 흉내내되, id마다 결정적으로 나오게 해서 이
 // 파일의 fixture id와 기대값이 같은 계산을 공유하게 한다.
 function publicIdOf(id: string): string {
-  return `dgt_${id.replace(/-/g, "").slice(0, 12)}`;
+  return `${DIGEST_PUBLIC_ID_PREFIX}${id.replace(/-/g, "").slice(0, DIGEST_PUBLIC_ID_LENGTH)}`;
 }
 
 function digestRow(args: {

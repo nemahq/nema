@@ -19,7 +19,6 @@ import {
   useDigestQuery,
   useDigestSuspenseQuery,
 } from "@web/features/digest/hooks/useDigestQuery";
-import { useDigestRelationsSuspenseQuery } from "@web/features/digest/hooks/useDigestRelationsQuery";
 import { useTranslation } from "@web/lib/tolgee";
 import { isNotFoundError } from "@web/lib/trpc";
 
@@ -71,7 +70,6 @@ function DigestDetailPanelContent({
   digestPublicId,
 }: DigestDetailPanelContentProps) {
   const [digest] = useDigestSuspenseQuery(digestPublicId);
-  const [relations] = useDigestRelationsSuspenseQuery(digest.id);
 
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pt-3 pb-8">
@@ -91,7 +89,7 @@ function DigestDetailPanelContent({
         <DigestReadonlyBodyFields digest={digest} />
       </CandidateCardFrame>
 
-      {relations.length > 0 && <DigestRelationsBlock relations={relations} />}
+      <DigestRelationsBlock digestId={digest.id} />
     </div>
   );
 }
