@@ -27,7 +27,7 @@ export function SourceDigestGroupSkeleton({
       </div>
       <div className="flex flex-col">
         {Array.from({ length: DIGEST_ROW_SKELETON_COUNT }).map((_, index) => (
-          <div key={index} className="flex items-center gap-2 px-2 py-1">
+          <div key={index} className="flex items-center gap-2 px-2 py-1.5">
             <TextSkeleton
               size="sm"
               className={

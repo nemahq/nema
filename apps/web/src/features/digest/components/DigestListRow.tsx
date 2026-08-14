@@ -26,9 +26,14 @@ export const DigestListRow = memo(function DigestListRow({
       {...linkOptions({ to: "/", search: { digest: digest.id } })}
       aria-current={selected ? "true" : undefined}
       className={cn(
-        "flex min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left",
+        "flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left",
         LIST_ITEM_HOVER_CLASSNAME,
-        selected && "bg-surface-raised",
+        // dark:bg-surface-raised-hover/40 — surface-raised는 다크 모드에서 이
+        // 행이 얹힌 surface-card와 완전히 같은 값이라(tokens/index.css) 선택
+        // 표시가 안 보인다. 다크에서는 호버 톤(LIST_ITEM_HOVER_CLASSNAME)과
+        // 같은 값으로 맞춘다 — 선택 상태가 늘 호버된 것처럼 보이는 셈이라
+        // 별도 색을 새로 안 만들어도 항상 대비가 생긴다.
+        selected && "bg-surface-raised dark:bg-surface-raised-hover/40",
       )}
     >
       <DigestTypeBadge type={digest.type} />

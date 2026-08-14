@@ -1,6 +1,6 @@
 import type { Digest } from "@nema-io/shared";
 import { Text } from "@nema-io/weave";
-import { Circle } from "@nema-io/weave/icons";
+import { Circle, CornerDownRight } from "@nema-io/weave/icons";
 
 import {
   DIGEST_BODY_FIELDS,
@@ -85,9 +85,12 @@ export function DigestReadonlyBodyFields({
                       {entry.option}
                     </Text>
                     {entry.detail !== undefined && (
-                      <Text as="span" size="sm" color="tertiary">
-                        {entry.detail}
-                      </Text>
+                      <div className="flex items-start gap-1">
+                        <CornerDownRight className="mt-0.5 size-3 shrink-0 text-fg-tertiary" />
+                        <Text as="span" size="sm" color="tertiary">
+                          {entry.detail}
+                        </Text>
+                      </div>
                     )}
                   </DigestFieldBullet>
                 ))}
