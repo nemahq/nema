@@ -49,12 +49,20 @@ const CREATED_AT = "2026-08-13T00:00:00.000Z";
 
 interface DigestRow {
   id: string;
+  public_id: string;
   source_id: string;
   type: Digest["type"];
   title: string;
   body: Record<string, string>;
   created_at: string;
   trashed_at?: string | null;
+}
+
+// groupByDigest·getRelationCounts가 상대 다이제스트를 다시 조회할 때 쓰는 값 —
+// 실제 형식(dgt_ 접두사 + 12자)을 흉내내되, id마다 결정적으로 나오게 해서 이
+// 파일의 fixture id와 기대값이 같은 계산을 공유하게 한다.
+function publicIdOf(id: string): string {
+  return `dgt_${id.replace(/-/g, "").slice(0, 12)}`;
 }
 
 function digestRow(args: {
@@ -73,11 +81,15 @@ function digestRow(args: {
   };
   return {
     id,
+    public_id: publicIdOf(id),
     source_id: sourceId,
     type,
     title,
     body: bodyByType[type],
     created_at: CREATED_AT,
+    // 실제 Supabase 응답처럼 살아있는 행도 trashed_at을 명시적 null로 채운다 —
+    // fetchRelationCounterparts는 undefined가 아니라 null만 "안 가려짐"으로 본다.
+    trashed_at: null,
   };
 }
 
@@ -109,7 +121,8 @@ type DigestsQuery = Promise<QueryResult> & {
 
 // v_visible_digests 조회는 .in("id", ...).in("type", ...).returns<>()로 두 번
 // 좁힌다 — 필터를 무시하는 목이면 "유형 표에 없는 후보가 걸러지는가"를 못
-// 잰다. 그래서 필터를 실제로 적용한다.
+// 잰다. 그래서 필터를 실제로 적용한다. plain digests(knownIds용, 가림 무시)와
+// v_visible_digests(가림 반영)는 같은 체인 모양이라 onlyVisible 플래그로만 가른다.
 function fakeSupabase(args: {
   rows: DigestRow[];
   // 이미 이어져 있는 쌍 — insert가 unique 위반으로 튕기는 상황을 만든다.
@@ -121,20 +134,21 @@ function fakeSupabase(args: {
   const { rows, existingPairs = [] } = args;
   const saved: RelationRow[] = [];
 
-  // 가림(trashed_at)까지 흉내내야 "가려진 후보가 빠지는가"를 잴 수 있다 —
-  // v_visible_digests는 실제로 이 조건을 뷰 정의(WHERE)에서 미리 거르므로,
-  // 여기서도 쿼리 체인이 아니라 픽스처 자체에서 항상 거른다.
-  function digestsQuery(filters: Array<[string, string[]]>): DigestsQuery {
+  function digestsQuery(
+    filters: Array<[string, string[]]>,
+    onlyVisible: boolean,
+  ): DigestsQuery {
     const matched = rows.filter(
       (row) =>
         filters.every(([column, values]) =>
           values.includes(String(row[column as keyof DigestRow])),
-        ) && (row.trashed_at ?? null) === null,
+        ) &&
+        (!onlyVisible || (row.trashed_at ?? null) === null),
     );
     return Object.assign(Promise.resolve({ data: matched, error: null }), {
       in: (column: string, values: string[]) =>
-        digestsQuery([...filters, [column, values]]),
-      returns: () => digestsQuery(filters),
+        digestsQuery([...filters, [column, values]], onlyVisible),
+      returns: () => digestsQuery(filters, onlyVisible),
     });
   }
 
@@ -149,7 +163,10 @@ function fakeSupabase(args: {
 
   const from = vi.fn((table: string) => {
     if (table === "v_visible_digests") {
-      return { select: () => digestsQuery([]) };
+      return { select: () => digestsQuery([], true) };
+    }
+    if (table === "digests") {
+      return { select: () => digestsQuery([], false) };
     }
     return {
       insert: (row: RelationRow) => {
@@ -251,10 +268,20 @@ describe("linkRelations", () => {
       },
     ]);
     expect(relations.get(LEARNING_ID)).toEqual([
-      { type: "supports", digestId: DECISION_ID, title: "주 1회" },
+      {
+        type: "supports",
+        digestId: DECISION_ID,
+        publicId: publicIdOf(DECISION_ID),
+        title: "주 1회",
+      },
     ]);
     expect(relations.get(DECISION_ID)).toEqual([
-      { type: "supported_by", digestId: LEARNING_ID, title: "7배 비쌈" },
+      {
+        type: "supported_by",
+        digestId: LEARNING_ID,
+        publicId: publicIdOf(LEARNING_ID),
+        title: "7배 비쌈",
+      },
     ]);
   });
 
@@ -522,7 +549,12 @@ describe("linkRelations", () => {
 
     expect(relations.get(DECISION_ID)).toEqual([]);
     expect(relations.get(LEARNING_ID)).toEqual([
-      { type: "supports", digestId: OLD_DECISION_ID, title: "옛 결정" },
+      {
+        type: "supports",
+        digestId: OLD_DECISION_ID,
+        publicId: publicIdOf(OLD_DECISION_ID),
+        title: "옛 결정",
+      },
     ]);
   });
 
@@ -657,6 +689,7 @@ describe("linkRelations — 중복·충돌", () => {
       {
         type: "conflicts_with",
         digestId: OLD_DECISION_ID,
+        publicId: publicIdOf(OLD_DECISION_ID),
         title: "주 1회 배포",
       },
     ]);

@@ -40,6 +40,20 @@ Tag의 `color`(`TagColor`) 값은 DB enum·CSS 토큰(`--tag-sienna` 등)·Tailw
 | `mauve` | 마젠타 | Magenta |
 | `violet` | 보라 | Purple |
 
+## 관계 종류 — 코드 값과 화면 문구
+
+`digest_relations.type`(`DigestRelationType`)은 DB enum이라 코드 용어를 유지하고,
+화면에는 방향을 접어 넣은 값(`DigestRelationPerspective`, `RELATION_PERSPECTIVE_BY_END`)이
+지지·약화·중복·충돌 문구로 뜬다. 이 넷은 다이제스트 상세·목록에서 이번에 처음
+쓰인 제품 용어다 — legacy의 「뒷받침/대체/같음」은 지금 모델과 안 맞아 쓰지 않는다.
+
+| 코드 용어 (`DigestRelationType`) | 제품 용어 (한) | 제품 용어 (영) |
+| --- | --- | --- |
+| `support` | 지지 | Support |
+| `weaken` | 약화 | Weaken |
+| `duplicate` | 중복 | Duplicate |
+| `conflict` | 충돌 | Conflict |
+
 ## 소유·사람 — 누구의 것인가
 
 | 제품 용어 (한) | 제품 용어 (영) | 개념 용어 | 코드 용어 | 역할 |

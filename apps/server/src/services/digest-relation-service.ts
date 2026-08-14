@@ -93,8 +93,6 @@ export async function linkRelations(args: {
     return new Map();
   }
 
-  const titleById = new Map(digests.map((digest) => [digest.id, digest.title]));
-
   const judged = await Promise.all(
     digests.map((digest, index) =>
       judgeOne({
@@ -117,18 +115,12 @@ export async function linkRelations(args: {
     ),
   );
 
-  for (const { candidates } of judged) {
-    for (const candidate of candidates) {
-      titleById.set(candidate.digest.id, candidate.digest.title);
-    }
-  }
-
   const saved = await saveRelations({
     supabase,
     rows: judged.flatMap((result) => result.rows),
   });
 
-  return groupByDigest({ digests, rows: saved, titleById });
+  return groupByDigest({ supabase, digests, rows: saved });
 }
 
 /** 그 다이제스트에 붙은 관계 — 하는 쪽·받는 쪽 양쪽 다 뜬다(linking.md 2.3). */
@@ -159,7 +151,7 @@ export async function getDigestRelations(args: {
     row.from_digest_id === digestId ? row.to_digest_id : row.from_digest_id,
   );
 
-  const { titleById, knownIds } = await fetchTitles({
+  const { infoById, knownIds } = await fetchRelationCounterparts({
     supabase,
     digestIds: otherIds,
   });
@@ -167,7 +159,85 @@ export async function getDigestRelations(args: {
   // 로그 저장은 응답을 기다리게 하지 않는다 — 실패 격리뿐 아니라 지연도 격리한다.
   void logGetRelations({ userId, detail: { digestId } });
 
-  return toRelations({ digestId, rows: relations, titleById, knownIds });
+  return toRelations({ digestId, rows: relations, infoById, knownIds });
+}
+
+/**
+ * 목록의 다이제스트 여럿에 대해 관계 개수를 한 번에 센다. getDigestRelations와
+ * 같은 기준(가려진 상대는 안 센다)이어야 한다 — 안 그러면 목록 개수와 상세 줄 수가
+ * 어긋난다(킥오프 참고). fetchRelationCounterparts를 그대로 재사용해 그 기준이
+ * 두 곳에서 갈릴 수 없게 한다.
+ */
+export async function getRelationCounts(args: {
+  supabase: TypedSupabaseClient;
+  digestIds: string[];
+}): Promise<Map<string, number>> {
+  const { supabase, digestIds } = args;
+  if (digestIds.length === 0) {
+    return new Map();
+  }
+
+  // digestIds는 digests.id(uuid) 값만 모여 있어 콤마·괄호를 못 담는다 — .or()
+  // 문자열 조립이 PostgREST 필터 구문 인젝션에 안전하다(getDigestRelations의
+  // 단일 eq() 조립과 같은 전제).
+  const idList = digestIds.join(",");
+  const { data: rows, error } = await supabase
+    .from("digest_relations")
+    .select("from_digest_id, to_digest_id")
+    .or(`from_digest_id.in.(${idList}),to_digest_id.in.(${idList})`);
+  throwIfSupabaseError(error);
+
+  const idSet = new Set(digestIds);
+  const counterpartsBySubject = new Map<string, string[]>();
+  for (const row of rows ?? []) {
+    addCounterpart({
+      map: counterpartsBySubject,
+      idSet,
+      subjectId: row.from_digest_id,
+      counterpartId: row.to_digest_id,
+    });
+    addCounterpart({
+      map: counterpartsBySubject,
+      idSet,
+      subjectId: row.to_digest_id,
+      counterpartId: row.from_digest_id,
+    });
+  }
+
+  const allCounterpartIds = [...counterpartsBySubject.values()].flat();
+  const { infoById } = await fetchRelationCounterparts({
+    supabase,
+    digestIds: allCounterpartIds,
+  });
+
+  return new Map(
+    digestIds.map((digestId) => [
+      digestId,
+      (counterpartsBySubject.get(digestId) ?? []).filter((id) =>
+        infoById.has(id),
+      ).length,
+    ]),
+  );
+}
+
+// subjectId가 이번 배치 대상일 때만 그 상대를 붙인다 — 배치 밖 다이제스트의
+// 관계까지 세면 안 된다(row가 배치 다이제스트를 한쪽 끝에만 걸고 있을 수 있어서).
+function addCounterpart(args: {
+  map: Map<string, string[]>;
+  idSet: Set<string>;
+  subjectId: string;
+  counterpartId: string;
+}): void {
+  const { map, idSet, subjectId, counterpartId } = args;
+  if (!idSet.has(subjectId)) {
+    return;
+  }
+  const list = map.get(subjectId);
+  if (list) {
+    list.push(counterpartId);
+  } else {
+    map.set(subjectId, [counterpartId]);
+  }
 }
 
 async function judgeOne(args: {
@@ -434,16 +504,31 @@ async function saveRelations(args: {
   return saved;
 }
 
-function groupByDigest(args: {
+// linkRelations 응답용 — 방금 이은 관계를 다이제스트별로 묶어 돌려준다. digests
+// 자체는 이미 메모리에 있지만 상대(다른 원문에서 온 기존 다이제스트일 수 있다)의
+// public_id까지는 안 들고 있어, getDigestRelations와 같은 fetchRelationCounterparts로
+// 다시 조회한다 — 코드가 두 벌로 갈리면 "가려진 상대 제외" 기준도 갈릴 수 있다.
+async function groupByDigest(args: {
+  supabase: TypedSupabaseClient;
   digests: Digest[];
   rows: RelationRow[];
-  titleById: Map<string, string>;
-}): Map<string, DigestRelation[]> {
-  const { digests, rows, titleById } = args;
+}): Promise<Map<string, DigestRelation[]>> {
+  const { supabase, digests, rows } = args;
+
+  const otherIds = new Set<string>();
+  for (const row of rows) {
+    otherIds.add(row.from_digest_id);
+    otherIds.add(row.to_digest_id);
+  }
+  const { infoById } = await fetchRelationCounterparts({
+    supabase,
+    digestIds: [...otherIds],
+  });
+
   return new Map(
     digests.map((digest) => [
       digest.id,
-      toRelations({ digestId: digest.id, rows, titleById }),
+      toRelations({ digestId: digest.id, rows, infoById }),
     ]),
   );
 }
@@ -451,10 +536,10 @@ function groupByDigest(args: {
 function toRelations(args: {
   digestId: string;
   rows: RelationRow[];
-  titleById: Map<string, string>;
+  infoById: Map<string, RelationCounterpartInfo>;
   knownIds?: Set<string>;
 }): DigestRelation[] {
-  const { digestId, rows, titleById, knownIds } = args;
+  const { digestId, rows, infoById, knownIds } = args;
 
   return rows.flatMap((row) => {
     const end = endOf(row, digestId);
@@ -462,8 +547,8 @@ function toRelations(args: {
       return [];
     }
     const otherId = end === "from" ? row.to_digest_id : row.from_digest_id;
-    const title = titleById.get(otherId);
-    if (title === undefined) {
+    const info = infoById.get(otherId);
+    if (info === undefined) {
       // 가려진 상대라 빠지는 건 정상이다. 행 자체가 없으면 CASCADE가 안 돈 것이라
       // 신호를 남긴다 — 조용히 빼면 관련 목록에서 한 줄이 이유 없이 사라진 걸로만 보인다.
       if (knownIds && !knownIds.has(otherId)) {
@@ -477,7 +562,8 @@ function toRelations(args: {
       {
         type: RELATION_PERSPECTIVE_BY_END[row.type][end],
         digestId: otherId,
-        title,
+        publicId: info.publicId,
+        title: info.title,
       },
     ];
   });
@@ -493,18 +579,26 @@ function endOf(row: RelationRow, digestId: string): RelationEnd | null {
   return null;
 }
 
-// 가려진 상대는 제목을 안 실어 관계가 목록에서 빠진다. 그 자리를 "못 찾음"과
-// 가르려면 존재 자체(knownIds, base 테이블)와 보임(titleById, v_visible_digests)을
+interface RelationCounterpartInfo {
+  title: string;
+  publicId: string;
+}
+
+// 가려진 상대는 정보를 안 실어 관계가 목록에서 빠진다. 그 자리를 "못 찾음"과
+// 가르려면 존재 자체(knownIds, base 테이블)와 보임(infoById, v_visible_digests)을
 // 따로 물어야 한다 — 가림은 사용자가 지운 정상 경로라 조용히 빠져야 하고, 아예
 // 없는 행은 CASCADE가 있는 한 생길 수 없어 경고가 남아야 한다. 판정 자체(3단
 // 상속)를 여기서 다시 적지 않으려고 두 번 왕복한다.
-async function fetchTitles(args: {
+async function fetchRelationCounterparts(args: {
   supabase: TypedSupabaseClient;
   digestIds: string[];
-}): Promise<{ titleById: Map<string, string>; knownIds: Set<string> }> {
+}): Promise<{
+  infoById: Map<string, RelationCounterpartInfo>;
+  knownIds: Set<string>;
+}> {
   const { supabase, digestIds } = args;
   if (digestIds.length === 0) {
-    return { titleById: new Map(), knownIds: new Set() };
+    return { infoById: new Map(), knownIds: new Set() };
   }
 
   const [
@@ -514,15 +608,20 @@ async function fetchTitles(args: {
     supabase.from("digests").select("id").in("id", digestIds),
     supabase
       .from("v_visible_digests")
-      .select("id, title")
+      .select("id, title, public_id")
       .in("id", digestIds)
-      .returns<Array<{ id: string; title: string }>>(),
+      .returns<Array<{ id: string; title: string; public_id: string }>>(),
   ]);
   throwIfSupabaseError(allError);
   throwIfSupabaseError(visibleError);
 
   return {
-    titleById: new Map((visibleRows ?? []).map((row) => [row.id, row.title])),
+    infoById: new Map(
+      (visibleRows ?? []).map((row) => [
+        row.id,
+        { title: row.title, publicId: row.public_id },
+      ]),
+    ),
     knownIds: new Set((allRows ?? []).map((row) => row.id)),
   };
 }

@@ -3,6 +3,7 @@ import { Link, linkOptions } from "@tanstack/react-router";
 
 import type { DigestListItem } from "@nema-io/shared";
 import { cn, LIST_ITEM_HOVER_CLASSNAME, Text } from "@nema-io/weave";
+import { Share2 } from "@nema-io/weave/icons";
 
 import { DigestTypeBadge } from "./DigestTypeBadge";
 
@@ -52,6 +53,17 @@ export const DigestListRow = memo(function DigestListRow({
       <Text as="span" size="sm" weight="medium" className="min-w-0 truncate">
         {digest.title}
       </Text>
+      {/* 배지(CountBadge·Badge) 대신 아이콘+숫자만 조용히 얹는다 — 배경 있는
+          배지를 붙이면 왼쪽 유형 배지와 시각적으로 경쟁한다. 관계 종류가 섞여
+          있어도 색은 안 바꾼다(중립) — 판정 화면이 없어 눌러도 할 게 없다. */}
+      {digest.relationCount > 0 && (
+        <span className="ml-auto flex shrink-0 items-center gap-1 text-fg-tertiary">
+          <Share2 className="size-3.5" />
+          <Text as="span" size="xs" color="tertiary">
+            {digest.relationCount}
+          </Text>
+        </span>
+      )}
     </Link>
   );
 });
