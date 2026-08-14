@@ -14,7 +14,7 @@
 -- 아무 상태도 안 가진다.
 --
 -- legacy(20260706112433_source_status_v2.sql)에서 trashed_at·trash_source·
--- restore_trashed_source를 옮겨 적되 두 가지를 바꿨다:
+-- restore_trashed_source를 옮겨 적되 세 가지를 바꿨다:
 --   1) status enum의 pending 가드를 뺐다 — legacy는 원문 삭제가 active→pending
 --      →trashed 2단계였고 우리는 그 되돌리기가 없다. 가드를 그대로 베끼면
 --      정상적인 삭제가 전부 막힌다.
@@ -30,7 +30,7 @@ ALTER TABLE sources ADD COLUMN trashed_at timestamptz;
 COMMENT ON COLUMN sources.trashed_at IS
   '휴지통행 시각 — NULL이면 살아있음. 30일 뒤 purge_expired_sources가 이 시각
    기준으로 완전 삭제 대상을 고른다(다음 마이그레이션). digests.trashed_at과
-   달리 CASCADE 삭제의 기준이 되므로 인덱스를 건다(아래).';
+   달리 그 배치 조회의 선별 기준이 되므로 인덱스를 건다(아래).';
 
 -- purge_expired_sources가 매일 훑는 조회 경로 — trashed 아닌 행(대다수)은
 -- 인덱스에 아예 안 들어가 부분 인덱스로 충분히 작다.
@@ -93,6 +93,31 @@ GRANT EXECUTE ON FUNCTION trash_source TO authenticated, service_role;
 
 REVOKE ALL ON FUNCTION restore_trashed_source FROM public, anon;
 GRANT EXECUTE ON FUNCTION restore_trashed_source TO authenticated, service_role;
+
+-- =============================================================
+-- "유일한 경로"를 RLS로도 지킨다 — sources_owner_update/_delete(20260810135811)가
+-- 살아있는 한 인증된 사용자가 REST로 직접 trashed_at을 건드리거나(RPC를 안 거쳐
+-- 되살리기 뒤 재색인을 건너뛰거나, 과거 시각을 심어 purge를 앞당기는 것) 원문을
+-- 통째로 DELETE(30일 유예를 건너뛰고 즉시 완전 삭제)할 수 있다. trash_source·
+-- restore_trashed_source가 유일한 경로가 되려면 DB 경계에서 막아야 한다.
+--
+-- DELETE: 이 PR부터 deleteSource가 하드 DELETE를 안 쓰므로 sources_owner_delete는
+-- 죽은 정책이다 — 지운다(purge_expired_sources는 SECURITY DEFINER라 안 걸린다).
+DROP POLICY sources_owner_delete ON sources;
+
+-- UPDATE: 나머지 컬럼(digestion_status·title 등)은 reExtractSource·
+-- saveDigestsAndIndex가 사용자 세션으로 그대로 쓴다 — 컬럼 단위로만 좁힌다.
+-- trash_source·restore_trashed_source는 SECURITY DEFINER라 함수 소유자 권한으로
+-- 도니 이 REVOKE에 안 걸린다.
+--
+-- 테이블 단위 UPDATE 권한(20260810111026 베이스라인의 GRANT ALL)이 있으면 그
+-- 권한이 모든 컬럼을 덮어써, REVOKE UPDATE (trashed_at) 하나만으로는 컬럼별
+-- 권한이 안 좁혀진다(Postgres는 테이블 권한과 컬럼 권한을 OR로 합친다) — 테이블
+-- 권한을 통째로 걷어낸 뒤 trashed_at만 빼고 다시 컬럼별로 내준다.
+REVOKE UPDATE ON sources FROM authenticated, anon;
+GRANT UPDATE (
+  id, user_id, body, digestion_status, created_at, updated_at, title, public_id
+) ON sources TO authenticated, anon;
 
 -- =============================================================
 -- 보이는 것만 돌려주는 조회 전용 뷰 — 3단 상속 판정을 한 자리로 모은다.

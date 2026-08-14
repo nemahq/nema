@@ -131,11 +131,33 @@ export async function restoreDigest(args: {
   throwIfSupabaseError(error);
 
   const restored = (data ?? []).length > 0;
-  if (restored) {
-    // 부모 원문이 trashed면(3단 상속) 이 digest는 여전히 안 보인다 — 그래도
-    // 재색인은 한다: 검색은 v_visible_digests로 걸러 안 걸리고, 나중에 원문이
-    // 복원되면(restoreSource) 그 시점 재색인을 다시 안 해도 벡터가 이미 있다.
-    await indexDigests({ userId, digests: (data ?? []).map(toDigest) });
+  const row = data?.[0];
+  if (restored && row) {
+    // 부모 원문이 trashed면(3단 상속) 이 digest는 여전히 안 보인다 — 그 상태로
+    // 재색인하면, 나중에 원문째로 purge될 때 이 벡터를 지울 방법이 없다(purge는
+    // "trash 시점에 이미 지웠다"는 전제로 벡터를 안 건드림, source_purge
+    // 마이그레이션 참고). 부모가 보일 때만 색인해 그 경우 자체를 안 만든다 —
+    // 부모가 나중에 복원되면 restoreSource가 이 digest를 마저 색인한다.
+    const { data: parentVisible, error: parentError } = await supabase
+      .from("v_visible_sources")
+      .select("id")
+      .eq("id", row.source_id)
+      .maybeSingle();
+    throwIfSupabaseError(parentError);
+
+    if (parentVisible) {
+      // RPC와 달리 이건 단일 UPDATE라 이미 커밋됐다 — 재색인 실패로 여기서
+      // 던지면 사용자는 "복원 실패"로 보지만 DB는 이미 복원된 상태로 갈린다.
+      // deleteDigestVectors와 같은 결로 경고만 남긴다.
+      try {
+        await indexDigests({ userId, digests: [toDigest(row)] });
+      } catch (indexError) {
+        console.warn(
+          `[digest-service] 복원 뒤 재색인 실패 — 검색에 안 걸릴 수 있음, digestId: ${digestId}:`,
+          indexError,
+        );
+      }
+    }
   }
 
   return { success: restored };

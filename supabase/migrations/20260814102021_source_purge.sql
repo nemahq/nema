@@ -17,8 +17,9 @@
 --
 -- 잡의 주인은 DB(pg_cron), 감시는 서버 몫이나 이번 슬라이스엔 안 붙인다 —
 -- apps/server/src/infra/에 아직 워치독을 걸 워커(legacy의 statement-sync 같은)가
--- 없다. purge_job_last_success()는 만들어 두되 호출부는 없다. 잡이 조용히
--- 멈추면 아무도 모른다 — PR Notes 참고.
+-- 없다. purge_job_last_success()는 만들어 두되 호출부는 없다.
+-- TODO: 그런 워커가 생기면 purge_job_last_success()로 "잡이 조용히 멈췄나"를
+-- 반드시 감시에 이어붙인다 — 지금은 잡이 멈춰도 아무도 모른다.
 -- =============================================================
 
 CREATE FUNCTION purge_expired_sources(
@@ -89,7 +90,7 @@ COMMENT ON FUNCTION purge_job_last_success IS
    개수"가 아니라 "잡이 실제로 돌았나"로 정지를 판정하게 한다(대량 휴지통을
    배치 한도로 여러 날 나눠 비우는 정상 상황에 헛경보가 안 나도록). 호출부는
    이번 슬라이스에 없다 — apps/server/src/infra/에 아직 이 함수를 부를 워커가
-   없다(PR Notes 참고).';
+   없다(파일 상단 TODO 참고).';
 
 REVOKE ALL ON FUNCTION purge_job_last_success() FROM public, anon, authenticated;
 GRANT EXECUTE ON FUNCTION purge_job_last_success() TO service_role;

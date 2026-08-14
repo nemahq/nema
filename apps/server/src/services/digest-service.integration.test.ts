@@ -38,7 +38,11 @@ vi.mock("@server/services/digest-index-service", () => ({
   indexDigests: mockIndexDigests,
 }));
 
-import { deleteDigest, restoreDigest } from "@server/services/digest-service";
+import {
+  deleteDigest,
+  getDigest,
+  restoreDigest,
+} from "@server/services/digest-service";
 
 const SETUP_TIMEOUT_MS = 30_000;
 const TEST_TIMEOUT_MS = 20_000;
@@ -178,6 +182,22 @@ describe("deleteDigest (RLS)", () => {
         .single();
       expect(row?.id).toBe(digestId);
       expect(row?.trashed_at).not.toBeNull();
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "가려진 다이제스트는 getDigest로 다시 물어도 not-found다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { digestId } = await seedDigest(userA.id);
+      await deleteDigest({ supabase: userA.supabase, digestId });
+
+      await expect(
+        getDigest({ supabase: userA.supabase, userId: userA.id, digestId }),
+      ).rejects.toThrow();
     },
     TEST_TIMEOUT_MS,
   );

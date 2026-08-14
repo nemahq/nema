@@ -224,4 +224,46 @@ describe("purge_expired_sources (RPC)", () => {
     },
     TEST_TIMEOUT_MS,
   );
+
+  it(
+    "p_batch_limit을 넘는 만료 원문은 이번엔 그만큼만 집어가고 나머지는 다음 배치로 남긴다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const seeded = await Promise.all([
+        seedTrashedSource({ trashedDaysAgo: 31 }),
+        seedTrashedSource({ trashedDaysAgo: 32 }),
+        seedTrashedSource({ trashedDaysAgo: 33 }),
+      ]);
+
+      const { data: purgedCount, error } = await admin.rpc(
+        "purge_expired_sources",
+        { p_retention_days: 30, p_batch_limit: 2 },
+      );
+      expect(error).toBeNull();
+      expect(purgedCount).toBe(2);
+
+      const { data: remaining } = await admin
+        .from("sources")
+        .select("id")
+        .in(
+          "id",
+          seeded.map((row) => row.sourceId),
+        );
+      // trashed_at이 가장 오래된(33일 전) 것부터 집어가므로, 남는 건 가장 최근에
+      // 휴지통에 들어간(31일 전) 하나뿐이어야 한다.
+      expect(remaining).toHaveLength(1);
+      expect(remaining?.[0]?.id).toBe(seeded[0]?.sourceId);
+
+      await admin
+        .from("sources")
+        .delete()
+        .in(
+          "id",
+          seeded.map((row) => row.sourceId),
+        );
+    },
+    TEST_TIMEOUT_MS,
+  );
 });

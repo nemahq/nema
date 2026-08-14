@@ -54,7 +54,7 @@ interface DigestRow {
   title: string;
   body: Record<string, string>;
   created_at: string;
-  hidden_at?: string | null;
+  trashed_at?: string | null;
 }
 
 function digestRow(args: {
@@ -121,7 +121,7 @@ function fakeSupabase(args: {
   const { rows, existingPairs = [] } = args;
   const saved: RelationRow[] = [];
 
-  // 가림(hidden_at)까지 흉내내야 "가려진 후보가 빠지는가"를 잴 수 있다 —
+  // 가림(trashed_at)까지 흉내내야 "가려진 후보가 빠지는가"를 잴 수 있다 —
   // v_visible_digests는 실제로 이 조건을 뷰 정의(WHERE)에서 미리 거르므로,
   // 여기서도 쿼리 체인이 아니라 픽스처 자체에서 항상 거른다.
   function digestsQuery(filters: Array<[string, string[]]>): DigestsQuery {
@@ -129,7 +129,7 @@ function fakeSupabase(args: {
       (row) =>
         filters.every(([column, values]) =>
           values.includes(String(row[column as keyof DigestRow])),
-        ) && (row.hidden_at ?? null) === null,
+        ) && (row.trashed_at ?? null) === null,
     );
     return Object.assign(Promise.resolve({ data: matched, error: null }), {
       in: (column: string, values: string[]) =>
@@ -412,7 +412,7 @@ describe("linkRelations", () => {
         sourceId: SOURCE_OLD,
         title: "지워진 결정",
       }),
-      hidden_at: CREATED_AT,
+      trashed_at: CREATED_AT,
     };
     mockSearchNeighbors.mockResolvedValue([
       { digestId: OLD_DECISION_ID, score: 0.8 },

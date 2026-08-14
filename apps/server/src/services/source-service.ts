@@ -142,11 +142,23 @@ export async function deleteSource(args: {
   // trash_source는 digests 행을 안 건드린다(가시성은 조인으로 파생) — Qdrant는
   // 그 파생을 모르니 지금 보이는 digest id를 미리 받아둬야 벡터도 같이 지울 수
   // 있다. RLS라 남의 원문이면 이 조회도 빈 배열이라 안전하다.
-  const { data: existingDigests } = await supabase
+  //
+  // 이 조회가 실패하면 existingDigests는 undefined다 — "digest가 0개"와
+  // 구분 못 하고 그냥 넘어가면 벡터 삭제가 조용히 스킵된다. purge가 CASCADE로
+  // 지운 digest의 벡터를 더는 정리해주지 않는 지금 구조(source_purge 마이그레이션
+  // 참고)에서는 이 스킵이 "나중에 복구 가능한 지연"이 아니라 "영구 고아"로
+  // 남으므로 여기서는 조용히 넘어가지 않고 경고를 남긴다.
+  const { data: existingDigests, error: existingDigestsError } = await supabase
     .from("v_visible_digests")
     .select("id")
     .eq("source_id", sourceId)
     .returns<Array<{ id: string }>>();
+  if (existingDigestsError) {
+    console.warn(
+      `[source-service] 휴지통행 전 digest 목록 조회 실패 — 벡터 정리가 스킵될 수 있음, sourceId: ${sourceId}:`,
+      existingDigestsError,
+    );
+  }
 
   // 이미 없는/남의/이미 trashed인 sourceId는 false — 에러가 아니다(RPC가
   // RAISE 대신 boolean을 반환하는 이유, source_digest_trash 마이그레이션 참고).
@@ -163,6 +175,8 @@ export async function deleteSource(args: {
   return { success: deleted };
 }
 
+// 휴지통 화면이 없어(kickoff) 라우터엔 아직 안 붙는다 — digest-service.ts
+// restoreDigest와 같은 사정.
 export async function restoreSource(args: {
   supabase: TypedSupabaseClient;
   userId: string;
@@ -189,10 +203,21 @@ export async function restoreSource(args: {
       .eq("source_id", sourceId)
       .is("trashed_at", null);
     throwIfSupabaseError(digestsError);
-    await indexDigests({
-      userId,
-      digests: (digestRows ?? []).map(toDigest),
-    });
+    // RPC는 이미 커밋됐다 — 여기서 던지면 사용자는 "복원 실패"로 보지만 DB는
+    // 이미 복원된 상태로 갈린다(deleteDigestVectors와 반대 결). 재색인 실패는
+    // 경고만 남기고 success:true를 그대로 돌려준다 — 검색 누락 하나가 "복원했는데
+    // 실패로 보인다"는 혼란보다 낫다.
+    try {
+      await indexDigests({
+        userId,
+        digests: (digestRows ?? []).map(toDigest),
+      });
+    } catch (indexError) {
+      console.warn(
+        `[source-service] 복원 뒤 재색인 실패 — digest가 검색에 안 걸릴 수 있음, sourceId: ${sourceId}:`,
+        indexError,
+      );
+    }
   }
 
   return { success };

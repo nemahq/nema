@@ -472,6 +472,74 @@ describe("source-service (RLS)", () => {
     TEST_TIMEOUT_MS,
   );
 
+  it(
+    "휴지통의 원문은 getSource·reExtractSource 둘 다 not-found다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("휴지통에서 안 보일 결정");
+      const { sourceId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "휴지통에서 안 보일 원문",
+      });
+      await deleteSource({ supabase: userA.supabase, sourceId });
+
+      await expect(
+        getSource({
+          supabase: userA.supabase,
+          userId: userA.id,
+          sourceId,
+          origin: "web",
+        }),
+      ).rejects.toThrow();
+
+      await expect(
+        reExtractSource({
+          supabase: userA.supabase,
+          userId: userA.id,
+          sourceId,
+        }),
+      ).rejects.toThrow();
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // v_visible_sources·v_visible_digests가 security_invoker=true 없이 만들어지면
+  // 뷰 소유자(관례상 postgres) 권한으로 돌아 RLS가 새어 남의 행이 보인다 — 지금
+  // 껏 admin(service_role, RLS 우회) 조회로만 이 뷰들을 확인해왔으니, 실제 다른
+  // 사용자 세션으로 한 번은 직접 확인해 둔다.
+  it(
+    "v_visible_sources·v_visible_digests는 다른 사용자에게 안 보인다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("B에게 안 보일 결정");
+      const { sourceId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "B에게 안 보일 원문",
+      });
+
+      const { data: sourceRows, error: sourceError } = await userB.supabase
+        .from("v_visible_sources")
+        .select("id")
+        .eq("id", sourceId);
+      expect(sourceError).toBeNull();
+      expect(sourceRows).toHaveLength(0);
+
+      const { data: digestRows, error: digestError } = await userB.supabase
+        .from("v_visible_digests")
+        .select("id")
+        .eq("source_id", sourceId);
+      expect(digestError).toBeNull();
+      expect(digestRows).toHaveLength(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
   // 이 테스트가 지키는 계약: CASCADE가 Postgres 쪽 digests는 지워도 Qdrant 벡터는
   // 안 건드린다 — deleteSource가 지워질 digest id로 벡터 정리를 직접 트리거해야 한다.
   it(
