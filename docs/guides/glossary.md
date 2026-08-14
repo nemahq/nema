@@ -10,9 +10,9 @@
 | -------------- | -------------- | --------- | --------- | ---- |
 | 맥락 | Context | Context | (해당 없음, 파생 개념) | Statement와 Relation이 쌓여 이루는, 신뢰하고 돌아올 수 있는 전체 지식 자산 |
 | 원문 | Source | Source | `sources` | 시스템이 손대지 않고, 사람이 작성한 그대로 보존하는 원재료 |
-| 다이제스트 | Digest | Digest | `digests` / `digest_references` / `digest_links` / `digest_topics` / `digest_tags` | Source를 사람이 읽기 좋게 정리한 것, 여기서 Statement가 추출된다 |
-| 문장 | Sentence | Statement | `statements` | 결정이나 판단의 '왜'를 담는, 문장 크기의 가장 작은 단위 |
-| 연결 | Connection | Relation | `statement_relations` | 두 Statement를 잇는, 방향을 가진 연결 |
+| 다이제스트 | Digest | Digest | `digests` / `digest_references` / `digest_links` / `digest_topics` / `digest_tags` | Source를 사람이 읽기 좋게 정리한 것. 주된 칸이 곧 Statement다(따로 뽑지 않는다) |
+| 문장 | Sentence | Statement | (해당 없음, 테이블 없음) | 결정이나 판단의 '왜'를 담는, 문장 크기의 가장 작은 단위. 개념만 있고 독립된 행은 없다 — Digest의 주된 칸이 곧 이것이다 |
+| 연결 | Connection | Relation | `digest_relations` | 두 Digest를 잇는, 방향을 가진 연결 |
 | 레퍼런스 | Reference | Reference | `references` / `reference_links` / `statement_references` / `digest_references` | Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력이 들어올 때마다 새로 쌓이지 않고 기존 것이 다듬어진다 |
 | 변경사항 | Change | Changeset | `changesets` / `changes` | 콘텐츠 단위들에 대한 변경을 한 번에 묶는 단위 |
 
