@@ -123,6 +123,9 @@ export function SignInPage() {
                 // 표시로 그대로 재사용한다 — 새 CSS 없이 기존 톤을 빌린다.
                 data-state={googleLoading ? "open" : undefined}
                 className={`w-full ${googleLoading ? "!opacity-100" : ""}`}
+                aria-label={
+                  googleLoading ? t("auth.continue_with_google") : undefined
+                }
               >
                 {googleLoading ? (
                   <LoaderCircle className="size-5 animate-spin" />
@@ -159,6 +162,9 @@ export function SignInPage() {
                   disabled={emailLoading || googleLoading}
                   data-state={emailLoading ? "open" : undefined}
                   className={`w-full ${emailLoading ? "!opacity-100" : ""}`}
+                  aria-label={
+                    emailLoading ? t("auth.continue_with_email") : undefined
+                  }
                 >
                   {emailLoading ? (
                     <LoaderCircle className="size-4 animate-spin" />
