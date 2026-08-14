@@ -73,7 +73,7 @@ function DigestListBodyContent({
       ref={scrollContainerRef}
       className="flex flex-1 flex-col overflow-y-auto"
     >
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6">
+      <div className="flex w-full flex-1 flex-col px-6 py-6">
         {sources.length === 0 ? (
           <DigestListEmptyState />
         ) : (
@@ -157,7 +157,7 @@ export function DigestListBody(props: DigestListBodyProps) {
         >
           <Suspense
             fallback={
-              <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-6">
+              <div className="flex w-full flex-1 flex-col px-6 py-6">
                 <DigestListSkeleton
                   count={DIGEST_LIST_INITIAL_SKELETON_COUNT}
                 />

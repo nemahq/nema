@@ -44,9 +44,7 @@ function TagColorGridPicker({
               )}
             />
           </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={3}>
-            {getColorLabel(color)}
-          </TooltipContent>
+          <TooltipContent side="bottom">{getColorLabel(color)}</TooltipContent>
         </Tooltip>
       ))}
     </div>

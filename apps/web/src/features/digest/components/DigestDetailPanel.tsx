@@ -75,7 +75,9 @@ function DigestDetailPanelContent({
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pt-3 pb-8">
       <CandidateCardFrame
         wash={
-          <div className="flex min-w-0 items-center gap-2">
+          // legacy 리뷰 편집 카드(DigestCardHeader → DigestTitleField)와 같은
+          // 배치 — 유형 배지를 제목과 한 줄에 나란히 두지 않고 위 행으로 뺀다.
+          <div className="flex min-w-0 flex-col items-start gap-2">
             <DigestTypeBadge type={digest.type} />
             {/* 목록에서는 한 줄로 잘리는 제목을 여기서는 통째로 보여준다 —
                 상세까지 잘리면 이 패널을 열 이유가 없다. truncate 대신

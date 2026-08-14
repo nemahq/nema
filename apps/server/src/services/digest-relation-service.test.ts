@@ -280,6 +280,7 @@ describe("linkRelations", () => {
         digestId: DECISION_ID,
         publicId: publicIdOf(DECISION_ID),
         title: "주 1회",
+        digestType: "decision",
       },
     ]);
     expect(relations.get(DECISION_ID)).toEqual([
@@ -288,6 +289,7 @@ describe("linkRelations", () => {
         digestId: LEARNING_ID,
         publicId: publicIdOf(LEARNING_ID),
         title: "7배 비쌈",
+        digestType: "learning",
       },
     ]);
   });
@@ -561,6 +563,7 @@ describe("linkRelations", () => {
         digestId: OLD_DECISION_ID,
         publicId: publicIdOf(OLD_DECISION_ID),
         title: "옛 결정",
+        digestType: "decision",
       },
     ]);
   });
@@ -698,6 +701,7 @@ describe("linkRelations — 중복·충돌", () => {
         digestId: OLD_DECISION_ID,
         publicId: publicIdOf(OLD_DECISION_ID),
         title: "주 1회 배포",
+        digestType: "decision",
       },
     ]);
   });

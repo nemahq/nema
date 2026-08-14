@@ -64,7 +64,7 @@ export function DigestReadonlyBodyFields({
             )}
 
             {list !== undefined && (
-              <ul className="flex flex-col gap-1">
+              <ul className="flex flex-col gap-1 pl-2">
                 {list.map((entry, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <Circle className="mt-2.5 size-1.5 shrink-0 fill-current text-fg-primary" />

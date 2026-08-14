@@ -1,7 +1,8 @@
 import type { DigestType } from "@nema-io/shared";
-import { Badge } from "@nema-io/weave";
+import { Badge, cn } from "@nema-io/weave";
 
 import {
+  DIGEST_TYPE_COLOR,
   DIGEST_TYPE_ICON,
   DIGEST_TYPE_LABEL_KEY,
 } from "@web/features/digest/constants";
@@ -19,7 +20,11 @@ export function DigestTypeBadge({ type }: DigestTypeBadgeProps) {
   const TypeIcon = DIGEST_TYPE_ICON[type];
 
   return (
-    <Badge shape="pill" variant="outline" className="shrink-0">
+    <Badge
+      shape="pill"
+      variant="outline"
+      className={cn("shrink-0", DIGEST_TYPE_COLOR[type])}
+    >
       <span className="inline-flex items-center gap-1">
         <TypeIcon className="size-3" />
         {t(DIGEST_TYPE_LABEL_KEY[type])}

@@ -3,6 +3,7 @@ import type {
   DigestDetail,
   DigestRelation,
   DigestRelationType,
+  DigestType,
   RelationEnd,
 } from "@nema-io/shared";
 import {
@@ -598,6 +599,7 @@ function toRelations(args: {
         digestId: otherId,
         publicId: info.publicId,
         title: info.title,
+        digestType: info.type,
       },
     ];
   });
@@ -616,6 +618,7 @@ function endOf(row: RelationRow, digestId: string): RelationEnd | null {
 interface RelationCounterpartInfo {
   title: string;
   publicId: string;
+  type: DigestType;
 }
 
 // 가려진 상대는 정보를 안 실어 관계가 목록에서 빠진다. 그 자리를 "못 찾음"과
@@ -640,11 +643,20 @@ async function fetchRelationCounterparts(args: {
     { data: visibleRows, error: visibleError },
   ] = await Promise.all([
     supabase.from("digests").select("id").in("id", digestIds),
+    // DigestDetailRow와 같은 근거로 안전한 캐스팅이다 — digests.type은 NOT
+    // NULL이고 v_visible_digests는 필터만 걸 뿐 컬럼을 안 바꾼다.
     supabase
       .from("v_visible_digests")
-      .select("id, title, public_id")
+      .select("id, title, public_id, type")
       .in("id", digestIds)
-      .returns<Array<{ id: string; title: string; public_id: string }>>(),
+      .returns<
+        Array<{
+          id: string;
+          title: string;
+          public_id: string;
+          type: DigestType;
+        }>
+      >(),
   ]);
   throwIfSupabaseError(allError);
   throwIfSupabaseError(visibleError);
@@ -653,7 +665,7 @@ async function fetchRelationCounterparts(args: {
     infoById: new Map(
       (visibleRows ?? []).map((row) => [
         row.id,
-        { title: row.title, publicId: row.public_id },
+        { title: row.title, publicId: row.public_id, type: row.type },
       ]),
     ),
     knownIds: new Set((allRows ?? []).map((row) => row.id)),

@@ -158,3 +158,23 @@ export function readDigestBodyOptions(
   });
   return entries.length > 0 ? entries : undefined;
 }
+
+// weave 토큰·BadgeVariant로 옮기지 않는다 — decision·pending·assumption은
+// Nema 도메인 용어인데 weave 색은 전부 UI 역할(brand·status·surface 등)
+// 기준이라, 도메인 개념을 넣으면 디자인 시스템이 이 제품에 묶인다.
+//
+// idea·assumption은 원안(#B8862B, #4F8A5B)이 흰 글자 대비 4.5:1(상세 배지
+// 라벨 기준 WCAG AA)에 못 미쳐(각각 3.24:1, 4.10:1) 그 색만 한 단계 낮췄다 —
+// 다른 세 색은 원안 그대로다.
+//
+// ring-[...]은 DigestTypeBadge(outline variant)의 인셋 링 색을 덮어쓰는 값이다
+// — DigestTypeIcon은 outline={false}라 Badge가 애초에 ring 유틸리티를 안
+// 붙여서 죽은 클래스지만, 두 컴포넌트가 이 색 문자열 하나를 그대로 공유하므로
+// 여기서 따로 안 뺀다.
+export const DIGEST_TYPE_COLOR: Record<DigestType, string> = {
+  decision: "text-white bg-[#C0503C] ring-[#C0503C]",
+  idea: "text-white bg-[#996F24] ring-[#996F24]",
+  assumption: "text-white bg-[#4B8256] ring-[#4B8256]",
+  learning: "text-white bg-[#3D7E96] ring-[#3D7E96]",
+  pending: "text-white bg-[#7E5FA8] ring-[#7E5FA8]",
+};
