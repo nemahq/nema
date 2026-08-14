@@ -80,6 +80,7 @@ export type Database = {
           extraction_order: number;
           hidden_at: string | null;
           id: string;
+          public_id: string;
           source_id: string;
           title: string;
           type: Database["public"]["Enums"]["digest_type"];
@@ -91,6 +92,7 @@ export type Database = {
           extraction_order: number;
           hidden_at?: string | null;
           id?: string;
+          public_id?: string;
           source_id: string;
           title: string;
           type: Database["public"]["Enums"]["digest_type"];
@@ -102,6 +104,7 @@ export type Database = {
           extraction_order?: number;
           hidden_at?: string | null;
           id?: string;
+          public_id?: string;
           source_id?: string;
           title?: string;
           type?: Database["public"]["Enums"]["digest_type"];
@@ -204,6 +207,7 @@ export type Database = {
           digestion_status: Database["public"]["Enums"]["digestion_status"];
           id: string;
           name: string;
+          public_id: string;
           title: string | null;
           updated_at: string;
           user_id: string;
@@ -215,6 +219,7 @@ export type Database = {
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           id?: string;
           name?: string;
+          public_id?: string;
           title?: string | null;
           updated_at?: string;
           user_id: string;
@@ -226,6 +231,7 @@ export type Database = {
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           id?: string;
           name?: string;
+          public_id?: string;
           title?: string | null;
           updated_at?: string;
           user_id?: string;
@@ -324,7 +330,8 @@ export type Database = {
       };
     };
     Functions: {
-      [_ in never]: never;
+      generate_digest_public_id: { Args: never; Returns: string };
+      generate_source_public_id: { Args: never; Returns: string };
     };
     Enums: {
       content_language: "en" | "ko";
