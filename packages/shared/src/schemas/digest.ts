@@ -130,3 +130,24 @@ export const DigestSearchResultSchema = z.intersection(
   z.object({ sourceId: z.string().uuid(), score: z.number() }),
 );
 export type DigestSearchResult = z.infer<typeof DigestSearchResultSchema>;
+
+// 목록 화면 전용 얇은 모양 — body 없이 id·type·title만 싣는다(목록에는 본문을
+// 안 싣는다, 상세는 따로 조회). type은 화면이 아이콘/라벨을 고르는 데 쓴다.
+export const DigestListItemSchema = z.object({
+  id: z.string().uuid(),
+  type: DigestTypeSchema,
+  title: z.string(),
+});
+export type DigestListItem = z.infer<typeof DigestListItemSchema>;
+
+// 삭제(가림) 공용 입력 — "이 다이제스트를" 말고는 인자가 없다.
+export const DigestActionInputSchema = z.object({
+  digestId: z.string().uuid(),
+});
+export type DigestActionInput = z.infer<typeof DigestActionInputSchema>;
+
+export const DigestDeleteResultSchema = z.object({
+  // 이미 가려진(또는 남의) digestId로 불러도 에러는 아니다 — source.delete와 같은 관행.
+  success: z.boolean(),
+});
+export type DigestDeleteResult = z.infer<typeof DigestDeleteResultSchema>;
