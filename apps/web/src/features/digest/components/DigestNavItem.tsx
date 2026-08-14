@@ -1,4 +1,4 @@
-import { LayoutList } from "@nema-io/weave/icons";
+import { NotebookText } from "@nema-io/weave/icons";
 
 import { NavItem } from "@web/components/layout/NavItem";
 import { useTranslation } from "@web/lib/tolgee";
@@ -9,7 +9,7 @@ export function DigestNavItem() {
   const { t } = useTranslation();
   return (
     <NavItem
-      icon={<LayoutList strokeWidth={1.5} className={NAV_ICON_CLASS} />}
+      icon={<NotebookText strokeWidth={1.5} className={NAV_ICON_CLASS} />}
       label={t("digest.nav_label")}
       to="/"
       // "/"는 모든 경로의 접두사라 exact 없이는 다른 라우트에서도 계속 active로
