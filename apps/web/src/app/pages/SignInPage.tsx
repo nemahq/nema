@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 
 import { Button, Input, Separator } from "@nema-io/weave";
-import { LoaderCircle, Mail } from "@nema-io/weave/icons";
+import { Loader, Mail } from "@nema-io/weave/icons";
 
 import { NemaWordmark } from "@web/components/ui/NemaWordmark";
 import { GoogleIcon } from "@web/features/auth";
@@ -57,12 +57,15 @@ export function SignInPage() {
         provider: "google",
         options: { redirectTo: resolveRedirectUrl() },
       });
+      // 성공 시 signInWithOAuth는 이미 구글로 리다이렉트를 걸어 둔
+      // 뒤라, 굳이 여기서 로딩을 풀지 않아도 된다 — 에러일 때만 풀어서
+      // 재시도할 수 있게 한다.
       if (oauthError) {
         setError(oauthError.message);
+        setGoogleLoading(false);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.unknown_error"));
-    } finally {
       setGoogleLoading(false);
     }
   }
@@ -128,7 +131,7 @@ export function SignInPage() {
                 }
               >
                 {googleLoading ? (
-                  <LoaderCircle className="size-5 animate-spin" />
+                  <Loader className="size-5 animate-spin" />
                 ) : (
                   <>
                     <GoogleIcon className="size-5" />
@@ -167,7 +170,7 @@ export function SignInPage() {
                   }
                 >
                   {emailLoading ? (
-                    <LoaderCircle className="size-4 animate-spin" />
+                    <Loader className="size-4 animate-spin" />
                   ) : (
                     <>
                       <Mail className="size-4" />
