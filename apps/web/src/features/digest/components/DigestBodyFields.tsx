@@ -1,12 +1,15 @@
 import type { Digest } from "@nema-io/shared";
 import { Text } from "@nema-io/weave";
-import { Circle } from "@nema-io/weave/icons";
 
 import {
   DIGEST_BODY_FIELDS,
-  readDigestBodyField,
+  readDigestBodyList,
+  readDigestBodyOptions,
+  readDigestBodyText,
 } from "@web/features/digest/constants";
 import { useTranslation } from "@web/lib/tolgee";
+
+import { DigestFieldBullet } from "./DigestFieldBullet";
 
 interface DigestBodyFieldsProps {
   digest: Digest;
@@ -20,8 +23,20 @@ export function DigestBodyFields({ digest }: DigestBodyFieldsProps) {
   return (
     <div className="flex flex-col gap-4">
       {DIGEST_BODY_FIELDS[digest.type].map((field) => {
-        const fieldValue = readDigestBodyField(digest.body, field.key);
-        if (fieldValue === undefined) {
+        const text =
+          field.kind === "text"
+            ? readDigestBodyText(digest.body, field.key)
+            : undefined;
+        const list =
+          field.kind === "list"
+            ? readDigestBodyList(digest.body, field.key)
+            : undefined;
+        const options =
+          field.kind === "option-list"
+            ? readDigestBodyOptions(digest.body, field.key)
+            : undefined;
+
+        if (text === undefined && list === undefined && options === undefined) {
           return null;
         }
 
@@ -30,34 +45,47 @@ export function DigestBodyFields({ digest }: DigestBodyFieldsProps) {
             <Text as="span" size="sm" weight="medium" color="tertiary">
               {t(field.labelKey)}
             </Text>
-            {field.kind === "text" ? (
+
+            {text !== undefined && (
               <Text
                 as="p"
                 size="sm"
                 color="primary"
                 className="whitespace-pre-wrap"
               >
-                {typeof fieldValue === "string"
-                  ? fieldValue
-                  : fieldValue.join("\n")}
+                {text}
               </Text>
-            ) : (
+            )}
+
+            {list !== undefined && (
               <ul className="flex flex-col gap-1">
-                {(Array.isArray(fieldValue) ? fieldValue : [fieldValue]).map(
-                  (entry, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <Circle className="mt-2 size-1 shrink-0 fill-current text-fg-tertiary" />
-                      <Text
-                        as="span"
-                        size="sm"
-                        color="primary"
-                        className="flex-1"
-                      >
-                        {entry}
+                {list.map((entry, index) => (
+                  <DigestFieldBullet key={index}>
+                    <Text as="span" size="sm" color="primary">
+                      {entry}
+                    </Text>
+                  </DigestFieldBullet>
+                ))}
+              </ul>
+            )}
+
+            {/* 선택지를 먼저 읽고 이유가 딸려 읽히게 둔다 — 상세를 여는 사람이
+                먼저 궁금한 건 "어떤 갈림길이 있었나"고 "왜 그랬나"는 그다음이다.
+                한 줄에 붙이면 줄바꿈되는 순간 어디까지가 선택지인지 사라진다. */}
+            {options !== undefined && (
+              <ul className="flex flex-col gap-2">
+                {options.map((entry, index) => (
+                  <DigestFieldBullet key={index}>
+                    <Text as="span" size="sm" color="primary">
+                      {entry.option}
+                    </Text>
+                    {entry.detail !== undefined && (
+                      <Text as="span" size="sm" color="tertiary">
+                        {entry.detail}
                       </Text>
-                    </li>
-                  ),
-                )}
+                    )}
+                  </DigestFieldBullet>
+                ))}
               </ul>
             )}
           </div>

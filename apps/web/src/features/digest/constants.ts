@@ -39,10 +39,18 @@ type DigestBodyFieldKey = BodyFieldKeyOf<DigestBody>;
 
 interface DigestBodyFieldMeta<T extends DigestType> {
   key: keyof Extract<Digest, { type: T }>["body"];
-  // string인지 string[]인지를 정의가 직접 들고 있는다 — 값을 보고 되짚으면
-  // 빈 필드에서 어느 쪽인지 알 수 없다.
-  kind: "text" | "list";
+  // 값 모양을 정의가 직접 들고 있는다 — 값을 보고 되짚으면 빈 필드에서 어느
+  // 쪽인지 알 수 없다. option-list는 갈림길을 담는 칸(선택지·대안)으로, 항목마다
+  // 선택지와 그 이유가 짝을 이룬다.
+  kind: "text" | "list" | "option-list";
   labelKey: TranslationKey;
+}
+
+// 갈림길 항목의 이유 필드는 칸마다 이름이 다르다(대안은 왜 안 골랐나,
+// 선택지는 그쪽 논거) — 읽는 쪽이 한 모양으로 다루도록 여기서 좁힌다.
+interface DigestOptionEntry {
+  option: string;
+  detail?: string;
 }
 
 // 칸 순서·라벨은 legacy review 화면과 같게 맞춘다 — 같은 다이제스트를 화면마다
@@ -57,14 +65,18 @@ export const DIGEST_BODY_FIELDS: {
     { key: "tradeoff", kind: "list", labelKey: "digest.field_tradeoff" },
     {
       key: "alternatives",
-      kind: "list",
+      kind: "option-list",
       labelKey: "digest.field_alternatives",
     },
   ],
   pending: [
     { key: "question", kind: "text", labelKey: "digest.field_question" },
     { key: "background", kind: "text", labelKey: "digest.field_background" },
-    { key: "branches", kind: "list", labelKey: "digest.field_branches" },
+    {
+      key: "branches",
+      kind: "option-list",
+      labelKey: "digest.field_branches",
+    },
     {
       key: "resolutionCondition",
       kind: "text",
@@ -94,17 +106,55 @@ export const DIGEST_BODY_FIELDS: {
 
 // DIGEST_BODY_FIELDS의 key는 렌더 시점에 body.type과의 상관관계가 끊겨 string으로
 // 넓어진다 — 단언 대신 실제 값 모양을 확인해 좁힌다.
-export function readDigestBodyField(
+export function readDigestBodyText(
   body: DigestBody,
   key: DigestBodyFieldKey,
-): string | string[] | undefined {
+): string | undefined {
   const raw: unknown = Object.getOwnPropertyDescriptor(body, key)?.value;
-  if (typeof raw === "string") {
-    return raw.trim() === "" ? undefined : raw;
+  if (typeof raw !== "string" || raw.trim() === "") {
+    return undefined;
   }
-  if (Array.isArray(raw) && raw.every((entry) => typeof entry === "string")) {
-    const filled = raw.filter((entry) => entry.trim() !== "");
-    return filled.length > 0 ? filled : undefined;
+  return raw;
+}
+
+export function readDigestBodyList(
+  body: DigestBody,
+  key: DigestBodyFieldKey,
+): string[] | undefined {
+  const raw: unknown = Object.getOwnPropertyDescriptor(body, key)?.value;
+  if (!Array.isArray(raw)) {
+    return undefined;
   }
-  return undefined;
+  const filled = raw.filter(
+    (entry): entry is string =>
+      typeof entry === "string" && entry.trim() !== "",
+  );
+  return filled.length > 0 ? filled : undefined;
+}
+
+// 이유 필드 이름이 칸마다 달라(alternatives는 rejectionReason, branches는
+// argument) 여기서 detail 하나로 좁힌다 — 렌더가 칸마다 분기하지 않게 한다.
+export function readDigestBodyOptions(
+  body: DigestBody,
+  key: DigestBodyFieldKey,
+): DigestOptionEntry[] | undefined {
+  const raw: unknown = Object.getOwnPropertyDescriptor(body, key)?.value;
+  if (!Array.isArray(raw)) {
+    return undefined;
+  }
+  const entries = raw.flatMap((item) => {
+    if (typeof item !== "object" || item === null) {
+      return [];
+    }
+    const record = item as Record<string, unknown>;
+    const option = record.option;
+    if (typeof option !== "string" || option.trim() === "") {
+      return [];
+    }
+    const reason = record.rejectionReason ?? record.argument;
+    const detail =
+      typeof reason === "string" && reason.trim() !== "" ? reason : undefined;
+    return [{ option, ...(detail !== undefined && { detail }) }];
+  });
+  return entries.length > 0 ? entries : undefined;
 }
