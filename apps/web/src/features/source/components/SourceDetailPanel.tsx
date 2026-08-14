@@ -137,7 +137,16 @@ export function SourceDetailPanel({
       )}
     >
       <Suspense fallback={<LoadingWatermark />}>
+        {/* key={sourceId} — 열려 있는 채로 다른 원문으로 바로 전환하면(패널을 안
+            닫고 카드만 바꿔 클릭), 대상 원문 쿼리가 이미 캐시돼 있을 때(staleTime
+            30초, gcTime 기본 5분) useSuspenseQuery가 다시 suspend하지 않아 이
+            컴포넌트가 리마운트되지 않는다 — 그러면 본문 textarea DOM이 재사용돼
+            이전 원문에서 스크롤한 위치가 새 원문에 그대로 남는다. key로 강제
+            리마운트시켜 이걸 막는다. SidePanel(폭 상태)은 이 key 밖에 있어
+            리마운트되지 않는다 — legacy가 key를 DraftDetailPanel 안쪽에만 둔 것과
+            같은 이유. */}
         <SourceDetailPanelContent
+          key={sourceId}
           sourceId={sourceId}
           onClose={onClose}
           banner={banner}
