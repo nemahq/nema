@@ -1,5 +1,5 @@
 import { josa } from "es-hangul";
-import { Suspense } from "react";
+import { Suspense, useSyncExternalStore } from "react";
 import { Link, linkOptions } from "@tanstack/react-router";
 
 import type { DigestRelationPerspective } from "@nema-io/shared";
@@ -58,13 +58,29 @@ export function DigestRelationsBlock({ digestId }: DigestRelationsBlockProps) {
   );
 }
 
+// tolgee의 language 이벤트를 직접 구독한다 — useTranslate()가 구독하는 update
+// 이벤트는 language도 포함하지만 그 안에 섞여 있어 이 자리에서 근거로 삼기엔
+// 간접적이다. RelativeTime의 분 틱 구독과 같은 형태(subscribe/getSnapshot)로
+// tolgee.getLanguage()를 직접 물어 리렌더를 보장한다.
+function subscribeToLanguage(callback: () => void): () => void {
+  const subscription = tolgee.on("language", callback);
+  return () => subscription.unsubscribe();
+}
+
+function getLanguageSnapshot(): string | undefined {
+  return tolgee.getLanguage();
+}
+
 function DigestRelationsBlockContent({ digestId }: DigestRelationsBlockProps) {
   const { t } = useTranslation();
   const [digestRelations] = useDigestRelationsSuspenseQuery(digestId);
-  // useTranslation() 구독이 언어 변경 시 리렌더를 보장한다(RelativeTime과 같은
-  // 패턴) — 한국어는 "제목 칩 + 조사 + 관계어"로 목적어가 동사 앞에 오지만,
-  // 영어는 "Supports + 제목 칩"으로 동사가 먼저 와야 자연스럽게 읽힌다.
-  const isKorean = tolgee.getLanguage() === "ko";
+  // 한국어는 "제목 칩 + 조사 + 관계어"로 목적어가 동사 앞에 오지만, 영어는
+  // "Supports + 제목 칩"으로 동사가 먼저 와야 자연스럽게 읽힌다.
+  const language = useSyncExternalStore(
+    subscribeToLanguage,
+    getLanguageSnapshot,
+  );
+  const isKorean = language === "ko";
 
   if (digestRelations.length === 0) {
     return null;
