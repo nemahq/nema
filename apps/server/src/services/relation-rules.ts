@@ -56,7 +56,12 @@ export interface RelationJudgment {
   pairs: Record<DigestType, Record<DigestType, RelationPairRule | null>>;
   /** 같은 원문 안 다이제스트를 후보로 볼지. */
   sameSourceScope: SameSourceScope;
-  /** 판정할 때 LLM에게 묻는 말. 프롬프트의 나머지(틀·출력 형식)는 갈래와 무관하다. */
+  /**
+   * 판정할 때 LLM에게 묻는 말. 프롬프트의 나머지(틀·출력 형식)는 갈래와 무관하다 —
+   * 갈래마다 뜻이 달라지는 말은 전부 여기 들어와야 틀이 그 상태로 남는다. 방향을
+   * 묻는 자리(direction: "llmDecides")가 있으면 from이 어느 쪽인지도 여기서 밝힌다:
+   * 틀은 "from을 언제 답하나"라는 기계적 규칙만 쥐고 있다.
+   */
   question: string;
 }
 
@@ -130,6 +135,10 @@ pulling the ground out from under it. The receiving end is always a decision.
 - weaken: the giving side takes ground away. What the decision stood on is gone,
   or what has been found makes the decision unworkable.
 - none: everything else.
+
+The relation runs FROM the giving side TO the decision it acts on. When a
+candidate line asks for "from", both digests are decisions and you must say
+which one is giving: the one that holds up or undercuts the other.
 
 Answer "none" unless the relation is plain. Two digests about the same project,
 the same feature, the same week are NOT related — sharing a subject is not
@@ -205,6 +214,23 @@ about the same feature are NOT related unless the main fields actually meet.
 Answer "none" unless the overlap is plain. A wrong link is worse than a missing
 one: the user is later told "you already decided this" and they did not.`,
 };
+
+/**
+ * 갈래 전부. 흐름은 이 순서대로 돈다 — 순서가 뜻을 갖는다.
+ *
+ * 한 쌍에 관계는 하나뿐인데(digest_relations_unique_pair) 다른 원문의 결정↔결정은
+ * 두 갈래 모두의 후보라, 같은 쌍에 weaken과 conflict가 함께 나올 수 있다. 먼저 이은
+ * 쪽이 남으므로 겹치는 자리에서 더 정확한 말인 중복·충돌을 앞에 둔다 — 같은 상황·같은
+ * 선택은 "지지"가 아니라 중복이고, 같은 상황·다른 선택은 "약화"가 아니라 충돌이다.
+ * 병렬로 돌리면 이 순서가 무너져 같은 원문을 던져도 매번 다른 관계가 붙는다.
+ *
+ * 표와 같은 파일에 두는 이유: 갈래를 표에만 만들고 여기 등록을 잊으면 아무 일도 안
+ * 일어난다. 그 누락은 relation-rules.test.ts의 커버리지 검사가 잡는다.
+ */
+export const RELATION_JUDGMENTS = [
+  DUPLICATE_CONFLICT_JUDGMENT,
+  SUPPORT_WEAKEN_JUDGMENT,
+] as const;
 
 /**
  * 이 판정이 낼 수 있는 관계 종류 — 프롬프트의 선택지와 응답 스키마가 여기서 나온다.
