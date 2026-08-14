@@ -9,6 +9,12 @@ import { DigestTypeBadge } from "./DigestTypeBadge";
 interface DigestListRowProps {
   digest: DigestListItem;
   selected: boolean;
+  // cmd/ctrl/shift/alt+click(새 탭)에서도 이 onClick은 이 탭에서 그대로 불린다 —
+  // 하지만 실제로 열리는 건 새 탭(별개 프로세스의 새 상태)이라 여기서 기록한
+  // knownDigestId는 그 탭엔 안 전해진다. 그 탭은 DigestDetailPanel이 digest.get
+  // 응답을 기다려 채운다(DigestDetailPanel 참고). middle click은 auxclick이라
+  // 이 onClick 자체가 안 불린다.
+  onOpen?: (digest: DigestListItem) => void;
 }
 
 // cmd/middle click으로 새 탭에서 열 수 있어야 해서 button+onClick이 아니라
@@ -20,10 +26,12 @@ interface DigestListRowProps {
 export const DigestListRow = memo(function DigestListRow({
   digest,
   selected,
+  onOpen,
 }: DigestListRowProps) {
   return (
     <Link
-      {...linkOptions({ to: "/", search: { digest: digest.id } })}
+      {...linkOptions({ to: "/", search: { digest: digest.publicId } })}
+      onClick={() => onOpen?.(digest)}
       aria-current={selected ? "true" : undefined}
       className={cn(
         "flex min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left",

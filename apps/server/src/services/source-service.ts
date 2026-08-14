@@ -187,27 +187,31 @@ export async function deleteSources(args: {
   return { failedCount };
 }
 
-export async function getSource(args: {
-  supabase: TypedSupabaseClient;
-  userId: string;
-  sourceId: string;
-  origin: RequestOrigin;
-}): Promise<SourceGetResult> {
-  const { supabase, userId, sourceId, origin } = args;
+export async function getSource(
+  args: {
+    supabase: TypedSupabaseClient;
+    userId: string;
+    origin: RequestOrigin;
+    // 둘 다 받는 이유는 SourceGetInputSchema 참고.
+  } & ({ sourcePublicId: string } | { sourceId: string }),
+): Promise<SourceGetResult> {
+  const { supabase, userId, origin } = args;
 
-  // RLS(owner-only)라 남의/없는 sourceId는 여기서 not-found로 걸린다.
-  const { data, error } = await supabase
-    .from("sources")
-    .select("id, name, body, created_at")
-    .eq("id", sourceId)
-    .single();
+  // RLS(owner-only)라 남의/없는 값은 여기서 not-found로 걸린다.
+  const query = supabase.from("sources").select("id, name, body, created_at");
+  const { data, error } = await (
+    "sourcePublicId" in args
+      ? query.eq("public_id", args.sourcePublicId)
+      : query.eq("id", args.sourceId)
+  ).single();
   throwIfSupabaseError(error);
 
   // 이 로그는 "정리본으로 부족해 원문을 봤다"를 세는 MCP 전용 품질 지표다 —
   // 원문 상세 화면에서 사람이 직접 열어본 것까지 섞이면 지표 의미가 깨진다.
   // 로그 저장은 응답을 기다리게 하지 않는다 — 실패 격리뿐 아니라 지연도 격리한다.
+  // 로그에는 내부 id를 남긴다 — public_id는 조회 입력일 뿐 지표가 참조하는 식별자가 아니다.
   if (origin === "mcp") {
-    void logGetSource({ userId, detail: { sourceId } });
+    void logGetSource({ userId, detail: { sourceId: data.id } });
   }
 
   return SourceGetResultSchema.parse({
@@ -240,7 +244,7 @@ export async function listSourcesWithDigests(args: {
   let query = supabase
     .from("sources")
     .select(
-      "id, name, created_at, digests!inner(id, type, title, extraction_order, hidden_at)",
+      "id, public_id, name, created_at, digests!inner(id, public_id, type, title, extraction_order, hidden_at)",
     )
     .eq("digestion_status", "completed")
     .order("created_at", { ascending: false })
@@ -293,7 +297,7 @@ export async function listDraftSources(args: {
   // 실제로 있는 초안이 빈 목록으로 보일 수 있었다(에러 없이 조용히 틀림).
   const { data, error } = await supabase
     .from("v_draft_sources")
-    .select("id, name, body_preview, created_at, digestion_status")
+    .select("id, public_id, name, body_preview, created_at, digestion_status")
     .order("created_at", { ascending: false })
     .limit(SOURCE_LIST_SAFETY_LIMIT);
   throwIfSupabaseError(error);
@@ -303,12 +307,12 @@ export async function listDraftSources(args: {
 
 type SourceWithDigestsRow = Pick<
   Database["public"]["Tables"]["sources"]["Row"],
-  "id" | "name" | "created_at"
+  "id" | "public_id" | "name" | "created_at"
 > & {
   digests: Array<
     Pick<
       Database["public"]["Tables"]["digests"]["Row"],
-      "id" | "type" | "title" | "hidden_at"
+      "id" | "public_id" | "type" | "title" | "hidden_at"
     >
   >;
 };
@@ -316,12 +320,14 @@ type SourceWithDigestsRow = Pick<
 function toSourceWithDigests(row: SourceWithDigestsRow): SourceWithDigests {
   return SourceWithDigestsSchema.parse({
     sourceId: row.id,
+    publicId: row.public_id,
     name: row.name,
     createdAt: row.created_at,
     digests: row.digests
       .filter((digest) => digest.hidden_at === null)
       .map((digest) => ({
         id: digest.id,
+        publicId: digest.public_id,
         type: digest.type,
         title: digest.title,
       })),
@@ -334,12 +340,18 @@ function toSourceWithDigests(row: SourceWithDigestsRow): SourceWithDigests {
 // 어긋나면(예: 뷰 정의가 조인으로 바뀌어 실제로 null이 새면) 여기서 곧바로 던진다.
 type SourceDraftRow = Pick<
   Database["public"]["Views"]["v_draft_sources"]["Row"],
-  "id" | "name" | "body_preview" | "created_at" | "digestion_status"
+  | "id"
+  | "public_id"
+  | "name"
+  | "body_preview"
+  | "created_at"
+  | "digestion_status"
 >;
 
 function toSourceDraft(row: SourceDraftRow): SourceDraft {
   return SourceDraftSchema.parse({
     sourceId: row.id,
+    publicId: row.public_id,
     name: row.name,
     bodyPreview: row.body_preview,
     createdAt: row.created_at,
