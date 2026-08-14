@@ -97,6 +97,7 @@
     "connect_request": "Wants to connect to Nema.",
     "deny": "Deny",
     "error": "We couldn't process your request. Please try again shortly.",
+    "invalid_request": "We couldn't find this connection request. Please reconnect from your app.",
     "logout_prompt": "Not your account?",
     "unknown_client": "Unknown app"
   },

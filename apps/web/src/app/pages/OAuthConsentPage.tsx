@@ -108,7 +108,7 @@ export function OAuthConsentPage() {
 
   // authorization_id가 URL에도 저장소에도 없으면 잘못 들어온 요청이다.
   const invalidRequest = !authorizationId;
-  const message = error ?? (invalidRequest ? t("common.unknown_error") : null);
+  const message = error ?? (invalidRequest ? t("oauth.invalid_request") : null);
   const ready = !message && clientName !== null;
 
   let cardContent: ReactNode;
