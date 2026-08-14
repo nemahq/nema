@@ -880,6 +880,9 @@ describe("getSource 로그 출처 구분", () => {
 // 넉넉히 잡는다 — 커서 자체는 별도 describe(listSourcesWithDigests 커서
 // 페이지네이션)가 검증한다.
 const LIST_WITH_DIGESTS_TEST_LIMIT = 50;
+// 픽스처 간 created_at 간격 — 밀리초 정밀도 비교가 실제로 통하는지 보되,
+// 클록 튐(NTP 등)에 흔들리지 않을 만큼 넉넉히 벌린다.
+const CURSOR_TEST_CREATED_AT_GAP_MS = 1000;
 
 describe("listSourcesWithDigests (RLS)", () => {
   afterEach(() => {
@@ -1103,7 +1106,8 @@ describe("listSourcesWithDigests 커서 페이지네이션 (RLS)", () => {
             .from("sources")
             .update({
               created_at: new Date(
-                baseTime + (sourceIds.length - index) * 1000,
+                baseTime +
+                  (sourceIds.length - index) * CURSOR_TEST_CREATED_AT_GAP_MS,
               ).toISOString(),
             })
             .eq("id", id),
