@@ -166,7 +166,7 @@ COMMENT ON VIEW v_visible_digests IS
 -- =============================================================
 
 CREATE OR REPLACE VIEW v_draft_sources WITH (security_invoker = true) AS
-SELECT s.id, s.name, s.created_at, s.digestion_status, s.body_preview
+SELECT s.id, s.name, s.created_at, s.digestion_status, s.body_preview, s.public_id
 FROM sources s
 WHERE s.trashed_at IS NULL
   AND (s.digestion_status = 'pending'
