@@ -70,9 +70,11 @@
     "card_open_label": "Open source detail",
     "empty_state": "No sources to process.",
     "load_error": "Couldn't load drafts",
+    "no_result_banner": "There is nothing to organize here.",
     "retry_pending": "Retrying...",
     "status_empty": "No results",
-    "status_pending": "Not organized yet"
+    "status_failed": "Failed to organize",
+    "status_processing": "Organizing"
   },
   "error": {
     "copy_error": "Copy error info",

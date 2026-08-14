@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "@tanstack/react-router";
 
 import { cn, Text } from "@nema-io/weave";
-import { FileText } from "@nema-io/weave/icons";
+import { Circle, FileText, TriangleAlert } from "@nema-io/weave/icons";
 
 import { NavItem } from "@web/components/layout/NavItem";
+import { useSidebar } from "@web/components/layout/Sidebar";
 import { useSourceDraftListQuery } from "@web/features/drafts/hooks/useSourceDraftListQuery";
+import { classifyPendingSource } from "@web/features/drafts/pendingSourceStatus";
 import { useTranslation } from "@web/lib/tolgee";
 
 import {
@@ -21,6 +23,7 @@ const TRANSITION_ANIMATION_MS = 300;
 export function DraftsNavItem() {
   const { t } = useTranslation();
   const pathname = useLocation({ select: (location) => location.pathname });
+  const { collapsed } = useSidebar();
   const draftsQuery = useSourceDraftListQuery();
   const [renderState, setRenderState] =
     useState<DraftsNavItemRenderState>("hidden");
@@ -32,6 +35,18 @@ export function DraftsNavItem() {
 
   const drafts = draftsQuery.data ?? [];
   const draftCount = drafts.length;
+  // 우선순위: 실패 > 처리중 — 더 급한 신호가 하나만 뜬다(스레드 카드와 같은 원칙).
+  // "처리중"은 서버가 확정해준 게 아니라 어림값이다 — pendingSourceStatus 참고.
+  const hasFailed = drafts.some(
+    (draft) =>
+      draft.status === "pending" &&
+      classifyPendingSource(draft.createdAt) === "stalled",
+  );
+  const hasProcessing = drafts.some(
+    (draft) =>
+      draft.status === "pending" &&
+      classifyPendingSource(draft.createdAt) === "processing",
+  );
   // 조회 실패로 개수를 모르는 상태를 "0개"로 오인해 항목을 숨기지 않는다 — 실제 초안이
   // 있는데도 조용히 진입점이 사라지는 것보다는, 눌러서 /drafts의 에러 상태를 보는 편이 낫다.
   const hasData = draftCount > 0 || draftsQuery.isError;
@@ -88,6 +103,24 @@ export function DraftsNavItem() {
     return null;
   }
 
+  let statusIndicator = null;
+  if (hasFailed) {
+    statusIndicator = (
+      <TriangleAlert
+        className={cn(
+          "size-3.5 shrink-0 text-status-error",
+          // 아이콘 도형이 뷰박스 안에서 오른쪽으로 치우쳐 있어 펼침 모드에서 카운트와
+          // 축이 안 맞는다 — 접힘 모드(코너 배지)는 이 보정이 필요 없다.
+          !collapsed && "-translate-x-1",
+        )}
+      />
+    );
+  } else if (hasProcessing) {
+    statusIndicator = (
+      <Circle className="size-1.5 shrink-0 animate-pulse fill-current text-status-info" />
+    );
+  }
+
   return (
     <div
       role="status"
@@ -105,6 +138,8 @@ export function DraftsNavItem() {
           label={t("workspace.drafts")}
           // 접힘 모드는 정확한 개수를 안 보여주니 툴팁에 붙여 hover로 확인하게 한다.
           tooltipLabel={draftsTooltipLabel()}
+          // exiting 중엔 이미 0개라 신호를 보여주면 오해를 준다.
+          labelSuffix={renderState !== "exiting" ? statusIndicator : null}
           to="/drafts"
           rightContentAlwaysVisible
           rightContent={

@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from "react";
+import { type ReactNode, Suspense, useEffect } from "react";
 
 import {
   Button,
@@ -26,6 +26,10 @@ import { SourceDeleteMenu } from "./SourceDeleteMenu";
 interface SourceDetailPanelProps {
   sourceId: string;
   onClose: () => void;
+  // 헤더 아래 상시 알림 자리 — 초안 화면이 "정리할 내용이 없어요" 경고를 꽂는다.
+  // 이 컴포넌트 자신은 그 판단(결과 없음 여부)을 못 한다 — source.get 응답에
+  // 다이제스트 개수가 안 실려서, 그 판단을 이미 하고 있는 소비처가 채운다.
+  banner?: ReactNode;
 }
 
 interface SourceDetailCloseButtonProps {
@@ -55,6 +59,7 @@ function SourceDetailCloseButton({ onClose }: SourceDetailCloseButtonProps) {
 function SourceDetailPanelContent({
   sourceId,
   onClose,
+  banner,
 }: SourceDetailPanelProps) {
   const { t } = useTranslation();
   const [source] = useSourceSuspenseQuery(sourceId);
@@ -79,6 +84,8 @@ function SourceDetailPanelContent({
           <SourceDetailCloseButton onClose={onClose} />
         </div>
       </div>
+
+      {banner && <div className="px-6 pt-3">{banner}</div>}
 
       {/* 제목·요약 추출은 아직 없는 기능이라 항상 빈 상태다 — 섹션 자체는 유지해
           자리를 예약해 두고, 어색해 보이지 않도록 안내 문구만 얹는다. */}
@@ -134,6 +141,7 @@ function SourceDetailPanelError({
 export function SourceDetailPanel({
   sourceId,
   onClose,
+  banner,
 }: SourceDetailPanelProps) {
   return (
     <ErrorBoundary
@@ -146,7 +154,11 @@ export function SourceDetailPanel({
       )}
     >
       <Suspense fallback={<LoadingWatermark />}>
-        <SourceDetailPanelContent sourceId={sourceId} onClose={onClose} />
+        <SourceDetailPanelContent
+          sourceId={sourceId}
+          onClose={onClose}
+          banner={banner}
+        />
       </Suspense>
     </ErrorBoundary>
   );

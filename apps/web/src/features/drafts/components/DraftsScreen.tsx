@@ -1,6 +1,6 @@
 import { SidePanel } from "@web/components/ui/SidePanel";
-import { SourceDetailPanel } from "@web/features/source";
 
+import { DraftDetailPanel } from "./DraftDetailPanel";
 import { DraftList } from "./DraftList";
 import { DraftsNavigationBar } from "./DraftsNavigationBar";
 
@@ -30,10 +30,7 @@ export function DraftsScreen({
 
       {selectedSourceId && (
         <SidePanel boundaryName="draft-detail" onClose={handleClose}>
-          <SourceDetailPanel
-            sourceId={selectedSourceId}
-            onClose={handleClose}
-          />
+          <DraftDetailPanel sourceId={selectedSourceId} onClose={handleClose} />
         </SidePanel>
       )}
     </main>
