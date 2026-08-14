@@ -9,7 +9,17 @@ import { SourceDigestGroup } from "./SourceDigestGroup";
 
 const DIGEST_LIST_SCROLL_KEY = "digest-list";
 
-function DigestListBodyContent() {
+interface DigestListBodyProps {
+  selectedDigestId: string | null;
+  onSelectDigest: (digestId: string) => void;
+  onSelectSource: (sourceId: string) => void;
+}
+
+function DigestListBodyContent({
+  selectedDigestId,
+  onSelectDigest,
+  onSelectSource,
+}: DigestListBodyProps) {
   const [sources] = useSourceListWithDigestsSuspenseQuery();
   const scrollContainerRef = useMainScrollRestoration(DIGEST_LIST_SCROLL_KEY);
 
@@ -27,6 +37,9 @@ function DigestListBodyContent() {
               key={source.sourceId}
               source={source}
               hideDivider={index === sources.length - 1}
+              selectedDigestId={selectedDigestId}
+              onSelectDigest={onSelectDigest}
+              onOpenSource={onSelectSource}
             />
           ))
         )}
@@ -39,7 +52,7 @@ function DigestListBodyContent() {
 // 목록 본문에만 둔다 — 헤더까지 함께 서스펜드시키면 화면 전체가 공용 워터마크와
 // 다를 바 없어져 로컬 경계를 두는 의미가 없다(apps/web/docs/conventions.md
 // Loading 참고).
-export function DigestListBody() {
+export function DigestListBody(props: DigestListBodyProps) {
   return (
     <Suspense
       fallback={
@@ -48,7 +61,7 @@ export function DigestListBody() {
         </div>
       }
     >
-      <DigestListBodyContent />
+      <DigestListBodyContent {...props} />
     </Suspense>
   );
 }

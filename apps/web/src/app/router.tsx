@@ -79,11 +79,17 @@ const authenticatedRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
+// 열려 있는 상세를 URL에 둔다(초안 화면과 같은 이유). digest와 source는 사이드뷰
+// 한 자리를 나눠 써서 동시에 열리지 않는다 — 하나를 열면 다른 하나를 지운다.
 const homeRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/",
   component: HomePage,
   errorComponent: RouteErrorFallback,
+  validateSearch: z.object({
+    digest: z.string().optional().catch(undefined),
+    source: z.string().optional().catch(undefined),
+  }),
 });
 
 // 열려 있는 초안 상세를 URL에 둔다 — catch는 파싱 자체가 실패하는 값(배열 등

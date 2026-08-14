@@ -1,0 +1,17 @@
+import type { ReactNode } from "react";
+
+import { Circle } from "@nema-io/weave/icons";
+
+interface DigestFieldBulletProps {
+  children: ReactNode;
+}
+
+// 항목이 여러 줄로 늘어나도 글머리 기호 아래로 흐르지 않게 본문을 한 칸으로 묶는다.
+export function DigestFieldBullet({ children }: DigestFieldBulletProps) {
+  return (
+    <li className="flex items-start gap-2">
+      <Circle className="mt-2 size-1 shrink-0 fill-current text-fg-tertiary" />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">{children}</div>
+    </li>
+  );
+}
