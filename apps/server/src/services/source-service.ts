@@ -57,12 +57,16 @@ export async function ingestSource(args: {
   throwIfSupabaseError(error);
 
   const contentLanguage = await resolveContentLanguage({ supabase, userId });
-  const normalized = await generateDigests(body, contentLanguage);
+  const { normalized, sourceTitle } = await generateDigests(
+    body,
+    contentLanguage,
+  );
   const digests = await saveDigestsAndIndex({
     supabase,
     userId,
     sourceId: source.id,
     normalized,
+    sourceTitle,
   });
   return { sourceId: source.id, digests };
 }
@@ -87,7 +91,10 @@ export async function reExtractSource(args: {
   // content filter, 스키마 검증 실패 등) 원문도 이전 다이제스트도 안 건드린 채
   // 그대로 남아 다시 부르면 된다. 순서를 반대로 하면 실패할 때마다 다이제스트가
   // 0개인 상태가 영구화될 위험이 있다.
-  const normalized = await generateDigests(source.body, contentLanguage);
+  const { normalized, sourceTitle } = await generateDigests(
+    source.body,
+    contentLanguage,
+  );
 
   const { error: statusError } = await supabase
     .from("sources")
@@ -110,6 +117,7 @@ export async function reExtractSource(args: {
     userId,
     sourceId: source.id,
     normalized,
+    sourceTitle,
   });
 
   await deleteDigestVectors((deletedDigests ?? []).map((row) => row.id));
@@ -324,13 +332,19 @@ async function resolveContentLanguage(args: {
 async function generateDigests(
   body: string,
   contentLanguage: ContentLanguage,
-): Promise<Array<Pick<Digest, "type" | "title" | "body">>> {
+): Promise<{
+  normalized: Array<Pick<Digest, "type" | "title" | "body">>;
+  sourceTitle: string;
+}> {
   const generated = await getDigestGenerationProvider().generateStructured({
     systemPrompt: buildDigestGenerationSystemPrompt(contentLanguage),
     messages: [{ role: "user", content: buildDigestGenerationMessage(body) }],
     schema: DigestGenerationSchema,
   });
-  return flattenGeneratedDigests(generated);
+  return {
+    normalized: flattenGeneratedDigests(generated),
+    sourceTitle: generated.sourceTitle,
+  };
 }
 
 async function saveDigestsAndIndex(args: {
@@ -338,8 +352,9 @@ async function saveDigestsAndIndex(args: {
   userId: string;
   sourceId: string;
   normalized: Array<Pick<Digest, "type" | "title" | "body">>;
+  sourceTitle: string;
 }): Promise<DigestWithRelations[]> {
-  const { supabase, userId, sourceId, normalized } = args;
+  const { supabase, userId, sourceId, normalized, sourceTitle } = args;
 
   const digests =
     normalized.length === 0
@@ -373,7 +388,7 @@ async function saveDigestsAndIndex(args: {
 
   const { error: statusError } = await supabase
     .from("sources")
-    .update({ digestion_status: "completed" })
+    .update({ digestion_status: "completed", title: sourceTitle })
     .eq("id", sourceId);
   throwIfSupabaseError(statusError);
 

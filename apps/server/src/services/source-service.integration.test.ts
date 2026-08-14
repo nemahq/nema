@@ -80,6 +80,7 @@ vi.mock("@server/services/digest-relation-service", () => ({
 
 function noDigests(): GeneratedDigests {
   return {
+    sourceTitle: "테스트 원문 제목",
     decisions: [],
     pendings: [],
     learnings: [],
@@ -998,34 +999,59 @@ describe("listDraftSources (RLS)", () => {
     TEST_TIMEOUT_MS,
   );
 
+  // title이 없는 원문(정리가 아직 title을 만들기 전부터 있던 원문)을 재현하려면
+  // ingestSource를 우회해 admin으로 직접 넣는다 — ingestSource를 거치면 mock이라도
+  // sourceTitle이 항상 채워져 title이 비는 경로를 만들 수 없다.
   it(
-    "원문 이름은 200자까지는 그대로, 넘으면 200자로 자르고 말줄임표 없이 끝난다",
+    "title이 없는 원문은 이름이 본문 앞 200자로 대체된다 — 200자까지는 그대로, 넘으면 잘리고 말줄임표가 없다",
     async () => {
       if (!localDbAvailable) {
         return;
       }
-      mockGenerated = noDigests();
       const exactly200 = "x".repeat(200);
       const over200 = `${"x".repeat(200)}y`;
 
-      const { sourceId: exactId } = await ingestSource({
-        supabase: userA.supabase,
-        userId: userA.id,
-        body: exactly200,
-      });
-      const { sourceId: overId } = await ingestSource({
-        supabase: userA.supabase,
-        userId: userA.id,
-        body: over200,
-      });
+      const { data: exactSource, error: exactError } = await admin
+        .from("sources")
+        .insert({ user_id: userA.id, body: exactly200 })
+        .select("id")
+        .single();
+      expect(exactError).toBeNull();
+      const { data: overSource, error: overError } = await admin
+        .from("sources")
+        .insert({ user_id: userA.id, body: over200 })
+        .select("id")
+        .single();
+      expect(overError).toBeNull();
 
       const drafts = await listDraftSources({ supabase: userA.supabase });
 
-      expect(drafts.find((draft) => draft.sourceId === exactId)?.name).toBe(
-        exactly200,
-      );
-      expect(drafts.find((draft) => draft.sourceId === overId)?.name).toBe(
-        exactly200,
+      expect(
+        drafts.find((draft) => draft.sourceId === exactSource?.id)?.name,
+      ).toBe(exactly200);
+      expect(
+        drafts.find((draft) => draft.sourceId === overSource?.id)?.name,
+      ).toBe(exactly200);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "정리가 만든 sourceTitle이 title에 저장되고 이름에 그대로 반영된다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = { ...noDigests(), sourceTitle: "생성된 원문 제목" };
+      const { sourceId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "제목 저장 테스트 원문",
+      });
+
+      const drafts = await listDraftSources({ supabase: userA.supabase });
+      expect(drafts.find((draft) => draft.sourceId === sourceId)?.name).toBe(
+        "생성된 원문 제목",
       );
     },
     TEST_TIMEOUT_MS,

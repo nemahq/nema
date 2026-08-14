@@ -5,6 +5,7 @@ import { flattenGeneratedDigests } from "@server/prompts/digest-generation";
 
 function empty(): GeneratedDigests {
   return {
+    sourceTitle: "원문 제목",
     decisions: [],
     pendings: [],
     learnings: [],
@@ -130,6 +131,7 @@ describe("flattenGeneratedDigests", () => {
 
   it("flattens every type's array into one list, matched to the right type", () => {
     const result = flattenGeneratedDigests({
+      sourceTitle: "원문 제목",
       decisions: [
         {
           title: "결정",
