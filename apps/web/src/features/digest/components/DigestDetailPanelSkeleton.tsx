@@ -4,15 +4,12 @@ const BODY_FIELD_SKELETON_WIDTHS = ["100%", "100%", "80%"];
 
 // SourceDetailPanelSkeleton과 같은 원칙 — 헤더(삭제·닫기·시각)는 바깥
 // (DigestDetailPanel)이 항상 따로 그리므로 여기서 자리를 맞추지 않는다. 유형
-// 배지는 SourceDigestGroupSkeleton과 같은 이유로 모양은 안 흉내낸다 — pill
-// 모양이 매번 달라지는 값(제목)보다 장식에 가깝다. 배지가 제목과 다른 행(legacy
-// 배치)이라 높이(h-5, Badge 기본 크기 px-2 text-[12px] leading-1.4 + py-0.5에서
-// 뽑은 값)만 자리로 남겨, 로딩→데이터 전환 시 제목 줄이 위로 튀지 않게 한다.
+// 배지도 SourceDigestGroupSkeleton과 같은 이유로 모양도, 자리도 안 남긴다 —
+// pill 모양이 매번 달라지는 값(제목)보다 장식에 가깝다.
 export function DigestDetailPanelSkeleton() {
   return (
     <div className="flex flex-1 flex-col gap-4 px-6 pt-3 pb-8">
       <div className="flex flex-col items-start gap-2 bg-surface-raised px-2 py-2 dark:bg-surface-base">
-        <div className="h-5" />
         {/* TextSkeleton 대신 Skeleton 바 + flex items-center로 직접 채운다 —
             TextSkeleton은 vertical-align: middle로 바를 앉히는데(베이스라인
             기준, 줄 상자 진짜 중앙이 아님), 제목 줄의 지오메트릭 중앙에 맞추려면

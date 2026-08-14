@@ -643,6 +643,8 @@ async function fetchRelationCounterparts(args: {
     { data: visibleRows, error: visibleError },
   ] = await Promise.all([
     supabase.from("digests").select("id").in("id", digestIds),
+    // DigestDetailRow와 같은 근거로 안전한 캐스팅이다 — digests.type은 NOT
+    // NULL이고 v_visible_digests는 필터만 걸 뿐 컬럼을 안 바꾼다.
     supabase
       .from("v_visible_digests")
       .select("id, title, public_id, type")
