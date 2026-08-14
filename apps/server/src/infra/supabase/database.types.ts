@@ -175,6 +175,7 @@ export type Database = {
           created_at: string;
           digest_id: string;
           id: string;
+          judgment: string;
           user_id: string;
         };
         Insert: {
@@ -182,6 +183,7 @@ export type Database = {
           created_at?: string;
           digest_id: string;
           id?: string;
+          judgment: string;
           user_id: string;
         };
         Update: {
@@ -189,6 +191,7 @@ export type Database = {
           created_at?: string;
           digest_id?: string;
           id?: string;
+          judgment?: string;
           user_id?: string;
         };
         Relationships: [];
@@ -273,6 +276,7 @@ export type Database = {
           candidate_type: Database["public"]["Enums"]["digest_type"] | null;
           digest_title: string | null;
           digest_type: Database["public"]["Enums"]["digest_type"] | null;
+          judgment: string | null;
           occurred_at: string | null;
           rank: number | null;
           score: number | null;
@@ -321,7 +325,7 @@ export type Database = {
     };
     Enums: {
       content_language: "en" | "ko";
-      digest_relation_type: "support" | "weaken";
+      digest_relation_type: "support" | "weaken" | "duplicate" | "conflict";
       digest_type: "decision" | "pending" | "learning" | "idea" | "assumption";
       digestion_status: "pending" | "completed";
       mcp_tool:
@@ -463,7 +467,7 @@ export const Constants = {
   public: {
     Enums: {
       content_language: ["en", "ko"],
-      digest_relation_type: ["support", "weaken"],
+      digest_relation_type: ["support", "weaken", "duplicate", "conflict"],
       digest_type: ["decision", "pending", "learning", "idea", "assumption"],
       digestion_status: ["pending", "completed"],
       mcp_tool: ["search_digests", "get_source", "get_relations", "get_digest"],

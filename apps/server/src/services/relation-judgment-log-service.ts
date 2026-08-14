@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@server/infra/supabase/supabase";
+import type { RelationJudgmentName } from "@server/services/relation-rules";
 
 // 판정에 넘긴 후보와 그때 점수·판정 결과를 남긴다. 후보 상한과 유사도 문턱을 지금은
 // 근거 없이 정해뒀는데(digest-relation-service 상단 참고), 떨어진 후보는 어디에도 안
@@ -18,13 +19,15 @@ export type JudgedCandidate = {
 export async function logRelationJudgment(args: {
   userId: string;
   digestId: string;
+  /** 어느 갈래의 판정인가. 갈래마다 후보 범위가 달라 점수 분포도 다르다. */
+  judgment: RelationJudgmentName;
   candidates: JudgedCandidate[];
 }): Promise<void> {
-  const { userId, digestId, candidates } = args;
+  const { userId, digestId, judgment, candidates } = args;
   try {
     const { error } = await getSupabaseAdmin()
       .from("relation_judgments")
-      .insert({ user_id: userId, digest_id: digestId, candidates });
+      .insert({ user_id: userId, digest_id: digestId, judgment, candidates });
     if (error) {
       console.warn(
         `[relation-judgment-log] 로그 저장 실패 — digestId=${digestId}:`,

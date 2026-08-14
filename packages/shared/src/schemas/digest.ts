@@ -113,27 +113,41 @@ export const DigestSchema = z.discriminatedUnion("type", [
 
 export type Digest = z.infer<typeof DigestSchema>;
 
-// DB enum digest_relation_type의 SSOT. 이번 슬라이스는 지지·약화 둘뿐이다 —
-// 중복·충돌·해소는 아무것도 접지 않는 이 둘과 달리 사람의 리뷰가 필요해 다음 순서다
-// (docs/blueprints/first-product/engine/linking.md 2.3).
-export const DIGEST_RELATION_TYPES = ["support", "weaken"] as const;
+// DB enum digest_relation_type의 SSOT. 해소(resolves)는 아직 없다 — 미결이 쌓여야
+// 값이 생기는데 짝이 되는 경로가 따로 필요하다
+// (docs/blueprints/first-product/engine/linking.md 2.1).
+//
+// 중복·충돌도 아무것도 접지 않는다. 사람의 리뷰·병합 초안·되돌리기(linking.md 2.4~2.5)는
+// "확정하면 한쪽이 접힌다"를 전제로 쓰인 절이고, 지금은 지지·약화와 똑같이 조용히
+// 걸리기만 한다 — 양쪽 다 그대로 살아 있고 목록에서 사라지는 것이 없다.
+export const DIGEST_RELATION_TYPES = [
+  "support",
+  "weaken",
+  "duplicate",
+  "conflict",
+] as const;
 
 export const DigestRelationTypeSchema = z.enum(DIGEST_RELATION_TYPES);
 export type DigestRelationType = z.infer<typeof DigestRelationTypeSchema>;
 
 // 관계의 두 끝. from이 하는 쪽(지지·약화하는 쪽), to가 받는 쪽 — 지지·약화에서
 // 받는 쪽은 늘 결정이다(linking.md 2.7). digest_relations의 컬럼명과 같다.
+// 중복·충돌은 논리적으로 대칭이지만 저장은 방향 있게 한다: from이 새로 온 쪽,
+// to가 이미 쌓여 있던 쪽이다(linking.md 2.2 "뒤늦게 몰아서 다시 잇지 않는다").
 export type RelationEnd = "from" | "to";
 
 // 관계는 한 방향으로 저장되지만 관련 목록에는 양쪽 다 뜬다(linking.md 2.3).
 // 같은 한 줄이라도 어느 다이제스트에 붙느냐에 따라 문장이 뒤집혀서, 응답에는
 // 방향까지 접어 넣은 값을 싣는다 — "support"만 실어 보내면 받은 쪽이 "이걸 지지한다"와
 // "이게 지지받는다"를 못 가르고, 해설이 근거 방향을 거꾸로 말하게 된다.
+// 중복·충돌에는 그 뒤집힘이 없다 — 양 끝에서 같은 문장이 나온다.
 const DIGEST_RELATION_PERSPECTIVES = [
   "supports",
   "supported_by",
   "weakens",
   "weakened_by",
+  "duplicate_of",
+  "conflicts_with",
 ] as const;
 
 export const DigestRelationPerspectiveSchema = z.enum(
@@ -148,6 +162,8 @@ export type DigestRelationPerspective = z.infer<
 export const RELATION_PERSPECTIVE_BY_END = {
   support: { from: "supports", to: "supported_by" },
   weaken: { from: "weakens", to: "weakened_by" },
+  duplicate: { from: "duplicate_of", to: "duplicate_of" },
+  conflict: { from: "conflicts_with", to: "conflicts_with" },
 } as const satisfies Record<
   DigestRelationType,
   Record<RelationEnd, DigestRelationPerspective>

@@ -32,7 +32,11 @@ vi.mock("@server/services/mcp-tool-call-log-service", () => ({
 }));
 
 import { linkRelations } from "@server/services/digest-relation-service";
-import { SUPPORT_WEAKEN_JUDGMENT } from "@server/services/relation-rules";
+import type { RelationJudgment } from "@server/services/relation-rules";
+import {
+  DUPLICATE_CONFLICT_JUDGMENT,
+  SUPPORT_WEAKEN_JUDGMENT,
+} from "@server/services/relation-rules";
 
 const SOURCE_NEW = "11111111-1111-4111-8111-111111111111";
 const SOURCE_OLD = "22222222-2222-4222-8222-222222222222";
@@ -171,6 +175,7 @@ function link(args: {
   digests: Digest[];
   rows: DigestRow[];
   existingPairs?: Array<[string, string]>;
+  judgment?: RelationJudgment;
 }) {
   const { client, savedRelations } = fakeSupabase({
     rows: args.rows,
@@ -181,7 +186,7 @@ function link(args: {
     userId: "user-1",
     sourceId: SOURCE_NEW,
     digests: args.digests,
-    judgment: SUPPORT_WEAKEN_JUDGMENT,
+    judgment: args.judgment ?? SUPPORT_WEAKEN_JUDGMENT,
   }).then((relations) => ({ relations, saved: savedRelations() }));
 }
 
@@ -477,6 +482,7 @@ describe("linkRelations", () => {
     expect(mockLogRelationJudgment).toHaveBeenCalledWith({
       userId: "user-1",
       digestId: LEARNING_ID,
+      judgment: "support_weaken",
       candidates: [
         { digestId: OLD_DECISION_ID, score: 0.55, verdict: "failed" },
       ],
@@ -547,7 +553,142 @@ describe("linkRelations", () => {
     expect(mockLogRelationJudgment).toHaveBeenCalledWith({
       userId: "user-1",
       digestId: LEARNING_ID,
+      judgment: "support_weaken",
       candidates: [{ digestId: OLD_DECISION_ID, score: 0.42, verdict: "none" }],
     });
+  });
+});
+
+// 중복·충돌 갈래. 지지·약화와 갈리는 자리만 잰다 — 후보 범위(같은 유형끼리·같은
+// 원문 제외)와 방향(LLM에게 안 묻는다)이다. 나머지 흐름은 위 describe가 이미 덮는다.
+describe("linkRelations — 중복·충돌", () => {
+  const dedup = (args: Omit<Parameters<typeof link>[0], "judgment">) =>
+    link({ ...args, judgment: DUPLICATE_CONFLICT_JUDGMENT });
+
+  it("유형이 다르면 후보로 보지 않는다 — 결정과 학습은 부딪히지 않는다", async () => {
+    const decision = digestRow({
+      id: DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_NEW,
+      title: "일 단위 배포",
+    });
+    const learning = digestRow({
+      id: LEARNING_ID,
+      type: "learning",
+      sourceId: SOURCE_OLD,
+      title: "배포가 7배 비쌈",
+    });
+    mockSearchNeighbors.mockResolvedValue([
+      { digestId: LEARNING_ID, score: 0.8 },
+    ]);
+
+    const { saved } = await dedup({
+      digests: [toDigest(decision)],
+      rows: [decision, learning],
+    });
+
+    expect(mockGenerateStructured).not.toHaveBeenCalled();
+    expect(saved).toEqual([]);
+  });
+
+  it("같은 원문 안은 앞선 것이어도 후보로 보지 않는다", async () => {
+    const older = digestRow({
+      id: DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_NEW,
+      title: "주 1회 배포",
+    });
+    const newer = digestRow({
+      id: OLD_DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_NEW,
+      title: "주 1회로 배포한다",
+    });
+    mockSearchNeighbors.mockImplementation(
+      ({ digestId }: { digestId: string }) =>
+        [
+          { digestId: DECISION_ID, score: 0.9 },
+          { digestId: OLD_DECISION_ID, score: 0.9 },
+        ].filter((hit) => hit.digestId !== digestId),
+    );
+
+    const { saved } = await dedup({
+      digests: [toDigest(older), toDigest(newer)],
+      rows: [older, newer],
+    });
+
+    expect(mockGenerateStructured).not.toHaveBeenCalled();
+    expect(saved).toEqual([]);
+  });
+
+  it("방향은 새 것 → 기존 것으로 고정한다 — LLM이 답한 방향을 쓰지 않는다", async () => {
+    const decision = digestRow({
+      id: DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_NEW,
+      title: "일 단위 배포",
+    });
+    const older = digestRow({
+      id: OLD_DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_OLD,
+      title: "주 1회 배포",
+    });
+    mockSearchNeighbors.mockResolvedValue([
+      { digestId: OLD_DECISION_ID, score: 0.66 },
+    ]);
+    // 표가 방향을 쥐고 있으니 LLM이 반대로 답해도 무시되어야 한다.
+    mockGenerateStructured.mockResolvedValue({
+      verdicts: [{ candidate: 1, relation: "conflict", from: "candidate" }],
+    });
+
+    const { relations, saved } = await dedup({
+      digests: [toDigest(decision)],
+      rows: [decision, older],
+    });
+
+    expect(saved).toEqual([
+      {
+        from_digest_id: DECISION_ID,
+        to_digest_id: OLD_DECISION_ID,
+        type: "conflict",
+      },
+    ]);
+    // 대칭이라 양 끝에서 같은 문장이 나온다.
+    expect(relations.get(DECISION_ID)).toEqual([
+      {
+        type: "conflicts_with",
+        digestId: OLD_DECISION_ID,
+        title: "주 1회 배포",
+      },
+    ]);
+  });
+
+  it("아이디어끼리는 충돌하지 못한다 — 중복만 남는다", async () => {
+    const idea = digestRow({
+      id: IDEA_ID,
+      type: "idea",
+      sourceId: SOURCE_NEW,
+      title: "요약을 매일 보낸다",
+    });
+    const older = digestRow({
+      id: DECISION_ID,
+      type: "idea",
+      sourceId: SOURCE_OLD,
+      title: "매일 요약 발송",
+    });
+    mockSearchNeighbors.mockResolvedValue([
+      { digestId: DECISION_ID, score: 0.7 },
+    ]);
+    mockGenerateStructured.mockResolvedValue({
+      verdicts: [{ candidate: 1, relation: "conflict", from: null }],
+    });
+
+    const { saved } = await dedup({
+      digests: [toDigest(idea)],
+      rows: [idea, older],
+    });
+
+    expect(saved).toEqual([]);
   });
 });

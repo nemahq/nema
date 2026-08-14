@@ -502,7 +502,27 @@ describe("source-service (RLS)", () => {
         return;
       }
       mockGenerated = oneDecision("관계가 안 붙는 결정");
+      // 앞 갈래(중복·충돌)만 죽인다 — 뒤 갈래가 이은 것은 그대로 살아야 한다.
+      // 둘 다 빈 Map으로 두면 "한 갈래만 잃었다"와 "merge가 통째로 깨졌다"가
+      // 똑같이 빈 배열로 보여 구별이 안 된다.
       mockLinkRelations.mockRejectedValueOnce(new Error("qdrant down"));
+      mockLinkRelations.mockImplementationOnce(
+        (args: { digests: Array<{ id: string }> }) =>
+          Promise.resolve(
+            new Map(
+              args.digests.map((digest) => [
+                digest.id,
+                [
+                  {
+                    type: "supports",
+                    digestId: digest.id,
+                    title: "살아남은 관계",
+                  },
+                ],
+              ]),
+            ),
+          ),
+      );
 
       const { sourceId, digests } = await ingestSource({
         supabase: userA.supabase,
@@ -511,7 +531,13 @@ describe("source-service (RLS)", () => {
       });
 
       expect(digests).toHaveLength(1);
-      expect(digests[0]?.relations).toEqual([]);
+      expect(digests[0]?.relations).toEqual([
+        {
+          type: "supports",
+          digestId: digests[0]?.id,
+          title: "살아남은 관계",
+        },
+      ]);
 
       const { data: source } = await userA.supabase
         .from("sources")
@@ -519,6 +545,68 @@ describe("source-service (RLS)", () => {
         .eq("id", sourceId)
         .single();
       expect(source?.digestion_status).toBe("completed");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // 갈래를 병렬로 돌리면 안 되는 이유가 여기 걸려 있다. 다른 원문의 결정↔결정은 두
+  // 갈래 모두의 후보라 weaken과 conflict가 같은 쌍에 나올 수 있는데, 한 쌍에 관계는
+  // 하나뿐이라(digest_relations_unique_pair) 나중에 넣는 쪽이 조용히 버려진다.
+  // 중복·충돌이 먼저여야 겹치는 자리에서 "충돌합니다"가 남는다 — 순서가 뒤집히거나
+  // 병렬로 바뀌면 같은 원문을 던져도 매번 다른 관계가 붙는다.
+  it(
+    "관계 잇기를 갈래마다 한 번씩 부르고, 중복·충돌을 먼저 돈다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("갈래 순서 결정");
+      // 호출 순서만 재면 Promise.all로 바뀌어도 통과한다 — 두 갈래가 같은 시점에 떠
+      // 있었는지를 함께 본다. 그게 unique 위반의 승자를 뒤집는 자리다.
+      let inFlight = 0;
+      let maxInFlight = 0;
+      mockLinkRelations.mockImplementation(
+        async (args: {
+          digests: Array<{ id: string }>;
+          judgment: { name: string };
+        }) => {
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          await new Promise((resolve) => setImmediate(resolve));
+          inFlight -= 1;
+          return new Map(
+            args.digests.map((digest) => [
+              digest.id,
+              [
+                {
+                  type: args.judgment.name,
+                  digestId: digest.id,
+                  title: args.judgment.name,
+                },
+              ],
+            ]),
+          );
+        },
+      );
+
+      const { digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "갈래 순서 원문",
+      });
+
+      expect(maxInFlight).toBe(1);
+      expect(
+        mockLinkRelations.mock.calls.map(
+          (call) => (call[0] as { judgment: { name: string } }).judgment.name,
+        ),
+      ).toEqual(["duplicate_conflict", "support_weaken"]);
+      // 두 갈래의 결과가 한 다이제스트 아래로 합쳐진다 — 나중 갈래가 앞 갈래를 덮으면
+      // 관계 절반이 응답에서 사라진다.
+      expect(digests[0]?.relations.map((relation) => relation.type)).toEqual([
+        "duplicate_conflict",
+        "support_weaken",
+      ]);
     },
     TEST_TIMEOUT_MS,
   );

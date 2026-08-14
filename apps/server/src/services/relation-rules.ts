@@ -31,8 +31,27 @@ export interface RelationPairRule {
   types: readonly DigestRelationType[];
 }
 
-/** 한 판정에서 함께 갈리는 관계 종류 묶음(= 갈래). 지금은 지지·약화 하나뿐이다. */
+/**
+ * 갈래 이름. 이 값이 relation_judgments.judgment로 그대로 나가 문턱을 갈래별로 볼 때의
+ * 조인 키가 된다 — 오타 하나가 점수 분포를 조용히 둘로 쪼개므로 열어두지 않는다.
+ */
+export type RelationJudgmentName = "support_weaken" | "duplicate_conflict";
+
+/**
+ * 한 판정에서 함께 갈리는 관계 종류 묶음(= 갈래). 갈래 하나가 LLM에게 던지는 질문
+ * 하나이고, 안에 든 관계 종류는 그 질문의 답 선택지다.
+ *
+ * 종류마다 따로 묻지 않는 이유는 배타성이다 — "중복인가"와 "충돌인가"를 따로 물으면
+ * 같은 상황을 다룬 두 결정에 둘 다 예가 나올 수 있는데, 한 쌍에 관계는 하나다.
+ * 한 번에 물으면 선택지 중 하나만 고르므로 배타성이 구조로 보장된다.
+ */
 export interface RelationJudgment {
+  /**
+   * 로그에 남길 갈래 이름(relation_judgments.judgment). 문턱을 나중에 갈래별로
+   * 나누려면 점수 분포가 섞이면 안 되는데, verdict 대부분이 none이라 이 이름이
+   * 없으면 어느 질문에 대한 none인지 구별이 안 된다.
+   */
+  name: RelationJudgmentName;
   /** 신규 유형(행) × 후보 유형(열) → 방향과 관계 종류. 곧 유형별 후보 범위이기도 하다. */
   pairs: Record<DigestType, Record<DigestType, RelationPairRule | null>>;
   /** 같은 원문 안 다이제스트를 후보로 볼지. */
@@ -50,7 +69,10 @@ export interface RelationJudgment {
  */
 export type SameSourceScope = "earlierOnly" | "exclude";
 
-const SUPPORT_OR_WEAKEN = DIGEST_RELATION_TYPES;
+const SUPPORT_OR_WEAKEN = [
+  "support",
+  "weaken",
+] as const satisfies readonly DigestRelationType[];
 // 아이디어는 약화에서 빠진다 — 아직 판단 전이라 무엇도 무너뜨리지 못한다.
 // 채택되면 지지가 되는 것과 대비된다(linking.md 2.1).
 const SUPPORT_ONLY = [
@@ -77,6 +99,7 @@ const NO_CANDIDATE = {
 } as const satisfies Record<DigestType, RelationPairRule | null>;
 
 export const SUPPORT_WEAKEN_JUDGMENT: RelationJudgment = {
+  name: "support_weaken",
   pairs: {
     // 신규가 결정이면 기존 전부를 본다 — 결정은 받는 쪽이 될 수도, 다른 결정을
     // 지지·약화하는 쪽이 될 수도 있다.
@@ -113,6 +136,74 @@ the same feature, the same week are NOT related — sharing a subject is not
 standing under something. If you find yourself explaining a chain of steps to
 get from one to the other, it is "none". A wrong link is worse than a missing
 one: the user is later told "this is what your decision rests on" and it is not.`,
+};
+
+const DUPLICATE_OR_CONFLICT = [
+  "duplicate",
+  "conflict",
+] as const satisfies readonly DigestRelationType[];
+// 미결과 아이디어는 충돌에서 빠진다 — 질문끼리는 부딪히지 않고(같은 것을 물으면
+// 그건 중복이다), 발상은 아직 판단 전이라 부딪힐 게 없다(linking.md 2.1).
+const DUPLICATE_ONLY = [
+  "duplicate",
+] as const satisfies readonly DigestRelationType[];
+
+// 중복·충돌은 같은 유형끼리만 본다. 유형이 다르면 주된 칸이 말하는 것도 달라서
+// "같은 말인가 / 다른 선택인가"를 물을 수가 없다. 유형을 가로질러 부딪히는
+// 경우(결정↔학습 등)는 지지·약화 표가 받는 쪽을 늘 결정으로 두어 약화로 이미 잡는다.
+function sameTypeOnly(
+  newType: DigestType,
+  types: readonly DigestRelationType[],
+): Record<DigestType, RelationPairRule | null> {
+  return {
+    ...NO_CANDIDATE,
+    // 방향은 LLM에게 안 묻는다 — 중복·충돌은 논리적으로 대칭이라 "새로 온 쪽이 이미
+    // 쌓인 쪽을 대체하는 방향"으로 고정하면 그만이다(linking.md 2.2 "뒤늦게 몰아서
+    // 다시 잇지 않는다"). 지지·약화에서 둘 다 결정일 때 물었던 것과 갈리는 대목이다.
+    [newType]: { direction: "newIsFrom", types },
+  };
+}
+
+export const DUPLICATE_CONFLICT_JUDGMENT: RelationJudgment = {
+  name: "duplicate_conflict",
+  pairs: {
+    decision: sameTypeOnly("decision", DUPLICATE_OR_CONFLICT),
+    learning: sameTypeOnly("learning", DUPLICATE_OR_CONFLICT),
+    assumption: sameTypeOnly("assumption", DUPLICATE_OR_CONFLICT),
+    idea: sameTypeOnly("idea", DUPLICATE_ONLY),
+    pending: sameTypeOnly("pending", DUPLICATE_ONLY),
+  },
+  // 같은 원문 안은 아예 안 본다. 한 번에 던진 대화 안에서 두 장이 비슷한 건 정리
+  // 단계의 문제이고, 여기가 잡을 건 다른 날 던진 것과 부딪히는 것이다. 그래서 쌓이기
+  // 전에는 관계가 거의 안 뜬다 — 0으로 나와도 문턱·상한부터 의심할 자리가 아니다.
+  sameSourceScope: "exclude",
+  question: `Both digests are the same type here, and a relation means they are about the
+same thing. Compare only the main field — the one that carries the judgment:
+
+- decision: "choice"      - learning: "finding"    - assumption: "assumption"
+- idea: "concept"         - pending: "question"
+
+Everything else (situation, background, reason, evidence, tradeoff, impact) is
+context. Two digests sharing context is not a relation.
+
+Decide in two steps.
+
+1. Do the two main fields address the same thing — the same call to make, the
+   same claim, the same question? If not, answer "none" and stop.
+2. If they do, do they say the same thing?
+   - duplicate: they say the same. The new digest adds nothing the stored one
+     does not already have.
+   - conflict: they say different things and cannot both hold.
+
+The common mistake is calling two digests duplicates because they share a
+situation. Two decisions made in the same situation that took DIFFERENT options
+are a conflict, not a duplicate — read the choice, not the setup.
+
+The other mistake is treating a shared subject as "the same thing". Two
+decisions about deployment, two findings about the same service, two questions
+about the same feature are NOT related unless the main fields actually meet.
+Answer "none" unless the overlap is plain. A wrong link is worse than a missing
+one: the user is later told "you already decided this" and they did not.`,
 };
 
 /**

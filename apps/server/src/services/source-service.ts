@@ -34,7 +34,10 @@ import {
 import { linkRelations } from "@server/services/digest-relation-service";
 import { logGetSource } from "@server/services/mcp-tool-call-log-service";
 import { getProfile } from "@server/services/profile-service";
-import { SUPPORT_WEAKEN_JUDGMENT } from "@server/services/relation-rules";
+import {
+  DUPLICATE_CONFLICT_JUDGMENT,
+  SUPPORT_WEAKEN_JUDGMENT,
+} from "@server/services/relation-rules";
 import type { RequestOrigin } from "@server/trpc";
 
 // DB 컬럼 기본값(profiles.content_language)과 같은 값으로 떨어뜨린다. 행이 없는
@@ -378,26 +381,65 @@ async function saveDigestsAndIndex(args: {
   throwIfSupabaseError(statusError);
 
   // 색인 다음에 잇는다 — 후보를 방금 색인한 벡터로 찾기 때문에 순서를 바꿀 수 없다.
-  // 색인과 달리 실패해도 안 던진다: 관계는 아무것도 접지 않아 없어도 다이제스트는
-  // 온전하고, 여기서 던지면 이미 저장된 정리 결과까지 사용자가 잃는다.
-  const relationsByDigestId = await linkRelations({
+  const relationsByDigestId = await linkAllRelations({
     supabase,
     userId,
     sourceId,
     digests,
-    judgment: SUPPORT_WEAKEN_JUDGMENT,
-  }).catch((error: unknown) => {
-    console.warn(
-      `[source-service] 관계 잇기 실패 — 다이제스트는 그대로 둔다, sourceId: ${sourceId}:`,
-      error,
-    );
-    return new Map<string, DigestRelation[]>();
   });
 
   return digests.map((digest) => ({
     ...digest,
     relations: relationsByDigestId.get(digest.id) ?? [],
   }));
+}
+
+// 갈래를 순서대로 돈다. 병렬로 돌리면 안 되는 이유는 한 쌍에 관계가 하나뿐이기
+// 때문이다(digest_relations_unique_pair) — 다른 원문의 결정↔결정은 두 갈래 모두의
+// 후보라 weaken과 conflict가 같은 쌍에 나올 수 있고, 병렬이면 먼저 insert한 쪽이
+// 이겨 매번 다른 결과가 남는다.
+//
+// 중복·충돌이 앞이다. 겹치는 자리에서 더 정확한 말이라서다 — 같은 상황·같은 선택은
+// "지지"가 아니라 중복이고, 같은 상황·다른 선택은 "약화"가 아니라 충돌이다. 지지·약화
+// 고유 시나리오(학습→결정 등)는 중복·충돌이 같은 유형끼리만 봐서 애초에 안 겹친다.
+const RELATION_JUDGMENTS = [
+  DUPLICATE_CONFLICT_JUDGMENT,
+  SUPPORT_WEAKEN_JUDGMENT,
+] as const;
+
+// 관계 잇기는 실패해도 안 던진다: 관계는 아무것도 접지 않아 없어도 다이제스트는
+// 온전하고, 여기서 던지면 이미 저장된 정리 결과까지 사용자가 잃는다. 갈래 하나가
+// 통째로 실패해도 다른 갈래가 이은 것은 남긴다.
+async function linkAllRelations(args: {
+  supabase: TypedSupabaseClient;
+  userId: string;
+  sourceId: string;
+  digests: Digest[];
+}): Promise<Map<string, DigestRelation[]>> {
+  const { supabase, userId, sourceId, digests } = args;
+  const merged = new Map<string, DigestRelation[]>();
+
+  for (const judgment of RELATION_JUDGMENTS) {
+    const linked = await linkRelations({
+      supabase,
+      userId,
+      sourceId,
+      digests,
+      judgment,
+    }).catch((error: unknown) => {
+      console.warn(
+        `[source-service] 관계 잇기 실패 — 다이제스트는 그대로 둔다, sourceId: ${sourceId}, judgment: ${judgment.name}:`,
+        error,
+      );
+      return new Map<string, DigestRelation[]>();
+    });
+
+    for (const [digestId, relations] of linked) {
+      merged.set(digestId, [...(merged.get(digestId) ?? []), ...relations]);
+    }
+  }
+
+  return merged;
 }
 
 async function saveDigests(args: {
