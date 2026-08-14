@@ -180,9 +180,12 @@ export const RELATION_PERSPECTIVE_BY_END = {
 // 관계 한 줄 — 상대 다이제스트를 통째로 싣지 않고 제목까지만 싣는다. 정리 프롬프트
 // 규칙 10이 제목을 "나머지 칸을 읽지 않고도 이해되게" 강제하고 있어 제목만으로도
 // 무엇과 이어졌는지가 읽힌다. 상세가 필요하면 digestId로 digest.get을 따로 부른다.
+// publicId — 상대로 이동하는 링크(?digest=)가 쓰는 값. digestId(내부)는 MCP가
+// get_digest를 이어 부를 때 쓴다(둘 다 실어보내는 이유는 DigestListItemSchema와 같다).
 export const DigestRelationSchema = z.object({
   type: DigestRelationPerspectiveSchema,
   digestId: z.string().uuid(),
+  publicId: z.string().regex(DIGEST_PUBLIC_ID_PATTERN),
   title: z.string(),
 });
 export type DigestRelation = z.infer<typeof DigestRelationSchema>;
@@ -224,11 +227,14 @@ export type DigestSearchResult = z.infer<typeof DigestSearchResultSchema>;
 // 안 싣는다, 상세는 따로 조회). type은 화면이 아이콘/라벨을 고르는 데 쓴다.
 // publicId — 상세로 가는 링크(?digest=)가 쓰는 값. id(내부)는 삭제 등 주소를
 // 거치지 않는 동작에 쓰인다(둘 다 실어보내는 이유는 digest.get 입력 스키마 참고).
+// relationCount — 목록 행 우측의 관계 신호가 쓰는 값. getDigestRelations와 같은
+// 기준(가려진 상대 제외)으로 세야 한다 — 그래야 개수와 상세 줄 수가 어긋나지 않는다.
 export const DigestListItemSchema = z.object({
   id: z.string().uuid(),
   publicId: z.string().regex(DIGEST_PUBLIC_ID_PATTERN),
   type: DigestTypeSchema,
   title: z.string(),
+  relationCount: z.number().int().nonnegative(),
 });
 export type DigestListItem = z.infer<typeof DigestListItemSchema>;
 

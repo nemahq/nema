@@ -73,7 +73,9 @@ async function createTestUser(): Promise<TestUser> {
 
 async function seedPair(user: TestUser): Promise<{
   decisionId: string;
+  decisionPublicId: string;
   learningId: string;
+  learningPublicId: string;
 }> {
   const { data: source, error: sourceError } = await user.supabase
     .from("sources")
@@ -102,17 +104,22 @@ async function seedPair(user: TestUser): Promise<{
         extraction_order: 1,
       },
     ])
-    .select("id, type");
+    .select("id, public_id, type");
   if (digestError || !digests) {
     throw digestError ?? new Error("failed to insert digests");
   }
 
-  const decisionId = digests.find((row) => row.type === "decision")?.id;
-  const learningId = digests.find((row) => row.type === "learning")?.id;
-  if (!decisionId || !learningId) {
+  const decision = digests.find((row) => row.type === "decision");
+  const learning = digests.find((row) => row.type === "learning");
+  if (!decision || !learning) {
     throw new Error("fixture digests missing");
   }
-  return { decisionId, learningId };
+  return {
+    decisionId: decision.id,
+    decisionPublicId: decision.public_id,
+    learningId: learning.id,
+    learningPublicId: learning.public_id,
+  };
 }
 
 // seedPair는 둘 다 같은 원문 밑에 둔다 — 원문 하나만 휴지통에 넣는 시나리오는
@@ -186,7 +193,8 @@ describe("digest_relations (RLS)", () => {
       if (!localDbAvailable) {
         return;
       }
-      const { decisionId, learningId } = await seedPair(userA);
+      const { decisionId, decisionPublicId, learningId, learningPublicId } =
+        await seedPair(userA);
       const { error } = await userA.supabase.from("digest_relations").insert({
         from_digest_id: learningId,
         to_digest_id: decisionId,
@@ -200,7 +208,12 @@ describe("digest_relations (RLS)", () => {
         digestId: learningId,
       });
       expect(fromLearning).toEqual([
-        { type: "supports", digestId: decisionId, title: "주 1회로 한다" },
+        {
+          type: "supports",
+          digestId: decisionId,
+          publicId: decisionPublicId,
+          title: "주 1회로 한다",
+        },
       ]);
 
       const fromDecision = await getDigestRelations({
@@ -212,6 +225,7 @@ describe("digest_relations (RLS)", () => {
         {
           type: "supported_by",
           digestId: learningId,
+          publicId: learningPublicId,
           title: "일 단위는 7배 비싸다",
         },
       ]);

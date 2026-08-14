@@ -26,6 +26,7 @@ import { CandidateCardFrame } from "./CandidateCardFrame";
 import { DigestDeleteAction } from "./DigestDeleteAction";
 import { DigestDetailPanelSkeleton } from "./DigestDetailPanelSkeleton";
 import { DigestReadonlyBodyFields } from "./DigestReadonlyBodyFields";
+import { DigestRelationsBlock } from "./DigestRelationsBlock";
 import { DigestTypeBadge } from "./DigestTypeBadge";
 
 interface DigestDetailPanelProps {
@@ -87,6 +88,8 @@ function DigestDetailPanelContent({
       >
         <DigestReadonlyBodyFields digest={digest} />
       </CandidateCardFrame>
+
+      <DigestRelationsBlock digestId={digest.id} />
     </div>
   );
 }

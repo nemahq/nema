@@ -34,7 +34,10 @@ import {
   deleteDigestVectors,
   indexDigests,
 } from "@server/services/digest-index-service";
-import { linkRelations } from "@server/services/digest-relation-service";
+import {
+  getRelationCounts,
+  linkRelations,
+} from "@server/services/digest-relation-service";
 import { logGetSource } from "@server/services/mcp-tool-call-log-service";
 import { getProfile } from "@server/services/profile-service";
 import { RELATION_JUDGMENTS } from "@server/services/relation-rules";
@@ -354,10 +357,24 @@ export async function listSourcesWithDigests(args: {
       ? { createdAt: lastRow.created_at, id: lastRow.id }
       : null;
 
+  const visibleDigestIds = pageRows.flatMap((row) =>
+    row.digests
+      .filter((digest) => digest.trashed_at === null)
+      .map((digest) => digest.id),
+  );
+  // 실패해도 폴백(예: relationCount: 0)으로 넘기지 않고 그대로 던진다 — 조회가
+  // 반쯤 실패한 채로 0을 채우면 "관계가 실제로 있는데 0개로 보이는" 조용히
+  // 틀리는 종류의 버그가 된다(킥오프가 명시적으로 경계한 것). 목록 전체가
+  // 잠깐 실패하는 게 개수를 거짓으로 보여주는 것보다 낫다.
+  const relationCountById = await getRelationCounts({
+    supabase,
+    digestIds: visibleDigestIds,
+  });
+
   // items뿐 아니라 nextCursor(DB row를 그대로 담음)까지 함께 검증한다 —
   // 어긋나면 다음 스크롤이 원인 불명 에러를 내는 대신 여기서 바로 던진다.
   return SourceListWithDigestsResultSchema.parse({
-    items: pageRows.map(toSourceWithDigests),
+    items: pageRows.map((row) => toSourceWithDigests(row, relationCountById)),
     nextCursor,
   });
 }
@@ -395,7 +412,10 @@ type SourceWithDigestsRow = Pick<
   >;
 };
 
-function toSourceWithDigests(row: SourceWithDigestsRow): SourceWithDigests {
+function toSourceWithDigests(
+  row: SourceWithDigestsRow,
+  relationCountById: Map<string, number>,
+): SourceWithDigests {
   return SourceWithDigestsSchema.parse({
     sourceId: row.id,
     publicId: row.public_id,
@@ -408,6 +428,7 @@ function toSourceWithDigests(row: SourceWithDigestsRow): SourceWithDigests {
         publicId: digest.public_id,
         type: digest.type,
         title: digest.title,
+        relationCount: relationCountById.get(digest.id) ?? 0,
       })),
   });
 }
