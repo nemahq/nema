@@ -20,7 +20,7 @@ export function SourceDigestGroupSkeleton({
 }: SourceDigestGroupSkeletonProps) {
   return (
     <div className="flex flex-col gap-1 py-3">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 px-2">
         <TextSkeleton size="sm" className="w-32" style={style} />
         <div className="min-w-6 flex-1" />
         <TextSkeleton size="xs" className="w-10" style={style} />

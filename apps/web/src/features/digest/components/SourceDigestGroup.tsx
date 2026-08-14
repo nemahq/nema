@@ -30,8 +30,10 @@ export function SourceDigestGroup({
   return (
     <div className="flex flex-col gap-1 py-3">
       {/* 구분선은 이름과 우측 액션 사이에만 둔다 — 헤더의 구분선 자체가
-          "여기서 새 원문이 시작한다"는 신호라, 행 사이·묶음 사이엔 따로 안 둔다. */}
-      <div className="flex items-center gap-2">
+          "여기서 새 원문이 시작한다"는 신호라, 행 사이·묶음 사이엔 따로 안 둔다.
+          px-2는 DigestListRow(Link)의 호버 박스 여백과 같은 값 — 아래 다이제스트
+          행과 좌우가 맞아떨어지게 맞춘다. */}
+      <div className="flex items-center gap-2 px-2">
         <Text
           as="span"
           size="sm"
