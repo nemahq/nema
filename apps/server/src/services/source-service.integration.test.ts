@@ -279,11 +279,20 @@ describe("source-service (RLS)", () => {
         userId: userA.id,
         body: "getSource RLS 테스트 원문",
       });
+      const { data: sourceRow } = await userA.supabase
+        .from("sources")
+        .select("public_id")
+        .eq("id", sourceId)
+        .single();
+      if (!sourceRow) {
+        throw new Error("source row not found");
+      }
+      const sourcePublicId = sourceRow.public_id;
 
       const asOwner = await getSource({
         supabase: userA.supabase,
         userId: userA.id,
-        sourceId,
+        sourcePublicId,
         origin: "web",
       });
       expect(asOwner.body).toBe("getSource RLS 테스트 원문");
@@ -292,7 +301,7 @@ describe("source-service (RLS)", () => {
         getSource({
           supabase: userB.supabase,
           userId: userB.id,
-          sourceId,
+          sourcePublicId,
           origin: "web",
         }),
       ).rejects.toMatchObject({ code: "PGRST116" });
@@ -852,11 +861,20 @@ describe("getSource 로그 출처 구분", () => {
         userId: userA.id,
         body: "로그 출처 구분 테스트 원문",
       });
+      const { data: sourceRow } = await userA.supabase
+        .from("sources")
+        .select("public_id")
+        .eq("id", sourceId)
+        .single();
+      if (!sourceRow) {
+        throw new Error("source row not found");
+      }
+      const sourcePublicId = sourceRow.public_id;
 
       await getSource({
         supabase: userA.supabase,
         userId: userA.id,
-        sourceId,
+        sourcePublicId,
         origin: "web",
       });
       expect(mockLogGetSource).not.toHaveBeenCalled();
@@ -864,7 +882,7 @@ describe("getSource 로그 출처 구분", () => {
       await getSource({
         supabase: userA.supabase,
         userId: userA.id,
-        sourceId,
+        sourcePublicId,
         origin: "mcp",
       });
       expect(mockLogGetSource).toHaveBeenCalledWith({

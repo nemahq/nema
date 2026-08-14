@@ -17,16 +17,21 @@ const STATUS_ICON: Record<DigestionStatus, ReactNode> = {
 };
 
 interface DraftCardProps {
+  // sourceId(내부)는 카드의 휴지통 삭제(source.delete)가 쓴다. sourcePublicId는
+  // 상세를 여는 값(onSelect, ?source=)이다 — 둘의 쓰임이 갈리는 이유는
+  // SourceDetailPanel의 knownSourceId 주석 참고.
   sourceId: string;
+  sourcePublicId: string;
   name: string;
   bodyPreview: string;
   status: DigestionStatus;
   createdAt: string;
-  onSelect: (sourceId: string) => void;
+  onSelect: (sourcePublicId: string) => void;
 }
 
 export const DraftCard = memo(function DraftCard({
   sourceId,
+  sourcePublicId,
   name,
   bodyPreview,
   status,
@@ -34,7 +39,7 @@ export const DraftCard = memo(function DraftCard({
   onSelect,
 }: DraftCardProps) {
   function handleSelect() {
-    onSelect(sourceId);
+    onSelect(sourcePublicId);
   }
 
   return (

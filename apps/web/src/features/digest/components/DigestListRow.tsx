@@ -9,6 +9,10 @@ import { DigestTypeBadge } from "./DigestTypeBadge";
 interface DigestListRowProps {
   digest: DigestListItem;
   selected: boolean;
+  // 왼쪽 클릭(같은 탭 내비게이션)에서만 불린다 — cmd/middle click(새 탭)은
+  // 이 컴포넌트 트리 밖에서 열리므로 내부 id를 미리 건네줄 수 없고, 그 경우
+  // DigestDetailPanel이 digest.get 응답을 기다려 채운다(DigestDetailPanel 참고).
+  onOpen?: (digest: DigestListItem) => void;
 }
 
 // cmd/middle click으로 새 탭에서 열 수 있어야 해서 button+onClick이 아니라
@@ -20,10 +24,12 @@ interface DigestListRowProps {
 export const DigestListRow = memo(function DigestListRow({
   digest,
   selected,
+  onOpen,
 }: DigestListRowProps) {
   return (
     <Link
-      {...linkOptions({ to: "/", search: { digest: digest.id } })}
+      {...linkOptions({ to: "/", search: { digest: digest.publicId } })}
+      onClick={() => onOpen?.(digest)}
       aria-current={selected ? "true" : undefined}
       className={cn(
         "flex min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left",

@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import {
   SourceActionInputSchema,
   SourceDeleteManyInputSchema,
+  SourceGetInputSchema,
   SourceIngestInputSchema,
   SourceListWithDigestsInputSchema,
 } from "@nema-io/shared";
@@ -38,14 +39,14 @@ export const sourceRouter = router({
   ),
 
   get: protectedProcedure
-    .input(SourceActionInputSchema)
+    .input(SourceGetInputSchema)
     .query(async ({ ctx, input }) => {
       try {
         return await getSource({
           supabase: ctx.supabase,
           userId: ctx.user.id,
-          sourceId: input.sourceId,
           origin: ctx.origin,
+          ...input,
         });
       } catch (error) {
         if (isNotFoundError(error)) {

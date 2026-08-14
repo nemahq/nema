@@ -93,9 +93,10 @@ const homeRoute = createRoute({
 });
 
 // 열려 있는 초안 상세를 URL에 둔다 — catch는 파싱 자체가 실패하는 값(배열 등
-// string이 아닌 값)만 비운다. 존재하지 않는/삭제된 sourceId는 정상 파싱되어
-// 그대로 통과하므로 여기서 걸러지지 않는다 — 그 죽은 링크는 SourceDetailPanel이
-// source.get의 NOT_FOUND를 받아 패널을 스스로 닫는 것으로 처리한다.
+// string이 아닌 값)만 비운다. 존재하지 않는/삭제된 sourcePublicId는 정상
+// 파싱되어 그대로 통과하므로 여기서 걸러지지 않는다 — 그 죽은 링크는
+// SourceDetailPanel이 source.get의 NOT_FOUND를 받아 패널을 스스로 닫는 것으로
+// 처리한다.
 const draftsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/drafts",

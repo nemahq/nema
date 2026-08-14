@@ -98,26 +98,34 @@ export async function deleteDigest(args: {
   return { success: deleted };
 }
 
-export async function getDigest(args: {
-  supabase: TypedSupabaseClient;
-  userId: string;
-  digestId: string;
-}): Promise<DigestDetail> {
-  const { supabase, userId, digestId } = args;
+export async function getDigest(
+  args: {
+    supabase: TypedSupabaseClient;
+    userId: string;
+    // 웹은 주소(?digest=)의 public_id로, MCP(get_digest 도구)는 이전 도구 응답이
+    // 준 내부 id로 부른다 — DigestGetInputSchema와 같은 이유로 둘 다 받는다.
+  } & ({ digestPublicId: string } | { digestId: string }),
+): Promise<DigestDetail> {
+  const { supabase, userId } = args;
 
-  // RLS(owner-only)라 남의/없는 digestId는 여기서 not-found로 걸린다. 가려진 것도
-  // 같은 자리에서 not-found가 된다 — 사용자에게는 지워진 것으로 보이므로 id를 들고
-  // 다시 물어도 돌아오면 안 된다.
-  const { data, error } = await supabase
+  // RLS(owner-only)라 남의/없는 값은 여기서 not-found로 걸린다. 가려진 것도 같은
+  // 자리에서 not-found가 된다 — 사용자에게는 지워진 것으로 보이므로 다시 물어도
+  // 돌아오면 안 된다.
+  const query = supabase
     .from("digests")
-    .select("id, source_id, type, title, body, created_at")
-    .eq("id", digestId)
+    .select("id, source_id, type, title, body, created_at");
+  const { data, error } = await (
+    "digestPublicId" in args
+      ? query.eq("public_id", args.digestPublicId)
+      : query.eq("id", args.digestId)
+  )
     .is("hidden_at", null)
     .single();
   throwIfSupabaseError(error);
 
   // 로그 저장은 응답을 기다리게 하지 않는다 — 실패 격리뿐 아니라 지연도 격리한다.
-  void logGetDigest({ userId, detail: { digestId } });
+  // 로그에는 내부 id를 남긴다 — public_id는 조회 입력일 뿐 지표가 참조하는 식별자가 아니다.
+  void logGetDigest({ userId, detail: { digestId: data.id } });
 
   return DigestDetailSchema.parse({
     id: data.id,

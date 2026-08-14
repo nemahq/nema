@@ -21,6 +21,9 @@ interface DeleteConfirmActionProps {
   confirmDescription: string;
   isPending: boolean;
   isPendingAfterDelay: boolean;
+  // 삭제에 필요한 값(내부 id)이 아직 없을 때 트리거 자체를 막는다 — 상세 헤더가
+  // 조회(get) 응답을 기다리는 동안이 이 경우다(SourceDetailPanel 참고).
+  disabled?: boolean;
   // 다이얼로그를 닫는 시점은 소비처가 쥔다 — 성공했을 때만 닫아야 하는데
   // 성공 여부는 mutation을 들고 있는 쪽만 안다.
   onConfirm: (closeDialog: () => void) => void;
@@ -33,6 +36,7 @@ export function DeleteConfirmAction({
   confirmDescription,
   isPending,
   isPendingAfterDelay,
+  disabled = false,
   onConfirm,
 }: DeleteConfirmActionProps) {
   const { t } = useTranslation();
@@ -51,6 +55,7 @@ export function DeleteConfirmAction({
             variant="ghost"
             aria-label={t("common.delete")}
             onClick={() => setConfirmOpen(true)}
+            disabled={disabled}
             className="size-7 text-fg-tertiary"
           >
             <Trash2 className="size-4" />

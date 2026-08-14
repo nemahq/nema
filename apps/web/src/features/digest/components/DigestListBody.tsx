@@ -1,6 +1,7 @@
 import { Suspense, useRef } from "react";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 
+import type { DigestListItem, SourceWithDigests } from "@nema-io/shared";
 import { Button, Text } from "@nema-io/weave";
 import { RotateCcw } from "@nema-io/weave/icons";
 
@@ -23,8 +24,9 @@ const DIGEST_LIST_INITIAL_SKELETON_COUNT = 3;
 const DIGEST_LIST_NEXT_PAGE_SKELETON_COUNT = 1;
 
 interface DigestListBodyProps {
-  selectedDigestId: string | null;
-  onSelectSource: (sourceId: string) => void;
+  selectedDigestPublicId: string | null;
+  onOpenSource: (source: SourceWithDigests) => void;
+  onOpenDigest?: (digest: DigestListItem) => void;
 }
 
 interface DigestListNextPageErrorProps {
@@ -44,8 +46,9 @@ function DigestListNextPageError({ onRetry }: DigestListNextPageErrorProps) {
 }
 
 function DigestListBodyContent({
-  selectedDigestId,
-  onSelectSource,
+  selectedDigestPublicId,
+  onOpenSource,
+  onOpenDigest,
 }: DigestListBodyProps) {
   const { t } = useTranslation();
   const [sourcePages, query] = useSourceListWithDigestsInfiniteQuery();
@@ -79,8 +82,9 @@ function DigestListBodyContent({
               <SourceDigestGroup
                 key={source.sourceId}
                 source={source}
-                selectedDigestId={selectedDigestId}
-                onOpenSource={onSelectSource}
+                selectedDigestPublicId={selectedDigestPublicId}
+                onOpenSource={onOpenSource}
+                onOpenDigest={onOpenDigest}
               />
             ))}
             {query.hasNextPage ? (

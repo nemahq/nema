@@ -14,14 +14,17 @@ export function HomePage() {
     void navigate({ to: "/", search: {} });
   }
 
-  function handleSelectSource(sourceId: string | null) {
-    void navigate({ to: "/", search: sourceId ? { source: sourceId } : {} });
+  function handleSelectSource(sourcePublicId: string | null) {
+    void navigate({
+      to: "/",
+      search: sourcePublicId ? { source: sourcePublicId } : {},
+    });
   }
 
   return (
     <DigestListScreen
-      selectedDigestId={digest ?? null}
-      selectedSourceId={source ?? null}
+      selectedDigestPublicId={digest ?? null}
+      selectedSourcePublicId={source ?? null}
       onCloseDigest={handleCloseDigest}
       onSelectSource={handleSelectSource}
     />

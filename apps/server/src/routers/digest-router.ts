@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import {
   DIGEST_SEARCH_DEFAULT_LIMIT,
   DigestActionInputSchema,
+  DigestGetInputSchema,
   DigestSearchInputSchema,
 } from "@nema-io/shared";
 
@@ -39,13 +40,13 @@ export const digestRouter = router({
     ),
 
   get: protectedProcedure
-    .input(DigestActionInputSchema)
+    .input(DigestGetInputSchema)
     .query(async ({ ctx, input }) => {
       try {
         return await getDigest({
           supabase: ctx.supabase,
           userId: ctx.user.id,
-          digestId: input.digestId,
+          ...input,
         });
       } catch (error) {
         toNotFound(error);
