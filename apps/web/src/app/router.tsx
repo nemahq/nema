@@ -10,6 +10,7 @@ import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
 import { AppLayout } from "@web/app/layouts/AppLayout";
 import { ComingSoonPage } from "@web/app/pages/ComingSoonPage";
+import { DraftsPage } from "@web/app/pages/DraftsPage";
 import { HomePage } from "@web/app/pages/HomePage";
 import { OAuthConsentPage } from "@web/app/pages/OAuthConsentPage";
 import { SignInPage } from "@web/app/pages/SignInPage";
@@ -85,10 +86,24 @@ const homeRoute = createRoute({
   errorComponent: RouteErrorFallback,
 });
 
+// 열려 있는 초안 상세를 URL에 둔다 — catch는 파싱 자체가 실패하는 값(배열 등
+// string이 아닌 값)만 비운다. 존재하지 않는/삭제된 sourceId는 정상 파싱되어
+// 그대로 통과하므로 여기서 걸러지지 않는다 — 그 죽은 링크는 SourceDetailPanel이
+// source.get의 NOT_FOUND를 받아 패널을 스스로 닫는 것으로 처리한다.
+const draftsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/drafts",
+  component: DraftsPage,
+  errorComponent: RouteErrorFallback,
+  validateSearch: z.object({
+    source: z.string().optional().catch(undefined),
+  }),
+});
+
 const routeTree = rootRoute.addChildren([
   signinRoute,
   oauthConsentRoute,
-  authenticatedRoute.addChildren([homeRoute]),
+  authenticatedRoute.addChildren([homeRoute, draftsRoute]),
 ]);
 
 export const router = createRouter({

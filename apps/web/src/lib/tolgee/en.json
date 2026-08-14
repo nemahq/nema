@@ -31,8 +31,11 @@
   "common": {
     "cancel": "Cancel",
     "close": "Close",
+    "delete": "Delete",
     "delete_confirm_instruction": "Type \"{value}\" to confirm.",
+    "deleting": "Deleting...",
     "draft_tab_close": "Close {label} tab",
+    "more_actions": "More actions",
     "refresh_failed": "Saved, but the screen couldn't refresh. Please refresh manually.",
     "retry": "Retry",
     "unknown_error": "An unknown error occurred."
@@ -45,6 +48,14 @@
     "type_idea": "Idea",
     "type_learning": "Learning",
     "type_pending": "Unresolved"
+  },
+  "draft": {
+    "card_open_label": "Open source detail",
+    "empty_state": "No sources to process.",
+    "load_error": "Couldn't load drafts",
+    "retry_pending": "Retrying...",
+    "status_empty": "No results",
+    "status_pending": "Not organized yet"
   },
   "error": {
     "copy_error": "Copy error info",
@@ -89,5 +100,13 @@
     "theme_description": "Choose how Nema looks on this device",
     "theme_light": "Light",
     "theme_system": "System"
+  },
+  "source": {
+    "delete_confirm_description": "Deleting this source also removes any digests made from it, and can't be undone.",
+    "delete_confirm_title": "Delete this source?",
+    "summary_empty": "No summary yet."
+  },
+  "workspace": {
+    "drafts": "Drafts"
   }
 }
