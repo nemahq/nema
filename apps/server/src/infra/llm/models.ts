@@ -12,6 +12,11 @@ export const DIGEST_GENERATION_MODEL_GEMINI = "gemini-3.1-flash-lite";
 // 맞지만 어느 등급까지 내려도 되는지 잴 자료가 없다. 따로 재서 내릴 때 상수를 가르고
 // MODEL_CATALOG에 등록한다.
 
+// 겹치는 카드 걸러내기도 같은 모델로 시작한다. 짧고 잦아 단가가 곧 총액이 되는 자리라
+// 내리고 싶은 유인이 크지만, 잘못 지운 카드는 사용자가 그런 판단이 있었다는 사실조차
+// 모른 채 사라져 되돌릴 수 없다 — 걸러낸 목록이 로그에 쌓여 과하게 지우는지를 잰 뒤 내린다.
+
 // OpenAI Responses API의 구조화 출력(zodTextFormat)이 요구하는 스키마 이름.
 export const DIGEST_GENERATION_SCHEMA_NAME = "digest_generation";
 export const RELATION_JUDGMENT_SCHEMA_NAME = "relation_judgment";
+export const DIGEST_DEDUP_SCHEMA_NAME = "digest_dedup";

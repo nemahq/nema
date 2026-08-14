@@ -5,12 +5,16 @@
 import { LlmError } from "@server/infra/llm/llm-error";
 import { getModelSpec } from "@server/infra/llm/model-catalog";
 import {
+  DIGEST_DEDUP_SCHEMA_NAME,
   DIGEST_GENERATION_MODEL_OPENAI,
   DIGEST_GENERATION_SCHEMA_NAME,
   RELATION_JUDGMENT_SCHEMA_NAME,
 } from "@server/infra/llm/models";
 
-export type LlmTask = "generateDigests" | "judgeRelations";
+export type LlmTask =
+  | "generateDigests"
+  | "judgeRelations"
+  | "dropDuplicateDigests";
 
 interface TaskDefault {
   modelId: string;
@@ -25,6 +29,10 @@ export const TASK_DEFAULTS = {
   judgeRelations: {
     modelId: DIGEST_GENERATION_MODEL_OPENAI,
     schemaName: RELATION_JUDGMENT_SCHEMA_NAME,
+  },
+  dropDuplicateDigests: {
+    modelId: DIGEST_GENERATION_MODEL_OPENAI,
+    schemaName: DIGEST_DEDUP_SCHEMA_NAME,
   },
 } as const satisfies Record<LlmTask, TaskDefault>;
 

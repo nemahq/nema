@@ -43,11 +43,19 @@ function seedDigestGenerationOverride(): void {
   overrideSeeded = true;
   if (env.DIGEST_GENERATION_LLM_PROVIDER === "vertex") {
     setTaskOverride("generateDigests", DIGEST_GENERATION_MODEL_GEMINI);
+    setTaskOverride("dropDuplicateDigests", DIGEST_GENERATION_MODEL_GEMINI);
   }
 }
 
 export function getDigestGenerationProvider(): LlmProvider {
   return getProviderForTask("generateDigests");
+}
+
+// 걸러내기는 관계 판정과 달리 DIGEST_GENERATION_LLM_PROVIDER를 함께 탄다 — 이 단계의
+// 출력이 곧 저장될 정리 결과이고 eval이 재는 것도 그거라, 절반만 다른 모델로 돌면
+// 잰 것과 나가는 것이 갈린다.
+export function getDigestDedupProvider(): LlmProvider {
+  return getProviderForTask("dropDuplicateDigests");
 }
 
 // 관계 판정은 DIGEST_GENERATION_LLM_PROVIDER를 안 탄다 — 그 스위치는 이름 그대로

@@ -43,8 +43,12 @@ loadEnv(join(fileURLToPath(import.meta.url), "..", "..", ".."));
 // RLS(owner-only)는 실제 소유자 판정을 Postgres 정책 평가에 맡기는데, 그건 실제
 // 서로 다른 유저 JWT로 PostgREST를 거쳐야만 확인된다 — mock supabase로는 통과시킬 수
 // 없다(모든 걸 다 허용해버리므로). 로컬 Supabase가 있어야 도는 이유.
+// 걸러내기도 함께 심는다 — 안 심으면 dropContainedDigests가 판정 실패로 떨어져
+// (실패해도 전부 남기는 게 정상 동작이라) 이 스위트가 그 자리를 안 지나는 걸 못 본다.
+// 여기 몫은 걸러내기 품질이 아니라 그 결과가 저장까지 흐르는지라, 기본은 안 뺀다.
 vi.mock("@server/infra/llm/provider", () => ({
   getDigestGenerationProvider: () => ({ generateStructured: mockGenerate }),
+  getDigestDedupProvider: () => ({ generateStructured: mockDedup }),
 }));
 
 // 색인은 Voyage·Qdrant 실제 호출이 필요해 이 스위트의 몫이 아니다(색인 자체·삭제는
@@ -101,6 +105,16 @@ function mockGenerate(args: {
     return Promise.reject(mockError);
   }
   return Promise.resolve(mockGenerated);
+}
+
+let mockDuplicates: Array<{
+  digest: number;
+  containedIn: number;
+  field: string;
+  reason: string;
+}> = [];
+function mockDedup(): Promise<{ duplicates: typeof mockDuplicates }> {
+  return Promise.resolve({ duplicates: mockDuplicates });
 }
 
 function oneDecision(
@@ -230,9 +244,74 @@ afterEach(() => {
   mockDeleteDigestVectors.mockReset().mockResolvedValue(undefined);
   mockLogGetSource.mockReset().mockResolvedValue(undefined);
   mockLinkRelations.mockReset().mockResolvedValue(new Map());
+  mockDuplicates = [];
 });
 
 describe("source-service (RLS)", () => {
+  // 걸러내기가 저장 전에 걸리는지를 본다. 저장 뒤로 밀리면 겹친 카드가 사용자에게
+  // 그대로 남는 것에 더해, extraction_order에 구멍이 나 목록 정렬의 전제가 깨진다.
+  it(
+    "겹친다고 판정된 카드는 저장도 색인도 안 되고, 남은 것의 순서 번호는 연속이다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = {
+        ...oneDecision("남는 결정"),
+        learnings: [
+          { title: "겹치는 학습", finding: "fixture finding", evidence: null },
+        ],
+        assumptions: [
+          {
+            title: "남는 가정",
+            assumption: "fixture assumption",
+            evidence: null,
+            impact: null,
+            verificationCondition: null,
+          },
+        ],
+      };
+      // 가운데(학습)만 뺀다 — 앞뒤가 다 남아야 번호 다시 매기기와 순서 보존이 갈린다.
+      mockDuplicates = [
+        {
+          digest: 2,
+          containedIn: 1,
+          field: "reason",
+          reason: "same claim as the decision's reason",
+        },
+      ];
+
+      const { sourceId, digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "겹치는 카드가 섞인 원문",
+      });
+
+      expect(digests.map((digest) => digest.title)).toEqual([
+        "남는 결정",
+        "남는 가정",
+      ]);
+      const indexed = mockIndexDigests.mock.calls[0]?.[0] as {
+        digests: Array<{ title: string }>;
+      };
+      expect(indexed.digests.map((digest) => digest.title)).toEqual([
+        "남는 결정",
+        "남는 가정",
+      ]);
+
+      const { data: rows } = await userA.supabase
+        .from("digests")
+        .select("title, extraction_order")
+        .eq("source_id", sourceId)
+        .order("extraction_order", { ascending: true });
+      expect(rows).toEqual([
+        { title: "남는 결정", extraction_order: 0 },
+        { title: "남는 가정", extraction_order: 1 },
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
   it(
     "넣은 원문의 다이제스트는 소유자만 볼 수 있다",
     async () => {

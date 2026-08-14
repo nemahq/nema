@@ -26,6 +26,7 @@ import {
   DigestGenerationSchema,
   flattenGeneratedDigests,
 } from "@server/prompts/digest-generation";
+import { dropContainedDigests } from "@server/services/digest-dedup-service";
 import {
   deleteDigestVectors,
   indexDigests,
@@ -56,7 +57,11 @@ export async function ingestSource(args: {
   throwIfSupabaseError(error);
 
   const contentLanguage = await resolveContentLanguage({ supabase, userId });
-  const normalized = await generateDigests(body, contentLanguage);
+  const generated = await generateDigests(body, contentLanguage);
+  const normalized = await dropDuplicates({
+    sourceId: source.id,
+    digests: generated,
+  });
   const digests = await saveDigestsAndIndex({
     supabase,
     userId,
@@ -85,8 +90,9 @@ export async function reExtractSource(args: {
   // LLM 호출을 기존 다이제스트 삭제보다 먼저 한다 — 여기서 실패하면(rate limit,
   // content filter, 스키마 검증 실패 등) 원문도 이전 다이제스트도 안 건드린 채
   // 그대로 남아 다시 부르면 된다. 순서를 반대로 하면 실패할 때마다 다이제스트가
-  // 0개인 상태가 영구화될 위험이 있다.
-  const normalized = await generateDigests(source.body, contentLanguage);
+  // 0개인 상태가 영구화될 위험이 있다. 걸러내기도 LLM 호출이라 같은 자리에 둔다.
+  const generated = await generateDigests(source.body, contentLanguage);
+  const normalized = await dropDuplicates({ sourceId, digests: generated });
 
   const { error: statusError } = await supabase
     .from("sources")
@@ -301,6 +307,28 @@ async function generateDigests(
   return flattenGeneratedDigests(generated);
 }
 
+// 무엇을 왜 뺐는지는 로그로만 남긴다 — 스키마를 안 건드리면서도, 지운 목록이 있으면
+// before/after diff를 읽지 않고도 빠짐이 바로 보인다. 이 단계가 과하게 지우는지도
+// 나중에 이 로그로 잰다. 지운 게 없으면 아무것도 안 남긴다(그게 보통이라 신호가 안 된다).
+async function dropDuplicates<
+  T extends Pick<Digest, "type" | "title" | "body">,
+>(args: { sourceId: string; digests: T[] }): Promise<T[]> {
+  const { sourceId, digests } = args;
+
+  const { kept, dropped } = await dropContainedDigests(digests);
+  if (dropped.length > 0) {
+    const lines = dropped.map(
+      (entry) =>
+        `  - [${entry.digest.type}] ${entry.digest.title} ← [${entry.containedIn.type}] ${entry.containedIn.title}의 ${entry.field}: ${entry.reason}`,
+    );
+    console.warn(
+      `[digest-dedup] 겹쳐서 뺀 다이제스트 ${dropped.length}건 — sourceId: ${sourceId}\n${lines.join("\n")}`,
+    );
+  }
+
+  return kept;
+}
+
 async function saveDigestsAndIndex(args: {
   supabase: TypedSupabaseClient;
   userId: string;
@@ -379,7 +407,11 @@ async function saveDigests(args: {
     .from("digests")
     .insert(
       // LLM 응답 배열의 순서가 곧 원문 안에서의 추출 순서다 — 배열 인덱스를
-      // 그대로 extraction_order에 넣는다.
+      // 그대로 extraction_order에 넣는다. 걸러내기가 저장 전에 배열을 좁히므로
+      // 여기 인덱스는 이미 0부터의 연번이다 — 순서를 안 바꾸는 filter라 상대 순서도
+      // 그대로다. 걸러내기를 저장 뒤로 옮기면 둘 다 깨진다: 번호에 구멍이 나고
+      // (연속을 전제한 코드가 나중에 생기면 걸린다), 관계 엔진의 "같은 원문 안에서
+      // 앞선 것만"도 이 순서에 기대고 있다.
       normalized.map((digest, index) => ({
         source_id: sourceId,
         type: digest.type,
