@@ -33,9 +33,9 @@ export function SourceDigestGroup({
     <div className="flex flex-col gap-1 py-3">
       {/* 구분선은 이름과 우측 액션 사이에만 둔다 — 헤더의 구분선 자체가
           "여기서 새 원문이 시작한다"는 신호라, 행 사이·묶음 사이엔 따로 안 둔다.
-          px-2는 DigestListRow(Link)의 호버 박스 여백과 같은 값 — 아래 다이제스트
+          px-3는 DigestListRow(Link)의 좌우 여백과 같은 값 — 아래 다이제스트
           행과 좌우가 맞아떨어지게 맞춘다. */}
-      <div className="flex items-center gap-2 px-2">
+      <div className="flex items-center gap-2 px-3">
         {/* color="tertiary" — 이 화면의 진짜 콘텐츠는 다이제스트 제목이고
             원문 이름은 "어디서 나왔나"를 알려주는 라벨이다. weight="medium"은
             유지해 스캔 리듬은 살리되, 색으로 다이제스트 제목(primary)보다
@@ -58,12 +58,12 @@ export function SourceDigestGroup({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              size="icon-sm"
+              size="icon-xs"
               variant="ghost"
               shape="circle"
               aria-label={t("source.open_detail_label")}
               onClick={() => onOpenSource(source)}
-              className="size-7 text-fg-tertiary"
+              className="text-fg-tertiary"
             >
               <FileText className="size-3.5" />
             </Button>

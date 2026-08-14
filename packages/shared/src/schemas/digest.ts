@@ -177,16 +177,19 @@ export const RELATION_PERSPECTIVE_BY_END = {
   Record<RelationEnd, DigestRelationPerspective>
 >;
 
-// 관계 한 줄 — 상대 다이제스트를 통째로 싣지 않고 제목까지만 싣는다. 정리 프롬프트
-// 규칙 10이 제목을 "나머지 칸을 읽지 않고도 이해되게" 강제하고 있어 제목만으로도
-// 무엇과 이어졌는지가 읽힌다. 상세가 필요하면 digestId로 digest.get을 따로 부른다.
-// publicId — 상대로 이동하는 링크(?digest=)가 쓰는 값. digestId(내부)는 MCP가
-// get_digest를 이어 부를 때 쓴다(둘 다 실어보내는 이유는 DigestListItemSchema와 같다).
+// 관계 한 줄 — 상대 다이제스트를 통째로 싣지 않고 제목·유형까지만 싣는다. 정리
+// 프롬프트 규칙 10이 제목을 "나머지 칸을 읽지 않고도 이해되게" 강제하고 있어
+// 제목만으로도 무엇과 이어졌는지가 읽힌다. 상세가 필요하면 digestId로 digest.get을
+// 따로 부른다. publicId — 상대로 이동하는 링크(?digest=)가 쓰는 값. digestId
+// (내부)는 MCP가 get_digest를 이어 부를 때 쓴다(둘 다 실어보내는 이유는
+// DigestListItemSchema와 같다). digestType — 관계의 종류(type)와 겹치지 않게
+// 이름을 가른다.
 export const DigestRelationSchema = z.object({
   type: DigestRelationPerspectiveSchema,
   digestId: z.string().uuid(),
   publicId: z.string().regex(DIGEST_PUBLIC_ID_PATTERN),
   title: z.string(),
+  digestType: DigestTypeSchema,
 });
 export type DigestRelation = z.infer<typeof DigestRelationSchema>;
 

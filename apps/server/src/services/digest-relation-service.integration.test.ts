@@ -213,6 +213,7 @@ describe("digest_relations (RLS)", () => {
           digestId: decisionId,
           publicId: decisionPublicId,
           title: "주 1회로 한다",
+          digestType: "decision",
         },
       ]);
 
@@ -227,6 +228,7 @@ describe("digest_relations (RLS)", () => {
           digestId: learningId,
           publicId: learningPublicId,
           title: "일 단위는 7배 비싸다",
+          digestType: "learning",
         },
       ]);
 

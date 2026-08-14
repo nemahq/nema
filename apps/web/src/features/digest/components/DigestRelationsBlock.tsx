@@ -3,7 +3,7 @@ import { Suspense, useSyncExternalStore } from "react";
 import { Link, linkOptions } from "@tanstack/react-router";
 
 import type { DigestRelationPerspective } from "@nema-io/shared";
-import { Badge, Text } from "@nema-io/weave";
+import { Text } from "@nema-io/weave";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useDigestRelationsSuspenseQuery } from "@web/features/digest/hooks/useDigestRelationsQuery";
@@ -12,6 +12,7 @@ import { useTranslation } from "@web/lib/tolgee";
 import { tolgee } from "@web/lib/tolgee/client";
 
 import { DigestRelationsBlockSkeleton } from "./DigestRelationsBlockSkeleton";
+import { DigestTypeIcon } from "./DigestTypeIcon";
 
 interface DigestRelationsBlockProps {
   digestId: string;
@@ -93,19 +94,22 @@ function DigestRelationsBlockContent({ digestId }: DigestRelationsBlockProps) {
       </Text>
       <ul className="flex flex-col gap-1.5">
         {digestRelations.map((relation) => {
-          // Chip이 아니라 Link+Badge다 — remove 없는 Chip은 항상 <button>이라
-          // cmd/가운데 클릭 새 탭이 안 된다. 칩만 클릭 대상이고 줄 전체는 아니다.
+          // Chip이 아니라 Link다 — remove 없는 Chip은 항상 <button>이라
+          // cmd/가운데 클릭 새 탭이 안 된다. 이 링크만 클릭 대상이고 줄 전체는
+          // 아니다. rounded-full — DigestListRow처럼 목록에 늘어놓는 자리가
+          // 아니라 문장 안에 끼는 낱말 하나라, 호버 배경도 pill 모양으로 감싼다.
           const chip = (
             <Link
               {...linkOptions({
                 to: "/",
                 search: { digest: relation.publicId },
               })}
-              className="flex min-w-0"
+              className="flex min-w-0 items-center gap-1.5 rounded-full px-2 py-0.5 transition-colors duration-fast hover:bg-surface-raised-hover/40"
             >
-              <Badge shape="rounded" variant="outline" truncated>
+              <DigestTypeIcon type={relation.digestType} />
+              <Text as="span" size="sm" className="min-w-0 truncate">
                 {relation.title}
-              </Badge>
+              </Text>
             </Link>
           );
           const label = (
