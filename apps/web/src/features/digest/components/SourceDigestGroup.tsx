@@ -53,6 +53,7 @@ export function SourceDigestGroup({
             <Button
               size="icon-sm"
               variant="ghost"
+              shape="circle"
               aria-label={t("source.open_detail_label")}
               onClick={() => onOpenSource(source.sourceId)}
               className="size-7 text-fg-tertiary"
