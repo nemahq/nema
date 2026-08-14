@@ -50,6 +50,7 @@ interface DigestRow {
   title: string;
   body: Record<string, string>;
   created_at: string;
+  hidden_at?: string | null;
 }
 
 function digestRow(args: {
@@ -99,6 +100,7 @@ interface QueryResult {
 
 type DigestsQuery = Promise<QueryResult> & {
   in: (column: string, values: string[]) => DigestsQuery;
+  is: (column: string, value: null) => DigestsQuery;
 };
 
 // digests 조회는 .in("id", ...).in("type", ...)으로 두 번 좁힌다 — 필터를 무시하는
@@ -114,15 +116,23 @@ function fakeSupabase(args: {
   const { rows, existingPairs = [] } = args;
   const saved: RelationRow[] = [];
 
-  function digestsQuery(filters: Array<[string, string[]]>): DigestsQuery {
-    const matched = rows.filter((row) =>
-      filters.every(([column, values]) =>
-        values.includes(String(row[column as keyof DigestRow])),
-      ),
+  // 가림(hidden_at)까지 흉내내야 "가려진 후보가 빠지는가"를 잴 수 있다 — 픽스처는
+  // hidden_at을 안 달면 살아있는 것으로 본다.
+  function digestsQuery(
+    filters: Array<[string, string[]]>,
+    onlyVisible: boolean,
+  ): DigestsQuery {
+    const matched = rows.filter(
+      (row) =>
+        filters.every(([column, values]) =>
+          values.includes(String(row[column as keyof DigestRow])),
+        ) &&
+        (!onlyVisible || (row.hidden_at ?? null) === null),
     );
     return Object.assign(Promise.resolve({ data: matched, error: null }), {
       in: (column: string, values: string[]) =>
-        digestsQuery([...filters, [column, values]]),
+        digestsQuery([...filters, [column, values]], onlyVisible),
+      is: () => digestsQuery(filters, true),
     });
   }
 
@@ -137,7 +147,7 @@ function fakeSupabase(args: {
 
   const from = vi.fn((table: string) => {
     if (table === "digests") {
-      return { select: () => digestsQuery([]) };
+      return { select: () => digestsQuery([], false) };
     }
     return {
       insert: (row: RelationRow) => {
@@ -381,6 +391,37 @@ describe("linkRelations", () => {
           })),
       }),
     );
+  });
+
+  // 벡터는 가림과 함께 지우지만 그 삭제는 실패해도 경고만 남는다 — 고아 벡터가
+  // 후보로 돌아오면 사용자가 지운 다이제스트의 제목이 관련 목록에 뜬다.
+  it("가려진 다이제스트는 고아 벡터로 걸려도 후보에서 빠진다", async () => {
+    const learning = digestRow({
+      id: LEARNING_ID,
+      type: "learning",
+      sourceId: SOURCE_NEW,
+      title: "알게 됨",
+    });
+    const hidden = {
+      ...digestRow({
+        id: OLD_DECISION_ID,
+        type: "decision",
+        sourceId: SOURCE_OLD,
+        title: "지워진 결정",
+      }),
+      hidden_at: CREATED_AT,
+    };
+    mockSearchNeighbors.mockResolvedValue([
+      { digestId: OLD_DECISION_ID, score: 0.8 },
+    ]);
+
+    const { relations } = await link({
+      digests: [toDigest(learning)],
+      rows: [learning, hidden],
+    });
+
+    expect(mockGenerateStructured).not.toHaveBeenCalled();
+    expect(relations.get(LEARNING_ID)).toEqual([]);
   });
 
   it("이미 이어진 쌍은 건너뛰고 나머지 쌍은 그대로 저장한다", async () => {

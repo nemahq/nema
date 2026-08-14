@@ -136,11 +136,13 @@ export async function getDigestRelations(args: {
 }): Promise<DigestRelation[]> {
   const { supabase, userId, digestId } = args;
 
-  // RLS(owner-only)라 남의/없는 digestId는 여기서 not-found로 걸린다.
+  // RLS(owner-only)라 남의/없는 digestId는 여기서 not-found로 걸린다. 가려진 것도
+  // 마찬가지다 — 지워진 다이제스트의 관련 목록이 열리면 안 된다.
   const { error: digestError } = await supabase
     .from("digests")
     .select("id")
     .eq("id", digestId)
+    .is("hidden_at", null)
     .single();
   throwIfSupabaseError(digestError);
 
@@ -155,12 +157,15 @@ export async function getDigestRelations(args: {
     row.from_digest_id === digestId ? row.to_digest_id : row.from_digest_id,
   );
 
-  const titleById = await fetchTitles({ supabase, digestIds: otherIds });
+  const { titleById, knownIds } = await fetchTitles({
+    supabase,
+    digestIds: otherIds,
+  });
 
   // 로그 저장은 응답을 기다리게 하지 않는다 — 실패 격리뿐 아니라 지연도 격리한다.
   void logGetRelations({ userId, detail: { digestId } });
 
-  return toRelations({ digestId, rows: relations, titleById });
+  return toRelations({ digestId, rows: relations, titleById, knownIds });
 }
 
 async function judgeOne(args: {
@@ -309,11 +314,16 @@ async function findCandidates(args: {
     return [];
   }
 
+  // 가려진 다이제스트는 후보에서 뺀다 — 벡터도 함께 지우니 원래는 안 걸리지만,
+  // 그 삭제가 실패해도 경고만 남기는 구조라 고아 벡터가 남을 수 있다(꺼내기 검색이
+  // 같은 조건을 거는 것과 같은 이유). 사용자에게 지워진 것이 근거로 되살아나면
+  // 관련 목록에 없는 다이제스트의 제목이 뜬다.
   const { data: rows, error } = await supabase
     .from("digests")
     .select("id, source_id, type, title, body, created_at")
     .in("id", [...scoreById.keys()])
-    .in("type", candidateTypes);
+    .in("type", candidateTypes)
+    .is("hidden_at", null);
   throwIfSupabaseError(error);
 
   // 같은 원문 안은 자기보다 앞선 것만 본다 — 배열 순서를 순서로 쓴다. 원문 등장
@@ -437,8 +447,9 @@ function toRelations(args: {
   digestId: string;
   rows: RelationRow[];
   titleById: Map<string, string>;
+  knownIds?: Set<string>;
 }): DigestRelation[] {
-  const { digestId, rows, titleById } = args;
+  const { digestId, rows, titleById, knownIds } = args;
 
   return rows.flatMap((row) => {
     const end = endOf(row, digestId);
@@ -448,11 +459,13 @@ function toRelations(args: {
     const otherId = end === "from" ? row.to_digest_id : row.from_digest_id;
     const title = titleById.get(otherId);
     if (title === undefined) {
-      // 관계는 남았는데 상대 다이제스트를 못 읽는 상태 — CASCADE가 있어 정상 경로로는
-      // 안 생긴다. 조용히 빼면 관련 목록에서 한 줄이 이유 없이 사라진 걸로만 보인다.
-      console.warn(
-        `[digest-relations] 상대 다이제스트를 못 찾아 관계를 뺌 — digestId=${digestId}, otherId=${otherId}`,
-      );
+      // 가려진 상대라 빠지는 건 정상이다. 행 자체가 없으면 CASCADE가 안 돈 것이라
+      // 신호를 남긴다 — 조용히 빼면 관련 목록에서 한 줄이 이유 없이 사라진 걸로만 보인다.
+      if (knownIds && !knownIds.has(otherId)) {
+        console.warn(
+          `[digest-relations] 상대 다이제스트를 못 찾아 관계를 뺌 — digestId=${digestId}, otherId=${otherId}`,
+        );
+      }
       return [];
     }
     return [
@@ -475,22 +488,33 @@ function endOf(row: RelationRow, digestId: string): RelationEnd | null {
   return null;
 }
 
+// 가려진 상대는 제목을 안 실어 관계가 목록에서 빠진다. 그 자리를 "못 찾음"과 가르려고
+// hidden_at까지 읽는다 — 가림은 사용자가 지운 정상 경로라 조용히 빠져야 하고, 아예
+// 없는 행은 CASCADE가 있는 한 생길 수 없어 경고가 남아야 한다.
 async function fetchTitles(args: {
   supabase: TypedSupabaseClient;
   digestIds: string[];
-}): Promise<Map<string, string>> {
+}): Promise<{ titleById: Map<string, string>; knownIds: Set<string> }> {
   const { supabase, digestIds } = args;
   if (digestIds.length === 0) {
-    return new Map();
+    return { titleById: new Map(), knownIds: new Set() };
   }
 
   const { data, error } = await supabase
     .from("digests")
-    .select("id, title")
+    .select("id, title, hidden_at")
     .in("id", digestIds);
   throwIfSupabaseError(error);
 
-  return new Map((data ?? []).map((row) => [row.id, row.title]));
+  const rows = data ?? [];
+  return {
+    titleById: new Map(
+      rows
+        .filter((row) => row.hidden_at === null)
+        .map((row) => [row.id, row.title]),
+    ),
+    knownIds: new Set(rows.map((row) => row.id)),
+  };
 }
 
 type DigestDetailRow = Pick<

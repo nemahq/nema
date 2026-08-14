@@ -105,11 +105,14 @@ export async function getDigest(args: {
 }): Promise<DigestDetail> {
   const { supabase, userId, digestId } = args;
 
-  // RLS(owner-only)라 남의/없는 digestId는 여기서 not-found로 걸린다.
+  // RLS(owner-only)라 남의/없는 digestId는 여기서 not-found로 걸린다. 가려진 것도
+  // 같은 자리에서 not-found가 된다 — 사용자에게는 지워진 것으로 보이므로 id를 들고
+  // 다시 물어도 돌아오면 안 된다.
   const { data, error } = await supabase
     .from("digests")
     .select("id, source_id, type, title, body, created_at")
     .eq("id", digestId)
+    .is("hidden_at", null)
     .single();
   throwIfSupabaseError(error);
 

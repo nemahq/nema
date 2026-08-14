@@ -92,12 +92,14 @@ async function seedPair(user: TestUser): Promise<{
         type: "decision",
         title: "주 1회로 한다",
         body: { choice: "주 1회" },
+        extraction_order: 0,
       },
       {
         source_id: source.id,
         type: "learning",
         title: "일 단위는 7배 비싸다",
         body: { finding: "호출이 7배" },
+        extraction_order: 1,
       },
     ])
     .select("id, type");
