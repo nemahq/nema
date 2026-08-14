@@ -15,17 +15,24 @@ ALTER TABLE sources DROP COLUMN name;
 
 ALTER TABLE sources ADD COLUMN title text;
 
--- title이 NOT NULL이 아니라 coalesce 표현식 자체는 null일 수 있지만, body가
--- NOT NULL이라 coalesce의 두 번째 인자가 항상 값을 채워 결과는 never null이다 —
--- 이전 정의와 마찬가지로 NOT NULL을 명시해 타입 생성에서 `string`으로 떨어지게 한다.
+-- title 하나만 보면 nullable이지만, coalesce가 body(NOT NULL)로 받아 결과는
+-- never null이다 — 이전 정의와 마찬가지로 NOT NULL을 명시해 타입 생성에서
+-- `string`으로 떨어지게 한다.
+--
+-- 200자 상한은 title에도 그대로 건다 — coalesce 뒤에 자르지 않고 left(btrim(...))
+-- 밖으로 빼면, title이 있든 없든 상한을 벗어날 길이 없다. title은 짧은 헤드라인을
+-- 요구하는 프롬프트가 만들지만, 그 상한은 프롬프트가 지키겠다는 약속일 뿐 DB가
+-- 강제하는 값이 아니다 — 응답 폭주 방지라는 이 컬럼의 존재 이유를 title 경로에서도
+-- 놓치지 않으려면 여기서 다시 잘라야 한다.
 ALTER TABLE sources
-  ADD COLUMN name text GENERATED ALWAYS AS (coalesce(title, left(btrim(body), 200))) STORED NOT NULL;
+  ADD COLUMN name text GENERATED ALWAYS AS (left(btrim(coalesce(title, body)), 200)) STORED NOT NULL;
 
 COMMENT ON COLUMN sources.name IS
   '원문 이름 — title이 있으면 그대로, 없으면 본문 앞부분으로 대신한다(200은 폭주
-   방지 상한일 뿐 표시 폭이 아니다, 자르는 건 화면 몫이라 "…"를 안 붙인다).
-   title은 정리(정리 1콜)가 성공했을 때만 채워진다 — 실패하면 null로 남고 이
-   coalesce가 받아준다.';
+   방지 상한일 뿐 표시 폭이 아니다, 자르는 건 화면 몫이라 "…"를 안 붙인다 — title
+   경로도 이 상한을 벗어나지 않는다). title은 이 원문의 던지기(정리+색인)가 끝까지
+   성공했을 때만 채워진다 — 둘 중 하나라도 실패하면 null로 남고 이 coalesce가
+   받아준다.';
 
 COMMENT ON COLUMN sources.title IS
   '원문 제목. 정리(생성 1콜)가 원문 전체를 보고 함께 만든다 — 사람이 직접 치지

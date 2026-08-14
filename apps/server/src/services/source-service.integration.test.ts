@@ -357,6 +357,42 @@ describe("source-service (RLS)", () => {
     TEST_TIMEOUT_MS,
   );
 
+  it(
+    "재추출은 sources.title도 새 sourceTitle로 갱신한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = {
+        ...oneDecision("첫 추출"),
+        sourceTitle: "첫 추출 제목",
+      };
+      const { sourceId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "재추출 제목 갱신 테스트 원문",
+      });
+
+      mockGenerated = {
+        ...oneDecision("재추출된 결과"),
+        sourceTitle: "재추출된 제목",
+      };
+      await reExtractSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        sourceId,
+      });
+
+      const { data: source } = await userA.supabase
+        .from("sources")
+        .select("name")
+        .eq("id", sourceId)
+        .single();
+      expect(source?.name).toBe("재추출된 제목");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
   // 이 테스트가 지키는 계약: 재추출로 옛 digest_id를 잃어버린 뒤에도(새 UUID로
   // 바뀌므로) 옛 벡터를 정리 대상으로 잡아낸다 — 못 잡으면 새 결과와 거의 같은
   // 점수의 유령 벡터가 검색 결과에 영구히 섞인다.
@@ -539,10 +575,14 @@ describe("source-service (RLS)", () => {
 
       const { data: sources } = await userA.supabase
         .from("sources")
-        .select("id, digestion_status")
+        .select("id, digestion_status, title, name")
         .eq("body", body);
       expect(sources).toHaveLength(1);
       expect(sources?.[0]?.digestion_status).toBe("pending");
+      // 정리 호출 자체가 실패해 title을 쓰는 자리(saveDigestsAndIndex)까지 못
+      // 간다 — title은 null로 남고 name이 coalesce로 본문을 대신 돌려줘야 한다.
+      expect(sources?.[0]?.title).toBeNull();
+      expect(sources?.[0]?.name).toBe(body);
     },
     TEST_TIMEOUT_MS,
   );
