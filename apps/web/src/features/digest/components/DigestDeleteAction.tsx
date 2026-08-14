@@ -3,7 +3,9 @@ import { useDeleteDigest } from "@web/features/digest/hooks/useDeleteDigest";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface DigestDeleteActionProps {
-  digestId: string;
+  // 상세 헤더는 조회(digest.get) 페칭과 분리돼 있어, 그 응답이 아직 없는 동안은
+  // 삭제에 쓸 내부 id도 없다(DigestDetailPanel 참고) — 그 구간엔 undefined.
+  digestId: string | undefined;
   onDeleted: () => void;
 }
 
@@ -16,6 +18,9 @@ export function DigestDeleteAction({
   const deleteDigest = useDeleteDigest();
 
   function handleConfirm(closeDialog: () => void) {
+    if (!digestId) {
+      return;
+    }
     deleteDigest.mutate(
       { digestId },
       {
@@ -33,6 +38,7 @@ export function DigestDeleteAction({
       confirmDescription={t("digest.delete_confirm_description")}
       isPending={deleteDigest.isPending}
       isPendingAfterDelay={deleteDigest.isPendingAfterDelay}
+      disabled={digestId === undefined}
       onConfirm={handleConfirm}
     />
   );

@@ -15,7 +15,10 @@ import {
 } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
-import { useSourceSuspenseQuery } from "@web/features/source/hooks/useSourceQuery";
+import {
+  useSourceQuery,
+  useSourceSuspenseQuery,
+} from "@web/features/source/hooks/useSourceQuery";
 import { useTranslation } from "@web/lib/tolgee";
 import { isNotFoundError } from "@web/lib/trpc";
 
@@ -24,7 +27,12 @@ import { SourceDeleteAction } from "./SourceDeleteAction";
 import { SourceDetailPanelSkeleton } from "./SourceDetailPanelSkeleton";
 
 interface SourceDetailPanelProps {
-  sourceId: string;
+  sourcePublicId: string;
+  // 목록 클릭으로 열었다면 호출자가 이미 내부 id를 들고 있다(list 응답이 sourceId·
+  // publicId를 함께 싣는다) — 그 값을 넘기면 삭제가 조회 응답을 기다리지 않고 바로
+  // 가능해진다. 새로고침·딥링크로 들어와 호출자도 모르면 undefined — 이땐 아래
+  // useSourceQuery(non-suspense)가 응답을 받아오는 대로 채운다.
+  knownSourceId?: string;
   onClose: () => void;
   // 헤더 아래 상시 알림 자리 — 초안 화면이 "정리할 내용이 없어요" 경고를 꽂는다.
   // 이 컴포넌트 자신은 그 판단(결과 없음 여부)을 못 한다 — source.get 응답에
@@ -57,15 +65,16 @@ function SourceDetailCloseButton({ onClose }: SourceDetailCloseButtonProps) {
 }
 
 interface SourceDetailBodyProps {
-  sourceId: string;
+  sourcePublicId: string;
   banner?: ReactNode;
 }
 
-// 헤더(삭제·닫기)는 sourceId만 있으면 그릴 수 있는 요소라 source.get 페칭과
-// 묶을 이유가 없다 — Suspense/ErrorBoundary는 실제로 페칭에 걸리는 이 부분에만
-// 두고, 헤더는 항상 즉시 눌러진다(로딩·에러 중에도 닫기·삭제가 가능해야 한다).
-function SourceDetailBody({ sourceId, banner }: SourceDetailBodyProps) {
-  const [source] = useSourceSuspenseQuery(sourceId);
+// 헤더(삭제·닫기)는 sourcePublicId만 있으면 그릴 수 있는 요소라 source.get
+// 페칭과 묶을 이유가 없다 — Suspense/ErrorBoundary는 실제로 페칭에 걸리는 이
+// 부분에만 두고, 헤더는 항상 즉시 눌러진다(로딩·에러 중에도 닫기는 가능해야
+// 한다. 삭제는 내부 id가 필요해 SourceDeleteAction이 별도로 기다린다).
+function SourceDetailBody({ sourcePublicId, banner }: SourceDetailBodyProps) {
+  const [source] = useSourceSuspenseQuery(sourcePublicId);
 
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pt-3 pb-8">
@@ -126,10 +135,17 @@ function SourceDetailPanelError({
 // 원문 상세 — SidePanel 안에 얹는 공용 콘텐츠. 초안 화면과, 후속으로 붙는 다이제스트
 // 목록 화면이 같은 컴포넌트로 원문 상세를 연다.
 export function SourceDetailPanel({
-  sourceId,
+  sourcePublicId,
+  knownSourceId,
   onClose,
   banner,
 }: SourceDetailPanelProps) {
+  // 클릭 진입이면 knownSourceId가 이미 있다 — 그대로 쓴다. 새로고침·딥링크로
+  // 들어와 없으면 source.get 응답(캐시 공유, 아래 SourceDetailBody의
+  // useSourceSuspenseQuery와 같은 키)이 올 때까지 undefined다.
+  const { data: fetchedSource } = useSourceQuery(sourcePublicId);
+  const sourceId = knownSourceId ?? fetchedSource?.sourceId;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-11 shrink-0 items-center justify-end gap-3 px-6">
@@ -159,15 +175,15 @@ export function SourceDetailPanel({
         )}
       >
         <Suspense fallback={<SourceDetailPanelSkeleton />}>
-          {/* key={sourceId} — 열려 있는 채로 다른 원문으로 바로 전환하면(패널을 안
-              닫고 카드만 바꿔 클릭), 대상 원문 쿼리가 이미 캐시돼 있을 때(staleTime
+          {/* key={sourcePublicId} — 열려 있는 채로 다른 원문으로 바로 전환하면(패널을
+              안 닫고 카드만 바꿔 클릭), 대상 원문 쿼리가 이미 캐시돼 있을 때(staleTime
               30초, gcTime 기본 5분) useSuspenseQuery가 다시 suspend하지 않아 이
               컴포넌트가 리마운트되지 않는다 — 그러면 스크롤 컨테이너 DOM이
               재사용돼 이전 원문에서 스크롤한 위치가 새 원문에 그대로 남는다. key로
               강제 리마운트시켜 이걸 막는다. */}
           <SourceDetailBody
-            key={sourceId}
-            sourceId={sourceId}
+            key={sourcePublicId}
+            sourcePublicId={sourcePublicId}
             banner={banner}
           />
         </Suspense>

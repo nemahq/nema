@@ -43,6 +43,7 @@ export function DraftList({ onSelectSource }: DraftListProps) {
         <DraftCard
           key={draft.sourceId}
           sourceId={draft.sourceId}
+          sourcePublicId={draft.publicId}
           name={draft.name}
           bodyPreview={draft.bodyPreview}
           status={draft.status}

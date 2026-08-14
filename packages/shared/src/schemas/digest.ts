@@ -222,18 +222,32 @@ export type DigestSearchResult = z.infer<typeof DigestSearchResultSchema>;
 
 // 목록 화면 전용 얇은 모양 — body 없이 id·type·title만 싣는다(목록에는 본문을
 // 안 싣는다, 상세는 따로 조회). type은 화면이 아이콘/라벨을 고르는 데 쓴다.
+// publicId — 상세로 가는 링크(?digest=)가 쓰는 값. id(내부)는 삭제 등 주소를
+// 거치지 않는 동작에 쓰인다(둘 다 실어보내는 이유는 digest.get 입력 스키마 참고).
 export const DigestListItemSchema = z.object({
   id: z.string().uuid(),
+  publicId: z.string().regex(DIGEST_PUBLIC_ID_PATTERN),
   type: DigestTypeSchema,
   title: z.string(),
 });
 export type DigestListItem = z.infer<typeof DigestListItemSchema>;
 
-// 다이제스트 하나를 가리키는 공용 입력 — 상세 조회·관계 조회·삭제(가림)가 함께 쓴다.
+// 다이제스트 하나를 가리키는 공용 입력 — 관계 조회·삭제(가림)가 함께 쓴다.
+// get만 따로 쓰는 이유는 DigestGetInputSchema 참고.
 export const DigestActionInputSchema = z.object({
   digestId: z.string().uuid(),
 });
 export type DigestActionInput = z.infer<typeof DigestActionInputSchema>;
+
+// 상세 조회 전용 입력 — 웹은 주소(?digest=)의 public_id로 부른다. MCP(get_digest
+// 도구)는 search_digests·get_relations가 돌려준 내부 id를 그대로 이어 부르므로
+// (apps/mcp/src/server.ts) 그쪽도 받아야 한다 — 관계 조회·삭제(DigestActionInputSchema)와
+// 달리 get은 호출자가 둘로 갈린다.
+export const DigestGetInputSchema = z.union([
+  z.object({ digestPublicId: z.string().regex(DIGEST_PUBLIC_ID_PATTERN) }),
+  z.object({ digestId: z.string().uuid() }),
+]);
+export type DigestGetInput = z.infer<typeof DigestGetInputSchema>;
 
 export const DigestDeleteResultSchema = z.object({
   // 이미 가려진(또는 남의) digestId로 불러도 에러는 아니다 — source.delete와 같은 관행.

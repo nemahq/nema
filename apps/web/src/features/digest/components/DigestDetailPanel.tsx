@@ -15,7 +15,10 @@ import {
 } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { RelativeTime } from "@web/components/ui/RelativeTime";
-import { useDigestSuspenseQuery } from "@web/features/digest/hooks/useDigestQuery";
+import {
+  useDigestQuery,
+  useDigestSuspenseQuery,
+} from "@web/features/digest/hooks/useDigestQuery";
 import { useTranslation } from "@web/lib/tolgee";
 import { isNotFoundError } from "@web/lib/trpc";
 
@@ -26,7 +29,11 @@ import { DigestReadonlyBodyFields } from "./DigestReadonlyBodyFields";
 import { DigestTypeBadge } from "./DigestTypeBadge";
 
 interface DigestDetailPanelProps {
-  digestId: string;
+  digestPublicId: string;
+  // 목록 클릭으로 열었다면 호출자가 이미 내부 id를 들고 있다(SourceDetailPanel의
+  // knownSourceId와 같은 이유) — 없으면(새로고침·딥링크) 아래 useDigestQuery
+  // (non-suspense)가 응답을 받아오는 대로 채운다.
+  knownDigestId?: string;
   onClose: () => void;
 }
 
@@ -55,11 +62,13 @@ function DigestDetailCloseButton({ onClose }: DigestDetailCloseButtonProps) {
 }
 
 interface DigestDetailPanelContentProps {
-  digestId: string;
+  digestPublicId: string;
 }
 
-function DigestDetailPanelContent({ digestId }: DigestDetailPanelContentProps) {
-  const [digest] = useDigestSuspenseQuery(digestId);
+function DigestDetailPanelContent({
+  digestPublicId,
+}: DigestDetailPanelContentProps) {
+  const [digest] = useDigestSuspenseQuery(digestPublicId);
 
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pt-3 pb-8">
@@ -131,9 +140,16 @@ function DigestDetailPanelError({
 // SourceDetailPanel과 같은 이유로 헤더는 페칭과 별개로 즉시 눌러진다). 시각은
 // 원문 상세와 자리를 맞추려고 휴지통 버튼 왼쪽에 둔다.
 export function DigestDetailPanel({
-  digestId,
+  digestPublicId,
+  knownDigestId,
   onClose,
 }: DigestDetailPanelProps) {
+  // 클릭 진입이면 knownDigestId가 이미 있다 — 그대로 쓴다. 새로고침·딥링크로
+  // 들어와 없으면 digest.get 응답(캐시 공유, 아래 DigestDetailPanelContent의
+  // useDigestSuspenseQuery와 같은 키)이 올 때까지 undefined다.
+  const { data: fetchedDigest } = useDigestQuery(digestPublicId);
+  const digestId = knownDigestId ?? fetchedDigest?.id;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-11 shrink-0 items-center justify-end gap-3 px-6">
@@ -162,7 +178,7 @@ export function DigestDetailPanel({
         )}
       >
         <Suspense fallback={<DigestDetailPanelSkeleton />}>
-          <DigestDetailPanelContent digestId={digestId} />
+          <DigestDetailPanelContent digestPublicId={digestPublicId} />
         </Suspense>
       </ErrorBoundary>
     </div>

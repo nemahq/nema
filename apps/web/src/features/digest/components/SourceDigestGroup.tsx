@@ -1,4 +1,4 @@
-import type { SourceWithDigests } from "@nema-io/shared";
+import type { DigestListItem, SourceWithDigests } from "@nema-io/shared";
 import {
   Button,
   Separator,
@@ -16,14 +16,16 @@ import { DigestListRow } from "./DigestListRow";
 
 interface SourceDigestGroupProps {
   source: SourceWithDigests;
-  selectedDigestId: string | null;
-  onOpenSource: (sourceId: string) => void;
+  selectedDigestPublicId: string | null;
+  onOpenSource: (source: SourceWithDigests) => void;
+  onOpenDigest?: (digest: DigestListItem) => void;
 }
 
 export function SourceDigestGroup({
   source,
-  selectedDigestId,
+  selectedDigestPublicId,
   onOpenSource,
+  onOpenDigest,
 }: SourceDigestGroupProps) {
   const { t } = useTranslation();
 
@@ -60,7 +62,7 @@ export function SourceDigestGroup({
               variant="ghost"
               shape="circle"
               aria-label={t("source.open_detail_label")}
-              onClick={() => onOpenSource(source.sourceId)}
+              onClick={() => onOpenSource(source)}
               className="size-7 text-fg-tertiary"
             >
               <FileText className="size-3.5" />
@@ -78,7 +80,8 @@ export function SourceDigestGroup({
           <DigestListRow
             key={digest.id}
             digest={digest}
-            selected={digest.id === selectedDigestId}
+            selected={digest.publicId === selectedDigestPublicId}
+            onOpen={onOpenDigest}
           />
         ))}
       </div>
