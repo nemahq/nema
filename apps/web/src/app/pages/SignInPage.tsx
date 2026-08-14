@@ -119,10 +119,19 @@ export function SignInPage() {
                 size="lg"
                 onClick={handleGoogleSignIn}
                 disabled={googleLoading || emailLoading}
-                className="w-full"
+                // Radix 트리거 전용인 data-[state=open] 톤을 로딩 중 hover
+                // 표시로 그대로 재사용한다 — 새 CSS 없이 기존 톤을 빌린다.
+                data-state={googleLoading ? "open" : undefined}
+                className={`w-full ${googleLoading ? "!opacity-100" : ""}`}
               >
-                <GoogleIcon className="size-5" />
-                {t("auth.continue_with_google")}
+                {googleLoading ? (
+                  <LoaderCircle className="size-5 animate-spin" />
+                ) : (
+                  <>
+                    <GoogleIcon className="size-5" />
+                    {t("auth.continue_with_google")}
+                  </>
+                )}
               </Button>
 
               <div className="flex items-center gap-3">
@@ -140,6 +149,7 @@ export function SignInPage() {
                   placeholder={t("auth.email_placeholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={emailLoading || googleLoading}
                   required
                 />
                 <Button
@@ -147,7 +157,8 @@ export function SignInPage() {
                   size="lg"
                   type="submit"
                   disabled={emailLoading || googleLoading}
-                  className="w-full"
+                  data-state={emailLoading ? "open" : undefined}
+                  className={`w-full ${emailLoading ? "!opacity-100" : ""}`}
                 >
                   {emailLoading ? (
                     <LoaderCircle className="size-4 animate-spin" />
