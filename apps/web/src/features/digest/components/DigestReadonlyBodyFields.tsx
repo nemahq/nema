@@ -81,7 +81,7 @@ export function DigestReadonlyBodyFields({
               <ul className="flex flex-col gap-2">
                 {options.map((entry, index) => (
                   <DigestFieldBullet key={index}>
-                    <Text as="span" size="sm" color="primary">
+                    <Text as="span" size="base" color="primary">
                       {entry.option}
                     </Text>
                     {entry.detail !== undefined && (
