@@ -45,10 +45,11 @@ Each candidate line lists which relations are allowed for that pair. Anything
 outside that list is not available for that candidate; when in doubt use
 "${NO_RELATION}".
 
-"from" names which of the two is the giving side — the one doing the supporting
-or weakening. Answer it ONLY when the candidate line says "from: ask"; leave it
-null otherwise, including when the relation is "${NO_RELATION}". When you do
-answer it, decide from what the two digests say, never from which came first.`;
+"from" names which of the two the relation runs from; what that means for this
+kind of relation is spelled out above. Answer it ONLY when the candidate line
+says "from: ask"; leave it null otherwise, including when the relation is
+"${NO_RELATION}". When you do answer it, decide from what the two digests say,
+never from which came first.`;
 }
 
 interface CandidateForPrompt {
