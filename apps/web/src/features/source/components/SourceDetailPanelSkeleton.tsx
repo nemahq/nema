@@ -6,16 +6,14 @@ const BODY_LINE_WIDTHS = ["100%", "100%", "92%", "100%", "64%"];
 
 export function SourceDetailPanelSkeleton() {
   return (
-    <>
-      <div className="px-6 pt-3">
-        <TextSkeleton size="xl" className="w-2/3 max-w-80" />
-      </div>
+    <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pt-3 pb-8">
+      <TextSkeleton size="xl" className="w-2/3 max-w-80" />
 
-      <div className="flex flex-1 flex-col gap-2 px-6 py-4">
+      <div className="flex flex-col gap-2">
         {BODY_LINE_WIDTHS.map((width, index) => (
           <TextSkeleton key={index} size="sm" style={{ width }} />
         ))}
       </div>
-    </>
+    </div>
   );
 }

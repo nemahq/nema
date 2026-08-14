@@ -67,17 +67,15 @@ function SourceDetailBody({ sourceId, banner }: SourceDetailBodyProps) {
   const [source] = useSourceSuspenseQuery(sourceId);
 
   return (
-    <>
-      {banner && <div className="px-6 pt-3">{banner}</div>}
+    <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pt-3 pb-8">
+      {banner}
 
-      <Text as="h2" size="xl" weight="bold" className="px-6 pt-3">
+      <Text as="h2" size="xl" weight="bold">
         {source.name}
       </Text>
 
-      <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
-        <SourceBodyView body={source.body} />
-      </div>
-    </>
+      <SourceBodyView body={source.body} />
+    </div>
   );
 }
 
@@ -140,9 +138,9 @@ export function SourceDetailPanel({
           {/* key={sourceId} — 열려 있는 채로 다른 원문으로 바로 전환하면(패널을 안
               닫고 카드만 바꿔 클릭), 대상 원문 쿼리가 이미 캐시돼 있을 때(staleTime
               30초, gcTime 기본 5분) useSuspenseQuery가 다시 suspend하지 않아 이
-              컴포넌트가 리마운트되지 않는다 — 그러면 본문 textarea DOM이 재사용돼
-              이전 원문에서 스크롤한 위치가 새 원문에 그대로 남는다. key로 강제
-              리마운트시켜 이걸 막는다. */}
+              컴포넌트가 리마운트되지 않는다 — 그러면 스크롤 컨테이너 DOM이
+              재사용돼 이전 원문에서 스크롤한 위치가 새 원문에 그대로 남는다. key로
+              강제 리마운트시켜 이걸 막는다. */}
           <SourceDetailBody
             key={sourceId}
             sourceId={sourceId}
