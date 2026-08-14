@@ -502,7 +502,27 @@ describe("source-service (RLS)", () => {
         return;
       }
       mockGenerated = oneDecision("관계가 안 붙는 결정");
+      // 앞 갈래(중복·충돌)만 죽인다 — 뒤 갈래가 이은 것은 그대로 살아야 한다.
+      // 둘 다 빈 Map으로 두면 "한 갈래만 잃었다"와 "merge가 통째로 깨졌다"가
+      // 똑같이 빈 배열로 보여 구별이 안 된다.
       mockLinkRelations.mockRejectedValueOnce(new Error("qdrant down"));
+      mockLinkRelations.mockImplementationOnce(
+        (args: { digests: Array<{ id: string }> }) =>
+          Promise.resolve(
+            new Map(
+              args.digests.map((digest) => [
+                digest.id,
+                [
+                  {
+                    type: "supports",
+                    digestId: digest.id,
+                    title: "살아남은 관계",
+                  },
+                ],
+              ]),
+            ),
+          ),
+      );
 
       const { sourceId, digests } = await ingestSource({
         supabase: userA.supabase,
@@ -511,7 +531,13 @@ describe("source-service (RLS)", () => {
       });
 
       expect(digests).toHaveLength(1);
-      expect(digests[0]?.relations).toEqual([]);
+      expect(digests[0]?.relations).toEqual([
+        {
+          type: "supports",
+          digestId: digests[0]?.id,
+          title: "살아남은 관계",
+        },
+      ]);
 
       const { data: source } = await userA.supabase
         .from("sources")
@@ -535,25 +561,32 @@ describe("source-service (RLS)", () => {
         return;
       }
       mockGenerated = oneDecision("갈래 순서 결정");
+      // 호출 순서만 재면 Promise.all로 바뀌어도 통과한다 — 두 갈래가 같은 시점에 떠
+      // 있었는지를 함께 본다. 그게 unique 위반의 승자를 뒤집는 자리다.
+      let inFlight = 0;
+      let maxInFlight = 0;
       mockLinkRelations.mockImplementation(
-        (args: {
+        async (args: {
           digests: Array<{ id: string }>;
           judgment: { name: string };
-        }) =>
-          Promise.resolve(
-            new Map(
-              args.digests.map((digest) => [
-                digest.id,
-                [
-                  {
-                    type: args.judgment.name,
-                    digestId: digest.id,
-                    title: args.judgment.name,
-                  },
-                ],
-              ]),
-            ),
-          ),
+        }) => {
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          await new Promise((resolve) => setImmediate(resolve));
+          inFlight -= 1;
+          return new Map(
+            args.digests.map((digest) => [
+              digest.id,
+              [
+                {
+                  type: args.judgment.name,
+                  digestId: digest.id,
+                  title: args.judgment.name,
+                },
+              ],
+            ]),
+          );
+        },
       );
 
       const { digests } = await ingestSource({
@@ -562,6 +595,7 @@ describe("source-service (RLS)", () => {
         body: "갈래 순서 원문",
       });
 
+      expect(maxInFlight).toBe(1);
       expect(
         mockLinkRelations.mock.calls.map(
           (call) => (call[0] as { judgment: { name: string } }).judgment.name,

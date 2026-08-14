@@ -32,6 +32,12 @@ export interface RelationPairRule {
 }
 
 /**
+ * 갈래 이름. 이 값이 relation_judgments.judgment로 그대로 나가 문턱을 갈래별로 볼 때의
+ * 조인 키가 된다 — 오타 하나가 점수 분포를 조용히 둘로 쪼개므로 열어두지 않는다.
+ */
+export type RelationJudgmentName = "support_weaken" | "duplicate_conflict";
+
+/**
  * 한 판정에서 함께 갈리는 관계 종류 묶음(= 갈래). 갈래 하나가 LLM에게 던지는 질문
  * 하나이고, 안에 든 관계 종류는 그 질문의 답 선택지다.
  *
@@ -45,7 +51,7 @@ export interface RelationJudgment {
    * 나누려면 점수 분포가 섞이면 안 되는데, verdict 대부분이 none이라 이 이름이
    * 없으면 어느 질문에 대한 none인지 구별이 안 된다.
    */
-  name: string;
+  name: RelationJudgmentName;
   /** 신규 유형(행) × 후보 유형(열) → 방향과 관계 종류. 곧 유형별 후보 범위이기도 하다. */
   pairs: Record<DigestType, Record<DigestType, RelationPairRule | null>>;
   /** 같은 원문 안 다이제스트를 후보로 볼지. */
@@ -152,8 +158,8 @@ function sameTypeOnly(
   return {
     ...NO_CANDIDATE,
     // 방향은 LLM에게 안 묻는다 — 중복·충돌은 논리적으로 대칭이라 "새로 온 쪽이 이미
-    // 쌓인 쪽을 대체하는 방향"으로 고정하면 그만이다(linking.md 2.3). 지지·약화에서
-    // 둘 다 결정일 때 물었던 것과 갈리는 대목이다.
+    // 쌓인 쪽을 대체하는 방향"으로 고정하면 그만이다(linking.md 2.2 "뒤늦게 몰아서
+    // 다시 잇지 않는다"). 지지·약화에서 둘 다 결정일 때 물었던 것과 갈리는 대목이다.
     [newType]: { direction: "newIsFrom", types },
   };
 }

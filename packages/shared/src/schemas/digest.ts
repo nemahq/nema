@@ -133,7 +133,7 @@ export type DigestRelationType = z.infer<typeof DigestRelationTypeSchema>;
 // 관계의 두 끝. from이 하는 쪽(지지·약화하는 쪽), to가 받는 쪽 — 지지·약화에서
 // 받는 쪽은 늘 결정이다(linking.md 2.7). digest_relations의 컬럼명과 같다.
 // 중복·충돌은 논리적으로 대칭이지만 저장은 방향 있게 한다: from이 새로 온 쪽,
-// to가 이미 쌓여 있던 쪽이다(linking.md 2.3).
+// to가 이미 쌓여 있던 쪽이다(linking.md 2.2 "뒤늦게 몰아서 다시 잇지 않는다").
 export type RelationEnd = "from" | "to";
 
 // 관계는 한 방향으로 저장되지만 관련 목록에는 양쪽 다 뜬다(linking.md 2.3).

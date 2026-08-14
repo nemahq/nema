@@ -106,8 +106,10 @@ export async function linkRelations(args: {
         digests,
         judgment,
       }).catch((error: unknown) => {
+        // 갈래를 남긴다 — 갈래가 둘이 되면서 "어느 질문의 판정이 죽었나"가 로그에서
+        // 안 보이면, 그 다이제스트에 왜 덜 정확한 관계가 붙었는지 나중에 못 짚는다.
         console.warn(
-          `[digest-relations] 판정 실패 — digestId=${digest.id}:`,
+          `[digest-relations] 판정 실패 — digestId=${digest.id}, judgment=${judgment.name}:`,
           error,
         );
         return { rows: [] as RelationRow[], candidates: [] as Candidate[] };
