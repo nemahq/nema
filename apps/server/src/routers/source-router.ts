@@ -4,6 +4,7 @@ import {
   SourceActionInputSchema,
   SourceDeleteManyInputSchema,
   SourceIngestInputSchema,
+  SourceListWithDigestsInputSchema,
 } from "@nema-io/shared";
 
 import { isNotFoundError } from "@server/infra/supabase/supabase-error";
@@ -19,10 +20,17 @@ import {
 import { protectedProcedure, router } from "@server/trpc";
 
 export const sourceRouter = router({
-  // 다이제스트 목록 화면 — 원문 헤더 > 다이제스트 행의 2층 목록.
-  listWithDigests: protectedProcedure.query(({ ctx }) =>
-    listSourcesWithDigests({ supabase: ctx.supabase }),
-  ),
+  // 다이제스트 목록 화면 — 원문 헤더 > 다이제스트 행의 2층 목록. 원문 단위 커서
+  // 페이지네이션(SourceListWithDigestsCursorSchema 참고).
+  listWithDigests: protectedProcedure
+    .input(SourceListWithDigestsInputSchema)
+    .query(({ ctx, input }) =>
+      listSourcesWithDigests({
+        supabase: ctx.supabase,
+        cursor: input.cursor ?? null,
+        limit: input.limit,
+      }),
+    ),
 
   // 초안 화면 — 다이제스트가 없는(정리 실패 또는 처리 중) 원문만.
   list: protectedProcedure.query(({ ctx }) =>

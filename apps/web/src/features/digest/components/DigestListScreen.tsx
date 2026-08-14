@@ -9,21 +9,20 @@ import { DigestListBody } from "./DigestListBody";
 interface DigestListScreenProps {
   selectedDigestId: string | null;
   selectedSourceId: string | null;
-  onSelectDigest: (digestId: string | null) => void;
+  // 행이 Link로 바뀌면서 다이제스트를 "여는" 경로는 URL 내비게이션이 도맡는다 —
+  // 이 화면이 스스로 트리거하는 건 닫기뿐이라 string | null이 아니라 닫기 전용
+  // 시그니처로 좁힌다.
+  onCloseDigest: () => void;
   onSelectSource: (sourceId: string | null) => void;
 }
 
 export function DigestListScreen({
   selectedDigestId,
   selectedSourceId,
-  onSelectDigest,
+  onCloseDigest,
   onSelectSource,
 }: DigestListScreenProps) {
   const { t } = useTranslation();
-
-  function handleCloseDigest() {
-    onSelectDigest(null);
-  }
 
   function handleCloseSource() {
     onSelectSource(null);
@@ -35,7 +34,6 @@ export function DigestListScreen({
         <NavigationBar items={[{ label: t("digest.nav_label") }]} />
         <DigestListBody
           selectedDigestId={selectedDigestId}
-          onSelectDigest={onSelectDigest}
           onSelectSource={onSelectSource}
         />
       </div>
@@ -43,10 +41,10 @@ export function DigestListScreen({
       {/* 다이제스트와 원문이 사이드뷰 한 자리를 나눠 쓴다 — URL이 둘 중 하나만
           담으므로 여기서도 다이제스트를 먼저 보고 없으면 원문을 본다. */}
       {selectedDigestId !== null && (
-        <SidePanel boundaryName="digest-detail" onClose={handleCloseDigest}>
+        <SidePanel boundaryName="digest-detail" onClose={onCloseDigest}>
           <DigestDetailPanel
             digestId={selectedDigestId}
-            onClose={handleCloseDigest}
+            onClose={onCloseDigest}
           />
         </SidePanel>
       )}

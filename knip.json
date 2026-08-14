@@ -10,7 +10,6 @@
     "apps/web/src/components/ui/TabbedPanel.tsx",
     "apps/web/src/components/ui/TabbedPanelLayout.tsx",
     "apps/web/src/hooks/useDebouncedValue.ts",
-    "apps/web/src/hooks/useIntersectionEffect.ts",
     "apps/web/src/hooks/useTypewriter.ts"
   ],
   "tags": ["-lintignore"],
