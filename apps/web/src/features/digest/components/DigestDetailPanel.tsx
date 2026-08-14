@@ -159,7 +159,9 @@ export function DigestDetailPanel({
           shouldReport={() => false}
         >
           <Suspense fallback={null}>
-            <DigestDetailTimestamp digestId={digestId} />
+            {digestId !== undefined && (
+              <DigestDetailTimestamp digestId={digestId} />
+            )}
           </Suspense>
         </ErrorBoundary>
         <div className="-mr-1 flex shrink-0 items-center gap-1">

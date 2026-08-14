@@ -155,7 +155,9 @@ export function SourceDetailPanel({
           shouldReport={() => false}
         >
           <Suspense fallback={null}>
-            <SourceDetailTimestamp sourceId={sourceId} />
+            {sourceId !== undefined && (
+              <SourceDetailTimestamp sourceId={sourceId} />
+            )}
           </Suspense>
         </ErrorBoundary>
         <div className="-mr-1 flex shrink-0 items-center gap-1">
