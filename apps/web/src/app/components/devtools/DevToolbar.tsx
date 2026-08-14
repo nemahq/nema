@@ -7,7 +7,7 @@ import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useTheme } from "@web/app/providers/ThemeProvider";
 import { useAuth } from "@web/lib/auth";
 import { supabase } from "@web/lib/supabase";
-import { changeLocale, type Locale, useCurrentLocale } from "@web/lib/tolgee";
+import { changeLocale, isLocale, type Locale, tolgee } from "@web/lib/tolgee";
 import type { ThemePreference } from "@web/utils/theme-preference";
 
 const ReactQueryDevtools = lazy(() =>
@@ -33,7 +33,26 @@ export function DevToolbar() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [queryDevtools, setQueryDevtools] = useState(false);
-  const currentLocale = useCurrentLocale();
+  // tolgee의 'language' 이벤트는 changeLanguage()의 cache.loadRecords()가 끝난
+  // 뒤에만 발화돼서, 그 값을 그대로 구독하면 실제 언어 전환보다 패널 표시가
+  // 뒤처진다 — PreferencesSection의 App language 셀렉트와 동일하게 클릭 시
+  // 낙관적으로 반영하고 실패하면 롤백한다.
+  const [currentLocale, setCurrentLocale] = useState<Locale>(() => {
+    const lang = tolgee.getLanguage();
+    return lang && isLocale(lang) ? lang : "ko";
+  });
+
+  async function handleLocaleChange(l: Locale) {
+    const previousLocale = currentLocale;
+    setCurrentLocale(l);
+    try {
+      await changeLocale(l);
+    } catch (error) {
+      setCurrentLocale(previousLocale);
+      // eslint-disable-next-line no-console
+      console.error(error);
+    }
+  }
 
   return (
     <>
@@ -94,7 +113,7 @@ export function DevToolbar() {
                   <button
                     key={l}
                     type="button"
-                    onClick={() => changeLocale(l)}
+                    onClick={() => handleLocaleChange(l)}
                     className={toggleClass(currentLocale === l)}
                   >
                     {l.toUpperCase()}
@@ -104,13 +123,15 @@ export function DevToolbar() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="font-semibold text-fg-tertiary">Query</span>
+              <span className="font-semibold text-fg-tertiary">
+                Query Devtools
+              </span>
               <button
                 type="button"
                 onClick={() => setQueryDevtools((prev) => !prev)}
                 className={toggleClass(queryDevtools)}
               >
-                {queryDevtools ? "ON" : "OFF"}
+                {queryDevtools ? "OFF" : "ON"}
               </button>
             </div>
           </div>
