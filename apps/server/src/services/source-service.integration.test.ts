@@ -1242,6 +1242,65 @@ describe("listSourcesWithDigests (RLS)", () => {
     TEST_TIMEOUT_MS,
   );
 
+  // 핵심 불변식: relationCount(목록)와 getDigestRelations 줄 수(상세)가 어긋나면
+  // 안 된다. 이 스위트는 linkRelations를 mock해 실제 관계가 안 생기므로, 관계
+  // 행은 admin으로 직접 심고 가려진 상대가 개수에서도 똑같이 빠지는지를 본다.
+  it(
+    "relationCount는 가려진 상대를 뺀 관계 개수와 같다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = twoDecisions(["관계 카운트 A", "관계 카운트 B"]);
+      const { sourceId, digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "관계 카운트 테스트 원문",
+      });
+      const [first, second] = digests;
+      const firstId = first?.id ?? "";
+      const secondId = second?.id ?? "";
+      expect(firstId).not.toBe("");
+      expect(secondId).not.toBe("");
+
+      const { error: relationError } = await admin
+        .from("digest_relations")
+        .insert({
+          from_digest_id: secondId,
+          to_digest_id: firstId,
+          type: "support",
+        });
+      expect(relationError).toBeNull();
+
+      async function relationCountsFor(): Promise<Record<string, number>> {
+        const result = await listSourcesWithDigests({
+          supabase: userA.supabase,
+          cursor: null,
+          limit: LIST_WITH_DIGESTS_TEST_LIMIT,
+        });
+        const entry = result.items.find((s) => s.sourceId === sourceId);
+        return Object.fromEntries(
+          (entry?.digests ?? []).map((d) => [d.id, d.relationCount]),
+        );
+      }
+
+      expect(await relationCountsFor()).toMatchObject({
+        [firstId]: 1,
+        [secondId]: 1,
+      });
+
+      // 상대(first)를 가리면 second 쪽 개수도 같이 줄어야 한다.
+      await admin
+        .from("digests")
+        .update({ trashed_at: new Date().toISOString() })
+        .eq("id", firstId);
+
+      const afterHide = await relationCountsFor();
+      expect(afterHide[secondId]).toBe(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
   it(
     "다른 사용자의 원문은 안 보여준다",
     async () => {

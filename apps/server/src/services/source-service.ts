@@ -362,6 +362,10 @@ export async function listSourcesWithDigests(args: {
       .filter((digest) => digest.trashed_at === null)
       .map((digest) => digest.id),
   );
+  // 실패해도 폴백(예: relationCount: 0)으로 넘기지 않고 그대로 던진다 — 조회가
+  // 반쯤 실패한 채로 0을 채우면 "관계가 실제로 있는데 0개로 보이는" 조용히
+  // 틀리는 종류의 버그가 된다(킥오프가 명시적으로 경계한 것). 목록 전체가
+  // 잠깐 실패하는 게 개수를 거짓으로 보여주는 것보다 낫다.
   const relationCountById = await getRelationCounts({
     supabase,
     digestIds: visibleDigestIds,

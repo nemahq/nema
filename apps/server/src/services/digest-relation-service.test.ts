@@ -35,7 +35,10 @@ vi.mock("@server/services/mcp-tool-call-log-service", () => ({
   logGetRelations: mockLogGetRelations,
 }));
 
-import { linkRelations } from "@server/services/digest-relation-service";
+import {
+  getRelationCounts,
+  linkRelations,
+} from "@server/services/digest-relation-service";
 import type { RelationJudgment } from "@server/services/relation-rules";
 import {
   DUPLICATE_CONFLICT_JUDGMENT,
@@ -725,5 +728,176 @@ describe("linkRelations — 중복·충돌", () => {
     });
 
     expect(saved).toEqual([]);
+  });
+});
+
+// getRelationCounts — 목록 개수와 상세(getDigestRelations) 줄 수가 어긋나면 안
+// 된다는 PR의 핵심 불변식을 직접 잰다. fetchRelationCounterparts를 공유해도
+// addCounterpart의 배치 경계 로직은 이 함수만의 것이라 별도로 검증해야 한다.
+describe("getRelationCounts", () => {
+  function fakeCountsSupabase(args: {
+    digestRows: DigestRow[];
+    relationRows: RelationRow[];
+  }): TypedSupabaseClient {
+    const { digestRows, relationRows } = args;
+
+    function digestsQuery(onlyVisible: boolean) {
+      return {
+        select: () => ({
+          in: (_column: string, ids: string[]) => {
+            const result = Promise.resolve({
+              data: digestRows.filter(
+                (row) =>
+                  ids.includes(row.id) &&
+                  (!onlyVisible || (row.trashed_at ?? null) === null),
+              ),
+              error: null,
+            });
+            // v_visible_digests 쪽 호출만 .returns<>()로 한 번 더 체이닝한다
+            // (fetchRelationCounterparts 참고) — 그대로 자기 자신을 돌려준다.
+            return Object.assign(result, { returns: () => result });
+          },
+        }),
+      };
+    }
+
+    const from = vi.fn((table: string) => {
+      if (table === "v_visible_digests") {
+        return digestsQuery(true);
+      }
+      if (table === "digests") {
+        return digestsQuery(false);
+      }
+      if (table === "digest_relations") {
+        return {
+          select: () => ({
+            in: (column: "from_digest_id" | "to_digest_id", ids: string[]) =>
+              Promise.resolve({
+                data: relationRows.filter((row) => ids.includes(row[column])),
+                error: null,
+              }),
+          }),
+        };
+      }
+      throw new Error(`fakeCountsSupabase: unexpected table "${table}"`);
+    });
+
+    return { from } as unknown as TypedSupabaseClient;
+  }
+
+  it("가려진 상대는 개수에서 뺀다 — getDigestRelations와 같은 기준이어야 한다", async () => {
+    const decision = digestRow({
+      id: DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_NEW,
+      title: "새 결정",
+    });
+    const learning = digestRow({
+      id: LEARNING_ID,
+      type: "learning",
+      sourceId: SOURCE_NEW,
+      title: "알게 됨",
+    });
+    const hiddenOlder = {
+      ...digestRow({
+        id: OLD_DECISION_ID,
+        type: "decision",
+        sourceId: SOURCE_OLD,
+        title: "지워진 결정",
+      }),
+      trashed_at: CREATED_AT,
+    };
+    const supabase = fakeCountsSupabase({
+      digestRows: [decision, learning, hiddenOlder],
+      relationRows: [
+        {
+          from_digest_id: LEARNING_ID,
+          to_digest_id: DECISION_ID,
+          type: "support",
+        },
+        {
+          from_digest_id: LEARNING_ID,
+          to_digest_id: OLD_DECISION_ID,
+          type: "support",
+        },
+      ],
+    });
+
+    const counts = await getRelationCounts({
+      supabase,
+      digestIds: [DECISION_ID, LEARNING_ID],
+    });
+
+    // learning은 실제로 관계 둘(decision, 지워진 older)을 걸고 있지만, 지워진
+    // 쪽은 안 세야 한다 — 안 그러면 목록엔 2가 찍히고 상세엔 1줄만 뜬다.
+    expect(counts.get(LEARNING_ID)).toBe(1);
+    expect(counts.get(DECISION_ID)).toBe(1);
+  });
+
+  it("배치 밖 다이제스트끼리의 관계는 안 센다", async () => {
+    const decision = digestRow({
+      id: DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_NEW,
+      title: "새 결정",
+    });
+    const learning = digestRow({
+      id: LEARNING_ID,
+      type: "learning",
+      sourceId: SOURCE_NEW,
+      title: "알게 됨",
+    });
+    const older = digestRow({
+      id: OLD_DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_OLD,
+      title: "옛 결정",
+    });
+    const supabase = fakeCountsSupabase({
+      digestRows: [decision, learning, older],
+      relationRows: [
+        // decision은 배치 밖이라, decision↔older 관계는 learning의 개수에
+        // 섞여 들면 안 된다.
+        {
+          from_digest_id: DECISION_ID,
+          to_digest_id: OLD_DECISION_ID,
+          type: "support",
+        },
+        {
+          from_digest_id: LEARNING_ID,
+          to_digest_id: OLD_DECISION_ID,
+          type: "support",
+        },
+      ],
+    });
+
+    // decision을 배치에서 뺀다 — learning만 조회 대상.
+    const counts = await getRelationCounts({
+      supabase,
+      digestIds: [LEARNING_ID],
+    });
+
+    expect(counts.get(LEARNING_ID)).toBe(1);
+    expect(counts.has(DECISION_ID)).toBe(false);
+  });
+
+  it("관계가 없는 다이제스트는 0을 돌려준다", async () => {
+    const decision = digestRow({
+      id: DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_NEW,
+      title: "새 결정",
+    });
+    const supabase = fakeCountsSupabase({
+      digestRows: [decision],
+      relationRows: [],
+    });
+
+    const counts = await getRelationCounts({
+      supabase,
+      digestIds: [DECISION_ID],
+    });
+
+    expect(counts.get(DECISION_ID)).toBe(0);
   });
 });

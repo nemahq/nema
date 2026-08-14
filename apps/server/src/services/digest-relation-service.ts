@@ -177,19 +177,39 @@ export async function getRelationCounts(args: {
     return new Map();
   }
 
-  // digestIds는 digests.id(uuid) 값만 모여 있어 콤마·괄호를 못 담는다 — .or()
-  // 문자열 조립이 PostgREST 필터 구문 인젝션에 안전하다(getDigestRelations의
-  // 단일 eq() 조립과 같은 전제).
-  const idList = digestIds.join(",");
-  const { data: rows, error } = await supabase
-    .from("digest_relations")
-    .select("from_digest_id, to_digest_id")
-    .or(`from_digest_id.in.(${idList}),to_digest_id.in.(${idList})`);
-  throwIfSupabaseError(error);
+  // .or()로 한 요청에 담으면 목록이 문자열에 두 번(from·to) 들어가 목록이 크면
+  // (다이제스트가 많은 페이지) GET URL이 프록시 한도를 넘길 수 있다 — from·to를
+  // 각각 .in()으로 나눠 두 요청으로 보낸다. 관계가 배치 안에서 양 끝을 다 걸치면
+  // 두 결과에 같은 행이 겹쳐 올 수 있어 합칠 때 중복을 거른다.
+  const [
+    { data: fromRows, error: fromError },
+    { data: toRows, error: toError },
+  ] = await Promise.all([
+    supabase
+      .from("digest_relations")
+      .select("from_digest_id, to_digest_id")
+      .in("from_digest_id", digestIds),
+    supabase
+      .from("digest_relations")
+      .select("from_digest_id, to_digest_id")
+      .in("to_digest_id", digestIds),
+  ]);
+  throwIfSupabaseError(fromError);
+  throwIfSupabaseError(toError);
+
+  const seenPairs = new Set<string>();
+  const rows = [...(fromRows ?? []), ...(toRows ?? [])].filter((row) => {
+    const key = `${row.from_digest_id}:${row.to_digest_id}`;
+    if (seenPairs.has(key)) {
+      return false;
+    }
+    seenPairs.add(key);
+    return true;
+  });
 
   const idSet = new Set(digestIds);
   const counterpartsBySubject = new Map<string, string[]>();
-  for (const row of rows ?? []) {
+  for (const row of rows) {
     addCounterpart({
       map: counterpartsBySubject,
       idSet,
@@ -204,11 +224,25 @@ export async function getRelationCounts(args: {
     });
   }
 
-  const allCounterpartIds = [...counterpartsBySubject.values()].flat();
-  const { infoById } = await fetchRelationCounterparts({
+  // 한 counterpart가 배치 안의 여러 subject와 관계될 수 있어(각자의 리스트에
+  // 한 번씩 실림) flat()만으로는 중복이 남는다 — 조회 목록을 부풀리지 않게 거른다.
+  const allCounterpartIds = [
+    ...new Set([...counterpartsBySubject.values()].flat()),
+  ];
+  const { infoById, knownIds } = await fetchRelationCounterparts({
     supabase,
     digestIds: allCounterpartIds,
   });
+
+  // toRelations와 같은 신호 — 가려진 상대는 조용히 빠지는 게 정상이지만, 행
+  // 자체가 없는 건 CASCADE 누락이라 목록 개수 쪽에서도 알아채야 한다.
+  for (const counterpartId of allCounterpartIds) {
+    if (!knownIds.has(counterpartId)) {
+      console.warn(
+        `[digest-relations] 상대 다이제스트를 못 찾아 개수에서 뺌 — otherId=${counterpartId}`,
+      );
+    }
+  }
 
   return new Map(
     digestIds.map((digestId) => [
