@@ -42,6 +42,17 @@ export function SignInPage() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
+  useEffect(function resetGoogleLoadingBeforeLeaving() {
+    // bfcache는 pagehide 시점의 렌더 상태를 그대로 얼려 둔다 — 여기서
+    // 꺼 두지 않으면, 구글 화면에서 뒤로가기로 돌아왔을 때 handleGoogleSignIn이
+    // 성공 시 켜 둔 채로 남겨 둔 googleLoading=true가 그대로 복원된다.
+    function handlePageHide() {
+      setGoogleLoading(false);
+    }
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, []);
+
   // startsWith("/") 가드로 외부 URL 주입(open redirect)을 차단한다.
   function resolveRedirectUrl() {
     return search.redirect?.startsWith("/")
@@ -131,10 +142,10 @@ export function SignInPage() {
                 }
               >
                 {googleLoading ? (
-                  <Loader className="size-5" />
+                  <Loader className="size-4" />
                 ) : (
                   <>
-                    <GoogleIcon className="size-5" />
+                    <GoogleIcon className="size-4" />
                     {t("auth.continue_with_google")}
                   </>
                 )}
