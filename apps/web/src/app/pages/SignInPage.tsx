@@ -131,7 +131,7 @@ export function SignInPage() {
                 }
               >
                 {googleLoading ? (
-                  <Loader className="size-5 animate-spin" />
+                  <Loader className="size-5" />
                 ) : (
                   <>
                     <GoogleIcon className="size-5" />
@@ -170,7 +170,7 @@ export function SignInPage() {
                   }
                 >
                   {emailLoading ? (
-                    <Loader className="size-4 animate-spin" />
+                    <Loader className="size-4" />
                   ) : (
                     <>
                       <Mail className="size-4" />
