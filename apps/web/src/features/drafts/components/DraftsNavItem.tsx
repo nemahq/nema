@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "@tanstack/react-router";
 
 import { cn, Text } from "@nema-io/weave";
-import { Circle, FileText, TriangleAlert } from "@nema-io/weave/icons";
+import { FileText, TriangleAlert } from "@nema-io/weave/icons";
 
 import { NavItem } from "@web/components/layout/NavItem";
 import { useSidebar } from "@web/components/layout/Sidebar";
 import { useSourceDraftListQuery } from "@web/features/drafts/hooks/useSourceDraftListQuery";
-import { classifyPendingSource } from "@web/features/drafts/pendingSourceStatus";
 import { useTranslation } from "@web/lib/tolgee";
 
 import {
@@ -35,18 +34,9 @@ export function DraftsNavItem() {
 
   const drafts = draftsQuery.data ?? [];
   const draftCount = drafts.length;
-  // 우선순위: 실패 > 처리중 — 더 급한 신호가 하나만 뜬다(스레드 카드와 같은 원칙).
-  // "처리중"은 서버가 확정해준 게 아니라 어림값이다 — pendingSourceStatus 참고.
-  const hasFailed = drafts.some(
-    (draft) =>
-      draft.status === "pending" &&
-      classifyPendingSource(draft.createdAt) === "stalled",
-  );
-  const hasProcessing = drafts.some(
-    (draft) =>
-      draft.status === "pending" &&
-      classifyPendingSource(draft.createdAt) === "processing",
-  );
+  // "정리중" 구간이 서버에 없다(digestion_status는 pending/completed 둘뿐이고,
+  // pending은 사실상 죽은 상태다) — 확인이 필요한지 여부 하나만 본다.
+  const hasFailed = drafts.some((draft) => draft.status === "pending");
   // 조회 실패로 개수를 모르는 상태를 "0개"로 오인해 항목을 숨기지 않는다 — 실제 초안이
   // 있는데도 조용히 진입점이 사라지는 것보다는, 눌러서 /drafts의 에러 상태를 보는 편이 낫다.
   const hasData = draftCount > 0 || draftsQuery.isError;
@@ -103,23 +93,16 @@ export function DraftsNavItem() {
     return null;
   }
 
-  let statusIndicator = null;
-  if (hasFailed) {
-    statusIndicator = (
-      <TriangleAlert
-        className={cn(
-          "size-3.5 shrink-0 text-status-error",
-          // 아이콘 도형이 뷰박스 안에서 오른쪽으로 치우쳐 있어 펼침 모드에서 카운트와
-          // 축이 안 맞는다 — 접힘 모드(코너 배지)는 이 보정이 필요 없다.
-          !collapsed && "-translate-x-1",
-        )}
-      />
-    );
-  } else if (hasProcessing) {
-    statusIndicator = (
-      <Circle className="size-1.5 shrink-0 animate-pulse fill-current text-status-info" />
-    );
-  }
+  const statusIndicator = hasFailed ? (
+    <TriangleAlert
+      className={cn(
+        "size-3.5 shrink-0 text-status-error",
+        // 아이콘 도형이 뷰박스 안에서 오른쪽으로 치우쳐 있어 펼침 모드에서 카운트와
+        // 축이 안 맞는다 — 접힘 모드(코너 배지)는 이 보정이 필요 없다.
+        !collapsed && "-translate-x-1",
+      )}
+    />
+  ) : null;
 
   return (
     <div

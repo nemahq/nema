@@ -38,6 +38,17 @@ export const SourceDeleteResultSchema = z.object({
 });
 export type SourceDeleteResult = z.infer<typeof SourceDeleteResultSchema>;
 
+// 벌크 삭제 상한 — 개별 tRPC 호출로 sourceId 개수만큼 source.delete를 부르면
+// URL이 프로시저명을 반복 이어붙여 Fastify maxParamLength를 넘길 수 있었다(#432).
+// deleteMany는 프로시저 호출 자체가 하나뿐이라 그 문제는 안 나지만, 그렇다고
+// 무제한 배열을 받으면 다른 종류의 남용(초대형 페이로드)에 열리므로 넉넉한 상한을 둔다.
+export const SOURCE_DELETE_MANY_MAX = 200;
+
+export const SourceDeleteManyInputSchema = z.object({
+  sourceIds: z.array(z.string().uuid()).min(1).max(SOURCE_DELETE_MANY_MAX),
+});
+export type SourceDeleteManyInput = z.infer<typeof SourceDeleteManyInputSchema>;
+
 // name — 원문 이름. sources.name(생성 컬럼, DB가 body 앞 200자로 채운다)을 그대로
 // 실어보낸다. 200은 표시 폭이 아니라 응답 폭주를 막는 상한이라 말줄임표가 안
 // 붙는다 — 화면에서 필요한 만큼 잘라 쓴다. source.get·listWithDigests·
@@ -62,10 +73,13 @@ export const SourceWithDigestsSchema = z.object({
 export type SourceWithDigests = z.infer<typeof SourceWithDigestsSchema>;
 
 // 초안 화면 — 정리 결과가 없거나 처리에 실패한 원문. status는 화면이 "재시도 중"
-// 표시 등에 쓴다. name은 위 SourceGetResultSchema와 같은 정의.
+// 표시 등에 쓴다. name은 위 SourceGetResultSchema와 같은 정의. bodyPreview는
+// 카드 본문 4줄 미리보기 전용(400자, sources.body_preview 생성 컬럼) — name과
+// 같은 원문 앞부분을 자른 값이라 name보다 200자 더 길다.
 export const SourceDraftSchema = z.object({
   sourceId: z.string().uuid(),
   name: z.string(),
+  bodyPreview: z.string(),
   createdAt: z.string().datetime({ offset: true }),
   status: DigestionStatusSchema,
 });

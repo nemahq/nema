@@ -15,13 +15,12 @@ import {
 } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
 import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
-import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { useSourceSuspenseQuery } from "@web/features/source/hooks/useSourceQuery";
 import { useTranslation } from "@web/lib/tolgee";
 import { isNotFoundError } from "@web/lib/trpc";
 
 import { SourceBodyView } from "./SourceBodyView";
-import { SourceDeleteMenu } from "./SourceDeleteMenu";
+import { SourceDeleteAction } from "./SourceDeleteAction";
 
 interface SourceDetailPanelProps {
   sourceId: string;
@@ -61,39 +60,23 @@ function SourceDetailPanelContent({
   onClose,
   banner,
 }: SourceDetailPanelProps) {
-  const { t } = useTranslation();
   const [source] = useSourceSuspenseQuery(sourceId);
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-11 shrink-0 items-center justify-between gap-3 px-6">
-        <div className="flex min-w-0 items-center gap-2">
-          <Text
-            size="sm"
-            weight="medium"
-            color="primary"
-            className="min-w-0 truncate"
-          >
-            {source.name}
-          </Text>
-          <RelativeTime dateTime={source.createdAt} />
-        </div>
+      <div className="flex h-11 shrink-0 items-center justify-end gap-3 px-6">
         <div className="-mr-1 flex shrink-0 items-center gap-1">
           {/* 삭제 성공 시 상세 패널을 같이 닫는다. */}
-          <SourceDeleteMenu sourceId={sourceId} onDeleted={onClose} />
+          <SourceDeleteAction sourceId={sourceId} onDeleted={onClose} />
           <SourceDetailCloseButton onClose={onClose} />
         </div>
       </div>
 
       {banner && <div className="px-6 pt-3">{banner}</div>}
 
-      {/* 제목·요약 추출은 아직 없는 기능이라 항상 빈 상태다 — 섹션 자체는 유지해
-          자리를 예약해 두고, 어색해 보이지 않도록 안내 문구만 얹는다. */}
-      <div className="px-6 pt-3 pb-1">
-        <Text size="xs" color="tertiary">
-          {t("source.summary_empty")}
-        </Text>
-      </div>
+      <Text as="h2" size="xl" weight="bold" className="px-6 pt-3">
+        {source.name}
+      </Text>
 
       <SourceBodyView body={source.body} />
     </div>

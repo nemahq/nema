@@ -2,12 +2,14 @@ import { TRPCError } from "@trpc/server";
 
 import {
   SourceActionInputSchema,
+  SourceDeleteManyInputSchema,
   SourceIngestInputSchema,
 } from "@nema-io/shared";
 
 import { isNotFoundError } from "@server/infra/supabase/supabase-error";
 import {
   deleteSource,
+  deleteSources,
   getSource,
   ingestSource,
   listDraftSources,
@@ -84,5 +86,13 @@ export const sourceRouter = router({
     .input(SourceActionInputSchema)
     .mutation(({ ctx, input }) =>
       deleteSource({ supabase: ctx.supabase, sourceId: input.sourceId }),
+    ),
+
+  // 초안 화면 벌크 삭제 — 개별 tRPC 호출로 묶지 않는 이유는
+  // SourceDeleteManyInputSchema 주석(#432) 참고.
+  deleteMany: protectedProcedure
+    .input(SourceDeleteManyInputSchema)
+    .mutation(({ ctx, input }) =>
+      deleteSources({ supabase: ctx.supabase, sourceIds: input.sourceIds }),
     ),
 });

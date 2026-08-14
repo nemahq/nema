@@ -16,6 +16,7 @@ import {
   SourceWithDigestsSchema,
 } from "@nema-io/shared";
 
+import { createLimiter } from "@server/infra/llm/limiter";
 import { getDigestGenerationProvider } from "@server/infra/llm/provider";
 import type { Database } from "@server/infra/supabase/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
@@ -145,6 +146,36 @@ export async function deleteSource(args: {
   return { success: deleted };
 }
 
+// legacy(#432)와 같은 동시성 상한 — 개별 삭제가 벡터 삭제까지 포함해 순간
+// 동시 요청이 몰리면 Qdrant/DB 커넥션을 과하게 잡아먹는다.
+const SOURCE_DELETE_CONCURRENCY = 10;
+const limitDelete = createLimiter(SOURCE_DELETE_CONCURRENCY);
+
+interface SourceDeleteManyResult {
+  failedCount: number;
+}
+
+// legacy와 달리 상태 충돌·열린 리뷰 같은 실패 갈래가 없다 — 이 아키텍처엔 그
+// 개념(changeset, source_state_changed 등) 자체가 없어 성공/실패 둘로만 센다.
+export async function deleteSources(args: {
+  supabase: TypedSupabaseClient;
+  sourceIds: string[];
+}): Promise<SourceDeleteManyResult> {
+  const { supabase, sourceIds } = args;
+
+  const results = await Promise.allSettled(
+    sourceIds.map((sourceId) =>
+      limitDelete(() => deleteSource({ supabase, sourceId })),
+    ),
+  );
+
+  const failedCount = results.filter(
+    (result) => result.status === "rejected" || !result.value.success,
+  ).length;
+
+  return { failedCount };
+}
+
 export async function getSource(args: {
   supabase: TypedSupabaseClient;
   userId: string;
@@ -220,7 +251,7 @@ export async function listDraftSources(args: {
   // 실제로 있는 초안이 빈 목록으로 보일 수 있었다(에러 없이 조용히 틀림).
   const { data, error } = await supabase
     .from("v_draft_sources")
-    .select("id, name, created_at, digestion_status")
+    .select("id, name, body_preview, created_at, digestion_status")
     .order("created_at", { ascending: false })
     .limit(SOURCE_LIST_SAFETY_LIMIT);
   throwIfSupabaseError(error);
@@ -261,13 +292,14 @@ function toSourceWithDigests(row: SourceWithDigestsRow): SourceWithDigests {
 // 어긋나면(예: 뷰 정의가 조인으로 바뀌어 실제로 null이 새면) 여기서 곧바로 던진다.
 type SourceDraftRow = Pick<
   Database["public"]["Views"]["v_draft_sources"]["Row"],
-  "id" | "name" | "created_at" | "digestion_status"
+  "id" | "name" | "body_preview" | "created_at" | "digestion_status"
 >;
 
 function toSourceDraft(row: SourceDraftRow): SourceDraft {
   return SourceDraftSchema.parse({
     sourceId: row.id,
     name: row.name,
+    bodyPreview: row.body_preview,
     createdAt: row.created_at,
     status: row.digestion_status,
   });

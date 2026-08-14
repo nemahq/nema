@@ -5,22 +5,19 @@ import { cn, LIST_ITEM_HOVER_CLASSNAME } from "@nema-io/weave";
 import { useTranslation } from "@web/lib/tolgee";
 
 interface DraftCardShellProps {
-  name: string;
   onSelect: () => void;
   children: ReactNode;
 }
 
-// 카드 전체가 열기 트리거지만 안에 재시도 같은 실제 버튼도 있어(button 안에
-// button은 불가) 실제 <button>을 콘텐츠 뒤에 깔아두는 방식(stretched button)을
-// 쓴다. 콘텐츠 wrapper가 DOM 순서상 위라 기본적으로 클릭을 가로채므로,
-// pointer-events-none으로 클릭이 그 아래 이 버튼까지 그대로 통과하게 한다.
-// 액션 버튼(재시도)만 pointer-events-auto로 되돌려 각자 히트테스트 대상을
-// 되찾는다 — legacy DraftCardShell과 동일한 트릭.
-export function DraftCardShell({
-  name,
-  onSelect,
-  children,
-}: DraftCardShellProps) {
+// 카드 전체가 열기 트리거지만 안에 삭제 같은 실제 버튼도 있어(button 안에 button은
+// 불가) 실제 <button>을 콘텐츠 뒤에 깔아두는 방식(stretched button)을 쓴다.
+// 히트테스트: 콘텐츠 wrapper가 DOM 순서상 위라 기본적으로 클릭을 가로채므로,
+// pointer-events-none으로 클릭이 그 아래 이 버튼까지 그대로 통과하게 한다. 액션
+// 버튼(삭제, 상태 아이콘 툴팁)만 pointer-events-auto로 되돌려 각자 히트테스트
+// 대상을 되찾는다 — 이 버튼들과 stretched button은 조상-자손이 아니라 형제라서,
+// 클릭이 액션 버튼 자체에서 시작돼 버블링돼도 stretched button의 onClick 경로는
+// 애초에 거치지 않는다(별도 안전장치 불필요).
+export function DraftCardShell({ onSelect, children }: DraftCardShellProps) {
   const { t } = useTranslation();
 
   return (
@@ -30,13 +27,9 @@ export function DraftCardShell({
         LIST_ITEM_HOVER_CLASSNAME,
       )}
     >
-      {/* weave Button 대신 raw button — 전체 카드에 깔리는 투명 히트타깃이라
-          Button의 시각 스타일(패딩·배경·타이포)이 전부 불필요하다. */}
       <button
         type="button"
-        // 카드마다 같은 라벨이면 스크린리더로는 어느 카드인지 구분이 안 된다 —
-        // 원문 이름을 붙여 카드별로 다르게 읽히게 한다.
-        aria-label={`${t("draft.card_open_label")} — ${name}`}
+        aria-label={t("draft.card_open_label")}
         onClick={onSelect}
         className="absolute inset-0 rounded-lg"
       />

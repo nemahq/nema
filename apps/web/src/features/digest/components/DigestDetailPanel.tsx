@@ -21,7 +21,7 @@ import { useTranslation } from "@web/lib/tolgee";
 import { isNotFoundError } from "@web/lib/trpc";
 
 import { DigestBodyFields } from "./DigestBodyFields";
-import { DigestDeleteMenu } from "./DigestDeleteMenu";
+import { DigestDeleteAction } from "./DigestDeleteAction";
 import { DigestTypeBadge } from "./DigestTypeBadge";
 
 interface DigestDetailPanelProps {
@@ -67,7 +67,7 @@ function DigestDetailPanelContent({
           <RelativeTime dateTime={digest.createdAt} />
         </div>
         <div className="-mr-1 flex shrink-0 items-center gap-1">
-          <DigestDeleteMenu digestId={digestId} onDeleted={onClose} />
+          <DigestDeleteAction digestId={digestId} onDeleted={onClose} />
           <DigestDetailCloseButton onClose={onClose} />
         </div>
       </div>
