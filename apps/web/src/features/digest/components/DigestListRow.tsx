@@ -7,7 +7,7 @@ import { Share2 } from "@nema-io/weave/icons";
 
 import { useTranslation } from "@web/lib/tolgee";
 
-import { DigestTypeBadge } from "./DigestTypeBadge";
+import { DigestTypeIcon } from "./DigestTypeIcon";
 
 interface DigestListRowProps {
   digest: DigestListItem;
@@ -39,7 +39,7 @@ export const DigestListRow = memo(function DigestListRow({
       onClick={() => onOpen?.(digest)}
       aria-current={selected ? "true" : undefined}
       className={cn(
-        "flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left",
+        "flex min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left",
         LIST_ITEM_HOVER_CLASSNAME,
         // dark:bg-surface-raised-hover/40 — surface-raised는 다크 모드에서 이
         // 행이 얹힌 surface-card와 완전히 같은 값이라(tokens/index.css) 선택
@@ -49,7 +49,7 @@ export const DigestListRow = memo(function DigestListRow({
         selected && "bg-surface-raised dark:bg-surface-raised-hover/40",
       )}
     >
-      <DigestTypeBadge type={digest.type} />
+      <DigestTypeIcon type={digest.type} />
       {/* weight="medium" — 배지는 테두리·아이콘이 있어 그 자체로 시각적
           무게가 크다. 제목이 기본(normal) 굵기면 부가 정보(유형)가 본문보다
           눈에 먼저 들어와 위계가 뒤집힌다 — 원문 헤더 이름(SourceDigestGroup)과

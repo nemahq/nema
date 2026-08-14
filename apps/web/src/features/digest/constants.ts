@@ -158,3 +158,14 @@ export function readDigestBodyOptions(
   });
   return entries.length > 0 ? entries : undefined;
 }
+
+// idea·assumption은 원안(#B8862B, #4F8A5B)이 흰 글자 대비 4.5:1(상세 배지
+// 라벨 기준 WCAG AA)에 못 미쳐(각각 3.24:1, 4.10:1) 그 색만 한 단계 낮췄다 —
+// 다른 세 색은 원안 그대로다.
+export const DIGEST_TYPE_COLOR: Record<DigestType, string> = {
+  decision: "text-white bg-[#C0503C] ring-[#C0503C]",
+  idea: "text-white bg-[#996F24] ring-[#996F24]",
+  assumption: "text-white bg-[#4B8356] ring-[#4B8356]",
+  learning: "text-white bg-[#3D7E96] ring-[#3D7E96]",
+  pending: "text-white bg-[#7E5FA8] ring-[#7E5FA8]",
+};
