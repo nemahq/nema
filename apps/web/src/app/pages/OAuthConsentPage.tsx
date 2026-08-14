@@ -25,9 +25,10 @@ export function OAuthConsentPage() {
   const loadedRef = useRef(false);
 
   useEffect(function loadAccountEmail() {
-    void supabase.auth.getSession().then(({ data }) => {
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
       setEmail(data.session?.user.email ?? "");
-    });
+    })();
   }, []);
 
   useEffect(
