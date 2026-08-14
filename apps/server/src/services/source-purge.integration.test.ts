@@ -56,13 +56,15 @@ afterAll(async () => {
   await admin.auth.admin.deleteUser(ownerId);
 });
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 // 보관기간을 굳이 짧게 주는 대신 trashed_at 자체를 과거로 심는다 — 실제 배치가
 // 기다리는 것도 "지금부터 N일"이 아니라 "trashed_at + N일 < now()"라 결과는 같다.
 async function seedTrashedSource(args: {
   trashedDaysAgo: number;
 }): Promise<{ sourceId: string; digestId: string }> {
   const trashedAt = new Date(
-    Date.now() - args.trashedDaysAgo * 24 * 60 * 60 * 1000,
+    Date.now() - args.trashedDaysAgo * DAY_MS,
   ).toISOString();
 
   const { data: source, error: sourceError } = await admin
