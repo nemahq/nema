@@ -37,7 +37,11 @@ export const DigestListRow = memo(function DigestListRow({
       )}
     >
       <DigestTypeBadge type={digest.type} />
-      <Text as="span" size="sm" className="min-w-0 truncate">
+      {/* weight="medium" — 배지는 테두리·아이콘이 있어 그 자체로 시각적
+          무게가 크다. 제목이 기본(normal) 굵기면 부가 정보(유형)가 본문보다
+          눈에 먼저 들어와 위계가 뒤집힌다 — 원문 헤더 이름(SourceDigestGroup)과
+          같은 굵기로 맞춘다. */}
+      <Text as="span" size="sm" weight="medium" className="min-w-0 truncate">
         {digest.title}
       </Text>
     </Link>
