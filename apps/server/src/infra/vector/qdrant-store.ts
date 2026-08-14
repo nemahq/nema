@@ -8,6 +8,7 @@ import type {
   DigestPayload,
   DigestSearchHit,
   DigestUpsertItem,
+  NeighborOptions,
   SearchOptions,
   VectorStore,
 } from "./vector-store";
@@ -167,6 +168,35 @@ export function createQdrantStore(
         throw new VectorStoreError(
           `Search failed: ${error instanceof Error ? error.message : String(error)}`,
           "search",
+          error,
+        );
+      }
+    },
+
+    async searchNeighbors(
+      options: NeighborOptions,
+    ): Promise<DigestSearchHit[]> {
+      const { userId, digestId, limit, minScore } = options;
+
+      try {
+        // query에 벡터 대신 point id를 넘기면 그 점의 벡터로 최근접을 찾는다. 질의로
+        // 쓴 점 자체도 결과에 섞여 나올 수 있어 호출부가 자기 자신을 걸러낸다.
+        const queryResult = await client.query(collectionName, {
+          query: digestId,
+          limit,
+          score_threshold: minScore,
+          filter: { must: [{ key: "user_id", match: { value: userId } }] },
+          with_payload: false,
+        });
+
+        return queryResult.points.map((point) => ({
+          digestId: String(point.id),
+          score: point.score,
+        }));
+      } catch (error) {
+        throw new VectorStoreError(
+          `Neighbor search failed: ${error instanceof Error ? error.message : String(error)}`,
+          "searchNeighbors",
           error,
         );
       }

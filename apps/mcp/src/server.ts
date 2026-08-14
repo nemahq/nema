@@ -4,6 +4,7 @@ import { createTRPCClient, httpLink, isTRPCClientError } from "@trpc/client";
 
 import type { AppRouter } from "@nema-io/server/src/router";
 import {
+  DigestActionInputSchema,
   DigestSearchInputSchema,
   MCP_CLIENT_HEADER_NAME,
   MCP_CLIENT_HEADER_VALUE,
@@ -58,7 +59,10 @@ function toolError(error: unknown): CallToolResult {
   };
 }
 
-// 도구 셋: 던지기(source.ingest)·꺼내기(digest.search)·원문 보기(source.get).
+// 도구 셋: 던지기(source.ingest)·꺼내기(digest.search)·관계 따라가기
+// (digest.getRelations)·다이제스트 보기(digest.get)·원문 보기(source.get).
+// 꺼내기 응답에는 관계를 안 싣는다 — 결과 10개마다 관계가 딸려 오면 응답이 폭발하고,
+// 자동으로 오면 "관계를 실제로 따라가나"가 로그에 안 남는다(원문 보기와 같은 원칙).
 // 요청마다 새 서버를 연결하는 stateless 구조(index.ts)라 accessToken을 그때그때
 // 받아 그 요청 전용 tRPC 클라이언트를 만든다.
 export function createMcpServer(accessToken: string): McpServer {
@@ -95,6 +99,40 @@ export function createMcpServer(accessToken: string): McpServer {
     async ({ query }) => {
       try {
         return toolResult(await client.digest.search.query({ query }));
+      } catch (error) {
+        return toolError(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_relations",
+    {
+      title: "연결 따라가기",
+      description:
+        "이 다이제스트가 무엇을 지지하거나 약화하는지, 또 무엇에게 지지받거나 약화되는지 연결을 가져온다. 사용자가 어떤 판단의 근거나 그 판단이 흔들리는 이유를 물을 때 쓴다. 상대 다이제스트는 제목까지만 온다 — 내용이 필요하면 get_digest로 간다.",
+      inputSchema: DigestActionInputSchema.shape,
+    },
+    async ({ digestId }) => {
+      try {
+        return toolResult(await client.digest.getRelations.query({ digestId }));
+      } catch (error) {
+        return toolError(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_digest",
+    {
+      title: "다이제스트 보기",
+      description:
+        "digestId로 다이제스트 하나를 전부 가져온다. 꺼내기나 연결에서 제목만 받은 것을 펼쳐 볼 때 쓴다.",
+      inputSchema: DigestActionInputSchema.shape,
+    },
+    async ({ digestId }) => {
+      try {
+        return toolResult(await client.digest.get.query({ digestId }));
       } catch (error) {
         return toolError(error);
       }

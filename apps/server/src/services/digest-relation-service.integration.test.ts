@@ -1,0 +1,239 @@
+import { randomUUID } from "node:crypto";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createClient } from "@supabase/supabase-js";
+
+import { loadEnv } from "@server/env";
+import type { Database } from "@server/infra/supabase/database.types";
+import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
+import { getDigestRelations } from "@server/services/digest-relation-service";
+
+// 이 스위트는 Voyage·Qdrant를 안 타지만 loadEnv()는 스키마 전체를 검증한다 — CI엔
+// 그 키들이 없어 더미로 채운다(로컬은 .env.secret의 실제 값이 먼저 있으면 그대로 쓰인다).
+process.env.APP_ENV ??= "local";
+process.env.VOYAGE_API_KEY ??= "test-placeholder";
+process.env.QDRANT_URL ??= "http://localhost:0";
+process.env.QDRANT_API_KEY ??= "test-placeholder";
+loadEnv(join(fileURLToPath(import.meta.url), "..", "..", ".."));
+
+// digest_relations의 RLS는 양 끝이 모두 내 것일 때만 열린다. 한쪽만 재는 정책으로
+// 잘못 짜도 단위 테스트는 통과한다(mock supabase는 다 허용한다) — 실제 정책 평가를
+// 거쳐야만 드러나는 자리라 여기서 본다. 관계가 다이제스트와 함께 사라지는지(CASCADE)도
+// 같은 이유로 여기 있다.
+const SETUP_TIMEOUT_MS = 30_000;
+const TEST_TIMEOUT_MS = 20_000;
+
+const LOCAL_URL = "http://127.0.0.1:54321";
+// source-service.integration.test.ts와 같은 고정 데모 키 — 비밀이 아니다.
+const LOCAL_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
+const LOCAL_SERVICE_ROLE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
+
+const admin = createClient<Database>(LOCAL_URL, LOCAL_SERVICE_ROLE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
+
+interface TestUser {
+  id: string;
+  supabase: TypedSupabaseClient;
+}
+
+async function createTestUser(): Promise<TestUser> {
+  const email = `digest-relation-test-${randomUUID()}@example.com`;
+  const password = randomUUID();
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+  if (error || !data.user) {
+    throw error ?? new Error("failed to create test user");
+  }
+
+  const anon = createClient<Database>(LOCAL_URL, LOCAL_ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: session, error: signInError } =
+    await anon.auth.signInWithPassword({ email, password });
+  if (signInError || !session.session) {
+    throw signInError ?? new Error("failed to sign in test user");
+  }
+
+  const supabase = createClient<Database>(LOCAL_URL, LOCAL_ANON_KEY, {
+    global: {
+      headers: { Authorization: `Bearer ${session.session.access_token}` },
+    },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return { id: data.user.id, supabase };
+}
+
+async function seedPair(user: TestUser): Promise<{
+  decisionId: string;
+  learningId: string;
+}> {
+  const { data: source, error: sourceError } = await user.supabase
+    .from("sources")
+    .insert({ user_id: user.id, body: "관계 픽스처" })
+    .select("id")
+    .single();
+  if (sourceError || !source) {
+    throw sourceError ?? new Error("failed to insert source");
+  }
+
+  const { data: digests, error: digestError } = await user.supabase
+    .from("digests")
+    .insert([
+      {
+        source_id: source.id,
+        type: "decision",
+        title: "주 1회로 한다",
+        body: { choice: "주 1회" },
+        extraction_order: 0,
+      },
+      {
+        source_id: source.id,
+        type: "learning",
+        title: "일 단위는 7배 비싸다",
+        body: { finding: "호출이 7배" },
+        extraction_order: 1,
+      },
+    ])
+    .select("id, type");
+  if (digestError || !digests) {
+    throw digestError ?? new Error("failed to insert digests");
+  }
+
+  const decisionId = digests.find((row) => row.type === "decision")?.id;
+  const learningId = digests.find((row) => row.type === "learning")?.id;
+  if (!decisionId || !learningId) {
+    throw new Error("fixture digests missing");
+  }
+  return { decisionId, learningId };
+}
+
+let userA: TestUser;
+let userB: TestUser;
+let localDbAvailable = false;
+
+beforeAll(async () => {
+  try {
+    userA = await createTestUser();
+    userB = await createTestUser();
+    localDbAvailable = true;
+  } catch (err) {
+    if (process.env.REQUIRE_LOCAL_DB === "true") {
+      throw new Error(
+        `[digest-relation-service.integration.test] local Supabase (${LOCAL_URL}) unreachable, but REQUIRE_LOCAL_DB=true. ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    console.warn(
+      `[digest-relation-service.integration.test] local Supabase (${LOCAL_URL}) unreachable — skipping. Run 'supabase start' first.`,
+    );
+  }
+}, SETUP_TIMEOUT_MS);
+
+afterAll(async () => {
+  if (!localDbAvailable) {
+    return;
+  }
+  await admin.auth.admin.deleteUser(userA.id);
+  await admin.auth.admin.deleteUser(userB.id);
+});
+
+describe("digest_relations (RLS)", () => {
+  it(
+    "관계는 양 끝에서 방향을 뒤집어 보이고, 남에게는 안 보인다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { decisionId, learningId } = await seedPair(userA);
+      const { error } = await userA.supabase.from("digest_relations").insert({
+        from_digest_id: learningId,
+        to_digest_id: decisionId,
+        type: "support",
+      });
+      expect(error).toBeNull();
+
+      const fromLearning = await getDigestRelations({
+        supabase: userA.supabase,
+        userId: userA.id,
+        digestId: learningId,
+      });
+      expect(fromLearning).toEqual([
+        { type: "supports", digestId: decisionId, title: "주 1회로 한다" },
+      ]);
+
+      const fromDecision = await getDigestRelations({
+        supabase: userA.supabase,
+        userId: userA.id,
+        digestId: decisionId,
+      });
+      expect(fromDecision).toEqual([
+        {
+          type: "supported_by",
+          digestId: learningId,
+          title: "일 단위는 7배 비싸다",
+        },
+      ]);
+
+      await expect(
+        getDigestRelations({
+          supabase: userB.supabase,
+          userId: userB.id,
+          digestId: decisionId,
+        }),
+      ).rejects.toThrow();
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "남의 다이제스트를 한쪽 끝에 매단 관계는 못 만든다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const mine = await seedPair(userB);
+      const theirs = await seedPair(userA);
+
+      const { error } = await userB.supabase.from("digest_relations").insert({
+        from_digest_id: mine.learningId,
+        to_digest_id: theirs.decisionId,
+        type: "support",
+      });
+
+      expect(error).not.toBeNull();
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "다이제스트가 지워지면 거기 걸린 관계도 함께 사라진다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { decisionId, learningId } = await seedPair(userA);
+      await userA.supabase.from("digest_relations").insert({
+        from_digest_id: learningId,
+        to_digest_id: decisionId,
+        type: "support",
+      });
+
+      await userA.supabase.from("digests").delete().eq("id", learningId);
+
+      const remaining = await getDigestRelations({
+        supabase: userA.supabase,
+        userId: userA.id,
+        digestId: decisionId,
+      });
+      expect(remaining).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+});
