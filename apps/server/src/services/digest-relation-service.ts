@@ -140,12 +140,11 @@ export async function getDigestRelations(args: {
   const { supabase, userId, digestId } = args;
 
   // RLS(owner-only)라 남의/없는 digestId는 여기서 not-found로 걸린다. 가려진 것도
-  // 마찬가지다 — 지워진 다이제스트의 관련 목록이 열리면 안 된다.
+  // 마찬가지다(v_visible_digests) — 지워진 다이제스트의 관련 목록이 열리면 안 된다.
   const { error: digestError } = await supabase
-    .from("digests")
+    .from("v_visible_digests")
     .select("id")
     .eq("id", digestId)
-    .is("hidden_at", null)
     .single();
   throwIfSupabaseError(digestError);
 
@@ -322,13 +321,14 @@ async function findCandidates(args: {
   // 가려진 다이제스트는 후보에서 뺀다 — 벡터도 함께 지우니 원래는 안 걸리지만,
   // 그 삭제가 실패해도 경고만 남기는 구조라 고아 벡터가 남을 수 있다(꺼내기 검색이
   // 같은 조건을 거는 것과 같은 이유). 사용자에게 지워진 것이 근거로 되살아나면
-  // 관련 목록에 없는 다이제스트의 제목이 뜬다.
+  // 관련 목록에 없는 다이제스트의 제목이 뜬다. v_visible_digests(3단 상속 판정)를
+  // 읽어 막는다.
   const { data: rows, error } = await supabase
-    .from("digests")
+    .from("v_visible_digests")
     .select("id, source_id, type, title, body, created_at")
     .in("id", [...scoreById.keys()])
     .in("type", candidateTypes)
-    .is("hidden_at", null);
+    .returns<DigestDetailRow[]>();
   throwIfSupabaseError(error);
 
   // 같은 원문 안은 자기보다 앞선 것만 본다 — 배열 순서를 순서로 쓴다. 원문 등장
@@ -493,9 +493,11 @@ function endOf(row: RelationRow, digestId: string): RelationEnd | null {
   return null;
 }
 
-// 가려진 상대는 제목을 안 실어 관계가 목록에서 빠진다. 그 자리를 "못 찾음"과 가르려고
-// hidden_at까지 읽는다 — 가림은 사용자가 지운 정상 경로라 조용히 빠져야 하고, 아예
-// 없는 행은 CASCADE가 있는 한 생길 수 없어 경고가 남아야 한다.
+// 가려진 상대는 제목을 안 실어 관계가 목록에서 빠진다. 그 자리를 "못 찾음"과
+// 가르려면 존재 자체(knownIds, base 테이블)와 보임(titleById, v_visible_digests)을
+// 따로 물어야 한다 — 가림은 사용자가 지운 정상 경로라 조용히 빠져야 하고, 아예
+// 없는 행은 CASCADE가 있는 한 생길 수 없어 경고가 남아야 한다. 판정 자체(3단
+// 상속)를 여기서 다시 적지 않으려고 두 번 왕복한다.
 async function fetchTitles(args: {
   supabase: TypedSupabaseClient;
   digestIds: string[];
@@ -505,23 +507,28 @@ async function fetchTitles(args: {
     return { titleById: new Map(), knownIds: new Set() };
   }
 
-  const { data, error } = await supabase
-    .from("digests")
-    .select("id, title, hidden_at")
-    .in("id", digestIds);
-  throwIfSupabaseError(error);
+  const [
+    { data: allRows, error: allError },
+    { data: visibleRows, error: visibleError },
+  ] = await Promise.all([
+    supabase.from("digests").select("id").in("id", digestIds),
+    supabase
+      .from("v_visible_digests")
+      .select("id, title")
+      .in("id", digestIds)
+      .returns<Array<{ id: string; title: string }>>(),
+  ]);
+  throwIfSupabaseError(allError);
+  throwIfSupabaseError(visibleError);
 
-  const rows = data ?? [];
   return {
-    titleById: new Map(
-      rows
-        .filter((row) => row.hidden_at === null)
-        .map((row) => [row.id, row.title]),
-    ),
-    knownIds: new Set(rows.map((row) => row.id)),
+    titleById: new Map((visibleRows ?? []).map((row) => [row.id, row.title])),
+    knownIds: new Set((allRows ?? []).map((row) => row.id)),
   };
 }
 
+// findCandidates의 .returns<>()가 선언하는 실제 행 모양 — digests 테이블 컬럼과
+// 같다(v_visible_digests는 필터만 걸 뿐 컬럼을 안 바꾼다).
 type DigestDetailRow = Pick<
   Database["public"]["Tables"]["digests"]["Row"],
   "id" | "source_id" | "type" | "title" | "body" | "created_at"

@@ -65,10 +65,24 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "digest_relations_from_digest_id_fkey";
+            columns: ["from_digest_id"];
+            isOneToOne: false;
+            referencedRelation: "v_visible_digests";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "digest_relations_to_digest_id_fkey";
             columns: ["to_digest_id"];
             isOneToOne: false;
             referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_relations_to_digest_id_fkey";
+            columns: ["to_digest_id"];
+            isOneToOne: false;
+            referencedRelation: "v_visible_digests";
             referencedColumns: ["id"];
           },
         ];
@@ -78,11 +92,11 @@ export type Database = {
           body: Json;
           created_at: string;
           extraction_order: number;
-          hidden_at: string | null;
           id: string;
           public_id: string;
           source_id: string;
           title: string;
+          trashed_at: string | null;
           type: Database["public"]["Enums"]["digest_type"];
           updated_at: string;
         };
@@ -90,11 +104,11 @@ export type Database = {
           body: Json;
           created_at?: string;
           extraction_order: number;
-          hidden_at?: string | null;
           id?: string;
           public_id?: string;
           source_id: string;
           title: string;
+          trashed_at?: string | null;
           type: Database["public"]["Enums"]["digest_type"];
           updated_at?: string;
         };
@@ -102,11 +116,11 @@ export type Database = {
           body?: Json;
           created_at?: string;
           extraction_order?: number;
-          hidden_at?: string | null;
           id?: string;
           public_id?: string;
           source_id?: string;
           title?: string;
+          trashed_at?: string | null;
           type?: Database["public"]["Enums"]["digest_type"];
           updated_at?: string;
         };
@@ -123,6 +137,13 @@ export type Database = {
             columns: ["source_id"];
             isOneToOne: false;
             referencedRelation: "v_draft_sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "v_visible_sources";
             referencedColumns: ["id"];
           },
         ];
@@ -209,6 +230,7 @@ export type Database = {
           name: string;
           public_id: string;
           title: string | null;
+          trashed_at: string | null;
           updated_at: string;
           user_id: string;
         };
@@ -221,6 +243,7 @@ export type Database = {
           name?: string;
           public_id?: string;
           title?: string | null;
+          trashed_at?: string | null;
           updated_at?: string;
           user_id: string;
         };
@@ -233,6 +256,7 @@ export type Database = {
           name?: string;
           public_id?: string;
           title?: string | null;
+          trashed_at?: string | null;
           updated_at?: string;
           user_id?: string;
         };
@@ -328,10 +352,101 @@ export type Database = {
         };
         Relationships: [];
       };
+      v_visible_digests: {
+        Row: {
+          body: Json | null;
+          created_at: string | null;
+          extraction_order: number | null;
+          id: string | null;
+          public_id: string | null;
+          source_id: string | null;
+          title: string | null;
+          type: Database["public"]["Enums"]["digest_type"] | null;
+          updated_at: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "v_draft_sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "v_visible_sources";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      v_visible_sources: {
+        Row: {
+          body: string | null;
+          body_preview: string | null;
+          created_at: string | null;
+          digestion_status:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id: string | null;
+          name: string | null;
+          public_id: string | null;
+          title: string | null;
+          updated_at: string | null;
+          user_id: string | null;
+        };
+        Insert: {
+          body?: string | null;
+          body_preview?: string | null;
+          created_at?: string | null;
+          digestion_status?:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id?: string | null;
+          name?: string | null;
+          public_id?: string | null;
+          title?: string | null;
+          updated_at?: string | null;
+          user_id?: string | null;
+        };
+        Update: {
+          body?: string | null;
+          body_preview?: string | null;
+          created_at?: string | null;
+          digestion_status?:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id?: string | null;
+          name?: string | null;
+          public_id?: string | null;
+          title?: string | null;
+          updated_at?: string | null;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       generate_digest_public_id: { Args: never; Returns: string };
       generate_source_public_id: { Args: never; Returns: string };
+      purge_expired_sources: {
+        Args: { p_batch_limit?: number; p_retention_days?: number };
+        Returns: number;
+      };
+      purge_job_last_success: { Args: never; Returns: string };
+      restore_trashed_source: {
+        Args: { p_source_id: string };
+        Returns: boolean;
+      };
+      trash_source: { Args: { p_source_id: string }; Returns: boolean };
     };
     Enums: {
       content_language: "en" | "ko";

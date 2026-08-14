@@ -82,10 +82,15 @@ export async function reExtractSource(args: {
   const { supabase, userId, sourceId } = args;
 
   // RLS(owner-only)라 남의/없는 sourceId는 여기서 not-found로 걸린다.
+  // v_visible_sources라 휴지통에 있는 원문도 not-found — 지운 원문을 되살리기
+  // 전에 재추출할 길을 열어두지 않는다. .returns<>()는 뷰의 생성 타입이 컬럼을
+  // 전부 nullable로 잡는 것을 되돌린다 — id·body는 sources의 NOT NULL 컬럼이라
+  // WHERE로 거른 뒤엔 실제로 null일 수 없다.
   const { data: source, error: fetchError } = await supabase
-    .from("sources")
+    .from("v_visible_sources")
     .select("id, body")
     .eq("id", sourceId)
+    .returns<Array<{ id: string; body: string }>>()
     .single();
   throwIfSupabaseError(fetchError);
 
@@ -134,27 +139,63 @@ export async function deleteSource(args: {
 }): Promise<SourceDeleteResult> {
   const { supabase, sourceId } = args;
 
-  // CASCADE가 Postgres 쪽 digests는 정리하지만 Qdrant는 안 건드린다 — 지워질
-  // digest id를 미리 받아둬야 벡터도 같이 지울 수 있다. RLS라 남의 원문이면
-  // 이 조회도 빈 배열이라 안전하다.
+  // trash_source는 digests 행을 안 건드린다(가시성은 조인으로 파생) — Qdrant는
+  // 그 파생을 모르니 지금 보이는 digest id를 미리 받아둬야 벡터도 같이 지울 수
+  // 있다. RLS라 남의 원문이면 이 조회도 빈 배열이라 안전하다.
   const { data: existingDigests } = await supabase
-    .from("digests")
+    .from("v_visible_digests")
     .select("id")
-    .eq("source_id", sourceId);
+    .eq("source_id", sourceId)
+    .returns<Array<{ id: string }>>();
 
-  const { data, error } = await supabase
-    .from("sources")
-    .delete()
-    .eq("id", sourceId)
-    .select("id");
+  // 이미 없는/남의/이미 trashed인 sourceId는 false — 에러가 아니다(RPC가
+  // RAISE 대신 boolean을 반환하는 이유, source_digest_trash 마이그레이션 참고).
+  const { data: trashed, error } = await supabase.rpc("trash_source", {
+    p_source_id: sourceId,
+  });
   throwIfSupabaseError(error);
 
-  const deleted = (data ?? []).length > 0;
+  const deleted = trashed === true;
   if (deleted) {
     await deleteDigestVectors((existingDigests ?? []).map((row) => row.id));
   }
 
   return { success: deleted };
+}
+
+export async function restoreSource(args: {
+  supabase: TypedSupabaseClient;
+  userId: string;
+  sourceId: string;
+}): Promise<SourceDeleteResult> {
+  const { supabase, userId, sourceId } = args;
+
+  const { data: restored, error } = await supabase.rpc(
+    "restore_trashed_source",
+    { p_source_id: sourceId },
+  );
+  throwIfSupabaseError(error);
+
+  const success = restored === true;
+  if (success) {
+    // 원문 휴지통행이 벡터만 지우고(위 deleteSource) digests 행은 안 건드렸듯,
+    // 복원도 반대 방향으로 같은 자리를 메운다 — 다시 보이게 된 digest 전부를
+    // 재색인한다. 부모는 방금 복원됐으니 이미 보인다(v_visible_digests를 다시
+    // 조인할 필요 없이 digests.trashed_at만 보면 된다) — 단독으로 지워졌던
+    // digest는 여전히 안 보여 재색인 대상에서 빠진다.
+    const { data: digestRows, error: digestsError } = await supabase
+      .from("digests")
+      .select("id, type, title, body, created_at")
+      .eq("source_id", sourceId)
+      .is("trashed_at", null);
+    throwIfSupabaseError(digestsError);
+    await indexDigests({
+      userId,
+      digests: (digestRows ?? []).map(toDigest),
+    });
+  }
+
+  return { success };
 }
 
 // legacy(#432)와 같은 동시성 상한 — 개별 삭제가 벡터 삭제까지 포함해 순간
@@ -196,8 +237,9 @@ export async function getSource(args: {
   const { supabase, userId, sourceId, origin } = args;
 
   // RLS(owner-only)라 남의/없는 sourceId는 여기서 not-found로 걸린다.
+  // 휴지통에 있는 원문도 v_visible_sources라 마찬가지다.
   const { data, error } = await supabase
-    .from("sources")
+    .from("v_visible_sources")
     .select("id, name, body, created_at")
     .eq("id", sourceId)
     .single();
@@ -238,9 +280,9 @@ export async function listSourcesWithDigests(args: {
   // 바꾸는 마지막 UPDATE만 실패하면(드물지만) pending인데 digest 행은 있는 원문이
   // 생기고, 이 조건이 없으면 그 원문이 두 목록에 동시에 뜬다.
   let query = supabase
-    .from("sources")
+    .from("v_visible_sources")
     .select(
-      "id, name, created_at, digests!inner(id, type, title, extraction_order, hidden_at)",
+      "id, name, created_at, digests!inner(id, type, title, extraction_order, trashed_at)",
     )
     .eq("digestion_status", "completed")
     .order("created_at", { ascending: false })
@@ -301,14 +343,17 @@ export async function listDraftSources(args: {
   return (data ?? []).map(toSourceDraft);
 }
 
+// v_visible_sources 컬럼은 생성 타입에서 전부 nullable로 잡힌다(뷰 공통 —
+// v_draft_sources와 같은 사정, 아래 toSourceDraft 주석 참고). 실제로 null이 나올
+// 일은 없고 SourceWithDigestsSchema.parse가 그 전제를 지킨다.
 type SourceWithDigestsRow = Pick<
-  Database["public"]["Tables"]["sources"]["Row"],
+  Database["public"]["Views"]["v_visible_sources"]["Row"],
   "id" | "name" | "created_at"
 > & {
   digests: Array<
     Pick<
       Database["public"]["Tables"]["digests"]["Row"],
-      "id" | "type" | "title" | "hidden_at"
+      "id" | "type" | "title" | "trashed_at"
     >
   >;
 };
@@ -319,7 +364,7 @@ function toSourceWithDigests(row: SourceWithDigestsRow): SourceWithDigests {
     name: row.name,
     createdAt: row.created_at,
     digests: row.digests
-      .filter((digest) => digest.hidden_at === null)
+      .filter((digest) => digest.trashed_at === null)
       .map((digest) => ({
         id: digest.id,
         type: digest.type,

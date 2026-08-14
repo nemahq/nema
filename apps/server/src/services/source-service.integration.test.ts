@@ -24,6 +24,7 @@ import {
   listDraftSources,
   listSourcesWithDigests,
   reExtractSource,
+  restoreSource,
 } from "@server/services/source-service";
 
 // getSource가 내부에서 getSupabaseAdmin()(→getEnv())을 타는 로그 경로를 갖게 되면서,
@@ -422,7 +423,7 @@ describe("source-service (RLS)", () => {
   );
 
   it(
-    "원문을 삭제하면 다이제스트도 함께 사라진다",
+    "원문을 휴지통에 넣으면 딸린 다이제스트는 Postgres엔 남지만 안 보이게 된다",
     async () => {
       if (!localDbAvailable) {
         return;
@@ -440,11 +441,27 @@ describe("source-service (RLS)", () => {
       });
       expect(result.success).toBe(true);
 
-      const { data: remainingDigests } = await admin
+      const { data: rawSource } = await admin
+        .from("sources")
+        .select("trashed_at")
+        .eq("id", sourceId)
+        .single();
+      expect(rawSource?.trashed_at).not.toBeNull();
+
+      const { data: rawDigests } = await admin
         .from("digests")
+        .select("id, trashed_at")
+        .eq("source_id", sourceId);
+      expect(rawDigests).toHaveLength(1);
+      // 원문 휴지통행은 딸린 digest 행의 trashed_at을 안 건드린다(가시성은
+      // v_visible_digests가 부모 조인으로 파생) — 그런데도 안 보여야 한다.
+      expect(rawDigests?.[0]?.trashed_at).toBeNull();
+
+      const { data: visibleDigests } = await admin
+        .from("v_visible_digests")
         .select("id")
         .eq("source_id", sourceId);
-      expect(remainingDigests).toHaveLength(0);
+      expect(visibleDigests).toHaveLength(0);
 
       const repeat = await deleteSource({
         supabase: userA.supabase,
@@ -502,6 +519,107 @@ describe("source-service (RLS)", () => {
         .eq("id", sourceId)
         .maybeSingle();
       expect(stillThere?.id).toBe(sourceId);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "휴지통의 원문을 되살리면 다시 보이고 딸린 다이제스트를 재색인한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("되살아날 결정");
+      const { sourceId, digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "되살아날 원문",
+      });
+      await deleteSource({ supabase: userA.supabase, sourceId });
+
+      const result = await restoreSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        sourceId,
+      });
+      expect(result.success).toBe(true);
+
+      const { data: rawSource } = await admin
+        .from("sources")
+        .select("trashed_at")
+        .eq("id", sourceId)
+        .single();
+      expect(rawSource?.trashed_at).toBeNull();
+
+      const { data: visibleDigests } = await admin
+        .from("v_visible_digests")
+        .select("id")
+        .eq("source_id", sourceId);
+      expect(visibleDigests).toHaveLength(1);
+      expect(mockIndexDigests).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: userA.id,
+          digests: [expect.objectContaining({ id: digests[0]?.id })],
+        }),
+      );
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "휴지통에 없는 원문을 되살리려 하면 에러 없이 false다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("휴지통에 없는 결정");
+      const { sourceId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "휴지통에 없는 원문",
+      });
+      // ingestSource 자체가 저장 직후 indexDigests를 부른다 — restoreSource 몫만
+      // 보려면 그 호출을 지우고 시작해야 한다.
+      mockIndexDigests.mockClear();
+
+      const result = await restoreSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        sourceId,
+      });
+      expect(result.success).toBe(false);
+      expect(mockIndexDigests).not.toHaveBeenCalled();
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "다른 사용자의 휴지통 원문은 되살릴 수 없다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("B가 못 되살릴 결정");
+      const { sourceId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "B가 못 되살릴 원문",
+      });
+      await deleteSource({ supabase: userA.supabase, sourceId });
+
+      const result = await restoreSource({
+        supabase: userB.supabase,
+        userId: userB.id,
+        sourceId,
+      });
+      expect(result.success).toBe(false);
+
+      const { data: rawSource } = await admin
+        .from("sources")
+        .select("trashed_at")
+        .eq("id", sourceId)
+        .single();
+      expect(rawSource?.trashed_at).not.toBeNull();
     },
     TEST_TIMEOUT_MS,
   );
@@ -988,7 +1106,7 @@ describe("listSourcesWithDigests (RLS)", () => {
       });
       const { error } = await admin
         .from("digests")
-        .update({ hidden_at: new Date().toISOString() })
+        .update({ trashed_at: new Date().toISOString() })
         .eq("id", digests[0]?.id ?? "");
       expect(error).toBeNull();
 
