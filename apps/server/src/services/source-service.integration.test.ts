@@ -80,6 +80,7 @@ vi.mock("@server/services/digest-relation-service", () => ({
 
 function noDigests(): GeneratedDigests {
   return {
+    sourceTitle: "테스트 원문 제목",
     decisions: [],
     pendings: [],
     learnings: [],
@@ -356,6 +357,42 @@ describe("source-service (RLS)", () => {
     TEST_TIMEOUT_MS,
   );
 
+  it(
+    "재추출은 sources.title도 새 sourceTitle로 갱신한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = {
+        ...oneDecision("첫 추출"),
+        sourceTitle: "첫 추출 제목",
+      };
+      const { sourceId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "재추출 제목 갱신 테스트 원문",
+      });
+
+      mockGenerated = {
+        ...oneDecision("재추출된 결과"),
+        sourceTitle: "재추출된 제목",
+      };
+      await reExtractSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        sourceId,
+      });
+
+      const { data: source } = await userA.supabase
+        .from("sources")
+        .select("name")
+        .eq("id", sourceId)
+        .single();
+      expect(source?.name).toBe("재추출된 제목");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
   // 이 테스트가 지키는 계약: 재추출로 옛 digest_id를 잃어버린 뒤에도(새 UUID로
   // 바뀌므로) 옛 벡터를 정리 대상으로 잡아낸다 — 못 잡으면 새 결과와 거의 같은
   // 점수의 유령 벡터가 검색 결과에 영구히 섞인다.
@@ -626,10 +663,14 @@ describe("source-service (RLS)", () => {
 
       const { data: sources } = await userA.supabase
         .from("sources")
-        .select("id, digestion_status")
+        .select("id, digestion_status, title, name")
         .eq("body", body);
       expect(sources).toHaveLength(1);
       expect(sources?.[0]?.digestion_status).toBe("pending");
+      // 정리 호출 자체가 실패해 title을 쓰는 자리(saveDigestsAndIndex)까지 못
+      // 간다 — title은 null로 남고 name이 coalesce로 본문을 대신 돌려줘야 한다.
+      expect(sources?.[0]?.title).toBeNull();
+      expect(sources?.[0]?.name).toBe(body);
     },
     TEST_TIMEOUT_MS,
   );
@@ -1086,34 +1127,59 @@ describe("listDraftSources (RLS)", () => {
     TEST_TIMEOUT_MS,
   );
 
+  // title이 없는 원문(정리가 아직 title을 만들기 전부터 있던 원문)을 재현하려면
+  // ingestSource를 우회해 admin으로 직접 넣는다 — ingestSource를 거치면 mock이라도
+  // sourceTitle이 항상 채워져 title이 비는 경로를 만들 수 없다.
   it(
-    "원문 이름은 200자까지는 그대로, 넘으면 200자로 자르고 말줄임표 없이 끝난다",
+    "title이 없는 원문은 이름이 본문 앞 200자로 대체된다 — 200자까지는 그대로, 넘으면 잘리고 말줄임표가 없다",
     async () => {
       if (!localDbAvailable) {
         return;
       }
-      mockGenerated = noDigests();
       const exactly200 = "x".repeat(200);
       const over200 = `${"x".repeat(200)}y`;
 
-      const { sourceId: exactId } = await ingestSource({
-        supabase: userA.supabase,
-        userId: userA.id,
-        body: exactly200,
-      });
-      const { sourceId: overId } = await ingestSource({
-        supabase: userA.supabase,
-        userId: userA.id,
-        body: over200,
-      });
+      const { data: exactSource, error: exactError } = await admin
+        .from("sources")
+        .insert({ user_id: userA.id, body: exactly200 })
+        .select("id")
+        .single();
+      expect(exactError).toBeNull();
+      const { data: overSource, error: overError } = await admin
+        .from("sources")
+        .insert({ user_id: userA.id, body: over200 })
+        .select("id")
+        .single();
+      expect(overError).toBeNull();
 
       const drafts = await listDraftSources({ supabase: userA.supabase });
 
-      expect(drafts.find((draft) => draft.sourceId === exactId)?.name).toBe(
-        exactly200,
-      );
-      expect(drafts.find((draft) => draft.sourceId === overId)?.name).toBe(
-        exactly200,
+      expect(
+        drafts.find((draft) => draft.sourceId === exactSource?.id)?.name,
+      ).toBe(exactly200);
+      expect(
+        drafts.find((draft) => draft.sourceId === overSource?.id)?.name,
+      ).toBe(exactly200);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "정리가 만든 sourceTitle이 title에 저장되고 이름에 그대로 반영된다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = { ...noDigests(), sourceTitle: "생성된 원문 제목" };
+      const { sourceId } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "제목 저장 테스트 원문",
+      });
+
+      const drafts = await listDraftSources({ supabase: userA.supabase });
+      expect(drafts.find((draft) => draft.sourceId === sourceId)?.name).toBe(
+        "생성된 원문 제목",
       );
     },
     TEST_TIMEOUT_MS,

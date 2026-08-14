@@ -204,6 +204,7 @@ export type Database = {
           digestion_status: Database["public"]["Enums"]["digestion_status"];
           id: string;
           name: string;
+          title: string | null;
           updated_at: string;
           user_id: string;
         };
@@ -214,6 +215,7 @@ export type Database = {
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           id?: string;
           name?: string;
+          title?: string | null;
           updated_at?: string;
           user_id: string;
         };
@@ -224,6 +226,7 @@ export type Database = {
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           id?: string;
           name?: string;
+          title?: string | null;
           updated_at?: string;
           user_id?: string;
         };

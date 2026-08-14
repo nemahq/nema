@@ -49,10 +49,10 @@ export const SourceDeleteManyInputSchema = z.object({
 });
 export type SourceDeleteManyInput = z.infer<typeof SourceDeleteManyInputSchema>;
 
-// name — 원문 이름. sources.name(생성 컬럼, DB가 body 앞 200자로 채운다)을 그대로
-// 실어보낸다. 200은 표시 폭이 아니라 응답 폭주를 막는 상한이라 말줄임표가 안
-// 붙는다 — 화면에서 필요한 만큼 잘라 쓴다. source.get·listWithDigests·
-// listDraftSources 셋 다 같은 컬럼을 읽어 이름의 정의가 하나다.
+// name — 원문 이름. sources.name(생성 컬럼)을 그대로 실어보낸다 — title이 있으면
+// title을, 없으면 본문 앞부분을 담는다. 200은 표시 폭이 아니라 응답 폭주를 막는
+// 상한이라 말줄임표가 안 붙는다 — 화면에서 필요한 만큼 잘라 쓴다. source.get·
+// listWithDigests·listDraftSources 셋 다 같은 컬럼을 읽어 이름의 정의가 하나다.
 export const SourceGetResultSchema = z.object({
   sourceId: z.string().uuid(),
   name: z.string(),
@@ -75,7 +75,7 @@ export type SourceWithDigests = z.infer<typeof SourceWithDigestsSchema>;
 // 초안 화면 — 정리 결과가 없거나 처리에 실패한 원문. status는 화면이 "재시도 중"
 // 표시 등에 쓴다. name은 위 SourceGetResultSchema와 같은 정의. bodyPreview는
 // 카드 본문 4줄 미리보기 전용(400자, sources.body_preview 생성 컬럼) — name과
-// 같은 원문 앞부분을 자른 값이라 name보다 200자 더 길다.
+// 달리 title 유무와 무관하게 항상 본문 앞부분이다.
 export const SourceDraftSchema = z.object({
   sourceId: z.string().uuid(),
   name: z.string(),

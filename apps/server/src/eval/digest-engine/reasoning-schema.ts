@@ -41,6 +41,8 @@ const OmittedSchema = z.object({
 });
 
 export const ReasoningDigestGenerationSchema = z.object({
+  sourceTitle: z.string().trim().min(1),
+  titleReasoning: REASONING_FIELD,
   decisions: z.array(ReasoningDecisionSchema),
   pendings: z.array(ReasoningPendingSchema),
   learnings: z.array(ReasoningLearningSchema),
@@ -60,6 +62,10 @@ const REASONING_INSTRUCTION = `
 Every item also carries a "reasoning" field: one or two sentences on why you
 classified it as this type and included it. Cite what in the note drove the
 call, especially when the type or inclusion was a close call.
+
+"sourceTitle" carries its own "titleReasoning": one or two sentences on why
+you picked that title — specifically, whether it was drawn from the whole
+note or leans on just one judgment.
 
 Also report, in a top-level "omitted" array, every judgment-like passage in the
 note that you considered but did NOT turn into a digest — one entry per passage,

@@ -191,13 +191,35 @@ happened is an assumption even if nothing else in the note depends on it yet.
     understandable without reading the rest of the fields.
 11. Write in ${CONTENT_LANGUAGE_NAMES[contentLanguage]}, regardless of what language the note itself uses.
 
+## Source title
+
+Besides the five arrays, produce one "sourceTitle": the title of the note as a
+whole, not of any single judgment (a digest's own "title" above names that one
+judgment; this one names the note that produced all of them). Judge it by
+reading the whole note, not by picking one digest.
+
+- When several digests share one topic, that shared topic is the title — a
+  regular CS sync that produced one decision and one pending question becomes
+  "CS 채팅 UX 개선", not either digest's own title.
+- When the note mixes unrelated topics, write a summary title that spans all
+  of them.
+- Never assemble it by mechanically combining the digests' own titles — judge
+  it fresh each time.
+- It should let someone who has not read the note understand what it is
+  about, the same bar a digest title is held to.
+- Produce it even when all five arrays end up empty — a note with no judgment
+  still has a topic.
+- Write it in ${CONTENT_LANGUAGE_NAMES[contentLanguage]}, same as everything else.
+
 ## Output
 
-JSON object with five arrays, one per type. Each item's title and required field
-come first; the rest are optional — set to null when the note doesn't state them.
-Within each array, order items by where their judgment first appears in the note.
+JSON object with "sourceTitle" plus five arrays, one per type. Each item's
+title and required field come first; the rest are optional — set to null when
+the note doesn't state them. Within each array, order items by where their
+judgment first appears in the note.
 
-{ "decisions":   [{ "title", "choice", "situation", "reason", "tradeoff", "alternatives" }],
+{ "sourceTitle": "",
+  "decisions":   [{ "title", "choice", "situation", "reason", "tradeoff", "alternatives" }],
   "pendings":    [{ "title", "question", "background", "branches", "resolutionCondition" }],
   "learnings":   [{ "title", "finding", "evidence" }],
   "ideas":       [{ "title", "concept", "background", "branches" }],
@@ -273,7 +295,9 @@ export const AssumptionSchema = z.object({
 });
 
 // 빈 배열 허용 — 판단이 없는 글(인사말·잡담)은 다이제스트가 안 나오는 게 정의.
+// sourceTitle은 그래도 항상 있다 — 판단이 없어도 원문엔 주제가 있다.
 export const DigestGenerationSchema = z.object({
+  sourceTitle: z.string().trim().min(1),
   decisions: z.array(DecisionSchema),
   pendings: z.array(PendingSchema),
   learnings: z.array(LearningSchema),
@@ -283,6 +307,11 @@ export const DigestGenerationSchema = z.object({
 
 export type GeneratedDigests = z.infer<typeof DigestGenerationSchema>;
 
+// sourceTitle은 배열이 아니라 flattenGeneratedDigests가 순회할 대상이 아니다 —
+// DIGEST_TYPE_BY_ARRAY_KEY를 이 키 집합 기준으로 걸어, 유형이 늘 때(배열 키가
+// 늘 때) 이 맵에 짝을 안 채우면 컴파일러가 잡아내는 성질은 그대로 둔다.
+type DigestArrayKey = Exclude<keyof GeneratedDigests, "sourceTitle">;
+
 // 배열 키 → DB 저장 type 값. 배열 이름 자체가 유형이라, 평평한 스키마 시절
 // normalizeDigest가 하던 "이 칸들 중 어디까지가 이 유형 것인가" 판단이 필요 없다.
 const DIGEST_TYPE_BY_ARRAY_KEY = {
@@ -291,7 +320,7 @@ const DIGEST_TYPE_BY_ARRAY_KEY = {
   learnings: "learning",
   ideas: "idea",
   assumptions: "assumption",
-} as const satisfies Record<keyof GeneratedDigests, DigestType>;
+} as const satisfies Record<DigestArrayKey, DigestType>;
 
 // type과 body가 같은 유형끼리 짝지어지도록 판별 유니언으로 둔다. Pick<Digest, ...>는
 // discriminated union을 인덱스로 접근하면 body가 다섯 유형 전부의 합집합으로
@@ -314,7 +343,7 @@ export function flattenGeneratedDigests(
   const result: GeneratedDigestItem[] = [];
 
   const entries = Object.entries(DIGEST_TYPE_BY_ARRAY_KEY) as Array<
-    [keyof GeneratedDigests, DigestType]
+    [DigestArrayKey, DigestType]
   >;
   for (const [arrayKey, type] of entries) {
     for (const generatedItem of generated[arrayKey]) {

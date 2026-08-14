@@ -40,7 +40,10 @@ const ARRAY_TYPE = {
   ideas: "idea",
   assumptions: "assumption",
 } as const satisfies Record<
-  Exclude<keyof ReasoningGeneratedDigests, "omitted">,
+  Exclude<
+    keyof ReasoningGeneratedDigests,
+    "omitted" | "sourceTitle" | "titleReasoning"
+  >,
   DigestType
 >;
 
@@ -102,9 +105,18 @@ function formatResponse(
     ...generated.omitted.map((entry) => `- "${entry.note}" — ${entry.reason}`),
   ].join("\n");
 
+  const titleSection = [
+    `## 원문 제목`,
+    "",
+    generated.sourceTitle,
+    "",
+    `> **${REASONING_FIELD_LABEL}**: ${generated.titleReasoning}`,
+  ].join("\n");
+
   return [
     `# ${stem} (reasoning)`,
     `digest count: ${count}`,
+    titleSection,
     ...sections,
     omittedSection,
   ].join("\n\n");
