@@ -53,8 +53,9 @@ const CANDIDATE_MIN_SCORE = 0.2;
 
 // 색인에는 유형·원문 필터를 걸지 않는다 — 페이로드에 유형을 넣으면 그 필드가 없는
 // 기존 벡터가 후보에서 조용히 빠진다. 대신 넉넉히 긁어 와서 Postgres 원장과 맞춰
-// 코드가 자른다. 다이제스트가 수천 개를 넘어 이 상한이 유형 필터에 먹히기 시작하면
-// 그때 페이로드 필터로 옮긴다.
+// 코드가 자른다. 30은 상한(5)의 여섯 배 — 이웃이 전부 엉뚱한 유형이어도 상한을 채울
+// 만큼은 남으라고 잡은 값이다. 다이제스트가 수천 개를 넘어 이 여유가 모자라기
+// 시작하면(로그에서 30개를 다 긁고도 후보가 상한에 못 미치면) 페이로드 필터로 옮긴다.
 const NEIGHBOR_FETCH_LIMIT = 30;
 
 // 이번 배치에 없는 같은 원문 다이제스트의 순서 — 던지기 이전부터 있던 것이라
@@ -197,19 +198,34 @@ async function judgeOne(args: {
     };
   });
 
-  const { verdicts } = await getRelationJudgmentProvider().generateStructured({
-    systemPrompt: buildRelationJudgmentSystemPrompt(judgment, relationTypes),
-    messages: [
-      {
-        role: "user",
-        content: buildRelationJudgmentMessage({
-          digest,
-          candidates: promptCandidates,
-        }),
-      },
-    ],
-    schema: buildRelationJudgmentSchema(relationTypes),
-  });
+  // 판정이 던지면 로그도 안 남아, 나중에 보면 "후보가 원래 없었다"와 구분이 안 된다.
+  // 문턱·상한을 그 로그로 정할 참이라 그 둘이 섞이면 값을 엉뚱하게 조인다. 실패도
+  // 후보와 함께 남기고 던진다.
+  const judged = await getRelationJudgmentProvider()
+    .generateStructured({
+      systemPrompt: buildRelationJudgmentSystemPrompt(judgment, relationTypes),
+      messages: [
+        {
+          role: "user",
+          content: buildRelationJudgmentMessage({
+            digest,
+            candidates: promptCandidates,
+          }),
+        },
+      ],
+      schema: buildRelationJudgmentSchema(relationTypes),
+    })
+    .catch((error: unknown) => {
+      void logRelationJudgment({
+        userId,
+        digestId: digest.id,
+        candidates: candidates.map((candidate) =>
+          toJudgedCandidate(candidate, JUDGMENT_FAILED),
+        ),
+      });
+      throw error;
+    });
+  const { verdicts } = judged;
 
   const rows: RelationRow[] = [];
   const verdictByCandidateId = new Map<string, string>();
@@ -239,16 +255,27 @@ async function judgeOne(args: {
   void logRelationJudgment({
     userId,
     digestId: digest.id,
-    candidates: candidates.map(
-      (candidate): JudgedCandidate => ({
-        digestId: candidate.digest.id,
-        score: candidate.score,
-        verdict: verdictByCandidateId.get(candidate.digest.id) ?? "unanswered",
-      }),
+    candidates: candidates.map((candidate) =>
+      toJudgedCandidate(
+        candidate,
+        verdictByCandidateId.get(candidate.digest.id) ?? UNANSWERED,
+      ),
     ),
   });
 
   return { rows, candidates };
+}
+
+// 판정 결과 자리에 관계 종류·none 말고 들어올 수 있는 값 — 후보가 판정을 못 받은
+// 두 경우다. 로그를 볼 때 "관계가 아니었다"와 구별되어야 한다.
+const UNANSWERED = "unanswered";
+const JUDGMENT_FAILED = "failed";
+
+function toJudgedCandidate(
+  candidate: Candidate,
+  verdict: string,
+): JudgedCandidate {
+  return { digestId: candidate.digest.id, score: candidate.score, verdict };
 }
 
 async function findCandidates(args: {
@@ -360,27 +387,36 @@ function toRelationRow(args: {
   return { from_digest_id: fromId, to_digest_id: toId, type: relation };
 }
 
+// 한 쌍에 관계는 하나라 두 번째는 unique 위반으로 튕긴다(digest_relations_unique_pair).
+// 그건 고장이 아니라 "이미 이어져 있다"는 뜻이라 조용히 건너뛴다.
+const UNIQUE_VIOLATION = "23505";
+
+// 쌍마다 따로 넣는다. 한 번에 묶으면 한 쌍이 튕길 때 그 원문의 관계가 통째로 날아가는데,
+// 방금 판정까지 끝낸 멀쩡한 쌍들을 남의 실패로 같이 잃는 건 너무 비싸다. 한 원문이
+// 내는 관계는 많아야 다이제스트 수 × 후보 상한이라 왕복이 늘어도 무겁지 않다.
 async function saveRelations(args: {
   supabase: TypedSupabaseClient;
   rows: RelationRow[];
 }): Promise<RelationRow[]> {
   const { supabase, rows } = args;
-  if (rows.length === 0) {
-    return [];
+  const saved: RelationRow[] = [];
+
+  for (const row of rows) {
+    const { error } = await supabase.from("digest_relations").insert(row);
+    if (!error) {
+      saved.push(row);
+      continue;
+    }
+    if (error.code === UNIQUE_VIOLATION) {
+      continue;
+    }
+    console.warn(
+      `[digest-relations] 관계 저장 실패 — from=${row.from_digest_id}, to=${row.to_digest_id}:`,
+      error,
+    );
   }
 
-  // 이미 이어진 쌍은 건너뛴다 — 같은 사용자가 동시에 두 원문을 던지면 같은 쌍이
-  // 양쪽에서 판정될 수 있다. 먼저 이어진 것을 남긴다.
-  const { data, error } = await supabase
-    .from("digest_relations")
-    .upsert(rows, {
-      onConflict: "from_digest_id,to_digest_id",
-      ignoreDuplicates: true,
-    })
-    .select("from_digest_id, to_digest_id, type");
-  throwIfSupabaseError(error);
-
-  return data ?? [];
+  return saved;
 }
 
 function groupByDigest(args: {
@@ -412,6 +448,11 @@ function toRelations(args: {
     const otherId = end === "from" ? row.to_digest_id : row.from_digest_id;
     const title = titleById.get(otherId);
     if (title === undefined) {
+      // 관계는 남았는데 상대 다이제스트를 못 읽는 상태 — CASCADE가 있어 정상 경로로는
+      // 안 생긴다. 조용히 빼면 관련 목록에서 한 줄이 이유 없이 사라진 걸로만 보인다.
+      console.warn(
+        `[digest-relations] 상대 다이제스트를 못 찾아 관계를 뺌 — digestId=${digestId}, otherId=${otherId}`,
+      );
       return [];
     }
     return [

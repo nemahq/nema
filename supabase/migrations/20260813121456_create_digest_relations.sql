@@ -21,12 +21,20 @@ CREATE TABLE digest_relations (
   to_digest_id    uuid NOT NULL REFERENCES digests(id) ON DELETE CASCADE,
   type            digest_relation_type NOT NULL,
   created_at      timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT digest_relations_not_self CHECK (from_digest_id <> to_digest_id),
-  -- 한 쌍은 한 번만 판정된다 — 같은 원문 안에서는 앞선 것만 후보로 보고, 기존
-  -- 다이제스트는 판정 대화가 다시 안 열리기 때문이다. 그래도 제약을 두는 건 동시
-  -- 던지기처럼 전제가 깨지는 자리를 조용히 통과시키지 않기 위해서다(쓰기 쪽은
-  -- 충돌을 무시하고 먼저 이어진 것을 남긴다).
-  CONSTRAINT digest_relations_unique_pair UNIQUE (from_digest_id, to_digest_id)
+  CONSTRAINT digest_relations_not_self CHECK (from_digest_id <> to_digest_id)
+);
+
+-- 한 쌍에 관계는 하나. 방향을 무시하고(LEAST/GREATEST) 거는 게 핵심이다 — 지지와
+-- 약화는 서로 반대 방향이라 같은 쌍에 동시에 참일 수 없는데(linking.md 2.7),
+-- (from, to) 순서쌍에 걸면 A→B 지지와 B→A 약화가 서로 다른 행이라 둘 다 들어온다.
+-- 그 조합이 실제로 생길 수 있는 자리는 동시 던지기다: 두 원문이 겹쳐 들어오면 같은
+-- 쌍이 양쪽 판정 대화에서 한 번씩 판정되고, LLM이 비결정적이라 두 답이 어긋날 수 있다.
+-- (평소에는 한 쌍이 한 번만 판정된다 — 같은 원문 안은 앞선 것만 후보로 보고, 기존
+-- 다이제스트는 판정 대화가 다시 안 열린다.)
+-- 쓰기 쪽은 이 충돌을 건너뛰고 먼저 이어진 것을 남긴다(digest-relation-service).
+CREATE UNIQUE INDEX digest_relations_unique_pair ON digest_relations (
+  LEAST(from_digest_id, to_digest_id),
+  GREATEST(from_digest_id, to_digest_id)
 );
 
 COMMENT ON TABLE digest_relations IS

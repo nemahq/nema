@@ -86,6 +86,12 @@ function toDigest(row: DigestRow): Digest {
   } as Digest;
 }
 
+interface RelationRow {
+  from_digest_id: string;
+  to_digest_id: string;
+  type: string;
+}
+
 interface QueryResult {
   data: DigestRow[];
   error: null;
@@ -97,11 +103,16 @@ type DigestsQuery = Promise<QueryResult> & {
 
 // digests 조회는 .in("id", ...).in("type", ...)으로 두 번 좁힌다 — 필터를 무시하는
 // 목이면 "유형 표에 없는 후보가 걸러지는가"를 못 잰다. 그래서 필터를 실제로 적용한다.
-function fakeSupabase(rows: DigestRow[]): {
+function fakeSupabase(args: {
+  rows: DigestRow[];
+  // 이미 이어져 있는 쌍 — insert가 unique 위반으로 튕기는 상황을 만든다.
+  existingPairs?: Array<[string, string]>;
+}): {
   client: TypedSupabaseClient;
-  savedRelations: () => unknown[];
+  savedRelations: () => RelationRow[];
 } {
-  const saved: unknown[] = [];
+  const { rows, existingPairs = [] } = args;
+  const saved: RelationRow[] = [];
 
   function digestsQuery(filters: Array<[string, string[]]>): DigestsQuery {
     const matched = rows.filter((row) =>
@@ -115,16 +126,27 @@ function fakeSupabase(rows: DigestRow[]): {
     });
   }
 
+  // 방향을 무시한 쌍에 걸린 unique 인덱스를 흉내낸다 — 순서만 뒤집힌 쌍도 같은 쌍이다.
+  function isTaken(row: RelationRow): boolean {
+    return existingPairs.some(
+      ([first, second]) =>
+        (first === row.from_digest_id && second === row.to_digest_id) ||
+        (first === row.to_digest_id && second === row.from_digest_id),
+    );
+  }
+
   const from = vi.fn((table: string) => {
     if (table === "digests") {
       return { select: () => digestsQuery([]) };
     }
     return {
-      upsert: (values: unknown[]) => {
-        saved.push(...values);
-        return {
-          select: () => Promise.resolve({ data: values, error: null }),
-        };
+      insert: (row: RelationRow) => {
+        if (isTaken(row)) {
+          return Promise.resolve({ error: { code: "23505" } });
+        }
+        existingPairs.push([row.from_digest_id, row.to_digest_id]);
+        saved.push(row);
+        return Promise.resolve({ error: null });
       },
     };
   });
@@ -135,8 +157,15 @@ function fakeSupabase(rows: DigestRow[]): {
   };
 }
 
-function link(args: { digests: Digest[]; rows: DigestRow[] }) {
-  const { client, savedRelations } = fakeSupabase(args.rows);
+function link(args: {
+  digests: Digest[];
+  rows: DigestRow[];
+  existingPairs?: Array<[string, string]>;
+}) {
+  const { client, savedRelations } = fakeSupabase({
+    rows: args.rows,
+    existingPairs: args.existingPairs,
+  });
   return linkRelations({
     supabase: client,
     userId: "user-1",
@@ -303,6 +332,114 @@ describe("linkRelations", () => {
     });
 
     expect(saved).toEqual([]);
+  });
+
+  it("후보가 상한을 넘으면 뜻이 가까운 것부터 상한만큼만 판정에 넘긴다", async () => {
+    const decision = digestRow({
+      id: DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_NEW,
+      title: "새 결정",
+    });
+    // 상한(5)보다 하나 많은 후보를 점수 오름차순으로 준다 — 잘리는 건 가장 먼 것이어야 한다.
+    const candidates = Array.from({ length: 6 }, (_, order) =>
+      digestRow({
+        id: `0000000${order}-0000-4000-8000-000000000000`,
+        type: "learning",
+        sourceId: SOURCE_OLD,
+        title: `후보 ${order}`,
+      }),
+    );
+    mockSearchNeighbors.mockResolvedValue(
+      candidates.map((row, order) => ({
+        digestId: row.id,
+        score: 0.3 + order / 100,
+      })),
+    );
+    mockGenerateStructured.mockResolvedValue({ verdicts: [] });
+
+    await link({
+      digests: [toDigest(decision)],
+      rows: [decision, ...candidates],
+    });
+
+    expect(mockSearchNeighbors).toHaveBeenCalledWith({
+      userId: "user-1",
+      digestId: DECISION_ID,
+      limit: 30,
+      minScore: 0.2,
+    });
+    expect(mockLogRelationJudgment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        candidates: candidates
+          .slice(1)
+          .reverse()
+          .map((row, order) => ({
+            digestId: row.id,
+            score: 0.3 + (5 - order) / 100,
+            verdict: "unanswered",
+          })),
+      }),
+    );
+  });
+
+  it("이미 이어진 쌍은 건너뛰고 나머지 쌍은 그대로 저장한다", async () => {
+    const learning = digestRow({
+      id: LEARNING_ID,
+      type: "learning",
+      sourceId: SOURCE_NEW,
+      title: "알게 됨",
+    });
+    const older = digestRow({
+      id: OLD_DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_OLD,
+      title: "옛 결정",
+    });
+    mockSearchNeighbors.mockResolvedValue([
+      { digestId: OLD_DECISION_ID, score: 0.4 },
+    ]);
+    mockGenerateStructured.mockResolvedValue({
+      verdicts: [{ candidate: 1, relation: "support", from: null }],
+    });
+
+    // 방향만 뒤집힌 쌍이 이미 있다 — 동시 던지기로 같은 쌍이 반대로 먼저 이어진 상태.
+    const { saved } = await link({
+      digests: [toDigest(learning)],
+      rows: [learning, older],
+      existingPairs: [[OLD_DECISION_ID, LEARNING_ID]],
+    });
+
+    expect(saved).toEqual([]);
+  });
+
+  it("판정이 실패하면 후보와 점수를 실패로 남긴다 — 후보가 없던 것과 구별된다", async () => {
+    const learning = digestRow({
+      id: LEARNING_ID,
+      type: "learning",
+      sourceId: SOURCE_NEW,
+      title: "알게 됨",
+    });
+    const older = digestRow({
+      id: OLD_DECISION_ID,
+      type: "decision",
+      sourceId: SOURCE_OLD,
+      title: "옛 결정",
+    });
+    mockSearchNeighbors.mockResolvedValue([
+      { digestId: OLD_DECISION_ID, score: 0.55 },
+    ]);
+    mockGenerateStructured.mockRejectedValue(new Error("rate limit"));
+
+    await link({ digests: [toDigest(learning)], rows: [learning, older] });
+
+    expect(mockLogRelationJudgment).toHaveBeenCalledWith({
+      userId: "user-1",
+      digestId: LEARNING_ID,
+      candidates: [
+        { digestId: OLD_DECISION_ID, score: 0.55, verdict: "failed" },
+      ],
+    });
   });
 
   it("판정이 실패한 다이제스트만 관계를 잃고 나머지는 이어진다", async () => {

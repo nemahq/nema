@@ -2,7 +2,9 @@
 -- digest-relations 슬라이스: mcp_tool_calls의 detail 모양 제약에 새 도구 둘을 더한다.
 --
 -- CASE에 분기가 없으면 결과가 NULL이고 CHECK는 NULL을 통과시킨다 — 새 도구 둘이
--- 제약 없이 뚫리는 걸 막으려면 분기를 명시해야 한다.
+-- 제약 없이 뚫리는 걸 막으려면 분기를 명시해야 한다. ELSE false로 닫아 다음에 도구가
+-- 늘 때도 분기를 빠뜨리면 통과가 아니라 거부가 되게 한다 — 같은 구멍을 세 번째로
+-- 손으로 막지 않으려면 기본값이 반대여야 한다.
 -- =============================================================
 
 ALTER TABLE mcp_tool_calls DROP CONSTRAINT mcp_tool_calls_detail_shape;
@@ -13,6 +15,7 @@ ALTER TABLE mcp_tool_calls ADD CONSTRAINT mcp_tool_calls_detail_shape CHECK (
     WHEN 'get_source' THEN detail ? 'sourceId'
     WHEN 'get_relations' THEN detail ? 'digestId'
     WHEN 'get_digest' THEN detail ? 'digestId'
+    ELSE false
   END
 );
 

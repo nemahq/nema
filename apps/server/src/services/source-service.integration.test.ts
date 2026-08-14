@@ -229,6 +229,7 @@ afterEach(() => {
   mockIndexDigests.mockReset().mockResolvedValue(undefined);
   mockDeleteDigestVectors.mockReset().mockResolvedValue(undefined);
   mockLogGetSource.mockReset().mockResolvedValue(undefined);
+  mockLinkRelations.mockReset().mockResolvedValue(new Map());
 });
 
 describe("source-service (RLS)", () => {
@@ -481,6 +482,36 @@ describe("source-service (RLS)", () => {
         body: "안녕하세요",
       });
       expect(digests).toHaveLength(0);
+
+      const { data: source } = await userA.supabase
+        .from("sources")
+        .select("digestion_status")
+        .eq("id", sourceId)
+        .single();
+      expect(source?.digestion_status).toBe("completed");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // 관계는 아무것도 접지 않으므로 없어도 다이제스트는 온전하다 — 여기서 던지면
+  // 이미 저장·색인까지 끝난 정리 결과를 관계 하나 때문에 통째로 잃는다.
+  it(
+    "관계 잇기가 실패해도 던지기는 다이제스트를 그대로 돌려준다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("관계가 안 붙는 결정");
+      mockLinkRelations.mockRejectedValueOnce(new Error("qdrant down"));
+
+      const { sourceId, digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "관계 실패 원문",
+      });
+
+      expect(digests).toHaveLength(1);
+      expect(digests[0]?.relations).toEqual([]);
 
       const { data: source } = await userA.supabase
         .from("sources")
