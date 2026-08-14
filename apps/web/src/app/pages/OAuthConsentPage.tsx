@@ -4,6 +4,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button, Skeleton, Text, TextSkeleton } from "@nema-io/weave";
 
 import { NemaWordmark } from "@web/components/ui/NemaWordmark";
+import { useUser } from "@web/lib/auth";
 import { supabase } from "@web/lib/supabase";
 import { useTranslation } from "@web/lib/tolgee";
 import { getStorage, removeStorage } from "@web/utils/localStorage";
@@ -13,23 +14,16 @@ export function OAuthConsentPage() {
   const search = useSearch({ from: "/oauth/consent" });
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { email } = useUser();
   // 구글 등 OAuth 공급자 왕복에서 authorization_id가 URL에서 사라질 수 있어,
   // 라우트 진입 때 저장해 둔 값으로 복구한다(없으면 URL 값을 그대로 쓴다).
   const [authorizationId] = useState(
     () => search.authorization_id ?? getStorage("oauthAuthorizationId"),
   );
   const [clientName, setClientName] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deciding, setDeciding] = useState(false);
   const loadedRef = useRef(false);
-
-  useEffect(function loadAccountEmail() {
-    void (async () => {
-      const { data } = await supabase.auth.getSession();
-      setEmail(data.session?.user.email ?? "");
-    })();
-  }, []);
 
   useEffect(
     function loadAuthorization() {
@@ -46,6 +40,11 @@ export function OAuthConsentPage() {
           const { data, error: detailsError } =
             await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
           if (detailsError) {
+            // eslint-disable-next-line no-console -- Sentry 없이 남은 유일한 신호
+            console.warn(
+              "Failed to load OAuth authorization details",
+              detailsError,
+            );
             setError(t("oauth.error"));
             return;
           }
@@ -55,7 +54,9 @@ export function OAuthConsentPage() {
             // 이미 동의한 요청은 곧장 클라이언트로 돌려보낸다.
             window.location.href = data.redirect_url;
           }
-        } catch {
+        } catch (e) {
+          // eslint-disable-next-line no-console -- Sentry 없이 남은 유일한 신호
+          console.warn("Failed to load OAuth authorization details", e);
           setError(t("oauth.error"));
         }
       })();
@@ -80,31 +81,42 @@ export function OAuthConsentPage() {
             skipBrowserRedirect: true,
           });
       if (decisionError) {
+        // eslint-disable-next-line no-console -- Sentry 없이 남은 유일한 신호
+        console.warn("Failed to decide OAuth authorization", decisionError);
         setError(t("oauth.error"));
         setDeciding(false);
         return;
       }
       window.location.href = data.redirect_url;
-    } catch {
+    } catch (e) {
+      // eslint-disable-next-line no-console -- Sentry 없이 남은 유일한 신호
+      console.warn("Failed to decide OAuth authorization", e);
       setError(t("oauth.error"));
       setDeciding(false);
     }
   }
 
+  // 로그아웃 후 같은 authorization_id로 돌아와야 대기 중인 MCP 클라이언트가
+  // 이어질 수 있다 — SignInPage의 redirect 쿼리 배선을 그대로 재사용한다.
   async function handleSignOut() {
     await supabase.auth.signOut();
-    await navigate({ to: "/signin", search: { redirect: undefined } });
+    const redirect = authorizationId
+      ? `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`
+      : undefined;
+    await navigate({ to: "/signin", search: { redirect } });
   }
 
   // authorization_id가 URL에도 저장소에도 없으면 잘못 들어온 요청이다.
   const invalidRequest = !authorizationId;
   const message = error ?? (invalidRequest ? t("common.unknown_error") : null);
-  const ready = !message && clientName !== null && email !== null;
+  const ready = !message && clientName !== null;
 
   let cardContent: ReactNode;
   if (message) {
     cardContent = (
-      <p className="text-center text-sm text-status-error">{message}</p>
+      <Text as="p" size="sm" color="error" role="alert" className="text-center">
+        {message}
+      </Text>
     );
   } else if (ready) {
     cardContent = (
@@ -156,13 +168,13 @@ export function OAuthConsentPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-surface p-4">
+    <main className="flex min-h-dvh items-center justify-center bg-surface p-4">
       <div className="flex w-full max-w-sm flex-col items-center gap-5">
         <NemaWordmark />
 
         {/* min-h로 로딩→확정 전환에서 레이아웃이 안 튀게 높이를 미리 잡아둔다
-            (SignInPage의 min-h-[260px]와 같은 이유). */}
-        <div className="flex min-h-[220px] w-full flex-col justify-center gap-5 rounded-xl border border-border bg-surface p-6">
+            (SignInPage와 같은 이유). */}
+        <div className="flex min-h-[220px] w-full flex-col justify-center gap-5 rounded-xl border border-border p-6">
           {cardContent}
         </div>
 
@@ -177,11 +189,11 @@ export function OAuthConsentPage() {
               onClick={handleSignOut}
               className="underline hover:text-fg-secondary"
             >
-              {t("oauth.logout")}
+              {t("settings.sign_out")}
             </button>
           </p>
         )}
       </div>
-    </div>
+    </main>
   );
 }
