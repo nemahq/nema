@@ -12,8 +12,8 @@ export function AppLayout() {
     <OnboardingGate>
       <div className="flex h-dvh overflow-hidden">
         <AppSidebar>
-          <DigestNavItem />
           <DraftsNavItem />
+          <DigestNavItem />
         </AppSidebar>
         <Suspense fallback={<ContentAreaFallback />}>
           <Outlet />

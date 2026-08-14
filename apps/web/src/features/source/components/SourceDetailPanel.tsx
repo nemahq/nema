@@ -14,13 +14,13 @@ import {
   type ErrorFallbackProps,
 } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
-import { LoadingWatermark } from "@web/components/ui/LoadingWatermark";
 import { useSourceSuspenseQuery } from "@web/features/source/hooks/useSourceQuery";
 import { useTranslation } from "@web/lib/tolgee";
 import { isNotFoundError } from "@web/lib/trpc";
 
 import { SourceBodyView } from "./SourceBodyView";
 import { SourceDeleteAction } from "./SourceDeleteAction";
+import { SourceDetailPanelSkeleton } from "./SourceDetailPanelSkeleton";
 
 interface SourceDetailPanelProps {
   sourceId: string;
@@ -55,31 +55,29 @@ function SourceDetailCloseButton({ onClose }: SourceDetailCloseButtonProps) {
   );
 }
 
-function SourceDetailPanelContent({
-  sourceId,
-  onClose,
-  banner,
-}: SourceDetailPanelProps) {
+interface SourceDetailBodyProps {
+  sourceId: string;
+  banner?: ReactNode;
+}
+
+// 헤더(삭제·닫기)는 sourceId만 있으면 그릴 수 있는 요소라 source.get 페칭과
+// 묶을 이유가 없다 — Suspense/ErrorBoundary는 실제로 페칭에 걸리는 이 부분에만
+// 두고, 헤더는 항상 즉시 눌러진다(로딩·에러 중에도 닫기·삭제가 가능해야 한다).
+function SourceDetailBody({ sourceId, banner }: SourceDetailBodyProps) {
   const [source] = useSourceSuspenseQuery(sourceId);
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex h-11 shrink-0 items-center justify-end gap-3 px-6">
-        <div className="-mr-1 flex shrink-0 items-center gap-1">
-          {/* 삭제 성공 시 상세 패널을 같이 닫는다. */}
-          <SourceDeleteAction sourceId={sourceId} onDeleted={onClose} />
-          <SourceDetailCloseButton onClose={onClose} />
-        </div>
-      </div>
-
+    <>
       {banner && <div className="px-6 pt-3">{banner}</div>}
 
       <Text as="h2" size="xl" weight="bold" className="px-6 pt-3">
         {source.name}
       </Text>
 
-      <SourceBodyView body={source.body} />
-    </div>
+      <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
+        <SourceBodyView body={source.body} />
+      </div>
+    </>
   );
 }
 
@@ -109,14 +107,7 @@ function SourceDetailPanelError({
     return null;
   }
 
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex h-11 shrink-0 items-center justify-end px-6">
-        <SourceDetailCloseButton onClose={onClose} />
-      </div>
-      <SectionErrorFallback {...fallbackProps} />
-    </div>
-  );
+  return <SectionErrorFallback {...fallbackProps} />;
 }
 
 // 원문 상세 — SidePanel 안에 얹는 공용 콘텐츠. 초안 화면과, 후속으로 붙는 다이제스트
@@ -127,31 +118,38 @@ export function SourceDetailPanel({
   banner,
 }: SourceDetailPanelProps) {
   return (
-    <ErrorBoundary
-      boundaryName="source-detail"
-      // NOT_FOUND는 삭제된 원문을 가리키는 죽은 링크에서 자연히 발생하는 예상된
-      // 에러라 노이즈로 보고하지 않는다.
-      shouldReport={(error) => !isNotFoundError(error)}
-      fallbackRender={(fallbackProps) => (
-        <SourceDetailPanelError {...fallbackProps} onClose={onClose} />
-      )}
-    >
-      <Suspense fallback={<LoadingWatermark />}>
-        {/* key={sourceId} — 열려 있는 채로 다른 원문으로 바로 전환하면(패널을 안
-            닫고 카드만 바꿔 클릭), 대상 원문 쿼리가 이미 캐시돼 있을 때(staleTime
-            30초, gcTime 기본 5분) useSuspenseQuery가 다시 suspend하지 않아 이
-            컴포넌트가 리마운트되지 않는다 — 그러면 본문 textarea DOM이 재사용돼
-            이전 원문에서 스크롤한 위치가 새 원문에 그대로 남는다. key로 강제
-            리마운트시켜 이걸 막는다. SidePanel(폭 상태)은 이 key 밖에 있어
-            리마운트되지 않는다 — legacy가 key를 DraftDetailPanel 안쪽에만 둔 것과
-            같은 이유. */}
-        <SourceDetailPanelContent
-          key={sourceId}
-          sourceId={sourceId}
-          onClose={onClose}
-          banner={banner}
-        />
-      </Suspense>
-    </ErrorBoundary>
+    <div className="flex h-full flex-col">
+      <div className="flex h-11 shrink-0 items-center justify-end gap-3 px-6">
+        <div className="-mr-1 flex shrink-0 items-center gap-1">
+          {/* 삭제 성공 시 상세 패널을 같이 닫는다. */}
+          <SourceDeleteAction sourceId={sourceId} onDeleted={onClose} />
+          <SourceDetailCloseButton onClose={onClose} />
+        </div>
+      </div>
+
+      <ErrorBoundary
+        boundaryName="source-detail"
+        // NOT_FOUND는 삭제된 원문을 가리키는 죽은 링크에서 자연히 발생하는 예상된
+        // 에러라 노이즈로 보고하지 않는다.
+        shouldReport={(error) => !isNotFoundError(error)}
+        fallbackRender={(fallbackProps) => (
+          <SourceDetailPanelError {...fallbackProps} onClose={onClose} />
+        )}
+      >
+        <Suspense fallback={<SourceDetailPanelSkeleton />}>
+          {/* key={sourceId} — 열려 있는 채로 다른 원문으로 바로 전환하면(패널을 안
+              닫고 카드만 바꿔 클릭), 대상 원문 쿼리가 이미 캐시돼 있을 때(staleTime
+              30초, gcTime 기본 5분) useSuspenseQuery가 다시 suspend하지 않아 이
+              컴포넌트가 리마운트되지 않는다 — 그러면 본문 textarea DOM이 재사용돼
+              이전 원문에서 스크롤한 위치가 새 원문에 그대로 남는다. key로 강제
+              리마운트시켜 이걸 막는다. */}
+          <SourceDetailBody
+            key={sourceId}
+            sourceId={sourceId}
+            banner={banner}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    </div>
   );
 }
