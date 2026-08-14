@@ -54,7 +54,7 @@ interface DigestRow {
   title: string;
   body: Record<string, string>;
   created_at: string;
-  hidden_at?: string | null;
+  trashed_at?: string | null;
 }
 
 function digestRow(args: {
@@ -104,11 +104,12 @@ interface QueryResult {
 
 type DigestsQuery = Promise<QueryResult> & {
   in: (column: string, values: string[]) => DigestsQuery;
-  is: (column: string, value: null) => DigestsQuery;
+  returns: () => DigestsQuery;
 };
 
-// digests 조회는 .in("id", ...).in("type", ...)으로 두 번 좁힌다 — 필터를 무시하는
-// 목이면 "유형 표에 없는 후보가 걸러지는가"를 못 잰다. 그래서 필터를 실제로 적용한다.
+// v_visible_digests 조회는 .in("id", ...).in("type", ...).returns<>()로 두 번
+// 좁힌다 — 필터를 무시하는 목이면 "유형 표에 없는 후보가 걸러지는가"를 못
+// 잰다. 그래서 필터를 실제로 적용한다.
 function fakeSupabase(args: {
   rows: DigestRow[];
   // 이미 이어져 있는 쌍 — insert가 unique 위반으로 튕기는 상황을 만든다.
@@ -120,23 +121,20 @@ function fakeSupabase(args: {
   const { rows, existingPairs = [] } = args;
   const saved: RelationRow[] = [];
 
-  // 가림(hidden_at)까지 흉내내야 "가려진 후보가 빠지는가"를 잴 수 있다 — 픽스처는
-  // hidden_at을 안 달면 살아있는 것으로 본다.
-  function digestsQuery(
-    filters: Array<[string, string[]]>,
-    onlyVisible: boolean,
-  ): DigestsQuery {
+  // 가림(trashed_at)까지 흉내내야 "가려진 후보가 빠지는가"를 잴 수 있다 —
+  // v_visible_digests는 실제로 이 조건을 뷰 정의(WHERE)에서 미리 거르므로,
+  // 여기서도 쿼리 체인이 아니라 픽스처 자체에서 항상 거른다.
+  function digestsQuery(filters: Array<[string, string[]]>): DigestsQuery {
     const matched = rows.filter(
       (row) =>
         filters.every(([column, values]) =>
           values.includes(String(row[column as keyof DigestRow])),
-        ) &&
-        (!onlyVisible || (row.hidden_at ?? null) === null),
+        ) && (row.trashed_at ?? null) === null,
     );
     return Object.assign(Promise.resolve({ data: matched, error: null }), {
       in: (column: string, values: string[]) =>
-        digestsQuery([...filters, [column, values]], onlyVisible),
-      is: () => digestsQuery(filters, true),
+        digestsQuery([...filters, [column, values]]),
+      returns: () => digestsQuery(filters),
     });
   }
 
@@ -150,8 +148,8 @@ function fakeSupabase(args: {
   }
 
   const from = vi.fn((table: string) => {
-    if (table === "digests") {
-      return { select: () => digestsQuery([], false) };
+    if (table === "v_visible_digests") {
+      return { select: () => digestsQuery([]) };
     }
     return {
       insert: (row: RelationRow) => {
@@ -414,7 +412,7 @@ describe("linkRelations", () => {
         sourceId: SOURCE_OLD,
         title: "지워진 결정",
       }),
-      hidden_at: CREATED_AT,
+      trashed_at: CREATED_AT,
     };
     mockSearchNeighbors.mockResolvedValue([
       { digestId: OLD_DECISION_ID, score: 0.8 },

@@ -29,14 +29,20 @@ loadEnv(join(fileURLToPath(import.meta.url), "..", "..", ".."));
 // 색인·벡터 삭제는 Voyage·Qdrant 실제 호출이 필요해 이 스위트의 몫이 아니다(그
 // 자체는 digest-index-service 단위 테스트 몫) — 여기서는 "가릴 때 이 함수가
 // 불렸는가"만 본다.
-const { mockDeleteDigestVectors } = vi.hoisted(() => ({
+const { mockDeleteDigestVectors, mockIndexDigests } = vi.hoisted(() => ({
   mockDeleteDigestVectors: vi.fn().mockResolvedValue(undefined),
+  mockIndexDigests: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@server/services/digest-index-service", () => ({
   deleteDigestVectors: mockDeleteDigestVectors,
+  indexDigests: mockIndexDigests,
 }));
 
-import { deleteDigest, getDigest } from "@server/services/digest-service";
+import {
+  deleteDigest,
+  getDigest,
+  restoreDigest,
+} from "@server/services/digest-service";
 
 const SETUP_TIMEOUT_MS = 30_000;
 const TEST_TIMEOUT_MS = 20_000;
@@ -157,11 +163,12 @@ afterAll(async () => {
 
 afterEach(() => {
   mockDeleteDigestVectors.mockClear();
+  mockIndexDigests.mockClear();
 });
 
 describe("deleteDigest (RLS)", () => {
   it(
-    "가리기는 Postgres 행을 지우지 않고 hidden_at만 남긴다",
+    "가리기는 Postgres 행을 지우지 않고 trashed_at만 남긴다",
     async () => {
       if (!localDbAvailable) {
         return;
@@ -176,11 +183,44 @@ describe("deleteDigest (RLS)", () => {
 
       const { data: row } = await admin
         .from("digests")
-        .select("id, hidden_at")
+        .select("id, trashed_at")
         .eq("id", digestId)
         .single();
       expect(row?.id).toBe(digestId);
-      expect(row?.hidden_at).not.toBeNull();
+      expect(row?.trashed_at).not.toBeNull();
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "한 다이제스트를 가려도 같은 원문의 다른 다이제스트는 멀쩡하다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { sourceId, digestId } = await seedDigest(userA.id);
+      const { data: sibling, error: siblingError } = await admin
+        .from("digests")
+        .insert({
+          source_id: sourceId,
+          type: "learning",
+          title: "가림 테스트 형제 다이제스트",
+          body: { finding: "fixture" },
+          extraction_order: 1,
+        })
+        .select("id")
+        .single();
+      if (siblingError || !sibling) {
+        throw siblingError ?? new Error("failed to seed sibling digest");
+      }
+
+      await deleteDigest({ supabase: userA.supabase, digestId });
+
+      const { data: visibleIds } = await admin
+        .from("v_visible_digests")
+        .select("id")
+        .eq("source_id", sourceId);
+      expect(visibleIds?.map((row) => row.id)).toEqual([sibling.id]);
     },
     TEST_TIMEOUT_MS,
   );
@@ -216,10 +256,10 @@ describe("deleteDigest (RLS)", () => {
 
       const { data: row } = await admin
         .from("digests")
-        .select("hidden_at")
+        .select("trashed_at")
         .eq("id", digestId)
         .single();
-      expect(row?.hidden_at).toBeNull();
+      expect(row?.trashed_at).toBeNull();
     },
     TEST_TIMEOUT_MS,
   );
@@ -255,6 +295,85 @@ describe("deleteDigest (RLS)", () => {
         digestId: randomUUID(),
       });
       expect(result.success).toBe(false);
+    },
+    TEST_TIMEOUT_MS,
+  );
+});
+
+describe("restoreDigest (RLS)", () => {
+  it(
+    "가려진 다이제스트를 되살리면 다시 보이고 재색인한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { digestId } = await seedDigest(userA.id);
+      await deleteDigest({ supabase: userA.supabase, digestId });
+
+      const result = await restoreDigest({
+        supabase: userA.supabase,
+        userId: userA.id,
+        digestId,
+      });
+      expect(result.success).toBe(true);
+
+      const { data: row } = await admin
+        .from("digests")
+        .select("trashed_at")
+        .eq("id", digestId)
+        .single();
+      expect(row?.trashed_at).toBeNull();
+      expect(mockIndexDigests).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: userA.id,
+          digests: [expect.objectContaining({ id: digestId })],
+        }),
+      );
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "가려지지 않은 다이제스트를 되살리려 하면 에러 없이 false다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { digestId } = await seedDigest(userA.id);
+
+      const result = await restoreDigest({
+        supabase: userA.supabase,
+        userId: userA.id,
+        digestId,
+      });
+      expect(result.success).toBe(false);
+      expect(mockIndexDigests).not.toHaveBeenCalled();
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "다른 사용자의 다이제스트는 되살릴 수 없다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { digestId } = await seedDigest(userA.id);
+      await deleteDigest({ supabase: userA.supabase, digestId });
+
+      const result = await restoreDigest({
+        supabase: userB.supabase,
+        userId: userB.id,
+        digestId,
+      });
+      expect(result.success).toBe(false);
+
+      const { data: row } = await admin
+        .from("digests")
+        .select("trashed_at")
+        .eq("id", digestId)
+        .single();
+      expect(row?.trashed_at).not.toBeNull();
     },
     TEST_TIMEOUT_MS,
   );

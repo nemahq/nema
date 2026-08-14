@@ -115,6 +115,41 @@ async function seedPair(user: TestUser): Promise<{
   return { decisionId, learningId };
 }
 
+// seedPair는 둘 다 같은 원문 밑에 둔다 — 원문 하나만 휴지통에 넣는 시나리오는
+// 상대 digest까지 같이 지워버려 검증이 안 된다. 그래서 원문을 따로 둔다.
+async function seedDigestWithSource(
+  user: TestUser,
+  args: { type: "decision" | "learning"; title: string },
+): Promise<{ sourceId: string; digestId: string }> {
+  const { data: source, error: sourceError } = await user.supabase
+    .from("sources")
+    .insert({ user_id: user.id, body: `관계 픽스처 — ${args.title}` })
+    .select("id")
+    .single();
+  if (sourceError || !source) {
+    throw sourceError ?? new Error("failed to insert source");
+  }
+
+  const body =
+    args.type === "decision" ? { choice: args.title } : { finding: args.title };
+  const { data: digest, error: digestError } = await user.supabase
+    .from("digests")
+    .insert({
+      source_id: source.id,
+      type: args.type,
+      title: args.title,
+      body,
+      extraction_order: 0,
+    })
+    .select("id")
+    .single();
+  if (digestError || !digest) {
+    throw digestError ?? new Error("failed to insert digest");
+  }
+
+  return { sourceId: source.id, digestId: digest.id };
+}
+
 let userA: TestUser;
 let userB: TestUser;
 let localDbAvailable = false;
@@ -233,6 +268,98 @@ describe("digest_relations (RLS)", () => {
         digestId: decisionId,
       });
       expect(remaining).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // 관계 자신은 아무 상태도 안 가진다 — 끝점(다이제스트)의 가시성에서만 파생된다
+  // (kickoff 3단 상속). digest_relations 행은 CASCADE 없이 그대로 남아있는 채로도
+  // 관계가 양쪽 모두에서 안 보여야 한다.
+  it(
+    "관계 끝점 하나가 휴지통에 있으면 관계가 양쪽 모두에서 안 보인다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { decisionId, learningId } = await seedPair(userA);
+      await userA.supabase.from("digest_relations").insert({
+        from_digest_id: learningId,
+        to_digest_id: decisionId,
+        type: "support",
+      });
+
+      const { error: trashError } = await userA.supabase
+        .from("digests")
+        .update({ trashed_at: new Date().toISOString() })
+        .eq("id", learningId);
+      expect(trashError).toBeNull();
+
+      // 지워진 쪽(learningId) 자체는 v_visible_digests 밖이라 not-found.
+      await expect(
+        getDigestRelations({
+          supabase: userA.supabase,
+          userId: userA.id,
+          digestId: learningId,
+        }),
+      ).rejects.toThrow();
+
+      // 살아있는 쪽(decisionId)에서 봐도 지워진 상대는 목록에서 빠진다.
+      const fromDecision = await getDigestRelations({
+        supabase: userA.supabase,
+        userId: userA.id,
+        digestId: decisionId,
+      });
+      expect(fromDecision).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // 다이제스트 자신의 trashed_at은 안 건드리고 부모 원문만 휴지통에 넣어도(3단
+  // 상속) 관계가 같은 방식으로 안 보여야 한다 — v_visible_digests가 조인으로
+  // 파생하는 자리를 검증한다.
+  it(
+    "부모 원문이 휴지통에 있으면(다이제스트 자신은 안 건드려도) 관계가 안 보인다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      // 서로 다른 원문에 하나씩 둔다 — 같은 원문이면 원문 하나를 휴지통에 넣을 때
+      // 상대(decision)까지 같이 안 보이게 돼 "다이제스트 자신은 안 건드려도"를
+      // 못 잰다.
+      const decision = await seedDigestWithSource(userA, {
+        type: "decision",
+        title: "주 1회로 한다",
+      });
+      const learning = await seedDigestWithSource(userA, {
+        type: "learning",
+        title: "일 단위는 7배 비싸다",
+      });
+      await userA.supabase.from("digest_relations").insert({
+        from_digest_id: learning.digestId,
+        to_digest_id: decision.digestId,
+        type: "support",
+      });
+
+      const { data: trashed, error: trashError } = await userA.supabase.rpc(
+        "trash_source",
+        { p_source_id: learning.sourceId },
+      );
+      expect(trashError).toBeNull();
+      expect(trashed).toBe(true);
+
+      const { data: rawLearning } = await admin
+        .from("digests")
+        .select("trashed_at")
+        .eq("id", learning.digestId)
+        .single();
+      expect(rawLearning?.trashed_at).toBeNull();
+
+      const fromDecision = await getDigestRelations({
+        supabase: userA.supabase,
+        userId: userA.id,
+        digestId: decision.digestId,
+      });
+      expect(fromDecision).toEqual([]);
     },
     TEST_TIMEOUT_MS,
   );
