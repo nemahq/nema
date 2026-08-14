@@ -18,13 +18,15 @@ export type JudgedCandidate = {
 export async function logRelationJudgment(args: {
   userId: string;
   digestId: string;
+  /** 어느 갈래의 판정인가 — RelationJudgment.name. 갈래마다 후보 범위가 달라 점수 분포도 다르다. */
+  judgment: string;
   candidates: JudgedCandidate[];
 }): Promise<void> {
-  const { userId, digestId, candidates } = args;
+  const { userId, digestId, judgment, candidates } = args;
   try {
     const { error } = await getSupabaseAdmin()
       .from("relation_judgments")
-      .insert({ user_id: userId, digest_id: digestId, candidates });
+      .insert({ user_id: userId, digest_id: digestId, judgment, candidates });
     if (error) {
       console.warn(
         `[relation-judgment-log] 로그 저장 실패 — digestId=${digestId}:`,

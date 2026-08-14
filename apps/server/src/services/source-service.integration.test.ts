@@ -523,6 +523,60 @@ describe("source-service (RLS)", () => {
     TEST_TIMEOUT_MS,
   );
 
+  // 갈래를 병렬로 돌리면 안 되는 이유가 여기 걸려 있다. 다른 원문의 결정↔결정은 두
+  // 갈래 모두의 후보라 weaken과 conflict가 같은 쌍에 나올 수 있는데, 한 쌍에 관계는
+  // 하나뿐이라(digest_relations_unique_pair) 나중에 넣는 쪽이 조용히 버려진다.
+  // 중복·충돌이 먼저여야 겹치는 자리에서 "충돌합니다"가 남는다 — 순서가 뒤집히거나
+  // 병렬로 바뀌면 같은 원문을 던져도 매번 다른 관계가 붙는다.
+  it(
+    "관계 잇기를 갈래마다 한 번씩 부르고, 중복·충돌을 먼저 돈다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      mockGenerated = oneDecision("갈래 순서 결정");
+      mockLinkRelations.mockImplementation(
+        (args: {
+          digests: Array<{ id: string }>;
+          judgment: { name: string };
+        }) =>
+          Promise.resolve(
+            new Map(
+              args.digests.map((digest) => [
+                digest.id,
+                [
+                  {
+                    type: args.judgment.name,
+                    digestId: digest.id,
+                    title: args.judgment.name,
+                  },
+                ],
+              ]),
+            ),
+          ),
+      );
+
+      const { digests } = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body: "갈래 순서 원문",
+      });
+
+      expect(
+        mockLinkRelations.mock.calls.map(
+          (call) => (call[0] as { judgment: { name: string } }).judgment.name,
+        ),
+      ).toEqual(["duplicate_conflict", "support_weaken"]);
+      // 두 갈래의 결과가 한 다이제스트 아래로 합쳐진다 — 나중 갈래가 앞 갈래를 덮으면
+      // 관계 절반이 응답에서 사라진다.
+      expect(digests[0]?.relations.map((relation) => relation.type)).toEqual([
+        "duplicate_conflict",
+        "support_weaken",
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
   it(
     "넣기 중 LLM 호출이 실패해도 원문은 남는다",
     async () => {

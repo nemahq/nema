@@ -37,8 +37,9 @@ import {
 // 관계 잇기 — 후보 찾기 → 판정 → 방향 붙여 저장.
 //
 // 이 흐름에는 다이제스트 유형 분기가 없다. 유형마다 다른 것(후보 범위·방향·관계
-// 종류)은 전부 relation-rules.ts의 표에서 읽는다. 중복·충돌을 붙일 때 이 파일을
-// 안 열어도 되게 하는 게 이 구조의 목적이다.
+// 종류)은 전부 relation-rules.ts의 표에서 읽는다. 갈래를 하나 더 붙일 때 이 파일을
+// 안 열어도 되게 하는 게 이 구조의 목적이다 — 중복·충돌을 붙일 때 실제로 지켜졌다.
+// 그때 여기서 바뀐 건 판정 로직이 아니라 로그 한 줄(judgment: judgment.name)뿐이다.
 //
 // 아래 세 값은 아직 근거가 얇은 출발점이다. 로컬 실측(원문 3건)에서 실제로 관계가
 // 붙은 쌍은 0.62·0.71이었다 — 꺼내기 검색의 대역(최고 0.30)과 아예 다른 자리다.
@@ -224,6 +225,7 @@ async function judgeOne(args: {
       void logRelationJudgment({
         userId,
         digestId: digest.id,
+        judgment: judgment.name,
         candidates: candidates.map((candidate) =>
           toJudgedCandidate(candidate, JUDGMENT_FAILED),
         ),
@@ -260,6 +262,7 @@ async function judgeOne(args: {
   void logRelationJudgment({
     userId,
     digestId: digest.id,
+    judgment: judgment.name,
     candidates: candidates.map((candidate) =>
       toJudgedCandidate(
         candidate,
