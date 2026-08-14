@@ -16,10 +16,11 @@ DECLARE
   -- 형식은 SourceSchema(packages/shared/src/schemas/source.ts)의 SOURCE_PUBLIC_ID_*
   -- 상수와 맞춰져 있다 — 한쪽을 바꾸면 다른 쪽도 맞춰야 한다.
   v_alphabet text := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  v_length   int := 12; -- SOURCE_PUBLIC_ID_LENGTH와 맞춘 값
   v_id       text := '';
   i          int;
 BEGIN
-  FOR i IN 1..12 LOOP
+  FOR i IN 1..v_length LOOP
     v_id := v_id || substr(v_alphabet, (floor(random() * length(v_alphabet)) + 1)::int, 1);
   END LOOP;
   RETURN 'src_' || v_id;
@@ -32,10 +33,11 @@ DECLARE
   -- 형식은 DigestSchema(packages/shared/src/schemas/digest.ts)의 DIGEST_PUBLIC_ID_*
   -- 상수와 맞춰져 있다 — 한쪽을 바꾸면 다른 쪽도 맞춰야 한다.
   v_alphabet text := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  v_length   int := 12; -- DIGEST_PUBLIC_ID_LENGTH와 맞춘 값
   v_id       text := '';
   i          int;
 BEGIN
-  FOR i IN 1..12 LOOP
+  FOR i IN 1..v_length LOOP
     v_id := v_id || substr(v_alphabet, (floor(random() * length(v_alphabet)) + 1)::int, 1);
   END LOOP;
   RETURN 'dgt_' || v_id;
