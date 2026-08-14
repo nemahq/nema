@@ -13,6 +13,14 @@ export const DIGEST_TYPES = [
 export const DigestTypeSchema = z.enum(DIGEST_TYPES);
 export type DigestType = z.infer<typeof DigestTypeSchema>;
 
+// generate_digest_public_id()(supabase/migrations)가 SQL로 같은 형식을 만든다 —
+// 한쪽을 바꾸면 다른 쪽도 맞춰야 한다(legacy Digest public_id와 같은 패턴).
+export const DIGEST_PUBLIC_ID_PREFIX = "dgt_";
+export const DIGEST_PUBLIC_ID_LENGTH = 12;
+export const DIGEST_PUBLIC_ID_PATTERN = new RegExp(
+  `^${DIGEST_PUBLIC_ID_PREFIX}[0-9A-Za-z]{${DIGEST_PUBLIC_ID_LENGTH}}$`,
+);
+
 // 이름이 서로 다른 이유 — 미결의 갈래는 아직 어느 쪽도 이길 수 있어 찬반을 함께
 // 담는 argument가 맞고, 결정의 대안은 이미 진 길이라 rejectionReason이 맞다.
 const PendingBranchSchema = z.object({

@@ -11,6 +11,15 @@ export type DigestionStatus = z.infer<typeof DigestionStatusSchema>;
 // 통과시키려 높게 잡는다. legacy(SOURCE_BODY_MAX_LENGTH)와 같은 값.
 export const SOURCE_BODY_MAX_LENGTH = 100_000;
 
+// generate_source_public_id()(supabase/migrations)가 SQL로 같은 형식을 만든다 —
+// 한쪽을 바꾸면 다른 쪽도 맞춰야 한다. legacy엔 Source public_id가 없어 새로 둔
+// 접두사다(legacy Digest는 dgt_, Source는 legacy에 없던 개념이라 src_).
+export const SOURCE_PUBLIC_ID_PREFIX = "src_";
+export const SOURCE_PUBLIC_ID_LENGTH = 12;
+export const SOURCE_PUBLIC_ID_PATTERN = new RegExp(
+  `^${SOURCE_PUBLIC_ID_PREFIX}[0-9A-Za-z]{${SOURCE_PUBLIC_ID_LENGTH}}$`,
+);
+
 export const SourceIngestInputSchema = z.object({
   body: z.string().trim().min(1).max(SOURCE_BODY_MAX_LENGTH),
 });
