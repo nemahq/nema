@@ -38,8 +38,7 @@
     "unknown_error": "An unknown error occurred."
   },
   "digest": {
-    "list_empty_description": "Digests appear here once you save something.",
-    "list_empty_title": "No digests yet.",
+    "list_empty": "Digests appear here once you save something.",
     "nav_label": "Digests",
     "type_assumption": "Assumption",
     "type_decision": "Decision",
