@@ -41,11 +41,11 @@
 - 기능 명세서(`../functional-spec/README.md`): 같은 동작을 사용자 플로우로 적은 것. 이번 라운드 범위 표시도 거기 있다.
 - 용어 사전(`../../../guides/glossary.md`): 제품 용어·개념 용어·코드 용어 매핑.
 
-## 07-modeling에서 아직 못 채운 것
+## 07-modeling에서 아직 안 맞는 것
 
-Statement·Relation 정의는 `07-modeling.md`가 이미 SSOT다(진술은 테이블 없이 개념만
-남고, 관계는 Digest끼리 잇는다). 아직 안 맞는 건 07-modeling의 Changeset "동작
-규칙" 절이다 — Changeset 자체가 이번 라운드에 안 만들어져서, 그 절은 진술 단위
+진술·관계 정의는 `07-modeling.md`가 이미 SSOT다(진술은 테이블 없이 개념만 남고,
+관계는 다이제스트끼리 잇는다). 아직 안 맞는 건 07-modeling의 Changeset "동작 규칙"
+절이다. Changeset 자체가 이번 라운드에 안 만들어져서, 그 절은 진술 단위
 리뷰·되돌리기를 전제로 한 옛 문장을 그대로 갖고 있다. Changeset을 실제로 만들 때
 다이제스트 단위로 다시 읽을 것.
 

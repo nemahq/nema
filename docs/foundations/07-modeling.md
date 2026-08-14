@@ -110,8 +110,8 @@ Digest의 주된 칸(결정의 `choice`, 학습의 `finding` 등)이 곧 그 진
 | `status` | `enum: active / archived` | 존재 상태. 끝점 archived 시 연쇄 규칙은 아래 동작 규칙 "끝점이 archived되면 관계도 연쇄로 archived된다" 참고 |
 
 **방향 의미**
-- `support` A→B: A가 B를 뒷받침한다("B인 이유는 A"). 받는 쪽(B)은 늘 Decision이다.
-- `weaken` A→B: A가 B가 딛고 선 것을 무너뜨린다. `support`의 반대 방향. 받는 쪽(B)은 늘 Decision이다.
+- `support` A→B: A가 B를 뒷받침한다("B인 이유는 A"). 받는 쪽(B)은 늘 결정이다.
+- `weaken` A→B: A가 B가 딛고 선 것을 무너뜨린다. `support`의 반대 방향. 받는 쪽(B)은 늘 결정이다.
 - `duplicate` A→B: A와 B가 같은 것을 말한다(같은 유형끼리만). 저장은 새 것(A)→기존 것(B) 방향이지만 논리적으로는 대칭이다.
 - `conflict` A→B: A와 B가 부딪힌다(같은 유형끼리만). `duplicate`와 같은 판정에서 갈리고, 저장 방향도 같다.
 - `resolve` A→B: A(답)가 B(질문, 또는 검증되지 않은 가정에서 나온 주장)를 닫는다. 아직 안 만들었다.
