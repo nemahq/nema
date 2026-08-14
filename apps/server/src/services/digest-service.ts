@@ -102,8 +102,7 @@ export async function getDigest(
   args: {
     supabase: TypedSupabaseClient;
     userId: string;
-    // 웹은 주소(?digest=)의 public_id로, MCP(get_digest 도구)는 이전 도구 응답이
-    // 준 내부 id로 부른다 — DigestGetInputSchema와 같은 이유로 둘 다 받는다.
+    // 둘 다 받는 이유는 DigestGetInputSchema 참고.
   } & ({ digestPublicId: string } | { digestId: string }),
 ): Promise<DigestDetail> {
   const { supabase, userId } = args;

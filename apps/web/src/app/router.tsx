@@ -5,6 +5,11 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 
+import {
+  DIGEST_PUBLIC_ID_PATTERN,
+  SOURCE_PUBLIC_ID_PATTERN,
+} from "@nema-io/shared";
+
 import { getEnv } from "@web/app/env";
 import { NotFoundErrorFallback } from "@web/app/error/NotFoundErrorFallback";
 import { RouteErrorFallback } from "@web/app/error/RouteErrorFallback";
@@ -81,29 +86,44 @@ const authenticatedRoute = createRoute({
 
 // 열려 있는 상세를 URL에 둔다(초안 화면과 같은 이유). digest와 source는 사이드뷰
 // 한 자리를 나눠 써서 동시에 열리지 않는다 — 하나를 열면 다른 하나를 지운다.
+// catch는 형식이 안 맞는 값(배열, public_id 패턴이 아닌 문자열 — 이 PR 이전에
+// 발급된 uuid 형식 북마크·열린 탭 포함)을 여기서 비운다. 서버 입력 스키마도 같은
+// 패턴을 검사하지만, 거기서 걸리면 NOT_FOUND가 아니라 BAD_REQUEST라 죽은 링크가
+// 스스로 안 닫히고 에러 화면에 박힌다 — 형식 검증은 이 경계에서 끝내야 한다.
 const homeRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/",
   component: HomePage,
   errorComponent: RouteErrorFallback,
   validateSearch: z.object({
-    digest: z.string().optional().catch(undefined),
-    source: z.string().optional().catch(undefined),
+    digest: z
+      .string()
+      .regex(DIGEST_PUBLIC_ID_PATTERN)
+      .optional()
+      .catch(undefined),
+    source: z
+      .string()
+      .regex(SOURCE_PUBLIC_ID_PATTERN)
+      .optional()
+      .catch(undefined),
   }),
 });
 
-// 열려 있는 초안 상세를 URL에 둔다 — catch는 파싱 자체가 실패하는 값(배열 등
-// string이 아닌 값)만 비운다. 존재하지 않는/삭제된 sourcePublicId는 정상
-// 파싱되어 그대로 통과하므로 여기서 걸러지지 않는다 — 그 죽은 링크는
-// SourceDetailPanel이 source.get의 NOT_FOUND를 받아 패널을 스스로 닫는 것으로
-// 처리한다.
+// 열려 있는 초안 상세를 URL에 둔다 — 형식이 맞지만 존재하지 않는/삭제된
+// sourcePublicId는(위 catch를 통과) 정상 파싱되어 그대로 통과하므로 여기서
+// 안 걸러진다 — 그 죽은 링크는 SourceDetailPanel이 source.get의 NOT_FOUND를
+// 받아 패널을 스스로 닫는 것으로 처리한다.
 const draftsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/drafts",
   component: DraftsPage,
   errorComponent: RouteErrorFallback,
   validateSearch: z.object({
-    source: z.string().optional().catch(undefined),
+    source: z
+      .string()
+      .regex(SOURCE_PUBLIC_ID_PATTERN)
+      .optional()
+      .catch(undefined),
   }),
 });
 

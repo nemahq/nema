@@ -192,8 +192,7 @@ export async function getSource(
     supabase: TypedSupabaseClient;
     userId: string;
     origin: RequestOrigin;
-    // 웹은 주소(?source=)의 public_id로, MCP(get_source 도구)는 이전 도구 응답이
-    // 준 내부 id로 부른다 — SourceGetInputSchema와 같은 이유로 둘 다 받는다.
+    // 둘 다 받는 이유는 SourceGetInputSchema 참고.
   } & ({ sourcePublicId: string } | { sourceId: string }),
 ): Promise<SourceGetResult> {
   const { supabase, userId, origin } = args;

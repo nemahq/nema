@@ -9,9 +9,11 @@ import { DigestTypeBadge } from "./DigestTypeBadge";
 interface DigestListRowProps {
   digest: DigestListItem;
   selected: boolean;
-  // 왼쪽 클릭(같은 탭 내비게이션)에서만 불린다 — cmd/middle click(새 탭)은
-  // 이 컴포넌트 트리 밖에서 열리므로 내부 id를 미리 건네줄 수 없고, 그 경우
-  // DigestDetailPanel이 digest.get 응답을 기다려 채운다(DigestDetailPanel 참고).
+  // cmd/ctrl/shift/alt+click(새 탭)에서도 이 onClick은 이 탭에서 그대로 불린다 —
+  // 하지만 실제로 열리는 건 새 탭(별개 프로세스의 새 상태)이라 여기서 기록한
+  // knownDigestId는 그 탭엔 안 전해진다. 그 탭은 DigestDetailPanel이 digest.get
+  // 응답을 기다려 채운다(DigestDetailPanel 참고). middle click은 auxclick이라
+  // 이 onClick 자체가 안 불린다.
   onOpen?: (digest: DigestListItem) => void;
 }
 
