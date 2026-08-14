@@ -65,24 +65,35 @@ function DigestDetailPanelContent({ digestId }: DigestDetailPanelContentProps) {
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 pt-3 pb-8">
       <CandidateCardFrame
         wash={
-          <>
-            <div className="flex min-w-0 items-center gap-2">
-              <DigestTypeBadge type={digest.type} />
-              {/* 목록에서는 한 줄로 잘리는 제목을 여기서는 통째로 보여준다 —
-                  상세까지 잘리면 이 패널을 열 이유가 없다. truncate 대신
-                  min-w-0만 둬서 넘치면 줄바꿈되게 한다. */}
-              <Text as="span" size="xl" weight="semibold" className="min-w-0">
-                {digest.title}
-              </Text>
-            </div>
-            <RelativeTime dateTime={digest.createdAt} />
-          </>
+          <div className="flex min-w-0 items-center gap-2">
+            <DigestTypeBadge type={digest.type} />
+            {/* 목록에서는 한 줄로 잘리는 제목을 여기서는 통째로 보여준다 —
+                상세까지 잘리면 이 패널을 열 이유가 없다. truncate 대신
+                min-w-0만 둬서 넘치면 줄바꿈되게 한다. */}
+            <Text as="span" size="xl" weight="semibold" className="min-w-0">
+              {digest.title}
+            </Text>
+          </div>
         }
       >
         <DigestReadonlyBodyFields digest={digest} />
       </CandidateCardFrame>
     </div>
   );
+}
+
+interface DigestDetailTimestampProps {
+  digestId: string;
+}
+
+// 헤더 자리로 옮긴 시각 — 워시 구역과 별개로 여기서 다시 구독한다(같은 쿼리라
+// 캐시를 나눠 쓸 뿐 추가 요청은 안 나간다). 헤더는 페칭과 무관하게 즉시
+// 눌러져야 해서, 이 조각만 따로 Suspense/ErrorBoundary로 감싸 실패해도
+// 조용히 안 보여줄 뿐 닫기·삭제는 막지 않는다 — 실제 에러 안내는 본문 쪽
+// 경계가 이미 하고 있어 여기서 또 보고하지 않는다(shouldReport false).
+function DigestDetailTimestamp({ digestId }: DigestDetailTimestampProps) {
+  const [digest] = useDigestSuspenseQuery(digestId);
+  return <RelativeTime dateTime={digest.createdAt} />;
 }
 
 interface DigestDetailPanelErrorProps extends ErrorFallbackProps {
@@ -116,8 +127,9 @@ function DigestDetailPanelError({
 
 // 다이제스트 상세 — SidePanel 안에 얹는 읽기 전용 콘텐츠. 편집은 없고, 결과가
 // 나쁘면 고치는 게 아니라 빼고 다시 돌린다. 사이드뷰 헤더는 액션 전용으로 비워
-// 두고, 유형·제목·시각은 CandidateCardFrame의 워시 구역으로 내린다(원문 상세
-// SourceDetailPanel과 같은 이유로 헤더는 페칭과 별개로 즉시 눌러진다).
+// 두고, 유형·제목은 CandidateCardFrame의 워시 구역으로 내린다(원문 상세
+// SourceDetailPanel과 같은 이유로 헤더는 페칭과 별개로 즉시 눌러진다). 시각은
+// 원문 상세와 자리를 맞추려고 휴지통 버튼 왼쪽에 둔다.
 export function DigestDetailPanel({
   digestId,
   onClose,
@@ -125,6 +137,15 @@ export function DigestDetailPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-11 shrink-0 items-center justify-end gap-3 px-6">
+        <ErrorBoundary
+          boundaryName="digest-detail-timestamp"
+          fallback={null}
+          shouldReport={() => false}
+        >
+          <Suspense fallback={null}>
+            <DigestDetailTimestamp digestId={digestId} />
+          </Suspense>
+        </ErrorBoundary>
         <div className="-mr-1 flex shrink-0 items-center gap-1">
           <DigestDeleteAction digestId={digestId} onDeleted={onClose} />
           <DigestDetailCloseButton onClose={onClose} />

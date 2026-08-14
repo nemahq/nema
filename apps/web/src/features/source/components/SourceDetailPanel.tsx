@@ -14,6 +14,7 @@ import {
   type ErrorFallbackProps,
 } from "@web/app/error/ErrorBoundary";
 import { SectionErrorFallback } from "@web/app/error/SectionErrorFallback";
+import { RelativeTime } from "@web/components/ui/RelativeTime";
 import { useSourceSuspenseQuery } from "@web/features/source/hooks/useSourceQuery";
 import { useTranslation } from "@web/lib/tolgee";
 import { isNotFoundError } from "@web/lib/trpc";
@@ -79,6 +80,20 @@ function SourceDetailBody({ sourceId, banner }: SourceDetailBodyProps) {
   );
 }
 
+interface SourceDetailTimestampProps {
+  sourceId: string;
+}
+
+// 헤더 자리로 옮긴 시각 — 본문과 별개로 여기서 다시 구독한다(같은 쿼리라
+// 캐시를 나눠 쓸 뿐 추가 요청은 안 나간다). 헤더는 페칭과 무관하게 즉시
+// 눌러져야 해서, 이 조각만 따로 Suspense/ErrorBoundary로 감싸 실패해도
+// 조용히 안 보여줄 뿐 닫기·삭제는 막지 않는다 — 실제 에러 안내는 본문 쪽
+// 경계가 이미 하고 있어 여기서 또 보고하지 않는다(shouldReport false).
+function SourceDetailTimestamp({ sourceId }: SourceDetailTimestampProps) {
+  const [source] = useSourceSuspenseQuery(sourceId);
+  return <RelativeTime dateTime={source.createdAt} />;
+}
+
 interface SourceDetailPanelErrorProps extends ErrorFallbackProps {
   onClose: () => void;
 }
@@ -118,6 +133,15 @@ export function SourceDetailPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-11 shrink-0 items-center justify-end gap-3 px-6">
+        <ErrorBoundary
+          boundaryName="source-detail-timestamp"
+          fallback={null}
+          shouldReport={() => false}
+        >
+          <Suspense fallback={null}>
+            <SourceDetailTimestamp sourceId={sourceId} />
+          </Suspense>
+        </ErrorBoundary>
         <div className="-mr-1 flex shrink-0 items-center gap-1">
           {/* 삭제 성공 시 상세 패널을 같이 닫는다. */}
           <SourceDeleteAction sourceId={sourceId} onDeleted={onClose} />
