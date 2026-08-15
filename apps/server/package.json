@@ -16,11 +16,14 @@
     "@fastify/cors": "^11.0.0",
     "@google/genai": "^2.8.0",
     "@nema-io/shared": "workspace:*",
+    "@qdrant/js-client-rest": "^1.17.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tolgee/core": "^6.4.0",
     "@trpc/server": "^11.18.0",
     "dotenv": "^17.3.1",
     "fastify": "^5.2.1",
+    "openai": "^6.25.0",
+    "voyageai": "^0.1.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

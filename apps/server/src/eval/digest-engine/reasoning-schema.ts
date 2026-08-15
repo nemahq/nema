@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { ContentLanguage } from "@nema-io/shared";
+
 import {
   AssumptionSchema,
   buildDigestGenerationSystemPrompt,
@@ -39,6 +41,8 @@ const OmittedSchema = z.object({
 });
 
 export const ReasoningDigestGenerationSchema = z.object({
+  sourceTitle: z.string().trim().min(1),
+  titleReasoning: REASONING_FIELD,
   decisions: z.array(ReasoningDecisionSchema),
   pendings: z.array(ReasoningPendingSchema),
   learnings: z.array(ReasoningLearningSchema),
@@ -59,6 +63,10 @@ Every item also carries a "reasoning" field: one or two sentences on why you
 classified it as this type and included it. Cite what in the note drove the
 call, especially when the type or inclusion was a close call.
 
+"sourceTitle" carries its own "titleReasoning": one or two sentences on why
+you picked that title — specifically, whether it was drawn from the whole
+note or leans on just one judgment.
+
 Also report, in a top-level "omitted" array, every judgment-like passage in the
 note that you considered but did NOT turn into a digest — one entry per passage,
 with a short quote or paraphrase ("note") and why you left it out ("reason":
@@ -66,7 +74,11 @@ merged into another digest, type was too ambiguous, judged too minor, or
 whatever the real reason was). This list exists only to check your splitting
 decisions; it does not affect what gets saved.`;
 
-export function buildReasoningSystemPrompt(contentLanguage?: string): string {
+// 실사용자 프로필과 무관한 eval 스크립트라 고정값을 쓴다 — samples/가 한국어
+// 원문이라 "ko"가 프로덕션 구 기본값("Korean")과 같은 결과를 낸다.
+export function buildReasoningSystemPrompt(
+  contentLanguage: ContentLanguage = "ko",
+): string {
   return (
     buildDigestGenerationSystemPrompt(contentLanguage) + REASONING_INSTRUCTION
   );

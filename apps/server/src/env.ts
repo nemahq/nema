@@ -27,6 +27,17 @@ const envSchema = z
     // 헤드리스 배포엔 사람 로그인 ADC가 없어 서비스 계정 키로 명시 인증한다.
     GEMINI_VERTEX_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
     GEMINI_API_KEY: z.string().min(1).optional(),
+    OPENAI_API_KEY: z.string().min(1).optional(),
+    // 기본은 openai. "vertex"로 명시했을 때만 Gemini(Vertex 경유)로 돈다.
+    DIGEST_GENERATION_LLM_PROVIDER: z
+      .enum(["openai", "vertex"])
+      .default("openai"),
+
+    // 색인은 동기·필수다 — 넣기 흐름 안에서 돌고 실패하면 넣기 전체가 실패한다.
+    // 그래서 optional 폴백 없이 항상 요구한다.
+    VOYAGE_API_KEY: z.string().min(1),
+    QDRANT_URL: z.string().url(),
+    QDRANT_API_KEY: z.string().min(1),
   })
   .transform((data) => ({
     ...data,

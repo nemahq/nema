@@ -1,10 +1,6 @@
 import { Suspense, useState } from "react";
 
-import {
-  CONTENT_LANGUAGES,
-  type ContentLanguage,
-  ContentLanguageSchema,
-} from "@nema-io/shared";
+import type { ContentLanguage } from "@nema-io/shared";
 import {
   SelectContent,
   SelectItem,
@@ -16,6 +12,7 @@ import {
 
 import { Select } from "@web/components/ui/Select";
 import {
+  ContentLanguageSelect,
   LANGUAGE_LABELS,
   useProfileSuspenseQuery,
   useUpdateProfile,
@@ -37,22 +34,18 @@ import { ThemeSelect } from "./ThemeSelect";
 // contentLanguage를 마운트 시점에 useState로 시드하므로, 여기만 profile을 서스펜드해
 // 값이 확정된 뒤 초기화한다 — 그러지 않으면 profile 도착 전 마운트 시 "en"으로 잘못
 // 시드되고(useState 초기화는 1회뿐) 실제 값이 와도 갱신되지 않는다.
-function ContentLanguageSelect() {
+function ContentLanguagePreference() {
   const [profile] = useProfileSuspenseQuery();
   const updateProfileMutation = useUpdateProfile();
   const [contentLang, setContentLang] = useState<ContentLanguage>(
     profile?.contentLanguage ?? "en",
   );
 
-  function handleContentLangChange(v: string) {
-    const parsed = ContentLanguageSchema.safeParse(v);
-    if (!parsed.success) {
-      return;
-    }
+  function handleContentLangChange(next: ContentLanguage) {
     const previousLang = contentLang;
-    setContentLang(parsed.data);
+    setContentLang(next);
     updateProfileMutation.mutate(
-      { contentLanguage: parsed.data },
+      { contentLanguage: next },
       {
         onError: (error) => {
           setContentLang(previousLang);
@@ -63,18 +56,11 @@ function ContentLanguageSelect() {
   }
 
   return (
-    <Select value={contentLang} onValueChange={handleContentLangChange}>
-      <SelectTrigger className="w-36">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {CONTENT_LANGUAGES.map((lang) => (
-          <SelectItem key={lang} value={lang}>
-            {LANGUAGE_LABELS[lang]}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <ContentLanguageSelect
+      value={contentLang}
+      onValueChange={handleContentLangChange}
+      className="w-36"
+    />
   );
 }
 
@@ -146,7 +132,7 @@ export function PreferencesSection() {
             description={t("settings.content_language_description")}
           >
             <Suspense fallback={<Skeleton className="h-9 w-36 rounded-md" />}>
-              <ContentLanguageSelect />
+              <ContentLanguagePreference />
             </Suspense>
           </SettingsRow>
         </div>

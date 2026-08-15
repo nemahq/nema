@@ -31,11 +31,60 @@
   "common": {
     "cancel": "Cancel",
     "close": "Close",
+    "delete": "Delete",
     "delete_confirm_instruction": "Type \"{value}\" to confirm.",
+    "deleting": "Deleting...",
     "draft_tab_close": "Close {label} tab",
+    "list_end": "You're all caught up.",
     "refresh_failed": "Saved, but the screen couldn't refresh. Please refresh manually.",
     "retry": "Retry",
     "unknown_error": "An unknown error occurred."
+  },
+  "digest": {
+    "delete_confirm_description": "Deleting this digest also removes it from search results, and can't be undone.",
+    "delete_confirm_title": "Delete this digest?",
+    "field_alternatives": "Alternatives",
+    "field_assumption": "Hypothesis",
+    "field_background": "Background",
+    "field_branches": "Options",
+    "field_choice": "Choice",
+    "field_concept": "Concept",
+    "field_evidence": "Evidence",
+    "field_finding": "Finding",
+    "field_impact": "Impact",
+    "field_question": "Question",
+    "field_reason": "Reason",
+    "field_resolution_condition": "Resolution condition",
+    "field_situation": "Situation",
+    "field_tradeoff": "Trade-offs",
+    "field_verification_condition": "Verification condition",
+    "list_empty": "No sources organized yet.",
+    "nav_label": "Digests",
+    "relation_conflicts_with": "Conflicts with",
+    "relation_count_label": "{count} related digests",
+    "relation_duplicate_of": "Duplicate of",
+    "relation_supported_by": "Supported by",
+    "relation_supports": "Supports",
+    "relation_weakened_by": "Weakened by",
+    "relation_weakens": "Weakens",
+    "relations_heading": "Related digests {count}",
+    "type_assumption": "Assumption",
+    "type_decision": "Decision",
+    "type_idea": "Idea",
+    "type_learning": "Learning",
+    "type_pending": "Unresolved"
+  },
+  "draft": {
+    "card_open_label": "Open source detail",
+    "delete_confirm_description": "This can't be undone.",
+    "delete_confirm_title": "Delete this source?",
+    "delete_waiting_action": "Delete sources needing attention",
+    "delete_waiting_confirm_title": "Delete {count} sources needing attention?",
+    "delete_waiting_partial_failure": "Couldn't delete {failed} sources. Try again.",
+    "empty_state": "No sources left to organize.",
+    "load_error": "Couldn't load sources.",
+    "no_result_banner": "You have nothing to organize here.",
+    "section_needs_attention": "Needs attention"
   },
   "error": {
     "copy_error": "Copy error info",
@@ -53,8 +102,18 @@
   },
   "oauth": {
     "approve": "Allow",
-    "consent_request": "Allow {client} to access your Nema account?",
-    "deny": "Deny"
+    "connect_request": "Wants to connect to Nema.",
+    "deny": "Deny",
+    "error": "We couldn't process your request. Please try again shortly.",
+    "invalid_request": "We couldn't find this connection request. Please reconnect from your app.",
+    "logout_prompt": "Not your account?",
+    "unknown_client": "Unknown app"
+  },
+  "onboarding": {
+    "description": "We'll organize what you write based on this language.",
+    "start": "Get started",
+    "start_pending": "Getting started...",
+    "title": "What language do you write in?"
   },
   "settings": {
     "account_section": "Account",
@@ -74,5 +133,13 @@
     "theme_description": "Choose how Nema looks on this device",
     "theme_light": "Light",
     "theme_system": "System"
+  },
+  "source": {
+    "delete_confirm_description": "Deleting this source also removes any digests made from it, and can't be undone.",
+    "delete_confirm_title": "Delete this source?",
+    "open_detail_label": "View source"
+  },
+  "workspace": {
+    "drafts": "Drafts"
   }
 }

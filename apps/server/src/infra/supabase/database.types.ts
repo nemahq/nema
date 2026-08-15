@@ -34,30 +34,95 @@ export type Database = {
   };
   public: {
     Tables: {
+      digest_relations: {
+        Row: {
+          created_at: string;
+          from_digest_id: string;
+          id: string;
+          to_digest_id: string;
+          type: Database["public"]["Enums"]["digest_relation_type"];
+        };
+        Insert: {
+          created_at?: string;
+          from_digest_id: string;
+          id?: string;
+          to_digest_id: string;
+          type: Database["public"]["Enums"]["digest_relation_type"];
+        };
+        Update: {
+          created_at?: string;
+          from_digest_id?: string;
+          id?: string;
+          to_digest_id?: string;
+          type?: Database["public"]["Enums"]["digest_relation_type"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "digest_relations_from_digest_id_fkey";
+            columns: ["from_digest_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_relations_from_digest_id_fkey";
+            columns: ["from_digest_id"];
+            isOneToOne: false;
+            referencedRelation: "v_visible_digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_relations_to_digest_id_fkey";
+            columns: ["to_digest_id"];
+            isOneToOne: false;
+            referencedRelation: "digests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digest_relations_to_digest_id_fkey";
+            columns: ["to_digest_id"];
+            isOneToOne: false;
+            referencedRelation: "v_visible_digests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       digests: {
         Row: {
           body: Json;
           created_at: string;
+          extraction_order: number;
           id: string;
+          public_id: string;
           source_id: string;
           title: string;
+          trashed_at: string | null;
           type: Database["public"]["Enums"]["digest_type"];
+          updated_at: string;
         };
         Insert: {
           body: Json;
           created_at?: string;
+          extraction_order: number;
           id?: string;
+          public_id?: string;
           source_id: string;
           title: string;
+          trashed_at?: string | null;
           type: Database["public"]["Enums"]["digest_type"];
+          updated_at?: string;
         };
         Update: {
           body?: Json;
           created_at?: string;
+          extraction_order?: number;
           id?: string;
+          public_id?: string;
           source_id?: string;
           title?: string;
+          trashed_at?: string | null;
           type?: Database["public"]["Enums"]["digest_type"];
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -67,7 +132,45 @@ export type Database = {
             referencedRelation: "sources";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "v_draft_sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "v_visible_sources";
+            referencedColumns: ["id"];
+          },
         ];
+      };
+      mcp_tool_calls: {
+        Row: {
+          created_at: string;
+          detail: Json;
+          id: string;
+          tool: Database["public"]["Enums"]["mcp_tool"];
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          detail: Json;
+          id?: string;
+          tool: Database["public"]["Enums"]["mcp_tool"];
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          detail?: Json;
+          id?: string;
+          tool?: Database["public"]["Enums"]["mcp_tool"];
+          user_id?: string;
+        };
+        Relationships: [];
       };
       profiles: {
         Row: {
@@ -90,82 +193,274 @@ export type Database = {
         };
         Relationships: [];
       };
+      relation_judgments: {
+        Row: {
+          candidates: Json;
+          created_at: string;
+          digest_id: string;
+          id: string;
+          judgment: string;
+          user_id: string;
+        };
+        Insert: {
+          candidates: Json;
+          created_at?: string;
+          digest_id: string;
+          id?: string;
+          judgment: string;
+          user_id: string;
+        };
+        Update: {
+          candidates?: Json;
+          created_at?: string;
+          digest_id?: string;
+          id?: string;
+          judgment?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       sources: {
         Row: {
           body: string;
+          body_preview: string;
           created_at: string;
           digestion_status: Database["public"]["Enums"]["digestion_status"];
           id: string;
+          name: string;
+          public_id: string;
+          title: string | null;
+          trashed_at: string | null;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           body: string;
+          body_preview?: string;
           created_at?: string;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           id?: string;
+          name?: string;
+          public_id?: string;
+          title?: string | null;
+          trashed_at?: string | null;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           body?: string;
+          body_preview?: string;
           created_at?: string;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
           id?: string;
+          name?: string;
+          public_id?: string;
+          title?: string | null;
+          trashed_at?: string | null;
           updated_at?: string;
           user_id?: string;
         };
         Relationships: [];
       };
-      statements: {
+    };
+    Views: {
+      v_draft_sources: {
         Row: {
-          content: string;
-          created_at: string;
-          digest_field: Database["public"]["Enums"]["digest_field"];
-          digest_id: string;
-          id: string;
+          body_preview: string | null;
+          created_at: string | null;
+          digestion_status:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id: string | null;
+          name: string | null;
+          public_id: string | null;
         };
         Insert: {
-          content: string;
-          created_at?: string;
-          digest_field: Database["public"]["Enums"]["digest_field"];
-          digest_id: string;
-          id?: string;
+          body_preview?: string | null;
+          created_at?: string | null;
+          digestion_status?:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id?: string | null;
+          name?: string | null;
+          public_id?: string | null;
         };
         Update: {
-          content?: string;
-          created_at?: string;
-          digest_field?: Database["public"]["Enums"]["digest_field"];
-          digest_id?: string;
-          id?: string;
+          body_preview?: string | null;
+          created_at?: string | null;
+          digestion_status?:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id?: string | null;
+          name?: string | null;
+          public_id?: string | null;
+        };
+        Relationships: [];
+      };
+      v_metrics_summary: {
+        Row: {
+          description: string | null;
+          direction: string | null;
+          metric: string | null;
+          value: number | null;
+        };
+        Relationships: [];
+      };
+      v_relation_candidates: {
+        Row: {
+          candidate_title: string | null;
+          candidate_type: Database["public"]["Enums"]["digest_type"] | null;
+          digest_title: string | null;
+          digest_type: Database["public"]["Enums"]["digest_type"] | null;
+          judgment: string | null;
+          occurred_at: string | null;
+          rank: number | null;
+          score: number | null;
+          verdict: string | null;
+        };
+        Relationships: [];
+      };
+      v_search_log: {
+        Row: {
+          lowest_score: number | null;
+          occurred_at: string | null;
+          query: string | null;
+          result_count: number | null;
+          top_score: number | null;
+        };
+        Insert: {
+          lowest_score?: never;
+          occurred_at?: string | null;
+          query?: never;
+          result_count?: never;
+          top_score?: never;
+        };
+        Update: {
+          lowest_score?: never;
+          occurred_at?: string | null;
+          query?: never;
+          result_count?: never;
+          top_score?: never;
+        };
+        Relationships: [];
+      };
+      v_search_results: {
+        Row: {
+          digest_title: string | null;
+          digest_type: Database["public"]["Enums"]["digest_type"] | null;
+          occurred_at: string | null;
+          query: string | null;
+          rank: number | null;
+          score: number | null;
+        };
+        Relationships: [];
+      };
+      v_visible_digests: {
+        Row: {
+          body: Json | null;
+          created_at: string | null;
+          extraction_order: number | null;
+          id: string | null;
+          public_id: string | null;
+          source_id: string | null;
+          title: string | null;
+          type: Database["public"]["Enums"]["digest_type"] | null;
+          updated_at: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "statements_digest_id_fkey";
-            columns: ["digest_id"];
-            isOneToOne: true;
-            referencedRelation: "digests";
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "v_draft_sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "digests_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "v_visible_sources";
             referencedColumns: ["id"];
           },
         ];
       };
-    };
-    Views: {
-      [_ in never]: never;
+      v_visible_sources: {
+        Row: {
+          body: string | null;
+          body_preview: string | null;
+          created_at: string | null;
+          digestion_status:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id: string | null;
+          name: string | null;
+          public_id: string | null;
+          title: string | null;
+          updated_at: string | null;
+          user_id: string | null;
+        };
+        Insert: {
+          body?: string | null;
+          body_preview?: string | null;
+          created_at?: string | null;
+          digestion_status?:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id?: string | null;
+          name?: string | null;
+          public_id?: string | null;
+          title?: string | null;
+          updated_at?: string | null;
+          user_id?: string | null;
+        };
+        Update: {
+          body?: string | null;
+          body_preview?: string | null;
+          created_at?: string | null;
+          digestion_status?:
+            | Database["public"]["Enums"]["digestion_status"]
+            | null;
+          id?: string | null;
+          name?: string | null;
+          public_id?: string | null;
+          title?: string | null;
+          updated_at?: string | null;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
-      [_ in never]: never;
+      generate_digest_public_id: { Args: never; Returns: string };
+      generate_source_public_id: { Args: never; Returns: string };
+      purge_expired_sources: {
+        Args: { p_batch_limit?: number; p_retention_days?: number };
+        Returns: number;
+      };
+      purge_job_last_success: { Args: never; Returns: string };
+      restore_trashed_source: {
+        Args: { p_source_id: string };
+        Returns: boolean;
+      };
+      trash_source: { Args: { p_source_id: string }; Returns: boolean };
     };
     Enums: {
       content_language: "en" | "ko";
-      digest_field:
-        | "choice"
-        | "question"
-        | "finding"
-        | "concept"
-        | "assumption";
+      digest_relation_type: "support" | "weaken" | "duplicate" | "conflict";
       digest_type: "decision" | "pending" | "learning" | "idea" | "assumption";
       digestion_status: "pending" | "completed";
+      mcp_tool:
+        | "search_digests"
+        | "get_source"
+        | "get_relations"
+        | "get_digest";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -300,9 +595,10 @@ export const Constants = {
   public: {
     Enums: {
       content_language: ["en", "ko"],
-      digest_field: ["choice", "question", "finding", "concept", "assumption"],
+      digest_relation_type: ["support", "weaken", "duplicate", "conflict"],
       digest_type: ["decision", "pending", "learning", "idea", "assumption"],
       digestion_status: ["pending", "completed"],
+      mcp_tool: ["search_digests", "get_source", "get_relations", "get_digest"],
     },
   },
 } as const;

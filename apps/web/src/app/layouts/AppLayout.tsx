@@ -3,14 +3,22 @@ import { Outlet } from "@tanstack/react-router";
 
 import { AppSidebar } from "@web/components/layout/AppSidebar";
 import { ContentAreaFallback } from "@web/components/layout/ContentAreaFallback";
+import { DigestNavItem } from "@web/features/digest";
+import { DraftsNavItem } from "@web/features/drafts";
+import { OnboardingGate } from "@web/features/onboarding";
 
 export function AppLayout() {
   return (
-    <div className="flex h-dvh overflow-hidden">
-      <AppSidebar />
-      <Suspense fallback={<ContentAreaFallback />}>
-        <Outlet />
-      </Suspense>
-    </div>
+    <OnboardingGate>
+      <div className="flex h-dvh overflow-hidden">
+        <AppSidebar>
+          <DraftsNavItem />
+          <DigestNavItem />
+        </AppSidebar>
+        <Suspense fallback={<ContentAreaFallback />}>
+          <Outlet />
+        </Suspense>
+      </div>
+    </OnboardingGate>
   );
 }

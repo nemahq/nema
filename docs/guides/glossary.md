@@ -10,10 +10,10 @@
 | -------------- | -------------- | --------- | --------- | ---- |
 | 맥락 | Context | Context | (해당 없음, 파생 개념) | Statement와 Relation이 쌓여 이루는, 신뢰하고 돌아올 수 있는 전체 지식 자산 |
 | 원문 | Source | Source | `sources` | 시스템이 손대지 않고, 사람이 작성한 그대로 보존하는 원재료 |
-| 다이제스트 | Digest | Digest | `digests` / `digest_references` / `digest_links` / `digest_topics` / `digest_tags` | Source를 사람이 읽기 좋게 정리한 것, 여기서 Statement가 추출된다 |
-| 문장 | Sentence | Statement | `statements` | 결정이나 판단의 '왜'를 담는, 문장 크기의 가장 작은 단위 |
-| 연결 | Connection | Relation | `statement_relations` | 두 Statement를 잇는, 방향을 가진 연결 |
-| 레퍼런스 | Reference | Reference | `references` / `reference_links` / `statement_references` / `digest_references` | Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력이 들어올 때마다 새로 쌓이지 않고 기존 것이 다듬어진다 |
+| 다이제스트 | Digest | Digest | `digests` / `digest_references` / `digest_links` / `digest_topics` / `digest_tags` | Source를 사람이 읽기 좋게 정리한 것. 주된 칸이 곧 Statement다(따로 뽑지 않는다) |
+| 문장 | Sentence | Statement | (해당 없음, 테이블 없음) | 결정이나 판단의 '왜'를 담는, 문장 크기의 가장 작은 단위. 개념만 있고 독립된 행은 없다 — Digest의 주된 칸이 곧 이것이다 |
+| 연결 | Connection | Relation | `digest_relations` | 두 Digest를 잇는, 방향을 가진 연결 |
+| 레퍼런스 | Reference | Reference | `references` / `reference_links` / `digest_references` | Digest 틀에 안 맞지만 반복 참조되는 것을 위한 곳. 관련 입력이 들어올 때마다 새로 쌓이지 않고 기존 것이 다듬어진다 |
 | 변경사항 | Change | Changeset | `changesets` / `changes` | 콘텐츠 단위들에 대한 변경을 한 번에 묶는 단위 |
 
 ## 다시 꺼내기 — 어떻게 다시 찾고 보는가
@@ -39,6 +39,23 @@ Tag의 `color`(`TagColor`) 값은 DB enum·CSS 토큰(`--tag-sienna` 등)·Tailw
 | `rose` | 분홍 | Pink |
 | `mauve` | 마젠타 | Magenta |
 | `violet` | 보라 | Purple |
+
+## 관계 종류 — 코드 값과 화면 문구
+
+`digest_relations.type`(`DigestRelationType`)은 DB enum이라 코드 용어를 유지하고,
+화면에는 방향을 접어 넣은 값(`DigestRelationPerspective`, `RELATION_PERSPECTIVE_BY_END`)이
+뒷받침·약화·중복·충돌 문구로 뜬다. 이 넷은 다이제스트 상세·목록에서 이번에 처음
+쓰인 제품 용어다 — legacy의 「대체/같음」은 지금 모델과 안 맞아 쓰지 않는다.
+「뒷받침」은 legacy와 같은 단어를 다시 썼다: "지지"는 의견·정책에 찬동한다는
+뉘앙스가 강해 "이 사용자가 이 결정에 동의한다"로 오독될 수 있지만, "뒷받침"은
+"근거가 주장을 뒷받침한다"처럼 증거-주장 관계 자체를 가리키는 표준 표현이다.
+
+| 코드 용어 (`DigestRelationType`) | 제품 용어 (한) | 제품 용어 (영) |
+| --- | --- | --- |
+| `support` | 뒷받침 | Support |
+| `weaken` | 약화 | Weaken |
+| `duplicate` | 중복 | Duplicate |
+| `conflict` | 충돌 | Conflict |
 
 ## 소유·사람 — 누구의 것인가
 

@@ -105,7 +105,9 @@ export function Sidebar({
                 </TooltipTrigger>
                 <TooltipContent
                   side={collapsed ? "right" : "bottom"}
-                  sideOffset={collapsed ? 12 : 3}
+                  // undefined면 TooltipContent 기본값(3)에 위임한다 — bottom일
+                  // 땐 다른 툴팁과 같은 간격을 쓴다.
+                  sideOffset={collapsed ? 12 : undefined}
                 >
                   {t(
                     collapsed

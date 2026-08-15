@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 
 import { Button, Input, Separator } from "@nema-io/weave";
-import { LoaderCircle, Mail } from "@nema-io/weave/icons";
+import { Loader, Mail } from "@nema-io/weave/icons";
 
 import { NemaWordmark } from "@web/components/ui/NemaWordmark";
 import { GoogleIcon } from "@web/features/auth";
@@ -42,6 +42,17 @@ export function SignInPage() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
+  useEffect(function resetGoogleLoadingBeforeLeaving() {
+    // bfcache는 pagehide 시점의 렌더 상태를 그대로 얼려 둔다 — 여기서
+    // 꺼 두지 않으면, 구글 화면에서 뒤로가기로 돌아왔을 때 handleGoogleSignIn이
+    // 성공 시 켜 둔 채로 남겨 둔 googleLoading=true가 그대로 복원된다.
+    function handlePageHide() {
+      setGoogleLoading(false);
+    }
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, []);
+
   // startsWith("/") 가드로 외부 URL 주입(open redirect)을 차단한다.
   function resolveRedirectUrl() {
     return search.redirect?.startsWith("/")
@@ -57,12 +68,15 @@ export function SignInPage() {
         provider: "google",
         options: { redirectTo: resolveRedirectUrl() },
       });
+      // 성공 시 signInWithOAuth는 이미 구글로 리다이렉트를 걸어 둔
+      // 뒤라, 굳이 여기서 로딩을 풀지 않아도 된다 — 에러일 때만 풀어서
+      // 재시도할 수 있게 한다.
       if (oauthError) {
         setError(oauthError.message);
+        setGoogleLoading(false);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.unknown_error"));
-    } finally {
       setGoogleLoading(false);
     }
   }
@@ -119,10 +133,22 @@ export function SignInPage() {
                 size="lg"
                 onClick={handleGoogleSignIn}
                 disabled={googleLoading || emailLoading}
-                className="w-full"
+                // Radix 트리거 전용인 data-[state=open] 톤을 로딩 중 hover
+                // 표시로 그대로 재사용한다 — 새 CSS 없이 기존 톤을 빌린다.
+                data-state={googleLoading ? "open" : undefined}
+                className={`w-full ${googleLoading ? "!opacity-100" : ""}`}
+                aria-label={
+                  googleLoading ? t("auth.continue_with_google") : undefined
+                }
               >
-                <GoogleIcon className="size-5" />
-                {t("auth.continue_with_google")}
+                {googleLoading ? (
+                  <Loader className="size-4" />
+                ) : (
+                  <>
+                    <GoogleIcon className="size-4" />
+                    {t("auth.continue_with_google")}
+                  </>
+                )}
               </Button>
 
               <div className="flex items-center gap-3">
@@ -140,6 +166,7 @@ export function SignInPage() {
                   placeholder={t("auth.email_placeholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={emailLoading || googleLoading}
                   required
                 />
                 <Button
@@ -147,10 +174,14 @@ export function SignInPage() {
                   size="lg"
                   type="submit"
                   disabled={emailLoading || googleLoading}
-                  className="w-full"
+                  data-state={emailLoading ? "open" : undefined}
+                  className={`w-full ${emailLoading ? "!opacity-100" : ""}`}
+                  aria-label={
+                    emailLoading ? t("auth.continue_with_email") : undefined
+                  }
                 >
                   {emailLoading ? (
-                    <LoaderCircle className="size-4 animate-spin" />
+                    <Loader className="size-4" />
                   ) : (
                     <>
                       <Mail className="size-4" />

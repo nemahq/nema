@@ -3,6 +3,7 @@
     "db_not_found": "The requested item was not found. It may have been deleted — try refreshing.",
     "default": "Something went wrong. Please try again.",
     "forbidden": "You don't have permission to do this. If you think this is a mistake, contact support.",
+    "index_unavailable": "We couldn't complete this right now. Please try again shortly.",
     "llm_aborted": "The request was cancelled.",
     "llm_bad_request": "We couldn't process your request. Please try again.",
     "llm_content_filter": "We couldn't process your input. Please try different wording.",

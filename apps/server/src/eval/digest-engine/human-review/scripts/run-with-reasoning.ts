@@ -5,7 +5,7 @@
 // usage: npx tsx run-with-reasoning.ts [파일명...]
 //   인자 없으면 samples/ 전체를 돈다.
 
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,6 +15,7 @@ import { loadEnv } from "@server/env";
 import {
   DIGEST_BODY_FIELD_ORDER,
   DIGEST_TYPE_LABEL,
+  formatDigestFieldValue,
   REASONING_FIELD_LABEL,
 } from "@server/eval/digest-engine/format";
 import type { ReasoningGeneratedDigests } from "@server/eval/digest-engine/reasoning-schema";
@@ -23,11 +24,13 @@ import {
   ReasoningDigestGenerationSchema,
 } from "@server/eval/digest-engine/reasoning-schema";
 import { getDigestGenerationProvider } from "@server/infra/llm/provider";
+import { resolveModelId } from "@server/infra/llm/task-routing";
 import { buildDigestGenerationMessage } from "@server/prompts/digest-generation";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SAMPLES_DIR = join(__dirname, "..", "..", "samples");
-const RESULTS_DIR = join(__dirname, "..", "results");
+// 모델별로 나눠 담지 않으면 다음 모델 실행이 직전 결과를 덮어써 대조가 불가능해진다.
+const RESULTS_ROOT = join(__dirname, "..", "results");
 const SERVER_ROOT = join(__dirname, "..", "..", "..", "..", "..");
 
 const ARRAY_TYPE = {
@@ -37,7 +40,10 @@ const ARRAY_TYPE = {
   ideas: "idea",
   assumptions: "assumption",
 } as const satisfies Record<
-  Exclude<keyof ReasoningGeneratedDigests, "omitted">,
+  Exclude<
+    keyof ReasoningGeneratedDigests,
+    "omitted" | "sourceTitle" | "titleReasoning"
+  >,
   DigestType
 >;
 
@@ -68,10 +74,7 @@ function formatItem(
     if (isBlank(fieldValue)) {
       continue;
     }
-    const formatted = Array.isArray(fieldValue)
-      ? `\n${fieldValue.map((entry) => `  - ${entry}`).join("\n")}`
-      : String(fieldValue);
-    lines.push(`- **${label}**: ${formatted}`);
+    lines.push(`- **${label}**: ${formatDigestFieldValue(fieldValue)}`);
   }
   // blockquote로 뺀다 — 다이제스트 필드(`- **라벨**:`)와 섞이면 실제로 저장될
   // 내용처럼 보인다. reasoning은 eval에서만 보는 부가 정보라 구분돼야 한다.
@@ -102,9 +105,18 @@ function formatResponse(
     ...generated.omitted.map((entry) => `- "${entry.note}" — ${entry.reason}`),
   ].join("\n");
 
+  const titleSection = [
+    `## 원문 제목`,
+    "",
+    generated.sourceTitle,
+    "",
+    `> **${REASONING_FIELD_LABEL}**: ${generated.titleReasoning}`,
+  ].join("\n");
+
   return [
     `# ${stem} (reasoning)`,
     `digest count: ${count}`,
+    titleSection,
     ...sections,
     omittedSection,
   ].join("\n\n");
@@ -118,6 +130,8 @@ async function main() {
   const files = requested.length > 0 ? requested : allFiles;
 
   const provider = getDigestGenerationProvider();
+  const resultsDir = join(RESULTS_ROOT, resolveModelId("generateDigests"));
+  mkdirSync(resultsDir, { recursive: true });
 
   for (const file of files) {
     const body = readFileSync(join(SAMPLES_DIR, file), "utf-8");
@@ -128,7 +142,7 @@ async function main() {
     });
 
     const stem = basename(file, ".md");
-    const outPath = join(RESULTS_DIR, `${stem}.reasoning.md`);
+    const outPath = join(resultsDir, `${stem}.reasoning.md`);
     writeFileSync(outPath, formatResponse(stem, generated));
 
     const count = Object.entries(ARRAY_TYPE).reduce(

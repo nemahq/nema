@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 
 import type { Locale } from "@nema-io/shared";
 
+import { EmbeddingError } from "@server/infra/embedding";
 import { t, type TranslationKey } from "@server/infra/i18n";
 import { LlmError } from "@server/infra/llm/llm-error";
 import {
@@ -9,12 +10,12 @@ import {
   isNotFoundError,
   SupabaseError,
 } from "@server/infra/supabase/supabase-error";
+import { VectorStoreError } from "@server/infra/vector";
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]["code"];
 
 // legacy(error-mapper.ts)의 도메인 코드 중 이번 세대 스키마에 대응물이 남은 것만
-// 옮긴다 — Space·Topic·Reference·Changeset·IngestionReview는 없어진 도메인이라
-// 뺀다. EmbeddingError·VectorStoreError도 대응 infra가 없어 뺀다.
+// 옮긴다 — Space·Topic·Reference·Changeset·IngestionReview는 없어진 도메인이라 뺀다.
 type DomainErrorCode =
   | "LLM_RATE_LIMIT"
   | "LLM_TIMEOUT"
@@ -22,7 +23,8 @@ type DomainErrorCode =
   | "LLM_CONTENT_FILTER"
   | "LLM_ABORTED"
   | "DB_NOT_FOUND"
-  | "DB_FORBIDDEN";
+  | "DB_FORBIDDEN"
+  | "INDEX_UNAVAILABLE";
 
 const ERROR_MAP: Record<
   DomainErrorCode,
@@ -56,6 +58,10 @@ const ERROR_MAP: Record<
     trpcCode: "FORBIDDEN",
     i18nKey: "error.forbidden",
   },
+  INDEX_UNAVAILABLE: {
+    trpcCode: "SERVICE_UNAVAILABLE",
+    i18nKey: "error.index_unavailable",
+  },
 };
 
 // 사용자에게 도달하는 정상적인 거부(권한·대상 없음)는 시스템 장애가 아니다 — 이
@@ -84,6 +90,9 @@ const LLM_CODE_MAP: Record<string, DomainErrorCode> = {
 export function getDomainCode(cause: unknown): DomainErrorCode | undefined {
   if (cause instanceof LlmError) {
     return LLM_CODE_MAP[cause.code];
+  }
+  if (cause instanceof EmbeddingError || cause instanceof VectorStoreError) {
+    return "INDEX_UNAVAILABLE";
   }
   if (cause instanceof SupabaseError) {
     if (isNotFoundError(cause)) {
