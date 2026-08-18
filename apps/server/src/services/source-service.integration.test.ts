@@ -85,6 +85,15 @@ vi.mock("@server/services/digest-relation-service", async (importOriginal) => {
   return { ...actual, linkRelations: mockLinkRelations };
 });
 
+// 관계 잇기 실패가 사용자에게 안 보이는 만큼, Sentry로 새는지가 이 실패를 잡는
+// 유일한 통로다 — sourceId·judgment 태그가 재추출 대상을 특정한다.
+const { mockCaptureException } = vi.hoisted(() => ({
+  mockCaptureException: vi.fn(),
+}));
+vi.mock("@server/infra/monitoring", () => ({
+  captureException: mockCaptureException,
+}));
+
 function noDigests(): GeneratedDigests {
   return {
     sourceTitle: "테스트 원문 제목",
@@ -238,6 +247,7 @@ afterEach(() => {
   mockDeleteDigestVectors.mockReset().mockResolvedValue(undefined);
   mockLogGetSource.mockReset().mockResolvedValue(undefined);
   mockLinkRelations.mockReset().mockResolvedValue(new Map());
+  mockCaptureException.mockReset();
 });
 
 describe("source-service (RLS)", () => {
@@ -848,6 +858,10 @@ describe("source-service (RLS)", () => {
         .eq("id", sourceId)
         .single();
       expect(source?.digestion_status).toBe("completed");
+
+      expect(mockCaptureException).toHaveBeenCalledWith(expect.any(Error), {
+        tags: { sourceId, judgment: "duplicate_conflict" },
+      });
     },
     TEST_TIMEOUT_MS,
   );

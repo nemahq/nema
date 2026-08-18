@@ -8,6 +8,11 @@ import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { getEnv, loadEnv } from "./env";
 import { resolveCorsOrigin } from "./infra/cors-origin";
 import { initI18n } from "./infra/i18n";
+import {
+  captureException,
+  flushMonitoring,
+  setupFastifyErrorHandler,
+} from "./infra/monitoring";
 import { getVectorStore } from "./infra/vector";
 import { appRouter } from "./router";
 import { createContext, onTRPCError } from "./trpc";
@@ -44,6 +49,8 @@ async function bootstrap() {
     trpcOptions: { router: appRouter, createContext, onError: onTRPCError },
   });
 
+  setupFastifyErrorHandler(server);
+
   server.get("/health", async () => ({ status: "ok", env: env.APP_ENV }));
 
   await server.listen({ port: env.PORT, host: "0.0.0.0" });
@@ -52,13 +59,16 @@ async function bootstrap() {
     process.on(signal, async () => {
       server.log.info(`${signal} received, shutting down`);
       await server.close();
+      await flushMonitoring();
       process.exit(0);
     });
   }
 }
 
-bootstrap().catch((err) => {
+bootstrap().catch(async (err) => {
   // eslint-disable-next-line no-console -- fatal bootstrap before logger exists
   console.error("Fatal: bootstrap failed", err);
+  captureException(err);
+  await flushMonitoring();
   process.exit(1);
 });

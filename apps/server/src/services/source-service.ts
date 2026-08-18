@@ -23,6 +23,7 @@ import {
 
 import { createLimiter } from "@server/infra/limiter";
 import { getDigestGenerationProvider } from "@server/infra/llm/provider";
+import { captureException } from "@server/infra/monitoring";
 import type { Database } from "@server/infra/supabase/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase/supabase-error";
@@ -828,6 +829,11 @@ async function linkAllRelations(args: {
         `[source-service] 관계 잇기 실패 — 다이제스트는 그대로 둔다, sourceId: ${sourceId}, judgment: ${judgment.name}:`,
         error,
       );
+      // 사용자에게는 던지기가 정상 완료로 보여 이 실패를 스스로 알아챌 방법이
+      // 없다 — sourceId·judgment를 태그로 실어 재추출 대상을 바로 특정하게 한다.
+      captureException(error, {
+        tags: { sourceId, judgment: judgment.name },
+      });
       return new Map<string, DigestRelation[]>();
     });
 

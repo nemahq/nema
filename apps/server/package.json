@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "dev:local": "APP_ENV=local tsx watch src/index.ts",
     "build": "tsup",
-    "start": "node dist/index.js",
+    "start": "node --import ./dist/instrument.js dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --cache --cache-strategy content src/",
     "test": "vitest run"
@@ -17,6 +17,7 @@
     "@google/genai": "^2.8.0",
     "@nema-io/shared": "workspace:*",
     "@qdrant/js-client-rest": "^1.17.0",
+    "@sentry/node": "^10.70.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tolgee/core": "^6.4.0",
     "@trpc/server": "^11.18.0",

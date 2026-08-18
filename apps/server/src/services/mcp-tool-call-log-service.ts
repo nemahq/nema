@@ -1,5 +1,7 @@
+import { captureException } from "@server/infra/monitoring";
 import type { Database } from "@server/infra/supabase/database.types";
 import { getSupabaseAdmin } from "@server/infra/supabase/supabase";
+import { SupabaseError } from "@server/infra/supabase/supabase-error";
 
 type McpTool = Database["public"]["Enums"]["mcp_tool"];
 
@@ -76,11 +78,16 @@ async function insertLog(args: { userId: string } & LogEntry): Promise<void> {
         `[mcp-tool-call-log] 로그 저장 실패 — tool=${tool}, userId=${userId}:`,
         error,
       );
+      // 물어본 횟수가 이 로그로 집계된다 — 실패가 삼켜지면 "안 썼다"로 오판된다.
+      captureException(new SupabaseError(error.message, error.code), {
+        tags: { tool, userId },
+      });
     }
   } catch (error) {
     console.warn(
       `[mcp-tool-call-log] 로그 저장 중 예외 — tool=${tool}, userId=${userId}:`,
       error,
     );
+    captureException(error, { tags: { tool, userId } });
   }
 }
