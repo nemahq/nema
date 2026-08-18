@@ -48,6 +48,12 @@ export function DigestReadonlyBodyFields({
           return null;
         }
 
+        // alternatives는 이미 진 길이다(pending.branches와 달리 방향이 정해져
+        // 있다) — "기각"이라는 낯선 단어 라벨 대신, 누구나 아는 취소선 관습으로
+        // "끝난 선택지"임을 구조만으로 알게 한다. branches는 아직 안 갈린
+        // 길이라 그대로 둔다.
+        const isRejectedAlternative = field.key === "alternatives";
+
         return (
           <div key={field.key} className="flex flex-col gap-1">
             <Text as="span" size="sm" weight="medium" color="tertiary">
@@ -82,7 +88,14 @@ export function DigestReadonlyBodyFields({
               <ul className="flex flex-col gap-2">
                 {options.map((entry, index) => (
                   <DigestFieldBullet key={index}>
-                    <Text as="span" size="base" color="primary">
+                    <Text
+                      as="span"
+                      size="base"
+                      color="primary"
+                      className={
+                        isRejectedAlternative ? "line-through" : undefined
+                      }
+                    >
                       {entry.option}
                     </Text>
                     {entry.detail !== undefined && (
