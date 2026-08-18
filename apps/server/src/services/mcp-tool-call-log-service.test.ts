@@ -29,7 +29,7 @@ describe("logSearch", () => {
     insertSpy.mockResolvedValue({ error: null });
   });
 
-  it("insert가 error를 반환하면 tool·userId를 태그로 Sentry에 보고한다 — 물어본 횟수가 로그 실패로 0이 되는 걸 놓치지 않게", async () => {
+  it("insert가 error를 반환하면 SupabaseError로 감싸 tool 태그·userId 컨텍스트와 함께 Sentry에 보고한다 — 물어본 횟수가 로그 실패로 0이 되는 걸 놓치지 않게", async () => {
     insertSpy.mockResolvedValueOnce({
       error: { code: "500", message: "db down" },
     });
@@ -39,12 +39,13 @@ describe("logSearch", () => {
       detail: { query: "질의", results: [] },
     });
 
-    expect(captureExceptionMock).toHaveBeenCalledWith(expect.any(Error), {
-      tags: { tool: "search_digests", userId: "user-1" },
-    });
+    expect(captureExceptionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "SupabaseError", code: "500" }),
+      { tags: { tool: "search_digests" }, user: { id: "user-1" } },
+    );
   });
 
-  it("insert 호출 자체가 예외를 던지면 tool·userId를 태그로 Sentry에 보고한다", async () => {
+  it("insert 호출 자체가 예외를 던지면 tool 태그·userId 컨텍스트와 함께 Sentry에 보고한다", async () => {
     const thrown = new Error("network down");
     insertSpy.mockRejectedValueOnce(thrown);
 
@@ -54,7 +55,8 @@ describe("logSearch", () => {
     });
 
     expect(captureExceptionMock).toHaveBeenCalledWith(thrown, {
-      tags: { tool: "search_digests", userId: "user-1" },
+      tags: { tool: "search_digests" },
+      user: { id: "user-1" },
     });
   });
 

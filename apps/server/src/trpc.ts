@@ -87,7 +87,7 @@ export const router = t.router;
 // fastifyTRPCPlugin의 trpcOptions.onError로 등록한다(index.ts) — 응답 shape 확정
 // (errorFormatter, 위)과 별개로, 요청이 끝나는 지점마다 부수효과(로깅·Sentry 전송)를
 // 맡는다. 정상적인 거부(권한·대상 없음)는 장애가 아니라 어느 쪽에도 안 남긴다 —
-// 노이즈 방지. Sentry는 production에서만 켜지므로(instrument.ts) staging에선 로그만
+// 노이즈 방지. Sentry는 production에서만 켜지므로(infra/monitoring.ts) staging에선 로그만
 // 남는다.
 export function onTRPCError({
   error,

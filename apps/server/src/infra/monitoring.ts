@@ -16,6 +16,17 @@ export function initMonitoring(): void {
     // 성능 추적(트레이싱)은 이벤트를 대량 발생시켜 무료 할당량을 빨리 태운다.
     // 에러만 받는다.
     tracesSampleRate: 0,
+    // OnUnhandledRejection 기본 통합의 mode는 "warn"이라 캡처만 하고 프로세스를
+    // 살려둔다 — 이 통합을 등록하는 순간 Node의 자체 기본 동작(리스너가 하나도
+    // 없을 때 처리되지 않은 거부를 크래시로 승격)이 무효화된다. Sentry 도입 전엔
+    // 이 앱에 리스너가 없어 크래시 후 Railway 재시작이 안전망이었다 — "strict"로
+    // 그 동작을 그대로 유지한다.
+    integrations: (defaults) =>
+      defaults.map((integration) =>
+        integration.name === "OnUnhandledRejection"
+          ? Sentry.onUnhandledRejectionIntegration({ mode: "strict" })
+          : integration,
+      ),
   });
 }
 

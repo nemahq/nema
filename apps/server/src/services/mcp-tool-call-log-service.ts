@@ -79,8 +79,11 @@ async function insertLog(args: { userId: string } & LogEntry): Promise<void> {
         error,
       );
       // 물어본 횟수가 이 로그로 집계된다 — 실패가 삼켜지면 "안 썼다"로 오판된다.
+      // userId는 Sentry user 컨텍스트로 싣는다 — 태그는 저카디널리티용이라 UUID를
+      // 태그에 쌓으면 안 된다. user.id로도 Sentry 검색이 그대로 된다.
       captureException(new SupabaseError(error.message, error.code), {
-        tags: { tool, userId },
+        tags: { tool },
+        user: { id: userId },
       });
     }
   } catch (error) {
@@ -88,6 +91,6 @@ async function insertLog(args: { userId: string } & LogEntry): Promise<void> {
       `[mcp-tool-call-log] 로그 저장 중 예외 — tool=${tool}, userId=${userId}:`,
       error,
     );
-    captureException(error, { tags: { tool, userId } });
+    captureException(error, { tags: { tool }, user: { id: userId } });
   }
 }
