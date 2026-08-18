@@ -223,6 +223,7 @@ export type Database = {
       sources: {
         Row: {
           body: string;
+          body_hash: string;
           body_preview: string;
           created_at: string;
           digestion_status: Database["public"]["Enums"]["digestion_status"];
@@ -236,6 +237,7 @@ export type Database = {
         };
         Insert: {
           body: string;
+          body_hash?: string;
           body_preview?: string;
           created_at?: string;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
@@ -249,6 +251,7 @@ export type Database = {
         };
         Update: {
           body?: string;
+          body_hash?: string;
           body_preview?: string;
           created_at?: string;
           digestion_status?: Database["public"]["Enums"]["digestion_status"];
@@ -394,6 +397,7 @@ export type Database = {
       v_visible_sources: {
         Row: {
           body: string | null;
+          body_hash: string | null;
           body_preview: string | null;
           created_at: string | null;
           digestion_status:
@@ -408,6 +412,7 @@ export type Database = {
         };
         Insert: {
           body?: string | null;
+          body_hash?: string | null;
           body_preview?: string | null;
           created_at?: string | null;
           digestion_status?:
@@ -422,6 +427,7 @@ export type Database = {
         };
         Update: {
           body?: string | null;
+          body_hash?: string | null;
           body_preview?: string | null;
           created_at?: string | null;
           digestion_status?:

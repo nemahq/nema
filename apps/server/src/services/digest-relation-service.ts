@@ -124,6 +124,41 @@ export async function linkRelations(args: {
   return groupByDigest({ supabase, digests, rows: saved });
 }
 
+/**
+ * 다이제스트 여럿에 이미 이어진 관계를 한 번에 묶어 돌려준다. 이번 배치에서
+ * 새로 이은 것만 보는 groupByDigest와 달리, 그 다이제스트에 지금까지 쌓인
+ * 관계를 전부 조회한다 — 중복 던지기 재구성(source-service.ts)이 기존 결과를
+ * 그대로 돌려줄 때 쓴다.
+ */
+export async function getRelationsForDigests(args: {
+  supabase: TypedSupabaseClient;
+  digestIds: string[];
+}): Promise<Map<string, DigestRelation[]>> {
+  const { supabase, digestIds } = args;
+  if (digestIds.length === 0) {
+    return new Map();
+  }
+
+  const rows = await fetchRelationRows({ supabase, digestIds });
+
+  const otherIds = new Set<string>();
+  for (const row of rows) {
+    otherIds.add(row.from_digest_id);
+    otherIds.add(row.to_digest_id);
+  }
+  const { infoById } = await fetchRelationCounterparts({
+    supabase,
+    digestIds: [...otherIds],
+  });
+
+  return new Map(
+    digestIds.map((digestId) => [
+      digestId,
+      toRelations({ digestId, rows, infoById }),
+    ]),
+  );
+}
+
 /** 그 다이제스트에 붙은 관계 — 하는 쪽·받는 쪽 양쪽 다 뜬다(linking.md 2.3). */
 export async function getDigestRelations(args: {
   supabase: TypedSupabaseClient;
@@ -178,35 +213,7 @@ export async function getRelationCounts(args: {
     return new Map();
   }
 
-  // .or()로 한 요청에 담으면 목록이 문자열에 두 번(from·to) 들어가 목록이 크면
-  // (다이제스트가 많은 페이지) GET URL이 프록시 한도를 넘길 수 있다 — from·to를
-  // 각각 .in()으로 나눠 두 요청으로 보낸다. 관계가 배치 안에서 양 끝을 다 걸치면
-  // 두 결과에 같은 행이 겹쳐 올 수 있어 합칠 때 중복을 거른다.
-  const [
-    { data: fromRows, error: fromError },
-    { data: toRows, error: toError },
-  ] = await Promise.all([
-    supabase
-      .from("digest_relations")
-      .select("from_digest_id, to_digest_id")
-      .in("from_digest_id", digestIds),
-    supabase
-      .from("digest_relations")
-      .select("from_digest_id, to_digest_id")
-      .in("to_digest_id", digestIds),
-  ]);
-  throwIfSupabaseError(fromError);
-  throwIfSupabaseError(toError);
-
-  const seenPairs = new Set<string>();
-  const rows = [...(fromRows ?? []), ...(toRows ?? [])].filter((row) => {
-    const key = `${row.from_digest_id}:${row.to_digest_id}`;
-    if (seenPairs.has(key)) {
-      return false;
-    }
-    seenPairs.add(key);
-    return true;
-  });
+  const rows = await fetchRelationRows({ supabase, digestIds });
 
   const idSet = new Set(digestIds);
   const counterpartsBySubject = new Map<string, string[]>();
@@ -613,6 +620,44 @@ function endOf(row: RelationRow, digestId: string): RelationEnd | null {
     return "to";
   }
   return null;
+}
+
+// getRelationsForDigests·getRelationCounts 공용 — 다이제스트 여럿에 걸린
+// digest_relations 행을 중복 없이 가져온다. .or()로 한 요청에 담으면 목록이
+// 문자열에 두 번(from·to) 들어가 다이제스트가 많을 때 GET URL이 프록시 한도를
+// 넘길 수 있어, from·to를 각각 .in()으로 나눠 두 요청으로 보낸다. 관계가 배치
+// 안에서 양 끝을 다 걸치면 두 결과에 같은 행이 겹쳐 올 수 있어 합칠 때 중복을 거른다.
+async function fetchRelationRows(args: {
+  supabase: TypedSupabaseClient;
+  digestIds: string[];
+}): Promise<RelationRow[]> {
+  const { supabase, digestIds } = args;
+
+  const [
+    { data: fromRows, error: fromError },
+    { data: toRows, error: toError },
+  ] = await Promise.all([
+    supabase
+      .from("digest_relations")
+      .select("from_digest_id, to_digest_id, type")
+      .in("from_digest_id", digestIds),
+    supabase
+      .from("digest_relations")
+      .select("from_digest_id, to_digest_id, type")
+      .in("to_digest_id", digestIds),
+  ]);
+  throwIfSupabaseError(fromError);
+  throwIfSupabaseError(toError);
+
+  const seenPairs = new Set<string>();
+  return [...(fromRows ?? []), ...(toRows ?? [])].filter((row) => {
+    const key = `${row.from_digest_id}:${row.to_digest_id}`;
+    if (seenPairs.has(key)) {
+      return false;
+    }
+    seenPairs.add(key);
+    return true;
+  });
 }
 
 interface RelationCounterpartInfo {
