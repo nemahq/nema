@@ -1,16 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getSupabaseAdminMock, insertSpy, fromSpy } = vi.hoisted(() => {
-  const insertSpy = vi.fn().mockResolvedValue({ error: null });
-  const fromSpy = vi.fn().mockReturnValue({ insert: insertSpy });
-  return {
-    insertSpy,
-    fromSpy,
-    getSupabaseAdminMock: vi.fn(() => ({ from: fromSpy })),
-  };
-});
+const { getSupabaseAdminMock, insertSpy, fromSpy, captureExceptionMock } =
+  vi.hoisted(() => {
+    const insertSpy = vi.fn().mockResolvedValue({ error: null });
+    const fromSpy = vi.fn().mockReturnValue({ insert: insertSpy });
+    return {
+      insertSpy,
+      fromSpy,
+      getSupabaseAdminMock: vi.fn(() => ({ from: fromSpy })),
+      captureExceptionMock: vi.fn(),
+    };
+  });
 vi.mock("@server/infra/supabase/supabase", () => ({
   getSupabaseAdmin: getSupabaseAdminMock,
+}));
+vi.mock("@server/infra/monitoring", () => ({
+  captureException: captureExceptionMock,
 }));
 
 import {
@@ -22,6 +27,37 @@ describe("logSearch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     insertSpy.mockResolvedValue({ error: null });
+  });
+
+  it("insert가 error를 반환하면 SupabaseError로 감싸 tool 태그·userId 컨텍스트와 함께 Sentry에 보고한다 — 물어본 횟수가 로그 실패로 0이 되는 걸 놓치지 않게", async () => {
+    insertSpy.mockResolvedValueOnce({
+      error: { code: "500", message: "db down" },
+    });
+
+    await logSearch({
+      userId: "user-1",
+      detail: { query: "질의", results: [] },
+    });
+
+    expect(captureExceptionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "SupabaseError", code: "500" }),
+      { tags: { tool: "search_digests" }, user: { id: "user-1" } },
+    );
+  });
+
+  it("insert 호출 자체가 예외를 던지면 tool 태그·userId 컨텍스트와 함께 Sentry에 보고한다", async () => {
+    const thrown = new Error("network down");
+    insertSpy.mockRejectedValueOnce(thrown);
+
+    await logSearch({
+      userId: "user-1",
+      detail: { query: "질의", results: [] },
+    });
+
+    expect(captureExceptionMock).toHaveBeenCalledWith(thrown, {
+      tags: { tool: "search_digests" },
+      user: { id: "user-1" },
+    });
   });
 
   it("tool=search_digests로 query·results를 detail에 그대로 실어 admin 클라이언트로 적재한다", async () => {

@@ -14,6 +14,7 @@ import {
   mapDomainError,
 } from "@server/error-mapper";
 import { resolveLanguage, t as translate } from "@server/infra/i18n";
+import { captureException } from "@server/infra/monitoring";
 import {
   createSupabaseUser,
   getSupabaseAdmin,
@@ -84,8 +85,10 @@ const t = initTRPC.context<Context>().create({
 export const router = t.router;
 
 // fastifyTRPCPlugin의 trpcOptions.onError로 등록한다(index.ts) — 응답 shape 확정
-// (errorFormatter, 위)과 별개로, 요청이 끝나는 지점마다 부수효과(로깅)를 맡는다.
-// 정상적인 거부(권한·대상 없음)는 장애가 아니라 로그에 안 남긴다 — 노이즈 방지.
+// (errorFormatter, 위)과 별개로, 요청이 끝나는 지점마다 부수효과(로깅·Sentry 전송)를
+// 맡는다. 정상적인 거부(권한·대상 없음)는 장애가 아니라 어느 쪽에도 안 남긴다 —
+// 노이즈 방지. Sentry는 production에서만 켜지므로(infra/monitoring.ts) staging에선 로그만
+// 남는다.
 export function onTRPCError({
   error,
   req,
@@ -97,6 +100,7 @@ export function onTRPCError({
   if (domainCode) {
     if (!isExpectedDomainError(error.cause)) {
       req?.log.error({ err: error.cause, domainCode }, "trpc domain error");
+      captureException(error.cause, { tags: { domainCode } });
     }
     return;
   }
@@ -105,6 +109,9 @@ export function onTRPCError({
     return;
   }
   req?.log.error({ err: error.cause ?? error }, "trpc internal error");
+  captureException(error.cause ?? error, {
+    tags: { domainCode: "UNKNOWN" },
+  });
 }
 
 /**
