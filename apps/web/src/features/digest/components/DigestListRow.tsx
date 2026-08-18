@@ -68,15 +68,13 @@ export const DigestListRow = memo(function DigestListRow({
           shape="pill"
           variant="outline"
           size="sm"
-          className="shrink-0 text-fg-tertiary"
+          className="shrink-0 gap-1 text-fg-tertiary"
           aria-label={t("digest.relation_count_label", {
             count: digest.relationCount,
           })}
         >
-          <span className="inline-flex items-center gap-1">
-            <Share2 className="size-3" aria-hidden="true" />
-            <span aria-hidden="true">{digest.relationCount}</span>
-          </span>
+          <Share2 className="size-3" aria-hidden="true" />
+          <span aria-hidden="true">{digest.relationCount}</span>
         </Badge>
       )}
     </Link>
