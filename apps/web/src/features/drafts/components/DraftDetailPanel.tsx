@@ -7,15 +7,17 @@ import { useSourceDraftListSuspenseQuery } from "@web/features/drafts/hooks/useS
 import { SourceDetailPanel } from "@web/features/source";
 import { useTranslation } from "@web/lib/tolgee";
 
+import { DraftReExtractAction } from "./DraftReExtractAction";
+
 interface DraftDetailPanelProps {
   sourcePublicId: string;
   onClose: () => void;
 }
 
 // 원문 상세는 공용 컴포넌트라 "결과 없음" 여부를 스스로 못 잰다 — 이미 그 판단이
-// 끝난 초안 목록 쿼리(캐시 재사용)에서 이 원문의 status를 찾아 배너로 얹는다.
-// pending(처리 중/실패, 아직 아무것도 안 나온 상태)에는 안 띄운다 — "결과가
-// 없다"고 단정할 근거가 아직 없다.
+// 끝난 초안 목록 쿼리(캐시 재사용)에서 이 원문의 status를 찾아 배너·재추출
+// 버튼으로 얹는다. completed(결과없음)엔 배너만, failed엔 재추출 버튼만 —
+// processing은 애초에 이 목록에 안 온다(v_draft_sources가 미리 거른다).
 function DraftDetailPanelContent({
   sourcePublicId,
   onClose,
@@ -52,12 +54,18 @@ function DraftDetailPanelContent({
       <Alert variant="warning">{t("draft.no_result_banner")}</Alert>
     ) : undefined;
 
+  const footer =
+    draft.status === "failed" ? (
+      <DraftReExtractAction sourceId={draft.sourceId} />
+    ) : undefined;
+
   return (
     <SourceDetailPanel
       sourcePublicId={sourcePublicId}
       knownSourceId={draft.sourceId}
       onClose={onClose}
       banner={banner}
+      footer={footer}
     />
   );
 }

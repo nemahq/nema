@@ -8,6 +8,7 @@
     "llm_bad_request": "요청을 처리하지 못했어요. 다시 시도해주세요.",
     "llm_content_filter": "입력 내용을 처리할 수 없었어요. 다른 표현으로 시도해주세요.",
     "llm_rate_limit": "요청이 너무 많아요. 잠시 후 다시 시도해주세요.",
-    "llm_timeout": "응답 시간이 초과됐어요. 다시 시도해주세요."
+    "llm_timeout": "응답 시간이 초과됐어요. 다시 시도해주세요.",
+    "source_already_processing": "이미 처리 중인 원문이에요. 잠시 후 다시 확인해주세요."
   }
 }

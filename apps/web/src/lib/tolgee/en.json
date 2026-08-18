@@ -84,6 +84,8 @@
     "empty_state": "No sources left to organize.",
     "load_error": "Couldn't load sources.",
     "no_result_banner": "You have nothing to organize here.",
+    "re_extract_action": "Retry",
+    "re_extract_pending": "Retrying...",
     "section_needs_attention": "Needs attention"
   },
   "error": {

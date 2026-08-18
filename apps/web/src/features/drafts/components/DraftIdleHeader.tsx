@@ -20,7 +20,7 @@ interface DraftIdleHeaderProps {
   sourceId: string;
   name: string;
   createdAt: string;
-  // pending/completed 상태 아이콘 — 있으면 시각 옆에 같이 묶어 보여준다.
+  // failed/completed 상태 아이콘 — 있으면 시각 옆에 같이 묶어 보여준다.
   icon: ReactNode;
 }
 

@@ -2,8 +2,14 @@ import { z } from "zod";
 
 import { DigestListItemSchema, DigestWithRelationsSchema } from "./digest";
 
-// DB enum digestion_status의 SSOT.
-export const DIGESTION_STATUSES = ["pending", "completed"] as const;
+// DB enum digestion_status의 SSOT. processing(처리 중) / completed(정상 종료) /
+// failed(파이프라인 도중 실패) — 셋 다 서로 다른 상황이라 화면이 구분해서 다룬다
+// (fix/draft-error-state).
+export const DIGESTION_STATUSES = [
+  "processing",
+  "completed",
+  "failed",
+] as const;
 export const DigestionStatusSchema = z.enum(DIGESTION_STATUSES);
 export type DigestionStatus = z.infer<typeof DigestionStatusSchema>;
 
@@ -136,10 +142,12 @@ export type SourceListWithDigestsResult = z.infer<
   typeof SourceListWithDigestsResultSchema
 >;
 
-// 초안 화면 — 정리 결과가 없거나 처리에 실패한 원문. status는 화면이 "재시도 중"
-// 표시 등에 쓴다. name은 위 SourceGetResultSchema와 같은 정의. bodyPreview는
-// 카드 본문 4줄 미리보기 전용(400자, sources.body_preview 생성 컬럼) — name과
-// 달리 title 유무와 무관하게 항상 본문 앞부분이다.
+// 초안 화면 — 정리 결과가 없거나 처리에 실패한 원문만 담는다(v_draft_sources가
+// processing은 미리 걸러 보낸다) — status는 실전에서 "failed" 또는 "completed"
+// (결과없음)만 온다. 화면은 이 값으로 실패 아이콘/결과없음 아이콘을 가른다.
+// name은 위 SourceGetResultSchema와 같은 정의. bodyPreview는 카드 본문 4줄
+// 미리보기 전용(400자, sources.body_preview 생성 컬럼) — name과 달리 title
+// 유무와 무관하게 항상 본문 앞부분이다.
 export const SourceDraftSchema = z.object({
   sourceId: z.string().uuid(),
   publicId: z.string().regex(SOURCE_PUBLIC_ID_PATTERN),

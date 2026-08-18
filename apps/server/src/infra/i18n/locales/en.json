@@ -8,6 +8,7 @@
     "llm_bad_request": "We couldn't process your request. Please try again.",
     "llm_content_filter": "We couldn't process your input. Please try different wording.",
     "llm_rate_limit": "Too many requests. Please try again shortly.",
-    "llm_timeout": "Response timed out. Please try again."
+    "llm_timeout": "Response timed out. Please try again.",
+    "source_already_processing": "We're already processing this source. Please check back shortly."
   }
 }

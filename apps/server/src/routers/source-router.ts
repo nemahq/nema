@@ -17,6 +17,7 @@ import {
   listDraftSources,
   listSourcesWithDigests,
   reExtractSource,
+  SourceAlreadyProcessingError,
 } from "@server/services/source-service";
 import { protectedProcedure, router } from "@server/trpc";
 
@@ -62,13 +63,26 @@ export const sourceRouter = router({
 
   ingest: protectedProcedure
     .input(SourceIngestInputSchema)
-    .mutation(({ ctx, input }) =>
-      ingestSource({
-        supabase: ctx.supabase,
-        userId: ctx.user.id,
-        body: input.body,
-      }),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await ingestSource({
+          supabase: ctx.supabase,
+          userId: ctx.user.id,
+          body: input.body,
+        });
+      } catch (error) {
+        // TRPCError로 옮겨야 code(CONFLICT)가 올바로 실린다 — 메시지 자체는
+        // errorFormatter(trpc.ts)가 error-mapper.ts를 거쳐 다시 채운다.
+        if (error instanceof SourceAlreadyProcessingError) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Source is already being processed.",
+            cause: error,
+          });
+        }
+        throw error;
+      }
+    }),
 
   reExtract: protectedProcedure
     .input(SourceActionInputSchema)
