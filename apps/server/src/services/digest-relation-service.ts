@@ -124,6 +124,68 @@ export async function linkRelations(args: {
   return groupByDigest({ supabase, digests, rows: saved });
 }
 
+/**
+ * 다이제스트 여럿에 이미 이어진 관계를 한 번에 묶어 돌려준다. 이번 배치에서
+ * 새로 이은 것만 보는 groupByDigest와 달리, 그 다이제스트에 지금까지 쌓인
+ * 관계를 전부 조회한다 — 중복 던지기 재구성(source-service.ts)이 기존 결과를
+ * 그대로 돌려줄 때 쓴다.
+ */
+export async function getRelationsForDigests(args: {
+  supabase: TypedSupabaseClient;
+  digestIds: string[];
+}): Promise<Map<string, DigestRelation[]>> {
+  const { supabase, digestIds } = args;
+  if (digestIds.length === 0) {
+    return new Map();
+  }
+
+  // getRelationCounts와 같은 이유로 from·to를 나눠 조회한다 — .or()로 한 번에
+  // 담으면 목록이 문자열에 두 번 들어가 다이제스트가 많을 때 GET URL이 프록시
+  // 한도를 넘길 수 있다.
+  const [
+    { data: fromRows, error: fromError },
+    { data: toRows, error: toError },
+  ] = await Promise.all([
+    supabase
+      .from("digest_relations")
+      .select("from_digest_id, to_digest_id, type")
+      .in("from_digest_id", digestIds),
+    supabase
+      .from("digest_relations")
+      .select("from_digest_id, to_digest_id, type")
+      .in("to_digest_id", digestIds),
+  ]);
+  throwIfSupabaseError(fromError);
+  throwIfSupabaseError(toError);
+
+  const seenPairs = new Set<string>();
+  const rows = [...(fromRows ?? []), ...(toRows ?? [])].filter((row) => {
+    const key = `${row.from_digest_id}:${row.to_digest_id}`;
+    if (seenPairs.has(key)) {
+      return false;
+    }
+    seenPairs.add(key);
+    return true;
+  });
+
+  const otherIds = new Set<string>();
+  for (const row of rows) {
+    otherIds.add(row.from_digest_id);
+    otherIds.add(row.to_digest_id);
+  }
+  const { infoById } = await fetchRelationCounterparts({
+    supabase,
+    digestIds: [...otherIds],
+  });
+
+  return new Map(
+    digestIds.map((digestId) => [
+      digestId,
+      toRelations({ digestId, rows, infoById }),
+    ]),
+  );
+}
+
 /** 그 다이제스트에 붙은 관계 — 하는 쪽·받는 쪽 양쪽 다 뜬다(linking.md 2.3). */
 export async function getDigestRelations(args: {
   supabase: TypedSupabaseClient;

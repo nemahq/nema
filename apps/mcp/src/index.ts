@@ -11,6 +11,14 @@ import { createMcpServer } from "./server";
 
 const PRM_PATH = "/.well-known/oauth-protected-resource";
 
+// body-parser 기본 limit(100KB)에 걸려 SOURCE_BODY_MAX_LENGTH(100,000자)가
+// 실제로는 한글(글자당 최대 3바이트, UTF-8) 3만 자쯤부터 413으로 끊겼다 —
+// 스키마 상한이 통과시키는 입력은 이 계층에서도 통과해야 한다. 한글로 꽉 채우면
+// 최대 약 300KB, 여기에 JSON-RPC 봉투와 줄바꿈 등 제어문자 이스케이프 오버헤드를
+// 더해도 넉넉한 값으로 서버(apps/server) Fastify의 기본 body limit(1MB)에
+// 맞춘다 — 두 계층의 실제 허용치를 일치시킨다.
+const JSON_BODY_LIMIT_BYTES = 1024 * 1024;
+
 loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 
 function main(): void {
@@ -19,7 +27,7 @@ function main(): void {
     .href;
 
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: JSON_BODY_LIMIT_BYTES }));
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });

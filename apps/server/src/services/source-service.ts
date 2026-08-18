@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type {
   ContentLanguage,
   Digest,
@@ -36,6 +38,7 @@ import {
 } from "@server/services/digest-index-service";
 import {
   getRelationCounts,
+  getRelationsForDigests,
   linkRelations,
 } from "@server/services/digest-relation-service";
 import { logGetSource } from "@server/services/mcp-tool-call-log-service";
@@ -48,12 +51,24 @@ import type { RequestOrigin } from "@server/trpc";
 // 강제라 넘어갈 수 없다), 그 순간을 위해 별도 오류 경로를 만들지 않는다.
 const FALLBACK_CONTENT_LANGUAGE: ContentLanguage = "en";
 
+// 타임아웃 후 재시도가 같은 원문을 또 처리하지 않게 하는 창. 던지기는 전 구간
+// 동기라(LLM 여러 콜) 클라이언트가 응답을 못 받고 끊어도 서버는 끝까지 처리하고,
+// 사용자는 실패로 보고 곧바로 다시 던진다 — 그 재시도가 이 창 안에 들어오면
+// 새로 처리하지 않고 기존 결과를 그대로 돌려준다. 완전한 unique 제약은 안
+// 쓴다 — 같은 내용을 의도적으로 다시 던지는 경우까지 영구히 막게 된다.
+const INGEST_DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
+
 export async function ingestSource(args: {
   supabase: TypedSupabaseClient;
   userId: string;
   body: string;
 }): Promise<SourceIngestResult> {
   const { supabase, userId, body } = args;
+
+  const duplicate = await findRecentDuplicateSource({ supabase, userId, body });
+  if (duplicate) {
+    return reconstructIngestResult({ supabase, sourceId: duplicate.id });
+  }
 
   const { data: source, error } = await supabase
     .from("sources")
@@ -75,6 +90,76 @@ export async function ingestSource(args: {
     sourceTitle,
   });
   return { sourceId: source.id, digests };
+}
+
+// body_hash 생성 컬럼(마이그레이션)과 같은 함수·같은 입력이어야 같은 값이
+// 나온다 — 한쪽만 바뀌면 아래 조회가 영영 안 걸린다.
+function hashBody(body: string): string {
+  return createHash("md5").update(body).digest("hex");
+}
+
+async function findRecentDuplicateSource(args: {
+  supabase: TypedSupabaseClient;
+  userId: string;
+  body: string;
+}): Promise<{ id: string } | null> {
+  const { supabase, userId, body } = args;
+  const since = new Date(Date.now() - INGEST_DUPLICATE_WINDOW_MS).toISOString();
+
+  // digestion_status: completed만 중복으로 본다. pending은 지금 처리 중이거나
+  // (드문 레이스) 이전 시도가 끝까지 못 갔다는 뜻인데, 후자를 중복으로 묶으면
+  // 실패한 원문이 재시도조차 안 되는 상태로 굳는다 — 놓치는 편이 더 안전하다.
+  // v_visible_sources를 거치므로 그사이 휴지통에 간 원문은 안 걸린다(돌려줄
+  // 결과가 이미 없다).
+  // .returns<>()는 뷰의 생성 타입이 컬럼을 전부 nullable로 잡는 것을 되돌린다
+  // (뷰 공통 관례) — id는 sources의 NOT NULL 컬럼이라 WHERE로 거른 뒤엔 실제로
+  // null일 수 없다.
+  const { data, error } = await supabase
+    .from("v_visible_sources")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("body_hash", hashBody(body))
+    .eq("digestion_status", "completed")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .returns<Array<{ id: string }>>()
+    .maybeSingle();
+  throwIfSupabaseError(error);
+
+  return data;
+}
+
+// 중복 판정된 기존 원문의 결과를 처음 던졌을 때와 같은 모양으로 다시 만든다 —
+// 응답이 화면 없이 결과를 보는 유일한 창구라(SourceIngestResultSchema 참고)
+// 기존 결과를 그대로 재구성해 돌려준다.
+async function reconstructIngestResult(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+}): Promise<SourceIngestResult> {
+  const { supabase, sourceId } = args;
+
+  const { data: rows, error } = await supabase
+    .from("digests")
+    .select("id, type, title, body, created_at")
+    .eq("source_id", sourceId)
+    .is("trashed_at", null)
+    .order("extraction_order", { ascending: true });
+  throwIfSupabaseError(error);
+
+  const digests = (rows ?? []).map(toDigest);
+  const relationsByDigestId = await getRelationsForDigests({
+    supabase,
+    digestIds: digests.map((digest) => digest.id),
+  });
+
+  return {
+    sourceId,
+    digests: digests.map((digest) => ({
+      ...digest,
+      relations: relationsByDigestId.get(digest.id) ?? [],
+    })),
+  };
 }
 
 export async function reExtractSource(args: {
