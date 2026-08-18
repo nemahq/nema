@@ -4,6 +4,7 @@ import { Link, linkOptions } from "@tanstack/react-router";
 
 import type { DigestRelationPerspective } from "@nema-io/shared";
 import { Text } from "@nema-io/weave";
+import { ArrowUpRight } from "@nema-io/weave/icons";
 
 import { ErrorBoundary } from "@web/app/error/ErrorBoundary";
 import { useDigestRelationsSuspenseQuery } from "@web/features/digest/hooks/useDigestRelationsQuery";
@@ -104,12 +105,20 @@ function DigestRelationsBlockContent({ digestId }: DigestRelationsBlockProps) {
                 to: "/",
                 search: { digest: relation.publicId },
               })}
-              className="flex min-w-0 items-center gap-1.5 rounded-full px-2 py-0.5 transition-colors duration-fast hover:bg-surface-raised-hover/40"
+              className="flex min-w-0 items-center gap-1.5 rounded-full px-1 py-0.5 transition-colors duration-fast hover:bg-surface-raised-hover/40"
             >
               <DigestTypeIcon type={relation.digestType} />
-              <Text as="span" size="sm" className="min-w-0 truncate">
-                {relation.title}
-              </Text>
+              {/* 밑줄(inset shadow)을 텍스트와 화살표를 함께 감싸는 span에 둬서, 화살표가
+                  타이틀의 색·크기·밑줄을 그대로 물려받은 연장선처럼 보이게 한다. */}
+              <span className="flex min-w-0 items-center shadow-[inset_0_-1px_0_0_var(--color-fg-quaternary)]">
+                <Text as="span" size="sm" className="min-w-0 truncate">
+                  {relation.title}
+                </Text>
+                <ArrowUpRight
+                  className="size-3.5 shrink-0 text-fg-primary"
+                  aria-hidden="true"
+                />
+              </span>
             </Link>
           );
           const label = (
@@ -125,7 +134,7 @@ function DigestRelationsBlockContent({ digestId }: DigestRelationsBlockProps) {
           return (
             <li
               key={relation.digestId}
-              className="flex min-w-0 items-center gap-1"
+              className="flex min-w-0 items-center gap-0.5"
             >
               {isKorean ? (
                 <>
