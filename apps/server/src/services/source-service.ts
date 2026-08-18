@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type {
   ContentLanguage,
   Digest,
@@ -21,6 +23,7 @@ import {
 
 import { createLimiter } from "@server/infra/limiter";
 import { getDigestGenerationProvider } from "@server/infra/llm/provider";
+import { captureException } from "@server/infra/monitoring";
 import type { Database } from "@server/infra/supabase/database.types";
 import type { TypedSupabaseClient } from "@server/infra/supabase/supabase";
 import { throwIfSupabaseError } from "@server/infra/supabase/supabase-error";
@@ -30,23 +33,39 @@ import {
   DigestGenerationSchema,
   flattenGeneratedDigests,
 } from "@server/prompts/digest-generation";
+import type { RequestOrigin } from "@server/request-origin";
 import {
   deleteDigestVectors,
   indexDigests,
 } from "@server/services/digest-index-service";
 import {
   getRelationCounts,
+  getRelationsForDigests,
   linkRelations,
 } from "@server/services/digest-relation-service";
 import { logGetSource } from "@server/services/mcp-tool-call-log-service";
 import { getProfile } from "@server/services/profile-service";
 import { RELATION_JUDGMENTS } from "@server/services/relation-rules";
-import type { RequestOrigin } from "@server/trpc";
+import { SourceAlreadyProcessingError } from "@server/services/source-errors";
 
 // DB 컬럼 기본값(profiles.content_language)과 같은 값으로 떨어뜨린다. 행이 없는
 // 상태는 로그인은 했지만 온보딩 모달을 아직 못 끝낸 아주 좁은 틈뿐이라(모달이
 // 강제라 넘어갈 수 없다), 그 순간을 위해 별도 오류 경로를 만들지 않는다.
 const FALLBACK_CONTENT_LANGUAGE: ContentLanguage = "en";
+
+// 타임아웃 후 재시도가 같은 원문을 또 처리하지 않게 하는 창. 던지기는 전 구간
+// 동기라(LLM 여러 콜) 클라이언트가 응답을 못 받고 끊어도 서버는 끝까지 처리하고,
+// 사용자는 실패로 보고 곧바로 다시 던진다 — 그 재시도가 이 창 안에 들어오면
+// 새로 처리하지 않고 기존 결과를 그대로 돌려준다. 완전한 unique 제약은 안
+// 쓴다 — 같은 내용을 의도적으로 다시 던지는 경우까지 영구히 막게 된다.
+const INGEST_DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
+
+// processing 중복 판정 창은 훨씬 짧다 — 정상 처리는 수십 초 안에 끝난다. 이보다
+// 오래 processing에 머문 행은 진행 중이 아니라 멈춘(크래시 등) 행일 가능성이
+// 높아, completed와 같은 10분 창을 쓰면 멈춘 원문이 재시도를 최대 10분간 계속
+// 막게 된다 — 그 대신 새로 처리하게 둔다(processIngestion이 성공하면 completed로,
+// 실패하면 failed로 정리해 이 상태를 스스로 벗어난다).
+const INGEST_PROCESSING_DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
 
 export async function ingestSource(args: {
   supabase: TypedSupabaseClient;
@@ -55,6 +74,21 @@ export async function ingestSource(args: {
 }): Promise<SourceIngestResult> {
   const { supabase, userId, body } = args;
 
+  const duplicate = await findRecentDuplicateSource({ supabase, userId, body });
+  if (duplicate?.digestionStatus === "processing") {
+    throw new SourceAlreadyProcessingError(duplicate.id);
+  }
+  if (duplicate) {
+    // 10분 창·completed 조건이 실제로 맞는 값인지는 아직 근거가 얇다 — 얼마나
+    // 자주 걸리는지가 그 근거가 될 유일한 신호라 서버 로그에 남긴다(mcp_tool_calls
+    // 텔레메트리는 안 쓴다 — ingest는 원래 거기 안 남는다, mcp-tool-call-log-service.ts
+    // 참고. 이 값들이 자리 잡으면 이 로그도 정리한다).
+    console.warn(
+      `[source-service] 중복 던지기로 재구성 — 새로 처리하지 않음, sourceId: ${duplicate.id}, userId: ${userId}`,
+    );
+    return reconstructIngestResult({ supabase, sourceId: duplicate.id });
+  }
+
   const { data: source, error } = await supabase
     .from("sources")
     .insert({ user_id: userId, body })
@@ -62,19 +96,119 @@ export async function ingestSource(args: {
     .single();
   throwIfSupabaseError(error);
 
-  const contentLanguage = await resolveContentLanguage({ supabase, userId });
-  const { normalized, sourceTitle } = await generateDigests(
-    body,
-    contentLanguage,
-  );
-  const digests = await saveDigestsAndIndex({
+  // resolveContentLanguage도 withFailureRecovery 안에 둔다 — 밖에 두면(예:
+  // getProfile의 DB 조회 자체가 실패) 이미 INSERT된 source 행이 failed로 정리될
+  // 기회 없이 processing에 영구히 갇힌다.
+  const digests = await withFailureRecovery({
     supabase,
-    userId,
     sourceId: source.id,
-    normalized,
-    sourceTitle,
+    work: async () => {
+      const contentLanguage = await resolveContentLanguage({
+        supabase,
+        userId,
+      });
+      return extractAndSaveDigests({
+        supabase,
+        userId,
+        sourceId: source.id,
+        body,
+        contentLanguage,
+      });
+    },
   });
   return { sourceId: source.id, digests };
+}
+
+// body_hash 생성 컬럼(마이그레이션)과 같은 함수·같은 입력이어야 같은 값이
+// 나온다 — 한쪽만 바뀌면 아래 조회가 영영 안 걸린다.
+function hashBody(body: string): string {
+  return createHash("md5").update(body).digest("hex");
+}
+
+async function findRecentDuplicateSource(args: {
+  supabase: TypedSupabaseClient;
+  userId: string;
+  body: string;
+}): Promise<{
+  id: string;
+  digestionStatus: "processing" | "completed";
+} | null> {
+  const { supabase, userId, body } = args;
+
+  // failed는 여전히 제외한다 — 진짜로 끝난 실패는 중복이 아니라 새로 처리해야
+  // 한다(재시도조차 안 되는 상태로 굳는 걸 막는다). processing/completed만
+  // 후보로 두고, 그중 가장 최근 행 하나를 판정 대상으로 삼는다 — 같은
+  // user_id+body_hash로 유효한 중복이 동시에 두 개 있을 수는 없다(있었다면
+  // 앞선 중복 판정에서 새 행 자체가 안 생겼을 것이다).
+  // v_visible_sources를 거치므로 그사이 휴지통에 간 원문은 안 걸린다(돌려줄
+  // 결과가 이미 없다).
+  // .returns<>()는 뷰의 생성 타입이 컬럼을 전부 nullable로 잡는 것을 되돌린다
+  // (뷰 공통 관례) — id·digestion_status·created_at은 sources의 NOT NULL
+  // 컬럼이라 WHERE로 거른 뒤엔 실제로 null일 수 없다.
+  const { data, error } = await supabase
+    .from("v_visible_sources")
+    .select("id, digestion_status, created_at")
+    .eq("user_id", userId)
+    .eq("body_hash", hashBody(body))
+    .in("digestion_status", ["processing", "completed"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .returns<
+      Array<{
+        id: string;
+        digestion_status: "processing" | "completed";
+        created_at: string;
+      }>
+    >()
+    .maybeSingle();
+  throwIfSupabaseError(error);
+  if (!data) {
+    return null;
+  }
+
+  const windowMs =
+    data.digestion_status === "processing"
+      ? INGEST_PROCESSING_DUPLICATE_WINDOW_MS
+      : INGEST_DUPLICATE_WINDOW_MS;
+  const isWithinWindow =
+    Date.now() - new Date(data.created_at).getTime() < windowMs;
+  if (!isWithinWindow) {
+    return null;
+  }
+
+  return { id: data.id, digestionStatus: data.digestion_status };
+}
+
+// 중복 판정된 기존 원문의 결과를 처음 던졌을 때와 같은 모양으로 다시 만든다 —
+// 응답이 화면 없이 결과를 보는 유일한 창구라(SourceIngestResultSchema 참고)
+// 기존 결과를 그대로 재구성해 돌려준다.
+async function reconstructIngestResult(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+}): Promise<SourceIngestResult> {
+  const { supabase, sourceId } = args;
+
+  const { data: rows, error } = await supabase
+    .from("digests")
+    .select("id, type, title, body, created_at")
+    .eq("source_id", sourceId)
+    .is("trashed_at", null)
+    .order("extraction_order", { ascending: true });
+  throwIfSupabaseError(error);
+
+  const digests = (rows ?? []).map(toDigest);
+  const relationsByDigestId = await getRelationsForDigests({
+    supabase,
+    digestIds: digests.map((digest) => digest.id),
+  });
+
+  return {
+    sourceId,
+    digests: digests.map((digest) => ({
+      ...digest,
+      relations: relationsByDigestId.get(digest.id) ?? [],
+    })),
+  };
 }
 
 export async function reExtractSource(args: {
@@ -98,42 +232,154 @@ export async function reExtractSource(args: {
   throwIfSupabaseError(fetchError);
 
   const contentLanguage = await resolveContentLanguage({ supabase, userId });
-  // LLM 호출을 기존 다이제스트 삭제보다 먼저 한다 — 여기서 실패하면(rate limit,
-  // content filter, 스키마 검증 실패 등) 원문도 이전 다이제스트도 안 건드린 채
-  // 그대로 남아 다시 부르면 된다. 순서를 반대로 하면 실패할 때마다 다이제스트가
-  // 0개인 상태가 영구화될 위험이 있다.
+
+  // 상태 전환을 ingestSource와 대칭으로 맨 앞(LLM 호출 전)에 둔다 — 서버 상태는
+  // 클릭 즉시 processing으로 바뀐다(화면 카드는 이 응답이 끝나 source.list가
+  // 무효화돼야 그 결과를 반영한다 — DraftReExtractAction 참고). 실패하면 아래
+  // withFailureRecovery가 failed로 되돌린다.
+  //
+  // WHERE에 digestion_status<>processing을 같이 걸어 동시 재추출을 막는다 —
+  // 이미 processing인 원문에 걸면 이 UPDATE는 0행이라 updated가 비고, 그때
+  // SourceAlreadyProcessingError를 던진다(ingestSource의 중복 판정과 같은 신호,
+  // 같은 tRPC CONFLICT로 옮겨진다).
+  const { data: updated, error: statusError } = await supabase
+    .from("sources")
+    .update({ digestion_status: "processing" })
+    .eq("id", sourceId)
+    .neq("digestion_status", "processing")
+    .select("id")
+    .maybeSingle();
+  throwIfSupabaseError(statusError);
+  if (!updated) {
+    throw new SourceAlreadyProcessingError(sourceId);
+  }
+
+  const { digests, oldDigestIds } = await withFailureRecovery({
+    supabase,
+    sourceId,
+    work: async () => {
+      // LLM 호출을 기존 digest 삭제보다 먼저 한다 — 여기서 실패하면 기존
+      // digest를 하나도 안 건드린 채 failed가 된다(재시도해도 결과가 그대로
+      // 남는다). 새 digest를 성공보다 앞서 저장할 순 없다 — digests에
+      // (source_id, extraction_order) unique 제약이 있어, 옛 digest가 아직
+      // 있는 채로 같은 extraction_order(0부터)를 쓰는 새 digest를 못 넣는다.
+      const { normalized, sourceTitle } = await generateDigests(
+        source.body,
+        contentLanguage,
+      );
+
+      // 지워지는 digest id를 같이 받아둔다 — 새 다이제스트를 색인한 뒤(아래)
+      // 이 id들의 옛 벡터를 지운다. 순서가 반대면(새로 색인하기 전에 지우면)
+      // 색인이 실패했을 때 검색 가능한 벡터가 하나도 안 남는 구간이 생긴다.
+      const { data: oldDigestRows, error: deleteError } = await supabase
+        .from("digests")
+        .delete()
+        .eq("source_id", sourceId)
+        .select("id");
+      throwIfSupabaseError(deleteError);
+
+      const newDigests = await saveDigestsAndIndex({
+        supabase,
+        userId,
+        sourceId: source.id,
+        normalized,
+        sourceTitle,
+      });
+
+      return {
+        digests: newDigests,
+        oldDigestIds: (oldDigestRows ?? []).map((row) => row.id),
+      };
+    },
+  });
+
+  await deleteDigestVectors(oldDigestIds);
+
+  return { sourceId: source.id, digests };
+}
+
+// LLM 추출 → 저장/색인 묶음. ingestSource가 쓴다(reExtractSource는 그 사이에
+// 기존 digest 삭제를 끼워야 해서 generateDigests/saveDigestsAndIndex를 직접 부른다).
+async function extractAndSaveDigests(args: {
+  supabase: TypedSupabaseClient;
+  userId: string;
+  sourceId: string;
+  body: string;
+  contentLanguage: ContentLanguage;
+}): Promise<DigestWithRelations[]> {
+  const { supabase, userId, sourceId, body, contentLanguage } = args;
   const { normalized, sourceTitle } = await generateDigests(
-    source.body,
+    body,
     contentLanguage,
   );
-
-  const { error: statusError } = await supabase
-    .from("sources")
-    .update({ digestion_status: "pending" })
-    .eq("id", sourceId);
-  throwIfSupabaseError(statusError);
-
-  // 지워지는 digest id를 같이 받아둔다 — 새 다이제스트를 색인한 뒤 이 id들의 옛
-  // 벡터를 지운다. 순서가 반대면(새로 색인하기 전에 지우면) 색인이 실패했을 때
-  // 검색 가능한 벡터가 하나도 안 남는 구간이 생긴다.
-  const { data: deletedDigests, error: deleteError } = await supabase
-    .from("digests")
-    .delete()
-    .eq("source_id", sourceId)
-    .select("id");
-  throwIfSupabaseError(deleteError);
-
-  const digests = await saveDigestsAndIndex({
+  return saveDigestsAndIndex({
     supabase,
     userId,
-    sourceId: source.id,
+    sourceId,
     normalized,
     sourceTitle,
   });
+}
 
-  await deleteDigestVectors((deletedDigests ?? []).map((row) => row.id));
+// saveDigestsAndIndex의 마지막 completed UPDATE 하나만 실패했을 때만 던진다 —
+// 이 시점엔 digest 저장·색인이 이미 끝나 완전히 유효한 결과가 있다.
+// withFailureRecovery는 이 타입을 다른 실패와 다르게 다룬다(아래).
+class SourceCompletionUpdateFailedError extends Error {
+  constructor(cause: unknown) {
+    super(
+      "digestion_status completed UPDATE failed after digests were saved and indexed.",
+    );
+    this.name = "SourceCompletionUpdateFailedError";
+    this.cause = cause;
+  }
+}
 
-  return { sourceId: source.id, digests };
+// work 도중 실패하면 source를 failed로 표시하고 그대로 다시 던진다 —
+// ingestSource·reExtractSource 둘 다 "처리 도중 실패하면 processing에 갇히지
+// 않고 failed로 끝난다"를 똑같이 지켜야 해서 한 곳에 모은다. 딱 하나
+// 예외다 — SourceCompletionUpdateFailedError는 안 건드린다. digest 저장·색인은
+// 이미 끝난 유효한 결과라, failed로 덮어쓰면 재추출 버튼이 멀쩡한 digest를
+// 지우고 처음부터 다시 만들게 된다(능동적 데이터 손실). processing에 그대로
+// 남겨두는 쪽을 택한다 — 상태 불일치는 정합성 점검으로 별도로 다룬다
+// (fix/draft-error-state 결정사항).
+//
+// work가 끝난 *뒤*의 후속 정리(예: reExtractSource의 기존 digest 삭제)는
+// 일부러 이 안에 안 넣는다 — 그건 이미 완성된 결과에 딸린 뒷정리라 실패해도
+// failed로 되돌릴 대상이 아니다.
+async function withFailureRecovery<T>(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+  work: () => Promise<T>;
+}): Promise<T> {
+  const { supabase, sourceId, work } = args;
+  try {
+    return await work();
+  } catch (error) {
+    if (!(error instanceof SourceCompletionUpdateFailedError)) {
+      await markSourceFailed({ supabase, sourceId });
+    }
+    throw error;
+  }
+}
+
+async function markSourceFailed(args: {
+  supabase: TypedSupabaseClient;
+  sourceId: string;
+}): Promise<void> {
+  const { supabase, sourceId } = args;
+  const { error } = await supabase
+    .from("sources")
+    .update({ digestion_status: "failed" })
+    .eq("id", sourceId);
+  if (error) {
+    // 이 UPDATE마저 실패하면 source가 processing에 그대로 남는다 — DB 쓰기
+    // 자체가 막힌 아주 드문 인프라 이슈라 자동 복구를 만들지 않는다
+    // (fix/draft-error-state 결정사항). 발생하면 수동으로 상태를 바로잡는다.
+    console.warn(
+      `[source-service] 실패 상태 기록도 실패 — source가 processing에 멈춰 있을 수 있음, sourceId: ${sourceId}:`,
+      error,
+    );
+  }
 }
 
 export async function deleteSource(args: {
@@ -317,8 +563,8 @@ export async function listSourcesWithDigests(args: {
   // 다 가려도 원문 자체는 목록에 남는다(원문을 지울 진입점을 유지해야 해서).
   // digestion_status='completed' 조건은 listDraftSources와 겹치지 않게 막는
   // 안전장치다 — saveDigestsAndIndex가 digest 행을 커밋한 뒤 상태를 completed로
-  // 바꾸는 마지막 UPDATE만 실패하면(드물지만) pending인데 digest 행은 있는 원문이
-  // 생기고, 이 조건이 없으면 그 원문이 두 목록에 동시에 뜬다.
+  // 바꾸는 마지막 UPDATE만 실패하면(드물지만) processing인데 digest 행은 있는
+  // 원문이 생기고, 이 조건이 없으면 그 원문이 두 목록에 동시에 뜬다.
   let query = supabase
     .from("v_visible_sources")
     .select(
@@ -384,9 +630,10 @@ export async function listDraftSources(args: {
 }): Promise<SourceDraft[]> {
   const { supabase } = args;
 
-  // 필터(pending 또는 digests 0건)는 v_draft_sources 뷰가 DB에서 미리 건다 —
-  // 여기서 JS로 걸렀다면 상한(limit)이 거르기 전에 먼저 잘라, 원문이 많을 때
-  // 실제로 있는 초안이 빈 목록으로 보일 수 있었다(에러 없이 조용히 틀림).
+  // 필터(failed 또는 digests 0건 — processing은 뺀다)는 v_draft_sources 뷰가
+  // DB에서 미리 건다 — 여기서 JS로 걸렀다면 상한(limit)이 거르기 전에 먼저
+  // 잘라, 원문이 많을 때 실제로 있는 초안이 빈 목록으로 보일 수 있었다(에러
+  // 없이 조용히 틀림).
   const { data, error } = await supabase
     .from("v_draft_sources")
     .select("id, public_id, name, body_preview, created_at, digestion_status")
@@ -509,7 +756,7 @@ async function saveDigestsAndIndex(args: {
   // 다이제스트 저장 직후, 같은 흐름 안에서 동기로 색인한다 — 실패하면 던지기
   // 전체가 실패한다. 이미 커밋된 digest 행은 색인 실패와 함께 되돌린다 — 안 그러면
   // Postgres엔 있지만 Qdrant엔 없어 영영 안 걸리는 다이제스트가 조용히 남는다.
-  // source 행은 digestion_status: pending으로 남아, 재추출로 복구할 수 있다.
+  // 이 예외는 withFailureRecovery까지 그대로 올라가 source를 failed로 남긴다.
   try {
     await indexDigests({ userId, digests });
   } catch (indexError) {
@@ -535,7 +782,11 @@ async function saveDigestsAndIndex(args: {
     .from("sources")
     .update({ digestion_status: "completed", title: sourceTitle })
     .eq("id", sourceId);
-  throwIfSupabaseError(statusError);
+  if (statusError) {
+    // 여기서 던지는 예외는 SourceCompletionUpdateFailedError로 감싼다 —
+    // withFailureRecovery가 이 타입만은 failed로 안 덮어쓴다(위 정의 참고).
+    throw new SourceCompletionUpdateFailedError(statusError);
+  }
 
   // 색인 다음에 잇는다 — 후보를 방금 색인한 벡터로 찾기 때문에 순서를 바꿀 수 없다.
   const relationsByDigestId = await linkAllRelations({
@@ -578,6 +829,11 @@ async function linkAllRelations(args: {
         `[source-service] 관계 잇기 실패 — 다이제스트는 그대로 둔다, sourceId: ${sourceId}, judgment: ${judgment.name}:`,
         error,
       );
+      // 사용자에게는 던지기가 정상 완료로 보여 이 실패를 스스로 알아챌 방법이
+      // 없다 — sourceId·judgment를 태그로 실어 재추출 대상을 바로 특정하게 한다.
+      captureException(error, {
+        tags: { sourceId, judgment: judgment.name },
+      });
       return new Map<string, DigestRelation[]>();
     });
 

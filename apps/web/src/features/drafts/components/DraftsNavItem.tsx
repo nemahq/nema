@@ -34,9 +34,10 @@ export function DraftsNavItem() {
 
   const drafts = draftsQuery.data ?? [];
   const draftCount = drafts.length;
-  // "정리중" 구간이 서버에 없다(digestion_status는 pending/completed 둘뿐이고,
-  // pending은 사실상 죽은 상태다) — 확인이 필요한지 여부 하나만 본다.
-  const hasFailed = drafts.some((draft) => draft.status === "pending");
+  // processing(정리 중)은 애초에 이 목록에 안 온다(v_draft_sources가 미리
+  // 거른다) — 여기 온 draft는 failed 아니면 completed(결과없음)뿐이라, failed
+  // 여부 하나만 보면 "확인 필요"가 갈린다.
+  const hasFailed = drafts.some((draft) => draft.status === "failed");
   // 조회 실패로 개수를 모르는 상태를 "0개"로 오인해 항목을 숨기지 않는다 — 실제 초안이
   // 있는데도 조용히 진입점이 사라지는 것보다는, 눌러서 /drafts의 에러 상태를 보는 편이 낫다.
   const hasData = draftCount > 0 || draftsQuery.isError;

@@ -85,6 +85,15 @@ vi.mock("@server/services/digest-relation-service", async (importOriginal) => {
   return { ...actual, linkRelations: mockLinkRelations };
 });
 
+// 관계 잇기 실패가 사용자에게 안 보이는 만큼, Sentry로 새는지가 이 실패를 잡는
+// 유일한 통로다 — sourceId·judgment 태그가 재추출 대상을 특정한다.
+const { mockCaptureException } = vi.hoisted(() => ({
+  mockCaptureException: vi.fn(),
+}));
+vi.mock("@server/infra/monitoring", () => ({
+  captureException: mockCaptureException,
+}));
+
 function noDigests(): GeneratedDigests {
   return {
     sourceTitle: "테스트 원문 제목",
@@ -238,6 +247,7 @@ afterEach(() => {
   mockDeleteDigestVectors.mockReset().mockResolvedValue(undefined);
   mockLogGetSource.mockReset().mockResolvedValue(undefined);
   mockLinkRelations.mockReset().mockResolvedValue(new Map());
+  mockCaptureException.mockReset();
 });
 
 describe("source-service (RLS)", () => {
@@ -367,6 +377,37 @@ describe("source-service (RLS)", () => {
     TEST_TIMEOUT_MS,
   );
 
+  // 이 테스트가 지키는 계약: 같은 원문에 재추출이 두 번 겹치면(예: 다른 탭에서
+  // 동시 클릭) 두 번째는 새로 처리하지 않는다 — 안 막으면 둘 다 saveDigests를
+  // 부르다 (source_id, extraction_order) unique 제약에 걸려 두 번째가 원인 불명
+  // 에러로 실패한다.
+  it(
+    "이미 재추출 중인 원문에 재추출을 또 부르면 CONFLICT를 던진다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { data: source, error: insertError } = await admin
+        .from("sources")
+        .insert({
+          user_id: userA.id,
+          body: `재추출 중복 방지 재현 원문 ${randomUUID()}`,
+        })
+        .select("id")
+        .single();
+      expect(insertError).toBeNull();
+
+      await expect(
+        reExtractSource({
+          supabase: userA.supabase,
+          userId: userA.id,
+          sourceId: source?.id ?? "",
+        }),
+      ).rejects.toThrow(/still processing/);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
   it(
     "재추출은 기존 다이제스트를 지우고 새 다이제스트로 바꾼다",
     async () => {
@@ -396,6 +437,13 @@ describe("source-service (RLS)", () => {
         .select("id")
         .eq("source_id", sourceId);
       expect(remaining).toHaveLength(1);
+
+      const { data: sourceRow } = await userA.supabase
+        .from("sources")
+        .select("digestion_status")
+        .eq("id", sourceId)
+        .single();
+      expect(sourceRow?.digestion_status).toBe("completed");
     },
     TEST_TIMEOUT_MS,
   );
@@ -810,6 +858,10 @@ describe("source-service (RLS)", () => {
         .eq("id", sourceId)
         .single();
       expect(source?.digestion_status).toBe("completed");
+
+      expect(mockCaptureException).toHaveBeenCalledWith(expect.any(Error), {
+        tags: { sourceId, judgment: "duplicate_conflict" },
+      });
     },
     TEST_TIMEOUT_MS,
   );
@@ -894,7 +946,7 @@ describe("source-service (RLS)", () => {
         .select("id, digestion_status, title, name")
         .eq("body", body);
       expect(sources).toHaveLength(1);
-      expect(sources?.[0]?.digestion_status).toBe("pending");
+      expect(sources?.[0]?.digestion_status).toBe("failed");
       // 정리 호출 자체가 실패해 title을 쓰는 자리(saveDigestsAndIndex)까지 못
       // 간다 — title은 null로 남고 name이 coalesce로 본문을 대신 돌려줘야 한다.
       expect(sources?.[0]?.title).toBeNull();
@@ -905,7 +957,7 @@ describe("source-service (RLS)", () => {
 
   // 이 테스트가 지키는 계약: 색인 실패 시 방금 커밋한 digest 행을 되돌린다 — 안
   // 그러면 Postgres엔 있지만 Qdrant엔 없어 영영 안 걸리는 다이제스트가 조용히
-  // 남는다. source 행은 pending으로 남아 재추출로 복구할 수 있다.
+  // 남는다. source 행은 failed로 남아 재추출로 복구할 수 있다.
   it(
     "색인이 실패하면 방금 저장한 다이제스트를 되돌린다",
     async () => {
@@ -925,7 +977,7 @@ describe("source-service (RLS)", () => {
         .select("id, digestion_status")
         .eq("body", body)
         .single();
-      expect(sources?.digestion_status).toBe("pending");
+      expect(sources?.digestion_status).toBe("failed");
 
       const { data: remainingDigests } = await admin
         .from("digests")
@@ -968,6 +1020,15 @@ describe("source-service (RLS)", () => {
         .eq("source_id", sourceId);
       expect(remaining).toHaveLength(1);
       expect(remaining?.[0]?.id).toBe(original[0]?.id);
+
+      // 상태도 failed로 끝나야 한다 — 이걸 안 보면 배선이 잘못돼 processing에
+      // 영구히 갇혀도(이 PR이 고치려는 버그와 같은 모양) 이 테스트가 못 잡는다.
+      const { data: sourceRow } = await userA.supabase
+        .from("sources")
+        .select("digestion_status")
+        .eq("id", sourceId)
+        .single();
+      expect(sourceRow?.digestion_status).toBe("failed");
     },
     TEST_TIMEOUT_MS,
   );
@@ -1062,6 +1123,307 @@ describe("source-service (RLS)", () => {
         "두 번째 결정",
       ]);
       expect(rows?.map((row) => row.extraction_order)).toEqual([0, 1]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+});
+
+// 던지기는 전 구간 동기라 클라이언트가 타임아웃으로 끊어도 서버는 끝까지
+// 처리한다 — 사용자가 그걸 실패로 보고 곧바로 같은 원문을 다시 던지는 상황을
+// 재현한다(실제로는 첫 호출이 이미 끝난 뒤 바로 이어 부르는 것과 같다).
+describe("던지기 중복 방지 (RLS)", () => {
+  it(
+    "같은 사용자가 같은 본문을 곧바로 다시 던지면 새로 처리하지 않고 기존 결과를 그대로 돌려준다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const body = `중복 방지 테스트 원문 ${randomUUID()}`;
+      mockGenerated = oneDecision("중복 방지 테스트 결정");
+
+      const first = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+      expect(mockGenerateCallCount).toBe(1);
+
+      const second = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+
+      expect(second.sourceId).toBe(first.sourceId);
+      expect(second.digests).toEqual(first.digests);
+      // 다이제스트 생성 LLM을 다시 부르지 않았다는 게 "새로 처리하지 않았다"의
+      // 직접적인 증거다 — 재구성만 탔다면 이 횟수가 그대로 1이어야 한다.
+      expect(mockGenerateCallCount).toBe(1);
+
+      const { data: sources } = await userA.supabase
+        .from("sources")
+        .select("id")
+        .eq("body", body);
+      expect(sources).toHaveLength(1);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "중복으로 재구성된 응답에도 기존에 이어진 관계가 그대로 담긴다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const body = `중복 방지 관계 테스트 원문 ${randomUUID()}`;
+      mockGenerated = twoDecisions(["중복 관계 A", "중복 관계 B"]);
+
+      const first = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+      const [firstDigest, secondDigest] = first.digests;
+
+      const { error: relationError } = await admin
+        .from("digest_relations")
+        .insert({
+          from_digest_id: secondDigest?.id ?? "",
+          to_digest_id: firstDigest?.id ?? "",
+          type: "support",
+        });
+      expect(relationError).toBeNull();
+
+      const second = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+
+      const reconstructedFirst = second.digests.find(
+        (digest) => digest.id === firstDigest?.id,
+      );
+      expect(
+        reconstructedFirst?.relations.map((relation) => relation.digestId),
+      ).toEqual([secondDigest?.id]);
+      // 재구성이 별도 쿼리(extraction_order 정렬)를 새로 타므로, 처음 던졌을
+      // 때의 순서가 그대로 유지되는지도 함께 본다.
+      expect(second.digests.map((digest) => digest.title)).toEqual(
+        first.digests.map((digest) => digest.title),
+      );
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "다른 사용자가 같은 본문을 던지면 중복으로 보지 않는다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const body = `중복 방지 사용자 격리 테스트 원문 ${randomUUID()}`;
+      mockGenerated = oneDecision("A 소유 결정");
+
+      const first = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+
+      mockGenerated = oneDecision("B 소유 결정");
+      const second = await ingestSource({
+        supabase: userB.supabase,
+        userId: userB.id,
+        body,
+      });
+
+      expect(second.sourceId).not.toBe(first.sourceId);
+      expect(mockGenerateCallCount).toBe(2);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "이전 시도가 끝까지 못 간(failed) 원문은 중복으로 보지 않고 새로 처리한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const body = `중복 방지 failed 재시도 테스트 원문 ${randomUUID()}`;
+      mockError = new Error("LLM unavailable");
+      await expect(
+        ingestSource({ supabase: userA.supabase, userId: userA.id, body }),
+      ).rejects.toThrow("LLM unavailable");
+
+      mockError = null;
+      mockGenerated = oneDecision("재시도로 완성된 결정");
+      const retried = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+
+      expect(retried.digests).toHaveLength(1);
+      const { data: sources } = await userA.supabase
+        .from("sources")
+        .select("id, digestion_status")
+        .eq("body", body);
+      // 실패해 failed로 남은 행 + 재시도가 새로 만든 completed 행, 둘이다 —
+      // failed를 중복으로 묶어 재구성했다면 여기가 1행이었을 것이다.
+      expect(sources).toHaveLength(2);
+      expect(
+        sources
+          ?.map((source) => source.digestion_status)
+          .sort((a, b) => a.localeCompare(b)),
+      ).toEqual(["completed", "failed"]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "처리 중(processing)인 원문과 중복이면 새로 처리하지 않고 CONFLICT를 던진다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const body = `중복 방지 processing 테스트 원문 ${randomUUID()}`;
+      // 원본이 아직 처리 중인 상황을 직접 심는다(ingestSource를 거치지 않고
+      // insert만) — 기본값이 processing이라 상태를 따로 안 줘도 된다.
+      const { data: original, error: insertError } = await admin
+        .from("sources")
+        .insert({ user_id: userA.id, body })
+        .select("id")
+        .single();
+      expect(insertError).toBeNull();
+
+      mockGenerated = oneDecision("중복 processing 재시도 결정");
+      await expect(
+        ingestSource({ supabase: userA.supabase, userId: userA.id, body }),
+      ).rejects.toThrow(/still processing/);
+
+      // 재시도가 새 행을 만들지 않았는지 — 여전히 원본 1행(processing)뿐이어야 한다.
+      const { data: sources } = await userA.supabase
+        .from("sources")
+        .select("id, digestion_status")
+        .eq("body", body);
+      expect(sources).toHaveLength(1);
+      expect(sources?.[0]?.id).toBe(original?.id);
+      expect(sources?.[0]?.digestion_status).toBe("processing");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // processing 창(2분)은 completed 창(10분)보다 훨씬 짧다 — 멈춘(크래시 등)
+  // processing 행이 재시도를 오래 막지 않게 하려는 의도적 차이다. 이 테스트는
+  // 그 차이 자체(짧은 창 밖은 새로 처리)를 검증한다.
+  const OUTSIDE_PROCESSING_DUPLICATE_WINDOW_MS = 3 * 60 * 1000;
+
+  it(
+    "processing 창(2분) 밖이면 새로 처리한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const body = `중복 방지 processing 창 밖 테스트 원문 ${randomUUID()}`;
+      const { data: original, error: insertError } = await admin
+        .from("sources")
+        .insert({
+          user_id: userA.id,
+          body,
+          created_at: new Date(
+            Date.now() - OUTSIDE_PROCESSING_DUPLICATE_WINDOW_MS,
+          ).toISOString(),
+        })
+        .select("id")
+        .single();
+      expect(insertError).toBeNull();
+
+      mockGenerated = oneDecision("processing 창 밖 - 새로 처리된 결정");
+      const retried = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+
+      expect(retried.sourceId).not.toBe(original?.id);
+      expect(retried.digests[0]?.title).toBe(
+        "processing 창 밖 - 새로 처리된 결정",
+      );
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "휴지통에 간 원문은 중복으로 보지 않고 새로 처리한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const body = `중복 방지 휴지통 테스트 원문 ${randomUUID()}`;
+      mockGenerated = oneDecision("휴지통행 전 결정");
+
+      const first = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+      await deleteSource({
+        supabase: userA.supabase,
+        sourceId: first.sourceId,
+      });
+
+      mockGenerated = oneDecision("휴지통행 후 재처리 결정");
+      const second = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+
+      expect(second.sourceId).not.toBe(first.sourceId);
+      expect(second.digests[0]?.title).toBe("휴지통행 후 재처리 결정");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // INGEST_DUPLICATE_WINDOW_MS(10분)보다 오래전에 completed된 원문은 창 밖이라
+  // 새로 처리돼야 한다 — 창 안쪽만 검증하는 위 테스트들은 since 계산 방향이
+  // 뒤집히거나(과거 대신 미래를 기준으로 삼는 등) 단위를 잘못 둬 창이 사실상
+  // 무한대가 돼도 못 잡는다.
+  const OUTSIDE_DUPLICATE_WINDOW_MS = 11 * 60 * 1000;
+
+  it(
+    "시간 창(10분) 밖에서 completed된 원문은 중복으로 보지 않고 새로 처리한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const body = `중복 방지 시간창 경계 테스트 원문 ${randomUUID()}`;
+      mockGenerated = oneDecision("시간창 밖 - 원래 결정");
+
+      const first = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+      const { error: backdateError } = await admin
+        .from("sources")
+        .update({
+          created_at: new Date(
+            Date.now() - OUTSIDE_DUPLICATE_WINDOW_MS,
+          ).toISOString(),
+        })
+        .eq("id", first.sourceId);
+      expect(backdateError).toBeNull();
+
+      mockGenerated = oneDecision("시간창 밖 - 재처리된 결정");
+      const second = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+
+      expect(second.sourceId).not.toBe(first.sourceId);
+      expect(second.digests[0]?.title).toBe("시간창 밖 - 재처리된 결정");
     },
     TEST_TIMEOUT_MS,
   );
@@ -1328,11 +1690,13 @@ describe("listSourcesWithDigests (RLS)", () => {
 
   // 이 테스트가 지키는 계약: saveDigestsAndIndex는 digest 행을 커밋한 뒤 맨
   // 마지막에 digestion_status를 completed로 바꾼다 — 그 마지막 UPDATE만
-  // 실패하면(드물지만) pending인데 digest 행은 있는 원문이 생긴다. 정상 흐름으론
-  // 재현이 안 돼 admin으로 그 상태를 직접 만든다. digestion_status='completed'
-  // 조건이 없으면 이 원문이 두 목록에 동시에 뜬다.
+  // 실패하면(드물지만) processing인데 digest 행은 있는 원문이 생긴다. 정상
+  // 흐름으론 재현이 안 돼 admin으로 그 상태를 직접 만든다. v_draft_sources가
+  // processing을 빼므로(초안 탭 오표시 방지), 이 원문은 두 목록 어디에도 안
+  // 뜬다 — completed로 안 바뀐 채 방치된 대가로, 데이터를 잃진 않지만 두
+  // 목록 모두에서 숨는다(의도적으로 수용한 트레이드오프).
   it(
-    "digestion_status 갱신만 실패해 pending인데 digest 행이 있는 원문은 초안에만 뜬다",
+    "digestion_status 갱신만 실패해 processing인데 digest 행이 있는 원문은 다이제스트 목록·초안 어디에도 안 뜬다",
     async () => {
       if (!localDbAvailable) {
         return;
@@ -1362,7 +1726,7 @@ describe("listSourcesWithDigests (RLS)", () => {
       expect(withDigests.items.some((s) => s.sourceId === source?.id)).toBe(
         false,
       );
-      expect(drafts.some((d) => d.sourceId === source?.id)).toBe(true);
+      expect(drafts.some((d) => d.sourceId === source?.id)).toBe(false);
     },
     TEST_TIMEOUT_MS,
   );
@@ -1571,25 +1935,25 @@ describe("listDraftSources (RLS)", () => {
   });
 
   it(
-    "pending과 다이제스트 0개인 completed만 담고, 다이제스트가 있는 completed는 뺀다",
+    "failed와 다이제스트 0개인 completed만 담고, 다이제스트가 있는 completed는 뺀다",
     async () => {
       if (!localDbAvailable) {
         return;
       }
-      const pendingBody = `초안 테스트 - pending ${randomUUID()}`;
+      const failedBody = `초안 테스트 - failed ${randomUUID()}`;
       mockError = new Error("LLM unavailable");
       await expect(
         ingestSource({
           supabase: userA.supabase,
           userId: userA.id,
-          body: pendingBody,
+          body: failedBody,
         }),
       ).rejects.toThrow();
       mockError = null;
-      const { data: pendingSource } = await userA.supabase
+      const { data: failedSource } = await userA.supabase
         .from("sources")
         .select("id")
-        .eq("body", pendingBody)
+        .eq("body", failedBody)
         .single();
 
       mockGenerated = noDigests();
@@ -1609,15 +1973,43 @@ describe("listDraftSources (RLS)", () => {
       const drafts = await listDraftSources({ supabase: userA.supabase });
       const draftIds = drafts.map((draft) => draft.sourceId);
 
-      expect(draftIds).toContain(pendingSource?.id);
+      expect(draftIds).toContain(failedSource?.id);
       expect(draftIds).toContain(completedEmpty);
       expect(draftIds).not.toContain(completedWithDigest);
       expect(
-        drafts.find((draft) => draft.sourceId === pendingSource?.id)?.status,
-      ).toBe("pending");
+        drafts.find((draft) => draft.sourceId === failedSource?.id)?.status,
+      ).toBe("failed");
       expect(
         drafts.find((draft) => draft.sourceId === completedEmpty)?.status,
       ).toBe("completed");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // "NOT EXISTS(digests)" 하나만으로 초안을 걸렀다면 이 테스트가 잡아낸다 —
+  // 막 던져 아직 digest가 없는 processing 원문도 그 조건 하나엔 걸리기
+  // 때문이다. digestion_status를 같이 봐야 이 원문이 초안 탭에서 빠진다.
+  it(
+    "처리 중(processing)이고 다이제스트가 아직 없는 원문은 초안에 안 뜬다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { data: processingSource, error: insertError } = await admin
+        .from("sources")
+        .insert({
+          user_id: userA.id,
+          body: `처리 중 재현 원문 ${randomUUID()}`,
+        })
+        .select("id")
+        .single();
+      expect(insertError).toBeNull();
+
+      const drafts = await listDraftSources({ supabase: userA.supabase });
+
+      expect(drafts.some((d) => d.sourceId === processingSource?.id)).toBe(
+        false,
+      );
     },
     TEST_TIMEOUT_MS,
   );
@@ -1653,15 +2045,25 @@ describe("listDraftSources (RLS)", () => {
       const exactly200 = "x".repeat(200);
       const over200 = `${"x".repeat(200)}y`;
 
+      // digestion_status를 failed로 명시한다 — 기본값(processing)은 이제
+      // 초안 탭에서 빠지므로, 이 재현이 목록에 걸리려면 failed여야 한다.
       const { data: exactSource, error: exactError } = await admin
         .from("sources")
-        .insert({ user_id: userA.id, body: exactly200 })
+        .insert({
+          user_id: userA.id,
+          body: exactly200,
+          digestion_status: "failed",
+        })
         .select("id")
         .single();
       expect(exactError).toBeNull();
       const { data: overSource, error: overError } = await admin
         .from("sources")
-        .insert({ user_id: userA.id, body: over200 })
+        .insert({
+          user_id: userA.id,
+          body: over200,
+          digestion_status: "failed",
+        })
         .select("id")
         .single();
       expect(overError).toBeNull();

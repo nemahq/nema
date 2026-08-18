@@ -14,19 +14,12 @@ import {
   mapDomainError,
 } from "@server/error-mapper";
 import { resolveLanguage, t as translate } from "@server/infra/i18n";
+import { captureException } from "@server/infra/monitoring";
 import {
   createSupabaseUser,
   getSupabaseAdmin,
 } from "@server/infra/supabase/supabase";
-
-// MCP와 웹이 같은 tRPC 프로시저를 공유해서 인증 정보만으로는 호출 출처를 못
-// 가른다 — MCP_CLIENT_HEADER_NAME(apps/mcp가 심는 헤더)로 구분한다. source.get의
-// MCP 전용 조회 로그(logGetSource)가 이 값을 쓴다.
-//
-// 헤더는 누구나 흉내 낼 수 있는 자기신고 값이다 — RLS처럼 서버가 독립적으로
-// 검증하는 값이 아니다. 로깅 지표를 어느 쪽에 남길지 가르는 용도로만 쓴다.
-// 인가(authorization) 판단에는 절대 재사용하지 않는다.
-export type RequestOrigin = "mcp" | "web";
+import type { RequestOrigin } from "@server/request-origin";
 
 export async function createContext({ req, res }: CreateFastifyContextOptions) {
   const prefix = "Bearer ";
@@ -92,8 +85,10 @@ const t = initTRPC.context<Context>().create({
 export const router = t.router;
 
 // fastifyTRPCPlugin의 trpcOptions.onError로 등록한다(index.ts) — 응답 shape 확정
-// (errorFormatter, 위)과 별개로, 요청이 끝나는 지점마다 부수효과(로깅)를 맡는다.
-// 정상적인 거부(권한·대상 없음)는 장애가 아니라 로그에 안 남긴다 — 노이즈 방지.
+// (errorFormatter, 위)과 별개로, 요청이 끝나는 지점마다 부수효과(로깅·Sentry 전송)를
+// 맡는다. 정상적인 거부(권한·대상 없음)는 장애가 아니라 어느 쪽에도 안 남긴다 —
+// 노이즈 방지. Sentry는 production에서만 켜지므로(infra/monitoring.ts) staging에선 로그만
+// 남는다.
 export function onTRPCError({
   error,
   req,
@@ -105,6 +100,7 @@ export function onTRPCError({
   if (domainCode) {
     if (!isExpectedDomainError(error.cause)) {
       req?.log.error({ err: error.cause, domainCode }, "trpc domain error");
+      captureException(error.cause, { tags: { domainCode } });
     }
     return;
   }
@@ -113,6 +109,9 @@ export function onTRPCError({
     return;
   }
   req?.log.error({ err: error.cause ?? error }, "trpc internal error");
+  captureException(error.cause ?? error, {
+    tags: { domainCode: "UNKNOWN" },
+  });
 }
 
 /**

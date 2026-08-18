@@ -76,7 +76,7 @@ Tag의 `color`(`TagColor`) 값은 DB enum·CSS 토큰(`--tag-sienna` 등)·Tailw
 | --- | --- | --- | --- |
 | 홈 | `common.home` | `/` | 로그인 후 기본 진입점. 모든 Space를 가로질러 Digest를 시간순으로 통합해 보여준다 |
 | 묻기 | `workspace.ask` | (미출시) | 질문을 던지고 해설로 답을 받는 진입점. 아직 비활성이다("곧 지원 예정") |
-| 초안 | `workspace.drafts` | `/drafts` | Changeset 없이 pending으로 남은 Source 카드 목록. 있을 때만 나타난다 |
+| 초안 | `workspace.drafts` | `/drafts` | 정리에 실패했거나 결과가 없는 Source 카드 목록. 있을 때만 나타난다 |
 | 워크스페이스 | `workspace.section_workspace` | 섹션 헤더(경로 없음), 하위 라우트 없음 | 하위에 위키를 둔다 |
 | 위키 | `workspace.references` | `/wiki` | Reference를 모아 보여주는 화면 이름. Reference 자체를 가리키는 말이 아니다 |
 | 스페이스 | `workspace.section_spaces` | 섹션 헤더(경로 없음), 하위 개별 Space는 `/space/$spacePublicId` | 하위에 사용자가 속한 Space 목록과 새 Space 생성을 둔다 |

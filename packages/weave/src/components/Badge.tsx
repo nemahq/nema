@@ -89,7 +89,8 @@ type BadgeProps = React.ComponentProps<"span"> & {
   variant?: BadgeVariant;
   shape?: BadgeShape;
   size?: BadgeSize;
-  // min-w-0 없이 truncate만 있으면 flex 안에서 조용히 안 먹으므로 항상 같이 묶는다.
+  // min-w-0 없이 truncate만 있으면 flex 안에서 조용히 안 먹으므로, 자체 flex
+  // 아이템으로 감싸 항상 같이 묶는다.
   truncated?: boolean;
   // RING_CLASSNAME 참고 — variant="outline"엔 항상 자기 테두리가 있어 무시된다.
   outline?: boolean;
@@ -102,6 +103,7 @@ function Badge({
   truncated = false,
   outline = true,
   className,
+  children,
   ...props
 }: BadgeProps) {
   const tone = variantClasses[variant ?? "brand"];
@@ -118,15 +120,24 @@ function Badge({
     <span
       data-slot="badge"
       className={cn(
-        "inline-block py-0.5 font-medium leading-[1.4]",
+        // inline-flex + items-center — line-height 기반 baseline 정렬 대신 콘텐츠
+        // 박스 기준으로 중앙을 맞춘다. 텍스트만 있을 땐 기존과 시각적으로 동일하고,
+        // 아이콘처럼 폰트 메트릭과 안 맞는 자식이 섞여도 항상 정확히 중앙에 온다 —
+        // 소비처가 아이콘 wrapper에 따로 정렬을 신경 쓸 필요가 없다.
+        "inline-flex items-center py-0.5 font-medium leading-[1.4]",
         shapeSize,
         tone,
         ring,
-        truncated && "min-w-0 truncate",
         className,
       )}
       {...props}
-    />
+    >
+      {truncated ? (
+        <span className="min-w-0 truncate">{children}</span>
+      ) : (
+        children
+      )}
+    </span>
   );
 }
 

@@ -38,6 +38,10 @@ interface SourceDetailPanelProps {
   // 이 컴포넌트 자신은 그 판단(결과 없음 여부)을 못 한다 — source.get 응답에
   // 다이제스트 개수가 안 실려서, 그 판단을 이미 하고 있는 소비처가 채운다.
   banner?: ReactNode;
+  // 하단 고정 액션 자리 — 초안 화면이 실패한 원문에 재추출 버튼을 꽂는다(banner와
+  // 같은 이유로 이 컴포넌트는 그 판단을 못 한다). 본문(overflow-y-auto)과 함께
+  // 스크롤되지 않도록 Suspense 밖, 별도 shrink-0 영역에 둔다.
+  footer?: ReactNode;
 }
 
 interface SourceDetailCloseButtonProps {
@@ -125,6 +129,7 @@ export function SourceDetailPanel({
   knownSourceId,
   onClose,
   banner,
+  footer,
 }: SourceDetailPanelProps) {
   // 클릭 진입이면 knownSourceId가 이미 있다 — 그대로 쓴다. 새로고침·딥링크로
   // 들어와 없으면 source.get 응답(캐시 공유, 아래 SourceDetailBody의
@@ -172,6 +177,12 @@ export function SourceDetailPanel({
           />
         </Suspense>
       </ErrorBoundary>
+
+      {footer && (
+        <div className="flex shrink-0 flex-col gap-2 px-6 py-4">
+          <div className="flex justify-start">{footer}</div>
+        </div>
+      )}
     </div>
   );
 }

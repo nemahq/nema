@@ -23,12 +23,10 @@ export function DigestTypeBadge({ type }: DigestTypeBadgeProps) {
     <Badge
       shape="pill"
       variant="outline"
-      className={cn("shrink-0", DIGEST_TYPE_COLOR[type])}
+      className={cn("shrink-0 gap-1", DIGEST_TYPE_COLOR[type])}
     >
-      <span className="inline-flex items-center gap-1">
-        <TypeIcon className="size-3" />
-        {t(DIGEST_TYPE_LABEL_KEY[type])}
-      </span>
+      <TypeIcon className="size-3" />
+      {t(DIGEST_TYPE_LABEL_KEY[type])}
     </Badge>
   );
 }
