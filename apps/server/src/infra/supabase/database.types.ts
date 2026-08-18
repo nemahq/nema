@@ -461,7 +461,7 @@ export type Database = {
       content_language: "en" | "ko";
       digest_relation_type: "support" | "weaken" | "duplicate" | "conflict";
       digest_type: "decision" | "pending" | "learning" | "idea" | "assumption";
-      digestion_status: "pending" | "completed";
+      digestion_status: "processing" | "completed" | "failed";
       mcp_tool:
         | "search_digests"
         | "get_source"
@@ -603,7 +603,7 @@ export const Constants = {
       content_language: ["en", "ko"],
       digest_relation_type: ["support", "weaken", "duplicate", "conflict"],
       digest_type: ["decision", "pending", "learning", "idea", "assumption"],
-      digestion_status: ["pending", "completed"],
+      digestion_status: ["processing", "completed", "failed"],
       mcp_tool: ["search_digests", "get_source", "get_relations", "get_digest"],
     },
   },

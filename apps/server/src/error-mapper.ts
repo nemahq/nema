@@ -11,6 +11,7 @@ import {
   SupabaseError,
 } from "@server/infra/supabase/supabase-error";
 import { VectorStoreError } from "@server/infra/vector";
+import { SourceAlreadyProcessingError } from "@server/services/source-errors";
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]["code"];
 
@@ -24,7 +25,8 @@ type DomainErrorCode =
   | "LLM_ABORTED"
   | "DB_NOT_FOUND"
   | "DB_FORBIDDEN"
-  | "INDEX_UNAVAILABLE";
+  | "INDEX_UNAVAILABLE"
+  | "SOURCE_ALREADY_PROCESSING";
 
 const ERROR_MAP: Record<
   DomainErrorCode,
@@ -62,6 +64,10 @@ const ERROR_MAP: Record<
     trpcCode: "SERVICE_UNAVAILABLE",
     i18nKey: "error.index_unavailable",
   },
+  SOURCE_ALREADY_PROCESSING: {
+    trpcCode: "CONFLICT",
+    i18nKey: "error.source_already_processing",
+  },
 };
 
 // 사용자에게 도달하는 정상적인 거부(권한·대상 없음)는 시스템 장애가 아니다 — 이
@@ -70,6 +76,7 @@ const EXPECTED_DOMAIN_CODES = new Set<DomainErrorCode>([
   "DB_NOT_FOUND",
   "DB_FORBIDDEN",
   "LLM_ABORTED",
+  "SOURCE_ALREADY_PROCESSING",
 ]);
 
 export function isExpectedDomainError(cause: unknown): boolean {
@@ -102,6 +109,9 @@ export function getDomainCode(cause: unknown): DomainErrorCode | undefined {
       return "DB_FORBIDDEN";
     }
     return undefined;
+  }
+  if (cause instanceof SourceAlreadyProcessingError) {
+    return "SOURCE_ALREADY_PROCESSING";
   }
   return undefined;
 }

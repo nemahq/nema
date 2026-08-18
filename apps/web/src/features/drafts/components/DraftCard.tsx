@@ -1,6 +1,6 @@
 import { memo, type ReactNode } from "react";
 
-import type { DigestionStatus } from "@nema-io/shared";
+import type { SourceDraftStatus } from "@nema-io/shared";
 import { Text } from "@nema-io/weave";
 import { TriangleAlert } from "@nema-io/weave/icons";
 
@@ -8,11 +8,8 @@ import { DraftCardShell } from "./DraftCardShell";
 import { DraftIdleHeader } from "./DraftIdleHeader";
 import { DraftNoResultIcon } from "./DraftNoResultIcon";
 
-// v_draft_sources 뷰가 이미 "pending 이거나 completed+다이제스트 0개"만 걸러
-// 보내므로, completed로 들어온 행은 항상 결과없음이다 — status 두 값이 우리
-// 두 케이스에 정확히 대응한다.
-const STATUS_ICON: Record<DigestionStatus, ReactNode> = {
-  pending: <TriangleAlert className="size-4 shrink-0 text-status-error" />,
+const STATUS_ICON: Record<SourceDraftStatus, ReactNode> = {
+  failed: <TriangleAlert className="size-4 shrink-0 text-status-error" />,
   completed: <DraftNoResultIcon />,
 };
 
@@ -24,7 +21,7 @@ interface DraftCardProps {
   sourcePublicId: string;
   name: string;
   bodyPreview: string;
-  status: DigestionStatus;
+  status: SourceDraftStatus;
   createdAt: string;
   onSelect: (sourcePublicId: string) => void;
 }
