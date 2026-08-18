@@ -12,7 +12,13 @@ interface NavItemProps {
   to?: LinkProps["to"];
   params?: LinkProps["params"];
   showActive?: boolean;
-  activeOptions?: LinkProps["activeOptions"];
+  // to가 다른 라우트의 접두사일 때만 true로 준다(예: "/"). 검색 파라미터는 활성
+  // 판정에서 항상 제외한다 — LNB 탭은 라우트 단위로 구분되고, 같은 라우트 안의
+  // 검색 파라미터 상세 상태(?digest=, ?source= 등)는 계속 같은 탭으로 취급해야
+  // 하는데, TanStack Router는 exact:true를 켜면 search까지 정확히 일치시켜버려
+  // (activeOptions.includeSearch가 exact에 결합돼 있다) 호출부가 매번 이걸 알고
+  // includeSearch:false를 같이 켜야 했다 — 그 결합을 여기서 흡수한다.
+  exactPath?: boolean;
   // to가 없으면 비활성(placeholder) 모드 — 툴팁에 이 힌트가 덧붙는다.
   disabledHint?: ReactNode;
   // 행 우측 슬롯(카운트 뱃지·hover 전용 메뉴 등) — 펼침 모드에서만 렌더된다.
@@ -36,7 +42,7 @@ export function NavItem({
   to,
   params,
   showActive = true,
-  activeOptions,
+  exactPath = false,
   disabledHint,
   rightContent,
   rightContentAlwaysVisible = false,
@@ -45,6 +51,9 @@ export function NavItem({
 }: NavItemProps) {
   const { collapsed } = useSidebar();
   const disabled = !to;
+  const activeOptions = exactPath
+    ? { exact: true, includeSearch: false }
+    : undefined;
   // activeProps.className은 TanStack Router가 기본 className 뒤에 문자열로 그냥
   // 이어붙일 뿐 tailwind-merge를 거치지 않는다 — text-fg-secondary(평상시)와
   // text-fg-primary(active)가 동일 특이도라 어느 게 이기는지 클래스 문자열 순서가
