@@ -440,3 +440,14 @@ jobs:
         env:
           TOLGEE_API_KEY: ${{ secrets.TOLGEE_API_KEY }}
           TOLGEE_API_URL: ${{ secrets.TOLGEE_API_URL }}
+
+      # 배포는 막지 않는다 — 번역 동기화 실패가 코드 배포를 막을 이유는 없다.
+      # #ci-alerts에 알리기만 해서 사람이 직접 원인을 보고 재실행하게 한다.
+      - name: Notify Slack on failure
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"🔴 tolgee-push 실패 — <${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}|로그 보기>\"}" \
+            "$SLACK_WEBHOOK_URL"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
