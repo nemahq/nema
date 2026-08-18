@@ -67,6 +67,13 @@ export async function ingestSource(args: {
 
   const duplicate = await findRecentDuplicateSource({ supabase, userId, body });
   if (duplicate) {
+    // 10분 창·completed 조건이 실제로 맞는 값인지는 아직 근거가 얇다 — 얼마나
+    // 자주 걸리는지가 그 근거가 될 유일한 신호라 서버 로그에 남긴다(mcp_tool_calls
+    // 텔레메트리는 안 쓴다 — ingest는 원래 거기 안 남는다, mcp-tool-call-log-service.ts
+    // 참고. 이 값들이 자리 잡으면 이 로그도 정리한다).
+    console.warn(
+      `[source-service] 중복 던지기로 재구성 — 새로 처리하지 않음, sourceId: ${duplicate.id}, userId: ${userId}`,
+    );
     return reconstructIngestResult({ supabase, sourceId: duplicate.id });
   }
 

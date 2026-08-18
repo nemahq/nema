@@ -17,6 +17,11 @@ import { createContext, onTRPCError } from "./trpc";
 // 난다 — 넉넉히 올려둔다.
 const FASTIFY_MAX_PARAM_LENGTH = 5000;
 
+// Fastify 기본값(1MB)과 같은 값이라 동작은 안 바뀐다 — 다만 그 기본값이 MCP
+// (apps/mcp/src/index.ts)의 express.json 쪽 body limit과 실제로 일치해야 하는
+// 값이라, 선언 안 된 프레임워크 기본값에만 기대는 채로 두지 않는다.
+const FASTIFY_BODY_LIMIT_BYTES = 1024 * 1024;
+
 loadEnv(dirname(fileURLToPath(import.meta.url)) + "/..");
 
 async function bootstrap() {
@@ -25,6 +30,7 @@ async function bootstrap() {
 
   const server = Fastify({
     logger: true,
+    bodyLimit: FASTIFY_BODY_LIMIT_BYTES,
     routerOptions: { maxParamLength: FASTIFY_MAX_PARAM_LENGTH },
   });
   const env = getEnv();

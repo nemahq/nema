@@ -17,8 +17,8 @@ ALTER TABLE sources
 
 COMMENT ON COLUMN sources.body_hash IS
   '중복 던지기 판정용 지문(md5(body)). 유일성을 강제하지 않는다 — 서비스
-   계층이 짧은 시간 창 안에서만 user_id + body_hash 일치를 중복으로 본다
-   (source-service.ts findRecentDuplicateSource).';
+   계층(source-service.ts의 던지기 중복 판정 로직)이 짧은 시간 창 안에서만
+   user_id + body_hash 일치를 중복으로 본다.';
 
 -- 최근 중복 조회(user_id + body_hash, 최신순) 경로.
 CREATE INDEX idx_sources_user_body_hash_created

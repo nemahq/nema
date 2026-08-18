@@ -1145,6 +1145,11 @@ describe("던지기 중복 방지 (RLS)", () => {
       expect(
         reconstructedFirst?.relations.map((relation) => relation.digestId),
       ).toEqual([secondDigest?.id]);
+      // 재구성이 별도 쿼리(extraction_order 정렬)를 새로 타므로, 처음 던졌을
+      // 때의 순서가 그대로 유지되는지도 함께 본다.
+      expect(second.digests.map((digest) => digest.title)).toEqual(
+        first.digests.map((digest) => digest.title),
+      );
     },
     TEST_TIMEOUT_MS,
   );
@@ -1242,6 +1247,49 @@ describe("던지기 중복 방지 (RLS)", () => {
 
       expect(second.sourceId).not.toBe(first.sourceId);
       expect(second.digests[0]?.title).toBe("휴지통행 후 재처리 결정");
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // INGEST_DUPLICATE_WINDOW_MS(10분)보다 오래전에 completed된 원문은 창 밖이라
+  // 새로 처리돼야 한다 — 창 안쪽만 검증하는 위 테스트들은 since 계산 방향이
+  // 뒤집히거나(과거 대신 미래를 기준으로 삼는 등) 단위를 잘못 둬 창이 사실상
+  // 무한대가 돼도 못 잡는다.
+  const OUTSIDE_DUPLICATE_WINDOW_MS = 11 * 60 * 1000;
+
+  it(
+    "시간 창(10분) 밖에서 completed된 원문은 중복으로 보지 않고 새로 처리한다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const body = `중복 방지 시간창 경계 테스트 원문 ${randomUUID()}`;
+      mockGenerated = oneDecision("시간창 밖 - 원래 결정");
+
+      const first = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+      const { error: backdateError } = await admin
+        .from("sources")
+        .update({
+          created_at: new Date(
+            Date.now() - OUTSIDE_DUPLICATE_WINDOW_MS,
+          ).toISOString(),
+        })
+        .eq("id", first.sourceId);
+      expect(backdateError).toBeNull();
+
+      mockGenerated = oneDecision("시간창 밖 - 재처리된 결정");
+      const second = await ingestSource({
+        supabase: userA.supabase,
+        userId: userA.id,
+        body,
+      });
+
+      expect(second.sourceId).not.toBe(first.sourceId);
+      expect(second.digests[0]?.title).toBe("시간창 밖 - 재처리된 결정");
     },
     TEST_TIMEOUT_MS,
   );
