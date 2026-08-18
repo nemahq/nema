@@ -13,6 +13,14 @@ export const DIGESTION_STATUSES = [
 export const DigestionStatusSchema = z.enum(DIGESTION_STATUSES);
 export type DigestionStatus = z.infer<typeof DigestionStatusSchema>;
 
+// 초안 카드가 실전에서 받는 status는 이 둘뿐이다(v_draft_sources가 processing을
+// 미리 거른다) — SourceDraftSchema가 DigestionStatusSchema 대신 이 좁은
+// 스키마를 쓰는 이유. 화면이 processing을 "일어날 수 없는 값"으로 안 다루고
+// 아예 타입에서 배제한다.
+export const SOURCE_DRAFT_STATUSES = ["failed", "completed"] as const;
+export const SourceDraftStatusSchema = z.enum(SOURCE_DRAFT_STATUSES);
+export type SourceDraftStatus = z.infer<typeof SourceDraftStatusSchema>;
+
 // 원문 입구 상한 — 정확성이 아니라 비용/폭주 브레이크. 정당한 장문(회의록·보고서)은
 // 통과시키려 높게 잡는다. legacy(SOURCE_BODY_MAX_LENGTH)와 같은 값.
 export const SOURCE_BODY_MAX_LENGTH = 100_000;
@@ -142,18 +150,16 @@ export type SourceListWithDigestsResult = z.infer<
   typeof SourceListWithDigestsResultSchema
 >;
 
-// 초안 화면 — 정리 결과가 없거나 처리에 실패한 원문만 담는다(v_draft_sources가
-// processing은 미리 걸러 보낸다) — status는 실전에서 "failed" 또는 "completed"
-// (결과없음)만 온다. 화면은 이 값으로 실패 아이콘/결과없음 아이콘을 가른다.
-// name은 위 SourceGetResultSchema와 같은 정의. bodyPreview는 카드 본문 4줄
-// 미리보기 전용(400자, sources.body_preview 생성 컬럼) — name과 달리 title
-// 유무와 무관하게 항상 본문 앞부분이다.
+// 초안 화면 — 정리 결과가 없거나 처리에 실패한 원문만 담는다. 화면은 status로
+// 실패 아이콘/결과없음 아이콘을 가른다. name은 위 SourceGetResultSchema와 같은
+// 정의. bodyPreview는 카드 본문 4줄 미리보기 전용(400자, sources.body_preview
+// 생성 컬럼) — name과 달리 title 유무와 무관하게 항상 본문 앞부분이다.
 export const SourceDraftSchema = z.object({
   sourceId: z.string().uuid(),
   publicId: z.string().regex(SOURCE_PUBLIC_ID_PATTERN),
   name: z.string(),
   bodyPreview: z.string(),
   createdAt: z.string().datetime({ offset: true }),
-  status: DigestionStatusSchema,
+  status: SourceDraftStatusSchema,
 });
 export type SourceDraft = z.infer<typeof SourceDraftSchema>;

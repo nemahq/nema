@@ -367,6 +367,37 @@ describe("source-service (RLS)", () => {
     TEST_TIMEOUT_MS,
   );
 
+  // 이 테스트가 지키는 계약: 같은 원문에 재추출이 두 번 겹치면(예: 다른 탭에서
+  // 동시 클릭) 두 번째는 새로 처리하지 않는다 — 안 막으면 둘 다 saveDigests를
+  // 부르다 (source_id, extraction_order) unique 제약에 걸려 두 번째가 원인 불명
+  // 에러로 실패한다.
+  it(
+    "이미 재추출 중인 원문에 재추출을 또 부르면 CONFLICT를 던진다",
+    async () => {
+      if (!localDbAvailable) {
+        return;
+      }
+      const { data: source, error: insertError } = await admin
+        .from("sources")
+        .insert({
+          user_id: userA.id,
+          body: `재추출 중복 방지 재현 원문 ${randomUUID()}`,
+        })
+        .select("id")
+        .single();
+      expect(insertError).toBeNull();
+
+      await expect(
+        reExtractSource({
+          supabase: userA.supabase,
+          userId: userA.id,
+          sourceId: source?.id ?? "",
+        }),
+      ).rejects.toThrow(/still processing/);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
   it(
     "재추출은 기존 다이제스트를 지우고 새 다이제스트로 바꾼다",
     async () => {
@@ -396,6 +427,13 @@ describe("source-service (RLS)", () => {
         .select("id")
         .eq("source_id", sourceId);
       expect(remaining).toHaveLength(1);
+
+      const { data: sourceRow } = await userA.supabase
+        .from("sources")
+        .select("digestion_status")
+        .eq("id", sourceId)
+        .single();
+      expect(sourceRow?.digestion_status).toBe("completed");
     },
     TEST_TIMEOUT_MS,
   );
@@ -968,6 +1006,15 @@ describe("source-service (RLS)", () => {
         .eq("source_id", sourceId);
       expect(remaining).toHaveLength(1);
       expect(remaining?.[0]?.id).toBe(original[0]?.id);
+
+      // 상태도 failed로 끝나야 한다 — 이걸 안 보면 배선이 잘못돼 processing에
+      // 영구히 갇혀도(이 PR이 고치려는 버그와 같은 모양) 이 테스트가 못 잡는다.
+      const { data: sourceRow } = await userA.supabase
+        .from("sources")
+        .select("digestion_status")
+        .eq("id", sourceId)
+        .single();
+      expect(sourceRow?.digestion_status).toBe("failed");
     },
     TEST_TIMEOUT_MS,
   );
@@ -1936,7 +1983,10 @@ describe("listDraftSources (RLS)", () => {
       }
       const { data: processingSource, error: insertError } = await admin
         .from("sources")
-        .insert({ user_id: userA.id, body: "처리 중 재현 원문" })
+        .insert({
+          user_id: userA.id,
+          body: `처리 중 재현 원문 ${randomUUID()}`,
+        })
         .select("id")
         .single();
       expect(insertError).toBeNull();

@@ -11,7 +11,7 @@ import {
   SupabaseError,
 } from "@server/infra/supabase/supabase-error";
 import { VectorStoreError } from "@server/infra/vector";
-import { SourceAlreadyProcessingError } from "@server/services/source-service";
+import { SourceAlreadyProcessingError } from "@server/services/source-errors";
 
 type TRPCErrorCode = ConstructorParameters<typeof TRPCError>[0]["code"];
 

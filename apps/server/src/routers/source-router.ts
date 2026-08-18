@@ -9,6 +9,7 @@ import {
 } from "@nema-io/shared";
 
 import { isNotFoundError } from "@server/infra/supabase/supabase-error";
+import { SourceAlreadyProcessingError } from "@server/services/source-errors";
 import {
   deleteSource,
   deleteSources,
@@ -17,7 +18,6 @@ import {
   listDraftSources,
   listSourcesWithDigests,
   reExtractSource,
-  SourceAlreadyProcessingError,
 } from "@server/services/source-service";
 import { protectedProcedure, router } from "@server/trpc";
 
@@ -98,6 +98,13 @@ export const sourceRouter = router({
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Source not found.",
+            cause: error,
+          });
+        }
+        if (error instanceof SourceAlreadyProcessingError) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Source is already being processed.",
             cause: error,
           });
         }

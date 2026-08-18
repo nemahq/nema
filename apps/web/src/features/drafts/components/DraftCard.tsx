@@ -1,6 +1,6 @@
 import { memo, type ReactNode } from "react";
 
-import type { DigestionStatus } from "@nema-io/shared";
+import type { SourceDraftStatus } from "@nema-io/shared";
 import { Text } from "@nema-io/weave";
 import { TriangleAlert } from "@nema-io/weave/icons";
 
@@ -8,11 +8,7 @@ import { DraftCardShell } from "./DraftCardShell";
 import { DraftIdleHeader } from "./DraftIdleHeader";
 import { DraftNoResultIcon } from "./DraftNoResultIcon";
 
-// v_draft_sources 뷰가 이미 "failed 이거나 completed+다이제스트 0개"만 걸러
-// 보내므로, 실전에선 processing이 여기 안 온다 — exhaustive record라 값은
-// 채워두되(TS가 DigestionStatus 전체를 요구), 실제로 렌더될 일은 없다.
-const STATUS_ICON: Record<DigestionStatus, ReactNode> = {
-  processing: null,
+const STATUS_ICON: Record<SourceDraftStatus, ReactNode> = {
   failed: <TriangleAlert className="size-4 shrink-0 text-status-error" />,
   completed: <DraftNoResultIcon />,
 };
@@ -25,7 +21,7 @@ interface DraftCardProps {
   sourcePublicId: string;
   name: string;
   bodyPreview: string;
-  status: DigestionStatus;
+  status: SourceDraftStatus;
   createdAt: string;
   onSelect: (sourcePublicId: string) => void;
 }

@@ -45,6 +45,7 @@ import {
 import { logGetSource } from "@server/services/mcp-tool-call-log-service";
 import { getProfile } from "@server/services/profile-service";
 import { RELATION_JUDGMENTS } from "@server/services/relation-rules";
+import { SourceAlreadyProcessingError } from "@server/services/source-errors";
 
 // DB 컬럼 기본값(profiles.content_language)과 같은 값으로 떨어뜨린다. 행이 없는
 // 상태는 로그인은 했지만 온보딩 모달을 아직 못 끝낸 아주 좁은 틈뿐이라(모달이
@@ -64,16 +65,6 @@ const INGEST_DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
 // 막게 된다 — 그 대신 새로 처리하게 둔다(processIngestion이 성공하면 completed로,
 // 실패하면 failed로 정리해 이 상태를 스스로 벗어난다).
 const INGEST_PROCESSING_DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
-
-// ingestSource가 processing 중복을 만나면 던진다 — completed 중복과 달리 아직
-// 다이제스트가 없어 결과를 재구성할 수 없다. source-router.ts가 이 타입을 보고
-// TRPCError(CONFLICT)로 옮기고, error-mapper.ts가 사용자 문구로 옮긴다.
-export class SourceAlreadyProcessingError extends Error {
-  constructor(public readonly sourceId: string) {
-    super(`Source ${sourceId} is still processing.`);
-    this.name = "SourceAlreadyProcessingError";
-  }
-}
 
 export async function ingestSource(args: {
   supabase: TypedSupabaseClient;
@@ -104,18 +95,25 @@ export async function ingestSource(args: {
     .single();
   throwIfSupabaseError(error);
 
-  const contentLanguage = await resolveContentLanguage({ supabase, userId });
+  // resolveContentLanguage도 withFailureRecovery 안에 둔다 — 밖에 두면(예:
+  // getProfile의 DB 조회 자체가 실패) 이미 INSERT된 source 행이 failed로 정리될
+  // 기회 없이 processing에 영구히 갇힌다.
   const digests = await withFailureRecovery({
     supabase,
     sourceId: source.id,
-    work: () =>
-      extractAndSaveDigests({
+    work: async () => {
+      const contentLanguage = await resolveContentLanguage({
+        supabase,
+        userId,
+      });
+      return extractAndSaveDigests({
         supabase,
         userId,
         sourceId: source.id,
         body,
         contentLanguage,
-      }),
+      });
+    },
   });
   return { sourceId: source.id, digests };
 }
@@ -234,15 +232,26 @@ export async function reExtractSource(args: {
 
   const contentLanguage = await resolveContentLanguage({ supabase, userId });
 
-  // 상태 전환을 ingestSource와 대칭으로 맨 앞(LLM 호출 전)에 둔다 — 초안 탭은
-  // processing을 안 보여주므로, 재추출 버튼을 누른 즉시(LLM 재추출 구간 포함)
-  // 카드가 화면에서 사라진다. 실패하면 아래 withFailureRecovery가 failed로
-  // 되돌린다.
-  const { error: statusError } = await supabase
+  // 상태 전환을 ingestSource와 대칭으로 맨 앞(LLM 호출 전)에 둔다 — 서버 상태는
+  // 클릭 즉시 processing으로 바뀐다(화면 카드는 이 응답이 끝나 source.list가
+  // 무효화돼야 그 결과를 반영한다 — DraftReExtractAction 참고). 실패하면 아래
+  // withFailureRecovery가 failed로 되돌린다.
+  //
+  // WHERE에 digestion_status<>processing을 같이 걸어 동시 재추출을 막는다 —
+  // 이미 processing인 원문에 걸면 이 UPDATE는 0행이라 updated가 비고, 그때
+  // SourceAlreadyProcessingError를 던진다(ingestSource의 중복 판정과 같은 신호,
+  // 같은 tRPC CONFLICT로 옮겨진다).
+  const { data: updated, error: statusError } = await supabase
     .from("sources")
     .update({ digestion_status: "processing" })
-    .eq("id", sourceId);
+    .eq("id", sourceId)
+    .neq("digestion_status", "processing")
+    .select("id")
+    .maybeSingle();
   throwIfSupabaseError(statusError);
+  if (!updated) {
+    throw new SourceAlreadyProcessingError(sourceId);
+  }
 
   const { digests, oldDigestIds } = await withFailureRecovery({
     supabase,
@@ -311,12 +320,31 @@ async function extractAndSaveDigests(args: {
   });
 }
 
-// work 도중 아무거나 실패하면 source를 failed로 표시하고 그대로 다시 던진다 —
+// saveDigestsAndIndex의 마지막 completed UPDATE 하나만 실패했을 때만 던진다 —
+// 이 시점엔 digest 저장·색인이 이미 끝나 완전히 유효한 결과가 있다.
+// withFailureRecovery는 이 타입을 다른 실패와 다르게 다룬다(아래).
+class SourceCompletionUpdateFailedError extends Error {
+  constructor(cause: unknown) {
+    super(
+      "digestion_status completed UPDATE failed after digests were saved and indexed.",
+    );
+    this.name = "SourceCompletionUpdateFailedError";
+    this.cause = cause;
+  }
+}
+
+// work 도중 실패하면 source를 failed로 표시하고 그대로 다시 던진다 —
 // ingestSource·reExtractSource 둘 다 "처리 도중 실패하면 processing에 갇히지
-// 않고 failed로 끝난다"를 똑같이 지켜야 해서 한 곳에 모은다. work가 끝난
-// *뒤*의 후속 정리(예: reExtractSource의 기존 digest 삭제)는 일부러 이 안에
-// 안 넣는다 — 그건 이미 완성된 결과에 딸린 뒷정리라 실패해도 failed로 되돌릴
-// 대상이 아니다.
+// 않고 failed로 끝난다"를 똑같이 지켜야 해서 한 곳에 모은다. 딱 하나
+// 예외다 — SourceCompletionUpdateFailedError는 안 건드린다. digest 저장·색인은
+// 이미 끝난 유효한 결과라, failed로 덮어쓰면 재추출 버튼이 멀쩡한 digest를
+// 지우고 처음부터 다시 만들게 된다(능동적 데이터 손실). processing에 그대로
+// 남겨두는 쪽을 택한다 — 상태 불일치는 정합성 점검으로 별도로 다룬다
+// (fix/draft-error-state 결정사항).
+//
+// work가 끝난 *뒤*의 후속 정리(예: reExtractSource의 기존 digest 삭제)는
+// 일부러 이 안에 안 넣는다 — 그건 이미 완성된 결과에 딸린 뒷정리라 실패해도
+// failed로 되돌릴 대상이 아니다.
 async function withFailureRecovery<T>(args: {
   supabase: TypedSupabaseClient;
   sourceId: string;
@@ -326,7 +354,9 @@ async function withFailureRecovery<T>(args: {
   try {
     return await work();
   } catch (error) {
-    await markSourceFailed({ supabase, sourceId });
+    if (!(error instanceof SourceCompletionUpdateFailedError)) {
+      await markSourceFailed({ supabase, sourceId });
+    }
     throw error;
   }
 }
@@ -751,7 +781,11 @@ async function saveDigestsAndIndex(args: {
     .from("sources")
     .update({ digestion_status: "completed", title: sourceTitle })
     .eq("id", sourceId);
-  throwIfSupabaseError(statusError);
+  if (statusError) {
+    // 여기서 던지는 예외는 SourceCompletionUpdateFailedError로 감싼다 —
+    // withFailureRecovery가 이 타입만은 failed로 안 덮어쓴다(위 정의 참고).
+    throw new SourceCompletionUpdateFailedError(statusError);
+  }
 
   // 색인 다음에 잇는다 — 후보를 방금 색인한 벡터로 찾기 때문에 순서를 바꿀 수 없다.
   const relationsByDigestId = await linkAllRelations({
