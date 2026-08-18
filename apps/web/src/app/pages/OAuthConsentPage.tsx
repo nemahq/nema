@@ -142,7 +142,7 @@ export function OAuthConsentPage() {
           </Button>
           <Button
             className="flex-1"
-            variant="secondary"
+            variant="ghost"
             onClick={() => decide(false)}
             disabled={deciding}
           >
