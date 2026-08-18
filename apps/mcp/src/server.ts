@@ -12,7 +12,7 @@ import {
   SourceIngestInputSchema,
 } from "@nema-io/shared";
 
-import { getEnv } from "./env";
+import { getEnv, ICON_PATH } from "./env";
 
 /**
  * 사용자 토큰을 그대로 실어 보낸다. 사용자/공간 해소와 검증은 apps/server의
@@ -66,7 +66,19 @@ function toolError(error: unknown): CallToolResult {
 // 요청마다 새 서버를 연결하는 stateless 구조(index.ts)라 accessToken을 그때그때
 // 받아 그 요청 전용 tRPC 클라이언트를 만든다.
 export function createMcpServer(accessToken: string): McpServer {
-  const server = new McpServer({ name: "nema-mcp", version: "0.0.0" });
+  // 아이콘은 웹앱 자산을 가리킨다. 클라이언트마다 읽는 자리가 달라
+  // serverInfo.icons와 /favicon.ico(index.ts) 양쪽을 다 채운다.
+  const server = new McpServer({
+    name: "nema-mcp",
+    version: "0.0.0",
+    icons: [
+      {
+        src: new URL(ICON_PATH, getEnv().NEMA_WEB_URL).href,
+        mimeType: "image/png",
+        sizes: ["512x512"],
+      },
+    ],
+  });
   const client = createNemaClient(accessToken);
 
   server.registerTool(

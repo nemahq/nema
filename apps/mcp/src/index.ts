@@ -6,7 +6,7 @@ import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middlew
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
 import { createSupabaseTokenVerifier, protectedResourceMetadata } from "./auth";
-import { getEnv, loadEnv } from "./env";
+import { FAVICON_PATH, getEnv, loadEnv } from "./env";
 import { createMcpServer } from "./server";
 
 const PRM_PATH = "/.well-known/oauth-protected-resource";
@@ -31,6 +31,12 @@ function main(): void {
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // 커넥터 아이콘을 favicon에서 찾는 클라이언트가 있어 웹앱 자산으로 넘긴다
+  // (serverInfo.icons만 읽는 클라이언트는 server.ts 쪽이 채운다).
+  app.get(FAVICON_PATH, (_req, res) => {
+    res.redirect(302, new URL(FAVICON_PATH, env.NEMA_WEB_URL).href);
   });
 
   const metadata = protectedResourceMetadata();
