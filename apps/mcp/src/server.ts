@@ -72,9 +72,9 @@ export function createMcpServer(accessToken: string): McpServer {
   server.registerTool(
     "ingest_source",
     {
-      title: "원문 던지기",
+      title: "Capture Source",
       description:
-        "원문을 Nema에 던진다. 원문을 사람이 읽기 좋게 정리한 다이제스트로 만들어 저장하고, 나중에 뜻으로 찾아 꺼낼 수 있게 색인한다.",
+        "Save a source into Nema. It is split into digests, indexed for meaning-based search, and linked to related digests already stored. Use when the content carries a judgment worth keeping — a decision and its reasoning, an open question, a learning, an idea, or an assumption. Skip routine chatter with no judgment in it.",
       inputSchema: SourceIngestInputSchema.shape,
     },
     async ({ body }) => {
@@ -89,9 +89,9 @@ export function createMcpServer(accessToken: string): McpServer {
   server.registerTool(
     "search_digests",
     {
-      title: "다이제스트 꺼내기",
+      title: "Search Digests",
       description:
-        "질의와 뜻이 가까운 다이제스트를 찾아 그대로 돌려준다. 다이제스트를 해석하거나 요약하지 않는다 — 그건 이 도구를 부르는 쪽의 몫이다.",
+        "Find digests semantically close to a query. Use when the user asks about past judgments — what was decided, why, what was learned, what is still open. Returns digests as stored, without interpretation. Does not include connections; call Get Connections for those.",
       // limit은 tRPC 스키마엔 있지만(하니스·디버깅용) 도구에는 안 연다 — 호출마다
       // 개수가 달라지면 "결과 몇 개가 쓸모 있었나"를 호출끼리 비교할 근거가 없어진다.
       inputSchema: { query: DigestSearchInputSchema.shape.query },
@@ -108,9 +108,9 @@ export function createMcpServer(accessToken: string): McpServer {
   server.registerTool(
     "get_relations",
     {
-      title: "연결 따라가기",
+      title: "Get Connections",
       description:
-        "이 다이제스트가 무엇을 지지하거나 약화하는지, 또 무엇에게 지지받거나 약화되는지 연결을 가져온다. 사용자가 어떤 판단의 근거나 그 판단이 흔들리는 이유를 물을 때 쓴다. 상대 다이제스트는 제목·유형까지만 온다 — 내용이 필요하면 get_digest로 간다.",
+        "Get how a digest connects to others — what supports or weakens it, and what it duplicates or conflicts with. Use when the user asks why a judgment was made, what backs it, or whether anything contradicts it. Counterparts come back with title and type only; call Get Digest for the full content.",
       inputSchema: DigestActionInputSchema.shape,
     },
     async ({ digestId }) => {
@@ -125,9 +125,9 @@ export function createMcpServer(accessToken: string): McpServer {
   server.registerTool(
     "get_digest",
     {
-      title: "다이제스트 보기",
+      title: "Get Digest",
       description:
-        "digestId로 다이제스트 하나를 전부 가져온다. 꺼내기나 연결에서 제목만 받은 것을 펼쳐 볼 때 쓴다.",
+        "Get one digest in full by digestId. Use to expand something that came back as a title only from Search Digests or Get Connections.",
       inputSchema: DigestActionInputSchema.shape,
     },
     async ({ digestId }) => {
@@ -142,9 +142,9 @@ export function createMcpServer(accessToken: string): McpServer {
   server.registerTool(
     "get_source",
     {
-      title: "원문 보기",
+      title: "Get Source",
       description:
-        "다이제스트가 부실하거나 더 자세히 봐야 할 때만 부른다. sourceId로 정리 전 원문 전체를 가져온다.",
+        "Get the original, unprocessed source text by sourceId. Use only when a digest is too thin or the raw wording matters — digests are the normal way to read what was captured.",
       inputSchema: SourceActionInputSchema.shape,
     },
     async ({ sourceId }) => {
